@@ -18215,8 +18215,8 @@ genérico, que ao lado de um brief ou de uma regra da mesma sessão parecia nega
 que eles existissem — o escopo da seção (PR e backlog, [RN-159](business-rules/autenticacao.md#rn-159)) não
 muda.
 
-- **Código:** `apps/web/src/routes/Shell.tsx:534` (`execucao`), `:542`
-  (`origemDaAtividade`), `:549` (`estadoDaAtividade`);
+- **Código:** `apps/web/src/routes/Shell.tsx:563` (`execucao`), `:571`
+  (`origemDaAtividade`), `:578` (`estadoDaAtividade`);
   `apps/web/src/lib/hooks.ts:127` (`useProjectSessions`, `frescorMs`);
   `apps/web/src/routes/Dashboard.tsx:75` (`lastActivityText`);
   `apps/web/src/routes/ContextAside.tsx:41` (`quantos`), `:253`
@@ -18320,28 +18320,32 @@ componente (tabelas e rótulos das seções), assunto de tipografia e espaço, n
 de moldura. O `fora-da-viewport` que sobra na Visão geral e em Aprovações são
 abas da barra horizontal além da borda, onde a rolagem interna as alcança.
 
+**Revisto pelo [ADR 0211](adr/0211-uma-navegacao-so-a-sidebar-absorve-o-trilho.md)
+(AT-404):** o item 3 deixou de valer — o trilho do projeto saiu, e com ele a
+barra horizontal. No telefone as abas do projeto moram na GAVETA (item 2), com
+os grupos, a ativa e os contadores; escolher uma fecha a gaveta. O corpo do
+projeto não vira mais coluna: só os respiros encolhem.
+
 **O que esta regra NÃO fecha:** a aba Código mantém o trilho de 48px do
 `CodeShell` e o editor em colunas; ela não foi desenhada para telefone. A
 tela de Sessão herda a moldura nova, mas a barra superior e o fio seguem com
-os achados X1–X3 da auditoria. Os dois lugares de navegação por abas (a
-gaveta e a barra) continuam existindo lado a lado, a mesma duplicação
-declarada no ADR 0126.
+os achados X1–X3 da auditoria. A duplicação de navegação por abas (gaveta e
+barra) fechou no ADR 0211.
 
 - **Código:** `apps/web/src/lib/layout-movel.ts:18` (`CONSULTA_MOVEL`),
   `:39` (`useLayoutMovel`); `apps/web/src/routes/Shell.tsx:422`
-  (`movel`), `:463` (`prenderFoco`), `:482` (`fecharAoSeguirLink`);
-  `apps/web/src/routes/ProjectRail.tsx:40` (`TECLAS_HORIZONTAL`), `:89`
-  (`horizontal`); `apps/web/src/routes/ProjectPage.tsx:58` (`movel`);
+  (`movel`), `:443` (`prenderFoco`), `:462` (`fecharAoSeguirLink`);
+  `apps/web/src/routes/ProjectPage.tsx:49` (`movel`);
   `apps/web/src/routes/ProjectOverviewTab.tsx:64` (`movel`)
 - **Teste:** `apps/web/src/routes/Shell.test.tsx` ("Shell — layout móvel
   (RN-643)": a gaveta abre com o foco dentro e o Esc a fecha devolvendo o foco;
   fecha pelo link, pelo X, pelo fundo e pela troca de rota; ignora o colapso
   gravado; cruzar o corte volta à sidebar fixa; e o caso de falha, sem
   `matchMedia` não há menu nem diálogo);
-  `apps/web/src/routes/ProjectRail.test.tsx` ("barra horizontal no layout
-  móvel": tablist horizontal com as 12 abas e a ativa rolada para a faixa;
-  setas esquerda/direita com volta e a seta para baixo inerte; e o caso de
-  falha, desktop continua vertical e a seta direita não anda), sobre o mock
+  `apps/web/src/routes/Shell.test.tsx` ("no telefone as abas estão na gaveta,
+  e escolher uma fecha a gaveta (RN-643)") e
+  `apps/web/src/routes/AbasDoProjeto.test.tsx` ("no telefone continua
+  VERTICAL"), desde o ADR 0211, sobre o mock
   `apps/web/src/test/match-media.ts`
 - **Origem:** AT-316 (achado S1 da AT-290); não muda o ADR 0126, só dá ao
   trilho uma forma para telas estreitas
@@ -18573,8 +18577,7 @@ verificador ainda relata nas Configurações e em Aprovações são ícones deco
   (`usePainelDeContexto`); `apps/web/src/routes/GavetaDoContexto.tsx:14`
   (`GavetaDoContexto`); `apps/web/src/routes/SessionTopbar.tsx:126`
   (`movel`); `apps/web/src/components/ui/Table.tsx:13` (`largaNoMovel`),
-  `:28` (`movel`); `apps/web/src/routes/ProjectRail.tsx:103` (`conteudo`),
-  `:124` (`bordas`); `apps/web/src/routes/Dashboard.tsx:165` (`movel`);
+  `:28` (`movel`); `apps/web/src/routes/Dashboard.tsx:165` (`movel`);
   `apps/web/src/routes/ProjectSessionsTab.tsx:149` (`movel`)
 - **Teste:** `apps/web/src/routes/SessionPage.layout-movel.test.tsx` (a gaveta
   nasce fechada, abre com o foco no X e o Esc fecha devolvendo o foco; X e
@@ -18585,9 +18588,11 @@ verificador ainda relata nas Configurações e em Aprovações são ícones deco
   `apps/web/src/routes/settings/modelos-por-agente-no-movel.test.tsx`,
   `apps/web/src/routes/StatusPage.test.tsx`,
   `apps/web/src/routes/Dashboard.test.tsx`,
-  `apps/web/src/routes/ProjectSessionsTab.test.tsx` e
-  `apps/web/src/routes/ProjectRail.test.tsx` (cada um com o móvel e o caso de
-  falha do desktop ou da faixa que cabe)
+  `apps/web/src/routes/ProjectSessionsTab.test.tsx` (cada um com o móvel e o
+  caso de falha do desktop ou da faixa que cabe). A faixa de abas do projeto
+  (`ProjectRail`, achado N8) saiu no
+  [ADR 0211](adr/0211-uma-navegacao-so-a-sidebar-absorve-o-trilho.md): as abas
+  moram na gaveta
 - **Origem:** AT-328 (achado N1) e AT-330 (achados N3 a N8) da auditoria
   visual da Rodada 29; completa a [RN-643](#rn-643)
 

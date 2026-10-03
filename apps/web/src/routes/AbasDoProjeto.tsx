@@ -58,7 +58,7 @@ const TECLAS = ['ArrowDown', 'ArrowUp', 'Home', 'End'];
 
 /**
  * As abas do projeto na SIDEBAR — a única navegação do projeto desde o ADR
- * 0210, que tirou o trilho vertical (ADR 0126) e trouxe para cá tudo o que só
+ * 0211, que tirou o trilho vertical (ADR 0126) e trouxe para cá tudo o que só
  * ele tinha: os três grupos abertos, a aba ativa marcada, os cinco contadores
  * (Insights, PRs, Aprovações, Backlog, Arquitetura) SEPARADOS — o cabeçalho do
  * grupo nunca soma as filhas —, e o teclado.

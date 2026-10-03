@@ -3,7 +3,7 @@ id: adr-index
 title: Architectural decisions (ADR)
 sidebar_label: ADR index
 sidebar_position: 0
-description: Brabo's 206 architectural decision records, grouped by theme, with what each one decided.
+description: Brabo's 207 architectural decision records, grouped by theme, with what each one decided.
 keywords: [ADR, architectural decision, architecture, history]
 ---
 
@@ -286,6 +286,7 @@ Screens, navigation, themes and the structure of the web app's largest files.
 | [0176](0176-sessionpage-abaixo-de-mil-linhas.md) | `apps/web/src/routes/SessionPage.tsx` goes **below 1,000 lines** in ten stacked, MECHANICAL PRs, and only then gets a CI ceiling (AT-138, `BRB-015`, maintainer's decision: "yes, and lock it afterwards"). The debt row closed by ADRs 0122/0124 at 2,479 lines closed by a NUMBER that nobody re-measured: on `origin/dev` at `018b8cd24c` the file was **2,637 lines**, grown back by legitimate features. The program moves, without editing any of the 28 `SessionPage.*.test.tsx` files: the fio passes (`session-fio.tsx`), the 762-line timeline `useMemo` body (`session-timeline-montagem.tsx`, called from inside the SAME `useMemo` with the SAME dependency list, byte for byte), the three JSX strips (`SessionTopbar`, `SessionFio`, `SessionComposer`), the handoff derivations (`lib/session-handoffs.ts`), the scroll refs and effects (`useRolagemDoFio`), story promotion (`usePromocaoDeHistorias` + `DevolverHistoriaModal`) and the non-turn handoff/execution actions (`useAcoesDeHandoff`) — **2,637 → 834**. The turn-entry handlers stay: they are the door of ADR 0124's cluster. The last PR adds `SessionPage.teto.test.ts`, failing the file at 1,000 lines or more; raising it takes a new ADR |
 | [0181](0181-tema-preto-neutro.md) | The dark theme becomes NEUTRAL BLACK with a SOFT terracotta accent, and light becomes the neutral of the same family (AT-283/AT-284). Semantic VALUES change, names don't; a raw `--neutro-*` scale enters. The final numbers came from MEASUREMENT, not the draft (`--text-muted` `#86868f` dark / `#696972` light, dark `--on-accent` becomes neutral black), and the five dark-theme debt pairs [0074](0074-tema-alcancavel-e-o-boot-sob-csp.md) locked by number now pass 4.5:1 and are asserted as FLOORS; the primary-button exception is gone without moving the brand hue. Color outside tokens moves into tokens: one checked copy of fallbacks for Mermaid/xterm/minimap, three agent tokens per theme, `--overlay`, and a test that fails on any `var(--x)` nobody declares |
 | [0210](0210-animacao-de-texto-com-motion.md) | Text animation with `motion` (AT-401): the AI Elements Shimmer, adapted to CSS Modules and tokens (`--text-secondary` base, `--text-primary` sweep), lives in `components/ui/Shimmer.tsx` — the only importer of `motion`, loaded through `LazyMotion` + `domAnimation` in its own `vendor-motion` chunk (26.5 kB gzip, outside the initial load); reduced motion keeps the text static. |
+| [0211](0211-uma-navegacao-so-a-sidebar-absorve-o-trilho.md) | One navigation only (AT-404): the project's vertical rail (ADR 0126, `ProjectRail.tsx`) is removed and the sidebar's per-project list (`AbasDoProjeto`) absorbs everything it had — groups, active tab, the five SEPARATE counters (same `useContagensDoProjeto` hook as the frame, no new request), keyboard, a flyout when collapsed and the drawer on phones. Code tab chrome drops from 492px to 312px (110px collapsed). |
 
 ## Operation, deploy and installation {#tema-operacao}
 
@@ -346,7 +347,7 @@ How documentation is generated, verified and published.
 
 - **One file per decision**, at `docs/adr/NNNN-short-title.md`, with
   sequential 4-digit numbering. **No number reuse**, not even when an ADR
-  is superseded — the next one is **0211**.
+  is superseded — the next one is **0212**.
 - **One theme per decision**, chosen by whoever writes the ADR, in the same
   PR: a line in `docs/adr/temas.yml` and the index row under that theme's
   section, in numeric order. The reviewer confirms it. A new theme is a

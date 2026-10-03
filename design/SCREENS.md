@@ -84,12 +84,19 @@ piso AA medido em `apps/web/src/lib/contraste.test.ts`.
 (3,88:1), e o selo é texto de 10px.
 
 **A régua horizontal de abas não existe mais** (ADR 0126). A navegação do
-Projeto é um TRILHO VERTICAL (`apps/web/src/routes/ProjectRail.tsx`), com os
+Projeto era um TRILHO VERTICAL (`ProjectRail.tsx`, removido no ADR 0211), com os
 três grupos abertos ao mesmo tempo — 12 abas em 3 grupos não cabiam numa barra
 desenhada para meia dúzia de itens. A geometria é a do trilho da aba Código
 (faixa `--surface-1`, item de 32px em `--radius-sm`, ativo tingido a 12% de
 `--accent`), com uma divergência declarada: 180px de largura em vez de 48px,
 porque este trilho carrega rótulo e cabeçalho de grupo, e não ícone.
+
+**O trilho saiu no ADR 0211** (AT-404): a navegação do projeto é a lista do
+projeto na SIDEBAR (`apps/web/src/routes/AbasDoProjeto.tsx`), com os mesmos
+grupos, a mesma geometria de item (28px, `--fs-sm`, ativo em `--accent-soft`) e
+os cinco contadores separados. Recolhida, o projeto aberto abre um flyout com as
+mesmas abas; no telefone, elas moram na gaveta. A moldura da aba Código caiu de
+492px para 312px (110px recolhida).
 
 A pendência que este parágrafo registrava — respiro por aba, intervalo e
 divisória ajustados por CSS do CHAMADOR (`ProjectPage.module.css`) em vez de

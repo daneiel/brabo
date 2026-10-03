@@ -135,7 +135,7 @@ diferentes.
 var(--fs-sm)`) para linha de tabela, painel lateral e barra de idioma; `icon` é
 o **botão de ícone** do handoff — quadrado (36px, ou 28px com `sm`), raio
 `--r-sm` (7px), nome acessível por `aria-label`. Botão cru (`<button>` com
-módulo próprio) fica só onde o elemento NÃO é uma ação de botão: aba do trilho
+módulo próprio) fica só onde o elemento NÃO é uma ação de botão: aba do projeto
 (`role="tab"`), cabeçalho de disclosure, item de navegação, título editável.
 
 ## Card, Chip e Badge (AT-286, AT-287)
