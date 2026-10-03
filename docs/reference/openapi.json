@@ -1327,6 +1327,62 @@
         ]
       }
     },
+    "/internal/sessions/{sessionId}/anamnese-window": {
+      "post": {
+        "description": "Records an anamnese run with zero profiles so the next round starts at windowTo — without it, the window never advanced and every tick paid for a new round over the same material.",
+        "operationId": "InternalSessionsController_anamneseWindow",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CloseAnamneseWindowInternalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecordProficiencyResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body."
+          },
+          "403": {
+            "description": "Service token missing or different from the shared one."
+          },
+          "404": {
+            "description": "Session, project, or resource not found."
+          }
+        },
+        "security": [
+          {
+            "service-token": []
+          }
+        ],
+        "summary": "Closes the Anamnese window of a round that emitted no profile",
+        "tags": [
+          "internal"
+        ]
+      }
+    },
     "/internal/sessions/{sessionId}/c4-diagram": {
       "post": {
         "description": "The artifact IS the `artifact.c4_diagram` event: immutable, versioned, and with an author, alongside `artifact.module_map`. Requires a current module_map — without one there is no Container level to draw (400).",
@@ -14698,6 +14754,36 @@
           "projectId",
           "module",
           "agentId"
+        ]
+      },
+      "CloseAnamneseWindowInternalDto": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "01JC4Z0000PROJETO0000000001"
+          },
+          "windowFrom": {
+            "type": "string",
+            "example": "2026-07-27T12:00:00.000Z",
+            "format": "date-time"
+          },
+          "windowTo": {
+            "type": "string",
+            "example": "2026-07-27T12:15:00.000Z",
+            "format": "date-time"
+          },
+          "eventCount": {
+            "type": "number",
+            "example": 12
+          }
+        },
+        "required": [
+          "projectId",
+          "windowFrom",
+          "windowTo",
+          "eventCount"
         ]
       },
       "CodeBlameLineResponseDto": {

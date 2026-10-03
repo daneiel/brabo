@@ -88,6 +88,14 @@ defmodule Engine.Gates.QaLeadServer do
     {:ok, %{project_id: project_id, pendente: nil}}
   end
 
+  # RN-722: o `GateRescuer` pergunta por TASK. Em voo aqui = suspensa
+  # esperando decisão; a que está RODANDO não responde (o servidor está dentro
+  # do `handle_cast`), e o resgate trata o silêncio como "vivo".
+  @impl true
+  def handle_call({:em_voo?, task_id}, _from, state) do
+    {:reply, match?(%{task_id: ^task_id}, state.pendente), state}
+  end
+
   @impl true
   def handle_cast({:run, task_id}, state) do
     case DevAgentState.find_by_task_id(state.project_id, task_id) do

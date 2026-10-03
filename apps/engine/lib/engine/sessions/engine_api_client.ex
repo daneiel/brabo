@@ -448,6 +448,18 @@ defmodule Engine.Sessions.EngineApiClient do
               {:ok, map()} | {:error, term()}
 
   @doc """
+  Fecha a janela de uma rodada da Anamnese que encerrou SEM perfil
+  (`skip_proficiency`): grava `anamnese_runs` com zero perfis, para a próxima
+  rodada começar em `windowTo` (RN-722).
+  """
+  @callback close_anamnese_window(
+              project_id :: String.t(),
+              session_id :: String.t(),
+              payload :: map()
+            ) ::
+              {:ok, map()} | {:error, term()}
+
+  @doc """
   Dispara o sync de catálogo de modelos na api (Fase 9c).
 
   Não leva projeto nem sessão: o catálogo é global e a chamada não roda em
@@ -886,6 +898,9 @@ defmodule Engine.Sessions.EngineApiClient do
 
   def record_proficiency(project_id, session_id, payload),
     do: impl().record_proficiency(project_id, session_id, payload)
+
+  def close_anamnese_window(project_id, session_id, payload),
+    do: impl().close_anamnese_window(project_id, session_id, payload)
 
   def propose_instruction_patch(project_id, session_id, payload),
     do: impl().propose_instruction_patch(project_id, session_id, payload)
@@ -1515,6 +1530,14 @@ defmodule Engine.Sessions.EngineApiClient.Live do
   def record_proficiency(project_id, session_id, payload) do
     post_returning(
       "/internal/sessions/#{session_id}/proficiency",
+      Map.put(payload, :projectId, project_id)
+    )
+  end
+
+  @impl true
+  def close_anamnese_window(project_id, session_id, payload) do
+    post_returning(
+      "/internal/sessions/#{session_id}/anamnese-window",
       Map.put(payload, :projectId, project_id)
     )
   end

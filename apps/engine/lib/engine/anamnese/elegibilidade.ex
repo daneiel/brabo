@@ -28,6 +28,12 @@ defmodule Engine.Anamnese.Elegibilidade do
   (`decidedBy`). É a MESMA janela que o prompt leva — evento omitido pelo
   corte não conta, porque o modelo não poderia citá-lo.
 
+  Desde a RN-722 (decisão do dono, 02/10) "ao menos UMA" virou ao menos
+  `min_interacoes_proprias/0` (default 5) interações próprias NOVAS — e a
+  janela já começa no fim da última tentativa (concluída ou encerrada sem
+  perfil), então "na janela" é "desde a última tentativa". Abaixo disso,
+  nenhuma chamada ao LLM nem ao RAG.
+
   Hipótese aceita na fila NÃO cria sujeito: ela forçava a rodada, e a rodada
   sem sujeito foi exatamente o que gastou no uso real. O destino da hipótese
   aceita, desde a RN-680, é o FATO do perfil no grafo, que não depende de
@@ -48,13 +54,15 @@ defmodule Engine.Anamnese.Elegibilidade do
       {:sem_sujeito, :nenhum_membro,
        "nenhum membro efetivo do projeto fora do opt-out da Anamnese"}
     else
-      ativos = interlocutores(events, decisions)
+      contagem = interlocutores(events, decisions)
+      minimo = min_interacoes_proprias()
 
-      case Enum.filter(members, &MapSet.member?(ativos, Map.get(&1, "userId"))) do
+      case Enum.filter(members, &(Map.get(contagem, Map.get(&1, "userId"), 0) >= minimo)) do
         [] ->
           {:sem_sujeito, :nenhuma_interacao_propria,
-           "#{length(members)} membro(s) elegível(is), nenhum com interação própria " <>
-             "nos #{length(events)} evento(s) e #{length(decisions)} decisão(ões) da janela"}
+           "#{length(members)} membro(s) elegível(is), nenhum com #{minimo}+ interações " <>
+             "próprias nos #{length(events)} evento(s) e #{length(decisions)} decisão(ões) " <>
+             "da janela (RN-722)"}
 
         sujeitos ->
           {:ok, sujeitos}
@@ -72,6 +80,10 @@ defmodule Engine.Anamnese.Elegibilidade do
 
     (de_eventos ++ de_decisoes)
     |> Enum.filter(&is_binary/1)
-    |> MapSet.new()
+    |> Enum.frequencies()
   end
+
+  @doc "Mínimo de interações próprias novas para alguém ser sujeito (RN-722)."
+  def min_interacoes_proprias,
+    do: Application.get_env(:engine, :anamnese_min_interacoes_proprias, 5)
 end

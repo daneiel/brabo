@@ -2992,7 +2992,7 @@ criados:** o destino que já tem oferta pendente ou já está ativo no projeto n
 recebe outra, e isso não é falha.
 
 - **Onde:** `apps/engine/lib/engine/gates/secops_agent_server.ex:55`
-  (`@appsec_handoff_targets`), `:326` (`criar_handoffs_appsec/3`)
+  (`@appsec_handoff_targets`), `:332` (`criar_handoffs_appsec/3`)
 - **Teste:** `apps/engine/test/engine/gates/secops_agent_server_test.exs`
   ("run_design: threat model concluído emite artifact.threat_model e cria
   os TRÊS handoffs")
@@ -14420,6 +14420,8 @@ contexto vivo tinha (a cauda inteira, mesmo o que já tinha sido compactado); o
   subtração), `:274` (o resumo do começo), `:294` (a compactação), `:328` (a
   abertura); `apps/engine/lib/engine/harness/context_manager.ex:138` (o resumo
   gravado); `apps/engine/lib/engine/sessions/engine_api_client.ex:1066`
+
+  gravado); `apps/engine/lib/engine/sessions/engine_api_client.ex:1065`
   (`list_events/3`); os seis `init/1` —
   `apps/engine/lib/engine/agents/criativo_server.ex:89`, `po_server.ex:93`,
   `arquiteto_server.ex:87`, `dev_lead_server.ex:132`, `ux_designer_server.ex:85`,
@@ -14629,6 +14631,8 @@ desde a Fase 4a —, e o que muda é a latência máxima das escritas sem aviso.
 
 - **Código:** `apps/engine/lib/engine/sessions/engine_api_client.ex:581`,
   `:607`, `:630`, `:954` (`avisar_canal`);
+
+  `:607`, `:630`, `:953` (`avisar_canal`);
   `apps/engine/lib/engine/sessions/live_broadcast.ex` (`event_appended/3`);
   `apps/engine/lib/engine_web/controllers/session_command_controller.ex:46`
   (`event_appended`, a rota do aviso da api);
@@ -14811,6 +14815,9 @@ fechada seguem mostrando a mensagem da api.
   (`classify`); `apps/engine/lib/engine/psychologist/termination_classifier.ex:46`;
   `apps/engine/lib/engine/sessions/engine_api_client.ex:1032`
   (`narrar_recusa_de_sessao_encerrada`), `:1342` (`pendencia_da_resposta`);
+
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1031`
+  (`narrar_recusa_de_sessao_encerrada`), `:1333` (`pendencia_da_resposta`);
   `apps/engine/lib/engine/agents/conversacionais.ex:49` (`parar_da_sessao`),
   `:69` (`parar_da_sessao_no_cluster`);
   `apps/engine/lib/engine/agents/turno_assincrono.ex:411` (`abandonar`);
@@ -15800,6 +15807,8 @@ pacote da porta de Docker. Nada muda na contenção do broker ([ADR
   `:270` (`erroDeTransporte`);
   `apps/api/src/application/ports/container-broker.port.ts:89` (`MotivoDeBrokerIndisponivel`);
   `apps/engine/lib/engine/sessions/engine_api_client.ex:1798` (`teto_do_container_exec_ms`)
+
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1797` (`teto_do_container_exec_ms`)
 - **Teste:** `apps/api/test/infrastructure/http-clients/container-broker.client.spec.ts:286`
   (a reprodução, contra um broker `node:http` que demora 6 s), `:182` (o
   teto de cada operação no `AbortSignal`), `:204` e `:229` (`teto-excedido`
@@ -15884,6 +15893,8 @@ continua vindo da decisão do Arquiteto, e `pull` não é operação nova do bro
   `:175` (`CHAMADAS_DE_CONTROLE_NO_START`),
   `:228` (`TETO_DO_PROPOSE_ACTION_DE_CONTAINER_NO_ENGINE_MS`);
   `apps/engine/lib/engine/sessions/engine_api_client.ex:1742` (`opcoes_do_propose_action`),
+
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1741` (`opcoes_do_propose_action`),
   `:1649` (`@teto_do_propose_action_de_container_ms`);
   `apps/engine/lib/engine/runners/runner_router.ex:52` (`@timeout_do_start_ms`)
 - **Teste:** `packages/docker-port/src/docker-cli.spec.ts:425` (describe da
@@ -16830,6 +16841,9 @@ especificação da AT-081 e o mecanismo verificado por provider na AT-161).
   (`idioma_do_projeto`);
   `apps/engine/lib/engine/sessions/engine_api_client.ex:632`
   (`IdiomaDaResposta`), `:725` (`IdiomaDaResposta`);
+
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:633`
+  (`IdiomaDaResposta`), `:726` (`IdiomaDaResposta`);
   `apps/engine/lib/engine/projects/project.ex:64` (`idioma`);
   `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:515`
   (`idioma_da_resposta`);
@@ -16928,6 +16942,9 @@ AT-167 mede; os tokenizadores do DeepSeek e da Anthropic seguem não medidos.
   `:260` (`idioma_do_projeto_para_o_artefato`);
   `apps/engine/lib/engine/sessions/engine_api_client.ex:632`
   (`IdiomaDaResposta`), `:725` (`IdiomaDaResposta`);
+
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:633`
+  (`IdiomaDaResposta`), `:726` (`IdiomaDaResposta`);
   `apps/web/src/routes/settings/ProjectLanguageSection.tsx`
 - **Teste:** `apps/engine/test/engine/harness/idioma_da_resposta_test.exs:157`
   (idiomas diferentes: a orientação diz os dois), `:168` (iguais: só um),
@@ -17192,6 +17209,9 @@ endpoint é ALPHA e o smoke manual
   `:112` (`custo_micros`), `:123` (`repetir_com_catalogo_inteiro?`), `:146`
   (`mesclar_repeticao`); `apps/engine/lib/engine/sessions/engine_api_client.ex:647`
   (`llm_turn`), `:719` (`llm_turn_stream`);
+
+  (`mesclar_repeticao`); `apps/engine/lib/engine/sessions/engine_api_client.ex:648`
+  (`llm_turn`), `:720` (`llm_turn_stream`);
   `apps/engine/lib/engine/harness/tool_loop.ex:132` (o custo do Jev no orçamento
   local)
 - **Teste:** `apps/api/test/domain/llm/tool-router.spec.ts:25` (`questions` é
@@ -17335,7 +17355,7 @@ inscrição no Wake (lacuna aceita do ADR 0086); o `GateRescuer` reinicia a áre
 inteira (ADR 0067), não retoma o `ctx`. Esta regra não muda o ADR 0090 (o
 momento do QA-estratégia) nem o teto de iterações do subagente.
 
-- **Código:** `apps/engine/lib/engine/gates/qa_lead_server.ex:104`
+- **Código:** `apps/engine/lib/engine/gates/qa_lead_server.ex:112`
   (`handle_info`), `:195` (`tratar_resultado`), `:230` (resultado desconhecido)
 - **Testes:** `apps/engine/test/engine/gates/qa_lead_server_test.exs:325`
   (segunda suspensão na retomada: fica suspenso, não decide nada, e a segunda
@@ -17893,9 +17913,11 @@ vault por decisão do dono; [ADR 0182](adr/0182-ciclo-de-vida-do-handoff.md)).
 3. **O artefato fica.** O `artifact.threat_model` é gravado ANTES e de qualquer
    jeito; o que deixa de nascer é a oferta repetida.
 
-- **Onde:** `apps/engine/lib/engine/gates/secops_agent_server.ex:326`
+- **Onde:** `apps/engine/lib/engine/gates/secops_agent_server.ex:332`
   (`criar_handoffs_appsec/3`);
   `apps/engine/lib/engine/sessions/engine_api_client.ex:1131`
+
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1130`
   (`create_handoff_if_absent`);
   `apps/api/src/domain/sessions/ciclo-de-vida-do-handoff.ts:71`
   (`decidirOferta`)
@@ -19505,9 +19527,9 @@ saíram, e `artifact.plano_de_teste` passa a exigir `taskId`. Declarado e não
 decidido aqui: se os critérios executáveis do plano devem virar linhas
 OBRIGATÓRIAS da `coverageMatrix` (e portanto reprovar entrega).
 
-- **Onde:** `apps/engine/lib/engine/gates/qa_lead_server.ex:144` (`plano_de_teste_da_entrega`),
-  `:520` (`plano_de_teste_da_entrega`), `:544` (`plano_ja_emitido`),
-  `:579` (`arquivos_alterados`);
+- **Onde:** `apps/engine/lib/engine/gates/qa_lead_server.ex:152` (`plano_de_teste_da_entrega`),
+  `:528` (`plano_de_teste_da_entrega`), `:552` (`plano_ja_emitido`),
+  `:587` (`arquivos_alterados`);
   `apps/engine/lib/engine/gates/qa_estrategia_agent.ex:86` (`run`),
   `:104` (`token_budget_micros`), `:179` (`descrever_arquivos`);
   `apps/engine/lib/engine/gates/qa_automacao_agent.ex:166` (`com_o_plano`);
@@ -19844,9 +19866,9 @@ sem destino. Ver o [ADR 0196](adr/0196-anamnese-religada-com-sujeito-e-fato-do-p
    nos três composes; `START_ANAMNESE` não muda (o de produção segue `false`,
    divergência já declarada). O Psicólogo segue pausado.
 
-- **Código:** `apps/engine/lib/engine/anamnese/elegibilidade.ex:46` (`avaliar`);
+- **Código:** `apps/engine/lib/engine/anamnese/elegibilidade.ex:52` (`avaliar`);
   `apps/engine/lib/engine/workers/anamnese_worker.ex:63` (`maybe_analyze`),
-  `:82` (`narrar_sem_sujeito`);
+  `:97` (`narrar_sem_sujeito`);
   `apps/api/src/domain/iam/membros-efetivos.ts:16` (`membrosEfetivos`);
   `apps/api/src/infrastructure/persistence/drizzle/project.repository.ts:209` (`listEffectiveMembers`);
   `apps/api/src/application/use-cases/execution/accept-hypothesis.use-case.ts:75` (`fatoDoPerfil`);
@@ -20305,7 +20327,7 @@ Perfil de proficiência, sem id cru. Nenhum marcador "perfil atualizado" entra
 no fio: fica de fora até alguém pedir.
 
 - **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:124` (`loop`);
-  `apps/engine/lib/engine/workers/anamnese_worker.ex:175` (`build_ctx`);
+  `apps/engine/lib/engine/workers/anamnese_worker.ex:157` (`build_ctx`);
   `apps/web/src/routes/session-timeline-montagem.tsx:103` (`ehDaAnamnese`)
 - **Teste:** `apps/engine/test/engine/workers/anamnese_worker_test.exs:253`
   (o texto sai `anamnese.analysis`; `agent.response` nunca é gravado — caso de
@@ -20627,6 +20649,8 @@ Junto, o fechamento deixa de dizer que parear uma pasta pela tela do projeto
   só" não virou artefato e o Arquiteto criou três módulos.
 - **Onde:** `apps/engine/lib/engine/harness/fluxo_do_time.ex:107` (`texto`),
   `:97` (`anexar`), `apps/engine/lib/engine/sessions/engine_api_client.ex:647`
+
+  `:97` (`anexar`), `apps/engine/lib/engine/sessions/engine_api_client.ex:648`
   (`llm_turn`), `apps/engine/lib/engine/harness/agents.ex:23` (`identity`),
   `apps/engine/lib/engine/agents/arquiteto_server.ex:367` (`build_kickoff`)
 - **Teste:** `apps/engine/test/engine/harness/fluxo_do_time_test.exs`
@@ -20846,9 +20870,9 @@ Junto, o fechamento deixa de dizer que parear uma pasta pela tela do projeto
   já é este erro com o mesmo `reason`, fica só a linha de Logger do servidor.
   Motivo diferente, um veredito no meio ou leitura que falha gravam de novo; o
   `agent.error` passa a levar `taskId`.
-- **Onde:** `apps/engine/lib/engine/gates/secops_agent_server.ex:110`
-  (`run_secops`), `apps/engine/lib/engine/gates/secops_agent_server.ex:157`
-  (`sast_nao_rodou`), `apps/engine/lib/engine/gates/secops_agent_server.ex:168`
+- **Onde:** `apps/engine/lib/engine/gates/secops_agent_server.ex:116`
+  (`run_secops`), `apps/engine/lib/engine/gates/secops_agent_server.ex:163`
+  (`sast_nao_rodou`), `apps/engine/lib/engine/gates/secops_agent_server.ex:174`
   (`erro_ja_registrado?`)
 - **Teste:** `apps/engine/test/engine/gates/secops_agent_server_test.exs`
   ("sem achados (gitleaks e semgrep limpos): approved"; casos de falha:
@@ -21092,7 +21116,7 @@ decisão, fechados juntos:
   sem hesitar" como arquitetura avançada.
 - **Onde:** `apps/api/src/domain/anamnese/proficiency-validation.ts:53`
   (`ehEvidenciaObservadaDaPessoa`), `apps/api/src/domain/anamnese/proficiency-validation.ts:74`
-  (`validateProficiencyBatch`), `apps/api/src/application/use-cases/anamnese/record-proficiency.use-case.ts:155`
+  (`validateProficiencyBatch`), `apps/api/src/application/use-cases/anamnese/record-proficiency.use-case.ts:189`
   (`resolveKnownEventIds`), regras no kickoff (`prompts/anamnese-kickoff.md`
   v3 e o fallback inline de `anamnese_worker.ex`)
 - **Teste:** `apps/api/test/domain/anamnese/proficiency-validation.spec.ts`
@@ -21336,3 +21360,72 @@ O kickoff do PO diz as três coisas.
   FERRAMENTA. Se a duplicata semântica avisou no caso real da loja-teste-2 não
   foi medido nesta mudança (o banco daquela execução não foi lido).
 - **Origem:** AT-388, AT-389
+
+## A Anamnese não paga duas vezes pela mesma janela, e o resgate de gate não reinicia ciclo que espera alguém (RN-722)
+
+### RN-722 — A Anamnese fecha a janela que avaliou e só roda com interação nova; o resgate de gate pergunta pela task, respeita a decisão humana pendente e estaciona o ciclo velho {#rn-722}
+
+- **Regra (Anamnese):** (1) a rodada que AVALIOU a janela e encerrou sem
+  perfil (`skip_proficiency`) grava `anamnese_runs` com zero perfis, e a
+  próxima começa em `window_to` — revisa a cláusula da RN-680/do moduledoc
+  "rodada que não conclui não grava": rodada que FALHA (teto, orçamento,
+  provider) continua sem gravar, e a que nem chega ao LLM (sem sujeito,
+  triagem, teto diário) não fecha nada; (2) os eventos que a própria Anamnese
+  escreve (`anamnese.*` e todo evento de ator `agent`/`anamnese`) e os de
+  ator `system` ficam fora da janela e da contagem da triagem; (3) decisão do
+  dono de 02/10: sujeito é quem tem ao menos **5** interações próprias NOVAS
+  (eventos de `actor_kind: "user"` mais decisões, na janela que já começa no
+  fim da última tentativa) — revisa o "ao menos UMA" da RN-680 —, e o projeto
+  tem no máximo **4** rodadas pagas por dia UTC (concluída, falha ou
+  `run_skipped` escrito pelo modelo; o pulo sem sujeito não conta). Abaixo de
+  qualquer dos dois, nenhuma chamada ao LLM nem ao RAG; o motivo vai ao log e,
+  só na rodada pedida à mão, a `anamnese.run_skipped` (`causa:
+  "teto_diario"` ou `"sem_sujeito_elegivel"`).
+- **Regra (resgate de gate, revisa a RN-140):** o `GateRescuer` (a) considera
+  vivo o ciclo cuja TASK está em voo no lead, perguntando a ele
+  (`{:em_voo?, task_id}`), e não mais o processo do projeto — lead ocioso não
+  segura o resgate; lead ocupado demais para responder conta como vivo; (b)
+  não reinicia ciclo cuja sessão tem `proposed_action` PENDENTE de ator do
+  gate (`qa*`, `secops*`, `appsec`) — só registra no log; (c) decisão do dono
+  de 02/10: ciclo parado há mais de 2 h desde a ÚLTIMA ATIVIDADE (`updated_at`)
+  é ESTACIONADO (`parked_at`) com `gate.rescue_parked` no log da sessão
+  (task, gate, idade, motivo), nem no boot nem no tick é retomado, e retomar
+  exige gesto humano (`GateRescuer.retomar_estacionado/3`).
+- **Onde:** `apps/engine/lib/engine/workers/anamnese_worker.ex:189`
+  (`fechar_janela`), `apps/engine/lib/engine/workers/anamnese_worker.ex:104`
+  (`dentro_do_teto_diario?`),
+  `apps/engine/lib/engine/session_events/event.ex:194`
+  (`project_window_query`), `apps/engine/lib/engine/session_events/event.ex:177`
+  (`count_anamnese_rounds_since`),
+  `apps/engine/lib/engine/anamnese/elegibilidade.ex:87`
+  (`min_interacoes_proprias`),
+  `apps/api/src/application/use-cases/anamnese/record-proficiency.use-case.ts:160`
+  (`fecharJanelaSemPerfil`), `apps/engine/lib/engine/gates/gate_rescuer.ex:243`
+  (`task_em_voo?`), `apps/engine/lib/engine/gates/gate_rescuer.ex:269`
+  (`aguardando_humano?`), `apps/engine/lib/engine/gates/gate_rescuer.ex:190`
+  (`estacionar`), `apps/engine/lib/engine/gates/gate_rescuer.ex:227`
+  (`retomar_estacionado`), `apps/engine/lib/engine/gates/qa_lead_server.ex:95`
+  (`handle_call`)
+- **Teste:** `apps/engine/test/engine/workers/anamnese_worker_test.exs`
+  (describe "a janela avaliada fecha (RN-722)": "skip_proficiency grava a
+  rodada vazia; a segunda começa em window_to e, sem interação nova, não chama
+  o LLM"; falhas: "falha ao fechar a janela não vira falha da rodada", "rodada
+  que FALHA não fecha a janela"; describe "piso de interações e teto diário
+  (RN-722)"), `apps/engine/test/engine/anamnese/elegibilidade_test.exs`,
+  `apps/engine/test/engine/session_events/event_window_test.exs` ("dez
+  eventos da Anamnese sozinhos não passam a triagem"),
+  `apps/engine/test/engine/gates/gate_rescuer_test.exs` ("lead do projeto vivo
+  e OCIOSO não segura o resgate de uma task perdida", "ciclo com ação PENDENTE
+  de ator do gate espera o humano", "ação pendente de OUTRO ator não segura o
+  resgate", "ciclo parado há mais de 2 h é ESTACIONADO", "ciclo parado há
+  MENOS de 2 h segue sendo resgatado"),
+  `apps/api/test/application/use-cases/anamnese/record-proficiency.use-case.spec.ts`
+  (describe "fecharJanelaSemPerfil (RN-722)")
+- **Lacuna declarada:** retomar um ciclo estacionado não tem tela nem rota —
+  é chamada de operador (`bin/engine rpc`); o mínimo proposto é uma rota
+  interna e um botão no evento `gate.rescue_parked`. A pendência humana é lida
+  pela SESSÃO do ciclo (a `proposed_action` não tem `task_id`)
+  ([ADR 0207](adr/0207-ciclo-de-gate-velho-estaciona.md)).
+- **Origem:** AT-391 (uso real de 02/10: ~US$ 8,90 de Anamnese num dia sem
+  ninguém pedir; ciclo de gate reiniciado com ação pendente e outro 8 h sem
+  resgate), decisões do dono de 02/10

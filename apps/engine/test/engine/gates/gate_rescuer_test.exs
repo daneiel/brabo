@@ -19,6 +19,7 @@ defmodule Engine.Gates.GateRescuerTest do
   # durável representa o ponto do crash, e o processo real morto é o que
   # prova que a recuperação não depende de estado em memória.
   use Engine.DataCase, async: false
+  import Ecto.Query, only: [from: 2]
 
   alias Engine.Dev.{DevAgentState, DevAgentSupervisor}
   alias Engine.Gates.{FakeGateDispatcher, GateRescuer, GateState, QaLeadSupervisor}
@@ -54,6 +55,79 @@ defmodule Engine.Gates.GateRescuerTest do
     container_running!(project_id)
 
     %{project_id: project_id, session_id: Ecto.UUID.generate()}
+  end
+
+  defp sessao_real!(project_id) do
+    session_id = Ecto.UUID.generate()
+    agora = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    Engine.Repo.insert_all(
+      "projects",
+      [
+        %{
+          id: Ecto.UUID.dump!(project_id),
+          name: "cobaia",
+          slug: "cobaia-#{System.unique_integer([:positive])}",
+          created_at: agora,
+          updated_at: agora
+        }
+      ],
+      on_conflict: :nothing
+    )
+
+    Engine.Repo.insert_all("sessions", [
+      %{
+        id: Ecto.UUID.dump!(session_id),
+        project_id: Ecto.UUID.dump!(project_id),
+        created_at: agora
+      }
+    ])
+
+    session_id
+  end
+
+  defp dev_na_task!(project_id, session_id, task_id) do
+    DevAgentState.upsert!(%{
+      project_id: project_id,
+      agent_id: "dev-api",
+      module: "api",
+      session_id: session_id,
+      task_id: task_id,
+      worktree_path: pasta_temporaria_propria!(),
+      status: "awaiting_gate"
+    })
+  end
+
+  defp linha_velha!(project_id, task_id, session_id, idade_s) do
+    GateState.upsert!(%{
+      project_id: project_id,
+      task_id: task_id,
+      gate: "qa",
+      session_id: session_id,
+      step: "in_progress"
+    })
+
+    em = DateTime.add(DateTime.utc_now(), -idade_s, :second)
+
+    Engine.Repo.update_all(
+      from(s in GateState, where: s.project_id == ^project_id and s.task_id == ^task_id),
+      set: [updated_at: em, inserted_at: em]
+    )
+  end
+
+  defp acao_pendente!(session_id, ator) do
+    Engine.Repo.insert_all("proposed_actions", [
+      %{
+        id: Ecto.UUID.dump!(Ecto.UUID.generate()),
+        session_id: Ecto.UUID.dump!(session_id),
+        action_type: "terminal",
+        status: "pending",
+        resolved_policy: "require_approval",
+        actor_kind: "agent",
+        actor_id: ator,
+        payload: %{}
+      }
+    ])
   end
 
   defp wait_gate_state_gone(project_id, task_id, gate, tentativas \\ 200) do
@@ -153,6 +227,45 @@ defmodule Engine.Gates.GateRescuerTest do
         status: "awaiting_gate"
       })
 
+      {:ok, pid, :started} = QaLeadSupervisor.start_agent(project_id)
+
+      # RN-722: vivo é por TASK — o lead tem ESTA task em voo (suspensa).
+      :sys.replace_state(pid, &%{&1 | pendente: %{task_id: task_id}})
+
+      GateState.upsert!(%{
+        project_id: project_id,
+        task_id: task_id,
+        gate: "qa",
+        session_id: session_id,
+        step: "in_progress"
+      })
+
+      # Staleness zerada, mas a task continua em voo no lead VIVO deste nó —
+      # é a guarda que impede o resgate de perturbar um ciclo que só está
+      # lento.
+      Application.put_env(:engine, :gate_rescue_stale_after_seconds, -1)
+
+      assert :ok = GateRescuer.run()
+
+      refute_received {:gate_dispatch, :qa, _, _}
+      assert GateState.get(project_id, task_id, "qa") != nil
+    end
+
+    test "lead do projeto vivo e OCIOSO não segura o resgate de uma task perdida (RN-722)",
+         %{project_id: project_id, session_id: session_id} do
+      Application.put_env(:engine, :gate_dispatcher, FakeGateDispatcher)
+      task_id = "task-#{Ecto.UUID.generate()}"
+
+      DevAgentState.upsert!(%{
+        project_id: project_id,
+        agent_id: "dev-api",
+        module: "api",
+        session_id: session_id,
+        task_id: task_id,
+        worktree_path: pasta_temporaria_propria!(),
+        status: "awaiting_gate"
+      })
+
       {:ok, _pid, :started} = QaLeadSupervisor.start_agent(project_id)
 
       GateState.upsert!(%{
@@ -163,15 +276,101 @@ defmodule Engine.Gates.GateRescuerTest do
         step: "in_progress"
       })
 
-      # Staleness zerada, mas o processo continua VIVO neste nó — o
-      # `Registry.lookup` local é a guarda que impede o resgate de perturbar
-      # um ciclo que só está lento.
+      Application.put_env(:engine, :gate_rescue_stale_after_seconds, -1)
+
+      assert :ok = GateRescuer.run()
+
+      assert_received {:gate_dispatch, :qa, ^project_id, ^task_id}
+    end
+
+    test "ciclo com ação PENDENTE de ator do gate espera o humano: não é redespachado (RN-722)",
+         %{project_id: project_id} do
+      Application.put_env(:engine, :gate_dispatcher, FakeGateDispatcher)
+      session_id = sessao_real!(project_id)
+      task_id = "task-#{Ecto.UUID.generate()}"
+      dev_na_task!(project_id, session_id, task_id)
+      acao_pendente!(session_id, "qa-automacao")
+
+      GateState.upsert!(%{
+        project_id: project_id,
+        task_id: task_id,
+        gate: "qa",
+        session_id: session_id,
+        step: "in_progress"
+      })
+
       Application.put_env(:engine, :gate_rescue_stale_after_seconds, -1)
 
       assert :ok = GateRescuer.run()
 
       refute_received {:gate_dispatch, :qa, _, _}
       assert GateState.get(project_id, task_id, "qa") != nil
+    end
+
+    test "ação pendente de OUTRO ator não segura o resgate (RN-722)",
+         %{project_id: project_id} do
+      Application.put_env(:engine, :gate_dispatcher, FakeGateDispatcher)
+      session_id = sessao_real!(project_id)
+      task_id = "task-#{Ecto.UUID.generate()}"
+      dev_na_task!(project_id, session_id, task_id)
+      acao_pendente!(session_id, "dev-api")
+
+      GateState.upsert!(%{
+        project_id: project_id,
+        task_id: task_id,
+        gate: "qa",
+        session_id: session_id,
+        step: "in_progress"
+      })
+
+      Application.put_env(:engine, :gate_rescue_stale_after_seconds, -1)
+
+      assert :ok = GateRescuer.run()
+
+      assert_received {:gate_dispatch, :qa, ^project_id, ^task_id}
+    end
+
+    test "ciclo parado há mais de 2 h é ESTACIONADO com evento, não reiniciado (ADR 0207)",
+         %{project_id: project_id, session_id: session_id} do
+      Application.put_env(:engine, :gate_dispatcher, FakeGateDispatcher)
+      task_id = "task-#{Ecto.UUID.generate()}"
+      dev_na_task!(project_id, session_id, task_id)
+      linha_velha!(project_id, task_id, session_id, 3 * 3600)
+
+      Application.put_env(:engine, :gate_rescue_stale_after_seconds, -1)
+      assert :ok = GateRescuer.run()
+
+      refute_received {:gate_dispatch, :qa, _, _}
+
+      assert_received {:event_appended, ^project_id, ^session_id,
+                       %{type: "gate.rescue_parked", payload: %{taskId: ^task_id, gate: "qa"}}}
+
+      assert %{parked_at: %DateTime{}} = GateState.get(project_id, task_id, "qa")
+
+      # Estacionada: a próxima varredura (e o boot) não a vê mais.
+      assert :ok = GateRescuer.run()
+      refute_received {:event_appended, _, _, %{type: "gate.rescue_parked"}}
+
+      # O gesto humano retoma.
+      assert :ok = GateRescuer.retomar_estacionado(project_id, task_id, "qa")
+      assert_received {:gate_dispatch, :qa, ^project_id, ^task_id}
+    end
+
+    test "ciclo parado há MENOS de 2 h segue sendo resgatado; retomar o que não está estacionado é recusado",
+         %{project_id: project_id, session_id: session_id} do
+      Application.put_env(:engine, :gate_dispatcher, FakeGateDispatcher)
+      task_id = "task-#{Ecto.UUID.generate()}"
+      dev_na_task!(project_id, session_id, task_id)
+      linha_velha!(project_id, task_id, session_id, 3600)
+
+      assert {:error, :nao_estacionado} =
+               GateRescuer.retomar_estacionado(project_id, task_id, "qa")
+
+      Application.put_env(:engine, :gate_rescue_stale_after_seconds, -1)
+      assert :ok = GateRescuer.run()
+
+      assert_received {:gate_dispatch, :qa, ^project_id, ^task_id}
+      refute_received {:event_appended, _, _, %{type: "gate.rescue_parked"}}
     end
 
     test "linha recente (não parada): o resgate não toca", %{
