@@ -251,5 +251,13 @@
     "cancelarSoAutor": "Only the person who sent the message can cancel it.",
     "erroCancelar": "Could not cancel the message.",
     "enfileirada": "{{agente}} is mid-turn: the message joined its queue (position {{posicao}}) and will be read when the turn ends."
+  },
+  "gateEstacionado": {
+    "aviso": "The {{gate}} gate cycle for task {{taskId}} stalled for more than 2 h and was parked: it does not restart on its own.",
+    "botao": "Resume gate",
+    "nota": "Dispatches the {{gate}} gate again for this task.",
+    "semPapel": "Resuming the gate requires the developer role on the project.",
+    "retomado": "Gate resumed — progress shows up in this thread.",
+    "erroTitulo": "Could not resume the gate"
   }
 }

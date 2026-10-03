@@ -262,5 +262,13 @@
     "cancelarSoAutor": "Só quem enviou a mensagem pode cancelá-la.",
     "erroCancelar": "Não foi possível cancelar a mensagem.",
     "enfileirada": "{{agente}} está no meio de um turno: a mensagem entrou na fila (posição {{posicao}}) e será lida quando ele terminar."
+  },
+  "gateEstacionado": {
+    "aviso": "O ciclo do gate {{gate}} da tarefa {{taskId}} ficou parado mais de 2 h e foi estacionado: ele não recomeça sozinho.",
+    "botao": "Retomar gate",
+    "nota": "Despacha o gate {{gate}} de novo para esta tarefa.",
+    "semPapel": "Retomar o gate exige o papel developer no projeto.",
+    "retomado": "Gate retomado — o andamento aparece neste fio.",
+    "erroTitulo": "Não foi possível retomar o gate"
   }
 }

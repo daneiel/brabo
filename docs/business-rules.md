@@ -277,7 +277,7 @@ one.
 
 - **Where:** `apps/web/src/lib/session-destinatario.ts:249`
   (`useDestinatarioDoChat`, since RN-631),
-  `apps/web/src/lib/api-client.ts:1088` (`getSessionModelBinding`, the
+  `apps/web/src/lib/api-client.ts:1097` (`getSessionModelBinding`, the
   `agentId`), `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:166`
   (`getSessionBinding`, `@Query('agentId')`)
 - **Test:** `apps/web/src/routes/SessionPage.destinatario-do-chat.test.tsx`
@@ -9697,7 +9697,7 @@ chave.
 
 - **Onde:** `apps/api/src/application/use-cases/auth/revoke-runner-device-key.use-case.ts:63`
   (a ordem, o projeto da linha e o `try/catch` que só loga);
-  `apps/api/src/application/ports/api-to-engine-client.port.ts:402`
+  `apps/api/src/application/ports/api-to-engine-client.port.ts:411`
   (`disconnectRunnerOfUser`, `DesfechoDeDesconexaoDeRunner`);
   `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:477`;
   `apps/engine/lib/engine/runners/revogacao.ex:92` (`derrubar/3`);
@@ -15972,7 +15972,7 @@ raiz do ESCOPO, nunca onde o arquivo de política mora.
   `apps/api/src/domain/actions/decide.ts:604` (`terminalNoEscopo`, o único
   consumidor do escopo)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:1135`
-  (`container`), `:1115` (`mounted`), `:1114` (`runner`), `:1123` (o caminho
+  (`container`), `:1115` (`mounted`), `:1118` (`runner`), `:1123` (o caminho
   absoluto sob `/home/usuario/…` NUNCA vaza, nos três casos, inclusive fora
   da base), `:1205` (`indisponivel`), `:1163` (outro tipo e o outbox sem o
   campo), `:1183` (evento anterior, sem o campo, pela mesma leitura);
@@ -18486,7 +18486,7 @@ não medido em projeto real, e declarado.
   (`TETO_DE_CHAVES_NO_LOTE`), `:37` (`lerListaDeChaves`), `:77`
   (`ResolveModelBindingsEmLoteUseCase`);
   `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:233`
-  (`getResolvedBindings`); `apps/web/src/lib/api-client.ts:1113`
+  (`getResolvedBindings`); `apps/web/src/lib/api-client.ts:1122`
   (`getResolvedModelBindings`); `apps/web/src/lib/bindings-resolvidos.ts:43`
   (`invalidarBindingsResolvidos`), `:69` (`useBindingsResolvidos`), `:111`
   (`useBindingsDosAgentes`); `apps/web/src/routes/ProjectOverviewTab.tsx:144`
@@ -19290,11 +19290,11 @@ segundo `executed` para o mesmo merge.
   `apps/api/src/infrastructure/git/local-git-provider.ts:339` (`GitPullRequestAlreadyMergedError`);
   `apps/web/src/lib/gate-do-merge.ts:19` (`gatePendenteNoMerge`);
   `apps/web/src/routes/ProjectPrsTab.tsx:201` (`gatePendenteNoMerge`);
-  `apps/web/src/routes/session-timeline-montagem.tsx:994` (`gatePendenteNoMerge`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:1019` (`gatePendenteNoMerge`)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:656`
   (`merge_ja_proposto`), `:679` (`pr_ja_mergeado` — caso de falha), `:696`
 
-  `apps/web/src/routes/session-timeline-montagem.tsx:994` (`gatePendenteNoMerge`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:1019` (`gatePendenteNoMerge`)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:656`
   (`merge_ja_proposto`), `:679` (`pr_ja_mergeado` — caso de falha), `:696`
   (negada não bloqueia, outra PR não colide — caminho feliz);
@@ -20097,7 +20097,7 @@ rótulo, não o comportamento.
   (`execute`), `:109` (`derrubarConexoesDaChave`);
   `apps/api/src/application/use-cases/auth/derrubar-conexoes-do-pat.ts:21`
   (`derrubarConexoesDoPat`);
-  `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:599`
+  `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:633`
   (`disconnectRunnerCredential`);
   `apps/engine/lib/engine/runners/socket_ticket.ex:107` (`emitir`), `:207`
   (`anular_pendentes_da_credencial`);
@@ -21421,11 +21421,43 @@ O kickoff do PO diz as três coisas.
   MENOS de 2 h segue sendo resgatado"),
   `apps/api/test/application/use-cases/anamnese/record-proficiency.use-case.spec.ts`
   (describe "fecharJanelaSemPerfil (RN-722)")
-- **Lacuna declarada:** retomar um ciclo estacionado não tem tela nem rota —
-  é chamada de operador (`bin/engine rpc`); o mínimo proposto é uma rota
-  interna e um botão no evento `gate.rescue_parked`. A pendência humana é lida
+- **Lacuna declarada:** retomar um ciclo estacionado não tinha tela nem rota
+  — era chamada de operador (`bin/engine rpc`); fechou na
+  [RN-724](#rn-724) (rota e botão no evento `gate.rescue_parked`). A pendência humana é lida
   pela SESSÃO do ciclo (a `proposed_action` não tem `task_id`)
   ([ADR 0207](adr/0207-ciclo-de-gate-velho-estaciona.md)).
 - **Origem:** AT-391 (uso real de 02/10: ~US$ 8,90 de Anamnese num dia sem
   ninguém pedir; ciclo de gate reiniciado com ação pendente e outro 8 h sem
   resgate), decisões do dono de 02/10
+
+### RN-724 — O ciclo de gate estacionado volta por um botão no fio, não só pelo terminal do operador {#rn-724}
+
+- **Regra:** o ciclo de gate ESTACIONADO pelo resgate
+  ([RN-722](#rn-722), [ADR 0207](adr/0207-ciclo-de-gate-velho-estaciona.md))
+  é retomado por `POST /projects/:projectId/tasks/:taskId/gates/:gate/resume`,
+  com o MESMO papel mínimo de quem decide a PR (`developer`). A api só
+  autoriza e pede ao engine (`POST /internal/projects/:id/tasks/:taskId/gates/:gate/resume`),
+  que delega a `GateRescuer.retomar_estacionado/3`: ciclo que não existe, não
+  está estacionado ou gate fora de `qa`/`secops` é 409 `gate_nao_estacionado`
+  e nada é despachado. No fio da sessão, o evento `gate.rescue_parked` vira um
+  aviso com o botão "Retomar gate", inerte com o motivo em texto quando o papel
+  não alcança `developer`; a recusa mostra a frase da api. Nenhum poll novo:
+  o andamento do gate retomado chega pelo log da sessão.
+- **Onde:** `apps/engine/lib/engine_web/controllers/gate_command_controller.ex:15`
+  (`resume`),
+  `apps/api/src/application/use-cases/gates/resume-parked-gate.use-case.ts:18`
+  (`execute`),
+  `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:351`
+  (`resumeParkedGate`),
+  `apps/api/src/interfaces/http/gates/gate-resume.controller.ts:40`
+  (`resume`), `apps/web/src/routes/RetomarGateEstacionado.tsx:30`
+  (`RetomarGateEstacionado`)
+- **Teste:** `apps/engine/test/engine_web/controllers/gate_command_controller_test.exs`
+  ("ciclo estacionado: 202 e despacha o gate de novo"; falha: "ciclo NÃO
+  estacionado: 409 nomeado e nada despachado"),
+  `apps/api/test/interfaces/http/gates/gate-resume.controller.spec.ts`
+  (feliz, 409 `gate_nao_estacionado`, papel abaixo de `developer`),
+  `apps/web/src/routes/RetomarGateEstacionado.test.tsx` (o clique chama a
+  rota; a recusa vira toast com a frase da api; papel insuficiente deixa o
+  botão inerte)
+- **Origem:** AT-397, fechando a lacuna declarada na RN-722
