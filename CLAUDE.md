@@ -287,6 +287,7 @@ estado lido do repositório e não da conversa.
 | A PR de infra mira `dev`, a sidebar abre só o projeto atual, e o assistente não convida o autofill (AT-411/412/413/415) | RN-729 |
 | A história draft se corrige e se arquiva, pelo PO e pelo usuário (AT-406) | ADR 0212, RN-727 |
 | O fecho do turno ganha o número real do que foi gravado (AT-414) | RN-731 |
+| O 402 do provider vira `insufficient_credit` na api, e o engine decide pelo código (AT-416) | RN-730 |
 
 ## Estado atual e aberto
 
