@@ -193,13 +193,44 @@ defmodule Engine.SessionEvents.Event do
     Repo.aggregate(project_window_query(project_id, from_time, to_time), :count, :id)
   end
 
+  @doc """
+  Quantas rodadas PAGAS da Anamnese o projeto teve desde `since` (RN-722): o
+  desfecho que toda rodada que chegou ao LLM grava — `anamnese.run_completed`,
+  `anamnese.run_failed` e o `anamnese.run_skipped` escrito pelo MODELO (o da
+  rodada sem sujeito leva `causa` e não gastou nada).
+  """
+  def count_anamnese_rounds_since(project_id, since) do
+    Repo.aggregate(
+      from(e in __MODULE__,
+        join: s in Engine.Sessions.ProjectSession,
+        on: e.session_id == s.id,
+        where:
+          s.project_id == type(^project_id, :binary_id) and e.created_at >= ^since and
+            e.actor_id == "anamnese" and
+            (e.type in ["anamnese.run_completed", "anamnese.run_failed"] or
+               (e.type == "anamnese.run_skipped" and
+                  is_nil(fragment("?->>'causa'", e.payload))))
+      ),
+      :count,
+      :id
+    )
+  end
+
   defp project_window_query(project_id, from_time, to_time) do
     from(e in __MODULE__,
       join: s in Engine.Sessions.ProjectSession,
       on: e.session_id == s.id,
       where:
         s.project_id == type(^project_id, :binary_id) and
-          e.created_at >= ^from_time and e.created_at < ^to_time
+          e.created_at >= ^from_time and e.created_at < ^to_time,
+      # RN-722: a janela é sobre a PESSOA. O que a própria Anamnese escreve
+      # (`anamnese.*`, e o `tool.call`/`tool.result`/`agent.*` do ator
+      # `anamnese`) e os eventos de sistema não são interação de ninguém —
+      # contá-los fazia cada rodada fabricar material para a seguinte.
+      where:
+        e.actor_kind != "system" and
+          not (e.actor_kind == "agent" and e.actor_id == "anamnese") and
+          not like(e.type, "anamnese.%")
     )
   end
 end

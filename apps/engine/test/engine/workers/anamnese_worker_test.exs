@@ -18,6 +18,10 @@ defmodule Engine.Workers.AnamneseWorkerTest do
     Application.put_env(:engine, :project_workspaces_root, root)
     Application.put_env(:engine, :engine_api_client, FakeEngineApiClient)
     Application.put_env(:engine, :test_pid, self())
+    # A maioria dos testes desta suíte é sobre o CONTEÚDO da rodada e monta o
+    # sujeito com UMA decisão; o piso de 5 interações (RN-722) tem describe
+    # próprio, que o restaura.
+    Application.put_env(:engine, :anamnese_min_interacoes_proprias, 1)
 
     # Template do grafo AUSENTE por padrão nesta suíte — a maioria dos testes
     # aqui é sobre o CONTEÚDO da rodada (fila, decisões, catálogo), e quer o
@@ -31,6 +35,7 @@ defmodule Engine.Workers.AnamneseWorkerTest do
       Application.delete_env(:engine, :engine_api_client)
       Application.delete_env(:engine, :test_pid)
       Application.delete_env(:engine, :graph_templates_enabled?)
+      Application.delete_env(:engine, :anamnese_min_interacoes_proprias)
       Engine.GlobalSessionTestLock.release()
     end)
 
@@ -86,6 +91,43 @@ defmodule Engine.Workers.AnamneseWorkerTest do
   defp forcar_rodada! do
     Application.put_env(:engine, :anamnese_min_events, 0)
     on_exit(fn -> Application.delete_env(:engine, :anamnese_min_events) end)
+  end
+
+  defp sessao_no_banco!(project_id, session_id) do
+    agora = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    Engine.Repo.insert_all("projects", [
+      %{
+        id: Ecto.UUID.dump!(project_id),
+        name: "cobaia",
+        slug: "cobaia-#{System.unique_integer([:positive])}",
+        created_at: agora,
+        updated_at: agora
+      }
+    ])
+
+    Engine.Repo.insert_all("sessions", [
+      %{
+        id: Ecto.UUID.dump!(session_id),
+        project_id: Ecto.UUID.dump!(project_id),
+        created_at: agora
+      }
+    ])
+  end
+
+  defp desfecho_pago!(session_id, seq, type, payload) do
+    Engine.Repo.insert_all("session_events", [
+      %{
+        id: "evt-#{System.unique_integer([:positive])}",
+        session_id: Ecto.UUID.dump!(session_id),
+        seq: seq,
+        type: type,
+        actor_kind: "agent",
+        actor_id: "anamnese",
+        payload: payload,
+        created_at: DateTime.utc_now()
+      }
+    ])
   end
 
   defp profile do
@@ -311,6 +353,139 @@ defmodule Engine.Workers.AnamneseWorkerTest do
     # E NÃO narra falha: uma rodada que fez a coisa certa não pode aparecer
     # como falha, senão quem lê o log aprende a ignorar o evento de falha.
     refute_received {:event_appended, ^project_id, ^session_id, %{type: "anamnese.run_failed"}}
+  end
+
+  describe "a janela avaliada fecha (RN-722)" do
+    defp skip_turn do
+      FakeEngineApiClient.tool_call_response("skip_proficiency", %{
+        "motivo" => "Janela sem mudança de perfil"
+      })
+    end
+
+    test "skip_proficiency grava a rodada vazia; a segunda começa em window_to e, sem interação nova, não chama o LLM",
+         %{project_id: project_id, session_id: session_id} do
+      forcar_rodada!()
+      Process.put(:fake_anamnese_context, context())
+      Process.put(:fake_llm_turns, [skip_turn()])
+
+      assert :ok = AnamneseWorker.perform(job(project_id, session_id))
+      assert_received {:llm_turn, _, _, _}
+
+      assert_received {:anamnese_window_closed,
+                       %{windowFrom: _, windowTo: window_to, eventCount: _}}
+
+      # A api passa a devolver `windowFrom` = fim da rodada anterior, e a
+      # decisão antiga não está mais na janela: ninguém é sujeito.
+      Process.put(
+        :fake_anamnese_context,
+        context(%{"windowFrom" => window_to, "decisions" => []})
+      )
+
+      Process.put(:fake_llm_turns, [skip_turn()])
+
+      assert :ok = AnamneseWorker.perform(job(project_id, session_id))
+      refute_received {:llm_turn, _, _, _}
+      refute_received {:anamnese_window_closed, _}
+    end
+
+    test "falha ao fechar a janela não vira falha da rodada", %{
+      project_id: project_id,
+      session_id: session_id
+    } do
+      forcar_rodada!()
+      Process.put(:fake_anamnese_context, context())
+      Process.put(:fake_llm_turns, [skip_turn()])
+      Process.put(:fake_close_anamnese_window_error, :timeout)
+
+      assert :ok = AnamneseWorker.perform(job(project_id, session_id))
+      assert_received {:anamnese_window_closed, _}
+
+      assert_received {:event_appended, ^project_id, ^session_id, %{type: "anamnese.run_skipped"}}
+
+      refute_received {:event_appended, ^project_id, ^session_id, %{type: "anamnese.run_failed"}}
+    end
+
+    test "rodada que FALHA não fecha a janela", %{
+      project_id: project_id,
+      session_id: session_id
+    } do
+      forcar_rodada!()
+      Process.put(:fake_anamnese_context, context())
+      Process.put(:fake_llm_turns, [])
+
+      assert :ok = AnamneseWorker.perform(job(project_id, session_id))
+      refute_received {:anamnese_window_closed, _}
+    end
+  end
+
+  describe "piso de interações e teto diário (RN-722)" do
+    setup do
+      Application.put_env(:engine, :anamnese_min_interacoes_proprias, 5)
+      :ok
+    end
+
+    defp decisoes(n), do: List.duplicate(decisao_do_sujeito(), n)
+
+    test "quatro interações próprias novas: nenhuma chamada ao LLM", %{
+      project_id: project_id,
+      session_id: session_id
+    } do
+      forcar_rodada!()
+      Process.put(:fake_anamnese_context, context(%{"decisions" => decisoes(4)}))
+
+      assert :ok = AnamneseWorker.perform(job(project_id, session_id))
+      refute_received {:llm_turn, _, _, _}
+    end
+
+    test "cinco interações próprias novas: a rodada roda", %{
+      project_id: project_id,
+      session_id: session_id
+    } do
+      forcar_rodada!()
+      Process.put(:fake_anamnese_context, context(%{"decisions" => decisoes(5)}))
+      Process.put(:fake_llm_turns, [skip_turn()])
+
+      assert :ok = AnamneseWorker.perform(job(project_id, session_id))
+      assert_received {:llm_turn, _, _, _}
+    end
+
+    test "quatro rodadas pagas hoje: a quinta nem busca o contexto, e a manual narra o teto", %{
+      project_id: project_id,
+      session_id: session_id
+    } do
+      sessao_no_banco!(project_id, session_id)
+      for seq <- 1..4, do: desfecho_pago!(session_id, seq, "anamnese.run_completed", %{})
+
+      Process.put(:fake_anamnese_context, context(%{"decisions" => decisoes(5)}))
+
+      assert :ok = AnamneseWorker.perform(job_manual(project_id, session_id))
+      refute_received {:anamnese_context_fetched, _}
+      refute_received {:llm_turn, _, _, _}
+
+      assert_received {:event_appended, ^project_id, ^session_id,
+                       %{type: "anamnese.run_skipped", payload: %{causa: "teto_diario"}}}
+    end
+
+    test "pulo SEM sujeito não conta para o teto", %{
+      project_id: project_id,
+      session_id: session_id
+    } do
+      forcar_rodada!()
+      sessao_no_banco!(project_id, session_id)
+      for seq <- 1..3, do: desfecho_pago!(session_id, seq, "anamnese.run_failed", %{})
+
+      for seq <- 4..9,
+          do:
+            desfecho_pago!(session_id, seq, "anamnese.run_skipped", %{
+              "causa" => "sem_sujeito_elegivel"
+            })
+
+      Process.put(:fake_anamnese_context, context(%{"decisions" => decisoes(5)}))
+      Process.put(:fake_llm_turns, [skip_turn()])
+
+      assert :ok = AnamneseWorker.perform(job(project_id, session_id))
+      assert_received {:llm_turn, _, _, _}
+    end
   end
 
   describe "sujeito elegível (RN-680)" do

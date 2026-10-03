@@ -19,8 +19,14 @@ defmodule Engine.Workers.AnamneseWorker do
   **Pula sem gastar nada** quando não há material novo (ver
   `Engine.Anamnese.Triage.should_run?/2`) — mas hipótese aceita na fila
   força a rodada QUANDO há sujeito, senão o loop fechado do Psicólogo nunca
-  completaria. Rodada que não conclui não grava `anamnese_runs`, então a
-  janela é reprocessada na próxima (mesma disciplina do Psicólogo).
+  completaria. Rodada que FALHA (teto, orçamento, provider) não grava
+  `anamnese_runs`, então a janela é reprocessada na próxima (mesma disciplina
+  do Psicólogo). Rodada que AVALIOU a janela e encerrou sem perfil
+  (`skip_proficiency`) a FECHA (RN-722): grava a rodada com zero perfis e a
+  próxima começa em `window_to` — antes ela ficava presa, a janela sempre
+  continha a interação antiga e cada tick pagava uma rodada nova sobre o
+  mesmo material. Rodada que nem chega ao LLM (sem sujeito, pulada por
+  triagem) não fecha nada: não avaliou a janela.
   """
 
   use Oban.Worker, queue: :default, max_attempts: 3
@@ -38,6 +44,23 @@ defmodule Engine.Workers.AnamneseWorker do
   def perform(%Oban.Job{args: %{"project_id" => project_id} = args}) do
     session_id = Map.get(args, "session_id")
 
+    if is_nil(session_id) or dentro_do_teto_diario?(project_id) do
+      buscar_e_analisar(project_id, session_id, args)
+    else
+      # RN-722: o teto vem ANTES do contexto — nem api, nem RAG, nem LLM.
+      detalhe = "projeto já teve #{Triage.max_rounds_per_day()} rodada(s) paga(s) hoje (UTC)"
+
+      Logger.info(
+        "anamnese: rodada NÃO roda em #{project_id} — teto_diario: #{detalhe}; " <>
+          "nenhuma chamada ao LLM nem ao RAG (RN-722)"
+      )
+
+      narrar_sem_sujeito(project_id, session_id, Map.get(args, "origem"), :teto_diario, detalhe)
+      :ok
+    end
+  end
+
+  defp buscar_e_analisar(project_id, session_id, args) do
     case ContextBuilder.fetch(project_id) do
       {:ok, context} ->
         maybe_analyze(project_id, session_id, context, Map.get(args, "origem"))
@@ -76,6 +99,15 @@ defmodule Engine.Workers.AnamneseWorker do
     end
   end
 
+  # RN-722: no máximo `Triage.max_rounds_per_day/0` rodadas pagas por projeto
+  # no dia UTC corrente.
+  defp dentro_do_teto_diario?(project_id) do
+    inicio_do_dia = DateTime.new!(Date.utc_today(), ~T[00:00:00], "Etc/UTC")
+
+    Engine.SessionEvents.Event.count_anamnese_rounds_since(project_id, inicio_do_dia) <
+      Triage.max_rounds_per_day()
+  end
+
   # Pelo tick (a cada 15 min, por projeto) é só log: virar evento encheria a
   # timeline de um aviso repetido. Na rodada pedida à MÃO, quem a pediu espera
   # um desfecho, e ele vai durável, com o motivo.
@@ -86,13 +118,16 @@ defmodule Engine.Workers.AnamneseWorker do
       actorId: Triage.agent(),
       payload: %{
         motivo: detalhe,
-        causa: "sem_sujeito_elegivel",
+        causa: causa_do_pulo(motivo),
         detalhe: Atom.to_string(motivo)
       }
     })
   end
 
   defp narrar_sem_sujeito(_project_id, _session_id, _origem, _motivo, _detalhe), do: :ok
+
+  defp causa_do_pulo(:teto_diario), do: "teto_diario"
+  defp causa_do_pulo(_motivo), do: "sem_sujeito_elegivel"
 
   defp triar(project_id, session_id, context) do
     # Contagem REAL da janela, não o tamanho do recorte que vai no prompt.
@@ -130,7 +165,9 @@ defmodule Engine.Workers.AnamneseWorker do
   # Encerrar sem perfil é DESFECHO, não falha: vira `anamnese.run_skipped` com
   # o motivo, e não `run_failed`. Narrar como falha uma rodada que fez a coisa
   # certa treina quem lê o log a ignorar o evento de falha.
-  defp handle_outcome({:halted, {"skip_proficiency", motivo}, _ctx}, project_id, session_id) do
+  defp handle_outcome({:halted, {"skip_proficiency", motivo}, ctx}, project_id, session_id) do
+    fechar_janela(ctx, project_id, session_id)
+
     EngineApiClient.append_event(project_id, session_id, %{
       type: "anamnese.run_skipped",
       actorKind: "agent",
@@ -144,6 +181,28 @@ defmodule Engine.Workers.AnamneseWorker do
   defp handle_outcome(outcome, project_id, session_id) do
     emit_failure(project_id, session_id, reason_for(outcome))
     :ok
+  end
+
+  # RN-722: a janela avaliada fecha mesmo sem perfil. Falhar ao fechar não
+  # derruba o desfecho (o `run_skipped` continua sendo a verdade da rodada);
+  # deixa rastro no log, e a próxima rodada reavalia a mesma janela.
+  defp fechar_janela(ctx, project_id, session_id) do
+    payload = %{
+      windowFrom: DateTime.to_iso8601(ctx.window_from),
+      windowTo: DateTime.to_iso8601(ctx.window_to),
+      eventCount: ctx.event_count
+    }
+
+    case EngineApiClient.close_anamnese_window(project_id, session_id, payload) do
+      {:ok, _} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning(
+          "anamnese: janela de #{project_id} NÃO fechada após skip_proficiency " <>
+            "(#{inspect(reason)}); a próxima rodada a reavalia"
+        )
+    end
   end
 
   defp reason_for({:limit_reached, _ctx}), do: "limite de iterações"

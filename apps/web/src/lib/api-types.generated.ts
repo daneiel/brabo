@@ -641,6 +641,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/internal/sessions/{sessionId}/anamnese-window": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Closes the Anamnese window of a round that emitted no profile
+         * @description Records an anamnese run with zero profiles so the next round starts at windowTo — without it, the window never advanced and every tick paid for a new round over the same material.
+         */
+        post: operations["InternalSessionsController_anamneseWindow"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/internal/sessions/{sessionId}/c4-diagram": {
         parameters: {
             query?: never;
@@ -5048,6 +5068,25 @@ export interface components {
             module: string;
             /** @example dev-api */
             agentId: string;
+        };
+        CloseAnamneseWindowInternalDto: {
+            /**
+             * Format: uuid
+             * @example 01JC4Z0000PROJETO0000000001
+             */
+            projectId: string;
+            /**
+             * Format: date-time
+             * @example 2026-07-27T12:00:00.000Z
+             */
+            windowFrom: string;
+            /**
+             * Format: date-time
+             * @example 2026-07-27T12:15:00.000Z
+             */
+            windowTo: string;
+            /** @example 12 */
+            eventCount: number;
         };
         CodeBlameLineResponseDto: {
             /**
@@ -11412,6 +11451,52 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AnamneseContextResponseDto"];
+                };
+            };
+            /** @description Invalid body. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Service token missing or different from the shared one. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Session, project, or resource not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    InternalSessionsController_anamneseWindow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CloseAnamneseWindowInternalDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordProficiencyResponseDto"];
                 };
             };
             /** @description Invalid body. */

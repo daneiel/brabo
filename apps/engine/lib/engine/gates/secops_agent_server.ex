@@ -79,6 +79,12 @@ defmodule Engine.Gates.SecOpsAgentServer do
   @impl true
   def init(project_id), do: {:ok, %{project_id: project_id}}
 
+  # RN-722: o SecOps não suspende — o ciclo roda inteiro dentro do
+  # `handle_cast`. Respondeu, então não há task em voo; ocupado, não responde
+  # e o `GateRescuer` trata o silêncio como "vivo".
+  @impl true
+  def handle_call({:em_voo?, _task_id}, _from, state), do: {:reply, false, state}
+
   @impl true
   def handle_cast({:run, task_id}, state) do
     case DevAgentState.find_by_task_id(state.project_id, task_id) do

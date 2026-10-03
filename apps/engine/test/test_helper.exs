@@ -83,6 +83,24 @@ CREATE TABLE IF NOT EXISTS public.session_events (
 )
 """)
 
+# RN-722: o `GateRescuer` lê ação PENDENTE de ator do gate direto daqui.
+# Gerenciada pela api (Drizzle); enums simplificados para text.
+Engine.Repo.query!("""
+CREATE TABLE IF NOT EXISTS public.proposed_actions (
+  id uuid PRIMARY KEY,
+  session_id uuid NOT NULL,
+  seq bigserial,
+  action_type text NOT NULL,
+  payload jsonb NOT NULL DEFAULT '{}',
+  status text NOT NULL DEFAULT 'pending',
+  resolved_policy text NOT NULL,
+  actor_kind text NOT NULL,
+  actor_id text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+)
+""")
+
 # Mesmo motivo dos fixtures acima — project_repositories também é
 # gerenciada pela api (Drizzle, schema "public"). Enum git_provider
 # simplificado pra text (Engine.Projects.ProjectRepository só lê a

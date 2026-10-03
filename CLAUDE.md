@@ -272,6 +272,7 @@ estado lido do repositório e não da conversa.
 | O modo automático libera push e PR de todo agente; merge protegido e sudo seguem manuais (AT-385) | ADR 0204, RN-713 |
 | A Infra herda a rede do Arquiteto na subida automática, `egress` incluído (AT-392) | ADR 0208, RN-723 |
 | O PO completa a história existente e não oferece o handoff com regra descoberta (AT-388/AT-389) | RN-720 |
+| A Anamnese fecha a janela sem perfil e tem teto diário; ciclo de gate parado estaciona (AT-391) | ADR 0207, RN-722 |
 
 ## Estado atual e aberto
 
@@ -435,6 +436,12 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   permitidos (agente, tipo fechado, `eventId`s), sem texto livre nem dado
   pessoal, e FORA do grafo do usuário — não o projete no
   `GraphEventTranslator`.
+  Desde a RN-722 (decisões do dono de 02/10) a rodada que avalia a janela e
+  encerra sem perfil a FECHA (`anamnese_runs` com zero perfis) — antes ela
+  rodava paga a cada 15 min sobre a mesma janela, para sempre (~US$ 8,90/dia
+  medidos); os eventos da própria Anamnese e os de sistema ficam fora da
+  janela e da contagem; sujeito exige 5+ interações próprias NOVAS e o projeto
+  tem no máximo 4 rodadas pagas por dia UTC — abaixo disso, nem LLM nem RAG.
 - Psicólogo PAUSADO desde 2026-08-10 (`PSYCHOLOGIST_ENABLED=false`),
   aguardando spec — e a Anamnese esteve pausada junto até a RN-680. A pausa do
   Psicólogo segue valendo e a decisão de produto NÃO mudou — o que mudou na
@@ -560,6 +567,11 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   drenada para o verde voltar
 - Restart do engine com Dev Lead suspenso perde a inscrição no Wake (decisão
   segue visível em Aprovações) — ADR 0086
+- Ciclo de gate parado há mais de 2 h ESTACIONA (`gate.rescue_parked`, ADR
+  0207, RN-722, decisão do dono) em vez de ser retomado sozinho no boot ou no
+  tick, e o resgate não reinicia ciclo cuja sessão tem ação pendente de ator do
+  gate. Retomar o estacionado é `GateRescuer.retomar_estacionado/3` pelo
+  `bin/engine rpc` do operador — sem tela nem rota, declarado
 - A aba de Código abre com 492px de moldura à esquerda (sidebar 264 + trilho
   do projeto 180 + trilho do `CodeShell` 48), contra ~110px antes do ADR
   0126 — preço MEDIDO e aceito por remover o auto-colapso da RN-201.

@@ -1090,6 +1090,7 @@ behind an infra PR).
 |---|---|
 | POST | `/hypotheses` |
 | POST | `/proficiency` |
+| POST | `/anamnese-window` |
 | POST | `/instruction-patches` |
 | POST | `/max-parallel-proposals` |
 
@@ -1097,6 +1098,14 @@ Evidence validation ([RN-021](../business-rules.md#rn-021)) and the closed
 catalog of competencies ([RN-024](../business-rules.md#rn-024)) are enforced
 **here**, in the api. The engine cannot write a hypothesis without valid
 evidence nor profile a competency outside the catalog, even if the model asks for it.
+
+`/anamnese-window` ([RN-722](../business-rules.md#rn-722)) closes the analyzed
+window when a round ends WITHOUT a profile (`skip_proficiency`): it records an
+`anamnese_runs` row with zero profiles, so the next round starts at its
+`window_to` instead of re-reading — and paying for — the same window forever.
+`/proficiency` keeps requiring a non-empty list; a failure here is only a
+warning in the engine log, never a failed round. The engine side is
+`EngineApiClient` in `engine_api_client.ex`.
 
 `/max-parallel-proposals` (FASE 14d) follows the same split: the Anamnese proposes
 raising an area's parallelism cap, and it's the **api** that rejects a proposal

@@ -586,6 +586,16 @@ defmodule Engine.Sessions.FakeEngineApiClient do
   end
 
   @impl true
+  def close_anamnese_window(_project_id, _session_id, payload) do
+    notify({:anamnese_window_closed, payload})
+
+    case Process.get(:fake_close_anamnese_window_error) do
+      nil -> {:ok, %{"runId" => "run-vazia", "profiles" => []}}
+      reason -> {:error, reason}
+    end
+  end
+
+  @impl true
   def sync_model_catalog do
     notify(:model_catalog_synced)
 
