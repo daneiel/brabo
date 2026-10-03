@@ -115,9 +115,12 @@ export function ProjectPrsTab({ projectId }: { projectId: string }) {
   const [propondo, setPropondo] = useState<string | null>(null);
 
   function invalidateMergeActions() {
-    // Por prefixo: alcança a fila pendente E a das recusas (RN-705).
+    // Por prefixo do PROJETO: alcança a fila pendente, a das recusas
+    // (RN-705) E a fila inteira que a sidebar conta (RN-729) — só com o
+    // prefixo de `git_merge`, o contador "PRs" da sidebar seguia mostrando o
+    // merge já executado até o próximo poll de projeto.
     queryClient.invalidateQueries({
-      queryKey: ['project-pending-actions', projectId, 'git_merge'],
+      queryKey: ['project-pending-actions', projectId],
     });
     // O merge aprovado executa na hora: a lista de PRs muda (a PR sai de
     // "Abertas") — sem isto ela seguia aberta com o botão até recarregar.

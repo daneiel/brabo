@@ -1,3 +1,4 @@
+import { SEM_AUTOFILL } from '../lib/conversa-comecou';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -744,6 +745,7 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
               <div className={styles.toggleRow}>
                 <Input
                   id="workspace-path"
+                  {...SEM_AUTOFILL}
                   value={caminhoLocal}
                   onChange={(e) => setCaminhoLocal(e.target.value)}
                   placeholder={t('workspace.pathPlaceholder')}
@@ -858,6 +860,7 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
               </label>
               <Input
                 id="repo-external-id"
+                {...SEM_AUTOFILL}
                 value={externalId}
                 onChange={(e) => setExternalId(e.target.value)}
                 placeholder={
@@ -885,6 +888,7 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
               </label>
               <Input
                 id="project-name"
+                {...SEM_AUTOFILL}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder={t('details.create.namePlaceholder')}

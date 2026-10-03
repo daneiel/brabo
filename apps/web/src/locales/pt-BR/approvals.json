@@ -248,7 +248,8 @@
       "eyebrow": "{{count}} de infra nos gates de QA/SecOps",
       "loading": "Carregando as PRs de infra…",
       "error": "Não foi possível carregar as PRs de infra.",
-      "empty": "Nenhuma PR de infra em revisão ainda."
+      "empty": "Nenhuma PR de infra em revisão ainda.",
+      "mergeLink": "Mergear na aba PRs"
     },
     "permissions": {
       "title": "Permissões do projeto",

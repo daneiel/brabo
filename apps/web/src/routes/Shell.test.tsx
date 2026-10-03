@@ -6,7 +6,7 @@ import { initReactI18next, I18nextProvider } from 'react-i18next';
 import { Shell } from './Shell';
 import { ApiError } from '../lib/api-client';
 import type { Project, WorkspaceWithRole } from '../lib/api-types';
-import { CHAVE_COLAPSADO } from '../lib/sidebar-state';
+import { CHAVE_COLAPSADO, CHAVE_PROJETOS_ABERTOS } from '../lib/sidebar-state';
 import { simularLayoutMovel } from '../test/match-media';
 // Real module, não mockado — RN-196 lê a LISTA de abas dela, nunca hardcoda
 // rótulos, então o teste também lê daqui em vez de repetir uma string.
@@ -482,6 +482,30 @@ describe('Shell — projetos expansíveis', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Recolher Core API' }));
 
     expect(screen.queryByText(ABAS_DO_PROJETO[0].label)).toBeNull();
+  });
+
+  it('RN-729: abrir um projeto recolhe o visitado antes e rola até o aberto', () => {
+    const WEB = { ...PROJECT, id: 'bbbbbbbb-2222-4000-8000-000000000002', name: 'Web' };
+    estado.projects = [PROJECT, WEB];
+    window.localStorage.setItem(CHAVE_PROJETOS_ABERTOS, JSON.stringify([PROJECT.id]));
+    const rolar = vi.fn();
+    Element.prototype.scrollIntoView = rolar;
+    estado.pathname = `/projects/${WEB.id}`;
+
+    renderShell();
+
+    expect(screen.getByRole('button', { name: 'Expandir Core API' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Recolher Web' })).toBeInTheDocument();
+    expect(rolar).toHaveBeenCalled();
+  });
+
+  it('RN-729: no Dashboard nenhum projeto fica forçado expandido', () => {
+    window.localStorage.setItem(CHAVE_PROJETOS_ABERTOS, JSON.stringify([PROJECT.id]));
+    estado.pathname = '/';
+
+    renderShell();
+
+    expect(screen.getByRole('button', { name: 'Expandir Core API' })).toBeInTheDocument();
   });
 });
 

@@ -227,7 +227,19 @@ function gateStatus(events: SessionEvent[], gate: 'qa' | 'secops'): AgentStatus 
   if (!last) return 'ocioso';
   const current = (last.payload as { gateStatus?: string }).gateStatus;
   const expected = gate === 'qa' ? 'awaiting_qa' : 'awaiting_secops';
-  return current === expected ? 'trabalhando' : 'ocioso';
+  if (current !== expected) return 'ocioso';
+  // RN-729: o ciclo do gate pode terminar em FALHA sem um `gate_changed`
+  // novo — o subagente da área falha e nada mais está em curso. Uma
+  // `delegation.failed` de membro da área DEPOIS do último parecer encerra o
+  // "trabalhando": o lead diz `falhou`, nunca trabalho que não existe.
+  const membros: readonly string[] = AREAS[gate]?.members ?? [];
+  const posterior = events.slice(events.indexOf(last) + 1);
+  const falhou = posterior.some(
+    (e) =>
+      e.type === 'delegation.failed' &&
+      membros.includes((e.payload as DelegationEventPayload).subagent),
+  );
+  return falhou ? 'falhou' : 'trabalhando';
 }
 
 // Subagente só entra no painel quando há EVIDÊNCIA de atividade nesta
