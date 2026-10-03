@@ -275,6 +275,7 @@ estado lido do repositório e não da conversa.
 | A Anamnese fecha a janela sem perfil e tem teto diário; ciclo de gate parado estaciona (AT-391) | ADR 0207, RN-722 |
 | O ciclo de gate estacionado volta por botão no fio (AT-397) | ADR 0207, RN-724 |
 | O `docs:generate` reescreve contagens, próximo ADR e refs deslocadas (AT-399) | documentation-workflow.md |
+| O engine sobe para OTP 29.1 porque o 27.3 aborta sob musl 1.2.6 em host com AMX (AT-398) | ADR 0209 |
 
 ## Estado atual e aberto
 
@@ -897,7 +898,10 @@ o RACIOCÍNIO da triagem, que continua valendo.
   caminho de volta — `pnpm --filter api artefatos:reprojetar` (RN-590), pelo
   MESMO `ArtifactEventTranslator` do `ArtifactProjector`, sem backup, sem tocar
   a outbox e sem apagar nada
-- `apps/engine`: Elixir/OTP + Phoenix (canais) + Oban (filas no Postgres)
+- `apps/engine`: Elixir/OTP + Phoenix (canais) + Oban (filas no Postgres) —
+  Elixir 1.20.4 / OTP 29.1.1 sobre Alpine 3.24.2 em dev, produção e CI (ADR
+  0209): OTP abaixo de 29.1 aborta no boot sob musl ≥ 1.2.6 em host com AMX
+  (`sys_sigaltstack`, erlang/otp#11349) — não desça o OTP sem descer a musl
 - `apps/web`: React 19 + Vite + TanStack Query/Router; `react-i18next`+
   `i18next` (fundação de i18n, RN-425) atrás de `lib/i18n.ts`/`lib/idioma.ts`
   — `en` é o idioma default, `pt-BR` mantido, servidor é a fonte de verdade
