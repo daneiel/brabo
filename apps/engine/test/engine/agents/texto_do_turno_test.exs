@@ -39,4 +39,32 @@ defmodule Engine.Agents.TextoDoTurnoTest do
     TextoDoTurno.acumular("x", nil)
     assert TextoDoTurno.descarregar_com_modelo("", nil) == {"x", nil}
   end
+
+  test "AT-395: turno de 3 voltas grava o fecho em content e as 2 anteriores em passos" do
+    TextoDoTurno.acumular("Vou criar.", "m/a")
+    TextoDoTurno.acumular("Criei duas.", "m/a")
+
+    assert TextoDoTurno.payload_do_turno("Resumo final.", "m/b") == %{
+             content: "Resumo final.",
+             passos: ["Vou criar.", "Criei duas."],
+             modelName: "m/b"
+           }
+
+    assert TextoDoTurno.payload_do_turno("", nil) == nil
+  end
+
+  test "AT-395: turno de 1 volta não tem passos" do
+    assert TextoDoTurno.payload_do_turno("Oi.", "m/a") == %{content: "Oi.", modelName: "m/a"}
+  end
+
+  test "AT-395: turno que termina em formulário fica com a última volta que teve texto" do
+    TextoDoTurno.acumular("Primeiro.", "m/a")
+    TextoDoTurno.acumular("Preciso de dados:", "m/a")
+
+    assert TextoDoTurno.payload_do_turno("", nil) == %{
+             content: "Preciso de dados:",
+             passos: ["Primeiro."],
+             modelName: "m/a"
+           }
+  end
 end

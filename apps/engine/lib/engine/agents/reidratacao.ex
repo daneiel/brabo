@@ -171,8 +171,20 @@ defmodule Engine.Agents.Reidratacao do
   defp acumular(%{"type" => "chat.message", "payload" => payload}, acc, _agent),
     do: [usuario(texto(payload, "text")) | acc]
 
-  defp acumular(%{"type" => "agent.response", "payload" => payload}, acc, _agent),
-    do: [assistente(texto(payload, "content") || texto(payload, "text") || "") | acc]
+  # AT-395: `passos` (as voltas antes do fecho) voltam ANTES do `content`, no
+  # mesmo `assistant`: o modelo não perde o que disse no meio do turno — é o
+  # texto que ele lia inteiro até a revisão da RN-698.
+  defp acumular(%{"type" => "agent.response", "payload" => payload}, acc, _agent) do
+    fecho = texto(payload, "content") || texto(payload, "text") || ""
+
+    passos =
+      case payload["passos"] do
+        l when is_list(l) -> Enum.filter(l, &(is_binary(&1) and &1 != ""))
+        _ -> []
+      end
+
+    [assistente(Enum.join(passos ++ [fecho], "\n\n")) | acc]
+  end
 
   defp acumular(%{"type" => "chat.structured_question"} = evento, acc, agent),
     do: [assistente(perguntas(evento, agent)) | acc]

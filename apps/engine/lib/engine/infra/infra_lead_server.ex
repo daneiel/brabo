@@ -1472,9 +1472,9 @@ defmodule Engine.Infra.InfraLeadServer do
 
   # RN-698: o texto do turno inteiro, numa `agent.response` só.
   defp gravar_texto_do_turno(state, ultimo) do
-    case TextoDoTurno.descarregar(ultimo) do
-      "" -> :ok
-      texto -> emit_response(state, texto)
+    case TextoDoTurno.payload_do_turno(ultimo, nil) do
+      nil -> :ok
+      payload -> emit(state, "agent.response", Map.delete(payload, :modelName))
     end
   end
 

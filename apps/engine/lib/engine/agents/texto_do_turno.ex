@@ -54,6 +54,30 @@ defmodule Engine.Agents.TextoDoTurno do
   end
 
   @doc """
+  O payload da `agent.response` do turno (AT-395, revisa a RN-698 por decisão
+  do dono de 03/10): `content` é só o FECHO — o texto da última volta que
+  escreveu algo (o turno que termina num formulário, sem texto na última
+  volta, fica com a anterior) — e `passos` são os textos das voltas
+  anteriores, na ordem, só quando há. Nada some: o fio os recolhe em "Passos
+  do turno". `nil` quando o modelo não escreveu nada. Esvazia o acúmulo.
+  """
+  @spec payload_do_turno(String.t() | nil, String.t() | nil) :: map() | nil
+  def payload_do_turno(ultimo, modelo) do
+    visto = Process.delete(@chave_modelo)
+    pedacos = Enum.reverse(Process.delete(@chave) || [])
+
+    case Enum.reject(pedacos ++ [ultimo || ""], &(&1 == "")) do
+      [] ->
+        nil
+
+      textos ->
+        {passos, [fecho]} = Enum.split(textos, -1)
+        base = %{content: String.trim_leading(fecho), modelName: modelo || visto}
+        if passos == [], do: base, else: Map.put(base, :passos, passos)
+    end
+  end
+
+  @doc """
   Devolve o texto do turno inteiro — os pedaços acumulados mais o `ultimo` — e
   esvazia o acúmulo. `""` quando o modelo não escreveu nada.
   """

@@ -373,9 +373,9 @@ defmodule Engine.Agents.CriativoServer do
 
   # RN-698: o texto do turno inteiro, numa `agent.response` só.
   defp gravar_texto_do_turno(state, ultimo, model_name) do
-    case TextoDoTurno.descarregar_com_modelo(ultimo, model_name) do
-      {"", _} -> :ok
-      {texto, modelo} -> emit_response(state, texto, modelo)
+    case TextoDoTurno.payload_do_turno(ultimo, model_name) do
+      nil -> :ok
+      payload -> emit(state, "agent.response", payload)
     end
   end
 
