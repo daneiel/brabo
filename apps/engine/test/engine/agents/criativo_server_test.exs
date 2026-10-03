@@ -220,13 +220,14 @@ defmodule Engine.Agents.CriativoServerTest do
     assert {:reply, :ok, _} = sync_call(CriativoServer, {:user_message, "x"}, state)
 
     assert_received {:event_appended, _, _,
-                     %{
-                       type: "agent.response",
-                       payload: %{
-                         content: "regras que cubram tudo.",
-                         passos: ["Vou registrar as"]
-                       }
-                     }}
+     %{
+       type: "agent.response",
+       payload: %{
+         # RN-731: o fato do que foi gravado vem ao lado do fecho.
+         content: "regras que cubram tudo.\n\nGravado neste turno: 1 regra de negócio.",
+         passos: ["Vou registrar as"]
+       }
+     }}
 
     refute_received {:event_appended, _, _, %{type: "agent.response"}}
   end
