@@ -787,7 +787,16 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
         content?: unknown;
         text?: unknown;
         modelName?: unknown;
+        passos?: unknown;
       };
+      // AT-395 (RN-698, decisão do dono de 03/10): o `content` é só o FECHO do
+      // turno; o texto das voltas anteriores vem em `passos` e entra como
+      // narrações do MESMO turno+autor ANTES do fecho — é o colapso de
+      // "Passos do turno" que já existe que as recolhe, sem segundo controle.
+      // Os passos não contam no corte do fio (RN-644): a mensagem é o fecho.
+      const passos = Array.isArray(payload?.passos)
+        ? payload.passos.filter((p): p is string => typeof p === 'string' && p !== '')
+        : [];
       const text =
         typeof payload?.content === 'string'
           ? payload.content
@@ -803,14 +812,8 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
         typeof payload?.modelName === 'string' && payload.modelName !== ''
           ? payload.modelName
           : undefined;
-      empurrar({
-        mensagem: true, // RN-644: conta no corte do fio
-        agentId: event.actor.kind === 'agent' ? event.actor.id : undefined,
-        // `agruparNarracoesDoTurno` lê este marcador pra saber que ESTA
-        // entrada, e só ela, participa do colapso de "Passos do turno".
-        agentResponse: true,
-        node: (
-          <div className={styles.message} key={event.id} style={corDoAgente(event.actor.id)}>
+      const bolha = (text: string, key: string) => (
+          <div className={styles.message} key={key} style={corDoAgente(event.actor.id)}>
             <span className={styles.avatar}>
               <ModelIcon size={15} />
             </span>
@@ -860,7 +863,21 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
               )}
             </div>
           </div>
-        ),
+      );
+      passos.forEach((passo, i) =>
+        empurrar({
+          agentId: event.actor.kind === 'agent' ? event.actor.id : undefined,
+          agentResponse: true,
+          node: bolha(passo, `${event.id}-passo-${i}`),
+        }),
+      );
+      empurrar({
+        mensagem: true, // RN-644: conta no corte do fio
+        agentId: event.actor.kind === 'agent' ? event.actor.id : undefined,
+        // `agruparNarracoesDoTurno` lê este marcador pra saber que ESTA
+        // entrada, e só ela, participa do colapso de "Passos do turno".
+        agentResponse: true,
+        node: bolha(text, event.id),
       });
     } else if (event.type === 'agent.error') {
       // O agente FALA a falha, no mesmo fio. Antes o motivo ia só por

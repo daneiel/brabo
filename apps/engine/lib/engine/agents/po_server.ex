@@ -312,9 +312,9 @@ defmodule Engine.Agents.PoServer do
 
   # RN-698: o texto do turno inteiro, numa `agent.response` só.
   defp gravar_texto_do_turno(state, ultimo, model_name) do
-    case TextoDoTurno.descarregar_com_modelo(ultimo, model_name) do
-      {"", _} -> :ok
-      {texto, modelo} -> emit_response(state, texto, modelo)
+    case TextoDoTurno.payload_do_turno(ultimo, model_name) do
+      nil -> :ok
+      payload -> emit(state, "agent.response", payload)
     end
   end
 
@@ -716,9 +716,6 @@ defmodule Engine.Agents.PoServer do
   # default: o único call site aqui sempre passa os 3 argumentos — diferente
   # do Criativo, que tem um segundo call site (mensagem sintética de erro de
   # ferramenta) sem modelo nenhum.
-  defp emit_response(state, content, model_name),
-    do: emit(state, "agent.response", %{content: content, modelName: model_name})
-
   # A falha, gravada e DITA. O `broadcast` continua, para quem está com a aba
   # aberta ver na hora — mas ele deixou de ser a única fonte.
   defp emit_falha(state, reason) do

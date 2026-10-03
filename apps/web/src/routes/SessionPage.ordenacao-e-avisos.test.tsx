@@ -499,6 +499,37 @@ describe('RN-172 — a sequência REAL do engine, renderizada', () => {
     expect(posHandoff).toBeGreaterThan(posUltima);
   });
 
+  it('AT-395: a bolha mostra só o fecho; `passos` recolhidos em "Passos do turno"', async () => {
+    eventos.mockReturnValue({
+      items: [
+        TURNO_DO_PO[0],
+        {
+          id: 'ev-9',
+          seq: 2,
+          type: 'agent.response',
+          actor: { kind: 'agent', id: 'po' },
+          payload: { content: 'Resumo final', passos: ['Vou criar', 'Criei duas'] },
+          createdAt: '2026-08-10T12:00:01.000Z',
+        },
+      ],
+    });
+    montar();
+    await screen.findByText('Resumo final');
+    expect(screen.queryByText('Vou criar')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /Passos do turno/ }));
+    await screen.findByText('Vou criar');
+    await screen.findByText('Criei duas');
+  });
+
+  it('AT-395: sem `passos`, nada de "Passos do turno"', async () => {
+    eventos.mockReturnValue({
+      items: [TURNO_DO_PO[0], { ...TURNO_DO_PO[1], payload: { content: 'Só isto' } }],
+    });
+    montar();
+    await screen.findByText('Só isto');
+    expect(screen.queryByRole('button', { name: /Passos do turno/ })).toBeNull();
+  });
+
   it('o handoff do turno N NÃO pula para dentro do turno N+1 (fronteira visível)', async () => {
     eventos.mockReturnValue({
       items: [

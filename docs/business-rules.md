@@ -19290,11 +19290,11 @@ segundo `executed` para o mesmo merge.
   `apps/api/src/infrastructure/git/local-git-provider.ts:339` (`GitPullRequestAlreadyMergedError`);
   `apps/web/src/lib/gate-do-merge.ts:19` (`gatePendenteNoMerge`);
   `apps/web/src/routes/ProjectPrsTab.tsx:201` (`gatePendenteNoMerge`);
-  `apps/web/src/routes/session-timeline-montagem.tsx:1019` (`gatePendenteNoMerge`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:1036` (`gatePendenteNoMerge`)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:656`
   (`merge_ja_proposto`), `:679` (`pr_ja_mergeado` — caso de falha), `:696`
 
-  `apps/web/src/routes/session-timeline-montagem.tsx:1019` (`gatePendenteNoMerge`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:1036` (`gatePendenteNoMerge`)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:656`
   (`merge_ja_proposto`), `:679` (`pr_ja_mergeado` — caso de falha), `:696`
   (negada não bloqueia, outra PR não colide — caminho feliz);
@@ -20497,15 +20497,37 @@ falhou), vale o modelo da última volta acumulada. Sem chamada de LLM que tenha
 devolvido modelo, o campo fica `nil` — nunca um modelo inventado (AT-384; o
 Infra Lead não grava `modelName` em desfecho nenhum e segue fora).
 
-- **Onde:** `apps/engine/lib/engine/agents/texto_do_turno.ex:61` (`descarregar`);
-  `:79` (`juntar`); `:51` (`descarregar_com_modelo`); `apps/web/src/routes/session-timeline-montagem.tsx:881`
-- **Teste:** `apps/engine/test/engine/agents/criativo_server_test.exs:207` (duas
+**Revisão (decisão do dono, 03/10, AT-395): só o fecho do turno na bolha.** No
+uso real (loja-teste-2, 02/10) a resposta única juntava o texto de TODAS as
+voltas ("Vou registrar… Excelente! Registrei…", dois resumos seguidos no PO).
+A `agent.response` do turno continua UMA, mas o `content` passa a ser só o
+FECHO — o texto da última volta que escreveu algo (o turno que termina num
+formulário, sem texto na última volta, fica com a anterior) — e o texto das
+voltas anteriores vai, na ordem, no campo `passos`, ausente quando não há.
+Nada some: o fio desenha cada passo como narração do mesmo turno+autor antes
+do fecho, e o colapso de "Passos do turno" que já existia os recolhe, fechado
+por padrão; os passos não contam no corte de mensagens do fio (RN-644). A
+reidratação (RN-580) devolve `passos` ANTES do `content`, no mesmo
+`assistant`, para o modelo não perder o que disse no meio do turno. Vale nos
+sete conversacionais (o Infra Lead também, sem `modelName`). Sem teto próprio
+para `passos`: o acúmulo já era gravado inteiro antes da revisão.
+
+- **Onde:** `apps/engine/lib/engine/agents/texto_do_turno.ex:85` (`descarregar`);
+  `:103` (`juntar`); `:51` (`descarregar_com_modelo`); `:65` (`payload_do_turno`);
+  `apps/engine/lib/engine/agents/reidratacao.ex:177` (`acumular`);
+  `apps/web/src/routes/session-timeline-montagem.tsx:797` (`passos`)
+- **Teste:** `apps/engine/test/engine/agents/texto_do_turno_test.exs:43` (três
+  voltas: fecho e dois passos), `:56` (uma volta, sem `passos`), `:60` (termina
+  em formulário); `apps/engine/test/engine/agents/reidratacao_test.exs`
+  (passos antes do fecho); `apps/web/src/routes/SessionPage.ordenacao-e-avisos.test.tsx:502`
+  (só o fecho à mostra, passos ao expandir) e `:524` (sem passos, nada extra);
+  `apps/engine/test/engine/agents/criativo_server_test.exs:209` (duas
   voltas, uma resposta inteira; nenhuma segunda), `apps/engine/test/engine/agents/texto_do_turno_test.exs`
   e `apps/web/src/routes/session-timeline-montagem.falha-de-turno.test.tsx:85`
   (a linha do teto; sem número, não inventa um); o modelo no formulário em
-  `apps/engine/test/engine/agents/criativo_server_test.exs:697` (com modelo) e
-  `:718` (sem modelo, `nil`)
-- **Origem:** AT-354, AT-384
+  `apps/engine/test/engine/agents/criativo_server_test.exs:703` (com modelo) e
+  `:724` (sem modelo, `nil`)
+- **Origem:** AT-354, AT-384, AT-395
 
 ### RN-700 — O PO não anuncia o handoff ao Arquiteto sem fazê-lo, e história sem tarefa não é entregue {#rn-700}
 

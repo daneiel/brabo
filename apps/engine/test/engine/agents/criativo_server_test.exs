@@ -204,9 +204,12 @@ defmodule Engine.Agents.CriativoServerTest do
   # RN-698 (AT-354): o texto que o modelo escreve em duas voltas (antes e
   # depois da ferramenta) vira UMA `agent.response`, e não um fragmento por
   # volta — o fio mostrava só " histórias e tarefas que cubram tudo.".
-  test "texto partido entre voltas vira UMA agent.response com o texto inteiro", %{
-    state: state
-  } do
+  # AT-395 (decisão do dono de 03/10): o `content` é só o FECHO, e a volta
+  # anterior vai em `passos` — continua UMA `agent.response`.
+  test "texto partido entre voltas vira UMA agent.response: fecho em content, o resto em passos",
+       %{
+         state: state
+       } do
     primeira = put_in(business_rule_turn([2])["message"]["content"], "Vou registrar as")
 
     Process.put(:fake_llm_turns, [
@@ -219,7 +222,10 @@ defmodule Engine.Agents.CriativoServerTest do
     assert_received {:event_appended, _, _,
                      %{
                        type: "agent.response",
-                       payload: %{content: "Vou registrar as regras que cubram tudo."}
+                       payload: %{
+                         content: "regras que cubram tudo.",
+                         passos: ["Vou registrar as"]
+                       }
                      }}
 
     refute_received {:event_appended, _, _, %{type: "agent.response"}}

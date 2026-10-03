@@ -397,14 +397,11 @@ defmodule Engine.Agents.UxDesignerServer do
 
   # `model_name` viaja do frame `final` da api (achado do problema 2). Sem
   # default: o único call site aqui sempre passa os 3 argumentos.
-  defp emit_response(state, content, model_name),
-    do: emit(state, "agent.response", %{content: content, modelName: model_name})
-
   # RN-698: o texto do turno inteiro, numa `agent.response` só.
   defp gravar_texto_do_turno(state, ultimo, model_name) do
-    case TextoDoTurno.descarregar_com_modelo(ultimo, model_name) do
-      {"", _} -> :ok
-      {texto, modelo} -> emit_response(state, texto, modelo)
+    case TextoDoTurno.payload_do_turno(ultimo, model_name) do
+      nil -> :ok
+      payload -> emit(state, "agent.response", payload)
     end
   end
 
