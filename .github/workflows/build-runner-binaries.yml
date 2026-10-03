@@ -41,7 +41,7 @@ permissions:
   contents: write # gh release upload
 
 env:
-  NODE_VERSION: '24.11.1'
+  NODE_VERSION: '26.10.0'
   PNPM_VERSION: '11.3.0'
   # `oven-sh/setup-bun` aceita "latest", mas fixar a versão evita que uma
   # release do Bun quebre os três builds ao mesmo tempo sem aviso — mesmo

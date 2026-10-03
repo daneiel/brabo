@@ -27,7 +27,7 @@ permissions:
   id-token: write # exigido por `npm publish --provenance`
 
 env:
-  NODE_VERSION: '24.11.1'
+  NODE_VERSION: '26.10.0'
   PNPM_VERSION: '11.3.0'
 
 concurrency:

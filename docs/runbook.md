@@ -202,7 +202,7 @@ Two consequences you will meet:
   warning for an outage would be worse.
 
 The service also has a **healthcheck** (`wget` against `127.0.0.1:8090/health`
-from inside the container — it publishes no port, and `node:24-alpine` has no
+from inside the container — it publishes no port, and `node:26-alpine` has no
 `curl`). Without it `up --wait` reported `Healthy` the moment the container
 started, so `scripts/dev/reset-total.sh` announced "reset complete" with a
 broker that had died five seconds earlier.
