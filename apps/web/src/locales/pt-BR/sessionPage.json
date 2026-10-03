@@ -104,6 +104,7 @@
     "passouOBastaoAo": "passou o bastão ao",
     "aceitarEIniciar": "Aceitar handoff e iniciar {{agente}}",
     "ativarExecucao": "Ativar execução",
+    "ativarSemPlanoAviso": "Sem plano: os devs pegam as tarefas como estão.",
     "semRepositorio": "Sem repositório ainda: aceitar este handoff o provisiona, e só então a execução pode ser ativada.",
     "acompanheExecucao": "Acompanhe a execução em Executores",
     "infraTitulo": "{{de}} passou o bastão à Infra",

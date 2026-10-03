@@ -589,13 +589,21 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
                     {t('handoff.semRepositorio')}
                   </span>
                 ) : (
-                  <Button
-                    variant="primary"
-                    loading={ativandoExecucao}
-                    onClick={handleActivateExecution}
-                  >
-                    {t('handoff.ativarExecucao')}
-                  </Button>
+                  // RN-728 (AT-410): o aceite é o primário; ativar daqui é
+                  // SECUNDÁRIO e diz o que pula — o plano do Dev Lead.
+                  <>
+                    <Button
+                      variant="secondary"
+                      loading={ativandoExecucao}
+                      onClick={handleActivateExecution}
+                      data-testid="ativar-execucao-no-handoff"
+                    >
+                      {t('handoff.ativarExecucao')}
+                    </Button>
+                    <span className={styles.timelineLink} data-testid="aviso-ativar-sem-plano">
+                      {t('handoff.ativarSemPlanoAviso')}
+                    </span>
+                  </>
                 )}
                 <Link
                   to="/projects/$projectId"
