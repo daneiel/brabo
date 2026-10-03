@@ -65,7 +65,10 @@ export function deriveExecutionProgress(
     // ANTERIOR pra sempre — o card dizia "ocioso" ao lado de "Implementar
     // X", uma task que já não existe mais pra ele. `dev.awaiting_gate` NÃO
     // limpa: a mesma task segue em aberto, só esperando o gate.
-    if ((e.type === 'dev.idle' || e.type === 'dev.idle_tripped') && p.agentId) {
+    if ((e.type === 'dev.idle' ||
+        e.type === 'dev.idle_tripped' ||
+        e.type === 'dev.credit_exhausted') &&
+      p.agentId) {
       agents.set(p.agentId, {
         ...agents.get(p.agentId),
         module: agents.get(p.agentId)?.module ?? '',

@@ -99,6 +99,9 @@ const DEV_STATUS_EVENTS: Record<string, AgentStatus> = {
   'dev.awaiting_approval': 'aguardando',
   'dev.awaiting_gate': 'aguardando',
   'dev.idle_tripped': 'travado',
+  // RN-726: provedor sem crédito. O engine pausa em `idle_tripped` (o Rearmar
+  // é a retomada) sem acionar a parada automática — `travado` com motivo próprio.
+  'dev.credit_exhausted': 'travado',
   // Os dois abaixo não são `dev.*` — não entram na comparação com o engine.
   'agent.response': 'trabalhando',
   'backlog.task_blocked': 'falhou',
@@ -191,9 +194,14 @@ export function subagentOutcomeLabel(events: SessionEvent[], subagentId: string)
 export function breakerReasonFor(events: SessionEvent[], agentId: string): string | undefined {
   const last = lastEventFor(
     events,
-    (e) => e.actor.id === agentId && e.type === 'dev.idle_tripped',
+    (e) =>
+      e.actor.id === agentId &&
+      (e.type === 'dev.idle_tripped' || e.type === 'dev.credit_exhausted'),
   );
   if (!last) return undefined;
+  if (last.type === 'dev.credit_exhausted') {
+    return i18n.t('agentStatus.creditExhausted', { ns: 'executors' });
+  }
   const n = (last.payload as { consecutiveBlocked?: number }).consecutiveBlocked;
   return n
     ? i18n.t('agentStatus.circuitBreaker.withCount', { ns: 'executors', count: n })

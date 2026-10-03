@@ -821,6 +821,8 @@ defmodule Engine.Dev.DevAgentServer do
     end
   end
 
+  @motivo_credito_esgotado "crédito do provider esgotado"
+
   # As origens abaixo NÃO são chute: cada desfecho do ToolLoop diz quem
   # decidiu parar, e é isso que a origem nomeia (achados P/Q/T).
   #
@@ -859,7 +861,24 @@ defmodule Engine.Dev.DevAgentServer do
   # O caminho do achado T. Quando há `last_error`, a origem sai do MESMO erro
   # que o diagnóstico já narra — antes, `diagnosis` dizia "falha na chamada ao
   # modelo: {413, …}" e `origem` dizia "indeterminada", na mesma linha.
-  defp handle_outcome({:ok, ctx}, state, _task, _story) do
+  # RN-726: o provider recusou por falta de crédito. A origem é `infra`, o
+  # motivo é nomeado, e a task NÃO conta para a parada automática (não é
+  # defeito de código): o agente PAUSA sem reivindicar a próxima, e o Rearmar
+  # do painel é a retomada depois de recarregar.
+  defp handle_outcome({:ok, %{last_error: erro} = ctx}, state, _task, _story)
+       when is_binary(erro) do
+    if FalhaDeTurno.credito_esgotado?(erro) do
+      state
+      |> AgentIo.block_task(@motivo_credito_esgotado, stop_diagnosis(ctx), "infra")
+      |> AgentIo.pausar_por_credito()
+    else
+      bloquear_parada(ctx, state)
+    end
+  end
+
+  defp handle_outcome({:ok, ctx}, state, _task, _story), do: bloquear_parada(ctx, state)
+
+  defp bloquear_parada(ctx, state) do
     state
     |> AgentIo.block_task(
       "parou sem concluir nem reportar bloqueio",

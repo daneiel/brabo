@@ -243,6 +243,29 @@ defmodule Engine.Dev.AgentIo do
     end
   end
 
+  @doc """
+  RN-726: o provider recusou por falta de crédito. Zera task/worktree/branch
+  como `finish_task/3`, mas NÃO incrementa o contador do disjuntor (não é
+  defeito de código) e NÃO reivindica a próxima task — reivindicar queimaria
+  as seguintes enquanto o provider seguir sem saldo. Fica em `:idle_tripped`
+  (o Rearmar do painel é a retomada) e emite `dev.credit_exhausted`, nunca
+  `dev.idle_tripped`.
+  """
+  def pausar_por_credito(state) do
+    state =
+      Map.merge(state, %{task_id: nil, worktree: nil, branch: nil, status: :idle_tripped})
+
+    persist(state)
+
+    emit(state, "dev.credit_exhausted", %{
+      agentId: state.agent_id,
+      motivo: "credito_esgotado",
+      origem: "infra"
+    })
+
+    state
+  end
+
   defp tripped?(counter, max) when is_integer(max), do: counter >= max
   defp tripped?(counter, _), do: counter >= @default_max_consecutive_blocked
 

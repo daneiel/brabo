@@ -283,6 +283,7 @@ estado lido do repositório e não da conversa.
 | Uma navegação só: a sidebar absorve o trilho do projeto (AT-404) | ADR 0211, RN-196, RN-201, RN-643 |
 | A mensagem do usuário aparece uma vez no fio, e "Ativar execução" vira secundário no handoff ao Dev Lead (AT-409/AT-410) | RN-728 |
 | Escape unicode no texto da ferramenta, duplicata normalizada e recusa que diz o que chegou (AT-405/AT-408) | RN-725 |
+| O crédito esgotado no provider pausa o dev com origem infra e diz como retomar (AT-407) | RN-726 |
 
 ## Estado atual e aberto
 

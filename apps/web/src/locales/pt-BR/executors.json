@@ -46,6 +46,7 @@
     "subspecialty_other": "{{count}} subespecialidades"
   },
   "agentStatus": {
+    "creditExhausted": "crédito do provedor do modelo esgotado — recarregue e rearme para retomar",
     "circuitBreaker": {
       "default": "parada automática acionada",
       "withCount_zero": "parada automática: {{count}} tarefas bloqueadas seguidas",
@@ -95,6 +96,7 @@
       "devBlockedByContainer": "parado: o projeto não tem container de pé",
       "devError": "erro",
       "devIdleTripped": "parada automática acionada",
+      "devCreditExhausted": "crédito do provedor esgotado",
       "prGateChanged": "gate mudou"
     },
     "now": {

@@ -169,6 +169,7 @@ compaction summary, and the opening messages.
 | `dev.awaiting_gate` | PR open, waiting on the gate (Phase 12b) — `task_id`/`worktree` remain held |
 | `dev.blocked` | the task was returned with a diagnosis (iteration limit, budget exceeded, `report_blocked`, worktree/context failure) |
 | `dev.idle_tripped` | circuit breaker tripped (RN-047) — N consecutive blocked tasks stop the agent |
+| `dev.credit_exhausted` | the model provider refused for lack of credit (RN-726) — the agent pauses in `idle_tripped` without counting the breaker nor claiming the next task; Rearm resumes |
 | `dev.rearmed` | the user re-armed a stuck agent (Phase 12b) — `actor` is the USER who clicked, not the agent |
 | `pr.gate_changed` | the PR moved to a new gate (`awaiting_qa` → `awaiting_secops` → `awaiting_user`) |
 | `infra.gate_changed` | Infra's gate |

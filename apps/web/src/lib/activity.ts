@@ -321,6 +321,17 @@ export function classifyEvent(event: SessionEvent): ActivityDisplay {
   // aqui, antes do genérico de `dev.`, porque naquele ele virava "atividade
   // em dev-api" em cinza neutro: indistinguível de ruído no sino de
   // notificações, enquanto UMA task bloqueada aparecia em vermelho.
+  // RN-726: o provedor recusou por falta de crédito — não é a parada
+  // automática, e o texto diz como retomar.
+  if (type === 'dev.credit_exhausted') {
+    return {
+      kind: 'commit',
+      icon: CommitIcon,
+      color: 'var(--danger)',
+      bad: true,
+      text: `${actorLabel} PAUSOU — crédito do provedor do modelo esgotado. Recarregue e rearme no painel do time para retomar.`,
+    };
+  }
   if (type === 'dev.idle_tripped') {
     const n = payloadField(payload, 'consecutiveBlocked');
     return {

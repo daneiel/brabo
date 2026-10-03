@@ -104,4 +104,18 @@ defmodule Engine.Agents.FalhaDeTurnoTest do
       assert FalhaDeTurno.mensagem({:final, "modelo xyz não existe"}) =~ "modelo xyz não existe"
     end
   end
+
+  describe "crédito esgotado (RN-726)" do
+    test "402 do provider é infra e é reconhecido" do
+      texto = "openrouter respondeu com status 402: add credits"
+      assert FalhaDeTurno.credito_esgotado?(texto)
+      assert FalhaDeTurno.credito_esgotado?(inspect({:final, texto}))
+      assert FalhaDeTurno.origem({:final, texto}) == "infra"
+    end
+
+    test "outro erro do provider não é crédito" do
+      refute FalhaDeTurno.credito_esgotado?("openrouter respondeu com status 500")
+      refute FalhaDeTurno.credito_esgotado?(nil)
+    end
+  end
 end

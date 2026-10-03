@@ -240,6 +240,20 @@ describe('deriveAgentRoster — status', () => {
       expect(breakerReasonFor([], 'dev-core')).toBeUndefined();
     });
 
+    it('RN-726: dev.credit_exhausted é travado com motivo de crédito, não a parada automática', () => {
+      const eventos = [ev('dev.credit_exhausted', 'dev-core', { motivo: 'credito_esgotado' })];
+      expect(breakerReasonFor(eventos, 'dev-core')).toBe(
+        'crédito do provedor do modelo esgotado — recarregue e rearme para retomar',
+      );
+      // Um idle_tripped ANTERIOR não vence o crédito mais recente.
+      expect(
+        breakerReasonFor(
+          [ev('dev.idle_tripped', 'dev-core', { consecutiveBlocked: 3 }), ...eventos],
+          'dev-core',
+        ),
+      ).toContain('crédito');
+    });
+
     it('dev.idle depois de dev.working limpa o card — não fica preso em ocioso mostrando a task antiga', () => {
       // A prova em si é de execution.ts (deriveExecutionProgress); aqui
       // só confirma que o STATUS reflete o evento mais recente.
