@@ -9902,7 +9902,7 @@ reabriria a rechamada por outra porta. A cláusula de args inválidos também n�
 dispara — ela não sabe qual é a story.
 
 - **Onde:** `apps/engine/lib/engine/agents/dev_lead_tools.ex:425`
-  (`run_assessment/2`, a leitura única do histórico) e `:455`
+  (`run_assessment/2`, a leitura única do histórico) e `:490`
   (`disparar_appsec_se_preciso/3`, a guarda de idempotência);
   `apps/engine/lib/engine/gates/dispatcher.ex:29` (o callback) e `:86`
   (`Engine.Gates.Dispatcher.Live.run_appsec_design/2`);
@@ -19502,7 +19502,7 @@ OBRIGATÓRIAS da `coverageMatrix` (e portanto reprovar entrega).
   `:104` (`token_budget_micros`), `:179` (`descrever_arquivos`);
   `apps/engine/lib/engine/gates/qa_automacao_agent.ex:166` (`com_o_plano`);
   `apps/engine/lib/engine/agents/dev_lead_tools.ex:425` (`run_assessment`),
-  `:421` (`propor_parecer`);
+  `:509` (`propor_parecer`);
   `apps/engine/lib/engine/harness/artifact_schemas.ex:59` (`taskId`);
   `docs/gates.yml` (`qa-verificada`, `implementavel`); `docs/fluxo.yml`
   (`qa-estrategia`, `area-qa`, `dev-lead`)
@@ -19770,7 +19770,7 @@ módulo do `module_map`, como antes, e o paralelismo extra continua pelo
   `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:133`
   (`recusaNaProposta`); `apps/api/src/application/use-cases/execution/execute-execution-plan.use-case.ts:67`
   (`recusaNaProposta`); `apps/api/src/db/schema/backlog.ts:180` (`module`);
-  `apps/engine/lib/engine/agents/dev_lead_tools.ex:330`
+  `apps/engine/lib/engine/agents/dev_lead_tools.ex:358`
   (`tarefas_do_backlog`); `apps/engine/lib/engine/agents/dev_lead_tools.ex:200`
   (`erro_da_proposta`)
 - **Teste:** `apps/api/test/domain/execution/plano-de-execucao.spec.ts:22`
@@ -20517,8 +20517,12 @@ bem-sucedido encerra o turno — antes, qualquer ferramenta bem-sucedida na
 kickoff proíbe inventar `task_id` e pede que ele só diga ter avaliado as
 histórias em que chamou `assess_implementability`.
 
-- **Onde:** `apps/engine/lib/engine/agents/dev_lead_tools.ex:308` (`module_map_vigente`);
-  `:282` (`spec_read_backlog`); `:330` (`tarefas_do_backlog`);
+- **Onde:** `apps/engine/lib/engine/agents/dev_lead_tools.ex:324` (`module_map_vigente`);
+  `:309` (`spec_read_backlog`); `:325` (`tarefas_do_backlog`);
+  `apps/engine/lib/engine/agents/dev_lead_server.ex:552` (`kickoff_instruction`);
+
+- **Onde:** `apps/engine/lib/engine/agents/dev_lead_tools.ex:335` (`module_map_vigente`);
+  `:309` (`spec_read_backlog`); `:358` (`tarefas_do_backlog`);
   `apps/engine/lib/engine/agents/dev_lead_server.ex:552` (`kickoff_instruction`);
   `:393` (`run_turn`)
 - **Teste:** `apps/engine/test/engine/agents/dev_lead_server_test.exs:164` (o
@@ -20953,14 +20957,19 @@ conversa —, e a delegação terminava `failed` com origem `modelo` e um
   nomeada reportada ao lead, mas o diagnóstico diz o que ele pediu: "pediu
   informação que não recebeu, em vez de chamar emit_infra_delegation_result:
   <texto>" (até 300 caracteres).
+- O título da PR de infra leva o prefixo `infra: ` só quando o resumo do
+  modelo ainda não começa com ele (sem diferenciar maiúsculas) — antes saía
+  "infra: infra: Dockerfile…" (AT-396).
 
 - **Onde:** `apps/engine/lib/engine/infra/workflows_agent.ex:61` (`dispensa`),
+  `apps/engine/lib/engine/infra/infra_lead.ex:69` (`com_prefixo`),
   `apps/engine/lib/engine/infra/workflows_agent.ex:184` (`parada_sem_ferramenta`),
   `apps/engine/lib/engine/infra/infra_lead_server.ex:1185` (`finalize`)
 - **Teste:** `apps/engine/test/engine/infra/workflows_agent_test.exs` ("RN-710: …")
   e `apps/engine/test/engine/infra/infra_lead_server_test.exs` ("RN-710:
-  repositório local dispensa o Workflows …")
-- **Origem:** AT-368
+  repositório local dispensa o Workflows …") e
+  `apps/engine/test/engine/infra/infra_lead_test.exs` ("com_prefixo/1 (AT-396)")
+- **Origem:** AT-368, AT-396
 
 ### RN-712 — O fio da sessão mostra o que acabou de acontecer, uma vez e legível {#rn-712}
 
@@ -21044,7 +21053,7 @@ decisão, fechados juntos:
   `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:80` (`execute`),
   `apps/api/src/application/use-cases/execution/execute-execution-plan.use-case.ts:89` (`execute`),
   `apps/api/src/application/use-cases/execution/activate-execution.use-case.ts:116` (`execute`),
-  `apps/engine/lib/engine/agents/dev_lead_tools.ex:219` (`resumo_do_plano`)
+  `apps/engine/lib/engine/agents/dev_lead_tools.ex:558` (`resumo_do_plano`)
 - **Teste:** `apps/web/src/lib/aprovacoes.test.ts` ("AT-371 — o verbo segue o
   estado da ação", "AT-381 — o plano mostra a estimativa de gasto"),
   `apps/web/src/components/ApprovalCard.test.tsx` ("open_adr_pr pendente"),
@@ -21212,3 +21221,28 @@ turno continua.
   nomeada; ferramenta que lança não encerra o turno do `ToolLoop` e grava
   `tool.result` `ok: false`)
 - **Origem:** AT-387
+
+### RN-721 — O id encurtado de história ou tarefa é resolvido dentro do projeto {#rn-721}
+
+O Arquiteto passava a `assign_story_modules` os 8 primeiros caracteres do id da
+história, a api respondia 400 "storyId must be a UUID" e, depois de oito
+tentativas, nenhuma história ganhava módulo (loja-teste-2, 02/10). Toda
+ferramenta de agente que recebe id de história ou tarefa —
+`assign_story_modules` e `create_task` (`story_id`), `assess_implementability`
+(`storyId`) e `propose_execution_plan` (`tarefas[].taskId`) — passa o id por
+`Engine.Harness.IdDoBacklog` antes de chamar a api:
+
+- UUID completo segue sem consulta.
+- Prefixo de no mínimo 8 caracteres hexadecimais é resolvido contra o backlog
+  do PROJETO (`list_backlog`): um só id que começa com ele vira o UUID;
+  nenhum é recusa nomeada ("nenhuma história do projeto tem id começando com
+  …"); mais de um é recusa nomeada ("o prefixo … é ambíguo"). A recusa volta
+  ao modelo como resultado da ferramenta (RN-163).
+- O que não é nem UUID nem prefixo segue como veio, e quem recusa é a api.
+
+- **Onde:** `apps/engine/lib/engine/harness/id_do_backlog.ex:21` (`resolver`),
+  `:43` (`resolver_em`); `apps/engine/lib/engine/agents/dev_lead_tools.ex:176`
+  (`resolver_tarefas`)
+- **Teste:** `apps/engine/test/engine/harness/id_do_backlog_test.exs` (prefixo
+  único resolve; ambíguo e inexistente recusam nomeados)
+- **Origem:** AT-390
