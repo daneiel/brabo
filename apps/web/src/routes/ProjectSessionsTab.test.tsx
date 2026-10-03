@@ -738,7 +738,10 @@ describe('ProjectSessionsTab — selo de status (RN-227)', () => {
 
     montarAba(ProjectCriativoTab);
 
-    expect(await screen.findByText('encerrando')).toBeTruthy();
+    const selo = await screen.findByText('encerrando');
+    expect(selo).toBeTruthy();
+    // `closing` é estado EM CURSO: o rótulo vai no Shimmer (AT-403).
+    expect(selo.className).toMatch(/shimmer|estatico/);
     // Nem o texto cru, nem o rótulo de "fechada" — os dois mentiriam sobre
     // um desfecho que ainda não aconteceu.
     expect(screen.queryByText('closing')).toBeNull();
@@ -755,7 +758,7 @@ describe('ProjectSessionsTab — selo de status (RN-227)', () => {
 
     montarAba(ProjectCriativoTab);
 
-    expect(await screen.findByText('aguardando')).toBeTruthy();
+    expect((await screen.findByText('aguardando')).className).not.toMatch(/shimmer|estatico/);
     expect(screen.queryByText('created')).toBeNull();
   });
 });
