@@ -286,3 +286,34 @@ describe('SessionPage — o composer oferece o Infra Lead (RN-617)', () => {
     );
   });
 });
+
+describe('SessionPage — uma bolha só por mensagem (RN-728, AT-409)', () => {
+  it('com o turno em curso, a otimista sai quando o chat.message do aceite chega ao log', async () => {
+    sendAgentMessage.mockResolvedValue({ ok: true, mensagemId: 'm-9', entrega: 'lida' });
+    montar();
+    const campo = await enviarMensagem('olá, PO');
+
+    expect(await screen.findAllByText('olá, PO')).toHaveLength(1);
+    await waitFor(() => expect(sendAgentMessage).toHaveBeenCalled());
+
+    eventos.mockReturnValue({
+      items: [
+        ...eventosIniciais,
+        {
+          id: 'm-9',
+          seq: 2,
+          type: 'chat.message',
+          actor: { kind: 'user', id: 'eu' },
+          payload: { text: 'olá, PO' },
+          createdAt: '2026-08-10T12:00:01.000Z',
+        },
+      ],
+    });
+    // Qualquer re-render lê o log novo (o mock do hook não tem cache).
+    fireEvent.change(campo, { target: { value: 'x' } });
+
+    // O turno segue (o "Parar" continua lá), e a mensagem aparece UMA vez.
+    await waitFor(() => expect(screen.getAllByText('olá, PO')).toHaveLength(1));
+    expect(screen.getByRole('button', { name: 'Parar' })).toBeInTheDocument();
+  });
+});

@@ -281,6 +281,7 @@ estado lido do repositório e não da conversa.
 | O TanStack AI não é adotado no front; revisitar na 1.0 (AT-400) | tanstack-ai.md |
 | O texto do turno do agente em curso ganha o Shimmer, com motion (AT-401) | ADR 0210 |
 | Uma navegação só: a sidebar absorve o trilho do projeto (AT-404) | ADR 0211, RN-196, RN-201, RN-643 |
+| A mensagem do usuário aparece uma vez no fio, e "Ativar execução" vira secundário no handoff ao Dev Lead (AT-409/AT-410) | RN-728 |
 
 ## Estado atual e aberto
 

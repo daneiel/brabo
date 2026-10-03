@@ -301,6 +301,18 @@ describe('SessionPage — problema 2: "Ativar execução" inline no card do Dev 
     return montar();
   }
 
+  it('RN-728 (AT-410): o aceite é o primário; "Ativar execução" é secundário e diz o que pula', async () => {
+    montarComCardDevLead();
+
+    const ativar = await screen.findByRole('button', { name: 'Ativar execução' });
+    const aceitar = screen.getByRole('button', { name: /Aceitar handoff e iniciar/ });
+    expect(ativar.className).toMatch(/secondary/);
+    expect(aceitar.className).not.toMatch(/secondary/);
+    expect(screen.getByTestId('aviso-ativar-sem-plano')).toHaveTextContent(
+      'Sem plano: os devs pegam as tarefas como estão.',
+    );
+  });
+
   it('caminho feliz: clique chama activateExecution com projectId e sessionId (originSessionId)', async () => {
     activateExecution.mockResolvedValue({ sessionId: 'sessao-exec-1', modules: ['api'] });
     montarComCardDevLead();

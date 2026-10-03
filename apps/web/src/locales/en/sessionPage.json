@@ -103,6 +103,7 @@
     "passouOBastaoAo": "handed off to",
     "aceitarEIniciar": "Accept handoff and start {{agente}}",
     "ativarExecucao": "Activate execution",
+    "ativarSemPlanoAviso": "No plan: the devs take the tasks as they are.",
     "semRepositorio": "No repository yet: accepting this handoff provisions it, and only then can execution be activated.",
     "acompanheExecucao": "Follow the execution in Executors",
     "infraTitulo": "{{de}} handed off to Infra",

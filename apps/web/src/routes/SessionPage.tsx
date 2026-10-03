@@ -39,6 +39,7 @@ import {
 } from '../lib/canal-vivo';
 import { emailDaSessao } from '../lib/auth';
 import { useAutoriaDaSessao } from '../lib/autoria-da-sessao';
+import { nomeDaMensagemOtimista, otimistaJaNoLog } from '../lib/mensagem-otimista';
 import { AGENTS } from '../lib/agents';
 import { useToast } from '../components/ui/ToastProvider';
 import { TurnActivityStripDoStore } from '../components/TurnActivityStrip';
@@ -130,11 +131,16 @@ export function SessionPage({
   // O access token carrega o e-mail; o nome não vem mais em claim nenhuma
   // (Fase 7a). Para o rótulo de autoria da própria mensagem, o e-mail serve —
   // e o fallback cobre o instante entre o boot e a primeira renovação.
-  const user = { name: emailDaSessao() };
   // RN-652: o autor de cada fala do fio sai do ATOR do evento, resolvido
   // contra quem vê e os membros do projeto — `user` acima é só o rótulo da
   // mensagem OTIMISTA, que é sempre de quem vê.
   const autoria = useAutoriaDaSessao(projectId);
+  // RN-728 (AT-409): o nome da bolha otimista sai do MESMO caminho da bolha
+  // do log; o e-mail do token é só o fallback antes da autoria chegar.
+  const user = { name: nomeDaMensagemOtimista(autoria) ?? emailDaSessao() };
+  // O `mensagemId` que a api devolveu no aceite: a otimista sai quando o
+  // `chat.message` dele chega ao log (casamento por id, nunca por texto).
+  const [idDaOtimista, setIdDaOtimista] = useState<string | null>(null);
 
   // "Auto mode" (RN-153) exige `maintainer` no endpoint que grava a curinga —
   // mesma aproximação de `ProjectApprovalsTab.tsx`/`ProjectSettingsTab.tsx`
@@ -659,6 +665,7 @@ export function SessionPage({
     if (!destinatario) return;
 
     setDraft('');
+    setIdDaOtimista(null);
     setOptimisticUser(text);
     setStreaming(true);
     setStreamingText('');
@@ -707,7 +714,8 @@ export function SessionPage({
     // sem efeito observável.
     iniciarTurnoDoAgente(agentParaEnviar);
     try {
-      await sendAgentMessage(projectId, sessionId, agentParaEnviar, text);
+      const resposta = await sendAgentMessage(projectId, sessionId, agentParaEnviar, text);
+      setIdDaOtimista(resposta?.mensagemId ?? null);
       // ADR 0163 (RN-578): resolver é o ACEITE — o turno segue no engine e
       // o fim chega pelo canal (`agent.done`) ou, se o canal perdeu o
       // broadcast (join ainda não concluído, RN-108), pela leitura da cauda
@@ -851,7 +859,7 @@ export function SessionPage({
                 handleStartIdeation={handleStartIdeation}
                 setDraft={setDraft}
                 fio={fio}
-                optimisticUser={optimisticUser}
+                optimisticUser={otimistaJaNoLog(events, idDaOtimista) ? null : optimisticUser}
                 user={user}
                 turnoViaCanal={turnoViaCanal}
                 streamingStore={streamingStore}
