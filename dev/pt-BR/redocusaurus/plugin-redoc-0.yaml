@@ -14373,6 +14373,17 @@ components:
             The provider's failure. Comes in the BODY with 200, not as an HTTP
             error, because the accounting in `usage` remains valid — the turn
             spent, even while failing.
+        errorCode:
+          type: object
+          example: null
+          nullable: true
+          description: >-
+            The provider failure's normalized `code` (ADR 0041) — `auth`,
+            `rate_limit`, `insufficient_credit` (HTTP 402, RN-730),
+            `model_not_found`, `context_length`, `timeout`, `connection` or
+            `upstream`. `null` with no error, or when the error is not the
+            provider's (budget, missing binding). Decide by this, never by the
+            text of `error`.
         modelName:
           type: object
           example: llama3.2:3b
@@ -14393,6 +14404,7 @@ components:
         - message
         - usage
         - error
+        - errorCode
         - modelName
     LlmTurnStreamEventResponseDto:
       type: object
