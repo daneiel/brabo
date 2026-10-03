@@ -222,8 +222,10 @@ defmodule Engine.Agents.PoServerTest do
       assert String.contains?(devolucao["content"], "Falta o caso de recusa do pagamento")
       # A frase de precedência (lição do ADR 0020).
       assert String.contains?(devolucao["content"], "PREVALECE")
-      # O modelo precisa saber o que PODE fazer: não existe editar história.
-      assert String.contains?(devolucao["content"], "create_story")
+      # O modelo precisa saber o que PODE fazer: desde a RN-727, corrigir a
+      # MESMA história ou arquivá-la — não recriá-la.
+      assert String.contains?(devolucao["content"], "update_story")
+      assert String.contains?(devolucao["content"], "archive_story")
     end
 
     test "vivo?/1 é falso quando não há PO registrado para a sessão" do
@@ -243,6 +245,10 @@ defmodule Engine.Agents.PoServerTest do
       assert "listar_metricas_de_produto" in nomes
       # RN-165: perguntar é uma saída, e só existe se estiver na lista.
       assert "ask_structured_questions" in nomes
+      # RN-727: o PO corrige e arquiva a própria história (TP-01: chamou
+      # `delete_story` e recebeu "ferramenta desconhecida").
+      assert "update_story" in nomes
+      assert "archive_story" in nomes
 
       indice = fn nome -> Enum.find_index(nomes, &(&1 == nome)) end
       assert indice.("listar_regras_de_negocio") < indice.("create_epic")

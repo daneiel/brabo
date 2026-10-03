@@ -67,7 +67,34 @@
   "storyNode": {
     "awaitingYou": "aguardando você",
     "returned": "devolvida",
-    "youReturned": "Você devolveu ao PO:"
+    "youReturned": "Você devolveu ao PO:",
+    "taskCount_zero": "{{count}} tarefas",
+    "taskCount_one": "{{count}} tarefa",
+    "taskCount_other": "{{count}} tarefas",
+    "editTitle": "Editar título",
+    "archive": "Arquivar",
+    "editModalTitle": "Editar o título da história",
+    "titleLabel": "Título",
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "archiveModalTitle": "Arquivar \"{{title}}\"?",
+    "archiveExplain_zero": "A história sai do backlog, da cobertura e do plano. Nada é apagado: o registro fica no histórico da sessão.",
+    "archiveExplain_one": "A história e a {{count}} tarefa dela saem do backlog, da cobertura e do plano. Nada é apagado: o registro fica no histórico da sessão.",
+    "archiveExplain_other": "A história e as {{count}} tarefas dela saem do backlog, da cobertura e do plano. Nada é apagado: o registro fica no histórico da sessão.",
+    "archiveReasonLabel": "Motivo (opcional)",
+    "archiveReasonPlaceholder": "Ex.: duplicada de outra história.",
+    "archiveConfirm": "Arquivar",
+    "inertRole": "Editar e arquivar pedem o papel developer ou acima.",
+    "inertStatus": "Só história em rascunho pode ser editada ou arquivada.",
+    "inertRunning_zero": "{{count}} tarefas em execução — espere terminar para editar ou arquivar.",
+    "inertRunning_one": "{{count}} tarefa em execução — espere terminar para editar ou arquivar.",
+    "inertRunning_other": "{{count}} tarefas em execução — espere terminar para editar ou arquivar.",
+    "toast": {
+      "updated": "Título corrigido",
+      "updateError": "Não foi possível corrigir o título",
+      "archived": "História arquivada",
+      "archiveError": "Não foi possível arquivar"
+    }
   },
   "fieldLabels": {
     "rf": "RF",

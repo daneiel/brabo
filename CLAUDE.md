@@ -285,6 +285,7 @@ estado lido do repositório e não da conversa.
 | Escape unicode no texto da ferramenta, duplicata normalizada e recusa que diz o que chegou (AT-405/AT-408) | RN-725 |
 | O crédito esgotado no provider pausa o dev com origem infra e diz como retomar (AT-407) | RN-726 |
 | A PR de infra mira `dev`, a sidebar abre só o projeto atual, e o assistente não convida o autofill (AT-411/412/413/415) | RN-729 |
+| A história draft se corrige e se arquiva, pelo PO e pelo usuário (AT-406) | ADR 0212, RN-727 |
 
 ## Estado atual e aberto
 
@@ -1615,6 +1616,15 @@ o RACIOCÍNIO da triagem, que continua valendo.
   avaliação do módulo) — o grafo de imports é um DAG e continuar assim é
   invariante que ninguém testa, só quebra no boot.
 - Todo evento de domínio é imutável: nunca UPDATE em tabelas de eventos.
+- História ARQUIVADA é a coluna `stories.archived_at`, nunca um valor de
+  `story_status` (o status é o que decide o claim) — ADR 0212, RN-727. Toda
+  leitura que DECIDE (backlog, cobertura, fila de promoção, plano do Dev Lead,
+  claim e a contagem dele) filtra `archived_at IS NULL`, e as tarefas saem
+  junto pela história. Editar e arquivar têm UMA régua
+  (`recusaDeCorrecaoDeHistoria`): só `draft` e sem tarefa
+  `in_progress`/`in_review`; quem pode é o PO (`update_story`/`archive_story`)
+  e o usuário (`developer`, aba Histórias). Corrigir a história é o caminho —
+  o PO não a recria.
 - Estados de sessão são máquina de estados explícita:
   created → active → closing → closed | closed_abnormally
   Estado TERMINAL recusa CONVERSA com 409 nomeado (`sessao_encerrada`,

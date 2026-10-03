@@ -34,7 +34,16 @@ defmodule Engine.Agents.PoServer do
     TurnoOrfao
   }
 
-  alias Engine.Harness.Tools.{CompleteStory, CreateEpic, CreateStory, CreateTask, OfferHandoff}
+  alias Engine.Harness.Tools.{
+    ArchiveStory,
+    CompleteStory,
+    CreateEpic,
+    CreateStory,
+    CreateTask,
+    OfferHandoff,
+    UpdateStory
+  }
+
   alias Engine.Harness.Tools.{AskStructuredQuestions, ListarBacklog, ListarRegrasDeNegocio}
   alias Engine.Harness.Tools.{EmitArtifact, ListarMetricasDeProduto}
   alias Engine.Sessions.EngineApiClient
@@ -128,6 +137,8 @@ defmodule Engine.Agents.PoServer do
          CreateStory.spec(),
          # RN-720: completar a história existente em vez de recriá-la.
          CompleteStory.spec(),
+         UpdateStory.spec(),
+         ArchiveStory.spec(),
          CreateTask.spec(),
          # RN-165: perguntar em vez de parar. A ferramenta é a MESMA do
          # Criativo (RN-162) — o PO só passou a advertisá-la.
@@ -365,6 +376,8 @@ defmodule Engine.Agents.PoServer do
   defp run_tool("create_epic", args, state), do: CreateEpic.run(args, state)
   defp run_tool("create_story", args, state), do: CreateStory.run(args, state)
   defp run_tool("complete_story", args, state), do: CompleteStory.run(args, state)
+  defp run_tool("update_story", args, state), do: UpdateStory.run(args, state)
+  defp run_tool("archive_story", args, state), do: ArchiveStory.run(args, state)
   defp run_tool("create_task", args, state), do: CreateTask.run(args, state)
 
   defp run_tool("ask_structured_questions", args, state),
@@ -589,7 +602,9 @@ defmodule Engine.Agents.PoServer do
     conta como entregue: o Dev Lead distribui tarefas, não histórias.
     Cubra TODAS as regras com ao menos uma história. História que já existe e ficou
     incompleta (sem `business_rule_ids`, RF, DoD ou DoR) se COMPLETA com complete_story —
-    nunca a recrie com create_story. offer_handoff ao arquiteto é RECUSADO enquanto houver
+    nunca a recrie com create_story. Título errado se corrige com update_story, e história
+    DUPLICADA ou criada por engano se arquiva com archive_story (só draft e sem tarefa em
+    execução) — nunca deixe a duplicata no backlog. offer_handoff ao arquiteto é RECUSADO enquanto houver
     regra sem história ou história draft incompleta, e o resultado lista quais; nunca diga
     ao usuário que a cobertura está completa sem a ferramenta ter aceitado.
     Não reescreva uma regra do usuário: se emit_artifact avisar que a sua regra parece
@@ -669,9 +684,9 @@ defmodule Engine.Agents.PoServer do
   # original continua no contexto, então o parecer que a contradiz precisa
   # dizer que vale mais.
   #
-  # O que o PO pode fazer está dito EXPLICITAMENTE. `complete_story` (RN-720)
-  # só completa história `draft` — não reescreve título nem desfaz regra —,
-  # então a recusa continua pedindo a versão corrigida por `create_story`.
+  # O que o PO pode fazer está dito EXPLICITAMENTE. Desde a RN-727 ele CORRIGE
+  # a própria história (`update_story`, `complete_story`) em vez de recriá-la,
+  # e arquiva a que não serve mais (`archive_story`).
   defp revision_message(story) do
     %{
       "role" => "user",
@@ -683,10 +698,10 @@ defmodule Engine.Agents.PoServer do
           "estava completa: onde os dois se contradisserem, siga o motivo. A promoção " <>
           "é decisão do usuário, e repropor a mesma história sem endereçar o que ele " <>
           "apontou só devolve o problema para ele.\n\n" <>
-          "Não existe ferramenta de EDITAR história. O que você pode fazer: criar a " <>
-          "versão corrigida com `create_story` (a recusada fica registrada como " <>
-          "devolvida, com o motivo), ou — se o motivo não estiver claro — responder " <>
-          "perguntando ao usuário antes de recriar qualquer coisa.",
+          "O que você pode fazer: corrigir a MESMA história — o título e a descrição " <>
+          "com `update_story`, RF/DoD/DoR e regras com `complete_story` — ou, se ela " <>
+          "não deve existir, arquivá-la com `archive_story`. Se o motivo não estiver " <>
+          "claro, pergunte ao usuário antes de mudar qualquer coisa.",
       :pinned => true
     }
   end

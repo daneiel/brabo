@@ -1292,6 +1292,8 @@ reason in the URL.
 | GET | `/internal/sessions/:sessionId/psychologist-context` | engine-service |
 | POST | `/internal/sessions/:sessionId/stories` | engine-service |
 | POST | `/internal/sessions/:sessionId/stories/:storyId/complete` | engine-service |
+| POST | `/internal/sessions/:sessionId/stories/:storyId/update` | engine-service |
+| POST | `/internal/sessions/:sessionId/stories/:storyId/archive` | engine-service |
 | POST | `/internal/sessions/:sessionId/semantic-duplicate-check` | engine-service |
 | POST | `/internal/sessions/:sessionId/story-modules` | engine-service |
 | POST | `/internal/sessions/:sessionId/tasks` | engine-service |
@@ -1437,6 +1439,8 @@ reason in the URL.
 | POST | `/projects/:projectId/tasks/:taskId/gates/:gate/resume` | role:developer |
 | GET | `/projects/:projectId/spend/me` | role:viewer |
 | POST | `/projects/:projectId/stories/:storyId/return` | role:developer |
+| PATCH | `/projects/:projectId/stories/:storyId/title` | role:developer |
+| POST | `/projects/:projectId/stories/:storyId/archive` | role:developer |
 | POST | `/projects/:projectId/stories/promote` | role:developer |
 | DELETE | `/workspaces/:workspaceId` | role:owner |
 | GET | `/workspaces/:workspaceId` | role:viewer |
