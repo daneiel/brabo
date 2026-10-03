@@ -1249,6 +1249,7 @@ reason in the URL.
 | GET | `/runner-releases/binary` | public |
 | POST | `/internal/sessions/:sessionId/actions` | engine-service |
 | GET | `/internal/sessions/:sessionId/anamnese-context` | engine-service |
+| POST | `/internal/sessions/:sessionId/anamnese-window` | engine-service |
 | POST | `/internal/sessions/:sessionId/delegations` | engine-service |
 | GET | `/internal/sessions/:sessionId/dev-context` | engine-service |
 | POST | `/internal/sessions/:sessionId/epics` | engine-service |
