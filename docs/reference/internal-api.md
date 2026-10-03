@@ -970,6 +970,7 @@ instead of inventing an image outside it.
 |---|---|
 | POST | `/epics` · `/stories` · `/tasks` |
 | POST | `/stories/:storyId/complete` (RN-720) |
+| POST | `/stories/:storyId/update` · `/stories/:storyId/archive` (RN-727) |
 | POST | `/story-modules` |
 | POST | `/module-map` |
 | POST | `/c4-diagram` |
@@ -982,6 +983,19 @@ instead of inventing an image outside it.
 
 `tasks/claim` is atomic on the api side — it's what prevents two dev agents from
 claiming the same task.
+
+`/stories/:storyId/update` (title and/or description) and
+`/stories/:storyId/archive` (optional `reason`) are the PO's `update_story` and
+`archive_story` ([RN-727](../business-rules.md#rn-727),
+[ADR 0212](../adr/0212-historia-arquivada.md)). Both go through the same rule
+as the user's routes — only a `draft` story with no task `in_progress` or
+`in_review` — and refuse with a named 409 (`historia_arquivada`,
+`historia_nao_draft`, `historia_com_tarefa_em_execucao`) that reaches the model
+as the tool result. An archived story leaves the backlog, coverage, the
+promotion queue, the Dev Lead's plan and the claim; `/stories/:storyId/complete`
+and `/tasks` refuse it. Body: `projectId` plus `title` (≤ 200) and/or
+`description` for update (`UpdateStoryInternalDto`), `projectId` plus an optional
+`reason` for archive — both in `create-story-internal.dto.ts`.
 
 `/module-map` takes, per module, an optional `resources` object (`cpus`,
 `memoryMb`, `pidsLimit` — all three or none): what THAT module needs alone in
