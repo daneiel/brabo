@@ -127,7 +127,7 @@ defmodule Engine.Harness.IdiomaDaResposta do
   # subir container (pedem decisão à pessoa, não gravam artefato).
   @ferramentas_de_artefato ~w(
     emit_artifact
-    create_epic create_story complete_story create_task
+    create_epic create_story complete_story create_task update_story
     create_module_map assign_story_modules choose_project_image create_c4_diagram
     route_modules_to_infra declare_module_contracts propose_adr emit_insight
     propose_execution_plan assess_implementability

@@ -200,6 +200,28 @@ defmodule Engine.Sessions.FakeEngineApiClient do
     end
   end
 
+  # RN-727: corrigir/arquivar história. Scriptáveis por `:fake_update_story`/
+  # `:fake_archive_story` (corpo) e `..._error` (motivo do `{:error, _}`).
+  @impl true
+  def update_story(_project_id, _session_id, story_id, fields) do
+    notify({:story_updated, story_id, fields})
+
+    case Process.get(:fake_update_story_error) do
+      nil -> reply(:fake_update_story, %{"id" => story_id, "title" => Map.get(fields, :title)})
+      reason -> {:error, reason}
+    end
+  end
+
+  @impl true
+  def archive_story(_project_id, _session_id, story_id, fields) do
+    notify({:story_archived, story_id, fields})
+
+    case Process.get(:fake_archive_story_error) do
+      nil -> reply(:fake_archive_story, %{"id" => story_id, "title" => "s"})
+      reason -> {:error, reason}
+    end
+  end
+
   # RN-681: a duplicata semântica de regra. Scriptável por
   # `:fake_semantic_duplicate` (o corpo de `{:ok, corpo}` ou `{:error, motivo}`);
   # sem script, "nada a comparar", que é o que a api responde a projeto vazio.

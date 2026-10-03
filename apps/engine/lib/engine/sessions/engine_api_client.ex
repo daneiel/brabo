@@ -167,6 +167,24 @@ defmodule Engine.Sessions.EngineApiClient do
             ) :: {:ok, map()} | {:error, term()}
 
   @doc """
+  Ferramentas `update_story`/`archive_story` do PO (RN-727): corrigem o
+  título/descrição ou arquivam uma história `draft` sem tarefa em execução.
+  A recusa da api volta como `{:error, {409, %{"reason" => ..., "message" => ...}}}`.
+  """
+  @callback update_story(
+              project_id :: String.t(),
+              session_id :: String.t(),
+              story_id :: String.t(),
+              fields :: map()
+            ) :: {:ok, map()} | {:error, term()}
+  @callback archive_story(
+              project_id :: String.t(),
+              session_id :: String.t(),
+              story_id :: String.t(),
+              fields :: map()
+            ) :: {:ok, map()} | {:error, term()}
+
+  @doc """
   A duplicata SEMÂNTICA de regra de negócio (RN-681, ADR 0198): chamada por
   `emit_artifact` DEPOIS de gravar a regra. `fields` leva `kind`
   (`"business_rule"`) e `title`; devolve `{:ok, %{"status" => ..., "message"
@@ -781,6 +799,16 @@ defmodule Engine.Sessions.EngineApiClient do
       impl().complete_story(project_id, session_id, story_id, fields)
       |> avisar_canal(session_id, "backlog.story_completed", nil)
 
+  def update_story(project_id, session_id, story_id, fields),
+    do:
+      impl().update_story(project_id, session_id, story_id, fields)
+      |> avisar_canal(session_id, "backlog.story_updated", nil)
+
+  def archive_story(project_id, session_id, story_id, fields),
+    do:
+      impl().archive_story(project_id, session_id, story_id, fields)
+      |> avisar_canal(session_id, "backlog.story_archived", nil)
+
   def create_story(project_id, session_id, fields),
     do:
       impl().create_story(project_id, session_id, fields)
@@ -1173,6 +1201,22 @@ defmodule Engine.Sessions.EngineApiClient.Live do
   def complete_story(project_id, session_id, story_id, fields) do
     post_returning(
       "/internal/sessions/#{session_id}/stories/#{story_id}/complete",
+      Map.put(fields, :projectId, project_id)
+    )
+  end
+
+  @impl true
+  def update_story(project_id, session_id, story_id, fields) do
+    post_returning(
+      "/internal/sessions/#{session_id}/stories/#{story_id}/update",
+      Map.put(fields, :projectId, project_id)
+    )
+  end
+
+  @impl true
+  def archive_story(project_id, session_id, story_id, fields) do
+    post_returning(
+      "/internal/sessions/#{session_id}/stories/#{story_id}/archive",
       Map.put(fields, :projectId, project_id)
     )
   end
