@@ -253,6 +253,15 @@ spinning forever. The subagent inherits the base agent's ceiling
 **`task_blocked`** — the artifact emitted when a task stalls: carries
 `reason` and `diagnosis`. It's a readable record of failure, not silence.
 
+**Parked gate cycle** — a QA/SecOps cycle left `in_progress` with no activity
+for more than 2 hours. The `GateRescuer` no longer resumes it on its own (on
+boot or on its tick): it records `gate.rescue_parked` and sets `parked_at`, and
+only a human gesture resumes it — today `GateRescuer.retomar_estacionado/3`
+through the operator's `bin/engine rpc`
+([ADR 0207](adr/0207-ciclo-de-gate-velho-estaciona.md),
+[RN-722](business-rules.md#rn-722)). A cycle whose session has an approval
+pending from a gate actor is not restarted either: it is waiting for you.
+
 **`implementavel` (implementable) gate** — a PRE-DEV gateway, before a dev
 agent or worktree exists: the Dev Lead assesses whether a story is
 implementable from the story itself and the current `module_map` (until
