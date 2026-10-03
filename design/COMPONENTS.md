@@ -418,7 +418,8 @@ o elemento **fica**, porque removê-lo mudaria o layout do botão.
 em `--text-secondary` e um brilho em `--text-primary` corre por ele
 (`duration` 2s, largura `--spread` = comprimento × `spread`). Quando usar:
 TEXTO que diz que algo está em curso ("Pensando…", "Reunindo informações…",
-o status "trabalhando" do AgentCard). Quando NÃO usar: bloco que espera dado →
+o status "trabalhando" do AgentCard, e o texto de carregamento de tela —
+"Carregando…", "Buscando…", "Somando…", "Verificando…", AT-402). Quando NÃO usar: bloco que espera dado →
 `Skeleton`; botão que espera resposta → `loading`. O texto fica no DOM;
 `role`/`aria-live` são do contêiner de quem chama. Em
 `prefers-reduced-motion` a animação para e o texto fica, estático, na

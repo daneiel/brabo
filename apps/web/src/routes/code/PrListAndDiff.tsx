@@ -1,3 +1,4 @@
+import { Shimmer } from '../../components/ui/Shimmer';
 import { useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -137,7 +138,7 @@ export function PrListAndDiff({
           )}
         </div>
 
-        {diffQuery.isLoading && <div className={styles.estado}>{t('diff.loadingDiff')}</div>}
+        {diffQuery.isLoading && <div className={styles.estado}><Shimmer>{t('diff.loadingDiff')}</Shimmer></div>}
 
         {diffQuery.isError &&
           (isContainerImageGateError(diffQuery.error) ? (
@@ -197,7 +198,7 @@ export function PrListAndDiff({
         onChange={setFiltro}
       />
 
-      {listaQuery.isLoading && <div className={styles.estado}>{t('diff.loadingPrs')}</div>}
+      {listaQuery.isLoading && <div className={styles.estado}><Shimmer>{t('diff.loadingPrs')}</Shimmer></div>}
 
       {listaQuery.isError &&
         (isContainerImageGateError(listaQuery.error) ? (
