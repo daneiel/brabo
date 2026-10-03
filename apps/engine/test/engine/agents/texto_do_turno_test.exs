@@ -67,4 +67,29 @@ defmodule Engine.Agents.TextoDoTurnoTest do
              modelName: "m/a"
            }
   end
+
+  describe "RN-732: escape unicode literal no texto do turno" do
+    test "decodifica os cinco escapes medidos no TP-01, no fecho e nos passos" do
+      TextoDoTurno.acumular("Sem colis\\u00e3o de nomes.")
+
+      payload =
+        TextoDoTurno.payload_do_turno(
+          "O usu\\u00e1rio v\\u00ea os c\\u00f3digos e o hist\\u00f3rico; est\\u00e3o salvos.",
+          "m"
+        )
+
+      assert payload.content == "O usuário vê os códigos e o histórico; estão salvos."
+      assert payload.passos == ["Sem colisão de nomes."]
+    end
+
+    test "texto sem escape volta intacto" do
+      assert %{content: "Tudo certo, usuário."} =
+               TextoDoTurno.payload_do_turno("Tudo certo, usuário.", "m")
+    end
+
+    test "bloco de código com \\n literal e sem \\u fica intacto" do
+      texto = "Veja:\n```\nIO.puts(\"a\\nb\")\n```"
+      assert %{content: ^texto} = TextoDoTurno.payload_do_turno(texto, "m")
+    end
+  end
 end

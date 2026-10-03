@@ -21736,3 +21736,23 @@ sem dizer qual.
   `apps/engine/test/engine/agents/criativo_server_test.exs`
 - **Origem:** AT-414 (TP-01 de 03/10: o Criativo fechou com "Registrei as 8
   regras de negócio" e o painel tinha 6)
+
+### RN-732 — O texto do turno passa pela mesma régua de escape dos argumentos {#rn-732}
+
+- **Regra:** o texto que o modelo escreve no turno de um agente conversacional
+  — o `content` (fecho) e cada `passos` da `agent.response` — passa pela MESMA
+  `decodificar_escapes/1` da RN-725 antes de ser gravado: `\u00e3` literal vira
+  `ã`. Uma régua só, sem cópia, e com o mesmo limite: só age quando há
+  `\uXXXX` literal, então texto sem escape — inclusive código com `"\n"`
+  literal num bloco cercado — volta byte a byte. O `agent.delta` do streaming
+  NÃO é decodificado: um escape pode chegar partido entre dois deltas, e a
+  bolha gravada substitui o texto em curso no fim do turno. Regra própria, e
+  não cláusula da RN-725, porque a superfície é outra (resposta do modelo, não
+  argumento de ferramenta) e a decisão sobre o delta é desta.
+- **Onde:** `apps/engine/lib/engine/agents/texto_do_turno.ex:65` (`payload_do_turno`),
+  `apps/engine/lib/engine/harness/argumentos_de_ferramenta.ex:92` (`decodificar_escapes`)
+- **Teste:** `apps/engine/test/engine/agents/texto_do_turno_test.exs` (feliz:
+  os cinco escapes medidos, no fecho e num passo; intacto: texto sem escape e
+  bloco de código com `\n` literal)
+- **Origem:** AT-417 (TP-01 de 03/10, 2ª rodada: a resposta final do Criativo
+  gravada com "colis\u00e3o", "usu\u00e1rio" e mais três escapes na bolha)
