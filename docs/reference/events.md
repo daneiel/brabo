@@ -446,7 +446,7 @@ Extracted from the emission points: **108 identifiers**, of which **3** are not 
 - `backlog.handoff_not_offered` <sub>(apps/engine/lib/engine/agents/po_server.ex)</sub>
 - `backlog.semantic_duplicate_check_skipped` <sub>(apps/api/src/application/use-cases/backlog/verificar-duplicata-semantica.use-case.ts)</sub>
 - `backlog.semantic_duplicate_warned` <sub>(apps/api/src/application/use-cases/backlog/verificar-duplicata-semantica.use-case.ts)</sub>
-- `backlog.story_archived` <sub>(apps/engine/lib/engine/sessions/engine_api_client.ex)</sub>
+- `backlog.story_archived` <sub>(apps/api/src/application/use-cases/backlog/corrigir-historia.use-case.ts)</sub>
 - `backlog.story_completed` <sub>(apps/api/src/application/use-cases/backlog/complete-story.use-case.ts)</sub>
 - `backlog.story_created` <sub>(apps/api/src/application/use-cases/backlog/create-story.use-case.ts)</sub>
 - `backlog.story_demoted` <sub>(apps/api/src/application/use-cases/architecture/create-module-map.use-case.ts)</sub>
@@ -455,7 +455,7 @@ Extracted from the emission points: **108 identifiers**, of which **3** are not 
 - `backlog.story_promotion_proposed` <sub>(apps/api/src/application/use-cases/backlog/complete-story.use-case.ts)</sub>
 - `backlog.story_promotion_returned` <sub>(apps/api/src/application/use-cases/backlog/return-story.use-case.ts)</sub>
 - `backlog.story_transitioned` <sub>(apps/api/src/application/use-cases/backlog/transition-story.use-case.ts)</sub>
-- `backlog.story_updated` <sub>(apps/engine/lib/engine/sessions/engine_api_client.ex)</sub>
+- `backlog.story_updated` <sub>(apps/api/src/application/use-cases/backlog/corrigir-historia.use-case.ts)</sub>
 - `backlog.task_blocked` <sub>(apps/api/src/application/use-cases/execution/mark-task-blocked.use-case.ts)</sub>
 - `backlog.task_claimed` <sub>(apps/api/src/application/use-cases/execution/claim-next-task.use-case.ts)</sub>
 - `backlog.task_created` <sub>(apps/api/src/application/use-cases/backlog/create-task.use-case.ts)</sub>
