@@ -18195,7 +18195,7 @@ muda.
   (`origemDaAtividade`), `:549` (`estadoDaAtividade`);
   `apps/web/src/lib/hooks.ts:127` (`useProjectSessions`, `frescorMs`);
   `apps/web/src/routes/Dashboard.tsx:75` (`lastActivityText`);
-  `apps/web/src/routes/ContextAside.tsx:41` (`quantos`), `:237`
+  `apps/web/src/routes/ContextAside.tsx:41` (`quantos`), `:253`
   (`totalDeArtefatos`)
 - **Teste:** `apps/web/src/routes/Shell.test.tsx` ("Shell — Atividades": sem
   execução lê a sessão da Visão geral e o Criativo aparece; com execução lê a
@@ -19263,11 +19263,11 @@ segundo `executed` para o mesmo merge.
   `apps/api/src/infrastructure/git/local-git-provider.ts:339` (`GitPullRequestAlreadyMergedError`);
   `apps/web/src/lib/gate-do-merge.ts:19` (`gatePendenteNoMerge`);
   `apps/web/src/routes/ProjectPrsTab.tsx:201` (`gatePendenteNoMerge`);
-  `apps/web/src/routes/session-timeline-montagem.tsx:984` (`gatePendenteNoMerge`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:994` (`gatePendenteNoMerge`)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:656`
   (`merge_ja_proposto`), `:679` (`pr_ja_mergeado` — caso de falha), `:696`
 
-  `apps/web/src/routes/session-timeline-montagem.tsx:984` (`gatePendenteNoMerge`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:994` (`gatePendenteNoMerge`)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:656`
   (`merge_ja_proposto`), `:679` (`pr_ja_mergeado` — caso de falha), `:696`
   (negada não bloqueia, outra PR não colide — caminho feliz);
@@ -20901,7 +20901,7 @@ cartão pendente apareceu só DURANTE a sessão ao vivo — estado transitório 
 tela, não da api nem da janela. A próxima rodada da AT-015 captura a rede no
 momento em que ele aparecer, antes de qualquer correção.
 
-- **Onde:** `apps/web/src/routes/ContextAside.tsx:302` (`trailing`), `:311`
+- **Onde:** `apps/web/src/routes/ContextAside.tsx:310` (`trailing`), `:328`
   (`nadaNaJanela`)
 - **Teste:** `apps/web/src/routes/SessionPage.painel-e-agrupamento.test.tsx`
   ("RN-701 (AT-365): com as regras fora da janela, o contador não afirma 0";

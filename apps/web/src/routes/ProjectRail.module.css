@@ -73,6 +73,8 @@
   font-weight: 500;
   text-align: left;
   cursor: pointer;
+  text-decoration: none;
+  box-sizing: border-box;
   transition:
     background 0.12s,
     color 0.12s;

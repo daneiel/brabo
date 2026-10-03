@@ -13,6 +13,8 @@ import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
 import { Textarea } from '../components/ui/Textarea';
+import { MarkdownInline } from '../components/ui/MarkdownMessage';
+import { textoPlanoDoMarkdown } from '../lib/texto-plano';
 import { corDoAgente, nomeDoAgente } from '../lib/agents';
 import { ChatIcon } from '../components/ui/icons';
 import styles from './SessionPage.module.css';
@@ -131,7 +133,7 @@ export function StructuredQuestionCard({
         <dl className={styles.structuredQuestionAnswers}>
           {questions.map((q) => (
             <div key={q.id} className={styles.structuredQuestionAnswerRow}>
-              <dt>{q.label}</dt>
+              <dt><MarkdownInline text={q.label} /></dt>
               <dd>{respostasExistentes?.[q.id] ?? '—'}</dd>
             </div>
           ))}
@@ -200,7 +202,7 @@ export function StructuredQuestionCard({
             return (
               <Textarea
                 key={q.id}
-                label={q.label}
+                label={<MarkdownInline text={q.label} />}
                 value={value}
                 disabled={enviando}
                 {...SEM_AUTOFILL}
@@ -222,7 +224,7 @@ export function StructuredQuestionCard({
             return (
               <div key={q.id} className={styles.structuredQuestionField}>
                 <label className={styles.structuredQuestionFieldLabel} htmlFor={selectId}>
-                  {q.label}
+                  <MarkdownInline text={q.label} />
                 </label>
                 <Select
                   id={selectId}
@@ -258,7 +260,7 @@ export function StructuredQuestionCard({
                   // `select` abertos teria dois campos chamados "Sua
                   // resposta" — indistinguíveis para quem usa leitor de tela.
                   <Input
-                    label={t('perguntas.suaResposta', { pergunta: q.label })}
+                    label={t('perguntas.suaResposta', { pergunta: textoPlanoDoMarkdown(q.label) })}
                     value={value}
                     disabled={enviando}
                     autoFocus
@@ -273,7 +275,7 @@ export function StructuredQuestionCard({
           return (
             <Input
               key={q.id}
-              label={q.label}
+              label={<MarkdownInline text={q.label} />}
               value={value}
               disabled={enviando}
               {...SEM_AUTOFILL}

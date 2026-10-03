@@ -288,7 +288,19 @@ export function ProjectPage({ projectId, initialTab, initialSection }: ProjectPa
       <div className={styles.corpo}>
         <ProjectRail
           active={tab}
-          onChange={(key) => setTab(key as ChaveDeAba)}
+          onChange={(key) => {
+            setTab(key as ChaveDeAba);
+            // AT-394: o endereço acompanha a aba, para recarregar e
+            // compartilhar abrirem onde se estava.
+            try {
+              const url = new URL(window.location.href);
+              url.searchParams.set('tab', key);
+              url.searchParams.delete('section');
+              window.history.replaceState(window.history.state, '', url);
+            } catch {
+              // sem `window` (teste/SSR): só a troca local
+            }
+          }}
           itens={itensDoTrilho}
         />
 

@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  parseInline,
   parseMarkdown,
   normalizarLinguagemDoFence,
   type MdAlinhamento,
@@ -242,6 +243,15 @@ function renderBlock(block: MdBlock, key: number): ReactNode {
  * Pensado pra ir DENTRO de `.bubble` (`ChatBubble.module.css`): não define
  * fundo, borda nem padding do balão — só a tipografia do conteúdo.
  */
+/**
+ * Markdown INLINE só (negrito, itálico, código, link) — para rótulos curtos,
+ * como os do formulário estruturado (AT-393), onde blocos não cabem. Reusa o
+ * MESMO `parseInline`/`renderInline` do fio, nunca um segundo renderizador.
+ */
+export function MarkdownInline({ text }: { text: string }) {
+  return <>{renderInline(parseInline(text))}</>;
+}
+
 export function MarkdownMessage({ text }: { text: string }) {
   const blocos = parseMarkdown(text);
   return <div className={styles.markdown}>{blocos.map((b, i) => renderBlock(b, i))}</div>;

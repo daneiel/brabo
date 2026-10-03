@@ -412,6 +412,8 @@ export function abaPorChave(chave: string | undefined): AbaDoProjeto {
 const ALIASES_DE_ABA: Readonly<Record<string, ChaveDeAba>> = {
   sessions: 'chat',
   rag: 'chat',
+  // AT-394: o rótulo da aba é "Histórias", e é isso que se digita na URL.
+  historias: 'backlog',
 };
 
 /**
