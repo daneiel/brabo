@@ -270,6 +270,7 @@ estado lido do repositório e não da conversa.
 | O projeto novo diz o próximo passo: cartão de primeiros passos na Visão geral, e Configurações abre pela credencial e pelos modelos (AT-372/AT-374) | RN-708 |
 | O conflito de merge devolve a tarefa ao dev agent dono, que integra a dev e reenvia; os gates julgam de novo (AT-383) | RN-715 |
 | O modo automático libera push e PR de todo agente; merge protegido e sudo seguem manuais (AT-385) | ADR 0204, RN-713 |
+| A Infra herda a rede do Arquiteto na subida automática, `egress` incluído (AT-392) | ADR 0208, RN-723 |
 
 ## Estado atual e aberto
 
@@ -336,7 +337,9 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   `container_start` é `proposed_action` de verdade (`maintainer`) — e desde
   o ADR 0190 (RN-671) é SEMEADA `auto_approve` no aceite do handoff da Infra,
   com o SERVIDOR do Infra Lead propondo a primeira subida sozinho no kickoff
-  quando há roteamento (`container`/`mounted`; `runner` segue pelo modelo e
+  quando há roteamento — com a rede HERDADA da `artifact.project_image` do
+  Arquiteto (`egress` incluído, sem clique; `none` sem decisão dele — ADR
+  0208, RN-723, preço declarado na borda 5 do ADR 0189) (`container`/`mounted`; `runner` segue pelo modelo e
   com aprovação) —, e
   `ExecuteContainerStartUseCase` chama `ContainerBrokerPort.start` de
   verdade quando aprovada — o Infra Lead elege uma das candidatas do
