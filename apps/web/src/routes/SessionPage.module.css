@@ -1230,3 +1230,9 @@
   max-width: 560px;
   margin-inline: auto;
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .statusDot.pulsing {
+    animation: none;
+  }
+}

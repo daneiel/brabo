@@ -152,6 +152,10 @@ módulo próprio) fica só onde o elemento NÃO é uma ação de botão: aba do 
   danger|accent|muted`, mais `neutral` (texto `--text-secondary`: badge cujo
   texto é conteúdo, como nome de branch) e `agent` (cor herdada de
   `--agent-color`). `size="md"` é o de 11px; `square` é o retângulo de tabela.
+  `emCurso` põe o rótulo no `Shimmer` — só em estado EM CURSO (container e
+  projeto `provisioning`); os outros badges não mudam. Os pulsos de ponto
+  (`pulse` do Badge, marcador do gate corrente, pontos de status) param em
+  `prefers-reduced-motion: reduce`: a animação sai, o ponto fica.
 
 ## AgentCard
 

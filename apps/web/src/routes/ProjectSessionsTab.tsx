@@ -48,11 +48,11 @@ import styles from './ProjectSessionsTab.module.css';
  */
 const SELO_DO_STATUS: Record<
   SessionStatus,
-  { chave: string; tone: BadgeTone; pulse?: boolean }
+  { chave: string; tone: BadgeTone; pulse?: boolean; emCurso?: boolean }
 > = {
   created: { chave: 'sessionsTab.status.created', tone: 'warning' },
   active: { chave: 'sessionsTab.status.active', tone: 'success', pulse: true },
-  closing: { chave: 'sessionsTab.status.closing', tone: 'accent', pulse: true },
+  closing: { chave: 'sessionsTab.status.closing', tone: 'accent', pulse: true, emCurso: true },
   closed: { chave: 'sessionsTab.status.closed', tone: 'muted' },
   closed_abnormally: { chave: 'sessionsTab.status.closedAbnormally', tone: 'danger' },
 };
@@ -437,6 +437,7 @@ export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps)
                   tone={SELO_DO_STATUS[session.status].tone}
                   dot
                   pulse={SELO_DO_STATUS[session.status].pulse}
+                  emCurso={SELO_DO_STATUS[session.status].emCurso}
                 >
                   {t(SELO_DO_STATUS[session.status].chave)}
                 </Badge>

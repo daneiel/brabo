@@ -18,4 +18,16 @@ describe('Badge', () => {
     expect(badge).not.toHaveAttribute('tabindex');
     expect(badge).not.toHaveAttribute('role');
   });
+
+  it('emCurso põe o rótulo no Shimmer, e o texto continua no DOM', () => {
+    const { container } = render(<Badge emCurso>Provisionando</Badge>);
+    const texto = screen.getByText('Provisionando');
+    expect(texto.parentElement).toBe(container.firstChild);
+    expect(texto.className).toMatch(/shimmer|estatico/);
+  });
+
+  it('sem emCurso o rótulo fica cru, sem Shimmer', () => {
+    render(<Badge>Ativo</Badge>);
+    expect(screen.getByText('Ativo').className).not.toMatch(/shimmer|estatico/);
+  });
 });

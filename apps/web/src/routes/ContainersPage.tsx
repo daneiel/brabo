@@ -412,7 +412,10 @@ export function ContainersPage() {
       width: '0.9fr',
       render: (item) =>
         item.registrado ? (
-          <Badge tone={TOM_DO_STATUS[item.registrado.status]}>
+          <Badge
+                tone={TOM_DO_STATUS[item.registrado.status]}
+                emCurso={item.registrado.status === 'provisioning'}
+              >
             {t(`status.${item.registrado.status}`)}
           </Badge>
         ) : (
