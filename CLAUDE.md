@@ -289,6 +289,7 @@ estado lido do repositório e não da conversa.
 | O fecho do turno ganha o número real do que foi gravado (AT-414) | RN-731 |
 | O 402 do provider vira `insufficient_credit` na api, e o engine decide pelo código (AT-416) | RN-730 |
 | O texto do turno decodifica escape unicode literal pela régua da RN-725 (AT-417) | RN-732 |
+| A escolha de imagem avisa que rede `none` impede instalar dependências (AT-420) | RN-735 |
 
 ## Estado atual e aberto
 
