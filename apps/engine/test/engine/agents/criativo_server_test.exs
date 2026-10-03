@@ -223,8 +223,8 @@ defmodule Engine.Agents.CriativoServerTest do
      %{
        type: "agent.response",
        payload: %{
-         # RN-731: o fato do que foi gravado vem ao lado do fecho.
-         content: "regras que cubram tudo.\n\nGravado neste turno: 1 regra de negócio.",
+         # RN-731: o fato do que foi gravado vem ao lado do fecho (sem idioma: en).
+         content: "regras que cubram tudo.\n\nRecorded this turn: 1 business rule.",
          passos: ["Vou registrar as"]
        }
      }}

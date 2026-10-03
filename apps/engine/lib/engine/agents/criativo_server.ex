@@ -458,7 +458,7 @@ defmodule Engine.Agents.CriativoServer do
     case Engine.Harness.ArgumentosDeFerramenta.executar(tool, args, state.tool_specs, fun) do
       {:ok, texto} ->
         emit(state, "tool.result", ResultadoDeFerramenta.payload(tool, {:ok, texto}))
-        Engine.Agents.GravadoNoTurno.anotar(tool, args, {:ok, texto})
+        Engine.Agents.GravadoNoTurno.anotar(tool, args, {:ok, texto}, state.project_id)
         {realimentar(state, call, texto, tool), {:ok, tool}}
 
       {:error, motivo} ->

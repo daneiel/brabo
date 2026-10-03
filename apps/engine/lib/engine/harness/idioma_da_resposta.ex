@@ -226,6 +226,26 @@ defmodule Engine.Harness.IdiomaDaResposta do
   end
 
   @doc """
+  O idioma do turno para texto que o SERVIDOR escreve no fio (RN-731): o do
+  autor quando o turno tem autor, senão o do projeto, senão `nil`. Nunca levanta.
+  """
+  @spec idioma_do_turno(String.t() | nil) :: String.t() | nil
+  def idioma_do_turno(project_id) do
+    case Process.get(@chave) do
+      {:autor, idioma} when is_binary(idioma) ->
+        idioma
+
+      _ ->
+        case project_id && Project.idioma(project_id) do
+          {:ok, idioma} when is_binary(idioma) -> idioma
+          _ -> nil
+        end
+    end
+  rescue
+    _ -> nil
+  end
+
+  @doc """
   A lista de mensagens com a orientação no FIM, ou a lista intacta quando não
   há orientação. `tools` são as ferramentas que a MESMA chamada leva ao modelo:
   é por elas que se sabe se o agente pode gravar artefato do projeto (RN-623).
