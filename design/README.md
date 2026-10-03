@@ -125,7 +125,9 @@ escreveu já sabe onde olhar, e o monitor de quem escreveu é sempre o melhor.
 **Contraste** é aritmética e virou teste:
 `apps/web/src/lib/contraste.test.ts` lê ESTE `tokens.css`, resolve os `var()`
 até a cor literal e mede a razão WCAG dos pares que a interface usa — **nos
-dois temas** desde o ADR 0074 (RN-184).
+dois temas** desde o ADR 0074 (RN-184). O Shimmer (ADR 0210) entra pelo pior
+ponto do brilho, a cor-base `--text-secondary` sobre `--surface-0/1/2`: no
+escuro 7,58/7,17/6,62:1, no claro 7,73/7,41/7,03:1.
 
 **A paleta é neutra desde o ADR 0181 (RN-640).** O escuro deixou de ser
 azul-petróleo e é preto neutro (`--surface-0/1/2` `#0d0d0f/#141417/#1c1c21`)

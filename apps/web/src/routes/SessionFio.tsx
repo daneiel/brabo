@@ -4,6 +4,7 @@ import { AGENTS } from '../lib/agents';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Disclosure } from '../components/ui/Disclosure';
+import { Shimmer } from '../components/ui/Shimmer';
 import { ModelIcon, UserIcon } from '../components/ui/icons';
 import { useTextoDoStreaming, type StoreDoStreaming } from '../lib/streaming-do-turno';
 import { FIO_RECENTES_ABERTAS, type dividirFio } from './session-fio';
@@ -279,18 +280,10 @@ function BolhaDoStreaming({
           <span className={styles.messageName}>
             {streamingText
               ? (agenteExibido?.name ?? t('compartilhado.agenteGenerico'))
-              : t('mensagens.reunindoInformacoes')}
+              : <Shimmer>{t('mensagens.reunindoInformacoes')}</Shimmer>}
           </span>
         </div>
-        {streamingText ? (
-          <div className={styles.bubble}>{streamingText}</div>
-        ) : (
-          <div className={styles.typing}>
-            <span className={styles.typingDot} />
-            <span className={styles.typingDot} />
-            <span className={styles.typingDot} />
-          </div>
-        )}
+        {streamingText && <div className={styles.bubble}>{streamingText}</div>}
       </div>
     </div>
   );

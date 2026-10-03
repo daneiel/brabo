@@ -39,6 +39,13 @@ export default defineConfig({
               name: 'vendor-i18n',
               test: /[\\/]node_modules[\\/](i18next|react-i18next)[\\/]/,
             },
+            {
+              // ADR 0210: `motion` só entra por `components/ui/Shimmer.tsx`, que
+              // o turno do agente e o AgentCard usam — chunk próprio pelo
+              // mesmo motivo dos três acima (hash estável entre deploys).
+              name: 'vendor-motion',
+              test: /[\\/]node_modules[\\/](motion|motion-dom|motion-utils|framer-motion)[\\/]/,
+            },
           ],
         },
       },
