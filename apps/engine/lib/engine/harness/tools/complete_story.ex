@@ -67,6 +67,19 @@ defmodule Engine.Harness.Tools.CompleteStory do
 
   defp desfecho(%{"status" => "ready"}), do: "status=ready."
 
-  defp desfecho(%{"status" => status}),
-    do: "status=#{status} — ainda faltam RF, DoD, DoR ou business_rule_ids."
+  defp desfecho(%{"status" => status} = story) do
+    case faltam(story) do
+      [] -> "status=#{status} — ainda faltam RF, DoD, DoR ou business_rule_ids."
+      lista -> "status=#{status} — falta: #{Enum.join(lista, ", ")}."
+    end
+  end
+
+  # A régua de `missingForReady` da api (story-readiness.ts), lida da história
+  # devolvida, para nomear EXATAMENTE o campo que falta (RN-725, AT-408).
+  # Chave ausente na resposta não é afirmada como falta.
+  defp faltam(story) do
+    [{"rf", "rf"}, {"dod", "dod"}, {"dor", "dor"}, {"businessRuleIds", "business_rule_ids"}]
+    |> Enum.filter(fn {chave, _} -> Map.get(story, chave) == [] end)
+    |> Enum.map(fn {_, nome} -> nome end)
+  end
 end

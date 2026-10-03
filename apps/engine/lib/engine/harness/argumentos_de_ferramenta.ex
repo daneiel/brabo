@@ -29,7 +29,7 @@ defmodule Engine.Harness.ArgumentosDeFerramenta do
     case normalizar(args, spec) do
       {:ok, normalizados} ->
         try do
-          fun.(normalizados)
+          normalizados |> fun.() |> com_chaves_recebidas(args)
         rescue
           e -> {:error, "#{@prefixo_falha} #{name}: #{curto(Exception.message(e))}"}
         catch
@@ -78,7 +78,80 @@ defmodule Engine.Harness.ArgumentosDeFerramenta do
     end
   end
 
+  defp coagir(_campo, _tipo, valor) when is_binary(valor), do: {:ok, decodificar_escapes(valor)}
   defp coagir(_campo, _tipo, valor), do: {:ok, valor}
+
+  @doc """
+  Decodifica escape LITERAL que o modelo mandou dentro de TEXTO (RN-725,
+  AT-405): `\\u00f3` vira `ó` (par surrogate incluído). Só age quando há um
+  `\\uXXXX` na string — é o sintoma medido — e aí decodifica também `\\n`,
+  `\\t`, `\\"` e `\\\\` da MESMA string. Texto sem `\\u` volta byte a byte,
+  de propósito: código num `content` com `"\\n"` literal não pode mudar.
+  """
+  @spec decodificar_escapes(term()) :: term()
+  def decodificar_escapes(texto) when is_binary(texto) do
+    if Regex.match?(~r/\\u[0-9a-fA-F]{4}/, texto) do
+      Regex.replace(
+        ~r/\\u([dD][89abAB][0-9a-fA-F]{2})\\u([dD][c-fC-F][0-9a-fA-F]{2})|\\u([0-9a-fA-F]{4})|\\([nt"\\])/,
+        texto,
+        &escape/5
+      )
+    else
+      texto
+    end
+  end
+
+  def decodificar_escapes(outro), do: outro
+
+  defp escape(original, alto, baixo, "", ""), do: par(original, alto, baixo)
+  defp escape(_original, "", "", unidade, ""), do: unidade_para_texto(unidade)
+  defp escape(_o, _a, _b, _u, "n"), do: "\n"
+  defp escape(_o, _a, _b, _u, "t"), do: "\t"
+  defp escape(_o, _a, _b, _u, outro), do: outro
+
+  defp par(original, alto, baixo) do
+    a = String.to_integer(alto, 16)
+    b = String.to_integer(baixo, 16)
+    <<0x10000 + (a - 0xD800) * 0x400 + (b - 0xDC00)::utf8>>
+  rescue
+    _ -> original
+  end
+
+  defp unidade_para_texto(hex) do
+    case String.to_integer(hex, 16) do
+      cp when cp in 0xD800..0xDFFF -> "\\u" <> hex
+      cp -> <<cp::utf8>>
+    end
+  end
+
+  @doc """
+  As CHAVES que chegaram, sem valores (RN-725, AT-408), para a recusa "exige
+  X" dizer o que veio. String no lugar de mapa é dito como tal.
+  """
+  @spec chaves_recebidas(term()) :: String.t()
+  def chaves_recebidas(args) when is_map(args) and map_size(args) == 0,
+    do: "chegou um objeto sem chaves"
+
+  def chaves_recebidas(args) when is_map(args),
+    do:
+      "chaves recebidas: " <>
+        (args |> Map.keys() |> Enum.map(&to_string/1) |> Enum.sort() |> Enum.join(", "))
+
+  def chaves_recebidas(args) when is_binary(args), do: "chegou uma string, não um objeto"
+  def chaves_recebidas(args) when is_list(args), do: "chegou uma lista, não um objeto"
+  def chaves_recebidas(nil), do: "não chegou argumento nenhum"
+  def chaves_recebidas(_), do: "chegou um valor que não é objeto"
+
+  defp com_chaves_recebidas({:error, msg}, args) when is_binary(msg) do
+    if String.contains?(msg, " exige `") and not String.contains?(msg, "chegou") and
+         not String.contains?(msg, "chaves recebidas") do
+      {:error, msg <> " (" <> chaves_recebidas(args) <> ")"}
+    else
+      {:error, msg}
+    end
+  end
+
+  defp com_chaves_recebidas(resultado, _args), do: resultado
 
   defp nome_do_tipo("array"), do: "uma lista"
   defp nome_do_tipo("object"), do: "um objeto"

@@ -138,6 +138,12 @@ defmodule Engine.Harness.Tools.EmitArtifact do
           {:error, reason} -> {:error, "falha ao emitir artefato: #{inspect(reason)}"}
         end
 
+      {:error, {:missing_keys, faltam}} ->
+        {:error,
+         "artefato inválido: payload exige " <>
+           Enum.map_join(faltam, ", ", &"`#{&1}`") <>
+           " — " <> Engine.Harness.ArgumentosDeFerramenta.chaves_recebidas(payload)}
+
       {:error, reason} ->
         {:error, "artefato inválido: #{inspect(reason)}"}
     end

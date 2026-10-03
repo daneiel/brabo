@@ -282,6 +282,7 @@ estado lido do repositório e não da conversa.
 | O texto do turno do agente em curso ganha o Shimmer, com motion (AT-401) | ADR 0210 |
 | Uma navegação só: a sidebar absorve o trilho do projeto (AT-404) | ADR 0211, RN-196, RN-201, RN-643 |
 | A mensagem do usuário aparece uma vez no fio, e "Ativar execução" vira secundário no handoff ao Dev Lead (AT-409/AT-410) | RN-728 |
+| Escape unicode no texto da ferramenta, duplicata normalizada e recusa que diz o que chegou (AT-405/AT-408) | RN-725 |
 
 ## Estado atual e aberto
 
@@ -2010,6 +2011,11 @@ o RACIOCÍNIO da triagem, que continua valendo.
   substituindo o outro.
 - Agentes rodam SEMPRE dentro de um Harness; nenhuma chamada de LLM ou
   ferramenta fora dele.
+  Argumento de ferramenta passa por `ArgumentosDeFerramenta.executar/4`:
+  lista/objeto em string JSON vira valor (RN-719), texto com `\uXXXX`
+  literal é decodificado (e só então `\n`/`\t`/`\"`/`\\` da mesma string —
+  texto sem `\u` fica intacto, senão o `write_file` corromperia código), e
+  recusa "exige X" leva as CHAVES recebidas, nunca os valores (RN-725).
 - Agente que ESCREVE tem de poder LER o que já existe, e tem de poder
   PERGUNTAR quando falta informação. As duas são a mesma lição (RN-164/165):
   um agente só com ferramenta de escrita age sobre um retrato tirado uma vez,
