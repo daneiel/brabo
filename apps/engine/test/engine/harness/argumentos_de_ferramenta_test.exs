@@ -125,4 +125,66 @@ defmodule Engine.Harness.ArgumentosDeFerramentaTest do
     tool_msg = Enum.find(out.messages, &(&1["role"] == "tool"))
     assert tool_msg["content"] =~ "falha interna da ferramenta explode"
   end
+
+  describe "RN-725 (AT-405/AT-408)" do
+    @spec_titulo %{
+      name: "t",
+      parameters: %{
+        "type" => "object",
+        "properties" => %{"title" => %{"type" => "string"}, "ids" => %{"type" => "array"}}
+      }
+    }
+
+    test "escape literal em texto é decodificado; texto normal e lista seguem como antes" do
+      assert {:ok, %{"title" => "Gerar código aleatório 😀\nfim"}} =
+               ArgumentosDeFerramenta.normalizar(
+                 %{"title" => "Gerar c\\u00f3digo aleat\\u00f3rio \\ud83d\\ude00\\nfim"},
+                 @spec_titulo
+               )
+
+      assert {:ok, %{"title" => "linha \\n sem unicode"}} =
+               ArgumentosDeFerramenta.normalizar(
+                 %{"title" => "linha \\n sem unicode"},
+                 @spec_titulo
+               )
+
+      assert {:ok, %{"ids" => ["a"]}} =
+               ArgumentosDeFerramenta.normalizar(%{"ids" => ~s(["a"])}, @spec_titulo)
+    end
+
+    test "recusa 'exige' diz as chaves que chegaram, sem valores" do
+      assert {:error, msg} =
+               ArgumentosDeFerramenta.executar(
+                 "t",
+                 %{"storyId" => "segredo"},
+                 @spec_titulo,
+                 fn _ ->
+                   {:error, "create_task exige `story_id` e `title`"}
+                 end
+               )
+
+      assert msg =~ "chaves recebidas: storyId"
+      refute msg =~ "segredo"
+      assert ArgumentosDeFerramenta.chaves_recebidas("x") =~ "string"
+    end
+
+    test "complete_story nomeia o campo que falta" do
+      Process.put(:fake_complete_story, %{
+        "id" => "s1",
+        "status" => "draft",
+        "rf" => ["a"],
+        "dod" => ["b"],
+        "dor" => ["c"],
+        "businessRuleIds" => []
+      })
+
+      assert {:ok, msg} =
+               Engine.Harness.Tools.CompleteStory.run(%{"story_id" => "s1"}, %{
+                 project_id: "p",
+                 session_id: "s"
+               })
+
+      assert msg =~ "falta: business_rule_ids."
+    end
+  end
 end

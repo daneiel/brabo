@@ -21372,7 +21372,7 @@ O kickoff do PO diz as três coisas.
   `apps/api/src/interfaces/http/internal/internal-sessions.controller.ts:530`
   (`completeStoryRoute`); `apps/engine/lib/engine/harness/tools/complete_story.ex:41`
   (`run`); `apps/engine/lib/engine/harness/tools/offer_handoff.ex:52`
-  (`recusa_por_cobertura`); `apps/engine/lib/engine/harness/tools/emit_artifact.ex:182`
+  (`recusa_por_cobertura`); `apps/engine/lib/engine/harness/tools/emit_artifact.ex:188`
   (`pergunte_antes`)
 - **Teste:** `apps/api/test/application/use-cases/backlog/complete-story.use-case.spec.ts`
   (liga a regra e propõe a promoção; `auto` vai a `ready`; regra inexistente,
@@ -21514,3 +21514,43 @@ O kickoff do PO diz as três coisas.
   ("o aceite é o primário; "Ativar execução" é secundário e diz o que pula")
 - **Origem:** AT-409 e AT-410 (TP-01 de 03/10); a forma do card é decisão do
   dono ("Secundário com aviso")
+
+### RN-725 — Texto com escape literal é decodificado, e a recusa de argumento diz o que chegou {#rn-725}
+
+**Contexto:** no TP-01 (03/10, Claude Haiku 4.5) o PO gravou títulos de
+história com o escape unicode LITERAL (`código`): a normalização da
+RN-719 só decodificava campo `array`/`object`. Recriadas com o título certo,
+as histórias passaram pela recusa de duplicata (RN-720/RN-081), que não casou
+o escapado com o normal. E as recusas "exige X" não diziam o que tinha
+chegado: o PO gastou 28+ passos (48% do custo do teste) até o teto, e
+`complete_story` respondia "ainda faltam RF, DoD, DoR ou business_rule_ids"
+sem dizer qual.
+
+**A regra:**
+
+1. No mesmo ponto da RN-719, string com `\uXXXX` LITERAL (par surrogate
+   incluído) é decodificada, e com ela `\n`, `\t`, `\"` e `\\` da MESMA
+   string. String sem `\uXXXX` volta byte a byte — código num `content` com
+   `"\n"` literal não muda. Isso revisa o "campo `string` nunca é tocado" da
+   RN-719 só nesse caso.
+2. A duplicata EXATA de história (api) e de regra (engine) compara o título
+   com o escape decodificado, antes da caixa e do NFD de sempre.
+3. Recusa de ferramenta que diz "exige `X`" ganha, no mesmo ponto, as CHAVES
+   que chegaram (nomes, nunca valores), ou que chegou string/lista em vez de
+   objeto. `emit_artifact` com chave faltando no `payload` diz as chaves
+   faltantes e as recebidas, em vez de `{:missing_keys, …}`.
+4. `complete_story` nomeia exatamente o que falta (`falta: business_rule_ids`),
+   pela mesma régua de `missingForReady` da api, lida da história devolvida.
+
+- **Onde:** `apps/engine/lib/engine/harness/argumentos_de_ferramenta.ex:92`
+  (`decodificar_escapes`), `:135` (`chaves_recebidas`), `:145`
+  (`com_chaves_recebidas`); `apps/engine/lib/engine/harness/tools/complete_story.ex:80`
+  (`faltam`); `apps/api/src/domain/backlog/story-overlap.ts:39`
+  (`decodificarEscapesLiterais`), `:25` (`normalizarTitulo`);
+  `apps/engine/lib/engine/harness/artifact_dedupe.ex` (`normalizar`)
+- **Teste:** `apps/engine/test/engine/harness/argumentos_de_ferramenta_test.exs`
+  (describe "RN-725": escape decodificado, texto sem `\u` e lista intactos;
+  recusa com as chaves e sem os valores; `complete_story` nomeia o campo);
+  `apps/api/test/domain/backlog/story-overlap.spec.ts` (título escapado casa
+  com o normal; título diferente segue diferente)
+- **Origem:** AT-405, AT-408
