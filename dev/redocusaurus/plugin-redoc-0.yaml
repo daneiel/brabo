@@ -7671,6 +7671,50 @@ paths:
       summary: Promotes stories the PO proposed to `ready`
       tags:
         - backlog
+  /projects/{projectId}/tasks/{taskId}/gates/{gate}/resume:
+    post:
+      description: >-
+        A gate cycle stalled for more than 2 h is parked instead of restarted on
+        its own (ADR 0207). This is the human gesture that resumes it.
+      operationId: GateResumeController_resume
+      parameters:
+        - name: projectId
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: taskId
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: gate
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OkResponseDto'
+        '401':
+          description: No token, expired token, or invalid signature.
+        '403':
+          description: Role below `developer` on the project.
+        '409':
+          description: >-
+            The cycle is not parked — body with `reason:
+            "gate_nao_estacionado"`.
+        '429':
+          description: Rate limit per user or per IP.
+      security:
+        - bearer: []
+      summary: Resumes a parked gate cycle
+      tags:
+        - gates
   /projects/{projectId}/terminal-ticket:
     post:
       description: >-
