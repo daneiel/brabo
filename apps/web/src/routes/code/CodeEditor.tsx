@@ -1,3 +1,4 @@
+import { Shimmer } from '../../components/ui/Shimmer';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -271,7 +272,7 @@ export function CodeEditor({
               )}
 
               {blameOn && blameQuery.isLoading && (
-                <div className={styles.blameEstado}>{t('editor.blameLoading')}</div>
+                <div className={styles.blameEstado}><Shimmer>{t('editor.blameLoading')}</Shimmer></div>
               )}
 
               {blameOn && blameQuery.isError && (

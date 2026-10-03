@@ -1,3 +1,4 @@
+import { Shimmer } from '../../components/ui/Shimmer';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -53,7 +54,7 @@ export function CodeSearchPanel({ projectId, gitRef, onOpenFile }: CodeSearchPan
       <div className={styles.resultados}>
         {!buscado && <div className={styles.estado}>{t('search.initial')}</div>}
 
-        {buscado && searchQuery.isLoading && <div className={styles.estado}>{t('search.searching')}</div>}
+        {buscado && searchQuery.isLoading && <div className={styles.estado}><Shimmer>{t('search.searching')}</Shimmer></div>}
 
         {buscado && searchQuery.isError && (
           <div className={styles.estadoErro} role="alert">

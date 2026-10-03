@@ -1,3 +1,4 @@
+import { Shimmer } from '../components/ui/Shimmer';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
@@ -479,7 +480,7 @@ export function ContainersPage() {
       )}
 
       {!query.isError && query.isPending && (
-        <p className={styles.loading}>{t('loading')}</p>
+        <p className={styles.loading}><Shimmer>{t('loading')}</Shimmer></p>
       )}
 
       {!query.isError && !query.isPending && (

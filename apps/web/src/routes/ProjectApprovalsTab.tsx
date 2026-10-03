@@ -1,3 +1,4 @@
+import { Shimmer } from '../components/ui/Shimmer';
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -87,7 +88,7 @@ function BlocoDeDados<T>({
     );
   }
   if (query.data === undefined) {
-    return <div className={styles.clean}>{textoCarregando}</div>;
+    return <div className={styles.clean}><Shimmer>{textoCarregando}</Shimmer></div>;
   }
   return <>{children(query.data)}</>;
 }
