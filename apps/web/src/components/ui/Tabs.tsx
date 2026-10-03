@@ -8,7 +8,8 @@ import styles from './Tabs.module.css';
  *
  * Desde o ADR 0126 ela não tem consumidor dentro de `apps/web`: o único era
  * `GroupedTabs`, e `GroupedTabs` era do `ProjectPage`, que passou a navegar
- * por um trilho vertical (`routes/ProjectRail.tsx`). Ela FICA — primitiva
+ * por um trilho vertical (que o ADR 0211 trocou pela lista da sidebar,
+ * `routes/AbasDoProjeto.tsx`). Ela FICA — primitiva
  * genérica sem chamador é peça do sistema de design em estoque, não código
  * morto, e apagá-la mudaria o inventário do DS por um efeito colateral de
  * uma tela.

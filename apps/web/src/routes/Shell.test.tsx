@@ -11,6 +11,9 @@ import { simularLayoutMovel } from '../test/match-media';
 // Real module, não mockado — RN-196 lê a LISTA de abas dela, nunca hardcoda
 // rótulos, então o teste também lê daqui em vez de repetir uma string.
 import { ABAS_DO_PROJETO } from './project-tabs';
+import { ouvirPedidosDeAba, publicarAbaAtiva } from '../lib/contagens-do-projeto';
+// Os RÓTULOS das abas vêm do singleton do app (`project-tabs.ts`).
+import i18nDoApp from '../lib/i18n';
 import shellEn from '../locales/en/shell.json';
 import shellPtBR from '../locales/pt-BR/shell.json';
 import commonEn from '../locales/en/common.json';
@@ -64,6 +67,13 @@ const estado = vi.hoisted(() => ({
   latestSession: undefined as { id: string } | undefined,
   latestSessionQuery: {} as Record<string, unknown>,
   eventosPorSessao: {} as Record<string, unknown[]>,
+  // ADR 0211: as cinco filas do projeto ABERTO, que dão os contadores das
+  // abas na sidebar. Só respondem com `projectId` (query desligada sem ele).
+  pendentes: [] as unknown[],
+  backlog: [] as unknown[],
+  hipoteses: [] as unknown[],
+  pendenciasDeArquitetura: [] as unknown[],
+  search: {} as Record<string, unknown>,
 }));
 
 const PROJECT: Project = {
@@ -138,6 +148,16 @@ vi.mock('../lib/hooks', () => ({
     isError: false,
     ...estado.latestSessionQuery,
   }),
+  useProjectPendingActions: (projectId: string | undefined) => ({
+    data: projectId ? estado.pendentes : undefined,
+  }),
+  useBacklog: (projectId: string | undefined) => ({ data: projectId ? estado.backlog : undefined }),
+  useHypotheses: (projectId: string | undefined) => ({
+    data: projectId ? estado.hipoteses : undefined,
+  }),
+  useArchitecture: (projectId: string | undefined) => ({
+    data: projectId ? { pendencies: estado.pendenciasDeArquitetura } : undefined,
+  }),
   useSessionEvents: (_projectId: string | undefined, sessionId: string | undefined) => ({
     data: {
       items: sessionId ? (estado.eventosPorSessao[sessionId] ?? estado.sessionEvents) : [],
@@ -197,6 +217,11 @@ beforeEach(() => {
   estado.latestSession = undefined;
   estado.latestSessionQuery = {};
   estado.eventosPorSessao = {};
+  estado.pendentes = [];
+  estado.backlog = [];
+  estado.hipoteses = [];
+  estado.pendenciasDeArquitetura = [];
+  publicarAbaAtiva(null);
   document.documentElement.removeAttribute('data-theme');
 });
 
@@ -457,6 +482,136 @@ describe('Shell — projetos expansíveis', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Recolher Core API' }));
 
     expect(screen.queryByText(ABAS_DO_PROJETO[0].label)).toBeNull();
+  });
+});
+
+/**
+ * ADR 0211: a sidebar é a ÚNICA navegação do projeto — o trilho vertical
+ * (ADR 0126) saiu, e o que só ele tinha mora aqui.
+ */
+describe('Shell — abas do projeto aberto (ADR 0211)', () => {
+  beforeEach(async () => {
+    await i18nDoApp.changeLanguage('pt-BR');
+  });
+  afterEach(async () => {
+    await i18nDoApp.changeLanguage('en');
+  });
+
+  function abrirNoProjeto(tab = 'overview') {
+    estado.pathname = `/projects/${PROJECT.id}`;
+    // A moldura publica a aba que mostra; aqui o teste faz o papel dela.
+    publicarAbaAtiva({ projectId: PROJECT.id, tab });
+  }
+
+  it('as 12 abas em três grupos, a ativa marcada e os cinco contadores SEPARADOS', () => {
+    abrirNoProjeto('code');
+    estado.pendentes = [
+      { status: 'pending', actionType: 'terminal' },
+      { status: 'pending', actionType: 'git_merge' },
+    ];
+    estado.hipoteses = [{ status: 'proposed' }, { status: 'proposed' }, { status: 'accepted' }];
+    estado.backlog = [{ stories: [{ proposedReady: true }, { proposedReady: false }] }];
+    estado.pendenciasDeArquitetura = [{}, {}, {}];
+
+    renderShell();
+
+    const lista = screen.getByRole('tablist', { name: 'Abas de Core API' });
+    expect(lista).toHaveAttribute('aria-orientation', 'vertical');
+    expect(within(lista).getAllByRole('tab')).toHaveLength(ABAS_DO_PROJETO.length);
+    for (const grupo of ['Agentes', 'Dev', 'Documentação']) {
+      expect(within(lista).getByText(grupo).textContent).toBe(grupo);
+    }
+    // Cada fila no SEU número — Aprovações conta as duas pendentes, PRs só o
+    // merge; nenhum cabeçalho de grupo soma.
+    expect(within(lista).getByRole('tab', { name: /^Aprovações\s*2$/ })).toBeInTheDocument();
+    expect(within(lista).getByRole('tab', { name: /^PRs\s*1$/ })).toBeInTheDocument();
+    expect(within(lista).getByRole('tab', { name: /^Percepções\s*2$/ })).toBeInTheDocument();
+    expect(within(lista).getByRole('tab', { name: /^Histórias\s*1$/ })).toBeInTheDocument();
+    expect(within(lista).getByRole('tab', { name: /^Arquitetura\s*3$/ })).toBeInTheDocument();
+    expect(
+      within(lista)
+        .getAllByRole('tab')
+        .filter((a) => a.getAttribute('aria-selected') === 'true')
+        .map((a) => a.textContent),
+    ).toEqual(['Código']);
+  });
+
+  it('clicar ou andar com a seta pede a aba à moldura e navega com `?tab=`', () => {
+    abrirNoProjeto('overview');
+    const pedidos: unknown[] = [];
+    const parar = ouvirPedidosDeAba((p) => pedidos.push(p));
+    try {
+      renderShell();
+      fireEvent.click(screen.getByRole('tab', { name: 'Código' }));
+      expect(pedidos).toEqual([{ projectId: PROJECT.id, tab: 'code' }]);
+      expect(navigate).toHaveBeenLastCalledWith({
+        to: '/projects/$projectId',
+        params: { projectId: PROJECT.id },
+        search: { tab: 'code' },
+      });
+
+      screen.getByRole('tab', { name: 'Visão geral' }).focus();
+      fireEvent.keyDown(screen.getByRole('tab', { name: 'Visão geral' }), { key: 'ArrowDown' });
+      expect(navigate).toHaveBeenLastCalledWith(
+        expect.objectContaining({ search: { tab: 'executores' } }),
+      );
+    } finally {
+      parar();
+    }
+  });
+
+  it('CASO DE FALHA: sem a moldura montada (ex.: tela de Sessão) não há poll das filas — só o número do resumo', () => {
+    estado.pathname = `/projects/${PROJECT.id}/sessions/s-1`;
+    estado.pendentes = [{ status: 'pending', actionType: 'terminal' }];
+    estado.summaries = [{ projectId: PROJECT.id, pendingApprovalsCount: 4 }];
+
+    renderShell();
+
+    const lista = screen.getByRole('tablist', { name: 'Abas de Core API' });
+    expect(within(lista).getByRole('tab', { name: /^Aprovações\s*4$/ })).toBeInTheDocument();
+    // Nenhuma aba marcada como da moldura: a padrão é a que a lista assume.
+    expect(within(lista).getByRole('tab', { name: 'Visão geral' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+  });
+
+  it('recolhida, o quadrado do projeto aberto abre um flyout com as MESMAS abas', () => {
+    abrirNoProjeto('prs');
+    window.localStorage.setItem(CHAVE_COLAPSADO, '1');
+
+    renderShell();
+
+    expect(screen.queryByRole('tablist')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Core API' }));
+    const flyout = screen.getByTestId('flyout-do-projeto');
+    const lista = within(flyout).getByRole('tablist', { name: 'Abas de Core API' });
+    expect(within(lista).getAllByRole('tab')).toHaveLength(ABAS_DO_PROJETO.length);
+    expect(within(lista).getByRole('tab', { name: 'PRs' })).toHaveAttribute('aria-selected', 'true');
+    // Recolhida continua recolhida: o flyout não expande a sidebar.
+    expect(window.localStorage.getItem(CHAVE_COLAPSADO)).toBe('1');
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByTestId('flyout-do-projeto')).toBeNull();
+  });
+
+  it('no telefone as abas estão na gaveta, e escolher uma fecha a gaveta (RN-643)', () => {
+    const largura = simularLayoutMovel(true);
+    try {
+      abrirNoProjeto('overview');
+      renderShell();
+      fireEvent.click(screen.getByRole('button', { name: 'Abrir navegação' }));
+      const dialogo = screen.getByRole('dialog');
+      const lista = within(dialogo).getByRole('tablist', { name: 'Abas de Core API' });
+      expect(within(lista).getAllByRole('tab')).toHaveLength(ABAS_DO_PROJETO.length);
+      fireEvent.click(within(lista).getByRole('tab', { name: 'Gastos' }));
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(navigate).toHaveBeenLastCalledWith(
+        expect.objectContaining({ search: { tab: 'spend' } }),
+      );
+    } finally {
+      largura.restaurar();
+    }
   });
 });
 

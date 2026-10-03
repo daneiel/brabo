@@ -16,7 +16,8 @@
       "loadError": "Não foi possível carregar os projetos.",
       "retry": "tentar de novo",
       "expand": "Expandir {{name}}",
-      "collapse": "Recolher {{name}}"
+      "collapse": "Recolher {{name}}",
+      "tabsAriaLabel": "Abas de {{name}}"
     },
     "activities": {
       "label": "Atividades",

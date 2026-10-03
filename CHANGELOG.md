@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- **web**: a sidebar vira a ÚNICA navegação do projeto e o trilho vertical sai (ADR 0211, AT-404, revisa o ADR 0126): a lista do projeto expandido ganha os três grupos, a aba ativa marcada, os cinco contadores separados (Insights, PRs, Aprovações, Histórias, Arquitetura — sem requisição nova) e o teclado; recolhida, o projeto aberto abre um flyout com as mesmas abas; no telefone elas ficam na gaveta, e a barra horizontal de abas some. A moldura da aba Código cai de 492px para 312px.
 - O texto de carregamento das telas do web (rota, gasto, RAG, Aprovações, Insights, aba Código, `/containers`, chaves de dispositivo, idioma, pastas) passa a brilhar com o `Shimmer` (ADR 0210, AT-402); botões, `Skeleton` e estados vazios ficam como estavam.
 
 - **web**: os rótulos de estado em curso ganham o Shimmer — o gate em execução da linha do tempo da PR, a espera do runner, "N agentes ativos" da aba Código e o badge `provisioning` de `/containers` e do card de projeto (prop `emCurso` do `Badge`); os pulsos de ponto param com movimento reduzido (AT-403, ADR 0210).

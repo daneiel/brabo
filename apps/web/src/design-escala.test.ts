@@ -56,7 +56,7 @@ const TODOS = modulos(resolve(raiz, 'src'));
 const ESCOPO = [
   'src/routes/SessionPage.module.css',
   'src/routes/Shell.module.css',
-  'src/routes/ProjectRail.module.css',
+  'src/routes/AbasDoProjeto.module.css',
   'src/routes/SessionLanguageIndicator.module.css',
 ].map((c) => resolve(raiz, c));
 

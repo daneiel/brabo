@@ -7,7 +7,7 @@ import { useSyncExternalStore } from 'react';
  * 444px de moldura FIXA — mais que a tela inteira de um telefone de 390px, e o
  * conteúdo ficava com ~0–126px ou estourava para a direita. Nessa faixa a
  * sidebar vira GAVETA (`Shell.tsx`) e o trilho vira BARRA horizontal rolável
- * (`ProjectRail.tsx`).
+ * (o trilho saiu no ADR 0211: as abas do projeto moram na gaveta).
  *
  * UMA fonte: quem troca de layout lê ESTA consulta por `useLayoutMovel`, e os
  * módulos CSS aplicam o desenho móvel pela CLASSE que o componente põe (nunca
