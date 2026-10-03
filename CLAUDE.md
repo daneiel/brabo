@@ -292,6 +292,7 @@ estado lido do repositório e não da conversa.
 | A escolha de imagem avisa que rede `none` impede instalar dependências (AT-420) | RN-735 |
 | O nome do projeto no assistente sem autofoco, para o gerenciador de senhas não cobrir a página (AT-418) | RN-736 |
 | A falha do turno grava o texto do provider, e o crédito esgotado vira frase curta no idioma do turno (AT-421) | RN-733 |
+| O caminho OpenAI-compatível manda `max_tokens` sempre (padrão 4096) (AT-419) | RN-734 |
 
 ## Estado atual e aberto
 
