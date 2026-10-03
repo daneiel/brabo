@@ -7057,6 +7057,11 @@ export interface components {
              * @example llama3.2:3b
              */
             modelName: Record<string, never> | null;
+            /**
+             * @description Present (always `true`) only when the provider cut the response at the output cap (`finish_reason: "length"` / `stop_reason: "max_tokens"`, RN-737): the text and the `toolCalls` arguments are truncated. The engine refuses to run a truncated tool call and narrates the cut.
+             * @enum {boolean}
+             */
+            truncated?: true;
             /** @description The step where the Jev chose the tool (ADR 0179, RN-625). Absent when the router was not consulted (provider other than OpenRouter, fewer than two tools, workspace switch off). The engine narrates it as `tool_router.decided`. */
             toolRouting?: components["schemas"]["ToolRoutingResponseDto"];
         };
@@ -7077,6 +7082,11 @@ export interface components {
              * @example llama3.2:3b
              */
             modelName?: Record<string, never> | null;
+            /**
+             * @description Only on the `final` frame, and only when the provider cut the response at the output cap (RN-737).
+             * @enum {boolean}
+             */
+            truncated?: true;
         };
         LlmUsageResponseDto: {
             /** @example 1820 */
