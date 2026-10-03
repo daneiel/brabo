@@ -27,9 +27,11 @@ defmodule Engine.Harness.Tools.ChooseProjectImage do
         "Fixa a imagem de container em que o código deste projeto vai rodar. " <>
           "Enquanto você não decidir, o container do projeto NÃO sobe e a aba Code " <>
           "fica fechada. Use uma referência com TAG explícita (`latest` é recusado). " <>
-          "`network` default é \"none\" (sem internet dentro do container); peça " <>
-          "\"egress\" só quando a stack precisar baixar dependências, porque quem " <>
-          "autoriza saída para a internet é o usuário.",
+          "`network` default é \"none\" (sem internet dentro do container). Com " <>
+          "\"none\" NENHUM gerenciador de pacotes funciona lá dentro (npm, pnpm, " <>
+          "yarn, pip, mix, cargo, go mod, bundler...): se a stack instala " <>
+          "dependências, o certo é \"egress\" — a Infra herda esta rede e o dev " <>
+          "agent não terá outra.",
       parameters: %{
         "type" => "object",
         "properties" => %{
@@ -75,15 +77,37 @@ defmodule Engine.Harness.Tools.ChooseProjectImage do
 
     case EngineApiClient.decide_project_image(ctx.project_id, ctx.session_id, payload) do
       {:ok, %{"version" => version, "decisao" => decisao}} ->
-        {:ok,
-         "imagem do projeto fixada (version #{version}): #{Map.get(decisao, "image")}, " <>
-           "rede #{Map.get(decisao, "network")}. A aba Code está liberada."}
+        {:ok, mensagem_de_fixada(version, decisao)}
 
       {:ok, _outro} ->
         {:ok, "imagem do projeto fixada."}
 
       {:error, reason} ->
         {:error, "imagem recusada: #{inspect(reason)}"}
+    end
+  end
+
+  @doc """
+  Texto do resultado da decisão (RN-735). Com rede `none` ele DIZ que nenhum
+  gerenciador de pacotes funciona no container — a Infra herda a rede (RN-723)
+  — para o modelo corrigir para `egress` no mesmo turno se a stack instala
+  dependências. Aviso, nunca recusa: a api não adivinha a stack.
+  """
+  def mensagem_de_fixada(version, decisao) do
+    rede = Map.get(decisao, "network")
+
+    base =
+      "imagem do projeto fixada (version #{version}): #{Map.get(decisao, "image")}, " <>
+        "rede #{rede}. A aba Code está liberada."
+
+    if rede == "none" do
+      base <>
+        " ATENÇÃO: com rede none o container não tem internet, e npm/pnpm/pip/mix/" <>
+        "cargo/go mod NÃO conseguem instalar dependências; a Infra herda esta rede. " <>
+        "Se a stack instala dependências, chame choose_project_image de novo com " <>
+        "network \"egress\"."
+    else
+      base
     end
   end
 
