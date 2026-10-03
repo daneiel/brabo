@@ -87,6 +87,9 @@ defmodule Engine.Harness.Tools.ChooseProjectImage do
     end
   end
 
+  def run(_args, _ctx),
+    do: {:error, "choose_project_image exige `image` (string) e `rationale` (string)"}
+
   @doc """
   Texto do resultado da decisão (RN-735). Com rede `none` ele DIZ que nenhum
   gerenciador de pacotes funciona no container — a Infra herda a rede (RN-723)
@@ -110,7 +113,4 @@ defmodule Engine.Harness.Tools.ChooseProjectImage do
       base
     end
   end
-
-  def run(_args, _ctx),
-    do: {:error, "choose_project_image exige `image` (string) e `rationale` (string)"}
 end
