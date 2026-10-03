@@ -739,6 +739,15 @@ nothing and the gate approves without static analysis
 ([RN-707](../business-rules.md#rn-707), runbook
 [The SecOps gate is stuck on "SAST não rodou"](../runbook.md#semgrep-do-gate)).
 
+Both engine images pin semgrep with the build argument `SEMGREP_VERSION`
+(`1.171.0`, the same in `docker/engine/Dockerfile` and `Dockerfile.prod`, held
+equal by `scripts/ci/semgrep-do-engine.spec.ts`). It is a build argument, not a
+runtime variable — nothing goes in the `.env`. Unpinned, pip took 1.179.0, which
+publishes no `musllinux` wheel: on the Alpine image the package came from the
+sdist without `semgrep-core` and every scan failed. Raising it means picking a
+release with a `musllinux` wheel on PyPI and changing both Dockerfiles in the
+same PR.
+
 None of the six Dockerfiles uses corepack (Node 25+ no longer ships it,
 AT-360): the build installs pnpm from the registry tarball, checked against a
 sha512 written in the Dockerfile itself — the build arguments `PNPM_VERSION`
