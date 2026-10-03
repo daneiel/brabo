@@ -13831,9 +13831,9 @@ lógico, monótono) à janela e ao parâmetro, que também passa a olhar
 evento pode ter saído da janela e a aba volta a decidir só por ela — é o custo
 da guarda, o mesmo dos outros dois fatos.
 
-- **Código:** `apps/web/src/lib/agent-status.ts:308` (`AgregadoDaSessao`),
+- **Código:** `apps/web/src/lib/agent-status.ts:320` (`AgregadoDaSessao`),
 
-- **Código:** `apps/web/src/lib/agent-status.ts:312` (`AgregadoDaSessao`),
+- **Código:** `apps/web/src/lib/agent-status.ts:320` (`AgregadoDaSessao`),
   `:296` (o parâmetro opcional de `rosterFactsFromEvents`), `:304` (a união das
   delegações), `:312` (o OU do gate), `:410` (o parâmetro repassado por
   `deriveAgentRoster`); `apps/web/src/routes/ProjectOverviewTab.tsx:97` e
@@ -21617,7 +21617,7 @@ sem dizer qual.
   `apps/web/src/routes/Shell.tsx:545` (`idDoProjetoAtual`),
   `apps/web/src/routes/NewProjectWizard.tsx:155` (`NewProjectWizard`),
   `apps/web/src/routes/ProjectPrsTab.tsx:117` (`invalidateMergeActions`),
-  `apps/web/src/lib/agent-status.ts:214` (`gateStatus`)
+  `apps/web/src/lib/agent-status.ts:218` (`gateStatus`)
 - **Teste:** `apps/api/test/application/use-cases/actions/execute-infra-pr.use-case.spec.ts`
   ("a branch nasce de dev, a PR mira dev e leva infra[bot]"; falha:
   "repositório sem dev falha nomeado, sem cair na default"),
