@@ -1122,6 +1122,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/internal/sessions/{sessionId}/stories/{storyId}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Completes an existing draft story instead of re-creating it
+         * @description `businessRuleIds` is ADDED to the rules already linked; non-empty lists replace the current ones and omitted lists stay. After writing, the story is promoted by the SAME criterion as story creation (`ready` in `auto` mode, `proposedReady` in `manual`) (RN-720).
+         */
+        post: operations["InternalSessionsController_completeStoryRoute"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/internal/sessions/{sessionId}/story-modules": {
         parameters: {
             query?: never;
@@ -5276,6 +5296,46 @@ export interface components {
              * @example false
              */
             truncated: boolean;
+        };
+        CompleteStoryInternalDto: {
+            /**
+             * Format: uuid
+             * @example 01JC4Z0000PROJETO0000000001
+             */
+            projectId: string;
+            /** @example As a buyer, I want to pay by card. */
+            description?: string;
+            /**
+             * @example [
+             *       "The cart accepts up to 50 items"
+             *     ]
+             */
+            rf?: string[];
+            /**
+             * @example [
+             *       "Response under 200ms at p95"
+             *     ]
+             */
+            rnf?: string[];
+            /**
+             * @example [
+             *       "Unit tests green"
+             *     ]
+             */
+            dod?: string[];
+            /**
+             * @example [
+             *       "Module defined"
+             *     ]
+             */
+            dor?: string[];
+            /**
+             * @description ADDED to the rules the story already cites (completing never unlinks a rule); each new id has to reference an existing `artifact.business_rule`.
+             * @example [
+             *       "RN-014"
+             *     ]
+             */
+            businessRuleIds?: string[];
         };
         ConfirmacaoDeArquiteturaResponseDto: {
             /**
@@ -12525,6 +12585,60 @@ export interface operations {
             };
             /** @description Session, project, or resource not found. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    InternalSessionsController_completeStoryRoute: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: string;
+                storyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompleteStoryInternalDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StoryResponseDto"];
+                };
+            };
+            /** @description A business_rule_id does not reference an existing rule. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Service token missing or different from the shared one. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Story is not in this project. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Story is no longer `draft`. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
