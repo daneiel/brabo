@@ -290,6 +290,7 @@ estado lido do repositório e não da conversa.
 | O 402 do provider vira `insufficient_credit` na api, e o engine decide pelo código (AT-416) | RN-730 |
 | O texto do turno decodifica escape unicode literal pela régua da RN-725 (AT-417) | RN-732 |
 | A escolha de imagem avisa que rede `none` impede instalar dependências (AT-420) | RN-735 |
+| O nome do projeto no assistente sem autofoco, para o gerenciador de senhas não cobrir a página (AT-418) | RN-736 |
 
 ## Estado atual e aberto
 

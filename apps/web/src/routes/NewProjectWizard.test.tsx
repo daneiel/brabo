@@ -232,6 +232,19 @@ describe('NewProjectWizard — o provider é da adoção', () => {
     expect(campo.getAttribute('autocomplete')).toBe('off');
     expect(campo.getAttribute('data-1p-ignore')).toBe('true');
     expect(campo.getAttribute('data-lpignore')).toBe('true');
+    expect(campo.getAttribute('data-bwignore')).toBe('true');
+    expect(campo.getAttribute('data-form-type')).toBe('other');
+  });
+
+  it('RN-736: o campo de nome não ganha foco sozinho nem se chama "name"', async () => {
+    montar();
+    fireEvent.click(screen.getByText('Criar novo'));
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+
+    const campo = await screen.findByLabelText('Nome do projeto');
+    expect(document.activeElement).not.toBe(campo);
+    expect(campo.id).toBe('project-title');
+    expect(campo.getAttribute('name')).toBe('project-title');
   });
 });
 
