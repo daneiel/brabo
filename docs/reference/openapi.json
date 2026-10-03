@@ -2805,6 +2805,65 @@
         ]
       }
     },
+    "/internal/sessions/{sessionId}/stories/{storyId}/archive": {
+      "post": {
+        "description": "The story and its tasks leave the backlog, coverage, plan and claim; the row stays and `backlog.story_archived` records it, with the PO as actor (RN-727).",
+        "operationId": "InternalSessionsController_archiveStoryRoute",
+        "parameters": [
+          {
+            "name": "storyId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArchiveStoryInternalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoryResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body."
+          },
+          "403": {
+            "description": "Service token missing or different from the shared one."
+          },
+          "404": {
+            "description": "Story is not in this project."
+          },
+          "409": {
+            "description": "Named refusal (`reason`): `historia_arquivada`, `historia_nao_draft` or `historia_com_tarefa_em_execucao`."
+          }
+        },
+        "security": [
+          {
+            "service-token": []
+          }
+        ],
+        "summary": "Archives a draft story",
+        "tags": [
+          "internal"
+        ]
+      }
+    },
     "/internal/sessions/{sessionId}/stories/{storyId}/complete": {
       "post": {
         "description": "`businessRuleIds` is ADDED to the rules already linked; non-empty lists replace the current ones and omitted lists stay. After writing, the story is promoted by the SAME criterion as story creation (`ready` in `auto` mode, `proposedReady` in `manual`) (RN-720).",
@@ -2867,6 +2926,65 @@
           }
         ],
         "summary": "Completes an existing draft story instead of re-creating it",
+        "tags": [
+          "internal"
+        ]
+      }
+    },
+    "/internal/sessions/{sessionId}/stories/{storyId}/update": {
+      "post": {
+        "description": "Only a `draft` story with no task in execution; writes `backlog.story_updated` with the PO as actor (RN-727).",
+        "operationId": "InternalSessionsController_updateStoryRoute",
+        "parameters": [
+          {
+            "name": "storyId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateStoryInternalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoryResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "No field, or an empty title."
+          },
+          "403": {
+            "description": "Service token missing or different from the shared one."
+          },
+          "404": {
+            "description": "Story is not in this project."
+          },
+          "409": {
+            "description": "Named refusal (`reason`): `historia_arquivada`, `historia_nao_draft` or `historia_com_tarefa_em_execucao`."
+          }
+        },
+        "security": [
+          {
+            "service-token": []
+          }
+        ],
+        "summary": "Corrects the title and/or description of a draft story",
         "tags": [
           "internal"
         ]
@@ -4536,7 +4654,7 @@
     },
     "/projects/{projectId}/backlog": {
       "get": {
-        "description": "Nested and complete, in a single call. This is READ-ONLY: backlog is written by agents, through the `/internal/*` routes.",
+        "description": "Nested and complete, in a single call. ARCHIVED stories (RN-727) are not listed. Backlog is written by agents, through the `/internal/*` routes.",
         "operationId": "BacklogController_backlog",
         "parameters": [
           {
@@ -10592,6 +10710,79 @@
         ]
       }
     },
+    "/projects/{projectId}/stories/{storyId}/archive": {
+      "post": {
+        "description": "The story leaves the backlog, the coverage, the promotion queue, the Dev Lead's plan and the claim — and so do its tasks. Nothing is deleted: the row stays with `archivedAt`, and `backlog.story_archived` records who, why and which tasks. Only a `draft` story with no task in execution.",
+        "operationId": "BacklogController_archive",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "storyId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArchiveStoryDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoryResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body. The `ValidationPipe` runs with `whitelist` and `forbidNonWhitelisted`, so an unknown field also fails."
+          },
+          "401": {
+            "description": "No token, expired token, or invalid signature."
+          },
+          "403": {
+            "description": "Insufficient role on the project."
+          },
+          "404": {
+            "description": "Project does not exist."
+          },
+          "409": {
+            "description": "Named refusal (`reason`): `historia_arquivada`, `historia_nao_draft` or `historia_com_tarefa_em_execucao`."
+          },
+          "429": {
+            "description": "Rate limit per user or per IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Archives a draft story (RN-727)",
+        "tags": [
+          "backlog"
+        ]
+      }
+    },
     "/projects/{projectId}/stories/{storyId}/return": {
       "post": {
         "description": "The story leaves the proposal queue and the reason becomes a message pinned to the PO's session — the same pattern as returning a gate to dev. If that session's PO is no longer up, the return is recorded anyway: it's the user's decision and does not depend on an agent listening.",
@@ -10657,6 +10848,79 @@
           }
         ],
         "summary": "Returns a refused story to the PO, with the reason",
+        "tags": [
+          "backlog"
+        ]
+      }
+    },
+    "/projects/{projectId}/stories/{storyId}/title": {
+      "patch": {
+        "description": "Only a `draft` story with no task in execution (`in_progress`/`in_review`). Writes `backlog.story_updated` with the previous and the new title. Same role as the other backlog writes (promote/return).",
+        "operationId": "BacklogController_updateTitle",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "storyId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateStoryTitleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoryResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Empty title or over 200 characters."
+          },
+          "401": {
+            "description": "No token, expired token, or invalid signature."
+          },
+          "403": {
+            "description": "Insufficient role on the project."
+          },
+          "404": {
+            "description": "Project does not exist."
+          },
+          "409": {
+            "description": "Named refusal (`reason`): `historia_arquivada`, `historia_nao_draft` or `historia_com_tarefa_em_execucao`."
+          },
+          "429": {
+            "description": "Rate limit per user or per IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Corrects the title of a draft story (RN-727)",
         "tags": [
           "backlog"
         ]
@@ -14132,6 +14396,33 @@
           "c4Diagram"
         ]
       },
+      "ArchiveStoryDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "example": "Duplicate of \"Register a user\".",
+            "description": "Optional; recorded in `backlog.story_archived`."
+          }
+        }
+      },
+      "ArchiveStoryInternalDto": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "01JC4Z0000PROJETO0000000001"
+          },
+          "reason": {
+            "type": "string",
+            "example": "Duplicate of \"Register a user\"."
+          }
+        },
+        "required": [
+          "projectId"
+        ]
+      },
       "AreaDeAgentesResponseDto": {
         "type": "object",
         "properties": {
@@ -16124,6 +16415,19 @@
             "format": "date-time",
             "nullable": true
           },
+          "archivedAt": {
+            "type": "string",
+            "example": null,
+            "format": "date-time",
+            "description": "When the story was ARCHIVED (RN-727). Archived stories leave the backlog, the coverage, the plan and the claim; `null` is a story in play.",
+            "nullable": true
+          },
+          "archivedReason": {
+            "type": "string",
+            "example": null,
+            "description": "Why it was archived, when someone said (RN-727).",
+            "nullable": true
+          },
           "createdAt": {
             "type": "string",
             "example": "2026-07-25T09:00:00.000Z",
@@ -16155,6 +16459,8 @@
           "proposedReady",
           "returnedReason",
           "returnedAt",
+          "archivedAt",
+          "archivedReason",
           "createdAt",
           "updatedAt",
           "semanticDuplicate"
@@ -24038,6 +24344,19 @@
             "format": "date-time",
             "nullable": true
           },
+          "archivedAt": {
+            "type": "string",
+            "example": null,
+            "format": "date-time",
+            "description": "When the story was ARCHIVED (RN-727). Archived stories leave the backlog, the coverage, the plan and the claim; `null` is a story in play.",
+            "nullable": true
+          },
+          "archivedReason": {
+            "type": "string",
+            "example": null,
+            "description": "Why it was archived, when someone said (RN-727).",
+            "nullable": true
+          },
           "createdAt": {
             "type": "string",
             "example": "2026-07-25T09:00:00.000Z",
@@ -24072,6 +24391,8 @@
           "proposedReady",
           "returnedReason",
           "returnedAt",
+          "archivedAt",
+          "archivedReason",
           "createdAt",
           "updatedAt",
           "tasks"
@@ -24191,6 +24512,19 @@
             "format": "date-time",
             "nullable": true
           },
+          "archivedAt": {
+            "type": "string",
+            "example": null,
+            "format": "date-time",
+            "description": "When the story was ARCHIVED (RN-727). Archived stories leave the backlog, the coverage, the plan and the claim; `null` is a story in play.",
+            "nullable": true
+          },
+          "archivedReason": {
+            "type": "string",
+            "example": null,
+            "description": "Why it was archived, when someone said (RN-727).",
+            "nullable": true
+          },
           "createdAt": {
             "type": "string",
             "example": "2026-07-25T09:00:00.000Z",
@@ -24219,6 +24553,8 @@
           "proposedReady",
           "returnedReason",
           "returnedAt",
+          "archivedAt",
+          "archivedReason",
           "createdAt",
           "updatedAt"
         ]
@@ -24674,6 +25010,40 @@
             "description": "The PROJECT's language (RN-619) — shared artifacts and turns with no human author use it. Any BCP-47 code the server recognizes, stored canonical; an unrecognized one is a 400. Omitted, the project starts with its creator's effective response language (RN-618: account choice > confirmed detection > interface language)."
           }
         }
+      },
+      "UpdateStoryInternalDto": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "01JC4Z0000PROJETO0000000001"
+          },
+          "title": {
+            "type": "string",
+            "example": "Register a user"
+          },
+          "description": {
+            "type": "string",
+            "example": "As a visitor, I want to sign up."
+          }
+        },
+        "required": [
+          "projectId"
+        ]
+      },
+      "UpdateStoryTitleDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "example": "Register a user",
+            "description": "Trimmed; 1 to 200 characters."
+          }
+        },
+        "required": [
+          "title"
+        ]
       },
       "UpdateUserPreferencesDto": {
         "type": "object",
