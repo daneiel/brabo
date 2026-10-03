@@ -19027,7 +19027,7 @@ O valor mora em DOIS lugares, de propósito, um por linguagem, e mudam juntos:
   `:183` (`garantir_base`), `:308` (`remoto_vazio?`);
   `apps/engine/lib/engine/dev/worktree_manager.ex:36` (`create`), `:79`
   (`add_worktree`), `:93` (`garantir_base`);
-  `apps/engine/lib/engine/dev/agent_io.ex:300` (`propose_pr`);
+  `apps/engine/lib/engine/dev/agent_io.ex:305` (`propose_pr`);
   `apps/engine/lib/engine/gates/diff.ex:21` (`compute`);
   `apps/engine/lib/engine/harness/project_context.ex:29` (`repo_line`);
   `apps/api/src/domain/actions/protected-branches.ts:26` (`BRANCH_DE_TRABALHO`);
@@ -19092,8 +19092,8 @@ desde então conta como recusa) e quando ela não cabia ao servidor (sem
 roteamento, `runner`) e o modelo não a propôs.
 
 - **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:464`
-  (`dispatch_calls`), `:539` (`recusa_pr_repetida_no_lote`), `:1147`
-  (`registrar_subida`), `:1157` (`fechar_subida`), `:1155`
+  (`dispatch_calls`), `:539` (`recusa_pr_repetida_no_lote`), `:1152`
+  (`registrar_subida`), `:1162` (`fechar_subida`), `:1155`
 
   (`dispatch_calls`), `:539` (`recusa_pr_repetida_no_lote`), `:1140`
   (`registrar_subida`), `:1150` (`fechar_subida`), `:1154`
@@ -19358,7 +19358,7 @@ vence — pôr a Infra em "manual" não desliga esta semente.
   (`INFRA_AUTONOMY_SEEDS`);
   `apps/engine/lib/engine/infra/infra_lead_server.ex:256` (`handle_cast`),
   `:626` (`propor_container_start`), `:707` (`subir_no_aceite`), `:759`
-  (`eleger_candidata`), `:1326` (`passo_da_subida`)
+  (`eleger_candidata`), `:1331` (`passo_da_subida`)
 
   `:626` (`propor_container_start`), `:707` (`subir_no_aceite`), `:759`
   (`eleger_candidata`), `:1319` (`passo_da_subida`)
@@ -21027,9 +21027,9 @@ conversa —, e a delegação terminava `failed` com origem `modelo` e um
 - **Onde:** `apps/engine/lib/engine/infra/workflows_agent.ex:61` (`dispensa`),
   `apps/engine/lib/engine/infra/infra_lead.ex:69` (`com_prefixo`),
   `apps/engine/lib/engine/infra/workflows_agent.ex:184` (`parada_sem_ferramenta`),
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:1191` (`finalize`)
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:1196` (`finalize`)
 
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:1191` (`finalize`)
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:1196` (`finalize`)
 - **Teste:** `apps/engine/test/engine/infra/workflows_agent_test.exs` ("RN-710: …")
   e `apps/engine/test/engine/infra/infra_lead_server_test.exs` ("RN-710:
   repositório local dispensa o Workflows …") e
@@ -21577,8 +21577,8 @@ sem dizer qual.
   ele que decide; o reconhecimento pelo texto ficou só como rede.
 - **Onde:** `apps/engine/lib/engine/agents/falha_de_turno.ex:110`
   (`credito_esgotado?`),
-  `apps/engine/lib/engine/dev/dev_agent_server.ex:868` (`handle_outcome`),
-  `apps/engine/lib/engine/dev/agent_io.ex:254` (`pausar_por_credito`),
+  `apps/engine/lib/engine/dev/dev_agent_server.ex:874` (`handle_outcome`),
+  `apps/engine/lib/engine/dev/agent_io.ex:259` (`pausar_por_credito`),
   `apps/web/src/lib/agent-status.ts:194` (`breakerReasonFor`),
   `apps/api/src/application/use-cases/sessions/get-session-pending-work.use-case.ts`
 - **Teste:** `apps/engine/test/engine/dev/dev_agent_server_test.exs`
@@ -21612,7 +21612,7 @@ sem dizer qual.
   (`streamErrorCode`),
   `apps/engine/lib/engine/agents/falha_de_turno.ex:106` (`credito_esgotado?`),
   `:71` (`origem`), `apps/engine/lib/engine/harness/tool_loop.ex:148`
-  (`last_error_code`), `apps/engine/lib/engine/dev/dev_agent_server.ex:868`
+  (`last_error_code`), `apps/engine/lib/engine/dev/dev_agent_server.ex:874`
   (`handle_outcome`)
 - **Teste:** `apps/api/test/contract/llm-provider.contract.ts` (`erro_402 vira
   chunk de erro com code "insufficient_credit"`; falha: `erro_500` segue
@@ -21790,3 +21790,24 @@ sem dizer qual.
   de nome não ganha foco sozinho nem se chama \"name\"" e o de RN-729, que
   confere os quatro atributos)
 - **Origem:** AT-418 (TP-01, 2ª rodada de 03/10)
+
+### RN-733 — A falha de crédito diz o que fazer, e o `reason` nunca é a tupla {#rn-733}
+
+- **Regra:** o `reason` gravado no `agent.error` dos conversacionais, do
+  Infra Lead e do `ToolLoop` (dev agent) é o TEXTO do frame final quando há
+  um — nunca a tupla `{:final, …}` inspecionada; outras formas seguem com
+  `inspect/1`. Com crédito do provider esgotado (`errorCode:
+  insufficient_credit`, RN-730, ou o reconhecimento por texto da RN-726), a
+  `mensagem` da bolha é curta e acionável no idioma do turno (RN-622): pt
+  "Crédito do provedor do modelo esgotado — recarregue a chave e tente de
+  novo.", qualquer outro idioma "The model provider's credit is exhausted —
+  top up the key and try again."; sem idioma resolvido, pt-BR. O JSON do
+  provider fica só no `reason` (diagnóstico). Os demais erros mantêm a frase
+  de sempre.
+- **Onde:** `apps/engine/lib/engine/agents/falha_de_turno.ex:126` (`mensagem`),
+  `:143` (`diagnostico`)
+- **Teste:** `apps/engine/test/engine/agents/dev_lead_server_test.exs` (402
+  em pt-BR e en: frase curta, `reason` sem `{:final`; erro `upstream`: frase
+  de sempre), `apps/engine/test/engine/agents/falha_de_turno_test.exs`
+- **Origem:** AT-421 (TP-01 de 03/10, 2ª rodada: o Dev Lead gravou
+  `reason: "{:final, …"` e a bolha despejou o JSON do 402)

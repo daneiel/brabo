@@ -1117,7 +1117,12 @@ defmodule Engine.Infra.InfraLeadServer do
         "ao dev-lead: #{inspect(reason)}. O fim de cada turno meu tenta de " <>
         "novo — me mande uma mensagem para eu repetir a oferta."
 
-    emit(state, "agent.error", %{origem: origem, mensagem: mensagem, reason: inspect(reason)})
+    emit(state, "agent.error", %{
+      origem: origem,
+      mensagem: mensagem,
+      reason: FalhaDeTurno.diagnostico(reason)
+    })
+
     broadcast(state, "agent.error", %{origem: origem, mensagem: mensagem})
     state
   end
@@ -1246,7 +1251,7 @@ defmodule Engine.Infra.InfraLeadServer do
         state
 
       {:error, reason} ->
-        broadcast(state, "agent.error", %{reason: inspect(reason)})
+        broadcast(state, "agent.error", %{reason: FalhaDeTurno.diagnostico(reason)})
         state
     end
   end
@@ -1482,12 +1487,12 @@ defmodule Engine.Infra.InfraLeadServer do
   # aberta ver na hora — mas ele deixou de ser a única fonte.
   defp emit_falha(state, reason) do
     origem = FalhaDeTurno.origem(reason)
-    mensagem = FalhaDeTurno.mensagem(reason)
+    mensagem = FalhaDeTurno.mensagem(reason, state.project_id)
 
     emit(state, "agent.error", %{
       origem: origem,
       mensagem: mensagem,
-      reason: inspect(reason)
+      reason: FalhaDeTurno.diagnostico(reason)
     })
 
     broadcast(state, "agent.error", %{origem: origem, mensagem: mensagem})

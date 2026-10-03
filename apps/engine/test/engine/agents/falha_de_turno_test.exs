@@ -136,4 +136,19 @@ defmodule Engine.Agents.FalhaDeTurnoTest do
       assert FalhaDeTurno.mensagem({:final, "x", "upstream"}) =~ "x"
     end
   end
+
+  describe "RN-733: diagnóstico sem tupla e frase curta de crédito" do
+    test "diagnostico nunca devolve a tupla {:final, ...}" do
+      assert FalhaDeTurno.diagnostico({:final, "x", "insufficient_credit"}) == "x"
+      assert FalhaDeTurno.diagnostico({:final, "x"}) == "x"
+      assert FalhaDeTurno.diagnostico(:aborted) == ":aborted"
+    end
+
+    test "crédito por code ou por texto: frase curta, sem o JSON do provider" do
+      msg = FalhaDeTurno.mensagem({:final, "(402): {json}", "insufficient_credit"})
+      assert msg =~ "Crédito do provedor do modelo esgotado"
+      refute msg =~ "json"
+      assert FalhaDeTurno.mensagem({:final, "status 402: add credits"}) =~ "esgotado"
+    end
+  end
 end

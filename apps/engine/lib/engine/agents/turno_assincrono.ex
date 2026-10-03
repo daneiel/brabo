@@ -619,7 +619,12 @@ defmodule Engine.Agents.TurnoAssincrono do
       "O turno caiu de forma inesperada: #{inspect(reason)}. Nada além do já " <>
         "registrado foi gasto. Você pode tentar de novo."
 
-    emit(state, "agent.error", %{origem: origem, mensagem: mensagem, reason: inspect(reason)})
+    emit(state, "agent.error", %{
+      origem: origem,
+      mensagem: mensagem,
+      reason: FalhaDeTurno.diagnostico(reason)
+    })
+
     broadcast(state, "agent.error", %{origem: origem, mensagem: mensagem})
     state
   end
