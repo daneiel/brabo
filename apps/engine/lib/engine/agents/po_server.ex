@@ -287,9 +287,9 @@ defmodule Engine.Agents.PoServer do
       # servidor é `restart: :temporary`, ele morria e não voltava — a correção
       # de uma falha silenciosa tinha virado uma QUEDA, com o gatilho mais
       # corriqueiro que existe (acabar o orçamento).
-      {:ok, %{"error" => erro}} when is_binary(erro) and erro != "" ->
+      {:ok, %{"error" => erro} = frame} when is_binary(erro) and erro != "" ->
         gravar_texto_do_turno(state, "", nil)
-        emit_falha(state, {:final, erro})
+        emit_falha(state, {:final, erro, Map.get(frame, "errorCode")})
         state
 
       {:ok, %{"message" => message} = frame} ->

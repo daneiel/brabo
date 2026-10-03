@@ -17202,8 +17202,8 @@ endpoint é ALPHA e o smoke manual
   (`recortarEstado`), `:260` (`menuP3`);
   `apps/api/src/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.ts:110`
   (`preparar`), `:143` (`executar`), `:285` (`registrarGasto`);
-  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:133`
-  (`decisaoDoJev`); `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:154`
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:146`
+  (`decisaoDoJev`); `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:167`
   (`preparar`); `apps/api/src/infrastructure/llm/jev-tool-router.ts:32`
   (`decidir`); `apps/api/src/db/schema/iam.ts:164` (`toolRouterEnabled`);
   `apps/api/src/db/schema/llm.ts:356` (`priceImplicit`);
@@ -21573,9 +21573,9 @@ sem dizer qual.
   reconhecimento faz `FalhaDeTurno.origem/1` devolver `infra` para o frame
   final de crédito (vale para os agentes de gate, como o QA). A sessão conta
   `dev.credit_exhausted` como trabalho pendente, como `dev.idle_tripped`.
-  Lacuna declarada: a api não tem código próprio para 402 (sai como
-  `upstream`); o reconhecimento é pelo texto normalizado.
-- **Onde:** `apps/engine/lib/engine/agents/falha_de_turno.ex:98`
+  Desde a RN-730 o 402 chega com `code` próprio (`insufficient_credit`) e é
+  ele que decide; o reconhecimento pelo texto ficou só como rede.
+- **Onde:** `apps/engine/lib/engine/agents/falha_de_turno.ex:110`
   (`credito_esgotado?`),
   `apps/engine/lib/engine/dev/dev_agent_server.ex:868` (`handle_outcome`),
   `apps/engine/lib/engine/dev/agent_io.ex:254` (`pausar_por_credito`),
@@ -21590,6 +21590,37 @@ sem dizer qual.
   ("RN-726: dev.credit_exhausted é travado com motivo de crédito…")
 - **Origem:** AT-407 (TP-01 de 03/10: 402 do OpenRouter virou três tarefas
   bloqueadas com origem `codigo` e a parada automática)
+
+### RN-730 — O 402 do provider tem `code` próprio, e é ele que decide o crédito esgotado {#rn-730}
+
+- **Regra:** o HTTP 402 do provider de LLM é normalizado como
+  `insufficient_credit` (antes caía em `upstream`), na mesma tabela de status
+  do ADR 0041 — os demais status continuam como estavam. O `code` viaja ao
+  engine como `errorCode` ao lado do `error`, no corpo de `llm-turn` e no frame
+  `final` de `llm-turn/stream` (`null` sem erro ou com erro que não é do
+  provider, como orçamento e binding ausente). No engine,
+  `FalhaDeTurno.credito_esgotado?/1` decide primeiro pelo `code`
+  (`insufficient_credit` é crédito; outro `code` não é, mesmo com a frase), e
+  o frame `{:final, texto, code}` dos conversacionais dá origem `infra` pelo
+  código. O reconhecimento por texto da RN-726 fica só como REDE: api anterior
+  ao campo, e caminho que só leva a mensagem.
+- **Onde:** `apps/api/src/domain/llm/llm-provider-errors.ts:38`
+  (`LLMInsufficientCreditError`), `:81` (`normalizeHttpStatus`),
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:202`
+  (`streamErrorCode`),
+  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:219`
+  (`streamErrorCode`),
+  `apps/engine/lib/engine/agents/falha_de_turno.ex:106` (`credito_esgotado?`),
+  `:71` (`origem`), `apps/engine/lib/engine/harness/tool_loop.ex:148`
+  (`last_error_code`), `apps/engine/lib/engine/dev/dev_agent_server.ex:868`
+  (`handle_outcome`)
+- **Teste:** `apps/api/test/contract/llm-provider.contract.ts` (`erro_402 vira
+  chunk de erro com code "insufficient_credit"`; falha: `erro_500` segue
+  `upstream`), rodado por todas as suítes de contrato de provider;
+  `apps/engine/test/engine/agents/falha_de_turno_test.exs` ("insufficient_credit
+  é crédito esgotado e origem infra, sem frase nenhuma"; falha: "outro code não
+  é crédito, mesmo com a frase; sem code, o texto é a rede")
+- **Origem:** AT-416 (a lacuna declarada da RN-726)
 
 ### RN-729 — A PR de infra mira `dev` e diz onde mergear; a sidebar abre só o projeto aberto {#rn-729}
 

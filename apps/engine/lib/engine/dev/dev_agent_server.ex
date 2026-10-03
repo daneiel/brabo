@@ -867,7 +867,10 @@ defmodule Engine.Dev.DevAgentServer do
   # do painel é a retomada depois de recarregar.
   defp handle_outcome({:ok, %{last_error: erro} = ctx}, state, _task, _story)
        when is_binary(erro) do
-    if FalhaDeTurno.credito_esgotado?(erro) do
+    if FalhaDeTurno.credito_esgotado?(%{
+         "errorCode" => Map.get(ctx, :last_error_code),
+         "error" => erro
+       }) do
       state
       |> AgentIo.block_task(@motivo_credito_esgotado, stop_diagnosis(ctx), "infra")
       |> AgentIo.pausar_por_credito()

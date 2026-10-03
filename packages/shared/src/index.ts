@@ -46,6 +46,11 @@ export type LLMErrorCode =
   | "auth"
   /** Cota ou throughput estourado (429). */
   | "rate_limit"
+  /**
+   * A conta no provider está sem crédito (402). Separado de `upstream` porque
+   * o remédio é recarregar a conta, não tentar de novo (RN-730).
+   */
+  | "insufficient_credit"
   /** O modelo pedido não existe nesse provider (404). */
   | "model_not_found"
   /** O prompt não cabe na janela do modelo (413, ou 400 com o marcador). */

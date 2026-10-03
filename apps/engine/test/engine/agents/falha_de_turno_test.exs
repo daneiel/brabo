@@ -118,4 +118,22 @@ defmodule Engine.Agents.FalhaDeTurnoTest do
       refute FalhaDeTurno.credito_esgotado?(nil)
     end
   end
+
+  describe "RN-730: o errorCode do provider decide antes do texto" do
+    test "insufficient_credit é crédito esgotado e origem infra, sem frase nenhuma" do
+      assert FalhaDeTurno.credito_esgotado?(%{
+               "errorCode" => "insufficient_credit",
+               "error" => "x"
+             })
+
+      assert FalhaDeTurno.origem({:final, "x", "insufficient_credit"}) == "infra"
+    end
+
+    test "outro code não é crédito, mesmo com a frase; sem code, o texto é a rede" do
+      refute FalhaDeTurno.credito_esgotado?(%{"errorCode" => "upstream", "error" => "status 402"})
+      assert FalhaDeTurno.credito_esgotado?(%{"errorCode" => nil, "error" => "status 402"})
+      assert FalhaDeTurno.origem({:final, "upstream falhou", "upstream"}) == "modelo"
+      assert FalhaDeTurno.mensagem({:final, "x", "upstream"}) =~ "x"
+    end
+  end
 end

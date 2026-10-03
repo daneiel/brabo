@@ -143,6 +143,9 @@ defmodule Engine.Harness.ToolLoop.Default do
         # diagnostica "o modelo parou sem sinalizar" para uma falha de
         # infraestrutura. Mesma armadilha do ADR 0019, outro caminho.
         ctx = registra_erro(ctx, Map.get(resp, "error"))
+        # RN-730: o `code` do provider viaja ao lado do texto, para quem decide
+        # crédito esgotado não depender da frase.
+        ctx = Map.put(ctx, :last_error_code, Map.get(resp, "errorCode"))
         content = Map.get(message, "content", "")
 
         # Mesmo guard-rail da RN-059 (Fase 14a), aplicado aqui — o ToolLoop é

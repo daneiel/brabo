@@ -444,9 +444,9 @@ defmodule Engine.Infra.InfraLeadServer do
       # A api narra a falha no PRÓPRIO frame final (budget, credencial, binding).
       # Isto não caía no `{:error, _}` abaixo e não emitia evento nenhum: o
       # turno terminava em silêncio absoluto, pior que o balão vazio.
-      {:ok, %{"error" => erro}} when is_binary(erro) and erro != "" ->
+      {:ok, %{"error" => erro} = frame} when is_binary(erro) and erro != "" ->
         gravar_texto_do_turno(state, "")
-        emit_falha(state, {:final, erro})
+        emit_falha(state, {:final, erro, Map.get(frame, "errorCode")})
         {:done, state}
 
       {:ok, %{"message" => message}} ->
