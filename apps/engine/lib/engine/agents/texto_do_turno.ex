@@ -72,6 +72,9 @@ defmodule Engine.Agents.TextoDoTurno do
         nil
 
       textos ->
+        # RN-732: o escape `\uXXXX` literal do modelo é decodificado pela MESMA
+        # régua dos argumentos de ferramenta (RN-725); texto sem `\u` intacto.
+        textos = Enum.map(textos, &Engine.Harness.ArgumentosDeFerramenta.decodificar_escapes/1)
         {passos, [fecho]} = Enum.split(textos, -1)
 
         # RN-731: o número do que foi gravado é FATO do servidor, nunca do texto.
