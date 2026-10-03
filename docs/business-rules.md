@@ -21771,3 +21771,22 @@ sem dizer qual.
 - **Teste:** `apps/engine/test/engine/harness/tools/choose_project_image_test.exs`
 - **Origem:** AT-420 (TP-01 de 03/10: `node:22-bookworm-slim` com rede `none`,
   e o dev agent não conseguiu `npm install`)
+
+### RN-736 — O campo "Nome do projeto" não ganha foco sozinho nem se chama "name" {#rn-736}
+
+- **Regra:** no passo de detalhes do assistente de projeto, o campo "Nome do
+  projeto" NÃO recebe `autoFocus` e usa `id`/`name` `project-title`, nunca
+  "name" puro; os atributos que desligam gerenciadores de senha
+  (`data-1p-ignore`, `data-lpignore`, `data-bwignore`, `data-form-type="other"`)
+  continuam vindo da fonte única `SEM_AUTOFILL` (RN-729). Decisão: sem foco
+  automático em caso nenhum (nem por teclado) — o menu "Contact Info" dessas
+  extensões abre no FOCO, ignora `autocomplete="off"` e cobria a página; um
+  clique ou Tab a mais é o preço. Os nomes dos atributos são os documentados
+  publicamente por 1Password, LastPass, Bitwarden e Dashlane, não medidos
+  contra cada extensão aqui.
+- **Onde:** `apps/web/src/routes/NewProjectWizard.tsx:893` (`project-title`),
+  `apps/web/src/lib/conversa-comecou.ts:24` (`SEM_AUTOFILL`)
+- **Teste:** `apps/web/src/routes/NewProjectWizard.test.tsx` ("RN-736: o campo
+  de nome não ganha foco sozinho nem se chama \"name\"" e o de RN-729, que
+  confere os quatro atributos)
+- **Origem:** AT-418 (TP-01, 2ª rodada de 03/10)

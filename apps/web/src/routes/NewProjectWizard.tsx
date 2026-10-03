@@ -883,16 +883,19 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
           ) : (
           <div>
             <div className={styles.field}>
-              <label className={styles.fieldLabel} htmlFor="project-name">
+              <label className={styles.fieldLabel} htmlFor="project-title">
                 {t('details.create.nameLabel')}
               </label>
+              {/* RN-736 (AT-418): sem `autoFocus` e sem "name" no id/name — o
+                  menu "Contact Info" de gerenciador de senha abre no FOCO de
+                  um campo que ele toma por nome de pessoa, e cobria o passo. */}
               <Input
-                id="project-name"
+                id="project-title"
+                name="project-title"
                 {...SEM_AUTOFILL}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder={t('details.create.namePlaceholder')}
-                autoFocus
               />
               {/* Sem dono no rótulo: quem provisiona é o backend, com o dono da
                   CREDENCIAL (`createForAuthenticatedUser`). Dizia `brabo/<slug>`,
