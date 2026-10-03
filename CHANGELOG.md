@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- **docs**: `pnpm docs:generate` passa a reescrever os números deriváveis da prosa — contagens de ADR e RN, o próximo ADR (e a linha repetida que um merge deixa), o recuo de `docs/adr/temas.yml` e a linha das refs `caminho:N` (`símbolo`) cujo símbolo tem ocorrência mais próxima única; o `docs:check` reprova com a mesma severidade e manda rodar o gerador (AT-399).
 - **gates**: o ciclo de gate estacionado pelo resgate (parado há mais de 2 h) ganha o botão "Retomar gate" no aviso do fio da sessão e a rota `POST /projects/:projectId/tasks/:taskId/gates/:gate/resume` (`developer`; 409 `gate_nao_estacionado` quando não há o que retomar) — antes só voltava pelo terminal do operador (AT-397, RN-724, ADR 0207).
 - **infra**: a subida do container no aceite do handoff da Infra (e a tool de subida sem rede informada) herda a rede que o Arquiteto declarou na imagem do projeto — `egress` deixa de ser rebaixado para `none`, e sobe sem clique como antes (AT-392, RN-723, ADR 0208).
 - **ações**: com o modo automático do agente ligado (a curinga em `auto_approve`), `git_push` e `pr_open` — tipados ou pelo comando de terminal — passam a ser auto-aprovados, com o motivo "modo automático (RN-713)" no evento; regra específica, "Sempre permitir" e `permissions.json` continuam sem liberar, e merge em branch protegida, deploy e `sudo`/`doas` seguem com o usuário. As telas do modo automático dizem isso (AT-385, RN-713, ADR 0204).

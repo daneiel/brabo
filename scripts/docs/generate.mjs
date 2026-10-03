@@ -20,11 +20,17 @@ import { execFileSync } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { RAIZ } from './docmap.mjs';
-import { aferir as aferirRefsComSimbolo, JANELA, veredito as vereditoDasRefs } from './refs-com-simbolo.mjs';
+import {
+  aferir as aferirRefsComSimbolo,
+  JANELA,
+  reancorar,
+  veredito as vereditoDasRefs,
+} from './refs-com-simbolo.mjs';
+import { deduplicarProximoAdr, substituirGrupo } from './reescrita.mjs';
 import { aferirAncoras, arquivosDeRn } from './ancoras-de-rn.mjs';
 import { aferirContagens } from './contagens-do-codigo.mjs';
 import { conferirTabela, repositorio, RUNBOOK } from './procedimentos-do-runbook.mjs';
-import { conferirTemas, INDICE as INDICE_DE_ADR, TEMAS as TEMAS_DE_ADR } from './temas-de-adr.mjs';
+import { conferirTemas, corrigirRecuo, INDICE as INDICE_DE_ADR, TEMAS as TEMAS_DE_ADR } from './temas-de-adr.mjs';
 import { fontesDoInventarioDeEnv } from './fontes-de-env.mjs';
 import {
   DESTINO as DESTINO_DO_INVENTARIO,
@@ -57,6 +63,21 @@ function celulaDeTabela(texto) {
 }
 
 const pendencias = [];
+
+/**
+ * Reescreve in-place um número DERIVÁVEL da prosa (AT-399). No `--check` não
+ * toca nada e devolve `false` (quem reprova é a aferição de sempre, que manda
+ * rodar `pnpm docs:generate`); no modo escrita grava e devolve `true` se mudou.
+ */
+function reescreverSeDerivavel(rel, transformar, oque) {
+  const atual = ler(rel);
+  const novo = transformar(atual);
+  if (novo === atual) return false;
+  if (CHECAR) return false;
+  writeFileSync(join(RAIZ, rel), novo);
+  console.log(`  corrigido ${rel} — ${oque} (derivável, AT-399)`);
+  return true;
+}
 
 // --------------------------------------------------------------- utilidades
 
@@ -520,6 +541,8 @@ function verificarIndiceAdr() {
  * A regra inteira está em `temas-de-adr.mjs`. Reprova; `CEGO` também.
  */
 function verificarTemasDeAdr() {
+  // Recuo de `adrs:` é derivável (AT-399): o modo escrita o acerta antes de conferir.
+  reescreverSeDerivavel(TEMAS_DE_ADR, corrigirRecuo, 'recuo das linhas de `adrs:`');
   const r = conferirTemas({
     temasYml: ler(TEMAS_DE_ADR),
     arquivosAdr: arquivos('docs/adr/[0-9]*.md').map((f) => f.replace('docs/adr/', '')),
@@ -727,8 +750,13 @@ function verificarContagensEmProsa() {
     },
   ];
 
+  // A duplicata de "the next one is" que um merge deixa sai antes de contar.
+  reescreverSeDerivavel('docs/adr/index.md', deduplicarProximoAdr, 'linha repetida do próximo ADR');
+
   let problemas = 0;
   for (const { arquivo, padrao, esperado, oque } of afericoes) {
+    // Contagem é derivável (AT-399): o modo escrita a acerta; o check reprova.
+    reescreverSeDerivavel(arquivo, (t) => substituirGrupo(t, padrao, esperado), oque);
     const achado = padrao.exec(ler(arquivo));
 
     if (achado === null) {
@@ -742,7 +770,9 @@ function verificarContagensEmProsa() {
 
     if (achado[1] !== esperado) {
       problemas++;
-      console.log(`  DESATUAL. ${arquivo} — ${oque}: diz ${achado[1]}, são ${esperado}.`);
+      console.log(
+        `  DESATUAL. ${arquivo} — ${oque}: diz ${achado[1]}, são ${esperado}. Rode \`pnpm docs:generate\`.`,
+      );
     }
   }
 
@@ -963,7 +993,17 @@ function verificarRefsComSimbolo() {
   const versionados = execFileSync('git', ['ls-files'], { cwd: RAIZ, encoding: 'utf8' })
     .split('\n')
     .filter(Boolean);
-  const resultado = aferirRefsComSimbolo(RAIZ, versionados);
+  let resultado = aferirRefsComSimbolo(RAIZ, versionados);
+  // Ref cujo símbolo tem uma ocorrência mais próxima ÚNICA é reancorada no
+  // modo escrita (AT-399); a que sumiu ou empata continua pedindo humano.
+  if (!CHECAR) {
+    let mudou = false;
+    for (const doc of new Set(resultado.naoBatem.map((r) => r.doc))) {
+      const refs = resultado.naoBatem.filter((r) => r.doc === doc);
+      mudou = reescreverSeDerivavel(doc, (t) => reancorar(t, refs), 'refs `caminho:N` reancoradas pelo símbolo') || mudou;
+    }
+    if (mudou) resultado = aferirRefsComSimbolo(RAIZ, versionados);
+  }
   const { total, batem, naoBatem, naoResolvidas } = resultado;
   const estado = vereditoDasRefs(resultado);
 
@@ -983,9 +1023,14 @@ function verificarRefsComSimbolo() {
   }
 
   pendencias.push('refs com símbolo');
-  console.log(`  REPROVA   refs com símbolo — ${resumo}. Corrija cada uma pelo SÍMBOLO:`);
+  console.log(`  REPROVA   refs com símbolo — ${resumo}:`);
   for (const r of naoBatem) {
-    const onde = r.achadoEm === null ? 'não aparece no arquivo' : `mais perto em :${r.achadoEm}`;
+    const onde =
+      r.novaLinha !== null
+        ? `mais perto em :${r.novaLinha} — \`pnpm docs:generate\` reancora`
+        : r.achadoEm === null
+          ? 'não aparece no arquivo — corrija pelo SÍMBOLO, à mão'
+          : `empate perto de :${r.achadoEm} — corrija pelo SÍMBOLO, à mão`;
     console.log(`            ${r.doc}:${r.linhaNoDoc} → ${r.resolvido}:${r.linha} (\`${r.simbolo}\`) — ${onde}`);
   }
   for (const r of naoResolvidas) {
@@ -1161,8 +1206,10 @@ verificarVersaoAnunciada();
 if (CHECAR && pendencias.length > 0) {
   console.error(
     `\n[docs:generate] ${pendencias.length} pendência(s): ${pendencias.join(', ')}.\n` +
-      'Arquivo fora de dia se resolve com `pnpm docs:generate` e commit; o resto\n' +
-      '(variável sem descrição, contagem, frase, ref) pede a PROSA — as linhas acima dizem onde.',
+      'Arquivo fora de dia, contagem de ADR/RN, próximo ADR, recuo de temas.yml e ref\n' +
+      'reancorável se resolvem com `pnpm docs:generate` e commit (AT-399); o resto\n' +
+      '(variável sem descrição, ADR sem tema, frase CEGA, ref cujo símbolo sumiu) pede a\n' +
+      'PROSA — as linhas acima dizem onde.',
   );
   process.exit(1);
 }

@@ -61,6 +61,22 @@ The provider one is written **in words** ("nove providers"), and the
 check compares against the word rather than forcing the prose to become
 a digit: the check exists to protect the text, not to reshape it.
 
+**Since AT-399 (2026-10-03) these numbers are also rewritten.** Parallel
+PRs that each add an RN or ADR wrote the shared numbers by hand, and every
+merge left the others stale: the docs guardian failed 8 of 30 runs in three
+hours for that reason alone. So `pnpm docs:generate` (write mode) now fixes
+in place what the source determines — the ADR and RN counts above, the
+next ADR number (dropping a duplicate "the next one is" line left by a
+merge), the indentation of `docs/adr/temas.yml` entries written at column 0,
+and the line of a symbol reference (below). The pure functions live in
+`scripts/docs/reescrita.mjs`, `refs-com-simbolo.mjs` (`novaLinha`,
+`reancorar`) and `temas-de-adr.mjs` (`corrigirRecuo`). `--check` keeps the
+same severity: a stale committed file still fails CI, and the fix is
+`pnpm docs:generate` plus a commit, as with generated files. What still
+needs a human: a phrase whose pattern stopped matching (`CEGO`), an ADR
+without a theme, a variable without a description, and a reference whose
+symbol left the file or ties between two nearest occurrences.
+
 The most expensive case was the **version announced in prose**: the
 README announced `v0.1.0` from Phase 5 all the way to v2.1.0 — seven
 releases behind reality, in the first thing a newcomer reads. The
@@ -180,8 +196,13 @@ up as a whole word within **±3 lines** of `N`. The window allows for a
 citation that points at the docblock rather than the signature. It stays
 small because drift moves by dozens or hundreds of lines. When a
 reference doesn't match, the output names the nearest line where the
-symbol does appear. That line is a hint, not a fix, because the nearest
-occurrence may be a call rather than the definition.
+symbol does appear. Since AT-399, `pnpm docs:generate` rewrites `N` to
+that line when the nearest occurrence is **unique** (no tie at the same
+distance); when the symbol is gone from the file, or two occurrences tie,
+the reference is left alone and must be re-read by symbol by hand. The
+nearest occurrence may be a call rather than the definition — that is the
+price accepted for not hand-editing numbers across parallel PRs, and the
+diff of the regenerated file shows each move for review.
 
 **Measured on 2026-09-18**, over every `path:N` in the three files:
 

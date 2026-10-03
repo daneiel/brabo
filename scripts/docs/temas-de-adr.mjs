@@ -166,3 +166,24 @@ export function conferirTemas({ temasYml, arquivosAdr, indice }) {
 
   return { cego: null, problemas, temas: tituloDe.size, adrs: temaDe.size };
 }
+
+/**
+ * Lane que acrescenta ADR às vezes escreve `"0209": tema` na COLUNA 0 — o YAML
+ * a lê como chave de topo, e o ADR fica SEM-TEMA. Recuo é derivável (é o das
+ * outras entradas de `adrs:`), então o `pnpm docs:generate` o acerta (AT-399).
+ * Só mexe em linhas DEPOIS de `adrs:`.
+ */
+export function corrigirRecuo(yml) {
+  const linhas = yml.split('\n');
+  const inicio = linhas.findIndex((l) => /^adrs:\s*$/.test(l));
+  if (inicio < 0) return yml;
+  const recuo =
+    linhas
+      .slice(inicio + 1)
+      .map((l) => /^(\s+)"?\d{4}"?:/.exec(l))
+      .find(Boolean)?.[1] ?? '  ';
+  for (let i = inicio + 1; i < linhas.length; i++) {
+    if (/^"?\d{4}"?:/.test(linhas[i])) linhas[i] = recuo + linhas[i];
+  }
+  return linhas.join('\n');
+}
