@@ -274,6 +274,7 @@ estado lido do repositório e não da conversa.
 | O PO completa a história existente e não oferece o handoff com regra descoberta (AT-388/AT-389) | RN-720 |
 | A Anamnese fecha a janela sem perfil e tem teto diário; ciclo de gate parado estaciona (AT-391) | ADR 0207, RN-722 |
 | O ciclo de gate estacionado volta por botão no fio (AT-397) | ADR 0207, RN-724 |
+| O `docs:generate` reescreve contagens, próximo ADR e refs deslocadas (AT-399) | documentation-workflow.md |
 
 ## Estado atual e aberto
 
@@ -2603,6 +2604,9 @@ o RACIOCÍNIO da triagem, que continua valendo.
   `scripts/docs/contagens-do-codigo.mjs` (AT-123) — uma linha por FRASE, um
   extrator por fonte, cada extrator provado por MUTAÇÃO no `.spec.ts` ao lado.
   Número que muda a cada PR (arquivos por app) é DATADO, não derivado.
+  As contagens de ADR/RN, o próximo ADR e o recuo de `docs/adr/temas.yml` são
+  reescritos pelo `pnpm docs:generate` (AT-399); o `docs:check` só reprova o
+  arquivo commitado desatualizado.
   Irmã em `block` desde a AT-122 (nasceu `warn` na AT-096):
   `verificarRefsComSimbolo` confere, nos três arquivos
   de RN, toda ref `` `caminho:N` (`símbolo` `` — e a continuação `` `:N` (`símbolo` ``,
@@ -2614,8 +2618,12 @@ o RACIOCÍNIO da triagem, que continua valendo.
   mutação no spec ao lado). O `warn` não segurou a deriva: a lista zerou em
   26/09 e voltou a 140 em cinco dias. As traduções pt-BR das RNs NÃO são
   aferidas. Ao escrever RN nova, cite `caminho:N` (`símbolo`) — é o que a
-  torna conferível — e releia pelo símbolo, nunca por um número antigo. PR que
-  desloca código citado por RN corrige a ref no MESMO PR. NÃO alargue a janela
+  torna conferível. Desde a AT-399 o `pnpm docs:generate` reancora a ref cujo
+  símbolo tem ocorrência mais próxima ÚNICA a até 40 linhas
+  (`DISTANCIA_MAXIMA_DE_REANCORA`); PR que desloca código citado por RN roda o
+  gerador e commita. Ref cujo símbolo sumiu, moveu mais de 40 linhas ou empata
+  entre duas ocorrências segue relida pelo símbolo, à mão, nunca por um número
+  antigo. NÃO alargue a janela
   para o vermelho sumir, nem estreite o padrão para esconder ref real.
 - O runbook termina com a tabela `procedure | anchor | verification |
   schedule` dos procedimentos de OPERAÇÃO (AT-193, EP-015), e o `docs:check` a
