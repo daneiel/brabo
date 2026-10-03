@@ -97,6 +97,11 @@ defmodule EngineWeb.Router do
          RunnerConnectionCommandController,
          :disconnect_credential
 
+    # ADR 0207, RN-724: retoma por gesto humano o ciclo de gate estacionado.
+    post "/projects/:projectId/tasks/:taskId/gates/:gate/resume",
+         GateCommandController,
+         :resume
+
     post "/projects/:projectId/containers/start", ContainerCommandController, :start
     post "/projects/:projectId/containers/stop", ContainerCommandController, :stop
     post "/projects/:projectId/containers/remove", ContainerCommandController, :remove

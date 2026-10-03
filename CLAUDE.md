@@ -273,6 +273,7 @@ estado lido do repositório e não da conversa.
 | A Infra herda a rede do Arquiteto na subida automática, `egress` incluído (AT-392) | ADR 0208, RN-723 |
 | O PO completa a história existente e não oferece o handoff com regra descoberta (AT-388/AT-389) | RN-720 |
 | A Anamnese fecha a janela sem perfil e tem teto diário; ciclo de gate parado estaciona (AT-391) | ADR 0207, RN-722 |
+| O ciclo de gate estacionado volta por botão no fio (AT-397) | ADR 0207, RN-724 |
 
 ## Estado atual e aberto
 
@@ -570,8 +571,10 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
 - Ciclo de gate parado há mais de 2 h ESTACIONA (`gate.rescue_parked`, ADR
   0207, RN-722, decisão do dono) em vez de ser retomado sozinho no boot ou no
   tick, e o resgate não reinicia ciclo cuja sessão tem ação pendente de ator do
-  gate. Retomar o estacionado é `GateRescuer.retomar_estacionado/3` pelo
-  `bin/engine rpc` do operador — sem tela nem rota, declarado
+  gate. Retomar o estacionado é o botão "Retomar gate" no aviso do fio
+  (`POST /projects/:projectId/tasks/:taskId/gates/:gate/resume`, `developer`,
+  409 `gate_nao_estacionado` — RN-724), que chama
+  `GateRescuer.retomar_estacionado/3` pelo engine
 - A aba de Código abre com 492px de moldura à esquerda (sidebar 264 + trilho
   do projeto 180 + trilho do `CodeShell` 48), contra ~110px antes do ADR
   0126 — preço MEDIDO e aceito por remover o auto-colapso da RN-201.

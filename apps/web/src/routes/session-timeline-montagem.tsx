@@ -46,6 +46,7 @@ import { agruparNarracoesDoTurno } from './session-fio';
 import { autorDaMensagem, type ContextoDeAutoria } from '../lib/autor-da-mensagem';
 import { estadosNaFila } from '../lib/fila-de-mensagens';
 import { SeloDaFila } from './SeloDaFila';
+import { RetomarGateEstacionado, cicloEstacionado } from './RetomarGateEstacionado';
 
 type Turno = ReturnType<typeof useTurnoDoAgente>;
 
@@ -935,6 +936,30 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
               <div className={[styles.bubble, styles.bubbleFalha].join(' ')}>
                 {t('mensagens.tetoDeIteracoes', { max: typeof max === 'number' ? max : '?' })}
               </div>
+            </div>
+          </div>
+        ),
+      });
+    } else if (cicloEstacionado(event)) {
+      // RN-724 (ADR 0207): o ciclo de gate parado há mais de 2 h estacionou;
+      // o gesto humano que o retoma mora aqui, sob o aviso.
+      const ciclo = cicloEstacionado(event)!;
+      empurrar({
+        node: (
+          <div className={styles.message} key={event.id} data-testid="gate-estacionado">
+            <span className={styles.avatar}>
+              <AlertCircleIcon size={15} />
+            </span>
+            <div className={styles.messageBody}>
+              <div className={styles.bubble}>
+                {t('gateEstacionado.aviso', { gate: ciclo.gate, taskId: ciclo.taskId })}
+              </div>
+              <RetomarGateEstacionado
+                projectId={projectId}
+                taskId={ciclo.taskId}
+                gate={ciclo.gate}
+                podeDecidir={podeDecidir}
+              />
             </div>
           </div>
         ),

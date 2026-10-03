@@ -622,6 +622,15 @@ export const transitionSession = (
  */
 export const reopenSession = (projectId: string, sessionId: string) =>
   post<Session>(`/projects/${projectId}/sessions/${sessionId}/reopen`, {});
+/**
+ * Retoma o ciclo de gate ESTACIONADO (ADR 0207, RN-724): `developer`, 409
+ * `gate_nao_estacionado` quando não há o que retomar.
+ */
+export const resumeParkedGate = (projectId: string, taskId: string, gate: string) =>
+  post<{ ok: true }>(
+    `/projects/${projectId}/tasks/${encodeURIComponent(taskId)}/gates/${encodeURIComponent(gate)}/resume`,
+    {},
+  );
 export const listSessionEvents = (
   projectId: string,
   sessionId: string,

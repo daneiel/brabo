@@ -3440,6 +3440,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{projectId}/tasks/{taskId}/gates/{gate}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resumes a parked gate cycle
+         * @description A gate cycle stalled for more than 2 h is parked instead of restarted on its own (ADR 0207). This is the human gesture that resumes it.
+         */
+        post: operations["GateResumeController_resume"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects/{projectId}/terminal-ticket": {
         parameters: {
             query?: never;
@@ -19894,6 +19914,57 @@ export interface operations {
             };
             /** @description Project does not exist. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GateResumeController_resume: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+                taskId: string;
+                gate: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OkResponseDto"];
+                };
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Role below `developer` on the project. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The cycle is not parked — body with `reason: "gate_nao_estacionado"`. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

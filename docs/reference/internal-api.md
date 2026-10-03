@@ -1387,6 +1387,7 @@ Twenty-one command routes, plus the health ones. Under `/internal` with `VerifyS
 | POST | `/sessions/:id/psychologist/reanalyze` | on-demand reanalysis |
 | GET | `/psychologist/status` | reads the global `PSYCHOLOGIST_ENABLED` flag ([RN-454](../business-rules.md#rn-454)) — no side effect, global (not scoped to a session) |
 | POST | `/projects/:id/anamnese/run` | Anamnese run, enqueued with `origem: "manual"`: a round with no eligible subject makes no LLM call and records `anamnese.run_skipped` with `causa: "sem_sujeito_elegivel"` ([RN-680](../business-rules.md#rn-680)) |
+| POST | `/projects/:id/tasks/:taskId/gates/:gate/resume` | resumes, by human gesture, a PARKED gate cycle ([RN-724](../business-rules.md#rn-724), [ADR 0207](../adr/0207-ciclo-de-gate-velho-estaciona.md)) — `202` and the gate is dispatched again; `409` `gate_nao_estacionado` when the cycle is not parked (or the gate is not `qa`/`secops`) |
 | POST | `/projects/:id/agents/:agent/instructions/invalidate` | invalidates the instruction cache |
 | POST | `/actions/execute` · `/actions/execute-git` | executes an **already approved** action |
 | POST | `/projects/:id/containers/start` · `/containers/stop` · `/containers/remove` | asks the RUNNER connected to the project to start/stop/remove its container ([RN-497](../business-rules.md#rn-497), [ADR 0137](../adr/0137-o-runner-sobe-o-container-do-projeto.md)) — only for `mounted`/`runner` projects; `container` still goes through the broker, never here |
