@@ -66,7 +66,7 @@ estado lido do repositório e não da conversa.
 | `SessionPage.tsx` em 5 PRs mecânicos | ADR 0122 |
 | Hook do canal de turno do `SessionPage.tsx` | ADR 0124 |
 | `ProjectSettingsTab.tsx` por seção | ADR 0125 |
-| Trilho vertical de navegação do projeto | ADR 0126, RN-201 |
+| Trilho vertical de navegação do projeto (removido no ADR 0211) | ADR 0126, ADR 0211, RN-201 |
 | Sumário ancorado de Configurações | CHANGELOG |
 | Padrão único de valor herdado | CHANGELOG |
 | Salvar por seção em Configurações | RN-469 |
@@ -280,6 +280,7 @@ estado lido do repositório e não da conversa.
 | Node 26 nas imagens e nos workflows, sem o `ignore` do major (AT-360) | CHANGELOG |
 | O TanStack AI não é adotado no front; revisitar na 1.0 (AT-400) | tanstack-ai.md |
 | O texto do turno do agente em curso ganha o Shimmer, com motion (AT-401) | ADR 0210 |
+| Uma navegação só: a sidebar absorve o trilho do projeto (AT-404) | ADR 0211, RN-196, RN-201, RN-643 |
 
 ## Estado atual e aberto
 
@@ -581,16 +582,16 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   (`POST /projects/:projectId/tasks/:taskId/gates/:gate/resume`, `developer`,
   409 `gate_nao_estacionado` — RN-724), que chama
   `GateRescuer.retomar_estacionado/3` pelo engine
-- A aba de Código abre com 492px de moldura à esquerda (sidebar 264 + trilho
-  do projeto 180 + trilho do `CodeShell` 48), contra ~110px antes do ADR
-  0126 — preço MEDIDO e aceito por remover o auto-colapso da RN-201.
-  Recolher manualmente continua funcionando e ainda produz trilho do Shell
-  ao lado do trilho do projeto: essa é uma escolha do USUÁRIO, não do
-  sistema, e é a diferença que o ADR compra
-- A navegação por abas do projeto existe em DOIS lugares — o trilho e a
-  lista por projeto da sidebar (`LinhaDeAba`, RN-196). Pré-existente (a
-  régua horizontal duplicava a mesma lista), só ficou visualmente paralela;
-  reconciliar é decisão de produto à parte, não tomada no ADR 0126
+- Desde o ADR 0211 a aba de Código abre com 312px de moldura (sidebar 264
+  + trilho do `CodeShell` 48), ou 110px com a sidebar recolhida (62 + 48) —
+  soma das larguras, não medida no navegador. O trilho do projeto (ADR 0126)
+  saiu e a sidebar (`AbasDoProjeto`) é a ÚNICA navegação do projeto, com os
+  grupos, a aba ativa, o teclado e os cinco contadores (nunca somados); com
+  a sidebar recolhida, as abas do projeto aberto ficam num flyout do quadrado
+  do projeto. Os cinco números só aparecem com a moldura do projeto montada:
+  na tela de Sessão fica só o de Aprovações do resumo, porque ligar o hook ali
+  estoura o orçamento de duas abas (RN-632) — não "complete" isso com query
+  nova
 - A presença de QA/SecOps, dos membros de área e dos dev agents
   (`gatesEverOpened`, `delegatedSubagents`, `executionActivated`) deixou de
   sofrer da janela de 200 eventos (RN-568): as duas telas passam o agregado do
