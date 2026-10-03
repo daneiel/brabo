@@ -22,7 +22,7 @@ check right below it.
 
 Elixir is **not** required: the engine runs in the container. You only need
 it on the host if you're going to run `pnpm engine:dev` outside Docker —
-and then you need the exact version (1.17.3 / OTP 27.1.2), because
+and then you need the exact version (1.20.4 / OTP 29.1.1), because
 `mix format` from a different version turns CI red.
 
 ## 1. Bring it up

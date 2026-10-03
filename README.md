@@ -228,7 +228,7 @@ merge em `main`, e por isso fica um ciclo de promoção atrás do que está em
 | [Artefatos](docs/reference/artifacts.md) | os onze schemas e quem pode emitir cada um |
 | [Providers de git](docs/reference/git-providers.md) | o contrato de quinze operações e as capabilities |
 | [API interna](docs/reference/internal-api.md) | o contrato api ↔ engine |
-| [ADRs](docs/adr/index.md) | as 204 decisões e o porquê de cada uma |
+| [ADRs](docs/adr/index.md) | as 205 decisões e o porquê de cada uma |
 | [Segurança](SECURITY.md) | como reportar uma vulnerabilidade |
 | [Como contribuir](CONTRIBUTING.md) | fluxo, Definition of Done, o que é aceito |
 | [Governança](GOVERNANCE.md) | modelo hoje (mantenedor único), os três papéis do modo `community` e o critério de quem entra em cada um |
@@ -277,14 +277,14 @@ pnpm engine:dev      # phx.server fora do Docker
 pnpm engine:test     # mix test
 ```
 
-> **Elixir 1.17.3 / OTP 27.1.2** é a versão do projeto, a mesma nos Dockerfiles
+> **Elixir 1.20.4 / OTP 29.1.1** é a versão do projeto, a mesma nos Dockerfiles
 > e no CI. O `mix format` de versões mais novas produz saída diferente e deixa o
 > `--check-formatted` do CI vermelho. Se o seu host tiver outra versão, formate
 > pelo container:
 >
 > ```bash
 > docker run --rm -v "$PWD/apps/engine:/app" -w /app \
->   hexpm/elixir:1.17.3-erlang-27.1.2-alpine-3.20.3 mix format
+>   hexpm/elixir:1.20.4-erlang-29.1.1-alpine-3.24.2 mix format
 > ```
 
 ## Banco de dados

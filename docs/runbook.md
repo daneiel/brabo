@@ -1266,6 +1266,18 @@ to production by `scripts/ci/semgrep-do-engine.spec.ts`); a dev image built
 before that rebuilds with `docker compose -p brabo-dev up -d --build engine`.
 Raising the version needs a release that has a `musllinux` wheel on PyPI.
 
+### The engine aborts with `sys_sigaltstack(): Internal error` {#engine-sigaltstack}
+
+`sys/unix/sys_signal_stack.c:101:sys_sigaltstack(): Internal error: Failed to
+set alternate signal stack`, exit 134, at boot or in the image build (`mix
+local.hex`, `mix compile`): the ERTS asked musl for a fixed-size signal stack
+that musl ≥ 1.2.6 refuses on CPUs with AMX (erlang/otp#11349). It shows up
+intermittently in CI (only some runners have AMX) and deterministically on such
+a server. The engine runs OTP 29.1.1, which has the fix
+([ADR 0209](adr/0209-engine-em-otp-29.md)); seeing it again means an image with
+OTP < 29.1 on Alpine ≥ 3.24 — rebuild from the current Dockerfiles. The CI build
+step "O host tem AMX?" tells whether a given run landed on such a host.
+
 ### CORS error {#erro-de-cors}
 
 The browser's message names the **destination** of the call, never the

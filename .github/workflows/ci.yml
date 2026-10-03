@@ -40,8 +40,8 @@ permissions:
 env:
   NODE_VERSION: '24.11.1'
   PNPM_VERSION: '11.3.0'
-  ELIXIR_VERSION: '1.17.3'
-  OTP_VERSION: '27.1.2'
+  ELIXIR_VERSION: '1.20.4'
+  OTP_VERSION: '29.1.1'
   # Mesmas versões pinadas do docker/engine/Dockerfile.prod. Divergir daqui
   # significa testar contra um scanner diferente do que roda em produção.
   # O passo "Versões dos scanners batem com o Dockerfile.prod" (job `lint`)
@@ -1070,6 +1070,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           fetch-depth: 2
+
+      # ADR 0209 (AT-398): o OTP 27 abortava com `sys_sigaltstack(): Internal
+      # error` sob a musl 1.2.6 em host com AMX (erlang/otp#11349). Imprimir se
+      # o runner TEM AMX é o que torna verde aqui uma prova, e não sorte de
+      # sorteio de máquina: um verde em host com AMX é o defeito ausente.
+      - name: O host tem AMX? (ADR 0209)
+        run: echo "amx_tile em /proc/cpuinfo — $(grep -c amx_tile /proc/cpuinfo || true) CPU(s)"
 
       # Só para o `node scripts/ci/diff-toca-imagem.ts` logo abaixo (type
       # stripping exige o Node pinado, não o do runner). Sem cache aqui: o do

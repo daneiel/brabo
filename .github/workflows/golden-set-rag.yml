@@ -25,8 +25,8 @@ env:
   # entre workflows.
   NODE_VERSION: '24.11.1'
   PNPM_VERSION: '11.3.0'
-  ELIXIR_VERSION: '1.17.3'
-  OTP_VERSION: '27.1.2'
+  ELIXIR_VERSION: '1.20.4'
+  OTP_VERSION: '29.1.1'
 
 jobs:
   # pgvector e ollama vêm do compose de dev, não de um literal aqui (ADR 0197).
