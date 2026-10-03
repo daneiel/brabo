@@ -30,6 +30,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Documentação
 
+- **explanation**: página nova `tanstack-ai.md` registra a decisão de não adotar o TanStack AI no web agora (Alpha; conflita com o canal, a fila no log e o fio multiagente), as duas proibições para uma adoção futura e o gatilho de revisão (AT-400).
 - **site**: a referência da API vira UMA página Redoc (redocusaurus, com SSR) em `/reference/api/`, no lugar das 235 páginas por operação do `docusaurus-plugin-openapi-docs`; as URLs por operação, a sidebar por tag, o playground e os snippets de cURL saem. Fecha o alerta High #43 (`@faker-js/faker@5.5.3`, GHSA-qxc2-j82w-r537) do `website/` (ADR 0206, AT-359).
 
 ### Manutenção
