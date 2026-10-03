@@ -20,6 +20,11 @@ export function conversaComecou(events: ReadonlyArray<{ type: string }>): boolea
  * Atributos que tiram um campo de texto livre do alcance do autofill do
  * navegador E dos gerenciadores de senha (1Password, LastPass, Bitwarden,
  * Dashlane) — `autocomplete="off"` sozinho é ignorado por eles.
+ *
+ * RN-740 (AT-425): `aria-autocomplete="none"` declara à árvore acessível que o
+ * campo não oferece sugestão (heurísticas de extensão leem o ARIA), e
+ * `data-protonpass-ignore` é o atributo que o Proton Pass documenta. Nenhum
+ * dos dois foi medido contra a extensão real: a prova fica para o TP-01.
  */
 export const SEM_AUTOFILL = {
   autoComplete: 'off',
@@ -27,4 +32,6 @@ export const SEM_AUTOFILL = {
   'data-lpignore': 'true',
   'data-bwignore': true,
   'data-form-type': 'other',
+  'aria-autocomplete': 'none',
+  'data-protonpass-ignore': 'true',
 } as const;
