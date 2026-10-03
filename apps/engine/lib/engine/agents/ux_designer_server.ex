@@ -286,7 +286,7 @@ defmodule Engine.Agents.UxDesignerServer do
     emit(state, "tool.call", %{tool: name, args: args})
     broadcast(state, "tool.call", %{tool: name, agent: @agent})
 
-    resultado = run_tool(name, args, state)
+    resultado = executar_ferramenta(name, args, state)
     emit(state, "tool.result", ResultadoDeFerramenta.payload(name, resultado))
 
     {text, desfecho} =
@@ -305,6 +305,13 @@ defmodule Engine.Agents.UxDesignerServer do
       })
 
     {state, desfecho}
+  end
+
+  # RN-719: argumentos normalizados contra a spec e exceção vira erro do laço.
+  defp executar_ferramenta(name, args, state) do
+    Engine.Harness.ArgumentosDeFerramenta.executar(name, args, state.tool_specs, fn a ->
+      run_tool(name, a, state)
+    end)
   end
 
   defp run_tool("propose_prototype", args, state), do: UxDesignerTools.run(args, state)

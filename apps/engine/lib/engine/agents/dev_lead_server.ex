@@ -496,7 +496,7 @@ defmodule Engine.Agents.DevLeadServer do
     emit(state, "tool.call", %{tool: name, args: args})
     broadcast(state, "tool.call", %{tool: name, agent: @agent})
 
-    case run_tool(name, args, state) do
+    case executar_ferramenta(name, args, state) do
       {:ok, texto} ->
         emit(state, "tool.result", ResultadoDeFerramenta.payload(name, {:ok, texto}))
         {append_tool_message(state, id, name, texto), :ok}
@@ -524,6 +524,13 @@ defmodule Engine.Agents.DevLeadServer do
       "name" => name,
       :pinned => false
     })
+  end
+
+  # RN-719: argumentos normalizados contra a spec e exceção vira erro do laço.
+  defp executar_ferramenta(name, args, state) do
+    Engine.Harness.ArgumentosDeFerramenta.executar(name, args, state.tool_specs, fn a ->
+      run_tool(name, a, state)
+    end)
   end
 
   defp run_tool("propose_execution_plan", args, state), do: DevLeadTools.run(args, state)

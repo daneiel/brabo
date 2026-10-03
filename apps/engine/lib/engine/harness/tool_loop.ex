@@ -313,7 +313,10 @@ defmodule Engine.Harness.ToolLoop.Default do
         {"ferramenta desconhecida: #{name}", false}
 
       mod ->
-        case mod.run(args, ctx) do
+        # RN-719: normaliza argumentos e transforma exceção em erro do laço.
+        case Engine.Harness.ArgumentosDeFerramenta.executar(name, args, mod.spec(), fn a ->
+               mod.run(a, ctx)
+             end) do
           {:ok, result} -> {result, true}
           {:error, reason} -> {stringify(reason), false}
         end

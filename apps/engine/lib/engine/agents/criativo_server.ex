@@ -420,8 +420,8 @@ defmodule Engine.Agents.CriativoServer do
   # Devolve `{state, desfecho}`: a NARRAÇÃO da falha saiu daqui (ver
   # `continuar/4`), mas o desfecho de cada chamada precisa subir para o laço
   # decidir se volta ao modelo.
-  defp dispatch_tool(%{"name" => "emit_artifact", "arguments" => args} = call, state) do
-    executar(call, state, "emit_artifact", fn -> EmitArtifact.run(args, state) end)
+  defp dispatch_tool(%{"name" => "emit_artifact", "arguments" => _} = call, state) do
+    executar(call, state, "emit_artifact", fn a -> EmitArtifact.run(a, state) end)
   end
 
   # RN-162: o Criativo emite `chat.structured_question` quando quer que o
@@ -430,9 +430,9 @@ defmodule Engine.Agents.CriativoServer do
   # pergunta foi registrada — as respostas voltam num turno FUTURO, como
   # `chat.message` normal (via `AnswerStructuredQuestionUseCase` na api),
   # não por este tool call.
-  defp dispatch_tool(%{"name" => "ask_structured_questions", "arguments" => args} = call, state) do
-    executar(call, state, "ask_structured_questions", fn ->
-      AskStructuredQuestions.run(args, state)
+  defp dispatch_tool(%{"name" => "ask_structured_questions", "arguments" => _} = call, state) do
+    executar(call, state, "ask_structured_questions", fn a ->
+      AskStructuredQuestions.run(a, state)
     end)
   end
 
@@ -443,7 +443,7 @@ defmodule Engine.Agents.CriativoServer do
   # do `run_tool/3` do PO.
   defp dispatch_tool(call, state) do
     tool = to_string(Map.get(call, "name", "desconhecida"))
-    executar(call, state, tool, fn -> {:error, "ferramenta desconhecida: #{tool}"} end)
+    executar(call, state, tool, fn _ -> {:error, "ferramenta desconhecida: #{tool}"} end)
   end
 
   defp executar(call, state, tool, fun) do
@@ -455,7 +455,7 @@ defmodule Engine.Agents.CriativoServer do
     # modelo emitiu `titulo`/`descricao` contra `title`/`description` — sumia
     # sem evento, sem aviso e sem chegar ao modelo: o Criativo dizia "registrei
     # as regras", quatro regras iam para o lixo e o painel ficava vazio.
-    case fun.() do
+    case Engine.Harness.ArgumentosDeFerramenta.executar(tool, args, state.tool_specs, fun) do
       {:ok, texto} ->
         emit(state, "tool.result", ResultadoDeFerramenta.payload(tool, {:ok, texto}))
         {realimentar(state, call, texto, tool), {:ok, tool}}

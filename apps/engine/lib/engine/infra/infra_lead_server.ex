@@ -1012,7 +1012,7 @@ defmodule Engine.Infra.InfraLeadServer do
 
     emit(state, "tool.call", %{tool: name, args: args})
 
-    registrar_resultado(state, id, name, run_tool(name, args, state))
+    registrar_resultado(state, id, name, executar_ferramenta(name, args, state))
   end
 
   # O desfecho de uma ferramenta despachada inline, nos DOIS lugares de
@@ -1035,6 +1035,13 @@ defmodule Engine.Infra.InfraLeadServer do
       "name" => name,
       :pinned => false
     })
+  end
+
+  # RN-719: argumentos normalizados contra a spec e exceção vira erro do laço.
+  defp executar_ferramenta(name, args, state) do
+    Engine.Harness.ArgumentosDeFerramenta.executar(name, args, state.tool_specs, fn a ->
+      run_tool(name, a, state)
+    end)
   end
 
   defp run_tool("validate_infra_file", args, state), do: ValidateInfraFile.run(args, state)
