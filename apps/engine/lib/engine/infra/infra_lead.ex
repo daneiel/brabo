@@ -35,7 +35,7 @@ defmodule Engine.Infra.InfraLead do
 
   # RN-710: Workflows dispensado (sem CI que rode) — a PR leva só o do Lead.
   def consolidar({:ok, lead}, {:dispensed, _motivo}),
-    do: {:ok, %{title: "infra: #{lead.summary}", files: lead.files}}
+    do: {:ok, %{title: com_prefixo(lead.summary), files: lead.files}}
 
   def consolidar({:blocked, info_lead}, {:dispensed, _motivo}),
     do: bloqueio("Infra (Dockerfiles/compose)", info_lead)
@@ -61,7 +61,16 @@ defmodule Engine.Infra.InfraLead do
   end
 
   defp titulo(resumo_lead, resumo_workflows),
-    do: "infra: #{resumo_lead} + #{resumo_workflows}"
+    do: com_prefixo("#{resumo_lead} + #{resumo_workflows}")
+
+  # AT-396: o modelo às vezes já escreve "infra:" no resumo; não repetir
+  # (sem diferenciar maiúsculas).
+  @doc false
+  def com_prefixo(resumo) do
+    if String.downcase(resumo) |> String.starts_with?("infra:"),
+      do: resumo,
+      else: "infra: " <> resumo
+  end
 
   # União por `path` — o arquivo do Workflows vence em caso de colisão (mais
   # específico: só ele sabe o formato de CI decidido pelo provider).

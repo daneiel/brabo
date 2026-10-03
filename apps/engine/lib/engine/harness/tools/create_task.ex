@@ -6,6 +6,7 @@ defmodule Engine.Harness.Tools.CreateTask do
 
   @behaviour Engine.Harness.Tool
 
+  alias Engine.Harness.IdDoBacklog
   alias Engine.Sessions.EngineApiClient
 
   @impl true
@@ -30,11 +31,14 @@ defmodule Engine.Harness.Tools.CreateTask do
 
   @impl true
   def run(%{"story_id" => story_id, "title" => title} = args, ctx) do
-    fields = %{storyId: story_id, title: title, description: Map.get(args, "description", "")}
+    # RN-721: aceita o prefixo (>= 8 hex) que o modelo copia encurtado.
+    with {:ok, story_id} <- IdDoBacklog.resolver(ctx.project_id, :historia, story_id) do
+      fields = %{storyId: story_id, title: title, description: Map.get(args, "description", "")}
 
-    case EngineApiClient.create_task(ctx.project_id, ctx.session_id, fields) do
-      {:ok, %{"id" => id}} -> {:ok, "tarefa criada: id=#{id}."}
-      {:error, reason} -> {:error, "falha ao criar tarefa: #{inspect(reason)}"}
+      case EngineApiClient.create_task(ctx.project_id, ctx.session_id, fields) do
+        {:ok, %{"id" => id}} -> {:ok, "tarefa criada: id=#{id}."}
+        {:error, reason} -> {:error, "falha ao criar tarefa: #{inspect(reason)}"}
+      end
     end
   end
 

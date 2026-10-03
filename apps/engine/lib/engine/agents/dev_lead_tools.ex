@@ -90,6 +90,7 @@ defmodule Engine.Agents.DevLeadTools do
 
   alias Engine.Agents.Reidratacao
   alias Engine.Gates.Dispatcher
+  alias Engine.Harness.IdDoBacklog
   alias Engine.Sessions.EngineApiClient
 
   @spec spec() :: map()
@@ -160,39 +161,65 @@ defmodule Engine.Agents.DevLeadTools do
         {:error, motivo}
 
       {:ok, normalizados} ->
-        total = Enum.reduce(normalizados, 0, &(&1.agentes + &2))
-        actor = %{kind: "agent", id: "dev-lead"}
-
-        # `tarefas` vai como veio: quem a confere é a API, contra o
-        # `module_map` vigente (RN-678) — uma régua só, e a frase da recusa
-        # dela volta ao modelo (`erro_da_proposta/1`).
-        tarefas = Map.get(args, "tarefas", [])
-
-        payload = %{
-          modulos: normalizados,
-          resumo: resumo,
-          totalAgentes: total,
-          tarefas: tarefas
-        }
-
-        case EngineApiClient.propose_action(
-               state.project_id,
-               state.session_id,
-               "propose_execution_plan",
-               actor,
-               payload
-             ) do
-          {:ok, action} ->
-            classificar(Map.get(action, "status"), action, total, normalizados)
-
-          {:error, reason} ->
-            {:error, erro_da_proposta(reason)}
+        # RN-721: o `taskId` encurtado (prefixo >= 8 hex) vira o UUID antes
+        # de ir à api; o resto de `tarefas` vai como veio.
+        case resolver_tarefas(state.project_id, Map.get(args, "tarefas", [])) do
+          {:error, motivo} -> {:error, motivo}
+          {:ok, tarefas} -> propor_plano(state, normalizados, resumo, tarefas)
         end
     end
   end
 
   def run(_args, _state),
     do: {:error, "propose_execution_plan exige `modulos` (lista) e `resumo`"}
+
+  defp resolver_tarefas(project_id, tarefas) when is_list(tarefas) do
+    Enum.reduce_while(tarefas, {:ok, []}, fn
+      %{"taskId" => id} = t, {:ok, acc} ->
+        case IdDoBacklog.resolver(project_id, :tarefa, id) do
+          {:ok, uuid} -> {:cont, {:ok, [Map.put(t, "taskId", uuid) | acc]}}
+          {:error, motivo} -> {:halt, {:error, motivo}}
+        end
+
+      t, {:ok, acc} ->
+        {:cont, {:ok, [t | acc]}}
+    end)
+    |> case do
+      {:ok, acc} -> {:ok, Enum.reverse(acc)}
+      erro -> erro
+    end
+  end
+
+  defp resolver_tarefas(_project_id, tarefas), do: {:ok, tarefas}
+
+  defp propor_plano(state, normalizados, resumo, tarefas) do
+    total = Enum.reduce(normalizados, 0, &(&1.agentes + &2))
+    actor = %{kind: "agent", id: "dev-lead"}
+
+    # `tarefas` é conferida pela API, contra o `module_map` vigente
+    # (RN-678) — uma régua só, e a frase da recusa dela volta ao modelo
+    # (`erro_da_proposta/1`).
+    payload = %{
+      modulos: normalizados,
+      resumo: resumo,
+      totalAgentes: total,
+      tarefas: tarefas
+    }
+
+    case EngineApiClient.propose_action(
+           state.project_id,
+           state.session_id,
+           "propose_execution_plan",
+           actor,
+           payload
+         ) do
+      {:ok, action} ->
+        classificar(Map.get(action, "status"), action, total, normalizados)
+
+      {:error, reason} ->
+        {:error, erro_da_proposta(reason)}
+    end
+  end
 
   # A recusa NOMEADA da api (RN-678): tarefa sem módulo, módulo fora do
   # `module_map`, tarefa que não é do projeto. A frase vai ao modelo como está,
@@ -405,6 +432,19 @@ defmodule Engine.Agents.DevLeadTools do
         state
       )
       when parecer in ["implementavel", "inviavel"] do
+    # RN-721: aceita o prefixo (>= 8 hex) que o modelo copia encurtado.
+    case IdDoBacklog.resolver(state.project_id, :historia, story_id) do
+      {:ok, uuid} -> avaliar(uuid, parecer, justificativa, state)
+      erro -> erro
+    end
+  end
+
+  def run_assessment(_args, _state),
+    do:
+      {:error,
+       "assess_implementability exige storyId, parecer (implementavel|inviavel) e justificativa"}
+
+  defp avaliar(story_id, parecer, justificativa, state) do
     # A CAUDA, com o mesmo teto da reidratação (RN-580, ADR 0060): sem
     # `latest`, a api devolve os PRIMEIROS 200 e numa sessão longa o threat
     # model recém-emitido ficava de fora.
@@ -424,11 +464,6 @@ defmodule Engine.Agents.DevLeadTools do
         {:error, "não consegui ler o histórico da sessão: #{inspect(reason)}"}
     end
   end
-
-  def run_assessment(_args, _state),
-    do:
-      {:error,
-       "assess_implementability exige storyId, parecer (implementavel|inviavel) e justificativa"}
 
   # A leitura do histórico é UMA por chamada de `run_assessment/2` (ADR 0060:
   # nada de duas leituras na mesma invocação), e serve só à guarda do appsec.

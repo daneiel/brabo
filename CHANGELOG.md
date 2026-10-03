@@ -10,6 +10,8 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 ### Correções
 
 - **agentes**: ferramenta de agente passa a aceitar lista ou objeto enviado como texto JSON (o `create_story` deixa de descartar os `business_rule_ids` e o `create_c4_diagram` deixa de derrubar o turno), texto que não é lista vira recusa nomeada, e exceção dentro de uma ferramenta volta ao agente como erro com origem `codigo` em vez de encerrar o turno (AT-387, RN-719).
+- **agentes**: o id de história ou tarefa encurtado (prefixo de 8+ caracteres hex) que o Arquiteto, o PO e o Dev Lead passam às ferramentas passa a ser resolvido para o UUID dentro do projeto; prefixo ambíguo ou inexistente vira recusa nomeada, em vez do 400 "must be a UUID" (AT-390, RN-721).
+- **infra**: o título da PR de infra deixa de sair "infra: infra: …" quando o modelo já escreveu o prefixo (AT-396, RN-710).
 - **sessão**: abrir a aba Sessões deixa de trocar as ações que o fio da Sessão mostra pelas 200 mais antigas — as duas telas passam a fazer a mesma leitura (a cauda mais as pendentes), e o resumo da aba passa a contar a pendente nova de uma sessão longa (AT-365, RN-718).
 - **gates**: o gate SecOps pendente por SAST que não rodou deixa de gravar um `agent.error` idêntico no fio a cada resgate do `GateRescuer`; o erro aparece uma vez por motivo, e motivo novo ou veredito no meio voltam a gravar (AT-386, RN-714).
 
