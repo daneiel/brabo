@@ -272,6 +272,13 @@ export interface ChatOptions {
    * declara `capabilities.routingPreference` IGNORA — nunca falha por ele.
    */
   routingPreference?: RoutingPreference;
+  /**
+   * O modelo RACIOCINA (`models.supports_reasoning`, do catálogo). Provider com
+   * orçamento de raciocínio configurado manda um teto explícito para ele e soma
+   * esse teto ao de saída, para o raciocínio nunca comer a saída visível
+   * (RN-741). Provider sem a configuração ignora.
+   */
+  reasoning?: boolean;
 }
 
 export interface ChatTextDeltaChunk {
