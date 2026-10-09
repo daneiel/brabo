@@ -9901,8 +9901,8 @@ nada: ausência de resposta não é prova de ausência de artefato, e disparar a
 reabriria a rechamada por outra porta. A cláusula de args inválidos também não
 dispara — ela não sabe qual é a story.
 
-- **Onde:** `apps/engine/lib/engine/agents/dev_lead_tools.ex:425`
-  (`run_assessment/2`, a leitura única do histórico) e `:490`
+- **Onde:** `apps/engine/lib/engine/agents/dev_lead_tools.ex:443`
+  (`run_assessment/2`, a leitura única do histórico) e `:505`
   (`disparar_appsec_se_preciso/3`, a guarda de idempotência);
   `apps/engine/lib/engine/gates/dispatcher.ex:29` (o callback) e `:86`
   (`Engine.Gates.Dispatcher.Live.run_appsec_design/2`);
@@ -19540,8 +19540,8 @@ OBRIGATÓRIAS da `coverageMatrix` (e portanto reprovar entrega).
   `apps/engine/lib/engine/gates/qa_estrategia_agent.ex:86` (`run`),
   `:104` (`token_budget_micros`), `:179` (`descrever_arquivos`);
   `apps/engine/lib/engine/gates/qa_automacao_agent.ex:166` (`com_o_plano`);
-  `apps/engine/lib/engine/agents/dev_lead_tools.ex:425` (`run_assessment`),
-  `:509` (`propor_parecer`);
+  `apps/engine/lib/engine/agents/dev_lead_tools.ex:443` (`run_assessment`),
+  `:524` (`propor_parecer`);
   `apps/engine/lib/engine/harness/artifact_schemas.ex:59` (`taskId`);
   `docs/gates.yml` (`qa-verificada`, `implementavel`); `docs/fluxo.yml`
   (`qa-estrategia`, `area-qa`, `dev-lead`)
@@ -19744,7 +19744,7 @@ handoff às 06:45:01 — o web encadeava a ativação para `maintainer`/`owner`
   (`execute`); `apps/api/src/application/use-cases/actions/approve-action.use-case.ts:192`
   (`executeExecutionPlan`); `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:347`
   (`executeExecutionPlan`); `apps/web/src/lib/session-acoes-de-handoff.ts:91`
-  (`handleAcceptHandoff`); `apps/engine/lib/engine/agents/dev_lead_tools.ex:215`
+  (`handleAcceptHandoff`); `apps/engine/lib/engine/agents/dev_lead_tools.ex:220`
   (`classificar`); `apps/engine/lib/engine/agents/dev_lead_server.ex:699`
   (`texto_do_desfecho`); `apps/web/src/lib/aprovacoes.ts:317`
   (`propose_execution_plan`)
@@ -19809,8 +19809,8 @@ módulo do `module_map`, como antes, e o paralelismo extra continua pelo
   `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:133`
   (`recusaNaProposta`); `apps/api/src/application/use-cases/execution/execute-execution-plan.use-case.ts:67`
   (`recusaNaProposta`); `apps/api/src/db/schema/backlog.ts:187` (`module`);
-  `apps/engine/lib/engine/agents/dev_lead_tools.ex:358`
-  (`tarefas_do_backlog`); `apps/engine/lib/engine/agents/dev_lead_tools.ex:200`
+  `apps/engine/lib/engine/agents/dev_lead_tools.ex:372`
+  (`tarefas_do_backlog`); `apps/engine/lib/engine/agents/dev_lead_tools.ex:204`
   (`erro_da_proposta`)
 - **Teste:** `apps/api/test/domain/execution/plano-de-execucao.spec.ts:22`
   (caminho feliz), `:41` (tarefa sem módulo — caso de falha), `:49` (módulo
@@ -20578,12 +20578,12 @@ bem-sucedido encerra o turno — antes, qualquer ferramenta bem-sucedida na
 kickoff proíbe inventar `task_id` e pede que ele só diga ter avaliado as
 histórias em que chamou `assess_implementability`.
 
-- **Onde:** `apps/engine/lib/engine/agents/dev_lead_tools.ex:324` (`module_map_vigente`);
-  `:309` (`spec_read_backlog`); `:325` (`tarefas_do_backlog`);
+- **Onde:** `apps/engine/lib/engine/agents/dev_lead_tools.ex:339` (`module_map_vigente`);
+  `:324` (`spec_read_backlog`); `:340` (`tarefas_do_backlog`);
   `apps/engine/lib/engine/agents/dev_lead_server.ex:552` (`kickoff_instruction`);
 
-- **Onde:** `apps/engine/lib/engine/agents/dev_lead_tools.ex:335` (`module_map_vigente`);
-  `:309` (`spec_read_backlog`); `:358` (`tarefas_do_backlog`);
+- **Onde:** `apps/engine/lib/engine/agents/dev_lead_tools.ex:339` (`module_map_vigente`);
+  `:324` (`spec_read_backlog`); `:372` (`tarefas_do_backlog`);
   `apps/engine/lib/engine/agents/dev_lead_server.ex:552` (`kickoff_instruction`);
   `:393` (`run_turn`)
 - **Teste:** `apps/engine/test/engine/agents/dev_lead_server_test.exs:164` (o
@@ -21113,12 +21113,12 @@ decisão, fechados juntos:
   Dev Lead no texto do resultado da ferramenta (`resumo_do_plano/1`), para ele
   citar os números em vez de recontar.
 
-- **Onde:** `apps/web/src/lib/aprovacoes.ts:403` (`verboDaAcao`),
+- **Onde:** `apps/web/src/lib/aprovacoes.ts:411` (`verboDaAcao`),
   `apps/api/src/domain/actions/sempre-permitir.ts:33` (`TIPOS_SEM_SEMPRE_PERMITIR`),
   `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:80` (`execute`),
   `apps/api/src/application/use-cases/execution/execute-execution-plan.use-case.ts:89` (`execute`),
   `apps/api/src/application/use-cases/execution/activate-execution.use-case.ts:116` (`execute`),
-  `apps/engine/lib/engine/agents/dev_lead_tools.ex:558` (`resumo_do_plano`)
+  `apps/engine/lib/engine/agents/dev_lead_tools.ex:573` (`resumo_do_plano`)
 - **Teste:** `apps/web/src/lib/aprovacoes.test.ts` ("AT-371 — o verbo segue o
   estado da ação", "AT-381 — o plano mostra a estimativa de gasto"),
   `apps/web/src/components/ApprovalCard.test.tsx` ("open_adr_pr pendente"),
@@ -22104,3 +22104,23 @@ sem dizer qual.
   "escritas do Arquiteto contadas, leitura e ferramenta desconhecida não")
 - **Origem:** AT-431 (08/10: com os 5 `propose_adr` `ok: false`, o Arquiteto
   fechou com "✅ ADRs Propostas (5 decisões críticas)" e nenhuma linha factual)
+### RN-747 — O plano do Dev Lead diz quantos dev agents sobem, não quantos pede {#rn-747}
+
+- **Regra:** aprovar `propose_execution_plan` ativa a execução (RN-677), e a
+  ativação sobe UM dev agent por módulo; o `agentes` por módulo do plano é
+  recomendação. O cartão de aprovação diz "sobe N dev agent(s), um por
+  módulo" e, quando o plano pede mais que isso, que os agentes a mais só sobem
+  se o usuário aceitar paralelizar depois — paralelizar é teto da RN-154 e
+  nunca é auto-aprovado nem embutido na aprovação do plano. O resultado da
+  ferramenta que volta ao Dev Lead diz o mesmo, e a descrição de `agentes`
+  pede para não prometer ganho de paralelismo. A aspa do modelo nas pontas do
+  resumo é removida antes de a frase citá-lo, para não sobrar `coberto."`.
+- **Onde:** `apps/web/src/lib/aprovacoes.ts:317` (`propose_execution_plan`),
+  `apps/engine/lib/engine/agents/dev_lead_tools.ex:254` (`sobem`), `:245`
+  (`classificar`), `:97` (`spec`)
+- **Teste:** `apps/web/src/lib/aprovacoes.test.ts` ("plano com 2 agentes num
+  módulo único diz que sobe 1…"; "plano sem agente a mais não fala de
+  paralelizar"), `apps/engine/test/engine/agents/dev_lead_tools_test.exs`
+  ("agente a mais no plano é dito como NÃO subindo")
+- **Origem:** AT-437 (08/10: o plano aprovado prometia "2 agentes no módulo
+  único… ~40% de ganho" e a execução subiu 1 dev)
