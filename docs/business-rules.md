@@ -19027,7 +19027,7 @@ O valor mora em DOIS lugares, de propósito, um por linguagem, e mudam juntos:
   `:183` (`garantir_base`), `:308` (`remoto_vazio?`);
   `apps/engine/lib/engine/dev/worktree_manager.ex:36` (`create`), `:138`
   (`add_worktree`), `:176` (`garantir_base`);
-  `apps/engine/lib/engine/dev/agent_io.ex:305` (`propose_pr`);
+  `apps/engine/lib/engine/dev/agent_io.ex:352` (`propose_pr`);
   `apps/engine/lib/engine/gates/diff.ex:21` (`compute`);
   `apps/engine/lib/engine/harness/project_context.ex:29` (`repo_line`);
   `apps/api/src/domain/actions/protected-branches.ts:26` (`BRANCH_DE_TRABALHO`);
@@ -20020,7 +20020,7 @@ lendo o worktree de outros módulos para descobrir a interface deles: o
   `apps/engine/lib/engine/harness/tools/listar_contratos_de_modulos.ex:43`
   (`run`), `:66` (`renderizar`);
   `apps/engine/lib/engine/dev/tools.ex:36` (`ListarContratosDeModulos`);
-  `apps/engine/lib/engine/dev/dev_agent_server.ex:489` (`module`), `:501`;
+  `apps/engine/lib/engine/dev/dev_agent_server.ex:484` (`module`), `:501`;
   `apps/engine/lib/engine/agents/arquiteto_server.ex:112`, `:335`, `:399`
 - **Teste:** `apps/api/test/application/use-cases/architecture/module-contracts.use-case.spec.ts:173`
   (grava a versão 1 — caminho feliz), `:185` (a vigente substitui), `:210`
@@ -22028,8 +22028,8 @@ sem dizer qual.
   `runner` o worktree está na máquina do usuário e o engine não preserva nada.
 - **Onde:** `apps/engine/lib/engine/dev/worktree_manager.ex:72`
   (`preservar_em`), `:55` (`create_from`),
-  `apps/engine/lib/engine/dev/agent_io.ex:410` (`preservar_trabalho`),
-  `apps/engine/lib/engine/dev/dev_agent_server.ex:468` (`base_preservada`)
+  `apps/engine/lib/engine/dev/agent_io.ex:416` (`preservar_trabalho`),
+  `apps/engine/lib/engine/dev/agent_io.ex:283` (`base_preservada`)
 - **Teste:** `apps/engine/test/engine/dev/worktree_manager_test.exs`
   (`preservar_em/3 e create_from/4`: commit com `dev-api[bot]` e a próxima
   task enxerga o arquivo; limpo é `:nada`; pasta sem repositório é erro),
@@ -22053,7 +22053,7 @@ sem dizer qual.
   parte.
 - **Onde:** `apps/engine/lib/engine/harness/tools/terminal.ex:12` (`spec`),
   `apps/engine/lib/engine/dev/worktree_manager.ex:108` (`retrato`),
-  `apps/engine/lib/engine/dev/dev_agent_server.ex:581` (`retrato_do_worktree`)
+  `apps/engine/lib/engine/dev/dev_agent_server.ex:576` (`retrato_do_worktree`)
 - **Teste:** `apps/engine/test/engine/dev/worktree_manager_test.exs`
   (`retrato/2`: branch e arquivos; pasta inalcançável diz indisponível; a
   descrição do terminal diz `sh`)
@@ -22270,3 +22270,31 @@ sem dizer qual.
   %Req.TransportError{reason: :timeout}"; medido nesta máquina, o mesmo
   `npm install` de `bcrypt`+`sqlite3`+`express` levou 5,3 s com a imagem em
   cache e prebuilds disponíveis — a cadeia, não o comando, cortava em 15 s)
+
+### RN-760 — A próxima task do dev agent parte da última branch dele ainda não mergeada {#rn-760}
+
+- **Regra:** generaliza a [RN-743](#rn-743). Ao terminar uma task — aprovada
+  nos gates (`nextAction: "done"`) ou bloqueada por QUALQUER motivo, inclusive
+  o "ciclo de correção esgotado (gate)" que a api decide e chega ao engine só
+  como `gate_resolved` —, o dev agent guarda a branch dela e a próxima task do
+  MESMO agente (logo, do mesmo módulo) nasce dessa branch, e não de `dev`. O
+  que sobrou sem commit no worktree é preservado antes, como na RN-743; o
+  ponteiro gravado pelo `block_task/4` não é sobrescrito. Quando a branch
+  anterior já é ancestral da `dev` local (mergeada), a próxima parte da `dev`,
+  que já a contém. QUANDO a fila anda não muda: a próxima task continua sendo
+  reivindicada ao fim dos gates, antes do merge do usuário (decisão do dono).
+  Declarado: merge por squash num remoto não deixa a branch ancestral da `dev`,
+  então a próxima segue partindo dela; o ponteiro continua só em memória, e no
+  modo `runner` a checagem de merge não roda.
+- **Onde:** `apps/engine/lib/engine/dev/agent_io.ex:301`
+  (`levar_branch_para_a_proxima`), `:282` (`criar_worktree`),
+  `apps/engine/lib/engine/dev/worktree_manager.ex:210`
+  (`ja_mergeada_volta_ao_trabalho`)
+- **Teste:** `apps/engine/test/engine/dev/bloqueio_preserva_trabalho_test.exs`
+  (`levar_branch_para_a_proxima/1 e criar_worktree/2`: aprovada leva a branch
+  para a próxima; o ponteiro do bloqueio não é sobrescrito),
+  `apps/engine/test/engine/dev/worktree_manager_test.exs` (`add_worktree/4
+  com a branch da task anterior`: não mergeada parte dela, mergeada parte da
+  `dev`)
+- **Origem:** AT-447 (TP-01 de 09/10: tasks `762833bd` e `5ebad64b` — a
+  segunda nasceu de `dev` sem a rota de login da primeira, e o QA reprovou)
