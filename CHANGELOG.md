@@ -6,6 +6,8 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- **web**: o painel "precisa de você" diz, ao lado do cartão, quando a ação pendente é de um gate (QA ou SecOps) parado esperando o clique, e a oferta em lote do modo automático na aba Executores cobre os subagentes de QA desde a ativação (RN-766, AT-449).
+- **api**: o recorte de menu do Jev deixa de virar incapacidade — o PO mantém `create_story`/`create_task` e o Arquiteto as cinco ferramentas de artefato em todo passo recortado, e o passo recortado leva uma mensagem `system` efêmera dizendo que o menu é um recorte e que as demais ferramentas voltam nas próximas voltas (RN-758, RN-759, AT-445).
 - **engine/api**: o gate de QA recebe o recorte da tarefa (descrição, regras e as tarefas irmãs com status, via `siblingTasks` no contexto do dev) e julga só o que é desta tarefa; RF de tarefa irmã vira observação, não reprovação — vale para o plano de teste e para a revisão (RN-765, AT-448).
 - **engine**: a ação `terminal` auto-aprovada passa a ser esperada pelo engine por `TERMINAL_ACTION_TIMEOUT_MS` + 120 s (antes, os 15 s do `Req`), o teto do comando sobe de 15 s para 120 s, e o estouro chega ao agente nomeando o teto em vez de `Req.TransportError` cru (RN-757, AT-440).
 
