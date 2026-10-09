@@ -312,6 +312,7 @@ estado lido do repositório e não da conversa.
 | Os saltos de layout da Sessão e do catálogo: composer, aba ativa, barra de lote e rolagem do fio (AT-442) | RN-751 |
 | A PR de infra mergeada sai de "PRs de infra em revisão" (AT-436) | RN-752 |
 | O seletor de modelo mostra `thinking`; ligar o modo automático não aprova o cartão, e ele diz isso (AT-443) | RN-755 |
+| O recorte do Jev não vira incapacidade: piso de obrigação no menu e aviso efêmero de recorte (AT-445) | RN-758, RN-759 |
 
 ## Estado atual e aberto
 

@@ -17200,8 +17200,8 @@ endpoint é ALPHA e o smoke manual
 - **Código:** `apps/api/src/domain/llm/tool-router.ts:19` (`MODELO_DO_JEV`),
   `:101` (`montarPedidoAoJev`), `:158` (`lerRespostaDoJev`), `:208`
   (`recortarEstado`), `:260` (`menuP3`);
-  `apps/api/src/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.ts:110`
-  (`preparar`), `:143` (`executar`), `:285` (`registrarGasto`);
+  `apps/api/src/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.ts:118`
+  (`preparar`), `:143` (`executar`), `:305` (`registrarGasto`);
   `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:152`
   (`decisaoDoJev`); `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:167`
   (`preparar`); `apps/api/src/infrastructure/llm/jev-tool-router.ts:32`
@@ -22270,3 +22270,47 @@ sem dizer qual.
   %Req.TransportError{reason: :timeout}"; medido nesta máquina, o mesmo
   `npm install` de `bcrypt`+`sqlite3`+`express` levou 5,3 s com a imagem em
   cache e prebuilds disponíveis — a cadeia, não o comando, cortava em 15 s)
+
+### RN-758 — O recorte do Jev nunca tira a ferramenta de obrigação do agente {#rn-758}
+
+- **Regra:** quando o Jev recorta o menu do passo ([RN-625](#rn-625), P3), o
+  menu recebe de volta o PISO do agente: para o PO, `create_story` e
+  `create_task`; para o Arquiteto, `create_module_map`,
+  `route_modules_to_infra`, `declare_module_contracts`, `propose_adr` e
+  `create_c4_diagram`. Só entra o que está no catálogo daquele passo — o piso
+  nunca acrescenta ferramenta que o agente não tinha, e em toda queda o
+  catálogo inteiro segue como antes. O piso é ESTÁTICO por agente, e isso é
+  declarado: a api não tem sinal barato de qual obrigação está pendente
+  naquele passo, então ele vale sempre que há recorte. Os dev agents ficam
+  sem piso, de propósito (a obrigação deles muda a cada passo; para eles vale
+  só a [RN-759](#rn-759)).
+- **Onde:** `apps/api/src/domain/llm/tool-router.ts:323` (`menuComPiso`) e
+  `apps/api/src/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.ts:248`
+  (`menuComPiso`)
+- **Teste:** `apps/api/test/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.spec.ts`
+  (o PO com o menu `["listar_backlog","create_story"]` mantém `create_task`;
+  o Arquiteto com 2 de 9 mantém as cinco de artefato)
+- **Origem:** AT-445 (TP-01 de 09/10: o PO sem `create_task` respondeu "Não
+  tenho uma ferramenta para criar tarefas" e fechou com 8 histórias sem
+  tarefa; o Arquiteto com 2 de 9 fechou sem roteamento, contratos, ADR nem C4)
+
+### RN-759 — O passo recortado avisa ao modelo que o menu é um recorte {#rn-759}
+
+- **Regra:** quando o recorte do Jev é aplicado (`aplicado: true`), a chamada
+  ao provider DAQUELE passo leva, no fim, uma mensagem `system` EFÊMERA que
+  diz quantas e quais ferramentas o passo recebeu, que as demais seguem
+  disponíveis nas próximas voltas e que o agente não deve concluir que não tem
+  uma ferramenta nem encerrar o turno esperando por ela. Ela nunca entra no
+  histórico do agente nem no event log, e não existe sem recorte nem em queda.
+  É montada na api, e não na fachada do engine como a [RN-622](#rn-622),
+  porque só a api sabe o menu depois do Jev. Não aplicar o recorte na volta
+  que fecha o turno foi avaliado e não feito: a api não sabe antes da
+  resposta que a volta será a última.
+- **Onde:** `apps/api/src/domain/llm/tool-router.ts:337` (`avisoDeRecorte`) e
+  `apps/api/src/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.ts:263`
+  (`avisoDeRecorte`)
+- **Teste:** `apps/api/test/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.spec.ts`
+  (o aviso chega como última mensagem com recorte; sem recorte e em queda, as
+  mensagens são as do pedido)
+- **Origem:** AT-445 (o dev agent bloqueou uma tarefa "sem ferramenta para
+  editar arquivos" tendo `write_file`)
