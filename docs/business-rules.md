@@ -22138,8 +22138,8 @@ sem dizer qual.
   sempre.
 - **Onde:** `apps/web/src/lib/session-channel.ts:195` (`awaiting_approval`),
   `apps/web/src/lib/session-turno.ts:418` (`awaiting_approval`),
-  `apps/web/src/lib/session-rolagem.ts:21` (`seqDaEsperaPorAprovacao`),
-  `:117` (`esperaPorAprovacao`)
+  `apps/web/src/lib/session-rolagem.ts:30` (`seqDaEsperaPorAprovacao`),
+  `:141` (`esperaPorAprovacao`)
 - **Teste:** `apps/web/src/lib/session-channel.test.ts` (`onAgentStatus repassa
   awaiting_approval (RN-748)`), `apps/web/src/lib/session-rolagem.test.ts`
   (`seqDaEsperaPorAprovacao (RN-748)`: espera mais recente; sem espera, `null`)
@@ -22199,8 +22199,8 @@ sem dizer qual.
   volta).
 - **Onde:** `apps/web/src/routes/project-tabs.ts:383` (`abaDaRota`),
   `apps/web/src/routes/Shell.tsx:510` (`abaDaRota`),
-  `apps/web/src/lib/session-rolagem.ts:16` (`estaPertoDoFim`), `:96`
-  (`estavaNoFimRef`), `:104` (`aoRolarOFio`),
+  `apps/web/src/lib/session-rolagem.ts:16` (`estaPertoDoFim`), `:82`
+  (`estavaNoFimRef`), `:120` (`aoRolarOFio`),
   `apps/web/src/components/ModelCatalogSection.module.css` (`.barraDeLote`),
   `apps/web/src/routes/SessionPage.module.css` (`.composer`)
 - **Teste:** `apps/web/src/lib/session-rolagem-fim.test.ts` (`estaPertoDoFim`
