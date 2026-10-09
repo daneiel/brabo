@@ -19538,8 +19538,8 @@ OBRIGATÓRIAS da `coverageMatrix` (e portanto reprovar entrega).
   `:528` (`plano_de_teste_da_entrega`), `:552` (`plano_ja_emitido`),
   `:587` (`arquivos_alterados`);
   `apps/engine/lib/engine/gates/qa_estrategia_agent.ex:86` (`run`),
-  `:104` (`token_budget_micros`), `:179` (`descrever_arquivos`);
-  `apps/engine/lib/engine/gates/qa_automacao_agent.ex:166` (`com_o_plano`);
+  `:104` (`token_budget_micros`), `:175` (`descrever_arquivos`);
+  `apps/engine/lib/engine/gates/qa_automacao_agent.ex:173` (`com_o_plano`);
   `apps/engine/lib/engine/agents/dev_lead_tools.ex:443` (`run_assessment`),
   `:524` (`propor_parecer`);
   `apps/engine/lib/engine/harness/artifact_schemas.ex:59` (`taskId`);
@@ -22270,3 +22270,27 @@ sem dizer qual.
   %Req.TransportError{reason: :timeout}"; medido nesta máquina, o mesmo
   `npm install` de `bcrypt`+`sqlite3`+`express` levou 5,3 s com a imagem em
   cache e prebuilds disponíveis — a cadeia, não o comando, cortava em 15 s)
+
+### RN-765 — O gate de QA julga a TAREFA, e RF de tarefa irmã é observação {#rn-765}
+
+- **Regra:** a QA-estratégia (plano de teste, [RN-674](#rn-674)) e a
+  QA-automação recebem, além da história, o RECORTE da tarefa: título e
+  descrição, as regras de negócio da história e as OUTRAS tarefas da mesma
+  história com o status (`siblingTasks` em `GET .../dev-context`). O veredito
+  é sobre o que é DESTA tarefa: requisito que pertence a uma tarefa irmã
+  (feita ou pendente) não reprova — vai ao `resumo` como observação, fora de
+  `itens`, e não impede `approved`. A régua é de PROMPT, não de código: o
+  `emit_qa_verdict` continua exigindo só a suite verde para aprovar.
+- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:18` (`texto`),
+  `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:59`
+  (`tarefasIrmas`) e `apps/engine/lib/engine/gates/qa_automacao_agent.ex:170`
+  (`com_o_recorte`)
+- **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs` e
+  `apps/api/test/application/use-cases/execution/get-dev-task-context.use-case.spec.ts`
+  (as irmãs sem a própria tarefa). O golden-set do QA (ADR 0168) NÃO ganhou
+  caso: ele roda o modelo de verdade, e provar o veredito sem chamada paga
+  não é possível — declarado.
+- **Origem:** AT-448 (TP-01 de 09/10: o gate de QA da tarefa "Modelar tabela
+  de usuários e hash bcrypt" reprovou três vezes por "RF01: login HTTP com
+  JWT não existe nesta entrega", que é de outra tarefa, e a tarefa bloqueou;
+  `artifact.qa_verdict` das tasks `42bea901` e `762833bd`)

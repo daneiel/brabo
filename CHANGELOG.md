@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- **engine/api**: o gate de QA recebe o recorte da tarefa (descrição, regras e as tarefas irmãs com status, via `siblingTasks` no contexto do dev) e julga só o que é desta tarefa; RF de tarefa irmã vira observação, não reprovação — vale para o plano de teste e para a revisão (RN-765, AT-448).
 - **engine**: a ação `terminal` auto-aprovada passa a ser esperada pelo engine por `TERMINAL_ACTION_TIMEOUT_MS` + 120 s (antes, os 15 s do `Req`), o teto do comando sobe de 15 s para 120 s, e o estouro chega ao agente nomeando o teto em vez de `Req.TransportError` cru (RN-757, AT-440).
 
 - **engine/anamnese**: a rodada só roda quando o sujeito teve interação com conteúdo técnico — mensagem escrita por ele, resposta a pergunta estruturada ou recusa com motivo; aprovação, handoff e clique não contam mais, e sem isso não há chamada ao LLM nem ao RAG (RN-756, AT-439).
