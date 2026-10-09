@@ -40,6 +40,38 @@ defmodule Engine.Harness.RespostaCortadaTest do
     assert motivo =~ "partes menores"
   end
 
+  test "RN-745: só a última chamada da resposta cortada é recusada; as completas executam" do
+    chamadas = [
+      %{"id" => "1", "name" => "propose_adr", "arguments" => %{"title" => "A"}},
+      %{"id" => "2", "name" => "propose_adr", "arguments" => %{"title" => "B"}},
+      %{"id" => "3", "name" => "propose_adr", "arguments" => %{}}
+    ]
+
+    RespostaCortada.registrar(
+      resposta(%{"truncated" => true, "message" => %{"toolCalls" => chamadas}}),
+      nil
+    )
+
+    assert {:ok, "A"} =
+             ArgumentosDeFerramenta.executar("propose_adr", %{"title" => "A"}, [], fn a ->
+               {:ok, a["title"]}
+             end)
+
+    assert {:ok, "B"} =
+             ArgumentosDeFerramenta.executar("propose_adr", %{"title" => "B"}, [], fn a ->
+               {:ok, a["title"]}
+             end)
+
+    assert {:error, motivo} =
+             ArgumentosDeFerramenta.executar("propose_adr", %{}, [], fn _ ->
+               flunk("a chamada incompleta não podia ter rodado")
+             end)
+
+    assert motivo =~ "propose_adr"
+    assert motivo =~ "a última da resposta"
+    assert motivo =~ "uma por chamada"
+  end
+
   test "resposta normal executa a ferramenta como sempre" do
     RespostaCortada.registrar(resposta(%{}), nil)
 

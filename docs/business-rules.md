@@ -21829,8 +21829,8 @@ sem dizer qual.
   (`truncated`),
   `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:217`
   (`truncated`),
-  `apps/engine/lib/engine/harness/resposta_cortada.ex:38` (`registrar`),
-  `:61` (`descarregar`),
+  `apps/engine/lib/engine/harness/resposta_cortada.ex:43` (`registrar`),
+  `:89` (`descarregar`),
   `apps/engine/lib/engine/harness/argumentos_de_ferramenta.ex:26` (`executar`),
   `apps/engine/lib/engine/agents/texto_do_turno.ex:65` (`payload_do_turno`)
 - **Teste:** `apps/api/test/contract/llm-provider.contract.ts` ("resposta
@@ -22059,3 +22059,25 @@ sem dizer qual.
   descrição do terminal diz `sh`)
 - **Origem:** AT-444 (TP-01 de 08/10: `mkdir -p src/{a,b}` no dash e o dev
   recriando o que já existia)
+### RN-745 — Na resposta cortada, só a chamada incompleta é recusada {#rn-745}
+
+- **Regra:** quando a resposta do modelo vem cortada pelo teto de saída
+  (`truncated: true`, [RN-737](#rn-737)), só a ÚLTIMA chamada de ferramenta da
+  resposta é tratada como incompleta e recusada com o erro nomeado (que agora
+  diz "a última da resposta", que as anteriores foram executadas e pede "uma
+  por chamada"). As chamadas anteriores da mesma resposta executam
+  normalmente — medido no código: o stream OpenAI-compatível monta as
+  chamadas em ordem, o corte cai na última, e o `parseArgumentos` da api
+  devolve `{}` para o JSON partido. A chamada é identificada por nome e
+  argumentos. Resposta cortada sem chamada conhecida continua recusando toda
+  ferramenta (régua da RN-737). A descrição de `propose_adr` orienta um ADR por
+  resposta.
+- **Onde:** `apps/engine/lib/engine/harness/resposta_cortada.ex:44`
+  (`registrar`), `:64` (`incompleta?`),
+  `apps/engine/lib/engine/harness/argumentos_de_ferramenta.ex:26` (`executar`),
+  `apps/engine/lib/engine/harness/tools/propose_adr.ex:27` (`spec`)
+- **Teste:** `apps/engine/test/engine/harness/resposta_cortada_test.exs` ("só
+  a última chamada da resposta cortada é recusada; as completas executam";
+  "ferramenta de resposta cortada NÃO executa", sem chamada conhecida)
+- **Origem:** AT-430 (08/10: o Arquiteto mandou 5 `propose_adr` numa resposta
+  cortada e as cinco foram recusadas; 0 ADRs)
