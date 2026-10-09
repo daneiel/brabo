@@ -365,6 +365,13 @@ defmodule Engine.Agents.ArquitetoServerTest do
     assert final_state.turno_assincrono == nil
   end
 
+  # RN-772/773 (AT-454): o estado que muda fora da conversa tem leitura.
+  test "as leituras de ADRs propostas e do backlog estão no catálogo", %{state: state} do
+    nomes = Enum.map(state.tool_specs, & &1.name)
+    assert "listar_adrs_propostas" in nomes
+    assert "listar_backlog" in nomes
+  end
+
   describe "Frente 3 do plano de decision_record — emit_artifact" do
     test "emit_artifact está na lista de tools do Arquiteto", %{state: state} do
       nomes = Enum.map(state.tool_specs, & &1.name)
