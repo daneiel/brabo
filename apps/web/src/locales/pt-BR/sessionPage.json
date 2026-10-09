@@ -273,5 +273,13 @@
     "semPapel": "Retomar o gate exige o papel developer no projeto.",
     "retomado": "Gate retomado — o andamento aparece neste fio.",
     "erroTitulo": "Não foi possível retomar o gate"
+  },
+  "encerrar": {
+    "titulo": "Encerrar a sessão de execução?",
+    "oQuePara": "Encerrar para os agentes desta sessão na hora: um comando em andamento (um npm install, uma rodada de testes) é cortado, e o turno em curso não é gravado.",
+    "agentes": "Trabalhando aqui: {{agentes}}.",
+    "semReabrir": "Sessão com execução não pode ser reaberta depois.",
+    "cancelar": "Continuar rodando",
+    "confirmar": "Encerrar sessão"
   }
 }

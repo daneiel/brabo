@@ -268,6 +268,8 @@ estado lido do repositório e não da conversa.
 | A Anamnese só roda com interação de conteúdo técnico do sujeito (AT-439) | RN-756 |
 | O instalador pergunta pelos modelos locais e mede a porta do Ollama; `brabo-dev` não é instalação, e a migração reinstala do zero (AT-351/AT-358) | RN-691, RN-692 |
 | O `npm install` cabe no `terminal`: o engine espera o `propose_action` pelo teto do comando, que vai a 120s (AT-440) | RN-757 |
+| O gate parado esperando clique é dito no painel, e a oferta em lote cobre os subagentes de QA (AT-449) | RN-766 |
+| O gate de QA julga a tarefa, e RF de tarefa irmã é observação (AT-448) | RN-765 |
 | O semgrep do SecOps morria sem `$HOME` gravável na imagem de produção, e o parecer aprovava (AT-380) | RN-707 |
 | O projeto novo diz o próximo passo: cartão de primeiros passos na Visão geral, e Configurações abre pela credencial e pelos modelos (AT-372/AT-374) | RN-708 |
 | O conflito de merge devolve a tarefa ao dev agent dono, que integra a dev e reenvia; os gates julgam de novo (AT-383) | RN-715 |
@@ -312,6 +314,10 @@ estado lido do repositório e não da conversa.
 | Os saltos de layout da Sessão e do catálogo: composer, aba ativa, barra de lote e rolagem do fio (AT-442) | RN-751 |
 | A PR de infra mergeada sai de "PRs de infra em revisão" (AT-436) | RN-752 |
 | O seletor de modelo mostra `thinking`; ligar o modo automático não aprova o cartão, e ele diz isso (AT-443) | RN-755 |
+| O recorte do Jev não vira incapacidade: piso de obrigação no menu e aviso efêmero de recorte (AT-445) | RN-758, RN-759 |
+| A aba PRs diz a verdade do botão Merge com a tarefa bloqueada (AT-451) | RN-768 |
+| Encerrar sessão com execução pergunta antes, e o estado sai traduzido (AT-452) | RN-769 |
+| Miudezas de tela do TP-01: autor da PR de ADR, modelo da Infra, título da PR do dev, selo da execução, caminho e tabela (AT-455) | RN-770 |
 | A próxima task do dev agent parte da última branch dele não mergeada (AT-447) | RN-760 |
 
 ## Estado atual e aberto

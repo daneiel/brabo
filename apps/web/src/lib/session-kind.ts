@@ -50,7 +50,27 @@ export const TIPOS_DE_SESSAO: Record<
   },
 };
 
-export const KINDS_DE_SESSAO = Object.keys(TIPOS_DE_SESSAO) as SessionKind[];
+/**
+ * Como a BARRA da sessão se apresenta (AT-455): a sessão de execução nasce
+ * `criativa` (RN-097, o `kind` é intenção e não muda), mas o selo "Criativa"
+ * nela engana — com execução ativa, a barra diz "Execução". É apresentação do
+ * ESTADO; o `kind` gravado segue o mesmo.
+ */
+export const TIPO_DE_EXECUCAO: (typeof TIPOS_DE_SESSAO)[SessionKind] = {
+  get rotulo() {
+    return i18n.t('sessionKind.execucao.label', { ns: 'sessions' });
+  },
+  get explicacao() {
+    return i18n.t('sessionKind.execucao.description', { ns: 'sessions' });
+  },
+  tom: 'accent',
+};
+
+export function tipoDaSessao(kind: SessionKind, emExecucao: boolean) {
+  return emExecucao ? TIPO_DE_EXECUCAO : TIPOS_DE_SESSAO[kind];
+}
+
+export const KINDS_DE_SESSAO =Object.keys(TIPOS_DE_SESSAO) as SessionKind[];
 
 /**
  * O tipo pré-selecionado no formulário de criação.

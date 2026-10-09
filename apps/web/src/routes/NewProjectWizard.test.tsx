@@ -324,6 +324,10 @@ describe('NewProjectWizard — onde o código vai morar', () => {
     const valorDoCaminho = screen.getByText('Código em').nextElementSibling;
     expect(valorDoCaminho?.textContent).toBe('/home/voce/projetos/loja');
     expect(valorDoCaminho?.querySelectorAll('wbr')).toHaveLength(4);
+    // AT-455: cada segmento é inteiro (nowrap) — não quebra no hífen.
+    const segmentos = valorDoCaminho?.querySelectorAll('span');
+    expect(segmentos?.[segmentos.length - 1]?.textContent).toBe('loja');
+    expect(segmentos?.[segmentos.length - 1]?.className).toMatch(/segmentoDeCaminho/);
   });
 
   it('Pasta montada manda o caminho digitado, e só ele', async () => {

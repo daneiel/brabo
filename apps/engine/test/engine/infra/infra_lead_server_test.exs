@@ -347,6 +347,23 @@ defmodule Engine.Infra.InfraLeadServerTest do
     assert_received %Phoenix.Socket.Broadcast{event: "agent.status", payload: %{status: "idle"}}
   end
 
+  # AT-455: a bolha da Infra dizia "modelo não registrado" — o servidor
+  # apagava o `modelName` do payload.
+  test "agent.response carrega o nome do modelo", %{state: state, session_id: session_id} do
+    Process.put(:fake_llm_turns, [
+      FakeEngineApiClient.final_response("Infra pronta.", "llama3.2:3b")
+    ])
+
+    assert {:reply, :ok, _} =
+             sync_call(InfraLeadServer, {:user_message, "gere os artefatos"}, state)
+
+    assert_received {:event_appended, _, ^session_id,
+                     %{
+                       type: "agent.response",
+                       payload: %{content: "Infra pronta.", modelName: "llama3.2:3b"}
+                     }}
+  end
+
   test "rehydration: reconstrói o histórico do event log no init", %{} do
     Process.put(:fake_events, [
       %{"type" => "chat.message", "payload" => %{"text" => "oi"}},

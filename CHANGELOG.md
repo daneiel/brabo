@@ -6,6 +6,14 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- **web**: o painel "precisa de você" diz, ao lado do cartão, quando a ação pendente é de um gate (QA ou SecOps) parado esperando o clique, e a oferta em lote do modo automático na aba Executores cobre os subagentes de QA desde a ativação (RN-766, AT-449).
+- **api**: o recorte de menu do Jev deixa de virar incapacidade — o PO mantém `create_story`/`create_task` e o Arquiteto as cinco ferramentas de artefato em todo passo recortado, e o passo recortado leva uma mensagem `system` efêmera dizendo que o menu é um recorte e que as demais ferramentas voltam nas próximas voltas (RN-758, RN-759, AT-445).
+- **engine/api**: o gate de QA recebe o recorte da tarefa (descrição, regras e as tarefas irmãs com status, via `siblingTasks` no contexto do dev) e julga só o que é desta tarefa; RF de tarefa irmã vira observação, não reprovação — vale para o plano de teste e para a revisão (RN-765, AT-448).
+- **web**: na aba PRs, a PR cuja tarefa está bloqueada deixa de dizer "o merge segue disponível" ao lado de um Merge desabilitado; o motivo da indisponibilidade (tarefa bloqueada, ou sem sessão) vai em texto (RN-768, AT-451).
+- **api/engine/web**: miudezas de tela do TP-01 — a PR de ADR leva `arquiteto[bot]` como autor; a bolha da Infra mostra o modelo; o título da PR do dev abre pela tarefa; a sessão de execução mostra o selo "Execução" e não oferece o Criativo; o caminho da confirmação de criação não quebra no hífen; a tabela Markdown no balão não fica mais larga que o texto sem quebra (RN-770, AT-455).
+
+- **web**: encerrar uma sessão com execução ativa pede confirmação dizendo o que para (agentes, comando em andamento, turno em curso; e que ela não reabre); a frase de sessão encerrada mostra o estado traduzido em vez de `closed`, e um teste novo reprova enum cru interpolado em frase de tela (RN-769, AT-452).
+
 - **engine**: a próxima task do dev agent parte da última branch dele ainda não mergeada — aprovada nos gates ou bloqueada por qualquer motivo, inclusive o ciclo de correção esgotado —, e não mais de `dev`; branch já mergeada na `dev` volta a partir da `dev` (RN-760, AT-447).
 - **engine**: a ação `terminal` auto-aprovada passa a ser esperada pelo engine por `TERMINAL_ACTION_TIMEOUT_MS` + 120 s (antes, os 15 s do `Req`), o teto do comando sobe de 15 s para 120 s, e o estouro chega ao agente nomeando o teto em vez de `Req.TransportError` cru (RN-757, AT-440).
 

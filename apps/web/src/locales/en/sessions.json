@@ -123,6 +123,10 @@
     "criativa": {
       "label": "Creative",
       "description": "For building: opens ideation with the Creative agent, who records the business rules and hands off to the PO. It's the only kind that enters execution."
+    },
+    "execucao": {
+      "label": "Execution",
+      "description": "The execution session: the dev agents work on the tasks of the plan approved by the Dev Lead."
     }
   },
   "sessionsTab": {
