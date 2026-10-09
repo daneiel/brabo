@@ -22270,3 +22270,19 @@ sem dizer qual.
   %Req.TransportError{reason: :timeout}"; medido nesta máquina, o mesmo
   `npm install` de `bcrypt`+`sqlite3`+`express` levou 5,3 s com a imagem em
   cache e prebuilds disponíveis — a cadeia, não o comando, cortava em 15 s)
+
+### RN-768 — Na aba PRs, o texto ao lado do Merge diz a verdade do botão {#rn-768}
+
+- **Regra:** gate pendente continua AVISO e não trava o merge
+  ([RN-663](#rn-663)). Tarefa BLOQUEADA (`task.blocked`) é outra coisa e
+  desabilita o botão; nesse caso a linha da PR NÃO mostra "o merge segue
+  disponível": diz, em texto, que o merge está indisponível porque a tarefa
+  está bloqueada (nomeando o gate pendente, se houver, ou o motivo do
+  bloqueio). Sem sessão no projeto, o mesmo: o motivo vai em texto, nunca só
+  no `title` do botão `disabled`, que não abre no Chromium. Se tarefa
+  bloqueada deve ou não travar o merge é pergunta do dono, não decidida aqui.
+- **Onde:** `apps/web/src/routes/ProjectPrsTab.tsx:248` (`avisoDaLinha`)
+- **Teste:** `apps/web/src/routes/ProjectPrsTab.test.tsx` ("AT-451: tarefa
+  bloqueada com gate pendente NÃO diz que o merge segue disponível")
+- **Origem:** AT-451 (TP-01 de 09/10: "O merge segue disponível — a decisão é
+  sua" ao lado de um "Merge" desabilitado)

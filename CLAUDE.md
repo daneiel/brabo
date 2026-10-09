@@ -312,6 +312,7 @@ estado lido do repositório e não da conversa.
 | Os saltos de layout da Sessão e do catálogo: composer, aba ativa, barra de lote e rolagem do fio (AT-442) | RN-751 |
 | A PR de infra mergeada sai de "PRs de infra em revisão" (AT-436) | RN-752 |
 | O seletor de modelo mostra `thinking`; ligar o modo automático não aprova o cartão, e ele diz isso (AT-443) | RN-755 |
+| A aba PRs diz a verdade do botão Merge com a tarefa bloqueada (AT-451) | RN-768 |
 
 ## Estado atual e aberto
 
