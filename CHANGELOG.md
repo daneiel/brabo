@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- **engine/api**: a primeira tarefa de cada módulo (a do `backlog.task_claimed` mais antigo do módulo no projeto) tem o dobro do teto por tarefa — US$ 1,00 com o padrão de US$ 0,50 —, e o bloqueio por orçamento diz o teto que valeu para aquela tarefa (RN-774, AT-433).
 - **engine**: o Arquiteto lê o status atual das ADRs que propôs (`listar_adrs_propostas`: pendente, aprovada, recusada com motivo, executada com a PR) e o backlog com as tarefas por história (`listar_backlog`), e o kickoff e o resultado do `propose_adr` mandam consultá-los antes de afirmar estado (RN-772, RN-773, AT-454).
 - **web**: o painel "precisa de você" diz, ao lado do cartão, quando a ação pendente é de um gate (QA ou SecOps) parado esperando o clique, e a oferta em lote do modo automático na aba Executores cobre os subagentes de QA desde a ativação (RN-766, AT-449).
 - **api**: o recorte de menu do Jev deixa de virar incapacidade — o PO mantém `create_story`/`create_task` e o Arquiteto as cinco ferramentas de artefato em todo passo recortado, e o passo recortado leva uma mensagem `system` efêmera dizendo que o menu é um recorte e que as demais ferramentas voltam nas próximas voltas (RN-758, RN-759, AT-445).

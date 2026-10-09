@@ -74,7 +74,7 @@ defmodule Engine.Dev.DevAgentServer do
   use GenServer, restart: :temporary
 
   alias Engine.Agents.FalhaDeTurno
-  alias Engine.Dev.{AgentIo, ContextBuilder, Tools, Wake}
+  alias Engine.Dev.{AgentIo, ContextBuilder, TetoDaTarefa, Tools, Wake}
   alias Engine.Dev.Hooks.Termination
   alias Engine.Gates.Dispatcher
   alias Engine.Harness.ToolLoop
@@ -525,7 +525,10 @@ defmodule Engine.Dev.DevAgentServer do
       workspace_root: state.worktree,
       tools: Tools.registry(),
       hooks: dev_hooks(),
-      token_budget_micros: state.task_budget_micros,
+      # RN-774: o teto EFETIVO da tarefa (2x na primeira do módulo), e se
+      # ela é a primeira, para o diagnóstico do bloqueio dizer o teto que valeu.
+      token_budget_micros: TetoDaTarefa.efetivo(state.task_budget_micros, task),
+      primeira_do_modulo: TetoDaTarefa.primeira?(task),
       business_rules_units: business_rules_units,
       task_state_units: task_state_units,
       messages: [initial_message(task, story), retrato_do_worktree(state)],
@@ -604,6 +607,13 @@ defmodule Engine.Dev.DevAgentServer do
     }
   end
 
+  # RN-774: o diagnóstico diz o teto que valeu para ESTA tarefa.
+  defp diagnostico_de_orcamento(ctx) do
+    "gasto: #{ctx.tokens_spent_micros} micro-USD (" <>
+      TetoDaTarefa.descrever(ctx.token_budget_micros, Map.get(ctx, :primeira_do_modulo, false)) <>
+      ")"
+  end
+
   # --- Correção pedida por um gate (mesmo worktree/branch — sem novo claim) ---
 
   defp implement_correction(
@@ -626,7 +636,10 @@ defmodule Engine.Dev.DevAgentServer do
       workspace_root: state.worktree,
       tools: Tools.registry(),
       hooks: dev_hooks(),
-      token_budget_micros: state.task_budget_micros,
+      # RN-774: o teto EFETIVO da tarefa (2x na primeira do módulo), e se
+      # ela é a primeira, para o diagnóstico do bloqueio dizer o teto que valeu.
+      token_budget_micros: TetoDaTarefa.efetivo(state.task_budget_micros, task),
+      primeira_do_modulo: TetoDaTarefa.primeira?(task),
       business_rules_units: business_rules_units,
       task_state_units: task_state_units,
       messages: [initial_message(task, story), correction_message(findings)],
@@ -740,7 +753,7 @@ defmodule Engine.Dev.DevAgentServer do
     state
     |> AgentIo.block_task(
       "orçamento de tokens excedido (correção)",
-      "gasto: #{ctx.tokens_spent_micros} micro-USD (teto: #{ctx.token_budget_micros})",
+      diagnostico_de_orcamento(ctx),
       "politica"
     )
     |> finish_task(:blocked)
@@ -872,7 +885,7 @@ defmodule Engine.Dev.DevAgentServer do
     state
     |> AgentIo.block_task(
       "orçamento de tokens excedido",
-      "gasto: #{ctx.tokens_spent_micros} micro-USD (teto: #{ctx.token_budget_micros})",
+      diagnostico_de_orcamento(ctx),
       "politica"
     )
     |> finish_task(:blocked)

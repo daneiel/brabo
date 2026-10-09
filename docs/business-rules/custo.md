@@ -3124,3 +3124,38 @@ diz onde configurar.
   (`appsec` herda do `secops` e `dev-api` do `dev-lead`; lead também sem modelo
   segue `null` — caso de falha)
 - **Origem:** AT-367
+
+---
+
+### RN-774 — A primeira tarefa de cada módulo tem o dobro do teto por tarefa {#rn-774}
+
+A primeira tarefa de um módulo monta o esqueleto inteiro (manifesto, app,
+banco, testes) e custa mais que as seguintes: no TP-01 de 08/10 ela gastou
+US$ 0,53 com o Haiku 4.5 e foi bloqueada pelo teto fixo de US$ 0,50
+(`taskBudgetMicros: 500000`). Por decisão do dono (09/10), ela ganha
+**2× o teto por tarefa** (US$ 1,00 com o padrão); as demais seguem o teto
+configurado. O multiplicador é constante nomeada no engine, não configuração.
+
+"Primeira" é medida pelo log, nunca pelo estado da tarefa: é a tarefa cujo
+`backlog.task_claimed` é o MAIS ANTIGO do projeto para aquele módulo. Bloquear
+zera `assigned_to` e reiniciar o engine perde a memória do processo; o log não
+muda, então a mesma tarefa reivindicada de novo depois de liberada continua a
+primeira, e uma correção pedida por gate também recebe o 2×. A api responde
+`task.primeiraDoModulo` no contexto do dev (`false` sem `module`, e `false` sem
+claim nenhum do módulo — o teto normal é o conservador), e o teto EFETIVO é
+resolvido num ponto só do engine. O bloqueio por orçamento diz o teto que valeu
+para aquela tarefa ("teto da primeira tarefa do módulo: 1000000 micro-USD,
+US$ 1.00"). Os gates de QA seguem com o `task_budget_micros` base — fora do
+recorte do card.
+
+- **Onde:** `apps/engine/lib/engine/dev/teto_da_tarefa.ex:32` (`efetivo`);
+  `apps/engine/lib/engine/dev/dev_agent_server.ex:611` (`diagnostico_de_orcamento`);
+  `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:68`
+  (`ehPrimeiraTarefaDoModulo`)
+- **Teste:** `apps/engine/test/engine/dev/dev_agent_server_test.exs` (describe
+  "RN-774": a primeira com US$ 0,53 não bloqueia, a segunda do mesmo módulo
+  bloqueia — caso de falha —, a primeira de outro módulo também ganha 2×);
+  `apps/engine/test/engine/dev/teto_da_tarefa_test.exs`;
+  `apps/api/test/application/use-cases/execution/get-dev-task-context.use-case.spec.ts`
+  (describe "RN-774")
+- **Origem:** AT-433
