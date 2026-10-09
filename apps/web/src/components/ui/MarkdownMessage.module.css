@@ -144,7 +144,10 @@
 /* O piso de largura fica no FILHO (o `Table`), não no contêiner: é ele que
    precisa exceder para o `overflow-x` do pai ter o que rolar. */
 .tabelaScroll > * {
-  min-width: max-content;
+  /* AT-455: `min-content`, não `max-content` — o piso é o `minmax(12rem, 1fr)`
+     de cada coluna, e a célula quebra por palavra. Com `max-content` a tabela
+     ficava da largura do texto sem quebra (2 236px num balão de 708px). */
+  min-width: min-content;
 }
 
 .tabelaCelula {

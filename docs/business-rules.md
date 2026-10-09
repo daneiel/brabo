@@ -211,7 +211,7 @@ to `key`, and whoever writes `active` receives the raw key from
 - **Where:** `apps/web/src/routes/project-tabs.ts:95` (both entries),
   `apps/web/src/routes/ProjectSessionsTab.tsx:114` (the filter by recorded
   `kind`) and `:98` (the CTA creating in the tab's `kind`),
-  `apps/web/src/routes/SessionPage.tsx:830` (`conviteVisivel`, the one
+  `apps/web/src/routes/SessionPage.tsx:834` (`conviteVisivel`, the one
   question the topbar and the invite share)
 - **Test:** `apps/web/src/routes/ProjectSessionsTab.test.tsx`,
   `apps/web/src/routes/project-tabs.test.tsx`,
@@ -239,7 +239,7 @@ either of the two paths. What changed is that the FIRST MESSAGE now also
 counts as that gesture: no one should need a separate click before talking
 to whoever the screen already invited them to talk to.
 
-- **Where:** `apps/web/src/routes/SessionPage.tsx:663` (`handleSend`)
+- **Where:** `apps/web/src/routes/SessionPage.tsx:667` (`handleSend`)
 - **Test:** `apps/web/src/routes/SessionPage.ideacao-automatica.test.tsx`
 - **Edge case:** a `consultiva` session has no Creative agent — the rule
   doesn't apply, and the generic SSE path stays the right one for it.
@@ -275,7 +275,7 @@ one.
 > follows that recipient. What survives from this rule is the half about the
 > model: the binding route receives the agent, never falls back silently.
 
-- **Where:** `apps/web/src/lib/session-destinatario.ts:249`
+- **Where:** `apps/web/src/lib/session-destinatario.ts:254`
   (`useDestinatarioDoChat`, since RN-631),
   `apps/web/src/lib/api-client.ts:1114` (`getSessionModelBinding`, the
   `agentId`), `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:166`
@@ -16066,10 +16066,10 @@ quem clica). A cláusula de pasta usa o carimbo, que não é batimento
   (`status_registrado`);
   `apps/engine/lib/engine/session_events/event.ex:120` (`imagem_decidida?`)
 - **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs:742`
-  (via runner, `running` recusa), `:757` (`provisioning` recusa), `:767`
+  (via runner, `running` recusa), `:774` (`provisioning` recusa), `:784`
   (`stopped` não recusa), `:779` (sem imagem), `:790` (pasta nunca
-  confirmada), `:803` (`propose_container_start` com container `running`),
-  `:837` (`propose_container_start` sem imagem PROPÕE), `:863` (caminho feliz
+  confirmada), `:820` (`propose_container_start` com container `running`),
+  `:833` (`propose_container_start` sem imagem PROPÕE), `:863` (caminho feliz
   do via runner), `:901` (sem runner conectado)
 - **Origem:** AT-142
 
@@ -16497,7 +16497,7 @@ deu e com as quatro ferramentas.
 - **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs:1033`
   (aceite imediato, `working` antes), `:1048` (409 com turno em curso — caso
   de falha), `:1077` ("Parar"), `:1103` ("Parar" sem turno), `:1107` (a
-  correção de gate na fila), `:1723` (`toolloop.limit_reached`);
+  correção de gate na fila), `:1740` (`toolloop.limit_reached`);
   `apps/engine/test/engine/agents/turno_orfao_test.exs:76` (o órfão, agora nos
   sete); `apps/engine/test/engine/agents/reidratacao_dos_seis_test.exs:62` (a
   reidratação, nos sete);
@@ -17200,8 +17200,8 @@ endpoint é ALPHA e o smoke manual
 - **Código:** `apps/api/src/domain/llm/tool-router.ts:19` (`MODELO_DO_JEV`),
   `:101` (`montarPedidoAoJev`), `:158` (`lerRespostaDoJev`), `:208`
   (`recortarEstado`), `:260` (`menuP3`);
-  `apps/api/src/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.ts:110`
-  (`preparar`), `:143` (`executar`), `:285` (`registrarGasto`);
+  `apps/api/src/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.ts:118`
+  (`preparar`), `:143` (`executar`), `:305` (`registrarGasto`);
   `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:152`
   (`decisaoDoJev`); `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:167`
   (`preparar`); `apps/api/src/infrastructure/llm/jev-tool-router.ts:32`
@@ -17312,7 +17312,7 @@ continuam SEM decisão inline (não há `ApprovalCard` para elas).
   (`PendenciasDeOutrasSessoes`); `apps/web/src/routes/MergearNoChat.tsx:28`
   (`prAbertaDaAcao`), `:56` (`jaHaMergeDaPr`), `:89` (`MergearNoChat`);
   `apps/web/src/routes/SessionPage.tsx:154` (`podeDecidir`), `:281`
-  (`useRetomarTurnoDoLog`), `:912` (`PendenciasDeOutrasSessoes`)
+  (`useRetomarTurnoDoLog`), `:916` (`PendenciasDeOutrasSessoes`)
 - **Teste:** `apps/web/src/components/ApprovalCard.decisao-em-voo.test.tsx:37`
   (duplo clique), `:52` (409 no card e botões inertes — caso de falha), `:67`
   (erro que não é 409 devolve os botões); `apps/web/src/lib/turno-em-curso-no-log.test.ts:18`
@@ -17661,7 +17661,7 @@ passa a ler `DESTINATARIO_DA_SESSAO_CRIATIVA` em vez do literal de
 cláusula própria no engine. Nenhuma mudança de api nem de engine.
 
 - **Onde:** `apps/web/src/lib/session-destinatario.ts:191` (`agentesEmConversa`),
-  `:214` (`resolverDestinatario`), `:249` (`useDestinatarioDoChat`), `:116`
+  `:219` (`resolverDestinatario`), `:254` (`useDestinatarioDoChat`), `:116`
   (`useAtivadosNaSessaoInteira`), `:141` (`ativadosSemJanela`);
   `apps/web/src/routes/SessionComposer.tsx:268` (`destinatarioRow`), `:172`
   (`ofertasForaDaJanela`); `apps/web/src/routes/SessionPage.tsx:357`
@@ -18864,8 +18864,8 @@ absolutos seguem pedindo aprovação (RN-154, RN-418): merge em branch protegida
 o de WORKSPACE, com a mesma lacuna declarada das outras telas de modo
 automático (RN-471).
 
-- **Código:** `apps/web/src/components/ModoAutomaticoDoTime.tsx:52`
-  (`ModoAutomaticoDoTime`), `:81` (`ligar`), `:35`
+- **Código:** `apps/web/src/components/ModoAutomaticoDoTime.tsx:68`
+  (`ModoAutomaticoDoTime`), `:97` (`ligar`), `:39`
   (`agentesEmModoAutomatico`); `apps/web/src/routes/ProjectExecutorsTab.tsx:85`
   (`podeLigarModoAutomatico`), `:308` (onde a oferta monta)
 - **Teste:** `apps/web/src/components/ModoAutomaticoDoTime.test.tsx:54` (nada
@@ -18907,7 +18907,7 @@ entra quando o resumo ficar pronto.
   `:42` (`necessity.validated`);
   `apps/api/src/domain/sessions/estou-pronto.ts:27` (`MARCA_DO_ESTOU_PRONTO`);
   `apps/web/src/routes/SessionComposer.tsx:315` (o título do botão);
-  `apps/web/src/routes/SessionPage.tsx:610` (`handleReadiness`)
+  `apps/web/src/routes/SessionPage.tsx:614` (`handleReadiness`)
 - **Teste:** `apps/api/test/application/use-cases/agents/confirm-readiness.use-case.spec.ts:49`
   (os dois eventos, com a marca e o brief por vir — caminho feliz), `:72`
   (422 do engine: só a prontidão fica gravada — caso de falha);
@@ -19366,10 +19366,10 @@ vence — pôr a Infra em "manual" não desliga esta semente.
   (a semente, e só ela — caminho feliz), `:267` (outro agente não semeia —
   caso de falha);
   `apps/engine/test/engine/infra/infra_lead_server_test.exs:1263` (o servidor
-  elege e propõe antes do modelo — caminho feliz), `:1395` (`mounted`), `:1405`
+  elege e propõe antes do modelo — caminho feliz), `:1412` (`mounted`), `:1422`
   (`runner` não sobe pelo servidor), `:1377` (sem roteamento), `:1387` (a api
   recusa sem broker — caso de falha), `:1427` (container já `running`), `:1439`
-  (negada pela política), `:1511` (`eleger_candidata/1`)
+  (negada pela política), `:1528` (`eleger_candidata/1`)
 - **Origem:** AT-260 (item A14 da análise do uso real de 29/09)
 
 ### RN-672 — O handoff ao Dev Lead sai da Infra, e só com o container do projeto `running` {#rn-672}
@@ -19538,8 +19538,8 @@ OBRIGATÓRIAS da `coverageMatrix` (e portanto reprovar entrega).
   `:528` (`plano_de_teste_da_entrega`), `:552` (`plano_ja_emitido`),
   `:587` (`arquivos_alterados`);
   `apps/engine/lib/engine/gates/qa_estrategia_agent.ex:86` (`run`),
-  `:104` (`token_budget_micros`), `:179` (`descrever_arquivos`);
-  `apps/engine/lib/engine/gates/qa_automacao_agent.ex:166` (`com_o_plano`);
+  `:104` (`token_budget_micros`), `:175` (`descrever_arquivos`);
+  `apps/engine/lib/engine/gates/qa_automacao_agent.ex:173` (`com_o_plano`);
   `apps/engine/lib/engine/agents/dev_lead_tools.ex:443` (`run_assessment`),
   `:524` (`propor_parecer`);
   `apps/engine/lib/engine/harness/artifact_schemas.ex:59` (`taskId`);
@@ -19957,8 +19957,8 @@ isso a recusa da api mora na ROTA, e o caso de uso não muda.
   `apps/api/src/application/use-cases/llm/garantir-destinatario-do-chat.use-case.ts:27`
   (`GarantirDestinatarioDoChatUseCase`);
   `apps/api/src/interfaces/http/llm/chat.controller.ts:82` (`chat`);
-  `apps/web/src/lib/session-destinatario.ts:306` (`agentesParaChamar`);
-  `apps/web/src/routes/SessionPage.tsx:663` (`handleSend`);
+  `apps/web/src/lib/session-destinatario.ts:311` (`agentesParaChamar`);
+  `apps/web/src/routes/SessionPage.tsx:667` (`handleSend`);
   `apps/web/src/routes/SessionComposer.tsx:276`
 - **Teste:** `apps/api/test/application/use-cases/llm/garantir-destinatario-do-chat.use-case.spec.ts:82`
   (consultiva sem agente — caso de falha), `:96`, `:113`, `:120`;
@@ -21076,7 +21076,7 @@ quando o turno termina entregando um formulário (`gravar_texto_do_turno(state,
 
 - **Onde:** `apps/web/src/lib/texto-plano.ts:7` (`textoPlanoDoMarkdown`),
   `apps/web/src/lib/eco-de-formulario.ts:17` (`ecosDeRespostaEstruturada`),
-  `apps/web/src/lib/session-destinatario.ts:214` (`resolverDestinatario`),
+  `apps/web/src/lib/session-destinatario.ts:219` (`resolverDestinatario`),
   `apps/web/src/components/ui/MarkdownMessage.tsx:74` (`CodeFence`)
 - **Teste:** `apps/web/src/lib/texto-plano.test.ts`,
   `apps/web/src/lib/eco-de-formulario.test.ts`,
@@ -21504,7 +21504,7 @@ O kickoff do PO diz as três coisas.
   pegam as tarefas como estão ([RN-677](#rn-677)).
 - **Onde:** `apps/web/src/lib/mensagem-otimista.ts:14` (`otimistaJaNoLog`),
   `apps/web/src/lib/mensagem-otimista.ts:22` (`nomeDaMensagemOtimista`),
-  `apps/web/src/routes/SessionPage.tsx:885` (`otimistaJaNoLog`),
+  `apps/web/src/routes/SessionPage.tsx:889` (`otimistaJaNoLog`),
   `apps/web/src/routes/session-timeline-montagem.tsx:605`
   (`handleActivateExecution`)
 - **Teste:** `apps/web/src/lib/mensagem-otimista.test.ts` (feliz: o id no log
@@ -22271,6 +22271,165 @@ sem dizer qual.
   `npm install` de `bcrypt`+`sqlite3`+`express` levou 5,3 s com a imagem em
   cache e prebuilds disponíveis — a cadeia, não o comando, cortava em 15 s)
 
+### RN-758 — O recorte do Jev nunca tira a ferramenta de obrigação do agente {#rn-758}
+
+- **Regra:** quando o Jev recorta o menu do passo ([RN-625](#rn-625), P3), o
+  menu recebe de volta o PISO do agente: para o PO, `create_story` e
+  `create_task`; para o Arquiteto, `create_module_map`,
+  `route_modules_to_infra`, `declare_module_contracts`, `propose_adr` e
+  `create_c4_diagram`. Só entra o que está no catálogo daquele passo — o piso
+  nunca acrescenta ferramenta que o agente não tinha, e em toda queda o
+  catálogo inteiro segue como antes. O piso é ESTÁTICO por agente, e isso é
+  declarado: a api não tem sinal barato de qual obrigação está pendente
+  naquele passo, então ele vale sempre que há recorte. Os dev agents ficam
+  sem piso, de propósito (a obrigação deles muda a cada passo; para eles vale
+  só a [RN-759](#rn-759)).
+- **Onde:** `apps/api/src/domain/llm/tool-router.ts:323` (`menuComPiso`) e
+  `apps/api/src/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.ts:248`
+  (`menuComPiso`)
+- **Teste:** `apps/api/test/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.spec.ts`
+  (o PO com o menu `["listar_backlog","create_story"]` mantém `create_task`;
+  o Arquiteto com 2 de 9 mantém as cinco de artefato)
+- **Origem:** AT-445 (TP-01 de 09/10: o PO sem `create_task` respondeu "Não
+  tenho uma ferramenta para criar tarefas" e fechou com 8 histórias sem
+  tarefa; o Arquiteto com 2 de 9 fechou sem roteamento, contratos, ADR nem C4)
+
+### RN-759 — O passo recortado avisa ao modelo que o menu é um recorte {#rn-759}
+
+- **Regra:** quando o recorte do Jev é aplicado (`aplicado: true`), a chamada
+  ao provider DAQUELE passo leva, no fim, uma mensagem `system` EFÊMERA que
+  diz quantas e quais ferramentas o passo recebeu, que as demais seguem
+  disponíveis nas próximas voltas e que o agente não deve concluir que não tem
+  uma ferramenta nem encerrar o turno esperando por ela. Ela nunca entra no
+  histórico do agente nem no event log, e não existe sem recorte nem em queda.
+  É montada na api, e não na fachada do engine como a [RN-622](#rn-622),
+  porque só a api sabe o menu depois do Jev. Não aplicar o recorte na volta
+  que fecha o turno foi avaliado e não feito: a api não sabe antes da
+  resposta que a volta será a última.
+- **Onde:** `apps/api/src/domain/llm/tool-router.ts:337` (`avisoDeRecorte`) e
+  `apps/api/src/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.ts:263`
+  (`avisoDeRecorte`)
+- **Teste:** `apps/api/test/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.spec.ts`
+  (o aviso chega como última mensagem com recorte; sem recorte e em queda, as
+  mensagens são as do pedido)
+- **Origem:** AT-445 (o dev agent bloqueou uma tarefa "sem ferramenta para
+  editar arquivos" tendo `write_file`)
+### RN-766 — O gate parado esperando clique é dito, e a oferta em lote cobre os subagentes de QA {#rn-766}
+
+- **Regra:** no painel "precisa de você" ([RN-467](#rn-467)), a ação pendente
+  proposta por agente de GATE (área de QA — `qa`, `qa-*` — ou SecOps) ganha,
+  acima do MESMO `ApprovalCard`, a frase de que aquele gate está PARADO até a
+  decisão; é uma frase por card, nunca uma soma de filas. E a oferta em lote
+  do modo automático na aba Executores ([RN-661](#rn-661)) lista os agentes da
+  área de QA (`AREAS.qa`) desde a ativação, sem esperar que eles apareçam no
+  roster — antes o `qa-automacao` só entrava na oferta depois do primeiro
+  evento dele, quando a primeira ação já esperava clique. O `allow` padrão do
+  `permissions.json` NÃO muda (decisão do dono).
+- **Onde:** `apps/web/src/lib/precisa-de-voce.ts:256` (`gateEsperandoClique`)
+  e `apps/web/src/components/ModoAutomaticoDoTime.tsx:58`
+  (`agentesDaOfertaEmLote`)
+- **Teste:** `apps/web/src/lib/precisa-de-voce.test.ts` (gate de QA e SecOps
+  nomeados; dev agent e humano não) e
+  `apps/web/src/components/ModoAutomaticoDoTime.test.tsx` (a oferta cobre os
+  subagentes de QA antes do roster, sem repetir)
+- **Origem:** AT-449 (TP-01 de 09/10: o `qa-automacao` propôs
+  `ls; cat; for f in test/*.js…`, um segmento fora do `allow`, sem modo
+  automático, e ficou 25 min pendente com só o contador de Aprovações como
+  sinal)
+### RN-765 — O gate de QA julga a TAREFA, e RF de tarefa irmã é observação {#rn-765}
+
+- **Regra:** a QA-estratégia (plano de teste, [RN-674](#rn-674)) e a
+  QA-automação recebem, além da história, o RECORTE da tarefa: título e
+  descrição, as regras de negócio da história e as OUTRAS tarefas da mesma
+  história com o status (`siblingTasks` em `GET .../dev-context`). O veredito
+  é sobre o que é DESTA tarefa: requisito que pertence a uma tarefa irmã
+  (feita ou pendente) não reprova — vai ao `resumo` como observação, fora de
+  `itens`, e não impede `approved`. A régua é de PROMPT, não de código: o
+  `emit_qa_verdict` continua exigindo só a suite verde para aprovar.
+- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:18` (`texto`),
+  `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:59`
+  (`tarefasIrmas`) e `apps/engine/lib/engine/gates/qa_automacao_agent.ex:170`
+  (`com_o_recorte`)
+- **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs` e
+  `apps/api/test/application/use-cases/execution/get-dev-task-context.use-case.spec.ts`
+  (as irmãs sem a própria tarefa). O golden-set do QA (ADR 0168) NÃO ganhou
+  caso: ele roda o modelo de verdade, e provar o veredito sem chamada paga
+  não é possível — declarado.
+- **Origem:** AT-448 (TP-01 de 09/10: o gate de QA da tarefa "Modelar tabela
+  de usuários e hash bcrypt" reprovou três vezes por "RF01: login HTTP com
+  JWT não existe nesta entrega", que é de outra tarefa, e a tarefa bloqueou;
+  `artifact.qa_verdict` das tasks `42bea901` e `762833bd`)
+### RN-768 — Na aba PRs, o texto ao lado do Merge diz a verdade do botão {#rn-768}
+
+- **Regra:** gate pendente continua AVISO e não trava o merge
+  ([RN-663](#rn-663)). Tarefa BLOQUEADA (`task.blocked`) é outra coisa e
+  desabilita o botão; nesse caso a linha da PR NÃO mostra "o merge segue
+  disponível": diz, em texto, que o merge está indisponível porque a tarefa
+  está bloqueada (nomeando o gate pendente, se houver, ou o motivo do
+  bloqueio). Sem sessão no projeto, o mesmo: o motivo vai em texto, nunca só
+  no `title` do botão `disabled`, que não abre no Chromium. Se tarefa
+  bloqueada deve ou não travar o merge é pergunta do dono, não decidida aqui.
+- **Onde:** `apps/web/src/routes/ProjectPrsTab.tsx:248` (`avisoDaLinha`)
+- **Teste:** `apps/web/src/routes/ProjectPrsTab.test.tsx` ("AT-451: tarefa
+  bloqueada com gate pendente NÃO diz que o merge segue disponível")
+- **Origem:** AT-451 (TP-01 de 09/10: "O merge segue disponível — a decisão é
+  sua" ao lado de um "Merge" desabilitado)
+### RN-769 — Encerrar sessão com execução ativa pergunta antes, e o estado aparece traduzido {#rn-769}
+
+- **Regra:** "Encerrar" numa sessão com execução ativa (evento
+  `execution.activated` na janela, ou um `dev-<modulo>` entre os ativados da
+  sessão inteira — o Dev Lead não conta, ele planeja antes da execução) abre
+  uma confirmação que diz o que para: os agentes da sessão param na hora, o
+  comando em andamento é cortado, o turno em curso não é gravado, e sessão com
+  execução não reabre ([RN-650](#rn-650)). Sem execução, o clique encerra
+  direto, como antes. A frase de sessão encerrada no composer interpola o
+  estado TRADUZIDO (`pontoDaSessao(...).rotuloKey`), nunca o enum cru
+  (`closed`). E isso é guardado no CÓDIGO, não só no locale: a régua de
+  vocabulário lê os JSON, e o enum entrava pela interpolação em runtime;
+  `i18n-enum-cru.test.ts` reprova `t(…, { status: x.status })`.
+- **Onde:** `apps/web/src/routes/ConfirmarEncerramento.tsx:13`
+  (`useEncerrarComConfirmacao`) e `apps/web/src/routes/SessionComposer.tsx:431`
+  (`statusGenerico`)
+- **Teste:** `apps/web/src/routes/ConfirmarEncerramento.test.tsx` (sem
+  execução encerra direto; com execução só encerra ao confirmar; cancelar não
+  encerra) e `apps/web/src/lib/i18n-enum-cru.test.ts` (reprovava o
+  `SessionComposer.tsx` antes da correção)
+- **Origem:** AT-452 (TP-01 de 09/10: "Encerrar" fechou a sessão de execução
+  em 3 s com o dev agent no meio de um `npm install`, e a barra disse "Sessão
+  closed")
+
+### RN-770 — Miudezas da tela de projeto: autor da PR de ADR, modelo da Infra, título da PR do dev, selo da execução, caminho e tabela {#rn-770}
+
+- **Regra:** (1) a PR de ADR leva a identidade do agente (`<agente>[bot]`,
+  senão `arquiteto[bot]`), como a de infra ([RN-729](#rn-729)) — a aba PRs
+  deixa de dizer "autor desconhecido"; (2) a `agent.response` do Infra Lead
+  carrega o `modelName` do frame final, como os outros conversacionais — a
+  bolha deixa de dizer "modelo não registrado"; (3) o título da PR do dev
+  agent abre pela TAREFA e depois a história (`<tarefa> — <história>`), para
+  três PRs da mesma história não parecerem a mesma com o fim cortado; (4) com
+  execução ativa (o mesmo predicado da [RN-769](#rn-769)), a barra da sessão
+  diz "Execução" em vez do `kind` gravado (`criativa`, que não muda —
+  [RN-097](#rn-097)) e o composer não oferece o Criativo antes de ativado;
+  (5) na confirmação da criação, cada segmento do caminho é `nowrap`: a quebra
+  só acontece depois da barra, nunca no hífen; (6) a tabela Markdown no balão
+  tem piso de `12rem` POR COLUNA e cresce por fração, com o contêiner em
+  `min-content` — com `max-content` ela ficava da largura do texto sem quebra
+  (medido no Chromium: 2 236px num balão de 708px) e a última coluna sumia.
+- **Onde:** `apps/api/src/application/use-cases/actions/execute-adr-pr.use-case.ts:96`
+  (`openPullRequest`); `apps/engine/lib/engine/infra/infra_lead_server.ex:1482`
+  (`gravar_texto_do_turno`); `apps/engine/lib/engine/dev/dev_agent_server.ex:992`
+  (`propose_pr`); `apps/web/src/lib/session-destinatario.ts:192`
+  (`agentesEmConversa`) e `apps/web/src/lib/session-kind.ts:69`
+  (`tipoDaSessao`); `apps/web/src/routes/NewProjectWizard.tsx:1127`
+  (`quebraPorSegmento`); `apps/web/src/components/ui/MarkdownMessage.tsx:139`
+  (`TabelaMarkdown`)
+- **Teste:** `apps/api/test/application/use-cases/actions/execute-adr-pr.use-case.spec.ts`,
+  `apps/engine/test/engine/infra/infra_lead_server_test.exs` ("agent.response
+  carrega o nome do modelo"), `apps/engine/test/engine/dev/dev_agent_server_test.exs`
+  (fluxo feliz), `apps/web/src/lib/session-destinatario.test.ts`,
+  `apps/web/src/lib/session-kind.test.ts`, `apps/web/src/routes/NewProjectWizard.test.tsx`,
+  `apps/web/src/components/ui/MarkdownMessage.test.tsx`
+- **Origem:** AT-455 (TP-01 de 09/10, achados 2, 3, 8, 9, 16 e 18)
 ### RN-760 — A próxima task do dev agent parte da última branch dele ainda não mergeada {#rn-760}
 
 - **Regra:** generaliza a [RN-743](#rn-743). Ao terminar uma task — aprovada

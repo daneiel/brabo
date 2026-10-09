@@ -242,11 +242,29 @@ export function ProjectPrsTab({ projectId }: { projectId: string }) {
           }
 
           const bloqueado = task?.blocked === true;
+          // AT-451: o texto diz a verdade do BOTÃO. Gate pendente é aviso
+          // (RN-663), mas tarefa BLOQUEADA desabilita o merge — e o motivo
+          // vai em texto, porque `title` em botão `disabled` não abre.
+          const avisoDaLinha = bloqueado ? (
+            <p className={styles.avisoDeGate} data-testid="aviso-merge-indisponivel">
+              {gatePendente
+                ? t('prsTab.gatePendenteBloqueada', { gate: gatePendente })
+                : t('prsTab.mergeIndisponivelBloqueada', {
+                    reason: task?.blockedReason ?? t('prsTab.mergeBlockedFallback'),
+                  })}
+            </p>
+          ) : !latestSession ? (
+            <p className={styles.avisoDeGate} data-testid="aviso-merge-indisponivel">
+              {t('prsTab.mergeIndisponivelSemSessao')}
+            </p>
+          ) : (
+            aviso
+          );
 
           return (
             <div className={styles.extraLinha}>
               {task && <PrGateTimeline task={task} verdicts={[]} />}
-              {aviso}
+              {avisoDaLinha}
               {avisoDeRecusa}
               <Button
                 variant="primary"

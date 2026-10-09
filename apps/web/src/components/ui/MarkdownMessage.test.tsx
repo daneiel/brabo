@@ -125,6 +125,14 @@ describe('MarkdownMessage', () => {
     expect(container.querySelector('table')).toBeNull();
   });
 
+  it('AT-455: cada coluna tem piso de largura e cresce por fração, nunca pela célula sem quebra', () => {
+    const { container } = renderComI18n(
+      <MarkdownMessage text={'| História | Tarefas |\n| --- | --- |\n| Login | Modelar; Rota |'} />,
+    );
+    const linha = container.querySelector<HTMLElement>('[style*="grid-template-columns"]');
+    expect(linha?.style.gridTemplateColumns).toBe('minmax(12rem, 1fr) minmax(12rem, 1fr)');
+  });
+
   it('formatação dentro da célula sobrevive (código, negrito)', () => {
     renderComI18n(<MarkdownMessage text={'| Módulo | Depende |\n| --- | --- |\n| `api` | **web** |'} />);
     expect(screen.getByText('api').tagName).toBe('CODE');

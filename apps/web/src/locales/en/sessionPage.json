@@ -262,5 +262,13 @@
     "semPapel": "Resuming the gate requires the developer role on the project.",
     "retomado": "Gate resumed — progress shows up in this thread.",
     "erroTitulo": "Could not resume the gate"
+  },
+  "encerrar": {
+    "titulo": "End the execution session?",
+    "oQuePara": "Ending stops the agents of this session right away: a command in progress (an npm install, a test run) is cut off, and the turn in progress is not saved.",
+    "agentes": "Working here: {{agentes}}.",
+    "semReabrir": "A session with execution cannot be reopened afterwards.",
+    "cancelar": "Keep running",
+    "confirmar": "End session"
   }
 }
