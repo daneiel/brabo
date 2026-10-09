@@ -10,7 +10,7 @@ defmodule Engine.Agents.GravadoNoTurnoTest do
   test "seis regras gravadas: o fecho do modelo fica intacto e ganha o fato ao lado (pt-BR)" do
     for _ <- 1..6, do: GravadoNoTurno.anotar("emit_artifact", regra(), {:ok, "ok"})
     GravadoNoTurno.anotar("emit_artifact", %{"type" => "decision_record"}, {:ok, "ok"})
-    # recusada não conta
+    # recusada não conta como gravada; é dita à parte (RN-746)
     GravadoNoTurno.anotar("emit_artifact", regra(), {:error, "schema"})
     # leitura não conta
     GravadoNoTurno.anotar("listar_regras_de_negocio", %{}, {:ok, "..."})
@@ -23,7 +23,9 @@ defmodule Engine.Agents.GravadoNoTurnoTest do
       end)
 
     assert payload.content ==
-             fecho <> "\n\nGravado neste turno: 6 regras de negócio, 1 decisão."
+             fecho <>
+               "\n\nGravado neste turno: 6 regras de negócio, 1 decisão; " <>
+               "1 chamada de escrita recusada."
 
     # a contagem é do turno: o próximo começa zerado
     assert GravadoNoTurno.descarregar() == nil
@@ -62,5 +64,39 @@ defmodule Engine.Agents.GravadoNoTurnoTest do
 
     assert GravadoNoTurno.descarregar("pt-BR") ==
              "Gravado neste turno: 1 história, 1 história corrigida, 1 história arquivada."
+  end
+
+  test "RN-746: Arquiteto com as cinco propose_adr recusadas fecha com nada gravado" do
+    for _ <- 1..5,
+        do: GravadoNoTurno.anotar("propose_adr", %{}, {:error, "cortada"})
+
+    fecho = "✅ ADRs Propostas (5 decisões críticas)"
+
+    payload =
+      IdiomaDaResposta.com_idioma_do_autor("pt-BR", fn ->
+        TextoDoTurno.payload_do_turno(fecho, "m")
+      end)
+
+    assert payload.content ==
+             fecho <> "\n\nGravado neste turno: nada; 5 chamadas de escrita recusadas."
+  end
+
+  test "RN-746: escritas do Arquiteto contadas, leitura e ferramenta desconhecida não" do
+    GravadoNoTurno.anotar("propose_adr", %{}, {:ok, "id"})
+    GravadoNoTurno.anotar("propose_adr", %{}, {:ok, "id"})
+    GravadoNoTurno.anotar("create_c4_diagram", %{}, {:ok, "id"})
+    GravadoNoTurno.anotar("declare_module_contracts", %{}, {:ok, "id"})
+    GravadoNoTurno.anotar("choose_project_image", %{}, {:ok, "id"})
+    GravadoNoTurno.anotar("route_modules_to_infra", %{}, {:ok, "id"})
+    GravadoNoTurno.anotar("ler_algo", %{}, {:error, "x"})
+
+    assert GravadoNoTurno.descarregar("pt-BR") ==
+             "Gravado neste turno: 2 ADRs propostos, 1 imagem decidida, 1 diagrama C4, " <>
+               "1 roteamento para a infra, 1 contrato de módulos."
+
+    GravadoNoTurno.anotar("propose_adr", %{}, {:error, "x"})
+
+    assert GravadoNoTurno.descarregar("en") ==
+             "Recorded this turn: nothing; 1 write call refused."
   end
 end

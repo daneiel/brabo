@@ -21,7 +21,7 @@ defmodule Engine.Gates.QaAutomacaoAgent do
   só roda o `ToolLoop` e DEVOLVE o resultado; nunca chama `EngineApiClient`.
   """
 
-  alias Engine.Gates.{Hooks.Termination, QaTools}
+  alias Engine.Gates.{Hooks.Termination, QaTools, RecorteDaTarefa}
   alias Engine.Harness.{Hooks, ToolLoop}
   alias Engine.Harness.Hooks.{ActionPipeline, EventLog}
 
@@ -98,6 +98,7 @@ defmodule Engine.Gates.QaAutomacaoAgent do
       messages: [
         task
         |> initial_message(story)
+        |> com_o_recorte(dev_context)
         |> com_o_plano(Map.get(dev_context, :plano_de_teste))
       ],
       context_window: 128_000
@@ -146,6 +147,9 @@ defmodule Engine.Gates.QaAutomacaoAgent do
       Veredito: `approved` só se a suite saiu com exit 0 E toda regra tem pelo
       menos um teste. Se alguma regra ficou sem teste, use
       `changes_requested` e liste em `itens` exatamente quais regras faltam.
+      Regra que é de OUTRA tarefa da história (ver o recorte abaixo) não
+      reprova: marque-a na matriz com `covered: false` e cite-a no `resumo`
+      como observação — ela não entra em `itens` nem impede `approved`.
 
       Responda SEMPRE chamando uma das ferramentas acima. Nunca chame as
       funções do código que está revisando — elas não são ferramentas.
@@ -161,6 +165,11 @@ defmodule Engine.Gates.QaAutomacaoAgent do
   # do plano obrigatórios mudaria o que o gate `qa-verificada` reprova, e isso
   # não foi decidido. Sem plano (a QA-estratégia falhou e já narrou a origem),
   # a mensagem é a de sempre, byte a byte.
+  # AT-448 (RN-765): o recorte da tarefa — sem ele o QA julgava a história
+  # inteira e reprovava por RF de tarefa irmã.
+  defp com_o_recorte(mensagem, dev_context),
+    do: Map.update!(mensagem, "content", &(&1 <> RecorteDaTarefa.texto(dev_context)))
+
   defp com_o_plano(mensagem, nil), do: mensagem
 
   defp com_o_plano(mensagem, plano),

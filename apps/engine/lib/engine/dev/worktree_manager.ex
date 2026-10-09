@@ -48,6 +48,89 @@ defmodule Engine.Dev.WorktreeManager do
     criar(project_id, agent_id, task_slug, "feature/#{task_slug}")
   end
 
+  @doc """
+  Como `create/3`, mas a branch nasce de `base` (RN-743): a branch de uma task
+  BLOQUEADA do mesmo agente, onde `preservar/4` deixou o trabalho em commit.
+  """
+  def create_from(project_id, agent_id, task_slug, base) do
+    criar(project_id, agent_id, task_slug, base)
+  end
+
+  @doc """
+  RN-743 (AT-429). Commita o que o agente deixou no worktree antes de a task
+  ser bloqueada, na branch da própria task e com a identidade
+  `<agente>[bot]`. Sem isso o próximo `create/3` removia o worktree com
+  `--force` e o trabalho não commitado sumia. Devolve `{:ok, sha}`, `:nada`
+  (worktree limpo) ou `{:error, motivo}`. No modo `runner` o worktree mora na
+  máquina do usuário e o engine não roda git ali: `:nada`, declarado.
+  """
+  def preservar(project_id, path, agent_id, task_id) do
+    if runner?(project_id), do: :nada, else: preservar_em(path, agent_id, task_id)
+  end
+
+  @doc false
+  def preservar_em(path, agent_id, task_id) do
+    identidade = "#{agent_id}[bot]"
+
+    with true <- is_binary(path) and File.dir?(path),
+         {:ok, status} <- git(path, ["status", "--porcelain"]),
+         false <- String.trim(status) == "",
+         {:ok, _} <- git(path, Engine.Actions.DiretoriosDeDependencia.argumentos_do_add()),
+         {:ok, _} <-
+           git(path, [
+             "-c",
+             "user.name=#{identidade}",
+             "-c",
+             "user.email=#{agent_id}@bot.brabo.local",
+             "commit",
+             "--no-verify",
+             "-m",
+             "wip(#{agent_id}): trabalho preservado ao bloquear a task #{task_id}"
+           ]),
+         {:ok, sha} <- git(path, ["rev-parse", "HEAD"]) do
+      {:ok, String.trim(sha)}
+    else
+      true -> :nada
+      false -> :nada
+      {:error, _} = erro -> erro
+    end
+  end
+
+  @teto_do_retrato 80
+
+  @doc """
+  RN-744 (AT-444). O retrato CONTIDO do worktree que o kickoff do dev entrega:
+  a branch e os arquivos que já existem (rastreados + não rastreados não
+  ignorados), com teto de #{@teto_do_retrato} linhas e o total real quando
+  corta (ADR 0060). Sem parâmetro do modelo: quem chama é o servidor. Pasta
+  que o engine não alcança (modo `runner`) devolve o texto que diz isso.
+  """
+  def retrato(path, branch) do
+    with true <- is_binary(path) and File.dir?(path),
+         {:ok, out} <-
+           git(path, ["ls-files", "--cached", "--others", "--exclude-standard"]) do
+      arquivos = out |> String.split("\n", trim: true) |> Enum.uniq()
+      total = length(arquivos)
+
+      corpo =
+        case total do
+          0 -> "(nenhum arquivo ainda — o worktree está vazio)"
+          _ -> arquivos |> Enum.take(@teto_do_retrato) |> Enum.join("\n")
+        end
+
+      corte =
+        if total > @teto_do_retrato,
+          do: "\n(… mostrando #{@teto_do_retrato} de #{total} arquivos)",
+          else: ""
+
+      "Estado do seu worktree — branch `#{branch}`, #{total} arquivo(s):\n" <> corpo <> corte
+    else
+      _ ->
+        "Estado do seu worktree — branch `#{branch}`: indisponível para leitura " <>
+          "pelo engine; liste com `terminal` (`ls`, `git status`)."
+    end
+  end
+
   defp criar(project_id, agent_id, task_slug, base) do
     with {:ok, remoto} <- ProjectRepository.remoto_de_trabalho(project_id),
          {:ok, work_dir} <- Workspace.ensure_remoto(project_id, remoto) do
@@ -90,6 +173,8 @@ defmodule Engine.Dev.WorktreeManager do
   com a branch local vazia): ali a base É o HEAD, e o caminho é o de sempre.
   """
   def add_worktree(work_dir, agent_id, task_slug, base) do
+    base = ja_mergeada_volta_ao_trabalho(work_dir, base)
+
     case garantir_base(work_dir, base) do
       {:ok, ponto_de_partida} -> criar_worktree(work_dir, agent_id, task_slug, ponto_de_partida)
       {:error, _} = erro -> erro
@@ -116,6 +201,20 @@ defmodule Engine.Dev.WorktreeManager do
            "nem #{base} nem origin/#{base} no working tree"
          )}
     end
+  end
+
+  # RN-760 (AT-447): a próxima task parte da branch da anterior enquanto ela
+  # NÃO foi mergeada; mergeada (ancestral da `dev` local), parte da `dev`, que
+  # já a contém e pode ter andado. Merge por squash num remoto não é ancestral
+  # e segue partindo da branch anterior — declarado.
+  defp ja_mergeada_volta_ao_trabalho(work_dir, base) do
+    trabalho = ProjectRepository.branch_de_trabalho()
+
+    if base != trabalho and ref?(work_dir, "refs/heads/#{base}") and
+         ref?(work_dir, "refs/heads/#{trabalho}") and
+         match?({:ok, _}, git(work_dir, ["merge-base", "--is-ancestor", base, trabalho])),
+       do: trabalho,
+       else: base
   end
 
   defp ref?(work_dir, ref),

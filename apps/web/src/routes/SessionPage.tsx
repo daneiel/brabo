@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, type KeyboardEvent } from 'react';
+import { useCallback, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
@@ -44,7 +44,7 @@ import { AGENTS } from '../lib/agents';
 import { useToast } from '../components/ui/ToastProvider';
 import { TurnActivityStripDoStore } from '../components/TurnActivityStrip';
 import { hashtagDaSessao, rotuloDaSessao } from '../lib/session-label';
-import { TIPOS_DE_SESSAO } from '../lib/session-kind';
+import { tipoDaSessao } from '../lib/session-kind';
 import styles from './SessionPage.module.css';
 import { conversaComecou as conversaJaComecou } from '../lib/conversa-comecou';
 import {
@@ -56,6 +56,8 @@ import {
 } from '../lib/session-timeline';
 import { ehRecusaDeSessaoEncerrada } from '../lib/sessao-encerrada';
 import { ContextAside } from './ContextAside';
+import { useEncerrarComConfirmacao } from './ConfirmarEncerramento';
+import { sessaoTemExecucao } from '../lib/sessao-de-execucao';
 import { useSessionReadiness } from '../lib/session-readiness';
 import { agruparNarracoesDoTurno, agruparTimelinePorAgente, dividirFio } from './session-fio';
 import { montarTimeline } from './session-timeline-montagem';
@@ -298,7 +300,7 @@ export function SessionPage({
   // A rolagem do fio (achado 10, Fase 4b, RN-173) mora em
   // `../lib/session-rolagem` desde o PR 7 do ADR 0176 — os mesmos refs e
   // efeitos, chamados neste mesmo ponto.
-  const { messagesEndRef, scrollContainerRef, messagesInnerRef } = useRolagemDoFio({
+  const { messagesEndRef, scrollContainerRef, messagesInnerRef, aoRolarOFio } = useRolagemDoFio({
     highlightEvent,
     logOpen,
     events,
@@ -446,6 +448,16 @@ export function SessionPage({
     queryClient.invalidateQueries({ queryKey: ['session-actions', projectId, sessionId] });
   }, [queryClient, projectId, sessionId]);
 
+  // RN-749: estável por ref — a montagem é memoizada e não pode depender de
+  // uma função recriada a cada render.
+  const enviarMensagemRef = useRef<(texto: string, agente: string | null) => Promise<void>>(
+    async () => {},
+  );
+  const continuarRespostaCortada = useCallback(
+    (agente: string) => void enviarMensagemRef.current(t('mensagens.continuarCortadaTexto'), agente),
+    [t],
+  );
+
   // A montagem mora em `./session-timeline-montagem` desde o PR 2 do ADR
   // 0176. A lista de dependências abaixo é a MESMA de antes, byte a byte.
   const timeline = useMemo<TimelineEntry[]>(
@@ -478,6 +490,7 @@ export function SessionPage({
         iniciarTurnoDoAgente,
         acompanharTurnoPeloLog,
         finalizarTurnoDoAgente,
+        continuarRespostaCortada,
       }),
     [
       events,
@@ -497,6 +510,7 @@ export function SessionPage({
       iniciarTurnoDoAgente,
       finalizarTurnoDoAgente,
       acompanharTurnoPeloLog,
+      continuarRespostaCortada,
       backlogQuery.data,
     ],
   );
@@ -550,6 +564,8 @@ export function SessionPage({
     queryClient.invalidateQueries({ queryKey: ['session', projectId, sessionId] });
     queryClient.invalidateQueries({ queryKey: ['sessions', projectId] });
   }
+
+  const { pedirEncerramento, modalDeEncerrar } = useEncerrarComConfirmacao(handleClose, events, ativadosNaSessaoInteira);
 
   async function handleRename() {
     if (rascunhoDoNome === null) return;
@@ -649,12 +665,20 @@ export function SessionPage({
   }
 
   async function handleSend() {
-    const text = draft.trim();
+    await enviarMensagem(draft.trim(), null);
+  }
+
+  // RN-749 (AT-434): o MESMO envio do composer, com texto e agente dados por
+  // quem chama ("Continuar de onde parou" na bolha cortada) — sem tocar no
+  // rascunho que a pessoa está escrevendo.
+  async function enviarMensagem(text: string, agenteForcado: string | null) {
     if (!text || session?.status !== 'active') return;
     // RN-673: com turno em curso a mensagem a um agente ENTRA NA FILA dele —
     // sem armar um turno novo na tela (o em curso segue sendo o acompanhado).
     if (streaming) {
-      if (destinatario && !precisaEscolherDestinatario) await enfileirar(text, destinatario);
+      const alvo =
+        agenteForcado ?? (destinatario && !precisaEscolherDestinatario ? destinatario : null);
+      if (alvo) await enfileirar(text, alvo);
       return;
     }
     // RN-631: duas ou mais opções e nenhuma escolhida — não há a quem mandar.
@@ -662,9 +686,10 @@ export function SessionPage({
     // PEDE um agente, e a mensagem nunca mais vai ao modelo cru (o SSE de
     // `POST .../chat`, sem histórico nem prompt de sistema). O botão já está
     // travado nos dois casos; isto cobre o Enter.
-    if (!destinatario) return;
+    const destino = agenteForcado ?? destinatario;
+    if (!destino) return;
 
-    setDraft('');
+    if (!agenteForcado) setDraft('');
     setIdDaOtimista(null);
     setOptimisticUser(text);
     setStreaming(true);
@@ -685,7 +710,7 @@ export function SessionPage({
     // agente entrou (o Criativo é a opção única, vinda só do `kind`) —, e não
     // só `!criativoActive`, que lê a janela: numa sessão longa a ativação dele
     // sai dos 200 eventos e a mensagem o reativaria com outros já em cena.
-    const agentParaEnviar = destinatario;
+    const agentParaEnviar = destino;
     if (
       agentParaEnviar === DESTINATARIO_DA_SESSAO_CRIATIVA &&
       !criativoActive &&
@@ -731,7 +756,7 @@ export function SessionPage({
       // AT-154: a sessão fechou por baixo — devolve o texto, que já saiu do
       // campo, e diz por quê em vez do erro genérico.
       if (avisarSessaoEncerrada(erro)) {
-        setDraft((atual) => atual || text);
+        if (!agenteForcado) setDraft((atual) => atual || text);
         return;
       }
       // 409 com o agente ainda no meio de um turno traz a frase do engine
@@ -777,6 +802,8 @@ export function SessionPage({
     finalizarTurnoDoAgente();
   }
 
+  enviarMensagemRef.current = enviarMensagem;
+
   function handleComposerKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -788,7 +815,7 @@ export function SessionPage({
   // quando a sessão não tem nome (RN-098). A hashtag nunca sai.
   const rotulo = rotuloDaSessao(sessionId, session?.name);
   const hashtag = hashtagDaSessao(sessionId);
-  const tipo = session ? TIPOS_DE_SESSAO[session.kind] : undefined;
+  const tipo = session ? tipoDaSessao(session.kind, sessaoTemExecucao(events, ativadosNaSessaoInteira)) : undefined;
   // Enquanto a sessão não carregou, NÃO é consultiva: é desconhecida. Tratar a
   // ausência como "consultiva" faria o botão de ideação piscar fora e dentro.
   const sessaoCriativa = session?.kind === 'criativa';
@@ -842,14 +869,14 @@ export function SessionPage({
         conviteVisivel={conviteVisivel}
         ideacaoComecou={handoffs.length > 0 || events.some((e) => e.actor.kind === 'agent')}
         handleStartIdeation={handleStartIdeation}
-        handleClose={handleClose}
+        handleClose={pedirEncerramento}
         asideOpen={asideOpen}
         setAsideOpen={setAsideOpen}
       />
 
       <div className={styles.body}>
         <div className={styles.chatColumn}>
-          <div className={styles.messages} ref={scrollContainerRef}>
+          <div className={styles.messages} ref={scrollContainerRef} onScroll={aoRolarOFio}>
             <div className={styles.messagesInner} ref={messagesInnerRef}>
               <SessionFio
                 conviteVisivel={conviteVisivel}
@@ -965,6 +992,7 @@ export function SessionPage({
         enviandoRecusa={enviandoRecusa}
         handleReturnStory={handleReturnStory}
       />
+      {modalDeEncerrar}
     </div>
   );
 }

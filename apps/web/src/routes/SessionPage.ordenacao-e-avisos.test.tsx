@@ -773,6 +773,8 @@ describe('RN-173 — o fio acompanha o que cresce', () => {
     Object.defineProperty(rolavel, 'scrollHeight', { value: 5000, configurable: true });
     Object.defineProperty(rolavel, 'clientHeight', { value: 500, configurable: true });
     Object.defineProperty(rolavel, 'scrollTop', { value: 0, configurable: true });
+    // AT-442: a intenção é medida no GESTO de rolar, antes de a altura mudar.
+    fireEvent.scroll(rolavel);
 
     rolou.mockClear();
     acoes.mockReturnValue([acao({ id: 'acao-1', seq: 999_999 })]);

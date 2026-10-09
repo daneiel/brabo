@@ -15,9 +15,14 @@ defmodule Engine.Harness.RespostaCortada do
   e grava o fecho —, então o estado vale para a ÚLTIMA resposta e a próxima
   chamada o substitui. Dois consumidores:
 
-    * `Engine.Harness.ArgumentosDeFerramenta.executar/4` NÃO executa ferramenta
-      vinda de resposta cortada: devolve ao laço um erro nomeado (RN-163) para
-      o modelo reenviar em partes menores;
+    * `Engine.Harness.ArgumentosDeFerramenta.executar/4` NÃO executa a chamada
+      INCOMPLETA da resposta cortada: devolve ao laço um erro nomeado (RN-163)
+      para o modelo reenviar em partes menores. Desde a RN-745 (AT-430) só a
+      ÚLTIMA chamada da resposta é a incompleta — medido: o stream
+      OpenAI-compatível monta as chamadas em ordem, o corte cai na última, e
+      `parseArgumentos` da api devolve `{}` para o JSON partido; as anteriores
+      chegam com o JSON inteiro e EXECUTAM. Resposta cortada sem chamada
+      conhecida segue recusando tudo (a régua da RN-737);
     * `Engine.Agents.TextoDoTurno.payload_do_turno/2` acrescenta ao fecho, sem
       reescrevê-lo, a linha `linha/1` no idioma do turno (molde da RN-731).
   """
@@ -27,16 +32,17 @@ defmodule Engine.Harness.RespostaCortada do
   @chave {__MODULE__, :cortada}
 
   @recusa "a resposta foi cortada pelo limite de tokens, e os argumentos desta " <>
-            "chamada chegaram incompletos; a ferramenta NÃO foi executada. Reenvie " <>
-            "o argumento em partes menores."
+            "chamada (a última da resposta) chegaram incompletos; a ferramenta NÃO " <>
+            "foi executada. As chamadas anteriores da mesma resposta, completas, " <>
+            "foram executadas normalmente. Reenvie esta em partes menores, uma por chamada."
 
   @doc """
   Anota se a resposta da chamada de LLM veio cortada e devolve o resultado
   intacto. Qualquer outro desfecho limpa a anotação.
   """
   @spec registrar(term(), String.t() | nil) :: term()
-  def registrar({:ok, %{"truncated" => true}} = resultado, project_id) do
-    Process.put(@chave, {:cortada, project_id})
+  def registrar({:ok, %{"truncated" => true} = resp} = resultado, project_id) do
+    Process.put(@chave, {:cortada, project_id, ultima_chamada(resp)})
     resultado
   end
 
@@ -47,7 +53,30 @@ defmodule Engine.Harness.RespostaCortada do
 
   @doc "A última resposta de LLM deste processo veio cortada pelo teto?"
   @spec cortada?() :: boolean()
-  def cortada?, do: match?({:cortada, _}, Process.get(@chave))
+  def cortada?, do: match?({:cortada, _, _}, Process.get(@chave))
+
+  @doc """
+  Esta chamada (`name`, `args`) é a incompleta da resposta cortada? É a
+  ÚLTIMA chamada da resposta (RN-745); sem chamada conhecida, toda chamada é
+  tratada como incompleta (RN-737).
+  """
+  @spec incompleta?(String.t() | nil, term()) :: boolean()
+  def incompleta?(name, args) do
+    case Process.get(@chave) do
+      {:cortada, _, {n, a}} -> n == name and a == args
+      {:cortada, _, nil} -> true
+      _ -> false
+    end
+  end
+
+  defp ultima_chamada(resp) do
+    chamadas = get_in(resp, ["message", "toolCalls"]) || []
+
+    case List.last(chamadas) do
+      %{} = c -> {Map.get(c, "name"), Map.get(c, "arguments", %{})}
+      _ -> nil
+    end
+  end
 
   @doc "O erro que volta ao laço no lugar da ferramenta de resposta cortada."
   @spec recusa(String.t() | nil) :: String.t()
@@ -60,7 +89,7 @@ defmodule Engine.Harness.RespostaCortada do
   @spec descarregar(String.t() | nil) :: String.t() | nil
   def descarregar(idioma \\ nil) do
     case Process.delete(@chave) do
-      {:cortada, project_id} -> linha(idioma || IdiomaDaResposta.idioma_do_turno(project_id))
+      {:cortada, project_id, _} -> linha(idioma || IdiomaDaResposta.idioma_do_turno(project_id))
       _ -> nil
     end
   end

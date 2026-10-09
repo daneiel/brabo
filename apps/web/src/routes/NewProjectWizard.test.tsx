@@ -296,6 +296,40 @@ describe('NewProjectWizard — onde o código vai morar', () => {
     expect(screen.getByText(/muda em Configurações/)).toBeTruthy();
   });
 
+  // AT-441: o caminho sugerido é derivado do nome, então o nome vem antes.
+  it('o nome do projeto vem antes do caminho da pasta, e nenhum ganha foco', async () => {
+    await ateWorkspaceComBase();
+    fireEvent.click(screen.getByText('Pasta montada'));
+
+    const nome = screen.getByLabelText('Nome do projeto');
+    const caminho = screen.getByLabelText('Caminho da pasta');
+    expect(
+      nome.compareDocumentPosition(caminho) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(document.activeElement).not.toBe(caminho);
+    expect(document.activeElement).not.toBe(nome);
+  });
+
+  it('o Confirmar nomeia o modo e quebra o caminho só depois de cada barra', async () => {
+    await ateWorkspaceComBase();
+    fireEvent.click(screen.getByText('Pasta montada'));
+    fireEvent.change(screen.getByLabelText('Caminho da pasta'), {
+      target: { value: '/home/voce/projetos/loja' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+
+    expect(screen.getByText('Modo da pasta')).toBeTruthy();
+    const valorDoModo = screen.getByText('Modo da pasta').nextElementSibling;
+    expect(valorDoModo?.textContent).toBe('Pasta montada');
+    const valorDoCaminho = screen.getByText('Código em').nextElementSibling;
+    expect(valorDoCaminho?.textContent).toBe('/home/voce/projetos/loja');
+    expect(valorDoCaminho?.querySelectorAll('wbr')).toHaveLength(4);
+    // AT-455: cada segmento é inteiro (nowrap) — não quebra no hífen.
+    const segmentos = valorDoCaminho?.querySelectorAll('span');
+    expect(segmentos?.[segmentos.length - 1]?.textContent).toBe('loja');
+    expect(segmentos?.[segmentos.length - 1]?.className).toMatch(/segmentoDeCaminho/);
+  });
+
   it('Pasta montada manda o caminho digitado, e só ele', async () => {
     createProject.mockResolvedValue({ id: 'proj-1' });
     await ateWorkspaceComBase();

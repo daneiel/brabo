@@ -157,7 +157,7 @@ config :engine,
   project_workspaces_root:
     System.get_env("PROJECT_WORKSPACES_ROOT", "/tmp/brabo-project-workspaces"),
   terminal_action_timeout_ms:
-    String.to_integer(System.get_env("TERMINAL_ACTION_TIMEOUT_MS", "15000")),
+    String.to_integer(System.get_env("TERMINAL_ACTION_TIMEOUT_MS", "120000")),
   # Teto de BYTES da saída de um comando (achado S). A saída fica no histórico
   # do laço e viaja em todo turno seguinte; sem teto, um `find` numa árvore
   # grande derruba a execução inteira com 413 — a api do Brabo (não o

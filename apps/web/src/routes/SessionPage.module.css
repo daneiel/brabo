@@ -441,6 +441,14 @@
   max-width: 780px;
   margin: 0 auto;
   width: 100%;
+  /* AT-442: durante o turno entram "Pôr na fila" e "Parar"; os botões
+     descem de linha em vez de espremer o campo. */
+  flex-wrap: wrap;
+}
+
+.composer > button {
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 /* O destinatário da mensagem (RN-631) — a primeira linha do composer, com a
@@ -544,7 +552,8 @@
 }
 
 .textarea {
-  flex: 1;
+  flex: 1 1 320px;
+  min-width: min(100%, 240px);
   min-height: 42px;
   max-height: 160px;
   resize: vertical;

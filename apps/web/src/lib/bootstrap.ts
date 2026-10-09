@@ -17,6 +17,7 @@ export interface BootstrapStepDef {
 export const BOOTSTRAP_STEPS: readonly BootstrapStepDef[] = [
   { name: 'commit_pr_template', labelKey: 'bootstrapSteps.stepLabel.commitPrTemplate' },
   { name: 'commit_branching_policy', labelKey: 'bootstrapSteps.stepLabel.commitBranchingPolicy' },
+  { name: 'commit_gitignore', labelKey: 'bootstrapSteps.stepLabel.commitGitignore' },
   { name: 'create_dev_branch', labelKey: 'bootstrapSteps.stepLabel.createDevBranch' },
   { name: 'create_qa_branch', labelKey: 'bootstrapSteps.stepLabel.createQaBranch' },
   // `create_rc_branch` saiu com o degrau `rc` (ADR 0030, achado #3). O nome

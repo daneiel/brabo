@@ -449,18 +449,21 @@ defmodule Engine.Infra.InfraLeadServer do
         emit_falha(state, {:final, erro, Map.get(frame, "errorCode")})
         {:done, state}
 
-      {:ok, %{"message" => message}} ->
+      {:ok, %{"message" => message} = frame} ->
         content = Map.get(message, "content", "")
+        # AT-455: o modelo que gerou o turno vai no payload, como nos outros
+        # conversacionais — sem ele a bolha da Infra dizia "modelo não registrado".
+        model_name = Map.get(frame, "modelName")
         state = append(state, Engine.Agents.MensagemDoAssistente.de(content, message))
 
         case tool_calls(message, state.tool_specs) do
           [] ->
-            gravar_texto_do_turno(state, content)
+            gravar_texto_do_turno(state, content, model_name)
             {:done, state}
 
           calls ->
             # RN-698: o texto desta volta continua na próxima.
-            TextoDoTurno.acumular(content)
+            TextoDoTurno.acumular(content, model_name)
             dispatch_calls(calls, state, remaining)
         end
 
@@ -1476,10 +1479,10 @@ defmodule Engine.Infra.InfraLeadServer do
     do: emit(state, "agent.response", %{content: content})
 
   # RN-698: o texto do turno inteiro, numa `agent.response` só.
-  defp gravar_texto_do_turno(state, ultimo) do
-    case TextoDoTurno.payload_do_turno(ultimo, nil) do
+  defp gravar_texto_do_turno(state, ultimo, model_name \\ nil) do
+    case TextoDoTurno.payload_do_turno(ultimo, model_name) do
       nil -> :ok
-      payload -> emit(state, "agent.response", Map.delete(payload, :modelName))
+      payload -> emit(state, "agent.response", payload)
     end
   end
 

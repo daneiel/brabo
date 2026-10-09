@@ -463,7 +463,11 @@ defmodule Engine.Dev.DevAgentServer do
     # dono vivo e invisível pro claim (que só pega `todo`).
     state = %{state | task_id: task_id}
 
-    case AgentIo.worktree_manager().create(state.project_id, state.agent_id, slug) do
+    # RN-743/RN-760: a task anterior deste agente deixou branch não mergeada
+    # — esta nasce dela, não de `dev`.
+    {criado, state} = AgentIo.criar_worktree(state, slug)
+
+    case criado do
       {:ok, %{path: path, branch: branch}} ->
         state = %{state | worktree: path, branch: branch}
         AgentIo.persist(state)
@@ -524,7 +528,7 @@ defmodule Engine.Dev.DevAgentServer do
       token_budget_micros: state.task_budget_micros,
       business_rules_units: business_rules_units,
       task_state_units: task_state_units,
-      messages: [initial_message(task, story)],
+      messages: [initial_message(task, story), retrato_do_worktree(state)],
       # Janela grande o bastante pra uma task inteira (vários terminals/reads)
       # não disparar compactação no meio do trabalho — o ContextManager ainda
       # roda: só não some com histórico recente por um cálculo de janela
@@ -565,6 +569,16 @@ defmodule Engine.Dev.DevAgentServer do
     |> Hooks.register(:pre_tool_use, ActionPipeline)
     |> Hooks.register(:post_tool_use, EventLog)
     |> Hooks.register(:post_tool_use, Termination)
+  end
+
+  # RN-744: o agente começa sabendo a branch e o que já existe no worktree,
+  # em vez de descobrir por tentativa (e criar de novo o que já estava lá).
+  defp retrato_do_worktree(state) do
+    %{
+      "role" => "user",
+      "content" => Engine.Dev.WorktreeManager.retrato(state.worktree, state.branch),
+      :pinned => true
+    }
   end
 
   defp initial_message(task, story) do
@@ -977,7 +991,9 @@ defmodule Engine.Dev.DevAgentServer do
   defp propose_pr(state, task, story) do
     AgentIo.propose_pr(
       state,
-      "#{story["title"]} — #{task["title"]}",
+      # AT-455: a TAREFA vem primeiro. Com a história na frente, a lista de
+      # PRs cortava o fim e três PRs da mesma história pareciam a mesma.
+      "#{task["title"]} — #{story["title"]}",
       pr_body(task, story)
     )
   end

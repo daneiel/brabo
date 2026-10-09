@@ -228,6 +228,26 @@ describe('connectSessionHeartbeat (RN-108)', () => {
 
     disconnect();
   });
+
+  it('onAgentStatus repassa `awaiting_approval` (RN-748) e ignora status desconhecido', async () => {
+    createSocketTicketMock.mockResolvedValue({
+      ticket: 'ticket-1',
+      expiresAt: new Date().toISOString(),
+    });
+    const onAgentStatus = vi.fn();
+    const disconnect = connectSessionHeartbeat('proj-1', 'sess-1', { onAgentStatus });
+    await flush();
+
+    const chamada = fakeChannel.on.mock.calls.find(([evento]) => evento === 'agent.status');
+    const callback = chamada![1] as (payload: { status?: string }) => void;
+    callback({ status: 'awaiting_approval' });
+    expect(onAgentStatus).toHaveBeenCalledWith({ status: 'awaiting_approval' });
+
+    onAgentStatus.mockClear();
+    callback({ status: 'qualquer' });
+    expect(onAgentStatus).not.toHaveBeenCalled();
+    disconnect();
+  });
 });
 
 describe('connectSessionHeartbeat — canal VIVO (RN-579)', () => {

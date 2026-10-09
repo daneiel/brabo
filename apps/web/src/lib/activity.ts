@@ -198,6 +198,7 @@ function payloadField(payload: unknown, key: string): string | undefined {
 const PASSO_DO_BOOTSTRAP: Record<string, string> = {
   commit_pr_template: 'template de PR',
   commit_branching_policy: 'política de branches',
+  commit_gitignore: '.gitignore base',
   create_dev_branch: 'branch dev',
   create_qa_branch: 'branch qa',
   create_rc_branch: 'branch rc',

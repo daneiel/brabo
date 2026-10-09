@@ -46,6 +46,7 @@ defmodule Engine.Gates.QaEstrategiaAgent do
   contenção que o ADR 0090 não tinha como dar.
   """
 
+  alias Engine.Gates.RecorteDaTarefa
   alias Engine.Gates.Tools.EmitPlanoDeTeste
   alias Engine.Harness.Hooks.{ActionPipeline, EventLog}
   alias Engine.Gates.Hooks.TerminationPlanoDeTeste
@@ -104,7 +105,11 @@ defmodule Engine.Gates.QaEstrategiaAgent do
       token_budget_micros: Map.get(dev_state, :task_budget_micros),
       business_rules_units: Map.get(dev_context, :business_rules_units, []),
       task_state_units: Map.get(dev_context, :task_state_units, []),
-      messages: [initial_message(dev_context.task, dev_context.story, arquivos_alterados)],
+      messages: [
+        dev_context.task
+        |> initial_message(dev_context.story, arquivos_alterados)
+        |> Map.update!("content", &(&1 <> RecorteDaTarefa.texto(dev_context)))
+      ],
       context_window: 128_000
     }
   end
@@ -144,7 +149,8 @@ defmodule Engine.Gates.QaEstrategiaAgent do
       Leia com `read_file` os arquivos acima que importam para a story (e os
       testes que já existem ao lado deles) — comece por eles, não vasculhe o
       repositório. Então chame `emit_plano_de_teste` com:
-      - `planoDeTeste`: síntese do que precisa ser verificado NESTA entrega;
+      - `planoDeTeste`: síntese do que precisa ser verificado NESTA entrega
+        (só o recorte desta tarefa, abaixo — não o que é de tarefa irmã);
       - `criteriosExecutaveis`: os critérios de aceite reescritos de forma
         VERIFICÁVEL contra o código entregue (ex.: "dado X, quando Y, então
         Z" em vez de prosa vaga);

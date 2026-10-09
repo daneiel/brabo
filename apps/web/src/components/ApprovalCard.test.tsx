@@ -125,6 +125,40 @@ describe('ApprovalCard', () => {
     expect(onActivateAutoMode).toHaveBeenCalledTimes(1);
   });
 
+  // AT-443 (RN-755): ligar o modo não decide o próprio card.
+  it('ligar o "Modo automático" não aprova o card, e o card diz isso', () => {
+    const onApprove = vi.fn();
+    const onActivateAutoMode = vi.fn();
+    render(
+      <ApprovalCard
+        action={makeAction()}
+        onApprove={onApprove}
+        onDeny={vi.fn()}
+        onAlwaysAllow={vi.fn()}
+        onActivateAutoMode={onActivateAutoMode}
+      />,
+    );
+    expect(screen.getByTestId('nota-modo-automatico-nao-aprova')).toHaveTextContent(
+      /não aprova esta ação/,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Modo automático' }));
+    expect(onActivateAutoMode).toHaveBeenCalledTimes(1);
+    expect(onApprove).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Aprovar' })).toBeEnabled();
+  });
+
+  it('sem o botão de modo automático, a nota de que ele não aprova também não sai', () => {
+    render(
+      <ApprovalCard
+        action={makeAction()}
+        onApprove={vi.fn()}
+        onDeny={vi.fn()}
+        onAlwaysAllow={vi.fn()}
+      />,
+    );
+    expect(screen.queryByTestId('nota-modo-automatico-nao-aprova')).toBeNull();
+  });
+
   it('mostra a nota do "Modo automático" na variante chat, citando os tetos que continuam pedindo decisão', () => {
     render(
       <ApprovalCard

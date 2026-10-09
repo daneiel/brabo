@@ -3,6 +3,8 @@ import {
   KINDS_DE_SESSAO,
   KIND_PRE_SELECIONADO,
   TIPOS_DE_SESSAO,
+  TIPO_DE_EXECUCAO,
+  tipoDaSessao,
 } from './session-kind';
 import type { SessionKind } from './api-types';
 
@@ -42,5 +44,15 @@ describe('catálogo de tipos de sessão', () => {
 
   it('o tipo pré-selecionado existe no catálogo', () => {
     expect(KINDS_DE_SESSAO).toContain(KIND_PRE_SELECIONADO);
+  });
+});
+
+describe('tipoDaSessao (AT-455)', () => {
+  it('com execução ativa a barra diz Execução, não o kind gravado', () => {
+    expect(tipoDaSessao('criativa', true)).toBe(TIPO_DE_EXECUCAO);
+    expect(TIPO_DE_EXECUCAO.rotulo).not.toBe(TIPOS_DE_SESSAO.criativa.rotulo);
+  });
+  it('sem execução, o kind de sempre', () => {
+    expect(tipoDaSessao('criativa', false)).toBe(TIPOS_DE_SESSAO.criativa);
   });
 });
