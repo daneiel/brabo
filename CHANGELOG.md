@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- **engine/anamnese**: a rodada só roda quando o sujeito teve interação com conteúdo técnico — mensagem escrita por ele, resposta a pergunta estruturada ou recusa com motivo; aprovação, handoff e clique não contam mais, e sem isso não há chamada ao LLM nem ao RAG (RN-756, AT-439).
 - **deps**: fecha os advisories CRÍTICOS que reprovavam a `dev` — overrides `proxy-addr@>=2.0.0 <2.0.8: 2.0.8` (GHSA-jqcg-44mw-7w3h, raiz e website) e `seroval@>=1.0.0 <1.6.3: 1.6.3` (GHSA-p6vx-979v-rg4c/GHSA-jp82-f5mq-hwhp), `shell-quote` direto da api para `^1.11.0` e override `shell-quote@>=1.8.4 <1.11.0: 1.11.0` no website (GHSA-pqg4-j6r4-53mv). Fica aberto, declarado: `tinypool@1.1.1` do website (2 CRITICAL, só corrigidas na linha 2, que `@docusaurus/core` não pede) (AT-426).
 - **api**: modelo que raciocina (`supports_reasoning`) recebe pelo OpenRouter um orçamento explícito `reasoning.max_tokens` de 4096, e o `max_tokens` da chamada passa a ser saída visível + orçamento — o raciocínio não come mais o teto da tool call; modelo sem raciocínio fica como antes (RN-741, AT-427).
 - **web**: os campos sem autofill (`SEM_AUTOFILL`, "Nome do projeto" incluído) ganham `aria-autocomplete="none"` e `data-protonpass-ignore`; rótulo inalterado, e a validação contra o gerenciador de senhas real fica para o próximo TP-01 (RN-740, AT-425).

@@ -21,7 +21,11 @@ defmodule Engine.Anamnese.ElegibilidadeTest do
     :ok
   end
 
-  defp evento(actor_kind, actor_id), do: %{actor_kind: actor_kind, actor_id: actor_id}
+  defp evento(actor_kind, actor_id, type \\ "chat.message"),
+    do: %{actor_kind: actor_kind, actor_id: actor_id, type: type}
+
+  defp recusa(quem),
+    do: %{"decidedBy" => quem, "status" => "rejected", "rejectionReason" => "use JWT curto"}
 
   test "caminho feliz: membro com evento próprio na janela é sujeito, o calado não" do
     assert {:ok, [@dani]} =
@@ -37,7 +41,7 @@ defmodule Engine.Anamnese.ElegibilidadeTest do
              Elegibilidade.avaliar(%{
                members: [@dani, @calada],
                events: [],
-               decisions: [%{"decidedBy" => "user-2"}]
+               decisions: [recusa("user-2")]
              })
   end
 
@@ -76,7 +80,7 @@ defmodule Engine.Anamnese.ElegibilidadeTest do
                Elegibilidade.avaliar(%{
                  members: [@dani],
                  events: List.duplicate(evento("user", "user-1"), 3),
-                 decisions: List.duplicate(%{"decidedBy" => "user-1"}, 2)
+                 decisions: List.duplicate(recusa("user-1"), 2)
                })
     end
 
@@ -89,6 +93,37 @@ defmodule Engine.Anamnese.ElegibilidadeTest do
                })
 
       assert detalhe =~ "5+"
+    end
+  end
+
+  describe "só interação com conteúdo técnico conta (RN-756, AT-439)" do
+    test "caminho feliz: mensagem escrita e resposta estruturada contam" do
+      assert {:ok, [@dani]} =
+               Elegibilidade.avaliar(%{
+                 members: [@dani],
+                 events: [
+                   evento("user", "user-1", "chat.message"),
+                   evento("user", "user-1", "chat.structured_question_answered")
+                 ],
+                 decisions: []
+               })
+    end
+
+    test "falha: só aprovações, handoff e recusa sem motivo — sem sujeito, sem gasto" do
+      assert {:sem_sujeito, :nenhuma_interacao_propria, detalhe} =
+               Elegibilidade.avaliar(%{
+                 members: [@dani],
+                 events: [
+                   evento("user", "user-1", "handoff.accepted"),
+                   evento("user", "user-1", "proposed_action.approved")
+                 ],
+                 decisions: [
+                   %{"decidedBy" => "user-1", "status" => "approved"},
+                   %{"decidedBy" => "user-1", "status" => "rejected", "rejectionReason" => " "}
+                 ]
+               })
+
+      assert detalhe =~ "RN-756"
     end
   end
 end

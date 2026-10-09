@@ -265,6 +265,7 @@ estado lido do repositório e não da conversa.
 | Os conversacionais guardam os `toolCalls` da resposta, e o resultado da ferramenta deixa de chegar órfão ao provider (AT-350) | RN-690 |
 | O catálogo de modelos ganha busca, o sync ao lado da credencial e o "ativar e aplicar ao time" (AT-357) | RN-694 |
 | A prontidão do Criativo sem ferramentas; o texto do turno numa resposta só, e o teto visível no fio (AT-352/AT-354) | RN-697, RN-698 |
+| A Anamnese só roda com interação de conteúdo técnico do sujeito (AT-439) | RN-756 |
 | O instalador pergunta pelos modelos locais e mede a porta do Ollama; `brabo-dev` não é instalação, e a migração reinstala do zero (AT-351/AT-358) | RN-691, RN-692 |
 | O semgrep do SecOps morria sem `$HOME` gravável na imagem de produção, e o parecer aprovava (AT-380) | RN-707 |
 | O projeto novo diz o próximo passo: cartão de primeiros passos na Visão geral, e Configurações abre pela credencial e pelos modelos (AT-372/AT-374) | RN-708 |
@@ -441,7 +442,8 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   `project_members`, e era por isso que toda rodada do uso real de 29/09
   terminava paga em "nenhum membro elegível"), fora do opt-out, com
   interação PRÓPRIA na janela (`Engine.Anamnese.Elegibilidade`, antes da
-  triagem; nem a fila de hipóteses a atravessa). Sem sujeito: nenhuma
+  triagem; desde a RN-756 só conta interação de CONTEÚDO TÉCNICO — mensagem
+  escrita, resposta estruturada, recusa com motivo —, nunca aprovação/handoff; nem a fila de hipóteses a atravessa). Sem sujeito: nenhuma
   chamada ao LLM nem ao RAG, motivo nomeado no log e, só na rodada pedida à
   mão, `anamnese.run_skipped`. (2) A hipótese que a PRÓPRIA pessoa aceitou
   (quem aceita é o autor da sessão) vira `FatoDoPerfil` no grafo, traduzido
