@@ -7,6 +7,7 @@ import type { Handoff } from '../lib/api-types';
 import { Button } from '../components/ui/Button';
 import { Select } from '../components/ui/Select';
 import { sessaoEhTerminal } from '../lib/sessao-encerrada';
+import { pontoDaSessao } from '../lib/session-timeline';
 import { agentesParaChamar } from '../lib/session-destinatario';
 import styles from './SessionPage.module.css';
 
@@ -427,7 +428,7 @@ export function SessionComposer({
             </>
           ) : sessaoEhTerminal(session?.status) && handleReopen ? (
             <>
-              <span>{t('ativacao.statusGenerico', { status: session?.status })}</span>
+              <span>{t('ativacao.statusGenerico', { status: t(pontoDaSessao(session?.status).rotuloKey) })}</span>
               <span>{t('ativacao.reabrirExplicacao')}</span>
               <Button
                 onClick={handleReopen}
@@ -439,7 +440,7 @@ export function SessionComposer({
               {!podeReabrir && <span>{t('ativacao.reabrirExigeDeveloper')}</span>}
             </>
           ) : (
-            <span>{t('ativacao.statusGenerico', { status: session?.status })}</span>
+            <span>{t('ativacao.statusGenerico', { status: t(pontoDaSessao(session?.status).rotuloKey) })}</span>
           )}
         </div>
       )}

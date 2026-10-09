@@ -316,6 +316,7 @@ estado lido do repositório e não da conversa.
 | O seletor de modelo mostra `thinking`; ligar o modo automático não aprova o cartão, e ele diz isso (AT-443) | RN-755 |
 | O recorte do Jev não vira incapacidade: piso de obrigação no menu e aviso efêmero de recorte (AT-445) | RN-758, RN-759 |
 | A aba PRs diz a verdade do botão Merge com a tarefa bloqueada (AT-451) | RN-768 |
+| Encerrar sessão com execução pergunta antes, e o estado sai traduzido (AT-452) | RN-769 |
 
 ## Estado atual e aberto
 

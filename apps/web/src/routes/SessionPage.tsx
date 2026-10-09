@@ -56,6 +56,7 @@ import {
 } from '../lib/session-timeline';
 import { ehRecusaDeSessaoEncerrada } from '../lib/sessao-encerrada';
 import { ContextAside } from './ContextAside';
+import { useEncerrarComConfirmacao } from './ConfirmarEncerramento';
 import { useSessionReadiness } from '../lib/session-readiness';
 import { agruparNarracoesDoTurno, agruparTimelinePorAgente, dividirFio } from './session-fio';
 import { montarTimeline } from './session-timeline-montagem';
@@ -563,6 +564,8 @@ export function SessionPage({
     queryClient.invalidateQueries({ queryKey: ['sessions', projectId] });
   }
 
+  const { pedirEncerramento, modalDeEncerrar } = useEncerrarComConfirmacao(handleClose, events, ativadosNaSessaoInteira);
+
   async function handleRename() {
     if (rascunhoDoNome === null) return;
     // Em branco APAGA o nome: `null` no corpo é o caminho de desfazer, e a
@@ -865,7 +868,7 @@ export function SessionPage({
         conviteVisivel={conviteVisivel}
         ideacaoComecou={handoffs.length > 0 || events.some((e) => e.actor.kind === 'agent')}
         handleStartIdeation={handleStartIdeation}
-        handleClose={handleClose}
+        handleClose={pedirEncerramento}
         asideOpen={asideOpen}
         setAsideOpen={setAsideOpen}
       />
@@ -988,6 +991,7 @@ export function SessionPage({
         enviandoRecusa={enviandoRecusa}
         handleReturnStory={handleReturnStory}
       />
+      {modalDeEncerrar}
     </div>
   );
 }
