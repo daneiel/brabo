@@ -288,6 +288,7 @@ defmodule Engine.Agents.UxDesignerServer do
 
     resultado = executar_ferramenta(name, args, state)
     emit(state, "tool.result", ResultadoDeFerramenta.payload(name, resultado))
+    Engine.Agents.GravadoNoTurno.anotar(name, args, resultado, state.project_id)
 
     {text, desfecho} =
       case resultado do
