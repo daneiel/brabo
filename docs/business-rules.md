@@ -18864,8 +18864,8 @@ absolutos seguem pedindo aprovação (RN-154, RN-418): merge em branch protegida
 o de WORKSPACE, com a mesma lacuna declarada das outras telas de modo
 automático (RN-471).
 
-- **Código:** `apps/web/src/components/ModoAutomaticoDoTime.tsx:52`
-  (`ModoAutomaticoDoTime`), `:81` (`ligar`), `:35`
+- **Código:** `apps/web/src/components/ModoAutomaticoDoTime.tsx:68`
+  (`ModoAutomaticoDoTime`), `:97` (`ligar`), `:39`
   (`agentesEmModoAutomatico`); `apps/web/src/routes/ProjectExecutorsTab.tsx:85`
   (`podeLigarModoAutomatico`), `:308` (onde a oferta monta)
 - **Teste:** `apps/web/src/components/ModoAutomaticoDoTime.test.tsx:54` (nada
@@ -22314,3 +22314,25 @@ sem dizer qual.
   mensagens são as do pedido)
 - **Origem:** AT-445 (o dev agent bloqueou uma tarefa "sem ferramenta para
   editar arquivos" tendo `write_file`)
+### RN-766 — O gate parado esperando clique é dito, e a oferta em lote cobre os subagentes de QA {#rn-766}
+
+- **Regra:** no painel "precisa de você" ([RN-467](#rn-467)), a ação pendente
+  proposta por agente de GATE (área de QA — `qa`, `qa-*` — ou SecOps) ganha,
+  acima do MESMO `ApprovalCard`, a frase de que aquele gate está PARADO até a
+  decisão; é uma frase por card, nunca uma soma de filas. E a oferta em lote
+  do modo automático na aba Executores ([RN-661](#rn-661)) lista os agentes da
+  área de QA (`AREAS.qa`) desde a ativação, sem esperar que eles apareçam no
+  roster — antes o `qa-automacao` só entrava na oferta depois do primeiro
+  evento dele, quando a primeira ação já esperava clique. O `allow` padrão do
+  `permissions.json` NÃO muda (decisão do dono).
+- **Onde:** `apps/web/src/lib/precisa-de-voce.ts:256` (`gateEsperandoClique`)
+  e `apps/web/src/components/ModoAutomaticoDoTime.tsx:58`
+  (`agentesDaOfertaEmLote`)
+- **Teste:** `apps/web/src/lib/precisa-de-voce.test.ts` (gate de QA e SecOps
+  nomeados; dev agent e humano não) e
+  `apps/web/src/components/ModoAutomaticoDoTime.test.tsx` (a oferta cobre os
+  subagentes de QA antes do roster, sem repetir)
+- **Origem:** AT-449 (TP-01 de 09/10: o `qa-automacao` propôs
+  `ls; cat; for f in test/*.js…`, um segmento fora do `allow`, sem modo
+  automático, e ficou 25 min pendente com só o contador de Aprovações como
+  sinal)

@@ -21,6 +21,7 @@
       "promocoes": "Promoções de história",
       "arquitetura": "Pendências de arquitetura",
       "hipoteses": "Hipóteses do Psicólogo"
-    }
+    },
+    "gateParado": "O gate de {{gate}} está parado até você decidir esta ação."
   }
 }
