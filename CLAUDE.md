@@ -320,6 +320,7 @@ estado lido do repositório e não da conversa.
 | Miudezas de tela do TP-01: autor da PR de ADR, modelo da Infra, título da PR do dev, selo da execução, caminho e tabela (AT-455) | RN-770 |
 | A próxima task do dev agent parte da última branch dele não mergeada (AT-447) | RN-760 |
 | O repositório nasce com `.gitignore` base, o commit do dev exclui dependência instalada e o SecOps a acusa (AT-446) | RN-761 |
+| O bloqueio por ciclo de correção esgotado grava a origem `politica` (AT-450) | RN-762 |
 
 ## Estado atual e aberto
 
