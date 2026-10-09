@@ -312,6 +312,7 @@ estado lido do repositório e não da conversa.
 | Os saltos de layout da Sessão e do catálogo: composer, aba ativa, barra de lote e rolagem do fio (AT-442) | RN-751 |
 | A PR de infra mergeada sai de "PRs de infra em revisão" (AT-436) | RN-752 |
 | O seletor de modelo mostra `thinking`; ligar o modo automático não aprova o cartão, e ele diz isso (AT-443) | RN-755 |
+| Encerrar a sessão de execução para os dev agents e os gates; "Parar execução" na aba Executores (AT-456) | RN-763 |
 
 ## Estado atual e aberto
 
@@ -1670,7 +1671,10 @@ o RACIOCÍNIO da triagem, que continua valendo.
   esperando o usuário, mas essa é a ÚNICA pendência com teto (8h do fim do
   turno, causa `conversation_idle_timeout`); os outros sinais da RN-064
   continuam sem teto e vencem. Fechar a sessão PARA os conversacionais dela
-  em todos os nós (`SessionLifecycleWorker`), sem gravar o turno em curso.
+  em todos os nós (`SessionLifecycleWorker`), sem gravar o turno em curso —
+  e, desde a RN-763, os dev agents dela e os gates do projeto, com a task em
+  curso bloqueada e o worktree preservado (`Engine.Dev.EncerramentoDaSessao`);
+  "Parar execução" na aba Executores é esse MESMO fechamento, sem estado novo.
   Os terminais têm UMA saída desde o ADR 0183 (RN-649/650): a REABERTURA,
   para `active`, por rota e checagem PRÓPRIAS (`reopen`, `canReopen`) — a
   transição genérica continua recusando `closed → active`, e `closing →

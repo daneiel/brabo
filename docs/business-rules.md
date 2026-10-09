@@ -22005,7 +22005,7 @@ sem dizer qual.
   passa a ver o `agent.error` e o `dev.blocked` da recuperação.
 - **Onde:** `apps/engine/lib/engine/sessions/engine_api_client.ex:2012`
   (`isolado`), `apps/engine/lib/engine/dev/monitor.ex:69` (`ao_terminar`),
-  `:93` (`registrar_e_religar`)
+  `:107` (`registrar_e_religar`)
 - **Teste:** `apps/engine/test/engine/sessions/engine_api_client_isolado_test.exs`
   (mensagem tardia não chega ao chamador; exceção vira `{:error, _}`),
   `apps/engine/test/engine/dev/monitor_test.exs` (crash grava `agent.error`
@@ -22270,3 +22270,42 @@ sem dizer qual.
   %Req.TransportError{reason: :timeout}"; medido nesta máquina, o mesmo
   `npm install` de `bcrypt`+`sqlite3`+`express` levou 5,3 s com a imagem em
   cache e prebuilds disponíveis — a cadeia, não o comando, cortava em 15 s)
+
+### RN-763 — Encerrar a sessão de execução para os dev agents e os gates, e "Parar execução" na aba Executores {#rn-763}
+
+- **Regra:** o fechamento da sessão (`session.closed`/`closed_abnormally`,
+  pelo `SessionLifecycleWorker`, o ponto por onde todo fechamento passa) PARA
+  os dev agents dela em todos os nós e os gates (QA lead e SecOps) do projeto
+  — a régua que já valia para os conversacionais ([RN-581](#rn-581)). O
+  processo é derrubado na hora, sem gravar o turno em curso, e o
+  `Engine.Dev.Monitor` é avisado antes (`esquecer/1`): a linha durável sai e
+  o agente NÃO é religado ([RN-742](#rn-742)). Para cada dev com task em curso
+  (`working`, `awaiting_approval` ou `awaiting_gate`), o trabalho do worktree
+  vira commit na branch da task ([RN-743](#rn-743)) e a task é BLOQUEADA com
+  motivo "sessão de execução encerrada", origem `politica`, e o diagnóstico
+  dizendo onde ficou o trabalho — volta à fila quando um humano a libera,
+  nunca perdida. As linhas de `gate_states` da sessão saem, para o
+  `GateRescuer` não reabrir ciclo da sessão encerrada. A aba Executores ganha
+  "Parar execução" (papel `developer`, o de encerrar sessão), cujo mecanismo é
+  o MESMO fechamento (`closing` → `closed`), sem estado novo; a confirmação
+  diz antes do clique o que fica: as tarefas em curso (com a contagem), as PRs
+  abertas, as aprovações pendentes e que a sessão não reabre. Declarado: ação
+  pendente de dev agent continua pendente; PR aberta continua aberta; sessão
+  com `execution.activated` não reabre ([RN-650](#rn-650)), então retomar é
+  ativar a execução numa sessão nova; a contagem de tarefas da confirmação vem
+  da janela de eventos da aba. A confirmação no "Encerrar" da barra da sessão
+  é de outra atividade (AT-452).
+- **Onde:** `apps/engine/lib/engine/dev/encerramento_da_sessao.ex:40`
+  (`parar_da_sessao`), `:66` (`parar_processos`), `:96` (`devolver_task`),
+  `apps/engine/lib/engine/dev/monitor.ex:34` (`esquecer`),
+  `apps/engine/lib/engine/workers/session_lifecycle_worker.ex:94`
+  (`parar_execucao`), `apps/web/src/components/PararExecucao.tsx`
+- **Teste:** `apps/engine/test/engine/dev/encerramento_da_sessao_test.exs`
+  (o dev morre sem ser religado, a linha sai, a task é bloqueada com origem
+  `politica`; sessão sem dev é no-op e o dev de outra sessão fica de pé),
+  `apps/web/src/components/PararExecucao.test.tsx` (a confirmação diz o que
+  fica e fecha `closing` → `closed`; a recusa da api fica na confirmação; sem
+  papel o botão fica inerte com o motivo)
+- **Origem:** AT-456 (TP-01 de 09/10: com a sessão de execução encerrada, o
+  `dev-encurtador-api` bloqueou a tarefa 3, pegou a 4 e abriu PR; o único
+  freio foi parar o container)
