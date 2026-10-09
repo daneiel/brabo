@@ -22227,3 +22227,18 @@ sem dizer qual.
   (merge executado tira a PR; merge falho ou pendente a mantém)
 - **Origem:** AT-436 (TP-01: depois de "Merge" → "Aprovar" na aba PRs, a PR
   seguia com Dev ✓ QA ✓ SecOps ✓ e "Você" pendente)
+### RN-755 — Ligar o modo automático não aprova o cartão onde foi ligado {#rn-755}
+
+- **Regra:** no `ApprovalCard` (o mesmo nas quatro superfícies), o botão
+  "Modo automático" grava a curinga do agente (RN-153) e NÃO decide a ação
+  do próprio cartão: ela segue pendente, com "Aprovar" como ação principal.
+  Onde o botão sai, sai junto uma nota dizendo isso antes do clique ("Ligar o
+  modo automático não aprova esta ação: ela continua esperando o seu
+  Aprovar."). Aprovar o cartão junto com a ligação do modo seria decisão do
+  dono e NÃO foi feito.
+- **Onde:** `apps/web/src/components/ApprovalCard.tsx:203` (`ApprovalCard`)
+- **Teste:** `apps/web/src/components/ApprovalCard.test.tsx` (`ligar o
+  "Modo automático" não aprova o card, e o card diz isso`; sem o botão, a nota
+  não sai)
+- **Origem:** AT-443 (TP-01: o modo ligado num cartão pendente não o
+  aprovava, e nada na tela dizia por quê)
