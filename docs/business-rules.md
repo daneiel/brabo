@@ -19025,8 +19025,8 @@ O valor mora em DOIS lugares, de propósito, um por linguagem, e mudam juntos:
   (`init_from_bare!`), `:272` (`remoto_vazio?`);
   `apps/engine/lib/engine/actions/workspace/runner_git.ex:158` (`add_worktree`),
   `:183` (`garantir_base`), `:308` (`remoto_vazio?`);
-  `apps/engine/lib/engine/dev/worktree_manager.ex:36` (`create`), `:103`
-  (`add_worktree`), `:147` (`garantir_base`);
+  `apps/engine/lib/engine/dev/worktree_manager.ex:36` (`create`), `:138`
+  (`add_worktree`), `:176` (`garantir_base`);
   `apps/engine/lib/engine/dev/agent_io.ex:305` (`propose_pr`);
   `apps/engine/lib/engine/gates/diff.ex:21` (`compute`);
   `apps/engine/lib/engine/harness/project_context.ex:29` (`repo_line`);
@@ -20759,7 +20759,7 @@ Junto, o fechamento deixa de dizer que parear uma pasta pela tela do projeto
   `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:374` (`reabrirPorConflitoDeMerge`),
   `apps/engine/lib/engine/workers/dev_agent_wake_worker.ex:151` (`task.merge_conflict`),
   `apps/engine/lib/engine/dev/dev_agent_server.ex:350` (`handle_info`),
-  `apps/engine/lib/engine/dev/dev_agent_server.ex:753` (`trigger_gate_recheck`),
+  `apps/engine/lib/engine/dev/dev_agent_server.ex:765` (`trigger_gate_recheck`),
   `apps/engine/lib/engine/dev/worktree_manager.ex:47` (`adopt`)
 - **Teste:** `apps/api/test/application/use-cases/actions/execute-git-action.use-case.spec.ts` ("conflito de merge → kind git_merge, arquivos no
   resultado e evento na tarefa"; falha: "RN-715: tarefa que já não está em
@@ -22037,3 +22037,25 @@ sem dizer qual.
   `dev.blocked` diz a branch; falha ao preservar não impede o bloqueio)
 - **Origem:** AT-429 (08/10: `feature/task-86dade03` sem commit, `package.json`
   e `src` perdidos depois do bloqueio por orçamento)
+
+### RN-744 — O dev sabe que o shell é `sh` e começa vendo o próprio worktree {#rn-744}
+
+- **Regra:** a descrição da ferramenta `terminal` diz que o shell do container
+  é `sh` (dash), não bash — sem brace expansion, sem `[[ ]]`, sem arrays, sem
+  `source` — e dá a forma que funciona. O kickoff de cada task do dev agent
+  ganha uma segunda mensagem fixada com o RETRATO do worktree: a branch e os
+  arquivos que já existem (rastreados + não rastreados não ignorados), com teto
+  de 80 linhas e o total real quando corta (ADR 0060); é o servidor que monta,
+  sem parâmetro do modelo. Pasta que o engine não alcança (modo `runner`) diz
+  que o retrato está indisponível e manda listar pelo `terminal`. Declarado e
+  NÃO corrigido: o worktree do dev pode nascer antes do merge da PR de infra,
+  então o que a Infra entregou por PR pode não estar na `dev` de onde ele
+  parte.
+- **Onde:** `apps/engine/lib/engine/harness/tools/terminal.ex:12` (`spec`),
+  `apps/engine/lib/engine/dev/worktree_manager.ex:108` (`retrato`),
+  `apps/engine/lib/engine/dev/dev_agent_server.ex:581` (`retrato_do_worktree`)
+- **Teste:** `apps/engine/test/engine/dev/worktree_manager_test.exs`
+  (`retrato/2`: branch e arquivos; pasta inalcançável diz indisponível; a
+  descrição do terminal diz `sh`)
+- **Origem:** AT-444 (TP-01 de 08/10: `mkdir -p src/{a,b}` no dash e o dev
+  recriando o que já existia)

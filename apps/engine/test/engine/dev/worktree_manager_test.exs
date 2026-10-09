@@ -336,4 +336,31 @@ defmodule Engine.Dev.WorktreeManagerTest do
       assert {:error, _} = WorktreeManager.preservar_em(solta, "dev-web", "t3")
     end
   end
+
+  # RN-744 (AT-444): o kickoff do dev diz a branch e o que já existe.
+  describe "retrato/2" do
+    test "lista a branch e os arquivos, rastreados e novos", %{work_dir: work_dir} do
+      {:ok, %{path: path, branch: branch}} =
+        WorktreeManager.add_worktree(work_dir, "dev-api", "task-dddd4444")
+
+      File.write!(Path.join(path, "package.json"), "{}")
+      texto = WorktreeManager.retrato(path, branch)
+
+      assert texto =~ "branch `feature/task-dddd4444`"
+      assert texto =~ "README.md"
+      assert texto =~ "package.json"
+      assert texto =~ "2 arquivo(s)"
+    end
+
+    test "pasta que o engine não alcança diz que está indisponível" do
+      texto = WorktreeManager.retrato("/nao/existe/#{System.unique_integer()}", "feature/x")
+      assert texto =~ "indisponível"
+    end
+  end
+
+  test "a descrição do terminal diz que o shell é sh, sem brace expansion" do
+    %{description: d} = Engine.Harness.Tools.Terminal.spec()
+    assert d =~ "`sh`"
+    assert d =~ "brace expansion"
+  end
 end
