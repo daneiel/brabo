@@ -61,4 +61,28 @@ defmodule Engine.Dev.BloqueioPreservaTrabalhoTest do
 
     assert d =~ "Não foi possível preservar"
   end
+
+  # RN-760 (AT-447): aprovada ou bloqueada pelo gate (sem `block_task/4`), a
+  # branch segue para a próxima task, com o que sobrou no worktree commitado.
+  describe "levar_branch_para_a_proxima/1 e criar_worktree/2" do
+    test "aprovada nos gates: a próxima task nasce da branch dela", %{state: state} do
+      novo = AgentIo.levar_branch_para_a_proxima(state)
+      assert novo.base_preservada == "feature/task-t1"
+
+      {{:ok, _}, depois} = AgentIo.criar_worktree(novo, "task-t2")
+      assert_receive {:worktree_created_from, _, "dev-api", "task-t2", "feature/task-t1"}
+      refute Map.has_key?(depois, :base_preservada)
+    end
+
+    test "o ponteiro de block_task/4 não é sobrescrito, e sem branch nada muda", %{state: state} do
+      com_base = Map.put(state, :base_preservada, "feature/outra")
+      assert AgentIo.levar_branch_para_a_proxima(com_base).base_preservada == "feature/outra"
+
+      sem = AgentIo.levar_branch_para_a_proxima(%{state | branch: nil})
+      refute Map.has_key?(sem, :base_preservada)
+
+      {{:ok, _}, _} = AgentIo.criar_worktree(sem, "task-t3")
+      assert_receive {:worktree_created, _, "dev-api", "task-t3"}
+    end
+  end
 end

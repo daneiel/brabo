@@ -218,6 +218,7 @@ defmodule Engine.Dev.AgentIo do
   """
   def finish_task(state, :approved, run_task) do
     state
+    |> levar_branch_para_a_proxima()
     |> Map.merge(%{task_id: nil, worktree: nil, branch: nil, consecutive_blocked: 0})
     |> try_claim(run_task)
   end
@@ -226,7 +227,9 @@ defmodule Engine.Dev.AgentIo do
     counter = state.consecutive_blocked + 1
 
     state =
-      Map.merge(state, %{
+      state
+      |> levar_branch_para_a_proxima()
+      |> Map.merge(%{
         task_id: nil,
         worktree: nil,
         branch: nil,
@@ -270,6 +273,50 @@ defmodule Engine.Dev.AgentIo do
 
     state
   end
+
+  @doc """
+  Cria o worktree da task: da branch deixada pela task anterior deste agente
+  (`base_preservada`, RN-743/RN-760) quando há, senão da `dev`. Consome o
+  ponteiro. Devolve `{resultado_do_worktree_manager, state}`.
+  """
+  def criar_worktree(state, slug) do
+    {base, state} = Map.pop(state, :base_preservada)
+
+    criado =
+      if base,
+        do: worktree_manager().create_from(state.project_id, state.agent_id, slug, base),
+        else: worktree_manager().create(state.project_id, state.agent_id, slug)
+
+    {criado, state}
+  end
+
+  # RN-760 (AT-447), generaliza a RN-743: a task seguinte deste agente parte
+  # da branch da anterior — aprovada nos gates (o merge é do usuário e pode
+  # não ter acontecido) ou bloqueada por QUALQUER motivo, inclusive o ciclo de
+  # correção esgotado que a api decide e chega aqui só como `gate_resolved`.
+  # O que sobrou sem commit no worktree é preservado antes (quem passou por
+  # `block_task/4` já preservou). Se a branch já foi mergeada,
+  # `WorktreeManager` parte da `dev`. Não muda QUANDO a fila anda.
+  @doc false
+  def levar_branch_para_a_proxima(%{branch: branch} = state) when is_binary(branch) do
+    if Map.has_key?(state, :base_preservada) do
+      state
+    else
+      _ =
+        if is_binary(state.worktree),
+          do:
+            worktree_manager().preservar(
+              state.project_id,
+              state.worktree,
+              state.agent_id,
+              state.task_id
+            )
+
+      Map.put(state, :base_preservada, branch)
+    end
+  end
+
+  def levar_branch_para_a_proxima(state), do: state
 
   defp tripped?(counter, max) when is_integer(max), do: counter >= max
   defp tripped?(counter, _), do: counter >= @default_max_consecutive_blocked

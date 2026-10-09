@@ -318,6 +318,7 @@ estado lido do repositório e não da conversa.
 | A aba PRs diz a verdade do botão Merge com a tarefa bloqueada (AT-451) | RN-768 |
 | Encerrar sessão com execução pergunta antes, e o estado sai traduzido (AT-452) | RN-769 |
 | Miudezas de tela do TP-01: autor da PR de ADR, modelo da Infra, título da PR do dev, selo da execução, caminho e tabela (AT-455) | RN-770 |
+| A próxima task do dev agent parte da última branch dele não mergeada (AT-447) | RN-760 |
 
 ## Estado atual e aberto
 

@@ -14,6 +14,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 - **web**: encerrar uma sessão com execução ativa pede confirmação dizendo o que para (agentes, comando em andamento, turno em curso; e que ela não reabre); a frase de sessão encerrada mostra o estado traduzido em vez de `closed`, e um teste novo reprova enum cru interpolado em frase de tela (RN-769, AT-452).
 
+- **engine**: a próxima task do dev agent parte da última branch dele ainda não mergeada — aprovada nos gates ou bloqueada por qualquer motivo, inclusive o ciclo de correção esgotado —, e não mais de `dev`; branch já mergeada na `dev` volta a partir da `dev` (RN-760, AT-447).
 - **engine**: a ação `terminal` auto-aprovada passa a ser esperada pelo engine por `TERMINAL_ACTION_TIMEOUT_MS` + 120 s (antes, os 15 s do `Req`), o teto do comando sobe de 15 s para 120 s, e o estouro chega ao agente nomeando o teto em vez de `Req.TransportError` cru (RN-757, AT-440).
 
 - **engine/anamnese**: a rodada só roda quando o sujeito teve interação com conteúdo técnico — mensagem escrita por ele, resposta a pergunta estruturada ou recusa com motivo; aprovação, handoff e clique não contam mais, e sem isso não há chamada ao LLM nem ao RAG (RN-756, AT-439).
