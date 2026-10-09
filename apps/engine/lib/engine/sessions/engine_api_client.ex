@@ -1835,11 +1835,6 @@ defmodule Engine.Sessions.EngineApiClient.Live do
   @doc false
   def teto_do_propose_action_de_container_ms, do: @teto_do_propose_action_de_container_ms
 
-  @doc false
-  def opcoes_do_propose_action(action_type)
-      when action_type in @acoes_de_container_executadas_no_propose,
-      do: [receive_timeout: @teto_do_propose_action_de_container_ms]
-
   # AT-440 (RN-757). Uma ação `terminal` auto-aprovada também é EXECUTADA na
   # mesma requisição: a api chama `/internal/actions/execute` neste engine,
   # que roda o comando (no container, pelo `container-exec`, até
@@ -1858,6 +1853,11 @@ defmodule Engine.Sessions.EngineApiClient.Live do
     do:
       Application.fetch_env!(:engine, :terminal_action_timeout_ms) +
         @folga_do_propose_action_de_terminal_ms
+
+  @doc false
+  def opcoes_do_propose_action(action_type)
+      when action_type in @acoes_de_container_executadas_no_propose,
+      do: [receive_timeout: @teto_do_propose_action_de_container_ms]
 
   def opcoes_do_propose_action("terminal"),
     do: [receive_timeout: teto_do_propose_action_de_terminal_ms()]
