@@ -22270,3 +22270,20 @@ sem dizer qual.
   %Req.TransportError{reason: :timeout}"; medido nesta máquina, o mesmo
   `npm install` de `bcrypt`+`sqlite3`+`express` levou 5,3 s com a imagem em
   cache e prebuilds disponíveis — a cadeia, não o comando, cortava em 15 s)
+
+### RN-762 — O bloqueio por ciclo de correção esgotado grava a origem `politica` {#rn-762}
+
+- **Regra:** quando o gate esgota o teto de correções (`maxGateCorrections`) e
+  a task é bloqueada com "ciclo de correção esgotado (gate)", o
+  `backlog.task_blocked` e a linha da task levam `origin: "politica"` — o teto
+  é decisão de configuração, não falha real (vocabulário do ADR 0020, regra da
+  RN-059). Antes saía `origin: null`. O bloqueio de artefato de infra pelo
+  mesmo motivo (`infra.artifact_blocked`) não tem campo de origem e fica como
+  está, declarado.
+- **Onde:** `apps/api/src/application/use-cases/execution/record-gate-verdict.use-case.ts:113`
+  (`politica`)
+- **Teste:** `apps/api/test/application/use-cases/execution/record-gate-verdict.use-case.spec.ts`
+  (o ciclo esgotado chama `MarkTaskBlockedUseCase` com `'politica'`; o veredito
+  aprovado não bloqueia)
+- **Origem:** AT-450 (TP-01 de 09/10: `backlog.task_blocked` com
+  `origin: null`)
