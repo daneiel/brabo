@@ -317,6 +317,7 @@ estado lido do repositório e não da conversa.
 | O recorte do Jev não vira incapacidade: piso de obrigação no menu e aviso efêmero de recorte (AT-445) | RN-758, RN-759 |
 | A aba PRs diz a verdade do botão Merge com a tarefa bloqueada (AT-451) | RN-768 |
 | Encerrar sessão com execução pergunta antes, e o estado sai traduzido (AT-452) | RN-769 |
+| Miudezas de tela do TP-01: autor da PR de ADR, modelo da Infra, título da PR do dev, selo da execução, caminho e tabela (AT-455) | RN-770 |
 
 ## Estado atual e aberto
 

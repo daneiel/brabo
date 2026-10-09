@@ -51,6 +51,13 @@ describe('agentesEmConversa (RN-631)', () => {
   it('a sessão criativa oferece o Criativo antes de qualquer ativação', () => {
     expect(agentesEmConversa([], [], 'criativa')).toEqual(['criativo']);
   });
+
+  it('AT-455: a sessão de EXECUÇÃO (criativa no kind) não oferece o Criativo', () => {
+    const ativacao = { type: 'execution.activated' } as SessionEvent;
+    expect(agentesEmConversa([ativacao], [], 'criativa')).toEqual([]);
+    // Fora da janela: um dev agent ativado na sessão inteira basta.
+    expect(agentesEmConversa([], [], 'criativa', ['dev-api'])).not.toContain('criativo');
+  });
 });
 
 describe('resolverDestinatario (RN-631)', () => {

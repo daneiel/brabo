@@ -996,7 +996,9 @@ defmodule Engine.Dev.DevAgentServer do
   defp propose_pr(state, task, story) do
     AgentIo.propose_pr(
       state,
-      "#{story["title"]} — #{task["title"]}",
+      # AT-455: a TAREFA vem primeiro. Com a história na frente, a lista de
+      # PRs cortava o fim e três PRs da mesma história pareciam a mesma.
+      "#{task["title"]} — #{story["title"]}",
       pr_body(task, story)
     )
   end

@@ -44,7 +44,7 @@ import { AGENTS } from '../lib/agents';
 import { useToast } from '../components/ui/ToastProvider';
 import { TurnActivityStripDoStore } from '../components/TurnActivityStrip';
 import { hashtagDaSessao, rotuloDaSessao } from '../lib/session-label';
-import { TIPOS_DE_SESSAO } from '../lib/session-kind';
+import { tipoDaSessao } from '../lib/session-kind';
 import styles from './SessionPage.module.css';
 import { conversaComecou as conversaJaComecou } from '../lib/conversa-comecou';
 import {
@@ -57,6 +57,7 @@ import {
 import { ehRecusaDeSessaoEncerrada } from '../lib/sessao-encerrada';
 import { ContextAside } from './ContextAside';
 import { useEncerrarComConfirmacao } from './ConfirmarEncerramento';
+import { sessaoTemExecucao } from '../lib/sessao-de-execucao';
 import { useSessionReadiness } from '../lib/session-readiness';
 import { agruparNarracoesDoTurno, agruparTimelinePorAgente, dividirFio } from './session-fio';
 import { montarTimeline } from './session-timeline-montagem';
@@ -814,7 +815,7 @@ export function SessionPage({
   // quando a sessão não tem nome (RN-098). A hashtag nunca sai.
   const rotulo = rotuloDaSessao(sessionId, session?.name);
   const hashtag = hashtagDaSessao(sessionId);
-  const tipo = session ? TIPOS_DE_SESSAO[session.kind] : undefined;
+  const tipo = session ? tipoDaSessao(session.kind, sessaoTemExecucao(events, ativadosNaSessaoInteira)) : undefined;
   // Enquanto a sessão não carregou, NÃO é consultiva: é desconhecida. Tratar a
   // ausência como "consultiva" faria o botão de ideação piscar fora e dentro.
   const sessaoCriativa = session?.kind === 'criativa';

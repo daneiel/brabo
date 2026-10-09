@@ -228,3 +228,8 @@
   display: flex;
   gap: 8px;
 }
+
+/* AT-455: o segmento do caminho não quebra no hífen; só depois da barra. */
+.segmentoDeCaminho {
+  white-space: nowrap;
+}

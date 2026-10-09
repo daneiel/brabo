@@ -211,7 +211,7 @@ to `key`, and whoever writes `active` receives the raw key from
 - **Where:** `apps/web/src/routes/project-tabs.ts:95` (both entries),
   `apps/web/src/routes/ProjectSessionsTab.tsx:114` (the filter by recorded
   `kind`) and `:98` (the CTA creating in the tab's `kind`),
-  `apps/web/src/routes/SessionPage.tsx:830` (`conviteVisivel`, the one
+  `apps/web/src/routes/SessionPage.tsx:834` (`conviteVisivel`, the one
   question the topbar and the invite share)
 - **Test:** `apps/web/src/routes/ProjectSessionsTab.test.tsx`,
   `apps/web/src/routes/project-tabs.test.tsx`,
@@ -239,7 +239,7 @@ either of the two paths. What changed is that the FIRST MESSAGE now also
 counts as that gesture: no one should need a separate click before talking
 to whoever the screen already invited them to talk to.
 
-- **Where:** `apps/web/src/routes/SessionPage.tsx:663` (`handleSend`)
+- **Where:** `apps/web/src/routes/SessionPage.tsx:667` (`handleSend`)
 - **Test:** `apps/web/src/routes/SessionPage.ideacao-automatica.test.tsx`
 - **Edge case:** a `consultiva` session has no Creative agent — the rule
   doesn't apply, and the generic SSE path stays the right one for it.
@@ -275,7 +275,7 @@ one.
 > follows that recipient. What survives from this rule is the half about the
 > model: the binding route receives the agent, never falls back silently.
 
-- **Where:** `apps/web/src/lib/session-destinatario.ts:249`
+- **Where:** `apps/web/src/lib/session-destinatario.ts:254`
   (`useDestinatarioDoChat`, since RN-631),
   `apps/web/src/lib/api-client.ts:1114` (`getSessionModelBinding`, the
   `agentId`), `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:166`
@@ -16066,10 +16066,10 @@ quem clica). A cláusula de pasta usa o carimbo, que não é batimento
   (`status_registrado`);
   `apps/engine/lib/engine/session_events/event.ex:120` (`imagem_decidida?`)
 - **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs:742`
-  (via runner, `running` recusa), `:757` (`provisioning` recusa), `:767`
+  (via runner, `running` recusa), `:774` (`provisioning` recusa), `:784`
   (`stopped` não recusa), `:779` (sem imagem), `:790` (pasta nunca
-  confirmada), `:803` (`propose_container_start` com container `running`),
-  `:837` (`propose_container_start` sem imagem PROPÕE), `:863` (caminho feliz
+  confirmada), `:820` (`propose_container_start` com container `running`),
+  `:833` (`propose_container_start` sem imagem PROPÕE), `:863` (caminho feliz
   do via runner), `:901` (sem runner conectado)
 - **Origem:** AT-142
 
@@ -16497,7 +16497,7 @@ deu e com as quatro ferramentas.
 - **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs:1033`
   (aceite imediato, `working` antes), `:1048` (409 com turno em curso — caso
   de falha), `:1077` ("Parar"), `:1103` ("Parar" sem turno), `:1107` (a
-  correção de gate na fila), `:1723` (`toolloop.limit_reached`);
+  correção de gate na fila), `:1740` (`toolloop.limit_reached`);
   `apps/engine/test/engine/agents/turno_orfao_test.exs:76` (o órfão, agora nos
   sete); `apps/engine/test/engine/agents/reidratacao_dos_seis_test.exs:62` (a
   reidratação, nos sete);
@@ -17312,7 +17312,7 @@ continuam SEM decisão inline (não há `ApprovalCard` para elas).
   (`PendenciasDeOutrasSessoes`); `apps/web/src/routes/MergearNoChat.tsx:28`
   (`prAbertaDaAcao`), `:56` (`jaHaMergeDaPr`), `:89` (`MergearNoChat`);
   `apps/web/src/routes/SessionPage.tsx:154` (`podeDecidir`), `:281`
-  (`useRetomarTurnoDoLog`), `:912` (`PendenciasDeOutrasSessoes`)
+  (`useRetomarTurnoDoLog`), `:916` (`PendenciasDeOutrasSessoes`)
 - **Teste:** `apps/web/src/components/ApprovalCard.decisao-em-voo.test.tsx:37`
   (duplo clique), `:52` (409 no card e botões inertes — caso de falha), `:67`
   (erro que não é 409 devolve os botões); `apps/web/src/lib/turno-em-curso-no-log.test.ts:18`
@@ -17661,7 +17661,7 @@ passa a ler `DESTINATARIO_DA_SESSAO_CRIATIVA` em vez do literal de
 cláusula própria no engine. Nenhuma mudança de api nem de engine.
 
 - **Onde:** `apps/web/src/lib/session-destinatario.ts:191` (`agentesEmConversa`),
-  `:214` (`resolverDestinatario`), `:249` (`useDestinatarioDoChat`), `:116`
+  `:219` (`resolverDestinatario`), `:254` (`useDestinatarioDoChat`), `:116`
   (`useAtivadosNaSessaoInteira`), `:141` (`ativadosSemJanela`);
   `apps/web/src/routes/SessionComposer.tsx:268` (`destinatarioRow`), `:172`
   (`ofertasForaDaJanela`); `apps/web/src/routes/SessionPage.tsx:357`
@@ -18907,7 +18907,7 @@ entra quando o resumo ficar pronto.
   `:42` (`necessity.validated`);
   `apps/api/src/domain/sessions/estou-pronto.ts:27` (`MARCA_DO_ESTOU_PRONTO`);
   `apps/web/src/routes/SessionComposer.tsx:315` (o título do botão);
-  `apps/web/src/routes/SessionPage.tsx:610` (`handleReadiness`)
+  `apps/web/src/routes/SessionPage.tsx:614` (`handleReadiness`)
 - **Teste:** `apps/api/test/application/use-cases/agents/confirm-readiness.use-case.spec.ts:49`
   (os dois eventos, com a marca e o brief por vir — caminho feliz), `:72`
   (422 do engine: só a prontidão fica gravada — caso de falha);
@@ -19366,10 +19366,10 @@ vence — pôr a Infra em "manual" não desliga esta semente.
   (a semente, e só ela — caminho feliz), `:267` (outro agente não semeia —
   caso de falha);
   `apps/engine/test/engine/infra/infra_lead_server_test.exs:1263` (o servidor
-  elege e propõe antes do modelo — caminho feliz), `:1395` (`mounted`), `:1405`
+  elege e propõe antes do modelo — caminho feliz), `:1412` (`mounted`), `:1422`
   (`runner` não sobe pelo servidor), `:1377` (sem roteamento), `:1387` (a api
   recusa sem broker — caso de falha), `:1427` (container já `running`), `:1439`
-  (negada pela política), `:1511` (`eleger_candidata/1`)
+  (negada pela política), `:1528` (`eleger_candidata/1`)
 - **Origem:** AT-260 (item A14 da análise do uso real de 29/09)
 
 ### RN-672 — O handoff ao Dev Lead sai da Infra, e só com o container do projeto `running` {#rn-672}
@@ -19957,8 +19957,8 @@ isso a recusa da api mora na ROTA, e o caso de uso não muda.
   `apps/api/src/application/use-cases/llm/garantir-destinatario-do-chat.use-case.ts:27`
   (`GarantirDestinatarioDoChatUseCase`);
   `apps/api/src/interfaces/http/llm/chat.controller.ts:82` (`chat`);
-  `apps/web/src/lib/session-destinatario.ts:306` (`agentesParaChamar`);
-  `apps/web/src/routes/SessionPage.tsx:663` (`handleSend`);
+  `apps/web/src/lib/session-destinatario.ts:311` (`agentesParaChamar`);
+  `apps/web/src/routes/SessionPage.tsx:667` (`handleSend`);
   `apps/web/src/routes/SessionComposer.tsx:276`
 - **Teste:** `apps/api/test/application/use-cases/llm/garantir-destinatario-do-chat.use-case.spec.ts:82`
   (consultiva sem agente — caso de falha), `:96`, `:113`, `:120`;
@@ -21076,7 +21076,7 @@ quando o turno termina entregando um formulário (`gravar_texto_do_turno(state,
 
 - **Onde:** `apps/web/src/lib/texto-plano.ts:7` (`textoPlanoDoMarkdown`),
   `apps/web/src/lib/eco-de-formulario.ts:17` (`ecosDeRespostaEstruturada`),
-  `apps/web/src/lib/session-destinatario.ts:214` (`resolverDestinatario`),
+  `apps/web/src/lib/session-destinatario.ts:219` (`resolverDestinatario`),
   `apps/web/src/components/ui/MarkdownMessage.tsx:74` (`CodeFence`)
 - **Teste:** `apps/web/src/lib/texto-plano.test.ts`,
   `apps/web/src/lib/eco-de-formulario.test.ts`,
@@ -21504,7 +21504,7 @@ O kickoff do PO diz as três coisas.
   pegam as tarefas como estão ([RN-677](#rn-677)).
 - **Onde:** `apps/web/src/lib/mensagem-otimista.ts:14` (`otimistaJaNoLog`),
   `apps/web/src/lib/mensagem-otimista.ts:22` (`nomeDaMensagemOtimista`),
-  `apps/web/src/routes/SessionPage.tsx:885` (`otimistaJaNoLog`),
+  `apps/web/src/routes/SessionPage.tsx:889` (`otimistaJaNoLog`),
   `apps/web/src/routes/session-timeline-montagem.tsx:605`
   (`handleActivateExecution`)
 - **Teste:** `apps/web/src/lib/mensagem-otimista.test.ts` (feliz: o id no log
@@ -22387,7 +22387,7 @@ sem dizer qual.
   (`closed`). E isso é guardado no CÓDIGO, não só no locale: a régua de
   vocabulário lê os JSON, e o enum entrava pela interpolação em runtime;
   `i18n-enum-cru.test.ts` reprova `t(…, { status: x.status })`.
-- **Onde:** `apps/web/src/routes/ConfirmarEncerramento.tsx:31`
+- **Onde:** `apps/web/src/routes/ConfirmarEncerramento.tsx:13`
   (`useEncerrarComConfirmacao`) e `apps/web/src/routes/SessionComposer.tsx:431`
   (`statusGenerico`)
 - **Teste:** `apps/web/src/routes/ConfirmarEncerramento.test.tsx` (sem
@@ -22397,3 +22397,36 @@ sem dizer qual.
 - **Origem:** AT-452 (TP-01 de 09/10: "Encerrar" fechou a sessão de execução
   em 3 s com o dev agent no meio de um `npm install`, e a barra disse "Sessão
   closed")
+
+### RN-770 — Miudezas da tela de projeto: autor da PR de ADR, modelo da Infra, título da PR do dev, selo da execução, caminho e tabela {#rn-770}
+
+- **Regra:** (1) a PR de ADR leva a identidade do agente (`<agente>[bot]`,
+  senão `arquiteto[bot]`), como a de infra ([RN-729](#rn-729)) — a aba PRs
+  deixa de dizer "autor desconhecido"; (2) a `agent.response` do Infra Lead
+  carrega o `modelName` do frame final, como os outros conversacionais — a
+  bolha deixa de dizer "modelo não registrado"; (3) o título da PR do dev
+  agent abre pela TAREFA e depois a história (`<tarefa> — <história>`), para
+  três PRs da mesma história não parecerem a mesma com o fim cortado; (4) com
+  execução ativa (o mesmo predicado da [RN-769](#rn-769)), a barra da sessão
+  diz "Execução" em vez do `kind` gravado (`criativa`, que não muda —
+  [RN-097](#rn-097)) e o composer não oferece o Criativo antes de ativado;
+  (5) na confirmação da criação, cada segmento do caminho é `nowrap`: a quebra
+  só acontece depois da barra, nunca no hífen; (6) a tabela Markdown no balão
+  tem piso de `12rem` POR COLUNA e cresce por fração, com o contêiner em
+  `min-content` — com `max-content` ela ficava da largura do texto sem quebra
+  (medido no Chromium: 2 236px num balão de 708px) e a última coluna sumia.
+- **Onde:** `apps/api/src/application/use-cases/actions/execute-adr-pr.use-case.ts:96`
+  (`openPullRequest`); `apps/engine/lib/engine/infra/infra_lead_server.ex:1482`
+  (`gravar_texto_do_turno`); `apps/engine/lib/engine/dev/dev_agent_server.ex:996`
+  (`propose_pr`); `apps/web/src/lib/session-destinatario.ts:192`
+  (`agentesEmConversa`) e `apps/web/src/lib/session-kind.ts:69`
+  (`tipoDaSessao`); `apps/web/src/routes/NewProjectWizard.tsx:1127`
+  (`quebraPorSegmento`); `apps/web/src/components/ui/MarkdownMessage.tsx:139`
+  (`TabelaMarkdown`)
+- **Teste:** `apps/api/test/application/use-cases/actions/execute-adr-pr.use-case.spec.ts`,
+  `apps/engine/test/engine/infra/infra_lead_server_test.exs` ("agent.response
+  carrega o nome do modelo"), `apps/engine/test/engine/dev/dev_agent_server_test.exs`
+  (fluxo feliz), `apps/web/src/lib/session-destinatario.test.ts`,
+  `apps/web/src/lib/session-kind.test.ts`, `apps/web/src/routes/NewProjectWizard.test.tsx`,
+  `apps/web/src/components/ui/MarkdownMessage.test.tsx`
+- **Origem:** AT-455 (TP-01 de 09/10, achados 2, 3, 8, 9, 16 e 18)
