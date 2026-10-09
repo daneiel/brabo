@@ -17305,7 +17305,7 @@ continuam SEM decisão inline (não há `ApprovalCard` para elas).
 
 - **Código:** `apps/web/src/components/ApprovalCard.tsx:228` (`decidir`, a
   decisão em voo e a recusa no card); `apps/web/src/lib/session-turno.ts:59`
-  (`turnoEmCursoNoLog`), `:526` (`useRetomarTurnoDoLog`);
+  (`turnoEmCursoNoLog`), `:532` (`useRetomarTurnoDoLog`);
   `apps/web/src/lib/pendencias-do-projeto.ts:24` (`usePendenciasDoProjeto`),
   `:56` (`separarPendenciasDeOutrasSessoes`);
   `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:46`
@@ -22124,3 +22124,24 @@ sem dizer qual.
   ("agente a mais no plano é dito como NÃO subindo")
 - **Origem:** AT-437 (08/10: o plano aprovado prometia "2 agentes no módulo
   único… ~40% de ganho" e a execução subiu 1 dev)
+### RN-748 — A espera por aprovação fecha a faixa do turno e leva o cartão à vista {#rn-748}
+
+- **Regra:** quando o agente suspende o turno esperando aprovação humana
+  (`agent.status: awaiting_approval`, hoje o Dev Lead no
+  `propose_execution_plan`, RN-284), a tela de Sessão trata isso como FIM de
+  turno também pelo CANAL — não só pela leitura do log (`turnoTerminouNoLog`,
+  que já o fazia): a faixa de atividade sai, e com ela "Pôr na fila" e
+  "Parar". E, quando uma espera NOVA aparece no log (o `seq` da espera mais
+  recente muda depois da abertura), o fio rola até o fim SEM a guarda dos
+  120px da RN-173, porque o cartão de aprovação é o que a pessoa precisa ver.
+  Reabrir a sessão com uma espera antiga não rola nada além da abertura de
+  sempre.
+- **Onde:** `apps/web/src/lib/session-channel.ts:195` (`awaiting_approval`),
+  `apps/web/src/lib/session-turno.ts:418` (`awaiting_approval`),
+  `apps/web/src/lib/session-rolagem.ts:21` (`seqDaEsperaPorAprovacao`),
+  `:117` (`esperaPorAprovacao`)
+- **Teste:** `apps/web/src/lib/session-channel.test.ts` (`onAgentStatus repassa
+  awaiting_approval (RN-748)`), `apps/web/src/lib/session-rolagem.test.ts`
+  (`seqDaEsperaPorAprovacao (RN-748)`: espera mais recente; sem espera, `null`)
+- **Origem:** AT-432 (TP-01: o Dev Lead em `awaiting_approval` com a faixa
+  "Montando o plano de execução" ativa e o cartão fora da vista)

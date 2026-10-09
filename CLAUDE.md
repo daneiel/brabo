@@ -305,6 +305,7 @@ estado lido do repositório e não da conversa.
 | Na resposta cortada, só a chamada incompleta é recusada (AT-430) | RN-745 |
 | O fecho do Arquiteto diz o que gravou, e as escritas recusadas são contadas (AT-431) | RN-746 |
 | O plano do Dev Lead diz quantos dev agents sobem, não quantos pede (AT-437) | RN-747 |
+| A espera por aprovação fecha a faixa do turno e leva o cartão à vista (AT-432) | RN-748 |
 
 ## Estado atual e aberto
 
