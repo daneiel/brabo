@@ -1840,6 +1840,28 @@ defmodule Engine.Sessions.EngineApiClient.Live do
       when action_type in @acoes_de_container_executadas_no_propose,
       do: [receive_timeout: @teto_do_propose_action_de_container_ms]
 
+  # AT-440 (RN-757). Uma ação `terminal` auto-aprovada também é EXECUTADA na
+  # mesma requisição: a api chama `/internal/actions/execute` neste engine,
+  # que roda o comando (no container, pelo `container-exec`, até
+  # `TERMINAL_ACTION_TIMEOUT_MS` + 90s). No default de 15s do Req — o MESMO
+  # número do teto antigo do comando — todo comando que passasse de ~15s
+  # (`npm install`, o primeiro de toda tarefa Node) voltava
+  # `%Req.TransportError{reason: :timeout}` ao agente, sem dizer qual teto nem
+  # quanto. A cadeia fica: broker (T) < api->broker (T + ~45s) <
+  # engine->api `container-exec` (T + 90s) < este (T + 120s); com o T padrão
+  # de 120s, este (240s) segue abaixo dos 300s de cabeçalhos do `fetch` do
+  # Node com que a api chama `/internal/actions/execute`.
+  @folga_do_propose_action_de_terminal_ms 120_000
+
+  @doc false
+  def teto_do_propose_action_de_terminal_ms,
+    do:
+      Application.fetch_env!(:engine, :terminal_action_timeout_ms) +
+        @folga_do_propose_action_de_terminal_ms
+
+  def opcoes_do_propose_action("terminal"),
+    do: [receive_timeout: teto_do_propose_action_de_terminal_ms()]
+
   def opcoes_do_propose_action(_action_type), do: []
 
   @impl true

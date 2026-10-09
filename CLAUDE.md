@@ -267,6 +267,7 @@ estado lido do repositório e não da conversa.
 | A prontidão do Criativo sem ferramentas; o texto do turno numa resposta só, e o teto visível no fio (AT-352/AT-354) | RN-697, RN-698 |
 | A Anamnese só roda com interação de conteúdo técnico do sujeito (AT-439) | RN-756 |
 | O instalador pergunta pelos modelos locais e mede a porta do Ollama; `brabo-dev` não é instalação, e a migração reinstala do zero (AT-351/AT-358) | RN-691, RN-692 |
+| O `npm install` cabe no `terminal`: o engine espera o `propose_action` pelo teto do comando, que vai a 120s (AT-440) | RN-757 |
 | O semgrep do SecOps morria sem `$HOME` gravável na imagem de produção, e o parecer aprovava (AT-380) | RN-707 |
 | O projeto novo diz o próximo passo: cartão de primeiros passos na Visão geral, e Configurações abre pela credencial e pelos modelos (AT-372/AT-374) | RN-708 |
 | O conflito de merge devolve a tarefa ao dev agent dono, que integra a dev e reenvia; os gates julgam de novo (AT-383) | RN-715 |
@@ -821,7 +822,13 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
 - A chamada ao broker tem teto POR OPERAÇÃO desde a RN-604 (`tetoDaOperacao`,
   `container-broker.client.ts`), e a cadeia do `exec` é broker < api <
   engine — mexer no teto de um salto sem o de cima reabre o defeito, e os
-  testes dos dois lados conferem a ordem. Segue aberto, por DECISÃO do
+  testes dos dois lados conferem a ordem. Desde a RN-757 (AT-440) a cadeia
+  tem um QUARTO salto, o de fora: a ação `terminal` auto-aprovada é executada
+  dentro do `propose_action`, e o engine a espera por
+  `TERMINAL_ACTION_TIMEOUT_MS` (agora 120s, era 15s) + 120s — broker (T) <
+  api (T + 45s) < `container-exec` (T + 90s) < `propose_action` (T + 120s),
+  abaixo dos 300s do `fetch`; o estouro chega ao modelo nomeando o teto, e
+  esse teto passar de ~180s reabre o corte. Segue aberto, por DECISÃO do
   mantenedor (AT-234, opção D, RN-605): imagem grande não sobe na primeira
   tentativa. O pull é passo explícito do `start` (`image inspect` → `pull`)
   sob o MESMO `TIMEOUT_DE_CONTROLE_MS` de 30s, e o estouro é
