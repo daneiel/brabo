@@ -141,5 +141,18 @@
       "none": "No agent had auto mode turned on: {{mensagem}}",
       "some": "Turned on for {{ok}} of {{total}} agents. Still manual: {{falharam}}."
     }
+  },
+  "parar": {
+    "descricao": "Stopping execution closes this session: dev agents and gates stop, and none starts another task.",
+    "botao": "Stop execution",
+    "semPapel": "Stopping execution requires the developer role in the workspace.",
+    "confirmarTitulo": "Stop execution?",
+    "ficaTarefas_one": "{{count}} task in progress is blocked with the worktree's work kept in a commit, and returns to the queue when you release it.",
+    "ficaTarefas_other": "{{count}} tasks in progress are blocked with the worktree's work kept in a commit, and return to the queue when you release them.",
+    "ficaPrs": "Pull requests already open stay open, waiting for your merge.",
+    "ficaAprovacoes": "Pending approvals stay in the Approvals tab.",
+    "retomar": "This session cannot be reopened after execution; to resume, activate execution in a new session.",
+    "confirmar": "Stop execution",
+    "erro": "Could not stop execution."
   }
 }

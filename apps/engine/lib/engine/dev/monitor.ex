@@ -27,10 +27,26 @@ defmodule Engine.Dev.Monitor do
   def watch(pid, project_id, agent_id),
     do: GenServer.call(@name, {:watch, pid, project_id, agent_id})
 
+  @doc """
+  RN-763: o agente vai sair DE PROPÓSITO (a sessão de execução foi encerrada).
+  Qualquer motivo de saída dele passa a apagar a linha durável, sem religamento.
+  """
+  def esquecer(pid), do: GenServer.call(@name, {:esquecer, pid})
+
   @impl true
   def init(state), do: {:ok, state}
 
   @impl true
+  def handle_call({:esquecer, pid}, _from, state) do
+    state =
+      case Map.fetch(state, pid) do
+        {:ok, entry} -> Map.put(state, pid, Map.put(entry, :esquecer, true))
+        :error -> state
+      end
+
+    {:reply, :ok, state}
+  end
+
   def handle_call({:watch, pid, project_id, agent_id}, _from, state) do
     state =
       if Map.has_key?(state, pid) do
@@ -71,6 +87,10 @@ defmodule Engine.Dev.Monitor do
     feitos = Map.get(state, chave, 0)
 
     cond do
+      Map.get(entry, :esquecer, false) ->
+        safe_delete(entry.project_id, entry.agent_id)
+        state
+
       not forget?(reason) ->
         state
 

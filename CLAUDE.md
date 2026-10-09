@@ -321,6 +321,7 @@ estado lido do repositório e não da conversa.
 | A próxima task do dev agent parte da última branch dele não mergeada (AT-447) | RN-760 |
 | O repositório nasce com `.gitignore` base, o commit do dev exclui dependência instalada e o SecOps a acusa (AT-446) | RN-761 |
 | O bloqueio por ciclo de correção esgotado grava a origem `politica` (AT-450) | RN-762 |
+| Encerrar a sessão de execução para os dev agents e os gates; "Parar execução" na aba Executores (AT-456) | RN-763 |
 
 ## Estado atual e aberto
 
@@ -1679,7 +1680,10 @@ o RACIOCÍNIO da triagem, que continua valendo.
   esperando o usuário, mas essa é a ÚNICA pendência com teto (8h do fim do
   turno, causa `conversation_idle_timeout`); os outros sinais da RN-064
   continuam sem teto e vencem. Fechar a sessão PARA os conversacionais dela
-  em todos os nós (`SessionLifecycleWorker`), sem gravar o turno em curso.
+  em todos os nós (`SessionLifecycleWorker`), sem gravar o turno em curso —
+  e, desde a RN-763, os dev agents dela e os gates do projeto, com a task em
+  curso bloqueada e o worktree preservado (`Engine.Dev.EncerramentoDaSessao`);
+  "Parar execução" na aba Executores é esse MESMO fechamento, sem estado novo.
   Os terminais têm UMA saída desde o ADR 0183 (RN-649/650): a REABERTURA,
   para `active`, por rota e checagem PRÓPRIAS (`reopen`, `canReopen`) — a
   transição genérica continua recusando `closed → active`, e `closing →

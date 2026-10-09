@@ -31,6 +31,7 @@ import {
   ModoAutomaticoDoTime,
   agentesDaOfertaEmLote,
 } from '../components/ModoAutomaticoDoTime';
+import { PararExecucao } from '../components/PararExecucao';
 import type { AutonomyMode } from '../components/AgentCard';
 import { AgentTeamGrid } from '../components/AgentTeamGrid';
 import { AgentTimelineTree } from '../components/AgentTimelineTree';
@@ -303,6 +304,19 @@ export function ProjectExecutorsTab({ projectId }: { projectId: string }) {
             sessionId={sessionId}
             podeDecidir={podeDecidir}
           />
+
+          {/* RN-763 (AT-456): parar a execução é FECHAR a sessão dela; o
+              engine para os dev agents e os gates. */}
+          {executionSession?.status === 'active' && (
+            <PararExecucao
+              projectId={projectId}
+              sessionId={sessionId}
+              tarefasEmCurso={
+                [...progressByAgent.values()].filter((p) => Boolean(p.taskId)).length
+              }
+              podeParar={podeDecidir}
+            />
+          )}
 
           {/* RN-661 (AT-315): no início da execução, a oferta de ligar o
               modo automático para o time de uma vez. Some quando todos já
