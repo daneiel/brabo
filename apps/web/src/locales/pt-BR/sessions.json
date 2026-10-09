@@ -135,6 +135,10 @@
     "criativa": {
       "label": "Criativa",
       "description": "Para produzir: abre a ideação com o Criativo, que registra as regras de negócio e passa a bola ao PO. É a única que entra em execução."
+    },
+    "execucao": {
+      "label": "Execução",
+      "description": "A sessão de execução: os dev agents trabalham nas tarefas do plano aprovado pelo Dev Lead."
     }
   },
   "sessionsTab": {

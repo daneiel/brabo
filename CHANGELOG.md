@@ -6,6 +6,8 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- **api/engine/web**: miudezas de tela do TP-01 — a PR de ADR leva `arquiteto[bot]` como autor; a bolha da Infra mostra o modelo; o título da PR do dev abre pela tarefa; a sessão de execução mostra o selo "Execução" e não oferece o Criativo; o caminho da confirmação de criação não quebra no hífen; a tabela Markdown no balão não fica mais larga que o texto sem quebra (RN-770, AT-455).
+
 - **web**: encerrar uma sessão com execução ativa pede confirmação dizendo o que para (agentes, comando em andamento, turno em curso; e que ela não reabre); a frase de sessão encerrada mostra o estado traduzido em vez de `closed`, e um teste novo reprova enum cru interpolado em frase de tela (RN-769, AT-452).
 
 - **engine**: a ação `terminal` auto-aprovada passa a ser esperada pelo engine por `TERMINAL_ACTION_TIMEOUT_MS` + 120 s (antes, os 15 s do `Req`), o teto do comando sobe de 15 s para 120 s, e o estouro chega ao agente nomeando o teto em vez de `Req.TransportError` cru (RN-757, AT-440).

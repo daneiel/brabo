@@ -313,6 +313,7 @@ estado lido do repositório e não da conversa.
 | A PR de infra mergeada sai de "PRs de infra em revisão" (AT-436) | RN-752 |
 | O seletor de modelo mostra `thinking`; ligar o modo automático não aprova o cartão, e ele diz isso (AT-443) | RN-755 |
 | Encerrar sessão com execução pergunta antes, e o estado sai traduzido (AT-452) | RN-769 |
+| Miudezas de tela do TP-01: autor da PR de ADR, modelo da Infra, título da PR do dev, selo da execução, caminho e tabela (AT-455) | RN-770 |
 
 ## Estado atual e aberto
 
