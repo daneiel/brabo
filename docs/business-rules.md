@@ -21822,7 +21822,7 @@ sem dizer qual.
   cortada pelo limite de tamanho.", qualquer outro — ou nenhum — "Response cut
   off by the length limit.". O Ollama não lê o motivo de parada (fora do
   escopo, declarado).
-- **Onde:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:260`
+- **Onde:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:278`
   (`cortadaPeloTeto`),
   `apps/api/src/infrastructure/llm/anthropic-provider.ts:198` (`finalMessage`),
   `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:204`
@@ -21881,7 +21881,7 @@ sem dizer qual.
   ITERAÇÕES, não o de tokens). Hipótese NÃO medida com chave real: que a
   reserva explica o 402 do TP-01.
 - **Onde:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:38`
-  (`MAX_TOKENS_PADRAO`), `:445` (`flags`)
+  (`MAX_TOKENS_PADRAO`), `:462` (`flags`)
 - **Teste:** `apps/api/test/infrastructure/llm/openai-compatible-provider.contract.spec.ts`
   (sem `maxTokens` o corpo leva `max_tokens: 4096`; com `maxTokens: 123` leva
   123; com `maxTokensField: 'max_completion_tokens'` o campo muda e
@@ -21931,3 +21931,33 @@ sem dizer qual.
   diagnóstico)
 - **Origem:** AT-424 (TP-01, 3ª rodada, 03/10: `reason` cortado em
   `…"code":402,"metadata":{"reason":"in…`)
+
+### RN-741 — O raciocínio tem orçamento próprio e não come a saída visível {#rn-741}
+
+- **Regra:** quando o modelo do binding raciocina (`models.supports_reasoning`,
+  do catálogo), os casos de uso de LLM mandam `reasoning: true` ao provider.
+  Um provider com `campoDeRaciocinio` configurado (hoje só o OpenRouter) manda
+  um orçamento EXPLÍCITO de raciocínio — `reasoning: { max_tokens:
+  ORCAMENTO_DE_RACIOCINIO }`, 4096 — e o `max_tokens` da chamada passa a ser a
+  saída visível (o teto da RN-734) MAIS esse orçamento, para o texto e a
+  chamada de ferramenta continuarem com o teto deles. O raciocínio nunca é
+  desligado (`exclude`/`enabled: false` não são enviados). Modelo sem
+  raciocínio, e provider sem a configuração, mandam o corpo de antes, byte a
+  byte. O `anthropic-provider` direto não envia `thinking`, então o modelo não
+  raciocina por ali e o buraco não existe — declarado, sem mudança. A forma do
+  campo foi lida da doc do OpenRouter (Reasoning Tokens: `reasoning.max_tokens`;
+  o `max_tokens` da chamada tem de ser maior que ele).
+  > **TODO(humano):** provar com credencial real que o
+  > `anthropic/claude-haiku-5.5` respeita o orçamento (smoke, com aviso ao
+  > dono antes de usar a chave).
+- **Onde:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:48`
+  (`ORCAMENTO_DE_RACIOCINIO`), `:469` (`raciocinio`),
+  `apps/api/src/infrastructure/llm/openrouter-provider.ts:223`
+  (`campoDeRaciocinioOpenRouter`),
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:188`
+  (`supportsReasoning`)
+- **Teste:** `apps/api/test/infrastructure/llm/openai-compatible-provider.contract.spec.ts`
+  (`raciocínio com orçamento próprio (RN-741)`: orçamento e teto somado; sem
+  raciocínio o corpo não muda; provider sem campo não inventa orçamento)
+- **Origem:** AT-427 (TP-01, 08/10: `anthropic/claude-haiku-5.5` com
+  `output_tokens = reasoning_tokens = 4096` em duas chamadas seguidas do PO)

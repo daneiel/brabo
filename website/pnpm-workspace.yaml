@@ -112,6 +112,18 @@ overrides:
   # 2): só ela existe nesta árvore. O alvo é a 2.0.4, o patch publicado 40
   # minutos depois da 2.0.3 na mesma linha, e não a 2.0.3.
   image-size@>=2.0.0 <2.0.3: 2.0.4
+  # MISTA (ADR 0117) — duplicada em `pnpm-workspace.yaml` (raiz).
+  # `pnpm why proxy-addr`: `express` ← `webpack-dev-server` ← `@docusaurus/core`.
+  #
+  # CRITICAL · GHSA-jqcg-44mw-7w3h (`>=1.1.0 <2.0.8`), presa à linha 2 (AT-426).
+  proxy-addr@>=2.0.0 <2.0.8: 2.0.8
+  # WEBSITE como override; no produto `shell-quote` é dependência DIRETA de
+  # `apps/api` e sobe no `package.json` dele. `pnpm why shell-quote`:
+  # `launch-editor` ← `webpack-dev-server` ← `@docusaurus/core`.
+  #
+  # CRITICAL · GHSA-pqg4-j6r4-53mv (`>=1.8.4 <1.11.0`), injeção de comando em
+  # `quote()`. Linha 1, a única que existe (AT-426).
+  shell-quote@>=1.8.4 <1.11.0: 1.11.0
 
 # ------------------------------------------------------------------------
 # O que NÃO tem override, e por quê. Esta seção existe porque fechar três de

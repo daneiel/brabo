@@ -292,6 +292,22 @@ overrides:
   # HIGH · GHSA-m9gg-hp2v-232j (30/09), mais a LOW GHSA-f596-whhp-79r4 da mesma
   # faixa, as duas `>=1.14.0 <1.14.5`. O pai pede `^1.14.x`; a 1.14.5 é patch.
   '@grpc/grpc-js@>=1.14.0 <1.14.5': 1.14.5
+  # MISTA (ADR 0117) — duplicada em `website/pnpm-workspace.yaml`. ALCANÇA
+  # PRODUÇÃO pelo produto: `pnpm why proxy-addr -r` mostra `express` ←
+  # `@nestjs/platform-express` em `apps/api` (o Trivy reprovava `brabo-api:prod`
+  # por ela, CVE-2026-90711); no website entra por `webpack-dev-server`.
+  #
+  # CRITICAL · GHSA-jqcg-44mw-7w3h (`>=1.1.0 <2.0.8`), confiança em sub-rede
+  # IPv6. Faixa presa à linha 2 (disciplina 2), a única na árvore; o `express`
+  # pede `~2.0.7`, então a 2.0.8 é patch dentro da faixa do pai (AT-426).
+  proxy-addr@>=2.0.0 <2.0.8: 2.0.8
+  # PRODUTO-EXCLUSIVA — `pnpm why seroval -r`: `@tanstack/router-core` (e o
+  # `seroval-plugins` dele) ← `@tanstack/react-router`, em `apps/web`.
+  #
+  # CRITICAL · GHSA-p6vx-979v-rg4c (`>=0.12.0 <=1.6.0`) e HIGH ·
+  # GHSA-jp82-f5mq-hwhp (`<=1.6.2`); o alvo é a 1.6.3, que fecha as duas.
+  # Faixa presa à linha 1 (disciplina 2) (AT-426).
+  seroval@>=1.0.0 <1.6.3: 1.6.3
 
 
 # O default do pnpm ("install") roda um `pnpm install` do workspace INTEIRO,
