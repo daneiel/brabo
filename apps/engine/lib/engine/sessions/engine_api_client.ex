@@ -1113,7 +1113,7 @@ defmodule Engine.Sessions.EngineApiClient.Live do
       api_url() <>
         "/internal/sessions/#{session_id}/events?projectId=#{project_id}&limit=200"
 
-    case Req.get(url, headers: headers()) do
+    case req_get(url, headers: headers()) do
       {:ok, %Req.Response{status: status, body: %{"items" => items}}}
       when status in 200..299 ->
         {:ok, items}
@@ -1144,7 +1144,7 @@ defmodule Engine.Sessions.EngineApiClient.Live do
 
     url = api_url() <> "/internal/sessions/#{session_id}/events"
 
-    case Req.get(url, headers: headers(), params: params) do
+    case req_get(url, headers: headers(), params: params) do
       {:ok, %Req.Response{status: status, body: %{"items" => items}}}
       when status in 200..299 ->
         {:ok, items}
@@ -1386,7 +1386,7 @@ defmodule Engine.Sessions.EngineApiClient.Live do
         "/internal/sessions/#{session_id}/dev-context?projectId=#{project_id}&taskId=#{task_id}" <>
         module_query
 
-    case Req.get(url, headers: headers()) do
+    case req_get(url, headers: headers()) do
       {:ok, %Req.Response{status: status, body: body}} when status in 200..299 ->
         {:ok, body}
 
@@ -1431,7 +1431,7 @@ defmodule Engine.Sessions.EngineApiClient.Live do
   def session_pending_work(session_id) do
     url = api_url() <> "/internal/sessions/#{session_id}/pending-work"
 
-    case Req.get(url, headers: headers()) do
+    case req_get(url, headers: headers()) do
       {:ok, %Req.Response{status: status, body: body}} when status in 200..299 ->
         pendencia_da_resposta(body)
 
@@ -1447,7 +1447,7 @@ defmodule Engine.Sessions.EngineApiClient.Live do
   def get_git_remote(project_id) do
     url = api_url() <> "/internal/projects/#{project_id}/git-remote"
 
-    case Req.get(url, headers: headers()) do
+    case req_get(url, headers: headers()) do
       {:ok, %Req.Response{status: status, body: body}} when status in 200..299 ->
         {:ok,
          %{
@@ -1487,7 +1487,7 @@ defmodule Engine.Sessions.EngineApiClient.Live do
   # chave por chave, o `session_pending_work` extrai dois campos), e trocar
   # isso por um helper comum seria refatorar caminho que já está provado.
   defp get_json(path) do
-    case Req.get(api_url() <> path, headers: headers()) do
+    case req_get(api_url() <> path, headers: headers()) do
       {:ok, %Req.Response{status: status, body: body}} when status in 200..299 ->
         {:ok, body}
 
@@ -1505,7 +1505,7 @@ defmodule Engine.Sessions.EngineApiClient.Live do
       api_url() <>
         "/internal/sessions/#{session_id}/infra-context?projectId=#{project_id}"
 
-    case Req.get(url, headers: headers()) do
+    case req_get(url, headers: headers()) do
       {:ok, %Req.Response{status: status, body: body}} when status in 200..299 ->
         {:ok, body}
 
@@ -1523,7 +1523,7 @@ defmodule Engine.Sessions.EngineApiClient.Live do
       api_url() <>
         "/internal/sessions/#{session_id}/infra-artifacts/#{pr_action_id}/files?projectId=#{project_id}"
 
-    case Req.get(url, headers: headers()) do
+    case req_get(url, headers: headers()) do
       {:ok, %Req.Response{status: status, body: body}} when status in 200..299 ->
         {:ok, body}
 
@@ -1541,7 +1541,7 @@ defmodule Engine.Sessions.EngineApiClient.Live do
       api_url() <>
         "/internal/sessions/#{session_id}/psychologist-context?projectId=#{project_id}"
 
-    case Req.get(url, headers: headers()) do
+    case req_get(url, headers: headers()) do
       {:ok, %Req.Response{status: status, body: body}} when status in 200..299 ->
         {:ok, body}
 
@@ -1560,7 +1560,7 @@ defmodule Engine.Sessions.EngineApiClient.Live do
     # sessão é irrelevante aqui.
     url = api_url() <> "/internal/sessions/_/anamnese-context?projectId=#{project_id}"
 
-    case Req.get(url, headers: headers()) do
+    case req_get(url, headers: headers()) do
       {:ok, %Req.Response{status: status, body: body}} when status in 200..299 ->
         {:ok, body}
 
@@ -1932,7 +1932,7 @@ defmodule Engine.Sessions.EngineApiClient.Live do
       api_url() <>
         "/internal/graph/prompt-templates/#{URI.encode_www_form(name)}" <> query_part
 
-    case Req.get(url, headers: headers()) do
+    case req_get(url, headers: headers()) do
       {:ok, %Req.Response{status: 404}} ->
         {:error, :not_found}
 
@@ -1974,6 +1974,32 @@ defmodule Engine.Sessions.EngineApiClient.Live do
     end
   end
 
+  # AT-428 (RN-742). A chamada HTTP roda num processo PRÓPRIO e descartável,
+  # nunca na caixa de mensagens de quem chama. Em 08/10 o `npm install` do dev
+  # estourou o `receive_timeout` (`Req.TransportError{reason: :timeout}`), a
+  # resposta atrasada da conexão ficou na caixa do `DevAgentServer`, e a
+  # chamada SEGUINTE morreu com `CaseClauseError` em
+  # `Finch.HTTP1.Conn.receive_response/8` — o GenServer caiu calado. Com o
+  # pedido numa Task, a mensagem tardia chega a um processo que já acabou.
+  # Os cabeçalhos (o `traceparent` vem do contexto do processo) são montados
+  # ANTES, no chamador. Exceção dentro da Task volta como `{:error, _}`, nunca
+  # como `EXIT` ligado. O `llm_turn_stream/6` fica FORA: o `into:` dele grava
+  # no dicionário do chamador, e os conversacionais já o chamam de dentro da
+  # Task do turno (`TurnoAssincrono`).
+  @doc false
+  def isolado(fun) do
+    Task.async(fn ->
+      try do
+        fun.()
+      rescue
+        e -> {:error, e}
+      end
+    end)
+    |> Task.await(:infinity)
+  end
+
+  defp req_get(url, opts), do: isolado(fn -> Req.get(url, opts) end)
+
   defp post(path, body) do
     case post_returning(path, body) do
       {:ok, _body} -> :ok
@@ -1984,13 +2010,9 @@ defmodule Engine.Sessions.EngineApiClient.Live do
   # Igual `post/2` mas devolve o corpo da resposta (llm_turn/propose_action
   # precisam do JSON de volta, não só do :ok).
   defp post_returning(path, body, opts \\ []) do
-    case Req.post(
-           [
-             url: api_url() <> path,
-             json: body,
-             headers: headers()
-           ] ++ opts
-         ) do
+    req_opts = [url: api_url() <> path, json: body, headers: headers()] ++ opts
+
+    case isolado(fn -> Req.post(req_opts) end) do
       {:ok, %Req.Response{status: status, body: resp}} when status in 200..299 ->
         {:ok, resp}
 

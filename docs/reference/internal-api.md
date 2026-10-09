@@ -298,6 +298,16 @@ conversational agents — which use only the streamed one — would fail at 15s 
 `%Req.TransportError{reason: :timeout}`, classified as origin `infra`. With
 a local model the turn fit within 15s and the defect didn't show up.
 
+#### Every non-streamed call runs in its own process ([RN-742](../business-rules.md#rn-742))
+
+`post_returning/3` and every GET of `EngineApiClient.Live` run the `Req` call
+inside a throwaway `Task` (`isolado/1`); the headers are built before, in the
+caller. A response that arrives after the `receive_timeout` lands in a process
+that has already ended, never in the caller's mailbox — on 08/10 that stray
+message crashed the dev agent on its NEXT call. The streamed path stays in the
+caller (its `into:` writes the caller's process dictionary, and the
+conversational agents already call it from the turn's `Task`).
+
 #### The last message may be the language guidance ([RN-622](../business-rules.md#rn-622))
 
 The `messages` the engine sends to both paths may end with ONE extra

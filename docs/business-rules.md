@@ -21984,3 +21984,31 @@ sem dizer qual.
 - **Origem:** AT-439 (TP-01, 08/10, projeto `c1dc053d`: duas rodadas durante
   a execução, US$ 0,20, ambas `skip_proficiency` com "o usuário apenas
   aprovou propostas")
+### RN-742 — O dev agent não morre calado, e a resposta HTTP tardia não fica na caixa dele {#rn-742}
+
+- **Regra:** toda chamada HTTP não-streamada do engine à api
+  (`post_returning/3` e os GETs de `EngineApiClient.Live`) roda numa `Task`
+  descartável; a resposta que chega depois do `receive_timeout` cai num
+  processo que já acabou, nunca na caixa de mensagens de quem chamou, e
+  exceção dentro do pedido volta como `{:error, _}`. E o dev agent que CAI
+  (saída que não é `:normal` nem `:shutdown`) não é tratado como terminado: o
+  `Engine.Dev.Monitor` grava `agent.error` DURÁVEL com origem `infra`
+  (`reason: processo_do_dev_caiu`, `religado`, `taskId`) e o RELIGA a partir
+  da própria linha de `dev_agent_states`, até 3 vezes por agente; o `resume`
+  passa pelo `handle_continue({:restart_recovery, _})` que já existia, que
+  bloqueia a task interrompida com diagnóstico (origem `infra`) e tenta o
+  próximo claim. Sem linha, ou no teto, a linha sai e o erro diz que não
+  houve religamento. O `llm_turn_stream/6` fica fora do isolamento (o `into:`
+  grava no dicionário do chamador); os conversacionais já o chamam de dentro
+  da Task do turno (`TurnoAssincrono`), então o padrão "HTTP dentro do
+  GenServer" não os alcança — declarado. A web não mudou: a aba Executores
+  passa a ver o `agent.error` e o `dev.blocked` da recuperação.
+- **Onde:** `apps/engine/lib/engine/sessions/engine_api_client.ex:1990`
+  (`isolado`), `apps/engine/lib/engine/dev/monitor.ex:69` (`ao_terminar`),
+  `:93` (`registrar_e_religar`)
+- **Teste:** `apps/engine/test/engine/sessions/engine_api_client_isolado_test.exs`
+  (mensagem tardia não chega ao chamador; exceção vira `{:error, _}`),
+  `apps/engine/test/engine/dev/monitor_test.exs` (crash grava `agent.error`
+  infra e religa; `:normal` apaga a linha; sem linha não religa)
+- **Origem:** AT-428 (08/10: `CaseClauseError` em
+  `Finch.HTTP1.Conn.receive_response/8` depois do timeout do `npm install`)
