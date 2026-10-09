@@ -2992,7 +2992,7 @@ criados:** o destino que já tem oferta pendente ou já está ativo no projeto n
 recebe outra, e isso não é falha.
 
 - **Onde:** `apps/engine/lib/engine/gates/secops_agent_server.ex:55`
-  (`@appsec_handoff_targets`), `:332` (`criar_handoffs_appsec/3`)
+  (`@appsec_handoff_targets`), `:362` (`criar_handoffs_appsec/3`)
 - **Teste:** `apps/engine/test/engine/gates/secops_agent_server_test.exs`
   ("run_design: threat model concluído emite artifact.threat_model e cria
   os TRÊS handoffs")
@@ -17915,7 +17915,7 @@ vault por decisão do dono; [ADR 0182](adr/0182-ciclo-de-vida-do-handoff.md)).
 3. **O artefato fica.** O `artifact.threat_model` é gravado ANTES e de qualquer
    jeito; o que deixa de nascer é a oferta repetida.
 
-- **Onde:** `apps/engine/lib/engine/gates/secops_agent_server.ex:332`
+- **Onde:** `apps/engine/lib/engine/gates/secops_agent_server.ex:362`
   (`criar_handoffs_appsec/3`);
   `apps/engine/lib/engine/sessions/engine_api_client.ex:1131`
 
@@ -20900,8 +20900,8 @@ Junto, o fechamento deixa de dizer que parear uma pasta pela tela do projeto
   Motivo diferente, um veredito no meio ou leitura que falha gravam de novo; o
   `agent.error` passa a levar `taskId`.
 - **Onde:** `apps/engine/lib/engine/gates/secops_agent_server.ex:116`
-  (`run_secops`), `apps/engine/lib/engine/gates/secops_agent_server.ex:163`
-  (`sast_nao_rodou`), `apps/engine/lib/engine/gates/secops_agent_server.ex:174`
+  (`run_secops`), `apps/engine/lib/engine/gates/secops_agent_server.ex:144`
+  (`sast_nao_rodou`), `apps/engine/lib/engine/gates/secops_agent_server.ex:194`
   (`erro_ja_registrado?`)
 - **Teste:** `apps/engine/test/engine/gates/secops_agent_server_test.exs`
   ("sem achados (gitleaks e semgrep limpos): approved"; casos de falha:
@@ -22457,3 +22457,43 @@ sem dizer qual.
   `dev`)
 - **Origem:** AT-447 (TP-01 de 09/10: tasks `762833bd` e `5ebad64b` — a
   segunda nasceu de `dev` sem a rota de login da primeira, e o QA reprovou)
+
+### RN-761 — Dependência instalada não entra no repositório: `.gitignore` base, commit que a exclui e gate que a acusa {#rn-761}
+
+- **Regra:** três camadas, com a MESMA lista de diretórios (`node_modules`,
+  `deps`, `_build`, `.venv`, `venv`, `__pycache__`, `vendor`, `target`):
+  1. o bootstrap do repositório (os três providers e a adoção) ganha o passo
+     `commit_gitignore`, que commita um `.gitignore` base em `main` ANTES de
+     `dev` nascer, então toda branch de trabalho o herda. É o ponto único
+     porque é por ele que TODO repositório criado ou adotado passa, antes de
+     qualquer agente escrever; a Infra pelo `module_map` chegaria depois do
+     primeiro commit do dev e só nos projetos que passam por ela. O passo só
+     CRIA o arquivo: um `.gitignore` já existente, mesmo diferente, é do
+     usuário e não entra no plano;
+  2. o commit do dev agent (`git_commit`) e o commit que preserva o worktree
+     ao bloquear ([RN-743](#rn-743)) estagiam tudo MENOS esses diretórios, em
+     qualquer profundidade (pathspec `:(exclude,glob)`), mesmo sem
+     `.gitignore`;
+  3. o gate SecOps acusa, como achado (`changes_requested`), diretório da lista
+     que apareça no diff da PR, com a contagem de arquivos.
+  As duas cópias da lista (api e engine) são conferidas por teste. Declarado:
+  arquivo de dependência JÁ rastreado antes desta regra não é removido pelo
+  commit (a exclusão não estagia remoção); o projeto já bootstrapado só ganha
+  o `.gitignore` se o bootstrap rodar de novo; no modo `runner` o commit roda
+  pelo mesmo `GitExecutor` e a mesma exclusão vale onde o engine executa git.
+- **Onde:** `apps/api/src/application/use-cases/git/bootstrap-templates.ts:28`
+  (`gitignoreContent`), `apps/api/src/application/use-cases/git/bootstrap-steps.ts:164`
+  (`soSeAusente`), `apps/engine/lib/engine/actions/diretorios_de_dependencia.ex:20`
+  (`argumentos_do_add`), `:28` (`commitados`),
+  `apps/engine/lib/engine/gates/secops_agent_server.ex:162`
+  (`dependencias_commitadas`)
+- **Teste:** `apps/api/test/application/use-cases/git/bootstrap-plan.spec.ts`
+  (o repositório vazio planeja os 3 arquivos; `.gitignore` do usuário não entra
+  no plano), `apps/api/test/application/use-cases/git/provision-repository.use-case.spec.ts`
+  (o local converge os 6 passos),
+  `apps/engine/test/engine/actions/git_executor_test.exs` (`commit exclui
+  diretórios de dependência mesmo sem .gitignore`),
+  `apps/engine/test/engine/actions/diretorios_de_dependencia_test.exs` (a
+  lista é a mesma da api; o SecOps acusa `node_modules`)
+- **Origem:** AT-446 (TP-01 de 09/10: PR com 1.453 arquivos, 1.437 em
+  `node_modules/`, aprovada por QA e SecOps)

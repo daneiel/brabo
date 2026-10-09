@@ -75,7 +75,7 @@ defmodule Engine.Dev.WorktreeManager do
     with true <- is_binary(path) and File.dir?(path),
          {:ok, status} <- git(path, ["status", "--porcelain"]),
          false <- String.trim(status) == "",
-         {:ok, _} <- git(path, ["add", "-A"]),
+         {:ok, _} <- git(path, Engine.Actions.DiretoriosDeDependencia.argumentos_do_add()),
          {:ok, _} <-
            git(path, [
              "-c",
