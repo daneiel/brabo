@@ -2418,7 +2418,9 @@ descrito aqui.
 - **Onde:** `apps/web/src/lib/activity.ts:94` (`OrigemDeEvento`), `:125`
   (`origemDoEvento`), `:152` (`agruparPorOrigem`);
   `apps/web/src/components/ActivityFeed.tsx:34` (o corte de 5), `:66` (o
-  toggle); `apps/web/src/routes/session-fio.tsx:119` (o corte do fio), `:268`
+  toggle); `apps/web/src/routes/session-fio.tsx:119` (o corte do fio), `:291`
+  (`dividirFio`); `apps/web/src/routes/SessionPage.tsx:516` (`fio`)
+  toggle); `apps/web/src/routes/session-fio.tsx:119` (o corte do fio), `:291`
   (`dividirFio`); `apps/web/src/routes/SessionPage.tsx:516` (`fio`)
 - **Teste:** `apps/web/src/lib/activity-origem.test.ts`,
   `apps/web/src/components/ActivityFeed.test.tsx` (describe "ordem,
