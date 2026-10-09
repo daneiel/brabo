@@ -18,28 +18,75 @@ defmodule Engine.Dev.MonitorTest do
     %{project_id: Ecto.UUID.generate(), session_id: Ecto.UUID.generate()}
   end
 
-  test "agente que morre apaga a própria linha — não volta no boot seguinte", %{
+  # AT-428 (RN-742): crash não é fim — vira agent.error durável (origem infra)
+  # e o agente é religado da própria linha.
+  test "agente que CAI grava agent.error infra e é religado", %{
     project_id: project_id,
     session_id: session_id
   } do
-    {:ok, pid, :started} =
-      DevAgentSupervisor.start_agent(project_id, "dev-api", "api", session_id, 500_000, 2)
+    Application.put_env(:engine, :test_pid, self())
+    Application.put_env(:engine, :engine_api_client, Engine.Sessions.FakeEngineApiClient)
+    on_exit(fn -> Application.delete_env(:engine, :engine_api_client) end)
+    on_exit(fn -> Application.delete_env(:engine, :test_pid) end)
 
-    assert DevAgentState.get(project_id, "dev-api")
+    {:ok, pid, :started} =
+      DevAgentSupervisor.start_agent(project_id, "dev-api", "api", session_id, 500_000, 2, :noop)
 
     ref = Process.monitor(pid)
     Process.exit(pid, :kill)
     assert_receive {:DOWN, ^ref, :process, ^pid, _}, 1_000
+
+    assert_receive {:event_appended, ^project_id, ^session_id,
+                    %{type: "agent.error", payload: %{origem: "infra", religado: true}}},
+                   2_000
+
+    novo = espera_religado(project_id, "dev-api", pid)
+    assert is_pid(novo) and novo != pid
+    assert DevAgentState.get(project_id, "dev-api")
+    :ok = DynamicSupervisor.terminate_child(DevAgentSupervisor, novo)
+  end
+
+  test "agente que termina :normal apaga a linha e não é religado", %{
+    project_id: project_id,
+    session_id: session_id
+  } do
+    {:ok, pid, :started} =
+      DevAgentSupervisor.start_agent(project_id, "dev-x", "x", session_id, 500_000, 2, :noop)
+
+    ref = Process.monitor(pid)
+    GenServer.stop(pid, :normal)
+    assert_receive {:DOWN, ^ref, :process, ^pid, _}, 1_000
     wait_forget(pid)
+    refute DevAgentState.get(project_id, "dev-x")
+  end
 
-    refute DevAgentState.get(project_id, "dev-api"),
-           "a linha sobreviveu ao agente: o DevRehydrator o ressuscitaria a cada boot"
+  test "sem linha durável, o crash não religa nem grava evento", %{project_id: project_id} do
+    Application.put_env(:engine, :test_pid, self())
+    Application.put_env(:engine, :engine_api_client, Engine.Sessions.FakeEngineApiClient)
+    on_exit(fn -> Application.delete_env(:engine, :engine_api_client) end)
+    on_exit(fn -> Application.delete_env(:engine, :test_pid) end)
 
-    # E o rehydrator de fato não o vê mais.
-    refute Enum.any?(
-             DevAgentState.list_all(),
-             &(&1.project_id == project_id and &1.agent_id == "dev-api")
-           )
+    entry = %{project_id: project_id, agent_id: "dev-sem-linha"}
+    Monitor.registrar_e_religar(entry, nil, :boom, false)
+    refute_received {:event_appended, _, _, _}
+    assert Registry.lookup(Engine.Dev.Registry, {project_id, "dev-sem-linha"}) == []
+  end
+
+  defp espera_religado(project_id, agent_id, antigo, tentativas \\ 100) do
+    case Registry.lookup(Engine.Dev.Registry, {project_id, agent_id}) do
+      [{pid, _}] when pid != antigo ->
+        if Process.alive?(pid), do: pid, else: retry(project_id, agent_id, antigo, tentativas)
+
+      _ ->
+        retry(project_id, agent_id, antigo, tentativas)
+    end
+  end
+
+  defp retry(_p, _a, _antigo, 0), do: nil
+
+  defp retry(p, a, antigo, n) do
+    Process.sleep(20)
+    espera_religado(p, a, antigo, n - 1)
   end
 
   test "desligamento do supervisor PRESERVA a linha (é o caso que a rehydration cobre)", %{

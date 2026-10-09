@@ -129,7 +129,8 @@ defmodule Engine.Sessions.EngineApiClientRagTest do
       fonte: fonte
     } do
       for linha <- String.split(fonte, "\n"),
-          String.contains?(linha, "Req.get(") do
+          String.contains?(linha, "req_get("),
+          not String.contains?(linha, "defp req_get") do
         assert String.contains?(linha, "headers: headers()"),
                "Req.get sem o funil de headers: #{String.trim(linha)}"
       end

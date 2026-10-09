@@ -299,6 +299,7 @@ estado lido do repositório e não da conversa.
 | `SEM_AUTOFILL` ganha `aria-autocomplete` e o ignore do Proton Pass; o rótulo visível fica (AT-425) | RN-740 |
 | O diagnóstico da falha guarda o corpo do provider até 4 000 caracteres; a bolha corta em 300 (AT-424) | RN-739 |
 | O raciocínio ganha orçamento próprio e não come a saída visível da tool call (AT-427) | RN-741 |
+| O dev agent não morre calado: HTTP em processo próprio, crash vira `agent.error` e religamento (AT-428) | RN-742 |
 
 ## Estado atual e aberto
 

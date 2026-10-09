@@ -93,6 +93,11 @@ The reason it's an outbox, and not a synchronous HTTP call like the others:
 an engine restart between the gate's verdict and the agent's reaction must
 not lose the signal — the row survives the process that would read it, HTTP
 would not survive the death of whoever was waiting for the response.
+A dev agent that CRASHES (any exit other than `:normal`/`:shutdown`) is not
+treated as finished: `Engine.Dev.Monitor` records a durable `agent.error`
+(origin `infra`) and restarts it from its own `dev_agent_states` row, up to
+three times; the interrupted task is blocked with diagnosis by the existing
+restart recovery ([RN-742](business-rules.md#rn-742)).
 `dev_agent_states` gained `consecutive_blocked`/`max_consecutive_blocked`
 (the circuit breaker, [RN-047](business-rules/custo.md#rn-047)); full decision in
 [ADR 0045](adr/0045-reagendamento-por-evento-do-dev-agent.md).
