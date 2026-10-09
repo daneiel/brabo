@@ -991,6 +991,15 @@ One endpoint per agent, instead of a generic one: each one assembles exactly wha
 that role needs, and the Harness doesn't end up filtering in the engine what
 the api could have simply not sent.
 
+`/dev-context` gained `siblingTasks` in AT-448 ([RN-765](../business-rules.md#rn-765))
+— the OTHER tasks of the same story, `{id, title, status}` each, without the
+task itself (`tarefasIrmas` in `get-dev-task-context.use-case.ts`), an empty
+list when the story has one task. It is what `Engine.Gates.RecorteDaTarefa`
+puts in front of the QA test plan and the `qa-automacao` review, so the
+verdict is about what THIS task delivers and a requirement owned by a sibling
+becomes an observation instead of a rejection. Read-only, same route, same
+`engine-service` guard: the HTTP surface does not change.
+
 `/infra-context` gained `gitProvider` in FASE 8c (`null` with no repository
 provisioned) — it's how the Workflows subagent decides `.github/workflows/
 ci.yml` vs `.gitlab-ci.yml`, with no new route (same "one GET per
