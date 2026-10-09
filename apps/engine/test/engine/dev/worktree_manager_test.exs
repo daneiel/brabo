@@ -301,4 +301,39 @@ defmodule Engine.Dev.WorktreeManagerTest do
       assert WorktreeManager.list(project_id) == []
     end
   end
+
+  # RN-743 (AT-429): o trabalho não commitado sobrevive ao bloqueio.
+  describe "preservar_em/3 e create_from/4" do
+    test "commita o worktree sujo na branch da task e a próxima nasce dela", %{
+      work_dir: work_dir
+    } do
+      {:ok, %{path: path, branch: branch}} =
+        WorktreeManager.add_worktree(work_dir, "dev-api", "task-aaaa1111")
+
+      File.write!(Path.join(path, "package.json"), "{}")
+
+      assert {:ok, sha} = WorktreeManager.preservar_em(path, "dev-api", "t1")
+      {autor, 0} = System.cmd("git", ["log", "-1", "--format=%an", branch], cd: work_dir)
+      assert String.trim(autor) == "dev-api[bot]"
+
+      {:ok, %{path: novo}} =
+        WorktreeManager.add_worktree(work_dir, "dev-api", "task-bbbb2222", branch)
+
+      assert File.exists?(Path.join(novo, "package.json"))
+      {head, 0} = System.cmd("git", ["rev-parse", "HEAD~0"], cd: novo)
+      assert String.trim(head) == sha
+    end
+
+    test "worktree limpo é :nada, e pasta que não é repositório é erro nomeado", %{
+      work_dir: work_dir,
+      root: root
+    } do
+      {:ok, %{path: path}} = WorktreeManager.add_worktree(work_dir, "dev-web", "task-cccc3333")
+      assert :nada == WorktreeManager.preservar_em(path, "dev-web", "t2")
+
+      solta = Path.join(root, "nao-e-repo")
+      File.mkdir_p!(solta)
+      assert {:error, _} = WorktreeManager.preservar_em(solta, "dev-web", "t3")
+    end
+  end
 end

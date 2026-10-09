@@ -19025,8 +19025,8 @@ O valor mora em DOIS lugares, de propósito, um por linguagem, e mudam juntos:
   (`init_from_bare!`), `:272` (`remoto_vazio?`);
   `apps/engine/lib/engine/actions/workspace/runner_git.ex:158` (`add_worktree`),
   `:183` (`garantir_base`), `:308` (`remoto_vazio?`);
-  `apps/engine/lib/engine/dev/worktree_manager.ex:36` (`create`), `:79`
-  (`add_worktree`), `:93` (`garantir_base`);
+  `apps/engine/lib/engine/dev/worktree_manager.ex:36` (`create`), `:103`
+  (`add_worktree`), `:147` (`garantir_base`);
   `apps/engine/lib/engine/dev/agent_io.ex:305` (`propose_pr`);
   `apps/engine/lib/engine/gates/diff.ex:21` (`compute`);
   `apps/engine/lib/engine/harness/project_context.ex:29` (`repo_line`);
@@ -20020,7 +20020,7 @@ lendo o worktree de outros módulos para descobrir a interface deles: o
   `apps/engine/lib/engine/harness/tools/listar_contratos_de_modulos.ex:43`
   (`run`), `:66` (`renderizar`);
   `apps/engine/lib/engine/dev/tools.ex:36` (`ListarContratosDeModulos`);
-  `apps/engine/lib/engine/dev/dev_agent_server.ex:477` (`module`), `:501`;
+  `apps/engine/lib/engine/dev/dev_agent_server.ex:489` (`module`), `:501`;
   `apps/engine/lib/engine/agents/arquiteto_server.ex:112`, `:335`, `:399`
 - **Teste:** `apps/api/test/application/use-cases/architecture/module-contracts.use-case.spec.ts:173`
   (grava a versão 1 — caminho feliz), `:185` (a vigente substitui), `:210`
@@ -21577,7 +21577,7 @@ sem dizer qual.
   ele que decide; o reconhecimento pelo texto ficou só como rede.
 - **Onde:** `apps/engine/lib/engine/agents/falha_de_turno.ex:110`
   (`credito_esgotado?`),
-  `apps/engine/lib/engine/dev/dev_agent_server.ex:874` (`handle_outcome`),
+  `apps/engine/lib/engine/dev/dev_agent_server.ex:866` (`handle_outcome`),
   `apps/engine/lib/engine/dev/agent_io.ex:259` (`pausar_por_credito`),
   `apps/web/src/lib/agent-status.ts:194` (`breakerReasonFor`),
   `apps/api/src/application/use-cases/sessions/get-session-pending-work.use-case.ts`
@@ -21612,7 +21612,7 @@ sem dizer qual.
   (`streamErrorCode`),
   `apps/engine/lib/engine/agents/falha_de_turno.ex:106` (`credito_esgotado?`),
   `:71` (`origem`), `apps/engine/lib/engine/harness/tool_loop.ex:148`
-  (`last_error_code`), `apps/engine/lib/engine/dev/dev_agent_server.ex:874`
+  (`last_error_code`), `apps/engine/lib/engine/dev/dev_agent_server.ex:866`
   (`handle_outcome`)
 - **Teste:** `apps/api/test/contract/llm-provider.contract.ts` (`erro_402 vira
   chunk de erro com code "insufficient_credit"`; falha: `erro_500` segue
@@ -22012,3 +22012,28 @@ sem dizer qual.
   infra e religa; `:normal` apaga a linha; sem linha não religa)
 - **Origem:** AT-428 (08/10: `CaseClauseError` em
   `Finch.HTTP1.Conn.receive_response/8` depois do timeout do `npm install`)
+
+### RN-743 — Bloquear a task preserva o trabalho do worktree, e a próxima parte dele {#rn-743}
+
+- **Regra:** antes de bloquear uma task (qualquer origem, inclusive o teto de
+  orçamento `taskBudgetMicros`, cujo VALOR não muda aqui), o que o dev agent
+  deixou no worktree vira commit na branch da própria task, com a identidade
+  `<agente>[bot]` (`git add -A` + `commit --no-verify`). O `dev.blocked` leva
+  `trabalhoPreservado` (`{branch, commit}` ou `null`) e o diagnóstico DIZ onde
+  o trabalho ficou — ou que não foi possível preservá-lo, com o motivo; a falha
+  ao preservar nunca impede o bloqueio. A próxima task do MESMO agente (logo,
+  do mesmo módulo) nasce dessa branch (`create_from/4`) em vez de `dev`, uma
+  vez só. Worktree limpo não gera commit. Declarado: o ponteiro mora só em
+  memória (restart do engine perde o ponteiro, não o commit), e no modo
+  `runner` o worktree está na máquina do usuário e o engine não preserva nada.
+- **Onde:** `apps/engine/lib/engine/dev/worktree_manager.ex:72`
+  (`preservar_em`), `:55` (`create_from`),
+  `apps/engine/lib/engine/dev/agent_io.ex:410` (`preservar_trabalho`),
+  `apps/engine/lib/engine/dev/dev_agent_server.ex:468` (`base_preservada`)
+- **Teste:** `apps/engine/test/engine/dev/worktree_manager_test.exs`
+  (`preservar_em/3 e create_from/4`: commit com `dev-api[bot]` e a próxima
+  task enxerga o arquivo; limpo é `:nada`; pasta sem repositório é erro),
+  `apps/engine/test/engine/dev/bloqueio_preserva_trabalho_test.exs` (o
+  `dev.blocked` diz a branch; falha ao preservar não impede o bloqueio)
+- **Origem:** AT-429 (08/10: `feature/task-86dade03` sem commit, `package.json`
+  e `src` perdidos depois do bloqueio por orçamento)
