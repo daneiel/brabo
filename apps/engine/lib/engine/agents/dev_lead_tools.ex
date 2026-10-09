@@ -117,7 +117,10 @@ defmodule Engine.Agents.DevLeadTools do
                 "agentes" => %{
                   "type" => "integer",
                   "minimum" => 1,
-                  "description" => "quantos agentes neste módulo"
+                  "description" =>
+                    "quantos agentes você recomenda neste módulo. A aprovação sobe UM " <>
+                      "dev agent por módulo; agente a mais é paralelização, que só o " <>
+                      "usuário libera depois — não prometa ganho de paralelismo"
                 },
                 "porque" => %{
                   "type" => "string",
@@ -241,16 +244,28 @@ defmodule Engine.Agents.DevLeadTools do
   # cujo desfecho ainda não chegou.
   defp classificar("executed", action, total, normalizados) do
     {:ok,
-     "plano aprovado e execução ATIVADA: #{total} agente(s) em " <>
-       "#{length(normalizados)} módulo(s); cada tarefa vai para o dev do módulo atribuído." <>
+     "plano aprovado e execução ATIVADA: #{sobem(total, normalizados)}; cada tarefa " <>
+       "vai para o dev do módulo atribuído." <>
        resumo_do_plano(Map.get(action, "executionResult") || %{})}
   end
 
   defp classificar(status, _action, total, normalizados)
        when status in ["auto_approved", "approved"] do
-    {:ok,
-     "plano aprovado: #{total} agente(s) em #{length(normalizados)} módulo(s). " <>
-       "A aprovação ativa a execução."}
+    {:ok, "plano aprovado: #{sobem(total, normalizados)}. A aprovação ativa a execução."}
+  end
+
+  # RN-747 (AT-437): a ativação sobe UM dev agent por módulo; o número que o
+  # plano pede além disso é paralelização (teto RN-154), decisão do usuário.
+  defp sobem(total, normalizados) do
+    n = length(normalizados)
+    base = "#{n} dev agent(s) sobem, um por módulo"
+
+    if total > n,
+      do:
+        base <>
+          " (o plano pedia #{total}; os #{total - n} a mais NÃO sobem com a aprovação — " <>
+          "paralelizar é decisão do usuário, não diga que há paralelismo)",
+      else: base
   end
 
   defp classificar("failed", action, _total, _normalizados) do

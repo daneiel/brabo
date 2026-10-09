@@ -37,8 +37,8 @@ defmodule Engine.Agents.DevLeadToolsTest do
          %{ctx: ctx} do
       assert {:ok, msg} = DevLeadTools.run(plano([modulo("api", 2), modulo("web", 1)]), ctx)
 
-      assert msg =~ "3 agente(s)"
-      assert msg =~ "2 módulo(s)"
+      assert msg =~ "o plano pedia 3"
+      assert msg =~ "2 dev agent(s) sobem"
 
       assert_received {:propose_action, action_type, actor, payload}
       assert action_type == "propose_execution_plan"
@@ -68,7 +68,7 @@ defmodule Engine.Agents.DevLeadToolsTest do
       Process.put(:fake_propose_action, %{"id" => "pa-9", "status" => "executed"})
 
       assert {:ok, msg} = DevLeadTools.run(plano([modulo("api", 1)]), ctx)
-      assert msg =~ "1 agente(s)"
+      assert msg =~ "1 dev agent(s) sobem"
     end
 
     test "status denied vira {:error, _} — a proposta não é reencaminhada como sucesso", %{
@@ -136,6 +136,17 @@ defmodule Engine.Agents.DevLeadToolsTest do
 
       assert {:ok, msg} = DevLeadTools.run(plano([modulo("api", 1)]), ctx)
       assert msg =~ "execução ATIVADA"
+      assert msg =~ "1 dev agent(s) sobem, um por módulo"
+      refute msg =~ "a mais"
+    end
+
+    # RN-747 (AT-437): 2 agentes pedidos num módulo único — sobe 1, e é dito.
+    test "agente a mais no plano é dito como NÃO subindo", %{ctx: ctx} do
+      Process.put(:fake_propose_action, %{"id" => "pa-12", "status" => "executed"})
+
+      assert {:ok, msg} = DevLeadTools.run(plano([modulo("api", 2)]), ctx)
+      assert msg =~ "1 dev agent(s) sobem"
+      assert msg =~ "o plano pedia 2; os 1 a mais NÃO sobem"
     end
 
     test "status failed vira {:error, _} com o motivo da ativação", %{ctx: ctx} do
