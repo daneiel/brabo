@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { mensagemDaApi, setAgentAutonomy } from '../lib/api-client';
 import { AGENT_AUTONOMY_ALL_ACTIONS, type AgentAutonomyRule } from '../lib/api-types';
 import { nomeDoAgente } from '../lib/agents';
+import { AREAS } from '../lib/agent-areas.generated';
 import { Button } from './ui/Button';
 import { OQueOPilotoLibera } from './OQueOPilotoLibera';
 import styles from './ModoAutomaticoDoTime.module.css';
@@ -45,6 +46,18 @@ export function agentesEmModoAutomatico(
       )
       .map((r) => r.agentId),
   );
+}
+
+/**
+ * AT-449 (RN-766): a oferta cobre os subagentes de GATE desde a ativação, e
+ * não só depois que eles aparecem no roster — o `qa-automacao` só entra na
+ * lista quando o primeiro evento dele chega, e aí a primeira ação dele já
+ * está esperando clique. São os agentes da área de QA (`AREAS.qa`), que
+ * rodam o `terminal`; a ordem é a do time e depois a dos gates, sem repetir.
+ */
+export function agentesDaOfertaEmLote(time: readonly string[]): string[] {
+  const gates = [AREAS.qa.lead, ...AREAS.qa.members];
+  return [...new Set([...time, ...gates])];
 }
 
 type Desfecho =

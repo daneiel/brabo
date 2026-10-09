@@ -17200,8 +17200,8 @@ endpoint é ALPHA e o smoke manual
 - **Código:** `apps/api/src/domain/llm/tool-router.ts:19` (`MODELO_DO_JEV`),
   `:101` (`montarPedidoAoJev`), `:158` (`lerRespostaDoJev`), `:208`
   (`recortarEstado`), `:260` (`menuP3`);
-  `apps/api/src/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.ts:110`
-  (`preparar`), `:143` (`executar`), `:285` (`registrarGasto`);
+  `apps/api/src/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.ts:118`
+  (`preparar`), `:143` (`executar`), `:305` (`registrarGasto`);
   `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:152`
   (`decisaoDoJev`); `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:167`
   (`preparar`); `apps/api/src/infrastructure/llm/jev-tool-router.ts:32`
@@ -18864,8 +18864,8 @@ absolutos seguem pedindo aprovação (RN-154, RN-418): merge em branch protegida
 o de WORKSPACE, com a mesma lacuna declarada das outras telas de modo
 automático (RN-471).
 
-- **Código:** `apps/web/src/components/ModoAutomaticoDoTime.tsx:52`
-  (`ModoAutomaticoDoTime`), `:81` (`ligar`), `:35`
+- **Código:** `apps/web/src/components/ModoAutomaticoDoTime.tsx:68`
+  (`ModoAutomaticoDoTime`), `:97` (`ligar`), `:39`
   (`agentesEmModoAutomatico`); `apps/web/src/routes/ProjectExecutorsTab.tsx:85`
   (`podeLigarModoAutomatico`), `:308` (onde a oferta monta)
 - **Teste:** `apps/web/src/components/ModoAutomaticoDoTime.test.tsx:54` (nada
@@ -19538,8 +19538,8 @@ OBRIGATÓRIAS da `coverageMatrix` (e portanto reprovar entrega).
   `:528` (`plano_de_teste_da_entrega`), `:552` (`plano_ja_emitido`),
   `:587` (`arquivos_alterados`);
   `apps/engine/lib/engine/gates/qa_estrategia_agent.ex:86` (`run`),
-  `:104` (`token_budget_micros`), `:179` (`descrever_arquivos`);
-  `apps/engine/lib/engine/gates/qa_automacao_agent.ex:166` (`com_o_plano`);
+  `:104` (`token_budget_micros`), `:175` (`descrever_arquivos`);
+  `apps/engine/lib/engine/gates/qa_automacao_agent.ex:173` (`com_o_plano`);
   `apps/engine/lib/engine/agents/dev_lead_tools.ex:443` (`run_assessment`),
   `:524` (`propor_parecer`);
   `apps/engine/lib/engine/harness/artifact_schemas.ex:59` (`taskId`);
@@ -22271,6 +22271,94 @@ sem dizer qual.
   `npm install` de `bcrypt`+`sqlite3`+`express` levou 5,3 s com a imagem em
   cache e prebuilds disponíveis — a cadeia, não o comando, cortava em 15 s)
 
+### RN-758 — O recorte do Jev nunca tira a ferramenta de obrigação do agente {#rn-758}
+
+- **Regra:** quando o Jev recorta o menu do passo ([RN-625](#rn-625), P3), o
+  menu recebe de volta o PISO do agente: para o PO, `create_story` e
+  `create_task`; para o Arquiteto, `create_module_map`,
+  `route_modules_to_infra`, `declare_module_contracts`, `propose_adr` e
+  `create_c4_diagram`. Só entra o que está no catálogo daquele passo — o piso
+  nunca acrescenta ferramenta que o agente não tinha, e em toda queda o
+  catálogo inteiro segue como antes. O piso é ESTÁTICO por agente, e isso é
+  declarado: a api não tem sinal barato de qual obrigação está pendente
+  naquele passo, então ele vale sempre que há recorte. Os dev agents ficam
+  sem piso, de propósito (a obrigação deles muda a cada passo; para eles vale
+  só a [RN-759](#rn-759)).
+- **Onde:** `apps/api/src/domain/llm/tool-router.ts:323` (`menuComPiso`) e
+  `apps/api/src/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.ts:248`
+  (`menuComPiso`)
+- **Teste:** `apps/api/test/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.spec.ts`
+  (o PO com o menu `["listar_backlog","create_story"]` mantém `create_task`;
+  o Arquiteto com 2 de 9 mantém as cinco de artefato)
+- **Origem:** AT-445 (TP-01 de 09/10: o PO sem `create_task` respondeu "Não
+  tenho uma ferramenta para criar tarefas" e fechou com 8 histórias sem
+  tarefa; o Arquiteto com 2 de 9 fechou sem roteamento, contratos, ADR nem C4)
+
+### RN-759 — O passo recortado avisa ao modelo que o menu é um recorte {#rn-759}
+
+- **Regra:** quando o recorte do Jev é aplicado (`aplicado: true`), a chamada
+  ao provider DAQUELE passo leva, no fim, uma mensagem `system` EFÊMERA que
+  diz quantas e quais ferramentas o passo recebeu, que as demais seguem
+  disponíveis nas próximas voltas e que o agente não deve concluir que não tem
+  uma ferramenta nem encerrar o turno esperando por ela. Ela nunca entra no
+  histórico do agente nem no event log, e não existe sem recorte nem em queda.
+  É montada na api, e não na fachada do engine como a [RN-622](#rn-622),
+  porque só a api sabe o menu depois do Jev. Não aplicar o recorte na volta
+  que fecha o turno foi avaliado e não feito: a api não sabe antes da
+  resposta que a volta será a última.
+- **Onde:** `apps/api/src/domain/llm/tool-router.ts:337` (`avisoDeRecorte`) e
+  `apps/api/src/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.ts:263`
+  (`avisoDeRecorte`)
+- **Teste:** `apps/api/test/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.spec.ts`
+  (o aviso chega como última mensagem com recorte; sem recorte e em queda, as
+  mensagens são as do pedido)
+- **Origem:** AT-445 (o dev agent bloqueou uma tarefa "sem ferramenta para
+  editar arquivos" tendo `write_file`)
+### RN-766 — O gate parado esperando clique é dito, e a oferta em lote cobre os subagentes de QA {#rn-766}
+
+- **Regra:** no painel "precisa de você" ([RN-467](#rn-467)), a ação pendente
+  proposta por agente de GATE (área de QA — `qa`, `qa-*` — ou SecOps) ganha,
+  acima do MESMO `ApprovalCard`, a frase de que aquele gate está PARADO até a
+  decisão; é uma frase por card, nunca uma soma de filas. E a oferta em lote
+  do modo automático na aba Executores ([RN-661](#rn-661)) lista os agentes da
+  área de QA (`AREAS.qa`) desde a ativação, sem esperar que eles apareçam no
+  roster — antes o `qa-automacao` só entrava na oferta depois do primeiro
+  evento dele, quando a primeira ação já esperava clique. O `allow` padrão do
+  `permissions.json` NÃO muda (decisão do dono).
+- **Onde:** `apps/web/src/lib/precisa-de-voce.ts:256` (`gateEsperandoClique`)
+  e `apps/web/src/components/ModoAutomaticoDoTime.tsx:58`
+  (`agentesDaOfertaEmLote`)
+- **Teste:** `apps/web/src/lib/precisa-de-voce.test.ts` (gate de QA e SecOps
+  nomeados; dev agent e humano não) e
+  `apps/web/src/components/ModoAutomaticoDoTime.test.tsx` (a oferta cobre os
+  subagentes de QA antes do roster, sem repetir)
+- **Origem:** AT-449 (TP-01 de 09/10: o `qa-automacao` propôs
+  `ls; cat; for f in test/*.js…`, um segmento fora do `allow`, sem modo
+  automático, e ficou 25 min pendente com só o contador de Aprovações como
+  sinal)
+### RN-765 — O gate de QA julga a TAREFA, e RF de tarefa irmã é observação {#rn-765}
+
+- **Regra:** a QA-estratégia (plano de teste, [RN-674](#rn-674)) e a
+  QA-automação recebem, além da história, o RECORTE da tarefa: título e
+  descrição, as regras de negócio da história e as OUTRAS tarefas da mesma
+  história com o status (`siblingTasks` em `GET .../dev-context`). O veredito
+  é sobre o que é DESTA tarefa: requisito que pertence a uma tarefa irmã
+  (feita ou pendente) não reprova — vai ao `resumo` como observação, fora de
+  `itens`, e não impede `approved`. A régua é de PROMPT, não de código: o
+  `emit_qa_verdict` continua exigindo só a suite verde para aprovar.
+- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:18` (`texto`),
+  `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:59`
+  (`tarefasIrmas`) e `apps/engine/lib/engine/gates/qa_automacao_agent.ex:170`
+  (`com_o_recorte`)
+- **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs` e
+  `apps/api/test/application/use-cases/execution/get-dev-task-context.use-case.spec.ts`
+  (as irmãs sem a própria tarefa). O golden-set do QA (ADR 0168) NÃO ganhou
+  caso: ele roda o modelo de verdade, e provar o veredito sem chamada paga
+  não é possível — declarado.
+- **Origem:** AT-448 (TP-01 de 09/10: o gate de QA da tarefa "Modelar tabela
+  de usuários e hash bcrypt" reprovou três vezes por "RF01: login HTTP com
+  JWT não existe nesta entrega", que é de outra tarefa, e a tarefa bloqueou;
+  `artifact.qa_verdict` das tasks `42bea901` e `762833bd`)
 ### RN-768 — Na aba PRs, o texto ao lado do Merge diz a verdade do botão {#rn-768}
 
 - **Regra:** gate pendente continua AVISO e não trava o merge
