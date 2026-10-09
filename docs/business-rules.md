@@ -19873,7 +19873,7 @@ sem destino. Ver o [ADR 0196](adr/0196-anamnese-religada-com-sujeito-e-fato-do-p
    nos três composes; `START_ANAMNESE` não muda (o de produção segue `false`,
    divergência já declarada). O Psicólogo segue pausado.
 
-- **Código:** `apps/engine/lib/engine/anamnese/elegibilidade.ex:52` (`avaliar`);
+- **Código:** `apps/engine/lib/engine/anamnese/elegibilidade.ex:59` (`avaliar`);
   `apps/engine/lib/engine/workers/anamnese_worker.ex:63` (`maybe_analyze`),
   `:97` (`narrar_sem_sujeito`);
   `apps/api/src/domain/iam/membros-efetivos.ts:16` (`membrosEfetivos`);
@@ -21426,7 +21426,7 @@ O kickoff do PO diz as três coisas.
   `apps/engine/lib/engine/session_events/event.ex:194`
   (`project_window_query`), `apps/engine/lib/engine/session_events/event.ex:202`
   (`count_anamnese_rounds_since`),
-  `apps/engine/lib/engine/anamnese/elegibilidade.ex:87`
+  `apps/engine/lib/engine/anamnese/elegibilidade.ex:67`
   (`min_interacoes_proprias`),
   `apps/api/src/application/use-cases/anamnese/record-proficiency.use-case.ts:160`
   (`fecharJanelaSemPerfil`), `apps/engine/lib/engine/gates/gate_rescuer.ex:243`
@@ -21961,3 +21961,26 @@ sem dizer qual.
   raciocínio o corpo não muda; provider sem campo não inventa orçamento)
 - **Origem:** AT-427 (TP-01, 08/10: `anthropic/claude-haiku-5.5` com
   `output_tokens = reasoning_tokens = 4096` em duas chamadas seguidas do PO)
+
+### RN-756 — A Anamnese só roda com interação de conteúdo técnico do sujeito; aprovar não conta {#rn-756}
+
+- **Regra:** revisa a contagem de "interação própria" da RN-680/RN-722. Só
+  contam para fazer alguém sujeito da rodada (a) evento `actor_kind: "user"`
+  do próprio membro cujo tipo está em `tipos_de_evento_com_conteudo/0` —
+  `chat.message` (mensagem escrita por ele) e
+  `chat.structured_question_answered` — e (b) decisão de ação com motivo de
+  recusa escrito (`rejectionReason` não vazio, uma correção). Aprovação,
+  aceite de handoff, clique e qualquer outro evento de usuário NÃO contam:
+  não são evidência de competência. O piso de 5 (RN-722), o teto diário e o
+  desfecho sem sujeito (motivo no log; `anamnese.run_skipped` só na rodada
+  pedida à mão) não mudam, e a triagem segue LOCAL, antes do LLM e do RAG.
+- **Código:** `apps/engine/lib/engine/anamnese/elegibilidade.ex:61`
+  (`avaliar`), `:102` (`recusa_com_motivo?`), `:108`
+  (`tipos_de_evento_com_conteudo`)
+- **Teste:** `apps/engine/test/engine/anamnese/elegibilidade_test.exs`
+  (`só interação com conteúdo técnico conta (RN-756, AT-439)`: mensagem e
+  resposta estruturada fazem sujeito; só aprovações, handoff e recusa sem
+  motivo não fazem)
+- **Origem:** AT-439 (TP-01, 08/10, projeto `c1dc053d`: duas rodadas durante
+  a execução, US$ 0,20, ambas `skip_proficiency` com "o usuário apenas
+  aprovou propostas")

@@ -54,13 +54,14 @@ defmodule Engine.Workers.AnamneseWorkerTest do
 
   # RN-680: sem interação PRÓPRIA na janela, o membro não é sujeito e a
   # rodada nem chega ao LLM. O banco de teste não tem eventos na janela, então
-  # o contexto padrão traz UMA decisão do `user-1` — é o que o faz sujeito.
+  # o contexto padrão traz UMA recusa com motivo do `user-1` — é o que o faz
+  # sujeito (desde a RN-756 aprovação não conta).
   # Testes que sobrescrevem `"decisions"` mantêm o `user-1` como quem decidiu.
   defp decisao_do_sujeito do
     %{
       "actionType" => "terminal",
-      "status" => "approved",
-      "rejectionReason" => nil,
+      "status" => "rejected",
+      "rejectionReason" => "fora do escopo",
       "decidedBy" => "user-1",
       "decidedAt" => "2026-07-19T10:00:00Z"
     }
@@ -701,7 +702,12 @@ defmodule Engine.Workers.AnamneseWorkerTest do
     Application.put_env(:engine, :anamnese_min_events, 1)
     on_exit(fn -> Application.delete_env(:engine, :anamnese_min_events) end)
 
-    Process.put(:fake_anamnese_context, context(%{"decisions" => decisions}))
+    # RN-756: aprovação não faz sujeito; a recusa de `terminal` (fora da
+    # régua do `parallelize`) é o que faz.
+    Process.put(
+      :fake_anamnese_context,
+      context(%{"decisions" => decisions ++ [decisao_do_sujeito()]})
+    )
 
     Process.put(:fake_llm_turns, [
       FakeEngineApiClient.tool_call_response("emit_proficiency", %{
@@ -763,7 +769,7 @@ defmodule Engine.Workers.AnamneseWorkerTest do
 
     Process.put(
       :fake_anamnese_context,
-      context(%{"decisions" => [decisao.(1), decisao.(2)]})
+      context(%{"decisions" => [decisao.(1), decisao_do_sujeito()]})
     )
 
     Process.put(:fake_llm_turns, [
