@@ -828,6 +828,7 @@ export function Shell() {
                         to="/projects/$projectId"
                         params={{ projectId: project.id }}
                         className={styles.navLink}
+                        title={project.name}
                         onClick={() => {
                           gravarProjetoAtivo(project.id);
                           gravarAbaAtiva(ABA_PADRAO);
