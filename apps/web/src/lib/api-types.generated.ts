@@ -4984,7 +4984,7 @@ export interface components {
              * @example create_qa_branch
              * @enum {string}
              */
-            step: "commit_pr_template" | "commit_branching_policy" | "create_dev_branch" | "create_qa_branch" | "create_rc_branch" | "protect_branches";
+            step: "commit_pr_template" | "commit_branching_policy" | "commit_gitignore" | "create_dev_branch" | "create_qa_branch" | "create_rc_branch" | "protect_branches";
             /**
              * @description The same taxonomy as `proposed_actions` — each approved step becomes a recorded action when the bootstrap runs.
              * @example git_branch_create
@@ -6289,12 +6289,22 @@ export interface components {
             /** @example Above that, the addition is refused with 409. */
             description: string;
         };
+        DevContextSiblingTaskResponseDto: {
+            /** @example 01J0000000000000000000000 */
+            id: string;
+            /** @example Expose POST /login returning a JWT */
+            title: string;
+            /** @example todo */
+            status: string;
+        };
         DevTaskContextResponseDto: {
             task: components["schemas"]["TaskResponseDto"];
             story: components["schemas"]["StoryResponseDto"];
             businessRules: components["schemas"]["DevContextBusinessRuleResponseDto"][];
             /** @description ADRs that apply: the cross-cutting ones (no module declared) plus the ones that cite this agent's module. */
             adrs: components["schemas"]["DevContextAdrResponseDto"][];
+            /** @description The other tasks of the same story, with their status. The QA gate judges the delivery by what belongs to THIS task; a requirement of a sibling task is an observation, never a rejection (RN-765). */
+            siblingTasks: components["schemas"]["DevContextSiblingTaskResponseDto"][];
         };
         DiffLineResponseDto: {
             /**
@@ -7754,7 +7764,7 @@ export interface components {
              * @example create_dev_branch
              * @enum {string}
              */
-            step: "commit_pr_template" | "commit_branching_policy" | "create_dev_branch" | "create_qa_branch" | "create_rc_branch" | "protect_branches";
+            step: "commit_pr_template" | "commit_branching_policy" | "commit_gitignore" | "create_dev_branch" | "create_qa_branch" | "create_rc_branch" | "protect_branches";
             /**
              * @example running
              * @enum {string}
@@ -9072,7 +9082,7 @@ export interface components {
              * @example null
              * @enum {string|null}
              */
-            failedStep: "commit_pr_template" | "commit_branching_policy" | "create_dev_branch" | "create_qa_branch" | "create_rc_branch" | "protect_branches" | null;
+            failedStep: "commit_pr_template" | "commit_branching_policy" | "commit_gitignore" | "create_dev_branch" | "create_qa_branch" | "create_rc_branch" | "protect_branches" | null;
             /** @example null */
             lastError: Record<string, never> | null;
             /**

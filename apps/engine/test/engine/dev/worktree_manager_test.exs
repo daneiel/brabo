@@ -337,6 +337,30 @@ defmodule Engine.Dev.WorktreeManagerTest do
     end
   end
 
+  # RN-760 (AT-447): branch anterior já mergeada na `dev` não é ponto de partida.
+  describe "add_worktree/4 com a branch da task anterior" do
+    test "não mergeada: parte dela; mergeada na dev: parte da dev", %{work_dir: work_dir} do
+      {:ok, %{path: path, branch: branch}} =
+        WorktreeManager.add_worktree(work_dir, "dev-api", "task-eeee5555")
+
+      File.write!(Path.join(path, "login.ts"), "rota")
+      {:ok, _} = WorktreeManager.preservar_em(path, "dev-api", "t5")
+
+      {:ok, %{path: p2}} =
+        WorktreeManager.add_worktree(work_dir, "dev-api", "task-ffff6666", branch)
+
+      assert File.exists?(Path.join(p2, "login.ts"))
+
+      {_, 0} = System.cmd("git", ["branch", "-f", "dev", branch], cd: work_dir)
+      {_, 0} = System.cmd("git", ["branch", "-f", branch, "dev~1"], cd: work_dir)
+
+      {:ok, %{path: p3}} =
+        WorktreeManager.add_worktree(work_dir, "dev-api", "task-abab7777", branch)
+
+      assert File.exists?(Path.join(p3, "login.ts"))
+    end
+  end
+
   # RN-744 (AT-444): o kickoff do dev diz a branch e o que já existe.
   describe "retrato/2" do
     test "lista a branch e os arquivos, rastreados e novos", %{work_dir: work_dir} do

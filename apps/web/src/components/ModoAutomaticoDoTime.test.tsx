@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach, afterAll } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import i18n from '../lib/i18n';
+import { agentesDaOfertaEmLote } from './ModoAutomaticoDoTime';
 import type { AgentAutonomyRule } from '../lib/api-types';
 
 /**
@@ -128,5 +129,25 @@ describe('ModoAutomaticoDoTime (RN-661)', () => {
       autonomyRules: [{ agentId: 'dev-lead', actionType: '*', mode: 'auto_approve' }],
     });
     expect(container).toBeEmptyDOMElement();
+  });
+});
+
+describe('agentesDaOfertaEmLote (AT-449, RN-766)', () => {
+  it('cobre os subagentes de QA desde a ativação, antes de aparecerem no roster', () => {
+    expect(agentesDaOfertaEmLote(['dev-lead', 'dev-api'])).toEqual([
+      'dev-lead',
+      'dev-api',
+      'qa',
+      'qa-automacao',
+      'qa-performance-seguranca',
+    ]);
+  });
+
+  it('não repete quem já está no time', () => {
+    expect(agentesDaOfertaEmLote(['qa-automacao'])).toEqual([
+      'qa-automacao',
+      'qa',
+      'qa-performance-seguranca',
+    ]);
   });
 });

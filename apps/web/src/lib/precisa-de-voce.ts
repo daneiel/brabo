@@ -245,3 +245,18 @@ export function montarFilas(entrada: EntradaDasFilas): FilaPrecisaDeVoce[] {
 export function temAlgoEsperando(filas: FilaPrecisaDeVoce[]): boolean {
   return filas.some((fila) => fila.itens.length > 0);
 }
+
+/**
+ * AT-449 (RN-766): a ação pendente foi proposta por um agente de GATE (a área
+ * de QA ou o SecOps)? O gate fica PARADO até o clique — o laço do subagente
+ * suspende na aprovação —, e a tela diz isso ao lado do card, em vez de
+ * deixar só o contador de Aprovações como sinal. Devolve QUAL gate, ou
+ * `null`. Não soma nada: é uma frase por card.
+ */
+export function gateEsperandoClique(acao: ProposedAction): 'qa' | 'secops' | null {
+  if (acao.actor.kind !== 'agent') return null;
+  const id = acao.actor.id;
+  if (id === 'qa' || id.startsWith('qa-')) return 'qa';
+  if (id === 'secops' || id.startsWith('secops-') || id === 'appsec') return 'secops';
+  return null;
+}

@@ -1119,11 +1119,18 @@ function SummaryRow({
   );
 }
 
-/** Insere `<wbr>` depois de cada `/`, o único ponto de quebra do caminho. */
+/**
+ * Insere `<wbr>` depois de cada `/`, o único ponto de quebra do caminho. Cada
+ * segmento vai num `nowrap` (AT-455): sem ele o navegador também quebrava no
+ * hífen DENTRO do segmento (`…2026-10-` / `09`).
+ */
 function quebraPorSegmento(caminho: string): ReactNode[] {
-  return caminho.split('/').flatMap((segmento, i, todos) =>
-    i < todos.length - 1
-      ? [segmento, '/', <wbr key={i} />]
-      : [segmento],
-  );
+  return caminho.split('/').flatMap((segmento, i, todos) => {
+    const inteiro = (
+      <span key={`s${i}`} className={styles.segmentoDeCaminho}>
+        {segmento}
+      </span>
+    );
+    return i < todos.length - 1 ? [inteiro, '/', <wbr key={i} />] : [inteiro];
+  });
 }

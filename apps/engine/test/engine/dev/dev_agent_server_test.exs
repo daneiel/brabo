@@ -107,7 +107,8 @@ defmodule Engine.Dev.DevAgentServerTest do
     assert commit_payload.message == "cadastro implementado"
     assert_received {:propose_action, "git_push", _, _}
     assert_received {:propose_action, "pr_open", _, pr_payload}
-    assert pr_payload.title =~ "Cadastro"
+    # AT-455: o título abre pela TAREFA, depois a história.
+    assert pr_payload.title == "Cadastro — Cadastro de usuários"
     assert pr_payload.body =~ "Definition of Done"
     # RN-664 (AT-250): a PR mira `dev` explicitamente — sem o campo, a api
     # completava com a branch default (`main`).
