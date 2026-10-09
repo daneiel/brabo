@@ -22116,7 +22116,7 @@ sem dizer qual.
   pede para não prometer ganho de paralelismo. A aspa do modelo nas pontas do
   resumo é removida antes de a frase citá-lo, para não sobrar `coberto."`.
 - **Onde:** `apps/web/src/lib/aprovacoes.ts:317` (`propose_execution_plan`),
-  `apps/engine/lib/engine/agents/dev_lead_tools.ex:259` (`sobem`), `:245`
+  `apps/engine/lib/engine/agents/dev_lead_tools.ex:254` (`sobem`), `:245`
   (`classificar`), `:97` (`spec`)
 - **Teste:** `apps/web/src/lib/aprovacoes.test.ts` ("plano com 2 agentes num
   módulo único diz que sobe 1…"; "plano sem agente a mais não fala de

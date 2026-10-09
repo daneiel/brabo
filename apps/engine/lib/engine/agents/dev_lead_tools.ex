@@ -254,20 +254,6 @@ defmodule Engine.Agents.DevLeadTools do
     {:ok, "plano aprovado: #{sobem(total, normalizados)}. A aprovação ativa a execução."}
   end
 
-  # RN-747 (AT-437): a ativação sobe UM dev agent por módulo; o número que o
-  # plano pede além disso é paralelização (teto RN-154), decisão do usuário.
-  defp sobem(total, normalizados) do
-    n = length(normalizados)
-    base = "#{n} dev agent(s) sobem, um por módulo"
-
-    if total > n,
-      do:
-        base <>
-          " (o plano pedia #{total}; os #{total - n} a mais NÃO sobem com a aprovação — " <>
-          "paralelizar é decisão do usuário, não diga que há paralelismo)",
-      else: base
-  end
-
   defp classificar("failed", action, _total, _normalizados) do
     motivo = get_in(action, ["executionResult", "motivo"]) || "sem motivo registrado"
 
@@ -283,6 +269,20 @@ defmodule Engine.Agents.DevLeadTools do
 
   defp classificar(status, _action, _total, _normalizados) do
     {:error, "o plano não foi registrado (status inesperado: #{inspect(status)})"}
+  end
+
+  # RN-747 (AT-437): a ativação sobe UM dev agent por módulo; o número que o
+  # plano pede além disso é paralelização (teto RN-154), decisão do usuário.
+  defp sobem(total, normalizados) do
+    n = length(normalizados)
+    base = "#{n} dev agent(s) sobem, um por módulo"
+
+    if total > n,
+      do:
+        base <>
+          " (o plano pedia #{total}; os #{total - n} a mais NÃO sobem com a aprovação — " <>
+          "paralelizar é decisão do usuário, não diga que há paralelismo)",
+      else: base
   end
 
   # Plano vazio, ou com zero agente num módulo, não é plano — e chegaria ao
