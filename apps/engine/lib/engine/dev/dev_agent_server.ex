@@ -463,14 +463,9 @@ defmodule Engine.Dev.DevAgentServer do
     # dono vivo e invisível pro claim (que só pega `todo`).
     state = %{state | task_id: task_id}
 
-    # RN-743: a task anterior deste agente foi bloqueada com trabalho
-    # preservado — esta nasce da branch dela, não de `dev`.
-    {base, state} = Map.pop(state, :base_preservada)
-
-    criado =
-      if base,
-        do: AgentIo.worktree_manager().create_from(state.project_id, state.agent_id, slug, base),
-        else: AgentIo.worktree_manager().create(state.project_id, state.agent_id, slug)
+    # RN-743/RN-760: a task anterior deste agente deixou branch não mergeada
+    # — esta nasce dela, não de `dev`.
+    {criado, state} = AgentIo.criar_worktree(state, slug)
 
     case criado do
       {:ok, %{path: path, branch: branch}} ->
@@ -996,7 +991,9 @@ defmodule Engine.Dev.DevAgentServer do
   defp propose_pr(state, task, story) do
     AgentIo.propose_pr(
       state,
-      "#{story["title"]} — #{task["title"]}",
+      # AT-455: a TAREFA vem primeiro. Com a história na frente, a lista de
+      # PRs cortava o fim e três PRs da mesma história pareciam a mesma.
+      "#{task["title"]} — #{story["title"]}",
       pr_body(task, story)
     )
   end

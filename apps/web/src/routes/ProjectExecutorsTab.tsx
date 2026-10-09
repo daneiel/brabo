@@ -27,7 +27,10 @@ import { INTERVALO_DO_PROJETO_MS, criarInvalidadorDoCanal } from '../lib/canal-v
 import { rotuloDaSessao } from '../lib/session-label';
 import { roleAtLeast } from '../lib/roles';
 import { PendenciasDeOutrasSessoes } from '../components/PendenciasDeOutrasSessoes';
-import { ModoAutomaticoDoTime } from '../components/ModoAutomaticoDoTime';
+import {
+  ModoAutomaticoDoTime,
+  agentesDaOfertaEmLote,
+} from '../components/ModoAutomaticoDoTime';
 import { PararExecucao } from '../components/PararExecucao';
 import type { AutonomyMode } from '../components/AgentCard';
 import { AgentTeamGrid } from '../components/AgentTeamGrid';
@@ -321,7 +324,7 @@ export function ProjectExecutorsTab({ projectId }: { projectId: string }) {
           {executorRoster.length > 0 && (
             <ModoAutomaticoDoTime
               projectId={projectId}
-              agentes={executorRoster.map((r) => r.id)}
+              agentes={agentesDaOfertaEmLote(executorRoster.map((r) => r.id))}
               autonomyRules={autonomyRules}
               podeLigar={podeLigarModoAutomatico}
             />

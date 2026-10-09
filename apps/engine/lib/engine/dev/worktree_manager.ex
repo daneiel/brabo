@@ -75,7 +75,7 @@ defmodule Engine.Dev.WorktreeManager do
     with true <- is_binary(path) and File.dir?(path),
          {:ok, status} <- git(path, ["status", "--porcelain"]),
          false <- String.trim(status) == "",
-         {:ok, _} <- git(path, ["add", "-A"]),
+         {:ok, _} <- git(path, Engine.Actions.DiretoriosDeDependencia.argumentos_do_add()),
          {:ok, _} <-
            git(path, [
              "-c",
@@ -173,6 +173,8 @@ defmodule Engine.Dev.WorktreeManager do
   com a branch local vazia): ali a base É o HEAD, e o caminho é o de sempre.
   """
   def add_worktree(work_dir, agent_id, task_slug, base) do
+    base = ja_mergeada_volta_ao_trabalho(work_dir, base)
+
     case garantir_base(work_dir, base) do
       {:ok, ponto_de_partida} -> criar_worktree(work_dir, agent_id, task_slug, ponto_de_partida)
       {:error, _} = erro -> erro
@@ -199,6 +201,20 @@ defmodule Engine.Dev.WorktreeManager do
            "nem #{base} nem origin/#{base} no working tree"
          )}
     end
+  end
+
+  # RN-760 (AT-447): a próxima task parte da branch da anterior enquanto ela
+  # NÃO foi mergeada; mergeada (ancestral da `dev` local), parte da `dev`, que
+  # já a contém e pode ter andado. Merge por squash num remoto não é ancestral
+  # e segue partindo da branch anterior — declarado.
+  defp ja_mergeada_volta_ao_trabalho(work_dir, base) do
+    trabalho = ProjectRepository.branch_de_trabalho()
+
+    if base != trabalho and ref?(work_dir, "refs/heads/#{base}") and
+         ref?(work_dir, "refs/heads/#{trabalho}") and
+         match?({:ok, _}, git(work_dir, ["merge-base", "--is-ancestor", base, trabalho])),
+       do: trabalho,
+       else: base
   end
 
   defp ref?(work_dir, ref),
