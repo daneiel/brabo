@@ -375,6 +375,15 @@ export const ABAS_DO_PROJETO: readonly AbaDoProjeto[] = [...REGISTRO].sort(
 /** A primeira aba é o default de quem abre o projeto sem `?tab=`. */
 export const ABA_PADRAO: ChaveDeAba = 'overview';
 
+/**
+ * A aba que a ROTA implica quando a moldura do projeto não está montada
+ * (AT-442): na tela de Sessão (`/projects/<id>/sessions/<sid>`) é o Chat —
+ * a sidebar marcava "Visão geral", o padrão. `undefined` fora dessas rotas.
+ */
+export function abaDaRota(pathname: string, projectId: string): ChaveDeAba | undefined {
+  return pathname.startsWith(`/projects/${projectId}/sessions/`) ? 'chat' : undefined;
+}
+
 export const CHAVES_DE_ABA: readonly ChaveDeAba[] = ABAS_DO_PROJETO.map(
   (aba) => aba.key as ChaveDeAba,
 );

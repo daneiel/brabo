@@ -52,7 +52,7 @@ import {
   lerProjetosAbertos,
 } from '../lib/sidebar-state';
 import type { ProjectCardSummary } from '../lib/api-types';
-import { ABA_PADRAO, type ContagensDeAba } from './project-tabs';
+import { ABA_PADRAO, abaDaRota, type ContagensDeAba } from './project-tabs';
 import { Badge } from '../components/ui/Badge';
 import {
   ActivityIcon,
@@ -507,7 +507,7 @@ export function Shell() {
     currentProject && abaPublicada?.projectId === currentProject.id
       ? abaPublicada.tab
       : currentProject
-        ? ABA_PADRAO
+        ? (abaDaRota(pathname, currentProject.id) ?? ABA_PADRAO)
         : undefined;
   function irParaAba(projectId: string, chave: string) {
     gravarProjetoAtivo(projectId);

@@ -593,8 +593,9 @@ describe('Shell — abas do projeto aberto (ADR 0211)', () => {
 
     const lista = screen.getByRole('tablist', { name: 'Abas de Core API' });
     expect(within(lista).getByRole('tab', { name: /^Aprovações\s*4$/ })).toBeInTheDocument();
-    // Nenhuma aba marcada como da moldura: a padrão é a que a lista assume.
-    expect(within(lista).getByRole('tab', { name: 'Visão geral' })).toHaveAttribute(
+    // Nenhuma aba marcada pela moldura: na tela de Sessão a rota implica o
+    // Chat (AT-442) — antes a lista assumia a padrão, "Visão geral".
+    expect(within(lista).getByRole('tab', { name: 'Chat' })).toHaveAttribute(
       'aria-selected',
       'true',
     );

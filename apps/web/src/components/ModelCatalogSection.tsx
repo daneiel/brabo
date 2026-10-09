@@ -647,6 +647,7 @@ export function ModelCatalogSection({
       })}
 
       <HuggingFaceModelBrowser workspaceId={workspaceId} />
+      {marcados.size > 0 && <div className={styles.respiroDaBarraDeLote} aria-hidden="true" />}
     </div>
   );
 }
