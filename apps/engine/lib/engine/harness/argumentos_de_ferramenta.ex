@@ -24,8 +24,8 @@ defmodule Engine.Harness.ArgumentosDeFerramenta do
   @spec executar(String.t(), term(), [map()] | map() | nil, (map() -> term())) ::
           {:ok, term()} | {:error, term()}
   def executar(name, args, specs, fun) do
-    # RN-737: argumento de resposta cortada pelo teto chegou incompleto.
-    if Engine.Harness.RespostaCortada.cortada?(),
+    # RN-737/RN-745: só a chamada incompleta (a última) da resposta cortada é recusada.
+    if Engine.Harness.RespostaCortada.incompleta?(name, args),
       do: {:error, Engine.Harness.RespostaCortada.recusa(name)},
       else: executar_inteira(name, args, specs, fun)
   end
