@@ -415,6 +415,12 @@ export function useTurnoDoAgente(
       onAgentStatus: (payload) => {
         if (payload.status === 'working') {
           if (!streamingRef.current) setStatusAgent(turnoAgentRef.current);
+        } else if (payload.status === 'awaiting_approval') {
+          // RN-748 (AT-432): o turno SUSPENDEU esperando aprovação — é fim de
+          // turno para a tela (a mesma leitura de `turnoTerminouNoLog`). A
+          // faixa e o "Pôr na fila/Parar" saem; o cartão fica no fio.
+          setStatusAgent(null);
+          finalizarTurnoDoAgente();
         } else {
           setStatusAgent(null);
         }

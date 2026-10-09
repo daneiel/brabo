@@ -301,4 +301,90 @@ defmodule Engine.Dev.WorktreeManagerTest do
       assert WorktreeManager.list(project_id) == []
     end
   end
+
+  # RN-743 (AT-429): o trabalho não commitado sobrevive ao bloqueio.
+  describe "preservar_em/3 e create_from/4" do
+    test "commita o worktree sujo na branch da task e a próxima nasce dela", %{
+      work_dir: work_dir
+    } do
+      {:ok, %{path: path, branch: branch}} =
+        WorktreeManager.add_worktree(work_dir, "dev-api", "task-aaaa1111")
+
+      File.write!(Path.join(path, "package.json"), "{}")
+
+      assert {:ok, sha} = WorktreeManager.preservar_em(path, "dev-api", "t1")
+      {autor, 0} = System.cmd("git", ["log", "-1", "--format=%an", branch], cd: work_dir)
+      assert String.trim(autor) == "dev-api[bot]"
+
+      {:ok, %{path: novo}} =
+        WorktreeManager.add_worktree(work_dir, "dev-api", "task-bbbb2222", branch)
+
+      assert File.exists?(Path.join(novo, "package.json"))
+      {head, 0} = System.cmd("git", ["rev-parse", "HEAD~0"], cd: novo)
+      assert String.trim(head) == sha
+    end
+
+    test "worktree limpo é :nada, e pasta que não é repositório é erro nomeado", %{
+      work_dir: work_dir,
+      root: root
+    } do
+      {:ok, %{path: path}} = WorktreeManager.add_worktree(work_dir, "dev-web", "task-cccc3333")
+      assert :nada == WorktreeManager.preservar_em(path, "dev-web", "t2")
+
+      solta = Path.join(root, "nao-e-repo")
+      File.mkdir_p!(solta)
+      assert {:error, _} = WorktreeManager.preservar_em(solta, "dev-web", "t3")
+    end
+  end
+
+  # RN-760 (AT-447): branch anterior já mergeada na `dev` não é ponto de partida.
+  describe "add_worktree/4 com a branch da task anterior" do
+    test "não mergeada: parte dela; mergeada na dev: parte da dev", %{work_dir: work_dir} do
+      {:ok, %{path: path, branch: branch}} =
+        WorktreeManager.add_worktree(work_dir, "dev-api", "task-eeee5555")
+
+      File.write!(Path.join(path, "login.ts"), "rota")
+      {:ok, _} = WorktreeManager.preservar_em(path, "dev-api", "t5")
+
+      {:ok, %{path: p2}} =
+        WorktreeManager.add_worktree(work_dir, "dev-api", "task-ffff6666", branch)
+
+      assert File.exists?(Path.join(p2, "login.ts"))
+
+      {_, 0} = System.cmd("git", ["branch", "-f", "dev", branch], cd: work_dir)
+      {_, 0} = System.cmd("git", ["branch", "-f", branch, "dev~1"], cd: work_dir)
+
+      {:ok, %{path: p3}} =
+        WorktreeManager.add_worktree(work_dir, "dev-api", "task-abab7777", branch)
+
+      assert File.exists?(Path.join(p3, "login.ts"))
+    end
+  end
+
+  # RN-744 (AT-444): o kickoff do dev diz a branch e o que já existe.
+  describe "retrato/2" do
+    test "lista a branch e os arquivos, rastreados e novos", %{work_dir: work_dir} do
+      {:ok, %{path: path, branch: branch}} =
+        WorktreeManager.add_worktree(work_dir, "dev-api", "task-dddd4444")
+
+      File.write!(Path.join(path, "package.json"), "{}")
+      texto = WorktreeManager.retrato(path, branch)
+
+      assert texto =~ "branch `feature/task-dddd4444`"
+      assert texto =~ "README.md"
+      assert texto =~ "package.json"
+      assert texto =~ "2 arquivo(s)"
+    end
+
+    test "pasta que o engine não alcança diz que está indisponível" do
+      texto = WorktreeManager.retrato("/nao/existe/#{System.unique_integer()}", "feature/x")
+      assert texto =~ "indisponível"
+    end
+  end
+
+  test "a descrição do terminal diz que o shell é sh, sem brace expansion" do
+    %{description: d} = Engine.Harness.Tools.Terminal.spec()
+    assert d =~ "`sh`"
+    assert d =~ "brace expansion"
+  end
 end

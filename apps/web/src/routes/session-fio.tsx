@@ -148,6 +148,18 @@ function entradaSimples(e: TimelineEntry): EntradaDoFio {
   };
 }
 
+/**
+ * O `seq` da última MENSAGEM de cada agente no fio (RN-750) — o fecho que o
+ * colapso por agente (RN-138) deixa aberto.
+ */
+export function fechoDeCadaAgente(timeline: readonly TimelineEntry[]): Map<string, TimelineEntry['seq']> {
+  const fecho = new Map<string, TimelineEntry['seq']>();
+  for (const e of timeline) {
+    if (e.agentId && e.mensagem === true) fecho.set(e.agentId, e.seq);
+  }
+  return fecho;
+}
+
 export function agruparTimelinePorAgente(
   timeline: TimelineEntry[],
   handoffs: Handoff[],
@@ -163,12 +175,22 @@ export function agruparTimelinePorAgente(
   const colapsavel = (agentId: string) =>
     passaramBastao.has(agentId) && !comAcaoPendente.has(agentId);
 
+  // RN-750 (AT-435): o FECHO de cada agente — a última mensagem dele no fio
+  // — nunca entra no colapso: é o resumo que a pessoa acabou de ler no
+  // handoff. Recolhe-se o que veio ANTES dele.
+  const fechoPorAgente = fechoDeCadaAgente(timeline);
+
   const resultado: EntradaDoFio[] = [];
   let corrente: TimelineEntry[] = [];
 
   function fecharCorrente() {
     if (corrente.length === 0) return;
     const agentId = corrente[0].agentId;
+    const fecho = agentId ? fechoPorAgente.get(agentId) : undefined;
+    const indiceDoFecho = corrente.findIndex((e) => e.seq === fecho);
+    // O fecho e o que vem depois dele ficam abertos; só o antes é candidato.
+    const abertos = indiceDoFecho >= 0 ? corrente.slice(indiceDoFecho) : [];
+    if (indiceDoFecho >= 0) corrente = corrente.slice(0, indiceDoFecho);
     // Só vira cabeçalho colapsável com 2+ entradas — uma sozinha não ganha
     // nada em virar "Fulano · 1 mensagem" no lugar da própria mensagem.
     if (agentId && corrente.length >= 2 && colapsavel(agentId)) {
@@ -209,6 +231,7 @@ export function agruparTimelinePorAgente(
         resultado.push(entradaSimples(e));
       }
     }
+    for (const e of abertos) resultado.push(entradaSimples(e));
     corrente = [];
   }
 

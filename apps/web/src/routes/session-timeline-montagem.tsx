@@ -21,6 +21,7 @@ import { MarkdownMessage } from '../components/ui/MarkdownMessage';
 import { Button } from '../components/ui/Button';
 import { Carousel, type CarouselSlide } from '../components/ui/Carousel';
 import { lerFalhaDeTurno } from '../lib/session-falha';
+import { respostaCortada } from '../lib/resposta-cortada';
 import {
   AlertCircleIcon,
   ChevronRightIcon,
@@ -93,6 +94,11 @@ export interface ContextoDaTimeline {
   iniciarTurnoDoAgente: Turno['iniciarTurnoDoAgente'];
   acompanharTurnoPeloLog: Turno['acompanharTurnoPeloLog'];
   finalizarTurnoDoAgente: Turno['finalizarTurnoDoAgente'];
+  /**
+   * RN-749 (AT-434): manda ao agente "continue de onde parou", pelo MESMO
+   * caminho do composer. Estável (não entra nas dependências da montagem).
+   */
+  continuarRespostaCortada?: (agente: string) => void;
 }
 
 /**
@@ -135,6 +141,7 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
     iniciarTurnoDoAgente,
     acompanharTurnoPeloLog,
     finalizarTurnoDoAgente,
+    continuarRespostaCortada,
   } = ctx;
   const items: TimelineEntry[] = [];
   // O rótulo de cada desfecho de `autorDaMensagem` (RN-652). "Você" só quando
@@ -869,6 +876,23 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
                   <MarkdownMessage text={text} />
                 </div>
               )}
+              {/* RN-749: a resposta cortada pelo teto oferece a continuação
+                  num clique — antes a pessoa tinha de adivinhar "continue". */}
+              {key === event.id &&
+                isActive &&
+                continuarRespostaCortada &&
+                event.actor.kind === 'agent' &&
+                respostaCortada(text) && (
+                  <div>
+                    <Button
+                      variant="ghost"
+                      data-testid="continuar-resposta-cortada"
+                      onClick={() => continuarRespostaCortada(event.actor.id)}
+                    >
+                      {t('mensagens.continuarCortada')}
+                    </Button>
+                  </div>
+                )}
             </div>
           </div>
       );

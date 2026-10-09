@@ -277,6 +277,23 @@ describe('Shell — projetos de mesmo nome na sidebar', () => {
 
     expect(screen.queryByText(/^#[0-9a-f]{8} · /)).toBeNull();
   });
+
+  // AT-438: prefixo comum longo cortado por reticência escondia o fim que
+  // distingue os projetos; o nome inteiro fica no `title` do link.
+  it('o link do projeto leva o nome inteiro no title', () => {
+    estado.projects = [
+      { ...PROJECT, id: 'aaaaaaaa-1111-4000-8000-000000000001', name: 'viralabs-app-2026-10-08-a' },
+      { ...PROJECT, id: 'bbbbbbbb-2222-4000-8000-000000000002', name: 'viralabs-app-2026-10-08-b' },
+    ];
+
+    renderShell();
+
+    const a = screen.getByText('viralabs-app-2026-10-08-a').closest('a');
+    expect(a).toHaveAttribute('title', 'viralabs-app-2026-10-08-a');
+    const b = screen.getByText('viralabs-app-2026-10-08-b').closest('a');
+    expect(b).toHaveAttribute('title', 'viralabs-app-2026-10-08-b');
+    expect(b).not.toHaveAttribute('title', 'viralabs-app-2026-10-08-a');
+  });
 });
 
 describe('Shell — lista de projetos que não carrega', () => {
@@ -593,8 +610,9 @@ describe('Shell — abas do projeto aberto (ADR 0211)', () => {
 
     const lista = screen.getByRole('tablist', { name: 'Abas de Core API' });
     expect(within(lista).getByRole('tab', { name: /^Aprovações\s*4$/ })).toBeInTheDocument();
-    // Nenhuma aba marcada como da moldura: a padrão é a que a lista assume.
-    expect(within(lista).getByRole('tab', { name: 'Visão geral' })).toHaveAttribute(
+    // Nenhuma aba marcada pela moldura: na tela de Sessão a rota implica o
+    // Chat (AT-442) — antes a lista assumia a padrão, "Visão geral".
+    expect(within(lista).getByRole('tab', { name: 'Chat' })).toHaveAttribute(
       'aria-selected',
       'true',
     );

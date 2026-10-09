@@ -146,6 +146,7 @@
       "alwaysAllowScoped": "Sempre permitir: libera este tipo de ação só para {{agent}}, não para os outros agentes do projeto.",
       "autoMode": "Modo automático: {{actor}} roda qualquer comando sem perguntar, inclusive fora da pasta do projeto, e isso inclui git push e abertura de PR. Continuam pedindo sua decisão deploy, sudo/doas, merge em branch protegida, patch de instrução, paralelismo e remover container; o que estiver em deny segue negado. Desliga no card do agente.",
       "autoModeTyped": "Modo automático: {{actor}} passa a ter as próximas ações aprovadas sem perguntar, inclusive git push e abertura de PR. Continuam pedindo sua decisão deploy, merge em branch protegida, patch de instrução, paralelismo e remover container; o que estiver em deny segue negado. Desliga no card do agente.",
+      "autoModeNotThis": "Ligar o modo automático não aprova esta ação: ela continua esperando o seu Aprovar.",
       "obsolete": "A ação já foi decidida por outro caminho; este card se atualiza sozinho."
     },
     "decided": {
@@ -281,6 +282,9 @@
     "mergeButton": "Merge",
     "mergeBlockedFallback": "Gate bloqueado — corrija antes de propor o merge.",
     "mergeNoSession": "Sem sessão no projeto para propor a ação.",
+    "gatePendenteBloqueada": "O gate {{gate}} ainda está pendente para esta PR, e a tarefa dela está bloqueada: o merge fica indisponível até ela ser desbloqueada.",
+    "mergeIndisponivelBloqueada": "Merge indisponível: a tarefa desta PR está bloqueada — {{reason}}",
+    "mergeIndisponivelSemSessao": "Merge indisponível: sem sessão no projeto para propor a ação.",
     "gatePendente": "O gate {{gate}} ainda está pendente para esta PR. O merge segue disponível — a decisão é sua.",
     "mergeRecusado": "A última tentativa de merge foi recusada: {{reason}}",
     "mergeRecusadoArquivos_one": "Arquivo em conflito: {{files}}",

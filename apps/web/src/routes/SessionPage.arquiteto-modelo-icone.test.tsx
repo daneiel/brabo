@@ -300,7 +300,7 @@ describe('SessionPage — problema 3: ícone do agente no cabeçalho do grupo co
       },
     ]);
     eventos.mockReturnValue({
-      items: [respostaDoPo(1, 'ev-1', 'Primeira'), respostaDoPo(2, 'ev-2', 'Segunda')],
+      items: [respostaDoPo(1, 'ev-1', 'Primeira'), respostaDoPo(2, 'ev-2', 'Segunda'), respostaDoPo(3, 'ev-3', 'Fecho')],
     });
 
     montar();

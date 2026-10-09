@@ -130,6 +130,28 @@ describe('frases derivadas do payload', () => {
     expect(frase).not.toContain('ainda decide');
   });
 
+  // RN-747 (AT-437): o card diz quantos dev agents SOBEM, não quantos o plano pede.
+  it('plano com 2 agentes num módulo único diz que sobe 1 e que o outro depende de paralelizar', () => {
+    const frase = fraseDaAcao('propose_execution_plan', {
+      totalAgentes: 2,
+      modulos: [{ modulo: 'app', agentes: 2 }],
+      resumo: '"2 agentes no módulo único; backlog coberto."',
+    })!;
+    expect(frase).toContain('sobe 1 dev agent, um por módulo');
+    expect(frase).toContain('o 1 a mais só sobe se você aceitar paralelizar');
+    expect(frase).toContain(': "2 agentes no módulo único; backlog coberto." e ATIVA');
+    expect(frase).not.toContain('coberto.""');
+  });
+
+  it('plano sem agente a mais não fala de paralelizar', () => {
+    const frase = fraseDaAcao('propose_execution_plan', {
+      totalAgentes: 2,
+      modulos: [{ modulo: 'api' }, { modulo: 'web' }],
+    })!;
+    expect(frase).toContain('sobe 2 dev agents, um por módulo');
+    expect(frase).not.toContain('paralelizar');
+  });
+
   it('plano sem `tarefas` (payload antigo) não inventa contagem', () => {
     const frase = fraseDaAcao('propose_execution_plan', { totalAgentes: 1, modulos: [{}] })!;
     expect(frase).toContain('ATIVA a execução');

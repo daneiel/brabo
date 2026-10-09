@@ -112,6 +112,24 @@ describe('ModelPicker', () => {
     expect(screen.getAllByText('tool calling').length).toBe(3);
   });
 
+  // AT-443: o selo de raciocínio que o catálogo já mostra.
+  it('modelo que raciocina ganha o selo thinking; o que não raciocina, não', () => {
+    abrir(undefined, {
+      local: {
+        ollama: [
+          model({ id: 'pensa', displayName: 'Pensa', supportsReasoning: true }),
+          model({ id: 'direto', displayName: 'Direto' }),
+        ],
+      },
+      cloud: {},
+    } as ModelsByCategory);
+
+    const pensa = screen.getByText('Pensa').closest('button')!;
+    const direto = screen.getByText('Direto').closest('button')!;
+    expect(pensa.textContent).toContain('thinking');
+    expect(direto.textContent).not.toContain('thinking');
+  });
+
   it('o filtro "aptos para agentes" esconde o chat-only (RN-040)', () => {
     abrir(undefined, {
       local: {

@@ -466,20 +466,51 @@ describe('SessionPage — problema 3: colapso de mensagens por agente após pass
       },
     ]);
     eventos.mockReturnValue({
-      items: [respostaDoPo(1, 'ev-1', 'Primeira mensagem do PO'), respostaDoPo(2, 'ev-2', 'Segunda mensagem do PO')],
+      items: [
+        respostaDoPo(1, 'ev-1', 'Primeira mensagem do PO'),
+        respostaDoPo(2, 'ev-2', 'Segunda mensagem do PO'),
+        respostaDoPo(3, 'ev-3', 'Fecho do PO'),
+      ],
     });
 
     montar();
 
-    // As duas mensagens somem da tela — só o cabeçalho do grupo aparece.
+    // As duas primeiras somem da tela — só o cabeçalho do grupo aparece —, e
+    // o FECHO do PO fica aberto (RN-750).
     await screen.findByText('2 mensagens');
     expect(screen.queryByText('Primeira mensagem do PO')).not.toBeInTheDocument();
     expect(screen.queryByText('Segunda mensagem do PO')).not.toBeInTheDocument();
+    expect(screen.getByText('Fecho do PO')).toBeInTheDocument();
 
     // Clicar no cabeçalho reabre as duas.
     fireEvent.click(screen.getByRole('button', { name: /2 mensagens/ }));
     expect(await screen.findByText('Primeira mensagem do PO')).toBeInTheDocument();
     expect(screen.getByText('Segunda mensagem do PO')).toBeInTheDocument();
+  });
+
+  it('RN-750: com duas mensagens, o fecho fica aberto e a outra, sozinha, não vira grupo', async () => {
+    handoffsMock.mockReturnValue([
+      {
+        id: 'handoff-po-arq',
+        sessionId: ID,
+        projectId: 'proj-1',
+        fromAgent: 'po',
+        toAgent: 'arquiteto',
+        artifactId: null,
+        status: 'accepted',
+        createdAt: '2026-08-10T12:00:02.000Z',
+        updatedAt: '2026-08-10T12:00:02.000Z',
+      },
+    ]);
+    eventos.mockReturnValue({
+      items: [respostaDoPo(1, 'ev-1', 'Primeira mensagem do PO'), respostaDoPo(2, 'ev-2', 'Resumo do PO')],
+    });
+
+    montar();
+
+    expect(await screen.findByText('Resumo do PO')).toBeInTheDocument();
+    expect(screen.getByText('Primeira mensagem do PO')).toBeInTheDocument();
+    expect(screen.queryByText(/mensagens$/)).not.toBeInTheDocument();
   });
 
   it('sem handoff.accepted do PO ainda (bastão não passado): as mensagens ficam abertas, sem colapso', async () => {

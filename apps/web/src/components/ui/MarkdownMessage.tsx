@@ -155,6 +155,10 @@ function TabelaMarkdown({
       // desenhado em mono/maiúsculas pelo design system, e negrito dentro
       // dele não teria efeito visível nenhum.
       label: textoSimples(celula),
+      // AT-455: piso POR COLUNA. Com `1fr` e o `max-content` no contêiner, cada
+      // coluna crescia até a célula mais longa SEM quebra (medido: 2 236px
+      // num balão de 708px) e a última coluna ficava fora da vista.
+      width: 'minmax(12rem, 1fr)',
       render: (row) => (
         <span className={styles.tabelaCelula} style={{ textAlign: aligns[c] }}>
           {renderInline(row.celulas[c] ?? [])}

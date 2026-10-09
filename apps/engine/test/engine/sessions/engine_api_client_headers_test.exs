@@ -45,7 +45,8 @@ defmodule Engine.Sessions.EngineApiClientHeadersTest do
       assert fonte |> String.split("headers: headers()") |> length() |> Kernel.-(1) >= 8
 
       for linha <- String.split(fonte, "\n"),
-          String.contains?(linha, "Req.get(") do
+          String.contains?(linha, "req_get("),
+          not String.contains?(linha, "defp req_get") do
         assert String.contains?(linha, "headers: headers()"),
                "Req.get sem o funil de headers: #{String.trim(linha)}"
       end

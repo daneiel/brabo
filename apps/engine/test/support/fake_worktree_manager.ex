@@ -17,6 +17,15 @@ defmodule Engine.Dev.FakeWorktreeManager do
     |> tap(fn _ -> send(self(), {:worktree_adopted, project_id, agent_id, slug}) end)
   end
 
+  def create_from(project_id, agent_id, slug, base) do
+    send(self(), {:worktree_created_from, project_id, agent_id, slug, base})
+    do_create(slug)
+  end
+
+  def preservar(_project_id, _path, _agent_id, _task_id) do
+    Process.get(:fake_preservar, :nada)
+  end
+
   defp do_create(slug) do
     path =
       Path.join(

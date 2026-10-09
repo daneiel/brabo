@@ -298,6 +298,16 @@ conversational agents — which use only the streamed one — would fail at 15s 
 `%Req.TransportError{reason: :timeout}`, classified as origin `infra`. With
 a local model the turn fit within 15s and the defect didn't show up.
 
+#### Every non-streamed call runs in its own process ([RN-742](../business-rules.md#rn-742))
+
+`post_returning/3` and every GET of `EngineApiClient.Live` run the `Req` call
+inside a throwaway `Task` (`isolado/1`); the headers are built before, in the
+caller. A response that arrives after the `receive_timeout` lands in a process
+that has already ended, never in the caller's mailbox — on 08/10 that stray
+message crashed the dev agent on its NEXT call. The streamed path stays in the
+caller (its `into:` writes the caller's process dictionary, and the
+conversational agents already call it from the turn's `Task`).
+
 #### The last message may be the language guidance ([RN-622](../business-rules.md#rn-622))
 
 The `messages` the engine sends to both paths may end with ONE extra
@@ -957,6 +967,16 @@ not respond". A ceiling that runs out now says so: `motivo` names the
 operation and the number (`teto-excedido`), distinct from an unreachable
 broker.
 
+The OUTER hop has a ceiling too ([RN-757](../business-rules.md#rn-757)): a
+`terminal` action the api auto-approves is executed inside the same
+`POST /internal/sessions/:sessionId/actions` request (api →
+`/internal/actions/execute` → this route), so the engine calls it with
+`receive_timeout: TERMINAL_ACTION_TIMEOUT_MS + 120s`
+(`teto_do_propose_action_de_terminal_ms/0`). Before AT-440 it used Req's 15s
+default and an `npm install` reached the agent as a raw
+`%Req.TransportError{reason: :timeout}`; that outcome now reaches the model
+naming the ceiling and suggesting `nohup … &`.
+
 ### Per-agent context
 
 | method | path |
@@ -970,6 +990,15 @@ broker.
 One endpoint per agent, instead of a generic one: each one assembles exactly what
 that role needs, and the Harness doesn't end up filtering in the engine what
 the api could have simply not sent.
+
+`/dev-context` gained `siblingTasks` in AT-448 ([RN-765](../business-rules.md#rn-765))
+— the OTHER tasks of the same story, `{id, title, status}` each, without the
+task itself (`tarefasIrmas` in `get-dev-task-context.use-case.ts`), an empty
+list when the story has one task. It is what `Engine.Gates.RecorteDaTarefa`
+puts in front of the QA test plan and the `qa-automacao` review, so the
+verdict is about what THIS task delivers and a requirement owned by a sibling
+becomes an observation instead of a rejection. Read-only, same route, same
+`engine-service` guard: the HTTP surface does not change.
 
 `/infra-context` gained `gitProvider` in FASE 8c (`null` with no repository
 provisioned) — it's how the Workflows subagent decides `.github/workflows/

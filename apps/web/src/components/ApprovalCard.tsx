@@ -449,6 +449,13 @@ export function ApprovalCard({
                     : t('approvalCard.notes.autoModeTyped', { actor: actorLabel })}
                 </span>
               </p>
+              {/* AT-443: ligar o modo NÃO decide este card — ele segue
+                  pendente, com "Aprovar" como a ação principal. Aprovar junto
+                  seria decisão do dono, não feita aqui. */}
+              <p className={styles.note} data-testid="nota-modo-automatico-nao-aprova">
+                <AlertIcon size={14} className={styles.noteIcon} />
+                <span>{t('approvalCard.notes.autoModeNotThis')}</span>
+              </p>
               <OQueOPilotoLibera recolhido />
             </>
           )}

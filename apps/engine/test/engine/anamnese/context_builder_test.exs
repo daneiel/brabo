@@ -48,8 +48,8 @@ defmodule Engine.Anamnese.ContextBuilderTest do
         "decisions" => [
           %{
             "actionType" => "terminal",
-            "status" => "approved",
-            "rejectionReason" => nil,
+            "status" => "rejected",
+            "rejectionReason" => "fora do escopo",
             "decidedBy" => "user-1",
             "decidedAt" => "2026-07-19T10:00:00Z"
           }

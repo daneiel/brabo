@@ -33,7 +33,8 @@ defmodule Engine.Harness.Tools.ProposeAdr do
           "feature/adr-<slug>. `content` é o markdown do ADR. `modules` lista os módulos do " <>
           "module_map a que a decisão se aplica — os dev agents desses módulos recebem o ADR " <>
           "no contexto. Omita (ou deixe vazio) quando a decisão for transversal ao projeto: " <>
-          "aí ela vale pra todos os módulos.",
+          "aí ela vale pra todos os módulos. Proponha UM ADR por resposta: vários ADRs " <>
+          "inteiros numa resposta só estouram o limite de saída e o último chega cortado.",
       parameters: %{
         "type" => "object",
         "properties" => %{

@@ -140,6 +140,7 @@
       "alwaysAllowScoped": "Always allow: releases this action type only for {{agent}}, not for the project's other agents.",
       "autoMode": "Auto mode: {{actor}} runs any command without asking, even outside the project folder, including git push and opening a PR. Deploy, sudo/doas, merges into a protected branch, instruction patches, parallelism and removing the container keep asking for your decision; anything in deny stays denied. Turn it off from the agent's card.",
       "autoModeTyped": "Auto mode: {{actor}}'s next actions are approved without asking, including git push and opening a PR. Deploy, merges into a protected branch, instruction patches, parallelism and removing the container keep asking for your decision; anything in deny stays denied. Turn it off from the agent's card.",
+      "autoModeNotThis": "Turning on auto mode does not approve this action: it still waits for your Approve.",
       "obsolete": "The action was already decided another way; this card refreshes on its own."
     },
     "decided": {
@@ -270,6 +271,9 @@
     "mergeButton": "Merge",
     "mergeBlockedFallback": "Gate blocked — fix it before proposing the merge.",
     "mergeNoSession": "No session in the project to propose the action.",
+    "gatePendenteBloqueada": "The {{gate}} gate is still pending for this PR, and its task is blocked: merging is unavailable until it is unblocked.",
+    "mergeIndisponivelBloqueada": "Merging is unavailable: the task behind this PR is blocked — {{reason}}",
+    "mergeIndisponivelSemSessao": "Merging is unavailable: no session in the project to propose the action.",
     "gatePendente": "The {{gate}} gate is still pending for this PR. Merging stays available — the decision is yours.",
     "mergeRecusado": "The last merge attempt was refused: {{reason}}",
     "mergeRecusadoArquivos_one": "Conflicting file: {{files}}",

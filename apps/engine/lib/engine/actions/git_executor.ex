@@ -7,7 +7,7 @@ defmodule Engine.Actions.GitExecutor do
   quem garante que uma falha nunca chega vazia.
   """
 
-  alias Engine.Actions.{GitAuth, GitCmd}
+  alias Engine.Actions.{DiretoriosDeDependencia, GitAuth, GitCmd}
   alias Engine.Projects.ProjectRepository
 
   @doc """
@@ -25,7 +25,8 @@ defmodule Engine.Actions.GitExecutor do
     body =
       if co_author, do: "#{message}\n\nCo-authored-by: #{co_author}", else: message
 
-    with {:ok, _} <- git(worktree, ["add", "-A"]),
+    # RN-761: dependência instalada e build não entram, mesmo sem `.gitignore`.
+    with {:ok, _} <- git(worktree, DiretoriosDeDependencia.argumentos_do_add()),
          {:ok, _} <-
            git(worktree, [
              "-c",

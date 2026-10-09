@@ -266,6 +266,25 @@ describe('ProjectPrsTab — botão Merge', () => {
     expect(botaoMerge.getAttribute('title')).toBe('QA pediu mudanças');
   });
 
+  it('AT-451: tarefa bloqueada com gate pendente NÃO diz que o merge segue disponível', async () => {
+    getCodePullRequests.mockResolvedValue({ items: [prAberta()], truncated: false });
+    useBacklog.mockReturnValue({
+      data: epicComTask({ blocked: true, blockedReason: 'QA pediu mudanças', gateStatus: null }),
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+
+    montar();
+
+    const botaoMerge = await screen.findByRole('button', { name: 'Merge' });
+    expect(botaoMerge).toBeDisabled();
+    expect(screen.queryByTestId('aviso-gate-pendente')).toBeNull();
+    const aviso = screen.getByTestId('aviso-merge-indisponivel');
+    expect(aviso).toHaveTextContent('qa-verificada');
+    expect(aviso.textContent).not.toMatch(/segue disponível|stays available/);
+  });
+
   it('gate de QA pendente AVISA em texto, nomeando o gate, e o Merge segue ativo (AT-249, RN-663)', async () => {
     getCodePullRequests.mockResolvedValue({ items: [prAberta()], truncated: false });
     useBacklog.mockReturnValue({

@@ -38,6 +38,8 @@ defmodule Engine.Dev.ContextBuilder do
       task: task,
       story: story,
       adrs: adrs,
+      # AT-448 (RN-765): as irmãs da tarefa, para o recorte do gate de QA.
+      sibling_tasks: Map.get(ctx, "siblingTasks", []),
       business_rules_units: business_rules_units(rules),
       task_state_units: task_state_units(task, story, adrs)
     }

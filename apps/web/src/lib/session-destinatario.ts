@@ -6,6 +6,7 @@ import { intervaloDaSessao, useCanalDaSessaoVivo } from './canal-vivo';
 import { pollQueParaNoErro } from './query-policy';
 import { AGENTES_DE_CHAT } from './session-readiness';
 import { addressableAgents } from './agents';
+import { sessaoTemExecucao } from './sessao-de-execucao';
 
 /**
  * O DESTINATÁRIO da mensagem do composer (RN-631, AT-251).
@@ -203,7 +204,11 @@ export function agentesEmConversa(
   for (const h of handoffs) {
     if (h.status === 'accepted') presentes.add(h.toAgent);
   }
-  if (kind === 'criativa') presentes.add(DESTINATARIO_DA_SESSAO_CRIATIVA);
+  // AT-455: a sessão de EXECUÇÃO nasce `criativa` (RN-097), mas não oferece o
+  // Criativo antes de ativado — ali a conversa é com o time de execução.
+  if (kind === 'criativa' && !sessaoTemExecucao(events, ativadosNaSessaoInteira)) {
+    presentes.add(DESTINATARIO_DA_SESSAO_CRIATIVA);
+  }
   return AGENTES_DE_CHAT.filter((agente) => presentes.has(agente));
 }
 

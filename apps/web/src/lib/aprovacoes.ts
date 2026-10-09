@@ -318,11 +318,19 @@ const FRASE_DA_ACAO: Record<ActionType, (payload: Payload) => string> = {
     const total = numero(p, 'totalAgentes');
     const modulos = quantidade(p, 'modulos');
     const resumo = texto(p, 'resumo');
+    // RN-747 (AT-437): a ativação sobe UM dev agent por módulo; o que o plano
+    // pede além disso é paralelização (teto RN-154), decisão do usuário depois.
+    const aMais = total !== undefined && modulos !== undefined ? total - modulos : 0;
     const quantos =
-      total !== undefined && modulos !== undefined
-        ? ` — ${plural(total, 'agente', 'agentes')} em ${plural(modulos, 'módulo', 'módulos')}`
+      modulos !== undefined
+        ? ` — sobe ${plural(modulos, 'dev agent', 'dev agents')}, um por módulo` +
+          (aMais > 0
+            ? ` (o plano pede ${plural(total!, 'agente', 'agentes')}; ${aMais === 1 ? 'o 1 a mais só sobe' : `os ${aMais} a mais só sobem`} se você aceitar paralelizar depois)`
+            : '')
         : '';
-    const porque = resumo ? `: "${curto(resumo)}"` : '';
+    // A aspa do modelo dentro do resumo não pode sobrar ao lado da nossa.
+    const resumoLimpo = resumo ? curto(resumo).replace(/^["“”']+|["“”']+$/g, '').trim() : '';
+    const porque = resumoLimpo ? `: "${resumoLimpo}"` : '';
     const tarefas = quantidade(p, 'tarefas');
     const comTarefas =
       tarefas !== undefined && tarefas > 0

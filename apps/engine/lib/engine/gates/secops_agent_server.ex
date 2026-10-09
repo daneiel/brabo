@@ -128,13 +128,15 @@ defmodule Engine.Gates.SecOpsAgentServer do
 
     worktree = dev_state.worktree_path
 
-    diff_note =
+    {diff_note, dependencias} =
       case Diff.compute(project_id, worktree) do
         {:ok, diff_text} ->
-          "#{length(Diff.changed_paths(diff_text))} arquivo(s) alterado(s) nesta PR."
+          paths = Diff.changed_paths(diff_text)
+
+          {"#{length(paths)} arquivo(s) alterado(s) nesta PR.", dependencias_commitadas(paths)}
 
         {:error, reason} ->
-          "diff indisponível (#{inspect(reason)})."
+          {"diff indisponível (#{inspect(reason)}).", []}
       end
 
     case Scanner.run(semgrep(), worktree, "semgrep") do
@@ -142,8 +144,36 @@ defmodule Engine.Gates.SecOpsAgentServer do
         sast_nao_rodou(project_id, dev_state, task_id, semgrep_note)
 
       {semgrep_findings, nil} ->
-        julgar(project_id, dev_state, task_id, worktree, diff_note, semgrep_findings)
+        julgar(
+          project_id,
+          dev_state,
+          task_id,
+          worktree,
+          diff_note,
+          semgrep_findings ++ dependencias
+        )
     end
+  end
+
+  # RN-761 (AT-446): diretório de dependência instalada no diff é achado do
+  # gate, com ou sem scanner — a PR de 1.453 arquivos, 1.437 em
+  # `node_modules/`, passou aprovada.
+  @doc false
+  def dependencias_commitadas(paths) do
+    paths
+    |> Engine.Actions.DiretoriosDeDependencia.commitados()
+    |> Enum.map(fn dir ->
+      n = Enum.count(paths, &(dir in Path.split(&1)))
+
+      %{
+        tool: "brabo",
+        path: dir,
+        line: 0,
+        message:
+          "diretório de dependência/build commitado (#{n} arquivo(s)); " <>
+            "tire-o do commit e do repositório e ponha no .gitignore"
+      }
+    end)
   end
 
   # RN-714 (AT-380): a análise estática (semgrep) que NÃO rodou — binário

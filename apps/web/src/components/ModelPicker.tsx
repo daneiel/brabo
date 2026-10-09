@@ -318,6 +318,9 @@ function ModelOption({ model, selected, onClick }: { model: Model; selected: boo
           {model.supportsToolCalling && (
             <Badge tone="accent">{t('badges.toolCalling')}</Badge>
           )}
+          {/* AT-443: o selo do catálogo (`ModelCatalogSection`) — quem escolhe
+              o modelo aqui também precisa saber se ele raciocina. */}
+          {model.supportsReasoning && <Badge tone="accent">{t('badges.thinking')}</Badge>}
           {/* Indisponível aparece MARCADO, nunca some: um modelo ausente da
               lista deixaria o binding que aponta pra ele sem explicação. */}
           {indisponivel && <Badge tone="warning">{t('badges.unavailable')}</Badge>}

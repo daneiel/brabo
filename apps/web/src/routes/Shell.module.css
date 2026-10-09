@@ -244,9 +244,18 @@
 
 .navName {
   min-width: 0;
-  white-space: nowrap;
+  /*
+   * AT-438: até DUAS linhas, quebrando em qualquer ponto do nome — com
+   * reticência numa linha só, `viralabs-app-2026-1…` escondia justamente o
+   * fim que distingue projetos de mesmo prefixo. O nome inteiro fica no
+   * `title` do link.
+   */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
   font-family: var(--font-mono);
 }
 

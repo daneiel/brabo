@@ -265,7 +265,11 @@ estado lido do repositório e não da conversa.
 | Os conversacionais guardam os `toolCalls` da resposta, e o resultado da ferramenta deixa de chegar órfão ao provider (AT-350) | RN-690 |
 | O catálogo de modelos ganha busca, o sync ao lado da credencial e o "ativar e aplicar ao time" (AT-357) | RN-694 |
 | A prontidão do Criativo sem ferramentas; o texto do turno numa resposta só, e o teto visível no fio (AT-352/AT-354) | RN-697, RN-698 |
+| A Anamnese só roda com interação de conteúdo técnico do sujeito (AT-439) | RN-756 |
 | O instalador pergunta pelos modelos locais e mede a porta do Ollama; `brabo-dev` não é instalação, e a migração reinstala do zero (AT-351/AT-358) | RN-691, RN-692 |
+| O `npm install` cabe no `terminal`: o engine espera o `propose_action` pelo teto do comando, que vai a 120s (AT-440) | RN-757 |
+| O gate parado esperando clique é dito no painel, e a oferta em lote cobre os subagentes de QA (AT-449) | RN-766 |
+| O gate de QA julga a tarefa, e RF de tarefa irmã é observação (AT-448) | RN-765 |
 | O semgrep do SecOps morria sem `$HOME` gravável na imagem de produção, e o parecer aprovava (AT-380) | RN-707 |
 | O projeto novo diz o próximo passo: cartão de primeiros passos na Visão geral, e Configurações abre pela credencial e pelos modelos (AT-372/AT-374) | RN-708 |
 | O conflito de merge devolve a tarefa ao dev agent dono, que integra a dev e reenvia; os gates julgam de novo (AT-383) | RN-715 |
@@ -298,6 +302,26 @@ estado lido do repositório e não da conversa.
 | `SEM_AUTOFILL` ganha `aria-autocomplete` e o ignore do Proton Pass; o rótulo visível fica (AT-425) | RN-740 |
 | O diagnóstico da falha guarda o corpo do provider até 4 000 caracteres; a bolha corta em 300 (AT-424) | RN-739 |
 | O raciocínio ganha orçamento próprio e não come a saída visível da tool call (AT-427) | RN-741 |
+| O dev agent não morre calado: HTTP em processo próprio, crash vira `agent.error` e religamento (AT-428) | RN-742 |
+| Bloquear a task preserva o trabalho do worktree em commit, e a próxima parte dele (AT-429) | RN-743 |
+| O dev sabe que o shell é `sh` e começa vendo o próprio worktree (AT-444) | RN-744 |
+| Na resposta cortada, só a chamada incompleta é recusada (AT-430) | RN-745 |
+| O fecho do Arquiteto diz o que gravou, e as escritas recusadas são contadas (AT-431) | RN-746 |
+| O plano do Dev Lead diz quantos dev agents sobem, não quantos pede (AT-437) | RN-747 |
+| A espera por aprovação fecha a faixa do turno e leva o cartão à vista (AT-432) | RN-748 |
+| A resposta cortada pelo teto oferece "Continuar de onde parou" num clique (AT-434) | RN-749 |
+| O colapso por agente deixa o fecho de cada agente aberto no handoff (AT-435) | RN-750 |
+| Os saltos de layout da Sessão e do catálogo: composer, aba ativa, barra de lote e rolagem do fio (AT-442) | RN-751 |
+| A PR de infra mergeada sai de "PRs de infra em revisão" (AT-436) | RN-752 |
+| O seletor de modelo mostra `thinking`; ligar o modo automático não aprova o cartão, e ele diz isso (AT-443) | RN-755 |
+| O recorte do Jev não vira incapacidade: piso de obrigação no menu e aviso efêmero de recorte (AT-445) | RN-758, RN-759 |
+| A aba PRs diz a verdade do botão Merge com a tarefa bloqueada (AT-451) | RN-768 |
+| Encerrar sessão com execução pergunta antes, e o estado sai traduzido (AT-452) | RN-769 |
+| Miudezas de tela do TP-01: autor da PR de ADR, modelo da Infra, título da PR do dev, selo da execução, caminho e tabela (AT-455) | RN-770 |
+| A próxima task do dev agent parte da última branch dele não mergeada (AT-447) | RN-760 |
+| O repositório nasce com `.gitignore` base, o commit do dev exclui dependência instalada e o SecOps a acusa (AT-446) | RN-761 |
+| O bloqueio por ciclo de correção esgotado grava a origem `politica` (AT-450) | RN-762 |
+| Encerrar a sessão de execução para os dev agents e os gates; "Parar execução" na aba Executores (AT-456) | RN-763 |
 
 ## Estado atual e aberto
 
@@ -441,7 +465,8 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   `project_members`, e era por isso que toda rodada do uso real de 29/09
   terminava paga em "nenhum membro elegível"), fora do opt-out, com
   interação PRÓPRIA na janela (`Engine.Anamnese.Elegibilidade`, antes da
-  triagem; nem a fila de hipóteses a atravessa). Sem sujeito: nenhuma
+  triagem; desde a RN-756 só conta interação de CONTEÚDO TÉCNICO — mensagem
+  escrita, resposta estruturada, recusa com motivo —, nunca aprovação/handoff; nem a fila de hipóteses a atravessa). Sem sujeito: nenhuma
   chamada ao LLM nem ao RAG, motivo nomeado no log e, só na rodada pedida à
   mão, `anamnese.run_skipped`. (2) A hipótese que a PRÓPRIA pessoa aceitou
   (quem aceita é o autor da sessão) vira `FatoDoPerfil` no grafo, traduzido
@@ -807,7 +832,13 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
 - A chamada ao broker tem teto POR OPERAÇÃO desde a RN-604 (`tetoDaOperacao`,
   `container-broker.client.ts`), e a cadeia do `exec` é broker < api <
   engine — mexer no teto de um salto sem o de cima reabre o defeito, e os
-  testes dos dois lados conferem a ordem. Segue aberto, por DECISÃO do
+  testes dos dois lados conferem a ordem. Desde a RN-757 (AT-440) a cadeia
+  tem um QUARTO salto, o de fora: a ação `terminal` auto-aprovada é executada
+  dentro do `propose_action`, e o engine a espera por
+  `TERMINAL_ACTION_TIMEOUT_MS` (agora 120s, era 15s) + 120s — broker (T) <
+  api (T + 45s) < `container-exec` (T + 90s) < `propose_action` (T + 120s),
+  abaixo dos 300s do `fetch`; o estouro chega ao modelo nomeando o teto, e
+  esse teto passar de ~180s reabre o corte. Segue aberto, por DECISÃO do
   mantenedor (AT-234, opção D, RN-605): imagem grande não sobe na primeira
   tentativa. O pull é passo explícito do `start` (`image inspect` → `pull`)
   sob o MESMO `TIMEOUT_DE_CONTROLE_MS` de 30s, e o estouro é
@@ -1649,7 +1680,10 @@ o RACIOCÍNIO da triagem, que continua valendo.
   esperando o usuário, mas essa é a ÚNICA pendência com teto (8h do fim do
   turno, causa `conversation_idle_timeout`); os outros sinais da RN-064
   continuam sem teto e vencem. Fechar a sessão PARA os conversacionais dela
-  em todos os nós (`SessionLifecycleWorker`), sem gravar o turno em curso.
+  em todos os nós (`SessionLifecycleWorker`), sem gravar o turno em curso —
+  e, desde a RN-763, os dev agents dela e os gates do projeto, com a task em
+  curso bloqueada e o worktree preservado (`Engine.Dev.EncerramentoDaSessao`);
+  "Parar execução" na aba Executores é esse MESMO fechamento, sem estado novo.
   Os terminais têm UMA saída desde o ADR 0183 (RN-649/650): a REABERTURA,
   para `active`, por rota e checagem PRÓPRIAS (`reopen`, `canReopen`) — a
   transição genérica continua recusando `closed → active`, e `closing →

@@ -147,5 +147,19 @@
       "none": "Nenhum agente teve o modo automático ligado: {{mensagem}}",
       "some": "Ligado para {{ok}} de {{total}} agentes. Ficaram em manual: {{falharam}}."
     }
+  },
+  "parar": {
+    "descricao": "Parar a execução encerra esta sessão: os dev agents e os gates param, e nenhum começa outra tarefa.",
+    "botao": "Parar execução",
+    "semPapel": "Parar a execução pede o papel developer no workspace.",
+    "confirmarTitulo": "Parar a execução?",
+    "ficaTarefas_zero": "Nenhuma tarefa está em curso agora.",
+    "ficaTarefas_one": "{{count}} tarefa em curso é bloqueada com o trabalho do worktree preservado em commit, e volta à fila quando você a liberar.",
+    "ficaTarefas_other": "{{count}} tarefas em curso são bloqueadas com o trabalho do worktree preservado em commit, e voltam à fila quando você as liberar.",
+    "ficaPrs": "As PRs já abertas continuam abertas, à espera do seu merge.",
+    "ficaAprovacoes": "As aprovações pendentes continuam na aba Aprovações.",
+    "retomar": "Esta sessão não pode ser reaberta depois da execução; para retomar, ative a execução numa sessão nova.",
+    "confirmar": "Parar execução",
+    "erro": "Não foi possível parar a execução."
   }
 }

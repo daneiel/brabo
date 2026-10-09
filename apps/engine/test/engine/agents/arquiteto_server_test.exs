@@ -168,8 +168,14 @@ defmodule Engine.Agents.ArquitetoServerTest do
     assert recusa["content"] =~ "sem repositório provisionado"
     assert recusa["content"] =~ "handoff ao Arquiteto é aceito (RN-582)"
 
+    # RN-746: a recusa é dita no fecho, ao lado do texto do modelo.
     assert_received {:event_appended, _, _,
-                     %{type: "agent.response", payload: %{content: "depois-de-recusar-adr"}}}
+                     %{
+                       type: "agent.response",
+                       payload: %{content: "depois-de-recusar-adr" <> linha}
+                     }}
+
+    assert linha =~ "1 chamada de escrita recusada" or linha =~ "1 write call refused"
 
     # Rastro durável: a chamada e o porquê.
     assert_received {:event_appended, _, _, %{type: "tool.call", payload: %{tool: "propose_adr"}}}
