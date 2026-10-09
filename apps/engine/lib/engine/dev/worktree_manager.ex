@@ -48,6 +48,54 @@ defmodule Engine.Dev.WorktreeManager do
     criar(project_id, agent_id, task_slug, "feature/#{task_slug}")
   end
 
+  @doc """
+  Como `create/3`, mas a branch nasce de `base` (RN-743): a branch de uma task
+  BLOQUEADA do mesmo agente, onde `preservar/4` deixou o trabalho em commit.
+  """
+  def create_from(project_id, agent_id, task_slug, base) do
+    criar(project_id, agent_id, task_slug, base)
+  end
+
+  @doc """
+  RN-743 (AT-429). Commita o que o agente deixou no worktree antes de a task
+  ser bloqueada, na branch da própria task e com a identidade
+  `<agente>[bot]`. Sem isso o próximo `create/3` removia o worktree com
+  `--force` e o trabalho não commitado sumia. Devolve `{:ok, sha}`, `:nada`
+  (worktree limpo) ou `{:error, motivo}`. No modo `runner` o worktree mora na
+  máquina do usuário e o engine não roda git ali: `:nada`, declarado.
+  """
+  def preservar(project_id, path, agent_id, task_id) do
+    if runner?(project_id), do: :nada, else: preservar_em(path, agent_id, task_id)
+  end
+
+  @doc false
+  def preservar_em(path, agent_id, task_id) do
+    identidade = "#{agent_id}[bot]"
+
+    with true <- is_binary(path) and File.dir?(path),
+         {:ok, status} <- git(path, ["status", "--porcelain"]),
+         false <- String.trim(status) == "",
+         {:ok, _} <- git(path, ["add", "-A"]),
+         {:ok, _} <-
+           git(path, [
+             "-c",
+             "user.name=#{identidade}",
+             "-c",
+             "user.email=#{agent_id}@bot.brabo.local",
+             "commit",
+             "--no-verify",
+             "-m",
+             "wip(#{agent_id}): trabalho preservado ao bloquear a task #{task_id}"
+           ]),
+         {:ok, sha} <- git(path, ["rev-parse", "HEAD"]) do
+      {:ok, String.trim(sha)}
+    else
+      true -> :nada
+      false -> :nada
+      {:error, _} = erro -> erro
+    end
+  end
+
   defp criar(project_id, agent_id, task_slug, base) do
     with {:ok, remoto} <- ProjectRepository.remoto_de_trabalho(project_id),
          {:ok, work_dir} <- Workspace.ensure_remoto(project_id, remoto) do

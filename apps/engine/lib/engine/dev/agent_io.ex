@@ -366,12 +366,15 @@ defmodule Engine.Dev.AgentIo do
   deriva a origem de um erro; use-a em vez de decidir no olho.
   """
   def block_task(state, reason, diagnosis, origem) do
+    {state, preservado, diagnosis} = preservar_trabalho(state, diagnosis)
+
     emit(state, "dev.blocked", %{
       agentId: state.agent_id,
       taskId: state.task_id,
       reason: reason,
       diagnosis: diagnosis,
-      origem: origem
+      origem: origem,
+      trabalhoPreservado: preservado
     })
 
     # Artefato do desfecho, além do evento de narrativa acima: é o registro
@@ -398,6 +401,31 @@ defmodule Engine.Dev.AgentIo do
 
     state
   end
+
+  # RN-743 (AT-429). Antes de bloquear, o que está no worktree vira commit na
+  # branch da task — o próximo `create/3` removeria o worktree com `--force`.
+  # A branch fica em `base_preservada` e a próxima task deste agente (mesmo
+  # módulo) nasce dela (`run_task/2`). Só em memória: restart do engine perde
+  # o ponteiro, não o commit. O diagnóstico DIZ onde ficou o trabalho.
+  defp preservar_trabalho(%{worktree: path, branch: branch} = state, diagnosis)
+       when is_binary(path) and is_binary(branch) do
+    case worktree_manager().preservar(state.project_id, path, state.agent_id, state.task_id) do
+      {:ok, sha} ->
+        {Map.put(state, :base_preservada, branch), %{branch: branch, commit: sha},
+         "#{diagnosis}\n\nO trabalho não commitado foi preservado em #{branch} (commit " <>
+           "#{String.slice(sha, 0, 12)}); a próxima task deste agente parte dele."}
+
+      :nada ->
+        {state, nil, diagnosis}
+
+      {:error, motivo} ->
+        {state, nil,
+         "#{diagnosis}\n\nNão foi possível preservar o trabalho do worktree (#{branch}): " <>
+           String.slice(to_string(motivo), 0, 300)}
+    end
+  end
+
+  defp preservar_trabalho(state, diagnosis), do: {state, nil, diagnosis}
 
   # --- Estado durável / event log ---
 
