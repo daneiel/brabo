@@ -106,6 +106,7 @@
   "confirm": {
     "modeLabel": "Modo",
     "providerLabel": "Provider",
+    "workspaceModeLabel": "Modo da pasta",
     "codeAtLabel": "Código em",
     "repoLabel": "Repositório",
     "bootstrapLabel": "Bootstrap",
