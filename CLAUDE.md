@@ -301,6 +301,7 @@ estado lido do repositório e não da conversa.
 | O raciocínio ganha orçamento próprio e não come a saída visível da tool call (AT-427) | RN-741 |
 | O dev agent não morre calado: HTTP em processo próprio, crash vira `agent.error` e religamento (AT-428) | RN-742 |
 | Bloquear a task preserva o trabalho do worktree em commit, e a próxima parte dele (AT-429) | RN-743 |
+| O dev sabe que o shell é `sh` e começa vendo o próprio worktree (AT-444) | RN-744 |
 
 ## Estado atual e aberto
 

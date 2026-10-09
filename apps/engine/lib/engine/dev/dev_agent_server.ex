@@ -533,7 +533,7 @@ defmodule Engine.Dev.DevAgentServer do
       token_budget_micros: state.task_budget_micros,
       business_rules_units: business_rules_units,
       task_state_units: task_state_units,
-      messages: [initial_message(task, story)],
+      messages: [initial_message(task, story), retrato_do_worktree(state)],
       # Janela grande o bastante pra uma task inteira (vários terminals/reads)
       # não disparar compactação no meio do trabalho — o ContextManager ainda
       # roda: só não some com histórico recente por um cálculo de janela
@@ -574,6 +574,16 @@ defmodule Engine.Dev.DevAgentServer do
     |> Hooks.register(:pre_tool_use, ActionPipeline)
     |> Hooks.register(:post_tool_use, EventLog)
     |> Hooks.register(:post_tool_use, Termination)
+  end
+
+  # RN-744: o agente começa sabendo a branch e o que já existe no worktree,
+  # em vez de descobrir por tentativa (e criar de novo o que já estava lá).
+  defp retrato_do_worktree(state) do
+    %{
+      "role" => "user",
+      "content" => Engine.Dev.WorktreeManager.retrato(state.worktree, state.branch),
+      :pinned => true
+    }
   end
 
   defp initial_message(task, story) do

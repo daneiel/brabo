@@ -96,6 +96,41 @@ defmodule Engine.Dev.WorktreeManager do
     end
   end
 
+  @teto_do_retrato 80
+
+  @doc """
+  RN-744 (AT-444). O retrato CONTIDO do worktree que o kickoff do dev entrega:
+  a branch e os arquivos que já existem (rastreados + não rastreados não
+  ignorados), com teto de #{@teto_do_retrato} linhas e o total real quando
+  corta (ADR 0060). Sem parâmetro do modelo: quem chama é o servidor. Pasta
+  que o engine não alcança (modo `runner`) devolve o texto que diz isso.
+  """
+  def retrato(path, branch) do
+    with true <- is_binary(path) and File.dir?(path),
+         {:ok, out} <-
+           git(path, ["ls-files", "--cached", "--others", "--exclude-standard"]) do
+      arquivos = out |> String.split("\n", trim: true) |> Enum.uniq()
+      total = length(arquivos)
+
+      corpo =
+        case total do
+          0 -> "(nenhum arquivo ainda — o worktree está vazio)"
+          _ -> arquivos |> Enum.take(@teto_do_retrato) |> Enum.join("\n")
+        end
+
+      corte =
+        if total > @teto_do_retrato,
+          do: "\n(… mostrando #{@teto_do_retrato} de #{total} arquivos)",
+          else: ""
+
+      "Estado do seu worktree — branch `#{branch}`, #{total} arquivo(s):\n" <> corpo <> corte
+    else
+      _ ->
+        "Estado do seu worktree — branch `#{branch}`: indisponível para leitura " <>
+          "pelo engine; liste com `terminal` (`ls`, `git status`)."
+    end
+  end
+
   defp criar(project_id, agent_id, task_slug, base) do
     with {:ok, remoto} <- ProjectRepository.remoto_de_trabalho(project_id),
          {:ok, work_dir} <- Workspace.ensure_remoto(project_id, remoto) do
