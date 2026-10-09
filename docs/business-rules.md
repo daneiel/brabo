@@ -15808,9 +15808,9 @@ pacote da porta de Docker. Nada muda na contenção do broker ([ADR
   `:205` (`TETO_DE_MUTACAO_MS`), `:217` (`FOLGA_DO_EXEC_NO_ENGINE_MS`),
   `:270` (`erroDeTransporte`);
   `apps/api/src/application/ports/container-broker.port.ts:89` (`MotivoDeBrokerIndisponivel`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1865` (`teto_do_container_exec_ms`)
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1889` (`teto_do_container_exec_ms`)
 
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1865` (`teto_do_container_exec_ms`)
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1889` (`teto_do_container_exec_ms`)
 - **Teste:** `apps/api/test/infrastructure/http-clients/container-broker.client.spec.ts:286`
   (a reprodução, contra um broker `node:http` que demora 6 s), `:182` (o
   teto de cada operação no `AbortSignal`), `:204` e `:229` (`teto-excedido`
@@ -22003,7 +22003,7 @@ sem dizer qual.
   da Task do turno (`TurnoAssincrono`), então o padrão "HTTP dentro do
   GenServer" não os alcança — declarado. A web não mudou: a aba Executores
   passa a ver o `agent.error` e o `dev.blocked` da recuperação.
-- **Onde:** `apps/engine/lib/engine/sessions/engine_api_client.ex:1990`
+- **Onde:** `apps/engine/lib/engine/sessions/engine_api_client.ex:2012`
   (`isolado`), `apps/engine/lib/engine/dev/monitor.ex:69` (`ao_terminar`),
   `:93` (`registrar_e_religar`)
 - **Teste:** `apps/engine/test/engine/sessions/engine_api_client_isolado_test.exs`
@@ -22242,3 +22242,31 @@ sem dizer qual.
   não sai)
 - **Origem:** AT-443 (TP-01: o modo ligado num cartão pendente não o
   aprovava, e nada na tela dizia por quê)
+### RN-757 — O `terminal` auto-aprovado espera o comando, e o teto do comando é 2 min {#rn-757}
+
+- **Regra:** a ação `terminal` que a api auto-aprova é EXECUTADA dentro da
+  mesma requisição do `propose_action` (api → engine
+  `/internal/actions/execute` → api `container-exec` → broker), e o engine
+  espera essa requisição por `TERMINAL_ACTION_TIMEOUT_MS` + 120 s — não pelo
+  default de 15 s do `Req`. O teto do comando (`TERMINAL_ACTION_TIMEOUT_MS`)
+  passa de 15 s para 120 s nos três composes e no `runtime.exs`. A cadeia fica
+  broker (T) < api → broker (T + até 45 s, [RN-604](#rn-604)) < engine →
+  `container-exec` (T + 90 s) < engine → `propose_action` (T + 120 s), e com
+  T = 120 s o salto de fora (240 s) segue abaixo dos 300 s de cabeçalhos do
+  `fetch` do Node. Se a espera ainda estourar, o modelo recebe texto NOMEADO
+  — o teto em segundos, que o processo pode seguir rodando e a sugestão de
+  `nohup … &` com log —, nunca `%Req.TransportError{reason: :timeout}` cru.
+  Exec assíncrono/streaming foi considerado e não feito: a menor mudança que
+  faz `npm install` comum caber é o teto.
+- **Onde:** `apps/engine/lib/engine/sessions/engine_api_client.ex:1862`
+  (`opcoes_do_propose_action`) e
+  `apps/engine/lib/engine/harness/hooks/action_pipeline.ex:80`
+  (`resultado_de_teto_do_terminal`)
+- **Teste:** `apps/engine/test/engine/sessions/engine_api_client_propose_terminal_test.exs`
+  (api falsa que demora 16 s ainda é esperada; ordem dos tetos abaixo de
+  300 s; o texto de estouro nomeia o teto)
+- **Origem:** AT-440 (TP-01 de 08/10: `npm install 2>&1 | tail -50` num
+  container `node:22-bookworm-slim` voltou "falha no pipeline:
+  %Req.TransportError{reason: :timeout}"; medido nesta máquina, o mesmo
+  `npm install` de `bcrypt`+`sqlite3`+`express` levou 5,3 s com a imagem em
+  cache e prebuilds disponíveis — a cadeia, não o comando, cortava em 15 s)

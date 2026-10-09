@@ -66,9 +66,25 @@ defmodule Engine.Harness.Hooks.ActionPipeline do
       {:ok, action} ->
         {:cont, Map.put(ctx, :result, result_fun.(action))}
 
+      {:error, %Req.TransportError{reason: :timeout}} when action_type == "terminal" ->
+        {:cont, Map.put(ctx, :result, resultado_de_teto_do_terminal())}
+
       {:error, reason} ->
         {:cont, Map.put(ctx, :result, "falha no pipeline: #{inspect(reason)}")}
     end
+  end
+
+  # AT-440 (RN-757). O estouro da espera vira texto NOMEADO para o modelo —
+  # qual teto e quanto —, para ele não repetir o mesmo comando igual.
+  @doc false
+  def resultado_de_teto_do_terminal do
+    teto_s = div(Application.fetch_env!(:engine, :terminal_action_timeout_ms), 1000)
+
+    "falhou: o comando passou do teto de execução de terminal (#{teto_s}s, " <>
+      "TERMINAL_ACTION_TIMEOUT_MS) e o engine parou de esperar a resposta; o " <>
+      "processo pode continuar rodando. Não repita o mesmo comando igual: " <>
+      "rode-o em segundo plano (`nohup <comando> > /tmp/saida.log 2>&1 &`) e " <>
+      "consulte o log depois, ou divida-o em passos menores."
   end
 
   defp terminal_result(%{"status" => "executed"} = action) do

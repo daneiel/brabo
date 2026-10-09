@@ -967,6 +967,16 @@ not respond". A ceiling that runs out now says so: `motivo` names the
 operation and the number (`teto-excedido`), distinct from an unreachable
 broker.
 
+The OUTER hop has a ceiling too ([RN-757](../business-rules.md#rn-757)): a
+`terminal` action the api auto-approves is executed inside the same
+`POST /internal/sessions/:sessionId/actions` request (api →
+`/internal/actions/execute` → this route), so the engine calls it with
+`receive_timeout: TERMINAL_ACTION_TIMEOUT_MS + 120s`
+(`teto_do_propose_action_de_terminal_ms/0`). Before AT-440 it used Req's 15s
+default and an `npm install` reached the agent as a raw
+`%Req.TransportError{reason: :timeout}`; that outcome now reaches the model
+naming the ceiling and suggesting `nohup … &`.
+
 ### Per-agent context
 
 | method | path |
