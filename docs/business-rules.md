@@ -22270,3 +22270,27 @@ sem dizer qual.
   %Req.TransportError{reason: :timeout}"; medido nesta máquina, o mesmo
   `npm install` de `bcrypt`+`sqlite3`+`express` levou 5,3 s com a imagem em
   cache e prebuilds disponíveis — a cadeia, não o comando, cortava em 15 s)
+
+### RN-769 — Encerrar sessão com execução ativa pergunta antes, e o estado aparece traduzido {#rn-769}
+
+- **Regra:** "Encerrar" numa sessão com execução ativa (evento
+  `execution.activated` na janela, ou um `dev-<modulo>` entre os ativados da
+  sessão inteira — o Dev Lead não conta, ele planeja antes da execução) abre
+  uma confirmação que diz o que para: os agentes da sessão param na hora, o
+  comando em andamento é cortado, o turno em curso não é gravado, e sessão com
+  execução não reabre ([RN-650](#rn-650)). Sem execução, o clique encerra
+  direto, como antes. A frase de sessão encerrada no composer interpola o
+  estado TRADUZIDO (`pontoDaSessao(...).rotuloKey`), nunca o enum cru
+  (`closed`). E isso é guardado no CÓDIGO, não só no locale: a régua de
+  vocabulário lê os JSON, e o enum entrava pela interpolação em runtime;
+  `i18n-enum-cru.test.ts` reprova `t(…, { status: x.status })`.
+- **Onde:** `apps/web/src/routes/ConfirmarEncerramento.tsx:31`
+  (`useEncerrarComConfirmacao`) e `apps/web/src/routes/SessionComposer.tsx:431`
+  (`statusGenerico`)
+- **Teste:** `apps/web/src/routes/ConfirmarEncerramento.test.tsx` (sem
+  execução encerra direto; com execução só encerra ao confirmar; cancelar não
+  encerra) e `apps/web/src/lib/i18n-enum-cru.test.ts` (reprovava o
+  `SessionComposer.tsx` antes da correção)
+- **Origem:** AT-452 (TP-01 de 09/10: "Encerrar" fechou a sessão de execução
+  em 3 s com o dev agent no meio de um `npm install`, e a barra disse "Sessão
+  closed")
