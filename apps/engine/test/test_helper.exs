@@ -101,6 +101,15 @@ CREATE TABLE IF NOT EXISTS public.proposed_actions (
 )
 """)
 
+# RN-772: `ListarAdrsPropostas` lê as `open_adr_pr` do PROJETO, com o
+# resultado da execução e o motivo da recusa.
+Engine.Repo.query!("""
+ALTER TABLE public.proposed_actions
+  ADD COLUMN IF NOT EXISTS project_id uuid,
+  ADD COLUMN IF NOT EXISTS execution_result jsonb,
+  ADD COLUMN IF NOT EXISTS rejection_reason text
+""")
+
 # Mesmo motivo dos fixtures acima — project_repositories também é
 # gerenciada pela api (Drizzle, schema "public"). Enum git_provider
 # simplificado pra text (Engine.Projects.ProjectRepository só lê a
