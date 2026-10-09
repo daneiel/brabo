@@ -81,6 +81,8 @@
     "modeloGerador": "Modelo que gerou esta resposta: {{modelName}}",
     "modeloNaoGravado": "Esta resposta foi gravada sem o nome do modelo",
     "modeloNaoRegistrado": "modelo não registrado",
+    "continuarCortada": "Continuar de onde parou",
+    "continuarCortadaTexto": "Continue de onde parou.",
     "falhaOrigem": "falha · origem {{origem}}",
     "falhaProximoPasso": "O turno de {{agente}} parou por esta falha (origem {{origem}}). Mande uma mensagem para {{agente}} continuar.",
     "tetoDeIteracoes": "Parou no teto de {{max}} passos sem terminar o turno. O que ficou registrado até aqui está acima; diga como prefere seguir."
