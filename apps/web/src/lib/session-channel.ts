@@ -36,7 +36,7 @@ export interface SessionChannelHandlers {
   onAgentDone?: () => void;
   // Working/idle nos limites de turno dos agentes conversacionais
   // (criativo/po/arquiteto/infra) — Fase 4a, painel do time ao vivo.
-  onAgentStatus?: (payload: { status: 'working' | 'idle' }) => void;
+  onAgentStatus?: (payload: { status: 'working' | 'idle' | 'awaiting_approval' }) => void;
   // Qualquer session_event recém-persistido (Dev/QA/SecOps/Infra, Fase 4a) —
   // broadcastado ao lado do append_event no engine. Usado só como GATILHO
   // pra antecipar o refetch do polling (nunca substitui o parsing/cache do
@@ -188,7 +188,12 @@ export function connectSessionHeartbeat(
     }
     if (handlers.onAgentStatus) {
       canal.on('agent.status', (payload: { status?: string }) => {
-        if (payload?.status === 'working' || payload?.status === 'idle') {
+        // AT-432 (RN-748): `awaiting_approval` também chega — é fim de turno.
+        if (
+          payload?.status === 'working' ||
+          payload?.status === 'idle' ||
+          payload?.status === 'awaiting_approval'
+        ) {
           handlers.onAgentStatus!({ status: payload.status });
         }
       });

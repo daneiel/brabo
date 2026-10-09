@@ -13,6 +13,22 @@ function rolarParaOFim(el: HTMLElement | null) {
 }
 
 /**
+ * O `seq` da espera por aprovação mais recente no log (RN-748, AT-432): o
+ * maior `seq` de `agent.status` com `awaiting_approval`, ou `null`. Quando ele
+ * MUDA, o turno acabou de suspender e o cartão de aprovação acabou de entrar
+ * no fio — a tela o leva à vista mesmo para quem não estava perto do fim.
+ */
+export function seqDaEsperaPorAprovacao(events: readonly SessionEvent[]): number | null {
+  let maior: number | null = null;
+  for (const e of events) {
+    if (e.type !== 'agent.status') continue;
+    if ((e.payload as { status?: unknown } | null)?.status !== 'awaiting_approval') continue;
+    if (maior === null || e.seq > maior) maior = e.seq;
+  }
+  return maior;
+}
+
+/**
  * A rolagem do fio da tela de Sessão: os refs da sentinela, do container que
  * rola e do conteúdo que cresce, a navegação até o evento citado pelo
  * Psicólogo (Fase 4b), a abertura no fim (achado 10) e o "acompanha o fim"
@@ -93,6 +109,22 @@ export function useRolagemDoFio({
   useEffect(() => {
     acompanharOFim();
   }, [events.length, actions.length, acompanharOFim]);
+
+  // RN-748 (AT-432): o turno suspendeu esperando aprovação — o cartão é a
+  // próxima coisa que a pessoa precisa ver, então vai à vista SEM a guarda
+  // dos 120px. Só na MUDANÇA depois da abertura: reabrir a sessão com uma
+  // espera antiga no log não arranca ninguém do lugar.
+  const esperaPorAprovacao = seqDaEsperaPorAprovacao(events);
+  const esperaVistaRef = useRef<number | null | undefined>(undefined);
+  useEffect(() => {
+    const anterior = esperaVistaRef.current;
+    esperaVistaRef.current = esperaPorAprovacao;
+    if (anterior === undefined || esperaPorAprovacao === null) return;
+    if (esperaPorAprovacao !== anterior) {
+      // O cartão chega por outra query (as ações): espera a volta seguinte.
+      setTimeout(() => rolarParaOFim(messagesEndRef.current), 0);
+    }
+  }, [esperaPorAprovacao]);
 
   // O texto do streaming (AT-301): em vez de dependência de efeito — que
   // exigiria a página re-renderizar a cada token —, uma assinatura direta do
