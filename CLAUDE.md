@@ -297,6 +297,7 @@ estado lido do repositório e não da conversa.
 | A resposta cortada pelo limite de tokens é narrada, e o argumento de ferramenta cortado não é executado (AT-423) | RN-737 |
 | `SEM_AUTOFILL` ganha `aria-autocomplete` e o ignore do Proton Pass; o rótulo visível fica (AT-425) | RN-740 |
 | O diagnóstico da falha guarda o corpo do provider até 4 000 caracteres; a bolha corta em 300 (AT-424) | RN-739 |
+| O raciocínio ganha orçamento próprio e não come a saída visível da tool call (AT-427) | RN-741 |
 
 ## Estado atual e aberto
 

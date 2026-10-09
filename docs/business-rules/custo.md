@@ -225,8 +225,8 @@ foram raciocínio).
    no protocolo dele (`cache_read_input_tokens`) e isso NÃO é lido aqui — fica
    `null`, declarado; o Ollama não informa.
 
-- **Where:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:283` (`cachedInputTokens`),
-  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:580` (`contagem`),
+- **Where:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:301` (`cachedInputTokens`),
+  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:609` (`contagem`),
   `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:175` (`cachedInputTokens`),
   `apps/api/src/application/use-cases/llm/record-llm-usage.use-case.ts:113` (`cachedInputTokens`),
   `apps/api/src/db/schema/llm.ts:374` (`cachedInputTokens`),
@@ -276,8 +276,8 @@ gasto somam. Sem ele, o preço congelado do catálogo produz o número, como no
   `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:225` (`custoDaChamada`),
   `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:238` (`custoDaChamada`),
   `apps/api/src/application/use-cases/llm/send-chat-message.use-case.ts:227` (`custoDaChamada`),
-  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:279` (`extrairCustoReal`),
-  `apps/api/src/infrastructure/llm/openrouter-provider.ts:229` (`extrairCustoRealOpenRouter`),
+  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:297` (`extrairCustoReal`),
+  `apps/api/src/infrastructure/llm/openrouter-provider.ts:243` (`extrairCustoRealOpenRouter`),
   `apps/api/src/db/schema/llm.ts:357` (`priceImplicit`)
 - **Test:** `test/domain/llm/custo-da-chamada.spec.ts`,
   `test/infrastructure/llm/openrouter-provider.contract.spec.ts` (resposta
@@ -382,7 +382,7 @@ comportamento de sempre, nada vai ao fio e o hub decide sozinho.
   `apps/api/src/domain/llm/binding-resolver.ts:100` (viaja com o binding),
   `apps/api/src/application/use-cases/llm/record-llm-usage.use-case.ts:118`
   (congela no metering),
-  `apps/api/src/infrastructure/llm/openrouter-provider.ts:245` (`openrouterConfig`,
+  `apps/api/src/infrastructure/llm/openrouter-provider.ts:259` (`openrouterConfig`,
   a capability provada)
 - **Test:** `test/domain/llm/routing-preference.spec.ts`,
   `test/application/use-cases/llm/set-model-binding.use-case.spec.ts`,

@@ -449,6 +449,15 @@ credit for the model's MAXIMUM output per in-flight call and answers 402
 even when the real call would fit the balance. A reply cut by this cap is
 not narrated yet: this dialect does not read `finish_reason: "length"`.
 
+When the model reasons (`models.supports_reasoning`) and the provider config
+has `campoDeRaciocinio` (only OpenRouter today), the call also carries an
+explicit reasoning budget, `reasoning: { max_tokens: ORCAMENTO_DE_RACIOCINIO }`
+(4096), and the output cap becomes visible output + that budget (RN-741):
+reasoning counts inside `max_tokens`, and without its own budget it could
+spend the whole cap before the text and the tool call. Reasoning is never
+turned off. The direct Anthropic provider sends no `thinking`, so the model
+does not reason there.
+
 Each flag exists because a real provider diverges. Don't add a flag without a
 provider that needs it.
 
