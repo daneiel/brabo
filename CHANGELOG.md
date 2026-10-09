@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- **web**: o painel "precisa de você" diz, ao lado do cartão, quando a ação pendente é de um gate (QA ou SecOps) parado esperando o clique, e a oferta em lote do modo automático na aba Executores cobre os subagentes de QA desde a ativação (RN-766, AT-449).
 - **engine**: a ação `terminal` auto-aprovada passa a ser esperada pelo engine por `TERMINAL_ACTION_TIMEOUT_MS` + 120 s (antes, os 15 s do `Req`), o teto do comando sobe de 15 s para 120 s, e o estouro chega ao agente nomeando o teto em vez de `Req.TransportError` cru (RN-757, AT-440).
 
 - **engine/anamnese**: a rodada só roda quando o sujeito teve interação com conteúdo técnico — mensagem escrita por ele, resposta a pergunta estruturada ou recusa com motivo; aprovação, handoff e clique não contam mais, e sem isso não há chamada ao LLM nem ao RAG (RN-756, AT-439).

@@ -425,8 +425,13 @@ describe('ProjectExecutorsTab — presença de QA vem do resumo, não da janela 
     montar();
 
     expect(await screen.findByText('dev-backend')).toBeInTheDocument();
-    expect(screen.queryByText('QA de Automação')).not.toBeInTheDocument();
-    expect(screen.queryByText('QA')).not.toBeInTheDocument();
+    // Fora da oferta em lote: desde a RN-766 ela lista os subagentes de QA
+    // desde a ativação, então o nome aparece num `<label>` dela — o que esta
+    // prova olha é o ROSTER.
+    const foraDaOferta = (texto: string) =>
+      screen.queryAllByText(texto).filter((el) => !el.closest('label'));
+    expect(foraDaOferta('QA de Automação')).toHaveLength(0);
+    expect(foraDaOferta('QA')).toHaveLength(0);
   });
 
   // AT-130 — `executionActivated` passa pela mesma guarda de sessão.
