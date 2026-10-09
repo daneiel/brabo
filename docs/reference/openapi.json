@@ -17217,6 +17217,28 @@
           "description"
         ]
       },
+      "DevContextSiblingTaskResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01J0000000000000000000000"
+          },
+          "title": {
+            "type": "string",
+            "example": "Expose POST /login returning a JWT"
+          },
+          "status": {
+            "type": "string",
+            "example": "todo"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "status"
+        ]
+      },
       "DevTaskContextResponseDto": {
         "type": "object",
         "properties": {
@@ -17238,13 +17260,21 @@
             "items": {
               "$ref": "#/components/schemas/DevContextAdrResponseDto"
             }
+          },
+          "siblingTasks": {
+            "description": "The other tasks of the same story, with their status. The QA gate judges the delivery by what belongs to THIS task; a requirement of a sibling task is an observation, never a rejection (RN-765).",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DevContextSiblingTaskResponseDto"
+            }
           }
         },
         "required": [
           "task",
           "story",
           "businessRules",
-          "adrs"
+          "adrs",
+          "siblingTasks"
         ]
       },
       "DiffLineResponseDto": {

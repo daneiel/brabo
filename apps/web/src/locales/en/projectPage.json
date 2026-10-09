@@ -21,6 +21,7 @@
       "promocoes": "Story promotions",
       "arquitetura": "Architecture pendencies",
       "hipoteses": "Psychologist hypotheses"
-    }
+    },
+    "gateParado": "The {{gate}} gate is stopped until you decide this action."
   }
 }

@@ -6289,12 +6289,22 @@ export interface components {
             /** @example Above that, the addition is refused with 409. */
             description: string;
         };
+        DevContextSiblingTaskResponseDto: {
+            /** @example 01J0000000000000000000000 */
+            id: string;
+            /** @example Expose POST /login returning a JWT */
+            title: string;
+            /** @example todo */
+            status: string;
+        };
         DevTaskContextResponseDto: {
             task: components["schemas"]["TaskResponseDto"];
             story: components["schemas"]["StoryResponseDto"];
             businessRules: components["schemas"]["DevContextBusinessRuleResponseDto"][];
             /** @description ADRs that apply: the cross-cutting ones (no module declared) plus the ones that cite this agent's module. */
             adrs: components["schemas"]["DevContextAdrResponseDto"][];
+            /** @description The other tasks of the same story, with their status. The QA gate judges the delivery by what belongs to THIS task; a requirement of a sibling task is an observation, never a rejection (RN-765). */
+            siblingTasks: components["schemas"]["DevContextSiblingTaskResponseDto"][];
         };
         DiffLineResponseDto: {
             /**
