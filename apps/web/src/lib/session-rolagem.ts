@@ -12,6 +12,15 @@ function rolarParaOFim(el: HTMLElement | null) {
   el?.scrollIntoView?.({ block: 'end' });
 }
 
+/** A guarda dos 120px da RN-173: o container está perto do fim? */
+export function estaPertoDoFim(container: {
+  scrollHeight: number;
+  scrollTop: number;
+  clientHeight: number;
+}): boolean {
+  return container.scrollHeight - container.scrollTop - container.clientHeight < 120;
+}
+
 /**
  * O `seq` da espera por aprovação mais recente no log (RN-748, AT-432): o
  * maior `seq` de `agent.status` com `awaiting_approval`, ou `null`. Quando ele
@@ -66,6 +75,11 @@ export function useRolagemDoFio({
   // não é ele que cresce; observar o container não veria nada.
   const messagesInnerRef = useRef<HTMLDivElement | null>(null);
   const abriuNoFimRef = useRef(false);
+  // AT-442: se a pessoa estava no fim ANTES de a altura mudar. Medir só
+  // depois falha quando o conteúdo encolhe e cresce de novo (aceitar o
+  // handoff da Infra): o navegador grampeia o scroll no topo e a guarda dos
+  // 120px, medida já com o conteúdo de volta, dizia "longe do fim".
+  const estavaNoFimRef = useRef(true);
 
   // Navegação de evidência (Fase 4b): rola até o evento assim que ele
   // existir no DOM — depende do log estar aberto E dos eventos já terem
@@ -95,9 +109,19 @@ export function useRolagemDoFio({
     if (!abriuNoFimRef.current) return;
     const container = scrollContainerRef.current;
     if (!container) return;
-    const pertoDoFim =
-      container.scrollHeight - container.scrollTop - container.clientHeight < 120;
-    if (pertoDoFim) rolarParaOFim(messagesEndRef.current);
+    if (estaPertoDoFim(container) || estavaNoFimRef.current) {
+      rolarParaOFim(messagesEndRef.current);
+    }
+  }, []);
+
+  // Ligado como `onScroll` do container (ele pode não existir no primeiro
+  // render). Rolagem com o conteúdo menor que a janela (grampeada) não muda a
+  // intenção de quem estava no fim.
+  const aoRolarOFio = useCallback(() => {
+    const container = scrollContainerRef.current;
+    if (container && container.scrollHeight > container.clientHeight) {
+      estavaNoFimRef.current = estaPertoDoFim(container);
+    }
   }, []);
 
   // RN-173: as dependências eram só `[events.length, streamingText]`, e por
@@ -170,5 +194,5 @@ export function useRolagemDoFio({
     return () => observador.disconnect();
   }, [acompanharOFim]);
 
-  return { messagesEndRef, scrollContainerRef, messagesInnerRef };
+  return { messagesEndRef, scrollContainerRef, messagesInnerRef, aoRolarOFio };
 }

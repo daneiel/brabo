@@ -22138,8 +22138,8 @@ sem dizer qual.
   sempre.
 - **Onde:** `apps/web/src/lib/session-channel.ts:195` (`awaiting_approval`),
   `apps/web/src/lib/session-turno.ts:418` (`awaiting_approval`),
-  `apps/web/src/lib/session-rolagem.ts:21` (`seqDaEsperaPorAprovacao`),
-  `:117` (`esperaPorAprovacao`)
+  `apps/web/src/lib/session-rolagem.ts:30` (`seqDaEsperaPorAprovacao`),
+  `:141` (`esperaPorAprovacao`)
 - **Teste:** `apps/web/src/lib/session-channel.test.ts` (`onAgentStatus repassa
   awaiting_approval (RN-748)`), `apps/web/src/lib/session-rolagem.test.ts`
   (`seqDaEsperaPorAprovacao (RN-748)`: espera mais recente; sem espera, `null`)
@@ -22181,3 +22181,31 @@ sem dizer qual.
   não vira grupo`)
 - **Origem:** AT-435 (TP-01: no handoff o fio recolhia a resposta inteira do
   Criativo, "Criativo · 2 mensagens", escondendo o resumo)
+### RN-751 — A Sessão e o catálogo não saltam: composer, aba ativa, barra de lote e rolagem {#rn-751}
+
+- **Regra:** quatro correções de layout, cada uma uma regra de tela.
+  (1) O composer não espreme o campo durante o turno: os botões não encolhem
+  nem quebram texto, e descem de linha quando não cabem. (2) Sem a moldura do
+  projeto montada, a aba que a sidebar marca é a que a ROTA implica — na tela
+  de Sessão, o Chat —, e só fora disso a padrão. (3) A barra de ação em lote
+  do catálogo de modelos SOBREPÕE a lista, presa ao pé da janela, e a seção
+  ganha um respiro no fim enquanto ela está aberta; inserida no fluxo, ela
+  empurrava a lista e o checkbox fugia do cursor. (4) O fio "acompanha o fim"
+  (RN-173) também quando a pessoa ESTAVA no fim antes de a altura mudar — a
+  intenção é medida no gesto de rolar, e a rolagem grampeada com conteúdo
+  menor que a janela não a muda. A guarda dos 120px continua: quem rolou para
+  cima não é arrastado. A causa do topo no aceite do handoff da Infra não foi
+  reproduzida no navegador; a correção cobre a classe (conteúdo que encolhe e
+  volta).
+- **Onde:** `apps/web/src/routes/project-tabs.ts:383` (`abaDaRota`),
+  `apps/web/src/routes/Shell.tsx:510` (`abaDaRota`),
+  `apps/web/src/lib/session-rolagem.ts:16` (`estaPertoDoFim`), `:82`
+  (`estavaNoFimRef`), `:120` (`aoRolarOFio`),
+  `apps/web/src/components/ModelCatalogSection.module.css` (`.barraDeLote`),
+  `apps/web/src/routes/SessionPage.module.css` (`.composer`)
+- **Teste:** `apps/web/src/lib/session-rolagem-fim.test.ts` (`estaPertoDoFim`
+  e `abaDaRota`: caminho feliz e falha), `apps/web/src/routes/Shell.test.tsx`
+  (`sem a moldura montada (ex.: tela de Sessão)`: Chat marcado),
+  `apps/web/src/routes/SessionPage.ordenacao-e-avisos.test.tsx` (`não arrasta
+  quem rolou pra cima`)
+- **Origem:** AT-442 (TP-01, levantamento visual)

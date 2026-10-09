@@ -308,6 +308,7 @@ estado lido do repositório e não da conversa.
 | A espera por aprovação fecha a faixa do turno e leva o cartão à vista (AT-432) | RN-748 |
 | A resposta cortada pelo teto oferece "Continuar de onde parou" num clique (AT-434) | RN-749 |
 | O colapso por agente deixa o fecho de cada agente aberto no handoff (AT-435) | RN-750 |
+| Os saltos de layout da Sessão e do catálogo: composer, aba ativa, barra de lote e rolagem do fio (AT-442) | RN-751 |
 
 ## Estado atual e aberto
 

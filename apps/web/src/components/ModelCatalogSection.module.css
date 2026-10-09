@@ -79,14 +79,27 @@
   display: flex;
   flex-wrap: wrap;
   min-width: 0;
-  max-width: 100%;
   align-items: center;
   gap: 10px;
   padding: 10px 12px;
-  margin-bottom: 12px;
-  background: var(--accent-soft);
+  /* AT-442: a barra SOBREPÕE a lista, presa ao pé da janela — inserida no
+     fluxo, ela empurrava a lista e o checkbox fugia do cursor. */
+  position: fixed;
+  bottom: var(--space-4);
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  z-index: 50;
+  background: var(--surface-1);
   border: 1px solid var(--accent-line);
   border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+}
+
+/* O espaço no FIM da seção para a barra não cobrir as últimas linhas. */
+.respiroDaBarraDeLote {
+  height: 160px;
 }
 
 .contagem {
