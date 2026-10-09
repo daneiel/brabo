@@ -585,7 +585,7 @@ strangely. The symptom table is in
 
 > **The `ollama` image version is not a variable — it is a digest.** Like every
 > third-party image in `docker/`, it is pinned as
-> `ollama/ollama:0.34.4@sha256:…`
+> `ollama/ollama:0.35.1@sha256:…`
 > ([ADR 0159](../adr/0159-imagem-de-terceiro-por-digest.md), tag inline since
 > [ADR 0178](../adr/0178-tag-inline-na-imagem-de-terceiro.md)), and the same
 > digest is used by `ci.yml`/`golden-set-rag.yml`, because the RAG golden-set
