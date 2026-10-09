@@ -303,6 +303,7 @@ estado lido do repositório e não da conversa.
 | Bloquear a task preserva o trabalho do worktree em commit, e a próxima parte dele (AT-429) | RN-743 |
 | O dev sabe que o shell é `sh` e começa vendo o próprio worktree (AT-444) | RN-744 |
 | Na resposta cortada, só a chamada incompleta é recusada (AT-430) | RN-745 |
+| O fecho do Arquiteto diz o que gravou, e as escritas recusadas são contadas (AT-431) | RN-746 |
 
 ## Estado atual e aberto
 

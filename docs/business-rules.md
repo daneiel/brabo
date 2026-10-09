@@ -21725,8 +21725,8 @@ sem dizer qual.
   senão o do projeto; `pt*` em português ("Gravado neste turno: 1 regra de
   negócio"), qualquer outro idioma — ou nenhum resolvido — em inglês
   ("Recorded this turn: 2 business rules"), com singular e plural nos dois.
-- **Onde:** `apps/engine/lib/engine/agents/gravado_no_turno.ex:43` (`anotar`),
-  `:62` (`descarregar`),
+- **Onde:** `apps/engine/lib/engine/agents/gravado_no_turno.ex:62` (`anotar`),
+  `:95` (`descarregar`),
   `apps/engine/lib/engine/harness/idioma_da_resposta.ex:233` (`idioma_do_turno`),
   `apps/engine/lib/engine/agents/texto_do_turno.ex:65` (`payload_do_turno`)
 - **Teste:** `apps/engine/test/engine/agents/gravado_no_turno_test.exs` (feliz:
@@ -22081,3 +22081,26 @@ sem dizer qual.
   "ferramenta de resposta cortada NÃO executa", sem chamada conhecida)
 - **Origem:** AT-430 (08/10: o Arquiteto mandou 5 `propose_adr` numa resposta
   cortada e as cinco foram recusadas; 0 ADRs)
+### RN-746 — O fecho do Arquiteto diz o que gravou, e as escritas recusadas são contadas {#rn-746}
+
+- **Regra:** a linha factual "Gravado neste turno: …" da
+  [RN-731](#rn-731) passa a contar as escritas do Arquiteto (ADR proposto,
+  mapa de módulos, atribuição de módulos, imagem decidida, diagrama C4,
+  roteamento para a infra, contrato de módulos, insight), a RFC do Staff e o
+  protótipo do UX Designer, e conta à parte as chamadas de ESCRITA recusadas
+  (`{:error, _}`) do turno: "…; N chamadas de escrita recusadas". Turno que
+  tentou escrever e não gravou nada fecha com "Gravado neste turno: nada; N
+  chamadas de escrita recusadas." (en: "Recorded this turn: nothing; N write
+  calls refused."). O Criativo passa a anotar a recusa também; Staff e UX
+  Designer passam a anotar. Leitura nunca conta. O texto do modelo não é
+  reescrito (RN-163: o agente não anuncia como feito o que o servidor
+  recusou — quem lê vê o fato ao lado). Fora, declarado: Dev Lead (o plano
+  suspende o turno, RN-284) e Infra Lead.
+- **Onde:** `apps/engine/lib/engine/agents/gravado_no_turno.ex:77` (`anotar`),
+  `:96` (`descarregar`), `:141` (`classe`),
+  `apps/engine/lib/engine/agents/arquiteto_server.ex:316` (`dispatch_tool`)
+- **Teste:** `apps/engine/test/engine/agents/gravado_no_turno_test.exs`
+  ("Arquiteto com as cinco propose_adr recusadas fecha com nada gravado";
+  "escritas do Arquiteto contadas, leitura e ferramenta desconhecida não")
+- **Origem:** AT-431 (08/10: com os 5 `propose_adr` `ok: false`, o Arquiteto
+  fechou com "✅ ADRs Propostas (5 decisões críticas)" e nenhuma linha factual)
