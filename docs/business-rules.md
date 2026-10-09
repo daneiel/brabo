@@ -20681,7 +20681,7 @@ Junto, o fechamento deixa de dizer que parear uma pasta pela tela do projeto
 
   `:97` (`anexar`), `apps/engine/lib/engine/sessions/engine_api_client.ex:677`
   (`llm_turn`), `apps/engine/lib/engine/harness/agents.ex:23` (`identity`),
-  `apps/engine/lib/engine/agents/arquiteto_server.ex:367` (`build_kickoff`)
+  `apps/engine/lib/engine/agents/arquiteto_server.ex:382` (`build_kickoff`)
 - **Teste:** `apps/engine/test/engine/harness/fluxo_do_time_test.exs`
   ("todo papel citado existe no fluxo.yml como ativo"; caso de falha: "nenhum
   texto cita etapa/agente fora do fluxo"),
@@ -21278,7 +21278,7 @@ turno continua.
   (`executar`), `:73` (`coagir`), `:52` (`falha_interna?`);
   `apps/engine/lib/engine/agents/resultado_de_ferramenta.ex:29` (`payload`);
   `apps/engine/lib/engine/harness/tool_loop.ex:310` (`run_direct`);
-  `apps/engine/lib/engine/agents/arquiteto_server.ex:338`
+  `apps/engine/lib/engine/agents/arquiteto_server.ex:331`
   (`executar_ferramenta`, o mesmo helper nos outros seis servidores)
 - **Teste:** `apps/engine/test/engine/harness/argumentos_de_ferramenta_test.exs`
   (`create_story` com ids em string JSON grava os ids; `create_c4_diagram` com
@@ -22098,7 +22098,7 @@ sem dizer qual.
   suspende o turno, RN-284) e Infra Lead.
 - **Onde:** `apps/engine/lib/engine/agents/gravado_no_turno.ex:77` (`anotar`),
   `:96` (`descarregar`), `:141` (`classe`),
-  `apps/engine/lib/engine/agents/arquiteto_server.ex:316` (`dispatch_tool`)
+  `apps/engine/lib/engine/agents/arquiteto_server.ex:323` (`dispatch_tool`)
 - **Teste:** `apps/engine/test/engine/agents/gravado_no_turno_test.exs`
   ("Arquiteto com as cinco propose_adr recusadas fecha com nada gravado";
   "escritas do Arquiteto contadas, leitura e ferramenta desconhecida não")
@@ -22551,3 +22551,42 @@ sem dizer qual.
 - **Origem:** AT-456 (TP-01 de 09/10: com a sessão de execução encerrada, o
   `dev-encurtador-api` bloqueou a tarefa 3, pegou a 4 e abriu PR; o único
   freio foi parar o container)
+
+### RN-772 — O Arquiteto lê o status ATUAL das ADRs que propôs {#rn-772}
+
+- **Regra:** o Arquiteto tem a leitura `listar_adrs_propostas`: as ações
+  `open_adr_pr` do PROJETO, lidas agora de `proposed_actions` (mesmo
+  Postgres, sem HTTP no laço), com o status de cada uma — pendente, aprovada,
+  aprovada automaticamente, executada (com a URL da PR), recusada (com o
+  motivo) ou falhada. Contida (ADR 0060, [RN-164](business-rules/autenticacao.md#rn-164)): sem parâmetro,
+  escopo fechado no projeto do contexto, uma contagem e uma consulta por
+  chamada, as 20 mais recentes, e o total real dito quando corta. Falha de
+  leitura é `tool.result` `ok: false` com o motivo, nunca texto vazio. Não
+  entrou no piso do Jev ([RN-758](#rn-758)): é leitura, não obrigação, e o
+  aviso de recorte ([RN-759](#rn-759)) já diz que as demais voltam.
+- **Onde:** `apps/engine/lib/engine/harness/tools/listar_adrs_propostas.ex:37`
+  (`run`), `:46` (`ler`), `apps/engine/lib/engine/agents/arquiteto_server.ex:124`
+  (`ListarAdrsPropostas`)
+- **Teste:** `apps/engine/test/engine/harness/tools/listar_adrs_propostas_test.exs`
+  (aprovada aparece aprovada, executada com a PR, recusada com o motivo, só as
+  do projeto; teto com o total real; sem proposta; leitura que falha vira erro
+  nomeado)
+- **Origem:** AT-454 (TP-01 de 09/10, sessão `771131f4`: com as 3 ADRs
+  aprovadas, o fecho seguinte disse "As 3 ADRs seguem pendentes de aprovação")
+
+### RN-773 — O Arquiteto lê o backlog, e consulta antes de afirmar estado {#rn-773}
+
+- **Regra:** o Arquiteto ganha a mesma `listar_backlog` do PO
+  ([RN-164](business-rules/autenticacao.md#rn-164)), com a contagem de tarefas por história. O kickoff dele e
+  o resultado do `propose_adr` dizem que o status das ADRs e as tarefas mudam
+  fora da conversa e mandam consultar as duas leituras antes de afirmá-los, em
+  vez do retrato de um resultado anterior. Nada de fluxo do time é narrado
+  aqui ([RN-711](#rn-711)).
+- **Onde:** `apps/engine/lib/engine/agents/arquiteto_server.ex:125`
+  (`ListarBacklog`), `apps/engine/lib/engine/harness/tools/propose_adr.ex:94`
+  (`propor`)
+- **Teste:** `apps/engine/test/engine/harness/tools/listar_backlog_test.exs`
+  (a contagem de tarefas por história), `apps/engine/test/engine/agents/arquiteto_server_test.exs`
+  (as duas leituras estão no catálogo do Arquiteto)
+- **Origem:** AT-454 (TP-01 de 09/10: com 17 tarefas no backlog, o Arquiteto
+  disse "faltam as tarefas" e "não consigo verificá-las daqui")
