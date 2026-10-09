@@ -827,6 +827,7 @@ export interface ProvisionedRepository {
 export type BootstrapStepName =
   | 'commit_pr_template'
   | 'commit_branching_policy'
+  | 'commit_gitignore'
   | 'create_dev_branch'
   | 'create_qa_branch'
   // Aposentado com o degrau `rc` (ADR 0030, achado #3): o bootstrap não o

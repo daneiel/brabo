@@ -313,6 +313,7 @@ estado lido do repositório e não da conversa.
 | A PR de infra mergeada sai de "PRs de infra em revisão" (AT-436) | RN-752 |
 | O seletor de modelo mostra `thinking`; ligar o modo automático não aprova o cartão, e ele diz isso (AT-443) | RN-755 |
 | A próxima task do dev agent parte da última branch dele não mergeada (AT-447) | RN-760 |
+| O repositório nasce com `.gitignore` base, o commit do dev exclui dependência instalada e o SecOps a acusa (AT-446) | RN-761 |
 
 ## Estado atual e aberto
 
