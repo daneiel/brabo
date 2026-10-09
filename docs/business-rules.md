@@ -17965,7 +17965,7 @@ resto, era a razão dos grupos por origem no fio. Ela não sobrevive à ordem
 cronológica — o painel de log segue oferecendo esse recorte.
 
 - **Código:** `apps/web/src/routes/session-fio.tsx:119` (`FIO_RECENTES_ABERTAS`),
-  `:268` (`dividirFio`), `:141` (`entradaSimples`);
+  `:291` (`dividirFio`), `:141` (`entradaSimples`);
   `apps/web/src/lib/session-timeline.ts:67` (`mensagem`);
   `apps/web/src/routes/session-timeline-montagem.tsx:389`, `:426`, `:673` (as
   três mensagens); `apps/web/src/routes/SessionFio.tsx:139` (o bloco único)
@@ -22164,3 +22164,20 @@ sem dizer qual.
   texto não)
 - **Origem:** AT-434 (TP-01: a resposta cortada não oferecia ação, e o usuário
   teve de adivinhar "continue")
+### RN-750 — O colapso por agente deixa o fecho de cada agente aberto {#rn-750}
+
+- **Regra:** o colapso de mensagens por agente depois que ele passa o bastão
+  (RN-138) nunca recolhe a ÚLTIMA mensagem daquele agente no fio — o fecho,
+  que no handoff é o resumo que a pessoa acabou de ler. Recolhe-se o que veio
+  antes dele na mesma sequência, e só com duas ou mais entradas (uma sozinha
+  não vira cabeçalho, a régua de sempre da RN-138). Sequências anteriores do
+  mesmo agente, separadas por outra fala, colapsam como antes. O corte do fio
+  (RN-644) não muda: ele roda sobre a lista já agrupada.
+- **Onde:** `apps/web/src/routes/session-fio.tsx:155` (`fechoDeCadaAgente`),
+  `:181` (`fechoPorAgente`), `:190` (`indiceDoFecho`)
+- **Teste:** `apps/web/src/routes/SessionPage.handoff-devlead-e-colapso.test.tsx`
+  (`duas mensagens consecutivas do PO colapsam...`: duas recolhidas e o fecho
+  aberto; `RN-750: com duas mensagens, o fecho fica aberto e a outra, sozinha,
+  não vira grupo`)
+- **Origem:** AT-435 (TP-01: no handoff o fio recolhia a resposta inteira do
+  Criativo, "Criativo · 2 mensagens", escondendo o resumo)
