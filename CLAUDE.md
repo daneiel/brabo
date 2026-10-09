@@ -309,6 +309,7 @@ estado lido do repositório e não da conversa.
 | A resposta cortada pelo teto oferece "Continuar de onde parou" num clique (AT-434) | RN-749 |
 | O colapso por agente deixa o fecho de cada agente aberto no handoff (AT-435) | RN-750 |
 | Os saltos de layout da Sessão e do catálogo: composer, aba ativa, barra de lote e rolagem do fio (AT-442) | RN-751 |
+| A PR de infra mergeada sai de "PRs de infra em revisão" (AT-436) | RN-752 |
 
 ## Estado atual e aberto
 

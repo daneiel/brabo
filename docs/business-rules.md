@@ -22209,3 +22209,21 @@ sem dizer qual.
   `apps/web/src/routes/SessionPage.ordenacao-e-avisos.test.tsx` (`não arrasta
   quem rolou pra cima`)
 - **Origem:** AT-442 (TP-01, levantamento visual)
+### RN-752 — PR de infra mergeada sai de "PRs de infra em revisão" {#rn-752}
+
+- **Regra:** a leitura `GET .../infra-artifacts` (seção "PRs de infra em
+  revisão" da aba Aprovações) não devolve o artefato de infra cuja PR já foi
+  mergeada. O gate do artefato termina em `awaiting_user` e nada o move depois
+  do merge; em vez de coluna nova, a régua é DERIVADA: a PR do artefato é o
+  `pullRequestId` do resultado do `open_infra_pr` que a abriu (`prActionId`),
+  e ela está mergeada quando um `git_merge` do projeto com status `executed`
+  devolveu `state: 'merged'` para esse id — o mesmo casamento por
+  `pullRequestId` que fecha as tarefas (RN-628). Merge que falhou ou ainda
+  pende não tira nada da lista. O aviso de "PR de infra pronta para merge" no
+  fio ou no painel "precisa de você" NÃO foi feito aqui.
+- **Onde:** `apps/api/src/application/use-cases/execution/list-infra-artifacts.use-case.ts:26`
+  (`execute`)
+- **Teste:** `apps/api/test/application/use-cases/execution/list-infra-artifacts.use-case.spec.ts`
+  (merge executado tira a PR; merge falho ou pendente a mantém)
+- **Origem:** AT-436 (TP-01: depois de "Merge" → "Aprovar" na aba PRs, a PR
+  seguia com Dev ✓ QA ✓ SecOps ✓ e "Você" pendente)
