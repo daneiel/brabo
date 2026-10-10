@@ -22417,7 +22417,7 @@ sem dizer qual.
   (medido no Chromium: 2 236px num balão de 708px) e a última coluna sumia.
 - **Onde:** `apps/api/src/application/use-cases/actions/execute-adr-pr.use-case.ts:96`
   (`openPullRequest`); `apps/engine/lib/engine/infra/infra_lead_server.ex:1482`
-  (`gravar_texto_do_turno`); `apps/engine/lib/engine/dev/dev_agent_server.ex:1004`
+  (`gravar_texto_do_turno`); `apps/engine/lib/engine/dev/dev_agent_server.ex:1017`
   (`propose_pr`); `apps/web/src/lib/session-destinatario.ts:192`
   (`agentesEmConversa`) e `apps/web/src/lib/session-kind.ts:69`
   (`tipoDaSessao`); `apps/web/src/routes/NewProjectWizard.tsx:1127`
@@ -22590,3 +22590,27 @@ sem dizer qual.
   (as duas leituras estão no catálogo do Arquiteto)
 - **Origem:** AT-454 (TP-01 de 09/10: com 17 tarefas no backlog, o Arquiteto
   disse "faltam as tarefas" e "não consigo verificá-las daqui")
+
+### RN-780 — Resposta só de raciocínio cortada pelo teto é corte, não desistência {#rn-780}
+
+- **Regra:** no `ToolLoop` (caminho de todo agente de execução e de gate),
+  a resposta sem texto e sem chamada de ferramenta que a api marca
+  `truncated: true` (o `finish_reason: length` da RN-737) é o raciocínio que
+  comeu o teto de saída. A volta é retentada UMA vez, sem a resposta vazia no
+  histórico e contando iteração — o teto de iterações e o orçamento da tarefa
+  continuam valendo. Se repetir, o laço para marcando `corte_pelo_teto`, e o
+  dev agent bloqueia a task com o motivo "resposta só de raciocínio, cortada
+  pelo teto" e origem `modelo`, em vez de "parou sem concluir nem reportar
+  bloqueio". Uma chamada de ferramenta no meio zera a retentativa. Declarado:
+  o engine recebe da api `truncated` e `usage.outputTokens`, mas NÃO os
+  `reasoningTokens` (ficam só em `token_usage`), então a resposta vazia que
+  bate no teto sem `finish_reason: length` não é reconhecida.
+- **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:219`
+  (`parada_sem_chamada`), `apps/engine/lib/engine/dev/dev_agent_server.ex:977`
+  (`motivo_da_parada`), `:980` (`stop_diagnosis`)
+- **Teste:** `apps/engine/test/engine/harness/tool_loop_test.exs` (`corte só
+  de raciocínio`: retentada uma vez e segue; repetido para com
+  `corte_pelo_teto`), `apps/engine/test/engine/dev/dev_agent_server_test.exs`
+  (`resposta só de raciocínio cortada pelo teto bloqueia com motivo nomeado`)
+- **Origem:** AT-459 (TP-01 de 09/10: a tarefa `c80daf6c` bloqueou em 40 s
+  com 8.192 tokens de saída, todos de raciocínio)

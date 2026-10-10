@@ -74,6 +74,26 @@ defmodule Engine.Harness.ToolLoopTest do
     assert out.max_iterations == 5
   end
 
+  # RN-780 (AT-459): resposta vazia cortada pelo teto é retentada uma vez.
+  defp cortada_vazia,
+    do: FakeEngineApiClient.final_response("") |> Map.put("truncated", true)
+
+  test "corte só de raciocínio: a volta é retentada uma vez e segue", %{ctx: ctx} do
+    Process.put(:fake_llm_turns, [cortada_vazia(), FakeEngineApiClient.final_response("pronto")])
+
+    assert {:ok, out} = ToolLoop.run(ctx)
+    refute Map.get(out, :corte_pelo_teto)
+    assert List.last(out.messages)["content"] == "pronto"
+    refute Enum.any?(out.messages, &(&1["role"] == "assistant" and &1["content"] == ""))
+  end
+
+  test "corte só de raciocínio repetido: para marcando corte_pelo_teto", %{ctx: ctx} do
+    Process.put(:fake_llm_turns, [cortada_vazia(), cortada_vazia()])
+
+    assert {:ok, out} = ToolLoop.run(ctx)
+    assert out.corte_pelo_teto == true
+  end
+
   test "caminho feliz: resposta final imediata, sem tool calls", %{ctx: ctx} do
     Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("tudo pronto")])
 

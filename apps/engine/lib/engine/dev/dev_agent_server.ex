@@ -762,7 +762,7 @@ defmodule Engine.Dev.DevAgentServer do
   defp handle_correction_outcome({:ok, ctx}, state, _findings) do
     state
     |> AgentIo.block_task(
-      "parou sem concluir nem reportar bloqueio (correção)",
+      motivo_da_parada(ctx, " (correção)"),
       stop_diagnosis(ctx),
       origem_da_parada(ctx)
     )
@@ -917,7 +917,7 @@ defmodule Engine.Dev.DevAgentServer do
   defp bloquear_parada(ctx, state) do
     state
     |> AgentIo.block_task(
-      "parou sem concluir nem reportar bloqueio",
+      motivo_da_parada(ctx, ""),
       stop_diagnosis(ctx),
       origem_da_parada(ctx)
     )
@@ -969,6 +969,19 @@ defmodule Engine.Dev.DevAgentServer do
   end
 
   # Distingue falha de provider (timeout, 5xx) de "o modelo simplesmente parou".
+  # RN-780 (AT-459): a resposta só de raciocínio, cortada pelo teto de saída
+  # duas vezes seguidas (o `ToolLoop` já retentou uma), não é desistência do
+  # modelo — é corte, e o motivo diz isso.
+  @motivo_do_corte "resposta só de raciocínio, cortada pelo teto"
+
+  defp motivo_da_parada(%{corte_pelo_teto: true}, sufixo), do: @motivo_do_corte <> sufixo
+  defp motivo_da_parada(_ctx, sufixo), do: "parou sem concluir nem reportar bloqueio" <> sufixo
+
+  defp stop_diagnosis(%{corte_pelo_teto: true}) do
+    "o modelo gastou o teto de saída sem produzir texto nem chamada de ferramenta " <>
+      "(finish_reason length), duas vezes seguidas — a volta foi retentada uma vez"
+  end
+
   defp stop_diagnosis(ctx) do
     case Map.get(ctx, :last_error) do
       nil -> "o modelo encerrou o turno sem chamar report_done nem report_blocked"
