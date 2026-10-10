@@ -45,7 +45,11 @@ defmodule Engine.Gates.RecorteDaTarefa do
     `resumo` como observação e não o ponha em `itens`. O mesmo vale para o
     que depende de entrega de OUTRA história ainda não feita (uma rota, uma
     tela, um dado que ela cria): é observação, nunca reprovação.
-    #{secao_da_forma(regras, task)}#{secao_do_contrato(contrato)}
+
+    Liste em `itens` TODAS as lacunas desta tarefa que você achar nesta volta,
+    de uma vez — nunca uma por volta: cada volta é uma correção paga e um passo
+    do teto do ciclo.
+    #{secao_da_forma(regras, task)}#{secao_do_ponto_de_entrada(task)}#{secao_do_contrato(contrato)}
     """
   end
 
@@ -69,6 +73,30 @@ defmodule Engine.Gates.RecorteDaTarefa do
       cobre a regra. E quando uma entrada é recusada, veja se a mensagem nomeia
       o campo recusado; se não nomeia, cite no `resumo` como observação (não
       vai para `itens`, salvo regra que o exija).
+      """,
+      else: ""
+  end
+
+  # AT-483 (RN-813): no TP-01 o `server.ts` nunca chamava a migração e uma rota
+  # `/:code` sombreava `GET /links` — os 53 testes passavam porque cada um monta
+  # o próprio app. Quando a tarefa toca o ponto de entrada, a fiação ou o README
+  # de execução, o recorte exige evidência de que o entrypoint REAL sobe e
+  # responde; a ausência dela vai para `itens`.
+  @ponto_de_entrada ~r/(server\.[jt]s|main\.[jt]s|index\.[jt]s|entrypoint|ponto de entrada|app\.listen|\bREADME|npm start|pnpm start|\bstart\b|\bfia[cç][aã]o|\bmigra[cç][aã]o|\brotas?\b|\broutes?\b)/iu
+
+  defp secao_do_ponto_de_entrada(task) do
+    texto = "#{Map.get(task, "title", "")} #{Map.get(task, "description", "")}"
+
+    if Regex.match?(@ponto_de_entrada, texto),
+      do: """
+
+      Ponto de entrada: esta tarefa toca o entrypoint, a fiação (rotas,
+      migração, registro) ou o README de execução. Exija evidência de que o
+      ponto de entrada REAL sobe — o `start`/`main` do projeto rodado, ou um
+      teste que importe o entrypoint real (não um app montado no próprio
+      teste) — e responde numa rota ou comando. Teste que monta o próprio
+      banco e o próprio app não prova isso. Sem essa evidência, ponha a lacuna
+      em `itens`.
       """,
       else: ""
   end
