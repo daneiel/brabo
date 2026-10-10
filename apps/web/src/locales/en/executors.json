@@ -134,6 +134,7 @@
     "noRole": "Turning on auto mode requires the maintainer role (read from the workspace; the project role is not checked here).",
     "button_one": "Turn on for {{count}} agent",
     "button_other": "Turn on for {{count}} agents",
+    "loading": "Reading which agents are already in auto mode… the button turns on once that is known.",
     "erroGenerico": "Could not turn on auto mode",
     "result": {
       "all_one": "Auto mode turned on for {{count}} agent.",
