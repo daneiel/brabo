@@ -644,6 +644,13 @@ export class DockerViaCli extends DockerPort {
       // repassa o sinal e a parada é imediata. CONSTANTE da composição, nunca
       // campo da spec: o chamador não escreve opção de `run`.
       '--init',
+      // AT-494 (RN-820): o daemon reiniciado (atualização do sistema) deixava
+      // todo container de projeto `Exited (143)` com o registro `running`.
+      // `unless-stopped` religa depois de o daemon voltar e NÃO religa o que
+      // `docker stop` parou — o `stop` explícito do ciclo de vida continua
+      // valendo. CONSTANTE como o `--init`: a spec não ganha campo.
+      '--restart',
+      'unless-stopped',
       '--name',
       nome,
       '--label',

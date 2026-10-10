@@ -59,7 +59,8 @@
       "sem_sessao": "This project has no session yet — the action needs one to be proposed."
     },
     "ressalva": {
-      "runner_pode_estar_desconectado": "The folder was confirmed by a local agent at some point; if it isn't running right now, the action fails once approved."
+      "runner_pode_estar_desconectado": "The folder was confirmed by a local agent at some point; if it isn't running right now, the action fails once approved.",
+      "registrado_rodando_observado_parado": "The record says running, but the container is stopped (did Docker restart?). Starting again brings the same container back, with no need to stop it first."
     },
     "semContainer": {
       "nuncaProvisionado": "Never provisioned: there is no container to stop or remove.",
