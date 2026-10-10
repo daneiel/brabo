@@ -40,6 +40,9 @@ defmodule Engine.Dev.ContextBuilder do
       adrs: adrs,
       # AT-448 (RN-765): as irmãs da tarefa, para o recorte do gate de QA.
       sibling_tasks: Map.get(ctx, "siblingTasks", []),
+      # AT-461 (RN-785): o que OUTRAS histórias do módulo ainda vão entregar.
+      module_open_tasks: Map.get(ctx, "moduleOpenTasks", []),
+      module_open_tasks_total: Map.get(ctx, "moduleOpenTasksTotal", 0),
       business_rules_units: business_rules_units(rules),
       task_state_units: task_state_units(task, story, adrs)
     }

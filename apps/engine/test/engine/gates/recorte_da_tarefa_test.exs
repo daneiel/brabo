@@ -24,4 +24,19 @@ defmodule Engine.Gates.RecorteDaTarefaTest do
     assert texto =~ "Tarefa: Única"
     assert texto =~ "(nenhuma)"
   end
+
+  test "RN-785: traz as tarefas abertas de outras histórias do módulo e o corte" do
+    texto =
+      RecorteDaTarefa.texto(%{
+        task: %{"title" => "Middleware JWT"},
+        module_open_tasks: [
+          %{"title" => "POST /links", "status" => "todo", "storyTitle" => "Criar links"}
+        ],
+        module_open_tasks_total: 3
+      })
+
+    assert texto =~ "- POST /links (todo, história: Criar links)"
+    assert texto =~ "(mostrando 1 de 3)"
+    assert texto =~ "OUTRA história ainda não feita"
+  end
 end

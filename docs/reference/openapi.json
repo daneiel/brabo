@@ -17218,6 +17218,33 @@
           "description"
         ]
       },
+      "DevContextModuleOpenTaskResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "01J0000000000000000000000"
+          },
+          "title": {
+            "type": "string",
+            "example": "Expose POST /links"
+          },
+          "status": {
+            "type": "string",
+            "example": "todo"
+          },
+          "storyTitle": {
+            "type": "string",
+            "example": "Members create short links"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "status",
+          "storyTitle"
+        ]
+      },
       "DevContextSiblingTaskResponseDto": {
         "type": "object",
         "properties": {
@@ -17269,6 +17296,17 @@
               "$ref": "#/components/schemas/DevContextSiblingTaskResponseDto"
             }
           },
+          "moduleOpenTasks": {
+            "description": "Tasks of OTHER stories of the same module that are not done yet, with the story title (at most 20). A requirement that depends on what another story will deliver is an observation for the QA gate, never a rejection (RN-785).",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DevContextModuleOpenTaskResponseDto"
+            }
+          },
+          "moduleOpenTasksTotal": {
+            "type": "number",
+            "description": "Real number of open tasks of the module in other stories — larger than `moduleOpenTasks.length` when the list was cut."
+          },
           "primeiraDoModulo": {
             "type": "boolean",
             "description": "Whether this is the FIRST task of the module: the oldest `backlog.task_claimed` of the project for `module` is this task. The engine gives it twice the per-task budget (RN-774). `false` without `module`."
@@ -17280,6 +17318,8 @@
           "businessRules",
           "adrs",
           "siblingTasks",
+          "moduleOpenTasks",
+          "moduleOpenTasksTotal",
           "primeiraDoModulo"
         ]
       },
