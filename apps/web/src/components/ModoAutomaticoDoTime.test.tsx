@@ -24,7 +24,7 @@ const { ModoAutomaticoDoTime } = await import('./ModoAutomaticoDoTime');
 function montar(
   props: Partial<{
     agentes: string[];
-    autonomyRules: AgentAutonomyRule[];
+    autonomyRules: AgentAutonomyRule[] | undefined;
     podeLigar: boolean;
   }> = {},
 ) {
@@ -34,7 +34,7 @@ function montar(
       <ModoAutomaticoDoTime
         projectId="proj-1"
         agentes={props.agentes ?? ['dev-lead', 'dev-core', 'qa']}
-        autonomyRules={props.autonomyRules ?? []}
+        autonomyRules={'autonomyRules' in props ? props.autonomyRules : []}
         podeLigar={props.podeLigar ?? true}
       />
     </QueryClientProvider>,
@@ -115,6 +115,30 @@ describe('ModoAutomaticoDoTime (RN-661)', () => {
     );
     // Não aborta na primeira recusa (RN-469): o terceiro também foi tentado.
     expect(setAgentAutonomy).toHaveBeenCalledTimes(3);
+  });
+
+  it('AT-477 (RN-803): antes de a leitura de agent_autonomy chegar, o botão fica inerte e diz por quê', async () => {
+    const { rerender } = montar({ autonomyRules: undefined });
+    const botao = screen.getByRole('button', { name: 'Ligar para 3 agentes' });
+    expect(botao).toBeDisabled();
+    expect(screen.getByTestId('modo-automatico-carregando')).toHaveTextContent('Lendo');
+    fireEvent.click(botao);
+    expect(setAgentAutonomy).not.toHaveBeenCalled();
+
+    // A leitura chega: o botão liga e o clique grava e diz o desfecho.
+    rerender(
+      <QueryClientProvider client={new QueryClient()}>
+        <ModoAutomaticoDoTime
+          projectId="proj-1"
+          agentes={['dev-lead', 'dev-core', 'qa']}
+          autonomyRules={[]}
+          podeLigar
+        />
+      </QueryClientProvider>,
+    );
+    expect(screen.queryByTestId('modo-automatico-carregando')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Ligar para 3 agentes' }));
+    expect(await screen.findByRole('status')).toHaveTextContent('Modo automático ligado');
   });
 
   it('sem maintainer: o controle fica inerte e o motivo é dito em texto', () => {

@@ -139,6 +139,7 @@
     "button_zero": "Ligar para {{count}} agentes",
     "button_one": "Ligar para {{count}} agente",
     "button_other": "Ligar para {{count}} agentes",
+    "loading": "Lendo quais agentes já estão em modo automático… o botão liga quando isso for conhecido.",
     "erroGenerico": "Não foi possível ligar o modo automático",
     "result": {
       "all_one": "Modo automático ligado para {{count}} agente.",
