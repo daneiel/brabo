@@ -343,6 +343,9 @@ export function ProjectExecutorsTab({ projectId }: { projectId: string }) {
             projectId={projectId}
             sessionId={sessionId}
             podeDecidir={podeDecidir}
+            // RN-825/826: as filas de PR pronta e tarefa bloqueada são do chat;
+            // aqui o backlog só é lido sem execução vigente (RN-794).
+            filasDoChat={false}
           />
 
           {/* `executionActivated` vem do resumo agregado — os três estados

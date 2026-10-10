@@ -9,6 +9,10 @@ const approveAction = vi.fn();
 const denyAction = vi.fn();
 const approveAlwaysAction = vi.fn();
 const listSessionEvents = vi.fn();
+const getCodePullRequests = vi.fn();
+const listBacklog = vi.fn();
+const proposeAction = vi.fn();
+const unblockTask = vi.fn();
 
 vi.mock('../lib/api-client', async (importOriginal) => {
   const original = await importOriginal<typeof import('../lib/api-client')>();
@@ -19,6 +23,10 @@ vi.mock('../lib/api-client', async (importOriginal) => {
     denyAction: (...a: unknown[]) => denyAction(...a),
     approveAlwaysAction: (...a: unknown[]) => approveAlwaysAction(...a),
     listSessionEvents: (...a: unknown[]) => listSessionEvents(...a),
+    getCodePullRequests: (...a: unknown[]) => getCodePullRequests(...a),
+    listBacklog: (...a: unknown[]) => listBacklog(...a),
+    proposeAction: (...a: unknown[]) => proposeAction(...a),
+    unblockTask: (...a: unknown[]) => unblockTask(...a),
   };
 });
 
@@ -72,6 +80,8 @@ beforeEach(() => {
   // O motivo da política de cada card é lido pela ação (AT-340); por padrão
   // o log responde sem o evento.
   listSessionEvents.mockResolvedValue({ items: [], nextCursor: null });
+  getCodePullRequests.mockResolvedValue({ items: [] });
+  listBacklog.mockResolvedValue([]);
 });
 
 describe('PendenciasDeOutrasSessoes (AT-265)', () => {
@@ -241,5 +251,110 @@ describe('PendenciasDeOutrasSessoes — motivo da política (AT-340)', () => {
     // Só o card lido fala; o da leitura falha não inventa motivo nem diz
     // "não registrado", que é o que a api afirma quando responde sem evento.
     expect(screen.getAllByTestId('motivo-da-politica')).toHaveLength(1);
+  });
+});
+
+function pr(id: string, sourceBranch: string) {
+  return {
+    id,
+    number: Number(id),
+    title: `PR ${id}`,
+    url: '',
+    author: null,
+    state: 'open',
+    sourceBranch,
+    targetBranch: 'dev',
+    updatedAt: null,
+  };
+}
+
+function backlog(tarefas: Record<string, unknown>[]) {
+  return [
+    {
+      id: 'e1',
+      projectId: 'proj-1',
+      sessionId: EXECUCAO,
+      title: 'Épico',
+      description: '',
+      createdAt: '',
+      updatedAt: '',
+      stories: [
+        {
+          id: 's1',
+          tasks: tarefas.map((t) => ({
+            storyId: 's1',
+            description: '',
+            status: 'in_review',
+            assignedTo: null,
+            blocked: false,
+            blockedReason: null,
+            gateStatus: null,
+            gateCorrectionCount: 0,
+            createdAt: '',
+            updatedAt: '',
+            ...t,
+          })),
+        },
+      ],
+    },
+  ];
+}
+
+describe('PendenciasDeOutrasSessoes — PRs prontas e tarefas bloqueadas (AT-497, RN-825/826)', () => {
+  it('a PR com os gates aprovados aparece, a com gate pendente não, e Mergear mostra o cartão ali', async () => {
+    getProjectPendingActions.mockResolvedValue([]);
+    getCodePullRequests.mockResolvedValue({
+      items: [pr('1', 'feature/task-aaaaaaaa'), pr('2', 'feature/task-bbbbbbbb'), pr('3', 'docs/adr-0300')],
+    });
+    listBacklog.mockResolvedValue(
+      backlog([
+        { id: 'aaaaaaaa-1', title: 'Pronta', gateStatus: 'awaiting_user' },
+        { id: 'bbbbbbbb-1', title: 'Em QA', gateStatus: 'awaiting_qa' },
+      ]),
+    );
+    proposeAction.mockResolvedValue(
+      acao('m-novo', {
+        sessionId: AQUI,
+        actionType: 'git_merge',
+        actor: { kind: 'user', id: 'u' },
+        payload: { pullRequestId: '1', sourceBranch: 'feature/task-aaaaaaaa', targetBranch: 'dev' },
+      }),
+    );
+
+    montar();
+
+    const fila = await screen.findByTestId('fila-prs-prontas');
+    expect(within(fila).getByText(/PR 1/)).toBeInTheDocument();
+    // PR de ADR (sem tarefa) também é pronta; a de gate pendente, não.
+    expect(within(fila).getByText(/PR 3/)).toBeInTheDocument();
+    expect(within(fila).queryByText(/PR 2/)).toBeNull();
+
+    fireEvent.click(within(fila).getAllByRole('button', { name: 'Mergear' })[0]!);
+    await waitFor(() =>
+      expect(proposeAction).toHaveBeenCalledWith(
+        'proj-1',
+        AQUI,
+        expect.objectContaining({ actionType: 'git_merge' }),
+      ),
+    );
+    expect(await within(fila).findByRole('button', { name: 'Aprovar' })).toBeInTheDocument();
+  });
+
+  it('CASO DE FALHA: desbloquear com erro diz o erro da api na linha da tarefa', async () => {
+    getProjectPendingActions.mockResolvedValue([]);
+    listBacklog.mockResolvedValue(
+      backlog([{ id: 't8', title: 'Tarefa 8', blocked: true, blockedReason: 'ciclo de correção esgotado' }]),
+    );
+    unblockTask.mockRejectedValue(new ApiError(409, { message: 'a tarefa não está bloqueada' }));
+
+    montar();
+
+    const fila = await screen.findByTestId('fila-tarefas-bloqueadas');
+    expect(within(fila).getByText('ciclo de correção esgotado')).toBeInTheDocument();
+    fireEvent.click(within(fila).getByRole('button', { name: 'Desbloquear' }));
+    await waitFor(() => expect(unblockTask).toHaveBeenCalledWith('proj-1', AQUI, 't8'));
+    expect(await within(fila).findByTestId('retorno-desbloqueio')).toHaveTextContent(
+      'a tarefa não está bloqueada',
+    );
   });
 });
