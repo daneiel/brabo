@@ -250,6 +250,44 @@ describe('ProjectPrsTab — botão Merge', () => {
     );
   });
 
+  it('RN-822 (AT-493): o 1º clique em Merge abre o cartão sem esperar a fila do projeto voltar', async () => {
+    getCodePullRequests.mockResolvedValue({ items: [prAberta()], truncated: false });
+    // A fila do projeto segue com o retrato ANTERIOR ao clique (o refetch
+    // ainda não voltou, ou voltou com uma leitura que já estava no ar).
+    useProjectPendingActions.mockReturnValue({ data: [], dataUpdatedAt: 1 });
+    proposeAction.mockResolvedValue(acaoDeMerge());
+
+    montar();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Merge' }));
+
+    expect(await screen.findByRole('button', { name: 'Aprovar' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Merge' })).not.toBeInTheDocument();
+  });
+
+  it('RN-822: a fila lida DEPOIS da proposta, sem ela, vence o cartão local', async () => {
+    getCodePullRequests.mockResolvedValue({ items: [prAberta()], truncated: false });
+    useProjectPendingActions.mockReturnValue({ data: [], dataUpdatedAt: 1 });
+    proposeAction.mockResolvedValue(acaoDeMerge());
+
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const arvore = () => (
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <ProjectPrsTab projectId="proj-1" />
+        </ToastProvider>
+      </QueryClientProvider>
+    );
+    const { rerender } = render(arvore());
+    fireEvent.click(await screen.findByRole('button', { name: 'Merge' }));
+    await screen.findByRole('button', { name: 'Aprovar' });
+
+    // Alguém decidiu noutra aba: a leitura nova da fila já não a traz.
+    useProjectPendingActions.mockReturnValue({ data: [], dataUpdatedAt: Date.now() + 60_000 });
+    rerender(arvore());
+    expect(await screen.findByRole('button', { name: 'Merge' })).toBeInTheDocument();
+  });
+
   it('gate bloqueado desabilita o Merge com o motivo em tooltip', async () => {
     getCodePullRequests.mockResolvedValue({ items: [prAberta()], truncated: false });
     useBacklog.mockReturnValue({

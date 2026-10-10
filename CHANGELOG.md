@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- Aba PRs: o primeiro clique em "Merge" já mostra o cartão de decisão com a ação devolvida pela api, sem esperar a fila do projeto recarregar (RN-822, AT-493).
 - **docker-port**: o comando executado no container que estoura o teto volta como estouro (`exitCode: -1`, `timedOut: true`) e não mais como "exit 0" — o cliente `docker exec` saía limpo ao receber o SIGTERM —, e o grupo de processos dele é morto dentro do container (RN-807, AT-482).
 - **api**: o recorte do Jev não tira mais do Arquiteto `assign_story_modules` nem `choose_project_image` — ele encerrava dizendo que a ferramenta não estava disponível, com histórias sem módulo (RN-809, AT-481).
 - **engine**: a tarefa reaberta depois de bloqueio não abre uma segunda PR da mesma branch: a PR aberta da branch é reaproveitada (RN-812, AT-485).

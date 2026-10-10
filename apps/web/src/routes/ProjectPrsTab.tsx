@@ -114,6 +114,29 @@ export function ProjectPrsTab({ projectId }: { projectId: string }) {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const [propondo, setPropondo] = useState<string | null>(null);
+  // RN-822 (AT-493): a ação que ESTE clique acabou de criar, por id da PR, com
+  // o instante em que a api a devolveu. O cartão aparece com ela na hora, sem
+  // depender de a fila do projeto voltar — antes o 1º clique terminava com o
+  // botão de volta e nenhum cartão até o refetch, e lia-se "não pegou". Vale
+  // só enquanto a fila não tem leitura MAIS NOVA que a proposta: aí quem diz
+  // se ela segue pendente é a fila.
+  const [propostas, setPropostas] = useState<Record<string, { acao: ProposedAction; em: number }>>({});
+
+  function acaoDaPr(pr: CodePullRequestSummary): ProposedAction | undefined {
+    const daFila = acaoDeMergeParaPr(mergeActionsQuery.data, pr);
+    if (daFila) return daFila;
+    const local = propostas[pr.id];
+    if (!local) return undefined;
+    return (mergeActionsQuery.dataUpdatedAt ?? 0) > local.em ? undefined : local.acao;
+  }
+
+  function esquecerProposta(acao: ProposedAction) {
+    setPropostas((atual) => {
+      const resto = { ...atual };
+      for (const [id, p] of Object.entries(atual)) if (p.acao.id === acao.id) delete resto[id];
+      return resto;
+    });
+  }
 
   function invalidateMergeActions() {
     // Por prefixo do PROJETO: alcança a fila pendente, a das recusas
@@ -133,7 +156,7 @@ export function ProjectPrsTab({ projectId }: { projectId: string }) {
     if (!latestSession) return;
     setPropondo(pr.id);
     try {
-      await proposeAction(projectId, latestSession.id, {
+      const acao = await proposeAction(projectId, latestSession.id, {
         actionType: 'git_merge',
         actor: { kind: 'user', id: userIdDaSessao() ?? 'usuário' },
         payload: {
@@ -143,6 +166,7 @@ export function ProjectPrsTab({ projectId }: { projectId: string }) {
           title: pr.title,
         },
       });
+      setPropostas((atual) => ({ ...atual, [pr.id]: { acao, em: Date.now() } }));
       invalidateMergeActions();
     } catch (erro) {
       showToast({
@@ -159,6 +183,7 @@ export function ProjectPrsTab({ projectId }: { projectId: string }) {
     try {
       await approveAction(projectId, acao.sessionId, acao.id);
     } finally {
+      esquecerProposta(acao);
       invalidateMergeActions();
     }
   }
@@ -166,6 +191,7 @@ export function ProjectPrsTab({ projectId }: { projectId: string }) {
     try {
       await denyAction(projectId, acao.sessionId, acao.id);
     } finally {
+      esquecerProposta(acao);
       invalidateMergeActions();
     }
   }
@@ -173,6 +199,7 @@ export function ProjectPrsTab({ projectId }: { projectId: string }) {
     try {
       await approveAlwaysAction(projectId, acao.sessionId, acao.id);
     } finally {
+      esquecerProposta(acao);
       invalidateMergeActions();
     }
     queryClient.invalidateQueries({ queryKey: ['permissions', projectId] });
@@ -209,7 +236,7 @@ export function ProjectPrsTab({ projectId }: { projectId: string }) {
             </p>
           ) : null;
 
-          const acaoPendente = acaoDeMergeParaPr(mergeActionsQuery.data, pr);
+          const acaoPendente = acaoDaPr(pr);
           // RN-705: a recusa é AVISO em texto (como o gate pendente, RN-663) —
           // o botão segue ativo, a decisão continua humana.
           const recusa = acaoPendente ? undefined : ultimaRecusaDeMerge(mergesFalhosQuery.data, pr);
