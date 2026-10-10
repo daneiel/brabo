@@ -6289,6 +6289,16 @@ export interface components {
             /** @example Above that, the addition is refused with 409. */
             description: string;
         };
+        DevContextModuleOpenTaskResponseDto: {
+            /** @example 01J0000000000000000000000 */
+            id: string;
+            /** @example Expose POST /links */
+            title: string;
+            /** @example todo */
+            status: string;
+            /** @example Members create short links */
+            storyTitle: string;
+        };
         DevContextSiblingTaskResponseDto: {
             /** @example 01J0000000000000000000000 */
             id: string;
@@ -6305,6 +6315,12 @@ export interface components {
             adrs: components["schemas"]["DevContextAdrResponseDto"][];
             /** @description The other tasks of the same story, with their status. The QA gate judges the delivery by what belongs to THIS task; a requirement of a sibling task is an observation, never a rejection (RN-765). */
             siblingTasks: components["schemas"]["DevContextSiblingTaskResponseDto"][];
+            /** @description Tasks of OTHER stories of the same module that are not done yet, with the story title (at most 20). A requirement that depends on what another story will deliver is an observation for the QA gate, never a rejection (RN-785). */
+            moduleOpenTasks: components["schemas"]["DevContextModuleOpenTaskResponseDto"][];
+            /** @description Real number of open tasks of the module in other stories — larger than `moduleOpenTasks.length` when the list was cut. */
+            moduleOpenTasksTotal: number;
+            /** @description The current contract of the task module (`artifact.module_contracts`) — the source of the INTERFACE for the QA gate. When the story and the contract diverge, the verdict names the divergence instead of rejecting the dev that followed the contract (RN-786). `null` without a resolvable module or contract. */
+            moduleContract: components["schemas"]["ContratoDeModuloResponseDto"] | null;
             /** @description Whether this is the FIRST task of the module: the oldest `backlog.task_claimed` of the project for `module` is this task. The engine gives it twice the per-task budget (RN-774). `false` without `module`. */
             primeiraDoModulo: boolean;
         };

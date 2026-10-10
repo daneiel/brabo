@@ -361,6 +361,103 @@ defmodule Engine.Dev.WorktreeManagerTest do
     end
   end
 
+  # RN-779 (AT-458): o merge das PRs acontece no remoto; o worktree da task
+  # (re)pegada parte da ponta ATUAL da `dev` e integra-a quando parte de outra
+  # branch.
+  describe "integração da dev atual (RN-779)" do
+    # Um remoto com `dev`; o work_dir fica com a `dev` local PARADA e um outro
+    # clone faz o papel do merge das PRs, que anda o remoto.
+    defp remoto_com_dev!(root, work_dir) do
+      bare = Path.join(root, "origem.git")
+      git(root, ["init", "--bare", "origem.git"])
+      git(work_dir, ["remote", "add", "origin", bare])
+      git(work_dir, ["checkout", "-b", "dev"])
+      git(work_dir, ["push", "origin", "dev"])
+      git(work_dir, ["fetch", "origin"])
+
+      outro = Path.join(root, "outro")
+      git(root, ["clone", "-b", "dev", bare, "outro"])
+      git(outro, ["config", "user.email", "t@brabo.dev"])
+      git(outro, ["config", "user.name", "t"])
+      outro
+    end
+
+    defp anda_o_remoto!(outro, work_dir, arquivo, conteudo) do
+      File.write!(Path.join(outro, arquivo), conteudo)
+      git(outro, ["add", "-A"])
+      git(outro, ["commit", "-m", "merge de outra PR"])
+      git(outro, ["push", "origin", "dev"])
+      git(work_dir, ["fetch", "origin"])
+    end
+
+    defp branch_com_trabalho!(work_dir, slug, arquivo, conteudo) do
+      {:ok, %{path: path, branch: branch}} =
+        WorktreeManager.add_worktree(work_dir, "dev-api", slug, "dev")
+
+      File.write!(Path.join(path, arquivo), conteudo)
+      {:ok, _} = WorktreeManager.preservar_em(path, "dev-api", slug)
+      branch
+    end
+
+    test "a task retomada com branch antiga já mergeada parte da dev ATUAL do remoto",
+         %{root: root, work_dir: work_dir} do
+      outro = remoto_com_dev!(root, work_dir)
+      _ = branch_com_trabalho!(work_dir, "task-c80daf6c", "velho.txt", "x")
+      # A branch velha entrou na dev pelo merge de outra PR, e a dev andou.
+      git(work_dir, ["push", "origin", "feature/task-c80daf6c"])
+      git(outro, ["fetch", "origin"])
+      git(outro, ["merge", "--no-edit", "origin/feature/task-c80daf6c"])
+      anda_o_remoto!(outro, work_dir, "doze_tarefas.txt", "y")
+
+      {:ok, %{path: p}} =
+        WorktreeManager.add_worktree(work_dir, "dev-api", "task-c80daf6c", "dev")
+
+      assert File.exists?(Path.join(p, "doze_tarefas.txt"))
+      assert File.exists?(Path.join(p, "velho.txt"))
+    end
+
+    test "a task retomada com trabalho preservado parte dele e integra a dev nova (RN-743)",
+         %{root: root, work_dir: work_dir} do
+      outro = remoto_com_dev!(root, work_dir)
+      _ = branch_com_trabalho!(work_dir, "task-aaaa1111", "meu.txt", "x")
+      anda_o_remoto!(outro, work_dir, "novo_na_dev.txt", "y")
+
+      {:ok, %{path: p}} =
+        WorktreeManager.add_worktree(work_dir, "dev-api", "task-aaaa1111", "dev")
+
+      assert File.exists?(Path.join(p, "meu.txt"))
+      assert File.exists?(Path.join(p, "novo_na_dev.txt"))
+    end
+
+    test "a anterior aprovada e não mergeada (awaiting_user) é a base, com a dev atual integrada",
+         %{root: root, work_dir: work_dir} do
+      outro = remoto_com_dev!(root, work_dir)
+      anterior = branch_com_trabalho!(work_dir, "task-bbbb2222", "login.ts", "rota")
+      anda_o_remoto!(outro, work_dir, "infra.txt", "y")
+
+      {:ok, %{path: p}} =
+        WorktreeManager.add_worktree(work_dir, "dev-api", "task-cccc3333", anterior)
+
+      assert File.exists?(Path.join(p, "login.ts"))
+      assert File.exists?(Path.join(p, "infra.txt"))
+    end
+
+    test "conflito ao integrar é recusa NOMEADA, com os arquivos, e o trabalho fica",
+         %{root: root, work_dir: work_dir} do
+      outro = remoto_com_dev!(root, work_dir)
+      anterior = branch_com_trabalho!(work_dir, "task-dddd4444", "README.md", "da task")
+      anda_o_remoto!(outro, work_dir, "README.md", "da dev")
+
+      assert {:error, motivo} =
+               WorktreeManager.add_worktree(work_dir, "dev-api", "task-eeee5555", anterior)
+
+      assert WorktreeManager.conflito_de_integracao?(motivo)
+      assert motivo =~ "README.md"
+      {log, 0} = System.cmd("git", ["log", "-1", "--format=%an", anterior], cd: work_dir)
+      assert String.trim(log) == "dev-api[bot]"
+    end
+  end
+
   # RN-744 (AT-444): o kickoff do dev diz a branch e o que já existe.
   describe "retrato/2" do
     test "lista a branch e os arquivos, rastreados e novos", %{work_dir: work_dir} do
