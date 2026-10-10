@@ -21947,15 +21947,11 @@ sem dizer qual.
   raciocina por ali e o buraco não existe — declarado, sem mudança. A forma do
   campo foi lida da doc do OpenRouter (Reasoning Tokens: `reasoning.max_tokens`;
   o `max_tokens` da chamada tem de ser maior que ele).
-  > **TODO(humano):** provar com credencial real que o
-  > `anthropic/claude-haiku-5.5` respeita o orçamento (smoke, com aviso ao
-  > dono antes de usar a chave).
+  **Revisada pela [RN-782](#rn-782)/[RN-783](#rn-783) (AT-467):** a medição
+  com credencial de 10/10 mostrou que o Haiku 5.5 IGNORA `reasoning.max_tokens`;
+  o campo deixou de ser enviado e a folga no `max_tokens` ficou.
 - **Onde:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:48`
-  (`ORCAMENTO_DE_RACIOCINIO`), `:469` (`raciocinio`),
-  `apps/api/src/infrastructure/llm/openrouter-provider.ts:223`
-  (`campoDeRaciocinioOpenRouter`),
-  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:188`
-  (`supportsReasoning`)
+  (`ORCAMENTO_DE_RACIOCINIO`), `:470` (`controla`)
 - **Teste:** `apps/api/test/infrastructure/llm/openai-compatible-provider.contract.spec.ts`
   (`raciocínio com orçamento próprio (RN-741)`: orçamento e teto somado; sem
   raciocínio o corpo não muda; provider sem campo não inventa orçamento)
@@ -22590,3 +22586,46 @@ sem dizer qual.
   (as duas leituras estão no catálogo do Arquiteto)
 - **Origem:** AT-454 (TP-01 de 09/10: com 17 tarefas no backlog, o Arquiteto
   disse "faltam as tarefas" e "não consigo verificá-las daqui")
+
+### RN-782 — Aceitar o parâmetro de raciocínio não é pedir raciocínio {#rn-782}
+
+- **Regra:** revisa a [RN-741](#rn-741). O modelo com `supportsReasoning` (no
+  OpenRouter, `reasoning` em `supported_parameters` — 341 de 478 modelos, ou
+  seja, "aceita o parâmetro", não "raciocina") continua com a FOLGA no teto:
+  `max_tokens` = saída visível (RN-734) + `ORCAMENTO_DE_RACIOCINIO` (4096). O
+  que sai é o campo `reasoning: { max_tokens }`: ele NÃO é mais enviado a
+  modelo nenhum. Medição paga de 10/10 (AT-467): no
+  `anthropic/claude-haiku-4.5`, que sem o campo não raciocina, ele LIGAVA o
+  raciocínio em 74% das chamadas a 2,8× o custo; no
+  `anthropic/claude-haiku-5.5` ele era IGNORADO (pedido 1024, gastou 8192 só de
+  raciocínio). A decisão do que pedir mora num ponto só, `opcoesDeRaciocinio`,
+  chamado pelos três casos de uso de turno. O TODO(humano) da RN-741 fecha com
+  essa medição.
+- **Onde:** `apps/api/src/domain/llm/raciocinio-do-agente.ts:14`
+  (`opcoesDeRaciocinio`), `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:470`
+  (`controla`), `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:189`
+  (`opcoesDeRaciocinio`)
+- **Teste:** `apps/api/test/infrastructure/llm/openai-compatible-provider.contract.spec.ts`
+  (`modelo que raciocina: folga no teto e NENHUM campo de raciocínio (RN-782)`,
+  corpo byte a byte), `apps/api/test/domain/llm/raciocinio-do-agente.spec.ts`
+- **Origem:** AT-467 (medição paga de 10/10)
+
+### RN-783 — Os dev agents de execução rodam com o raciocínio desligado {#rn-783}
+
+- **Regra:** decisão do dono de 10/10. Para agente `dev-<modulo>` (o Dev Lead,
+  `dev-lead`, é conversacional e fica de fora) com modelo de
+  `supportsReasoning`, o provider que sabe dizer "desligado" (hoje só o
+  OpenRouter, `campoDeRaciocinioDesligado`) manda `reasoning: { enabled: false }`,
+  mantendo a folga da [RN-782](#rn-782). Medido no Haiku 5.5: 0 de 8 respostas
+  cortadas e −42% de custo. Conversacionais e gates não mudam (sem campo), e
+  modelo sem `supportsReasoning` não manda nada. Não é silencioso: a ajuda da
+  faceta "thinking" do catálogo de modelos diz que nos dev agents de execução o
+  raciocínio vai desligado (o mínimo escolhido; o seletor e a bolha não mudam).
+- **Onde:** `apps/api/src/domain/llm/raciocinio-do-agente.ts:28`
+  (`raciocinioDesligadoParaOAgente`), `apps/api/src/infrastructure/llm/openrouter-provider.ts:224`
+  (`campoDeRaciocinioDesligadoOpenRouter`)
+- **Teste:** `apps/api/test/infrastructure/llm/openai-compatible-provider.contract.spec.ts`
+  (`dev agent: raciocínio desligado explícito, com a folga (RN-783)`),
+  `apps/api/test/domain/llm/raciocinio-do-agente.spec.ts` (dev-* desliga;
+  criativo e dev-lead só a folga; sem `supportsReasoning`, nada)
+- **Origem:** AT-467 (decisão do dono de 10/10)
