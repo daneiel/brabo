@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- **engine**: o plano de teste da QA-estratégia com critérios em string JSON deixa de ser recusado depois de a ferramenta aceitá-lo (e de derrubar o QA Lead, deixando o gate parado até o resgate); e o QA Lead roda um ciclo por tarefa — pedido repetido que esperava enquanto o ciclo rodava é descartado, em vez de gravar um parecer contrário depois do veredito que valeu (RN-805, RN-806, AT-478).
 - **web/api**: a estimativa do cartão do plano do Dev Lead soma o dobro da primeira tarefa de cada módulo — 8 tarefas num módulo com teto de US$ 0,50 dizem "até US$ 4,50", não US$ 4,00; a api leva o multiplicador no payload (RN-802, AT-473).
 - **web**: a "Linha do tempo do time" da Visão geral, lendo a sessão de execução com uma ideação mais recente aberta, deixa de apagar o Infra Lead e os agentes que só agiram na execução e de dizer "nenhum agente" sobre um time trabalhando (RN-800, AT-471).
 - **web**: o campo "Nome (opcional)" da nova sessão (abas Criativo e Chat) declara `autocomplete="off"`, `aria-autocomplete="none"` e os ignores dos gerenciadores de senha, como o composer (RN-801, AT-472).

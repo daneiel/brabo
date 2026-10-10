@@ -47,6 +47,8 @@ defmodule Engine.Gates.QaLeadServer do
 
   use GenServer, restart: :temporary
 
+  require Logger
+
   # DERIVADO da lista canônica da api (FASE 18) — era a terceira cópia escrita
   # à mão, e a única que nenhum teste travava: subagente novo lá dentro passava
   # a existir sem que este `Wake.subscribe` soubesse.
@@ -97,11 +99,23 @@ defmodule Engine.Gates.QaLeadServer do
     {:reply, match?(%{task_id: ^task_id}, state.pendente), state}
   end
 
+  # RN-806 (AT-478): UM ciclo por task+gate. Pedido para a task cujo ciclo
+  # está SUSPENSO aqui (esperando decisão) não abre um segundo por cima — o
+  # `pendente` seria sobrescrito e dois laços disputariam o mesmo gate.
   @impl true
+  def handle_cast({:run, task_id}, %{pendente: %{task_id: task_id}} = state) do
+    Logger.info("QaLead: ciclo qa da task #{task_id} já em voo — pedido repetido ignorado")
+    {:noreply, state}
+  end
+
   def handle_cast({:run, task_id}, state) do
     case DevAgentState.find_by_task_id(state.project_id, task_id) do
-      nil -> {:noreply, state}
-      dev_state -> {:noreply, run_area(state, dev_state, task_id)}
+      nil ->
+        {:noreply, state}
+
+      dev_state ->
+        state = run_area(state, dev_state, task_id)
+        {:noreply, descartar_pedidos_obsoletos(state, task_id)}
     end
   end
 
@@ -122,13 +136,36 @@ defmodule Engine.Gates.QaLeadServer do
     # roda vários comandos e cada um pede aprovação. O resultado da retomada
     # passa pelo MESMO tratamento do resultado de `run/5`; antes o
     # `{:awaiting, _}` entrava em `colhidos` como se fosse parecer.
-    {:noreply, tratar_resultado(state, p.em_voo, p.delegacao, resultado, p.colhidos, p.restantes)}
+    state = tratar_resultado(state, p.em_voo, p.delegacao, resultado, p.colhidos, p.restantes)
+    {:noreply, descartar_pedidos_obsoletos(state, p.task_id)}
   end
 
   # Desfecho de OUTRA ação, ou o lead já não está esperando: ignora em vez de
   # derrubar. A entrega é por agente, e nada garante que só chegue o esperado.
   def handle_info({:action_settled, _}, state), do: {:noreply, state}
   def handle_info(_msg, state), do: {:noreply, state}
+
+  # RN-806 (AT-478): terminado o ciclo de `task_id` (veredito registrado, ou
+  # bloqueio), todo `{:run, task_id}` que ESPERAVA na caixa foi pedido ANTES
+  # desse veredito existir — no uso real, o resgate disparou duas vezes no
+  # mesmo instante, e o segundo ciclo rodou depois do primeiro e gravou um
+  # parecer contrário ao que já tinha valido. Um pedido legítimo novo (a
+  # correção do dev) só nasce DEPOIS do veredito, então chega depois desta
+  # varredura. Ciclo ainda suspenso não descarta nada: ele não terminou.
+  defp descartar_pedidos_obsoletos(%{pendente: %{task_id: task_id}} = state, task_id), do: state
+
+  defp descartar_pedidos_obsoletos(state, task_id) do
+    receive do
+      {:"$gen_cast", {:run, ^task_id}} ->
+        Logger.info(
+          "QaLead: pedido de ciclo qa da task #{task_id} anterior ao veredito descartado (RN-806)"
+        )
+
+        descartar_pedidos_obsoletos(state, task_id)
+    after
+      0 -> state
+    end
+  end
 
   defp run_area(state, dev_state, task_id) do
     project_id = state.project_id

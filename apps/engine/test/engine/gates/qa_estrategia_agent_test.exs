@@ -108,6 +108,43 @@ defmodule Engine.Gates.QaEstrategiaAgentTest do
     assert payload.estrategiaDeAutomacao == "testes de integração na api"
   end
 
+  # RN-805 (AT-478): no uso real o modelo mandou `criteriosExecutaveis` como
+  # STRING JSON; a tool (args normalizados) disse "9 critérios", o hook leu o
+  # cru, o artefato foi recusado com `:criterios_vazios` e a Automação caiu no
+  # `Enum` da string — o QA Lead morreu e o gate ficou 18 min parado.
+  test "critérios em string JSON viram lista: o plano é gravado e devolvido como lista", %{
+    project_id: project_id,
+    session_id: session_id,
+    dev_state: dev_state
+  } do
+    Process.put(:fake_llm_turns, [
+      FakeEngineApiClient.tool_call_response("read_file", %{"path" => "src/app.js"}),
+      FakeEngineApiClient.tool_call_response("emit_plano_de_teste", %{
+        "planoDeTeste" => "Cobrir o handler de erros.",
+        "criteriosExecutaveis" => ~s(["dado X, quando Y, então Z", "dado A, então B"]),
+        "estrategiaDeAutomacao" => "integração"
+      })
+    ])
+
+    assert {:ok, plano} =
+             QaEstrategiaAgent.run(
+               project_id,
+               session_id,
+               "task-1",
+               dev_state,
+               dev_context(),
+               {:ok, []}
+             )
+
+    assert plano.criterios_executaveis == ["dado X, quando Y, então Z", "dado A, então B"]
+
+    assert_received {:event_appended, ^project_id, ^session_id,
+                     %{type: "artifact.plano_de_teste", payload: payload}}
+
+    assert payload.criteriosExecutaveis == plano.criterios_executaveis
+    refute_received {:event_appended, _, _, %{type: "qa-estrategia.error"}}
+  end
+
   test "os arquivos da entrega entram na mensagem — é o que aponta as 8 iterações", %{
     project_id: project_id,
     session_id: session_id,

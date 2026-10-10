@@ -178,7 +178,8 @@ defmodule Engine.Gates.QaAutomacaoAgent do
   defp secao_do_plano(plano) do
     criterios =
       plano
-      |> Map.get(:criterios_executaveis, [])
+      |> Map.get(:criterios_executaveis)
+      |> Engine.Gates.Hooks.Termination.lista()
       |> Enum.map_join("\n", &("- " <> to_string(&1)))
 
     """
