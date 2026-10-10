@@ -17464,7 +17464,7 @@ seguiram em `in_review` (AT-275).
    chegar aqui; o gate pendente, por decisão do dono, é só aviso na tela.
 
 - **Onde:** `apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts:242`
-  (`settleMerge`), `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:364`
+  (`settleMerge`), `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:413`
   (`markDoneIfNotDone`)
 - **Teste:** `apps/api/test/application/use-cases/actions/execute-git-action.use-case.spec.ts`
   ("git_merge marca a tarefa como done": feliz, repetido, PR aberta/merge
@@ -19804,8 +19804,8 @@ módulo do `module_map`, como antes, e o paralelismo extra continua pelo
 `parallelize` ([RN-083](business-rules/custo.md#rn-083)).
 
 - **Onde:** `apps/api/src/domain/execution/plano-de-execucao.ts:33`
-  (`lerPlanoDeExecucao`); `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:564`
-  (`daTarefaDoModulo`), `:299` (`claimNext`), `:287` (`assignModules`);
+  (`lerPlanoDeExecucao`); `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:613`
+  (`daTarefaDoModulo`), `:348` (`claimNext`), `:336` (`assignModules`);
   `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:133`
   (`recusaNaProposta`); `apps/api/src/application/use-cases/execution/execute-execution-plan.use-case.ts:67`
   (`recusaNaProposta`); `apps/api/src/db/schema/backlog.ts:187` (`module`);
@@ -20756,7 +20756,7 @@ Junto, o fechamento deixa de dizer que parear uma pasta pela tela do projeto
 - **Medição (AT-383, 02/10, loja-teste):** a #6 terminou `failed` por conflito
   em `package.json`, e a tarefa ficou `in_review` sem ninguém para resolvê-lo.
 - **Onde:** `apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts:339` (`devolverAoDono`),
-  `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:374` (`reabrirPorConflitoDeMerge`),
+  `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:423` (`reabrirPorConflitoDeMerge`),
   `apps/engine/lib/engine/workers/dev_agent_wake_worker.ex:151` (`task.merge_conflict`),
   `apps/engine/lib/engine/dev/dev_agent_server.ex:350` (`handle_info`),
   `apps/engine/lib/engine/dev/dev_agent_server.ex:773` (`trigger_gate_recheck`),
@@ -21687,7 +21687,7 @@ sem dizer qual.
   `apps/api/src/application/use-cases/backlog/corrigir-historia.use-case.ts:47`
   (`editar`), `:90` (`arquivar`),
   `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:97`
-  (`findByProject`), `:299` (`claimNext`),
+  (`findByProject`), `:348` (`claimNext`),
   `apps/api/src/interfaces/http/backlog/backlog.controller.ts:188`
   (`updateTitle`), `:219` (`archive`),
   `apps/api/src/interfaces/http/internal/internal-sessions.controller.ts:571`
@@ -22590,3 +22590,38 @@ sem dizer qual.
   (as duas leituras estão no catálogo do Arquiteto)
 - **Origem:** AT-454 (TP-01 de 09/10: com 17 tarefas no backlog, o Arquiteto
   disse "faltam as tarefas" e "não consigo verificá-las daqui")
+
+### RN-776 — Tarefa da execução esperando alguém segura a sessão de execução {#rn-776}
+
+- **Regra:** o heartbeat não fecha a sessão de execução VIGENTE do projeto (a
+  `active` mais recente com `execution.activated`) enquanto houver tarefa de
+  história não arquivada BLOQUEADA, com PR em `awaiting_user`, ou devolvida
+  por conflito de merge ([RN-715](#rn-715), `backlog.task_merge_conflict`
+  nesta sessão) e ainda `in_progress`. É o sexto sinal da
+  [RN-064](business-rules/custo.md#rn-064), sem teto, como os outros sinais que esperam uma pessoa;
+  vem antes do sinal da conversa ociosa ([RN-581](#rn-581)), que continua
+  o único com teto. Sessão de execução ANTIGA do mesmo projeto não é segurada
+  pela tarefa: a tarefa é do projeto, e sem esse recorte ela ficaria imortal.
+- **Onde:** `apps/api/src/application/use-cases/sessions/get-session-pending-work.use-case.ts:238`
+  (`findPendenteDaExecucao`), `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:220`
+  (`findPendenteDaExecucao`)
+- **Teste:** `apps/api/test/application/use-cases/sessions/get-session-pending-work.use-case.spec.ts`
+  (bloqueada, PR esperando merge e conflito seguram; sem nada, fecha; sessão
+  de execução antiga não é segurada)
+- **Origem:** AT-457 (TP-01 de 09/10: as duas sessões de execução fecharam
+  2–8 s depois do `dev.idle`, com tarefa bloqueada e PR esperando o merge)
+
+### RN-777 — Desbloquear a tarefa acorda o dev do módulo DELA {#rn-777}
+
+- **Regra:** `task.became_claimable` com causa `task_unblocked` leva como
+  `modules` o módulo da TAREFA (`tasks.module`, [RN-678](#rn-678)) quando ele
+  existe, e os da história só quando a tarefa não tem módulo — o claim é pelo
+  módulo da tarefa, então é o dev dele que tem de acordar. O conflito de merge
+  já acorda o dono ([RN-715](#rn-715)); com a sessão de execução de pé
+  ([RN-776](#rn-776)), o dono continua com linha em `dev_agent_states` para
+  ser acordado.
+- **Onde:** `apps/api/src/application/use-cases/execution/unblock-task.use-case.ts:56`
+  (`modules`)
+- **Teste:** `apps/api/test/application/use-cases/execution/unblock-task.use-case.spec.ts`
+  (tarefa com módulo acorda o dev desse módulo)
+- **Origem:** AT-457
