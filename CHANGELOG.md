@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- **web**: o campo "Nome (opcional)" da nova sessão (abas Criativo e Chat) declara `autocomplete="off"`, `aria-autocomplete="none"` e os ignores dos gerenciadores de senha, como o composer (RN-801, AT-472).
 - **web**: sem execução vigente e com tarefa pendente, a aba Executores e a Visão geral dizem quantas tarefas ficaram e oferecem "Religar execução" pelo mesmo `execution/activate` (a recusa mostra a frase da api); "Desbloquear" sem execução avisa que a tarefa só roda depois de religar (RN-794, AT-469).
 - **engine**: o parecer do SecOps (e o diff do QA) conta a PR contra a `dev` da origem, buscada antes quando a origem é local, e não mais o acumulado da `dev` local parada; `itens`/`coverageMatrix` do `qa_verdict` são gravados sempre como lista (RN-787, AT-464).
 - **engine**: no boot, o dev agent com `dev.working` (ou outra espera) sem processo nem linha durável fecha com `dev.error` origem infra e `dev.idle`, e a sessão deixa de ser reagendada para sempre pelo heartbeat (RN-778, AT-465).

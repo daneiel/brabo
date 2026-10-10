@@ -466,6 +466,19 @@ describe('ProjectSessionsTab — cada aba é um tipo', () => {
     expect(screen.getByLabelText('Nome (opcional)')).toBeTruthy();
   });
 
+  it('AT-472: o nome da nova ideação não convida o gerenciador de senhas', async () => {
+    montarAba(ProjectCriativoTab);
+    await screen.findByText('Criativo');
+    fireEvent.click(screen.getByRole('button', { name: 'Nova ideação' }));
+
+    const campo = screen.getByLabelText('Nome (opcional)');
+    expect(campo.getAttribute('autocomplete')).toBe('off');
+    expect(campo.getAttribute('aria-autocomplete')).toBe('none');
+    expect(campo.getAttribute('data-protonpass-ignore')).toBe('true');
+    expect(campo.getAttribute('data-1p-ignore')).toBe('true');
+    expect(campo.getAttribute('data-lpignore')).toBe('true');
+  });
+
   it('caminho feliz: o CTA cria com o kind da ABA', async () => {
     createSession.mockResolvedValue({ id: 'nova-sessao' });
     transitionSession.mockResolvedValue({});

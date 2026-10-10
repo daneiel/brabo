@@ -1,4 +1,5 @@
 import { useState, type KeyboardEvent, type MouseEvent } from 'react';
+import { SEM_AUTOFILL } from '../lib/conversa-comecou';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from '@tanstack/react-router';
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -313,6 +314,9 @@ export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps)
             maxLength={LIMITE_DO_NOME}
             placeholder={t('sessionsTab.newSessionForm.namePlaceholder')}
             hint={t('sessionsTab.newSessionForm.nameHint')}
+            // AT-472: o gerenciador de senhas se anexava ao campo e tomava o
+            // foco — a mesma régua do composer e do assistente (RN-736/740).
+            {...SEM_AUTOFILL}
           />
 
           <div className={styles.novaSessaoAcoes}>

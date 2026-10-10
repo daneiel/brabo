@@ -22938,3 +22938,17 @@ sem dizer qual.
   execução), `apps/web/src/routes/ProjectOverviewTab.test.tsx` (religar a
   execução encerrada)
 - **Origem:** AT-469
+### RN-801 — O nome da nova sessão não convida o gerenciador de senhas {#rn-801}
+
+- **Regra:** o campo "Nome (opcional)" do formulário de nova sessão (aba
+  Criativo e aba Chat) recebe o MESMO `SEM_AUTOFILL` do composer e do
+  assistente ([RN-736](#rn-736)/[RN-740](#rn-740)): `autocomplete="off"`,
+  `aria-autocomplete="none"` e os ignores de 1Password, LastPass, Bitwarden e
+  Proton Pass. O composer da Sessão já o tinha. A constante NÃO tem atributo de
+  ignore do NordPass, e nenhum foi inventado: se o NordPass segue se anexando,
+  o resto da lacuna é da extensão, como na RN-740.
+- **Onde:** `apps/web/src/routes/ProjectSessionsTab.tsx:319` (`SEM_AUTOFILL`),
+  `apps/web/src/lib/conversa-comecou.ts:29` (`SEM_AUTOFILL`)
+- **Teste:** `apps/web/src/routes/ProjectSessionsTab.test.tsx` ("AT-472: o nome
+  da nova ideação não convida o gerenciador de senhas")
+- **Origem:** AT-472 (TP-01 de 10/10)
