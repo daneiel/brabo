@@ -17463,7 +17463,7 @@ seguiram em `in_review` (AT-275).
    proposta repetida) veio depois, na [RN-663](#rn-663), antes de o merge
    chegar aqui; o gate pendente, por decisão do dono, é só aviso na tela.
 
-- **Onde:** `apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts:242`
+- **Onde:** `apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts:295`
   (`settleMerge`), `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:413`
   (`markDoneIfNotDone`)
 - **Teste:** `apps/api/test/application/use-cases/actions/execute-git-action.use-case.spec.ts`
@@ -19031,7 +19031,7 @@ O valor mora em DOIS lugares, de propósito, um por linguagem, e mudam juntos:
   `apps/engine/lib/engine/gates/diff.ex:29` (`compute`);
   `apps/engine/lib/engine/harness/project_context.ex:29` (`repo_line`);
   `apps/api/src/domain/actions/protected-branches.ts:26` (`BRANCH_DE_TRABALHO`);
-  `apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts:171`
+  `apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts:208`
   (`targetBranch`); `apps/api/src/application/use-cases/actions/execute-adr-pr.use-case.ts:86`
   (`fromRef`), `:99` (`targetBranch`)
 - **Teste:** `apps/engine/test/engine/gates/diff_test.exs:64` (o diff é só a
@@ -20755,7 +20755,7 @@ Junto, o fechamento deixa de dizer que parear uma pasta pela tela do projeto
   PR aberta por humano não tem dono a acordar.
 - **Medição (AT-383, 02/10, loja-teste):** a #6 terminou `failed` por conflito
   em `package.json`, e a tarefa ficou `in_review` sem ninguém para resolvê-lo.
-- **Onde:** `apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts:339` (`devolverAoDono`),
+- **Onde:** `apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts:392` (`devolverAoDono`),
   `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:423` (`reabrirPorConflitoDeMerge`),
   `apps/engine/lib/engine/workers/dev_agent_wake_worker.ex:151` (`task.merge_conflict`),
   `apps/engine/lib/engine/dev/dev_agent_server.ex:350` (`handle_info`),
@@ -20801,7 +20801,7 @@ Junto, o fechamento deixa de dizer que parear uma pasta pela tela do projeto
   "Merge", sem texto nenhum; a ação gravou `kind: git_push`. Depois de um merge
   executado, a PR seguia em "Abertas" até recarregar, o card mostrava o UUID do
   usuário e `#pr-3`, e toda PR local era "autor desconhecido".
-- **Onde:** `apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts:39` (`resultadoDaFalha`),
+- **Onde:** `apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts:72` (`resultadoDaFalha`),
   `apps/api/src/application/use-cases/actions/list-project-pending-actions.use-case.ts:22` (`execute`),
   `apps/web/src/routes/ProjectPrsTab.tsx:65` (`ultimaRecusaDeMerge`),
   `apps/web/src/lib/canal-vivo.ts:124` (`alvosDoEvento`)
@@ -23147,3 +23147,22 @@ sem dizer qual.
   feliz: com a dev atualizada, a branch não tem diff"; "falha: remoto
   inalcançável não fecha a task sozinha")
 - **Origem:** AT-486 (TP-01 de 10/10)
+
+### RN-812 — A PR aberta da mesma branch é reaproveitada, nunca duplicada {#rn-812}
+
+- **Regra:** antes de abrir a PR de um `pr_open`, o executor pergunta ao
+  provider (`listPullRequests`, só as abertas) se já há PR ABERTA com a mesma
+  origem e o mesmo destino. Havendo, ela é reaproveitada: a ação fecha
+  `executed` com a URL e o id dela e `reaproveitada: true`, sem abrir outra —
+  o push da task já a atualizou. No uso real a task reaberta depois de
+  bloqueio abriu a pr-9 da mesma branch com a pr-8 aberta, e a aba PRs mostrou
+  as duas. Provider sem a listagem, ou listagem que falha, não impede abrir: o
+  caminho de sempre segue. Fica como estava a PR da branch que a [RN-797](#rn-797)
+  fecha como "já na dev": essa não é fechada no provider.
+- **Onde:** `apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts:32`
+  (`prAbertaDaBranch`), `apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts:204`
+  (`prAbertaDaBranch`)
+- **Teste:** `apps/api/test/application/use-cases/actions/execute-git-action.use-case.spec.ts`
+  ("pr_open com PR aberta da mesma branch → reaproveita, sem abrir outra";
+  "pr_open: listar PRs falha → abre a PR como sempre")
+- **Origem:** AT-485 (TP-01 de 10/10)

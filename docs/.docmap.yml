@@ -328,6 +328,7 @@ rules:
       - "apps/engine/lib/engine/dev/agent_io.ex"
       - "apps/engine/lib/engine/dev/dev_agent_server.ex"
       - "apps/engine/lib/engine/dev/worktree_manager.ex"
+      - "apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts"
     docs: ["docs/business-rules.md"]
     severity: warn
     note: "Mudou a retentativa de rede, a origem do bloqueio por rede, a comparação com a dev ou o reaproveitamento da PR: atualizar as RN-810/811/812."
