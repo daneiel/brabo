@@ -17663,7 +17663,7 @@ cláusula própria no engine. Nenhuma mudança de api nem de engine.
 - **Onde:** `apps/web/src/lib/session-destinatario.ts:191` (`agentesEmConversa`),
   `:219` (`resolverDestinatario`), `:254` (`useDestinatarioDoChat`), `:116`
   (`useAtivadosNaSessaoInteira`), `:141` (`ativadosSemJanela`);
-  `apps/web/src/routes/SessionComposer.tsx:268` (`destinatarioRow`), `:172`
+  `apps/web/src/routes/SessionComposer.tsx:272` (`destinatarioRow`), `:178`
   (`ofertasForaDaJanela`); `apps/web/src/routes/SessionPage.tsx:357`
   (`aceitarHandoff`); `apps/web/src/routes/session-timeline-montagem.tsx:547`
   (`handoffIdDoEvento`), `:555` (`origem`); `apps/web/src/lib/session-handoffs.ts:68`
@@ -20396,7 +20396,7 @@ E o composer e os campos de texto das perguntas estruturadas levam
 
 - **Onde:** `apps/web/src/lib/conversa-comecou.ts:15` (`conversaComecou`),
   `:29` (`SEM_AUTOFILL`); `apps/web/src/routes/SessionPage.tsx:443`
-  (`conversaComecou`); `apps/web/src/routes/SessionComposer.tsx:346`
+  (`conversaComecou`); `apps/web/src/routes/SessionComposer.tsx:365`
   (`SEM_AUTOFILL`); `apps/web/src/routes/StructuredQuestionCard.tsx:206`
   (`SEM_AUTOFILL`)
 - **Teste:** `apps/web/src/routes/SessionPage.sessao.test.tsx:316` (Criativo
@@ -22394,7 +22394,7 @@ sem dizer qual.
   vocabulário lê os JSON, e o enum entrava pela interpolação em runtime;
   `i18n-enum-cru.test.ts` reprova `t(…, { status: x.status })`.
 - **Onde:** `apps/web/src/routes/ConfirmarEncerramento.tsx:13`
-  (`useEncerrarComConfirmacao`) e `apps/web/src/routes/SessionComposer.tsx:431`
+  (`useEncerrarComConfirmacao`) e `apps/web/src/routes/SessionComposer.tsx:449`
   (`statusGenerico`)
 - **Teste:** `apps/web/src/routes/ConfirmarEncerramento.test.tsx` (sem
   execução encerra direto; com execução só encerra ao confirmar; cancelar não
@@ -23367,3 +23367,25 @@ sem dizer qual.
   (RN-823)")
 - **Origem:** AT-495 (TP-01 de 10/10: o reinício das 18:51 matou o ciclo de QA
   da tarefa 10, e o dev ficou `awaiting_gate` 15 min sem tela nenhuma dizer)
+
+### RN-824 — Depois do mapa de módulos, o composer diz que o próximo passo é confirmar a arquitetura {#rn-824}
+
+- **Regra:** a oferta da Infra continua sendo um clique HUMANO ("Confirmar
+  arquitetura pronta"); o que muda é que a tela AVISA. Com o Arquiteto ativo,
+  sem turno em curso, sem o handoff dele já oferecido e com um
+  `artifact.module_map` gravado na sessão, o composer mostra em texto visível
+  que a arquitetura pode ser confirmada para o sistema oferecer a Infra. Sem
+  história promovida, o mesmo lugar diz o motivo de o botão estar inerte, uma
+  vez, em texto (o `title` de botão desabilitado não abre no Chromium,
+  [RN-102](business-rules/custo.md#rn-102)); o botão habilitado ganha a explicação no `title`. A
+  derivação lê os `events` que a tela já tem — nenhuma query nova
+  ([RN-579](#rn-579)).
+- **Onde:** `apps/web/src/lib/session-readiness.ts:149` (`temMapaDeModulos`),
+  `apps/web/src/routes/SessionComposer.tsx:350` (`hasModuleMap`)
+- **Teste:** `apps/web/src/routes/SessionPage.proximo-passo-arquitetura.test.tsx`
+  ("mapa gravado + história promovida + Arquiteto parado: o texto aparece";
+  falhas: "com o handoff do Arquiteto já oferecido, o texto some", "com turno
+  em curso (streaming), o texto não aparece", "sem história promovida, o
+  motivo vem em texto visível")
+- **Origem:** AT-491 (opção a: o gesto humano é desenho, o defeito era a tela
+  não avisar)

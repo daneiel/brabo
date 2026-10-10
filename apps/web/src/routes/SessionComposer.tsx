@@ -59,6 +59,8 @@ export interface SessionComposerProps {
   arquiteturaJaDeclarada: boolean;
   handleArchitectureReadiness: () => Promise<void>;
   hasPromotedStory: boolean;
+  /** RN-824: a sessão gravou `artifact.module_map` — há arquitetura a confirmar. */
+  hasModuleMap?: boolean;
   handleActivate: () => Promise<void>;
   /**
    * ADR 0183 (RN-650): reabrir sessão encerrada. `podeReabrir` é o papel
@@ -100,6 +102,7 @@ export function SessionComposer({
   arquiteturaJaDeclarada,
   handleArchitectureReadiness,
   hasPromotedStory,
+  hasModuleMap = false,
   handleActivate,
   podeReabrir = false,
   reabrindo = false,
@@ -338,6 +341,21 @@ export function SessionComposer({
             </>
           )}
         </div>
+        {/*
+          RN-824 (AT-491): o próximo passo depois do mapa de módulos é um
+          clique HUMANO — o sistema não oferece a Infra sozinho. A tela DIZ
+          isso em texto visível, e sem história promovida diz o motivo uma
+          vez em texto (o `title` de botão desabilitado não abre, RN-102).
+        */}
+        {arquitetoActive && !arquiteturaJaDeclarada && !streaming && hasModuleMap && (
+          <div className={styles.manualHandoffRow} data-testid="proximo-passo-arquitetura">
+            <span className={styles.destinatarioAviso}>
+              {hasPromotedStory
+                ? t('composer.confirmarArquiteturaProximoPasso')
+                : t('composer.confirmarArquiteturaDesabilitado')}
+            </span>
+          </div>
+        )}
         <div className={`${styles.composer} ${styles.composerComDestinatario}`}>
           <textarea
             className={styles.textarea}
@@ -403,7 +421,7 @@ export function SessionComposer({
               title={
                 !hasPromotedStory
                   ? t('composer.confirmarArquiteturaDesabilitado')
-                  : undefined
+                  : t('composer.confirmarArquiteturaExplica')
               }
             >
               {t('composer.confirmarArquitetura')}

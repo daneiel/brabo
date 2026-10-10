@@ -324,17 +324,15 @@ export function SessionPage({
   // execução, depois de ativada) — a oferta a ele não é acionável aqui.
   const ativosNoProjeto = useAtivosNoProjeto(workspaceComPapel?.workspace.id, projectId);
 
-  // As derivações de "prontidão" (RN-160/RN-161) — `criativoActive`,
-  // `arquitetoActive`, `hasBusinessRule` e `hasPromotedStory` — moraram aqui até a extração do hook
-  // `useSessionReadiness` (PR 5/5 da decomposição de `SessionPage.tsx`, ADR
-  // 0122): mesma lógica, mesmas dependências, só re-hospedadas atrás de um
-  // contrato de parâmetros explícito (`../lib/session-readiness.ts`).
+  // As derivações de "prontidão" (RN-160/RN-161/RN-824) moram em
+  // `../lib/session-readiness.ts` desde o PR 5/5 do ADR 0122.
   const backlogQuery = useBacklog(projectId, undefined, sessionId);
   const {
     criativoActive,
     arquitetoActive,
     hasBusinessRule,
     hasPromotedStory,
+    hasModuleMap,
   } = useSessionReadiness(events, backlogQuery.data);
 
   // O destinatário da mensagem do composer é ESCOLHIDO, nunca derivado do log
@@ -958,6 +956,7 @@ export function SessionPage({
             arquiteturaJaDeclarada={arquiteturaJaDeclarada}
             handleArchitectureReadiness={handleArchitectureReadiness}
             hasPromotedStory={hasPromotedStory}
+            hasModuleMap={hasModuleMap}
             handleActivate={handleActivate}
             podeReabrir={podeReabrir}
             reabrindo={reabrindo}
