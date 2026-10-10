@@ -5703,7 +5703,7 @@ si não muda.
   dev_lead,ux_designer,staff}_server.ex` (broadcast de `tool.call`);
   `apps/web/src/lib/atividade-do-turno.ts` (reducer);
   `apps/web/src/components/TurnActivityStrip.tsx` (componente);
-  `apps/web/src/lib/session-channel.ts:50` (`onToolCall`);
+  `apps/web/src/lib/session-channel.ts:54` (`onToolCall`);
   `apps/web/src/routes/session-fio.tsx:48` (`agruparNarracoesDoTurno`),
   `apps/web/src/routes/SessionPage.tsx:206` (`turnoViaCanal`)
 - **Teste:** `apps/web/src/lib/atividade-do-turno.test.ts`,
@@ -14642,8 +14642,8 @@ desde a Fase 4a —, e o que muda é a latência máxima das escritas sem aviso.
   (`eventAppended`);
   `apps/api/src/infrastructure/persistence/drizzle/drizzle-context.ts:39`
   (`aposCommit`), `:53` (`veioDoEngine`);
-  `apps/web/src/lib/canal-vivo.ts:35` (fallback), `:66` (estado), `:98`
-  (`intervaloDaSessao`), `:123` (`alvosDoEvento`), `:150` (janelas), `:175`
+  `apps/web/src/lib/canal-vivo.ts:35` (fallback), `:66` (estado), `:108`
+  (`intervaloDaSessao`), `:134` (`alvosDoEvento`), `:150` (janelas), `:185`
   (`criarInvalidadorDoCanal`); `apps/web/src/lib/session-channel.ts:161`,
   `:165`, `:131`, `:229`; `apps/web/src/lib/session-turno.ts:414`
   (o aviso: invalida e, do acompanhado, antecipa a leitura), `:86`
@@ -17813,7 +17813,7 @@ não dizia quais abas estavam abertas, e a leitura de que `/containers` estava
 numa delas é inferência pelos 106 ≈ 9 × 12.
 
 - **Código:** `apps/web/src/lib/canal-vivo.ts:54` (`INTERVALO_DO_PROJETO_MS`),
-  `:216` (`aoEvento`, os `extras`); `apps/web/src/lib/hooks.ts:127`
+  `:226` (`aoEvento`, os `extras`); `apps/web/src/lib/hooks.ts:127`
   (`useProjectSessions`), `:158` (`useLatestSession`);
   `apps/web/src/routes/ProjectPage.tsx:77` (os contadores do trilho);
   `apps/web/src/routes/ContainersPage.tsx:62` (`useLatestSession`, sem poll);
@@ -18089,7 +18089,7 @@ o do chat.
   `apps/web/src/routes/ProjectExecutorsTab.tsx:107` (`pendentesQuery`), `:290`
   (o bloco); `apps/web/src/routes/code/CodeShell.tsx:101` (`pendentesQuery`);
   `apps/web/src/routes/SessionPage.tsx:782` (o bloco sem `isActive`);
-  `apps/web/src/lib/canal-vivo.ts:123` (`alvosDoEvento`), `:180`
+  `apps/web/src/lib/canal-vivo.ts:134` (`alvosDoEvento`), `:180`
   (a chave por prefixo); `apps/web/src/components/PendenciasDeOutrasSessoes.tsx`
   (`porSessao`, `presenca`); `apps/web/src/components/ApprovalCard.tsx`
   (`detalheRecolhido`); `apps/web/src/lib/hooks.ts:455`
@@ -20806,7 +20806,7 @@ Junto, o fechamento deixa de dizer que parear uma pasta pela tela do projeto
 - **Onde:** `apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts:72` (`resultadoDaFalha`),
   `apps/api/src/application/use-cases/actions/list-project-pending-actions.use-case.ts:22` (`execute`),
   `apps/web/src/routes/ProjectPrsTab.tsx:65` (`ultimaRecusaDeMerge`),
-  `apps/web/src/lib/canal-vivo.ts:124` (`alvosDoEvento`)
+  `apps/web/src/lib/canal-vivo.ts:134` (`alvosDoEvento`)
 - **Teste:** `apps/api/test/application/use-cases/actions/execute-git-action.use-case.spec.ts`
   ("conflito de merge → kind git_merge, arquivos no resultado e evento na
   tarefa"; caso de falha: "falha que não é conflito não grava arquivos nem
@@ -22134,7 +22134,7 @@ sem dizer qual.
   120px da RN-173, porque o cartão de aprovação é o que a pessoa precisa ver.
   Reabrir a sessão com uma espera antiga não rola nada além da abertura de
   sempre.
-- **Onde:** `apps/web/src/lib/session-channel.ts:195` (`awaiting_approval`),
+- **Onde:** `apps/web/src/lib/session-channel.ts:232` (`awaiting_approval`),
   `apps/web/src/lib/session-turno.ts:418` (`awaiting_approval`),
   `apps/web/src/lib/session-rolagem.ts:30` (`seqDaEsperaPorAprovacao`),
   `:141` (`esperaPorAprovacao`)
@@ -23549,3 +23549,27 @@ sem dizer qual.
   FALHA: erro no envio desarma o turno e a mensagem fica \"não enviada\"
   (RN-831)")
 - **Origem:** AT-503 (nota de UX do chat §3)
+### RN-833 — Todo socket Phoenix do web se descarta, e o substituído não age {#rn-833}
+
+- **Regra:** todo socket Phoenix do web nasce por `criarSocket` e morre por
+  `descartar()`, que faz `disconnect()` e remove os três ouvintes que o
+  construtor do `phoenix@1.8.9` registra em `window` (`pagehide`, `pageshow`,
+  `visibilitychange`) — `disconnect()` sozinho os deixava, e o
+  `visibilitychange` reabria o socket velho. No canal da sessão cada
+  `conectar()` é uma GERAÇÃO: a anterior é descartada (leave, `descartar()` e
+  o ping DELA) antes de a nova nascer, e todo callback de geração antiga é
+  no-op — o `onClose` de um socket substituído não agenda reconexão, não
+  limpa o ping do atual e não marca morto o canal vivo. O canal vivo
+  ([RN-579](#rn-579)) é CONTAGEM de conexões por sessão, não booleano. A
+  neutralização do auto-reconnect ([RN-108](business-rules/autenticacao.md#rn-108))
+  continua obrigatória no tipo de `criarSocket`.
+- **Onde:** `apps/web/src/lib/socket-phoenix.ts:31` (`criarSocket`),
+  `apps/web/src/lib/session-channel.ts:92` (`descartarGeracao`),
+  `apps/web/src/lib/session-channel.ts:136` (`ehAtual`),
+  `apps/web/src/lib/canal-vivo.ts:70` (`marcarCanalDaSessao`)
+- **Teste:** `apps/web/src/lib/socket-phoenix.test.ts` (Phoenix real: "50×
+  criar + descartar deixa saldo líquido 0 nos três ouvintes de window";
+  falha: "socket só desconectado (sem descartar) deixa os três ouvintes"),
+  `apps/web/src/lib/session-channel.test.ts` ("gerações (AT-500, RN-833)"),
+  `apps/web/src/lib/canal-vivo.test.ts`
+- **Origem:** AT-500
