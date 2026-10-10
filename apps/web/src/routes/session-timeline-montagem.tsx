@@ -47,7 +47,11 @@ import { agruparNarracoesDoTurno } from './session-fio';
 import { autorDaMensagem, type ContextoDeAutoria } from '../lib/autor-da-mensagem';
 import { estadosNaFila } from '../lib/fila-de-mensagens';
 import { SeloDaFila } from './SeloDaFila';
-import { RetomarGateEstacionado, cicloEstacionado } from './RetomarGateEstacionado';
+import {
+  RetomarGateEstacionado,
+  cicloEstacionado,
+  cicloInterrompido,
+} from './RetomarGateEstacionado';
 
 type Turno = ReturnType<typeof useTurnoDoAgente>;
 
@@ -984,6 +988,28 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
               </div>
               <div className={[styles.bubble, styles.bubbleFalha].join(' ')}>
                 {t('mensagens.tetoDeIteracoes', { max: typeof max === 'number' ? max : '?' })}
+              </div>
+            </div>
+          </div>
+        ),
+      });
+    } else if (cicloInterrompido(event)) {
+      // RN-823 (AT-495): o reinício do engine matou o ciclo no meio e o boot
+      // o retomou do começo — o fio diz isso em vez de ficar calado.
+      const ciclo = cicloInterrompido(event)!;
+      const hora = new Date(ciclo.retomadoEm ?? event.createdAt).toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+      empurrar({
+        node: (
+          <div className={styles.message} key={event.id} data-testid="gate-interrompido">
+            <span className={styles.avatar}>
+              <AlertCircleIcon size={15} />
+            </span>
+            <div className={styles.messageBody}>
+              <div className={styles.bubble}>
+                {t('gateInterrompido.aviso', { gate: ciclo.gate, taskId: ciclo.taskId, hora })}
               </div>
             </div>
           </div>

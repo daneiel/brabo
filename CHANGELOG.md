@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- **engine**: o recorte do gate de QA pede estado limpo antes da suíte (encerrar o que o próprio projeto deixou de pé), teste de processo que encerre o grupo, e teste pulado por ambiente como observação (RN-817, AT-496); diz o que conta como evidência do ponto de entrada no ambiente do dev e que build de imagem, `docker compose` e rede externa nunca reprovam (RN-818, AT-492); e pede uma varredura por regra antes de emitir o parecer (RN-819, AT-490).
 - Aba PRs: o primeiro clique em "Merge" já mostra o cartão de decisão com a ação devolvida pela api, sem esperar a fila do projeto recarregar (RN-822, AT-493).
 - **docker-port**: o comando executado no container que estoura o teto volta como estouro (`exitCode: -1`, `timedOut: true`) e não mais como "exit 0" — o cliente `docker exec` saía limpo ao receber o SIGTERM —, e o grupo de processos dele é morto dentro do container (RN-807, AT-482).
 - **api**: o recorte do Jev não tira mais do Arquiteto `assign_story_modules` nem `choose_project_image` — ele encerrava dizendo que a ferramenta não estava disponível, com histórias sem módulo (RN-809, AT-481).
@@ -98,6 +99,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - **ações**: com o modo automático do agente ligado (a curinga em `auto_approve`), `git_push` e `pr_open` — tipados ou pelo comando de terminal — passam a ser auto-aprovados, com o motivo "modo automático (RN-713)" no evento; regra específica, "Sempre permitir" e `permissions.json` continuam sem liberar, e merge em branch protegida, deploy e `sudo`/`doas` seguem com o usuário. As telas do modo automático dizem isso (AT-385, RN-713, ADR 0204).
 ### Correções
 
+- **gates**: o ciclo de QA/SecOps que o reinício do engine matou no meio é retomado já no boot, sem esperar os 15 min do resgate, quando nenhum nó do cluster o tem em voo; o boot grava `gate.interrupted` e o fio da sessão avisa que o gate foi interrompido e retomado (AT-495, RN-823).
 - **secops**: o item do gitleaks no parecer diz a regra que acusou e o trecho com o segredo mascarado (`***`), e o ambiente do dev agent avisa que segredo de teste é gerado em tempo de execução, nunca literal (AT-470, RN-796).
 - **dev agent**: a task cuja branch, depois de integrada com a `dev`, não tem diff contra ela fecha como "já na dev" (evento `dev.task_already_in_dev`), sem PR, sem gates e sem clique; na dúvida segue para os gates (AT-474, RN-797).
 - **qa**: entrega que toca README tem os comandos de script citados (`npm run`, `pnpm`, `yarn`) conferidos contra o `package.json`; comando sem script vira item do parecer de QA (AT-475, RN-798).

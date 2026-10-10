@@ -267,6 +267,9 @@
     "erroCancelar": "Não foi possível cancelar a mensagem.",
     "enfileirada": "{{agente}} está no meio de um turno: a mensagem entrou na fila (posição {{posicao}}) e será lida quando ele terminar."
   },
+  "gateInterrompido": {
+    "aviso": "O reinício do engine interrompeu o ciclo do gate {{gate}} da tarefa {{taskId}}; ele foi retomado do começo às {{hora}}."
+  },
   "gateEstacionado": {
     "aviso": "O ciclo do gate {{gate}} da tarefa {{taskId}} ficou parado mais de 2 h e foi estacionado: ele não recomeça sozinho.",
     "botao": "Retomar gate",
