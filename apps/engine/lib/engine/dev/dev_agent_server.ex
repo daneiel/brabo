@@ -835,26 +835,9 @@ defmodule Engine.Dev.DevAgentServer do
   end
 
   defp handle_outcome({:halted, {"report_done", %{summary: summary}}, _ctx}, state, task, story) do
-    desfechos = [
-      AgentIo.propose_commit(state, summary),
-      AgentIo.propose_push(state),
-      propose_pr(state, task, story)
-    ]
-
-    _ =
-      EngineApiClient.mark_task(
-        state.project_id,
-        state.session_id,
-        state.task_id,
-        "in_review",
-        state.agent_id
-      )
-
-    if Enum.all?(desfechos, &(&1 == :executed)) do
-      abrir_gate(state)
-    else
-      aguardar_aprovacao(state, desfechos)
-    end
+    if AgentIo.worktree_manager().sem_diff_contra_a_dev?(state.worktree),
+      do: ja_na_dev(state),
+      else: entregar(state, summary, task, story)
   end
 
   @motivo_credito_esgotado "crédito do provider esgotado"
@@ -929,6 +912,53 @@ defmodule Engine.Dev.DevAgentServer do
 
   # Caminho normal (autonomia `auto_approve`, o default da ativação): a PR
   # existe, o gate pode julgar.
+  defp entregar(state, summary, task, story) do
+    desfechos = [
+      AgentIo.propose_commit(state, summary),
+      AgentIo.propose_push(state),
+      propose_pr(state, task, story)
+    ]
+
+    _ =
+      EngineApiClient.mark_task(
+        state.project_id,
+        state.session_id,
+        state.task_id,
+        "in_review",
+        state.agent_id
+      )
+
+    if Enum.all?(desfechos, &(&1 == :executed)) do
+      abrir_gate(state)
+    else
+      aguardar_aprovacao(state, desfechos)
+    end
+  end
+
+  # RN-797 (AT-474): a branch não tem diff contra a `dev` (a task reintegrada
+  # cujo código já entrou por outra PR). Sem PR nova, sem gates, sem clique: a
+  # task fecha como "já na dev" com evento nomeado. A PR antiga da branch, se
+  # existir, fica MARCADA pelo evento (`branch`), não fechada no provider.
+  defp ja_na_dev(state) do
+    AgentIo.emit(state, "dev.task_already_in_dev", %{
+      agentId: state.agent_id,
+      taskId: state.task_id,
+      branch: state.branch,
+      motivo: "a branch não tem diff contra a dev: o código já está na dev"
+    })
+
+    _ =
+      EngineApiClient.mark_task(
+        state.project_id,
+        state.session_id,
+        state.task_id,
+        "done",
+        state.agent_id
+      )
+
+    finish_task(state, :approved)
+  end
+
   defp abrir_gate(state) do
     _ =
       EngineApiClient.open_gate(state.project_id, state.session_id, state.task_id, state.agent_id)

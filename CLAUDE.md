@@ -314,10 +314,12 @@ estado lido do repositório e não da conversa.
 | Os saltos de layout da Sessão e do catálogo: composer, aba ativa, barra de lote e rolagem do fio (AT-442) | RN-751 |
 | A PR de infra mergeada sai de "PRs de infra em revisão" (AT-436) | RN-752 |
 | O seletor de modelo mostra `thinking`; ligar o modo automático não aprova o cartão, e ele diz isso (AT-443) | RN-755 |
+| O item do gitleaks diz a regra e o trecho mascarado; segredo de teste nasce em runtime (AT-470) | RN-796 |
 | O QA confere os comandos do README tocado contra os scripts do package.json (AT-475) | RN-798 |
 | A estimativa do plano do Dev Lead soma o dobro da primeira tarefa de cada módulo (AT-473) | RN-802 |
 | A linha do tempo do time na Visão geral filtra por família, não pela roster da sessão mais recente (AT-471) | RN-800 |
 | O nome da nova sessão não convida o gerenciador de senhas (AT-472) | RN-801 |
+| A task sem diff contra a `dev` fecha como "já na dev", sem PR nem gates (AT-474) | RN-797 |
 | O SecOps conta o diff da PR contra a `dev` da origem, e o `qa_verdict` grava lista (AT-464) | RN-787 |
 | O dev agent órfão fecha por evento novo no boot, e a sessão deixa de ser reagendada para sempre (AT-465) | RN-778 |
 | O Arquiteto recebe, ao declarar o contrato, as rotas das histórias que ele não declara (AT-468) | RN-792 |

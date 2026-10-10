@@ -30,6 +30,9 @@ defmodule Engine.Harness.AmbienteDoAgenteTest do
     assert texto =~ "git_commit"
     assert texto =~ "Seu módulo: `api`"
     assert texto =~ "package.json"
+    # RN-796: segredo de teste nasce em tempo de execução, nunca literal.
+    assert texto =~ "gerados em tempo de execução"
+    refute String.ends_with?(texto, "…")
     assert String.length(texto) <= AmbienteDoAgente.teto_de_caracteres()
   end
 

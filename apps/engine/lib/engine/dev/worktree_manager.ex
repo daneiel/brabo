@@ -235,6 +235,28 @@ defmodule Engine.Dev.WorktreeManager do
     end
   end
 
+  @doc """
+  RN-797 (AT-474). A branch do worktree não traz NADA que a `dev` não tenha:
+  árvore limpa (nada sem commit) e nenhum diff desde o ancestral comum com a
+  ponta da `dev` (`git diff --quiet <ponta>...HEAD`). É o caso da task
+  reintegrada (RN-779) cujo código já entrou por outra PR. Qualquer dúvida —
+  pasta que o engine não alcança (modo `runner`), git que falha — é `false`:
+  na dúvida a task segue para os gates, nunca fecha sozinha.
+  """
+  def sem_diff_contra_a_dev?(path) do
+    trabalho = ProjectRepository.branch_de_trabalho()
+
+    with true <- is_binary(path) and File.dir?(path),
+         {:ok, ""} <- git(path, ["status", "--porcelain"]),
+         ponta = ponta_do_trabalho(path, trabalho),
+         true <- ref?(path, ponta),
+         {:ok, _} <- git(path, ["diff", "--quiet", "#{ponta}...HEAD"]) do
+      true
+    else
+      _ -> false
+    end
+  end
+
   defp ponta_atual(work_dir, base, trabalho, ponto) do
     if base == trabalho and ponto != [], do: [ponta_do_trabalho(work_dir, trabalho)], else: ponto
   end
