@@ -44,7 +44,7 @@ import { AGENTS } from '../lib/agents';
 import { useToast } from '../components/ui/ToastProvider';
 import { TurnActivityStripDoStore } from '../components/TurnActivityStrip';
 import { hashtagDaSessao, rotuloDaSessao } from '../lib/session-label';
-import { tipoDaSessao } from '../lib/session-kind';
+import { tipoDaSessao, usePublicarAbaDaSessao } from '../lib/session-kind';
 import styles from './SessionPage.module.css';
 import { conversaComecou as conversaJaComecou } from '../lib/conversa-comecou';
 import {
@@ -819,6 +819,7 @@ export function SessionPage({
   // Enquanto a sessão não carregou, NÃO é consultiva: é desconhecida. Tratar a
   // ausência como "consultiva" faria o botão de ideação piscar fora e dentro.
   const sessaoCriativa = session?.kind === 'criativa';
+  usePublicarAbaDaSessao(projectId, session?.kind); // AT-463: a aba da sidebar segue o tipo
   // `isActive` mora lá em cima, junto de `session` — ver o comentário lá.
   // O convite ocupa o fio inteiro enquanto a conversa não começou. Vira
   // variável na FASE 24 porque a topbar passou a DEPENDER dele: as duas
