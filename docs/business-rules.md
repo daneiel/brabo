@@ -277,7 +277,7 @@ one.
 
 - **Where:** `apps/web/src/lib/session-destinatario.ts:254`
   (`useDestinatarioDoChat`, since RN-631),
-  `apps/web/src/lib/api-client.ts:1114` (`getSessionModelBinding`, the
+  `apps/web/src/lib/api-client.ts:1120` (`getSessionModelBinding`, the
   `agentId`), `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:166`
   (`getSessionBinding`, `@Query('agentId')`)
 - **Test:** `apps/web/src/routes/SessionPage.destinatario-do-chat.test.tsx`
@@ -8187,7 +8187,7 @@ nunca `startsWith` cru — `/base-outra` não está dentro de `/base` —, espel
   `:333` (`caminhoForaDaBase`), `:360` (a sugestão);
   `apps/web/src/lib/wizard.ts:143` (`caminhoSugeridoNaBase`) e `:171`
   (`caminhoDentroDaBase`) — as funções puras;
-  `apps/web/src/lib/api-client.ts:292` (`getProjectsBase`)
+  `apps/web/src/lib/api-client.ts:296` (`getProjectsBase`)
 - **Teste:** `apps/web/src/routes/NewProjectWizard.test.tsx`
   (`describe('NewProjectWizard — a base de projetos decide o que é
   oferecido')` — base presente, base `null`, consulta recusada com 403, a
@@ -14926,7 +14926,7 @@ motivo é dito em TEXTO. A recusa da api (409 de sessão com execução, 403) vi
 toast com a frase dela. O fio narra `session.reopened` como "sessão reaberta",
 com a causa do fechamento anterior quando ela foi gravada.
 
-- **Onde:** `apps/api/src/interfaces/http/sessions/sessions.controller.ts:206`
+- **Onde:** `apps/api/src/interfaces/http/sessions/sessions.controller.ts:210`
   (`reopen`); `apps/web/src/lib/api-client.ts:623` (`reopenSession`);
   `apps/web/src/routes/SessionPage.tsx:157` (`podeReabrir`), `:545`
   (`handleReopen`); `apps/web/src/routes/SessionComposer.tsx:383` (o botão);
@@ -18221,7 +18221,7 @@ muda.
   (`origemDaAtividade`), `:594` (`estadoDaAtividade`);
   `apps/web/src/lib/hooks.ts:127` (`useProjectSessions`, `frescorMs`);
   `apps/web/src/routes/Dashboard.tsx:75` (`lastActivityText`);
-  `apps/web/src/routes/ContextAside.tsx:41` (`quantos`), `:253`
+  `apps/web/src/routes/ContextAside.tsx:46` (`quantos`), `:309`
   (`totalDeArtefatos`)
 - **Teste:** `apps/web/src/routes/Shell.test.tsx` ("Shell — Atividades": sem
   execução lê a sessão da Visão geral e o Criativo aparece; com execução lê a
@@ -18492,7 +18492,7 @@ não medido em projeto real, e declarado.
   (`TETO_DE_CHAVES_NO_LOTE`), `:37` (`lerListaDeChaves`), `:77`
   (`ResolveModelBindingsEmLoteUseCase`);
   `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:233`
-  (`getResolvedBindings`); `apps/web/src/lib/api-client.ts:1139`
+  (`getResolvedBindings`); `apps/web/src/lib/api-client.ts:1145`
   (`getResolvedModelBindings`); `apps/web/src/lib/bindings-resolvidos.ts:43`
   (`invalidarBindingsResolvidos`), `:69` (`useBindingsResolvidos`), `:111`
   (`useBindingsDosAgentes`); `apps/web/src/routes/ProjectOverviewTab.tsx:144`
@@ -18732,7 +18732,7 @@ do bloco. O painel "precisa de você" NÃO usa este caminho: ele não lê log
 nenhum e abrir não dispara consulta, então o cartão ali segue calado, como a
 [RN-614](#rn-614) já dizia — decisão, não lacuna. Nenhum teto muda.
 
-- **Código:** `apps/api/src/interfaces/http/sessions/sessions.controller.ts:252`
+- **Código:** `apps/api/src/interfaces/http/sessions/sessions.controller.ts:256`
   (`listEvents`);
   `apps/api/src/infrastructure/persistence/drizzle/session-event.repository.ts:61`
   (o filtro);
@@ -20966,7 +20966,7 @@ cartão pendente apareceu só DURANTE a sessão ao vivo — estado transitório 
 tela, não da api nem da janela. A próxima rodada da AT-015 captura a rede no
 momento em que ele aparecer, antes de qualquer correção.
 
-- **Onde:** `apps/web/src/routes/ContextAside.tsx:310` (`trailing`), `:328`
+- **Onde:** `apps/web/src/routes/ContextAside.tsx:370` (`trailing`), `:384`
   (`nadaNaJanela`)
 - **Teste:** `apps/web/src/routes/SessionPage.painel-e-agrupamento.test.tsx`
   ("RN-701 (AT-365): com as regras fora da janela, o contador não afirma 0";
@@ -22609,7 +22609,7 @@ sem dizer qual.
   não é a mais recente. Nenhuma requisição a mais: as chaves são as que a
   sidebar já assina, e `useActiveExecutionSession` ganha `staleTime` igual ao
   intervalo, para o segundo assinante não refazer a busca ([RN-632](#rn-632)).
-- **Onde:** `apps/web/src/routes/ContextAside.tsx:388` (`trailing`),
+- **Onde:** `apps/web/src/routes/ContextAside.tsx:370` (`trailing`),
   `apps/web/src/routes/ProjectOverviewTab.tsx:86` (`linhaDoTempoNaExecucao`)
 - **Teste:** `apps/web/src/routes/SessionPage.painel-e-agrupamento.test.tsx`
   (decisão fora da janela não vira 0; sessão inteira na janela diz vazio),
@@ -23442,3 +23442,49 @@ sem dizer qual.
   motivo vem em texto visível")
 - **Origem:** AT-491 (opção a: o gesto humano é desenho, o defeito era a tela
   não avisar)
+
+### RN-827 — O painel de contexto conta a sessão inteira, e a janela só dá o detalhe {#rn-827}
+
+- **Regra:** os NÚMEROS do painel "Contexto da sessão" — regras de negócio,
+  decisões registradas e artefatos por agente — vêm de um agregado da sessão
+  INTEIRA contado no servidor (`GET .../sessions/:sessionId/context-summary`,
+  `viewer`, leitura sem tabela nova), SOMADO à janela de eventos que a tela já
+  carregou pelo molde da [RN-568](#rn-568): as contagens são monótonas, então
+  vale o maior dos dois. O DETALHE (o cartão da regra, a decisão, a árvore do
+  backlog) continua sendo o da janela, e o aviso de recorte ("Mostrando N de
+  M") aparece só na seção cujo detalhe é parcial; o agente cujos artefatos
+  ficaram todos antes da janela ganha o grupo com o total. Agregado AUSENTE
+  (carregando ou falhou) é "não li": o painel cai no recorte declarado da
+  [RN-180](business-rules/autenticacao.md#rn-180)/[RN-701](#rn-701), e "Arquivos tocados" vazio diz que não
+  leu, nunca "Nada ainda". O agregado NÃO polla ([RN-579](#rn-579),
+  [RN-632](#rn-632)): é relido quando a janela vê um artefato ou uma ação de
+  commit/PR nova (a chave da query), no foco e na remontagem.
+- **Onde:** `apps/api/src/infrastructure/persistence/drizzle/session-context-summary.repository.ts:22`
+  (`resumir`), `apps/web/src/lib/contexto-da-sessao.ts:15`
+  (`useContextoDaSessaoInteira`), `apps/web/src/lib/contexto-da-sessao.ts:34`
+  (`totalDaSessao`), `apps/web/src/routes/ContextAside.tsx:174` (`resumo`)
+- **Teste:** `apps/api/test/infrastructure/persistence/drizzle/session-context-summary.repository.spec.ts`
+  ("conta a sessão INTEIRA, além de qualquer cauda de 200…"),
+  `apps/api/test/application/use-cases/sessions/get-session-context-summary.use-case.spec.ts`
+  (falha: "sessão de outro projeto é 404 e não lê nada"),
+  `apps/web/src/routes/ContextAside.sessao-inteira.test.tsx` ("com o agregado
+  maior que a janela, mostra o total da sessão…"; falha: "sem o agregado, os
+  arquivos dizem \"não li\"…")
+- **Origem:** AT-498 (TP-01 de 10/10: sessão de 301 eventos mostrou 0 regras
+  sobre 11 e 2 decisões sobre 6)
+
+### RN-828 — "Arquivos tocados" inclui a sessão de execução ligada, com teto e total real {#rn-828}
+
+- **Regra:** a lista de arquivos tocados do agregado ([RN-827](#rn-827)) junta
+  os `git_commit`/`git_push` da sessão pedida e da sessão de EXECUÇÃO ligada a
+  ela — a que o plano do Dev Lead aprovado NESTA sessão ativou
+  (`executionResult.sessaoDeExecucao` de `propose_execution_plan` executado),
+  do mesmo projeto. Sessão sem essa ligação não entra. A lista vem do mais
+  recente para o mais antigo, cortada em 100 (`TETO_DE_ARQUIVOS_TOCADOS`), e o
+  `total` diz o número real; a tela declara o recorte quando ele corta.
+- **Onde:** `apps/api/src/infrastructure/persistence/drizzle/session-context-summary.repository.ts:31`
+  (`ligadas`), `apps/web/src/routes/ContextAside.tsx:335` (`filesTouched`)
+- **Teste:** `apps/api/test/infrastructure/persistence/drizzle/session-context-summary.repository.spec.ts`
+  ("…e soma os arquivos da execução ligada"; falha: "corta a lista de arquivos
+  no teto e devolve o total real; não lê sessão sem ligação")
+- **Origem:** AT-498

@@ -97,9 +97,11 @@ rules:
   - id: painel-de-contexto-da-sessao
     watch:
       - "apps/web/src/routes/ContextAside.tsx"
+      - "apps/web/src/lib/contexto-da-sessao.ts"
+      - "apps/api/src/infrastructure/persistence/drizzle/session-context-summary.repository.ts"
     docs: ["docs/business-rules.md"]
     severity: warn
-    note: "O recorte do painel de contexto (RN-178, RN-180, RN-701); mudança aqui costuma mover o arquivo:linha dessas RNs."
+    note: "O recorte do painel de contexto (RN-178, RN-180, RN-701) e o agregado da sessão inteira (RN-827/828); mudança aqui costuma mover o arquivo:linha dessas RNs."
 
   # O cartão de primeiros passos da Visão geral decide o que falta a um
   # projeto novo a partir de leituras que já existem (RN-708).

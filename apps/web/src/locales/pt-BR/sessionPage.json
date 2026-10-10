@@ -212,7 +212,10 @@
     "decisoes": "Decisões registradas",
     "decisoesNadaNaJanela": "Nenhuma nos eventos carregados — pode haver decisões nos anteriores.",
     "decisoesVazio": "Nenhuma decisão registrada nesta sessão.",
-    "decisaoSemEscolha": "Decisão sem escolha registrada"
+    "decisaoSemEscolha": "Decisão sem escolha registrada",
+    "todasAntesDaJanela": "Há {{total}} nesta sessão, todas antes dos eventos carregados — “Carregar mais antigos”, no Log de eventos, traz o detalhe.",
+    "recorte": "Mostrando {{mostradas}} de {{total}} — as demais estão antes do que foi carregado.",
+    "arquivosNaoLidos": "Ainda não li os arquivos da sessão inteira."
   },
   "turno": {
     "pensando": "Pensando…",
