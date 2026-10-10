@@ -222,7 +222,9 @@
     "nota": "A shortcut to the decision: the same cards and endpoints as the Approvals tab. No ceiling changes — merging into a protected branch stays manual.",
     "filas": {
       "aprovacoes": "Approvals",
-      "merges": "PR merges"
+      "merges": "PR merges",
+      "prontas": "PRs ready to merge",
+      "bloqueadas": "Blocked tasks"
     },
     "origem_one": "Proposed in session {{hashtag}} · {{tempo}}",
     "origem_other": "{{count}} proposed in session {{hashtag}} · oldest {{tempo}}",
@@ -233,6 +235,13 @@
       "todas_other": "The policy reason for these {{count}} cards could not be read: reading the log of the session that proposed the actions failed.",
       "algumas_one": "The policy reason for {{count}} of the {{total}} cards below could not be read: reading the log of the session that proposed the action failed.",
       "algumas_other": "The policy reason for {{count}} of the {{total}} cards below could not be read: reading the log of the session that proposed the actions failed."
+    },
+    "bloqueadas": {
+      "botao": "Unblock",
+      "ok": "Task unblocked: it goes back to the module's dev agent queue.",
+      "erro": "Could not unblock the task.",
+      "semMotivo": "No reason recorded.",
+      "semPapel": "Unblocking requires the developer role on the project."
     }
   },
   "mergearNoChat": {

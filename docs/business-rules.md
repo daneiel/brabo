@@ -17308,7 +17308,7 @@ continuam SEM decisão inline (não há `ApprovalCard` para elas).
   (`turnoEmCursoNoLog`), `:532` (`useRetomarTurnoDoLog`);
   `apps/web/src/lib/pendencias-do-projeto.ts:24` (`usePendenciasDoProjeto`),
   `:56` (`separarPendenciasDeOutrasSessoes`);
-  `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:46`
+  `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:65`
   (`PendenciasDeOutrasSessoes`); `apps/web/src/routes/MergearNoChat.tsx:28`
   (`prAbertaDaAcao`), `:56` (`jaHaMergeDaPr`), `:89` (`MergearNoChat`);
   `apps/web/src/routes/SessionPage.tsx:154` (`podeDecidir`), `:281`
@@ -20761,7 +20761,7 @@ Junto, o fechamento deixa de dizer que parear uma pasta pela tela do projeto
   `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:423` (`reabrirPorConflitoDeMerge`),
   `apps/engine/lib/engine/workers/dev_agent_wake_worker.ex:151` (`task.merge_conflict`),
   `apps/engine/lib/engine/dev/dev_agent_server.ex:350` (`handle_info`),
-  `apps/engine/lib/engine/dev/dev_agent_server.ex:773` (`trigger_gate_recheck`),
+  `apps/engine/lib/engine/dev/dev_agent_server.ex:781` (`trigger_gate_recheck`),
   `apps/engine/lib/engine/dev/worktree_manager.ex:47` (`adopt`)
 - **Teste:** `apps/api/test/application/use-cases/actions/execute-git-action.use-case.spec.ts` ("conflito de merge → kind git_merge, arquivos no
   resultado e evento na tarefa"; falha: "RN-715: tarefa que já não está em
@@ -21579,7 +21579,7 @@ sem dizer qual.
   ele que decide; o reconhecimento pelo texto ficou só como rede.
 - **Onde:** `apps/engine/lib/engine/agents/falha_de_turno.ex:130`
   (`credito_esgotado?`),
-  `apps/engine/lib/engine/dev/dev_agent_server.ex:887` (`handle_outcome`),
+  `apps/engine/lib/engine/dev/dev_agent_server.ex:892` (`handle_outcome`),
   `apps/engine/lib/engine/dev/agent_io.ex:271` (`pausar_por_credito`),
   `apps/web/src/lib/agent-status.ts:198` (`breakerReasonFor`),
   `apps/api/src/application/use-cases/sessions/get-session-pending-work.use-case.ts`
@@ -21614,7 +21614,7 @@ sem dizer qual.
   (`streamErrorCode`),
   `apps/engine/lib/engine/agents/falha_de_turno.ex:83` (`credito_esgotado?`),
   `:71` (`origem`), `apps/engine/lib/engine/harness/tool_loop.ex:148`
-  (`last_error_code`), `apps/engine/lib/engine/dev/dev_agent_server.ex:887`
+  (`last_error_code`), `apps/engine/lib/engine/dev/dev_agent_server.ex:892`
   (`handle_outcome`)
 - **Teste:** `apps/api/test/contract/llm-provider.contract.ts` (`erro_402 vira
   chunk de erro com code "insufficient_credit"`; falha: `erro_500` segue
@@ -22425,7 +22425,7 @@ sem dizer qual.
   (medido no Chromium: 2 236px num balão de 708px) e a última coluna sumia.
 - **Onde:** `apps/api/src/application/use-cases/actions/execute-adr-pr.use-case.ts:96`
   (`openPullRequest`); `apps/engine/lib/engine/infra/infra_lead_server.ex:1482`
-  (`gravar_texto_do_turno`); `apps/engine/lib/engine/dev/dev_agent_server.ex:1059`
+  (`gravar_texto_do_turno`); `apps/engine/lib/engine/dev/dev_agent_server.ex:1064`
   (`propose_pr`); `apps/web/src/lib/session-destinatario.ts:192`
   (`agentesEmConversa`) e `apps/web/src/lib/session-kind.ts:69`
   (`tipoDaSessao`); `apps/web/src/routes/NewProjectWizard.tsx:1127`
@@ -22730,8 +22730,8 @@ sem dizer qual.
   `reasoningTokens` (ficam só em `token_usage`), então a resposta vazia que
   bate no teto sem `finish_reason: length` não é reconhecida.
 - **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:219`
-  (`parada_sem_chamada`), `apps/engine/lib/engine/dev/dev_agent_server.ex:1010`
-  (`motivo_da_parada`), `:1013` (`stop_diagnosis`)
+  (`parada_sem_chamada`), `apps/engine/lib/engine/dev/dev_agent_server.ex:1016`
+  (`motivo_da_parada`), `:1019` (`stop_diagnosis`)
 - **Teste:** `apps/engine/test/engine/harness/tool_loop_test.exs` (`corte só
   de raciocínio`: retentada uma vez e segue; repetido para com
   `corte_pelo_teto`), `apps/engine/test/engine/dev/dev_agent_server_test.exs`
@@ -23010,7 +23010,7 @@ sem dizer qual.
   cobre também o merge por squash que a [RN-760](#rn-760) declara não ver.
   Declarado: a PR antiga da branch, se existir, não é fechada no provider.
 - **Onde:** `apps/engine/lib/engine/dev/worktree_manager.ex:246`
-  (`sem_diff_contra_a_dev?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:942`
+  (`sem_diff_contra_a_dev?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:948`
   (`ja_na_dev`)
 - **Teste:** `apps/engine/test/engine/dev/tarefa_ja_na_dev_test.exs`
 - **Origem:** AT-474
@@ -23184,7 +23184,7 @@ sem dizer qual.
   com o que há, e na dúvida a task segue para os gates.
 - **Onde:** `apps/engine/lib/engine/dev/worktree_manager.ex:267`
   (`sem_diff_contra_a_dev?`), `apps/engine/lib/engine/dev/worktree_manager.ex:277`
-  (`sem_diff_atualizado?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:837`
+  (`sem_diff_atualizado?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:842`
   (`handle_outcome`)
 - **Teste:** `apps/engine/test/engine/dev/tarefa_ja_na_dev_test.exs` ("caminho
   feliz: com a dev atualizada, a branch não tem diff"; "falha: remoto
@@ -23442,6 +23442,60 @@ sem dizer qual.
   motivo vem em texto visível")
 - **Origem:** AT-491 (opção a: o gesto humano é desenho, o defeito era a tela
   não avisar)
+
+### RN-832 — O dev agent sabe que `report_done` faz commit, push e PR, e que teste novo entra no script `test` {#rn-832}
+
+- **Regra:** o dev agent não tem nem precisa de `git_commit`, `git_push` ou
+  `pr_open`: commit, push e PR acontecem quando ele chama `report_done`. A
+  descrição de `report_done`, a de `report_blocked` ("falta ferramenta de git"
+  não é motivo de bloqueio), o kickoff do dev agent e a mensagem de ambiente
+  ([RN-706](#rn-706)) dizem isso — a de ambiente mandava, até aqui, usar as
+  ações tipadas de git, que o dev não tem. O kickoff e o ambiente dizem também
+  que, se o script `test` do `package.json` lista arquivos um a um, todo
+  arquivo de teste novo entra nele. Só texto: nenhuma regra nova de código, e
+  o Jev segue sem piso para dev agents ([RN-758](#rn-758)).
+- **Onde:** `apps/engine/lib/engine/dev/tools/report_done.ex:16` (`spec`),
+  `apps/engine/lib/engine/dev/tools/report_blocked.ex:12` (`spec`),
+  `apps/engine/lib/engine/dev/dev_agent_server.ex:591` (`initial_message`),
+  `apps/engine/lib/engine/harness/ambiente_do_agente.ex:102` (`montar`)
+- **Teste:** `apps/engine/test/engine/dev/report_done_instrucao_test.exs`
+  ("caminho feliz: report_done, kickoff e ambiente carregam as duas
+  instruções"; falha: "o ambiente não manda mais usar as ações tipadas de git")
+- **Origem:** AT-499 (TP-01, 11ª: tarefa bloqueada com a suíte verde por
+  "git_commit não existe"; quatro voltas de QA por teste fora do script `test`)
+### RN-825 — O chat mostra as PRs prontas para merge e propõe o merge ali {#rn-825}
+
+- **Regra:** acima do fio da sessão, ao lado das pendências de outras sessões
+  ([RN-626](#rn-626)), a fila "PRs prontas para merge" lista as PRs ABERTAS do
+  projeto cuja tarefa teve os gates aprovados (`gateStatus: awaiting_user`) ou
+  que não têm tarefa (ADR, infra), e que não têm `git_merge` pendente de OUTRA
+  sessão (essa já está em "Merges de PR"). "Mergear" PROPÕE o merge nesta
+  sessão, pelo mesmo endpoint da aba PRs, e o cartão de aprovação aparece na
+  linha da PR com a ação devolvida pela api ([RN-822](#rn-822)); o merge segue
+  manual ([RN-418](#rn-418)). Cada fila tem título e contagem próprios, nunca
+  somados ([RN-467](#rn-467)), e as leituras são as que a aba PRs e o backlog
+  já fazem (mesmas `queryKey`s, backlog a 15 s), sem poll novo apertado
+  ([RN-579](#rn-579)).
+- **Onde:** `apps/web/src/lib/prontas-e-bloqueadas.ts:30` (`prsProntasParaMerge`),
+  `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:92` (`prontas`)
+- **Teste:** `apps/web/src/components/PendenciasDeOutrasSessoes.test.tsx`
+  ("a PR com os gates aprovados aparece, a com gate pendente não, e Mergear
+  mostra o cartão ali")
+- **Origem:** AT-497 (TP-01 conduzido pelo chat do Criativo)
+
+### RN-826 — O chat lista as tarefas bloqueadas e desbloqueia ali {#rn-826}
+
+- **Regra:** na mesma área, a fila "Tarefas bloqueadas" lista as tarefas
+  `blocked` do backlog com título e motivo (`blockedReason`, ou "sem motivo
+  registrado"), e "Desbloquear" chama o mesmo `unblock` da Visão geral
+  ([RN-794](#rn-794)) com a sessão aberta. O retorno é dito na linha da
+  tarefa: sucesso em texto, e a recusa com a frase da api. Papel abaixo de
+  `developer` vê a fila com o botão inerte e o motivo em texto.
+- **Onde:** `apps/web/src/lib/prontas-e-bloqueadas.ts:53` (`tarefasBloqueadas`),
+  `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:149` (`desbloquear`)
+- **Teste:** `apps/web/src/components/PendenciasDeOutrasSessoes.test.tsx`
+  ("CASO DE FALHA: desbloquear com erro diz o erro da api na linha da tarefa")
+- **Origem:** AT-497
 
 ### RN-829 — O avatar de quem fala no fio é o do agente, no streaming e depois dele {#rn-829}
 
