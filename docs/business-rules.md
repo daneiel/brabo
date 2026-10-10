@@ -22343,7 +22343,7 @@ sem dizer qual.
   `itens`, e não impede `approved`. A régua é de PROMPT, não de código: o
   `emit_qa_verdict` continua exigindo só a suite verde para aprovar.
 - **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:18` (`texto`),
-  `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:81`
+  `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:98`
   (`tarefasIrmas`) e `apps/engine/lib/engine/gates/qa_automacao_agent.ex:170`
   (`com_o_recorte`)
 - **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs` e
@@ -22744,3 +22744,25 @@ sem dizer qual.
 - **Origem:** AT-464 item 2 (TP-01 de 09/10: `git log feature/task-9d6dcd53`
   com "Pendente: commit… as ações git_commit, git_push e pr_open não estavam
   disponíveis neste passo")
+### RN-785 — Requisito que depende de outra história ainda não feita é observação no gate de QA {#rn-785}
+
+- **Regra:** além das tarefas irmãs ([RN-765](#rn-765)), o recorte que a
+  QA-estratégia e a QA-automação recebem traz as tarefas NÃO concluídas das
+  OUTRAS histórias do mesmo módulo, com o título da história
+  (`moduleOpenTasks` em `GET .../dev-context`). O módulo é o da tarefa, senão
+  o pedido, senão os da história; história arquivada fica fora. Leitura
+  contida (ADR 0060): no máximo 20, com o total real em
+  `moduleOpenTasksTotal` e o corte dito no recorte. Requisito da entrega que
+  depende do que outra história ainda vai entregar (uma rota, uma tela) vai ao
+  `resumo` como observação e não reprova. A régua é de PROMPT, como na RN-765.
+- **Onde:** `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:113`
+  (`tarefasAbertasDoModulo`), `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:20`
+  (`texto`)
+- **Teste:** `apps/api/test/application/use-cases/execution/get-dev-task-context.use-case.spec.ts`
+  (só a tarefa aberta da outra história do mesmo módulo; arquivada fora; teto
+  com o total real) e `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs`
+  (as tarefas abertas e o corte no texto). O golden-set do QA não ganhou caso
+  (o veredito exige chamada paga) — declarado.
+- **Origem:** AT-461 (TP-01 de 09/10, sessão `80e3ce09`: a tarefa "middleware
+  JWT" foi reprovada porque "não há rotas de criar, listar, apagar links nem de
+  painel no diff", rotas de outras histórias ainda não feitas)
