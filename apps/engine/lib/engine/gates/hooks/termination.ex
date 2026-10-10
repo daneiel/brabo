@@ -24,10 +24,26 @@ defmodule Engine.Gates.Hooks.Termination do
       %{
         veredito: Map.get(args, "veredito"),
         resumo: Map.get(args, "resumo", ""),
-        itens: Map.get(args, "itens", []),
-        coverage_matrix: Map.get(args, "coverageMatrix", [])
+        itens: lista(Map.get(args, "itens")),
+        coverage_matrix: lista(Map.get(args, "coverageMatrix"))
       }}}
   end
 
   def call(ctx), do: {:cont, ctx}
+
+  # RN-787 (AT-464): o modelo manda `itens`/`coverageMatrix` ora como lista,
+  # ora como STRING JSON; o hook lê o argumento cru, e o `qa_verdict` gravava o
+  # tipo que chegou. Normaliza para lista (o molde da RN-719); string que não é
+  # lista JSON vira lista vazia, nunca o texto cru no artefato.
+  @doc false
+  def lista(valor) when is_list(valor), do: valor
+
+  def lista(valor) when is_binary(valor) do
+    case Jason.decode(valor) do
+      {:ok, l} when is_list(l) -> l
+      _ -> []
+    end
+  end
+
+  def lista(_), do: []
 end

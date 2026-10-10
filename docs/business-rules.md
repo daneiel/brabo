@@ -19028,7 +19028,7 @@ O valor mora em DOIS lugares, de propósito, um por linguagem, e mudam juntos:
   `apps/engine/lib/engine/dev/worktree_manager.ex:36` (`create`), `:138`
   (`add_worktree`), `:201` (`garantir_base`);
   `apps/engine/lib/engine/dev/agent_io.ex:385` (`propose_pr`);
-  `apps/engine/lib/engine/gates/diff.ex:21` (`compute`);
+  `apps/engine/lib/engine/gates/diff.ex:29` (`compute`);
   `apps/engine/lib/engine/harness/project_context.ex:29` (`repo_line`);
   `apps/api/src/domain/actions/protected-branches.ts:26` (`BRANCH_DE_TRABALHO`);
   `apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts:171`
@@ -22790,3 +22790,27 @@ sem dizer qual.
 - **Origem:** AT-462 (TP-01 de 09/10, sessão `80e3ce09`: a história pedia
   `GET /painel`, o contrato declarou `GET /panel`, o dev seguiu o contrato e o
   QA reprovou pela história)
+
+### RN-787 — O gate conta o diff da PR contra a `dev` da origem, e o parecer de QA grava lista {#rn-787}
+
+- **Regra:** (1) o diff que o QA e o SecOps julgam (`dev...HEAD`,
+  [RN-664](#rn-664)) usa a `dev` MAIS NOVA que o working tree enxerga: com
+  origem local (caminho no disco) o gate faz antes `git fetch origin dev`,
+  melhor esforço, e entre `origin/dev` e a `dev` local vale a que contém a
+  outra. A `dev` local do clone não anda quando a PR é mergeada na origem, e o
+  parecer do SecOps contava o acumulado das tarefas já mergeadas. Com origem
+  remota não há fetch no gate (a credencial é do `Workspace`) — declarado. O
+  semgrep e o gitleaks seguem varrendo o worktree inteiro, não só o diff:
+  estreitar o que o scanner vê muda o que o gate reprova, e isso fica para o
+  dono. (2) `itens` e `coverageMatrix` do parecer de QA chegam ao
+  `artifact.qa_verdict` sempre como LISTA: string JSON de lista é decodificada
+  (o molde da [RN-719](#rn-719)), e string que não é lista vira `[]`.
+- **Onde:** `apps/engine/lib/engine/gates/diff.ex:44` (`base_mais_nova`),
+  `apps/engine/lib/engine/gates/hooks/termination.ex:41` (`lista`)
+- **Teste:** `apps/engine/test/engine/gates/diff_test.exs` (a tarefa B nascida
+  da A, com a A mergeada na origem: o diff é só B) e
+  `apps/engine/test/engine/gates/hooks/termination_test.exs` (string JSON vira
+  lista; lista intacta; string inválida vira `[]`)
+- **Origem:** AT-464 itens 1 e 3 (TP-01 de 09/10, sessão `80e3ce09`: "17
+  arquivo(s) alterado(s) nesta PR" numa PR de 3 arquivos contra a `dev`, e
+  `coverageMatrix`/`itens` gravados como `"[]"` nos últimos pareceres)
