@@ -23,6 +23,7 @@ defmodule Engine.Gates.RecorteDaTarefa do
     regras = Map.get(dev_context, :business_rules_units, [])
     abertas = Map.get(dev_context, :module_open_tasks, [])
     total = Map.get(dev_context, :module_open_tasks_total, length(abertas))
+    contrato = Map.get(dev_context, :module_contract)
 
     """
 
@@ -44,8 +45,31 @@ defmodule Engine.Gates.RecorteDaTarefa do
     `resumo` como observação e não o ponha em `itens`. O mesmo vale para o
     que depende de entrega de OUTRA história ainda não feita (uma rota, uma
     tela, um dado que ela cria): é observação, nunca reprovação.
+    #{secao_do_contrato(contrato)}
     """
   end
+
+  # AT-462 (RN-786): o contrato do Arquiteto é a fonte da INTERFACE (nome de
+  # rota, assinatura). O dev o segue; divergência com a história é do
+  # Arquiteto/usuário resolverem, não do dev.
+  defp secao_do_contrato(%{"expoe" => [_ | _] = itens} = c) do
+    """
+
+    Contrato do módulo #{Map.get(c, "modulo", "")} (declarado pelo Arquiteto — a fonte da INTERFACE):
+    #{lista(Enum.map(itens, &item_do_contrato/1))}
+
+    Quando a história e o contrato divergem num nome de interface (rota,
+    função, evento), a entrega que segue o CONTRATO não é reprovada por isso:
+    nomeie a DIVERGÊNCIA no `resumo` (história diz X, contrato diz Y) como
+    observação para o usuário e o Arquiteto, fora de `itens`.
+    """
+  end
+
+  defp secao_do_contrato(_), do: ""
+
+  defp item_do_contrato(i),
+    do:
+      "#{Map.get(i, "tipo", "")}: #{Map.get(i, "assinatura", "")} — #{Map.get(i, "descricao", "")}"
 
   defp aberta(t),
     do:

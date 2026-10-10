@@ -43,6 +43,8 @@ defmodule Engine.Dev.ContextBuilder do
       # AT-461 (RN-785): o que OUTRAS histórias do módulo ainda vão entregar.
       module_open_tasks: Map.get(ctx, "moduleOpenTasks", []),
       module_open_tasks_total: Map.get(ctx, "moduleOpenTasksTotal", 0),
+      # AT-462 (RN-786): o contrato do módulo, fonte da interface no gate.
+      module_contract: Map.get(ctx, "moduleContract"),
       business_rules_units: business_rules_units(rules),
       task_state_units: task_state_units(task, story, adrs)
     }

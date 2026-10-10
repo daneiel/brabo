@@ -3150,7 +3150,7 @@ recorte do card.
 
 - **Onde:** `apps/engine/lib/engine/dev/teto_da_tarefa.ex:32` (`efetivo`);
   `apps/engine/lib/engine/dev/dev_agent_server.ex:611` (`diagnostico_de_orcamento`);
-  `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:85`
+  `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:90`
   (`ehPrimeiraTarefaDoModulo`)
 - **Teste:** `apps/engine/test/engine/dev/dev_agent_server_test.exs` (describe
   "RN-774": a primeira com US$ 0,53 não bloqueia, a segunda do mesmo módulo

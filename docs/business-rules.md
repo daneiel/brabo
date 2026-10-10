@@ -22343,7 +22343,7 @@ sem dizer qual.
   `itens`, e não impede `approved`. A régua é de PROMPT, não de código: o
   `emit_qa_verdict` continua exigindo só a suite verde para aprovar.
 - **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:18` (`texto`),
-  `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:98`
+  `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:103`
   (`tarefasIrmas`) e `apps/engine/lib/engine/gates/qa_automacao_agent.ex:170`
   (`com_o_recorte`)
 - **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs` e
@@ -22755,7 +22755,7 @@ sem dizer qual.
   `moduleOpenTasksTotal` e o corte dito no recorte. Requisito da entrega que
   depende do que outra história ainda vai entregar (uma rota, uma tela) vai ao
   `resumo` como observação e não reprova. A régua é de PROMPT, como na RN-765.
-- **Onde:** `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:113`
+- **Onde:** `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:118`
   (`tarefasAbertasDoModulo`), `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:20`
   (`texto`)
 - **Teste:** `apps/api/test/application/use-cases/execution/get-dev-task-context.use-case.spec.ts`
@@ -22766,3 +22766,27 @@ sem dizer qual.
 - **Origem:** AT-461 (TP-01 de 09/10, sessão `80e3ce09`: a tarefa "middleware
   JWT" foi reprovada porque "não há rotas de criar, listar, apagar links nem de
   painel no diff", rotas de outras histórias ainda não feitas)
+
+### RN-786 — O gate de QA lê o contrato do módulo, e divergência com a história é observação {#rn-786}
+
+- **Regra:** o recorte que a QA-estratégia e a QA-automação recebem traz o
+  contrato VIGENTE do módulo da tarefa (`artifact.module_contracts`,
+  [RN-684](#rn-684)), em `moduleContract` de `GET .../dev-context`, como a
+  fonte da INTERFACE. O módulo é o da tarefa, senão o pedido, senão o único da
+  história; história com mais de um módulo e tarefa sem módulo é ambígua e vai
+  sem contrato. Quando a história e o contrato divergem num nome de interface
+  (rota, função, evento), a entrega que segue o contrato não é reprovada por
+  isso: o parecer nomeia a DIVERGÊNCIA no `resumo` (história diz X, contrato
+  diz Y), para o usuário e o Arquiteto. Régua de PROMPT, como a
+  [RN-765](#rn-765). O Arquiteto NÃO passou a conferir o contrato contra as
+  rotas citadas nas histórias — declarado.
+- **Onde:** `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:163`
+  (`moduloDoContrato`), `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:55`
+  (`secao_do_contrato`)
+- **Teste:** `apps/api/test/application/use-cases/execution/get-dev-task-context.use-case.spec.ts`
+  (o contrato do módulo da história; sem contrato ou módulo ambíguo, `null`) e
+  `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs` (a seção do
+  contrato com a régua da divergência; sem contrato, sem seção)
+- **Origem:** AT-462 (TP-01 de 09/10, sessão `80e3ce09`: a história pedia
+  `GET /painel`, o contrato declarou `GET /panel`, o dev seguiu o contrato e o
+  QA reprovou pela história)

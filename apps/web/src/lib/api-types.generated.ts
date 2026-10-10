@@ -6319,6 +6319,8 @@ export interface components {
             moduleOpenTasks: components["schemas"]["DevContextModuleOpenTaskResponseDto"][];
             /** @description Real number of open tasks of the module in other stories — larger than `moduleOpenTasks.length` when the list was cut. */
             moduleOpenTasksTotal: number;
+            /** @description The current contract of the task module (`artifact.module_contracts`) — the source of the INTERFACE for the QA gate. When the story and the contract diverge, the verdict names the divergence instead of rejecting the dev that followed the contract (RN-786). `null` without a resolvable module or contract. */
+            moduleContract: components["schemas"]["ContratoDeModuloResponseDto"] | null;
             /** @description Whether this is the FIRST task of the module: the oldest `backlog.task_claimed` of the project for `module` is this task. The engine gives it twice the per-task budget (RN-774). `false` without `module`. */
             primeiraDoModulo: boolean;
         };
