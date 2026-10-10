@@ -21,7 +21,7 @@ const sidebars: SidebarsConfig = {
       type: 'category',
       label: '🚀 Comece aqui',
       collapsed: false,
-      items: ['intro', 'getting-started'],
+      items: ['intro', 'getting-started', 'tutorials/from-zero-to-deliverable'],
     },
     {
       type: 'category',
