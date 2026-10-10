@@ -6,6 +6,8 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- **web**: "Decisões registradas" no contexto da sessão diz o recorte ("N na janela · há mais antes") quando há eventos antes da janela; a linha do tempo do time na Visão geral lê a sessão de execução e diz isso; na tela de Sessão a sidebar marca "Criativo" para sessão criativa, onde ela está listada (RN-788, RN-789, AT-463).
+- **engine**: o worktree da tarefa (re)pegada faz `git fetch` e parte da `dev` ATUAL do remoto; partindo da branch anterior não mergeada ou do próprio trabalho preservado, integra a `dev` antes do primeiro passo, e conflito é bloqueio nomeado com os arquivos (RN-779, AT-458).
 - **engine**: resposta sem texto nem chamada cortada pelo teto de saída (só raciocínio) é retentada uma vez; repetida, a tarefa bloqueia com "resposta só de raciocínio, cortada pelo teto", origem `modelo`, em vez de "parou sem concluir" (RN-780, AT-459).
 - **docs**: página nova "From zero to a deliverable" (`docs/tutorials/`), o fluxo de um projeto real do zero ao entregável com as gravações do teste ao vivo de 09/10.
 - **engine/api**: a primeira tarefa de cada módulo (a do `backlog.task_claimed` mais antigo do módulo no projeto) tem o dobro do teto por tarefa — US$ 1,00 com o padrão de US$ 0,50 —, e o bloqueio por orçamento diz o teto que valeu para aquela tarefa (RN-774, AT-433).
@@ -71,6 +73,8 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - **ações**: com o modo automático do agente ligado (a curinga em `auto_approve`), `git_push` e `pr_open` — tipados ou pelo comando de terminal — passam a ser auto-aprovados, com o motivo "modo automático (RN-713)" no evento; regra específica, "Sempre permitir" e `permissions.json` continuam sem liberar, e merge em branch protegida, deploy e `sudo`/`doas` seguem com o usuário. As telas do modo automático dizem isso (AT-385, RN-713, ADR 0204).
 ### Correções
 
+- **llm**: o raciocínio deixa de ser ligado só porque o modelo aceita o parâmetro — o campo `reasoning.max_tokens` sai do corpo (ligava raciocínio no Haiku 4.5 a 2,8× o custo e era ignorado pelo Haiku 5.5), a folga no `max_tokens` fica, e os dev agents de execução passam a mandar `reasoning: { enabled: false }` no OpenRouter, dito na ajuda da faceta "thinking" do catálogo (AT-467, RN-782, RN-783).
+- **agentes**: o recorte de ferramentas do Jev deixa de tirar do Arquiteto as leituras de estado `listar_adrs_propostas` e `listar_backlog`, que passam a fazer parte do piso do menu dele (AT-460, RN-784).
 - **agentes**: a resposta do agente conversacional deixa de aparecer com escape unicode literal ("colis\u00e3o" vira "colisão"), pela mesma decodificação dos argumentos de ferramenta; texto sem escape e código com `\n` ficam intactos, e o streaming em curso não é decodificado (AT-417, RN-732).
 - **agentes**: o fecho do turno do Criativo, do PO e do Arquiteto ganha a linha "Gravado neste turno: …" com o que as ferramentas de escrita gravaram de verdade, contado pelo servidor e no idioma do turno (pt-BR ou en) — o "Registrei as 8 regras" do modelo deixa de ficar sozinho quando o painel tem 6 (AT-414, RN-731).
 - **dev agent**: crédito do provedor do modelo esgotado (402) deixa de virar "parou sem concluir" com origem `codigo` e de acionar a parada automática: a tarefa é bloqueada com origem `infra` e motivo nomeado, o agente pausa sem reivindicar as seguintes (evento `dev.credit_exhausted`), e o painel do time diz "recarregue e rearme para retomar" (AT-407, RN-726).

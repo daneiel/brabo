@@ -380,8 +380,17 @@ export const ABA_PADRAO: ChaveDeAba = 'overview';
  * (AT-442): na tela de Sessão (`/projects/<id>/sessions/<sid>`) é o Chat —
  * a sidebar marcava "Visão geral", o padrão. `undefined` fora dessas rotas.
  */
-export function abaDaRota(pathname: string, projectId: string): ChaveDeAba | undefined {
-  return pathname.startsWith(`/projects/${projectId}/sessions/`) ? 'chat' : undefined;
+export function abaDaRota(
+  pathname: string,
+  projectId: string,
+  // AT-463: o tipo da sessão aberta decide — criativa é "Criativo", onde a
+  // ideação está listada; sem ele (sessão ainda carregando), "Chat".
+  abaDaSessao?: { projectId: string; tab: string } | null,
+): ChaveDeAba | undefined {
+  if (!pathname.startsWith(`/projects/${projectId}/sessions/`)) return undefined;
+  return abaDaSessao?.projectId === projectId && ehChaveDeAba(abaDaSessao.tab)
+    ? abaDaSessao.tab
+    : 'chat';
 }
 
 export const CHAVES_DE_ABA: readonly ChaveDeAba[] = ABAS_DO_PROJETO.map(
