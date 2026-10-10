@@ -13831,9 +13831,9 @@ lógico, monótono) à janela e ao parâmetro, que também passa a olhar
 evento pode ter saído da janela e a aba volta a decidir só por ela — é o custo
 da guarda, o mesmo dos outros dois fatos.
 
-- **Código:** `apps/web/src/lib/agent-status.ts:320` (`AgregadoDaSessao`),
+- **Código:** `apps/web/src/lib/agent-status.ts:324` (`AgregadoDaSessao`),
 
-- **Código:** `apps/web/src/lib/agent-status.ts:320` (`AgregadoDaSessao`),
+- **Código:** `apps/web/src/lib/agent-status.ts:324` (`AgregadoDaSessao`),
   `:296` (o parâmetro opcional de `rosterFactsFromEvents`), `:304` (a união das
   delegações), `:312` (o OU do gate), `:410` (o parâmetro repassado por
   `deriveAgentRoster`); `apps/web/src/routes/ProjectOverviewTab.tsx:97` e
@@ -14065,7 +14065,7 @@ delas estava coberta pela comparação com o vocabulário do engine.
   (`ChaveDeRotulo`, AT-134), `:135` (`tradutorDaArvore`);
   `apps/web/src/locales/{en,pt-BR}/executors.json` (`timelineTree.label`,
   `timelineTree.now`, `timelineTree.detail`);
-  `apps/web/src/lib/agent-status.ts:127` (`statusDoEventoDev`);
+  `apps/web/src/lib/agent-status.ts:134` (`statusDoEventoDev`);
   `apps/web/src/components/AgentTimelineTree.module.css` (`.espera`)
 - **Teste:** `scripts/ci/vocabulario-de-eventos-dev.spec.ts:300` (o bloco da
   árvore: `:308` todo tipo do engine decidido, `:324` nada traduzido que o
@@ -21577,9 +21577,9 @@ sem dizer qual.
   ele que decide; o reconhecimento pelo texto ficou só como rede.
 - **Onde:** `apps/engine/lib/engine/agents/falha_de_turno.ex:110`
   (`credito_esgotado?`),
-  `apps/engine/lib/engine/dev/dev_agent_server.ex:866` (`handle_outcome`),
+  `apps/engine/lib/engine/dev/dev_agent_server.ex:887` (`handle_outcome`),
   `apps/engine/lib/engine/dev/agent_io.ex:259` (`pausar_por_credito`),
-  `apps/web/src/lib/agent-status.ts:194` (`breakerReasonFor`),
+  `apps/web/src/lib/agent-status.ts:198` (`breakerReasonFor`),
   `apps/api/src/application/use-cases/sessions/get-session-pending-work.use-case.ts`
 - **Teste:** `apps/engine/test/engine/dev/dev_agent_server_test.exs`
   ("402 do provider: origem infra, pausa sem idle_tripped e sem queimar a
@@ -21612,7 +21612,7 @@ sem dizer qual.
   (`streamErrorCode`),
   `apps/engine/lib/engine/agents/falha_de_turno.ex:106` (`credito_esgotado?`),
   `:71` (`origem`), `apps/engine/lib/engine/harness/tool_loop.ex:148`
-  (`last_error_code`), `apps/engine/lib/engine/dev/dev_agent_server.ex:866`
+  (`last_error_code`), `apps/engine/lib/engine/dev/dev_agent_server.ex:887`
   (`handle_outcome`)
 - **Teste:** `apps/api/test/contract/llm-provider.contract.ts` (`erro_402 vira
   chunk de erro com code "insufficient_credit"`; falha: `erro_500` segue
@@ -21648,7 +21648,7 @@ sem dizer qual.
   `apps/web/src/routes/Shell.tsx:545` (`idDoProjetoAtual`),
   `apps/web/src/routes/NewProjectWizard.tsx:155` (`NewProjectWizard`),
   `apps/web/src/routes/ProjectPrsTab.tsx:117` (`invalidateMergeActions`),
-  `apps/web/src/lib/agent-status.ts:218` (`gateStatus`)
+  `apps/web/src/lib/agent-status.ts:222` (`gateStatus`)
 - **Teste:** `apps/api/test/application/use-cases/actions/execute-infra-pr.use-case.spec.ts`
   ("a branch nasce de dev, a PR mira dev e leva infra[bot]"; falha:
   "repositório sem dev falha nomeado, sem cair na default"),
@@ -22413,7 +22413,7 @@ sem dizer qual.
   (medido no Chromium: 2 236px num balão de 708px) e a última coluna sumia.
 - **Onde:** `apps/api/src/application/use-cases/actions/execute-adr-pr.use-case.ts:96`
   (`openPullRequest`); `apps/engine/lib/engine/infra/infra_lead_server.ex:1482`
-  (`gravar_texto_do_turno`); `apps/engine/lib/engine/dev/dev_agent_server.ex:1017`
+  (`gravar_texto_do_turno`); `apps/engine/lib/engine/dev/dev_agent_server.ex:1050`
   (`propose_pr`); `apps/web/src/lib/session-destinatario.ts:192`
   (`agentesEmConversa`) e `apps/web/src/lib/session-kind.ts:69`
   (`tipoDaSessao`); `apps/web/src/routes/NewProjectWizard.tsx:1127`
@@ -22696,7 +22696,7 @@ sem dizer qual.
   Declarado: no modo `runner` nada disso roda (o git é da máquina do usuário).
 - **Onde:** `apps/engine/lib/engine/dev/worktree_manager.ex:151`
   (`atualizar_remoto`), `:195` (`add_worktree`), `:227`
-  (`ponta_do_trabalho`), `:246` (`retomada`), `:256` (`integrar_trabalho`)
+  (`ponta_do_trabalho`), `:225` (`retomada`), `:278` (`integrar_trabalho`)
 - **Teste:** `apps/engine/test/engine/dev/worktree_manager_test.exs`
   (`integração da dev atual (RN-779)`: retomada com branch antiga parte da dev
   nova do remoto; trabalho preservado integra a dev nova; anterior em
@@ -22718,8 +22718,8 @@ sem dizer qual.
   `reasoningTokens` (ficam só em `token_usage`), então a resposta vazia que
   bate no teto sem `finish_reason: length` não é reconhecida.
 - **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:219`
-  (`parada_sem_chamada`), `apps/engine/lib/engine/dev/dev_agent_server.ex:977`
-  (`motivo_da_parada`), `:980` (`stop_diagnosis`)
+  (`parada_sem_chamada`), `apps/engine/lib/engine/dev/dev_agent_server.ex:1010`
+  (`motivo_da_parada`), `:1013` (`stop_diagnosis`)
 - **Teste:** `apps/engine/test/engine/harness/tool_loop_test.exs` (`corte só
   de raciocínio`: retentada uma vez e segue; repetido para com
   `corte_pelo_teto`), `apps/engine/test/engine/dev/dev_agent_server_test.exs`
@@ -22983,3 +22983,22 @@ sem dizer qual.
 - **Teste:** `apps/engine/test/engine/actions/gitleaks_relatorio_test.exs`,
   `apps/engine/test/engine/harness/ambiente_do_agente_test.exs`
 - **Origem:** AT-470
+
+### RN-797 — A task cuja branch não tem diff contra a `dev` fecha como "já na dev" {#rn-797}
+
+- **Regra:** no `report_done`, antes de propor commit, push e PR, o dev agent
+  pergunta se a branch do worktree traz algo que a `dev` não tem: árvore limpa
+  e `git diff --quiet <ponta da dev>...HEAD` sem diferença. É o caso da task
+  reintegrada ([RN-779](#rn-779)) cujo código já entrou por outra PR. Sem
+  diff, a task fecha como `done` com o evento `dev.task_already_in_dev`
+  (agente, task, branch, motivo) — sem commit, sem PR, sem gates e sem
+  clique. Qualquer dúvida (pasta que o engine não alcança, como no modo
+  `runner`; git que falha; ref da `dev` ausente) é "tem diff": a task segue
+  para os gates, nunca fecha sozinha. Mede DIFF e não ancestralidade, então
+  cobre também o merge por squash que a [RN-760](#rn-760) declara não ver.
+  Declarado: a PR antiga da branch, se existir, não é fechada no provider.
+- **Onde:** `apps/engine/lib/engine/dev/worktree_manager.ex:246`
+  (`sem_diff_contra_a_dev?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:942`
+  (`ja_na_dev`)
+- **Teste:** `apps/engine/test/engine/dev/tarefa_ja_na_dev_test.exs`
+- **Origem:** AT-474

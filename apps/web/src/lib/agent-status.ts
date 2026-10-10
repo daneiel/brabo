@@ -110,14 +110,18 @@ const DEV_STATUS_EVENTS: Record<string, AgentStatus> = {
 /**
  * Tipo `dev.*` que o engine emite e que o painel decidiu NÃO considerar, com
  * o motivo — a válvula que impede o teste cruzado de forçar um mapeamento
- * inventado. Vazio hoje, e essa é a resposta certa: os nove tipos que o
+ * inventado. Hoje só o desfecho de task da RN-797; os demais tipos que o
  * engine emite têm todos um estado honesto no painel.
  *
  * Declarar aqui é uma DECISÃO registrada, não um esquecimento: o tipo fica
  * invisível para `devStatus` (o painel mostra o evento conhecido anterior), e
  * quem ler saberá que foi de propósito.
  */
-export const DEV_STATUS_EVENTS_FORA: Record<string, string> = {};
+export const DEV_STATUS_EVENTS_FORA: Record<string, string> = {
+  // RN-797: desfecho da TASK, não estado do agente — o `dev.idle`/`dev.started`
+  // que vem logo depois é que diz o que ele está fazendo.
+  'dev.task_already_in_dev': 'desfecho da task; o estado do agente vem do evento seguinte',
+};
 
 /**
  * O estado que o painel dá a um tipo `dev.*`, para quem precisa da MESMA

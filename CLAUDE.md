@@ -318,6 +318,7 @@ estado lido do repositório e não da conversa.
 | A estimativa do plano do Dev Lead soma o dobro da primeira tarefa de cada módulo (AT-473) | RN-802 |
 | A linha do tempo do time na Visão geral filtra por família, não pela roster da sessão mais recente (AT-471) | RN-800 |
 | O nome da nova sessão não convida o gerenciador de senhas (AT-472) | RN-801 |
+| A task sem diff contra a `dev` fecha como "já na dev", sem PR nem gates (AT-474) | RN-797 |
 | O SecOps conta o diff da PR contra a `dev` da origem, e o `qa_verdict` grava lista (AT-464) | RN-787 |
 | O dev agent órfão fecha por evento novo no boot, e a sessão deixa de ser reagendada para sempre (AT-465) | RN-778 |
 | O Arquiteto recebe, ao declarar o contrato, as rotas das histórias que ele não declara (AT-468) | RN-792 |
