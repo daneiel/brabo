@@ -22624,3 +22624,25 @@ sem dizer qual.
 - **Teste:** `apps/web/src/lib/session-rolagem-fim.test.ts` (criativa marca
   "Criativo"; aba de outro projeto ou inválida não vale)
 - **Origem:** AT-463 (TP-01 de 09/10)
+
+### RN-778 — O dev agent órfão fecha por evento novo no boot {#rn-778}
+
+- **Regra:** no boot, para cada sessão não terminal, o dev agent cujo último
+  `dev.*` na sessão é de espera (`dev.working`, `dev.blocked`, `dev.idle_tripped`
+  e os demais que o `GetSessionPendingWorkUseCase` conta) e que NÃO tem linha
+  em `dev_agent_states` NESTA sessão ganha `dev.error` com origem `infra`
+  (`reason: dev_agent_sem_processo`) seguido de `dev.idle`, que o tira da régua
+  do trabalho pendente ([RN-064](business-rules/custo.md#rn-064)). É o molde
+  da [RN-586](#rn-586) para o vocabulário `dev.*`: nunca reexecuta, nunca
+  reescreve evento, e a linha durável é a prova de dono — com ela o
+  `DevRehydrator` religa o agente, e fechá-lo seria matar um agente saudável.
+  Não toca a tarefa: tarefa bloqueada ou com PR esperando o merge continua
+  segurando a sessão de execução vigente pela RN-776 (AT-457), que tem dono
+  humano.
+- **Onde:** `apps/engine/lib/engine/dev/dev_orfao.ex:49` (`varrer`),
+  `apps/engine/lib/engine/sessions/rehydrator.ex:81` (`varrer`)
+- **Teste:** `apps/engine/test/engine/dev/dev_orfao_test.exs` (o órfão fecha
+  com `dev.error` infra + `dev.idle`; o que tem linha durável e o que já está
+  `idle` não; leitura que falha não fecha nada)
+- **Origem:** AT-465 (TP-01 de 09/10: a sessão `63a4e1aa` reagendada pelo
+  heartbeat a cada 30 s por um `dev.working` sem processo)
