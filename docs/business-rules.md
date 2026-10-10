@@ -19027,7 +19027,7 @@ O valor mora em DOIS lugares, de propósito, um por linguagem, e mudam juntos:
   `:183` (`garantir_base`), `:308` (`remoto_vazio?`);
   `apps/engine/lib/engine/dev/worktree_manager.ex:36` (`create`), `:138`
   (`add_worktree`), `:176` (`garantir_base`);
-  `apps/engine/lib/engine/dev/agent_io.ex:352` (`propose_pr`);
+  `apps/engine/lib/engine/dev/agent_io.ex:385` (`propose_pr`);
   `apps/engine/lib/engine/gates/diff.ex:21` (`compute`);
   `apps/engine/lib/engine/harness/project_context.ex:29` (`repo_line`);
   `apps/api/src/domain/actions/protected-branches.ts:26` (`BRANCH_DE_TRABALHO`);
@@ -22028,7 +22028,7 @@ sem dizer qual.
   `runner` o worktree está na máquina do usuário e o engine não preserva nada.
 - **Onde:** `apps/engine/lib/engine/dev/worktree_manager.ex:72`
   (`preservar_em`), `:55` (`create_from`),
-  `apps/engine/lib/engine/dev/agent_io.ex:416` (`preservar_trabalho`),
+  `apps/engine/lib/engine/dev/agent_io.ex:449` (`preservar_trabalho`),
   `apps/engine/lib/engine/dev/agent_io.ex:283` (`base_preservada`)
 - **Teste:** `apps/engine/test/engine/dev/worktree_manager_test.exs`
   (`preservar_em/3 e create_from/4`: commit com `dev-api[bot]` e a próxima
@@ -22590,3 +22590,22 @@ sem dizer qual.
   (as duas leituras estão no catálogo do Arquiteto)
 - **Origem:** AT-454 (TP-01 de 09/10: com 17 tarefas no backlog, o Arquiteto
   disse "faltam as tarefas" e "não consigo verificá-las daqui")
+
+### RN-781 — A mensagem de commit do dev não grava pendência que é do sistema {#rn-781}
+
+- **Regra:** o resumo do `report_done` é a mensagem de commit do dev agent, e
+  commit, push e PR são feitos pelo sistema depois dele. Antes de propor o
+  `git_commit`, o engine corta do marcador de pendência ("Pendente",
+  "Pendência", "Pending") ao fim quando o resto fala de commit, push ou PR, e
+  tira o parêntese "(ainda sem commit…)"; pendência que não fala disso fica.
+  A descrição do campo `summary` diz que ele vira a mensagem de commit e que
+  não se narra commit, push nem PR. Resumo que fica vazio cai na mensagem
+  padrão `<agente>: <task>`.
+- **Onde:** `apps/engine/lib/engine/dev/agent_io.ex:356`
+  (`mensagem_de_commit`), `:331` (`propose_commit`),
+  `apps/engine/lib/engine/dev/tools/report_done.ex:27` (`summary`)
+- **Teste:** `apps/engine/test/engine/dev/mensagem_de_commit_test.exs`
+  (corta a narração; tira o parêntese; pendência alheia ao sistema fica)
+- **Origem:** AT-464 item 2 (TP-01 de 09/10: `git log feature/task-9d6dcd53`
+  com "Pendente: commit… as ações git_commit, git_push e pr_open não estavam
+  disponíveis neste passo")

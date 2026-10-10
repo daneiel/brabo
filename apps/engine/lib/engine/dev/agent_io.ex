@@ -329,6 +329,7 @@ defmodule Engine.Dev.AgentIo do
   pelo `Engine.Actions.GitExecutor`).
   """
   def propose_commit(state, message) do
+    message = mensagem_de_commit(message)
     message = if message == "", do: "#{state.agent_id}: #{state.task_id}", else: message
 
     propose(state, "git_commit", %{
@@ -340,6 +341,38 @@ defmodule Engine.Dev.AgentIo do
       coAuthor: "Brabo User <user@brabo.dev>"
     })
   end
+
+  # RN-781 (AT-464): o resumo do `report_done` vira a mensagem de commit, e o
+  # modelo costuma fechá-lo narrando o que o SISTEMA faz depois ("Pendente:
+  # commit… e PR… as ações git_commit, git_push e pr_open não estavam
+  # disponíveis") — pendência falsa gravada no histórico. Corta do marcador de
+  # pendência ao fim quando o resto fala de commit/push/PR, e o parêntese
+  # "(ainda sem commit…)". O resto do resumo fica intacto.
+  @marcador_de_pendencia ~r/\s*(?:PEND[ÊE]NCIAS?|Pend[êe]ncias?|Pendente|Pending)\b.*$/us
+  @fala_do_sistema ~r/commit|\bPR\b|git_push|git_commit|pr_open|push/iu
+  @parentese_sem_commit ~r/\s*\((?:ainda\s+)?(?:sem|n[ãa]o)\s+commit[^)]*\)/iu
+
+  @doc false
+  def mensagem_de_commit(message) when is_binary(message) do
+    message = Regex.replace(@parentese_sem_commit, message, "")
+
+    message =
+      case Regex.run(@marcador_de_pendencia, message, return: :index) do
+        [{inicio, tamanho} | _] ->
+          resto = binary_part(message, inicio, tamanho)
+
+          if Regex.match?(@fala_do_sistema, resto),
+            do: binary_part(message, 0, inicio),
+            else: message
+
+        _ ->
+          message
+      end
+
+    String.trim(message)
+  end
+
+  def mensagem_de_commit(_), do: ""
 
   def propose_push(state) do
     propose(state, "git_push", %{worktree: state.worktree, branch: state.branch})

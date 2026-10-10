@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- **engine**: a mensagem de commit do dev não grava mais a pendência falsa ("Pendente: commit… e PR…") que o modelo narrava no resumo do `report_done`, e a descrição do campo diz que commit, push e PR são do sistema (RN-781, AT-464).
 - **docs**: página nova "From zero to a deliverable" (`docs/tutorials/`), o fluxo de um projeto real do zero ao entregável com as gravações do teste ao vivo de 09/10.
 - **engine/api**: a primeira tarefa de cada módulo (a do `backlog.task_claimed` mais antigo do módulo no projeto) tem o dobro do teto por tarefa — US$ 1,00 com o padrão de US$ 0,50 —, e o bloqueio por orçamento diz o teto que valeu para aquela tarefa (RN-774, AT-433).
 - **engine**: o Arquiteto lê o status atual das ADRs que propôs (`listar_adrs_propostas`: pendente, aprovada, recusada com motivo, executada com a PR) e o backlog com as tarefas por história (`listar_backlog`), e o kickoff e o resultado do `propose_adr` mandam consultá-los antes de afirmar estado (RN-772, RN-773, AT-454).
