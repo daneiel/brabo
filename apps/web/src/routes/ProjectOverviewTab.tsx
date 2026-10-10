@@ -31,6 +31,7 @@ import {
 import {
   deriveAgentRoster,
   groupRosterByArea,
+  isExecutorAgentId,
   isExecutorGroup,
 } from '../lib/agent-status';
 import { contarTarefasPendentes, deriveExecutionProgress, formatMicros } from '../lib/execution';
@@ -255,8 +256,12 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
     ),
   );
   const overviewRoster = roster.filter((r) => overviewRosterIds.has(r.id));
+  // AT-471: o filtro da árvore é por FAMÍLIA (sem dev/QA, RN-121), nunca pela
+  // roster — a roster é da sessão mais recente, e a árvore lê a de execução:
+  // filtrar por ela apagava o Infra Lead (e todo agente que só agiu na
+  // execução) e a árvore dizia "nenhum agente" sobre um time trabalhando.
   const overviewEvents = eventosDaLinhaDoTempo.filter(
-    (e) => e.actor.kind !== 'agent' || overviewRosterIds.has(e.actor.id),
+    (e) => e.actor.kind !== 'agent' || !isExecutorAgentId(e.actor.id),
   );
   const workingCount = overviewRoster.filter((r) => r.status === 'trabalhando').length;
   const waitingCount = overviewRoster.filter((r) => r.status === 'aguardando').length;

@@ -564,6 +564,32 @@ describe('linha do tempo do time lê a sessão de execução (AT-463)', () => {
     expect(listSessionEvents.mock.calls.some((c) => c[1] === 'sess-exec')).toBe(true);
   });
 
+  it('AT-471: agente que só agiu na execução aparece na árvore, sem "nenhum agente"', async () => {
+    // O handoff da Infra foi aceito na sessão de EXECUÇÃO; a mais recente
+    // (ideação) não tem nenhum, então a roster dela não traz o Infra Lead.
+    listHandoffs.mockResolvedValue([]);
+    getActiveExecutionSession.mockResolvedValue({ ...SESSAO, id: 'sess-exec' });
+    listSessionEvents.mockImplementation(async (_p: string, sessionId: string) =>
+      sessionId === 'sess-exec'
+        ? {
+            items: [
+              evento({ id: 'x1', seq: 1, type: 'agent.activated', actor: { kind: 'agent', id: 'infra' }, payload: {} }),
+              evento({ id: 'x2', seq: 2, type: 'agent.activated', actor: { kind: 'agent', id: 'dev-backend' }, payload: {} }),
+            ],
+            nextCursor: null,
+          }
+        : { items: [evento({ id: 'c1', seq: 1, type: 'chat.message', actor: { kind: 'user', id: 'u1' }, payload: { text: 'oi' } })], nextCursor: null },
+    );
+    montar();
+
+    expect(await screen.findByText(/Lendo a sessão de execução/)).toBeInTheDocument();
+    // A árvore ganha o ramo do Infra Lead (o do dev segue na aba Executores).
+    await vi.waitFor(() =>
+      expect(screen.queryByText('Nenhum agente entrou em ação nesta sessão ainda.')).not.toBeInTheDocument(),
+    );
+    expect(listSessionEvents.mock.calls.some((c) => c[1] === 'sess-exec')).toBe(true);
+  });
+
   it('CASO DE FALHA evitado: sem execução, lê a mais recente e não anuncia outra', async () => {
     montar();
 
