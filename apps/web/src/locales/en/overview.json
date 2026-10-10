@@ -107,7 +107,9 @@
     "authorizationNeededMessage_one": "The session already has {{count}} agent, the lead's cap is {{max}}. The request is in Approvals.",
     "authorizationNeededMessage_other": "The session already has {{count}} agents, the lead's cap is {{max}}. The request is in Approvals.",
     "requestDeniedTitle": "Request denied",
-    "requestError": "Could not request"
+    "requestError": "Could not request",
+    "unblocking": "Unblocking…",
+    "unblockNeedsSession": "The session is still loading: unblocking needs it."
   },
   "architectureSummary": {
     "title": "Architecture",
