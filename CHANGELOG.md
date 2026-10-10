@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- **engine**: o achado do gitleaks no parecer do SecOps leva a regra (`RuleID`) e o trecho acusado com o segredo mascarado por `***`; o ambiente do dev diz que segredo e senha de teste são gerados em tempo de execução, nunca literais (RN-796, AT-470).
 - **web**: sem execução vigente e com tarefa pendente, a aba Executores e a Visão geral dizem quantas tarefas ficaram e oferecem "Religar execução" pelo mesmo `execution/activate` (a recusa mostra a frase da api); "Desbloquear" sem execução avisa que a tarefa só roda depois de religar (RN-794, AT-469).
 - **engine**: o parecer do SecOps (e o diff do QA) conta a PR contra a `dev` da origem, buscada antes quando a origem é local, e não mais o acumulado da `dev` local parada; `itens`/`coverageMatrix` do `qa_verdict` são gravados sempre como lista (RN-787, AT-464).
 - **engine**: no boot, o dev agent com `dev.working` (ou outra espera) sem processo nem linha durável fecha com `dev.error` origem infra e `dev.idle`, e a sessão deixa de ser reagendada para sempre pelo heartbeat (RN-778, AT-465).

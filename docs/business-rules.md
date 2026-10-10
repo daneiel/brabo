@@ -22938,3 +22938,21 @@ sem dizer qual.
   execução), `apps/web/src/routes/ProjectOverviewTab.test.tsx` (religar a
   execução encerrada)
 - **Origem:** AT-469
+### RN-796 — O achado do gitleaks diz a regra e o trecho mascarado, e o dev gera segredo de teste em runtime {#rn-796}
+
+- **Regra:** cada item do parecer do SecOps vindo do `gitleaks dir` leva o
+  `RuleID` do relatório (`[generic-api-key] Detected a Generic API Key`) e o
+  trecho acusado — o `Match` com o `Secret` trocado por `***`, até 160
+  caracteres. O segredo NUNCA sai em claro: sem `Secret` no relatório, o
+  trecho é só `***`. O ambiente do dev agent e do subagente de QA
+  ([RN-706](#rn-706)) diz em uma linha que segredo e senha de teste são
+  gerados em tempo de execução, nunca literais, e que não há allowlist nem
+  `.gitleaksignore`.
+- **Onde:** `apps/engine/lib/engine/actions/gitleaks_detector.ex:117` (`formatar_achado`),
+  `apps/engine/lib/engine/harness/ambiente_do_agente.ex:102` (`montar`)
+- **Teste:** `apps/engine/test/engine/actions/gitleaks_formatar_achado_test.exs`
+  (regra e trecho mascarado; sem `Secret`, o `Match` não vaza),
+  `apps/engine/test/engine/harness/ambiente_do_agente_test.exs`
+- **Origem:** AT-470 (TP-01 de 10/10: o gitleaks acusava a linha 13 de um
+  teste, o parecer só dizia "Detected a Generic API Key", e o dev reescreveu
+  a linha 12 três vezes até esgotar o ciclo de correção)

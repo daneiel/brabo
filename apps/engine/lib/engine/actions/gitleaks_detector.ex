@@ -106,14 +106,49 @@ defmodule Engine.Actions.GitleaksDetector.Live do
     end
   end
 
-  defp format(finding, worktree_path) do
+  defp format(finding, worktree_path), do: formatar_achado(finding, worktree_path)
+
+  @doc """
+  Um achado do relatório JSON do `gitleaks dir` como item do parecer (AT-470,
+  RN-796): leva o `RuleID` e o trecho acusado (`Match`) com o `Secret`
+  MASCARADO por `***` — nunca o segredo em claro. Sem isso o dev recebia só
+  "Detected a Generic API Key" e reescrevia a linha errada.
+  """
+  def formatar_achado(finding, worktree_path) do
+    descricao = finding["Description"] || "segredo detectado"
+    regra = finding["RuleID"]
+    trecho = trecho_mascarado(finding["Match"], finding["Secret"])
+
+    message =
+      [
+        if(regra, do: "[#{regra}] #{descricao}", else: descricao),
+        if(trecho, do: "trecho: #{trecho}")
+      ]
+      |> Enum.reject(&is_nil/1)
+      |> Enum.join(" — ")
+
     %{
       tool: "gitleaks",
       path: relative_path(finding["File"], worktree_path),
       line: finding["StartLine"],
-      message: finding["Description"] || finding["RuleID"] || "segredo detectado"
+      message: message
     }
   end
+
+  @teto_do_trecho 160
+
+  defp trecho_mascarado(match, secret) when is_binary(match) and match != "" do
+    mascarado =
+      if is_binary(secret) and secret != "",
+        do: String.replace(match, secret, "***"),
+        else: "***"
+
+    # Sem o `Secret` não há como mascarar com certeza: não mostra o trecho.
+    mascarado = if mascarado == match, do: "***", else: mascarado
+    String.slice(String.trim(mascarado), 0, @teto_do_trecho)
+  end
+
+  defp trecho_mascarado(_, _), do: nil
 
   # `gitleaks dir` reporta caminho ABSOLUTO (o `detect` reportava relativo).
   # O parecer vai pro usuário e pro prompt de correção do dev: o caminho

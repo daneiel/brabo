@@ -28,6 +28,10 @@ defmodule Engine.Harness.AmbienteDoAgenteTest do
     assert texto =~ "node:22-bookworm-slim"
     assert texto =~ "rede `none`"
     assert texto =~ "git_commit"
+    # RN-796 (AT-470): segredo de teste é gerado em runtime, nunca literal.
+    assert texto =~ "tempo de execução"
+    assert texto =~ ".gitleaksignore"
+    assert String.length(texto) <= AmbienteDoAgente.teto_de_caracteres()
     assert texto =~ "Seu módulo: `api`"
     assert texto =~ "package.json"
     assert String.length(texto) <= AmbienteDoAgente.teto_de_caracteres()
