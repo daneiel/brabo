@@ -15888,7 +15888,7 @@ continua vindo da decisão do Arquiteto, e `pull` não é operação nova do bro
 
 - **Código:**
   `packages/docker-port/src/docker-cli.ts:192` (`PullExcedeuTetoError`),
-  `:482` (`garantirImagem`), `:115` (`CHAMADAS_DE_CONTROLE_NO_START`),
+  `:553` (`garantirImagem`), `:115` (`CHAMADAS_DE_CONTROLE_NO_START`),
   `:106` (`TIMEOUT_DE_CONTROLE_MS`);
   `apps/broker/src/servidor.ts:199` (`PullExcedeuTetoError`);
   `apps/api/src/infrastructure/http-clients/container-broker.client.ts:205` (`TETO_DE_MUTACAO_MS`),
@@ -17428,7 +17428,7 @@ escreve na pasta do projeto, que é do uid do operador: `npm install` dava
 4. **Não afrouxa contenção**: `--cap-drop ALL`, um bind, rede de dois valores
    e cinco operações continuam. Container já criado só muda ao ser recriado.
 
-- **Onde:** `packages/docker-port/src/docker-cli.ts:566` (`argsDeCriacao`),
+- **Onde:** `packages/docker-port/src/docker-cli.ts:637` (`argsDeCriacao`),
   `packages/docker-port/src/spec-de-container.ts:141` (`usuarioValidado`),
   `apps/broker/src/operacoes.ts:385` (`especificacaoDoProjeto`),
   `apps/api/src/application/use-cases/containers/obter-spec-de-container.use-case.ts:110`
@@ -21902,7 +21902,7 @@ sem dizer qual.
   `['containers-overview']` e `['container-lifecycle', projectId]` no
   `finally` — também quando a chamada falha ou cai —, e devolve a promessa ao
   card. Nenhum poll novo (RN-579/632).
-- **Onde:** `packages/docker-port/src/docker-cli.ts:566` (`argsDeCriacao`),
+- **Onde:** `packages/docker-port/src/docker-cli.ts:637` (`argsDeCriacao`),
   `apps/web/src/routes/ContainersPage.tsx:72` (`invalidateContainers`), `:183`
   (`aprovar`)
 - **Teste:** `packages/docker-port/src/docker-cli.spec.ts` (`run` leva
@@ -23085,6 +23085,31 @@ sem dizer qual.
 - **Teste:** `apps/engine/test/engine/gates/qa_estrategia_agent_test.exs`
   ("critérios em string JSON viram lista: o plano é gravado e devolvido como lista")
 - **Origem:** AT-478 (TP-01 de 10/10)
+
+### RN-807 — O `exec` que estoura o teto volta como estouro, e o comando morre dentro do container {#rn-807}
+
+- **Regra:** o estouro do teto do `exec` da `DockerPort` é decidido pelo
+  RELÓGIO (decorrido ≥ teto) além do `killed`, porque o cliente `docker exec`
+  captura o SIGTERM do `timeout` do `execFile` e sai com código 0 — medido:
+  `sleep 30; echo FIM` sob teto de 3s voltava `erro: null`, `stdout: ""`, e o
+  adaptador devolvia `exitCode: 0`. Comando de agente que estourava os 120s
+  voltava "exit 0", e o QA aprovou suíte que trava. O estouro agora devolve
+  `exitCode: -1`, `timedOut: true` e a marca de timeout. E matar o cliente não
+  mata o comando: o `exec` embrulha o comando (que segue como UM argumento,
+  intacto) num `sh` que grava o próprio PID — líder de grupo e de sessão,
+  porque o runtime faz `setsid` em todo `docker exec` — em `/tmp` do container;
+  no estouro o adaptador mata o GRUPO por esse PID (SIGKILL), numa chamada
+  interna, sem operação nova na porta (ADR 0130). Medido e recusado: `timeout`
+  do busybox dentro do `sh -c` — o vigia morre com o cliente e o `sleep`
+  sobrevive. Se a morte falhar (`/tmp` sem escrita, por exemplo), a marca diz
+  que o processo pode ter sobrevivido.
+- **Onde:** `packages/docker-port/src/docker-cli.ts:269` (`estourouOTeto`),
+  `packages/docker-port/src/docker-cli.ts:455` (`matarExecEstourado`)
+- **Teste:** `packages/docker-port/src/docker-cli.spec.ts` ("erro nulo depois do
+  teto É estouro"; "no estouro mata o grupo do comando DENTRO do container";
+  "o comando que estoura volta timedOut e MORRE dentro do container", contra
+  Docker real, pulado sem daemon)
+- **Origem:** AT-482
 
 ### RN-806 — Um ciclo de QA por tarefa: pedido anterior ao veredito é descartado {#rn-806}
 

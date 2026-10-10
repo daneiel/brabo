@@ -4,6 +4,8 @@ import {
   ComandoDeDockerFalhouError,
   DockerCliAusenteError,
   DockerViaCli,
+  EMBRULHO_DO_EXEC,
+  estourouOTeto,
   PullExcedeuTetoError,
   TIMEOUT_DE_CONTROLE_MS,
   rodarDockerDeVerdade,
@@ -287,7 +289,8 @@ describe('DockerViaCli.exec', () => {
 
     expect(resultado).toEqual({ exitCode: 0, output: 'ola brabo', timedOut: false });
     const exec = chamadas.find((c) => c[0] === 'exec') as string[];
-    expect(exec.slice(-3)).toEqual(['/bin/sh', '-c', 'echo -n "ola brabo" && exit 0']);
+    expect(exec.slice(-6, -2)).toEqual(['/bin/sh', '-c', EMBRULHO_DO_EXEC, 'brabo-exec']);
+    expect(exec.at(-1)).toBe('echo -n "ola brabo" && exit 0');
     expect(exec.join(' ')).toContain('--workdir /work');
   });
 
@@ -331,6 +334,24 @@ describe('DockerViaCli.exec', () => {
     expect(resultado.timedOut).toBe(true);
     expect(resultado.exitCode).toBe(-1);
     expect(resultado.output).toContain('pode continuar rodando DENTRO do container');
+  });
+
+  it('no estouro mata o grupo do comando DENTRO do container, pelo mesmo marcador (RN-807)', async () => {
+    const { rodar, chamadas } = duplo([
+      { quando: ['ps'], entao: comSaida(linhaDePs('brabo-exp002-f52be111', 'running')) },
+      { quando: ['exec', '--workdir'], entao: { exitCode: -1, stdout: '', stderr: '', timedOut: true } },
+    ]);
+
+    const resultado = await new DockerViaCli(rodar).exec('exp002-f52be111', {
+      comando: 'sleep 60',
+      timeoutMs: 200,
+    });
+
+    const [execDoComando, kill] = chamadas.filter((c) => c[0] === 'exec');
+    expect(kill?.at(-2)).toBe('brabo-kill');
+    expect(kill?.at(-1)).toBe(execDoComando?.at(-2));
+    expect(resultado.exitCode).toBe(-1);
+    expect(resultado.output).toContain('foi encerrado DENTRO do container');
   });
 
   it('sem container de pé não há onde executar — lança em vez de devolver saída vazia', async () => {
@@ -553,4 +574,67 @@ describe('DockerViaCli.start — imagem ausente cujo pull passa do teto de contr
     // deles (RN-605); mudou aqui, muda lá.
     expect(CHAMADAS_DE_CONTROLE_NO_START).toBe(6);
   });
+});
+
+describe('estourouOTeto (RN-807)', () => {
+  it('erro nulo depois do teto É estouro — o `docker exec` sai 0 ao receber SIGTERM', () => {
+    expect(estourouOTeto(3_010, 3_000, null)).toBe(true);
+  });
+
+  it('comando que termina antes do teto não é estouro, com ou sem erro', () => {
+    expect(estourouOTeto(120, 3_000, null)).toBe(false);
+    expect(estourouOTeto(120, 3_000, Object.assign(new Error('x'), { killed: false }))).toBe(false);
+  });
+});
+
+/**
+ * O defeito só existe com o CLIENTE `docker exec` de verdade — processo local
+ * morre do SIGTERM e marca `killed`. Sem Docker na máquina, pula NOMEANDO.
+ */
+const temDocker = await (async () => {
+  try {
+    const r = await rodarDockerDeVerdade(['version', '--format', '{{.Server.Version}}'], 5_000);
+    return r.exitCode === 0 && !r.timedOut;
+  } catch {
+    return false;
+  }
+})();
+
+describe.skipIf(!temDocker)('DockerViaCli.exec contra Docker real (sem daemon: pulado)', () => {
+  it('o comando que estoura volta timedOut e MORRE dentro do container', async () => {
+    const nome = `brabo-at482-${process.pid}`;
+    const criado = await rodarDockerDeVerdade(
+      ['run', '-d', '--rm', '--name', nome, 'alpine:3.20', 'sleep', '120'],
+      60_000,
+    );
+    expect(criado.exitCode).toBe(0);
+    try {
+      // `ps` responde pelo duplo (o container de teste não leva o rótulo
+      // gerenciado); o id devolvido é o nome do container REAL, e todo o
+      // resto vai ao CLI de verdade.
+      const docker = new DockerViaCli((args, t) =>
+        args[0] === 'ps'
+          ? Promise.resolve(comSaida(linhaDePs('brabo-at482', 'running', nome)))
+          : rodarDockerDeVerdade(args, t),
+      );
+
+      const ok = await docker.exec('at482', { comando: 'echo -n oi', cwd: '/' });
+      expect(ok).toEqual({ exitCode: 0, output: 'oi', timedOut: false });
+
+      const estouro = await docker.exec('at482', {
+        comando: 'sleep 30; echo FIM',
+        cwd: '/',
+        timeoutMs: 2_000,
+      });
+      expect(estouro.timedOut).toBe(true);
+      expect(estouro.exitCode).toBe(-1);
+      expect(estouro.output).toContain('foi encerrado DENTRO do container');
+
+      const ps = await rodarDockerDeVerdade(['exec', nome, 'ps', '-o', 'stat,args'], 10_000);
+      const vivos = ps.stdout.split('\n').filter((l) => l.includes('sleep 30') && !/^\s*Z/.test(l));
+      expect(vivos).toEqual([]);
+    } finally {
+      await rodarDockerDeVerdade(['rm', '-f', nome], 30_000);
+    }
+  }, 90_000);
 });
