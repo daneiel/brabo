@@ -1,4 +1,20 @@
-import type { SessionEvent } from './api-types';
+import type { Epic, SessionEvent } from './api-types';
+
+/**
+ * RN-794 (AT-469): quantas tarefas do backlog ainda não terminaram — `todo`
+ * (inclusive a devolvida pelo gate), `in_progress`, `in_review` e as
+ * bloqueadas, que são `todo`/`in_progress` com `blocked`. É o número que a
+ * tela diz quando NÃO há execução vigente: trabalho que só volta a rodar
+ * religando a execução. Derivado do backlog que a tela já lê, sem rota nova.
+ */
+export function contarTarefasPendentes(epics: Epic[] | undefined): number {
+  return (epics ?? []).reduce(
+    (total, epic) =>
+      total +
+      epic.stories.reduce((n, story) => n + story.tasks.filter((t) => t.status !== 'done').length, 0),
+    0,
+  );
+}
 
 /**
  * Progresso ao vivo de um dev agent, derivado do event log (Fase 4a).

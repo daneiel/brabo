@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- **web**: sem execução vigente e com tarefa pendente, a aba Executores e a Visão geral dizem quantas tarefas ficaram e oferecem "Religar execução" pelo mesmo `execution/activate` (a recusa mostra a frase da api); "Desbloquear" sem execução avisa que a tarefa só roda depois de religar (RN-794, AT-469).
 - **engine**: o parecer do SecOps (e o diff do QA) conta a PR contra a `dev` da origem, buscada antes quando a origem é local, e não mais o acumulado da `dev` local parada; `itens`/`coverageMatrix` do `qa_verdict` são gravados sempre como lista (RN-787, AT-464).
 - **web**: "Decisões registradas" no contexto da sessão diz o recorte ("N na janela · há mais antes") quando há eventos antes da janela; a linha do tempo do time na Visão geral lê a sessão de execução e diz isso; na tela de Sessão a sidebar marca "Criativo" para sessão criativa, onde ela está listada (RN-788, RN-789, AT-463).
 - **engine**: o worktree da tarefa (re)pegada faz `git fetch` e parte da `dev` ATUAL do remoto; partindo da branch anterior não mergeada ou do próprio trabalho preservado, integra a `dev` antes do primeiro passo, e conflito é bloqueio nomeado com os arquivos (RN-779, AT-458).

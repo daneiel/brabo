@@ -148,6 +148,13 @@
       "some": "Ligado para {{ok}} de {{total}} agentes. Ficaram em manual: {{falharam}}."
     }
   },
+  "religar": {
+    "descricao_zero": "Nenhuma execução está rodando, e nenhuma tarefa está pendente.",
+    "descricao_one": "Nenhuma execução está rodando, e {{count}} tarefa segue pendente. Ela só volta a rodar se você religar a execução.",
+    "descricao_other": "Nenhuma execução está rodando, e {{count}} tarefas seguem pendentes. Elas só voltam a rodar se você religar a execução.",
+    "botao": "Religar execução",
+    "erro": "Não foi possível religar a execução"
+  },
   "parar": {
     "descricao": "Parar a execução encerra esta sessão: os dev agents e os gates param, e nenhum começa outra tarefa.",
     "botao": "Parar execução",

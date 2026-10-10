@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterAll } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ProjectExecutorsTab } from './ProjectExecutorsTab';
 import { ToastProvider } from '../components/ui/ToastProvider';
 import { ApiError } from '../lib/api-client';
@@ -40,6 +40,8 @@ const listAgentAutonomy = vi.fn();
 const listWorkspaces = vi.fn();
 const getProjectsSummary = vi.fn();
 const getProjectPendingActions = vi.fn();
+const listBacklog = vi.fn();
+const activateExecution = vi.fn();
 
 vi.mock('../lib/api-client', async () => {
   const real = await vi.importActual<typeof import('../lib/api-client')>('../lib/api-client');
@@ -61,6 +63,8 @@ vi.mock('../lib/api-client', async () => {
     listWorkspaces: (...args: unknown[]) => listWorkspaces(...args),
     getProjectsSummary: (...args: unknown[]) => getProjectsSummary(...args),
     getProjectPendingActions: (...args: unknown[]) => getProjectPendingActions(...args),
+    listBacklog: (...args: unknown[]) => listBacklog(...args),
+    activateExecution: (...args: unknown[]) => activateExecution(...args),
     approveAction: vi.fn(),
     denyAction: vi.fn(),
     approveAlwaysAction: vi.fn(),
@@ -230,6 +234,7 @@ beforeEach(async () => {
   ]);
   getProjectsSummary.mockResolvedValue([resumo()]);
   getProjectPendingActions.mockResolvedValue([]);
+  listBacklog.mockResolvedValue([]);
 });
 
 // Restaura o default do app depois deste arquivo — a instância é o
@@ -563,5 +568,68 @@ describe('ProjectExecutorsTab — bindings em lote (AT-339)', () => {
     await waitFor(() => expect(getResolvedModelBindings).toHaveBeenCalledTimes(2));
     expect(screen.queryByText(/Modelo Dois/)).not.toBeInTheDocument();
     expect(getAgentModelBinding).not.toHaveBeenCalled();
+  });
+});
+
+// RN-794 (AT-469): sem execução vigente e com tarefa pendente, a aba diz
+// quantas são e religa pelo MESMO `execution/activate`.
+describe('ProjectExecutorsTab — religar a execução (RN-794)', () => {
+  const tarefa = (id: string, status: string, blocked = false) => ({
+    id,
+    storyId: 'st-1',
+    title: id,
+    description: '',
+    status,
+    assignedTo: null,
+    blocked,
+    blockedReason: null,
+    gateStatus: null,
+    gateCorrectionCount: 0,
+    createdAt: '2026-10-09T10:00:00.000Z',
+    updatedAt: '2026-10-09T10:00:00.000Z',
+  });
+  const backlog = [
+    {
+      id: 'ep-1',
+      projectId: 'proj-1',
+      sessionId: 'sess-1',
+      title: 'E',
+      description: '',
+      createdAt: '',
+      updatedAt: '',
+      stories: [{ id: 'st-1', tasks: [tarefa('t1', 'todo', true), tarefa('t2', 'in_review'), tarefa('t3', 'done')] }],
+    },
+  ];
+
+  it('diz quantas tarefas ficaram pendentes e religa pelo execution/activate', async () => {
+    getActiveExecutionSession.mockResolvedValue(null);
+    listBacklog.mockResolvedValue(backlog);
+    activateExecution.mockResolvedValue({ sessionId: 'sess-2' });
+
+    montar();
+
+    expect(await screen.findByText(/2 tarefas seguem pendentes/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Religar execução' }));
+    await waitFor(() => expect(activateExecution).toHaveBeenCalledWith('proj-1'));
+  });
+
+  it('recusa da api (409) aparece com a frase dela', async () => {
+    getActiveExecutionSession.mockResolvedValue(null);
+    listBacklog.mockResolvedValue(backlog);
+    activateExecution.mockRejectedValue(
+      new ApiError(409, { message: 'O projeto não tem repositório.' }),
+    );
+
+    montar();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Religar execução' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('O projeto não tem repositório.');
+  });
+
+  it('com execução vigente, nem lê o backlog nem oferece religar', async () => {
+    montar();
+    await screen.findByText(/Mostrando a sessão|sess-1/);
+    expect(listBacklog).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('religar-execucao')).not.toBeInTheDocument();
   });
 });

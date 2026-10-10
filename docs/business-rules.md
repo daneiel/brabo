@@ -6775,7 +6775,7 @@ caminho que a execução em container substitui; o que muda agora é só a
   `apps/api/src/application/use-cases/execution/activate-execution.use-case.ts:176`
   (o 400), `apps/api/src/interfaces/http/execution/execution.controller.ts:74`
   (a anotação de OpenAPI, que prometia 409 para dois casos que nunca foram
-  409), `apps/web/src/routes/ProjectOverviewTab.tsx:452`
+  409), `apps/web/src/routes/ProjectOverviewTab.tsx:462`
   (`mensagemDaApi`), `apps/engine/lib/engine/actions/workspace.ex:61`
   (a mensagem da lacuna que fica)
 - **Teste:**
@@ -17817,7 +17817,7 @@ numa delas é inferência pelos 106 ≈ 9 × 12.
   (`useProjectSessions`), `:158` (`useLatestSession`);
   `apps/web/src/routes/ProjectPage.tsx:77` (os contadores do trilho);
   `apps/web/src/routes/ContainersPage.tsx:62` (`useLatestSession`, sem poll);
-  `apps/web/src/routes/ProjectExecutorsTab.tsx:197` (`invalidador`),
+  `apps/web/src/routes/ProjectExecutorsTab.tsx:203` (`invalidador`),
   `apps/web/src/routes/ProjectOverviewTab.tsx:191` (`invalidador`);
   `apps/web/src/components/EsperaDoRunner.tsx:73` (`confirmadoPor`)
 - **Teste:** `apps/web/src/routes/duas-abas.orcamento.test.tsx` (as duas abas
@@ -18086,7 +18086,7 @@ o do chat.
   `apps/web/src/routes/ProjectApprovalsTab.tsx:111` (`pendentesQuery`), `:115`
   (`sessaoDeTrabalho`), `:322` (`handleApprove`);
   `apps/web/src/routes/ProjectOverviewTab.tsx:114` (`pendentesDoProjeto`);
-  `apps/web/src/routes/ProjectExecutorsTab.tsx:98` (`pendentesQuery`), `:290`
+  `apps/web/src/routes/ProjectExecutorsTab.tsx:107` (`pendentesQuery`), `:290`
   (o bloco); `apps/web/src/routes/code/CodeShell.tsx:101` (`pendentesQuery`);
   `apps/web/src/routes/SessionPage.tsx:782` (o bloco sem `isActive`);
   `apps/web/src/lib/canal-vivo.ts:123` (`alvosDoEvento`), `:180`
@@ -22848,3 +22848,27 @@ sem dizer qual.
 - **Teste:** `apps/api/test/application/use-cases/execution/unblock-task.use-case.spec.ts`
   (tarefa com módulo acorda o dev desse módulo)
 - **Origem:** AT-457
+
+### RN-794 — Sem execução vigente, a tela diz o que ficou pendente e religa pelo mesmo caminho {#rn-794}
+
+- **Regra:** quando a leitura da sessão de execução vigente ([RN-139](business-rules/autenticacao.md#rn-139))
+  CONFIRMA que não há nenhuma e o backlog tem tarefa que não está `done`
+  (`todo` — inclusive a devolvida pelo gate —, `in_progress`, `in_review`,
+  bloqueada), a aba Executores e a seção Execução da Visão geral dizem
+  quantas são e oferecem "Religar execução", que chama o MESMO
+  `POST .../execution/activate` (`ActivateExecutionUseCase`) do botão
+  "Ativar execução", sem `originSessionId` (como a Visão geral sempre
+  chamou: não há sessão de chat para a api fechar, [RN-135](business-rules/custo.md#rn-135)). A
+  recusa (409 sem repositório, sessão consultiva, papel) aparece com a frase
+  da api. "Desbloquear" sem execução vigente avisa que a tarefa só roda
+  quando a execução for religada — o botão está na mesma seção. Na aba
+  Executores o backlog só é lido com a ausência confirmada (query desligada
+  com execução de pé, ritmo de projeto quando ligada, [RN-632](#rn-632)).
+- **Onde:** `apps/web/src/components/ReligarExecucao.tsx:23` (`ReligarExecucao`),
+  `apps/web/src/lib/execution.ts:10` (`contarTarefasPendentes`),
+  `apps/web/src/routes/ProjectExecutorsTab.tsx:99` (`semExecucaoVigente`),
+  `apps/web/src/routes/ProjectOverviewTab.tsx:483` (`semExecucaoVigente`)
+- **Teste:** `apps/web/src/routes/ProjectExecutorsTab.test.tsx` (religar a
+  execução), `apps/web/src/routes/ProjectOverviewTab.test.tsx` (religar a
+  execução encerrada)
+- **Origem:** AT-469

@@ -33,7 +33,8 @@ import {
   groupRosterByArea,
   isExecutorGroup,
 } from '../lib/agent-status';
-import { deriveExecutionProgress, formatMicros } from '../lib/execution';
+import { contarTarefasPendentes, deriveExecutionProgress, formatMicros } from '../lib/execution';
+import { ReligarExecucao } from '../components/ReligarExecucao';
 import { connectSessionHeartbeat } from '../lib/session-channel';
 import { INTERVALO_DO_PROJETO_MS, criarInvalidadorDoCanal } from '../lib/canal-vivo';
 import type { AutonomyMode } from '../components/AgentCard';
@@ -318,6 +319,7 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
           executionActivatedPending={summaryQuery.isPending}
           executionActivatedError={summaryQuery.isError ? summaryQuery.error : null}
           onRetryExecutionActivated={() => void summaryQuery.refetch()}
+          semExecucaoVigente={execucao.isSuccess && !execucao.session}
         />
 
         <ArchitectureSummary projectId={projectId} architecture={architecture} />
@@ -378,6 +380,7 @@ function ExecutionSection({
   executionActivatedPending,
   executionActivatedError,
   onRetryExecutionActivated,
+  semExecucaoVigente,
 }: {
   projectId: string;
   sessionId?: string;
@@ -389,6 +392,12 @@ function ExecutionSection({
   executionActivatedPending: boolean;
   executionActivatedError: unknown;
   onRetryExecutionActivated: () => void;
+  /**
+   * RN-794 (AT-469): a leitura da sessão de execução VIGENTE (RN-139, a
+   * mesma chave que a sidebar assina) CONFIRMOU que não há nenhuma. Só a
+   * ausência confirmada conta — carregando ou com erro, nada muda.
+   */
+  semExecucaoVigente: boolean;
 }) {
   const { t } = useTranslation('overview');
   const queryClient = useQueryClient();
@@ -396,6 +405,7 @@ function ExecutionSection({
   const { data: epics } = useBacklog(projectId);
 
   const activated = executionActivated;
+  const tarefasPendentes = contarTarefasPendentes(epics);
 
   // RN-582 (ADR 0165): sem repositório, `POST .../execution/activate` responde
   // 409 — os dev agents trabalham em worktrees dele. A tela tira o CONTROLE e
@@ -467,6 +477,16 @@ function ExecutionSection({
     try {
       await unblockTask(projectId, sessionId, taskId);
       await queryClient.invalidateQueries({ queryKey: ['backlog', projectId] });
+      // RN-794 (AT-469): desbloquear acorda o dev do módulo só se houver
+      // execução vigente (RN-777). Sem ela, a tela diz que nada volta a
+      // rodar até religar — o botão está nesta mesma seção.
+      if (semExecucaoVigente) {
+        showToast({
+          title: t('executionSection.unblockedTitle'),
+          message: t('executionSection.unblockedWithoutExecution'),
+          tone: 'warning',
+        });
+      }
     } catch {
       showToast({
         title: t('executionSection.errorTitle'),
@@ -558,6 +578,9 @@ function ExecutionSection({
         </div>
       ) : (
         <>
+          {semExecucaoVigente && tarefasPendentes > 0 && (
+            <ReligarExecucao projectId={projectId} tarefasPendentes={tarefasPendentes} />
+          )}
           <div className={styles.archLabel}>{t('executionSection.devAgentsLabel')}</div>
           {agents.size === 0 ? (
             <div className={styles.sectionSub}>{t('executionSection.spinningUp')}</div>

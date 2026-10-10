@@ -6,6 +6,7 @@ import { useBindingsDosAgentes } from '../lib/bindings-resolvidos';
 import {
   useActiveExecutionSession,
   useArchitecture,
+  useBacklog,
   useCurrentWorkspace,
   useCurrentWorkspaceWithRole,
   useHandoffs,
@@ -21,7 +22,8 @@ import {
   setAgentAutonomy,
 } from '../lib/api-client';
 import { deriveAgentRoster, groupRosterByArea, isExecutorAgentId, isExecutorGroup } from '../lib/agent-status';
-import { deriveExecutionProgress } from '../lib/execution';
+import { contarTarefasPendentes, deriveExecutionProgress } from '../lib/execution';
+import { ReligarExecucao } from '../components/ReligarExecucao';
 import { connectSessionHeartbeat } from '../lib/session-channel';
 import { INTERVALO_DO_PROJETO_MS, criarInvalidadorDoCanal } from '../lib/canal-vivo';
 import { rotuloDaSessao } from '../lib/session-label';
@@ -90,6 +92,13 @@ export function ProjectExecutorsTab({ projectId }: { projectId: string }) {
   const executionSessionQuery = useActiveExecutionSession(projectId);
   const executionSession = executionSessionQuery.session;
   const sessionId = executionSession?.id;
+  // RN-794 (AT-469): o backlog só é lido quando a leitura CONFIRMOU que não há
+  // execução vigente — é ele que diz quantas tarefas ficaram pendentes. Com a
+  // execução de pé a query fica desligada (nenhuma requisição a mais, RN-632),
+  // e no ritmo de projeto quando ligada.
+  const semExecucaoVigente = executionSessionQuery.isSuccess && !executionSession;
+  const backlogQuery = useBacklog(semExecucaoVigente ? projectId : undefined, INTERVALO_DO_PROJETO_MS);
+  const tarefasPendentes = contarTarefasPendentes(backlogQuery.data);
   const eventsQuery = useSessionEvents(projectId, sessionId);
   const events = eventsQuery.data?.items ?? [];
   // Quem espera decisão sai da fila do PROJETO (AT-297, RN-638): a mesma
@@ -275,7 +284,12 @@ export function ProjectExecutorsTab({ projectId }: { projectId: string }) {
           <Skeleton width={220} height={18} />
         </div>
       ) : !executionSession ? (
-        <div className={styles.sectionSub}>{t('tab.noActiveExecution')}</div>
+        <>
+          <div className={styles.sectionSub}>{t('tab.noActiveExecution')}</div>
+          {tarefasPendentes > 0 && (
+            <ReligarExecucao projectId={projectId} tarefasPendentes={tarefasPendentes} />
+          )}
+        </>
       ) : (
         <div className={styles.sectionSub}>
           {t('tab.showingSession')}{' '}
