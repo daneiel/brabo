@@ -226,7 +226,7 @@ foram raciocínio).
    `null`, declarado; o Ollama não informa.
 
 - **Where:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:301` (`cachedInputTokens`),
-  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:609` (`contagem`),
+  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:615` (`contagem`),
   `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:175` (`cachedInputTokens`),
   `apps/api/src/application/use-cases/llm/record-llm-usage.use-case.ts:113` (`cachedInputTokens`),
   `apps/api/src/db/schema/llm.ts:374` (`cachedInputTokens`),
@@ -3150,7 +3150,7 @@ recorte do card.
 
 - **Onde:** `apps/engine/lib/engine/dev/teto_da_tarefa.ex:32` (`efetivo`);
   `apps/engine/lib/engine/dev/dev_agent_server.ex:611` (`diagnostico_de_orcamento`);
-  `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:68`
+  `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:90`
   (`ehPrimeiraTarefaDoModulo`)
 - **Teste:** `apps/engine/test/engine/dev/dev_agent_server_test.exs` (describe
   "RN-774": a primeira com US$ 0,53 não bloqueia, a segunda do mesmo módulo

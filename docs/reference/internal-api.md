@@ -1009,6 +1009,25 @@ reads it to give the first task of each module twice the per-task budget.
 Read-only, same route, same `engine-service` guard: the HTTP surface does not
 change.
 
+`/dev-context` also gained `moduleOpenTasks` and `moduleOpenTasksTotal` in
+AT-461 ([RN-785](../business-rules.md#rn-785)) — the tasks not yet done of the
+OTHER stories of the same module, each with its story title, at most 20, with
+the real total beside them (`tarefasAbertasDoModulo` in
+`get-dev-task-context.use-case.ts`); archived stories are left out.
+`Engine.Gates.RecorteDaTarefa` lists them to the QA so that a requirement that
+depends on another story not delivered yet becomes an observation instead of a
+rejection. Read-only, same route, same `engine-service` guard: the HTTP surface
+does not change.
+
+`/dev-context` also gained `moduleContract` in AT-462
+([RN-786](../business-rules.md#rn-786)) — the current contract
+(`artifact.module_contracts`) of the task's module, `null` when the story has
+more than one module and the task has none. The QA cut presents it as the
+source of the interface: when the story and the contract diverge, the verdict
+names the divergence instead of rejecting the dev that followed the contract.
+Read-only, same route, same `engine-service` guard: the HTTP surface does not
+change.
+
 `/infra-context` gained `gitProvider` in FASE 8c (`null` with no repository
 provisioned) — it's how the Workflows subagent decides `.github/workflows/
 ci.yml` vs `.gitlab-ci.yml`, with no new route (same "one GET per

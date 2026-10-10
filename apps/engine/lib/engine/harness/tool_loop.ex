@@ -184,9 +184,11 @@ defmodule Engine.Harness.ToolLoop.Default do
         # usar o protocolo nativo. Recupera antes de desistir (ADR 0020).
         case tool_calls(message, ctx) do
           [] ->
-            {:ok, ctx}
+            parada_sem_chamada(ctx, resp, content)
 
           tool_calls ->
+            ctx = Map.delete(ctx, :corte_retentado)
+
             case Enum.reduce_while(tool_calls, {:cont, ctx}, &dispatch_or_halt/2) do
               {:halted, reason, ctx} -> {:halted, reason, ctx}
               {:cont, ctx} -> loop(%{ctx | iteration: ctx.iteration + 1})
@@ -207,6 +209,31 @@ defmodule Engine.Harness.ToolLoop.Default do
         {:ok, Map.put(ctx, :last_error, inspect(reason))}
     end
   end
+
+  # RN-780 (AT-459): resposta sem texto e sem chamada, cortada pelo teto de
+  # saída (`truncated`, o `finish_reason: length` que a api devolve — RN-737),
+  # é o raciocínio que comeu o teto, não o modelo desistindo. A volta é
+  # retentada UMA vez, sem a resposta vazia no histórico e contando iteração
+  # (o teto de iterações e o orçamento da tarefa continuam valendo); repetida,
+  # o laço para marcando `corte_pelo_teto`, que o consumidor narra.
+  defp parada_sem_chamada(ctx, %{"truncated" => true}, content) do
+    cond do
+      String.trim(to_string(content)) != "" ->
+        {:ok, ctx}
+
+      Map.get(ctx, :corte_retentado) ->
+        {:ok, Map.put(ctx, :corte_pelo_teto, true)}
+
+      true ->
+        ctx
+        |> Map.update!(:messages, &Enum.drop(&1, -1))
+        |> Map.put(:corte_retentado, true)
+        |> Map.update!(:iteration, &(&1 + 1))
+        |> loop()
+    end
+  end
+
+  defp parada_sem_chamada(ctx, _resp, _content), do: {:ok, ctx}
 
   defp emit_falha(ctx, reason) do
     emit(ctx, "agent.error", %{
