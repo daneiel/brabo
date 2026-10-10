@@ -13831,9 +13831,9 @@ lógico, monótono) à janela e ao parâmetro, que também passa a olhar
 evento pode ter saído da janela e a aba volta a decidir só por ela — é o custo
 da guarda, o mesmo dos outros dois fatos.
 
-- **Código:** `apps/web/src/lib/agent-status.ts:320` (`AgregadoDaSessao`),
+- **Código:** `apps/web/src/lib/agent-status.ts:324` (`AgregadoDaSessao`),
 
-- **Código:** `apps/web/src/lib/agent-status.ts:320` (`AgregadoDaSessao`),
+- **Código:** `apps/web/src/lib/agent-status.ts:324` (`AgregadoDaSessao`),
   `:296` (o parâmetro opcional de `rosterFactsFromEvents`), `:304` (a união das
   delegações), `:312` (o OU do gate), `:410` (o parâmetro repassado por
   `deriveAgentRoster`); `apps/web/src/routes/ProjectOverviewTab.tsx:97` e
@@ -14065,7 +14065,7 @@ delas estava coberta pela comparação com o vocabulário do engine.
   (`ChaveDeRotulo`, AT-134), `:135` (`tradutorDaArvore`);
   `apps/web/src/locales/{en,pt-BR}/executors.json` (`timelineTree.label`,
   `timelineTree.now`, `timelineTree.detail`);
-  `apps/web/src/lib/agent-status.ts:127` (`statusDoEventoDev`);
+  `apps/web/src/lib/agent-status.ts:134` (`statusDoEventoDev`);
   `apps/web/src/components/AgentTimelineTree.module.css` (`.espera`)
 - **Teste:** `scripts/ci/vocabulario-de-eventos-dev.spec.ts:300` (o bloco da
   árvore: `:308` todo tipo do engine decidido, `:324` nada traduzido que o
@@ -21579,7 +21579,7 @@ sem dizer qual.
   (`credito_esgotado?`),
   `apps/engine/lib/engine/dev/dev_agent_server.ex:887` (`handle_outcome`),
   `apps/engine/lib/engine/dev/agent_io.ex:259` (`pausar_por_credito`),
-  `apps/web/src/lib/agent-status.ts:194` (`breakerReasonFor`),
+  `apps/web/src/lib/agent-status.ts:198` (`breakerReasonFor`),
   `apps/api/src/application/use-cases/sessions/get-session-pending-work.use-case.ts`
 - **Teste:** `apps/engine/test/engine/dev/dev_agent_server_test.exs`
   ("402 do provider: origem infra, pausa sem idle_tripped e sem queimar a
@@ -21648,7 +21648,7 @@ sem dizer qual.
   `apps/web/src/routes/Shell.tsx:545` (`idDoProjetoAtual`),
   `apps/web/src/routes/NewProjectWizard.tsx:155` (`NewProjectWizard`),
   `apps/web/src/routes/ProjectPrsTab.tsx:117` (`invalidateMergeActions`),
-  `apps/web/src/lib/agent-status.ts:218` (`gateStatus`)
+  `apps/web/src/lib/agent-status.ts:222` (`gateStatus`)
 - **Teste:** `apps/api/test/application/use-cases/actions/execute-infra-pr.use-case.spec.ts`
   ("a branch nasce de dev, a PR mira dev e leva infra[bot]"; falha:
   "repositório sem dev falha nomeado, sem cair na default"),

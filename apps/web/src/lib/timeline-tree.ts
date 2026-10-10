@@ -242,11 +242,15 @@ const TRADUCAO: Record<string, Traducao> = {
 
 /**
  * Tipo `dev.*` que o engine emite e que a árvore decidiu NÃO mostrar, com o
- * motivo — a mesma válvula de `DEV_STATUS_EVENTS_FORA` no painel. Vazio hoje:
- * os tipos que o engine emite têm todos um marco honesto. Declarar aqui é
+ * motivo — a mesma válvula de `DEV_STATUS_EVENTS_FORA` no painel. Hoje só o
+ * desfecho de task da RN-797; os demais têm todos um marco honesto. Declarar aqui é
  * decisão registrada, nunca esquecimento.
  */
-export const TRADUCAO_FORA: Record<string, string> = {};
+export const TRADUCAO_FORA: Record<string, string> = {
+  // RN-797: a task fechada como "já na dev" aparece pela marcação `done` da
+  // task; um marco a mais na árvore repetiria o mesmo desfecho.
+  'dev.task_already_in_dev': 'o fechamento da task já aparece pela marcação done',
+};
 
 /** As chaves de rótulo que a tabela USA — o teste as cobra nos dois locales. */
 export const CHAVES_DE_ROTULO_USADAS: readonly ChaveDeRotulo[] = Object.values(TRADUCAO).map(
