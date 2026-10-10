@@ -22280,7 +22280,7 @@ sem dizer qual.
   naquele passo, então ele vale sempre que há recorte. Os dev agents ficam
   sem piso, de propósito (a obrigação deles muda a cada passo; para eles vale
   só a [RN-759](#rn-759)).
-- **Onde:** `apps/api/src/domain/llm/tool-router.ts:323` (`menuComPiso`) e
+- **Onde:** `apps/api/src/domain/llm/tool-router.ts:327` (`menuComPiso`) e
   `apps/api/src/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.ts:248`
   (`menuComPiso`)
 - **Teste:** `apps/api/test/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.spec.ts`
@@ -22302,7 +22302,7 @@ sem dizer qual.
   porque só a api sabe o menu depois do Jev. Não aplicar o recorte na volta
   que fecha o turno foi avaliado e não feito: a api não sabe antes da
   resposta que a volta será a última.
-- **Onde:** `apps/api/src/domain/llm/tool-router.ts:337` (`avisoDeRecorte`) e
+- **Onde:** `apps/api/src/domain/llm/tool-router.ts:341` (`avisoDeRecorte`) e
   `apps/api/src/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.ts:263`
   (`avisoDeRecorte`)
 - **Teste:** `apps/api/test/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.spec.ts`
@@ -22557,9 +22557,8 @@ sem dizer qual.
   motivo) ou falhada. Contida (ADR 0060, [RN-164](business-rules/autenticacao.md#rn-164)): sem parâmetro,
   escopo fechado no projeto do contexto, uma contagem e uma consulta por
   chamada, as 20 mais recentes, e o total real dito quando corta. Falha de
-  leitura é `tool.result` `ok: false` com o motivo, nunca texto vazio. Não
-  entrou no piso do Jev ([RN-758](#rn-758)): é leitura, não obrigação, e o
-  aviso de recorte ([RN-759](#rn-759)) já diz que as demais voltam.
+  leitura é `tool.result` `ok: false` com o motivo, nunca texto vazio. Desde a
+  [RN-784](#rn-784) ela ESTÁ no piso do Jev.
 - **Onde:** `apps/engine/lib/engine/harness/tools/listar_adrs_propostas.ex:37`
   (`run`), `:46` (`ler`), `apps/engine/lib/engine/agents/arquiteto_server.ex:124`
   (`ListarAdrsPropostas`)
@@ -22662,3 +22661,16 @@ sem dizer qual.
   `apps/api/test/domain/llm/raciocinio-do-agente.spec.ts` (dev-* desliga;
   criativo e dev-lead só a folga; sem `supportsReasoning`, nada)
 - **Origem:** AT-467 (decisão do dono de 10/10)
+### RN-784 — As leituras de estado do Arquiteto entram no piso do Jev {#rn-784}
+
+- **Regra:** revisa a [RN-758](#rn-758) e a [RN-772](#rn-772) (decisão do
+  dono). O piso do Arquiteto ganha `listar_adrs_propostas` e `listar_backlog`:
+  o recorte do Jev nunca as tira, para o Arquiteto não afirmar status de ADR
+  nem tarefas do backlog sem poder consultá-los ([RN-773](#rn-773)). Continua
+  valendo que o piso só devolve o que está no catálogo do passo.
+- **Onde:** `apps/api/src/domain/llm/tool-router.ts:303` (`PISO_DO_MENU`)
+- **Teste:** `apps/api/test/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.spec.ts`
+  (`Arquiteto recortado pelo Jev: as leituras de estado (ADRs propostas,
+  backlog) continuam no menu (RN-784)`)
+- **Origem:** AT-460 (TP-01 de 09/10: o Jev tirou do menu do Arquiteto as
+  leituras da AT-454)
