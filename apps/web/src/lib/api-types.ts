@@ -931,6 +931,22 @@ export interface Handoff {
   updatedAt: string;
 }
 
+/**
+ * RN-827/828 — o agregado da sessão INTEIRA do painel de contexto
+ * (`GET .../sessions/:sessionId/context-summary`). Contado no servidor; a
+ * tela o SOMA à janela de eventos que já carregou.
+ */
+export interface ResumoDoContextoDaSessao {
+  sessoesLidas: string[];
+  regras: number;
+  decisoes: number;
+  artefatosPorAgente: { actorId: string; quantos: number }[];
+  arquivosTocados: {
+    itens: { actionId: string; path: string; additions: number; deletions: number }[];
+    total: number;
+  };
+}
+
 // Payload do session_event `artifact.business_rule` emitido pelo Criativo.
 export interface BusinessRulePayload {
   title: string;

@@ -4,6 +4,7 @@ import { childSpan, logger, newTraceContext } from './logger';
 import type { LlmCredentialProvider } from './models';
 import type { MySpend, WorkspaceSpendReport } from './spend';
 import type {
+  ResumoDoContextoDaSessao,
   AgentAutonomyRule,
   AgentAutonomyActionType,
   CredentialSpend,
@@ -641,6 +642,11 @@ export const listSessionEvents = (
 ) =>
   get<Page<SessionEvent>>(
     `/projects/${projectId}/sessions/${sessionId}/events${qs(opts)}`,
+  );
+// RN-827 (AT-498): o agregado da sessão inteira do painel de contexto.
+export const getSessionContextSummary = (projectId: string, sessionId: string) =>
+  get<ResumoDoContextoDaSessao>(
+    `/projects/${projectId}/sessions/${sessionId}/context-summary`,
   );
 // Um evento pelo id — a listagem é paginada (últimos N) e o feed esconde
 // ruído de máquina, então evidência de hipótese precisa deste caminho pra

@@ -1421,6 +1421,7 @@ reason in the URL.
 | GET | `/projects/:projectId/sessions/:sessionId/events` | role:viewer |
 | POST | `/projects/:projectId/sessions/:sessionId/events` | role:developer |
 | GET | `/projects/:projectId/sessions/:sessionId/events/:eventId` | role:viewer |
+| GET | `/projects/:projectId/sessions/:sessionId/context-summary` | role:viewer |
 | POST | `/projects/:projectId/sessions/:sessionId/execution/parallelize` | role:developer |
 | GET | `/projects/:projectId/sessions/:sessionId/handoffs` | role:viewer |
 | POST | `/projects/:projectId/sessions/:sessionId/handoffs` | role:developer |
