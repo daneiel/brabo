@@ -17,8 +17,10 @@ defmodule Engine.Dev.Tools.ReportDone do
     %{
       name: "report_done",
       description:
-        "Sinaliza que a task está pronta pra abrir PR. Só aceito se o último " <>
-          "comando `terminal` rodado (a suite de testes) tiver saído com exit 0.",
+        "Conclui a task: o sistema faz o commit, o push e abre a PR depois desta " <>
+          "chamada — não existe `git_commit`, `git_push` nem `pr_open` para procurar. " <>
+          "Só aceito se o último comando `terminal` rodado (a suite de testes) tiver " <>
+          "saído com exit 0.",
       parameters: %{
         "type" => "object",
         "properties" => %{
