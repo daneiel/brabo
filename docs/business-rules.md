@@ -6775,7 +6775,7 @@ caminho que a execução em container substitui; o que muda agora é só a
   `apps/api/src/application/use-cases/execution/activate-execution.use-case.ts:176`
   (o 400), `apps/api/src/interfaces/http/execution/execution.controller.ts:74`
   (a anotação de OpenAPI, que prometia 409 para dois casos que nunca foram
-  409), `apps/web/src/routes/ProjectOverviewTab.tsx:462`
+  409), `apps/web/src/routes/ProjectOverviewTab.tsx:467`
   (`mensagemDaApi`), `apps/engine/lib/engine/actions/workspace.ex:61`
   (a mensagem da lacuna que fica)
 - **Teste:**
@@ -22933,8 +22933,23 @@ sem dizer qual.
 - **Onde:** `apps/web/src/components/ReligarExecucao.tsx:23` (`ReligarExecucao`),
   `apps/web/src/lib/execution.ts:10` (`contarTarefasPendentes`),
   `apps/web/src/routes/ProjectExecutorsTab.tsx:99` (`semExecucaoVigente`),
-  `apps/web/src/routes/ProjectOverviewTab.tsx:483` (`semExecucaoVigente`)
+  `apps/web/src/routes/ProjectOverviewTab.tsx:488` (`semExecucaoVigente`)
 - **Teste:** `apps/web/src/routes/ProjectExecutorsTab.test.tsx` (religar a
   execução), `apps/web/src/routes/ProjectOverviewTab.test.tsx` (religar a
   execução encerrada)
 - **Origem:** AT-469
+### RN-800 — A linha do tempo do time filtra por família, não pela roster da sessão mais recente {#rn-800}
+
+- **Regra:** a árvore "Linha do tempo do time" da Visão geral lê a sessão de
+  EXECUÇÃO quando há uma vigente (AT-463), e tira dela os eventos de dev agent
+  e de QA pela FAMÍLIA do ator (`isExecutorAgentId`, a mesma régua da aba
+  Executores, RN-121) — nunca pela roster, que é derivada da sessão mais
+  recente. Filtrar pela roster apagava todo agente que só agiu na execução (o
+  Infra Lead cujo handoff foi aceito lá), e com uma ideação aberta depois a
+  árvore dizia "Nenhum agente entrou em ação nesta sessão ainda" sobre um time
+  trabalhando. Sem leitura nova.
+- **Onde:** `apps/web/src/routes/ProjectOverviewTab.tsx:263` (`overviewEvents`)
+- **Teste:** `apps/web/src/routes/ProjectOverviewTab.test.tsx` ("AT-471: agente
+  que só agiu na execução aparece na árvore…"; o caso sem execução segue lendo
+  a mais recente)
+- **Origem:** AT-471 (TP-01 de 10/10)
