@@ -109,6 +109,11 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - **ações**: com o modo automático do agente ligado (a curinga em `auto_approve`), `git_push` e `pr_open` — tipados ou pelo comando de terminal — passam a ser auto-aprovados, com o motivo "modo automático (RN-713)" no evento; regra específica, "Sempre permitir" e `permissions.json` continuam sem liberar, e merge em branch protegida, deploy e `sudo`/`doas` seguem com o usuário. As telas do modo automático dizem isso (AT-385, RN-713, ADR 0204).
 ### Correções
 
+- Visão geral: o "Desbloquear" das tarefas bloqueadas vem antes dos blocos que
+  carregam depois (religar e dev agents), fica inerte com "Desbloqueando…" em
+  voo, diz "Tarefa desbloqueada" no sucesso e mostra a frase da api na recusa;
+  sem sessão lida, diz por que está inerte (RN-835, AT-502).
+
 - **gates**: o ciclo de QA/SecOps que o reinício do engine matou no meio é retomado já no boot, sem esperar os 15 min do resgate, quando nenhum nó do cluster o tem em voo; o boot grava `gate.interrupted` e o fio da sessão avisa que o gate foi interrompido e retomado (AT-495, RN-823).
 - **secops**: o item do gitleaks no parecer diz a regra que acusou e o trecho com o segredo mascarado (`***`), e o ambiente do dev agent avisa que segredo de teste é gerado em tempo de execução, nunca literal (AT-470, RN-796).
 - **dev agent**: a task cuja branch, depois de integrada com a `dev`, não tem diff contra ela fecha como "já na dev" (evento `dev.task_already_in_dev`), sem PR, sem gates e sem clique; na dúvida segue para os gates (AT-474, RN-797).
