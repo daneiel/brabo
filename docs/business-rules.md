@@ -21777,7 +21777,7 @@ sem dizer qual.
 ### RN-736 — O campo "Nome do projeto" não ganha foco sozinho nem se chama "name" {#rn-736}
 
 - **Regra:** no passo de detalhes do assistente de projeto, o campo "Nome do
-  projeto" NÃO recebe `autoFocus` e usa `id`/`name` `project-title`, nunca
+  projeto" NÃO recebe `autoFocus` e usa `id`/`name` `project-title` (desde a RN-834, `projeto-slug`), nunca
   "name" puro; os atributos que desligam gerenciadores de senha
   (`data-1p-ignore`, `data-lpignore`, `data-bwignore`, `data-form-type="other"`)
   continuam vindo da fonte única `SEM_AUTOFILL` (RN-729). Decisão: sem foco
@@ -21786,7 +21786,7 @@ sem dizer qual.
   clique ou Tab a mais é o preço. Os nomes dos atributos são os documentados
   publicamente por 1Password, LastPass, Bitwarden e Dashlane, não medidos
   contra cada extensão aqui.
-- **Onde:** `apps/web/src/routes/NewProjectWizard.tsx:893` (`project-title`),
+- **Onde:** `apps/web/src/routes/NewProjectWizard.tsx:746` (`projeto-slug`),
   `apps/web/src/lib/conversa-comecou.ts:29` (`SEM_AUTOFILL`)
 - **Teste:** `apps/web/src/routes/NewProjectWizard.test.tsx` ("RN-736: o campo
   de nome não ganha foco sozinho nem se chama \"name\"" e o de RN-729, que
@@ -23573,6 +23573,22 @@ sem dizer qual.
   `apps/web/src/lib/session-channel.test.ts` ("gerações (AT-500, RN-833)"),
   `apps/web/src/lib/canal-vivo.test.ts`
 - **Origem:** AT-500
+
+### RN-834 — O nome do projeto no assistente não se chama "title" {#rn-834}
+
+- **Regra:** o campo "Nome do projeto" do assistente de criação usa `id`/`name`
+  `projeto-slug`, que não casam com nenhum token de dado de contato (`name`,
+  `nome`, `title`, `first`, `last`, `company`, `contact`). O `project-title` da
+  [RN-736](#rn-736) tirou o "name", mas "title" é pronome de tratamento
+  (Sr./Sra.) no preenchimento de contato, e o NordPass seguiu abrindo a lista
+  de contatos sobre o campo. O rótulo visível "Nome do projeto" (ligado por
+  `htmlFor`) e o `SEM_AUTOFILL` da [RN-740](#rn-740) ficam. É HEURÍSTICA, não
+  medida: o NordPass não documenta atributo de ignore, e nenhum foi
+  acrescentado ao `SEM_AUTOFILL`; a prova é o TP-01.
+- **Onde:** `apps/web/src/routes/NewProjectWizard.tsx:746` (`projeto-slug`)
+- **Teste:** `apps/web/src/routes/NewProjectWizard.test.tsx` ("RN-834: id e
+  name do nome do projeto não parecem dado de contato…")
+- **Origem:** AT-501 (TP-01 de 10/10)
 ### RN-827 — O painel de contexto conta a sessão inteira, e a janela só dá o detalhe {#rn-827}
 
 - **Regra:** os NÚMEROS do painel "Contexto da sessão" — regras de negócio,
