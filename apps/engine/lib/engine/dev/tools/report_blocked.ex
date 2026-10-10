@@ -12,7 +12,10 @@ defmodule Engine.Dev.Tools.ReportBlocked do
   def spec do
     %{
       name: "report_blocked",
-      description: "Sinaliza que não é possível concluir a task e registra o diagnóstico.",
+      description:
+        "Sinaliza que não é possível concluir a task e registra o diagnóstico. " <>
+          "Não serve para \"falta ferramenta de git\": commit, push e PR são feitos " <>
+          "por `report_done`.",
       parameters: %{
         "type" => "object",
         "properties" => %{

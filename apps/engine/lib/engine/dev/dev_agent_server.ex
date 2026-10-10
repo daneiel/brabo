@@ -587,7 +587,8 @@ defmodule Engine.Dev.DevAgentServer do
     }
   end
 
-  defp initial_message(task, story) do
+  @doc false
+  def initial_message(task, story) do
     %{
       "role" => "user",
       # Instrução explícita porque modelos menores tendem a DESCREVER a
@@ -599,6 +600,10 @@ defmodule Engine.Dev.DevAgentServer do
           "Rode a suite de testes do projeto via `terminal` e só sinalize conclusão com " <>
           "`report_done` depois de vê-la passar (exit 0). Se não conseguir concluir, " <>
           "use `report_blocked` com o diagnóstico do que foi tentado e por que falhou.\n\n" <>
+          "`report_done` faz o commit, o push e abre a PR: nunca procure " <>
+          "`git_commit`/`git_push`/`pr_open`, e falta de ferramenta de git não é " <>
+          "motivo de `report_blocked`. Se o script `test` do `package.json` lista os " <>
+          "arquivos um a um, inclua nele todo arquivo de teste novo.\n\n" <>
           "IMPORTANTE: aja apenas por chamadas de ferramenta. Não escreva código " <>
           "nem JSON na sua resposta em texto, e não explique o que pretende fazer — " <>
           "chame `write_file` para criar cada arquivo e `terminal` para rodar a suite. " <>
