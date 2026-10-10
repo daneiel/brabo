@@ -19027,7 +19027,7 @@ O valor mora em DOIS lugares, de propósito, um por linguagem, e mudam juntos:
   `:183` (`garantir_base`), `:308` (`remoto_vazio?`);
   `apps/engine/lib/engine/dev/worktree_manager.ex:36` (`create`), `:138`
   (`add_worktree`), `:201` (`garantir_base`);
-  `apps/engine/lib/engine/dev/agent_io.ex:385` (`propose_pr`);
+  `apps/engine/lib/engine/dev/agent_io.ex:394` (`propose_pr`);
   `apps/engine/lib/engine/gates/diff.ex:29` (`compute`);
   `apps/engine/lib/engine/harness/project_context.ex:29` (`repo_line`);
   `apps/api/src/domain/actions/protected-branches.ts:26` (`BRANCH_DE_TRABALHO`);
@@ -21277,7 +21277,7 @@ turno continua.
 - **Onde:** `apps/engine/lib/engine/harness/argumentos_de_ferramenta.ex:26`
   (`executar`), `:73` (`coagir`), `:52` (`falha_interna?`);
   `apps/engine/lib/engine/agents/resultado_de_ferramenta.ex:29` (`payload`);
-  `apps/engine/lib/engine/harness/tool_loop.ex:310` (`run_direct`);
+  `apps/engine/lib/engine/harness/tool_loop.ex:348` (`run_direct`);
   `apps/engine/lib/engine/agents/arquiteto_server.ex:331`
   (`executar_ferramenta`, o mesmo helper nos outros seis servidores)
 - **Teste:** `apps/engine/test/engine/harness/argumentos_de_ferramenta_test.exs`
@@ -21575,10 +21575,10 @@ sem dizer qual.
   `dev.credit_exhausted` como trabalho pendente, como `dev.idle_tripped`.
   Desde a RN-730 o 402 chega com `code` próprio (`insufficient_credit`) e é
   ele que decide; o reconhecimento pelo texto ficou só como rede.
-- **Onde:** `apps/engine/lib/engine/agents/falha_de_turno.ex:110`
+- **Onde:** `apps/engine/lib/engine/agents/falha_de_turno.ex:130`
   (`credito_esgotado?`),
   `apps/engine/lib/engine/dev/dev_agent_server.ex:887` (`handle_outcome`),
-  `apps/engine/lib/engine/dev/agent_io.ex:259` (`pausar_por_credito`),
+  `apps/engine/lib/engine/dev/agent_io.ex:271` (`pausar_por_credito`),
   `apps/web/src/lib/agent-status.ts:198` (`breakerReasonFor`),
   `apps/api/src/application/use-cases/sessions/get-session-pending-work.use-case.ts`
 - **Teste:** `apps/engine/test/engine/dev/dev_agent_server_test.exs`
@@ -21610,7 +21610,7 @@ sem dizer qual.
   (`streamErrorCode`),
   `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:219`
   (`streamErrorCode`),
-  `apps/engine/lib/engine/agents/falha_de_turno.ex:106` (`credito_esgotado?`),
+  `apps/engine/lib/engine/agents/falha_de_turno.ex:83` (`credito_esgotado?`),
   `:71` (`origem`), `apps/engine/lib/engine/harness/tool_loop.ex:148`
   (`last_error_code`), `apps/engine/lib/engine/dev/dev_agent_server.ex:887`
   (`handle_outcome`)
@@ -21855,8 +21855,8 @@ sem dizer qual.
   top up the key and try again."; sem idioma resolvido, pt-BR. O JSON do
   provider fica só no `reason` (diagnóstico). Os demais erros mantêm a frase
   de sempre.
-- **Onde:** `apps/engine/lib/engine/agents/falha_de_turno.ex:126` (`mensagem`),
-  `:143` (`diagnostico`)
+- **Onde:** `apps/engine/lib/engine/agents/falha_de_turno.ex:135` (`mensagem`),
+  `:172` (`diagnostico`)
 - **Teste:** `apps/engine/test/engine/agents/dev_lead_server_test.exs` (402
   em pt-BR e en: frase curta, `reason` sem `{:final`; erro `upstream`: frase
   de sempre), `apps/engine/test/engine/agents/falha_de_turno_test.exs`
@@ -21923,7 +21923,7 @@ sem dizer qual.
   texto narrado entra na bolha cortado em 300 caracteres com "…".
 - **Onde:** `apps/api/src/domain/llm/llm-provider-errors.ts:144`
   (`LIMITE_DO_DETALHE`), `apps/engine/lib/engine/agents/falha_de_turno.ex:168`
-  (`@teto_da_bolha`), `:172` (`curto`)
+  (`@teto_da_bolha`), `:190` (`curto`)
 - **Teste:** `apps/api/test/domain/llm/llm-provider-errors.spec.ts` (o 402
   leva `"metadata":{"reason":"insufficient_credits"` inteiro; corpo acima do
   teto corta), `apps/engine/test/engine/agents/falha_de_turno_test.exs`
@@ -22024,8 +22024,8 @@ sem dizer qual.
   `runner` o worktree está na máquina do usuário e o engine não preserva nada.
 - **Onde:** `apps/engine/lib/engine/dev/worktree_manager.ex:72`
   (`preservar_em`), `:55` (`create_from`),
-  `apps/engine/lib/engine/dev/agent_io.ex:449` (`preservar_trabalho`),
-  `apps/engine/lib/engine/dev/agent_io.ex:283` (`base_preservada`)
+  `apps/engine/lib/engine/dev/agent_io.ex:458` (`preservar_trabalho`),
+  `apps/engine/lib/engine/dev/agent_io.ex:288` (`base_preservada`)
 - **Teste:** `apps/engine/test/engine/dev/worktree_manager_test.exs`
   (`preservar_em/3 e create_from/4`: commit com `dev-api[bot]` e a próxima
   task enxerga o arquivo; limpo é `:nada`; pasta sem repositório é erro),
@@ -22423,7 +22423,7 @@ sem dizer qual.
   (medido no Chromium: 2 236px num balão de 708px) e a última coluna sumia.
 - **Onde:** `apps/api/src/application/use-cases/actions/execute-adr-pr.use-case.ts:96`
   (`openPullRequest`); `apps/engine/lib/engine/infra/infra_lead_server.ex:1482`
-  (`gravar_texto_do_turno`); `apps/engine/lib/engine/dev/dev_agent_server.ex:1050`
+  (`gravar_texto_do_turno`); `apps/engine/lib/engine/dev/dev_agent_server.ex:1059`
   (`propose_pr`); `apps/web/src/lib/session-destinatario.ts:192`
   (`agentesEmConversa`) e `apps/web/src/lib/session-kind.ts:69`
   (`tipoDaSessao`); `apps/web/src/routes/NewProjectWizard.tsx:1127`
@@ -22451,8 +22451,8 @@ sem dizer qual.
   Declarado: merge por squash num remoto não deixa a branch ancestral da `dev`,
   então a próxima segue partindo dela; o ponteiro continua só em memória, e no
   modo `runner` a checagem de merge não roda.
-- **Onde:** `apps/engine/lib/engine/dev/agent_io.ex:301`
-  (`levar_branch_para_a_proxima`), `:282` (`criar_worktree`),
+- **Onde:** `apps/engine/lib/engine/dev/agent_io.ex:310`
+  (`levar_branch_para_a_proxima`), `:291` (`criar_worktree`),
   `apps/engine/lib/engine/dev/worktree_manager.ex:199`
   (`ja_mergeada_volta_ao_trabalho`)
 - **Teste:** `apps/engine/test/engine/dev/bloqueio_preserva_trabalho_test.exs`
@@ -22746,8 +22746,8 @@ sem dizer qual.
   A descrição do campo `summary` diz que ele vira a mensagem de commit e que
   não se narra commit, push nem PR. Resumo que fica vazio cai na mensagem
   padrão `<agente>: <task>`.
-- **Onde:** `apps/engine/lib/engine/dev/agent_io.ex:356`
-  (`mensagem_de_commit`), `:331` (`propose_commit`),
+- **Onde:** `apps/engine/lib/engine/dev/agent_io.ex:365`
+  (`mensagem_de_commit`), `:340` (`propose_commit`),
   `apps/engine/lib/engine/dev/tools/report_done.ex:27` (`summary`)
 - **Teste:** `apps/engine/test/engine/dev/mensagem_de_commit_test.exs`
   (corta a narração; tira o parêntese; pendência alheia ao sistema fica)
@@ -23104,3 +23104,28 @@ sem dizer qual.
   repetido que esperava na caixa é descartado ao fim do ciclo"; "pedido para a
   task com ciclo suspenso não abre um segundo")
 - **Origem:** AT-478 (TP-01 de 10/10)
+
+### RN-810 — Falha de rede passageira do provider é retentada, e o bloqueio dela é `infra` sem contar no disjuntor {#rn-810}
+
+- **Regra:** quando a chamada ao modelo volta com erro de REDE do provider —
+  o `code` `connection`/`timeout` que a api normaliza (ADR 0041) ou, sem
+  código, o texto do transporte (`EAI_AGAIN`, `ECONNRESET`, `ETIMEDOUT`,
+  `ECONNREFUSED`, `ENOTFOUND`) —, o `ToolLoop` a retenta até duas vezes, com
+  espera de 1 s e 3 s, gravando `toolloop.network_retry` a cada uma. Vale para
+  todo consumidor do `ToolLoop` (dev agents e subagentes de gate). Esgotado o
+  teto, a origem do desfecho é `infra`, nunca `codigo`, e o bloqueio da task
+  do dev agent por essa causa NÃO incrementa o contador de bloqueios seguidos
+  ([RN-047](business-rules/custo.md#rn-047)): o agente segue reivindicando. No uso real um
+  `getaddrinfo EAI_AGAIN openrouter.ai` de 17 s bloqueou duas tarefas como
+  `codigo` e desarmou o dev.
+- **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:246`
+  (`llm_turn_com_retentativa`), `apps/engine/lib/engine/agents/falha_de_turno.ex:112`
+  (`falha_de_rede?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:906`
+  (`bloquear_parada`), `apps/engine/lib/engine/dev/agent_io.ex:228`
+  (`finish_task`)
+- **Teste:** `apps/engine/test/engine/harness/tool_loop_test.exs` ("falha de
+  rede do provider: retenta e segue quando a rede volta"; "falha de rede que
+  persiste esgota o teto"), `apps/engine/test/engine/dev/dev_agent_server_test.exs`
+  ("erro de rede do provider: origem infra e o disjuntor não conta"),
+  `apps/engine/test/engine/agents/falha_de_turno_test.exs`
+- **Origem:** AT-484 (TP-01 de 10/10)

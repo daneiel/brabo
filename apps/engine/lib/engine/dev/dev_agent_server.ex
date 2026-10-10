@@ -900,14 +900,15 @@ defmodule Engine.Dev.DevAgentServer do
 
   defp handle_outcome({:ok, ctx}, state, _task, _story), do: bloquear_parada(ctx, state)
 
+  # RN-810 (AT-484): bloqueio de origem `infra` (a rede do provider caiu
+  # depois das retentativas do `ToolLoop`) não conta para o disjuntor de
+  # bloqueios seguidos — não é defeito do agente nem do código.
   defp bloquear_parada(ctx, state) do
+    origem = origem_da_parada(ctx)
+
     state
-    |> AgentIo.block_task(
-      motivo_da_parada(ctx, ""),
-      stop_diagnosis(ctx),
-      origem_da_parada(ctx)
-    )
-    |> finish_task(:blocked)
+    |> AgentIo.block_task(motivo_da_parada(ctx, ""), stop_diagnosis(ctx), origem)
+    |> finish_task(if origem == "infra", do: :blocked_infra, else: :blocked)
   end
 
   # Caminho normal (autonomia `auto_approve`, o default da ativação): a PR
@@ -1031,8 +1032,16 @@ defmodule Engine.Dev.DevAgentServer do
   # ninguém mais.
   defp origem_da_parada(ctx) do
     case Map.get(ctx, :last_error) do
-      nil -> "modelo"
-      error -> FalhaDeTurno.origem(error)
+      nil ->
+        "modelo"
+
+      error ->
+        if FalhaDeTurno.falha_de_rede?(%{
+             "errorCode" => Map.get(ctx, :last_error_code),
+             "error" => error
+           }),
+           do: "infra",
+           else: FalhaDeTurno.origem(error)
     end
   end
 

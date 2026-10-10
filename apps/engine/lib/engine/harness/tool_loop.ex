@@ -128,7 +128,7 @@ defmodule Engine.Harness.ToolLoop.Default do
     {:ok, ctx} = ContextManager.maybe_compact(ctx)
     wire = Enum.map(ctx.messages, &to_wire/1)
 
-    case EngineApiClient.llm_turn(ctx.project_id, ctx.session_id, ctx.agent, wire, ctx.tool_specs) do
+    case llm_turn_com_retentativa(ctx, wire) do
       {:ok, %{"message" => message} = resp} ->
         # O custo do chat MAIS o do Jev (ADR 0179): o orçamento local do laço
         # gasta o que a api também registrou em `token_usage`.
@@ -234,6 +234,41 @@ defmodule Engine.Harness.ToolLoop.Default do
   end
 
   defp parada_sem_chamada(ctx, _resp, _content), do: {:ok, ctx}
+
+  # RN-810 (AT-484): falha de REDE passageira do provider (DNS `EAI_AGAIN`,
+  # conexão recusada/derrubada, timeout) é retentada com espera curta e teto
+  # pequeno ANTES de virar desfecho. A api normaliza o erro por `code`
+  # (`connection`/`timeout`, ADR 0041) e o devolve no corpo 200; o texto fica
+  # como rede para o erro que chegou sem código. Vale para todo consumidor do
+  # `ToolLoop` (dev agents e subagentes de gate), porque o caminho é este.
+  @esperas_de_rede_ms [1_000, 3_000]
+
+  defp llm_turn_com_retentativa(ctx, wire, esperas \\ nil) do
+    esperas = esperas || Application.get_env(:engine, :esperas_de_rede_ms, @esperas_de_rede_ms)
+
+    resultado =
+      EngineApiClient.llm_turn(ctx.project_id, ctx.session_id, ctx.agent, wire, ctx.tool_specs)
+
+    case {resultado, esperas} do
+      {{:ok, resp}, [espera | resto]} when is_map(resp) ->
+        if FalhaDeTurno.falha_de_rede?(resp) do
+          emit(ctx, "toolloop.network_retry", %{
+            erro: Map.get(resp, "error"),
+            errorCode: Map.get(resp, "errorCode"),
+            esperaMs: espera,
+            tentativasRestantes: length(resto)
+          })
+
+          Process.sleep(espera)
+          llm_turn_com_retentativa(ctx, wire, resto)
+        else
+          resultado
+        end
+
+      _ ->
+        resultado
+    end
+  end
 
   defp emit_falha(ctx, reason) do
     emit(ctx, "agent.error", %{
