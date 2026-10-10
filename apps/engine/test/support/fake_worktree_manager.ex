@@ -28,6 +28,7 @@ defmodule Engine.Dev.FakeWorktreeManager do
 
   # RN-797: o servidor roda noutro processo, então o controle é por env.
   def sem_diff_contra_a_dev?(_path), do: Application.get_env(:engine, :fake_sem_diff, false)
+  def sem_diff_contra_a_dev?(path, _project_id), do: sem_diff_contra_a_dev?(path)
 
   defp do_create(slug) do
     path =

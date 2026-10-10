@@ -739,6 +739,21 @@ defmodule Engine.Dev.DevAgentServerTest do
       assert new_state.consecutive_blocked == 1
     end
 
+    # RN-810 (AT-484): rede do provider fora é INFRA e não conta no disjuntor.
+    test "erro de rede do provider: origem infra e o disjuntor não conta",
+         %{state: state} do
+      state = %{state | max_consecutive_blocked: 3, consecutive_blocked: 2}
+      Process.put(:fake_tasks, [%{"id" => "task-n1", "title" => "T1"}])
+      Process.put(:fake_dev_context, contexto_minimo())
+      Process.put(:fake_llm_turn_error, "getaddrinfo EAI_AGAIN openrouter.ai")
+
+      assert {:noreply, new_state} = DevAgentServer.handle_cast(:work, state)
+
+      assert_received {:task_blocked_origin, "task-n1", "infra"}
+      refute_received {:event_appended, _, _, %{type: "dev.idle_tripped"}}
+      assert new_state.consecutive_blocked == 2
+    end
+
     # RN-780 (AT-459): só raciocínio, cortado pelo teto, duas vezes seguidas.
     test "resposta só de raciocínio cortada pelo teto bloqueia com motivo nomeado, origem modelo",
          %{state: state} do
