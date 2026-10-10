@@ -87,7 +87,9 @@
     "continuarCortadaTexto": "Continue where you stopped.",
     "falhaOrigem": "failure · origin {{origem}}",
     "falhaProximoPasso": "The {{agente}} turn stopped because of this failure (origin {{origem}}). Send {{agente}} a message to continue.",
-    "tetoDeIteracoes": "Stopped at the limit of {{max}} steps without finishing the turn. What was recorded so far is above; tell me how you'd like to continue."
+    "tetoDeIteracoes": "Stopped at the limit of {{max}} steps without finishing the turn. What was recorded so far is above; tell me how you'd like to continue.",
+    "naoEnviada": "not sent",
+    "tentarDeNovo": "Try again"
   },
   "historia": {
     "pendente": "story \"{{titulo}}\" ready, awaiting your promotion",
@@ -223,7 +225,9 @@
     "nota": "A shortcut to the decision: the same cards and endpoints as the Approvals tab. No ceiling changes — merging into a protected branch stays manual.",
     "filas": {
       "aprovacoes": "Approvals",
-      "merges": "PR merges"
+      "merges": "PR merges",
+      "prontas": "PRs ready to merge",
+      "bloqueadas": "Blocked tasks"
     },
     "origem_one": "Proposed in session {{hashtag}} · {{tempo}}",
     "origem_other": "{{count}} proposed in session {{hashtag}} · oldest {{tempo}}",
@@ -234,6 +238,13 @@
       "todas_other": "The policy reason for these {{count}} cards could not be read: reading the log of the session that proposed the actions failed.",
       "algumas_one": "The policy reason for {{count}} of the {{total}} cards below could not be read: reading the log of the session that proposed the action failed.",
       "algumas_other": "The policy reason for {{count}} of the {{total}} cards below could not be read: reading the log of the session that proposed the actions failed."
+    },
+    "bloqueadas": {
+      "botao": "Unblock",
+      "ok": "Task unblocked: it goes back to the module's dev agent queue.",
+      "erro": "Could not unblock the task.",
+      "semMotivo": "No reason recorded.",
+      "semPapel": "Unblocking requires the developer role on the project."
     }
   },
   "mergearNoChat": {
@@ -251,7 +262,8 @@
       "outrasCount_one": "{{count}} other entry",
       "outrasCount_other": "{{count}} other entries",
       "conteudoComOutras": "{{mensagens}} · {{outras}}"
-    }
+    },
+    "rotuloDoFio": "Session conversation"
   },
   "fila": {
     "naFila": "queued for {{agente}} — read when the current turn ends",

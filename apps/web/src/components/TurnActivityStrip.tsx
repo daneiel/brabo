@@ -60,7 +60,13 @@ export function TurnActivityStrip({ estado, agente, pensandoVisivel }: TurnActiv
   ];
 
   return (
-    <div className={styles.faixa} style={corDoAgente(agente ?? undefined)}>
+    <div
+      className={styles.faixa}
+      style={corDoAgente(agente ?? undefined)}
+      // RN-830: leitor de tela ouve o que o agente está fazendo, sem interromper.
+      role="status"
+      aria-live="polite"
+    >
       <AvatarDoAgente id={agente ?? undefined} />
       <div className={styles.corpo}>
         <div className={styles.previa} title={previa ?? undefined}>

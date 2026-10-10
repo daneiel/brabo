@@ -3125,6 +3125,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{projectId}/sessions/{sessionId}/context-summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Counts the whole session for the context panel
+         * @description Business rules, decision records and artifacts per agent counted over the WHOLE session log (the screen reads a 200-event tail), plus the files touched by `git_commit`/`git_push` in this session and in the execution session its approved Dev Lead plan activated (RN-828). Read only; no new table.
+         */
+        get: operations["SessionsController_contextSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects/{projectId}/sessions/{sessionId}/events": {
         parameters: {
             query?: never;
@@ -4859,6 +4879,34 @@ export interface components {
              *     ]
              */
             members: string[];
+        };
+        ArquivosTocadosResponseDto: {
+            /** @description Most recent first, capped at 100. */
+            itens: components["schemas"]["ArquivoTocadoResponseDto"][];
+            /**
+             * @description Real total, even when `itens` was cut.
+             * @example 140
+             */
+            total: number;
+        };
+        ArquivoTocadoResponseDto: {
+            /** @example 01JC4Z0000ACAO00000000000001 */
+            actionId: string;
+            /** @example src/app.ts */
+            path: string;
+            /** @example 12 */
+            additions: number;
+            /** @example 3 */
+            deletions: number;
+        };
+        ArtefatosDoAgenteResponseDto: {
+            /** @example po */
+            actorId: string;
+            /**
+             * @description PRs (`pr_open`/`open_adr_pr`) plus epics, stories and tasks this agent created in the session.
+             * @example 7
+             */
+            quantos: number;
         };
         AssignStoryModulesInternalDto: {
             /**
@@ -9517,6 +9565,23 @@ export interface components {
              * @enum {string}
              */
             locale: "pt-BR" | "en";
+        };
+        SessionContextSummaryResponseDto: {
+            /** @description The requested session plus the execution session(s) its approved Dev Lead plan activated (RN-828). */
+            sessoesLidas: string[];
+            /**
+             * @description `artifact.business_rule` in the whole session.
+             * @example 11
+             */
+            regras: number;
+            /**
+             * @description `artifact.decision_record` in the whole session.
+             * @example 6
+             */
+            decisoes: number;
+            artefatosPorAgente: components["schemas"]["ArtefatosDoAgenteResponseDto"][];
+            /** @description Files from `git_commit`/`git_push` actions of this session and of the linked execution session. */
+            arquivosTocados: components["schemas"]["ArquivosTocadosResponseDto"];
         };
         SessionEventResponseDto: {
             /**
@@ -18997,6 +19062,56 @@ export interface operations {
             };
             /** @description `destinatario_ausente`: a `consultiva` session with no agent — the message has no recipient. Nothing was recorded and no model was called (RN-682). */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SessionsController_contextSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+                sessionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionContextSummaryResponseDto"];
+                };
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient role in the project. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Project or session does not exist. */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -21,7 +21,7 @@ import {
 import { PendenciasDeOutrasSessoes } from '../components/PendenciasDeOutrasSessoes';
 import { roleAtLeast } from '../lib/roles';
 import { useRetomarTurnoDoLog, useTurnoDoAgente } from '../lib/session-turno';
-import { useEnfileirarMensagem } from '../lib/enfileirar-mensagem';
+import { useEnfileirarMensagem } from '../lib/enfileirar-mensagem'; import { marcarMensagemNaoEnviada } from '../lib/mensagem-nao-enviada';
 import { mensagemDaRecusaDoAgente } from '../lib/recusa-do-agente';
 import {
   useBacklog,
@@ -757,6 +757,7 @@ export function SessionPage({
         if (!agenteForcado) setDraft((atual) => atual || text);
         return;
       }
+      marcarMensagemNaoEnviada({ texto: text, reenviar: () => void enviarMensagem(text, agentParaEnviar) }); // RN-831
       // 409 com o agente ainda no meio de um turno traz a frase do engine
       // ("ficou registrada, mas não foi lida") — antes era aceita e sumia.
       showToast({
@@ -886,7 +887,7 @@ export function SessionPage({
             sessionId={sessionId}
             podeDecidir={podeDecidir}
           />
-          <div className={styles.messages} ref={scrollContainerRef} onScroll={aoRolarOFio}>
+          <div className={styles.messages} ref={scrollContainerRef} onScroll={aoRolarOFio} role="log" aria-label={t('fio.rotuloDoFio')}>
             <div className={styles.messagesInner} ref={messagesInnerRef}>
               <SessionFio
                 conviteVisivel={conviteVisivel}

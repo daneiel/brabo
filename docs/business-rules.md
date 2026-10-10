@@ -5703,7 +5703,7 @@ si não muda.
   dev_lead,ux_designer,staff}_server.ex` (broadcast de `tool.call`);
   `apps/web/src/lib/atividade-do-turno.ts` (reducer);
   `apps/web/src/components/TurnActivityStrip.tsx` (componente);
-  `apps/web/src/lib/session-channel.ts:50` (`onToolCall`);
+  `apps/web/src/lib/session-channel.ts:54` (`onToolCall`);
   `apps/web/src/routes/session-fio.tsx:48` (`agruparNarracoesDoTurno`),
   `apps/web/src/routes/SessionPage.tsx:206` (`turnoViaCanal`)
 - **Teste:** `apps/web/src/lib/atividade-do-turno.test.ts`,
@@ -14642,8 +14642,8 @@ desde a Fase 4a —, e o que muda é a latência máxima das escritas sem aviso.
   (`eventAppended`);
   `apps/api/src/infrastructure/persistence/drizzle/drizzle-context.ts:39`
   (`aposCommit`), `:53` (`veioDoEngine`);
-  `apps/web/src/lib/canal-vivo.ts:35` (fallback), `:66` (estado), `:98`
-  (`intervaloDaSessao`), `:123` (`alvosDoEvento`), `:150` (janelas), `:175`
+  `apps/web/src/lib/canal-vivo.ts:35` (fallback), `:66` (estado), `:108`
+  (`intervaloDaSessao`), `:134` (`alvosDoEvento`), `:150` (janelas), `:185`
   (`criarInvalidadorDoCanal`); `apps/web/src/lib/session-channel.ts:161`,
   `:165`, `:131`, `:229`; `apps/web/src/lib/session-turno.ts:414`
   (o aviso: invalida e, do acompanhado, antecipa a leitura), `:86`
@@ -17308,7 +17308,7 @@ continuam SEM decisão inline (não há `ApprovalCard` para elas).
   (`turnoEmCursoNoLog`), `:532` (`useRetomarTurnoDoLog`);
   `apps/web/src/lib/pendencias-do-projeto.ts:24` (`usePendenciasDoProjeto`),
   `:56` (`separarPendenciasDeOutrasSessoes`);
-  `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:46`
+  `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:65`
   (`PendenciasDeOutrasSessoes`); `apps/web/src/routes/MergearNoChat.tsx:28`
   (`prAbertaDaAcao`), `:56` (`jaHaMergeDaPr`), `:89` (`MergearNoChat`);
   `apps/web/src/routes/SessionPage.tsx:154` (`podeDecidir`), `:281`
@@ -17663,7 +17663,7 @@ cláusula própria no engine. Nenhuma mudança de api nem de engine.
 - **Onde:** `apps/web/src/lib/session-destinatario.ts:191` (`agentesEmConversa`),
   `:219` (`resolverDestinatario`), `:254` (`useDestinatarioDoChat`), `:116`
   (`useAtivadosNaSessaoInteira`), `:141` (`ativadosSemJanela`);
-  `apps/web/src/routes/SessionComposer.tsx:272` (`destinatarioRow`), `:178`
+  `apps/web/src/routes/SessionComposer.tsx:287` (`destinatarioRow`), `:193`
   (`ofertasForaDaJanela`); `apps/web/src/routes/SessionPage.tsx:357`
   (`aceitarHandoff`); `apps/web/src/routes/session-timeline-montagem.tsx:547`
   (`handoffIdDoEvento`), `:555` (`origem`); `apps/web/src/lib/session-handoffs.ts:68`
@@ -17813,7 +17813,7 @@ não dizia quais abas estavam abertas, e a leitura de que `/containers` estava
 numa delas é inferência pelos 106 ≈ 9 × 12.
 
 - **Código:** `apps/web/src/lib/canal-vivo.ts:54` (`INTERVALO_DO_PROJETO_MS`),
-  `:216` (`aoEvento`, os `extras`); `apps/web/src/lib/hooks.ts:127`
+  `:226` (`aoEvento`, os `extras`); `apps/web/src/lib/hooks.ts:127`
   (`useProjectSessions`), `:158` (`useLatestSession`);
   `apps/web/src/routes/ProjectPage.tsx:77` (os contadores do trilho);
   `apps/web/src/routes/ContainersPage.tsx:62` (`useLatestSession`, sem poll);
@@ -18089,7 +18089,7 @@ o do chat.
   `apps/web/src/routes/ProjectExecutorsTab.tsx:107` (`pendentesQuery`), `:290`
   (o bloco); `apps/web/src/routes/code/CodeShell.tsx:101` (`pendentesQuery`);
   `apps/web/src/routes/SessionPage.tsx:782` (o bloco sem `isActive`);
-  `apps/web/src/lib/canal-vivo.ts:123` (`alvosDoEvento`), `:180`
+  `apps/web/src/lib/canal-vivo.ts:134` (`alvosDoEvento`), `:180`
   (a chave por prefixo); `apps/web/src/components/PendenciasDeOutrasSessoes.tsx`
   (`porSessao`, `presenca`); `apps/web/src/components/ApprovalCard.tsx`
   (`detalheRecolhido`); `apps/web/src/lib/hooks.ts:455`
@@ -20398,7 +20398,7 @@ E o composer e os campos de texto das perguntas estruturadas levam
 
 - **Onde:** `apps/web/src/lib/conversa-comecou.ts:15` (`conversaComecou`),
   `:29` (`SEM_AUTOFILL`); `apps/web/src/routes/SessionPage.tsx:443`
-  (`conversaComecou`); `apps/web/src/routes/SessionComposer.tsx:365`
+  (`conversaComecou`); `apps/web/src/routes/SessionComposer.tsx:380`
   (`SEM_AUTOFILL`); `apps/web/src/routes/StructuredQuestionCard.tsx:206`
   (`SEM_AUTOFILL`)
 - **Teste:** `apps/web/src/routes/SessionPage.sessao.test.tsx:316` (Criativo
@@ -20761,7 +20761,7 @@ Junto, o fechamento deixa de dizer que parear uma pasta pela tela do projeto
   `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:423` (`reabrirPorConflitoDeMerge`),
   `apps/engine/lib/engine/workers/dev_agent_wake_worker.ex:151` (`task.merge_conflict`),
   `apps/engine/lib/engine/dev/dev_agent_server.ex:350` (`handle_info`),
-  `apps/engine/lib/engine/dev/dev_agent_server.ex:773` (`trigger_gate_recheck`),
+  `apps/engine/lib/engine/dev/dev_agent_server.ex:781` (`trigger_gate_recheck`),
   `apps/engine/lib/engine/dev/worktree_manager.ex:47` (`adopt`)
 - **Teste:** `apps/api/test/application/use-cases/actions/execute-git-action.use-case.spec.ts` ("conflito de merge → kind git_merge, arquivos no
   resultado e evento na tarefa"; falha: "RN-715: tarefa que já não está em
@@ -20806,7 +20806,7 @@ Junto, o fechamento deixa de dizer que parear uma pasta pela tela do projeto
 - **Onde:** `apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts:72` (`resultadoDaFalha`),
   `apps/api/src/application/use-cases/actions/list-project-pending-actions.use-case.ts:22` (`execute`),
   `apps/web/src/routes/ProjectPrsTab.tsx:65` (`ultimaRecusaDeMerge`),
-  `apps/web/src/lib/canal-vivo.ts:124` (`alvosDoEvento`)
+  `apps/web/src/lib/canal-vivo.ts:134` (`alvosDoEvento`)
 - **Teste:** `apps/api/test/application/use-cases/actions/execute-git-action.use-case.spec.ts`
   ("conflito de merge → kind git_merge, arquivos no resultado e evento na
   tarefa"; caso de falha: "falha que não é conflito não grava arquivos nem
@@ -21579,7 +21579,7 @@ sem dizer qual.
   ele que decide; o reconhecimento pelo texto ficou só como rede.
 - **Onde:** `apps/engine/lib/engine/agents/falha_de_turno.ex:130`
   (`credito_esgotado?`),
-  `apps/engine/lib/engine/dev/dev_agent_server.ex:887` (`handle_outcome`),
+  `apps/engine/lib/engine/dev/dev_agent_server.ex:892` (`handle_outcome`),
   `apps/engine/lib/engine/dev/agent_io.ex:271` (`pausar_por_credito`),
   `apps/web/src/lib/agent-status.ts:198` (`breakerReasonFor`),
   `apps/api/src/application/use-cases/sessions/get-session-pending-work.use-case.ts`
@@ -21614,7 +21614,7 @@ sem dizer qual.
   (`streamErrorCode`),
   `apps/engine/lib/engine/agents/falha_de_turno.ex:83` (`credito_esgotado?`),
   `:71` (`origem`), `apps/engine/lib/engine/harness/tool_loop.ex:148`
-  (`last_error_code`), `apps/engine/lib/engine/dev/dev_agent_server.ex:887`
+  (`last_error_code`), `apps/engine/lib/engine/dev/dev_agent_server.ex:892`
   (`handle_outcome`)
 - **Teste:** `apps/api/test/contract/llm-provider.contract.ts` (`erro_402 vira
   chunk de erro com code "insufficient_credit"`; falha: `erro_500` segue
@@ -22134,7 +22134,7 @@ sem dizer qual.
   120px da RN-173, porque o cartão de aprovação é o que a pessoa precisa ver.
   Reabrir a sessão com uma espera antiga não rola nada além da abertura de
   sempre.
-- **Onde:** `apps/web/src/lib/session-channel.ts:195` (`awaiting_approval`),
+- **Onde:** `apps/web/src/lib/session-channel.ts:232` (`awaiting_approval`),
   `apps/web/src/lib/session-turno.ts:418` (`awaiting_approval`),
   `apps/web/src/lib/session-rolagem.ts:30` (`seqDaEsperaPorAprovacao`),
   `:141` (`esperaPorAprovacao`)
@@ -22396,7 +22396,7 @@ sem dizer qual.
   vocabulário lê os JSON, e o enum entrava pela interpolação em runtime;
   `i18n-enum-cru.test.ts` reprova `t(…, { status: x.status })`.
 - **Onde:** `apps/web/src/routes/ConfirmarEncerramento.tsx:13`
-  (`useEncerrarComConfirmacao`) e `apps/web/src/routes/SessionComposer.tsx:449`
+  (`useEncerrarComConfirmacao`) e `apps/web/src/routes/SessionComposer.tsx:464`
   (`statusGenerico`)
 - **Teste:** `apps/web/src/routes/ConfirmarEncerramento.test.tsx` (sem
   execução encerra direto; com execução só encerra ao confirmar; cancelar não
@@ -22425,7 +22425,7 @@ sem dizer qual.
   (medido no Chromium: 2 236px num balão de 708px) e a última coluna sumia.
 - **Onde:** `apps/api/src/application/use-cases/actions/execute-adr-pr.use-case.ts:96`
   (`openPullRequest`); `apps/engine/lib/engine/infra/infra_lead_server.ex:1482`
-  (`gravar_texto_do_turno`); `apps/engine/lib/engine/dev/dev_agent_server.ex:1059`
+  (`gravar_texto_do_turno`); `apps/engine/lib/engine/dev/dev_agent_server.ex:1064`
   (`propose_pr`); `apps/web/src/lib/session-destinatario.ts:192`
   (`agentesEmConversa`) e `apps/web/src/lib/session-kind.ts:69`
   (`tipoDaSessao`); `apps/web/src/routes/NewProjectWizard.tsx:1127`
@@ -22730,8 +22730,8 @@ sem dizer qual.
   `reasoningTokens` (ficam só em `token_usage`), então a resposta vazia que
   bate no teto sem `finish_reason: length` não é reconhecida.
 - **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:219`
-  (`parada_sem_chamada`), `apps/engine/lib/engine/dev/dev_agent_server.ex:1010`
-  (`motivo_da_parada`), `:1013` (`stop_diagnosis`)
+  (`parada_sem_chamada`), `apps/engine/lib/engine/dev/dev_agent_server.ex:1016`
+  (`motivo_da_parada`), `:1019` (`stop_diagnosis`)
 - **Teste:** `apps/engine/test/engine/harness/tool_loop_test.exs` (`corte só
   de raciocínio`: retentada uma vez e segue; repetido para com
   `corte_pelo_teto`), `apps/engine/test/engine/dev/dev_agent_server_test.exs`
@@ -23010,7 +23010,7 @@ sem dizer qual.
   cobre também o merge por squash que a [RN-760](#rn-760) declara não ver.
   Declarado: a PR antiga da branch, se existir, não é fechada no provider.
 - **Onde:** `apps/engine/lib/engine/dev/worktree_manager.ex:246`
-  (`sem_diff_contra_a_dev?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:942`
+  (`sem_diff_contra_a_dev?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:948`
   (`ja_na_dev`)
 - **Teste:** `apps/engine/test/engine/dev/tarefa_ja_na_dev_test.exs`
 - **Origem:** AT-474
@@ -23184,7 +23184,7 @@ sem dizer qual.
   com o que há, e na dúvida a task segue para os gates.
 - **Onde:** `apps/engine/lib/engine/dev/worktree_manager.ex:267`
   (`sem_diff_contra_a_dev?`), `apps/engine/lib/engine/dev/worktree_manager.ex:277`
-  (`sem_diff_atualizado?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:837`
+  (`sem_diff_atualizado?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:842`
   (`handle_outcome`)
 - **Teste:** `apps/engine/test/engine/dev/tarefa_ja_na_dev_test.exs` ("caminho
   feliz: com a dev atualizada, a branch não tem diff"; "falha: remoto
@@ -23434,7 +23434,7 @@ sem dizer qual.
   derivação lê os `events` que a tela já tem — nenhuma query nova
   ([RN-579](#rn-579)).
 - **Onde:** `apps/web/src/lib/session-readiness.ts:149` (`temMapaDeModulos`),
-  `apps/web/src/routes/SessionComposer.tsx:350` (`hasModuleMap`)
+  `apps/web/src/routes/SessionComposer.tsx:365` (`hasModuleMap`)
 - **Teste:** `apps/web/src/routes/SessionPage.proximo-passo-arquitetura.test.tsx`
   ("mapa gravado + história promovida + Arquiteto parado: o texto aparece";
   falhas: "com o handoff do Arquiteto já oferecido, o texto some", "com turno
@@ -23443,6 +23443,136 @@ sem dizer qual.
 - **Origem:** AT-491 (opção a: o gesto humano é desenho, o defeito era a tela
   não avisar)
 
+### RN-832 — O dev agent sabe que `report_done` faz commit, push e PR, e que teste novo entra no script `test` {#rn-832}
+
+- **Regra:** o dev agent não tem nem precisa de `git_commit`, `git_push` ou
+  `pr_open`: commit, push e PR acontecem quando ele chama `report_done`. A
+  descrição de `report_done`, a de `report_blocked` ("falta ferramenta de git"
+  não é motivo de bloqueio), o kickoff do dev agent e a mensagem de ambiente
+  ([RN-706](#rn-706)) dizem isso — a de ambiente mandava, até aqui, usar as
+  ações tipadas de git, que o dev não tem. O kickoff e o ambiente dizem também
+  que, se o script `test` do `package.json` lista arquivos um a um, todo
+  arquivo de teste novo entra nele. Só texto: nenhuma regra nova de código, e
+  o Jev segue sem piso para dev agents ([RN-758](#rn-758)).
+- **Onde:** `apps/engine/lib/engine/dev/tools/report_done.ex:16` (`spec`),
+  `apps/engine/lib/engine/dev/tools/report_blocked.ex:12` (`spec`),
+  `apps/engine/lib/engine/dev/dev_agent_server.ex:591` (`initial_message`),
+  `apps/engine/lib/engine/harness/ambiente_do_agente.ex:102` (`montar`)
+- **Teste:** `apps/engine/test/engine/dev/report_done_instrucao_test.exs`
+  ("caminho feliz: report_done, kickoff e ambiente carregam as duas
+  instruções"; falha: "o ambiente não manda mais usar as ações tipadas de git")
+- **Origem:** AT-499 (TP-01, 11ª: tarefa bloqueada com a suíte verde por
+  "git_commit não existe"; quatro voltas de QA por teste fora do script `test`)
+### RN-825 — O chat mostra as PRs prontas para merge e propõe o merge ali {#rn-825}
+
+- **Regra:** acima do fio da sessão, ao lado das pendências de outras sessões
+  ([RN-626](#rn-626)), a fila "PRs prontas para merge" lista as PRs ABERTAS do
+  projeto cuja tarefa teve os gates aprovados (`gateStatus: awaiting_user`) ou
+  que não têm tarefa (ADR, infra), e que não têm `git_merge` pendente de OUTRA
+  sessão (essa já está em "Merges de PR"). "Mergear" PROPÕE o merge nesta
+  sessão, pelo mesmo endpoint da aba PRs, e o cartão de aprovação aparece na
+  linha da PR com a ação devolvida pela api ([RN-822](#rn-822)); o merge segue
+  manual ([RN-418](#rn-418)). Cada fila tem título e contagem próprios, nunca
+  somados ([RN-467](#rn-467)), e as leituras são as que a aba PRs e o backlog
+  já fazem (mesmas `queryKey`s, backlog a 15 s), sem poll novo apertado
+  ([RN-579](#rn-579)).
+- **Onde:** `apps/web/src/lib/prontas-e-bloqueadas.ts:30` (`prsProntasParaMerge`),
+  `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:92` (`prontas`)
+- **Teste:** `apps/web/src/components/PendenciasDeOutrasSessoes.test.tsx`
+  ("a PR com os gates aprovados aparece, a com gate pendente não, e Mergear
+  mostra o cartão ali")
+- **Origem:** AT-497 (TP-01 conduzido pelo chat do Criativo)
+
+### RN-826 — O chat lista as tarefas bloqueadas e desbloqueia ali {#rn-826}
+
+- **Regra:** na mesma área, a fila "Tarefas bloqueadas" lista as tarefas
+  `blocked` do backlog com título e motivo (`blockedReason`, ou "sem motivo
+  registrado"), e "Desbloquear" chama o mesmo `unblock` da Visão geral
+  ([RN-794](#rn-794)) com a sessão aberta. O retorno é dito na linha da
+  tarefa: sucesso em texto, e a recusa com a frase da api. Papel abaixo de
+  `developer` vê a fila com o botão inerte e o motivo em texto.
+- **Onde:** `apps/web/src/lib/prontas-e-bloqueadas.ts:53` (`tarefasBloqueadas`),
+  `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:149` (`desbloquear`)
+- **Teste:** `apps/web/src/components/PendenciasDeOutrasSessoes.test.tsx`
+  ("CASO DE FALHA: desbloquear com erro diz o erro da api na linha da tarefa")
+- **Origem:** AT-497
+
+### RN-829 — O avatar de quem fala no fio é o do agente, no streaming e depois dele {#rn-829}
+
+- **Regra:** a bolha do agente em streaming e a bolha persistida da resposta
+  (`agent.response`) desenham o MESMO avatar, `AvatarDoAgente`, pelo id do
+  agente. Antes a bolha em curso mostrava o ícone do agente e a persistida o
+  ícone de modelo, e o avatar trocava na cara da pessoa quando o turno fechava.
+  O modelo que gerou a resposta continua só no chip ao lado do nome.
+  Agente fora do roster (ou sem id) degrada para o ícone
+  genérico, nunca para caixa vazia.
+- **Onde:** `apps/web/src/components/ui/AvatarDoAgente.tsx:22` (`AvatarDoAgente`),
+  `apps/web/src/routes/SessionFio.tsx:278` (`BolhaDoStreaming`),
+  `apps/web/src/routes/session-timeline-montagem.tsx:120` (`montarTimeline`)
+- **Teste:** `apps/web/src/routes/SessionFio.at503.test.tsx` ("a bolha
+  persistida usa o avatar do agente, não o do modelo; o modelo segue no chip",
+  "a bolha em streaming usa o MESMO avatar"; degradação: "sem agente
+  identificado, degrada para o avatar genérico")
+- **Origem:** AT-503 (TP-01 11ª, nota de UX do chat §2.1)
+
+### RN-830 — O composer respeita a composição de acento, e o fio fala com o leitor de tela {#rn-830}
+
+- **Regra:** Enter só envia quando não há composição em curso
+  (`nativeEvent.isComposing`) — no meio de um acento por IME ou tecla morta,
+  ele confirma o caractere. O contêiner do fio é `role="log"` (com nome), e a
+  faixa de atividade do turno ([RN-460](#rn-460)) é `role="status"` com
+  `aria-live="polite"`: o leitor de tela anuncia a resposta nova e o que o
+  agente está fazendo sem interromper quem está lendo. A checagem mora no
+  composer, não na página, que está no teto de linhas ([ADR 0176](adr/0176-sessionpage-abaixo-de-mil-linhas.md)).
+- **Onde:** `apps/web/src/routes/SessionComposer.tsx:81` (`ignorarComposicaoIme`),
+  `apps/web/src/components/TurnActivityStrip.tsx:41` (`TurnActivityStrip`)
+- **Teste:** `apps/web/src/routes/SessionFio.at503.test.tsx` ("Enter sem
+  composição chega ao handler de envio", "a faixa do turno é uma região de
+  status educada"; falha: "Enter no meio da composição de acento NÃO envia")
+- **Origem:** AT-503 (nota de UX do chat §3)
+
+### RN-831 — A mensagem que não foi enviada fica no fio, com "tentar de novo" {#rn-831}
+
+- **Regra:** quando o envio da mensagem ao agente falha (exceto a recusa por
+  sessão encerrada, que devolve o texto ao campo — AT-154), a bolha otimista
+  não some: o texto fica no fio com o selo "não enviada" e o botão "Tentar de
+  novo", que reenvia o MESMO texto ao MESMO destinatário pelo caminho de
+  sempre. Há uma só por vez; um envio novo (ou o próprio reenvio) a substitui.
+  O toast com o motivo continua.
+- **Onde:** `apps/web/src/lib/mensagem-nao-enviada.ts:29`
+  (`marcarMensagemNaoEnviada`), `apps/web/src/routes/SessionFio.tsx:52`
+  (`SessionFio`)
+- **Teste:** `apps/web/src/routes/SessionFio.at503.test.tsx` ("mostra o texto
+  com \"não enviada\" e reenvia ao clicar em tentar de novo", "um envio novo
+  (otimista acesa) substitui a não enviada");
+  `apps/web/src/routes/SessionPage.turno-preso.test.tsx` (falha: "CASO DE
+  FALHA: erro no envio desarma o turno e a mensagem fica \"não enviada\"
+  (RN-831)")
+- **Origem:** AT-503 (nota de UX do chat §3)
+### RN-833 — Todo socket Phoenix do web se descarta, e o substituído não age {#rn-833}
+
+- **Regra:** todo socket Phoenix do web nasce por `criarSocket` e morre por
+  `descartar()`, que faz `disconnect()` e remove os três ouvintes que o
+  construtor do `phoenix@1.8.9` registra em `window` (`pagehide`, `pageshow`,
+  `visibilitychange`) — `disconnect()` sozinho os deixava, e o
+  `visibilitychange` reabria o socket velho. No canal da sessão cada
+  `conectar()` é uma GERAÇÃO: a anterior é descartada (leave, `descartar()` e
+  o ping DELA) antes de a nova nascer, e todo callback de geração antiga é
+  no-op — o `onClose` de um socket substituído não agenda reconexão, não
+  limpa o ping do atual e não marca morto o canal vivo. O canal vivo
+  ([RN-579](#rn-579)) é CONTAGEM de conexões por sessão, não booleano. A
+  neutralização do auto-reconnect ([RN-108](business-rules/autenticacao.md#rn-108))
+  continua obrigatória no tipo de `criarSocket`.
+- **Onde:** `apps/web/src/lib/socket-phoenix.ts:31` (`criarSocket`),
+  `apps/web/src/lib/session-channel.ts:92` (`descartarGeracao`),
+  `apps/web/src/lib/session-channel.ts:136` (`ehAtual`),
+  `apps/web/src/lib/canal-vivo.ts:70` (`marcarCanalDaSessao`)
+- **Teste:** `apps/web/src/lib/socket-phoenix.test.ts` (Phoenix real: "50×
+  criar + descartar deixa saldo líquido 0 nos três ouvintes de window";
+  falha: "socket só desconectado (sem descartar) deixa os três ouvintes"),
+  `apps/web/src/lib/session-channel.test.ts` ("gerações (AT-500, RN-833)"),
+  `apps/web/src/lib/canal-vivo.test.ts`
+- **Origem:** AT-500
 ### RN-827 — O painel de contexto conta a sessão inteira, e a janela só dá o detalhe {#rn-827}
 
 - **Regra:** os NÚMEROS do painel "Contexto da sessão" — regras de negócio,

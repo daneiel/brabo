@@ -2177,7 +2177,11 @@ o RACIOCÍNIO da triagem, que continua valendo.
   conta. Por isso a opção é OBRIGATÓRIA no tipo (`OpcoesDoSocket` do runner) e
   é asserida por teste sobre a OPÇÃO passada ao construtor: teste que só
   verifica "conecta" passa com o defeito de pé, e passou. Comentário não é
-  mecanismo.
+  mecanismo. No web, nenhum arquivo chama `new Socket` direto: todo socket nasce por
+  `criarSocket` (`apps/web/src/lib/socket-phoenix.ts`) e morre por `descartar()`,
+  porque o construtor do `phoenix@1.8.9` registra três ouvintes em `window` que
+  `disconnect()` não remove; e o canal da sessão é por GERAÇÃO — callback de
+  socket substituído não age (RN-833).
 - O teto de 300 req/min é do USUÁRIO, não da aba, e NÃO se resolve subindo o
   teto (RN-579, AT-093: um navegador na Sessão fazia 118/min de mediana e 263
   de pico). Com o canal `session:<id>` VIVO (join confirmado), as queries da

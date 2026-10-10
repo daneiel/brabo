@@ -1,11 +1,16 @@
-import type { CSSProperties, Dispatch, SetStateAction } from 'react';
+import { useEffect, type CSSProperties, type Dispatch, type SetStateAction } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { AGENTS } from '../lib/agents';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Disclosure } from '../components/ui/Disclosure';
 import { Shimmer } from '../components/ui/Shimmer';
-import { ModelIcon, UserIcon } from '../components/ui/icons';
+import { UserIcon } from '../components/ui/icons';
+import { AvatarDoAgente } from '../components/ui/AvatarDoAgente';
+import {
+  limparMensagemNaoEnviada,
+  useMensagemNaoEnviada,
+} from '../lib/mensagem-nao-enviada';
 import { useTextoDoStreaming, type StoreDoStreaming } from '../lib/streaming-do-turno';
 import { FIO_RECENTES_ABERTAS, type dividirFio } from './session-fio';
 import styles from './SessionPage.module.css';
@@ -62,6 +67,13 @@ export function SessionFio({
   agenteExibido,
 }: SessionFioProps) {
   const { t } = useTranslation('sessionPage');
+  // RN-831: a mensagem cujo envio falhou fica no fio até a próxima tentativa —
+  // um envio novo (ou o reenvio) acende a otimista e a substitui.
+  const naoEnviada = useMensagemNaoEnviada();
+  useEffect(() => {
+    if (optimisticUser !== null) limparMensagemNaoEnviada();
+  }, [optimisticUser]);
+  useEffect(() => limparMensagemNaoEnviada, []);
   return (
     <>
       {/* O Criativo é ativado e NÃO fala primeiro: ele espera a sua
@@ -192,6 +204,38 @@ export function SessionFio({
         </div>
       )}
 
+      {naoEnviada && !optimisticUser && (
+        <div
+          className={styles.message}
+          style={{ ['--msg-color' as string]: 'var(--accent)' } as CSSProperties}
+          data-testid="mensagem-nao-enviada"
+        >
+          <span className={[styles.avatar, styles.user].join(' ')}>
+            <UserIcon size={15} />
+          </span>
+          <div className={styles.messageBody}>
+            <div className={styles.messageHeader}>
+              <span className={styles.messageName}>{user.name ?? t('compartilhado.voce')}</span>
+            </div>
+            <div className={styles.bubble}>{naoEnviada.texto}</div>
+            <div className={styles.messageNaoEnviada}>
+              <span>{t('mensagens.naoEnviada')}</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  const { reenviar } = naoEnviada;
+                  limparMensagemNaoEnviada();
+                  reenviar();
+                }}
+              >
+                {t('mensagens.tentarDeNovo')}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* `statusAgent` cobre o intervalo entre o `agent.status`
           "working" (achado B) e o primeiro delta — sem ele, aceitar
           um handoff cujo kickoff é assíncrono no engine não mostrava
@@ -257,9 +301,9 @@ function BolhaDoStreaming({
         } as CSSProperties
       }
     >
-      <span className={styles.avatar}>
-        {agenteExibido ? <agenteExibido.icon size={15} /> : <ModelIcon size={15} />}
-      </span>
+      {/* RN-829: o MESMO avatar da bolha persistida — trocar de ícone no
+          fim do turno era o avatar mudando na cara da pessoa. */}
+      <AvatarDoAgente id={agenteExibido?.key} />
       <div className={styles.messageBody}>
         <div className={styles.messageHeader}>
           {/*

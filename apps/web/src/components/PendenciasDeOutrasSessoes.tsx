@@ -1,7 +1,20 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useQueryClient } from '@tanstack/react-query';
-import { approveAction, approveAlwaysAction, denyAction } from '../lib/api-client';
-import type { ProposedAction } from '../lib/api-types';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  approveAction,
+  approveAlwaysAction,
+  denyAction,
+  getCodePullRequests,
+  mensagemDaApi,
+  proposeAction,
+  unblockTask,
+} from '../lib/api-client';
+import type { CodePullRequestSummary, ProposedAction, Task } from '../lib/api-types';
+import { userIdDaSessao } from '../lib/auth';
+import { useBacklog } from '../lib/hooks';
+import { prsProntasParaMerge, tarefasBloqueadas } from '../lib/prontas-e-bloqueadas';
+import { Button } from './ui/Button';
 import {
   CHAVE_DAS_PENDENCIAS_DO_PROJETO,
   TETO_DE_PENDENCIAS_NO_CHAT,
@@ -28,6 +41,12 @@ interface PendenciasDeOutrasSessoesProps {
    * texto — o que se tira é o controle, nunca a informação (ADR 0064).
    */
   podeDecidir: boolean;
+  /**
+   * Mostra as filas de PR pronta e de tarefa bloqueada (RN-825/826)? Só o chat
+   * da sessão as quer; a aba Executores tem a própria leitura do backlog e o
+   * orçamento dela (RN-794) passa `false`.
+   */
+  filasDoChat?: boolean;
 }
 
 /**
@@ -47,11 +66,36 @@ export function PendenciasDeOutrasSessoes({
   projectId,
   sessionId,
   podeDecidir,
+  filasDoChat = true,
 }: PendenciasDeOutrasSessoesProps) {
   const { t } = useTranslation('sessionPage');
   const queryClient = useQueryClient();
   const consulta = usePendenciasDoProjeto(projectId, sessionId);
   const { aprovacoes, merges } = separarPendenciasDeOutrasSessoes(consulta.data, sessionId);
+  // RN-825/826 (AT-497): as PRs prontas e as tarefas bloqueadas, pelas MESMAS
+  // leituras da aba PRs (`['code-pull-requests', id, 'open']`) e do backlog
+  // (`['backlog', id]`) — cache compartilhado, sem poll novo apertado (o
+  // backlog no ritmo de projeto, 15 s; a lista de PRs sem poll, o canal a
+  // invalida).
+  const prsQuery = useQuery({
+    queryKey: ['code-pull-requests', projectId, 'open'],
+    queryFn: () => getCodePullRequests(projectId, { state: 'open' }),
+    enabled: !!projectId && filasDoChat,
+  });
+  const backlogQuery = useBacklog(filasDoChat ? projectId : undefined, 15_000, sessionId);
+  const [propostas, setPropostas] = useState<Record<string, ProposedAction>>({});
+  const [propondo, setPropondo] = useState<string | null>(null);
+  const [erroDoMerge, setErroDoMerge] = useState<Record<string, string>>({});
+  const [desbloqueio, setDesbloqueio] = useState<
+    Record<string, { tom: 'ok' | 'erro'; texto: string } | 'enviando'>
+  >({});
+  const prontas = prsProntasParaMerge(
+    prsQuery.data?.items,
+    backlogQuery.data,
+    consulta.data,
+    sessionId,
+  );
+  const bloqueadas = tarefasBloqueadas(backlogQuery.data);
   const total = aprovacoes.length + merges.length;
 
   // Recorte declarado (RN-180): o teto vale para as DUAS filas juntas em
@@ -77,7 +121,64 @@ export function PendenciasDeOutrasSessoes({
     SEM_EVENTOS_LOCAIS,
   );
 
-  if (total === 0) return null;
+  if (total === 0 && prontas.length === 0 && bloqueadas.length === 0) return null;
+
+  async function proporMerge(pr: CodePullRequestSummary) {
+    setPropondo(pr.id);
+    setErroDoMerge((e) => ({ ...e, [pr.id]: '' }));
+    try {
+      const acao = await proposeAction(projectId, sessionId, {
+        actionType: 'git_merge',
+        actor: { kind: 'user', id: userIdDaSessao() ?? 'usuário' },
+        payload: {
+          pullRequestId: pr.id,
+          sourceBranch: pr.sourceBranch,
+          targetBranch: pr.targetBranch,
+          title: pr.title,
+        },
+      });
+      setPropostas((p) => ({ ...p, [pr.id]: acao }));
+      invalidar(acao);
+    } catch (erro) {
+      setErroDoMerge((e) => ({ ...e, [pr.id]: mensagemDaApi(erro) }));
+    } finally {
+      setPropondo(null);
+    }
+  }
+
+  async function desbloquear(task: Task) {
+    setDesbloqueio((d) => ({ ...d, [task.id]: 'enviando' }));
+    try {
+      await unblockTask(projectId, sessionId, task.id);
+      setDesbloqueio((d) => ({ ...d, [task.id]: { tom: 'ok', texto: t('pendencias.bloqueadas.ok') } }));
+      void queryClient.invalidateQueries({ queryKey: ['backlog', projectId] });
+    } catch (erro) {
+      setDesbloqueio((d) => ({
+        ...d,
+        [task.id]: { tom: 'erro', texto: mensagemDaApi(erro, t('pendencias.bloqueadas.erro')) },
+      }));
+    }
+  }
+
+  function cardDeDecisao(acao: ProposedAction) {
+    return (
+      <ApprovalCard
+        key={acao.id}
+        action={acao}
+        detalheRecolhido
+        decisaoDaPolitica={decisoes.get(acao.id)}
+        bloqueio={podeDecidir ? undefined : t('pendencias.semPapel')}
+        onApprove={() => decidir(acao, () => approveAction(projectId, acao.sessionId, acao.id))}
+        onDeny={() => decidir(acao, () => denyAction(projectId, acao.sessionId, acao.id))}
+        onAlwaysAllow={() =>
+          decidir(acao, async () => {
+            await approveAlwaysAction(projectId, acao.sessionId, acao.id);
+            void queryClient.invalidateQueries({ queryKey: ['permissions', projectId] });
+          })
+        }
+      />
+    );
+  }
 
   function invalidar(acao: ProposedAction) {
     void queryClient.invalidateQueries({
@@ -86,6 +187,7 @@ export function PendenciasDeOutrasSessoes({
     void queryClient.invalidateQueries({
       queryKey: ['session-actions', projectId, acao.sessionId],
     });
+    void queryClient.invalidateQueries({ queryKey: ['code-pull-requests', projectId] });
   }
   // Devolvem a promessa: o card segura os botões e diz a frase da api (AT-256),
   // e a lista se refaz MESMO na recusa.
@@ -161,8 +263,14 @@ export function PendenciasDeOutrasSessoes({
 
   // Presença POR FILA no cabeçalho, visível com o bloco recolhido — cada fila
   // com o próprio número, nunca uma soma (RN-467).
-  const presenca = (['aprovacoes', 'merges'] as const)
-    .map((chave) => ({ chave, n: chave === 'aprovacoes' ? aprovacoes.length : merges.length }))
+  const contagens = {
+    aprovacoes: aprovacoes.length,
+    merges: merges.length,
+    prontas: prontas.length,
+    bloqueadas: bloqueadas.length,
+  };
+  const presenca = (['aprovacoes', 'merges', 'prontas', 'bloqueadas'] as const)
+    .map((chave) => ({ chave, n: contagens[chave] }))
     .filter(({ n }) => n > 0)
     .map(({ chave, n }) => `${t(`pendencias.filas.${chave}`)} ${n}`)
     .join(' · ');
@@ -190,6 +298,97 @@ export function PendenciasDeOutrasSessoes({
         <div className={styles.lista}>
           {fila('aprovacoes', aprovacoes, aprovacoesVisiveis)}
           {fila('merges', merges, mergesVisiveis)}
+          {prontas.length > 0 && (
+            <section
+              className={styles.fila}
+              aria-label={t('pendencias.filas.prontas')}
+              data-testid="fila-prs-prontas"
+            >
+              <h4 className={styles.filaTitulo}>
+                {t('pendencias.filas.prontas')}
+                <span className={styles.contagem}>{prontas.length}</span>
+              </h4>
+              {prontas.map(({ pr, mergeDaSessao }) => {
+                // RN-822: a proposta que ESTE clique criou aparece na hora; a
+                // fila do projeto, quando volta, diz se ela segue pendente.
+                const acao = mergeDaSessao ?? propostas[pr.id];
+                return (
+                  <div key={pr.id} className={styles.grupo} data-testid="pr-pronta">
+                    <div className={styles.origem}>
+                      #{pr.number} {pr.title} · {pr.sourceBranch} → {pr.targetBranch}
+                    </div>
+                    {acao && acao.status === 'pending' ? (
+                      cardDeDecisao(acao)
+                    ) : (
+                      <div className={styles.acoesDaLinha}>
+                        <Button
+                          variant="primary"
+                          disabled={!podeDecidir}
+                          loading={propondo === pr.id}
+                          onClick={() => void proporMerge(pr)}
+                        >
+                          {t('mergearNoChat.botao')}
+                        </Button>
+                        <span className={styles.nota}>
+                          {podeDecidir ? t('mergearNoChat.nota') : t('mergearNoChat.semPapel')}
+                        </span>
+                      </div>
+                    )}
+                    {erroDoMerge[pr.id] && (
+                      <p className={styles.erro} role="alert">
+                        {t('mergearNoChat.erroTitulo')}: {erroDoMerge[pr.id]}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </section>
+          )}
+          {bloqueadas.length > 0 && (
+            <section
+              className={styles.fila}
+              aria-label={t('pendencias.filas.bloqueadas')}
+              data-testid="fila-tarefas-bloqueadas"
+            >
+              <h4 className={styles.filaTitulo}>
+                {t('pendencias.filas.bloqueadas')}
+                <span className={styles.contagem}>{bloqueadas.length}</span>
+              </h4>
+              {bloqueadas.map((task) => {
+                const estado = desbloqueio[task.id];
+                return (
+                  <div key={task.id} className={styles.grupo} data-testid="tarefa-bloqueada">
+                    <div className={styles.origem}>{task.title}</div>
+                    <p className={styles.nota}>
+                      {task.blockedReason ?? t('pendencias.bloqueadas.semMotivo')}
+                    </p>
+                    <div className={styles.acoesDaLinha}>
+                      <Button
+                        variant="secondary"
+                        disabled={!podeDecidir}
+                        loading={estado === 'enviando'}
+                        onClick={() => void desbloquear(task)}
+                      >
+                        {t('pendencias.bloqueadas.botao')}
+                      </Button>
+                      {!podeDecidir && (
+                        <span className={styles.nota}>{t('pendencias.bloqueadas.semPapel')}</span>
+                      )}
+                    </div>
+                    {estado && estado !== 'enviando' && (
+                      <p
+                        className={estado.tom === 'erro' ? styles.erro : styles.nota}
+                        role={estado.tom === 'erro' ? 'alert' : 'status'}
+                        data-testid="retorno-desbloqueio"
+                      >
+                        {estado.texto}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </section>
+          )}
           {cortadas > 0 && (
             <p className={styles.recorte}>
               {t('pendencias.recorte', { mostradas: total - cortadas, total })}

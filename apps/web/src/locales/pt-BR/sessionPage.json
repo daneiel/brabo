@@ -87,7 +87,9 @@
     "continuarCortadaTexto": "Continue de onde parou.",
     "falhaOrigem": "falha · origem {{origem}}",
     "falhaProximoPasso": "O turno de {{agente}} parou por esta falha (origem {{origem}}). Mande uma mensagem para {{agente}} continuar.",
-    "tetoDeIteracoes": "Parou no teto de {{max}} passos sem terminar o turno. O que ficou registrado até aqui está acima; diga como prefere seguir."
+    "tetoDeIteracoes": "Parou no teto de {{max}} passos sem terminar o turno. O que ficou registrado até aqui está acima; diga como prefere seguir.",
+    "naoEnviada": "não enviada",
+    "tentarDeNovo": "Tentar de novo"
   },
   "historia": {
     "pendente": "história \"{{titulo}}\" pronta, aguardando sua promoção",
@@ -229,7 +231,9 @@
     "nota": "Atalho para a decisão: os mesmos cards e os mesmos endpoints da aba Aprovações. Nenhum teto muda — merge em branch protegida segue manual.",
     "filas": {
       "aprovacoes": "Aprovações",
-      "merges": "Merges de PR"
+      "merges": "Merges de PR",
+      "prontas": "PRs prontas para merge",
+      "bloqueadas": "Tarefas bloqueadas"
     },
     "origem_zero": "{{count}} propostas na sessão {{hashtag}} · a mais antiga {{tempo}}",
     "origem_one": "Proposta na sessão {{hashtag}} · {{tempo}}",
@@ -243,6 +247,13 @@
       "algumas_zero": "Não foi possível ler o motivo da política de {{count}} dos {{total}} cards abaixo: a leitura do log da sessão que propôs as ações falhou.",
       "algumas_one": "Não foi possível ler o motivo da política de {{count}} dos {{total}} cards abaixo: a leitura do log da sessão que propôs a ação falhou.",
       "algumas_other": "Não foi possível ler o motivo da política de {{count}} dos {{total}} cards abaixo: a leitura do log da sessão que propôs as ações falhou."
+    },
+    "bloqueadas": {
+      "botao": "Desbloquear",
+      "ok": "Tarefa desbloqueada: ela volta para a fila do dev agent do módulo.",
+      "erro": "Não foi possível desbloquear a tarefa.",
+      "semMotivo": "Sem motivo registrado.",
+      "semPapel": "Desbloquear exige o papel developer no projeto."
     }
   },
   "mergearNoChat": {
@@ -262,7 +273,8 @@
       "outrasCount_one": "{{count}} outra entrada",
       "outrasCount_other": "{{count}} outras entradas",
       "conteudoComOutras": "{{mensagens}} · {{outras}}"
-    }
+    },
+    "rotuloDoFio": "Conversa da sessão"
   },
   "fila": {
     "naFila": "na fila de {{agente}} — será lida quando o turno atual terminar",
