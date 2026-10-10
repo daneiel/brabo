@@ -22706,7 +22706,7 @@ sem dizer qual.
   Declarado: no modo `runner` nada disso roda (o git é da máquina do usuário).
 - **Onde:** `apps/engine/lib/engine/dev/worktree_manager.ex:151`
   (`atualizar_remoto`), `:195` (`add_worktree`), `:227`
-  (`ponta_do_trabalho`), `:225` (`retomada`), `:278` (`integrar_trabalho`)
+  (`ponta_do_trabalho`), `:225` (`retomada`), `:300` (`integrar_trabalho`)
 - **Teste:** `apps/engine/test/engine/dev/worktree_manager_test.exs`
   (`integração da dev atual (RN-779)`: retomada com branch antiga parte da dev
   nova do remoto; trabalho preservado integra a dev nova; anterior em
@@ -23129,3 +23129,21 @@ sem dizer qual.
   ("erro de rede do provider: origem infra e o disjuntor não conta"),
   `apps/engine/test/engine/agents/falha_de_turno_test.exs`
 - **Origem:** AT-484 (TP-01 de 10/10)
+
+### RN-811 — O "já na dev" compara com a `dev` do remoto atualizada {#rn-811}
+
+- **Regra:** antes da checagem "já na dev" ([RN-797](#rn-797)) no
+  `report_done`, o dev agent atualiza a `dev` do remoto pelo MESMO `fetch`
+  que a [RN-779](#rn-779) faz no claim, serializado por projeto. Sem ele a
+  comparação usava a `dev` do dia em que o worktree nasceu: a branch da task
+  cujos commits já tinham entrado na `dev` remota pela PR de outra task passou
+  por QA e SecOps com 0 arquivos. `fetch` que falha não decide nada — compara
+  com o que há, e na dúvida a task segue para os gates.
+- **Onde:** `apps/engine/lib/engine/dev/worktree_manager.ex:267`
+  (`sem_diff_contra_a_dev?`), `apps/engine/lib/engine/dev/worktree_manager.ex:277`
+  (`sem_diff_atualizado?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:837`
+  (`handle_outcome`)
+- **Teste:** `apps/engine/test/engine/dev/tarefa_ja_na_dev_test.exs` ("caminho
+  feliz: com a dev atualizada, a branch não tem diff"; "falha: remoto
+  inalcançável não fecha a task sozinha")
+- **Origem:** AT-486 (TP-01 de 10/10)

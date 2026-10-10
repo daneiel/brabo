@@ -835,7 +835,7 @@ defmodule Engine.Dev.DevAgentServer do
   end
 
   defp handle_outcome({:halted, {"report_done", %{summary: summary}}, _ctx}, state, task, story) do
-    if AgentIo.worktree_manager().sem_diff_contra_a_dev?(state.worktree),
+    if AgentIo.worktree_manager().sem_diff_contra_a_dev?(state.worktree, state.project_id),
       do: ja_na_dev(state),
       else: entregar(state, summary, task, story)
   end

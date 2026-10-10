@@ -257,6 +257,28 @@ defmodule Engine.Dev.WorktreeManager do
     end
   end
 
+  @doc """
+  RN-811 (AT-486). Como `sem_diff_contra_a_dev?/1`, mas ANTES atualiza a `dev`
+  do remoto pelo MESMO `fetch` que a RN-779 faz no claim: sem ele a comparação
+  usava a `dev` do dia da criação do worktree, e a branch já inteira na `dev`
+  remota passava pelos gates com 0 arquivos. `fetch` que falha não decide
+  nada: compara com o que há (na dúvida, a task segue para os gates).
+  """
+  def sem_diff_contra_a_dev?(path, project_id) do
+    case ProjectRepository.remoto_de_trabalho(project_id) do
+      {:ok, remoto} -> sem_diff_atualizado?(path, project_id, remoto)
+      _ -> sem_diff_contra_a_dev?(path)
+    end
+  rescue
+    _ -> sem_diff_contra_a_dev?(path)
+  end
+
+  @doc false
+  def sem_diff_atualizado?(path, project_id, remoto) do
+    if is_binary(path) and File.dir?(path), do: atualizar_remoto(project_id, path, remoto)
+    sem_diff_contra_a_dev?(path)
+  end
+
   defp ponta_atual(work_dir, base, trabalho, ponto) do
     if base == trabalho and ponto != [], do: [ponta_do_trabalho(work_dir, trabalho)], else: ponto
   end

@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- **engine**: a checagem "já na dev" do `report_done` atualiza a `dev` do remoto antes de comparar — a tarefa cuja branch já estava inteira na `dev` remota passava pelos gates com 0 arquivos (RN-811, AT-486).
 - **engine**: erro de rede passageiro do provider (DNS `EAI_AGAIN`, conexão recusada ou derrubada, timeout) é retentado duas vezes antes de virar desfecho; o bloqueio que sobra tem origem `infra`, não `codigo`, e não conta para o desarme do dev agent por bloqueios seguidos (RN-810, AT-484).
 - **web**: a oferta em lote do modo automático (aba Executores) fica inerte, dizendo por quê, até a leitura de quem já está em automático chegar — o primeiro clique depois de navegar caía em outro elemento sem gravar nem avisar (RN-803, AT-477).
 - **web**: o cartão do plano do Dev Lead oferece ligar o modo automático para o time antes de aprovar, com o mesmo controle da aba Executores — o primeiro comando do dev já não nasce esperando clique (RN-804, AT-476).
