@@ -17312,7 +17312,7 @@ continuam SEM decisão inline (não há `ApprovalCard` para elas).
   (`PendenciasDeOutrasSessoes`); `apps/web/src/routes/MergearNoChat.tsx:28`
   (`prAbertaDaAcao`), `:56` (`jaHaMergeDaPr`), `:89` (`MergearNoChat`);
   `apps/web/src/routes/SessionPage.tsx:154` (`podeDecidir`), `:281`
-  (`useRetomarTurnoDoLog`), `:916` (`PendenciasDeOutrasSessoes`)
+  (`useRetomarTurnoDoLog`), `:886` (`PendenciasDeOutrasSessoes`)
 - **Teste:** `apps/web/src/components/ApprovalCard.decisao-em-voo.test.tsx:37`
   (duplo clique), `:52` (409 no card e botões inertes — caso de falha), `:67`
   (erro que não é 409 devolve os botões); `apps/web/src/lib/turno-em-curso-no-log.test.ts:18`
@@ -18864,8 +18864,8 @@ absolutos seguem pedindo aprovação (RN-154, RN-418): merge em branch protegida
 o de WORKSPACE, com a mesma lacuna declarada das outras telas de modo
 automático (RN-471).
 
-- **Código:** `apps/web/src/components/ModoAutomaticoDoTime.tsx:68`
-  (`ModoAutomaticoDoTime`), `:103` (`ligar`), `:39`
+- **Código:** `apps/web/src/components/ModoAutomaticoDoTime.tsx:73`
+  (`ModoAutomaticoDoTime`), `:109` (`ligar`), `:44`
   (`agentesEmModoAutomatico`); `apps/web/src/routes/ProjectExecutorsTab.tsx:89`
   (`podeLigarModoAutomatico`), `:308` (onde a oferta monta)
 - **Teste:** `apps/web/src/components/ModoAutomaticoDoTime.test.tsx:54` (nada
@@ -19296,7 +19296,7 @@ segundo `executed` para o mesmo merge.
   `apps/api/src/application/use-cases/actions/approve-action.use-case.ts:282` (`recusaDeMerge`);
   `apps/api/src/infrastructure/git/local-git-provider.ts:339` (`GitPullRequestAlreadyMergedError`);
   `apps/web/src/lib/gate-do-merge.ts:19` (`gatePendenteNoMerge`);
-  `apps/web/src/routes/ProjectPrsTab.tsx:201` (`gatePendenteNoMerge`);
+  `apps/web/src/routes/ProjectPrsTab.tsx:205` (`gatePendenteNoMerge`);
   `apps/web/src/routes/session-timeline-montagem.tsx:1068` (`gatePendenteNoMerge`)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:664`
   (`merge_ja_proposto`), `:687` (`pr_ja_mergeado` — caso de falha), `:696`
@@ -21504,7 +21504,7 @@ O kickoff do PO diz as três coisas.
   pegam as tarefas como estão ([RN-677](#rn-677)).
 - **Onde:** `apps/web/src/lib/mensagem-otimista.ts:14` (`otimistaJaNoLog`),
   `apps/web/src/lib/mensagem-otimista.ts:22` (`nomeDaMensagemOtimista`),
-  `apps/web/src/routes/SessionPage.tsx:889` (`otimistaJaNoLog`),
+  `apps/web/src/routes/SessionPage.tsx:901` (`otimistaJaNoLog`),
   `apps/web/src/routes/session-timeline-montagem.tsx:605`
   (`handleActivateExecution`)
 - **Teste:** `apps/web/src/lib/mensagem-otimista.test.ts` (feliz: o id no log
@@ -22322,7 +22322,7 @@ sem dizer qual.
   evento dele, quando a primeira ação já esperava clique. O `allow` padrão do
   `permissions.json` NÃO muda (decisão do dono).
 - **Onde:** `apps/web/src/lib/precisa-de-voce.ts:256` (`gateEsperandoClique`)
-  e `apps/web/src/components/ModoAutomaticoDoTime.tsx:58`
+  e `apps/web/src/components/ModoAutomaticoDoTime.tsx:63`
   (`agentesDaOfertaEmLote`)
 - **Teste:** `apps/web/src/lib/precisa-de-voce.test.ts` (gate de QA e SecOps
   nomeados; dev agent e humano não) e
@@ -23043,7 +23043,7 @@ sem dizer qual.
   alguns) é dito mesmo que a releitura depois das gravações falhe. Declarado:
   o mesmo sintoma no "Merge" da aba PRs, em "Nova ideação" e no "Aplicar a
   todos os agentes" NÃO foi reproduzido nem corrigido aqui.
-- **Onde:** `apps/web/src/components/ModoAutomaticoDoTime.tsx:92` (`carregando`)
+- **Onde:** `apps/web/src/components/ModoAutomaticoDoTime.tsx:98` (`carregando`)
 - **Teste:** `apps/web/src/components/ModoAutomaticoDoTime.test.tsx` ("AT-477
   (RN-803): antes de a leitura de agent_autonomy chegar, o botão fica inerte e
   diz por quê")
@@ -23207,3 +23207,48 @@ sem dizer qual.
   ("pr_open com PR aberta da mesma branch → reaproveita, sem abrir outra";
   "pr_open: listar PRs falha → abre a PR como sempre")
 - **Origem:** AT-485 (TP-01 de 10/10)
+### RN-815 — O "Parar execução" conta as tarefas em curso E em revisão, lidas do backlog {#rn-815}
+
+- **Regra:** a confirmação de "Parar execução" ([RN-763](#rn-763)) conta as
+  tarefas pelo BACKLOG, lido só com a confirmação aberta, e não pela janela de
+  eventos: `in_progress` e `in_review` (gate de QA rodando) em frases
+  separadas, cada uma dizendo o que acontece com ela ao parar — a em curso é
+  bloqueada com o trabalho preservado; a em revisão tem o gate parado e é
+  bloqueada com a PR aberta; as duas voltam à fila quando liberadas. Antes a
+  contagem saía dos dev agents com task na janela, e a tarefa em revisão (sem
+  dev trabalhando nela) fazia a tela afirmar "Nenhuma tarefa está em curso".
+  Backlog carregando ou com erro é dito em texto próprio, nunca como "nenhuma".
+  Junto, o cartão do plano do Dev Lead ([RN-804](#rn-804)) abre a oferta em
+  lote com texto próprio ("Ao aprovar o plano, a execução começa"), porque ali
+  a execução ainda não começou ([RN-677](#rn-677)).
+- **Onde:** `apps/web/src/lib/execution.ts:26` (`contarTarefasAfetadasAoParar`),
+  `apps/web/src/components/PararExecucao.tsx:26` (`PararExecucao`),
+  `apps/web/src/components/ModoAutomaticoDoTime.tsx:73` (`ModoAutomaticoDoTime`)
+- **Teste:** `apps/web/src/components/PararExecucao.test.tsx` ("RN-815 (AT-488):
+  a tarefa em revisão de QA conta…"; "RN-815: sem backlog lido não afirma…"),
+  `apps/web/src/components/ModoAutomaticoDoTime.test.tsx` ("RN-816 (AT-488): no
+  cartão do plano não afirma que a execução começou")
+- **Origem:** AT-488 (TP-01 de 10/10)
+
+### RN-816 — O botão não muda de lugar quando um bloco tardio chega {#rn-816}
+
+- **Regra:** bloco que chega DEPOIS do primeiro paint não fica acima do botão
+  que a pessoa vai clicar, e o que precisa ficar acima tem o espaço reservado
+  enquanto carrega. Na Sessão as pendências de outras sessões
+  ([RN-626](#rn-626)) moram ACIMA do fio — entre o fio e o composer elas o
+  encolhiam por baixo e, com o "acompanha o fim" ([RN-751](#rn-751)), o card
+  final ("Aceitar handoff e iniciar…") subia sob o cursor. Na aba Executores
+  elas vêm DEPOIS de "Parar execução" e da oferta em lote. Na aba PRs o Merge
+  vem primeiro na coluna da linha, e a esteira do gate, que depende do backlog,
+  tem altura reservada (esqueleto) enquanto ele carrega. Declarado: a reserva
+  da esteira é a altura de uma esteira de uma linha de etapas, não medida no
+  navegador, e jsdom não faz layout — o teste prova a ORDEM e a reserva, não o
+  deslocamento em pixels.
+- **Onde:** `apps/web/src/routes/SessionPage.tsx` (`PendenciasDeOutrasSessoes`
+  antes de `styles.messages`), `apps/web/src/routes/ProjectExecutorsTab.tsx`,
+  `apps/web/src/routes/ProjectPrsTab.tsx:103` (`ProjectPrsTab`),
+  `apps/web/src/routes/ProjectPrsTab.module.css` (`.reservaDaEsteira`)
+- **Teste:** `apps/web/src/routes/salto-de-layout.test.ts`,
+  `apps/web/src/routes/ProjectPrsTab.test.tsx` ("RN-816 (AT-480): o Merge não
+  muda de lugar quando o backlog chega")
+- **Origem:** AT-480 (TP-01 de 10/10)

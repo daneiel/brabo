@@ -26,6 +26,7 @@ function montar(
     agentes: string[];
     autonomyRules: AgentAutonomyRule[] | undefined;
     podeLigar: boolean;
+    noPlano: boolean;
   }> = {},
 ) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -36,6 +37,7 @@ function montar(
         agentes={props.agentes ?? ['dev-lead', 'dev-core', 'qa']}
         autonomyRules={'autonomyRules' in props ? props.autonomyRules : []}
         podeLigar={props.podeLigar ?? true}
+        noPlano={props.noPlano}
       />
     </QueryClientProvider>,
   );
@@ -173,5 +175,16 @@ describe('agentesDaOfertaEmLote (AT-449, RN-766)', () => {
       'qa',
       'qa-performance-seguranca',
     ]);
+  });
+
+  it('RN-816 (AT-488): no cartão do plano não afirma que a execução começou', () => {
+    montar({ noPlano: true });
+    expect(screen.getByText(/Ao aprovar o plano, a execução começa/)).toBeInTheDocument();
+    expect(screen.queryByText(/A execução começou/)).not.toBeInTheDocument();
+  });
+
+  it('na aba Executores segue dizendo que a execução começou', () => {
+    montar();
+    expect(screen.getByText(/A execução começou/)).toBeInTheDocument();
   });
 });

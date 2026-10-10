@@ -15,6 +15,7 @@ import { gatePendenteNoMerge } from '../lib/gate-do-merge';
 import type { CodePullRequestSummary, Epic, ProposedAction, Task } from '../lib/api-types';
 import { ApprovalCard } from '../components/ApprovalCard';
 import { PrGateTimeline } from '../components/PrGateTimeline';
+import { Skeleton } from '../components/ui/Skeleton';
 import { Button } from '../components/ui/Button';
 import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
 import { useToast } from '../components/ui/ToastProvider';
@@ -263,9 +264,6 @@ export function ProjectPrsTab({ projectId }: { projectId: string }) {
 
           return (
             <div className={styles.extraLinha}>
-              {task && <PrGateTimeline task={task} verdicts={[]} />}
-              {avisoDaLinha}
-              {avisoDeRecusa}
               <Button
                 variant="primary"
                 disabled={!latestSession || bloqueado}
@@ -281,6 +279,19 @@ export function ProjectPrsTab({ projectId }: { projectId: string }) {
               >
                 {t('prsTab.mergeButton')}
               </Button>
+              {avisoDaLinha}
+              {avisoDeRecusa}
+              {/* RN-816 (AT-480): o botão vem PRIMEIRO, e a esteira do gate —
+                  que depende do backlog, lido depois — tem o espaço reservado
+                  enquanto ele carrega: chegando depois, ela empurrava o Merge
+                  desta linha e o das linhas de baixo. */}
+              {backlogQuery.isPending ? (
+                <div className={styles.reservaDaEsteira} data-testid="reserva-da-esteira" aria-busy="true">
+                  <Skeleton height="100%" />
+                </div>
+              ) : (
+                task && <PrGateTimeline task={task} verdicts={[]} />
+              )}
             </div>
           );
         }}

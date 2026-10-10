@@ -8,9 +8,11 @@ import i18n from '../lib/i18n';
  * de uma confirmação que diz o que fica.
  */
 const transitionSession = vi.fn();
+const listBacklog = vi.fn();
 
 vi.mock('../lib/api-client', () => ({
   transitionSession: (...args: unknown[]) => transitionSession(...args),
+  listBacklog: (...args: unknown[]) => listBacklog(...args),
   mensagemDaApi: (erro: unknown, padrao: string) =>
     erro instanceof Error ? erro.message : padrao,
 }));
@@ -21,7 +23,7 @@ function montar(podeParar = true) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
-      <PararExecucao projectId="proj-1" sessionId="sess-1" tarefasEmCurso={2} podeParar={podeParar} />
+      <PararExecucao projectId="proj-1" sessionId="sess-1" podeParar={podeParar} />
     </QueryClientProvider>,
   );
 }
@@ -30,7 +32,17 @@ beforeEach(async () => {
   vi.clearAllMocks();
   await i18n.changeLanguage('pt-BR');
   transitionSession.mockResolvedValue({});
+  listBacklog.mockResolvedValue(backlog(['in_progress', 'in_progress', 'done']));
 });
+
+function backlog(status: string[]) {
+  return [
+    {
+      id: 'e1',
+      stories: [{ id: 's1', tasks: status.map((st, i) => ({ id: `t${i}`, status: st })) }],
+    },
+  ];
+}
 
 afterAll(() => {
   void i18n.changeLanguage('en');
@@ -43,7 +55,7 @@ describe('PararExecucao (RN-763)', () => {
     expect(transitionSession).not.toHaveBeenCalled();
 
     const fica = screen.getByTestId('parar-execucao-o-que-fica');
-    expect(fica).toHaveTextContent('2 tarefas em curso são bloqueadas');
+    await waitFor(() => expect(fica).toHaveTextContent('2 tarefas em curso são bloqueadas'));
     expect(fica).toHaveTextContent('PRs já abertas continuam abertas');
 
     const botoes = screen.getAllByRole('button', { name: 'Parar execução' });
@@ -67,5 +79,24 @@ describe('PararExecucao (RN-763)', () => {
     montar(false);
     expect(screen.getByRole('button', { name: 'Parar execução' })).toBeDisabled();
     expect(screen.getByText(/pede o papel developer/)).toBeInTheDocument();
+  });
+
+  it('RN-815 (AT-488): a tarefa em revisão de QA conta, e o modal diz o que acontece com ela', async () => {
+    listBacklog.mockResolvedValue(backlog(['in_review', 'done']));
+    montar();
+    expect(listBacklog).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Parar execução' }));
+    const fica = screen.getByTestId('parar-execucao-o-que-fica');
+    await waitFor(() => expect(fica).toHaveTextContent('1 tarefa em revisão de QA: o gate dela para'));
+    expect(fica).not.toHaveTextContent('Nenhuma tarefa');
+  });
+
+  it('RN-815: sem backlog lido não afirma "nenhuma tarefa"', async () => {
+    listBacklog.mockRejectedValue(new Error('rede'));
+    montar();
+    fireEvent.click(screen.getByRole('button', { name: 'Parar execução' }));
+    const fica = screen.getByTestId('parar-execucao-o-que-fica');
+    await waitFor(() => expect(fica).toHaveTextContent('Não foi possível ler o backlog'));
+    expect(fica).not.toHaveTextContent('Nenhuma tarefa');
   });
 });

@@ -45,6 +45,7 @@ export function ModoAutomaticoDoPlano({
       agentes={agentes}
       autonomyRules={autonomyRules}
       podeLigar
+      noPlano
     />
   );
 }

@@ -17,6 +17,30 @@ export function contarTarefasPendentes(epics: Epic[] | undefined): number {
 }
 
 /**
+ * RN-815 (AT-488): o que o "Parar execução" afeta, lido do BACKLOG e não da
+ * janela de eventos — a tarefa `in_review` (gate de QA rodando) não tem dev
+ * agent com task em curso no roster, e a confirmação dizia "nenhuma tarefa
+ * está em curso" sobre ela. Conta `in_progress` e `in_review` separadas,
+ * porque o que acontece com cada uma é dito em frase própria.
+ */
+export function contarTarefasAfetadasAoParar(epics: Epic[] | undefined): {
+  emCurso: number;
+  emRevisao: number;
+} {
+  let emCurso = 0;
+  let emRevisao = 0;
+  for (const epic of epics ?? []) {
+    for (const story of epic.stories) {
+      for (const task of story.tasks) {
+        if (task.status === 'in_progress') emCurso += 1;
+        else if (task.status === 'in_review') emRevisao += 1;
+      }
+    }
+  }
+  return { emCurso, emRevisao };
+}
+
+/**
  * Progresso ao vivo de um dev agent, derivado do event log (Fase 4a).
  *
  * O painel não tem uma fonte transacional pra isto: o que existe é a narrativa
