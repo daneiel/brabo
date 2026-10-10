@@ -22341,12 +22341,22 @@ sem dizer qual.
   é sobre o que é DESTA tarefa: requisito que pertence a uma tarefa irmã
   (feita ou pendente) não reprova — vai ao `resumo` como observação, fora de
   `itens`, e não impede `approved`. A régua é de PROMPT, não de código: o
-  `emit_qa_verdict` continua exigindo só a suite verde para aprovar.
+  `emit_qa_verdict` continua exigindo só a suite verde para aprovar. Desde a
+  AT-479, quando a descrição da tarefa ou uma regra quantifica POR item ("por
+  X", "cada", "de todos os" — "por exemplo"/"por padrão" não contam), o recorte
+  ganha a seção "Forma da resposta": conferir que a resposta traz o valor de
+  CADA item, não só o total (o painel aprovado com só `{totalCliques}` sobre
+  "a contagem… de todos os links"), e que a recusa de entrada nomeia o campo —
+  esta última é OBSERVAÇÃO no `resumo`, fora de `itens`, salvo regra que a
+  exija. Continua régua de prompt: nenhuma reprovação nova no código.
 - **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:18` (`texto`),
+  `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:60` (`secao_da_forma`),
   `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:103`
   (`tarefasIrmas`) e `apps/engine/lib/engine/gates/qa_automacao_agent.ex:170`
   (`com_o_recorte`)
-- **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs` e
+- **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs` (desde
+  a AT-479 também "regra que quantifica por item pede a conferência da forma da
+  resposta" e o caso sem quantificador) e
   `apps/api/test/application/use-cases/execution/get-dev-task-context.use-case.spec.ts`
   (as irmãs sem a própria tarefa). O golden-set do QA (ADR 0168) NÃO ganhou
   caso: ele roda o modelo de verdade, e provar o veredito sem chamada paga
@@ -22781,7 +22791,7 @@ sem dizer qual.
   [RN-765](#rn-765). Desde a [RN-792](#rn-792) o Arquiteto confere o contrato
   contra as rotas citadas nas histórias ao declará-lo.
 - **Onde:** `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:163`
-  (`moduloDoContrato`), `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:55`
+  (`moduloDoContrato`), `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:48`
   (`secao_do_contrato`)
 - **Teste:** `apps/api/test/application/use-cases/execution/get-dev-task-context.use-case.spec.ts`
   (o contrato do módulo da história; sem contrato ou módulo ambíguo, `null`) e

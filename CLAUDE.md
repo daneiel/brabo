@@ -317,6 +317,7 @@ estado lido do repositório e não da conversa.
 | A oferta em lote do modo automático espera saber quem já está ligado (AT-477) | RN-803 |
 | O cartão do plano do Dev Lead oferece o modo automático em lote antes de aprovar (AT-476) | RN-804 |
 | O plano de teste gravado é o que a ferramenta aceitou, e o QA roda um ciclo por tarefa (AT-478) | RN-805, RN-806 |
+| O recorte do QA pede a forma da resposta quando a regra fala por item (AT-479) | RN-765 |
 | O item do gitleaks diz a regra e o trecho mascarado; segredo de teste nasce em runtime (AT-470) | RN-796 |
 | O QA confere os comandos do README tocado contra os scripts do package.json (AT-475) | RN-798 |
 | A estimativa do plano do Dev Lead soma o dobro da primeira tarefa de cada módulo (AT-473) | RN-802 |

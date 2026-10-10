@@ -59,4 +59,30 @@ defmodule Engine.Gates.RecorteDaTarefaTest do
     refute RecorteDaTarefa.texto(%{task: %{"title" => "X"}, module_contract: nil}) =~
              "Contrato do módulo"
   end
+
+  # AT-479: "a contagem e o histórico de cliques de todos os links" foi
+  # aprovado com só `{totalCliques}`.
+  test "regra que quantifica por item pede a conferência da forma da resposta" do
+    texto =
+      RecorteDaTarefa.texto(%{
+        task: %{"title" => "Painel de cliques"},
+        business_rules_units: [
+          %{content: "O painel mostra a contagem e o histórico de cliques de todos os links"}
+        ]
+      })
+
+    assert texto =~ "Forma da resposta"
+    assert texto =~ "não só o total"
+    assert texto =~ "o campo recusado"
+  end
+
+  test "regra sem quantificador não ganha a seção (e \"por exemplo\" não conta)" do
+    texto =
+      RecorteDaTarefa.texto(%{
+        task: %{"title" => "Login", "description" => "por exemplo, e-mail e senha"},
+        business_rules_units: [%{content: "Senha com bcrypt"}]
+      })
+
+    refute texto =~ "Forma da resposta"
+  end
 end
