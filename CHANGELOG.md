@@ -8,6 +8,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 - **web/api**: a estimativa do cartão do plano do Dev Lead soma o dobro da primeira tarefa de cada módulo — 8 tarefas num módulo com teto de US$ 0,50 dizem "até US$ 4,50", não US$ 4,00; a api leva o multiplicador no payload (RN-802, AT-473).
 - **web**: a "Linha do tempo do time" da Visão geral, lendo a sessão de execução com uma ideação mais recente aberta, deixa de apagar o Infra Lead e os agentes que só agiram na execução e de dizer "nenhum agente" sobre um time trabalhando (RN-800, AT-471).
+- **web**: o campo "Nome (opcional)" da nova sessão (abas Criativo e Chat) declara `autocomplete="off"`, `aria-autocomplete="none"` e os ignores dos gerenciadores de senha, como o composer (RN-801, AT-472).
 - **web**: sem execução vigente e com tarefa pendente, a aba Executores e a Visão geral dizem quantas tarefas ficaram e oferecem "Religar execução" pelo mesmo `execution/activate` (a recusa mostra a frase da api); "Desbloquear" sem execução avisa que a tarefa só roda depois de religar (RN-794, AT-469).
 - **engine**: o parecer do SecOps (e o diff do QA) conta a PR contra a `dev` da origem, buscada antes quando a origem é local, e não mais o acumulado da `dev` local parada; `itens`/`coverageMatrix` do `qa_verdict` são gravados sempre como lista (RN-787, AT-464).
 - **engine**: no boot, o dev agent com `dev.working` (ou outra espera) sem processo nem linha durável fecha com `dev.error` origem infra e `dev.idle`, e a sessão deixa de ser reagendada para sempre pelo heartbeat (RN-778, AT-465).
