@@ -337,12 +337,29 @@ const FRASE_DA_ACAO: Record<ActionType, (payload: Payload) => string> = {
         ? ` Cada uma das ${plural(tarefas, 'tarefa', 'tarefas')} vai para o dev do módulo que o Dev Lead escolheu.`
         : '';
     // AT-381 (RN-709): a api põe no payload o orçamento por tarefa VIGENTE (o
-    // mesmo que a ativação usa); a estimativa é tarefas × esse teto.
+    // mesmo que a ativação usa). RN-802 (AT-473): e o multiplicador da
+    // primeira tarefa de cada módulo (RN-774) — a estimativa soma o teto
+    // EFETIVO: (tarefas − módulos) × teto + módulos × multiplicador × teto. O
+    // número vem do payload, nunca de uma constante daqui; sem ele, a conta
+    // antiga.
     const orcamento = numero(p, 'orcamentoPorTarefaMicros');
-    const estimativa =
-      orcamento !== undefined && tarefas !== undefined && tarefas > 0
-        ? ` Estimativa: até ${dolares(orcamento * tarefas)} (${plural(tarefas, 'tarefa', 'tarefas')} × ${dolares(orcamento)}) — é o teto por tarefa, não o preço.`
-        : '';
+    const multiplicador = numero(p, 'multiplicadorDaPrimeiraDoModulo');
+    const listaDeTarefas = Array.isArray(p.tarefas) ? (p.tarefas as unknown[]) : [];
+    const modulosComTarefa = new Set(
+      listaDeTarefas
+        .map((t) => (t && typeof t === 'object' ? (t as { modulo?: unknown }).modulo : undefined))
+        .filter((m): m is string => typeof m === 'string' && m.length > 0),
+    ).size;
+    let estimativa = '';
+    if (orcamento !== undefined && tarefas !== undefined && tarefas > 0) {
+      if (multiplicador !== undefined && multiplicador > 1 && modulosComTarefa > 0) {
+        const primeiras = Math.min(modulosComTarefa, tarefas);
+        const total = (tarefas - primeiras) * orcamento + primeiras * multiplicador * orcamento;
+        estimativa = ` Estimativa: até ${dolares(total)} (${plural(tarefas, 'tarefa', 'tarefas')} × ${dolares(orcamento)}; a primeira de cada módulo vale ${multiplicador === 2 ? 'o dobro' : `${multiplicador}×`}) — é o teto por tarefa, não o preço.`;
+      } else {
+        estimativa = ` Estimativa: até ${dolares(orcamento * tarefas)} (${plural(tarefas, 'tarefa', 'tarefas')} × ${dolares(orcamento)}) — é o teto por tarefa, não o preço.`;
+      }
+    }
     // RN-677 (AT-263, ADR 0194): aprovar o plano É ativar a execução — sobe
     // os dev agents e começa o gasto. A frase diz isso antes do clique.
     return `Aprova o plano de execução do Dev Lead${quantos}${porque} e ATIVA a execução: os dev agents sobem e começam a gastar.${comTarefas}${estimativa}`;

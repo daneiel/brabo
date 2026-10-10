@@ -5,16 +5,19 @@ description: A real project walked end to end on Brabo — create, pick a model,
 
 # From zero to a deliverable
 
-This page follows one real project, recorded live on 2026-10-09, from an empty
-workspace to working code. The project, `viralabs-app-2026-10-09b`, is a link
+This page follows one real project, recorded live on 2026-10-10, from an empty
+workspace to working code. The project, `viralabs-app-2026-10-10`, is a link
 shortener (Node 22 + SQLite). The whole team ran on **Claude Haiku 5.5**, and
-the run cost **US$ 0.71**.
+the run cost **US$ 0.37**, taking **29 minutes** from the idea to the last merge.
 
-What came out at the end: 13 stories, 12 of 13 tasks merged into the project's
-`dev` branch, and a deliverable whose test suite passes **69/69**.
+What came out at the end: **8 of 8 tasks** merged into the project's `dev`
+branch, and a deliverable whose test suite passes **72/72**, with an
+installation README. (The previous recorded run, on 2026-10-09, merged 12 of
+13 tasks.)
 
 Each step below says what you do and what the agents hand back. The
-recordings are the real screen of that run.
+recordings are the real screen of Brabo; steps 1 to 5 come from the
+2026-10-09 run, and step 6 from the 2026-10-10 run.
 
 ## 1. Create the project
 
@@ -34,9 +37,9 @@ This run applied Claude Haiku 5.5 to the 17 agents in one action.
 ## 3. Creative, PO and Architect shape the work
 
 You describe the product in the session chat. The **Creative** turns it into
-business rules (12 rules and 1 decision, in about 40 s). The **PO** breaks
-them into a backlog in one turn — 4 epics, 13 stories, 13 tasks, in about
-2 minutes — and the handoff to the **Architect** is accepted automatically
+business rules (9 rules and 2 decisions, in about 25 s). The **PO** breaks
+them into a backlog in one turn — 4 epics, 7 stories, 8 tasks, in about
+1 minute — and the handoff to the **Architect** is accepted automatically
 once every rule is covered by a story.
 
 ![Creative, PO and Architect](../assets/fluxo-do-zero/passo-03-criativo-po-arquiteto.gif)
@@ -67,17 +70,21 @@ also offers automatic mode for the whole team in one click.
 
 Each task runs in a dev agent (40 s to 2.5 min per task) and goes through the
 pipeline shown in the PRs tab: **Dev → QA → SecOps → You**. The pull request
-title starts with the task. When the gates pass, you merge. In this run, 6
-tasks passed on the first round and 6 on the second, and the execution took
-about 47 minutes (PRs #3 to #14).
+title starts with the task. When the gates pass, you merge. In this run each
+task took 30 to 50 s, and the execution of the 8 tasks took about 22 minutes
+(PRs #3 to #10). A task that a gate blocks shows "Unblock" on the Overview;
+one click and the dev agent picks it up again in the same execution.
 
-![Execution, gates and merges](../assets/fluxo-do-zero/passo-06-execucao-gates-e-merges.gif)
+![Execution, unblocking and merges](../assets/fluxo-do-zero/passo-06-execucao-desbloqueio-e-merges.gif)
 
 ## The deliverable
 
 The `dev` branch of the project repository, exported and run in
-`node:22-bookworm-slim` with `npm ci` and `npm test`, passed **69/69** tests.
-Running the API, the rules were checked over HTTP: requests without a session
-get 401, links get a 7-character code, invalid URLs get 422, the public
-redirect is a 302 that counts every click, missing/expired/deleted links get
-404/410, and the panel lists the total and the click history.
+`node:22-bookworm-slim` with `npm ci` and `npm test`, passed **72/72** tests.
+Running the API, all 12 rules were checked over HTTP and the CLI: users are
+created with `npm run user:create` and a duplicate e-mail is refused, requests
+without a session get 401, invalid URLs get 422, the public redirect is a 302
+that counts every click, an expired link gets 410, the panel lists the total
+and the click history, and the server refuses to start without `JWT_SECRET`.
+The repository ships a README covering install, configuration, start-up and
+first access.

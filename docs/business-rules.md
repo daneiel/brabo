@@ -6775,7 +6775,7 @@ caminho que a execução em container substitui; o que muda agora é só a
   `apps/api/src/application/use-cases/execution/activate-execution.use-case.ts:176`
   (o 400), `apps/api/src/interfaces/http/execution/execution.controller.ts:74`
   (a anotação de OpenAPI, que prometia 409 para dois casos que nunca foram
-  409), `apps/web/src/routes/ProjectOverviewTab.tsx:462`
+  409), `apps/web/src/routes/ProjectOverviewTab.tsx:467`
   (`mensagemDaApi`), `apps/engine/lib/engine/actions/workspace.ex:61`
   (a mensagem da lacuna que fica)
 - **Teste:**
@@ -13760,15 +13760,15 @@ do `permissions.json` repetem os TOKENS do comando no texto (o `label` de
 `matchAgainstFile`) — o mesmo comando que já mora em
 `proposed_actions.payload` e no card de aprovação.
 
-- **Código:** `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:260`
+- **Código:** `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:265`
   (`reason` no payload do evento de sessão), `:223` (o comentário do outbox
   sem o campo), `:227` (o payload do outbox, intacto), `:356` (o
   `rejectionReason`, que continua só no `deny`);
   `apps/api/src/domain/actions/decide.ts:278` (`Decision`, a fonte da string)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:902`
   (caminho feliz: auto-aprovação grava `agent_autonomy: auto_approve`),
-  `:940` (`require_approval` pelo default e pelo teto da trava de merge),
-  `:1039` (`deny` com o mesmo texto do `rejectionReason`), `:999` (o outbox
+  `:948` (`require_approval` pelo default e pelo teto da trava de merge),
+  `:1047` (`deny` com o mesmo texto do `rejectionReason`), `:999` (o outbox
   sem `reason`)
 - **ADR:** [0048](adr/0048-decisao-no-log-e-a-ordem-do-gate.md),
   [0055](adr/0055-escopo-de-caminho-na-politica-de-terminal.md) (ponto 7,
@@ -15969,14 +15969,14 @@ raiz do ESCOPO, nunca onde o arquivo de política mora.
 - **Código:** `apps/api/src/infrastructure/filesystem/project-workspaces-root.ts:907`
   (`raizDoEscopoNoEvento`), `:901` (`RaizDoEscopoNoEvento`), `:117`
   (`segmentoSobABaseDeProjetos`, reusada);
-  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:274`
+  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:280`
   (`scopeRoot` só em `terminal`);
   `apps/api/src/domain/actions/decide.ts:604` (`terminalNoEscopo`, o único
   consumidor do escopo)
-- **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:1135`
-  (`container`), `:1115` (`mounted`), `:1118` (`runner`), `:1123` (o caminho
+- **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:1143`
+  (`container`), `:1123` (`mounted`), `:1123` (`runner`), `:1123` (o caminho
   absoluto sob `/home/usuario/…` NUNCA vaza, nos três casos, inclusive fora
-  da base), `:1205` (`indisponivel`), `:1163` (outro tipo e o outbox sem o
+  da base), `:1213` (`indisponivel`), `:1163` (outro tipo e o outbox sem o
   campo), `:1183` (evento anterior, sem o campo, pela mesma leitura);
   `apps/api/test/infrastructure/filesystem/project-workspaces-root.spec.ts:772`
   (a função pura, nos três modos e nos três casos de `indisponivel`)
@@ -17874,7 +17874,7 @@ oferta a agente já ativo ficava acionável para sempre (AT-291,
   (`travarOfertasDoDestino`);
   `apps/api/src/application/use-cases/agents/activate-agent.use-case.ts:88`
   (`substituirOfertasAoAtivar`);
-  `apps/api/src/application/use-cases/execution/activate-execution.use-case.ts:312`
+  `apps/api/src/application/use-cases/execution/activate-execution.use-case.ts:319`
   (`substituirOfertasAoAtivar`);
   `apps/api/src/application/use-cases/agents/offer-infra-handoff.use-case.ts:96`
   (`jaAtendido`);
@@ -19139,7 +19139,7 @@ existe.
   várias raízes), `:137` (`PONTO_DE_MONTAGEM_DO_CONTAINER`);
   `apps/api/src/domain/actions/decide.ts:275` (`execucaoNoContainer`), `:616`
   (`execucaoNoContainer`, em `terminalNoEscopo`);
-  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:170`
+  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:174`
   (`containerExecutionActive`, separado de `execucaoNoContainer`)
 - **Teste:** `apps/api/test/domain/actions/decide.spec.ts:1274` (com container
   `/work`, `.worktrees`, `/tmp` e `..` dentro — caminho feliz; `/etc`, outro
@@ -19292,18 +19292,18 @@ segundo `executed` para o mesmo merge.
 
 - **Código:** `apps/api/src/domain/actions/merge-de-pr.ts:56` (`recusaDeMerge`),
   `:40` (`mergeouAPr`);
-  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:116` (`recusaDeMerge`);
+  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:120` (`recusaDeMerge`);
   `apps/api/src/application/use-cases/actions/approve-action.use-case.ts:282` (`recusaDeMerge`);
   `apps/api/src/infrastructure/git/local-git-provider.ts:339` (`GitPullRequestAlreadyMergedError`);
   `apps/web/src/lib/gate-do-merge.ts:19` (`gatePendenteNoMerge`);
   `apps/web/src/routes/ProjectPrsTab.tsx:201` (`gatePendenteNoMerge`);
   `apps/web/src/routes/session-timeline-montagem.tsx:1068` (`gatePendenteNoMerge`)
-- **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:656`
-  (`merge_ja_proposto`), `:679` (`pr_ja_mergeado` — caso de falha), `:696`
+- **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:664`
+  (`merge_ja_proposto`), `:687` (`pr_ja_mergeado` — caso de falha), `:696`
 
   `apps/web/src/routes/session-timeline-montagem.tsx:1068` (`gatePendenteNoMerge`)
-- **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:656`
-  (`merge_ja_proposto`), `:679` (`pr_ja_mergeado` — caso de falha), `:696`
+- **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:664`
+  (`merge_ja_proposto`), `:687` (`pr_ja_mergeado` — caso de falha), `:696`
   (negada não bloqueia, outra PR não colide — caminho feliz);
   `apps/api/test/application/use-cases/actions/approve-deny-action.use-case.spec.ts:473`;
   `apps/api/test/infrastructure/git/local-git-provider.contract.spec.ts:150`;
@@ -19742,7 +19742,7 @@ handoff às 06:45:01 — o web encadeava a ativação para `maintainer`/`owner`
 
 - **Onde:** `apps/api/src/application/use-cases/execution/execute-execution-plan.use-case.ts:89`
   (`execute`); `apps/api/src/application/use-cases/actions/approve-action.use-case.ts:192`
-  (`executeExecutionPlan`); `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:347`
+  (`executeExecutionPlan`); `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:353`
   (`executeExecutionPlan`); `apps/web/src/lib/session-acoes-de-handoff.ts:91`
   (`handleAcceptHandoff`); `apps/engine/lib/engine/agents/dev_lead_tools.ex:220`
   (`classificar`); `apps/engine/lib/engine/agents/dev_lead_server.ex:699`
@@ -19806,7 +19806,7 @@ módulo do `module_map`, como antes, e o paralelismo extra continua pelo
 - **Onde:** `apps/api/src/domain/execution/plano-de-execucao.ts:33`
   (`lerPlanoDeExecucao`); `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:613`
   (`daTarefaDoModulo`), `:348` (`claimNext`), `:336` (`assignModules`);
-  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:133`
+  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:137`
   (`recusaNaProposta`); `apps/api/src/application/use-cases/execution/execute-execution-plan.use-case.ts:67`
   (`recusaNaProposta`); `apps/api/src/db/schema/backlog.ts:187` (`module`);
   `apps/engine/lib/engine/agents/dev_lead_tools.ex:372`
@@ -21113,11 +21113,11 @@ decisão, fechados juntos:
   Dev Lead no texto do resultado da ferramenta (`resumo_do_plano/1`), para ele
   citar os números em vez de recontar.
 
-- **Onde:** `apps/web/src/lib/aprovacoes.ts:411` (`verboDaAcao`),
+- **Onde:** `apps/web/src/lib/aprovacoes.ts:428` (`verboDaAcao`),
   `apps/api/src/domain/actions/sempre-permitir.ts:33` (`TIPOS_SEM_SEMPRE_PERMITIR`),
   `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:80` (`execute`),
   `apps/api/src/application/use-cases/execution/execute-execution-plan.use-case.ts:89` (`execute`),
-  `apps/api/src/application/use-cases/execution/activate-execution.use-case.ts:116` (`execute`),
+  `apps/api/src/application/use-cases/execution/activate-execution.use-case.ts:123` (`execute`),
   `apps/engine/lib/engine/agents/dev_lead_tools.ex:573` (`resumo_do_plano`)
 - **Teste:** `apps/web/src/lib/aprovacoes.test.ts` ("AT-371 — o verbo segue o
   estado da ação", "AT-381 — o plano mostra a estimativa de gasto"),
@@ -22933,11 +22933,26 @@ sem dizer qual.
 - **Onde:** `apps/web/src/components/ReligarExecucao.tsx:23` (`ReligarExecucao`),
   `apps/web/src/lib/execution.ts:10` (`contarTarefasPendentes`),
   `apps/web/src/routes/ProjectExecutorsTab.tsx:99` (`semExecucaoVigente`),
-  `apps/web/src/routes/ProjectOverviewTab.tsx:483` (`semExecucaoVigente`)
+  `apps/web/src/routes/ProjectOverviewTab.tsx:488` (`semExecucaoVigente`)
 - **Teste:** `apps/web/src/routes/ProjectExecutorsTab.test.tsx` (religar a
   execução), `apps/web/src/routes/ProjectOverviewTab.test.tsx` (religar a
   execução encerrada)
 - **Origem:** AT-469
+### RN-800 — A linha do tempo do time filtra por família, não pela roster da sessão mais recente {#rn-800}
+
+- **Regra:** a árvore "Linha do tempo do time" da Visão geral lê a sessão de
+  EXECUÇÃO quando há uma vigente (AT-463), e tira dela os eventos de dev agent
+  e de QA pela FAMÍLIA do ator (`isExecutorAgentId`, a mesma régua da aba
+  Executores, RN-121) — nunca pela roster, que é derivada da sessão mais
+  recente. Filtrar pela roster apagava todo agente que só agiu na execução (o
+  Infra Lead cujo handoff foi aceito lá), e com uma ideação aberta depois a
+  árvore dizia "Nenhum agente entrou em ação nesta sessão ainda" sobre um time
+  trabalhando. Sem leitura nova.
+- **Onde:** `apps/web/src/routes/ProjectOverviewTab.tsx:263` (`overviewEvents`)
+- **Teste:** `apps/web/src/routes/ProjectOverviewTab.test.tsx` ("AT-471: agente
+  que só agiu na execução aparece na árvore…"; o caso sem execução segue lendo
+  a mais recente)
+- **Origem:** AT-471 (TP-01 de 10/10)
 ### RN-801 — O nome da nova sessão não convida o gerenciador de senhas {#rn-801}
 
 - **Regra:** o campo "Nome (opcional)" do formulário de nova sessão (aba

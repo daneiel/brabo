@@ -3159,3 +3159,26 @@ recorte do card.
   `apps/api/test/application/use-cases/execution/get-dev-task-context.use-case.spec.ts`
   (describe "RN-774")
 - **Origem:** AT-433
+
+### RN-802 — A estimativa do plano do Dev Lead soma o dobro da primeira tarefa de cada módulo {#rn-802}
+
+O cartão de aprovação do `propose_execution_plan` (RN-709) dizia "até N × teto",
+ignorando que a primeira tarefa de cada módulo tem o dobro do teto (RN-774).
+Agora a api leva no payload, ao lado de `orcamentoPorTarefaMicros`, o
+`multiplicadorDaPrimeiraDoModulo`, e a frase soma o teto EFETIVO:
+(tarefas − módulos com tarefa) × teto + módulos com tarefa × multiplicador ×
+teto, dizendo "a primeira de cada módulo vale o dobro". Com 8 tarefas num
+módulo e teto de US$ 0,50: até US$ 4,50. É limite superior: a primeira de um
+módulo que já teve tarefa reivindicada não ganha o dobro, e a frase continua
+dizendo "até". Sem o multiplicador no payload (proposta antiga), a conta antiga.
+
+O multiplicador é APLICADO só no engine (`Engine.Dev.TetoDaTarefa`); a api tem
+um espelho declarado, porque a tela não deve copiar a constante e o engine não
+é consultado na proposta. Mudar um exige mudar o outro.
+
+- **Onde:** `apps/api/src/application/use-cases/execution/activate-execution.use-case.ts:83` (`MULTIPLICADOR_DA_PRIMEIRA_TAREFA_DO_MODULO`);
+  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:220` (`multiplicadorDaPrimeiraDoModulo`);
+  `apps/web/src/lib/aprovacoes.ts:346` (`multiplicador`)
+- **Teste:** `apps/web/src/lib/aprovacoes.test.ts` (it "RN-802 (AT-473)": 8 tarefas, 1 módulo → US$ 4,50; 3 tarefas, 2 módulos → US$ 2,50; sem orçamento, sem número — caso de falha);
+  `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts` ("plano válido nasce pending")
+- **Origem:** AT-473
