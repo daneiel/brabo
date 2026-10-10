@@ -108,6 +108,9 @@ defmodule Engine.Harness.AmbienteDoAgente do
         "Git: NÃO rode `git` no terminal (a imagem pode não ter git, e o terminal " <>
           "não é o caminho de commit). Use as ações tipadas `git_commit`, " <>
           "`git_push` e `pr_open`.",
+        "Segredos: senha, token ou chave de teste são gerados em tempo de execução " <>
+          "(variável de ambiente ou valor aleatório), nunca literais no código — o " <>
+          "SecOps reprova literal que pareça segredo.",
         modulo(Map.get(dados, :modulo))
       ]
       |> Enum.reject(&is_nil/1)

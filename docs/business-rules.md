@@ -22953,3 +22953,19 @@ sem dizer qual.
   que só agiu na execução aparece na árvore…"; o caso sem execução segue lendo
   a mais recente)
 - **Origem:** AT-471 (TP-01 de 10/10)
+
+### RN-796 — O item do gitleaks diz a regra e o trecho com o segredo mascarado {#rn-796}
+
+- **Regra:** o item que o `gitleaks` põe no parecer do SecOps leva, além do
+  caminho e da linha, a regra que acusou (`RuleID`) e o trecho acusado
+  (`Match`) com o segredo (`Secret`) trocado por `***` — nunca o segredo em
+  claro. Sem o `Secret` para mascarar, o trecho não entra. E o ambiente do
+  agente de execução ([RN-706](#rn-706)) diz em uma linha que senha, token ou
+  chave de teste são gerados em tempo de execução, nunca literais. Sem
+  allowlist nova.
+- **Onde:** `apps/engine/lib/engine/actions/gitleaks_detector.ex:121`
+  (`mensagem`), `apps/engine/lib/engine/harness/ambiente_do_agente.ex:102`
+  (`montar`)
+- **Teste:** `apps/engine/test/engine/actions/gitleaks_relatorio_test.exs`,
+  `apps/engine/test/engine/harness/ambiente_do_agente_test.exs`
+- **Origem:** AT-470
