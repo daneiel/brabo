@@ -11,7 +11,7 @@ export interface RosterEntry {
 
 // agent_id/branch slug a partir do nome do módulo — mesma regra de
 // `devAgentId` em activate-execution.use-case.ts (api).
-function devAgentId(moduleName: string): string {
+export function devAgentId(moduleName: string): string {
   return `dev-${moduleName
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')

@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- **web**: o cartão do plano do Dev Lead oferece ligar o modo automático para o time antes de aprovar, com o mesmo controle da aba Executores — o primeiro comando do dev já não nasce esperando clique (RN-804, AT-476).
 - **web/api**: a estimativa do cartão do plano do Dev Lead soma o dobro da primeira tarefa de cada módulo — 8 tarefas num módulo com teto de US$ 0,50 dizem "até US$ 4,50", não US$ 4,00; a api leva o multiplicador no payload (RN-802, AT-473).
 - **web**: a "Linha do tempo do time" da Visão geral, lendo a sessão de execução com uma ideação mais recente aberta, deixa de apagar o Infra Lead e os agentes que só agiram na execução e de dizer "nenhum agente" sobre um time trabalhando (RN-800, AT-471).
 - **web**: o campo "Nome (opcional)" da nova sessão (abas Criativo e Chat) declara `autocomplete="off"`, `aria-autocomplete="none"` e os ignores dos gerenciadores de senha, como o composer (RN-801, AT-472).
