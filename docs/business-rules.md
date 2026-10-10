@@ -17464,7 +17464,7 @@ seguiram em `in_review` (AT-275).
    chegar aqui; o gate pendente, por decisão do dono, é só aviso na tela.
 
 - **Onde:** `apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts:242`
-  (`settleMerge`), `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:364`
+  (`settleMerge`), `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:413`
   (`markDoneIfNotDone`)
 - **Teste:** `apps/api/test/application/use-cases/actions/execute-git-action.use-case.spec.ts`
   ("git_merge marca a tarefa como done": feliz, repetido, PR aberta/merge
@@ -19026,9 +19026,9 @@ O valor mora em DOIS lugares, de propósito, um por linguagem, e mudam juntos:
   `apps/engine/lib/engine/actions/workspace/runner_git.ex:158` (`add_worktree`),
   `:183` (`garantir_base`), `:308` (`remoto_vazio?`);
   `apps/engine/lib/engine/dev/worktree_manager.ex:36` (`create`), `:138`
-  (`add_worktree`), `:176` (`garantir_base`);
-  `apps/engine/lib/engine/dev/agent_io.ex:352` (`propose_pr`);
-  `apps/engine/lib/engine/gates/diff.ex:21` (`compute`);
+  (`add_worktree`), `:201` (`garantir_base`);
+  `apps/engine/lib/engine/dev/agent_io.ex:385` (`propose_pr`);
+  `apps/engine/lib/engine/gates/diff.ex:29` (`compute`);
   `apps/engine/lib/engine/harness/project_context.ex:29` (`repo_line`);
   `apps/api/src/domain/actions/protected-branches.ts:26` (`BRANCH_DE_TRABALHO`);
   `apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts:171`
@@ -19804,8 +19804,8 @@ módulo do `module_map`, como antes, e o paralelismo extra continua pelo
 `parallelize` ([RN-083](business-rules/custo.md#rn-083)).
 
 - **Onde:** `apps/api/src/domain/execution/plano-de-execucao.ts:33`
-  (`lerPlanoDeExecucao`); `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:564`
-  (`daTarefaDoModulo`), `:299` (`claimNext`), `:287` (`assignModules`);
+  (`lerPlanoDeExecucao`); `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:613`
+  (`daTarefaDoModulo`), `:348` (`claimNext`), `:336` (`assignModules`);
   `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:133`
   (`recusaNaProposta`); `apps/api/src/application/use-cases/execution/execute-execution-plan.use-case.ts:67`
   (`recusaNaProposta`); `apps/api/src/db/schema/backlog.ts:187` (`module`);
@@ -20756,7 +20756,7 @@ Junto, o fechamento deixa de dizer que parear uma pasta pela tela do projeto
 - **Medição (AT-383, 02/10, loja-teste):** a #6 terminou `failed` por conflito
   em `package.json`, e a tarefa ficou `in_review` sem ninguém para resolvê-lo.
 - **Onde:** `apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts:339` (`devolverAoDono`),
-  `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:374` (`reabrirPorConflitoDeMerge`),
+  `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:423` (`reabrirPorConflitoDeMerge`),
   `apps/engine/lib/engine/workers/dev_agent_wake_worker.ex:151` (`task.merge_conflict`),
   `apps/engine/lib/engine/dev/dev_agent_server.ex:350` (`handle_info`),
   `apps/engine/lib/engine/dev/dev_agent_server.ex:773` (`trigger_gate_recheck`),
@@ -21687,7 +21687,7 @@ sem dizer qual.
   `apps/api/src/application/use-cases/backlog/corrigir-historia.use-case.ts:47`
   (`editar`), `:90` (`arquivar`),
   `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:97`
-  (`findByProject`), `:299` (`claimNext`),
+  (`findByProject`), `:348` (`claimNext`),
   `apps/api/src/interfaces/http/backlog/backlog.controller.ts:188`
   (`updateTitle`), `:219` (`archive`),
   `apps/api/src/interfaces/http/internal/internal-sessions.controller.ts:571`
@@ -21947,15 +21947,11 @@ sem dizer qual.
   raciocina por ali e o buraco não existe — declarado, sem mudança. A forma do
   campo foi lida da doc do OpenRouter (Reasoning Tokens: `reasoning.max_tokens`;
   o `max_tokens` da chamada tem de ser maior que ele).
-  > **TODO(humano):** provar com credencial real que o
-  > `anthropic/claude-haiku-5.5` respeita o orçamento (smoke, com aviso ao
-  > dono antes de usar a chave).
+  **Revisada pela [RN-782](#rn-782)/[RN-783](#rn-783) (AT-467):** a medição
+  com credencial de 10/10 mostrou que o Haiku 5.5 IGNORA `reasoning.max_tokens`;
+  o campo deixou de ser enviado e a folga no `max_tokens` ficou.
 - **Onde:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:48`
-  (`ORCAMENTO_DE_RACIOCINIO`), `:469` (`raciocinio`),
-  `apps/api/src/infrastructure/llm/openrouter-provider.ts:223`
-  (`campoDeRaciocinioOpenRouter`),
-  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:188`
-  (`supportsReasoning`)
+  (`ORCAMENTO_DE_RACIOCINIO`), `:470` (`controla`)
 - **Teste:** `apps/api/test/infrastructure/llm/openai-compatible-provider.contract.spec.ts`
   (`raciocínio com orçamento próprio (RN-741)`: orçamento e teto somado; sem
   raciocínio o corpo não muda; provider sem campo não inventa orçamento)
@@ -22028,7 +22024,7 @@ sem dizer qual.
   `runner` o worktree está na máquina do usuário e o engine não preserva nada.
 - **Onde:** `apps/engine/lib/engine/dev/worktree_manager.ex:72`
   (`preservar_em`), `:55` (`create_from`),
-  `apps/engine/lib/engine/dev/agent_io.ex:416` (`preservar_trabalho`),
+  `apps/engine/lib/engine/dev/agent_io.ex:449` (`preservar_trabalho`),
   `apps/engine/lib/engine/dev/agent_io.ex:283` (`base_preservada`)
 - **Teste:** `apps/engine/test/engine/dev/worktree_manager_test.exs`
   (`preservar_em/3 e create_from/4`: commit com `dev-api[bot]` e a próxima
@@ -22053,7 +22049,7 @@ sem dizer qual.
   parte.
 - **Onde:** `apps/engine/lib/engine/harness/tools/terminal.ex:12` (`spec`),
   `apps/engine/lib/engine/dev/worktree_manager.ex:108` (`retrato`),
-  `apps/engine/lib/engine/dev/dev_agent_server.ex:576` (`retrato_do_worktree`)
+  `apps/engine/lib/engine/dev/dev_agent_server.ex:582` (`retrato_do_worktree`)
 - **Teste:** `apps/engine/test/engine/dev/worktree_manager_test.exs`
   (`retrato/2`: branch e arquivos; pasta inalcançável diz indisponível; a
   descrição do terminal diz `sh`)
@@ -22284,7 +22280,7 @@ sem dizer qual.
   naquele passo, então ele vale sempre que há recorte. Os dev agents ficam
   sem piso, de propósito (a obrigação deles muda a cada passo; para eles vale
   só a [RN-759](#rn-759)).
-- **Onde:** `apps/api/src/domain/llm/tool-router.ts:323` (`menuComPiso`) e
+- **Onde:** `apps/api/src/domain/llm/tool-router.ts:327` (`menuComPiso`) e
   `apps/api/src/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.ts:248`
   (`menuComPiso`)
 - **Teste:** `apps/api/test/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.spec.ts`
@@ -22306,7 +22302,7 @@ sem dizer qual.
   porque só a api sabe o menu depois do Jev. Não aplicar o recorte na volta
   que fecha o turno foi avaliado e não feito: a api não sabe antes da
   resposta que a volta será a última.
-- **Onde:** `apps/api/src/domain/llm/tool-router.ts:337` (`avisoDeRecorte`) e
+- **Onde:** `apps/api/src/domain/llm/tool-router.ts:341` (`avisoDeRecorte`) e
   `apps/api/src/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.ts:263`
   (`avisoDeRecorte`)
 - **Teste:** `apps/api/test/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.spec.ts`
@@ -22347,7 +22343,7 @@ sem dizer qual.
   `itens`, e não impede `approved`. A régua é de PROMPT, não de código: o
   `emit_qa_verdict` continua exigindo só a suite verde para aprovar.
 - **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:18` (`texto`),
-  `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:81`
+  `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:103`
   (`tarefasIrmas`) e `apps/engine/lib/engine/gates/qa_automacao_agent.ex:170`
   (`com_o_recorte`)
 - **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs` e
@@ -22417,7 +22413,7 @@ sem dizer qual.
   (medido no Chromium: 2 236px num balão de 708px) e a última coluna sumia.
 - **Onde:** `apps/api/src/application/use-cases/actions/execute-adr-pr.use-case.ts:96`
   (`openPullRequest`); `apps/engine/lib/engine/infra/infra_lead_server.ex:1482`
-  (`gravar_texto_do_turno`); `apps/engine/lib/engine/dev/dev_agent_server.ex:1004`
+  (`gravar_texto_do_turno`); `apps/engine/lib/engine/dev/dev_agent_server.ex:1017`
   (`propose_pr`); `apps/web/src/lib/session-destinatario.ts:192`
   (`agentesEmConversa`) e `apps/web/src/lib/session-kind.ts:69`
   (`tipoDaSessao`); `apps/web/src/routes/NewProjectWizard.tsx:1127`
@@ -22447,7 +22443,7 @@ sem dizer qual.
   modo `runner` a checagem de merge não roda.
 - **Onde:** `apps/engine/lib/engine/dev/agent_io.ex:301`
   (`levar_branch_para_a_proxima`), `:282` (`criar_worktree`),
-  `apps/engine/lib/engine/dev/worktree_manager.ex:210`
+  `apps/engine/lib/engine/dev/worktree_manager.ex:199`
   (`ja_mergeada_volta_ao_trabalho`)
 - **Teste:** `apps/engine/test/engine/dev/bloqueio_preserva_trabalho_test.exs`
   (`levar_branch_para_a_proxima/1 e criar_worktree/2`: aprovada leva a branch
@@ -22561,9 +22557,8 @@ sem dizer qual.
   motivo) ou falhada. Contida (ADR 0060, [RN-164](business-rules/autenticacao.md#rn-164)): sem parâmetro,
   escopo fechado no projeto do contexto, uma contagem e uma consulta por
   chamada, as 20 mais recentes, e o total real dito quando corta. Falha de
-  leitura é `tool.result` `ok: false` com o motivo, nunca texto vazio. Não
-  entrou no piso do Jev ([RN-758](#rn-758)): é leitura, não obrigação, e o
-  aviso de recorte ([RN-759](#rn-759)) já diz que as demais voltam.
+  leitura é `tool.result` `ok: false` com o motivo, nunca texto vazio. Desde a
+  [RN-784](#rn-784) ela ESTÁ no piso do Jev.
 - **Onde:** `apps/engine/lib/engine/harness/tools/listar_adrs_propostas.ex:37`
   (`run`), `:46` (`ler`), `apps/engine/lib/engine/agents/arquiteto_server.ex:124`
   (`ListarAdrsPropostas`)
@@ -22624,6 +22619,235 @@ sem dizer qual.
 - **Teste:** `apps/web/src/lib/session-rolagem-fim.test.ts` (criativa marca
   "Criativo"; aba de outro projeto ou inválida não vale)
 - **Origem:** AT-463 (TP-01 de 09/10)
+### RN-782 — Aceitar o parâmetro de raciocínio não é pedir raciocínio {#rn-782}
+
+- **Regra:** revisa a [RN-741](#rn-741). O modelo com `supportsReasoning` (no
+  OpenRouter, `reasoning` em `supported_parameters` — 341 de 478 modelos, ou
+  seja, "aceita o parâmetro", não "raciocina") continua com a FOLGA no teto:
+  `max_tokens` = saída visível (RN-734) + `ORCAMENTO_DE_RACIOCINIO` (4096). O
+  que sai é o campo `reasoning: { max_tokens }`: ele NÃO é mais enviado a
+  modelo nenhum. Medição paga de 10/10 (AT-467): no
+  `anthropic/claude-haiku-4.5`, que sem o campo não raciocina, ele LIGAVA o
+  raciocínio em 74% das chamadas a 2,8× o custo; no
+  `anthropic/claude-haiku-5.5` ele era IGNORADO (pedido 1024, gastou 8192 só de
+  raciocínio). A decisão do que pedir mora num ponto só, `opcoesDeRaciocinio`,
+  chamado pelos três casos de uso de turno. O TODO(humano) da RN-741 fecha com
+  essa medição.
+- **Onde:** `apps/api/src/domain/llm/raciocinio-do-agente.ts:14`
+  (`opcoesDeRaciocinio`), `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:470`
+  (`controla`), `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:189`
+  (`opcoesDeRaciocinio`)
+- **Teste:** `apps/api/test/infrastructure/llm/openai-compatible-provider.contract.spec.ts`
+  (`modelo que raciocina: folga no teto e NENHUM campo de raciocínio (RN-782)`,
+  corpo byte a byte), `apps/api/test/domain/llm/raciocinio-do-agente.spec.ts`
+- **Origem:** AT-467 (medição paga de 10/10)
+
+### RN-783 — Os dev agents de execução rodam com o raciocínio desligado {#rn-783}
+
+- **Regra:** decisão do dono de 10/10. Para agente `dev-<modulo>` (o Dev Lead,
+  `dev-lead`, é conversacional e fica de fora) com modelo de
+  `supportsReasoning`, o provider que sabe dizer "desligado" (hoje só o
+  OpenRouter, `campoDeRaciocinioDesligado`) manda `reasoning: { enabled: false }`,
+  mantendo a folga da [RN-782](#rn-782). Medido no Haiku 5.5: 0 de 8 respostas
+  cortadas e −42% de custo. Conversacionais e gates não mudam (sem campo), e
+  modelo sem `supportsReasoning` não manda nada. Não é silencioso: a ajuda da
+  faceta "thinking" do catálogo de modelos diz que nos dev agents de execução o
+  raciocínio vai desligado (o mínimo escolhido; o seletor e a bolha não mudam).
+- **Onde:** `apps/api/src/domain/llm/raciocinio-do-agente.ts:28`
+  (`raciocinioDesligadoParaOAgente`), `apps/api/src/infrastructure/llm/openrouter-provider.ts:224`
+  (`campoDeRaciocinioDesligadoOpenRouter`)
+- **Teste:** `apps/api/test/infrastructure/llm/openai-compatible-provider.contract.spec.ts`
+  (`dev agent: raciocínio desligado explícito, com a folga (RN-783)`),
+  `apps/api/test/domain/llm/raciocinio-do-agente.spec.ts` (dev-* desliga;
+  criativo e dev-lead só a folga; sem `supportsReasoning`, nada)
+- **Origem:** AT-467 (decisão do dono de 10/10)
+### RN-784 — As leituras de estado do Arquiteto entram no piso do Jev {#rn-784}
+
+- **Regra:** revisa a [RN-758](#rn-758) e a [RN-772](#rn-772) (decisão do
+  dono). O piso do Arquiteto ganha `listar_adrs_propostas` e `listar_backlog`:
+  o recorte do Jev nunca as tira, para o Arquiteto não afirmar status de ADR
+  nem tarefas do backlog sem poder consultá-los ([RN-773](#rn-773)). Continua
+  valendo que o piso só devolve o que está no catálogo do passo.
+- **Onde:** `apps/api/src/domain/llm/tool-router.ts:303` (`PISO_DO_MENU`)
+- **Teste:** `apps/api/test/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.spec.ts`
+  (`Arquiteto recortado pelo Jev: as leituras de estado (ADRs propostas,
+  backlog) continuam no menu (RN-784)`)
+- **Origem:** AT-460 (TP-01 de 09/10: o Jev tirou do menu do Arquiteto as
+  leituras da AT-454)
+### RN-779 — O worktree da task (re)pegada parte da `dev` ATUAL e a integra {#rn-779}
+
+- **Regra:** antes de criar o worktree de uma task (primeira vez ou retomada),
+  o engine faz `git fetch origin` no working tree do projeto (serializado por
+  projeto) — é no remoto que as PRs são mergeadas, e a `dev` local só andava no
+  checkout da inicialização. A ponta da `dev` é `origin/dev` quando a local
+  ficou para trás. A task nasce: (1) da branch da task anterior não mergeada
+  (RN-760), (2) da PRÓPRIA branch quando ela tem trabalho que a `dev` não
+  contém — a task retomada num processo novo, que perdeu o ponteiro em memória
+  (RN-743) —, ou (3) da ponta atual da `dev`. Nos casos (1) e (2) o worktree
+  INTEGRA a ponta da `dev` (`merge --no-ff`, identidade `<agente>[bot]`) antes
+  do primeiro passo. Conflito nessa integração é recusa NOMEADA ("conflito ao
+  integrar a `dev` atual", com os arquivos), o merge é abortado, a branch de
+  origem fica intacta e a task bloqueia com motivo próprio e origem `codigo`.
+  `fetch` que falha bloqueia a task com o motivo do git, nunca cai na `dev`
+  velha. A readoção depois de conflito de merge (RN-715) não integra sozinha.
+  Medido no TP-01: a AT-447 DISPAROU no 1º claim (reflog: `Created from
+  feature/task-b3cc92b8`); quem perdeu a base foi o reclaim, que redefiniu a
+  branch para a `dev` LOCAL parada no merge da infra (`Reset to dev`).
+  Declarado: no modo `runner` nada disso roda (o git é da máquina do usuário).
+- **Onde:** `apps/engine/lib/engine/dev/worktree_manager.ex:151`
+  (`atualizar_remoto`), `:195` (`add_worktree`), `:227`
+  (`ponta_do_trabalho`), `:246` (`retomada`), `:256` (`integrar_trabalho`)
+- **Teste:** `apps/engine/test/engine/dev/worktree_manager_test.exs`
+  (`integração da dev atual (RN-779)`: retomada com branch antiga parte da dev
+  nova do remoto; trabalho preservado integra a dev nova; anterior em
+  `awaiting_user` é a base com a dev integrada; conflito é recusa nomeada)
+- **Origem:** AT-458 (TP-01 de 09/10: `feature/task-c80daf6c` nasceu de
+  `1fa2241` sem as 12 tarefas mergeadas depois, e o merge conflitou)
+### RN-780 — Resposta só de raciocínio cortada pelo teto é corte, não desistência {#rn-780}
+
+- **Regra:** no `ToolLoop` (caminho de todo agente de execução e de gate),
+  a resposta sem texto e sem chamada de ferramenta que a api marca
+  `truncated: true` (o `finish_reason: length` da RN-737) é o raciocínio que
+  comeu o teto de saída. A volta é retentada UMA vez, sem a resposta vazia no
+  histórico e contando iteração — o teto de iterações e o orçamento da tarefa
+  continuam valendo. Se repetir, o laço para marcando `corte_pelo_teto`, e o
+  dev agent bloqueia a task com o motivo "resposta só de raciocínio, cortada
+  pelo teto" e origem `modelo`, em vez de "parou sem concluir nem reportar
+  bloqueio". Uma chamada de ferramenta no meio zera a retentativa. Declarado:
+  o engine recebe da api `truncated` e `usage.outputTokens`, mas NÃO os
+  `reasoningTokens` (ficam só em `token_usage`), então a resposta vazia que
+  bate no teto sem `finish_reason: length` não é reconhecida.
+- **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:219`
+  (`parada_sem_chamada`), `apps/engine/lib/engine/dev/dev_agent_server.ex:977`
+  (`motivo_da_parada`), `:980` (`stop_diagnosis`)
+- **Teste:** `apps/engine/test/engine/harness/tool_loop_test.exs` (`corte só
+  de raciocínio`: retentada uma vez e segue; repetido para com
+  `corte_pelo_teto`), `apps/engine/test/engine/dev/dev_agent_server_test.exs`
+  (`resposta só de raciocínio cortada pelo teto bloqueia com motivo nomeado`)
+- **Origem:** AT-459 (TP-01 de 09/10: a tarefa `c80daf6c` bloqueou em 40 s
+  com 8.192 tokens de saída, todos de raciocínio)
+### RN-781 — A mensagem de commit do dev não grava pendência que é do sistema {#rn-781}
+
+- **Regra:** o resumo do `report_done` é a mensagem de commit do dev agent, e
+  commit, push e PR são feitos pelo sistema depois dele. Antes de propor o
+  `git_commit`, o engine corta do marcador de pendência ("Pendente",
+  "Pendência", "Pending") ao fim quando o resto fala de commit, push ou PR, e
+  tira o parêntese "(ainda sem commit…)"; pendência que não fala disso fica.
+  A descrição do campo `summary` diz que ele vira a mensagem de commit e que
+  não se narra commit, push nem PR. Resumo que fica vazio cai na mensagem
+  padrão `<agente>: <task>`.
+- **Onde:** `apps/engine/lib/engine/dev/agent_io.ex:356`
+  (`mensagem_de_commit`), `:331` (`propose_commit`),
+  `apps/engine/lib/engine/dev/tools/report_done.ex:27` (`summary`)
+- **Teste:** `apps/engine/test/engine/dev/mensagem_de_commit_test.exs`
+  (corta a narração; tira o parêntese; pendência alheia ao sistema fica)
+- **Origem:** AT-464 item 2 (TP-01 de 09/10: `git log feature/task-9d6dcd53`
+  com "Pendente: commit… as ações git_commit, git_push e pr_open não estavam
+  disponíveis neste passo")
+### RN-785 — Requisito que depende de outra história ainda não feita é observação no gate de QA {#rn-785}
+
+- **Regra:** além das tarefas irmãs ([RN-765](#rn-765)), o recorte que a
+  QA-estratégia e a QA-automação recebem traz as tarefas NÃO concluídas das
+  OUTRAS histórias do mesmo módulo, com o título da história
+  (`moduleOpenTasks` em `GET .../dev-context`). O módulo é o da tarefa, senão
+  o pedido, senão os da história; história arquivada fica fora. Leitura
+  contida (ADR 0060): no máximo 20, com o total real em
+  `moduleOpenTasksTotal` e o corte dito no recorte. Requisito da entrega que
+  depende do que outra história ainda vai entregar (uma rota, uma tela) vai ao
+  `resumo` como observação e não reprova. A régua é de PROMPT, como na RN-765.
+- **Onde:** `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:118`
+  (`tarefasAbertasDoModulo`), `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:20`
+  (`texto`)
+- **Teste:** `apps/api/test/application/use-cases/execution/get-dev-task-context.use-case.spec.ts`
+  (só a tarefa aberta da outra história do mesmo módulo; arquivada fora; teto
+  com o total real) e `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs`
+  (as tarefas abertas e o corte no texto). O golden-set do QA não ganhou caso
+  (o veredito exige chamada paga) — declarado.
+- **Origem:** AT-461 (TP-01 de 09/10, sessão `80e3ce09`: a tarefa "middleware
+  JWT" foi reprovada porque "não há rotas de criar, listar, apagar links nem de
+  painel no diff", rotas de outras histórias ainda não feitas)
+
+### RN-786 — O gate de QA lê o contrato do módulo, e divergência com a história é observação {#rn-786}
+
+- **Regra:** o recorte que a QA-estratégia e a QA-automação recebem traz o
+  contrato VIGENTE do módulo da tarefa (`artifact.module_contracts`,
+  [RN-684](#rn-684)), em `moduleContract` de `GET .../dev-context`, como a
+  fonte da INTERFACE. O módulo é o da tarefa, senão o pedido, senão o único da
+  história; história com mais de um módulo e tarefa sem módulo é ambígua e vai
+  sem contrato. Quando a história e o contrato divergem num nome de interface
+  (rota, função, evento), a entrega que segue o contrato não é reprovada por
+  isso: o parecer nomeia a DIVERGÊNCIA no `resumo` (história diz X, contrato
+  diz Y), para o usuário e o Arquiteto. Régua de PROMPT, como a
+  [RN-765](#rn-765). O Arquiteto NÃO passou a conferir o contrato contra as
+  rotas citadas nas histórias — declarado.
+- **Onde:** `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:163`
+  (`moduloDoContrato`), `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:55`
+  (`secao_do_contrato`)
+- **Teste:** `apps/api/test/application/use-cases/execution/get-dev-task-context.use-case.spec.ts`
+  (o contrato do módulo da história; sem contrato ou módulo ambíguo, `null`) e
+  `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs` (a seção do
+  contrato com a régua da divergência; sem contrato, sem seção)
+- **Origem:** AT-462 (TP-01 de 09/10, sessão `80e3ce09`: a história pedia
+  `GET /painel`, o contrato declarou `GET /panel`, o dev seguiu o contrato e o
+  QA reprovou pela história)
+
+### RN-787 — O gate conta o diff da PR contra a `dev` da origem, e o parecer de QA grava lista {#rn-787}
+
+- **Regra:** (1) o diff que o QA e o SecOps julgam (`dev...HEAD`,
+  [RN-664](#rn-664)) usa a `dev` MAIS NOVA que o working tree enxerga: com
+  origem local (caminho no disco) o gate faz antes `git fetch origin dev`,
+  melhor esforço, e entre `origin/dev` e a `dev` local vale a que contém a
+  outra. A `dev` local do clone não anda quando a PR é mergeada na origem, e o
+  parecer do SecOps contava o acumulado das tarefas já mergeadas. Com origem
+  remota não há fetch no gate (a credencial é do `Workspace`) — declarado. O
+  semgrep e o gitleaks seguem varrendo o worktree inteiro, não só o diff:
+  estreitar o que o scanner vê muda o que o gate reprova, e isso fica para o
+  dono. (2) `itens` e `coverageMatrix` do parecer de QA chegam ao
+  `artifact.qa_verdict` sempre como LISTA: string JSON de lista é decodificada
+  (o molde da [RN-719](#rn-719)), e string que não é lista vira `[]`.
+- **Onde:** `apps/engine/lib/engine/gates/diff.ex:44` (`base_mais_nova`),
+  `apps/engine/lib/engine/gates/hooks/termination.ex:41` (`lista`)
+- **Teste:** `apps/engine/test/engine/gates/diff_test.exs` (a tarefa B nascida
+  da A, com a A mergeada na origem: o diff é só B) e
+  `apps/engine/test/engine/gates/hooks/termination_test.exs` (string JSON vira
+  lista; lista intacta; string inválida vira `[]`)
+- **Origem:** AT-464 itens 1 e 3 (TP-01 de 09/10, sessão `80e3ce09`: "17
+  arquivo(s) alterado(s) nesta PR" numa PR de 3 arquivos contra a `dev`, e
+  `coverageMatrix`/`itens` gravados como `"[]"` nos últimos pareceres)
+### RN-776 — Tarefa da execução esperando alguém segura a sessão de execução {#rn-776}
+
+- **Regra:** o heartbeat não fecha a sessão de execução VIGENTE do projeto (a
+  `active` mais recente com `execution.activated`) enquanto houver tarefa de
+  história não arquivada BLOQUEADA, com PR em `awaiting_user`, ou devolvida
+  por conflito de merge ([RN-715](#rn-715), `backlog.task_merge_conflict`
+  nesta sessão) e ainda `in_progress`. É o sexto sinal da
+  [RN-064](business-rules/custo.md#rn-064), sem teto, como os outros sinais que esperam uma pessoa;
+  vem antes do sinal da conversa ociosa ([RN-581](#rn-581)), que continua
+  o único com teto. Sessão de execução ANTIGA do mesmo projeto não é segurada
+  pela tarefa: a tarefa é do projeto, e sem esse recorte ela ficaria imortal.
+- **Onde:** `apps/api/src/application/use-cases/sessions/get-session-pending-work.use-case.ts:238`
+  (`findPendenteDaExecucao`), `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:220`
+  (`findPendenteDaExecucao`)
+- **Teste:** `apps/api/test/application/use-cases/sessions/get-session-pending-work.use-case.spec.ts`
+  (bloqueada, PR esperando merge e conflito seguram; sem nada, fecha; sessão
+  de execução antiga não é segurada)
+- **Origem:** AT-457 (TP-01 de 09/10: as duas sessões de execução fecharam
+  2–8 s depois do `dev.idle`, com tarefa bloqueada e PR esperando o merge)
+
+### RN-777 — Desbloquear a tarefa acorda o dev do módulo DELA {#rn-777}
+
+- **Regra:** `task.became_claimable` com causa `task_unblocked` leva como
+  `modules` o módulo da TAREFA (`tasks.module`, [RN-678](#rn-678)) quando ele
+  existe, e os da história só quando a tarefa não tem módulo — o claim é pelo
+  módulo da tarefa, então é o dev dele que tem de acordar. O conflito de merge
+  já acorda o dono ([RN-715](#rn-715)); com a sessão de execução de pé
+  ([RN-776](#rn-776)), o dono continua com linha em `dev_agent_states` para
+  ser acordado.
+- **Onde:** `apps/api/src/application/use-cases/execution/unblock-task.use-case.ts:56`
+  (`modules`)
+- **Teste:** `apps/api/test/application/use-cases/execution/unblock-task.use-case.spec.ts`
+  (tarefa com módulo acorda o dev desse módulo)
+- **Origem:** AT-457
 
 ### RN-778 — O dev agent órfão fecha por evento novo no boot {#rn-778}
 

@@ -24,7 +24,9 @@ defmodule Engine.Dev.Tools.ReportDone do
         "properties" => %{
           "summary" => %{
             "type" => "string",
-            "description" => "resumo do que foi implementado"
+            "description" =>
+              "resumo do que foi implementado; vira a mensagem de commit. " <>
+                "Não narre commit, push nem PR: o sistema os faz depois desta chamada"
           }
         },
         "required" => ["summary"]

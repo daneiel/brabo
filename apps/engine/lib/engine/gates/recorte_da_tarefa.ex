@@ -8,7 +8,9 @@ defmodule Engine.Gates.RecorteDaTarefa do
   de três correções que ela não tinha como fazer. Este módulo monta o texto
   que a QA-estratégia e a QA-automação recebem: título e descrição da tarefa,
   as regras de negócio da história, e as tarefas irmãs com o status (o que
-  `GET .../dev-context` devolve em `siblingTasks`). A régua é dita junto: o
+  `GET .../dev-context` devolve em `siblingTasks`) e, desde a AT-461 (RN-785),
+  as tarefas não concluídas de OUTRAS histórias do mesmo módulo
+  (`moduleOpenTasks`). A régua é dita junto: o
   veredito é sobre o que é DESTA tarefa, e requisito de outra tarefa é
   OBSERVAÇÃO, nunca reprovação. Puro — sem I/O.
   """
@@ -19,6 +21,9 @@ defmodule Engine.Gates.RecorteDaTarefa do
     task = Map.get(dev_context, :task, %{})
     irmas = Map.get(dev_context, :sibling_tasks, [])
     regras = Map.get(dev_context, :business_rules_units, [])
+    abertas = Map.get(dev_context, :module_open_tasks, [])
+    total = Map.get(dev_context, :module_open_tasks_total, length(abertas))
+    contrato = Map.get(dev_context, :module_contract)
 
     """
 
@@ -32,11 +37,48 @@ defmodule Engine.Gates.RecorteDaTarefa do
     Outras tarefas da MESMA história (não são desta entrega):
     #{lista(Enum.map(irmas, &irma/1))}
 
+    Tarefas ainda NÃO concluídas de OUTRAS histórias do mesmo módulo:
+    #{lista(Enum.map(abertas, &aberta/1))}#{corte(abertas, total)}
+
     Julgue SÓ o que é desta tarefa. Requisito da história que pertence a
     outra tarefa (feita ou pendente) NÃO reprova esta entrega: cite-o no
-    `resumo` como observação e não o ponha em `itens`.
+    `resumo` como observação e não o ponha em `itens`. O mesmo vale para o
+    que depende de entrega de OUTRA história ainda não feita (uma rota, uma
+    tela, um dado que ela cria): é observação, nunca reprovação.
+    #{secao_do_contrato(contrato)}
     """
   end
+
+  # AT-462 (RN-786): o contrato do Arquiteto é a fonte da INTERFACE (nome de
+  # rota, assinatura). O dev o segue; divergência com a história é do
+  # Arquiteto/usuário resolverem, não do dev.
+  defp secao_do_contrato(%{"expoe" => [_ | _] = itens} = c) do
+    """
+
+    Contrato do módulo #{Map.get(c, "modulo", "")} (declarado pelo Arquiteto — a fonte da INTERFACE):
+    #{lista(Enum.map(itens, &item_do_contrato/1))}
+
+    Quando a história e o contrato divergem num nome de interface (rota,
+    função, evento), a entrega que segue o CONTRATO não é reprovada por isso:
+    nomeie a DIVERGÊNCIA no `resumo` (história diz X, contrato diz Y) como
+    observação para o usuário e o Arquiteto, fora de `itens`.
+    """
+  end
+
+  defp secao_do_contrato(_), do: ""
+
+  defp item_do_contrato(i),
+    do:
+      "#{Map.get(i, "tipo", "")}: #{Map.get(i, "assinatura", "")} — #{Map.get(i, "descricao", "")}"
+
+  defp aberta(t),
+    do:
+      "#{Map.get(t, "title", "")} (#{Map.get(t, "status", "?")}, história: #{Map.get(t, "storyTitle", "?")})"
+
+  defp corte(abertas, total) when total > length(abertas),
+    do: "\n(mostrando #{length(abertas)} de #{total})"
+
+  defp corte(_, _), do: ""
 
   defp irma(t), do: "#{Map.get(t, "title", "")} (#{Map.get(t, "status", "?")})"
 
