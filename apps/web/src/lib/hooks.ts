@@ -188,6 +188,9 @@ export function useActiveExecutionSession(
     queryKey: ['execution-session', projectId],
     queryFn: () => getActiveExecutionSession(projectId!),
     enabled: !!projectId,
+    // AT-463: a sidebar e a Visão geral assinam a MESMA chave; sem frescor,
+    // o segundo a montar refazia a busca que o primeiro acabou de fazer.
+    staleTime: intervalMs,
     refetchInterval: pollQueParaNoErro(intervalMs),
   });
   return { ...query, session: query.data };

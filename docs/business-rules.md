@@ -6775,7 +6775,7 @@ caminho que a execução em container substitui; o que muda agora é só a
   `apps/api/src/application/use-cases/execution/activate-execution.use-case.ts:176`
   (o 400), `apps/api/src/interfaces/http/execution/execution.controller.ts:74`
   (a anotação de OpenAPI, que prometia 409 para dois casos que nunca foram
-  409), `apps/web/src/routes/ProjectOverviewTab.tsx:437`
+  409), `apps/web/src/routes/ProjectOverviewTab.tsx:452`
   (`mensagemDaApi`), `apps/engine/lib/engine/actions/workspace.ex:61`
   (a mensagem da lacuna que fica)
 - **Teste:**
@@ -17818,7 +17818,7 @@ numa delas é inferência pelos 106 ≈ 9 × 12.
   `apps/web/src/routes/ProjectPage.tsx:77` (os contadores do trilho);
   `apps/web/src/routes/ContainersPage.tsx:62` (`useLatestSession`, sem poll);
   `apps/web/src/routes/ProjectExecutorsTab.tsx:197` (`invalidador`),
-  `apps/web/src/routes/ProjectOverviewTab.tsx:179` (`invalidador`);
+  `apps/web/src/routes/ProjectOverviewTab.tsx:191` (`invalidador`);
   `apps/web/src/components/EsperaDoRunner.tsx:73` (`confirmadoPor`)
 - **Teste:** `apps/web/src/routes/duas-abas.orcamento.test.tsx` (as duas abas
   com canal vivo, com rajada, com o canal que nunca conecta, e `/containers`;
@@ -18085,14 +18085,14 @@ o do chat.
   `:121` (os merges da mesma leitura);
   `apps/web/src/routes/ProjectApprovalsTab.tsx:111` (`pendentesQuery`), `:115`
   (`sessaoDeTrabalho`), `:322` (`handleApprove`);
-  `apps/web/src/routes/ProjectOverviewTab.tsx:102` (`pendentesDoProjeto`);
+  `apps/web/src/routes/ProjectOverviewTab.tsx:114` (`pendentesDoProjeto`);
   `apps/web/src/routes/ProjectExecutorsTab.tsx:98` (`pendentesQuery`), `:290`
   (o bloco); `apps/web/src/routes/code/CodeShell.tsx:101` (`pendentesQuery`);
   `apps/web/src/routes/SessionPage.tsx:782` (o bloco sem `isActive`);
   `apps/web/src/lib/canal-vivo.ts:123` (`alvosDoEvento`), `:180`
   (a chave por prefixo); `apps/web/src/components/PendenciasDeOutrasSessoes.tsx`
   (`porSessao`, `presenca`); `apps/web/src/components/ApprovalCard.tsx`
-  (`detalheRecolhido`); `apps/web/src/lib/hooks.ts:450`
+  (`detalheRecolhido`); `apps/web/src/lib/hooks.ts:455`
   (`useProjectPendingActions`); `apps/web/src/lib/precisa-de-voce.ts`
   (`acoesPendentes`)
 - **Teste:** `apps/web/src/routes/ProjectApprovalsTab.test.tsx` (a pendente da
@@ -18418,7 +18418,7 @@ toda aba — a mesma lacuna que a [RN-632](#rn-632) declara.
 
 - **Código:** `apps/web/src/lib/query-policy.ts:111`
   (`FRESCOR_DA_CONFIGURACAO_MS`); `apps/web/src/lib/hooks.ts:29`
-  (`useCurrentWorkspaceWithRole`), `:530` (`useProficiency`);
+  (`useCurrentWorkspaceWithRole`), `:535` (`useProficiency`);
   `apps/web/src/routes/settings/InstructionVersionsSection.tsx:31`
   (`instruction-versions`, sem poll); as seções de `apps/web/src/routes/settings/`
   e `apps/web/src/components/ModelCatalogSection.tsx`;
@@ -22590,3 +22590,37 @@ sem dizer qual.
   (as duas leituras estão no catálogo do Arquiteto)
 - **Origem:** AT-454 (TP-01 de 09/10: com 17 tarefas no backlog, o Arquiteto
   disse "faltam as tarefas" e "não consigo verificá-las daqui")
+
+### RN-788 — Decisões e linha do tempo do time não afirmam sobre o que não leram {#rn-788}
+
+- **Regra:** no painel "Contexto da sessão", "Decisões registradas" segue o
+  mesmo recorte declarado das regras ([RN-701](#rn-701)): com eventos antes da
+  janela, o contador diz "N na janela · há mais antes" e o vazio diz que pode
+  haver decisões nos anteriores, nunca "Nenhuma decisão registrada nesta
+  sessão". Na Visão geral, a "Linha do tempo do time" lê a sessão de EXECUÇÃO
+  quando ela existe (a mesma da sidebar) e diz isso no subtítulo quando ela
+  não é a mais recente. Nenhuma requisição a mais: as chaves são as que a
+  sidebar já assina, e `useActiveExecutionSession` ganha `staleTime` igual ao
+  intervalo, para o segundo assinante não refazer a busca ([RN-632](#rn-632)).
+- **Onde:** `apps/web/src/routes/ContextAside.tsx:388` (`trailing`),
+  `apps/web/src/routes/ProjectOverviewTab.tsx:86` (`linhaDoTempoNaExecucao`)
+- **Teste:** `apps/web/src/routes/SessionPage.painel-e-agrupamento.test.tsx`
+  (decisão fora da janela não vira 0; sessão inteira na janela diz vazio),
+  `apps/web/src/routes/ProjectOverviewTab.test.tsx` (lê a sessão de execução e
+  diz; sem execução, lê a mais recente), `apps/web/src/routes/duas-abas.orcamento.test.tsx`
+  (a carga da Visão geral segue no teto)
+- **Origem:** AT-463 (TP-01 de 09/10)
+
+### RN-789 — Na tela de Sessão, a sidebar marca a aba onde a sessão está listada {#rn-789}
+
+- **Regra:** a tela de Sessão publica a aba que o TIPO da sessão implica —
+  criativa em "Criativo" (a lista de ideações), consultiva em "Chat" —, e a
+  sidebar a marca em vez de sempre "Chat" ([RN-751](#rn-751)); o clique leva à
+  lista onde a sessão aparece, que é o caminho de volta a ela. Sessão ainda
+  carregando, ou aba publicada de outro projeto, cai em "Chat". Sem leitura
+  nova: o tipo já veio com a sessão.
+- **Onde:** `apps/web/src/routes/project-tabs.ts:383` (`abaDaRota`),
+  `apps/web/src/lib/session-kind.ts:94` (`usePublicarAbaDaSessao`)
+- **Teste:** `apps/web/src/lib/session-rolagem-fim.test.ts` (criativa marca
+  "Criativo"; aba de outro projeto ou inválida não vale)
+- **Origem:** AT-463 (TP-01 de 09/10)
