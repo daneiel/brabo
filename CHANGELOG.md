@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- **web (markdown do fio)**: a resposta do agente ganha régua (`---`), citação (`>`), `####`, lista aninhada de um nível e checklist (`- [ ]`/`- [x]`, só visual); e o texto em curso pode passar por `fecharMarcadoresAbertos`, que fecha fence, crase e negrito pendentes para o prefixo do stream não mostrar marcador cru — o texto final segue sem ele (RN-837, AT-507).
 - **engine**: o dev agent deixa de bloquear tarefa pronta procurando ferramenta de commit: a descrição de `report_done`/`report_blocked`, o kickoff e a mensagem de ambiente dizem que `report_done` faz commit, push e PR (o ambiente mandava usar ações tipadas de git que o dev não tem), e que teste novo entra no script `test` que lista arquivos (RN-832, AT-499).
 - **web**: o chat da sessão mostra as PRs prontas para merge (gates aprovados, inclusive ADR e infra) com "Mergear" e o cartão de aprovação ali, e as tarefas bloqueadas com motivo e "Desbloquear" (RN-825, RN-826, AT-497).
 - **web (fio da Sessão)**: a bolha do agente mantém o mesmo avatar do streaming ao fim do turno, com o modelo só no chip (RN-829); Enter não envia no meio da composição de acento, o fio é `role="log"` e a faixa do turno `role="status"` (RN-830); a mensagem cujo envio falhou fica no fio como "não enviada", com "Tentar de novo" ao mesmo destinatário (RN-831, AT-503).

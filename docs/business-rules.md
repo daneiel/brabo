@@ -23618,3 +23618,27 @@ sem dizer qual.
   ("…e soma os arquivos da execução ligada"; falha: "corta a lista de arquivos
   no teto e devolve o total real; não lê sessão sem ligação")
 - **Origem:** AT-498
+
+### RN-837 — Markdown do fio: blocos novos e prefixo de stream sem marcador cru {#rn-837}
+
+- **Regra:** o Markdown leve do chat (parser próprio, sem dependência) também
+  reconhece régua (`---`, `***`, `___`; logo depois de texto de parágrafo
+  continua texto), citação (linhas `>` seguidas, miolo reprocessado pelo
+  mesmo parser), cabeçalho `####`, lista aninhada de UM nível (item recuado em
+  2+ espaços vai para o item anterior; mais fundo achata) e checklist
+  (`- [ ]`/`- [x]`, caixa só visual, desabilitada). No modo stream
+  (`MarkdownMessage` com `emCurso`), o texto passa antes por
+  `fecharMarcadoresAbertos`, que fecha fence, crase e `**` pendentes e tira um
+  marcador solto na ponta — nenhum prefixo lança nem mostra marcador cru. O
+  texto final nunca passa por ele. Continua sem `dangerouslySetInnerHTML`.
+- **Onde:** `apps/web/src/lib/markdown.ts:122` (`HR_RE`),
+  `apps/web/src/lib/markdown.ts:123` (`CITACAO_RE`),
+  `apps/web/src/lib/markdown.ts:124` (`TAREFA_RE`),
+  `apps/web/src/lib/markdown.ts:374` (`fecharMarcadoresAbertos`),
+  `apps/web/src/components/ui/MarkdownMessage.tsx:298` (`MarkdownMessage`)
+- **Teste:** `apps/web/src/lib/markdown.blocos-e-stream.test.ts` ("checklist
+  marca cada item…"; falha: "`---` logo depois de texto continua texto"),
+  `apps/web/src/components/ui/MarkdownMessage.stream.test.tsx` ("nenhum
+  prefixo lança nem mostra marcador cru"; falha: "o texto final (sem
+  emCurso) não é alterado")
+- **Origem:** AT-507 (Melhorias de UX do Chat, 10/10, item 1.2-a)

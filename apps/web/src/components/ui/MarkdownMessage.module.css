@@ -173,3 +173,40 @@
   border-top: 1px solid var(--border);
   cursor: pointer;
 }
+
+/* RN-837 */
+.titulo4 {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 13px;
+  margin: 10px 0 4px;
+}
+
+.regua {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 12px 0;
+}
+
+.citacao {
+  margin: 0 0 10px;
+  padding: 2px 0 2px 12px;
+  border-left: 3px solid var(--border);
+  color: var(--text-muted);
+}
+
+.lista .lista {
+  margin: 3px 0 0;
+}
+
+.itemTarefa {
+  list-style: none;
+  margin-left: -18px;
+}
+
+.caixaTarefa {
+  margin: 0 6px 0 0;
+  vertical-align: middle;
+  accent-color: var(--accent);
+}
