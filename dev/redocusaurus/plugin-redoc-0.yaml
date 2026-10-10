@@ -13109,6 +13109,17 @@ components:
           description: >-
             Real number of open tasks of the module in other stories — larger
             than `moduleOpenTasks.length` when the list was cut.
+        moduleContract:
+          nullable: true
+          description: >-
+            The current contract of the task module
+            (`artifact.module_contracts`) — the source of the INTERFACE for the
+            QA gate. When the story and the contract diverge, the verdict names
+            the divergence instead of rejecting the dev that followed the
+            contract (RN-786). `null` without a resolvable module or contract.
+          type: object
+          allOf:
+            - $ref: '#/components/schemas/ContratoDeModuloResponseDto'
         primeiraDoModulo:
           type: boolean
           description: >-
@@ -13124,6 +13135,7 @@ components:
         - siblingTasks
         - moduleOpenTasks
         - moduleOpenTasksTotal
+        - moduleContract
         - primeiraDoModulo
     DiffLineResponseDto:
       type: object
