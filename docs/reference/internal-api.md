@@ -1000,6 +1000,15 @@ verdict is about what THIS task delivers and a requirement owned by a sibling
 becomes an observation instead of a rejection. Read-only, same route, same
 `engine-service` guard: the HTTP surface does not change.
 
+`/dev-context` also gained `task.primeiraDoModulo` in AT-433
+([RN-774](../business-rules/custo.md#rn-774)) — `true` when the oldest
+`backlog.task_claimed` of the project for that module is this task
+(`ehPrimeiraTarefaDoModulo` in `get-dev-task-context.use-case.ts`), `false`
+without a module or without any claim. `Engine.Dev.TetoDaTarefa.efetivo/2`
+reads it to give the first task of each module twice the per-task budget.
+Read-only, same route, same `engine-service` guard: the HTTP surface does not
+change.
+
 `/infra-context` gained `gitProvider` in FASE 8c (`null` with no repository
 provisioned) — it's how the Workflows subagent decides `.github/workflows/
 ci.yml` vs `.gitlab-ci.yml`, with no new route (same "one GET per
