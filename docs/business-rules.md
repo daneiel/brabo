@@ -22350,7 +22350,7 @@ sem dizer qual.
   esta última é OBSERVAÇÃO no `resumo`, fora de `itens`, salvo regra que a
   exija. Continua régua de prompt: nenhuma reprovação nova no código.
 - **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:18` (`texto`),
-  `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:64` (`secao_da_forma`),
+  `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:68` (`secao_da_forma`),
   `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:103`
   (`tarefasIrmas`) e `apps/engine/lib/engine/gates/qa_automacao_agent.ex:170`
   (`com_o_recorte`)
@@ -22791,7 +22791,7 @@ sem dizer qual.
   [RN-765](#rn-765). Desde a [RN-792](#rn-792) o Arquiteto confere o contrato
   contra as rotas citadas nas histórias ao declará-lo.
 - **Onde:** `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:163`
-  (`moduloDoContrato`), `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:52`
+  (`moduloDoContrato`), `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:56`
   (`secao_do_contrato`)
 - **Teste:** `apps/api/test/application/use-cases/execution/get-dev-task-context.use-case.spec.ts`
   (o contrato do módulo da história; sem contrato ou módulo ambíguo, `null`) e
@@ -23264,7 +23264,7 @@ sem dizer qual.
   externo dos gates (`docs/gates.yml`) e o código do `emit_qa_verdict` não
   mudam, e nenhum gate novo nasce. Tarefa que não toca nada disso não ganha a
   seção.
-- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:87`
+- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:91`
   (`secao_do_ponto_de_entrada`)
 - **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs`
   ("tarefa que toca a fiação exige evidência do ponto de entrada real" e "tarefa
@@ -23285,3 +23285,57 @@ sem dizer qual.
   recorte pede todas as lacunas numa volta só")
 - **Origem:** AT-487 (TP-01 de 10/10, tarefa `c7ced5a2`: duas reprovações por
   duas lacunas que já existiam na entrega original)
+
+### RN-817 — O QA roda a suíte em estado limpo, e teste pulado não é verde {#rn-817}
+
+- **Regra:** extensão do recorte da [RN-765](#rn-765), para toda tarefa. Antes
+  de rodar a suíte, o gate de QA encerra o que o PRÓPRIO projeto deixou de pé
+  (servidor do `start` escutando numa porta do projeto), só processos daquela
+  pasta, nunca de fora. Teste que sobe processo deve encerrar o GRUPO (ou
+  subir `node` direto, não via `npm`); o que não encerra trava a suíte num
+  clone limpo e é lacuna em `itens`. Teste que se PULOU por ambiente (porta
+  ocupada, ferramenta ausente) não conta como verde: vai ao `resumo` como
+  observação. É instrução do recorte, não passo do harness: quem roda a suíte
+  é o próprio QA pelo `terminal`, que já passa pela política e pelo
+  roteamento de container dos três modos — um `pkill` no harness precisaria
+  de um segundo caminho de execução por modo. Régua de prompt; o contrato dos
+  gates não muda.
+- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:122`
+  (`secao_do_ambiente_limpo`)
+- **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs`
+  ("RN-817: pede ambiente limpo, encerrar o grupo e pulado como observação")
+- **Origem:** AT-496 (TP-01 de 10/10: `npm test` travava num clone limpo — o
+  teste matava o `npm` e o `node` neto ficava na 3000 —, e no container o QA
+  viu exit 0 porque o teste se pulava com a porta ocupada por um servidor
+  órfão)
+
+### RN-818 — A evidência do ponto de entrada é a que o ambiente do dev produz {#rn-818}
+
+- **Regra:** extensão da [RN-813](#rn-813). A seção "Ponto de entrada" diz o
+  que CONTA como evidência no ambiente do dev — subir o processo do
+  entrypoint na pasta do projeto, rodar o script no container do projeto,
+  bater numa rota do processo de pé — e o que NÃO cabe ali: construir imagem
+  Docker, `docker compose`, rede externa. Exigência desse segundo tipo nunca
+  vai para `itens`; vai ao `resumo` como observação. Régua de prompt.
+- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:91`
+  (`secao_do_ponto_de_entrada`)
+- **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs`
+  ("RN-818: com ponto de entrada diz o que conta e o que não cabe" e "RN-818:
+  sem ponto de entrada não traz a régua de evidência")
+- **Origem:** AT-492 (TP-01 de 10/10, task `c708f8b2`: a 4ª volta exigiu
+  construir a imagem a partir do Dockerfile, o container do projeto não tem
+  Docker, e o ciclo esgotou em bloqueio `politica`)
+
+### RN-819 — O QA varre regra por regra antes de emitir {#rn-819}
+
+- **Regra:** extensão da [RN-814](#rn-814). Além de listar todas as lacunas, o
+  recorte pede uma VARREDURA POR REGRA antes de emitir: percorrer cada regra
+  de negócio e cada critério da tarefa, um por um, apontando onde está a prova
+  ou que ela falta, e só emitir depois de passar por todas. "Liste todas"
+  sozinho não segurou lacuna pré-existente aparecendo na volta seguinte.
+  Régua de prompt.
+- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:20` (`texto`)
+- **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs`
+  ("RN-819: pede varredura por regra antes de emitir")
+- **Origem:** AT-490 (TP-01 de 10/10: tarefas 2 e 11 trouxeram na 2ª volta
+  lacuna que já estava na entrega)

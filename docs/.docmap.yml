@@ -319,6 +319,14 @@ rules:
     severity: warn
     note: "Mudou o que a mensagem de ambiente diz, para quem, ou de onde lê: atualizar a RN-706."
 
+  # RN-765/813/814/817..819 — o recorte da tarefa que o gate de QA julga.
+  - id: recorte-do-qa
+    watch:
+      - "apps/engine/lib/engine/gates/recorte_da_tarefa.ex"
+    docs: ["docs/business-rules.md"]
+    severity: warn
+    note: "Mudou o que o recorte pede ao QA: atualizar a RN-765 e as extensões (RN-813/814/817/818/819)."
+
   # RN-810..812 — retentativa de rede do provider, a dev atualizada antes do
   # "já na dev" e a PR aberta da branch reaproveitada.
   - id: dev-rede-e-pr-repetida
