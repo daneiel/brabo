@@ -18,7 +18,7 @@
     },
     "reasoning": {
       "label": "thinking",
-      "help": "Exposes explicit reasoning before the response."
+      "help": "Exposes explicit reasoning before the response. Execution dev agents run with reasoning turned off; the other agents leave it to the model."
     },
     "imagem": {
       "label": "generates image",

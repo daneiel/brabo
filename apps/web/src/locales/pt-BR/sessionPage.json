@@ -208,6 +208,7 @@
     "eventoCitadoNaoEncontrado": "O evento citado não foi encontrado nesta sessão.",
     "erroCarregarLog": "Não foi possível carregar o log de eventos.",
     "decisoes": "Decisões registradas",
+    "decisoesNadaNaJanela": "Nenhuma nos eventos carregados — pode haver decisões nos anteriores.",
     "decisoesVazio": "Nenhuma decisão registrada nesta sessão.",
     "decisaoSemEscolha": "Decisão sem escolha registrada"
   },

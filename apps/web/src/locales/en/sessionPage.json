@@ -203,6 +203,7 @@
     "eventoCitadoNaoEncontrado": "The cited event wasn't found in this session.",
     "erroCarregarLog": "Could not load the event log.",
     "decisoes": "Recorded decisions",
+    "decisoesNadaNaJanela": "None in the loaded events — there may be decisions in earlier ones.",
     "decisoesVazio": "No decision recorded in this session.",
     "decisaoSemEscolha": "Decision with no recorded choice"
   },
