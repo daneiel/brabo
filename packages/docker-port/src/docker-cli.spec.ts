@@ -103,6 +103,10 @@ describe('DockerViaCli.start', () => {
     // AT-422 (RN-738): init que repassa o SIGTERM — sem ele, `stop` leva 10 s.
     expect(args).toContain('--init');
     expect(args.indexOf('--init')).toBeLessThan(args.indexOf('sleep'));
+    // AT-494 (RN-820): volta sozinho depois de o daemon reiniciar, e o `stop`
+    // explícito não é desfeito (`unless-stopped`, nunca `always`).
+    expect(args.join(' ')).toContain('--restart unless-stopped');
+    expect(args).not.toContain('always');
     expect(args.join(' ')).toContain(`--label ${ROTULO_GERENCIADO}=true`);
     // UM volume, destino constante. Se um dia aparecer um segundo `--volume`,
     // este número é o que reprova.
