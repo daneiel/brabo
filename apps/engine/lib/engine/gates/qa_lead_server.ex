@@ -57,6 +57,7 @@ defmodule Engine.Gates.QaLeadServer do
   alias Engine.Agents.Reidratacao
 
   alias Engine.Gates.{
+    ConferenciaDoReadme,
     Diff,
     Dispatcher,
     GateState,
@@ -252,6 +253,7 @@ defmodule Engine.Gates.QaLeadServer do
 
     resultados
     |> Enum.map(fn {d, resultado} -> {d.label, resultado} end)
+    |> Kernel.++(conferencia_do_readme(emVoo))
     |> QaLead.consolidar()
     |> aplicar(emVoo.project_id, emVoo.dev_state, emVoo.task_id)
 
@@ -582,6 +584,33 @@ defmodule Engine.Gates.QaLeadServer do
       criterios_executaveis: Map.get(payload, "criteriosExecutaveis", []),
       estrategia_de_automacao: Map.get(payload, "estrategiaDeAutomacao", "")
     }
+  end
+
+  # RN-798 (AT-475): README tocado pela entrega é conferido contra os scripts
+  # do package.json, sem LLM; divergência entra como parecer próprio.
+  defp conferencia_do_readme(%{project_id: project_id, dev_state: dev_state}) do
+    worktree = Map.get(dev_state, :worktree_path)
+
+    case ConferenciaDoReadme.conferir(worktree, arquivos_alterados(project_id, worktree)) do
+      nil ->
+        []
+
+      [] ->
+        [{"Conferência do README", {:ok, %{veredito: "approved", resumo: "", itens: []}}}]
+
+      divergencias ->
+        [
+          {"Conferência do README",
+           {:ok,
+            %{
+              veredito: "changes_requested",
+              resumo: "README cita comando que o código não tem",
+              itens: divergencias
+            }}}
+        ]
+    end
+  rescue
+    _ -> []
   end
 
   defp arquivos_alterados(project_id, worktree_path) do

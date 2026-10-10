@@ -19536,7 +19536,7 @@ OBRIGATÓRIAS da `coverageMatrix` (e portanto reprovar entrega).
 
 - **Onde:** `apps/engine/lib/engine/gates/qa_lead_server.ex:152` (`plano_de_teste_da_entrega`),
   `:528` (`plano_de_teste_da_entrega`), `:552` (`plano_ja_emitido`),
-  `:587` (`arquivos_alterados`);
+  `:594` (`arquivos_alterados`);
   `apps/engine/lib/engine/gates/qa_estrategia_agent.ex:86` (`run`),
   `:104` (`token_budget_micros`), `:175` (`descrever_arquivos`);
   `apps/engine/lib/engine/gates/qa_automacao_agent.ex:173` (`com_o_plano`);
@@ -23002,3 +23002,21 @@ sem dizer qual.
   (`ja_na_dev`)
 - **Teste:** `apps/engine/test/engine/dev/tarefa_ja_na_dev_test.exs`
 - **Origem:** AT-474
+### RN-798 — O QA confere os comandos do README tocado pela entrega contra os scripts {#rn-798}
+
+- **Regra:** quando o diff da entrega contra a `dev` toca um README, o QA
+  confere, sem LLM, que todo `npm run <s>`, `npm test`, `npm start`,
+  `pnpm [run] <s>` e `yarn [run] <s>` citado nele existe em `scripts` do
+  `package.json` da mesma pasta (senão o da raiz do worktree). A conferência
+  entra na consolidação como mais um parecer ("Conferência do README"):
+  divergência é `changes_requested` com um item por comando, nomeando o
+  script que falta; sem divergência, aprova. Sem README no diff, diff que
+  falhou ou `package.json` inalcançável, nada é afirmado. De FORA, declarado:
+  subcomando embutido do gerenciador (`pnpm install`, `pnpm dlx`…), comando
+  com flag antes do script (`pnpm --filter x test`), flags de CLI do próprio
+  projeto e comando que não é de Node.
+- **Onde:** `apps/engine/lib/engine/gates/conferencia_do_readme.ex:28`
+  (`conferir`), `apps/engine/lib/engine/gates/qa_lead_server.ex:591`
+  (`conferencia_do_readme`)
+- **Teste:** `apps/engine/test/engine/gates/conferencia_do_readme_test.exs`
+- **Origem:** AT-475
