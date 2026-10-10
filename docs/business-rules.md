@@ -22945,7 +22945,7 @@ sem dizer qual.
 - **Onde:** `apps/web/src/components/ReligarExecucao.tsx:23` (`ReligarExecucao`),
   `apps/web/src/lib/execution.ts:10` (`contarTarefasPendentes`),
   `apps/web/src/routes/ProjectExecutorsTab.tsx:99` (`semExecucaoVigente`),
-  `apps/web/src/routes/ProjectOverviewTab.tsx:488` (`semExecucaoVigente`)
+  `apps/web/src/routes/ProjectOverviewTab.tsx:500` (`semExecucaoVigente`)
 - **Teste:** `apps/web/src/routes/ProjectExecutorsTab.test.tsx` (religar a
   execução), `apps/web/src/routes/ProjectOverviewTab.test.tsx` (religar a
   execução encerrada)
@@ -23618,3 +23618,27 @@ sem dizer qual.
   ("…e soma os arquivos da execução ligada"; falha: "corta a lista de arquivos
   no teto e devolve o total real; não lê sessão sem ligação")
 - **Origem:** AT-498
+
+### RN-835 — O "Desbloquear" da Visão geral não se move e diz o que aconteceu {#rn-835}
+
+- **Regra:** extensão da [RN-816](#rn-816) e da [RN-794](#rn-794). Na seção de
+  execução da Visão geral, a lista de tarefas bloqueadas vem PRIMEIRO, antes do
+  "Religar execução" (que depende da leitura da execução vigente) e do grid dos
+  dev agents (que depende dos eventos) — blocos que chegavam depois do primeiro
+  paint e empurravam o botão sob o cursor. O desbloqueio tem retorno POR
+  TAREFA: em voo o botão fica inerte e diz "Desbloqueando…" (um clique, uma
+  chamada), o sucesso diz "Tarefa desbloqueada" até o backlog relido tirar a
+  linha, e a recusa mostra a frase da api na própria linha. Sem sessão lida, o
+  botão fica inerte com o motivo em texto — antes o clique retornava calado.
+  Declarado: o que fica ACIMA da seção (o time e a árvore de atividade) não tem
+  altura reservada, e jsdom não faz layout — o teste prova a ORDEM, não o
+  deslocamento em pixels; qual das duas causas (salto ou sessão não lida) fez o
+  1º clique do TP-01 se perder não foi medido no navegador.
+- **Onde:** `apps/web/src/routes/ProjectOverviewTab.tsx:485` (`desbloqueio`),
+  `apps/web/src/routes/ProjectOverviewTab.tsx:605` (`blockedTasks`)
+- **Teste:** `apps/web/src/routes/ProjectOverviewTab.test.tsx` ("RN-835
+  (AT-502): o desbloqueio chama uma vez, fica em voo e diz quando terminou";
+  falha: "RN-835: a recusa do desbloqueio mostra a frase da api na linha"),
+  `apps/web/src/routes/salto-de-layout.test.ts` ("RN-835 (AT-502): Visão
+  geral — as tarefas bloqueadas vêm antes…")
+- **Origem:** AT-502 (TP-01 de 10/10)

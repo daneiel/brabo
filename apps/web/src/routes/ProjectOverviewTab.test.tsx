@@ -652,6 +652,38 @@ describe('religar a execução encerrada (RN-794)', () => {
     expect(activateExecutionMock).toHaveBeenCalledWith('proj-1');
   });
 
+  it('RN-835 (AT-502): o desbloqueio chama uma vez, fica em voo e diz quando terminou', async () => {
+    getProjectsSummary.mockResolvedValue([resumo({ executionActivated: true })]);
+    listBacklog.mockResolvedValue(backlog);
+    let resolver: () => void = () => {};
+    unblockTaskMock.mockReset();
+    unblockTaskMock.mockReturnValue(new Promise<void>((r) => (resolver = r)));
+
+    montar();
+
+    const botao = await screen.findByRole('button', { name: 'Desbloquear' });
+    await userEvent.click(botao);
+    const emVoo = await screen.findByRole('button', { name: 'Desbloqueando…' });
+    expect(emVoo).toBeDisabled();
+    await userEvent.click(emVoo);
+    expect(unblockTaskMock).toHaveBeenCalledTimes(1);
+    resolver();
+    expect(await screen.findByTestId('desbloqueada')).toHaveTextContent('Tarefa desbloqueada');
+  });
+
+  it('RN-835: a recusa do desbloqueio mostra a frase da api na linha', async () => {
+    getProjectsSummary.mockResolvedValue([resumo({ executionActivated: true })]);
+    listBacklog.mockResolvedValue(backlog);
+    unblockTaskMock.mockReset();
+    unblockTaskMock.mockRejectedValue(new ApiError(409, { message: 'A tarefa já está em curso.' }));
+
+    montar();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Desbloquear' }));
+    expect((await screen.findAllByText('A tarefa já está em curso.')).length).toBeGreaterThan(0);
+    expect(screen.getByRole('button', { name: 'Desbloquear' })).toBeEnabled();
+  });
+
   it('a recusa (409) de religar mostra a frase da api', async () => {
     getProjectsSummary.mockResolvedValue([resumo({ executionActivated: true })]);
     listBacklog.mockResolvedValue(backlog);

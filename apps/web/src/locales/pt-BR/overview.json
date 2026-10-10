@@ -113,7 +113,9 @@
     "authorizationNeededMessage_one": "A sessão já tem {{count}} agente, o teto do lead é {{max}}. O pedido está em Aprovações.",
     "authorizationNeededMessage_other": "A sessão já tem {{count}} agentes, o teto do lead é {{max}}. O pedido está em Aprovações.",
     "requestDeniedTitle": "Pedido recusado",
-    "requestError": "Não foi possível pedir"
+    "requestError": "Não foi possível pedir",
+    "unblocking": "Desbloqueando…",
+    "unblockNeedsSession": "A sessão ainda está carregando: desbloquear depende dela."
   },
   "architectureSummary": {
     "title": "Arquitetura",
