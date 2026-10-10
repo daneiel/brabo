@@ -22280,7 +22280,7 @@ sem dizer qual.
   naquele passo, então ele vale sempre que há recorte. Os dev agents ficam
   sem piso, de propósito (a obrigação deles muda a cada passo; para eles vale
   só a [RN-759](#rn-759)).
-- **Onde:** `apps/api/src/domain/llm/tool-router.ts:327` (`menuComPiso`) e
+- **Onde:** `apps/api/src/domain/llm/tool-router.ts:332` (`menuComPiso`) e
   `apps/api/src/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.ts:248`
   (`menuComPiso`)
 - **Teste:** `apps/api/test/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.spec.ts`
@@ -22302,7 +22302,7 @@ sem dizer qual.
   porque só a api sabe o menu depois do Jev. Não aplicar o recorte na volta
   que fecha o turno foi avaliado e não feito: a api não sabe antes da
   resposta que a volta será a última.
-- **Onde:** `apps/api/src/domain/llm/tool-router.ts:341` (`avisoDeRecorte`) e
+- **Onde:** `apps/api/src/domain/llm/tool-router.ts:346` (`avisoDeRecorte`) e
   `apps/api/src/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.ts:263`
   (`avisoDeRecorte`)
 - **Teste:** `apps/api/test/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.spec.ts`
@@ -23129,3 +23129,20 @@ sem dizer qual.
   repetido que esperava na caixa é descartado ao fim do ciclo"; "pedido para a
   task com ciclo suspenso não abre um segundo")
 - **Origem:** AT-478 (TP-01 de 10/10)
+
+### RN-809 — As obrigações de módulo e imagem do Arquiteto entram no piso do Jev {#rn-809}
+
+- **Regra:** estende a [RN-758](#rn-758) e a [RN-784](#rn-784). O piso do
+  Arquiteto ganha `assign_story_modules` e `choose_project_image`, os passos 2 e
+  3 do kickoff dele (`arquiteto_server.ex`): o recorte do Jev nunca as tira, e o
+  Arquiteto não encerra dizendo que a ferramenta "não está disponível nesta
+  etapa" com histórias sem módulo e imagem não decidida. `emit_insight` (passo
+  8, registro de tensão) e `emit_artifact` ficam fora do piso: não são
+  obrigação da etapa. Continua valendo que o piso só devolve o que está no
+  catálogo do passo.
+- **Onde:** `apps/api/src/domain/llm/tool-router.ts:303` (`PISO_DO_MENU`)
+- **Teste:** `apps/api/test/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.spec.ts`
+  (`Arquiteto recortado pelo Jev sem assign_story_modules/choose_project_image:
+  as duas continuam no menu (RN-809)`)
+- **Origem:** AT-481 (TP-01: o recorte deixou 7 de 11 ferramentas e o
+  Arquiteto não distribuiu as histórias por módulo)
