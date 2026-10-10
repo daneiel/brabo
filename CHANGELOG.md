@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- **engine/api**: o gate de QA recebe o contrato vigente do módulo (`moduleContract` no dev-context) como fonte da interface; quando a história e o contrato divergem, o parecer nomeia a divergência em vez de reprovar o dev que seguiu o contrato (RN-786, AT-462).
 - **engine/api**: o gate de QA recebe as tarefas não concluídas das outras histórias do mesmo módulo (`moduleOpenTasks` no dev-context, até 20, com o total) e trata requisito que depende delas como observação, não reprovação (RN-785, AT-461).
 - **docs**: página nova "From zero to a deliverable" (`docs/tutorials/`), o fluxo de um projeto real do zero ao entregável com as gravações do teste ao vivo de 09/10.
 - **engine/api**: a primeira tarefa de cada módulo (a do `backlog.task_claimed` mais antigo do módulo no projeto) tem o dobro do teto por tarefa — US$ 1,00 com o padrão de US$ 0,50 —, e o bloqueio por orçamento diz o teto que valeu para aquela tarefa (RN-774, AT-433).
