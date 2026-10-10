@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- **engine**: o PO passa a pôr no DoD da história de entrada da aplicação (ou numa história própria) o critério "README diz como instalar, configurar (variáveis obrigatórias) e subir" (RN-790, AT-466).
 - **web**: "Decisões registradas" no contexto da sessão diz o recorte ("N na janela · há mais antes") quando há eventos antes da janela; a linha do tempo do time na Visão geral lê a sessão de execução e diz isso; na tela de Sessão a sidebar marca "Criativo" para sessão criativa, onde ela está listada (RN-788, RN-789, AT-463).
 - **engine**: o worktree da tarefa (re)pegada faz `git fetch` e parte da `dev` ATUAL do remoto; partindo da branch anterior não mergeada ou do próprio trabalho preservado, integra a `dev` antes do primeiro passo, e conflito é bloqueio nomeado com os arquivos (RN-779, AT-458).
 - **engine**: resposta sem texto nem chamada cortada pelo teto de saída (só raciocínio) é retentada uma vez; repetida, a tarefa bloqueia com "resposta só de raciocínio, cortada pelo teto", origem `modelo`, em vez de "parou sem concluir" (RN-780, AT-459).

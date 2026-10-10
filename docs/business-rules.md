@@ -22790,3 +22790,22 @@ sem dizer qual.
 - **Origem:** AT-462 (TP-01 de 09/10, sessão `80e3ce09`: a história pedia
   `GET /painel`, o contrato declarou `GET /panel`, o dev seguiu o contrato e o
   QA reprovou pela história)
+
+### RN-790 — O README de como subir o entregável é critério do DoD que o PO escreve {#rn-790}
+
+- **Regra:** a instrução de kickoff do PO manda incluir, no DoD da história que
+  cria a entrada da aplicação (servidor, CLI, configuração ou persistência) — ou
+  numa história própria —, o critério "README diz como instalar, configurar
+  (variáveis de ambiente obrigatórias e opcionais, com o padrão) e subir a
+  aplicação, e como criar o primeiro acesso, quando houver". O dev agent cumpre
+  o DoD da história, e o gate o julga por ele. Régua de PROMPT, como a
+  [RN-765](#rn-765): nenhuma ferramenta recusa história sem esse critério. A
+  outra variante — o dev agent atualizar o README em toda tarefa que mexe em
+  configuração/entrada — NÃO foi feita: exigiria classificar a tarefa no
+  `AmbienteDoAgente` ou no `report_done`, regra nova de código — declarado.
+- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:555` (`kickoff_instruction`)
+- **Teste:** `apps/engine/test/engine/agents/po_server_test.exs:438` (a
+  instrução de kickoff traz o critério do README)
+- **Origem:** AT-466 (TP-01 de 09/10: o `encurtador-api` saiu com um README só
+  com `npm test`, sem `JWT_SECRET` obrigatório, `DB_PATH`/`PORT`, `npm start`
+  nem como criar o primeiro membro)

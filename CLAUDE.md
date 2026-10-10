@@ -332,6 +332,7 @@ estado lido do repositório e não da conversa.
 | O repositório nasce com `.gitignore` base, o commit do dev exclui dependência instalada e o SecOps a acusa (AT-446) | RN-761 |
 | O bloqueio por ciclo de correção esgotado grava a origem `politica` (AT-450) | RN-762 |
 | Encerrar a sessão de execução para os dev agents e os gates; "Parar execução" na aba Executores (AT-456) | RN-763 |
+| O README de como subir o entregável vira critério do DoD que o PO escreve (AT-466) | RN-790 |
 
 ## Estado atual e aberto
 

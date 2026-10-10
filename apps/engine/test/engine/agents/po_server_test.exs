@@ -449,6 +449,9 @@ defmodule Engine.Agents.PoServerTest do
       assert instrucao["content"] =~ "ÉPICO SEM HISTÓRIA NÃO SERVE PARA NADA"
       assert instrucao["content"] =~ "PERGUNTE"
       assert instrucao["content"] =~ "ask_structured_questions"
+      # AT-466 (RN-790): o README de como subir é critério do DoD.
+      assert instrucao["content"] =~ "README diz como instalar"
+      assert instrucao["content"] =~ "variáveis de ambiente obrigatórias"
     end
   end
 
