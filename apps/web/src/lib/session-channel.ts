@@ -1,8 +1,9 @@
-import { Socket } from 'phoenix';
+import type { Socket } from 'phoenix';
 import { logger } from './logger';
 import { runtimeConfig } from './runtime-config';
 import { createSocketTicket } from './api-client';
 import { marcarCanalDaSessao } from './canal-vivo';
+import { criarSocket, type SocketDescartavel } from './socket-phoenix';
 
 const ENGINE_URL = runtimeConfig.engineUrl;
 const PING_INTERVAL_MS = 10_000;
@@ -70,22 +71,38 @@ export function connectSessionHeartbeat(
 ): () => void {
   const wsUrl = ENGINE_URL.replace(/^http/, 'ws') + '/socket';
 
-  let socket: Socket | null = null;
-  let channel: ReturnType<Socket['channel']> | null = null;
-  let pingInterval: ReturnType<typeof setInterval> | null = null;
+  // AT-500 (RN-833): cada `conectar()` é uma GERAÇÃO. A anterior é
+  // descartada (leave + `descartar()` + o ping DELA) antes de a nova nascer,
+  // e todo callback de geração antiga vira no-op — antes, o `onClose` de um
+  // socket substituído limpava o ping do atual, agendava reconexão e marcava
+  // morto o canal vivo.
+  interface Geracao {
+    id: number;
+    descartavel: SocketDescartavel;
+    canal: ReturnType<Socket['channel']>;
+    ping: ReturnType<typeof setInterval> | null;
+    token: object;
+  }
+  let atual: Geracao | null = null;
+  let contadorDeGeracoes = 0;
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   let parado = false;
   let tentativa = 0;
 
-  function limparPing() {
-    if (pingInterval) {
-      clearInterval(pingInterval);
-      pingInterval = null;
+  function descartarGeracao(g: Geracao | null) {
+    if (!g) return;
+    if (g.ping) {
+      clearInterval(g.ping);
+      g.ping = null;
     }
+    marcarCanalDaSessao(sessionId, false, g.token);
+    g.canal.leave();
+    g.descartavel.descartar();
   }
 
   function agendarReconexao() {
     if (parado) return;
+    if (reconnectTimer) clearTimeout(reconnectTimer);
     tentativa += 1;
     const espera = esperaDaTentativa(tentativa);
     reconnectTimer = setTimeout(() => {
@@ -112,10 +129,16 @@ export function connectSessionHeartbeat(
 
     if (parado) return;
 
-    socket = new Socket(wsUrl, {
+    descartarGeracao(atual);
+    atual = null;
+    const id = ++contadorDeGeracoes;
+    const token = {};
+    const ehAtual = () => !parado && atual?.id === id;
+    const descartavel = criarSocket(wsUrl, {
       params: { ticket },
       reconnectAfterMs: () => NUNCA_RECONECTAR_SOZINHO_MS,
     });
+    const socket = descartavel.socket;
 
     // O ciclo de vida do socket não era observado (ADR 0035): `onError` e
     // `onClose` nunca eram registrados, e a única linha era um `console.warn`
@@ -128,23 +151,29 @@ export function connectSessionHeartbeat(
     // lado do servidor. Quem correlaciona é o `sessionId`, que é o mesmo que
     // o engine agora emite em `Logger.metadata(session_id:)`.
     socket.onError((erro: unknown) => {
-      marcarCanalDaSessao(sessionId, false);
+      if (!ehAtual()) return;
+      marcarCanalDaSessao(sessionId, false, token);
       logger.warn('socket da sessão com erro', {
         sessionId,
         erro: String(erro),
       });
     });
     socket.onClose(() => {
+      if (!ehAtual()) return;
       logger.info('socket da sessão fechado', { sessionId });
       // Canal caído: as queries da sessão voltam ao poll curto na hora
       // (RN-579) — nenhum aviso vai chegar até a reconexão.
-      marcarCanalDaSessao(sessionId, false);
-      limparPing();
+      marcarCanalDaSessao(sessionId, false, token);
+      if (atual?.ping) {
+        clearInterval(atual.ping);
+        atual.ping = null;
+      }
       // Reconexão MANUAL — busca ticket novo, nunca reusa o que acabou de
       // cair. `parado` cobre o cleanup intencional (retorno desta função).
       agendarReconexao();
     });
     socket.onOpen(() => {
+      if (!ehAtual()) return;
       // Conexão bem-sucedida: a próxima queda volta a contar do começo do
       // backoff, em vez de continuar de onde a instabilidade anterior parou.
       tentativa = 0;
@@ -153,16 +182,23 @@ export function connectSessionHeartbeat(
     socket.connect();
 
     const canal = socket.channel(`session:${sessionId}`, {});
-    channel = canal;
+    const geracao: Geracao = { id, descartavel, canal, ping: null, token };
+    atual = geracao;
     // RN-579: VIVO só com o join CONFIRMADO — socket aberto sem canal não
     // entrega aviso nenhum. O `ok` volta a disparar a cada rejoin automático
     // do canal (o gancho fica no `joinPush`), e qualquer erro/fechamento do
     // canal ou do socket devolve o poll curto.
-    canal.onError(() => marcarCanalDaSessao(sessionId, false));
-    canal.onClose(() => marcarCanalDaSessao(sessionId, false));
+    canal.onError(() => {
+      if (ehAtual()) marcarCanalDaSessao(sessionId, false, token);
+    });
+    canal.onClose(() => {
+      if (ehAtual()) marcarCanalDaSessao(sessionId, false, token);
+    });
     canal
       .join()
-      .receive('ok', () => marcarCanalDaSessao(sessionId, true))
+      .receive('ok', () => {
+        if (ehAtual()) marcarCanalDaSessao(sessionId, true, token);
+      })
       .receive('error', (resp: unknown) =>
         logger.warn('não foi possível entrar no canal da sessão', {
           sessionId,
@@ -173,8 +209,13 @@ export function connectSessionHeartbeat(
         logger.warn('timeout ao entrar no canal da sessão', { sessionId }),
       );
 
+    const on = (evento: string, cb: (payload: never) => void) =>
+      canal.on(evento, (payload: unknown) => {
+        if (ehAtual()) cb(payload as never);
+      });
+
     if (handlers.onAgentDelta) {
-      canal.on('agent.delta', (payload: { text?: string; agent?: string }) => {
+      on('agent.delta', (payload: { text?: string; agent?: string }) => {
         if (typeof payload?.text === 'string') {
           handlers.onAgentDelta!(
             payload.text,
@@ -184,10 +225,10 @@ export function connectSessionHeartbeat(
       });
     }
     if (handlers.onAgentDone) {
-      canal.on('agent.done', () => handlers.onAgentDone!());
+      on('agent.done', () => handlers.onAgentDone!());
     }
     if (handlers.onAgentStatus) {
-      canal.on('agent.status', (payload: { status?: string }) => {
+      on('agent.status', (payload: { status?: string }) => {
         // AT-432 (RN-748): `awaiting_approval` também chega — é fim de turno.
         if (
           payload?.status === 'working' ||
@@ -199,7 +240,7 @@ export function connectSessionHeartbeat(
       });
     }
     if (handlers.onToolCall) {
-      canal.on('tool.call', (payload: { tool?: string; agent?: string }) => {
+      on('tool.call', (payload: { tool?: string; agent?: string }) => {
         if (typeof payload?.tool === 'string') {
           handlers.onToolCall!(
             payload.tool,
@@ -209,7 +250,7 @@ export function connectSessionHeartbeat(
       });
     }
     if (handlers.onEvent) {
-      canal.on(
+      on(
         'event.appended',
         (payload: { type?: string; actorId?: string }) => {
           if (typeof payload?.type === 'string') {
@@ -222,7 +263,7 @@ export function connectSessionHeartbeat(
       );
     }
 
-    pingInterval = setInterval(() => {
+    geracao.ping = setInterval(() => {
       if (canal.state === 'joined') canal.push('ping', {});
     }, PING_INTERVAL_MS);
   }
@@ -231,13 +272,11 @@ export function connectSessionHeartbeat(
 
   return () => {
     parado = true;
-    marcarCanalDaSessao(sessionId, false);
     if (reconnectTimer) {
       clearTimeout(reconnectTimer);
       reconnectTimer = null;
     }
-    limparPing();
-    channel?.leave();
-    socket?.disconnect();
+    descartarGeracao(atual);
+    atual = null;
   };
 }

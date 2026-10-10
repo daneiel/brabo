@@ -301,3 +301,53 @@ describe('connectSessionHeartbeat — canal VIVO (RN-579)', () => {
     disconnect();
   });
 });
+
+describe('connectSessionHeartbeat — gerações (AT-500, RN-833)', () => {
+  async function duasGeracoes() {
+    createSocketTicketMock.mockResolvedValue({
+      ticket: 't',
+      expiresAt: new Date().toISOString(),
+    });
+    const errosAntes = fakeChannel.onError.mock.calls.length;
+    const disconnect = connectSessionHeartbeat('proj-1', 'sess-g', {});
+    await flush();
+    const erroDoCanalVelho = fakeChannel.onError.mock.calls[errosAntes][0] as () => void;
+    const fecharVelho = socketInstances[0].onClose.mock.calls[0][0] as () => void;
+    fecharVelho();
+    await vi.advanceTimersByTimeAsync(1_000);
+    await flush();
+    expect(socketInstances).toHaveLength(2);
+    return { disconnect, fecharVelho, erroDoCanalVelho };
+  }
+
+  it('o substituído recebeu disconnect, e o onClose dele não cria socket nem mata o ping do atual', async () => {
+    const { disconnect, fecharVelho } = await duasGeracoes();
+    expect(socketInstances[0].disconnect).toHaveBeenCalled();
+    expect(socketInstances[1].disconnect).not.toHaveBeenCalled();
+
+    fakeChannel.push.mockClear();
+    fecharVelho();
+    expect(vi.getTimerCount()).toBe(1); // só o ping da geração atual
+    await vi.advanceTimersByTimeAsync(20_000);
+    expect(socketInstances).toHaveLength(2);
+    expect(fakeChannel.push).toHaveBeenCalledWith('ping', {});
+    disconnect();
+  });
+
+  it('depois do cleanup todos os sockets estão desconectados e nenhum timer sobra', async () => {
+    const { disconnect } = await duasGeracoes();
+    disconnect();
+    for (const s of socketInstances) expect(s.disconnect).toHaveBeenCalled();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('CASO DE FALHA evitado: erro do canal velho não marca morto o atual', async () => {
+    const { disconnect, erroDoCanalVelho } = await duasGeracoes();
+    (fakeChannel as unknown as { ganchos: Record<string, () => void> }).ganchos.ok();
+    expect(canalDaSessaoVivo('sess-g')).toBe(true);
+    erroDoCanalVelho();
+    expect(canalDaSessaoVivo('sess-g')).toBe(true);
+    disconnect();
+    expect(canalDaSessaoVivo('sess-g')).toBe(false);
+  });
+});

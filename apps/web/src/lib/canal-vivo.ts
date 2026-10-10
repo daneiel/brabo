@@ -55,7 +55,11 @@ export const INTERVALO_DO_PROJETO_MS = 15_000;
 /** O orçamento muda com gasto de token, não com decisão; pode esperar mais. */
 export const INTERVALO_DO_ORCAMENTO_COM_CANAL_MS = 30_000;
 
-const vivos = new Set<string>();
+// AT-500 (RN-833): vivo é CONTAGEM de conexões por sessão, não um booleano —
+// com duas conexões da mesma sessão (duas montagens, ou a geração nova ainda
+// nascendo), a queda de uma não marca morta a outra.
+const vivos = new Map<string, Set<unknown>>();
+const CONEXAO_PADRAO = Symbol('conexao-padrao');
 const ouvintes = new Set<() => void>();
 
 function avisar() {
@@ -63,12 +67,18 @@ function avisar() {
 }
 
 /** Chamado SÓ por `connectSessionHeartbeat` (join ok / queda / cleanup). */
-export function marcarCanalDaSessao(sessionId: string, vivo: boolean): void {
+export function marcarCanalDaSessao(
+  sessionId: string,
+  vivo: boolean,
+  conexao: unknown = CONEXAO_PADRAO,
+): void {
   const estava = vivos.has(sessionId);
-  if (vivo === estava) return;
-  if (vivo) vivos.add(sessionId);
+  const conexoes = vivos.get(sessionId) ?? new Set<unknown>();
+  if (vivo) conexoes.add(conexao);
+  else conexoes.delete(conexao);
+  if (conexoes.size > 0) vivos.set(sessionId, conexoes);
   else vivos.delete(sessionId);
-  avisar();
+  if (vivos.has(sessionId) !== estava) avisar();
 }
 
 export function canalDaSessaoVivo(sessionId: string | undefined): boolean {
