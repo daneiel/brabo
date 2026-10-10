@@ -1,6 +1,8 @@
 import type { BadgeTone } from '../components/ui/Badge';
 import type { SessionKind } from './api-types';
+import { useEffect } from 'react';
 import i18n from './i18n';
+import { publicarAbaDaSessao } from './contagens-do-projeto';
 
 /**
  * Como o tipo da sessão se apresenta (FASE 20, RN-097).
@@ -82,3 +84,17 @@ export const KINDS_DE_SESSAO =Object.keys(TIPOS_DE_SESSAO) as SessionKind[];
  * pode ganhar o direito de executar de graça.
  */
 export const KIND_PRE_SELECIONADO: SessionKind = 'criativa';
+
+/**
+ * AT-463: a tela de Sessão publica a aba onde ESTA sessão está listada —
+ * criativa em "Criativo" (as ideações), consultiva em "Chat" —, para a
+ * sidebar marcar a certa e o clique levar de volta a ela. Sem leitura nova:
+ * o tipo já veio com a sessão (RN-632).
+ */
+export function usePublicarAbaDaSessao(projectId: string, kind: SessionKind | undefined) {
+  useEffect(() => {
+    if (!kind) return;
+    publicarAbaDaSessao({ projectId, tab: kind === 'criativa' ? 'criativo' : 'chat' });
+    return () => publicarAbaDaSessao(null);
+  }, [projectId, kind]);
+}

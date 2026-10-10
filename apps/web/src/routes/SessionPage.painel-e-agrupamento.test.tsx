@@ -218,8 +218,39 @@ describe('RN-180 — o painel diz o que não está mostrando', () => {
 
     montar();
 
-    expect(await screen.findByText('0 na janela · há mais antes')).toBeTruthy();
-    expect(screen.getByText(/Nenhuma nos eventos carregados/)).toBeTruthy();
+    expect(
+      await screen.findByRole('button', { name: /Regras de negócio.*0 na janela · há mais antes/ }),
+    ).toBeTruthy();
+    const regras = await regiao(/Regras de negócio/);
+    expect(regras.getByText(/Nenhuma nos eventos carregados/)).toBeTruthy();
+  });
+
+  it('AT-463: com a decisão fora da janela, Decisões também não afirma 0', async () => {
+    eventos.mockReturnValue({
+      items: Array.from({ length: 200 }, (_, i) => ({
+        ...regra(69 + i, 'x'),
+        type: 'agent.response',
+        payload: { text: 'oi' },
+      })),
+    });
+
+    montar();
+
+    expect(
+      await screen.findByRole('button', { name: /Decisões registradas.*0 na janela · há mais antes/ }),
+    ).toBeTruthy();
+    const decisoes = await regiao(/Decisões registradas/);
+    expect(decisoes.getByText(/pode haver decisões nos anteriores/)).toBeTruthy();
+    expect(decisoes.queryByText('Nenhuma decisão registrada nesta sessão.')).toBeNull();
+  });
+
+  it('CASO DE FALHA evitado (AT-463): sessão inteira na janela, sem decisão, diz vazio', async () => {
+    eventos.mockReturnValue({ items: [regra(1, 'Primeira regra')] });
+
+    montar();
+
+    const decisoes = await regiao(/Decisões registradas/);
+    expect(decisoes.getByText('Nenhuma decisão registrada nesta sessão.')).toBeTruthy();
   });
 
   it('com eventos anteriores à janela, a nota conta quantos faltam', async () => {

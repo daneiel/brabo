@@ -106,3 +106,32 @@ export function useAbaPublicada(): AbaPublicada {
     () => abaPublicada,
   );
 }
+
+/**
+ * A aba que a TELA DE SESSÃO implica, pelo TIPO da sessão aberta (AT-463):
+ * sessão criativa é "Criativo" (a lista de ideações, onde ela aparece);
+ * consultiva é "Chat". Publicada pela própria `SessionPage`, que já leu a
+ * sessão — a sidebar não faz leitura nova para saber o tipo (RN-632). Fora
+ * da tela de Sessão é `null`, e a sidebar cai em `abaDaRota` como antes.
+ */
+let abaDaSessao: AbaPublicada = null;
+const ouvintesDaSessao = new Set<() => void>();
+
+export function publicarAbaDaSessao(valor: AbaPublicada) {
+  if (abaDaSessao?.projectId === valor?.projectId && abaDaSessao?.tab === valor?.tab) return;
+  abaDaSessao = valor;
+  for (const ouvinte of ouvintesDaSessao) ouvinte();
+}
+
+export function useAbaDaSessao(): AbaPublicada {
+  return useSyncExternalStore(
+    (ouvinte) => {
+      ouvintesDaSessao.add(ouvinte);
+      return () => {
+        ouvintesDaSessao.delete(ouvinte);
+      };
+    },
+    () => abaDaSessao,
+    () => abaDaSessao,
+  );
+}

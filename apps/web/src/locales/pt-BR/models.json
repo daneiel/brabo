@@ -18,7 +18,7 @@
     },
     "reasoning": {
       "label": "thinking",
-      "help": "Expõe raciocínio explícito antes da resposta."
+      "help": "Expõe raciocínio explícito antes da resposta. Nos dev agents de execução o raciocínio vai desligado; nos demais agentes ele segue como o modelo decide."
     },
     "imagem": {
       "label": "gera imagem",
