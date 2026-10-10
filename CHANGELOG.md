@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- **api**: o recorte do Jev não tira mais do Arquiteto `assign_story_modules` nem `choose_project_image` — ele encerrava dizendo que a ferramenta não estava disponível, com histórias sem módulo (RN-809, AT-481).
 - **web**: a oferta em lote do modo automático (aba Executores) fica inerte, dizendo por quê, até a leitura de quem já está em automático chegar — o primeiro clique depois de navegar caía em outro elemento sem gravar nem avisar (RN-803, AT-477).
 - **web**: o cartão do plano do Dev Lead oferece ligar o modo automático para o time antes de aprovar, com o mesmo controle da aba Executores — o primeiro comando do dev já não nasce esperando clique (RN-804, AT-476).
 - **engine**: o plano de teste da QA-estratégia com critérios em string JSON deixa de ser recusado depois de a ferramenta aceitá-lo (e de derrubar o QA Lead, deixando o gate parado até o resgate); e o QA Lead roda um ciclo por tarefa — pedido repetido que esperava enquanto o ciclo rodava é descartado, em vez de gravar um parecer contrário depois do veredito que valeu (RN-805, RN-806, AT-478).
