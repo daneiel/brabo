@@ -323,6 +323,7 @@ estado lido do repositório e não da conversa.
 | A mensagem de commit do dev não grava a pendência de commit/PR que é do sistema (AT-464) | RN-781 |
 | O QA não reprova pelo que outra história do módulo ainda vai entregar (AT-461) | RN-785 |
 | O QA lê o contrato do módulo, e divergência com a história é observação (AT-462) | RN-786 |
+| A execução não fecha com tarefa bloqueada, PR esperando merge ou conflito; desbloquear acorda o dev do módulo (AT-457) | RN-776, RN-777 |
 | A primeira tarefa de cada módulo tem o dobro do teto por tarefa (AT-433) | RN-774 |
 | O Arquiteto lê o status atual das ADRs e o backlog com as tarefas antes de afirmar estado (AT-454) | RN-772, RN-773 |
 | O recorte do Jev não vira incapacidade: piso de obrigação no menu e aviso efêmero de recorte (AT-445) | RN-758, RN-759 |
