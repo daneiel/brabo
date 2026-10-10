@@ -223,6 +223,15 @@ defmodule Engine.Dev.AgentIo do
     |> try_claim(run_task)
   end
 
+  # RN-810: bloqueio de origem `infra` zera como `:blocked`, mas NÃO
+  # incrementa o contador do disjuntor e segue reivindicando.
+  def finish_task(state, :blocked_infra, run_task) do
+    state
+    |> levar_branch_para_a_proxima()
+    |> Map.merge(%{task_id: nil, worktree: nil, branch: nil})
+    |> try_claim(run_task)
+  end
+
   def finish_task(state, :blocked, run_task) do
     counter = state.consecutive_blocked + 1
 

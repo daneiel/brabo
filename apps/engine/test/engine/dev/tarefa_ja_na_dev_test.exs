@@ -112,5 +112,56 @@ defmodule Engine.Dev.TarefaJaNaDevTest do
     end
   end
 
+  # RN-811 (AT-486): a `dev` do remoto andou depois do worktree; a
+  # comparação atualiza antes de decidir.
+  describe "WorktreeManager.sem_diff_atualizado?/3" do
+    setup do
+      raiz = Path.join(System.tmp_dir!(), "brabo-semdiff-r-#{System.unique_integer([:positive])}")
+      origem = Path.join(raiz, "origem.git")
+      outro = Path.join(raiz, "outro")
+      wt = Path.join(raiz, "wt")
+      File.mkdir_p!(raiz)
+      on_exit(fn -> File.rm_rf!(raiz) end)
+
+      git!(raiz, ["init", "-q", "--bare", "-b", "dev", origem])
+      git!(raiz, ["clone", "-q", origem, outro])
+      git!(outro, ["config", "user.email", "t@t"])
+      git!(outro, ["config", "user.name", "t"])
+      git!(outro, ["checkout", "-q", "-b", "dev"])
+      File.write!(Path.join(outro, "a.txt"), "a\n")
+      git!(outro, ["add", "-A"])
+      git!(outro, ["commit", "-qm", "base"])
+      git!(outro, ["push", "-q", "origin", "dev"])
+
+      git!(raiz, ["clone", "-q", "-b", "dev", origem, wt])
+      git!(wt, ["config", "user.email", "t@t"])
+      git!(wt, ["config", "user.name", "t"])
+      git!(wt, ["checkout", "-q", "-b", "feature/task-x"])
+      File.write!(Path.join(wt, "b.txt"), "b\n")
+      git!(wt, ["add", "-A"])
+      git!(wt, ["commit", "-qm", "b"])
+
+      # Os mesmos commits entram na `dev` remota pela PR de outra task.
+      git!(wt, ["push", "-q", "origin", "feature/task-x"])
+      git!(outro, ["fetch", "-q", "origin"])
+      git!(outro, ["merge", "-q", "--no-ff", "--no-edit", "origin/feature/task-x"])
+      git!(outro, ["push", "-q", "origin", "dev"])
+
+      remoto = %{kind: :local, origin: origem, default_branch: "dev", token: nil, username: nil}
+      %{wt: wt, remoto: remoto}
+    end
+
+    test "caminho feliz: com a dev atualizada, a branch não tem diff", %{wt: wt, remoto: remoto} do
+      refute WorktreeManager.sem_diff_contra_a_dev?(wt)
+      assert WorktreeManager.sem_diff_atualizado?(wt, Ecto.UUID.generate(), remoto)
+    end
+
+    test "falha: remoto inalcançável não fecha a task sozinha", %{wt: wt, remoto: remoto} do
+      remoto = %{remoto | origin: "/nao/existe.git"}
+      git!(wt, ["remote", "set-url", "origin", "/nao/existe.git"])
+      refute WorktreeManager.sem_diff_atualizado?(wt, Ecto.UUID.generate(), remoto)
+    end
+  end
+
   defp git!(dir, args), do: {:ok, _} = GitCmd.run(dir, args)
 end

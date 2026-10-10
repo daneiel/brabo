@@ -69,6 +69,10 @@ defmodule Engine.Agents.FalhaDeTurno do
   # Frame final com o `errorCode` do provider (RN-730): o código decide o
   # crédito esgotado; o resto segue pela leitura do texto.
   def origem({:final, texto, "insufficient_credit"}) when is_binary(texto), do: "infra"
+
+  def origem({:final, texto, code}) when is_binary(texto) and code in ["connection", "timeout"],
+    do: "infra"
+
   def origem({:final, texto, _code}) when is_binary(texto), do: origem({:final, texto})
 
   # Erro que a própria api narrou no frame final — texto normalizado por ela.
@@ -77,6 +81,8 @@ defmodule Engine.Agents.FalhaDeTurno do
       # RN-726: provider sem crédito (402) é INFRA — falta saldo na conta, não
       # há defeito do modelo nem do nosso código. Antes do padrão de provider.
       credito_esgotado?(texto) -> "infra"
+      # RN-810: erro de rede/DNS do provider é INFRA.
+      texto_de_rede?(texto) -> "infra"
       texto =~ ~r/budget|orçamento/iu -> "politica"
       texto =~ ~r/credencial/iu -> "politica"
       texto =~ ~r/modelo vinculado|binding/iu -> "politica"
@@ -90,7 +96,31 @@ defmodule Engine.Agents.FalhaDeTurno do
 
   # Forma que este módulo não conhece. Mesma leitura: quem não soube classificar
   # foi o nosso código, e é aqui que a cláusula que falta deve nascer.
+  def origem(texto) when is_binary(texto) do
+    if texto_de_rede?(texto), do: "infra", else: "codigo"
+  end
+
   def origem(_qualquer), do: "codigo"
+
+  @doc """
+  RN-810 (AT-484): a falha é de REDE do provider, passageira — o `code`
+  `connection`/`timeout` que a api normaliza (ADR 0041) ou, sem código, o
+  texto do erro de transporte (`EAI_AGAIN`, `ECONNRESET`, `ETIMEDOUT`,
+  `ECONNREFUSED`, `ENOTFOUND`). Só olha resposta COM erro.
+  """
+  @spec falha_de_rede?(term()) :: boolean()
+  def falha_de_rede?(%{"errorCode" => code}) when code in ["connection", "timeout"], do: true
+
+  def falha_de_rede?(%{"error" => texto}) when is_binary(texto) and texto != "",
+    do: texto_de_rede?(texto)
+
+  def falha_de_rede?(texto) when is_binary(texto), do: texto_de_rede?(texto)
+  def falha_de_rede?(_), do: false
+
+  defp texto_de_rede?(texto),
+    do:
+      texto =~
+        ~r/EAI_AGAIN|ECONNRESET|ETIMEDOUT|ECONNREFUSED|ENOTFOUND|getaddrinfo|socket hang up/
 
   @doc """
   O provider recusou por falta de CRÉDITO (HTTP 402, ou o texto do OpenRouter
