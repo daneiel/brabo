@@ -35,6 +35,7 @@
   },
   "timeline": {
     "title": "Linha do tempo do time",
+    "lendoExecucao": "Lendo a sessão de execução, não a mais recente.",
     "description": "Um ramo por agente, do primeiro marco ao que ele está fazendo agora. Quem está ativo, ou entre os 5 mais recentes, abre sozinho — o resto fica a um clique, com a contagem de marcos novos no cabeçalho."
   },
   "ambiente": {

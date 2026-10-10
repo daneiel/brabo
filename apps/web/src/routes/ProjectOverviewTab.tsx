@@ -8,6 +8,7 @@ import {
   useBacklog,
   useCurrentWorkspace,
   useHandoffs,
+  useActiveExecutionSession,
   useLatestSession,
   usePendingActions,
   useProjectPendingActions,
@@ -75,6 +76,17 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
   // HISTÓRICO — o que a coluna de Atividade mostra, em páginas (RN-099).
   // Mesma `queryKey` da cauda por dentro: nenhuma requisição a mais por ciclo.
   const historico = useSessionEventHistory(projectId, sessionId);
+  // AT-463: a linha do tempo do time lê a sessão de EXECUÇÃO quando ela
+  // existe — a mais recente pode ser uma ideação aberta depois, e a árvore
+  // dizia "nenhum agente" sobre um time que já tinha entregado. As duas
+  // queries são as MESMAS chaves que a sidebar já assina (Shell, RN-632):
+  // nenhuma requisição a mais por ciclo.
+  const execucao = useActiveExecutionSession(projectId);
+  const sessaoDaLinhaDoTempo = execucao.session?.id ?? sessionId;
+  const linhaDoTempoNaExecucao = !!execucao.session && execucao.session.id !== sessionId;
+  const eventosDaExecucao = useSessionEvents(projectId, sessaoDaLinhaDoTempo);
+  const eventosDaLinhaDoTempo =
+    sessaoDaLinhaDoTempo === sessionId ? events : (eventosDaExecucao.data?.items ?? []);
   const actionsQuery = usePendingActions(projectId, sessionId);
   const actions = actionsQuery.data?.items ?? [];
   const { data: architecture } = useArchitecture(projectId);
@@ -242,7 +254,7 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
     ),
   );
   const overviewRoster = roster.filter((r) => overviewRosterIds.has(r.id));
-  const overviewEvents = events.filter(
+  const overviewEvents = eventosDaLinhaDoTempo.filter(
     (e) => e.actor.kind !== 'agent' || overviewRosterIds.has(e.actor.id),
   );
   const workingCount = overviewRoster.filter((r) => r.status === 'trabalhando').length;
@@ -290,7 +302,10 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
             tem a própria árvore, e mostrar os mesmos ramos nas duas telas
             era duplicar a mesma pergunta sem ganhar nada. */}
         <h2 className={styles.sectionHeader}>{t('timeline.title')}</h2>
-        <div className={styles.sectionSub}>{t('timeline.description')}</div>
+        <div className={styles.sectionSub}>
+          {t('timeline.description')}
+          {linhaDoTempoNaExecucao && ` ${t('timeline.lendoExecucao')}`}
+        </div>
         <AgentTimelineTree events={overviewEvents} projectId={projectId} compactarChamadas />
 
         <ExecutionSection

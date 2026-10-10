@@ -58,6 +58,7 @@ const getProjectsSummary = vi.fn();
 const activateExecutionMock = vi.fn();
 const getRepository = vi.fn();
 const listCredentials = vi.fn();
+const getActiveExecutionSession = vi.fn();
 
 vi.mock('../lib/api-client', async () => {
   const real = await vi.importActual<typeof import('../lib/api-client')>('../lib/api-client');
@@ -82,6 +83,7 @@ vi.mock('../lib/api-client', async () => {
     activateExecution: (...args: unknown[]) => activateExecutionMock(...args),
     getRepository: (...args: unknown[]) => getRepository(...args),
     listCredentials: (...args: unknown[]) => listCredentials(...args),
+    getActiveExecutionSession: (...args: unknown[]) => getActiveExecutionSession(...args),
     requestParallelization: vi.fn(),
     rearmDevAgent: vi.fn(),
     setAgentAutonomy: vi.fn(),
@@ -227,6 +229,7 @@ function montar() {
 beforeEach(() => {
   vi.clearAllMocks();
   listSessions.mockResolvedValue([SESSAO]);
+  getActiveExecutionSession.mockResolvedValue(null);
   listCredentials.mockResolvedValue([{ id: 'c-1', provider: 'openrouter', createdAt: '', updatedAt: '' }]);
   listSessionEvents.mockResolvedValue({ items: EVENTOS, nextCursor: null });
   listHandoffs.mockResolvedValue([HANDOFF_INFRA]);
@@ -547,5 +550,23 @@ describe('primeiros passos (RN-708, AT-372)', () => {
 
     await screen.findAllByText(/Execução/);
     expect(screen.queryByTestId('primeiros-passos')).toBeNull();
+  });
+});
+
+describe('linha do tempo do time lê a sessão de execução (AT-463)', () => {
+  it('com execução ativa noutra sessão, a árvore lê a de execução e diz isso', async () => {
+    getActiveExecutionSession.mockResolvedValue({ ...SESSAO, id: 'sess-exec' });
+    montar();
+
+    expect(await screen.findByText(/Lendo a sessão de execução, não a mais recente\./)).toBeInTheDocument();
+    expect(listSessionEvents.mock.calls.some((c) => c[1] === 'sess-exec')).toBe(true);
+  });
+
+  it('CASO DE FALHA evitado: sem execução, lê a mais recente e não anuncia outra', async () => {
+    montar();
+
+    expect(await screen.findByText('Criativo')).toBeInTheDocument();
+    expect(screen.queryByText(/Lendo a sessão de execução/)).not.toBeInTheDocument();
+    expect(listSessionEvents.mock.calls.every((c) => c[1] === 'sess-1')).toBe(true);
   });
 });
