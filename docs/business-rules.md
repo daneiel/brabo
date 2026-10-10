@@ -23038,3 +23038,21 @@ sem dizer qual.
   (RN-803): antes de a leitura de agent_autonomy chegar, o botão fica inerte e
   diz por quê")
 - **Origem:** AT-477 (TP-01 de 10/10)
+### RN-804 — O cartão do plano do Dev Lead oferece o modo automático em lote antes de aprovar {#rn-804}
+
+- **Regra:** o `ApprovalCard` de `propose_execution_plan` pendente mostra,
+  acima de "Aprovar", o MESMO controle de oferta em lote da aba Executores
+  ([RN-661](#rn-661)): os `dev-<modulo>` que o plano sobe (mesma derivação de
+  `devAgentId` da api) mais os subagentes de gate, todos marcados, e nada
+  gravado sem o clique em "Ligar". Mesmo endpoint (`PUT .../agent-autonomy`,
+  curinga `*`), um PUT por agente, desfecho por agente e a mesma lista do que o
+  modo automático não libera. Aprovar ativa a execução ([RN-677](#rn-677)) e o
+  dev pede o primeiro comando logo depois; ligar depois não aprova o pendente
+  ([RN-755](#rn-755)). Só aparece onde quem chama passou o callback do modo
+  automático (papel `maintainer`) e há `QueryClient`. O cartão segue único
+  (AT-322): é um bloco a mais do tipo, não variante de aparência.
+- **Onde:** `apps/web/src/components/ApprovalCard.tsx:386`
+  (`ModoAutomaticoDoPlano`), `apps/web/src/components/ModoAutomaticoDoPlano.tsx:17`
+  (`agentesDoPlano`)
+- **Teste:** `apps/web/src/components/ApprovalCard.modo-automatico-do-plano.test.tsx`
+- **Origem:** AT-476 (TP-01 de 10/10)
