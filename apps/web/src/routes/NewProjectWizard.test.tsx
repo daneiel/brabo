@@ -243,8 +243,21 @@ describe('NewProjectWizard — o provider é da adoção', () => {
 
     const campo = await screen.findByLabelText('Nome do projeto');
     expect(document.activeElement).not.toBe(campo);
-    expect(campo.id).toBe('project-title');
-    expect(campo.getAttribute('name')).toBe('project-title');
+    expect(campo.id).toBe('projeto-slug');
+    expect(campo.getAttribute('name')).toBe('projeto-slug');
+  });
+
+  it('RN-834: id e name do nome do projeto não parecem dado de contato, e o rótulo segue visível', async () => {
+    montar();
+    fireEvent.click(screen.getByText('Criar novo'));
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+
+    const campo = await screen.findByLabelText('Nome do projeto');
+    for (const attr of [campo.id, campo.getAttribute('name') ?? '']) {
+      expect(attr).not.toMatch(/name|nome|title|first|last|company|contact/i);
+    }
+    expect(campo.getAttribute('autocomplete')).toBe('off');
+    expect(campo.getAttribute('aria-autocomplete')).toBe('none');
   });
 
   it('RN-740: o campo de nome declara que não sugere nada e ignora o Proton Pass, sem mudar o rótulo', async () => {

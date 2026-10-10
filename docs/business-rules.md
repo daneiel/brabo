@@ -211,7 +211,7 @@ to `key`, and whoever writes `active` receives the raw key from
 - **Where:** `apps/web/src/routes/project-tabs.ts:95` (both entries),
   `apps/web/src/routes/ProjectSessionsTab.tsx:114` (the filter by recorded
   `kind`) and `:98` (the CTA creating in the tab's `kind`),
-  `apps/web/src/routes/SessionPage.tsx:834` (`conviteVisivel`, the one
+  `apps/web/src/routes/SessionPage.tsx:712` (`conviteVisivel`, the one
   question the topbar and the invite share)
 - **Test:** `apps/web/src/routes/ProjectSessionsTab.test.tsx`,
   `apps/web/src/routes/project-tabs.test.tsx`,
@@ -239,7 +239,7 @@ either of the two paths. What changed is that the FIRST MESSAGE now also
 counts as that gesture: no one should need a separate click before talking
 to whoever the screen already invited them to talk to.
 
-- **Where:** `apps/web/src/routes/SessionPage.tsx:667` (`handleSend`)
+- **Where:** `apps/web/src/routes/SessionPage.tsx:674` (`handleSend`)
 - **Test:** `apps/web/src/routes/SessionPage.ideacao-automatica.test.tsx`
 - **Edge case:** a `consultiva` session has no Creative agent — the rule
   doesn't apply, and the generic SSE path stays the right one for it.
@@ -5705,7 +5705,7 @@ si não muda.
   `apps/web/src/components/TurnActivityStrip.tsx` (componente);
   `apps/web/src/lib/session-channel.ts:54` (`onToolCall`);
   `apps/web/src/routes/session-fio.tsx:48` (`agruparNarracoesDoTurno`),
-  `apps/web/src/routes/SessionPage.tsx:206` (`turnoViaCanal`)
+  `apps/web/src/routes/SessionPage.tsx:197` (`turnoViaCanal`)
 - **Teste:** `apps/web/src/lib/atividade-do-turno.test.ts`,
   `apps/web/src/components/TurnActivityStrip.test.tsx`,
   `apps/web/src/lib/session-channel.test.ts`,
@@ -14928,8 +14928,8 @@ com a causa do fechamento anterior quando ela foi gravada.
 
 - **Onde:** `apps/api/src/interfaces/http/sessions/sessions.controller.ts:210`
   (`reopen`); `apps/web/src/lib/api-client.ts:623` (`reopenSession`);
-  `apps/web/src/routes/SessionPage.tsx:157` (`podeReabrir`), `:545`
-  (`handleReopen`); `apps/web/src/routes/SessionComposer.tsx:383` (o botão);
+  `apps/web/src/routes/SessionPage.tsx:153` (`podeReabrir`);
+  `apps/web/src/lib/session-acoes-da-sessao.ts:77` (`handleReopen`); `apps/web/src/routes/SessionComposer.tsx:383` (o botão);
   `apps/web/src/lib/activity.ts:633` (a frase do fio)
 - **Teste:** `apps/api/test/interfaces/http/sessions/sessions-reopen.controller.spec.ts:22`
   (`developer`, o mesmo da transição genérica), `:36` (viewer não alcança o
@@ -17311,8 +17311,8 @@ continuam SEM decisão inline (não há `ApprovalCard` para elas).
   `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:65`
   (`PendenciasDeOutrasSessoes`); `apps/web/src/routes/MergearNoChat.tsx:28`
   (`prAbertaDaAcao`), `:56` (`jaHaMergeDaPr`), `:89` (`MergearNoChat`);
-  `apps/web/src/routes/SessionPage.tsx:154` (`podeDecidir`), `:281`
-  (`useRetomarTurnoDoLog`), `:886` (`PendenciasDeOutrasSessoes`)
+  `apps/web/src/routes/SessionPage.tsx:150` (`podeDecidir`), `:272`
+  (`useRetomarTurnoDoLog`), `:763` (`PendenciasDeOutrasSessoes`)
 - **Teste:** `apps/web/src/components/ApprovalCard.decisao-em-voo.test.tsx:37`
   (duplo clique), `:52` (409 no card e botões inertes — caso de falha), `:67`
   (erro que não é 409 devolve os botões); `apps/web/src/lib/turno-em-curso-no-log.test.ts:18`
@@ -17664,7 +17664,7 @@ cláusula própria no engine. Nenhuma mudança de api nem de engine.
   `:219` (`resolverDestinatario`), `:254` (`useDestinatarioDoChat`), `:116`
   (`useAtivadosNaSessaoInteira`), `:141` (`ativadosSemJanela`);
   `apps/web/src/routes/SessionComposer.tsx:287` (`destinatarioRow`), `:193`
-  (`ofertasForaDaJanela`); `apps/web/src/routes/SessionPage.tsx:357`
+  (`ofertasForaDaJanela`); `apps/web/src/routes/SessionPage.tsx:346`
   (`aceitarHandoff`); `apps/web/src/routes/session-timeline-montagem.tsx:547`
   (`handoffIdDoEvento`), `:555` (`origem`); `apps/web/src/lib/session-handoffs.ts:68`
   (`activeFor`), `:120` (`ofertasAcionaveis`), `:142` (`ofertasForaDaJanela`)
@@ -18907,7 +18907,7 @@ entra quando o resumo ficar pronto.
   `:42` (`necessity.validated`);
   `apps/api/src/domain/sessions/estou-pronto.ts:27` (`MARCA_DO_ESTOU_PRONTO`);
   `apps/web/src/routes/SessionComposer.tsx:315` (o título do botão);
-  `apps/web/src/routes/SessionPage.tsx:614` (`handleReadiness`)
+  `apps/web/src/lib/session-acoes-da-sessao.ts:143` (`handleReadiness`)
 - **Teste:** `apps/api/test/application/use-cases/agents/confirm-readiness.use-case.spec.ts:49`
   (os dois eventos, com a marca e o brief por vir — caminho feliz), `:72`
   (422 do engine: só a prontidão fica gravada — caso de falha);
@@ -19960,7 +19960,7 @@ isso a recusa da api mora na ROTA, e o caso de uso não muda.
   (`GarantirDestinatarioDoChatUseCase`);
   `apps/api/src/interfaces/http/llm/chat.controller.ts:82` (`chat`);
   `apps/web/src/lib/session-destinatario.ts:311` (`agentesParaChamar`);
-  `apps/web/src/routes/SessionPage.tsx:667` (`handleSend`);
+  `apps/web/src/routes/SessionPage.tsx:674` (`handleSend`);
   `apps/web/src/routes/SessionComposer.tsx:276`
 - **Teste:** `apps/api/test/application/use-cases/llm/garantir-destinatario-do-chat.use-case.spec.ts:82`
   (consultiva sem agente — caso de falha), `:96`, `:113`, `:120`;
@@ -20397,7 +20397,7 @@ E o composer e os campos de texto das perguntas estruturadas levam
 `data-form-type="other"`): cada foco abria o popup de autofill do navegador.
 
 - **Onde:** `apps/web/src/lib/conversa-comecou.ts:15` (`conversaComecou`),
-  `:29` (`SEM_AUTOFILL`); `apps/web/src/routes/SessionPage.tsx:443`
+  `:29` (`SEM_AUTOFILL`); `apps/web/src/routes/SessionPage.tsx:432`
   (`conversaComecou`); `apps/web/src/routes/SessionComposer.tsx:380`
   (`SEM_AUTOFILL`); `apps/web/src/routes/StructuredQuestionCard.tsx:206`
   (`SEM_AUTOFILL`)
@@ -21506,7 +21506,7 @@ O kickoff do PO diz as três coisas.
   pegam as tarefas como estão ([RN-677](#rn-677)).
 - **Onde:** `apps/web/src/lib/mensagem-otimista.ts:14` (`otimistaJaNoLog`),
   `apps/web/src/lib/mensagem-otimista.ts:22` (`nomeDaMensagemOtimista`),
-  `apps/web/src/routes/SessionPage.tsx:901` (`otimistaJaNoLog`),
+  `apps/web/src/routes/SessionPage.tsx:778` (`otimistaJaNoLog`),
   `apps/web/src/routes/session-timeline-montagem.tsx:609`
   (`handleActivateExecution`)
 - **Teste:** `apps/web/src/lib/mensagem-otimista.test.ts` (feliz: o id no log
@@ -21777,7 +21777,7 @@ sem dizer qual.
 ### RN-736 — O campo "Nome do projeto" não ganha foco sozinho nem se chama "name" {#rn-736}
 
 - **Regra:** no passo de detalhes do assistente de projeto, o campo "Nome do
-  projeto" NÃO recebe `autoFocus` e usa `id`/`name` `project-title`, nunca
+  projeto" NÃO recebe `autoFocus` e usa `id`/`name` `project-title` (desde a RN-834, `projeto-slug`), nunca
   "name" puro; os atributos que desligam gerenciadores de senha
   (`data-1p-ignore`, `data-lpignore`, `data-bwignore`, `data-form-type="other"`)
   continuam vindo da fonte única `SEM_AUTOFILL` (RN-729). Decisão: sem foco
@@ -21786,7 +21786,7 @@ sem dizer qual.
   clique ou Tab a mais é o preço. Os nomes dos atributos são os documentados
   publicamente por 1Password, LastPass, Bitwarden e Dashlane, não medidos
   contra cada extensão aqui.
-- **Onde:** `apps/web/src/routes/NewProjectWizard.tsx:893` (`project-title`),
+- **Onde:** `apps/web/src/routes/NewProjectWizard.tsx:746` (`projeto-slug`),
   `apps/web/src/lib/conversa-comecou.ts:29` (`SEM_AUTOFILL`)
 - **Teste:** `apps/web/src/routes/NewProjectWizard.test.tsx` ("RN-736: o campo
   de nome não ganha foco sozinho nem se chama \"name\"" e o de RN-729, que
@@ -22155,8 +22155,8 @@ sem dizer qual.
   texto, e as duas frases são o contrato com `Engine.Harness.RespostaCortada`.
 - **Onde:** `apps/web/src/lib/resposta-cortada.ts:14` (`respostaCortada`),
   `apps/web/src/routes/session-timeline-montagem.tsx:889` (`respostaCortada`),
-  `apps/web/src/routes/SessionPage.tsx:454` (`continuarRespostaCortada`),
-  `:670` (`enviarMensagem`)
+  `apps/web/src/routes/SessionPage.tsx:443` (`continuarRespostaCortada`),
+  `:682` (`enviarMensagem`)
 - **Teste:** `apps/web/src/lib/resposta-cortada.test.ts` (`respostaCortada
   (RN-749)`: as duas linhas reconhecidas; resposta inteira e a frase no meio do
   texto não)
@@ -23573,6 +23573,22 @@ sem dizer qual.
   `apps/web/src/lib/session-channel.test.ts` ("gerações (AT-500, RN-833)"),
   `apps/web/src/lib/canal-vivo.test.ts`
 - **Origem:** AT-500
+
+### RN-834 — O nome do projeto no assistente não se chama "title" {#rn-834}
+
+- **Regra:** o campo "Nome do projeto" do assistente de criação usa `id`/`name`
+  `projeto-slug`, que não casam com nenhum token de dado de contato (`name`,
+  `nome`, `title`, `first`, `last`, `company`, `contact`). O `project-title` da
+  [RN-736](#rn-736) tirou o "name", mas "title" é pronome de tratamento
+  (Sr./Sra.) no preenchimento de contato, e o NordPass seguiu abrindo a lista
+  de contatos sobre o campo. O rótulo visível "Nome do projeto" (ligado por
+  `htmlFor`) e o `SEM_AUTOFILL` da [RN-740](#rn-740) ficam. É HEURÍSTICA, não
+  medida: o NordPass não documenta atributo de ignore, e nenhum foi
+  acrescentado ao `SEM_AUTOFILL`; a prova é o TP-01.
+- **Onde:** `apps/web/src/routes/NewProjectWizard.tsx:746` (`projeto-slug`)
+- **Teste:** `apps/web/src/routes/NewProjectWizard.test.tsx` ("RN-834: id e
+  name do nome do projeto não parecem dado de contato…")
+- **Origem:** AT-501 (TP-01 de 10/10)
 ### RN-827 — O painel de contexto conta a sessão inteira, e a janela só dá o detalhe {#rn-827}
 
 - **Regra:** os NÚMEROS do painel "Contexto da sessão" — regras de negócio,
