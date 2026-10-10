@@ -273,12 +273,19 @@ export interface ChatOptions {
    */
   routingPreference?: RoutingPreference;
   /**
-   * O modelo RACIOCINA (`models.supports_reasoning`, do catálogo). Provider com
-   * orçamento de raciocínio configurado manda um teto explícito para ele e soma
-   * esse teto ao de saída, para o raciocínio nunca comer a saída visível
-   * (RN-741). Provider sem a configuração ignora.
+   * O modelo RACIOCINA (`models.supports_reasoning`, do catálogo). Provider que
+   * sabe controlar o raciocínio soma uma FOLGA ao teto de saída, para o
+   * raciocínio nunca comer a saída visível (RN-741) — mas NÃO manda campo de
+   * raciocínio por isso (RN-782): aceitar o parâmetro não é pedir raciocínio.
+   * Provider sem a configuração ignora.
    */
   reasoning?: boolean;
+  /**
+   * Desliga o raciocínio EXPLICITAMENTE (RN-783) — hoje só para os dev agents
+   * (`dev-*`), por decisão do dono. Só vale com `reasoning: true` e provider que
+   * sabe dizer "desligado"; os outros ignoram.
+   */
+  reasoningOff?: boolean;
 }
 
 export interface ChatTextDeltaChunk {

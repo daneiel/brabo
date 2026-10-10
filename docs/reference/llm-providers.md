@@ -450,13 +450,17 @@ even when the real call would fit the balance. A reply cut by this cap is
 not narrated yet: this dialect does not read `finish_reason: "length"`.
 
 When the model reasons (`models.supports_reasoning`) and the provider config
-has `campoDeRaciocinio` (only OpenRouter today), the call also carries an
-explicit reasoning budget, `reasoning: { max_tokens: ORCAMENTO_DE_RACIOCINIO }`
-(4096), and the output cap becomes visible output + that budget (RN-741):
-reasoning counts inside `max_tokens`, and without its own budget it could
-spend the whole cap before the text and the tool call. Reasoning is never
-turned off. The direct Anthropic provider sends no `thinking`, so the model
-does not reason there.
+has `campoDeRaciocinioDesligado` (only OpenRouter today), the output cap becomes
+visible output + `ORCAMENTO_DE_RACIOCINIO` (4096), because reasoning counts
+inside `max_tokens` (RN-741). No reasoning field is sent just because the model
+accepts the parameter (RN-782): the paid measurement of 2026-10-10 (AT-467)
+showed `reasoning: { max_tokens }` turning reasoning ON for
+`anthropic/claude-haiku-4.5` (74% of calls, 2.8x the cost) and being IGNORED by
+`anthropic/claude-haiku-5.5` (1024 asked, 8192 spent). Execution dev agents
+(`dev-<module>`, not `dev-lead`) get `reasoning: { enabled: false }` (RN-783,
+owner's decision): 0 of 8 replies cut, -42% cost on Haiku 5.5. The model
+catalog's "thinking" facet help says so. The direct Anthropic provider sends no
+`thinking`, so the model does not reason there.
 
 Each flag exists because a real provider diverges. Don't add a flag without a
 provider that needs it.
