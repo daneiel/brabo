@@ -16,6 +16,7 @@ defmodule Engine.Dev.WorktreeManager do
   verdade, e o que `runner?/1` usa para decidir pra qual das duas rotear.
   """
 
+  alias Engine.Actions.GitAuth
   alias Engine.Actions.GitCmd
   alias Engine.Actions.Workspace
   alias Engine.Actions.Workspace.RunnerGit
@@ -137,9 +138,28 @@ defmodule Engine.Dev.WorktreeManager do
       if runner?(project_id) do
         RunnerGit.add_worktree(project_id, work_dir, agent_id, task_slug, base)
       else
-        add_worktree(work_dir, agent_id, task_slug, base)
+        with :ok <- atualizar_remoto(project_id, work_dir, remoto) do
+          add_worktree(work_dir, agent_id, task_slug, base)
+        end
       end
     end
+  end
+
+  # RN-779 (AT-458): o merge das PRs acontece no REMOTO; sem este `fetch` o
+  # working tree só conhecia a `dev` do dia da inicialização. Serializado por
+  # projeto, como a inicialização (`fetch` paralelo no mesmo `.git` colide).
+  defp atualizar_remoto(project_id, work_dir, remoto) do
+    :global.trans({{__MODULE__, :fetch, project_id}, self()}, fn ->
+      case GitAuth.run(work_dir, ["fetch", "origin"], remoto) do
+        {:ok, _} ->
+          :ok
+
+        {:error, saida} ->
+          {:error,
+           "não foi possível atualizar a `dev` do remoto antes de criar o worktree " <>
+             "(git fetch): #{String.slice(to_string(saida), 0, 300)}"}
+      end
+    end)
   end
 
   defp runner?(project_id) do
@@ -173,13 +193,110 @@ defmodule Engine.Dev.WorktreeManager do
   com a branch local vazia): ali a base É o HEAD, e o caminho é o de sempre.
   """
   def add_worktree(work_dir, agent_id, task_slug, base) do
-    base = ja_mergeada_volta_ao_trabalho(work_dir, base)
+    trabalho = ProjectRepository.branch_de_trabalho()
+    propria = "feature/#{task_slug}"
+    adotando? = base == propria
+    base = base |> ja_mergeada_volta_ao_trabalho(work_dir) |> retomada(work_dir, propria)
 
-    case garantir_base(work_dir, base) do
-      {:ok, ponto_de_partida} -> criar_worktree(work_dir, agent_id, task_slug, ponto_de_partida)
-      {:error, _} = erro -> erro
+    with {:ok, ponto} <- garantir_base(work_dir, base),
+         ponto = ponta_atual(work_dir, base, trabalho, ponto),
+         {:ok, wt} <- criar_worktree(work_dir, agent_id, task_slug, ponto) do
+      # RN-779 (AT-458): partindo de outra branch que não a de trabalho (a da
+      # task anterior, RN-760, ou o trabalho preservado desta, RN-743), o
+      # worktree integra a ponta ATUAL da `dev` antes do primeiro passo. A
+      # readoção depois de conflito (RN-715) fica de fora: integrar ali é o
+      # trabalho do próprio agente.
+      if base != trabalho and not adotando?,
+        do: integrar_trabalho(work_dir, wt, agent_id, base, trabalho),
+        else: {:ok, wt}
     end
   end
+
+  @prefixo_do_conflito "conflito ao integrar a `dev` atual"
+
+  @doc "A falha de `add_worktree/4` é o conflito de integração da RN-779?"
+  def conflito_de_integracao?(motivo) when is_binary(motivo),
+    do: String.starts_with?(motivo, @prefixo_do_conflito)
+
+  def conflito_de_integracao?(_), do: false
+
+  # RN-779: a ponta da `dev` é a do REMOTO (`origin/dev`, atualizada pelo
+  # `fetch` de `criar/4`) quando a local ficou para trás: a local só anda no
+  # checkout da inicialização (sem auto-pull), e era dela que a task retomada
+  # nascia, sem nenhum merge feito depois.
+  defp ponta_do_trabalho(work_dir, trabalho) do
+    remota = "origin/#{trabalho}"
+
+    cond do
+      not ref?(work_dir, "refs/remotes/#{remota}") -> trabalho
+      not ref?(work_dir, "refs/heads/#{trabalho}") -> remota
+      ancestral?(work_dir, trabalho, remota) -> remota
+      true -> trabalho
+    end
+  end
+
+  defp ponta_atual(work_dir, base, trabalho, ponto) do
+    if base == trabalho and ponto != [], do: [ponta_do_trabalho(work_dir, trabalho)], else: ponto
+  end
+
+  # RN-779 + RN-743: a task RETOMADA (a mesma task, num processo novo, que
+  # perdeu o ponteiro em memória) parte da própria branch quando ela tem
+  # trabalho que a `dev` não contém — senão o `-B` a redefinia e o trabalho
+  # preservado sumia do histórico da branch.
+  defp retomada(base, work_dir, propria) do
+    trabalho = ProjectRepository.branch_de_trabalho()
+
+    if base == trabalho and ref?(work_dir, "refs/heads/#{propria}") and
+         ref?(work_dir, "refs/heads/#{trabalho}") and
+         not ancestral?(work_dir, propria, ponta_do_trabalho(work_dir, trabalho)),
+       do: propria,
+       else: base
+  end
+
+  defp integrar_trabalho(work_dir, %{path: path} = wt, agent_id, base, trabalho) do
+    ponta = ponta_do_trabalho(work_dir, trabalho)
+
+    if ref?(work_dir, ponta) do
+      args = [
+        "-c",
+        "user.name=#{agent_id}[bot]",
+        "-c",
+        "user.email=#{agent_id}@bot.brabo.local",
+        "merge",
+        "--no-edit",
+        "--no-ff",
+        ponta
+      ]
+
+      case git(path, args) do
+        {:ok, _} ->
+          {:ok, wt}
+
+        {:error, saida} ->
+          arquivos =
+            case git(path, ["diff", "--name-only", "--diff-filter=U"]) do
+              {:ok, out} -> out |> String.split("\n", trim: true) |> Enum.join(", ")
+              _ -> ""
+            end
+
+          _ = git(path, ["merge", "--abort"])
+
+          {:error,
+           "#{@prefixo_do_conflito} (#{ponta}) no worktree de #{wt.branch}, que partiu de " <>
+             "#{base}: " <>
+             if(arquivos == "",
+               do: String.slice(to_string(saida), 0, 300),
+               else: "arquivos em conflito: #{arquivos}"
+             ) <>
+             ". O trabalho de #{base} segue intacto; integre a `dev` nessa branch e desbloqueie a task."}
+      end
+    else
+      {:ok, wt}
+    end
+  end
+
+  defp ancestral?(work_dir, a, b),
+    do: match?({:ok, _}, git(work_dir, ["merge-base", "--is-ancestor", a, b]))
 
   defp garantir_base(work_dir, base) do
     cond do
@@ -207,12 +324,12 @@ defmodule Engine.Dev.WorktreeManager do
   # NÃO foi mergeada; mergeada (ancestral da `dev` local), parte da `dev`, que
   # já a contém e pode ter andado. Merge por squash num remoto não é ancestral
   # e segue partindo da branch anterior — declarado.
-  defp ja_mergeada_volta_ao_trabalho(work_dir, base) do
+  defp ja_mergeada_volta_ao_trabalho(base, work_dir) do
     trabalho = ProjectRepository.branch_de_trabalho()
 
     if base != trabalho and ref?(work_dir, "refs/heads/#{base}") and
          ref?(work_dir, "refs/heads/#{trabalho}") and
-         match?({:ok, _}, git(work_dir, ["merge-base", "--is-ancestor", base, trabalho])),
+         ancestral?(work_dir, base, ponta_do_trabalho(work_dir, trabalho)),
        do: trabalho,
        else: base
   end
@@ -245,7 +362,7 @@ defmodule Engine.Dev.WorktreeManager do
     # Redefinir é o certo aqui: o worktree anterior já foi removido, o trabalho
     # daquela tentativa não vale (a task voltou para a fila) e a branch tem que
     # renascer do ponto atual do work_dir.
-    case git(work_dir, ["worktree", "add", path, "-B", branch] ++ ponto_de_partida) do
+    case git(work_dir, ["worktree", "add", "--no-track", path, "-B", branch] ++ ponto_de_partida) do
       {:ok, _} -> {:ok, %{path: path, branch: branch}}
       {:error, out} -> {:error, out}
     end

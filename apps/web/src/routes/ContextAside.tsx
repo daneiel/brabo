@@ -383,12 +383,20 @@ export function ContextAside({
       <div className={styles.asideSection}>
         <Disclosure
           titulo={t('aside.decisoes')}
-          trailing={decisoes.length}
+          // AT-463: o mesmo recorte declarado das regras (RN-701) — o
+          // `decision_record` fora da janela não pode virar "0".
+          trailing={
+            eventosAnteriores > 0
+              ? t('aside.contagemNaJanela', { count: decisoes.length })
+              : decisoes.length
+          }
           padraoAberto
           classNameCabecalho={styles.asideHeader}
         >
           {decisoes.length === 0 ? (
-            <div className={styles.asideEmpty}>{t('aside.decisoesVazio')}</div>
+            <div className={styles.asideEmpty}>
+              {eventosAnteriores > 0 ? t('aside.decisoesNadaNaJanela') : t('aside.decisoesVazio')}
+            </div>
           ) : (
             decisoes.map((d) => (
               <div key={d.chave} className={styles.asideItem} style={corDoAgente(d.actorId)}>

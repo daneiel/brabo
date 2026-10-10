@@ -226,7 +226,7 @@ foram raciocínio).
    `null`, declarado; o Ollama não informa.
 
 - **Where:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:301` (`cachedInputTokens`),
-  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:609` (`contagem`),
+  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:615` (`contagem`),
   `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:175` (`cachedInputTokens`),
   `apps/api/src/application/use-cases/llm/record-llm-usage.use-case.ts:113` (`cachedInputTokens`),
   `apps/api/src/db/schema/llm.ts:374` (`cachedInputTokens`),

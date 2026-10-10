@@ -739,6 +739,26 @@ defmodule Engine.Dev.DevAgentServerTest do
       assert new_state.consecutive_blocked == 1
     end
 
+    # RN-780 (AT-459): só raciocínio, cortado pelo teto, duas vezes seguidas.
+    test "resposta só de raciocínio cortada pelo teto bloqueia com motivo nomeado, origem modelo",
+         %{state: state} do
+      Process.put(:fake_tasks, [%{"id" => "task-r1", "title" => "T1"}])
+      Process.put(:fake_dev_context, contexto_minimo())
+
+      cortada =
+        FakeEngineApiClient.final_response("") |> Map.put("truncated", true)
+
+      Process.put(:fake_llm_always, cortada)
+
+      assert {:noreply, _} = DevAgentServer.handle_cast(:work, state)
+
+      assert_received {:task_blocked, "task-r1", "resposta só de raciocínio, cortada pelo teto",
+                       diagnostico, "dev-api"}
+
+      assert diagnostico =~ "teto de saída"
+      assert_received {:task_blocked_origin, "task-r1", "modelo"}
+    end
+
     test "orçamento por task não vaza entre reivindicações da mesma sequência", %{
       state: state
     } do

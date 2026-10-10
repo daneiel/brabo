@@ -37,7 +37,7 @@ import { getAgentLastSeenSeq, setAgentLastSeenSeq } from '../lib/read-state';
 import { useLayoutMovel } from '../lib/layout-movel';
 import { INTERVALO_DO_PROJETO_MS } from '../lib/canal-vivo';
 import { alternarTema, observarTema, temaAtual, type Tema } from '../lib/tema';
-import { pedirAba, useAbaPublicada, useContagensDoProjeto } from '../lib/contagens-do-projeto';
+import { pedirAba, useAbaDaSessao, useAbaPublicada, useContagensDoProjeto } from '../lib/contagens-do-projeto';
 import { AbasDoProjeto, itensDasAbas } from './AbasDoProjeto';
 import { useTranslation } from 'react-i18next';
 import {
@@ -502,12 +502,13 @@ export function Shell() {
   // filas. Na tela de Sessão, por exemplo, a sidebar não liga poll nenhum e
   // fica com o número do resumo, como num projeto fechado.
   const abaPublicada = useAbaPublicada();
+  const abaDaSessao = useAbaDaSessao();
   const { contagens: contagensDaMoldura } = useContagensDoProjeto(abaPublicada?.projectId);
   const abaAtivaDoAtual =
     currentProject && abaPublicada?.projectId === currentProject.id
       ? abaPublicada.tab
       : currentProject
-        ? (abaDaRota(pathname, currentProject.id) ?? ABA_PADRAO)
+        ? (abaDaRota(pathname, currentProject.id, abaDaSessao) ?? ABA_PADRAO)
         : undefined;
   function irParaAba(projectId: string, chave: string) {
     gravarProjetoAtivo(projectId);
