@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- **docker-port**: o comando executado no container que estoura o teto volta como estouro (`exitCode: -1`, `timedOut: true`) e não mais como "exit 0" — o cliente `docker exec` saía limpo ao receber o SIGTERM —, e o grupo de processos dele é morto dentro do container (RN-807, AT-482).
 - **web**: a oferta em lote do modo automático (aba Executores) fica inerte, dizendo por quê, até a leitura de quem já está em automático chegar — o primeiro clique depois de navegar caía em outro elemento sem gravar nem avisar (RN-803, AT-477).
 - **web**: o cartão do plano do Dev Lead oferece ligar o modo automático para o time antes de aprovar, com o mesmo controle da aba Executores — o primeiro comando do dev já não nasce esperando clique (RN-804, AT-476).
 - **engine**: o plano de teste da QA-estratégia com critérios em string JSON deixa de ser recusado depois de a ferramenta aceitá-lo (e de derrubar o QA Lead, deixando o gate parado até o resgate); e o QA Lead roda um ciclo por tarefa — pedido repetido que esperava enquanto o ciclo rodava é descartado, em vez de gravar um parecer contrário depois do veredito que valeu (RN-805, RN-806, AT-478).

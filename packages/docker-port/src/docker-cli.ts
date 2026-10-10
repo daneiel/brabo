@@ -222,11 +222,20 @@ export function enderecoDoDaemon(env: NodeJS.ProcessEnv = process.env): string {
  */
 export const rodarDockerDeVerdade: RodarDocker = (args, timeoutMs) =>
   new Promise((resolvePromise, rejeitar) => {
+    const inicio = Date.now();
     execFile(
       'docker',
       [...args],
       { timeout: timeoutMs, maxBuffer: 8 * 1024 * 1024, encoding: 'utf8' },
       (erro, stdout, stderr) => {
+        // AT-482 (RN-807): o cliente `docker exec` CAPTURA o SIGTERM do
+        // `timeout` do `execFile` e sai com código 0 — `erro: null`, sem
+        // `killed`. Medido: `sleep 30` sob teto de 3s voltava "exit 0". O
+        // estouro é decidido pelo RELÓGIO, não pelo jeito como o filho morreu.
+        if (estourouOTeto(Date.now() - inicio, timeoutMs, erro)) {
+          resolvePromise({ exitCode: -1, stdout, stderr, timedOut: true });
+          return;
+        }
         if (erro === null) {
           resolvePromise({ exitCode: 0, stdout, stderr, timedOut: false });
           return;
@@ -250,6 +259,44 @@ export const rodarDockerDeVerdade: RodarDocker = (args, timeoutMs) =>
       },
     );
   });
+
+/**
+ * O teto estourou? `killed` cobre o filho que morre do sinal; o tempo cobre o
+ * cliente `docker exec`, que trata o SIGTERM e sai limpo (RN-807). Margem de
+ * 50ms abaixo do teto porque o temporizador do `execFile` dispara no teto, não
+ * depois dele — e um comando que termina sozinho antes disso não chega perto.
+ */
+export function estourouOTeto(
+  decorridoMs: number,
+  timeoutMs: number,
+  erro: (Error & { killed?: boolean }) | null,
+): boolean {
+  if (erro !== null && erro.killed === true) return true;
+  return timeoutMs > 0 && decorridoMs >= timeoutMs - 50;
+}
+
+/**
+ * Embrulho do comando do `exec` (RN-807): grava o PID do `sh` — que é líder de
+ * grupo e de sessão, porque o runtime faz `setsid` em todo `docker exec`
+ * (medido: pid = pgid = sid) — num arquivo de /tmp do container, roda o
+ * comando e apaga o arquivo. No estouro, `matarExecEstourado` mata o GRUPO
+ * inteiro por esse PID. O comando segue viajando como UM argumento (`$2`),
+ * intacto; o embrulho não interpreta nada dele. `/tmp` sem escrita só perde a
+ * morte, nunca a execução.
+ */
+export const EMBRULHO_DO_EXEC =
+  'echo $$ > "/tmp/.brabo-exec-$1" 2>/dev/null; /bin/sh -c "$2"; rc=$?; ' +
+  'rm -f "/tmp/.brabo-exec-$1"; exit $rc';
+
+const MATAR_EXEC =
+  'f="/tmp/.brabo-exec-$1"; [ -f "$f" ] || exit 3; p="$(cat "$f")"; ' +
+  'kill -9 -"$p" 2>/dev/null || kill -9 "$p"; rc=$?; rm -f "$f"; exit $rc';
+
+let sequenciaDeExec = 0;
+function marcadorDeExec(): string {
+  sequenciaDeExec += 1;
+  return `${process.pid}-${Date.now()}-${sequenciaDeExec}`;
+}
 
 /**
  * O CLI não conseguiu falar com o daemon. Classificado pelo COMANDO, não por
@@ -399,6 +446,24 @@ export class DockerViaCli extends DockerPort {
     };
   }
 
+  /**
+   * Mata o grupo de processos do `exec` que estourou (RN-807). Chamada INTERNA
+   * do adaptador — não é operação nova da porta (ADR 0130): é o mesmo `exec`
+   * cumprindo o teto que ele promete. Nunca lança; `false` vira a marca que
+   * diz que o processo pode ter sobrevivido.
+   */
+  private async matarExecEstourado(containerId: string, marcador: string): Promise<boolean> {
+    try {
+      const r = await this.rodar(
+        ['exec', containerId, '/bin/sh', '-c', MATAR_EXEC, 'brabo-kill', marcador],
+        TIMEOUT_DE_CONTROLE_MS,
+      );
+      return !r.timedOut && r.exitCode === 0;
+    } catch {
+      return false;
+    }
+  }
+
   async exec(workspaceDirName: string, pedido: PedidoDeExec): Promise<ResultadoDeExec> {
     const nome = nomeDoContainer(workspaceDirName);
     const existente = await this.resolver(nome);
@@ -408,6 +473,7 @@ export class DockerViaCli extends DockerPort {
 
     const timeoutMs = pedido.timeoutMs ?? TIMEOUT_DE_EXEC_PADRAO_MS;
     const maxBytes = pedido.maxBytes ?? TETO_DE_BYTES_PADRAO;
+    const marcador = marcadorDeExec();
     const resultado = await this.rodar(
       [
         'exec',
@@ -417,9 +483,12 @@ export class DockerViaCli extends DockerPort {
         // `sh -c` e o comando como UM argumento: o contrato do produto é um
         // comando de SHELL (pipe, redirecionamento, `&&`), o mesmo que
         // `exec.ts` executa na máquina. Quebrar em argv mudaria o significado
-        // do que o usuário aprovou.
+        // do que o usuário aprovou. O embrulho (RN-807) só guarda o PID.
         '/bin/sh',
         '-c',
+        EMBRULHO_DO_EXEC,
+        'brabo-exec',
+        marcador,
         pedido.comando,
       ],
       timeoutMs,
@@ -432,7 +501,9 @@ export class DockerViaCli extends DockerPort {
     const output = truncar(bruto, maxBytes);
 
     if (resultado.timedOut) {
-      return { exitCode: -1, output: output + marcaDeTimeout(timeoutMs), timedOut: true };
+      // Matar o cliente não mata o comando: mata-se o grupo DENTRO do container.
+      const morto = await this.matarExecEstourado(existente.id, marcador);
+      return { exitCode: -1, output: output + marcaDeTimeout(timeoutMs, morto), timedOut: true };
     }
     return { exitCode: resultado.exitCode, output, timedOut: false };
   }
@@ -647,11 +718,17 @@ function primeiroJson<T>(texto: string): T | null {
   }
 }
 
-function marcaDeTimeout(timeoutMs: number): string {
+function marcaDeTimeout(timeoutMs: number, morto: boolean): string {
+  if (morto) {
+    return (
+      `\n\n[runner: parei de esperar depois de ${timeoutMs}ms. O comando estourou o teto ` +
+      `e foi encerrado DENTRO do container (o grupo de processos dele recebeu SIGKILL).]`
+    );
+  }
   return (
     `\n\n[runner: parei de esperar depois de ${timeoutMs}ms. O \`docker exec\` foi ` +
-    `encerrado, mas o processo pode continuar rodando DENTRO do container — este ` +
-    `timeout mata o cliente, não o comando.]`
+    `encerrado, mas o processo pode continuar rodando DENTRO do container — não ` +
+    `consegui matá-lo lá dentro.]`
   );
 }
 
