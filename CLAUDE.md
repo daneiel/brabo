@@ -864,7 +864,10 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   `TERMINAL_ACTION_TIMEOUT_MS` (agora 120s, era 15s) + 120s — broker (T) <
   api (T + 45s) < `container-exec` (T + 90s) < `propose_action` (T + 120s),
   abaixo dos 300s do `fetch`; o estouro chega ao modelo nomeando o teto, e
-  esse teto passar de ~180s reabre o corte. Segue aberto, por DECISÃO do
+  esse teto passar de ~180s reabre o corte. O estouro do `exec` é decidido pelo RELÓGIO, não
+  pelo `killed` — o cliente `docker exec` sai 0 ao receber o SIGTERM —, e o
+  grupo do comando é morto DENTRO do container pelo PID que o embrulho grava
+  (RN-807); não volte a confiar só em `killed`. Segue aberto, por DECISÃO do
   mantenedor (AT-234, opção D, RN-605): imagem grande não sobe na primeira
   tentativa. O pull é passo explícito do `start` (`image inspect` → `pull`)
   sob o MESMO `TIMEOUT_DE_CONTROLE_MS` de 30s, e o estouro é

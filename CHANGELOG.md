@@ -6,6 +6,8 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- **docker-port**: o comando executado no container que estoura o teto volta como estouro (`exitCode: -1`, `timedOut: true`) e não mais como "exit 0" — o cliente `docker exec` saía limpo ao receber o SIGTERM —, e o grupo de processos dele é morto dentro do container (RN-807, AT-482).
+- **api**: o recorte do Jev não tira mais do Arquiteto `assign_story_modules` nem `choose_project_image` — ele encerrava dizendo que a ferramenta não estava disponível, com histórias sem módulo (RN-809, AT-481).
 - **engine**: a tarefa reaberta depois de bloqueio não abre uma segunda PR da mesma branch: a PR aberta da branch é reaproveitada (RN-812, AT-485).
 - **engine**: a checagem "já na dev" do `report_done` atualiza a `dev` do remoto antes de comparar — a tarefa cuja branch já estava inteira na `dev` remota passava pelos gates com 0 arquivos (RN-811, AT-486).
 - **engine**: erro de rede passageiro do provider (DNS `EAI_AGAIN`, conexão recusada ou derrubada, timeout) é retentado duas vezes antes de virar desfecho; o bloqueio que sobra tem origem `infra`, não `codigo`, e não conta para o desarme do dev agent por bloqueios seguidos (RN-810, AT-484).

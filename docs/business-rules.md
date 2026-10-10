@@ -15888,7 +15888,7 @@ continua vindo da decisão do Arquiteto, e `pull` não é operação nova do bro
 
 - **Código:**
   `packages/docker-port/src/docker-cli.ts:192` (`PullExcedeuTetoError`),
-  `:482` (`garantirImagem`), `:115` (`CHAMADAS_DE_CONTROLE_NO_START`),
+  `:553` (`garantirImagem`), `:115` (`CHAMADAS_DE_CONTROLE_NO_START`),
   `:106` (`TIMEOUT_DE_CONTROLE_MS`);
   `apps/broker/src/servidor.ts:199` (`PullExcedeuTetoError`);
   `apps/api/src/infrastructure/http-clients/container-broker.client.ts:205` (`TETO_DE_MUTACAO_MS`),
@@ -17428,7 +17428,7 @@ escreve na pasta do projeto, que é do uid do operador: `npm install` dava
 4. **Não afrouxa contenção**: `--cap-drop ALL`, um bind, rede de dois valores
    e cinco operações continuam. Container já criado só muda ao ser recriado.
 
-- **Onde:** `packages/docker-port/src/docker-cli.ts:566` (`argsDeCriacao`),
+- **Onde:** `packages/docker-port/src/docker-cli.ts:637` (`argsDeCriacao`),
   `packages/docker-port/src/spec-de-container.ts:141` (`usuarioValidado`),
   `apps/broker/src/operacoes.ts:385` (`especificacaoDoProjeto`),
   `apps/api/src/application/use-cases/containers/obter-spec-de-container.use-case.ts:110`
@@ -21902,7 +21902,7 @@ sem dizer qual.
   `['containers-overview']` e `['container-lifecycle', projectId]` no
   `finally` — também quando a chamada falha ou cai —, e devolve a promessa ao
   card. Nenhum poll novo (RN-579/632).
-- **Onde:** `packages/docker-port/src/docker-cli.ts:566` (`argsDeCriacao`),
+- **Onde:** `packages/docker-port/src/docker-cli.ts:637` (`argsDeCriacao`),
   `apps/web/src/routes/ContainersPage.tsx:72` (`invalidateContainers`), `:183`
   (`aprovar`)
 - **Teste:** `packages/docker-port/src/docker-cli.spec.ts` (`run` leva
@@ -22280,7 +22280,7 @@ sem dizer qual.
   naquele passo, então ele vale sempre que há recorte. Os dev agents ficam
   sem piso, de propósito (a obrigação deles muda a cada passo; para eles vale
   só a [RN-759](#rn-759)).
-- **Onde:** `apps/api/src/domain/llm/tool-router.ts:327` (`menuComPiso`) e
+- **Onde:** `apps/api/src/domain/llm/tool-router.ts:332` (`menuComPiso`) e
   `apps/api/src/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.ts:248`
   (`menuComPiso`)
 - **Teste:** `apps/api/test/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.spec.ts`
@@ -22302,7 +22302,7 @@ sem dizer qual.
   porque só a api sabe o menu depois do Jev. Não aplicar o recorte na volta
   que fecha o turno foi avaliado e não feito: a api não sabe antes da
   resposta que a volta será a última.
-- **Onde:** `apps/api/src/domain/llm/tool-router.ts:341` (`avisoDeRecorte`) e
+- **Onde:** `apps/api/src/domain/llm/tool-router.ts:346` (`avisoDeRecorte`) e
   `apps/api/src/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.ts:263`
   (`avisoDeRecorte`)
 - **Teste:** `apps/api/test/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.spec.ts`
@@ -23086,6 +23086,31 @@ sem dizer qual.
   ("critérios em string JSON viram lista: o plano é gravado e devolvido como lista")
 - **Origem:** AT-478 (TP-01 de 10/10)
 
+### RN-807 — O `exec` que estoura o teto volta como estouro, e o comando morre dentro do container {#rn-807}
+
+- **Regra:** o estouro do teto do `exec` da `DockerPort` é decidido pelo
+  RELÓGIO (decorrido ≥ teto) além do `killed`, porque o cliente `docker exec`
+  captura o SIGTERM do `timeout` do `execFile` e sai com código 0 — medido:
+  `sleep 30; echo FIM` sob teto de 3s voltava `erro: null`, `stdout: ""`, e o
+  adaptador devolvia `exitCode: 0`. Comando de agente que estourava os 120s
+  voltava "exit 0", e o QA aprovou suíte que trava. O estouro agora devolve
+  `exitCode: -1`, `timedOut: true` e a marca de timeout. E matar o cliente não
+  mata o comando: o `exec` embrulha o comando (que segue como UM argumento,
+  intacto) num `sh` que grava o próprio PID — líder de grupo e de sessão,
+  porque o runtime faz `setsid` em todo `docker exec` — em `/tmp` do container;
+  no estouro o adaptador mata o GRUPO por esse PID (SIGKILL), numa chamada
+  interna, sem operação nova na porta (ADR 0130). Medido e recusado: `timeout`
+  do busybox dentro do `sh -c` — o vigia morre com o cliente e o `sleep`
+  sobrevive. Se a morte falhar (`/tmp` sem escrita, por exemplo), a marca diz
+  que o processo pode ter sobrevivido.
+- **Onde:** `packages/docker-port/src/docker-cli.ts:269` (`estourouOTeto`),
+  `packages/docker-port/src/docker-cli.ts:455` (`matarExecEstourado`)
+- **Teste:** `packages/docker-port/src/docker-cli.spec.ts` ("erro nulo depois do
+  teto É estouro"; "no estouro mata o grupo do comando DENTRO do container";
+  "o comando que estoura volta timedOut e MORRE dentro do container", contra
+  Docker real, pulado sem daemon)
+- **Origem:** AT-482
+
 ### RN-806 — Um ciclo de QA por tarefa: pedido anterior ao veredito é descartado {#rn-806}
 
 - **Regra:** o QA Lead roda UM ciclo por task. Pedido `{:run, task}` para a
@@ -23105,6 +23130,22 @@ sem dizer qual.
   task com ciclo suspenso não abre um segundo")
 - **Origem:** AT-478 (TP-01 de 10/10)
 
+### RN-809 — As obrigações de módulo e imagem do Arquiteto entram no piso do Jev {#rn-809}
+
+- **Regra:** estende a [RN-758](#rn-758) e a [RN-784](#rn-784). O piso do
+  Arquiteto ganha `assign_story_modules` e `choose_project_image`, os passos 2 e
+  3 do kickoff dele (`arquiteto_server.ex`): o recorte do Jev nunca as tira, e o
+  Arquiteto não encerra dizendo que a ferramenta "não está disponível nesta
+  etapa" com histórias sem módulo e imagem não decidida. `emit_insight` (passo
+  8, registro de tensão) e `emit_artifact` ficam fora do piso: não são
+  obrigação da etapa. Continua valendo que o piso só devolve o que está no
+  catálogo do passo.
+- **Onde:** `apps/api/src/domain/llm/tool-router.ts:303` (`PISO_DO_MENU`)
+- **Teste:** `apps/api/test/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.spec.ts`
+  (`Arquiteto recortado pelo Jev sem assign_story_modules/choose_project_image:
+  as duas continuam no menu (RN-809)`)
+- **Origem:** AT-481 (TP-01: o recorte deixou 7 de 11 ferramentas e o
+  Arquiteto não distribuiu as histórias por módulo)
 ### RN-810 — Falha de rede passageira do provider é retentada, e o bloqueio dela é `infra` sem contar no disjuntor {#rn-810}
 
 - **Regra:** quando a chamada ao modelo volta com erro de REDE do provider —
