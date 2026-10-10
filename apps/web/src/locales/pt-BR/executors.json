@@ -147,7 +147,8 @@
       "all_zero": "Nenhum agente escolhido.",
       "none": "Nenhum agente teve o modo automático ligado: {{mensagem}}",
       "some": "Ligado para {{ok}} de {{total}} agentes. Ficaram em manual: {{falharam}}."
-    }
+    },
+    "planSubtitle": "Ao aprovar o plano, a execução começa. Ligar o modo automático agora nos agentes escolhidos faz os comandos deles rodarem sem pedir aprovação — inclusive fora da pasta do projeto. É uma oferta: nada muda sem o clique abaixo, e cada agente continua com o próprio toggle manual/auto."
   },
   "religar": {
     "descricao_zero": "Nenhuma execução está rodando, e nenhuma tarefa está pendente.",
@@ -161,13 +162,19 @@
     "botao": "Parar execução",
     "semPapel": "Parar a execução pede o papel developer no workspace.",
     "confirmarTitulo": "Parar a execução?",
-    "ficaTarefas_zero": "Nenhuma tarefa está em curso agora.",
+    "ficaTarefas_zero": "Nenhuma tarefa está em curso.",
     "ficaTarefas_one": "{{count}} tarefa em curso é bloqueada com o trabalho do worktree preservado em commit, e volta à fila quando você a liberar.",
     "ficaTarefas_other": "{{count}} tarefas em curso são bloqueadas com o trabalho do worktree preservado em commit, e voltam à fila quando você as liberar.",
     "ficaPrs": "As PRs já abertas continuam abertas, à espera do seu merge.",
     "ficaAprovacoes": "As aprovações pendentes continuam na aba Aprovações.",
     "retomar": "Esta sessão não pode ser reaberta depois da execução; para retomar, ative a execução numa sessão nova.",
     "confirmar": "Parar execução",
-    "erro": "Não foi possível parar a execução."
+    "erro": "Não foi possível parar a execução.",
+    "nenhumaTarefa": "Nenhuma tarefa está em curso nem em revisão agora.",
+    "lendoTarefas": "Lendo o backlog para contar as tarefas em curso e em revisão…",
+    "tarefasNaoLidas": "Não foi possível ler o backlog: as tarefas em curso e em revisão não puderam ser contadas.",
+    "ficaRevisao_zero": "Nenhuma tarefa está em revisão.",
+    "ficaRevisao_one": "{{count}} tarefa em revisão de QA: o gate dela para e a tarefa é bloqueada, com a PR aberta; volta à fila quando você a liberar.",
+    "ficaRevisao_other": "{{count}} tarefas em revisão de QA: os gates delas param e as tarefas são bloqueadas, com as PRs abertas; voltam à fila quando você as liberar."
   }
 }

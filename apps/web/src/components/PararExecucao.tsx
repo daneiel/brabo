@@ -4,13 +4,14 @@ import { useQueryClient } from '@tanstack/react-query';
 import { mensagemDaApi, transitionSession } from '../lib/api-client';
 import { Button } from './ui/Button';
 import { Modal } from './ui/Modal';
+import { useBacklog } from '../lib/hooks';
+import { contarTarefasAfetadasAoParar } from '../lib/execution';
+import { INTERVALO_DO_PROJETO_MS } from '../lib/canal-vivo';
 import styles from './ModoAutomaticoDoTime.module.css';
 
 export interface PararExecucaoProps {
   projectId: string;
   sessionId: string;
-  /** Quantos dev agents estão com task em curso agora (da janela de eventos). */
-  tarefasEmCurso: number;
   /** Encerrar sessão pede `developer` no endpoint (RN-650). */
   podeParar: boolean;
 }
@@ -22,12 +23,16 @@ export interface PararExecucaoProps {
  * gates, bloqueia a task em curso com o trabalho preservado e não grava o
  * turno. Nenhum estado novo. A confirmação diz o que FICA antes do clique.
  */
-export function PararExecucao({ projectId, sessionId, tarefasEmCurso, podeParar }: PararExecucaoProps) {
+export function PararExecucao({ projectId, sessionId, podeParar }: PararExecucaoProps) {
   const { t } = useTranslation('executors');
   const queryClient = useQueryClient();
   const [confirmando, setConfirmando] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  // RN-815 (AT-488): a contagem vem do backlog, lido só com a confirmação
+  // aberta (nenhuma requisição a mais enquanto ela está fechada, RN-632).
+  const backlog = useBacklog(confirmando ? projectId : undefined, INTERVALO_DO_PROJETO_MS);
+  const afetadas = backlog.data ? contarTarefasAfetadasAoParar(backlog.data) : null;
 
   async function parar() {
     setEnviando(true);
@@ -58,7 +63,22 @@ export function PararExecucao({ projectId, sessionId, tarefasEmCurso, podeParar 
       {confirmando && (
         <Modal title={t('parar.confirmarTitulo')} onClose={() => setConfirmando(false)}>
           <ul data-testid="parar-execucao-o-que-fica">
-            <li>{t('parar.ficaTarefas', { count: tarefasEmCurso })}</li>
+            {afetadas === null ? (
+              <li aria-busy="true">
+                {backlog.isError ? t('parar.tarefasNaoLidas') : t('parar.lendoTarefas')}
+              </li>
+            ) : afetadas.emCurso + afetadas.emRevisao === 0 ? (
+              <li>{t('parar.nenhumaTarefa')}</li>
+            ) : (
+              <>
+                {afetadas.emCurso > 0 && (
+                  <li>{t('parar.ficaTarefas', { count: afetadas.emCurso })}</li>
+                )}
+                {afetadas.emRevisao > 0 && (
+                  <li>{t('parar.ficaRevisao', { count: afetadas.emRevisao })}</li>
+                )}
+              </>
+            )}
             <li>{t('parar.ficaPrs')}</li>
             <li>{t('parar.ficaAprovacoes')}</li>
             <li>{t('parar.retomar')}</li>

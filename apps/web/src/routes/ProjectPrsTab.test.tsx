@@ -485,4 +485,30 @@ describe('ProjectPrsTab — a recusa de merge aparece (RN-705)', () => {
 
     await waitFor(() => expect(getCodePullRequests).toHaveBeenCalledTimes(2));
   });
+
+  describe('RN-816 (AT-480): o Merge não muda de lugar quando o backlog chega', () => {
+    it('com o backlog carregando, o Merge vem primeiro e a esteira tem o lugar reservado', async () => {
+      getCodePullRequests.mockResolvedValue({ items: [prAberta()], truncated: false });
+      useBacklog.mockReturnValue({ data: undefined, isPending: true, isError: false, error: null, refetch: vi.fn() });
+
+      montar();
+
+      const botaoMerge = await screen.findByRole('button', { name: 'Merge' });
+      const reserva = screen.getByTestId('reserva-da-esteira');
+      // O botão vem ANTES da reserva no DOM: o que chega depois fica abaixo dele.
+      expect(botaoMerge.compareDocumentPosition(reserva) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it('com o backlog lido, a reserva sai e a esteira entra no MESMO lugar, abaixo do botão', async () => {
+      getCodePullRequests.mockResolvedValue({ items: [prAberta()], truncated: false });
+      useBacklog.mockReturnValue({ data: epicComTask(), isPending: false, isError: false, error: null, refetch: vi.fn() });
+
+      montar();
+
+      const botaoMerge = await screen.findByRole('button', { name: 'Merge' });
+      expect(screen.queryByTestId('reserva-da-esteira')).not.toBeInTheDocument();
+      const esteira = screen.getByText('Implementar A');
+      expect(botaoMerge.compareDocumentPosition(esteira) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+  });
 });
