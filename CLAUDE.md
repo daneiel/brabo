@@ -317,6 +317,7 @@ estado lido do repositório e não da conversa.
 | Decisões fora da janela, a linha do tempo pela sessão de execução e a aba da sidebar pelo tipo da sessão (AT-463) | RN-788, RN-789 |
 | O raciocínio não é ligado por aceitar o parâmetro, e os dev agents de execução o desligam (AT-467) | RN-782, RN-783 |
 | As leituras de estado do Arquiteto entram no piso do Jev (AT-460) | RN-784 |
+| O worktree da tarefa (re)pegada parte da `dev` atual do remoto e a integra; conflito é bloqueio nomeado (AT-458) | RN-779 |
 | A primeira tarefa de cada módulo tem o dobro do teto por tarefa (AT-433) | RN-774 |
 | O Arquiteto lê o status atual das ADRs e o backlog com as tarefas antes de afirmar estado (AT-454) | RN-772, RN-773 |
 | O recorte do Jev não vira incapacidade: piso de obrigação no menu e aviso efêmero de recorte (AT-445) | RN-758, RN-759 |
