@@ -261,6 +261,10 @@ through the operator's `bin/engine rpc`
 ([ADR 0207](adr/0207-ciclo-de-gate-velho-estaciona.md),
 [RN-722](business-rules.md#rn-722)). A cycle whose session has an approval
 pending from a gate actor is not restarted either: it is waiting for you.
+A RECENT `in_progress` cycle that the engine restart itself killed is not
+parked nor left waiting for the 15-minute threshold: on boot, when no node of
+the cluster has it in flight, the rescuer records `gate.interrupted` and
+restarts it at once ([RN-823](business-rules.md#rn-823)).
 
 **`implementavel` (implementable) gate** — a PRE-DEV gateway, before a dev
 agent or worktree exists: the Dev Lead assesses whether a story is

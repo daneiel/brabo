@@ -17665,8 +17665,8 @@ cláusula própria no engine. Nenhuma mudança de api nem de engine.
   (`useAtivadosNaSessaoInteira`), `:141` (`ativadosSemJanela`);
   `apps/web/src/routes/SessionComposer.tsx:268` (`destinatarioRow`), `:172`
   (`ofertasForaDaJanela`); `apps/web/src/routes/SessionPage.tsx:357`
-  (`aceitarHandoff`); `apps/web/src/routes/session-timeline-montagem.tsx:543`
-  (`handoffIdDoEvento`), `:551` (`origem`); `apps/web/src/lib/session-handoffs.ts:68`
+  (`aceitarHandoff`); `apps/web/src/routes/session-timeline-montagem.tsx:547`
+  (`handoffIdDoEvento`), `:555` (`origem`); `apps/web/src/lib/session-handoffs.ts:68`
   (`activeFor`), `:120` (`ofertasAcionaveis`), `:142` (`ofertasForaDaJanela`)
 - **Teste:** `apps/web/src/routes/SessionPage.destinatario-do-chat.test.tsx`
   (escolha → envio ao escolhido; dois agentes sem escolha não enviam e dizem
@@ -18638,7 +18638,7 @@ sempre dele.
 - **Código:** `apps/web/src/lib/autor-da-mensagem.ts:52` (`autorDaMensagem`);
   `apps/web/src/lib/autoria-da-sessao.ts:45` (`useAutoriaDaSessao`), `:18`
   (`comporMembros`);
-  `apps/web/src/routes/session-timeline-montagem.tsx:150` (`rotuloDoAutor`),
+  `apps/web/src/routes/session-timeline-montagem.tsx:154` (`rotuloDoAutor`),
   `:405` (o `chat.message`), `:687` (a devolução de história);
   `apps/web/src/routes/SessionPage.tsx:133` (`autoria`)
 - **Teste:** `apps/web/src/routes/SessionPage.autor-da-mensagem.test.tsx:147`
@@ -19296,12 +19296,14 @@ segundo `executed` para o mesmo merge.
   `apps/api/src/application/use-cases/actions/approve-action.use-case.ts:282` (`recusaDeMerge`);
   `apps/api/src/infrastructure/git/local-git-provider.ts:339` (`GitPullRequestAlreadyMergedError`);
   `apps/web/src/lib/gate-do-merge.ts:19` (`gatePendenteNoMerge`);
-  `apps/web/src/routes/ProjectPrsTab.tsx:205` (`gatePendenteNoMerge`);
-  `apps/web/src/routes/session-timeline-montagem.tsx:1068` (`gatePendenteNoMerge`)
+  `apps/web/src/routes/ProjectPrsTab.tsx:232` (`gatePendenteNoMerge`);
+  `apps/web/src/routes/session-timeline-montagem.tsx:1094` (`gatePendenteNoMerge`)
+  `apps/web/src/routes/ProjectPrsTab.tsx:232` (`gatePendenteNoMerge`);
+  `apps/web/src/routes/session-timeline-montagem.tsx:1094` (`gatePendenteNoMerge`)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:664`
   (`merge_ja_proposto`), `:687` (`pr_ja_mergeado` — caso de falha), `:696`
 
-  `apps/web/src/routes/session-timeline-montagem.tsx:1068` (`gatePendenteNoMerge`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:1094` (`gatePendenteNoMerge`)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:664`
   (`merge_ja_proposto`), `:687` (`pr_ja_mergeado` — caso de falha), `:696`
   (negada não bloqueia, outra PR não colide — caminho feliz);
@@ -20335,7 +20337,7 @@ no fio: fica de fora até alguém pedir.
 
 - **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:124` (`loop`);
   `apps/engine/lib/engine/workers/anamnese_worker.ex:157` (`build_ctx`);
-  `apps/web/src/routes/session-timeline-montagem.tsx:111` (`ehDaAnamnese`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:115` (`ehDaAnamnese`)
 - **Teste:** `apps/engine/test/engine/workers/anamnese_worker_test.exs:253`
   (o texto sai `anamnese.analysis`; `agent.response` nunca é gravado — caso de
   falha); `apps/web/src/routes/session-timeline-montagem.falha-de-turno.test.tsx:86`
@@ -20522,7 +20524,7 @@ para `passos`: o acúmulo já era gravado inteiro antes da revisão.
 - **Onde:** `apps/engine/lib/engine/agents/texto_do_turno.ex:83` (`descarregar`);
   `:111` (`juntar`); `:51` (`descarregar_com_modelo`); `:65` (`payload_do_turno`);
   `apps/engine/lib/engine/agents/reidratacao.ex:177` (`acumular`);
-  `apps/web/src/routes/session-timeline-montagem.tsx:805` (`passos`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:809` (`passos`)
 - **Teste:** `apps/engine/test/engine/agents/texto_do_turno_test.exs:43` (três
   voltas: fecho e dois passos), `:56` (uma volta, sem `passos`), `:60` (termina
   em formulário); `apps/engine/test/engine/agents/reidratacao_test.exs`
@@ -21429,10 +21431,10 @@ O kickoff do PO diz as três coisas.
   `apps/engine/lib/engine/anamnese/elegibilidade.ex:67`
   (`min_interacoes_proprias`),
   `apps/api/src/application/use-cases/anamnese/record-proficiency.use-case.ts:160`
-  (`fecharJanelaSemPerfil`), `apps/engine/lib/engine/gates/gate_rescuer.ex:243`
-  (`task_em_voo?`), `apps/engine/lib/engine/gates/gate_rescuer.ex:269`
-  (`aguardando_humano?`), `apps/engine/lib/engine/gates/gate_rescuer.ex:190`
-  (`estacionar`), `apps/engine/lib/engine/gates/gate_rescuer.ex:227`
+  (`fecharJanelaSemPerfil`), `apps/engine/lib/engine/gates/gate_rescuer.ex:336`
+  (`task_em_voo?`), `apps/engine/lib/engine/gates/gate_rescuer.ex:360`
+  (`aguardando_humano?`), `apps/engine/lib/engine/gates/gate_rescuer.ex:283`
+  (`estacionar`), `apps/engine/lib/engine/gates/gate_rescuer.ex:320`
   (`retomar_estacionado`), `apps/engine/lib/engine/gates/qa_lead_server.ex:95`
   (`handle_call`)
 - **Teste:** `apps/engine/test/engine/workers/anamnese_worker_test.exs`
@@ -21479,7 +21481,7 @@ O kickoff do PO diz as três coisas.
   `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:351`
   (`resumeParkedGate`),
   `apps/api/src/interfaces/http/gates/gate-resume.controller.ts:40`
-  (`resume`), `apps/web/src/routes/RetomarGateEstacionado.tsx:30`
+  (`resume`), `apps/web/src/routes/RetomarGateEstacionado.tsx:47`
   (`RetomarGateEstacionado`)
 - **Teste:** `apps/engine/test/engine_web/controllers/gate_command_controller_test.exs`
   ("ciclo estacionado: 202 e despacha o gate de novo"; falha: "ciclo NÃO
@@ -21505,7 +21507,7 @@ O kickoff do PO diz as três coisas.
 - **Onde:** `apps/web/src/lib/mensagem-otimista.ts:14` (`otimistaJaNoLog`),
   `apps/web/src/lib/mensagem-otimista.ts:22` (`nomeDaMensagemOtimista`),
   `apps/web/src/routes/SessionPage.tsx:901` (`otimistaJaNoLog`),
-  `apps/web/src/routes/session-timeline-montagem.tsx:605`
+  `apps/web/src/routes/session-timeline-montagem.tsx:609`
   (`handleActivateExecution`)
 - **Teste:** `apps/web/src/lib/mensagem-otimista.test.ts` (feliz: o id no log
   tira a otimista; falha: id ausente ou de outro tipo a mantém; o nome é o da
@@ -21647,7 +21649,7 @@ sem dizer qual.
   `apps/web/src/routes/ProjectApprovalsTab.tsx:106` (`ProjectApprovalsTab`),
   `apps/web/src/routes/Shell.tsx:545` (`idDoProjetoAtual`),
   `apps/web/src/routes/NewProjectWizard.tsx:155` (`NewProjectWizard`),
-  `apps/web/src/routes/ProjectPrsTab.tsx:117` (`invalidateMergeActions`),
+  `apps/web/src/routes/ProjectPrsTab.tsx:141` (`invalidateMergeActions`),
   `apps/web/src/lib/agent-status.ts:222` (`gateStatus`)
 - **Teste:** `apps/api/test/application/use-cases/actions/execute-infra-pr.use-case.spec.ts`
   ("a branch nasce de dev, a PR mira dev e leva infra[bot]"; falha:
@@ -22152,7 +22154,7 @@ sem dizer qual.
   fecho tem o botão; os passos do turno não. A tela reconhece a linha pelo
   texto, e as duas frases são o contrato com `Engine.Harness.RespostaCortada`.
 - **Onde:** `apps/web/src/lib/resposta-cortada.ts:14` (`respostaCortada`),
-  `apps/web/src/routes/session-timeline-montagem.tsx:885` (`respostaCortada`),
+  `apps/web/src/routes/session-timeline-montagem.tsx:889` (`respostaCortada`),
   `apps/web/src/routes/SessionPage.tsx:454` (`continuarRespostaCortada`),
   `:670` (`enviarMensagem`)
 - **Teste:** `apps/web/src/lib/resposta-cortada.test.ts` (`respostaCortada
@@ -22350,7 +22352,7 @@ sem dizer qual.
   esta última é OBSERVAÇÃO no `resumo`, fora de `itens`, salvo regra que a
   exija. Continua régua de prompt: nenhuma reprovação nova no código.
 - **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:18` (`texto`),
-  `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:64` (`secao_da_forma`),
+  `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:68` (`secao_da_forma`),
   `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:103`
   (`tarefasIrmas`) e `apps/engine/lib/engine/gates/qa_automacao_agent.ex:170`
   (`com_o_recorte`)
@@ -22375,7 +22377,7 @@ sem dizer qual.
   bloqueio). Sem sessão no projeto, o mesmo: o motivo vai em texto, nunca só
   no `title` do botão `disabled`, que não abre no Chromium. Se tarefa
   bloqueada deve ou não travar o merge é pergunta do dono, não decidida aqui.
-- **Onde:** `apps/web/src/routes/ProjectPrsTab.tsx:248` (`avisoDaLinha`)
+- **Onde:** `apps/web/src/routes/ProjectPrsTab.tsx:276` (`avisoDaLinha`)
 - **Teste:** `apps/web/src/routes/ProjectPrsTab.test.tsx` ("AT-451: tarefa
   bloqueada com gate pendente NÃO diz que o merge segue disponível")
 - **Origem:** AT-451 (TP-01 de 09/10: "O merge segue disponível — a decisão é
@@ -22791,7 +22793,7 @@ sem dizer qual.
   [RN-765](#rn-765). Desde a [RN-792](#rn-792) o Arquiteto confere o contrato
   contra as rotas citadas nas histórias ao declará-lo.
 - **Onde:** `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:163`
-  (`moduloDoContrato`), `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:52`
+  (`moduloDoContrato`), `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:56`
   (`secao_do_contrato`)
 - **Teste:** `apps/api/test/application/use-cases/execution/get-dev-task-context.use-case.spec.ts`
   (o contrato do módulo da história; sem contrato ou módulo ambíguo, `null`) e
@@ -23230,6 +23232,25 @@ sem dizer qual.
   cartão do plano não afirma que a execução começou")
 - **Origem:** AT-488 (TP-01 de 10/10)
 
+### RN-822 — O primeiro clique em Merge abre o cartão sem esperar a fila {#rn-822}
+
+- **Regra:** extensão da [RN-816](#rn-816). Na aba PRs, o clique em "Merge"
+  que cria a `proposed_action` de `git_merge` mostra o cartão de decisão com a
+  ação que a api DEVOLVEU, na hora, em vez de esperar a fila do projeto
+  (`useProjectPendingActions`) voltar. Antes, entre a resposta da proposta e o
+  refetch da fila, o botão voltava sem cartão nenhum e a pessoa lia "o clique
+  não pegou". A ação local vale por id da PR só enquanto a fila não tiver
+  leitura MAIS NOVA que a proposta (`dataUpdatedAt`); com leitura mais nova,
+  quem diz se ela segue pendente é a fila. Decidir (aprovar, negar, sempre
+  permitir) a esquece. Declarado: a causa foi medida no CÓDIGO (o cartão
+  dependia do refetch), não no navegador; que o refetch demore o bastante para
+  o clique parecer perdido é inferência do TP-01.
+- **Onde:** `apps/web/src/routes/ProjectPrsTab.tsx:125` (`acaoDaPr`)
+- **Teste:** `apps/web/src/routes/ProjectPrsTab.test.tsx` ("RN-822 (AT-493):
+  o 1º clique em Merge abre o cartão sem esperar a fila do projeto voltar" e
+  "RN-822: a fila lida DEPOIS da proposta, sem ela, vence o cartão local")
+- **Origem:** AT-493 (TP-01 de 10/10)
+
 ### RN-816 — O botão não muda de lugar quando um bloco tardio chega {#rn-816}
 
 - **Regra:** bloco que chega DEPOIS do primeiro paint não fica acima do botão
@@ -23264,7 +23285,7 @@ sem dizer qual.
   externo dos gates (`docs/gates.yml`) e o código do `emit_qa_verdict` não
   mudam, e nenhum gate novo nasce. Tarefa que não toca nada disso não ganha a
   seção.
-- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:87`
+- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:91`
   (`secao_do_ponto_de_entrada`)
 - **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs`
   ("tarefa que toca a fiação exige evidência do ponto de entrada real" e "tarefa
@@ -23286,6 +23307,87 @@ sem dizer qual.
 - **Origem:** AT-487 (TP-01 de 10/10, tarefa `c7ced5a2`: duas reprovações por
   duas lacunas que já existiam na entrega original)
 
+### RN-817 — O QA roda a suíte em estado limpo, e teste pulado não é verde {#rn-817}
+
+- **Regra:** extensão do recorte da [RN-765](#rn-765), para toda tarefa. Antes
+  de rodar a suíte, o gate de QA encerra o que o PRÓPRIO projeto deixou de pé
+  (servidor do `start` escutando numa porta do projeto), só processos daquela
+  pasta, nunca de fora. Teste que sobe processo deve encerrar o GRUPO (ou
+  subir `node` direto, não via `npm`); o que não encerra trava a suíte num
+  clone limpo e é lacuna em `itens`. Teste que se PULOU por ambiente (porta
+  ocupada, ferramenta ausente) não conta como verde: vai ao `resumo` como
+  observação. É instrução do recorte, não passo do harness: quem roda a suíte
+  é o próprio QA pelo `terminal`, que já passa pela política e pelo
+  roteamento de container dos três modos — um `pkill` no harness precisaria
+  de um segundo caminho de execução por modo. Régua de prompt; o contrato dos
+  gates não muda.
+- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:122`
+  (`secao_do_ambiente_limpo`)
+- **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs`
+  ("RN-817: pede ambiente limpo, encerrar o grupo e pulado como observação")
+- **Origem:** AT-496 (TP-01 de 10/10: `npm test` travava num clone limpo — o
+  teste matava o `npm` e o `node` neto ficava na 3000 —, e no container o QA
+  viu exit 0 porque o teste se pulava com a porta ocupada por um servidor
+  órfão)
+
+### RN-818 — A evidência do ponto de entrada é a que o ambiente do dev produz {#rn-818}
+
+- **Regra:** extensão da [RN-813](#rn-813). A seção "Ponto de entrada" diz o
+  que CONTA como evidência no ambiente do dev — subir o processo do
+  entrypoint na pasta do projeto, rodar o script no container do projeto,
+  bater numa rota do processo de pé — e o que NÃO cabe ali: construir imagem
+  Docker, `docker compose`, rede externa. Exigência desse segundo tipo nunca
+  vai para `itens`; vai ao `resumo` como observação. Régua de prompt.
+- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:91`
+  (`secao_do_ponto_de_entrada`)
+- **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs`
+  ("RN-818: com ponto de entrada diz o que conta e o que não cabe" e "RN-818:
+  sem ponto de entrada não traz a régua de evidência")
+- **Origem:** AT-492 (TP-01 de 10/10, task `c708f8b2`: a 4ª volta exigiu
+  construir a imagem a partir do Dockerfile, o container do projeto não tem
+  Docker, e o ciclo esgotou em bloqueio `politica`)
+
+### RN-819 — O QA varre regra por regra antes de emitir {#rn-819}
+
+- **Regra:** extensão da [RN-814](#rn-814). Além de listar todas as lacunas, o
+  recorte pede uma VARREDURA POR REGRA antes de emitir: percorrer cada regra
+  de negócio e cada critério da tarefa, um por um, apontando onde está a prova
+  ou que ela falta, e só emitir depois de passar por todas. "Liste todas"
+  sozinho não segurou lacuna pré-existente aparecendo na volta seguinte.
+  Régua de prompt.
+- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:20` (`texto`)
+- **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs`
+  ("RN-819: pede varredura por regra antes de emitir")
+- **Origem:** AT-490 (TP-01 de 10/10: tarefas 2 e 11 trouxeram na 2ª volta
+  lacuna que já estava na entrega)
+### RN-823 — O ciclo de gate que o reinício do engine matou é retomado no boot, e o fio diz isso {#rn-823}
+
+- **Regra:** no BOOT do engine, a linha `in_progress` de `gate_states`
+  RECENTE (abaixo de `gate_rescue_stale_after_seconds`, 15 min, e por isso
+  invisível para o tick) sem processo vivo NESTE nó nem nos OUTROS nós do
+  cluster é órfã do reinício, não um ciclo lento: o boot a retoma na hora
+  (`Dispatcher.run_qa`/`run_secops`), sem esperar o limiar. "Vivo" é a régua da
+  [RN-722](#rn-722) (a task em voo no lead), perguntada também aos outros nós
+  por `:erpc.multicall` — nó que não responde conta como VIVO, a régua do
+  `TurnoOrfao` ([RN-586](#rn-586)). Valem as guardas de sempre: ação pendente
+  de ator do gate não reinicia, e dev dono ausente só apaga a linha. Antes de
+  redespachar, o boot grava `gate.interrupted` no log da sessão (`taskId`,
+  `gate`, `ultimaAtividadeEm`, `retomadoEm`), e o fio o mostra como aviso, nos
+  dois idiomas. O tick periódico NÃO muda: fora do boot, linha recente é ciclo
+  em voo. Resíduo declarado: nó que ainda não entrou no cluster no instante do
+  boot não é perguntado, e o pior desfecho é o de sempre (trabalho duplicado e
+  barato; o segundo veredito é recusado pela api).
+- **Onde:** `apps/engine/lib/engine/gates/gate_rescuer.ex:191` (`run_boot`),
+  `:209` (`interrompido_no_boot`),
+  `apps/web/src/routes/RetomarGateEstacionado.tsx:23` (`cicloInterrompido`)
+- **Teste:** `apps/engine/test/engine/gates/gate_rescuer_test.exs` ("boot com
+  ciclo RECENTE órfão do reinício: grava gate.interrupted e retoma já
+  (RN-823)"; falhas: "boot com ciclo recente esperando ação PENDENTE do gate:
+  não reinicia nem grava (RN-823)" e o processo local vivo intocado),
+  `apps/web/src/routes/RetomarGateEstacionado.test.tsx` ("cicloInterrompido
+  (RN-823)")
+- **Origem:** AT-495 (TP-01 de 10/10: o reinício das 18:51 matou o ciclo de QA
+  da tarefa 10, e o dev ficou `awaiting_gate` 15 min sem tela nenhuma dizer)
 ### RN-820 — O container de projeto volta sozinho quando o daemon reinicia {#rn-820}
 
 - **Regra:** o `docker run` composto pelo `DockerViaCli` leva

@@ -14,6 +14,23 @@ export function cicloEstacionado(evento: SessionEvent): { taskId: string; gate: 
   return { taskId: p.taskId, gate: p.gate };
 }
 
+/**
+ * O ciclo que o reinício do engine interrompeu e o boot retomou
+ * (`gate.interrupted`, RN-823), lido do payload.
+ */
+export function cicloInterrompido(
+  evento: SessionEvent,
+): { taskId: string; gate: string; retomadoEm: string | null } | null {
+  if (evento.type !== 'gate.interrupted') return null;
+  const p = evento.payload as { taskId?: unknown; gate?: unknown; retomadoEm?: unknown } | null;
+  if (typeof p?.taskId !== 'string' || typeof p?.gate !== 'string') return null;
+  return {
+    taskId: p.taskId,
+    gate: p.gate,
+    retomadoEm: typeof p.retomadoEm === 'string' ? p.retomadoEm : null,
+  };
+}
+
 interface Props {
   projectId: string;
   taskId: string;

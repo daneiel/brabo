@@ -14,7 +14,8 @@ vi.mock('../components/ui/ToastProvider', () => ({
   useToast: () => ({ showToast }),
 }));
 
-const { RetomarGateEstacionado, cicloEstacionado } = await import('./RetomarGateEstacionado');
+const { RetomarGateEstacionado, cicloEstacionado, cicloInterrompido } =
+  await import('./RetomarGateEstacionado');
 const { ApiError } = await import('../lib/api-client');
 
 beforeAll(async () => {
@@ -35,6 +36,23 @@ const evento = (type: string, payload: unknown): SessionEvent =>
     payload,
     createdAt: new Date().toISOString(),
   }) as SessionEvent;
+
+describe('cicloInterrompido (RN-823)', () => {
+  it('lê o gate.interrupted; payload sem tarefa ou outro tipo não vira aviso', () => {
+    const payload = { taskId: 't1', gate: 'qa', retomadoEm: '2026-10-10T19:00:00Z' };
+    expect(cicloInterrompido(evento('gate.interrupted', payload))).toEqual(payload);
+    expect(cicloInterrompido(evento('gate.interrupted', { gate: 'qa' }))).toBeNull();
+    expect(cicloInterrompido(evento('gate.rescue_parked', { taskId: 't1', gate: 'qa' }))).toBeNull();
+  });
+
+  it('o aviso tem texto nos dois idiomas', () => {
+    const opcoes = { gate: 'qa', taskId: 't1', hora: '19:00' };
+    expect(i18n.t('sessionPage:gateInterrompido.aviso', opcoes)).toContain('reinício do engine');
+    expect(i18n.getFixedT('en')('sessionPage:gateInterrompido.aviso', opcoes)).toContain(
+      'engine restart',
+    );
+  });
+});
 
 describe('RetomarGateEstacionado (RN-724)', () => {
   it('lê o ciclo do gate.rescue_parked; outro evento não tem botão', () => {

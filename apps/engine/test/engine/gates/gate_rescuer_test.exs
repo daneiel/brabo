@@ -249,6 +249,12 @@ defmodule Engine.Gates.GateRescuerTest do
 
       refute_received {:gate_dispatch, :qa, _, _}
       assert GateState.get(project_id, task_id, "qa") != nil
+
+      # RN-823: o boot também não o toma por órfão do reinício.
+      Application.delete_env(:engine, :gate_rescue_stale_after_seconds)
+      assert :ok = GateRescuer.run_boot()
+      refute_received {:gate_dispatch, :qa, _, _}
+      refute_received {:event_appended, _, _, %{type: "gate.interrupted"}}
     end
 
     test "lead do projeto vivo e OCIOSO não segura o resgate de uma task perdida (RN-722)",
@@ -371,6 +377,44 @@ defmodule Engine.Gates.GateRescuerTest do
 
       assert_received {:gate_dispatch, :qa, ^project_id, ^task_id}
       refute_received {:event_appended, _, _, %{type: "gate.rescue_parked"}}
+    end
+
+    test "boot com ciclo RECENTE órfão do reinício: grava gate.interrupted e retoma já (RN-823)",
+         %{project_id: project_id} do
+      Application.put_env(:engine, :gate_dispatcher, FakeGateDispatcher)
+      session_id = sessao_real!(project_id)
+      task_id = "task-#{Ecto.UUID.generate()}"
+      dev_na_task!(project_id, session_id, task_id)
+      linha_velha!(project_id, task_id, session_id, 60)
+
+      # O tick periódico NÃO a vê (60s < 900s): é o ciclo em voo.
+      assert :ok = GateRescuer.run()
+      refute_received {:gate_dispatch, :qa, _, _}
+
+      assert :ok = GateRescuer.run_boot()
+
+      assert_received {:event_appended, ^project_id, ^session_id,
+                       %{
+                         type: "gate.interrupted",
+                         payload: %{taskId: ^task_id, gate: "qa", retomadoEm: _}
+                       }}
+
+      assert_received {:gate_dispatch, :qa, ^project_id, ^task_id}
+    end
+
+    test "boot com ciclo recente esperando ação PENDENTE do gate: não reinicia nem grava (RN-823)",
+         %{project_id: project_id} do
+      Application.put_env(:engine, :gate_dispatcher, FakeGateDispatcher)
+      session_id = sessao_real!(project_id)
+      task_id = "task-#{Ecto.UUID.generate()}"
+      dev_na_task!(project_id, session_id, task_id)
+      linha_velha!(project_id, task_id, session_id, 60)
+      acao_pendente!(session_id, "qa-automacao")
+
+      assert :ok = GateRescuer.run_boot()
+
+      refute_received {:gate_dispatch, :qa, _, _}
+      refute_received {:event_appended, _, _, %{type: "gate.interrupted"}}
     end
 
     test "linha recente (não parada): o resgate não toca", %{
