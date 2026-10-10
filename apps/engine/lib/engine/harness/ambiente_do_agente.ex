@@ -105,9 +105,11 @@ defmodule Engine.Harness.AmbienteDoAgente do
         "Ambiente de execução (fato do sistema, não suposição):",
         pasta(cwd, raiz, running),
         imagem_e_rede(Map.get(dados, :imagem), running),
-        "Git: NÃO rode `git` no terminal (a imagem pode não ter git, e o terminal " <>
-          "não é o caminho de commit). Use as ações tipadas `git_commit`, " <>
-          "`git_push` e `pr_open`.",
+        "Git: NÃO rode `git` no terminal (a imagem pode não ter git). Commit, push " <>
+          "e PR são feitos pelo sistema quando o dev chama `report_done`: não procure " <>
+          "`git_commit`/`git_push`/`pr_open` e não use `report_blocked` por falta delas.",
+        "Testes: se o script `test` do `package.json` lista arquivos um a um, inclua " <>
+          "nele todo arquivo de teste novo.",
         "Segredos: senha, token ou chave de teste são gerados em tempo de execução " <>
           "(variável de ambiente ou valor aleatório), nunca literais no código — o " <>
           "SecOps reprova literal que pareça segredo.",
