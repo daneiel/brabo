@@ -19026,7 +19026,7 @@ O valor mora em DOIS lugares, de propósito, um por linguagem, e mudam juntos:
   `apps/engine/lib/engine/actions/workspace/runner_git.ex:158` (`add_worktree`),
   `:183` (`garantir_base`), `:308` (`remoto_vazio?`);
   `apps/engine/lib/engine/dev/worktree_manager.ex:36` (`create`), `:138`
-  (`add_worktree`), `:176` (`garantir_base`);
+  (`add_worktree`), `:201` (`garantir_base`);
   `apps/engine/lib/engine/dev/agent_io.ex:352` (`propose_pr`);
   `apps/engine/lib/engine/gates/diff.ex:21` (`compute`);
   `apps/engine/lib/engine/harness/project_context.ex:29` (`repo_line`);
@@ -22053,7 +22053,7 @@ sem dizer qual.
   parte.
 - **Onde:** `apps/engine/lib/engine/harness/tools/terminal.ex:12` (`spec`),
   `apps/engine/lib/engine/dev/worktree_manager.ex:108` (`retrato`),
-  `apps/engine/lib/engine/dev/dev_agent_server.ex:576` (`retrato_do_worktree`)
+  `apps/engine/lib/engine/dev/dev_agent_server.ex:582` (`retrato_do_worktree`)
 - **Teste:** `apps/engine/test/engine/dev/worktree_manager_test.exs`
   (`retrato/2`: branch e arquivos; pasta inalcançável diz indisponível; a
   descrição do terminal diz `sh`)
@@ -22447,7 +22447,7 @@ sem dizer qual.
   modo `runner` a checagem de merge não roda.
 - **Onde:** `apps/engine/lib/engine/dev/agent_io.ex:301`
   (`levar_branch_para_a_proxima`), `:282` (`criar_worktree`),
-  `apps/engine/lib/engine/dev/worktree_manager.ex:210`
+  `apps/engine/lib/engine/dev/worktree_manager.ex:199`
   (`ja_mergeada_volta_ao_trabalho`)
 - **Teste:** `apps/engine/test/engine/dev/bloqueio_preserva_trabalho_test.exs`
   (`levar_branch_para_a_proxima/1 e criar_worktree/2`: aprovada leva a branch
@@ -22590,3 +22590,33 @@ sem dizer qual.
   (as duas leituras estão no catálogo do Arquiteto)
 - **Origem:** AT-454 (TP-01 de 09/10: com 17 tarefas no backlog, o Arquiteto
   disse "faltam as tarefas" e "não consigo verificá-las daqui")
+
+### RN-779 — O worktree da task (re)pegada parte da `dev` ATUAL e a integra {#rn-779}
+
+- **Regra:** antes de criar o worktree de uma task (primeira vez ou retomada),
+  o engine faz `git fetch origin` no working tree do projeto (serializado por
+  projeto) — é no remoto que as PRs são mergeadas, e a `dev` local só andava no
+  checkout da inicialização. A ponta da `dev` é `origin/dev` quando a local
+  ficou para trás. A task nasce: (1) da branch da task anterior não mergeada
+  (RN-760), (2) da PRÓPRIA branch quando ela tem trabalho que a `dev` não
+  contém — a task retomada num processo novo, que perdeu o ponteiro em memória
+  (RN-743) —, ou (3) da ponta atual da `dev`. Nos casos (1) e (2) o worktree
+  INTEGRA a ponta da `dev` (`merge --no-ff`, identidade `<agente>[bot]`) antes
+  do primeiro passo. Conflito nessa integração é recusa NOMEADA ("conflito ao
+  integrar a `dev` atual", com os arquivos), o merge é abortado, a branch de
+  origem fica intacta e a task bloqueia com motivo próprio e origem `codigo`.
+  `fetch` que falha bloqueia a task com o motivo do git, nunca cai na `dev`
+  velha. A readoção depois de conflito de merge (RN-715) não integra sozinha.
+  Medido no TP-01: a AT-447 DISPAROU no 1º claim (reflog: `Created from
+  feature/task-b3cc92b8`); quem perdeu a base foi o reclaim, que redefiniu a
+  branch para a `dev` LOCAL parada no merge da infra (`Reset to dev`).
+  Declarado: no modo `runner` nada disso roda (o git é da máquina do usuário).
+- **Onde:** `apps/engine/lib/engine/dev/worktree_manager.ex:151`
+  (`atualizar_remoto`), `:195` (`add_worktree`), `:227`
+  (`ponta_do_trabalho`), `:246` (`retomada`), `:256` (`integrar_trabalho`)
+- **Teste:** `apps/engine/test/engine/dev/worktree_manager_test.exs`
+  (`integração da dev atual (RN-779)`: retomada com branch antiga parte da dev
+  nova do remoto; trabalho preservado integra a dev nova; anterior em
+  `awaiting_user` é a base com a dev integrada; conflito é recusa nomeada)
+- **Origem:** AT-458 (TP-01 de 09/10: `feature/task-c80daf6c` nasceu de
+  `1fa2241` sem as 12 tarefas mergeadas depois, e o merge conflitou)

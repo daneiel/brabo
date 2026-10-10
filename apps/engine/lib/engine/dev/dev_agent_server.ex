@@ -501,7 +501,10 @@ defmodule Engine.Dev.DevAgentServer do
         # (`politica`, ADR 0020) — nunca `codigo`, que mandaria quem tria a
         # rodada seguinte procurar uma cláusula que ninguém escreveu. Qualquer
         # outra falha mantém o desfecho de sempre.
-        {motivo, origem} = CredencialDeGit.desfecho(reason)
+        {motivo, origem} =
+          if Engine.Dev.WorktreeManager.conflito_de_integracao?(reason),
+            do: {"conflito ao integrar a dev atual no worktree da task", "codigo"},
+            else: CredencialDeGit.desfecho(reason)
 
         state
         |> AgentIo.block_task(motivo, inspect(reason), origem)
