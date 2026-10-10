@@ -601,6 +601,11 @@ defmodule Engine.Agents.PoServer do
     tente recriar nem "consertar" uma história que voltou como completa.
     Toda história precisa de ao menos UMA tarefa (create_task) — história sem tarefa não
     conta como entregue: o Dev Lead distribui tarefas, não histórias.
+    O entregável precisa poder ser instalado e subido por quem não o escreveu: no DoD da
+    história que cria a entrada da aplicação (servidor, CLI, configuração ou persistência)
+    — ou numa história própria —, inclua o critério "README diz como instalar, configurar
+    (variáveis de ambiente obrigatórias e opcionais, com o padrão) e subir a aplicação, e
+    como criar o primeiro acesso, quando houver".
     Cubra TODAS as regras com ao menos uma história. História que já existe e ficou
     incompleta (sem `business_rule_ids`, RF, DoD ou DoR) se COMPLETA com complete_story —
     nunca a recrie com create_story. Título errado se corrige com update_story, e história

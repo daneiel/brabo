@@ -17464,7 +17464,7 @@ seguiram em `in_review` (AT-275).
    chegar aqui; o gate pendente, por decisão do dono, é só aviso na tela.
 
 - **Onde:** `apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts:242`
-  (`settleMerge`), `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:364`
+  (`settleMerge`), `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:413`
   (`markDoneIfNotDone`)
 - **Teste:** `apps/api/test/application/use-cases/actions/execute-git-action.use-case.spec.ts`
   ("git_merge marca a tarefa como done": feliz, repetido, PR aberta/merge
@@ -19028,7 +19028,7 @@ O valor mora em DOIS lugares, de propósito, um por linguagem, e mudam juntos:
   `apps/engine/lib/engine/dev/worktree_manager.ex:36` (`create`), `:138`
   (`add_worktree`), `:201` (`garantir_base`);
   `apps/engine/lib/engine/dev/agent_io.ex:385` (`propose_pr`);
-  `apps/engine/lib/engine/gates/diff.ex:21` (`compute`);
+  `apps/engine/lib/engine/gates/diff.ex:29` (`compute`);
   `apps/engine/lib/engine/harness/project_context.ex:29` (`repo_line`);
   `apps/api/src/domain/actions/protected-branches.ts:26` (`BRANCH_DE_TRABALHO`);
   `apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts:171`
@@ -19804,8 +19804,8 @@ módulo do `module_map`, como antes, e o paralelismo extra continua pelo
 `parallelize` ([RN-083](business-rules/custo.md#rn-083)).
 
 - **Onde:** `apps/api/src/domain/execution/plano-de-execucao.ts:33`
-  (`lerPlanoDeExecucao`); `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:564`
-  (`daTarefaDoModulo`), `:299` (`claimNext`), `:287` (`assignModules`);
+  (`lerPlanoDeExecucao`); `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:613`
+  (`daTarefaDoModulo`), `:348` (`claimNext`), `:336` (`assignModules`);
   `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:133`
   (`recusaNaProposta`); `apps/api/src/application/use-cases/execution/execute-execution-plan.use-case.ts:67`
   (`recusaNaProposta`); `apps/api/src/db/schema/backlog.ts:187` (`module`);
@@ -20756,7 +20756,7 @@ Junto, o fechamento deixa de dizer que parear uma pasta pela tela do projeto
 - **Medição (AT-383, 02/10, loja-teste):** a #6 terminou `failed` por conflito
   em `package.json`, e a tarefa ficou `in_review` sem ninguém para resolvê-lo.
 - **Onde:** `apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts:339` (`devolverAoDono`),
-  `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:374` (`reabrirPorConflitoDeMerge`),
+  `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:423` (`reabrirPorConflitoDeMerge`),
   `apps/engine/lib/engine/workers/dev_agent_wake_worker.ex:151` (`task.merge_conflict`),
   `apps/engine/lib/engine/dev/dev_agent_server.ex:350` (`handle_info`),
   `apps/engine/lib/engine/dev/dev_agent_server.ex:773` (`trigger_gate_recheck`),
@@ -21687,7 +21687,7 @@ sem dizer qual.
   `apps/api/src/application/use-cases/backlog/corrigir-historia.use-case.ts:47`
   (`editar`), `:90` (`arquivar`),
   `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:97`
-  (`findByProject`), `:299` (`claimNext`),
+  (`findByProject`), `:348` (`claimNext`),
   `apps/api/src/interfaces/http/backlog/backlog.controller.ts:188`
   (`updateTitle`), `:219` (`archive`),
   `apps/api/src/interfaces/http/internal/internal-sessions.controller.ts:571`
@@ -22791,6 +22791,103 @@ sem dizer qual.
   `GET /painel`, o contrato declarou `GET /panel`, o dev seguiu o contrato e o
   QA reprovou pela história)
 
+### RN-787 — O gate conta o diff da PR contra a `dev` da origem, e o parecer de QA grava lista {#rn-787}
+
+- **Regra:** (1) o diff que o QA e o SecOps julgam (`dev...HEAD`,
+  [RN-664](#rn-664)) usa a `dev` MAIS NOVA que o working tree enxerga: com
+  origem local (caminho no disco) o gate faz antes `git fetch origin dev`,
+  melhor esforço, e entre `origin/dev` e a `dev` local vale a que contém a
+  outra. A `dev` local do clone não anda quando a PR é mergeada na origem, e o
+  parecer do SecOps contava o acumulado das tarefas já mergeadas. Com origem
+  remota não há fetch no gate (a credencial é do `Workspace`) — declarado. O
+  semgrep e o gitleaks seguem varrendo o worktree inteiro, não só o diff:
+  estreitar o que o scanner vê muda o que o gate reprova, e isso fica para o
+  dono. (2) `itens` e `coverageMatrix` do parecer de QA chegam ao
+  `artifact.qa_verdict` sempre como LISTA: string JSON de lista é decodificada
+  (o molde da [RN-719](#rn-719)), e string que não é lista vira `[]`.
+- **Onde:** `apps/engine/lib/engine/gates/diff.ex:44` (`base_mais_nova`),
+  `apps/engine/lib/engine/gates/hooks/termination.ex:41` (`lista`)
+- **Teste:** `apps/engine/test/engine/gates/diff_test.exs` (a tarefa B nascida
+  da A, com a A mergeada na origem: o diff é só B) e
+  `apps/engine/test/engine/gates/hooks/termination_test.exs` (string JSON vira
+  lista; lista intacta; string inválida vira `[]`)
+- **Origem:** AT-464 itens 1 e 3 (TP-01 de 09/10, sessão `80e3ce09`: "17
+  arquivo(s) alterado(s) nesta PR" numa PR de 3 arquivos contra a `dev`, e
+  `coverageMatrix`/`itens` gravados como `"[]"` nos últimos pareceres)
+### RN-776 — Tarefa da execução esperando alguém segura a sessão de execução {#rn-776}
+
+- **Regra:** o heartbeat não fecha a sessão de execução VIGENTE do projeto (a
+  `active` mais recente com `execution.activated`) enquanto houver tarefa de
+  história não arquivada BLOQUEADA, com PR em `awaiting_user`, ou devolvida
+  por conflito de merge ([RN-715](#rn-715), `backlog.task_merge_conflict`
+  nesta sessão) e ainda `in_progress`. É o sexto sinal da
+  [RN-064](business-rules/custo.md#rn-064), sem teto, como os outros sinais que esperam uma pessoa;
+  vem antes do sinal da conversa ociosa ([RN-581](#rn-581)), que continua
+  o único com teto. Sessão de execução ANTIGA do mesmo projeto não é segurada
+  pela tarefa: a tarefa é do projeto, e sem esse recorte ela ficaria imortal.
+- **Onde:** `apps/api/src/application/use-cases/sessions/get-session-pending-work.use-case.ts:238`
+  (`findPendenteDaExecucao`), `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:220`
+  (`findPendenteDaExecucao`)
+- **Teste:** `apps/api/test/application/use-cases/sessions/get-session-pending-work.use-case.spec.ts`
+  (bloqueada, PR esperando merge e conflito seguram; sem nada, fecha; sessão
+  de execução antiga não é segurada)
+- **Origem:** AT-457 (TP-01 de 09/10: as duas sessões de execução fecharam
+  2–8 s depois do `dev.idle`, com tarefa bloqueada e PR esperando o merge)
+
+### RN-777 — Desbloquear a tarefa acorda o dev do módulo DELA {#rn-777}
+
+- **Regra:** `task.became_claimable` com causa `task_unblocked` leva como
+  `modules` o módulo da TAREFA (`tasks.module`, [RN-678](#rn-678)) quando ele
+  existe, e os da história só quando a tarefa não tem módulo — o claim é pelo
+  módulo da tarefa, então é o dev dele que tem de acordar. O conflito de merge
+  já acorda o dono ([RN-715](#rn-715)); com a sessão de execução de pé
+  ([RN-776](#rn-776)), o dono continua com linha em `dev_agent_states` para
+  ser acordado.
+- **Onde:** `apps/api/src/application/use-cases/execution/unblock-task.use-case.ts:56`
+  (`modules`)
+- **Teste:** `apps/api/test/application/use-cases/execution/unblock-task.use-case.spec.ts`
+  (tarefa com módulo acorda o dev desse módulo)
+- **Origem:** AT-457
+
+### RN-778 — O dev agent órfão fecha por evento novo no boot {#rn-778}
+
+- **Regra:** no boot, para cada sessão não terminal, o dev agent cujo último
+  `dev.*` na sessão é de espera (`dev.working`, `dev.blocked`, `dev.idle_tripped`
+  e os demais que o `GetSessionPendingWorkUseCase` conta) e que NÃO tem linha
+  em `dev_agent_states` NESTA sessão ganha `dev.error` com origem `infra`
+  (`reason: dev_agent_sem_processo`) seguido de `dev.idle`, que o tira da régua
+  do trabalho pendente ([RN-064](business-rules/custo.md#rn-064)). É o molde
+  da [RN-586](#rn-586) para o vocabulário `dev.*`: nunca reexecuta, nunca
+  reescreve evento, e a linha durável é a prova de dono — com ela o
+  `DevRehydrator` religa o agente, e fechá-lo seria matar um agente saudável.
+  Não toca a tarefa: tarefa bloqueada ou com PR esperando o merge continua
+  segurando a sessão de execução vigente pela RN-776 (AT-457), que tem dono
+  humano.
+- **Onde:** `apps/engine/lib/engine/dev/dev_orfao.ex:49` (`varrer`),
+  `apps/engine/lib/engine/sessions/rehydrator.ex:81` (`varrer`)
+- **Teste:** `apps/engine/test/engine/dev/dev_orfao_test.exs` (o órfão fecha
+  com `dev.error` infra + `dev.idle`; o que tem linha durável e o que já está
+  `idle` não; leitura que falha não fecha nada)
+- **Origem:** AT-465 (TP-01 de 09/10: a sessão `63a4e1aa` reagendada pelo
+  heartbeat a cada 30 s por um `dev.working` sem processo)
+### RN-790 — O README de como subir o entregável é critério do DoD que o PO escreve {#rn-790}
+
+- **Regra:** a instrução de kickoff do PO manda incluir, no DoD da história que
+  cria a entrada da aplicação (servidor, CLI, configuração ou persistência) — ou
+  numa história própria —, o critério "README diz como instalar, configurar
+  (variáveis de ambiente obrigatórias e opcionais, com o padrão) e subir a
+  aplicação, e como criar o primeiro acesso, quando houver". O dev agent cumpre
+  o DoD da história, e o gate o julga por ele. Régua de PROMPT, como a
+  [RN-765](#rn-765): nenhuma ferramenta recusa história sem esse critério. A
+  outra variante — o dev agent atualizar o README em toda tarefa que mexe em
+  configuração/entrada — NÃO foi feita: exigiria classificar a tarefa no
+  `AmbienteDoAgente` ou no `report_done`, regra nova de código — declarado.
+- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:555` (`kickoff_instruction`)
+- **Teste:** `apps/engine/test/engine/agents/po_server_test.exs:438` (a
+  instrução de kickoff traz o critério do README)
+- **Origem:** AT-466 (TP-01 de 09/10: o `encurtador-api` saiu com um README só
+  com `npm test`, sem `JWT_SECRET` obrigatório, `DB_PATH`/`PORT`, `npm start`
+  nem como criar o primeiro membro)
 ### RN-792 — Ao declarar o contrato, o Arquiteto recebe as rotas das histórias que o contrato não declara {#rn-792}
 
 - **Regra:** depois de `declare_module_contracts` gravar a versão
