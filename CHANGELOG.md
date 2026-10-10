@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- **web**: o chat da sessão mostra as PRs prontas para merge (gates aprovados, inclusive ADR e infra) com "Mergear" e o cartão de aprovação ali, e as tarefas bloqueadas com motivo e "Desbloquear" (RN-825, RN-826, AT-497).
 - **engine (segurança)**: `decimal` (transitiva, via ecto/postgrex) sobe de 3.1.1 para 3.2.0, que fecha a EEF-CVE-2026-97853 / GHSA-6c27-994x-c52f (alocação sem teto em `Decimal.round/3` pelo argumento `places`, DoS; corrigida a partir da 3.1.2). O `mix hex.audit` do CI volta a passar.
 - **web**: com o mapa de módulos gravado, o composer diz em texto que o próximo passo é "Confirmar arquitetura pronta" para o sistema oferecer a Infra, e sem história promovida diz o motivo em texto, não só no `title` do botão (RN-824, AT-491).
 - **engine**: o recorte do gate de QA pede estado limpo antes da suíte (encerrar o que o próprio projeto deixou de pé), teste de processo que encerre o grupo, e teste pulado por ambiente como observação (RN-817, AT-496); diz o que conta como evidência do ponto de entrada no ambiente do dev e que build de imagem, `docker compose` e rede externa nunca reprovam (RN-818, AT-492); e pede uma varredura por regra antes de emitir o parecer (RN-819, AT-490).

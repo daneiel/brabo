@@ -17308,7 +17308,7 @@ continuam SEM decisão inline (não há `ApprovalCard` para elas).
   (`turnoEmCursoNoLog`), `:532` (`useRetomarTurnoDoLog`);
   `apps/web/src/lib/pendencias-do-projeto.ts:24` (`usePendenciasDoProjeto`),
   `:56` (`separarPendenciasDeOutrasSessoes`);
-  `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:46`
+  `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:59`
   (`PendenciasDeOutrasSessoes`); `apps/web/src/routes/MergearNoChat.tsx:28`
   (`prAbertaDaAcao`), `:56` (`jaHaMergeDaPr`), `:89` (`MergearNoChat`);
   `apps/web/src/routes/SessionPage.tsx:154` (`podeDecidir`), `:281`
@@ -23442,3 +23442,38 @@ sem dizer qual.
   motivo vem em texto visível")
 - **Origem:** AT-491 (opção a: o gesto humano é desenho, o defeito era a tela
   não avisar)
+
+### RN-825 — O chat mostra as PRs prontas para merge e propõe o merge ali {#rn-825}
+
+- **Regra:** acima do fio da sessão, ao lado das pendências de outras sessões
+  ([RN-626](#rn-626)), a fila "PRs prontas para merge" lista as PRs ABERTAS do
+  projeto cuja tarefa teve os gates aprovados (`gateStatus: awaiting_user`) ou
+  que não têm tarefa (ADR, infra), e que não têm `git_merge` pendente de OUTRA
+  sessão (essa já está em "Merges de PR"). "Mergear" PROPÕE o merge nesta
+  sessão, pelo mesmo endpoint da aba PRs, e o cartão de aprovação aparece na
+  linha da PR com a ação devolvida pela api ([RN-822](#rn-822)); o merge segue
+  manual ([RN-418](#rn-418)). Cada fila tem título e contagem próprios, nunca
+  somados ([RN-467](#rn-467)), e as leituras são as que a aba PRs e o backlog
+  já fazem (mesmas `queryKey`s, backlog a 15 s), sem poll novo apertado
+  ([RN-579](#rn-579)).
+- **Onde:** `apps/web/src/lib/prontas-e-bloqueadas.ts:30` (`prsProntasParaMerge`),
+  `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:85` (`prontas`)
+- **Teste:** `apps/web/src/components/PendenciasDeOutrasSessoes.test.tsx`
+  ("a PR com os gates aprovados aparece, a com gate pendente não, e Mergear
+  mostra o cartão ali")
+- **Origem:** AT-497 (TP-01 conduzido pelo chat do Criativo)
+
+### RN-826 — O chat lista as tarefas bloqueadas e desbloqueia ali {#rn-826}
+
+- **Regra:** na mesma área, a fila "Tarefas bloqueadas" lista as tarefas
+  `blocked` do backlog com título e motivo (`blockedReason`, ou "sem motivo
+  registrado"), e "Desbloquear" chama o mesmo `unblock` da Visão geral
+  ([RN-794](#rn-794)) com a sessão aberta. O retorno é dito na linha da
+  tarefa: sucesso em texto, e a recusa com a frase da api. Papel abaixo de
+  `developer` vê a fila com o botão inerte e o motivo em texto.
+- **Onde:** `apps/web/src/lib/prontas-e-bloqueadas.ts:53` (`tarefasBloqueadas`),
+  `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:142` (`desbloquear`)
+- **Teste:** `apps/web/src/components/PendenciasDeOutrasSessoes.test.tsx`
+  ("CASO DE FALHA: desbloquear com erro diz o erro da api na linha da tarefa")
+- **Origem:** AT-497
+
