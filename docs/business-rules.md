@@ -23507,7 +23507,7 @@ sem dizer qual.
   Agente fora do roster (ou sem id) degrada para o ícone
   genérico, nunca para caixa vazia.
 - **Onde:** `apps/web/src/components/ui/AvatarDoAgente.tsx:22` (`AvatarDoAgente`),
-  `apps/web/src/routes/SessionFio.tsx:278` (`BolhaDoStreaming`),
+  `apps/web/src/routes/SessionFio.tsx:284` (`BolhaDoStreaming`),
   `apps/web/src/routes/session-timeline-montagem.tsx:120` (`montarTimeline`)
 - **Teste:** `apps/web/src/routes/SessionFio.at503.test.tsx` ("a bolha
   persistida usa o avatar do agente, não o do modelo; o modelo segue no chip",
@@ -23618,3 +23618,22 @@ sem dizer qual.
   ("…e soma os arquivos da execução ligada"; falha: "corta a lista de arquivos
   no teto e devolve o total real; não lê sessão sem ligação")
 - **Origem:** AT-498
+
+### RN-836 — O fio oferece "ir ao fim" quando chega conteúdo para quem subiu {#rn-836}
+
+- **Regra:** com a pessoa longe do fim do fio (a guarda dos 120px da
+  [RN-173](business-rules/autenticacao.md#rn-173)) e o fio tendo ganho mensagem ou cartão de aprovação
+  desde que ela saiu do fim, um botão flutuante no rodapé da área que rola
+  oferece o salto ao fim, contando as mensagens novas ("3 mensagens novas",
+  plural do i18next com `_zero`/`_one`/`_other`). Cartão de aprovação novo
+  não soma ao número: REALÇA o botão e troca o rótulo por "Há uma aprovação
+  esperando". O botão tem rótulo acessível próprio, some ao chegar ao fim e
+  nunca aparece para quem está no fim — ali a rolagem automática da RN-173
+  continua mandando, e o botão só observa.
+- **Onde:** `apps/web/src/lib/session-rolagem.ts:206` (`estadoDoIrAoFim`),
+  `apps/web/src/lib/session-rolagem.ts:227` (`useIrAoFimDoFio`),
+  `apps/web/src/routes/IrAoFimDoFio.tsx:10` (`IrAoFimDoFio`)
+- **Teste:** `apps/web/src/routes/IrAoFimDoFio.test.tsx` ("caminho feliz: fora
+  do fim e com mensagens novas, mostra o contador…", "aprovação nova realça o
+  botão"; falha: "no fim, conteúdo novo não mostra botão")
+- **Origem:** AT-506 (Melhorias de UX do Chat, item 1.3)
