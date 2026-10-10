@@ -59,7 +59,8 @@
       "sem_sessao": "Este projeto ainda não tem sessão — a ação precisa de uma para ser proposta."
     },
     "ressalva": {
-      "runner_pode_estar_desconectado": "A pasta foi confirmada um dia por um agente local; se ele não estiver rodando agora, a ação falha ao ser aprovada."
+      "runner_pode_estar_desconectado": "A pasta foi confirmada um dia por um agente local; se ele não estiver rodando agora, a ação falha ao ser aprovada.",
+      "registrado_rodando_observado_parado": "O registro diz rodando, mas o container está parado (o Docker reiniciou?). Subir de novo religa o mesmo container, sem precisar parar antes."
     },
     "semContainer": {
       "nuncaProvisionado": "Nunca provisionado: não há container para parar nem remover.",

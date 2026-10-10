@@ -1207,7 +1207,9 @@ o RACIOCÍNIO da triagem, que continua valendo.
   `'none' | 'egress'`, e o bind é UMA pasta de tipo MARCADO com destino
   constante — não há lista de mounts. O `docker run` composto por `DockerViaCli` leva `--init` como CONSTANTE (RN-738):
   o `sleep infinity` de espera é PID 1 e não recebe SIGTERM sem init, e `stop`
-  levava 10 s até o kill (`Exited (137)`). `pidsLimit` entrou na spec no ADR 0130,
+  levava 10 s até o kill (`Exited (137)`); e `--restart unless-stopped`, também
+  CONSTANTE (RN-820): daemon reiniciado religa o container, `stop` explícito não —
+  nunca `always`. `pidsLimit` entrou na spec no ADR 0130,
   porque o artefato do Arquiteto sempre teve três números e descartar um faria
   ele prometer um teto que o container não recebe. Do lado do RUNNER, essa
   porta deixou de ser só provada por `--self-test-docker` (ADR 0112/0128) e

@@ -60,7 +60,14 @@ export type RessalvaDeSubida =
    * presença — quem sabe do AGORA é o canal Phoenix, no engine —, então a tela
    * DIZ que não sabe em vez de prometer que sabe.
    */
-  'runner_pode_estar_desconectado';
+  | 'runner_pode_estar_desconectado'
+  /**
+   * Registrado `running`, observado `exited` (AT-494, RN-821): o container
+   * caiu por fora do Brabo (daemon reiniciado). Subir de novo é a mesma ação
+   * de subida — a api mantém `running` e o broker faz `docker start` no
+   * container parado —, e a tela DIZ por que oferece subir algo "rodando".
+   */
+  | 'registrado_rodando_observado_parado';
 
 export type DecisaoDeSubida =
   | { pode: true; acao: AcaoDeSubida; ressalva: RessalvaDeSubida | null }
@@ -112,7 +119,11 @@ export function decidirSubida(input: {
   const { item, papel, temSessao } = input;
   const status = item.registrado?.status ?? null;
 
-  if (status === 'running' || status === 'provisioning') {
+  // AT-494 (RN-821): registro `running` com o daemon dizendo `exited` não é
+  // "já está de pé" — é o container que caiu por fora (daemon reiniciado).
+  // Só o OBSERVADO destrava; sem observação, o registro continua valendo.
+  const caiuPorFora = status === 'running' && item.observado?.estado === 'exited';
+  if ((status === 'running' && !caiuPorFora) || status === 'provisioning') {
     return { pode: false, motivo: 'ja_esta_de_pe' };
   }
   // Antes da imagem, de propósito: decidir a imagem não destrava nada numa
@@ -142,8 +153,11 @@ export function decidirSubida(input: {
   return {
     pode: true,
     acao: acaoDeSubidaDoModo(item.executionMode),
-    ressalva:
-      item.executionMode === 'runner' ? 'runner_pode_estar_desconectado' : null,
+    ressalva: caiuPorFora
+      ? 'registrado_rodando_observado_parado'
+      : item.executionMode === 'runner'
+        ? 'runner_pode_estar_desconectado'
+        : null,
   };
 }
 

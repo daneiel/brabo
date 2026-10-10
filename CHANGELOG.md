@@ -6,6 +6,8 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- **docker-port**: o container de projeto nasce com `--restart unless-stopped` (constante, como o `--init`) e volta sozinho quando o daemon do Docker reinicia; `docker stop` explícito continua parando (RN-820, AT-494).
+- **web**: na `/containers`, registro "rodando" com o container observado parado oferece "Subir de novo" sem exigir Parar antes, dizendo por quê (RN-821, AT-494).
 - **docker-port**: o comando executado no container que estoura o teto volta como estouro (`exitCode: -1`, `timedOut: true`) e não mais como "exit 0" — o cliente `docker exec` saía limpo ao receber o SIGTERM —, e o grupo de processos dele é morto dentro do container (RN-807, AT-482).
 - **api**: o recorte do Jev não tira mais do Arquiteto `assign_story_modules` nem `choose_project_image` — ele encerrava dizendo que a ferramenta não estava disponível, com histórias sem módulo (RN-809, AT-481).
 - **engine**: a tarefa reaberta depois de bloqueio não abre uma segunda PR da mesma branch: a PR aberta da branch é reaproveitada (RN-812, AT-485).

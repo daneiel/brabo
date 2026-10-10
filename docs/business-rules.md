@@ -9825,7 +9825,7 @@ reparável (termina em toast), não o invisível.
   (`sem_container_registrado`) e `:101` (`elegivelParaVerificacao`, que é o que
   mantém o orçamento intacto);
   `apps/api/src/interfaces/http/containers/containers-overview.controller.ts:60`;
-  `apps/web/src/routes/containers-subida.ts:107` (`decidirSubida`, a regra
+  `apps/web/src/routes/containers-subida.ts:114` (`decidirSubida`, a regra
   inteira, pura);
   `apps/web/src/routes/ContainersPage.tsx:119` (os dois payloads)
 - **Teste:**
@@ -14173,7 +14173,7 @@ instalação sem broker continua possível pelo agente.
 - **Código:** `apps/api/src/application/use-cases/containers/obter-visao-geral-de-containers.use-case.ts:71`
   (o campo), `:150` (lido uma vez por carga);
   `apps/api/src/interfaces/http/containers/dto/containers.response.dto.ts:408`;
-  `apps/web/src/routes/containers-subida.ts:33` (o motivo), `:87`
+  `apps/web/src/routes/containers-subida.ts:33` (o motivo), `:94`
   (`usaBroker`), `:122` (a recusa);
   `apps/web/src/locales/{pt-BR,en}/containers.json`
   (`actions.bloqueio.sem_broker_na_instalacao`)
@@ -15518,8 +15518,8 @@ quem chama sem ser o agente, o que é o desejado — a aprovação só terminari
 direta.
 
 - **Código:** `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:90`
-  (recusa 409), `apps/web/src/routes/containers-subida.ts:167`
-  (`semBrokerParaCicloDeVida`) e `:178` (`conversaoSemBroker`),
+  (recusa 409), `apps/web/src/routes/containers-subida.ts:181`
+  (`semBrokerParaCicloDeVida`) e `:192` (`conversaoSemBroker`),
   `apps/web/src/routes/settings/ExecutionModeSection.tsx` (botão inerte),
   `apps/engine/lib/engine/infra/infra_lead_server.ex:796`
   (`motivo_da_recusa_da_api`)
@@ -23285,3 +23285,36 @@ sem dizer qual.
   recorte pede todas as lacunas numa volta só")
 - **Origem:** AT-487 (TP-01 de 10/10, tarefa `c7ced5a2`: duas reprovações por
   duas lacunas que já existiam na entrega original)
+
+### RN-820 — O container de projeto volta sozinho quando o daemon reinicia {#rn-820}
+
+- **Regra:** o `docker run` composto pelo `DockerViaCli` leva
+  `--restart unless-stopped` como CONSTANTE, ao lado do `--init` da
+  [RN-738](#rn-738) — a spec não ganha campo, e a contenção do ADR 0130 não
+  muda. Um daemon reiniciado (atualização do sistema) religa o container de
+  projeto; um `docker stop` explícito (o `container_stop` do ciclo de vida) NÃO
+  é desfeito, porque `unless-stopped` não religa o que foi parado à mão — nunca
+  `always`. Medido: container `unless-stopped` parado com `docker stop` segue
+  `exited` com `RestartCount=0`.
+- **Onde:** `packages/docker-port/src/docker-cli.ts:637` (`argsDeCriacao`)
+- **Teste:** `packages/docker-port/src/docker-cli.spec.ts` ("cria o container
+  com rótulo gerenciado, UM bind e as capabilities derrubadas")
+- **Origem:** AT-494 (o daemon reiniciado deixou todo container de projeto
+  `Exited (143)` com o registro `running`)
+
+### RN-821 — Registrado rodando e observado parado oferece "Subir de novo" {#rn-821}
+
+- **Regra:** na `/containers`, a linha com registro `running` e estado
+  OBSERVADO `exited` deixa de ser "já está de pé" e oferece a ação de subida do
+  modo (`acaoDeSubidaDoModo`), sem exigir Parar antes, com a ressalva
+  `registrado_rodando_observado_parado` em texto. Só o observado destrava: sem
+  observação, ou observado `running`, o registro continua valendo. A api já
+  aceitava: `ExecuteContainerStartUseCase` com linha `running` não transiciona
+  nada (a máquina de estados do ADR 0081 não muda) e o broker faz `docker
+  start` no container parado.
+- **Onde:** `apps/web/src/routes/containers-subida.ts:125` (`caiuPorFora`)
+- **Teste:** `apps/web/src/routes/containers-subida.test.ts` ("AT-494:
+  registrado running e observado exited oferece subir de novo, com a ressalva"
+  e "AT-494: registrado running e observado running (ou não observado) continua
+  já de pé")
+- **Origem:** AT-494

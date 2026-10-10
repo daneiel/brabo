@@ -92,6 +92,30 @@ describe('decidirSubida', () => {
     expect(decisao).toEqual({ pode: false, motivo: 'sem_broker_na_instalacao' });
   });
 
+  it('AT-494: registrado running e observado exited oferece subir de novo, com a ressalva', () => {
+    const observado = { containerId: 'c1', nome: 'brabo-core', estado: 'exited' as const, imagem: 'node', iniciadoEm: null };
+    const decisao = decidirSubida({
+      item: item({ registrado: registro(), observado }),
+      papel: 'maintainer',
+      temSessao: true,
+    });
+
+    expect(decisao).toEqual({
+      pode: true,
+      acao: 'container_start',
+      ressalva: 'registrado_rodando_observado_parado',
+    });
+  });
+
+  it('AT-494: registrado running e observado running (ou não observado) continua já de pé', () => {
+    const observado = { containerId: 'c1', nome: 'brabo-core', estado: 'running' as const, imagem: 'node', iniciadoEm: null };
+    for (const o of [observado, null]) {
+      expect(
+        decidirSubida({ item: item({ registrado: registro(), observado: o }), papel: 'maintainer', temSessao: true }),
+      ).toEqual({ pode: false, motivo: 'ja_esta_de_pe' });
+    }
+  });
+
   it('container já de pé continua dizendo isso, mesmo sem broker', () => {
     const decisao = decidirSubida({
       item: item({ registrado: registro(), brokerConfigurado: false }),
