@@ -6775,7 +6775,7 @@ caminho que a execução em container substitui; o que muda agora é só a
   `apps/api/src/application/use-cases/execution/activate-execution.use-case.ts:176`
   (o 400), `apps/api/src/interfaces/http/execution/execution.controller.ts:74`
   (a anotação de OpenAPI, que prometia 409 para dois casos que nunca foram
-  409), `apps/web/src/routes/ProjectOverviewTab.tsx:437`
+  409), `apps/web/src/routes/ProjectOverviewTab.tsx:452`
   (`mensagemDaApi`), `apps/engine/lib/engine/actions/workspace.ex:61`
   (a mensagem da lacuna que fica)
 - **Teste:**
@@ -17818,7 +17818,7 @@ numa delas é inferência pelos 106 ≈ 9 × 12.
   `apps/web/src/routes/ProjectPage.tsx:77` (os contadores do trilho);
   `apps/web/src/routes/ContainersPage.tsx:62` (`useLatestSession`, sem poll);
   `apps/web/src/routes/ProjectExecutorsTab.tsx:197` (`invalidador`),
-  `apps/web/src/routes/ProjectOverviewTab.tsx:179` (`invalidador`);
+  `apps/web/src/routes/ProjectOverviewTab.tsx:191` (`invalidador`);
   `apps/web/src/components/EsperaDoRunner.tsx:73` (`confirmadoPor`)
 - **Teste:** `apps/web/src/routes/duas-abas.orcamento.test.tsx` (as duas abas
   com canal vivo, com rajada, com o canal que nunca conecta, e `/containers`;
@@ -18085,14 +18085,14 @@ o do chat.
   `:121` (os merges da mesma leitura);
   `apps/web/src/routes/ProjectApprovalsTab.tsx:111` (`pendentesQuery`), `:115`
   (`sessaoDeTrabalho`), `:322` (`handleApprove`);
-  `apps/web/src/routes/ProjectOverviewTab.tsx:102` (`pendentesDoProjeto`);
+  `apps/web/src/routes/ProjectOverviewTab.tsx:114` (`pendentesDoProjeto`);
   `apps/web/src/routes/ProjectExecutorsTab.tsx:98` (`pendentesQuery`), `:290`
   (o bloco); `apps/web/src/routes/code/CodeShell.tsx:101` (`pendentesQuery`);
   `apps/web/src/routes/SessionPage.tsx:782` (o bloco sem `isActive`);
   `apps/web/src/lib/canal-vivo.ts:123` (`alvosDoEvento`), `:180`
   (a chave por prefixo); `apps/web/src/components/PendenciasDeOutrasSessoes.tsx`
   (`porSessao`, `presenca`); `apps/web/src/components/ApprovalCard.tsx`
-  (`detalheRecolhido`); `apps/web/src/lib/hooks.ts:450`
+  (`detalheRecolhido`); `apps/web/src/lib/hooks.ts:455`
   (`useProjectPendingActions`); `apps/web/src/lib/precisa-de-voce.ts`
   (`acoesPendentes`)
 - **Teste:** `apps/web/src/routes/ProjectApprovalsTab.test.tsx` (a pendente da
@@ -18418,7 +18418,7 @@ toda aba — a mesma lacuna que a [RN-632](#rn-632) declara.
 
 - **Código:** `apps/web/src/lib/query-policy.ts:111`
   (`FRESCOR_DA_CONFIGURACAO_MS`); `apps/web/src/lib/hooks.ts:29`
-  (`useCurrentWorkspaceWithRole`), `:530` (`useProficiency`);
+  (`useCurrentWorkspaceWithRole`), `:535` (`useProficiency`);
   `apps/web/src/routes/settings/InstructionVersionsSection.tsx:31`
   (`instruction-versions`, sem poll); as seções de `apps/web/src/routes/settings/`
   e `apps/web/src/components/ModelCatalogSection.tsx`;
@@ -21947,15 +21947,11 @@ sem dizer qual.
   raciocina por ali e o buraco não existe — declarado, sem mudança. A forma do
   campo foi lida da doc do OpenRouter (Reasoning Tokens: `reasoning.max_tokens`;
   o `max_tokens` da chamada tem de ser maior que ele).
-  > **TODO(humano):** provar com credencial real que o
-  > `anthropic/claude-haiku-5.5` respeita o orçamento (smoke, com aviso ao
-  > dono antes de usar a chave).
+  **Revisada pela [RN-782](#rn-782)/[RN-783](#rn-783) (AT-467):** a medição
+  com credencial de 10/10 mostrou que o Haiku 5.5 IGNORA `reasoning.max_tokens`;
+  o campo deixou de ser enviado e a folga no `max_tokens` ficou.
 - **Onde:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:48`
-  (`ORCAMENTO_DE_RACIOCINIO`), `:469` (`raciocinio`),
-  `apps/api/src/infrastructure/llm/openrouter-provider.ts:223`
-  (`campoDeRaciocinioOpenRouter`),
-  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:188`
-  (`supportsReasoning`)
+  (`ORCAMENTO_DE_RACIOCINIO`), `:470` (`controla`)
 - **Teste:** `apps/api/test/infrastructure/llm/openai-compatible-provider.contract.spec.ts`
   (`raciocínio com orçamento próprio (RN-741)`: orçamento e teto somado; sem
   raciocínio o corpo não muda; provider sem campo não inventa orçamento)
@@ -22590,6 +22586,81 @@ sem dizer qual.
 - **Origem:** AT-454 (TP-01 de 09/10: com 17 tarefas no backlog, o Arquiteto
   disse "faltam as tarefas" e "não consigo verificá-las daqui")
 
+### RN-788 — Decisões e linha do tempo do time não afirmam sobre o que não leram {#rn-788}
+
+- **Regra:** no painel "Contexto da sessão", "Decisões registradas" segue o
+  mesmo recorte declarado das regras ([RN-701](#rn-701)): com eventos antes da
+  janela, o contador diz "N na janela · há mais antes" e o vazio diz que pode
+  haver decisões nos anteriores, nunca "Nenhuma decisão registrada nesta
+  sessão". Na Visão geral, a "Linha do tempo do time" lê a sessão de EXECUÇÃO
+  quando ela existe (a mesma da sidebar) e diz isso no subtítulo quando ela
+  não é a mais recente. Nenhuma requisição a mais: as chaves são as que a
+  sidebar já assina, e `useActiveExecutionSession` ganha `staleTime` igual ao
+  intervalo, para o segundo assinante não refazer a busca ([RN-632](#rn-632)).
+- **Onde:** `apps/web/src/routes/ContextAside.tsx:388` (`trailing`),
+  `apps/web/src/routes/ProjectOverviewTab.tsx:86` (`linhaDoTempoNaExecucao`)
+- **Teste:** `apps/web/src/routes/SessionPage.painel-e-agrupamento.test.tsx`
+  (decisão fora da janela não vira 0; sessão inteira na janela diz vazio),
+  `apps/web/src/routes/ProjectOverviewTab.test.tsx` (lê a sessão de execução e
+  diz; sem execução, lê a mais recente), `apps/web/src/routes/duas-abas.orcamento.test.tsx`
+  (a carga da Visão geral segue no teto)
+- **Origem:** AT-463 (TP-01 de 09/10)
+
+### RN-789 — Na tela de Sessão, a sidebar marca a aba onde a sessão está listada {#rn-789}
+
+- **Regra:** a tela de Sessão publica a aba que o TIPO da sessão implica —
+  criativa em "Criativo" (a lista de ideações), consultiva em "Chat" —, e a
+  sidebar a marca em vez de sempre "Chat" ([RN-751](#rn-751)); o clique leva à
+  lista onde a sessão aparece, que é o caminho de volta a ela. Sessão ainda
+  carregando, ou aba publicada de outro projeto, cai em "Chat". Sem leitura
+  nova: o tipo já veio com a sessão.
+- **Onde:** `apps/web/src/routes/project-tabs.ts:383` (`abaDaRota`),
+  `apps/web/src/lib/session-kind.ts:94` (`usePublicarAbaDaSessao`)
+- **Teste:** `apps/web/src/lib/session-rolagem-fim.test.ts` (criativa marca
+  "Criativo"; aba de outro projeto ou inválida não vale)
+- **Origem:** AT-463 (TP-01 de 09/10)
+### RN-782 — Aceitar o parâmetro de raciocínio não é pedir raciocínio {#rn-782}
+
+- **Regra:** revisa a [RN-741](#rn-741). O modelo com `supportsReasoning` (no
+  OpenRouter, `reasoning` em `supported_parameters` — 341 de 478 modelos, ou
+  seja, "aceita o parâmetro", não "raciocina") continua com a FOLGA no teto:
+  `max_tokens` = saída visível (RN-734) + `ORCAMENTO_DE_RACIOCINIO` (4096). O
+  que sai é o campo `reasoning: { max_tokens }`: ele NÃO é mais enviado a
+  modelo nenhum. Medição paga de 10/10 (AT-467): no
+  `anthropic/claude-haiku-4.5`, que sem o campo não raciocina, ele LIGAVA o
+  raciocínio em 74% das chamadas a 2,8× o custo; no
+  `anthropic/claude-haiku-5.5` ele era IGNORADO (pedido 1024, gastou 8192 só de
+  raciocínio). A decisão do que pedir mora num ponto só, `opcoesDeRaciocinio`,
+  chamado pelos três casos de uso de turno. O TODO(humano) da RN-741 fecha com
+  essa medição.
+- **Onde:** `apps/api/src/domain/llm/raciocinio-do-agente.ts:14`
+  (`opcoesDeRaciocinio`), `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:470`
+  (`controla`), `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:189`
+  (`opcoesDeRaciocinio`)
+- **Teste:** `apps/api/test/infrastructure/llm/openai-compatible-provider.contract.spec.ts`
+  (`modelo que raciocina: folga no teto e NENHUM campo de raciocínio (RN-782)`,
+  corpo byte a byte), `apps/api/test/domain/llm/raciocinio-do-agente.spec.ts`
+- **Origem:** AT-467 (medição paga de 10/10)
+
+### RN-783 — Os dev agents de execução rodam com o raciocínio desligado {#rn-783}
+
+- **Regra:** decisão do dono de 10/10. Para agente `dev-<modulo>` (o Dev Lead,
+  `dev-lead`, é conversacional e fica de fora) com modelo de
+  `supportsReasoning`, o provider que sabe dizer "desligado" (hoje só o
+  OpenRouter, `campoDeRaciocinioDesligado`) manda `reasoning: { enabled: false }`,
+  mantendo a folga da [RN-782](#rn-782). Medido no Haiku 5.5: 0 de 8 respostas
+  cortadas e −42% de custo. Conversacionais e gates não mudam (sem campo), e
+  modelo sem `supportsReasoning` não manda nada. Não é silencioso: a ajuda da
+  faceta "thinking" do catálogo de modelos diz que nos dev agents de execução o
+  raciocínio vai desligado (o mínimo escolhido; o seletor e a bolha não mudam).
+- **Onde:** `apps/api/src/domain/llm/raciocinio-do-agente.ts:28`
+  (`raciocinioDesligadoParaOAgente`), `apps/api/src/infrastructure/llm/openrouter-provider.ts:224`
+  (`campoDeRaciocinioDesligadoOpenRouter`)
+- **Teste:** `apps/api/test/infrastructure/llm/openai-compatible-provider.contract.spec.ts`
+  (`dev agent: raciocínio desligado explícito, com a folga (RN-783)`),
+  `apps/api/test/domain/llm/raciocinio-do-agente.spec.ts` (dev-* desliga;
+  criativo e dev-lead só a folga; sem `supportsReasoning`, nada)
+- **Origem:** AT-467 (decisão do dono de 10/10)
 ### RN-784 — As leituras de estado do Arquiteto entram no piso do Jev {#rn-784}
 
 - **Regra:** revisa a [RN-758](#rn-758) e a [RN-772](#rn-772) (decisão do
