@@ -17357,8 +17357,8 @@ inscrição no Wake (lacuna aceita do ADR 0086); o `GateRescuer` reinicia a áre
 inteira (ADR 0067), não retoma o `ctx`. Esta regra não muda o ADR 0090 (o
 momento do QA-estratégia) nem o teto de iterações do subagente.
 
-- **Código:** `apps/engine/lib/engine/gates/qa_lead_server.ex:112`
-  (`handle_info`), `:195` (`tratar_resultado`), `:230` (resultado desconhecido)
+- **Código:** `apps/engine/lib/engine/gates/qa_lead_server.ex:127`
+  (`handle_info`), `:233` (`tratar_resultado`), `:230` (resultado desconhecido)
 - **Testes:** `apps/engine/test/engine/gates/qa_lead_server_test.exs:325`
   (segunda suspensão na retomada: fica suspenso, não decide nada, e a segunda
   decisão conclui a área); `:278` (uma suspensão, o caminho feliz)
@@ -19534,9 +19534,9 @@ saíram, e `artifact.plano_de_teste` passa a exigir `taskId`. Declarado e não
 decidido aqui: se os critérios executáveis do plano devem virar linhas
 OBRIGATÓRIAS da `coverageMatrix` (e portanto reprovar entrega).
 
-- **Onde:** `apps/engine/lib/engine/gates/qa_lead_server.ex:152` (`plano_de_teste_da_entrega`),
-  `:528` (`plano_de_teste_da_entrega`), `:552` (`plano_ja_emitido`),
-  `:594` (`arquivos_alterados`);
+- **Onde:** `apps/engine/lib/engine/gates/qa_lead_server.ex:190` (`plano_de_teste_da_entrega`),
+  `:567` (`plano_de_teste_da_entrega`), `:568` (`plano_ja_emitido`),
+  `:573` (`arquivos_alterados`);
   `apps/engine/lib/engine/gates/qa_estrategia_agent.ex:86` (`run`),
   `:104` (`token_budget_micros`), `:175` (`descrever_arquivos`);
   `apps/engine/lib/engine/gates/qa_automacao_agent.ex:173` (`com_o_plano`);
@@ -23016,7 +23016,7 @@ sem dizer qual.
   com flag antes do script (`pnpm --filter x test`), flags de CLI do próprio
   projeto e comando que não é de Node.
 - **Onde:** `apps/engine/lib/engine/gates/conferencia_do_readme.ex:28`
-  (`conferir`), `apps/engine/lib/engine/gates/qa_lead_server.ex:591`
+  (`conferir`), `apps/engine/lib/engine/gates/qa_lead_server.ex:628`
   (`conferencia_do_readme`)
 - **Teste:** `apps/engine/test/engine/gates/conferencia_do_readme_test.exs`
 - **Origem:** AT-475
@@ -23056,3 +23056,41 @@ sem dizer qual.
   (`agentesDoPlano`)
 - **Teste:** `apps/web/src/components/ApprovalCard.modo-automatico-do-plano.test.tsx`
 - **Origem:** AT-476 (TP-01 de 10/10)
+### RN-805 — O plano de teste gravado é o que a ferramenta aceitou {#rn-805}
+
+- **Regra:** `emit_plano_de_teste` valida os argumentos JÁ normalizados
+  ([RN-719](#rn-719): `criteriosExecutaveis` em string JSON vira lista), e o
+  hook que encerra o laço da QA-estratégia lê `criteriosExecutaveis` pela MESMA
+  normalização (`Termination.lista/1`, a da [RN-787](#rn-787)). Antes, a tool
+  dizia "plano registrado: 9 critérios", o hook levava a string crua, o
+  artefato era recusado (`:criterios_vazios`), o agente devolvia `{:ok, plano}`
+  mesmo assim e a Automação caía no `Enum` da string — o QA Lead morria e o
+  gate ficava parado até o resgate (18 min no uso real). Artefato recusado
+  agora é falha NOMEADA da QA-estratégia (`agent.error`, origem `codigo`) e a
+  revisão segue sem plano, como já seguia quando o plano falha; a Automação
+  também normaliza os critérios que recebe.
+- **Onde:** `apps/engine/lib/engine/gates/hooks/termination_plano_de_teste.ex:23`
+  (`criterios_executaveis`), `apps/engine/lib/engine/gates/qa_estrategia_agent.ex:216`
+  (`emit_returning`)
+- **Teste:** `apps/engine/test/engine/gates/qa_estrategia_agent_test.exs`
+  ("critérios em string JSON viram lista: o plano é gravado e devolvido como lista")
+- **Origem:** AT-478 (TP-01 de 10/10)
+
+### RN-806 — Um ciclo de QA por tarefa: pedido anterior ao veredito é descartado {#rn-806}
+
+- **Regra:** o QA Lead roda UM ciclo por task. Pedido `{:run, task}` para a
+  task cujo ciclo está suspenso esperando decisão é ignorado, e ao fim de um
+  ciclo (veredito ou bloqueio) todo `{:run, task}` que esperava na caixa do
+  processo é descartado — foi pedido antes de o veredito existir, e a
+  correção legítima do dev só nasce depois dele. No uso real o resgate
+  ([RN-722](#rn-722)) disparou o ciclo duas vezes no mesmo instante, e o
+  segundo, rodando depois do aprovado, gravou um parecer contrário sobre a
+  tarefa já mergeada. De FORA, declarado: duas réplicas do engine (a caixa é
+  por processo, a mesma ressalva do `GateRescuer`) e a causa da dupla
+  varredura do resgate, que não foi corrigida aqui.
+- **Onde:** `apps/engine/lib/engine/gates/qa_lead_server.ex:106` (`handle_cast`),
+  `apps/engine/lib/engine/gates/qa_lead_server.ex:157` (`descartar_pedidos_obsoletos`)
+- **Teste:** `apps/engine/test/engine/gates/qa_lead_server_test.exs` ("pedido
+  repetido que esperava na caixa é descartado ao fim do ciclo"; "pedido para a
+  task com ciclo suspenso não abre um segundo")
+- **Origem:** AT-478 (TP-01 de 10/10)

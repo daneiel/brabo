@@ -199,7 +199,7 @@ defmodule Engine.Gates.QaEstrategiaAgent do
     # schema registrado em `Engine.Harness.ArtifactSchemas` (mesmo caminho de
     # `qa_verdict`/`task_blocked`) — payload inválido vira `qa-estrategia.error`
     # em vez de gravar um artefato que ninguém sabe ler.
-    ArtifactEmitter.emit(project_id, session_id, "qa-estrategia", "plano_de_teste", %{
+    payload = %{
       storyId: Map.get(story, "id"),
       # ADR 0192: o plano é da ENTREGA — é por `taskId` que o `QaLeadServer`
       # o reencontra na rodada de correção seguinte em vez de pagar outro.
@@ -207,9 +207,27 @@ defmodule Engine.Gates.QaEstrategiaAgent do
       planoDeTeste: plano.plano_de_teste,
       criteriosExecutaveis: plano.criterios_executaveis,
       estrategiaDeAutomacao: plano.estrategia_de_automacao
-    })
+    }
 
-    {:ok, plano}
+    # RN-805 (AT-478): artefato recusado NÃO é plano — devolver `{:ok, plano}`
+    # aqui entregava à Automação um plano que nunca foi gravado (e, no uso
+    # real, de tipo errado), derrubando o QA Lead e deixando o gate parado até
+    # o resgate. A recusa vira falha nomeada, e a revisão segue sem plano.
+    case ArtifactEmitter.emit_returning(
+           project_id,
+           session_id,
+           "qa-estrategia",
+           "plano_de_teste",
+           payload
+         ) do
+      {:error, motivo} ->
+        motivo = "artefato plano_de_teste recusado: #{inspect(motivo)}"
+        emit_falha(project_id, session_id, story, "codigo", motivo)
+        {:error, motivo}
+
+      _ ->
+        {:ok, plano}
+    end
   end
 
   defp handle_outcome(outcome, project_id, session_id, _task_id, story) do
