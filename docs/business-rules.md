@@ -22778,8 +22778,8 @@ sem dizer qual.
   (rota, função, evento), a entrega que segue o contrato não é reprovada por
   isso: o parecer nomeia a DIVERGÊNCIA no `resumo` (história diz X, contrato
   diz Y), para o usuário e o Arquiteto. Régua de PROMPT, como a
-  [RN-765](#rn-765). O Arquiteto NÃO passou a conferir o contrato contra as
-  rotas citadas nas histórias — declarado.
+  [RN-765](#rn-765). Desde a [RN-792](#rn-792) o Arquiteto confere o contrato
+  contra as rotas citadas nas histórias ao declará-lo.
 - **Onde:** `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:163`
   (`moduloDoContrato`), `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:55`
   (`secao_do_contrato`)
@@ -22849,6 +22849,72 @@ sem dizer qual.
   (tarefa com módulo acorda o dev desse módulo)
 - **Origem:** AT-457
 
+### RN-778 — O dev agent órfão fecha por evento novo no boot {#rn-778}
+
+- **Regra:** no boot, para cada sessão não terminal, o dev agent cujo último
+  `dev.*` na sessão é de espera (`dev.working`, `dev.blocked`, `dev.idle_tripped`
+  e os demais que o `GetSessionPendingWorkUseCase` conta) e que NÃO tem linha
+  em `dev_agent_states` NESTA sessão ganha `dev.error` com origem `infra`
+  (`reason: dev_agent_sem_processo`) seguido de `dev.idle`, que o tira da régua
+  do trabalho pendente ([RN-064](business-rules/custo.md#rn-064)). É o molde
+  da [RN-586](#rn-586) para o vocabulário `dev.*`: nunca reexecuta, nunca
+  reescreve evento, e a linha durável é a prova de dono — com ela o
+  `DevRehydrator` religa o agente, e fechá-lo seria matar um agente saudável.
+  Não toca a tarefa: tarefa bloqueada ou com PR esperando o merge continua
+  segurando a sessão de execução vigente pela RN-776 (AT-457), que tem dono
+  humano.
+- **Onde:** `apps/engine/lib/engine/dev/dev_orfao.ex:49` (`varrer`),
+  `apps/engine/lib/engine/sessions/rehydrator.ex:81` (`varrer`)
+- **Teste:** `apps/engine/test/engine/dev/dev_orfao_test.exs` (o órfão fecha
+  com `dev.error` infra + `dev.idle`; o que tem linha durável e o que já está
+  `idle` não; leitura que falha não fecha nada)
+- **Origem:** AT-465 (TP-01 de 09/10: a sessão `63a4e1aa` reagendada pelo
+  heartbeat a cada 30 s por um `dev.working` sem processo)
+### RN-790 — O README de como subir o entregável é critério do DoD que o PO escreve {#rn-790}
+
+- **Regra:** a instrução de kickoff do PO manda incluir, no DoD da história que
+  cria a entrada da aplicação (servidor, CLI, configuração ou persistência) — ou
+  numa história própria —, o critério "README diz como instalar, configurar
+  (variáveis de ambiente obrigatórias e opcionais, com o padrão) e subir a
+  aplicação, e como criar o primeiro acesso, quando houver". O dev agent cumpre
+  o DoD da história, e o gate o julga por ele. Régua de PROMPT, como a
+  [RN-765](#rn-765): nenhuma ferramenta recusa história sem esse critério. A
+  outra variante — o dev agent atualizar o README em toda tarefa que mexe em
+  configuração/entrada — NÃO foi feita: exigiria classificar a tarefa no
+  `AmbienteDoAgente` ou no `report_done`, regra nova de código — declarado.
+- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:555` (`kickoff_instruction`)
+- **Teste:** `apps/engine/test/engine/agents/po_server_test.exs:438` (a
+  instrução de kickoff traz o critério do README)
+- **Origem:** AT-466 (TP-01 de 09/10: o `encurtador-api` saiu com um README só
+  com `npm test`, sem `JWT_SECRET` obrigatório, `DB_PATH`/`PORT`, `npm start`
+  nem como criar o primeiro membro)
+### RN-792 — Ao declarar o contrato, o Arquiteto recebe as rotas das histórias que o contrato não declara {#rn-792}
+
+- **Regra:** depois de `declare_module_contracts` gravar a versão
+  ([RN-684](#rn-684)), a ferramenta lê o backlog do projeto e extrai, de forma
+  determinística e sem LLM, todo `MÉTODO /caminho` (GET, POST, PUT, PATCH,
+  DELETE) do título, descrição, RF e DoD das histórias não arquivadas, e o
+  mesmo padrão das `assinatura`s do contrato. Rota citada por história e
+  ausente da UNIÃO das rotas do contrato (a história do front cita a rota do
+  back) volta no resultado como DIVERGÊNCIA, com o que o contrato declara no
+  mesmo método — entrada do laço ([RN-163](business-rules/autenticacao.md#rn-163)), para o Arquiteto
+  corrigir o contrato ou registrar a decisão. Parâmetro (`:id`, `{id}`), barra
+  final e query string são normalizados; teto de 10 linhas, com o total. A
+  leitura do backlog falhar NÃO recusa a declaração (já gravada): o resultado
+  diz que não conferiu. Fica de fora, declarado: rota que só o contrato
+  declara (não é divergência), história editada DEPOIS da declaração (só é
+  conferida na próxima), e o contrato acompanhar a rota que o DEV renomeou
+  (o QA nomeia a divergência no parecer, [RN-786](#rn-786), mas nada a leva
+  de volta ao Arquiteto).
+- **Onde:** `apps/engine/lib/engine/harness/rotas_do_contrato.ex:37`
+  (`divergencias`), `apps/engine/lib/engine/harness/tools/declare_module_contracts.ex:119`
+  (`conferencia_com_historias`)
+- **Teste:** `apps/engine/test/engine/harness/tools/declare_module_contracts_test.exs`
+  (`GET /painel` na história × `GET /panel` no contrato acusa; rota igual com
+  parâmetro e barra normalizados não acusa; backlog ilegível diz que não
+  conferiu)
+- **Origem:** AT-468 (TP-01 de 09/10: a história pedia `GET /painel`, o
+  contrato declarou `GET /panel`, e ninguém acusou na arquitetura)
 ### RN-794 — Sem execução vigente, a tela diz o que ficou pendente e religa pelo mesmo caminho {#rn-794}
 
 - **Regra:** quando a leitura da sessão de execução vigente ([RN-139](business-rules/autenticacao.md#rn-139))

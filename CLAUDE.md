@@ -315,6 +315,8 @@ estado lido do repositório e não da conversa.
 | A PR de infra mergeada sai de "PRs de infra em revisão" (AT-436) | RN-752 |
 | O seletor de modelo mostra `thinking`; ligar o modo automático não aprova o cartão, e ele diz isso (AT-443) | RN-755 |
 | O SecOps conta o diff da PR contra a `dev` da origem, e o `qa_verdict` grava lista (AT-464) | RN-787 |
+| O dev agent órfão fecha por evento novo no boot, e a sessão deixa de ser reagendada para sempre (AT-465) | RN-778 |
+| O Arquiteto recebe, ao declarar o contrato, as rotas das histórias que ele não declara (AT-468) | RN-792 |
 | Decisões fora da janela, a linha do tempo pela sessão de execução e a aba da sidebar pelo tipo da sessão (AT-463) | RN-788, RN-789 |
 | O raciocínio não é ligado por aceitar o parâmetro, e os dev agents de execução o desligam (AT-467) | RN-782, RN-783 |
 | As leituras de estado do Arquiteto entram no piso do Jev (AT-460) | RN-784 |
@@ -334,6 +336,7 @@ estado lido do repositório e não da conversa.
 | O repositório nasce com `.gitignore` base, o commit do dev exclui dependência instalada e o SecOps a acusa (AT-446) | RN-761 |
 | O bloqueio por ciclo de correção esgotado grava a origem `politica` (AT-450) | RN-762 |
 | Encerrar a sessão de execução para os dev agents e os gates; "Parar execução" na aba Executores (AT-456) | RN-763 |
+| O README de como subir o entregável vira critério do DoD que o PO escreve (AT-466) | RN-790 |
 | Sem execução vigente, Executores e Visão geral dizem as tarefas pendentes e religam pelo mesmo `execution/activate` (AT-469) | RN-794 |
 
 ## Estado atual e aberto

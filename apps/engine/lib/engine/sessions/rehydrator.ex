@@ -77,6 +77,8 @@ defmodule Engine.Sessions.Rehydrator do
       Enum.each(sessions, fn s ->
         try do
           Engine.Agents.TurnoOrfao.varrer(s.project_id, s.session_id)
+          # RN-778: o mesmo para o dev agent sem processo nem linha durável.
+          Engine.Dev.DevOrfao.varrer(s.project_id, s.session_id)
           # RN-673: depois de fechar o turno órfão, acorda quem tem mensagem
           # esperando na fila — ela é lida, o turno interrompido não é refeito.
           Engine.Agents.FilaDeMensagens.acordar_pendentes(s.project_id, s.session_id)

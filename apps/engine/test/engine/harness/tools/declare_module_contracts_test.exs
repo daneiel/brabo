@@ -85,4 +85,48 @@ defmodule Engine.Harness.Tools.DeclareModuleContractsTest do
     assert texto =~ "exige `contratos`"
     refute_received {:module_contracts_declared, _}
   end
+
+  # RN-792 (AT-468): o caso real do TP-01 de 2026-10-09.
+  defp backlog_com(texto) do
+    [%{"stories" => [%{"title" => "Painel", "description" => texto, "archivedAt" => nil}]}]
+  end
+
+  defp contrato_com(assinatura) do
+    [%{"modulo" => "api", "expoe" => [%{"tipo" => "rota", "assinatura" => assinatura}]}]
+  end
+
+  test "rota da história ausente do contrato volta como divergência no resultado", %{ctx: ctx} do
+    Process.put(:fake_backlog, backlog_com("Expor GET /painel com os totais."))
+    on_exit(fn -> Process.delete(:fake_backlog) end)
+
+    assert {:ok, texto} =
+             DeclareModuleContracts.run(%{"contratos" => contrato_com("GET /panel -> {}")}, ctx)
+
+    assert texto =~ "DIVERGÊNCIA"
+    assert texto =~ "`GET /painel`"
+    assert texto =~ "o contrato declara GET /panel"
+  end
+
+  test "rotas iguais (parâmetro e barra final normalizados) não acusam nada", %{ctx: ctx} do
+    Process.put(:fake_backlog, backlog_com("GET /scores/:id/ devolve o placar."))
+    on_exit(fn -> Process.delete(:fake_backlog) end)
+
+    assert {:ok, texto} =
+             DeclareModuleContracts.run(
+               %{"contratos" => contrato_com("GET /scores/{id} -> Score")},
+               ctx
+             )
+
+    refute texto =~ "DIVERGÊNCIA"
+  end
+
+  test "backlog ilegível não recusa a declaração e diz que não conferiu", %{ctx: ctx} do
+    Process.put(:fake_backlog, {:error, :timeout})
+    on_exit(fn -> Process.delete(:fake_backlog) end)
+
+    assert {:ok, texto} =
+             DeclareModuleContracts.run(%{"contratos" => contrato_com("GET /panel")}, ctx)
+
+    assert texto =~ "Não conferi as rotas"
+  end
 end
