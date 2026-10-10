@@ -45,8 +45,32 @@ defmodule Engine.Gates.RecorteDaTarefa do
     `resumo` como observação e não o ponha em `itens`. O mesmo vale para o
     que depende de entrega de OUTRA história ainda não feita (uma rota, uma
     tela, um dado que ela cria): é observação, nunca reprovação.
-    #{secao_do_contrato(contrato)}
+    #{secao_da_forma(regras, task)}#{secao_do_contrato(contrato)}
     """
+  end
+
+  # AT-479 (RN-765): a regra dizia "a contagem e o histórico
+  # de cliques de TODOS os links" e o QA aprovou `{totalCliques}`, sem a
+  # contagem POR link. Quando o texto da regra quantifica por item ("por X",
+  # "cada", "de todos os"), o recorte pede a conferência da FORMA da resposta.
+  # Só um lembrete de leitura: não muda a régua do veredito (a regra continua
+  # sendo a que reprova). A recusa que não nomeia o campo é OBSERVAÇÃO.
+  @quantificador ~r/\b(de tod[oa]s [oa]s|cada|por (?!exemplo|padr[aã]o|isso|meio|favor|causa|vez|cento|enquanto|fim|ora)\p{L}+)/iu
+
+  defp secao_da_forma(regras, task) do
+    textos = [Map.get(task, "description", "") | Enum.map(regras, &Map.get(&1, :content, ""))]
+
+    if Enum.any?(textos, &(is_binary(&1) and Regex.match?(@quantificador, &1))),
+      do: """
+
+      Forma da resposta: há regra que fala POR item ("por X", "cada", "de
+      todos os"). Confira no código/teste que a resposta traz o valor de CADA
+      item (ex.: uma contagem por link), não só o total — total sozinho não
+      cobre a regra. E quando uma entrada é recusada, veja se a mensagem nomeia
+      o campo recusado; se não nomeia, cite no `resumo` como observação (não
+      vai para `itens`, salvo regra que o exija).
+      """,
+      else: ""
   end
 
   # AT-462 (RN-786): o contrato do Arquiteto é a fonte da INTERFACE (nome de

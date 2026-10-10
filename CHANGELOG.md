@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- **engine**: o recorte que o gate de QA recebe pede a conferência da FORMA da resposta quando a regra fala por item ("por link", "de todos os links") — total sozinho não cobre — e que a recusa de entrada nomeie o campo, esta como observação (RN-765, AT-479).
 - **web/api**: a estimativa do cartão do plano do Dev Lead soma o dobro da primeira tarefa de cada módulo — 8 tarefas num módulo com teto de US$ 0,50 dizem "até US$ 4,50", não US$ 4,00; a api leva o multiplicador no payload (RN-802, AT-473).
 - **web**: a "Linha do tempo do time" da Visão geral, lendo a sessão de execução com uma ideação mais recente aberta, deixa de apagar o Infra Lead e os agentes que só agiram na execução e de dizer "nenhum agente" sobre um time trabalhando (RN-800, AT-471).
 - **web**: o campo "Nome (opcional)" da nova sessão (abas Criativo e Chat) declara `autocomplete="off"`, `aria-autocomplete="none"` e os ignores dos gerenciadores de senha, como o composer (RN-801, AT-472).
