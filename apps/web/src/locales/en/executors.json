@@ -142,6 +142,12 @@
       "some": "Turned on for {{ok}} of {{total}} agents. Still manual: {{falharam}}."
     }
   },
+  "religar": {
+    "descricao_one": "No execution is running, and {{count}} task is still pending. It only runs again if you restart the execution.",
+    "descricao_other": "No execution is running, and {{count}} tasks are still pending. They only run again if you restart the execution.",
+    "botao": "Restart execution",
+    "erro": "Could not restart the execution"
+  },
   "parar": {
     "descricao": "Stopping execution closes this session: dev agents and gates stop, and none starts another task.",
     "botao": "Stop execution",

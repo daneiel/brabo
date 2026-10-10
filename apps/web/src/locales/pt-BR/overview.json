@@ -106,6 +106,8 @@
     "errorTitle": "Erro",
     "activateError": "Não foi possível ativar a execução",
     "unblockError": "Não foi possível desbloquear a tarefa",
+    "unblockedTitle": "Tarefa desbloqueada",
+    "unblockedWithoutExecution": "Nenhuma execução está rodando: a tarefa só roda quando você religar a execução, aqui nesta seção.",
     "authorizationNeededTitle": "Precisa da sua autorização",
     "authorizationNeededMessage_zero": "A sessão já tem {{count}} agentes, o teto do lead é {{max}}. O pedido está em Aprovações.",
     "authorizationNeededMessage_one": "A sessão já tem {{count}} agente, o teto do lead é {{max}}. O pedido está em Aprovações.",

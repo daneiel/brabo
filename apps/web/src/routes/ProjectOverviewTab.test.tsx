@@ -6,6 +6,7 @@ import type { ReactNode } from 'react';
 import i18next from 'i18next';
 import { initReactI18next, I18nextProvider } from 'react-i18next';
 import overviewPtBR from '../locales/pt-BR/overview.json';
+import executorsPtBR from '../locales/pt-BR/executors.json';
 import { ProjectOverviewTab } from './ProjectOverviewTab';
 import { ApiError } from '../lib/api-client';
 import { ToastProvider } from '../components/ui/ToastProvider';
@@ -16,7 +17,7 @@ import { ToastProvider } from '../components/ui/ToastProvider';
 function novaInstanciaI18n() {
   const instancia = i18next.createInstance();
   void instancia.use(initReactI18next).init({
-    resources: { 'pt-BR': { overview: overviewPtBR } },
+    resources: { 'pt-BR': { overview: overviewPtBR, executors: executorsPtBR } },
     lng: 'pt-BR',
     fallbackLng: 'pt-BR',
     defaultNS: 'overview',
@@ -47,6 +48,7 @@ const listSessionEvents = vi.fn();
 const listHandoffs = vi.fn();
 const listActions = vi.fn();
 const listBacklog = vi.fn();
+const unblockTaskMock = vi.fn();
 const getArchitecture = vi.fn();
 const getSessionTokenUsage = vi.fn();
 const listModels = vi.fn();
@@ -87,7 +89,7 @@ vi.mock('../lib/api-client', async () => {
     requestParallelization: vi.fn(),
     rearmDevAgent: vi.fn(),
     setAgentAutonomy: vi.fn(),
-    unblockTask: vi.fn(),
+    unblockTask: (...args: unknown[]) => unblockTaskMock(...args),
   };
 });
 
@@ -568,5 +570,72 @@ describe('linha do tempo do time lê a sessão de execução (AT-463)', () => {
     expect(await screen.findByText('Criativo')).toBeInTheDocument();
     expect(screen.queryByText(/Lendo a sessão de execução/)).not.toBeInTheDocument();
     expect(listSessionEvents.mock.calls.every((c) => c[1] === 'sess-1')).toBe(true);
+  });
+});
+
+// RN-794 (AT-469): execução já ativada antes, nenhuma vigente agora, tarefa
+// bloqueada no backlog — a seção diz quantas pendem, oferece religar e o
+// "Desbloquear" avisa que nada volta a rodar até religar.
+describe('religar a execução encerrada (RN-794)', () => {
+  const backlog = [
+    {
+      id: 'ep-1',
+      projectId: 'proj-1',
+      sessionId: 'sess-1',
+      title: 'E',
+      description: '',
+      createdAt: '',
+      updatedAt: '',
+      stories: [
+        {
+          id: 'st-1',
+          title: 'H',
+          tasks: [
+            {
+              id: 't1',
+              storyId: 'st-1',
+              title: 'Tarefa travada',
+              description: '',
+              status: 'todo',
+              assignedTo: null,
+              blocked: true,
+              blockedReason: 'motivo',
+              gateStatus: null,
+              gateCorrectionCount: 0,
+              createdAt: '',
+              updatedAt: '',
+            },
+          ],
+        },
+      ],
+    },
+  ];
+
+  it('oferece religar pelo execution/activate e o desbloqueio avisa', async () => {
+    getProjectsSummary.mockResolvedValue([resumo({ executionActivated: true })]);
+    listBacklog.mockResolvedValue(backlog);
+    unblockTaskMock.mockResolvedValue(undefined);
+    activateExecutionMock.mockResolvedValue({ sessionId: 'sess-2' });
+
+    montar();
+
+    expect(await screen.findByText(/1 tarefa segue pendente/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Desbloquear' }));
+    expect(await screen.findByText(/a tarefa só roda quando você religar/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Religar execução' }));
+    expect(activateExecutionMock).toHaveBeenCalledWith('proj-1');
+  });
+
+  it('a recusa (409) de religar mostra a frase da api', async () => {
+    getProjectsSummary.mockResolvedValue([resumo({ executionActivated: true })]);
+    listBacklog.mockResolvedValue(backlog);
+    activateExecutionMock.mockRejectedValue(
+      new ApiError(409, { message: 'A sessão é consultiva.' }),
+    );
+
+    montar();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Religar execução' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('A sessão é consultiva.');
   });
 });

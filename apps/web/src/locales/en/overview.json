@@ -101,6 +101,8 @@
     "errorTitle": "Error",
     "activateError": "Could not activate execution",
     "unblockError": "Could not unblock the task",
+    "unblockedTitle": "Task unblocked",
+    "unblockedWithoutExecution": "No execution is running: the task only runs when you restart the execution, here in this section.",
     "authorizationNeededTitle": "Needs your authorization",
     "authorizationNeededMessage_one": "The session already has {{count}} agent, the lead's cap is {{max}}. The request is in Approvals.",
     "authorizationNeededMessage_other": "The session already has {{count}} agents, the lead's cap is {{max}}. The request is in Approvals.",
