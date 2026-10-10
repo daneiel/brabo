@@ -34,6 +34,11 @@ export interface ModoAutomaticoDoTimeProps {
   autonomyRules: readonly AgentAutonomyRule[] | undefined;
   /** `maintainer` no endpoint (RN-102); sem ele o controle fica inerte. */
   podeLigar: boolean;
+  /**
+   * RN-816 (AT-488): no cartão do plano a execução ainda NÃO começou —
+   * começa ao aprovar (RN-677) —, e o texto de abertura é outro.
+   */
+  noPlano?: boolean;
 }
 
 export function agentesEmModoAutomatico(
@@ -70,6 +75,7 @@ export function ModoAutomaticoDoTime({
   agentes,
   autonomyRules,
   podeLigar,
+  noPlano = false,
 }: ModoAutomaticoDoTimeProps) {
   const { t } = useTranslation('executors');
   const queryClient = useQueryClient();
@@ -134,7 +140,7 @@ export function ModoAutomaticoDoTime({
       <h3 id="modo-automatico-do-time-titulo" className={styles.titulo}>
         {t('autoModeTeam.title')}
       </h3>
-      <p className={styles.texto}>{t('autoModeTeam.subtitle')}</p>
+      <p className={styles.texto}>{t(noPlano ? 'autoModeTeam.planSubtitle' : 'autoModeTeam.subtitle')}</p>
 
       {candidatos.length > 0 && (
         <ul className={styles.lista}>

@@ -1,5 +1,8 @@
 import Config
 
+# RN-810: a retentativa de rede do ToolLoop não espera nos testes.
+config :engine, :esperas_de_rede_ms, [0, 0]
+
 # Configure your database
 #
 # The MIX_TEST_PARTITION environment variable can be used

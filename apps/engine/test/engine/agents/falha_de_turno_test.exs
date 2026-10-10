@@ -171,4 +171,16 @@ defmodule Engine.Agents.FalhaDeTurnoTest do
       assert FalhaDeTurno.diagnostico({:final, corpo, "upstream"}) == corpo
     end
   end
+
+  describe "RN-810: erro de rede do provider é infra" do
+    test "code connection/timeout e texto de DNS são rede; o resto não" do
+      assert FalhaDeTurno.falha_de_rede?(%{"errorCode" => "connection", "error" => "x"})
+      assert FalhaDeTurno.falha_de_rede?(%{"error" => "getaddrinfo EAI_AGAIN openrouter.ai"})
+      refute FalhaDeTurno.falha_de_rede?(%{"errorCode" => "auth", "error" => "chave inválida"})
+      refute FalhaDeTurno.falha_de_rede?(nil)
+      assert FalhaDeTurno.origem("getaddrinfo EAI_AGAIN openrouter.ai") == "infra"
+      assert FalhaDeTurno.origem({:final, "read ECONNRESET"}) == "infra"
+      assert FalhaDeTurno.origem("algo inesperado") == "codigo"
+    end
+  end
 end

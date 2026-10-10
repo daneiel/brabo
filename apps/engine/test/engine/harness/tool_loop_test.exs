@@ -94,6 +94,29 @@ defmodule Engine.Harness.ToolLoopTest do
     assert out.corte_pelo_teto == true
   end
 
+  # RN-810 (AT-484): falha de rede passageira do provider é retentada.
+  defp falha_de_rede,
+    do:
+      FakeEngineApiClient.final_response("")
+      |> Map.put("error", "getaddrinfo EAI_AGAIN openrouter.ai")
+      |> Map.put("errorCode", "connection")
+
+  test "falha de rede do provider: retenta e segue quando a rede volta", %{ctx: ctx} do
+    Process.put(:fake_llm_turns, [falha_de_rede(), FakeEngineApiClient.final_response("pronto")])
+
+    assert {:ok, out} = ToolLoop.run(ctx)
+    refute Map.get(out, :last_error)
+    assert List.last(out.messages)["content"] == "pronto"
+  end
+
+  test "falha de rede que persiste esgota o teto e devolve o erro", %{ctx: ctx} do
+    Process.put(:fake_llm_turns, [falha_de_rede(), falha_de_rede(), falha_de_rede()])
+
+    assert {:ok, out} = ToolLoop.run(ctx)
+    assert out.last_error =~ "EAI_AGAIN"
+    assert out.last_error_code == "connection"
+  end
+
   test "caminho feliz: resposta final imediata, sem tool calls", %{ctx: ctx} do
     Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("tudo pronto")])
 

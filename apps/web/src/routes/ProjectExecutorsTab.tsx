@@ -307,17 +307,6 @@ export function ProjectExecutorsTab({ projectId }: { projectId: string }) {
 
       {sessionId && (
         <>
-          {/* AT-298: o que os agentes propuseram FORA da execução e a destrava
-              — o `container_start` do Infra Lead nasce na sessão de chat,
-              enquanto o `dev.blocked_by_container` aparece aqui. Mesmo atalho
-              do chat (RN-626/RN-467): mesmo card, mesmos endpoints, filas
-              separadas. As da PRÓPRIA execução não entram: o roster já as
-              marca como `aguardando`, e a aba Aprovações as decide. */}
-          <PendenciasDeOutrasSessoes
-            projectId={projectId}
-            sessionId={sessionId}
-            podeDecidir={podeDecidir}
-          />
 
           {/* RN-763 (AT-456): parar a execução é FECHAR a sessão dela; o
               engine para os dev agents e os gates. */}
@@ -325,9 +314,6 @@ export function ProjectExecutorsTab({ projectId }: { projectId: string }) {
             <PararExecucao
               projectId={projectId}
               sessionId={sessionId}
-              tarefasEmCurso={
-                [...progressByAgent.values()].filter((p) => Boolean(p.taskId)).length
-              }
               podeParar={podeDecidir}
             />
           )}
@@ -343,6 +329,21 @@ export function ProjectExecutorsTab({ projectId }: { projectId: string }) {
               podeLigar={podeLigarModoAutomatico}
             />
           )}
+
+          {/* AT-298: o que os agentes propuseram FORA da execução e a destrava
+              — o `container_start` do Infra Lead nasce na sessão de chat,
+              enquanto o `dev.blocked_by_container` aparece aqui. Mesmo atalho
+              do chat (RN-626/RN-467): mesmo card, mesmos endpoints, filas
+              separadas. As da PRÓPRIA execução não entram: o roster já as
+              marca como `aguardando`, e a aba Aprovações as decide. RN-816
+              (AT-480): vem DEPOIS de "Parar execução" e da oferta em lote —
+              chega depois do primeiro paint, e acima deles empurrava o botão
+              para baixo do cursor. */}
+          <PendenciasDeOutrasSessoes
+            projectId={projectId}
+            sessionId={sessionId}
+            podeDecidir={podeDecidir}
+          />
 
           {/* `executionActivated` vem do resumo agregado — os três estados
               da RN-088 aqui: sem eles, um "nenhum dev agent" de CARREGANDO
