@@ -58,6 +58,20 @@ defmodule Engine.Gates.GateRescuer do
   depois, um ciclo que ninguém olhou é pagar a área inteira de novo sobre um
   contexto que pode ter mudado.
 
+  E desde a RN-823 (AT-495), o BOOT não espera o limiar para o ciclo que o
+  próprio reinício matou: no boot, a linha `"in_progress"` RECENTE (abaixo do
+  limiar de staleness, e por isso invisível para `run/0`) sem processo vivo
+  NESTE nó nem nos OUTROS nós do cluster (`:erpc.multicall` sobre
+  `Node.list/0`, a régua do `Engine.Agents.TurnoOrfao`; nó que não responde
+  conta como VIVO) é órfã do reinício, não um ciclo lento. As guardas de
+  sempre valem (ação pendente de ator do gate, dev dono ausente), e o boot
+  grava `gate.interrupted` no log da sessão (gate, task, última atividade e
+  quando foi retomado) ANTES de redespachar a área. O tick periódico segue com
+  o limiar de 15 min: fora do boot, linha recente é ciclo em voo. Resíduo
+  declarado: nó do cluster que ainda não se conectou no instante do boot não
+  é perguntado — o pior desfecho segue sendo o de sempre, trabalho duplicado
+  e barato.
+
   Chamado de dois lugares (mesmo par que `Engine.Dev.DevRehydrator` usa para
   dev agents): uma vez no boot (`Engine.Application`) e periodicamente via
   `Engine.Workers.GateRescueSchedulerWorker` (Oban).
@@ -168,6 +182,83 @@ defmodule Engine.Gates.GateRescuer do
 
   defp dispatch_fresh("secops", project_id, task_id),
     do: :ok = Dispatcher.run_secops(project_id, task_id)
+
+  @doc """
+  Varredura de BOOT (RN-823): a de `run/0` mais o ciclo recente órfão do
+  reinício. A lista dos recentes é lida ANTES de `run/0`, para não tomar por
+  órfã a linha que o próprio `run/0` acabou de redespachar.
+  """
+  def run_boot do
+    limiar = stale_after_seconds()
+
+    recentes =
+      0
+      |> GateState.list_stale()
+      |> Enum.filter(&(&1.step == "in_progress" and recente?(&1, limiar)))
+
+    :ok = run()
+    Enum.each(recentes, &interrompido_no_boot/1)
+    :ok
+  end
+
+  defp recente?(%{updated_at: %DateTime{} = em}, limiar),
+    do: DateTime.diff(DateTime.utc_now(), em, :second) <= limiar
+
+  defp recente?(_linha, _limiar), do: false
+
+  defp interrompido_no_boot(%{gate: gate, project_id: project_id, task_id: task_id} = linha) do
+    cond do
+      task_em_voo?(project_id, gate, task_id) or em_voo_em_outro_no?(project_id, gate, task_id) ->
+        :ok
+
+      aguardando_humano?(gate, Map.get(linha, :session_id)) ->
+        :ok
+
+      DevAgentState.find_by_task_id(project_id, task_id) == nil ->
+        GateState.delete(project_id, task_id, gate)
+
+      true ->
+        Logger.warning(
+          "GateRescuer: ciclo #{gate} da task #{task_id} (projeto #{project_id}) " <>
+            "interrompido pelo reinício do engine — retomado no boot (RN-823)"
+        )
+
+        if is_binary(linha.session_id) do
+          EngineApiClient.append_event(project_id, linha.session_id, %{
+            type: "gate.interrupted",
+            actorKind: "system",
+            actorId: "gate-rescuer",
+            payload: %{
+              taskId: task_id,
+              gate: gate,
+              ultimaAtividadeEm: DateTime.to_iso8601(linha.updated_at),
+              retomadoEm: DateTime.to_iso8601(DateTime.utc_now())
+            }
+          })
+        end
+
+        dispatch_fresh(gate, project_id, task_id)
+    end
+  end
+
+  @doc false
+  # Chamado por `:erpc` dos OUTROS nós no boot deles (RN-823).
+  def em_voo_neste_no?(project_id, gate, task_id), do: task_em_voo?(project_id, gate, task_id)
+
+  defp em_voo_em_outro_no?(project_id, gate, task_id) do
+    case Node.list() do
+      [] ->
+        false
+
+      nos ->
+        nos
+        |> :erpc.multicall(__MODULE__, :em_voo_neste_no?, [project_id, gate, task_id], 2_000)
+        |> Enum.any?(fn
+          {:ok, false} -> false
+          _ -> true
+        end)
+    end
+  end
 
   # VIVO, e não só registrado (AT-204): o Registry apaga a chave de forma
   # ASSÍNCRONA, e logo depois de o processo morrer o lookup ainda pode devolver
@@ -301,12 +392,11 @@ defmodule Engine.Gates.GateRescuer do
 
   # --- Boot task (mesmo idioma do Engine.Dev.DevRehydrator) -----------------
   #
-  # Sem bypass de staleness no boot: uma linha recente demais pode pertencer
-  # a um processo vivo em OUTRA réplica (Registry é local ao nó), então o
-  # boot varre com o MESMO limiar que o tick periódico usa.
+  # O boot varre com o MESMO limiar do tick E, para a linha recente, pergunta
+  # aos outros nós antes de tomá-la por órfã do reinício (RN-823).
 
   def start_link(_opts) do
-    :ok = run()
+    :ok = run_boot()
     :ignore
   end
 

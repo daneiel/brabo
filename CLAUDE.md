@@ -649,7 +649,10 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   gate. Retomar o estacionado é o botão "Retomar gate" no aviso do fio
   (`POST /projects/:projectId/tasks/:taskId/gates/:gate/resume`, `developer`,
   409 `gate_nao_estacionado` — RN-724), que chama
-  `GateRescuer.retomar_estacionado/3` pelo engine
+  `GateRescuer.retomar_estacionado/3` pelo engine. O ciclo RECENTE que o
+  próprio reinício matou não espera os 15 min: o boot o retoma quando nenhum
+  nó do cluster o tem em voo (`:erpc`, nó mudo = vivo) e grava
+  `gate.interrupted`, que o fio mostra (RN-823); o tick segue com o limiar
 - Desde o ADR 0211 a aba de Código abre com 312px de moldura (sidebar 264
   + trilho do `CodeShell` 48), ou 110px com a sidebar recolhida (62 + 48) —
   soma das larguras, não medida no navegador. O trilho do projeto (ADR 0126)
