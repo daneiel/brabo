@@ -110,4 +110,37 @@ defmodule Engine.Gates.RecorteDaTarefaTest do
   test "o recorte pede todas as lacunas numa volta só" do
     assert RecorteDaTarefa.texto(%{task: %{"title" => "X"}}) =~ "TODAS as lacunas"
   end
+
+  describe "Rodada 64 (RN-817/818/819)" do
+    test "RN-817: pede ambiente limpo, encerrar o grupo e pulado como observação" do
+      texto = RecorteDaTarefa.texto(%{task: %{"title" => "Modelar tabela"}})
+      assert texto =~ "Ambiente limpo"
+      assert texto =~ "encerrar o GRUPO"
+      assert texto =~ "se PULOU por ambiente"
+      assert texto =~ "nunca processo de fora dele"
+    end
+
+    test "RN-818: com ponto de entrada diz o que conta e o que não cabe" do
+      texto = RecorteDaTarefa.texto(%{task: %{"title" => "Fiação do server.ts"}})
+      assert texto =~ "O que CONTA como evidência"
+      assert texto =~ "construir imagem Docker"
+      assert texto =~ "NUNCA vai para `itens`"
+    end
+
+    test "RN-818: sem ponto de entrada não traz a régua de evidência" do
+      texto = RecorteDaTarefa.texto(%{task: %{"title" => "Modelar tabela"}})
+      refute texto =~ "O que CONTA como evidência"
+    end
+
+    test "RN-819: pede varredura por regra antes de emitir" do
+      texto =
+        RecorteDaTarefa.texto(%{
+          task: %{"title" => "X"},
+          business_rules_units: [%{content: "Regra A"}]
+        })
+
+      assert texto =~ "VARREDURA POR REGRA"
+      assert texto =~ "Só emita depois de passar por TODAS"
+    end
+  end
 end

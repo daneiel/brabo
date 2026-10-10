@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- **engine**: o recorte do gate de QA pede estado limpo antes da suíte (encerrar o que o próprio projeto deixou de pé), teste de processo que encerre o grupo, e teste pulado por ambiente como observação (RN-817, AT-496); diz o que conta como evidência do ponto de entrada no ambiente do dev e que build de imagem, `docker compose` e rede externa nunca reprovam (RN-818, AT-492); e pede uma varredura por regra antes de emitir o parecer (RN-819, AT-490).
 - **docker-port**: o comando executado no container que estoura o teto volta como estouro (`exitCode: -1`, `timedOut: true`) e não mais como "exit 0" — o cliente `docker exec` saía limpo ao receber o SIGTERM —, e o grupo de processos dele é morto dentro do container (RN-807, AT-482).
 - **api**: o recorte do Jev não tira mais do Arquiteto `assign_story_modules` nem `choose_project_image` — ele encerrava dizendo que a ferramenta não estava disponível, com histórias sem módulo (RN-809, AT-481).
 - **engine**: a tarefa reaberta depois de bloqueio não abre uma segunda PR da mesma branch: a PR aberta da branch é reaproveitada (RN-812, AT-485).

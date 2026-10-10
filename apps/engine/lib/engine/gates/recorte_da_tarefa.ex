@@ -48,8 +48,12 @@ defmodule Engine.Gates.RecorteDaTarefa do
 
     Liste em `itens` TODAS as lacunas desta tarefa que você achar nesta volta,
     de uma vez — nunca uma por volta: cada volta é uma correção paga e um passo
-    do teto do ciclo.
-    #{secao_da_forma(regras, task)}#{secao_do_ponto_de_entrada(task)}#{secao_do_contrato(contrato)}
+    do teto do ciclo. Antes de emitir, faça a VARREDURA POR REGRA: percorra
+    cada regra de negócio acima e cada critério da tarefa, um por um, e para
+    cada um diga a si mesmo onde está a prova (arquivo e teste) ou que ela
+    falta. Só emita depois de passar por TODAS; lacuna que já estava na
+    entrega e aparece só na volta seguinte é uma volta paga a mais.
+    #{secao_do_ambiente_limpo()}#{secao_da_forma(regras, task)}#{secao_do_ponto_de_entrada(task)}#{secao_do_contrato(contrato)}
     """
   end
 
@@ -97,8 +101,36 @@ defmodule Engine.Gates.RecorteDaTarefa do
       teste) — e responde numa rota ou comando. Teste que monta o próprio
       banco e o próprio app não prova isso. Sem essa evidência, ponha a lacuna
       em `itens`.
+
+      O que CONTA como evidência no ambiente do dev: subir o processo do
+      entrypoint (o `start`/`main`) na pasta do projeto, rodar o script no
+      container do projeto, bater numa rota do processo de pé. O que NÃO cabe
+      ali: construir imagem Docker, `docker compose`, rede externa — o
+      container do projeto não tem Docker nem saída garantida. Exigência desse
+      segundo tipo NUNCA vai para `itens`: cite-a no `resumo` como observação.
       """,
       else: ""
+  end
+
+  # AT-496 (RN-817): no TP-01 a suíte travava num clone limpo (um teste matava
+  # o `npm` e o `node` neto ficava na 3000), e o QA viu exit 0 porque o teste
+  # se PULAVA com a porta ocupada por um servidor órfão de rodada anterior. O
+  # recorte pede estado limpo antes da suíte, teste de processo que encerre o
+  # GRUPO, e teste pulado por ambiente como observação. É instrução e não passo
+  # do harness: quem roda a suíte é o próprio QA pelo `terminal`, que já passa
+  # pela política e pelo roteamento de container dos três modos.
+  defp secao_do_ambiente_limpo do
+    """
+
+    Ambiente limpo: antes de rodar a suíte, encerre o que o PRÓPRIO projeto
+    deixou de pé em rodadas anteriores (servidor do `start` ainda escutando
+    numa porta do projeto) — só processos desta pasta, ex.: `pkill -f` com o
+    caminho do projeto; nunca processo de fora dele. Teste que sobe processo
+    deve encerrar o GRUPO (ou subir `node` direto, não via `npm`, que deixa o
+    neto vivo); se não encerra, a suíte trava num clone limpo — é lacuna em
+    `itens`. Teste que se PULOU por ambiente (porta ocupada, ferramenta
+    ausente) não conta como verde: cite-o no `resumo` como observação.
+    """
   end
 
   # AT-462 (RN-786): o contrato do Arquiteto é a fonte da INTERFACE (nome de
