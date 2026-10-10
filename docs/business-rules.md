@@ -17665,8 +17665,8 @@ cláusula própria no engine. Nenhuma mudança de api nem de engine.
   (`useAtivadosNaSessaoInteira`), `:141` (`ativadosSemJanela`);
   `apps/web/src/routes/SessionComposer.tsx:268` (`destinatarioRow`), `:172`
   (`ofertasForaDaJanela`); `apps/web/src/routes/SessionPage.tsx:357`
-  (`aceitarHandoff`); `apps/web/src/routes/session-timeline-montagem.tsx:543`
-  (`handoffIdDoEvento`), `:551` (`origem`); `apps/web/src/lib/session-handoffs.ts:68`
+  (`aceitarHandoff`); `apps/web/src/routes/session-timeline-montagem.tsx:547`
+  (`handoffIdDoEvento`), `:555` (`origem`); `apps/web/src/lib/session-handoffs.ts:68`
   (`activeFor`), `:120` (`ofertasAcionaveis`), `:142` (`ofertasForaDaJanela`)
 - **Teste:** `apps/web/src/routes/SessionPage.destinatario-do-chat.test.tsx`
   (escolha → envio ao escolhido; dois agentes sem escolha não enviam e dizem
@@ -18638,7 +18638,7 @@ sempre dele.
 - **Código:** `apps/web/src/lib/autor-da-mensagem.ts:52` (`autorDaMensagem`);
   `apps/web/src/lib/autoria-da-sessao.ts:45` (`useAutoriaDaSessao`), `:18`
   (`comporMembros`);
-  `apps/web/src/routes/session-timeline-montagem.tsx:150` (`rotuloDoAutor`),
+  `apps/web/src/routes/session-timeline-montagem.tsx:154` (`rotuloDoAutor`),
   `:405` (o `chat.message`), `:687` (a devolução de história);
   `apps/web/src/routes/SessionPage.tsx:133` (`autoria`)
 - **Teste:** `apps/web/src/routes/SessionPage.autor-da-mensagem.test.tsx:147`
@@ -19297,11 +19297,11 @@ segundo `executed` para o mesmo merge.
   `apps/api/src/infrastructure/git/local-git-provider.ts:339` (`GitPullRequestAlreadyMergedError`);
   `apps/web/src/lib/gate-do-merge.ts:19` (`gatePendenteNoMerge`);
   `apps/web/src/routes/ProjectPrsTab.tsx:205` (`gatePendenteNoMerge`);
-  `apps/web/src/routes/session-timeline-montagem.tsx:1068` (`gatePendenteNoMerge`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:1094` (`gatePendenteNoMerge`)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:664`
   (`merge_ja_proposto`), `:687` (`pr_ja_mergeado` — caso de falha), `:696`
 
-  `apps/web/src/routes/session-timeline-montagem.tsx:1068` (`gatePendenteNoMerge`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:1094` (`gatePendenteNoMerge`)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:664`
   (`merge_ja_proposto`), `:687` (`pr_ja_mergeado` — caso de falha), `:696`
   (negada não bloqueia, outra PR não colide — caminho feliz);
@@ -20335,7 +20335,7 @@ no fio: fica de fora até alguém pedir.
 
 - **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:124` (`loop`);
   `apps/engine/lib/engine/workers/anamnese_worker.ex:157` (`build_ctx`);
-  `apps/web/src/routes/session-timeline-montagem.tsx:111` (`ehDaAnamnese`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:115` (`ehDaAnamnese`)
 - **Teste:** `apps/engine/test/engine/workers/anamnese_worker_test.exs:253`
   (o texto sai `anamnese.analysis`; `agent.response` nunca é gravado — caso de
   falha); `apps/web/src/routes/session-timeline-montagem.falha-de-turno.test.tsx:86`
@@ -20522,7 +20522,7 @@ para `passos`: o acúmulo já era gravado inteiro antes da revisão.
 - **Onde:** `apps/engine/lib/engine/agents/texto_do_turno.ex:83` (`descarregar`);
   `:111` (`juntar`); `:51` (`descarregar_com_modelo`); `:65` (`payload_do_turno`);
   `apps/engine/lib/engine/agents/reidratacao.ex:177` (`acumular`);
-  `apps/web/src/routes/session-timeline-montagem.tsx:805` (`passos`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:809` (`passos`)
 - **Teste:** `apps/engine/test/engine/agents/texto_do_turno_test.exs:43` (três
   voltas: fecho e dois passos), `:56` (uma volta, sem `passos`), `:60` (termina
   em formulário); `apps/engine/test/engine/agents/reidratacao_test.exs`
@@ -21429,10 +21429,10 @@ O kickoff do PO diz as três coisas.
   `apps/engine/lib/engine/anamnese/elegibilidade.ex:67`
   (`min_interacoes_proprias`),
   `apps/api/src/application/use-cases/anamnese/record-proficiency.use-case.ts:160`
-  (`fecharJanelaSemPerfil`), `apps/engine/lib/engine/gates/gate_rescuer.ex:243`
-  (`task_em_voo?`), `apps/engine/lib/engine/gates/gate_rescuer.ex:269`
-  (`aguardando_humano?`), `apps/engine/lib/engine/gates/gate_rescuer.ex:190`
-  (`estacionar`), `apps/engine/lib/engine/gates/gate_rescuer.ex:227`
+  (`fecharJanelaSemPerfil`), `apps/engine/lib/engine/gates/gate_rescuer.ex:336`
+  (`task_em_voo?`), `apps/engine/lib/engine/gates/gate_rescuer.ex:360`
+  (`aguardando_humano?`), `apps/engine/lib/engine/gates/gate_rescuer.ex:283`
+  (`estacionar`), `apps/engine/lib/engine/gates/gate_rescuer.ex:320`
   (`retomar_estacionado`), `apps/engine/lib/engine/gates/qa_lead_server.ex:95`
   (`handle_call`)
 - **Teste:** `apps/engine/test/engine/workers/anamnese_worker_test.exs`
@@ -21479,7 +21479,7 @@ O kickoff do PO diz as três coisas.
   `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:351`
   (`resumeParkedGate`),
   `apps/api/src/interfaces/http/gates/gate-resume.controller.ts:40`
-  (`resume`), `apps/web/src/routes/RetomarGateEstacionado.tsx:30`
+  (`resume`), `apps/web/src/routes/RetomarGateEstacionado.tsx:47`
   (`RetomarGateEstacionado`)
 - **Teste:** `apps/engine/test/engine_web/controllers/gate_command_controller_test.exs`
   ("ciclo estacionado: 202 e despacha o gate de novo"; falha: "ciclo NÃO
@@ -21505,7 +21505,7 @@ O kickoff do PO diz as três coisas.
 - **Onde:** `apps/web/src/lib/mensagem-otimista.ts:14` (`otimistaJaNoLog`),
   `apps/web/src/lib/mensagem-otimista.ts:22` (`nomeDaMensagemOtimista`),
   `apps/web/src/routes/SessionPage.tsx:901` (`otimistaJaNoLog`),
-  `apps/web/src/routes/session-timeline-montagem.tsx:605`
+  `apps/web/src/routes/session-timeline-montagem.tsx:609`
   (`handleActivateExecution`)
 - **Teste:** `apps/web/src/lib/mensagem-otimista.test.ts` (feliz: o id no log
   tira a otimista; falha: id ausente ou de outro tipo a mantém; o nome é o da
@@ -22152,7 +22152,7 @@ sem dizer qual.
   fecho tem o botão; os passos do turno não. A tela reconhece a linha pelo
   texto, e as duas frases são o contrato com `Engine.Harness.RespostaCortada`.
 - **Onde:** `apps/web/src/lib/resposta-cortada.ts:14` (`respostaCortada`),
-  `apps/web/src/routes/session-timeline-montagem.tsx:885` (`respostaCortada`),
+  `apps/web/src/routes/session-timeline-montagem.tsx:889` (`respostaCortada`),
   `apps/web/src/routes/SessionPage.tsx:454` (`continuarRespostaCortada`),
   `:670` (`enviarMensagem`)
 - **Teste:** `apps/web/src/lib/resposta-cortada.test.ts` (`respostaCortada
@@ -23339,3 +23339,31 @@ sem dizer qual.
   ("RN-819: pede varredura por regra antes de emitir")
 - **Origem:** AT-490 (TP-01 de 10/10: tarefas 2 e 11 trouxeram na 2ª volta
   lacuna que já estava na entrega)
+### RN-823 — O ciclo de gate que o reinício do engine matou é retomado no boot, e o fio diz isso {#rn-823}
+
+- **Regra:** no BOOT do engine, a linha `in_progress` de `gate_states`
+  RECENTE (abaixo de `gate_rescue_stale_after_seconds`, 15 min, e por isso
+  invisível para o tick) sem processo vivo NESTE nó nem nos OUTROS nós do
+  cluster é órfã do reinício, não um ciclo lento: o boot a retoma na hora
+  (`Dispatcher.run_qa`/`run_secops`), sem esperar o limiar. "Vivo" é a régua da
+  [RN-722](#rn-722) (a task em voo no lead), perguntada também aos outros nós
+  por `:erpc.multicall` — nó que não responde conta como VIVO, a régua do
+  `TurnoOrfao` ([RN-586](#rn-586)). Valem as guardas de sempre: ação pendente
+  de ator do gate não reinicia, e dev dono ausente só apaga a linha. Antes de
+  redespachar, o boot grava `gate.interrupted` no log da sessão (`taskId`,
+  `gate`, `ultimaAtividadeEm`, `retomadoEm`), e o fio o mostra como aviso, nos
+  dois idiomas. O tick periódico NÃO muda: fora do boot, linha recente é ciclo
+  em voo. Resíduo declarado: nó que ainda não entrou no cluster no instante do
+  boot não é perguntado, e o pior desfecho é o de sempre (trabalho duplicado e
+  barato; o segundo veredito é recusado pela api).
+- **Onde:** `apps/engine/lib/engine/gates/gate_rescuer.ex:191` (`run_boot`),
+  `:209` (`interrompido_no_boot`),
+  `apps/web/src/routes/RetomarGateEstacionado.tsx:23` (`cicloInterrompido`)
+- **Teste:** `apps/engine/test/engine/gates/gate_rescuer_test.exs` ("boot com
+  ciclo RECENTE órfão do reinício: grava gate.interrupted e retoma já
+  (RN-823)"; falhas: "boot com ciclo recente esperando ação PENDENTE do gate:
+  não reinicia nem grava (RN-823)" e o processo local vivo intocado),
+  `apps/web/src/routes/RetomarGateEstacionado.test.tsx` ("cicloInterrompido
+  (RN-823)")
+- **Origem:** AT-495 (TP-01 de 10/10: o reinício das 18:51 matou o ciclo de QA
+  da tarefa 10, e o dev ficou `awaiting_gate` 15 min sem tela nenhuma dizer)

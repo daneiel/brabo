@@ -256,6 +256,9 @@
     "erroCancelar": "Could not cancel the message.",
     "enfileirada": "{{agente}} is mid-turn: the message joined its queue (position {{posicao}}) and will be read when the turn ends."
   },
+  "gateInterrompido": {
+    "aviso": "The engine restart interrupted the {{gate}} gate cycle for task {{taskId}}; it was restarted from the beginning at {{hora}}."
+  },
   "gateEstacionado": {
     "aviso": "The {{gate}} gate cycle for task {{taskId}} stalled for more than 2 h and was parked: it does not restart on its own.",
     "botao": "Resume gate",
