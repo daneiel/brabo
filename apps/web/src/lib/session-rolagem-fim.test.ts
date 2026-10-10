@@ -17,6 +17,17 @@ describe('abaDaRota (AT-442)', () => {
     expect(abaDaRota('/projects/p1/sessions/s1', 'p1')).toBe('chat');
   });
 
+  it('AT-463: sessão criativa marca "Criativo", onde a ideação está listada', () => {
+    expect(abaDaRota('/projects/p1/sessions/s1', 'p1', { projectId: 'p1', tab: 'criativo' })).toBe(
+      'criativo',
+    );
+  });
+
+  it('CASO DE FALHA evitado (AT-463): aba publicada de OUTRO projeto ou inválida não vale', () => {
+    expect(abaDaRota('/projects/p1/sessions/s1', 'p1', { projectId: 'p2', tab: 'criativo' })).toBe('chat');
+    expect(abaDaRota('/projects/p1/sessions/s1', 'p1', { projectId: 'p1', tab: 'xyz' })).toBe('chat');
+  });
+
   it('fora da Sessão (ou de outro projeto), nenhuma aba implícita', () => {
     expect(abaDaRota('/projects/p1', 'p1')).toBeUndefined();
     expect(abaDaRota('/projects/p2/sessions/s1', 'p1')).toBeUndefined();

@@ -34,6 +34,7 @@
   },
   "timeline": {
     "title": "Team timeline",
+    "lendoExecucao": "Reading the execution session, not the most recent one.",
     "description": "One branch per agent, from the first milestone to what it's doing right now. Whoever is active, or among the 5 most recent, opens on its own — the rest is one click away, with a count of new milestones in the header."
   },
   "ambiente": {

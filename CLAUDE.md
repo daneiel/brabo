@@ -314,6 +314,12 @@ estado lido do repositório e não da conversa.
 | Os saltos de layout da Sessão e do catálogo: composer, aba ativa, barra de lote e rolagem do fio (AT-442) | RN-751 |
 | A PR de infra mergeada sai de "PRs de infra em revisão" (AT-436) | RN-752 |
 | O seletor de modelo mostra `thinking`; ligar o modo automático não aprova o cartão, e ele diz isso (AT-443) | RN-755 |
+| Decisões fora da janela, a linha do tempo pela sessão de execução e a aba da sidebar pelo tipo da sessão (AT-463) | RN-788, RN-789 |
+| O raciocínio não é ligado por aceitar o parâmetro, e os dev agents de execução o desligam (AT-467) | RN-782, RN-783 |
+| As leituras de estado do Arquiteto entram no piso do Jev (AT-460) | RN-784 |
+| O worktree da tarefa (re)pegada parte da `dev` atual do remoto e a integra; conflito é bloqueio nomeado (AT-458) | RN-779 |
+| A resposta só de raciocínio cortada pelo teto é retentada uma vez e, repetida, bloqueia nomeada (AT-459) | RN-780 |
+| A mensagem de commit do dev não grava a pendência de commit/PR que é do sistema (AT-464) | RN-781 |
 | O QA não reprova pelo que outra história do módulo ainda vai entregar (AT-461) | RN-785 |
 | A primeira tarefa de cada módulo tem o dobro do teto por tarefa (AT-433) | RN-774 |
 | O Arquiteto lê o status atual das ADRs e o backlog com as tarefas antes de afirmar estado (AT-454) | RN-772, RN-773 |
