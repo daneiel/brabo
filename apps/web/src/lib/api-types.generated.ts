@@ -6305,6 +6305,8 @@ export interface components {
             adrs: components["schemas"]["DevContextAdrResponseDto"][];
             /** @description The other tasks of the same story, with their status. The QA gate judges the delivery by what belongs to THIS task; a requirement of a sibling task is an observation, never a rejection (RN-765). */
             siblingTasks: components["schemas"]["DevContextSiblingTaskResponseDto"][];
+            /** @description Whether this is the FIRST task of the module: the oldest `backlog.task_claimed` of the project for `module` is this task. The engine gives it twice the per-task budget (RN-774). `false` without `module`. */
+            primeiraDoModulo: boolean;
         };
         DiffLineResponseDto: {
             /**

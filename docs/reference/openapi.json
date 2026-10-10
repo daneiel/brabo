@@ -17268,6 +17268,10 @@
             "items": {
               "$ref": "#/components/schemas/DevContextSiblingTaskResponseDto"
             }
+          },
+          "primeiraDoModulo": {
+            "type": "boolean",
+            "description": "Whether this is the FIRST task of the module: the oldest `backlog.task_claimed` of the project for `module` is this task. The engine gives it twice the per-task budget (RN-774). `false` without `module`."
           }
         },
         "required": [
@@ -17275,7 +17279,8 @@
           "story",
           "businessRules",
           "adrs",
-          "siblingTasks"
+          "siblingTasks",
+          "primeiraDoModulo"
         ]
       },
       "DiffLineResponseDto": {

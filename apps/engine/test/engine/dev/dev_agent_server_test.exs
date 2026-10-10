@@ -323,6 +323,82 @@ defmodule Engine.Dev.DevAgentServerTest do
     refute_received {:propose_action, "pr_open", _, _}
   end
 
+  describe "RN-774: teto 2x na primeira tarefa do módulo" do
+    # Cada chamada custa US$ 0,53, o gasto da tarefa 1 do TP-01 de 08/10.
+    defp chamada_de_53_centavos do
+      %{
+        "message" => %{
+          "role" => "assistant",
+          "content" => "",
+          "toolCalls" => [
+            %{"id" => "tc-1", "name" => "search_workspace", "arguments" => %{"query" => "x"}}
+          ]
+        },
+        "usage" => %{"costMicros" => 530_000, "estimated" => false},
+        "error" => nil
+      }
+    end
+
+    defp contexto_da_tarefa(task_id, primeira) do
+      %{
+        "task" => %{
+          "id" => task_id,
+          "title" => "t",
+          "description" => "",
+          "primeiraDoModulo" => primeira
+        },
+        "story" => %{"id" => "st-1", "title" => "s", "description" => ""},
+        "businessRules" => [],
+        "adrs" => []
+      }
+    end
+
+    setup %{state: state} do
+      Process.put(:fake_llm_always, chamada_de_53_centavos())
+      %{state: %{state | task_budget_micros: 500_000}}
+    end
+
+    test "a primeira tarefa do módulo com US$ 0,53 NÃO bloqueia; o teto que vale é US$ 1,00",
+         %{state: state} do
+      Process.put(:fake_tasks, [%{"id" => "task-1a", "title" => "Esqueleto"}])
+      Process.put(:fake_dev_context, contexto_da_tarefa("task-1a", true))
+
+      assert {:noreply, _} = DevAgentServer.handle_cast(:work, state)
+
+      # A primeira chamada (US$ 0,53) passou; só a segunda (US$ 1,06 no total)
+      # estourou, e o diagnóstico diz o teto que valeu para ESTA tarefa.
+      assert_received {:task_blocked, "task-1a", "orçamento de tokens excedido", diagnosis,
+                       "dev-api"}
+
+      assert diagnosis =~ "gasto: 1060000 micro-USD"
+      assert diagnosis =~ "teto da primeira tarefa do módulo: 1000000 micro-USD, US$ 1.00"
+    end
+
+    test "a segunda tarefa do mesmo módulo com US$ 0,53 BLOQUEIA, com o teto normal",
+         %{state: state} do
+      Process.put(:fake_tasks, [%{"id" => "task-2a", "title" => "Segunda"}])
+      Process.put(:fake_dev_context, contexto_da_tarefa("task-2a", false))
+
+      assert {:noreply, _} = DevAgentServer.handle_cast(:work, state)
+
+      assert_received {:task_blocked, "task-2a", "orçamento de tokens excedido", diagnosis,
+                       "dev-api"}
+
+      assert diagnosis =~ "gasto: 530000 micro-USD (teto: 500000 micro-USD, US$ 0.50)"
+    end
+
+    test "a primeira tarefa de OUTRO módulo também ganha 2x", %{state: state} do
+      state = %{state | module: "web", agent_id: "dev-web"}
+      Process.put(:fake_tasks, [%{"id" => "task-1w", "title" => "Esqueleto web"}])
+      Process.put(:fake_dev_context, contexto_da_tarefa("task-1w", true))
+
+      assert {:noreply, _} = DevAgentServer.handle_cast(:work, state)
+
+      assert_received {:task_blocked, "task-1w", "orçamento de tokens excedido", diagnosis, _}
+      assert diagnosis =~ "gasto: 1060000 micro-USD"
+    end
+  end
+
   test "report_done sem terminal exit 0 prévio: recusado, loop conclui sem PR", %{state: state} do
     Process.put(:fake_tasks, [%{"id" => "task-apressada", "title" => "Tarefa apressada"}])
 
