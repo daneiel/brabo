@@ -6,6 +6,8 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- **engine**: o parecer do SecOps (e o diff do QA) conta a PR contra a `dev` da origem, buscada antes quando a origem é local, e não mais o acumulado da `dev` local parada; `itens`/`coverageMatrix` do `qa_verdict` são gravados sempre como lista (RN-787, AT-464).
+- **engine**: no boot, o dev agent com `dev.working` (ou outra espera) sem processo nem linha durável fecha com `dev.error` origem infra e `dev.idle`, e a sessão deixa de ser reagendada para sempre pelo heartbeat (RN-778, AT-465).
 - **engine**: o PO passa a pôr no DoD da história de entrada da aplicação (ou numa história própria) o critério "README diz como instalar, configurar (variáveis obrigatórias) e subir" (RN-790, AT-466).
 - **web**: "Decisões registradas" no contexto da sessão diz o recorte ("N na janela · há mais antes") quando há eventos antes da janela; a linha do tempo do time na Visão geral lê a sessão de execução e diz isso; na tela de Sessão a sidebar marca "Criativo" para sessão criativa, onde ela está listada (RN-788, RN-789, AT-463).
 - **engine**: o worktree da tarefa (re)pegada faz `git fetch` e parte da `dev` ATUAL do remoto; partindo da branch anterior não mergeada ou do próprio trabalho preservado, integra a `dev` antes do primeiro passo, e conflito é bloqueio nomeado com os arquivos (RN-779, AT-458).
@@ -13,6 +15,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - **engine**: a mensagem de commit do dev não grava mais a pendência falsa ("Pendente: commit… e PR…") que o modelo narrava no resumo do `report_done`, e a descrição do campo diz que commit, push e PR são do sistema (RN-781, AT-464).
 - **engine/api**: o gate de QA recebe o contrato vigente do módulo (`moduleContract` no dev-context) como fonte da interface; quando a história e o contrato divergem, o parecer nomeia a divergência em vez de reprovar o dev que seguiu o contrato (RN-786, AT-462).
 - **engine/api**: o gate de QA recebe as tarefas não concluídas das outras histórias do mesmo módulo (`moduleOpenTasks` no dev-context, até 20, com o total) e trata requisito que depende delas como observação, não reprovação (RN-785, AT-461).
+- **api**: a sessão de execução vigente não fecha por heartbeat enquanto houver tarefa bloqueada, PR esperando o merge do usuário ou tarefa devolvida por conflito de merge; desbloquear a tarefa acorda o dev do módulo dela (RN-776, RN-777, AT-457).
 - **docs**: página nova "From zero to a deliverable" (`docs/tutorials/`), o fluxo de um projeto real do zero ao entregável com as gravações do teste ao vivo de 09/10.
 - **engine/api**: a primeira tarefa de cada módulo (a do `backlog.task_claimed` mais antigo do módulo no projeto) tem o dobro do teto por tarefa — US$ 1,00 com o padrão de US$ 0,50 —, e o bloqueio por orçamento diz o teto que valeu para aquela tarefa (RN-774, AT-433).
 - **engine**: o Arquiteto lê o status atual das ADRs que propôs (`listar_adrs_propostas`: pendente, aprovada, recusada com motivo, executada com a PR) e o backlog com as tarefas por história (`listar_backlog`), e o kickoff e o resultado do `propose_adr` mandam consultá-los antes de afirmar estado (RN-772, RN-773, AT-454).
