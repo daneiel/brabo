@@ -85,4 +85,29 @@ defmodule Engine.Gates.RecorteDaTarefaTest do
 
     refute texto =~ "Forma da resposta"
   end
+
+  # AT-483 (RN-813): o entregável não subia e nenhum gate rodou o entrypoint.
+  test "tarefa que toca a fiação exige evidência do ponto de entrada real" do
+    texto =
+      RecorteDaTarefa.texto(%{
+        task: %{
+          "title" => "Registrar rotas de links",
+          "description" => "server.ts chama a migração"
+        }
+      })
+
+    assert texto =~ "Ponto de entrada"
+    assert texto =~ "importe o entrypoint real"
+    assert texto =~ "Sem essa evidência"
+  end
+
+  test "tarefa que não toca entrypoint nem fiação não ganha a seção" do
+    refute RecorteDaTarefa.texto(%{task: %{"title" => "Hash de senha com bcrypt"}}) =~
+             "Ponto de entrada"
+  end
+
+  # AT-487 (RN-814): o QA reprovou em duas voltas por lacunas da entrega original.
+  test "o recorte pede todas as lacunas numa volta só" do
+    assert RecorteDaTarefa.texto(%{task: %{"title" => "X"}}) =~ "TODAS as lacunas"
+  end
 end

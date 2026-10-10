@@ -22350,7 +22350,7 @@ sem dizer qual.
   esta última é OBSERVAÇÃO no `resumo`, fora de `itens`, salvo regra que a
   exija. Continua régua de prompt: nenhuma reprovação nova no código.
 - **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:18` (`texto`),
-  `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:60` (`secao_da_forma`),
+  `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:64` (`secao_da_forma`),
   `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:103`
   (`tarefasIrmas`) e `apps/engine/lib/engine/gates/qa_automacao_agent.ex:170`
   (`com_o_recorte`)
@@ -22791,7 +22791,7 @@ sem dizer qual.
   [RN-765](#rn-765). Desde a [RN-792](#rn-792) o Arquiteto confere o contrato
   contra as rotas citadas nas histórias ao declará-lo.
 - **Onde:** `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:163`
-  (`moduloDoContrato`), `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:48`
+  (`moduloDoContrato`), `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:52`
   (`secao_do_contrato`)
 - **Teste:** `apps/api/test/application/use-cases/execution/get-dev-task-context.use-case.spec.ts`
   (o contrato do módulo da história; sem contrato ou módulo ambíguo, `null`) e
@@ -23104,3 +23104,37 @@ sem dizer qual.
   repetido que esperava na caixa é descartado ao fim do ciclo"; "pedido para a
   task com ciclo suspenso não abre um segundo")
 - **Origem:** AT-478 (TP-01 de 10/10)
+
+### RN-813 — Tarefa que toca o ponto de entrada exige evidência de que ele sobe {#rn-813}
+
+- **Regra:** extensão do recorte da [RN-765](#rn-765). Quando o título ou a
+  descrição da tarefa toca o ponto de entrada, a fiação (rotas, migração,
+  registro) ou o README de execução, o recorte do gate de QA ganha a seção
+  "Ponto de entrada": exigir evidência de que o entrypoint REAL sobe (o
+  `start`/`main` do projeto rodado, ou um teste que importe o entrypoint real,
+  não um app montado no próprio teste) e responde numa rota ou comando. Sem
+  essa evidência, a lacuna vai para `itens`. É régua de PROMPT: o contrato
+  externo dos gates (`docs/gates.yml`) e o código do `emit_qa_verdict` não
+  mudam, e nenhum gate novo nasce. Tarefa que não toca nada disso não ganha a
+  seção.
+- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:87`
+  (`secao_do_ponto_de_entrada`)
+- **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs`
+  ("tarefa que toca a fiação exige evidência do ponto de entrada real" e "tarefa
+  que não toca entrypoint nem fiação não ganha a seção")
+- **Origem:** AT-483 (TP-01 de 10/10: o `server.ts` nunca chamava a migração da
+  tabela `links` e `/:code` sombreava `GET /links`; os 53 testes passavam porque
+  cada um montava o próprio banco e app)
+
+### RN-814 — O parecer do QA lista todas as lacunas numa volta {#rn-814}
+
+- **Regra:** extensão do recorte da [RN-765](#rn-765): o gate de QA lista em
+  `itens` TODAS as lacunas da tarefa que achar na volta, de uma vez, nunca uma
+  por volta — cada volta é uma correção paga e um passo do teto do ciclo. O
+  prompt anterior só mandava listar "quais regras faltam", e lacuna que não era
+  regra descoberta ficava para a volta seguinte. Régua de prompt.
+- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:20` (`texto`)
+- **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs` ("o
+  recorte pede todas as lacunas numa volta só")
+- **Origem:** AT-487 (TP-01 de 10/10, tarefa `c7ced5a2`: duas reprovações por
+  duas lacunas que já existiam na entrega original)
