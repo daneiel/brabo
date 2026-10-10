@@ -18865,7 +18865,7 @@ o de WORKSPACE, com a mesma lacuna declarada das outras telas de modo
 automático (RN-471).
 
 - **Código:** `apps/web/src/components/ModoAutomaticoDoTime.tsx:68`
-  (`ModoAutomaticoDoTime`), `:97` (`ligar`), `:39`
+  (`ModoAutomaticoDoTime`), `:103` (`ligar`), `:39`
   (`agentesEmModoAutomatico`); `apps/web/src/routes/ProjectExecutorsTab.tsx:89`
   (`podeLigarModoAutomatico`), `:308` (onde a oferta monta)
 - **Teste:** `apps/web/src/components/ModoAutomaticoDoTime.test.tsx:54` (nada
@@ -23021,6 +23021,41 @@ sem dizer qual.
 - **Teste:** `apps/engine/test/engine/gates/conferencia_do_readme_test.exs`
 - **Origem:** AT-475
 
+### RN-803 — A oferta em lote do modo automático fica inerte até saber quem já está ligado {#rn-803}
+
+- **Regra:** enquanto a leitura de `agent_autonomy` do projeto não chegou, o
+  "Ligar para N agentes" da aba Executores ([RN-661](#rn-661)) e as caixas dos
+  agentes ficam `disabled`, com o motivo em texto ("Lendo quais agentes já
+  estão em modo automático…"); o clique nesse intervalo não grava nada. Antes,
+  a lista nascia com TODOS os agentes como palpite e encolhia quando a leitura
+  chegava, e o primeiro clique depois de navegar caía em outro elemento sem
+  gravar nem dizer nada. O desfecho do lote (todos, nenhum com a frase da api,
+  alguns) é dito mesmo que a releitura depois das gravações falhe. Declarado:
+  o mesmo sintoma no "Merge" da aba PRs, em "Nova ideação" e no "Aplicar a
+  todos os agentes" NÃO foi reproduzido nem corrigido aqui.
+- **Onde:** `apps/web/src/components/ModoAutomaticoDoTime.tsx:92` (`carregando`)
+- **Teste:** `apps/web/src/components/ModoAutomaticoDoTime.test.tsx` ("AT-477
+  (RN-803): antes de a leitura de agent_autonomy chegar, o botão fica inerte e
+  diz por quê")
+- **Origem:** AT-477 (TP-01 de 10/10)
+### RN-804 — O cartão do plano do Dev Lead oferece o modo automático em lote antes de aprovar {#rn-804}
+
+- **Regra:** o `ApprovalCard` de `propose_execution_plan` pendente mostra,
+  acima de "Aprovar", o MESMO controle de oferta em lote da aba Executores
+  ([RN-661](#rn-661)): os `dev-<modulo>` que o plano sobe (mesma derivação de
+  `devAgentId` da api) mais os subagentes de gate, todos marcados, e nada
+  gravado sem o clique em "Ligar". Mesmo endpoint (`PUT .../agent-autonomy`,
+  curinga `*`), um PUT por agente, desfecho por agente e a mesma lista do que o
+  modo automático não libera. Aprovar ativa a execução ([RN-677](#rn-677)) e o
+  dev pede o primeiro comando logo depois; ligar depois não aprova o pendente
+  ([RN-755](#rn-755)). Só aparece onde quem chama passou o callback do modo
+  automático (papel `maintainer`) e há `QueryClient`. O cartão segue único
+  (AT-322): é um bloco a mais do tipo, não variante de aparência.
+- **Onde:** `apps/web/src/components/ApprovalCard.tsx:386`
+  (`ModoAutomaticoDoPlano`), `apps/web/src/components/ModoAutomaticoDoPlano.tsx:17`
+  (`agentesDoPlano`)
+- **Teste:** `apps/web/src/components/ApprovalCard.modo-automatico-do-plano.test.tsx`
+- **Origem:** AT-476 (TP-01 de 10/10)
 ### RN-805 — O plano de teste gravado é o que a ferramenta aceitou {#rn-805}
 
 - **Regra:** `emit_plano_de_teste` valida os argumentos JÁ normalizados
