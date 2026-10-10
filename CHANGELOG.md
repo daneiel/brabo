@@ -7,6 +7,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 ### Mudanças
 
 - **engine (segurança)**: `decimal` (transitiva, via ecto/postgrex) sobe de 3.1.1 para 3.2.0, que fecha a EEF-CVE-2026-97853 / GHSA-6c27-994x-c52f (alocação sem teto em `Decimal.round/3` pelo argumento `places`, DoS; corrigida a partir da 3.1.2). O `mix hex.audit` do CI volta a passar.
+- **web**: com o mapa de módulos gravado, o composer diz em texto que o próximo passo é "Confirmar arquitetura pronta" para o sistema oferecer a Infra, e sem história promovida diz o motivo em texto, não só no `title` do botão (RN-824, AT-491).
 - **engine**: o recorte do gate de QA pede estado limpo antes da suíte (encerrar o que o próprio projeto deixou de pé), teste de processo que encerre o grupo, e teste pulado por ambiente como observação (RN-817, AT-496); diz o que conta como evidência do ponto de entrada no ambiente do dev e que build de imagem, `docker compose` e rede externa nunca reprovam (RN-818, AT-492); e pede uma varredura por regra antes de emitir o parecer (RN-819, AT-490).
 - Aba PRs: o primeiro clique em "Merge" já mostra o cartão de decisão com a ação devolvida pela api, sem esperar a fila do projeto recarregar (RN-822, AT-493).
 - **docker-port**: o container de projeto nasce com `--restart unless-stopped` (constante, como o `--init`) e volta sozinho quando o daemon do Docker reinicia; `docker stop` explícito continua parando (RN-820, AT-494).

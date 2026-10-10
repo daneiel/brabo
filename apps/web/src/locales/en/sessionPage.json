@@ -59,6 +59,8 @@
     "prontoParaProduzirDesabilitado": "Capture at least one business rule with the Creative before confirming readiness",
     "confirmarArquitetura": "Confirm architecture ready",
     "confirmarArquiteturaDesabilitado": "Promote at least one story in the Backlog before confirming the architecture",
+    "confirmarArquiteturaExplica": "Declares the architecture ready and offers the handoff to the Infra, which brings up the project's container.",
+    "confirmarArquiteturaProximoPasso": "Is the architecture ready? Confirm it so the system offers the Infra, which brings up the project's container.",
     "destinatarioLabel": "To",
     "destinatarioPlaceholder": "Choose the agent…",
     "destinatarioPrecisaEscolher": "There is more than one agent in this session: choose who the message goes to.",

@@ -59,6 +59,8 @@
     "prontoParaProduzirDesabilitado": "Registre pelo menos uma regra de negócio com o Criativo antes de confirmar prontidão",
     "confirmarArquitetura": "Confirmar arquitetura pronta",
     "confirmarArquiteturaDesabilitado": "Promova pelo menos uma história na aba Histórias antes de confirmar a arquitetura",
+    "confirmarArquiteturaExplica": "Declara a arquitetura pronta e oferece o handoff à Infra, que sobe o container do projeto.",
+    "confirmarArquiteturaProximoPasso": "A arquitetura está pronta? Confirme para o sistema oferecer a Infra, que sobe o container do projeto.",
     "destinatarioLabel": "Para",
     "destinatarioPlaceholder": "Escolha o agente…",
     "destinatarioPrecisaEscolher": "Há mais de um agente nesta sessão: escolha a quem vai a mensagem.",
