@@ -17663,7 +17663,7 @@ cláusula própria no engine. Nenhuma mudança de api nem de engine.
 - **Onde:** `apps/web/src/lib/session-destinatario.ts:191` (`agentesEmConversa`),
   `:219` (`resolverDestinatario`), `:254` (`useDestinatarioDoChat`), `:116`
   (`useAtivadosNaSessaoInteira`), `:141` (`ativadosSemJanela`);
-  `apps/web/src/routes/SessionComposer.tsx:272` (`destinatarioRow`), `:178`
+  `apps/web/src/routes/SessionComposer.tsx:287` (`destinatarioRow`), `:193`
   (`ofertasForaDaJanela`); `apps/web/src/routes/SessionPage.tsx:357`
   (`aceitarHandoff`); `apps/web/src/routes/session-timeline-montagem.tsx:547`
   (`handoffIdDoEvento`), `:555` (`origem`); `apps/web/src/lib/session-handoffs.ts:68`
@@ -20398,7 +20398,7 @@ E o composer e os campos de texto das perguntas estruturadas levam
 
 - **Onde:** `apps/web/src/lib/conversa-comecou.ts:15` (`conversaComecou`),
   `:29` (`SEM_AUTOFILL`); `apps/web/src/routes/SessionPage.tsx:443`
-  (`conversaComecou`); `apps/web/src/routes/SessionComposer.tsx:365`
+  (`conversaComecou`); `apps/web/src/routes/SessionComposer.tsx:380`
   (`SEM_AUTOFILL`); `apps/web/src/routes/StructuredQuestionCard.tsx:206`
   (`SEM_AUTOFILL`)
 - **Teste:** `apps/web/src/routes/SessionPage.sessao.test.tsx:316` (Criativo
@@ -22396,7 +22396,7 @@ sem dizer qual.
   vocabulário lê os JSON, e o enum entrava pela interpolação em runtime;
   `i18n-enum-cru.test.ts` reprova `t(…, { status: x.status })`.
 - **Onde:** `apps/web/src/routes/ConfirmarEncerramento.tsx:13`
-  (`useEncerrarComConfirmacao`) e `apps/web/src/routes/SessionComposer.tsx:449`
+  (`useEncerrarComConfirmacao`) e `apps/web/src/routes/SessionComposer.tsx:464`
   (`statusGenerico`)
 - **Teste:** `apps/web/src/routes/ConfirmarEncerramento.test.tsx` (sem
   execução encerra direto; com execução só encerra ao confirmar; cancelar não
@@ -23434,7 +23434,7 @@ sem dizer qual.
   derivação lê os `events` que a tela já tem — nenhuma query nova
   ([RN-579](#rn-579)).
 - **Onde:** `apps/web/src/lib/session-readiness.ts:149` (`temMapaDeModulos`),
-  `apps/web/src/routes/SessionComposer.tsx:350` (`hasModuleMap`)
+  `apps/web/src/routes/SessionComposer.tsx:365` (`hasModuleMap`)
 - **Teste:** `apps/web/src/routes/SessionPage.proximo-passo-arquitetura.test.tsx`
   ("mapa gravado + história promovida + Arquiteto parado: o texto aparece";
   falhas: "com o handoff do Arquiteto já oferecido, o texto some", "com turno
@@ -23442,3 +23442,56 @@ sem dizer qual.
   motivo vem em texto visível")
 - **Origem:** AT-491 (opção a: o gesto humano é desenho, o defeito era a tela
   não avisar)
+
+### RN-829 — O avatar de quem fala no fio é o do agente, no streaming e depois dele {#rn-829}
+
+- **Regra:** a bolha do agente em streaming e a bolha persistida da resposta
+  (`agent.response`) desenham o MESMO avatar, `AvatarDoAgente`, pelo id do
+  agente. Antes a bolha em curso mostrava o ícone do agente e a persistida o
+  ícone de modelo, e o avatar trocava na cara da pessoa quando o turno fechava.
+  O modelo que gerou a resposta continua só no chip ao lado do nome.
+  Agente fora do roster (ou sem id) degrada para o ícone
+  genérico, nunca para caixa vazia.
+- **Onde:** `apps/web/src/components/ui/AvatarDoAgente.tsx:22` (`AvatarDoAgente`),
+  `apps/web/src/routes/SessionFio.tsx:278` (`BolhaDoStreaming`),
+  `apps/web/src/routes/session-timeline-montagem.tsx:120` (`montarTimeline`)
+- **Teste:** `apps/web/src/routes/SessionFio.at503.test.tsx` ("a bolha
+  persistida usa o avatar do agente, não o do modelo; o modelo segue no chip",
+  "a bolha em streaming usa o MESMO avatar"; degradação: "sem agente
+  identificado, degrada para o avatar genérico")
+- **Origem:** AT-503 (TP-01 11ª, nota de UX do chat §2.1)
+
+### RN-830 — O composer respeita a composição de acento, e o fio fala com o leitor de tela {#rn-830}
+
+- **Regra:** Enter só envia quando não há composição em curso
+  (`nativeEvent.isComposing`) — no meio de um acento por IME ou tecla morta,
+  ele confirma o caractere. O contêiner do fio é `role="log"` (com nome), e a
+  faixa de atividade do turno ([RN-460](#rn-460)) é `role="status"` com
+  `aria-live="polite"`: o leitor de tela anuncia a resposta nova e o que o
+  agente está fazendo sem interromper quem está lendo. A checagem mora no
+  composer, não na página, que está no teto de linhas ([ADR 0176](adr/0176-sessionpage-abaixo-de-mil-linhas.md)).
+- **Onde:** `apps/web/src/routes/SessionComposer.tsx:81` (`ignorarComposicaoIme`),
+  `apps/web/src/components/TurnActivityStrip.tsx:41` (`TurnActivityStrip`)
+- **Teste:** `apps/web/src/routes/SessionFio.at503.test.tsx` ("Enter sem
+  composição chega ao handler de envio", "a faixa do turno é uma região de
+  status educada"; falha: "Enter no meio da composição de acento NÃO envia")
+- **Origem:** AT-503 (nota de UX do chat §3)
+
+### RN-831 — A mensagem que não foi enviada fica no fio, com "tentar de novo" {#rn-831}
+
+- **Regra:** quando o envio da mensagem ao agente falha (exceto a recusa por
+  sessão encerrada, que devolve o texto ao campo — AT-154), a bolha otimista
+  não some: o texto fica no fio com o selo "não enviada" e o botão "Tentar de
+  novo", que reenvia o MESMO texto ao MESMO destinatário pelo caminho de
+  sempre. Há uma só por vez; um envio novo (ou o próprio reenvio) a substitui.
+  O toast com o motivo continua.
+- **Onde:** `apps/web/src/lib/mensagem-nao-enviada.ts:29`
+  (`marcarMensagemNaoEnviada`), `apps/web/src/routes/SessionFio.tsx:52`
+  (`SessionFio`)
+- **Teste:** `apps/web/src/routes/SessionFio.at503.test.tsx` ("mostra o texto
+  com \"não enviada\" e reenvia ao clicar em tentar de novo", "um envio novo
+  (otimista acesa) substitui a não enviada");
+  `apps/web/src/routes/SessionPage.turno-preso.test.tsx` (falha: "CASO DE
+  FALHA: erro no envio desarma o turno e a mensagem fica \"não enviada\"
+  (RN-831)")
+- **Origem:** AT-503 (nota de UX do chat §3)

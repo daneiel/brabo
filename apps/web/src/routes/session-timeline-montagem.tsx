@@ -18,6 +18,7 @@ import type {
 import type { useTurnoDoAgente } from '../lib/session-turno';
 import { ApprovalCard } from '../components/ApprovalCard';
 import { MarkdownMessage } from '../components/ui/MarkdownMessage';
+import { AvatarDoAgente } from '../components/ui/AvatarDoAgente';
 import { Button } from '../components/ui/Button';
 import { Carousel, type CarouselSlide } from '../components/ui/Carousel';
 import { lerFalhaDeTurno } from '../lib/session-falha';
@@ -833,9 +834,8 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
           : undefined;
       const bolha = (text: string, key: string) => (
           <div className={styles.message} key={key} style={corDoAgente(event.actor.id)}>
-            <span className={styles.avatar}>
-              <ModelIcon size={15} />
-            </span>
+            {/* RN-829: quem fala é o AGENTE — o modelo fica só no chip. */}
+            <AvatarDoAgente id={event.actor.id} />
             <div className={styles.messageBody}>
               <div className={styles.messageHeader}>
                 <span className={styles.messageName}>{nomeDoAgente(event.actor.id)}</span>

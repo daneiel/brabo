@@ -1245,3 +1245,13 @@
     animation: none;
   }
 }
+
+/* RN-831: o selo da mensagem cujo envio falhou, com o reenvio ao lado. */
+.messageNaoEnviada {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  font-size: var(--fs-sm);
+  color: var(--danger);
+}

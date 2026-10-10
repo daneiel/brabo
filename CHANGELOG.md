@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- **web (fio da Sessão)**: a bolha do agente mantém o mesmo avatar do streaming ao fim do turno, com o modelo só no chip (RN-829); Enter não envia no meio da composição de acento, o fio é `role="log"` e a faixa do turno `role="status"` (RN-830); a mensagem cujo envio falhou fica no fio como "não enviada", com "Tentar de novo" ao mesmo destinatário (RN-831, AT-503).
 - **engine (segurança)**: `decimal` (transitiva, via ecto/postgrex) sobe de 3.1.1 para 3.2.0, que fecha a EEF-CVE-2026-97853 / GHSA-6c27-994x-c52f (alocação sem teto em `Decimal.round/3` pelo argumento `places`, DoS; corrigida a partir da 3.1.2). O `mix hex.audit` do CI volta a passar.
 - **web**: com o mapa de módulos gravado, o composer diz em texto que o próximo passo é "Confirmar arquitetura pronta" para o sistema oferecer a Infra, e sem história promovida diz o motivo em texto, não só no `title` do botão (RN-824, AT-491).
 - **engine**: o recorte do gate de QA pede estado limpo antes da suíte (encerrar o que o próprio projeto deixou de pé), teste de processo que encerre o grupo, e teste pulado por ambiente como observação (RN-817, AT-496); diz o que conta como evidência do ponto de entrada no ambiente do dev e que build de imagem, `docker compose` e rede externa nunca reprovam (RN-818, AT-492); e pede uma varredura por regra antes de emitir o parecer (RN-819, AT-490).
