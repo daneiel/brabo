@@ -294,6 +294,25 @@ describe('AT-381 — o plano mostra a estimativa de gasto', () => {
     expect(frase).toContain('teto por tarefa, não o preço');
   });
 
+  it('RN-802 (AT-473): a primeira de cada módulo vale o dobro', () => {
+    const umModulo = fraseDaAcao('propose_execution_plan', {
+      tarefas: Array.from({ length: 8 }, (_, i) => ({ taskId: `t${i}`, modulo: 'api' })),
+      orcamentoPorTarefaMicros: 500_000,
+      multiplicadorDaPrimeiraDoModulo: 2,
+    });
+    expect(umModulo).toContain('até US$ 4,50 (8 tarefas × US$ 0,50; a primeira de cada módulo vale o dobro)');
+    const doisModulos = fraseDaAcao('propose_execution_plan', {
+      tarefas: [
+        { taskId: 'a', modulo: 'api' },
+        { taskId: 'b', modulo: 'web' },
+        { taskId: 'c', modulo: 'web' },
+      ],
+      orcamentoPorTarefaMicros: 500_000,
+      multiplicadorDaPrimeiraDoModulo: 2,
+    });
+    expect(doisModulos).toContain('até US$ 2,50');
+  });
+
   it('sem orçamento no payload, não inventa número', () => {
     expect(fraseDaAcao('propose_execution_plan', { tarefas: [{ taskId: 't', modulo: 'api' }] })).not.toContain('US$');
   });
