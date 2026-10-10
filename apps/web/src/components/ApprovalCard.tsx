@@ -27,6 +27,7 @@ import {
 } from './ui/icons';
 import { podeOferecerSemprePermitir } from '../lib/sempre-permitir';
 import { OQueOPilotoLibera } from './OQueOPilotoLibera';
+import { ModoAutomaticoDoPlano } from './ModoAutomaticoDoPlano';
 import styles from './ApprovalCard.module.css';
 
 export type ApprovalUrgency = 'critico' | 'alta' | 'normal';
@@ -375,6 +376,15 @@ export function ApprovalCard({
 
       {isPending ? (
         <>
+          {/* AT-476 (RN-804): no plano do Dev Lead, a oferta em lote do modo
+              automático vem ANTES de aprovar — aprovar ativa a execução. Só
+              com o callback (quem chama já confirmou maintainer) e com
+              QueryClient (a oferta lê `agent_autonomy`). */}
+          {action.actionType === 'propose_execution_plan' &&
+            onActivateAutoMode &&
+            temQueryClient && (
+              <ModoAutomaticoDoPlano projectId={action.projectId} payload={payload} />
+            )}
           <div className={styles.actions}>
             <Button variant="success" disabled={inerte} onClick={() => void decidir(() => onApprove())}>
               {t('approvalCard.actions.approve')}

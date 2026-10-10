@@ -16,7 +16,12 @@ defmodule Engine.Gates.Hooks.TerminationPlanoDeTeste do
      {"emit_plano_de_teste",
       %{
         plano_de_teste: Map.get(args, "planoDeTeste", ""),
-        criterios_executaveis: Map.get(args, "criteriosExecutaveis", []),
+        # RN-805 (AT-478): o argumento cru pode chegar como STRING JSON; a
+        # tool já validou a lista normalizada (RN-719), então o hook normaliza
+        # igual — senão o artefato era recusado (`:criterios_vazios`) depois
+        # de a tool dizer "registrado", e a Automação caía no `Enum` da string.
+        criterios_executaveis:
+          Engine.Gates.Hooks.Termination.lista(Map.get(args, "criteriosExecutaveis")),
         estrategia_de_automacao: Map.get(args, "estrategiaDeAutomacao", "")
       }}}
   end

@@ -535,4 +535,43 @@ defmodule Engine.Gates.QaLeadServerTest do
       assert_received {:gate_verdict_recorded, "task-abc12345", "qa", "approved", _r, _i, nil}
     end
   end
+
+  # RN-806 (AT-478): no uso real o resgate pediu o ciclo DUAS vezes no mesmo
+  # instante; o segundo rodou depois do veredito do primeiro e gravou parecer
+  # contrário ao que já tinha valido.
+  describe "um ciclo por task+gate" do
+    test "pedido repetido que esperava na caixa é descartado ao fim do ciclo", %{state: state} do
+      Process.put(:fake_dev_context, dev_context([]))
+      Process.put(:fake_propose_action, terminal_ok())
+
+      Process.put(:fake_llm_turns, [
+        FakeEngineApiClient.tool_call_response("terminal", %{"command" => "npm test"}),
+        FakeEngineApiClient.tool_call_response("emit_qa_verdict", %{
+          "veredito" => "approved",
+          "resumo" => "ok",
+          "itens" => [],
+          "coverageMatrix" => []
+        })
+      ])
+
+      Process.put(:fake_gate_verdict_response, %{"nextAction" => "run_secops"})
+
+      # O pedido duplicado, já na caixa do processo do Lead.
+      send(self(), {:"$gen_cast", {:run, "task-abc12345"}})
+      # Pedido de OUTRA task não é tocado.
+      send(self(), {:"$gen_cast", {:run, "task-outra"}})
+
+      assert {:noreply, _} = QaLeadServer.handle_cast({:run, "task-abc12345"}, state)
+
+      refute_received {:"$gen_cast", {:run, "task-abc12345"}}
+      assert_received {:"$gen_cast", {:run, "task-outra"}}
+    end
+
+    test "pedido para a task com ciclo suspenso não abre um segundo", %{state: state} do
+      suspenso = %{state | pendente: %{task_id: "task-abc12345", action_id: "pa-9"}}
+
+      assert {:noreply, ^suspenso} = QaLeadServer.handle_cast({:run, "task-abc12345"}, suspenso)
+      refute_received {:llm_turn, _, _, _}
+    end
+  end
 end

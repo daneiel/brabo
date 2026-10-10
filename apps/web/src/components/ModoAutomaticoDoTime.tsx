@@ -84,6 +84,12 @@ export function ModoAutomaticoDoTime({
   if (candidatos.length === 0 && !desfecho) return null;
 
   const escolhidos = candidatos.filter((a) => !desmarcados.has(a));
+  // AT-477 (RN-803): enquanto a leitura de `agent_autonomy` não chegou, a
+  // lista de candidatos é PALPITE (todos) e encolhe quando ela chega — o
+  // botão e as caixas mudam de lugar sob o cursor, e o primeiro clique caía
+  // em outro elemento sem gravar nada nem dizer nada. Inerte, com o motivo
+  // em texto, até a leitura chegar.
+  const carregando = autonomyRules === undefined;
 
   function alternar(agente: string) {
     setDesmarcados((atual) => {
@@ -95,6 +101,7 @@ export function ModoAutomaticoDoTime({
   }
 
   async function ligar() {
+    if (carregando || ligando || escolhidos.length === 0) return;
     setLigando(true);
     setDesfecho(null);
     const falharam: string[] = [];
@@ -111,7 +118,10 @@ export function ModoAutomaticoDoTime({
         ultimaMensagem = mensagemDaApi(erro, t('autoModeTeam.erroGenerico'));
       }
     }
-    await queryClient.invalidateQueries({ queryKey: ['agent-autonomy', projectId] });
+    // O desfecho é dito mesmo que a releitura falhe: ela não decide nada.
+    await queryClient
+      .invalidateQueries({ queryKey: ['agent-autonomy', projectId] })
+      .catch(() => undefined);
     const total = escolhidos.length;
     if (falharam.length === 0) setDesfecho({ tipo: 'todos', total });
     else if (falharam.length === total) setDesfecho({ tipo: 'nenhum', mensagem: ultimaMensagem });
@@ -134,7 +144,7 @@ export function ModoAutomaticoDoTime({
                 <input
                   type="checkbox"
                   checked={!desmarcados.has(agente)}
-                  disabled={!podeLigar || ligando}
+                  disabled={!podeLigar || ligando || carregando}
                   onChange={() => alternar(agente)}
                 />
                 {nomeDoAgente(agente)}
@@ -152,11 +162,17 @@ export function ModoAutomaticoDoTime({
         </p>
       )}
 
+      {carregando && podeLigar && (
+        <p className={styles.texto} data-testid="modo-automatico-carregando">
+          {t('autoModeTeam.loading')}
+        </p>
+      )}
+
       {candidatos.length > 0 && (
         <Button
           variant="primary"
           loading={ligando}
-          disabled={!podeLigar || escolhidos.length === 0}
+          disabled={!podeLigar || carregando || escolhidos.length === 0}
           onClick={() => void ligar()}
         >
           {t('autoModeTeam.button', { count: escolhidos.length })}
