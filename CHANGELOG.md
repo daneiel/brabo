@@ -6,6 +6,8 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- **api**: o QA de Automação roda com o raciocínio desligado, como os dev agents de execução; o QA-estratégia não muda (AT-504, RN-838).
+- **api**: o recorte do Jev nunca tira `report_done` nem `report_blocked` dos dev agents de execução (AT-499, RN-839).
 - **web**: o campo "Nome do projeto" do assistente passa a se chamar `projeto-slug` (era `project-title`, e "title" é token de contato): o NordPass não deve mais abrir a lista de contatos sobre ele — heurística, sem atributo de ignore documentado pelo NordPass (RN-834, AT-501).
 - **web (fio da Sessão)**: botão flutuante "ir ao fim" quando chega mensagem para quem subiu no fio, com o número de mensagens novas e realce quando a novidade é uma aprovação (RN-836, AT-506).
 - **web (markdown do fio)**: a resposta do agente ganha régua (`---`), citação (`>`), `####`, lista aninhada de um nível e checklist (`- [ ]`/`- [x]`, só visual); e o texto em curso pode passar por `fecharMarcadoresAbertos`, que fecha fence, crase e negrito pendentes para o prefixo do stream não mostrar marcador cru — o texto final segue sem ele (RN-837, AT-507).

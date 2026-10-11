@@ -17197,9 +17197,9 @@ OpenRouter cobrou sem devolver `usage.cost` não entra em `token_usage`; o
 endpoint é ALPHA e o smoke manual
 (`jev-tool-router.smoke.spec.ts`, teto US$ 0,05) é quem acusa a mudança.
 
-- **Código:** `apps/api/src/domain/llm/tool-router.ts:19` (`MODELO_DO_JEV`),
-  `:101` (`montarPedidoAoJev`), `:158` (`lerRespostaDoJev`), `:208`
-  (`recortarEstado`), `:260` (`menuP3`);
+- **Código:** `apps/api/src/domain/llm/tool-router.ts:27` (`MODELO_DO_JEV`),
+  `:109` (`montarPedidoAoJev`), `:166` (`lerRespostaDoJev`), `:216`
+  (`recortarEstado`), `:268` (`menuP3`);
   `apps/api/src/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.ts:118`
   (`preparar`), `:143` (`executar`), `:305` (`registrarGasto`);
   `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:152`
@@ -22281,8 +22281,8 @@ sem dizer qual.
   declarado: a api não tem sinal barato de qual obrigação está pendente
   naquele passo, então ele vale sempre que há recorte. Os dev agents ficam
   sem piso, de propósito (a obrigação deles muda a cada passo; para eles vale
-  só a [RN-759](#rn-759)).
-- **Onde:** `apps/api/src/domain/llm/tool-router.ts:332` (`menuComPiso`) e
+  só a [RN-759](#rn-759)) — salvo `report_done`/`report_blocked`, que entram no piso deles desde a [RN-839](#rn-839).
+- **Onde:** `apps/api/src/domain/llm/tool-router.ts:352` (`menuComPiso`) e
   `apps/api/src/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.ts:248`
   (`menuComPiso`)
 - **Teste:** `apps/api/test/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.spec.ts`
@@ -22304,7 +22304,7 @@ sem dizer qual.
   porque só a api sabe o menu depois do Jev. Não aplicar o recorte na volta
   que fecha o turno foi avaliado e não feito: a api não sabe antes da
   resposta que a volta será a última.
-- **Onde:** `apps/api/src/domain/llm/tool-router.ts:346` (`avisoDeRecorte`) e
+- **Onde:** `apps/api/src/domain/llm/tool-router.ts:366` (`avisoDeRecorte`) e
   `apps/api/src/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.ts:263`
   (`avisoDeRecorte`)
 - **Teste:** `apps/api/test/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.spec.ts`
@@ -22645,7 +22645,7 @@ sem dizer qual.
   raciocínio). A decisão do que pedir mora num ponto só, `opcoesDeRaciocinio`,
   chamado pelos três casos de uso de turno. O TODO(humano) da RN-741 fecha com
   essa medição.
-- **Onde:** `apps/api/src/domain/llm/raciocinio-do-agente.ts:14`
+- **Onde:** `apps/api/src/domain/llm/raciocinio-do-agente.ts:18`
   (`opcoesDeRaciocinio`), `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:470`
   (`controla`), `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:189`
   (`opcoesDeRaciocinio`)
@@ -22665,7 +22665,7 @@ sem dizer qual.
   modelo sem `supportsReasoning` não manda nada. Não é silencioso: a ajuda da
   faceta "thinking" do catálogo de modelos diz que nos dev agents de execução o
   raciocínio vai desligado (o mínimo escolhido; o seletor e a bolha não mudam).
-- **Onde:** `apps/api/src/domain/llm/raciocinio-do-agente.ts:28`
+- **Onde:** `apps/api/src/domain/llm/raciocinio-do-agente.ts:23`
   (`raciocinioDesligadoParaOAgente`), `apps/api/src/infrastructure/llm/openrouter-provider.ts:224`
   (`campoDeRaciocinioDesligadoOpenRouter`)
 - **Teste:** `apps/api/test/infrastructure/llm/openai-compatible-provider.contract.spec.ts`
@@ -22680,7 +22680,7 @@ sem dizer qual.
   o recorte do Jev nunca as tira, para o Arquiteto não afirmar status de ADR
   nem tarefas do backlog sem poder consultá-los ([RN-773](#rn-773)). Continua
   valendo que o piso só devolve o que está no catálogo do passo.
-- **Onde:** `apps/api/src/domain/llm/tool-router.ts:303` (`PISO_DO_MENU`)
+- **Onde:** `apps/api/src/domain/llm/tool-router.ts:311` (`PISO_DO_MENU`)
 - **Teste:** `apps/api/test/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.spec.ts`
   (`Arquiteto recortado pelo Jev: as leituras de estado (ADRs propostas,
   backlog) continuam no menu (RN-784)`)
@@ -23142,7 +23142,7 @@ sem dizer qual.
   8, registro de tensão) e `emit_artifact` ficam fora do piso: não são
   obrigação da etapa. Continua valendo que o piso só devolve o que está no
   catálogo do passo.
-- **Onde:** `apps/api/src/domain/llm/tool-router.ts:303` (`PISO_DO_MENU`)
+- **Onde:** `apps/api/src/domain/llm/tool-router.ts:311` (`PISO_DO_MENU`)
 - **Teste:** `apps/api/test/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.spec.ts`
   (`Arquiteto recortado pelo Jev sem assign_story_modules/choose_project_image:
   as duas continuam no menu (RN-809)`)
@@ -23453,7 +23453,7 @@ sem dizer qual.
   ações tipadas de git, que o dev não tem. O kickoff e o ambiente dizem também
   que, se o script `test` do `package.json` lista arquivos um a um, todo
   arquivo de teste novo entra nele. Só texto: nenhuma regra nova de código, e
-  o Jev segue sem piso para dev agents ([RN-758](#rn-758)).
+  o Jev segue sem piso para dev agents ([RN-758](#rn-758)) — até a [RN-839](#rn-839), que pôs `report_done`/`report_blocked` no piso deles.
 - **Onde:** `apps/engine/lib/engine/dev/tools/report_done.ex:16` (`spec`),
   `apps/engine/lib/engine/dev/tools/report_blocked.ex:12` (`spec`),
   `apps/engine/lib/engine/dev/dev_agent_server.ex:591` (`initial_message`),
@@ -23699,3 +23699,33 @@ sem dizer qual.
   prefixo lança nem mostra marcador cru"; falha: "o texto final (sem
   emCurso) não é alterado")
 - **Origem:** AT-507 (Melhorias de UX do Chat, 10/10, item 1.2-a)
+### RN-838 — O QA de Automação roda com o raciocínio desligado {#rn-838}
+
+- **Regra:** estende a [RN-783](#rn-783) (decisão do dono de 10/10). O gate
+  `qa-automacao` passa a ter o mesmo tratamento dos dev agents de execução:
+  com modelo de `supportsReasoning`, o provider que sabe dizer "desligado"
+  manda `reasoning: { enabled: false }`, mantendo a folga da
+  [RN-782](#rn-782). O QA-estratégia (`qa-estrategia`) e os demais gates não
+  mudam. Medição que motivou: o raciocínio dos gates subiu de 44 mil para 211
+  mil tokens por rodada, e o custo deles de US$ 0,15 para US$ 0,55.
+- **Onde:** `apps/api/src/domain/llm/raciocinio-do-agente.ts:34`
+  (`raciocinioDesligadoParaOAgente`)
+- **Teste:** `apps/api/test/domain/llm/raciocinio-do-agente.spec.ts`
+  (`QA de Automação desliga; QA-estratégia e outros gates não (RN-838)`;
+  `falha: QA de Automação com modelo sem supportsReasoning não manda nada`)
+- **Origem:** AT-504 (decisão do dono de 10/10)
+
+### RN-839 — `report_done` e `report_blocked` entram no piso do Jev dos dev agents {#rn-839}
+
+- **Regra:** revisa a [RN-758](#rn-758)/[RN-759](#rn-759) (decisão do dono de
+  10/10). Os dev agents de execução (`dev-<modulo>`, nunca o `dev-lead`)
+  deixam de ficar sem piso SÓ para as duas ferramentas de desfecho da task:
+  o recorte do Jev nunca tira `report_done` nem `report_blocked`. O resto do
+  passo deles segue recortável, com o aviso de recorte da RN-759. Como todo
+  piso, ele só devolve o que está no catálogo do passo.
+- **Onde:** `apps/api/src/domain/llm/tool-router.ts:342` (`pisoDoMenu`)
+- **Teste:** `apps/api/test/domain/llm/piso-dos-dev-agents.spec.ts`
+  (`recorte que deixa só \`terminal\` para dev-api: report_done e
+  report_blocked continuam`; `falha: dev-lead e outro agente não ganham as
+  ferramentas de desfecho`)
+- **Origem:** AT-499 (sequência, decisão do dono de 10/10)
