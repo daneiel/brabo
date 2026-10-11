@@ -14638,7 +14638,7 @@ desde a Fase 4a —, e o que muda é a latência máxima das escritas sem aviso.
   `apps/engine/lib/engine/sessions/live_broadcast.ex` (`event_appended/3`);
   `apps/engine/lib/engine_web/controllers/session_command_controller.ex:46`
   (`event_appended`, a rota do aviso da api);
-  `apps/api/src/application/use-cases/sessions/append-session-event.use-case.ts:182`
+  `apps/api/src/application/use-cases/sessions/append-session-event.use-case.ts:198`
   (`eventAppended`);
   `apps/api/src/infrastructure/persistence/drizzle/drizzle-context.ts:39`
   (`aposCommit`), `:53` (`veioDoEngine`);
@@ -14798,9 +14798,9 @@ fechada seguem mostrando a mensagem da api.
   `apps/api/src/domain/sessions/conversa-em-sessao-encerrada.ts:56`
   (`AGENTES_CONVERSACIONAIS`), `:67` (`TIPOS_DA_CONVERSA`), `:95`
   (`ehEventoDeConversa`), `:117` (`garantirQueSessaoAceitaEvento`);
-  `apps/api/src/application/use-cases/sessions/append-session-event.use-case.ts:39`
+  `apps/api/src/application/use-cases/sessions/append-session-event.use-case.ts:44`
   (`conflitoDeSessaoEncerrada`), `:114` (o estado no mesmo `UPDATE` do `seq`),
-  `:198` (`garantirQueAceita`);
+  `:214` (`garantirQueAceita`);
   `apps/api/src/infrastructure/persistence/drizzle/session.repository.ts:117`
   (`incrementSeq`);
   `apps/api/src/application/use-cases/llm/send-chat-message.use-case.ts:78`
@@ -20014,7 +20014,7 @@ lendo o worktree de outros módulos para descobrir a interface deles: o
   (`execute`);
   `apps/api/src/application/use-cases/architecture/list-module-contracts.use-case.ts:42`
   (`execute`);
-  `apps/api/src/interfaces/http/internal/internal-sessions.controller.ts:773`
+  `apps/api/src/interfaces/http/internal/internal-sessions.controller.ts:779`
   (`moduleContracts`);
   `apps/api/src/interfaces/http/internal/internal-projects.controller.ts:178`
   (`moduleContracts`);
@@ -21371,7 +21371,7 @@ história que ele recriou disparou o aviso de duplicata semântica
 
 O kickoff do PO diz as três coisas.
 
-- **Onde:** `apps/api/src/application/use-cases/backlog/complete-story.use-case.ts:42`
+- **Onde:** `apps/api/src/application/use-cases/backlog/complete-story.use-case.ts:52`
   (`CompleteStoryUseCase`);
   `apps/api/src/interfaces/http/internal/internal-sessions.controller.ts:535`
   (`completeStoryRoute`); `apps/engine/lib/engine/harness/tools/complete_story.ex:41`
@@ -21687,13 +21687,13 @@ sem dizer qual.
 - **Onde:** `apps/api/src/domain/backlog/correcao-de-historia.ts:33`
   (`recusaDeCorrecaoDeHistoria`),
   `apps/api/src/application/use-cases/backlog/corrigir-historia.use-case.ts:47`
-  (`editar`), `:90` (`arquivar`),
+  (`editar`), `:95` (`arquivar`),
   `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:97`
   (`findByProject`), `:403` (`claimNext`),
   `apps/api/src/interfaces/http/backlog/backlog.controller.ts:205`
   (`updateTitle`), `:219` (`archive`),
-  `apps/api/src/interfaces/http/internal/internal-sessions.controller.ts:571`
-  (`updateStoryRoute`), `:603` (`archiveStoryRoute`),
+  `apps/api/src/interfaces/http/internal/internal-sessions.controller.ts:576`
+  (`updateStoryRoute`), `:609` (`archiveStoryRoute`),
   `apps/engine/lib/engine/harness/tools/update_story.ex:39` (`run`),
   `apps/engine/lib/engine/harness/tools/archive_story.ex:38` (`run`),
   `apps/web/src/routes/ProjectBacklogTab.tsx:64` (`motivoDeCorrecaoInerte`)
@@ -22353,7 +22353,7 @@ sem dizer qual.
   exija. Continua régua de prompt: nenhuma reprovação nova no código.
 - **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:18` (`texto`),
   `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:72` (`secao_da_forma`),
-  `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:103`
+  `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:165`
   (`tarefasIrmas`) e `apps/engine/lib/engine/gates/qa_automacao_agent.ex:170`
   (`com_o_recorte`)
 - **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs` (desde
@@ -22514,7 +22514,7 @@ sem dizer qual.
   RN-059). Antes saía `origin: null`. O bloqueio de artefato de infra pelo
   mesmo motivo (`infra.artifact_blocked`) não tem campo de origem e fica como
   está, declarado.
-- **Onde:** `apps/api/src/application/use-cases/execution/record-gate-verdict.use-case.ts:113`
+- **Onde:** `apps/api/src/application/use-cases/execution/record-gate-verdict.use-case.ts:132`
   (`politica`)
 - **Teste:** `apps/api/test/application/use-cases/execution/record-gate-verdict.use-case.spec.ts`
   (o ciclo esgotado chama `MarkTaskBlockedUseCase` com `'politica'`; o veredito
@@ -22767,7 +22767,7 @@ sem dizer qual.
   `moduleOpenTasksTotal` e o corte dito no recorte. Requisito da entrega que
   depende do que outra história ainda vai entregar (uma rota, uma tela) vai ao
   `resumo` como observação e não reprova. A régua é de PROMPT, como na RN-765.
-- **Onde:** `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:118`
+- **Onde:** `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:180`
   (`tarefasAbertasDoModulo`), `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:20`
   (`texto`)
 - **Teste:** `apps/api/test/application/use-cases/execution/get-dev-task-context.use-case.spec.ts`
@@ -22792,7 +22792,7 @@ sem dizer qual.
   diz Y), para o usuário e o Arquiteto. Régua de PROMPT, como a
   [RN-765](#rn-765). Desde a [RN-792](#rn-792) o Arquiteto confere o contrato
   contra as rotas citadas nas histórias ao declará-lo.
-- **Onde:** `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:163`
+- **Onde:** `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:225`
   (`moduloDoContrato`), `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:60`
   (`secao_do_contrato`)
 - **Teste:** `apps/api/test/application/use-cases/execution/get-dev-task-context.use-case.spec.ts`
@@ -24145,3 +24145,113 @@ sem dizer qual.
   leitura do dev não alarga"; "outro agente com a mesma mensagem não ganha";
   "as marcas existem no texto que o engine monta")
 - **Origem:** AT-523
+### RN-858 — A pergunta em aberto de agente é registro durável, e só o autor da sessão a responde {#rn-858}
+
+- **Regra:** a dúvida que um agente deixa para o usuário vira o evento
+  `artifact.open_question` (append-only, no log da sessão onde nasce) com
+  `{questionId (uuid), pergunta (até 500), sugestao (até 300, opcional),
+  afeta: {regras, historias, tarefas}, autor, sessionId}` — o funil de
+  eventos recusa com 400 o payload fora desse formato, venha do engine ou da
+  api. Ela fecha com `open_question.answered` `{questionId, resposta,
+  aceitouSugestao, decisionEventId, respondidaPor}`; o STATUS sai do log
+  (aberta = sem `answered`), nunca de tabela. `GET
+  /projects/:projectId/open-questions?status=open|answered|all` (`viewer`,
+  padrão `open`) lista as mais recentes primeiro, com teto de 50 e o `total`
+  (RN-180), e diz em `autorDaSessao` quem pode responder. `POST
+  .../open-questions/:questionId/answer` com `{resposta}` ou
+  `{aceitarSugestao: true}` só é aceito do AUTOR da sessão de origem (403
+  `so_o_autor_da_sessao`); já respondida é 409 `pergunta_ja_respondida`,
+  pergunta de outro projeto é 404 e resposta vazia (ou sugestão que não
+  existe) é 400. Responder grava, numa transação, um `artifact.decision_record`
+  com o usuário como ator (`context` = a pergunta, `choice` = a resposta,
+  `consequences` = o que afeta, mais `questionId` e `afeta`) e o
+  `open_question.answered`, avisa o canal da sessão (pelo funil, RN-579) e pede
+  ao engine para retomar o gate de QA ESTACIONADO de cada tarefa afetada
+  (caminho da RN-724) — melhor esforço: gate que não estava estacionado ou
+  engine fora do ar não desfaz a resposta. ADR 0214.
+- **Onde:** `apps/api/src/domain/open-questions/pergunta-em-aberto.ts:44`
+  (`validarPerguntaEmAberto`), `:112` (`respostaEscolhida`),
+  `apps/api/src/application/use-cases/sessions/append-session-event.use-case.ts:101`
+  (`EVENTO_PERGUNTA_EM_ABERTO`),
+  `apps/api/src/application/use-cases/backlog/perguntas-em-aberto.use-case.ts:72`
+  (`listar`), `:106` (`responder`), `:189` (`resumeParkedGate`),
+  `apps/api/src/interfaces/http/backlog/open-questions.controller.ts:51`
+  (`list`), `:81` (`answer`)
+- **Teste:** `apps/api/test/application/use-cases/backlog/perguntas-em-aberto.use-case.spec.ts`
+  ("o autor responde: decision_record (ator usuário, com questionId) e
+  answered, e o gate é religado"; "aceitar a sugestão grava a sugestão como
+  escolha"; falhas: "quem não é o autor da sessão recebe 403
+  so_o_autor_da_sessao, sem escrever"; "já respondida é 409
+  pergunta_ja_respondida"; "pergunta de outro projeto é 404"; "o funil de
+  eventos recusa com 400 antes de qualquer escrita")
+- **Origem:** AT-521 (TP-01: quatro perguntas do Criativo sumiram do campo de
+  visão e o fluxo seguiu sem respostas)
+
+### RN-859 — A decisão do usuário chega a quem trabalha, e destrava a correção da história `ready` {#rn-859}
+
+- **Regra:** `GET /internal/sessions/:sessionId/dev-context` devolve
+  `decisoes`: os `artifact.decision_record` do projeto cujo `afeta` toca a
+  tarefa, a história dela ou uma regra que a história cita — mais recentes
+  primeiro, no máximo 10, com a pergunta e a decisão cortadas em 1 500
+  caracteres cada (`{id, questionId, pergunta, decisao, decididaEm}`).
+  Decisão sem `afeta` não entra. Elas vencem RF/DoR quando conflitam (o
+  kickoff do dev e o recorte do QA as mostram — engine). E a régua de
+  correção de história (RN-727, `recusaDeCorrecaoDeHistoria`) é revista
+  (ADR 0214, sobre o ADR 0212): história `ready` também é corrigível quando o
+  pedido cita um `questionId` que o usuário JÁ respondeu — pergunta aberta ou
+  inexistente não destrava nada, e a trava de tarefa `in_progress`/`in_review`
+  continua valendo. As duas portas do PO aceitam o `questionId`: `update_story`
+  (título/descrição, o evento o leva) e `complete_story` (RF/DoD/DoR; a
+  história segue `ready`, sem nova promoção, e `backlog.story_completed` leva
+  o `questionId`).
+- **Onde:** `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:112`
+  (`decisoesDaTarefa`), `:344` (`decisoesDaTarefa`),
+  `apps/api/src/domain/backlog/correcao-de-historia.ts:33`
+  (`recusaDeCorrecaoDeHistoria`),
+  `apps/api/src/application/use-cases/backlog/corrigir-historia.use-case.ts:126`
+  (`respostaDoUsuario`),
+  `apps/api/src/application/use-cases/backlog/complete-story.use-case.ts:82`
+  (`corrigindoReady`)
+- **Teste:** `apps/api/test/application/use-cases/execution/get-dev-task-context.use-case.spec.ts`
+  ("devolve só as que afetam a tarefa, a história ou uma regra dela, mais
+  recentes primeiro"; "decisão sem afeta não entra; teto de 10 e texto cortado
+  em 1 500"),
+  `apps/api/test/application/use-cases/backlog/corrigir-historia.use-case.spec.ts`
+  ("história ready citando pergunta RESPONDIDA é corrigida, e o evento a
+  cita"; falhas: "história ready citando pergunta AINDA ABERTA segue
+  recusada"; "história ready com tarefa em revisão segue recusada mesmo com a
+  resposta"),
+  `apps/api/test/application/use-cases/backlog/complete-story.use-case.spec.ts`
+  ("história ready com pergunta respondida tem RF/DoR corrigidos e segue
+  ready"; "história ready com pergunta ainda aberta é recusada")
+- **Origem:** AT-521 (o QA reprovou três vezes lendo a DoR de uma história
+  `ready` que ninguém podia corrigir, depois de o usuário já ter decidido)
+
+### RN-860 — O gate de QA espera o usuário sem gastar o ciclo de correção {#rn-860}
+
+- **Regra:** o parecer de gate (`POST /internal/sessions/:sessionId/gates/verdict`)
+  aceita o veredito `needs_user_decision`, só do gate `qa`, com `pergunta`
+  (até 500) e `sugestao` (até 300) ou um `openQuestionId` que já existe — sem
+  nenhum dos dois é 400. A máquina de estados mantém o MESMO gate e NÃO
+  incrementa o contador de correção, nem no teto, então o ciclo não chega ao
+  bloqueio `politica` da RN-762. Sem `openQuestionId`, a api grava o
+  `artifact.open_question` (ator e autor `qa-agent`, na sessão de execução,
+  afetando a tarefa e a história dela), o `pr.gate_changed` sai com
+  `esperandoUsuario: true` e o `openQuestionId` (é por ele que a tela mostra
+  a tarefa como "esperando você"), e a resposta devolve `nextAction:
+  "await_user"` com o `openQuestionId` — o engine estaciona o ciclo (ADR 0207)
+  e a resposta à pergunta o religa (RN-858). Nenhuma linha de outbox nasce
+  nesse desfecho. ADR 0214.
+- **Onde:** `apps/api/src/domain/execution/pr-gate-state-machine.ts:63`
+  (`nextGateStatus`),
+  `apps/api/src/application/use-cases/execution/record-gate-verdict.use-case.ts:94`
+  (`esperaUsuario`), `:160` (`nextAction`)
+- **Teste:** `apps/api/test/domain/execution/pr-gate-state-machine.spec.ts`
+  ("needs_user_decision mantém o gate e NÃO incrementa o contador, nem no
+  teto"),
+  `apps/api/test/application/use-cases/execution/record-gate-verdict.use-case.spec.ts`
+  ("needs_user_decision no teto: grava a pergunta, não conta correção, não
+  bloqueia"; falha: "needs_user_decision sem pergunta nem openQuestionId é
+  recusado")
+- **Origem:** AT-521 (o QA de Automação reprovou quatro vezes "não confirmado
+  pelo usuário" até o ciclo esgotar)

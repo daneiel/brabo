@@ -1761,7 +1761,7 @@
     },
     "/internal/sessions/{sessionId}/gates/verdict": {
       "post": {
-        "description": "The response's `nextAction` is what the engine obeys: `correct` returns to dev, `run_secops` advances the gate, `done` releases it to the user, and `blocked` means the correction cap ran out. MERGE is never automatic — `done` only means it's the human's turn.",
+        "description": "The response's `nextAction` is what the engine obeys: `correct` returns to dev, `run_secops` advances the gate, `done` releases it to the user, `await_user` parks the cycle until the open question is answered (RN-860, no correction counted), and `blocked` means the correction cap ran out. MERGE is never automatic — `done` only means it's the human's turn.",
         "operationId": "InternalSessionsController_gateVerdict",
         "parameters": [
           {
@@ -2933,7 +2933,7 @@
     },
     "/internal/sessions/{sessionId}/stories/{storyId}/update": {
       "post": {
-        "description": "Only a `draft` story with no task in execution; writes `backlog.story_updated` with the PO as actor (RN-727).",
+        "description": "Only a `draft` story with no task in execution; writes `backlog.story_updated` with the PO as actor (RN-727). A `ready` one too when `questionId` cites an open question the user already answered (RN-859).",
         "operationId": "InternalSessionsController_updateStoryRoute",
         "parameters": [
           {
@@ -7067,6 +7067,136 @@
         "summary": "Lists the models active IN THE PROJECT's WORKSPACE",
         "tags": [
           "llm"
+        ]
+      }
+    },
+    "/projects/{projectId}/open-questions": {
+      "get": {
+        "description": "Status comes from the event log: open is an `artifact.open_question` without `open_question.answered`. Newest first, capped at 50 with `total`.",
+        "operationId": "OpenQuestionsController_list",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "open",
+              "type": "string",
+              "enum": [
+                "open",
+                "answered",
+                "all"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpenQuestionsListResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, expired token, or invalid signature."
+          },
+          "429": {
+            "description": "Rate limit per user or per IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Lists the agents' open questions of the project (RN-858)",
+        "tags": [
+          "backlog"
+        ]
+      }
+    },
+    "/projects/{projectId}/open-questions/{questionId}/answer": {
+      "post": {
+        "description": "Only the author of the session where the question was born answers. Writes a `decision_record` (actor: the user, with `questionId`) and `open_question.answered`, and asks the engine to resume the parked QA gate of each affected task (RN-860), best effort.",
+        "operationId": "OpenQuestionsController_answer",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "questionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnswerOpenQuestionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpenQuestionResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "No answer, or a suggestion accepted where there is none."
+          },
+          "401": {
+            "description": "No token, expired token, or invalid signature."
+          },
+          "403": {
+            "description": "Not the session author — body with `reason: \"so_o_autor_da_sessao\"`."
+          },
+          "404": {
+            "description": "Question is not in this project."
+          },
+          "409": {
+            "description": "Already answered — `reason: \"pergunta_ja_respondida\"`."
+          },
+          "429": {
+            "description": "Rate limit per user or per IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Answers an open question (RN-858)",
+        "tags": [
+          "backlog"
         ]
       }
     },
@@ -14224,6 +14354,21 @@
           "answer"
         ]
       },
+      "AnswerOpenQuestionDto": {
+        "type": "object",
+        "properties": {
+          "resposta": {
+            "type": "string",
+            "example": "404 for a code that does not exist.",
+            "description": "Free-text answer. Send this OR `aceitarSugestao: true`."
+          },
+          "aceitarSugestao": {
+            "type": "boolean",
+            "example": true,
+            "description": "Accept the agent's suggestion as the answer."
+          }
+        }
+      },
       "AnswerStructuredQuestionDto": {
         "type": "object",
         "properties": {
@@ -15930,6 +16075,11 @@
             "items": {
               "type": "string"
             }
+          },
+          "questionId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "RN-859 (ADR 0214): an open question the user ALREADY answered — only then a `ready` story (no task in execution) can be corrected."
           }
         },
         "required": [
@@ -17445,6 +17595,37 @@
           "description"
         ]
       },
+      "DevContextDecisaoResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "questionId": {
+            "type": "string",
+            "nullable": true
+          },
+          "pergunta": {
+            "type": "string",
+            "description": "The question that was decided."
+          },
+          "decisao": {
+            "type": "string",
+            "description": "The user's decision."
+          },
+          "decididaEm": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "questionId",
+          "pergunta",
+          "decisao",
+          "decididaEm"
+        ]
+      },
       "DevContextModuleOpenTaskResponseDto": {
         "type": "object",
         "properties": {
@@ -17547,6 +17728,13 @@
           "primeiraDoModulo": {
             "type": "boolean",
             "description": "Whether this is the FIRST task of the module: the oldest `backlog.task_claimed` of the project for `module` is this task. The engine gives it twice the per-task budget (RN-774). `false` without `module`."
+          },
+          "decisoes": {
+            "description": "RN-859: the user's decisions tied to this task, its story or its rules by `afeta` — they win over RF/DoR on conflict. Newest first, at most 10, each text cut at 1,500 characters.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DevContextDecisaoResponseDto"
+            }
           }
         },
         "required": [
@@ -17558,7 +17746,8 @@
           "moduleOpenTasks",
           "moduleOpenTasksTotal",
           "moduleContract",
-          "primeiraDoModulo"
+          "primeiraDoModulo",
+          "decisoes"
         ]
       },
       "DiffLineResponseDto": {
@@ -18098,13 +18287,19 @@
               "correct",
               "run_secops",
               "done",
-              "blocked"
+              "blocked",
+              "await_user"
             ],
             "example": "run_secops",
-            "description": "What happens next. `correct` returns to dev; `run_secops` advances the gate; `done` releases it to the user; `blocked` means the correction cap ran out and only a human can unblock it."
+            "description": "What happens next. `correct` returns to dev; `run_secops` advances the gate; `done` releases it to the user; `await_user` parks the cycle until the open question is answered (RN-860); `blocked` means the correction cap ran out and only a human can unblock it."
           },
           "task": {
             "$ref": "#/components/schemas/TaskResponseDto"
+          },
+          "openQuestionId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "With `await_user`: the open question the cycle waits on."
           }
         },
         "required": [
@@ -20435,6 +20630,149 @@
         "required": [
           "projectId",
           "agentId"
+        ]
+      },
+      "OpenQuestionAffectsDto": {
+        "type": "object",
+        "properties": {
+          "regras": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "historias": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "tarefas": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "regras",
+          "historias",
+          "tarefas"
+        ]
+      },
+      "OpenQuestionAnswerDto": {
+        "type": "object",
+        "properties": {
+          "texto": {
+            "type": "string"
+          },
+          "aceitouSugestao": {
+            "type": "boolean"
+          },
+          "decisionEventId": {
+            "type": "string"
+          },
+          "respondidaPor": {
+            "type": "string"
+          },
+          "respondidaEm": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "texto",
+          "aceitouSugestao",
+          "decisionEventId",
+          "respondidaPor",
+          "respondidaEm"
+        ]
+      },
+      "OpenQuestionResponseDto": {
+        "type": "object",
+        "properties": {
+          "questionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "eventId": {
+            "type": "string"
+          },
+          "sessionId": {
+            "type": "string"
+          },
+          "pergunta": {
+            "type": "string"
+          },
+          "sugestao": {
+            "type": "string",
+            "nullable": true
+          },
+          "afeta": {
+            "$ref": "#/components/schemas/OpenQuestionAffectsDto"
+          },
+          "autor": {
+            "type": "string",
+            "example": "criativo",
+            "description": "The agent that asked."
+          },
+          "criadaEm": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "answered"
+            ]
+          },
+          "autorDaSessao": {
+            "type": "string",
+            "nullable": true,
+            "description": "The user who created the origin session — the only one who may answer."
+          },
+          "resposta": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OpenQuestionAnswerDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "questionId",
+          "eventId",
+          "sessionId",
+          "pergunta",
+          "sugestao",
+          "afeta",
+          "autor",
+          "criadaEm",
+          "status",
+          "autorDaSessao",
+          "resposta"
+        ]
+      },
+      "OpenQuestionsListResponseDto": {
+        "type": "object",
+        "properties": {
+          "itens": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OpenQuestionResponseDto"
+            }
+          },
+          "total": {
+            "type": "number",
+            "description": "Total matching the filter; `itens` is capped at 50 (RN-180)."
+          }
+        },
+        "required": [
+          "itens",
+          "total"
         ]
       },
       "PaginaDeAcoesResponseDto": {
@@ -22811,9 +23149,11 @@
             "type": "string",
             "enum": [
               "approved",
-              "changes_requested"
+              "changes_requested",
+              "needs_user_decision"
             ],
-            "example": "changes_requested"
+            "example": "changes_requested",
+            "description": "`needs_user_decision` (QA only, RN-860): the cycle waits for the user's answer to an open question — it does not count as a correction."
           },
           "resumo": {
             "type": "string",
@@ -22828,6 +23168,21 @@
             "items": {
               "type": "string"
             }
+          },
+          "pergunta": {
+            "type": "string",
+            "example": "Should a non-existent code answer 404?",
+            "description": "With `needs_user_decision`: the new open question (up to 500 chars)."
+          },
+          "sugestao": {
+            "type": "string",
+            "example": "404 with a plain message.",
+            "description": "With `needs_user_decision`: the agent's suggestion."
+          },
+          "openQuestionId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "With `needs_user_decision`: an EXISTING open question instead of a new one."
           },
           "maxCorrections": {
             "type": "number",
@@ -25573,6 +25928,11 @@
           "description": {
             "type": "string",
             "example": "As a visitor, I want to sign up."
+          },
+          "questionId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "RN-859 (ADR 0214): an open question the user ALREADY answered — only then a `ready` story (no task in execution) can be corrected."
           }
         },
         "required": [

@@ -433,7 +433,7 @@ Extracted from the emission points: **109 identifiers**, of which **2** are not 
 - `anamnese.run_skipped` <sub>(apps/engine/lib/engine/session_events/event.ex)</sub>
 - `architecture.readiness_confirmed` <sub>(apps/api/src/application/use-cases/agents/offer-infra-handoff.use-case.ts)</sub>
 - `artifact.business_rule` <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub>
-- `artifact.decision_record` <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub>
+- `artifact.decision_record` <sub>(apps/api/src/application/use-cases/backlog/perguntas-em-aberto.use-case.ts)</sub>
 - `artifact.insight` <sub>(apps/engine/lib/engine/harness/tools/emit_insight.ex)</sub>
 - `artifact.module_map` <sub>(apps/api/src/application/use-cases/architecture/create-module-map.use-case.ts)</sub>
 - `artifact.plano_de_teste` <sub>(apps/engine/lib/engine/gates/qa_lead_server.ex)</sub>

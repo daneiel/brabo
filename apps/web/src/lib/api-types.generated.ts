@@ -773,7 +773,7 @@ export interface paths {
         put?: never;
         /**
          * Records QA's or SecOps's verdict on a task's PR
-         * @description The response's `nextAction` is what the engine obeys: `correct` returns to dev, `run_secops` advances the gate, `done` releases it to the user, and `blocked` means the correction cap ran out. MERGE is never automatic — `done` only means it's the human's turn.
+         * @description The response's `nextAction` is what the engine obeys: `correct` returns to dev, `run_secops` advances the gate, `done` releases it to the user, `await_user` parks the cycle until the open question is answered (RN-860, no correction counted), and `blocked` means the correction cap ran out. MERGE is never automatic — `done` only means it's the human's turn.
          */
         post: operations["InternalSessionsController_gateVerdict"];
         delete?: never;
@@ -1193,7 +1193,7 @@ export interface paths {
         put?: never;
         /**
          * Corrects the title and/or description of a draft story
-         * @description Only a `draft` story with no task in execution; writes `backlog.story_updated` with the PO as actor (RN-727).
+         * @description Only a `draft` story with no task in execution; writes `backlog.story_updated` with the PO as actor (RN-727). A `ready` one too when `questionId` cites an open question the user already answered (RN-859).
          */
         post: operations["InternalSessionsController_updateStoryRoute"];
         delete?: never;
@@ -2438,6 +2438,46 @@ export interface paths {
         get: operations["ModelsController_list"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{projectId}/open-questions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lists the agents' open questions of the project (RN-858)
+         * @description Status comes from the event log: open is an `artifact.open_question` without `open_question.answered`. Newest first, capped at 50 with `total`.
+         */
+        get: operations["OpenQuestionsController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{projectId}/open-questions/{questionId}/answer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Answers an open question (RN-858)
+         * @description Only the author of the session where the question was born answers. Writes a `decision_record` (actor: the user, with `questionId`) and `open_question.answered`, and asks the engine to resume the parked QA gate of each affected task (RN-860), best effort.
+         */
+        post: operations["OpenQuestionsController_answer"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4690,6 +4730,18 @@ export interface components {
              */
             answer: "confirm" | "decline";
         };
+        AnswerOpenQuestionDto: {
+            /**
+             * @description Free-text answer. Send this OR `aceitarSugestao: true`.
+             * @example 404 for a code that does not exist.
+             */
+            resposta?: string;
+            /**
+             * @description Accept the agent's suggestion as the answer.
+             * @example true
+             */
+            aceitarSugestao?: boolean;
+        };
         AnswerStructuredQuestionDto: {
             /**
              * @description Answer keyed by question `id` — the same `id` that came in `chat.structured_question`.
@@ -5584,6 +5636,11 @@ export interface components {
              *     ]
              */
             businessRuleIds?: string[];
+            /**
+             * Format: uuid
+             * @description RN-859 (ADR 0214): an open question the user ALREADY answered — only then a `ready` story (no task in execution) can be corrected.
+             */
+            questionId?: string;
         };
         ConfirmacaoDeArquiteturaResponseDto: {
             /**
@@ -6382,6 +6439,16 @@ export interface components {
             /** @example Above that, the addition is refused with 409. */
             description: string;
         };
+        DevContextDecisaoResponseDto: {
+            id: string;
+            questionId: string | null;
+            /** @description The question that was decided. */
+            pergunta: string;
+            /** @description The user's decision. */
+            decisao: string;
+            /** Format: date-time */
+            decididaEm: string;
+        };
         DevContextModuleOpenTaskResponseDto: {
             /** @example 01J0000000000000000000000 */
             id: string;
@@ -6416,6 +6483,8 @@ export interface components {
             moduleContract: components["schemas"]["ContratoDeModuloResponseDto"] | null;
             /** @description Whether this is the FIRST task of the module: the oldest `backlog.task_claimed` of the project for `module` is this task. The engine gives it twice the per-task budget (RN-774). `false` without `module`. */
             primeiraDoModulo: boolean;
+            /** @description RN-859: the user's decisions tied to this task, its story or its rules by `afeta` — they win over RF/DoR on conflict. Newest first, at most 10, each text cut at 1,500 characters. */
+            decisoes: components["schemas"]["DevContextDecisaoResponseDto"][];
         };
         DiffLineResponseDto: {
             /**
@@ -6668,12 +6737,17 @@ export interface components {
         };
         GateVerdictResponseDto: {
             /**
-             * @description What happens next. `correct` returns to dev; `run_secops` advances the gate; `done` releases it to the user; `blocked` means the correction cap ran out and only a human can unblock it.
+             * @description What happens next. `correct` returns to dev; `run_secops` advances the gate; `done` releases it to the user; `await_user` parks the cycle until the open question is answered (RN-860); `blocked` means the correction cap ran out and only a human can unblock it.
              * @example run_secops
              * @enum {string}
              */
-            nextAction: "correct" | "run_secops" | "done" | "blocked";
+            nextAction: "correct" | "run_secops" | "done" | "blocked" | "await_user";
             task: components["schemas"]["TaskResponseDto"];
+            /**
+             * Format: uuid
+             * @description With `await_user`: the open question the cycle waits on.
+             */
+            openQuestionId?: string;
         };
         GitAuthorizeUrlResponseDto: {
             /**
@@ -7883,6 +7957,45 @@ export interface components {
             /** @example dev-api */
             agentId: string;
         };
+        OpenQuestionAffectsDto: {
+            regras: string[];
+            historias: string[];
+            tarefas: string[];
+        };
+        OpenQuestionAnswerDto: {
+            texto: string;
+            aceitouSugestao: boolean;
+            decisionEventId: string;
+            respondidaPor: string;
+            /** Format: date-time */
+            respondidaEm: string;
+        };
+        OpenQuestionResponseDto: {
+            /** Format: uuid */
+            questionId: string;
+            eventId: string;
+            sessionId: string;
+            pergunta: string;
+            sugestao: string | null;
+            afeta: components["schemas"]["OpenQuestionAffectsDto"];
+            /**
+             * @description The agent that asked.
+             * @example criativo
+             */
+            autor: string;
+            /** Format: date-time */
+            criadaEm: string;
+            /** @enum {string} */
+            status: "open" | "answered";
+            /** @description The user who created the origin session — the only one who may answer. */
+            autorDaSessao: string | null;
+            resposta: components["schemas"]["OpenQuestionAnswerDto"] | null;
+        };
+        OpenQuestionsListResponseDto: {
+            itens: components["schemas"]["OpenQuestionResponseDto"][];
+            /** @description Total matching the filter; `itens` is capped at 50 (RN-180). */
+            total: number;
+        };
         PaginaDeAcoesResponseDto: {
             items: components["schemas"]["ProposedActionResponseDto"][];
             /**
@@ -9047,10 +9160,11 @@ export interface components {
              */
             gate: "qa" | "secops";
             /**
+             * @description `needs_user_decision` (QA only, RN-860): the cycle waits for the user's answer to an open question — it does not count as a correction.
              * @example changes_requested
              * @enum {string}
              */
-            veredito: "approved" | "changes_requested";
+            veredito: "approved" | "changes_requested" | "needs_user_decision";
             /** @example Missing tests for the insufficient-stock path. */
             resumo: string;
             /**
@@ -9060,6 +9174,21 @@ export interface components {
              *     ]
              */
             itens: string[];
+            /**
+             * @description With `needs_user_decision`: the new open question (up to 500 chars).
+             * @example Should a non-existent code answer 404?
+             */
+            pergunta?: string;
+            /**
+             * @description With `needs_user_decision`: the agent's suggestion.
+             * @example 404 with a plain message.
+             */
+            sugestao?: string;
+            /**
+             * Format: uuid
+             * @description With `needs_user_decision`: an EXISTING open question instead of a new one.
+             */
+            openQuestionId?: string;
             /**
              * @description Cap on round trips before the task becomes `blocked`. Omitted uses the domain's default.
              * @example 3
@@ -10520,6 +10649,11 @@ export interface components {
             title?: string;
             /** @example As a visitor, I want to sign up. */
             description?: string;
+            /**
+             * Format: uuid
+             * @description RN-859 (ADR 0214): an open question the user ALREADY answered — only then a `ready` story (no task in execution) can be corrected.
+             */
+            questionId?: string;
         };
         UpdateStoryTitleDto: {
             /**
@@ -16995,6 +17129,111 @@ export interface operations {
             };
             /** @description No token, expired token, or invalid signature. */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OpenQuestionsController_list: {
+        parameters: {
+            query?: {
+                status?: "open" | "answered" | "all";
+            };
+            header?: never;
+            path: {
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OpenQuestionsListResponseDto"];
+                };
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OpenQuestionsController_answer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+                questionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnswerOpenQuestionDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OpenQuestionResponseDto"];
+                };
+            };
+            /** @description No answer, or a suggestion accepted where there is none. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not the session author — body with `reason: "so_o_autor_da_sessao"`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Question is not in this project. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Already answered — `reason: "pergunta_ja_respondida"`. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
