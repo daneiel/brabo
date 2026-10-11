@@ -1452,7 +1452,9 @@ defmodule Engine.Infra.InfraLeadServer do
        porta `${APP_PORT:-8080}:<porta interna>`, volume para dados persistentes e
        `env_file: .env`, com um `.env.example` commitado listando as variáveis
        obrigatórias (nunca um `.env`).
-    3. No README, a seção "Rodar na sua máquina": o comando e as URLs.
+    3. No README, a seção "Rodar na sua máquina": o comando e as URLs. Módulo
+       HTTP declara SEMPRE `/docs` (a UI Swagger, `kind: "api_docs"`) mesmo antes
+       de existir, e módulo web a página inicial — nunca rota de negócio.
     4. Valide CADA arquivo com `validate_infra_file` (path + content) antes de propor.
     #{String.trim_trailing(passo_da_subida(subida))}
     7. Por último, chame `propose_infra_pr` (title + files + run: o mesmo comando e

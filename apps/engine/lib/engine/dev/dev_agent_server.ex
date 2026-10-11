@@ -631,8 +631,10 @@ defmodule Engine.Dev.DevAgentServer do
   defp clausula_de_openapi(task) do
     if Engine.Gates.RecorteDaTarefa.toca_ponto_de_entrada?(task),
       do:
-        "\n\nMódulo que expõe HTTP serve `/openapi.json` (OpenAPI 3, cobrindo as rotas) " <>
-          "e `/docs` (UI Swagger); sem rede ou sem pacote, `/docs` é uma página HTML " <>
+        "\n\nMódulo que expõe HTTP serve `/openapi.json` (OpenAPI 3) " <>
+          "e TODA rota HTTP criada ou mudada nesta tarefa entra nele (path com " <>
+          "método, corpo e respostas); serve também " <>
+          "`/docs` (UI Swagger); sem rede ou sem pacote, `/docs` é uma página HTML " <>
           "que carrega o swagger-ui de CDN (quem baixa é o navegador do usuário). " <>
           "Módulo web serve a página inicial. Ao criar, acrescente a URL na seção " <>
           "\"Rodar na sua máquina\" do README (que a Infra escreve).",
