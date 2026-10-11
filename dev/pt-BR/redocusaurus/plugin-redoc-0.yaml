@@ -2388,6 +2388,39 @@ paths:
       summary: Atomically claims the module's next claimable task
       tags:
         - internal
+  /internal/sessions/{sessionId}/tasks/in-progress-by-dev:
+    get:
+      description: >-
+        Not blocked and outside the PR gates; empty unless the session is an
+        execution session. Used by the engine when stopping an execution, to
+        block the ones no live dev agent holds.
+      operationId: InternalSessionsController_tarefasEmCursoDeDev
+      parameters:
+        - name: sessionId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TarefaEmCursoDeDevResponseDto'
+        '400':
+          description: Invalid body.
+        '403':
+          description: Service token missing or different from the shared one.
+        '404':
+          description: Session, project, or resource not found.
+      security:
+        - service-token: []
+      summary: Lists the project's in-progress tasks held by a dev agent
+      tags:
+        - internal
   /internal/sessions/{sessionId}/termination:
     post:
       description: >-
@@ -19896,6 +19929,23 @@ components:
             $ref: '#/components/schemas/ResultadoPorProviderResponseDto'
       required:
         - porProvider
+    TarefaEmCursoDeDevResponseDto:
+      type: object
+      properties:
+        projectId:
+          type: string
+          format: uuid
+        taskId:
+          type: string
+          format: uuid
+        assignedTo:
+          type: string
+          example: dev-api
+          description: The dev agent holding it.
+      required:
+        - projectId
+        - taskId
+        - assignedTo
     TaskResponseDto:
       type: object
       properties:
