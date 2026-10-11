@@ -42,10 +42,41 @@ defmodule Engine.Harness.Tools.ListarAdrsPropostasTest do
 
     assert texto =~ "3 ADR(s) proposta(s)"
     assert texto =~ "ADR banco | APROVADA"
-    assert texto =~ "ADR fila | APROVADA e EXECUTADA (PR aberta) | PR: http://pr/1"
+    assert texto =~ "ADR fila | APROVADA e EXECUTADA | estado da PR: NÃO CONSEGUI LER"
     assert texto =~ "ADR cache | RECUSADA | motivo: não precisa"
     refute texto =~ "outro projeto"
     refute texto =~ "PENDENTE"
+  end
+
+  # RN-845 (AT-514): o Arquiteto disse "aberta como PR" 30 s depois do merge.
+  test "PR mergeada aparece como mergeada, com a data; a sem merge, aberta", %{project_id: p} do
+    adr!(p, "ADR banco", "executed", %{
+      execution_result: %{"pullRequestUrl" => "local://x/pull/1", "pullRequestId" => "1"}
+    })
+
+    adr!(p, "ADR fila", "executed", %{
+      execution_result: %{"pullRequestUrl" => "local://x/pull/2", "pullRequestId" => "2"}
+    })
+
+    adr!(p, "merge", "executed", %{
+      action_type: "git_merge",
+      payload: %{"pullRequestId" => "1"},
+      decided_at: ~U[2026-10-11 00:37:52.000000Z]
+    })
+
+    {:ok, texto} = ListarAdrsPropostas.run(%{}, %{project_id: p})
+
+    assert texto =~ "ADR banco | APROVADA e EXECUTADA | PR MERGEADA em 2026-10-11T00:37:52Z"
+    assert texto =~ "ADR fila | APROVADA e EXECUTADA | PR aberta (nenhum merge dela"
+  end
+
+  test "estado da PR ilegível diz que não leu, nunca aberta", %{project_id: p} do
+    adr!(p, "ADR sem id", "executed", %{execution_result: %{"pullRequestUrl" => "http://pr/9"}})
+
+    {:ok, texto} = ListarAdrsPropostas.run(%{}, %{project_id: p})
+
+    assert texto =~ "NÃO CONSEGUI LER"
+    refute texto =~ "PR aberta"
   end
 
   test "corta no teto e declara o total real", %{project_id: p} do

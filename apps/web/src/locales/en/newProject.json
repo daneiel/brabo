@@ -69,7 +69,7 @@
       "note": "Nothing is created and nothing is changed now. The next step shows a <strong>plan</strong> of what the bootstrap would do to this repository — and you decide whether to apply it or adopt it as-is."
     },
     "create": {
-      "nameLabel": "Project name",
+      "nameLabel": "Project",
       "namePlaceholder": "E.g.: Online Store",
       "repoPreview": "repo: {{slug}}",
       "visibilityLabel": "Visibility",
