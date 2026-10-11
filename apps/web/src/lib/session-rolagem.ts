@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ProposedAction, SessionEvent } from './api-types';
 import type { StoreDoStreaming } from './streaming-do-turno';
 
@@ -195,4 +195,91 @@ export function useRolagemDoFio({
   }, [acompanharOFim]);
 
   return { messagesEndRef, scrollContainerRef, messagesInnerRef, aoRolarOFio };
+}
+
+/**
+ * O botão "ir ao fim" do fio (RN-836, AT-506): aparece só quando a pessoa
+ * saiu do fim (a mesma guarda dos 120px da RN-173) E o fio ganhou conteúdo
+ * desde então. O contador é de MENSAGENS novas; uma aprovação nova não soma
+ * ao número, ela REALÇA o botão — é decisão esperando a pessoa.
+ */
+export function estadoDoIrAoFim(e: {
+  foraDoFim: boolean;
+  mensagensAgora: number;
+  mensagensAoSair: number;
+  aprovacoesAgora: number;
+  aprovacoesAoSair: number;
+}): { visivel: boolean; novas: number; aprovacao: boolean } {
+  const novas = Math.max(0, e.mensagensAgora - e.mensagensAoSair);
+  const aprovacao = e.aprovacoesAgora > e.aprovacoesAoSair;
+  return { visivel: e.foraDoFim && (novas > 0 || aprovacao), novas, aprovacao };
+}
+
+/** O seletor dos cartões de aprovação dentro do fio (marcados na montagem). */
+export const SELETOR_DE_APROVACAO_NO_FIO = '[data-aprovacao-no-fio]';
+
+/**
+ * A metade de estado do botão "ir ao fim". Ele é montado DENTRO do conteúdo
+ * do fio, então acha o container que rola pelo próprio DOM (o `role="log"`
+ * do fio) em vez de receber o ref da página — o hook da página continua
+ * dono da rolagem automática, este só OBSERVA e oferece o salto.
+ */
+export function useIrAoFimDoFio(totalDeMensagens: number) {
+  const ancoraRef = useRef<HTMLDivElement | null>(null);
+  const [foraDoFim, setForaDoFim] = useState(false);
+  const aoSairRef = useRef({ mensagens: 0, aprovacoes: 0 });
+  const [aprovacoesAgora, setAprovacoesAgora] = useState(0);
+  const totalRef = useRef(totalDeMensagens);
+  totalRef.current = totalDeMensagens;
+
+  const container = useCallback(
+    () => ancoraRef.current?.closest<HTMLElement>('[role="log"]') ?? null,
+    [],
+  );
+  const contarAprovacoes = useCallback(
+    () => container()?.querySelectorAll(SELETOR_DE_APROVACAO_NO_FIO).length ?? 0,
+    [container],
+  );
+
+  useEffect(() => {
+    setAprovacoesAgora(contarAprovacoes());
+  });
+
+  useEffect(() => {
+    const el = container();
+    if (!el) return;
+    const aoRolar = () => {
+      if (estaPertoDoFim(el)) {
+        setForaDoFim(false);
+        return;
+      }
+      setForaDoFim((antes) => {
+        if (!antes) {
+          aoSairRef.current = { mensagens: totalRef.current, aprovacoes: contarAprovacoes() };
+        }
+        return true;
+      });
+    };
+    el.addEventListener('scroll', aoRolar);
+    return () => el.removeEventListener('scroll', aoRolar);
+  }, [container, contarAprovacoes]);
+
+  const irAoFim = useCallback(() => {
+    const el = container();
+    if (el) {
+      if (typeof el.scrollTo === 'function') el.scrollTo({ top: el.scrollHeight });
+      else el.scrollTop = el.scrollHeight;
+    }
+    rolarParaOFim(ancoraRef.current);
+    setForaDoFim(false);
+  }, [container]);
+
+  const estado = estadoDoIrAoFim({
+    foraDoFim,
+    mensagensAgora: totalDeMensagens,
+    mensagensAoSair: aoSairRef.current.mensagens,
+    aprovacoesAgora,
+    aprovacoesAoSair: aoSairRef.current.aprovacoes,
+  });
+  return { ancoraRef, irAoFim, ...estado };
 }

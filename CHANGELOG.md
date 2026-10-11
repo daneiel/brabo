@@ -7,6 +7,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 ### Mudanças
 
 - **web**: o campo "Nome do projeto" do assistente passa a se chamar `projeto-slug` (era `project-title`, e "title" é token de contato): o NordPass não deve mais abrir a lista de contatos sobre ele — heurística, sem atributo de ignore documentado pelo NordPass (RN-834, AT-501).
+- **web (fio da Sessão)**: botão flutuante "ir ao fim" quando chega mensagem para quem subiu no fio, com o número de mensagens novas e realce quando a novidade é uma aprovação (RN-836, AT-506).
 - **engine**: o dev agent deixa de bloquear tarefa pronta procurando ferramenta de commit: a descrição de `report_done`/`report_blocked`, o kickoff e a mensagem de ambiente dizem que `report_done` faz commit, push e PR (o ambiente mandava usar ações tipadas de git que o dev não tem), e que teste novo entra no script `test` que lista arquivos (RN-832, AT-499).
 - **web**: o chat da sessão mostra as PRs prontas para merge (gates aprovados, inclusive ADR e infra) com "Mergear" e o cartão de aprovação ali, e as tarefas bloqueadas com motivo e "Desbloquear" (RN-825, RN-826, AT-497).
 - **web (fio da Sessão)**: a bolha do agente mantém o mesmo avatar do streaming ao fim do turno, com o modelo só no chip (RN-829); Enter não envia no meio da composição de acento, o fio é `role="log"` e a faixa do turno `role="status"` (RN-830); a mensagem cujo envio falhou fica no fio como "não enviada", com "Tentar de novo" ao mesmo destinatário (RN-831, AT-503).

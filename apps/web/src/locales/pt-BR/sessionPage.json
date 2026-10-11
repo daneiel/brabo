@@ -274,7 +274,14 @@
       "outrasCount_other": "{{count}} outras entradas",
       "conteudoComOutras": "{{mensagens}} · {{outras}}"
     },
-    "rotuloDoFio": "Conversa da sessão"
+    "rotuloDoFio": "Conversa da sessão",
+    "irAoFim": {
+      "rotulo": "Ir ao fim da conversa: {{detalhe}}",
+      "novas_zero": "{{count}} mensagens novas",
+      "novas_one": "{{count}} mensagem nova",
+      "novas_other": "{{count}} mensagens novas",
+      "aprovacao": "Há uma aprovação esperando"
+    }
   },
   "fila": {
     "naFila": "na fila de {{agente}} — será lida quando o turno atual terminar",

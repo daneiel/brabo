@@ -1125,7 +1125,7 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
       node: (
         // AT-322: o card é o mesmo das outras superfícies; quem o centraliza
         // com teto de 560px no fio é este contêiner (RN-173).
-        <div key={action.id} className={styles.acaoNoFio}>
+        <div key={action.id} className={styles.acaoNoFio} data-aprovacao-no-fio="">
         <ApprovalCard
           action={action}
           decisaoDaPolitica={decisaoDaPoliticaDaAcao(action.id, events)}

@@ -263,7 +263,13 @@
       "outrasCount_other": "{{count}} other entries",
       "conteudoComOutras": "{{mensagens}} · {{outras}}"
     },
-    "rotuloDoFio": "Session conversation"
+    "rotuloDoFio": "Session conversation",
+    "irAoFim": {
+      "rotulo": "Go to the end of the conversation: {{detalhe}}",
+      "novas_one": "{{count}} new message",
+      "novas_other": "{{count}} new messages",
+      "aprovacao": "An approval is waiting"
+    }
   },
   "fila": {
     "naFila": "queued for {{agente}} — read when the current turn ends",
