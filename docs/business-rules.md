@@ -22282,7 +22282,7 @@ sem dizer qual.
   naquele passo, então ele vale sempre que há recorte. Os dev agents ficam
   sem piso, de propósito (a obrigação deles muda a cada passo; para eles vale
   só a [RN-759](#rn-759)) — salvo `report_done`/`report_blocked`, que entram no piso deles desde a [RN-839](#rn-839).
-- **Onde:** `apps/api/src/domain/llm/tool-router.ts:361` (`menuComPiso`) e
+- **Onde:** `apps/api/src/domain/llm/tool-router.ts:392` (`menuComPiso`) e
   `apps/api/src/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.ts:248`
   (`menuComPiso`)
 - **Teste:** `apps/api/test/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.spec.ts`
@@ -22304,7 +22304,7 @@ sem dizer qual.
   porque só a api sabe o menu depois do Jev. Não aplicar o recorte na volta
   que fecha o turno foi avaliado e não feito: a api não sabe antes da
   resposta que a volta será a última.
-- **Onde:** `apps/api/src/domain/llm/tool-router.ts:375` (`avisoDeRecorte`) e
+- **Onde:** `apps/api/src/domain/llm/tool-router.ts:411` (`avisoDeRecorte`) e
   `apps/api/src/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.ts:263`
   (`avisoDeRecorte`)
 - **Teste:** `apps/api/test/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.spec.ts`
@@ -24092,3 +24092,22 @@ sem dizer qual.
   (null) o cartão não aparece"; "só localhost/127.0.0.1 com porta vira link";
   "infra.pr_opened relê o cartão; outro evento não")
 - **Origem:** AT-517 (ADR 0213)
+
+### RN-857 — O passo de correção do dev agent tem escrita e terminal no recorte do Jev {#rn-857}
+
+- **Regra:** quando o recorte do Jev (RN-625) decide o menu de um dev agent
+  de execução (`dev-<modulo>`, nunca o `dev-lead`) e a ÚLTIMA mensagem
+  `user` do passo é o parecer de correção que o engine monta — gate pedindo
+  correção ("pediu correção nesta PR") ou merge recusado por conflito (RN-715)
+  —, o menu ganha `write_file` e `terminal` além do piso de desfecho
+  (RN-839). O critério é o texto que a api já recebe, sem campo novo; o piso
+  fixo de todo passo não alarga (RN-759), outro agente não ganha, e o piso só
+  acrescenta o que está no catálogo do passo (P3).
+- **Onde:** `apps/api/src/domain/llm/tool-router.ts:368` (`PISO_DA_CORRECAO_DO_DEV`),
+  `:379` (`ehPassoDeCorrecao`), `:392` (`menuComPiso`),
+  `apps/api/src/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.ts:248` (`menuComPiso`)
+- **Teste:** `apps/api/test/domain/llm/tool-router-correcao-do-dev.spec.ts`
+  ("dev agent em correção recebe write_file e terminal"; "passo comum de
+  leitura do dev não alarga"; "outro agente com a mesma mensagem não ganha";
+  "as marcas existem no texto que o engine monta")
+- **Origem:** AT-523
