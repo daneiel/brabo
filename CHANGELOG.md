@@ -6,6 +6,8 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- **web**: a fila "PRs prontas para merge" do chat aparece sem recarregar a página: a mudança de status/gate de tarefa no backlog (lido a 15 s) e os avisos de PR aberta ou mergeada desta sessão releem a lista, sem poll novo (AT-510, RN-841).
+
 - **api**: o QA de Automação roda com o raciocínio desligado, como os dev agents de execução; o QA-estratégia não muda (AT-504, RN-838).
 - **api**: o recorte do Jev nunca tira `report_done` nem `report_blocked` dos dev agents de execução (AT-499, RN-839).
 - **web**: o campo "Nome do projeto" do assistente passa a se chamar `projeto-slug` (era `project-title`, e "title" é token de contato): o NordPass não deve mais abrir a lista de contatos sobre ele — heurística, sem atributo de ignore documentado pelo NordPass (RN-834, AT-501).
