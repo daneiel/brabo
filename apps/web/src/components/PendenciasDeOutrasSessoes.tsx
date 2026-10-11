@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -13,7 +13,7 @@ import {
 import type { CodePullRequestSummary, ProposedAction, Task } from '../lib/api-types';
 import { userIdDaSessao } from '../lib/auth';
 import { useBacklog } from '../lib/hooks';
-import { prsProntasParaMerge, tarefasBloqueadas } from '../lib/prontas-e-bloqueadas';
+import { assinaturaDoBacklog, prsProntasParaMerge, tarefasBloqueadas } from '../lib/prontas-e-bloqueadas';
 import { Button } from './ui/Button';
 import {
   CHAVE_DAS_PENDENCIAS_DO_PROJETO,
@@ -75,14 +75,29 @@ export function PendenciasDeOutrasSessoes({
   // RN-825/826 (AT-497): as PRs prontas e as tarefas bloqueadas, pelas MESMAS
   // leituras da aba PRs (`['code-pull-requests', id, 'open']`) e do backlog
   // (`['backlog', id]`) — cache compartilhado, sem poll novo apertado (o
-  // backlog no ritmo de projeto, 15 s; a lista de PRs sem poll, o canal a
-  // invalida).
+  // backlog no ritmo de projeto, 15 s; a lista de PRs sem poll, o canal e a
+  // mudança do backlog a invalidam — RN-841).
   const prsQuery = useQuery({
     queryKey: ['code-pull-requests', projectId, 'open'],
     queryFn: () => getCodePullRequests(projectId, { state: 'open' }),
     enabled: !!projectId && filasDoChat,
   });
   const backlogQuery = useBacklog(filasDoChat ? projectId : undefined, 15_000, sessionId);
+  // RN-841 (AT-510): a lista de PRs não tem poll; a PR do dev nasce na sessão
+  // de EXECUÇÃO, cujo canal esta página não ouve. A tarefa que muda de status
+  // ou de gate (a PR aberta, os gates aprovando) aparece na leitura de 15 s do
+  // backlog que já existe — e é ela que relê a lista. Primeira leitura e
+  // leitura igual não custam nada.
+  const assinaturaAnterior = useRef<string | undefined>(undefined);
+  const assinatura = backlogQuery.data ? assinaturaDoBacklog(backlogQuery.data) : undefined;
+  useEffect(() => {
+    if (assinatura === undefined) return;
+    const anterior = assinaturaAnterior.current;
+    assinaturaAnterior.current = assinatura;
+    if (anterior !== undefined && anterior !== assinatura) {
+      void queryClient.invalidateQueries({ queryKey: ['code-pull-requests', projectId] });
+    }
+  }, [assinatura, projectId, queryClient]);
   const [propostas, setPropostas] = useState<Record<string, ProposedAction>>({});
   const [propondo, setPropondo] = useState<string | null>(null);
   const [erroDoMerge, setErroDoMerge] = useState<Record<string, string>>({});

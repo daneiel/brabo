@@ -6,6 +6,8 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- **web**: a fila "PRs prontas para merge" do chat aparece sem recarregar a página: a mudança de status/gate de tarefa no backlog (lido a 15 s) e os avisos de PR aberta ou mergeada desta sessão releem a lista, sem poll novo (AT-510, RN-841).
+
 - **api**: o QA de Automação roda com o raciocínio desligado, como os dev agents de execução; o QA-estratégia não muda (AT-504, RN-838).
 - **api**: o recorte do Jev nunca tira dos agentes de gate a ferramenta de parecer de cada um (`emit_qa_verdict`, `emit_perf_seguranca_verdict`, `emit_plano_de_teste`, `emit_threat_model`) — o QA de Automação não para mais sem veredito depois de rodar a suíte (AT-509, RN-840).
 - **api**: o recorte do Jev nunca tira `report_done` nem `report_blocked` dos dev agents de execução (AT-499, RN-839).

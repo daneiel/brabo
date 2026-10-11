@@ -14643,7 +14643,7 @@ desde a Fase 4a —, e o que muda é a latência máxima das escritas sem aviso.
   `apps/api/src/infrastructure/persistence/drizzle/drizzle-context.ts:39`
   (`aposCommit`), `:53` (`veioDoEngine`);
   `apps/web/src/lib/canal-vivo.ts:35` (fallback), `:66` (estado), `:108`
-  (`intervaloDaSessao`), `:134` (`alvosDoEvento`), `:150` (janelas), `:185`
+  (`intervaloDaSessao`), `:134` (`alvosDoEvento`), `:150` (janelas), `:196`
   (`criarInvalidadorDoCanal`); `apps/web/src/lib/session-channel.ts:161`,
   `:165`, `:131`, `:229`; `apps/web/src/lib/session-turno.ts:414`
   (o aviso: invalida e, do acompanhado, antecipa a leitura), `:86`
@@ -17813,7 +17813,7 @@ não dizia quais abas estavam abertas, e a leitura de que `/containers` estava
 numa delas é inferência pelos 106 ≈ 9 × 12.
 
 - **Código:** `apps/web/src/lib/canal-vivo.ts:54` (`INTERVALO_DO_PROJETO_MS`),
-  `:226` (`aoEvento`, os `extras`); `apps/web/src/lib/hooks.ts:127`
+  `:237` (`aoEvento`, os `extras`); `apps/web/src/lib/hooks.ts:127`
   (`useProjectSessions`), `:158` (`useLatestSession`);
   `apps/web/src/routes/ProjectPage.tsx:77` (os contadores do trilho);
   `apps/web/src/routes/ContainersPage.tsx:62` (`useLatestSession`, sem poll);
@@ -23477,7 +23477,7 @@ sem dizer qual.
   já fazem (mesmas `queryKey`s, backlog a 15 s), sem poll novo apertado
   ([RN-579](#rn-579)).
 - **Onde:** `apps/web/src/lib/prontas-e-bloqueadas.ts:30` (`prsProntasParaMerge`),
-  `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:92` (`prontas`)
+  `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:107` (`prontas`)
 - **Teste:** `apps/web/src/components/PendenciasDeOutrasSessoes.test.tsx`
   ("a PR com os gates aprovados aparece, a com gate pendente não, e Mergear
   mostra o cartão ali")
@@ -23492,7 +23492,7 @@ sem dizer qual.
   tarefa: sucesso em texto, e a recusa com a frase da api. Papel abaixo de
   `developer` vê a fila com o botão inerte e o motivo em texto.
 - **Onde:** `apps/web/src/lib/prontas-e-bloqueadas.ts:53` (`tarefasBloqueadas`),
-  `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:149` (`desbloquear`)
+  `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:164` (`desbloquear`)
 - **Teste:** `apps/web/src/components/PendenciasDeOutrasSessoes.test.tsx`
   ("CASO DE FALHA: desbloquear com erro diz o erro da api na linha da tarefa")
 - **Origem:** AT-497
@@ -23747,3 +23747,24 @@ sem dizer qual.
   `dev-api` e `dev-lead` não ganham ferramenta de parecer; o piso não
   acrescenta ferramenta fora do catálogo)
 - **Origem:** AT-509 (TP-01, 12ª execução)
+### RN-841 — A fila "PRs prontas" se relê sem recarregar a página {#rn-841}
+
+- **Regra:** extensão da [RN-825](#rn-825). A lista de PRs abertas continua
+  sem poll próprio, e é relida em dois momentos: (1) quando a leitura do
+  backlog que o chat já faz a 15 s traz alguma tarefa com `status` ou
+  `gateStatus` diferente da leitura anterior (a PR do dev nasce na sessão de
+  EXECUÇÃO, cujo canal o chat não ouve, e os gates aprovando aparecem ali); e
+  (2) quando o canal desta sessão avisa `adr.pr_opened`, `infra.pr_opened`,
+  `action.pr_open`, `action.git_merge` ou `action.failed`, pelo
+  invalidador com janela de 2 s ([RN-579](#rn-579), [RN-632](#rn-632)). A
+  primeira leitura e a leitura igual não releem nada: o custo é zero de poll
+  novo. Fica de fora, declarado: PR de infra aberta noutra sessão sem mudar
+  tarefa nem passar por este canal só aparece na próxima leitura disparada por
+  outro motivo.
+- **Onde:** `apps/web/src/lib/prontas-e-bloqueadas.ts:66` (`assinaturaDoBacklog`),
+  `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:91` (`assinaturaAnterior`),
+  `apps/web/src/lib/canal-vivo.ts:134` (`alvosDoEvento`)
+- **Teste:** `apps/web/src/components/PendenciasDeOutrasSessoes.test.tsx`
+  ("RN-841: a tarefa que entra em awaiting_user relê as PRs…" e "CASO DE FALHA
+  RN-841…"), `apps/web/src/lib/acoes-da-sessao.test.ts`
+- **Origem:** AT-510

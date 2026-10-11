@@ -55,3 +55,21 @@ export function tarefasBloqueadas(epics: readonly Epic[] | undefined): Task[] {
     (e.stories ?? []).flatMap((s) => (s.tasks ?? []).filter((t) => t.blocked)),
   );
 }
+
+/**
+ * A assinatura do que, no backlog, decide se uma PR de tarefa é pronta — RN-841
+ * (AT-510): `id:status:gateStatus` de cada tarefa. Quando ela muda entre duas
+ * leituras do backlog (a de 15 s que o chat já faz), a lista de PRs abertas é
+ * relida: a PR do dev nasce na sessão de EXECUÇÃO, cujo canal o chat não ouve,
+ * e a tarefa mudando de status/gate é o sinal que chega aqui sem poll novo.
+ */
+export function assinaturaDoBacklog(epics: readonly Epic[] | undefined): string {
+  return (epics ?? [])
+    .flatMap((e) =>
+      (e.stories ?? []).flatMap((s) =>
+        (s.tasks ?? []).map((t) => `${t.id}:${t.status}:${t.gateStatus ?? ''}`),
+      ),
+    )
+    .sort()
+    .join('|');
+}
