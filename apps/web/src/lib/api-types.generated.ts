@@ -1296,6 +1296,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/internal/sessions/{sessionId}/tasks/{taskId}/unblock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Unblocks a task after a transient network/provider failure
+         * @description Called by the engine retry job (up to 3 times, after 1, 3 and 10 min). Same use case as the human unblock, with a `system` actor; a task that is no longer blocked is left untouched.
+         */
+        post: operations["InternalSessionsController_unblockTaskAutomatically"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/internal/sessions/{sessionId}/tasks/claim": {
         parameters: {
             query?: never;
@@ -10586,6 +10606,18 @@ export interface components {
              */
             status: "created" | "active" | "closing" | "closed" | "closed_abnormally";
         };
+        UnblockTaskInternalDto: {
+            /**
+             * Format: uuid
+             * @example 01JC4Z0000PROJETO0000000001
+             */
+            projectId: string;
+            /**
+             * @description The dev agent whose transient failure scheduled the retry.
+             * @example dev-api
+             */
+            agentId: string;
+        };
         UnreadCursorDto: {
             /**
              * Format: uuid
@@ -13597,6 +13629,53 @@ export interface operations {
             };
             /** @description Invalid transition, or another agent's task. */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    InternalSessionsController_unblockTaskAutomatically: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: string;
+                taskId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UnblockTaskInternalDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskResponseDto"];
+                };
+            };
+            /** @description Invalid body. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Service token missing or different from the shared one. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Session, project, or resource not found. */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

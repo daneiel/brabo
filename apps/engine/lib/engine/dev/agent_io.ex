@@ -284,6 +284,39 @@ defmodule Engine.Dev.AgentIo do
   end
 
   @doc """
+  RN-864 (AT-525): falha PASSAGEIRA de rede/provedor. Zera task/worktree/branch
+  como `finish_task/3`, NÃO conta no disjuntor, e NÃO reivindica a próxima:
+  fica `:idle` com `pausa_de_rede: true` por `pausa_de_rede_ms/0` (1 min) —
+  pegar a próxima com a rede fora só bloquearia a fila inteira, que foi o
+  medido no TP-01. Quem retoma é `:fim_da_pausa_de_rede`.
+  """
+  def pausar_por_rede(state) do
+    state =
+      state
+      |> levar_branch_para_a_proxima()
+      |> Map.merge(%{
+        task_id: nil,
+        worktree: nil,
+        branch: nil,
+        status: :idle,
+        pausa_de_rede: true
+      })
+
+    persist(state)
+
+    emit(state, "dev.idle", %{
+      agentId: state.agent_id,
+      reason: "pausa de #{div(pausa_de_rede_ms(), 1000)} s depois de falha passageira de rede"
+    })
+
+    Process.send_after(self(), :fim_da_pausa_de_rede, pausa_de_rede_ms())
+    state
+  end
+
+  @doc false
+  def pausa_de_rede_ms, do: Application.get_env(:engine, :pausa_de_rede_ms, 60_000)
+
+  @doc """
   Cria o worktree da task: da branch deixada pela task anterior deste agente
   (`base_preservada`, RN-743/RN-760) quando há, senão da `dev`. Consome o
   ponteiro. Devolve `{resultado_do_worktree_manager, state}`.

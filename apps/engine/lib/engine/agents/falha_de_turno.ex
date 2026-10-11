@@ -123,6 +123,29 @@ defmodule Engine.Agents.FalhaDeTurno do
         ~r/EAI_AGAIN|ECONNRESET|ETIMEDOUT|ECONNREFUSED|ENOTFOUND|getaddrinfo|socket hang up/
 
   @doc """
+  RN-864 (AT-525): a falha é PASSAGEIRA de rede/provedor — a que se resolve
+  sozinha esperando. Lista de PERMITIDOS, explícita: DNS (`EAI_AGAIN`,
+  `ENOTFOUND`), `ECONNRESET`, `ETIMEDOUT`, `aborted`, e HTTP 5xx/429 do
+  provedor (códigos `rate_limit`/`upstream`, e o que `falha_de_rede?/1` já reconhece). Crédito esgotado
+  (402, RN-726/730) NUNCA é passageira, mesmo que o texto também case.
+  """
+  @spec passageira?(term()) :: boolean()
+  def passageira?(falha) do
+    not credito_esgotado?(falha) and (falha_de_rede?(falha) or texto_passageiro?(falha))
+  end
+
+  defp texto_passageiro?(%{"errorCode" => code}) when code in ["rate_limit", "upstream"],
+    do: true
+
+  defp texto_passageiro?(%{"error" => texto}) when is_binary(texto), do: texto_passageiro?(texto)
+
+  defp texto_passageiro?(texto) when is_binary(texto) do
+    texto =~ ~r/\baborted\b|status:? (5\d\d|429)\b|\((5\d\d|429)\)|\{(5\d\d|429),/iu
+  end
+
+  defp texto_passageiro?(_), do: false
+
+  @doc """
   O provider recusou por falta de CRÉDITO (HTTP 402, ou o texto do OpenRouter
   "exceed your available credits"/"add credits") — RN-726. Aceita o termo cru
   ou o texto já inspecionado (`ctx.last_error` do `ToolLoop` é `inspect/1`).

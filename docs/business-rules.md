@@ -14423,7 +14423,7 @@ contexto vivo tinha (a cauda inteira, mesmo o que já tinha sido compactado); o
   abertura); `apps/engine/lib/engine/harness/context_manager.ex:138` (o resumo
   gravado); `apps/engine/lib/engine/sessions/engine_api_client.ex:1066`
 
-  gravado); `apps/engine/lib/engine/sessions/engine_api_client.ex:1124`
+  gravado); `apps/engine/lib/engine/sessions/engine_api_client.ex:1142`
   (`list_events/3`); os seis `init/1` —
   `apps/engine/lib/engine/agents/criativo_server.ex:89`, `po_server.ex:93`,
   `arquiteto_server.ex:87`, `dev_lead_server.ex:132`, `ux_designer_server.ex:85`,
@@ -14632,7 +14632,7 @@ fonte continua sendo o GET, o canal continua sendo só gatilho — como já era
 desde a Fase 4a —, e o que muda é a latência máxima das escritas sem aviso.
 
 - **Código:** `apps/engine/lib/engine/sessions/engine_api_client.ex:581`,
-  `:607`, `:630`, `:1012` (`avisar_canal`);
+  `:607`, `:630`, `:1030` (`avisar_canal`);
 
   `:607`, `:630`, `:953` (`avisar_canal`);
   `apps/engine/lib/engine/sessions/live_broadcast.ex` (`event_appended/3`);
@@ -14815,11 +14815,11 @@ fechada seguem mostrando a mensagem da api.
   (`conversa_ociosa`), `:193` (`encerrar`), `:222`
   (`conversation_idle_timeout_ms`); `apps/engine/lib/engine/sessions/monitor.ex:185`
   (`classify`); `apps/engine/lib/engine/psychologist/termination_classifier.ex:46`;
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1090`
-  (`narrar_recusa_de_sessao_encerrada`), `:1437` (`pendencia_da_resposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1108`
+  (`narrar_recusa_de_sessao_encerrada`), `:1460` (`pendencia_da_resposta`);
 
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1090`
-  (`narrar_recusa_de_sessao_encerrada`), `:1437` (`pendencia_da_resposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1108`
+  (`narrar_recusa_de_sessao_encerrada`), `:1460` (`pendencia_da_resposta`);
   `apps/engine/lib/engine/agents/conversacionais.ex:49` (`parar_da_sessao`),
   `:69` (`parar_da_sessao_no_cluster`);
   `apps/engine/lib/engine/agents/turno_assincrono.ex:411` (`abandonar`);
@@ -15808,9 +15808,9 @@ pacote da porta de Docker. Nada muda na contenção do broker ([ADR
   `:205` (`TETO_DE_MUTACAO_MS`), `:217` (`FOLGA_DO_EXEC_NO_ENGINE_MS`),
   `:270` (`erroDeTransporte`);
   `apps/api/src/application/ports/container-broker.port.ts:89` (`MotivoDeBrokerIndisponivel`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1923` (`teto_do_container_exec_ms`)
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1946` (`teto_do_container_exec_ms`)
 
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1923` (`teto_do_container_exec_ms`)
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1946` (`teto_do_container_exec_ms`)
 - **Teste:** `apps/api/test/infrastructure/http-clients/container-broker.client.spec.ts:286`
   (a reprodução, contra um broker `node:http` que demora 6 s), `:182` (o
   teto de cada operação no `AbortSignal`), `:204` e `:229` (`teto-excedido`
@@ -15894,9 +15894,9 @@ continua vindo da decisão do Arquiteto, e `pull` não é operação nova do bro
   `apps/api/src/infrastructure/http-clients/container-broker.client.ts:205` (`TETO_DE_MUTACAO_MS`),
   `:175` (`CHAMADAS_DE_CONTROLE_NO_START`),
   `:228` (`TETO_DO_PROPOSE_ACTION_DE_CONTAINER_NO_ENGINE_MS`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1845` (`opcoes_do_propose_action`),
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1868` (`opcoes_do_propose_action`),
 
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1845` (`opcoes_do_propose_action`),
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1868` (`opcoes_do_propose_action`),
   `:1649` (`@teto_do_propose_action_de_container_ms`);
   `apps/engine/lib/engine/runners/runner_router.ex:52` (`@timeout_do_start_ms`)
 - **Teste:** `packages/docker-port/src/docker-cli.spec.ts:425` (describe da
@@ -16841,11 +16841,11 @@ especificação da AT-081 e o mecanismo verificado por provider na AT-161).
   (`anexar`), `:213` (`com_idioma_do_autor`), `:152` (`orientacao`), `:94`
   (`@sem_orientacao`), `:261` (`texto_do_turno`), `:286`
   (`idioma_do_projeto`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:672`
-  (`IdiomaDaResposta`), `:766` (`IdiomaDaResposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:685`
+  (`IdiomaDaResposta`), `:779` (`IdiomaDaResposta`);
 
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:672`
-  (`IdiomaDaResposta`), `:766` (`IdiomaDaResposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:685`
+  (`IdiomaDaResposta`), `:779` (`IdiomaDaResposta`);
   `apps/engine/lib/engine/projects/project.ex:64` (`idioma`);
   `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:515`
   (`idioma_da_resposta`);
@@ -16942,11 +16942,11 @@ AT-167 mede; os tokenizadores do DeepSeek e da Anthropic seguem não medidos.
   (`orientacao`), `:127` (`@ferramentas_de_artefato`), `:118`
   (`@forma_curta`), `:261` (`texto_do_turno`), `:279` (`grava_artefato?`),
   `:280` (`idioma_do_projeto_para_o_artefato`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:672`
-  (`IdiomaDaResposta`), `:766` (`IdiomaDaResposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:685`
+  (`IdiomaDaResposta`), `:779` (`IdiomaDaResposta`);
 
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:672`
-  (`IdiomaDaResposta`), `:766` (`IdiomaDaResposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:685`
+  (`IdiomaDaResposta`), `:779` (`IdiomaDaResposta`);
   `apps/web/src/routes/settings/ProjectLanguageSection.tsx`
 - **Teste:** `apps/engine/test/engine/harness/idioma_da_resposta_test.exs:157`
   (idiomas diferentes: a orientação diz os dois), `:168` (iguais: só um),
@@ -17209,11 +17209,11 @@ endpoint é ALPHA e o smoke manual
   `apps/api/src/db/schema/llm.ts:356` (`priceImplicit`);
   `apps/engine/lib/engine/harness/roteamento_de_ferramenta.ex:60` (`registrar`),
   `:112` (`custo_micros`), `:123` (`repetir_com_catalogo_inteiro?`), `:146`
-  (`mesclar_repeticao`); `apps/engine/lib/engine/sessions/engine_api_client.ex:687`
-  (`llm_turn`), `:760` (`llm_turn_stream`);
+  (`mesclar_repeticao`); `apps/engine/lib/engine/sessions/engine_api_client.ex:700`
+  (`llm_turn`), `:773` (`llm_turn_stream`);
 
-  (`mesclar_repeticao`); `apps/engine/lib/engine/sessions/engine_api_client.ex:687`
-  (`llm_turn`), `:760` (`llm_turn_stream`);
+  (`mesclar_repeticao`); `apps/engine/lib/engine/sessions/engine_api_client.ex:700`
+  (`llm_turn`), `:773` (`llm_turn_stream`);
   `apps/engine/lib/engine/harness/tool_loop.ex:132` (o custo do Jev no orçamento
   local)
 - **Teste:** `apps/api/test/domain/llm/tool-router.spec.ts:25` (`questions` é
@@ -17919,7 +17919,7 @@ vault por decisão do dono; [ADR 0182](adr/0182-ciclo-de-vida-do-handoff.md)).
   (`criar_handoffs_appsec/3`);
   `apps/engine/lib/engine/sessions/engine_api_client.ex:1131`
 
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1189`
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1207`
   (`create_handoff_if_absent`);
   `apps/api/src/domain/sessions/ciclo-de-vida-do-handoff.ts:71`
   (`decidirOferta`)
@@ -18825,7 +18825,7 @@ handoff manual (ADR 0109) também.
   (`AceitarHandoffAutomaticamenteUseCase`);
   `apps/api/src/application/use-cases/agents/accept-handoff.use-case.ts:91`
   (`AceitePeloSistema`);
-  `apps/api/src/interfaces/http/internal/internal-sessions.controller.ts:408`
+  `apps/api/src/interfaces/http/internal/internal-sessions.controller.ts:414`
   (`handoff`); `apps/engine/lib/engine/harness/tools/offer_handoff.ex:59`;
   `apps/web/src/routes/session-timeline-montagem.tsx:604` (o aviso no fio)
 - **Teste:** `apps/api/test/application/use-cases/agents/aceitar-handoff-automaticamente.use-case.spec.ts:73`
@@ -18957,7 +18957,7 @@ faz merge nem push.
 - **Código:** `apps/api/src/domain/sessions/estou-pronto.ts:62` (`decidirAceiteImplicitoDoPo`);
   `apps/api/src/application/use-cases/agents/aceite-implicito-do-po.use-case.ts:37` (`AceiteImplicitoDoPoUseCase`),
   `:45` (`seCouber`);
-  `apps/api/src/interfaces/http/internal/internal-sessions.controller.ts:408` (`handoff`);
+  `apps/api/src/interfaces/http/internal/internal-sessions.controller.ts:414` (`handoff`);
   `apps/api/src/application/use-cases/agents/accept-handoff.use-case.ts:135` (`implicito` no `handoff.accepted`);
   `apps/api/src/application/use-cases/agents/activate-agent.use-case.ts:80` (`implicito` no `agent.activated`)
 - **Teste:** `apps/api/test/application/use-cases/agents/aceite-implicito-do-po.use-case.spec.ts:105`
@@ -19027,7 +19027,7 @@ O valor mora em DOIS lugares, de propósito, um por linguagem, e mudam juntos:
   `:183` (`garantir_base`), `:308` (`remoto_vazio?`);
   `apps/engine/lib/engine/dev/worktree_manager.ex:36` (`create`), `:138`
   (`add_worktree`), `:201` (`garantir_base`);
-  `apps/engine/lib/engine/dev/agent_io.ex:394` (`propose_pr`);
+  `apps/engine/lib/engine/dev/agent_io.ex:427` (`propose_pr`);
   `apps/engine/lib/engine/gates/diff.ex:29` (`compute`);
   `apps/engine/lib/engine/harness/project_context.ex:29` (`repo_line`);
   `apps/api/src/domain/actions/protected-branches.ts:26` (`BRANCH_DE_TRABALHO`);
@@ -20022,7 +20022,7 @@ lendo o worktree de outros módulos para descobrir a interface deles: o
   `apps/engine/lib/engine/harness/tools/listar_contratos_de_modulos.ex:43`
   (`run`), `:66` (`renderizar`);
   `apps/engine/lib/engine/dev/tools.ex:36` (`ListarContratosDeModulos`);
-  `apps/engine/lib/engine/dev/dev_agent_server.ex:484` (`module`), `:501`;
+  `apps/engine/lib/engine/dev/dev_agent_server.ex:497` (`module`), `:501`;
   `apps/engine/lib/engine/agents/arquiteto_server.ex:112`, `:335`, `:399`
 - **Teste:** `apps/api/test/application/use-cases/architecture/module-contracts.use-case.spec.ts:173`
   (grava a versão 1 — caminho feliz), `:185` (a vigente substitui), `:210`
@@ -20681,7 +20681,7 @@ Junto, o fechamento deixa de dizer que parear uma pasta pela tela do projeto
 - **Onde:** `apps/engine/lib/engine/harness/fluxo_do_time.ex:107` (`texto`),
   `:97` (`anexar`), `apps/engine/lib/engine/sessions/engine_api_client.ex:647`
 
-  `:97` (`anexar`), `apps/engine/lib/engine/sessions/engine_api_client.ex:687`
+  `:97` (`anexar`), `apps/engine/lib/engine/sessions/engine_api_client.ex:700`
   (`llm_turn`), `apps/engine/lib/engine/harness/agents.ex:23` (`identity`),
   `apps/engine/lib/engine/agents/arquiteto_server.ex:388` (`build_kickoff`)
 - **Teste:** `apps/engine/test/engine/harness/fluxo_do_time_test.exs`
@@ -20761,7 +20761,7 @@ Junto, o fechamento deixa de dizer que parear uma pasta pela tela do projeto
   `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:490` (`reabrirPorConflitoDeMerge`),
   `apps/engine/lib/engine/workers/dev_agent_wake_worker.ex:151` (`task.merge_conflict`),
   `apps/engine/lib/engine/dev/dev_agent_server.ex:350` (`handle_info`),
-  `apps/engine/lib/engine/dev/dev_agent_server.ex:805` (`trigger_gate_recheck`),
+  `apps/engine/lib/engine/dev/dev_agent_server.ex:818` (`trigger_gate_recheck`),
   `apps/engine/lib/engine/dev/worktree_manager.ex:47` (`adopt`)
 - **Teste:** `apps/api/test/application/use-cases/actions/execute-git-action.use-case.spec.ts` ("conflito de merge → kind git_merge, arquivos no
   resultado e evento na tarefa"; falha: "RN-715: tarefa que já não está em
@@ -21373,7 +21373,7 @@ O kickoff do PO diz as três coisas.
 
 - **Onde:** `apps/api/src/application/use-cases/backlog/complete-story.use-case.ts:52`
   (`CompleteStoryUseCase`);
-  `apps/api/src/interfaces/http/internal/internal-sessions.controller.ts:535`
+  `apps/api/src/interfaces/http/internal/internal-sessions.controller.ts:541`
   (`completeStoryRoute`); `apps/engine/lib/engine/harness/tools/complete_story.ex:47`
   (`run`); `apps/engine/lib/engine/harness/tools/offer_handoff.ex:52`
   (`recusa_por_cobertura`); `apps/engine/lib/engine/harness/tools/emit_artifact.ex:188`
@@ -21577,9 +21577,9 @@ sem dizer qual.
   `dev.credit_exhausted` como trabalho pendente, como `dev.idle_tripped`.
   Desde a RN-730 o 402 chega com `code` próprio (`insufficient_credit`) e é
   ele que decide; o reconhecimento pelo texto ficou só como rede.
-- **Onde:** `apps/engine/lib/engine/agents/falha_de_turno.ex:130`
+- **Onde:** `apps/engine/lib/engine/agents/falha_de_turno.ex:134`
   (`credito_esgotado?`),
-  `apps/engine/lib/engine/dev/dev_agent_server.ex:901` (`handle_outcome`),
+  `apps/engine/lib/engine/dev/dev_agent_server.ex:906` (`handle_outcome`),
   `apps/engine/lib/engine/dev/agent_io.ex:271` (`pausar_por_credito`),
   `apps/web/src/lib/agent-status.ts:198` (`breakerReasonFor`),
   `apps/api/src/application/use-cases/sessions/get-session-pending-work.use-case.ts`
@@ -21614,7 +21614,7 @@ sem dizer qual.
   (`streamErrorCode`),
   `apps/engine/lib/engine/agents/falha_de_turno.ex:83` (`credito_esgotado?`),
   `:71` (`origem`), `apps/engine/lib/engine/harness/tool_loop.ex:148`
-  (`last_error_code`), `apps/engine/lib/engine/dev/dev_agent_server.ex:901`
+  (`last_error_code`), `apps/engine/lib/engine/dev/dev_agent_server.ex:906`
   (`handle_outcome`)
 - **Teste:** `apps/api/test/contract/llm-provider.contract.ts` (`erro_402 vira
   chunk de erro com code "insufficient_credit"`; falha: `erro_500` segue
@@ -21857,8 +21857,8 @@ sem dizer qual.
   top up the key and try again."; sem idioma resolvido, pt-BR. O JSON do
   provider fica só no `reason` (diagnóstico). Os demais erros mantêm a frase
   de sempre.
-- **Onde:** `apps/engine/lib/engine/agents/falha_de_turno.ex:135` (`mensagem`),
-  `:172` (`diagnostico`)
+- **Onde:** `apps/engine/lib/engine/agents/falha_de_turno.ex:158` (`mensagem`),
+  `:195` (`diagnostico`)
 - **Teste:** `apps/engine/test/engine/agents/dev_lead_server_test.exs` (402
   em pt-BR e en: frase curta, `reason` sem `{:final`; erro `upstream`: frase
   de sempre), `apps/engine/test/engine/agents/falha_de_turno_test.exs`
@@ -21925,7 +21925,7 @@ sem dizer qual.
   texto narrado entra na bolha cortado em 300 caracteres com "…".
 - **Onde:** `apps/api/src/domain/llm/llm-provider-errors.ts:144`
   (`LIMITE_DO_DETALHE`), `apps/engine/lib/engine/agents/falha_de_turno.ex:168`
-  (`@teto_da_bolha`), `:190` (`curto`)
+  (`@teto_da_bolha`), `:213` (`curto`)
 - **Teste:** `apps/api/test/domain/llm/llm-provider-errors.spec.ts` (o 402
   leva `"metadata":{"reason":"insufficient_credits"` inteiro; corpo acima do
   teto corta), `apps/engine/test/engine/agents/falha_de_turno_test.exs`
@@ -22001,7 +22001,7 @@ sem dizer qual.
   da Task do turno (`TurnoAssincrono`), então o padrão "HTTP dentro do
   GenServer" não os alcança — declarado. A web não mudou: a aba Executores
   passa a ver o `agent.error` e o `dev.blocked` da recuperação.
-- **Onde:** `apps/engine/lib/engine/sessions/engine_api_client.ex:2046`
+- **Onde:** `apps/engine/lib/engine/sessions/engine_api_client.ex:2069`
   (`isolado`), `apps/engine/lib/engine/dev/monitor.ex:69` (`ao_terminar`),
   `:107` (`registrar_e_religar`)
 - **Teste:** `apps/engine/test/engine/sessions/engine_api_client_isolado_test.exs`
@@ -22026,8 +22026,8 @@ sem dizer qual.
   `runner` o worktree está na máquina do usuário e o engine não preserva nada.
 - **Onde:** `apps/engine/lib/engine/dev/worktree_manager.ex:72`
   (`preservar_em`), `:55` (`create_from`),
-  `apps/engine/lib/engine/dev/agent_io.ex:458` (`preservar_trabalho`),
-  `apps/engine/lib/engine/dev/agent_io.ex:288` (`base_preservada`)
+  `apps/engine/lib/engine/dev/agent_io.ex:491` (`preservar_trabalho`),
+  `apps/engine/lib/engine/dev/agent_io.ex:321` (`base_preservada`)
 - **Teste:** `apps/engine/test/engine/dev/worktree_manager_test.exs`
   (`preservar_em/3 e create_from/4`: commit com `dev-api[bot]` e a próxima
   task enxerga o arquivo; limpo é `:nada`; pasta sem repositório é erro),
@@ -22051,7 +22051,7 @@ sem dizer qual.
   parte.
 - **Onde:** `apps/engine/lib/engine/harness/tools/terminal.ex:12` (`spec`),
   `apps/engine/lib/engine/dev/worktree_manager.ex:108` (`retrato`),
-  `apps/engine/lib/engine/dev/dev_agent_server.ex:582` (`retrato_do_worktree`)
+  `apps/engine/lib/engine/dev/dev_agent_server.ex:595` (`retrato_do_worktree`)
 - **Teste:** `apps/engine/test/engine/dev/worktree_manager_test.exs`
   (`retrato/2`: branch e arquivos; pasta inalcançável diz indisponível; a
   descrição do terminal diz `sh`)
@@ -22256,7 +22256,7 @@ sem dizer qual.
   `nohup … &` com log —, nunca `%Req.TransportError{reason: :timeout}` cru.
   Exec assíncrono/streaming foi considerado e não feito: a menor mudança que
   faz `npm install` comum caber é o teto.
-- **Onde:** `apps/engine/lib/engine/sessions/engine_api_client.ex:1892`
+- **Onde:** `apps/engine/lib/engine/sessions/engine_api_client.ex:1915`
   (`opcoes_do_propose_action`) e
   `apps/engine/lib/engine/harness/hooks/action_pipeline.ex:80`
   (`resultado_de_teto_do_terminal`)
@@ -22425,7 +22425,7 @@ sem dizer qual.
   (medido no Chromium: 2 236px num balão de 708px) e a última coluna sumia.
 - **Onde:** `apps/api/src/application/use-cases/actions/execute-adr-pr.use-case.ts:96`
   (`openPullRequest`); `apps/engine/lib/engine/infra/infra_lead_server.ex:1521`
-  (`gravar_texto_do_turno`); `apps/engine/lib/engine/dev/dev_agent_server.ex:1088`
+  (`gravar_texto_do_turno`); `apps/engine/lib/engine/dev/dev_agent_server.ex:1141`
   (`propose_pr`); `apps/web/src/lib/session-destinatario.ts:192`
   (`agentesEmConversa`) e `apps/web/src/lib/session-kind.ts:69`
   (`tipoDaSessao`); `apps/web/src/routes/NewProjectWizard.tsx:1122`
@@ -22453,8 +22453,8 @@ sem dizer qual.
   Declarado: merge por squash num remoto não deixa a branch ancestral da `dev`,
   então a próxima segue partindo dela; o ponteiro continua só em memória, e no
   modo `runner` a checagem de merge não roda.
-- **Onde:** `apps/engine/lib/engine/dev/agent_io.ex:310`
-  (`levar_branch_para_a_proxima`), `:291` (`criar_worktree`),
+- **Onde:** `apps/engine/lib/engine/dev/agent_io.ex:296`
+  (`levar_branch_para_a_proxima`), `:324` (`criar_worktree`),
   `apps/engine/lib/engine/dev/worktree_manager.ex:199`
   (`ja_mergeada_volta_ao_trabalho`)
 - **Teste:** `apps/engine/test/engine/dev/bloqueio_preserva_trabalho_test.exs`
@@ -22730,8 +22730,8 @@ sem dizer qual.
   `reasoningTokens` (ficam só em `token_usage`), então a resposta vazia que
   bate no teto sem `finish_reason: length` não é reconhecida.
 - **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:219`
-  (`parada_sem_chamada`), `apps/engine/lib/engine/dev/dev_agent_server.ex:1040`
-  (`motivo_da_parada`), `:1043` (`stop_diagnosis`)
+  (`parada_sem_chamada`), `apps/engine/lib/engine/dev/dev_agent_server.ex:1093`
+  (`motivo_da_parada`), `:1101` (`stop_diagnosis`)
 - **Teste:** `apps/engine/test/engine/harness/tool_loop_test.exs` (`corte só
   de raciocínio`: retentada uma vez e segue; repetido para com
   `corte_pelo_teto`), `apps/engine/test/engine/dev/dev_agent_server_test.exs`
@@ -22748,8 +22748,8 @@ sem dizer qual.
   A descrição do campo `summary` diz que ele vira a mensagem de commit e que
   não se narra commit, push nem PR. Resumo que fica vazio cai na mensagem
   padrão `<agente>: <task>`.
-- **Onde:** `apps/engine/lib/engine/dev/agent_io.ex:365`
-  (`mensagem_de_commit`), `:340` (`propose_commit`),
+- **Onde:** `apps/engine/lib/engine/dev/agent_io.ex:374`
+  (`mensagem_de_commit`), `:373` (`propose_commit`),
   `apps/engine/lib/engine/dev/tools/report_done.ex:27` (`summary`)
 - **Teste:** `apps/engine/test/engine/dev/mensagem_de_commit_test.exs`
   (corta a narração; tira o parêntese; pendência alheia ao sistema fica)
@@ -22855,7 +22855,7 @@ sem dizer qual.
   já acorda o dono ([RN-715](#rn-715)); com a sessão de execução de pé
   ([RN-776](#rn-776)), o dono continua com linha em `dev_agent_states` para
   ser acordado.
-- **Onde:** `apps/api/src/application/use-cases/execution/unblock-task.use-case.ts:56`
+- **Onde:** `apps/api/src/application/use-cases/execution/unblock-task.use-case.ts:68`
   (`modules`)
 - **Teste:** `apps/api/test/application/use-cases/execution/unblock-task.use-case.spec.ts`
   (tarefa com módulo acorda o dev desse módulo)
@@ -23010,7 +23010,7 @@ sem dizer qual.
   cobre também o merge por squash que a [RN-760](#rn-760) declara não ver.
   Declarado: a PR antiga da branch, se existir, não é fechada no provider.
 - **Onde:** `apps/engine/lib/engine/dev/worktree_manager.ex:246`
-  (`sem_diff_contra_a_dev?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:972`
+  (`sem_diff_contra_a_dev?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:1025`
   (`ja_na_dev`)
 - **Teste:** `apps/engine/test/engine/dev/tarefa_ja_na_dev_test.exs`
 - **Origem:** AT-474
@@ -23163,7 +23163,7 @@ sem dizer qual.
   `codigo` e desarmou o dev.
 - **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:246`
   (`llm_turn_com_retentativa`), `apps/engine/lib/engine/agents/falha_de_turno.ex:112`
-  (`falha_de_rede?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:926`
+  (`falha_de_rede?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:939`
   (`bloquear_parada`), `apps/engine/lib/engine/dev/agent_io.ex:228`
   (`finish_task`)
 - **Teste:** `apps/engine/test/engine/harness/tool_loop_test.exs` ("falha de
@@ -23184,7 +23184,7 @@ sem dizer qual.
   com o que há, e na dúvida a task segue para os gates.
 - **Onde:** `apps/engine/lib/engine/dev/worktree_manager.ex:267`
   (`sem_diff_contra_a_dev?`), `apps/engine/lib/engine/dev/worktree_manager.ex:277`
-  (`sem_diff_atualizado?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:866`
+  (`sem_diff_atualizado?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:879`
   (`handle_outcome`)
 - **Teste:** `apps/engine/test/engine/dev/tarefa_ja_na_dev_test.exs` ("caminho
   feliz: com a dev atualizada, a branch não tem diff"; "falha: remoto
@@ -23368,7 +23368,7 @@ sem dizer qual.
   campo inválido) responda com mensagem própria no formato do projeto, nunca a
   mensagem crua da biblioteca. O recorte do QA confere as duas coisas na
   varredura por regra, e o que faltar vai a `itens`. Régua de prompt.
-- **Onde:** `apps/engine/lib/engine/dev/dev_agent_server.ex:591`
+- **Onde:** `apps/engine/lib/engine/dev/dev_agent_server.ex:604`
   (`initial_message`) e `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:20`
   (`texto`)
 - **Teste:** `apps/engine/test/engine/dev/report_done_instrucao_test.exs`
@@ -23385,7 +23385,7 @@ sem dizer qual.
   se faltar), nunca no fim do arquivo, e que o README, que é do usuário, não
   ganhe nota de processo nem instrução para agentes. O recorte do QA confere
   as duas coisas. Régua de prompt.
-- **Onde:** `apps/engine/lib/engine/dev/dev_agent_server.ex:591`
+- **Onde:** `apps/engine/lib/engine/dev/dev_agent_server.ex:604`
   (`initial_message`) e `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:20`
   (`texto`)
 - **Teste:** `apps/engine/test/engine/dev/report_done_instrucao_test.exs`
@@ -23513,7 +23513,7 @@ sem dizer qual.
   o Jev segue sem piso para dev agents ([RN-758](#rn-758)) — até a [RN-839](#rn-839), que pôs `report_done`/`report_blocked` no piso deles.
 - **Onde:** `apps/engine/lib/engine/dev/tools/report_done.ex:16` (`spec`),
   `apps/engine/lib/engine/dev/tools/report_blocked.ex:12` (`spec`),
-  `apps/engine/lib/engine/dev/dev_agent_server.ex:591` (`initial_message`),
+  `apps/engine/lib/engine/dev/dev_agent_server.ex:604` (`initial_message`),
   `apps/engine/lib/engine/harness/ambiente_do_agente.ex:102` (`montar`)
 - **Teste:** `apps/engine/test/engine/dev/report_done_instrucao_test.exs`
   ("caminho feliz: report_done, kickoff e ambiente carregam as duas
@@ -24005,7 +24005,7 @@ sem dizer qual.
   swagger-ui de CDN; módulo web serve a página inicial; a URL entra na seção
   "Rodar na sua máquina" do README. Tarefa que não toca rotas não paga a
   cláusula (a mensagem é fixada e volta a cada iteração).
-- **Onde:** `apps/engine/lib/engine/dev/dev_agent_server.ex:631`
+- **Onde:** `apps/engine/lib/engine/dev/dev_agent_server.ex:636`
   (`clausula_de_openapi`),
   `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:105`
   (`toca_ponto_de_entrada?`)
@@ -24303,7 +24303,7 @@ sem dizer qual.
 - **Onde:** `apps/engine/lib/engine/infra/instrucoes_de_execucao.ex:52` (`url`),
   `apps/api/src/domain/infra/run-instructions.ts:44` (`recusaDoRun`),
   `apps/engine/lib/engine/infra/infra_lead_server.ex:1398` (`build_kickoff`),
-  `apps/engine/lib/engine/dev/dev_agent_server.ex:631` (`clausula_de_openapi`),
+  `apps/engine/lib/engine/dev/dev_agent_server.ex:636` (`clausula_de_openapi`),
   `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:20` (`texto`)
 - **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs`
   ("run api_docs em rota de negócio é recusado com motivo, sem propor"),
@@ -24339,3 +24339,32 @@ sem dizer qual.
   recusa 409 mostra a frase da api", "quem não é o autor da sessão vê o
   cartão com o controle inerte e o motivo em texto")
 - **Origem:** AT-521
+
+### RN-864 — Falha passageira de rede volta sozinha em até 3 tentativas, e o dev pausa {#rn-864}
+
+- **Regra:** a task bloqueada pelo dev agent com origem `infra` por falha
+  PASSAGEIRA de rede/provedor — lista de permitidos explícita: DNS
+  (`EAI_AGAIN`, `ENOTFOUND`, `getaddrinfo`), `ECONNRESET`, `ETIMEDOUT`,
+  `aborted`, HTTP 5xx/429 do provedor (códigos `rate_limit`/`upstream`,
+  `connection`/`timeout`) — é RETOMADA sozinha até 3 vezes, depois de 1, 3 e
+  10 min (decisão do dono), por um job Oban que chama o MESMO desbloqueio do
+  humano (`UnblockTaskUseCase`, pela rota interna `.../tasks/:taskId/unblock`,
+  ator `system`, no-op se a task já não está bloqueada). O motivo do bloqueio
+  diz qual retomada foi agendada; depois da 3ª retomada a falha seguinte fica
+  bloqueada como antes, e o motivo diz que as 3 já foram tentadas. E o agente
+  PAUSA 1 min em vez de pegar a próxima task (o wake é ignorado durante a
+  pausa). Crédito esgotado (402, RN-726/730) e erro de código NÃO entram:
+  bloqueiam na hora. O contador de retomadas é só em memória: reiniciar o
+  engine o zera.
+- **Onde:** `apps/engine/lib/engine/agents/falha_de_turno.ex:133`
+  (`passageira?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:974`
+  (`bloquear_passageira`), `apps/engine/lib/engine/dev/agent_io.ex:293`
+  (`pausar_por_rede`), `apps/engine/lib/engine/workers/retomada_de_tarefa_worker.ex:33`
+  (`agendar`), `apps/api/src/application/use-cases/execution/unblock-task.use-case.ts:33`
+  (`ator`)
+- **Teste:** `apps/engine/test/engine/dev/dev_agent_server_test.exs` ("falha
+  passageira: agenda a retomada, pausa e não queima a fila", "fim da pausa
+  volta a reivindicar"; falha: "falha passageira depois de 3 retomadas fica
+  bloqueada pedindo o clique", "402 não agenda retomada"),
+  `apps/engine/test/engine/workers/retomada_de_tarefa_worker_test.exs`
+- **Origem:** AT-525
