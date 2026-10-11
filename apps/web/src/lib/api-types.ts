@@ -940,10 +940,29 @@ export interface ResumoDoContextoDaSessao {
   sessoesLidas: string[];
   regras: number;
   decisoes: number;
+  /** RN-844: as regras mais recentes da sessão, até 50; o total é `regras`. */
+  itensDeRegras: {
+    eventId: string;
+    seq: number;
+    actorId: string;
+    titulo: string | null;
+    descricao: string | null;
+    origens: number;
+  }[];
+  /** RN-844: as decisões mais recentes da sessão, até 50; o total é `decisoes`. */
+  itensDeDecisoes: {
+    eventId: string;
+    seq: number;
+    actorId: string;
+    escolha: string | null;
+    contexto: string | null;
+  }[];
   artefatosPorAgente: { actorId: string; quantos: number }[];
   arquivosTocados: {
     itens: { actionId: string; path: string; additions: number; deletions: number }[];
     total: number;
+    /** RN-844: PRs cujos arquivos não foram lidos (além do teto de 20, ou diff recusado). */
+    prsNaoLidas: number;
   };
 }
 

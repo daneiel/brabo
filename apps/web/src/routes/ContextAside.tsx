@@ -180,14 +180,33 @@ export function ContextAside({
   // RN-178: do último para o primeiro, nas quatro seções. Cópia antes do
   // `sort`: `baixados` é derivado do cache da query, e ordená-lo no lugar
   // reordenaria o que os outros consumidores leem.
-  const businessRules = events
+  const regrasDaJanela = events
     .filter((e) => e.type === 'artifact.business_rule')
-    .sort((a, b) => b.seq - a.seq);
+    .sort((a, b) => b.seq - a.seq)
+    .map((e) => {
+      const rule = e.payload as BusinessRulePayload;
+      return {
+        chave: e.id,
+        titulo: rule.title,
+        descricao: rule.description,
+        origens: Array.isArray(rule.origin) ? rule.origin.length : 0,
+      };
+    });
+  // RN-844 (AT-513): com o agregado, a LISTA também vem do servidor — as
+  // regras que ficaram antes da janela continuam aparecendo.
+  const businessRules = resumo
+    ? resumo.itensDeRegras.map((r) => ({
+        chave: r.eventId,
+        titulo: r.titulo ?? '',
+        descricao: r.descricao ?? '',
+        origens: r.origens,
+      }))
+    : regrasDaJanela;
 
   // AT-393: as decisões registradas (`artifact.decision_record`, RN-505) têm
   // seção própria — não são PR nem backlog, e sem ela o painel dizia
   // "nenhum artefato" numa sessão que decidiu coisas.
-  const decisoes = events
+  const decisoesDaJanela = events
     .filter((e) => e.type === 'artifact.decision_record')
     .sort((a, b) => b.seq - a.seq)
     .map((e) => {
@@ -200,8 +219,20 @@ export function ContextAside({
       };
     });
 
-  const totalDeRegras = totalDaSessao(resumo?.regras, businessRules.length);
-  const totalDeDecisoes = totalDaSessao(resumo?.decisoes, decisoes.length);
+  const decisoes = resumo
+    ? resumo.itensDeDecisoes.map((d) => ({
+        chave: d.eventId,
+        actorId: d.actorId,
+        escolha: d.escolha ?? '',
+        contexto: d.contexto ?? '',
+      }))
+    : decisoesDaJanela;
+
+  const totalDeRegras = totalDaSessao(resumo?.regras, regrasDaJanela.length);
+  const totalDeDecisoes = totalDaSessao(resumo?.decisoes, decisoesDaJanela.length);
+  // Com o agregado, o que falta da lista é o que passou do teto do servidor
+  // (as mais recentes vêm), não o que ficou antes da janela.
+  const chaveDoRecorte = resumo ? 'aside.recorteMaisRecentes' : 'aside.recorte';
 
   // RN-178: acima de 5 regras a lista pagina em vez de crescer sem fim — o
   // painel tem a altura de uma coluna, e uma sessão de ideação passa
@@ -388,23 +419,18 @@ export function ContextAside({
             <>
               {totalDeRegras !== null && totalDeRegras > businessRules.length && (
                 <div className={styles.asideEmpty}>
-                  {t('aside.recorte', { mostradas: businessRules.length, total: totalDeRegras })}
+                  {t(chaveDoRecorte, { mostradas: businessRules.length, total: totalDeRegras })}
                 </div>
               )}
-              {regrasDaPagina.map((e) => {
-                const rule = e.payload as BusinessRulePayload;
-                return (
-                  <Card key={e.id} radius="md" padding="sm" className={styles.ruleCard}>
-                    <div className={styles.ruleTitle}>{rule.title}</div>
-                    <div className={styles.ruleDescription}>{rule.description}</div>
-                    <div className={styles.ruleOrigin}>
-                      {t('aside.origemRefs', {
-                        count: Array.isArray(rule.origin) ? rule.origin.length : 0,
-                      })}
-                    </div>
-                  </Card>
-                );
-              })}
+              {regrasDaPagina.map((rule) => (
+                <Card key={rule.chave} radius="md" padding="sm" className={styles.ruleCard}>
+                  <div className={styles.ruleTitle}>{rule.titulo}</div>
+                  <div className={styles.ruleDescription}>{rule.descricao}</div>
+                  <div className={styles.ruleOrigin}>
+                    {t('aside.origemRefs', { count: rule.origens })}
+                  </div>
+                </Card>
+              ))}
               {/* O paginador só existe quando há o que paginar: com 5 ou menos
                   ele seria um controle permanentemente inútil ocupando altura
                   na coluna mais estreita da tela. */}
@@ -468,7 +494,7 @@ export function ContextAside({
             [
               totalDeDecisoes !== null && totalDeDecisoes > decisoes.length && (
                 <div key="recorte" className={styles.asideEmpty}>
-                  {t('aside.recorte', { mostradas: decisoes.length, total: totalDeDecisoes })}
+                  {t(chaveDoRecorte, { mostradas: decisoes.length, total: totalDeDecisoes })}
                 </div>
               ),
               ...decisoes.map((d) => (
@@ -534,13 +560,21 @@ export function ContextAside({
         <div className={styles.asideHeader}>{t('aside.arquivosTocados')}</div>
         {filesTouched.length === 0 ? (
           <div className={styles.asideEmpty}>
-            {resumo ? t('aside.nadaAinda') : t('aside.arquivosNaoLidos')}
+            {resumo ? t('aside.arquivosVazio') : t('aside.arquivosNaoLidos')}
           </div>
         ) : (
           [
+            resumo && resumo.arquivosTocados.prsNaoLidas > 0 && (
+              <div key="prs-nao-lidas" className={styles.asideEmpty}>
+                {t('aside.prsNaoLidas', { count: resumo.arquivosTocados.prsNaoLidas })}
+              </div>
+            ),
             totalDeArquivos > filesTouched.length && (
               <div key="recorte" className={styles.asideEmpty}>
-                {t('aside.recorte', { mostradas: filesTouched.length, total: totalDeArquivos })}
+                {t(resumo ? 'aside.recorteMaisRecentes' : 'aside.recorte', {
+                  mostradas: filesTouched.length,
+                  total: totalDeArquivos,
+                })}
               </div>
             ),
             ...filesTouched.map((file) => (

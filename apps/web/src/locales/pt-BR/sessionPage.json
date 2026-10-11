@@ -217,7 +217,12 @@
     "decisaoSemEscolha": "Decisão sem escolha registrada",
     "todasAntesDaJanela": "Há {{total}} nesta sessão, todas antes dos eventos carregados — “Carregar mais antigos”, no Log de eventos, traz o detalhe.",
     "recorte": "Mostrando {{mostradas}} de {{total}} — as demais estão antes do que foi carregado.",
-    "arquivosNaoLidos": "Ainda não li os arquivos da sessão inteira."
+    "arquivosNaoLidos": "Ainda não li os arquivos da sessão inteira.",
+    "recorteMaisRecentes": "Mostrando as {{mostradas}} mais recentes de {{total}}.",
+    "arquivosVazio": "Nenhum arquivo nas PRs nem nos commits desta sessão ou da execução ligada a ela.",
+    "prsNaoLidas_zero": "Todas as PRs foram lidas.",
+    "prsNaoLidas_one": "{{count}} PR ficou de fora desta lista (além do limite de leitura, ou o diff não pôde ser lido) — a aba PRs mostra todas.",
+    "prsNaoLidas_other": "{{count}} PRs ficaram de fora desta lista (além do limite de leitura, ou o diff não pôde ser lido) — a aba PRs mostra todas."
   },
   "turno": {
     "pensando": "Pensando…",
