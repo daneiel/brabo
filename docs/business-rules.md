@@ -22663,8 +22663,8 @@ sem dizer qual.
   mantendo a folga da [RN-782](#rn-782). Medido no Haiku 5.5: 0 de 8 respostas
   cortadas e −42% de custo. Conversacionais e gates não mudam (sem campo), e
   modelo sem `supportsReasoning` não manda nada. Não é silencioso: a ajuda da
-  faceta "thinking" do catálogo de modelos diz que nos dev agents de execução o
-  raciocínio vai desligado (o mínimo escolhido; o seletor e a bolha não mudam).
+  faceta "thinking" do catálogo de modelos diz que nos dev agents de execução e,
+  desde a RN-838, no QA de Automação o raciocínio vai desligado (o mínimo escolhido; o seletor e a bolha não mudam).
 - **Onde:** `apps/api/src/domain/llm/raciocinio-do-agente.ts:23`
   (`raciocinioDesligadoParaOAgente`), `apps/api/src/infrastructure/llm/openrouter-provider.ts:224`
   (`campoDeRaciocinioDesligadoOpenRouter`)
