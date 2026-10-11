@@ -127,7 +127,7 @@ defmodule Engine.Infra.InfraLeadServer do
   use GenServer, restart: :temporary
 
   alias Engine.Harness.{ContextBuilder, PromptAssembler, ContextManager, ToolCallRecovery}
-  alias Engine.Infra.{InfraLead, WorkflowsAgent}
+  alias Engine.Infra.{InfraLead, InstrucoesDeExecucao, WorkflowsAgent}
 
   alias Engine.Infra.Tools.{
     ValidateInfraFile,
@@ -502,6 +502,9 @@ defmodule Engine.Infra.InfraLeadServer do
             pr != nil ->
               {pr, recusa_pr_repetida_no_lote(call, title, files, st)}
 
+            match?({:error, _}, InstrucoesDeExecucao.validar(Map.get(args, "run"))) ->
+              {nil, recusa_run_invalido(call, title, files, st)}
+
             st_recusado = recusa_de_infra_pr(call, title, files, st) ->
               {nil, st_recusado}
 
@@ -516,7 +519,8 @@ defmodule Engine.Infra.InfraLeadServer do
                   :pinned => false
                 })
 
-              {{title, files}, st}
+              {:ok, run} = InstrucoesDeExecucao.validar(Map.get(args, "run"))
+              {{title, files}, Map.put(st, :run_da_pr, run)}
           end
 
         "propose_container_start" ->
@@ -537,6 +541,20 @@ defmodule Engine.Infra.InfraLeadServer do
       {nil, state} ->
         run_turn(state, remaining - 1)
     end
+  end
+
+  # `run` inválido (RN-851): recusa NOMEADA que entra no laço (RN-163), antes
+  # do HALT — o mesmo molde da PR repetida no lote.
+  defp recusa_run_invalido(call, title, files, state) do
+    {:error, motivo} = InstrucoesDeExecucao.validar(Map.get(call["arguments"] || %{}, "run"))
+    caminhos = if is_list(files), do: for(%{"path" => path} <- files, do: path), else: []
+
+    emit(state, "tool.call", %{
+      tool: "propose_infra_pr",
+      args: %{title: title, paths: caminhos}
+    })
+
+    registrar_resultado(state, Map.get(call, "id"), "propose_infra_pr", {:error, motivo})
   end
 
   defp recusa_pr_repetida_no_lote(call, title, files, state) do
@@ -1237,7 +1255,7 @@ defmodule Engine.Infra.InfraLeadServer do
   # arquivos.
   defp abrir_pr(state, title, files) do
     actor = %{kind: "agent", id: @agent}
-    payload = %{title: title, files: files}
+    payload = %{title: title, files: files, run: Map.get(state, :run_da_pr)}
 
     case EngineApiClient.propose_action(
            state.project_id,
@@ -1325,15 +1343,19 @@ defmodule Engine.Infra.InfraLeadServer do
   defp kickoff_instruction({:ok, ctx}, subida), do: build_kickoff(ctx, subida)
 
   defp kickoff_instruction(_sem_contexto, _subida),
-    do: "Proponha os artefatos de infra (Dockerfiles, compose de dev)."
+    do:
+      "Proponha os artefatos de infra que sobem o APP na máquina do usuário " <>
+        "(Dockerfile por módulo, docker-compose.yml com porta ${APP_PORT:-8080}, " <>
+        ".env.example e a seção \"Rodar na sua máquina\" no README) e chame " <>
+        "`propose_infra_pr` com `run`."
 
-  # Os passos 4 e 5 do kickoff — o que o modelo precisa saber da subida. Com
+  # Os passos 5 e 6 do kickoff — o que o modelo precisa saber da subida. Com
   # a subida feita pelo SERVIDOR (RN-671), o texto diz o que JÁ aconteceu, e
   # não pede ao modelo uma eleição que o código já fez; sem ela (sem
   # roteamento, projeto `runner`), os passos de sempre.
   defp passo_da_subida({:servidor, imagem, {:ok, texto}}) do
     """
-    4. A subida do container JÁ foi proposta pelo SERVIDOR neste aceite, sem
+    5. A subida do container JÁ foi proposta pelo SERVIDOR neste aceite, sem
        esperar por você: ele elegeu `#{imagem}` entre as candidatas do
        roteamento abaixo. Resultado: #{texto} Não chame `propose_container_start`
        de novo neste turno. Se o status for `failed`, diga isso ao usuário com
@@ -1343,7 +1365,7 @@ defmodule Engine.Infra.InfraLeadServer do
 
   defp passo_da_subida({:servidor, imagem, {:error, motivo}}) do
     """
-    4. O SERVIDOR tentou propor a subida do container neste aceite, elegendo
+    5. O SERVIDOR tentou propor a subida do container neste aceite, elegendo
        `#{imagem}`, e ela foi RECUSADA: #{motivo}
        Se outra candidata do roteamento resolver o motivo, chame
        `propose_container_start` com ela; senão, diga o motivo ao usuário e
@@ -1353,12 +1375,12 @@ defmodule Engine.Infra.InfraLeadServer do
 
   defp passo_da_subida(_sem_subida_do_servidor) do
     """
-    4. Se houver roteamento de módulos abaixo, ELEJA uma das imagens candidatas
+    5. Se houver roteamento de módulos abaixo, ELEJA uma das imagens candidatas
        para o container do projeto e chame `propose_container_start` (imagem +
        network + resources + rationale dizendo por que ESTA candidata, nunca
        inventando uma imagem fora da lista). Sem roteamento vigente, pule-o; o
        container do projeto segue como está.
-    5. Se o projeto estiver no modo `runner` (código na máquina do usuário, sem
+    6. Se o projeto estiver no modo `runner` (código na máquina do usuário, sem
        bind-mount pro servidor), `propose_container_start` não serve — chame
        `container_start_via_runner` (só `rationale` opcional, sem eleger nada:
        sobe a imagem já decidida). Se você não souber o modo, tente
@@ -1370,6 +1392,13 @@ defmodule Engine.Infra.InfraLeadServer do
     module_map = Map.get(ctx, "moduleMap")
     adrs = Map.get(ctx, "adrs", [])
     routing = Map.get(ctx, "moduleRouting")
+
+    imagem_text =
+      case Map.get(ctx, "projectImage") do
+        %{"imagem" => img} when is_binary(img) and img != "" -> "`#{img}`"
+        img when is_binary(img) and img != "" -> "`#{img}`"
+        _ -> "(não decidida — use a candidata do roteamento do módulo e diga isso no README)"
+      end
 
     modules_text =
       case module_map do
@@ -1406,26 +1435,28 @@ defmodule Engine.Infra.InfraLeadServer do
 
     """
     Você recebeu o handoff do Arquiteto. Proponha os artefatos de INFRA que são
-    SEUS — Dockerfiles e compose de dev. O pipeline de CI é responsabilidade de
-    outra subespecialidade (Workflows), que roda depois e junta o resultado à
-    mesma PR — você não precisa gerá-lo.
+    SEUS: os que sobem o APP na máquina do usuário. O pipeline de CI é de outra
+    subespecialidade (Workflows), que roda depois e junta o resultado à mesma PR.
 
-    1. Para cada módulo do module_map abaixo, gere um Dockerfile adequado ao stack.
-    2. Gere um compose de desenvolvimento (docker-compose.yml) integrando os módulos.
-    3. Valide CADA arquivo com `validate_infra_file` (path + content) antes de propor.
+    1. Para cada módulo do module_map abaixo, um Dockerfile com `FROM` = a imagem
+       decidida: #{imagem_text}.
+    2. Um docker-compose.yml que SOBE O APP: `build` do Dockerfile de cada módulo,
+       porta `${APP_PORT:-8080}:<porta interna>`, volume para dados persistentes e
+       `env_file: .env`, com um `.env.example` commitado listando as variáveis
+       obrigatórias (nunca um `.env`).
+    3. No README, a seção "Rodar na sua máquina": o comando e as URLs.
+    4. Valide CADA arquivo com `validate_infra_file` (path + content) antes de propor.
     #{String.trim_trailing(passo_da_subida(subida))}
-    6. Por último, chame `propose_infra_pr` (title + files) com o que é seu — a
-       consolidação com o pipeline de CI acontece depois, automaticamente.
-       `propose_infra_pr` ENCERRA o seu turno: uma subida do container que
-       caiba a você só acontece se for chamada ANTES dela ou na MESMA resposta. Não
-       diga que vai subir o container "depois" ou "em paralelo" sem chamar a
-       ferramenta — o que não foi chamado não acontece.
+    7. Por último, chame `propose_infra_pr` (title + files + run: o mesmo comando e
+       URLs do README) com o que é seu. Ela ENCERRA o seu turno: uma subida do
+       container que caiba a você só acontece se for chamada ANTES dela ou na
+       MESMA resposta — o que não foi chamado não acontece.
 
     Você NUNCA aplica nada em ambiente — só propõe. Sem acesso a terminal.
-    Os arquivos vão SÓ na `propose_infra_pr`: não cole o conteúdo deles no chat. O
-    container do projeto sobe pelo SISTEMA (broker), não por esse compose, e não há
-    deploy neste fluxo — não o prometa. Com o container `running`, o SISTEMA oferece
-    o Dev Lead (RN-711).
+    Os arquivos vão SÓ na `propose_infra_pr`: não cole o conteúdo deles no chat.
+    Esse compose é para o USUÁRIO rodar; o container de TRABALHO dos agentes sobe
+    pelo SISTEMA (broker), e não há deploy neste fluxo — não o prometa. Com o
+    container `running`, o SISTEMA oferece o Dev Lead (RN-711).
 
     MÓDULOS:
     #{modules_text}
