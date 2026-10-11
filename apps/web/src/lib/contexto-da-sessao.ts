@@ -10,7 +10,10 @@ import type { ResumoDoContextoDaSessao } from './api-types';
  * `seq` de artefato que a JANELA já viu mais as ações de commit/PR —, que
  * entra na chave: artefato novo chegando pelo fio relê o agregado uma vez.
  * O que a janela não vê (o commit da sessão de execução ligada) é relido no
- * foco da janela e na remontagem, o default das queries.
+ * foco da janela e na remontagem, o default das queries. Desde a RN-847
+ * (AT-518) também é relido nos gatilhos que releem a lista de PRs (o alvo
+ * `prs` do canal e a mudança do backlog, RN-841), por PREFIXO
+ * `['session-context-summary', projectId]` — os arquivos vêm do diff delas.
  */
 export function useContextoDaSessaoInteira(
   projectId: string,
