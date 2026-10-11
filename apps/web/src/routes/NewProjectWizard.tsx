@@ -741,7 +741,10 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
                   um campo que ele toma por nome de pessoa, e cobria o passo.
                   RN-834 (AT-501): nem "title" — é token de pronome de
                   tratamento (Sr./Sra.) no "Contact info" do NordPass, que não
-                  documenta atributo de ignore; heurística, não medida. */}
+                  documenta atributo de ignore; heurística, não medida.
+                  RN-842 (AT-511): o rótulo visível deixa de dizer "Nome" —
+                  o classificador de contato lê o texto do <label>; segue
+                  heurística, sem atributo documentado. */}
               <Input
                 id="projeto-slug"
                 name="projeto-slug"

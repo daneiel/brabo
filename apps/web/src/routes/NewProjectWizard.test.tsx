@@ -125,7 +125,7 @@ async function ateVisibilidade(provider: 'GitHub' | 'Local', adotando = false) {
  */
 async function ateWorkspace() {
   await ateVisibilidade('Local');
-  fireEvent.change(screen.getByLabelText('Nome do projeto'), {
+  fireEvent.change(screen.getByLabelText('Projeto'), {
     target: { value: 'Loja' },
   });
 }
@@ -211,7 +211,7 @@ describe('NewProjectWizard — o provider é da adoção', () => {
     fireEvent.click(screen.getByText('Criar novo'));
     fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
 
-    expect(await screen.findByLabelText('Nome do projeto')).toBeTruthy();
+    expect(await screen.findByLabelText('Projeto')).toBeTruthy();
     expect(screen.queryByText('GitHub')).toBeNull();
   });
 
@@ -228,7 +228,7 @@ describe('NewProjectWizard — o provider é da adoção', () => {
     fireEvent.click(screen.getByText('Criar novo'));
     fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
 
-    const campo = await screen.findByLabelText('Nome do projeto');
+    const campo = await screen.findByLabelText('Projeto');
     expect(campo.getAttribute('autocomplete')).toBe('off');
     expect(campo.getAttribute('data-1p-ignore')).toBe('true');
     expect(campo.getAttribute('data-lpignore')).toBe('true');
@@ -241,7 +241,7 @@ describe('NewProjectWizard — o provider é da adoção', () => {
     fireEvent.click(screen.getByText('Criar novo'));
     fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
 
-    const campo = await screen.findByLabelText('Nome do projeto');
+    const campo = await screen.findByLabelText('Projeto');
     expect(document.activeElement).not.toBe(campo);
     expect(campo.id).toBe('projeto-slug');
     expect(campo.getAttribute('name')).toBe('projeto-slug');
@@ -252,7 +252,7 @@ describe('NewProjectWizard — o provider é da adoção', () => {
     fireEvent.click(screen.getByText('Criar novo'));
     fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
 
-    const campo = await screen.findByLabelText('Nome do projeto');
+    const campo = await screen.findByLabelText('Projeto');
     for (const attr of [campo.id, campo.getAttribute('name') ?? '']) {
       expect(attr).not.toMatch(/name|nome|title|first|last|company|contact/i);
     }
@@ -260,12 +260,25 @@ describe('NewProjectWizard — o provider é da adoção', () => {
     expect(campo.getAttribute('aria-autocomplete')).toBe('none');
   });
 
+  it('RN-842: o rótulo visível do campo não traz "nome", e o campo segue nomeado por ele', async () => {
+    montar();
+    fireEvent.click(screen.getByText('Criar novo'));
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+
+    const campo = await screen.findByLabelText('Projeto');
+    const rotulo = document.querySelector('label[for="projeto-slug"]');
+    expect(rotulo?.textContent).toBe('Projeto');
+    expect(rotulo?.textContent).not.toMatch(/name|nome|title|contact/i);
+    expect(campo.closest('form')).toBeNull();
+    expect(campo.getAttribute('autocomplete')).toBe('off');
+  });
+
   it('RN-740: o campo de nome declara que não sugere nada e ignora o Proton Pass, sem mudar o rótulo', async () => {
     montar();
     fireEvent.click(screen.getByText('Criar novo'));
     fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
 
-    const campo = await screen.findByLabelText('Nome do projeto');
+    const campo = await screen.findByLabelText('Projeto');
     expect(campo.getAttribute('aria-autocomplete')).toBe('none');
     expect(campo.getAttribute('data-protonpass-ignore')).toBe('true');
     expect(campo.getAttribute('aria-label')).toBeNull();
@@ -314,7 +327,7 @@ describe('NewProjectWizard — onde o código vai morar', () => {
     await ateWorkspaceComBase();
     fireEvent.click(screen.getByText('Pasta montada'));
 
-    const nome = screen.getByLabelText('Nome do projeto');
+    const nome = screen.getByLabelText('Projeto');
     const caminho = screen.getByLabelText('Caminho da pasta');
     expect(
       nome.compareDocumentPosition(caminho) & Node.DOCUMENT_POSITION_FOLLOWING,
@@ -521,7 +534,7 @@ describe('NewProjectWizard — a base de projetos decide o que é oferecido', ()
 
     // Sem ida e volta: nome e destino estão no MESMO passo agora, e avançar
     // aqui sairia da tela onde o caminho é visível.
-    fireEvent.change(screen.getByLabelText('Nome do projeto'), {
+    fireEvent.change(screen.getByLabelText('Projeto'), {
       target: { value: 'Loja Nova' },
     });
 
@@ -540,7 +553,7 @@ describe('NewProjectWizard — a base de projetos decide o que é oferecido', ()
 
     // Sem ida e volta: nome e destino estão no MESMO passo agora, e avançar
     // aqui sairia da tela onde o caminho é visível.
-    fireEvent.change(screen.getByLabelText('Nome do projeto'), {
+    fireEvent.change(screen.getByLabelText('Projeto'), {
       target: { value: 'Loja Nova' },
     });
     await screen.findByText('Onde o código vai morar');
@@ -890,7 +903,7 @@ describe('NewProjectWizard — navegação de pasta antecipada no modo Runner', 
     // autorizou o projeto anterior.
     // Sem ida e volta: nome e destino estão no MESMO passo agora, e avançar
     // aqui sairia da tela onde o caminho é visível.
-    fireEvent.change(screen.getByLabelText('Nome do projeto'), {
+    fireEvent.change(screen.getByLabelText('Projeto'), {
       target: { value: 'Loja Nova' },
     });
     await screen.findByText('Onde o código vai morar');
@@ -960,17 +973,17 @@ describe('NewProjectWizard — criar projeto sem rajada de 400', () => {
     expect(createProject).not.toHaveBeenCalled();
 
     // Nome de UMA letra também seria 400 (MinLength 2).
-    fireEvent.change(screen.getByLabelText('Nome do projeto'), { target: { value: 'a' } });
+    fireEvent.change(screen.getByLabelText('Projeto'), { target: { value: 'a' } });
     expect(botao).toBeDisabled();
 
-    fireEvent.change(screen.getByLabelText('Nome do projeto'), { target: { value: 'Loja' } });
+    fireEvent.change(screen.getByLabelText('Projeto'), { target: { value: 'Loja' } });
     expect(botao).not.toBeDisabled();
     expect(screen.queryByTestId('procurar-bloqueado')).not.toBeInTheDocument();
   });
 
   it('Runner com caminho relativo digitado: inerte, com o motivo — seria a outra recusa certa', async () => {
     await ateRunnerSemNome();
-    fireEvent.change(screen.getByLabelText('Nome do projeto'), { target: { value: 'Loja' } });
+    fireEvent.change(screen.getByLabelText('Projeto'), { target: { value: 'Loja' } });
     fireEvent.change(screen.getByLabelText('Caminho da pasta'), {
       target: { value: 'projetos/loja' },
     });
@@ -981,14 +994,14 @@ describe('NewProjectWizard — criar projeto sem rajada de 400', () => {
 
   it('nome de uma letra não chega ao Provisionar', async () => {
     await ateVisibilidade('Local');
-    fireEvent.change(screen.getByLabelText('Nome do projeto'), { target: { value: 'a' } });
+    fireEvent.change(screen.getByLabelText('Projeto'), { target: { value: 'a' } });
     expect(screen.getByRole('button', { name: 'Continuar' })).toBeDisabled();
   });
 
   it('o nome vai recortado no corpo', async () => {
     createProject.mockResolvedValue({ id: 'proj-1' });
     await ateVisibilidade('Local');
-    fireEvent.change(screen.getByLabelText('Nome do projeto'), {
+    fireEvent.change(screen.getByLabelText('Projeto'), {
       target: { value: '  Loja  ' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
@@ -1006,7 +1019,7 @@ describe('NewProjectWizard — criar projeto sem rajada de 400', () => {
     let resolver!: (v: { id: string }) => void;
     createProject.mockReturnValue(new Promise((r) => (resolver = r)));
     await ateRunnerSemNome();
-    fireEvent.change(screen.getByLabelText('Nome do projeto'), { target: { value: 'Loja' } });
+    fireEvent.change(screen.getByLabelText('Projeto'), { target: { value: 'Loja' } });
 
     const botao = screen.getByRole('button', { name: /Procurar pasta/i });
     fireEvent.click(botao);
@@ -1041,7 +1054,7 @@ describe('NewProjectWizard — criar projeto sem rajada de 400', () => {
       }),
     );
     await ateRunnerSemNome();
-    fireEvent.change(screen.getByLabelText('Nome do projeto'), { target: { value: 'Loja' } });
+    fireEvent.change(screen.getByLabelText('Projeto'), { target: { value: 'Loja' } });
 
     fireEvent.click(screen.getByRole('button', { name: /Procurar pasta/i }));
 
