@@ -477,10 +477,22 @@ function ExecutionSection({
     }
   }
 
+  // RN-835 (AT-502): o desbloqueio tem retorno visível POR TAREFA — em voo o
+  // botão fica inerte e diz "Desbloqueando…" (um clique, uma chamada), o
+  // sucesso diz "desbloqueada" até o backlog relido tirar a linha, e a recusa
+  // mostra a frase da api na própria linha. Sem sessão lida o botão fica
+  // inerte com o motivo, em vez de um clique que não fazia nada calado.
+  const [desbloqueio, setDesbloqueio] = useState<
+    Record<string, { estado: 'em_voo' | 'ok' } | { estado: 'erro'; mensagem: string }>
+  >({});
+
   async function handleUnblock(taskId: string) {
     if (!sessionId) return;
+    if (desbloqueio[taskId]?.estado === 'em_voo') return;
+    setDesbloqueio((d) => ({ ...d, [taskId]: { estado: 'em_voo' } }));
     try {
       await unblockTask(projectId, sessionId, taskId);
+      setDesbloqueio((d) => ({ ...d, [taskId]: { estado: 'ok' } }));
       await queryClient.invalidateQueries({ queryKey: ['backlog', projectId] });
       // RN-794 (AT-469): desbloquear acorda o dev do módulo só se houver
       // execução vigente (RN-777). Sem ela, a tela diz que nada volta a
@@ -492,10 +504,12 @@ function ExecutionSection({
           tone: 'warning',
         });
       }
-    } catch {
+    } catch (erro) {
+      const mensagem = mensagemDaApi(erro, t('executionSection.unblockError'));
+      setDesbloqueio((d) => ({ ...d, [taskId]: { estado: 'erro', mensagem } }));
       showToast({
         title: t('executionSection.errorTitle'),
-        message: t('executionSection.unblockError'),
+        message: mensagem,
         tone: 'danger',
       });
     }
@@ -583,6 +597,61 @@ function ExecutionSection({
         </div>
       ) : (
         <>
+          {/* RN-835 (AT-502): as tarefas bloqueadas vêm PRIMEIRO na seção,
+              antes do "Religar execução" (depende da leitura da execução
+              vigente) e do grid dos dev agents (depende dos eventos) — blocos
+              que chegam depois do primeiro paint e empurravam o
+              "Desbloquear" sob o cursor (mesmo molde da RN-816). */}
+          {blockedTasks.length > 0 && (
+            <>
+              <div className={styles.archLabel}>
+                {t('executionSection.blockedTasksLabel')}
+                <Badge tone="danger">{blockedTasks.length}</Badge>
+              </div>
+              <ul className={styles.pendList}>
+                {blockedTasks.map((t2) => (
+                  <li key={t2.id} className={styles.pendItem}>
+                    <span className={styles.pendTitle}>
+                      {t2.title} <span className={styles.moduleStack}>({t2.storyTitle})</span>
+                    </span>
+                    <span className={styles.pendReason}>
+                      {t2.blockedReason ?? t('executionSection.noDiagnosis')}
+                    </span>
+                    {desbloqueio[t2.id]?.estado === 'ok' ? (
+                      <span role="status" data-testid="desbloqueada">
+                        {t('executionSection.unblockedTitle')}
+                      </span>
+                    ) : (
+                      <Button
+                        variant="secondary"
+                        onClick={() => handleUnblock(t2.id)}
+                        disabled={!sessionId || desbloqueio[t2.id]?.estado === 'em_voo'}
+                        aria-busy={desbloqueio[t2.id]?.estado === 'em_voo'}
+                      >
+                        {desbloqueio[t2.id]?.estado === 'em_voo'
+                          ? t('executionSection.unblocking')
+                          : t('executionSection.unblock')}
+                      </Button>
+                    )}
+                    {!sessionId && (
+                      <span className={styles.pendReason}>
+                        {t('executionSection.unblockNeedsSession')}
+                      </span>
+                    )}
+                    {(() => {
+                      const d = desbloqueio[t2.id];
+                      return d?.estado === 'erro' ? (
+                        <span role="alert" className={styles.pendReason}>
+                          {d.mensagem}
+                        </span>
+                      ) : null;
+                    })()}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+
           {semExecucaoVigente && tarefasPendentes > 0 && (
             <ReligarExecucao projectId={projectId} tarefasPendentes={tarefasPendentes} />
           )}
@@ -614,30 +683,6 @@ function ExecutionSection({
                 </Card>
               ))}
             </div>
-          )}
-
-          {blockedTasks.length > 0 && (
-            <>
-              <div className={styles.archLabel}>
-                {t('executionSection.blockedTasksLabel')}
-                <Badge tone="danger">{blockedTasks.length}</Badge>
-              </div>
-              <ul className={styles.pendList}>
-                {blockedTasks.map((t2) => (
-                  <li key={t2.id} className={styles.pendItem}>
-                    <span className={styles.pendTitle}>
-                      {t2.title} <span className={styles.moduleStack}>({t2.storyTitle})</span>
-                    </span>
-                    <span className={styles.pendReason}>
-                      {t2.blockedReason ?? t('executionSection.noDiagnosis')}
-                    </span>
-                    <Button variant="secondary" onClick={() => handleUnblock(t2.id)}>
-                      {t('executionSection.unblock')}
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            </>
           )}
 
           {suggestions.map((module) => (

@@ -13,6 +13,7 @@ import {
 } from '../lib/mensagem-nao-enviada';
 import { useTextoDoStreaming, type StoreDoStreaming } from '../lib/streaming-do-turno';
 import { FIO_RECENTES_ABERTAS, type dividirFio } from './session-fio';
+import { IrAoFimDoFio } from './IrAoFimDoFio';
 import styles from './SessionPage.module.css';
 
 /**
@@ -265,6 +266,11 @@ export function SessionFio({
           agenteExibido={agenteExibido}
         />
       )}
+      <IrAoFimDoFio
+        totalDeMensagens={
+          (fio.historico?.mensagens ?? 0) + fio.recentes.filter((e) => e.mensagem).length
+        }
+      />
     </>
   );
 }
