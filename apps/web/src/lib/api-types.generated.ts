@@ -10302,6 +10302,17 @@ export interface components {
         SyncModelCatalogResponseDto: {
             porProvider: components["schemas"]["ResultadoPorProviderResponseDto"][];
         };
+        TarefaEmCursoDeDevResponseDto: {
+            /** Format: uuid */
+            projectId: string;
+            /** Format: uuid */
+            taskId: string;
+            /**
+             * @description The dev agent holding it.
+             * @example dev-api
+             */
+            assignedTo: string;
+        };
         TaskResponseDto: {
             /** @example 01JC4Z0000TAREFA00000000001 */
             id: string;
@@ -13520,7 +13531,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["TarefaEmCursoDeDevResponseDto"][];
+                };
             };
             /** @description Invalid body. */
             400: {
