@@ -215,6 +215,12 @@ export function criarInvalidadorDoCanal(
   function invalidar(alvo: AlvoDoCanal) {
     ultimo.set(alvo, agora());
     void queryClient.invalidateQueries({ queryKey: chaves[alvo] });
+    // RN-847 (AT-518): os arquivos do painel "Contexto da sessão" saem do
+    // diff das PRs; o que muda a lista de PRs muda o resumo, com a MESMA
+    // janela do alvo `prs` (nenhuma busca a mais fora dela).
+    if (alvo === 'prs') {
+      void queryClient.invalidateQueries({ queryKey: ['session-context-summary', projectId] });
+    }
   }
 
   function agendar(alvo: AlvoDoCanal) {

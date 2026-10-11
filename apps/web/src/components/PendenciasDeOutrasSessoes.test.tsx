@@ -376,6 +376,7 @@ describe('PendenciasDeOutrasSessoes — PRs prontas e tarefas bloqueadas (AT-497
       backlog([{ id: 'aaaaaaaa-1', title: 'Pronta', gateStatus: 'awaiting_qa' }]),
     );
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const invalidar = vi.spyOn(client, 'invalidateQueries');
     montar(true, client);
     await waitFor(() => expect(getCodePullRequests).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(listBacklog).toHaveBeenCalledTimes(1));
@@ -390,6 +391,12 @@ describe('PendenciasDeOutrasSessoes — PRs prontas e tarefas bloqueadas (AT-497
     const fila = await screen.findByTestId('fila-prs-prontas');
     expect(within(fila).getByText(/PR 1/)).toBeInTheDocument();
     expect(getCodePullRequests).toHaveBeenCalledTimes(2);
+    // RN-847 (AT-518): o resumo do contexto é invalidado junto.
+    expect(
+      invalidar.mock.calls.some(
+        ([f]) => JSON.stringify(f?.queryKey) === JSON.stringify(['session-context-summary', 'proj-1']),
+      ),
+    ).toBe(true);
   });
 
   it('CASO DE FALHA RN-841: backlog relido sem mudança não relê as PRs', async () => {
