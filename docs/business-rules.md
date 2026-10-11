@@ -14816,10 +14816,10 @@ fechada seguem mostrando a mensagem da api.
   (`conversation_idle_timeout_ms`); `apps/engine/lib/engine/sessions/monitor.ex:185`
   (`classify`); `apps/engine/lib/engine/psychologist/termination_classifier.ex:46`;
   `apps/engine/lib/engine/sessions/engine_api_client.ex:1090`
-  (`narrar_recusa_de_sessao_encerrada`), `:1425` (`pendencia_da_resposta`);
+  (`narrar_recusa_de_sessao_encerrada`), `:1437` (`pendencia_da_resposta`);
 
   `apps/engine/lib/engine/sessions/engine_api_client.ex:1090`
-  (`narrar_recusa_de_sessao_encerrada`), `:1425` (`pendencia_da_resposta`);
+  (`narrar_recusa_de_sessao_encerrada`), `:1437` (`pendencia_da_resposta`);
   `apps/engine/lib/engine/agents/conversacionais.ex:49` (`parar_da_sessao`),
   `:69` (`parar_da_sessao_no_cluster`);
   `apps/engine/lib/engine/agents/turno_assincrono.ex:411` (`abandonar`);
@@ -15613,7 +15613,7 @@ PRÓPRIO agente escreveu, e o corte é a única contenção — é o item (d) da
 [RN-589](#rn-589) com o primeiro caso concreto.
 
 - **Código:** `apps/engine/lib/engine/agents/dev_lead_server.ex:313`
-  (`handle_info/2` do `action_settled`, o `tool.result` em `:271`), `:714`
+  (`handle_info/2` do `action_settled`, o `tool.result` em `:271`), `:719`
   (`sentido_do_desfecho/1`);
   `apps/engine/lib/engine/infra/infra_lead_server.ex:1042`
   (`registrar_resultado/4`), `:317` (a recusa de `propose_infra_pr`)
@@ -15808,9 +15808,9 @@ pacote da porta de Docker. Nada muda na contenção do broker ([ADR
   `:205` (`TETO_DE_MUTACAO_MS`), `:217` (`FOLGA_DO_EXEC_NO_ENGINE_MS`),
   `:270` (`erroDeTransporte`);
   `apps/api/src/application/ports/container-broker.port.ts:89` (`MotivoDeBrokerIndisponivel`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1911` (`teto_do_container_exec_ms`)
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1923` (`teto_do_container_exec_ms`)
 
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1911` (`teto_do_container_exec_ms`)
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1923` (`teto_do_container_exec_ms`)
 - **Teste:** `apps/api/test/infrastructure/http-clients/container-broker.client.spec.ts:286`
   (a reprodução, contra um broker `node:http` que demora 6 s), `:182` (o
   teto de cada operação no `AbortSignal`), `:204` e `:229` (`teto-excedido`
@@ -15894,9 +15894,9 @@ continua vindo da decisão do Arquiteto, e `pull` não é operação nova do bro
   `apps/api/src/infrastructure/http-clients/container-broker.client.ts:205` (`TETO_DE_MUTACAO_MS`),
   `:175` (`CHAMADAS_DE_CONTROLE_NO_START`),
   `:228` (`TETO_DO_PROPOSE_ACTION_DE_CONTAINER_NO_ENGINE_MS`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1833` (`opcoes_do_propose_action`),
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1845` (`opcoes_do_propose_action`),
 
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1833` (`opcoes_do_propose_action`),
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1845` (`opcoes_do_propose_action`),
   `:1649` (`@teto_do_propose_action_de_container_ms`);
   `apps/engine/lib/engine/runners/runner_router.ex:52` (`@timeout_do_start_ms`)
 - **Teste:** `packages/docker-port/src/docker-cli.spec.ts:425` (describe da
@@ -19537,8 +19537,8 @@ decidido aqui: se os critérios executáveis do plano devem virar linhas
 OBRIGATÓRIAS da `coverageMatrix` (e portanto reprovar entrega).
 
 - **Onde:** `apps/engine/lib/engine/gates/qa_lead_server.ex:190` (`plano_de_teste_da_entrega`),
-  `:567` (`plano_de_teste_da_entrega`), `:568` (`plano_ja_emitido`),
-  `:573` (`arquivos_alterados`);
+  `:628` (`plano_de_teste_da_entrega`), `:629` (`plano_ja_emitido`),
+  `:634` (`arquivos_alterados`);
   `apps/engine/lib/engine/gates/qa_estrategia_agent.ex:86` (`run`),
   `:104` (`token_budget_micros`), `:175` (`descrever_arquivos`);
   `apps/engine/lib/engine/gates/qa_automacao_agent.ex:173` (`com_o_plano`);
@@ -20475,8 +20475,8 @@ nem a que o modelo copie do histórico. O catálogo volta intacto no turno
 seguinte; o turno normal continua com `emit_artifact` e
 `ask_structured_questions`.
 
-- **Onde:** `apps/engine/lib/engine/agents/criativo_server.ex:214` (`executar_confirm_readiness`);
-  `:259` (`ferramentas_da_prontidao`)
+- **Onde:** `apps/engine/lib/engine/agents/criativo_server.ex:218` (`executar_confirm_readiness`);
+  `:263` (`ferramentas_da_prontidao`)
 - **Teste:** `apps/engine/test/engine/agents/criativo_server_test.exs:172` (o turno
   vai com `tools: []` e não grava regra nem pergunta) e `:192` (regressão: o turno
   normal mantém as duas ferramentas)
@@ -20554,8 +20554,8 @@ origem `infra`. Regra descoberta, ou backlog sem regra/história, não é julgad
 A instrução do PO passa a exigir tarefa por história. Quem cria as tarefas é o
 PO (decisão do agente principal na AT-364: ele já tem `create_task`).
 
-- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:469` (`fechar_handoff`);
-  `:496` (`oferecer_handoff`)
+- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:475` (`fechar_handoff`);
+  `:502` (`oferecer_handoff`)
 - **Teste:** `apps/engine/test/engine/agents/po_server_test.exs:592` (oferece e
   não repete), `:610` (história sem tarefa: não oferece, nomeia)
 - **Origem:** AT-364
@@ -20582,11 +20582,11 @@ histórias em que chamou `assess_implementability`.
 
 - **Onde:** `apps/engine/lib/engine/agents/dev_lead_tools.ex:339` (`module_map_vigente`);
   `:324` (`spec_read_backlog`); `:340` (`tarefas_do_backlog`);
-  `apps/engine/lib/engine/agents/dev_lead_server.ex:552` (`kickoff_instruction`);
+  `apps/engine/lib/engine/agents/dev_lead_server.ex:557` (`kickoff_instruction`);
 
 - **Onde:** `apps/engine/lib/engine/agents/dev_lead_tools.ex:339` (`module_map_vigente`);
   `:324` (`spec_read_backlog`); `:372` (`tarefas_do_backlog`);
-  `apps/engine/lib/engine/agents/dev_lead_server.ex:552` (`kickoff_instruction`);
+  `apps/engine/lib/engine/agents/dev_lead_server.ex:557` (`kickoff_instruction`);
   `:393` (`run_turn`)
 - **Teste:** `apps/engine/test/engine/agents/dev_lead_server_test.exs:164` (o
   mapa vigente chega ao kickoff e o tipo antigo não é lido), o teste seguinte
@@ -20683,7 +20683,7 @@ Junto, o fechamento deixa de dizer que parear uma pasta pela tela do projeto
 
   `:97` (`anexar`), `apps/engine/lib/engine/sessions/engine_api_client.ex:687`
   (`llm_turn`), `apps/engine/lib/engine/harness/agents.ex:23` (`identity`),
-  `apps/engine/lib/engine/agents/arquiteto_server.ex:382` (`build_kickoff`)
+  `apps/engine/lib/engine/agents/arquiteto_server.ex:388` (`build_kickoff`)
 - **Teste:** `apps/engine/test/engine/harness/fluxo_do_time_test.exs`
   ("todo papel citado existe no fluxo.yml como ativo"; caso de falha: "nenhum
   texto cita etapa/agente fora do fluxo"),
@@ -21374,7 +21374,7 @@ O kickoff do PO diz as três coisas.
 - **Onde:** `apps/api/src/application/use-cases/backlog/complete-story.use-case.ts:52`
   (`CompleteStoryUseCase`);
   `apps/api/src/interfaces/http/internal/internal-sessions.controller.ts:535`
-  (`completeStoryRoute`); `apps/engine/lib/engine/harness/tools/complete_story.ex:41`
+  (`completeStoryRoute`); `apps/engine/lib/engine/harness/tools/complete_story.ex:47`
   (`run`); `apps/engine/lib/engine/harness/tools/offer_handoff.ex:52`
   (`recusa_por_cobertura`); `apps/engine/lib/engine/harness/tools/emit_artifact.ex:188`
   (`pergunte_antes`)
@@ -21694,7 +21694,7 @@ sem dizer qual.
   (`updateTitle`), `:219` (`archive`),
   `apps/api/src/interfaces/http/internal/internal-sessions.controller.ts:576`
   (`updateStoryRoute`), `:609` (`archiveStoryRoute`),
-  `apps/engine/lib/engine/harness/tools/update_story.ex:39` (`run`),
+  `apps/engine/lib/engine/harness/tools/update_story.ex:45` (`run`),
   `apps/engine/lib/engine/harness/tools/archive_story.ex:38` (`run`),
   `apps/web/src/routes/ProjectBacklogTab.tsx:64` (`motivoDeCorrecaoInerte`)
 - **Teste:** `apps/api/test/application/use-cases/backlog/corrigir-historia.use-case.spec.ts`
@@ -22001,7 +22001,7 @@ sem dizer qual.
   da Task do turno (`TurnoAssincrono`), então o padrão "HTTP dentro do
   GenServer" não os alcança — declarado. A web não mudou: a aba Executores
   passa a ver o `agent.error` e o `dev.blocked` da recuperação.
-- **Onde:** `apps/engine/lib/engine/sessions/engine_api_client.ex:2034`
+- **Onde:** `apps/engine/lib/engine/sessions/engine_api_client.ex:2046`
   (`isolado`), `apps/engine/lib/engine/dev/monitor.ex:69` (`ao_terminar`),
   `:107` (`registrar_e_religar`)
 - **Teste:** `apps/engine/test/engine/sessions/engine_api_client_isolado_test.exs`
@@ -22256,7 +22256,7 @@ sem dizer qual.
   `nohup … &` com log —, nunca `%Req.TransportError{reason: :timeout}` cru.
   Exec assíncrono/streaming foi considerado e não feito: a menor mudança que
   faz `npm install` comum caber é o teto.
-- **Onde:** `apps/engine/lib/engine/sessions/engine_api_client.ex:1880`
+- **Onde:** `apps/engine/lib/engine/sessions/engine_api_client.ex:1892`
   (`opcoes_do_propose_action`) e
   `apps/engine/lib/engine/harness/hooks/action_pipeline.ex:80`
   (`resultado_de_teto_do_terminal`)
@@ -22352,7 +22352,7 @@ sem dizer qual.
   esta última é OBSERVAÇÃO no `resumo`, fora de `itens`, salvo regra que a
   exija. Continua régua de prompt: nenhuma reprovação nova no código.
 - **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:18` (`texto`),
-  `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:72` (`secao_da_forma`),
+  `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:78` (`secao_da_forma`),
   `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:165`
   (`tarefasIrmas`) e `apps/engine/lib/engine/gates/qa_automacao_agent.ex:170`
   (`com_o_recorte`)
@@ -22793,7 +22793,7 @@ sem dizer qual.
   [RN-765](#rn-765). Desde a [RN-792](#rn-792) o Arquiteto confere o contrato
   contra as rotas citadas nas histórias ao declará-lo.
 - **Onde:** `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:225`
-  (`moduloDoContrato`), `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:60`
+  (`moduloDoContrato`), `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:66`
   (`secao_do_contrato`)
 - **Teste:** `apps/api/test/application/use-cases/execution/get-dev-task-context.use-case.spec.ts`
   (o contrato do módulo da história; sem contrato ou módulo ambíguo, `null`) e
@@ -22818,7 +22818,7 @@ sem dizer qual.
   `artifact.qa_verdict` sempre como LISTA: string JSON de lista é decodificada
   (o molde da [RN-719](#rn-719)), e string que não é lista vira `[]`.
 - **Onde:** `apps/engine/lib/engine/gates/diff.ex:44` (`base_mais_nova`),
-  `apps/engine/lib/engine/gates/hooks/termination.ex:41` (`lista`)
+  `apps/engine/lib/engine/gates/hooks/termination.ex:46` (`lista`)
 - **Teste:** `apps/engine/test/engine/gates/diff_test.exs` (a tarefa B nascida
   da A, com a A mergeada na origem: o diff é só B) e
   `apps/engine/test/engine/gates/hooks/termination_test.exs` (string JSON vira
@@ -22894,7 +22894,7 @@ sem dizer qual.
   outra variante — o dev agent atualizar o README em toda tarefa que mexe em
   configuração/entrada — NÃO foi feita: exigiria classificar a tarefa no
   `AmbienteDoAgente` ou no `report_done`, regra nova de código — declarado.
-- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:555` (`kickoff_instruction`)
+- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:560` (`kickoff_instruction`)
 - **Teste:** `apps/engine/test/engine/agents/po_server_test.exs:438` (a
   instrução de kickoff traz o critério do README)
 - **Origem:** AT-466 (TP-01 de 09/10: o `encurtador-api` saiu com um README só
@@ -23028,7 +23028,7 @@ sem dizer qual.
   com flag antes do script (`pnpm --filter x test`), flags de CLI do próprio
   projeto e comando que não é de Node.
 - **Onde:** `apps/engine/lib/engine/gates/conferencia_do_readme.ex:28`
-  (`conferir`), `apps/engine/lib/engine/gates/qa_lead_server.ex:628`
+  (`conferir`), `apps/engine/lib/engine/gates/qa_lead_server.ex:689`
   (`conferencia_do_readme`)
 - **Teste:** `apps/engine/test/engine/gates/conferencia_do_readme_test.exs`
 - **Origem:** AT-475
@@ -23285,7 +23285,7 @@ sem dizer qual.
   externo dos gates (`docs/gates.yml`) e o código do `emit_qa_verdict` não
   mudam, e nenhum gate novo nasce. Tarefa que não toca nada disso não ganha a
   seção.
-- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:108`
+- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:113`
   (`secao_do_ponto_de_entrada`)
 - **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs`
   ("tarefa que toca a fiação exige evidência do ponto de entrada real" e "tarefa
@@ -23321,7 +23321,7 @@ sem dizer qual.
   roteamento de container dos três modos — um `pkill` no harness precisaria
   de um segundo caminho de execução por modo. Régua de prompt; o contrato dos
   gates não muda.
-- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:145`
+- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:150`
   (`secao_do_ambiente_limpo`)
 - **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs`
   ("RN-817: pede ambiente limpo, encerrar o grupo e pulado como observação")
@@ -23338,7 +23338,7 @@ sem dizer qual.
   bater numa rota do processo de pé — e o que NÃO cabe ali: construir imagem
   Docker, `docker compose`, rede externa. Exigência desse segundo tipo nunca
   vai para `itens`; vai ao `resumo` como observação. Régua de prompt.
-- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:108`
+- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:113`
   (`secao_do_ponto_de_entrada`)
 - **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs`
   ("RN-818: com ponto de entrada diz o que conta e o que não cabe" e "RN-818:
@@ -24007,7 +24007,7 @@ sem dizer qual.
   cláusula (a mensagem é fixada e volta a cada iteração).
 - **Onde:** `apps/engine/lib/engine/dev/dev_agent_server.ex:631`
   (`clausula_de_openapi`),
-  `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:101`
+  `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:105`
   (`toca_ponto_de_entrada?`)
 - **Teste:** `apps/engine/test/engine/dev/report_done_instrucao_test.exs`
   ("RN-853: tarefa que toca rotas pede /openapi.json e /docs"; falha: "RN-853
@@ -24023,7 +24023,7 @@ sem dizer qual.
   `node -e fetch`) e encerra o grupo de processos ([RN-817](#rn-817)). Falha
   vai a `itens`; o `docker compose up` real fica no `resumo` como "provado só
   na máquina do usuário".
-- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:108`
+- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:113`
   (`secao_do_ponto_de_entrada`)
 - **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs`
   ("tarefa que toca rotas pede /openapi.json e /docs, compose em resumo";
@@ -24255,3 +24255,36 @@ sem dizer qual.
   recusado")
 - **Origem:** AT-521 (o QA de Automação reprovou quatro vezes "não confirmado
   pelo usuário" até o ciclo esgotar)
+
+### RN-862 — A pergunta em aberto do lado do engine: ferramenta, veredito e decisão no contexto {#rn-862}
+
+- **Regra:** o Criativo, o PO, o Arquiteto e o Dev Lead declaram toda dúvida
+  deixada para o usuário com `declare_open_question` (`pergunta` até 500,
+  `sugestao` até 300 opcional, `afeta: {regras, historias, tarefas}`), que
+  grava `artifact.open_question` com `questionId` (uuid), `autor` e
+  `sessionId`; payload inválido é recusa nomeada e não grava. A instrução é UMA
+  frase central, no texto do fluxo dos quatro (RN-711), nunca por servidor. No
+  gate de QA, requisito "não confirmado pelo usuário" (ou contradito por decisão
+  vigente) é `needs_user_decision`, nunca `changes_requested`:
+  `emit_qa_verdict` o aceita só com `pergunta` ou `openQuestionId`, o QA Lead o
+  consolida acima de `approved`, o veredito vai à api com a pergunta e o ciclo
+  fica ESTACIONADO (ADR 0207, `gate.rescue_parked`, sem resgate automático)
+  até a api pedir a retomada pela rota da RN-724. As `decisoes` do dev-context
+  entram no kickoff do dev e no recorte do QA como "Decisões do usuário —
+  vencem RF/DoR quando conflitam" (`pergunta → decisao`); vazio não escreve
+  nada. A pergunta gravada conta no fecho do turno (RN-731), e o PO passa
+  `question_id` em `update_story`/`complete_story` quando corrige a história a
+  partir de uma resposta ([ADR 0214](adr/0214-pergunta-em-aberto-vira-pendencia.md)).
+- **Onde:** `apps/engine/lib/engine/harness/tools/declare_open_question.ex:54` (`run`),
+  `apps/engine/lib/engine/harness/fluxo_do_time.ex:113` (`frase_da_pergunta`),
+  `apps/engine/lib/engine/gates/tools/emit_qa_verdict.ex:73` (`run`),
+  `apps/engine/lib/engine/gates/qa_lead.ex:89` (`consolidar_decisao`),
+  `apps/engine/lib/engine/gates/qa_lead_server.ex:535` (`estacionar_por_decisao`),
+  `apps/engine/lib/engine/dev/context_builder.ex:106` (`secao_de_decisoes`)
+- **Teste:** `apps/engine/test/engine/harness/perguntas_em_aberto_test.exs`
+  ("válida grava artifact.open_question…"; "inválida é recusa nomeada…";
+  "consolidação: needs_user_decision vence approved"; "o recorte diz a régua…";
+  "ContextBuilder: a história leva as decisões…"),
+  `apps/engine/test/engine/gates/qa_lead_server_test.exs` ("grava a pergunta
+  na api, estaciona o ciclo e só o gesto humano o retoma")
+- **Origem:** AT-521, [ADR 0214](adr/0214-pergunta-em-aberto-vira-pendencia.md)

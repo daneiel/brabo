@@ -34,6 +34,7 @@ defmodule Engine.Agents.ArquitetoServer do
     DeclareModuleContracts,
     ProposeAdr,
     EmitInsight,
+    DeclareOpenQuestion,
     EmitArtifact,
     ListarAdrsPropostas,
     ListarBacklog
@@ -118,6 +119,7 @@ defmodule Engine.Agents.ArquitetoServer do
          # Frente 3 do plano de decision_record — mesma ferramenta do
          # Criativo, tipo novo (`decision_record`).
          EmitArtifact.spec(),
+         DeclareOpenQuestion.spec(),
          # RN-772/773 (AT-454): leituras do estado que muda FORA da conversa
          # (a aprovação das ADRs, as tarefas do PO) — sem elas o Arquiteto
          # afirmava o retrato da hora em que propôs.
@@ -362,6 +364,9 @@ defmodule Engine.Agents.ArquitetoServer do
   defp run_tool("propose_adr", args, state), do: ProposeAdr.run(args, state)
   defp run_tool("emit_insight", args, state), do: EmitInsight.run(args, state)
   defp run_tool("emit_artifact", args, state), do: EmitArtifact.run(args, state)
+
+  defp run_tool("declare_open_question", args, state),
+    do: DeclareOpenQuestion.run(args, state)
 
   defp run_tool("listar_adrs_propostas", args, state),
     do: ListarAdrsPropostas.run(args, state)

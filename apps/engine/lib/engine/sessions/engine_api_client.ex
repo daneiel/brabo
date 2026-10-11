@@ -373,7 +373,8 @@ defmodule Engine.Sessions.EngineApiClient do
               veredito :: String.t(),
               resumo :: String.t(),
               itens :: [String.t()],
-              max_corrections :: integer() | nil
+              max_corrections :: integer() | nil,
+              extras :: map()
             ) ::
               {:ok, map()} | {:error, term()}
 
@@ -911,7 +912,8 @@ defmodule Engine.Sessions.EngineApiClient do
         veredito,
         resumo,
         itens,
-        max_corrections \\ nil
+        max_corrections \\ nil,
+        extras \\ %{}
       ),
       do:
         impl().record_gate_verdict(
@@ -922,7 +924,8 @@ defmodule Engine.Sessions.EngineApiClient do
           veredito,
           resumo,
           itens,
-          max_corrections
+          max_corrections,
+          extras
         )
 
   def record_delegation(payload), do: impl().record_delegation(payload)
@@ -1367,17 +1370,26 @@ defmodule Engine.Sessions.EngineApiClient.Live do
         veredito,
         resumo,
         itens,
-        max_corrections
+        max_corrections,
+        extras
       ) do
-    post_returning("/internal/sessions/#{session_id}/gates/verdict", %{
-      projectId: project_id,
-      taskId: task_id,
-      gate: gate,
-      veredito: veredito,
-      resumo: resumo,
-      itens: itens,
-      maxCorrections: max_corrections
-    })
+    # ADR 0214 (RN-862): `extras` leva `pergunta`/`sugestao`/`openQuestionId`
+    # do veredito `needs_user_decision`; vazio nos outros, corpo de sempre.
+    post_returning(
+      "/internal/sessions/#{session_id}/gates/verdict",
+      Map.merge(
+        %{
+          projectId: project_id,
+          taskId: task_id,
+          gate: gate,
+          veredito: veredito,
+          resumo: resumo,
+          itens: itens,
+          maxCorrections: max_corrections
+        },
+        extras
+      )
+    )
   end
 
   @impl true

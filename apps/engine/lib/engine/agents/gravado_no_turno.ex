@@ -33,6 +33,8 @@ defmodule Engine.Agents.GravadoNoTurno do
   @rotulos [
     {:regra, {"regra de negócio", "regras de negócio"}, {"business rule", "business rules"}},
     {:decisao, {"decisão", "decisões"}, {"decision", "decisions"}},
+    {:pergunta, {"pergunta em aberto", "perguntas em aberto"},
+     {"open question", "open questions"}},
     {:epico, {"épico", "épicos"}, {"epic", "epics"}},
     {:historia, {"história", "histórias"}, {"story", "stories"}},
     {:historia_corrigida, {"história corrigida", "histórias corrigidas"},
@@ -133,6 +135,7 @@ defmodule Engine.Agents.GravadoNoTurno do
   defp classe("emit_artifact", %{"type" => "decision_record"}), do: :decisao
   defp classe("emit_artifact", %{"type" => "note"}), do: :nota
   defp classe("emit_artifact", _), do: :artefato
+  defp classe("declare_open_question", _), do: :pergunta
   defp classe("create_epic", _), do: :epico
   defp classe("create_story", _), do: :historia
   defp classe("update_story", _), do: :historia_corrigida

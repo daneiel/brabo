@@ -103,8 +103,26 @@ defmodule Engine.Harness.FluxoDoTime do
 
   def anexar(messages, _agent), do: messages
 
+  # ADR 0214 (RN-862): a frase CENTRAL da pergunta em aberto, só para quem
+  # tem a ferramenta `declare_open_question` — nunca repetida por servidor.
+  @perguntadores ~w(criativo po arquiteto dev-lead)
+  @frase_da_pergunta "Toda dúvida que você deixar para o usuário vira `declare_open_question`, " <>
+                       "com a sua sugestão e o que ela afeta; não termine o turno com pergunta só no texto."
+
+  @doc "A frase da pergunta em aberto (ADR 0214), ou `nil` para quem não tem a ferramenta."
+  def frase_da_pergunta(agent) when agent in @perguntadores, do: @frase_da_pergunta
+  def frase_da_pergunta(_agent), do: nil
+
   @doc "O texto do fluxo para o agente, ou `nil` se ele não é conversacional."
   def texto(agent) do
+    case {texto_do_fluxo(agent), frase_da_pergunta(agent)} do
+      {nil, _} -> nil
+      {t, nil} -> t
+      {t, frase} -> t <> "\n" <> frase
+    end
+  end
+
+  defp texto_do_fluxo(agent) do
     cond do
       idx = Enum.find_index(@etapas, &(&1.agente == agent)) ->
         etapa = Enum.at(@etapas, idx)

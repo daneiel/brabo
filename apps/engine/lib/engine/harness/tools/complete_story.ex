@@ -27,7 +27,13 @@ defmodule Engine.Harness.Tools.CompleteStory do
           "rnf" => %{"type" => "array", "items" => %{"type" => "string"}},
           "dod" => %{"type" => "array", "items" => %{"type" => "string"}},
           "dor" => %{"type" => "array", "items" => %{"type" => "string"}},
-          "business_rule_ids" => %{"type" => "array", "items" => %{"type" => "string"}}
+          "business_rule_ids" => %{"type" => "array", "items" => %{"type" => "string"}},
+          "question_id" => %{
+            "type" => "string",
+            "description" =>
+              "questionId da pergunta em aberto JÁ respondida que motiva a correção " <>
+                "(destrava história ready, ADR 0214)"
+          }
         },
         "required" => ["story_id"]
       }
@@ -46,7 +52,8 @@ defmodule Engine.Harness.Tools.CompleteStory do
         rnf: Map.get(args, "rnf"),
         dod: Map.get(args, "dod"),
         dor: Map.get(args, "dor"),
-        businessRuleIds: Map.get(args, "business_rule_ids")
+        businessRuleIds: Map.get(args, "business_rule_ids"),
+        questionId: Map.get(args, "question_id")
       }
       |> Enum.reject(fn {_k, v} -> is_nil(v) end)
       |> Map.new()
