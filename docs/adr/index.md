@@ -3,7 +3,7 @@ id: adr-index
 title: Architectural decisions (ADR)
 sidebar_label: ADR index
 sidebar_position: 0
-description: Brabo's 208 architectural decision records, grouped by theme, with what each one decided.
+description: Brabo's 209 architectural decision records, grouped by theme, with what each one decided.
 keywords: [ADR, architectural decision, architecture, history]
 ---
 
@@ -93,6 +93,7 @@ Which agents exist, what each delivers to whom, delegation inside an area and th
 | [0186](0186-aceite-automatico-do-handoff-ao-arquiteto.md) | The PO's handoff to the Architect is accepted by the SYSTEM, without a click, when the backlog is COVERED (at least one business rule and none without a story citing it — the same `computeCoverage` as the Backlog tab), the repository the accept touches is `local` with no git credential in the project, and whoever opened the session still has `developer` (AT-314). It builds on ADR 0165 without editing it: provisioning stays in `AcceptHandoffUseCase`, before `activateAgent`; the new use case only reads and decides, and records `handoff.accepted` with the system actor `handoff-auto-accept` and the criterion in the payload. A failure after deciding becomes `handoff.auto_accept_failed`; a remote repository or a git credential still asks for the click |
 | [0194](0194-aprovar-o-plano-ativa-a-execucao.md) | APPROVING the Dev Lead's `propose_execution_plan` is what activates execution, and accepting the Dev Lead's handoff only brings him in to PLAN (AT-263, owner decision 01/10, revising the [ADR 0069](0069-fusao-condicional-do-handoff-com-a-ativacao-de-execucao.md) fusion, RN-161). The plan gets an executor in the api that rereads it against the current `module_map`, writes each task's MODULE and calls the SAME `ActivateExecutionUseCase` as the button, so the 409 without a repository, the 409 on a consultative session and `findActiveExecutionSession` stay as they were. Tasks get a `module` column (migration `0068`), assigned by the Dev Lead in the plan (`tarefas: [{ taskId, modulo }]`, AT-274); a task without a module or with a module outside the `module_map` is refused with a named 400 at proposal time. Only the dev of that module claims it; a task with no module is claimable only when its story has exactly one module |
 | [0212](0212-historia-arquivada.md) | A story can be ARCHIVED, and it is a column — `stories.archived_at`/`archived_reason` (migration `0069`) — not a new `story_status` value, because the status is the claim gate and archiving is not a progress step (AT-406, owner decision 03/10 "PO and user"). Every read that DECIDES (backlog, coverage, promotion queue, the Dev Lead plan, claim) filters `archived_at IS NULL`, and the tasks leave with their story; nothing is deleted, and the new immutable `backlog.story_archived`/`backlog.story_updated` events record it. One rule for the PO tool and the Backlog tab: only `draft` with no task in execution, a named 409 otherwise |
+| [0213](0213-o-entregavel-roda-na-maquina-pelo-compose-da-infra.md) | The deliverable runs on the user's machine through the Infra's compose, never through a port published by the broker (AT-517, owner decision 11/10; ADR 0130 untouched). The compose builds the APP from the module Dockerfile with `FROM` = the decided image, on host port `${APP_PORT:-8080}`, with a committed `.env.example`; `propose_infra_pr` gets a mandatory `run` payload (`command`, 1–5 localhost `urls`, `envExample`) that the api turns into the versioned `artifact.run_instructions`. Devs serve `/openapi.json` and `/docs` (Swagger from a CDN under network `none`), QA proves them INSIDE the container, and the Overview card says "declared by Infra, not verified on your machine" — the real `docker compose up` stays a declared gap |
 
 ## Gates, QA and security review {#tema-gates}
 
@@ -348,7 +349,7 @@ How documentation is generated, verified and published.
 
 - **One file per decision**, at `docs/adr/NNNN-short-title.md`, with
   sequential 4-digit numbering. **No number reuse**, not even when an ADR
-  is superseded — the next one is **0213**.
+  is superseded — the next one is **0214**.
 - **One theme per decision**, chosen by whoever writes the ADR, in the same
   PR: a line in `docs/adr/temas.yml` and the index row under that theme's
   section, in numeric order. The reviewer confirms it. A new theme is a
