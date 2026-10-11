@@ -5,6 +5,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 ## Unreleased
 
 ### Mudanças
+- **engine (Infra)**: o compose que a Infra propõe sobe o APP na máquina do usuário (imagem decidida, porta `${APP_PORT:-8080}`, volume, `.env.example`, seção "Rodar na sua máquina" no README), e `propose_infra_pr` exige `run` (comando e URLs locais), recusado com motivo quando inválido (RN-851, AT-517).
 - **engine (dev e QA)**: tarefa que toca rotas ou ponto de entrada faz o dev servir `/openapi.json` (OpenAPI 3) e `/docs` (Swagger, ou página que carrega o swagger-ui de CDN sem rede) e citar a URL em "Rodar na sua máquina" do README; o QA sobe o app no container e bate nas duas rotas, com o `docker compose up` real como observação (RN-853, RN-854, ADR 0213, AT-517).
 - **engine (dev e QA)**: o kickoff do dev pede a rota DENTRO da seção "Rotas HTTP" do README (antes de "Testes"), nunca no fim, e sem nota de processo para agentes; o QA confere as duas coisas (RN-850, AT-520).
 
