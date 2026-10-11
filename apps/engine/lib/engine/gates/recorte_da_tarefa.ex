@@ -93,10 +93,20 @@ defmodule Engine.Gates.RecorteDaTarefa do
   # responde; a ausência dela vai para `itens`.
   @ponto_de_entrada ~r/(server\.[jt]s|main\.[jt]s|index\.[jt]s|entrypoint|ponto de entrada|app\.listen|\bREADME|npm start|pnpm start|\bstart\b|\bfia[cç][aã]o|\bmigra[cç][aã]o|\brotas?\b|\broutes?\b)/iu
 
-  defp secao_do_ponto_de_entrada(task) do
+  @doc """
+  A tarefa toca ponto de entrada, fiação ou rotas? Régua ÚNICA, usada pelo
+  recorte do QA (RN-813/854) e pelo kickoff do dev (RN-853).
+  """
+  @spec toca_ponto_de_entrada?(map()) :: boolean()
+  def toca_ponto_de_entrada?(task) when is_map(task) do
     texto = "#{Map.get(task, "title", "")} #{Map.get(task, "description", "")}"
+    Regex.match?(@ponto_de_entrada, texto)
+  end
 
-    if Regex.match?(@ponto_de_entrada, texto),
+  def toca_ponto_de_entrada?(_), do: false
+
+  defp secao_do_ponto_de_entrada(task) do
+    if toca_ponto_de_entrada?(task),
       do: """
 
       Ponto de entrada: esta tarefa toca o entrypoint, a fiação (rotas,
@@ -113,6 +123,14 @@ defmodule Engine.Gates.RecorteDaTarefa do
       ali: construir imagem Docker, `docker compose`, rede externa — o
       container do projeto não tem Docker nem saída garantida. Exigência desse
       segundo tipo NUNCA vai para `itens`: cite-a no `resumo` como observação.
+
+      OpenAPI e Swagger (RN-854, ADR 0213): suba o app pelo comando do README
+      em background DENTRO do container, bata em
+      `localhost:<porta interna>/openapi.json` e `/docs` (`curl`, `wget` ou
+      `node -e "fetch(...)"`) e encerre o GRUPO de processos ao fim. Rota que
+      não responde, ou JSON que não é OpenAPI 3, vai a `itens`. O
+      `docker compose up` real cite no `resumo` como "provado só na máquina do
+      usuário", nunca em `itens`.
       """,
       else: ""
   end

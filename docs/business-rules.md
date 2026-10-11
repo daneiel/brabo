@@ -20761,7 +20761,7 @@ Junto, o fechamento deixa de dizer que parear uma pasta pela tela do projeto
   `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:423` (`reabrirPorConflitoDeMerge`),
   `apps/engine/lib/engine/workers/dev_agent_wake_worker.ex:151` (`task.merge_conflict`),
   `apps/engine/lib/engine/dev/dev_agent_server.ex:350` (`handle_info`),
-  `apps/engine/lib/engine/dev/dev_agent_server.ex:790` (`trigger_gate_recheck`),
+  `apps/engine/lib/engine/dev/dev_agent_server.ex:805` (`trigger_gate_recheck`),
   `apps/engine/lib/engine/dev/worktree_manager.ex:47` (`adopt`)
 - **Teste:** `apps/api/test/application/use-cases/actions/execute-git-action.use-case.spec.ts` ("conflito de merge → kind git_merge, arquivos no
   resultado e evento na tarefa"; falha: "RN-715: tarefa que já não está em
@@ -22425,7 +22425,7 @@ sem dizer qual.
   (medido no Chromium: 2 236px num balão de 708px) e a última coluna sumia.
 - **Onde:** `apps/api/src/application/use-cases/actions/execute-adr-pr.use-case.ts:96`
   (`openPullRequest`); `apps/engine/lib/engine/infra/infra_lead_server.ex:1513`
-  (`gravar_texto_do_turno`); `apps/engine/lib/engine/dev/dev_agent_server.ex:1073`
+  (`gravar_texto_do_turno`); `apps/engine/lib/engine/dev/dev_agent_server.ex:1088`
   (`propose_pr`); `apps/web/src/lib/session-destinatario.ts:192`
   (`agentesEmConversa`) e `apps/web/src/lib/session-kind.ts:69`
   (`tipoDaSessao`); `apps/web/src/routes/NewProjectWizard.tsx:1122`
@@ -22730,8 +22730,8 @@ sem dizer qual.
   `reasoningTokens` (ficam só em `token_usage`), então a resposta vazia que
   bate no teto sem `finish_reason: length` não é reconhecida.
 - **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:219`
-  (`parada_sem_chamada`), `apps/engine/lib/engine/dev/dev_agent_server.ex:1025`
-  (`motivo_da_parada`), `:1028` (`stop_diagnosis`)
+  (`parada_sem_chamada`), `apps/engine/lib/engine/dev/dev_agent_server.ex:1040`
+  (`motivo_da_parada`), `:1043` (`stop_diagnosis`)
 - **Teste:** `apps/engine/test/engine/harness/tool_loop_test.exs` (`corte só
   de raciocínio`: retentada uma vez e segue; repetido para com
   `corte_pelo_teto`), `apps/engine/test/engine/dev/dev_agent_server_test.exs`
@@ -23010,7 +23010,7 @@ sem dizer qual.
   cobre também o merge por squash que a [RN-760](#rn-760) declara não ver.
   Declarado: a PR antiga da branch, se existir, não é fechada no provider.
 - **Onde:** `apps/engine/lib/engine/dev/worktree_manager.ex:246`
-  (`sem_diff_contra_a_dev?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:957`
+  (`sem_diff_contra_a_dev?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:972`
   (`ja_na_dev`)
 - **Teste:** `apps/engine/test/engine/dev/tarefa_ja_na_dev_test.exs`
 - **Origem:** AT-474
@@ -23163,7 +23163,7 @@ sem dizer qual.
   `codigo` e desarmou o dev.
 - **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:246`
   (`llm_turn_com_retentativa`), `apps/engine/lib/engine/agents/falha_de_turno.ex:112`
-  (`falha_de_rede?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:911`
+  (`falha_de_rede?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:926`
   (`bloquear_parada`), `apps/engine/lib/engine/dev/agent_io.ex:228`
   (`finish_task`)
 - **Teste:** `apps/engine/test/engine/harness/tool_loop_test.exs` ("falha de
@@ -23184,7 +23184,7 @@ sem dizer qual.
   com o que há, e na dúvida a task segue para os gates.
 - **Onde:** `apps/engine/lib/engine/dev/worktree_manager.ex:267`
   (`sem_diff_contra_a_dev?`), `apps/engine/lib/engine/dev/worktree_manager.ex:277`
-  (`sem_diff_atualizado?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:851`
+  (`sem_diff_atualizado?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:866`
   (`handle_outcome`)
 - **Teste:** `apps/engine/test/engine/dev/tarefa_ja_na_dev_test.exs` ("caminho
   feliz: com a dev atualizada, a branch não tem diff"; "falha: remoto
@@ -23285,7 +23285,7 @@ sem dizer qual.
   externo dos gates (`docs/gates.yml`) e o código do `emit_qa_verdict` não
   mudam, e nenhum gate novo nasce. Tarefa que não toca nada disso não ganha a
   seção.
-- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:95`
+- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:108`
   (`secao_do_ponto_de_entrada`)
 - **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs`
   ("tarefa que toca a fiação exige evidência do ponto de entrada real" e "tarefa
@@ -23321,7 +23321,7 @@ sem dizer qual.
   roteamento de container dos três modos — um `pkill` no harness precisaria
   de um segundo caminho de execução por modo. Régua de prompt; o contrato dos
   gates não muda.
-- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:126`
+- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:145`
   (`secao_do_ambiente_limpo`)
 - **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs`
   ("RN-817: pede ambiente limpo, encerrar o grupo e pulado como observação")
@@ -23338,7 +23338,7 @@ sem dizer qual.
   bater numa rota do processo de pé — e o que NÃO cabe ali: construir imagem
   Docker, `docker compose`, rede externa. Exigência desse segundo tipo nunca
   vai para `itens`; vai ao `resumo` como observação. Régua de prompt.
-- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:95`
+- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:108`
   (`secao_do_ponto_de_entrada`)
 - **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs`
   ("RN-818: com ponto de entrada diz o que conta e o que não cabe" e "RN-818:
@@ -23408,7 +23408,7 @@ sem dizer qual.
   60, `kind` em `api_docs | web`, `url` começando com `http://localhost:` ou
   `http://127.0.0.1:`; `envExample` booleano), validado no engine ANTES do HALT
   com recusa nomeada que entra no laço (RN-163) e repassado no
-  payload de `open_infra_pr`. Decisão no ADR 0213.
+  payload de `open_infra_pr`. Decisão no [ADR 0213](adr/0213-o-entregavel-roda-na-maquina-pelo-compose-da-infra.md).
 - **Onde:** `apps/engine/lib/engine/infra/instrucoes_de_execucao.ex:20`
   (`validar`), `apps/engine/lib/engine/infra/infra_lead_server.ex:1391`
   (`build_kickoff`) e `:1256` (`abrir_pr`), e
@@ -23994,3 +23994,38 @@ sem dizer qual.
   novo pela api")
 - **Origem:** AT-516 (a PR de infra auto-aprovada só entrou em "PRs prontas"
   do chat ~5 min depois, pelo poll de fallback)
+
+### RN-853 — O dev expõe OpenAPI e Swagger quando a tarefa toca rotas {#rn-853}
+
+- **Regra:** parte do ADR 0213. Quando a
+  tarefa toca ponto de entrada ou rotas (a MESMA régua do recorte do QA,
+  `toca_ponto_de_entrada?`, nunca uma cópia), o kickoff do dev ganha a
+  cláusula: módulo que expõe HTTP serve `/openapi.json` (OpenAPI 3) e `/docs`
+  (UI Swagger); sem rede ou sem pacote, `/docs` é página HTML que carrega o
+  swagger-ui de CDN; módulo web serve a página inicial; a URL entra na seção
+  "Rodar na sua máquina" do README. Tarefa que não toca rotas não paga a
+  cláusula (a mensagem é fixada e volta a cada iteração).
+- **Onde:** `apps/engine/lib/engine/dev/dev_agent_server.ex:631`
+  (`clausula_de_openapi`),
+  `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:101`
+  (`toca_ponto_de_entrada?`)
+- **Teste:** `apps/engine/test/engine/dev/report_done_instrucao_test.exs`
+  ("RN-853: tarefa que toca rotas pede /openapi.json e /docs"; falha: "RN-853
+  falha: tarefa sem rota nem entrypoint não paga a cláusula")
+- **Origem:** AT-517
+
+### RN-854 — O QA prova `/openapi.json` e `/docs` dentro do container {#rn-854}
+
+- **Regra:** parte do ADR 0213. Na seção
+  de ponto de entrada do recorte ([RN-813](#rn-813)), o QA sobe o app pelo
+  comando do README em background DENTRO do container, bate em
+  `localhost:<porta interna>/openapi.json` e `/docs` (`curl`, `wget` ou
+  `node -e fetch`) e encerra o grupo de processos ([RN-817](#rn-817)). Falha
+  vai a `itens`; o `docker compose up` real fica no `resumo` como "provado só
+  na máquina do usuário".
+- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:108`
+  (`secao_do_ponto_de_entrada`)
+- **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs`
+  ("tarefa que toca rotas pede /openapi.json e /docs, compose em resumo";
+  falha: "falha: tarefa sem rota não recebe a seção")
+- **Origem:** AT-517
