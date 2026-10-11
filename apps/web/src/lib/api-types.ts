@@ -1953,3 +1953,9 @@ export interface ModelPullRequest {
   createdAt: string;
   updatedAt: string;
 }
+
+/**
+ * Como rodar o entregável na máquina do usuário, declarado pela Infra na PR
+ * dela (`artifact.run_instructions`, RN-852). `null` quando nunca declarado.
+ */
+export type RunInstructions = components['schemas']['RunInstructionsResponseDto'];

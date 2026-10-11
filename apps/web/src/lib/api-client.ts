@@ -17,6 +17,7 @@ import type {
   AgentArea,
   ParallelizationRequest,
   InfraArtifact,
+  RunInstructions,
   PsychologistHypothesis,
   PsychologistAnalysis,
   PsychologistStatus,
@@ -827,6 +828,9 @@ export const getArchitecture = (projectId: string) =>
   get<Architecture>(`/projects/${projectId}/architecture`);
 export const listInfraArtifacts = (projectId: string) =>
   get<InfraArtifact[]>(`/projects/${projectId}/infra-artifacts`);
+/** RN-855: o vigente de `artifact.run_instructions`, ou `null`. */
+export const getRunInstructions = (projectId: string) =>
+  get<RunInstructions | null>(`/projects/${projectId}/run-instructions`);
 
 // --- Psicólogo (Fase 4b) ---
 

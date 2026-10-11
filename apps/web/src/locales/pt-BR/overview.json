@@ -146,5 +146,15 @@
       "pendente": "Conte a ideia ao Criativo — é daí que saem as histórias.",
       "link": "Abrir o Criativo →"
     }
+  },
+  "rodarNaSuaMaquina": {
+    "title": "Rodar na sua máquina",
+    "envExample": "Antes, copie o arquivo de ambiente de exemplo: cp .env.example .env",
+    "copiar": "Copiar",
+    "copiado": "Copiado",
+    "urlRecusada": "(endereço fora da sua máquina, não vira link)",
+    "notaAntes": "Declarado pela Infra na",
+    "pr": "PR",
+    "notaDepois": ", não verificado na sua máquina."
   }
 }
