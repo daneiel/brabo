@@ -17197,9 +17197,9 @@ OpenRouter cobrou sem devolver `usage.cost` não entra em `token_usage`; o
 endpoint é ALPHA e o smoke manual
 (`jev-tool-router.smoke.spec.ts`, teto US$ 0,05) é quem acusa a mudança.
 
-- **Código:** `apps/api/src/domain/llm/tool-router.ts:19` (`MODELO_DO_JEV`),
-  `:101` (`montarPedidoAoJev`), `:158` (`lerRespostaDoJev`), `:208`
-  (`recortarEstado`), `:260` (`menuP3`);
+- **Código:** `apps/api/src/domain/llm/tool-router.ts:27` (`MODELO_DO_JEV`),
+  `:109` (`montarPedidoAoJev`), `:166` (`lerRespostaDoJev`), `:216`
+  (`recortarEstado`), `:268` (`menuP3`);
   `apps/api/src/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.ts:118`
   (`preparar`), `:143` (`executar`), `:305` (`registrarGasto`);
   `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:152`
@@ -22282,7 +22282,7 @@ sem dizer qual.
   naquele passo, então ele vale sempre que há recorte. Os dev agents ficam
   sem piso, de propósito (a obrigação deles muda a cada passo; para eles vale
   só a [RN-759](#rn-759)) — salvo `report_done`/`report_blocked`, que entram no piso deles desde a [RN-839](#rn-839).
-- **Onde:** `apps/api/src/domain/llm/tool-router.ts:345` (`menuComPiso`) e
+- **Onde:** `apps/api/src/domain/llm/tool-router.ts:352` (`menuComPiso`) e
   `apps/api/src/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.ts:248`
   (`menuComPiso`)
 - **Teste:** `apps/api/test/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.spec.ts`
@@ -22304,7 +22304,7 @@ sem dizer qual.
   porque só a api sabe o menu depois do Jev. Não aplicar o recorte na volta
   que fecha o turno foi avaliado e não feito: a api não sabe antes da
   resposta que a volta será a última.
-- **Onde:** `apps/api/src/domain/llm/tool-router.ts:359` (`avisoDeRecorte`) e
+- **Onde:** `apps/api/src/domain/llm/tool-router.ts:366` (`avisoDeRecorte`) e
   `apps/api/src/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.ts:263`
   (`avisoDeRecorte`)
 - **Teste:** `apps/api/test/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.spec.ts`
@@ -22680,7 +22680,7 @@ sem dizer qual.
   o recorte do Jev nunca as tira, para o Arquiteto não afirmar status de ADR
   nem tarefas do backlog sem poder consultá-los ([RN-773](#rn-773)). Continua
   valendo que o piso só devolve o que está no catálogo do passo.
-- **Onde:** `apps/api/src/domain/llm/tool-router.ts:303` (`PISO_DO_MENU`)
+- **Onde:** `apps/api/src/domain/llm/tool-router.ts:311` (`PISO_DO_MENU`)
 - **Teste:** `apps/api/test/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.spec.ts`
   (`Arquiteto recortado pelo Jev: as leituras de estado (ADRs propostas,
   backlog) continuam no menu (RN-784)`)
@@ -23142,7 +23142,7 @@ sem dizer qual.
   8, registro de tensão) e `emit_artifact` ficam fora do piso: não são
   obrigação da etapa. Continua valendo que o piso só devolve o que está no
   catálogo do passo.
-- **Onde:** `apps/api/src/domain/llm/tool-router.ts:303` (`PISO_DO_MENU`)
+- **Onde:** `apps/api/src/domain/llm/tool-router.ts:311` (`PISO_DO_MENU`)
 - **Teste:** `apps/api/test/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.spec.ts`
   (`Arquiteto recortado pelo Jev sem assign_story_modules/choose_project_image:
   as duas continuam no menu (RN-809)`)
@@ -23723,7 +23723,7 @@ sem dizer qual.
   o recorte do Jev nunca tira `report_done` nem `report_blocked`. O resto do
   passo deles segue recortável, com o aviso de recorte da RN-759. Como todo
   piso, ele só devolve o que está no catálogo do passo.
-- **Onde:** `apps/api/src/domain/llm/tool-router.ts:335` (`pisoDoMenu`)
+- **Onde:** `apps/api/src/domain/llm/tool-router.ts:342` (`pisoDoMenu`)
 - **Teste:** `apps/api/test/domain/llm/piso-dos-dev-agents.spec.ts`
   (`recorte que deixa só \`terminal\` para dev-api: report_done e
   report_blocked continuam`; `falha: dev-lead e outro agente não ganham as
