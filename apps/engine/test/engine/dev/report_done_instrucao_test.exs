@@ -58,4 +58,22 @@ defmodule Engine.Dev.ReportDoneInstrucaoTest do
     ambiente = AmbienteDoAgente.montar(%{cwd: nil, raiz: nil, container_running: false})
     refute ambiente =~ "Use as ações tipadas"
   end
+
+  test "RN-853: tarefa que toca rotas pede /openapi.json e /docs" do
+    kickoff =
+      DevAgentServer.initial_message(%{"title" => "Criar rotas de links"}, %{"title" => "S"})[
+        "content"
+      ]
+
+    assert kickoff =~ "`/openapi.json` (OpenAPI 3"
+    assert kickoff =~ "swagger-ui de CDN"
+    assert kickoff =~ "\"Rodar na sua máquina\""
+  end
+
+  test "RN-853 falha: tarefa sem rota nem entrypoint não paga a cláusula" do
+    kickoff =
+      DevAgentServer.initial_message(%{"title" => "Modelar tabela"}, %{"title" => "S"})["content"]
+
+    refute kickoff =~ "openapi.json"
+  end
 end

@@ -29,7 +29,8 @@ defmodule Engine.Infra.Tools.ProposeInfraPr do
           "branch e abre uma PR real no repo do projeto, junto com o pipeline de CI que o " <>
           "Workflows gera. Chamá-la ENCERRA o seu turno: se for propor a subida do " <>
           "container (`propose_container_start`/`container_start_via_runner`), chame-a " <>
-          "ANTES desta ou na MESMA resposta.",
+          "ANTES desta ou na MESMA resposta. `run` é obrigatório: como o usuário sobe o " <>
+          "app na máquina dele (o mesmo comando e URLs da seção do README).",
       parameters: %{
         "type" => "object",
         "properties" => %{
@@ -44,9 +45,37 @@ defmodule Engine.Infra.Tools.ProposeInfraPr do
               },
               "required" => ["path", "content"]
             }
+          },
+          "run" => %{
+            "type" => "object",
+            "properties" => %{
+              "command" => %{"type" => "string", "maxLength" => 300},
+              "urls" => %{
+                "type" => "array",
+                "minItems" => 1,
+                "maxItems" => 5,
+                "items" => %{
+                  "type" => "object",
+                  "properties" => %{
+                    "label" => %{"type" => "string", "maxLength" => 60},
+                    "url" => %{
+                      "type" => "string",
+                      "description" => "começa com http://localhost: ou http://127.0.0.1:"
+                    },
+                    "kind" => %{"type" => "string", "enum" => ["api_docs", "web"]}
+                  },
+                  "required" => ["label", "url", "kind"]
+                }
+              },
+              "envExample" => %{
+                "type" => "boolean",
+                "description" => "true quando o .env.example está entre os files"
+              }
+            },
+            "required" => ["command", "urls", "envExample"]
           }
         },
-        "required" => ["title", "files"]
+        "required" => ["title", "files", "run"]
       }
     }
   end

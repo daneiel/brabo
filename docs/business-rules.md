@@ -13606,7 +13606,7 @@ semeia no aceite do handoff da Infra), e `container_remove` segue no
 teto absoluto de git push/comando privilegiado ([RN-418](#rn-418)).
 
 - **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:599` (o
-  dispatch de `container_start` consultando antes de propor), `:881`
+  dispatch de `container_start` consultando antes de propor), `:902`
   (`recusa_local_de_subida/2` — a leitura ÚNICA do projeto), `:474` (a
   cláusula de `container_start`: lista de permitidos), `:477` (a recusa
   nomeando `container_start_via_runner`), `:492` (a cláusula da irmã, com a
@@ -14330,7 +14330,7 @@ reordena os handoffs.
   duas tools); `apps/engine/lib/engine/harness/tools/propose_adr.ex:54` (a
   recusa antes de propor), `:61` (o `tool.result` com o motivo);
   `apps/engine/lib/engine/infra/infra_lead_server.ex:251` (a interceptação de
-  `propose_infra_pr` perguntando antes do HALT), `:573`
+  `propose_infra_pr` perguntando antes do HALT), `:594`
   (`recusa_de_infra_pr/4`), `:309` (o `tool.call` com os caminhos), `:314` (o
   `tool.result`)
 - **Teste:** `apps/engine/test/engine/agents/arquiteto_server_test.exs:107`
@@ -15521,7 +15521,7 @@ direta.
   (recusa 409), `apps/web/src/routes/containers-subida.ts:181`
   (`semBrokerParaCicloDeVida`) e `:192` (`conversaoSemBroker`),
   `apps/web/src/routes/settings/ExecutionModeSection.tsx` (botão inerte),
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:796`
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:817`
   (`motivo_da_recusa_da_api`)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:207`
   (409 nas três ações, e `container_stop` segue `pending` com broker),
@@ -15615,14 +15615,14 @@ PRÓPRIO agente escreveu, e o corte é a única contenção — é o item (d) da
 - **Código:** `apps/engine/lib/engine/agents/dev_lead_server.ex:313`
   (`handle_info/2` do `action_settled`, o `tool.result` em `:271`), `:714`
   (`sentido_do_desfecho/1`);
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:1021`
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:1042`
   (`registrar_resultado/4`), `:317` (a recusa de `propose_infra_pr`)
 - **Teste:** `apps/engine/test/engine/agents/dev_lead_server_test.exs:292` (a
   suspensão não grava), `:364` (a retomada grava o texto que o modelo leu),
   `:488` (recusado é `ok: false` com o motivo);
   `apps/engine/test/engine/infra/infra_lead_server_test.exs:253`
   (o desfecho de `validate_infra_file`), `:409` (proposta aceita), `:485` (recusa por modo),
-  `:863` e `:901` (`container_start_via_runner` com e sem runner)
+  `:863` e `:910` (`container_start_via_runner` com e sem runner)
 - **Origem:** AT-190 — declarado aberto na [RN-589](#rn-589) (AT-151)
 
 ### RN-599 — No compose de dev a api encontra o broker sozinha, e a falta da pasta gerenciada é dita a cada subida {#rn-599}
@@ -16058,18 +16058,18 @@ não lê `BROKER_URL`; quem recusa é a api ao propor, com 409
 quem clica). A cláusula de pasta usa o carimbo, que não é batimento
 ([RN-468](#rn-468)) — por isso a de runner conectado continua depois dela.
 
-- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:881`
-  (`recusa_local_de_subida`), `:934` (`recusa_por_estado`), `:938`
-  (`recusa_ja_de_pe`), `:943` (`recusa_sem_imagem_decidida`), `:993`
-  (`recusa_pasta_nunca_confirmada`), `:1004` (`recusa_runner_desconectado`);
+- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:902`
+  (`recusa_local_de_subida`), `:955` (`recusa_por_estado`), `:956`
+  (`recusa_ja_de_pe`), `:964` (`recusa_sem_imagem_decidida`), `:1014`
+  (`recusa_pasta_nunca_confirmada`), `:1025` (`recusa_runner_desconectado`);
   `apps/engine/lib/engine/containers/project_container_lifecycle.ex:83`
   (`status_registrado`);
   `apps/engine/lib/engine/session_events/event.ex:120` (`imagem_decidida?`)
 - **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs:742`
-  (via runner, `running` recusa), `:774` (`provisioning` recusa), `:784`
+  (via runner, `running` recusa), `:804` (`provisioning` recusa), `:814`
   (`stopped` não recusa), `:779` (sem imagem), `:790` (pasta nunca
-  confirmada), `:820` (`propose_container_start` com container `running`),
-  `:833` (`propose_container_start` sem imagem PROPÕE), `:863` (caminho feliz
+  confirmada), `:850` (`propose_container_start` com container `running`),
+  `:850` (`propose_container_start` sem imagem PROPÕE), `:863` (caminho feliz
   do via runner), `:901` (sem runner conectado)
 - **Origem:** AT-142
 
@@ -16486,7 +16486,7 @@ deu e com as quatro ferramentas.
   (`handle_cast(:kickoff`), `:270` (`handle_cast({:correct`, a fila), `:280`
   (`handle_cast(:cancel`), `:296` (`handle_call({:user_message`), `:355`
   (`handle_info`), `:373` (`drenar_correcao_pendente`), `:420`
-  (`toolloop.limit_reached`), `:1064` (`concluir`);
+  (`toolloop.limit_reached`), `:1085` (`concluir`);
 
   (`toolloop.limit_reached`), `:1057` (`concluir`);
   `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:44`
@@ -16497,7 +16497,7 @@ deu e com as quatro ferramentas.
 - **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs:1033`
   (aceite imediato, `working` antes), `:1048` (409 com turno em curso — caso
   de falha), `:1077` ("Parar"), `:1103` ("Parar" sem turno), `:1107` (a
-  correção de gate na fila), `:1740` (`toolloop.limit_reached`);
+  correção de gate na fila), `:1788` (`toolloop.limit_reached`);
   `apps/engine/test/engine/agents/turno_orfao_test.exs:76` (o órfão, agora nos
   sete); `apps/engine/test/engine/agents/reidratacao_dos_seis_test.exs:62` (a
   reidratação, nos sete);
@@ -19092,8 +19092,8 @@ desde então conta como recusa) e quando ela não cabia ao servidor (sem
 roteamento, `runner`) e o modelo não a propôs.
 
 - **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:464`
-  (`dispatch_calls`), `:539` (`recusa_pr_repetida_no_lote`), `:1152`
-  (`registrar_subida`), `:1162` (`fechar_subida`), `:1155`
+  (`dispatch_calls`), `:560` (`recusa_pr_repetida_no_lote`), `:1173`
+  (`registrar_subida`), `:1183` (`fechar_subida`), `:1155`
 
   (`dispatch_calls`), `:539` (`recusa_pr_repetida_no_lote`), `:1140`
   (`registrar_subida`), `:1150` (`fechar_subida`), `:1154`
@@ -19359,8 +19359,8 @@ vence — pôr a Infra em "manual" não desliga esta semente.
 - **Código:** `apps/api/src/application/use-cases/agents/accept-handoff.use-case.ts:38`
   (`INFRA_AUTONOMY_SEEDS`);
   `apps/engine/lib/engine/infra/infra_lead_server.ex:256` (`handle_cast`),
-  `:626` (`propor_container_start`), `:707` (`subir_no_aceite`), `:759`
-  (`eleger_candidata`), `:1331` (`passo_da_subida`)
+  `:647` (`propor_container_start`), `:728` (`subir_no_aceite`), `:780`
+  (`eleger_candidata`), `:1356` (`passo_da_subida`)
 
   `:626` (`propor_container_start`), `:707` (`subir_no_aceite`), `:759`
   (`eleger_candidata`), `:1319` (`passo_da_subida`)
@@ -19368,10 +19368,10 @@ vence — pôr a Infra em "manual" não desliga esta semente.
   (a semente, e só ela — caminho feliz), `:267` (outro agente não semeia —
   caso de falha);
   `apps/engine/test/engine/infra/infra_lead_server_test.exs:1263` (o servidor
-  elege e propõe antes do modelo — caminho feliz), `:1412` (`mounted`), `:1422`
+  elege e propõe antes do modelo — caminho feliz), `:1454` (`mounted`), `:1464`
   (`runner` não sobe pelo servidor), `:1377` (sem roteamento), `:1387` (a api
   recusa sem broker — caso de falha), `:1427` (container já `running`), `:1439`
-  (negada pela política), `:1528` (`eleger_candidata/1`)
+  (negada pela política), `:1576` (`eleger_candidata/1`)
 - **Origem:** AT-260 (item A14 da análise do uso real de 29/09)
 
 ### RN-672 — O handoff ao Dev Lead sai da Infra, e só com o container do projeto `running` {#rn-672}
@@ -19414,8 +19414,8 @@ instante, a oferta espera o fim do próximo turno dele.
 
 - **Código:** `apps/api/src/application/use-cases/agents/offer-infra-handoff.use-case.ts:15`
   (`ALVOS_DA_CONFIRMACAO`);
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:1069` (`oferecer_ao_dev_lead`),
-  `:1064` (`concluir`), `:345` (`handle_info`), `:1075`
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:1090` (`oferecer_ao_dev_lead`),
+  `:1085` (`concluir`), `:345` (`handle_info`), `:1075`
 
   `:1057` (`concluir`), `:345` (`handle_info`), `:1074`
   (`topico_do_container`);
@@ -19481,7 +19481,7 @@ mudam; a recusa abaixo do mínimo acontece na execução, não ao propor.
   `apps/api/src/application/use-cases/actions/execute-container-start.use-case.ts:175`
   (`resolverRecursosDaSubida`);
   `apps/engine/lib/engine/harness/tools/create_module_map.ex:103` (`normalize`);
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:782`
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:803`
   (`rationale_do_servidor`)
 - **Teste:** `apps/api/test/domain/containers/recursos-minimos.spec.ts:18`
   (soma — caminho feliz), `:35` (mapa antigo = padrão), `:41` (piso e nomeado),
@@ -20761,7 +20761,7 @@ Junto, o fechamento deixa de dizer que parear uma pasta pela tela do projeto
   `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:423` (`reabrirPorConflitoDeMerge`),
   `apps/engine/lib/engine/workers/dev_agent_wake_worker.ex:151` (`task.merge_conflict`),
   `apps/engine/lib/engine/dev/dev_agent_server.ex:350` (`handle_info`),
-  `apps/engine/lib/engine/dev/dev_agent_server.ex:790` (`trigger_gate_recheck`),
+  `apps/engine/lib/engine/dev/dev_agent_server.ex:805` (`trigger_gate_recheck`),
   `apps/engine/lib/engine/dev/worktree_manager.ex:47` (`adopt`)
 - **Teste:** `apps/api/test/application/use-cases/actions/execute-git-action.use-case.spec.ts` ("conflito de merge → kind git_merge, arquivos no
   resultado e evento na tarefa"; falha: "RN-715: tarefa que já não está em
@@ -21029,9 +21029,9 @@ conversa —, e a delegação terminava `failed` com origem `modelo` e um
 - **Onde:** `apps/engine/lib/engine/infra/workflows_agent.ex:61` (`dispensa`),
   `apps/engine/lib/engine/infra/infra_lead.ex:69` (`com_prefixo`),
   `apps/engine/lib/engine/infra/workflows_agent.ex:184` (`parada_sem_ferramenta`),
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:1196` (`finalize`)
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:1217` (`finalize`)
 
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:1196` (`finalize`)
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:1217` (`finalize`)
 - **Teste:** `apps/engine/test/engine/infra/workflows_agent_test.exs` ("RN-710: …")
   e `apps/engine/test/engine/infra/infra_lead_server_test.exs` ("RN-710:
   repositório local dispensa o Workflows …") e
@@ -21327,7 +21327,7 @@ a tool `propose_container_start` sem `network`. A autonomia semeada não muda:
 publicadas da máquina, ADR 0189) está declarado no ADR.
 
 - **Código:** `apps/engine/lib/engine/session_events/event.ex:139` (`rede_do_arquiteto`),
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:751` (`rede_herdada`)
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:740` (`rede_herdada`)
 - **Testes:** `apps/engine/test/engine/infra/infra_lead_server_test.exs` —
   "RN-723: a subida herda a rede `egress` que o Arquiteto declarou" e
   "RN-723: rede do Arquiteto fora do vocabulário — a subida segue `none`"
@@ -22424,8 +22424,8 @@ sem dizer qual.
   `min-content` — com `max-content` ela ficava da largura do texto sem quebra
   (medido no Chromium: 2 236px num balão de 708px) e a última coluna sumia.
 - **Onde:** `apps/api/src/application/use-cases/actions/execute-adr-pr.use-case.ts:96`
-  (`openPullRequest`); `apps/engine/lib/engine/infra/infra_lead_server.ex:1482`
-  (`gravar_texto_do_turno`); `apps/engine/lib/engine/dev/dev_agent_server.ex:1073`
+  (`openPullRequest`); `apps/engine/lib/engine/infra/infra_lead_server.ex:1521`
+  (`gravar_texto_do_turno`); `apps/engine/lib/engine/dev/dev_agent_server.ex:1088`
   (`propose_pr`); `apps/web/src/lib/session-destinatario.ts:192`
   (`agentesEmConversa`) e `apps/web/src/lib/session-kind.ts:69`
   (`tipoDaSessao`); `apps/web/src/routes/NewProjectWizard.tsx:1122`
@@ -22730,8 +22730,8 @@ sem dizer qual.
   `reasoningTokens` (ficam só em `token_usage`), então a resposta vazia que
   bate no teto sem `finish_reason: length` não é reconhecida.
 - **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:219`
-  (`parada_sem_chamada`), `apps/engine/lib/engine/dev/dev_agent_server.ex:1025`
-  (`motivo_da_parada`), `:1028` (`stop_diagnosis`)
+  (`parada_sem_chamada`), `apps/engine/lib/engine/dev/dev_agent_server.ex:1040`
+  (`motivo_da_parada`), `:1043` (`stop_diagnosis`)
 - **Teste:** `apps/engine/test/engine/harness/tool_loop_test.exs` (`corte só
   de raciocínio`: retentada uma vez e segue; repetido para com
   `corte_pelo_teto`), `apps/engine/test/engine/dev/dev_agent_server_test.exs`
@@ -23010,7 +23010,7 @@ sem dizer qual.
   cobre também o merge por squash que a [RN-760](#rn-760) declara não ver.
   Declarado: a PR antiga da branch, se existir, não é fechada no provider.
 - **Onde:** `apps/engine/lib/engine/dev/worktree_manager.ex:246`
-  (`sem_diff_contra_a_dev?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:957`
+  (`sem_diff_contra_a_dev?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:972`
   (`ja_na_dev`)
 - **Teste:** `apps/engine/test/engine/dev/tarefa_ja_na_dev_test.exs`
 - **Origem:** AT-474
@@ -23163,7 +23163,7 @@ sem dizer qual.
   `codigo` e desarmou o dev.
 - **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:246`
   (`llm_turn_com_retentativa`), `apps/engine/lib/engine/agents/falha_de_turno.ex:112`
-  (`falha_de_rede?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:911`
+  (`falha_de_rede?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:926`
   (`bloquear_parada`), `apps/engine/lib/engine/dev/agent_io.ex:228`
   (`finish_task`)
 - **Teste:** `apps/engine/test/engine/harness/tool_loop_test.exs` ("falha de
@@ -23184,7 +23184,7 @@ sem dizer qual.
   com o que há, e na dúvida a task segue para os gates.
 - **Onde:** `apps/engine/lib/engine/dev/worktree_manager.ex:267`
   (`sem_diff_contra_a_dev?`), `apps/engine/lib/engine/dev/worktree_manager.ex:277`
-  (`sem_diff_atualizado?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:851`
+  (`sem_diff_atualizado?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:866`
   (`handle_outcome`)
 - **Teste:** `apps/engine/test/engine/dev/tarefa_ja_na_dev_test.exs` ("caminho
   feliz: com a dev atualizada, a branch não tem diff"; "falha: remoto
@@ -23285,7 +23285,7 @@ sem dizer qual.
   externo dos gates (`docs/gates.yml`) e o código do `emit_qa_verdict` não
   mudam, e nenhum gate novo nasce. Tarefa que não toca nada disso não ganha a
   seção.
-- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:95`
+- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:108`
   (`secao_do_ponto_de_entrada`)
 - **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs`
   ("tarefa que toca a fiação exige evidência do ponto de entrada real" e "tarefa
@@ -23321,7 +23321,7 @@ sem dizer qual.
   roteamento de container dos três modos — um `pkill` no harness precisaria
   de um segundo caminho de execução por modo. Régua de prompt; o contrato dos
   gates não muda.
-- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:126`
+- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:145`
   (`secao_do_ambiente_limpo`)
 - **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs`
   ("RN-817: pede ambiente limpo, encerrar o grupo e pulado como observação")
@@ -23338,7 +23338,7 @@ sem dizer qual.
   bater numa rota do processo de pé — e o que NÃO cabe ali: construir imagem
   Docker, `docker compose`, rede externa. Exigência desse segundo tipo nunca
   vai para `itens`; vai ao `resumo` como observação. Régua de prompt.
-- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:95`
+- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:108`
   (`secao_do_ponto_de_entrada`)
 - **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs`
   ("RN-818: com ponto de entrada diz o que conta e o que não cabe" e "RN-818:
@@ -23394,6 +23394,28 @@ sem dizer qual.
   ("RN-850: confere a seção Rotas HTTP e a ausência de nota de processo")
 - **Origem:** AT-520 (TP-01: cada tarefa acrescentou rotas no fim do README,
   depois de "Testes", e sobrou um parágrafo de processo para agentes)
+
+### RN-851 — O compose da Infra sobe o APP na máquina do usuário, e a PR declara como rodá-lo {#rn-851}
+
+- **Regra:** o kickoff do Infra Lead pede o compose que SOBE O APP (não só
+  ambiente de dev): `build` do Dockerfile de cada módulo com `FROM` = a imagem
+  decidida (`projectImage` do contexto da Infra; sem ela, a candidata do
+  roteamento, dito no README), porta `${APP_PORT:-8080}:<porta interna>`, volume
+  para dados persistentes, `.env.example` commitado (nunca `.env`) e a seção
+  "Rodar na sua máquina" no README. O container de TRABALHO dos agentes segue
+  subindo pelo broker, e não há deploy. `propose_infra_pr` ganha o campo
+  OBRIGATÓRIO `run` (`command` até 300 caracteres; `urls` de 1 a 5, `label` até
+  60, `kind` em `api_docs | web`, `url` começando com `http://localhost:` ou
+  `http://127.0.0.1:`; `envExample` booleano), validado no engine ANTES do HALT
+  com recusa nomeada que entra no laço (RN-163) e repassado no
+  payload de `open_infra_pr`. Decisão no [ADR 0213](adr/0213-o-entregavel-roda-na-maquina-pelo-compose-da-infra.md).
+- **Onde:** `apps/engine/lib/engine/infra/instrucoes_de_execucao.ex:20`
+  (`validar`), `apps/engine/lib/engine/infra/infra_lead_server.ex:1398`
+  (`build_kickoff`) e `:1256` (`abrir_pr`), e
+  `apps/engine/lib/engine/infra/tools/propose_infra_pr.ex:24` (`spec`)
+- **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs`
+  (describe "o compose sobe o app e a PR leva `run` (RN-851)")
+- **Origem:** AT-517 (o entregável não tinha como ser rodado pelo usuário)
 
 ### RN-823 — O ciclo de gate que o reinício do engine matou é retomado no boot, e o fio diz isso {#rn-823}
 
@@ -23973,6 +23995,40 @@ sem dizer qual.
 - **Origem:** AT-516 (a PR de infra auto-aprovada só entrou em "PRs prontas"
   do chat ~5 min depois, pelo poll de fallback)
 
+### RN-853 — O dev expõe OpenAPI e Swagger quando a tarefa toca rotas {#rn-853}
+
+- **Regra:** parte do ADR 0213. Quando a
+  tarefa toca ponto de entrada ou rotas (a MESMA régua do recorte do QA,
+  `toca_ponto_de_entrada?`, nunca uma cópia), o kickoff do dev ganha a
+  cláusula: módulo que expõe HTTP serve `/openapi.json` (OpenAPI 3) e `/docs`
+  (UI Swagger); sem rede ou sem pacote, `/docs` é página HTML que carrega o
+  swagger-ui de CDN; módulo web serve a página inicial; a URL entra na seção
+  "Rodar na sua máquina" do README. Tarefa que não toca rotas não paga a
+  cláusula (a mensagem é fixada e volta a cada iteração).
+- **Onde:** `apps/engine/lib/engine/dev/dev_agent_server.ex:631`
+  (`clausula_de_openapi`),
+  `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:101`
+  (`toca_ponto_de_entrada?`)
+- **Teste:** `apps/engine/test/engine/dev/report_done_instrucao_test.exs`
+  ("RN-853: tarefa que toca rotas pede /openapi.json e /docs"; falha: "RN-853
+  falha: tarefa sem rota nem entrypoint não paga a cláusula")
+- **Origem:** AT-517
+
+### RN-854 — O QA prova `/openapi.json` e `/docs` dentro do container {#rn-854}
+
+- **Regra:** parte do ADR 0213. Na seção
+  de ponto de entrada do recorte ([RN-813](#rn-813)), o QA sobe o app pelo
+  comando do README em background DENTRO do container, bate em
+  `localhost:<porta interna>/openapi.json` e `/docs` (`curl`, `wget` ou
+  `node -e fetch`) e encerra o grupo de processos ([RN-817](#rn-817)). Falha
+  vai a `itens`; o `docker compose up` real fica no `resumo` como "provado só
+  na máquina do usuário".
+- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:108`
+  (`secao_do_ponto_de_entrada`)
+- **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs`
+  ("tarefa que toca rotas pede /openapi.json e /docs, compose em resumo";
+  falha: "falha: tarefa sem rota não recebe a seção")
+- **Origem:** AT-517
 ### RN-852 — A PR de infra declara como rodar o entregável, e isso vira artefato {#rn-852}
 
 - **Regra:** `open_infra_pr` EXIGE `run` = `{command, urls, envExample}`
