@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import {
   parseInline,
   parseMarkdown,
+  fecharMarcadoresAbertos,
   normalizarLinguagemDoFence,
   type MdAlinhamento,
   type MdBlock,
@@ -196,10 +197,25 @@ function renderBlock(block: MdBlock, key: number): ReactNode {
           </h2>
         );
       }
+      if (block.level === 3) {
+        return (
+          <h3 key={key} className={styles.titulo3}>
+            {renderInline(block.inline)}
+          </h3>
+        );
+      }
       return (
-        <h3 key={key} className={styles.titulo3}>
+        <h4 key={key} className={styles.titulo4}>
           {renderInline(block.inline)}
-        </h3>
+        </h4>
+      );
+    case 'hr':
+      return <hr key={key} className={styles.regua} />;
+    case 'blockquote':
+      return (
+        <blockquote key={key} className={styles.citacao}>
+          {block.blocks.map((b, j) => renderBlock(b, j))}
+        </blockquote>
       );
     case 'paragraph':
       return (
@@ -207,20 +223,41 @@ function renderBlock(block: MdBlock, key: number): ReactNode {
           {renderInline(block.inline)}
         </p>
       );
-    case 'list':
-      return block.ordered ? (
-        <ol key={key} className={styles.lista}>
-          {block.items.map((item, j) => (
-            <li key={j}>{renderInline(item)}</li>
-          ))}
-        </ol>
-      ) : (
-        <ul key={key} className={styles.lista}>
-          {block.items.map((item, j) => (
-            <li key={j}>{renderInline(item)}</li>
-          ))}
-        </ul>
+    case 'list': {
+      const Lista = block.ordered ? 'ol' : 'ul';
+      return (
+        <Lista key={key} className={styles.lista}>
+          {block.items.map((item, j) => {
+            const tarefa = block.tarefas?.[j] ?? null;
+            const filho = block.filhos?.[j] ?? null;
+            const SubLista = filho?.ordered ? 'ol' : 'ul';
+            return (
+              <li key={j} className={tarefa !== null ? styles.itemTarefa : undefined}>
+                {tarefa !== null && (
+                  // Só visual (RN-837): a caixa não é controle, não muda nada.
+                  <input
+                    type="checkbox"
+                    className={styles.caixaTarefa}
+                    checked={tarefa}
+                    readOnly
+                    disabled
+                    tabIndex={-1}
+                  />
+                )}
+                {renderInline(item)}
+                {filho && (
+                  <SubLista className={styles.lista}>
+                    {filho.items.map((sub, k) => (
+                      <li key={k}>{renderInline(sub)}</li>
+                    ))}
+                  </SubLista>
+                )}
+              </li>
+            );
+          })}
+        </Lista>
       );
+    }
     case 'code':
       return <CodeFence key={key} lang={block.lang} content={block.content} />;
     case 'table':
@@ -256,7 +293,9 @@ export function MarkdownInline({ text }: { text: string }) {
   return <>{renderInline(parseInline(text))}</>;
 }
 
-export function MarkdownMessage({ text }: { text: string }) {
-  const blocos = parseMarkdown(text);
+/** `emCurso` (RN-837): o texto é um prefixo de stream — fecha os marcadores
+ *  abertos antes de parsear. O texto final passa sem isso. */
+export function MarkdownMessage({ text, emCurso = false }: { text: string; emCurso?: boolean }) {
+  const blocos = parseMarkdown(emCurso ? fecharMarcadoresAbertos(text) : text);
   return <div className={styles.markdown}>{blocos.map((b, i) => renderBlock(b, i))}</div>;
 }

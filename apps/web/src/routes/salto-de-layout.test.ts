@@ -31,4 +31,12 @@ describe('blocos tardios não empurram o botão (RN-816)', () => {
     expect(s.indexOf('<PararExecucao')).toBeLessThan(pendencias);
     expect(s.indexOf('<ModoAutomaticoDoTime')).toBeLessThan(pendencias);
   });
+
+  it('RN-835 (AT-502): Visão geral — as tarefas bloqueadas vêm antes do religar e do grid dos dev agents', () => {
+    const s = fonte('ProjectOverviewTab.tsx');
+    const bloqueadas = s.indexOf('{blockedTasks.length > 0 && (');
+    expect(bloqueadas).toBeGreaterThan(-1);
+    expect(bloqueadas).toBeLessThan(s.indexOf('<ReligarExecucao'));
+    expect(bloqueadas).toBeLessThan(s.indexOf("executionSection.devAgentsLabel"));
+  });
 });

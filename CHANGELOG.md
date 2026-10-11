@@ -9,6 +9,8 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - **api**: o QA de Automação roda com o raciocínio desligado, como os dev agents de execução; o QA-estratégia não muda (AT-504, RN-838).
 - **api**: o recorte do Jev nunca tira `report_done` nem `report_blocked` dos dev agents de execução (AT-499, RN-839).
 - **web**: o campo "Nome do projeto" do assistente passa a se chamar `projeto-slug` (era `project-title`, e "title" é token de contato): o NordPass não deve mais abrir a lista de contatos sobre ele — heurística, sem atributo de ignore documentado pelo NordPass (RN-834, AT-501).
+- **web (fio da Sessão)**: botão flutuante "ir ao fim" quando chega mensagem para quem subiu no fio, com o número de mensagens novas e realce quando a novidade é uma aprovação (RN-836, AT-506).
+- **web (markdown do fio)**: a resposta do agente ganha régua (`---`), citação (`>`), `####`, lista aninhada de um nível e checklist (`- [ ]`/`- [x]`, só visual); e o texto em curso pode passar por `fecharMarcadoresAbertos`, que fecha fence, crase e negrito pendentes para o prefixo do stream não mostrar marcador cru — o texto final segue sem ele (RN-837, AT-507).
 - **engine**: o dev agent deixa de bloquear tarefa pronta procurando ferramenta de commit: a descrição de `report_done`/`report_blocked`, o kickoff e a mensagem de ambiente dizem que `report_done` faz commit, push e PR (o ambiente mandava usar ações tipadas de git que o dev não tem), e que teste novo entra no script `test` que lista arquivos (RN-832, AT-499).
 - **web**: o chat da sessão mostra as PRs prontas para merge (gates aprovados, inclusive ADR e infra) com "Mergear" e o cartão de aprovação ali, e as tarefas bloqueadas com motivo e "Desbloquear" (RN-825, RN-826, AT-497).
 - **web (fio da Sessão)**: a bolha do agente mantém o mesmo avatar do streaming ao fim do turno, com o modelo só no chip (RN-829); Enter não envia no meio da composição de acento, o fio é `role="log"` e a faixa do turno `role="status"` (RN-830); a mensagem cujo envio falhou fica no fio como "não enviada", com "Tentar de novo" ao mesmo destinatário (RN-831, AT-503).
@@ -110,6 +112,11 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - **infra**: a subida do container no aceite do handoff da Infra (e a tool de subida sem rede informada) herda a rede que o Arquiteto declarou na imagem do projeto — `egress` deixa de ser rebaixado para `none`, e sobe sem clique como antes (AT-392, RN-723, ADR 0208).
 - **ações**: com o modo automático do agente ligado (a curinga em `auto_approve`), `git_push` e `pr_open` — tipados ou pelo comando de terminal — passam a ser auto-aprovados, com o motivo "modo automático (RN-713)" no evento; regra específica, "Sempre permitir" e `permissions.json` continuam sem liberar, e merge em branch protegida, deploy e `sudo`/`doas` seguem com o usuário. As telas do modo automático dizem isso (AT-385, RN-713, ADR 0204).
 ### Correções
+
+- Visão geral: o "Desbloquear" das tarefas bloqueadas vem antes dos blocos que
+  carregam depois (religar e dev agents), fica inerte com "Desbloqueando…" em
+  voo, diz "Tarefa desbloqueada" no sucesso e mostra a frase da api na recusa;
+  sem sessão lida, diz por que está inerte (RN-835, AT-502).
 
 - **gates**: o ciclo de QA/SecOps que o reinício do engine matou no meio é retomado já no boot, sem esperar os 15 min do resgate, quando nenhum nó do cluster o tem em voo; o boot grava `gate.interrupted` e o fio da sessão avisa que o gate foi interrompido e retomado (AT-495, RN-823).
 - **secops**: o item do gitleaks no parecer diz a regra que acusou e o trecho com o segredo mascarado (`***`), e o ambiente do dev agent avisa que segredo de teste é gerado em tempo de execução, nunca literal (AT-470, RN-796).

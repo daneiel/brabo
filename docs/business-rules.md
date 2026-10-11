@@ -22945,7 +22945,7 @@ sem dizer qual.
 - **Onde:** `apps/web/src/components/ReligarExecucao.tsx:23` (`ReligarExecucao`),
   `apps/web/src/lib/execution.ts:10` (`contarTarefasPendentes`),
   `apps/web/src/routes/ProjectExecutorsTab.tsx:99` (`semExecucaoVigente`),
-  `apps/web/src/routes/ProjectOverviewTab.tsx:488` (`semExecucaoVigente`)
+  `apps/web/src/routes/ProjectOverviewTab.tsx:500` (`semExecucaoVigente`)
 - **Teste:** `apps/web/src/routes/ProjectExecutorsTab.test.tsx` (religar a
   execução), `apps/web/src/routes/ProjectOverviewTab.test.tsx` (religar a
   execução encerrada)
@@ -23507,7 +23507,7 @@ sem dizer qual.
   Agente fora do roster (ou sem id) degrada para o ícone
   genérico, nunca para caixa vazia.
 - **Onde:** `apps/web/src/components/ui/AvatarDoAgente.tsx:22` (`AvatarDoAgente`),
-  `apps/web/src/routes/SessionFio.tsx:278` (`BolhaDoStreaming`),
+  `apps/web/src/routes/SessionFio.tsx:284` (`BolhaDoStreaming`),
   `apps/web/src/routes/session-timeline-montagem.tsx:120` (`montarTimeline`)
 - **Teste:** `apps/web/src/routes/SessionFio.at503.test.tsx` ("a bolha
   persistida usa o avatar do agente, não o do modelo; o modelo segue no chip",
@@ -23635,6 +23635,70 @@ sem dizer qual.
   no teto e devolve o total real; não lê sessão sem ligação")
 - **Origem:** AT-498
 
+### RN-835 — O "Desbloquear" da Visão geral não se move e diz o que aconteceu {#rn-835}
+
+- **Regra:** extensão da [RN-816](#rn-816) e da [RN-794](#rn-794). Na seção de
+  execução da Visão geral, a lista de tarefas bloqueadas vem PRIMEIRO, antes do
+  "Religar execução" (que depende da leitura da execução vigente) e do grid dos
+  dev agents (que depende dos eventos) — blocos que chegavam depois do primeiro
+  paint e empurravam o botão sob o cursor. O desbloqueio tem retorno POR
+  TAREFA: em voo o botão fica inerte e diz "Desbloqueando…" (um clique, uma
+  chamada), o sucesso diz "Tarefa desbloqueada" até o backlog relido tirar a
+  linha, e a recusa mostra a frase da api na própria linha. Sem sessão lida, o
+  botão fica inerte com o motivo em texto — antes o clique retornava calado.
+  Declarado: o que fica ACIMA da seção (o time e a árvore de atividade) não tem
+  altura reservada, e jsdom não faz layout — o teste prova a ORDEM, não o
+  deslocamento em pixels; qual das duas causas (salto ou sessão não lida) fez o
+  1º clique do TP-01 se perder não foi medido no navegador.
+- **Onde:** `apps/web/src/routes/ProjectOverviewTab.tsx:485` (`desbloqueio`),
+  `apps/web/src/routes/ProjectOverviewTab.tsx:605` (`blockedTasks`)
+- **Teste:** `apps/web/src/routes/ProjectOverviewTab.test.tsx` ("RN-835
+  (AT-502): o desbloqueio chama uma vez, fica em voo e diz quando terminou";
+  falha: "RN-835: a recusa do desbloqueio mostra a frase da api na linha"),
+  `apps/web/src/routes/salto-de-layout.test.ts` ("RN-835 (AT-502): Visão
+  geral — as tarefas bloqueadas vêm antes…")
+- **Origem:** AT-502 (TP-01 de 10/10)
+### RN-836 — O fio oferece "ir ao fim" quando chega conteúdo para quem subiu {#rn-836}
+
+- **Regra:** com a pessoa longe do fim do fio (a guarda dos 120px da
+  [RN-173](business-rules/autenticacao.md#rn-173)) e o fio tendo ganho mensagem ou cartão de aprovação
+  desde que ela saiu do fim, um botão flutuante no rodapé da área que rola
+  oferece o salto ao fim, contando as mensagens novas ("3 mensagens novas",
+  plural do i18next com `_zero`/`_one`/`_other`). Cartão de aprovação novo
+  não soma ao número: REALÇA o botão e troca o rótulo por "Há uma aprovação
+  esperando". O botão tem rótulo acessível próprio, some ao chegar ao fim e
+  nunca aparece para quem está no fim — ali a rolagem automática da RN-173
+  continua mandando, e o botão só observa.
+- **Onde:** `apps/web/src/lib/session-rolagem.ts:206` (`estadoDoIrAoFim`),
+  `apps/web/src/lib/session-rolagem.ts:227` (`useIrAoFimDoFio`),
+  `apps/web/src/routes/IrAoFimDoFio.tsx:10` (`IrAoFimDoFio`)
+- **Teste:** `apps/web/src/routes/IrAoFimDoFio.test.tsx` ("caminho feliz: fora
+  do fim e com mensagens novas, mostra o contador…", "aprovação nova realça o
+  botão"; falha: "no fim, conteúdo novo não mostra botão")
+- **Origem:** AT-506 (Melhorias de UX do Chat, item 1.3)
+### RN-837 — Markdown do fio: blocos novos e prefixo de stream sem marcador cru {#rn-837}
+
+- **Regra:** o Markdown leve do chat (parser próprio, sem dependência) também
+  reconhece régua (`---`, `***`, `___`; logo depois de texto de parágrafo
+  continua texto), citação (linhas `>` seguidas, miolo reprocessado pelo
+  mesmo parser), cabeçalho `####`, lista aninhada de UM nível (item recuado em
+  2+ espaços vai para o item anterior; mais fundo achata) e checklist
+  (`- [ ]`/`- [x]`, caixa só visual, desabilitada). No modo stream
+  (`MarkdownMessage` com `emCurso`), o texto passa antes por
+  `fecharMarcadoresAbertos`, que fecha fence, crase e `**` pendentes e tira um
+  marcador solto na ponta — nenhum prefixo lança nem mostra marcador cru. O
+  texto final nunca passa por ele. Continua sem `dangerouslySetInnerHTML`.
+- **Onde:** `apps/web/src/lib/markdown.ts:122` (`HR_RE`),
+  `apps/web/src/lib/markdown.ts:123` (`CITACAO_RE`),
+  `apps/web/src/lib/markdown.ts:124` (`TAREFA_RE`),
+  `apps/web/src/lib/markdown.ts:374` (`fecharMarcadoresAbertos`),
+  `apps/web/src/components/ui/MarkdownMessage.tsx:298` (`MarkdownMessage`)
+- **Teste:** `apps/web/src/lib/markdown.blocos-e-stream.test.ts` ("checklist
+  marca cada item…"; falha: "`---` logo depois de texto continua texto"),
+  `apps/web/src/components/ui/MarkdownMessage.stream.test.tsx` ("nenhum
+  prefixo lança nem mostra marcador cru"; falha: "o texto final (sem
+  emCurso) não é alterado")
+- **Origem:** AT-507 (Melhorias de UX do Chat, 10/10, item 1.2-a)
 ### RN-838 — O QA de Automação roda com o raciocínio desligado {#rn-838}
 
 - **Regra:** estende a [RN-783](#rn-783) (decisão do dono de 10/10). O gate
