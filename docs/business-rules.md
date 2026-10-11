@@ -23510,7 +23510,7 @@ sem dizer qual.
   tarefa: sucesso em texto, e a recusa com a frase da api. Papel abaixo de
   `developer` vê a fila com o botão inerte e o motivo em texto.
 - **Onde:** `apps/web/src/lib/prontas-e-bloqueadas.ts:53` (`tarefasBloqueadas`),
-  `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:164` (`desbloquear`)
+  `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:165` (`desbloquear`)
 - **Teste:** `apps/web/src/components/PendenciasDeOutrasSessoes.test.tsx`
   ("CASO DE FALHA: desbloquear com erro diz o erro da api na linha da tarefa")
 - **Origem:** AT-497
@@ -23824,3 +23824,22 @@ sem dizer qual.
   leu, nunca aberta").
 - **Origem:** AT-514 (TP-01, 11/10: o Arquiteto disse "aberta como PR" 30 s
   depois do merge).
+### RN-843 — Um cartão de decisão por ação no chat {#rn-843}
+
+- **Regra:** extensão da [RN-822](#rn-822). O `git_merge` PENDENTE que o bloco
+  de pendências desenha na linha da PR ("PRs prontas para merge") é o ÚNICO
+  `ApprovalCard` dele na tela: o bloco registra os ids que desenha num registro
+  leve do cliente, e o fio da sessão, enquanto a ação estiver pendente e
+  registrada, mostra só uma linha apontando para a fila. Decidida, o fio volta
+  ao cartão (histórico); sem o bloco montado (outra tela, PR fora da fila), o
+  fio mostra o cartão completo. O registro vale só enquanto o cartão está
+  MONTADO: com o bloco recolhido (o `Disclosure` desmonta o conteúdo), o fio
+  mostra o cartão. Nenhum endpoint nem teto muda.
+- **Onde:** `apps/web/src/lib/acoes-no-bloco.ts:48` (`useAcaoEstaNoBloco`),
+  `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:426` (`useRegistrarAcoesNoBloco`),
+  `apps/web/src/components/CartaoOuReferenciaNoFio.tsx:11` (`CartaoOuReferenciaNoFio`),
+  `apps/web/src/routes/session-timeline-montagem.tsx:1132` (`CartaoOuReferenciaNoFio`)
+- **Teste:** `apps/web/src/components/CartaoOuReferenciaNoFio.test.tsx`,
+  `apps/web/src/components/PendenciasDeOutrasSessoes.test.tsx` ("a PR com os
+  gates aprovados aparece…")
+- **Origem:** AT-512

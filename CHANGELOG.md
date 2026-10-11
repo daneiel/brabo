@@ -10,6 +10,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - **web**: o rótulo do campo de nome do assistente passa a ser "Projeto" (en: "Project"), sem a palavra "Nome", para o NordPass não abrir "Contact info" sobre ele — heurística, sem atributo de ignore documentado (AT-511, RN-842).
 - O dev agent de execução documenta no README a rota HTTP que cria ou muda (método, caminho, corpo, respostas e códigos) e responde erro de entrada com mensagem própria do projeto; o QA confere as duas coisas na varredura por regra (AT-515, RN-846).
 
+- **web**: o merge proposto pela fila "PRs prontas para merge" tem um cartão de decisão só; no fio, enquanto pendente, vira uma linha que aponta para a fila (AT-512, RN-843).
 - **web**: a fila "PRs prontas para merge" do chat aparece sem recarregar a página: a mudança de status/gate de tarefa no backlog (lido a 15 s) e os avisos de PR aberta ou mergeada desta sessão releem a lista, sem poll novo (AT-510, RN-841).
 
 - **web**: a ajuda da faceta "thinking" do catálogo de modelos cita o QA de Automação entre os agentes que rodam sem raciocínio (AT-508, RN-783).

@@ -25,6 +25,7 @@ import { hashtagDaSessao } from '../lib/session-label';
 import { formatRelativeTime } from '../lib/time';
 import { useDecisoesDaPolitica } from '../lib/decisao-da-politica-queries';
 import { ApprovalCard } from './ApprovalCard';
+import { useRegistrarAcoesNoBloco } from '../lib/acoes-no-bloco';
 import { Disclosure } from './ui/Disclosure';
 import styles from './PendenciasDeOutrasSessoes.module.css';
 
@@ -333,7 +334,12 @@ export function PendenciasDeOutrasSessoes({
                       #{pr.number} {pr.title} · {pr.sourceBranch} → {pr.targetBranch}
                     </div>
                     {acao && acao.status === 'pending' ? (
-                      cardDeDecisao(acao)
+                      <>
+                        {/* RN-843: registra só enquanto o cartão está MONTADO
+                            (o Disclosure recolhido desmonta e desregistra). */}
+                        <RegistroDoBloco ids={[acao.id]} />
+                        {cardDeDecisao(acao)}
+                      </>
                     ) : (
                       <div className={styles.acoesDaLinha}>
                         <Button
@@ -413,4 +419,10 @@ export function PendenciasDeOutrasSessoes({
       </Disclosure>
     </div>
   );
+}
+
+/** RN-843 (AT-512): o cartão montado na linha da PR se registra para o fio. */
+function RegistroDoBloco({ ids }: { ids: readonly string[] }) {
+  useRegistrarAcoesNoBloco(ids);
+  return null;
 }

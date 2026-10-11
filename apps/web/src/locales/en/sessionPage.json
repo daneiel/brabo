@@ -221,6 +221,7 @@
     "passosCount_other": "{{count}} steps"
   },
   "pendencias": {
+    "referenciaNoFio": "Merge proposed — decide it in the \"PRs ready to merge\" queue above.",
     "titulo": "Pending decisions from other sessions in this project",
     "nota": "A shortcut to the decision: the same cards and endpoints as the Approvals tab. No ceiling changes — merging into a protected branch stays manual.",
     "filas": {
