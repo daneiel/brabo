@@ -14643,7 +14643,7 @@ desde a Fase 4a —, e o que muda é a latência máxima das escritas sem aviso.
   `apps/api/src/infrastructure/persistence/drizzle/drizzle-context.ts:39`
   (`aposCommit`), `:53` (`veioDoEngine`);
   `apps/web/src/lib/canal-vivo.ts:35` (fallback), `:66` (estado), `:108`
-  (`intervaloDaSessao`), `:134` (`alvosDoEvento`), `:150` (janelas), `:196`
+  (`intervaloDaSessao`), `:134` (`alvosDoEvento`), `:150` (janelas), `:207`
   (`criarInvalidadorDoCanal`); `apps/web/src/lib/session-channel.ts:161`,
   `:165`, `:131`, `:229`; `apps/web/src/lib/session-turno.ts:414`
   (o aviso: invalida e, do acompanhado, antecipa a leitura), `:86`
@@ -17813,7 +17813,7 @@ não dizia quais abas estavam abertas, e a leitura de que `/containers` estava
 numa delas é inferência pelos 106 ≈ 9 × 12.
 
 - **Código:** `apps/web/src/lib/canal-vivo.ts:54` (`INTERVALO_DO_PROJETO_MS`),
-  `:243` (`aoEvento`, os `extras`); `apps/web/src/lib/hooks.ts:127`
+  `:255` (`aoEvento`, os `extras`); `apps/web/src/lib/hooks.ts:127`
   (`useProjectSessions`), `:158` (`useLatestSession`);
   `apps/web/src/routes/ProjectPage.tsx:77` (os contadores do trilho);
   `apps/web/src/routes/ContainersPage.tsx:62` (`useLatestSession`, sem poll);
@@ -20398,7 +20398,7 @@ E o composer e os campos de texto das perguntas estruturadas levam
 
 - **Onde:** `apps/web/src/lib/conversa-comecou.ts:15` (`conversaComecou`),
   `:29` (`SEM_AUTOFILL`); `apps/web/src/routes/SessionPage.tsx:432`
-  (`conversaComecou`); `apps/web/src/routes/SessionComposer.tsx:380`
+  (`conversaComecou`); `apps/web/src/routes/SessionComposer.tsx:389`
   (`SEM_AUTOFILL`); `apps/web/src/routes/StructuredQuestionCard.tsx:206`
   (`SEM_AUTOFILL`)
 - **Teste:** `apps/web/src/routes/SessionPage.sessao.test.tsx:316` (Criativo
@@ -22396,7 +22396,7 @@ sem dizer qual.
   vocabulário lê os JSON, e o enum entrava pela interpolação em runtime;
   `i18n-enum-cru.test.ts` reprova `t(…, { status: x.status })`.
 - **Onde:** `apps/web/src/routes/ConfirmarEncerramento.tsx:13`
-  (`useEncerrarComConfirmacao`) e `apps/web/src/routes/SessionComposer.tsx:464`
+  (`useEncerrarComConfirmacao`) e `apps/web/src/routes/SessionComposer.tsx:473`
   (`statusGenerico`)
 - **Teste:** `apps/web/src/routes/ConfirmarEncerramento.test.tsx` (sem
   execução encerra direto; com execução só encerra ao confirmar; cancelar não
@@ -23534,7 +23534,7 @@ sem dizer qual.
   já fazem (mesmas `queryKey`s, backlog a 15 s), sem poll novo apertado
   ([RN-579](#rn-579)).
 - **Onde:** `apps/web/src/lib/prontas-e-bloqueadas.ts:30` (`prsProntasParaMerge`),
-  `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:107` (`prontas`)
+  `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:112` (`prontas`)
 - **Teste:** `apps/web/src/components/PendenciasDeOutrasSessoes.test.tsx`
   ("a PR com os gates aprovados aparece, a com gate pendente não, e Mergear
   mostra o cartão ali")
@@ -23549,7 +23549,7 @@ sem dizer qual.
   tarefa: sucesso em texto, e a recusa com a frase da api. Papel abaixo de
   `developer` vê a fila com o botão inerte e o motivo em texto.
 - **Onde:** `apps/web/src/lib/prontas-e-bloqueadas.ts:53` (`tarefasBloqueadas`),
-  `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:165` (`desbloquear`)
+  `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:180` (`desbloquear`)
 - **Teste:** `apps/web/src/components/PendenciasDeOutrasSessoes.test.tsx`
   ("CASO DE FALHA: desbloquear com erro diz o erro da api na linha da tarefa")
 - **Origem:** AT-497
@@ -23890,7 +23890,7 @@ sem dizer qual.
   MONTADO: com o bloco recolhido (o `Disclosure` desmonta o conteúdo), o fio
   mostra o cartão. Nenhum endpoint nem teto muda.
 - **Onde:** `apps/web/src/lib/acoes-no-bloco.ts:48` (`useAcaoEstaNoBloco`),
-  `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:426` (`useRegistrarAcoesNoBloco`),
+  `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:450` (`useRegistrarAcoesNoBloco`),
   `apps/web/src/components/CartaoOuReferenciaNoFio.tsx:11` (`CartaoOuReferenciaNoFio`),
   `apps/web/src/routes/session-timeline-montagem.tsx:1132` (`CartaoOuReferenciaNoFio`)
 - **Teste:** `apps/web/src/components/CartaoOuReferenciaNoFio.test.tsx`,
@@ -24288,3 +24288,30 @@ sem dizer qual.
   `apps/engine/test/engine/gates/qa_lead_server_test.exs` ("grava a pergunta
   na api, estaciona o ciclo e só o gesto humano o retoma")
 - **Origem:** AT-521, [ADR 0214](adr/0214-pergunta-em-aberto-vira-pendencia.md)
+### RN-861 — As perguntas em aberto são fila própria no chat, e o aviso de prontidão não bloqueia {#rn-861}
+
+- **Regra:** o bloco de pendências do chat ganha a fila "Perguntas em
+  aberto", com título e contagem PRÓPRIOS (o `total` da api, nunca somado às
+  outras filas — RN-467) e recorte declarado quando a lista vem com teto
+  (RN-180). Cada cartão diz a pergunta, o agente que perguntou, o que ela
+  afeta, a sugestão com "Aceitar sugestão" e um campo curto com "Responder";
+  a tarefa que o gate de QA estacionou pela pergunta (RN-860) aparece no
+  próprio cartão como "esperando sua resposta". Só o autor da sessão de
+  origem (`autorDaSessao`) tem os controles; os outros veem o cartão com o
+  controle inerte e o motivo em texto (ADR 0064). A recusa mostra a frase da
+  api; o sucesso relê a fila e a pergunta sai. A leitura NÃO polla: o canal
+  relê a fila em `artifact.open_question`, `open_question.answered` e
+  `pr.gate_changed` (alvo `perguntas`, janela de 2 s). Junto de "Estou pronto"
+  e de "Confirmar arquitetura pronta", o composer avisa "N perguntas em
+  aberto" com atalho até a fila, lendo a MESMA query — só avisa, os botões
+  seguem habilitados (ADR 0214).
+- **Onde:** `apps/web/src/components/PerguntasEmAberto.tsx:35`
+  (`PerguntasEmAberto`), `:75` (`eAutor`), `:176`
+  (`AvisoDePerguntasEmAberto`), `apps/web/src/lib/canal-vivo.ts:135`
+  (`alvosDoEvento`)
+- **Teste:** `apps/web/src/components/PerguntasEmAberto.test.tsx` ("fila
+  própria com contagem própria; o autor responde e aceita a sugestão", "o
+  aviso do composer diz N e não bloqueia nada; some sem perguntas"; falha: "a
+  recusa 409 mostra a frase da api", "quem não é o autor da sessão vê o
+  cartão com o controle inerte e o motivo em texto")
+- **Origem:** AT-521

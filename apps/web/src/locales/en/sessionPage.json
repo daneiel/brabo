@@ -66,7 +66,10 @@
     "destinatarioPrecisaEscolher": "There is more than one agent in this session: choose who the message goes to.",
     "semAgente": "This session has no agent yet: choose one and click Call. The offer shows up in the conversation, and the message can only be sent after you accept it.",
     "chamarAgente": "Call",
-    "enfileirar": "Queue"
+    "enfileirar": "Queue",
+    "perguntasEmAberto_one": "{{count}} open question",
+    "perguntasEmAberto_other": "{{count}} open questions",
+    "responderPerguntas": "Answer them"
   },
   "ativacao": {
     "mensagemNaoEnviada": "Your unsent message",
@@ -232,7 +235,8 @@
       "aprovacoes": "Approvals",
       "merges": "PR merges",
       "prontas": "PRs ready to merge",
-      "bloqueadas": "Blocked tasks"
+      "bloqueadas": "Blocked tasks",
+      "perguntas": "Open questions"
     },
     "origem_one": "Proposed in session {{hashtag}} · {{tempo}}",
     "origem_other": "{{count}} proposed in session {{hashtag}} · oldest {{tempo}}",
@@ -250,6 +254,24 @@
       "erro": "Could not unblock the task.",
       "semMotivo": "No reason recorded.",
       "semPapel": "Unblocking requires the developer role on the project."
+    },
+    "perguntas": {
+      "origem": "{{agente}} asked · {{tempo}}",
+      "afeta": "Affects:",
+      "afetaRegras_one": "{{count}} rule",
+      "afetaRegras_other": "{{count}} rules",
+      "afetaHistorias_one": "{{count}} story",
+      "afetaHistorias_other": "{{count}} stories",
+      "afetaTarefas_one": "{{count}} task",
+      "afetaTarefas_other": "{{count}} tasks",
+      "esperando": "The task \"{{tarefa}}\" is waiting for your answer.",
+      "sugestao": "Suggestion:",
+      "aceitar": "Accept suggestion",
+      "campo": "Your answer",
+      "responder": "Answer",
+      "soOAutor": "Only the person who created the session where the question was asked can answer it.",
+      "erro": "The answer could not be saved.",
+      "recorte": "Showing {{mostradas}} of {{total}} questions."
     }
   },
   "mergearNoChat": {

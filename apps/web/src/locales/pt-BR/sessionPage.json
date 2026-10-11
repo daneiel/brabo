@@ -66,7 +66,11 @@
     "destinatarioPrecisaEscolher": "Há mais de um agente nesta sessão: escolha a quem vai a mensagem.",
     "semAgente": "Esta sessão ainda não tem agente: escolha um e clique em Chamar. A oferta aparece na conversa, e a mensagem só pode ser enviada depois que você aceitá-la.",
     "chamarAgente": "Chamar",
-    "enfileirar": "Pôr na fila"
+    "enfileirar": "Pôr na fila",
+    "perguntasEmAberto_zero": "{{count}} perguntas em aberto",
+    "perguntasEmAberto_one": "{{count}} pergunta em aberto",
+    "perguntasEmAberto_other": "{{count}} perguntas em aberto",
+    "responderPerguntas": "Responder"
   },
   "ativacao": {
     "mensagemNaoEnviada": "Sua mensagem não enviada",
@@ -239,7 +243,8 @@
       "aprovacoes": "Aprovações",
       "merges": "Merges de PR",
       "prontas": "PRs prontas para merge",
-      "bloqueadas": "Tarefas bloqueadas"
+      "bloqueadas": "Tarefas bloqueadas",
+      "perguntas": "Perguntas em aberto"
     },
     "origem_zero": "{{count}} propostas na sessão {{hashtag}} · a mais antiga {{tempo}}",
     "origem_one": "Proposta na sessão {{hashtag}} · {{tempo}}",
@@ -260,6 +265,27 @@
       "erro": "Não foi possível desbloquear a tarefa.",
       "semMotivo": "Sem motivo registrado.",
       "semPapel": "Desbloquear exige o papel developer no projeto."
+    },
+    "perguntas": {
+      "origem": "{{agente}} perguntou · {{tempo}}",
+      "afeta": "Afeta:",
+      "afetaRegras_zero": "{{count}} regras",
+      "afetaRegras_one": "{{count}} regra",
+      "afetaRegras_other": "{{count}} regras",
+      "afetaHistorias_zero": "{{count}} histórias",
+      "afetaHistorias_one": "{{count}} história",
+      "afetaHistorias_other": "{{count}} histórias",
+      "afetaTarefas_zero": "{{count}} tarefas",
+      "afetaTarefas_one": "{{count}} tarefa",
+      "afetaTarefas_other": "{{count}} tarefas",
+      "esperando": "A tarefa \"{{tarefa}}\" está esperando sua resposta.",
+      "sugestao": "Sugestão:",
+      "aceitar": "Aceitar sugestão",
+      "campo": "Sua resposta",
+      "responder": "Responder",
+      "soOAutor": "Só quem criou a sessão em que a pergunta nasceu pode respondê-la.",
+      "erro": "Não foi possível gravar a resposta.",
+      "recorte": "Mostrando {{mostradas}} de {{total}} perguntas."
     }
   },
   "mergearNoChat": {
