@@ -1080,11 +1080,16 @@ rationale, network, resources}`), `null` when none was decided. It is the
 | POST | `/tasks/claim` |
 | POST | `/tasks/:taskId/status` |
 | POST | `/tasks/:taskId/block` |
+| POST | `/tasks/:taskId/unblock` (RN-864) |
 | GET | `/tasks/in-progress-by-dev` (RN-856) |
 
 `tasks/claim` is atomic on the api side — it's what prevents two dev agents from
 claiming the same task. Since RN-856 it returns the agent's OWN `in_progress`
 task (outside the gates, not blocked) before the `todo` queue.
+`tasks/:taskId/unblock` is the engine's automatic retry after a transient
+network/provider failure ([RN-864](../business-rules.md#rn-864)): the same use
+case as the human unblock, with a `system` actor, and a no-op when the task is
+no longer blocked.
 `tasks/in-progress-by-dev` lists the project's `in_progress` tasks held by a
 `dev-*` agent (empty unless the session is an execution session); the engine
 blocks the ones no live dev agent holds when it stops an execution.

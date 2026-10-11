@@ -3295,6 +3295,70 @@
         ]
       }
     },
+    "/internal/sessions/{sessionId}/tasks/{taskId}/unblock": {
+      "post": {
+        "description": "Called by the engine retry job (up to 3 times, after 1, 3 and 10 min). Same use case as the human unblock, with a `system` actor; a task that is no longer blocked is left untouched.",
+        "operationId": "InternalSessionsController_unblockTaskAutomatically",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "taskId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnblockTaskInternalDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body."
+          },
+          "403": {
+            "description": "Service token missing or different from the shared one."
+          },
+          "404": {
+            "description": "Session, project, or resource not found."
+          }
+        },
+        "security": [
+          {
+            "service-token": []
+          }
+        ],
+        "summary": "Unblocks a task after a transient network/provider failure",
+        "tags": [
+          "internal"
+        ]
+      }
+    },
     "/internal/sessions/{sessionId}/tasks/claim": {
       "post": {
         "description": "ATOMIC by design: with several dev agents on the same module, two concurrent claims cannot return the same task. With no task available, returns empty instead of an error.",
@@ -25820,6 +25884,25 @@
         },
         "required": [
           "status"
+        ]
+      },
+      "UnblockTaskInternalDto": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "01JC4Z0000PROJETO0000000001"
+          },
+          "agentId": {
+            "type": "string",
+            "example": "dev-api",
+            "description": "The dev agent whose transient failure scheduled the retry."
+          }
+        },
+        "required": [
+          "projectId",
+          "agentId"
         ]
       },
       "UnreadCursorDto": {

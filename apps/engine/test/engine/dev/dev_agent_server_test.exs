@@ -5,6 +5,7 @@ defmodule Engine.Dev.DevAgentServerTest do
   # síncrono no mesmo processo, e o acesso ao banco fica no sandbox do
   # próprio processo.
   use Engine.DataCase, async: false
+  use Oban.Testing, repo: Engine.Repo, prefix: "engine"
 
   alias Engine.Dev.{DevAgentServer, DevAgentState, FakeWorktreeManager}
   alias Engine.Gates.FakeGateDispatcher
@@ -752,6 +753,74 @@ defmodule Engine.Dev.DevAgentServerTest do
       assert_received {:task_blocked_origin, "task-n1", "infra"}
       refute_received {:event_appended, _, _, %{type: "dev.idle_tripped"}}
       assert new_state.consecutive_blocked == 2
+    end
+
+    # RN-864 (AT-525): falha passageira agenda a retomada (1 min) e PAUSA o
+    # agente, que não pega a próxima task.
+    test "falha passageira: agenda a retomada, pausa e não queima a fila", %{state: state} do
+      Process.put(:fake_tasks, [
+        %{"id" => "task-p1", "title" => "T1"},
+        %{"id" => "task-p2", "title" => "T2"}
+      ])
+
+      Process.put(:fake_dev_context, contexto_minimo())
+      Process.put(:fake_llm_turn_error, "getaddrinfo EAI_AGAIN openrouter.ai")
+
+      assert {:noreply, new_state} = DevAgentServer.handle_cast(:work, state)
+
+      assert_received {:task_blocked, "task-p1", motivo, _, "dev-api"}
+      assert motivo =~ "retomada automática 1 de 3 em 1 min"
+      refute_received {:task_blocked, "task-p2", _, _, _}
+      assert new_state.status == :idle
+      assert new_state.pausa_de_rede
+      assert new_state.retomadas_automaticas == %{"task-p1" => 1}
+
+      assert [job] = all_enqueued(worker: Engine.Workers.RetomadaDeTarefaWorker)
+      assert job.args["taskId"] == "task-p1"
+      assert DateTime.diff(job.scheduled_at, DateTime.utc_now()) in 50..61
+
+      # Wake durante a pausa não reivindica.
+      assert {:noreply, ^new_state} =
+               DevAgentServer.handle_info({:wake, :became_claimable}, new_state)
+    end
+
+    test "falha passageira depois de 3 retomadas fica bloqueada pedindo o clique",
+         %{state: state} do
+      state = Map.put(state, :retomadas_automaticas, %{"task-p3" => 3})
+      Process.put(:fake_tasks, [%{"id" => "task-p3", "title" => "T1"}])
+      Process.put(:fake_dev_context, contexto_minimo())
+      Process.put(:fake_llm_turn_error, "openrouter respondeu com status 503")
+
+      assert {:noreply, _} = DevAgentServer.handle_cast(:work, state)
+
+      assert_received {:task_blocked, "task-p3", motivo, _, "dev-api"}
+      assert motivo =~ "3 retomadas automáticas já tentadas; desbloqueie à mão"
+      assert_received {:task_blocked_origin, "task-p3", "infra"}
+      assert [] == all_enqueued(worker: Engine.Workers.RetomadaDeTarefaWorker)
+    end
+
+    test "402 não agenda retomada", %{state: state} do
+      Process.put(:fake_tasks, [%{"id" => "task-c1", "title" => "T1"}])
+      Process.put(:fake_dev_context, contexto_minimo())
+
+      Process.put(
+        :fake_llm_turn_error,
+        "openrouter respondeu com status 402: This request would exceed your available credits"
+      )
+
+      assert {:noreply, _} = DevAgentServer.handle_cast(:work, state)
+      assert [] == all_enqueued(worker: Engine.Workers.RetomadaDeTarefaWorker)
+    end
+
+    test "fim da pausa volta a reivindicar", %{state: state} do
+      Process.put(:fake_tasks, [])
+      paused = Map.merge(state, %{status: :idle, pausa_de_rede: true})
+
+      assert {:noreply, new_state} = DevAgentServer.handle_info(:fim_da_pausa_de_rede, paused)
+      refute new_state.pausa_de_rede
+
+      assert_received {:event_appended, _, _,
+                       %{type: "dev.idle", payload: %{reason: "sem task pegável"}}}
     end
 
     # RN-780 (AT-459): só raciocínio, cortado pelo teto, duas vezes seguidas.

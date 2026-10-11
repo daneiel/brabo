@@ -338,6 +338,18 @@ defmodule Engine.Sessions.EngineApiClient do
               {:ok, map()} | {:error, term()}
 
   @doc """
+  RN-864 (AT-525): desbloqueia a task pela retomada automática depois de falha
+  passageira de rede — o MESMO caso de uso do "Desbloquear" humano, ator
+  `system`, no-op se a task já não está bloqueada.
+  """
+  @callback unblock_task(
+              project_id :: String.t(),
+              session_id :: String.t(),
+              task_id :: String.t(),
+              agent_id :: String.t()
+            ) :: {:ok, map() | nil} | {:error, term()}
+
+  @doc """
   RN-856 (AT-522): tarefas `in_progress` do projeto da sessão de EXECUÇÃO
   (vazio em outra) com dono `dev-*`, fora de
   gate e não bloqueadas — `[%{"taskId" => _, "assignedTo" => _}]`. O
@@ -875,6 +887,9 @@ defmodule Engine.Sessions.EngineApiClient do
   def mark_task(project_id, session_id, task_id, status, agent_id),
     do: impl().mark_task(project_id, session_id, task_id, status, agent_id)
 
+  def unblock_task(project_id, session_id, task_id, agent_id),
+    do: impl().unblock_task(project_id, session_id, task_id, agent_id)
+
   def get_dev_context(project_id, session_id, task_id, module \\ nil),
     do: impl().get_dev_context(project_id, session_id, task_id, module)
 
@@ -1330,6 +1345,14 @@ defmodule Engine.Sessions.EngineApiClient.Live do
       projectId: project_id,
       agentId: agent_id,
       status: status
+    })
+  end
+
+  @impl true
+  def unblock_task(project_id, session_id, task_id, agent_id) do
+    post_returning("/internal/sessions/#{session_id}/tasks/#{task_id}/unblock", %{
+      projectId: project_id,
+      agentId: agent_id
     })
   end
 

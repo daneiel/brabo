@@ -6,6 +6,10 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- A task bloqueada por falha passageira de rede ou do provedor (DNS, conexão
+  caída, 5xx/429) volta sozinha em até 3 tentativas, depois de 1, 3 e 10 min,
+  e o dev agent pausa 1 min em vez de bloquear a fila inteira; crédito
+  esgotado continua bloqueando na hora (RN-864, AT-525).
 - A sessão de execução não encerra mais no intervalo entre "Desbloquear" e o
   dev pegar a tarefa: o heartbeat conta como trabalho pendente a tarefa `todo`
   do módulo de um dev agent da execução e a `in_progress` atribuída a um deles.

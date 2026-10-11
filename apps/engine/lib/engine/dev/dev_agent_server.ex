@@ -83,6 +83,7 @@ defmodule Engine.Dev.DevAgentServer do
   alias Engine.Projects.ProjectRepository
   alias Engine.Runners.CredencialDeGit
   alias Engine.Sessions.EngineApiClient
+  alias Engine.Workers.RetomadaDeTarefaWorker
 
   # RN-715: o conflito de merge reusa o laço de correção sob este "gate".
   @gate_conflito "conflito_de_merge"
@@ -420,9 +421,21 @@ defmodule Engine.Dev.DevAgentServer do
     {:noreply, state}
   end
 
+  # RN-864: em pausa por falha passageira de rede, o wake não reivindica — é
+  # o fim da pausa (`:fim_da_pausa_de_rede`) que volta a tentar.
+  def handle_info({:wake, :became_claimable}, %{status: :idle, pausa_de_rede: true} = state),
+    do: {:noreply, state}
+
   def handle_info({:wake, :became_claimable}, %{status: :idle} = state) do
     {:noreply, try_claim(state)}
   end
+
+  def handle_info(:fim_da_pausa_de_rede, %{status: :idle} = state) do
+    {:noreply, try_claim(Map.put(state, :pausa_de_rede, false))}
+  end
+
+  def handle_info(:fim_da_pausa_de_rede, state),
+    do: {:noreply, Map.put(state, :pausa_de_rede, false)}
 
   def handle_info({:wake, :became_claimable}, state), do: {:noreply, state}
 
@@ -932,12 +945,52 @@ defmodule Engine.Dev.DevAgentServer do
   # RN-810 (AT-484): bloqueio de origem `infra` (a rede do provider caiu
   # depois das retentativas do `ToolLoop`) não conta para o disjuntor de
   # bloqueios seguidos — não é defeito do agente nem do código.
+  #
+  # RN-864 (AT-525): a falha PASSAGEIRA de rede/provedor
+  # (`FalhaDeTurno.passageira?/1`) volta sozinha — até 3 retomadas, depois de
+  # 1, 3 e 10 min, pelo MESMO desbloqueio do humano
+  # (`Engine.Workers.RetomadaDeTarefaWorker`). Esgotadas, fica bloqueada
+  # pedindo o clique, e o motivo diz quantas houve. E o agente PAUSA
+  # (`AgentIo.pausar_por_rede/1`) em vez de pegar a próxima e falhar de novo.
   defp bloquear_parada(ctx, state) do
     origem = origem_da_parada(ctx)
 
+    if origem == "infra" and passageira?(ctx) do
+      bloquear_passageira(ctx, state)
+    else
+      state
+      |> AgentIo.block_task(motivo_da_parada(ctx, ""), stop_diagnosis(ctx), origem)
+      |> finish_task(if origem == "infra", do: :blocked_infra, else: :blocked)
+    end
+  end
+
+  defp passageira?(ctx) do
+    FalhaDeTurno.passageira?(%{
+      "errorCode" => Map.get(ctx, :last_error_code),
+      "error" => Map.get(ctx, :last_error)
+    })
+  end
+
+  defp bloquear_passageira(ctx, state) do
+    task_id = state.task_id
+    retomadas = Map.get(state, :retomadas_automaticas, %{})
+    feitas = Map.get(retomadas, task_id, 0)
+
+    {sufixo, state} =
+      case RetomadaDeTarefaWorker.agendar(state, task_id, feitas) do
+        {:ok, minutos} ->
+          {" — retomada automática #{feitas + 1} de #{RetomadaDeTarefaWorker.teto()} " <>
+             "em #{minutos} min (falha passageira de rede)",
+           Map.put(state, :retomadas_automaticas, Map.put(retomadas, task_id, feitas + 1))}
+
+        :esgotado ->
+          {" — #{feitas} retomadas automáticas já tentadas; desbloqueie à mão",
+           Map.put(state, :retomadas_automaticas, Map.delete(retomadas, task_id))}
+      end
+
     state
-    |> AgentIo.block_task(motivo_da_parada(ctx, ""), stop_diagnosis(ctx), origem)
-    |> finish_task(if origem == "infra", do: :blocked_infra, else: :blocked)
+    |> AgentIo.block_task(motivo_da_parada(ctx, sufixo), stop_diagnosis(ctx), "infra")
+    |> AgentIo.pausar_por_rede()
   end
 
   # Caminho normal (autonomia `auto_approve`, o default da ativação): a PR
@@ -1065,7 +1118,7 @@ defmodule Engine.Dev.DevAgentServer do
         "modelo"
 
       error ->
-        if FalhaDeTurno.falha_de_rede?(%{
+        if FalhaDeTurno.passageira?(%{
              "errorCode" => Map.get(ctx, :last_error_code),
              "error" => error
            }),
