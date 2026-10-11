@@ -5,6 +5,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 ## Unreleased
 
 ### Mudanças
+- **engine (Arquiteto)**: `listar_adrs_propostas` cruza a ADR executada com o `git_merge` executado e diz "PR MERGEADA em <data>" ou "PR aberta"; sem como ler o estado, diz que não leu, nunca "aberta" (RN-845, AT-514).
 
 - **web**: o rótulo do campo de nome do assistente passa a ser "Projeto" (en: "Project"), sem a palavra "Nome", para o NordPass não abrir "Contact info" sobre ele — heurística, sem atributo de ignore documentado (AT-511, RN-842).
 - O dev agent de execução documenta no README a rota HTTP que cria ou muda (método, caminho, corpo, respostas e códigos) e responde erro de entrada com mensagem própria do projeto; o QA confere as duas coisas na varredura por regra (AT-515, RN-846).

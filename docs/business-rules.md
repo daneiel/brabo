@@ -23804,3 +23804,23 @@ sem dizer qual.
   ("RN-841: a tarefa que entra em awaiting_user relê as PRs…" e "CASO DE FALHA
   RN-841…"), `apps/web/src/lib/acoes-da-sessao.test.ts`
 - **Origem:** AT-510
+
+### RN-845 — A leitura das ADRs propostas diz se a PR já foi mergeada {#rn-845}
+
+- **Regra:** na linha de uma ADR `executed`, `listar_adrs_propostas`
+  ([RN-772](#rn-772)) não afirma mais "PR aberta" pelo status da AÇÃO: cruza o
+  `pullRequestId` do resultado com o `git_merge` EXECUTADO do mesmo projeto
+  (a ação pela qual todo merge passa, [RN-418](#rn-418)) e diz "PR MERGEADA em
+  <data da decisão>" ou "PR aberta (nenhum merge dela registrado no Brabo)".
+  Resultado sem id de PR, ou consulta de merge que falha, vira "estado da PR:
+  NÃO CONSEGUI LER" — nunca "aberta". Contida (ADR 0060): uma consulta a mais,
+  só sobre os ids listados, no mesmo Postgres. Limite declarado: PR fechada
+  sem merge FORA do Brabo (no provider remoto) não é vista, e segue lida como
+  aberta — perguntar ao provider seria HTTP no laço do agente.
+- **Onde:** `apps/engine/lib/engine/harness/tools/listar_adrs_propostas.ex:75`
+  (`cruzar_com_merges`), `:87` (`merges_por_pr`), `:140` (`estado_da_pr`).
+- **Teste:** `apps/engine/test/engine/harness/tools/listar_adrs_propostas_test.exs`
+  ("PR mergeada aparece como mergeada…", "estado da PR ilegível diz que não
+  leu, nunca aberta").
+- **Origem:** AT-514 (TP-01, 11/10: o Arquiteto disse "aberta como PR" 30 s
+  depois do merge).
