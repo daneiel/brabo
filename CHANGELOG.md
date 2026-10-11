@@ -5,6 +5,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 ## Unreleased
 
 ### Mudanças
+- **api (canal da sessão)**: o que a api grava como efeito de uma ação auto-aprovada executada dentro do pedido interno do engine (`infra.pr_opened`, `adr.pr_opened`, `action.*`) avisa o canal na hora; a PR de infra entra em "PRs prontas" sem esperar o poll de fallback (RN-848, AT-516).
 - **engine (Arquiteto)**: `listar_adrs_propostas` cruza a ADR executada com o `git_merge` executado e diz "PR MERGEADA em <data>" ou "PR aberta"; sem como ler o estado, diz que não leu, nunca "aberta" (RN-845, AT-514).
 
 - **web**: o rótulo do campo de nome do assistente passa a ser "Projeto" (en: "Project"), sem a palavra "Nome", para o NordPass não abrir "Contact info" sobre ele — heurística, sem atributo de ignore documentado (AT-511, RN-842).
