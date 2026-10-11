@@ -5,6 +5,13 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 ## Unreleased
 
 ### Mudanças
+
+- A sessão de execução não encerra mais no intervalo entre "Desbloquear" e o
+  dev pegar a tarefa: o heartbeat conta como trabalho pendente a tarefa `todo`
+  do módulo de um dev agent da execução e a `in_progress` atribuída a um deles.
+  O dev religado retoma a SUA tarefa `in_progress` antes da fila, e "Parar
+  execução" bloqueia também a tarefa em curso que nenhum dev vivo segura, para
+  ela aparecer em "Tarefas bloqueadas" com "Desbloquear" (RN-856, AT-522).
 - **engine (Infra)**: o compose que a Infra propõe sobe o APP na máquina do usuário (imagem decidida, porta `${APP_PORT:-8080}`, volume, `.env.example`, seção "Rodar na sua máquina" no README), e `propose_infra_pr` exige `run` (comando e URLs locais), recusado com motivo quando inválido (RN-851, AT-517).
 - **engine (dev e QA)**: tarefa que toca rotas ou ponto de entrada faz o dev servir `/openapi.json` (OpenAPI 3) e `/docs` (Swagger, ou página que carrega o swagger-ui de CDN sem rede) e citar a URL em "Rodar na sua máquina" do README; o QA sobe o app no container e bate nas duas rotas, com o `docker compose up` real como observação (RN-853, RN-854, ADR 0213, AT-517).
 - **web (Visão geral)**: cartão "Rodar na sua máquina" com o comando (copiar), as URLs locais clicáveis, a lembrança do `.env.example` e a nota de que é declarado pela Infra na PR e não verificado; some sem declaração e é relido quando a PR de infra abre (RN-855, AT-517).

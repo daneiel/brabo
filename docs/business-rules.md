@@ -14423,7 +14423,7 @@ contexto vivo tinha (a cauda inteira, mesmo o que já tinha sido compactado); o
   abertura); `apps/engine/lib/engine/harness/context_manager.ex:138` (o resumo
   gravado); `apps/engine/lib/engine/sessions/engine_api_client.ex:1066`
 
-  gravado); `apps/engine/lib/engine/sessions/engine_api_client.ex:1109`
+  gravado); `apps/engine/lib/engine/sessions/engine_api_client.ex:1124`
   (`list_events/3`); os seis `init/1` —
   `apps/engine/lib/engine/agents/criativo_server.ex:89`, `po_server.ex:93`,
   `arquiteto_server.ex:87`, `dev_lead_server.ex:132`, `ux_designer_server.ex:85`,
@@ -14632,7 +14632,7 @@ fonte continua sendo o GET, o canal continua sendo só gatilho — como já era
 desde a Fase 4a —, e o que muda é a latência máxima das escritas sem aviso.
 
 - **Código:** `apps/engine/lib/engine/sessions/engine_api_client.ex:581`,
-  `:607`, `:630`, `:997` (`avisar_canal`);
+  `:607`, `:630`, `:1012` (`avisar_canal`);
 
   `:607`, `:630`, `:953` (`avisar_canal`);
   `apps/engine/lib/engine/sessions/live_broadcast.ex` (`event_appended/3`);
@@ -14815,11 +14815,11 @@ fechada seguem mostrando a mensagem da api.
   (`conversa_ociosa`), `:193` (`encerrar`), `:222`
   (`conversation_idle_timeout_ms`); `apps/engine/lib/engine/sessions/monitor.ex:185`
   (`classify`); `apps/engine/lib/engine/psychologist/termination_classifier.ex:46`;
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1075`
-  (`narrar_recusa_de_sessao_encerrada`), `:1401` (`pendencia_da_resposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1090`
+  (`narrar_recusa_de_sessao_encerrada`), `:1425` (`pendencia_da_resposta`);
 
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1075`
-  (`narrar_recusa_de_sessao_encerrada`), `:1401` (`pendencia_da_resposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1090`
+  (`narrar_recusa_de_sessao_encerrada`), `:1425` (`pendencia_da_resposta`);
   `apps/engine/lib/engine/agents/conversacionais.ex:49` (`parar_da_sessao`),
   `:69` (`parar_da_sessao_no_cluster`);
   `apps/engine/lib/engine/agents/turno_assincrono.ex:411` (`abandonar`);
@@ -15808,9 +15808,9 @@ pacote da porta de Docker. Nada muda na contenção do broker ([ADR
   `:205` (`TETO_DE_MUTACAO_MS`), `:217` (`FOLGA_DO_EXEC_NO_ENGINE_MS`),
   `:270` (`erroDeTransporte`);
   `apps/api/src/application/ports/container-broker.port.ts:89` (`MotivoDeBrokerIndisponivel`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1889` (`teto_do_container_exec_ms`)
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1911` (`teto_do_container_exec_ms`)
 
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1889` (`teto_do_container_exec_ms`)
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1911` (`teto_do_container_exec_ms`)
 - **Teste:** `apps/api/test/infrastructure/http-clients/container-broker.client.spec.ts:286`
   (a reprodução, contra um broker `node:http` que demora 6 s), `:182` (o
   teto de cada operação no `AbortSignal`), `:204` e `:229` (`teto-excedido`
@@ -15894,9 +15894,9 @@ continua vindo da decisão do Arquiteto, e `pull` não é operação nova do bro
   `apps/api/src/infrastructure/http-clients/container-broker.client.ts:205` (`TETO_DE_MUTACAO_MS`),
   `:175` (`CHAMADAS_DE_CONTROLE_NO_START`),
   `:228` (`TETO_DO_PROPOSE_ACTION_DE_CONTAINER_NO_ENGINE_MS`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1809` (`opcoes_do_propose_action`),
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1833` (`opcoes_do_propose_action`),
 
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1809` (`opcoes_do_propose_action`),
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1833` (`opcoes_do_propose_action`),
   `:1649` (`@teto_do_propose_action_de_container_ms`);
   `apps/engine/lib/engine/runners/runner_router.ex:52` (`@timeout_do_start_ms`)
 - **Teste:** `packages/docker-port/src/docker-cli.spec.ts:425` (describe da
@@ -16841,11 +16841,11 @@ especificação da AT-081 e o mecanismo verificado por provider na AT-161).
   (`anexar`), `:213` (`com_idioma_do_autor`), `:152` (`orientacao`), `:94`
   (`@sem_orientacao`), `:261` (`texto_do_turno`), `:286`
   (`idioma_do_projeto`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:662`
-  (`IdiomaDaResposta`), `:755` (`IdiomaDaResposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:672`
+  (`IdiomaDaResposta`), `:766` (`IdiomaDaResposta`);
 
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:662`
-  (`IdiomaDaResposta`), `:755` (`IdiomaDaResposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:672`
+  (`IdiomaDaResposta`), `:766` (`IdiomaDaResposta`);
   `apps/engine/lib/engine/projects/project.ex:64` (`idioma`);
   `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:515`
   (`idioma_da_resposta`);
@@ -16942,11 +16942,11 @@ AT-167 mede; os tokenizadores do DeepSeek e da Anthropic seguem não medidos.
   (`orientacao`), `:127` (`@ferramentas_de_artefato`), `:118`
   (`@forma_curta`), `:261` (`texto_do_turno`), `:279` (`grava_artefato?`),
   `:280` (`idioma_do_projeto_para_o_artefato`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:662`
-  (`IdiomaDaResposta`), `:755` (`IdiomaDaResposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:672`
+  (`IdiomaDaResposta`), `:766` (`IdiomaDaResposta`);
 
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:662`
-  (`IdiomaDaResposta`), `:755` (`IdiomaDaResposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:672`
+  (`IdiomaDaResposta`), `:766` (`IdiomaDaResposta`);
   `apps/web/src/routes/settings/ProjectLanguageSection.tsx`
 - **Teste:** `apps/engine/test/engine/harness/idioma_da_resposta_test.exs:157`
   (idiomas diferentes: a orientação diz os dois), `:168` (iguais: só um),
@@ -17209,11 +17209,11 @@ endpoint é ALPHA e o smoke manual
   `apps/api/src/db/schema/llm.ts:356` (`priceImplicit`);
   `apps/engine/lib/engine/harness/roteamento_de_ferramenta.ex:60` (`registrar`),
   `:112` (`custo_micros`), `:123` (`repetir_com_catalogo_inteiro?`), `:146`
-  (`mesclar_repeticao`); `apps/engine/lib/engine/sessions/engine_api_client.ex:677`
-  (`llm_turn`), `:749` (`llm_turn_stream`);
+  (`mesclar_repeticao`); `apps/engine/lib/engine/sessions/engine_api_client.ex:687`
+  (`llm_turn`), `:760` (`llm_turn_stream`);
 
-  (`mesclar_repeticao`); `apps/engine/lib/engine/sessions/engine_api_client.ex:677`
-  (`llm_turn`), `:749` (`llm_turn_stream`);
+  (`mesclar_repeticao`); `apps/engine/lib/engine/sessions/engine_api_client.ex:687`
+  (`llm_turn`), `:760` (`llm_turn_stream`);
   `apps/engine/lib/engine/harness/tool_loop.ex:132` (o custo do Jev no orçamento
   local)
 - **Teste:** `apps/api/test/domain/llm/tool-router.spec.ts:25` (`questions` é
@@ -17464,7 +17464,7 @@ seguiram em `in_review` (AT-275).
    chegar aqui; o gate pendente, por decisão do dono, é só aviso na tela.
 
 - **Onde:** `apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts:295`
-  (`settleMerge`), `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:413`
+  (`settleMerge`), `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:480`
   (`markDoneIfNotDone`)
 - **Teste:** `apps/api/test/application/use-cases/actions/execute-git-action.use-case.spec.ts`
   ("git_merge marca a tarefa como done": feliz, repetido, PR aberta/merge
@@ -17919,7 +17919,7 @@ vault por decisão do dono; [ADR 0182](adr/0182-ciclo-de-vida-do-handoff.md)).
   (`criar_handoffs_appsec/3`);
   `apps/engine/lib/engine/sessions/engine_api_client.ex:1131`
 
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1174`
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1189`
   (`create_handoff_if_absent`);
   `apps/api/src/domain/sessions/ciclo-de-vida-do-handoff.ts:71`
   (`decidirOferta`)
@@ -19806,8 +19806,8 @@ módulo do `module_map`, como antes, e o paralelismo extra continua pelo
 `parallelize` ([RN-083](business-rules/custo.md#rn-083)).
 
 - **Onde:** `apps/api/src/domain/execution/plano-de-execucao.ts:33`
-  (`lerPlanoDeExecucao`); `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:613`
-  (`daTarefaDoModulo`), `:348` (`claimNext`), `:336` (`assignModules`);
+  (`lerPlanoDeExecucao`); `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:680`
+  (`daTarefaDoModulo`), `:403` (`claimNext`), `:391` (`assignModules`);
   `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:137`
   (`recusaNaProposta`); `apps/api/src/application/use-cases/execution/execute-execution-plan.use-case.ts:67`
   (`recusaNaProposta`); `apps/api/src/db/schema/backlog.ts:187` (`module`);
@@ -20681,7 +20681,7 @@ Junto, o fechamento deixa de dizer que parear uma pasta pela tela do projeto
 - **Onde:** `apps/engine/lib/engine/harness/fluxo_do_time.ex:107` (`texto`),
   `:97` (`anexar`), `apps/engine/lib/engine/sessions/engine_api_client.ex:647`
 
-  `:97` (`anexar`), `apps/engine/lib/engine/sessions/engine_api_client.ex:677`
+  `:97` (`anexar`), `apps/engine/lib/engine/sessions/engine_api_client.ex:687`
   (`llm_turn`), `apps/engine/lib/engine/harness/agents.ex:23` (`identity`),
   `apps/engine/lib/engine/agents/arquiteto_server.ex:382` (`build_kickoff`)
 - **Teste:** `apps/engine/test/engine/harness/fluxo_do_time_test.exs`
@@ -20758,7 +20758,7 @@ Junto, o fechamento deixa de dizer que parear uma pasta pela tela do projeto
 - **Medição (AT-383, 02/10, loja-teste):** a #6 terminou `failed` por conflito
   em `package.json`, e a tarefa ficou `in_review` sem ninguém para resolvê-lo.
 - **Onde:** `apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts:392` (`devolverAoDono`),
-  `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:423` (`reabrirPorConflitoDeMerge`),
+  `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:490` (`reabrirPorConflitoDeMerge`),
   `apps/engine/lib/engine/workers/dev_agent_wake_worker.ex:151` (`task.merge_conflict`),
   `apps/engine/lib/engine/dev/dev_agent_server.ex:350` (`handle_info`),
   `apps/engine/lib/engine/dev/dev_agent_server.ex:805` (`trigger_gate_recheck`),
@@ -21689,7 +21689,7 @@ sem dizer qual.
   `apps/api/src/application/use-cases/backlog/corrigir-historia.use-case.ts:47`
   (`editar`), `:90` (`arquivar`),
   `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:97`
-  (`findByProject`), `:348` (`claimNext`),
+  (`findByProject`), `:403` (`claimNext`),
   `apps/api/src/interfaces/http/backlog/backlog.controller.ts:205`
   (`updateTitle`), `:219` (`archive`),
   `apps/api/src/interfaces/http/internal/internal-sessions.controller.ts:571`
@@ -22001,7 +22001,7 @@ sem dizer qual.
   da Task do turno (`TurnoAssincrono`), então o padrão "HTTP dentro do
   GenServer" não os alcança — declarado. A web não mudou: a aba Executores
   passa a ver o `agent.error` e o `dev.blocked` da recuperação.
-- **Onde:** `apps/engine/lib/engine/sessions/engine_api_client.ex:2012`
+- **Onde:** `apps/engine/lib/engine/sessions/engine_api_client.ex:2034`
   (`isolado`), `apps/engine/lib/engine/dev/monitor.ex:69` (`ao_terminar`),
   `:107` (`registrar_e_religar`)
 - **Teste:** `apps/engine/test/engine/sessions/engine_api_client_isolado_test.exs`
@@ -22256,7 +22256,7 @@ sem dizer qual.
   `nohup … &` com log —, nunca `%Req.TransportError{reason: :timeout}` cru.
   Exec assíncrono/streaming foi considerado e não feito: a menor mudança que
   faz `npm install` comum caber é o teto.
-- **Onde:** `apps/engine/lib/engine/sessions/engine_api_client.ex:1862`
+- **Onde:** `apps/engine/lib/engine/sessions/engine_api_client.ex:1880`
   (`opcoes_do_propose_action`) e
   `apps/engine/lib/engine/harness/hooks/action_pipeline.ex:80`
   (`resultado_de_teto_do_terminal`)
@@ -22546,7 +22546,7 @@ sem dizer qual.
   da janela de eventos da aba. A confirmação no "Encerrar" da barra da sessão
   é de outra atividade (AT-452).
 - **Onde:** `apps/engine/lib/engine/dev/encerramento_da_sessao.ex:40`
-  (`parar_da_sessao`), `:66` (`parar_processos`), `:96` (`devolver_task`),
+  (`parar_da_sessao`), `:74` (`parar_processos`), `:104` (`devolver_task`),
   `apps/engine/lib/engine/dev/monitor.ex:34` (`esquecer`),
   `apps/engine/lib/engine/workers/session_lifecycle_worker.ex:94`
   (`parar_execucao`), `apps/web/src/components/PararExecucao.tsx`
@@ -22837,8 +22837,8 @@ sem dizer qual.
   vem antes do sinal da conversa ociosa ([RN-581](#rn-581)), que continua
   o único com teto. Sessão de execução ANTIGA do mesmo projeto não é segurada
   pela tarefa: a tarefa é do projeto, e sem esse recorte ela ficaria imortal.
-- **Onde:** `apps/api/src/application/use-cases/sessions/get-session-pending-work.use-case.ts:238`
-  (`findPendenteDaExecucao`), `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:220`
+- **Onde:** `apps/api/src/application/use-cases/sessions/get-session-pending-work.use-case.ts:242`
+  (`findPendenteDaExecucao`), `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:252`
   (`findPendenteDaExecucao`)
 - **Teste:** `apps/api/test/application/use-cases/sessions/get-session-pending-work.use-case.spec.ts`
   (bloqueada, PR esperando merge e conflito seguram; sem nada, fecha; sessão
@@ -24092,3 +24092,37 @@ sem dizer qual.
   (null) o cartão não aparece"; "só localhost/127.0.0.1 com porta vira link";
   "infra.pr_opened relê o cartão; outro evento não")
 - **Origem:** AT-517 (ADR 0213)
+
+### RN-856 — Desbloquear não encerra a execução, e a tarefa em curso órfã tem volta {#rn-856}
+
+- **Regra:** três metades de um defeito só (o TP-01 mediu 1 s entre o
+  "Desbloquear" e o claim do dev, e o heartbeat encerrou a sessão nele). (1) O
+  sexto sinal da [RN-064](business-rules/custo.md#rn-064) ([RN-776](#rn-776))
+  conta também, na sessão de execução vigente, a tarefa `todo` de história
+  `ready` cujo módulo é de um dev agent DESTA execução (ator de evento `dev.*`
+  na sessão) e a tarefa `in_progress` atribuída a um deles — sem teto, como os
+  outros. (2) O claim retoma, ANTES da fila `todo`, a tarefa `in_progress` que
+  já é do agente (mesmo `assigned_to`, fora de gate, não bloqueada); a branch
+  dela, se existir e não estiver mergeada, é o ponto de partida do worktree
+  (a retomada do `WorktreeManager`). (3) Encerrar a sessão de execução
+  ([RN-763](#rn-763)) bloqueia também a tarefa `in_progress` de dono `dev-*`
+  que nenhuma linha de `dev_agent_states` segura, com o mesmo motivo e origem
+  `politica`; a lista só vem para sessão de EXECUÇÃO, então encerrar uma
+  consultiva do mesmo projeto não bloqueia nada.
+- **Onde:** `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:252`
+  (`findPendenteDaExecucao`), `:403` (`claimNext`), `:221` (`listEmCursoDeDev`),
+  `apps/api/src/application/use-cases/sessions/get-session-pending-work.use-case.ts:49`
+  (`em_curso_de_dev`),
+  `apps/engine/lib/engine/dev/encerramento_da_sessao.ex:133` (`bloquear_orfas`)
+- **Teste:** `apps/api/test/application/use-cases/sessions/get-session-pending-work.use-case.spec.ts`
+  ("tarefa recém-desbloqueada (todo) do módulo de um dev da execução segura a
+  sessão"; "tarefa todo de módulo SEM dev na execução não segura"; "tarefa
+  in_progress atribuída a dev da execução segura a sessão"; "listEmCursoDeDev
+  lista a in_progress de dev só para sessão de EXECUÇÃO"),
+  `apps/api/test/application/use-cases/execution/claim-next-task.use-case.spec.ts`
+  ("retoma a in_progress que já é DELE antes da fila todo"; "não retoma a
+  in_progress dele que está em gate"),
+  `apps/engine/test/engine/dev/encerramento_da_sessao_test.exs` ("bloqueia a
+  task em curso ÓRFÃ…"; "sem nenhuma linha, a órfã também é bloqueada…")
+- **Origem:** AT-522 (TP-01, 14ª: sessão `538a0ba5` encerrada 1 s depois do
+  desbloqueio, tarefa `in_progress` presa em `dev-api` sem processo)
