@@ -1420,3 +1420,22 @@ export const getModelPullRequest = (workspaceId: string, id: string) =>
   get<import('./api-types').ModelPullRequest>(
     `/workspaces/${workspaceId}/huggingface/pull-requests/${id}`,
   );
+
+// RN-858/861 (AT-521): as perguntas em aberto do projeto e a resposta do autor
+// da sessão de origem.
+export const getOpenQuestions = (
+  projectId: string,
+  status: 'open' | 'answered' | 'all' = 'open',
+) =>
+  get<import('./api-types').OpenQuestionsList>(
+    `/projects/${projectId}/open-questions${qs({ status })}`,
+  );
+export const answerOpenQuestion = (
+  projectId: string,
+  questionId: string,
+  corpo: { resposta: string } | { aceitarSugestao: true },
+) =>
+  post<import('./api-types').OpenQuestion>(
+    `/projects/${projectId}/open-questions/${questionId}/answer`,
+    corpo,
+  );

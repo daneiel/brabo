@@ -1959,3 +1959,7 @@ export interface ModelPullRequest {
  * dela (`artifact.run_instructions`, RN-852). `null` quando nunca declarado.
  */
 export type RunInstructions = components['schemas']['RunInstructionsResponseDto'];
+
+/** RN-858/861 (AT-521): a pergunta que um agente deixou para o usuário. */
+export type OpenQuestion = components['schemas']['OpenQuestionResponseDto'];
+export type OpenQuestionsList = components['schemas']['OpenQuestionsListResponseDto'];

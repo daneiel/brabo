@@ -121,7 +121,8 @@ export type AlvoDoCanal =
   | 'handoffs'
   | 'backlog'
   | 'orcamento'
-  | 'prs';
+  | 'prs'
+  | 'perguntas';
 
 /**
  * Tipo de evento → queries que ele invalida. Os prefixos são os tipos
@@ -145,6 +146,15 @@ export function alvosDoEvento(type: string): AlvoDoCanal[] {
   // avisa essa proposta, mas avisa o bloqueio — e é a deixa para reler a fila
   // do projeto, onde ela está (AT-298).
   if (type === 'dev.blocked_by_container') alvos.push('pendenciasDoProjeto');
+  // RN-861 (AT-521): a pergunta que nasce, a que é respondida e o gate que
+  // passa a esperar o usuário mudam a fila "Perguntas em aberto".
+  if (
+    type === 'artifact.open_question' ||
+    type === 'open_question.answered' ||
+    type === 'pr.gate_changed'
+  ) {
+    alvos.push('perguntas');
+  }
   if (type.startsWith('handoff.')) alvos.push('handoffs');
   if (type.startsWith('backlog.')) alvos.push('backlog');
   // RN-705: o merge executado (ou recusado) muda a lista de PRs do projeto —
@@ -180,6 +190,7 @@ export const JANELA_DE_INVALIDACAO_MS: Record<AlvoDoCanal, number> = {
   backlog: 2_000,
   orcamento: 10_000,
   prs: 2_000,
+  perguntas: 2_000,
 };
 
 export interface InvalidadorDoCanal {
@@ -208,6 +219,7 @@ export function criarInvalidadorDoCanal(
     backlog: ['backlog', projectId],
     orcamento: ['session-budget', projectId, sessionId],
     prs: ['code-pull-requests', projectId],
+    perguntas: ['open-questions', projectId],
   };
   const ultimo = new Map<AlvoDoCanal, number>();
   const pendentes = new Map<AlvoDoCanal, ReturnType<typeof setTimeout>>();

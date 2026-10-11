@@ -15,6 +15,8 @@ import { userIdDaSessao } from '../lib/auth';
 import { useBacklog } from '../lib/hooks';
 import { assinaturaDoBacklog, prsProntasParaMerge, tarefasBloqueadas } from '../lib/prontas-e-bloqueadas';
 import { Button } from './ui/Button';
+import { PerguntasEmAberto } from './PerguntasEmAberto';
+import { usePerguntasEmAberto } from '../lib/perguntas-em-aberto';
 import {
   CHAVE_DAS_PENDENCIAS_DO_PROJETO,
   TETO_DE_PENDENCIAS_NO_CHAT,
@@ -114,6 +116,11 @@ export function PendenciasDeOutrasSessoes({
     sessionId,
   );
   const bloqueadas = tarefasBloqueadas(backlogQuery.data);
+  // RN-861 (AT-521): a fila "Perguntas em aberto", só no chat; sem poll —
+  // o canal da sessão a relê (alvo `perguntas`).
+  const perguntasQuery = usePerguntasEmAberto(filasDoChat ? projectId : undefined);
+  const perguntas = perguntasQuery.data?.itens ?? [];
+  const totalDePerguntas = perguntasQuery.data?.total ?? 0;
   const total = aprovacoes.length + merges.length;
 
   // Recorte declarado (RN-180): o teto vale para as DUAS filas juntas em
@@ -139,7 +146,13 @@ export function PendenciasDeOutrasSessoes({
     SEM_EVENTOS_LOCAIS,
   );
 
-  if (total === 0 && prontas.length === 0 && bloqueadas.length === 0) return null;
+  if (
+    total === 0 &&
+    prontas.length === 0 &&
+    bloqueadas.length === 0 &&
+    perguntas.length === 0
+  )
+    return null;
 
   async function proporMerge(pr: CodePullRequestSummary) {
     setPropondo(pr.id);
@@ -286,8 +299,9 @@ export function PendenciasDeOutrasSessoes({
     merges: merges.length,
     prontas: prontas.length,
     bloqueadas: bloqueadas.length,
+    perguntas: totalDePerguntas,
   };
-  const presenca = (['aprovacoes', 'merges', 'prontas', 'bloqueadas'] as const)
+  const presenca = (['perguntas', 'aprovacoes', 'merges', 'prontas', 'bloqueadas'] as const)
     .map((chave) => ({ chave, n: contagens[chave] }))
     .filter(({ n }) => n > 0)
     .map(({ chave, n }) => `${t(`pendencias.filas.${chave}`)} ${n}`)
@@ -314,6 +328,14 @@ export function PendenciasDeOutrasSessoes({
           </p>
         )}
         <div className={styles.lista}>
+          <PerguntasEmAberto
+            projectId={projectId}
+            perguntas={perguntas}
+            total={totalDePerguntas}
+            tarefas={(backlogQuery.data ?? []).flatMap((e) =>
+              (e.stories ?? []).flatMap((st) => st.tasks ?? []),
+            )}
+          />
           {fila('aprovacoes', aprovacoes, aprovacoesVisiveis)}
           {fila('merges', merges, mergesVisiveis)}
           {prontas.length > 0 && (

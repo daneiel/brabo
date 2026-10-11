@@ -9,6 +9,7 @@ import { Select } from '../components/ui/Select';
 import { sessaoEhTerminal } from '../lib/sessao-encerrada';
 import { pontoDaSessao } from '../lib/session-timeline';
 import { agentesParaChamar } from '../lib/session-destinatario';
+import { AvisoDePerguntasEmAberto } from '../components/PerguntasEmAberto';
 import styles from './SessionPage.module.css';
 
 /**
@@ -370,6 +371,14 @@ export function SessionComposer({
                 : t('composer.confirmarArquiteturaDesabilitado')}
             </span>
           </div>
+        )}
+        {((criativoActive && !prontidaoJaDeclarada) ||
+          (arquitetoActive && !arquiteturaJaDeclarada)) && (
+          <AvisoDePerguntasEmAberto
+            projectId={session?.projectId}
+            classeDaLinha={styles.manualHandoffRow}
+            classeDoTexto={styles.destinatarioAviso}
+          />
         )}
         <div className={`${styles.composer} ${styles.composerComDestinatario}`}>
           <textarea

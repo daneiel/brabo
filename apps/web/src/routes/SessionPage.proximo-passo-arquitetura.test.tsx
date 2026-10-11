@@ -233,6 +233,8 @@ describe('SessionPage — próximo passo depois do mapa de módulos (RN-824)', (
   it('com turno em curso (streaming), o texto não aparece', () => {
     const noop = async () => undefined;
     render(
+      // RN-861: o composer lê a fila de perguntas em aberto (react-query).
+      <QueryClientProvider client={new QueryClient()}>
       <SessionComposer
         {...({
           isActive: true,
@@ -266,7 +268,8 @@ describe('SessionPage — próximo passo depois do mapa de módulos (RN-824)', (
           handoffDaInfraOferecido: undefined,
           handleAcceptHandoff: noop,
         } as unknown as Parameters<typeof SessionComposer>[0])}
-      />,
+      />
+      </QueryClientProvider>,
     );
     expect(screen.queryByTestId('proximo-passo-arquitetura')).toBeNull();
   });
