@@ -112,14 +112,6 @@ export function PendenciasDeOutrasSessoes({
     sessionId,
   );
   const bloqueadas = tarefasBloqueadas(backlogQuery.data);
-  // RN-843 (AT-512): o merge pendente desenhado na linha da PR é o ÚNICO
-  // cartão de decisão dele; o fio lê este registro e recolhe o seu.
-  useRegistrarAcoesNoBloco(
-    prontas
-      .map(({ pr, mergeDaSessao }) => mergeDaSessao ?? propostas[pr.id])
-      .filter((a): a is ProposedAction => !!a && a.status === 'pending')
-      .map((a) => a.id),
-  );
   const total = aprovacoes.length + merges.length;
 
   // Recorte declarado (RN-180): o teto vale para as DUAS filas juntas em
@@ -342,7 +334,12 @@ export function PendenciasDeOutrasSessoes({
                       #{pr.number} {pr.title} · {pr.sourceBranch} → {pr.targetBranch}
                     </div>
                     {acao && acao.status === 'pending' ? (
-                      cardDeDecisao(acao)
+                      <>
+                        {/* RN-843: registra só enquanto o cartão está MONTADO
+                            (o Disclosure recolhido desmonta e desregistra). */}
+                        <RegistroDoBloco ids={[acao.id]} />
+                        {cardDeDecisao(acao)}
+                      </>
                     ) : (
                       <div className={styles.acoesDaLinha}>
                         <Button
@@ -422,4 +419,10 @@ export function PendenciasDeOutrasSessoes({
       </Disclosure>
     </div>
   );
+}
+
+/** RN-843 (AT-512): o cartão montado na linha da PR se registra para o fio. */
+function RegistroDoBloco({ ids }: { ids: readonly string[] }) {
+  useRegistrarAcoesNoBloco(ids);
+  return null;
 }

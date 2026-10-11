@@ -4,6 +4,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import type { ProposedAction } from '../lib/api-types';
 import i18n from '../lib/i18n';
 import { acaoEstaNoBloco } from '../lib/acoes-no-bloco';
+import { CartaoOuReferenciaNoFio } from './CartaoOuReferenciaNoFio';
 
 const getProjectPendingActions = vi.fn();
 const approveAction = vi.fn();
@@ -341,6 +342,31 @@ describe('PendenciasDeOutrasSessoes — PRs prontas e tarefas bloqueadas (AT-497
     expect(await within(fila).findByRole('button', { name: 'Aprovar' })).toBeInTheDocument();
     // RN-843: a ação desenhada aqui fica registrada para o fio recolher a dele.
     expect(acaoEstaNoBloco('m-novo')).toBe(true);
+
+    // RN-843: recolher o bloco desmonta o cartão e o desregistra — o fio volta
+    // ao cartão completo; abrir de novo devolve a referência.
+    const fioDaAcao = {
+      id: 'm-novo',
+      status: 'pending',
+    } as unknown as ProposedAction;
+    render(
+      <div data-testid="fio">
+        <CartaoOuReferenciaNoFio action={fioDaAcao}>
+          <button type="button">Aprovar</button>
+        </CartaoOuReferenciaNoFio>
+      </div>,
+    );
+    const fio = screen.getByTestId('fio');
+    expect(within(fio).queryByRole('button', { name: 'Aprovar' })).toBeNull();
+    const cabecalho = document.querySelector('[aria-expanded="true"]') as HTMLElement;
+    fireEvent.click(cabecalho);
+    expect(acaoEstaNoBloco('m-novo')).toBe(false);
+    expect(screen.getAllByRole('button', { name: 'Aprovar' })).toHaveLength(1);
+    expect(within(fio).getByRole('button', { name: 'Aprovar' })).toBeInTheDocument();
+    fireEvent.click(document.querySelector('[aria-expanded="false"]') as HTMLElement);
+    expect(await within(screen.getByTestId('fila-prs-prontas')).findByRole('button', { name: 'Aprovar' })).toBeInTheDocument();
+    expect(acaoEstaNoBloco('m-novo')).toBe(true);
+    expect(within(fio).queryByRole('button', { name: 'Aprovar' })).toBeNull();
   });
 
   it('RN-841: a tarefa que entra em awaiting_user relê as PRs, e a PR nova aparece sem remontar', async () => {
