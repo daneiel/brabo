@@ -595,6 +595,7 @@ defmodule Engine.Dev.DevAgentServer do
       # solução (ou imprimir a tool call como JSON no texto) em vez de
       # chamar a ferramenta — o loop então termina sem desfecho e a task é
       # bloqueada sem o modelo ter feito nada.
+      # RN-846 (AT-515): rota HTTP documentada e erro de entrada próprio.
       "content" =>
         "Implemente a task \"#{task["title"]}\" da story \"#{story["title"]}\". " <>
           "Rode a suite de testes do projeto via `terminal` e só sinalize conclusão com " <>
@@ -604,6 +605,10 @@ defmodule Engine.Dev.DevAgentServer do
           "`git_commit`/`git_push`/`pr_open`, e falta de ferramenta de git não é " <>
           "motivo de `report_blocked`. Se o script `test` do `package.json` lista os " <>
           "arquivos um a um, inclua nele todo arquivo de teste novo.\n\n" <>
+          "Rota HTTP criada ou mudada entra no README: método, caminho, corpo, " <>
+          "respostas e códigos. Erro de entrada (JSON malformado, campo inválido) " <>
+          "responde com mensagem própria no formato de erro do projeto, nunca a " <>
+          "mensagem crua da biblioteca.\n\n" <>
           "IMPORTANTE: aja apenas por chamadas de ferramenta. Não escreva código " <>
           "nem JSON na sua resposta em texto, e não explique o que pretende fazer — " <>
           "chame `write_file` para criar cada arquivo e `terminal` para rodar a suite. " <>

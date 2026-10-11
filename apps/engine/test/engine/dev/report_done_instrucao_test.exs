@@ -33,6 +33,17 @@ defmodule Engine.Dev.ReportDoneInstrucaoTest do
     assert ambiente =~ "inclua nele todo arquivo de teste novo"
   end
 
+  test "RN-846: kickoff pede a rota no README e erro de entrada próprio" do
+    kickoff =
+      DevAgentServer.initial_message(%{"title" => "T"}, %{"title" => "S"})["content"]
+
+    assert kickoff =~ "Rota HTTP criada ou mudada entra no README"
+    assert kickoff =~ "nunca a mensagem crua da biblioteca"
+
+    refute AmbienteDoAgente.montar(%{cwd: nil, raiz: nil, container_running: false}) =~
+             "Rota HTTP criada"
+  end
+
   test "falha: o ambiente não manda mais usar as ações tipadas de git" do
     ambiente = AmbienteDoAgente.montar(%{cwd: nil, raiz: nil, container_running: false})
     refute ambiente =~ "Use as ações tipadas"
