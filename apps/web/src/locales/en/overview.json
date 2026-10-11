@@ -139,5 +139,15 @@
       "pendente": "Tell the Creative agent your idea — that is where the stories come from.",
       "link": "Open the Creative agent →"
     }
+  },
+  "rodarNaSuaMaquina": {
+    "title": "Run it on your machine",
+    "envExample": "First copy the example environment file: cp .env.example .env",
+    "copiar": "Copy",
+    "copiado": "Copied",
+    "urlRecusada": "(address outside your machine, not shown as a link)",
+    "notaAntes": "Declared by Infra in the",
+    "pr": "pull request",
+    "notaDepois": ", not verified on your machine."
   }
 }

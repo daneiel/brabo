@@ -5,6 +5,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 ## Unreleased
 
 ### Mudanças
+- **web (Visão geral)**: cartão "Rodar na sua máquina" com o comando (copiar), as URLs locais clicáveis, a lembrança do `.env.example` e a nota de que é declarado pela Infra na PR e não verificado; some sem declaração e é relido quando a PR de infra abre (RN-855, AT-517).
 - **api (Infra)**: `open_infra_pr` exige `run` (`{command, urls, envExample}`, URLs só em `localhost`/`127.0.0.1`), recusado com 400 `run_invalido` na proposta e revalidado na execução; a PR aberta emite `artifact.run_instructions`, lido por `GET /projects/:projectId/run-instructions` (o vigente ou `null`); o contexto da Infra leva `projectImage` (RN-852, AT-517).
 - **engine (dev e QA)**: o kickoff do dev pede a rota DENTRO da seção "Rotas HTTP" do README (antes de "Testes"), nunca no fim, e sem nota de processo para agentes; o QA confere as duas coisas (RN-850, AT-520).
 

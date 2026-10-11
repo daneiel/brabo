@@ -277,7 +277,7 @@ one.
 
 - **Where:** `apps/web/src/lib/session-destinatario.ts:254`
   (`useDestinatarioDoChat`, since RN-631),
-  `apps/web/src/lib/api-client.ts:1120` (`getSessionModelBinding`, the
+  `apps/web/src/lib/api-client.ts:1124` (`getSessionModelBinding`, the
   `agentId`), `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:166`
   (`getSessionBinding`, `@Query('agentId')`)
 - **Test:** `apps/web/src/routes/SessionPage.destinatario-do-chat.test.tsx`
@@ -6775,7 +6775,7 @@ caminho que a execução em container substitui; o que muda agora é só a
   `apps/api/src/application/use-cases/execution/activate-execution.use-case.ts:176`
   (o 400), `apps/api/src/interfaces/http/execution/execution.controller.ts:74`
   (a anotação de OpenAPI, que prometia 409 para dois casos que nunca foram
-  409), `apps/web/src/routes/ProjectOverviewTab.tsx:467`
+  409), `apps/web/src/routes/ProjectOverviewTab.tsx:473`
   (`mensagemDaApi`), `apps/engine/lib/engine/actions/workspace.ex:61`
   (a mensagem da lacuna que fica)
 - **Teste:**
@@ -18338,7 +18338,7 @@ barra) fechou no ADR 0211.
   `:39` (`useLayoutMovel`); `apps/web/src/routes/Shell.tsx:422`
   (`movel`), `:443` (`prenderFoco`), `:462` (`fecharAoSeguirLink`);
   `apps/web/src/routes/ProjectPage.tsx:49` (`movel`);
-  `apps/web/src/routes/ProjectOverviewTab.tsx:64` (`movel`)
+  `apps/web/src/routes/ProjectOverviewTab.tsx:68` (`movel`)
 - **Teste:** `apps/web/src/routes/Shell.test.tsx` ("Shell — layout móvel
   (RN-643)": a gaveta abre com o foco dentro e o Esc a fecha devolvendo o foco;
   fecha pelo link, pelo X, pelo fundo e pela troca de rota; ignora o colapso
@@ -18492,7 +18492,7 @@ não medido em projeto real, e declarado.
   (`TETO_DE_CHAVES_NO_LOTE`), `:37` (`lerListaDeChaves`), `:77`
   (`ResolveModelBindingsEmLoteUseCase`);
   `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:233`
-  (`getResolvedBindings`); `apps/web/src/lib/api-client.ts:1145`
+  (`getResolvedBindings`); `apps/web/src/lib/api-client.ts:1149`
   (`getResolvedModelBindings`); `apps/web/src/lib/bindings-resolvidos.ts:43`
   (`invalidarBindingsResolvidos`), `:69` (`useBindingsResolvidos`), `:111`
   (`useBindingsDosAgentes`); `apps/web/src/routes/ProjectOverviewTab.tsx:144`
@@ -22945,7 +22945,7 @@ sem dizer qual.
 - **Onde:** `apps/web/src/components/ReligarExecucao.tsx:23` (`ReligarExecucao`),
   `apps/web/src/lib/execution.ts:10` (`contarTarefasPendentes`),
   `apps/web/src/routes/ProjectExecutorsTab.tsx:99` (`semExecucaoVigente`),
-  `apps/web/src/routes/ProjectOverviewTab.tsx:500` (`semExecucaoVigente`)
+  `apps/web/src/routes/ProjectOverviewTab.tsx:506` (`semExecucaoVigente`)
 - **Teste:** `apps/web/src/routes/ProjectExecutorsTab.test.tsx` (religar a
   execução), `apps/web/src/routes/ProjectOverviewTab.test.tsx` (religar a
   execução encerrada)
@@ -22960,7 +22960,7 @@ sem dizer qual.
   Infra Lead cujo handoff foi aceito lá), e com uma ideação aberta depois a
   árvore dizia "Nenhum agente entrou em ação nesta sessão ainda" sobre um time
   trabalhando. Sem leitura nova.
-- **Onde:** `apps/web/src/routes/ProjectOverviewTab.tsx:263` (`overviewEvents`)
+- **Onde:** `apps/web/src/routes/ProjectOverviewTab.tsx:267` (`overviewEvents`)
 - **Teste:** `apps/web/src/routes/ProjectOverviewTab.test.tsx` ("AT-471: agente
   que só agiu na execução aparece na árvore…"; o caso sem execução segue lendo
   a mais recente)
@@ -23704,7 +23704,7 @@ sem dizer qual.
   deslocamento em pixels; qual das duas causas (salto ou sessão não lida) fez o
   1º clique do TP-01 se perder não foi medido no navegador.
 - **Onde:** `apps/web/src/routes/ProjectOverviewTab.tsx:485` (`desbloqueio`),
-  `apps/web/src/routes/ProjectOverviewTab.tsx:605` (`blockedTasks`)
+  `apps/web/src/routes/ProjectOverviewTab.tsx:611` (`blockedTasks`)
 - **Teste:** `apps/web/src/routes/ProjectOverviewTab.test.tsx` ("RN-835
   (AT-502): o desbloqueio chama uma vez, fica em voo e diz quando terminou";
   falha: "RN-835: a recusa do desbloqueio mostra a frase da api na linha"),
@@ -24012,3 +24012,27 @@ sem dizer qual.
   ("RN-852: projectImage é a decisão vigente…"; "…null sem decisão de imagem")
 - **Origem:** AT-517 (o entregável do TP-01 não dizia como rodar na máquina
   do usuário)
+
+### RN-855 — A Visão geral mostra como rodar o entregável, declarado e não verificado {#rn-855}
+
+- **Regra:** a Visão geral ganha o cartão "Rodar na sua máquina", logo abaixo
+  do de primeiros passos, com o que a Infra declarou na PR dela
+  (`artifact.run_instructions`, RN-852): o comando num bloco de código com
+  botão "Copiar", as URLs como links que abrem em aba nova
+  (`target="_blank"`, `rel="noopener noreferrer"`) — só `http://localhost:<porta>`
+  e `http://127.0.0.1:<porta>`; outra URL não vira link, mesmo a api já a
+  recusando —, a lembrança de `cp .env.example .env` quando `envExample` e a
+  nota "Declarado pela Infra na PR, não verificado na sua máquina" (RN-468:
+  nunca verde, nunca "rodando"). Sem declaração (`null`) o cartão não
+  aparece, como o de primeiros passos some quando não há o que dizer. A
+  leitura é de configuração (`FRESCOR_DA_CONFIGURACAO_MS`, sem poll) e o
+  aviso `infra.pr_opened` do canal da sessão a relê.
+- **Onde:** `apps/web/src/components/RodarNaSuaMaquina.tsx:32` (`RodarNaSuaMaquina`), `:20` (`urlLocalSegura`),
+  `:13` (`releSeInfraAbriuPr`),
+  `apps/web/src/routes/ProjectOverviewTab.tsx:202` (`releSeInfraAbriuPr`),
+  `apps/web/src/lib/api-client.ts:832` (`getRunInstructions`)
+- **Teste:** `apps/web/src/components/RodarNaSuaMaquina.test.tsx` ("mostra
+  comando, copiar, link local e a nota de não verificado"; "sem declaração
+  (null) o cartão não aparece"; "só localhost/127.0.0.1 com porta vira link";
+  "infra.pr_opened relê o cartão; outro evento não")
+- **Origem:** AT-517 (ADR 0213)

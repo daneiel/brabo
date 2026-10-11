@@ -45,6 +45,7 @@ import { ActivityFeed } from '../components/ActivityFeed';
 import { useLayoutMovel } from '../lib/layout-movel';
 import { AmbienteDoProjeto } from '../components/AmbienteDoProjeto';
 import { PrimeirosPassos } from '../components/PrimeirosPassos';
+import { RodarNaSuaMaquina, releSeInfraAbriuPr } from '../components/RodarNaSuaMaquina';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
 import { Skeleton } from '../components/ui/Skeleton';
@@ -196,7 +197,10 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
     // vêm dele, não do event log), só que também com janela.
     const invalidador = criarInvalidadorDoCanal(queryClient, projectId, sessionId);
     const disconnect = connectSessionHeartbeat(projectId, sessionId, {
-      onEvent: ({ type }) => invalidador.aoEvento(type, false, ['backlog']),
+      onEvent: ({ type }) => {
+        invalidador.aoEvento(type, false, ['backlog']);
+        releSeInfraAbriuPr(queryClient, projectId, type);
+      },
       onAgentStatus: () => invalidador.aoEvento('agent.status', false),
     });
     return () => {
@@ -274,6 +278,8 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
           projectId={projectId}
           temSessao={sessoesQuery.data ? !!latestSession : undefined}
         />
+        {/* RN-855: como rodar o entregável, declarado pela Infra. */}
+        <RodarNaSuaMaquina projectId={projectId} />
         <div className={styles.sectionRow}>
           <h2 className={styles.sectionHeader}>{t('team.title')}</h2>
           <span className={styles.sectionCount}>
