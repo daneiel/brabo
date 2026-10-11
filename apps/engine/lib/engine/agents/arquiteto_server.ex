@@ -221,7 +221,8 @@ defmodule Engine.Agents.ArquitetoServer do
         "O usuário JÁ confirmou que a arquitetura está pronta — não peça " <>
           "essa confirmação de novo. Finalize quaisquer considerações " <>
           "pendentes; o SISTEMA oferece em seguida o handoff à Infra, que " <>
-          "sobe o container do projeto (não prometa pipeline nem deploy)."
+          "sobe o container do projeto (não prometa pipeline nem deploy).\n\n" <>
+          ListarAdrsPropostas.contexto_de_prontidao(state)
       )
 
     state =

@@ -596,6 +596,8 @@ defmodule Engine.Dev.DevAgentServer do
       # chamar a ferramenta — o loop então termina sem desfecho e a task é
       # bloqueada sem o modelo ter feito nada.
       # RN-846 (AT-515): rota HTTP documentada e erro de entrada próprio.
+      # RN-850 (AT-520): a rota vai DENTRO de "Rotas HTTP", e o README não
+      # ganha nota de processo.
       "content" =>
         "Implemente a task \"#{task["title"]}\" da story \"#{story["title"]}\". " <>
           "Rode a suite de testes do projeto via `terminal` e só sinalize conclusão com " <>
@@ -606,7 +608,9 @@ defmodule Engine.Dev.DevAgentServer do
           "motivo de `report_blocked`. Se o script `test` do `package.json` lista os " <>
           "arquivos um a um, inclua nele todo arquivo de teste novo.\n\n" <>
           "Rota HTTP criada ou mudada entra no README: método, caminho, corpo, " <>
-          "respostas e códigos. Erro de entrada (JSON malformado, campo inválido) " <>
+          "respostas e códigos, DENTRO da seção \"Rotas HTTP\" (crie-a antes de " <>
+          "\"Testes\" se faltar), nunca no fim do arquivo. O README é do usuário: " <>
+          "sem nota de processo nem instrução para agentes. Erro de entrada (JSON malformado, campo inválido) " <>
           "responde com mensagem própria no formato de erro do projeto, nunca a " <>
           "mensagem crua da biblioteca.\n\n" <>
           "IMPORTANTE: aja apenas por chamadas de ferramenta. Não escreva código " <>
