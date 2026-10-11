@@ -133,7 +133,9 @@ defmodule Engine.Gates.RecorteDaTarefa do
       em background DENTRO do container, bata em
       `localhost:<porta interna>/openapi.json` e `/docs` (`curl`, `wget` ou
       `node -e "fetch(...)"`) e encerre o GRUPO de processos ao fim. Rota que
-      não responde, ou JSON que não é OpenAPI 3, vai a `itens`. O
+      não responde, ou JSON que não é OpenAPI 3, vai a `itens`. Cada rota da
+      seção "Rotas HTTP" do README precisa estar em `paths` do `/openapi.json`
+      servido (com o método): rota faltando é ITEM, nunca observação. O
       `docker compose up` real cite no `resumo` como "provado só na máquina do
       usuário", nunca em `itens`.
       """,

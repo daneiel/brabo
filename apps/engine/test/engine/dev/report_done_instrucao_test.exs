@@ -66,6 +66,7 @@ defmodule Engine.Dev.ReportDoneInstrucaoTest do
       ]
 
     assert kickoff =~ "`/openapi.json` (OpenAPI 3"
+    assert kickoff =~ "TODA rota HTTP criada ou mudada nesta tarefa entra nele"
     assert kickoff =~ "swagger-ui de CDN"
     assert kickoff =~ "\"Rodar na sua máquina\""
   end

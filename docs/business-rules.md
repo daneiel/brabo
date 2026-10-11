@@ -24288,6 +24288,30 @@ sem dizer qual.
   `apps/engine/test/engine/gates/qa_lead_server_test.exs` ("grava a pergunta
   na api, estaciona o ciclo e só o gesto humano o retoma")
 - **Origem:** AT-521, [ADR 0214](adr/0214-pergunta-em-aberto-vira-pendencia.md)
+### RN-863 — `api_docs` é sempre `/docs`, toda rota entra no OpenAPI, e o QA reprova a que falta {#rn-863}
+
+- **Regra:** módulo HTTP declara em `run.urls` SEMPRE `/docs` (a UI Swagger,
+  `kind: "api_docs"`) mesmo antes de existir, e módulo web a página inicial —
+  nunca uma rota de negócio; o kickoff da Infra diz isso no passo do README
+  (estende a RN-851). A validação do `run` recusa, nomeada e com a MESMA régua
+  nos dois lados, `api_docs` cuja URL não termina em `/docs` (estende a
+  RN-852). A cláusula do dev diz que TODA rota HTTP criada ou mudada na tarefa
+  entra no `/openapi.json` — path com método, corpo e respostas (estende a
+  RN-853). No recorte do QA, cada rota da seção "Rotas HTTP" do README precisa
+  estar em `paths` do `/openapi.json` servido; rota faltando é item que
+  reprova, nunca observação (estende a RN-854).
+- **Onde:** `apps/engine/lib/engine/infra/instrucoes_de_execucao.ex:52` (`url`),
+  `apps/api/src/domain/infra/run-instructions.ts:44` (`recusaDoRun`),
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:1398` (`build_kickoff`),
+  `apps/engine/lib/engine/dev/dev_agent_server.ex:631` (`clausula_de_openapi`),
+  `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:20` (`texto`)
+- **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs`
+  ("run api_docs em rota de negócio é recusado com motivo, sem propor"),
+  `apps/api/test/application/use-cases/execution/get-run-instructions.use-case.spec.ts`
+  ("recusaDoRun (RN-852)"),
+  `apps/engine/test/engine/dev/report_done_instrucao_test.exs` ("RN-853: …"),
+  `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs` ("RN-854: …")
+- **Origem:** AT-524, [ADR 0213](adr/0213-o-entregavel-roda-na-maquina-pelo-compose-da-infra.md)
 ### RN-861 — As perguntas em aberto são fila própria no chat, e o aviso de prontidão não bloqueia {#rn-861}
 
 - **Regra:** o bloco de pendências do chat ganha a fila "Perguntas em
