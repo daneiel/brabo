@@ -113,6 +113,17 @@ wasn't a missing outbox, it was missing durable state for what happens
 BETWEEN two in-process calls. See
 [RN-140](business-rules.md#rn-140), [ADR 0067](adr/0067-o-gate-sobrevive-ao-restart.md).
 
+The QA gate has a THIRD verdict besides `approved`/`changes_requested`:
+`needs_user_decision`, for a requirement the user never confirmed (or that a
+current decision contradicts). It does not consume a correction; the QA Lead
+consolidates it above `approved`, and the cycle is PARKED by the mechanism of
+[ADR 0207](adr/0207-ciclo-de-gate-velho-estaciona.md) until the user answers the
+question, which resumes it. The conversational side of the same rule is the
+`declare_open_question` tool (Creative, PO, Architect, Dev Lead), which records
+`artifact.open_question`; the user's answers come back to the dev and to QA as
+"user decisions" in the dev-context ([RN-862](business-rules.md#rn-862),
+[ADR 0214](adr/0214-pergunta-em-aberto-vira-pendencia.md)).
+
 Who ASKS for a gate is never the gate itself: `Engine.Gates.Dispatcher` is a
 behaviour with five callbacks (PR QA and SecOps, the two deterministic infra
 gates, and design AppSec — the QA-strategy one left with

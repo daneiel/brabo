@@ -349,7 +349,12 @@ the environment one and BEFORE the author profile and the language guidance:
 the delivery flow, built by `Engine.Harness.FluxoDoTime` — the seven steps in
 order, where the agent is, the real next step and who triggers it (human or
 system). Same text for every turn of the same agent; never stored in the
-agent's history. The request body does not change.
+agent's history. The request body does not change. Since
+[RN-862](../business-rules.md#rn-862) the same message ends, for the Creative,
+PO, Architect and Dev Lead only (the agents with `declare_open_question`), with
+one central sentence: every doubt left for the user becomes
+`declare_open_question`, with the agent's suggestion and what it affects — never
+a question only in the turn text.
 
 #### The final frame carries the model name ([RN-146](../business-rules/autenticacao.md#rn-146))
 
@@ -1200,6 +1205,17 @@ question resumes it. The engine records `artifact.open_question` through
 `stories/:storyId/complete` accept an optional `questionId`: a `ready` story is
 corrected only when it cites a question the user already answered
 ([RN-859](../business-rules.md#rn-859)).
+
+On the engine side ([RN-862](../business-rules.md#rn-862),
+[ADR 0214](../adr/0214-pergunta-em-aberto-vira-pendencia.md)) the body of a
+`needs_user_decision` verdict carries `pergunta`, `sugestao` and/or
+`openQuestionId` next to the usual fields (absent keys are omitted; the other
+verdicts send the same body as always). After sending it the `QaLeadServer`
+parks the cycle itself — `gate_states` row with step `awaiting_user_decision`,
+`parked_at` set, `gate.rescue_parked` in the log — so the periodic rescue never
+restarts it; it does not depend on reading `await_user` back. The api resumes it
+through the existing `POST /internal/projects/:p/tasks/:t/gates/qa/resume`
+([RN-724](../business-rules.md#rn-724)).
 
 `/delegations` is DIFFERENT from the other three: it doesn't move the gate's
 state machine — it only records the outcome of an area delegate (QA, FASE 8b; Infra,
