@@ -1033,6 +1033,12 @@ names the divergence instead of rejecting the dev that followed the contract.
 Read-only, same route, same `engine-service` guard: the HTTP surface does not
 change.
 
+`/dev-context` also gained `decisoes` in AT-521
+([RN-859](../business-rules.md#rn-859)) — the user's `decision_record`s whose
+`afeta` touches the task, its story or one of the story's rules, newest first,
+at most 10, each text cut at 1,500 characters. They win over RF/DoR on
+conflict. Read-only, same route: the HTTP surface does not change.
+
 `/infra-context` gained `gitProvider` in FASE 8c (`null` with no repository
 provisioned) — it's how the Workflows subagent decides `.github/workflows/
 ci.yml` vs `.gitlab-ci.yml`, with no new route (same "one GET per
@@ -1069,9 +1075,14 @@ rationale, network, resources}`), `null` when none was decided. It is the
 | POST | `/tasks/claim` |
 | POST | `/tasks/:taskId/status` |
 | POST | `/tasks/:taskId/block` |
+| GET | `/tasks/in-progress-by-dev` (RN-856) |
 
 `tasks/claim` is atomic on the api side — it's what prevents two dev agents from
-claiming the same task.
+claiming the same task. Since RN-856 it returns the agent's OWN `in_progress`
+task (outside the gates, not blocked) before the `todo` queue.
+`tasks/in-progress-by-dev` lists the project's `in_progress` tasks held by a
+`dev-*` agent (empty unless the session is an execution session); the engine
+blocks the ones no live dev agent holds when it stops an execution.
 
 `/stories/:storyId/update` (title and/or description) and
 `/stories/:storyId/archive` (optional `reason`) are the PO's `update_story` and
@@ -1175,6 +1186,20 @@ emptying out (finding W, in
 The **gate state machine lives in the api**, not in the engine. The engine reports the
 verdict; who decides whether the transition is legal — and rejects QA trying to jump to
 `awaiting_user` — is the domain ([RN-014](../business-rules.md#rn-014)).
+
+Since AT-521 `/gates/verdict` also accepts `veredito: "needs_user_decision"`
+(QA only — [RN-860](../business-rules.md#rn-860), ADR 0214), with `pergunta`
+and `sugestao` or an existing `openQuestionId`. It keeps the same gate WITHOUT
+counting a correction, writes an `artifact.open_question` (author `qa-agent`,
+affecting the task) when no `openQuestionId` is given, marks `pr.gate_changed`
+with `esperandoUsuario: true`, and answers `nextAction: "await_user"` plus the
+`openQuestionId` — the engine parks the cycle (ADR 0207) and answering the
+question resumes it. The engine records `artifact.open_question` through
+`POST /events` like any other artifact; the api validates its payload there
+([RN-858](../business-rules.md#rn-858)). `stories/:storyId/update` and
+`stories/:storyId/complete` accept an optional `questionId`: a `ready` story is
+corrected only when it cites a question the user already answered
+([RN-859](../business-rules.md#rn-859)).
 
 `/delegations` is DIFFERENT from the other three: it doesn't move the gate's
 state machine — it only records the outcome of an area delegate (QA, FASE 8b; Infra,

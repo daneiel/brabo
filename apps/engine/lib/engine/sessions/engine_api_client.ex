@@ -338,6 +338,16 @@ defmodule Engine.Sessions.EngineApiClient do
               {:ok, map()} | {:error, term()}
 
   @doc """
+  RN-856 (AT-522): tarefas `in_progress` do projeto da sessão de EXECUÇÃO
+  (vazio em outra) com dono `dev-*`, fora de
+  gate e não bloqueadas — `[%{"taskId" => _, "assignedTo" => _}]`. O
+  encerramento da execução bloqueia as que nenhuma linha de
+  `dev_agent_states` segura.
+  """
+  @callback list_tarefas_em_curso_de_dev(session_id :: String.t()) ::
+              {:ok, [map()]} | {:error, term()}
+
+  @doc """
   Abre o fluxo de gates de uma PR (Fase 4a) — o `DevAgentServer` chama logo
   depois de `pr_open` executar com sucesso.
   """
@@ -888,6 +898,9 @@ defmodule Engine.Sessions.EngineApiClient do
           origin
         )
 
+  def list_tarefas_em_curso_de_dev(session_id),
+    do: impl().list_tarefas_em_curso_de_dev(session_id)
+
   def open_gate(project_id, session_id, task_id, agent_id),
     do: impl().open_gate(project_id, session_id, task_id, agent_id)
 
@@ -1329,6 +1342,15 @@ defmodule Engine.Sessions.EngineApiClient.Live do
       diagnosis: diagnosis,
       origin: origin
     })
+  end
+
+  @impl true
+  def list_tarefas_em_curso_de_dev(session_id) do
+    case get_json("/internal/sessions/#{session_id}/tasks/in-progress-by-dev") do
+      {:ok, lista} when is_list(lista) -> {:ok, lista}
+      {:ok, outro} -> {:error, {:resposta_inesperada, outro}}
+      erro -> erro
+    end
   end
 
   @impl true

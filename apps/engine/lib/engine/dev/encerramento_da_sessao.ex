@@ -42,6 +42,7 @@ defmodule Engine.Dev.EncerramentoDaSessao do
 
     if linhas == [] do
       apagar_gates_da_sessao(session_id)
+      bloquear_orfas(session_id, MapSet.new())
       []
     else
       alvos = Enum.map(linhas, &{&1.project_id, &1.agent_id})
@@ -58,6 +59,13 @@ defmodule Engine.Dev.EncerramentoDaSessao do
 
       Enum.each(linhas, &devolver_task/1)
       apagar_gates_da_sessao(session_id)
+
+      linhas
+      |> Enum.map(& &1.task_id)
+      |> Enum.filter(&is_binary/1)
+      |> MapSet.new()
+      |> then(&bloquear_orfas(session_id, &1))
+
       Enum.map(linhas, & &1.agent_id)
     end
   end
@@ -115,6 +123,42 @@ defmodule Engine.Dev.EncerramentoDaSessao do
   end
 
   defp devolver_task(linha), do: DevAgentState.delete(linha.project_id, linha.agent_id)
+
+  # RN-856 (AT-522): a task `in_progress` cujo dev agent já não tem linha em
+  # `dev_agent_states` (o processo morreu, a execução parou antes) é ÓRFÃ:
+  # nada a devolvia, e ela ficava presa com um dono que não existe. É
+  # bloqueada com o mesmo motivo e origem; o trabalho dela fica na branch da
+  # task (o worktree não é de ninguém vivo para preservar), e o "Desbloquear"
+  # a devolve à fila.
+  defp bloquear_orfas(session_id, ja_devolvidas) do
+    case EngineApiClient.list_tarefas_em_curso_de_dev(session_id) do
+      {:ok, tarefas} ->
+        tarefas
+        |> Enum.reject(&MapSet.member?(ja_devolvidas, &1["taskId"]))
+        |> Enum.each(&bloquear_orfa(session_id, &1))
+
+      {:error, motivo} ->
+        Logger.warning("sessão #{session_id}: tarefas órfãs ilegíveis: #{inspect(motivo)}")
+    end
+  end
+
+  defp bloquear_orfa(session_id, %{"taskId" => task_id, "assignedTo" => dono} = t) do
+    diagnostico =
+      "A sessão de execução foi encerrada com a task em curso e sem dev agent " <>
+        "vivo segurando-a (#{dono}); o trabalho já commitado segue na branch da task." <>
+        " Libere a task para retomá-la numa nova execução."
+
+    _ =
+      EngineApiClient.mark_task_blocked(
+        t["projectId"],
+        session_id,
+        task_id,
+        @motivo,
+        diagnostico,
+        dono,
+        "politica"
+      )
+  end
 
   defp onde_ficou(%{worktree_path: path} = linha) when is_binary(path) do
     case AgentIo.worktree_manager().preservar(

@@ -14423,7 +14423,7 @@ contexto vivo tinha (a cauda inteira, mesmo o que já tinha sido compactado); o
   abertura); `apps/engine/lib/engine/harness/context_manager.ex:138` (o resumo
   gravado); `apps/engine/lib/engine/sessions/engine_api_client.ex:1066`
 
-  gravado); `apps/engine/lib/engine/sessions/engine_api_client.ex:1114`
+  gravado); `apps/engine/lib/engine/sessions/engine_api_client.ex:1124`
   (`list_events/3`); os seis `init/1` —
   `apps/engine/lib/engine/agents/criativo_server.ex:89`, `po_server.ex:93`,
   `arquiteto_server.ex:87`, `dev_lead_server.ex:132`, `ux_designer_server.ex:85`,
@@ -14632,13 +14632,13 @@ fonte continua sendo o GET, o canal continua sendo só gatilho — como já era
 desde a Fase 4a —, e o que muda é a latência máxima das escritas sem aviso.
 
 - **Código:** `apps/engine/lib/engine/sessions/engine_api_client.ex:581`,
-  `:607`, `:630`, `:1002` (`avisar_canal`);
+  `:607`, `:630`, `:1012` (`avisar_canal`);
 
   `:607`, `:630`, `:953` (`avisar_canal`);
   `apps/engine/lib/engine/sessions/live_broadcast.ex` (`event_appended/3`);
   `apps/engine/lib/engine_web/controllers/session_command_controller.ex:46`
   (`event_appended`, a rota do aviso da api);
-  `apps/api/src/application/use-cases/sessions/append-session-event.use-case.ts:182`
+  `apps/api/src/application/use-cases/sessions/append-session-event.use-case.ts:198`
   (`eventAppended`);
   `apps/api/src/infrastructure/persistence/drizzle/drizzle-context.ts:39`
   (`aposCommit`), `:53` (`veioDoEngine`);
@@ -14798,9 +14798,9 @@ fechada seguem mostrando a mensagem da api.
   `apps/api/src/domain/sessions/conversa-em-sessao-encerrada.ts:56`
   (`AGENTES_CONVERSACIONAIS`), `:67` (`TIPOS_DA_CONVERSA`), `:95`
   (`ehEventoDeConversa`), `:117` (`garantirQueSessaoAceitaEvento`);
-  `apps/api/src/application/use-cases/sessions/append-session-event.use-case.ts:39`
+  `apps/api/src/application/use-cases/sessions/append-session-event.use-case.ts:44`
   (`conflitoDeSessaoEncerrada`), `:114` (o estado no mesmo `UPDATE` do `seq`),
-  `:198` (`garantirQueAceita`);
+  `:214` (`garantirQueAceita`);
   `apps/api/src/infrastructure/persistence/drizzle/session.repository.ts:117`
   (`incrementSeq`);
   `apps/api/src/application/use-cases/llm/send-chat-message.use-case.ts:78`
@@ -14815,11 +14815,11 @@ fechada seguem mostrando a mensagem da api.
   (`conversa_ociosa`), `:193` (`encerrar`), `:222`
   (`conversation_idle_timeout_ms`); `apps/engine/lib/engine/sessions/monitor.ex:185`
   (`classify`); `apps/engine/lib/engine/psychologist/termination_classifier.ex:46`;
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1080`
-  (`narrar_recusa_de_sessao_encerrada`), `:1415` (`pendencia_da_resposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1090`
+  (`narrar_recusa_de_sessao_encerrada`), `:1437` (`pendencia_da_resposta`);
 
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1080`
-  (`narrar_recusa_de_sessao_encerrada`), `:1415` (`pendencia_da_resposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1090`
+  (`narrar_recusa_de_sessao_encerrada`), `:1437` (`pendencia_da_resposta`);
   `apps/engine/lib/engine/agents/conversacionais.ex:49` (`parar_da_sessao`),
   `:69` (`parar_da_sessao_no_cluster`);
   `apps/engine/lib/engine/agents/turno_assincrono.ex:411` (`abandonar`);
@@ -15808,9 +15808,9 @@ pacote da porta de Docker. Nada muda na contenção do broker ([ADR
   `:205` (`TETO_DE_MUTACAO_MS`), `:217` (`FOLGA_DO_EXEC_NO_ENGINE_MS`),
   `:270` (`erroDeTransporte`);
   `apps/api/src/application/ports/container-broker.port.ts:89` (`MotivoDeBrokerIndisponivel`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1901` (`teto_do_container_exec_ms`)
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1923` (`teto_do_container_exec_ms`)
 
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1901` (`teto_do_container_exec_ms`)
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1923` (`teto_do_container_exec_ms`)
 - **Teste:** `apps/api/test/infrastructure/http-clients/container-broker.client.spec.ts:286`
   (a reprodução, contra um broker `node:http` que demora 6 s), `:182` (o
   teto de cada operação no `AbortSignal`), `:204` e `:229` (`teto-excedido`
@@ -15894,9 +15894,9 @@ continua vindo da decisão do Arquiteto, e `pull` não é operação nova do bro
   `apps/api/src/infrastructure/http-clients/container-broker.client.ts:205` (`TETO_DE_MUTACAO_MS`),
   `:175` (`CHAMADAS_DE_CONTROLE_NO_START`),
   `:228` (`TETO_DO_PROPOSE_ACTION_DE_CONTAINER_NO_ENGINE_MS`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1823` (`opcoes_do_propose_action`),
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1845` (`opcoes_do_propose_action`),
 
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1823` (`opcoes_do_propose_action`),
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1845` (`opcoes_do_propose_action`),
   `:1649` (`@teto_do_propose_action_de_container_ms`);
   `apps/engine/lib/engine/runners/runner_router.ex:52` (`@timeout_do_start_ms`)
 - **Teste:** `packages/docker-port/src/docker-cli.spec.ts:425` (describe da
@@ -16841,11 +16841,11 @@ especificação da AT-081 e o mecanismo verificado por provider na AT-161).
   (`anexar`), `:213` (`com_idioma_do_autor`), `:152` (`orientacao`), `:94`
   (`@sem_orientacao`), `:261` (`texto_do_turno`), `:286`
   (`idioma_do_projeto`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:662`
-  (`IdiomaDaResposta`), `:755` (`IdiomaDaResposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:672`
+  (`IdiomaDaResposta`), `:766` (`IdiomaDaResposta`);
 
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:662`
-  (`IdiomaDaResposta`), `:755` (`IdiomaDaResposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:672`
+  (`IdiomaDaResposta`), `:766` (`IdiomaDaResposta`);
   `apps/engine/lib/engine/projects/project.ex:64` (`idioma`);
   `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:515`
   (`idioma_da_resposta`);
@@ -16942,11 +16942,11 @@ AT-167 mede; os tokenizadores do DeepSeek e da Anthropic seguem não medidos.
   (`orientacao`), `:127` (`@ferramentas_de_artefato`), `:118`
   (`@forma_curta`), `:261` (`texto_do_turno`), `:279` (`grava_artefato?`),
   `:280` (`idioma_do_projeto_para_o_artefato`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:662`
-  (`IdiomaDaResposta`), `:755` (`IdiomaDaResposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:672`
+  (`IdiomaDaResposta`), `:766` (`IdiomaDaResposta`);
 
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:662`
-  (`IdiomaDaResposta`), `:755` (`IdiomaDaResposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:672`
+  (`IdiomaDaResposta`), `:766` (`IdiomaDaResposta`);
   `apps/web/src/routes/settings/ProjectLanguageSection.tsx`
 - **Teste:** `apps/engine/test/engine/harness/idioma_da_resposta_test.exs:157`
   (idiomas diferentes: a orientação diz os dois), `:168` (iguais: só um),
@@ -17209,11 +17209,11 @@ endpoint é ALPHA e o smoke manual
   `apps/api/src/db/schema/llm.ts:356` (`priceImplicit`);
   `apps/engine/lib/engine/harness/roteamento_de_ferramenta.ex:60` (`registrar`),
   `:112` (`custo_micros`), `:123` (`repetir_com_catalogo_inteiro?`), `:146`
-  (`mesclar_repeticao`); `apps/engine/lib/engine/sessions/engine_api_client.ex:677`
-  (`llm_turn`), `:749` (`llm_turn_stream`);
+  (`mesclar_repeticao`); `apps/engine/lib/engine/sessions/engine_api_client.ex:687`
+  (`llm_turn`), `:760` (`llm_turn_stream`);
 
-  (`mesclar_repeticao`); `apps/engine/lib/engine/sessions/engine_api_client.ex:677`
-  (`llm_turn`), `:749` (`llm_turn_stream`);
+  (`mesclar_repeticao`); `apps/engine/lib/engine/sessions/engine_api_client.ex:687`
+  (`llm_turn`), `:760` (`llm_turn_stream`);
   `apps/engine/lib/engine/harness/tool_loop.ex:132` (o custo do Jev no orçamento
   local)
 - **Teste:** `apps/api/test/domain/llm/tool-router.spec.ts:25` (`questions` é
@@ -17464,7 +17464,7 @@ seguiram em `in_review` (AT-275).
    chegar aqui; o gate pendente, por decisão do dono, é só aviso na tela.
 
 - **Onde:** `apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts:295`
-  (`settleMerge`), `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:413`
+  (`settleMerge`), `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:480`
   (`markDoneIfNotDone`)
 - **Teste:** `apps/api/test/application/use-cases/actions/execute-git-action.use-case.spec.ts`
   ("git_merge marca a tarefa como done": feliz, repetido, PR aberta/merge
@@ -17919,7 +17919,7 @@ vault por decisão do dono; [ADR 0182](adr/0182-ciclo-de-vida-do-handoff.md)).
   (`criar_handoffs_appsec/3`);
   `apps/engine/lib/engine/sessions/engine_api_client.ex:1131`
 
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1179`
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1189`
   (`create_handoff_if_absent`);
   `apps/api/src/domain/sessions/ciclo-de-vida-do-handoff.ts:71`
   (`decidirOferta`)
@@ -19806,8 +19806,8 @@ módulo do `module_map`, como antes, e o paralelismo extra continua pelo
 `parallelize` ([RN-083](business-rules/custo.md#rn-083)).
 
 - **Onde:** `apps/api/src/domain/execution/plano-de-execucao.ts:33`
-  (`lerPlanoDeExecucao`); `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:613`
-  (`daTarefaDoModulo`), `:348` (`claimNext`), `:336` (`assignModules`);
+  (`lerPlanoDeExecucao`); `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:680`
+  (`daTarefaDoModulo`), `:403` (`claimNext`), `:391` (`assignModules`);
   `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:137`
   (`recusaNaProposta`); `apps/api/src/application/use-cases/execution/execute-execution-plan.use-case.ts:67`
   (`recusaNaProposta`); `apps/api/src/db/schema/backlog.ts:187` (`module`);
@@ -20014,7 +20014,7 @@ lendo o worktree de outros módulos para descobrir a interface deles: o
   (`execute`);
   `apps/api/src/application/use-cases/architecture/list-module-contracts.use-case.ts:42`
   (`execute`);
-  `apps/api/src/interfaces/http/internal/internal-sessions.controller.ts:773`
+  `apps/api/src/interfaces/http/internal/internal-sessions.controller.ts:779`
   (`moduleContracts`);
   `apps/api/src/interfaces/http/internal/internal-projects.controller.ts:178`
   (`moduleContracts`);
@@ -20681,7 +20681,7 @@ Junto, o fechamento deixa de dizer que parear uma pasta pela tela do projeto
 - **Onde:** `apps/engine/lib/engine/harness/fluxo_do_time.ex:107` (`texto`),
   `:97` (`anexar`), `apps/engine/lib/engine/sessions/engine_api_client.ex:647`
 
-  `:97` (`anexar`), `apps/engine/lib/engine/sessions/engine_api_client.ex:677`
+  `:97` (`anexar`), `apps/engine/lib/engine/sessions/engine_api_client.ex:687`
   (`llm_turn`), `apps/engine/lib/engine/harness/agents.ex:23` (`identity`),
   `apps/engine/lib/engine/agents/arquiteto_server.ex:388` (`build_kickoff`)
 - **Teste:** `apps/engine/test/engine/harness/fluxo_do_time_test.exs`
@@ -20758,7 +20758,7 @@ Junto, o fechamento deixa de dizer que parear uma pasta pela tela do projeto
 - **Medição (AT-383, 02/10, loja-teste):** a #6 terminou `failed` por conflito
   em `package.json`, e a tarefa ficou `in_review` sem ninguém para resolvê-lo.
 - **Onde:** `apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts:392` (`devolverAoDono`),
-  `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:423` (`reabrirPorConflitoDeMerge`),
+  `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:490` (`reabrirPorConflitoDeMerge`),
   `apps/engine/lib/engine/workers/dev_agent_wake_worker.ex:151` (`task.merge_conflict`),
   `apps/engine/lib/engine/dev/dev_agent_server.ex:350` (`handle_info`),
   `apps/engine/lib/engine/dev/dev_agent_server.ex:805` (`trigger_gate_recheck`),
@@ -21371,7 +21371,7 @@ história que ele recriou disparou o aviso de duplicata semântica
 
 O kickoff do PO diz as três coisas.
 
-- **Onde:** `apps/api/src/application/use-cases/backlog/complete-story.use-case.ts:42`
+- **Onde:** `apps/api/src/application/use-cases/backlog/complete-story.use-case.ts:52`
   (`CompleteStoryUseCase`);
   `apps/api/src/interfaces/http/internal/internal-sessions.controller.ts:535`
   (`completeStoryRoute`); `apps/engine/lib/engine/harness/tools/complete_story.ex:47`
@@ -21687,13 +21687,13 @@ sem dizer qual.
 - **Onde:** `apps/api/src/domain/backlog/correcao-de-historia.ts:33`
   (`recusaDeCorrecaoDeHistoria`),
   `apps/api/src/application/use-cases/backlog/corrigir-historia.use-case.ts:47`
-  (`editar`), `:90` (`arquivar`),
+  (`editar`), `:95` (`arquivar`),
   `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:97`
-  (`findByProject`), `:348` (`claimNext`),
+  (`findByProject`), `:403` (`claimNext`),
   `apps/api/src/interfaces/http/backlog/backlog.controller.ts:205`
   (`updateTitle`), `:219` (`archive`),
-  `apps/api/src/interfaces/http/internal/internal-sessions.controller.ts:571`
-  (`updateStoryRoute`), `:603` (`archiveStoryRoute`),
+  `apps/api/src/interfaces/http/internal/internal-sessions.controller.ts:576`
+  (`updateStoryRoute`), `:609` (`archiveStoryRoute`),
   `apps/engine/lib/engine/harness/tools/update_story.ex:45` (`run`),
   `apps/engine/lib/engine/harness/tools/archive_story.ex:38` (`run`),
   `apps/web/src/routes/ProjectBacklogTab.tsx:64` (`motivoDeCorrecaoInerte`)
@@ -22001,7 +22001,7 @@ sem dizer qual.
   da Task do turno (`TurnoAssincrono`), então o padrão "HTTP dentro do
   GenServer" não os alcança — declarado. A web não mudou: a aba Executores
   passa a ver o `agent.error` e o `dev.blocked` da recuperação.
-- **Onde:** `apps/engine/lib/engine/sessions/engine_api_client.ex:2024`
+- **Onde:** `apps/engine/lib/engine/sessions/engine_api_client.ex:2046`
   (`isolado`), `apps/engine/lib/engine/dev/monitor.ex:69` (`ao_terminar`),
   `:107` (`registrar_e_religar`)
 - **Teste:** `apps/engine/test/engine/sessions/engine_api_client_isolado_test.exs`
@@ -22256,7 +22256,7 @@ sem dizer qual.
   `nohup … &` com log —, nunca `%Req.TransportError{reason: :timeout}` cru.
   Exec assíncrono/streaming foi considerado e não feito: a menor mudança que
   faz `npm install` comum caber é o teto.
-- **Onde:** `apps/engine/lib/engine/sessions/engine_api_client.ex:1870`
+- **Onde:** `apps/engine/lib/engine/sessions/engine_api_client.ex:1892`
   (`opcoes_do_propose_action`) e
   `apps/engine/lib/engine/harness/hooks/action_pipeline.ex:80`
   (`resultado_de_teto_do_terminal`)
@@ -22353,7 +22353,7 @@ sem dizer qual.
   exija. Continua régua de prompt: nenhuma reprovação nova no código.
 - **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:18` (`texto`),
   `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:78` (`secao_da_forma`),
-  `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:103`
+  `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:165`
   (`tarefasIrmas`) e `apps/engine/lib/engine/gates/qa_automacao_agent.ex:170`
   (`com_o_recorte`)
 - **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs` (desde
@@ -22514,7 +22514,7 @@ sem dizer qual.
   RN-059). Antes saía `origin: null`. O bloqueio de artefato de infra pelo
   mesmo motivo (`infra.artifact_blocked`) não tem campo de origem e fica como
   está, declarado.
-- **Onde:** `apps/api/src/application/use-cases/execution/record-gate-verdict.use-case.ts:113`
+- **Onde:** `apps/api/src/application/use-cases/execution/record-gate-verdict.use-case.ts:132`
   (`politica`)
 - **Teste:** `apps/api/test/application/use-cases/execution/record-gate-verdict.use-case.spec.ts`
   (o ciclo esgotado chama `MarkTaskBlockedUseCase` com `'politica'`; o veredito
@@ -22546,7 +22546,7 @@ sem dizer qual.
   da janela de eventos da aba. A confirmação no "Encerrar" da barra da sessão
   é de outra atividade (AT-452).
 - **Onde:** `apps/engine/lib/engine/dev/encerramento_da_sessao.ex:40`
-  (`parar_da_sessao`), `:66` (`parar_processos`), `:96` (`devolver_task`),
+  (`parar_da_sessao`), `:74` (`parar_processos`), `:104` (`devolver_task`),
   `apps/engine/lib/engine/dev/monitor.ex:34` (`esquecer`),
   `apps/engine/lib/engine/workers/session_lifecycle_worker.ex:94`
   (`parar_execucao`), `apps/web/src/components/PararExecucao.tsx`
@@ -22767,7 +22767,7 @@ sem dizer qual.
   `moduleOpenTasksTotal` e o corte dito no recorte. Requisito da entrega que
   depende do que outra história ainda vai entregar (uma rota, uma tela) vai ao
   `resumo` como observação e não reprova. A régua é de PROMPT, como na RN-765.
-- **Onde:** `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:118`
+- **Onde:** `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:180`
   (`tarefasAbertasDoModulo`), `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:20`
   (`texto`)
 - **Teste:** `apps/api/test/application/use-cases/execution/get-dev-task-context.use-case.spec.ts`
@@ -22792,7 +22792,7 @@ sem dizer qual.
   diz Y), para o usuário e o Arquiteto. Régua de PROMPT, como a
   [RN-765](#rn-765). Desde a [RN-792](#rn-792) o Arquiteto confere o contrato
   contra as rotas citadas nas histórias ao declará-lo.
-- **Onde:** `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:163`
+- **Onde:** `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:225`
   (`moduloDoContrato`), `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:66`
   (`secao_do_contrato`)
 - **Teste:** `apps/api/test/application/use-cases/execution/get-dev-task-context.use-case.spec.ts`
@@ -22837,8 +22837,8 @@ sem dizer qual.
   vem antes do sinal da conversa ociosa ([RN-581](#rn-581)), que continua
   o único com teto. Sessão de execução ANTIGA do mesmo projeto não é segurada
   pela tarefa: a tarefa é do projeto, e sem esse recorte ela ficaria imortal.
-- **Onde:** `apps/api/src/application/use-cases/sessions/get-session-pending-work.use-case.ts:238`
-  (`findPendenteDaExecucao`), `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:220`
+- **Onde:** `apps/api/src/application/use-cases/sessions/get-session-pending-work.use-case.ts:242`
+  (`findPendenteDaExecucao`), `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:252`
   (`findPendenteDaExecucao`)
 - **Teste:** `apps/api/test/application/use-cases/sessions/get-session-pending-work.use-case.spec.ts`
   (bloqueada, PR esperando merge e conflito seguram; sem nada, fecha; sessão
@@ -24093,6 +24093,40 @@ sem dizer qual.
   "infra.pr_opened relê o cartão; outro evento não")
 - **Origem:** AT-517 (ADR 0213)
 
+### RN-856 — Desbloquear não encerra a execução, e a tarefa em curso órfã tem volta {#rn-856}
+
+- **Regra:** três metades de um defeito só (o TP-01 mediu 1 s entre o
+  "Desbloquear" e o claim do dev, e o heartbeat encerrou a sessão nele). (1) O
+  sexto sinal da [RN-064](business-rules/custo.md#rn-064) ([RN-776](#rn-776))
+  conta também, na sessão de execução vigente, a tarefa `todo` de história
+  `ready` cujo módulo é de um dev agent DESTA execução (ator de evento `dev.*`
+  na sessão) e a tarefa `in_progress` atribuída a um deles — sem teto, como os
+  outros. (2) O claim retoma, ANTES da fila `todo`, a tarefa `in_progress` que
+  já é do agente (mesmo `assigned_to`, fora de gate, não bloqueada); a branch
+  dela, se existir e não estiver mergeada, é o ponto de partida do worktree
+  (a retomada do `WorktreeManager`). (3) Encerrar a sessão de execução
+  ([RN-763](#rn-763)) bloqueia também a tarefa `in_progress` de dono `dev-*`
+  que nenhuma linha de `dev_agent_states` segura, com o mesmo motivo e origem
+  `politica`; a lista só vem para sessão de EXECUÇÃO, então encerrar uma
+  consultiva do mesmo projeto não bloqueia nada.
+- **Onde:** `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:252`
+  (`findPendenteDaExecucao`), `:403` (`claimNext`), `:221` (`listEmCursoDeDev`),
+  `apps/api/src/application/use-cases/sessions/get-session-pending-work.use-case.ts:49`
+  (`em_curso_de_dev`),
+  `apps/engine/lib/engine/dev/encerramento_da_sessao.ex:133` (`bloquear_orfas`)
+- **Teste:** `apps/api/test/application/use-cases/sessions/get-session-pending-work.use-case.spec.ts`
+  ("tarefa recém-desbloqueada (todo) do módulo de um dev da execução segura a
+  sessão"; "tarefa todo de módulo SEM dev na execução não segura"; "tarefa
+  in_progress atribuída a dev da execução segura a sessão"; "listEmCursoDeDev
+  lista a in_progress de dev só para sessão de EXECUÇÃO"),
+  `apps/api/test/application/use-cases/execution/claim-next-task.use-case.spec.ts`
+  ("retoma a in_progress que já é DELE antes da fila todo"; "não retoma a
+  in_progress dele que está em gate"),
+  `apps/engine/test/engine/dev/encerramento_da_sessao_test.exs` ("bloqueia a
+  task em curso ÓRFÃ…"; "sem nenhuma linha, a órfã também é bloqueada…")
+- **Origem:** AT-522 (TP-01, 14ª: sessão `538a0ba5` encerrada 1 s depois do
+  desbloqueio, tarefa `in_progress` presa em `dev-api` sem processo)
+
 ### RN-857 — O passo de correção do dev agent tem escrita e terminal no recorte do Jev {#rn-857}
 
 - **Regra:** quando o recorte do Jev (RN-625) decide o menu de um dev agent
@@ -24111,6 +24145,116 @@ sem dizer qual.
   leitura do dev não alarga"; "outro agente com a mesma mensagem não ganha";
   "as marcas existem no texto que o engine monta")
 - **Origem:** AT-523
+### RN-858 — A pergunta em aberto de agente é registro durável, e só o autor da sessão a responde {#rn-858}
+
+- **Regra:** a dúvida que um agente deixa para o usuário vira o evento
+  `artifact.open_question` (append-only, no log da sessão onde nasce) com
+  `{questionId (uuid), pergunta (até 500), sugestao (até 300, opcional),
+  afeta: {regras, historias, tarefas}, autor, sessionId}` — o funil de
+  eventos recusa com 400 o payload fora desse formato, venha do engine ou da
+  api. Ela fecha com `open_question.answered` `{questionId, resposta,
+  aceitouSugestao, decisionEventId, respondidaPor}`; o STATUS sai do log
+  (aberta = sem `answered`), nunca de tabela. `GET
+  /projects/:projectId/open-questions?status=open|answered|all` (`viewer`,
+  padrão `open`) lista as mais recentes primeiro, com teto de 50 e o `total`
+  (RN-180), e diz em `autorDaSessao` quem pode responder. `POST
+  .../open-questions/:questionId/answer` com `{resposta}` ou
+  `{aceitarSugestao: true}` só é aceito do AUTOR da sessão de origem (403
+  `so_o_autor_da_sessao`); já respondida é 409 `pergunta_ja_respondida`,
+  pergunta de outro projeto é 404 e resposta vazia (ou sugestão que não
+  existe) é 400. Responder grava, numa transação, um `artifact.decision_record`
+  com o usuário como ator (`context` = a pergunta, `choice` = a resposta,
+  `consequences` = o que afeta, mais `questionId` e `afeta`) e o
+  `open_question.answered`, avisa o canal da sessão (pelo funil, RN-579) e pede
+  ao engine para retomar o gate de QA ESTACIONADO de cada tarefa afetada
+  (caminho da RN-724) — melhor esforço: gate que não estava estacionado ou
+  engine fora do ar não desfaz a resposta. ADR 0214.
+- **Onde:** `apps/api/src/domain/open-questions/pergunta-em-aberto.ts:44`
+  (`validarPerguntaEmAberto`), `:112` (`respostaEscolhida`),
+  `apps/api/src/application/use-cases/sessions/append-session-event.use-case.ts:101`
+  (`EVENTO_PERGUNTA_EM_ABERTO`),
+  `apps/api/src/application/use-cases/backlog/perguntas-em-aberto.use-case.ts:72`
+  (`listar`), `:106` (`responder`), `:189` (`resumeParkedGate`),
+  `apps/api/src/interfaces/http/backlog/open-questions.controller.ts:51`
+  (`list`), `:81` (`answer`)
+- **Teste:** `apps/api/test/application/use-cases/backlog/perguntas-em-aberto.use-case.spec.ts`
+  ("o autor responde: decision_record (ator usuário, com questionId) e
+  answered, e o gate é religado"; "aceitar a sugestão grava a sugestão como
+  escolha"; falhas: "quem não é o autor da sessão recebe 403
+  so_o_autor_da_sessao, sem escrever"; "já respondida é 409
+  pergunta_ja_respondida"; "pergunta de outro projeto é 404"; "o funil de
+  eventos recusa com 400 antes de qualquer escrita")
+- **Origem:** AT-521 (TP-01: quatro perguntas do Criativo sumiram do campo de
+  visão e o fluxo seguiu sem respostas)
+
+### RN-859 — A decisão do usuário chega a quem trabalha, e destrava a correção da história `ready` {#rn-859}
+
+- **Regra:** `GET /internal/sessions/:sessionId/dev-context` devolve
+  `decisoes`: os `artifact.decision_record` do projeto cujo `afeta` toca a
+  tarefa, a história dela ou uma regra que a história cita — mais recentes
+  primeiro, no máximo 10, com a pergunta e a decisão cortadas em 1 500
+  caracteres cada (`{id, questionId, pergunta, decisao, decididaEm}`).
+  Decisão sem `afeta` não entra. Elas vencem RF/DoR quando conflitam (o
+  kickoff do dev e o recorte do QA as mostram — engine). E a régua de
+  correção de história (RN-727, `recusaDeCorrecaoDeHistoria`) é revista
+  (ADR 0214, sobre o ADR 0212): história `ready` também é corrigível quando o
+  pedido cita um `questionId` que o usuário JÁ respondeu — pergunta aberta ou
+  inexistente não destrava nada, e a trava de tarefa `in_progress`/`in_review`
+  continua valendo. As duas portas do PO aceitam o `questionId`: `update_story`
+  (título/descrição, o evento o leva) e `complete_story` (RF/DoD/DoR; a
+  história segue `ready`, sem nova promoção, e `backlog.story_completed` leva
+  o `questionId`).
+- **Onde:** `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:112`
+  (`decisoesDaTarefa`), `:344` (`decisoesDaTarefa`),
+  `apps/api/src/domain/backlog/correcao-de-historia.ts:33`
+  (`recusaDeCorrecaoDeHistoria`),
+  `apps/api/src/application/use-cases/backlog/corrigir-historia.use-case.ts:126`
+  (`respostaDoUsuario`),
+  `apps/api/src/application/use-cases/backlog/complete-story.use-case.ts:82`
+  (`corrigindoReady`)
+- **Teste:** `apps/api/test/application/use-cases/execution/get-dev-task-context.use-case.spec.ts`
+  ("devolve só as que afetam a tarefa, a história ou uma regra dela, mais
+  recentes primeiro"; "decisão sem afeta não entra; teto de 10 e texto cortado
+  em 1 500"),
+  `apps/api/test/application/use-cases/backlog/corrigir-historia.use-case.spec.ts`
+  ("história ready citando pergunta RESPONDIDA é corrigida, e o evento a
+  cita"; falhas: "história ready citando pergunta AINDA ABERTA segue
+  recusada"; "história ready com tarefa em revisão segue recusada mesmo com a
+  resposta"),
+  `apps/api/test/application/use-cases/backlog/complete-story.use-case.spec.ts`
+  ("história ready com pergunta respondida tem RF/DoR corrigidos e segue
+  ready"; "história ready com pergunta ainda aberta é recusada")
+- **Origem:** AT-521 (o QA reprovou três vezes lendo a DoR de uma história
+  `ready` que ninguém podia corrigir, depois de o usuário já ter decidido)
+
+### RN-860 — O gate de QA espera o usuário sem gastar o ciclo de correção {#rn-860}
+
+- **Regra:** o parecer de gate (`POST /internal/sessions/:sessionId/gates/verdict`)
+  aceita o veredito `needs_user_decision`, só do gate `qa`, com `pergunta`
+  (até 500) e `sugestao` (até 300) ou um `openQuestionId` que já existe — sem
+  nenhum dos dois é 400. A máquina de estados mantém o MESMO gate e NÃO
+  incrementa o contador de correção, nem no teto, então o ciclo não chega ao
+  bloqueio `politica` da RN-762. Sem `openQuestionId`, a api grava o
+  `artifact.open_question` (ator e autor `qa-agent`, na sessão de execução,
+  afetando a tarefa e a história dela), o `pr.gate_changed` sai com
+  `esperandoUsuario: true` e o `openQuestionId` (é por ele que a tela mostra
+  a tarefa como "esperando você"), e a resposta devolve `nextAction:
+  "await_user"` com o `openQuestionId` — o engine estaciona o ciclo (ADR 0207)
+  e a resposta à pergunta o religa (RN-858). Nenhuma linha de outbox nasce
+  nesse desfecho. ADR 0214.
+- **Onde:** `apps/api/src/domain/execution/pr-gate-state-machine.ts:63`
+  (`nextGateStatus`),
+  `apps/api/src/application/use-cases/execution/record-gate-verdict.use-case.ts:94`
+  (`esperaUsuario`), `:160` (`nextAction`)
+- **Teste:** `apps/api/test/domain/execution/pr-gate-state-machine.spec.ts`
+  ("needs_user_decision mantém o gate e NÃO incrementa o contador, nem no
+  teto"),
+  `apps/api/test/application/use-cases/execution/record-gate-verdict.use-case.spec.ts`
+  ("needs_user_decision no teto: grava a pergunta, não conta correção, não
+  bloqueia"; falha: "needs_user_decision sem pergunta nem openQuestionId é
+  recusado")
+- **Origem:** AT-521 (o QA de Automação reprovou quatro vezes "não confirmado
+  pelo usuário" até o ciclo esgotar)
 
 ### RN-862 — A pergunta em aberto do lado do engine: ferramenta, veredito e decisão no contexto {#rn-862}
 
@@ -24130,7 +24274,7 @@ sem dizer qual.
   vencem RF/DoR quando conflitam" (`pergunta → decisao`); vazio não escreve
   nada. A pergunta gravada conta no fecho do turno (RN-731), e o PO passa
   `question_id` em `update_story`/`complete_story` quando corrige a história a
-  partir de uma resposta (ADR 0214).
+  partir de uma resposta ([ADR 0214](adr/0214-pergunta-em-aberto-vira-pendencia.md)).
 - **Onde:** `apps/engine/lib/engine/harness/tools/declare_open_question.ex:54` (`run`),
   `apps/engine/lib/engine/harness/fluxo_do_time.ex:113` (`frase_da_pergunta`),
   `apps/engine/lib/engine/gates/tools/emit_qa_verdict.ex:73` (`run`),
@@ -24143,4 +24287,4 @@ sem dizer qual.
   "ContextBuilder: a história leva as decisões…"),
   `apps/engine/test/engine/gates/qa_lead_server_test.exs` ("grava a pergunta
   na api, estaciona o ciclo e só o gesto humano o retoma")
-- **Origem:** AT-521, ADR 0214
+- **Origem:** AT-521, [ADR 0214](adr/0214-pergunta-em-aberto-vira-pendencia.md)
