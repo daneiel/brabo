@@ -97,4 +97,39 @@ defmodule Engine.Harness.Tools.ListarAdrsPropostasTest do
     assert {:error, "falha ao ler as ADRs propostas: " <> _} =
              ListarAdrsPropostas.run(%{}, %{project_id: "nao-e-uuid"})
   end
+
+  describe "contexto_de_prontidao/2 (RN-849)" do
+    test "ADR mergeada aparece MERGEADA", %{project_id: p} do
+      adr!(p, "ADR banco", "executed", %{
+        execution_result: %{"pullRequestUrl" => "local://x/pull/1", "pullRequestId" => "1"}
+      })
+
+      adr!(p, "merge", "executed", %{
+        action_type: "git_merge",
+        payload: %{"pullRequestId" => "1"},
+        decided_at: ~U[2026-10-11 00:37:52.000000Z]
+      })
+
+      texto = ListarAdrsPropostas.contexto_de_prontidao(%{project_id: p})
+      assert texto =~ "PR MERGEADA em"
+      assert texto =~ "Não afirme estado de ADR diferente"
+    end
+
+    test "ADR pendente aparece pendente", %{project_id: p} do
+      adr!(p, "ADR fila", "pending")
+
+      assert ListarAdrsPropostas.contexto_de_prontidao(%{project_id: p}) =~
+               "PENDENTE de aprovação"
+    end
+
+    test "leitura que falha diz que não leu, nunca pendente", %{project_id: p} do
+      texto =
+        ListarAdrsPropostas.contexto_de_prontidao(%{project_id: p}, fn _, _ ->
+          {:error, "boom"}
+        end)
+
+      assert texto =~ "NÃO CONSEGUI LER"
+      refute texto =~ "PENDENTE"
+    end
+  end
 end
