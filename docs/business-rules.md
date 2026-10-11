@@ -17813,7 +17813,7 @@ não dizia quais abas estavam abertas, e a leitura de que `/containers` estava
 numa delas é inferência pelos 106 ≈ 9 × 12.
 
 - **Código:** `apps/web/src/lib/canal-vivo.ts:54` (`INTERVALO_DO_PROJETO_MS`),
-  `:237` (`aoEvento`, os `extras`); `apps/web/src/lib/hooks.ts:127`
+  `:243` (`aoEvento`, os `extras`); `apps/web/src/lib/hooks.ts:127`
   (`useProjectSessions`), `:158` (`useLatestSession`);
   `apps/web/src/routes/ProjectPage.tsx:77` (os contadores do trilho);
   `apps/web/src/routes/ContainersPage.tsx:62` (`useLatestSession`, sem poll);
@@ -20761,7 +20761,7 @@ Junto, o fechamento deixa de dizer que parear uma pasta pela tela do projeto
   `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:423` (`reabrirPorConflitoDeMerge`),
   `apps/engine/lib/engine/workers/dev_agent_wake_worker.ex:151` (`task.merge_conflict`),
   `apps/engine/lib/engine/dev/dev_agent_server.ex:350` (`handle_info`),
-  `apps/engine/lib/engine/dev/dev_agent_server.ex:786` (`trigger_gate_recheck`),
+  `apps/engine/lib/engine/dev/dev_agent_server.ex:790` (`trigger_gate_recheck`),
   `apps/engine/lib/engine/dev/worktree_manager.ex:47` (`adopt`)
 - **Teste:** `apps/api/test/application/use-cases/actions/execute-git-action.use-case.spec.ts` ("conflito de merge → kind git_merge, arquivos no
   resultado e evento na tarefa"; falha: "RN-715: tarefa que já não está em
@@ -20839,7 +20839,7 @@ Junto, o fechamento deixa de dizer que parear uma pasta pela tela do projeto
 - **Medição (AT-377):** duas PRs do mesmo commit base (#3 e #4) mergeadas em
   sequência: a `dev` ficou só com a #4, e os commits da #3 deixaram de ser
   ancestrais dela. O `update-ref` antigo era um reset forçado.
-- **Onde:** `apps/api/src/infrastructure/git/local-git-provider.ts:769` (`mergeShas`),
+- **Onde:** `apps/api/src/infrastructure/git/local-git-provider.ts:783` (`mergeShas`),
   `apps/api/src/domain/git/git-errors.ts:89` (`GitMergeConflictError`),
   `apps/api/src/interfaces/http/shared/git-provider-error.filter.ts`
 - **Teste:** `apps/api/test/infrastructure/git/local-git-provider.contract.spec.ts`
@@ -21579,7 +21579,7 @@ sem dizer qual.
   ele que decide; o reconhecimento pelo texto ficou só como rede.
 - **Onde:** `apps/engine/lib/engine/agents/falha_de_turno.ex:130`
   (`credito_esgotado?`),
-  `apps/engine/lib/engine/dev/dev_agent_server.ex:897` (`handle_outcome`),
+  `apps/engine/lib/engine/dev/dev_agent_server.ex:901` (`handle_outcome`),
   `apps/engine/lib/engine/dev/agent_io.ex:271` (`pausar_por_credito`),
   `apps/web/src/lib/agent-status.ts:198` (`breakerReasonFor`),
   `apps/api/src/application/use-cases/sessions/get-session-pending-work.use-case.ts`
@@ -21614,7 +21614,7 @@ sem dizer qual.
   (`streamErrorCode`),
   `apps/engine/lib/engine/agents/falha_de_turno.ex:83` (`credito_esgotado?`),
   `:71` (`origem`), `apps/engine/lib/engine/harness/tool_loop.ex:148`
-  (`last_error_code`), `apps/engine/lib/engine/dev/dev_agent_server.ex:897`
+  (`last_error_code`), `apps/engine/lib/engine/dev/dev_agent_server.ex:901`
   (`handle_outcome`)
 - **Teste:** `apps/api/test/contract/llm-provider.contract.ts` (`erro_402 vira
   chunk de erro com code "insufficient_credit"`; falha: `erro_500` segue
@@ -22425,7 +22425,7 @@ sem dizer qual.
   (medido no Chromium: 2 236px num balão de 708px) e a última coluna sumia.
 - **Onde:** `apps/api/src/application/use-cases/actions/execute-adr-pr.use-case.ts:96`
   (`openPullRequest`); `apps/engine/lib/engine/infra/infra_lead_server.ex:1482`
-  (`gravar_texto_do_turno`); `apps/engine/lib/engine/dev/dev_agent_server.ex:1069`
+  (`gravar_texto_do_turno`); `apps/engine/lib/engine/dev/dev_agent_server.ex:1073`
   (`propose_pr`); `apps/web/src/lib/session-destinatario.ts:192`
   (`agentesEmConversa`) e `apps/web/src/lib/session-kind.ts:69`
   (`tipoDaSessao`); `apps/web/src/routes/NewProjectWizard.tsx:1122`
@@ -22572,7 +22572,7 @@ sem dizer qual.
   leitura é `tool.result` `ok: false` com o motivo, nunca texto vazio. Desde a
   [RN-784](#rn-784) ela ESTÁ no piso do Jev.
 - **Onde:** `apps/engine/lib/engine/harness/tools/listar_adrs_propostas.ex:37`
-  (`run`), `:46` (`ler`), `apps/engine/lib/engine/agents/arquiteto_server.ex:124`
+  (`run`), `:40` (`ler`), `apps/engine/lib/engine/agents/arquiteto_server.ex:124`
   (`ListarAdrsPropostas`)
 - **Teste:** `apps/engine/test/engine/harness/tools/listar_adrs_propostas_test.exs`
   (aprovada aparece aprovada, executada com a PR, recusada com o motivo, só as
@@ -22730,8 +22730,8 @@ sem dizer qual.
   `reasoningTokens` (ficam só em `token_usage`), então a resposta vazia que
   bate no teto sem `finish_reason: length` não é reconhecida.
 - **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:219`
-  (`parada_sem_chamada`), `apps/engine/lib/engine/dev/dev_agent_server.ex:1021`
-  (`motivo_da_parada`), `:1024` (`stop_diagnosis`)
+  (`parada_sem_chamada`), `apps/engine/lib/engine/dev/dev_agent_server.ex:1025`
+  (`motivo_da_parada`), `:1028` (`stop_diagnosis`)
 - **Teste:** `apps/engine/test/engine/harness/tool_loop_test.exs` (`corte só
   de raciocínio`: retentada uma vez e segue; repetido para com
   `corte_pelo_teto`), `apps/engine/test/engine/dev/dev_agent_server_test.exs`
@@ -23010,7 +23010,7 @@ sem dizer qual.
   cobre também o merge por squash que a [RN-760](#rn-760) declara não ver.
   Declarado: a PR antiga da branch, se existir, não é fechada no provider.
 - **Onde:** `apps/engine/lib/engine/dev/worktree_manager.ex:246`
-  (`sem_diff_contra_a_dev?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:953`
+  (`sem_diff_contra_a_dev?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:957`
   (`ja_na_dev`)
 - **Teste:** `apps/engine/test/engine/dev/tarefa_ja_na_dev_test.exs`
 - **Origem:** AT-474
@@ -23163,7 +23163,7 @@ sem dizer qual.
   `codigo` e desarmou o dev.
 - **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:246`
   (`llm_turn_com_retentativa`), `apps/engine/lib/engine/agents/falha_de_turno.ex:112`
-  (`falha_de_rede?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:906`
+  (`falha_de_rede?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:911`
   (`bloquear_parada`), `apps/engine/lib/engine/dev/agent_io.ex:228`
   (`finish_task`)
 - **Teste:** `apps/engine/test/engine/harness/tool_loop_test.exs` ("falha de
@@ -23184,7 +23184,7 @@ sem dizer qual.
   com o que há, e na dúvida a task segue para os gates.
 - **Onde:** `apps/engine/lib/engine/dev/worktree_manager.ex:267`
   (`sem_diff_contra_a_dev?`), `apps/engine/lib/engine/dev/worktree_manager.ex:277`
-  (`sem_diff_atualizado?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:847`
+  (`sem_diff_atualizado?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:851`
   (`handle_outcome`)
 - **Teste:** `apps/engine/test/engine/dev/tarefa_ja_na_dev_test.exs` ("caminho
   feliz: com a dev atualizada, a branch não tem diff"; "falha: remoto
@@ -23377,6 +23377,23 @@ sem dizer qual.
   rota no README e erro de entrada próprio")
 - **Origem:** AT-515 (TP-01, 12ª: o README não documentava a API, e JSON
   malformado respondia 400 com "Expected property name…" do parser)
+
+### RN-850 — A rota entra na seção "Rotas HTTP" e o README não leva nota de processo {#rn-850}
+
+- **Regra:** extensão da [RN-846](#rn-846). O kickoff do dev agent pede que a
+  rota entre DENTRO da seção "Rotas HTTP" do README (criada antes de "Testes"
+  se faltar), nunca no fim do arquivo, e que o README, que é do usuário, não
+  ganhe nota de processo nem instrução para agentes. O recorte do QA confere
+  as duas coisas. Régua de prompt.
+- **Onde:** `apps/engine/lib/engine/dev/dev_agent_server.ex:591`
+  (`initial_message`) e `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:20`
+  (`texto`)
+- **Teste:** `apps/engine/test/engine/dev/report_done_instrucao_test.exs`
+  ("RN-850: a rota vai dentro de Rotas HTTP e o README não leva nota de
+  processo") e `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs`
+  ("RN-850: confere a seção Rotas HTTP e a ausência de nota de processo")
+- **Origem:** AT-520 (TP-01: cada tarefa acrescentou rotas no fim do README,
+  depois de "Testes", e sobrou um parágrafo de processo para agentes)
 
 ### RN-823 — O ciclo de gate que o reinício do engine matou é retomado no boot, e o fio diz isso {#rn-823}
 
@@ -23817,13 +23834,28 @@ sem dizer qual.
   só sobre os ids listados, no mesmo Postgres. Limite declarado: PR fechada
   sem merge FORA do Brabo (no provider remoto) não é vista, e segue lida como
   aberta — perguntar ao provider seria HTTP no laço do agente.
-- **Onde:** `apps/engine/lib/engine/harness/tools/listar_adrs_propostas.ex:75`
-  (`cruzar_com_merges`), `:87` (`merges_por_pr`), `:140` (`estado_da_pr`).
+- **Onde:** `apps/engine/lib/engine/harness/tools/listar_adrs_propostas.ex:88`
+  (`cruzar_com_merges`), `:102` (`merges_por_pr`), `:155` (`estado_da_pr`).
 - **Teste:** `apps/engine/test/engine/harness/tools/listar_adrs_propostas_test.exs`
   ("PR mergeada aparece como mergeada…", "estado da PR ilegível diz que não
   leu, nunca aberta").
 - **Origem:** AT-514 (TP-01, 11/10: o Arquiteto disse "aberta como PR" 30 s
   depois do merge).
+### RN-849 — O turno de prontidão da arquitetura abre com o estado atual das ADRs {#rn-849}
+
+- **Regra:** extensão da [RN-845](#rn-845). Quando o usuário confirma que a
+  arquitetura está pronta, o servidor do Arquiteto LÊ o estado das ADRs pelo
+  mesmo código de `listar_adrs_propostas` (Postgres local, sem HTTP, mesmo teto
+  de 20 linhas) e o põe na mensagem de abertura desse turno, com a instrução de
+  não afirmar estado de ADR diferente. Leitura que falha diz "NÃO CONSEGUI LER"
+  e manda dizer que não sabe — nunca "pendente".
+- **Onde:** `apps/engine/lib/engine/harness/tools/listar_adrs_propostas.ex:50`
+  (`contexto_de_prontidao`), `apps/engine/lib/engine/agents/arquiteto_server.ex:225`
+  (`contexto_de_prontidao`).
+- **Teste:** `apps/engine/test/engine/harness/tools/listar_adrs_propostas_test.exs`
+  ("contexto_de_prontidao/2 (RN-849)").
+- **Origem:** AT-519 (TP-01: no turno de prontidão o Arquiteto disse "pendente
+  de aprovação" sobre ADR já mergeada, repetindo a leitura do turno anterior).
 ### RN-843 — Um cartão de decisão por ação no chat {#rn-843}
 
 - **Regra:** extensão da [RN-822](#rn-822). O `git_merge` PENDENTE que o bloco
@@ -23882,6 +23914,42 @@ sem dizer qual.
 - **Origem:** AT-513 (TP-01 de 11/10: 9 regras sem lista, "mostrando 1 de 4"
   decisões e "Arquivos tocados: Nada ainda" com 12 PRs mergeadas)
 
+### RN-847 — A PR mergeada continua dizendo os arquivos que mudou {#rn-847}
+
+- **Regra:** extensão da [RN-844](#rn-844). No provider git LOCAL, o diff de
+  uma PR era `target...source` também depois do merge — e aí a merge base é a
+  própria ponta da origem, então a PR mergeada devolvia ZERO arquivos (medido
+  em teste: `[]` para fast-forward e para commit de merge), e o painel
+  "Contexto da sessão" dizia "Nenhum arquivo nas PRs" com 14 PRs mergeadas,
+  sem nada em `prsNaoLidas` (o diff não falhava, vinha vazio). Agora o merge
+  grava no store da PR a merge base e a ponta da origem do instante do merge
+  (`mergedBaseSha`/`mergedHeadSha`), e o diff da PR mergeada é
+  `mergedBaseSha...mergedHeadSha`. PR mergeada antes desses campos cai no
+  commit de merge do alvo (primeiro pai) cujo segundo pai é a ponta da origem;
+  a mergeada por fast-forward sem os campos não tem como ser reconstruída e
+  segue vazia (lacuna declarada). GitHub e GitLab já devolvem o diff da PR
+  mergeada pela própria plataforma. Na tela, o resumo do contexto é relido
+  nos MESMOS gatilhos que releem a lista de PRs ([RN-841](#rn-841)): o alvo
+  `prs` do canal (com a janela de 2 s dele, sem busca a mais) e a mudança da
+  assinatura do backlog, por prefixo `['session-context-summary', projectId]`.
+- **Onde:** `apps/api/src/infrastructure/git/local-git-provider.ts:374`
+  (`mergedBaseSha`), `apps/api/src/infrastructure/git/local-git-provider.ts:862`
+  (`rangeDoDiff`), `apps/web/src/lib/canal-vivo.ts:221` (`prs`),
+  `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:101` (`invalidateQueries`)
+- **Teste:** `apps/api/test/infrastructure/git/local-git-provider.contract.spec.ts`
+  ("PR mergeada por fast-forward devolve os arquivos que mudou"; "PR mergeada
+  por commit de merge devolve só os arquivos dela"; "PR mergeada antes de os
+  SHAs serem gravados acha o commit de merge"),
+  `apps/web/src/lib/contexto-da-sessao.test.tsx` ("o merge que chega pelo canal
+  relê o resumo"; "CASO DE FALHA: evento que não mexe em PR não relê o
+  resumo"), `apps/web/src/components/PendenciasDeOutrasSessoes.test.tsx`
+  ("RN-841: a tarefa que entra em awaiting_user relê as PRs…"). A falha de
+  leitura somando em `prsNaoLidas` segue coberta por
+  `apps/api/test/application/use-cases/git/resumir-contexto-da-sessao.use-case.spec.ts`
+  ("corta no teto de arquivos, conta PR fora do teto e diff que falhou em
+  prsNaoLidas").
+- **Origem:** AT-518 (TP-01, 13ª: "Nenhum arquivo nas PRs nem nos commits"
+  com 14 PRs mergeadas, e a aba sem reler o resumo)
 ### RN-848 — O efeito de ação executada dentro de um pedido interno avisa o canal da sessão {#rn-848}
 
 - **Regra:** extensão da [RN-579](#rn-579) (AT-157). A api não avisa o canal

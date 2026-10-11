@@ -5,6 +5,9 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 ## Unreleased
 
 ### Mudanças
+- **engine (dev e QA)**: o kickoff do dev pede a rota DENTRO da seção "Rotas HTTP" do README (antes de "Testes"), nunca no fim, e sem nota de processo para agentes; o QA confere as duas coisas (RN-850, AT-520).
+
+- **api + web (contexto da sessão)**: PR mergeada no repositório local deixa de devolver diff vazio — o merge grava a merge base e a ponta da origem, e o diff (aba PRs e "Arquivos tocados" do painel de contexto) passa a listar os arquivos que ela mudou; PR mergeada antes cai no commit de merge. O resumo do contexto é relido quando a lista de PRs é relida (canal e backlog), sem recarregar (RN-847, AT-518).
 - **api (canal da sessão)**: o que a api grava como efeito de uma ação auto-aprovada executada dentro do pedido interno do engine (`infra.pr_opened`, `adr.pr_opened`, `action.*`) avisa o canal na hora; a PR de infra entra em "PRs prontas" sem esperar o poll de fallback (RN-848, AT-516).
 - **engine (Arquiteto)**: `listar_adrs_propostas` cruza a ADR executada com o `git_merge` executado e diz "PR MERGEADA em <data>" ou "PR aberta"; sem como ler o estado, diz que não leu, nunca "aberta" (RN-845, AT-514).
 
@@ -124,6 +127,9 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - **ações**: com o modo automático do agente ligado (a curinga em `auto_approve`), `git_push` e `pr_open` — tipados ou pelo comando de terminal — passam a ser auto-aprovados, com o motivo "modo automático (RN-713)" no evento; regra específica, "Sempre permitir" e `permissions.json` continuam sem liberar, e merge em branch protegida, deploy e `sudo`/`doas` seguem com o usuário. As telas do modo automático dizem isso (AT-385, RN-713, ADR 0204).
 ### Correções
 
+- Arquiteto: o turno de "Confirmar arquitetura pronta" abre com o estado atual
+  das ADRs lido pelo sistema, e não repete mais "pendente de aprovação" sobre
+  ADR já mergeada (RN-849).
 - Visão geral: o "Desbloquear" das tarefas bloqueadas vem antes dos blocos que
   carregam depois (religar e dev agents), fica inerte com "Desbloqueando…" em
   voo, diz "Tarefa desbloqueada" no sucesso e mostra a frase da api na recusa;

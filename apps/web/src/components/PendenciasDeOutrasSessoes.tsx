@@ -97,6 +97,8 @@ export function PendenciasDeOutrasSessoes({
     assinaturaAnterior.current = assinatura;
     if (anterior !== undefined && anterior !== assinatura) {
       void queryClient.invalidateQueries({ queryKey: ['code-pull-requests', projectId] });
+      // RN-847 (AT-518): o resumo do contexto lê os arquivos das mesmas PRs.
+      void queryClient.invalidateQueries({ queryKey: ['session-context-summary', projectId] });
     }
   }, [assinatura, projectId, queryClient]);
   const [propostas, setPropostas] = useState<Record<string, ProposedAction>>({});

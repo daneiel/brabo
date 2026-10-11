@@ -55,7 +55,8 @@ defmodule Engine.Gates.RecorteDaTarefa do
     entrega e aparece só na volta seguinte é uma volta paga a mais.
     Na varredura, confira também que o usuário usa pelo README: rota HTTP
     criada ou mudada nesta tarefa tem ali método, caminho, corpo, respostas e
-    códigos, e erro de entrada responde com mensagem própria do projeto, nunca
+    códigos, dentro da seção "Rotas HTTP" (antes de "Testes", nunca no fim),
+    o README não traz nota de processo nem instrução para agentes, e erro de entrada responde com mensagem própria do projeto, nunca
     a crua da biblioteca; o que faltar vai a `itens`.
     #{secao_do_ambiente_limpo()}#{secao_da_forma(regras, task)}#{secao_do_ponto_de_entrada(task)}#{secao_do_contrato(contrato)}
     """
