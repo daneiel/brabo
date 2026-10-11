@@ -20761,7 +20761,7 @@ Junto, o fechamento deixa de dizer que parear uma pasta pela tela do projeto
   `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:423` (`reabrirPorConflitoDeMerge`),
   `apps/engine/lib/engine/workers/dev_agent_wake_worker.ex:151` (`task.merge_conflict`),
   `apps/engine/lib/engine/dev/dev_agent_server.ex:350` (`handle_info`),
-  `apps/engine/lib/engine/dev/dev_agent_server.ex:781` (`trigger_gate_recheck`),
+  `apps/engine/lib/engine/dev/dev_agent_server.ex:786` (`trigger_gate_recheck`),
   `apps/engine/lib/engine/dev/worktree_manager.ex:47` (`adopt`)
 - **Teste:** `apps/api/test/application/use-cases/actions/execute-git-action.use-case.spec.ts` ("conflito de merge → kind git_merge, arquivos no
   resultado e evento na tarefa"; falha: "RN-715: tarefa que já não está em
@@ -21579,7 +21579,7 @@ sem dizer qual.
   ele que decide; o reconhecimento pelo texto ficou só como rede.
 - **Onde:** `apps/engine/lib/engine/agents/falha_de_turno.ex:130`
   (`credito_esgotado?`),
-  `apps/engine/lib/engine/dev/dev_agent_server.ex:892` (`handle_outcome`),
+  `apps/engine/lib/engine/dev/dev_agent_server.ex:897` (`handle_outcome`),
   `apps/engine/lib/engine/dev/agent_io.ex:271` (`pausar_por_credito`),
   `apps/web/src/lib/agent-status.ts:198` (`breakerReasonFor`),
   `apps/api/src/application/use-cases/sessions/get-session-pending-work.use-case.ts`
@@ -21614,7 +21614,7 @@ sem dizer qual.
   (`streamErrorCode`),
   `apps/engine/lib/engine/agents/falha_de_turno.ex:83` (`credito_esgotado?`),
   `:71` (`origem`), `apps/engine/lib/engine/harness/tool_loop.ex:148`
-  (`last_error_code`), `apps/engine/lib/engine/dev/dev_agent_server.ex:892`
+  (`last_error_code`), `apps/engine/lib/engine/dev/dev_agent_server.ex:897`
   (`handle_outcome`)
 - **Teste:** `apps/api/test/contract/llm-provider.contract.ts` (`erro_402 vira
   chunk de erro com code "insufficient_credit"`; falha: `erro_500` segue
@@ -22352,7 +22352,7 @@ sem dizer qual.
   esta última é OBSERVAÇÃO no `resumo`, fora de `itens`, salvo regra que a
   exija. Continua régua de prompt: nenhuma reprovação nova no código.
 - **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:18` (`texto`),
-  `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:68` (`secao_da_forma`),
+  `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:72` (`secao_da_forma`),
   `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:103`
   (`tarefasIrmas`) e `apps/engine/lib/engine/gates/qa_automacao_agent.ex:170`
   (`com_o_recorte`)
@@ -22425,7 +22425,7 @@ sem dizer qual.
   (medido no Chromium: 2 236px num balão de 708px) e a última coluna sumia.
 - **Onde:** `apps/api/src/application/use-cases/actions/execute-adr-pr.use-case.ts:96`
   (`openPullRequest`); `apps/engine/lib/engine/infra/infra_lead_server.ex:1482`
-  (`gravar_texto_do_turno`); `apps/engine/lib/engine/dev/dev_agent_server.ex:1064`
+  (`gravar_texto_do_turno`); `apps/engine/lib/engine/dev/dev_agent_server.ex:1069`
   (`propose_pr`); `apps/web/src/lib/session-destinatario.ts:192`
   (`agentesEmConversa`) e `apps/web/src/lib/session-kind.ts:69`
   (`tipoDaSessao`); `apps/web/src/routes/NewProjectWizard.tsx:1127`
@@ -22730,8 +22730,8 @@ sem dizer qual.
   `reasoningTokens` (ficam só em `token_usage`), então a resposta vazia que
   bate no teto sem `finish_reason: length` não é reconhecida.
 - **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:219`
-  (`parada_sem_chamada`), `apps/engine/lib/engine/dev/dev_agent_server.ex:1016`
-  (`motivo_da_parada`), `:1019` (`stop_diagnosis`)
+  (`parada_sem_chamada`), `apps/engine/lib/engine/dev/dev_agent_server.ex:1021`
+  (`motivo_da_parada`), `:1024` (`stop_diagnosis`)
 - **Teste:** `apps/engine/test/engine/harness/tool_loop_test.exs` (`corte só
   de raciocínio`: retentada uma vez e segue; repetido para com
   `corte_pelo_teto`), `apps/engine/test/engine/dev/dev_agent_server_test.exs`
@@ -22793,7 +22793,7 @@ sem dizer qual.
   [RN-765](#rn-765). Desde a [RN-792](#rn-792) o Arquiteto confere o contrato
   contra as rotas citadas nas histórias ao declará-lo.
 - **Onde:** `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:163`
-  (`moduloDoContrato`), `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:56`
+  (`moduloDoContrato`), `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:60`
   (`secao_do_contrato`)
 - **Teste:** `apps/api/test/application/use-cases/execution/get-dev-task-context.use-case.spec.ts`
   (o contrato do módulo da história; sem contrato ou módulo ambíguo, `null`) e
@@ -23010,7 +23010,7 @@ sem dizer qual.
   cobre também o merge por squash que a [RN-760](#rn-760) declara não ver.
   Declarado: a PR antiga da branch, se existir, não é fechada no provider.
 - **Onde:** `apps/engine/lib/engine/dev/worktree_manager.ex:246`
-  (`sem_diff_contra_a_dev?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:948`
+  (`sem_diff_contra_a_dev?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:953`
   (`ja_na_dev`)
 - **Teste:** `apps/engine/test/engine/dev/tarefa_ja_na_dev_test.exs`
 - **Origem:** AT-474
@@ -23184,7 +23184,7 @@ sem dizer qual.
   com o que há, e na dúvida a task segue para os gates.
 - **Onde:** `apps/engine/lib/engine/dev/worktree_manager.ex:267`
   (`sem_diff_contra_a_dev?`), `apps/engine/lib/engine/dev/worktree_manager.ex:277`
-  (`sem_diff_atualizado?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:842`
+  (`sem_diff_atualizado?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:847`
   (`handle_outcome`)
 - **Teste:** `apps/engine/test/engine/dev/tarefa_ja_na_dev_test.exs` ("caminho
   feliz: com a dev atualizada, a branch não tem diff"; "falha: remoto
@@ -23285,7 +23285,7 @@ sem dizer qual.
   externo dos gates (`docs/gates.yml`) e o código do `emit_qa_verdict` não
   mudam, e nenhum gate novo nasce. Tarefa que não toca nada disso não ganha a
   seção.
-- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:91`
+- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:95`
   (`secao_do_ponto_de_entrada`)
 - **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs`
   ("tarefa que toca a fiação exige evidência do ponto de entrada real" e "tarefa
@@ -23321,7 +23321,7 @@ sem dizer qual.
   roteamento de container dos três modos — um `pkill` no harness precisaria
   de um segundo caminho de execução por modo. Régua de prompt; o contrato dos
   gates não muda.
-- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:122`
+- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:126`
   (`secao_do_ambiente_limpo`)
 - **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs`
   ("RN-817: pede ambiente limpo, encerrar o grupo e pulado como observação")
@@ -23338,7 +23338,7 @@ sem dizer qual.
   bater numa rota do processo de pé — e o que NÃO cabe ali: construir imagem
   Docker, `docker compose`, rede externa. Exigência desse segundo tipo nunca
   vai para `itens`; vai ao `resumo` como observação. Régua de prompt.
-- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:91`
+- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:95`
   (`secao_do_ponto_de_entrada`)
 - **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs`
   ("RN-818: com ponto de entrada diz o que conta e o que não cabe" e "RN-818:
@@ -23360,6 +23360,24 @@ sem dizer qual.
   ("RN-819: pede varredura por regra antes de emitir")
 - **Origem:** AT-490 (TP-01 de 10/10: tarefas 2 e 11 trouxeram na 2ª volta
   lacuna que já estava na entrega)
+### RN-846 — A rota HTTP vai ao README e o erro de entrada é do projeto {#rn-846}
+
+- **Regra:** extensão da [RN-819](#rn-819). O kickoff do dev agent de
+  execução pede que rota HTTP criada ou mudada entre no README (método,
+  caminho, corpo, respostas e códigos) e que erro de entrada (JSON malformado,
+  campo inválido) responda com mensagem própria no formato do projeto, nunca a
+  mensagem crua da biblioteca. O recorte do QA confere as duas coisas na
+  varredura por regra, e o que faltar vai a `itens`. Régua de prompt.
+- **Onde:** `apps/engine/lib/engine/dev/dev_agent_server.ex:591`
+  (`initial_message`) e `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:20`
+  (`texto`)
+- **Teste:** `apps/engine/test/engine/dev/report_done_instrucao_test.exs`
+  ("RN-846: kickoff pede a rota no README e erro de entrada próprio") e
+  `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs` ("RN-846: confere
+  rota no README e erro de entrada próprio")
+- **Origem:** AT-515 (TP-01, 12ª: o README não documentava a API, e JSON
+  malformado respondia 400 com "Expected property name…" do parser)
+
 ### RN-823 — O ciclo de gate que o reinício do engine matou é retomado no boot, e o fio diz isso {#rn-823}
 
 - **Regra:** no BOOT do engine, a linha `in_progress` de `gate_states`

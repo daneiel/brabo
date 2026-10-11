@@ -142,5 +142,12 @@ defmodule Engine.Gates.RecorteDaTarefaTest do
       assert texto =~ "VARREDURA POR REGRA"
       assert texto =~ "Só emita depois de passar por TODAS"
     end
+
+    test "RN-846: confere rota no README e erro de entrada próprio" do
+      texto = RecorteDaTarefa.texto(%{task: %{"title" => "X"}})
+      assert texto =~ "método, caminho, corpo, respostas e"
+      assert texto =~ "a crua da biblioteca"
+      refute texto =~ "Expected property name"
+    end
   end
 end
