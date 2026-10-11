@@ -6,6 +6,8 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- **api**: o QA de Automação roda com o raciocínio desligado, como os dev agents de execução; o QA-estratégia não muda (AT-504, RN-838).
+- **api**: o recorte do Jev nunca tira `report_done` nem `report_blocked` dos dev agents de execução (AT-499, RN-839).
 - **web**: o campo "Nome do projeto" do assistente passa a se chamar `projeto-slug` (era `project-title`, e "title" é token de contato): o NordPass não deve mais abrir a lista de contatos sobre ele — heurística, sem atributo de ignore documentado pelo NordPass (RN-834, AT-501).
 - **engine**: o dev agent deixa de bloquear tarefa pronta procurando ferramenta de commit: a descrição de `report_done`/`report_blocked`, o kickoff e a mensagem de ambiente dizem que `report_done` faz commit, push e PR (o ambiente mandava usar ações tipadas de git que o dev não tem), e que teste novo entra no script `test` que lista arquivos (RN-832, AT-499).
 - **web**: o chat da sessão mostra as PRs prontas para merge (gates aprovados, inclusive ADR e infra) com "Mergear" e o cartão de aprovação ali, e as tarefas bloqueadas com motivo e "Desbloquear" (RN-825, RN-826, AT-497).
