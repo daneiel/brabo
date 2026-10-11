@@ -619,9 +619,24 @@ defmodule Engine.Dev.DevAgentServer do
           "Toda resposta sua deve conter pelo menos uma chamada de ferramenta.\n\n" <>
           "A interface de OUTRO módulo (o que ele expõe e de quais o seu depende) é o " <>
           "contrato declarado pelo Arquiteto: leia com `listar_contratos_de_modulos`, " <>
-          "nunca no worktree ou no código de outro dev agent.",
+          "nunca no worktree ou no código de outro dev agent." <>
+          clausula_de_openapi(task),
       :pinned => true
     }
+  end
+
+  # RN-853 (AT-517, ADR 0213): só quando a tarefa toca entrypoint/rotas — a
+  # mensagem é fixada e volta a cada iteração, então não paga sempre. A régua
+  # é a do recorte do QA, nunca uma cópia.
+  defp clausula_de_openapi(task) do
+    if Engine.Gates.RecorteDaTarefa.toca_ponto_de_entrada?(task),
+      do:
+        "\n\nMódulo que expõe HTTP serve `/openapi.json` (OpenAPI 3, cobrindo as rotas) " <>
+          "e `/docs` (UI Swagger); sem rede ou sem pacote, `/docs` é uma página HTML " <>
+          "que carrega o swagger-ui de CDN (quem baixa é o navegador do usuário). " <>
+          "Módulo web serve a página inicial. Ao criar, acrescente a URL na seção " <>
+          "\"Rodar na sua máquina\" do README (que a Infra escreve).",
+      else: ""
   end
 
   # RN-774: o diagnóstico diz o teto que valeu para ESTA tarefa.

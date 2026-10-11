@@ -158,4 +158,19 @@ defmodule Engine.Gates.RecorteDaTarefaTest do
       refute texto =~ "no fim do README"
     end
   end
+
+  describe "RN-854: OpenAPI e Swagger no container" do
+    test "tarefa que toca rotas pede /openapi.json e /docs, compose em resumo" do
+      texto = RecorteDaTarefa.texto(%{task: %{"title" => "Expor rotas HTTP"}})
+      assert texto =~ "/openapi.json` e `/docs`"
+      assert texto =~ "provado só na máquina do"
+      assert RecorteDaTarefa.toca_ponto_de_entrada?(%{"title" => "server.ts"})
+    end
+
+    test "falha: tarefa sem rota não recebe a seção" do
+      texto = RecorteDaTarefa.texto(%{task: %{"title" => "Modelar tabela"}})
+      refute texto =~ "openapi.json"
+      refute RecorteDaTarefa.toca_ponto_de_entrada?(nil)
+    end
+  end
 end

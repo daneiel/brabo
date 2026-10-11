@@ -5,6 +5,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 ## Unreleased
 
 ### Mudanças
+- **engine (dev e QA)**: tarefa que toca rotas ou ponto de entrada faz o dev servir `/openapi.json` (OpenAPI 3) e `/docs` (Swagger, ou página que carrega o swagger-ui de CDN sem rede) e citar a URL em "Rodar na sua máquina" do README; o QA sobe o app no container e bate nas duas rotas, com o `docker compose up` real como observação (RN-853, RN-854, ADR 0213, AT-517).
 - **engine (dev e QA)**: o kickoff do dev pede a rota DENTRO da seção "Rotas HTTP" do README (antes de "Testes"), nunca no fim, e sem nota de processo para agentes; o QA confere as duas coisas (RN-850, AT-520).
 
 - **api + web (contexto da sessão)**: PR mergeada no repositório local deixa de devolver diff vazio — o merge grava a merge base e a ponta da origem, e o diff (aba PRs e "Arquivos tocados" do painel de contexto) passa a listar os arquivos que ela mudou; PR mergeada antes cai no commit de merge. O resumo do contexto é relido quando a lista de PRs é relida (canal e backlog), sem recarregar (RN-847, AT-518).
