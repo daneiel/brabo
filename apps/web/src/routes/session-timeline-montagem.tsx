@@ -17,6 +17,7 @@ import type {
 } from '../lib/api-types';
 import type { useTurnoDoAgente } from '../lib/session-turno';
 import { ApprovalCard } from '../components/ApprovalCard';
+import { CartaoOuReferenciaNoFio } from '../components/CartaoOuReferenciaNoFio';
 import { MarkdownMessage } from '../components/ui/MarkdownMessage';
 import { AvatarDoAgente } from '../components/ui/AvatarDoAgente';
 import { Button } from '../components/ui/Button';
@@ -1126,6 +1127,9 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
         // AT-322: o card é o mesmo das outras superfícies; quem o centraliza
         // com teto de 560px no fio é este contêiner (RN-173).
         <div key={action.id} className={styles.acaoNoFio} data-aprovacao-no-fio="">
+        {/* RN-843 (AT-512): pendente e desenhada no bloco de pendências, a
+            ação vira só uma referência aqui — um cartão de decisão por ação. */}
+        <CartaoOuReferenciaNoFio action={action}>
         <ApprovalCard
           action={action}
           decisaoDaPolitica={decisaoDaPoliticaDaAcao(action.id, events)}
@@ -1150,6 +1154,7 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
               : undefined
           }
         />
+        </CartaoOuReferenciaNoFio>
         {mergear}
         </div>
       ),

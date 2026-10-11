@@ -25,6 +25,7 @@ import { hashtagDaSessao } from '../lib/session-label';
 import { formatRelativeTime } from '../lib/time';
 import { useDecisoesDaPolitica } from '../lib/decisao-da-politica-queries';
 import { ApprovalCard } from './ApprovalCard';
+import { useRegistrarAcoesNoBloco } from '../lib/acoes-no-bloco';
 import { Disclosure } from './ui/Disclosure';
 import styles from './PendenciasDeOutrasSessoes.module.css';
 
@@ -111,6 +112,14 @@ export function PendenciasDeOutrasSessoes({
     sessionId,
   );
   const bloqueadas = tarefasBloqueadas(backlogQuery.data);
+  // RN-843 (AT-512): o merge pendente desenhado na linha da PR é o ÚNICO
+  // cartão de decisão dele; o fio lê este registro e recolhe o seu.
+  useRegistrarAcoesNoBloco(
+    prontas
+      .map(({ pr, mergeDaSessao }) => mergeDaSessao ?? propostas[pr.id])
+      .filter((a): a is ProposedAction => !!a && a.status === 'pending')
+      .map((a) => a.id),
+  );
   const total = aprovacoes.length + merges.length;
 
   // Recorte declarado (RN-180): o teto vale para as DUAS filas juntas em

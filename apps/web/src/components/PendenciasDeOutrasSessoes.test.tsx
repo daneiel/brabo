@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ProposedAction } from '../lib/api-types';
 import i18n from '../lib/i18n';
+import { acaoEstaNoBloco } from '../lib/acoes-no-bloco';
 
 const getProjectPendingActions = vi.fn();
 const approveAction = vi.fn();
@@ -338,6 +339,8 @@ describe('PendenciasDeOutrasSessoes — PRs prontas e tarefas bloqueadas (AT-497
       ),
     );
     expect(await within(fila).findByRole('button', { name: 'Aprovar' })).toBeInTheDocument();
+    // RN-843: a ação desenhada aqui fica registrada para o fio recolher a dele.
+    expect(acaoEstaNoBloco('m-novo')).toBe(true);
   });
 
   it('RN-841: a tarefa que entra em awaiting_user relê as PRs, e a PR nova aparece sem remontar', async () => {
