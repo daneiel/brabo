@@ -1388,6 +1388,13 @@ defmodule Engine.Infra.InfraLeadServer do
     """
   end
 
+  # `projectImage` da api: `{image, rationale, network, resources}`; `imagem`
+  # e string seguem aceitos por compatibilidade.
+  defp imagem_com_rede(img, %{"network" => rede}) when is_binary(rede) and rede != "",
+    do: "`#{img}` (rede `#{rede}`)"
+
+  defp imagem_com_rede(img, _), do: "`#{img}`"
+
   defp build_kickoff(ctx, subida) do
     module_map = Map.get(ctx, "moduleMap")
     adrs = Map.get(ctx, "adrs", [])
@@ -1395,7 +1402,8 @@ defmodule Engine.Infra.InfraLeadServer do
 
     imagem_text =
       case Map.get(ctx, "projectImage") do
-        %{"imagem" => img} when is_binary(img) and img != "" -> "`#{img}`"
+        %{"image" => img} = pi when is_binary(img) and img != "" -> imagem_com_rede(img, pi)
+        %{"imagem" => img} = pi when is_binary(img) and img != "" -> imagem_com_rede(img, pi)
         img when is_binary(img) and img != "" -> "`#{img}`"
         _ -> "(não decidida — use a candidata do roteamento do módulo e diga isso no README)"
       end
