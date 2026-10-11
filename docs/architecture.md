@@ -101,6 +101,11 @@ restart recovery ([RN-742](business-rules.md#rn-742)).
 `dev_agent_states` gained `consecutive_blocked`/`max_consecutive_blocked`
 (the circuit breaker, [RN-047](business-rules/custo.md#rn-047)); full decision in
 [ADR 0045](adr/0045-reagendamento-por-evento-do-dev-agent.md).
+A task blocked by a transient network/provider failure (DNS, reset
+connection, 5xx/429) is unblocked again by an Oban job after 1, 3 and 10 min
+(up to three times, through the same unblock use case as the human), and the
+dev agent pauses for a minute instead of claiming the next task
+([RN-864](business-rules.md#rn-864)).
 
 The gate agents (`QaLeadServer`/`SecOpsAgentServer`) don't go through the
 outbox on intermediate transitions (`correct`/`run_secops` remain a direct

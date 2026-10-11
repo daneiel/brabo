@@ -21579,7 +21579,7 @@ sem dizer qual.
   ele que decide; o reconhecimento pelo texto ficou só como rede.
 - **Onde:** `apps/engine/lib/engine/agents/falha_de_turno.ex:134`
   (`credito_esgotado?`),
-  `apps/engine/lib/engine/dev/dev_agent_server.ex:901` (`handle_outcome`),
+  `apps/engine/lib/engine/dev/dev_agent_server.ex:906` (`handle_outcome`),
   `apps/engine/lib/engine/dev/agent_io.ex:271` (`pausar_por_credito`),
   `apps/web/src/lib/agent-status.ts:198` (`breakerReasonFor`),
   `apps/api/src/application/use-cases/sessions/get-session-pending-work.use-case.ts`
@@ -21614,7 +21614,7 @@ sem dizer qual.
   (`streamErrorCode`),
   `apps/engine/lib/engine/agents/falha_de_turno.ex:83` (`credito_esgotado?`),
   `:71` (`origem`), `apps/engine/lib/engine/harness/tool_loop.ex:148`
-  (`last_error_code`), `apps/engine/lib/engine/dev/dev_agent_server.ex:901`
+  (`last_error_code`), `apps/engine/lib/engine/dev/dev_agent_server.ex:906`
   (`handle_outcome`)
 - **Teste:** `apps/api/test/contract/llm-provider.contract.ts` (`erro_402 vira
   chunk de erro com code "insufficient_credit"`; falha: `erro_500` segue
@@ -24303,7 +24303,7 @@ sem dizer qual.
 - **Onde:** `apps/engine/lib/engine/infra/instrucoes_de_execucao.ex:52` (`url`),
   `apps/api/src/domain/infra/run-instructions.ts:44` (`recusaDoRun`),
   `apps/engine/lib/engine/infra/infra_lead_server.ex:1398` (`build_kickoff`),
-  `apps/engine/lib/engine/dev/dev_agent_server.ex:631` (`clausula_de_openapi`),
+  `apps/engine/lib/engine/dev/dev_agent_server.ex:636` (`clausula_de_openapi`),
   `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:20` (`texto`)
 - **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs`
   ("run api_docs em rota de negócio é recusado com motivo, sem propor"),

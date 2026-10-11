@@ -1298,6 +1298,7 @@ reason in the URL.
 | POST | `/internal/sessions/:sessionId/story-modules` | engine-service |
 | POST | `/internal/sessions/:sessionId/tasks` | engine-service |
 | POST | `/internal/sessions/:sessionId/tasks/:taskId/block` | engine-service |
+| POST | `/internal/sessions/:sessionId/tasks/:taskId/unblock` | engine-service |
 | POST | `/internal/sessions/:sessionId/tasks/:taskId/gate/open` | engine-service |
 | POST | `/internal/sessions/:sessionId/tasks/:taskId/status` | engine-service |
 | POST | `/internal/sessions/:sessionId/tasks/claim` | engine-service |
