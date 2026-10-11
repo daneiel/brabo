@@ -18221,7 +18221,7 @@ muda.
   (`origemDaAtividade`), `:594` (`estadoDaAtividade`);
   `apps/web/src/lib/hooks.ts:127` (`useProjectSessions`, `frescorMs`);
   `apps/web/src/routes/Dashboard.tsx:75` (`lastActivityText`);
-  `apps/web/src/routes/ContextAside.tsx:46` (`quantos`), `:309`
+  `apps/web/src/routes/ContextAside.tsx:46` (`quantos`), `:340`
   (`totalDeArtefatos`)
 - **Teste:** `apps/web/src/routes/Shell.test.tsx` ("Shell — Atividades": sem
   execução lê a sessão da Visão geral e o Criativo aparece; com execução lê a
@@ -20966,7 +20966,7 @@ cartão pendente apareceu só DURANTE a sessão ao vivo — estado transitório 
 tela, não da api nem da janela. A próxima rodada da AT-015 captura a rede no
 momento em que ele aparecer, antes de qualquer correção.
 
-- **Onde:** `apps/web/src/routes/ContextAside.tsx:370` (`trailing`), `:384`
+- **Onde:** `apps/web/src/routes/ContextAside.tsx:393` (`trailing`), `:415`
   (`nadaNaJanela`)
 - **Teste:** `apps/web/src/routes/SessionPage.painel-e-agrupamento.test.tsx`
   ("RN-701 (AT-365): com as regras fora da janela, o contador não afirma 0";
@@ -22609,7 +22609,7 @@ sem dizer qual.
   não é a mais recente. Nenhuma requisição a mais: as chaves são as que a
   sidebar já assina, e `useActiveExecutionSession` ganha `staleTime` igual ao
   intervalo, para o segundo assinante não refazer a busca ([RN-632](#rn-632)).
-- **Onde:** `apps/web/src/routes/ContextAside.tsx:370` (`trailing`),
+- **Onde:** `apps/web/src/routes/ContextAside.tsx:393` (`trailing`),
   `apps/web/src/routes/ProjectOverviewTab.tsx:86` (`linhaDoTempoNaExecucao`)
 - **Teste:** `apps/web/src/routes/SessionPage.painel-e-agrupamento.test.tsx`
   (decisão fora da janela não vira 0; sessão inteira na janela diz vazio),
@@ -23647,7 +23647,7 @@ sem dizer qual.
   recente para o mais antigo, cortada em 100 (`TETO_DE_ARQUIVOS_TOCADOS`), e o
   `total` diz o número real; a tela declara o recorte quando ele corta.
 - **Onde:** `apps/api/src/infrastructure/persistence/drizzle/session-context-summary.repository.ts:31`
-  (`ligadas`), `apps/web/src/routes/ContextAside.tsx:335` (`filesTouched`)
+  (`ligadas`), `apps/web/src/routes/ContextAside.tsx:366` (`filesTouched`)
 - **Teste:** `apps/api/test/infrastructure/persistence/drizzle/session-context-summary.repository.spec.ts`
   ("…e soma os arquivos da execução ligada"; falha: "corta a lista de arquivos
   no teto e devolve o total real; não lê sessão sem ligação")
@@ -23843,3 +23843,41 @@ sem dizer qual.
   `apps/web/src/components/PendenciasDeOutrasSessoes.test.tsx` ("a PR com os
   gates aprovados aparece…")
 - **Origem:** AT-512
+### RN-844 — O painel de contexto lista as regras, as decisões e os arquivos das PRs da sessão inteira {#rn-844}
+
+- **Regra:** extensão da [RN-827](#rn-827) e da [RN-828](#rn-828). O agregado
+  `GET .../sessions/:sessionId/context-summary` devolve, além dos números, os
+  ITENS: as regras de negócio (`itensDeRegras`: título, descrição e quantas
+  origens cita) e as decisões registradas (`itensDeDecisoes`: escolha e
+  contexto) da sessão, as mais recentes primeiro, até 50 de cada
+  (`TETO_DE_ITENS_DO_CONTEXTO`); o total segue em `regras`/`decisoes`. Com o
+  agregado, o painel lista esses itens em vez da janela de 200 eventos — a
+  regra que ficou antes da janela continua aparecendo — e o recorte diz
+  "Mostrando as N mais recentes de M". "Arquivos tocados" passa a incluir os
+  arquivos das PRs (`pr_open`/`open_adr_pr`/`open_infra_pr` executadas, com
+  `pullRequestId`) da sessão e da sessão de execução ligada, lidos do MESMO
+  diff da aba PRs (`ReadProjectCodeUseCase.pullRequestDiff`), antes dos
+  arquivos de payload de commit, no teto de 100 com o total real. Leitura
+  contida ([ADR 0060](adr/0060-superficie-de-leitura-de-codigo.md)): sem parâmetro
+  livre, no máximo 20 diffs por chamada (`TETO_DE_PRS_LIDAS`); PR além do teto
+  ou cujo diff falhou entra em `prsNaoLidas`, e a tela diz quantas ficaram de
+  fora. Com o agregado e nada a listar, o vazio diz o que não houve (nenhum
+  arquivo em PR nem commit desta sessão ou da execução ligada), nunca "Nada
+  ainda". O caso de uso mora no módulo de git porque é ele que lê o
+  repositório; sessão de outro projeto continua 404 sem ler PR nenhuma.
+- **Onde:** `apps/api/src/infrastructure/persistence/drizzle/session-context-summary.repository.ts:140`
+  (`itensDeRegras`), `apps/api/src/infrastructure/persistence/drizzle/session-context-summary.repository.ts:184`
+  (`prsDasSessoes`), `apps/api/src/application/use-cases/git/resumir-contexto-da-sessao.use-case.ts:37`
+  (`prs`), `apps/web/src/routes/ContextAside.tsx:197` (`businessRules`),
+  `apps/web/src/routes/ContextAside.tsx:222` (`decisoes`)
+- **Teste:** `apps/api/test/infrastructure/persistence/drizzle/session-context-summary.repository.spec.ts`
+  ("RN-844: devolve os ITENS de regra e decisão fora de qualquer cauda, com
+  teto de 50"; "RN-844: lista as PRs executadas da sessão e da execução
+  ligada…"), `apps/api/test/application/use-cases/git/resumir-contexto-da-sessao.use-case.spec.ts`
+  ("lê os arquivos das PRs das sessões lidas…"; falhas: "corta no teto de
+  arquivos, conta PR fora do teto e diff que falhou em prsNaoLidas" e "sessão
+  de outro projeto é 404 e não lê PR nenhuma"),
+  `apps/web/src/routes/ContextAside.sessao-inteira.test.tsx` ("…lista os itens
+  do servidor (RN-844)"; "agregado sem arquivo diz O QUE não houve…")
+- **Origem:** AT-513 (TP-01 de 11/10: 9 regras sem lista, "mostrando 1 de 4"
+  decisões e "Arquivos tocados: Nada ainda" com 12 PRs mergeadas)

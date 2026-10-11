@@ -212,7 +212,11 @@
     "decisaoSemEscolha": "Decision with no recorded choice",
     "todasAntesDaJanela": "There are {{total}} in this session, all before the loaded events — “Load older”, in the Event log, brings the detail.",
     "recorte": "Showing {{mostradas}} of {{total}} — the rest are before what was loaded.",
-    "arquivosNaoLidos": "I haven't read the whole session's files yet."
+    "arquivosNaoLidos": "I haven't read the whole session's files yet.",
+    "recorteMaisRecentes": "Showing the {{mostradas}} most recent of {{total}}.",
+    "arquivosVazio": "No files in the PRs or commits of this session or of the execution session linked to it.",
+    "prsNaoLidas_one": "{{count}} PR was left out of this list (past the read limit, or its diff could not be read) — the PRs tab shows them all.",
+    "prsNaoLidas_other": "{{count}} PRs were left out of this list (past the read limit, or their diff could not be read) — the PRs tab shows them all."
   },
   "turno": {
     "pensando": "Thinking…",

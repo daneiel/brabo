@@ -3134,7 +3134,7 @@ export interface paths {
         };
         /**
          * Counts the whole session for the context panel
-         * @description Business rules, decision records and artifacts per agent counted over the WHOLE session log (the screen reads a 200-event tail), plus the files touched by `git_commit`/`git_push` in this session and in the execution session its approved Dev Lead plan activated (RN-828). Read only; no new table.
+         * @description Business rules, decision records and artifacts per agent counted over the WHOLE session log (the screen reads a 200-event tail), plus the files touched by `git_commit`/`git_push` in this session and in the execution session its approved Dev Lead plan activated (RN-828). Since RN-844 it also returns the ITEMS of rules and decisions (latest 50 each; the totals stay in `regras`/`decisoes`) and the files of the PRs opened in those sessions, read from the same diff the PRs tab reads, for at most 20 PRs per call; `prsNaoLidas` says how many were left out or failed. Read only; no new table.
          */
         get: operations["SessionsController_contextSummary"];
         put?: never;
@@ -4888,6 +4888,11 @@ export interface components {
              * @example 140
              */
             total: number;
+            /**
+             * @description PRs of the read sessions whose files were NOT read: past the 20-PR cap, or the provider refused the diff (RN-844).
+             * @example 0
+             */
+            prsNaoLidas: number;
         };
         ArquivoTocadoResponseDto: {
             /** @example 01JC4Z0000ACAO00000000000001 */
@@ -7079,6 +7084,33 @@ export interface components {
             assinatura: string;
             /** @example Returns a new board; never mutates the one passed in. */
             descricao: string;
+        };
+        ItemDeDecisaoResponseDto: {
+            /** @example evt_01JC4Z */
+            eventId: string;
+            /** @example 43 */
+            seq: number;
+            /** @example criativo */
+            actorId: string;
+            /** @example SQLite em arquivo */
+            escolha: string | null;
+            contexto: string | null;
+        };
+        ItemDeRegraResponseDto: {
+            /** @example evt_01JC4Z */
+            eventId: string;
+            /** @example 42 */
+            seq: number;
+            /** @example po */
+            actorId: string;
+            /** @example Login exige e-mail */
+            titulo: string | null;
+            descricao: string | null;
+            /**
+             * @description How many origin references the rule cites.
+             * @example 2
+             */
+            origens: number;
         };
         JwksResponseDto: {
             /** @description Active public Ed25519 keys. Two during a rotation. */
@@ -9579,8 +9611,12 @@ export interface components {
              * @example 6
              */
             decisoes: number;
+            /** @description Latest business rules of the session, capped at 50; the total is `regras` (RN-844). */
+            itensDeRegras: components["schemas"]["ItemDeRegraResponseDto"][];
+            /** @description Latest decision records of the session, capped at 50; the total is `decisoes` (RN-844). */
+            itensDeDecisoes: components["schemas"]["ItemDeDecisaoResponseDto"][];
             artefatosPorAgente: components["schemas"]["ArtefatosDoAgenteResponseDto"][];
-            /** @description Files from `git_commit`/`git_push` actions of this session and of the linked execution session. */
+            /** @description Files of the PRs opened in this session and in the linked execution session (read from the PR diff, RN-844), then files from `git_commit`/`git_push` payloads. */
             arquivosTocados: components["schemas"]["ArquivosTocadosResponseDto"];
         };
         SessionEventResponseDto: {
