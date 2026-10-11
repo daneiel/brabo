@@ -22572,7 +22572,7 @@ sem dizer qual.
   leitura é `tool.result` `ok: false` com o motivo, nunca texto vazio. Desde a
   [RN-784](#rn-784) ela ESTÁ no piso do Jev.
 - **Onde:** `apps/engine/lib/engine/harness/tools/listar_adrs_propostas.ex:37`
-  (`run`), `:46` (`ler`), `apps/engine/lib/engine/agents/arquiteto_server.ex:124`
+  (`run`), `:40` (`ler`), `apps/engine/lib/engine/agents/arquiteto_server.ex:124`
   (`ListarAdrsPropostas`)
 - **Teste:** `apps/engine/test/engine/harness/tools/listar_adrs_propostas_test.exs`
   (aprovada aparece aprovada, executada com a PR, recusada com o motivo, só as
@@ -23817,13 +23817,28 @@ sem dizer qual.
   só sobre os ids listados, no mesmo Postgres. Limite declarado: PR fechada
   sem merge FORA do Brabo (no provider remoto) não é vista, e segue lida como
   aberta — perguntar ao provider seria HTTP no laço do agente.
-- **Onde:** `apps/engine/lib/engine/harness/tools/listar_adrs_propostas.ex:75`
-  (`cruzar_com_merges`), `:87` (`merges_por_pr`), `:140` (`estado_da_pr`).
+- **Onde:** `apps/engine/lib/engine/harness/tools/listar_adrs_propostas.ex:88`
+  (`cruzar_com_merges`), `:102` (`merges_por_pr`), `:155` (`estado_da_pr`).
 - **Teste:** `apps/engine/test/engine/harness/tools/listar_adrs_propostas_test.exs`
   ("PR mergeada aparece como mergeada…", "estado da PR ilegível diz que não
   leu, nunca aberta").
 - **Origem:** AT-514 (TP-01, 11/10: o Arquiteto disse "aberta como PR" 30 s
   depois do merge).
+### RN-849 — O turno de prontidão da arquitetura abre com o estado atual das ADRs {#rn-849}
+
+- **Regra:** extensão da [RN-845](#rn-845). Quando o usuário confirma que a
+  arquitetura está pronta, o servidor do Arquiteto LÊ o estado das ADRs pelo
+  mesmo código de `listar_adrs_propostas` (Postgres local, sem HTTP, mesmo teto
+  de 20 linhas) e o põe na mensagem de abertura desse turno, com a instrução de
+  não afirmar estado de ADR diferente. Leitura que falha diz "NÃO CONSEGUI LER"
+  e manda dizer que não sabe — nunca "pendente".
+- **Onde:** `apps/engine/lib/engine/harness/tools/listar_adrs_propostas.ex:50`
+  (`contexto_de_prontidao`), `apps/engine/lib/engine/agents/arquiteto_server.ex:225`
+  (`contexto_de_prontidao`).
+- **Teste:** `apps/engine/test/engine/harness/tools/listar_adrs_propostas_test.exs`
+  ("contexto_de_prontidao/2 (RN-849)").
+- **Origem:** AT-519 (TP-01: no turno de prontidão o Arquiteto disse "pendente
+  de aprovação" sobre ADR já mergeada, repetindo a leitura do turno anterior).
 ### RN-843 — Um cartão de decisão por ação no chat {#rn-843}
 
 - **Regra:** extensão da [RN-822](#rn-822). O `git_merge` PENDENTE que o bloco

@@ -40,6 +40,27 @@ defmodule Engine.Harness.Tools.ListarAdrsPropostas do
     e -> {:error, "falha ao ler as ADRs propostas: #{Exception.message(e)}"}
   end
 
+  @doc """
+  RN-849 (AT-519): o estado ATUAL das ADRs para a abertura do turno de
+  prontidão da arquitetura, lido pelo servidor (sem HTTP, mesmo código da
+  ferramenta) — no TP-01 o Arquiteto repetiu a leitura do turno anterior e
+  disse "pendente de aprovação" sobre ADR já mergeada. Leitura que falha diz
+  que não leu, nunca "pendente". `ler_fn` existe para o teste da falha.
+  """
+  def contexto_de_prontidao(ctx, ler_fn \\ &run/2) do
+    estado =
+      case ler_fn.(%{}, ctx) do
+        {:ok, texto} -> texto
+        {:error, _} -> "NÃO CONSEGUI LER o estado das ADRs agora."
+      end
+
+    "Estado ATUAL das ADRs, lido pelo sistema agora (vale mais que qualquer " <>
+      "leitura anterior desta conversa):\n" <>
+      estado <>
+      "\nNão afirme estado de ADR diferente deste; se ele diz que não leu, " <>
+      "diga que não sabe o estado, nunca que está pendente."
+  end
+
   @doc false
   def max_linhas, do: @max_linhas
 
