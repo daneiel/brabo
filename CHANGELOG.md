@@ -131,6 +131,9 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - **ações**: com o modo automático do agente ligado (a curinga em `auto_approve`), `git_push` e `pr_open` — tipados ou pelo comando de terminal — passam a ser auto-aprovados, com o motivo "modo automático (RN-713)" no evento; regra específica, "Sempre permitir" e `permissions.json` continuam sem liberar, e merge em branch protegida, deploy e `sudo`/`doas` seguem com o usuário. As telas do modo automático dizem isso (AT-385, RN-713, ADR 0204).
 ### Correções
 
+- Dev agents: no passo de correção pedida por um gate, o recorte de ferramentas
+  do Jev mantém `write_file` e `terminal`, e o dev deixa de se bloquear dizendo
+  que não tem como editar (RN-857).
 - Arquiteto: o turno de "Confirmar arquitetura pronta" abre com o estado atual
   das ADRs lido pelo sistema, e não repete mais "pendente de aprovação" sobre
   ADR já mergeada (RN-849).
