@@ -149,7 +149,18 @@ export function alvosDoEvento(type: string): AlvoDoCanal[] {
   if (type.startsWith('backlog.')) alvos.push('backlog');
   // RN-705: o merge executado (ou recusado) muda a lista de PRs do projeto —
   // sem isto a PR mergeada seguia "aberta" com o botão até recarregar.
-  if (type === 'action.git_merge' || type === 'action.failed') alvos.push('prs');
+  // RN-841 (AT-510): a PR que NASCE também muda a lista — a da ADR e a de
+  // infra (`adr.pr_opened`/`infra.pr_opened`) e a do terminal tipado
+  // (`action.pr_open`); sem isto a fila "PRs prontas" só aparecia com F5.
+  if (
+    type === 'action.git_merge' ||
+    type === 'action.failed' ||
+    type === 'action.pr_open' ||
+    type === 'adr.pr_opened' ||
+    type === 'infra.pr_opened'
+  ) {
+    alvos.push('prs');
+  }
   return alvos;
 }
 

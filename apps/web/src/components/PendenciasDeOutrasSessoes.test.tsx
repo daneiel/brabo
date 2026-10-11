@@ -340,6 +340,44 @@ describe('PendenciasDeOutrasSessoes — PRs prontas e tarefas bloqueadas (AT-497
     expect(await within(fila).findByRole('button', { name: 'Aprovar' })).toBeInTheDocument();
   });
 
+  it('RN-841: a tarefa que entra em awaiting_user relê as PRs, e a PR nova aparece sem remontar', async () => {
+    getProjectPendingActions.mockResolvedValue([]);
+    getCodePullRequests.mockResolvedValueOnce({ items: [] });
+    listBacklog.mockResolvedValueOnce(
+      backlog([{ id: 'aaaaaaaa-1', title: 'Pronta', gateStatus: 'awaiting_qa' }]),
+    );
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    montar(true, client);
+    await waitFor(() => expect(getCodePullRequests).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(listBacklog).toHaveBeenCalledTimes(1));
+
+    getCodePullRequests.mockResolvedValue({ items: [pr('1', 'feature/task-aaaaaaaa')] });
+    listBacklog.mockResolvedValue(
+      backlog([{ id: 'aaaaaaaa-1', title: 'Pronta', gateStatus: 'awaiting_user' }]),
+    );
+    // A leitura de 15 s do backlog, simulada.
+    await client.invalidateQueries({ queryKey: ['backlog'] });
+
+    const fila = await screen.findByTestId('fila-prs-prontas');
+    expect(within(fila).getByText(/PR 1/)).toBeInTheDocument();
+    expect(getCodePullRequests).toHaveBeenCalledTimes(2);
+  });
+
+  it('CASO DE FALHA RN-841: backlog relido sem mudança não relê as PRs', async () => {
+    getProjectPendingActions.mockResolvedValue([]);
+    listBacklog.mockResolvedValue(
+      backlog([{ id: 'aaaaaaaa-1', title: 'Pronta', gateStatus: 'awaiting_qa' }]),
+    );
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    montar(true, client);
+    await waitFor(() => expect(listBacklog).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(getCodePullRequests).toHaveBeenCalledTimes(1));
+    await client.invalidateQueries({ queryKey: ['backlog'] });
+    await waitFor(() => expect(listBacklog).toHaveBeenCalledTimes(2));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(getCodePullRequests).toHaveBeenCalledTimes(1);
+  });
+
   it('CASO DE FALHA: desbloquear com erro diz o erro da api na linha da tarefa', async () => {
     getProjectPendingActions.mockResolvedValue([]);
     listBacklog.mockResolvedValue(
