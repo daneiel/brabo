@@ -1862,6 +1862,25 @@ defmodule Engine.Infra.InfraLeadServerTest do
       refute texto =~ "não por esse compose"
     end
 
+    test "o payload exato da api (`image`) chega ao kickoff, com a rede", %{state: state} do
+      Process.put(:fake_infra_context, %{
+        "moduleMap" => nil,
+        "adrs" => [],
+        "projectImage" => %{
+          "image" => "node:22-bookworm-slim",
+          "network" => "egress",
+          "rationale" => "LTS",
+          "resources" => %{"cpus" => 1, "memoryMb" => 512, "pidsLimit" => 256}
+        }
+      })
+
+      Process.put(:fake_llm_turns, [lote([], "Pronto.")])
+      assert {:noreply, _} = sync_cast(InfraLeadServer, :kickoff, state)
+      texto = kickoff_lido(caixa())
+      assert texto =~ "`node:22-bookworm-slim` (rede `egress`)"
+      refute texto =~ "não decidida"
+    end
+
     test "sem imagem decidida, o kickoff diz o que fazer", %{state: state} do
       Process.put(:fake_infra_context, %{"moduleMap" => nil, "adrs" => []})
       Process.put(:fake_llm_turns, [lote([], "Pronto.")])
