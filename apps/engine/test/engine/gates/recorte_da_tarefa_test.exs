@@ -149,5 +149,13 @@ defmodule Engine.Gates.RecorteDaTarefaTest do
       assert texto =~ "a crua da biblioteca"
       refute texto =~ "Expected property name"
     end
+
+    test "RN-850: confere a seção Rotas HTTP e a ausência de nota de processo" do
+      texto = RecorteDaTarefa.texto(%{task: %{"title" => "X"}})
+      assert texto =~ ~s(dentro da seção "Rotas HTTP")
+      assert texto =~ "nunca no fim"
+      assert texto =~ "nota de processo"
+      refute texto =~ "no fim do README"
+    end
   end
 end

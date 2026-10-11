@@ -44,6 +44,16 @@ defmodule Engine.Dev.ReportDoneInstrucaoTest do
              "Rota HTTP criada"
   end
 
+  test "RN-850: a rota vai dentro de Rotas HTTP e o README não leva nota de processo" do
+    kickoff =
+      DevAgentServer.initial_message(%{"title" => "T"}, %{"title" => "S"})["content"]
+
+    assert kickoff =~ ~s(DENTRO da seção "Rotas HTTP")
+    assert kickoff =~ "nunca no fim do arquivo"
+    assert kickoff =~ "sem nota de processo nem instrução para agentes"
+    refute kickoff =~ "deve ser documentado nesta seção"
+  end
+
   test "falha: o ambiente não manda mais usar as ações tipadas de git" do
     ambiente = AmbienteDoAgente.montar(%{cwd: nil, raiz: nil, container_running: false})
     refute ambiente =~ "Use as ações tipadas"
