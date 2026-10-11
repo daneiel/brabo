@@ -5,6 +5,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 ## Unreleased
 
 ### Mudanças
+- **engine (Arquiteto)**: `listar_adrs_propostas` cruza a ADR executada com o `git_merge` executado e diz "PR MERGEADA em <data>" ou "PR aberta"; sem como ler o estado, diz que não leu, nunca "aberta" (RN-845, AT-514).
 
 - **web**: a fila "PRs prontas para merge" do chat aparece sem recarregar a página: a mudança de status/gate de tarefa no backlog (lido a 15 s) e os avisos de PR aberta ou mergeada desta sessão releem a lista, sem poll novo (AT-510, RN-841).
 
