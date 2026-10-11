@@ -1069,9 +1069,14 @@ rationale, network, resources}`), `null` when none was decided. It is the
 | POST | `/tasks/claim` |
 | POST | `/tasks/:taskId/status` |
 | POST | `/tasks/:taskId/block` |
+| GET | `/tasks/in-progress-by-dev` (RN-856) |
 
 `tasks/claim` is atomic on the api side — it's what prevents two dev agents from
-claiming the same task.
+claiming the same task. Since RN-856 it returns the agent's OWN `in_progress`
+task (outside the gates, not blocked) before the `todo` queue.
+`tasks/in-progress-by-dev` lists the project's `in_progress` tasks held by a
+`dev-*` agent (empty unless the session is an execution session); the engine
+blocks the ones no live dev agent holds when it stops an execution.
 
 `/stories/:storyId/update` (title and/or description) and
 `/stories/:storyId/archive` (optional `reason`) are the PO's `update_story` and

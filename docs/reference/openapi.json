@@ -3367,7 +3367,17 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TarefaEmCursoDeDevResponseDto"
+                  }
+                }
+              }
+            }
           },
           "400": {
             "description": "Invalid body."
@@ -25128,6 +25138,29 @@
         },
         "required": [
           "porProvider"
+        ]
+      },
+      "TarefaEmCursoDeDevResponseDto": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "taskId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "assignedTo": {
+            "type": "string",
+            "example": "dev-api",
+            "description": "The dev agent holding it."
+          }
+        },
+        "required": [
+          "projectId",
+          "taskId",
+          "assignedTo"
         ]
       },
       "TaskResponseDto": {
