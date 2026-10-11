@@ -1316,6 +1316,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/internal/sessions/{sessionId}/tasks/in-progress-by-dev": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lists the project's in-progress tasks held by a dev agent
+         * @description Not blocked and outside the PR gates; empty unless the session is an execution session. Used by the engine when stopping an execution, to block the ones no live dev agent holds.
+         */
+        get: operations["InternalSessionsController_tarefasEmCursoDeDev"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/internal/sessions/{sessionId}/termination": {
         parameters: {
             query?: never;
@@ -10411,6 +10431,17 @@ export interface components {
         SyncModelCatalogResponseDto: {
             porProvider: components["schemas"]["ResultadoPorProviderResponseDto"][];
         };
+        TarefaEmCursoDeDevResponseDto: {
+            /** Format: uuid */
+            projectId: string;
+            /** Format: uuid */
+            taskId: string;
+            /**
+             * @description The dev agent holding it.
+             * @example dev-api
+             */
+            assignedTo: string;
+        };
         TaskResponseDto: {
             /** @example 01JC4Z0000TAREFA00000000001 */
             id: string;
@@ -13594,6 +13625,48 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TaskResponseDto"];
+                };
+            };
+            /** @description Invalid body. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Service token missing or different from the shared one. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Session, project, or resource not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    InternalSessionsController_tarefasEmCursoDeDev: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TarefaEmCursoDeDevResponseDto"][];
                 };
             };
             /** @description Invalid body. */

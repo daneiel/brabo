@@ -5,6 +5,13 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 ## Unreleased
 
 ### Mudanças
+
+- A sessão de execução não encerra mais no intervalo entre "Desbloquear" e o
+  dev pegar a tarefa: o heartbeat conta como trabalho pendente a tarefa `todo`
+  do módulo de um dev agent da execução e a `in_progress` atribuída a um deles.
+  O dev religado retoma a SUA tarefa `in_progress` antes da fila, e "Parar
+  execução" bloqueia também a tarefa em curso que nenhum dev vivo segura, para
+  ela aparecer em "Tarefas bloqueadas" com "Desbloquear" (RN-856, AT-522).
 - **api (perguntas em aberto)**: a dúvida de agente vira `artifact.open_question` (payload validado no funil de eventos) e fecha com `open_question.answered`; `GET /projects/:projectId/open-questions?status=` (`viewer`, teto 50 com `total`) e `POST .../open-questions/:questionId/answer` (`{resposta}` ou `{aceitarSugestao: true}`, só o autor da sessão de origem — 403 `so_o_autor_da_sessao`, 409 `pergunta_ja_respondida`), que grava `decision_record` do usuário e religa o gate de QA estacionado da tarefa afetada (RN-858, ADR 0214, AT-521).
 - **api (gate de QA)**: veredito `needs_user_decision` — grava a pergunta (autor `qa-agent`), devolve `nextAction: "await_user"`, marca `pr.gate_changed` com `esperandoUsuario` e NÃO conta ciclo de correção nem bloqueia por `politica` (RN-860, AT-521).
 - **api (contexto do dev/QA e história `ready`)**: `dev-context` devolve `decisoes` (as decisões do usuário ligadas por `afeta`, até 10, 1 500 caracteres); `update_story` e `complete_story` aceitam `questionId` e corrigem história `ready` quando a pergunta citada já foi respondida (RN-859, revisão do ADR 0212 pelo ADR 0214, AT-521).
@@ -134,6 +141,9 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - **ações**: com o modo automático do agente ligado (a curinga em `auto_approve`), `git_push` e `pr_open` — tipados ou pelo comando de terminal — passam a ser auto-aprovados, com o motivo "modo automático (RN-713)" no evento; regra específica, "Sempre permitir" e `permissions.json` continuam sem liberar, e merge em branch protegida, deploy e `sudo`/`doas` seguem com o usuário. As telas do modo automático dizem isso (AT-385, RN-713, ADR 0204).
 ### Correções
 
+- Dev agents: no passo de correção pedida por um gate, o recorte de ferramentas
+  do Jev mantém `write_file` e `terminal`, e o dev deixa de se bloquear dizendo
+  que não tem como editar (RN-857).
 - Arquiteto: o turno de "Confirmar arquitetura pronta" abre com o estado atual
   das ADRs lido pelo sistema, e não repete mais "pendente de aprovação" sobre
   ADR já mergeada (RN-849).
