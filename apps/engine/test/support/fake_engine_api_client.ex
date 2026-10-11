@@ -454,6 +454,11 @@ defmodule Engine.Sessions.FakeEngineApiClient do
   end
 
   @impl true
+  def list_tarefas_em_curso_de_dev(_session_id) do
+    {:ok, Application.get_env(:engine, :fake_tarefas_em_curso_de_dev, [])}
+  end
+
+  @impl true
   def open_gate(_project_id, _session_id, task_id, agent_id) do
     notify({:gate_opened, task_id, agent_id})
     {:ok, %{"id" => task_id, "gateStatus" => "awaiting_qa"}}
