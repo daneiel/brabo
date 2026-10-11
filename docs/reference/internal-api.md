@@ -265,7 +265,12 @@ through that facade, and since AT-157 they reach the channel the other way
 round: after the write **commits**, the api calls
 `POST /internal/sessions/:id/event-appended` (see *api → engine*) and the
 engine broadcasts the same `event.appended`. Writes that arrived from the
-engine itself (`/internal/*`) are not announced a second time. The call is
+engine itself (`/internal/*`) are not announced a second time — except the
+events the api records on its OWN as the effect of an action it auto-approved
+and executed inside that internal request (`infra.pr_opened`,
+`adr.pr_opened`, `action.*`): the engine's facade only announces the write it
+asked for, so these are announced once by the api
+([RN-848](../business-rules.md#rn-848)). The call is
 best effort and never awaited; if it is lost, the browser's 15s fallback poll
 covers it, as before. The `:id` is sent only when the session id is a
 UUID (the column type): the api checks it where it builds the URL, encodes the
