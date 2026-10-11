@@ -19744,7 +19744,7 @@ handoff às 06:45:01 — o web encadeava a ativação para `maintainer`/`owner`
 
 - **Onde:** `apps/api/src/application/use-cases/execution/execute-execution-plan.use-case.ts:89`
   (`execute`); `apps/api/src/application/use-cases/actions/approve-action.use-case.ts:192`
-  (`executeExecutionPlan`); `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:353`
+  (`executeExecutionPlan`); `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:374`
   (`executeExecutionPlan`); `apps/web/src/lib/session-acoes-de-handoff.ts:91`
   (`handleAcceptHandoff`); `apps/engine/lib/engine/agents/dev_lead_tools.ex:220`
   (`classificar`); `apps/engine/lib/engine/agents/dev_lead_server.ex:699`
@@ -21117,7 +21117,7 @@ decisão, fechados juntos:
 
 - **Onde:** `apps/web/src/lib/aprovacoes.ts:428` (`verboDaAcao`),
   `apps/api/src/domain/actions/sempre-permitir.ts:33` (`TIPOS_SEM_SEMPRE_PERMITIR`),
-  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:80` (`execute`),
+  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:84` (`execute`),
   `apps/api/src/application/use-cases/execution/execute-execution-plan.use-case.ts:89` (`execute`),
   `apps/api/src/application/use-cases/execution/activate-execution.use-case.ts:123` (`execute`),
   `apps/engine/lib/engine/agents/dev_lead_tools.ex:573` (`resumo_do_plano`)
@@ -23950,3 +23950,25 @@ sem dizer qual.
   prsNaoLidas").
 - **Origem:** AT-518 (TP-01, 13ª: "Nenhum arquivo nas PRs nem nos commits"
   com 14 PRs mergeadas, e a aba sem reler o resumo)
+### RN-848 — O efeito de ação executada dentro de um pedido interno avisa o canal da sessão {#rn-848}
+
+- **Regra:** extensão da [RN-579](#rn-579) (AT-157). A api não avisa o canal
+  da escrita que veio do engine (`/internal/*`), porque a fachada dele avisa o
+  evento que ELE pediu para gravar. O que a api grava por conta própria como
+  EFEITO de uma ação auto-aprovada executada dentro desse pedido
+  (`infra.pr_opened`, `adr.pr_opened`, `action.*`) nenhuma fachada avisa, e
+  passa a ser avisado: `ProposeActionUseCase` executa a ação sob a marca
+  `runComoEfeitoDeAcao`, e o notifier só fica calado com origem engine SEM essa
+  marca. O evento que o engine pediu (inclusive o `proposed_action.created`)
+  continua sem aviso da api, para não sair em dobro.
+- **Onde:** `apps/api/src/application/efeito-de-acao.ts:18` (`ehEfeitoDeAcao`),
+  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:298`
+  (`runComoEfeitoDeAcao`),
+  `apps/api/src/infrastructure/http-clients/session-channel-notifier.ts:73`
+  (`ehEfeitoDeAcao`)
+- **Teste:** `apps/api/test/application/use-cases/sessions/aviso-ao-canal-da-sessao.spec.ts`
+  ("AT-516: efeito de ação executada dentro de /internal avisa o canal, uma
+  vez"; falha/regressão: "escrita vinda do engine (/internal) não é avisada de
+  novo pela api")
+- **Origem:** AT-516 (a PR de infra auto-aprovada só entrou em "PRs prontas"
+  do chat ~5 min depois, pelo poll de fallback)

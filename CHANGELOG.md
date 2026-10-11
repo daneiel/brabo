@@ -8,6 +8,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - **engine (dev e QA)**: o kickoff do dev pede a rota DENTRO da seção "Rotas HTTP" do README (antes de "Testes"), nunca no fim, e sem nota de processo para agentes; o QA confere as duas coisas (RN-850, AT-520).
 
 - **api + web (contexto da sessão)**: PR mergeada no repositório local deixa de devolver diff vazio — o merge grava a merge base e a ponta da origem, e o diff (aba PRs e "Arquivos tocados" do painel de contexto) passa a listar os arquivos que ela mudou; PR mergeada antes cai no commit de merge. O resumo do contexto é relido quando a lista de PRs é relida (canal e backlog), sem recarregar (RN-847, AT-518).
+- **api (canal da sessão)**: o que a api grava como efeito de uma ação auto-aprovada executada dentro do pedido interno do engine (`infra.pr_opened`, `adr.pr_opened`, `action.*`) avisa o canal na hora; a PR de infra entra em "PRs prontas" sem esperar o poll de fallback (RN-848, AT-516).
 - **engine (Arquiteto)**: `listar_adrs_propostas` cruza a ADR executada com o `git_merge` executado e diz "PR MERGEADA em <data>" ou "PR aberta"; sem como ler o estado, diz que não leu, nunca "aberta" (RN-845, AT-514).
 
 - **web**: o rótulo do campo de nome do assistente passa a ser "Projeto" (en: "Project"), sem a palavra "Nome", para o NordPass não abrir "Contact info" sobre ele — heurística, sem atributo de ignore documentado (AT-511, RN-842).
