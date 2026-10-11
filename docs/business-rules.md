@@ -22428,7 +22428,7 @@ sem dizer qual.
   (`gravar_texto_do_turno`); `apps/engine/lib/engine/dev/dev_agent_server.ex:1064`
   (`propose_pr`); `apps/web/src/lib/session-destinatario.ts:192`
   (`agentesEmConversa`) e `apps/web/src/lib/session-kind.ts:69`
-  (`tipoDaSessao`); `apps/web/src/routes/NewProjectWizard.tsx:1127`
+  (`tipoDaSessao`); `apps/web/src/routes/NewProjectWizard.tsx:1122`
   (`quebraPorSegmento`); `apps/web/src/components/ui/MarkdownMessage.tsx:139`
   (`TabelaMarkdown`)
 - **Teste:** `apps/api/test/application/use-cases/actions/execute-adr-pr.use-case.spec.ts`,
@@ -23635,6 +23635,24 @@ sem dizer qual.
   no teto e devolve o total real; não lê sessão sem ligação")
 - **Origem:** AT-498
 
+### RN-842 — O rótulo do nome do projeto não diz "Nome" {#rn-842}
+
+- **Regra:** o rótulo visível do campo de nome do assistente de criação é
+  "Projeto" (en: "Project"), não "Nome do projeto"/"Project name": com o
+  `id`/`name` `projeto-slug` da [RN-834](#rn-834) o NordPass seguiu abrindo
+  "Contact info" sobre o campo (TP-01, 12ª), e o texto do `<label>` é o sinal
+  que sobrava. O rótulo segue visível e ligado por `htmlFor`, o campo segue
+  fora de `<form>` e com o `SEM_AUTOFILL` da [RN-740](#rn-740). É HEURÍSTICA:
+  a busca (central de ajuda do NordPass, loja da extensão, fóruns) não achou
+  atributo de ignore documentado pelo NordPass (nada como `data-np-ignore`),
+  então nenhum foi acrescentado ao `SEM_AUTOFILL`. Já tentados antes: tirar
+  `autoFocus` (RN-736), `aria-autocomplete`/`data-protonpass-ignore` (RN-740),
+  `id`/`name` sem token de contato (RN-834). A prova é o TP-01.
+- **Onde:** `apps/web/src/routes/NewProjectWizard.tsx:749` (`projeto-slug`),
+  `apps/web/src/locales/pt-BR/newProject.json` (`nameLabel`)
+- **Teste:** `apps/web/src/routes/NewProjectWizard.test.tsx` ("RN-842: o
+  rótulo visível do campo não traz \"nome\"…")
+- **Origem:** AT-511 (TP-01 de 11/10)
 ### RN-835 — O "Desbloquear" da Visão geral não se move e diz o que aconteceu {#rn-835}
 
 - **Regra:** extensão da [RN-816](#rn-816) e da [RN-794](#rn-794). Na seção de
