@@ -5659,6 +5659,39 @@ paths:
       summary: Hybrid search (vector + lexical) over the project's indexed chunks
       tags:
         - rag
+  /projects/{projectId}/run-instructions:
+    get:
+      description: >-
+        RN-852 (ADR 0213): the current `artifact.run_instructions`, emitted when
+        an `open_infra_pr` with `run` executes. DECLARED by the Infra agent,
+        never verified on the reader's machine. `null` when there is none.
+      operationId: BacklogController_runInstructions
+      parameters:
+        - name: projectId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RunInstructionsResponseDto'
+        '401':
+          description: No token, expired token, or invalid signature.
+        '403':
+          description: Insufficient role on the project.
+        '404':
+          description: Project does not exist.
+        '429':
+          description: Rate limit per user or per IP.
+      security:
+        - bearer: []
+      summary: Returns how to run the deliverable on your machine
+      tags:
+        - backlog
   /projects/{projectId}/runner-device-keys:
     get:
       description: >-
@@ -14262,11 +14295,21 @@ components:
             anything yet.
           allOf:
             - $ref: '#/components/schemas/EstadoDoRoteamentoResponseDto'
+        projectImage:
+          nullable: true
+          description: >-
+            RN-852: the CURRENT artifact.project_image decision (image, network,
+            resources) — the FROM of the Dockerfile and the network the Infra
+            compose respects. null when no image has been decided.
+          type: object
+          allOf:
+            - $ref: '#/components/schemas/DecisaoDeImagemResponseDto'
       required:
         - moduleMap
         - adrs
         - gitProvider
         - moduleRouting
+        - projectImage
     InfraGateVerdictResponseDto:
       type: object
       properties:
@@ -18505,6 +18548,40 @@ components:
         - title
         - coveredByStoryIds
         - covered
+    RunInstructionsResponseDto:
+      type: object
+      properties:
+        command:
+          type: string
+          example: cp .env.example .env && docker compose up --build
+        urls:
+          type: array
+          items:
+            $ref: '#/components/schemas/UrlDeExecucaoResponseDto'
+        envExample:
+          type: boolean
+          example: true
+          description: The PR commits a `.env.example` to copy before running.
+        prUrl:
+          type: string
+          example: http://localhost:3000/git/acme/pulls/3
+        version:
+          type: number
+          example: 1
+        eventId:
+          type: string
+          example: 01JC4Z0000EVENTORUNINSTRUC01
+        declaredAt:
+          type: string
+          example: '2026-10-11T12:00:00.000Z'
+      required:
+        - command
+        - urls
+        - envExample
+        - prUrl
+        - version
+        - eventId
+        - declaredAt
     RunLlmTurnDto:
       type: object
       properties:
@@ -20295,6 +20372,26 @@ components:
         - version
         - body
         - hash
+    UrlDeExecucaoResponseDto:
+      type: object
+      properties:
+        label:
+          type: string
+          example: Swagger
+          maxLength: 60
+        url:
+          type: string
+          example: http://localhost:8080/docs
+        kind:
+          type: string
+          enum:
+            - api_docs
+            - web
+          example: api_docs
+      required:
+        - label
+        - url
+        - kind
     UserCredentialResponseDto:
       type: object
       properties:
