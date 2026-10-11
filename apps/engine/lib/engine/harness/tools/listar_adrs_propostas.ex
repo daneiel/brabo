@@ -64,7 +64,38 @@ defmodule Engine.Harness.Tools.ListarAdrsPropostas do
       })
       |> Engine.Repo.all()
 
-    {total, linhas}
+    {total, cruzar_com_merges(project_id, linhas)}
+  end
+
+  # RN-845 (AT-514): o status da AÇÃO `open_adr_pr` diz só que a PR foi aberta.
+  # O estado da PR vem do `git_merge` EXECUTADO no mesmo projeto com o mesmo
+  # `pullRequestId` — a mesma fonte que move a PR para "mergeada" na aba PRs, e
+  # o único caminho de merge do produto (RN-418). Uma consulta, só sobre os ids
+  # listados. Falha aqui não vira "aberta": a linha diz que não leu.
+  defp cruzar_com_merges(project_id, linhas) do
+    ids =
+      for %{status: "executed", resultado: %{"pullRequestId" => id}} <- linhas,
+          is_binary(id) and id != "",
+          do: id
+
+    merges = merges_por_pr(project_id, ids)
+    Enum.map(linhas, &Map.put(&1, :merges, merges))
+  end
+
+  defp merges_por_pr(_project_id, []), do: %{}
+
+  defp merges_por_pr(project_id, ids) do
+    from(m in "proposed_actions",
+      where:
+        m.project_id == type(^project_id, :binary_id) and m.action_type == "git_merge" and
+          m.status == "executed" and
+          fragment("?->>'pullRequestId'", m.payload) in ^ids,
+      select: {fragment("?->>'pullRequestId'", m.payload), m.decided_at, m.created_at}
+    )
+    |> Engine.Repo.all()
+    |> Map.new(fn {id, decidido, criado} -> {id, decidido || criado} end)
+  rescue
+    _ -> :ilegivel
   end
 
   defp renderizar({0, _}) do
@@ -93,20 +124,44 @@ defmodule Engine.Harness.Tools.ListarAdrsPropostas do
   defp status_legivel("pending"), do: "PENDENTE de aprovação"
   defp status_legivel("approved"), do: "APROVADA (PR ainda não aberta)"
   defp status_legivel("auto_approved"), do: "APROVADA automaticamente (PR ainda não aberta)"
-  defp status_legivel("executed"), do: "APROVADA e EXECUTADA (PR aberta)"
+  defp status_legivel("executed"), do: "APROVADA e EXECUTADA"
   defp status_legivel("denied"), do: "RECUSADA"
   defp status_legivel("failed"), do: "APROVADA, mas a execução FALHOU"
   defp status_legivel(outro), do: "status=#{outro}"
 
-  defp detalhe(%{status: "executed", resultado: %{"pullRequestUrl" => url}}), do: " | PR: #{url}"
+  defp detalhe(%{status: "executed"} = a) do
+    url = get_in(a, [:resultado, "pullRequestUrl"])
+    estado_da_pr(a) <> if(is_binary(url) and url != "", do: " | PR: #{url}", else: "")
+  end
+
   defp detalhe(%{status: "denied", motivo: m}) when is_binary(m), do: " | motivo: #{m}"
   defp detalhe(_), do: ""
+
+  defp estado_da_pr(%{merges: :ilegivel}),
+    do: " | estado da PR: NÃO CONSEGUI LER (não afirme que está aberta nem mergeada)"
+
+  defp estado_da_pr(%{resultado: %{"pullRequestId" => id}, merges: merges})
+       when is_binary(id) and id != "" do
+    case Map.fetch(merges, id) do
+      {:ok, quando} -> " | PR MERGEADA em #{data(quando)}"
+      :error -> " | PR aberta (nenhum merge dela registrado no Brabo)"
+    end
+  end
+
+  defp estado_da_pr(_),
+    do: " | estado da PR: NÃO CONSEGUI LER (resultado sem id de PR)"
+
+  defp data(%NaiveDateTime{} = d),
+    do: NaiveDateTime.to_iso8601(NaiveDateTime.truncate(d, :second)) <> "Z"
+
+  defp data(%DateTime{} = d), do: DateTime.to_iso8601(DateTime.truncate(d, :second))
+  defp data(outro), do: to_string(outro)
 
   defp descricao do
     """
     Lista as ADRs que você propôs neste projeto (`propose_adr`) com o status
     ATUAL de cada uma: pendente, aprovada, recusada (com o motivo), executada
-    (com a URL da PR) ou falhada. Não recebe parâmetro nenhum.
+    (com a URL da PR e se ela está aberta ou já mergeada) ou falhada. Não recebe parâmetro nenhum.
 
     A aprovação acontece fora desta conversa: antes de afirmar se uma ADR está
     pendente ou aprovada, consulte esta ferramenta.

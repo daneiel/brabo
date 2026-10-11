@@ -102,12 +102,14 @@ CREATE TABLE IF NOT EXISTS public.proposed_actions (
 """)
 
 # RN-772: `ListarAdrsPropostas` lê as `open_adr_pr` do PROJETO, com o
-# resultado da execução e o motivo da recusa.
+# resultado da execução e o motivo da recusa; RN-845 cruza com o `git_merge`
+# executado, pela data da decisão.
 Engine.Repo.query!("""
 ALTER TABLE public.proposed_actions
   ADD COLUMN IF NOT EXISTS project_id uuid,
   ADD COLUMN IF NOT EXISTS execution_result jsonb,
-  ADD COLUMN IF NOT EXISTS rejection_reason text
+  ADD COLUMN IF NOT EXISTS rejection_reason text,
+  ADD COLUMN IF NOT EXISTS decided_at timestamptz
 """)
 
 # Mesmo motivo dos fixtures acima — project_repositories também é
