@@ -22282,7 +22282,7 @@ sem dizer qual.
   naquele passo, então ele vale sempre que há recorte. Os dev agents ficam
   sem piso, de propósito (a obrigação deles muda a cada passo; para eles vale
   só a [RN-759](#rn-759)) — salvo `report_done`/`report_blocked`, que entram no piso deles desde a [RN-839](#rn-839).
-- **Onde:** `apps/api/src/domain/llm/tool-router.ts:352` (`menuComPiso`) e
+- **Onde:** `apps/api/src/domain/llm/tool-router.ts:361` (`menuComPiso`) e
   `apps/api/src/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.ts:248`
   (`menuComPiso`)
 - **Teste:** `apps/api/test/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.spec.ts`
@@ -22304,7 +22304,7 @@ sem dizer qual.
   porque só a api sabe o menu depois do Jev. Não aplicar o recorte na volta
   que fecha o turno foi avaliado e não feito: a api não sabe antes da
   resposta que a volta será a última.
-- **Onde:** `apps/api/src/domain/llm/tool-router.ts:366` (`avisoDeRecorte`) e
+- **Onde:** `apps/api/src/domain/llm/tool-router.ts:375` (`avisoDeRecorte`) e
   `apps/api/src/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.ts:263`
   (`avisoDeRecorte`)
 - **Teste:** `apps/api/test/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.spec.ts`
@@ -23723,9 +23723,27 @@ sem dizer qual.
   o recorte do Jev nunca tira `report_done` nem `report_blocked`. O resto do
   passo deles segue recortável, com o aviso de recorte da RN-759. Como todo
   piso, ele só devolve o que está no catálogo do passo.
-- **Onde:** `apps/api/src/domain/llm/tool-router.ts:342` (`pisoDoMenu`)
+- **Onde:** `apps/api/src/domain/llm/tool-router.ts:351` (`pisoDoMenu`)
 - **Teste:** `apps/api/test/domain/llm/piso-dos-dev-agents.spec.ts`
   (`recorte que deixa só \`terminal\` para dev-api: report_done e
   report_blocked continuam`; `falha: dev-lead e outro agente não ganham as
   ferramentas de desfecho`)
 - **Origem:** AT-499 (sequência, decisão do dono de 10/10)
+
+### RN-840 — a ferramenta de parecer de cada agente de gate entra no piso do Jev {#rn-840}
+
+- **Regra:** estende a [RN-758](#rn-758) e a [RN-839](#rn-839) aos agentes de
+  GATE. O recorte do Jev nunca tira de cada um a ferramenta de PARECER dele, e
+  só a dele: `qa-automacao` → `emit_qa_verdict`, `qa-performance-seguranca` →
+  `emit_perf_seguranca_verdict`, `qa-estrategia` → `emit_plano_de_teste`,
+  `appsec` → `emit_threat_model`. Sem ela o gate rodava a suíte e parava sem
+  veredito, com a delegação falhando por origem `modelo` e a tarefa pronta
+  bloqueada. Agente fora dos gates não ganha ferramenta de parecer, e o piso
+  só devolve o que está no catálogo do passo.
+- **Onde:** `apps/api/src/domain/llm/tool-router.ts:311` (`PISO_DO_MENU`)
+- **Teste:** `apps/api/test/domain/llm/tool-router-piso-dos-gates.spec.ts`
+  (ids e ferramentas conferidos contra os `.ex` do engine; recorte que deixa
+  só `terminal`/`read_file` termina com o parecer; falha: `criativo`,
+  `dev-api` e `dev-lead` não ganham ferramenta de parecer; o piso não
+  acrescenta ferramenta fora do catálogo)
+- **Origem:** AT-509 (TP-01, 12ª execução)
