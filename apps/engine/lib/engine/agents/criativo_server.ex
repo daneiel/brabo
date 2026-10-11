@@ -51,7 +51,7 @@ defmodule Engine.Agents.CriativoServer do
     TurnoOrfao
   }
 
-  alias Engine.Harness.Tools.{AskStructuredQuestions, EmitArtifact}
+  alias Engine.Harness.Tools.{AskStructuredQuestions, DeclareOpenQuestion, EmitArtifact}
   alias Engine.Sessions.EngineApiClient
 
   @agent "criativo"
@@ -112,7 +112,11 @@ defmodule Engine.Agents.CriativoServer do
        project_id: project_id,
        agent: @agent,
        messages: [system_msg | history],
-       tool_specs: [EmitArtifact.spec(), AskStructuredQuestions.spec()],
+       tool_specs: [
+         EmitArtifact.spec(),
+         AskStructuredQuestions.spec(),
+         DeclareOpenQuestion.spec()
+       ],
        # Guardado enquanto o turno roda numa Task supervisionada, fora do
        # `handle_call` que bloqueava o processo inteiro — é o que permite um
        # `:cancel` chegar e ser atendido (RN-122). Ver `TurnoAssincrono`.
@@ -436,6 +440,11 @@ defmodule Engine.Agents.CriativoServer do
     end)
   end
 
+  # ADR 0214 (RN-862): a dúvida deixada para o usuário vira pendência.
+  defp dispatch_tool(%{"name" => "declare_open_question", "arguments" => _} = call, state) do
+    executar(call, state, "declare_open_question", fn a -> DeclareOpenQuestion.run(a, state) end)
+  end
+
   # Nome que não é nenhuma das duas: o modelo inventou a ferramenta. Volta como
   # ERRO pelo mesmo caminho de um payload inválido — antes era ignorado em
   # silêncio, e com o laço isso seria pior que antes: o histórico ficaria
@@ -629,6 +638,7 @@ defmodule Engine.Agents.CriativoServer do
   # tem de mudar na volta seguinte, e é ele que a origem precisa apontar.
   defp origem_da_ferramenta("falha ao emitir artefato: " <> _), do: "infra"
   defp origem_da_ferramenta("falha ao registrar perguntas: " <> _), do: "infra"
+  defp origem_da_ferramenta("falha ao registrar a pergunta: " <> _), do: "infra"
   defp origem_da_ferramenta(_outro), do: "modelo"
 
   defp prefixo_da_ferramenta("emit_artifact"), do: "Não consegui registrar isso"

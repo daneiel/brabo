@@ -227,6 +227,7 @@ defmodule Engine.Harness.IdiomaDaRespostaTest do
 
     specs = [
       Tools.EmitArtifact.spec(),
+      Tools.DeclareOpenQuestion.spec(),
       Tools.CreateEpic.spec(),
       Tools.CreateStory.spec(),
       Tools.CompleteStory.spec(),

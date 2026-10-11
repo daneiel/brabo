@@ -45,8 +45,10 @@ defmodule Engine.Dev.ContextBuilder do
       module_open_tasks_total: Map.get(ctx, "moduleOpenTasksTotal", 0),
       # AT-462 (RN-786): o contrato do módulo, fonte da interface no gate.
       module_contract: Map.get(ctx, "moduleContract"),
+      # ADR 0214 (RN-862): decisões do usuário ligadas à história/tarefa.
+      decisoes: Map.get(ctx, "decisoes", []),
       business_rules_units: business_rules_units(rules),
-      task_state_units: task_state_units(task, story, adrs)
+      task_state_units: task_state_units(task, story, adrs, Map.get(ctx, "decisoes", []))
     }
   end
 
@@ -59,8 +61,8 @@ defmodule Engine.Dev.ContextBuilder do
     end)
   end
 
-  defp task_state_units(task, story, adrs) do
-    story_unit = %{id: :story, content: story_content(story)}
+  defp task_state_units(task, story, adrs, decisoes) do
+    story_unit = %{id: :story, content: story_content(story) <> secao_de_decisoes(decisoes)}
     task_unit = %{id: :task, content: "Task: #{task["title"]}\n#{task["description"]}"}
 
     adr_units =
@@ -95,6 +97,26 @@ defmodule Engine.Dev.ContextBuilder do
     #{format_list(story["dor"])}
     """
   end
+
+  @doc """
+  As decisões do usuário (ADR 0214, RN-862), já com teto da api. Vazio não
+  escreve nada. Cada item aceita `pergunta`/`resposta` ou o molde do
+  `decision_record` (`context`/`choice`).
+  """
+  def secao_de_decisoes(decisoes) when is_list(decisoes) and decisoes != [] do
+    linhas = Enum.map_join(decisoes, "\n", &"- #{linha_de_decisao(&1)}")
+    "\nDecisões do usuário — vencem RF/DoR quando conflitam:\n#{linhas}\n"
+  end
+
+  def secao_de_decisoes(_), do: ""
+
+  defp linha_de_decisao(d) when is_map(d) do
+    pergunta = Map.get(d, "pergunta") || Map.get(d, "context") || ""
+    resposta = Map.get(d, "decisao") || Map.get(d, "resposta") || Map.get(d, "choice") || ""
+    "#{pergunta} → #{resposta}"
+  end
+
+  defp linha_de_decisao(d), do: to_string(d)
 
   defp format_list(nil), do: "(nenhum)"
   defp format_list([]), do: "(nenhum)"

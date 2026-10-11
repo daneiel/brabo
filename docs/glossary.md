@@ -152,7 +152,7 @@ that states how many earlier events were left out.
 Explicit because the destination and the reason are recorded in the event
 log, instead of one agent implicitly "taking over" another's context.
 
-**Artifact** — an agent's structured, validated output. Eleven closed
+**Artifact** — an agent's structured, validated output. Twelve closed
 schemas (`note`, `business_rule`, `product_brief`, `decision_record`,
 `plano_de_teste`, `prototipo_navegavel`, `threat_model`, `task_blocked`,
 `qa_verdict`, `secops_verdict`, `infra_delegation_files`): a missing field

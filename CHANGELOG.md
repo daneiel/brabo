@@ -5,6 +5,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 ## Unreleased
 
 ### Mudanças
+- **engine (perguntas em aberto)**: Criativo, PO, Arquiteto e Dev Lead registram a dúvida deixada para o usuário com `declare_open_question` (pergunta, sugestão e o que afeta); o QA emite `needs_user_decision` para requisito não confirmado, o ciclo do gate fica estacionado até a resposta, e as decisões do usuário entram no contexto do dev e do QA (RN-862, ADR 0214, AT-521).
 - **engine (Infra)**: o compose que a Infra propõe sobe o APP na máquina do usuário (imagem decidida, porta `${APP_PORT:-8080}`, volume, `.env.example`, seção "Rodar na sua máquina" no README), e `propose_infra_pr` exige `run` (comando e URLs locais), recusado com motivo quando inválido (RN-851, AT-517).
 - **engine (dev e QA)**: tarefa que toca rotas ou ponto de entrada faz o dev servir `/openapi.json` (OpenAPI 3) e `/docs` (Swagger, ou página que carrega o swagger-ui de CDN sem rede) e citar a URL em "Rodar na sua máquina" do README; o QA sobe o app no container e bate nas duas rotas, com o `docker compose up` real como observação (RN-853, RN-854, ADR 0213, AT-517).
 - **web (Visão geral)**: cartão "Rodar na sua máquina" com o comando (copiar), as URLs locais clicáveis, a lembrança do `.env.example` e a nota de que é declarado pela Infra na PR e não verificado; some sem declaração e é relido quando a PR de infra abre (RN-855, AT-517).

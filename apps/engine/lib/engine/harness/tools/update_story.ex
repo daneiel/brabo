@@ -25,7 +25,13 @@ defmodule Engine.Harness.Tools.UpdateStory do
         "properties" => %{
           "story_id" => %{"type" => "string"},
           "title" => %{"type" => "string"},
-          "description" => %{"type" => "string"}
+          "description" => %{"type" => "string"},
+          "question_id" => %{
+            "type" => "string",
+            "description" =>
+              "questionId da pergunta em aberto JÁ respondida que motiva a correção " <>
+                "(destrava história ready, ADR 0214)"
+          }
         },
         "required" => ["story_id"]
       }
@@ -38,11 +44,15 @@ defmodule Engine.Harness.Tools.UpdateStory do
   @impl true
   def run(%{"story_id" => story_id} = args, ctx) when is_binary(story_id) do
     fields =
-      %{title: Map.get(args, "title"), description: Map.get(args, "description")}
+      %{
+        title: Map.get(args, "title"),
+        description: Map.get(args, "description"),
+        questionId: Map.get(args, "question_id")
+      }
       |> Enum.reject(fn {_k, v} -> is_nil(v) end)
       |> Map.new()
 
-    if fields == %{} do
+    if Map.delete(fields, :questionId) == %{} do
       {:error, "update_story exige `title` ou `description`"}
     else
       case EngineApiClient.update_story(ctx.project_id, ctx.session_id, story_id, fields) do

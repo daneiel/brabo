@@ -87,7 +87,7 @@ defmodule Engine.Agents.DevLeadServer do
   use GenServer, restart: :temporary
 
   alias Engine.Harness.{ContextBuilder, PromptAssembler, ContextManager, ToolCallRecovery}
-  alias Engine.Harness.Tools.EmitArtifact
+  alias Engine.Harness.Tools.{DeclareOpenQuestion, EmitArtifact}
 
   alias Engine.Agents.{
     DevLeadTools,
@@ -178,6 +178,7 @@ defmodule Engine.Agents.DevLeadServer do
          DevLeadTools.spec(),
          DevLeadTools.spec_assess_implementability(),
          EmitArtifact.spec(),
+         DeclareOpenQuestion.spec(),
          # RN-699 (AT-363): leitura do backlog e do module_map vigente.
          DevLeadTools.spec_read_backlog()
        ],
@@ -545,6 +546,10 @@ defmodule Engine.Agents.DevLeadServer do
   defp run_tool("read_backlog", _args, state), do: DevLeadTools.run_read_backlog(state)
 
   defp run_tool("emit_artifact", args, state), do: EmitArtifact.run(args, state)
+
+  defp run_tool("declare_open_question", args, state),
+    do: DeclareOpenQuestion.run(args, state)
+
   defp run_tool(name, _args, _state), do: {:error, "ferramenta desconhecida: #{name}"}
 
   # --- Kickoff ---

@@ -468,9 +468,11 @@ defmodule Engine.Sessions.FakeEngineApiClient do
         veredito,
         resumo,
         itens,
-        max_corrections
+        max_corrections,
+        extras \\ %{}
       ) do
     notify({:gate_verdict_recorded, task_id, gate, veredito, resumo, itens, max_corrections})
+    if extras != %{}, do: notify({:gate_verdict_extras, task_id, gate, extras})
     reply(:fake_gate_verdict_response, %{"nextAction" => "done", "task" => %{"id" => task_id}})
   end
 

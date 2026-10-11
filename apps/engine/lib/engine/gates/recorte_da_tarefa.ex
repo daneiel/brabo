@@ -24,6 +24,7 @@ defmodule Engine.Gates.RecorteDaTarefa do
     abertas = Map.get(dev_context, :module_open_tasks, [])
     total = Map.get(dev_context, :module_open_tasks_total, length(abertas))
     contrato = Map.get(dev_context, :module_contract)
+    decisoes = Map.get(dev_context, :decisoes, [])
 
     """
 
@@ -58,7 +59,11 @@ defmodule Engine.Gates.RecorteDaTarefa do
     códigos, dentro da seção "Rotas HTTP" (antes de "Testes", nunca no fim),
     o README não traz nota de processo nem instrução para agentes, e erro de entrada responde com mensagem própria do projeto, nunca
     a crua da biblioteca; o que faltar vai a `itens`.
-    #{secao_do_ambiente_limpo()}#{secao_da_forma(regras, task)}#{secao_do_ponto_de_entrada(task)}#{secao_do_contrato(contrato)}
+
+    Requisito marcado "não confirmado pelo usuário" (ou contradito por decisão
+    vigente) → `needs_user_decision`, nunca `changes_requested`: mande a
+    `pergunta` e a sua `sugestao`.
+    #{Engine.Dev.ContextBuilder.secao_de_decisoes(decisoes)}    #{secao_do_ambiente_limpo()}#{secao_da_forma(regras, task)}#{secao_do_ponto_de_entrada(task)}#{secao_do_contrato(contrato)}
     """
   end
 

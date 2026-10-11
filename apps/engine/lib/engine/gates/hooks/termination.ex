@@ -26,10 +26,22 @@ defmodule Engine.Gates.Hooks.Termination do
         resumo: Map.get(args, "resumo", ""),
         itens: lista(Map.get(args, "itens")),
         coverage_matrix: lista(Map.get(args, "coverageMatrix"))
-      }}}
+      }
+      |> com_decisao_do_usuario(args)}}
   end
 
   def call(ctx), do: {:cont, ctx}
+
+  # ADR 0214 (RN-862): o veredito `needs_user_decision` leva a pergunta.
+  defp com_decisao_do_usuario(verdict, %{"veredito" => "needs_user_decision"} = args) do
+    Map.put(verdict, :decisao_do_usuario, %{
+      pergunta: Map.get(args, "pergunta"),
+      sugestao: Map.get(args, "sugestao"),
+      open_question_id: Map.get(args, "openQuestionId")
+    })
+  end
+
+  defp com_decisao_do_usuario(verdict, _args), do: verdict
 
   # RN-787 (AT-464): o modelo manda `itens`/`coverageMatrix` ora como lista,
   # ora como STRING JSON; o hook lê o argumento cru, e o `qa_verdict` gravava o
