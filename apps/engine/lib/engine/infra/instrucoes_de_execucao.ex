@@ -64,6 +64,14 @@ defmodule Engine.Infra.InstrucoesDeExecucao do
            "`run.urls[#{i}].url` é `#{u}`; precisa começar com http://localhost: ou http://127.0.0.1:"
          )}
 
+      # RN-863 (AT-524): `api_docs` é sempre a UI Swagger em `/docs`, nunca
+      # uma rota de negócio — a mesma régua de `recusaDoRun` na api.
+      k == "api_docs" and not String.ends_with?(u, "/docs") ->
+        {:halt,
+         recusa(
+           "`run.urls[#{i}].url` é `#{u}`; `api_docs` aponta para `/docs` (a UI Swagger), nunca rota de negócio"
+         )}
+
       true ->
         {:cont, :ok}
     end

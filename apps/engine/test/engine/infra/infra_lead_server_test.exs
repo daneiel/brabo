@@ -1859,6 +1859,9 @@ defmodule Engine.Infra.InfraLeadServerTest do
       assert texto =~ "`node:22-bookworm-slim`"
       assert texto =~ "Rodar na sua máquina"
       assert texto =~ "run"
+      # RN-863: `/docs` sempre, nunca rota de negócio
+      assert texto =~ "declara SEMPRE `/docs`"
+      assert texto =~ "nunca rota de negócio"
       refute texto =~ "não por esse compose"
     end
 
@@ -1928,7 +1931,15 @@ defmodule Engine.Infra.InfraLeadServerTest do
              "command" => "docker compose up",
              "urls" => [%{"label" => "App", "url" => "http://localhost:8080", "kind" => "grpc"}],
              "envExample" => false
-           }, "aceitos: api_docs, web"}
+           }, "aceitos: api_docs, web"},
+          {"api_docs em rota de negócio",
+           %{
+             "command" => "docker compose up",
+             "urls" => [
+               %{"label" => "API", "url" => "http://localhost:8080/links", "kind" => "api_docs"}
+             ],
+             "envExample" => false
+           }, "`api_docs` aponta para `/docs`"}
         ] do
       test "run #{nome} é recusado com motivo, sem propor", %{state: state} do
         Process.put(:fake_infra_context, %{"moduleMap" => nil, "adrs" => []})
