@@ -13760,7 +13760,7 @@ do `permissions.json` repetem os TOKENS do comando no texto (o `label` de
 `matchAgainstFile`) — o mesmo comando que já mora em
 `proposed_actions.payload` e no card de aprovação.
 
-- **Código:** `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:265`
+- **Código:** `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:259`
   (`reason` no payload do evento de sessão), `:223` (o comentário do outbox
   sem o campo), `:227` (o payload do outbox, intacto), `:356` (o
   `rejectionReason`, que continua só no `deny`);
@@ -15969,7 +15969,7 @@ raiz do ESCOPO, nunca onde o arquivo de política mora.
 - **Código:** `apps/api/src/infrastructure/filesystem/project-workspaces-root.ts:907`
   (`raizDoEscopoNoEvento`), `:901` (`RaizDoEscopoNoEvento`), `:117`
   (`segmentoSobABaseDeProjetos`, reusada);
-  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:280`
+  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:297`
   (`scopeRoot` só em `terminal`);
   `apps/api/src/domain/actions/decide.ts:604` (`terminalNoEscopo`, o único
   consumidor do escopo)
@@ -19744,7 +19744,7 @@ handoff às 06:45:01 — o web encadeava a ativação para `maintainer`/`owner`
 
 - **Onde:** `apps/api/src/application/use-cases/execution/execute-execution-plan.use-case.ts:89`
   (`execute`); `apps/api/src/application/use-cases/actions/approve-action.use-case.ts:192`
-  (`executeExecutionPlan`); `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:374`
+  (`executeExecutionPlan`); `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:390`
   (`executeExecutionPlan`); `apps/web/src/lib/session-acoes-de-handoff.ts:91`
   (`handleAcceptHandoff`); `apps/engine/lib/engine/agents/dev_lead_tools.ex:220`
   (`classificar`); `apps/engine/lib/engine/agents/dev_lead_server.ex:699`
@@ -21644,7 +21644,7 @@ sem dizer qual.
   SecOps) deixa de dizer "trabalhando" quando, depois do último parecer, um
   subagente da área registra `delegation.failed` — passa a `falhou`. Nenhuma
   query nem poll novo.
-- **Onde:** `apps/api/src/application/use-cases/actions/execute-infra-pr.use-case.ts:61`
+- **Onde:** `apps/api/src/application/use-cases/actions/execute-infra-pr.use-case.ts:71`
   (`ExecuteInfraPrUseCase`),
   `apps/web/src/routes/ProjectApprovalsTab.tsx:106` (`ProjectApprovalsTab`),
   `apps/web/src/routes/Shell.tsx:545` (`idDoProjetoAtual`),
@@ -21690,7 +21690,7 @@ sem dizer qual.
   (`editar`), `:90` (`arquivar`),
   `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:97`
   (`findByProject`), `:348` (`claimNext`),
-  `apps/api/src/interfaces/http/backlog/backlog.controller.ts:188`
+  `apps/api/src/interfaces/http/backlog/backlog.controller.ts:205`
   (`updateTitle`), `:219` (`archive`),
   `apps/api/src/interfaces/http/internal/internal-sessions.controller.ts:571`
   (`updateStoryRoute`), `:603` (`archiveStoryRoute`),
@@ -23962,7 +23962,7 @@ sem dizer qual.
   marca. O evento que o engine pediu (inclusive o `proposed_action.created`)
   continua sem aviso da api, para não sair em dobro.
 - **Onde:** `apps/api/src/application/efeito-de-acao.ts:18` (`ehEfeitoDeAcao`),
-  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:298`
+  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:314`
   (`runComoEfeitoDeAcao`),
   `apps/api/src/infrastructure/http-clients/session-channel-notifier.ts:73`
   (`ehEfeitoDeAcao`)
@@ -23972,3 +23972,43 @@ sem dizer qual.
   novo pela api")
 - **Origem:** AT-516 (a PR de infra auto-aprovada só entrou em "PRs prontas"
   do chat ~5 min depois, pelo poll de fallback)
+
+### RN-852 — A PR de infra declara como rodar o entregável, e isso vira artefato {#rn-852}
+
+- **Regra:** `open_infra_pr` EXIGE `run` = `{command, urls, envExample}`
+  (ADR 0213): `command` texto não vazio até 300 caracteres; `urls` de 1 a 5
+  itens `{label (até 60), url, kind}`, com `url` começando com
+  `http://localhost:` ou `http://127.0.0.1:` e `kind` ∈ `api_docs` | `web`;
+  `envExample` booleano. A api recusa na PROPOSTA com 400 `run_invalido`
+  (texto que volta ao Infra Lead) e revalida na EXECUÇÃO, que falha nomeada
+  sem commitar. Com a PR aberta (ou corrigida), a api emite
+  `artifact.run_instructions` `{command, urls, envExample, prUrl, version}` —
+  versionado, sem tabela, o de maior `version` é o vigente (o desenho de
+  `artifact.project_image`), e projetado em `docs/` como os outros
+  versionados. `GET /projects/:projectId/run-instructions` (`viewer`) devolve
+  o vigente (`+ version, eventId, declaredAt`) ou `null`. É DECLARADO pela
+  Infra, nunca verificado na máquina de quem lê (RN-468). E o contexto da
+  Infra (`/internal/.../infra-context`) passa a levar `projectImage`, a
+  decisão vigente de imagem, rede e recursos, `null` sem decisão.
+- **Onde:** `apps/api/src/domain/infra/run-instructions.ts:44` (`recusaDoRun`),
+  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:155`
+  (`recusaDoRun`),
+  `apps/api/src/application/use-cases/actions/execute-infra-pr.use-case.ts:111`
+  (`recusaDoRun`), `:328` (`EVENTO_INSTRUCOES_DE_EXECUCAO`),
+  `apps/api/src/application/use-cases/execution/get-run-instructions.use-case.ts:26`
+  (`execute`),
+  `apps/api/src/application/use-cases/execution/get-infra-context.use-case.ts:89`
+  (`projectImage`)
+- **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts`
+  ("sem `run`: 400 `run_invalido`, sem proposta"; "URL fora de localhost: 400
+  nomeando o campo"; "`run` válido: a proposta nasce"),
+  `apps/api/test/application/use-cases/actions/execute-infra-pr.use-case.spec.ts`
+  ("PR aberta emite artifact.run_instructions com prUrl e versão seguinte";
+  falha: "`run` inválido na execução falha sem commitar nem emitir"),
+  `apps/api/test/application/use-cases/execution/get-run-instructions.use-case.spec.ts`
+  ("devolve o vigente — o de maior version"; "null sem artefato, e o de outro
+  projeto não vaza"),
+  `apps/api/test/application/use-cases/execution/get-infra-context.use-case.spec.ts`
+  ("RN-852: projectImage é a decisão vigente…"; "…null sem decisão de imagem")
+- **Origem:** AT-517 (o entregável do TP-01 não dizia como rodar na máquina
+  do usuário)

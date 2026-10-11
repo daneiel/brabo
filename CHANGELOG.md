@@ -5,6 +5,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 ## Unreleased
 
 ### Mudanças
+- **api (Infra)**: `open_infra_pr` exige `run` (`{command, urls, envExample}`, URLs só em `localhost`/`127.0.0.1`), recusado com 400 `run_invalido` na proposta e revalidado na execução; a PR aberta emite `artifact.run_instructions`, lido por `GET /projects/:projectId/run-instructions` (o vigente ou `null`); o contexto da Infra leva `projectImage` (RN-852, AT-517).
 - **engine (dev e QA)**: o kickoff do dev pede a rota DENTRO da seção "Rotas HTTP" do README (antes de "Testes"), nunca no fim, e sem nota de processo para agentes; o QA confere as duas coisas (RN-850, AT-520).
 
 - **api + web (contexto da sessão)**: PR mergeada no repositório local deixa de devolver diff vazio — o merge grava a merge base e a ponta da origem, e o diff (aba PRs e "Arquivos tocados" do painel de contexto) passa a listar os arquivos que ela mudou; PR mergeada antes cai no commit de merge. O resumo do contexto é relido quando a lista de PRs é relida (canal e backlog), sem recarregar (RN-847, AT-518).

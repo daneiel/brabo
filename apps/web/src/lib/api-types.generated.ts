@@ -2732,6 +2732,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{projectId}/run-instructions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Returns how to run the deliverable on your machine
+         * @description RN-852 (ADR 0213): the current `artifact.run_instructions`, emitted when an `open_infra_pr` with `run` executes. DECLARED by the Infra agent, never verified on the reader's machine. `null` when there is none.
+         */
+        get: operations["BacklogController_runInstructions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects/{projectId}/runner-device-keys": {
         parameters: {
             query?: never;
@@ -6955,6 +6975,8 @@ export interface components {
             gitProvider: "local" | "github" | "gitlab" | null;
             /** @description The Architect-routed candidates (route_modules_to_infra, ADR 0131) — what the Infra Lead elects among when proposing container_start (ADR 0130/0133). "sem_roteamento" when the Architect has not routed anything yet. */
             moduleRouting: components["schemas"]["EstadoDoRoteamentoResponseDto"];
+            /** @description RN-852: the CURRENT artifact.project_image decision (image, network, resources) — the FROM of the Dockerfile and the network the Infra compose respects. null when no image has been decided. */
+            projectImage: components["schemas"]["DecisaoDeImagemResponseDto"] | null;
         };
         InfraGateVerdictResponseDto: {
             /**
@@ -9419,6 +9441,24 @@ export interface components {
             /** @example true */
             covered: boolean;
         };
+        RunInstructionsResponseDto: {
+            /** @example cp .env.example .env && docker compose up --build */
+            command: string;
+            urls: components["schemas"]["UrlDeExecucaoResponseDto"][];
+            /**
+             * @description The PR commits a `.env.example` to copy before running.
+             * @example true
+             */
+            envExample: boolean;
+            /** @example http://localhost:3000/git/acme/pulls/3 */
+            prUrl: string;
+            /** @example 1 */
+            version: number;
+            /** @example 01JC4Z0000EVENTORUNINSTRUC01 */
+            eventId: string;
+            /** @example 2026-10-11T12:00:00.000Z */
+            declaredAt: string;
+        };
         RunLlmTurnDto: {
             /**
              * Format: uuid
@@ -10513,6 +10553,17 @@ export interface components {
             body: string;
             /** @example sha256:9f2c... */
             hash: string;
+        };
+        UrlDeExecucaoResponseDto: {
+            /** @example Swagger */
+            label: string;
+            /** @example http://localhost:8080/docs */
+            url: string;
+            /**
+             * @example api_docs
+             * @enum {string}
+             */
+            kind: "api_docs" | "web";
         };
         UserCredentialResponseDto: {
             /** @example 01JC4Z0000CREDENCIAL00000001 */
@@ -17740,6 +17791,55 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient role on the project. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Project does not exist. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    BacklogController_runInstructions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunInstructionsResponseDto"];
+                };
             };
             /** @description No token, expired token, or invalid signature. */
             401: {

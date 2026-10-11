@@ -1048,6 +1048,11 @@ run `route_modules_to_infra` yet. It's what `InfraLeadServer.build_kickoff/1`
 lists so the model can elect one candidate via `propose_container_start`
 instead of inventing an image outside it.
 
+`/infra-context` also gained `projectImage` ([RN-852](../business-rules.md#rn-852),
+ADR 0213) — the CURRENT `artifact.project_image` decision (`{image,
+rationale, network, resources}`), `null` when none was decided. It is the
+`FROM` of the Dockerfile and the network the Infra compose respects.
+
 ### Backlog and architecture
 
 | method | path |
