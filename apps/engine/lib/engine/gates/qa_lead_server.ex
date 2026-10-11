@@ -453,7 +453,7 @@ defmodule Engine.Gates.QaLeadServer do
       coverageMatrix: Map.get(verdict, :coverage_matrix, [])
     })
 
-    apply_gate_result(project_id, dev_state, task_id, veredito, resumo, itens)
+    apply_gate_result(project_id, dev_state, task_id, veredito, resumo, itens, verdict)
   end
 
   defp aplicar(
@@ -491,6 +491,67 @@ defmodule Engine.Gates.QaLeadServer do
   # Mesma chamada, byte a byte, que o QAAgent da Fase 4a fazia — é o que
   # garante que `RecordGateVerdictUseCase`/`nextGateStatus` não precisam saber
   # que existe um Lead.
+  # ADR 0214 (RN-862): requisito que só o usuário decide. A api grava a
+  # pergunta e NÃO conta correção; o ciclo fica ESTACIONADO pelo mecanismo do
+  # ADR 0207 (sem resgate automático) até a resposta, que pede a retomada por
+  # `GateRescuer.retomar_estacionado/3` (a rota da RN-724).
+  defp apply_gate_result(
+         project_id,
+         dev_state,
+         task_id,
+         "needs_user_decision" = veredito,
+         resumo,
+         itens,
+         verdict
+       ) do
+    decisao = Map.get(verdict, :decisao_do_usuario, %{})
+
+    extras =
+      %{
+        pergunta: Map.get(decisao, :pergunta),
+        sugestao: Map.get(decisao, :sugestao),
+        openQuestionId: Map.get(decisao, :open_question_id)
+      }
+      |> Map.reject(fn {_k, v} -> is_nil(v) end)
+
+    EngineApiClient.record_gate_verdict(
+      project_id,
+      dev_state.session_id,
+      task_id,
+      "qa",
+      veredito,
+      resumo,
+      itens,
+      dev_state.max_gate_corrections,
+      extras
+    )
+
+    estacionar_por_decisao(project_id, dev_state.session_id, task_id)
+  end
+
+  defp apply_gate_result(project_id, dev_state, task_id, veredito, resumo, itens, _verdict),
+    do: apply_gate_result(project_id, dev_state, task_id, veredito, resumo, itens)
+
+  defp estacionar_por_decisao(project_id, session_id, task_id) do
+    GateState.upsert!(%{
+      project_id: project_id,
+      task_id: task_id,
+      gate: "qa",
+      session_id: session_id,
+      step: "awaiting_user_decision"
+    })
+
+    :ok = GateState.park!(project_id, task_id, "qa")
+
+    emit(project_id, session_id, "gate.rescue_parked", %{
+      taskId: task_id,
+      gate: "qa",
+      motivo: "esperando a decisão do usuário numa pergunta em aberto; a resposta retoma o gate"
+    })
+
+    :ok
+  end
+
   defp apply_gate_result(project_id, dev_state, task_id, veredito, resumo, itens) do
     result =
       EngineApiClient.record_gate_verdict(

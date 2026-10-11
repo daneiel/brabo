@@ -65,4 +65,53 @@ defmodule Engine.Dev.EncerramentoDaSessaoTest do
     refute_receive {:task_blocked, _, _, _, _}, 100
     :ok = DynamicSupervisor.terminate_child(DevAgentSupervisor, pid)
   end
+
+  # RN-856 (AT-522): a task `in_progress` sem linha em `dev_agent_states` é
+  # órfã e é bloqueada também; a que uma linha segura não é bloqueada duas vezes.
+  test "bloqueia a task em curso ÓRFÃ (sem dev vivo) e não repete a já devolvida", %{
+    project_id: project_id,
+    session_id: session_id
+  } do
+    Application.put_env(:engine, :fake_tarefas_em_curso_de_dev, [
+      %{"projectId" => project_id, "taskId" => "task-orfa", "assignedTo" => "dev-api"},
+      %{"projectId" => project_id, "taskId" => "task-viva", "assignedTo" => "dev-web"}
+    ])
+
+    on_exit(fn -> Application.delete_env(:engine, :fake_tarefas_em_curso_de_dev) end)
+
+    DevAgentState.upsert!(%{
+      project_id: project_id,
+      agent_id: "dev-web",
+      module: "web",
+      session_id: session_id,
+      task_id: "task-viva",
+      worktree_path: nil,
+      status: "working",
+      impl: "noop"
+    })
+
+    assert EncerramentoDaSessao.parar_da_sessao(session_id) == ["dev-web"]
+    assert_receive {:task_blocked, "task-viva", _, _, "dev-web"}
+    assert_receive {:task_blocked, "task-orfa", "sessão de execução encerrada", diag, "dev-api"}
+    assert diag =~ "sem dev agent vivo"
+    assert_receive {:task_blocked_origin, "task-orfa", "politica"}
+    refute_receive {:task_blocked, "task-viva", _, _, _}, 200
+  end
+
+  test "sem nenhuma linha, a órfã também é bloqueada; sem órfã, nada é bloqueado", %{
+    project_id: project_id,
+    session_id: session_id
+  } do
+    assert EncerramentoDaSessao.parar_da_sessao(session_id) == []
+    refute_receive {:task_blocked, _, _, _, _}, 100
+
+    Application.put_env(:engine, :fake_tarefas_em_curso_de_dev, [
+      %{"projectId" => project_id, "taskId" => "task-orfa", "assignedTo" => "dev-api"}
+    ])
+
+    on_exit(fn -> Application.delete_env(:engine, :fake_tarefas_em_curso_de_dev) end)
+
+    assert EncerramentoDaSessao.parar_da_sessao(session_id) == []
+    assert_receive {:task_blocked, "task-orfa", _, _, "dev-api"}
+  end
 end

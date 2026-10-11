@@ -141,6 +141,50 @@ defmodule Engine.Gates.QaLeadServerTest do
     end
   end
 
+  describe "needs_user_decision (ADR 0214, RN-862)" do
+    test "grava a pergunta na api, estaciona o ciclo e só o gesto humano o retoma", %{
+      state: state,
+      project_id: project_id
+    } do
+      Process.put(:fake_dev_context, dev_context([]))
+      Process.put(:fake_propose_action, terminal_ok())
+
+      Process.put(:fake_llm_turns, [
+        FakeEngineApiClient.tool_call_response("terminal", %{"command" => "npm test"}),
+        FakeEngineApiClient.tool_call_response("emit_qa_verdict", %{
+          "veredito" => "needs_user_decision",
+          "resumo" => "o limite de 5 não foi confirmado pelo usuário",
+          "itens" => [],
+          "coverageMatrix" => [],
+          "pergunta" => "O limite é 5 links por usuário?",
+          "sugestao" => "Sim, 5"
+        })
+      ])
+
+      assert {:noreply, _} = QaLeadServer.handle_cast({:run, "task-abc12345"}, state)
+
+      assert_received {:gate_verdict_recorded, "task-abc12345", "qa", "needs_user_decision", _r,
+                       _i, nil}
+
+      assert_received {:gate_verdict_extras, "task-abc12345", "qa",
+                       %{pergunta: "O limite é 5 links por usuário?", sugestao: "Sim, 5"}}
+
+      linha = GateState.get(project_id, "task-abc12345", "qa")
+      assert linha.step == "awaiting_user_decision"
+      assert %DateTime{} = linha.parked_at
+
+      assert_received {:event_appended, ^project_id, _, %{type: "gate.rescue_parked"}}
+
+      # O resgate periódico não o religa; a resposta do usuário (rota da RN-724) sim.
+      assert GateState.list_stale(-1) |> Enum.all?(&(&1.task_id != "task-abc12345"))
+
+      assert :ok =
+               Engine.Gates.GateRescuer.retomar_estacionado(project_id, "task-abc12345", "qa")
+
+      assert_received {:gate_dispatch, :qa, ^project_id, "task-abc12345"}
+    end
+  end
+
   describe "story com RNF de performance" do
     test "delega as duas; consolida com itens rastreados por subespecialidade", %{
       state: state,
