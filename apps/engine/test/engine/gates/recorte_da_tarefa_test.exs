@@ -196,4 +196,43 @@ defmodule Engine.Gates.RecorteDaTarefaTest do
       refute RecorteDaTarefa.toca_ponto_de_entrada?(nil)
     end
   end
+
+  describe "RN-879/880: URL, code de erro e CORS" do
+    test "tarefa que toca rotas pede porta na URL, code único e preflight" do
+      texto = RecorteDaTarefa.texto(%{task: %{"title" => "Expor rotas HTTP"}})
+      assert texto =~ "`PUBLIC_BASE_URL`"
+      assert texto =~ "mesmo `code` em todas as"
+      assert texto =~ "-X OPTIONS"
+      assert texto =~ "`servers` com URL ABSOLUTA"
+    end
+
+    test "falha: tarefa sem rota não recebe a régua" do
+      texto = RecorteDaTarefa.texto(%{task: %{"title" => "Modelar tabela"}})
+      refute texto =~ "PUBLIC_BASE_URL"
+      refute texto =~ "X OPTIONS"
+    end
+  end
+
+  describe "RN-881: outras decisões do projeto" do
+    test "com o campo, a seção vem depois das da tarefa" do
+      texto =
+        RecorteDaTarefa.texto(%{
+          task: %{"title" => "T"},
+          decisoes: [%{"pergunta" => "Tamanho do código?", "decisao" => "7"}],
+          decisoes_do_projeto: [%{"pergunta" => "Banco?", "decisao" => "SQLite"}]
+        })
+
+      assert texto =~ "Outras decisões do projeto:\n- "
+      assert texto =~ "SQLite"
+      {a, _} = :binary.match(texto, "Decisões do usuário")
+      {b, _} = :binary.match(texto, "Outras decisões do projeto")
+      assert a < b
+    end
+
+    test "falha: sem o campo, a seção some" do
+      texto = RecorteDaTarefa.texto(%{task: %{"title" => "T"}, decisoes_do_projeto: []})
+      refute texto =~ "Outras decisões do projeto"
+      assert Engine.Dev.ContextBuilder.secao_de_decisoes_do_projeto(nil) == ""
+    end
+  end
 end

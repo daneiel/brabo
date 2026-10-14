@@ -6,6 +6,14 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- O dev agent e o gate de QA passam a cobrar do entregável que toca rotas: URL
+  absoluta com a porta (`PUBLIC_BASE_URL` ou o `Host`), o mesmo `code` para o
+  mesmo erro em todas as rotas, CORS configurável por `CORS_ORIGINS` com
+  preflight 204, `servers` relativo no `/openapi.json` e swagger-ui com versão
+  exata (RN-879, RN-880, AT-531, AT-532).
+- O dev e o QA recebem as outras decisões do projeto numa seção própria,
+  depois das da tarefa (RN-881, AT-526).
+
 - O gate de QA deixa de estacionar quando a api recusa a pergunta do
   `needs_user_decision` (id que não é uuid, pergunta inexistente ou já
   respondida): a recusa volta ao QA, que tenta de novo ou aplica a decisão já

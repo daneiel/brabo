@@ -25,6 +25,7 @@ defmodule Engine.Gates.RecorteDaTarefa do
     total = Map.get(dev_context, :module_open_tasks_total, length(abertas))
     contrato = Map.get(dev_context, :module_contract)
     decisoes = Map.get(dev_context, :decisoes, [])
+    decisoes_do_projeto = Map.get(dev_context, :decisoes_do_projeto, [])
 
     """
 
@@ -67,7 +68,7 @@ defmodule Engine.Gates.RecorteDaTarefa do
     pergunta — aplique a decisão. `openQuestionId` só com o uuid de uma
     pergunta ABERTA; sem esse uuid, a pergunta nova vai em
     `pergunta`/`sugestao`.
-    #{Engine.Dev.ContextBuilder.secao_de_decisoes(decisoes)}    #{secao_do_ambiente_limpo()}#{secao_da_forma(regras, task)}#{secao_do_ponto_de_entrada(task)}#{secao_do_contrato(contrato)}
+    #{Engine.Dev.ContextBuilder.secao_de_decisoes(decisoes)}#{Engine.Dev.ContextBuilder.secao_de_decisoes_do_projeto(decisoes_do_projeto)}    #{secao_do_ambiente_limpo()}#{secao_da_forma(regras, task)}#{secao_do_ponto_de_entrada(task)}#{secao_do_contrato(contrato)}
     """
   end
 
@@ -148,6 +149,17 @@ defmodule Engine.Gates.RecorteDaTarefa do
       rota faltando é ITEM, nunca observação. O
       `docker compose up` real cite no `resumo` como "provado só na máquina do
       usuário", nunca em `itens`.
+
+      URL, erro e CORS (RN-879/880): URL absoluta devolvida pela API (ex.: um
+      link curto) sai de `PUBLIC_BASE_URL` ou do `Host` da requisição COM a
+      porta; `http://localhost` fixo ou hostname sem porta é ITEM. O mesmo caso
+      de erro (ex.: recurso inexistente) responde o mesmo `code` em todas as
+      rotas; divergência (ex.: `not_found` numa, `link_not_found` noutra) é
+      ITEM. Prove CORS com um preflight de outra origem (`curl -X OPTIONS -H
+      'Origin: http://127.0.0.1:<porta>' -H 'Access-Control-Request-Method:
+      POST'`): sem `OPTIONS` 204 e os `Access-Control-Allow-*` (com
+      `Authorization` e `Content-Type`) é ITEM. `servers` com URL ABSOLUTA no
+      `/openapi.json`, ou swagger-ui de CDN sem versão exata (ex.: `@5`), é ITEM.
       """,
       else: ""
   end
