@@ -6,12 +6,24 @@ import { Button } from '../components/ui/Button';
 import { useToast } from '../components/ui/ToastProvider';
 import styles from './SessionPage.module.css';
 
+/**
+ * Por que o ciclo estacionou (RN-867). O payload tem dois emissores: o resgate
+ * por tempo (`GateRescuer`, que grava `idadeSegundos`) e o QA esperando a
+ * resposta a uma pergunta em aberto (sem `idadeSegundos`). É a presença do
+ * número, não o texto do `motivo` (que é pt-BR fixo), que separa os dois.
+ */
+export type MotivoDoEstacionamento = 'tempo' | 'pergunta';
+
 /** O ciclo que um `gate.rescue_parked` estacionou, lido do payload. */
-export function cicloEstacionado(evento: SessionEvent): { taskId: string; gate: string } | null {
+export function cicloEstacionado(
+  evento: SessionEvent,
+): { taskId: string; gate: string; motivo: MotivoDoEstacionamento } | null {
   if (evento.type !== 'gate.rescue_parked') return null;
-  const p = evento.payload as { taskId?: unknown; gate?: unknown } | null;
+  const p = evento.payload as { taskId?: unknown; gate?: unknown; idadeSegundos?: unknown } | null;
   if (typeof p?.taskId !== 'string' || typeof p?.gate !== 'string') return null;
-  return { taskId: p.taskId, gate: p.gate };
+  const motivo: MotivoDoEstacionamento =
+    typeof p.idadeSegundos === 'number' ? 'tempo' : 'pergunta';
+  return { taskId: p.taskId, gate: p.gate, motivo };
 }
 
 /**

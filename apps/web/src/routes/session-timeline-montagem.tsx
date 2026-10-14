@@ -1017,8 +1017,8 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
         ),
       });
     } else if (cicloEstacionado(event)) {
-      // RN-724 (ADR 0207): o ciclo de gate parado há mais de 2 h estacionou;
-      // o gesto humano que o retoma mora aqui, sob o aviso.
+      // RN-724 (ADR 0207): o ciclo de gate estacionou; o gesto humano que o
+      // retoma mora aqui, sob o aviso. RN-867: o texto segue o motivo gravado.
       const ciclo = cicloEstacionado(event)!;
       empurrar({
         node: (
@@ -1028,7 +1028,12 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
             </span>
             <div className={styles.messageBody}>
               <div className={styles.bubble}>
-                {t('gateEstacionado.aviso', { gate: ciclo.gate, taskId: ciclo.taskId })}
+                {t(
+                  ciclo.motivo === 'tempo'
+                    ? 'gateEstacionado.aviso'
+                    : 'gateEstacionado.avisoPergunta',
+                  { gate: ciclo.gate, taskId: ciclo.taskId },
+                )}
               </div>
               <RetomarGateEstacionado
                 projectId={projectId}
