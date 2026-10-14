@@ -331,6 +331,14 @@ rules:
     severity: warn
     note: "Mudou o que a mensagem de ambiente diz, para quem, ou de onde lê: atualizar a RN-706."
 
+  # RN-622/623/878 — a orientação de idioma que a fachada acrescenta no fim.
+  - id: idioma-da-resposta
+    watch:
+      - "apps/engine/lib/engine/harness/idioma_da_resposta.ex"
+    docs: ["docs/business-rules.md"]
+    severity: warn
+    note: "Mudou o texto, para quem vale ou o teto da orientação de idioma: atualizar a RN-622/623/878."
+
   # RN-765/813/814/817..819 — o recorte da tarefa que o gate de QA julga.
   - id: recorte-do-qa
     watch:
