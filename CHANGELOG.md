@@ -6,6 +6,11 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- O gate de QA deixa de estacionar quando a api recusa a pergunta do
+  `needs_user_decision` (id que não é uuid, pergunta inexistente ou já
+  respondida): a recusa volta ao QA, que tenta de novo ou aplica a decisão já
+  tomada; teto esgotado bloqueia a tarefa com o motivo. O recorte do QA manda
+  conferir as decisões antes de perguntar (RN-876, RN-877, AT-526).
 - Os agentes de execução (`dev-*`, `qa-*`) recebem a orientação de idioma
   dizendo que ela vale desde a primeira frase, inclusive a narração antes de
   cada ferramenta: o QA de Automação abria o turno em inglês num projeto
@@ -20,6 +25,16 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   verbo HTTP com caminho (`POST /links`): ela recebe a cláusula do OpenAPI e a
   conferência do `/openapi.json`, que agora cobra também as rotas registradas
   no código, e a que falta reprova (RN-865, AT-527).
+- O PO passa a receber no turno as decisões do usuário e as perguntas ainda
+  abertas do projeto, e escreve a resposta decidida na história em vez de
+  "pergunta em aberto N" (RN-874, AT-526).
+- O QA não estaciona mais o gate esperando uma pergunta que não existe ou que
+  o usuário já respondeu: o veredito com `openQuestionId` desconhecido é
+  recusado (404) e o de pergunta já respondida volta 409 com a decisão do
+  usuário, sem gravar nada. Pergunta em aberto que cita a regra pelo TÍTULO
+  passa a guardar o id dela, e a decisão do usuário que não toca a tarefa
+  chega ao dev e ao QA numa lista própria do contexto (`decisoesDoProjeto`),
+  dentro do mesmo teto de 10 (AT-526, RN-870..872, ADR 0215).
 - A task bloqueada por falha passageira de rede ou do provedor (DNS, conexão
   caída, 5xx/429) volta sozinha em até 3 tentativas, depois de 1, 3 e 10 min,
   e o dev agent pausa 1 min em vez de bloquear a fila inteira; crédito

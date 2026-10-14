@@ -70,6 +70,21 @@ defmodule Engine.Gates.Tools.EmitQaVerdict do
 
   # ADR 0214 (RN-862): requisito não confirmado pelo usuário não é defeito do
   # dev — é pergunta. Sem pergunta nem pergunta existente, é recusa nomeada.
+  # AT-526 (RN-876): `openQuestionId` que não é uuid ("1") a api recusa com
+  # 400 — a recusa vem aqui, dentro do laço, antes de chamar a api.
+  @uuid ~r/\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/i
+
+  def run(%{"veredito" => "needs_user_decision", "openQuestionId" => id}, _ctx)
+      when is_binary(id) and id != "" do
+    if Regex.match?(@uuid, id),
+      do: {:ok, "parecer registrado: decisão do usuário pedida"},
+      else:
+        {:error,
+         "`openQuestionId` \"#{id}\" não é o uuid de uma pergunta aberta: " <>
+           "use o uuid exato de uma pergunta ABERTA, ou mande a pergunta nova em " <>
+           "`pergunta`/`sugestao` sem `openQuestionId`"}
+  end
+
   def run(%{"veredito" => "needs_user_decision"} = args, _ctx) do
     pergunta = Map.get(args, "pergunta")
     existente = Map.get(args, "openQuestionId")

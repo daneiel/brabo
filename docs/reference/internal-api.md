@@ -356,6 +356,13 @@ one central sentence: every doubt left for the user becomes
 `declare_open_question`, with the agent's suggestion and what it affects — never
 a question only in the turn text.
 
+Since [RN-874](../business-rules.md#rn-874) the PO's calls carry one more
+ephemeral `role: "system"` message right after the flow one, built by
+`Engine.Harness.DecisoesDoProjeto`: the user's decisions (`decision_record`)
+and the questions still open in the project, read locally from the event log,
+capped at 10 + 10 items and 3 000 characters. Omitted when there is nothing to
+say or the read fails.
+
 #### The final frame carries the model name ([RN-146](../business-rules/autenticacao.md#rn-146))
 
 `RunLlmTurnResult` and the `final` frame of `LlmTurnStreamEvent` gain
@@ -1044,6 +1051,14 @@ change.
 at most 10, each text cut at 1,500 characters. They win over RF/DoR on
 conflict. Read-only, same route: the HTTP surface does not change.
 
+Since AT-526 ([RN-872](../business-rules.md#rn-872),
+[ADR 0215](../adr/0215-decisao-do-projeto-chega-ao-dev-e-ao-qa.md)) it also
+returns `decisoesDoProjeto`: the project's other decisions, those whose `afeta`
+does not touch the task, in a separate list inside the SAME cap of 10 (task
+decisions take it first). `decisoes` also matches legacy decisions whose
+`afeta.regras` holds the rule TITLE instead of the id. Additive field: an
+engine that does not know it ignores it.
+
 `/infra-context` gained `gitProvider` in FASE 8c (`null` with no repository
 provisioned) — it's how the Workflows subagent decides `.github/workflows/
 ci.yml` vs `.gitlab-ci.yml`, with no new route (same "one GET per
@@ -1210,6 +1225,16 @@ question resumes it. The engine records `artifact.open_question` through
 `stories/:storyId/complete` accept an optional `questionId`: a `ready` story is
 corrected only when it cites a question the user already answered
 ([RN-859](../business-rules.md#rn-859)).
+
+Since AT-526 an `openQuestionId` on the verdict must exist in the project and
+be OPEN, checked before any write ([RN-870](../business-rules.md#rn-870)):
+unknown (or from another project) is **404** `reason: "pergunta_nao_encontrada"`;
+already answered is **409** `reason: "pergunta_ja_respondida"` with the user's
+decision in `decisao` — nothing is written and no `pr.gate_changed` is emitted.
+On `POST /events`, an `artifact.open_question` whose `afeta.regras` holds the
+exact TITLE of a project `artifact.business_rule` has it converted to the id;
+anything that is neither id nor exact title is **400**
+([RN-871](../business-rules.md#rn-871)).
 
 On the engine side ([RN-862](../business-rules.md#rn-862),
 [ADR 0214](../adr/0214-pergunta-em-aberto-vira-pendencia.md)) the body of a

@@ -69,6 +69,22 @@ defmodule Engine.Gates.QaAutomacaoAgent do
     |> handle_outcome(task_id)
   end
 
+  @doc """
+  AT-526 (RN-876): a api recusou o veredito `needs_user_decision`. Retoma o
+  laço de onde ele parou, com a recusa como mensagem nova (RN-163: erro é
+  entrada do laço). A volta CONTA no teto de iterações do mesmo `ctx`.
+  """
+  def devolver(ctx, texto_da_recusa, task_id) do
+    ctx
+    |> Map.update!(:messages, fn messages ->
+      Enum.reject(messages, &(Map.get(&1, "role") == "system")) ++
+        [%{"role" => "user", "content" => texto_da_recusa, :pinned => false}]
+    end)
+    |> Map.update(:iteration, 1, &(&1 + 1))
+    |> ToolLoop.run()
+    |> handle_outcome(task_id)
+  end
+
   defp build_ctx(
          project_id,
          session_id,
@@ -194,6 +210,16 @@ defmodule Engine.Gates.QaAutomacaoAgent do
 
     Estratégia de automação: #{Map.get(plano, :estrategia_de_automacao, "")}
     """
+  end
+
+  # AT-526 (RN-876): o `needs_user_decision` leva o `ctx` do laço, para a
+  # recusa da api voltar a ele (`devolver/3`). Nunca entra em artefato: quem
+  # emite lê os campos nomeados.
+  defp handle_outcome(
+         {:halted, {"emit_qa_verdict", %{veredito: "needs_user_decision"} = verdict}, ctx},
+         _task_id
+       ) do
+    {:ok, Map.put(verdict, :retomada, ctx)}
   end
 
   defp handle_outcome({:halted, {"emit_qa_verdict", verdict}, _ctx}, _task_id) do

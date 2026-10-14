@@ -293,6 +293,40 @@ defmodule Engine.Gates.QaLeadServer do
     |> Kernel.++(conferencia_do_readme(emVoo))
     |> QaLead.consolidar()
     |> aplicar(emVoo.project_id, emVoo.dev_state, emVoo.task_id)
+    |> case do
+      {:devolver_ao_qa, ctx, texto} -> devolver_ao_qa(state, emVoo, resultados, ctx, texto)
+      _ -> state
+    end
+  end
+
+  # AT-526 (RN-876): a api recusou o `needs_user_decision`. O laço da
+  # Automação RETOMA do contexto em que emitiu, com a recusa como entrada, e o
+  # resultado novo passa pelo MESMO `tratar_resultado/6` (awaiting, ok,
+  # blocked). As outras delegações não rodam de novo: o resultado delas fica.
+  # A volta conta no teto de iterações do próprio laço; esgotado, vira
+  # `{:blocked, ...}` com origem `modelo`, narrado — nunca estacionamento.
+  defp devolver_ao_qa(state, emVoo, resultados, ctx, texto) when is_map(ctx) do
+    {[{d, _} | _], outros} =
+      Enum.split_with(resultados, fn {d, _} -> d.subagent == "qa-automacao" end)
+
+    novo = QaAutomacaoAgent.devolver(ctx, texto, emVoo.task_id)
+    tratar_resultado(state, emVoo, d, novo, Enum.reverse(outros), [])
+  end
+
+  # Sem o contexto do laço (não deveria acontecer: só a Automação emite
+  # `needs_user_decision`), a recusa vira bloqueio NOMEADO, nunca silêncio.
+  defp devolver_ao_qa(state, emVoo, _resultados, _ctx, texto) do
+    aplicar(
+      {:blocked,
+       %{
+         reason: "QA pediu decisão do usuário e a api recusou",
+         diagnosis: texto,
+         origin: "codigo"
+       }},
+      emVoo.project_id,
+      emVoo.dev_state,
+      emVoo.task_id
+    )
 
     state
   end
@@ -514,19 +548,32 @@ defmodule Engine.Gates.QaLeadServer do
       }
       |> Map.reject(fn {_k, v} -> is_nil(v) end)
 
-    EngineApiClient.record_gate_verdict(
-      project_id,
-      dev_state.session_id,
-      task_id,
-      "qa",
-      veredito,
-      resumo,
-      itens,
-      dev_state.max_gate_corrections,
-      extras
-    )
+    result =
+      EngineApiClient.record_gate_verdict(
+        project_id,
+        dev_state.session_id,
+        task_id,
+        "qa",
+        veredito,
+        resumo,
+        itens,
+        dev_state.max_gate_corrections,
+        extras
+      )
 
-    estacionar_por_decisao(project_id, dev_state.session_id, task_id)
+    # AT-526 (RN-876): só se estaciona quando a api ACEITOU a pergunta
+    # (`await_user`). A recusa (400/404/409) volta ao QA como entrada do laço
+    # (RN-163) — estacionar sobre ela deixava o gate parado sem pergunta no fio.
+    case result do
+      {:ok, %{"nextAction" => "await_user"}} ->
+        estacionar_por_decisao(project_id, dev_state.session_id, task_id)
+
+      {:ok, _} ->
+        seguir_proxima_acao(result, project_id, dev_state, task_id, resumo, itens)
+
+      {:error, motivo} ->
+        {:devolver_ao_qa, Map.get(verdict, :retomada), texto_da_recusa(motivo)}
+    end
   end
 
   defp apply_gate_result(project_id, dev_state, task_id, veredito, resumo, itens, _verdict),
@@ -565,6 +612,10 @@ defmodule Engine.Gates.QaLeadServer do
         dev_state.max_gate_corrections
       )
 
+    seguir_proxima_acao(result, project_id, dev_state, task_id, resumo, itens)
+  end
+
+  defp seguir_proxima_acao(result, project_id, dev_state, task_id, resumo, itens) do
     case result do
       {:ok, %{"nextAction" => "correct"}} ->
         # ADR 0067: o veredito JÁ está gravado (durável, na api) — o que falta
@@ -613,6 +664,42 @@ defmodule Engine.Gates.QaLeadServer do
         GateState.delete(project_id, task_id, "qa")
     end
   end
+
+  @doc false
+  # O texto que o QA lê na volta seguinte. No 409 `pergunta_ja_respondida` a
+  # api manda a decisão já tomada: o QA a aplica em vez de perguntar de novo.
+  def texto_da_recusa({409, %{"reason" => "pergunta_ja_respondida"} = corpo}) do
+    """
+    A api recusou o veredito `needs_user_decision`: a pergunta já foi respondida pelo usuário.
+    Decisão já tomada: #{decisao_do_corpo(corpo)}
+    Aplique essa decisão e emita o parecer por ela (`approved` ou `changes_requested`); não pergunte de novo.
+    """
+  end
+
+  def texto_da_recusa({status, corpo}) when is_integer(status) do
+    """
+    A api recusou o veredito `needs_user_decision` (HTTP #{status}): #{mensagem_do_corpo(corpo)}
+    Corrija e chame `emit_qa_verdict` de novo: `openQuestionId` só com o uuid de uma pergunta ABERTA; sem ele, mande a pergunta nova em `pergunta`/`sugestao`.
+    """
+  end
+
+  def texto_da_recusa(motivo),
+    do: "A api não registrou o veredito `needs_user_decision`: #{inspect(motivo)}. Tente de novo."
+
+  defp decisao_do_corpo(corpo) when is_map(corpo) do
+    Enum.find_value(["decisao", "decision", "resposta", "answer", "message"], fn k ->
+      case Map.get(corpo, k) do
+        v when is_binary(v) and v != "" -> v
+        v when is_map(v) -> Jason.encode!(v)
+        _ -> nil
+      end
+    end) || Jason.encode!(corpo)
+  end
+
+  defp mensagem_do_corpo(%{"message" => m}) when is_binary(m), do: m
+  defp mensagem_do_corpo(%{"message" => m}) when is_list(m), do: Enum.join(m, "; ")
+  defp mensagem_do_corpo(corpo) when is_map(corpo), do: Jason.encode!(corpo)
+  defp mensagem_do_corpo(corpo), do: inspect(corpo)
 
   defp emit(project_id, session_id, type, payload) do
     ArtifactEmitter.append(project_id, session_id, "qa-lead", type, payload)
