@@ -10,7 +10,7 @@
 # Estágio 1: dependências + bundle. Um estágio só, e não os três da api: este
 # serviço não tem migrations para carregar nem `nest build` para separar.
 # ---------------------------------------------------------------------------
-FROM node:26.10.0-alpine3.24@sha256:0b36e8c136b94cd4fcf02188228e76c31ad5872eef3fec8cbd2eee500cfd9e80 AS build
+FROM node:26.11.1-alpine3.24@sha256:143494b1da2945f061539253adc65e4f1569ddf07da2d384c022c791a9d90a4a AS build
 
 # pnpm sem corepack (AT-360): o Node 25+ não traz corepack. Tarball do registry
 # conferido contra o sha512 GRAVADO aqui (`npm view pnpm@<v> dist.integrity`, em
@@ -46,7 +46,7 @@ RUN pnpm --filter @brabo/broker build
 # ---------------------------------------------------------------------------
 # Estágio 2: runtime. O bundle, o CLI do docker, e mais nada.
 # ---------------------------------------------------------------------------
-FROM node:26.10.0-alpine3.24@sha256:0b36e8c136b94cd4fcf02188228e76c31ad5872eef3fec8cbd2eee500cfd9e80 AS runtime
+FROM node:26.11.1-alpine3.24@sha256:143494b1da2945f061539253adc65e4f1569ddf07da2d384c022c791a9d90a4a AS runtime
 
 ARG BRABO_VERSION=dev
 
