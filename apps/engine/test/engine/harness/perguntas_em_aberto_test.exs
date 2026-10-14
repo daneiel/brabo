@@ -93,6 +93,25 @@ defmodule Engine.Harness.PerguntasEmAbertoTest do
       assert msg =~ "exige `pergunta`"
     end
 
+    test "AT-526 (RN-876): openQuestionId que não é uuid é recusa nomeada; uuid passa" do
+      assert {:error, msg} =
+               EmitQaVerdict.run(
+                 %{"veredito" => "needs_user_decision", "openQuestionId" => "1"},
+                 %{}
+               )
+
+      assert msg =~ "não é o uuid"
+
+      assert {:ok, _} =
+               EmitQaVerdict.run(
+                 %{
+                   "veredito" => "needs_user_decision",
+                   "openQuestionId" => "0b9c1a3e-5f2d-4c1b-9a7e-1d2c3b4a5f60"
+                 },
+                 %{}
+               )
+    end
+
     test "consolidação: needs_user_decision vence approved" do
       decisao = %{pergunta: "5?", sugestao: "sim", open_question_id: nil}
 
