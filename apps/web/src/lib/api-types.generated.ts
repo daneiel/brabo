@@ -6505,6 +6505,8 @@ export interface components {
             primeiraDoModulo: boolean;
             /** @description RN-859: the user's decisions tied to this task, its story or its rules by `afeta` — they win over RF/DoR on conflict. Newest first, at most 10, each text cut at 1,500 characters. */
             decisoes: components["schemas"]["DevContextDecisaoResponseDto"][];
+            /** @description RN-872 (ADR 0215): the project's OTHER decisions — those whose `afeta` does not touch this task. Separate section, inside the SAME cap of 10 as `decisoes` (task decisions take the cap first), newest first. */
+            decisoesDoProjeto: components["schemas"]["DevContextDecisaoResponseDto"][];
         };
         DiffLineResponseDto: {
             /**

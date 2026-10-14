@@ -19,6 +19,13 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - O PO passa a receber no turno as decisões do usuário e as perguntas ainda
   abertas do projeto, e escreve a resposta decidida na história em vez de
   "pergunta em aberto N" (RN-874, AT-526).
+- O QA não estaciona mais o gate esperando uma pergunta que não existe ou que
+  o usuário já respondeu: o veredito com `openQuestionId` desconhecido é
+  recusado (404) e o de pergunta já respondida volta 409 com a decisão do
+  usuário, sem gravar nada. Pergunta em aberto que cita a regra pelo TÍTULO
+  passa a guardar o id dela, e a decisão do usuário que não toca a tarefa
+  chega ao dev e ao QA numa lista própria do contexto (`decisoesDoProjeto`),
+  dentro do mesmo teto de 10 (AT-526, RN-870..872, ADR 0215).
 - A task bloqueada por falha passageira de rede ou do provedor (DNS, conexão
   caída, 5xx/429) volta sozinha em até 3 tentativas, depois de 1, 3 e 10 min,
   e o dev agent pausa 1 min em vez de bloquear a fila inteira; crédito
