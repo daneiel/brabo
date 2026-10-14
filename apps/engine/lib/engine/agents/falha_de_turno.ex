@@ -161,7 +161,8 @@ defmodule Engine.Agents.FalhaDeTurno do
   def credito_esgotado?(%{"error" => texto}), do: credito_esgotado?(texto)
 
   def credito_esgotado?(texto) when is_binary(texto) do
-    texto =~ ~r/status 402|\(402\)|available credits|add credits|insufficient credits/iu
+    texto =~
+      ~r/status 402|\(402\)|available credits|add credits|insufficient credits|budget limit exceeded|guardrail_budget/iu
   end
 
   def credito_esgotado?(outro), do: credito_esgotado?(inspect(outro))
@@ -177,13 +178,75 @@ defmodule Engine.Agents.FalhaDeTurno do
   """
   @spec mensagem(term(), String.t() | nil) :: String.t()
   def mensagem(reason, project_id \\ nil) do
-    if credito?(reason) do
-      if portugues?(Engine.Harness.IdiomaDaResposta.idioma_do_turno(project_id)),
-        do: "Crédito do provedor do modelo esgotado — recarregue a chave e tente de novo.",
-        else: "The model provider's credit is exhausted — top up the key and try again."
-    else
-      "Não consegui completar este turno: #{motivo(reason)}. " <>
-        "Nada foi gasto nesta tentativa. Você pode tentar de novo."
+    orcamento = if credito?(reason), do: orcamento_esgotado(diagnostico(reason))
+
+    cond do
+      orcamento ->
+        frase_de_orcamento(orcamento, Engine.Harness.IdiomaDaResposta.idioma_do_turno(project_id))
+
+      credito?(reason) ->
+        if portugues?(Engine.Harness.IdiomaDaResposta.idioma_do_turno(project_id)),
+          do: "Crédito do provedor do modelo esgotado — recarregue a chave e tente de novo.",
+          else: "The model provider's credit is exhausted — top up the key and try again."
+
+      true ->
+        "Não consegui completar este turno: #{motivo(reason)}. " <>
+          "Nada foi gasto nesta tentativa. Você pode tentar de novo."
+    end
+  end
+
+  @doc """
+  RN-886 (AT-534): o 403 de ORÇAMENTO do OpenRouter (guardrail mensal da chave)
+  chega como `insufficient_credit` (RN-730). Lê do corpo `limit_usd`,
+  `spend_usd` e `resets_at` — o que vier — e devolve `nil` quando o texto não é
+  de orçamento.
+  """
+  @spec orcamento_esgotado(term()) :: map() | nil
+  def orcamento_esgotado(texto) when is_binary(texto) do
+    if texto =~ ~r/budget limit exceeded|guardrail_budget/iu do
+      %{
+        limite: campo(texto, "limit_usd"),
+        gasto: campo(texto, "spend_usd"),
+        reset: campo(texto, "resets_at")
+      }
+    end
+  end
+
+  def orcamento_esgotado(_), do: nil
+
+  @doc "A frase curta do orçamento esgotado, no idioma dado (RN-886)."
+  @spec frase_de_orcamento(map(), String.t() | nil) :: String.t()
+  def frase_de_orcamento(o, idioma) do
+    pt = portugues?(idioma)
+    numeros = numeros_do_orcamento(o, pt)
+
+    if pt,
+      do:
+        "Orçamento da chave do provedor esgotado#{numeros} — peça ao admin do OpenRouter para subir o orçamento e tente de novo.",
+      else:
+        "The provider key's budget is exhausted#{numeros} — ask the OpenRouter admin to raise the budget and try again."
+  end
+
+  defp numeros_do_orcamento(%{limite: l, gasto: g, reset: r}, pt) do
+    partes =
+      [
+        l && if(pt, do: "limite US$ #{l}", else: "limit US$ #{l}"),
+        g && if(pt, do: "gasto US$ #{g}", else: "spent US$ #{g}"),
+        r &&
+          if(pt,
+            do: "renova em #{String.slice(r, 0, 10)}",
+            else: "resets on #{String.slice(r, 0, 10)}"
+          )
+      ]
+      |> Enum.reject(&is_nil/1)
+
+    if partes == [], do: "", else: " (" <> Enum.join(partes, ", ") <> ")"
+  end
+
+  defp campo(texto, nome) do
+    case Regex.run(~r/"#{nome}"\s*:\s*"?([^",}\s]+)"?/, texto) do
+      [_, valor] -> valor
+      _ -> nil
     end
   end
 
