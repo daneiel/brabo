@@ -23285,7 +23285,7 @@ sem dizer qual.
   externo dos gates (`docs/gates.yml`) e o código do `emit_qa_verdict` não
   mudam, e nenhum gate novo nasce. Tarefa que não toca nada disso não ganha a
   seção.
-- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:113`
+- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:117`
   (`secao_do_ponto_de_entrada`)
 - **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs`
   ("tarefa que toca a fiação exige evidência do ponto de entrada real" e "tarefa
@@ -23321,7 +23321,7 @@ sem dizer qual.
   roteamento de container dos três modos — um `pkill` no harness precisaria
   de um segundo caminho de execução por modo. Régua de prompt; o contrato dos
   gates não muda.
-- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:150`
+- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:158`
   (`secao_do_ambiente_limpo`)
 - **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs`
   ("RN-817: pede ambiente limpo, encerrar o grupo e pulado como observação")
@@ -23338,7 +23338,7 @@ sem dizer qual.
   bater numa rota do processo de pé — e o que NÃO cabe ali: construir imagem
   Docker, `docker compose`, rede externa. Exigência desse segundo tipo nunca
   vai para `itens`; vai ao `resumo` como observação. Régua de prompt.
-- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:113`
+- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:117`
   (`secao_do_ponto_de_entrada`)
 - **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs`
   ("RN-818: com ponto de entrada diz o que conta e o que não cabe" e "RN-818:
@@ -24007,7 +24007,7 @@ sem dizer qual.
   cláusula (a mensagem é fixada e volta a cada iteração).
 - **Onde:** `apps/engine/lib/engine/dev/dev_agent_server.ex:636`
   (`clausula_de_openapi`),
-  `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:105`
+  `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:109`
   (`toca_ponto_de_entrada?`)
 - **Teste:** `apps/engine/test/engine/dev/report_done_instrucao_test.exs`
   ("RN-853: tarefa que toca rotas pede /openapi.json e /docs"; falha: "RN-853
@@ -24023,7 +24023,7 @@ sem dizer qual.
   `node -e fetch`) e encerra o grupo de processos ([RN-817](#rn-817)). Falha
   vai a `itens`; o `docker compose up` real fica no `resumo` como "provado só
   na máquina do usuário".
-- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:113`
+- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:117`
   (`secao_do_ponto_de_entrada`)
 - **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs`
   ("tarefa que toca rotas pede /openapi.json e /docs, compose em resumo";
@@ -24368,3 +24368,22 @@ sem dizer qual.
   bloqueada pedindo o clique", "402 não agenda retomada"),
   `apps/engine/test/engine/workers/retomada_de_tarefa_worker_test.exs`
 - **Origem:** AT-525
+### RN-865 — Endpoint e verbo HTTP com caminho também ligam a conferência do OpenAPI, e ela cobre as rotas do código {#rn-865}
+
+- **Regra:** a régua única de "a tarefa toca ponto de entrada/rotas"
+  (`toca_ponto_de_entrada?`, usada pelo recorte do QA e pela cláusula do dev da
+  RN-853) casa também "endpoint" e verbo HTTP seguido de caminho
+  (`POST /links`). Sem isso, tarefa descrita como "Endpoint protegido…" não
+  recebia nem a cláusula do OpenAPI (dev) nem a conferência do `/openapi.json`
+  (QA) — foi assim que `POST /links` e `GET /panel` ficaram fora do OpenAPI
+  com as duas tarefas aprovadas no TP-01. A conferência do QA passa a exigir em
+  `paths` do `/openapi.json` servido, além das rotas da seção "Rotas HTTP" do
+  README, cada rota que o CÓDIGO registra; a que falta é item que reprova
+  (estende a RN-863).
+- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:103`
+  (`@ponto_de_entrada`), `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:110`
+  (`toca_ponto_de_entrada?`)
+- **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs`
+  ("RN-865: tarefa que diz só endpoint ou verbo com caminho recebe a seção";
+  falha: "falha: tarefa sem rota não recebe a seção")
+- **Origem:** AT-527

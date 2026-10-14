@@ -6,6 +6,10 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- O dev e o QA passam a tratar como rota a tarefa que diz só "endpoint" ou
+  verbo HTTP com caminho (`POST /links`): ela recebe a cláusula do OpenAPI e a
+  conferência do `/openapi.json`, que agora cobra também as rotas registradas
+  no código, e a que falta reprova (RN-865, AT-527).
 - A task bloqueada por falha passageira de rede ou do provedor (DNS, conexão
   caída, 5xx/429) volta sozinha em até 3 tentativas, depois de 1, 3 e 10 min,
   e o dev agent pausa 1 min em vez de bloquear a fila inteira; crédito
