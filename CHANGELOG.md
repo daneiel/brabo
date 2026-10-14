@@ -6,6 +6,11 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- O engine passa a usar o `bandit` do commit `d88b219` de `mtrudel/bandit`,
+  preso ao SHA, em vez da 1.12.5 da hex: a advisory EEF-CVE-2026-105659
+  (GHSA-69m6-wcv4-rwcf, HIGH, HTTP/2) afeta toda release `>= 1.4.0` e a
+  correção ainda não saiu em release. Temporário: volta para `~> 1.12` da hex
+  quando sair a release que contém o commit.
 - O composer da Sessão não perde mais teclas na digitação rápida: o campo
   guarda o próprio valor e uma renderização atrasada da página não o reescreve
   (RN-882).

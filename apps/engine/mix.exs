@@ -92,7 +92,14 @@ defmodule Engine.MixProject do
       {:gettext, "~> 1.0"},
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.2.0"},
-      {:bandit, "~> 1.5"},
+      # TEMPORÁRIO (14/10/2026): bandit preso a COMMIT por causa da
+      # EEF-CVE-2026-105659 (GHSA-69m6-wcv4-rwcf, HIGH, HTTP/2). A 1.12.5, última
+      # release da hex, é afetada (faixa >= 1.4.0) e a correção só existe no
+      # commit d88b219 de mtrudel/bandit, sem release. `override: true` porque
+      # phoenix e opentelemetry_bandit pedem o bandit da hex. Gatilho de volta:
+      # `{:bandit, "~> 1.12"}` da hex quando sair a release que contém o commit.
+      {:bandit,
+       github: "mtrudel/bandit", ref: "d88b21953c65061f21136ea76a89a4f95a2ac7a1", override: true},
       {:oban, "~> 2.23"},
       {:req, "~> 0.5"},
       # OpenTelemetry (Fase 5, item 3). Justificativa por pacote:
