@@ -101,5 +101,12 @@
     "rnf": "RNF",
     "dor": "DoR",
     "dod": "DoD"
+  },
+  "taskState": {
+    "blocked": "Bloqueada",
+    "todo": "a fazer",
+    "inProgress": "em curso",
+    "inReview": "em revisão",
+    "done": "concluída"
   }
 }
