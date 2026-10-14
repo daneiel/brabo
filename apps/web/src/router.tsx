@@ -272,6 +272,8 @@ interface ProjectSearch {
    * duas decisões independentes.
    */
   section?: ChaveDeSecao;
+  /** RN-884: a história que a aba Histórias abre (o "Corrigir a história"). */
+  historia?: string;
 }
 
 const projectRoute = createRoute({
@@ -288,10 +290,11 @@ const projectRoute = createRoute({
   validateSearch: (search: Record<string, unknown>): ProjectSearch => ({
     tab: resolverChaveDeAba(search.tab),
     section: resolverChaveDeSecao(search.section),
+    historia: typeof search.historia === 'string' ? search.historia : undefined,
   }),
   component: comCarga(ProjectPageLazy, () => {
     const { projectId } = projectRoute.useParams();
-    const { tab, section } = projectRoute.useSearch();
+    const { tab, section, historia } = projectRoute.useSearch();
     // `?section=` sozinho ABRE Configurações. A alternativa era abrir a Visão
     // geral e não rolar para lugar nenhum — a mesma falha silenciosa que o
     // registro de abas existe para não repetir: um link que a URL aceita e a
@@ -301,6 +304,7 @@ const projectRoute = createRoute({
         projectId={projectId}
         initialTab={tab ?? (section ? 'settings' : undefined)}
         initialSection={section}
+        initialStory={historia}
       />
     );
   }),

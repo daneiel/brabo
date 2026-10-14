@@ -10,7 +10,7 @@ import {
   proposeAction,
   unblockTask,
 } from '../lib/api-client';
-import type { CodePullRequestSummary, ProposedAction, Task } from '../lib/api-types';
+import type { CodePullRequestSummary, OpenQuestion, ProposedAction, Task } from '../lib/api-types';
 import { userIdDaSessao } from '../lib/auth';
 import { useBacklog } from '../lib/hooks';
 import { assinaturaDoBacklog, prsProntasParaMerge, tarefasBloqueadas } from '../lib/prontas-e-bloqueadas';
@@ -120,6 +120,8 @@ export function PendenciasDeOutrasSessoes({
   // o canal da sessão a relê (alvo `perguntas`).
   const perguntasQuery = usePerguntasEmAberto(filasDoChat ? projectId : undefined);
   const perguntas = perguntasQuery.data?.itens ?? [];
+  // RN-884: as perguntas respondidas nesta tela, com o "Corrigir a história".
+  const [respondidas, setRespondidas] = useState<OpenQuestion[]>([]);
   const totalDePerguntas = perguntasQuery.data?.total ?? 0;
   const total = aprovacoes.length + merges.length;
 
@@ -150,7 +152,8 @@ export function PendenciasDeOutrasSessoes({
     total === 0 &&
     prontas.length === 0 &&
     bloqueadas.length === 0 &&
-    perguntas.length === 0
+    perguntas.length === 0 &&
+    respondidas.length === 0
   )
     return null;
 
@@ -335,6 +338,13 @@ export function PendenciasDeOutrasSessoes({
             tarefas={(backlogQuery.data ?? []).flatMap((e) =>
               (e.stories ?? []).flatMap((st) => st.tasks ?? []),
             )}
+            historias={(backlogQuery.data ?? []).flatMap((e) => e.stories ?? [])}
+            respondidas={respondidas}
+            aoResponder={(p) => setRespondidas((atual) => [...atual, p])}
+            aoDispensar={(id) =>
+              setRespondidas((atual) => atual.filter((p) => p.questionId !== id))
+            }
+            podeCorrigir={podeDecidir}
           />
           {fila('aprovacoes', aprovacoes, aprovacoesVisiveis)}
           {fila('merges', merges, mergesVisiveis)}
