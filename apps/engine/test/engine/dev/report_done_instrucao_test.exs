@@ -91,6 +91,17 @@ defmodule Engine.Dev.ReportDoneInstrucaoTest do
     assert kickoff =~ "versão EXATA"
   end
 
+  test "RN-885: o padrão do CORS usa a porta PUBLICADA, nunca a interna" do
+    kickoff =
+      DevAgentServer.initial_message(%{"title" => "Criar rotas de links"}, %{"title" => "S"})[
+        "content"
+      ]
+
+    assert kickoff =~ "porta PUBLICADA"
+    assert kickoff =~ "`APP_PORT`"
+    assert kickoff =~ "nunca a interna `PORT`"
+  end
+
   test "RN-879/880 falha: tarefa sem rota não recebe CORS nem PUBLIC_BASE_URL" do
     kickoff =
       DevAgentServer.initial_message(%{"title" => "Modelar tabela"}, %{"title" => "S"})["content"]

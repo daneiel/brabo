@@ -155,10 +155,14 @@ defmodule Engine.Gates.RecorteDaTarefa do
       porta; `http://localhost` fixo ou hostname sem porta é ITEM. O mesmo caso
       de erro (ex.: recurso inexistente) responde o mesmo `code` em todas as
       rotas; divergência (ex.: `not_found` numa, `link_not_found` noutra) é
-      ITEM. Prove CORS com um preflight de outra origem (`curl -X OPTIONS -H
-      'Origin: http://127.0.0.1:<porta>' -H 'Access-Control-Request-Method:
-      POST'`): sem `OPTIONS` 204 e os `Access-Control-Allow-*` (com
-      `Authorization` e `Content-Type`) é ITEM. `servers` com URL ABSOLUTA no
+      ITEM. Prove CORS (RN-885) com um preflight contra a porta PUBLICADA
+      (`APP_PORT` do compose, nunca a interna `PORT`), uma vez para cada
+      origem, `http://localhost:<APP_PORT>` e `http://127.0.0.1:<APP_PORT>`
+      (`curl -i -X OPTIONS -H 'Origin: <origem>' -H
+      'Access-Control-Request-Method: POST'`): cada resposta precisa de
+      `OPTIONS` 204 E do header `Access-Control-Allow-Origin` com a origem
+      enviada, além dos `Access-Control-Allow-*` (com `Authorization` e
+      `Content-Type`); 204 sem esse header, ou CORS só na porta interna, é ITEM. `servers` com URL ABSOLUTA no
       `/openapi.json`, ou swagger-ui de CDN sem versão exata (ex.: `@5`), é ITEM.
       """,
       else: ""
