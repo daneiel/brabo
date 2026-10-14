@@ -6,6 +6,9 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- O tick do resgate de gates deixa de se multiplicar: o reagendamento é único
+  como o do boot, e a mesma linha do `GateRescuer` não sai mais 11 vezes por
+  tick (RN-868, AT-529).
 - A task bloqueada por falha passageira de rede ou do provedor (DNS, conexão
   caída, 5xx/429) volta sozinha em até 3 tentativas, depois de 1, 3 e 10 min,
   e o dev agent pausa 1 min em vez de bloquear a fila inteira; crédito

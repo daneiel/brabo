@@ -24368,3 +24368,22 @@ sem dizer qual.
   bloqueada pedindo o clique", "402 não agenda retomada"),
   `apps/engine/test/engine/workers/retomada_de_tarefa_worker_test.exs`
 - **Origem:** AT-525
+
+### RN-868 — O tick do resgate de gates é uma corrente só {#rn-868}
+
+- **Regra:** o `GateRescueSchedulerWorker` reagenda o próprio sucessor com a
+  MESMA unicidade do `kickoff/0` (estados `available`/`scheduled`/`retryable`,
+  sem `executing`, janela de dois intervalos). Antes só o `kickoff/0` era
+  único: o job em execução não conta, então o kickoff do boot com o tick
+  anterior em voo, ou um retry que re-roda o `perform/1`, abria uma SEGUNDA
+  corrente, e elas nunca se fundiam. Medido no uso real (14/10): 11 jobs
+  agendados ao mesmo tempo e a linha "espera decisão humana" da RN-722 11
+  vezes por tick para UMA linha de `gate_states`. Não era defeito de dado. Com
+  a unicidade no reagendamento as correntes duplicadas colapsam numa só no
+  tick seguinte.
+- **Onde:** `apps/engine/lib/engine/workers/gate_rescue_scheduler_worker.ex:42`
+  (`unicidade`)
+- **Teste:** `apps/engine/test/engine/workers/gate_rescue_scheduler_worker_test.exs`
+  ("o tick se reagenda e mantém a corrente viva"; falha: "com um sucessor já
+  agendado, o tick não abre uma segunda corrente")
+- **Origem:** AT-529
