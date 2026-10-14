@@ -6,6 +6,10 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- Os agentes de execução (`dev-*`, `qa-*`) recebem a orientação de idioma
+  dizendo que ela vale desde a primeira frase, inclusive a narração antes de
+  cada ferramenta: o QA de Automação abria o turno em inglês num projeto
+  pt-BR (RN-878, AT-530).
 - O aviso do gate estacionado no fio deixa de dizer "parado mais de 2 h"
   quando o motivo é uma pergunta em aberto: diz que o gate espera a resposta e
   aponta o cartão "Perguntas em aberto" (RN-867, AT-528).

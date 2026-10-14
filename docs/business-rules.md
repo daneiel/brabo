@@ -16837,9 +16837,9 @@ especificação da AT-081 e o mecanismo verificado por provider na AT-161).
   AT-167 mede. No Anthropic, a orientação içada ao topo muda o prefixo do
   cache a cada troca de autor ou de idioma — cache não é observável hoje.
 
-- **Código:** `apps/engine/lib/engine/harness/idioma_da_resposta.ex:254`
-  (`anexar`), `:213` (`com_idioma_do_autor`), `:152` (`orientacao`), `:94`
-  (`@sem_orientacao`), `:261` (`texto_do_turno`), `:286`
+- **Código:** `apps/engine/lib/engine/harness/idioma_da_resposta.ex:294`
+  (`anexar`), `:253` (`com_idioma_do_autor`), `:161` (`orientacao`), `:94`
+  (`@sem_orientacao`), `:301` (`texto_do_turno`), `:326`
   (`idioma_do_projeto`);
   `apps/engine/lib/engine/sessions/engine_api_client.ex:685`
   (`IdiomaDaResposta`), `:779` (`IdiomaDaResposta`);
@@ -16940,8 +16940,8 @@ AT-167 mede; os tokenizadores do DeepSeek e da Anthropic seguem não medidos.
 
 - **Código:** `apps/engine/lib/engine/harness/idioma_da_resposta.ex:174`
   (`orientacao`), `:127` (`@ferramentas_de_artefato`), `:118`
-  (`@forma_curta`), `:261` (`texto_do_turno`), `:279` (`grava_artefato?`),
-  `:280` (`idioma_do_projeto_para_o_artefato`);
+  (`@forma_curta`), `:301` (`texto_do_turno`), `:319` (`grava_artefato?`),
+  `:320` (`idioma_do_projeto_para_o_artefato`);
   `apps/engine/lib/engine/sessions/engine_api_client.ex:685`
   (`IdiomaDaResposta`), `:779` (`IdiomaDaResposta`);
 
@@ -19886,7 +19886,7 @@ sem destino. Ver o [ADR 0196](adr/0196-anamnese-religada-com-sujeito-e-fato-do-p
   `apps/api/src/domain/graph/perfil-do-autor.ts:30` (`textoDoPerfilDoAutor`);
   `apps/api/src/application/use-cases/agents/send-agent-message.use-case.ts:111` (`resolverPerfil`);
   `apps/engine/lib/engine/harness/perfil_do_autor.ex:68` (`anexar`);
-  `apps/engine/lib/engine/harness/idioma_da_resposta.ex:213` (`com_idioma_do_autor`);
+  `apps/engine/lib/engine/harness/idioma_da_resposta.ex:253` (`com_idioma_do_autor`);
   `apps/engine/config/runtime.exs:315` (`anamnese_enabled?`)
 - **Teste:** `apps/engine/test/engine/anamnese/elegibilidade_test.exs:17`
   (caminho feliz), `:35` e `:46` (sem sujeito — casos de falha);
@@ -21729,7 +21729,7 @@ sem dizer qual.
   ("Recorded this turn: 2 business rules"), com singular e plural nos dois.
 - **Onde:** `apps/engine/lib/engine/agents/gravado_no_turno.ex:62` (`anotar`),
   `:95` (`descarregar`),
-  `apps/engine/lib/engine/harness/idioma_da_resposta.ex:233` (`idioma_do_turno`),
+  `apps/engine/lib/engine/harness/idioma_da_resposta.ex:272` (`idioma_do_turno`),
   `apps/engine/lib/engine/agents/texto_do_turno.ex:65` (`payload_do_turno`)
 - **Teste:** `apps/engine/test/engine/agents/gravado_no_turno_test.exs` (feliz:
   seis regras e uma decisão gravadas, uma recusada — o fecho "8 regras" do
@@ -24425,3 +24425,26 @@ sem dizer qual.
   ("o tick se reagenda e mantém a corrente viva"; falha: "com um sucessor já
   agendado, o tick não abre uma segunda corrente")
 - **Origem:** AT-529
+
+### RN-878 — O idioma do agente de execução vale desde a primeira frase {#rn-878}
+
+- **Regra:** nos turnos SEM autor humano dos agentes de execução (`dev-*`,
+  `qa-*`), a orientação de idioma da RN-622 diz que vale desde a PRIMEIRA
+  frase, inclusive a narração antes de cada ferramenta, e perde a ressalva
+  "salvo pedido do usuário" (não há usuário no turno). Medido na sessão
+  `6c68fbc0` (projeto pt-BR, `anthropic/claude-haiku-5.5`): a orientação
+  chegava, e mesmo assim a iteração 0 do `qa-automacao` e do
+  `dev-encurtador-api` abria em inglês ("I'll start by running…"). O caminho
+  continua UM (a fachada, RN-622): nada em prompt de servidor,
+  `agent_instructions` ou descrição de ferramenta (RN-667). O teto de 50 tokens
+  (AT-169) segue: medido com `gpt-tokenizer`, `pt-BR` 32/26, `en` 19/19 e o
+  genérico com código na forma curta no pior caso 30/30 (cl100k/o200k); código
+  fora da forma curta cai na orientação de sempre, que já cabia. Turno com
+  autor e os conversacionais não mudam. Sem idioma resolvido, nada é
+  acrescentado. A eficácia se mede no próximo TP-01.
+- **Onde:** `apps/engine/lib/engine/harness/idioma_da_resposta.ex:164`
+  (`orientacao_de_execucao`), `:154` (`agente_de_execucao?`)
+- **Teste:** `apps/engine/test/engine/harness/idioma_da_resposta_test.exs`
+  ("agente de execução: vale desde a primeira frase, dentro do teto"; falha:
+  "agente de execução sem idioma resolvido: nada é acrescentado")
+- **Origem:** AT-530
