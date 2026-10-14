@@ -3,7 +3,7 @@ id: adr-index
 title: Architectural decisions (ADR)
 sidebar_label: ADR index
 sidebar_position: 0
-description: Brabo's 210 architectural decision records, grouped by theme, with what each one decided.
+description: Brabo's 211 architectural decision records, grouped by theme, with what each one decided.
 keywords: [ADR, architectural decision, architecture, history]
 ---
 
@@ -115,6 +115,7 @@ The gate registry, the QA and SecOps verdicts and the golden-sets that measure t
 | [0192](0192-plano-de-teste-depois-da-entrega.md) | The test plan is written AFTER the dev agent's delivery, from the delivered code, not at design time (AT-269, owner decision 01/10, the "(b)" exit that contradicts [ADR 0090](0090-qa-estrategia-e-appsec-segundo-momento.md)). It becomes the FIRST step of the `qa-verificada` cycle: `QaLeadServer.run_area/3` runs `QaEstrategiaAgent.run/6` on the dev's worktree with the files the delivery touched (`git diff dev...HEAD`), once per TASK (the correction round reuses the plan by `taskId`), and the plan reaches Automation as INPUT — the verdict rule and the one-verdict contract don't change, and a failed plan never holds the review. The `implementavel` gate stays (same owner, `warn`, human approval) and is judged by the Dev Lead on the story and the `module_map` already in its context: the verdict comes out on the FIRST call, without plan fields. `run_design/3`, `run_qa_estrategia/3` and `QaEstrategiaContext` go away; `artifact.plano_de_teste` requires `taskId`; the iteration cap STAYS at 8, now with the task budget underneath; appsec stays at design time (RN-674) |
 | [0207](0207-ciclo-de-gate-velho-estaciona.md) | A gate cycle stalled for more than 2 hours since its last activity is parked with a `gate.rescue_parked` event and only a human gesture resumes it; the rescuer asks the lead about the TASK, not the project, and leaves alone a cycle with a pending human decision (AT-391, revises 0067). |
 | [0214](0214-pergunta-em-aberto-vira-pendencia.md) | An open question to the user becomes a pending item with state in the log (`artifact.open_question` + `open_question.answered` + a `decision_record`), declared only by the `declare_open_question` tool and answered only by the session author; QA gains the `needs_user_decision` verdict, which does not consume the correction cycle and parks the gate through the ADR 0207 mechanism until the answer; the decision reaches dev-context and the QA cut, and the PO may correct a `ready` story from an answered question (AT-521, extends 0207, revises part of 0212). |
+| [0215](0215-decisao-do-projeto-chega-ao-dev-e-ao-qa.md) | The `openQuestionId` of a gate verdict must exist in the project and be open (unknown is 404, already answered is 409 with the decision), `afeta.regras` accepts the exact rule title and stores the id, and dev-context also returns the project's other decisions as `decisoesDoProjeto` inside the same cap of 10 (AT-526, revises part of 0214). |
 
 > **Acceptance criterion still open.** [0020](0020-destravar-gates-qa-secops.md)
 > explicitly records that the gates demo is **"CLOSED, but NOT
@@ -350,7 +351,7 @@ How documentation is generated, verified and published.
 
 - **One file per decision**, at `docs/adr/NNNN-short-title.md`, with
   sequential 4-digit numbering. **No number reuse**, not even when an ADR
-  is superseded — the next one is **0215**.
+  is superseded — the next one is **0216**.
 - **One theme per decision**, chosen by whoever writes the ADR, in the same
   PR: a line in `docs/adr/temas.yml` and the index row under that theme's
   section, in numeric order. The reviewer confirms it. A new theme is a

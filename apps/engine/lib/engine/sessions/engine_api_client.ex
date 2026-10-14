@@ -8,6 +8,7 @@ defmodule Engine.Sessions.EngineApiClient do
   alias Engine.Harness.AmbienteDoAgente
   alias Engine.Harness.PerfilDoAutor
   alias Engine.Harness.FluxoDoTime
+  alias Engine.Harness.DecisoesDoProjeto
   alias Engine.Harness.RoteamentoDeFerramenta
 
   @callback report_termination(
@@ -696,12 +697,14 @@ defmodule Engine.Sessions.EngineApiClient do
   #
   # RN-711: o fluxo do time (onde o conversacional está, o próximo passo e
   # quem o dispara, `Engine.Harness.FluxoDoTime`) entra depois do ambiente e
-  # antes do perfil.
+  # antes do perfil. RN-874 (AT-526): logo depois do fluxo, o PO recebe as
+  # decisões do usuário e as perguntas ABERTAS (`Engine.Harness.DecisoesDoProjeto`).
   def llm_turn(project_id, session_id, agent, messages, tools) do
     enviadas =
       messages
       |> AmbienteDoAgente.anexar(agent)
       |> FluxoDoTime.anexar(agent)
+      |> DecisoesDoProjeto.anexar(project_id, agent)
       |> PerfilDoAutor.anexar(agent)
       |> IdiomaDaResposta.anexar(project_id, agent, tools)
 
@@ -775,6 +778,7 @@ defmodule Engine.Sessions.EngineApiClient do
       messages
       |> AmbienteDoAgente.anexar(agent)
       |> FluxoDoTime.anexar(agent)
+      |> DecisoesDoProjeto.anexar(project_id, agent)
       |> PerfilDoAutor.anexar(agent)
       |> IdiomaDaResposta.anexar(project_id, agent, tools)
 
