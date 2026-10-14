@@ -19297,13 +19297,13 @@ segundo `executed` para o mesmo merge.
   `apps/api/src/infrastructure/git/local-git-provider.ts:339` (`GitPullRequestAlreadyMergedError`);
   `apps/web/src/lib/gate-do-merge.ts:19` (`gatePendenteNoMerge`);
   `apps/web/src/routes/ProjectPrsTab.tsx:232` (`gatePendenteNoMerge`);
-  `apps/web/src/routes/session-timeline-montagem.tsx:1094` (`gatePendenteNoMerge`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:1100` (`gatePendenteNoMerge`)
   `apps/web/src/routes/ProjectPrsTab.tsx:232` (`gatePendenteNoMerge`);
-  `apps/web/src/routes/session-timeline-montagem.tsx:1094` (`gatePendenteNoMerge`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:1100` (`gatePendenteNoMerge`)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:664`
   (`merge_ja_proposto`), `:687` (`pr_ja_mergeado` — caso de falha), `:696`
 
-  `apps/web/src/routes/session-timeline-montagem.tsx:1094` (`gatePendenteNoMerge`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:1100` (`gatePendenteNoMerge`)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:664`
   (`merge_ja_proposto`), `:687` (`pr_ja_mergeado` — caso de falha), `:696`
   (negada não bloqueia, outra PR não colide — caminho feliz);
@@ -21481,7 +21481,7 @@ O kickoff do PO diz as três coisas.
   `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:351`
   (`resumeParkedGate`),
   `apps/api/src/interfaces/http/gates/gate-resume.controller.ts:40`
-  (`resume`), `apps/web/src/routes/RetomarGateEstacionado.tsx:47`
+  (`resume`), `apps/web/src/routes/RetomarGateEstacionado.tsx:59`
   (`RetomarGateEstacionado`)
 - **Teste:** `apps/engine/test/engine_web/controllers/gate_command_controller_test.exs`
   ("ciclo estacionado: 202 e despacha o gate de novo"; falha: "ciclo NÃO
@@ -23436,7 +23436,7 @@ sem dizer qual.
   barato; o segundo veredito é recusado pela api).
 - **Onde:** `apps/engine/lib/engine/gates/gate_rescuer.ex:191` (`run_boot`),
   `:209` (`interrompido_no_boot`),
-  `apps/web/src/routes/RetomarGateEstacionado.tsx:23` (`cicloInterrompido`)
+  `apps/web/src/routes/RetomarGateEstacionado.tsx:33` (`cicloInterrompido`)
 - **Teste:** `apps/engine/test/engine/gates/gate_rescuer_test.exs` ("boot com
   ciclo RECENTE órfão do reinício: grava gate.interrupted e retoma já
   (RN-823)"; falhas: "boot com ciclo recente esperando ação PENDENTE do gate:
@@ -23892,7 +23892,7 @@ sem dizer qual.
 - **Onde:** `apps/web/src/lib/acoes-no-bloco.ts:48` (`useAcaoEstaNoBloco`),
   `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:450` (`useRegistrarAcoesNoBloco`),
   `apps/web/src/components/CartaoOuReferenciaNoFio.tsx:11` (`CartaoOuReferenciaNoFio`),
-  `apps/web/src/routes/session-timeline-montagem.tsx:1132` (`CartaoOuReferenciaNoFio`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:1137` (`CartaoOuReferenciaNoFio`)
 - **Teste:** `apps/web/src/components/CartaoOuReferenciaNoFio.test.tsx`,
   `apps/web/src/components/PendenciasDeOutrasSessoes.test.tsx` ("a PR com os
   gates aprovados aparece…")
@@ -24368,6 +24368,24 @@ sem dizer qual.
   bloqueada pedindo o clique", "402 não agenda retomada"),
   `apps/engine/test/engine/workers/retomada_de_tarefa_worker_test.exs`
 - **Origem:** AT-525
+
+### RN-867 — O aviso do gate estacionado diz o motivo gravado, e a pergunta em aberto aponta o cartão dela {#rn-867}
+
+- **Regra:** o `gate.rescue_parked` tem dois emissores: o resgate por tempo
+  (`GateRescuer`, RN-722), que grava `idadeSegundos`, e o QA estacionado
+  esperando a resposta a uma pergunta em aberto, que não o grava. O fio
+  distingue os dois pela PRESENÇA de `idadeSegundos` (o `motivo` é texto
+  pt-BR fixo e não é lido como chave): "parado mais de 2 h" só no resgate por
+  tempo; no outro, o aviso diz que o gate espera a resposta e aponta o cartão
+  "Perguntas em aberto" (RN-861). O botão "Retomar gate" (RN-724) segue nos
+  dois.
+- **Onde:** `apps/web/src/routes/RetomarGateEstacionado.tsx:18`
+  (`cicloEstacionado`), `apps/web/src/routes/session-timeline-montagem.tsx`
+  (`gateEstacionado.avisoPergunta`)
+- **Teste:** `apps/web/src/routes/RetomarGateEstacionado.test.tsx` ("o
+  resgate por tempo grava idadeSegundos e lê como tempo"; falha: "a pergunta
+  em aberto não tem idadeSegundos e não fala em 2 h")
+- **Origem:** AT-528
 
 ### RN-868 — O tick do resgate de gates é uma corrente só {#rn-868}
 

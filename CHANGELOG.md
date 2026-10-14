@@ -6,6 +6,9 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- O aviso do gate estacionado no fio deixa de dizer "parado mais de 2 h"
+  quando o motivo é uma pergunta em aberto: diz que o gate espera a resposta e
+  aponta o cartão "Perguntas em aberto" (RN-867, AT-528).
 - O tick do resgate de gates deixa de se multiplicar: o reagendamento é único
   como o do boot, e a mesma linha do `GateRescuer` não sai mais 11 vezes por
   tick (RN-868, AT-529).
