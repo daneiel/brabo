@@ -20761,7 +20761,7 @@ Junto, o fechamento deixa de dizer que parear uma pasta pela tela do projeto
   `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts:490` (`reabrirPorConflitoDeMerge`),
   `apps/engine/lib/engine/workers/dev_agent_wake_worker.ex:151` (`task.merge_conflict`),
   `apps/engine/lib/engine/dev/dev_agent_server.ex:350` (`handle_info`),
-  `apps/engine/lib/engine/dev/dev_agent_server.ex:818` (`trigger_gate_recheck`),
+  `apps/engine/lib/engine/dev/dev_agent_server.ex:831` (`trigger_gate_recheck`),
   `apps/engine/lib/engine/dev/worktree_manager.ex:47` (`adopt`)
 - **Teste:** `apps/api/test/application/use-cases/actions/execute-git-action.use-case.spec.ts` ("conflito de merge → kind git_merge, arquivos no
   resultado e evento na tarefa"; falha: "RN-715: tarefa que já não está em
@@ -22429,7 +22429,7 @@ sem dizer qual.
   (medido no Chromium: 2 236px num balão de 708px) e a última coluna sumia.
 - **Onde:** `apps/api/src/application/use-cases/actions/execute-adr-pr.use-case.ts:96`
   (`openPullRequest`); `apps/engine/lib/engine/infra/infra_lead_server.ex:1521`
-  (`gravar_texto_do_turno`); `apps/engine/lib/engine/dev/dev_agent_server.ex:1141`
+  (`gravar_texto_do_turno`); `apps/engine/lib/engine/dev/dev_agent_server.ex:1154`
   (`propose_pr`); `apps/web/src/lib/session-destinatario.ts:192`
   (`agentesEmConversa`) e `apps/web/src/lib/session-kind.ts:69`
   (`tipoDaSessao`); `apps/web/src/routes/NewProjectWizard.tsx:1122`
@@ -22734,8 +22734,8 @@ sem dizer qual.
   `reasoningTokens` (ficam só em `token_usage`), então a resposta vazia que
   bate no teto sem `finish_reason: length` não é reconhecida.
 - **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:219`
-  (`parada_sem_chamada`), `apps/engine/lib/engine/dev/dev_agent_server.ex:1093`
-  (`motivo_da_parada`), `:1101` (`stop_diagnosis`)
+  (`parada_sem_chamada`), `apps/engine/lib/engine/dev/dev_agent_server.ex:1106`
+  (`motivo_da_parada`), `:1109` (`stop_diagnosis`)
 - **Teste:** `apps/engine/test/engine/harness/tool_loop_test.exs` (`corte só
   de raciocínio`: retentada uma vez e segue; repetido para com
   `corte_pelo_teto`), `apps/engine/test/engine/dev/dev_agent_server_test.exs`
@@ -23017,7 +23017,7 @@ sem dizer qual.
   cobre também o merge por squash que a [RN-760](#rn-760) declara não ver.
   Declarado: a PR antiga da branch, se existir, não é fechada no provider.
 - **Onde:** `apps/engine/lib/engine/dev/worktree_manager.ex:246`
-  (`sem_diff_contra_a_dev?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:1025`
+  (`sem_diff_contra_a_dev?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:1038`
   (`ja_na_dev`)
 - **Teste:** `apps/engine/test/engine/dev/tarefa_ja_na_dev_test.exs`
 - **Origem:** AT-474
@@ -23170,7 +23170,7 @@ sem dizer qual.
   `codigo` e desarmou o dev.
 - **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:246`
   (`llm_turn_com_retentativa`), `apps/engine/lib/engine/agents/falha_de_turno.ex:112`
-  (`falha_de_rede?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:939`
+  (`falha_de_rede?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:952`
   (`bloquear_parada`), `apps/engine/lib/engine/dev/agent_io.ex:228`
   (`finish_task`)
 - **Teste:** `apps/engine/test/engine/harness/tool_loop_test.exs` ("falha de
@@ -23191,7 +23191,7 @@ sem dizer qual.
   com o que há, e na dúvida a task segue para os gates.
 - **Onde:** `apps/engine/lib/engine/dev/worktree_manager.ex:267`
   (`sem_diff_contra_a_dev?`), `apps/engine/lib/engine/dev/worktree_manager.ex:277`
-  (`sem_diff_atualizado?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:879`
+  (`sem_diff_atualizado?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:892`
   (`handle_outcome`)
 - **Teste:** `apps/engine/test/engine/dev/tarefa_ja_na_dev_test.exs` ("caminho
   feliz: com a dev atualizada, a branch não tem diff"; "falha: remoto
@@ -23328,7 +23328,7 @@ sem dizer qual.
   roteamento de container dos três modos — um `pkill` no harness precisaria
   de um segundo caminho de execução por modo. Régua de prompt; o contrato dos
   gates não muda.
-- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:162`
+- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:174`
   (`secao_do_ambiente_limpo`)
 - **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs`
   ("RN-817: pede ambiente limpo, encerrar o grupo e pulado como observação")
@@ -24287,7 +24287,7 @@ sem dizer qual.
   `apps/engine/lib/engine/gates/tools/emit_qa_verdict.ex:77` (`run`),
   `apps/engine/lib/engine/gates/qa_lead.ex:89` (`consolidar_decisao`),
   `apps/engine/lib/engine/gates/qa_lead_server.ex:569` (`estacionar_por_decisao`),
-  `apps/engine/lib/engine/dev/context_builder.ex:106` (`secao_de_decisoes`)
+  `apps/engine/lib/engine/dev/context_builder.ex:121` (`secao_de_decisoes`)
 - **Teste:** `apps/engine/test/engine/harness/perguntas_em_aberto_test.exs`
   ("válida grava artifact.open_question…"; "inválida é recusa nomeada…";
   "consolidação: needs_user_decision vence approved"; "o recorte diz a régua…";
@@ -24442,7 +24442,7 @@ sem dizer qual.
   README, cada rota que o CÓDIGO registra; a que falta é item que reprova
   (estende a RN-863).
 - **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:103`
-  (`@ponto_de_entrada`), `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:110`
+  (`@ponto_de_entrada`), `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:114`
   (`toca_ponto_de_entrada?`)
 - **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs`
   ("RN-865: tarefa que diz só endpoint ou verbo com caminho recebe a seção";
@@ -24554,3 +24554,51 @@ sem dizer qual.
   ("AT-526 (RN-877): manda conferir as decisões antes de needs_user_decision";
   a falha da instrução é coberta pelo teste da RN-876 da ferramenta)
 - **Origem:** AT-526
+
+### RN-879 — URL absoluta do entregável com a porta, e o mesmo `code` para o mesmo erro {#rn-879}
+
+- **Regra:** quando a tarefa toca ponto de entrada ou rotas, a cláusula do dev
+  manda que URL absoluta devolvida pela API do entregável (ex.: o link curto)
+  venha de `PUBLIC_BASE_URL` ou do `Host` da requisição COM a porta — nunca
+  `http://localhost` fixo nem o hostname sem porta —, e que o mesmo caso de
+  erro responda o mesmo `code` em todas as rotas. O recorte do QA confere as
+  duas coisas e trata a divergência (ex.: `not_found` × `link_not_found`)
+  como ITEM. Decisão do dono de 14/10: regra geral.
+- **Onde:** `apps/engine/lib/engine/dev/dev_agent_server.ex:644` (`clausula_de_openapi`);
+  `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:122` (`secao_do_ponto_de_entrada`)
+- **Teste:** `apps/engine/test/engine/dev/report_done_instrucao_test.exs`
+  ("RN-879/880: tarefa que toca rotas leva URL com porta, code único e CORS" e
+  a falha "RN-879/880 falha: tarefa sem rota não recebe CORS nem PUBLIC_BASE_URL");
+  `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs` ("RN-879/880: URL,
+  code de erro e CORS")
+- **Origem:** AT-531
+
+### RN-880 — O entregável responde CORS configurável, com `servers` relativo e swagger-ui pinado {#rn-880}
+
+- **Regra:** na mesma cláusula, a API do entregável responde CORS com origens
+  de `CORS_ORIGINS` (padrão `http://localhost:<porta>` e
+  `http://127.0.0.1:<porta>`), `OPTIONS` 204 e `Access-Control-Allow-*` com
+  `Authorization` e `Content-Type`; o `/openapi.json` declara `servers` só
+  relativo (`/`) — URL absoluta criaria o erro de CORS quando a página é aberta
+  por outro host —, e o swagger-ui de CDN vai com versão exata, nunca `@5`. O
+  QA prova com um preflight de outra origem (`curl -X OPTIONS`) e reprova sem
+  os cabeçalhos, com `servers` absoluto ou com o CDN flutuante.
+- **Onde:** `apps/engine/lib/engine/dev/dev_agent_server.ex:644` (`clausula_de_openapi`);
+  `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:122` (`secao_do_ponto_de_entrada`)
+- **Teste:** os mesmos da RN-879 (caminho feliz e falha nos dois arquivos)
+- **Origem:** AT-532
+
+### RN-881 — O engine imprime as outras decisões do projeto para o dev e o QA {#rn-881}
+
+- **Regra:** o `decisoesDoProjeto` que a api devolve no `dev-context`
+  (RN-872, ADR 0215, já com teto) vira a seção "Outras decisões do projeto",
+  separada e DEPOIS das decisões da tarefa, na unidade da story do dev e no
+  recorte do QA. Vazio ou ausente não escreve nada; o engine não aplica teto
+  próprio.
+- **Onde:** `apps/engine/lib/engine/dev/context_builder.ex:133` (`secao_de_decisoes_do_projeto`);
+  `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:20` (`texto`)
+- **Teste:** `apps/engine/test/engine/dev/context_builder_test.exs` ("RN-881:
+  decisoesDoProjeto vira a seção..." e "RN-881 falha: sem decisoesDoProjeto a
+  seção some"); `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs`
+  ("RN-881: outras decisões do projeto")
+- **Origem:** AT-526 (fatia F4, lado do engine)

@@ -77,4 +77,25 @@ defmodule Engine.Dev.ReportDoneInstrucaoTest do
 
     refute kickoff =~ "openapi.json"
   end
+
+  test "RN-879/880: tarefa que toca rotas leva URL com porta, code único e CORS" do
+    kickoff =
+      DevAgentServer.initial_message(%{"title" => "Criar rotas de links"}, %{"title" => "S"})[
+        "content"
+      ]
+
+    assert kickoff =~ "`PUBLIC_BASE_URL`"
+    assert kickoff =~ "MESMO `code` em todas as rotas"
+    assert kickoff =~ "`CORS_ORIGINS`"
+    assert kickoff =~ "`servers` só relativo (`/`)"
+    assert kickoff =~ "versão EXATA"
+  end
+
+  test "RN-879/880 falha: tarefa sem rota não recebe CORS nem PUBLIC_BASE_URL" do
+    kickoff =
+      DevAgentServer.initial_message(%{"title" => "Modelar tabela"}, %{"title" => "S"})["content"]
+
+    refute kickoff =~ "CORS_ORIGINS"
+    refute kickoff =~ "PUBLIC_BASE_URL"
+  end
 end

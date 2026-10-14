@@ -337,7 +337,7 @@ rules:
       - "apps/engine/lib/engine/gates/recorte_da_tarefa.ex"
     docs: ["docs/business-rules.md"]
     severity: warn
-    note: "Mudou o que o recorte pede ao QA: atualizar a RN-765 e as extensões (RN-813/814/817/818/819/863/865)."
+    note: "Mudou o que o recorte pede ao QA: atualizar a RN-765 e as extensões (RN-813/814/817/818/819/863/865/879/880/881)."
 
   # RN-810..812 — retentativa de rede do provider, a dev atualizada antes do
   # "já na dev" e a PR aberta da branch reaproveitada.

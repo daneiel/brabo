@@ -643,6 +643,7 @@ defmodule Engine.Dev.DevAgentServer do
   # é a do recorte do QA, nunca uma cópia.
   defp clausula_de_openapi(task) do
     if Engine.Gates.RecorteDaTarefa.toca_ponto_de_entrada?(task),
+      # RN-879 (AT-531) e RN-880 (AT-532): URL absoluta, código de erro e CORS.
       do:
         "\n\nMódulo que expõe HTTP serve `/openapi.json` (OpenAPI 3) " <>
           "e TODA rota HTTP criada ou mudada nesta tarefa entra nele (path com " <>
@@ -650,7 +651,17 @@ defmodule Engine.Dev.DevAgentServer do
           "`/docs` (UI Swagger); sem rede ou sem pacote, `/docs` é uma página HTML " <>
           "que carrega o swagger-ui de CDN (quem baixa é o navegador do usuário). " <>
           "Módulo web serve a página inicial. Ao criar, acrescente a URL na seção " <>
-          "\"Rodar na sua máquina\" do README (que a Infra escreve).",
+          "\"Rodar na sua máquina\" do README (que a Infra escreve)." <>
+          "\n\nURL absoluta que a API devolve (ex.: um link curto) vem de " <>
+          "`PUBLIC_BASE_URL` ou do `Host` da requisição COM a porta — nunca " <>
+          "`http://localhost` fixo nem o hostname sem porta. O mesmo erro (ex.: " <>
+          "recurso inexistente) responde o MESMO `code` em todas as rotas. A API " <>
+          "responde CORS com origens de `CORS_ORIGINS` (padrão: " <>
+          "`http://localhost:<porta>` e `http://127.0.0.1:<porta>`), `OPTIONS` 204 e " <>
+          "`Access-Control-Allow-*` com `Authorization` e `Content-Type`. No " <>
+          "`/openapi.json`, `servers` só relativo (`/`), nunca URL absoluta; o " <>
+          "swagger-ui de CDN vai com versão EXATA (ex.: `swagger-ui-dist@5.17.14`), " <>
+          "nunca `@5`.",
       else: ""
   end
 
