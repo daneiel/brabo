@@ -21858,7 +21858,7 @@ sem dizer qual.
   provider fica só no `reason` (diagnóstico). Os demais erros mantêm a frase
   de sempre.
 - **Onde:** `apps/engine/lib/engine/agents/falha_de_turno.ex:158` (`mensagem`),
-  `:195` (`diagnostico`)
+  `:181` (`diagnostico`)
 - **Teste:** `apps/engine/test/engine/agents/dev_lead_server_test.exs` (402
   em pt-BR e en: frase curta, `reason` sem `{:final`; erro `upstream`: frase
   de sempre), `apps/engine/test/engine/agents/falha_de_turno_test.exs`
@@ -21923,9 +21923,9 @@ sem dizer qual.
   do `agent.error` (`FalhaDeTurno.diagnostico/1`, RN-733). A frase da bolha
   NÃO cresce com ela: fora do caso de crédito (que já tem frase curta), o
   texto narrado entra na bolha cortado em 300 caracteres com "…".
-- **Onde:** `apps/api/src/domain/llm/llm-provider-errors.ts:144`
-  (`LIMITE_DO_DETALHE`), `apps/engine/lib/engine/agents/falha_de_turno.ex:168`
-  (`@teto_da_bolha`), `:213` (`curto`)
+- **Onde:** `apps/api/src/domain/llm/llm-provider-errors.ts:159`
+  (`LIMITE_DO_DETALHE`), `apps/engine/lib/engine/agents/falha_de_turno.ex:284`
+  (`@teto_da_bolha`), `:286` (`curto`)
 - **Teste:** `apps/api/test/domain/llm/llm-provider-errors.spec.ts` (o 402
   leva `"metadata":{"reason":"insufficient_credits"` inteiro; corpo acima do
   teto corta), `apps/engine/test/engine/agents/falha_de_turno_test.exs`
@@ -22429,7 +22429,7 @@ sem dizer qual.
   (medido no Chromium: 2 236px num balão de 708px) e a última coluna sumia.
 - **Onde:** `apps/api/src/application/use-cases/actions/execute-adr-pr.use-case.ts:96`
   (`openPullRequest`); `apps/engine/lib/engine/infra/infra_lead_server.ex:1521`
-  (`gravar_texto_do_turno`); `apps/engine/lib/engine/dev/dev_agent_server.ex:1154`
+  (`gravar_texto_do_turno`); `apps/engine/lib/engine/dev/dev_agent_server.ex:1164`
   (`propose_pr`); `apps/web/src/lib/session-destinatario.ts:192`
   (`agentesEmConversa`) e `apps/web/src/lib/session-kind.ts:69`
   (`tipoDaSessao`); `apps/web/src/routes/NewProjectWizard.tsx:1122`
@@ -22734,8 +22734,8 @@ sem dizer qual.
   `reasoningTokens` (ficam só em `token_usage`), então a resposta vazia que
   bate no teto sem `finish_reason: length` não é reconhecida.
 - **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:219`
-  (`parada_sem_chamada`), `apps/engine/lib/engine/dev/dev_agent_server.ex:1106`
-  (`motivo_da_parada`), `:1109` (`stop_diagnosis`)
+  (`parada_sem_chamada`), `apps/engine/lib/engine/dev/dev_agent_server.ex:1116`
+  (`motivo_da_parada`), `:1119` (`stop_diagnosis`)
 - **Teste:** `apps/engine/test/engine/harness/tool_loop_test.exs` (`corte só
   de raciocínio`: retentada uma vez e segue; repetido para com
   `corte_pelo_teto`), `apps/engine/test/engine/dev/dev_agent_server_test.exs`
@@ -23017,7 +23017,7 @@ sem dizer qual.
   cobre também o merge por squash que a [RN-760](#rn-760) declara não ver.
   Declarado: a PR antiga da branch, se existir, não é fechada no provider.
 - **Onde:** `apps/engine/lib/engine/dev/worktree_manager.ex:246`
-  (`sem_diff_contra_a_dev?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:1038`
+  (`sem_diff_contra_a_dev?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:1048`
   (`ja_na_dev`)
 - **Teste:** `apps/engine/test/engine/dev/tarefa_ja_na_dev_test.exs`
 - **Origem:** AT-474
@@ -23328,7 +23328,7 @@ sem dizer qual.
   roteamento de container dos três modos — um `pkill` no harness precisaria
   de um segundo caminho de execução por modo. Régua de prompt; o contrato dos
   gates não muda.
-- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:174`
+- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:178`
   (`secao_do_ambiente_limpo`)
 - **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs`
   ("RN-817: pede ambiente limpo, encerrar o grupo e pulado como observação")
@@ -24364,7 +24364,7 @@ sem dizer qual.
   bloqueiam na hora. O contador de retomadas é só em memória: reiniciar o
   engine o zera.
 - **Onde:** `apps/engine/lib/engine/agents/falha_de_turno.ex:133`
-  (`passageira?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:974`
+  (`passageira?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:982`
   (`bloquear_passageira`), `apps/engine/lib/engine/dev/agent_io.ex:293`
   (`pausar_por_rede`), `apps/engine/lib/engine/workers/retomada_de_tarefa_worker.ex:33`
   (`agendar`), `apps/api/src/application/use-cases/execution/unblock-task.use-case.ts:33`
@@ -24602,6 +24602,52 @@ sem dizer qual.
   seção some"); `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs`
   ("RN-881: outras decisões do projeto")
 - **Origem:** AT-526 (fatia F4, lado do engine)
+
+### RN-885 — O CORS do entregável usa a porta PUBLICADA, e o QA confere o header nas duas origens {#rn-885}
+
+- **Regra:** revisa a RN-880 (que continua valendo no resto). O padrão de
+  `CORS_ORIGINS` do entregável usa a porta PUBLICADA — `APP_PORT`, que o
+  compose passa ao app —, nunca a interna `PORT`: no TP-01 (16ª) o padrão saiu
+  com `PORT=3000` e, com o compose publicando 8080, nenhuma origem real recebia
+  `Access-Control-Allow-Origin` (medido com curl: `:3000` recebe, `:8080` não;
+  no Chrome, `Failed to fetch`). O QA faz o preflight contra a porta PUBLICADA,
+  uma vez para `http://localhost:<APP_PORT>` e outra para
+  `http://127.0.0.1:<APP_PORT>`, e reprova sem o header
+  `Access-Control-Allow-Origin` — 204 sozinho não basta, e CORS só na porta
+  interna é ITEM.
+- **Onde:** `apps/engine/lib/engine/dev/dev_agent_server.ex:644` (`clausula_de_openapi`);
+  `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:122` (`secao_do_ponto_de_entrada`)
+- **Teste:** `apps/engine/test/engine/dev/report_done_instrucao_test.exs`
+  ("RN-885: o padrão do CORS usa a porta PUBLICADA, nunca a interna"; falha:
+  "RN-879/880 falha: tarefa sem rota não recebe CORS nem PUBLIC_BASE_URL");
+  `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs` ("RN-885: o
+  preflight é na porta PUBLICADA, nas duas origens, e confere o header")
+- **Origem:** AT-535
+
+### RN-886 — O 403 de orçamento do OpenRouter é crédito esgotado, com limite, gasto e reset {#rn-886}
+
+- **Regra:** o 403 do OpenRouter com `Budget limit exceeded` /
+  `limit_source: openrouter_guardrail_budget` (guardrail mensal da chave) NÃO
+  é credencial rejeitada: a api o normaliza no MESMO `insufficient_credit` do
+  402 (RN-730) — sem código novo no contrato — e o resto do caminho do crédito
+  vale igual: origem `infra` (RN-726), pausa sem retomada automática (nunca
+  passageira, RN-864). A frase curta, no idioma do turno (RN-733), diz o
+  limite, o gasto e o reset lidos do corpo (`limit_usd`, `spend_usd`,
+  `resets_at`, o que vier) e pede ao admin do OpenRouter para subir o
+  orçamento; o dev bloqueia a tarefa com essa frase no motivo, em vez de
+  "parou sem concluir nem reportar bloqueio" com origem `codigo`. 403 sem o
+  marcador segue `auth`.
+- **Onde:** `apps/api/src/domain/llm/llm-provider-errors.ts:81` (`normalizeHttpStatus`),
+  `:135` (`pareceOrcamento`); `apps/engine/lib/engine/agents/falha_de_turno.ex:205`
+  (`orcamento_esgotado`), `:219` (`frase_de_orcamento`), `:163`
+  (`credito_esgotado?`); `apps/engine/lib/engine/dev/dev_agent_server.ex:961`
+  (`motivo_de_credito`)
+- **Teste:** `apps/api/test/domain/llm/llm-provider-errors.spec.ts` ("o 403 de
+  orçamento vira insufficient_credit com o corpo inteiro"; falha: "403 sem
+  marcador de orçamento continua credencial rejeitada");
+  `apps/engine/test/engine/agents/falha_de_turno_test.exs` ("RN-886: o 403 de
+  orçamento do OpenRouter")
+- **Origem:** AT-534
 
 ### RN-878 — O idioma do agente de execução vale desde a primeira frase {#rn-878}
 

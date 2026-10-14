@@ -24,6 +24,12 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   mesmo erro em todas as rotas, CORS configurável por `CORS_ORIGINS` com
   preflight 204, `servers` relativo no `/openapi.json` e swagger-ui com versão
   exata (RN-879, RN-880, AT-531, AT-532).
+- O CORS do entregável usa a porta publicada (`APP_PORT`), nunca a interna, e
+  o QA faz o preflight nessa porta para `localhost` e `127.0.0.1`, conferindo o
+  `Access-Control-Allow-Origin` (RN-885, AT-535).
+- O 403 de orçamento do OpenRouter (guardrail mensal da chave) passa a ser
+  crédito esgotado: origem `infra`, sem retomada automática, e frase curta com
+  limite, gasto e reset em vez de "parou sem concluir" (RN-886, AT-534).
 - O dev e o QA recebem as outras decisões do projeto numa seção própria,
   depois das da tarefa (RN-881, AT-526).
 

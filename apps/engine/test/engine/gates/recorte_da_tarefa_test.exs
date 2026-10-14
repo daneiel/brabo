@@ -206,6 +206,15 @@ defmodule Engine.Gates.RecorteDaTarefaTest do
       assert texto =~ "`servers` com URL ABSOLUTA"
     end
 
+    test "RN-885: o preflight é na porta PUBLICADA, nas duas origens, e confere o header" do
+      texto = RecorteDaTarefa.texto(%{task: %{"title" => "Expor rotas HTTP"}})
+      assert texto =~ "porta PUBLICADA"
+      assert texto =~ "`http://localhost:<APP_PORT>`"
+      assert texto =~ "`http://127.0.0.1:<APP_PORT>`"
+      assert texto =~ "`Access-Control-Allow-Origin`"
+      assert texto =~ "204 sem esse header"
+    end
+
     test "falha: tarefa sem rota não recebe a régua" do
       texto = RecorteDaTarefa.texto(%{task: %{"title" => "Modelar tabela"}})
       refute texto =~ "PUBLIC_BASE_URL"

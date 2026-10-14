@@ -643,7 +643,8 @@ defmodule Engine.Dev.DevAgentServer do
   # é a do recorte do QA, nunca uma cópia.
   defp clausula_de_openapi(task) do
     if Engine.Gates.RecorteDaTarefa.toca_ponto_de_entrada?(task),
-      # RN-879 (AT-531) e RN-880 (AT-532): URL absoluta, código de erro e CORS.
+      # RN-879 (AT-531) e RN-880 (AT-532): URL absoluta, código de erro e CORS;
+      # RN-885 (AT-535): a porta do CORS é a PUBLICADA (`APP_PORT`).
       do:
         "\n\nMódulo que expõe HTTP serve `/openapi.json` (OpenAPI 3) " <>
           "e TODA rota HTTP criada ou mudada nesta tarefa entra nele (path com " <>
@@ -657,7 +658,8 @@ defmodule Engine.Dev.DevAgentServer do
           "`http://localhost` fixo nem o hostname sem porta. O mesmo erro (ex.: " <>
           "recurso inexistente) responde o MESMO `code` em todas as rotas. A API " <>
           "responde CORS com origens de `CORS_ORIGINS` (padrão: " <>
-          "`http://localhost:<porta>` e `http://127.0.0.1:<porta>`), `OPTIONS` 204 e " <>
+          "`http://localhost:<porta>` e `http://127.0.0.1:<porta>`, com a porta PUBLICADA " <>
+          "— `APP_PORT`, que o compose passa ao app —, nunca a interna `PORT`), `OPTIONS` 204 e " <>
           "`Access-Control-Allow-*` com `Authorization` e `Content-Type`. No " <>
           "`/openapi.json`, `servers` só relativo (`/`), nunca URL absoluta; o " <>
           "swagger-ui de CDN vai com versão EXATA (ex.: `swagger-ui-dist@5.17.14`), " <>
@@ -946,7 +948,7 @@ defmodule Engine.Dev.DevAgentServer do
          "error" => erro
        }) do
       state
-      |> AgentIo.block_task(@motivo_credito_esgotado, stop_diagnosis(ctx), "infra")
+      |> AgentIo.block_task(motivo_de_credito(erro), stop_diagnosis(ctx), "infra")
       |> AgentIo.pausar_por_credito()
     else
       bloquear_parada(ctx, state)
@@ -954,6 +956,14 @@ defmodule Engine.Dev.DevAgentServer do
   end
 
   defp handle_outcome({:ok, ctx}, state, _task, _story), do: bloquear_parada(ctx, state)
+
+  # RN-886 (AT-534): o 403 de orçamento do OpenRouter diz limite, gasto e reset.
+  defp motivo_de_credito(erro) do
+    case FalhaDeTurno.orcamento_esgotado(erro) do
+      nil -> @motivo_credito_esgotado
+      orcamento -> FalhaDeTurno.frase_de_orcamento(orcamento, "pt-BR")
+    end
+  end
 
   # RN-810 (AT-484): bloqueio de origem `infra` (a rede do provider caiu
   # depois das retentativas do `ToolLoop`) não conta para o disjuntor de
