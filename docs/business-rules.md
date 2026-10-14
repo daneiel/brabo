@@ -14638,7 +14638,7 @@ desde a Fase 4a —, e o que muda é a latência máxima das escritas sem aviso.
   `apps/engine/lib/engine/sessions/live_broadcast.ex` (`event_appended/3`);
   `apps/engine/lib/engine_web/controllers/session_command_controller.ex:46`
   (`event_appended`, a rota do aviso da api);
-  `apps/api/src/application/use-cases/sessions/append-session-event.use-case.ts:198`
+  `apps/api/src/application/use-cases/sessions/append-session-event.use-case.ts:225`
   (`eventAppended`);
   `apps/api/src/infrastructure/persistence/drizzle/drizzle-context.ts:39`
   (`aposCommit`), `:53` (`veioDoEngine`);
@@ -14800,7 +14800,7 @@ fechada seguem mostrando a mensagem da api.
   (`ehEventoDeConversa`), `:117` (`garantirQueSessaoAceitaEvento`);
   `apps/api/src/application/use-cases/sessions/append-session-event.use-case.ts:44`
   (`conflitoDeSessaoEncerrada`), `:114` (o estado no mesmo `UPDATE` do `seq`),
-  `:214` (`garantirQueAceita`);
+  `:241` (`garantirQueAceita`);
   `apps/api/src/infrastructure/persistence/drizzle/session.repository.ts:117`
   (`incrementSeq`);
   `apps/api/src/application/use-cases/llm/send-chat-message.use-case.ts:78`
@@ -22353,7 +22353,7 @@ sem dizer qual.
   exija. Continua régua de prompt: nenhuma reprovação nova no código.
 - **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:18` (`texto`),
   `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:78` (`secao_da_forma`),
-  `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:165`
+  `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:195`
   (`tarefasIrmas`) e `apps/engine/lib/engine/gates/qa_automacao_agent.ex:170`
   (`com_o_recorte`)
 - **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs` (desde
@@ -22514,7 +22514,7 @@ sem dizer qual.
   RN-059). Antes saía `origin: null`. O bloqueio de artefato de infra pelo
   mesmo motivo (`infra.artifact_blocked`) não tem campo de origem e fica como
   está, declarado.
-- **Onde:** `apps/api/src/application/use-cases/execution/record-gate-verdict.use-case.ts:132`
+- **Onde:** `apps/api/src/application/use-cases/execution/record-gate-verdict.use-case.ts:215`
   (`politica`)
 - **Teste:** `apps/api/test/application/use-cases/execution/record-gate-verdict.use-case.spec.ts`
   (o ciclo esgotado chama `MarkTaskBlockedUseCase` com `'politica'`; o veredito
@@ -22767,7 +22767,7 @@ sem dizer qual.
   `moduleOpenTasksTotal` e o corte dito no recorte. Requisito da entrega que
   depende do que outra história ainda vai entregar (uma rota, uma tela) vai ao
   `resumo` como observação e não reprova. A régua é de PROMPT, como na RN-765.
-- **Onde:** `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:180`
+- **Onde:** `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:210`
   (`tarefasAbertasDoModulo`), `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:20`
   (`texto`)
 - **Teste:** `apps/api/test/application/use-cases/execution/get-dev-task-context.use-case.spec.ts`
@@ -22792,7 +22792,7 @@ sem dizer qual.
   diz Y), para o usuário e o Arquiteto. Régua de PROMPT, como a
   [RN-765](#rn-765). Desde a [RN-792](#rn-792) o Arquiteto confere o contrato
   contra as rotas citadas nas histórias ao declará-lo.
-- **Onde:** `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:225`
+- **Onde:** `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:255`
   (`moduloDoContrato`), `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:66`
   (`secao_do_contrato`)
 - **Teste:** `apps/api/test/application/use-cases/execution/get-dev-task-context.use-case.spec.ts`
@@ -24204,8 +24204,8 @@ sem dizer qual.
   (título/descrição, o evento o leva) e `complete_story` (RF/DoD/DoR; a
   história segue `ready`, sem nova promoção, e `backlog.story_completed` leva
   o `questionId`).
-- **Onde:** `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:112`
-  (`decisoesDaTarefa`), `:344` (`decisoesDaTarefa`),
+- **Onde:** `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:122`
+  (`decisoesDaTarefa`), `:374` (`decisoesDoContexto`),
   `apps/api/src/domain/backlog/correcao-de-historia.ts:33`
   (`recusaDeCorrecaoDeHistoria`),
   `apps/api/src/application/use-cases/backlog/corrigir-historia.use-case.ts:126`
@@ -24244,8 +24244,8 @@ sem dizer qual.
   nesse desfecho. ADR 0214.
 - **Onde:** `apps/api/src/domain/execution/pr-gate-state-machine.ts:63`
   (`nextGateStatus`),
-  `apps/api/src/application/use-cases/execution/record-gate-verdict.use-case.ts:94`
-  (`esperaUsuario`), `:160` (`nextAction`)
+  `apps/api/src/application/use-cases/execution/record-gate-verdict.use-case.ts:135`
+  (`esperaUsuario`), `:171` (`nextAction`)
 - **Teste:** `apps/api/test/domain/execution/pr-gate-state-machine.spec.ts`
   ("needs_user_decision mantém o gate e NÃO incrementa o contador, nem no
   teto"),
@@ -24368,3 +24368,56 @@ sem dizer qual.
   bloqueada pedindo o clique", "402 não agenda retomada"),
   `apps/engine/test/engine/workers/retomada_de_tarefa_worker_test.exs`
 - **Origem:** AT-525
+
+### RN-870 — O veredito só espera pergunta que existe e está aberta {#rn-870}
+
+- **Regra:** `POST /internal/sessions/:sessionId/gates/verdict` com
+  `needs_user_decision` e `openQuestionId` confere, ANTES de qualquer escrita
+  (comentário na PR, estado do gate, evento), que a pergunta existe no projeto
+  e está aberta. Inexistente ou de outro projeto: 404
+  `reason: "pergunta_nao_encontrada"`. Já respondida: 409
+  `reason: "pergunta_ja_respondida"` com a decisão do usuário em `decisao` —
+  sem escrita e sem `pr.gate_changed`. O estado sai do log (RN-858).
+- **Onde:** `apps/api/src/application/use-cases/execution/record-gate-verdict.use-case.ts:85`
+  (`exigirPerguntaAberta`), `apps/api/src/domain/open-questions/pergunta-em-aberto.ts:154`
+  (`estadoDaPergunta`)
+- **Teste:** `apps/api/test/application/use-cases/execution/record-gate-verdict.use-case.spec.ts`
+  ("pergunta aberta: estaciona sem gravar outra"; falha: "inexistente ou de
+  outro projeto: 404 nomeado, sem escrita", "já respondida: 409 com a decisão,
+  sem escrita nem pr.gate_changed")
+- **Origem:** AT-526, ADR 0215
+
+### RN-871 — `afeta.regras` aceita o título exato da regra e guarda o id {#rn-871}
+
+- **Regra:** no funil de eventos, o `artifact.open_question` cujo
+  `afeta.regras` traz o TÍTULO exato de um `artifact.business_rule` do projeto
+  é gravado com o id da regra (a mais recente, se o título se repete); o que
+  não é id nem título exato é recusado com 400 nomeando os valores. No contexto
+  do dev, `decisoes` casa também pelo título das regras da história, para as
+  decisões gravadas antes desta regra.
+- **Onde:** `apps/api/src/domain/open-questions/pergunta-em-aberto.ts:179`
+  (`resolverRegrasDoAfeta`), `apps/api/src/application/use-cases/sessions/append-session-event.use-case.ts:117`
+  (`resolverRegrasDoAfeta`), `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:134`
+  (`decisoesDoContexto`)
+- **Teste:** `apps/api/test/application/use-cases/backlog/perguntas-em-aberto.use-case.spec.ts`
+  ("título exato é convertido para o id da regra"; falha: "texto que não é id
+  nem título de regra: 400 sem escrita"),
+  `apps/api/test/application/use-cases/execution/get-dev-task-context.use-case.spec.ts`
+  ("decisão legada com TÍTULO de regra em afeta.regras casa pelo título")
+- **Origem:** AT-526, ADR 0215
+
+### RN-872 — As outras decisões do projeto chegam ao dev e ao QA, em seção própria {#rn-872}
+
+- **Regra:** `GET /internal/sessions/:sessionId/dev-context` devolve, além de
+  `decisoes` (as que tocam a tarefa, RN-859), `decisoesDoProjeto`: as demais
+  `artifact.decision_record` do projeto, mais recentes primeiro, no mesmo
+  formato. O teto de 10 é COMPARTILHADO — as da tarefa vêm primeiro e consomem
+  o teto antes. Revisa a frase "decisão sem `afeta` não entra" do ADR 0214 para
+  esta lista. O campo é aditivo (o engine que não o conhece o ignora).
+- **Onde:** `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:134`
+  (`decisoesDoContexto`), `apps/api/src/interfaces/http/internal/dto/internal.response.dto.ts:237`
+  (`decisoesDoProjeto`)
+- **Teste:** `apps/api/test/application/use-cases/execution/get-dev-task-context.use-case.spec.ts`
+  ("as que não tocam a tarefa vêm em decisoesDoProjeto; teto de 10 somado, as
+  da tarefa primeiro")
+- **Origem:** AT-526, ADR 0215
