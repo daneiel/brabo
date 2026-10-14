@@ -356,6 +356,13 @@ one central sentence: every doubt left for the user becomes
 `declare_open_question`, with the agent's suggestion and what it affects — never
 a question only in the turn text.
 
+Since [RN-874](../business-rules.md#rn-874) the PO's calls carry one more
+ephemeral `role: "system"` message right after the flow one, built by
+`Engine.Harness.DecisoesDoProjeto`: the user's decisions (`decision_record`)
+and the questions still open in the project, read locally from the event log,
+capped at 10 + 10 items and 3 000 characters. Omitted when there is nothing to
+say or the read fails.
+
 #### The final frame carries the model name ([RN-146](../business-rules/autenticacao.md#rn-146))
 
 `RunLlmTurnResult` and the `final` frame of `LlmTurnStreamEvent` gain
