@@ -337,7 +337,7 @@ rules:
       - "apps/engine/lib/engine/gates/recorte_da_tarefa.ex"
     docs: ["docs/business-rules.md"]
     severity: warn
-    note: "Mudou o que o recorte pede ao QA: atualizar a RN-765 e as extensões (RN-813/814/817/818/819)."
+    note: "Mudou o que o recorte pede ao QA: atualizar a RN-765 e as extensões (RN-813/814/817/818/819/863/865)."
 
   # RN-810..812 — retentativa de rede do provider, a dev atualizada antes do
   # "já na dev" e a PR aberta da branch reaproveitada.
@@ -360,6 +360,14 @@ rules:
     docs: ["docs/business-rules.md", "docs/reference/internal-api.md"]
     severity: warn
     note: "Mudou o fluxo que os conversacionais recebem: atualizar a RN-711 e a mensagem descrita na internal-api."
+
+  # RN-874 — decisões e perguntas abertas do projeto no turno do PO.
+  - id: decisoes-do-projeto
+    watch:
+      - "apps/engine/lib/engine/harness/decisoes_do_projeto.ex"
+    docs: ["docs/business-rules.md"]
+    severity: warn
+    note: "Mudou o que o PO recebe de decisões/perguntas, o teto ou a leitura: atualizar a RN-874."
 
   - id: recusas-locais-de-proposta
     watch:

@@ -14423,7 +14423,7 @@ contexto vivo tinha (a cauda inteira, mesmo o que já tinha sido compactado); o
   abertura); `apps/engine/lib/engine/harness/context_manager.ex:138` (o resumo
   gravado); `apps/engine/lib/engine/sessions/engine_api_client.ex:1066`
 
-  gravado); `apps/engine/lib/engine/sessions/engine_api_client.ex:1142`
+  gravado); `apps/engine/lib/engine/sessions/engine_api_client.ex:1146`
   (`list_events/3`); os seis `init/1` —
   `apps/engine/lib/engine/agents/criativo_server.ex:89`, `po_server.ex:93`,
   `arquiteto_server.ex:87`, `dev_lead_server.ex:132`, `ux_designer_server.ex:85`,
@@ -14632,7 +14632,7 @@ fonte continua sendo o GET, o canal continua sendo só gatilho — como já era
 desde a Fase 4a —, e o que muda é a latência máxima das escritas sem aviso.
 
 - **Código:** `apps/engine/lib/engine/sessions/engine_api_client.ex:581`,
-  `:607`, `:630`, `:1030` (`avisar_canal`);
+  `:607`, `:630`, `:1034` (`avisar_canal`);
 
   `:607`, `:630`, `:953` (`avisar_canal`);
   `apps/engine/lib/engine/sessions/live_broadcast.ex` (`event_appended/3`);
@@ -14815,11 +14815,11 @@ fechada seguem mostrando a mensagem da api.
   (`conversa_ociosa`), `:193` (`encerrar`), `:222`
   (`conversation_idle_timeout_ms`); `apps/engine/lib/engine/sessions/monitor.ex:185`
   (`classify`); `apps/engine/lib/engine/psychologist/termination_classifier.ex:46`;
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1108`
-  (`narrar_recusa_de_sessao_encerrada`), `:1460` (`pendencia_da_resposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1112`
+  (`narrar_recusa_de_sessao_encerrada`), `:1464` (`pendencia_da_resposta`);
 
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1108`
-  (`narrar_recusa_de_sessao_encerrada`), `:1460` (`pendencia_da_resposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1112`
+  (`narrar_recusa_de_sessao_encerrada`), `:1464` (`pendencia_da_resposta`);
   `apps/engine/lib/engine/agents/conversacionais.ex:49` (`parar_da_sessao`),
   `:69` (`parar_da_sessao_no_cluster`);
   `apps/engine/lib/engine/agents/turno_assincrono.ex:411` (`abandonar`);
@@ -15808,9 +15808,9 @@ pacote da porta de Docker. Nada muda na contenção do broker ([ADR
   `:205` (`TETO_DE_MUTACAO_MS`), `:217` (`FOLGA_DO_EXEC_NO_ENGINE_MS`),
   `:270` (`erroDeTransporte`);
   `apps/api/src/application/ports/container-broker.port.ts:89` (`MotivoDeBrokerIndisponivel`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1946` (`teto_do_container_exec_ms`)
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1950` (`teto_do_container_exec_ms`)
 
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1946` (`teto_do_container_exec_ms`)
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1950` (`teto_do_container_exec_ms`)
 - **Teste:** `apps/api/test/infrastructure/http-clients/container-broker.client.spec.ts:286`
   (a reprodução, contra um broker `node:http` que demora 6 s), `:182` (o
   teto de cada operação no `AbortSignal`), `:204` e `:229` (`teto-excedido`
@@ -15894,9 +15894,9 @@ continua vindo da decisão do Arquiteto, e `pull` não é operação nova do bro
   `apps/api/src/infrastructure/http-clients/container-broker.client.ts:205` (`TETO_DE_MUTACAO_MS`),
   `:175` (`CHAMADAS_DE_CONTROLE_NO_START`),
   `:228` (`TETO_DO_PROPOSE_ACTION_DE_CONTAINER_NO_ENGINE_MS`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1868` (`opcoes_do_propose_action`),
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1872` (`opcoes_do_propose_action`),
 
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1868` (`opcoes_do_propose_action`),
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1872` (`opcoes_do_propose_action`),
   `:1649` (`@teto_do_propose_action_de_container_ms`);
   `apps/engine/lib/engine/runners/runner_router.ex:52` (`@timeout_do_start_ms`)
 - **Teste:** `packages/docker-port/src/docker-cli.spec.ts:425` (describe da
@@ -16842,10 +16842,10 @@ especificação da AT-081 e o mecanismo verificado por provider na AT-161).
   (`@sem_orientacao`), `:261` (`texto_do_turno`), `:286`
   (`idioma_do_projeto`);
   `apps/engine/lib/engine/sessions/engine_api_client.ex:685`
-  (`IdiomaDaResposta`), `:779` (`IdiomaDaResposta`);
+  (`IdiomaDaResposta`), `:783` (`IdiomaDaResposta`);
 
   `apps/engine/lib/engine/sessions/engine_api_client.ex:685`
-  (`IdiomaDaResposta`), `:779` (`IdiomaDaResposta`);
+  (`IdiomaDaResposta`), `:783` (`IdiomaDaResposta`);
   `apps/engine/lib/engine/projects/project.ex:64` (`idioma`);
   `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:515`
   (`idioma_da_resposta`);
@@ -16943,10 +16943,10 @@ AT-167 mede; os tokenizadores do DeepSeek e da Anthropic seguem não medidos.
   (`@forma_curta`), `:261` (`texto_do_turno`), `:279` (`grava_artefato?`),
   `:280` (`idioma_do_projeto_para_o_artefato`);
   `apps/engine/lib/engine/sessions/engine_api_client.ex:685`
-  (`IdiomaDaResposta`), `:779` (`IdiomaDaResposta`);
+  (`IdiomaDaResposta`), `:783` (`IdiomaDaResposta`);
 
   `apps/engine/lib/engine/sessions/engine_api_client.ex:685`
-  (`IdiomaDaResposta`), `:779` (`IdiomaDaResposta`);
+  (`IdiomaDaResposta`), `:783` (`IdiomaDaResposta`);
   `apps/web/src/routes/settings/ProjectLanguageSection.tsx`
 - **Teste:** `apps/engine/test/engine/harness/idioma_da_resposta_test.exs:157`
   (idiomas diferentes: a orientação diz os dois), `:168` (iguais: só um),
@@ -17919,7 +17919,7 @@ vault por decisão do dono; [ADR 0182](adr/0182-ciclo-de-vida-do-handoff.md)).
   (`criar_handoffs_appsec/3`);
   `apps/engine/lib/engine/sessions/engine_api_client.ex:1131`
 
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1207`
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1211`
   (`create_handoff_if_absent`);
   `apps/api/src/domain/sessions/ciclo-de-vida-do-handoff.ts:71`
   (`decidirOferta`)
@@ -19297,13 +19297,13 @@ segundo `executed` para o mesmo merge.
   `apps/api/src/infrastructure/git/local-git-provider.ts:339` (`GitPullRequestAlreadyMergedError`);
   `apps/web/src/lib/gate-do-merge.ts:19` (`gatePendenteNoMerge`);
   `apps/web/src/routes/ProjectPrsTab.tsx:232` (`gatePendenteNoMerge`);
-  `apps/web/src/routes/session-timeline-montagem.tsx:1094` (`gatePendenteNoMerge`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:1100` (`gatePendenteNoMerge`)
   `apps/web/src/routes/ProjectPrsTab.tsx:232` (`gatePendenteNoMerge`);
-  `apps/web/src/routes/session-timeline-montagem.tsx:1094` (`gatePendenteNoMerge`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:1100` (`gatePendenteNoMerge`)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:664`
   (`merge_ja_proposto`), `:687` (`pr_ja_mergeado` — caso de falha), `:696`
 
-  `apps/web/src/routes/session-timeline-montagem.tsx:1094` (`gatePendenteNoMerge`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:1100` (`gatePendenteNoMerge`)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:664`
   (`merge_ja_proposto`), `:687` (`pr_ja_mergeado` — caso de falha), `:696`
   (negada não bloqueia, outra PR não colide — caminho feliz);
@@ -21481,7 +21481,7 @@ O kickoff do PO diz as três coisas.
   `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:351`
   (`resumeParkedGate`),
   `apps/api/src/interfaces/http/gates/gate-resume.controller.ts:40`
-  (`resume`), `apps/web/src/routes/RetomarGateEstacionado.tsx:47`
+  (`resume`), `apps/web/src/routes/RetomarGateEstacionado.tsx:59`
   (`RetomarGateEstacionado`)
 - **Teste:** `apps/engine/test/engine_web/controllers/gate_command_controller_test.exs`
   ("ciclo estacionado: 202 e despacha o gate de novo"; falha: "ciclo NÃO
@@ -22001,7 +22001,7 @@ sem dizer qual.
   da Task do turno (`TurnoAssincrono`), então o padrão "HTTP dentro do
   GenServer" não os alcança — declarado. A web não mudou: a aba Executores
   passa a ver o `agent.error` e o `dev.blocked` da recuperação.
-- **Onde:** `apps/engine/lib/engine/sessions/engine_api_client.ex:2069`
+- **Onde:** `apps/engine/lib/engine/sessions/engine_api_client.ex:2073`
   (`isolado`), `apps/engine/lib/engine/dev/monitor.ex:69` (`ao_terminar`),
   `:107` (`registrar_e_religar`)
 - **Teste:** `apps/engine/test/engine/sessions/engine_api_client_isolado_test.exs`
@@ -22256,7 +22256,7 @@ sem dizer qual.
   `nohup … &` com log —, nunca `%Req.TransportError{reason: :timeout}` cru.
   Exec assíncrono/streaming foi considerado e não feito: a menor mudança que
   faz `npm install` comum caber é o teto.
-- **Onde:** `apps/engine/lib/engine/sessions/engine_api_client.ex:1915`
+- **Onde:** `apps/engine/lib/engine/sessions/engine_api_client.ex:1919`
   (`opcoes_do_propose_action`) e
   `apps/engine/lib/engine/harness/hooks/action_pipeline.ex:80`
   (`resultado_de_teto_do_terminal`)
@@ -23285,7 +23285,7 @@ sem dizer qual.
   externo dos gates (`docs/gates.yml`) e o código do `emit_qa_verdict` não
   mudam, e nenhum gate novo nasce. Tarefa que não toca nada disso não ganha a
   seção.
-- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:113`
+- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:117`
   (`secao_do_ponto_de_entrada`)
 - **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs`
   ("tarefa que toca a fiação exige evidência do ponto de entrada real" e "tarefa
@@ -23321,7 +23321,7 @@ sem dizer qual.
   roteamento de container dos três modos — um `pkill` no harness precisaria
   de um segundo caminho de execução por modo. Régua de prompt; o contrato dos
   gates não muda.
-- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:150`
+- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:158`
   (`secao_do_ambiente_limpo`)
 - **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs`
   ("RN-817: pede ambiente limpo, encerrar o grupo e pulado como observação")
@@ -23338,7 +23338,7 @@ sem dizer qual.
   bater numa rota do processo de pé — e o que NÃO cabe ali: construir imagem
   Docker, `docker compose`, rede externa. Exigência desse segundo tipo nunca
   vai para `itens`; vai ao `resumo` como observação. Régua de prompt.
-- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:113`
+- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:117`
   (`secao_do_ponto_de_entrada`)
 - **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs`
   ("RN-818: com ponto de entrada diz o que conta e o que não cabe" e "RN-818:
@@ -23436,7 +23436,7 @@ sem dizer qual.
   barato; o segundo veredito é recusado pela api).
 - **Onde:** `apps/engine/lib/engine/gates/gate_rescuer.ex:191` (`run_boot`),
   `:209` (`interrompido_no_boot`),
-  `apps/web/src/routes/RetomarGateEstacionado.tsx:23` (`cicloInterrompido`)
+  `apps/web/src/routes/RetomarGateEstacionado.tsx:33` (`cicloInterrompido`)
 - **Teste:** `apps/engine/test/engine/gates/gate_rescuer_test.exs` ("boot com
   ciclo RECENTE órfão do reinício: grava gate.interrupted e retoma já
   (RN-823)"; falhas: "boot com ciclo recente esperando ação PENDENTE do gate:
@@ -23892,7 +23892,7 @@ sem dizer qual.
 - **Onde:** `apps/web/src/lib/acoes-no-bloco.ts:48` (`useAcaoEstaNoBloco`),
   `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:450` (`useRegistrarAcoesNoBloco`),
   `apps/web/src/components/CartaoOuReferenciaNoFio.tsx:11` (`CartaoOuReferenciaNoFio`),
-  `apps/web/src/routes/session-timeline-montagem.tsx:1132` (`CartaoOuReferenciaNoFio`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:1137` (`CartaoOuReferenciaNoFio`)
 - **Teste:** `apps/web/src/components/CartaoOuReferenciaNoFio.test.tsx`,
   `apps/web/src/components/PendenciasDeOutrasSessoes.test.tsx` ("a PR com os
   gates aprovados aparece…")
@@ -24007,7 +24007,7 @@ sem dizer qual.
   cláusula (a mensagem é fixada e volta a cada iteração).
 - **Onde:** `apps/engine/lib/engine/dev/dev_agent_server.ex:636`
   (`clausula_de_openapi`),
-  `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:105`
+  `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:109`
   (`toca_ponto_de_entrada?`)
 - **Teste:** `apps/engine/test/engine/dev/report_done_instrucao_test.exs`
   ("RN-853: tarefa que toca rotas pede /openapi.json e /docs"; falha: "RN-853
@@ -24023,7 +24023,7 @@ sem dizer qual.
   `node -e fetch`) e encerra o grupo de processos ([RN-817](#rn-817)). Falha
   vai a `itens`; o `docker compose up` real fica no `resumo` como "provado só
   na máquina do usuário".
-- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:113`
+- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:117`
   (`secao_do_ponto_de_entrada`)
 - **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs`
   ("tarefa que toca rotas pede /openapi.json e /docs, compose em resumo";
@@ -24421,3 +24421,89 @@ sem dizer qual.
   ("as que não tocam a tarefa vêm em decisoesDoProjeto; teto de 10 somado, as
   da tarefa primeiro")
 - **Origem:** AT-526, ADR 0215
+
+### RN-865 — Endpoint e verbo HTTP com caminho também ligam a conferência do OpenAPI, e ela cobre as rotas do código {#rn-865}
+
+- **Regra:** a régua única de "a tarefa toca ponto de entrada/rotas"
+  (`toca_ponto_de_entrada?`, usada pelo recorte do QA e pela cláusula do dev da
+  RN-853) casa também "endpoint" e verbo HTTP seguido de caminho
+  (`POST /links`). Sem isso, tarefa descrita como "Endpoint protegido…" não
+  recebia nem a cláusula do OpenAPI (dev) nem a conferência do `/openapi.json`
+  (QA) — foi assim que `POST /links` e `GET /panel` ficaram fora do OpenAPI
+  com as duas tarefas aprovadas no TP-01. A conferência do QA passa a exigir em
+  `paths` do `/openapi.json` servido, além das rotas da seção "Rotas HTTP" do
+  README, cada rota que o CÓDIGO registra; a que falta é item que reprova
+  (estende a RN-863).
+- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:103`
+  (`@ponto_de_entrada`), `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:110`
+  (`toca_ponto_de_entrada?`)
+- **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs`
+  ("RN-865: tarefa que diz só endpoint ou verbo com caminho recebe a seção";
+  falha: "falha: tarefa sem rota não recebe a seção")
+- **Origem:** AT-527
+
+
+### RN-867 — O aviso do gate estacionado diz o motivo gravado, e a pergunta em aberto aponta o cartão dela {#rn-867}
+
+- **Regra:** o `gate.rescue_parked` tem dois emissores: o resgate por tempo
+  (`GateRescuer`, RN-722), que grava `idadeSegundos`, e o QA estacionado
+  esperando a resposta a uma pergunta em aberto, que não o grava. O fio
+  distingue os dois pela PRESENÇA de `idadeSegundos` (o `motivo` é texto
+  pt-BR fixo e não é lido como chave): "parado mais de 2 h" só no resgate por
+  tempo; no outro, o aviso diz que o gate espera a resposta e aponta o cartão
+  "Perguntas em aberto" (RN-861). O botão "Retomar gate" (RN-724) segue nos
+  dois.
+- **Onde:** `apps/web/src/routes/RetomarGateEstacionado.tsx:18`
+  (`cicloEstacionado`), `apps/web/src/routes/session-timeline-montagem.tsx`
+  (`gateEstacionado.avisoPergunta`)
+- **Teste:** `apps/web/src/routes/RetomarGateEstacionado.test.tsx` ("o
+  resgate por tempo grava idadeSegundos e lê como tempo"; falha: "a pergunta
+  em aberto não tem idadeSegundos e não fala em 2 h")
+- **Origem:** AT-528
+
+### RN-868 — O tick do resgate de gates é uma corrente só {#rn-868}
+
+- **Regra:** o `GateRescueSchedulerWorker` reagenda o próprio sucessor com a
+  MESMA unicidade do `kickoff/0` (estados `available`/`scheduled`/`retryable`,
+  sem `executing`, janela de dois intervalos). Antes só o `kickoff/0` era
+  único: o job em execução não conta, então o kickoff do boot com o tick
+  anterior em voo, ou um retry que re-roda o `perform/1`, abria uma SEGUNDA
+  corrente, e elas nunca se fundiam. Medido no uso real (14/10): 11 jobs
+  agendados ao mesmo tempo e a linha "espera decisão humana" da RN-722 11
+  vezes por tick para UMA linha de `gate_states`. Não era defeito de dado. Com
+  a unicidade no reagendamento as correntes duplicadas colapsam numa só no
+  tick seguinte.
+- **Onde:** `apps/engine/lib/engine/workers/gate_rescue_scheduler_worker.ex:42`
+  (`unicidade`)
+- **Teste:** `apps/engine/test/engine/workers/gate_rescue_scheduler_worker_test.exs`
+  ("o tick se reagenda e mantém a corrente viva"; falha: "com um sucessor já
+  agendado, o tick não abre uma segunda corrente")
+- **Origem:** AT-529
+
+
+### RN-874 — O PO recebe no turno as decisões do usuário e as perguntas abertas do projeto {#rn-874}
+
+- **Regra:** todo turno do PO leva, como mensagem `system` EFÊMERA
+  acrescentada pela fachada `EngineApiClient` logo depois do fluxo do time
+  (RN-711) — nunca em `state.messages` nem no prompt do servidor —, as
+  decisões do usuário (`artifact.decision_record`, `choice` e `context`) e as
+  perguntas AINDA abertas do projeto (`artifact.open_question` sem
+  `open_question.answered` com o mesmo `questionId`), de TODAS as sessões. O
+  texto manda escrever a RESPOSTA decidida na história, regra, DoR, DoD e
+  tarefa, nunca "pergunta em aberto N"; pergunta ainda aberta é citada pelo
+  `questionId`, sem inventar resposta. A leitura é LOCAL (Postgres direto, sem
+  HTTP no laço), dos 200 eventos mais recentes desses tipos, com teto de 10
+  decisões, 10 perguntas, 240 caracteres por item e 3 000 no texto. Sem
+  decisão nem pergunta aberta, ou com a leitura falhando, o turno segue sem a
+  mensagem, nunca cai. Só o `po` recebe.
+- **Onde:** `apps/engine/lib/engine/harness/decisoes_do_projeto.ex:34`
+  (`anexar`), `:49` (`texto`),
+  `apps/engine/lib/engine/session_events/event.ex:224`
+  (`list_types_for_project`),
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:707`
+  (`DecisoesDoProjeto`)
+- **Teste:** `apps/engine/test/engine/harness/decisoes_do_projeto_test.exs`
+  ("o turno do PO leva a decisão e só a pergunta AINDA aberta", "custo de
+  entrada tem teto"; falha: "sem decisões nem perguntas não acrescenta nada",
+  "leitura que falha deixa o turno sem a mensagem, sem queda")
+- **Origem:** AT-526
