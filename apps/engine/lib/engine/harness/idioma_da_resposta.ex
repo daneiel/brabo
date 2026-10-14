@@ -136,6 +136,46 @@ defmodule Engine.Harness.IdiomaDaResposta do
     propose_infra_pr
   )
 
+  # O reforço dos agentes de EXECUÇÃO (RN-878, AT-530): `dev-*` e `qa-*`
+  # abriam o turno em inglês ("I'll start by running…") num projeto pt-BR com
+  # a orientação de sempre no fim da lista. Turno sem autor humano, então a
+  # ressalva "salvo pedido do usuário" não tem a quem servir; no lugar dela, o
+  # texto diz que vale desde a PRIMEIRA frase, narração antes de ferramenta
+  # inclusive. O genérico só com código na forma curta (pior caso medido 30
+  # tokens); fora dela, a orientação de sempre, que já cabia no teto.
+  @textos_de_execucao %{
+    "pt-BR" =>
+      "Escreva tudo em português brasileiro (pt-BR) desde a primeira frase, inclusive a narração antes de cada ferramenta.",
+    "en" =>
+      "Write everything in English (en) from the first sentence, including narration before each tool call."
+  }
+
+  @doc "Agente de execução (`dev-*`, `qa-*`): recebe o reforço da RN-878."
+  def agente_de_execucao?(agent) when is_binary(agent),
+    do: String.starts_with?(agent, ["dev-", "qa-"])
+
+  def agente_de_execucao?(_), do: false
+
+  @doc """
+  A orientação de um agente de EXECUÇÃO (RN-878): vale desde a primeira frase.
+  Código fora da forma curta cai em `orientacao/1`, que cabe no teto.
+  """
+  @spec orientacao_de_execucao(term()) :: String.t() | nil
+  def orientacao_de_execucao(idioma) when is_binary(idioma) do
+    cond do
+      texto = Map.get(@textos_de_execucao, idioma) ->
+        texto
+
+      Regex.match?(@forma_curta, idioma) ->
+        "Write everything in the language with BCP-47 code #{idioma} from the first sentence, including narration before tool calls."
+
+      true ->
+        orientacao(idioma)
+    end
+  end
+
+  def orientacao_de_execucao(_), do: nil
+
   @doc "O teto de tamanho, em caracteres, que o teste usa como vigia dos 50 tokens."
   def teto_de_caracteres, do: 160
 
@@ -283,7 +323,11 @@ defmodule Engine.Harness.IdiomaDaResposta do
         end
 
       _ ->
-        project_id |> idioma_do_projeto(agent) |> orientacao()
+        idioma = idioma_do_projeto(project_id, agent)
+
+        if agente_de_execucao?(agent),
+          do: orientacao_de_execucao(idioma),
+          else: orientacao(idioma)
     end
   end
 
