@@ -6,6 +6,10 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- A tarefa bloqueada deixa de aparecer como "a fazer": a aba Histórias mostra
+  um selo de estado em cada tarefa ("Bloqueada", com o motivo, vence o
+  status), e o backlog que o Dev Lead lê marca a linha com `BLOQUEADA` e o
+  motivo (RN-887).
 - O engine passa a usar o `bandit` do commit `d88b219` de `mtrudel/bandit`,
   preso ao SHA, em vez da 1.12.5 da hex: a advisory EEF-CVE-2026-105659
   (GHSA-69m6-wcv4-rwcf, HIGH, HTTP/2) afeta toda release `>= 1.4.0` e a

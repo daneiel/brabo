@@ -9901,8 +9901,8 @@ nada: ausência de resposta não é prova de ausência de artefato, e disparar a
 reabriria a rechamada por outra porta. A cláusula de args inválidos também não
 dispara — ela não sabe qual é a story.
 
-- **Onde:** `apps/engine/lib/engine/agents/dev_lead_tools.ex:443`
-  (`run_assessment/2`, a leitura única do histórico) e `:505`
+- **Onde:** `apps/engine/lib/engine/agents/dev_lead_tools.ex:457`
+  (`run_assessment/2`, a leitura única do histórico) e `:519`
   (`disparar_appsec_se_preciso/3`, a guarda de idempotência);
   `apps/engine/lib/engine/gates/dispatcher.ex:29` (o callback) e `:86`
   (`Engine.Gates.Dispatcher.Live.run_appsec_design/2`);
@@ -19542,8 +19542,8 @@ OBRIGATÓRIAS da `coverageMatrix` (e portanto reprovar entrega).
   `apps/engine/lib/engine/gates/qa_estrategia_agent.ex:86` (`run`),
   `:104` (`token_budget_micros`), `:175` (`descrever_arquivos`);
   `apps/engine/lib/engine/gates/qa_automacao_agent.ex:189` (`com_o_plano`);
-  `apps/engine/lib/engine/agents/dev_lead_tools.ex:443` (`run_assessment`),
-  `:524` (`propor_parecer`);
+  `apps/engine/lib/engine/agents/dev_lead_tools.ex:457` (`run_assessment`),
+  `:538` (`propor_parecer`);
   `apps/engine/lib/engine/harness/artifact_schemas.ex:59` (`taskId`);
   `docs/gates.yml` (`qa-verificada`, `implementavel`); `docs/fluxo.yml`
   (`qa-estrategia`, `area-qa`, `dev-lead`)
@@ -21120,7 +21120,7 @@ decisão, fechados juntos:
   `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:84` (`execute`),
   `apps/api/src/application/use-cases/execution/execute-execution-plan.use-case.ts:89` (`execute`),
   `apps/api/src/application/use-cases/execution/activate-execution.use-case.ts:123` (`execute`),
-  `apps/engine/lib/engine/agents/dev_lead_tools.ex:573` (`resumo_do_plano`)
+  `apps/engine/lib/engine/agents/dev_lead_tools.ex:587` (`resumo_do_plano`)
 - **Teste:** `apps/web/src/lib/aprovacoes.test.ts` ("AT-371 — o verbo segue o
   estado da ação", "AT-381 — o plano mostra a estimativa de gasto"),
   `apps/web/src/components/ApprovalCard.test.tsx` ("open_adr_pr pendente"),
@@ -21696,7 +21696,7 @@ sem dizer qual.
   (`updateStoryRoute`), `:609` (`archiveStoryRoute`),
   `apps/engine/lib/engine/harness/tools/update_story.ex:45` (`run`),
   `apps/engine/lib/engine/harness/tools/archive_story.ex:38` (`run`),
-  `apps/web/src/routes/ProjectBacklogTab.tsx:59` (`motivoDeCorrecaoInerte`)
+  `apps/web/src/routes/ProjectBacklogTab.tsx:76` (`motivoDeCorrecaoInerte`)
 - **Teste:** `apps/api/test/application/use-cases/backlog/corrigir-historia.use-case.spec.ts`
   (feliz: título e arquivo com evento; falha: tarefa `in_progress`/`in_review`
   é 409 `historia_com_tarefa_em_execucao` sem escrita),
@@ -22950,7 +22950,7 @@ sem dizer qual.
   Executores o backlog só é lido com a ausência confirmada (query desligada
   com execução de pé, ritmo de projeto quando ligada, [RN-632](#rn-632)).
 - **Onde:** `apps/web/src/components/ReligarExecucao.tsx:23` (`ReligarExecucao`),
-  `apps/web/src/lib/execution.ts:10` (`contarTarefasPendentes`),
+  `apps/web/src/lib/execution.ts:21` (`contarTarefasPendentes`),
   `apps/web/src/routes/ProjectExecutorsTab.tsx:99` (`semExecucaoVigente`),
   `apps/web/src/routes/ProjectOverviewTab.tsx:506` (`semExecucaoVigente`)
 - **Teste:** `apps/web/src/routes/ProjectExecutorsTab.test.tsx` (religar a
@@ -23230,7 +23230,7 @@ sem dizer qual.
   Junto, o cartão do plano do Dev Lead ([RN-804](#rn-804)) abre a oferta em
   lote com texto próprio ("Ao aprovar o plano, a execução começa"), porque ali
   a execução ainda não começou ([RN-677](#rn-677)).
-- **Onde:** `apps/web/src/lib/execution.ts:26` (`contarTarefasAfetadasAoParar`),
+- **Onde:** `apps/web/src/lib/execution.ts:37` (`contarTarefasAfetadasAoParar`),
   `apps/web/src/components/PararExecucao.tsx:26` (`PararExecucao`),
   `apps/web/src/components/ModoAutomaticoDoTime.tsx:73` (`ModoAutomaticoDoTime`)
 - **Teste:** `apps/web/src/components/PararExecucao.test.tsx` ("RN-815 (AT-488):
@@ -24674,10 +24674,30 @@ sem dizer qual.
   a MESMA função da aba Histórias, movida para `lib/`.
 - **Onde:** `apps/web/src/components/PerguntasEmAberto.tsx:222`
   (`CartaoRespondido`); `apps/web/src/lib/correcao-de-historia.ts`
-  (`motivoDeCorrecaoInerte`); `apps/web/src/routes/ProjectBacklogTab.tsx:381`
+  (`motivoDeCorrecaoInerte`); `apps/web/src/routes/ProjectBacklogTab.tsx:398`
   (`useHistoriaInicial`)
 - **Teste:** `apps/web/src/components/PerguntasRespondidas.test.tsx` ("caminho
   feliz: história draft sem tarefa em execução ganha o link para a aba
   Histórias"; falha: "com tarefa em execução o botão não existe e o motivo é
   dito em texto")
 - **Origem:** AT-538
+
+### RN-887 — O bloqueio da tarefa é ortogonal ao status, e quem mostra lê os dois {#rn-887}
+
+- **Regra:** tarefa bloqueada continua `todo`/`in_progress` com
+  `tasks.blocked = true` (e `blocked_reason`/`blocked_origin`) — não há status
+  `blocked` no enum, por decisão do dono (14/10). Quem CONTA ou MOSTRA tarefa
+  lê os dois campos, e `blocked` vence `status`: a aba Histórias mostra o selo
+  "Bloqueada" (tom de perigo) com o motivo em texto, e os demais pelo status
+  (a fazer, em curso, em revisão, concluída); a lista de tarefas do backlog que
+  o Dev Lead lê marca a linha com `| BLOQUEADA: <motivo, até 120 caracteres>`,
+  e a tarefa segue na lista. Claim, desbloqueio e retomada não mudam.
+- **Onde:** `apps/web/src/lib/execution.ts:10` (`estadoDaTarefa`);
+  `apps/web/src/routes/ProjectBacklogTab.tsx` (o selo da lista de tarefas);
+  `apps/engine/lib/engine/agents/dev_lead_tools.ex:410` (`bloqueio`)
+- **Teste:** `apps/web/src/lib/execution.test.ts` ("blocked vence o status";
+  falha: "sem bloqueio, o status"); `apps/web/src/routes/ProjectBacklogTab.test.tsx`
+  ("a bloqueada mostra \"Bloqueada\" e o motivo, sem o selo \"a fazer\"");
+  `apps/engine/test/engine/agents/dev_lead_tools_test.exs` ("a tarefa
+  bloqueada diz BLOQUEADA e o motivo; a todo normal não")
+- **Origem:** AT-536

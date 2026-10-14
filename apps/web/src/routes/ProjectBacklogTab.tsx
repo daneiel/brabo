@@ -14,6 +14,7 @@ import {
   updateStoryTitle,
 } from '../lib/api-client';
 import { roleAtLeast } from '../lib/roles';
+import { estadoDaTarefa, type EstadoDaTarefa } from '../lib/execution';
 import { motivoDeCorrecaoInerte } from '../lib/correcao-de-historia';
 import { useHistoriaInicial } from '../lib/historia-inicial';
 import { Input } from '../components/ui/Input';
@@ -44,6 +45,22 @@ const STATUS_LABEL_KEY: Record<StoryStatus, string> = {
   ready: 'statusLabel.ready',
   in_progress: 'statusLabel.inProgress',
   done: 'statusLabel.done',
+};
+
+const TASK_STATE_TONE: Record<EstadoDaTarefa, BadgeTone> = {
+  blocked: 'danger',
+  todo: 'muted',
+  in_progress: 'warning',
+  in_review: 'accent',
+  done: 'success',
+};
+
+const TASK_STATE_LABEL_KEY: Record<EstadoDaTarefa, string> = {
+  blocked: 'taskState.blocked',
+  todo: 'taskState.todo',
+  in_progress: 'taskState.inProgress',
+  in_review: 'taskState.inReview',
+  done: 'taskState.done',
 };
 
 /**
@@ -487,8 +504,14 @@ function StoryNode({
           {story.tasks.length > 0 && (
             <ul className={styles.tasks}>
               {story.tasks.map((task) => (
-                <li key={task.id} className={styles.task}>
+                <li key={task.id} className={styles.task} data-task-state={estadoDaTarefa(task)}>
+                  <Badge tone={TASK_STATE_TONE[estadoDaTarefa(task)]}>
+                    {t(TASK_STATE_LABEL_KEY[estadoDaTarefa(task)])}
+                  </Badge>{' '}
                   {task.title}
+                  {task.blocked && task.blockedReason && (
+                    <div className={styles.taskBlockedReason}>{task.blockedReason}</div>
+                  )}
                 </li>
               ))}
             </ul>
