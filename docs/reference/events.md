@@ -436,7 +436,7 @@ Extracted from the emission points: **110 identifiers**, of which **3** are not 
 - `artifact.decision_record` <sub>(apps/api/src/application/use-cases/backlog/perguntas-em-aberto.use-case.ts)</sub>
 - `artifact.insight` <sub>(apps/engine/lib/engine/harness/tools/emit_insight.ex)</sub>
 - `artifact.module_map` <sub>(apps/api/src/application/use-cases/architecture/create-module-map.use-case.ts)</sub>
-- `artifact.open_question` — ⚠️ **not described above** <sub>(apps/engine/lib/engine/harness/tools/declare_open_question.ex)</sub>
+- `artifact.open_question` — ⚠️ **not described above** <sub>(apps/engine/lib/engine/harness/decisoes_do_projeto.ex)</sub>
 - `artifact.plano_de_teste` <sub>(apps/engine/lib/engine/gates/qa_lead_server.ex)</sub>
 - `artifact.product_brief` <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub>
 - `artifact.project_image` <sub>(apps/engine/lib/engine/harness/ambiente_do_agente.ex)</sub>
