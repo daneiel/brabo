@@ -168,6 +168,22 @@ defmodule Engine.Gates.RecorteDaTarefaTest do
       assert RecorteDaTarefa.toca_ponto_de_entrada?(%{"title" => "server.ts"})
     end
 
+    test "RN-865: tarefa que diz só endpoint ou verbo com caminho recebe a seção" do
+      criar = %{
+        "title" => "Implementar criação de link com código aleatório e validação de URL",
+        "description" => "Endpoint protegido que gera código de 7 caracteres."
+      }
+
+      painel = %{"title" => "Gravar cliques", "description" => "expõe GET /panel com o histórico"}
+
+      for task <- [criar, painel] do
+        assert RecorteDaTarefa.toca_ponto_de_entrada?(task)
+        texto = RecorteDaTarefa.texto(%{task: task})
+        assert texto =~ "rota que o CÓDIGO registra"
+        assert texto =~ "rota faltando é ITEM, nunca observação"
+      end
+    end
+
     test "falha: tarefa sem rota não recebe a seção" do
       texto = RecorteDaTarefa.texto(%{task: %{"title" => "Modelar tabela"}})
       refute texto =~ "openapi.json"

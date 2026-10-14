@@ -96,7 +96,11 @@ defmodule Engine.Gates.RecorteDaTarefa do
   # o próprio app. Quando a tarefa toca o ponto de entrada, a fiação ou o README
   # de execução, o recorte exige evidência de que o entrypoint REAL sobe e
   # responde; a ausência dela vai para `itens`.
-  @ponto_de_entrada ~r/(server\.[jt]s|main\.[jt]s|index\.[jt]s|entrypoint|ponto de entrada|app\.listen|\bREADME|npm start|pnpm start|\bstart\b|\bfia[cç][aã]o|\bmigra[cç][aã]o|\brotas?\b|\broutes?\b)/iu
+  # RN-865 (AT-527): "endpoint" e verbo HTTP com caminho também são rota. No
+  # TP-01 as tarefas de `POST /links` e `GET /panel` diziam só "Endpoint
+  # protegido", a régua não casava, e nem o dev recebeu a cláusula do OpenAPI
+  # nem o QA a conferência — as duas rotas ficaram fora do `/openapi.json`.
+  @ponto_de_entrada ~r/(server\.[jt]s|main\.[jt]s|index\.[jt]s|entrypoint|ponto de entrada|app\.listen|\bREADME|npm start|pnpm start|\bstart\b|\bfia[cç][aã]o|\bmigra[cç][aã]o|\brotas?\b|\broutes?\b|\bendpoints?\b|\b(GET|POST|PUT|PATCH|DELETE)\s+\/)/iu
 
   @doc """
   A tarefa toca ponto de entrada, fiação ou rotas? Régua ÚNICA, usada pelo
@@ -135,7 +139,9 @@ defmodule Engine.Gates.RecorteDaTarefa do
       `node -e "fetch(...)"`) e encerre o GRUPO de processos ao fim. Rota que
       não responde, ou JSON que não é OpenAPI 3, vai a `itens`. Cada rota da
       seção "Rotas HTTP" do README precisa estar em `paths` do `/openapi.json`
-      servido (com o método): rota faltando é ITEM, nunca observação. O
+      servido (com o método), e também cada rota que o CÓDIGO registra
+      (procure o registro de rotas, ex.: `app.get(`, `app.post(`, `router.`):
+      rota faltando é ITEM, nunca observação. O
       `docker compose up` real cite no `resumo` como "provado só na máquina do
       usuário", nunca em `itens`.
       """,
