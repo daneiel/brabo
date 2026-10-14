@@ -271,7 +271,11 @@
       "responder": "Answer",
       "soOAutor": "Only the person who created the session where the question was asked can answer it.",
       "erro": "The answer could not be saved.",
-      "recorte": "Showing {{mostradas}} of {{total}} questions."
+      "recorte": "Showing {{mostradas}} of {{total}} questions.",
+      "respondida": "Answered. The answer was saved as a decision.",
+      "corrigir": "Fix the story",
+      "corrigirHistoria": "Affected story: {{titulo}}",
+      "dispensar": "Dismiss"
     }
   },
   "mergearNoChat": {

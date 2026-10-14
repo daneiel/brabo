@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import { answerOpenQuestion, mensagemDaApi } from '../lib/api-client';
-import type { OpenQuestion, Task } from '../lib/api-types';
+import type { OpenQuestion, Story, Task } from '../lib/api-types';
+import { motivoDeCorrecaoInerte } from '../lib/correcao-de-historia';
 import { nomeDoAgente } from '../lib/agents';
 import { userIdDaSessao } from '../lib/auth';
 import {
@@ -23,6 +24,17 @@ interface PerguntasEmAbertoProps {
   total: number;
   /** As tarefas do backlog, para nomear a tarefa que espera a resposta. */
   tarefas?: readonly Task[];
+  /**
+   * RN-884 (AT-538): as perguntas que ESTA tela respondeu, guardadas por quem
+   * monta a fila (a releitura as tira da lista da api), e as histórias do
+   * backlog, para saber se a afetada ainda é corrigível.
+   */
+  respondidas?: readonly OpenQuestion[];
+  aoResponder?: (pergunta: OpenQuestion) => void;
+  aoDispensar?: (questionId: string) => void;
+  historias?: readonly Story[];
+  /** `developer` no endpoint de correção (RN-727, RN-102). */
+  podeCorrigir?: boolean;
 }
 
 /**
@@ -32,9 +44,21 @@ interface PerguntasEmAbertoProps {
  * o gate de QA estacionou por esta pergunta aparece aqui como "esperando sua
  * resposta" (RN-860).
  */
-export function PerguntasEmAberto({ projectId, perguntas, total, tarefas }: PerguntasEmAbertoProps) {
+export function PerguntasEmAberto({
+  projectId,
+  perguntas,
+  total,
+  tarefas,
+  respondidas = [],
+  aoResponder,
+  aoDispensar,
+  historias,
+  podeCorrigir = false,
+}: PerguntasEmAbertoProps) {
   const { t } = useTranslation('sessionPage');
-  if (perguntas.length === 0) return null;
+  const abertas = new Set(perguntas.map((p) => p.questionId));
+  const jaRespondidas = respondidas.filter((p) => !abertas.has(p.questionId));
+  if (perguntas.length === 0 && jaRespondidas.length === 0) return null;
   return (
     <section
       id={ID_DA_FILA_DE_PERGUNTAS}
@@ -47,7 +71,23 @@ export function PerguntasEmAberto({ projectId, perguntas, total, tarefas }: Perg
         <span className={styles.contagem}>{total}</span>
       </h4>
       {perguntas.map((p) => (
-        <CartaoDaPergunta key={p.questionId} projectId={projectId} pergunta={p} tarefas={tarefas} />
+        <CartaoDaPergunta
+          key={p.questionId}
+          projectId={projectId}
+          pergunta={p}
+          tarefas={tarefas}
+          aoResponder={aoResponder}
+        />
+      ))}
+      {jaRespondidas.map((p) => (
+        <CartaoRespondido
+          key={p.questionId}
+          projectId={projectId}
+          pergunta={p}
+          historias={historias}
+          podeCorrigir={podeCorrigir}
+          aoDispensar={aoDispensar}
+        />
       ))}
       {total > perguntas.length && (
         <p className={styles.recorte}>
@@ -62,10 +102,12 @@ function CartaoDaPergunta({
   projectId,
   pergunta,
   tarefas,
+  aoResponder,
 }: {
   projectId: string;
   pergunta: OpenQuestion;
   tarefas?: readonly Task[];
+  aoResponder?: (pergunta: OpenQuestion) => void;
 }) {
   const { t } = useTranslation('sessionPage');
   const queryClient = useQueryClient();
@@ -91,6 +133,7 @@ function CartaoDaPergunta({
     setErro(null);
     try {
       await answerOpenQuestion(projectId, pergunta.questionId, corpo);
+      aoResponder?.(pergunta);
       // Sucesso: a releitura tira a pergunta da fila.
       void queryClient.invalidateQueries({ queryKey: ['open-questions', projectId] });
       void queryClient.invalidateQueries({ queryKey: ['backlog', projectId] });
@@ -163,6 +206,69 @@ function CartaoDaPergunta({
         <p className={styles.erro} role="alert">
           {erro}
         </p>
+      )}
+    </div>
+  );
+}
+
+/**
+ * RN-884 (AT-538, decisão do dono de 14/10): a pergunta respondida AQUI fica
+ * na fila como cartão respondido, e cada história afetada que ainda é
+ * corrigível (`draft`, sem tarefa em execução — a régua da RN-727) ganha
+ * "Corrigir a história", que leva à aba Histórias com ela aberta. NÃO aciona
+ * o PO. Não corrigível: o botão não existe e o motivo é dito em TEXTO
+ * (RN-102). História que o backlog não traz não é nomeada nem oferecida.
+ */
+export function CartaoRespondido({
+  projectId,
+  pergunta,
+  historias,
+  podeCorrigir,
+  aoDispensar,
+}: {
+  projectId: string;
+  pergunta: OpenQuestion;
+  historias?: readonly Story[];
+  podeCorrigir: boolean;
+  aoDispensar?: (questionId: string) => void;
+}) {
+  const { t } = useTranslation('sessionPage');
+  const { t: tBacklog } = useTranslation('backlog');
+  const afetadas = pergunta.afeta.historias
+    .map((id) => historias?.find((s) => s.id === id))
+    .filter((s): s is Story => !!s);
+  return (
+    <div className={styles.grupo} data-testid="pergunta-respondida">
+      <p>{pergunta.pergunta}</p>
+      <p className={styles.nota}>{t('pendencias.perguntas.respondida')}</p>
+      {afetadas.map((story) => {
+        const inerte = motivoDeCorrecaoInerte(story, podeCorrigir);
+        return (
+          <div key={story.id} className={styles.acoesDaLinha}>
+            <span className={styles.nota}>
+              {t('pendencias.perguntas.corrigirHistoria', { titulo: story.title })}
+            </span>
+            {inerte ? (
+              <span className={styles.nota} data-testid="corrigir-historia-inerte">
+                {tBacklog(inerte.chave, { count: inerte.count })}
+              </span>
+            ) : (
+              <a
+                href={`/projects/${projectId}?tab=backlog&historia=${encodeURIComponent(story.id)}`}
+                data-testid="corrigir-historia"
+              >
+                {t('pendencias.perguntas.corrigir')}
+              </a>
+            )}
+          </div>
+        );
+      })}
+      {aoDispensar && (
+        <div className={styles.acoesDaLinha}>
+          <Button variant="ghost" onClick={() => aoDispensar(pergunta.questionId)}>
+            {t('pendencias.perguntas.dispensar')}
+          </Button>
+        </div>
       )}
     </div>
   );

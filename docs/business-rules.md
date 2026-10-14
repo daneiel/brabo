@@ -17743,7 +17743,7 @@ fica. Ativação recusada não navega e mostra a frase da api. Quem navega é a
 ROTA (`irParaSessao`, o `navigate` do router): a tela não depende do router.
 
 - **Onde:** `apps/web/src/lib/session-acoes-de-handoff.ts:147`
-  (`handleActivateExecution`); `apps/web/src/router.tsx:332` (`irParaSessao`)
+  (`handleActivateExecution`); `apps/web/src/router.tsx:339` (`irParaSessao`)
 - **Teste:** `apps/web/src/routes/SessionPage.handoff-obsoleto.test.tsx`
   (navega para o `sessionId` devolvido, com aviso; recusa não navega — caso de
   falha; sem quem navegue, só avisa)
@@ -21506,7 +21506,7 @@ O kickoff do PO diz as três coisas.
   pegam as tarefas como estão ([RN-677](#rn-677)).
 - **Onde:** `apps/web/src/lib/mensagem-otimista.ts:14` (`otimistaJaNoLog`),
   `apps/web/src/lib/mensagem-otimista.ts:22` (`nomeDaMensagemOtimista`),
-  `apps/web/src/routes/SessionPage.tsx:778` (`otimistaJaNoLog`),
+  `apps/web/src/routes/SessionPage.tsx:785` (`otimistaJaNoLog`),
   `apps/web/src/routes/session-timeline-montagem.tsx:609`
   (`handleActivateExecution`)
 - **Teste:** `apps/web/src/lib/mensagem-otimista.test.ts` (feliz: o id no log
@@ -21696,7 +21696,7 @@ sem dizer qual.
   (`updateStoryRoute`), `:609` (`archiveStoryRoute`),
   `apps/engine/lib/engine/harness/tools/update_story.ex:45` (`run`),
   `apps/engine/lib/engine/harness/tools/archive_story.ex:38` (`run`),
-  `apps/web/src/routes/ProjectBacklogTab.tsx:64` (`motivoDeCorrecaoInerte`)
+  `apps/web/src/routes/ProjectBacklogTab.tsx:59` (`motivoDeCorrecaoInerte`)
 - **Teste:** `apps/api/test/application/use-cases/backlog/corrigir-historia.use-case.spec.ts`
   (feliz: título e arquivo com evento; falha: tarefa `in_progress`/`in_review`
   é 409 `historia_com_tarefa_em_execucao` sem escrita),
@@ -23897,7 +23897,7 @@ sem dizer qual.
   MONTADO: com o bloco recolhido (o `Disclosure` desmonta o conteúdo), o fio
   mostra o cartão. Nenhum endpoint nem teto muda.
 - **Onde:** `apps/web/src/lib/acoes-no-bloco.ts:48` (`useAcaoEstaNoBloco`),
-  `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:450` (`useRegistrarAcoesNoBloco`),
+  `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:460` (`useRegistrarAcoesNoBloco`),
   `apps/web/src/components/CartaoOuReferenciaNoFio.tsx:11` (`CartaoOuReferenciaNoFio`),
   `apps/web/src/routes/session-timeline-montagem.tsx:1137` (`CartaoOuReferenciaNoFio`)
 - **Teste:** `apps/web/src/components/CartaoOuReferenciaNoFio.test.tsx`,
@@ -24336,8 +24336,8 @@ sem dizer qual.
   e de "Confirmar arquitetura pronta", o composer avisa "N perguntas em
   aberto" com atalho até a fila, lendo a MESMA query — só avisa, os botões
   seguem habilitados (ADR 0214).
-- **Onde:** `apps/web/src/components/PerguntasEmAberto.tsx:35`
-  (`PerguntasEmAberto`), `:75` (`eAutor`), `:176`
+- **Onde:** `apps/web/src/components/PerguntasEmAberto.tsx:47`
+  (`PerguntasEmAberto`), `:117` (`eAutor`), `:282`
   (`AvisoDePerguntasEmAberto`), `apps/web/src/lib/canal-vivo.ts:135`
   (`alvosDoEvento`)
 - **Teste:** `apps/web/src/components/PerguntasEmAberto.test.tsx` ("fila
@@ -24625,3 +24625,59 @@ sem dizer qual.
   ("agente de execução: vale desde a primeira frase, dentro do teto"; falha:
   "agente de execução sem idioma resolvido: nada é acrescentado")
 - **Origem:** AT-530
+
+### RN-882 — O composer da Sessão não perde tecla na digitação rápida {#rn-882}
+
+- **Regra:** o campo do composer é dono do PRÓPRIO valor enquanto se digita:
+  o valor desenhado é o estado local, atualizado no `onChange`, e o `draft`
+  da página recebe cada valor (envio, fila e botões seguem lendo dele). Um
+  `draft` atrasado que volta como prop NUNCA reescreve o campo — só é adotado
+  o valor que o campo não emitiu (esvaziar depois do envio, o texto devolvido
+  na falha, o exemplo do convite). Antes o `<textarea>` era controlado direto
+  pelo `draft` do `SessionPage`, e a re-renderização atrasada da página
+  reescrevia o campo com um valor mais velho: 991 de 1 010 caracteres no
+  TP-01, com um textarea comum na mesma página recebendo 249/249. Enter,
+  Shift+Enter e a composição de acento (RN-830) não mudam.
+- **Onde:** `apps/web/src/components/CampoDoComposer.tsx:21` (`CampoDoComposer`);
+  `apps/web/src/routes/SessionComposer.tsx`
+- **Teste:** `apps/web/src/components/CampoDoComposer.test.tsx` ("digitação
+  rápida com a página atrasada não perde tecla nenhuma"; falha/borda: "a
+  escrita de fora (esvaziar depois do envio) é adotada pelo campo")
+- **Origem:** AT-533
+
+### RN-883 — A oferta em lote do modo automático também no chat da Sessão {#rn-883}
+
+- **Regra:** com a sessão ativa e com execução (`sessaoTemExecucao`), o chat
+  mostra a MESMA oferta em lote da aba Executores (RN-661) — o mesmo
+  componente, o mesmo endpoint (um PUT por agente), o mesmo texto do que o
+  modo automático não libera, e nada é gravado sem o clique. Os agentes são os
+  `dev-<modulo>` que entraram na sessão inteira mais os subagentes de gate
+  (`agentesDaOfertaEmLote`); papel `maintainer` (o do endpoint). Sem execução,
+  nada aparece e `agent_autonomy` nem é lido. Some quando todos já estão em
+  automático.
+- **Onde:** `apps/web/src/components/ModoAutomaticoNoChat.tsx:22`
+  (`ModoAutomaticoNoChat`), `:18` (`agentesDoChat`)
+- **Teste:** `apps/web/src/components/ModoAutomaticoNoChat.test.tsx` ("caminho
+  feliz: com execução, a oferta aparece e só o clique grava"; falha: "sem
+  execução, nada aparece e nem a leitura acontece")
+- **Origem:** AT-537
+
+### RN-884 — A pergunta respondida oferece "Corrigir a história" {#rn-884}
+
+- **Regra:** a pergunta respondida pelo painel "Perguntas em aberto" do chat
+  (RN-861) fica como cartão respondido até ser dispensada, e cada história de
+  `afeta.historias` que o backlog traz ganha "Corrigir a história" quando ainda
+  é corrigível pela régua da RN-727 (`draft`, sem tarefa
+  `in_progress`/`in_review`, papel `developer`) — o link leva à aba Histórias
+  com ela aberta (`?historia=`). Não aciona o PO (decisão do dono, 14/10). Não
+  corrigível: o link não existe e o motivo é dito em texto (RN-102). A régua é
+  a MESMA função da aba Histórias, movida para `lib/`.
+- **Onde:** `apps/web/src/components/PerguntasEmAberto.tsx:222`
+  (`CartaoRespondido`); `apps/web/src/lib/correcao-de-historia.ts`
+  (`motivoDeCorrecaoInerte`); `apps/web/src/routes/ProjectBacklogTab.tsx:381`
+  (`useHistoriaInicial`)
+- **Teste:** `apps/web/src/components/PerguntasRespondidas.test.tsx` ("caminho
+  feliz: história draft sem tarefa em execução ganha o link para a aba
+  Histórias"; falha: "com tarefa em execução o botão não existe e o motivo é
+  dito em texto")
+- **Origem:** AT-538
