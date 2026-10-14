@@ -6,6 +6,9 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- O aviso do gate estacionado no fio deixa de dizer "parado mais de 2 h"
+  quando o motivo é uma pergunta em aberto: diz que o gate espera a resposta e
+  aponta o cartão "Perguntas em aberto" (RN-867, AT-528).
 - A task bloqueada por falha passageira de rede ou do provedor (DNS, conexão
   caída, 5xx/429) volta sozinha em até 3 tentativas, depois de 1, 3 e 10 min,
   e o dev agent pausa 1 min em vez de bloquear a fila inteira; crédito
