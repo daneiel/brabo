@@ -54,11 +54,36 @@ describe('cicloInterrompido (RN-823)', () => {
   });
 });
 
+describe('cicloEstacionado: o motivo gravado (RN-867)', () => {
+  it('o resgate por tempo grava idadeSegundos e lê como tempo', () => {
+    const e = evento('gate.rescue_parked', {
+      taskId: 't1',
+      gate: 'qa',
+      idadeSegundos: 7300,
+      motivo: 'ciclo parado há mais de 120 min sem atividade',
+    });
+    expect(cicloEstacionado(e)?.motivo).toBe('tempo');
+  });
+
+  it('a pergunta em aberto não tem idadeSegundos e não fala em 2 h', () => {
+    const e = evento('gate.rescue_parked', {
+      taskId: 't1',
+      gate: 'qa',
+      motivo: 'esperando a decisão do usuário numa pergunta em aberto; a resposta retoma o gate',
+    });
+    expect(cicloEstacionado(e)?.motivo).toBe('pergunta');
+    const texto = i18n.t('sessionPage:gateEstacionado.avisoPergunta', { gate: 'qa', taskId: 't1' });
+    expect(texto).toContain('Perguntas em aberto');
+    expect(texto).not.toContain('2 h');
+  });
+});
+
 describe('RetomarGateEstacionado (RN-724)', () => {
   it('lê o ciclo do gate.rescue_parked; outro evento não tem botão', () => {
     expect(cicloEstacionado(evento('gate.rescue_parked', { taskId: 't1', gate: 'qa' }))).toEqual({
       taskId: 't1',
       gate: 'qa',
+      motivo: 'pergunta',
     });
     expect(cicloEstacionado(evento('gate.opened', { taskId: 't1', gate: 'qa' }))).toBeNull();
     expect(cicloEstacionado(evento('gate.rescue_parked', {}))).toBeNull();
