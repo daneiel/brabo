@@ -19537,11 +19537,11 @@ decidido aqui: se os critérios executáveis do plano devem virar linhas
 OBRIGATÓRIAS da `coverageMatrix` (e portanto reprovar entrega).
 
 - **Onde:** `apps/engine/lib/engine/gates/qa_lead_server.ex:190` (`plano_de_teste_da_entrega`),
-  `:628` (`plano_de_teste_da_entrega`), `:629` (`plano_ja_emitido`),
-  `:634` (`arquivos_alterados`);
+  `:715` (`plano_de_teste_da_entrega`), `:716` (`plano_ja_emitido`),
+  `:721` (`arquivos_alterados`);
   `apps/engine/lib/engine/gates/qa_estrategia_agent.ex:86` (`run`),
   `:104` (`token_budget_micros`), `:175` (`descrever_arquivos`);
-  `apps/engine/lib/engine/gates/qa_automacao_agent.ex:173` (`com_o_plano`);
+  `apps/engine/lib/engine/gates/qa_automacao_agent.ex:189` (`com_o_plano`);
   `apps/engine/lib/engine/agents/dev_lead_tools.ex:443` (`run_assessment`),
   `:524` (`propor_parecer`);
   `apps/engine/lib/engine/harness/artifact_schemas.ex:59` (`taskId`);
@@ -22352,9 +22352,13 @@ sem dizer qual.
   esta última é OBSERVAÇÃO no `resumo`, fora de `itens`, salvo regra que a
   exija. Continua régua de prompt: nenhuma reprovação nova no código.
 - **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:18` (`texto`),
-  `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:78` (`secao_da_forma`),
+  `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:82` (`secao_da_forma`),
   `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:195`
   (`tarefasIrmas`) e `apps/engine/lib/engine/gates/qa_automacao_agent.ex:170`
+
+  `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:82` (`secao_da_forma`),
+  `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:195`
+  (`tarefasIrmas`) e `apps/engine/lib/engine/gates/qa_automacao_agent.ex:186`
   (`com_o_recorte`)
 - **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs` (desde
   a AT-479 também "regra que quantifica por item pede a conferência da forma da
@@ -22794,6 +22798,9 @@ sem dizer qual.
   contra as rotas citadas nas histórias ao declará-lo.
 - **Onde:** `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:255`
   (`moduloDoContrato`), `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:66`
+
+- **Onde:** `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:255`
+  (`moduloDoContrato`), `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:70`
   (`secao_do_contrato`)
 - **Teste:** `apps/api/test/application/use-cases/execution/get-dev-task-context.use-case.spec.ts`
   (o contrato do módulo da história; sem contrato ou módulo ambíguo, `null`) e
@@ -23028,7 +23035,7 @@ sem dizer qual.
   com flag antes do script (`pnpm --filter x test`), flags de CLI do próprio
   projeto e comando que não é de Node.
 - **Onde:** `apps/engine/lib/engine/gates/conferencia_do_readme.ex:28`
-  (`conferir`), `apps/engine/lib/engine/gates/qa_lead_server.ex:689`
+  (`conferir`), `apps/engine/lib/engine/gates/qa_lead_server.ex:776`
   (`conferencia_do_readme`)
 - **Teste:** `apps/engine/test/engine/gates/conferencia_do_readme_test.exs`
 - **Origem:** AT-475
@@ -23285,7 +23292,7 @@ sem dizer qual.
   externo dos gates (`docs/gates.yml`) e o código do `emit_qa_verdict` não
   mudam, e nenhum gate novo nasce. Tarefa que não toca nada disso não ganha a
   seção.
-- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:117`
+- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:121`
   (`secao_do_ponto_de_entrada`)
 - **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs`
   ("tarefa que toca a fiação exige evidência do ponto de entrada real" e "tarefa
@@ -23321,7 +23328,7 @@ sem dizer qual.
   roteamento de container dos três modos — um `pkill` no harness precisaria
   de um segundo caminho de execução por modo. Régua de prompt; o contrato dos
   gates não muda.
-- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:158`
+- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:162`
   (`secao_do_ambiente_limpo`)
 - **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs`
   ("RN-817: pede ambiente limpo, encerrar o grupo e pulado como observação")
@@ -23338,7 +23345,7 @@ sem dizer qual.
   bater numa rota do processo de pé — e o que NÃO cabe ali: construir imagem
   Docker, `docker compose`, rede externa. Exigência desse segundo tipo nunca
   vai para `itens`; vai ao `resumo` como observação. Régua de prompt.
-- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:117`
+- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:121`
   (`secao_do_ponto_de_entrada`)
 - **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs`
   ("RN-818: com ponto de entrada diz o que conta e o que não cabe" e "RN-818:
@@ -24007,7 +24014,7 @@ sem dizer qual.
   cláusula (a mensagem é fixada e volta a cada iteração).
 - **Onde:** `apps/engine/lib/engine/dev/dev_agent_server.ex:636`
   (`clausula_de_openapi`),
-  `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:109`
+  `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:113`
   (`toca_ponto_de_entrada?`)
 - **Teste:** `apps/engine/test/engine/dev/report_done_instrucao_test.exs`
   ("RN-853: tarefa que toca rotas pede /openapi.json e /docs"; falha: "RN-853
@@ -24023,7 +24030,7 @@ sem dizer qual.
   `node -e fetch`) e encerra o grupo de processos ([RN-817](#rn-817)). Falha
   vai a `itens`; o `docker compose up` real fica no `resumo` como "provado só
   na máquina do usuário".
-- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:117`
+- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:121`
   (`secao_do_ponto_de_entrada`)
 - **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs`
   ("tarefa que toca rotas pede /openapi.json e /docs, compose em resumo";
@@ -24277,9 +24284,9 @@ sem dizer qual.
   partir de uma resposta ([ADR 0214](adr/0214-pergunta-em-aberto-vira-pendencia.md)).
 - **Onde:** `apps/engine/lib/engine/harness/tools/declare_open_question.ex:54` (`run`),
   `apps/engine/lib/engine/harness/fluxo_do_time.ex:113` (`frase_da_pergunta`),
-  `apps/engine/lib/engine/gates/tools/emit_qa_verdict.ex:73` (`run`),
+  `apps/engine/lib/engine/gates/tools/emit_qa_verdict.ex:77` (`run`),
   `apps/engine/lib/engine/gates/qa_lead.ex:89` (`consolidar_decisao`),
-  `apps/engine/lib/engine/gates/qa_lead_server.ex:535` (`estacionar_por_decisao`),
+  `apps/engine/lib/engine/gates/qa_lead_server.ex:569` (`estacionar_por_decisao`),
   `apps/engine/lib/engine/dev/context_builder.ex:106` (`secao_de_decisoes`)
 - **Teste:** `apps/engine/test/engine/harness/perguntas_em_aberto_test.exs`
   ("válida grava artifact.open_question…"; "inválida é recusa nomeada…";
@@ -24506,4 +24513,44 @@ sem dizer qual.
   ("o turno do PO leva a decisão e só a pergunta AINDA aberta", "custo de
   entrada tem teto"; falha: "sem decisões nem perguntas não acrescenta nada",
   "leitura que falha deixa o turno sem a mensagem, sem queda")
+
+### RN-876 — O `needs_user_decision` recusado pela api volta ao QA, e só o aceite estaciona o gate {#rn-876}
+
+- **Regra:** o gate de QA só ESTACIONA (`gate.rescue_parked`) quando a api
+  aceita o veredito `needs_user_decision` com `nextAction: "await_user"`. Se a
+  api RECUSA (400, 404, ou o 409 `pergunta_ja_respondida`), a recusa volta ao
+  laço da QA de Automação como mensagem nova (RN-163: erro é entrada do laço),
+  retomando o MESMO contexto em que ela emitiu — no 409, com a decisão já
+  tomada para o QA aplicar em vez de perguntar de novo. As outras delegações
+  não rodam de novo. A volta conta no teto de iterações do próprio laço;
+  esgotado, a tarefa é bloqueada com o motivo e a origem `modelo` (RN-059),
+  nunca estacionada em silêncio. Antes, o retorno da api era descartado e o
+  gate estacionava sem pergunta no fio (medido: `openQuestionId: "1"`, 400 do
+  `@IsUUID`). A ferramenta `emit_qa_verdict` recusa, DENTRO do laço e antes da
+  api, `openQuestionId` que não é uuid.
+- **Onde:** `apps/engine/lib/engine/gates/qa_lead_server.ex:575`
+  (`devolver_ao_qa`), `apps/engine/lib/engine/gates/qa_lead_server.ex:308`
+  (`devolver_ao_qa`), `apps/engine/lib/engine/gates/qa_lead_server.ex:671`
+  (`texto_da_recusa`), `apps/engine/lib/engine/gates/qa_automacao_agent.ex:77`
+  (`devolver`), `apps/engine/lib/engine/gates/tools/emit_qa_verdict.ex:75`
+  (`uuid`)
+- **Teste:** `apps/engine/test/engine/gates/qa_lead_server_test.exs` ("400:
+  nada estaciona, o QA recebe o motivo e uma nova volta acontece"; "409 no
+  laço: a volta seguinte do QA lê a decisão"; falha: "teto esgotado depois da
+  recusa: bloqueio narrado, nunca estacionamento"),
+  `apps/engine/test/engine/harness/perguntas_em_aberto_test.exs` ("AT-526
+  (RN-876): openQuestionId que não é uuid é recusa nomeada; uuid passa")
+- **Origem:** AT-526
+
+### RN-877 — O recorte do QA manda conferir as decisões antes de pedir decisão {#rn-877}
+
+- **Regra:** a instrução do recorte do QA diz que, antes de
+  `needs_user_decision`, ele confere as decisões listadas; requisito que uma
+  delas já responde não é pergunta e a decisão se aplica. `openQuestionId` só
+  com o uuid de uma pergunta ABERTA; sem ele, a pergunta nova vai em
+  `pergunta`/`sugestao`. É lembrete de leitura: não muda a régua do veredito.
+- **Onde:** `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:20` (`texto`)
+- **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs`
+  ("AT-526 (RN-877): manda conferir as decisões antes de needs_user_decision";
+  a falha da instrução é coberta pelo teste da RN-876 da ferramenta)
 - **Origem:** AT-526

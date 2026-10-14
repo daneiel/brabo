@@ -6,6 +6,11 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- O gate de QA deixa de estacionar quando a api recusa a pergunta do
+  `needs_user_decision` (id que não é uuid, pergunta inexistente ou já
+  respondida): a recusa volta ao QA, que tenta de novo ou aplica a decisão já
+  tomada; teto esgotado bloqueia a tarefa com o motivo. O recorte do QA manda
+  conferir as decisões antes de perguntar (RN-876, RN-877, AT-526).
 - O aviso do gate estacionado no fio deixa de dizer "parado mais de 2 h"
   quando o motivo é uma pergunta em aberto: diz que o gate espera a resposta e
   aponta o cartão "Perguntas em aberto" (RN-867, AT-528).

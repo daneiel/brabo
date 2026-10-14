@@ -19,6 +19,12 @@ defmodule Engine.Gates.RecorteDaTarefaTest do
     assert texto =~ "NÃO reprova esta entrega"
   end
 
+  test "AT-526 (RN-877): manda conferir as decisões antes de needs_user_decision" do
+    texto = RecorteDaTarefa.texto(%{task: %{"title" => "Única"}})
+    assert texto =~ "ANTES de `needs_user_decision`, confira as"
+    assert texto =~ "`openQuestionId` só com o uuid de uma"
+  end
+
   test "sem irmãs nem regras (contexto antigo) diz nenhuma em vez de quebrar" do
     texto = RecorteDaTarefa.texto(%{task: %{"title" => "Única"}})
     assert texto =~ "Tarefa: Única"

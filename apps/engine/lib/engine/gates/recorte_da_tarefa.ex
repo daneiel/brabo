@@ -62,7 +62,11 @@ defmodule Engine.Gates.RecorteDaTarefa do
 
     Requisito marcado "não confirmado pelo usuário" (ou contradito por decisão
     vigente) → `needs_user_decision`, nunca `changes_requested`: mande a
-    `pergunta` e a sua `sugestao`.
+    `pergunta` e a sua `sugestao`. ANTES de `needs_user_decision`, confira as
+    decisões listadas abaixo: requisito que uma delas já responde NÃO é
+    pergunta — aplique a decisão. `openQuestionId` só com o uuid de uma
+    pergunta ABERTA; sem esse uuid, a pergunta nova vai em
+    `pergunta`/`sugestao`.
     #{Engine.Dev.ContextBuilder.secao_de_decisoes(decisoes)}    #{secao_do_ambiente_limpo()}#{secao_da_forma(regras, task)}#{secao_do_ponto_de_entrada(task)}#{secao_do_contrato(contrato)}
     """
   end
