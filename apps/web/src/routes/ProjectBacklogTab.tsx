@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import {
@@ -14,6 +14,8 @@ import {
   updateStoryTitle,
 } from '../lib/api-client';
 import { roleAtLeast } from '../lib/roles';
+import { motivoDeCorrecaoInerte } from '../lib/correcao-de-historia';
+import { useHistoriaInicial } from '../lib/historia-inicial';
 import { Input } from '../components/ui/Input';
 import type { Epic, Story, StoryStatus } from '../lib/api-types';
 import { Badge, type BadgeTone } from '../components/ui/Badge';
@@ -54,27 +56,7 @@ export function aguardandoPromocao(epics: Epic[] | undefined): Story[] {
   return epics.flatMap((e) => e.stories.filter((s) => s.proposedReady));
 }
 
-/**
- * Por que os controles de corrigir uma história (RN-727) ficam inertes — o
- * texto que a tela diz UMA vez, em vez de um tooltip em botão `disabled`.
- * `null` quando a pessoa pode editar e arquivar. A régua é a da api
- * (`recusaDeCorrecaoDeHistoria`): papel `developer` (o do endpoint), só
- * `draft`, e sem tarefa `in_progress`/`in_review`.
- */
-export function motivoDeCorrecaoInerte(
-  story: Pick<Story, 'status' | 'tasks'>,
-  podeEscrever: boolean,
-): { chave: string; count?: number } | null {
-  if (!podeEscrever) return { chave: 'storyNode.inertRole' };
-  if (story.status !== 'draft') return { chave: 'storyNode.inertStatus' };
-  const emExecucao = story.tasks.filter(
-    (t) => t.status === 'in_progress' || t.status === 'in_review',
-  ).length;
-  if (emExecucao > 0) {
-    return { chave: 'storyNode.inertRunning', count: emExecucao };
-  }
-  return null;
-}
+export { motivoDeCorrecaoInerte };
 
 export function ProjectBacklogTab({ projectId }: { projectId: string }) {
   const { t } = useTranslation('backlog');
@@ -394,7 +376,14 @@ function StoryNode({
   const { t } = useTranslation('backlog');
   const queryClient = useQueryClient();
   const { showToast } = useToast();
-  const [open, setOpen] = useState(false);
+  // RN-884: o deep-link `?historia=` (o "Corrigir a história" do chat) abre
+  // a história e a traz à vista.
+  const alvo = useHistoriaInicial() === story.id;
+  const [open, setOpen] = useState(alvo);
+  const refDaHistoria = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (alvo) refDaHistoria.current?.scrollIntoView?.({ block: 'center' });
+  }, [alvo]);
   const [editando, setEditando] = useState(false);
   const [titulo, setTitulo] = useState(story.title);
   const [arquivando, setArquivando] = useState(false);
@@ -448,7 +437,7 @@ function StoryNode({
   }
 
   return (
-    <div className={styles.story}>
+    <div className={styles.story} ref={refDaHistoria} data-historia={story.id}>
       <button
         type="button"
         className={styles.storyHeader}

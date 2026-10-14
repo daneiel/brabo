@@ -10,6 +10,7 @@ import { sessaoEhTerminal } from '../lib/sessao-encerrada';
 import { pontoDaSessao } from '../lib/session-timeline';
 import { agentesParaChamar } from '../lib/session-destinatario';
 import { AvisoDePerguntasEmAberto } from '../components/PerguntasEmAberto';
+import { CampoDoComposer } from '../components/CampoDoComposer';
 import styles from './SessionPage.module.css';
 
 /**
@@ -381,10 +382,11 @@ export function SessionComposer({
           />
         )}
         <div className={`${styles.composer} ${styles.composerComDestinatario}`}>
-          <textarea
+          {/* RN-882: o campo é dono do valor durante a digitação. */}
+          <CampoDoComposer
             className={styles.textarea}
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
+            valor={draft}
+            aoMudar={setDraft}
             onKeyDown={ignorarComposicaoIme(handleComposerKeyDown)}
             {...SEM_AUTOFILL}
             placeholder={t('composer.placeholder')}

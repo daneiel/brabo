@@ -369,6 +369,24 @@ applied. Without it, `engine` would carry 56 fixable findings in the
 third-party scanner binaries that file documents. The four scans plus the
 database download took about 30 s.
 
+## A dependency pinned to a git commit: `bandit`, temporary {#bandit-pinned-to-a-commit}
+
+Every engine dependency comes from hex.pm, with one TEMPORARY exception.
+Advisory EEF-CVE-2026-105659 (GHSA-69m6-wcv4-rwcf, HIGH, Bandit's HTTP/2)
+affects every Bandit `>= 1.4.0`, including 1.12.5, the latest hex release,
+and `mix hex.audit` in the CI fails on it in every PR. The fix exists only as
+commit `d88b21953c65061f21136ea76a89a4f95a2ac7a1` of `mtrudel/bandit`
+(merged on 2026-10-12), with no release. Since 2026-10-14
+`apps/engine/mix.exs` points `bandit` at that commit, by full SHA and never by
+branch, with `override: true` because `phoenix` and `opentelemetry_bandit`
+ask for the hex package (measured: without it `mix deps.get` stops with
+"Dependencies have diverged"). The SHA plays the role the checksum plays for
+a hex package: the lock records it and nobody can move it. Both engine
+Dockerfiles already install `git` in the build stage.
+
+The way back: return to `{:bandit, "~> 1.12"}` from hex as soon as a release
+containing that commit is published, and drop this section with it.
+
 ## What is still trusted on faith
 
 Declared, not fixed:

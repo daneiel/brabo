@@ -6,6 +6,19 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- O engine passa a usar o `bandit` do commit `d88b219` de `mtrudel/bandit`,
+  preso ao SHA, em vez da 1.12.5 da hex: a advisory EEF-CVE-2026-105659
+  (GHSA-69m6-wcv4-rwcf, HIGH, HTTP/2) afeta toda release `>= 1.4.0` e a
+  correção ainda não saiu em release. Temporário: volta para `~> 1.12` da hex
+  quando sair a release que contém o commit.
+- O composer da Sessão não perde mais teclas na digitação rápida: o campo
+  guarda o próprio valor e uma renderização atrasada da página não o reescreve
+  (RN-882).
+- A oferta de ligar o modo automático para o time aparece também no chat da
+  Sessão com a execução ativa, pelo mesmo controle da aba Executores (RN-883).
+- A pergunta respondida no chat oferece "Corrigir a história" quando a
+  história afetada ainda é rascunho sem tarefa em execução, levando à aba
+  Histórias com ela aberta (RN-884).
 - O dev agent e o gate de QA passam a cobrar do entregável que toca rotas: URL
   absoluta com a porta (`PUBLIC_BASE_URL` ou o `Host`), o mesmo `code` para o
   mesmo erro em todas as rotas, CORS configurável por `CORS_ORIGINS` com

@@ -285,7 +285,11 @@
       "responder": "Responder",
       "soOAutor": "Só quem criou a sessão em que a pergunta nasceu pode respondê-la.",
       "erro": "Não foi possível gravar a resposta.",
-      "recorte": "Mostrando {{mostradas}} de {{total}} perguntas."
+      "recorte": "Mostrando {{mostradas}} de {{total}} perguntas.",
+      "respondida": "Respondida. A resposta foi gravada como decisão.",
+      "corrigir": "Corrigir a história",
+      "corrigirHistoria": "História afetada: {{titulo}}",
+      "dispensar": "Dispensar"
     }
   },
   "mergearNoChat": {

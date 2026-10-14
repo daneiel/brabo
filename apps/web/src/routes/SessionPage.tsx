@@ -51,6 +51,7 @@ import {
 import { ContextAside } from './ContextAside';
 import { useEncerrarComConfirmacao } from './ConfirmarEncerramento';
 import { sessaoTemExecucao } from '../lib/sessao-de-execucao';
+import { ModoAutomaticoNoChat } from '../components/ModoAutomaticoNoChat';
 import { useSessionReadiness } from '../lib/session-readiness';
 import { agruparNarracoesDoTurno, agruparTimelinePorAgente, dividirFio } from './session-fio';
 import { montarTimeline } from './session-timeline-montagem';
@@ -764,6 +765,12 @@ export function SessionPage({
             projectId={projectId}
             sessionId={sessionId}
             podeDecidir={podeDecidir}
+          />
+          <ModoAutomaticoNoChat
+            projectId={projectId}
+            comExecucao={isActive && sessaoTemExecucao(events, ativadosNaSessaoInteira)}
+            ativados={ativadosNaSessaoInteira}
+            podeLigar={roleAtLeast(workspaceComPapel?.role, 'maintainer')}
           />
           <div className={styles.messages} ref={scrollContainerRef} onScroll={aoRolarOFio} role="log" aria-label={t('fio.rotuloDoFio')}>
             <div className={styles.messagesInner} ref={messagesInnerRef}>
