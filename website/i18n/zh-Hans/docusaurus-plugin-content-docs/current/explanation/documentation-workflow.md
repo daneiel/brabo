@@ -5,7 +5,7 @@ sidebar_label: 文档同步
 sidebar_position: 1
 description: 阻止文档腐烂的机制——每个部件做什么、为什么存在，以及当检查不公正地抱怨时该怎么办。
 keywords: [documentation, drift, docmap, CI, generation]
-traducao_de: 96a04ed7489e6c9035ff600bc57269ef8305ea58
+traducao_de: 533ceeea898444e4d43ea714775482f74e65a781
 ---
 
 # 文档如何保持鲜活 {#how-documentation-stays-alive}
@@ -400,6 +400,13 @@ Markdown 内容在 `docs/` 中，但**路由**在 `website/sidebars.ts` 中—�
 
 构建**不会**因此失败：孤立页面不是坏链接。这是一项目视检查，也是机制中唯一没有安全网的步骤——在
 `pnpm docs:build` 之后，打开侧边栏确认页面在那里。
+
+例外是 ADR：「Decisões (ADR)」分组在每次构建时从 `docs/adr/temas.yml` 和
+`docs/adr/` 中的文件**派生**——每个主题一个子分类，按列表顺序排列，ADR
+按编号排序（AT-560）。新的 ADR 会落入其主题的分组，无需修改
+`sidebars.ts`。如果解析器找不到任何主题、任何已映射的 ADR，或发现没有主题的
+ADR（`docs:check` 已会拒绝），构建会以具名错误失败，而不是绘制错误的侧边栏。
+「说明」部分按主题手工列为五个分组，在那里新增页面仍按上述方式加入。
 
 ### `api-render-check.mjs`——绿色的构建不等于能渲染的页面 {#api-render-checkmjs--a-green-build-isnt-a-page-that-renders}
 
