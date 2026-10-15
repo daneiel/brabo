@@ -210,7 +210,8 @@
     "pending": {
       "title": "Pending",
       "eyebrow": "sorted by urgency",
-      "selectedCount": "{{count}} selected",
+      "selectedCount_one": "{{count}} selected",
+      "selectedCount_other": "{{count}} selected",
       "approveSelected": "Approve selected",
       "clear": "Clear",
       "findingSession": "Looking for the project's session…",

@@ -13,7 +13,7 @@ A fonte é o pt-BR em `docs/` (ADR 0216); `docs/reference/**` é gerado e fica f
 
 | locale | páginas traduzidas | caracteres traduzidos | em dia | defasadas | sem procedência | ausentes | órfãs |
 |---|---|---|---|---|---|---|---|
-| `en` | 254 de 257 (98.8%) | 61.9% de 5.295.894 | 151 | 1 | 102 | 3 | 0 |
+| `en` | 247 de 257 (96.1%) | 86.1% de 5.295.894 | 144 | 1 | 102 | 10 | 0 |
 | `ru` | 4 de 257 (1.6%) | 0.9% de 5.295.894 | 2 | 2 | 0 | 253 | 0 |
 | `zh-Hans` | 4 de 257 (1.6%) | 0.9% de 5.295.894 | 2 | 2 | 0 | 253 | 0 |
 
@@ -39,13 +39,7 @@ Chaves de `apps/web/src/locales/<locale>/` contra o pt-BR. Chave plural conta um
 
 | locale | formas de plural | chaves presentes | plurais incompletos |
 |---|---|---|---|
-| `en` | one, other | 2302 de 2316 (99.4%) | 7 |
+| `en` | one, other | 2316 de 2316 (100.0%) | 0 |
 | `ru` | one, few, many, other | 2520 de 2520 (100.0%) | 0 |
 | `zh-Hans` | other | 2214 de 2214 (100.0%) | 0 |
-
-### Namespaces incompletos em `en`
-
-- `approvals`: 209 de 211
-- `models`: 153 de 157
-- `sessions`: 145 de 153
 
