@@ -1704,6 +1704,10 @@
     }
   },
   "zh-Hans": {
+    "explanation/historico-de-fases.md": {
+      "defasada": false,
+      "data": "2026-10-01"
+    },
     "getting-started.md": {
       "defasada": false,
       "data": "2026-10-15"
@@ -1713,6 +1717,10 @@
       "data": "2026-10-11"
     },
     "intro.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "runbook.md": {
       "defasada": false,
       "data": "2026-10-15"
     },
