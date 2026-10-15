@@ -2068,6 +2068,14 @@
       "defasada": false,
       "data": "2026-10-15"
     },
+    "business-rules/autenticacao.md": {
+      "defasada": false,
+      "data": "2026-10-11"
+    },
+    "business-rules/custo.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
     "getting-started.md": {
       "defasada": false,
       "data": "2026-10-15"
@@ -2077,6 +2085,10 @@
       "data": "2026-10-11"
     },
     "intro.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "security-surface.md": {
       "defasada": false,
       "data": "2026-10-15"
     },
