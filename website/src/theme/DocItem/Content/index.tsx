@@ -1,8 +1,8 @@
 /**
  * Faixa de tradução (AT-550, ADR 0216 item 6) — swizzle em modo WRAP.
  *
- * Num locale que não é o pt-BR, `metadata.source` diz de onde a página veio:
- * `@site/docs/...` é o FALLBACK (a fonte em português, sem tradução neste
+ * Num locale que não é o pt-BR, `metadata.source` diz de onde a página veio: fora de
+ * `@site/i18n/<locale>/...` é o FALLBACK (a fonte em português, sem tradução neste
  * locale); `@site/i18n/<locale>/...` é a tradução. Para a tradução, o
  * `traducao.json` (gerado por `pnpm docs:generate`) diz se a fonte mudou
  * depois do `traducao_de`. Página em dia não ganha faixa.
@@ -36,7 +36,9 @@ export default function ContentWrapper(props: Props): ReactNode {
   if (currentLocale !== defaultLocale) {
     const source = metadata.source;
     const prefixo = `@site/i18n/${currentLocale}/docusaurus-plugin-content-docs/current/`;
-    if (source.startsWith('@site/docs/')) {
+    // A fonte mora fora do site (`path: '../docs'`), e o `source` dela é
+    // `@site/../docs/...`: o que NÃO vem da árvore do locale é o fallback.
+    if (!source.startsWith(prefixo)) {
       faixa = (
         <Faixa>
           <Translate id="traducao.faixa.naoTraduzida">

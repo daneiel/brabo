@@ -33,6 +33,9 @@ importers:
       '@docusaurus/faster':
         specifier: 3.10.2
         version: 3.10.2(@docusaurus/types@3.10.2(@swc/core@1.16.1)(postcss@8.5.23)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(postcss@8.5.23)
+      '@docusaurus/plugin-content-docs':
+        specifier: 3.10.2
+        version: 3.10.2(@docusaurus/faster@3.10.2(@docusaurus/types@3.10.2(@swc/core@1.16.1)(postcss@8.5.23)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(postcss@8.5.23))(@mdx-js/react@3.1.1(@types/react@19.2.18)(react@19.2.8))(@rspack/core@1.7.12)(@swc/core@1.16.1)(debug@4.4.3)(postcss@8.5.23)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@6.0.3)
       '@docusaurus/preset-classic':
         specifier: 3.10.2
         version: 3.10.2(@algolia/client-search@5.57.0)(@docusaurus/faster@3.10.2(@docusaurus/types@3.10.2(@swc/core@1.16.1)(postcss@8.5.23)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(postcss@8.5.23))(@mdx-js/react@3.1.1(@types/react@19.2.18)(react@19.2.8))(@rspack/core@1.7.12)(@swc/core@1.16.1)(@types/react@19.2.18)(postcss@8.5.23)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(search-insights@2.17.3)(typescript@6.0.3)
