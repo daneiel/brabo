@@ -9807,7 +9807,7 @@ runner seu também cai"* 换成 *"só cai o que se conectou com ESTA chave"*。�
 - **架构决策：** [ADR 0203](adr/0203-aposenta-o-fluxo-do-runner-pelo-navegador.md)
 - **来源：** AT-014（`BRB-031`），负责人 10月1日的决定
 
-## RN-418 的上限也适用于类型化入口（RN-689）
+## 类型化入口同样适用 RN-418 的上限（RN-689）
 
 ### RN-689 — 类型化的 `git_push` 和 `pr_open` 永不可自动批准：RN-418 的上限对命令「和」操作都有效 {#rn-689}
 
