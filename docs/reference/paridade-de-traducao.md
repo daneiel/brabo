@@ -39,13 +39,7 @@ Chaves de `apps/web/src/locales/<locale>/` contra o pt-BR. Chave plural conta um
 
 | locale | formas de plural | chaves presentes | plurais incompletos |
 |---|---|---|---|
-| `en` | one, other | 2302 de 2316 (99.4%) | 7 |
+| `en` | one, other | 2316 de 2316 (100.0%) | 0 |
 | `ru` | one, few, many, other | 2520 de 2520 (100.0%) | 0 |
 | `zh-Hans` | other | 2214 de 2214 (100.0%) | 0 |
-
-### Namespaces incompletos em `en`
-
-- `approvals`: 209 de 211
-- `models`: 153 de 157
-- `sessions`: 145 de 153
 
