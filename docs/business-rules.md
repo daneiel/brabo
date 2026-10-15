@@ -24760,7 +24760,11 @@ sem dizer qual.
   Mesmo componente, mesmo endpoint, mesmo texto, nada gravado sem o clique,
   espera saber quem já está ligado (RN-803) e some com o time todo em
   automático. Sem execução no projeto, nada aparece e `agent_autonomy` nem é
-  lido.
+  lido. Lacuna declarada: o sinal é `roster.executionActivated` da sessão mais
+  recente, que diz que ela TEVE `execution.activated`, não que segue aberta;
+  com a sessão de execução já encerrada, a oferta ainda aparece no chat do
+  Criativo — declarado, não corrigido, porque distinguir exigiria uma leitura
+  nova (o orçamento de requisições).
 - **Onde:** `apps/web/src/components/ModoAutomaticoNoChat.tsx:29`
   (`ofertaDoChat`); `apps/web/src/lib/session-destinatario.ts:174`
   (`useExecucaoNoProjeto`)
