@@ -1,8 +1,8 @@
 ---
-traducao_de: a58e2abe46dee1d68d49868a5df5911c6c19683e
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
-# 0217 — Automatic `dev` → `qa` promotion while QA is in a test phase
+# ADR 0217 — Automatic `dev` → `qa` promotion while QA is in a test phase
 
 ## Status
 

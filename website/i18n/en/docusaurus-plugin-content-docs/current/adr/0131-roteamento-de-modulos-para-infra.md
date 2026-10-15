@@ -1,8 +1,8 @@
 ---
-traducao_de: e27637347c3751bbf825284e720697ab103880db
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
-# 0131 — The Arquiteto routes modules to infra: it NOMINATES, Infra ELECTS
+# ADR 0131 — The Arquiteto routes modules to infra: it NOMINATES, Infra ELECTS
 
 ## Context
 

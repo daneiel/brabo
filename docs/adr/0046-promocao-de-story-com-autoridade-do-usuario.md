@@ -1,4 +1,4 @@
-# 0046 — Promoção de história com autoridade do usuário
+# ADR 0046 — Promoção de história com autoridade do usuário
 
 ## Contexto
 

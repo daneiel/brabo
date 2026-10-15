@@ -1,4 +1,4 @@
-# 0210 — Animação de texto com `motion`
+# ADR 0210 — Animação de texto com `motion`
 
 ## Status
 

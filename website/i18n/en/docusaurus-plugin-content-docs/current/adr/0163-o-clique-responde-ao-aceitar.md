@@ -1,8 +1,8 @@
 ---
-traducao_de: f8d6559d1abb11ac6c9a1b1d79833cbd56906238
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
-# 0163 — The click answers on ACCEPTING the command, and the turn continues through the channel
+# ADR 0163 — The click answers on ACCEPTING the command, and the turn continues through the channel
 
 ## Status
 

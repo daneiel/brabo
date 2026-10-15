@@ -1,8 +1,8 @@
 ---
-traducao_de: a7c299716cdd5eed998b9b4d2a84131bcc541cc5
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
-# 0135 — The Arquiteto's image gate (RN-105) now applies in all three execution modes
+# ADR 0135 — The Arquiteto's image gate (RN-105) now applies in all three execution modes
 
 ## Context
 

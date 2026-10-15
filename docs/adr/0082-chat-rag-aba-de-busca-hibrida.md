@@ -1,4 +1,4 @@
-# 0082 — Chat RAG: aba própria de busca híbrida, sem renomear "Chat"
+# ADR 0082 — Chat RAG: aba própria de busca híbrida, sem renomear "Chat"
 
 ## Status
 

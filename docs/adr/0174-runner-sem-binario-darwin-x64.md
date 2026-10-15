@@ -1,4 +1,4 @@
-# 0174 — O binário standalone do runner deixa de prometer o Mac Intel
+# ADR 0174 — O binário standalone do runner deixa de prometer o Mac Intel
 
 ## Status
 

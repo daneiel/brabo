@@ -1,4 +1,4 @@
-# 0132 — Golden-set de acerto do RAG, e o gate `rag-acertivo`
+# ADR 0132 — Golden-set de acerto do RAG, e o gate `rag-acertivo`
 
 ## Context
 

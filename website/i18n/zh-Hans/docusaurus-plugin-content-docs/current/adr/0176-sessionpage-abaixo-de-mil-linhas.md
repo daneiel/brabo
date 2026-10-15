@@ -1,8 +1,8 @@
 ---
-traducao_de: 6b761ce09ad165373334e6fd24e9f8f1b2d21f9c
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
-# 0176 — `SessionPage.tsx` 降到 1 000 行以下，分十个机械式 PR，之后才加锁
+# ADR 0176 — `SessionPage.tsx` 降到 1 000 行以下，分十个机械式 PR，之后才加锁
 
 ## 状态 {#status}
 

@@ -1,8 +1,8 @@
 ---
-traducao_de: 11b49cb725b01688a29cfae832f7256c9b1b7da5
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
-# 0136 — Global containers page: a per-load ceiling on the broker, and `container_remove` under the absolute ceiling
+# ADR 0136 — Global containers page: a per-load ceiling on the broker, and `container_remove` under the absolute ceiling
 
 ## Context
 

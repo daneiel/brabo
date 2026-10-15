@@ -1,4 +1,4 @@
-# 0005 — Bootstrap de Gitflow idempotente e retomável
+# ADR 0005 — Bootstrap de Gitflow idempotente e retomável
 
 ## Contexto
 

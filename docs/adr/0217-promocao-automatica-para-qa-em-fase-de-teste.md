@@ -1,4 +1,4 @@
-# 0217 — Promoção automática `dev` → `qa` enquanto a QA está em fase de teste
+# ADR 0217 — Promoção automática `dev` → `qa` enquanto a QA está em fase de teste
 
 ## Status
 

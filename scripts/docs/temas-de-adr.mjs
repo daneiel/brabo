@@ -24,6 +24,8 @@
  *   - LINHA     no índice, linha de ADR (`| [NNNN](…) |`) sob a seção de outro
  *               tema, fora de qualquer seção de tema, repetida, ou fora da
  *               ordem numérica dentro da seção.
+ *   - TITULO    H1 do ADR fora de `# ADR NNNN — <título>`, ou com número
+ *               diferente do do arquivo (ADR 0218).
  *
  * E o check cego: YAML ilegível, `temas:` ou `adrs:` vazios, ou nenhuma seção
  * de tema no índice é `CEGO` e reprova — uma aferição que não achou o que
@@ -44,11 +46,12 @@ const LINHA_DE_ADR = /^\|\s*\[(\d{4})\]\(/;
 
 /**
  * @param {{ temasYml: string, arquivosAdr: string[], indice: string }} entrada
- *   `arquivosAdr` são nomes como `0001-x.md` (sem diretório).
+ *   `arquivosAdr` são nomes como `0001-x.md` (sem diretório); `titulosAdr`
+ *   mapeia esse nome para o primeiro `# ` do arquivo.
  * @returns {{ cego: string|null, problemas: {regra: string, motivo: string}[],
  *   temas: number, adrs: number }}
  */
-export function conferirTemas({ temasYml, arquivosAdr, indice }) {
+export function conferirTemas({ temasYml, arquivosAdr, indice, titulosAdr = {} }) {
   const problemas = [];
   const falha = (regra, motivo) => problemas.push({ regra, motivo });
   const cego = (motivo) => ({ cego: motivo, problemas: [], temas: 0, adrs: 0 });
@@ -94,6 +97,9 @@ export function conferirTemas({ temasYml, arquivosAdr, indice }) {
   }
   for (const n of [...existentes].sort()) {
     if (!temaDe.has(n)) falha('SEM-TEMA', `ADR ${n} não tem tema em ${TEMAS}`);
+  }
+  for (const [arquivo, h1] of Object.entries(titulosAdr)) {
+    if (!h1?.startsWith(`# ADR ${arquivo.slice(0, 4)} — `)) falha('TITULO', `${arquivo}: o H1 deve ser \`# ADR ${arquivo.slice(0, 4)} — <título>\` (ADR 0218), é "${h1 ?? ''}"`);
   }
   const usados = new Set(temaDe.values());
   for (const id of tituloDe.keys()) {

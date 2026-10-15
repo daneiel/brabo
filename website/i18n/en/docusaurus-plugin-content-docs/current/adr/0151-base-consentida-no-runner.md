@@ -1,8 +1,8 @@
 ---
-traducao_de: 213fbcc7470e8f4bae01648d030a1e3437751cf6
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
-# 0151 — The base consented in the runner, and folder creation through the channel
+# ADR 0151 — The base consented in the runner, and folder creation through the channel
 
 ## Status
 

@@ -3,9 +3,9 @@ id: adr-index
 title: 架构决策（ADR）
 sidebar_label: ADR 索引
 sidebar_position: 0
-description: Brabo 的 213 条架构决策记录，按主题分组，并附上每条决策的内容。
+description: Brabo 的 214 条架构决策记录，按主题分组，并附上每条决策的内容。
 keywords: [ADR, 架构决策, 架构, 历史]
-traducao_de: 7ab25176352c551c329517531f17c7db6c79f92f
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
 # 架构决策
@@ -349,12 +349,13 @@ chunks 和混合搜索、对它的测量、Neo4j 图谱，以及从事件日志�
 | [0202](0202-o-indice-de-adr-por-tema.md) | ADR 索引按**主题**分组，主题在 ADR **之外**（AT-137，所有者 10月1日的决定，发现 `BRB-026`）：`docs/adr/temas.yml` 保存 15 个主题的封闭列表以及每个 ADR 一个主要主题，使任何已接受的 ADR 都不被编辑，即使是为了获得 frontmatter。索引是**核对**的，而不是生成的——一行描述仍然是人工精选的——`docs:check`（`scripts/docs/temas-de-adr.mjs`，每条规则由变异证明）让没有主题的 ADR、不在列表中的主题、没有 ADR 的主题，以及放错章节、不在任何章节或不按数字顺序的索引行失败。分类法来自产品的前线，而不是阶段或代码文件夹，是 lane 提交给所有者审阅的提议；新 ADR 的作者在同一个 PR 中选择它的主题，超过 15 个主题需要一份 ADR |
 | [0206](0206-referencia-da-api-numa-pagina-redoc.md) | API 参考变成在服务器端渲染的**一个** Redoc 页面（redocusaurus），位于 `/reference/api/`，修订了 [0033](0033-referencia-de-api-gerada-do-openapi.md) 中发布的那一半：OpenAPI 的插件和主题拖入了 `postman-collection` → `@faker-js/faker@5.5.3`（High 告警 #43），没有修正的途径。按操作的页面、按 tag 的侧边栏、按操作的 URL、playground 和 cURL 片段按所有者的决定移除；`api-render-check.mjs` 现在断言标题以及每个操作一个 SSR 章节 |
 | [0216](0216-quatro-idiomas-com-pt-br-como-fonte.md) | 文档和界面使用四种语言——pt-BR 成为**来源**和默认，英语、俄语和简体中文作为分阶段的翻译，测量一致性，并对未翻译或过时的页面逐页给出提示（AT-545，所有者 10月15日的决定） |
+| [0218](0218-titulo-de-adr-com-prefixo.md) | 每个 ADR 都命名为“ADR NNNN — 标题”：H1 加上 `ADR` 前缀、4 位编号和破折号；文件名（即 URL）不变，规范标题标签不算编辑决策（AT-559，所有者 10月15日的决定） |
 
 ## 约定 {#a-convenção}
 
 - **每个决策一个文件**，位于 `docs/adr/NNNN-short-title.md`，使用
-  4 位顺序编号。**编号不复用**，即使一份 ADR
-  被取代——下一个是 **0218**。
+  4 位顺序编号，标题为 `# ADR NNNN — <标题>`（[0218](0218-titulo-de-adr-com-prefixo.md)）。**编号不复用**，即使一份 ADR
+  被取代——下一个是 **0219**。
 - **每个决策一个主题**，由编写 ADR 的人在同一个
   PR 中选择：`docs/adr/temas.yml` 中的一行，以及该主题章节下的索引行，
   按数字顺序。审阅者确认。新主题是

@@ -1,4 +1,4 @@
-# 0006 — Harness de agentes: montagem determinística de contexto
+# ADR 0006 — Harness de agentes: montagem determinística de contexto
 
 ## Contexto
 

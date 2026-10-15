@@ -1,4 +1,4 @@
-# 0211 — Uma navegação só: a sidebar absorve o trilho do projeto
+# ADR 0211 — Uma navegação só: a sidebar absorve o trilho do projeto
 
 ## Status
 

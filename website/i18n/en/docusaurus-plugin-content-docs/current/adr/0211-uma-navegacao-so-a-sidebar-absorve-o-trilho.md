@@ -1,8 +1,8 @@
 ---
-traducao_de: 4069e0dabf04a99d889663c95b89b6daba1a5904
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
-# 0211 — A single navigation: the sidebar absorbs the project rail
+# ADR 0211 — A single navigation: the sidebar absorbs the project rail
 
 ## Status
 

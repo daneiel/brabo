@@ -1,8 +1,8 @@
 ---
-traducao_de: 285d458e5d984ace5ddf0fb39263b3b1ae7e8ff0
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
-# 0147 — 一个本地 agent，在连接时声明能力
+# ADR 0147 — 一个本地 agent，在连接时声明能力
 
 ## 背景 {#context}
 

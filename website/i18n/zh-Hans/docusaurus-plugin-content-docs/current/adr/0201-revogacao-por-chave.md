@@ -1,8 +1,8 @@
 ---
-traducao_de: 59101794d7e56c79f23e05e8947478bbd89694fb
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
-# 0201 — 吊销针对的是**密钥**，而不是 `{projeto, usuário}` 这一对
+# ADR 0201 — 吊销针对的是**密钥**，而不是 `{projeto, usuário}` 这一对
 
 ## 状态 {#status}
 

@@ -1,4 +1,4 @@
-# 0054 — Gates como registro declarativo
+# ADR 0054 — Gates como registro declarativo
 
 ## Status
 

@@ -1,8 +1,8 @@
 ---
-traducao_de: 5393558baeec7d7521831b2be845200534784d83
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
-# 0034 — Documentation published per stage, in a Pages subdirectory
+# ADR 0034 — Documentation published per stage, in a Pages subdirectory
 
 ## Context
 

@@ -1,4 +1,4 @@
-# 0034 — Documentação publicada por degrau, em subdiretório do Pages
+# ADR 0034 — Documentação publicada por degrau, em subdiretório do Pages
 
 ## Contexto
 

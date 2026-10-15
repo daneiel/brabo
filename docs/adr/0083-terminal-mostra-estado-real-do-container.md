@@ -1,4 +1,4 @@
-# 0083 — A aba Terminal ganha o consumidor real do ciclo de vida, não o terminal
+# ADR 0083 — A aba Terminal ganha o consumidor real do ciclo de vida, não o terminal
 
 ## Status
 

@@ -1,4 +1,4 @@
-# 0212 — A história arquivada: uma coluna, não um estado da máquina
+# ADR 0212 — A história arquivada: uma coluna, não um estado da máquina
 
 ## Status
 

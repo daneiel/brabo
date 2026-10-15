@@ -1,4 +1,4 @@
-# 0051 — Facetas de capability provadas; "para que serve" é curadoria
+# ADR 0051 — Facetas de capability provadas; "para que serve" é curadoria
 
 ## Contexto
 

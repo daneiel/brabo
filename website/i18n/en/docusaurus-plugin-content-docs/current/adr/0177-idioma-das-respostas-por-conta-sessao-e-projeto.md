@@ -1,8 +1,8 @@
 ---
-traducao_de: 5130851198a3ebcb5cb5bdc3e6f5c0a02f2a4935
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
-# 0177 — The response language lives in three places — account, session and project —, as an open BCP-47 list and never in `users.locale`
+# ADR 0177 — The response language lives in three places — account, session and project —, as an open BCP-47 list and never in `users.locale`
 
 ## Status
 

@@ -1,4 +1,4 @@
-# 0039 — actionlint e a validação do pipeline de CI gerado
+# ADR 0039 — actionlint e a validação do pipeline de CI gerado
 
 ## Contexto
 

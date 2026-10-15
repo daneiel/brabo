@@ -1,8 +1,8 @@
 ---
-traducao_de: efa7cf0930491b8af046a8f8972a5856c69f5aca
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
-# 0168 — The QA golden-set now runs in CI, scheduled and weekly
+# ADR 0168 — The QA golden-set now runs in CI, scheduled and weekly
 
 ## Status
 

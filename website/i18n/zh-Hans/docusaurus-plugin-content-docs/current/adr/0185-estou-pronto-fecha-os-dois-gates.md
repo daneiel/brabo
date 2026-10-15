@@ -1,8 +1,8 @@
 ---
-traducao_de: 78383039b5006cf39f88edb5054e4f5bb1b43aea
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
-# 0185 — "Estou pronto — a necessidade está validada"：一次点击同时关闭就绪确认、gate `necessidade-validada` 和 PO 的接受
+# ADR 0185 — "Estou pronto — a necessidade está validada"：一次点击同时关闭就绪确认、gate `necessidade-validada` 和 PO 的接受
 
 ## 状态 {#status}
 

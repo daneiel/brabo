@@ -1,4 +1,4 @@
-# 0028 — Proteção de branch: divergência entre providers e a matriz de aprovação
+# ADR 0028 — Proteção de branch: divergência entre providers e a matriz de aprovação
 
 ## Contexto
 

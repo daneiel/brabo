@@ -1,8 +1,8 @@
 ---
-traducao_de: dc3ec6a48c32909b8b62605552904ef7b42672b3
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
-# 0184 — 重新打开会话：所有者的三个决定，`developer` 即可重新打开
+# ADR 0184 — 重新打开会话：所有者的三个决定，`developer` 即可重新打开
 
 ## 状态 {#status}
 

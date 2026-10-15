@@ -1,4 +1,4 @@
-# 0163 — O clique responde ao ACEITAR o comando, e o turno segue pelo canal
+# ADR 0163 — O clique responde ao ACEITAR o comando, e o turno segue pelo canal
 
 ## Status
 

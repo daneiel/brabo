@@ -1,4 +1,4 @@
-# 0074 — Tema alcançável, e o boot sob CSP
+# ADR 0074 — Tema alcançável, e o boot sob CSP
 
 **Status:** aceito · 2026-08-14
 

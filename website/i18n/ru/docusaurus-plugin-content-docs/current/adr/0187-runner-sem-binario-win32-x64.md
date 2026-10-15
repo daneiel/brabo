@@ -1,8 +1,8 @@
 ---
-traducao_de: acad6bd367a09a0b48f20de94df3482e772dc258
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
-# 0187 — Автономный бинарник runner перестаёт обещать Windows
+# ADR 0187 — Автономный бинарник runner перестаёт обещать Windows
 
 ## Статус {#status}
 

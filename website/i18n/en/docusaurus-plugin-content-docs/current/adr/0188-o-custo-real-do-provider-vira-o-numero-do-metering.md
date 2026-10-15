@@ -1,8 +1,8 @@
 ---
-traducao_de: 8397a73e2338fe4d24d56ee0a87b33fdff223ff8
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
-# 0188 — The real cost the provider returns becomes the metering number
+# ADR 0188 — The real cost the provider returns becomes the metering number
 
 ## Status
 

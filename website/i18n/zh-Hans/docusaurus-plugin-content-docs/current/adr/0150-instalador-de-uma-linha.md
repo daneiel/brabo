@@ -1,8 +1,8 @@
 ---
-traducao_de: b4ee01ec5b0fa2bb837b94747022ab4b10cdc213
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
-# 0150 — 一行安装程序，带可选来源和标记文件
+# ADR 0150 — 一行安装程序，带可选来源和标记文件
 
 ## 状态 {#status}
 

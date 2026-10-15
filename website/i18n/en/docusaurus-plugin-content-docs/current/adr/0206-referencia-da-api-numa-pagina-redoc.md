@@ -1,8 +1,8 @@
 ---
-traducao_de: 7451c1f845145a031c32644067c4583dd08b694a
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
-# 0206 — The API reference becomes a Redoc page
+# ADR 0206 — The API reference becomes a Redoc page
 
 ## Status
 

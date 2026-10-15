@@ -1,8 +1,8 @@
 ---
-traducao_de: f9a111fcc133a5fcd7195d7ccc74ab40ee414777
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
-# 0205 — Anamnese 观察到的 agent 偏差成为产品信号，不含个人数据
+# ADR 0205 — Anamnese 观察到的 agent 偏差成为产品信号，不含个人数据
 
 ## 状态 {#status}
 

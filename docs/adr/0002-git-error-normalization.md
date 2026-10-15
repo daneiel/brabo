@@ -1,4 +1,4 @@
-# 0002 — Normalização de erros do GitProvider
+# ADR 0002 — Normalização de erros do GitProvider
 
 ## Contexto
 

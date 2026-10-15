@@ -1,8 +1,8 @@
 ---
-traducao_de: a6158ee3620a338091376dafb0ce4c4e3b04436c
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
-# 0190 — Infra brings up the container on handoff acceptance, as a server step and with seeded autonomy, and it is Infra that hands over to the Dev Lead
+# ADR 0190 — Infra brings up the container on handoff acceptance, as a server step and with seeded autonomy, and it is Infra that hands over to the Dev Lead
 
 ## Status
 

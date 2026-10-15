@@ -1,5 +1,5 @@
 ---
-traducao_de: 23e727d97992c1974a3df731360a293b67fd669c
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 id: architecture
 title: Architecture
 sidebar_label: Architecture
@@ -14,7 +14,7 @@ This document is the map for anyone who's going to **work** on the code. It
 says where to start reading, what each boundary promises, and what's already
 known to be crooked.
 
-Decisions and their rationale live in the [ADRs](adr/index.md) — 213 of
+Decisions and their rationale live in the [ADRs](adr/index.md) — 214 of
 them, several recording a real defect found in execution. Here we don't
 repeat the argument: we point at it.
 

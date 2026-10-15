@@ -1,8 +1,8 @@
 ---
-traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
-# 0003 — 远程 provider 的重试策略
+# ADR 0003 — 远程 provider 的重试策略
 
 ## 背景 {#contexto}
 

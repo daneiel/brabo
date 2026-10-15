@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- Todo ADR passa a se chamar "ADR NNNN — título" (ADR 0218): os 131 títulos `# NNNN —` ganham o prefixo, nas quatro línguas, e o `docs:check` reprova H1 fora do padrão; os nomes de arquivo (as URLs) não mudam.
 - A lateral do site agrupa os ADRs por tema (derivado de `docs/adr/temas.yml`) e a Explicação em cinco grupos por assunto (AT-560).
 - O README (e as traduções) ficou só com a visão do produto: estrutura, banco,
   testes, observabilidade, produção, Kubernetes, CI, frontend, convenções e

@@ -548,6 +548,9 @@ function verificarTemasDeAdr() {
     temasYml: ler(TEMAS_DE_ADR),
     arquivosAdr: arquivos('docs/adr/[0-9]*.md').map((f) => f.replace('docs/adr/', '')),
     indice: ler(INDICE_DE_ADR),
+    titulosAdr: Object.fromEntries(
+      arquivos('docs/adr/[0-9]*.md').map((f) => [f.replace('docs/adr/', ''), ler(f).split('\n').find((l) => l.startsWith('# '))]),
+    ),
   });
 
   if (r.cego) {

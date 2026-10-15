@@ -1,8 +1,8 @@
 ---
-traducao_de: a7c299716cdd5eed998b9b4d2a84131bcc541cc5
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
-# 0135 — Arquiteto 的镜像关口（RN-105）开始在三种执行模式下生效
+# ADR 0135 — Arquiteto 的镜像关口（RN-105）开始在三种执行模式下生效
 
 ## Context {#context}
 

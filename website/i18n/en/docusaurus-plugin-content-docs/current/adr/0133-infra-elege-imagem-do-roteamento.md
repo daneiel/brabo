@@ -1,8 +1,8 @@
 ---
-traducao_de: d86b3b6a2e74a54732e147d1e0c053ca5feedc39
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
-# 0133 — Infra elects among the routing's candidates, and the election becomes a new version of `artifact.project_image`
+# ADR 0133 — Infra elects among the routing's candidates, and the election becomes a new version of `artifact.project_image`
 
 ## Context
 
