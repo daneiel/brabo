@@ -192,7 +192,7 @@ distingue os três é o EVENTO (`dev.idle`, `dev.error`,
 
 **`proposed_action`** — toda ação com efeito externo (comando de terminal,
 commit, push, PR, merge, gasto) **nasce** aqui, nunca executa direto.
-Vinte e um tipos. Seis estados ([RN-003](business-rules.md#rn-003)).
+São 21 tipos e 6 estados ([RN-003](business-rules.md#rn-003)).
 
 **`permissions.json`** — o arquivo de política do projeto. Casa um padrão de
 comando (estruturado, não substring) e devolve `allow`, `deny` ou
