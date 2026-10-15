@@ -1,3 +1,7 @@
+---
+traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
+---
+
 # Harvest skeleton (10c)
 
 Working material. **This file is not the report** — it is its mold.

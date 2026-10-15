@@ -1,3 +1,7 @@
+---
+traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
+---
+
 # ADR 0100 — `rag_search` for agents and Ollama models guaranteed at boot
 
 - **Status:** Accepted

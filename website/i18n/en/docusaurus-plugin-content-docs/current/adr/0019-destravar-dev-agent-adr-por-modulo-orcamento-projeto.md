@@ -1,3 +1,7 @@
+---
+traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
+---
+
 # ADR 0019 — Unblocking the real DevAgent: writing, terminal, ADR by module, and per-project budget
 
 - Status: accepted

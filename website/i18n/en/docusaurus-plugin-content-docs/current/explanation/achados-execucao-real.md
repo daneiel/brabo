@@ -1,3 +1,7 @@
+---
+traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
+---
+
 # Findings from the real execution of the pipeline
 
 > Gathered in a browser-driven execution session on **2026-08-05**, with an

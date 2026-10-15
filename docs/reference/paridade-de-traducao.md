@@ -13,15 +13,11 @@ A fonte é o pt-BR em `docs/` (ADR 0216); `docs/reference/**` é gerado e fica f
 
 | locale | páginas traduzidas | caracteres traduzidos | em dia | defasadas | sem procedência | ausentes | órfãs |
 |---|---|---|---|---|---|---|---|
-| `en` | 255 de 257 (99.2%) | 91.2% de 5.296.038 | 152 | 1 | 102 | 2 | 0 |
-| `ru` | 4 de 257 (1.6%) | 0.9% de 5.296.038 | 2 | 2 | 0 | 253 | 0 |
-| `zh-Hans` | 4 de 257 (1.6%) | 0.9% de 5.296.038 | 2 | 2 | 0 | 253 | 0 |
+| `en` | 248 de 257 (96.5%) | 89.7% de 5.299.073 | 248 | 0 | 0 | 9 | 0 |
+| `ru` | 4 de 257 (1.6%) | 0.9% de 5.299.073 | 2 | 2 | 0 | 253 | 0 |
+| `zh-Hans` | 4 de 257 (1.6%) | 0.9% de 5.299.073 | 2 | 2 | 0 | 253 | 0 |
 
 > **TODO(humano):** revisão nativa por idioma — quem revisou e quando. Ainda não há revisão nativa registrada.
-
-### Defasadas em `en`
-
-- `adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md` (tradução de 2026-10-15)
 
 ### Defasadas em `ru`
 
