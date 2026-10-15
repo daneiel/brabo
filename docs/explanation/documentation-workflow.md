@@ -610,8 +610,9 @@ A exceção são os ADRs: o grupo "Decisões (ADR)" é **derivado** a cada
 build de `docs/adr/temas.yml` e dos arquivos em `docs/adr/` — uma
 subcategoria por tema, na ordem da lista, com os ADRs em ordem numérica
 (AT-560). ADR novo entra no grupo do tema dele sem tocar no
-`sidebars.ts`; um ADR sem tema (que o `docs:check` reprova) cairia em
-"Outros" em vez de quebrar o build. A Explicação é enumerada à mão em
+`sidebars.ts`. Se o parser não achar tema nenhum, ADR mapeado nenhum ou
+um ADR sem tema (que o `docs:check` já reprova), o build quebra com erro
+nomeado em vez de desenhar uma lateral errada. A Explicação é enumerada à mão em
 cinco grupos por assunto, e página nova ali ainda entra pelo caminho
 acima.
 

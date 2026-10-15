@@ -7,7 +7,9 @@ import path from 'node:path';
  * em `docs/adr/` a cada build (AT-560): ADR novo cai no grupo do tema dele sem
  * editar este arquivo. O parser lê só as duas formas que o `temas.yml` usa
  * (`- id:`/`titulo:` e `"NNNN": tema`); quem valida o arquivo é o `docs:check`.
- * ADR sem tema vai para "Outros" em vez de quebrar o build.
+ * Parse que se perdeu (zero temas, zero ADRs mapeados, ADR sem tema) LANÇA:
+ * o `docs:check` garante que todo ADR tem tema, então isso só acontece se o
+ * formato do `temas.yml` mudou e este parser não acompanhou.
  */
 function adrsPorTema() {
   const dir = path.resolve(__dirname, '../docs/adr');
@@ -19,11 +21,15 @@ function adrsPorTema() {
     const tema = temaDe.get(arq.slice(0, 4)) ?? '';
     (grupos.get(tema) ?? grupos.get('')!).push(`adr/${arq.slice(0, -3)}`);
   }
-  const outros = grupos.get('')!;
-  return [
-    ...temas.map((t) => ({ type: 'category' as const, label: t.titulo, items: grupos.get(t.id)! })),
-    ...(outros.length ? [{ type: 'category' as const, label: 'Outros', items: outros }] : []),
-  ].filter((c) => c.items.length);
+  const semTema = grupos.get('')!;
+  if (!temas.length || !temaDe.size || semTema.length) {
+    throw new Error(
+      `sidebars.ts: o parse de docs/adr/temas.yml se perdeu (${temas.length} temas, ${temaDe.size} ADRs mapeados, sem tema: ${semTema.join(', ') || 'nenhum'}). Ajuste adrsPorTema() ao formato do arquivo.`,
+    );
+  }
+  return temas
+    .map((t) => ({ type: 'category' as const, label: t.titulo, items: grupos.get(t.id)! }))
+    .filter((c) => c.items.length);
 }
 
 /**
