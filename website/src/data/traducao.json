@@ -376,6 +376,66 @@
       "defasada": false,
       "data": null
     },
+    "adr/0112-binario-standalone-do-runner-via-bun-build-compile.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0113-pasta-local-anexada-via-navegador-vira-chunks-scope-local.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0114-deteccao-de-ollama-nativo-no-bootstrap-dev.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0115-pedido-de-pull-de-modelo-huggingface-tabela-propria.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0116-tipos-do-web-gerados-do-openapi.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0117-lockfile-proprio-para-o-website.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0118-configuracao-automatica-do-runner-pelo-navegador.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0119-imagens-publicadas-no-ghcr-por-digest.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0120-e2e-de-navegador-contra-o-compose-de-producao.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0121-schema-dividido-por-agregado-de-dominio.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0122-sessionpage-dividido-em-cinco-prs.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0123-golden-set-regressao-qa-automacao.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0124-hook-do-canal-de-turno-do-sessionpage.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0125-projectsettingstab-dividido-por-secao.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0126-trilho-vertical-de-navegacao-do-projeto.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
     "explanation/aceite-providers.md": {
       "defasada": false,
       "data": null
@@ -419,6 +479,10 @@
     "missions/colheita-esqueleto.md": {
       "defasada": false,
       "data": null
+    },
+    "security-surface.md": {
+      "defasada": false,
+      "data": "2026-10-15"
     },
     "tutorials/from-zero-to-deliverable.md": {
       "defasada": false,
