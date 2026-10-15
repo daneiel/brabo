@@ -1,3 +1,7 @@
+---
+traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
+---
+
 # ADR 0091 — `secops-runtime` as a report script over `rate_limit_hits`
 
 - **Status:** Accepted

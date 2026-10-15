@@ -1,3 +1,7 @@
+---
+traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
+---
+
 # 0074 — Reachable theme, and the boot under CSP
 
 **Status:** accepted · 2026-08-14
