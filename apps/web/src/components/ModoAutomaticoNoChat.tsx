@@ -19,11 +19,32 @@ export function agentesDoChat(ativados: readonly string[]): string[] {
   return agentesDaOfertaEmLote(ativados.filter(ehDevAgent));
 }
 
+/**
+ * RN-889 (AT-540): estende a RN-883. Aprovar o plano do Dev Lead cria a sessão
+ * de EXECUÇÃO, separada da do Criativo — e é no chat do Criativo que o usuário
+ * conduz. Com a execução ativa no PROJETO (o roster do resumo, a sessão mais
+ * recente), a oferta aparece em qualquer sessão ativa dele, com os dev agents
+ * de lá somados aos desta.
+ */
+export function ofertaDoChat(
+  comExecucao: boolean,
+  ativados: readonly string[],
+  execucaoNoProjeto?: { ativa: boolean; ativados: readonly string[] },
+): { mostra: boolean; ativados: string[] } {
+  const doProjeto = execucaoNoProjeto?.ativa === true;
+  return {
+    mostra: comExecucao || doProjeto,
+    ativados: [...new Set([...ativados, ...(doProjeto ? execucaoNoProjeto.ativados : [])])],
+  };
+}
+
 export function ModoAutomaticoNoChat({
   projectId,
   comExecucao,
   ativados,
   podeLigar,
+  execucaoNoProjeto,
+  sessaoAtiva = true,
 }: {
   projectId: string;
   /** A sessão está ativa E tem execução (`sessaoTemExecucao`). */
@@ -31,17 +52,23 @@ export function ModoAutomaticoNoChat({
   ativados: readonly string[];
   /** `maintainer` no endpoint (RN-102). */
   podeLigar: boolean;
+  /** RN-889: a execução do projeto, de outra sessão (o resumo). */
+  execucaoNoProjeto?: { ativa: boolean; ativados: readonly string[] };
+  /** A sessão lida está ativa (a oferta nunca aparece em sessão encerrada). */
+  sessaoAtiva?: boolean;
 }) {
+  const oferta = ofertaDoChat(comExecucao, ativados, execucaoNoProjeto);
+  const mostra = sessaoAtiva && oferta.mostra;
   const { data: autonomyRules } = useQuery({
     queryKey: ['agent-autonomy', projectId],
     queryFn: () => listAgentAutonomy(projectId),
-    enabled: comExecucao,
+    enabled: mostra,
   });
-  if (!comExecucao) return null;
+  if (!mostra) return null;
   return (
     <ModoAutomaticoDoTime
       projectId={projectId}
-      agentes={agentesDoChat(ativados)}
+      agentes={agentesDoChat(oferta.ativados)}
       autonomyRules={autonomyRules}
       podeLigar={podeLigar}
     />

@@ -6,6 +6,10 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- A oferta "Ligar para N agentes" do modo automático aparece também no chat do
+  Criativo quando o projeto tem execução ativa noutra sessão — antes ela só
+  aparecia na sessão de execução, e o dev esperava o clique num `terminal`
+  (RN-889, AT-540).
 - A tarefa bloqueada deixa de aparecer como "a fazer": a aba Histórias mostra
   um selo de estado em cada tarefa ("Bloqueada", com o motivo, vence o
   status), e o backlog que o Dev Lead lê marca a linha com `BLOQUEADA` e o
