@@ -1,3 +1,7 @@
+---
+traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
+---
+
 # ADR 0101 — Relational memory as an event log projection; templates consumed without touching GenServers
 
 - **Status:** Accepted
