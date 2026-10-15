@@ -6,6 +6,9 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- A interface ganha chinês simplificado (`zh-Hans`): os 27 namespaces de
+  `apps/web/src/locales/zh-Hans/`, traduzidos da fonte pt-BR, com plural só em
+  `_other` (ADR 0216, AT-552). Revisão por falante nativo: ainda não.
 - O cache de prompt passa a valer no Haiku (e nos demais `anthropic/*`) pelo
   OpenRouter: a capability `promptCaching` do OpenRouter vira `true`, provada
   por smoke com credencial em 15/10 (`cached_input_tokens=8011` na segunda
