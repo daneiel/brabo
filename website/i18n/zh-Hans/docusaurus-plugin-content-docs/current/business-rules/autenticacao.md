@@ -352,3 +352,332 @@ rev-list --left-right --count`）。把这个代价附加到每次分支的采�
   `apps/web/src/routes/code/CodeEditor.module.css`
 - **测试：** `apps/web/src/routes/code/CodeEditor.test.tsx`
 - **来源：** FASE 26b 的 UI 波（blame——丰富的分支下拉菜单和 PR 列表是另外两个 agent 的 UI，没有冲突风险）
+
+### RN-115 — Anamnese 可以被全局暂停；暂停属于*产品*，从不删除数据 {#rn-115}
+
+`ANAMNESE_ENABLED`（engine 的环境变量，布尔，自这条规则起默认 `false`）决定 Anamnese 的*新*一轮是否可以发生——周期性的（`AnamneseSchedulerWorker`）或按需的（`AnamneseCommandController`）。这是用户在 2026-08-10 作出的*产品*决定（"hoje ele não está trazendo
+dados de muito valor"），不是 bug——见 docs/explanation/backlog.md。停用时，*没有*任何现有数据被触碰：已经写入的假设、熟练度档案和指令补丁保持完好且可见，*按成员*的退出（RN-025）仍然是一个独立的概念——暂停属于*系统*，而不是个人画像。
+
+`AnamneseSchedulerWorker.kickoff/0`（在启动时调用一次）在停用时*不*安排周期性 job，而不是安排后让 `perform/1` 在每个 tick 空转——更便宜（Oban 队列不会每隔 `ANAMNESE_INTERVAL_SECONDS` 收到一个只为什么都不做的 job），对检查队列的人也更清楚。**2026-08-10 的更正**（执行中的真实发现，而非假设）：这条规则的原始版本刻意让 `perform/1` 无条件执行，使轮次之间的链条不携带开启/关闭的决定——但这意味着在 flag 存在*之前*（或在有人停用它之前）已经安排好的链条会永远自我重新安排，在 flag 为 `false` 的情况下真正运行 Anamnese。这正是在一个比原始 PR 更老的开发 Postgres 中发生的事，通过手动取消已安排的 job 得到补救。`perform/1` 现在在每个 tick 都检查 `enabled?/0`，与 `kickoff/0` 一样：停用时，既不执行 `enqueue_projects/0` 也不重新安排，链条就此终止——这也能*自愈*仍会触发一次的旧 job 的情形，无需人工干预。
+
+`AnamneseCommandController.run/2`（按需路由，设置中的"立即重新分析"）在停用时响应 **503**，正文为 `{"error": "anamnese_desativada"}`——刻意区别于已有的表示"项目没有会话"的空 409（两者在纯 409 中很容易混淆，而它们是截然不同的原因）。api 一侧的 `RunAnamneseUseCase` 把 engine 的 503 转换为正文中带 `reason: "anamnese_disabled"` 的 `ServiceUnavailableException`——绝不是通用的 500，也不是复用的 409。web（`ProjectSettingsTab.tsx`）在第一次点击"立即运行"时发现这个状态（目前没有对全局状态的预先读取），从那以后禁用按钮并在界面上保持解释*可见*——而不只是一个会消失的 toast（RN-088：绝不是无声或令人困惑的失败）。
+
+- **位置：** `apps/engine/lib/engine/workers/anamnese_scheduler_worker.ex`
+  （`enabled?/0`、`kickoff/0`），
+  `apps/engine/lib/engine_web/controllers/anamnese_command_controller.ex`,
+  `apps/engine/config/runtime.exs`,
+  `apps/api/src/domain/anamnese/anamnese-disabled.error.ts`,
+  `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts`
+  （`runAnamnese`），`apps/api/src/application/use-cases/anamnese/run-anamnese.use-case.ts`,
+  `apps/web/src/routes/settings/ProficiencySection.tsx`
+- **测试：**
+  `apps/engine/test/engine/workers/anamnese_scheduler_worker_test.exs`
+  （停用时 `kickoff/0` 不安排，启用时安排，默认关闭；在链条中途停用时 `perform/1` 不扇出也不重新安排），
+  `apps/engine/test/engine_web/controllers/anamnese_command_controller_test.exs`
+  （503 区别于 409，有会话和没有会话），
+  `apps/api/test/application/use-cases/anamnese/run-anamnese.use-case.spec.ts`,
+  `apps/web/src/routes/ProjectSettingsTab.test.tsx`（`ProficiencySection`）
+- **边界情况：** flag 是*全局*的（所有项目/workspace），而不是按项目——与并行上限（RN-083）或按区域可继承的模型（RN-102）这些按范围的决定不同。重新开启是
+  `ANAMNESE_ENABLED=true` 并重启 engine；UI 中没有这个按钮（这是运维操作，而不是项目偏好）。
+- **来源：** 没有 ADR——可逆的产品决定，不是结构性的架构变更。见 docs/explanation/backlog.md。
+
+### RN-117 — Psicólogo 可以被全局暂停；暂停属于*产品*，从不删除数据 {#rn-117}
+
+`PSYCHOLOGIST_ENABLED`（engine 的环境变量，布尔，默认 `false`）决定 Psicólogo 的*新*一轮是否可以发生——自动的（会话关闭，由 `Engine.Outbox.Drain` 路由）或按需的
+（`PsychologistCommandController.reanalyze/2`）。这与用户在 2026-08-10 已经应用于 Anamnese 的*产品*决定相同（RN-115，"hoje ele não está
+trazendo dados de muito valor"）——不是 bug，见 docs/explanation/backlog.md。停用时，*没有*任何现有数据被触碰：已经发出的分析和假设保持完好且可见。
+
+与 Anamnese 不同（其自动触发器是由 flag 自己决定是否重新安排的周期性 *TICK*），Psicólogo 的自动触发器是会话关闭——`Engine.Outbox.Drain` 只在 `PsychologistWorker.enabled?/0` 为 true 时（`Drain.handlers_for/1`）才把
+`session.closed`/`session.closed_abnormally` 路由给 `PsychologistWorker`；停用时只运行 `SessionLifecycleWorker`，Psicólogo 的 job 根本不会诞生。`PsychologistWorker.perform/1` 刻意保持无条件——但它*不再*是与 `AnamneseSchedulerWorker` "相同的模式"（见上面 RN-115 中 2026-08-10 的更正）：在那里 `perform/1` 开始检查 flag，是因为它*自己*在每个 tick 重新安排链条，而一个无条件触发的旧 job 会在 flag 关闭时重新打开 Anamnese。Psicólogo 没有任何会自我重新安排的链条——每个 job 都诞生于*一个*事件（`session.closed`），作决定的是 `Drain` 在*接收*事件的时刻，而不是 worker 在*运行*的时刻；在关闭 flag 之前已经入队的 Psicólogo job 至多是最后一轮待处理的，绝不是无限的链条。这就是为什么 `PsychologistWorker` 已有的测试套件（直接调用 `perform/1`）不需要改动。
+
+`PsychologistCommandController.reanalyze/2`（按需路由，洞察标签页中的"重新分析"）在停用时响应 **503**，正文为
+`{"error": "psicologo_desativado"}`，甚至不创建 job。api 一侧的 `ReanalyzeSessionUseCase` 把 engine 的 503 转换为正文中带 `reason: "psychologist_disabled"` 的 `ServiceUnavailableException`——绝不是通用的 500。这在已经存在可重新处理的分析时发现暂停；*没有任何*假设的界面有自己的预先读取，这里原来没有——见 [RN-454](../business-rules.md#rn-454)。
+
+- **位置：** `apps/engine/lib/engine/workers/psychologist_worker.ex`
+  （`enabled?/0`），`apps/engine/lib/engine/outbox/drain.ex`
+  （`handlers_for/1`），
+  `apps/engine/lib/engine_web/controllers/psychologist_command_controller.ex`,
+  `apps/engine/config/runtime.exs`,
+  `apps/api/src/domain/psychologist/psychologist-disabled.error.ts`,
+  `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts`
+  （`reanalyzeSession`），
+  `apps/api/src/application/use-cases/execution/reanalyze-session.use-case.ts`,
+  `apps/web/src/routes/ProjectInsightsTab.tsx`
+- **测试：**
+  `apps/engine/test/engine/outbox/drain_test.exs`（`session.closed` 只在启用时把 Psicólogo 入队），
+  `apps/engine/test/engine_web/controllers/psychologist_command_controller_test.exs`
+  （503 且不创建 job，启用时 202 并有入队的 job），
+  `apps/api/test/application/use-cases/execution/reanalyze-session.use-case.spec.ts`,
+  `apps/web/src/routes/ProjectInsightsTab.test.tsx`
+- **边界情况：** flag 是*全局*的（所有项目/workspace），与 Anamnese 的一样。重新开启是 `PSYCHOLOGIST_ENABLED=true` 并重启 engine；UI 中没有这个按钮。
+- **来源：** 没有 ADR——可逆的产品决定，不是结构性的架构变更。见 docs/explanation/backlog.md。
+
+### RN-108 — 会话 socket 要求一次性的不透明 ticket，而不是复用 JWT {#rn-108}
+
+`EngineWeb.SessionSocket.connect/3` 原来只要求 `session_id`（UUID）存在于 Registry 中就允许连接——发现了 UUID 的人就能进入 `session:<id>` 通道，接收该会话的所有实时广播。关闭这一点是自 Fase 3 起就记录在模块本身中的刻意限制。
+
+`POST /projects/:projectId/sessions/:sessionId/socket-ticket`（`scope:
+"heartbeat"|"terminal"`）签发一个不透明 ticket（32 字节 CSPRNG，
+`TokenFactory`），TTL **30 秒**，一次性。`scope: "heartbeat"` 要求角色 `viewer`；`scope: "terminal"` 要求 `developer`——与 `domain/actions/decide.ts` 中 `MIN_ROLE_FOR_ACTION_TYPE.terminal` 相同的最低角色（目前没有任何路径真正请求 `terminal`；这个值为 FASE 25 的交互式终端正确地诞生）。api 只持久化*哈希*（**纯** SHA-256，而不是 `hashDeToken`/HMAC——engine 没有 api 的 pepper，而一个 256 位的 CSPRNG token 不需要 pepper 来防御字典攻击，与 `hashDeToken` 自己记录的推理相同），从不持久化原始 token。
+
+消耗属于 *ENGINE*，它直接读取 `session_socket_tickets`（与 `Engine.Outbox.Event` 对 `outbox_events` 的模式相同——绝不是 changeset/insert，只有一次性所需的窄写入），分*两*步：
+`SocketTicket.validar/1`（窥视，不标记任何东西——由 `connect/3` 调用，它还不知道将请求哪个 `session_id`）和
+`SocketTicket.consumir/2`（条件 `UPDATE`，要求主题的 `session_id` 与该行一致——由 `SessionChannel.join/3` 调用，它还会对照会话的 `project_id` 检查 ticket 的 `project_id`，纵深防御，防止一个项目的 ticket 打开另一个项目的通道）。没有 ticket，或 ticket 无效：整个连接被拒绝（`{:error, %{reason:
+"unauthorized"}}`），而不只是通道的 join。
+
+web（`session-channel.ts`）在*每次* `socket.connect()` 之前都获取一个*新* ticket——包括自动重连，它确实存在。`Phoenix.Socket` 的原生重连会复用构造时的同一个 `params`（旧 ticket，已经过期或被消耗），因此它被中和（`reconnectAfterMs` 几乎永不触发），重连完全变为手动，每次尝试都获取新的 ticket。
+
+这种中和适用于 socket 的*每个*客户端，而不只是 web 的——包括 `/runner` socket，它的 ticket（`POST .../runner-ticket`）是同一口径。它在仓库四个 `Socket` 构造器中的*两个*里失败了，代价在真实执行中被测量：`apps/runner/src/
+channel.ts` 构造 socket 时没有这个选项——而模块的 docblock 却*声称*重连"因此被中和"——自动重连每 **~5.13s**（phoenix.js 内部退避的上限）重复同一个已被消耗的 ticket，几个小时内产生 **61 次 `REFUSED CONNECTION TO
+EngineWeb.RunnerSocket`**。再加上 runner *自己*的策略（`index.ts`，这个是正确的），结果是**一分钟 530 个请求**，而 `RATE_LIMIT_USER` 的上限是 300——由于限制是按*用户*的，429 出现在账户所有者的*浏览器*中。两个后果，第二个比 429 更糟：处于这个循环中时 runner *没有*连接，因此 `RunnerReadiness`（RN-507）会拒绝，项目看起来"没有本地 agent"。`apps/web/src/lib/fs-browser-channel.ts` 有*同样*的缺陷行（同样的一次性 ticket，且没有自己的重连策略——它的 `onClose` 说"关闭再重新打开"），一并修正。
+
+阻止第三个实例的是*机制*，而不是注释：在 runner 中，`Socket` 的选项变成了一个 `reconnectAfterMs` *必填*的类型（`channel.ts` 中的 `OpcoesDoSocket`），两侧都增加了断言*传给*构造函数的*选项*的测试——一个只检查"能连上"的测试在缺陷存在时也会通过，而且确实通过了。同时，`conectarERodar`（`index.ts`）开始显式*丢弃*掉线的连接（`conexao.desconectar()`）：没有这一点，上一轮的 `Socket` 会在下一轮创建后继续存活，每次掉线都会多留下一个用失效 ticket 尝试的存活对象。
+
+- **位置：** `apps/api/src/db/schema/sessions.ts`（`sessionSocketTickets`），
+  `apps/api/src/domain/sessions/socket-ticket-scope.ts`,
+  `apps/api/src/application/use-cases/sessions/create-socket-ticket.use-case.ts`,
+  `apps/api/src/interfaces/http/sessions/sessions.controller.ts`（路由
+  `socket-ticket`），`apps/engine/lib/engine/sessions/socket_ticket.ex`,
+  `apps/engine/lib/engine_web/channels/session_socket.ex`,
+  `apps/engine/lib/engine_web/channels/session_channel.ex`,
+  `apps/web/src/lib/session-channel.ts`,
+  `apps/web/src/lib/fs-browser-channel.ts`,
+  `apps/runner/src/channel.ts`（`OpcoesDoSocket`、
+  `NUNCA_RECONECTAR_SOZINHO_MS`），`apps/runner/src/index.ts`
+  （`conectarERodar`，掉线连接的丢弃）
+- **测试：**
+  `apps/api/test/application/use-cases/sessions/create-socket-ticket.use-case.spec.ts`,
+  `apps/api/test/domain/sessions/socket-ticket-scope.spec.ts`,
+  `apps/api/test/infrastructure/persistence/session-socket-ticket.repository.spec.ts`,
+  `apps/engine/test/engine/sessions/socket_ticket_test.exs`（复用失败、session_id 错误失败、并发竞争只有一个胜出），
+  `apps/engine/test/engine_web/channels/session_socket_test.exs`（没有 ticket 时连接被拒绝），
+  `apps/engine/test/engine_web/channels/session_channel_test.exs`（另一个项目的 ticket：join 失败），`apps/web/src/lib/session-channel.test.ts`,
+  `apps/runner/src/channel.spec.ts`（"neutraliza o auto-reconnect do
+  Phoenix.Socket — ticket de uso único nunca é repetido"；断言传给构造函数的*选项*，没有它则失败），
+  `apps/web/src/lib/fs-browser-channel.test.ts`（同样的断言，用于文件夹浏览器经由 runner 的传输）
+- **边界情况：** ticket *不是*复用的 JWT——短 TTL、一次性、封闭的范围，并且诞生于一条已经检查有效角色的专门路由，而不是解码现有的 access token。
+- **来源：** 没有 ADR——单点的提取/加固，不是结构性变更。
+
+### RN-109 — workspace 的文件夹名在创建时冻结，旧项目保留 UUID {#rn-109}
+
+项目在 `PROJECT_WORKSPACES_ROOT` 中的物理文件夹原来是纯 UUID——在磁盘上打开时无法辨认。`projects.workspace_dir_name`（NOT NULL，UNIQUE）开始保存真正的名称：*新*项目为 `<slug>-<id 的 8 个字符>`（`apps/api/src/infrastructure/filesystem/project-workspaces-root.ts` 中的 `workspaceDirNameFor`），在代码中生成——id 来自 `CreateProjectUseCase` 中的 `crypto.randomUUID()`，而不是 Postgres 的 `defaultRandom()`，因为文件夹名在插入*之前*就需要 id。8 个字符遵循与会话标签相同的约定（`apps/web/src/lib/session-label.ts`）。
+
+名称在创建时*冻结*，从不重新计算：`UpdateProjectUseCase` 允许之后编辑 `slug`，而这*不*触碰 `workspace_dir_name`——重新安排物理文件夹（其中可能有打开的工作树和 agent 的 worktree）是真实的风险，这个决定在构造上避免了它，而不是靠调用者的自律。
+
+在这次迁移（0042）*之前*创建的项目保留它已有的物理文件夹：回填为每个现有行写入 `workspace_dir_name = id`——与磁盘上本来就为真的值相同——并且*从不*重命名任何目录。一个 `BEFORE INSERT` 触发器（`projects_workspace_dir_name_default_trg`）对任何不带该字段的插入应用*相同*的回退（`id::text`）——这是给忘记写入它的人的安全网（绝不是主路径，主路径总是显式写入），也是让几十个不知道这个概念的现有测试 fixture 无需逐个重写就能继续工作的原因。
+
+从名称推导路径（`projectScopeRoot`，RN-092/RN-075）开始接收 `workspace_dir_name`，而不是原始的 `projectId`——同样的字符集校验，同样的纯粹性。engine 读取*同一*列（`Engine.Projects.Project.workspace_dir_name/1`）来解析
+`Engine.Actions.Workspace.workspace_dir/1`，从不根据 id 重新计算名称：两种推导（api 和 engine）实际上是针对同一数据库的同一读取——这保证了 RN-075（终端范围）和 RN-092（代码读取）继续指向 engine 真正使用的*同一个*文件夹。
+
+- **位置：** `apps/api/src/db/schema/iam.ts`（`projects.workspaceDirName`），
+  `apps/api/src/db/migrations/0042_tough_captain_midlands.sql`,
+  `apps/api/src/infrastructure/filesystem/project-workspaces-root.ts`
+  （`workspaceDirNameFor`、`projectScopeRoot`），
+  `apps/api/src/application/use-cases/iam/create-project.use-case.ts`,
+  `apps/engine/lib/engine/projects/project.ex`
+  （`workspace_dir_name/1`、`all_workspace_dirs/0`），
+  `apps/engine/lib/engine/actions/workspace.ex`（`workspace_dir/1,2`），
+  `apps/engine/lib/engine/dev/worktree_cleanup.ex`
+- **测试：**
+  `apps/api/test/db/workspace-dir-name-migration.spec.ts`（触发器、等价回填、唯一性），
+  `apps/api/test/application/use-cases/iam/create-project-semeia-areas.spec.ts`
+  （`workspaceDirName` 以 `<slug>-<8 chars>` 诞生，不同 workspace 中 slug 相同的两个项目文件夹不冲突），
+  `apps/api/test/infrastructure/filesystem/project-workspaces-root.spec.ts`
+- **边界情况：** 并行上限和合并 gate 不变——RN-109 只是文件夹的*名称*，绝不是策略。创建后重命名 slug 不会重命名文件夹；文件夹只通过已写入的 `workspace_dir_name` 读取。
+- **来源：** ADR 0066（修订 ADR 0055）。
+
+### RN-129 — ToolLoop 从不写入空的 `agent.response`；传输失败成为持久的 `agent.error` {#rn-129}
+
+[RN-059](../business-rules/custo.md#rn-059) 为四个对话型 agent 堵住了空气泡，但它们不经过 `Engine.Harness.ToolLoop`——每个都在自己的模块中调用 `EngineApiClient.llm_turn_stream/6`。`ToolLoop`（由 dev agent、QA Automação/Performance-Segurança、Infra-Workflows、Anamnese 和 Psicólogo 使用）在另一条路径上有*同样*的缺陷：它在每次迭代时发出 `agent.response`，即使模型只调用了工具而没有文本，或者结束回合而什么都没产生——而传输失败（提供方宕机、超时）会变成缺少 `content` 的 `agent.response`，同样与成功无法区分。
+
+在一次真实执行会话（dev agent）中实时发现：两个带有 RN-059 兼容文本（"resposta vazia — evento anterior..."）的气泡出现在几分钟前创建的会话中——它们不是旧事件，而是同一缺陷再次发生，只是在执行标签页中。
+
+两项修正，位于每个 `ToolLoop` 消费者共有的*结构性*位置，而不是逐个模块：
+
+1. **空内容绝不会变成 `agent.response`。** 只调用了工具的迭代已经由 `tool.call`/`tool.result` 叙述；什么都没产生的迭代（既没有文本也没有工具调用）把结果留给调用循环的人决定——`ctx.last_error`/`{:ok, ctx}` 携带信息，消费者（例如 `DevAgentServer.handle_outcome/4`）已经写入*自己*领域的持久事件（`dev.blocked`，带 `origem`）。
+2. **传输失败成为持久的 `agent.error`**，带 `origem`（`Engine.Agents.FalhaDeTurno.origem/1`——四个对话型 agent 使用的*同一个*辅助函数，不重复分类）和葡萄牙语的 `mensagem`——再也不会有缺少 `content` 的 `agent.response`。
+
+- **位置：** `apps/engine/lib/engine/harness/tool_loop.ex`（`loop/1`、
+  `emit_falha/2`）
+- **测试：** `apps/engine/test/engine/harness/tool_loop_test.exs`
+  （"iteração só com tool call (sem texto) não grava agent.response vazio"、
+  "modelo termina o turno sem texto e sem tool call..."、"falha de
+  transporte... grava agent.error durável com origem"）
+- **来源：** RN-059（本规则扩展的规则）——在有 dev agent 的真实执行会话中实时发现
+
+### RN-139 — 执行者标签页读取*现行*的执行会话，绝不是项目最近的会话 {#rn-139}
+
+`ProjectExecutorsTab` 原来按 `useLatestSession` 返回的会话获取 dev agent/QA 的事件——项目中 `createdAt` 最新的会话，不按 `kind` 过滤，也不要求 `execution.activated`。它之所以能工作只是**巧合**：执行会话通常是最新的。一旦有任何会话在它之后诞生——一次新的构思、一次咨询性聊天——标签页就会悄无声息地开始查看这个没有执行事件的新会话：界面上没有任何线索说明显示的是哪个会话。
+
+正确的读取在后端已经存在：`findActiveExecutionSession`
+（`SessionRepository`）——带有 `execution.activated` 的最近 `active` 会话——但它只在内部被 `ActivateExecutionUseCase` 用来决定是重新激活还是创建。修正通过 HTTP 暴露*同一*标准，而不是在前端重复它：
+
+- **`GET /projects/:projectId/execution/session`**（`role:viewer`）返回现行会话或 `null`——从不根据最新的去推断；
+- `ProjectExecutorsTab` 把 `useLatestSession` 换成 `useActiveExecutionSession`
+  （基于上述路由的新 hook），作为整个标签页读取的会话来源；
+- 标签页头部总是显示正在显示*哪个*会话——它的标签（hashtag + 名称）链接到 `SessionPage`，或在 `null` 时显示"没有活跃的执行"——再也不是隐含的。[RN-088](../business-rules.md#rn-088) 的三种状态适用于会话本身的获取：加载中、错误（带 `trace_id`）和空（`null`）是三种不同的渲染，绝不是把它们合并的 `if (!sessão) return null`。
+
+- **位置：**
+  `apps/api/src/application/use-cases/execution/get-active-execution-session.use-case.ts`,
+  `apps/api/src/interfaces/http/execution/execution.controller.ts`（`getSession`），
+  `apps/web/src/lib/hooks.ts`（`useActiveExecutionSession`），
+  `apps/web/src/routes/ProjectExecutorsTab.tsx`
+- **测试：**
+  `apps/web/src/routes/ProjectExecutorsTab.test.tsx`——即使项目中存在更新的会话也显示执行会话，显式的"没有活跃的执行"状态，以及网络错误得到处理（不是空白）
+- **来源：** 代码调查中的发现 + 实时测试——与 RN-088 为 429 关闭的同一类缺陷，现在针对的是"界面在看哪个会话"
+
+### RN-141 — `read_file` 读取的内容同样有字节上限 {#rn-141}
+
+[RN-074](../business-rules/custo.md#rn-074) 让*终端*的输出免于
+`{413, "request entity too large"}`，却通过 `read_file` 留下了同一扇门：它读取*整个*文件，没有上限，这些内容进入循环的历史并在之后的每个回合中传输。一个带有大文件（lockfile、bundle、生成的文件）的 PR 就足以卡住 dev agent *和* Performance/Segurança 的 QA——后者只有 `ReadFile`/`SearchWorkspace`（刻意没有 `Terminal`）来调查 PR，因此当文件太大时它没有任何出路。
+
+内容在成为工具结果之前被截断到 `READ_FILE_MAX_BYTES`（默认 32 KiB，与 RN-074 的值相同是出于上下文的巧合，而不是耦合——两个变量是独立的），并带有说明文件和两个大小的标记：
+
+```
+[arquivo package-lock.json truncado: mostrando 32768 de 1048576 bytes. Use
+search_workspace para localizar um trecho específico em vez de reler o
+arquivo inteiro.]
+```
+
+与 RN-074 相同的三个性质（上限是 `>` 而不是 `>=`；截断不切开多字节字符；标记是写给模型的，说明该怎么做）。截断位于*工具*中（`Engine.Harness.Tools.ReadFile`），而不在
+`Engine.Harness.WorkspaceFiles.read_file/2` 中——后者是通用的文件访问基础，由 `write_file`/`search_workspace` 共享，在那里截断会切掉不需要这个上限的调用者的内容。
+
+`search_workspace` 没有得到同样的处理：它只返回匹配的*路径*（`matched_content` 是布尔值），从不返回文件内容——促成这条 RN 的溢出向量不适用于它。
+
+- **位置：** `apps/engine/lib/engine/harness/tools/read_file.ex`
+  （`truncate/2`），上限在 `apps/engine/config/runtime.exs`
+  （`read_file_max_bytes`）
+- **测试：** `apps/engine/test/engine/harness/tools/read_file_test.exs`
+  （describe `teto de bytes do conteúdo`）
+- **来源：** 在一次真实执行的事件日志中实时发现——一个项目的 4 个 dev agent 和 Automação/Performance-Segurança 的 QA 都被 `{413, "request entity too large"}` 阻塞，与 RN-074 同一根因，不同的门
+
+### RN-144 — Criativo 标签页不列出现行的执行会话 {#rn-144}
+
+接收 `execution.activated` 和 dev agent 工具调用事件的会话必须以 `kind: 'criativa'` 诞生——这是结构性规则（RN-097，
+`garantirQuePodeAtivarExecucao`），否则事件会被拒绝。由于 `ProjectSessionsTab`（Criativo 标签页，RN-104）列出会话时只按 `session.kind === 'criativa'` 过滤，执行会话会*混在*列表中，与真正的构思并列——在 `SessionPage.tsx` 中打开它会显示一整条 dev agent 工具调用的时间线，在用户看来就像"dev 在 Criativo 的聊天里写东西"。已实时确认：一个带有 35 个以上 dev agent 事件的真实会话正常出现在列表中，与真实的构思会话并列。
+
+修正复用 [RN-139](#rn-139) 已经暴露的信号——
+`useActiveExecutionSession`/`GET /projects/:projectId/execution/session`——而不是让后端为每个会话计算一个新字段（`hasExecutionActivated` 或类似的）。Criativo 标签页获取现行会话，并将其从渲染的列表中排除：
+
+- 获取只在 Criativo 标签页运行（在 `kind !==
+  'criativa'` 时 `enabled` 关闭）——聊天标签页从未做过这个调用，现在也不做；
+- 过滤按 `id` 进行，位于已有的按 `kind` 过滤之后——它不改变列表*是*什么，只改变它*排除*什么。
+
+**刻意的范围决定：** 这只覆盖*现行*的执行，而不覆盖已经结束的*旧*执行（在今天处于 `closed` 的会话中写入的 `execution.activated`）。计算这一点需要后端为每个会话标注是否写入了该事件——仓储和列表端点的变更，针对一个残余情形：*旧*执行会话带着 `closed` 徽章出现，这已经以比现行会话（原来显示为 `active`，与进行中的构思无法区分）少得多的歧义表明"这不是活跃的构思"。如果这在实践中再次造成困惑，出路是列表端点为每个会话返回该信号——而不是在前端为旧会话再加一个 `filter`。
+
+- **位置：** `apps/web/src/routes/ProjectSessionsTab.tsx`
+  （`ProjectSessionsTab`）
+- **测试：** `apps/web/src/routes/ProjectSessionsTab.test.tsx`——现行会话从 Criativo 列表中消失而正常会话仍在旁边，聊天标签页不调用现行执行的获取，没有现行执行（`null`）时列表完整显示
+- **来源：** 代码调查中的发现 + 实时测试——带有活跃执行的真实会话混在 Criativo 标签页中
+
+### RN-145 — Arquiteto 也有就绪按钮，*同一次*确认同时提供给 Infra 和 Dev Lead {#rn-145}
+
+`OfferInfraHandoffUseCase`（`POST .../agents/arquiteto/handoff-infra`）自 Fase 4a 起就已存在——写入 `architecture.readiness_confirmed` 并调用 engine，后者向 Infra 提供 handoff，并在*同一次*确认中向 Dev Lead 提供（FASE 14d/ADR 0053）。缺少的是到达它的途径：前端没有任何地方调用这个端点。"确认架构就绪"按钮对 Criativo 来说一直都有（"我准备好产出了"，
+[RN-131](../business-rules.md#rn-131)/[RN-142](../business-rules.md#rn-142)）——Arquiteto 没有任何等价物，没有这次点击 handoff 就永远不会诞生：消息流中卡片优先级的修正（[RN-125](../business-rules.md#rn-125)）没有实际效果，因为没有东西可以显示。
+
+`arquitetoActive` 对应 `criativoActive`（此会话中存在 Arquiteto 的 `agent.activated`），`arquiteturaJaDeclarada` 对应
+`prontidaoJaDeclarada`（存在*任何*从 Arquiteto 发出的 handoff——确认已经发生的证据，因为 `OfferInfraHandoffUseCase` 在同一次调用中至少创建给 Infra 的那个）。按钮只在前者为真、后者为假时出现在输入框中——点击后消失，理由与 Criativo 的按钮在就绪后消失相同。
+
+与 Criativo 不同，Arquiteto *没有*在缺少 `module_map` 时阻止确认的服务器护栏——`ArquitetoServer.offer_infra_handoff` 不拒绝任何东西，这与 `CriativoServer.confirm_readiness`（[RN-142](../business-rules.md#rn-142)）不同。按钮只在 `streaming` 期间禁用；不在这里复制概览页的 `disabled={!hasModuleMap}` 是刻意的决定，理由与 Dev Lead 卡片上的"激活执行"（[RN-137](../business-rules.md#rn-137)）已经适用的相同——当这张卡片存在时，Arquiteto 已经决定了架构。
+
+- **位置：** `apps/api/src/interfaces/http/agents/agents.controller.ts`
+  （`handoffInfra`，已有路由），`apps/web/src/lib/api-client.ts`
+  （`confirmArchitectureReadiness`），`apps/web/src/routes/SessionPage.tsx`
+  （`arquitetoActive`、`arquiteturaJaDeclarada`、`handleArchitectureReadiness`、
+  "确认架构就绪"按钮）
+- **测试：**
+  `apps/web/src/routes/SessionPage.arquiteto-modelo-icone.test.tsx`，describe
+  "problema 1"——没有活跃 Arquiteto 时没有按钮，正常路径调用专用端点，失败时显示错误 toast，架构已声明后按钮消失
+- **来源：** 代码调查——端点和 engine 的逻辑自 Fase 4a/14d 起就存在，却*没有任何* UI 路径通往它们
+
+### RN-146 — `agent.response` 携带生成该响应的模型名称 {#rn-146}
+
+模型名称原来只存在于 `token_usage` 中，与它所产生的具体 `agent.response` 事件没有关联——`SessionPage.tsx` 在 agent 名称旁显示*固定*字符串 `"modelo"`，从不显示真实名称。
+
+变更贯穿三层，都使用*同一个*字段名（`modelName`），因此无需在它们之间转换：
+
+1. **api**——`StreamLlmTurnUseCase`/`RunLlmTurnUseCase` 本来就为调用提供方而解析模型（`resolveModelBinding` → `models.findById`）；`final` 帧/`RunLlmTurnResult` 新增 `modelName: string |
+   null`。只有当回合在解析出模型*之前*失败时（没有 binding，或 binding 指向不存在的模型）才为 `null`——其他情况下，包括预算超支，binding 已经解析完成，名称即使在错误帧中也会传输。
+2. **engine**——四个对话型 agent（`criativo_server.ex`、
+   `po_server.ex`、`arquiteto_server.ex`、`dev_lead_server.ex`）从 `final` 帧中提取 `Map.get(frame, "modelName")`，并把它放进
+   `emit_response`/`agent.response` 的 payload（`%{content: content, modelName:
+   model_name}`）。
+3. **web**——`SessionPage.tsx` 读取 `event.payload.modelName`。在这次变更之前*写入*的事件没有这个键（`undefined`），而 api 没有解析出任何模型的回合会写入 `null`——两者都降级为通用标签 `"modelo"`，绝不会在界面上显示 `undefined`/`null`；与 `text === ''` 已经用于 RN-059 之前的响应的模式相同。
+
+- **位置：** `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts`
+  （`LlmTurnStreamEvent`），`apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts`
+  （`RunLlmTurnResult`），`apps/api/src/interfaces/http/internal/dto/internal.response.dto.ts`
+  （`LlmTurnResponseDto`/`LlmTurnStreamEventResponseDto`），
+  `apps/engine/lib/engine/agents/{criativo,po,arquiteto,dev_lead}_server.ex`
+  （`emit_response/3`），`apps/web/src/routes/SessionPage.tsx`（时间线的
+  `agent.response` 块）
+- **测试：** `apps/api/test/application/use-cases/llm/run-llm-turn.use-case.spec.ts`,
+  `apps/api/test/application/use-cases/llm/stream-llm-turn.use-case.spec.ts`
+  （正常路径、提供方错误和没有 binding 时的 `modelName`），
+  `apps/engine/test/engine/agents/{criativo,po,arquiteto,dev_lead}_server_test.exs`
+  （`agent.response` 携带模型名称；没有该键的帧这一边界情况），
+  `apps/web/src/routes/SessionPage.arquiteto-modelo-icone.test.tsx`，describe
+  "problema 2"——真实名称、没有该键的旧事件、`modelName: null`
+- **来源：** 代码调查——确认数据已经存在于 `token_usage` 中，却从未到达事件的 payload
+
+### RN-147 — 折叠分组的头部显示 agent 的图标，而不只是名称 {#rn-147}
+
+`timelineAgrupada`（[RN-138](../business-rules.md#rn-138)）的 `Disclosure` 在 `titulo` 中只接收名称*字符串*——每条展开的消息都已经有头像（`.avatar` + 图标），而折叠的头部恰恰在最有助于扫视消息流的地方丢失了这个视觉线索。
+
+`AvatarDoAgente` 复用与展开消息*相同*的 `.avatar` 框，但选择的图标是*名册*中的（`AGENTS[id].icon`）——与已经在流式指示器中识别"谁在说话"的同一来源（`agenteExibido.icon`，
+[RN-131](../business-rules.md#rn-131)）——而不是每个展开条目使用的按事件*类型*的图标（`agent.response` 中的 `ModelIcon`、`backlog.*_created` 中的 `StackIcon`、`agent.error` 中的 `AlertCircleIcon`）。一个折叠分组可能混合同一 agent 的这些类型的条目；头部代表的是 *AGENT*，而不是它的最后一个条目，只有名册图标对此是稳定的。没有 `id`，或者 agent 不在名册中时，降级为 `ModelIcon`——绝不是空框。
+
+- **位置：** `apps/web/src/routes/SessionPage.tsx`（`AvatarDoAgente`、
+  `timelineAgrupada`），`apps/web/src/routes/SessionPage.module.css`
+  （`.agentGroupTitulo`）
+- **测试：** `apps/web/src/routes/SessionPage.arquiteto-modelo-icone.test.tsx`，
+  describe "problema 3"——折叠的头部带有 PO 图标（`UserIcon`）的 PATH，而不只是一个通用的装饰性 SVG
+- **来源：** 代码调查——`Disclosure` 本来就在 `titulo` 中接受 `ReactNode`；缺的是把头像与名称一起传入
+
+### RN-148 — 同时待晋升的故事变成轮播，而不是 N 张卡片 {#rn-148}
+
+PO 一个接一个地创建故事，每个 `backlog.story_promotion_proposed`
+（[RN-126](../business-rules.md#rn-126)）都会在时间线上变成一张单独的卡片——在一批多个故事中，这会堆叠 N 张相同的卡片争夺同一空间，与其余叙述混在一起。
+
+一**批**是会话中*仍然待定*的晋升提议的集合，在每次渲染时评估——而不是"连续不间断地创建的"。标准与每张单独卡片本来就独自用来决定自己是变成可操作卡片还是分隔线的*相同*（之后没有相同 `storyId` 的 `backlog.story_transitioned`/`backlog.story_promotion_returned`），只是对整个会话一次性地查看：
+
+- **0 或 1 个待定：** 什么都不变——一如既往的单独卡片（降级是刻意的：只有一张幻灯片的轮播变成轮播毫无收益）。
+- **同时 2 个以上待定：** 变成*一个* `Carousel`（设计系统中的新组件，`apps/web/src/components/ui/Carousel.tsx`），插在*第一个*仍待定提议的位置；其余的作为单独卡片消失——每一个都成为它的一张*幻灯片*。每张幻灯片显示与单独卡片相同的句子（"故事……已就绪，等待你的晋升"），payload 带有时显示摘要/RF（目前没有——见下文），以及该特定故事的晋升/退回按钮，调用一如既往的*同一个*
+  `promoteStories`/`returnStory`。
+- 轮播头部的**"全部批准"**在一次调用中用*所有*待定项的 id 调用 `promoteStories`——端点本来就是批量的
+  （`promoteStories(projectId, storyIds[])`，RN-048），因此契约没有任何变化，只是改变了由谁组装列表。
+- 在轮播打开时被解决（晋升或退回）的故事会在下一次渲染时离开这一批（两个动作都会使事件查询失效）——如果只剩 1 个待定，轮播会自行解散，卡片恢复为单独卡片。
+
+幻灯片中的 `resumo`/RF 是*已就绪*但未被使用的字段：`CreateStoryUseCase` 目前只在 `backlog.story_promotion_proposed` 的 payload 中写入 `storyId`/`epicId`/`title`——没有描述，也没有功能需求。幻灯片已经知道在 payload 有一天携带 `description`/`rf` 时显示它们（在那之前降级为只显示标题）；扩展 payload 不在本次交付之内，因为没有人要求。
+
+- **位置：** `apps/web/src/components/ui/Carousel.tsx`（新组件，通用导航），`apps/web/src/routes/SessionPage.tsx`
+  （`promocoesPendentes`、`ehLevaDeHistorias`、`StorySlide`、
+  `handlePromoteAll`），`apps/web/src/routes/SessionPage.module.css`
+  （`.storySlide`）
+- **测试：** `apps/web/src/components/ui/Carousel.test.tsx`（导航、ARIA、只挂载当前幻灯片、列表缩短时索引被钳制），
+  `apps/web/src/routes/SessionPage.carrossel-historias.test.tsx`（3 个以上待定变成轮播；"全部批准"发送整批；从导航到的幻灯片进行单个晋升和退回仍然有效；1 个待定降级为简单卡片；被解决的故事离开这一批，轮播重新计算数量）
+- **来源：** 用户的请求——PO 批量产出的故事在消息流中很难一个一个地决定
+
+### RN-149 — C4 图的 Container 层级从 module_map 推导，绝不由模型重新键入 {#rn-149}
+
+`create_c4_diagram`（Arquiteto 的新工具）生成 C4 图的两种 Mermaid 语法（Context + Container，Simon Brown 的模型）。工具调用只携带 `system_name`/`system_description`/`actors`——Container 层级的模块和依赖*不*属于输入：用例获取项目的*现行* `module_map`（`ModuleMapRepository.findCurrent`，与 `GetArchitectureUseCase` 相同的读取），并从中推导 Container 层级，使用 `create_module_map` 已经校验为无环的*相同*名称和依赖。
+
+显而易见的替代方案——让模型在图的工具调用中再次描述模块，就像它已经为 `create_module_map` 做的那样——被刻意否决：模型写下"模块是 X、Y、Z"的第二个地方，就是这个列表可能与第一个分歧的第二个地方，而分歧会是*无声*的——没有任何东西会拒绝一张带有真实映射中已不存在的模块的图。从仓储推导在构造上关闭了这种分歧：如果 `module_map` 之后发生变化，图可能*过时*（重新发出就是重新生成，没有锁——见 ADR 0068），但它永远不会就生成时存在的东西*撒谎*。
+
+没有现行 `module_map` 时，`create_c4_diagram` 以 400 被拒绝——没有模块可画就没有 Container 层级，错误消息会指示 Arquiteto 先调用 `create_module_map`（RN-061：拒绝通过工具结果返回，带着完整的原因）。
+
+`artifact.c4_diagram` 工件在事件日志中带版本，没有自己的表——与 `artifact.project_image`（ADR 0065）的设计相同：现行的是 `version` 最大的，修订就是重新生成，绝不覆盖。
+
+- **位置：** `apps/api/src/domain/architecture/c4-diagram.ts`
+  （`gerarDiagramaContexto`/`gerarDiagramaContainer`，纯函数），
+  `apps/api/src/application/use-cases/architecture/create-c4-diagram.use-case.ts`,
+  `apps/api/src/application/use-cases/architecture/get-c4-diagram.use-case.ts`,
+  `apps/engine/lib/engine/harness/tools/create_c4_diagram.ex`,
+  `apps/web/src/components/C4DiagramView.tsx`（渲染，三种状态——
+  RN-088），`apps/web/src/lib/mermaid-render.ts`（`mermaid` 被隔离在这里，动态 `import()`）
+- **测试：** `apps/api/test/domain/architecture/c4-diagram.spec.ts`（从示例 `module_map` 生成有效的 Mermaid 语法，忽略悬空边，id 去重），
+  `apps/api/test/application/use-cases/architecture/create-c4-diagram.use-case.spec.ts`
+  （没有 module_map 时以 400 拒绝且不写入任何东西；Container 反映真实的模块/依赖；重新发出时版本化），
+  `apps/engine/test/engine/harness/tools/create_c4_diagram_test.exs`,
+  `apps/web/src/components/C4DiagramView.test.tsx`（成功变成 SVG，语法错误变成可读的 Alert 而不破坏界面，空图不尝试渲染）
+- **来源：** 用户的请求——在项目概览中显示 Arquiteto 的 C4 图（ADR 0068）
