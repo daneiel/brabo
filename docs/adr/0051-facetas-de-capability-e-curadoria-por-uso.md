@@ -1,162 +1,151 @@
-# 0051 — Proven capability facets; "what it's good for" is curation
+# 0051 — Facetas de capability provadas; "para que serve" é curadoria
 
-## Context
+## Contexto
 
-OpenRouter's first real sync brought **338 models** into the curation
-screen. Grouping by manufacturer (Phase 12, hub with subgroups) made the
-list navigable, but didn't answer the question actually asked in front of
-it: *which of these serves what I need right now?*
+O primeiro sync real do OpenRouter trouxe **338 modelos** para a tela de
+curadoria. O agrupamento por fabricante (Fase 12, hub com subgrupos) tornou a
+lista navegável, mas não respondeu à pergunta que se faz de verdade diante
+dela: *qual destes serve para o que eu preciso agora?*
 
-Two findings, measured against the live API, bound the problem.
+Duas descobertas, medidas contra a API viva, delimitam o problema.
 
-**First: the catalog already published what the screen didn't show.** The
-parser read `id`, `name`, `context_length`, `pricing`, and
-`supported_parameters` — and discarded `architecture`. Worse, the sync
-never consulted the remote for modality capability at all:
+**A primeira: o catálogo já publicava o que a tela não mostrava.** O parser
+lia `id`, `name`, `context_length`, `pricing` e `supported_parameters` — e
+descartava `architecture`. Pior, o sync nunca consultava o remoto para
+capability de modalidade:
 
 ```ts
-// sync-model-catalog.use-case.ts:202, before
+// sync-model-catalog.use-case.ts:202, antes
 supportsVision: local?.supportsVision ?? false,
 ```
 
-The value came from whatever was already stored, and whatever was stored
-had been born `false`. Result: `supports_vision = false` across all 338,
-including models whose entire provider page is titled "vision." The
-column was born false and died false — there was no path by which it
-could ever become true.
+O valor saía do que já estava gravado, e o que estava gravado tinha nascido
+`false`. Resultado: `supports_vision = false` nos 338, incluindo os modelos
+cuja página inteira do provider se chama "vision". A coluna nascia falsa e
+morria falsa — não havia caminho pelo qual ela pudesse virar verdadeira.
 
-Against the 2026-08-04 catalog, OpenRouter declares: **181** models accept
-image input, **11** produce image output, **213** accept `reasoning`,
-**25** accept audio, **0** produce video.
+Contra o catálogo de 2026-08-04, o OpenRouter declara: **181** modelos aceitam
+imagem na entrada, **11** produzem imagem, **213** aceitam `reasoning`, **25**
+aceitam áudio, **0** produzem vídeo.
 
-**Second: half of what people want to filter by doesn't exist in any
-catalog.** The request included "best AIs by type — documentation, image,
-video, thinking, code." Image and thinking are declared by the provider.
-"Best for code" and "good for documentation" **no provider publishes** —
-there's no field, no convention, nothing beyond the model's name. And
-deriving capability from the name is exactly what
-[ADR 0041](0041-base-openai-compativel-e-contrato-de-llm-providers.md)
-forbids: capability is only declared when the suite proves it.
+**A segunda: metade do que se quer filtrar não existe em catálogo nenhum.** O
+pedido incluía "melhores IAs por tipo — documentar, imagem, vídeo, thinking,
+code". Imagem e thinking o provider declara. "Melhor para código" e "bom para
+documentação" **nenhum provider publica** — não há campo, não há convenção, não
+há nada além do nome do modelo. E derivar capability do nome é exatamente o que
+o [ADR 0041](0041-base-openai-compativel-e-contrato-de-llm-providers.md)
+proíbe: capability só se declara quando a suite prova.
 
-Video is the extreme case: zero models, across nine providers. A video
-facet would be a filter that never matches anything.
+Vídeo é o caso extremo: zero modelos, em nove providers. Uma faceta de vídeo
+seria um filtro que nunca casa nada.
 
-## Decision
+## Decisão
 
-**The two axes exist, separated, and each lives where its truth lives.**
+**Os dois eixos existem, separados, e cada um mora onde sua verdade mora.**
 
-### 1. Capability facet — what the provider PROVES
+### 1. Faceta de capability — o que o provider PROVA
 
-Three new fields on `models`, fed by the remote catalog:
+Três campos novos em `models`, alimentados pelo catálogo remoto:
 
-| field | OpenRouter source |
+| campo | origem no OpenRouter |
 |---|---|
-| `supports_vision` | `architecture.input_modalities` contains `image` |
-| `generates_image` | `architecture.output_modalities` contains `image` |
-| `supports_reasoning` | `supported_parameters` contains `reasoning` |
+| `supports_vision` | `architecture.input_modalities` contém `image` |
+| `generates_image` | `architecture.output_modalities` contém `image` |
+| `supports_reasoning` | `supported_parameters` contém `reasoning` |
 
-Image input and output are **distinct axes**, not one: a model that reads
-diagrams and one that draws them solve different problems, and merging
-them would send the user to the wrong model.
+Entrada e saída de imagem são **eixos distintos**, não um só: um modelo que lê
+diagrama e um que desenha resolvem problemas diferentes, e fundi-los mandaria o
+usuário para o modelo errado.
 
-The sync now reads from the remote with local fallback, in the same shape
-as `supportsToolCalling`:
+O sync passa a ler do remoto com fallback local, na mesma forma do
+`supportsToolCalling`:
 
 ```ts
 supportsVision: remoto.supportsVision ?? local?.supportsVision ?? false,
 ```
 
-`undefined` on the remote side preserves the local value — **absence of a
-declaration is not a declaration of absence**. The parser omits the field
-when the provider says nothing, instead of emitting `false`; declaring
-`false` there would wipe out hand-done curation the first time the
-provider changed its catalog's format.
+`undefined` no remoto preserva o local — **ausência de declaração não é
+declaração de ausência**. O parser omite o campo quando o provider se cala, em
+vez de emitir `false`; declarar `false` ali apagaria uma curadoria feita à mão
+na primeira vez que o provider mudasse o formato do catálogo.
 
-Audio and video are left **out**: audio because no part of the product
-consumes it today, video because it doesn't exist. They come in when
-there's something to filter.
+Áudio e vídeo ficam **de fora**: áudio porque nenhuma parte do produto o
+consome hoje, vídeo porque não existe. Entram quando houver o que filtrar.
 
-### 2. Usage curation — what the TEAM discovered
+### 2. Curadoria por uso — o que o TIME descobriu
 
-A closed vocabulary of five uses — `codigo`, `documentacao`, `analise`,
-`imagem`, `conversa` — flagged per workspace, in the
-`workspace_models.uses` column (`text[]`).
+Vocabulário fechado de cinco usos — `codigo`, `documentacao`, `analise`,
+`imagem`, `conversa` — marcado por workspace, na coluna `workspace_models.uses`
+(`text[]`).
 
-It lives in `workspace_models`, not `models`, for the same reason as
-[ADR 0049](0049-curadoria-de-modelo-por-workspace.md): it's **the
-operator's opinion**. The same model is "the coding one" in one workspace
-and the cheap-chat one in another, and whoever pays the bill has the right
-to decide. There's no global axis because there's no global answer.
+Mora em `workspace_models`, e não em `models`, pela mesma razão do
+[ADR 0049](0049-curadoria-de-modelo-por-workspace.md): é **opinião de quem
+opera**. O mesmo modelo é "o de código" num workspace e o de conversa barata em
+outro, e quem paga a conta é quem tem o direito de decidir. Não há eixo global
+porque não existe uma resposta global.
 
-The vocabulary is **closed**, not free text: `code`, `coding`, `Code`, and
-`código` all showing up on the same screen within a week produces a filter
-that matches nothing — worse than no filter at all. A new use enters the
-type and gets a migration, with exhaustiveness proven at compile time on
-both sides (the same mechanism as `llm-provider-names.ts`).
+Vocabulário **fechado**, não texto livre: `code`, `coding`, `Code` e `código`
+na mesma tela em uma semana produzem um filtro que não casa nada — pior que
+filtro nenhum. Uso novo entra no tipo e ganha migração, com prova de
+exaustividade em tempo de compilação dos dois lados (o mesmo mecanismo de
+`llm-provider-names.ts`).
 
-`text[]`, not a Postgres enum, like `delegations.area` from Phase 8: a new
-use shouldn't require a type migration.
+`text[]` e não enum do Postgres, como `delegations.area` da Fase 8: uso novo
+não deve exigir migração de tipo.
 
-### 3. The two axes never mix, in the UI or in the database
+### 3. Os dois eixos não se misturam na UI nem no banco
 
-- The facet badge and the usage badge have **different tones** on the
-  catalog row, and the filter chips are separated by a divider.
-- Flagging a use **doesn't turn the model on** in the picker. The
-  `is_active` column has DEFAULT `true`, so a row born from a usage flag
-  is inserted with `isActive: false` explicit — without that, opining
-  about a model would authorize it to spend, against
-  [RN-043](../business-rules/custo.md#rn-043).
-- Changing the use doesn't turn off what was already on: `is_active`
-  stays out of the `ON CONFLICT`'s `SET`.
-- The screen never writes "doesn't read images." A badge only affirms
-  what's true, because `false` here means "the provider didn't declare
-  it."
+- Selo de faceta e selo de uso têm **tons diferentes** na linha do catálogo, e
+  os chips de filtro ficam separados por um divisor.
+- Marcar uso **não liga** o modelo no seletor. A coluna `is_active` tem DEFAULT
+  `true`, então a linha nascida de uma marcação de uso é inserida com
+  `isActive: false` explícito — sem isso, opinar sobre um modelo o autorizaria a
+  gastar, contra a [RN-043](../business-rules/custo.md#rn-043).
+- Trocar o uso não desliga o que estava ligado: `is_active` fica fora do `SET`
+  do `ON CONFLICT`.
+- A tela nunca escreve "não lê imagem". Selo só afirma o que é verdade, porque
+  `false` aqui quer dizer "o provider não declarou".
 
-## Consequences
+## Consequências
 
-- The screen answers "which model serves this" through two paths: what
-  the provider proves and what the team discovered by using it.
-- A filter that zeroes out the list becomes distinguishable from an empty
-  catalog — before, the screen would say "register a credential" to
-  someone who already had one.
-- The existing catalog only gets the true facets **on the next sync**:
-  the migration creates the columns with `false`, and it's the sync that
-  fills them in from the remote. No backfill is possible without querying
-  the provider, and inventing a value would be the original defect all
-  over again.
-- The eight providers that don't publish modality stay at `false` —
-  honest, and gracefully upgradable the moment any of them starts
-  declaring it.
-- "Best for code" will never be a capability in this product. If a
-  provider ever publishes a field like that, it will be one more
-  opinion — theirs — and it doesn't replace the team's.
+- A tela responde "qual modelo serve para isto" por dois caminhos: o que o
+  provider prova e o que o time descobriu usando.
+- Um filtro que zera a lista passa a ser distinguível de catálogo vazio — antes
+  a tela diria "cadastre uma credencial" para quem já tem uma.
+- O catálogo existente só ganha as facetas verdadeiras **no próximo sync**: a
+  migração cria as colunas com `false`, e é o sync que as preenche a partir do
+  remoto. Nenhum backfill é possível sem consultar o provider, e inventar valor
+  seria o defeito original de novo.
+- Os oito providers que não publicam modalidade seguem com `false` — honesto, e
+  degradável assim que qualquer um deles passe a declarar.
+- "Melhor para código" nunca será capability neste produto. Se um provider
+  publicar um campo assim algum dia, ele será mais uma opinião — a dele — e não
+  substitui a do time.
 
-Three designs were discarded, and the reason for each is the consequence
-it would have left behind:
+Três desenhos foram descartados, e o motivo de cada um é a consequência que
+ficaria:
 
-- **Inferring use from the model's name** (`*-coder-*` → code): a guess
-  dressed as data. It fails on the generalist that's good at code, fails
-  on the one with "coder" in the name that the team found bad, and no one
-  who knows can correct it.
-- **Global use in `models`**: would repeat exactly the defect ADR 0049
-  fixed — one workspace deciding for its neighbor.
-- **Free text for use**: fragments the vocabulary within a week and turns
-  the filter into a text search.
+- **Inferir uso do nome do modelo** (`*-coder-*` → código): palpite vestido de
+  dado. Erra no generalista bom em código, erra no que tem "coder" no nome e o
+  time achou ruim, e ninguém que sabe consegue corrigir.
+- **Uso global em `models`**: repetiria exatamente o defeito que o ADR 0049
+  corrigiu — um workspace decidindo pelo vizinho.
+- **Texto livre no uso**: fragmenta o vocabulário em uma semana e transforma o
+  filtro em busca textual.
 
-## What's left for later
+## O que fica para depois
 
-**Audio and video facets**, once there's something to filter: audio
-already has 25 models on OpenRouter, but no part of the product consumes
-audio today; video has zero across nine providers.
+**Faceta de áudio e de vídeo**, quando houver o que filtrar: áudio já tem 25
+modelos no OpenRouter, mas nenhuma parte do produto consome áudio hoje; vídeo
+tem zero em nove providers.
 
-**Sorting the catalog by flagged use** — today use only filters. With the
-vocabulary locked, sorting is a one-liner; with nobody having flagged
-anything yet, it would sort by an empty list.
+**Ordenar o catálogo por uso marcado** — hoje o uso só filtra. Com o
+vocabulário travado, ordenar é uma linha; sem ninguém ter marcado nada,
+ordenaria por lista vazia.
 
-**The facets on the other eight providers.** Only OpenRouter publishes
-modality today; each of the rest needs to be investigated against its
-official docs, the way Phase 11 did for the quirks — inheriting one
-provider's parser for another is forbidden.
+**As facetas nos outros oito providers.** Só o OpenRouter publica modalidade
+hoje; cada um dos demais precisa ser investigado contra a doc oficial, como a
+Fase 11 fez com os quirks — herdar o parser de um no outro é proibido.
 
-The rules are in [RN-056](../business-rules/custo.md#rn-056) and
+As regras estão em [RN-056](../business-rules/custo.md#rn-056) e
 [RN-057](../business-rules/custo.md#rn-057).
