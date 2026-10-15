@@ -1541,3 +1541,237 @@ workspace`。`area` 位于 agent 和项目*之间*——它是一个区域的 le
   `test/application/use-cases/llm/resolve-model-binding.use-case.spec.ts`
   （"o binding de agente é POR PROJETO: o vizinho não o enxerga"）
 - **来源：** [ADR 0064](../adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global.md)（FASE 23）
+
+### RN-470 — 模型来源区分自有 binding 与从 Criativo 继承，级联中的空值不与其他空值共用同一符号 {#rn-470}
+
+api 响应中的 `origin: 'agent'` 意味着**两件不同的事**，而 api 不区分它们是正确的：agent 在 `model_bindings` 中有一行 `agent` 范围的记录，**或者**级联落在 `workspace` 上而
+[`herdarModeloDeStart`](#rn-102) 把值换成了 Criativo 的模型——读"来自哪里"的人需要看到它来自一个 *AGENT*，而不是来自一个数据库中不存在的范围。必须区分它们的是**界面**，而在此之前它没有区分：来源列打印原始枚举，在一个数据库中有 3 行 `agent` 的项目里，12 个 agent 都显示同一个词 `agent`。
+
+**来源是一条*链*，而不是一个词。** `workspace › projeto › área ›
+agente`，每个节点四种状态，四种都存在是因为它们说的是不同的事：**现行**（使用中的模型从这里来——唯一以 `Badge` 显示的节点）、**已定义**（这一层有自己的值，但一个更具体的层胜出了）、**空**（这里没有值）和**被跳过**（有值，但级联因 `unavailable`/`sem_tool_calling` 丢弃了它，[RN-043](#rn-043)）。把"已定义"折叠成"空"会把原始枚举的问题带回低一层。
+
+**在继承中，`agente` 节点保持为*空*，一个额外节点点名 Criativo。** 级联到达的层级（`workspace`）显示为"已定义"，而**不是**现行：workspace 的模型不是生效的那个，把它标为现行就是断言了错误的模型。Criativo 的节点是唯一一个不是数据库范围的节点，这是刻意的——它点名的是级联之后的那一步。同一条链也适用于*区域*部分，在那里 `origin: 'agent'` **只能**是这一步：区域查询不会把 agent 范围放进级联。
+
+**推导属于*客户端*，它无法证明的东西仍然可以操作。** 没有新端点：界面已经获取了四个层级。当工作区之上没有任何层级有*可用*的值（被跳过的不会阻止下降）并且模型与解析出的 Criativo 模型相同时，`agent` 就是继承。剩下一个无法区分的情形：agent 有自己的行，指向与 Criativo 相同的模型，且没有区域或项目默认值。这就是为什么"恢复继承"在每个 `agent` 来源上都继续显示——动作恰恰在链无法证明的情形中保持可用，而在那种情形下它仍然会改变未来（没有这一行，agent 开始跟随 Criativo）。
+
+**这个选择的另一半：404 有自己的结果。** 在每个 `agent` 来源上保留按钮，意味着*也*在没有行可删的地方提供它——在那里 `ClearModelBindingUseCase` 正确地响应 **404**（"删除了不存在的东西"和"删除了"不是同一个回答；把它们折叠起来会隐藏一个错误的 `agentSlug`）。然而对点击的人来说，这个 404 不是失败：所请求的状态——agent 在继承——**已经是事实**，把它称为错误就是界面与它所知道的东西相矛盾。因此它不像其他拒绝那样经过 `mensagemDaApi`，有两个原因：api 的句子是硬编码在代码中的 pt-BR，而 web 的默认语言是 `en`；并且这个端点只有**一个** 404 原因（角色不足是 `RolesGuard` 中的 403，格式错误的 `scope_id` 不是 404）——客户端*知道*这个 404 意味着什么，可以用读者的语言说出来。任何其他状态仍然是真正的失败，带 api 的句子和 `danger` 色调。在**两种**结果中都会重新读取该行：如果 api 说本来就没有 binding，过时的是界面。
+
+**而自己的结果属于*端点*，而不是界面。** 同一行的另一个动作——通过现行模型列的 `ModelPicker` 更换模型——有七条拒绝路径，**没有任何一个状态能单独识别其中之一**（`SetModelBindingUseCase`）：格式错误的 `scope_id` 或 DTO 拒绝的 `modelId` 是 400，低于 `developer` 的角色是 403，**两个无法区分的原因是 404**（"Modelo não encontrado" 和 "Projeto não encontrado"），三个原因是 422（[RN-040](#rn-040) 没有 tool calling；[RN-043](#rn-043) 在 workspace 中被停用或从提供方消失）。在那里客户端*不能*点名 404——选择两句中的一句，就是界面断言它不知道的东西——因此每次拒绝都遵循正常语法，带 api 的句子和 `danger` 色调。这两个函数相邻，刻意以相反的方式处理同一个状态：授权自己结果的是*唯一*的原因，而不是界面。
+
+**在拒绝时，现行模型列继续显示已确认的 binding。** `ModelPicker` 不在本地状态中保存选择（`selected` 来自 `selectedModelId` prop，它来自查询），因此拒绝不会在界面上留下 api 拒绝写入的模型——而该行只在成功时重新读取，因为拒绝时数据库中什么都没变。这是把这条 RN 的同一纪律应用于时间：界面不断言一个不存在的状态，不靠短横线，不靠枚举，也不靠乐观。
+
+**空值有自己的文本，不同的空值有不同的文本。** 界面上的三个 `—` 用同一个符号说三件事，现在各说各的：`sem modelo em nenhum nível`（没有任何层级为该 agent 设置 binding）、`sem gasto ainda`（agent 没有记录消耗——不同于 `US$ 0,00`，那是免费运行过）以及 `sem padrão em nenhum nível`（区域及其上面的两层都为空）。与
+[RN-180](autenticacao.md#rn-180) 同一纪律：界面不用一条短横线断言它无法点名的东西。
+
+- **位置：** `apps/web/src/routes/settings/cascata.tsx:119`（`montarCadeia`——四种状态和 Criativo 的节点），`:178`（`herdouDoCriativo`——推导及其限制），`:287`（`CadeiaDeCascata`），
+  `apps/web/src/routes/settings/ModelsSection.tsx:149`（`cadeiaDoAgente`），
+  `:329`（`handleModelChange`——为什么这里的 404 *没有*自己的结果，以及为什么该行只在成功时重新读取），`:385`（`handleClearAgentBinding`——三种结果，以及为什么 404 有它自己的），`:359`（来源列），`:429`
+  （`não há nível abaixo`），`:448`（`sem gasto ainda`），
+  `apps/web/src/components/ModelPicker.tsx:95`（`selected` 来自 prop——选择器不保存选择，这就是拒绝不会在界面上留下幽灵值的原因），
+  `apps/api/src/application/use-cases/llm/set-model-binding.use-case.ts:38`
+  （这个端点的两个 404 原因——这个文件*没有*改变），
+  `apps/api/src/interfaces/http/shared/llm-binding-error.filter.ts:39`
+  （策展拒绝的 400/422——这个文件*没有*改变），
+  `apps/web/src/routes/settings/AreaModelsSection.tsx:142`（区域的链），
+  `apps/api/src/application/use-cases/llm/clear-model-binding.use-case.ts:25`
+  （api 抛出的 404——这个文件*没有*改变），
+  `apps/api/src/domain/llm/binding-resolver.ts:140`（api 返回的 `origin: 'agent'`，以及解释它为何正确的注释——这个文件*没有*改变）
+- **测试：** `apps/web/src/routes/settings/cascata.test.tsx`（自有 binding 结束于 `agente` 节点；继承让 `agente` 为空并点名 Criativo；workspace 在继承中从不显示为现行；区域部分同样；区分在 `en` 下保留；被丢弃的层级成为划线节点，竞争的徽章消失；三种空值三段文本；作为纯函数的 `montarCadeia` 和
+  `herdouDoCriativo`，包括被*丢弃*的区域默认值不会阻止下降的情形），
+  `apps/web/src/routes/settings/voltar-a-herdar.test.tsx`（点击的三种结果：删除并重新读取；404 不是错误，即使在 `en` 下也不转达 api 的 pt-BR 句子，并重新读取，因为过时的是界面；其他状态走 `mensagemDaApi` 且不重新读取），
+  `apps/web/src/routes/settings/troca-de-modelo.test.tsx`（同一行的另一个动作：写入并重新读取；`unavailable` 模型的 422——可达的情形，因为选择器会显示带标记的不可用模型——走 `mensagemDaApi` 且不重新读取；现行模型列保持在旧模型上，绝不显示被拒绝的；而 404 *没有*自己的结果，这是与姊妹函数的对照）
+- **来源：** 产品所有者的设计评审（UI 改进画布的第 9 项——"cascata de modelo como cadeia visível"）
+
+### RN-059 — 回合失败是带来源的持久事件，而且 agent 会说话 {#rn-059}
+
+当 LLM 回合失败时，agent 在事件日志中写入 **`agent.error`**，带三个字段：`origem`（ADR 0020 的词汇）、葡萄牙语的 `mensagem` 以及原始的 `reason`。并且消息出现在**对话的消息流中**，而不只是在日志中。
+
+过去正好相反，结果是最坏的：四个对话型 agent 写入内容为**空**的 `agent.response`——在不可变日志中与成功无法区分——并通过短暂的 `broadcast` 发送原因。那一秒没有打开标签页的人永远不会知道发生了错误；打开的人则看到一个空白气泡。
+
+还有第二条路径，更糟：当 api 在它*自己*的最后一帧中叙述失败（预算、缺少凭据、缺少 binding）时，回合不会落入错误分支，**根本不发出任何事件**——绝对的沉默。
+
+这个分支一旦被修正，又付出了第二轮代价：在 PO、Arquiteto 和 Dev Lead 中，它返回 `{state, ""}`——一个*元组*，而 `run_turn` 的其他所有分支都返回 `state`（一个 map）。`TurnoAssincrono.tratar_resultado/2` 中的 `Map.put/3` 在 `handle_info` 中抛出 `BadMapError`，由于四个对话型 agent 都是 `restart: :temporary`，agent 会*死掉*且不再回来。失败不再是无声的，却变成了崩溃——而触发条件是最常见的那些。规则完整适用：agent 叙述失败**并保持运行**。因此 `tratar_resultado/2` 在四者共享的位置有第二道屏障：不是 map 的回合结果会成为来源为 `codigo` 的 `agent.error`，绝不会成为一个死掉的进程。
+
+来源*绝不*靠猜：`FalhaDeTurno.origem/1` 中的每个模式都有书面的理由，不匹配任何模式的以 **`codigo`** 输出——缺口属于我们的分类器，而这是指向正确行动的来源（ADR 0020）。
+
+已经写入的事件不会被删除——界面把它们*点名*为这条规则之前的空响应，而不是显示空白。
+
+- **位置：** `apps/engine/lib/engine/agents/falha_de_turno.ex`,
+  `criativo_server.ex`, `po_server.ex`, `arquiteto_server.ex`,
+  `dev_lead_server.ex`, `infra_lead_server.ex`（`emit_falha/2`），
+  `turno_assincrono.ex`（`tratar_resultado/2`，第二道屏障），
+  `apps/web/src/lib/session-falha.ts`
+- **测试：** `apps/engine/test/engine/agents/criativo_server_test.exs`
+  （带来源的持久事件；从不写入空响应；在最后一帧中叙述的错误也会成为事件）；`po_server_test.exs`（带错误的最后一帧不会让 agent 倒下——*真正*的 GenServer，使用 `Process.alive?/1`）；
+  `arquiteto_server_test.exs` 和 `dev_lead_server_test.exs`（同一路径，完整周期）；`turno_assincrono_test.exs`（第二道屏障叙述而不是崩溃）；`apps/web/src/lib/session-falha.test.ts`
+- **来源：** FASE 13b 的真实执行
+
+### RN-116 — *创建* handoff 失败不会让 agent 倒下 {#rn-116}
+
+`confirm_readiness`（Criativo → PO）和 `offer_infra_handoff`（Arquiteto → Infra；
+`offer_dev_handoff`，即 Arquiteto → Dev Lead，已在
+[RN-672](../business-rules.md#rn-672) 中移除，而 Infra 提供的给 Dev Lead 的 handoff 遵循同一把尺子）在回合已经运行*之后*调用 api 创建 handoff——在 Criativo 的情形中，是在 `product_brief` 已经写入事件日志之后。如果这次调用失败（api 宕机、5xx 等），handoff 不存在，但这*绝不*会让 agent 的 GenServer 倒下：失败成为持久的 `agent.error`，带 `origem`（`FalhaDeTurno.origem/1`），以及一条说明*已经*保存了什么（product_brief、规则）、什么没有保存（handoff）的消息——让用户知道再次确认是安全的，不会重复工作。
+
+过去正好相反：三个调用都使用 `{:ok, _handoff} = EngineApiClient.create_handoff(...)`
+——一个严格匹配。`{:error, _}` 变成 `MatchError`，而由于三个 agent 都以 `restart: :temporary` 在 `:one_for_one` 的 `DynamicSupervisor` 中启动，进程就这么*消失*了——没有 `agent.error`，消息流中没有回复，只有沉默。从观察者的角度看：信息（规则、product brief）似乎已经"通过"（已写入），但下一个 agent 那边什么都没开始，因为 handoff 从未存在过。重新打开对话本身不能解决问题——只有*新*消息会重新激活进程（从事件日志重新水合），只有新的就绪确认会再次尝试 handoff。
+
+消息*不*复用 `FalhaDeTurno.mensagem/1`（`RN-059` 的那句"não consegui
+completar este turno... nada foi gasto"）：在三个调用点上，工作都已经运行过（或者在 `offer_dev_handoff` 的情形中根本不需要运行）——当整合回合中已经花费了 token 时，说"什么都没花"是假的。只复用 `FalhaDeTurno.origem/1`，它按原因的*形式*（HTTP 状态、传输异常）分类，而不是按是否是 LLM 回合。
+
+`Engine.Harness.Tools.OfferHandoff`（PO 通过 ToolLoop 中的工具调用使用的工具）本来就会在不崩溃的情况下处理 `{:error, reason}`——缺陷只存在于这三个服务器驱动的 handler 中，它们*直接*调用 `EngineApiClient.create_handoff/5`，而不是经过工具。
+
+- **位置：** `apps/engine/lib/engine/agents/criativo_server.ex`
+  （`handle_call(:confirm_readiness, ...)`、`emit_falha_handoff/3`），
+  `apps/engine/lib/engine/agents/arquiteto_server.ex`
+  （`handle_call(:offer_infra_handoff, ...)`、`emit_falha_handoff/3`）；
+  `apps/engine/lib/engine/infra/infra_lead_server.ex`
+  （`emit_falha_do_handoff_ao_dev_lead/2`，RN-672）
+- **测试：** `apps/engine/test/engine/agents/criativo_server_test.exs`
+  （"prontidão: falha ao criar o handoff NÃO derruba o processo, e vira
+  agent.error durável"）；`apps/engine/test/engine/agents/arquiteto_server_test.exs`
+  （`offer_infra_handoff`，成功和失败）；
+  `apps/engine/test/engine/infra/infra_lead_server_test.exs`（Infra 提供的给 Dev Lead 的 handoff，被 500 拒绝）
+- **来源：** `exp-001` 项目（Criativo → PO）中的真实使用报告；同样的结构性失败通过阅读代码在 Arquiteto 的两个 handoff 中被发现，没有为它们单独复现
+
+### RN-058 — *AGENT* 花费的密钥是 workspace owner 的 {#rn-058}
+
+LLM 凭据属于一个人（`user_credentials.user_id`），而 agent 不是人。agent 的回合按 **workspace owner**（`workspaces.created_by`）解析密钥，而不是按打开会话的人，也不是按创建项目的人：付账的人为 agent 买单，当团队中的另一个人开始会话时，这一点不变。
+
+用 `created_by` 而不是 `workspace_members.role = 'owner'`：可能有多个 owner，"其中任意一个"会让使用的密钥在无人决定的情况下变化。
+
+在此之前，回合在用户列中传入的是 **agent 的 slug**（`agentId ?? sessionId`）。查询以 `user_id = 'criativo'` 到达数据库，Postgres 拒绝了无效的 UUID，错误在消息流中变成**空响应**——没有指标，没有失败事件，界面上什么都没有。只有一次真实执行才揭示的实际效果是：**从来没有任何 agent 使用过带凭据的提供方**。只有 `ollama` 能工作，因为对它会跳过查找——而 Fase 4、Fase 10 的 dogfooding 以及所有演示都是用本地模型运行的。
+
+人工聊天从未有过这个缺陷：它使用 `actor.id`，那是真正的用户。
+
+- **位置：**
+  `apps/api/src/application/use-cases/llm/resolve-credential-owner.use-case.ts`,
+  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts`,
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts`
+- **测试：** `test/application/use-cases/llm/resolve-credential-owner.use-case.spec.ts`
+  （owner 胜过创建项目的人；找到的密钥是他的；不存在的项目是 404 而不是数据库错误）
+- **来源：** FASE 13b 的真实执行
+
+### RN-056 — 能力的分面来自提供方；沉默保留原有的值 {#rn-056}
+
+`supports_vision`、`supports_reasoning` 和 `generates_image` 是**提供方的事实**，而不是意见：它们在同步时来自远程目录，回退与 `supports_tool_calling` 相同——远程，然后本地，然后 `false`。
+
+在 OpenRouter（目前唯一公布这些的）中，三者来自：
+`architecture.input_modalities` 包含 `image`，
+`supported_parameters` 包含 `reasoning`，以及
+`architecture.output_modalities` 包含 `image`。接受图像和**生成**图像是不同的维度：把它们合并会把用户送到错误的模型。
+
+以前，同步从已*写入*的数据读取 `supportsVision`，从不查询远程——该列以 `false` 诞生，没有途径变为 true。第一次真实同步的 338 个模型全部为 `false`，包括提供方声明为多模态的 181 个。
+
+**没有声明不等于声明没有**
+（[ADR 0041](../adr/0041-base-openai-compativel-e-contrato-de-llm-providers.md)）：当提供方沉默时，解析器*省略*该字段，`undefined` 保留本地值。因此界面只把分面用作*正向*过滤器，从不写"不能读图"——这里的 `false` 意味着"提供方没有声明"。
+
+- **位置：** `apps/api/src/infrastructure/llm/openrouter-provider.ts`
+  （`temModalidade`、`parseCatalogoOpenRouter`），
+  `apps/api/src/application/use-cases/llm/sync-model-catalog.use-case.ts`,
+  `apps/api/src/db/schema/llm.ts`（`models`）
+- **测试：**
+  `test/infrastructure/llm/openrouter-provider.contract.spec.ts`
+  （`modalidade não declarada OMITE o campo em vez de afirmar false`）；
+  `test/application/use-cases/llm/sync-model-catalog.use-case.spec.ts`
+  （`catálogo que se cala sobre modalidade preserva a faceta gravada`）
+- **来源：** [ADR 0051](../adr/0051-facetas-de-capability-e-curadoria-por-uso.md)
+
+### RN-057 — "用途"是 workspace 的策展，标记用途不会打开模型 {#rn-057}
+
+没有任何提供方的目录公布"适合写代码"。这是**操作者的意见**，在使用中发现——因此它位于 `workspace_models.uses`，与 workspace 的另一个决定（[RN-052](#rn-052)）并列，而不是在 `models` 中。
+
+*封闭*的词汇——`codigo`、`documentacao`、`analise`、`imagem`、
+`conversa`——，两侧都有编译期的穷尽性证明。自由文本会在一周内让 `code`、`coding` 和 `código` 出现在同一个过滤器中。
+
+保持维度分离的两条规则：
+
+1. **标记用途不会打开模型。** `workspace_models.is_active` 的 DEFAULT 是
+   `true`，因此由用途标记创建的行以显式的 `is_active = false` 插入。没有这一点，对模型发表意见就会授权它花钱，违反 [RN-043](#rn-043)。
+2. **更换用途不会关闭已经打开的。** `is_active` 不在 `ON CONFLICT` 的 `SET` 之中。
+
+用途列表**替换**之前的，而不是相加：空列表就是全部取消标记的方式，并且是一个正当的状态——"没有人发表意见"不等于"没用"。
+
+- **位置：** `apps/api/src/domain/llm/model-uses.ts`,
+  `apps/api/src/db/schema/llm.ts`（`workspace_models.uses`），
+  `apps/api/src/infrastructure/persistence/drizzle/workspace-model.repository.ts`
+  （`setUses`），
+  `apps/api/src/application/use-cases/llm/set-model-uses.use-case.ts`
+- **测试：** `test/application/use-cases/llm/set-model-uses.use-case.spec.ts`
+  （`marcar uso NÃO liga o modelo — a linha nova nasce inativa`、
+  `trocar o uso não desliga o que já estava ligado`、
+  `o uso vale só neste workspace`）
+- **来源：** [ADR 0051](../adr/0051-facetas-de-capability-e-curadoria-por-uso.md)
+
+### RN-038 — workspace 摘要中计数的 agent = 本月花费了 token {#rn-038}
+
+项目仪表板的摘要（"N 个活跃项目 · M 个 agent · 本月花费"）把在当月 `token_usage` 中至少有一行 `actor_kind = 'agent'` 的执行者计为"agent"，汇总 workspace 的所有项目。没有 `actor_kind` 过滤器，发送聊天的 `user` 或记录使用的 `system` 会让计数膨胀——`token_usage` 为任何类型的执行者记录，而不只是 agent。按月截断使用
+`created_at >= date_trunc('month', now())`；只在上个月工作过的 agent 不计入，即使它仍出现在某个会话的名册中。计数自然包括 Fase 8 的区域子专业（`qa-automacao`、`qa-performance-seguranca`、`infra-workflows`）：每个在花费 token 时都有自己的 `actor_id`。
+
+- **位置：** `apps/api/src/infrastructure/persistence/drizzle/token-usage.repository.ts`
+  （`summarizeForWorkspaceThisMonth`）
+- **测试：** `test/application/use-cases/iam/get-workspace-summary.use-case.spec.ts`
+
+---
+
+### RN-703 — 没有模型的子 agent 继承区域 lead 解析出的模型 {#rn-703}
+
+"应用到所有 agent"（RN-476）为设置目录中的每个 agent 写入一个 binding——17 行——，而 engine 在这个列表之外运行的子 agent 在任何层级都没有模型：`appsec` 以来源 `infra` 的 `agent.error`（"Nenhum modelo vinculado para esta sessão"）告终，对除 `dev-backend`/`dev-frontend` 之外的每个 `dev-<modulo>` 以及 `qa-estrategia` 也是如此。当*子 agent* 的级联找不到值（或者只找到没有人为项目选择的 workspace 全局默认值）时，它使用其区域 lead 的*已解析* binding：目录（`agent-areas.ts`）中区域的 lead，或者——对于 `appsec` → `secops` 和 `qa-estrategia` → `qa`，它们由 engine 在 lead 内部运行但不接收 handoff——旁边的一张表，只服务于这种继承。响应带有指明 lead 的 `herdadoDoLead`，`origin` 仍然是 lead 的 binding 的来源（RN-470：界面不断言自有配置）。tool calling 过滤器（RN-040）在 lead 的解析中与子 agent 的解析中同样适用。如果仍然没有模型，失败消息会说明在哪里配置。
+
+- **位置：** `apps/api/src/application/use-cases/llm/resolve-model-binding.use-case.ts:76`
+  (`leadDoSubagente`); `apps/api/src/domain/agents/agent-areas.ts:123` (`leadDoSubagente`);
+  `apps/api/src/domain/llm/binding-resolver.ts:66` (`MENSAGEM_SEM_MODELO`)
+- **测试：** `apps/api/test/application/use-cases/llm/resolve-model-binding.use-case.spec.ts`
+  （`appsec` 继承自 `secops`，`dev-api` 继承自 `dev-lead`；lead 也没有模型时仍为 `null`——失败用例）
+- **来源：** AT-367
+
+---
+
+### RN-774 — 每个模块的第一个任务拥有两倍的单任务上限 {#rn-774}
+
+模块的第一个任务搭建整个骨架（清单、应用、数据库、测试），比后续任务花费更多：在 10月8日的 TP-01 中，它使用 Haiku 4.5 花费了 US$ 0.53，被 US$ 0.50 的固定上限（`taskBudgetMicros: 500000`）阻塞。根据所有者的决定（10月9日），它获得**2 倍的单任务上限**（默认为 US$ 1.00）；其余任务沿用配置的上限。倍数是 engine 中的命名常量，而不是配置。
+
+"第一个"由日志衡量，绝不由任务状态衡量：它是其 `backlog.task_claimed` 在项目中针对该模块*最早*的任务。阻塞会清空 `assigned_to`，重启 engine 会丢失进程的记忆；日志不变，因此同一任务在被释放后再次被领取时仍然是第一个，gate 要求的修正也会获得 2 倍。api 在 dev 的上下文中返回 `task.primeiraDoModulo`（没有 `module` 时为 `false`，该模块没有任何领取时也为 `false`——正常上限是保守的），*有效*上限在 engine 的单一位置解析。因预算而阻塞时会说明对该任务生效的上限（"teto da primeira tarefa do módulo: 1000000 micro-USD,
+US$ 1.00"）。QA 的 gate 仍使用基础的 `task_budget_micros`——不在卡片的范围之内。
+
+- **位置：** `apps/engine/lib/engine/dev/teto_da_tarefa.ex:32` (`efetivo`);
+  `apps/engine/lib/engine/dev/dev_agent_server.ex:669` (`diagnostico_de_orcamento`);
+  `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:182`
+  (`ehPrimeiraTarefaDoModulo`)
+- **测试：** `apps/engine/test/engine/dev/dev_agent_server_test.exs`（describe
+  "RN-774"：花费 US$ 0.53 的第一个不阻塞，同一模块的第二个阻塞——失败用例——，另一个模块的第一个也获得 2 倍）；
+  `apps/engine/test/engine/dev/teto_da_tarefa_test.exs`;
+  `apps/api/test/application/use-cases/execution/get-dev-task-context.use-case.spec.ts`
+  （describe "RN-774"）
+- **来源：** AT-433
+
+### RN-802 — Dev Lead 计划的估算把每个模块第一个任务算作两倍 {#rn-802}
+
+`propose_execution_plan` 的审批卡片（RN-709）原来说"最多 N × 上限"，忽略了每个模块的第一个任务有两倍上限（RN-774）。现在 api 在 payload 中、在 `orcamentoPorTarefaMicros` 旁边带上
+`multiplicadorDaPrimeiraDoModulo`，句子汇总*有效*上限：（任务数 − 有任务的模块数）× 上限 + 有任务的模块数 × 倍数 × 上限，并说明"每个模块的第一个算两倍"。一个模块 8 个任务、上限 US$ 0.50 时：最多 US$ 4.50。这是上限：已经有任务被领取过的模块的第一个不会获得两倍，句子仍然说"最多"。payload 中没有倍数（旧提议）时，用旧的算法。
+
+倍数只在 engine 中*应用*（`Engine.Dev.TetoDaTarefa`）；api 有一个声明的镜像，因为界面不应该复制这个常量，而提议时不会询问 engine。改一个就要改另一个。
+
+- **位置：** `apps/api/src/application/use-cases/execution/activate-execution.use-case.ts:83` (`MULTIPLICADOR_DA_PRIMEIRA_TAREFA_DO_MODULO`);
+  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:237` (`multiplicadorDaPrimeiraDoModulo`);
+  `apps/web/src/lib/aprovacoes.ts:346` (`multiplicador`)
+- **测试：** `apps/web/src/lib/aprovacoes.test.ts`（it "RN-802 (AT-473)"：8 个任务、1 个模块 → US$ 4.50；3 个任务、2 个模块 → US$ 2.50；没有预算则没有数字——失败用例）；
+  `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts`（"plano válido nasce pending"）
+- **来源：** AT-473
+
+### RN-892 — 调用的稳定前缀带标记发往 prompt 缓存，能力只在 OpenRouter 中打开，并经过证明 {#rn-892}
+
+在 TP-01（10月15日）中测得：经由 OpenRouter 的 `anthropic/claude-haiku-5.5` 收到 840 万输入 token，其中缓存为 **0**，输入占 US$ 1.02 中的 US$ 0.84。Anthropic 模型只从缓存读取在文本内容块中以 `cache_control: { type: "ephemeral" }` 标记的前缀（最多四个点，TTL 5 分钟——https://openrouter.ai/docs/features/prompt-caching）。
+
+1. **提供方能力，必需。** `LLMProviderCapabilities.promptCaching`
+   只在 OpenRouter 中为 `true`，在其他八个中为 `false`。声明它而没有 `marcarCacheDePrompt` 钩子会在构造时失败。关闭时，请求体与之前逐字节相同。
+2. **配置中的模型层。** 在 OpenRouter 中只有 `anthropic/*` 获得缓存点；其他模型自行缓存，原样返回。
+3. **两个点，放在不变的东西上。** 前缀的最后一个 `system`（指令，以及其前的工具）和末尾 `system` 尾部之前的最后一个 `user`/`tool`。尾部——语言（RN-622）、环境（RN-706）、流程（RN-711）、档案（RN-680）——位于最后一个点*之后*，消息的顺序从不改变。
+4. **证明（ADR 0041/0042）。** 2026-10-15，smoke 使用真实凭据运行（`OPENROUTER_TEST_KEY=… pnpm --filter api exec vitest run
+   test/infrastructure/llm/openrouter-provider.cache.smoke.spec.ts`），对 `anthropic/claude-haiku-5.5` 的第二次调用返回
+   `cached_input_tokens=8011`；只有在那之后，OpenRouter 的能力才变为
+   `true`。打开其他提供方需要等效的 smoke。收益通过 [RN-666](#rn-666) 出现在计量中。
+
+- **代码：** `apps/api/src/infrastructure/llm/openrouter-provider.ts:276` (`marcarCacheDePromptOpenRouter`);
+  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:501` (`mensagens`)
+- **测试：** `apps/api/test/infrastructure/llm/openrouter-provider.contract.spec.ts`（"pontos de cache de prompt (RN-892)"：打开时标记两个点；关闭时逐字节相同；有能力而无钩子会失败——失败用例）
+- **来源：** AT-543
