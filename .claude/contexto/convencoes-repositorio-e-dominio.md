@@ -151,8 +151,10 @@
   workflow da `main`. É por isso que o drift lê `PR_BODY_FILE` antes de
   `PR_BODY`. A linha do bot é marcada e sai sozinha se o diff deixar de ser
   pin; a de humano nunca é tocada.
-- Toda branch cujo PR é mergeado é ARQUIVADA automaticamente
-  (`.github/workflows/archive-merged-branch.yml`) — move de
+- Toda branch cujo PR é mergeado é ARQUIVADA automaticamente 7 DIAS depois
+  do merge, por checagem DIÁRIA (`.github/workflows/archive-merged-branch.yml`,
+  AT-557): sem PR aberta e sem commit depois do merge; branch sem PR mergeada
+  não é tocada — move de
   `refs/heads/<nome>` para `refs/archive/<nome>`, nunca apaga: histórico
   intacto, recuperável com um `git push` de volta. Exceções: dev/qa/main
   (aparecem como `head` de todo PR de promoção), `gh-pages` (deploy do

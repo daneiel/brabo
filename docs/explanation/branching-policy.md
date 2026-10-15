@@ -188,9 +188,26 @@ receives the application.
 
 ## Merged branches get archived
 
-Every branch whose PR merges gets moved out of the branch list —
-mechanically, by `archive-merged-branch.yml`, on every `pull_request`
-`closed` event where `merged == true`. "Archived" is literal, not a
+Every branch whose PR merged gets moved out of the branch list **7 days
+after the merge** — mechanically, by `archive-merged-branch.yml`, which runs
+once a day (`schedule:`, plus `workflow_dispatch`) and walks every branch of
+the repository (AT-557, owner's decision of 2026-10-15). Until then the
+branch stays where it is, so a follow-up fix can still go on top of it. A
+branch is archived only when all of these hold:
+
+- it is not one of the excluded names below, and not from a fork;
+- no PR with that head is **open**;
+- a PR with that head **merged** in this repository, and the most recent
+  one merged 7 or more days ago (`DIAS_ATE_ARQUIVAR`);
+- the branch tip is still that PR's `head.sha` — a branch that received a
+  commit after the merge **stays**.
+
+A branch that never had a merged PR has no merge date and is **never**
+archived by this job; removing it stays a manual call. The job summary
+lists what was archived, what was kept (with the reason) and what failed;
+a failure on one branch doesn't stop the others, and turns the job red.
+
+"Archived" is literal, not a
 euphemism for deleted: the branch moves from `refs/heads/<name>` to
 `refs/archive/<name>`, a namespace GitHub's UI doesn't show as a branch.
 The commit object and its history stay in the repository exactly as they
@@ -214,10 +231,12 @@ The decision itself — which four names are excluded, and the fork check —
 is a tested pure function
 ([`scripts/ci/archive-branch.ts`](https://github.com/daneiel/brabo/blob/dev/scripts/ci/archive-branch.ts)),
 not inline shell: it's the part of this mechanism that's actually worth
-getting wrong tests for. The workflow step that follows just calls the
-GitHub API twice — create the `refs/archive/` ref, then delete the
-`refs/heads/` one — and only deletes after the create succeeds, so a
-failure never drops a branch without leaving the archived copy behind.
+getting wrong tests for — and so is the 7-day eligibility
+(`aptaParaArquivar`, same file). The same script then calls the GitHub
+API: create the `refs/archive/` ref (or force it, when the name was archived
+before), read it back and check it points at the branch's SHA, and only then
+delete the `refs/heads/` one — so a failure never drops a branch without
+leaving the archived copy behind.
 
 ## Bots skip the ladder
 
