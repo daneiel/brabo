@@ -1,6 +1,6 @@
 <div align="center">
 
-**Português** · English (em breve) · Русский (em breve) · 简体中文 (em breve)
+**Português** · [English](README.en.md) · [Русский](README.ru.md) · [简体中文](README.zh-Hans.md)
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="website/static/img/logo.svg" />

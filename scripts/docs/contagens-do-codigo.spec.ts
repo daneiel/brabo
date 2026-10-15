@@ -124,7 +124,7 @@ describe('contagens derivadas do código (AT-123)', () => {
 
   it('a frase sumir é CEGO', () => {
     const ctx = contexto([
-      { arquivo: 'docs/glossary.md', de: 'executes directly.', para: 'runs directly.' },
+      { arquivo: 'docs/glossary.md', de: 'nunca executa direto.', para: 'nunca roda direto.' },
     ]);
     expect(estadosDa('tiposDeAcao', ctx)).toEqual(['CEGO']);
   });
