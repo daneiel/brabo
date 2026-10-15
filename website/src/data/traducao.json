@@ -376,6 +376,10 @@
       "defasada": false,
       "data": null
     },
+    "business-rules/custo.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
     "explanation/aceite-providers.md": {
       "defasada": false,
       "data": null
@@ -419,6 +423,30 @@
     "missions/colheita-esqueleto.md": {
       "defasada": false,
       "data": null
+    },
+    "missions/doc-mission.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "missions/dogfooding-mission.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "missions/inputs/00-handoff-criativo.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "missions/inputs/01-contrato-gitprovider.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "missions/inputs/02-bitbucket-cloud-a-investigar.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "missions/inputs/03-escopo-do-generic.md": {
+      "defasada": false,
+      "data": "2026-10-15"
     },
     "tutorials/from-zero-to-deliverable.md": {
       "defasada": false,
