@@ -2060,6 +2060,118 @@
     }
   },
   "zh-Hans": {
+    "adr/0020-destravar-gates-qa-secops.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0021-fechamento-4a-infra-e-painel.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0022-fechamento-4b-psicologo.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0023-fechamento-4b-anamnese.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0024-fase5-imagens-producao-ci.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0025-fase5-deploy-kubernetes-kustomize.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0026-fase5-observabilidade-e-graceful-shutdown.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0035-observabilidade-legivel-e-trace-sem-coletor.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0036-telas-de-auth-fieis-ao-design-e-fontes-auto-hospedadas.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0038-hierarquia-de-agentes.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0045-reagendamento-por-evento-do-dev-agent.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0112-binario-standalone-do-runner-via-bun-build-compile.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0115-pedido-de-pull-de-modelo-huggingface-tabela-propria.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0118-configuracao-automatica-do-runner-pelo-navegador.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0123-golden-set-regressao-qa-automacao.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0125-projectsettingstab-dividido-por-secao.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0126-trilho-vertical-de-navegacao-do-projeto.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0128-porta-de-docker-e-a-prova-de-empacotamento.md": {
+      "defasada": false,
+      "data": "2026-09-02"
+    },
+    "adr/0130-broker-de-container.md": {
+      "defasada": false,
+      "data": "2026-09-02"
+    },
+    "adr/0132-golden-set-de-acerto-do-rag.md": {
+      "defasada": false,
+      "data": "2026-09-02"
+    },
+    "adr/0134-dev-agents-executam-dentro-do-container.md": {
+      "defasada": false,
+      "data": "2026-09-03"
+    },
+    "adr/0146-base-consentida-no-bootstrap.md": {
+      "defasada": false,
+      "data": "2026-09-06"
+    },
+    "adr/0147-agente-local-com-capacidades.md": {
+      "defasada": false,
+      "data": "2026-09-06"
+    },
+    "adr/0154-chave-de-dispositivo-de-maquina.md": {
+      "defasada": false,
+      "data": "2026-09-27"
+    },
+    "adr/0157-teto-de-auto-movimento-no-upsert-de-workspace.md": {
+      "defasada": false,
+      "data": "2026-09-12"
+    },
+    "adr/0179-o-laco-pergunta-ao-jev-qual-ferramenta.md": {
+      "defasada": false,
+      "data": "2026-09-30"
+    },
     "adr/index.md": {
       "defasada": false,
       "data": "2026-10-15"
@@ -2080,7 +2192,19 @@
       "defasada": false,
       "data": "2026-10-15"
     },
+    "explanation/aceite-providers.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
     "explanation/achados-execucao-real.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "explanation/auditoria-fluxo-vs-codigo.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "explanation/auditoria-visual-rodada-29.md": {
       "defasada": false,
       "data": "2026-10-15"
     },
@@ -2099,6 +2223,10 @@
     "explanation/documentation-workflow.md": {
       "defasada": false,
       "data": "2026-10-15"
+    },
+    "explanation/fase-29-instalacao-de-uma-linha.md": {
+      "defasada": false,
+      "data": "2026-09-09"
     },
     "explanation/fase-30-runner-por-maquina.md": {
       "defasada": false,
@@ -2120,6 +2248,10 @@
       "defasada": false,
       "data": "2026-10-15"
     },
+    "explanation/validacao-real.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
     "getting-started.md": {
       "defasada": false,
       "data": "2026-10-15"
@@ -2129,6 +2261,10 @@
       "data": "2026-10-11"
     },
     "intro.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "missions/doc-mission.md": {
       "defasada": false,
       "data": "2026-10-15"
     },
