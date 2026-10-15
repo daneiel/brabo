@@ -21,50 +21,50 @@
 
 temas:
   - id: git
-    titulo: Git, repository and branch policy
-    descricao: The git provider contract, the repository's birth and adoption, protection and the branch policy.
+    titulo: Git, repositório e política de branches
+    descricao: O contrato do provider de git, o nascimento e a adoção do repositório, a proteção e a política de branches.
   - id: agentes
-    titulo: Agent harness, turns and sessions
-    descricao: How an agent runs — context, the tool loop, the conversational turn, the session and its states.
+    titulo: Harness de agente, turnos e sessões
+    descricao: Como um agente roda — contexto, o laço de ferramentas, o turno conversacional, a sessão e seus estados.
   - id: time
-    titulo: The agent team — roles, areas and handoffs
-    descricao: Which agents exist, what each delivers to whom, delegation inside an area and the handoff between them.
+    titulo: O time de agentes — papéis, áreas e handoffs
+    descricao: Quais agentes existem, o que cada um entrega a quem, a delegação dentro de uma área e o handoff entre eles.
   - id: gates
-    titulo: Gates, QA and security review
-    descricao: The gate registry, the QA and SecOps verdicts and the golden-sets that measure them.
+    titulo: Gates, QA e revisão de segurança
+    descricao: O registro de gates, os vereditos de QA e SecOps e os golden-sets que os medem.
   - id: execucao
-    titulo: Execution, terminal policy and approvals
-    descricao: The dev agent at work, `proposed_action`, the terminal policy, path scope, auto mode and the absolute ceilings.
+    titulo: Execução, política de terminal e aprovações
+    descricao: O dev agent trabalhando, `proposed_action`, a política de terminal, o escopo de caminho, o modo automático e os tetos absolutos.
   - id: modos
-    titulo: Where the code lives — execution modes
-    descricao: The three execution modes, the user's folder, the projects base and converting a project between modes.
+    titulo: Onde o código mora — modos de execução
+    descricao: Os três modos de execução, a pasta do usuário, a base de projetos e a conversão de um projeto entre modos.
   - id: container
-    titulo: Project container and broker
-    descricao: The project container's lifecycle, the image decision, the Docker port and the broker that talks to the daemon.
+    titulo: Container do projeto e broker
+    descricao: O ciclo de vida do container do projeto, a decisão de imagem, a porta de Docker e o broker que fala com o daemon.
   - id: runner
-    titulo: The local runner
-    descricao: The CLI on the user's machine — its channel, credentials, device keys, distribution, base and service.
+    titulo: O runner local
+    descricao: O CLI na máquina do usuário — o canal, as credenciais, as chaves de dispositivo, a distribuição, a base e o serviço.
   - id: iam
-    titulo: Auth, access and secrets
-    descricao: First-party auth, roles and their ceilings, workspace membership, cross-origin hardening and secret envelopes.
+    titulo: Autenticação, acesso e segredos
+    descricao: Autenticação first-party, papéis e seus tetos, associação ao workspace, endurecimento entre origens e envelopes de segredo.
   - id: llm
-    titulo: LLM providers, models and spend
-    descricao: The provider contract, the model catalog and curation, model bindings, metering and budgets.
+    titulo: Providers de LLM, modelos e gasto
+    descricao: O contrato de provider, o catálogo de modelos e a curadoria, os bindings de modelo, o metering e os orçamentos.
   - id: conhecimento
-    titulo: RAG, knowledge graph and artifacts
-    descricao: Chunks and hybrid search, its measurement, the Neo4j graph and the artifacts projected from the event log.
+    titulo: RAG, grafo de conhecimento e artefatos
+    descricao: Chunks e busca híbrida, a medição dela, o grafo Neo4j e os artefatos projetados do event log.
   - id: web
-    titulo: Web UI and design system
-    descricao: Screens, navigation, themes and the structure of the web app's largest files.
+    titulo: Interface web e design system
+    descricao: Telas, navegação, temas e a estrutura dos maiores arquivos do app web.
   - id: operacao
-    titulo: Operation, deploy and installation
-    descricao: Production images, Kubernetes, observability, backup, the dev compose and the one-line installer.
+    titulo: Operação, deploy e instalação
+    descricao: Imagens de produção, Kubernetes, observabilidade, backup, o compose de dev e o instalador de uma linha.
   - id: engenharia
-    titulo: CI, release and supply chain
-    descricao: The pipeline, the published images, signing, scanning, pinning, the test layers and the repository's own structure.
+    titulo: CI, release e cadeia de suprimentos
+    descricao: O pipeline, as imagens publicadas, a assinatura, a varredura, o pin, as camadas de teste e a estrutura do próprio repositório.
   - id: docs
-    titulo: Documentation
-    descricao: How documentation is generated, verified and published.
+    titulo: Documentação
+    descricao: Como a documentação é gerada, verificada e publicada.
 
 adrs:
   "0001": git
