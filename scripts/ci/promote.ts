@@ -48,6 +48,11 @@ export function celulaDeTabela(texto: string): string {
   return texto.replace(/\\/g, '\\\\').replace(/\|/g, '\\|');
 }
 
+/** O aviso da fase de teste (ADR 0217) — o mesmo texto do site e da política. */
+export const AVISO_DA_FASE_DE_TESTE =
+  'Fase de teste: a QA é promovida automaticamente a cada merge na dev e ainda ' +
+  'não é considerada ambiente validado.';
+
 /** O corpo do PR: cada PR do ciclo, seu impacto, e a versão proposta. */
 export function corpoDaPromocao(
   de: string,
@@ -55,9 +60,18 @@ export function corpoDaPromocao(
   versao: string,
   ultimaFinal: string | null,
   prs: PrClassificado[],
+  automatica = false,
 ): string {
   const l: string[] = [];
   const impacto = maiorImpacto(prs)!;
+
+  if (automatica) {
+    l.push(`> **${AVISO_DA_FASE_DE_TESTE}**`);
+    l.push('>');
+    l.push('> Aberto e mergeado pelo workflow `promote-auto-qa` depois de todos os');
+    l.push('> checks terminarem verdes (`QA_FASE_DE_TESTE=true`, ADR 0217).');
+    l.push('');
+  }
 
   l.push(`Promoção **\`${de}\` → \`${para}\`**, gerada pelo workflow \`promote\`.`);
   l.push('');
@@ -214,7 +228,14 @@ async function principal(): Promise<void> {
   // --- 5. a saída.
   writeFileSync(
     'corpo-da-promocao.md',
-    corpoDaPromocao(par.de, par.para, versao, ultimaFinal, classificados),
+    corpoDaPromocao(
+      par.de,
+      par.para,
+      versao,
+      ultimaFinal,
+      classificados,
+      process.env.PROMOCAO_AUTOMATICA === 'true',
+    ),
   );
 
   const saida: Record<string, string> = {

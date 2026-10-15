@@ -6,6 +6,12 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- Com a variável de repositório `QA_FASE_DE_TESTE=true`, cada merge na `dev`
+  abre (ou atualiza) e mergeia sozinho o PR de promoção `dev` → `qa`, depois
+  de todos os checks terminarem verdes; a escada dispensa a aprovação só
+  desse PR aberto pelo bot, `qa` → `main` segue manual, e o site
+  `/brabo/qa/` avisa que a QA ainda não é ambiente validado (ADR 0217,
+  AT-555).
 - O cache de prompt passa a valer no Haiku (e nos demais `anthropic/*`) pelo
   OpenRouter: a capability `promptCaching` do OpenRouter vira `true`, provada
   por smoke com credencial em 15/10 (`cached_input_tokens=8011` na segunda

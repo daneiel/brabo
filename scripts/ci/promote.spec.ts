@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { celulaDeTabela, corpoDaPromocao } from './promote.ts';
+import { AVISO_DA_FASE_DE_TESTE, celulaDeTabela, corpoDaPromocao } from './promote.ts';
 
 /**
  * Escape de célula da tabela do corpo do PR de promoção (CodeQL
@@ -62,5 +62,15 @@ describe('corpoDaPromocao', () => {
     // Contagem de delimitadores REAIS: um `|` não precedido de contrabarra.
     const delimitadores = [...linha.matchAll(/(?<!\\)\|/g)].length;
     expect(delimitadores).toBe(5); // 4 colunas => 5 bordas
+  });
+
+  it('a promoção automática abre com o aviso da fase de teste (ADR 0217)', () => {
+    const corpo = corpoDaPromocao('dev', 'qa', 'v1.2.0', 'v1.1.0', [pr('feat: a')], true);
+    expect(corpo.split('\n')[0]).toContain(AVISO_DA_FASE_DE_TESTE);
+  });
+
+  it('a promoção manual não leva o aviso', () => {
+    const corpo = corpoDaPromocao('dev', 'qa', 'v1.2.0', 'v1.1.0', [pr('feat: a')]);
+    expect(corpo).not.toContain(AVISO_DA_FASE_DE_TESTE);
   });
 });

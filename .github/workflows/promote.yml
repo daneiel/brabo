@@ -121,20 +121,4 @@ jobs:
           DE: ${{ steps.calculo.outputs.de }}
           PARA: ${{ steps.calculo.outputs.para }}
           VERSAO: ${{ steps.calculo.outputs.versao }}
-        run: |
-          set -euo pipefail
-
-          # PR de promoção já aberto: atualizar em vez de duplicar. Dois PRs
-          # para o mesmo par disputariam o mesmo merge.
-          existente="$(gh pr list --base "$PARA" --head "$DE" --state open --json number --jq '.[0].number // empty')"
-
-          if [ -n "$existente" ]; then
-            gh pr edit "$existente" --title "promoção: $DE → $PARA ($VERSAO)" --body-file corpo-da-promocao.md
-            echo "PR #$existente atualizado: $(gh pr view "$existente" --json url --jq .url)"
-          else
-            gh pr create \
-              --base "$PARA" --head "$DE" \
-              --title "promoção: $DE → $PARA ($VERSAO)" \
-              --body-file corpo-da-promocao.md
-            echo "PR aberto: $(gh pr list --base "$PARA" --head "$DE" --state open --json url --jq '.[0].url')"
-          fi
+        run: bash scripts/ci/abrir-pr-de-promocao.sh

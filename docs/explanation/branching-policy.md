@@ -513,6 +513,35 @@ extra cell and the table breaks. That's why the order of the two
 substitutions is load-bearing, and the test in `promote.spec.ts` counts
 the line's REAL delimiters instead of comparing the whole string.
 
+### Automatic promotion to qa (test phase) {#automatic-promotion-to-qa}
+
+While QA is in its **test phase**, `dev` → `qa` promotes itself (ADR 0217,
+owner's decision of 15/10). The switch is the repository variable
+**`QA_FASE_DE_TESTE`** (Settings → Variables): `true` turns it on; deleting
+it or any other value turns it off, and promotion goes back to the manual
+`promote` workflow above.
+
+With it on, every push to `dev` runs `promote-auto-qa.yml`: the same version
+calculation (`promote.ts`) and the same opening step
+(`scripts/ci/abrir-pr-de-promocao.sh`) open or update the `dev` → `qa` PR
+through `BRABO_BOT_TOKEN`. Then `scripts/ci/promocao-automatica.ts` waits
+until **every** check run on the PR head has finished — the repository has
+no required checks, so `--auto` would not wait — and merges with a merge
+commit only if none ended `failure`, `cancelled` or `timed_out` (among
+others). Any failure stops the promotion and the job summary names the check
+and its link. Without `BRABO_BOT_TOKEN` the job fails visibly.
+
+The approval ladder waives the owner's approval **only** for that PR: pair
+`dev` → `qa`, variable on, and author equal to the `BRABO_BOT_TOKEN` user
+(resolved with `gh api user`). `qa` → `main` and every other pair still
+require approval.
+
+> **Fase de teste: a QA é promovida automaticamente a cada merge na dev e
+> ainda não é considerada ambiente validado.** The `/brabo/qa/` site shows
+> this in its announcement bar, and the automatic PR body opens with it.
+> Each automatic promotion also produces a `-qa.N` tag and republishes
+> `/brabo/qa/`.
+
 ### The promotion check
 
 A promotion PR goes through a check of its own, separate from

@@ -598,6 +598,7 @@ rules:
       - ".github/workflows/pr-police.yml"
       - ".github/workflows/approval-ladder.yml"
       - ".github/workflows/promote.yml"
+      - ".github/workflows/promote-auto-qa.yml"
       - ".github/workflows/promotion-check.yml"
       - ".github/workflows/tag-release.yml"
       - ".github/workflows/release.yml"
@@ -622,7 +623,7 @@ rules:
       # `branching-policy.md` no docblock, mais o spec dele — e reprova se esta
       # lista divergir. Script de política novo declara a fonte no cabeçalho,
       # como os catorze, e o spec o cobra aqui.
-      - "scripts/ci/@(alarme-de-tag|approval-ladder|archive-branch|backmerge-gate|dependabot-justifica-pin|dependabot-para-dev|destravar-gate|gate|hotfix-gate|pr-police|promote|promotion-check|tag-release|version)?(.spec).ts"
+      - "scripts/ci/@(alarme-de-tag|approval-ladder|archive-branch|backmerge-gate|dependabot-justifica-pin|dependabot-para-dev|destravar-gate|gate|hotfix-gate|pr-police|promocao-automatica|promote|promotion-check|tag-release|version)?(.spec).ts"
       # `.release/gate.json` NÃO entra aqui: ele só existe depois do primeiro
       # hotfix, e glob que não casa com nada reprova o docs:check. O estado do
       # gate é dado, não fonte — a doc dele acompanha `scripts/ci/gate.ts`.
