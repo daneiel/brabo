@@ -1,3 +1,7 @@
+---
+traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
+---
+
 # ADR 0025 — Phase 5 (session 2): Kubernetes deploy with Kustomize, queue metric and local overlay
 
 - Status: accepted
