@@ -34,6 +34,6 @@ git 动作在批准后没有执行器（`ApproveActionUseCase` 只路由 `termin
 - 项目概览获得 **Arquitetura** 一节：module_map（`depends_on` 以 chip 显示的模块）、ADR（指向 PR 的链接 + 状态徽章）以及以红色显示的交叉验证待办项。会话中接受 handoff 的按钮变成通用的（任意 agent），composer 路由到最靠后的活动 agent。
 - 测试：领域（`module-graph` 拒绝环、`module-resolution`）、用例（`CreateModuleMap` 拒绝环 + 重新验证/降级孤立项；`TransitionStory` 在模块缺失时阻止 ready；`ExecuteAdrPr` 用假的 GitProvider 打开 PR），以及 `arquiteto_server`（kickoff 串联 module_map→assign→ADR→insight；环变成错误的 tool-result；广播；重新水合）。
 
-## Escopo {#escopo}
+## 范围 {#escopo}
 
 Fase 3 的最后一次会话。不实现执行 agent（Fase 4）。用于打开 PR 的凭据是审批者的（`decidedBy`），与仓库开通一致（Fase 2）。没有 Bitbucket/GenericGitProvider；队列放在 Postgres（Oban）中。
