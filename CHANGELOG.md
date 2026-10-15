@@ -6,6 +6,9 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- O QA passa a cobrar o código de saída de comando de linha da entrega: 0 no
+  caminho feliz e diferente de 0 na recusa de entrada, e o plano de teste
+  pede os dois critérios para todo comando que recusa entrada (RN-890).
 - A tarefa bloqueada deixa de aparecer como "a fazer": a aba Histórias mostra
   um selo de estado em cada tarefa ("Bloqueada", com o motivo, vence o
   status), e o backlog que o Dev Lead lê marca a linha com `BLOQUEADA` e o

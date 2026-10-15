@@ -86,6 +86,23 @@ defmodule Engine.Gates.QaAutomacaoAgentTest do
     refute_received {:task_blocked, _, _, _, _}
   end
 
+  # RN-890 (AT-542): o código de saída da RECUSA de um comando de linha.
+  test "a instrução cobra código de saída 0 no feliz e diferente de 0 na recusa", %{
+    dev_state: dev_state,
+    dev_context: dev_context
+  } do
+    instrucao = Engine.Gates.QaAutomacaoAgent.instrucao_de_codigo_de_saida()
+    assert instrucao =~ "CÓDIGO DE SAÍDA"
+    assert instrucao =~ "0 no caminho feliz"
+    assert instrucao =~ "DIFERENTE de 0"
+    assert instrucao =~ "recusa a entrada"
+
+    Process.put(:fake_llm_turns, [])
+    run(dev_state, dev_context)
+    assert_received {:llm_turn, _, messages, _tools}
+    assert Enum.any?(messages, &(is_binary(&1["content"]) and &1["content"] =~ instrucao))
+  end
+
   test "recusa aprovar sem terminal exit 0 prévio — nunca aprova sem prova", %{
     dev_state: dev_state,
     dev_context: dev_context

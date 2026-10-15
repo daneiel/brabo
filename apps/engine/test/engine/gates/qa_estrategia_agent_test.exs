@@ -171,6 +171,12 @@ defmodule Engine.Gates.QaEstrategiaAgentTest do
     assert conteudo =~ "- apps/api/test/cadastro.spec.ts"
     assert conteudo =~ "ENTREGOU"
     assert conteudo =~ "Cadastro na api"
+    # RN-890 (AT-542): o plano pede código de saída do comando que recusa.
+    instrucao = QaEstrategiaAgent.instrucao_de_codigo_de_saida()
+    assert instrucao =~ "RECUSA entrada"
+    assert instrucao =~ "0 no caminho feliz"
+    assert instrucao =~ "DIFERENTE de 0 na recusa"
+    assert conteudo =~ instrucao
   end
 
   test "diff que falhou não derruba o plano: a mensagem diz POR QUE não listou", %{
