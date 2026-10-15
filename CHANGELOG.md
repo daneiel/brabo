@@ -6,6 +6,13 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- A fonte da documentação passa a ser pt-BR também nas 53 páginas que ainda
+  estavam em inglês (AT-549, lote 1, ADR 0216): o runbook, as regras de custo,
+  as missões, 11 páginas de `explanation/`, `architecture.md`,
+  `security-surface.md` e 31 ADRs. Doze ADRs que nasceram em português voltaram
+  ao texto aceito no commit de criação; os outros foram traduzidos. O inglês
+  anterior está em `/en/`, com `traducao_de`, e os ids antigos dos cabeçalhos
+  continuam valendo como `{#id}` explícito.
 - A branch mergeada deixa de ser arquivada no instante do merge: o
   `archive-merged-branch.yml` roda uma vez por dia e arquiva (move para
   `refs/archive/<nome>`, nunca apaga) só a branch mergeada há 7 dias ou mais,

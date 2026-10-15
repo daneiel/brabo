@@ -141,10 +141,11 @@ coisas saíram do import sem perder uma palavra:
   `every PR` → `pull_request`, `every tag` → `push: tags`; `manual` não cita
   workflow). Sem prova, a célula começa com `**None**` — DECLARA, nunca fica
   vazia. Procedimento de operação novo no runbook ganha linha ali; renomear um
-  spec ou tirar o `schedule:` de um workflow citado reprova o PR que o fez. Só
-  o runbook em inglês tem a tabela: a tradução pt-BR está atrás (AT-209) e uma
-  segunda cópia sem conferência seria a cópia que a tabela existe para
-  substituir.
+  spec ou tirar o `schedule:` de um workflow citado reprova o PR que o fez.
+  Desde a AT-549 a fonte do runbook é pt-BR (ADR 0216) e a tabela mora nela; o
+  script acha a seção pela âncora `{#procedimentos-e-verificacao}`, nunca pelo
+  título, e o cabeçalho da tabela e as classes ficam literais (vocabulário de
+  máquina). A cópia em inglês em `website/i18n/en/` NÃO é conferida.
 - O índice de ADR é agrupado por TEMA, e o tema mora FORA do ADR (ADR 0202,
   AT-137): `docs/adr/temas.yml` tem a lista fechada (15 temas) e UM tema por
   ADR. ADR novo ganha a linha dele ali e a linha do índice na seção do tema, em
