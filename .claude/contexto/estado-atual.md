@@ -480,9 +480,11 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   fluxo do navegador, ADR 0203) são amarrados por
   `scripts/ci/alvos-do-runner.spec.ts` — religar o Mac Intel ou o Windows é ADR
   novo, depois de o Bun corrigir, nunca só devolver as linhas da matriz
-- i18n Onda 6b NÃO fechou: corpo de `docs/business-rules.md` 100% pt-BR; ao
-  fechar, revisar Stack/Documentação deste arquivo para inglês como idioma
-  primário. A fatia residual de `.tsx` fechou na AT-289 (varredura por AST de
+- i18n Onda 6b NÃO fechou, e a direção mudou: o ADR 0216 (EP-032, decisões
+  do dono de 15/10) fez do pt-BR a FONTE e o padrão do site e da interface, com
+  `en`, `ru` e `zh-Hans` como traduções em fases e paridade medida. NÃO revise
+  Stack/Documentação para "inglês como idioma primário": essa instrução
+  caducou. A fatia residual de `.tsx` fechou na AT-289 (varredura por AST de
   texto JSX e literais de prosa: o que sobra é marca, comando, caminho e nome
   de papel/enum, de propósito), e `apps/web/src/lib/i18n-paridade.test.ts`
   reprova chave que exista num idioma e falte no outro. Fora do `.tsx` ainda há
