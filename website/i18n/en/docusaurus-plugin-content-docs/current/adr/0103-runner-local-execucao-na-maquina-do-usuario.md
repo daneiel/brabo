@@ -1,3 +1,7 @@
+---
+traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
+---
+
 # ADR 0103 — Local runner: execution on the user's machine over a Phoenix channel with a single-use ticket
 
 - **Status:** Accepted

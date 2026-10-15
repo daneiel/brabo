@@ -267,6 +267,11 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - **ações**: com o modo automático do agente ligado (a curinga em `auto_approve`), `git_push` e `pr_open` — tipados ou pelo comando de terminal — passam a ser auto-aprovados, com o motivo "modo automático (RN-713)" no evento; regra específica, "Sempre permitir" e `permissions.json` continuam sem liberar, e merge em branch protegida, deploy e `sudo`/`doas` seguem com o usuário. As telas do modo automático dizem isso (AT-385, RN-713, ADR 0204).
 ### Correções
 
+- Interface em inglês: sete contagens (seleção de aprovações, novos/sumidos
+  na sincronização de modelos, arquivos pulados, chunks sem vetor e as
+  contagens de decisões da aba Sessões) ganharam as formas `one`/`other` que
+  a fonte pt-BR tem; `i18n-paridade.test.ts` passa a reprovar plural da fonte
+  sem as formas do idioma, que a normalização de sufixo escondia (AT-549).
 - Entregável: a Infra declara sempre `/docs` como `api_docs` (nunca rota de
   negócio) e a validação do `run` recusa o contrário, na api e no engine; o dev
   põe toda rota HTTP da tarefa no `/openapi.json`, e o QA reprova rota do README

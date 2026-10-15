@@ -1,4 +1,5 @@
 ---
+traducao_de: 17fe83498b0a1eea177367926431ffddda3ce9ff
 id: tanstack-ai
 title: TanStack AI — not adopted
 description: Why the web app does not adopt TanStack AI for the session chat (decision of 2026-10-03), what was measured, the two things any future adoption must never use, and the trigger to revisit it.

@@ -1,4 +1,5 @@
 ---
+traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
 id: validacao-fase-12
 title: The validation that the three findings died
 sidebar_label: Phase 12 validation

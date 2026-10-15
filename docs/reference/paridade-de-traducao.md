@@ -13,15 +13,11 @@ A fonte é o pt-BR em `docs/` (ADR 0216); `docs/reference/**` é gerado e fica f
 
 | locale | páginas traduzidas | caracteres traduzidos | em dia | defasadas | sem procedência | ausentes | órfãs |
 |---|---|---|---|---|---|---|---|
-| `en` | 247 de 257 (96.1%) | 62.0% de 5.296.780 | 144 | 1 | 102 | 10 | 0 |
-| `ru` | 4 de 257 (1.6%) | 0.9% de 5.296.780 | 2 | 2 | 0 | 253 | 0 |
-| `zh-Hans` | 4 de 257 (1.6%) | 0.9% de 5.296.780 | 2 | 2 | 0 | 253 | 0 |
+| `en` | 256 de 257 (99.6%) | 94.8% de 5.299.217 | 256 | 0 | 0 | 1 | 0 |
+| `ru` | 4 de 257 (1.6%) | 0.9% de 5.299.217 | 2 | 2 | 0 | 253 | 0 |
+| `zh-Hans` | 4 de 257 (1.6%) | 0.9% de 5.299.217 | 2 | 2 | 0 | 253 | 0 |
 
 > **TODO(humano):** revisão nativa por idioma — quem revisou e quando. Ainda não há revisão nativa registrada.
-
-### Defasadas em `en`
-
-- `adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md` (tradução de 2026-10-15)
 
 ### Defasadas em `ru`
 
@@ -39,13 +35,7 @@ Chaves de `apps/web/src/locales/<locale>/` contra o pt-BR. Chave plural conta um
 
 | locale | formas de plural | chaves presentes | plurais incompletos |
 |---|---|---|---|
-| `en` | one, other | 2302 de 2316 (99.4%) | 7 |
+| `en` | one, other | 2316 de 2316 (100.0%) | 0 |
 | `ru` | one, few, many, other | 2520 de 2520 (100.0%) | 0 |
 | `zh-Hans` | other | 2214 de 2214 (100.0%) | 0 |
-
-### Namespaces incompletos em `en`
-
-- `approvals`: 209 de 211
-- `models`: 153 de 157
-- `sessions`: 145 de 153
 
