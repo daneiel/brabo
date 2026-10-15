@@ -1030,6 +1030,330 @@
     }
   },
   "ru": {
+    "adr/0001-git-provider-contract-shape.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0002-git-error-normalization.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0003-git-provider-retry-policy.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0004-git-credential-registration.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0006-prompt-assembler-context-harness.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0007-toolloop-tools-context-manager.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0008-agente-criativo-conversacional-handoffs.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0009-agente-po-backlog-rastreabilidade.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0010-agente-arquiteto-adr-pr-module-map.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0011-infra-dev-agents-worktrees-merge-lock.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0013-gates-qa-secops-pr.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0017-lock-de-workspace-e-monitor-de-dev-agents.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0018-noop-dev-agent-modo-de-execucao.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0019-destravar-dev-agent-adr-por-modulo-orcamento-projeto.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0028-protecao-de-branch-divergencia-entre-providers.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0029-sincronizacao-continua-da-documentacao.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0039-actionlint-e-validacao-do-pipeline-de-ci-gerado.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0040-moeda-do-dashboard.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0047-operabilidade-pos-dogfooding.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0049-curadoria-de-modelo-por-workspace.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0051-facetas-de-capability-e-curadoria-por-uso.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0052-dev-agent-espera-aprovacao-no-meio-do-laco.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0054-gates-como-registro-declarativo.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0056-o-engine-trabalha-em-repositorio-remoto.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0057-o-gate-espera-a-aprovacao.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0059-segredo-do-state-de-oauth-sem-default.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0060-superficie-de-leitura-de-codigo.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0061-tipo-da-sessao-na-criacao.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0068-diagrama-c4-do-arquiteto.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0070-observabilidade-no-compose-local.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0071-publicacao-simetrica-por-degrau.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0077-ranking-de-modelos-por-capacidade-sem-nota-inventada.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0082-chat-rag-aba-de-busca-hibrida.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0083-terminal-mostra-estado-real-do-container.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0085-fluxo-como-registro-declarativo.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0091-secops-runtime-relatorio-de-abuso.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0092-platform-relatorio-de-telemetria-sob-demanda.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0093-dbre-linter-de-migracao-e-relatorio-de-backup.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0097-leitura-direta-do-schema-do-engine-para-online-agent-count.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0098-limites-de-transporte-e-janela-efetiva-de-compactacao.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0099-neo4j-grafo-de-conhecimento-e-templates.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0100-rag-search-e-modelos-garantidos-no-boot.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0101-memoria-relacional-como-projecao-do-event-log.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0102-revisao-do-adr-0065-teto-absoluto-substitui-deny.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0103-runner-local-execucao-na-maquina-do-usuario.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0107-navegacao-de-pasta-local-via-o-runner.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0108-projeto-runner-nasce-ao-navegar-pasta-no-wizard.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0120-e2e-de-navegador-contra-o-compose-de-producao.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0131-roteamento-de-modulos-para-infra.md": {
+      "defasada": false,
+      "data": "2026-09-02"
+    },
+    "adr/0139-o-alarme-de-esteira-ganha-destinatario.md": {
+      "defasada": false,
+      "data": "2026-09-04"
+    },
+    "adr/0140-timeout-do-audit-como-risco-assumido.md": {
+      "defasada": false,
+      "data": "2026-09-04"
+    },
+    "adr/0152-backup-de-volumes-contra-compose.md": {
+      "defasada": false,
+      "data": "2026-09-08"
+    },
+    "adr/0167-modo-automatico-libera-o-escopo-de-caminho.md": {
+      "defasada": false,
+      "data": "2026-09-26"
+    },
+    "adr/0168-golden-set-do-qa-em-ci-semanal.md": {
+      "defasada": false,
+      "data": "2026-09-27"
+    },
+    "adr/0170-compose-de-dev-brabo-dev.md": {
+      "defasada": false,
+      "data": "2026-09-27"
+    },
+    "adr/0172-trivy-no-release-antes-de-assinar.md": {
+      "defasada": false,
+      "data": "2026-09-27"
+    },
+    "adr/0174-runner-sem-binario-darwin-x64.md": {
+      "defasada": false,
+      "data": "2026-09-28"
+    },
+    "adr/0175-infra-lead-conversa-pelo-composer.md": {
+      "defasada": false,
+      "data": "2026-09-28"
+    },
+    "adr/0177-idioma-das-respostas-por-conta-sessao-e-projeto.md": {
+      "defasada": false,
+      "data": "2026-09-28"
+    },
+    "adr/0180-container-com-o-dono-da-pasta.md": {
+      "defasada": false,
+      "data": "2026-09-29"
+    },
+    "adr/0181-tema-preto-neutro.md": {
+      "defasada": false,
+      "data": "2026-09-30"
+    },
+    "adr/0184-reabrir-sessao-decisoes-do-dono.md": {
+      "defasada": false,
+      "data": "2026-09-30"
+    },
+    "adr/0186-aceite-automatico-do-handoff-ao-arquiteto.md": {
+      "defasada": false,
+      "data": "2026-09-30"
+    },
+    "adr/0187-runner-sem-binario-win32-x64.md": {
+      "defasada": false,
+      "data": "2026-10-01"
+    },
+    "adr/0194-aprovar-o-plano-ativa-a-execucao.md": {
+      "defasada": false,
+      "data": "2026-10-01"
+    },
+    "adr/0196-anamnese-religada-com-sujeito-e-fato-do-perfil.md": {
+      "defasada": false,
+      "data": "2026-10-01"
+    },
+    "adr/0199-recurso-minimo-derivado-do-module-map.md": {
+      "defasada": false,
+      "data": "2026-10-01"
+    },
+    "adr/0204-modo-automatico-libera-push-e-pr.md": {
+      "defasada": false,
+      "data": "2026-10-02"
+    },
+    "adr/0205-desvio-do-agente-como-sinal-do-produto.md": {
+      "defasada": false,
+      "data": "2026-10-02"
+    },
+    "adr/0206-referencia-da-api-numa-pagina-redoc.md": {
+      "defasada": false,
+      "data": "2026-10-02"
+    },
+    "adr/0207-ciclo-de-gate-velho-estaciona.md": {
+      "defasada": false,
+      "data": "2026-10-02"
+    },
+    "adr/0208-a-infra-herda-a-rede-do-arquiteto.md": {
+      "defasada": false,
+      "data": "2026-10-02"
+    },
+    "adr/0209-engine-em-otp-29.md": {
+      "defasada": false,
+      "data": "2026-10-02"
+    },
+    "adr/0210-animacao-de-texto-com-motion.md": {
+      "defasada": false,
+      "data": "2026-10-03"
+    },
+    "adr/0211-uma-navegacao-so-a-sidebar-absorve-o-trilho.md": {
+      "defasada": false,
+      "data": "2026-10-03"
+    },
+    "adr/0212-historia-arquivada.md": {
+      "defasada": false,
+      "data": "2026-10-03"
+    },
+    "adr/0213-o-entregavel-roda-na-maquina-pelo-compose-da-infra.md": {
+      "defasada": false,
+      "data": "2026-10-11"
+    },
+    "adr/0214-pergunta-em-aberto-vira-pendencia.md": {
+      "defasada": false,
+      "data": "2026-10-11"
+    },
+    "adr/0215-decisao-do-projeto-chega-ao-dev-e-ao-qa.md": {
+      "defasada": false,
+      "data": "2026-10-14"
+    },
+    "adr/0217-promocao-automatica-para-qa-em-fase-de-teste.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
     "adr/index.md": {
       "defasada": false,
       "data": "2026-10-15"
@@ -1038,19 +1362,51 @@
       "defasada": false,
       "data": "2026-10-15"
     },
+    "explanation/execucao-real-hello-world.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
     "explanation/historico-de-fases.md": {
       "defasada": false,
       "data": "2026-10-01"
+    },
+    "explanation/localizacao-en.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "explanation/localizacao-ru.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "explanation/localizacao-zh-hans.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "explanation/localizacao.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "explanation/modelo-de-time.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "explanation/tanstack-ai.md": {
+      "defasada": false,
+      "data": "2026-10-15"
     },
     "getting-started.md": {
       "defasada": false,
       "data": "2026-10-15"
     },
     "glossary.md": {
-      "defasada": true,
-      "data": "2026-10-11"
+      "defasada": false,
+      "data": "2026-10-15"
     },
     "intro.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "missions/inputs/00-handoff-criativo.md": {
       "defasada": false,
       "data": "2026-10-15"
     },
@@ -1059,7 +1415,7 @@
       "data": "2026-10-15"
     },
     "tutorials/from-zero-to-deliverable.md": {
-      "defasada": true,
+      "defasada": false,
       "data": "2026-10-15"
     }
   },
