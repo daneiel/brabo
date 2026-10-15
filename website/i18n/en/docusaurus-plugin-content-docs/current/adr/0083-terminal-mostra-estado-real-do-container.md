@@ -2,7 +2,7 @@
 traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
 ---
 
-# 0083 — The Terminal tab gets the real consumer of the lifecycle, not the terminal
+# ADR 0083 — The Terminal tab gets the real consumer of the lifecycle, not the terminal
 
 ## Status
 

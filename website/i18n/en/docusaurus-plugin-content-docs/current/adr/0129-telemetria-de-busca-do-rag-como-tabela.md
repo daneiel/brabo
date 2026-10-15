@@ -2,7 +2,7 @@
 traducao_de: 4a96d14a43984b17eb9c018ce61b5286964878b0
 ---
 
-# 0129 — RAG search telemetry is a TABLE, with the weights frozen in the row
+# ADR 0129 — RAG search telemetry is a TABLE, with the weights frozen in the row
 
 ## Context
 

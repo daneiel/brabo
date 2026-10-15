@@ -2,7 +2,7 @@
 traducao_de: 8b290c0ec233be29106b78a1b8943317bc25347c
 ---
 
-# 0157 — workspace upsert 中的自我变动上限，以及原本是漏洞的自我晋升
+# ADR 0157 — workspace upsert 中的自我变动上限，以及原本是漏洞的自我晋升
 
 ## 状态 {#status}
 

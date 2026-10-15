@@ -2,7 +2,7 @@
 traducao_de: 46b80218d8760540d8aa0f904fa42f38face0ae3
 ---
 
-# 0166 — The routing preference lives in the model binding, travels with it, and freezes in metering
+# ADR 0166 — The routing preference lives in the model binding, travels with it, and freezes in metering
 
 ## Status
 

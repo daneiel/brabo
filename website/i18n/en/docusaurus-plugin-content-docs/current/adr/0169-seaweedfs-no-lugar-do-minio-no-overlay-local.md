@@ -2,7 +2,7 @@
 traducao_de: 7b4435d8e9a6289bb11b8029fe64df5e4264ebf8
 ---
 
-# 0169 — The local overlay's S3 destination stops being MinIO and becomes SeaweedFS
+# ADR 0169 — The local overlay's S3 destination stops being MinIO and becomes SeaweedFS
 
 ## Status
 

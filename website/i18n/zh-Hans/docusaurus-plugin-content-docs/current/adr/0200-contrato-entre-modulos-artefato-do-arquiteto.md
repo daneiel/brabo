@@ -2,7 +2,7 @@
 traducao_de: f97894b6489d2e6970b87610f36b64414277b26d
 ---
 
-# 0200 — 模块间合约成为 Arquiteto 的版本化工件，dev agent 读取它而不是别人的 worktree
+# ADR 0200 — 模块间合约成为 Arquiteto 的版本化工件，dev agent 读取它而不是别人的 worktree
 
 ## 状态 {#status}
 

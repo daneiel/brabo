@@ -2,7 +2,7 @@
 traducao_de: 122ec00d6ff5390cc968dd5404c70d8661e896e4
 ---
 
-# 0212 — The archived story: a column, not a state of the machine
+# ADR 0212 — The archived story: a column, not a state of the machine
 
 ## Status
 

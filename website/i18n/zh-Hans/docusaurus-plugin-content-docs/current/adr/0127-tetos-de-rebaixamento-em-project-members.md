@@ -2,7 +2,7 @@
 traducao_de: 30cd83cf109ffd8ec272c1821c14a1288b65e4f1
 ---
 
-# 0127 — `project_members` 中的两道降级上限，覆盖关系保留
+# ADR 0127 — `project_members` 中的两道降级上限，覆盖关系保留
 
 ## 背景 {#context}
 

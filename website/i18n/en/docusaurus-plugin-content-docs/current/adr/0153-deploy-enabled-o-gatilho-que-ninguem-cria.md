@@ -2,7 +2,7 @@
 traducao_de: f56f3ba781c30b1696dcf68fb872242008c3a4a8
 ---
 
-# 0153 — `DEPLOY_ENABLED`: the trigger ten documents cite and none creates
+# ADR 0153 — `DEPLOY_ENABLED`: the trigger ten documents cite and none creates
 
 ## Status
 

@@ -2,7 +2,7 @@
 traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
 ---
 
-# 0082 — Chat RAG: its own hybrid-search tab, without renaming "Chat"
+# ADR 0082 — Chat RAG: its own hybrid-search tab, without renaming "Chat"
 
 ## Status
 

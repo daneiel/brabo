@@ -2,7 +2,7 @@
 traducao_de: 368d70ac0b60ed35c47ec8245b812c79d81e4550
 ---
 
-# 0204 — 自动模式放行 push 和 PR
+# ADR 0204 — 自动模式放行 push 和 PR
 
 ## 状态 {#status}
 

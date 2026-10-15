@@ -2,7 +2,7 @@
 traducao_de: 23e727d97992c1974a3df731360a293b67fd669c
 ---
 
-# 0027 — Backup/restore, api hardening, exposed surface and release
+# ADR 0027 — Backup/restore, api hardening, exposed surface and release
 
 ## Context
 

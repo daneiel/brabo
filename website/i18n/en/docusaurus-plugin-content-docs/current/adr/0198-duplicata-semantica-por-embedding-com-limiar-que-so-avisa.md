@@ -2,7 +2,7 @@
 traducao_de: e48d6fadf002507531282196656b6b651acd9ed5
 ---
 
-# 0198 — Semantic duplicates of stories and rules are warned by embedding with a threshold, and the spending enters metering
+# ADR 0198 — Semantic duplicates of stories and rules are warned by embedding with a threshold, and the spending enters metering
 
 ## Status
 

@@ -2,7 +2,7 @@
 traducao_de: 1b6809016dba7f83632a49a7ee233407f72932c0
 ---
 
-# 0148 — agent 的工件以文件形式投影到一个 `docs/` 目录
+# ADR 0148 — agent 的工件以文件形式投影到一个 `docs/` 目录
 
 ## 背景 {#context}
 

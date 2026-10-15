@@ -2,7 +2,7 @@
 traducao_de: cacbded6233a83c548068768eaea16dd24d84bb5
 ---
 
-# 0158 — The master key's id recorded in the envelope, as observability and never as authority
+# ADR 0158 — The master key's id recorded in the envelope, as observability and never as authority
 
 ## Status
 

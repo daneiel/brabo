@@ -2,7 +2,7 @@
 traducao_de: 8b4e3fbcf8776909f26bdab5da0c730a4daffecd
 ---
 
-# 0165 — 仓库在接受给 Arquiteto 的 handoff 时诞生，没有它执行就不会开始
+# ADR 0165 — 仓库在接受给 Arquiteto 的 handoff 时诞生，没有它执行就不会开始
 
 ## 状态 {#status}
 

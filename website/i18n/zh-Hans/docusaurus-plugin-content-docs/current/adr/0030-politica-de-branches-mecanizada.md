@@ -2,7 +2,7 @@
 traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
 ---
 
-# 0030 — 机制化的分支策略
+# ADR 0030 — 机制化的分支策略
 
 ## 背景 {#contexto}
 

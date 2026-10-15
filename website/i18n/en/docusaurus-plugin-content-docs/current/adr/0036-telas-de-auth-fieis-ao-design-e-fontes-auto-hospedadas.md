@@ -2,7 +2,7 @@
 traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
 ---
 
-# 0036 — Auth screens faithful to the design, and the three fonts that weren't loading
+# ADR 0036 — Auth screens faithful to the design, and the three fonts that weren't loading
 
 ## Context
 

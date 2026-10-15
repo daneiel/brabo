@@ -2,7 +2,7 @@
 traducao_de: 1eb71c3229b3ec8770369028759fe2f4281495a4
 ---
 
-# 0138 — The RAG golden-set now runs in CI, scheduled — and remains `warn`
+# ADR 0138 — The RAG golden-set now runs in CI, scheduled — and remains `warn`
 
 ## Context
 

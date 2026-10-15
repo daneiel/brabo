@@ -2,7 +2,7 @@
 traducao_de: cf708bdefd987dda6e1cb40b3aa9e520113eb6b8
 ---
 
-# 0159 — 第三方镜像按 digest 引入，lint 让忘记的人失败
+# ADR 0159 — 第三方镜像按 digest 引入，lint 让忘记的人失败
 
 ## 状态 {#status}
 

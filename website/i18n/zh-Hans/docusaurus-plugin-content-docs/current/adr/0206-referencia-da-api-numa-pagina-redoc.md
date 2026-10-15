@@ -2,7 +2,7 @@
 traducao_de: 7451c1f845145a031c32644067c4583dd08b694a
 ---
 
-# 0206 — API 参考变成一个 Redoc 页面
+# ADR 0206 — API 参考变成一个 Redoc 页面
 
 ## 状态 {#status}
 

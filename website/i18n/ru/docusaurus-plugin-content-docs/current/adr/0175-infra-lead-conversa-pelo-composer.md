@@ -2,7 +2,7 @@
 traducao_de: 647a615b764cb1f27b5073762d7a6e80f1c8cd15
 ---
 
-# 0175 — Infra Lead разговаривает через composer, а прежде его ход проходит через `TurnoAssincrono`
+# ADR 0175 — Infra Lead разговаривает через composer, а прежде его ход проходит через `TurnoAssincrono`
 
 ## Статус {#status}
 

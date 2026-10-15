@@ -2,7 +2,7 @@
 traducao_de: 89cbb17db55cf80033647930d80fa91cf9fecfd6
 ---
 
-# 0192 — 测试计划在 dev 交付之后诞生，gate `implementavel` 改为基于故事和 `module_map` 进行判断
+# ADR 0192 — 测试计划在 dev 交付之后诞生，gate `implementavel` 改为基于故事和 `module_map` 进行判断
 
 ## 状态 {#status}
 

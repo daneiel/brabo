@@ -1,4 +1,4 @@
-# 0207 — Ciclo de gate parado há mais de 2 h estaciona, e só gesto humano o retoma
+# ADR 0207 — Ciclo de gate parado há mais de 2 h estaciona, e só gesto humano o retoma
 
 ## Status
 

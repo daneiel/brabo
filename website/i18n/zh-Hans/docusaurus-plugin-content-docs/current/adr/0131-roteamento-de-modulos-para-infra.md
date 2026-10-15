@@ -2,7 +2,7 @@
 traducao_de: e27637347c3751bbf825284e720697ab103880db
 ---
 
-# 0131 — Arquiteto 把模块路由给 infra：它**提名**，Infra **选定**
+# ADR 0131 — Arquiteto 把模块路由给 infra：它**提名**，Infra **选定**
 
 ## 背景 {#context}
 

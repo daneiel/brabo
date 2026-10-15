@@ -2,7 +2,7 @@
 traducao_de: 153a82109c8bd8c3a907dc2603c40953ecb4b4c1
 ---
 
-# 0174 — The runner's standalone binary stops promising Intel Mac
+# ADR 0174 — The runner's standalone binary stops promising Intel Mac
 
 ## Status
 

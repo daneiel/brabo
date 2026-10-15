@@ -2,7 +2,7 @@
 traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
 ---
 
-# 0032 — 切除 Keycloak：自有签发方、service token 与 cookie 中的会话
+# ADR 0032 — 切除 Keycloak：自有签发方、service token 与 cookie 中的会话
 
 ## 背景 {#contexto}
 

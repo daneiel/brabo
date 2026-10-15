@@ -1,4 +1,4 @@
-# 0050 — Credencial sempre cifrada; verificação vira ação explícita
+# ADR 0050 — Credencial sempre cifrada; verificação vira ação explícita
 
 ## Contexto
 

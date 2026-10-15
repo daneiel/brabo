@@ -2,7 +2,7 @@
 traducao_de: 285d458e5d984ace5ddf0fb39263b3b1ae7e8ff0
 ---
 
-# 0147 — One local agent, capabilities declared on connection
+# ADR 0147 — One local agent, capabilities declared on connection
 
 ## Context
 

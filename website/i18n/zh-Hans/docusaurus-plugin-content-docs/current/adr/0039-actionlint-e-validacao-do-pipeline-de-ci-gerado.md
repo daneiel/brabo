@@ -2,7 +2,7 @@
 traducao_de: 23e727d97992c1974a3df731360a293b67fd669c
 ---
 
-# 0039 — actionlint 与生成的 CI 管道的验证
+# ADR 0039 — actionlint 与生成的 CI 管道的验证
 
 ## 背景 {#contexto}
 

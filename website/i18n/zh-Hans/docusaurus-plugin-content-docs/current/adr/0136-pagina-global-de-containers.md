@@ -2,7 +2,7 @@
 traducao_de: 11b49cb725b01688a29cfae832f7256c9b1b7da5
 ---
 
-# 0136 — 全局容器页面：broker 按加载设上限，`container_remove` 纳入绝对上限
+# ADR 0136 — 全局容器页面：broker 按加载设上限，`container_remove` 纳入绝对上限
 
 ## Context {#context}
 

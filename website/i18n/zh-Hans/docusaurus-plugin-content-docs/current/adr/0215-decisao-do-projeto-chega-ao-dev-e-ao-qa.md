@@ -2,7 +2,7 @@
 traducao_de: 1f58364ef056b293fa60dc3aa0ddc5731b64f515
 ---
 
-# 0215 — 项目的决定传达到 dev 和 QA
+# ADR 0215 — 项目的决定传达到 dev 和 QA
 
 ## 状态 {#status}
 

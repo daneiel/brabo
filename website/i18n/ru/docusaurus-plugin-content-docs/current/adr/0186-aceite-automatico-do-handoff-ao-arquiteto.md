@@ -2,7 +2,7 @@
 traducao_de: 6aea992eb40df66f9d66e187efea4051efe796d3
 ---
 
-# 0186 — Handoff от PO к Arquiteto принимается без клика, когда backlog покрыт и репозиторий локальный
+# ADR 0186 — Handoff от PO к Arquiteto принимается без клика, когда backlog покрыт и репозиторий локальный
 
 ## Статус {#status}
 

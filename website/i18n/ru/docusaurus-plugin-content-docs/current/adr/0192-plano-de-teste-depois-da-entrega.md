@@ -2,7 +2,7 @@
 traducao_de: 89cbb17db55cf80033647930d80fa91cf9fecfd6
 ---
 
-# 0192 — План тестирования рождается после сдачи dev, а gate `implementavel` начинает судить по истории и `module_map`
+# ADR 0192 — План тестирования рождается после сдачи dev, а gate `implementavel` начинает судить по истории и `module_map`
 
 ## Статус {#status}
 

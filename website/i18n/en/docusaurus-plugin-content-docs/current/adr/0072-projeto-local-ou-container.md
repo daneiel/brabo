@@ -2,7 +2,7 @@
 traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
 ---
 
-# 0072 — The project chooses where the code lives: user folder or managed folder
+# ADR 0072 — The project chooses where the code lives: user folder or managed folder
 
 ## Status
 

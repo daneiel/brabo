@@ -2,7 +2,7 @@
 traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
 ---
 
-# 0007 — ToolLoop, tools, ContextManager (harness with LLM)
+# ADR 0007 — ToolLoop, tools, ContextManager (harness with LLM)
 
 ## Context
 

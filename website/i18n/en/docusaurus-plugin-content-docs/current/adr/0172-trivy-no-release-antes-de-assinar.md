@@ -2,7 +2,7 @@
 traducao_de: 209fd3641c5685b064dbe9c5625201180387c5f7
 ---
 
-# 0172 — The release scans with Trivy what it publishes, by digest, before signing
+# ADR 0172 — The release scans with Trivy what it publishes, by digest, before signing
 
 ## Status
 

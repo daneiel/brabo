@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- Todo ADR passa a se chamar "ADR NNNN — título" (ADR 0218): os 131 títulos `# NNNN —` ganham o prefixo, nas quatro línguas, e o `docs:check` reprova H1 fora do padrão; os nomes de arquivo (as URLs) não mudam.
 - A fonte da documentação passa a ser pt-BR também nas 53 páginas que ainda
   estavam em inglês (AT-549, lote 1, ADR 0216): o runbook, as regras de custo,
   as missões, 11 páginas de `explanation/`, `architecture.md`,

@@ -2,7 +2,7 @@
 traducao_de: 9624de8abe26503310142e39c49058bc36338c6d
 ---
 
-# 0161 — The screen only offers the mode the installation executes, and the Release installation has no broker
+# ADR 0161 — The screen only offers the mode the installation executes, and the Release installation has no broker
 
 ## Status
 

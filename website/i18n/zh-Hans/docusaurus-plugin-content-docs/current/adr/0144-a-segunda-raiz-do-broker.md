@@ -2,7 +2,7 @@
 traducao_de: 2245f20165791640b2229d908c179ea2f0925828
 ---
 
-# 0144 — broker 的第二个根，以及选择它的可辨识定位符
+# ADR 0144 — broker 的第二个根，以及选择它的可辨识定位符
 
 ## Context {#context}
 

@@ -2,7 +2,7 @@
 traducao_de: 36da3628893047b803131fbe7b06c832f6a3081d
 ---
 
-# 0207 — A gate cycle stalled for more than 2 h parks, and only a human gesture resumes it
+# ADR 0207 — A gate cycle stalled for more than 2 h parks, and only a human gesture resumes it
 
 ## Status
 

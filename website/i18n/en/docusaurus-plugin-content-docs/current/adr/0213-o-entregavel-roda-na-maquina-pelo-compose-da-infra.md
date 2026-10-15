@@ -2,7 +2,7 @@
 traducao_de: e377ff4a1b1caac762cf61ae2001d296ee190e55
 ---
 
-# 0213 — The deliverable runs on the user's machine through Infra's compose
+# ADR 0213 — The deliverable runs on the user's machine through Infra's compose
 
 ## Status
 

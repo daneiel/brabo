@@ -2,7 +2,7 @@
 traducao_de: 368d70ac0b60ed35c47ec8245b812c79d81e4550
 ---
 
-# 0204 — Automatic mode releases push and PR
+# ADR 0204 — Automatic mode releases push and PR
 
 ## Status
 

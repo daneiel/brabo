@@ -2,7 +2,7 @@
 traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
 ---
 
-# 0002 — GitProvider 错误的规范化
+# ADR 0002 — GitProvider 错误的规范化
 
 ## 背景 {#contexto}
 

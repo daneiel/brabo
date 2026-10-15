@@ -2,7 +2,7 @@
 traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
 ---
 
-# 0066 — 可读的 workspace 文件夹名称
+# ADR 0066 — 可读的 workspace 文件夹名称
 
 ## 状态 {#status}
 

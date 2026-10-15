@@ -2,7 +2,7 @@
 traducao_de: 9624de8abe26503310142e39c49058bc36338c6d
 ---
 
-# 0161 — 界面只提供安装能执行的模式，而通过 Release 的安装没有 broker
+# ADR 0161 — 界面只提供安装能执行的模式，而通过 Release 的安装没有 broker
 
 ## 状态 {#status}
 

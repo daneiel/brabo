@@ -2,7 +2,7 @@
 traducao_de: 8841a171692a9823fb48590d1b9cbe883920fab4
 ---
 
-# 0197 — Образ workflows берётся из compose, и Dependabot для образов включается
+# ADR 0197 — Образ workflows берётся из compose, и Dependabot для образов включается
 
 ## Статус {#status}
 

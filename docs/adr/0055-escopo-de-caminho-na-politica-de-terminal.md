@@ -1,4 +1,4 @@
-# 0055 — Escopo de caminho na política de terminal
+# ADR 0055 — Escopo de caminho na política de terminal
 
 ## Status
 

@@ -1,4 +1,4 @@
-# 0042 — Catálogo vivo, ciclo de vida do modelo e preço auditável
+# ADR 0042 — Catálogo vivo, ciclo de vida do modelo e preço auditável
 
 ## Contexto
 

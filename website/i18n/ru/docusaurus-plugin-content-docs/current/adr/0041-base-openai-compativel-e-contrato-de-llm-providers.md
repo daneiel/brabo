@@ -2,7 +2,7 @@
 traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
 ---
 
-# 0041 — Одна OpenAI-совместимая база, один контракт LLM providers и capabilities, отклоняющие binding
+# ADR 0041 — Одна OpenAI-совместимая база, один контракт LLM providers и capabilities, отклоняющие binding
 
 ## Контекст {#contexto}
 

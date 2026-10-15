@@ -2,7 +2,7 @@
 traducao_de: e377ff4a1b1caac762cf61ae2001d296ee190e55
 ---
 
-# 0213 — 交付物通过 Infra 的 compose 在用户的机器上运行
+# ADR 0213 — 交付物通过 Infra 的 compose 在用户的机器上运行
 
 ## 状态 {#status}
 

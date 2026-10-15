@@ -2,7 +2,7 @@
 traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
 ---
 
-# 0007 — ToolLoop、工具、ContextManager（带 LLM 的 harness）
+# ADR 0007 — ToolLoop、工具、ContextManager（带 LLM 的 harness）
 
 ## 背景 {#contexto}
 

@@ -2,7 +2,7 @@
 traducao_de: e5037d8a16735316f5929c9b1ea0894b428eb7bc
 ---
 
-# 0199 — 容器的最低资源从 `module_map` 派生：每个模块声明自己的，Infra 按总和启动
+# ADR 0199 — 容器的最低资源从 `module_map` 派生：每个模块声明自己的，Infra 按总和启动
 
 ## 状态 {#status}
 

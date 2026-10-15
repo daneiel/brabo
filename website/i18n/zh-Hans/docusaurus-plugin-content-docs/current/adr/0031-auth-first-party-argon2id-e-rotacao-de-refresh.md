@@ -2,7 +2,7 @@
 traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
 ---
 
-# 0031 — 自有认证：argon2id、EdDSA 与 refresh 轮换
+# ADR 0031 — 自有认证：argon2id、EdDSA 与 refresh 轮换
 
 ## 背景 {#contexto}
 

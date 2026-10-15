@@ -2,7 +2,7 @@
 traducao_de: eb32fa72c74cb4f32985f16a3c1440e93357c0b9
 ---
 
-# 0134 — Dev agents execute INSIDE the project's real container, and the terminal gains an auto-approval floor in there
+# ADR 0134 — Dev agents execute INSIDE the project's real container, and the terminal gains an auto-approval floor in there
 
 ## Context
 

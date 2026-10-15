@@ -2,7 +2,7 @@
 traducao_de: 9d4f011ddd0f94cccc993a6640002463803b1925
 ---
 
-# 0210 — 用 `motion` 做文本动画
+# ADR 0210 — 用 `motion` 做文本动画
 
 ## 状态 {#status}
 

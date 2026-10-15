@@ -2,7 +2,7 @@
 traducao_de: a5e4f1bc5ada7985eb268f8b7322903a396032ee
 ---
 
-# 0202 — 按主题组织的 ADR 索引，主题放在 ADR 之外
+# ADR 0202 — 按主题组织的 ADR 索引，主题放在 ADR 之外
 
 ## 状态 {#status}
 

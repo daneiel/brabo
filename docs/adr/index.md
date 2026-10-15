@@ -3,7 +3,7 @@ id: adr-index
 title: Decisões arquiteturais (ADR)
 sidebar_label: Índice de ADRs
 sidebar_position: 0
-description: Os 213 registros de decisão arquitetural do Brabo, agrupados por tema, com o que cada um decidiu.
+description: Os 214 registros de decisão arquitetural do Brabo, agrupados por tema, com o que cada um decidiu.
 keywords: [ADR, decisão arquitetural, arquitetura, histórico]
 ---
 
@@ -348,12 +348,14 @@ Como a documentação é gerada, verificada e publicada.
 | [0202](0202-o-indice-de-adr-por-tema.md) | O índice de ADR é agrupado por TEMA, com o tema FORA do ADR (AT-137, decisão do dono de 01/10, achado `BRB-026`): `docs/adr/temas.yml` guarda a lista fechada de 15 temas e um tema principal por ADR, para que nenhum ADR aceito seja editado, nem para ganhar frontmatter. O índice é CONFERIDO, não gerado — as descrições de uma linha continuam curadas — e o `docs:check` (`scripts/docs/temas-de-adr.mjs`, cada regra provada por mutação) reprova ADR sem tema, tema fora da lista, tema sem ADR, e linha do índice na seção errada, fora de qualquer seção ou fora da ordem numérica. A taxonomia vem das frentes do produto, não das fases nem das pastas do código, e é a proposta da lane para o dono revisar; o autor de um ADR novo escolhe o tema dele no mesmo PR, e passar de 15 temas exige um ADR |
 | [0206](0206-referencia-da-api-numa-pagina-redoc.md) | A referência da API vira UMA página Redoc renderizada no servidor (redocusaurus) em `/reference/api/`, revisando a metade de publicação do [0033](0033-referencia-de-api-gerada-do-openapi.md): o plugin e o tema de OpenAPI arrastavam `postman-collection` → `@faker-js/faker@5.5.3` (alerta High #43) sem caminho de correção. As páginas por operação, a sidebar por tag, as URLs por operação, o playground e os trechos de cURL saem por decisão do dono; o `api-render-check.mjs` agora afirma o título e uma seção SSR por operação |
 | [0216](0216-quatro-idiomas-com-pt-br-como-fonte.md) | Quatro idiomas para a documentação e a interface — o pt-BR vira a FONTE e o padrão, com inglês, russo e chinês simplificado como traduções em fases, paridade medida e um aviso por página para páginas não traduzidas ou defasadas (AT-545, decisões do dono de 15/10) |
+| [0218](0218-titulo-de-adr-com-prefixo.md) | Todo ADR se chama "ADR NNNN — título": o H1 ganha o prefixo `ADR`, número de 4 dígitos e travessão; o nome do arquivo (a URL) não muda, e normalizar o rótulo do título não é editar a decisão (AT-559, decisão do dono de 15/10) |
 
 ## A convenção
 
 - **Um arquivo por decisão**, em `docs/adr/NNNN-short-title.md`, com
-  numeração sequencial de 4 dígitos. **Sem reuso de número**, nem quando um ADR
-  é substituído — o próximo é **0218**.
+  numeração sequencial de 4 dígitos, e título `# ADR NNNN — <título>`
+  ([0218](0218-titulo-de-adr-com-prefixo.md)). **Sem reuso de número**, nem quando um ADR
+  é substituído — o próximo é **0219**.
 - **Um tema por decisão**, escolhido por quem escreve o ADR, no mesmo
   PR: uma linha em `docs/adr/temas.yml` e a linha do índice sob a seção desse
   tema, em ordem numérica. Quem revisa confirma. Um tema novo é uma

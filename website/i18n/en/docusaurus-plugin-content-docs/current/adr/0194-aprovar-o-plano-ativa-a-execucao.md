@@ -2,7 +2,7 @@
 traducao_de: fe6d073c10c82c4a1844c7be6fc497a0a5733af9
 ---
 
-# 0194 — Approving the Dev Lead's plan activates execution, and the task gains the module it assigns
+# ADR 0194 — Approving the Dev Lead's plan activates execution, and the task gains the module it assigns
 
 ## Status
 

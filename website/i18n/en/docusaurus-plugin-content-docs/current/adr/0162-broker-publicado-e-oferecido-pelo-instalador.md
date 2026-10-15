@@ -2,7 +2,7 @@
 traducao_de: 072ea006db81a742be1bd92ba503bb37e0f9cdd3
 ---
 
-# 0162 — The broker becomes the fifth published image, and the installer ASKS whether to turn it on
+# ADR 0162 — The broker becomes the fifth published image, and the installer ASKS whether to turn it on
 
 ## Status
 

@@ -2,7 +2,7 @@
 traducao_de: 23e727d97992c1974a3df731360a293b67fd669c
 ---
 
-# 0001 — GitProvider 规范化契约的形态
+# ADR 0001 — GitProvider 规范化契约的形态
 
 ## 背景 {#contexto}
 

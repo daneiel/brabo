@@ -2,7 +2,7 @@
 traducao_de: 153a82109c8bd8c3a907dc2603c40953ecb4b4c1
 ---
 
-# 0174 — Автономный бинарник runner перестаёт обещать Mac Intel
+# ADR 0174 — Автономный бинарник runner перестаёт обещать Mac Intel
 
 ## Статус {#status}
 

@@ -2,7 +2,7 @@
 traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
 ---
 
-# 0040 — Dashboard currency: USD for now, manual per-workspace exchange rate deferred
+# ADR 0040 — Dashboard currency: USD for now, manual per-workspace exchange rate deferred
 
 ## Context
 

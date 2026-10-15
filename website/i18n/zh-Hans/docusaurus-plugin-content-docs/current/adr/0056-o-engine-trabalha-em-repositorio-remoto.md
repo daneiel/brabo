@@ -2,7 +2,7 @@
 traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
 ---
 
-# 0056 — engine 在远程仓库上工作
+# ADR 0056 — engine 在远程仓库上工作
 
 ## 状态 {#status}
 

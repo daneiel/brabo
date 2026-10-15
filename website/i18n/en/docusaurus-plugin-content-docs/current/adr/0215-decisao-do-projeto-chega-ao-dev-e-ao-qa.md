@@ -2,7 +2,7 @@
 traducao_de: 1f58364ef056b293fa60dc3aa0ddc5731b64f515
 ---
 
-# 0215 — The project's decision reaches the dev and QA
+# ADR 0215 — The project's decision reaches the dev and QA
 
 ## Status
 

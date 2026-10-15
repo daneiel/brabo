@@ -1,4 +1,4 @@
-# 0048 — A decisão no event log, e a ordem do gate
+# ADR 0048 — A decisão no event log, e a ordem do gate
 
 ## Contexto
 

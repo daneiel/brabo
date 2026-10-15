@@ -2,7 +2,7 @@
 traducao_de: 1b6809016dba7f83632a49a7ee233407f72932c0
 ---
 
-# 0148 — The agents' artifacts projected to files, in a `docs/` folder
+# ADR 0148 — The agents' artifacts projected to files, in a `docs/` folder
 
 ## Context
 

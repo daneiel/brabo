@@ -2,7 +2,7 @@
 traducao_de: 5393558baeec7d7521831b2be845200534784d83
 ---
 
-# 0034 — Documentation published per stage, in a Pages subdirectory
+# ADR 0034 — Documentation published per stage, in a Pages subdirectory
 
 ## Context
 

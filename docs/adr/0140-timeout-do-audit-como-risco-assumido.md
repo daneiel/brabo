@@ -1,4 +1,4 @@
-# 0140 — Timeout repetido do `pnpm audit` é risco assumido; achado continua reprovando
+# ADR 0140 — Timeout repetido do `pnpm audit` é risco assumido; achado continua reprovando
 
 ## Context
 

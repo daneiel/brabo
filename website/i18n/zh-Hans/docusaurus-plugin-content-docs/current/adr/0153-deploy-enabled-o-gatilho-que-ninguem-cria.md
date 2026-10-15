@@ -2,7 +2,7 @@
 traducao_de: f56f3ba781c30b1696dcf68fb872242008c3a4a8
 ---
 
-# 0153 — `DEPLOY_ENABLED`：十份文档引用、却无人创建的触发器
+# ADR 0153 — `DEPLOY_ENABLED`：十份文档引用、却无人创建的触发器
 
 ## 状态 {#status}
 

@@ -2,7 +2,7 @@
 traducao_de: 23e727d97992c1974a3df731360a293b67fd669c
 ---
 
-# 0054 — gate 作为声明式登记
+# ADR 0054 — gate 作为声明式登记
 
 ## 状态 {#status}
 

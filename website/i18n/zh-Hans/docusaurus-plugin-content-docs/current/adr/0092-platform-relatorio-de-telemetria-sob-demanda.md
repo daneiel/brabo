@@ -2,7 +2,7 @@
 traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
 ---
 
-# 0092 — `platform` 以按需报告脚本的形式诞生，而不是 agent
+# ADR 0092 — `platform` 以按需报告脚本的形式诞生，而不是 agent
 
 ## 状态 {#status}
 

@@ -2,7 +2,7 @@
 traducao_de: 7bb8172e06f04a3473660371149177023de99b0a
 ---
 
-# 0155 — The first account is born in the terminal, and the local agent comes up paired
+# ADR 0155 — The first account is born in the terminal, and the local agent comes up paired
 
 ## Status
 

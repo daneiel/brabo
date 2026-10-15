@@ -2,7 +2,7 @@
 traducao_de: 6aea992eb40df66f9d66e187efea4051efe796d3
 ---
 
-# 0186 — 当 backlog 已覆盖且仓库为本地时，PO 给 Arquiteto 的 handoff 无需点击即被接受
+# ADR 0186 — 当 backlog 已覆盖且仓库为本地时，PO 给 Arquiteto 的 handoff 无需点击即被接受
 
 ## 状态 {#status}
 

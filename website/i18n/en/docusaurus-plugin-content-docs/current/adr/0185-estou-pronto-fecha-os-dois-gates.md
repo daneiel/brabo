@@ -2,7 +2,7 @@
 traducao_de: 78383039b5006cf39f88edb5054e4f5bb1b43aea
 ---
 
-# 0185 — "I'm ready — the need is validated": one click closes readiness, the `necessidade-validada` gate and the PO's acceptance
+# ADR 0185 — "I'm ready — the need is validated": one click closes readiness, the `necessidade-validada` gate and the PO's acceptance
 
 ## Status
 

@@ -2,7 +2,7 @@
 traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
 ---
 
-# 0047 — dogfooding 之后的可运维性：Fase 12 的收尾
+# ADR 0047 — dogfooding 之后的可运维性：Fase 12 的收尾
 
 ## 背景 {#contexto}
 

@@ -2,7 +2,7 @@
 traducao_de: 15e14c662cd4de7b1d041babd7caf3ef71f9ae2a
 ---
 
-# 0173 — Workspace member removal is born, protected by the same clause
+# ADR 0173 — Workspace member removal is born, protected by the same clause
 
 ## Status
 

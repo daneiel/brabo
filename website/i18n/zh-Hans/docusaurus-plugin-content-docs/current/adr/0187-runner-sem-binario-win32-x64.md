@@ -2,7 +2,7 @@
 traducao_de: acad6bd367a09a0b48f20de94df3482e772dc258
 ---
 
-# 0187 — runner 的独立二进制不再承诺 Windows
+# ADR 0187 — runner 的独立二进制不再承诺 Windows
 
 ## 状态 {#status}
 

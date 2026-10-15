@@ -2,7 +2,7 @@
 traducao_de: 51f6ee68bba3a758faecd802cc3b04861656fdc6
 ---
 
-# 0191 — A message arriving during a turn enters a persisted queue and is read at the end of the turn
+# ADR 0191 — A message arriving during a turn enters a persisted queue and is read at the end of the turn
 
 ## Status
 

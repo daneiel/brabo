@@ -2,7 +2,7 @@
 traducao_de: 8d6d3ff7815b9c1a57462ad2061380c148299f42
 ---
 
-# 0208 — Infra наследует сеть, объявленную Arquiteto
+# ADR 0208 — Infra наследует сеть, объявленную Arquiteto
 
 ## Статус {#status}
 

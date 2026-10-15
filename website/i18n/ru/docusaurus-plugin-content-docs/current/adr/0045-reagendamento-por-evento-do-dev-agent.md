@@ -2,7 +2,7 @@
 traducao_de: 23e727d97992c1974a3df731360a293b67fd669c
 ---
 
-# 0045 — Перепланирование dev agent по событию и circuit breaker
+# ADR 0045 — Перепланирование dev agent по событию и circuit breaker
 
 ## Контекст {#contexto}
 

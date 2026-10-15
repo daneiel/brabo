@@ -1,4 +1,4 @@
-# 0047 — Operabilidade pós-dogfooding: o fechamento da Fase 12
+# ADR 0047 — Operabilidade pós-dogfooding: o fechamento da Fase 12
 
 ## Contexto
 

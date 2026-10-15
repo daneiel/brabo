@@ -2,7 +2,7 @@
 traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
 ---
 
-# 0028 — 分支保护：provider 之间的分歧与审批矩阵
+# ADR 0028 — 分支保护：provider 之间的分歧与审批矩阵
 
 ## 背景 {#contexto}
 

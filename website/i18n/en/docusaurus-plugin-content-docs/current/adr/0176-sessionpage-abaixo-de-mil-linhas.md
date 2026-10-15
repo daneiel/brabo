@@ -2,7 +2,7 @@
 traducao_de: 6b761ce09ad165373334e6fd24e9f8f1b2d21f9c
 ---
 
-# 0176 — `SessionPage.tsx` below 1,000 lines, in ten mechanical PRs, and the lock only afterwards
+# ADR 0176 — `SessionPage.tsx` below 1,000 lines, in ten mechanical PRs, and the lock only afterwards
 
 ## Status
 

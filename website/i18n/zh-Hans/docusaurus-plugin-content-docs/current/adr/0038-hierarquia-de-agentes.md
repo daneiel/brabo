@@ -2,7 +2,7 @@
 traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
 ---
 
-# 0038 — agent 的层级：领域、lead 与委派
+# ADR 0038 — agent 的层级：领域、lead 与委派
 
 ## 背景 {#contexto}
 

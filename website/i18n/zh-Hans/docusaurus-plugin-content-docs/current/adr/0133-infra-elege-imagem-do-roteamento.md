@@ -2,7 +2,7 @@
 traducao_de: d86b3b6a2e74a54732e147d1e0c053ca5feedc39
 ---
 
-# 0133 — Infra 在路由的候选项中做出选择，选择结果成为 `artifact.project_image` 的新版本
+# ADR 0133 — Infra 在路由的候选项中做出选择，选择结果成为 `artifact.project_image` 的新版本
 
 ## Context {#context}
 

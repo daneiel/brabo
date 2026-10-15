@@ -2,7 +2,7 @@
 traducao_de: 647a615b764cb1f27b5073762d7a6e80f1c8cd15
 ---
 
-# 0175 — Infra Lead 通过 composer 对话，在此之前它的回合先经过 `TurnoAssincrono`
+# ADR 0175 — Infra Lead 通过 composer 对话，在此之前它的回合先经过 `TurnoAssincrono`
 
 ## 状态 {#status}
 

@@ -1,4 +1,4 @@
-# 0029 — Sincronização contínua da documentação
+# ADR 0029 — Sincronização contínua da documentação
 
 ## Contexto
 

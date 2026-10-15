@@ -2,7 +2,7 @@
 traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
 ---
 
-# 0004 — Registration of the user's git credentials
+# ADR 0004 — Registration of the user's git credentials
 
 ## Context
 

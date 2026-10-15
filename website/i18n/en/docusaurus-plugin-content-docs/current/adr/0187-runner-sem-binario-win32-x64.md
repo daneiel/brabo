@@ -2,7 +2,7 @@
 traducao_de: acad6bd367a09a0b48f20de94df3482e772dc258
 ---
 
-# 0187 — The runner's standalone binary stops promising Windows
+# ADR 0187 — The runner's standalone binary stops promising Windows
 
 ## Status
 

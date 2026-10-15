@@ -2,7 +2,7 @@
 traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
 ---
 
-# 0066 — Читаемое имя папки workspace
+# ADR 0066 — Читаемое имя папки workspace
 
 ## Статус {#status}
 

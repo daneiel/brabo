@@ -2,7 +2,7 @@
 traducao_de: efa7cf0930491b8af046a8f8972a5856c69f5aca
 ---
 
-# 0168 — QA 的 golden-set 开始在 CI 中按周定时运行
+# ADR 0168 — QA 的 golden-set 开始在 CI 中按周定时运行
 
 ## 状态 {#status}
 

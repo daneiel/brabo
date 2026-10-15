@@ -2,7 +2,7 @@
 traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
 ---
 
-# 0048 — Решение в event log и порядок gate
+# ADR 0048 — Решение в event log и порядок gate
 
 ## Контекст {#contexto}
 

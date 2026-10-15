@@ -2,7 +2,7 @@
 traducao_de: bc436f20d320ce519c89beb3c0674f0a623ce711
 ---
 
-# 0167 — Automatic mode releases the path scope, and only it
+# ADR 0167 — Automatic mode releases the path scope, and only it
 
 ## Status
 

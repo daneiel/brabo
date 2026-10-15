@@ -2,7 +2,7 @@
 traducao_de: cf708bdefd987dda6e1cb40b3aa9e520113eb6b8
 ---
 
-# 0159 — A third-party image comes in by digest, and the lint fails whoever forgets
+# ADR 0159 — A third-party image comes in by digest, and the lint fails whoever forgets
 
 ## Status
 

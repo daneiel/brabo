@@ -2,7 +2,7 @@
 traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
 ---
 
-# 0035 — 没有 collector 的 trace，以及日志中跨层的路径
+# ADR 0035 — 没有 collector 的 trace，以及日志中跨层的路径
 
 ## 背景 {#contexto}
 

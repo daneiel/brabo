@@ -2,7 +2,7 @@
 traducao_de: dc3ec6a48c32909b8b62605552904ef7b42672b3
 ---
 
-# 0184 — Reopening a session: the owner's three decisions, and `developer` reopens
+# ADR 0184 — Reopening a session: the owner's three decisions, and `developer` reopens
 
 ## Status
 

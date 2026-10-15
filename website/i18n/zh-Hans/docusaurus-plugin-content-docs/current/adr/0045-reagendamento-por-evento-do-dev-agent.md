@@ -2,7 +2,7 @@
 traducao_de: 23e727d97992c1974a3df731360a293b67fd669c
 ---
 
-# 0045 — dev agent 的按事件重新调度，以及熔断器
+# ADR 0045 — dev agent 的按事件重新调度，以及熔断器
 
 ## 背景 {#contexto}
 

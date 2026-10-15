@@ -2,7 +2,7 @@
 traducao_de: 213fbcc7470e8f4bae01648d030a1e3437751cf6
 ---
 
-# 0152 — 针对 compose 的卷备份与恢复
+# ADR 0152 — 针对 compose 的卷备份与恢复
 
 ## 状态 {#status}
 

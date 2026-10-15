@@ -2,7 +2,7 @@
 traducao_de: 15e14c662cd4de7b1d041babd7caf3ef71f9ae2a
 ---
 
-# 0173 — workspace 成员的移除诞生，由同一条款保护
+# ADR 0173 — workspace 成员的移除诞生，由同一条款保护
 
 ## 状态 {#status}
 

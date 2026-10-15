@@ -2,7 +2,7 @@
 traducao_de: 13603dddc11848b2458bb703718cbc1709f9c47d
 ---
 
-# 0140 — A repeated `pnpm audit` timeout is an accepted risk; a finding still fails
+# ADR 0140 — A repeated `pnpm audit` timeout is an accepted risk; a finding still fails
 
 ## Context
 

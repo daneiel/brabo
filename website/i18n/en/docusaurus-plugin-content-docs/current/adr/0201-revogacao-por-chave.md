@@ -2,7 +2,7 @@
 traducao_de: 59101794d7e56c79f23e05e8947478bbd89694fb
 ---
 
-# 0201 — Revocation targets the KEY, not the `{project, user}` pair
+# ADR 0201 — Revocation targets the KEY, not the `{project, user}` pair
 
 ## Status
 

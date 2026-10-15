@@ -2,7 +2,7 @@
 traducao_de: cc6cd4e5f762017286b36c6232f5d75f5a0739e3
 ---
 
-# 0178 — The third-party image tag lives INSIDE the reference, before the digest
+# ADR 0178 — The third-party image tag lives INSIDE the reference, before the digest
 
 ## Status
 

@@ -2,7 +2,7 @@
 traducao_de: 54df79826307229989b14a56d4e2eb6da04478e5
 ---
 
-# 0142 — 挂载 workspace 的验证推迟到实体化时进行
+# ADR 0142 — 挂载 workspace 的验证推迟到实体化时进行
 
 ## Context {#context}
 

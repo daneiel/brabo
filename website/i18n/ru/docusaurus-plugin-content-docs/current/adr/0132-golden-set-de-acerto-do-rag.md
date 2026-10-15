@@ -2,7 +2,7 @@
 traducao_de: 14e6e1b2b934a17e2fb2f0bd237cbfd802c298e0
 ---
 
-# 0132 — Golden-set попаданий RAG и gate `rag-acertivo`
+# ADR 0132 — Golden-set попаданий RAG и gate `rag-acertivo`
 
 ## Контекст {#context}
 

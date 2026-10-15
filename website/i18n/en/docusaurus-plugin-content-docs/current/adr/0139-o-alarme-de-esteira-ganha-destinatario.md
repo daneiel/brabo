@@ -2,7 +2,7 @@
 traducao_de: f95d4165ab94254691d282696f8bbd8f10416cb8
 ---
 
-# 0139 — The pipeline merge alarm gains a recipient, and the rule covers `dev`
+# ADR 0139 — The pipeline merge alarm gains a recipient, and the rule covers `dev`
 
 ## Context
 

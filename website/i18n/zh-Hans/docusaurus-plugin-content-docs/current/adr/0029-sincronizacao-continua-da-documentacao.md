@@ -2,7 +2,7 @@
 traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
 ---
 
-# 0029 — 文档的持续同步
+# ADR 0029 — 文档的持续同步
 
 ## 背景 {#contexto}
 
