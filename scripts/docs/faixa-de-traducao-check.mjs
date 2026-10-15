@@ -5,7 +5,8 @@
  *
  *   node scripts/docs/faixa-de-traducao-check.mjs [<dir-do-build>]
  *
- *   - uma página SEM tradução em `en` (servida do fallback pt-BR) tem a faixa;
+ *   - uma página SEM tradução (servida do fallback pt-BR) tem a faixa, no primeiro
+ *     locale que ainda tiver uma — ou nada a conferir, se todos estiverem completos;
  *   - uma página traduzida para `en` que não está defasada NÃO tem a faixa;
  *   - a mesma página em pt-BR (raiz) nunca tem a faixa.
  *
@@ -46,11 +47,17 @@ const docs = (dir, base = '') =>
   );
 
 const fonte = join(RAIZ, 'docs');
-const naoTraduzida = docs(fonte).find(
-  (rel) => rel.startsWith('explanation/') && !existsSync(join(TRADUZIDAS_EN, rel)) && rotaSimples(join(fonte, rel)),
-);
+const LOCALES = ['en', 'ru', 'zh-Hans'];
+const traduzidasEm = (loc) => join(RAIZ, 'website/i18n', loc, 'docusaurus-plugin-content-docs/current');
+const daFonte = (rel) => !rel.startsWith('reference/') && rotaSimples(join(fonte, rel));
+// A amostra sem tradução vem do primeiro locale que ainda tem uma: com o en completo, ru e zh-Hans seguem servindo.
+let naoTraduzida, localeDoFallback;
+for (const loc of LOCALES) {
+  naoTraduzida = docs(fonte).find((rel) => daFonte(rel) && !existsSync(join(traduzidasEm(loc), rel)));
+  if (naoTraduzida) { localeDoFallback = loc; break; }
+}
 const traduzida = Object.entries(DADOS.en ?? {}).find(
-  ([rel, e]) => !e.defasada && rel.startsWith('explanation/') && rotaSimples(join(TRADUZIDAS_EN, rel)) && rotaSimples(join(fonte, rel)),
+  ([rel, e]) => !e.defasada && daFonte(rel) && rotaSimples(join(TRADUZIDAS_EN, rel)),
 )?.[0];
 
 let falhas = 0;
@@ -74,7 +81,9 @@ function conferir(rotulo, rota, querFaixa) {
 }
 
 const sem = (rel) => rel?.replace(/\.md$/, '');
-conferir('fallback pt-BR em /en/', naoTraduzida && `en/${sem(naoTraduzida)}`, true);
-conferir('pt-BR na raiz', naoTraduzida && sem(naoTraduzida), false);
+if (naoTraduzida) {
+  conferir(`fallback pt-BR em /${localeDoFallback}/`, `${localeDoFallback}/${sem(naoTraduzida)}`, true);
+  conferir('pt-BR na raiz', sem(naoTraduzida), false);
+} else console.log('  ok        nenhum locale tem página sem tradução: não há fallback a conferir');
 conferir('tradução en não defasada', traduzida && `en/${sem(traduzida)}`, false);
 process.exit(falhas ? 1 : 0);

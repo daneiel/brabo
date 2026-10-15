@@ -700,9 +700,11 @@ e diz isso; uma página traduzida que o `traducao.json` marca como
 desatualizada mostra a data da tradução e diz que o original mudou. Os
 textos moram no `code.json` de cada locale.
 `scripts/docs/faixa-de-traducao-check.mjs` roda depois do
-`pnpm docs:build` e confere o HTML estático: uma página de fallback sob
-`/en/` tem a faixa, enquanto a mesma página na raiz e uma página
-traduzida que não está desatualizada não têm. As regras para quem
+`pnpm docs:build` e confere o HTML estático: uma página de fallback tem a
+faixa (a amostra vem do primeiro locale, `en`, `ru` ou `zh-Hans`, que ainda
+tenha página sem tradução; com todos completos não há fallback a conferir),
+enquanto a mesma página na raiz e uma página traduzida para `en` que não está
+desatualizada não têm. As regras para quem
 traduz estão em [Localização](localizacao.md).
 
 ### `links-do-locale.mjs` — link reescrito escapa da checagem de link quebrado {#links-do-localemjs--a-rewritten-link-skips-the-broken-link-check}
