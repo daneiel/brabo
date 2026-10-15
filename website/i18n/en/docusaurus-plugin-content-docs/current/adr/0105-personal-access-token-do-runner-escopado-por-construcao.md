@@ -1,3 +1,7 @@
+---
+traducao_de: 23e727d97992c1974a3df731360a293b67fd669c
+---
+
 # ADR 0105 — Personal Access Token (`brb_…`) for the runner, scoped by construction to a single route
 
 - **Status:** Accepted

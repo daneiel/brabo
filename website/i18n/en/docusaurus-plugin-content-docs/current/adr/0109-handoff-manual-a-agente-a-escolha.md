@@ -1,3 +1,7 @@
+---
+traducao_de: 23e727d97992c1974a3df731360a293b67fd669c
+---
+
 # ADR 0109 — Manual handoff to an agent of choice reuses offer+accept, never a third handoff state
 
 - **Status:** Accepted

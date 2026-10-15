@@ -1,3 +1,7 @@
+---
+traducao_de: 23e727d97992c1974a3df731360a293b67fd669c
+---
+
 # ADR 0053 — Dev Lead as an area, and parallelism authorized by the user
 
 - **Status:** Accepted (implemented in PHASE 14d, 2026-08-07)

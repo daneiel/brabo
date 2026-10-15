@@ -1,3 +1,7 @@
+---
+traducao_de: 23e727d97992c1974a3df731360a293b67fd669c
+---
+
 # ADR 0110 — Budget per area is ADDITIVE, next to project/session — not a cascade, and not a new table
 
 - **Status:** Accepted

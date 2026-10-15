@@ -1,3 +1,7 @@
+---
+traducao_de: 23e727d97992c1974a3df731360a293b67fd669c
+---
+
 # ADR 0108 — In `runner` mode, the project is born when clicking "Browse folder...", not only at confirmation
 
 - **Status:** Accepted

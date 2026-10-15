@@ -1,3 +1,7 @@
+---
+traducao_de: 23e727d97992c1974a3df731360a293b67fd669c
+---
+
 # 0045 — Event-based rescheduling of the dev agent, and the circuit breaker
 
 ## Context
