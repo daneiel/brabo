@@ -1367,3 +1367,402 @@ Phoenix 通道并不能填补这个空缺，正是这一点让修正成为必要
 - **测试：** `apps/web/src/lib/tema.test.ts`（describe "contrato com o script
   de boot"）
 - **ADR：** [0074](../adr/0074-tema-alcancavel-e-o-boot-sob-csp.md)
+
+### RN-183 — 主题偏好只有一个来源，`<html>` 的属性才是事实 {#rn-183}
+
+读取、写入、切换和观察主题都由 `apps/web/src/lib/tema.ts` 负责——按钮位于 shell 中并使用这个 API，从不自行写入 `data-theme`。
+
+其中有三个决定：
+
+1. **`temaAtual()` 先读取*属性***，然后才是 `localStorage` 和默认值。属性才是界面正在显示的东西；在它之前回落到已写入的偏好，会让 UI 在启动失败的恰恰那种情形中断言一个与所见不同的主题。
+2. **没有写入的偏好时，`lerTemaSalvo()` 返回 `null`，而不是默认值**。从未作出选择的人有一天可能会跟随操作系统（`prefers-color-scheme`），在这里抹掉这一区分，会让日后决定这件事的人失去信息。
+3. **`observarTema()` 覆盖 `storage` 事件**，浏览器在同一源的*其他*标签页中触发它。没有这一点，两个打开的标签页会处于不同主题，直到下一次重新加载。
+
+键和默认值在 `public/theme-boot.js` 中重复，因为它在 bundle 之前运行，不能导入任何东西。这是唯一可能悄无声息地分歧的重复，因此测试会读取启动文件，在两者不再一致时失败。
+
+- **位置：** `apps/web/src/lib/tema.ts:73`
+- **测试：** `apps/web/src/lib/tema.test.ts`
+- **ADR：** [0074](../adr/0074-tema-alcancavel-e-o-boot-sob-csp.md)
+
+### RN-184 — 对比度在*两个*主题中测量 {#rn-184}
+
+当浅色主题无法到达时（[RN-182](#rn-182)），只测量深色是诚实的：测量一个没有人能打开的界面，就是在测量一个意图。有了主题按钮，不再测量浅色就会隐藏产品一半的可见表面——因此颜色对在两个主题中都被要求，下限相同（文本 4.5:1，界面元素 3:1）。
+
+为此，**浅色主题的六个 token 改变了值**。浅色中要求最高的背景是 `--code-bg`（纸色，`#efe4d2`，与表面只差一级），能对它达标的就能对其余达标：`--accent`
+3.56 → 4.81，`--warning` 3.15 → 4.98，`--success` 3.89 → 5.12，`--violet`
+4.16 → 4.95，`--text-muted` 2.76 → 5.17，`--accent-hover` 跟随 accent 低一级。深色主题**没有改变任何一个值**，它已知的欠账一直被同样的五个数字锁定（3.89 / 3.10 / 3.88 / 3.88 / 4.41），直到 [RN-640](../business-rules.md#rn-640)（ADR 0181）用中性调色板关闭了它，并把它变成了下限。
+
+浅色的 `--text-muted` 不是欠账：在 `--surface-2` 上为 2.40:1，它连*界面元素*的下限都不满足，而那是存在的最低下限。那是缺陷，而浅色主题没有理由比主主题更差。
+
+- **位置：** `design/tokens.css:208`
+- **测试：** `apps/web/src/lib/contraste.test.ts`,
+  `apps/web/src/design-contraste.test.ts`,
+  `apps/web/test/design-contraste.test.ts`
+- **ADR：** [0074](../adr/0074-tema-alcancavel-e-o-boot-sob-csp.md)
+
+### RN-185 — 八个语法角色，handoff 的值只有在测量之后才进入 {#rn-185}
+
+高亮调色板原来是三个自有 token（`--syntax-function`、
+`--syntax-comment`、`--syntax-operator`）和五个复用的语义 token
+（`--accent`、`--warning`、`--violet`、`--success`、`--text-primary`）。正是这种复用让调色板只在深色中被测量：在浅色中，语义 token 对纸色的 `--code-bg` 不达标。
+
+现在它拥有 handoff 的**八个角色**，使用仓库已经在用的 `--syntax-*` 前缀，每个在每个主题中都有自己的值。给这八个命名，正是让高亮在需要的那天可以与语义分开的东西。
+
+**handoff 的值只有在测量通过时才进入。** 对照 handoff 自己的 `--code-bg`，八个中有五个达不到代码文本要求的 4.5:1——`--syn-cm` 在深色中为 4.09:1、在浅色中为 2.32:1，`--syn-kw` 4.34:1，`--syn-str` 4.20:1，`--syn-fn` 4.14:1，`--syn-op` 4.00:1。handoff 不达标的地方，以测得的数字为准：这是 ADR 0036 的同一把尺子——handoff 的意图有效，破坏产品的机制（或数字）无效。
+
+五个语义 token 仍然是真正上色的（`SyntaxTokens.module.css` 在这次交付中没有改变），因此它们与八个角色**并列测量**：只要它们是真正的像素，下限就向它们要求。在浅色主题中，每个角色目前的数字与为其上色的语义 token *相同*，这是刻意的——同一像素的两个来源有不同的数字，会在第一次只改一侧的修正时分歧。
+
+- **位置：** `design/tokens.css:111`
+- **测试：** `apps/web/src/lib/contraste.test.ts`（describe "contraste — paleta
+  de sintaxe sobre --code-bg"）
+- **ADR：** [0074](../adr/0074-tema-alcancavel-e-o-boot-sob-csp.md)
+
+### RN-195 — 侧边栏可折叠为图标轨道，偏好会被持久化 {#rn-195}
+
+`Shell.tsx` 原来是固定宽度（248px），没有任何收缩方式。现在它在 `--sidebar-w`（264px）和 `--sidebar-w-collapsed`（62px）之间切换——Onda 1/frente A 已经在 `design/tokens.css` 中创建的两个 token——，带 `transition: width .18s ease`。折叠时，它成为一条垂直轨道：每个项目一个首字母方块（边框为身份色，
+[RN-197](#rn-197)）外加一个活动图标；在轨道上点击一个项目会重新展开栏、打开该项目并导航到它。
+
+偏好属于用户，并能挺过重新加载：`apps/web/src/lib/sidebar-state.ts` 中的 `brabo.sidebar.collapsed`（`'1'`/`'0'`）。它**只是手动的**（`colapsadoManual`）：曾经有第二个*自动*状态（`autoColapsado`），由代码标签页以 OR 叠加，它被
+[ADR 0126](../adr/0126-trilho-vertical-de-navegacao-do-projeto.md) 移除——见 [RN-201](#rn-201)。没有任何界面会自行折叠侧边栏；看到折叠的状态，是用户要求的，并且已被记录。
+
+- **位置：** `apps/web/src/routes/Shell.tsx:340-351`（状态和开关），
+  `apps/web/src/routes/Shell.module.css`（`.sidebar`、`.colapsado .sidebar`、
+  `.trilha*`），`apps/web/src/lib/sidebar-state.ts`
+  （`lerColapsado`/`gravarColapsado`）
+- **测试：** `apps/web/src/lib/sidebar-state.test.ts`（describe "colapso"），
+  `apps/web/src/routes/Shell.test.tsx`
+- **来源：** PROGRAMA 28，Onda 2，frente B——
+  `design_handoff_brabo/README.md` 的 "Navigation shell" 部分
+
+### RN-196 — 可展开的项目会显示项目的标签页，可同时展开 N 个 {#rn-196}
+
+侧边栏中的每个项目获得一个 chevron：点击它会展开该行，显示该项目的标签页列表（概览、执行者、Criativo、聊天、代码、Backlog、审批、洞察、花费、设置），每一个都是指向 `/projects/$projectId?tab=<chave>` 的链接。多个项目可以同时打开——状态是 id 的 `Set<string>`，持久化在 `brabo.sidebar.open` 中。
+
+标签页列表和标签来自 `ABAS_DO_PROJETO`
+（`apps/web/src/routes/project-tabs.ts`，属于 frente C，在这一波中并行进行）——侧边栏只**读取**导出的数组，从不重写标签页名称。**形状假设**，需要对照 frente C 的交付核对：`AbaDoProjeto` 有 `key: string`、`label: string` 和
+`count?: (contagens: ContagensDeAba) => number | undefined`，其中
+`ContagensDeAba = { promocoesPendentes, aprovacoesPendentes,
+hipotesesPendentes }`。侧边栏只能免费填充
+`aprovacoesPendentes`（`pendingApprovalsCount` 已经出现在仪表板摘要中，[RN-151](#rn-151)）；`promocoesPendentes`/`hipotesesPendentes` 以 `0` 进入——计算它们需要对侧边栏中*每个打开的项目*做一次新查询，与 RN-090/091 在仪表板中关闭的同一类 N+1。这两个徽章在 `ProjectPage` 自己的尺子内仍然正确；只有侧边栏中的预览是不完整的，这是刻意的省略，而不是 bug。
+
+*当前*路由的项目总是显示为展开（`projetosAbertosEfetivo`），即使它不在持久化的 `Set` 中——通过路由"免费"打开不会写入任何东西；只有显式点击 chevron 才会进入 `brabo.sidebar.open`。
+
+**自 [ADR 0211](../adr/0211-uma-navegacao-so-a-sidebar-absorve-o-trilho.md)
+（AT-404）起，这个列表是项目*唯一*的导航：**垂直轨道退出了，它接收了原来只有轨道才有的一切——三个带标题的分组、标记的当前标签页、以项目命名的垂直 `tablist`、键盘（`ArrowDown`/`ArrowUp`/`Home`/`End`，循环并跨越分组）以及*五个*计数器，各在自己的标签页上，绝不相加。上面那个刻意的省略对*关闭*的项目以及在项目框架之外打开的项目（例如在会话中）仍然有效：只有审批，来自摘要。当项目框架挂载时，五个数字来自它所使用的*同一个* hook（`useContagensDoProjeto`），没有新的请求。折叠时，打开的项目的方块会打开一个带相同标签页的浮出菜单。
+
+- **位置：** `apps/web/src/routes/Shell.tsx:557` (`projetosAbertosEfetivo`),
+  `:505` (`useContagensDoProjeto`), `:512` (`irParaAba`), `:527`
+  (`flyoutAberto`), `:215` (`contagensDoResumo`);
+  `apps/web/src/routes/AbasDoProjeto.tsx:78` (`AbasDoProjeto`), `:34`
+  (`itensDasAbas`), `:95` (`aoTeclar`);
+  `apps/web/src/lib/contagens-do-projeto.ts:22` (`useContagensDoProjeto`),
+  `:70` (`publicarAbaAtiva`), `:86` (`pedirAba`);
+  `apps/web/src/lib/sidebar-state.ts`（`lerProjetosAbertos`/`gravarProjetosAbertos`）
+- **测试：** `apps/web/src/lib/sidebar-state.test.ts`（describe "conjuntos"），
+  `apps/web/src/routes/Shell.test.tsx`（describe "Shell — abas do projeto
+  aberto (ADR 0211)"：12 个标签页、五个分开的计数器、当前标签页、点击和方向键导航、折叠的浮出菜单、手机上的抽屉，以及失败用例——没有挂载框架时，只有摘要的数字），
+  `apps/web/src/routes/AbasDoProjeto.test.tsx`（分组、当前标签页、计数器、键盘、roving tabindex、按项目的链接），`apps/web/src/routes/project-tabs.test.tsx`
+- **来源：** PROGRAMA 28，Onda 2，frente B；ADR 0211（AT-404）
+
+### RN-197 — 项目的两种颜色，两种用途：身份不是状态 {#rn-197}
+
+handoff 要求在展开的行中有一个"项目颜色点"，并在折叠的轨道上使用同样的颜色原则。产品在那里已经有一个点——`NavStatusDot`——但它是**状态**（预算/最近活动，由 `useProjectsSummary`/`useProjectsStatus` 推导而无需自己的查询，RN-039），而不是身份：它的颜色会随时间*变化*。
+
+决定是记录下来而不是解决：展开的行继续只显示 `NavStatusDot`（那是可操作的信息；在旁边再加第二个点是噪音）。*身份*颜色——每个项目稳定，基于 id 在一个固定 token 调色板上的确定性哈希（`corDoProjeto`，没有新表，与 `AGENTS[key].color` 同一思路）——只出现在折叠的轨道上，作为首字母方块的边框，那里放不下两个点，而在许多相似的方块中帮助找到正确项目的是身份（而不是状态）。
+
+同样，handoff 要求项目上有"显示最近迭代总数的徽章"；产品自 RN-151 起使用 `pendingApprovalsCount`，它晚于 handoff，解决了一个真实的缺陷（一个点击后与任何可操作之事都对应不上的数字）。这个徽章**不变**——RN-151 仍然有效，在这里分歧的是 handoff。
+
+- **位置：** `apps/web/src/lib/sidebar-state.ts`（`corDoProjeto`），
+  `apps/web/src/routes/Shell.tsx`（`NavStatusDot`，关于分歧的注释）
+- **测试：** `apps/web/src/lib/sidebar-state.test.ts`（describe "corDoProjeto"）
+- **来源：** PROGRAMA 28，Onda 2，frente B——
+  `design_handoff_brabo/CHECKLIST-CONFRONTO.md` 与 RN-151 之间的分歧
+
+### RN-198 — 活动按*真实*的基础 agent/实例分组，绝不按编造的计数器 {#rn-198}
+
+侧边栏的活动部分与 `AgentTimelineTree.tsx`/`timeline-tree.ts`（已经用于项目概览）是同一套分组逻辑，搬到了一个新地方——而不是重写。`montarArvore` 本来就按 `evento.actor.id` 分组；新内容是 `agruparPorInstancia`（`apps/web/src/lib/timeline-tree.ts`），它决定哪些分支构成两级的视觉分组。
+
+"实例"不是重新编号的计数器（`-01`/`-02`）——它是产品已经写入的*真实* `agent_id`：`devAgentId`/`extraDevAgentId`
+（`apps/api/src/application/use-cases/execution/activate-execution.use-case.ts:27-38`）产生 `dev-<modulo>` 和 `dev-<modulo>-2`（后缀总是恰好 `-2`，因为上限是每个模块*两个*，[RN-154](#rn-154)）。只有当基础 agent（去掉后缀）在同一列表中*也*有分支时，一个分支才成为另一个的"额外实例"——否则它就是 agent 本身。只有一个实例的 agent 直接展开到事件；有两个时，会显示第二层，每个实例一行，各有自己的计数——复用 `read-state.ts` 中已经为树的新增计数器存在的 `getAgentLastSeenSeq`/`setAgentLastSeenSeq`。
+
+范围：只有*当前*路由的项目（`pathname`），而不是 workspace 的所有项目——聚合所有项目需要*每个*项目一次事件查询，与 RN-090/091 在仪表板中关闭的同一类 N+1。复用 `AgentTimelineTree`/`SessionPage` 已经使用的*同一对* hook（`useActiveExecutionSession` + `useSessionEvents`，相同的 `queryKey`）——两个界面同时挂载时零新请求。
+
+打开/关闭的状态持久化在 `brabo.sidebar.agents` 中，采用 handoff 的格式并适配真实 id：`agenteBase`（打开的分组，例如
+`dev-backend`）或 `${agenteBase}/${instancia}`（打开的特定实例，例如 `dev-backend/dev-backend-2`）。
+
+- **位置：** `apps/web/src/lib/timeline-tree.ts`（`agruparPorInstancia`、
+  `GrupoDeAgente`），`apps/web/src/routes/Shell.tsx:237-311`
+  （`GrupoDeAtividade`、`InstanciaDeAgente`），`apps/web/src/routes/Shell.tsx:376-399`
+  （范围和持久化）
+- **测试：** `apps/web/src/lib/timeline-tree.test.ts`（describe
+  "agruparPorInstancia"），`apps/web/src/lib/sidebar-state.test.ts`
+- **来源：** PROGRAMA 28，Onda 1/frente B0（发现，无代码）和 Onda
+  2/frente B（实现）
+
+### RN-199 — 页脚的主题按钮，折叠时也可用 {#rn-199}
+
+侧边栏的页脚新增了一个太阳/月亮按钮，它使用 Onda 1/frente A 的 `apps/web/src/lib/tema.ts` API（`temaAtual`、
+`alternarTema`、`observarTema`），不重新实现任何东西——只有*按钮*是新的。在折叠状态（62px）下也能工作：文字标签消失，但 `aria-label`/`title` 仍描述当前主题，点击仍然切换。
+
+- **位置：** `apps/web/src/routes/Shell.tsx:130-148`（`BotaoDeTema`）
+- **测试：** `apps/web/src/lib/tema.test.ts`（API，未被本 RN 改变）
+  ——`Shell.test.tsx` 不重复主题的测试套件，只挂载 Shell
+- **来源：** PROGRAMA 28，Onda 2，frente B
+
+### RN-200 — 只有项目和活动作为全局项 {#rn-200}
+
+导航页脚中两个没有路由的项（"全局聊天"/"设置"，`title="em breve"`）被移除。handoff 很明确：只有项目和活动是*全局*项——其他一切都限定在某个项目内。"设置"仍然存在，作为展开行中的项目*标签页*（[RN-196](#rn-196)）——移除的是没有目标的孤立项。
+
+- **位置：** `apps/web/src/routes/Shell.tsx`（FASE 17a 的 `.globalNav`/
+  `.inertNavItem` 块被移除，没有全局替代）
+- **测试：** `apps/web/src/routes/Shell.test.tsx`（describe "sem itens
+  globais inertes"）
+- **来源：** PROGRAMA 28，Onda 2，frente B——
+  `design_handoff_brabo/README.md` 的 "Navigation shell" 部分
+
+### RN-201 — 活跃的项目/标签页在页面之间持久化；侧边栏的折叠*只*属于用户 {#rn-201}
+
+handoff 的最后两个键：`brabo.project`（活跃项目）和
+`brabo.tab`（活跃标签页）——在用户点击*侧边栏中*的标签页链接（`LinhaDeAba`/项目名称链接）时写入。URL 中的 `?tab=` 只作为*初始*深链接有效（`project-tabs.ts`，FASE 24）——在 `ProjectPage.tsx` 内切换标签页是本地状态，第一次加载之后不写入 URL，因此这些键是偏好在一次导航与另一次导航之间存活的唯一途径。**这一半从未改变。**
+
+**代码标签页的自动折叠被移除了（ADR 0126）。** 在此之前，代码标签页会自行折叠侧边栏，为编辑器腾出宽度，而不写入偏好：`sidebar-state.ts` 中的 `AutoCollapseContext`/`useAutoCollapseSidebar`，由 `ProjectCodeTab.tsx`（唯一调用者）注册，并在 `Shell` 中与手动折叠以 OR 叠加。上下文、hook、`autoColapsado` 状态、包裹 `<Outlet />` 的 `Provider` 以及折叠按钮的 `disabled`——它只为保护这条路径而存在——全部被移除。
+
+原因是结构性的：在项目的垂直轨道（`routes/ProjectRail.tsx`，已在 ADR 0211 中移除）始终存在的情况下，保留自动折叠会让 Shell 的图标轨道紧贴项目轨道——在产品最重的标签页上，*两条*相邻的、永久的垂直轨道。
+
+现在生效的是：**侧边栏的折叠是*用户*的决定，且只是他的。**它仍然是手动的，仍然持久化在 `brabo.sidebar.collapsed` 中（[RN-195](#rn-195)），没有任何界面会自行折叠侧边栏。
+
+**接受并声明的代价：**代码标签页开始以*展开*的侧边栏（264px）+ 项目轨道（180px）+ `CodeShell` 自己的轨道（48px）打开——在第一个代码字符之前有 492px 的框架，在浏览器中*测得*，而之前约为 110px（62px 折叠的侧边栏 + 48px 代码轨道）。手动折叠仍然可行，并且仍然会让 Shell 的轨道挨着项目轨道——区别在于现在是用户选择的，而不是系统。
+
+**由 [ADR 0211](../adr/0211-uma-navegacao-so-a-sidebar-absorve-o-trilho.md)
+（AT-404）修订：**项目轨道退出了，代码标签页的框架在侧边栏展开时变为 **312px**（264 + `CodeShell` 的 48），折叠时为 **110px**（62 + 48）——两种情况下都没有双轨道。折叠仍然只属于用户。侧边栏标记的当前标签页来自项目框架（`publicarAbaAtiva`），而不只是 `brabo.tab`。
+
+- **位置：** `apps/web/src/lib/sidebar-state.ts:80-105`
+  （`lerProjetoAtivo`/`gravarProjetoAtivo`、`lerAbaAtiva`/`gravarAbaAtiva`，以及记录移除的注释），`apps/web/src/routes/Shell.tsx:366-369`
+  （只剩 `colapsadoManual`），`apps/web/src/routes/ProjectCodeTab.tsx`
+  （没有任何折叠调用）
+- **测试：** `apps/web/src/lib/sidebar-state.test.ts`（describe "projeto e
+  aba ativos"），`apps/web/src/routes/Shell.test.tsx`（describe "Shell —
+  colapso da sidebar"：偏好只来自点击按钮，并且总会被写入）。describe "useAutoCollapseSidebar" 与 hook 一起被移除。
+- **来源：** PROGRAMA 28，Onda 2，frente B——
+  `design_handoff_brabo/CHECKLIST-CONFRONTO.md` 第 1 部分；自动折叠的那一半由
+  [ADR 0126](../adr/0126-trilho-vertical-de-navegacao-do-projeto.md) 修订
+### RN-202 — `sessions` 标签页仍然叫"Chat"，绝不叫"Chat RAG" {#rn-202}
+
+PROGRAMA 28 最新的设计 handoff 把咨询标签页叫做"Chat RAG"（`designs/Brabo Chat.dc.html`），但产品没有这项功能：没有按项目的索引流水线，没有向量索引，没有引用来源的 UI。ADR 0075 把 `embed` 放进了 `LLMProvider` 的契约——这个操作存在并在 Ollama 上*经过证明*——，但还没有任何东西*消费*它。今天的 `sessions` 标签页是 [RN-104](../business-rules.md#rn-104) 的普通咨询聊天：一个 agent 带着会话上下文回答，不产出 backlog，背后没有任何 RAG。
+
+今天把标签页标为"Chat RAG"会宣告一种不存在的能力——与 [ADR 0042](../adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md) 已经对目录模型拒绝的错误相同（"不自动激活发现的模型"）。标签会在功能到来的那天改变，连同其背后的数据——绝不提前。
+
+- **位置：** `apps/web/src/routes/project-tabs.ts:144`（条目 `key:
+  'sessions'`）
+- **测试：** `apps/web/src/routes/project-tabs.test.tsx`（describe "abas do
+  projeto derivam de um registro só"，`'RN-202 — a aba \`sessions\` continua
+  "Chat", nunca "Chat RAG"'`）
+- **ADR：** [0078](../adr/0078-moldura-de-tela-e-o-registro-de-abas-diverge-do-handoff.md)
+
+### RN-203 — handoff 是视觉参考，而不是产品标签页数量的上限 {#rn-203}
+
+设计 handoff 列出了 7 个项目标签页（概览、Criativo、代码、Chat RAG、花费、审批、设置）；注册表（`apps/web/src/routes/project-tabs.ts`）有 10 个。多出的三个——
+`executores`（[RN-121](../business-rules.md#rn-121)）、`backlog`（[RN-048](../business-rules/custo.md#rn-048)）和
+`insights`（等待决定的 Psicólogo 假设）——都诞生于 handoff 设计*之后*，都有真实数据、由查询推导的计数器，以及至少一条带测试的自有 RN。
+
+handoff 规定的是每个界面应该*看起来*怎样——颜色、字体、间距、框架的绘制——，这一部分在同一次变更中被严格遵循（头部、标尺、滚动、内容宽度）。它并不把标签页清单冻结在它被写下的那一天。为了与 handoff "对上"而删除这三个，会出于错误的原因摧毁产品本来已经会显示的信息。
+
+- **位置：** `apps/web/src/routes/project-tabs.ts:91`（`REGISTRO`）
+- **测试：** `apps/web/src/routes/project-tabs.test.tsx`（describe "abas do
+  projeto derivam de um registro só"，`'RN-203 — as 3 abas que o handoff não
+  previu continuam no registro'`）
+- **ADR：** [0078](../adr/0078-moldura-de-tela-e-o-registro-de-abas-diverge-do-handoff.md)
+### RN-210 — "推荐"是真实使用和成本，绝不是计算出的分数 {#rn-210}
+
+"按能力的最佳模型"块（设置）没有分数列。handoff 为每种能力显示一个分数（代码 9.4、图像 9.1……），但那是 mock 的*虚构*数据——没有任何提供方公布"代码质量"，产品也不在任何地方测量它。在这里计算一个数字，就是 [ADR 0041](../adr/0041-base-openai-compativel-e-contrato-de-llm-providers.md) 对*模型*能力所禁止的那种"穿着数据外衣的猜测"，只是这次针对的是质量。
+
+取而代之，"推荐"/"备选"来自两个真实信号，在*本* workspace 的策展为该能力标记的模型之中（`uses`，
+[RN-057](../business-rules/custo.md#rn-057)）：首先是*本*项目的 agent 使用最多的——与解析每个 agent 现行 binding 的同一级联——，以成本（来自目录，升序）作为平局决胜。"团队已经选择的"是在不编造分数的情况下可用的最诚实的信号。没有任何策展模型的能力显示"没有策展覆盖"——从不隐藏这一行，与 `ModelsSection` 的来源列已经为被跳过的 binding 使用的模式相同。
+
+- **位置：** `apps/web/src/routes/settings/MelhoresModelosPorCapacidadeSection.tsx`
+- **测试：** `apps/web/src/routes/ProjectSettingsTab.test.tsx`
+  （describe "MelhoresModelosPorCapacidadeSection"）
+- **ADR：** [0077](../adr/0077-ranking-de-modelos-por-capacidade-sem-nota-inventada.md)
+
+### RN-211 — 界面上按提供方的花费是排名，而不是编造的分类调色板 {#rn-211}
+
+handoff 要求按提供方堆叠的每日条形图以及按提供方的拆分。仓库的 dataviz skill 要求在使用分类调色板之前用脚本校验，绝不凭眼睛：`validate_palette.js` 拒绝 `design/tokens.css` 中每个 3 个以上 token 的组合在至少一个主题中——`--accent`+`--violet` 是唯一在两个主题中都通过的一对（若干 `--syntax-*` 字面上就是与 `--warning`/`--violet`/`--success` 相同的十六进制值，已测量）。有 9 个提供方（ADR 0043）而只有 2 种经过校验的颜色，循环使用调色板正是该 skill 自己点名的反模式（"a 9th series is never a generated hue"），而发明新的十六进制值会违反这一 frente 的指示。按提供方的拆分变成 `Ranking`——与"按模型"/"按项目"/"按 agent 和人"相同的组件，没有按颜色的身份。按提供方的*每日*序列没有交付：`sumGroupedBy`（ADR 0076）一次按一个维度分组，这一波的后端中不存在日×提供方的交叉聚合。
+
+- **位置：** `apps/web/src/lib/spend.ts`（"Gasto por PROVIDER na
+  tela"块），`apps/web/src/routes/ProjectSpendTab.tsx`（`GastoDoWorkspace`）
+- **测试：** `apps/web/src/routes/ProjectSpendTab.test.tsx`（describe "a
+  audiência do owner"——`'mostra os cinco recortes do workspace,
+  incluindo provider'`）
+- **ADR：** [0076](../adr/0076-provider-volta-a-ser-dimensao-de-gasto.md)
+
+### RN-212 — "按项目"块是接入真实预算的 TokenMeter {#rn-212}
+
+花费标签页新增了一个按*项目*（而不是按受众）的块：
+`OrcamentoDoProjeto` 读取 `GET /projects/:id/budget`，并把结果直接放进已有的 `TokenMeter`，后者已经实现了 70/90 的阈值（`tokenThreshold`）——没有新组件。三种读取：加载中（静默，避免在角色解析出下方的受众之前闪烁）、没有定义预算（文字说明，没有 CTA）以及错误（静默——实际上几乎总是拥有 *workspace* 角色但在*项目*中不是 `maintainer` 的人得到的 403，刻意显示横幅对大多数成员而言是误报，与 `ProjectPage.tsx` 的紧凑 `TokenMeter` 已经使用的模式相同）。
+
+- **位置：** `apps/web/src/routes/ProjectSpendTab.tsx`
+  （`OrcamentoDoProjeto`）
+- **测试：** `apps/web/src/routes/ProjectSpendTab.test.tsx`（describe "o
+  orçamento do projeto"）
+
+### RN-213 — 成本警报读取 `lastThresholdNotified`，绝不重新计算 {#rn-213}
+
+`alertaDeOrcamento` 不重新实现 `crossedThresholds`
+（`apps/api/src/domain/llm/budget-threshold.ts`）：它读取后端在真实调用越过 70/90/100% 时已经写入的字段，只决定颜色（低于 90 为 `warning`，从 90 起为 `danger`）以及文本是否应提示阻止已生效（`policy === 'block' && spentMicros >=
+limitMicros`）。没有新的业务规则——纯粹是对已有数据的呈现。
+
+- **位置：** `apps/web/src/lib/spend.ts`（`alertaDeOrcamento`）
+- **测试：** `apps/web/src/lib/spend.test.ts`（describe "alertaDeOrcamento
+  (RN-213)"）；`apps/web/src/routes/ProjectSpendTab.test.tsx`（describe "o
+  orçamento do projeto"）
+
+### RN-214 — 本地模型节省的 KPI 因缺少反事实价格而不在范围内 {#rn-214}
+
+`TokenMeter` 已经准备好 `savingsBRL`/`savingsPct` 来接收数字，它们被刻意保持未填充。这张卡片需要一个*反事实*价格——同一次调用在付费模型上本会花费多少——而它在产品的任何地方都不存在：目录（ADR 0042）只冻结*实际*使用的模型的价格（RN-044），也没有声明的"本地模型 X ~ 付费模型 Y"映射。在这里编造它，就是 RN-210 已经为能力排名拒绝的那类"穿着数据外衣的分数"。待办事项记录在 backlog 中，等有了可辩护且带版本的反事实价格时再做。
+
+- **位置：** `apps/web/src/routes/ProjectSpendTab.tsx`（注释 "KPI de
+  economia com modelos locais — CORTE DECLARADO"，文件末尾）
+
+### RN-215 — 问题标签页以诚实的空状态诞生 {#rn-215}
+
+对所管理项目的代码没有集成的 lint 或测试；底部面板的问题标签页（handoff `design_handoff_brabo`）明确说明这一点，而不是显示编造的计数（handoff 的 mock 带有徽章"3"）。与终端（FASE 25b）以及轨道上被禁用的"测试"项已经使用的模式相同。
+
+- **位置：** `apps/web/src/routes/code/CodeBottomPanel.tsx`
+- **测试：** `apps/web/src/routes/code/CodeBottomPanel.test.tsx`——
+  "Problemas diz honestamente que não há lint/teste integrado, sem
+  contagem inventada"
+
+### RN-216 — 输出标签页以诚实的空状态诞生 {#rn-216}
+
+这个标签页中没有构建/部署命令的流——它依赖于交互式终端（FASE 25b），而那并不存在。标签页解释这一点，并提醒 `git push`/PR/部署无论如何都不会通过终端发出（RN-106）。
+
+- **位置：** `apps/web/src/routes/code/CodeBottomPanel.tsx`
+- **测试：** `apps/web/src/routes/code/CodeBottomPanel.test.tsx`——"Saída
+  diz honestamente que não há stream de comando, sem simular execução"
+
+### RN-217 — 代码标签页的状态栏只显示真实数据 {#rn-217}
+
+24px 的状态栏（`CodeShell.tsx`）显示当前分支提交的 `↑N ↓M`（通过 `getCodeBranches`，与 `CodeBranchPicker` 相同的 `queryKey`——去重，零额外请求，RN-090/091）以及当前文件的语言（`linguagemPorCaminho`）。handoff mock 中的光标位置和错误/测试计数被排除在外：`CodeEditor` 不暴露可追踪的选区/插入符，也没有集成的 lint/测试（与 RN-215 相同的决定）。
+
+- **位置：** `apps/web/src/routes/code/CodeShell.tsx`
+- **测试：** `apps/web/src/routes/code/CodeShell.test.tsx`——"a status bar
+  mostra ↑/↓ real da branch atual" 和 "sem ahead/behind (branch em dia), a
+  status bar não mostra o par vazio"
+
+### RN-218 — 底部面板自有标签页上的可见焦点 {#rn-218}
+
+`CodeBottomPanel.tsx` 的标签页是自有实现（不是设计系统的 `Tabs`），没有继承 `Tabs.module.css` 在 Onda 2/frente C 中获得的校准过的 `:focus-visible`。用与 `Input.module.css`（ADR 0036）相同的模式修正，包括 `forced-colors`。
+
+- **位置：** `apps/web/src/routes/code/CodeBottomPanel.module.css`
+
+### RN-219 — chunk 索引的三个范围是诚实的，并通过 CHECK 相互排斥 {#rn-219}
+
+Chat RAG 的索引只覆盖产品已经知道来源的三种文本源：`docs`、`adr` 和 `session`。源代码和 Pull Request 被刻意排除——在没有每次 `push` 都重新索引的 watcher 的情况下索引它们，会让索引在覆盖范围上撒谎，这与 ADR 0042 已经对模型能力拒绝的错误同类。`session_id`/`source_path` 通过 CHECK 而不是应用约定相互排斥，与 `projects.workspace_mode`/`workspace_path`（ADR 0072）相同的模式：`scope =
+'session'` 要求 `session_id` 并拒绝 `source_path`；`docs`/`adr` 要求 `source_path` 并拒绝 `session_id`。锁放在数据库中，因为将要写这张表的是一个流水线（Onda 4），它不一定每次都经过同一个用例。
+
+- **位置：** `apps/api/src/db/schema/rag.ts`（`chunkScopeEnum` 以及 `chunks` 表的两个 CHECK）
+- **测试：** `apps/api/test/infrastructure/persistence/chunk.repository.spec.ts`
+  （"recusa chunk de docs sem source_path — o CHECK da migração 0045, não
+  validação de aplicação"）
+- **ADR：** [0079](../adr/0079-tabela-de-chunks-vetor-e-tsvector-juntos.md)
+
+### RN-220 — 向量和词法搜索存在于同一行中，绝不在分开的表中 {#rn-220}
+
+`chunks.embedding`（pgvector）和 `chunks.search_vector`（tsvector）是*同一*张表的姊妹列，而不是通过 `chunk_id` 关联的两张表。分开需要在每次混合搜索（Onda 4）中做 JOIN，并为两者分歧留下空间——一个有向量却没有词法条目的片段，或者反过来——而数据库中没有任何机制阻止。一行，就是搜索两半的唯一事实来源。
+
+- **位置：** `apps/api/src/db/schema/rag.ts`（`chunks` 表）
+- **测试：** `apps/api/test/infrastructure/persistence/chunk.repository.spec.ts`
+  （三个 spec 都在同一行中写入和读取两列）
+- **ADR：** [0079](../adr/0079-tabela-de-chunks-vetor-e-tsvector-juntos.md)
+
+### RN-221 — `search_vector` 从不由应用写入——它是 GENERATED 列 {#rn-221}
+
+`search_vector` 是 `GENERATED ALWAYS AS (to_tsvector('portuguese', content))
+STORED`。没有任何用例、仓储或脚本写入它——Postgres 在构造上使它与 `content` 保持一致，在 `INSERT` 的同一事务中就绪，不依赖任何 LLM 提供方响应（与 `embedding` 不同，后者只有在索引流水线存在时才会到来）。
+
+- **位置：** `apps/api/src/db/schema/rag.ts`（`search_vector` 列）
+- **测试：** `apps/api/test/infrastructure/persistence/chunk.repository.spec.ts`
+  （"grava um chunk de docs com vetor e devolve o search_vector gerado pela
+  GENERATED ALWAYS AS"）
+- **ADR：** [0079](../adr/0079-tabela-de-chunks-vetor-e-tsvector-juntos.md)
+
+### RN-222 — 向量的维度是记录在案的，而不是猜的，`embedding` 在 chunk 之后到来 {#rn-222}
+
+`chunks.embedding` 是 `vector(768)`——Ollama 的 `nomic-embed-text` 的真实维度，这是目前唯一声明 `capabilities.embeddings:
+true` 的提供方（RN-191，ADR 0075）。向量索引的维度是*固定*的：未来更换 embedding 模型是新的迁移，绝不是运行时参数。该列可为空：这张表保存 *CHUNK*（切分后的文本），而*向量*可以之后通过一个尚不存在的异步索引流水线（Onda 4）到来——没有这一点，分块就得等待 embedding，把两种性质不同的失败（文档解析与对提供方的网络调用）混进一次原子写入中。
+
+- **位置：** `apps/api/src/db/schema/rag.ts`（`embedding` 列）
+- **测试：** `apps/api/test/infrastructure/persistence/chunk.repository.spec.ts`
+  （"grava um chunk de docs com vetor..." 写入时填充了 `embedding`；另外两个 spec 不带它写入，确认了可空性）
+- **ADR：** [0079](../adr/0079-tabela-de-chunks-vetor-e-tsvector-juntos.md)；[RN-191](../business-rules/custo.md#rn-191)
+
+### RN-223 — 向量索引是 HNSW 而不是 IVFFlat，因为表诞生时是空的 {#rn-223}
+
+IVFFlat 需要已经加载的行来训练列表（`lists`），在空表上构建会很差——而这恰恰是这张表诞生时的状态，还没有索引流水线（Onda 4）。HNSW 逐次插入地增量构建图，没有训练步骤——从第一行起就很好。使用 `vector_cosine_ops`，因为这是文本 embedding 通常期望的度量（相似度排名不应随向量的模长变化）。
+
+- **位置：** `apps/api/src/db/migrations/0045_shallow_randall.sql`
+  （`chunks_embedding_idx`）
+- **ADR：** [0079](../adr/0079-tabela-de-chunks-vetor-e-tsvector-juntos.md)
+
+### RN-224 — 迁移自行以幂等方式创建 pgvector 扩展 {#rn-224}
+
+迁移 `0045` 在创建表之前执行 `CREATE EXTENSION IF NOT EXISTS vector`，而不是假设 `docker/postgres/init.sql` 已经运行过——那个文件只在 Postgres 卷*首次*初始化时执行，使用旧卷的环境可能没有这个扩展。`IF NOT EXISTS` 是幂等的：本地（扩展已经安装）和新环境都经过同一行，行为没有差别。
+
+- **位置：** `apps/api/src/db/migrations/0045_shallow_randall.sql`
+- **ADR：** [0079](../adr/0079-tabela-de-chunks-vetor-e-tsvector-juntos.md)
+
+### RN-225 — 可能需要运维者权限的迁移诞生于 `breaking/` {#rn-225}
+
+创建扩展要求应用的角色拥有 `CREATEDB`（或者扩展被 DBA 标记为 "trusted"）。本地角色是超级用户，但在生产环境中没有任何保证——托管 Postgres 的管理方常常不给应用超级用户。如果迁移在那里失败，这是部署之前*运维者*的操作（以超级用户身份运行一次 `CREATE
+EXTENSION vector;`），而不是产品的 bug——这正是 CLAUDE.md 中诞生于 `breaking/` 而不是
+`feature/`/`bugfix/` 的标准。
+
+- **位置：** 分支 `breaking/tabela-de-chunks`，
+  `apps/api/src/db/migrations/0045_shallow_randall.sql`（在迁移本身内部记录该决定的注释）
+- **ADR：** [0079](../adr/0079-tabela-de-chunks-vetor-e-tsvector-juntos.md)
+
+### RN-226 — `ChunkRepository` 只覆盖基本的写入/读取；`createMany` 是批量操作 {#rn-226}
+
+端口只有 `create`、`createMany`、`findById` 和 `listByProject`——混合搜索（向量 + 词法、权重、阈值）属于 Onda 4（G2），刻意*不*放在这里：端口保存数据，用例决定拿它做什么。`createMany` 之所以存在，是因为一次索引会一次性把一个文档/会话切成 N 个片段，避免每个被索引的文档 N 次往返。
+
+- **位置：** `apps/api/src/application/ports/chunk-repository.port.ts`,
+  `apps/api/src/infrastructure/persistence/drizzle/chunk.repository.ts`
+- **测试：** `apps/api/test/infrastructure/persistence/chunk.repository.spec.ts`
+  （"createMany grava um lote e listByProject filtra por escopo, sem
+  misturar docs e session"）
+- **ADR：** [0079](../adr/0079-tabela-de-chunks-vetor-e-tsvector-juntos.md)
+
+### RN-227 — 会话状态徽章覆盖 5 个真实状态，而不是 handoff 的 4 个 {#rn-227}
+
+handoff 为状态机的 5 个真实状态（`created/active/closing/closed/closed_abnormally`）要求 4 个徽章（活跃/等待中/已关闭/已中止）。`closed_abnormally`→已中止和 `created`→等待中是直接对应的。`closing` *不*与"已关闭"合并：它获得自己的徽章（"正在结束"，色调 `accent`，脉动），因为在 `closing` 中结果（`closed` 或 `closed_abnormally`）还不知道——把它叫做"已关闭"会在这一点上撒谎。
+
+- **位置：** `apps/web/src/routes/ProjectSessionsTab.tsx`（`SELO_DO_STATUS`）
+- **测试：** `apps/web/src/routes/ProjectSessionsTab.test.tsx`——describe
+  "ProjectSessionsTab — selo de status (RN-227)"
+
+### RN-228 — 药丸过滤器按*轨迹*归并 2 个没有自己药丸的状态 {#rn-228}
+
+handoff 的药丸过滤器（全部/活跃/已关闭/已中止）只覆盖 5 个状态中的 4 个。`created`（等待中）进入"活跃"药丸——它还没有到达任何地方，是"仍在进行中的会话"。`closing` 进入"已关闭"药丸——它已经在没有错误地走向关闭。每行的*徽章*（RN-227）从不被过滤器重写；药丸只做归并。
+
+- **位置：** `apps/web/src/routes/ProjectSessionsTab.tsx`
+  （`correspondeAoFiltro`）
+- **测试：** `apps/web/src/routes/ProjectSessionsTab.test.tsx`——describe
+  "filtro pill agrupa os 2 estados sem pill própria (RN-228)"
+
+### RN-229 — Criativo 标签页的"本月成本"KPI 是*执行者*的消耗，而不是项目的总额 {#rn-229}
+
+复用 `getMySpend(projectId, 30)`——与 `ProjectSpendTab.tsx#MeuConsumo` 用于成员视图的*同一个* queryKey（RN-101，ADR
+0063），没有新的聚合。*绝不*显示把所有人加起来的项目总额（`getWorkspaceSpendReport` 中的 `porProjeto`），因为那个数据只属于 owner，而 Criativo 标签页对项目的任何成员可见——显示总额会把别人的花费泄露给 RN-060/101 不授权查看的人。
+
+- **位置：** `apps/web/src/routes/ProjectSessionsTab.tsx`（`CriativoKpis`）
+- **测试：** `apps/web/src/routes/ProjectSessionsTab.test.tsx`——describe
+  "KPIs da aba Criativo"，用例 "caminho feliz" 和 "CASO DE FALHA"
+
+### RN-230 — "构思 → 提交率"KPI 被声明为缺失，绝不计算 {#rn-230}
+
+在产品的任何地方都不存在创意会话与其产生的提交之间的关联。Criativo 标签页显示"—"以及句子"não
+medido: sessão não é vinculada a commit hoje"，而不是编造一个计算——与 ADR 0042 已经对模型分数拒绝的错误同类。
+
+- **位置：** `apps/web/src/routes/ProjectSessionsTab.tsx`（`CriativoKpis`）
+- **测试：** `apps/web/src/routes/ProjectSessionsTab.test.tsx`——"'Taxa
+  ideação → commit' é DECLARADA ausente — nunca um número calculado"
