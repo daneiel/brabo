@@ -15,7 +15,7 @@ A fonte é o pt-BR em `docs/` (ADR 0216); `docs/reference/**` é gerado e fica f
 |---|---|---|---|---|---|---|---|
 | `en` | 257 de 257 (100.0%) | 100.0% de 5.300.103 | 257 | 0 | 0 | 0 | 0 |
 | `ru` | 257 de 257 (100.0%) | 100.0% de 5.300.103 | 257 | 0 | 0 | 0 | 0 |
-| `zh-Hans` | 56 de 257 (21.8%) | 72.2% de 5.300.103 | 54 | 2 | 0 | 201 | 0 |
+| `zh-Hans` | 105 de 257 (40.9%) | 81.9% de 5.300.103 | 103 | 2 | 0 | 152 | 0 |
 
 > **TODO(humano):** revisão nativa por idioma — quem revisou e quando. Ainda não há revisão nativa registrada.
 
