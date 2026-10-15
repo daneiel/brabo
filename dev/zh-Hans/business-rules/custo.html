@@ -1,4 +1,4 @@
-<!doctype html><html lang=zh-Hans dir=ltr class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-business-rules/custo" data-has-hydrated=false><head><meta charset=UTF-8><meta name=generator content="Docusaurus v3.10.2"><title data-rh=true>业务规则——成本 | Brabo</title><meta data-rh=true name=viewport content="width=device-width, initial-scale=1.0"/><meta data-rh=true name=robots content="noindex, nofollow"/><meta data-rh=true name=twitter:card content=summary_large_image /><meta data-rh=true property=og:url content=https://daneiel.github.io/brabo/dev/zh-Hans/business-rules/custo /><meta data-rh=true property=og:locale content=zh_Hans /><meta data-rh=true property=og:locale:alternate content=pt_BR /><meta data-rh=true property=og:locale:alternate content=en /><meta data-rh=true property=og:locale:alternate content=ru /><meta data-rh=true name=docusaurus_locale content=zh-Hans /><meta data-rh=true name=docsearch:language content=zh-Hans /><meta data-rh=true name=docusaurus_version content=current /><meta data-rh=true name=docusaurus_tag content=docs-default-current /><meta data-rh=true name=docsearch:version content=current /><meta data-rh=true name=docsearch:docusaurus_tag content=docs-default-current /><meta data-rh=true property=og:title content="业务规则——成本 | Brabo"/><meta data-rh=true name=description content="关于预算、计量（metering）、支出报告和成本上限的 RN——因篇幅原因从 business-rules.md 中拆出。"/><meta data-rh=true property=og:description content="关于预算、计量（metering）、支出报告和成本上限的 RN——因篇幅原因从 business-rules.md 中拆出。"/><meta data-rh=true name=keywords content=业务规则,成本,预算,metering,token /><link data-rh=true rel=icon href=/brabo/dev/zh-Hans/img/favicon.ico /><link data-rh=true rel=canonical href=https://daneiel.github.io/brabo/dev/zh-Hans/business-rules/custo /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/business-rules/custo hreflang=pt-BR /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/en/business-rules/custo hreflang=en /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/ru/business-rules/custo hreflang=ru /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/zh-Hans/business-rules/custo hreflang=zh-Hans /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/business-rules/custo hreflang=x-default /><script data-rh=true type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","item":"https://daneiel.github.io/brabo/dev/zh-Hans/business-rules/custo","name":"成本与计量","position":1}]}</script><link rel=stylesheet href=/brabo/dev/zh-Hans/assets/css/styles.7f2bd764.css /><script src=/brabo/dev/zh-Hans/assets/js/runtime~main.3c51026d.js defer></script><script src=/brabo/dev/zh-Hans/assets/js/main.f4e458ea.js defer></script></head><body><svg style="display: none;"><defs>
+<!doctype html><html lang=zh-Hans dir=ltr class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-business-rules/custo" data-has-hydrated=false><head><meta charset=UTF-8><meta name=generator content="Docusaurus v3.10.2"><title data-rh=true>业务规则——成本 | Brabo</title><meta data-rh=true name=viewport content="width=device-width, initial-scale=1.0"/><meta data-rh=true name=robots content="noindex, nofollow"/><meta data-rh=true name=twitter:card content=summary_large_image /><meta data-rh=true property=og:url content=https://daneiel.github.io/brabo/dev/zh-Hans/business-rules/custo /><meta data-rh=true property=og:locale content=zh_Hans /><meta data-rh=true property=og:locale:alternate content=pt_BR /><meta data-rh=true property=og:locale:alternate content=en /><meta data-rh=true property=og:locale:alternate content=ru /><meta data-rh=true name=docusaurus_locale content=zh-Hans /><meta data-rh=true name=docsearch:language content=zh-Hans /><meta data-rh=true name=docusaurus_version content=current /><meta data-rh=true name=docusaurus_tag content=docs-default-current /><meta data-rh=true name=docsearch:version content=current /><meta data-rh=true name=docsearch:docusaurus_tag content=docs-default-current /><meta data-rh=true property=og:title content="业务规则——成本 | Brabo"/><meta data-rh=true name=description content="关于预算、计量（metering）、支出报告和成本上限的 RN——因篇幅原因从 business-rules.md 中拆出。"/><meta data-rh=true property=og:description content="关于预算、计量（metering）、支出报告和成本上限的 RN——因篇幅原因从 business-rules.md 中拆出。"/><meta data-rh=true name=keywords content=业务规则,成本,预算,metering,token /><link data-rh=true rel=icon href=/brabo/dev/zh-Hans/img/favicon.ico /><link data-rh=true rel=canonical href=https://daneiel.github.io/brabo/dev/zh-Hans/business-rules/custo /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/business-rules/custo hreflang=pt-BR /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/en/business-rules/custo hreflang=en /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/ru/business-rules/custo hreflang=ru /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/zh-Hans/business-rules/custo hreflang=zh-Hans /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/business-rules/custo hreflang=x-default /><script data-rh=true type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","item":"https://daneiel.github.io/brabo/dev/zh-Hans/business-rules/custo","name":"成本与计量","position":1}]}</script><link rel=stylesheet href=/brabo/dev/zh-Hans/assets/css/styles.41f6b491.css /><script src=/brabo/dev/zh-Hans/assets/js/runtime~main.4faf1b40.js defer></script><script src=/brabo/dev/zh-Hans/assets/js/main.914e0854.js defer></script></head><body><svg style="display: none;"><defs>
 <symbol id=theme-svg-external-link viewBox="0 0 24 24"><path fill=currentColor d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
 </defs></svg>
 <script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme-3f2")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")),document.documentElement.setAttribute("data-theme-choice",t||"system")}(),function(){try{for(var[t,e]of new URLSearchParams(window.location.search).entries())if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id=__docusaurus><link rel=preload as=image href=/brabo/dev/zh-Hans/img/logo.svg /><div role=region aria-label=跳到主要内容><a class=skipToContent_CFOX href=#__docusaurus_skipToContent_fallback>跳到主要内容</a></div><nav aria-label=主导航 class="theme-layout-navbar navbar navbar--fixed-top"><div class=navbar__inner><div class="theme-layout-navbar-left navbar__items"><button aria-label=切换导航栏 aria-expanded=false class="navbar__toggle clean-btn" type=button><svg width=30 height=30 viewBox="0 0 30 30" aria-hidden=true><path stroke=currentColor stroke-linecap=round stroke-miterlimit=10 stroke-width=2 d="M4 7h22M4 15h22M4 23h22"/></svg></button><a class=navbar__brand href=/brabo/dev/zh-Hans/><div class=navbar__logo><img src=/brabo/dev/zh-Hans/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--light_vzqw"/><img src=/brabo/dev/zh-Hans/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--dark_FhTf"/></div><b class="navbar__title text--truncate">Brabo</b></a><a aria-current=page class="navbar__item navbar__link navbar__link--active" href=/brabo/dev/zh-Hans/>文档</a><a class="navbar__item navbar__link" href=/brabo/dev/zh-Hans/runbook>Runbook</a><a class="navbar__item navbar__link" href=/brabo/dev/zh-Hans/adr>ADRs</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a href=# aria-haspopup=true aria-expanded=false role=button class=navbar__link>dev</a><ul class=dropdown__menu><li><a href=https://daneiel.github.io/brabo/prd/ target=_blank rel="noopener noreferrer" class=dropdown__link>prd — estável<svg width=12 height=12 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/qa/ target=_blank rel="noopener noreferrer" class=dropdown__link>qa — 候选版<svg width=12 height=12 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/dev/ target=_blank rel="noopener noreferrer" class=dropdown__link>dev — em desenvolvimento ✓<svg width=12 height=12 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><div class="toggle_pnX7 colorModeToggle_Dj3Z"><button class="clean-btn toggleButton_DKER toggleButtonDisabled_qzkp" type=button disabled title=跟随系统 aria-label=切换浅色/暗黑模式（当前为跟随系统）><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL lightToggleIcon_E8tM"><path fill=currentColor d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL darkToggleIcon_rXjT"><path fill=currentColor d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL systemToggleIcon_zwCm"><path fill=currentColor d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"/></svg></button></div><div class=navbarSearchContainer_zRAa><div class="navbar__search searchBarContainer_eGzj" dir=ltr><svg aria-hidden=true class=searchIcon_PXpx focusable=false viewBox="0 0 16 16"><path fill=currentColor d="M6.02945 10.20327a4.17382 4.17382 0 1 1 4.17382-4.17382 4.15609 4.15609 0 0 1-4.17382 4.17382Zm9.69195 4.2199-4.8225-4.82338A5.88021 5.88021 0 0 0 12.058 6.02856 6.00467 6.00467 0 1 0 9.59979 10.8989l4.82338 4.82338a.89729.89729 0 0 0 1.29912 0 .89749.89749 0 0 0-.00087-1.29909Z"/></svg><input placeholder=搜索 aria-label=Search class="navbar__search-input searchInput_xOBI" value="" /><div class="loadingRing_JccP searchBarLoadingRing_aTss"><div></div><div></div><div></div><div></div></div></div></div></div></div><div role=presentation class=navbar-sidebar__backdrop></div></nav><div id=__docusaurus_skipToContent_fallback class="theme-layout-main main-wrapper mainWrapper_WJkx"><div class=docsWrapper_mIeg><button aria-label=回到顶部 class="clean-btn theme-back-to-top-button backToTopButton_Afc8" type=button></button><div class=docRoot_XZYc><aside class="theme-doc-sidebar-container docSidebarContainer_FPqZ"><div class=sidebarViewport_waOe><div class=sidebar_RQC4><nav aria-label=文档侧边栏 class="menu thin-scrollbar menu_ZM4U"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/><span class=categoryLinkLabel_jKch>🚀 从这里开始</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/><span class=linkLabel_CzBh>简介</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/getting-started><span class=linkLabel_CzBh>快速开始</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/tutorials/from-zero-to-deliverable><span class=linkLabel_CzBh>从零到交付物</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/architecture><span class=categoryLinkLabel_jKch>🏗️ 架构</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/architecture><span class=linkLabel_CzBh>架构</span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist" tabindex=0 href=/brabo/dev/zh-Hans/adr><span class=categoryLinkLabel_jKch>决策（ADR）</span></a><button aria-label="展开侧边栏分类 '决策（ADR）'" aria-expanded=false type=button class="clean-btn menu__caret"></button></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role=button aria-expanded=true href=/brabo/dev/zh-Hans/business-rules><span class=categoryLinkLabel_jKch>📐 规则</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/business-rules><span class=linkLabel_CzBh>业务规则</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link menu__link--active" aria-current=page tabindex=0 href=/brabo/dev/zh-Hans/business-rules/custo><span class=linkLabel_CzBh>成本与计量</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/business-rules/autenticacao><span class=linkLabel_CzBh>认证</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/reference/configuration><span class=categoryLinkLabel_jKch>📖 参考</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/configuration><span class=linkLabel_CzBh>Configuration</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/events><span class=linkLabel_CzBh>Events</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/permissions><span class=linkLabel_CzBh>Permissions</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/artifacts><span class=linkLabel_CzBh>Artifacts</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/git-providers><span class=linkLabel_CzBh>Git Providers</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/internal-api><span class=linkLabel_CzBh>Internal API</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/scripts><span class=linkLabel_CzBh>Scripts</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/rulesets><span class=linkLabel_CzBh>Rulesets</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/paridade-de-traducao><span class=linkLabel_CzBh>Paridade de tradução</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/brb><span class=linkLabel_CzBh>BRB register</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/security-surface><span class=linkLabel_CzBh>api 的暴露面</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/api><span class=linkLabel_CzBh>API 参考</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/explanation/documentation-workflow><span class=categoryLinkLabel_jKch>💡 解释</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true tabindex=0 href=/brabo/dev/zh-Hans/explanation/documentation-workflow><span class=categoryLinkLabel_jKch>流程与流水线</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/documentation-workflow><span class=linkLabel_CzBh>文档同步</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/branching-policy><span class=linkLabel_CzBh>分支策略</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/cadeia-de-suprimentos-do-ci><span class=linkLabel_CzBh>CI 的供应链</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/gates><span class=linkLabel_CzBh>gates，以及如何测量它们</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/observability><span class=linkLabel_CzBh>可观测性</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/modelo-de-time><span class=linkLabel_CzBh>团队模型与交付物流程</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/dev/zh-Hans/explanation/primeiro-dogfooding><span class=categoryLinkLabel_jKch>验证与测量</span></a></div><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/dev/zh-Hans/explanation/historico-de-fases><span class=categoryLinkLabel_jKch>阶段历史</span></a></div><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/dev/zh-Hans/explanation/localizacao><span class=categoryLinkLabel_jKch>本地化</span></a></div><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/dev/zh-Hans/explanation/tanstack-ai><span class=categoryLinkLabel_jKch>技术笔记</span></a></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/runbook><span class=categoryLinkLabel_jKch>🛠️ 运维</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/runbook><span class=linkLabel_CzBh>运维手册</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/glossary><span class=categoryLinkLabel_jKch>📚 词汇</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/glossary><span class=linkLabel_CzBh>术语表</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true><span class=categoryLinkLabel_jKch>🤝 贡献</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>如何贡献</span><svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>在哪里求助</span><svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>报告漏洞</span><svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></ul></nav></div></div></aside><main class=docMainContainer_ia8v><div class="container padding-top--md padding-bottom--lg"><div class=row><div class="col docItemCol_xjE4"><div class=docItemContainer_cPej><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_sZul" aria-label=页面路径><ul class=breadcrumbs><li class=breadcrumbs__item><a aria-label=主页面 class=breadcrumbs__link href=/brabo/dev/zh-Hans/><svg viewBox="0 0 24 24" class=breadcrumbHomeIcon_AUjL><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill=currentColor /></svg></a><li class=breadcrumbs__item><span class=breadcrumbs__link>📐 规则</span><li class="breadcrumbs__item breadcrumbs__item--active"><span class=breadcrumbs__link>成本与计量</span></ul></nav><div class="tocCollapsible_nbAK theme-doc-toc-mobile tocMobile_r92C"><button type=button class="clean-btn tocCollapsibleButton_hcyq">本页总览</button></div><div class="theme-doc-markdown markdown"><header><h1>成本</h1></header>
@@ -23,7 +23,7 @@
 <ul>
 <li class=""><strong>位置：</strong> <code>apps/api/src/domain/llm/budget-threshold.ts:4</code></li>
 <li class=""><strong>边界情况：</strong> 处于 <code>allow</code> 的项目在达到上限时<strong>不会停下</strong>。这是"预算没拦住"最常见的原因——见
-<a href=/brabo/dev/zh-Hans/runbook target=_blank rel="noopener noreferrer" class="">runbook</a>。</li>
+<a class="" href=/brabo/dev/zh-Hans/runbook>runbook</a>。</li>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rn-020>RN-020 — 模型按级联解析，从最具体到最一般<a href=#rn-020 class=hash-link aria-label="RN-020 — 模型按级联解析，从最具体到最一般的直接链接" title="RN-020 — 模型按级联解析，从最具体到最一般的直接链接" translate=no>​</a></h3>
 <p><code>session > agent > area > project > workspace</code>。第一个存在的胜出。<code>area</code> 在 FASE 23 加入——关于它的位置，以及对已经读过这个级联的人有什么变化，见 <a href=#rn-102 class="">RN-102</a>。</p>
@@ -33,7 +33,7 @@
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rn-040>RN-040 — agent 的 binding 要求原生 tool calling<a href=#rn-040 class=hash-link aria-label="RN-040 — agent 的 binding 要求原生 tool calling的直接链接" title="RN-040 — agent 的 binding 要求原生 tool calling的直接链接" translate=no>​</a></h3>
 <p>只有当模型具备 <code>supports_tool_calling</code> 时，才允许把模型绑定到<strong>agent</strong>（<code>scope = 'agent'</code>）。agent 只存在于 ToolLoop 之内，而 ToolLoop 只有在模型懂得<strong>请求</strong>工具时才能工作；否则失败会在后面表现为"agent 没做完就停了"，这正是
-<a href=/brabo/dev/zh-Hans/adr/0020-destravar-gates-qa-secops target=_blank rel="noopener noreferrer" class="">ADR 0020</a> 所禁止的排除法诊断。拒绝是 422，消息指向**"适用于 agent"**过滤器——没有这个指引，规则就成了死胡同。</p>
+<a class="" href=/brabo/dev/zh-Hans/adr/0020-destravar-gates-qa-secops>ADR 0020</a> 所禁止的排除法诊断。拒绝是 422，消息指向**"适用于 agent"**过滤器——没有这个指引，规则就成了死胡同。</p>
 <p>engine 的 <code>ToolCallRecovery</code> 会挽回模型以散文写出的调用，但它是<strong>救援，而不是许可</strong>：它依赖模型碰巧写对格式。</p>
 <p>只有 <code>agent</code> 做校验。<code>workspace</code> 和 <code>project</code> 是人工聊天的回退，<code>session</code> 是对话——它们都不运行 ToolLoop，锁住它们会禁止产品中只能聊天的模型。<code>context-manager</code> agent 在构造上已被覆盖：它是 <code>agent</code> 范围<em>之内</em>的一个 slug，而不是一个独立的范围。</p>
 <p><strong>附加说明——过滤器改为默认<em>勾选</em>，而打开它的是<em>范围</em>。</strong> 上面一段说拒绝指向"适用于 agent"过滤器，"否则规则就成了死胡同"——而很长一段时间里它确实是：让选择器在打开时勾选过滤器的 prop 从 Fase 9c 起就存在，却<strong>没有任何生产界面传递它</strong>。agent 的选择器打开时提供只能聊天的模型，点击它们只是为了被拒绝。写入经校验范围的两个界面改为打开时即过滤——<code>ModelsSection</code>（agent）和
@@ -42,7 +42,7 @@
 <p><strong>后果：被过滤器隐藏的现行模型会被<em>说出来</em>。</strong> <code>workspace</code> 和
 <code>project</code> 从未要求 tool calling，而解析 agent 或区域 binding 的路由调用 <code>ResolveModelBindingUseCase</code> 时<strong>不带</strong>
 <code>exigeToolCalling</code>——因此这些层级上只能聊天的默认值会被正常解析，成为该行的现行模型。在过滤器勾选时，触发器显示的名称不在打开的列表中，也没有任何选项被选中。选择器现在会点名该模型和原因；它<em>可以</em>点名原因，因为那里只有一个过滤器。当整个列表都为空时，说话的仍然是空列表文本，它已经让人取消勾选——关于同一个复选框的两条提示只是噪音。</p>
-<p><strong>事实更正，而不是对上文的更正：</strong>"Only <code>agent</code> validates" 描述的是 Fase 9a。自 <a href=/brabo/dev/zh-Hans/adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global target=_blank rel="noopener noreferrer" class="">ADR 0064</a> 起，
+<p><strong>事实更正，而不是对上文的更正：</strong>"Only <code>agent</code> validates" 描述的是 Fase 9a。自 <a class="" href=/brabo/dev/zh-Hans/adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global>ADR 0064</a> 起，
 <code>area</code> 进入<em>同一</em>校验——它不是通用回退，区域模型唯一的消费者是该区域的 agent（<a href=#rn-102 class="">RN-102</a>）——，这就是打开过滤器的界面有<em>两个</em>的原因。</p>
 <ul>
 <li class=""><strong>位置：</strong> <code>apps/api/src/domain/llm/model-capabilities.ts:38</code>；
@@ -52,7 +52,7 @@
 <code>test/application/use-cases/llm/set-model-binding.use-case.spec.ts</code>；
 <code>apps/web/src/routes/settings/filtro-de-aptos.test.tsx</code> 和
 <code>apps/web/src/routes/SessionPage.filtro-de-aptos.test.tsx</code>（打开过滤器的两个界面，以及不打开的那个）</li>
-<li class=""><strong>来源：</strong> <a href=/brabo/dev/zh-Hans/adr/0041-base-openai-compativel-e-contrato-de-llm-providers target=_blank rel="noopener noreferrer" class="">ADR 0041</a></li>
+<li class=""><strong>来源：</strong> <a class="" href=/brabo/dev/zh-Hans/adr/0041-base-openai-compativel-e-contrato-de-llm-providers>ADR 0041</a></li>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rn-041>RN-041 — 提供方未给出的 token 计数被标记为估算<a href=#rn-041 class=hash-link aria-label="RN-041 — 提供方未给出的 token 计数被标记为估算的直接链接" title="RN-041 — 提供方未给出的 token 计数被标记为估算的直接链接" translate=no>​</a></h3>
 <p>当提供方的响应不含 <code>usage</code> 时，OpenAI 兼容基类用 tokenizer 在本地计数，并以
@@ -64,7 +64,7 @@
 <li class=""><strong>位置：</strong> <code>apps/api/src/infrastructure/llm/openai-compatible-provider.ts:167</code></li>
 <li class=""><strong>测试：</strong> <code>test/contract/llm-provider.contract.ts</code>（场景
 <code>sem_usage</code>，针对三个提供方运行）</li>
-<li class=""><strong>来源：</strong> <a href=/brabo/dev/zh-Hans/adr/0041-base-openai-compativel-e-contrato-de-llm-providers target=_blank rel="noopener noreferrer" class="">ADR 0041</a></li>
+<li class=""><strong>来源：</strong> <a class="" href=/brabo/dev/zh-Hans/adr/0041-base-openai-compativel-e-contrato-de-llm-providers>ADR 0041</a></li>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rn-042>RN-042 — 计量记录<em>实际服务</em>调用的是谁，而不只是调用从哪里进入<a href=#rn-042 class=hash-link aria-label=rn-042的直接链接 title=rn-042的直接链接 translate=no>​</a></h3>
 <p>当调用经过一个会告知真实提供方的 hub 时，<code>token_usage</code> 除了入口提供方外，还在 <code>upstream_provider</code> 中记录该提供方。没有 hub——或 hub 没有告知——时，该字段是**<code>null</code>**，绝不是空字符串：按提供方统计成本的查询需要区分"没有经过 hub"和"经过了 hub 但 hub 没说"。</p>
@@ -72,7 +72,7 @@
 <ul>
 <li class=""><strong>位置：</strong> <code>apps/api/src/application/use-cases/llm/record-llm-usage.use-case.ts:73</code></li>
 <li class=""><strong>测试：</strong> <code>test/application/use-cases/llm/record-llm-usage.use-case.spec.ts</code></li>
-<li class=""><strong>来源：</strong> <a href=/brabo/dev/zh-Hans/adr/0041-base-openai-compativel-e-contrato-de-llm-providers target=_blank rel="noopener noreferrer" class="">ADR 0041</a></li>
+<li class=""><strong>来源：</strong> <a class="" href=/brabo/dev/zh-Hans/adr/0041-base-openai-compativel-e-contrato-de-llm-providers>ADR 0041</a></li>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rn-681>RN-681 — 与现有相似的故事和规则通过 embedding 产生<em>警告</em>，绝不拒绝；检查的花费是计量中的独立一行<a href=#rn-681 class=hash-link aria-label=rn-681的直接链接 title=rn-681的直接链接 translate=no>​</a></h3>
 <p>在写入一个故事（<code>create_story</code>）或一条业务规则（<code>business_rule</code> 的 <code>emit_artifact</code>）之后，api 将其<em>标题</em>与<em>项目</em>中同类现有条目的标题比较，使用 RAG embedding 模型向量之间的余弦，当最接近的达到阈值时<em>发出警告</em>。</p>
@@ -80,11 +80,11 @@
 <li class=""><strong>警告，绝不拒绝。</strong> 检查运行时条目已经存在。警告在工具结果中返回给 agent——句子点名相似条目、id 和数值——并以 <code>backlog.semantic_duplicate_warned</code> 留在日志中。<em>精确</em>重复仍会在此之前被 <a href=#rn-080 class="">RN-080</a> 和
 <a href=#rn-081 class="">RN-081</a> 拒绝，因此规范化后相同的标题不参与比较。</li>
 <li class=""><strong>阈值是 0.80，是<em>起点</em>，未经校准</strong>（ADR 0198，与
-<a href=/brabo/dev/zh-Hans/adr/0080-busca-hibrida-pesos-limiar-e-citacao target=_blank rel="noopener noreferrer" class="">ADR 0080</a> 的权重一样）：在规则诞生的环境中，无法记录发现 R 那一对以及非重复对的真实向量。一旦 <code>vetores.json</code> 被记录，证明会自行运行；在那之前它被<em>跳过</em>并给出警告。</li>
+<a class="" href=/brabo/dev/zh-Hans/adr/0080-busca-hibrida-pesos-limiar-e-citacao>ADR 0080</a> 的权重一样）：在规则诞生的环境中，无法记录发现 R 那一对以及非重复对的真实向量。一旦 <code>vetores.json</code> 被记录，证明会自行运行；在那之前它被<em>跳过</em>并给出警告。</li>
 <li class=""><strong>没有 embedding 提供方时，检查被<em>跳过</em>并<em>说明</em></strong>——能力缺失、daemon 不在、超时：<code>backlog.semantic_duplicate_check_skipped</code>，原因写入日志和给 agent 的句子。绝不会让发出失败。</li>
 <li class=""><strong>花费作为独立一行进入计量</strong>：执行者
 <code>system</code>/<code>duplicata-semantica</code>，RAG 的提供方和模型，输出为零，模型在目录中时使用目录价格。这是对
-<a href=/brabo/dev/zh-Hans/adr/0075-embeddings-no-contrato-de-llm-provider target=_blank rel="noopener noreferrer" class="">ADR 0075</a> 划分的<em>唯一</em>例外——RAG 的索引和搜索仍在其外——，之所以成立，是因为发出发生在会话之内。</li>
+<a class="" href=/brabo/dev/zh-Hans/adr/0075-embeddings-no-contrato-de-llm-provider>ADR 0075</a> 划分的<em>唯一</em>例外——RAG 的索引和搜索仍在其外——，之所以成立，是因为发出发生在会话之内。</li>
 <li class=""><strong>上限：</strong> 最近的 100 个现有条目（截断时结果会说明是多少中的多少）以及整个检查 10 s 的挂钟时间。</li>
 </ol>
 <ul>
@@ -105,7 +105,7 @@
 <code>test/domain/backlog/limiar-de-duplicata.calibracao.spec.ts</code>（<em>数值</em>——在向量被记录之前跳过），
 <code>apps/engine/test/engine/harness/duplicata_semantica_test.exs</code>,
 <code>apps/web/src/lib/activity.test.ts</code> (<code>duplicata semântica (RN-681)</code>)</li>
-<li class=""><strong>来源：</strong> <a href=/brabo/dev/zh-Hans/adr/0198-duplicata-semantica-por-embedding-com-limiar-que-so-avisa target=_blank rel="noopener noreferrer" class="">ADR 0198</a>
+<li class=""><strong>来源：</strong> <a class="" href=/brabo/dev/zh-Hans/adr/0198-duplicata-semantica-por-embedding-com-limiar-que-so-avisa>ADR 0198</a>
 （AT-171，发现 R）</li>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rn-666>RN-666 — 计量记录输入中有多少来自缓存、输出中有多少是推理<a href=#rn-666 class=hash-link aria-label="RN-666 — 计量记录输入中有多少来自缓存、输出中有多少是推理的直接链接" title="RN-666 — 计量记录输入中有多少来自缓存、输出中有多少是推理的直接链接" translate=no>​</a></h3>
@@ -129,12 +129,12 @@
 <li class=""><strong>测试：</strong> <code>test/infrastructure/llm/openrouter-provider.contract.spec.ts</code>
 （带两个部分的录制响应；没有细节；无效值和零），<code>test/application/use-cases/llm/run-llm-turn.use-case.spec.ts</code>,
 <code>test/scripts/medir-execucao.spec.ts</code> (<code>formatarParteMedida</code>)</li>
-<li class=""><strong>来源：</strong> <a href=/brabo/dev/zh-Hans/adr/0188-o-custo-real-do-provider-vira-o-numero-do-metering target=_blank rel="noopener noreferrer" class="">ADR 0188</a>
+<li class=""><strong>来源：</strong> <a class="" href=/brabo/dev/zh-Hans/adr/0188-o-custo-real-do-provider-vira-o-numero-do-metering>ADR 0188</a>
 （AT-272）</li>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rn-665>RN-665 — 提供方返回的真实成本就是计量的数字；目录价格用在没有真实成本的地方<a href=#rn-665 class=hash-link aria-label="RN-665 — 提供方返回的真实成本就是计量的数字；目录价格用在没有真实成本的地方的直接链接" title="RN-665 — 提供方返回的真实成本就是计量的数字；目录价格用在没有真实成本的地方的直接链接" translate=no>​</a></h3>
 <p>所有者的决定（9月30日）：<strong>真实成本成为数字</strong>。当 LLM 调用的响应说明了提供方收取多少——在 OpenRouter 中是流最后一帧中的 <code>usage.cost</code>——，这个值就是该行的 <code>token_usage.cost_micros</code>、回合返回给 engine 的值（循环将其累加到本地预算）、增加项目/会话/区域预算的值，以及支出报告汇总的值。没有它时，由目录的冻结价格产生数字，与
-<a href=/brabo/dev/zh-Hans/adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel target=_blank rel="noopener noreferrer" class="">ADR 0042</a> 中一样。</p>
+<a class="" href=/brabo/dev/zh-Hans/adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel>ADR 0042</a> 中一样。</p>
 <ol>
 <li class=""><strong>一条规则，三条路径。</strong> <code>RunLlmTurnUseCase</code>、<code>StreamLlmTurnUseCase</code>
 和 <code>SendChatMessageUseCase</code> 都经过同一个 <code>custoDaChamada</code>；没有第二把尺子。</li>
@@ -159,12 +159,12 @@
 <code>test/infrastructure/llm/openrouter-provider.contract.spec.ts</code>（录制响应：成本、解析后的模型、id；BYOK；没有 <code>cost</code>；没有钩子的提供方），<code>test/application/use-cases/llm/run-llm-turn.use-case.spec.ts</code>,
 <code>test/application/use-cases/llm/stream-llm-turn.use-case.spec.ts</code>,
 <code>test/application/use-cases/llm/send-chat-message.use-case.spec.ts</code>；有凭据时，手动 smoke <code>openrouter-provider.smoke.spec.ts</code></li>
-<li class=""><strong>来源：</strong> <a href=/brabo/dev/zh-Hans/adr/0188-o-custo-real-do-provider-vira-o-numero-do-metering target=_blank rel="noopener noreferrer" class="">ADR 0188</a>
+<li class=""><strong>来源：</strong> <a class="" href=/brabo/dev/zh-Hans/adr/0188-o-custo-real-do-provider-vira-o-numero-do-metering>ADR 0188</a>
 （AT-270）</li>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rn-679>RN-679 — 策展拒绝 OpenRouter 的自由路由别名<a href=#rn-679 class=hash-link aria-label="RN-679 — 策展拒绝 OpenRouter 的自由路由别名的直接链接" title="RN-679 — 策展拒绝 OpenRouter 的自由路由别名的直接链接" translate=no>​</a></h3>
 <p>所有者的决定（10月1日）：<strong><code>~</code> 别名不进入策展</strong>——只接受上游固定的模型。OpenRouter 的自由路由别名（以 <code>~</code> 开头的 id，如 <code>~deepseek/deepseek-flash-latest</code>）"总是重定向到该家族最新的那个"：目录发布的是<em>橱窗</em>价格（在 9月29日的真实使用中，是该家族最便宜端点的价格），端点列表为空，收费的是实际服务的上游。没有一个上游能让
-<a href=/brabo/dev/zh-Hans/adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel target=_blank rel="noopener noreferrer" class="">ADR 0042</a> 的冻结价格有任何意义。替代方案——按上游定价——被否决。</p>
+<a class="" href=/brabo/dev/zh-Hans/adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel>ADR 0042</a> 的冻结价格有任何意义。替代方案——按上游定价——被否决。</p>
 <ol>
 <li class=""><strong>尺子属于提供方。</strong> <code>ehAliasDeRoteamentoLivre</code> 是 <code>provider = 'openrouter'</code> <em>且</em>名称以 <code>~</code> 开头；其他提供方中相同的前缀不是别名，不会拒绝。</li>
 <li class=""><strong>激活会拒绝，带代码。</strong> <code>POST .../models/activate</code> 带
@@ -211,7 +211,7 @@
 <code>test/application/use-cases/llm/set-model-binding.use-case.spec.ts</code>,
 <code>test/application/use-cases/llm/run-llm-turn.use-case.spec.ts</code>,
 <code>test/infrastructure/llm/openrouter-provider.contract.spec.ts</code>；能力的手动证明是 <code>test/infrastructure/llm/openrouter-provider.roteamento.smoke.spec.ts</code></li>
-<li class=""><strong>来源：</strong> <a href=/brabo/dev/zh-Hans/adr/0166-preferencia-de-roteamento-no-binding-de-modelo target=_blank rel="noopener noreferrer" class="">ADR 0166</a>（AT-090）</li>
+<li class=""><strong>来源：</strong> <a class="" href=/brabo/dev/zh-Hans/adr/0166-preferencia-de-roteamento-no-binding-de-modelo>ADR 0166</a>（AT-090）</li>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rn-043>RN-043 — 新发现的模型以停用状态进入；消失的模型被标记，从不删除<a href=#rn-043 class=hash-link aria-label="RN-043 — 新发现的模型以停用状态进入；消失的模型被标记，从不删除的直接链接" title="RN-043 — 新发现的模型以停用状态进入；消失的模型被标记，从不删除的直接链接" translate=no>​</a></h3>
 <p>目录同步有三种结果，没有一种是破坏性的：</p>
@@ -222,7 +222,7 @@
 <code>model_bindings</code> 和 <code>token_usage</code> 指向这一行，删除它会把成本历史一起带走。</li>
 <li class=""><strong>回来的模型</strong>恢复为 <code>available</code>，策展<strong>保持不变</strong>——owner 的选择能挺过提供方的暂时缺席。</li>
 </ol>
-<p>两个维度刻意相互独立：策展是一个人的决定，<code>availability</code> 是对提供方的观察。谁都不写入对方——而自 <a href=/brabo/dev/zh-Hans/adr/0049-curadoria-de-modelo-por-workspace target=_blank rel="noopener noreferrer" class="">ADR 0049</a> 起，它们甚至不在同一张表中，因此同步即使想覆盖，也没有策展字段可以覆盖。</p>
+<p>两个维度刻意相互独立：策展是一个人的决定，<code>availability</code> 是对提供方的观察。谁都不写入对方——而自 <a class="" href=/brabo/dev/zh-Hans/adr/0049-curadoria-de-modelo-por-workspace>ADR 0049</a> 起，它们甚至不在同一张表中，因此同步即使想覆盖，也没有策展字段可以覆盖。</p>
 <p>对系统其余部分有三个后果：</p>
 <ul>
 <li class="">
@@ -246,7 +246,7 @@
 <code>test/application/use-cases/llm/set-model-binding.use-case.spec.ts</code></p>
 </li>
 <li class="">
-<p><strong>来源：</strong> <a href=/brabo/dev/zh-Hans/adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel target=_blank rel="noopener noreferrer" class="">ADR 0042</a></p>
+<p><strong>来源：</strong> <a class="" href=/brabo/dev/zh-Hans/adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel>ADR 0042</a></p>
 </li>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rn-044>RN-044 — 价格从此刻起生效，旧成本仍然可以核对<a href=#rn-044 class=hash-link aria-label="RN-044 — 价格从此刻起生效，旧成本仍然可以核对的直接链接" title="RN-044 — 价格从此刻起生效，旧成本仍然可以核对的直接链接" translate=no>​</a></h3>
@@ -259,7 +259,7 @@
 <code>apps/api/src/db/seed.ts:376</code></li>
 <li class=""><strong>测试：</strong> <code>test/application/use-cases/llm/update-model-pricing.use-case.spec.ts</code>,
 <code>test/application/use-cases/llm/sync-model-catalog.use-case.spec.ts</code></li>
-<li class=""><strong>来源：</strong> <a href=/brabo/dev/zh-Hans/adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel target=_blank rel="noopener noreferrer" class="">ADR 0042</a></li>
+<li class=""><strong>来源：</strong> <a class="" href=/brabo/dev/zh-Hans/adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel>ADR 0042</a></li>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rn-189>RN-189 — embedding 为每个输入返回一个向量，或者一个错误<a href=#rn-189 class=hash-link aria-label="RN-189 — embedding 为每个输入返回一个向量，或者一个错误的直接链接" title="RN-189 — embedding 为每个输入返回一个向量，或者一个错误的直接链接" translate=no>​</a></h3>
 <p><code>embed</code> 是<em>批量</em>操作：接收 N 段文本，返回 N 个向量，<strong>顺序相同</strong>。顺序是输入与向量之间唯一的联系，这就是更短的响应不可接受的原因——第 i 个向量最终会属于另一个句子，索引会悄无声息地出错，症状出现在<em>搜索</em>中，几周之后，远离原因。</p>
@@ -270,7 +270,7 @@
 <li class=""><strong>位置：</strong> <code>apps/api/src/application/ports/llm-provider.port.ts:61</code>,
 <code>apps/api/src/infrastructure/llm/embedding-result.ts:26</code></li>
 <li class=""><strong>测试：</strong> <code>test/contract/llm-provider.contract.ts</code>（五个用例，针对每个声明该能力的提供方运行）</li>
-<li class=""><strong>来源：</strong> <a href=/brabo/dev/zh-Hans/adr/0075-embeddings-no-contrato-de-llm-provider target=_blank rel="noopener noreferrer" class="">ADR 0075</a></li>
+<li class=""><strong>来源：</strong> <a class="" href=/brabo/dev/zh-Hans/adr/0075-embeddings-no-contrato-de-llm-provider>ADR 0075</a></li>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rn-190>RN-190 — embedding 的能力有两层，模型那一层是互斥<a href=#rn-190 class=hash-link aria-label="RN-190 — embedding 的能力有两层，模型那一层是互斥的直接链接" title="RN-190 — embedding 的能力有两层，模型那一层是互斥的直接链接" translate=no>​</a></h3>
 <p>与 tool calling（<a href=#rn-040 class="">RN-040</a>）一样，能力有两层：<em>提供方</em>（<code>capabilities.embeddings</code>，上限）和<em>模型</em>（目录行中的 <code>supportsEmbeddings</code>）。两种情形的区别正是这条规则要断言的：</p>
@@ -280,19 +280,19 @@
 embeddings"）证明了这一点。</li>
 </ul>
 <p><code>assertCanEmbed</code> 按最利于失败的顺序检查两者：先检查提供方，因为换模型修不好一个不做 embedding 的提供方。<strong>没有声明</strong>的模型也会被拒绝，消息不同——缺失意味着"提供方没说"
-（<a href=/brabo/dev/zh-Hans/adr/0041-base-openai-compativel-e-contrato-de-llm-providers target=_blank rel="noopener noreferrer" class="">ADR 0041</a>），绝不是许可，读者应该做的是同步目录而不是换模型。禁止根据模型<em>名称</em>推断能力：那是穿着数据外衣的猜测。</p>
+（<a class="" href=/brabo/dev/zh-Hans/adr/0041-base-openai-compativel-e-contrato-de-llm-providers>ADR 0041</a>），绝不是许可，读者应该做的是同步目录而不是换模型。禁止根据模型<em>名称</em>推断能力：那是穿着数据外衣的猜测。</p>
 <ul>
 <li class=""><strong>位置：</strong> <code>apps/api/src/domain/llm/embedding-capability.ts:64</code>,
 <code>apps/api/src/infrastructure/llm/ollama-provider.ts:319</code></li>
 <li class=""><strong>测试：</strong> <code>test/domain/llm/embedding-capability.spec.ts</code>,
 <code>test/infrastructure/llm/ollama-provider.spec.ts</code></li>
-<li class=""><strong>来源：</strong> <a href=/brabo/dev/zh-Hans/adr/0075-embeddings-no-contrato-de-llm-provider target=_blank rel="noopener noreferrer" class="">ADR 0075</a></li>
+<li class=""><strong>来源：</strong> <a class="" href=/brabo/dev/zh-Hans/adr/0075-embeddings-no-contrato-de-llm-provider>ADR 0075</a></li>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rn-191>RN-191 — <code>embeddings: true</code> 需要实际运行，而不是文档<a href=#rn-191 class=hash-link aria-label=rn-191的直接链接 title=rn-191的直接链接 translate=no>​</a></h3>
-<p>本项目的规则（<a href=/brabo/dev/zh-Hans/adr/0041-base-openai-compativel-e-contrato-de-llm-providers target=_blank rel="noopener noreferrer" class="">ADR 0041</a>/<a href=/brabo/dev/zh-Hans/adr/0043-seis-providers-de-llm-e-o-fechamento-da-fase-9b target=_blank rel="noopener noreferrer" class="">ADR 0043</a>）应用于新能力：<strong>只有 <code>ollama</code> 声明 <code>true</code></strong>，证明是针对真实 daemon 0.32.1 使用 <code>nomic-embed-text</code> 运行的 <code>POST /api/embed</code>——两个输入，两个 768 维向量，<code>prompt_eval_count: 10</code>。</p>
+<p>本项目的规则（<a class="" href=/brabo/dev/zh-Hans/adr/0041-base-openai-compativel-e-contrato-de-llm-providers>ADR 0041</a>/<a class="" href=/brabo/dev/zh-Hans/adr/0043-seis-providers-de-llm-e-o-fechamento-da-fase-9b>ADR 0043</a>）应用于新能力：<strong>只有 <code>ollama</code> 声明 <code>true</code></strong>，证明是针对真实 daemon 0.32.1 使用 <code>nomic-embed-text</code> 运行的 <code>POST /api/embed</code>——两个输入，两个 768 维向量，<code>prompt_eval_count: 10</code>。</p>
 <p>其他八个声明 <code>false</code>，出于两个不同的原因：</p>
 <ul>
-<li class=""><strong>缺乏证明</strong>（七个）：环境中没有它们的密钥，唯一运行过的付费 smoke 测试（<a href=/brabo/dev/zh-Hans/explanation/aceite-providers target=_blank rel="noopener noreferrer" class="">验收</a>）是<em>聊天</em>——在 hub 中，embedding 路由到与聊天不同的提供方，一个端点的证明不是另一个的证明；</li>
+<li class=""><strong>缺乏证明</strong>（七个）：环境中没有它们的密钥，唯一运行过的付费 smoke 测试（<a class="" href=/brabo/dev/zh-Hans/explanation/aceite-providers>验收</a>）是<em>聊天</em>——在 hub 中，embedding 路由到与聊天不同的提供方，一个端点的证明不是另一个的证明；</li>
 <li class=""><strong>操作缺失</strong>（Anthropic）：没有专门的 embedding 端点，其文档指向一个第三方，那是另一个提供方，另一个密钥，另一种方言。</li>
 </ul>
 <p>OpenAI 兼容基类的<em>方言</em>单独证明，契约套件在打开能力的情况下对它再运行一次。正是这一点让某个提供方在它的密钥出现的那天变为 <code>true</code> 变得廉价：改字面量中的一行，解析已经被演练过。声明 <code>false</code> 却仍然暴露该方法的提供方会在接触网络之前<strong>拒绝调用</strong>。</p>
@@ -303,7 +303,7 @@ embeddings"）证明了这一点。</li>
 <code>test/infrastructure/llm/openai-compatible-provider.contract.spec.ts</code>,
 <code>test/infrastructure/llm/ollama-provider.embeddings.smoke.spec.ts</code>
 （手动，针对真实 daemon）</li>
-<li class=""><strong>来源：</strong> <a href=/brabo/dev/zh-Hans/adr/0075-embeddings-no-contrato-de-llm-provider target=_blank rel="noopener noreferrer" class="">ADR 0075</a></li>
+<li class=""><strong>来源：</strong> <a class="" href=/brabo/dev/zh-Hans/adr/0075-embeddings-no-contrato-de-llm-provider>ADR 0075</a></li>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rn-045>RN-045 — 被采纳的仓库只能由已批准的计划修改<a href=#rn-045 class=hash-link aria-label="RN-045 — 被采纳的仓库只能由已批准的计划修改的直接链接" title="RN-045 — 被采纳的仓库只能由已批准的计划修改的直接链接" translate=no>​</a></h3>
 <p>采纳现有仓库<strong>只诊断不行动</strong>。采纳校验访问（<code>getRepo</code>），写入项目的行，并产生一个<strong>计划</strong>：bootstrap 将要做的事情的序列化列表，通过调用每个步骤的 <code>check()</code> 获得——与自 <a class="" href=/brabo/dev/zh-Hans/business-rules#rn-029>RN-029</a> 起提供幂等性的是同一个——而从不执行相应的变更。</p>
@@ -317,14 +317,14 @@ embeddings"）证明了这一点。</li>
 <p>对重新生成的计划作出决定会被拒绝（409）：决定携带用户看到的 <code>planGeneratedAt</code>，对另一件事说的"是"不算数。</p>
 <p>正常的部署流程拒绝（409）在被采纳的仓库中运行——没有这道防护，恢复路径会在没有任何计划的情况下对第三方仓库运行 bootstrap。</p>
 <p>**已知限制：**这里的"保护不一致"是有 × 无，因为契约只暴露这么多（<code>GitBranch.protected</code> 是布尔值，而
-<a href=/brabo/dev/zh-Hans/adr/0028-protecao-de-branch-divergencia-entre-providers target=_blank rel="noopener noreferrer" class="">ADR 0028</a> 推迟了规范化的 <code>ProtectionPolicy</code>）。<em>部分</em>保护的分支被算作"未保护"，可能被覆盖——但只在已批准的计划之内。</p>
+<a class="" href=/brabo/dev/zh-Hans/adr/0028-protecao-de-branch-divergencia-entre-providers>ADR 0028</a> 推迟了规范化的 <code>ProtectionPolicy</code>）。<em>部分</em>保护的分支被算作"未保护"，可能被覆盖——但只在已批准的计划之内。</p>
 <ul>
 <li class=""><strong>位置：</strong> <code>apps/api/src/application/use-cases/git/decide-bootstrap-plan.use-case.ts</code>,
 <code>apps/api/src/application/use-cases/git/bootstrap-plan.ts</code>,
 <code>apps/api/src/application/use-cases/git/bootstrap-steps.ts:112</code></li>
 <li class=""><strong>测试：</strong> <code>test/application/use-cases/git/decide-bootstrap-plan.use-case.spec.ts</code>,
 <code>test/application/use-cases/git/bootstrap-plan.spec.ts</code></li>
-<li class=""><strong>来源：</strong> <a href=/brabo/dev/zh-Hans/adr/0044-adocao-de-repositorio-existente target=_blank rel="noopener noreferrer" class="">ADR 0044</a></li>
+<li class=""><strong>来源：</strong> <a class="" href=/brabo/dev/zh-Hans/adr/0044-adocao-de-repositorio-existente>ADR 0044</a></li>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rn-046>RN-046 — 每个项目仓库都声明其来源<a href=#rn-046 class=hash-link aria-label="RN-046 — 每个项目仓库都声明其来源的直接链接" title="RN-046 — 每个项目仓库都声明其来源的直接链接" translate=no>​</a></h3>
 <p><code>project_repositories.origin</code> 和 <code>repo_bootstraps.origin</code> 说明 Brabo 是<strong>创建</strong>了仓库（<code>created</code>）还是<strong>采纳</strong>了一个已存在的（<code>adopted</code>）。来源由写入该行的一方显式写入——而不是列的默认值——之后不再改变。</p>
@@ -335,7 +335,7 @@ embeddings"）证明了这一点。</li>
 <li class=""><strong>位置：</strong> <code>apps/api/src/db/schema/git.ts</code>, <code>apps/api/src/db/migrations/0031_special_winter_soldier.sql</code>,
 <code>apps/api/src/domain/git/repo-bootstrap.entity.ts</code></li>
 <li class=""><strong>测试：</strong> <code>test/application/use-cases/git/adopt-repository.use-case.spec.ts</code></li>
-<li class=""><strong>来源：</strong> <a href=/brabo/dev/zh-Hans/adr/0044-adocao-de-repositorio-existente target=_blank rel="noopener noreferrer" class="">ADR 0044</a></li>
+<li class=""><strong>来源：</strong> <a class="" href=/brabo/dev/zh-Hans/adr/0044-adocao-de-repositorio-existente>ADR 0044</a></li>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rn-047>RN-047 — dev agent 的熔断器：连续 N 次阻塞让它停下，而不在循环中烧掉预算<a href=#rn-047 class=hash-link aria-label="RN-047 — dev agent 的熔断器：连续 N 次阻塞让它停下，而不在循环中烧掉预算的直接链接" title="RN-047 — dev agent 的熔断器：连续 N 次阻塞让它停下，而不在循环中烧掉预算的直接链接" translate=no>​</a></h3>
 <p>每个 dev agent 维护一个计数器（<code>dev_agent_states.consecutive_blocked</code>），记录有多少个任务连续以 <code>blocked</code> <em>结束</em>——在本地（ToolLoop 中）或远程（gate 的修正次数上限用尽）。达到按项目设置的上限（<code>max_consecutive_blocked</code>，默认 3）时，agent 停在 <code>idle_tripped</code>，<strong>不再尝试领取下一个任务</strong>。一个获得批准的终止结果会把计数器归零；单独一个被阻塞的任务走正常流程（带诊断退回，可供人解除阻塞）——熔断器处理的是<em>序列</em>，而不是任务。</p>
@@ -349,7 +349,7 @@ embeddings"）证明了这一点。</li>
 <li class=""><strong>测试：</strong> <code>apps/engine/test/engine/dev/dev_agent_server_test.exs</code>
 （describe <code>circuit breaker</code>），<code>apps/engine/test/engine/dev/dev_rehydrator_test.exs</code>
 （describe <code>the four rehydrated states</code>），<code>test/application/use-cases/execution/rearm-dev-agent.use-case.spec.ts</code></li>
-<li class=""><strong>来源：</strong> <a href=/brabo/dev/zh-Hans/adr/0045-reagendamento-por-evento-do-dev-agent target=_blank rel="noopener noreferrer" class="">ADR 0045</a></li>
+<li class=""><strong>来源：</strong> <a class="" href=/brabo/dev/zh-Hans/adr/0045-reagendamento-por-evento-do-dev-agent>ADR 0045</a></li>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rn-053>RN-053 — 重新激活执行会唤醒停下的 agent，在已存在的会话之内<a href=#rn-053 class=hash-link aria-label="RN-053 — 重新激活执行会唤醒停下的 agent，在已存在的会话之内的直接链接" title="RN-053 — 重新激活执行会唤醒停下的 agent，在已存在的会话之内的直接链接" translate=no>​</a></h3>
 <p>激活一个<strong>已经在执行</strong>的项目的执行，是重新激活，而不是从零开始：它落入当前的执行会话，并唤醒停下的 agent。分两部分，系统两侧各一部分。</p>
@@ -391,7 +391,7 @@ embeddings"）证明了这一点。</li>
 <code>apps/engine/test/engine_web/controllers/execution_command_controller_test.exs</code>
 （describe <code>reactivation</code>）</li>
 <li class=""><strong>来源：</strong>
-<a href=/brabo/dev/zh-Hans/explanation/primeiro-dogfooding target=_blank rel="noopener noreferrer" class="">第一次 dogfooding</a> 的发现 #11</li>
+<a class="" href=/brabo/dev/zh-Hans/explanation/primeiro-dogfooding>第一次 dogfooding</a> 的发现 #11</li>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rn-048>RN-048 — story 的晋升默认由用户进行；模式改变谁来触发，从不改变校验什么<a href=#rn-048 class=hash-link aria-label="RN-048 — story 的晋升默认由用户进行；模式改变谁来触发，从不改变校验什么的直接链接" title="RN-048 — story 的晋升默认由用户进行；模式改变谁来触发，从不改变校验什么的直接链接" translate=no>​</a></h3>
 <p><code>projects.story_promotion</code> 选择<em>谁</em>把 story 从 <code>draft</code> 晋升为
@@ -420,7 +420,7 @@ embeddings"）证明了这一点。</li>
 <code>test/application/use-cases/backlog/promote-stories.use-case.spec.ts</code>,
 <code>test/application/use-cases/backlog/return-story.use-case.spec.ts</code>,
 <code>apps/engine/test/engine/agents/po_server_test.exs</code>（describe <code>revise/2</code>）</li>
-<li class=""><strong>来源：</strong> <a href=/brabo/dev/zh-Hans/adr/0046-promocao-de-story-com-autoridade-do-usuario target=_blank rel="noopener noreferrer" class="">ADR 0046</a></li>
+<li class=""><strong>来源：</strong> <a class="" href=/brabo/dev/zh-Hans/adr/0046-promocao-de-story-com-autoridade-do-usuario>ADR 0046</a></li>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rn-049>RN-049 — 对提议动作的每一个决定都留在事件日志中，并带有决定者<a href=#rn-049 class=hash-link aria-label="RN-049 — 对提议动作的每一个决定都留在事件日志中，并带有决定者的直接链接" title="RN-049 — 对提议动作的每一个决定都留在事件日志中，并带有决定者的直接链接" translate=no>​</a></h3>
 <p><code>proposed_action.created</code>、<code>.approved</code> 和 <code>.denied</code> 是 <code>session_events</code> 中的领域事件，此外还有把它们带到 engine 的 outbox 行。outbox <strong>不是</strong>记忆：它被排空，标记 <code>processed_at</code>，然后被修剪。</p>
@@ -432,7 +432,7 @@ embeddings"）证明了这一点。</li>
 <code>.../approve-action.use-case.ts</code>, <code>.../deny-action.use-case.ts</code></li>
 <li class=""><strong>测试：</strong> <code>test/application/use-cases/actions/approve-deny-action.use-case.spec.ts</code>
 （describe <code>the decision in the event log</code>）</li>
-<li class=""><strong>来源：</strong> <a href=/brabo/dev/zh-Hans/adr/0048-decisao-no-log-e-a-ordem-do-gate target=_blank rel="noopener noreferrer" class="">ADR 0048</a></li>
+<li class=""><strong>来源：</strong> <a class="" href=/brabo/dev/zh-Hans/adr/0048-decisao-no-log-e-a-ordem-do-gate>ADR 0048</a></li>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rn-050>RN-050 — 没有打开的 PR，就不打开任何 gate<a href=#rn-050 class=hash-link aria-label="RN-050 — 没有打开的 PR，就不打开任何 gate的直接链接" title="RN-050 — 没有打开的 PR，就不打开任何 gate的直接链接" translate=no>​</a></h3>
 <p>dev agent 提议 commit、push 和 PR，并<strong>读取每一项的结果</strong>。只有三项都执行了，它才打开 gate。如果有一项停在 <code>pending</code>——agent 的自主权处于 <code>require_approval</code>——它进入 <code>awaiting_approval</code>，<strong>持有 worktree</strong>，不打开任何 gate。</p>
@@ -448,7 +448,7 @@ embeddings"）证明了这一点。</li>
 (<code>settlePrOpen</code>)</li>
 <li class=""><strong>测试：</strong> <code>apps/engine/test/engine/dev/dev_agent_server_test.exs</code>
 （describe <code>pending approval doesn't open a gate</code>）</li>
-<li class=""><strong>来源：</strong> <a href=/brabo/dev/zh-Hans/adr/0048-decisao-no-log-e-a-ordem-do-gate target=_blank rel="noopener noreferrer" class="">ADR 0048</a></li>
+<li class=""><strong>来源：</strong> <a class="" href=/brabo/dev/zh-Hans/adr/0048-decisao-no-log-e-a-ordem-do-gate>ADR 0048</a></li>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rn-051>RN-051 — 手工输入的价格胜过提供方的目录<a href=#rn-051 class=hash-link aria-label="RN-051 — 手工输入的价格胜过提供方的目录的直接链接" title="RN-051 — 手工输入的价格胜过提供方的目录的直接链接" translate=no>​</a></h3>
 <p><code>manual_pricing = true</code> 的 <code>models</code> 行有一个数字，是有人在阅读提供方文档之后输入的。目录同步<strong>不会碰它</strong>——即使远程目录带有自己的价格也一样。schema 一直是这么说的（"同步价格的一方<em>不能</em>在没有显式决定的情况下覆盖此处标记的行"），而代码没有这样做：只要远程带有价格，它总是胜出，下一次同步会撤销那个修正了错误数字的人所做的更正。</p>
@@ -460,7 +460,7 @@ embeddings"）证明了这一点。</li>
 （<code>resolverPreco</code>），<code>apps/api/src/db/schema/llm.ts:137</code></li>
 <li class=""><strong>测试：</strong> <code>test/application/use-cases/llm/sync-model-catalog.use-case.spec.ts</code>
 (<code>manually typed price beats a catalog that REPORTS a price</code>)</li>
-<li class=""><strong>来源：</strong> <a href=/brabo/dev/zh-Hans/adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel target=_blank rel="noopener noreferrer" class="">ADR 0042</a></li>
+<li class=""><strong>来源：</strong> <a class="" href=/brabo/dev/zh-Hans/adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel>ADR 0042</a></li>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rn-052>RN-052 — 模型策展只在作出决定的 workspace 中有效<a href=#rn-052 class=hash-link aria-label="RN-052 — 模型策展只在作出决定的 workspace 中有效的直接链接" title="RN-052 — 模型策展只在作出决定的 workspace 中有效的直接链接" translate=no>​</a></h3>
 <p>在选择器中打开或关闭一个模型，是<em>那个 workspace</em> 的决定，不会波及邻居。目录本身仍然是全局的——名称、价格、窗口和能力是提供方的事实，对所有人都一样，按 workspace 复制它们会对同一个模型产生 N 个真相，还会把 <code>token_usage.model_id</code> 劈成两半。</p>
@@ -478,7 +478,7 @@ embeddings"）证明了这一点。</li>
 (<code>workspaceDoEscopo</code>)</li>
 <li class=""><strong>测试：</strong> <code>test/application/use-cases/llm/set-models-active.use-case.spec.ts</code>
 (<code>activating in one workspace does NOT turn on the model in its neighbor</code>)</li>
-<li class=""><strong>来源：</strong> <a href=/brabo/dev/zh-Hans/adr/0049-curadoria-de-modelo-por-workspace target=_blank rel="noopener noreferrer" class="">ADR 0049</a></li>
+<li class=""><strong>来源：</strong> <a class="" href=/brabo/dev/zh-Hans/adr/0049-curadoria-de-modelo-por-workspace>ADR 0049</a></li>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rn-061>RN-061 — <em>工具</em>失败也是事件，并回到模型<a href=#rn-061 class=hash-link aria-label=rn-061的直接链接 title=rn-061的直接链接 translate=no>​</a></h3>
 <p>工具调用的结果从不被丢弃。它在事件日志中成为 <code>tool.result</code>（<code>ok</code>，失败时还有 <code>erro</code>），agent 在消息流中<strong>说出</strong>发生了什么，原因以 <code>tool</code> 角色<strong>回到模型</strong>——让它在下一回合修正并重新发出。工具错误是循环的输入，而不是终点。</p>
@@ -558,7 +558,7 @@ vinculadas a módulos com sucesso"*。由于执行会<strong>为每个模块启�
 <code>toolloop.limit_reached {iteration: 8, max_iterations: 8}</code>，任务因"达到迭代上限"而被阻塞，一行都没写——而用户给出的批准在循环耗尽之后才到达。</p>
 <p>放开读取并不放松流水线，测试断言的正是这一点：<code>deny</code> 胜过 <code>allow</code>，<code>BUILTIN_DENY_PATTERNS</code> 仍然有效，匹配按 <em>TOKEN</em> 前缀进行（允许的 <code>ls</code> 不允许 <code>lsof</code>），复合命令要求<em>每个</em>段都匹配——<code>ls && rm -rf /</code> 不会因为 <code>ls</code> 而通过。</p>
 <p>允许列表是缓解，不是解决方案：它是预期命令的列表，而模型会发明命令。结构性的修正——agent <em>等待</em>决定，而不是烧掉迭代——见
-<a href=/brabo/dev/zh-Hans/adr/0052-dev-agent-espera-aprovacao-no-meio-do-laco target=_blank rel="noopener noreferrer" class="">ADR 0052</a>。</p>
+<a class="" href=/brabo/dev/zh-Hans/adr/0052-dev-agent-espera-aprovacao-no-meio-do-laco>ADR 0052</a>。</p>
 <ul>
 <li class=""><strong>位置：</strong> <code>apps/api/src/domain/actions/dev-terminal-patterns.ts</code>，
 由 <code>application/use-cases/execution/activate-execution.use-case.ts</code> 植入</li>
@@ -652,7 +652,7 @@ vinculadas a módulos com sucesso"*。由于执行会<strong>为每个模块启�
 <p>当 binding 级联落在 <strong>workspace</strong> 的默认值上——也就是说，没有人为这个项目决定任何东西——继承的模型是 <strong>Criativo</strong> agent 的，而不是全局默认值。</p>
 <p>Criativo agent 始终是项目的入口：第一次对话就是与它进行的，它的 binding 代表"这个项目用来思考的模型"。</p>
 <p>继承只填补<strong>空缺</strong>，从不覆盖：会话、agent 或项目的 binding 是某个人的显式选择，继续胜出。这就是为什么它是级联<em>之后</em>的一步，而不是级联之内的新范围——它不争夺优先级。继承的模型经过同样的过滤：从目录中消失或没有 tool calling 意味着不被继承，理由与级联跳过它们相同（<a href=#rn-043 class="">RN-043</a>）。</p>
-<p>这修复的是：workspace 的默认值是全局的，往往是一个小的本地模型。新会话和 dev agent——它们没有自己的 binding——会诞生在它上面，而 <a href=/brabo/dev/zh-Hans/adr/0020-destravar-gates-qa-secops target=_blank rel="noopener noreferrer" class="">ADR 0020</a> 禁止在语义步骤中使用小的本地模型。在一次真实执行中，必须在每个打开的会话中手动更换模型，三个 dev agent 在没有任何人要求的情况下运行在
+<p>这修复的是：workspace 的默认值是全局的，往往是一个小的本地模型。新会话和 dev agent——它们没有自己的 binding——会诞生在它上面，而 <a class="" href=/brabo/dev/zh-Hans/adr/0020-destravar-gates-qa-secops>ADR 0020</a> 禁止在语义步骤中使用小的本地模型。在一次真实执行中，必须在每个打开的会话中手动更换模型，三个 dev agent 在没有任何人要求的情况下运行在
 <code>llama3.2:1b</code> 上。</p>
 <ul>
 <li class=""><strong>位置：</strong> <code>apps/api/src/domain/llm/binding-resolver.ts</code>
@@ -682,7 +682,7 @@ vinculadas a módulos com sucesso"*。由于执行会<strong>为每个模块启�
 （<code>pending action STOPS the agent</code>；<code>approved: resumes the loop with the REAL output</code>；<code>restart during the wait BLOCKS the task</code>）和
 <code>apps/engine/test/engine/dev/wake_do_outbox_ao_agente_test.exs</code>，它走完整条链——outbox、drain、队列和进程——因为逐环节的测试在投递损坏时全都是绿的；聚合在 api 一侧锁定于
 <code>apps/api/test/application/use-cases/actions/approve-deny-action.use-case.spec.ts</code></li>
-<li class=""><strong>来源：</strong> <a href=/brabo/dev/zh-Hans/adr/0052-dev-agent-espera-aprovacao-no-meio-do-laco target=_blank rel="noopener noreferrer" class="">ADR 0052</a>，
+<li class=""><strong>来源：</strong> <a class="" href=/brabo/dev/zh-Hans/adr/0052-dev-agent-espera-aprovacao-no-meio-do-laco>ADR 0052</a>，
 分诊的阶段 A</li>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rn-135>RN-135 — 激活执行会关闭发起请求的<em>聊天</em>会话<a href=#rn-135 class=hash-link aria-label=rn-135的直接链接 title=rn-135的直接链接 translate=no>​</a></h3>
@@ -706,7 +706,7 @@ describe <code>fecha a sessão de origem (RN-135)</code>——没有待定时关
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rn-074>RN-074 — 终端输出有字节上限<a href=#rn-074 class=hash-link aria-label="RN-074 — 终端输出有字节上限的直接链接" title="RN-074 — 终端输出有字节上限的直接链接" translate=no>​</a></h3>
 <p>命令的输出在成为工具结果之前被截断到 <code>TERMINAL_OUTPUT_MAX_BYTES</code>（默认 32 KiB），截断会留下一个<strong>标记</strong>，说明两个大小以及该怎么做：</p>
-<div class="language-text codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-text codeBlock_mqej thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_uNqR><div class=token-line style=color:#F8F8F2><span class="token plain">[saída truncada: 32768 de 1048576 bytes. Refine o comando (head, grep,</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">-maxdepth) para ver o que falta.]</span><br/></div></code></pre></div></div>
+<div class="language-text codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:var(--syntax-text);--prism-background-color:var(--code-bg)><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-text codeBlock_mqej thin-scrollbar" style=color:var(--syntax-text);background-color:var(--code-bg)><code class=codeBlockLines_uNqR><div class=token-line style=color:var(--syntax-text)><span class="token plain">[saída truncada: 32768 de 1048576 bytes. Refine o comando (head, grep,</span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">-maxdepth) para ver o que falta.]</span><br/></div></code></pre></div></div>
 <p>测试锁定的三个性质：</p>
 <ul>
 <li class=""><strong>上限是 <code>></code>，不是 <code>>=</code>。</strong> 恰好等于限制的输出原样通过——标记它会让模型去细化一个已经给出全部内容的命令。</li>
@@ -721,8 +721,8 @@ describe <code>fecha a sessão de origem (RN-135)</code>——没有待定时关
 <li class=""><strong>测试：</strong> <code>apps/engine/test/engine/actions/terminal_executor_test.exs</code>
 （describe <code>teto de bytes da saída</code>）</li>
 <li class=""><strong>来源：</strong>
-<a href=/brabo/dev/zh-Hans/explanation/achados-execucao-real target=_blank rel="noopener noreferrer" class="">achados-execucao-real.md</a> 的发现 S，
-<a href=/brabo/dev/zh-Hans/explanation/backlog target=_blank rel="noopener noreferrer" class="">backlog</a> 的 Fase F</li>
+<a class="" href=/brabo/dev/zh-Hans/explanation/achados-execucao-real>achados-execucao-real.md</a> 的发现 S，
+<a class="" href=/brabo/dev/zh-Hans/explanation/backlog>backlog</a> 的 Fase F</li>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rn-075>RN-075 — 终端命令按其触及之处评估，而不只是按动词<a href=#rn-075 class=hash-link aria-label="RN-075 — 终端命令按其触及之处评估，而不只是按动词的直接链接" title="RN-075 — 终端命令按其触及之处评估，而不只是按动词的直接链接" translate=no>​</a></h3>
 <p>项目文件夹（<code>&lt;PROJECT_WORKSPACES_ROOT>/&lt;workspace_dir_name></code>——在 <a class="" href=/brabo/dev/zh-Hans/business-rules/autenticacao#rn-109>RN-109</a> 之前的项目中是纯 UUID，在新项目中是 <code>&lt;slug>-&lt;id 的 8 个字符></code>）是<strong>范围</strong>。
@@ -748,8 +748,8 @@ describe <code>fecha a sessão de origem (RN-135)</code>——没有待定时关
 <li class=""><strong>测试：</strong> <code>apps/api/test/domain/actions/path-scope.spec.ts</code> 和
 <code>apps/api/test/domain/actions/decide.spec.ts</code>
 （describe <code>decide — escopo de caminho</code>）</li>
-<li class=""><strong>来源：</strong> <a href=/brabo/dev/zh-Hans/adr/0055-escopo-de-caminho-na-politica-de-terminal target=_blank rel="noopener noreferrer" class="">ADR 0055</a>，
-发现 U，<a href=/brabo/dev/zh-Hans/explanation/backlog target=_blank rel="noopener noreferrer" class="">backlog</a> 的 Fase F</li>
+<li class=""><strong>来源：</strong> <a class="" href=/brabo/dev/zh-Hans/adr/0055-escopo-de-caminho-na-politica-de-terminal>ADR 0055</a>，
+发现 U，<a class="" href=/brabo/dev/zh-Hans/explanation/backlog>backlog</a> 的 Fase F</li>
 </ul>
 <p>范围只有在其自身位于根目录之内时才有效——保证这一点的是 <a href=#rn-092 class="">RN-092</a>。</p>
 <h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rn-092>RN-092 — <code>projectId</code> 是路径段，范围永远不离开根目录<a href=#rn-092 class=hash-link aria-label=rn-092的直接链接 title=rn-092的直接链接 translate=no>​</a></h3>
@@ -765,7 +765,7 @@ describe <code>fecha a sessão de origem (RN-135)</code>——没有待定时关
 <li class=""><strong>位置：</strong> <code>apps/api/src/infrastructure/filesystem/project-workspaces-root.ts</code>
 (<code>projectScopeRoot</code>)</li>
 <li class=""><strong>测试：</strong> <code>apps/api/test/infrastructure/filesystem/project-workspaces-root.spec.ts</code></li>
-<li class=""><strong>来源：</strong> <a href=/brabo/dev/zh-Hans/adr/0058-csp-fechado-na-api-e-escopo-de-projeto-contido target=_blank rel="noopener noreferrer" class="">ADR 0058</a>，
+<li class=""><strong>来源：</strong> <a class="" href=/brabo/dev/zh-Hans/adr/0058-csp-fechado-na-api-e-escopo-de-projeto-contido>ADR 0058</a>，
 CodeQL 的 <code>js/path-injection</code> 警报</li>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rn-095>RN-095 — 仓库读取被限制在项目内并有上限<a href=#rn-095 class=hash-link aria-label="RN-095 — 仓库读取被限制在项目内并有上限的直接链接" title="RN-095 — 仓库读取被限制在项目内并有上限的直接链接" translate=no>​</a></h3>
@@ -794,7 +794,7 @@ CodeQL 的 <code>js/path-injection</code> 警报</li>
 （恶意路径在三条路由上于调用提供方<strong>之前</strong>被拒绝，以及三个预算各自让搜索停下），
 <code>apps/api/test/domain/git/git-read-cache.spec.ts</code></li>
 <li class=""><strong>来源：</strong> FASE 26b，16–26 计划的第 34 项；约束扩展了
-<a href=#rn-092 class="">RN-092</a>（<a href=/brabo/dev/zh-Hans/adr/0058-csp-fechado-na-api-e-escopo-de-projeto-contido target=_blank rel="noopener noreferrer" class="">ADR 0058</a>）</li>
+<a href=#rn-092 class="">RN-092</a>（<a class="" href=/brabo/dev/zh-Hans/adr/0058-csp-fechado-na-api-e-escopo-de-projeto-contido>ADR 0058</a>）</li>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rn-127>RN-127 — 代码标签页的 <code>ref</code>/<code>path</code> 拒绝以<em>数组</em>形式到达，而不只是拒绝范围之外的路径<a href=#rn-127 class=hash-link aria-label=rn-127的直接链接 title=rn-127的直接链接 translate=no>​</a></h3>
 <p><code>@Query('ref') ref?: string</code> 和 <code>@Query('path') path?: string</code>
@@ -825,10 +825,10 @@ CodeQL 的 <code>js/path-injection</code> 警报</li>
 <li class=""><strong>位置：</strong> <code>apps/api/src/infrastructure/security/oauth-state-secret.ts</code>
 （<code>resolveOauthStateSecret</code>），在 <code>apps/api/src/main.ts</code> 启动时调用</li>
 <li class=""><strong>测试：</strong> <code>apps/api/test/infrastructure/security/oauth-state-secret.spec.ts</code></li>
-<li class=""><strong>来源：</strong> <a href=/brabo/dev/zh-Hans/adr/0059-segredo-do-state-de-oauth-sem-default target=_blank rel="noopener noreferrer" class="">ADR 0059</a></li>
+<li class=""><strong>来源：</strong> <a class="" href=/brabo/dev/zh-Hans/adr/0059-segredo-do-state-de-oauth-sem-default>ADR 0059</a></li>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rn-114>RN-114 — <code>GIT_OAUTH_STATE_SECRET</code> 的四个姊妹秘密在生产环境中同样不会以示例值启动<a href=#rn-114 class=hash-link aria-label=rn-114的直接链接 title=rn-114的直接链接 translate=no>​</a></h3>
-<p><a href=/brabo/dev/zh-Hans/adr/0059-segredo-do-state-de-oauth-sem-default target=_blank rel="noopener noreferrer" class="">ADR 0059</a> 为 <code>GIT_OAUTH_STATE_SECRET</code> 关闭了这个模式，并明确保留了同一失败模式适用于四个姊妹秘密这一开放问题，它们在 <code>docker-compose.prod.yml</code> 中都有开发默认值：<code>AUTH_JWT_SECRET</code>、
+<p><a class="" href=/brabo/dev/zh-Hans/adr/0059-segredo-do-state-de-oauth-sem-default>ADR 0059</a> 为 <code>GIT_OAUTH_STATE_SECRET</code> 关闭了这个模式，并明确保留了同一失败模式适用于四个姊妹秘密这一开放问题，它们在 <code>docker-compose.prod.yml</code> 中都有开发默认值：<code>AUTH_JWT_SECRET</code>、
 <code>BRABO_SERVICE_TOKEN</code>、<code>CREDENTIALS_MASTER_KEY</code> 和 <code>SECRET_KEY_BASE</code>。这条 RN 关闭了这四个，完全复制同一条规则——这不是新的决定，而是把同一决定应用于姊妹们。</p>
 <p>在生产环境（<code>NODE_ENV === 'production'</code>）中，当变量缺失/只有空格、等于仓库的示例字面量（它是公开的——在 <code>.env.example</code> 中）或少于 16 个字符时，每个解析器都<strong>使启动失败</strong>。在生产环境之外，开发默认值继续有效，因为没有 <code>.env</code> 的 <code>docker compose up</code> 必须能工作。</p>
 <ul>
@@ -853,7 +853,7 @@ CodeQL 的 <code>js/path-injection</code> 警报</li>
 <code>apps/api/test/infrastructure/security/service-token.spec.ts</code> 以及
 <code>apps/api/test/infrastructure/security/envelope-encryption.service.spec.ts</code> 中的 describe
 <code>validação de produção</code></li>
-<li class=""><strong>来源：</strong> <a href=/brabo/dev/zh-Hans/adr/0059-segredo-do-state-de-oauth-sem-default target=_blank rel="noopener noreferrer" class="">ADR 0059</a></li>
+<li class=""><strong>来源：</strong> <a class="" href=/brabo/dev/zh-Hans/adr/0059-segredo-do-state-de-oauth-sem-default>ADR 0059</a></li>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rn-076>RN-076 — git 凭据从不写入文件<a href=#rn-076 class=hash-link aria-label="RN-076 — git 凭据从不写入文件的直接链接" title="RN-076 — git 凭据从不写入文件的直接链接" translate=no>​</a></h3>
 <p>engine 在远程仓库上工作，方式是向 api 请求<strong>工作远程</strong>（<code>GET /internal/projects/:projectId/git-remote</code>），后者返回<strong>干净的</strong>来源，并单独返回 owner 的 token。token 通过<strong>子进程的环境</strong>进入 git 调用，别无他处：</p>
@@ -873,11 +873,11 @@ CodeQL 的 <code>js/path-injection</code> 警报</li>
 <li class=""><strong>测试：</strong> <code>apps/engine/test/engine/actions/git_auth_test.exs</code>（token 不出现在 argv 中，也不在 helper 中）和
 <code>apps/api/test/application/use-cases/git/get-project-git-remote.use-case.spec.ts</code>
 （返回的来源不包含 token，也不包含 <code>@</code>）</li>
-<li class=""><strong>来源：</strong> <a href=/brabo/dev/zh-Hans/adr/0056-o-engine-trabalha-em-repositorio-remoto target=_blank rel="noopener noreferrer" class="">ADR 0056</a>，
-发现 N，<a href=/brabo/dev/zh-Hans/explanation/backlog target=_blank rel="noopener noreferrer" class="">backlog</a> 的 Fase B</li>
+<li class=""><strong>来源：</strong> <a class="" href=/brabo/dev/zh-Hans/adr/0056-o-engine-trabalha-em-repositorio-remoto>ADR 0056</a>，
+发现 N，<a class="" href=/brabo/dev/zh-Hans/explanation/backlog>backlog</a> 的 Fase B</li>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rn-077>RN-077 — 失败的来源总是四者之一<a href=#rn-077 class=hash-link aria-label="RN-077 — 失败的来源总是四者之一的直接链接" title="RN-077 — 失败的来源总是四者之一的直接链接" translate=no>​</a></h3>
-<p>每个失败结果都以 <a href=/brabo/dev/zh-Hans/adr/0020-destravar-gates-qa-secops target=_blank rel="noopener noreferrer" class="">ADR 0020</a> 的<strong>封闭</strong>词汇点名<em>来源</em>——
+<p>每个失败结果都以 <a class="" href=/brabo/dev/zh-Hans/adr/0020-destravar-gates-qa-secops>ADR 0020</a> 的<strong>封闭</strong>词汇点名<em>来源</em>——
 <code>infra | modelo | codigo | politica</code>。没有第五个值：<code>null</code> 和
 <code>"indeterminada"</code> 已不再可能。</p>
 <p>两项结构性保证，没有一项依赖某人记得：</p>
@@ -895,7 +895,7 @@ CodeQL 的 <code>js/path-injection</code> 警报</li>
 （<code>o vocabulário é fechado</code>）和
 <code>apps/engine/test/engine/dev/dev_agent_server_test.exs</code>，它断言发出事件中的来源</li>
 <li class=""><strong>来源：</strong>
-<a href=/brabo/dev/zh-Hans/explanation/achados-execucao-real target=_blank rel="noopener noreferrer" class="">achados-execucao-real.md</a> 的发现 P、Q 和 T，<a href=/brabo/dev/zh-Hans/explanation/backlog target=_blank rel="noopener noreferrer" class="">backlog</a> 的 Fase G</li>
+<a class="" href=/brabo/dev/zh-Hans/explanation/achados-execucao-real>achados-execucao-real.md</a> 的发现 P、Q 和 T，<a class="" href=/brabo/dev/zh-Hans/explanation/backlog>backlog</a> 的 Fase G</li>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rn-078>RN-078 — 保护分支的失败可以被确认，且只有它可以<a href=#rn-078 class=hash-link aria-label="RN-078 — 保护分支的失败可以被确认，且只有它可以的直接链接" title="RN-078 — 保护分支的失败可以被确认，且只有它可以的直接链接" translate=no>​</a></h3>
 <p>在 GitHub 免费计划的私有仓库中，<code>protect_branches</code> 会失败——向导<strong>在开始之前就提醒这一点</strong>。用户可以确认这个失败并继续；bootstrap 结束，项目变得可以访问。</p>
@@ -909,7 +909,7 @@ CodeQL 的 <code>js/path-injection</code> 警报</li>
 <code>apps/web/src/routes/ProvisioningPage.tsx</code></li>
 <li class=""><strong>测试：</strong> <code>apps/api/test/application/use-cases/git/acknowledge-protection-failure.use-case.spec.ts</code>
 （解锁；带执行者的日志中的决定；以及对先前失败的拒绝）</li>
-<li class=""><strong>来源：</strong> 发现 D，<a href=/brabo/dev/zh-Hans/explanation/backlog target=_blank rel="noopener noreferrer" class="">backlog</a> 的 Fase D</li>
+<li class=""><strong>来源：</strong> 发现 D，<a class="" href=/brabo/dev/zh-Hans/explanation/backlog>backlog</a> 的 Fase D</li>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rn-079>RN-079 — Psicólogo 不分析没有可分析事件的会话<a href=#rn-079 class=hash-link aria-label="RN-079 — Psicólogo 不分析没有可分析事件的会话的直接链接" title="RN-079 — Psicólogo 不分析没有可分析事件的会话的直接链接" translate=no>​</a></h3>
 <p>在花费一个模型回合之前，分析会先问有没有可分析的东西。没有的话，它<strong>不运行</strong>，结果成为 <code>psychologist.analysis_skipped</code>。</p>
@@ -929,7 +929,7 @@ CodeQL 的 <code>js/path-injection</code> 警报</li>
 <li class=""><strong>测试：</strong> <code>apps/engine/test/engine/session_events/event_analisaveis_test.exs</code>
 （包括对发现中那个会话的复现：14 个事件，没有一个可分析），
 <code>apps/engine/test/engine/workers/psychologist_worker_test.exs</code></li>
-<li class=""><strong>来源：</strong> 发现 J，<a href=/brabo/dev/zh-Hans/explanation/backlog target=_blank rel="noopener noreferrer" class="">backlog</a> 的 Fase E</li>
+<li class=""><strong>来源：</strong> 发现 J，<a class="" href=/brabo/dev/zh-Hans/explanation/backlog>backlog</a> 的 Fase E</li>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rn-080>RN-080 — 重复的业务规则在入口被拒绝<a href=#rn-080 class=hash-link aria-label="RN-080 — 重复的业务规则在入口被拒绝的直接链接" title="RN-080 — 重复的业务规则在入口被拒绝的直接链接" translate=no>​</a></h3>
 <p>标题已经存在于<strong>项目中</strong>的 <code>business_rule</code> 不会被写入。拒绝通过与无效 payload 相同的路径回到模型，它会继续处理下一条规则，而不是停下。</p>
@@ -944,7 +944,7 @@ CodeQL 的 <code>js/path-injection</code> 警报</li>
 <code>apps/engine/lib/engine/session_events/event.ex</code>（<code>titulos_de_regras/1</code>）</li>
 <li class=""><strong>测试：</strong> <code>apps/engine/test/engine/harness/artifact_dedupe_test.exs</code>,
 <code>apps/engine/test/engine/harness/emit_artifact_dedupe_test.exs</code></li>
-<li class=""><strong>来源：</strong> 发现 K，<a href=/brabo/dev/zh-Hans/explanation/backlog target=_blank rel="noopener noreferrer" class="">backlog</a> 的 Fase E</li>
+<li class=""><strong>来源：</strong> 发现 K，<a class="" href=/brabo/dev/zh-Hans/explanation/backlog>backlog</a> 的 Fase E</li>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rn-081>RN-081 — 重复的故事：相同标题拒绝，相同理由警告<a href=#rn-081 class=hash-link aria-label="RN-081 — 重复的故事：相同标题拒绝，相同理由警告的直接链接" title="RN-081 — 重复的故事：相同标题拒绝，相同理由警告的直接链接" translate=no>​</a></h3>
 <p>对两个不同的问题给出两种不同的回应：</p>
@@ -962,7 +962,7 @@ responde saudação imediata" 以不同的标题和理由覆盖同一个端点�
 <code>apps/api/src/application/use-cases/backlog/create-story.use-case.ts</code></li>
 <li class=""><strong>测试：</strong> <code>apps/api/test/domain/backlog/story-overlap.spec.ts</code>,
 <code>apps/api/test/application/use-cases/backlog/create-story.use-case.spec.ts</code></li>
-<li class=""><strong>来源：</strong> 发现 R，<a href=/brabo/dev/zh-Hans/explanation/backlog target=_blank rel="noopener noreferrer" class="">backlog</a> 的 Fase E</li>
+<li class=""><strong>来源：</strong> 发现 R，<a class="" href=/brabo/dev/zh-Hans/explanation/backlog>backlog</a> 的 Fase E</li>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rn-082>RN-082 — 动作的 git 凭据是 workspace <em>OWNER</em> 的<a href=#rn-082 class=hash-link aria-label=rn-082的直接链接 title=rn-082的直接链接 translate=no>​</a></h3>
 <p>当 api 针对远程提供方执行 git 动作（<code>pr_open</code>、
@@ -976,13 +976,13 @@ responde saudação imediata" 以不同的标题和理由覆盖同一个端点�
 复用 <code>application/use-cases/llm/resolve-credential-owner.use-case.ts</code></li>
 <li class=""><strong>测试：</strong> <code>apps/api/test/application/use-cases/actions/execute-git-action.use-case.spec.ts</code>
 （自动批准的 <code>pr_open</code>，带 <code>decidedBy: null</code>，请求 owner 的凭据）</li>
-<li class=""><strong>来源：</strong> 发现 AA，<a href=/brabo/dev/zh-Hans/explanation/validacao-real target=_blank rel="noopener noreferrer" class="">13b 的真实验证</a></li>
+<li class=""><strong>来源：</strong> 发现 AA，<a class="" href=/brabo/dev/zh-Hans/explanation/validacao-real>13b 的真实验证</a></li>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rn-083>RN-083 — lead 决定并行度；超过上限时由你授权<a href=#rn-083 class=hash-link aria-label="RN-083 — lead 决定并行度；超过上限时由你授权的直接链接" title="RN-083 — lead 决定并行度；超过上限时由你授权的直接链接" translate=no>​</a></h3>
 <p>启动多少个 agent 不再是代码中的一个数字：评估的是<strong>区域的 lead</strong>。但它的决定在<em>花费</em>上并不至高无上——在 <code>agent_areas.max_parallel</code>（默认 <strong>2</strong>）之内它直接启动并继续；<strong>超过时就成为 <code>parallelize</code> 类型的 <code>proposed_action</code></strong>，经过与所有外部效果动作相同的流水线。</p>
 <p><strong>上限属于<em>会话</em>，而不是模块。</strong> 这是规则中唯一不显而易见的部分，也是粗心的重构会撤销的部分：按模块计数会允许 N 个模块 × 2 个 agent 而不需要任何授权——换了个名字的旧漏洞。有测试正好断言这一点。</p>
 <p><strong>零或负数的上限是无效配置，而不是"无限制"。</strong> 把它当作无限，会把一个输入错误变成无限制的花费，这与流水线存在的目的正相反。</p>
-<p><strong>提出请求的是 lead；作出决定的是你。</strong> <code>proposed_action</code> 以 lead 为执行者诞生，决定以你的名字留在事件日志中——正是这一区分让历史之后可以重建（<a href=/brabo/dev/zh-Hans/adr/0048-decisao-no-log-e-a-ordem-do-gate target=_blank rel="noopener noreferrer" class="">ADR 0048</a>）。</p>
+<p><strong>提出请求的是 lead；作出决定的是你。</strong> <code>proposed_action</code> 以 lead 为执行者诞生，决定以你的名字留在事件日志中——正是这一区分让历史之后可以重建（<a class="" href=/brabo/dev/zh-Hans/adr/0048-decisao-no-log-e-a-ordem-do-gate>ADR 0048</a>）。</p>
 <p>原因在<em>不可变</em>的 payload 中传输，带三个数字（现有多少、请求多少、上限是多少）：六个月后阅读的人需要在不重建会话状态的情况下理解授权了什么。</p>
 <p><code>AcceptParallelizationUseCase</code> 不变：它仍然是<em>执行</em>者，无论是在直接路径上，还是在动作被批准时。从内部吸收它而不是重写它，正是让 Fase 4 的测试套件无需修改就保持绿色的原因——这证明了这一更换没有泄漏到外部契约。</p>
 <p><strong>上限可按区域配置，并且只能由你配置。</strong> <code>PATCH /projects/:projectId/agent-areas/:key/max-parallel</code> 要求 <code>maintainer</code>——与激活执行相同的角色，理由也相同：改变上限就是决定产品可以不询问就花多少钱。没有自动提高它的途径。Anamnese 在注意到授权已成例行公事时可以<em>提议</em>，而提议在你接受之后仍要经过这条路由——一个自己提高自己花费上限的产品，正是审批流水线要阻止的东西。</p>
@@ -998,8 +998,8 @@ responde saudação imediata" 以不同的标题和理由覆盖同一个端点�
 <code>test/application/use-cases/execution/set-area-max-parallel.use-case.spec.ts</code>
 以及 <code>apps/web/src/routes/ProjectSettingsTab.test.tsx</code>（<code>ParallelismSection</code>）</li>
 <li class=""><strong>Gate：</strong> <code>docs/gates.yml</code>（<code>paralelismo-autorizado</code>）——自 fluxo.yml × 代码审计（发现 A1/B5）起为 <code>status: active</code>；机制本身没有变，变的只是自 FASE 14d 起错误地保持 <code>planned</code> 的登记，见
-<a href=/brabo/dev/zh-Hans/explanation/gates#a-registry-can-age-in-the-wrong-direction--stale-not-inactive target=_blank rel="noopener noreferrer" class="">gates.md</a></li>
-<li class=""><strong>来源：</strong> <a href=/brabo/dev/zh-Hans/adr/0053-dev-lead-e-paralelismo-autorizado target=_blank rel="noopener noreferrer" class="">ADR 0053</a>，FASE 14d</li>
+<a class="" href=/brabo/dev/zh-Hans/explanation/gates#a-registry-can-age-in-the-wrong-direction--stale-not-inactive>gates.md</a></li>
+<li class=""><strong>来源：</strong> <a class="" href=/brabo/dev/zh-Hans/adr/0053-dev-lead-e-paralelismo-autorizado>ADR 0053</a>，FASE 14d</li>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rn-094>RN-094 — agent 区域与项目一同诞生<a href=#rn-094 class=hash-link aria-label="RN-094 — agent 区域与项目一同诞生的直接链接" title="RN-094 — agent 区域与项目一同诞生的直接链接" translate=no>​</a></h3>
 <p>创建项目会在 <code>agent_areas</code> 中写入三个区域（<code>dev</code>、<code>qa</code>、<code>infra</code>），以及每个区域的 lead 和在 <code>agent_area_members</code> 中<strong>可枚举</strong>的成员——在与创建<em>相同</em>的事务中。如果 seed 失败，项目不会诞生：没有区域的项目，就是 RN-083 读到空表、在没有任何人决定的情况下落到默认值的项目。</p>
@@ -1019,7 +1019,7 @@ responde saudação imediata" 以不同的标题和理由覆盖同一个端点�
 <code>test/db/agent-areas-backfill.spec.ts</code>（真正运行的迁移，运行两次）以及 <code>test/application/use-cases/execution/activate-execution.use-case.spec.ts</code>
 （dev 的成员，以及从不发送的上限）</li>
 <li class=""><strong>来源：</strong> FASE 18，在 16–26 计划的调查中发现的缺陷；
-表来自 <a href=/brabo/dev/zh-Hans/adr/0053-dev-lead-e-paralelismo-autorizado target=_blank rel="noopener noreferrer" class="">ADR 0053</a></li>
+表来自 <a class="" href=/brabo/dev/zh-Hans/adr/0053-dev-lead-e-paralelismo-autorizado>ADR 0053</a></li>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rn-084>RN-084 — 显示的流水线来自 gate 注册表<a href=#rn-084 class=hash-link aria-label="RN-084 — 显示的流水线来自 gate 注册表的直接链接" title="RN-084 — 显示的流水线来自 gate 注册表的直接链接" translate=no>​</a></h3>
 <p>团队面板显示 PR 所处的阶段，方法是<strong>从
@@ -1046,7 +1046,7 @@ responde saudação imediata" 以不同的标题和理由覆盖同一个端点�
 （<code>gate que SAI do registro some da tela</code>、<code>gate de PR que a tela ainda não sabe desenhar é IGNORADO</code>、<code>sem registro, mostra a esteira completa</code>）</p>
 </li>
 <li class="">
-<p><strong>来源：</strong> <a href=/brabo/dev/zh-Hans/adr/0054-gates-como-registro-declarativo target=_blank rel="noopener noreferrer" class="">ADR 0054</a>，FASE 15b</p>
+<p><strong>来源：</strong> <a class="" href=/brabo/dev/zh-Hans/adr/0054-gates-como-registro-declarativo>ADR 0054</a>，FASE 15b</p>
 </li>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rn-085>RN-085 — 迭代上限按 agent <em>类型</em>设置<a href=#rn-085 class=hash-link aria-label=rn-085的直接链接 title=rn-085的直接链接 translate=no>​</a></h3>
@@ -1073,8 +1073,8 @@ responde saudação imediata" 以不同的标题和理由覆盖同一个端点�
 <code>teto explícito do chamador VENCE o do tipo</code>）</p>
 </li>
 <li class="">
-<p><strong>来源：</strong> 发现 X，<a href=/brabo/dev/zh-Hans/explanation/validacao-real target=_blank rel="noopener noreferrer" class="">13b 的真实验证</a>；
-<a href=/brabo/dev/zh-Hans/adr/0053-dev-lead-e-paralelismo-autorizado target=_blank rel="noopener noreferrer" class="">ADR 0053</a>，FASE 14d</p>
+<p><strong>来源：</strong> 发现 X，<a class="" href=/brabo/dev/zh-Hans/explanation/validacao-real>13b 的真实验证</a>；
+<a class="" href=/brabo/dev/zh-Hans/adr/0053-dev-lead-e-paralelismo-autorizado>ADR 0053</a>，FASE 14d</p>
 </li>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rn-086>RN-086 — 为更多 agent 花钱永远不会自动批准<a href=#rn-086 class=hash-link aria-label="RN-086 — 为更多 agent 花钱永远不会自动批准的直接链接" title="RN-086 — 为更多 agent 花钱永远不会自动批准的直接链接" translate=no>​</a></h3>
@@ -1103,14 +1103,14 @@ responde saudação imediata" 以不同的标题和理由覆盖同一个端点�
 <code>execute-max-parallel-raise.use-case.spec.ts</code>,
 <code>apps/engine/test/engine/anamnese/tools_test.exs</code> 和
 <code>test/engine/workers/anamnese_worker_test.exs</code>（<code>duas aprovacoes NAO sao rotina</code>、<code>uma NEGACAO derruba o sinal</code>）</li>
-<li class=""><strong>来源：</strong> <a href=/brabo/dev/zh-Hans/adr/0053-dev-lead-e-paralelismo-autorizado target=_blank rel="noopener noreferrer" class="">ADR 0053</a>，FASE 14d</li>
+<li class=""><strong>来源：</strong> <a class="" href=/brabo/dev/zh-Hans/adr/0053-dev-lead-e-paralelismo-autorizado>ADR 0053</a>，FASE 14d</li>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rn-087>RN-087 — Dev Lead 是执行的唯一外部地址<a href=#rn-087 class=hash-link aria-label="RN-087 — Dev Lead 是执行的唯一外部地址的直接链接" title="RN-087 — Dev Lead 是执行的唯一外部地址的直接链接" translate=no>​</a></h3>
 <p>存在一个对话型 agent <code>dev-lead</code>，它接收 Arquiteto 的 handoff（自 <a class="" href=/brabo/dev/zh-Hans/business-rules#rn-672>RN-672</a> 起，来自 Infra，项目容器处于 <code>running</code>），并提议<strong>执行计划</strong>：每个模块多少个 agent 以及为什么。它不写代码——它分配工作并为之负责。</p>
 <p><strong>在它之前，<a href=#rn-083 class="">RN-083</a> 中"由 lead 决定"这句话没有主人。</strong> Arquiteto 完成后，执行由一个按钮启动，中间没有人评估有多少工作。</p>
-<p><strong><code>dev-&lt;modulo></code> 不再能通过 handoff 寻址。</strong> 这不是新的例外：这是 <a href=/brabo/dev/zh-Hans/adr/0038-hierarquia-de-agentes target=_blank rel="noopener noreferrer" class="">ADR 0038</a> 的规则——外部 handoff 只寻址区域的 lead 或没有区域的 agent——开始像对 QA 和 Infra 一样对 dev 生效。在没有 Dev Lead 时，它们是<em>没有</em>区域的 agent，因此是有效目标；成为成员后，就不再是了。</p>
+<p><strong><code>dev-&lt;modulo></code> 不再能通过 handoff 寻址。</strong> 这不是新的例外：这是 <a class="" href=/brabo/dev/zh-Hans/adr/0038-hierarquia-de-agentes>ADR 0038</a> 的规则——外部 handoff 只寻址区域的 lead 或没有区域的 agent——开始像对 QA 和 Infra 一样对 dev 生效。在没有 Dev Lead 时，它们是<em>没有</em>区域的 agent，因此是有效目标；成为成员后，就不再是了。</p>
 <p><strong><code>dev</code> 区域是第一个<em>动态</em>区域</strong>，正是它迫使使用谓词：成员是 <code>module_map</code> 的每个模块一个，由 Arquiteto 决定，每个项目都不同，因此没有可枚举的列表。<code>dev-lead</code> 与成员匹配相同的 <code>dev-</code> 前缀，排除它的是通用规则<strong>lead 永远不是自己区域的成员</strong>——它适用于任何区域，只存在于一处。第一个版本在三处重复这个排除，变异检查表明没有一份副本是测试可达的：每一份都能在另一份被变异时存活。</p>
-<p><strong>计划是 <code>proposed_action</code>（由 <a href=/brabo/dev/zh-Hans/adr/0086-dev-lead-plano-suspende-para-aprovacao target=_blank rel="noopener noreferrer" class="">ADR 0086</a>、<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-284>RN-284</a> 修订）。</strong>
+<p><strong>计划是 <code>proposed_action</code>（由 <a class="" href=/brabo/dev/zh-Hans/adr/0086-dev-lead-plano-suspende-para-aprovacao>ADR 0086</a>、<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-284>RN-284</a> 修订）。</strong>
 在这次变更之前，计划成为简单的<em>事件</em>，没有审批：理由是提议没有外部效果——花费发生在 agent 启动时，上限在那里要求授权；把提议变成待决定的动作会让你对同一件事决定两次。对 <code>docs/fluxo.yml</code> × 代码的审计发现，自 ADR 0085 起流程就已经把这个输出声明为 <code>via: proposed_action</code>，而代码从未被调整为一致——产品所有者判定是代码错了：计划是会话将在并行上花多少钱的<em>第一个</em>真实决定，用户开始在<em>看到</em>一次真正的审批之后才决定激活执行，而不只是读到消息流中的一行。旧的教训没有消失——它正是
 <code>propose_execution_plan</code> <em>没有</em>进入 <code>decide.ts</code> 绝对上限块的原因（见 RN-284）。</p>
 <p><strong><em>成功</em>的计划结束回合——在<em>没有</em>暂停的路径上。</strong> 在第一次真实执行中，Dev Lead 在同一会话中登记了<strong>两次</strong> <code>execution.plan_proposed</code>——文本不同，总数相同——因为循环回到了模型，它又提议了一次。事件日志是不可变的：留下了两份提议，没有任何东西说明哪个有效。工具 spec 中"只用一次"的指示是请求，不是保证；保证的是循环停止。自 ADR 0086 起，当提议处于 <code>pending</code> 时，结束回合的是暂停的<em>停止</em>（RN-284）——立即成功（<code>auto_approved</code>/<code>executed</code>/<code>approved</code>，见 RN-284）继续以一贯的方式关闭循环。</p>
@@ -1125,8 +1125,8 @@ responde saudação imediata" 以不同的标题和理由覆盖同一个端点�
 <code>dev_lead_server_test.exs</code>（<code>o plano ENCERRA o turno</code>、<code>o plano recusado NÃO encerra o turno</code>），
 <code>apps/api/test/domain/agents/agent-areas.spec.ts</code>（<code>o dev de módulo DEIXOU de ser endereçável</code>、<code>`dev-lead` É endereçável, apesar do prefixo</code>）和
 <code>test/application/use-cases/agents/offer-infra-handoff.use-case.spec.ts</code></li>
-<li class=""><strong>来源：</strong> <a href=/brabo/dev/zh-Hans/adr/0053-dev-lead-e-paralelismo-autorizado target=_blank rel="noopener noreferrer" class="">ADR 0053</a>，FASE 14d；
-审批机制由 <a href=/brabo/dev/zh-Hans/adr/0086-dev-lead-plano-suspende-para-aprovacao target=_blank rel="noopener noreferrer" class="">ADR 0086</a> 修订</li>
+<li class=""><strong>来源：</strong> <a class="" href=/brabo/dev/zh-Hans/adr/0053-dev-lead-e-paralelismo-autorizado>ADR 0053</a>，FASE 14d；
+审批机制由 <a class="" href=/brabo/dev/zh-Hans/adr/0086-dev-lead-plano-suspende-para-aprovacao>ADR 0086</a> 修订</li>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rn-064>RN-064 — 心跳不会结束有待定工作的会话<a href=#rn-064 class=hash-link aria-label="RN-064 — 心跳不会结束有待定工作的会话的直接链接" title="RN-064 — 心跳不会结束有待定工作的会话的直接链接" translate=no>​</a></h3>
 <blockquote>
@@ -1146,7 +1146,7 @@ responde saudação imediata" 以不同的标题和理由覆盖同一个端点�
 <p>第二个是第一个的同一缺陷低一个层级，而 <code>hello-limpo</code> 的执行显示了代价：会话诞生于 23:34:12，一个动作在 23:34:13 变为 <code>pending</code>，心跳在 <strong>23:34:42——恰好是超时的 30s</strong>——关闭了它。dev agent 在一个数据库认为已结束的会话中又工作了一个多小时，这毒害了每一项按会话的指标：时长、成本以及"多少个好好结束了"都开始读取一个不描述实际发生之事的状态。</p>
 <p>第三个是同一个窗口，在前两个任何一个存在之前一步：<code>AcceptHandoffUseCase</code> 把旧 handoff 标记为 <code>accepted</code> 并立即激活下一个 agent，但 engine 中的激活是 <code>GenServer.cast</code>，发出即不管——在 agent 甚至开始之前就响应 201。由 Criativo 的 handoff 激活的 PO 运行一个最多 12 次 LLM 迭代的 kickoff，只使用 <code>category: :direct</code> 的工具（<code>create_epic</code>/<code>create_story</code>/<code>create_task</code>），它们从不产生 <code>proposed_action</code>，并且只在整个回合<em>结束</em>时才提供下一个 handoff（信号 1）。在激活与那个结束之间，信号 1 和信号 2 都不存在——只有每 10s 一次的 Phoenix 通道 ping 撑着会话，任何超过 30s 超时的延迟都会在 PO 仍在生成 backlog 时关闭会话，从根上打断 handoff 链：下一个 handoff 最终被提供在一个已经 <code>closed</code>、不再接受任何东西的会话中。</p>
 <p><code>agent.status</code>（<code>working</code>/<code>idle</code>）是每个对话型 agent（Criativo/PO/Arquiteto/Dev Lead/Infra）已经在回合边界叙述的东西，并且被<em>持久化</em>在事件日志中，而不只是在通道中广播
-（<code>Engine.Sessions.LiveBroadcast.agent_status/4</code>，<a href=/brabo/dev/zh-Hans/adr/0021-fechamento-4a-infra-e-painel target=_blank rel="noopener noreferrer" class="">ADR 0021</a>）
+（<code>Engine.Sessions.LiveBroadcast.agent_status/4</code>，<a class="" href=/brabo/dev/zh-Hans/adr/0021-fechamento-4a-infra-e-painel>ADR 0021</a>）
 ——团队面板已经读取同一个信号来推导名册（<code>apps/web/src/lib/agent-status.ts</code> 中的 <code>conversationalStatus</code>）。在这里复用它不需要任何新事件：第三个信号是在会话中发过言的<em>每个</em>执行者的最后一个 <code>agent.status</code>，并且按事件类型是通用的——它覆盖任何由 handoff 激活的 agent，而不只是 PO。</p>
 <p>这条规则的上一个版本白纸黑字地写着，把 agent 的工作包括进来"而没有证明这种交互的测试，就是在猜"。执行产生了证明，测试现在存在了。</p>
 <p>**仍然排除在外的：**没有待定动作、没有 handoff、也没有未完回合的 <code>in_progress</code> 任务。dev agent 有自己的状态机，自行持有 worktree；api 拥有且执行已证实的信号是待定动作。把任务包括进来需要 api 读取属于 engine 的 <code>dev_agent_states</code>——这是边界决定，不是顺手修复。dev agent 也不发出 <code>agent.status</code>（它们用自己的状态机运行，而不是对话型的回合循环）——第三个信号不覆盖它们，也不需要：待定动作已经覆盖了它们的路径。</p>
@@ -1159,7 +1159,7 @@ responde saudação imediata" 以不同的标题和理由覆盖同一个端点�
 （<code>heartbeat NÃO encerra sessão com trabalho pendente</code> 以及相反的情形）和
 <code>apps/api/test/application/use-cases/sessions/get-session-pending-work.use-case.spec.ts</code>
 （三个信号、已经决定因而<em>不</em>撑住会话的动作、释放会话的 <code>idle</code>、按执行者的隔离、按 agent 类型的通用性以及按会话的范围）</li>
-<li class=""><strong>来源：</strong> FASE 13b 的真实执行；发现 V，<a href=/brabo/dev/zh-Hans/explanation/backlog target=_blank rel="noopener noreferrer" class="">backlog</a> 的 Fase H；Criativo→PO→Arquiteto 链式衔接的真实 bug</li>
+<li class=""><strong>来源：</strong> FASE 13b 的真实执行；发现 V，<a class="" href=/brabo/dev/zh-Hans/explanation/backlog>backlog</a> 的 Fase H；Criativo→PO→Arquiteto 链式衔接的真实 bug</li>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rn-063>RN-063 — 不产出而结束是结果，不是失败<a href=#rn-063 class=hash-link aria-label="RN-063 — 不产出而结束是结果，不是失败的直接链接" title="RN-063 — 不产出而结束是结果，不是失败的直接链接" translate=no>​</a></h3>
 <p>Anamnese 有一个工具用来说**"没有什么要发出，原因如下"**（<code>skip_proficiency</code>）。这一轮以 <code>anamnese.run_skipped</code> 结束，原因放在 payload 中——绝不以 <code>anamnese.run_failed</code> 结束。</p>
@@ -1192,7 +1192,7 @@ docs/explanation/validacao-real.md</li>
 <p>报告按<strong>提供方</strong>分组，因为那是凭据的单位——每人每个提供方一个密钥。单一总数无法与任何账单对上。</p>
 <p>并且它把 <strong>agent</strong> 与<strong>人</strong>分开：自 RN-058 起，两者都出自同一个密钥，而"我的 agent 贵吗？"与"我聊天用得多吗？"是不同的问题。这就是为什么这是产品中唯一<em>没有</em> <a href=#rn-038 class="">RN-038</a> 的 <code>actor_kind = 'agent'</code> 过滤器的成本汇总——这里的问题是从密钥中流出了多少，而 owner 自己的聊天也从中流出。</p>
 <p><strong>已移除</strong>凭据的花费仍留在报告中，带标记：消耗确实发生了，隐藏它会得到一个与提供方账单对不上的总数。</p>
-<p>没有任何秘密穿过：响应包含提供方、token 和成本——绝不包含密钥，即使是加密的也不包含（<a href=/brabo/dev/zh-Hans/adr/0050-credencial-sempre-cifrada-verificacao-explicita target=_blank rel="noopener noreferrer" class="">ADR 0050</a>）。</p>
+<p>没有任何秘密穿过：响应包含提供方、token 和成本——绝不包含密钥，即使是加密的也不包含（<a class="" href=/brabo/dev/zh-Hans/adr/0050-credencial-sempre-cifrada-verificacao-explicita>ADR 0050</a>）。</p>
 <ul>
 <li class=""><strong>位置：</strong>
 <code>apps/api/src/application/use-cases/llm/get-credential-spend.use-case.ts</code>,
@@ -1210,7 +1210,7 @@ docs/explanation/validacao-real.md</li>
 <p>执行者<strong>不是参数</strong>：它来自已认证的用户，没有地方可以写入别人的 id。"成员看不到其他执行者的行"是用例签名的性质，而不是某个人可能忘记调用的检查。</p>
 <p><strong>agent 不计入成员的账。</strong> <code>token_usage</code> 记录的是谁<em>花了</em>钱，而不是谁让花钱；把 agent 归给启动它的人，就是编造一个表中没有的数据。agent 的花费出现在 owner 的报告中，密钥是他的。</p>
 <p><strong><code>provider</code> 维度存在，而成员够不着它。</strong> 在
-<a href=/brabo/dev/zh-Hans/adr/0076-provider-volta-a-ser-dimensao-de-gasto target=_blank rel="noopener noreferrer" class="">ADR 0076</a> 之前，它在聚合中根本不存在，正是这种缺失约束着成员的视图。如今
+<a class="" href=/brabo/dev/zh-Hans/adr/0076-provider-volta-a-ser-dimensao-de-gasto>ADR 0076</a> 之前，它在聚合中根本不存在，正是这种缺失约束着成员的视图。如今
 <code>sumGroupedBy</code> 有六个维度（<code>model</code>、<code>provider</code>、<code>project</code>、<code>actor</code>、
 <code>session</code>、<code>day</code>），约束改变的是形式而不是力度：约束它的是<em>类型</em>——见 <a href=#rn-186 class="">RN-186</a> 和 <a href=#rn-187 class="">RN-187</a>。没有改变的是，提供同一模型名称的两个提供方，在 <code>model</code> 维度上仍然落在同一行。</p>
 <ul>
@@ -1223,13 +1223,13 @@ docs/explanation/validacao-real.md</li>
 <li class=""><strong>测试：</strong> <code>apps/api/test/application/use-cases/llm/spend-audiencias.use-case.spec.ts</code>
 （成员看不到其他执行者的行，也看不到 agent 或 owner 的行；过滤按 <code>(kind, id)</code> 这一对进行；响应不携带提供方）；
 <code>apps/web/src/routes/ProjectSpendTab.test.tsx</code></li>
-<li class=""><strong>来源：</strong> <a href=/brabo/dev/zh-Hans/adr/0063-duas-audiencias-para-o-mesmo-gasto target=_blank rel="noopener noreferrer" class="">ADR 0063</a>（FASE 22），
-由 <a href=/brabo/dev/zh-Hans/adr/0076-provider-volta-a-ser-dimensao-de-gasto target=_blank rel="noopener noreferrer" class="">ADR 0076</a> 修订</li>
+<li class=""><strong>来源：</strong> <a class="" href=/brabo/dev/zh-Hans/adr/0063-duas-audiencias-para-o-mesmo-gasto>ADR 0063</a>（FASE 22），
+由 <a class="" href=/brabo/dev/zh-Hans/adr/0076-provider-volta-a-ser-dimensao-de-gasto>ADR 0076</a> 修订</li>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rn-186>RN-186 — <code>provider</code> 是 owner 报告的维度，且只属于它<a href=#rn-186 class=hash-link aria-label=rn-186的直接链接 title=rn-186的直接链接 translate=no>​</a></h3>
 <p><code>sumGroupedBy</code> 接受 <code>provider</code> 作为维度，
-<code>GET /workspaces/:id/spend-report</code> 在模型、项目、执行者和日期旁边返回 <code>porProvider</code> 列表。<a href=/brabo/dev/zh-Hans/adr/0063-duas-audiencias-para-o-mesmo-gasto target=_blank rel="noopener noreferrer" class="">ADR 0063</a>
-曾把这个维度排除在外；<a href=/brabo/dev/zh-Hans/adr/0076-provider-volta-a-ser-dimensao-de-gasto target=_blank rel="noopener noreferrer" class="">ADR 0076</a>
+<code>GET /workspaces/:id/spend-report</code> 在模型、项目、执行者和日期旁边返回 <code>porProvider</code> 列表。<a class="" href=/brabo/dev/zh-Hans/adr/0063-duas-audiencias-para-o-mesmo-gasto>ADR 0063</a>
+曾把这个维度排除在外；<a class="" href=/brabo/dev/zh-Hans/adr/0076-provider-volta-a-ser-dimensao-de-gasto>ADR 0076</a>
 把它带了回来，<strong>却没有推翻那个论点</strong>：按提供方拆分花费仍然就是按<em>凭据</em>拆分，因此这个维度位于一条已经要求 <code>owner</code>（<a href=#rn-060 class="">RN-060</a>）的路由上——与 <code>credential-spend</code> 同一把尺子，后者继续回答<em>账单</em>的问题（按月，与今天存在的密钥相关联）。</p>
 <p><code>GET /projects/:id/spend/me</code> <strong>什么都没有获得</strong>。不对称正是设计：两个响应仍然不是彼此的切片（<a href=#rn-101 class="">RN-101</a>）。</p>
 <p><code>model</code> 维度<strong>没有改变</strong>：提供同一模型名称的两个提供方仍然在同一行。想要按凭据拆分的人有专门的列表，而交叉两个维度会让排名的行数成倍增加，却回答不了两个单独列表回答不了的问题。</p>
@@ -1242,7 +1242,7 @@ docs/explanation/validacao-real.md</li>
 <li class=""><strong>测试：</strong> <code>apps/api/test/application/use-cases/llm/spend-audiencias.use-case.spec.ts</code>
 （"quebra por PROVIDER, e o mesmo nome de modelo em dois providers segue UMA
 linha"）</li>
-<li class=""><strong>来源：</strong> <a href=/brabo/dev/zh-Hans/adr/0076-provider-volta-a-ser-dimensao-de-gasto target=_blank rel="noopener noreferrer" class="">ADR 0076</a></li>
+<li class=""><strong>来源：</strong> <a class="" href=/brabo/dev/zh-Hans/adr/0076-provider-volta-a-ser-dimensao-de-gasto>ADR 0076</a></li>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rn-187>RN-187 — 成员视图够不着 <code>provider</code>，保证它的是<em>类型</em><a href=#rn-187 class=hash-link aria-label=rn-187的直接链接 title=rn-187的直接链接 translate=no>​</a></h3>
 <p>在这个维度不存在时，约束成员视图的是没有可传的参数这一<strong>缺失</strong>。维度回来之后，约束改由签名承担：<code>sumGroupedBy</code> 有<strong>两个重载</strong>，接受带 <code>actor</code> 的范围的那个——成员受众的范围，也是成员唯一拥有的——只接收
@@ -1259,11 +1259,11 @@ linha"）</li>
 （"não compila pedir <code>provider</code> com escopo de ator"——一个 <code>@ts-expect-error</code>，如果屏障倒下，<code>tsc</code> 会把它作为<em>未使用</em>的指令拒绝；以及 "só pede as
 dimensões <code>session</code> e <code>day</code>"），
 <code>apps/api/test/interfaces/spend.controller.spec.ts</code>（成员的路由只接受 <code>dias</code>，别无其他）</li>
-<li class=""><strong>来源：</strong> <a href=/brabo/dev/zh-Hans/adr/0076-provider-volta-a-ser-dimensao-de-gasto target=_blank rel="noopener noreferrer" class="">ADR 0076</a></li>
+<li class=""><strong>来源：</strong> <a class="" href=/brabo/dev/zh-Hans/adr/0076-provider-volta-a-ser-dimensao-de-gasto>ADR 0076</a></li>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rn-188>RN-188 — 人与 agent 是按执行者列表的划分，不多做查询<a href=#rn-188 class=hash-link aria-label="RN-188 — 人与 agent 是按执行者列表的划分，不多做查询的直接链接" title="RN-188 — 人与 agent 是按执行者列表的划分，不多做查询的直接链接" translate=no>​</a></h3>
 <p>owner 的报告除了保持完整的 <code>porAtor</code> 之外，还带有 <code>porOwner</code>（<code>actor_kind = 'user'</code> 的行）和
-<code>porAgente</code>（<code>actor_kind = 'agent'</code>）。这两块在用例中由 <code>porAtor</code> <strong>推导</strong>——<code>actorKind</code> 自 FASE 22 起就已经在行中——，而不是两次带 <code>where actor_kind</code> 的查询。原因是测量过的：<a href=/brabo/dev/zh-Hans/adr/0063-duas-audiencias-para-o-mesmo-gasto target=_blank rel="noopener noreferrer" class="">ADR 0063</a>
+<code>porAgente</code>（<code>actor_kind = 'agent'</code>）。这两块在用例中由 <code>porAtor</code> <strong>推导</strong>——<code>actorKind</code> 自 FASE 22 起就已经在行中——，而不是两次带 <code>where actor_kind</code> 的查询。原因是测量过的：<a class="" href=/brabo/dev/zh-Hans/adr/0063-duas-audiencias-para-o-mesmo-gasto>ADR 0063</a>
 表明这些查询的成本随 <code>token_usage</code> 的大小而不是请求的大小增长，因此为了分开已经在内存中分开的东西而多扫描两次窗口，会因为错误的原因而昂贵。</p>
 <p>既不是人也不是 agent 的 <code>actor_kind</code>（目前是 <code>system</code>）<strong>不进入任何一块</strong>，并在 <code>porAtor</code> 和总数中保持可见。为它开第三块，就等于说产品有一类它并没有的受众。</p>
 <p>"按 owner"这个标签来自设计 handoff，依据 <a href=#rn-058 class="">RN-058</a> 成立——所有这些行花的都是 owner 的密钥。workspace 的所有者是谁，仍然由 <code>ownerId</code> 字段决定，而不是每行的 <code>actorKind</code>。</p>
@@ -1271,7 +1271,7 @@ dimensões <code>session</code> e <code>day</code>"），
 <li class=""><strong>位置：</strong> <code>apps/api/src/application/use-cases/llm/get-workspace-spend-report.use-case.ts:120</code></li>
 <li class=""><strong>测试：</strong> <code>apps/api/test/application/use-cases/llm/spend-audiencias.use-case.spec.ts</code>
 （"separa PESSOA de AGENTE em dois blocos, sem perder a lista por ator"）</li>
-<li class=""><strong>来源：</strong> <a href=/brabo/dev/zh-Hans/adr/0076-provider-volta-a-ser-dimensao-de-gasto target=_blank rel="noopener noreferrer" class="">ADR 0076</a></li>
+<li class=""><strong>来源：</strong> <a class="" href=/brabo/dev/zh-Hans/adr/0076-provider-volta-a-ser-dimensao-de-gasto>ADR 0076</a></li>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rn-102>RN-102 — 区域的模型是可继承的默认值；偏离是 agent 的决定，恢复继承会抹去该决定<a href=#rn-102 class=hash-link aria-label="RN-102 — 区域的模型是可继承的默认值；偏离是 agent 的决定，恢复继承会抹去该决定的直接链接" title="RN-102 — 区域的模型是可继承的默认值；偏离是 agent 的决定，恢复继承会抹去该决定的直接链接" translate=no>​</a></h3>
 <p>binding 级联增加了一层：<code>sessão > agente > **área** > projeto > workspace</code>。<code>area</code> 位于 agent 和项目<em>之间</em>——它是一个区域的 lead 和子 agent 共享的<em>默认值</em>（<code>qa</code>/<code>qa-automacao</code>/
@@ -1308,7 +1308,7 @@ dimensões <code>session</code> e <code>day</code>"），
 <code>apps/web/src/routes/settings/papel-na-tabela-de-agentes.test.tsx</code>
 （<code>viewer</code> 不能编辑，点击不会到达 api；<code>developer</code> 能编辑，PUT/DELETE 会到达；缺失的角色是非活动的；行中的信息在控件变灰后保留；以及阻止"统一"两个部分的情形——同一个
 <code>developer</code> 同时看到 agent 表启用而区域表禁用）</li>
-<li class=""><strong>来源：</strong> <a href=/brabo/dev/zh-Hans/adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global target=_blank rel="noopener noreferrer" class="">ADR 0064</a>（FASE 23）</li>
+<li class=""><strong>来源：</strong> <a class="" href=/brabo/dev/zh-Hans/adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global>ADR 0064</a>（FASE 23）</li>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rn-103>RN-103 — agent 的 binding 是<em>按项目</em>的，不再是全局的<a href=#rn-103 class=hash-link aria-label=rn-103的直接链接 title=rn-103的直接链接 translate=no>​</a></h3>
 <p>在 FASE 23 之前，<code>scope = 'agent'</code> 保存一个全局 SLUG（<code>scope_id = 'qa'</code>），而 <code>PUT /projects/:id/agent-bindings/:slug</code> 在路由中接收 <code>:projectId</code> 却刻意<em>丢弃</em>它——在一个项目的界面上选择 Arquiteto 的模型，会改变它在<em>所有</em>项目中的模型。当区域成为可继承的默认值（RN-102）之后，这站不住了：区域是按项目的，而一个位于按项目默认值<em>之上</em>的全局 agent binding，会让同一个 agent 只在存在区域的地方解析出不同的模型——并且会让"恢复继承"抹去一个波及无人关注的项目的决定。</p>
@@ -1321,7 +1321,7 @@ dimensões <code>session</code> e <code>day</code>"），
 <code>test/application/use-cases/llm/set-model-binding.use-case.spec.ts</code>,
 <code>test/application/use-cases/llm/resolve-model-binding.use-case.spec.ts</code>
 （"o binding de agente é POR PROJETO: o vizinho não o enxerga"）</li>
-<li class=""><strong>来源：</strong> <a href=/brabo/dev/zh-Hans/adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global target=_blank rel="noopener noreferrer" class="">ADR 0064</a>（FASE 23）</li>
+<li class=""><strong>来源：</strong> <a class="" href=/brabo/dev/zh-Hans/adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global>ADR 0064</a>（FASE 23）</li>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rn-470>RN-470 — 模型来源区分自有 binding 与从 Criativo 继承，级联中的空值不与其他空值共用同一符号<a href=#rn-470 class=hash-link aria-label="RN-470 — 模型来源区分自有 binding 与从 Criativo 继承，级联中的空值不与其他空值共用同一符号的直接链接" title="RN-470 — 模型来源区分自有 binding 与从 Criativo 继承，级联中的空值不与其他空值共用同一符号的直接链接" translate=no>​</a></h3>
 <p>api 响应中的 <code>origin: 'agent'</code> 意味着<strong>两件不同的事</strong>，而 api 不区分它们是正确的：agent 在 <code>model_bindings</code> 中有一行 <code>agent</code> 范围的记录，<strong>或者</strong>级联落在 <code>workspace</code> 上而
@@ -1417,7 +1417,7 @@ agent.error durável"）；<code>apps/engine/test/engine/agents/arquiteto_server
 <code>architecture.output_modalities</code> 包含 <code>image</code>。接受图像和<strong>生成</strong>图像是不同的维度：把它们合并会把用户送到错误的模型。</p>
 <p>以前，同步从已<em>写入</em>的数据读取 <code>supportsVision</code>，从不查询远程——该列以 <code>false</code> 诞生，没有途径变为 true。第一次真实同步的 338 个模型全部为 <code>false</code>，包括提供方声明为多模态的 181 个。</p>
 <p><strong>没有声明不等于声明没有</strong>
-（<a href=/brabo/dev/zh-Hans/adr/0041-base-openai-compativel-e-contrato-de-llm-providers target=_blank rel="noopener noreferrer" class="">ADR 0041</a>）：当提供方沉默时，解析器<em>省略</em>该字段，<code>undefined</code> 保留本地值。因此界面只把分面用作<em>正向</em>过滤器，从不写"不能读图"——这里的 <code>false</code> 意味着"提供方没有声明"。</p>
+（<a class="" href=/brabo/dev/zh-Hans/adr/0041-base-openai-compativel-e-contrato-de-llm-providers>ADR 0041</a>）：当提供方沉默时，解析器<em>省略</em>该字段，<code>undefined</code> 保留本地值。因此界面只把分面用作<em>正向</em>过滤器，从不写"不能读图"——这里的 <code>false</code> 意味着"提供方没有声明"。</p>
 <ul>
 <li class=""><strong>位置：</strong> <code>apps/api/src/infrastructure/llm/openrouter-provider.ts</code>
 （<code>temModalidade</code>、<code>parseCatalogoOpenRouter</code>），
@@ -1428,7 +1428,7 @@ agent.error durável"）；<code>apps/engine/test/engine/agents/arquiteto_server
 （<code>modalidade não declarada OMITE o campo em vez de afirmar false</code>）；
 <code>test/application/use-cases/llm/sync-model-catalog.use-case.spec.ts</code>
 （<code>catálogo que se cala sobre modalidade preserva a faceta gravada</code>）</li>
-<li class=""><strong>来源：</strong> <a href=/brabo/dev/zh-Hans/adr/0051-facetas-de-capability-e-curadoria-por-uso target=_blank rel="noopener noreferrer" class="">ADR 0051</a></li>
+<li class=""><strong>来源：</strong> <a class="" href=/brabo/dev/zh-Hans/adr/0051-facetas-de-capability-e-curadoria-por-uso>ADR 0051</a></li>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rn-057>RN-057 — "用途"是 workspace 的策展，标记用途不会打开模型<a href=#rn-057 class=hash-link aria-label='RN-057 — "用途"是 workspace 的策展，标记用途不会打开模型的直接链接' title='RN-057 — "用途"是 workspace 的策展，标记用途不会打开模型的直接链接' translate=no>​</a></h3>
 <p>没有任何提供方的目录公布"适合写代码"。这是<strong>操作者的意见</strong>，在使用中发现——因此它位于 <code>workspace_models.uses</code>，与 workspace 的另一个决定（<a href=#rn-052 class="">RN-052</a>）并列，而不是在 <code>models</code> 中。</p>
@@ -1451,7 +1451,7 @@ agent.error durável"）；<code>apps/engine/test/engine/agents/arquiteto_server
 （<code>marcar uso NÃO liga o modelo — a linha nova nasce inativa</code>、
 <code>trocar o uso não desliga o que já estava ligado</code>、
 <code>o uso vale só neste workspace</code>）</li>
-<li class=""><strong>来源：</strong> <a href=/brabo/dev/zh-Hans/adr/0051-facetas-de-capability-e-curadoria-por-uso target=_blank rel="noopener noreferrer" class="">ADR 0051</a></li>
+<li class=""><strong>来源：</strong> <a class="" href=/brabo/dev/zh-Hans/adr/0051-facetas-de-capability-e-curadoria-por-uso>ADR 0051</a></li>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rn-038>RN-038 — workspace 摘要中计数的 agent = 本月花费了 token<a href=#rn-038 class=hash-link aria-label="RN-038 — workspace 摘要中计数的 agent = 本月花费了 token的直接链接" title="RN-038 — workspace 摘要中计数的 agent = 本月花费了 token的直接链接" translate=no>​</a></h3>
 <p>项目仪表板的摘要（"N 个活跃项目 · M 个 agent · 本月花费"）把在当月 <code>token_usage</code> 中至少有一行 <code>actor_kind = 'agent'</code> 的执行者计为"agent"，汇总 workspace 的所有项目。没有 <code>actor_kind</code> 过滤器，发送聊天的 <code>user</code> 或记录使用的 <code>system</code> 会让计数膨胀——<code>token_usage</code> 为任何类型的执行者记录，而不只是 agent。按月截断使用
