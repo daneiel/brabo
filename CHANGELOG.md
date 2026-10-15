@@ -6,6 +6,10 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- A cobertura de cada idioma do site e da interface é medida e publicada em
+  "Paridade de tradução" (`pnpm docs:generate`), e a página do site que não
+  foi traduzida, ou cuja tradução ficou para trás do original, diz isso numa
+  faixa no topo (AT-550, ADR 0216).
 - O cache de prompt passa a valer no Haiku (e nos demais `anthropic/*`) pelo
   OpenRouter: a capability `promptCaching` do OpenRouter vira `true`, provada
   por smoke com credencial em 15/10 (`cached_input_tokens=8011` na segunda

@@ -788,6 +788,22 @@ rules:
     severity: warn
     note: "docs/ (pt-BR, fonte) mudou — confira se as traduções em website/i18n/<locale>/ (en, ru, zh-Hans) precisam acompanhar."
 
+  # AT-550 (ADR 0216 item 7): a paridade de tradução é MEDIDA e o relatório
+  # é GERADO. Mudou a fonte, uma tradução ou um catálogo da interface, o
+  # `pnpm docs:generate` reescreve os dois arquivos, e o `--check` reprova o
+  # commitado fora de dia.
+  - id: paridade-de-traducao
+    watch:
+      - "docs/**/*.md"
+      - "website/i18n/**/*.md"
+      - "apps/web/src/locales/**"
+      - "scripts/docs/paridade-de-traducao.mjs"
+    docs:
+      - "docs/reference/paridade-de-traducao.md"
+      - "website/src/data/traducao.json"
+    generated: true
+    severity: warn
+
   - id: claude-md
     watch:
       - "package.json"
