@@ -1,105 +1,104 @@
-<!doctype html><html lang=zh-Hans dir=ltr class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-explanation/cadeia-de-suprimentos-do-ci" data-has-hydrated=false><head><meta charset=UTF-8><meta name=generator content="Docusaurus v3.10.2"><title data-rh=true>The CI supply chain | Brabo</title><meta data-rh=true name=viewport content="width=device-width, initial-scale=1.0"/><meta data-rh=true name=robots content="noindex, nofollow"/><meta data-rh=true name=twitter:card content=summary_large_image /><meta data-rh=true property=og:url content=https://daneiel.github.io/brabo/dev/zh-Hans/explanation/cadeia-de-suprimentos-do-ci /><meta data-rh=true property=og:locale content=zh_Hans /><meta data-rh=true property=og:locale:alternate content=pt_BR /><meta data-rh=true property=og:locale:alternate content=en /><meta data-rh=true property=og:locale:alternate content=ru /><meta data-rh=true name=docusaurus_locale content=zh-Hans /><meta data-rh=true name=docsearch:language content=zh-Hans /><meta data-rh=true name=docusaurus_version content=current /><meta data-rh=true name=docusaurus_tag content=docs-default-current /><meta data-rh=true name=docsearch:version content=current /><meta data-rh=true name=docsearch:docusaurus_tag content=docs-default-current /><meta data-rh=true property=og:title content="The CI supply chain | Brabo"/><meta data-rh=true name=description content="What runs inside our CI runners that we didn't write, how it's pinned, and what's still trusted on faith."/><meta data-rh=true property=og:description content="What runs inside our CI runners that we didn't write, how it's pinned, and what's still trusted on faith."/><link data-rh=true rel=icon href=/brabo/dev/zh-Hans/img/favicon.ico /><link data-rh=true rel=canonical href=https://daneiel.github.io/brabo/dev/zh-Hans/explanation/cadeia-de-suprimentos-do-ci /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/explanation/cadeia-de-suprimentos-do-ci hreflang=pt-BR /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/en/explanation/cadeia-de-suprimentos-do-ci hreflang=en /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/ru/explanation/cadeia-de-suprimentos-do-ci hreflang=ru /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/zh-Hans/explanation/cadeia-de-suprimentos-do-ci hreflang=zh-Hans /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/explanation/cadeia-de-suprimentos-do-ci hreflang=x-default /><script data-rh=true type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","item":"https://daneiel.github.io/brabo/dev/zh-Hans/explanation/cadeia-de-suprimentos-do-ci","name":"CI supply chain","position":1}]}</script><link rel=stylesheet href=/brabo/dev/zh-Hans/assets/css/styles.7f2bd764.css /><script src=/brabo/dev/zh-Hans/assets/js/runtime~main.9edb373d.js defer></script><script src=/brabo/dev/zh-Hans/assets/js/main.510e487e.js defer></script></head><body><svg style="display: none;"><defs>
+<!doctype html><html lang=zh-Hans dir=ltr class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-explanation/cadeia-de-suprimentos-do-ci" data-has-hydrated=false><head><meta charset=UTF-8><meta name=generator content="Docusaurus v3.10.2"><title data-rh=true>A cadeia de suprimentos do CI | Brabo</title><meta data-rh=true name=viewport content="width=device-width, initial-scale=1.0"/><meta data-rh=true name=robots content="noindex, nofollow"/><meta data-rh=true name=twitter:card content=summary_large_image /><meta data-rh=true property=og:url content=https://daneiel.github.io/brabo/dev/zh-Hans/explanation/cadeia-de-suprimentos-do-ci /><meta data-rh=true property=og:locale content=zh_Hans /><meta data-rh=true property=og:locale:alternate content=pt_BR /><meta data-rh=true property=og:locale:alternate content=en /><meta data-rh=true property=og:locale:alternate content=ru /><meta data-rh=true name=docusaurus_locale content=zh-Hans /><meta data-rh=true name=docsearch:language content=zh-Hans /><meta data-rh=true name=docusaurus_version content=current /><meta data-rh=true name=docusaurus_tag content=docs-default-current /><meta data-rh=true name=docsearch:version content=current /><meta data-rh=true name=docsearch:docusaurus_tag content=docs-default-current /><meta data-rh=true property=og:title content="A cadeia de suprimentos do CI | Brabo"/><meta data-rh=true name=description content="O que roda dentro dos nossos runners de CI que não fomos nós que escrevemos, como isso é pinado, e o que ainda é aceito na confiança."/><meta data-rh=true property=og:description content="O que roda dentro dos nossos runners de CI que não fomos nós que escrevemos, como isso é pinado, e o que ainda é aceito na confiança."/><link data-rh=true rel=icon href=/brabo/dev/zh-Hans/img/favicon.ico /><link data-rh=true rel=canonical href=https://daneiel.github.io/brabo/dev/zh-Hans/explanation/cadeia-de-suprimentos-do-ci /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/explanation/cadeia-de-suprimentos-do-ci hreflang=pt-BR /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/en/explanation/cadeia-de-suprimentos-do-ci hreflang=en /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/ru/explanation/cadeia-de-suprimentos-do-ci hreflang=ru /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/zh-Hans/explanation/cadeia-de-suprimentos-do-ci hreflang=zh-Hans /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/explanation/cadeia-de-suprimentos-do-ci hreflang=x-default /><script data-rh=true type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","item":"https://daneiel.github.io/brabo/dev/zh-Hans/explanation/cadeia-de-suprimentos-do-ci","name":"Cadeia de suprimentos do CI","position":1}]}</script><link rel=stylesheet href=/brabo/dev/zh-Hans/assets/css/styles.7f2bd764.css /><script src=/brabo/dev/zh-Hans/assets/js/runtime~main.df649d4d.js defer></script><script src=/brabo/dev/zh-Hans/assets/js/main.77885a25.js defer></script></head><body><svg style="display: none;"><defs>
 <symbol id=theme-svg-external-link viewBox="0 0 24 24"><path fill=currentColor d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
 </defs></svg>
-<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme-3f2")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")),document.documentElement.setAttribute("data-theme-choice",t||"system")}(),function(){try{for(var[t,e]of new URLSearchParams(window.location.search).entries())if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id=__docusaurus><link rel=preload as=image href=/brabo/dev/zh-Hans/img/logo.svg /><div role=region aria-label=跳到主要内容><a class=skipToContent_CFOX href=#__docusaurus_skipToContent_fallback>跳到主要内容</a></div><nav aria-label=主导航 class="theme-layout-navbar navbar navbar--fixed-top"><div class=navbar__inner><div class="theme-layout-navbar-left navbar__items"><button aria-label=切换导航栏 aria-expanded=false class="navbar__toggle clean-btn" type=button><svg width=30 height=30 viewBox="0 0 30 30" aria-hidden=true><path stroke=currentColor stroke-linecap=round stroke-miterlimit=10 stroke-width=2 d="M4 7h22M4 15h22M4 23h22"/></svg></button><a class=navbar__brand href=/brabo/dev/zh-Hans/><div class=navbar__logo><img src=/brabo/dev/zh-Hans/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--light_vzqw"/><img src=/brabo/dev/zh-Hans/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--dark_FhTf"/></div><b class="navbar__title text--truncate">Brabo</b></a><a aria-current=page class="navbar__item navbar__link navbar__link--active" href=/brabo/dev/zh-Hans/>文档</a><a class="navbar__item navbar__link" href=/brabo/dev/zh-Hans/runbook>Runbook</a><a class="navbar__item navbar__link" href=/brabo/dev/zh-Hans/adr>ADRs</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a href=# aria-haspopup=true aria-expanded=false role=button class=navbar__link>dev</a><ul class=dropdown__menu><li><a href=https://daneiel.github.io/brabo/prd/ target=_blank rel="noopener noreferrer" class=dropdown__link>prd — estável<svg width=12 height=12 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/qa/ target=_blank rel="noopener noreferrer" class=dropdown__link>qa — 候选版<svg width=12 height=12 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/dev/ target=_blank rel="noopener noreferrer" class=dropdown__link>dev — em desenvolvimento ✓<svg width=12 height=12 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><div class="toggle_pnX7 colorModeToggle_Dj3Z"><button class="clean-btn toggleButton_DKER toggleButtonDisabled_qzkp" type=button disabled title=跟随系统 aria-label=切换浅色/暗黑模式（当前为跟随系统）><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL lightToggleIcon_E8tM"><path fill=currentColor d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL darkToggleIcon_rXjT"><path fill=currentColor d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL systemToggleIcon_zwCm"><path fill=currentColor d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"/></svg></button></div><div class=navbarSearchContainer_zRAa><div class="navbar__search searchBarContainer_eGzj" dir=ltr><svg aria-hidden=true class=searchIcon_PXpx focusable=false viewBox="0 0 16 16"><path fill=currentColor d="M6.02945 10.20327a4.17382 4.17382 0 1 1 4.17382-4.17382 4.15609 4.15609 0 0 1-4.17382 4.17382Zm9.69195 4.2199-4.8225-4.82338A5.88021 5.88021 0 0 0 12.058 6.02856 6.00467 6.00467 0 1 0 9.59979 10.8989l4.82338 4.82338a.89729.89729 0 0 0 1.29912 0 .89749.89749 0 0 0-.00087-1.29909Z"/></svg><input placeholder=搜索 aria-label=Search class="navbar__search-input searchInput_xOBI" value="" /><div class="loadingRing_JccP searchBarLoadingRing_aTss"><div></div><div></div><div></div><div></div></div></div></div></div></div><div role=presentation class=navbar-sidebar__backdrop></div></nav><div id=__docusaurus_skipToContent_fallback class="theme-layout-main main-wrapper mainWrapper_WJkx"><div class=docsWrapper_mIeg><button aria-label=回到顶部 class="clean-btn theme-back-to-top-button backToTopButton_Afc8" type=button></button><div class=docRoot_XZYc><aside class="theme-doc-sidebar-container docSidebarContainer_FPqZ"><div class=sidebarViewport_waOe><div class=sidebar_RQC4><nav aria-label=文档侧边栏 class="menu thin-scrollbar menu_ZM4U"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/><span class=categoryLinkLabel_jKch>🚀 从这里开始</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/><span class=linkLabel_CzBh>简介</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/getting-started><span class=linkLabel_CzBh>快速开始</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/tutorials/from-zero-to-deliverable><span class=linkLabel_CzBh>从零到交付物</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/architecture><span class=categoryLinkLabel_jKch>🏗️ 架构</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/architecture><span class=linkLabel_CzBh>Arquitetura</span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist" tabindex=0 href=/brabo/dev/zh-Hans/adr><span class=categoryLinkLabel_jKch>决策（ADR）</span></a><button aria-label="展开侧边栏分类 '决策（ADR）'" aria-expanded=false type=button class="clean-btn menu__caret"></button></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/business-rules><span class=categoryLinkLabel_jKch>📐 规则</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/business-rules><span class=linkLabel_CzBh>Regras de negócio</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/business-rules/custo><span class=linkLabel_CzBh>Custo e metering</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/business-rules/autenticacao><span class=linkLabel_CzBh>Autenticação</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/reference/configuration><span class=categoryLinkLabel_jKch>📖 参考</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/configuration><span class=linkLabel_CzBh>Configuration</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/events><span class=linkLabel_CzBh>Events</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/permissions><span class=linkLabel_CzBh>Permissions</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/artifacts><span class=linkLabel_CzBh>Artifacts</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/git-providers><span class=linkLabel_CzBh>Git Providers</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/internal-api><span class=linkLabel_CzBh>Internal API</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/scripts><span class=linkLabel_CzBh>Scripts</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/rulesets><span class=linkLabel_CzBh>Rulesets</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/paridade-de-traducao><span class=linkLabel_CzBh>Paridade de tradução</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/brb><span class=linkLabel_CzBh>BRB register</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/security-surface><span class=linkLabel_CzBh>Superfície exposta da api</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/api><span class=linkLabel_CzBh>API 参考</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role=button aria-expanded=true href=/brabo/dev/zh-Hans/explanation/documentation-workflow><span class=categoryLinkLabel_jKch>💡 解释</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/documentation-workflow><span class=linkLabel_CzBh>Docs sync</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/branching-policy><span class=linkLabel_CzBh>Branching policy</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link menu__link--active" aria-current=page tabindex=0 href=/brabo/dev/zh-Hans/explanation/cadeia-de-suprimentos-do-ci><span class=linkLabel_CzBh>CI supply chain</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/observability><span class=linkLabel_CzBh>Observability</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/primeiro-dogfooding><span class=linkLabel_CzBh>Primeiro dogfooding</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/execucao-real-hello-world><span class=linkLabel_CzBh>Execução real (hello world)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/achados-execucao-real><span class=linkLabel_CzBh>Achados da execução real da esteira</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/backlog><span class=linkLabel_CzBh>Triaged backlog</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/validacao-fase-12><span class=linkLabel_CzBh>Validação da Fase 12</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/validacao-real><span class=linkLabel_CzBh>Validação real (13b)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/aceite-providers><span class=linkLabel_CzBh>Aceite dos providers</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/gates><span class=linkLabel_CzBh>The gates, and how they're measured</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/auditoria-fluxo-vs-codigo><span class=linkLabel_CzBh>Audit: fluxo.yml × code (v3, ADR 0085)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/historico-de-fases><span class=linkLabel_CzBh>Histórico de fases</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/fase-28-pasta-do-usuario><span class=linkLabel_CzBh>FASE 28 — pasta do usuário</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/fase-29-instalacao-de-uma-linha><span class=linkLabel_CzBh>FASE 29 — instalação de uma linha</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/fase-30-runner-por-maquina><span class=linkLabel_CzBh>FASE 30 — agente local da máquina</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/medicao-do-idioma><span class=linkLabel_CzBh>Measuring the language heuristic</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/medicao-do-jev><span class=linkLabel_CzBh>Measuring the Jev tool router</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/auditoria-visual-rodada-29><span class=linkLabel_CzBh>Visual audit, before and after Rodada 29</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/tanstack-ai><span class=linkLabel_CzBh>TanStack AI — não adotado</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/localizacao><span class=linkLabel_CzBh>Localização</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/localizacao-en><span class=linkLabel_CzBh>Localização — inglês (en)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/localizacao-ru><span class=linkLabel_CzBh>Localização — russo (ru)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/localizacao-zh-hans><span class=linkLabel_CzBh>Localização — chinês simplificado (zh-Hans)</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/runbook><span class=categoryLinkLabel_jKch>🛠️ 运维</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/runbook><span class=linkLabel_CzBh>Runbook</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/glossary><span class=categoryLinkLabel_jKch>📚 词汇</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/glossary><span class=linkLabel_CzBh>术语表</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true><span class=categoryLinkLabel_jKch>🤝 贡献</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>如何贡献</span><svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>在哪里求助</span><svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>报告漏洞</span><svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></ul></nav></div></div></aside><main class=docMainContainer_ia8v><div class="container padding-top--md padding-bottom--lg"><div class=row><div class="col docItemCol_xjE4"><div class=docItemContainer_cPej><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_sZul" aria-label=页面路径><ul class=breadcrumbs><li class=breadcrumbs__item><a aria-label=主页面 class=breadcrumbs__link href=/brabo/dev/zh-Hans/><svg viewBox="0 0 24 24" class=breadcrumbHomeIcon_AUjL><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill=currentColor /></svg></a><li class=breadcrumbs__item><span class=breadcrumbs__link>💡 解释</span><li class="breadcrumbs__item breadcrumbs__item--active"><span class=breadcrumbs__link>CI supply chain</span></ul></nav><div class="tocCollapsible_nbAK theme-doc-toc-mobile tocMobile_r92C"><button type=button class="clean-btn tocCollapsibleButton_hcyq">本页总览</button></div><div class="alert alert--warning margin-bottom--md" role=note data-faixa-de-traducao="">本页尚未翻译；您正在阅读葡萄牙语原文。</div><div class="theme-doc-markdown markdown"><header><h1>The CI supply chain</h1></header>
-<p>Every job in this repository runs third-party code on a machine that has
-a checkout of the source and, in the release workflows, credentials for
-the GHCR registry, the npm registry and the repository's own git refs.
-That code arrives two ways: <strong>GitHub Actions</strong> (<code>uses:</code>) and <strong>binaries
-downloaded with <code>curl</code></strong> (the scanners). Neither is written here, and
-neither is reviewed by a PR.</p>
-<p>This page is about the part of that we control. It exists because the
-mechanism lived only in workflow comments — a place where a rule can be
-read but not audited, and where the two halves drifted for exactly that
-reason.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=the-threat-stated-plainly>The threat, stated plainly<a href=#the-threat-stated-plainly class=hash-link aria-label="The threat, stated plainly的直接链接" title="The threat, stated plainly的直接链接" translate=no>​</a></h2>
-<p>A tag is a pointer. <code>actions/checkout@v4</code> is not a version, it's a name
-that the action's owner can delete and recreate pointing at a different
-commit, at any moment, with no signal in this repository. Whoever moves
-that tag runs their code in our runner, on our checkout, with whatever
-secrets that workflow was granted.</p>
-<p>The same holds for a <code>curl</code> of a GitHub Release asset: a compromised
-release, or a MITM between the runner and the CDN, hands us a different
-binary and nothing notices — until the scanner fails to start, or worse,
-until it "works."</p>
-<p>Neither is a hypothesis about our repository specifically. They're the
-two documented ways CI gets compromised in the wild, and the defense for
-both is the same idea: <strong>refer to content, not to a name</strong>.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=the-two-mechanisms>The two mechanisms<a href=#the-two-mechanisms class=hash-link aria-label="The two mechanisms的直接链接" title="The two mechanisms的直接链接" translate=no>​</a></h2>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=binaries-checksum-after-every-download>Binaries: checksum after every download<a href=#binaries-checksum-after-every-download class=hash-link aria-label="Binaries: checksum after every download的直接链接" title="Binaries: checksum after every download的直接链接" translate=no>​</a></h3>
-<p>Every <code>curl</code> of a release asset in <code>ci.yml</code> and in both engine
-Dockerfiles is followed by <code>sha256sum -c</code> against a hash written in the
-workflow itself:</p>
+<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme-3f2")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")),document.documentElement.setAttribute("data-theme-choice",t||"system")}(),function(){try{for(var[t,e]of new URLSearchParams(window.location.search).entries())if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id=__docusaurus><link rel=preload as=image href=/brabo/dev/zh-Hans/img/logo.svg /><div role=region aria-label=跳到主要内容><a class=skipToContent_CFOX href=#__docusaurus_skipToContent_fallback>跳到主要内容</a></div><nav aria-label=主导航 class="theme-layout-navbar navbar navbar--fixed-top"><div class=navbar__inner><div class="theme-layout-navbar-left navbar__items"><button aria-label=切换导航栏 aria-expanded=false class="navbar__toggle clean-btn" type=button><svg width=30 height=30 viewBox="0 0 30 30" aria-hidden=true><path stroke=currentColor stroke-linecap=round stroke-miterlimit=10 stroke-width=2 d="M4 7h22M4 15h22M4 23h22"/></svg></button><a class=navbar__brand href=/brabo/dev/zh-Hans/><div class=navbar__logo><img src=/brabo/dev/zh-Hans/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--light_vzqw"/><img src=/brabo/dev/zh-Hans/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--dark_FhTf"/></div><b class="navbar__title text--truncate">Brabo</b></a><a aria-current=page class="navbar__item navbar__link navbar__link--active" href=/brabo/dev/zh-Hans/>文档</a><a class="navbar__item navbar__link" href=/brabo/dev/zh-Hans/runbook>Runbook</a><a class="navbar__item navbar__link" href=/brabo/dev/zh-Hans/adr>ADRs</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a href=# aria-haspopup=true aria-expanded=false role=button class=navbar__link>dev</a><ul class=dropdown__menu><li><a href=https://daneiel.github.io/brabo/prd/ target=_blank rel="noopener noreferrer" class=dropdown__link>prd — estável<svg width=12 height=12 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/qa/ target=_blank rel="noopener noreferrer" class=dropdown__link>qa — 候选版<svg width=12 height=12 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/dev/ target=_blank rel="noopener noreferrer" class=dropdown__link>dev — em desenvolvimento ✓<svg width=12 height=12 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><div class="toggle_pnX7 colorModeToggle_Dj3Z"><button class="clean-btn toggleButton_DKER toggleButtonDisabled_qzkp" type=button disabled title=跟随系统 aria-label=切换浅色/暗黑模式（当前为跟随系统）><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL lightToggleIcon_E8tM"><path fill=currentColor d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL darkToggleIcon_rXjT"><path fill=currentColor d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL systemToggleIcon_zwCm"><path fill=currentColor d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"/></svg></button></div><div class=navbarSearchContainer_zRAa><div class="navbar__search searchBarContainer_eGzj" dir=ltr><svg aria-hidden=true class=searchIcon_PXpx focusable=false viewBox="0 0 16 16"><path fill=currentColor d="M6.02945 10.20327a4.17382 4.17382 0 1 1 4.17382-4.17382 4.15609 4.15609 0 0 1-4.17382 4.17382Zm9.69195 4.2199-4.8225-4.82338A5.88021 5.88021 0 0 0 12.058 6.02856 6.00467 6.00467 0 1 0 9.59979 10.8989l4.82338 4.82338a.89729.89729 0 0 0 1.29912 0 .89749.89749 0 0 0-.00087-1.29909Z"/></svg><input placeholder=搜索 aria-label=Search class="navbar__search-input searchInput_xOBI" value="" /><div class="loadingRing_JccP searchBarLoadingRing_aTss"><div></div><div></div><div></div><div></div></div></div></div></div></div><div role=presentation class=navbar-sidebar__backdrop></div></nav><div id=__docusaurus_skipToContent_fallback class="theme-layout-main main-wrapper mainWrapper_WJkx"><div class=docsWrapper_mIeg><button aria-label=回到顶部 class="clean-btn theme-back-to-top-button backToTopButton_Afc8" type=button></button><div class=docRoot_XZYc><aside class="theme-doc-sidebar-container docSidebarContainer_FPqZ"><div class=sidebarViewport_waOe><div class=sidebar_RQC4><nav aria-label=文档侧边栏 class="menu thin-scrollbar menu_ZM4U"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/><span class=categoryLinkLabel_jKch>🚀 从这里开始</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/><span class=linkLabel_CzBh>简介</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/getting-started><span class=linkLabel_CzBh>快速开始</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/tutorials/from-zero-to-deliverable><span class=linkLabel_CzBh>从零到交付物</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/architecture><span class=categoryLinkLabel_jKch>🏗️ 架构</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/architecture><span class=linkLabel_CzBh>Arquitetura</span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist" tabindex=0 href=/brabo/dev/zh-Hans/adr><span class=categoryLinkLabel_jKch>决策（ADR）</span></a><button aria-label="展开侧边栏分类 '决策（ADR）'" aria-expanded=false type=button class="clean-btn menu__caret"></button></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/business-rules><span class=categoryLinkLabel_jKch>📐 规则</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/business-rules><span class=linkLabel_CzBh>Regras de negócio</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/business-rules/custo><span class=linkLabel_CzBh>Custo e metering</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/business-rules/autenticacao><span class=linkLabel_CzBh>Autenticação</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/reference/configuration><span class=categoryLinkLabel_jKch>📖 参考</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/configuration><span class=linkLabel_CzBh>Configuration</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/events><span class=linkLabel_CzBh>Events</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/permissions><span class=linkLabel_CzBh>Permissions</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/artifacts><span class=linkLabel_CzBh>Artifacts</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/git-providers><span class=linkLabel_CzBh>Git Providers</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/internal-api><span class=linkLabel_CzBh>Internal API</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/scripts><span class=linkLabel_CzBh>Scripts</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/rulesets><span class=linkLabel_CzBh>Rulesets</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/paridade-de-traducao><span class=linkLabel_CzBh>Paridade de tradução</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/brb><span class=linkLabel_CzBh>BRB register</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/security-surface><span class=linkLabel_CzBh>Superfície exposta da api</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/api><span class=linkLabel_CzBh>API 参考</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role=button aria-expanded=true href=/brabo/dev/zh-Hans/explanation/documentation-workflow><span class=categoryLinkLabel_jKch>💡 解释</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/documentation-workflow><span class=linkLabel_CzBh>Sincronia da doc</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/branching-policy><span class=linkLabel_CzBh>Política de branches</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link menu__link--active" aria-current=page tabindex=0 href=/brabo/dev/zh-Hans/explanation/cadeia-de-suprimentos-do-ci><span class=linkLabel_CzBh>Cadeia de suprimentos do CI</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/observability><span class=linkLabel_CzBh>Observabilidade</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/primeiro-dogfooding><span class=linkLabel_CzBh>Primeiro dogfooding</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/execucao-real-hello-world><span class=linkLabel_CzBh>Execução real (hello world)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/achados-execucao-real><span class=linkLabel_CzBh>Achados da execução real da esteira</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/backlog><span class=linkLabel_CzBh>Backlog triado</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/validacao-fase-12><span class=linkLabel_CzBh>Validação da Fase 12</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/validacao-real><span class=linkLabel_CzBh>Validação real (13b)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/aceite-providers><span class=linkLabel_CzBh>Aceite dos providers</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/gates><span class=linkLabel_CzBh>Os gates, e como eles são medidos</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/auditoria-fluxo-vs-codigo><span class=linkLabel_CzBh>Auditoria: fluxo.yml × código (v3, ADR 0085)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/historico-de-fases><span class=linkLabel_CzBh>Histórico de fases</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/fase-28-pasta-do-usuario><span class=linkLabel_CzBh>FASE 28 — pasta do usuário</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/fase-29-instalacao-de-uma-linha><span class=linkLabel_CzBh>FASE 29 — instalação de uma linha</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/fase-30-runner-por-maquina><span class=linkLabel_CzBh>FASE 30 — agente local da máquina</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/medicao-do-idioma><span class=linkLabel_CzBh>Medição da heurística de idioma</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/medicao-do-jev><span class=linkLabel_CzBh>Medição do roteador de ferramentas Jev</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/auditoria-visual-rodada-29><span class=linkLabel_CzBh>Auditoria visual, antes e depois da Rodada 29</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/tanstack-ai><span class=linkLabel_CzBh>TanStack AI — não adotado</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/localizacao><span class=linkLabel_CzBh>Localização</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/localizacao-en><span class=linkLabel_CzBh>Localização — inglês (en)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/localizacao-ru><span class=linkLabel_CzBh>Localização — russo (ru)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/localizacao-zh-hans><span class=linkLabel_CzBh>Localização — chinês simplificado (zh-Hans)</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/runbook><span class=categoryLinkLabel_jKch>🛠️ 运维</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/runbook><span class=linkLabel_CzBh>Runbook</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/glossary><span class=categoryLinkLabel_jKch>📚 词汇</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/glossary><span class=linkLabel_CzBh>术语表</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true><span class=categoryLinkLabel_jKch>🤝 贡献</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>如何贡献</span><svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>在哪里求助</span><svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>报告漏洞</span><svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></ul></nav></div></div></aside><main class=docMainContainer_ia8v><div class="container padding-top--md padding-bottom--lg"><div class=row><div class="col docItemCol_xjE4"><div class=docItemContainer_cPej><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_sZul" aria-label=页面路径><ul class=breadcrumbs><li class=breadcrumbs__item><a aria-label=主页面 class=breadcrumbs__link href=/brabo/dev/zh-Hans/><svg viewBox="0 0 24 24" class=breadcrumbHomeIcon_AUjL><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill=currentColor /></svg></a><li class=breadcrumbs__item><span class=breadcrumbs__link>💡 解释</span><li class="breadcrumbs__item breadcrumbs__item--active"><span class=breadcrumbs__link>Cadeia de suprimentos do CI</span></ul></nav><div class="tocCollapsible_nbAK theme-doc-toc-mobile tocMobile_r92C"><button type=button class="clean-btn tocCollapsibleButton_hcyq">本页总览</button></div><div class="alert alert--warning margin-bottom--md" role=note data-faixa-de-traducao="">本页尚未翻译；您正在阅读葡萄牙语原文。</div><div class="theme-doc-markdown markdown"><header><h1>A cadeia de suprimentos do CI</h1></header>
+<p>Todo job deste repositório roda código de terceiros numa máquina que tem
+um checkout do código-fonte e, nos workflows de release, credenciais do
+registry GHCR, do registry npm e das próprias refs de git do repositório.
+Esse código chega por dois caminhos: <strong>GitHub Actions</strong> (<code>uses:</code>) e
+<strong>binários baixados com <code>curl</code></strong> (os scanners). Nenhum dos dois é escrito
+aqui, e nenhum dos dois é revisado por uma PR.</p>
+<p>Esta página trata da parte disso que controlamos. Ela existe porque o
+mecanismo morava só em comentários de workflow — um lugar onde a regra
+pode ser lida mas não auditada, e onde as duas metades divergiram
+exatamente por esse motivo.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=the-threat-stated-plainly>A ameaça, dita sem rodeios<a href=#the-threat-stated-plainly class=hash-link aria-label="A ameaça, dita sem rodeios的直接链接" title="A ameaça, dita sem rodeios的直接链接" translate=no>​</a></h2>
+<p>Uma tag é um ponteiro. <code>actions/checkout@v4</code> não é uma versão, é um nome
+que o dono da action pode apagar e recriar apontando para outro commit, a
+qualquer momento, sem sinal nenhum neste repositório. Quem move essa tag
+roda o código dele no nosso runner, no nosso checkout, com os segredos
+que aquele workflow recebeu.</p>
+<p>O mesmo vale para um <code>curl</code> de um asset de GitHub Release: uma release
+comprometida, ou um MITM entre o runner e a CDN, nos entrega outro binário
+e nada percebe — até o scanner não conseguir subir, ou pior, até ele
+"funcionar".</p>
+<p>Nenhuma das duas é hipótese sobre o nosso repositório especificamente. São
+as duas formas documentadas de o CI ser comprometido no mundo real, e a
+defesa para as duas é a mesma ideia: <strong>referir-se ao conteúdo, não a um
+nome</strong>.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=the-two-mechanisms>Os dois mecanismos<a href=#the-two-mechanisms class=hash-link aria-label="Os dois mecanismos的直接链接" title="Os dois mecanismos的直接链接" translate=no>​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=binaries-checksum-after-every-download>Binários: checksum depois de todo download<a href=#binaries-checksum-after-every-download class=hash-link aria-label="Binários: checksum depois de todo download的直接链接" title="Binários: checksum depois de todo download的直接链接" translate=no>​</a></h3>
+<p>Todo <code>curl</code> de asset de release no <code>ci.yml</code> e nos dois Dockerfiles do
+engine é seguido de <code>sha256sum -c</code> contra um hash escrito no próprio
+workflow:</p>
 <div class="language-yaml codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-yaml codeBlock_mqej thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_uNqR><div class=token-line style=color:#F8F8F2><span class="token key atrule">GITLEAKS_SHA256</span><span class="token punctuation" style="color:rgb(248, 248, 242)">:</span><span class="token plain"> </span><span class="token string" style="color:rgb(255, 121, 198)">'551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb'</span><br/></div></code></pre></div></div>
-<p>The hashes come from the <code>checksums.txt</code> published with each release, on
-an independent download. A mismatch fails the job before the binary is
-ever executed.</p>
-<p><code>propriedades.yml</code> (the scheduled property proofs, BRB-009) follows the same
-rule for the three binaries it needs to bring up a cluster — <code>k3d</code>, <code>helm</code>
-and <code>kubectl</code>, each with its hash in the workflow's <code>env:</code>. It installs them
-<strong>before</strong> running <code>deploy/k8s/bootstrap.sh</code>, and that order is the point:
-the bootstrap's own <code>ensure_k3d</code> downloads k3d with <strong>no</strong> checksum, and
-finding the binary already on <code>PATH</code> is what keeps it from downloading. A
-step fails the job if the versions pinned there drift from the ones the
-bootstrap would install. What that workflow still takes on trust, stated:
-the Helm charts come from their repositories by <strong>version</strong>, not digest
-(<code>deploy/k8s/helm/charts.env</code>), with whatever images those charts reference;
-and <code>k3d</code> pulls the <code>rancher/k3s</code> node image and its load-balancer image by
-the <strong>tag baked into the k3d binary</strong> — pinned, then, only as far as the k3d
-checksum pins it.</p>
-<p>The scanner versions have a second constraint: they must match
-<code>docker/engine/Dockerfile.prod</code>, because testing against a different
-scanner from the one that runs in production is a false green. The
-comment promising that was there since Phase 5; the step that <em>enforces</em>
-it (<code>Versões dos scanners batem com o Dockerfile.prod do engine</code>, in the
-<code>lint</code> job) arrived only with <a href=https://github.com/daneiel/brabo/pull/408 target=_blank rel="noopener noreferrer" class="">#408</a>.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=actions-commit-sha-with-the-version-alongside>Actions: commit SHA, with the version alongside<a href=#actions-commit-sha-with-the-version-alongside class=hash-link aria-label="Actions: commit SHA, with the version alongside的直接链接" title="Actions: commit SHA, with the version alongside的直接链接" translate=no>​</a></h3>
-<p>Every <code>uses:</code> is pinned to a 40-character commit SHA, with the tag it
-came from preserved in a trailing comment:</p>
+<p>Os hashes vêm do <code>checksums.txt</code> publicado com cada release, num download
+independente. Uma divergência reprova o job antes de o binário ser sequer
+executado.</p>
+<p>O <code>propriedades.yml</code> (as provas de propriedade agendadas, BRB-009) segue a
+mesma regra para os três binários de que precisa para subir um cluster —
+<code>k3d</code>, <code>helm</code> e <code>kubectl</code>, cada um com seu hash no <code>env:</code> do workflow. Ele
+os instala <strong>antes</strong> de rodar <code>deploy/k8s/bootstrap.sh</code>, e essa ordem é o
+ponto: o <code>ensure_k3d</code> do próprio bootstrap baixa o k3d <strong>sem</strong> checksum, e
+achar o binário já no <code>PATH</code> é o que o impede de baixar. Um passo reprova o
+job se as versões pinadas ali divergirem das que o bootstrap instalaria. O
+que esse workflow ainda aceita na confiança, declarado: os charts do Helm
+vêm dos repositórios deles por <strong>versão</strong>, não por digest
+(<code>deploy/k8s/helm/charts.env</code>), com as imagens que esses charts
+referenciam; e o <code>k3d</code> baixa a imagem de nó <code>rancher/k3s</code> e a imagem do
+load balancer dele pela <strong>tag embutida no binário do k3d</strong> — pinadas,
+então, só até onde o checksum do k3d as pina.</p>
+<p>As versões dos scanners têm uma segunda restrição: precisam bater com o
+<code>docker/engine/Dockerfile.prod</code>, porque testar contra um scanner diferente
+do que roda em produção é verde falso. O comentário que prometia isso
+estava lá desde a Fase 5; o passo que o <em>cobra</em>
+(<code>Versões dos scanners batem com o Dockerfile.prod do engine</code>, no job
+<code>lint</code>) só chegou com a <a href=https://github.com/daneiel/brabo/pull/408 target=_blank rel="noopener noreferrer" class="">#408</a>.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=actions-commit-sha-with-the-version-alongside>Actions: SHA de commit, com a versão ao lado<a href=#actions-commit-sha-with-the-version-alongside class=hash-link aria-label="Actions: SHA de commit, com a versão ao lado的直接链接" title="Actions: SHA de commit, com a versão ao lado的直接链接" translate=no>​</a></h3>
+<p>Todo <code>uses:</code> é pinado num SHA de commit de 40 caracteres, com a tag de
+onde ele veio preservada num comentário ao fim da linha:</p>
 <div class="language-yaml codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-yaml codeBlock_mqej thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_uNqR><div class=token-line style=color:#F8F8F2><span class="token punctuation" style="color:rgb(248, 248, 242)">-</span><span class="token plain"> </span><span class="token key atrule">uses</span><span class="token punctuation" style="color:rgb(248, 248, 242)">:</span><span class="token plain"> actions/checkout@11d5960a326750d5838078e36cf38b85af677262  </span><span class="token comment" style="color:rgb(98, 114, 164)"># v4</span><br/></div></code></pre></div></div>
-<p>The comment is <strong>required</strong>, and not as decoration. It's the only thing
-that tells a human — and Dependabot, which reads exactly that comment —
-which version a hash is. A SHA with no version beside it is a pin nobody
-can audit and nobody can update.</p>
-<p>To resolve a tag into the SHA to write down:</p>
+<p>O comentário é <strong>obrigatório</strong>, e não como enfeite. É a única coisa que diz
+a um humano — e ao Dependabot, que lê exatamente esse comentário — qual
+versão um hash é. Um SHA sem versão ao lado é um pin que ninguém consegue
+auditar e ninguém consegue atualizar.</p>
+<p>Para resolver uma tag no SHA a anotar:</p>
 <div class="language-bash codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-bash codeBlock_mqej thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_uNqR><div class=token-line style=color:#F8F8F2><span class="token plain">gh api repos/actions/checkout/commits/v4 --jq .sha</span><br/></div></code></pre></div></div>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=why-theres-a-check-and-not-just-a-rule>Why there's a check and not just a rule<a href=#why-theres-a-check-and-not-just-a-rule class=hash-link aria-label="Why there's a check and not just a rule的直接链接" title="Why there's a check and not just a rule的直接链接" translate=no>​</a></h2>
-<p>#408 pinned the actions in <code>ci.yml</code> and only there. The other fifteen
-workflows stayed on mutable tags for months — including <code>release.yml</code>
-(pushes images to GHCR), <code>publish-runner.yml</code> (publishes to npm),
-<code>tag-release.yml</code> (creates tags) and <code>docs-deploy.yml</code> (pushes to
-<code>gh-pages</code>). The half that was left unpinned was, precisely, the half
-that holds credentials.</p>
-<p>That isn't carelessness, it's the predictable shape of a rule with no
-mechanism: a new workflow is written by copying a neighbour, and the
-neighbour had a tag. So the rule now has a mechanism —
-<code>scripts/ci/actions-pinadas.ts</code>, run in the <code>lint</code> job, which fails on
-any <code>uses:</code> that isn't a commit SHA, and on any SHA without its version
-comment. It's the same reasoning as
-<a class="" href=/brabo/dev/zh-Hans/explanation/documentation-workflow>the RN and ADR counts</a>: a number kept correct
-by hand goes stale the moment someone forgets, so the artifact is read
-instead of trusted.</p>
-<p>A reference to an action <strong>inside this repository</strong> (<code>./.github/...</code>)
-passes: it's our own code, reviewed by the PR that changes it, with no
-third party able to move anything.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=the-playwright-browser>The Playwright browser<a href=#the-playwright-browser class=hash-link aria-label="The Playwright browser的直接链接" title="The Playwright browser的直接链接" translate=no>​</a></h2>
-<p>The browser E2E (<a class="" href=/brabo/dev/zh-Hans/adr/0120-e2e-de-navegador-contra-o-compose-de-producao>ADR 0120</a>)
-downloads chromium at CI time from Playwright's CDN — a third download
-that isn't an action and isn't a GitHub Release asset, so neither of the
-two mechanisms above covers it.</p>
-<p>What pins it is the <strong>exact</strong> <code>@playwright/test</code> version in <code>e2e/pnpm-lock.yaml</code>:
-each release of the package is bound to one browser build, and
-<code>playwright install</code> fetches that one. So the pin is the lockfile, and
-<code>--frozen-lockfile</code> in the job is what makes it a pin rather than a
-suggestion.</p>
-<p>There is no <code>sha256sum -c</code> here, and that's the honest description: the
-tool downloads and verifies on its own, and reproducing its checksum
-table by hand would be a copy that ages. Weaker than the scanner
-binaries, stated rather than implied.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=images-job-caches>What the images job caches, and what the cache cannot change<a href=#images-job-caches class=hash-link aria-label="What the images job caches, and what the cache cannot change的直接链接" title="What the images job caches, and what the cache cannot change的直接链接" translate=no>​</a></h2>
-<p>Since AT-304 the <code>images</code> job of <code>ci.yml</code> keeps three things between runs
-with <code>actions/cache</code> (pinned by SHA like every other action), and each one
-was chosen so that the cache saves time without moving a verdict:</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=why-theres-a-check-and-not-just-a-rule>Por que há uma checagem e não só uma regra<a href=#why-theres-a-check-and-not-just-a-rule class=hash-link aria-label="Por que há uma checagem e não só uma regra的直接链接" title="Por que há uma checagem e não só uma regra的直接链接" translate=no>​</a></h2>
+<p>A #408 pinou as actions do <code>ci.yml</code> e só dele. Os outros quinze workflows
+ficaram em tags mutáveis por meses — inclusive <code>release.yml</code> (empurra
+imagens para o GHCR), <code>publish-runner.yml</code> (publica no npm),
+<code>tag-release.yml</code> (cria tags) e <code>docs-deploy.yml</code> (empurra para o
+<code>gh-pages</code>). A metade que ficou sem pin era, precisamente, a metade que
+tem credenciais.</p>
+<p>Isso não é descuido, é a forma previsível de uma regra sem mecanismo: um
+workflow novo é escrito copiando um vizinho, e o vizinho tinha uma tag.
+Então a regra agora tem um mecanismo — <code>scripts/ci/actions-pinadas.ts</code>,
+rodado no job <code>lint</code>, que reprova qualquer <code>uses:</code> que não seja SHA de
+commit, e qualquer SHA sem o comentário de versão. É o mesmo raciocínio
+<a class="" href=/brabo/dev/zh-Hans/explanation/documentation-workflow>das contagens de RN e ADR</a>: um número mantido
+certo à mão fica velho no momento em que alguém esquece, então o artefato
+é lido em vez de confiado.</p>
+<p>Uma referência a uma action <strong>dentro deste repositório</strong> (<code>./.github/...</code>)
+passa: é código nosso, revisado pela PR que o muda, sem terceiro capaz de
+mover nada.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=the-playwright-browser>O navegador do Playwright<a href=#the-playwright-browser class=hash-link aria-label="O navegador do Playwright的直接链接" title="O navegador do Playwright的直接链接" translate=no>​</a></h2>
+<p>O E2E de navegador (<a class="" href=/brabo/dev/zh-Hans/adr/0120-e2e-de-navegador-contra-o-compose-de-producao>ADR 0120</a>)
+baixa o chromium na hora do CI, da CDN do Playwright — um terceiro
+download que não é action nem asset de GitHub Release, então nenhum dos
+dois mecanismos acima o cobre.</p>
+<p>O que o pina é a versão <strong>exata</strong> de <code>@playwright/test</code> em
+<code>e2e/pnpm-lock.yaml</code>: cada release do pacote está amarrada a um build do
+navegador, e <code>playwright install</code> busca esse. Então o pin é o lockfile, e
+o <code>--frozen-lockfile</code> no job é o que o torna um pin e não uma sugestão.</p>
+<p>Não há <code>sha256sum -c</code> aqui, e essa é a descrição honesta: a ferramenta
+baixa e verifica por conta própria, e reproduzir a tabela de checksums
+dela à mão seria uma cópia que envelhece. Mais fraco que os binários dos
+scanners, dito em vez de subentendido.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=images-job-caches>O que o job de imagens guarda em cache, e o que o cache não pode mudar<a href=#images-job-caches class=hash-link aria-label="O que o job de imagens guarda em cache, e o que o cache não pode mudar的直接链接" title="O que o job de imagens guarda em cache, e o que o cache não pode mudar的直接链接" translate=no>​</a></h2>
+<p>Desde a AT-304 o job <code>images</code> do <code>ci.yml</code> guarda três coisas entre
+execuções com <code>actions/cache</code> (pinada por SHA como toda action), e cada
+uma foi escolhida para que o cache economize tempo sem mover um veredito:</p>
 
 
 
@@ -125,318 +124,345 @@ was chosen so that the cache saves time without moving a verdict:</p>
 
 
 
-<table><thead><tr><th>cache<th>key<th>what decides the content<tbody><tr><td>the Playwright browser (<code>~/.cache/ms-playwright</code>)<td>exact <code>@playwright/test</code> version + hash of <code>e2e/pnpm-lock.yaml</code><td>the lockfile pin above — a new Playwright is a new key, never a stale hit<tr><td>the <code>e2e/</code> pnpm store (<code>setup-node</code>, <code>cache-dependency-path: e2e/pnpm-lock.yaml</code>)<td>hash of <code>e2e/pnpm-lock.yaml</code><td><code>pnpm install --frozen-lockfile</code>, which still checks every tarball's integrity against the lockfile<tr><td>the Trivy vulnerability database (<code>/tmp/trivy-cache/seed/db</code>)<td>Trivy version + UTC day, restoring the latest earlier day<td><strong>Trivy itself</strong>: <code>--download-db-only</code> still runs, reads the database's own <code>NextUpdate</code>, and downloads again when it has passed</table>
-<p>The last row is the one that could have loosened a gate, and it doesn't:
-the cache only <em>seeds</em> the directory, and freshness is judged by the same
-rule Trivy applies on a laptop. What the cache removes is the ~110 MB
-download from the registry on every run — which was also the source of the
-occasional <code>TOOMANYREQUESTS</code> failure. <code>release.yml</code> does not use this cache:
-a tag scans with a database it downloads itself.</p>
-<p>The browser cache holds <strong>only</strong> the browser. The system libraries that
-<code>--with-deps</code> installs go into the runner's apt, which no directory cache
-can hold, so a warm run still installs them (<code>playwright install-deps</code>).</p>
-<p>Scope is GitHub's, not ours: <code>ci.yml</code> only runs on <code>pull_request</code>, so these
-caches are written in the PR's own scope and read back by that PR's later
-pushes (and from the base branch's scope, which this workflow never writes).
-A PR cannot seed another PR's cache.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=container-images-digest-with-the-tag-alongside>Container images: digest, with the tag inside the reference<a href=#container-images-digest-with-the-tag-alongside class=hash-link aria-label="Container images: digest, with the tag inside the reference的直接链接" title="Container images: digest, with the tag inside the reference的直接链接" translate=no>​</a></h2>
-<p>Third-party images are pinned by <strong>digest</strong>, with the tag they came from
-written <strong>inside the reference</strong>, before the digest — <code>image:tag@sha256:&lt;index></code>
+<table><thead><tr><th>cache<th>chave<th>o que decide o conteúdo<tbody><tr><td>o navegador do Playwright (<code>~/.cache/ms-playwright</code>)<td>versão exata de <code>@playwright/test</code> + hash de <code>e2e/pnpm-lock.yaml</code><td>o pin do lockfile acima — Playwright novo é chave nova, nunca um acerto velho<tr><td>o store do pnpm de <code>e2e/</code> (<code>setup-node</code>, <code>cache-dependency-path: e2e/pnpm-lock.yaml</code>)<td>hash de <code>e2e/pnpm-lock.yaml</code><td><code>pnpm install --frozen-lockfile</code>, que continua conferindo a integridade de todo tarball contra o lockfile<tr><td>o banco de vulnerabilidades do Trivy (<code>/tmp/trivy-cache/seed/db</code>)<td>versão do Trivy + dia UTC, restaurando o dia anterior mais recente<td><strong>o próprio Trivy</strong>: <code>--download-db-only</code> continua rodando, lê o <code>NextUpdate</code> do próprio banco e baixa de novo quando ele passou</table>
+<p>A última linha é a que poderia ter afrouxado um gate, e não afrouxa: o
+cache só <em>semeia</em> o diretório, e o frescor é julgado pela mesma regra que
+o Trivy aplica num notebook. O que o cache tira é o download de ~110 MB do
+registry a cada execução — que era também a origem da falha ocasional
+<code>TOOMANYREQUESTS</code>. O <code>release.yml</code> não usa esse cache: uma tag escaneia
+com um banco que ela mesma baixa.</p>
+<p>O cache do navegador guarda <strong>só</strong> o navegador. As bibliotecas de sistema
+que o <code>--with-deps</code> instala vão para o apt do runner, que nenhum cache de
+diretório consegue guardar, então uma execução quente ainda as instala
+(<code>playwright install-deps</code>).</p>
+<p>O escopo é do GitHub, não nosso: o <code>ci.yml</code> só roda em <code>pull_request</code>,
+então esses caches são gravados no escopo da própria PR e lidos de volta
+pelos pushes seguintes dessa PR (e do escopo da branch base, que este
+workflow nunca grava). Uma PR não consegue semear o cache de outra PR.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=container-images-digest-with-the-tag-alongside>Imagens de container: digest, com a tag dentro da referência<a href=#container-images-digest-with-the-tag-alongside class=hash-link aria-label="Imagens de container: digest, com a tag dentro da referência的直接链接" title="Imagens de container: digest, com a tag dentro da referência的直接链接" translate=no>​</a></h2>
+<p>Imagens de terceiros são pinadas por <strong>digest</strong>, com a tag de onde vieram
+escrita <strong>dentro da referência</strong>, antes do digest —
+<code>image:tag@sha256:&lt;index></code>
 (<a class="" href=/brabo/dev/zh-Hans/adr/0178-tag-inline-na-imagem-de-terceiro>ADR 0178</a>):</p>
 <div class="language-yaml codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-yaml codeBlock_mqej thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_uNqR><div class=token-line style=color:#F8F8F2><span class="token key atrule">image</span><span class="token punctuation" style="color:rgb(248, 248, 242)">:</span><span class="token plain"> neo4j</span><span class="token punctuation" style="color:rgb(248, 248, 242)">:</span><span class="token plain">5.26</span><span class="token punctuation" style="color:rgb(248, 248, 242)">-</span><span class="token plain">community@sha256</span><span class="token punctuation" style="color:rgb(248, 248, 242)">:</span><span class="token plain">d9cfe82983d27f5a75b3aaae8f316d04f9a698a3b7f6103a508f7caf8362f255</span><br/></div></code></pre></div></div>
 <div class="language-dockerfile codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-dockerfile codeBlock_mqej thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_uNqR><div class=token-line style=color:#F8F8F2><span class="token plain">FROM node:26.11.1-alpine3.24@sha256:143494b1da2945f061539253adc65e4f1569ddf07da2d384c022c791a9d90a4a AS deps</span><br/></div></code></pre></div></div>
-<p>With both present, Docker pulls by the digest: the tag is information for
-whoever reads the line, and the digest decides the bytes.</p>
-<p><strong>Until ADR 0178 the tag lived in a comment</strong> (<code>neo4j@sha256:…  # 5.26-community</code>,
-and in a Dockerfile on the line above), mirroring the actions. It moved because
-of a measurement (AT-139, 2026-09-27): Dependabot does not read that comment in
-any format, and a digest-only pin is "updated" to the digest of <code>latest</code> — which
-would have taken pgvector, neo4j and node to another major with the comment still
-claiming the old tag and the lint green. With the tag inline, Docker,
-Dependabot and a human all read the same tag. The CloudNativePG <code>imageName</code>
-already had this shape, for a different reason: its webhook refuses a
-digest-only reference, because it reads the Postgres version from the tag.</p>
-<p>A comment is still <strong>allowed</strong>, but only if it says the same thing: a comment
-that states one tag (a single token with a digit) different from the inline
-one fails the check — it is exactly the leftover a version bump would leave
-lying. <strong>In a Dockerfile a comment at the end of the <code>FROM</code> line still fails</strong>:
-Docker's parser only recognizes <code>#</code> at the <em>start</em> of a line, so
-<code>FROM alpine:3.20@sha256:… # 3.20</code> is a <code>FROM</code> with three arguments, and the
-build dies with <em>"FROM requires either one or three arguments"</em>. This was found
-the right way under ADR 0159 — the <code>images</code> job's <code>bake</code> step failed on the first
-push, in 27 seconds — and <code>hadolint</code> had passed the same file: a linter agreeing
-is not the build agreeing.</p>
-<p>This page used to say the opposite — tag pinning was "a deliberate stop,
-not an oversight," buying day-to-day reproducibility "without the
-maintenance cost of digests on images we don't publish." That reasoning
-is <strong>revoked</strong>, and the measurement is why: the 37 third-party references
-in the repository were on tags, and three of the places they run are
-worse than a <code>docker compose pull</code> going stale.</p>
+<p>Com as duas presentes, o Docker baixa pelo digest: a tag é informação para
+quem lê a linha, e o digest decide os bytes.</p>
+<p><strong>Até o ADR 0178 a tag morava num comentário</strong> (<code>neo4j@sha256:…  # 5.26-community</code>,
+e num Dockerfile na linha de cima), espelhando as actions. Ela mudou de
+lugar por causa de uma medição (AT-139, 2026-09-27): o Dependabot não lê
+esse comentário em formato nenhum, e um pin só de digest é "atualizado"
+para o digest de <code>latest</code> — o que teria levado pgvector, neo4j e node a
+outro major com o comentário ainda afirmando a tag antiga e o lint verde.
+Com a tag inline, o Docker, o Dependabot e um humano leem todos a mesma
+tag. O <code>imageName</code> do CloudNativePG já tinha essa forma, por outro motivo:
+o webhook dele recusa referência só com digest, porque lê a versão do
+Postgres da tag.</p>
+<p>Um comentário continua <strong>permitido</strong>, mas só se disser a mesma coisa: um
+comentário que afirma uma tag (um único token com dígito) diferente da
+inline reprova a checagem — é exatamente a sobra que uma troca de versão
+deixaria largada. <strong>Num Dockerfile, comentário no fim da linha <code>FROM</code>
+continua reprovando</strong>: o parser do Docker só reconhece <code>#</code> no <em>início</em> da
+linha, então <code>FROM alpine:3.20@sha256:… # 3.20</code> é um <code>FROM</code> com três
+argumentos, e o build morre com <em>"FROM requires either one or three
+arguments"</em>. Isso foi achado do jeito certo sob o ADR 0159 — o passo
+<code>bake</code> do job <code>images</code> falhou no primeiro push, em 27 segundos — e o
+<code>hadolint</code> tinha passado o mesmo arquivo: linter concordar não é build
+concordar.</p>
+<p>Esta página já disse o contrário — pinar por tag era "uma parada
+deliberada, não um descuido", comprando reprodutibilidade do dia a dia
+"sem o custo de manutenção de digests em imagens que não publicamos". Esse
+raciocínio está <strong>revogado</strong>, e a medição é o porquê: as 37 referências de
+terceiros no repositório estavam em tags, e três dos lugares onde elas
+rodam são piores que um <code>docker compose pull</code> ficando velho.</p>
 <ul>
-<li class="">The <code>FROM</code> lines are the base of the images we <strong>publish</strong> to
-GHCR — five since <a class="" href=/brabo/dev/zh-Hans/adr/0162-broker-publicado-e-oferecido-pelo-instalador>ADR 0162</a>. A moved tag becomes bytes inside an image we sign and hand to
-other people.</li>
-<li class=""><code>docker/docker-compose.install.yml</code> runs on the machine of whoever
-installed the product, beside their Postgres. In that same file our
-<strong>own</strong> images already arrive by digest, through a variable the
-installer fills — the third-party ones arrived by tag, next to them.</li>
-<li class=""><code>ci.yml</code>, <code>golden-set-rag.yml</code> and <code>golden-set-qa.yml</code> run third-party images as job
-<code>services:</code>. That is literally the runner the action rule exists to
-protect, reached by the other door. Since
-<a class="" href=/brabo/dev/zh-Hans/adr/0197-a-imagem-dos-workflows-vem-do-compose>ADR 0197</a> they hold
-no literal: see <em>The workflows read the compose</em> below.</li>
+<li class="">As linhas <code>FROM</code> são a base das imagens que <strong>publicamos</strong> no GHCR —
+cinco desde o <a class="" href=/brabo/dev/zh-Hans/adr/0162-broker-publicado-e-oferecido-pelo-instalador>ADR 0162</a>.
+Uma tag movida vira bytes dentro de uma imagem que assinamos e
+entregamos a outras pessoas.</li>
+<li class=""><code>docker/docker-compose.install.yml</code> roda na máquina de quem instalou o
+produto, ao lado do Postgres dela. Nesse mesmo arquivo as nossas
+<strong>próprias</strong> imagens já chegam por digest, por uma variável que o
+instalador preenche — as de terceiros chegavam por tag, ao lado delas.</li>
+<li class=""><code>ci.yml</code>, <code>golden-set-rag.yml</code> e <code>golden-set-qa.yml</code> rodam imagens de
+terceiros como <code>services:</code> do job. É literalmente o runner que a regra
+das actions existe para proteger, alcançado pela outra porta. Desde o
+<a class="" href=/brabo/dev/zh-Hans/adr/0197-a-imagem-dos-workflows-vem-do-compose>ADR 0197</a> eles
+não guardam literal nenhum: ver <em>Os workflows leem o compose</em> abaixo.</li>
 </ul>
-<p>To resolve a tag into the digest to write down — the <strong>index</strong> digest, so
-the pin keeps working on <code>linux/arm64</code> as well as <code>linux/amd64</code>:</p>
+<p>Para resolver uma tag no digest a anotar — o digest do <strong>índice</strong>, para o
+pin continuar funcionando em <code>linux/arm64</code> além de <code>linux/amd64</code>:</p>
 <div class="language-bash codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-bash codeBlock_mqej thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_uNqR><div class=token-line style=color:#F8F8F2><span class="token plain">docker manifest inspect neo4j:5.26-community | head -3   # confirms it is an index</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">docker buildx imagetools inspect neo4j:5.26-community --format '{{.Manifest.Digest}}'</span><br/></div></code></pre></div></div>
-<p>The tag is <strong>required</strong>, for the same reason the version comment is on
-actions: <code>sha256:22ec5cd0…</code> does not tell anyone that it is Neo4j 5.26. And,
-as with the actions, the rule has a mechanism rather than goodwill —
-<code>scripts/ci/imagens-pinadas.ts</code>, run in the <code>lint</code> job, which fails on any
-<code>image:</code>/<code>imageName:</code>/<code>FROM</code> that is not a digest, on any digest with no
-inline tag (the old comment-only shape included), on a tag comment that
-disagrees with the inline tag, on a comment at the end of a <code>FROM</code>, and on
-the same inline tag carrying two different digests in two files. It is a <strong>sibling</strong> of <code>actions-pinadas.ts</code>, not an
-extension of it: <code>uses:</code> lives in workflow YAML with one syntax, images
-live in composes, kustomize manifests and Dockerfiles with three others,
-and one function answering both questions would answer both badly.</p>
-<p>What the check deliberately does <strong>not</strong> cover:</p>
+<p>A tag é <strong>obrigatória</strong>, pelo mesmo motivo de o comentário de versão ser
+obrigatório nas actions: <code>sha256:22ec5cd0…</code> não diz a ninguém que aquilo é
+o Neo4j 5.26. E, como nas actions, a regra tem um mecanismo em vez de boa
+vontade — <code>scripts/ci/imagens-pinadas.ts</code>, rodado no job <code>lint</code>, que
+reprova qualquer <code>image:</code>/<code>imageName:</code>/<code>FROM</code> que não seja digest, qualquer
+digest sem tag inline (a forma antiga só com comentário incluída), um
+comentário de tag que discorda da tag inline, um comentário no fim de um
+<code>FROM</code>, e a mesma tag inline carregando dois digests diferentes em dois
+arquivos. Ele é <strong>irmão</strong> do <code>actions-pinadas.ts</code>, não uma extensão dele:
+<code>uses:</code> mora em YAML de workflow com uma sintaxe, imagens moram em
+composes, manifestos kustomize e Dockerfiles com outras três, e uma função
+respondendo às duas perguntas responderia mal às duas.</p>
+<p>O que a checagem deliberadamente <strong>não</strong> cobre:</p>
 <ul>
-<li class=""><strong>The images we build ourselves</strong> (<code>brabo-api</code>, <code>brabo-engine</code>,
-<code>brabo-web</code>, <code>brabo-backup</code> and <code>brabo-broker</code> — the last one
-published since <a class="" href=/brabo/dev/zh-Hans/adr/0162-broker-publicado-e-oferecido-pelo-instalador>ADR 0162</a>). There is no third party who could move anything, and
-<code>brabo-api:prod</code> is a <em>local</em> tag whose digest does not exist before
-the build. Where they do cross a registry they are <strong>already</strong> by
-digest, through the mechanism that owns them: <code>.release/images.json</code>
-written by <code>release.yml</code> and applied by <code>make imagens-do-release</code>
-(<a class="" href=/brabo/dev/zh-Hans/adr/0119-imagens-publicadas-no-ghcr-por-digest>ADR 0119</a>). The
-repository's overlay holds the <em>marker</em>, not a frozen release —
-demanding a literal digest there would fight that mechanism instead of
-reinforcing it.</li>
-<li class=""><strong>Interpolated references</strong> (<code>${BRABO_API_IMAGE:?…}</code>), which is the
-same case seen from the other side.</li>
-<li class=""><strong>Multi-stage build stages</strong> (<code>FROM deps AS build</code>, <code>FROM scratch</code>),
-which are not registry images.</li>
+<li class=""><strong>As imagens que nós mesmos construímos</strong> (<code>brabo-api</code>, <code>brabo-engine</code>,
+<code>brabo-web</code>, <code>brabo-backup</code> e <code>brabo-broker</code> — a última publicada desde o
+<a class="" href=/brabo/dev/zh-Hans/adr/0162-broker-publicado-e-oferecido-pelo-instalador>ADR 0162</a>).
+Não há terceiro que pudesse mover nada, e <code>brabo-api:prod</code> é uma tag
+<em>local</em> cujo digest não existe antes do build. Onde elas atravessam um
+registry, <strong>já</strong> vão por digest, pelo mecanismo que é dono delas:
+<code>.release/images.json</code> escrito pelo <code>release.yml</code> e aplicado por
+<code>make imagens-do-release</code>
+(<a class="" href=/brabo/dev/zh-Hans/adr/0119-imagens-publicadas-no-ghcr-por-digest>ADR 0119</a>). O
+overlay do repositório guarda o <em>marcador</em>, não uma release congelada —
+exigir um digest literal ali brigaria com esse mecanismo em vez de
+reforçá-lo.</li>
+<li class=""><strong>Referências interpoladas</strong> (<code>${BRABO_API_IMAGE:?…}</code>), que são o mesmo
+caso visto do outro lado.</li>
+<li class=""><strong>Estágios de build multi-stage</strong> (<code>FROM deps AS build</code>, <code>FROM scratch</code>),
+que não são imagens de registry.</li>
 </ul>
-<p>The exception list is by <em>name</em> and fails closed: a new third-party image
-never matches <code>brabo-</code>, so it is born under the rule.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=the-workflows-read-the-compose>The workflows read the compose<a href=#the-workflows-read-the-compose class=hash-link aria-label="The workflows read the compose的直接链接" title="The workflows read the compose的直接链接" translate=no>​</a></h3>
-<p>Until <a class="" href=/brabo/dev/zh-Hans/adr/0197-a-imagem-dos-workflows-vem-do-compose>ADR 0197</a>
-<code>pgvector</code> and <code>ollama</code> lived twice: in the composes and, as literals, in the
-<code>services:</code> of <code>ci.yml</code> and the two golden-set workflows. No Dependabot
-ecosystem reads a workflow's <code>services:</code>, so every bot PR bumping one of them in
-the compose would have been born red by the "same tag, two digests" rule, and
-the step that would align the workflow on the bot's PR cannot push with the
-<code>GITHUB_TOKEN</code>, which is never allowed to change <code>.github/workflows/</code>.</p>
-<p>The literal is gone. A reusable workflow, <code>.github/workflows/imagens-do-compose.yml</code>,
-runs <code>scripts/ci/imagens-do-compose.ts</code>, which reads each service's <code>image:</code> from
-<code>docker/docker-compose.yml</code> (and refuses one that is not
-<code>image:tag@sha256:&lt;index></code>), and the callers write
-<code>image: ${{ needs.imagens.outputs.pgvector }}</code>. A duplicate that does not exist
-cannot diverge: the bot's PR touches only the compose, and the CI of that very
-PR already runs against the new image. What <code>golden-set-rag.yml</code> used to
-<em>promise</em> in a comment — the same Ollama as dev, because the golden-set floor is
-keyed by model and not by environment — is now true by construction.</p>
-<p><code>imagens-pinadas.ts</code> learned the new shape and closes the door it opens. In a
-workflow it fails any third-party <strong>literal</strong> (pinned or not); any expression
-that is not exactly <code>${{ needs.&lt;job>.outputs.&lt;name> }}</code> — a literal inside the
-expression, an <code>||</code> default, <code>env.</code>, <code>vars.</code>, <code>format()</code> are all places a
-mutable reference could hide, and the old pattern did not even match a line
-with spaces; and a <code>needs.&lt;job></code> whose job does not call the reusable workflow,
-or an output it does not declare. Each rule is proved by mutation in its spec.</p>
-<p><strong>The price is real, and Dependabot now pays part of it.</strong> An image pinned by
-digest receives no security update until someone changes the digest — the same
-debt the action SHAs carry. <code>.github/dependabot.yml</code> enables <code>github-actions</code>
-for that reason and, since ADR 0197, <code>docker-compose</code> (<code>/docker</code>) and <code>docker</code>
-(<code>/docker/*</code> and <code>/deploy/k8s/**</code>), each grouped into one weekly PR into <code>dev</code>.
-The temporary ignore of the <code>node</code> MAJOR (AT-360) came out with the move to
-Node 26 (owner's decision, 2026-10-02): both image ecosystems now propose
-<code>node</code> majors like any other update.
-Still manual, and declared in ADR 0197: <code>neo4j</code> and <code>ollama</code> also live in
-<code>deploy/k8s/base/</code>, the two ecosystems never share a PR, and a same-tag digest
-re-roll makes both PRs fail until a human joins them; the CloudNativePG
-<code>imageName</code> and <code>IMAGEM_DO_GOLDEN_SET_QA</code> are read by no ecosystem. Those
-follow the <a class="" href=/brabo/dev/zh-Hans/runbook#subindo-imagem-de-terceiro>runbook procedure</a>.</p>
-<p><strong>A digest guarantees immutability, not availability.</strong> The pin protects
-against the owner of a tag moving it; it does not protect against the
-publisher deleting the repository. That happened with MinIO: the local
-overlay's S3 server was pinned by index digest on <code>quay.io/minio/minio</code>,
-MinIO stopped publishing its community image, and the same digest started
-answering 401 (Docker Hub: 404). The bootstrap died at <code>rollout status</code> and
-no property proof ran until the server was replaced by SeaweedFS
+<p>A lista de exceções é por <em>nome</em> e falha fechada: uma imagem de terceiro
+nova nunca casa com <code>brabo-</code>, então ela nasce sob a regra.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=the-workflows-read-the-compose>Os workflows leem o compose<a href=#the-workflows-read-the-compose class=hash-link aria-label="Os workflows leem o compose的直接链接" title="Os workflows leem o compose的直接链接" translate=no>​</a></h3>
+<p>Até o <a class="" href=/brabo/dev/zh-Hans/adr/0197-a-imagem-dos-workflows-vem-do-compose>ADR 0197</a>
+<code>pgvector</code> e <code>ollama</code> moravam em dois lugares: nos composes e, como
+literais, nos <code>services:</code> do <code>ci.yml</code> e dos dois workflows de golden-set.
+Nenhum ecossistema do Dependabot lê os <code>services:</code> de um workflow, então
+toda PR do bot subindo uma delas no compose teria nascido vermelha pela
+regra "mesma tag, dois digests", e o passo que alinharia o workflow na PR
+do bot não consegue empurrar com o <code>GITHUB_TOKEN</code>, que nunca tem permissão
+de mudar <code>.github/workflows/</code>.</p>
+<p>O literal saiu. Um workflow reutilizável,
+<code>.github/workflows/imagens-do-compose.yml</code>, roda
+<code>scripts/ci/imagens-do-compose.ts</code>, que lê o <code>image:</code> de cada serviço de
+<code>docker/docker-compose.yml</code> (e recusa um que não seja
+<code>image:tag@sha256:&lt;index></code>), e os chamadores escrevem
+<code>image: ${{ needs.imagens.outputs.pgvector }}</code>. Uma duplicata que não
+existe não consegue divergir: a PR do bot toca só o compose, e o CI dessa
+mesma PR já roda contra a imagem nova. O que o <code>golden-set-rag.yml</code>
+<em>prometia</em> num comentário — o mesmo Ollama do dev, porque o piso do
+golden-set é chaveado por modelo e não por ambiente — agora é verdade por
+construção.</p>
+<p>O <code>imagens-pinadas.ts</code> aprendeu a forma nova e fecha a porta que ela abre.
+Num workflow ele reprova qualquer <strong>literal</strong> de terceiro (pinado ou não);
+qualquer expressão que não seja exatamente
+<code>${{ needs.&lt;job>.outputs.&lt;name> }}</code> — um literal dentro da expressão, um
+default por <code>||</code>, <code>env.</code>, <code>vars.</code>, <code>format()</code> são todos lugares onde uma
+referência mutável poderia se esconder, e o padrão antigo nem casava com
+uma linha com espaços; e um <code>needs.&lt;job></code> cujo job não chama o workflow
+reutilizável, ou uma saída que ele não declara. Cada regra é provada por
+mutação no spec dela.</p>
+<p><strong>O preço é real, e o Dependabot agora paga parte dele.</strong> Uma imagem
+pinada por digest não recebe atualização de segurança até alguém trocar o
+digest — a mesma dívida que os SHAs das actions carregam. O
+<code>.github/dependabot.yml</code> liga <code>github-actions</code> por esse motivo e, desde o
+ADR 0197, <code>docker-compose</code> (<code>/docker</code>) e <code>docker</code> (<code>/docker/*</code> e
+<code>/deploy/k8s/**</code>), cada um agrupado numa PR semanal para a <code>dev</code>. O ignore
+temporário do MAJOR do <code>node</code> (AT-360) saiu com a mudança para o Node 26
+(decisão do dono, 2026-10-02): os dois ecossistemas de imagem agora
+propõem majors do <code>node</code> como qualquer outra atualização.
+Ainda manual, e declarado no ADR 0197: <code>neo4j</code> e <code>ollama</code> moram também em
+<code>deploy/k8s/base/</code>, os dois ecossistemas nunca compartilham uma PR, e um
+re-roll de digest com a mesma tag faz as duas PRs falharem até um humano
+juntá-las; o <code>imageName</code> do CloudNativePG e o <code>IMAGEM_DO_GOLDEN_SET_QA</code> não
+são lidos por ecossistema nenhum. Esses seguem o
+<a class="" href=/brabo/dev/zh-Hans/runbook#subindo-imagem-de-terceiro>procedimento do runbook</a>.</p>
+<p><strong>Um digest garante imutabilidade, não disponibilidade.</strong> O pin protege
+contra o dono de uma tag movê-la; não protege contra o publicador apagar o
+repositório. Isso aconteceu com o MinIO: o servidor S3 do overlay local
+estava pinado por digest de índice em <code>quay.io/minio/minio</code>, o MinIO parou
+de publicar a imagem community, e o mesmo digest passou a responder 401
+(Docker Hub: 404). O bootstrap morria no <code>rollout status</code> e nenhuma prova
+de propriedade rodou até o servidor ser trocado pelo SeaweedFS
 (<a class="" href=/brabo/dev/zh-Hans/adr/0169-seaweedfs-no-lugar-do-minio-no-overlay-local>ADR 0169</a>).
-The symptom, if it happens again to any pinned image, is <code>ImagePullBackOff</code>
-on a digest that has not changed — the fix is a new image from a publisher
-that still serves one, never unpinning.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=the-build-cache-cannot-hide-a-stale-package>The build cache cannot hide a stale package<a href=#the-build-cache-cannot-hide-a-stale-package class=hash-link aria-label="The build cache cannot hide a stale package的直接链接" title="The build cache cannot hide a stale package的直接链接" translate=no>​</a></h2>
-<p>The final stage (<code>runtime</code>) of every <code>Dockerfile.prod</code> runs <code>apk upgrade</code>.
-BuildKit keys a layer by instruction plus parent layer, never by time, so with
-<code>cache-from</code> on, a PR build reused an <code>apk upgrade</code> layer frozen at that PR's
-first build (measured: <code>CACHED</code> on 5 of 5 images), and Trivy scanned an old
-openssl that the tag, built cold, would not carry. <code>docker-bake.hcl</code> therefore
-sets <code>no-cache-filter = ["runtime"]</code> on the shared base target: the final stage
-and what follows it are rebuilt every time, the build stages keep their cache
-(that is where the time is), and the scan looks at what the tag would publish.
-It is not a Trivy allowlist. The cost is about 7–9 s per image, in parallel.</p>
-<p>That fixed what the <strong>PR</strong> scans. It could not fix what the <strong>tag</strong> publishes:
-a tag builds cold, from a different run, and until
-<a class="" href=/brabo/dev/zh-Hans/adr/0172-trivy-no-release-antes-de-assinar>ADR 0172</a> nothing scanned it.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=the-release-scans-what-it-publishes-before-signing-it>The release scans what it publishes, before signing it<a href=#the-release-scans-what-it-publishes-before-signing-it class=hash-link aria-label="The release scans what it publishes, before signing it的直接链接" title="The release scans what it publishes, before signing it的直接链接" translate=no>​</a></h2>
-<p><code>release.yml</code> runs Trivy on each image <strong>by digest</strong>, straight from the
-registry (<code>--image-src remote</code>), after the bake pushes and records
-<code>.release/images.json</code> and <strong>before</strong> <code>cosign sign</code>. The order is the
-mechanism: an image that fails is never signed, and <code>install.sh</code> does not
-install an unsigned image. The push has already happened by then (it is what
-creates the digest), so a failed tag leaves its tags in the GHCR unsigned and
-without a Release — the correct state, since nothing installs them.</p>
-<p>The gate is the <strong>same</strong> rule as the <code>ci.yml</code> job, flag for flag:
-<code>--scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1</code> and
-the same <code>.trivyignore.yaml</code>, whose every entry carries an <code>expired_at</code>. A HIGH
-or CRITICAL <strong>with a fix available</strong> fails the release. What has <strong>no</strong> fix is
-reported, not blocking: a second scan without <code>--ignore-unfixed</code> and with
-<code>--exit-code 0</code> feeds <code>scripts/ci/trivy-do-release.ts</code>, which writes the job
-summary and the <code>trivy-sem-correcao.md</code> Release asset. That script never
-decides the verdict — Trivy's exit code does —, because a second rule for
-"has a fix" would drift from Trivy's own the first time it added a status.
-There is <strong>no new allowlist</strong>: the step accepts no ignore file but the one the
-PR already uses.</p>
-<p>The binary is the same <code>v0.70.0</code> with the same <code>sha256</code> as <code>ci.yml</code>, declared
-twice because a workflow's <code>env:</code> cannot be imported. The duplication is
-guarded: <code>scripts/ci/trivy-do-release.spec.ts</code> fails when version, hash or the
-gate's flags diverge between the two workflows, when the gate moves after the
-signing, or when a second ignore file appears. Like <code>install-e2e.yml</code>, the
-release only runs on a final tag, so that spec is the proof a PR can give.</p>
-<p>Measured on 2026-09-27 against the digests of the last release (<code>v6.1.0</code>,
-four images, published 2026-09-14), with the same flags: <code>api</code> and <code>web</code> would
-<strong>fail</strong> — <code>CVE-2026-45447</code> (HIGH, <code>libcrypto3</code>/<code>libssl3</code> <code>3.3.7-r0</code>, fixed in
-<code>3.3.7-r1</code>), a CVE published after that tag —, <code>engine</code> and <code>backup</code> pass, and
-nothing HIGH/CRITICAL without a fix appears once <code>.trivyignore.yaml</code> is
-applied. Without it, <code>engine</code> would carry 56 fixable findings in the
-third-party scanner binaries that file documents. The four scans plus the
-database download took about 30 s.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=bandit-pinned-to-a-commit>A dependency pinned to a git commit: <code>bandit</code>, temporary<a href=#bandit-pinned-to-a-commit class=hash-link aria-label=bandit-pinned-to-a-commit的直接链接 title=bandit-pinned-to-a-commit的直接链接 translate=no>​</a></h2>
-<p>Every engine dependency comes from hex.pm, with one TEMPORARY exception.
-Advisory EEF-CVE-2026-105659 (GHSA-69m6-wcv4-rwcf, HIGH, Bandit's HTTP/2)
-affects every Bandit <code>>= 1.4.0</code>, including 1.12.5, the latest hex release,
-and <code>mix hex.audit</code> in the CI fails on it in every PR. The fix exists only as
-commit <code>d88b21953c65061f21136ea76a89a4f95a2ac7a1</code> of <code>mtrudel/bandit</code>
-(merged on 2026-10-12), with no release. Since 2026-10-14
-<code>apps/engine/mix.exs</code> points <code>bandit</code> at that commit, by full SHA and never by
-branch, with <code>override: true</code> because <code>phoenix</code> and <code>opentelemetry_bandit</code>
-ask for the hex package (measured: without it <code>mix deps.get</code> stops with
-"Dependencies have diverged"). The SHA plays the role the checksum plays for
-a hex package: the lock records it and nobody can move it. Both engine
-Dockerfiles already install <code>git</code> in the build stage.</p>
-<p>The way back: return to <code>{:bandit, "~> 1.12"}</code> from hex as soon as a release
-containing that commit is published, and drop this section with it.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=what-is-still-trusted-on-faith>What is still trusted on faith<a href=#what-is-still-trusted-on-faith class=hash-link aria-label="What is still trusted on faith的直接链接" title="What is still trusted on faith的直接链接" translate=no>​</a></h2>
-<p>Declared, not fixed:</p>
+O sintoma, se acontecer de novo com qualquer imagem pinada, é
+<code>ImagePullBackOff</code> num digest que não mudou — a correção é uma imagem nova
+de um publicador que ainda a serve, nunca tirar o pin.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=the-build-cache-cannot-hide-a-stale-package>O cache de build não pode esconder um pacote velho<a href=#the-build-cache-cannot-hide-a-stale-package class=hash-link aria-label="O cache de build não pode esconder um pacote velho的直接链接" title="O cache de build não pode esconder um pacote velho的直接链接" translate=no>​</a></h2>
+<p>O estágio final (<code>runtime</code>) de todo <code>Dockerfile.prod</code> roda <code>apk upgrade</code>.
+O BuildKit chaveia uma camada por instrução mais camada-mãe, nunca por
+tempo, então com <code>cache-from</code> ligado um build de PR reaproveitava uma
+camada de <code>apk upgrade</code> congelada no primeiro build daquela PR (medido:
+<code>CACHED</code> em 5 de 5 imagens), e o Trivy escaneava um openssl antigo que a
+tag, construída a frio, não levaria. Por isso o <code>docker-bake.hcl</code> define
+<code>no-cache-filter = ["runtime"]</code> no alvo base compartilhado: o estágio
+final e o que vem depois dele são reconstruídos toda vez, os estágios de
+build mantêm o cache deles (é onde está o tempo), e o scan olha o que a
+tag publicaria. Não é uma allowlist do Trivy. O custo é de cerca de 7–9 s
+por imagem, em paralelo.</p>
+<p>Isso corrigiu o que a <strong>PR</strong> escaneia. Não podia corrigir o que a <strong>tag</strong>
+publica: uma tag constrói a frio, numa outra execução, e até o
+<a class="" href=/brabo/dev/zh-Hans/adr/0172-trivy-no-release-antes-de-assinar>ADR 0172</a> nada a
+escaneava.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=the-release-scans-what-it-publishes-before-signing-it>A release escaneia o que publica, antes de assinar<a href=#the-release-scans-what-it-publishes-before-signing-it class=hash-link aria-label="A release escaneia o que publica, antes de assinar的直接链接" title="A release escaneia o que publica, antes de assinar的直接链接" translate=no>​</a></h2>
+<p>O <code>release.yml</code> roda o Trivy em cada imagem <strong>por digest</strong>, direto do
+registry (<code>--image-src remote</code>), depois de o bake empurrar e gravar
+<code>.release/images.json</code> e <strong>antes</strong> do <code>cosign sign</code>. A ordem é o
+mecanismo: uma imagem que reprova nunca é assinada, e o <code>install.sh</code> não
+instala imagem não assinada. O push já aconteceu a essa altura (é ele que
+cria o digest), então uma tag reprovada deixa as tags dela no GHCR sem
+assinatura e sem Release — o estado correto, já que nada as instala.</p>
+<p>O gate é a <strong>mesma</strong> regra do job do <code>ci.yml</code>, flag por flag:
+<code>--scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1</code> e
+o mesmo <code>.trivyignore.yaml</code>, em que toda entrada leva um <code>expired_at</code>. Um
+HIGH ou CRITICAL <strong>com correção disponível</strong> reprova a release. O que
+<strong>não</strong> tem correção é relatado, sem bloquear: um segundo scan sem
+<code>--ignore-unfixed</code> e com <code>--exit-code 0</code> alimenta
+<code>scripts/ci/trivy-do-release.ts</code>, que escreve o resumo do job e o asset de
+Release <code>trivy-sem-correcao.md</code>. Esse script nunca decide o veredito —
+quem decide é o código de saída do Trivy —, porque uma segunda regra para
+"tem correção" divergiria da do próprio Trivy na primeira vez que ele
+acrescentasse um status. <strong>Não há allowlist nova</strong>: o passo não aceita
+arquivo de ignore além do que a PR já usa.</p>
+<p>O binário é o mesmo <code>v0.70.0</code> com o mesmo <code>sha256</code> do <code>ci.yml</code>, declarado
+duas vezes porque o <code>env:</code> de um workflow não pode ser importado. A
+duplicação é vigiada: <code>scripts/ci/trivy-do-release.spec.ts</code> reprova quando
+versão, hash ou as flags do gate divergem entre os dois workflows, quando
+o gate vai para depois da assinatura, ou quando aparece um segundo arquivo
+de ignore. Como o <code>install-e2e.yml</code>, a release só roda numa tag final,
+então esse spec é a prova que uma PR consegue dar.</p>
+<p>Medido em 2026-09-27 contra os digests da última release (<code>v6.1.0</code>, quatro
+imagens, publicada em 2026-09-14), com as mesmas flags: <code>api</code> e <code>web</code>
+<strong>reprovariam</strong> — <code>CVE-2026-45447</code> (HIGH, <code>libcrypto3</code>/<code>libssl3</code>
+<code>3.3.7-r0</code>, corrigido em <code>3.3.7-r1</code>), uma CVE publicada depois daquela
+tag —, <code>engine</code> e <code>backup</code> passam, e nada HIGH/CRITICAL sem correção
+aparece depois de aplicado o <code>.trivyignore.yaml</code>. Sem ele, o <code>engine</code>
+carregaria 56 achados corrigíveis nos binários de scanner de terceiros que
+aquele arquivo documenta. Os quatro scans mais o download do banco levaram
+cerca de 30 s.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=bandit-pinned-to-a-commit>Uma dependência pinada num commit de git: <code>bandit</code>, temporária<a href=#bandit-pinned-to-a-commit class=hash-link aria-label=bandit-pinned-to-a-commit的直接链接 title=bandit-pinned-to-a-commit的直接链接 translate=no>​</a></h2>
+<p>Toda dependência do engine vem do hex.pm, com uma exceção TEMPORÁRIA. O
+advisory EEF-CVE-2026-105659 (GHSA-69m6-wcv4-rwcf, HIGH, o HTTP/2 do
+Bandit) afeta todo Bandit <code>>= 1.4.0</code>, inclusive o 1.12.5, a última release
+no hex, e o <code>mix hex.audit</code> do CI reprova por ele em toda PR. A correção
+existe só como o commit <code>d88b21953c65061f21136ea76a89a4f95a2ac7a1</code> de
+<code>mtrudel/bandit</code> (mergeado em 2026-10-12), sem release. Desde 2026-10-14 o
+<code>apps/engine/mix.exs</code> aponta <code>bandit</code> para esse commit, por SHA completo e
+nunca por branch, com <code>override: true</code> porque <code>phoenix</code> e
+<code>opentelemetry_bandit</code> pedem o pacote do hex (medido: sem isso o
+<code>mix deps.get</code> para com "Dependencies have diverged"). O SHA faz o papel
+que o checksum faz para um pacote do hex: o lock o grava e ninguém
+consegue movê-lo. Os dois Dockerfiles do engine já instalam <code>git</code> no
+estágio de build.</p>
+<p>O caminho de volta: voltar a <code>{:bandit, "~> 1.12"}</code> do hex assim que for
+publicada uma release que contenha esse commit, e apagar esta seção junto.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=what-is-still-trusted-on-faith>O que ainda é aceito na confiança<a href=#what-is-still-trusted-on-faith class=hash-link aria-label="O que ainda é aceito na confiança的直接链接" title="O que ainda é aceito na confiança的直接链接" translate=no>​</a></h2>
+<p>Declarado, não corrigido:</p>
 <ul>
 <li class="">
-<p><del><strong>No Dependabot.</strong></del> <strong>Half closed, and the other half is not ours
-to close.</strong> The claim had also stopped being true: <em>security</em> updates
-are switched on in the repository's <strong>interface</strong>, in no file, and were
-running daily against <code>npm_and_yarn in /., /website</code> — and <strong>failing</strong>,
-every day, with <code>Dependabot::DependabotError</code>. Measured cause: the
-packages it chases (<code>multer</code>, <code>esbuild</code>, and the list beside them) are
-the ones this repository fixes through <strong>overrides</strong> in
-<code>pnpm-workspace.yaml</code>, a mechanism Dependabot cannot manipulate. The
-alert it pursues is already closed; what is left is the error.</p>
-<p><code>.github/dependabot.yml</code> now exists and does the two things a file can
-do: it <strong>enables <code>github-actions</code></strong> — the debt named right here, since
-the SHAs are moved by hand and <em>a pin nobody updates is a pin that ages
-into a known-vulnerable version</em> — and declares both npm trees with
-<code>open-pull-requests-limit: 0</code>, which turns off routine version updates
-without touching security ones. <strong>Turning security updates off is an
-interface switch</strong>, reachable only by the repository owner; until
-someone decides, that job keeps failing on alerts that the overrides
-already closed.</p>
-<p>Every Dependabot PR enters through <code>dev</code> (<code>target-branch: dev</code> on the
-five entries — the two image ecosystems included, since ADR 0197). Security updates ignore that key and open against the
-default branch, so <code>dependabot-para-dev.yml</code> closes the ones <code>dev</code>
-already fixes and retargets the rest — see <em>Dependabot enters through
-dev</em> in <code>branching-policy.md</code>.</p>
+<p><del><strong>Sem Dependabot.</strong></del> <strong>Metade fechada, e a outra metade não cabe a
+nós fechar.</strong> A afirmação também tinha deixado de ser verdade: as
+atualizações de <em>segurança</em> são ligadas na <strong>interface</strong> do
+repositório, em arquivo nenhum, e estavam rodando diariamente contra
+<code>npm_and_yarn in /., /website</code> — e <strong>falhando</strong>, todo dia, com
+<code>Dependabot::DependabotError</code>. Causa medida: os pacotes que ele persegue
+(<code>multer</code>, <code>esbuild</code>, e a lista ao lado deles) são os que este
+repositório corrige por <strong>overrides</strong> no <code>pnpm-workspace.yaml</code>, um
+mecanismo que o Dependabot não consegue manipular. O alerta que ele
+persegue já está fechado; o que sobra é o erro.</p>
+<p>O <code>.github/dependabot.yml</code> agora existe e faz as duas coisas que um
+arquivo consegue fazer: <strong>liga <code>github-actions</code></strong> — a dívida nomeada
+aqui mesmo, já que os SHAs são movidos à mão e <em>um pin que ninguém
+atualiza é um pin que envelhece até uma versão sabidamente vulnerável</em> —
+e declara as duas árvores npm com <code>open-pull-requests-limit: 0</code>, o que
+desliga as atualizações rotineiras de versão sem tocar nas de
+segurança. <strong>Desligar as atualizações de segurança é um interruptor da
+interface</strong>, alcançável só pelo dono do repositório; até alguém decidir,
+esse job continua falhando em alertas que os overrides já fecharam.</p>
+<p>Toda PR do Dependabot entra pela <code>dev</code> (<code>target-branch: dev</code> nas cinco
+entradas — os dois ecossistemas de imagem incluídos, desde o ADR 0197).
+As atualizações de segurança ignoram essa chave e abrem contra a branch
+default, então o <code>dependabot-para-dev.yml</code> fecha as que a <code>dev</code> já
+corrige e redireciona o resto — ver <em>Dependabot enters through dev</em> em
+<code>branching-policy.md</code>.</p>
 </li>
 <li class="">
-<p><strong>npm/pnpm dependencies aren't attested.</strong> The lockfile pins versions
-and integrity hashes, which is real, but there's no provenance check
-(<code>npm audit signatures</code> or equivalent) in any job.</p>
+<p><strong>Dependências npm/pnpm não são atestadas.</strong> O lockfile pina versões e
+hashes de integridade, o que é real, mas não há checagem de proveniência
+(<code>npm audit signatures</code> ou equivalente) em job nenhum.</p>
 </li>
 <li class="">
-<p><del><strong>No signing or attestation of our own artifacts.</strong></del> <strong>Closed by
-<a class="" href=/brabo/dev/zh-Hans/adr/0149-assinatura-dos-artefatos-publicados>ADR 0149</a></strong>
-(BRB-005). <code>release.yml</code> signs the images it publishes <strong>by digest</strong> with
-<code>cosign</code> keyless — the OIDC identity of the workflow, no key in
-custody anywhere — and <code>build-runner-binaries.yml</code> gained a
-consolidating job that publishes <strong>one signed <code>checksums.txt</code></strong>
-covering the runner binaries (four targets since
-<a class="" href=/brabo/dev/zh-Hans/adr/0174-runner-sem-binario-darwin-x64>ADR 0174</a>, which dropped
-<code>darwin-x64</code>), rather than one signature per binary.
-Both workflows <strong>verify what they just signed</strong>, in the same run:
-a signature nobody tries to verify is one more file in the release,
-and the failure would otherwise surface on the machine of whoever
-installs — the worst place to find it.</p>
-<p>Since <a class="" href=/brabo/dev/zh-Hans/adr/0160-o-compose-do-instalador-viaja-assinado>ADR 0160</a>
-that manifest covers more than binaries: <code>install.sh</code> and the four files it
-needs to bring an installation up — the install compose and the three files
-it uses by relative path, published as <code>brabo-install-*</code> assets from the
-tag's checkout — are lines in the <strong>same</strong> <code>checksums.txt</code>, and the job runs
-<code>sha256sum -c --strict</code> on it before attaching anything. The installer
-checks each of the four against that manifest before it asks or writes
-anything (<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-570>RN-570</a>). Until then the compose
-was the one thing the installer used that nothing verified — nor even
-downloaded. The list lives in <code>scripts/ci/assets-do-instalador.ts</code>, and its
-spec fails when the installer's own copy of it diverges or when the compose
-gains a relative bind-mount that is not on it.</p>
-<p><strong>The broker image is the fifth, and it is the one that matters most</strong>
+<p><del><strong>Sem assinatura nem atestação dos nossos próprios artefatos.</strong></del>
+<strong>Fechado pelo <a class="" href=/brabo/dev/zh-Hans/adr/0149-assinatura-dos-artefatos-publicados>ADR 0149</a></strong>
+(BRB-005). O <code>release.yml</code> assina as imagens que publica <strong>por digest</strong>
+com <code>cosign</code> keyless — a identidade OIDC do workflow, sem chave sob
+custódia em lugar nenhum — e o <code>build-runner-binaries.yml</code> ganhou um job
+consolidador que publica <strong>um <code>checksums.txt</code> assinado</strong> cobrindo os
+binários do runner (quatro alvos desde o
+<a class="" href=/brabo/dev/zh-Hans/adr/0174-runner-sem-binario-darwin-x64>ADR 0174</a>, que tirou o
+<code>darwin-x64</code>), em vez de uma assinatura por binário.
+Os dois workflows <strong>verificam o que acabaram de assinar</strong>, na mesma
+execução: uma assinatura que ninguém tenta verificar é mais um arquivo
+na release, e a falha, do contrário, apareceria na máquina de quem
+instala — o pior lugar para achá-la.</p>
+<p>Desde o <a class="" href=/brabo/dev/zh-Hans/adr/0160-o-compose-do-instalador-viaja-assinado>ADR 0160</a>
+esse manifesto cobre mais que binários: o <code>install.sh</code> e os quatro
+arquivos de que ele precisa para subir uma instalação — o compose de
+instalação e os três arquivos que ele usa por caminho relativo,
+publicados como assets <code>brabo-install-*</code> a partir do checkout da tag —
+são linhas do <strong>mesmo</strong> <code>checksums.txt</code>, e o job roda
+<code>sha256sum -c --strict</code> sobre ele antes de anexar qualquer coisa. O
+instalador confere cada um dos quatro contra esse manifesto antes de
+perguntar ou gravar qualquer coisa (<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-570>RN-570</a>).
+Até então o compose era a única coisa que o instalador usava que nada
+verificava — nem sequer baixava. A lista mora em
+<code>scripts/ci/assets-do-instalador.ts</code>, e o spec dela reprova quando a
+cópia do próprio instalador diverge ou quando o compose ganha um
+bind-mount relativo que não está nela.</p>
+<p><strong>A imagem do broker é a quinta, e é a que mais importa</strong>
 (<a class="" href=/brabo/dev/zh-Hans/adr/0162-broker-publicado-e-oferecido-pelo-instalador>ADR 0162</a>).
-It was built by nobody until then: the <code>Dockerfile.prod</code> existed and passed
-<code>hadolint</code>, but no bake target built it, so it was never scanned and never
-published, and the installation had no way to offer the service. It now
-goes through every gate the other four do — the <code>ci.yml</code> builds it on every
-PR, refuses it running as root, runs Trivy on it and brings it up healthy
-with a read-only rootfs and no network; <code>release.yml</code> publishes, records,
-signs and verifies it by digest with no extra line, because both loops read
-<code>.release/images.json</code>. The reason it needs them more than any other: in an
-installation that consents, it is the one service that receives the host's
-Docker socket, so a vulnerability in it is a path to the whole machine.
-Publishing it makes it a studiable public target; that price is declared
-in the ADR, not hidden. The Kubernetes overlay does not know it
-(<code>argumentosDeSetImage</code> emits only the four images the kustomize base
-declares) — there is no broker Deployment, by decision.</p>
-<p>What this does <strong>not</strong> cover, and is a different item: <strong>code-signing
-the runner binaries</strong> for the OS (macOS notarization, Windows
-Authenticode), which needs a paid signing identity and stays in
-<a class="" href=/brabo/dev/zh-Hans/explanation/backlog>the backlog</a>.</p>
+Ninguém a construía até então: o <code>Dockerfile.prod</code> existia e passava no
+<code>hadolint</code>, mas nenhum alvo do bake o construía, então ela nunca foi
+escaneada nem publicada, e a instalação não tinha como oferecer o
+serviço. Agora ela passa por todo gate que as outras quatro passam — o
+<code>ci.yml</code> a constrói em toda PR, a recusa rodando como root, roda o Trivy
+nela e a sobe saudável com rootfs somente leitura e sem rede; o
+<code>release.yml</code> a publica, grava, assina e verifica por digest sem linha a
+mais, porque os dois laços leem <code>.release/images.json</code>. O motivo de ela
+precisar disso mais que qualquer outra: numa instalação que consente, é
+o único serviço que recebe o socket do Docker do host, então uma
+vulnerabilidade nela é um caminho para a máquina inteira. Publicá-la a
+torna um alvo público estudável; esse preço está declarado no ADR, não
+escondido. O overlay do Kubernetes não a conhece
+(<code>argumentosDeSetImage</code> emite só as quatro imagens que a base do
+kustomize declara) — não há Deployment do broker, por decisão.</p>
+<p>O que isso <strong>não</strong> cobre, e é outro item: <strong>assinatura de código dos
+binários do runner</strong> para o sistema operacional (notarização do macOS,
+Authenticode do Windows), que exige uma identidade de assinatura paga e
+fica no <a class="" href=/brabo/dev/zh-Hans/explanation/backlog>backlog</a>.</p>
 </li>
 <li class="">
-<p><del><strong>Third-party images are tag-pinned, not digest-pinned.</strong></del> <strong>Closed</strong>
-(above): all 33 third-party references — composes, kustomize manifests and
-Dockerfile <code>FROM</code> lines — are pinned by digest with the tag inside the
-reference (ADR 0178), the workflow <code>services:</code> read theirs from the compose
-(ADR 0197), and <code>scripts/ci/imagens-pinadas.ts</code> fails the <code>lint</code> job on the
-next regression. What is <strong>not</strong> closed, and is the price of the pin rather
-than a leftover: a digest receives no security update until someone bumps
-it. Dependabot's <code>docker</code>/<code>docker-compose</code> ecosystems propose those bumps
-since ADR 0197; what they cannot reach is listed there.</p>
+<p><del><strong>Imagens de terceiros pinadas por tag, não por digest.</strong></del> <strong>Fechado</strong>
+(acima): todas as 33 referências de terceiros — composes, manifestos
+kustomize e linhas <code>FROM</code> de Dockerfile — estão pinadas por digest com a
+tag dentro da referência (ADR 0178), os <code>services:</code> dos workflows leem as
+deles do compose (ADR 0197), e o <code>scripts/ci/imagens-pinadas.ts</code> reprova
+o job <code>lint</code> na próxima regressão. O que <strong>não</strong> está fechado, e é o
+preço do pin e não uma sobra: um digest não recebe atualização de
+segurança até alguém subi-lo. Os ecossistemas <code>docker</code>/<code>docker-compose</code>
+do Dependabot propõem essas subidas desde o ADR 0197; o que eles não
+alcançam está listado lá.</p>
 </li>
 <li class="">
-<p><strong>The workflows' own permissions</strong> aren't covered here; that's the
-<code>permissions:</code> block per workflow, and it's a separate audit.</p>
+<p><strong>As permissões dos próprios workflows</strong> não são cobertas aqui; isso é o
+bloco <code>permissions:</code> de cada workflow, e é uma auditoria à parte.</p>
 </li>
 <li class="">
-<p><strong>A repeated <code>pnpm audit</code> timeout is an ACCEPTED RISK, by decision.</strong>
-When the npm advisories endpoint fails to answer three times in a row,
-the job goes green with a loud warning instead of red — see
-<a class="" href=/brabo/dev/zh-Hans/adr/0140-timeout-do-audit-como-risco-assumido>ADR 0140</a>. What
-this costs is stated plainly: on those runs the dependency tree is
-<strong>not</strong> audited, and the run says so rather than implying a clean
-result. What it does not touch: a vulnerability that is actually
-reported still fails on the first attempt, with no retry, and an
-unrecognized failure fails too (fail closed). The alternative —
-staying red on third-party downtime — was measured on the day it
-happened (four PRs blocked by the same 503) and refused, because a
-gate that cries wolf teaches people to re-run until green, and that
-habit does not distinguish a real red from a fake one.</p>
+<p><strong>Timeout repetido do <code>pnpm audit</code> é RISCO ASSUMIDO, por decisão.</strong>
+Quando o endpoint de advisories do npm deixa de responder três vezes
+seguidas, o job fica verde com um aviso alto em vez de vermelho — ver o
+<a class="" href=/brabo/dev/zh-Hans/adr/0140-timeout-do-audit-como-risco-assumido>ADR 0140</a>. O que
+isso custa é dito sem rodeios: nessas execuções a árvore de dependências
+<strong>não</strong> é auditada, e a execução diz isso em vez de sugerir um
+resultado limpo. O que isso não toca: uma vulnerabilidade de fato
+relatada continua reprovando na primeira tentativa, sem retry, e uma
+falha não reconhecida também reprova (falha fechada). A alternativa —
+ficar vermelho com o terceiro fora do ar — foi medida no dia em que
+aconteceu (quatro PRs bloqueadas pelo mesmo 503) e recusada, porque um
+gate que grita lobo ensina as pessoas a rodar de novo até ficar verde, e
+esse hábito não distingue um vermelho real de um falso.</p>
 </li>
-</ul></div><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_yZb9"><a href=https://github.com/daneiel/brabo/blob/dev/docs/explanation/cadeia-de-suprimentos-do-ci.md target=_blank rel="noopener noreferrer" class=theme-edit-this-page><svg fill=currentColor height=20 width=20 viewBox="0 0 40 40" class=iconEdit_ANja aria-hidden=true><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"/></g></svg>编辑此页</a></div><div class="col lastUpdated_Kb4y"><span class=theme-last-updated>最后<!-- -->由 <b>Daniel Souza</b> <!-- -->于 <b><time datetime=2026-10-15T04:45:55.000Z itemprop=dateModified>2026年10月15日</time></b> <!-- -->更新</span></div></div></footer></article><nav class="docusaurus-mt-lg pagination-nav" aria-label=文件选项卡><a class="pagination-nav__link pagination-nav__link--prev" href=/brabo/dev/zh-Hans/explanation/branching-policy><div class=pagination-nav__sublabel>上一页</div><div class=pagination-nav__label>Branching policy</div></a><a class="pagination-nav__link pagination-nav__link--next" href=/brabo/dev/zh-Hans/explanation/observability><div class=pagination-nav__sublabel>下一页</div><div class=pagination-nav__label>Observability</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_wOiH thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href=#the-threat-stated-plainly class="table-of-contents__link toc-highlight">The threat, stated plainly</a><li><a href=#the-two-mechanisms class="table-of-contents__link toc-highlight">The two mechanisms</a><ul><li><a href=#binaries-checksum-after-every-download class="table-of-contents__link toc-highlight">Binaries: checksum after every download</a><li><a href=#actions-commit-sha-with-the-version-alongside class="table-of-contents__link toc-highlight">Actions: commit SHA, with the version alongside</a></ul><li><a href=#why-theres-a-check-and-not-just-a-rule class="table-of-contents__link toc-highlight">Why there's a check and not just a rule</a><li><a href=#the-playwright-browser class="table-of-contents__link toc-highlight">The Playwright browser</a><li><a href=#images-job-caches class="table-of-contents__link toc-highlight">What the images job caches, and what the cache cannot change</a><li><a href=#container-images-digest-with-the-tag-alongside class="table-of-contents__link toc-highlight">Container images: digest, with the tag inside the reference</a><ul><li><a href=#the-workflows-read-the-compose class="table-of-contents__link toc-highlight">The workflows read the compose</a></ul><li><a href=#the-build-cache-cannot-hide-a-stale-package class="table-of-contents__link toc-highlight">The build cache cannot hide a stale package</a><li><a href=#the-release-scans-what-it-publishes-before-signing-it class="table-of-contents__link toc-highlight">The release scans what it publishes, before signing it</a><li><a href=#bandit-pinned-to-a-commit class="table-of-contents__link toc-highlight">A dependency pinned to a git commit: <code>bandit</code>, temporary</a><li><a href=#what-is-still-trusted-on-faith class="table-of-contents__link toc-highlight">What is still trusted on faith</a></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class=footer__title>文档</div><ul class="footer__items clean-list"><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/getting-started>快速开始</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/architecture>架构</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/business-rules>业务规则</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/runbook>Runbook</a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>社区</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class=footer__link-item>如何贡献<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class=footer__link-item>在哪里求助<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class=footer__link-item>安全<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>更多</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class=footer__link-item>GitHub<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CHANGELOG.md target=_blank rel="noopener noreferrer" class=footer__link-item>CHANGELOG<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/LICENSE target=_blank rel="noopener noreferrer" class=footer__link-item>MIT 许可证<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/THIRD_PARTY_NOTICES.md target=_blank rel="noopener noreferrer" class=footer__link-item>第三方声明<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div></div><div class="footer__bottom text--center"><div class=footer__copyright>Copyright © 2026 Daniel Souza。基于 MIT 许可证授权。第三方工具保留各自的许可证——参见第三方声明。</div></div></div></footer></div></body>
+</ul></div><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_yZb9"><a href=https://github.com/daneiel/brabo/blob/dev/docs/explanation/cadeia-de-suprimentos-do-ci.md target=_blank rel="noopener noreferrer" class=theme-edit-this-page><svg fill=currentColor height=20 width=20 viewBox="0 0 40 40" class=iconEdit_ANja aria-hidden=true><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"/></g></svg>编辑此页</a></div><div class="col lastUpdated_Kb4y"><span class=theme-last-updated>最后<!-- -->由 <b>Daniel Souza</b> <!-- -->于 <b><time datetime=2026-10-15T07:50:47.000Z itemprop=dateModified>2026年10月15日</time></b> <!-- -->更新</span></div></div></footer></article><nav class="docusaurus-mt-lg pagination-nav" aria-label=文件选项卡><a class="pagination-nav__link pagination-nav__link--prev" href=/brabo/dev/zh-Hans/explanation/branching-policy><div class=pagination-nav__sublabel>上一页</div><div class=pagination-nav__label>Política de branches</div></a><a class="pagination-nav__link pagination-nav__link--next" href=/brabo/dev/zh-Hans/explanation/observability><div class=pagination-nav__sublabel>下一页</div><div class=pagination-nav__label>Observabilidade</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_wOiH thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href=#the-threat-stated-plainly class="table-of-contents__link toc-highlight">A ameaça, dita sem rodeios</a><li><a href=#the-two-mechanisms class="table-of-contents__link toc-highlight">Os dois mecanismos</a><ul><li><a href=#binaries-checksum-after-every-download class="table-of-contents__link toc-highlight">Binários: checksum depois de todo download</a><li><a href=#actions-commit-sha-with-the-version-alongside class="table-of-contents__link toc-highlight">Actions: SHA de commit, com a versão ao lado</a></ul><li><a href=#why-theres-a-check-and-not-just-a-rule class="table-of-contents__link toc-highlight">Por que há uma checagem e não só uma regra</a><li><a href=#the-playwright-browser class="table-of-contents__link toc-highlight">O navegador do Playwright</a><li><a href=#images-job-caches class="table-of-contents__link toc-highlight">O que o job de imagens guarda em cache, e o que o cache não pode mudar</a><li><a href=#container-images-digest-with-the-tag-alongside class="table-of-contents__link toc-highlight">Imagens de container: digest, com a tag dentro da referência</a><ul><li><a href=#the-workflows-read-the-compose class="table-of-contents__link toc-highlight">Os workflows leem o compose</a></ul><li><a href=#the-build-cache-cannot-hide-a-stale-package class="table-of-contents__link toc-highlight">O cache de build não pode esconder um pacote velho</a><li><a href=#the-release-scans-what-it-publishes-before-signing-it class="table-of-contents__link toc-highlight">A release escaneia o que publica, antes de assinar</a><li><a href=#bandit-pinned-to-a-commit class="table-of-contents__link toc-highlight">Uma dependência pinada num commit de git: <code>bandit</code>, temporária</a><li><a href=#what-is-still-trusted-on-faith class="table-of-contents__link toc-highlight">O que ainda é aceito na confiança</a></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class=footer__title>文档</div><ul class="footer__items clean-list"><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/getting-started>快速开始</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/architecture>架构</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/business-rules>业务规则</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/runbook>Runbook</a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>社区</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class=footer__link-item>如何贡献<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class=footer__link-item>在哪里求助<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class=footer__link-item>安全<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>更多</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class=footer__link-item>GitHub<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CHANGELOG.md target=_blank rel="noopener noreferrer" class=footer__link-item>CHANGELOG<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/LICENSE target=_blank rel="noopener noreferrer" class=footer__link-item>MIT 许可证<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/THIRD_PARTY_NOTICES.md target=_blank rel="noopener noreferrer" class=footer__link-item>第三方声明<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div></div><div class="footer__bottom text--center"><div class=footer__copyright>Copyright © 2026 Daniel Souza。基于 MIT 许可证授权。第三方工具保留各自的许可证——参见第三方声明。</div></div></div></footer></div></body>

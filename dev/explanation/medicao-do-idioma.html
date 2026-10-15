@@ -1,33 +1,33 @@
-<!doctype html><html lang=pt-BR dir=ltr class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-explanation/medicao-do-idioma" data-has-hydrated=false><head><meta charset=UTF-8><meta name=generator content="Docusaurus v3.10.2"><title data-rh=true>Measuring the language heuristic | Brabo</title><meta data-rh=true name=viewport content="width=device-width, initial-scale=1.0"/><meta data-rh=true name=robots content="noindex, nofollow"/><meta data-rh=true name=twitter:card content=summary_large_image /><meta data-rh=true property=og:url content=https://daneiel.github.io/brabo/dev/explanation/medicao-do-idioma /><meta data-rh=true property=og:locale content=pt_BR /><meta data-rh=true property=og:locale:alternate content=en /><meta data-rh=true property=og:locale:alternate content=ru /><meta data-rh=true property=og:locale:alternate content=zh_Hans /><meta data-rh=true name=docusaurus_locale content=pt-BR /><meta data-rh=true name=docsearch:language content=pt-BR /><meta data-rh=true name=docusaurus_version content=current /><meta data-rh=true name=docusaurus_tag content=docs-default-current /><meta data-rh=true name=docsearch:version content=current /><meta data-rh=true name=docsearch:docusaurus_tag content=docs-default-current /><meta data-rh=true property=og:title content="Measuring the language heuristic | Brabo"/><meta data-rh=true name=description content="The instrument that measures the AT-080 language-detection heuristic against a labeled corpus, the numbers it produced on the synthetic corpus, and the paid validation of the language orientation and its cost (AT-167, 2026-09-29)."/><meta data-rh=true property=og:description content="The instrument that measures the AT-080 language-detection heuristic against a labeled corpus, the numbers it produced on the synthetic corpus, and the paid validation of the language orientation and its cost (AT-167, 2026-09-29)."/><link data-rh=true rel=icon href=/brabo/dev/img/favicon.ico /><link data-rh=true rel=canonical href=https://daneiel.github.io/brabo/dev/explanation/medicao-do-idioma /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/explanation/medicao-do-idioma hreflang=pt-BR /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/en/explanation/medicao-do-idioma hreflang=en /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/ru/explanation/medicao-do-idioma hreflang=ru /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/zh-Hans/explanation/medicao-do-idioma hreflang=zh-Hans /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/explanation/medicao-do-idioma hreflang=x-default /><script data-rh=true type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","item":"https://daneiel.github.io/brabo/dev/explanation/medicao-do-idioma","name":"Measuring the language heuristic","position":1}]}</script><link rel=stylesheet href=/brabo/dev/assets/css/styles.7f2bd764.css /><script src=/brabo/dev/assets/js/runtime~main.6d9165b4.js defer></script><script src=/brabo/dev/assets/js/main.905f026e.js defer></script></head><body><svg style="display: none;"><defs>
+<!doctype html><html lang=pt-BR dir=ltr class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-explanation/medicao-do-idioma" data-has-hydrated=false><head><meta charset=UTF-8><meta name=generator content="Docusaurus v3.10.2"><title data-rh=true>Medição da heurística de idioma | Brabo</title><meta data-rh=true name=viewport content="width=device-width, initial-scale=1.0"/><meta data-rh=true name=robots content="noindex, nofollow"/><meta data-rh=true name=twitter:card content=summary_large_image /><meta data-rh=true property=og:url content=https://daneiel.github.io/brabo/dev/explanation/medicao-do-idioma /><meta data-rh=true property=og:locale content=pt_BR /><meta data-rh=true property=og:locale:alternate content=en /><meta data-rh=true property=og:locale:alternate content=ru /><meta data-rh=true property=og:locale:alternate content=zh_Hans /><meta data-rh=true name=docusaurus_locale content=pt-BR /><meta data-rh=true name=docsearch:language content=pt-BR /><meta data-rh=true name=docusaurus_version content=current /><meta data-rh=true name=docusaurus_tag content=docs-default-current /><meta data-rh=true name=docsearch:version content=current /><meta data-rh=true name=docsearch:docusaurus_tag content=docs-default-current /><meta data-rh=true property=og:title content="Medição da heurística de idioma | Brabo"/><meta data-rh=true name=description content="O instrumento que mede a heurística de detecção de idioma da AT-080 contra um corpus rotulado, os números que ele produziu no corpus sintético, e a validação paga da orientação de idioma e do custo dela (AT-167, 2026-09-29)."/><meta data-rh=true property=og:description content="O instrumento que mede a heurística de detecção de idioma da AT-080 contra um corpus rotulado, os números que ele produziu no corpus sintético, e a validação paga da orientação de idioma e do custo dela (AT-167, 2026-09-29)."/><link data-rh=true rel=icon href=/brabo/dev/img/favicon.ico /><link data-rh=true rel=canonical href=https://daneiel.github.io/brabo/dev/explanation/medicao-do-idioma /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/explanation/medicao-do-idioma hreflang=pt-BR /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/en/explanation/medicao-do-idioma hreflang=en /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/ru/explanation/medicao-do-idioma hreflang=ru /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/zh-Hans/explanation/medicao-do-idioma hreflang=zh-Hans /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/explanation/medicao-do-idioma hreflang=x-default /><script data-rh=true type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","item":"https://daneiel.github.io/brabo/dev/explanation/medicao-do-idioma","name":"Medição da heurística de idioma","position":1}]}</script><link rel=stylesheet href=/brabo/dev/assets/css/styles.7f2bd764.css /><script src=/brabo/dev/assets/js/runtime~main.f740ec8c.js defer></script><script src=/brabo/dev/assets/js/main.086e53c3.js defer></script></head><body><svg style="display: none;"><defs>
 <symbol id=theme-svg-external-link viewBox="0 0 24 24"><path fill=currentColor d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
 </defs></svg>
-<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme-73f")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")),document.documentElement.setAttribute("data-theme-choice",t||"system")}(),function(){try{for(var[t,e]of new URLSearchParams(window.location.search).entries())if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id=__docusaurus><link rel=preload as=image href=/brabo/dev/img/logo.svg /><div role=region aria-label="Pular para o conteúdo principal"><a class=skipToContent_CFOX href=#__docusaurus_skipToContent_fallback>Pular para o conteúdo principal</a></div><nav aria-label="Navegação principal" class="theme-layout-navbar navbar navbar--fixed-top"><div class=navbar__inner><div class="theme-layout-navbar-left navbar__items"><button aria-label="Alternar painel de navegação" aria-expanded=false class="navbar__toggle clean-btn" type=button><svg width=30 height=30 viewBox="0 0 30 30" aria-hidden=true><path stroke=currentColor stroke-linecap=round stroke-miterlimit=10 stroke-width=2 d="M4 7h22M4 15h22M4 23h22"/></svg></button><a class=navbar__brand href=/brabo/dev/><div class=navbar__logo><img src=/brabo/dev/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--light_vzqw"/><img src=/brabo/dev/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--dark_FhTf"/></div><b class="navbar__title text--truncate">Brabo</b></a><a aria-current=page class="navbar__item navbar__link navbar__link--active" href=/brabo/dev/>Documentação</a><a class="navbar__item navbar__link" href=/brabo/dev/runbook>Runbook</a><a class="navbar__item navbar__link" href=/brabo/dev/adr>ADRs</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a href=# aria-haspopup=true aria-expanded=false role=button class=navbar__link>dev</a><ul class=dropdown__menu><li><a href=https://daneiel.github.io/brabo/prd/ target=_blank rel="noopener noreferrer" class=dropdown__link>prd — estável<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/qa/ target=_blank rel="noopener noreferrer" class=dropdown__link>qa — candidata<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/dev/ target=_blank rel="noopener noreferrer" class=dropdown__link>dev — em desenvolvimento ✓<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><div class="toggle_pnX7 colorModeToggle_Dj3Z"><button class="clean-btn toggleButton_DKER toggleButtonDisabled_qzkp" type=button disabled title="modo do sistema" aria-label="Mudar entre modo claro e escuro (modo do sistema está ativo)"><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL lightToggleIcon_E8tM"><path fill=currentColor d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL darkToggleIcon_rXjT"><path fill=currentColor d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL systemToggleIcon_zwCm"><path fill=currentColor d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"/></svg></button></div><div class=navbarSearchContainer_zRAa><div class="navbar__search searchBarContainer_eGzj" dir=ltr><svg aria-hidden=true class=searchIcon_PXpx focusable=false viewBox="0 0 16 16"><path fill=currentColor d="M6.02945 10.20327a4.17382 4.17382 0 1 1 4.17382-4.17382 4.15609 4.15609 0 0 1-4.17382 4.17382Zm9.69195 4.2199-4.8225-4.82338A5.88021 5.88021 0 0 0 12.058 6.02856 6.00467 6.00467 0 1 0 9.59979 10.8989l4.82338 4.82338a.89729.89729 0 0 0 1.29912 0 .89749.89749 0 0 0-.00087-1.29909Z"/></svg><input placeholder=Search aria-label=Search class="navbar__search-input searchInput_xOBI" value="" /><div class="loadingRing_JccP searchBarLoadingRing_aTss"><div></div><div></div><div></div><div></div></div></div></div></div></div><div role=presentation class=navbar-sidebar__backdrop></div></nav><div id=__docusaurus_skipToContent_fallback class="theme-layout-main main-wrapper mainWrapper_WJkx"><div class=docsWrapper_mIeg><button aria-label="Voltar para o topo" class="clean-btn theme-back-to-top-button backToTopButton_Afc8" type=button></button><div class=docRoot_XZYc><aside class="theme-doc-sidebar-container docSidebarContainer_FPqZ"><div class=sidebarViewport_waOe><div class=sidebar_RQC4><nav aria-label="Painel lateral de documentos" class="menu thin-scrollbar menu_ZM4U"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/><span class=categoryLinkLabel_jKch>🚀 Comece aqui</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/><span class=linkLabel_CzBh>Introdução</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/getting-started><span class=linkLabel_CzBh>Primeiros passos</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/tutorials/from-zero-to-deliverable><span class=linkLabel_CzBh>Do zero a um entregável</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/architecture><span class=categoryLinkLabel_jKch>🏗️ Arquitetura</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/architecture><span class=linkLabel_CzBh>Arquitetura</span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist" tabindex=0 href=/brabo/dev/adr><span class=categoryLinkLabel_jKch>Decisões (ADR)</span></a><button aria-label="Expandir a categoria 'Decisões (ADR)'" aria-expanded=false type=button class="clean-btn menu__caret"></button></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/business-rules><span class=categoryLinkLabel_jKch>📐 Regras</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/business-rules><span class=linkLabel_CzBh>Regras de negócio</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/business-rules/custo><span class=linkLabel_CzBh>Custo e metering</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/business-rules/autenticacao><span class=linkLabel_CzBh>Autenticação</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/reference/configuration><span class=categoryLinkLabel_jKch>📖 Referência</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/reference/configuration><span class=linkLabel_CzBh>Configuration</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/reference/events><span class=linkLabel_CzBh>Events</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/reference/permissions><span class=linkLabel_CzBh>Permissions</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/reference/artifacts><span class=linkLabel_CzBh>Artifacts</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/reference/git-providers><span class=linkLabel_CzBh>Git Providers</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/reference/internal-api><span class=linkLabel_CzBh>Internal API</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/reference/scripts><span class=linkLabel_CzBh>Scripts</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/reference/rulesets><span class=linkLabel_CzBh>Rulesets</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/reference/paridade-de-traducao><span class=linkLabel_CzBh>Paridade de tradução</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/reference/brb><span class=linkLabel_CzBh>BRB register</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/security-surface><span class=linkLabel_CzBh>Superfície exposta da api</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/reference/api><span class=linkLabel_CzBh>Referência da API</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role=button aria-expanded=true href=/brabo/dev/explanation/documentation-workflow><span class=categoryLinkLabel_jKch>💡 Explicação</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/documentation-workflow><span class=linkLabel_CzBh>Docs sync</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/branching-policy><span class=linkLabel_CzBh>Branching policy</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/cadeia-de-suprimentos-do-ci><span class=linkLabel_CzBh>CI supply chain</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/observability><span class=linkLabel_CzBh>Observability</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/primeiro-dogfooding><span class=linkLabel_CzBh>Primeiro dogfooding</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/execucao-real-hello-world><span class=linkLabel_CzBh>Execução real (hello world)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/achados-execucao-real><span class=linkLabel_CzBh>Achados da execução real da esteira</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/backlog><span class=linkLabel_CzBh>Triaged backlog</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/validacao-fase-12><span class=linkLabel_CzBh>Validação da Fase 12</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/validacao-real><span class=linkLabel_CzBh>Validação real (13b)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/aceite-providers><span class=linkLabel_CzBh>Aceite dos providers</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/gates><span class=linkLabel_CzBh>The gates, and how they're measured</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/auditoria-fluxo-vs-codigo><span class=linkLabel_CzBh>Audit: fluxo.yml × code (v3, ADR 0085)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/historico-de-fases><span class=linkLabel_CzBh>Histórico de fases</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/fase-28-pasta-do-usuario><span class=linkLabel_CzBh>FASE 28 — pasta do usuário</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/fase-29-instalacao-de-uma-linha><span class=linkLabel_CzBh>FASE 29 — instalação de uma linha</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/fase-30-runner-por-maquina><span class=linkLabel_CzBh>FASE 30 — agente local da máquina</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link menu__link--active" aria-current=page tabindex=0 href=/brabo/dev/explanation/medicao-do-idioma><span class=linkLabel_CzBh>Measuring the language heuristic</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/medicao-do-jev><span class=linkLabel_CzBh>Measuring the Jev tool router</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/auditoria-visual-rodada-29><span class=linkLabel_CzBh>Visual audit, before and after Rodada 29</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/tanstack-ai><span class=linkLabel_CzBh>TanStack AI — não adotado</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/localizacao><span class=linkLabel_CzBh>Localização</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/localizacao-en><span class=linkLabel_CzBh>Localização — inglês (en)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/localizacao-ru><span class=linkLabel_CzBh>Localização — russo (ru)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/localizacao-zh-hans><span class=linkLabel_CzBh>Localização — chinês simplificado (zh-Hans)</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/runbook><span class=categoryLinkLabel_jKch>🛠️ Operação</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/runbook><span class=linkLabel_CzBh>Runbook</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/glossary><span class=categoryLinkLabel_jKch>📚 Vocabulário</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/glossary><span class=linkLabel_CzBh>Glossário</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true><span class=categoryLinkLabel_jKch>🤝 Contribuir</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>Como contribuir</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>Onde pedir ajuda</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>Reportar vulnerabilidade</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></ul></nav></div></div></aside><main class=docMainContainer_ia8v><div class="container padding-top--md padding-bottom--lg"><div class=row><div class="col docItemCol_xjE4"><div class=docItemContainer_cPej><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_sZul" aria-label=Trilha><ul class=breadcrumbs><li class=breadcrumbs__item><a aria-label="Página Inicial" class=breadcrumbs__link href=/brabo/dev/><svg viewBox="0 0 24 24" class=breadcrumbHomeIcon_AUjL><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill=currentColor /></svg></a><li class=breadcrumbs__item><span class=breadcrumbs__link>💡 Explicação</span><li class="breadcrumbs__item breadcrumbs__item--active"><span class=breadcrumbs__link>Measuring the language heuristic</span></ul></nav><div class="tocCollapsible_nbAK theme-doc-toc-mobile tocMobile_r92C"><button type=button class="clean-btn tocCollapsibleButton_hcyq">Nesta página</button></div><div class="theme-doc-markdown markdown"><header><h1>Measuring the language heuristic</h1></header>
+<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme-73f")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")),document.documentElement.setAttribute("data-theme-choice",t||"system")}(),function(){try{for(var[t,e]of new URLSearchParams(window.location.search).entries())if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id=__docusaurus><link rel=preload as=image href=/brabo/dev/img/logo.svg /><div role=region aria-label="Pular para o conteúdo principal"><a class=skipToContent_CFOX href=#__docusaurus_skipToContent_fallback>Pular para o conteúdo principal</a></div><nav aria-label="Navegação principal" class="theme-layout-navbar navbar navbar--fixed-top"><div class=navbar__inner><div class="theme-layout-navbar-left navbar__items"><button aria-label="Alternar painel de navegação" aria-expanded=false class="navbar__toggle clean-btn" type=button><svg width=30 height=30 viewBox="0 0 30 30" aria-hidden=true><path stroke=currentColor stroke-linecap=round stroke-miterlimit=10 stroke-width=2 d="M4 7h22M4 15h22M4 23h22"/></svg></button><a class=navbar__brand href=/brabo/dev/><div class=navbar__logo><img src=/brabo/dev/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--light_vzqw"/><img src=/brabo/dev/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--dark_FhTf"/></div><b class="navbar__title text--truncate">Brabo</b></a><a aria-current=page class="navbar__item navbar__link navbar__link--active" href=/brabo/dev/>Documentação</a><a class="navbar__item navbar__link" href=/brabo/dev/runbook>Runbook</a><a class="navbar__item navbar__link" href=/brabo/dev/adr>ADRs</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a href=# aria-haspopup=true aria-expanded=false role=button class=navbar__link>dev</a><ul class=dropdown__menu><li><a href=https://daneiel.github.io/brabo/prd/ target=_blank rel="noopener noreferrer" class=dropdown__link>prd — estável<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/qa/ target=_blank rel="noopener noreferrer" class=dropdown__link>qa — candidata<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/dev/ target=_blank rel="noopener noreferrer" class=dropdown__link>dev — em desenvolvimento ✓<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><div class="toggle_pnX7 colorModeToggle_Dj3Z"><button class="clean-btn toggleButton_DKER toggleButtonDisabled_qzkp" type=button disabled title="modo do sistema" aria-label="Mudar entre modo claro e escuro (modo do sistema está ativo)"><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL lightToggleIcon_E8tM"><path fill=currentColor d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL darkToggleIcon_rXjT"><path fill=currentColor d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL systemToggleIcon_zwCm"><path fill=currentColor d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"/></svg></button></div><div class=navbarSearchContainer_zRAa><div class="navbar__search searchBarContainer_eGzj" dir=ltr><svg aria-hidden=true class=searchIcon_PXpx focusable=false viewBox="0 0 16 16"><path fill=currentColor d="M6.02945 10.20327a4.17382 4.17382 0 1 1 4.17382-4.17382 4.15609 4.15609 0 0 1-4.17382 4.17382Zm9.69195 4.2199-4.8225-4.82338A5.88021 5.88021 0 0 0 12.058 6.02856 6.00467 6.00467 0 1 0 9.59979 10.8989l4.82338 4.82338a.89729.89729 0 0 0 1.29912 0 .89749.89749 0 0 0-.00087-1.29909Z"/></svg><input placeholder=Search aria-label=Search class="navbar__search-input searchInput_xOBI" value="" /><div class="loadingRing_JccP searchBarLoadingRing_aTss"><div></div><div></div><div></div><div></div></div></div></div></div></div><div role=presentation class=navbar-sidebar__backdrop></div></nav><div id=__docusaurus_skipToContent_fallback class="theme-layout-main main-wrapper mainWrapper_WJkx"><div class=docsWrapper_mIeg><button aria-label="Voltar para o topo" class="clean-btn theme-back-to-top-button backToTopButton_Afc8" type=button></button><div class=docRoot_XZYc><aside class="theme-doc-sidebar-container docSidebarContainer_FPqZ"><div class=sidebarViewport_waOe><div class=sidebar_RQC4><nav aria-label="Painel lateral de documentos" class="menu thin-scrollbar menu_ZM4U"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/><span class=categoryLinkLabel_jKch>🚀 Comece aqui</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/><span class=linkLabel_CzBh>Introdução</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/getting-started><span class=linkLabel_CzBh>Primeiros passos</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/tutorials/from-zero-to-deliverable><span class=linkLabel_CzBh>Do zero a um entregável</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/architecture><span class=categoryLinkLabel_jKch>🏗️ Arquitetura</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/architecture><span class=linkLabel_CzBh>Arquitetura</span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist" tabindex=0 href=/brabo/dev/adr><span class=categoryLinkLabel_jKch>Decisões (ADR)</span></a><button aria-label="Expandir a categoria 'Decisões (ADR)'" aria-expanded=false type=button class="clean-btn menu__caret"></button></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/business-rules><span class=categoryLinkLabel_jKch>📐 Regras</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/business-rules><span class=linkLabel_CzBh>Regras de negócio</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/business-rules/custo><span class=linkLabel_CzBh>Custo e metering</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/business-rules/autenticacao><span class=linkLabel_CzBh>Autenticação</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/reference/configuration><span class=categoryLinkLabel_jKch>📖 Referência</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/reference/configuration><span class=linkLabel_CzBh>Configuration</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/reference/events><span class=linkLabel_CzBh>Events</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/reference/permissions><span class=linkLabel_CzBh>Permissions</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/reference/artifacts><span class=linkLabel_CzBh>Artifacts</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/reference/git-providers><span class=linkLabel_CzBh>Git Providers</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/reference/internal-api><span class=linkLabel_CzBh>Internal API</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/reference/scripts><span class=linkLabel_CzBh>Scripts</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/reference/rulesets><span class=linkLabel_CzBh>Rulesets</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/reference/paridade-de-traducao><span class=linkLabel_CzBh>Paridade de tradução</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/reference/brb><span class=linkLabel_CzBh>BRB register</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/security-surface><span class=linkLabel_CzBh>Superfície exposta da api</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/reference/api><span class=linkLabel_CzBh>Referência da API</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role=button aria-expanded=true href=/brabo/dev/explanation/documentation-workflow><span class=categoryLinkLabel_jKch>💡 Explicação</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/documentation-workflow><span class=linkLabel_CzBh>Sincronia da doc</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/branching-policy><span class=linkLabel_CzBh>Política de branches</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/cadeia-de-suprimentos-do-ci><span class=linkLabel_CzBh>Cadeia de suprimentos do CI</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/observability><span class=linkLabel_CzBh>Observabilidade</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/primeiro-dogfooding><span class=linkLabel_CzBh>Primeiro dogfooding</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/execucao-real-hello-world><span class=linkLabel_CzBh>Execução real (hello world)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/achados-execucao-real><span class=linkLabel_CzBh>Achados da execução real da esteira</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/backlog><span class=linkLabel_CzBh>Backlog triado</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/validacao-fase-12><span class=linkLabel_CzBh>Validação da Fase 12</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/validacao-real><span class=linkLabel_CzBh>Validação real (13b)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/aceite-providers><span class=linkLabel_CzBh>Aceite dos providers</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/gates><span class=linkLabel_CzBh>Os gates, e como eles são medidos</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/auditoria-fluxo-vs-codigo><span class=linkLabel_CzBh>Auditoria: fluxo.yml × código (v3, ADR 0085)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/historico-de-fases><span class=linkLabel_CzBh>Histórico de fases</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/fase-28-pasta-do-usuario><span class=linkLabel_CzBh>FASE 28 — pasta do usuário</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/fase-29-instalacao-de-uma-linha><span class=linkLabel_CzBh>FASE 29 — instalação de uma linha</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/fase-30-runner-por-maquina><span class=linkLabel_CzBh>FASE 30 — agente local da máquina</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link menu__link--active" aria-current=page tabindex=0 href=/brabo/dev/explanation/medicao-do-idioma><span class=linkLabel_CzBh>Medição da heurística de idioma</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/medicao-do-jev><span class=linkLabel_CzBh>Medição do roteador de ferramentas Jev</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/auditoria-visual-rodada-29><span class=linkLabel_CzBh>Auditoria visual, antes e depois da Rodada 29</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/tanstack-ai><span class=linkLabel_CzBh>TanStack AI — não adotado</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/localizacao><span class=linkLabel_CzBh>Localização</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/localizacao-en><span class=linkLabel_CzBh>Localização — inglês (en)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/localizacao-ru><span class=linkLabel_CzBh>Localização — russo (ru)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/explanation/localizacao-zh-hans><span class=linkLabel_CzBh>Localização — chinês simplificado (zh-Hans)</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/runbook><span class=categoryLinkLabel_jKch>🛠️ Operação</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/runbook><span class=linkLabel_CzBh>Runbook</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/glossary><span class=categoryLinkLabel_jKch>📚 Vocabulário</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/glossary><span class=linkLabel_CzBh>Glossário</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true><span class=categoryLinkLabel_jKch>🤝 Contribuir</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>Como contribuir</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>Onde pedir ajuda</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>Reportar vulnerabilidade</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></ul></nav></div></div></aside><main class=docMainContainer_ia8v><div class="container padding-top--md padding-bottom--lg"><div class=row><div class="col docItemCol_xjE4"><div class=docItemContainer_cPej><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_sZul" aria-label=Trilha><ul class=breadcrumbs><li class=breadcrumbs__item><a aria-label="Página Inicial" class=breadcrumbs__link href=/brabo/dev/><svg viewBox="0 0 24 24" class=breadcrumbHomeIcon_AUjL><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill=currentColor /></svg></a><li class=breadcrumbs__item><span class=breadcrumbs__link>💡 Explicação</span><li class="breadcrumbs__item breadcrumbs__item--active"><span class=breadcrumbs__link>Medição da heurística de idioma</span></ul></nav><div class="tocCollapsible_nbAK theme-doc-toc-mobile tocMobile_r92C"><button type=button class="clean-btn tocCollapsibleButton_hcyq">Nesta página</button></div><div class="theme-doc-markdown markdown"><header><h1>Medição da heurística de idioma</h1></header>
 <blockquote>
-<p>AT-160 (EP-028, HS-053). The heuristic being measured is the one the AT-080
-specification proposed ("A — own heuristic, no dependency"). Since AT-163
-(<a class="" href=/brabo/dev/business-rules#rn-624>RN-624</a>) the product runs it: the api detects
-the author's language with it and ASKS before anything changes. The
-product's thresholds are <strong>provisional</strong> — see
-<a href=#the-products-provisional-thresholds class="">The product's provisional thresholds</a>.</p>
+<p>AT-160 (EP-028, HS-053). A heurística medida é a que a especificação da
+AT-080 propôs ("A — heurística própria, sem dependência"). Desde a AT-163
+(<a class="" href=/brabo/dev/business-rules#rn-624>RN-624</a>) o produto a roda: a api detecta
+o idioma do autor com ela e PERGUNTA antes de qualquer coisa mudar. Os
+limiares do produto são <strong>provisórios</strong> — veja
+<a href=#the-products-provisional-thresholds class="">Os limiares provisórios do produto</a>.</p>
 </blockquote>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=what-exists>What exists<a href=#what-exists class=hash-link aria-label="Link direto para What exists" title="Link direto para What exists" translate=no>​</a></h2>
-<p>The instrument lives in <code>scripts/idioma/</code> and runs with the repository's Node
-(type stripping, no build step). <strong>No new dependency</strong>: the heuristic is marker
-lists and regular expressions, and the extraction talks to Postgres through
-<code>psql</code> inside the database container.</p>
-<p>The heuristic itself lives in the <strong>api</strong> —
-<code>apps/api/src/domain/iam/heuristica-de-idioma.ts</code> — and <code>scripts/idioma/heuristica.ts</code>
-only re-exports it, so the instrument measures exactly the code the product
-runs. That direction is forced: the api reaches neither <code>scripts/</code> nor any
-runtime package without a build step, and <code>packages/shared</code> is types only. The
-file has no imports, so Node runs it from <code>scripts/</code> by type stripping (the
-<code>idioma:*</code> commands silence the "typeless package" warning that comes with it),
-and <code>scripts/idioma/</code> has its own <code>tsconfig.json</code> — the only difference is
-turning <code>verbatimModuleSyntax</code> off, which rejects every <code>export</code> of a CommonJS
-module such as the api's. A <code>.mts</code> file was tried first: it passed both
-typechecks and the build, and broke every <code>ts-node</code> script of the api. The rule
-of <em>what is evidence</em> (<code>evidenciasDoAutor</code>) moved with the heuristic, and the
-real-corpus extraction uses the same one.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=what-exists>O que existe<a href=#what-exists class=hash-link aria-label="Link direto para O que existe" title="Link direto para O que existe" translate=no>​</a></h2>
+<p>O instrumento mora em <code>scripts/idioma/</code> e roda com o Node do repositório
+(type stripping, sem passo de build). <strong>Nenhuma dependência nova</strong>: a heurística
+é lista de marcadores e expressões regulares, e a extração fala com o Postgres
+por <code>psql</code> dentro do container do banco.</p>
+<p>A heurística em si mora na <strong>api</strong> —
+<code>apps/api/src/domain/iam/heuristica-de-idioma.ts</code> — e <code>scripts/idioma/heuristica.ts</code>
+só a reexporta, então o instrumento mede exatamente o código que o produto
+roda. Essa direção é forçada: a api não alcança nem <code>scripts/</code> nem pacote de
+runtime nenhum sem passo de build, e <code>packages/shared</code> é só tipos. O arquivo
+não tem imports, então o Node o roda a partir de <code>scripts/</code> por type stripping
+(os comandos <code>idioma:*</code> silenciam o aviso de "typeless package" que vem junto),
+e <code>scripts/idioma/</code> tem <code>tsconfig.json</code> próprio — a única diferença é desligar
+<code>verbatimModuleSyntax</code>, que recusa todo <code>export</code> de módulo CommonJS como os da
+api. Um arquivo <code>.mts</code> foi tentado primeiro: passou nos dois typechecks e no
+build, e quebrou todo script <code>ts-node</code> da api. A regra do <em>que é evidência</em>
+(<code>evidenciasDoAutor</code>) se mudou junto com a heurística, e a extração do corpus
+real usa a mesma.</p>
 
 
 
@@ -61,52 +61,56 @@ real-corpus extraction uses the same one.</p>
 
 
 
-<table><thead><tr><th>file<th>role<tbody><tr><td><code>heuristica.ts</code><td>re-exports the api's heuristic: cleaning, contrastive scoring, the candidate and the provisional parameters, the 10-message sample, the hysteresis and the evidence rule<tr><td><code>corpus-sintetico.jsonl</code><td>the <strong>versioned</strong> synthetic corpus — every line hand-written for the instrument, <code>origem: "sintetico"</code><tr><td><code>sequencias-sinteticas.json</code><td>synthetic conversations for the sample-and-hysteresis path<tr><td><code>medicao.ts</code> / <code>medir.ts</code><td>the instrument and its CLI<tr><td><code>extrair.ts</code><td>extracts the <strong>real</strong> corpus from the local event log, to a file outside git<tr><td><code>rotular.ts</code><td>assisted labeling of the real corpus, in the terminal</table>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=the-two-corpora-and-where-each-one-lives>The two corpora, and where each one lives<a href=#the-two-corpora-and-where-each-one-lives class=hash-link aria-label="Link direto para The two corpora, and where each one lives" title="Link direto para The two corpora, and where each one lives" translate=no>​</a></h2>
-<p>The maintainer's decision (AT-168, answer 5) is <strong>real + synthetic</strong>. They have
-opposite storage rules:</p>
+<table><thead><tr><th>arquivo<th>papel<tbody><tr><td><code>heuristica.ts</code><td>reexporta a heurística da api: limpeza, pontuação contrastiva, o candidato e os parâmetros provisórios, a amostra de 10 mensagens, a histerese e a regra de evidência<tr><td><code>corpus-sintetico.jsonl</code><td>o corpus sintético <strong>versionado</strong> — toda linha escrita à mão para o instrumento, <code>origem: "sintetico"</code><tr><td><code>sequencias-sinteticas.json</code><td>conversas sintéticas para o caminho da amostra e da histerese<tr><td><code>medicao.ts</code> / <code>medir.ts</code><td>o instrumento e o CLI dele<tr><td><code>extrair.ts</code><td>extrai o corpus <strong>real</strong> do event log local, para um arquivo fora do git<tr><td><code>rotular.ts</code><td>rotulação assistida do corpus real, no terminal</table>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=the-two-corpora-and-where-each-one-lives>Os dois corpora, e onde cada um mora<a href=#the-two-corpora-and-where-each-one-lives class=hash-link aria-label="Link direto para Os dois corpora, e onde cada um mora" title="Link direto para Os dois corpora, e onde cada um mora" translate=no>​</a></h2>
+<p>A decisão do mantenedor (AT-168, resposta 5) é <strong>real + sintético</strong>. Eles têm
+regras de armazenamento opostas:</p>
 <ul>
-<li class=""><strong>Synthetic</strong> — versioned, reviewed like code. It covers the nine mandatory
-cases of AT-080 (typos, legitimate Spanish, English, mixed text, "ok", code,
-logs, quotations in another language) plus Portuguese full of English jargon,
-inline identifiers, and languages outside the three (French, Italian, German,
-Galician, Catalan, Dutch) — the language list is open (AT-168, answer 2).</li>
-<li class=""><strong>Real</strong> — the user's own messages from the <strong>local</strong> event log. It never
-enters git, a fixture, a CI log or a PR body. <code>extrair.ts</code> and <code>corpus.ts</code>
-refuse any destination inside the checkout, and the file is written with mode
-600 under <code>$XDG_CACHE_HOME/brabo/corpus-idioma/</code> (else <code>~/.cache/…</code>). The
-report never prints an item's text — only ids, labels and counts — so its
-output can be pasted into a PR.</li>
+<li class=""><strong>Sintético</strong> — versionado, revisado como código. Cobre os nove casos
+obrigatórios da AT-080 (erros de digitação, espanhol legítimo, inglês, texto
+misto, "ok", código, logs, citações em outro idioma) mais português cheio de
+jargão em inglês, identificadores inline, e idiomas fora dos três (francês,
+italiano, alemão, galego, catalão, holandês) — a lista de idiomas é aberta
+(AT-168, resposta 2).</li>
+<li class=""><strong>Real</strong> — as mensagens do próprio usuário no event log <strong>local</strong>. Nunca
+entra no git, numa fixture, num log de CI nem no corpo de uma PR. <code>extrair.ts</code>
+e <code>corpus.ts</code> recusam qualquer destino dentro do checkout, e o arquivo é
+gravado com modo 600 em <code>$XDG_CACHE_HOME/brabo/corpus-idioma/</code> (senão
+<code>~/.cache/…</code>). O relatório nunca imprime o texto de um item — só ids, rótulos
+e contagens —, então a saída dele pode ser colada numa PR.</li>
 </ul>
-<p>What the extraction takes as evidence follows the AT-080 cleaning: only events
-whose actor is the <strong>user</strong> (the agent's reply is never evidence, so a Spanish
-answer from the model cannot feed the detection back), and, for the structured
-form, only the <strong>answers</strong> — the concatenated <code>chat.message</code> the api writes right
-after it, whose labels are the agent's text, is skipped.</p>
-<p>The labeling assistant does <strong>not</strong> pre-fill the heuristic's guess: accepting it
-with ENTER would anchor the label on the thing the label exists to measure. ENTER
-accepts the language the owner declares with <code>--padrao</code>.</p>
-<p>Labels: a BCP-47 code (<code>pt-BR</code>, <code>es</code>, <code>fr</code>…), <code>und</code> (nothing to decide: "ok",
-only code, only a log) or <code>mul</code> (mixed, no dominant language). Scoring:
-<code>pt</code>/<code>es</code>/<code>en</code> must get their own language; <code>und</code>, <code>mul</code> and any other language
-must get <code>indeterminado</code> — the only correct answer a three-language heuristic can
-give them. An <code>indeterminado</code> on a decidable item is <strong>lost coverage</strong> (the known
-preference stays); a wrong language is an <strong>error</strong>, and <code>falso es</code> is counted
-apart because it is the defect the epic exists to remove.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=running-it>Running it<a href=#running-it class=hash-link aria-label="Link direto para Running it" title="Link direto para Running it" translate=no>​</a></h2>
+<p>O que a extração toma como evidência segue a limpeza da AT-080: só eventos
+cujo ator é o <strong>usuário</strong> (a resposta do agente nunca é evidência, então uma
+resposta em espanhol do modelo não pode realimentar a detecção) e, no
+formulário estruturado, só as <strong>respostas</strong> — o <code>chat.message</code> concatenado que
+a api grava logo depois, cujos rótulos são texto do agente, é pulado.</p>
+<p>O assistente de rotulação <strong>não</strong> pré-preenche o palpite da heurística:
+aceitá-lo com ENTER ancoraria o rótulo justamente na coisa que o rótulo existe
+para medir. ENTER aceita o idioma que o dono declara com <code>--padrao</code>.</p>
+<p>Rótulos: um código BCP-47 (<code>pt-BR</code>, <code>es</code>, <code>fr</code>…), <code>und</code> (nada a decidir: "ok",
+só código, só um log) ou <code>mul</code> (misto, sem idioma dominante). Pontuação:
+<code>pt</code>/<code>es</code>/<code>en</code> têm de receber o próprio idioma; <code>und</code>, <code>mul</code> e qualquer outro
+idioma têm de receber <code>indeterminado</code> — a única resposta correta que uma
+heurística de três idiomas pode dar a eles. Um <code>indeterminado</code> num item
+decidível é <strong>cobertura perdida</strong> (a preferência conhecida fica); um idioma
+errado é <strong>erro</strong>, e <code>falso es</code> é contado à parte porque é o defeito que o
+épico existe para remover.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=running-it>Como rodar<a href=#running-it class=hash-link aria-label="Link direto para Como rodar" title="Link direto para Como rodar" translate=no>​</a></h2>
 <div class="language-bash codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-bash codeBlock_mqej thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_uNqR><div class=token-line style=color:#F8F8F2><span class="token plain"># synthetic corpus (the default)</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">pnpm --filter @brabo/scripts idioma:medir</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain" style=display:inline-block></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain"># the owner's real corpus, on the owner's machine</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">pnpm --filter @brabo/scripts idioma:extrair --container brabo-dev-postgres-1</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">pnpm --filter @brabo/scripts idioma:rotular --padrao pt-BR</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">pnpm --filter @brabo/scripts idioma:medir --real</span><br/></div></code></pre></div></div>
-<p><code>--container</code> runs <code>psql</code> inside that container with one read-only <code>SELECT</code> on
-<code>session_events</code> (<code>--usuario</code>/<code>--banco</code> default to the compose's <code>brabo</code>/<code>brabo</code>);
-<code>--database-url &lt;url></code> uses a host <code>psql</code> instead. Re-running the extraction keeps
-existing labels and appends new messages unlabeled.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=numbers-on-the-synthetic-corpus-2026-09-28>Numbers on the synthetic corpus (2026-09-28)<a href=#numbers-on-the-synthetic-corpus-2026-09-28 class=hash-link aria-label="Link direto para Numbers on the synthetic corpus (2026-09-28)" title="Link direto para Numbers on the synthetic corpus (2026-09-28)" translate=no>​</a></h2>
-<p>123 labeled items, 7 sequences, candidate parameters of AT-080 (20-word minimum,
-threshold 0.8, margin 0.3, 10 messages / 2,000 characters, hysteresis 2). Two
-marker lists: <code>at080</code> is the specification's list verbatim; <code>ampliada</code> is a
-larger list written by this instrument <strong>before</strong> it was run against the corpus
-(frequent function words absent from the other two languages). Same corpus, so
-<code>ampliada</code> is not validated by these numbers — the real corpus is what can tell.</p>
-<p>Per message, candidate parameters:</p>
+<p><code>--container</code> roda <code>psql</code> dentro desse container com um único <code>SELECT</code> só de
+leitura em <code>session_events</code> (<code>--usuario</code>/<code>--banco</code> têm como default o
+<code>brabo</code>/<code>brabo</code> do compose); <code>--database-url &lt;url></code> usa um <code>psql</code> do host no
+lugar. Rodar a extração de novo mantém os rótulos existentes e acrescenta as
+mensagens novas sem rótulo.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=numbers-on-the-synthetic-corpus-2026-09-28>Números no corpus sintético (2026-09-28)<a href=#numbers-on-the-synthetic-corpus-2026-09-28 class=hash-link aria-label="Link direto para Números no corpus sintético (2026-09-28)" title="Link direto para Números no corpus sintético (2026-09-28)" translate=no>​</a></h2>
+<p>123 itens rotulados, 7 sequências, parâmetros candidatos da AT-080 (mínimo de
+20 palavras, limiar 0,8, margem 0,3, 10 mensagens / 2.000 caracteres, histerese
+2). Duas listas de marcadores: <code>at080</code> é a lista da especificação, literal;
+<code>ampliada</code> é uma lista maior escrita por este instrumento <strong>antes</strong> de ele rodar
+contra o corpus (palavras funcionais frequentes ausentes dos outros dois
+idiomas). Mesmo corpus, então <code>ampliada</code> não é validada por estes números — quem
+pode dizer é o corpus real.</p>
+<p>Por mensagem, parâmetros candidatos:</p>
 
 
 
@@ -168,50 +172,52 @@ larger list written by this instrument <strong>before</strong> it was run agains
 
 
 
-<table><thead><tr><th>label<th>n<th><code>at080</code> correct<th><code>at080</code> indeterminate<th><code>ampliada</code> correct<th><code>ampliada</code> indeterminate<tbody><tr><td>pt<td>56<td>26 (46.4%)<td>30<td>30 (53.6%)<td>26<tr><td>es<td>20<td>6 (30.0%)<td>14<td>7 (35.0%)<td>13<tr><td>en<td>14<td>6 (42.9%)<td>8<td>6 (42.9%)<td>8<tr><td>und<td>15<td>15 (100%)<td>0<td>15 (100%)<td>0<tr><td>mul<td>5<td>5 (100%)<td>0<td>5 (100%)<td>0<tr><td>other languages<td>13<td>10<td>0<td>9<td>0</table>
-<p>Wrong-language verdicts: <strong>none on a <code>pt</code>/<code>es</code>/<code>en</code> item</strong>, in either list. All of
-them are on languages outside the three — <code>at080</code>: French → pt (the <code>ê</code> of
-<em>arrêté</em>), <strong>Galician → es</strong> (the one <code>falso es</code>), Dutch → en; <code>ampliada</code>: French →
-es, German → pt and → en, Dutch → en.</p>
-<p>The cleaning removed more than half of the words of <strong>zero</strong> decidable items.</p>
-<p>All seven synthetic sequences end where expected with at most the allowed number
-of switches, in both lists — including Portuguese with a long Spanish quotation,
-one whole Spanish message in the middle of Portuguese, and Portuguese dense with
-English jargon.</p>
-<p>CPU on this machine: <code>at080</code> 11.7 µs per message and 49 µs per evaluation of the
-10-message sample; <code>ampliada</code> 16.8 µs and 60 µs. It varies with the machine; the
-order of magnitude is the point.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=what-the-numbers-say>What the numbers say<a href=#what-the-numbers-say class=hash-link aria-label="Link direto para What the numbers say" title="Link direto para What the numbers say" translate=no>​</a></h2>
+<table><thead><tr><th>rótulo<th>n<th><code>at080</code> correto<th><code>at080</code> indeterminado<th><code>ampliada</code> correto<th><code>ampliada</code> indeterminado<tbody><tr><td>pt<td>56<td>26 (46,4%)<td>30<td>30 (53,6%)<td>26<tr><td>es<td>20<td>6 (30,0%)<td>14<td>7 (35,0%)<td>13<tr><td>en<td>14<td>6 (42,9%)<td>8<td>6 (42,9%)<td>8<tr><td>und<td>15<td>15 (100%)<td>0<td>15 (100%)<td>0<tr><td>mul<td>5<td>5 (100%)<td>0<td>5 (100%)<td>0<tr><td>outros idiomas<td>13<td>10<td>0<td>9<td>0</table>
+<p>Vereditos de idioma errado: <strong>nenhum num item <code>pt</code>/<code>es</code>/<code>en</code></strong>, em nenhuma das
+listas. Todos estão em idiomas fora dos três — <code>at080</code>: francês → pt (o <code>ê</code> de
+<em>arrêté</em>), <strong>galego → es</strong> (o único <code>falso es</code>), holandês → en; <code>ampliada</code>:
+francês → es, alemão → pt e → en, holandês → en.</p>
+<p>A limpeza removeu mais da metade das palavras de <strong>zero</strong> itens decidíveis.</p>
+<p>As sete sequências sintéticas terminam onde se espera com no máximo o número
+permitido de trocas, nas duas listas — inclusive português com uma citação
+longa em espanhol, uma mensagem inteira em espanhol no meio do português, e
+português denso de jargão em inglês.</p>
+<p>CPU nesta máquina: <code>at080</code> 11,7 µs por mensagem e 49 µs por avaliação da
+amostra de 10 mensagens; <code>ampliada</code> 16,8 µs e 60 µs. Varia com a máquina; o que
+importa é a ordem de grandeza.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=what-the-numbers-say>O que os números dizem<a href=#what-the-numbers-say class=hash-link aria-label="Link direto para O que os números dizem" title="Link direto para O que os números dizem" translate=no>​</a></h2>
 <ul>
-<li class=""><strong>With the <code>at080</code> list, the threshold and the margin never bind.</strong> 66 of the
-67 items that score at all score for one language only (confidence = 1.0), so
-sweeping the threshold from 0.5 to 1.0 changes nothing. The word minimum is the
-only knob that acts: per message, decidable items reach their language 42.2%
-of the time at 20 words, 58.9% at 10 and 66.7% with no minimum — at 20 it
-throws away every short and typo message and most of the technical ones.</li>
-<li class=""><strong>Dropping the minimum lets mixed text decide.</strong> With no minimum, <code>at080</code> turns
-three of the five mixed messages into <code>en</code> or <code>pt</code>, and <code>ampliada</code> also decides
-two <code>und</code> items as <code>en</code> — unfenced code (<code>const total = itens.reduce(…)</code>) and
-pnpm output (<code>ELIFECYCLE  Test failed. See above for more details.</code>) pass the
-cleaning, which only knows fenced code and the log shapes AT-080 listed.</li>
-<li class=""><strong>The margin of 0.3 is redundant with the threshold of 0.8</strong> in any list: with
-three languages, a winner at ≥ 0.8 is at least 0.6 above the second.</li>
-<li class=""><strong>The unit that matters is the sample, not the message</strong> — in the sequences
-the 10-message window reaches the language with messages that alone would be
-<code>indeterminado</code>. A single Spanish message in a Portuguese window turns the
-sample <code>indeterminado</code> for as long as it stays in the window (sequence <code>q03</code>):
-no switch, but no confirmation either.</li>
-<li class=""><strong>The open language list is where the errors are.</strong> With three languages, a
-Galician or French user can be told they write Spanish or Portuguese. Under the
-AT-168 rule the detection only <em>asks</em>, and the user confirms, so the cost is a
-wrong question — but it is still the heuristic's only failure mode here.</li>
+<li class=""><strong>Com a lista <code>at080</code>, o limiar e a margem nunca atuam.</strong> 66 dos 67 itens que
+pontuam alguma coisa pontuam para um idioma só (confiança = 1,0), então
+varrer o limiar de 0,5 a 1,0 não muda nada. O mínimo de palavras é o único
+botão que age: por mensagem, os itens decidíveis chegam ao idioma deles 42,2%
+das vezes com 20 palavras, 58,9% com 10 e 66,7% sem mínimo — com 20 ele joga
+fora toda mensagem curta e com erro de digitação e a maior parte das técnicas.</li>
+<li class=""><strong>Tirar o mínimo deixa texto misto decidir.</strong> Sem mínimo, <code>at080</code> transforma
+três das cinco mensagens mistas em <code>en</code> ou <code>pt</code>, e <code>ampliada</code> também decide
+dois itens <code>und</code> como <code>en</code> — código sem cerca (<code>const total = itens.reduce(…)</code>)
+e saída do pnpm (<code>ELIFECYCLE  Test failed. See above for more details.</code>) passam
+pela limpeza, que só conhece código cercado e os formatos de log que a AT-080
+listou.</li>
+<li class=""><strong>A margem de 0,3 é redundante com o limiar de 0,8</strong> em qualquer lista: com
+três idiomas, um vencedor com ≥ 0,8 fica pelo menos 0,6 acima do segundo.</li>
+<li class=""><strong>A unidade que importa é a amostra, não a mensagem</strong> — nas sequências, a
+janela de 10 mensagens chega ao idioma com mensagens que sozinhas seriam
+<code>indeterminado</code>. Uma única mensagem em espanhol numa janela em português torna
+a amostra <code>indeterminado</code> enquanto ela estiver na janela (sequência <code>q03</code>):
+nenhuma troca, mas nenhuma confirmação também.</li>
+<li class=""><strong>A lista aberta de idiomas é onde estão os erros.</strong> Com três idiomas, um
+usuário galego ou francês pode ouvir que escreve espanhol ou português. Pela
+regra da AT-168 a detecção só <em>pergunta</em>, e o usuário confirma, então o custo
+é uma pergunta errada — mas continua sendo o único modo de falha da heurística
+aqui.</li>
 </ul>
-<p>These are synthetic numbers: the corpus was written by the same hand that wrote
-the heuristic. The thresholds of AT-163 should come from the real corpus.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=the-products-provisional-thresholds>The product's provisional thresholds<a href=#the-products-provisional-thresholds class=hash-link aria-label="Link direto para The product's provisional thresholds" title="Link direto para The product's provisional thresholds" translate=no>​</a></h2>
-<p>AT-163 had to ship with <em>some</em> numbers before the real corpus exists, so the
-api reads <code>PARAMETROS_PROVISORIOS</code> — <strong>provisional, not calibrated</strong>, and
-declared so in <a class="" href=/brabo/dev/business-rules#rn-624>RN-624</a>:</p>
+<p>Estes são números sintéticos: o corpus foi escrito pela mesma mão que escreveu
+a heurística. Os limiares da AT-163 deveriam vir do corpus real.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=the-products-provisional-thresholds>Os limiares provisórios do produto<a href=#the-products-provisional-thresholds class=hash-link aria-label="Link direto para Os limiares provisórios do produto" title="Link direto para Os limiares provisórios do produto" translate=no>​</a></h2>
+<p>A AT-163 tinha de sair com <em>algum</em> número antes de o corpus real existir, então
+a api lê <code>PARAMETROS_PROVISORIOS</code> — <strong>provisórios, não calibrados</strong>, e assim
+declarados na <a class="" href=/brabo/dev/business-rules#rn-624>RN-624</a>:</p>
 
 
 
@@ -253,73 +259,77 @@ declared so in <a class="" href=/brabo/dev/business-rules#rn-624>RN-624</a>:</p>
 
 
 
-<table><thead><tr><th>parameter<th>provisional<th>AT-080 candidate<th>why<tbody><tr><td>marker list<td><code>at080</code><td>—<td><code>ampliada</code> gains 4 points in pt and gets German wrong twice; neither is validated by real data<tr><td>word minimum (over the sample)<td><strong>10</strong><td>20<td>coverage of decidable items 42.2% → 58.9% with the <strong>same</strong> three wrong verdicts (French, Galician, Dutch — languages outside the three); below 10, mixed text starts to decide<tr><td>threshold / margin<td>0.8 / 0.3<td>0.8 / 0.3<td>they never bind on the synthetic corpus, so there is no better number to pick yet<tr><td>sample<td>10 messages / 2,000 characters<td>same<td>—<tr><td>hysteresis<td>2<td>2<td>—</table>
-<p>The hysteresis is <strong>recomputed, never stored</strong>: the api reads the last 11
-pieces of evidence and asks whether the last two evaluations of the sample
-agree. CPU on this machine, synthetic corpus: 11.6 µs to clean and classify
-one message, 110 µs per detection (11 messages, two evaluations). The read is
-served by a partial index on <code>session_events</code>: 0.056 ms against 13.5 ms for a
-sequential scan, measured over 200,000 events.</p>
-<p>To recalibrate: run the real corpus (<code>idioma:medir --real</code>), then change
-<code>PARAMETROS_PROVISORIOS</code> in the api — it is the only place the product reads
-them from, and the instrument imports the same file (its report still sweeps the AT-080 candidates).</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=paid-validation-of-the-language-orientation-at-167-2026-09-29>Paid validation of the language orientation (AT-167, 2026-09-29)<a href=#paid-validation-of-the-language-orientation-at-167-2026-09-29 class=hash-link aria-label="Link direto para Paid validation of the language orientation (AT-167, 2026-09-29)" title="Link direto para Paid validation of the language orientation (AT-167, 2026-09-29)" translate=no>​</a></h2>
+<table><thead><tr><th>parâmetro<th>provisório<th>candidato da AT-080<th>por quê<tbody><tr><td>lista de marcadores<td><code>at080</code><td>—<td><code>ampliada</code> ganha 4 pontos em pt e erra o alemão duas vezes; nenhuma das duas é validada por dado real<tr><td>mínimo de palavras (sobre a amostra)<td><strong>10</strong><td>20<td>cobertura dos itens decidíveis 42,2% → 58,9% com os <strong>mesmos</strong> três vereditos errados (francês, galego, holandês — idiomas fora dos três); abaixo de 10, texto misto começa a decidir<tr><td>limiar / margem<td>0,8 / 0,3<td>0,8 / 0,3<td>nunca atuam no corpus sintético, então ainda não há número melhor para escolher<tr><td>amostra<td>10 mensagens / 2.000 caracteres<td>igual<td>—<tr><td>histerese<td>2<td>2<td>—</table>
+<p>A histerese é <strong>recalculada, nunca guardada</strong>: a api lê as últimas 11
+evidências e pergunta se as duas últimas avaliações da amostra concordam. CPU
+nesta máquina, corpus sintético: 11,6 µs para limpar e classificar uma
+mensagem, 110 µs por detecção (11 mensagens, duas avaliações). A leitura é
+servida por um índice parcial em <code>session_events</code>: 0,056 ms contra 13,5 ms de
+uma varredura sequencial, medidos sobre 200.000 eventos.</p>
+<p>Para recalibrar: rode o corpus real (<code>idioma:medir --real</code>) e depois mude
+<code>PARAMETROS_PROVISORIOS</code> na api — é o único lugar de onde o produto os lê, e o
+instrumento importa o mesmo arquivo (o relatório dele continua varrendo os
+candidatos da AT-080).</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=paid-validation-of-the-language-orientation-at-167-2026-09-29>Validação paga da orientação de idioma (AT-167, 2026-09-29)<a href=#paid-validation-of-the-language-orientation-at-167-2026-09-29 class=hash-link aria-label="Link direto para Validação paga da orientação de idioma (AT-167, 2026-09-29)" title="Link direto para Validação paga da orientação de idioma (AT-167, 2026-09-29)" translate=no>​</a></h2>
 <blockquote>
-<p>The protocol is AT-082's, with the decisions of AT-169: budget US$ 5,
-5 rounds per case and arm, acceptance threshold "in the treated arm, <strong>zero</strong>
-Spanish answers where pt-BR is expected, and correct language <strong>≥ 95%</strong> in
-C01–C04 and C06–C15", model under test <code>deepseek/deepseek-v4.1-flash</code>,
-comparison model <code>anthropic/claude-haiku-4.5</code>, incremental cost ceiling
-50 input tokens per call. Code at <code>d48f99f8e</code> (the <code>dev</code> of 2026-09-29).</p>
+<p>O protocolo é o da AT-082, com as decisões da AT-169: orçamento de US$ 5,
+5 rodadas por caso e braço, limiar de aceite "no braço tratado, <strong>zero</strong>
+respostas em espanhol onde se espera pt-BR, e idioma correto <strong>≥ 95%</strong> em
+C01–C04 e C06–C15", modelo sob teste <code>deepseek/deepseek-v4.1-flash</code>, modelo
+de comparação <code>anthropic/claude-haiku-4.5</code>, teto de custo incremental de
+50 tokens de entrada por chamada. Código em <code>d48f99f8e</code> (a <code>dev</code> de 2026-09-29).</p>
 </blockquote>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=where-it-runs-and-what-is-and-is-not-the-product>Where it runs, and what is (and is not) the product<a href=#where-it-runs-and-what-is-and-is-not-the-product class=hash-link aria-label="Link direto para Where it runs, and what is (and is not) the product" title="Link direto para Where it runs, and what is (and is not) the product" translate=no>​</a></h3>
-<p>A script outside the product, <code>scripts/idioma/validar.ts</code> (the pure part —
-matrix, judging, report — in <code>validacao.ts</code>, tested by <code>validacao.spec.ts</code>). It
-calls OpenRouter <strong>directly</strong> and writes nothing to the database. What the
-product sends to the model is <strong>read from the product's files at every run</strong>,
-never copied — the read throws, naming what it missed, if a file changes shape:</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=where-it-runs-and-what-is-and-is-not-the-product>Onde roda, e o que é (e o que não é) o produto<a href=#where-it-runs-and-what-is-and-is-not-the-product class=hash-link aria-label="Link direto para Onde roda, e o que é (e o que não é) o produto" title="Link direto para Onde roda, e o que é (e o que não é) o produto" translate=no>​</a></h3>
+<p>Um script fora do produto, <code>scripts/idioma/validar.ts</code> (a parte pura — matriz,
+julgamento, relatório — em <code>validacao.ts</code>, testada por <code>validacao.spec.ts</code>). Ele
+chama o OpenRouter <strong>direto</strong> e não grava nada no banco. O que o produto manda
+ao modelo é <strong>lido dos arquivos do produto a cada execução</strong>, nunca copiado — a
+leitura lança, nomeando o que não achou, se um arquivo mudar de forma:</p>
 <ul>
-<li class="">the orientation (RN-622/623): <code>@textos</code>, the generic sentence, the artifact
-clause, <code>@forma_curta</code> and <code>@ferramentas_de_artefato</code> of
-<code>apps/engine/lib/engine/harness/idioma_da_resposta.ex</code>, sent as the LAST
-message, <code>role: "system"</code>, in every call of a treated turn (tool iterations
-included) and never kept in the history;</li>
-<li class="">the summary prompt and its language sentence (RN-621) of
+<li class="">a orientação (RN-622/623): <code>@textos</code>, a frase genérica, a cláusula de
+artefato, <code>@forma_curta</code> e <code>@ferramentas_de_artefato</code> de
+<code>apps/engine/lib/engine/harness/idioma_da_resposta.ex</code>, enviada como a ÚLTIMA
+mensagem, <code>role: "system"</code>, em toda chamada de um turno tratado (iterações de
+ferramenta incluídas) e nunca mantida no histórico;</li>
+<li class="">o prompt de resumo e a frase de idioma dele (RN-621) de
 <code>apps/engine/lib/engine/harness/context_manager.ex</code>;</li>
-<li class="">the Criativo persona (<code>CRIATIVO_INSTRUCTIONS</code>), its two tools with the real
-descriptions, and the tool results the product returns.</li>
+<li class="">a persona do Criativo (<code>CRIATIVO_INSTRUCTIONS</code>), as duas ferramentas dele com
+as descrições reais, e os resultados de ferramenta que o produto devolve.</li>
 </ul>
-<p>Declared differences from the product: the system prompt is only the persona
-(no <code>ContextBuilder</code> layers); compaction is <strong>forced</strong> before the fifth turn
-of C04 (keeping the last two messages, the product's <code>keep_recent</code>), with the
-model under test as summarizer; resumption (C15) is the history rebuilt as
-text, the shape of <code>Engine.Agents.Reidratacao</code>; at most 4 model calls per
-turn (the Criativo allows 12); and <code>max_tokens</code> is capped at 4000 (the product
-sends none). The upstream provider was <strong>not</strong> fixed — recorded per call as a
-confounder. Baseline = the code before RN-621/622: no orientation <strong>and</strong> the
-old summary prompt (AT-169 answer 4: the validation measures the set, there is
-no isolated baseline of the old summary).</p>
-<p>The resolved language of each message's author is part of the case: <code>pt-BR</code>
-for Ana (C01–C05, C07–C11, C13–C15), <code>en</code> for Bob (C06 as a confirmed detected
-<code>en</code>, C12 as an explicit <code>en</code> preference writing Portuguese); project language
-<code>pt-BR</code>. C05 expects <strong>pt-BR</strong>: under AT-168 answer 4 detection only <em>asks</em>, so
-the author's resolved language stays pt-BR until confirmed.</p>
-<p>A first passo-zero run with <code>max_tokens</code> 1000 was <strong>discarded</strong>: DeepSeek's
-reasoning used the whole cap in 7 calls and the answer came back empty (two
-summaries became the product's fallback text). Its records are kept apart in
-the output folder; an empty answer now counts as <code>falha</code>, never
+<p>Diferenças declaradas em relação ao produto: o system prompt é só a persona
+(sem as camadas do <code>ContextBuilder</code>); a compactação é <strong>forçada</strong> antes do
+quinto turno do C04 (mantendo as duas últimas mensagens, o <code>keep_recent</code> do
+produto), com o modelo sob teste como resumidor; a retomada (C15) é o histórico
+reconstruído como texto, a forma de <code>Engine.Agents.Reidratacao</code>; no máximo 4
+chamadas ao modelo por turno (o Criativo permite 12); e <code>max_tokens</code> tem teto
+de 4000 (o produto não manda nenhum). O provider upstream <strong>não</strong> foi fixado —
+registrado por chamada como confundidor. Baseline = o código antes da
+RN-621/622: sem orientação <strong>e</strong> com o prompt de resumo antigo (AT-169 resposta
+4: a validação mede o conjunto, não há baseline isolado do resumo antigo).</p>
+<p>O idioma resolvido do autor de cada mensagem faz parte do caso: <code>pt-BR</code> para a
+Ana (C01–C05, C07–C11, C13–C15), <code>en</code> para o Bob (C06 como <code>en</code> detectado e
+confirmado, C12 como preferência <code>en</code> explícita escrevendo português); idioma
+do projeto <code>pt-BR</code>. O C05 espera <strong>pt-BR</strong>: pela resposta 4 da AT-168 a
+detecção só <em>pergunta</em>, então o idioma resolvido do autor continua pt-BR até a
+confirmação.</p>
+<p>Uma primeira execução do passo zero com <code>max_tokens</code> 1000 foi <strong>descartada</strong>: o
+raciocínio do DeepSeek gastou o teto inteiro em 7 chamadas e a resposta voltou
+vazia (dois resumos viraram o texto de fallback do produto). Os registros dela
+ficam à parte na pasta de saída; resposta vazia agora conta como <code>falha</code>, nunca
 <code>indeterminado</code>.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=step-zero-not-reproduced>Step zero: not reproduced<a href=#step-zero-not-reproduced class=hash-link aria-label="Link direto para Step zero: not reproduced" title="Link direto para Step zero: not reproduced" translate=no>​</a></h3>
-<p>Baseline only, <code>deepseek/deepseek-v4.1-flash</code>, C01–C04, 5 rounds: <strong>0 Spanish
-answers in 35 judged answers</strong> (35 pt, 0 indeterminate). The 13/09 report
-(Spanish from Portuguese input) is <strong>not reproduced</strong>, so no improvement on
-<em>that</em> defect can be claimed from the treatment. The run continued because the
-AT-169 threshold is absolute on the treated arm and the other cases (C05, C06,
-C12, C16, C17) do show the baseline answering in the wrong language.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=results-by-case--arm--model>Results by case × arm × model<a href=#results-by-case--arm--model class=hash-link aria-label="Link direto para Results by case × arm × model" title="Link direto para Results by case × arm × model" translate=no>​</a></h3>
-<p>First judge: the local classifier (<code>ampliada</code> list, candidate parameters) on
-the prose. "ok" = expected language; "wrong (es)" = another language (of which
-Spanish); "ind." = indeterminate. n is judged answers (5 rounds × judged turns).</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=step-zero-not-reproduced>Passo zero: não reproduzido<a href=#step-zero-not-reproduced class=hash-link aria-label="Link direto para Passo zero: não reproduzido" title="Link direto para Passo zero: não reproduzido" translate=no>​</a></h3>
+<p>Só baseline, <code>deepseek/deepseek-v4.1-flash</code>, C01–C04, 5 rodadas: <strong>0 respostas
+em espanhol em 35 respostas julgadas</strong> (35 pt, 0 indeterminadas). O relato de
+13/09 (espanhol a partir de entrada em português) <strong>não é reproduzido</strong>, então
+nenhuma melhora <em>naquele</em> defeito pode ser atribuída ao tratamento. A execução
+continuou porque o limiar da AT-169 é absoluto no braço tratado e os outros
+casos (C05, C06, C12, C16, C17) mostram, sim, o baseline respondendo no idioma
+errado.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=results-by-case--arm--model>Resultados por caso × braço × modelo<a href=#results-by-case--arm--model class=hash-link aria-label="Link direto para Resultados por caso × braço × modelo" title="Link direto para Resultados por caso × braço × modelo" translate=no>​</a></h3>
+<p>Primeiro juiz: o classificador local (lista <code>ampliada</code>, parâmetros candidatos)
+sobre a prosa. "ok" = idioma esperado; "errado (es)" = outro idioma (dos quais
+espanhol); "ind." = indeterminado. n é o número de respostas julgadas (5 rodadas
+× turnos julgados).</p>
 
 
 
@@ -423,9 +433,9 @@ Spanish); "ind." = indeterminate. n is judged answers (5 rounds × judged turns)
 
 
 
-<table><thead><tr><th>case<th>DeepSeek baseline<th>DeepSeek treatment<th>Haiku baseline<th>Haiku treatment<tbody><tr><td>C01 (n=5)<td>5 ok<td>5 ok<td>5 ok<td>5 ok<tr><td>C02 (n=5)<td>5 ok<td>5 ok<td>5 ok<td>5 ok<tr><td>C03 (n=15)<td>15 ok<td>15 ok<td>15 ok<td>15 ok<tr><td>C04 (n=10)<td>10 ok<td>10 ok<td>10 ok<td>10 ok<tr><td>C05 (n=5, out of the 95% list)<td>1 ok, 4 wrong (4 es)<td>5 ok<td>0 ok, 5 wrong (5 es)<td>2 ok, 3 wrong (3 es)<tr><td>C06 (n=5)<td>2 ok, 2 wrong, 1 ind.<td>3 ok, 2 ind.<td>4 ok, 1 wrong<td>5 ok<tr><td>C07–C10 (n=5 each)<td>all ok<td>all ok<td>all ok<td>all ok<tr><td>C11 (n=10)<td>6 ok, 4 wrong<td>5 ok, 5 wrong<td>5 ok, 1 wrong, 4 ind.<td>6 ok, 4 wrong<tr><td>C12 (n=10)<td>0 ok, 10 wrong<td>4 ok, 6 ind.<td>0 ok, 10 wrong<td><strong>0 ok, 10 wrong</strong><tr><td>C13 (n=5)<td>5 ok<td>5 ok<td>5 ok<td>5 ok<tr><td>C14, C15 (n=5 each)<td>all ok<td>all ok<td>all ok<td>all ok<tr><td>C16 (n=20, out of the list)<td>10 ok, 10 wrong<td>19 ok, 1 ind.<td>10 ok, 10 wrong<td>18 ok, 2 wrong<tr><td>C17 (n=20, out of the list)<td>12 ok, 8 wrong<td>20 ok<td>16 ok, 4 wrong<td>20 ok</table>
-<p>C13 called <code>emit_artifact</code> in 20 of 20 conversations. No call failed.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=against-the-threshold>Against the threshold<a href=#against-the-threshold class=hash-link aria-label="Link direto para Against the threshold" title="Link direto para Against the threshold" translate=no>​</a></h3>
+<table><thead><tr><th>caso<th>DeepSeek baseline<th>DeepSeek tratamento<th>Haiku baseline<th>Haiku tratamento<tbody><tr><td>C01 (n=5)<td>5 ok<td>5 ok<td>5 ok<td>5 ok<tr><td>C02 (n=5)<td>5 ok<td>5 ok<td>5 ok<td>5 ok<tr><td>C03 (n=15)<td>15 ok<td>15 ok<td>15 ok<td>15 ok<tr><td>C04 (n=10)<td>10 ok<td>10 ok<td>10 ok<td>10 ok<tr><td>C05 (n=5, fora da lista dos 95%)<td>1 ok, 4 errados (4 es)<td>5 ok<td>0 ok, 5 errados (5 es)<td>2 ok, 3 errados (3 es)<tr><td>C06 (n=5)<td>2 ok, 2 errados, 1 ind.<td>3 ok, 2 ind.<td>4 ok, 1 errado<td>5 ok<tr><td>C07–C10 (n=5 cada)<td>todos ok<td>todos ok<td>todos ok<td>todos ok<tr><td>C11 (n=10)<td>6 ok, 4 errados<td>5 ok, 5 errados<td>5 ok, 1 errado, 4 ind.<td>6 ok, 4 errados<tr><td>C12 (n=10)<td>0 ok, 10 errados<td>4 ok, 6 ind.<td>0 ok, 10 errados<td><strong>0 ok, 10 errados</strong><tr><td>C13 (n=5)<td>5 ok<td>5 ok<td>5 ok<td>5 ok<tr><td>C14, C15 (n=5 cada)<td>todos ok<td>todos ok<td>todos ok<td>todos ok<tr><td>C16 (n=20, fora da lista)<td>10 ok, 10 errados<td>19 ok, 1 ind.<td>10 ok, 10 errados<td>18 ok, 2 errados<tr><td>C17 (n=20, fora da lista)<td>12 ok, 8 errados<td>20 ok<td>16 ok, 4 errados<td>20 ok</table>
+<p>O C13 chamou <code>emit_artifact</code> em 20 de 20 conversas. Nenhuma chamada falhou.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=against-the-threshold>Contra o limiar<a href=#against-the-threshold class=hash-link aria-label="Link direto para Contra o limiar" title="Link direto para Contra o limiar" translate=no>​</a></h3>
 
 
 
@@ -449,34 +459,33 @@ Spanish); "ind." = indeterminate. n is judged answers (5 rounds × judged turns)
 
 
 
-<table><thead><tr><th>model<th>Spanish where pt-BR expected (treated)<th>correct in C01–C04, C06–C15 (strict, classifier)<th>verdict by the classifier<tbody><tr><td><code>deepseek/deepseek-v4.1-flash</code><td>0<td>82/95 (86.3%), 8 indeterminate<td><strong>does not pass</strong><tr><td><code>anthropic/claude-haiku-4.5</code><td>3 (all C05)<td>81/95 (85.3%), 0 indeterminate<td><strong>does not pass</strong></table>
-<p>The 13 DeepSeek misses are two groups. The reading below was the agent's,
-made BEFORE the review; the review (<a href=#human-review-and-the-haiku-diagnosis-at-167-follow-up class="">next section</a>)
-corrected it — the 8 indeterminates are not all English prose:</p>
+<table><thead><tr><th>modelo<th>espanhol onde se espera pt-BR (tratado)<th>corretos em C01–C04, C06–C15 (estrito, classificador)<th>veredito pelo classificador<tbody><tr><td><code>deepseek/deepseek-v4.1-flash</code><td>0<td>82/95 (86,3%), 8 indeterminados<td><strong>não passa</strong><tr><td><code>anthropic/claude-haiku-4.5</code><td>3 (todos no C05)<td>81/95 (85,3%), 0 indeterminados<td><strong>não passa</strong></table>
+<p>As 13 falhas do DeepSeek formam dois grupos. A leitura abaixo foi a do agente,
+feita ANTES da revisão; a revisão (<a href=#human-review-and-the-haiku-diagnosis-at-167-follow-up class="">próxima seção</a>)
+a corrigiu — os 8 indeterminados não são todos prosa em inglês:</p>
 <ul>
-<li class="">the 8 indeterminates (C06 ×2, C12 ×6) read as English prose — the <code>ampliada</code>
-list scores English poorly ("Great starting point — …");</li>
-<li class="">the 5 C11 misses answer the translation request with the <strong>English
-translation inside a Portuguese frame</strong>, which the orientation allows ("unless
-the user explicitly asks … in this message" covers the translation, not the
-frame). The protocol's "translation in en" does not say which of the two is
-right.</li>
+<li class="">os 8 indeterminados (C06 ×2, C12 ×6) parecem prosa em inglês — a lista
+<code>ampliada</code> pontua mal o inglês ("Great starting point — …");</li>
+<li class="">as 5 falhas do C11 respondem ao pedido de tradução com a <strong>tradução em inglês
+dentro de uma moldura em português</strong>, o que a orientação permite ("a menos que
+o usuário peça explicitamente … nesta mensagem" cobre a tradução, não a
+moldura). O "tradução em en" do protocolo não diz qual dos dois está certo.</li>
 </ul>
-<p>If the review accepts both groups, DeepSeek reaches 95/95 and <strong>passes</strong>; if it
-rejects C11, 90/95 (94.7%) and fails by one answer. Haiku <strong>fails either way</strong>:
-with the explicit <code>en</code> preference and Portuguese messages (C12) it answered in
-Portuguese in 10 of 10 treated answers, and it answered 3 of 5 Spanish messages
-in Spanish (C05). A hypothesis, not measured: for Anthropic models OpenRouter
-lifts the trailing <code>system</code> message into the top system prompt, where it loses
-the recency it has at the end of the list. (Measured afterwards, and <strong>not
-confirmed</strong>: see the diagnosis below.)</p>
-<p>The answers to review (every indeterminate or divergent one, every C11
-translation, and a deterministic 1-in-10 sample of the concordant) are 146 of
-560, listed in <code>revisao.md</code> in the output folder.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=incremental-cost-of-the-orientation>Incremental cost of the orientation<a href=#incremental-cost-of-the-orientation class=hash-link aria-label="Link direto para Incremental cost of the orientation" title="Link direto para Incremental cost of the orientation" translate=no>​</a></h3>
-<p>Paired <code>prompt_tokens</code> of the <strong>first</strong> call of each conversation (identical
-input in both arms but the orientation), from OpenRouter's <code>usage</code>, never an
-estimate:</p>
+<p>Se a revisão aceitar os dois grupos, o DeepSeek chega a 95/95 e <strong>passa</strong>; se
+recusar o C11, 90/95 (94,7%) e falha por uma resposta. O Haiku <strong>falha de
+qualquer jeito</strong>: com a preferência <code>en</code> explícita e mensagens em português
+(C12) ele respondeu em português em 10 de 10 respostas tratadas, e respondeu 3
+de 5 mensagens em espanhol em espanhol (C05). Uma hipótese, não medida: para
+modelos da Anthropic o OpenRouter sobe a mensagem <code>system</code> do fim para o system
+prompt do topo, onde ela perde a recência que tem no fim da lista. (Medido
+depois, e <strong>não confirmado</strong>: veja o diagnóstico abaixo.)</p>
+<p>As respostas a revisar (toda indeterminada ou divergente, toda tradução do C11,
+e uma amostra determinística de 1 em 10 das concordantes) são 146 de 560,
+listadas em <code>revisao.md</code> na pasta de saída.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=incremental-cost-of-the-orientation>Custo incremental da orientação<a href=#incremental-cost-of-the-orientation class=hash-link aria-label="Link direto para Custo incremental da orientação" title="Link direto para Custo incremental da orientação" translate=no>​</a></h3>
+<p><code>prompt_tokens</code> pareados da <strong>primeira</strong> chamada de cada conversa (entrada
+idêntica nos dois braços, salvo a orientação), tirados do <code>usage</code> do OpenRouter,
+nunca estimados:</p>
 
 
 
@@ -512,58 +521,59 @@ estimate:</p>
 
 
 
-<table><thead><tr><th>model<th>orientation<th>pairs<th>Δ input tokens<tbody><tr><td>DeepSeek<td>pt-BR (108 characters)<td>75<td>32 (every pair)<tr><td>DeepSeek<td>en + artifact clause (128 characters)<td>15<td>27<tr><td>Haiku<td>pt-BR<td>75<td>30<tr><td>Haiku<td>en + artifact clause<td>15<td>27</table>
-<p>All under the 50-token ceiling. At catalog input price that is about
-US$ 0.0000096 per call on DeepSeek and US$ 0.00003 on Haiku — an upper bound,
-since DeepSeek served most of the input from cache (cached tokens are
-returned; the per-call cost with cache is inside <code>usage.cost</code>, not separated
-per message). The orientation goes in every call of a turn, so a turn with
-tool iterations pays it once per iteration.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=spend>Spend<a href=#spend class=hash-link aria-label="Link direto para Spend" title="Link direto para Spend" translate=no>​</a></h3>
-<p>The cost of the validation is the sum of <code>usage.cost</code> of each response, kept
-per call in <code>chamadas.jsonl</code>: <strong>US$ 2.3071</strong> in total — US$ 2.2629 in the
-counted runs (DeepSeek 0.1526 baseline + 0.2133 treatment; Haiku 0.9526 +
-0.9443; 865 calls), US$ 0.0281 in the discarded step zero and US$ 0.0162 in a
-one-case smoke. The <code>GET /api/v1/key</code> counter moved from 1.8301 to 4.1578
-(Δ 2.3277) over the same period, but the key is shared with other paid lanes
-running at the same time and the counter lags, so that delta is context, not
-this validation's spend. Generation ids were not recorded, so the per-call cost
-was not cross-checked against <code>GET /api/v1/generation</code>. The product's own
-metering (<code>token_usage</code>) was not involved: the script bypasses the api.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=reproducing>Reproducing<a href=#reproducing class=hash-link aria-label="Link direto para Reproducing" title="Link direto para Reproducing" translate=no>​</a></h3>
+<table><thead><tr><th>modelo<th>orientação<th>pares<th>Δ tokens de entrada<tbody><tr><td>DeepSeek<td>pt-BR (108 caracteres)<td>75<td>32 (todo par)<tr><td>DeepSeek<td>en + cláusula de artefato (128 caracteres)<td>15<td>27<tr><td>Haiku<td>pt-BR<td>75<td>30<tr><td>Haiku<td>en + cláusula de artefato<td>15<td>27</table>
+<p>Tudo abaixo do teto de 50 tokens. Ao preço de entrada do catálogo isso dá cerca
+de US$ 0,0000096 por chamada no DeepSeek e US$ 0,00003 no Haiku — um limite
+superior, já que o DeepSeek serviu a maior parte da entrada do cache (os tokens
+em cache são devolvidos; o custo por chamada com cache está dentro de
+<code>usage.cost</code>, não separado por mensagem). A orientação vai em toda chamada de
+um turno, então um turno com iterações de ferramenta a paga uma vez por iteração.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=spend>Gasto<a href=#spend class=hash-link aria-label="Link direto para Gasto" title="Link direto para Gasto" translate=no>​</a></h3>
+<p>O custo da validação é a soma do <code>usage.cost</code> de cada resposta, guardado por
+chamada em <code>chamadas.jsonl</code>: <strong>US$ 2,3071</strong> no total — US$ 2,2629 nas execuções
+contadas (DeepSeek 0,1526 baseline + 0,2133 tratamento; Haiku 0,9526 + 0,9443;
+865 chamadas), US$ 0,0281 no passo zero descartado e US$ 0,0162 num smoke de um
+caso. O contador de <code>GET /api/v1/key</code> foi de 1,8301 a 4,1578 (Δ 2,3277) no mesmo
+período, mas a chave é compartilhada com outras lanes pagas rodando ao mesmo
+tempo e o contador atrasa, então esse delta é contexto, não o gasto desta
+validação. Os ids de geração não foram gravados, então o custo por chamada não
+foi conferido contra <code>GET /api/v1/generation</code>. O metering do próprio produto
+(<code>token_usage</code>) não entrou: o script passa por fora da api.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=reproducing>Como reproduzir<a href=#reproducing class=hash-link aria-label="Link direto para Como reproduzir" title="Link direto para Como reproduzir" translate=no>​</a></h3>
 <div class="language-bash codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-bash codeBlock_mqej thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_uNqR><div class=token-line style=color:#F8F8F2><span class="token plain"># the key file holds OPENROUTER_TEST_KEY=…; the key is never printed</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">pnpm --filter @brabo/scripts idioma:validar --arquivo-de-chave ~/.config/brabo/openrouter-test.env \</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  --modelos deepseek/deepseek-v4.1-flash --bracos baseline --casos C01,C02,C03,C04   # step zero</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">pnpm --filter @brabo/scripts idioma:validar --arquivo-de-chave ~/.config/brabo/openrouter-test.env \</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  --pular-existentes --teto-usd 2.5                                                 # everything else</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">pnpm --filter @brabo/scripts idioma:validar --relatorio                             # report only</span><br/></div></code></pre></div></div>
-<p>Output goes to <code>$XDG_CACHE_HOME/brabo/validacao-idioma/&lt;date>/</code> (else
-<code>~/.cache/…</code>), mode 600, and the script refuses a folder inside the checkout.
-<code>--teto-usd</code> stops before the call that would pass it, by the running sum of
+<p>A saída vai para <code>$XDG_CACHE_HOME/brabo/validacao-idioma/&lt;date>/</code> (senão
+<code>~/.cache/…</code>), modo 600, e o script recusa pasta dentro do checkout.
+<code>--teto-usd</code> para antes da chamada que o ultrapassaria, pela soma corrente de
 <code>usage.cost</code>.</p>
-<p>Not measured: cache savings as such, the product's full system prompt, real
-(threshold-triggered) compaction, a restart of the real engine, the tokenizer
-count of the artifact clause in Portuguese, and any fixed upstream.</p>
-<p>The 146 answers were reviewed by hand; the result, and the one decision that
-is still the owner's, are in the next section.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=human-review-and-the-haiku-diagnosis-at-167-follow-up>Human review and the Haiku diagnosis (AT-167 follow-up)<a href=#human-review-and-the-haiku-diagnosis-at-167-follow-up class=hash-link aria-label="Link direto para Human review and the Haiku diagnosis (AT-167 follow-up)" title="Link direto para Human review and the Haiku diagnosis (AT-167 follow-up)" translate=no>​</a></h2>
-<p>Two offline-or-cheap follow-ups to the paid validation, both on the same run
-(<code>respostas.jsonl</code>, 560 judged answers): the human review of the 146 answers the
-classifier flagged (Part A, no spend), and the test of the "OpenRouter hoists the
-trailing <code>system</code> message" hypothesis for Haiku (Part B, US$ 0.1485). Neither
-changes the product.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=part-a--the-review-of-the-146>Part A — the review of the 146<a href=#part-a--the-review-of-the-146 class=hash-link aria-label="Link direto para Part A — the review of the 146" title="Link direto para Part A — the review of the 146" translate=no>​</a></h3>
-<p>Every one of the 146 answers in <code>revisao.md</code> was read, one by one, by the agent
-that wrote this section (not by a second human; the label file is kept for
-anyone who wants to contradict it). For each: the <strong>real</strong> language of the text
-the user reads, whether it is correct for the case, and a one-line reason. The
-files live outside git with the answers —
-<code>~/.cache/brabo/validacao-idioma/2026-09-29/revisao-feita.md</code> (the 146) and
-<code>amostra-lida.md</code> (the sample below). <code>pnpm --filter @brabo/scripts idioma:revisar</code> reads them and prints every table of this section; the labels
-are data, the arithmetic is code (<code>scripts/idioma/revisao.ts</code>, tested).</p>
-<p>The labels are four, because the reading found a fact the classifier cannot see:</p>
+<p>Não medidos: a economia de cache em si, o system prompt completo do produto, a
+compactação real (disparada por limiar), um reinício do engine real, a contagem
+do tokenizador da cláusula de artefato em português, e qualquer upstream fixo.</p>
+<p>As 146 respostas foram revisadas à mão; o resultado, e a única decisão que
+continua sendo do dono, estão na próxima seção.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=human-review-and-the-haiku-diagnosis-at-167-follow-up>Revisão humana e o diagnóstico do Haiku (continuação da AT-167)<a href=#human-review-and-the-haiku-diagnosis-at-167-follow-up class=hash-link aria-label="Link direto para Revisão humana e o diagnóstico do Haiku (continuação da AT-167)" title="Link direto para Revisão humana e o diagnóstico do Haiku (continuação da AT-167)" translate=no>​</a></h2>
+<p>Duas continuações offline ou baratas da validação paga, ambas sobre a mesma
+execução (<code>respostas.jsonl</code>, 560 respostas julgadas): a revisão humana das 146
+respostas que o classificador sinalizou (Parte A, sem gasto), e o teste da
+hipótese "o OpenRouter iça a mensagem <code>system</code> do fim" para o Haiku (Parte B,
+US$ 0,1485). Nenhuma das duas muda o produto.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=part-a--the-review-of-the-146>Parte A — a revisão das 146<a href=#part-a--the-review-of-the-146 class=hash-link aria-label="Link direto para Parte A — a revisão das 146" title="Link direto para Parte A — a revisão das 146" translate=no>​</a></h3>
+<p>Cada uma das 146 respostas de <code>revisao.md</code> foi lida, uma a uma, pelo agente que
+escreveu esta seção (não por um segundo humano; o arquivo de rótulos fica
+guardado para quem quiser contradizê-lo). Para cada uma: o idioma <strong>real</strong> do
+texto que o usuário lê, se ele está correto para o caso, e um motivo em uma
+linha. Os arquivos moram fora do git, junto com as respostas —
+<code>~/.cache/brabo/validacao-idioma/2026-09-29/revisao-feita.md</code> (as 146) e
+<code>amostra-lida.md</code> (a amostra abaixo). <code>pnpm --filter @brabo/scripts idioma:revisar</code> os lê e imprime toda tabela desta seção; os rótulos são dado, a
+aritmética é código (<code>scripts/idioma/revisao.ts</code>, testado).</p>
+<p>Os rótulos são quatro, porque a leitura achou um fato que o classificador não
+enxerga:</p>
 <ul>
-<li class=""><code>sim</code> / <code>nao</code>: the answer is / is not in the expected language;</li>
-<li class=""><code>formulario</code>: the <strong>prose</strong> is in the expected language, but the questions of
-the structured form (<code>ask_structured_questions</code>, the substance of a first
-answer) came out in Portuguese for an author whose language is <code>en</code>;</li>
-<li class=""><code>c11</code>: a translation into English inside a Portuguese frame — the owner's
-decision, see below.</li>
+<li class=""><code>sim</code> / <code>nao</code>: a resposta está / não está no idioma esperado;</li>
+<li class=""><code>formulario</code>: a <strong>prosa</strong> está no idioma esperado, mas as perguntas do
+formulário estruturado (<code>ask_structured_questions</code>, a substância de uma
+primeira resposta) saíram em português para um autor cujo idioma é <code>en</code>;</li>
+<li class=""><code>c11</code>: uma tradução para o inglês dentro de uma moldura em português — decisão
+do dono, veja abaixo.</li>
 </ul>
 
 
@@ -598,37 +608,40 @@ decision, see below.</li>
 
 
 
-<table><thead><tr><th>of the 146<th>correct<th>incorrect<th>prose right, form in Portuguese<th>C11 (owner's decision)<tbody><tr><td>all<td>42<td>81<td>8<td>15<tr><td>baseline arm (89)<td>18<td>64<td>1<td>6<tr><td>treated arm (57)<td>24<td>17<td>7<td>9</table>
-<p>The 14 answers the classifier called <strong>indeterminate</strong> were, once read: 3
-English answers (Haiku's plain English translations of C11), 2 incorrect
-(DeepSeek C12, Portuguese and English sentences interleaved in the prose), 8
-English prose with the form in Portuguese, and 1 C11. So the agent's earlier
-sentence — "the 8 indeterminates read as English prose" — was half right: the
-prose was English, and so was <strong>not</strong> the form in 6 of the 8.</p>
-<p><strong>The classifier's error, measured.</strong> On the 118 definitive verdicts
-(<code>pt</code>/<code>es</code>/<code>en</code>) among the 146 read answers, the reading contradicted <strong>0</strong>. The
-classifier never called an answer right that was wrong, nor wrong that was right;
-its only failures are the 3 "indeterminate" that were plain English. For the 414
-answers that were <strong>not</strong> flagged (all concordant with the expectation), a sample
-was read: 60 drawn with <code>random.Random(20260929).sample(range(414), 60)</code> over the
-answers in <code>respostas.jsonl</code> order, plus the 14 unflagged C06/C12 answers with
-expected <code>en</code> that the draw missed (they decide the threshold, so they were read
-whole) — 74 read, <strong>0 divergent</strong> (Wilson 95% upper bound 4.9%). Together with
-the 39 concordant answers that the 1-in-10 hash had already flagged and were
-read too, the random part is 0 in 99 (upper bound 3.7%): at most ~15 of the 414
-could be wrong, and the sample suggests none. Two slips seen in the sample are
-one-word insertions (<code>"What falta for us…"</code>, <code>"reminders automáticos"</code>) that
-do not change the language of the answer.</p>
-<p>What the classifier <strong>cannot</strong> see is the form: <code>clf=en</code> on an English answer
-did not tell that its questions were in Portuguese (it flagged those answers as
-indeterminate only when the mix was heavy). That is why the sample read the
-C06/C12 answers whole, and why the two readings below exist.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=the-threshold-recomputed-with-the-reviewed-labels>The threshold, recomputed with the reviewed labels<a href=#the-threshold-recomputed-with-the-reviewed-labels class=hash-link aria-label="Link direto para The threshold, recomputed with the reviewed labels" title="Link direto para The threshold, recomputed with the reviewed labels" translate=no>​</a></h3>
-<p>Treated arm, C01–C04 and C06–C15 (n = 95), Spanish counted on the <strong>real</strong> language
-of every treated answer where pt-BR is expected (C05 included). Wilson 95%
-interval. Two independent readings: <strong>C11</strong> (the owner's, open) and <strong>form</strong>
-(prose right, form in Portuguese — the agent resolved it as a fact about what
-the user reads, and shows the other side so it can be contradicted).</p>
+<table><thead><tr><th>das 146<th>corretas<th>incorretas<th>prosa certa, formulário em português<th>C11 (decisão do dono)<tbody><tr><td>todas<td>42<td>81<td>8<td>15<tr><td>braço baseline (89)<td>18<td>64<td>1<td>6<tr><td>braço tratado (57)<td>24<td>17<td>7<td>9</table>
+<p>As 14 respostas que o classificador chamou de <strong>indeterminadas</strong> eram, uma vez
+lidas: 3 respostas em inglês (traduções simples do C11 pelo Haiku), 2
+incorretas (DeepSeek C12, frases em português e em inglês intercaladas na
+prosa), 8 de prosa em inglês com o formulário em português, e 1 C11. Então a
+frase anterior do agente — "os 8 indeterminados parecem prosa em inglês" —
+estava meio certa: a prosa era inglês, e o formulário <strong>não</strong> era em 6 dos 8.</p>
+<p><strong>O erro do classificador, medido.</strong> Nos 118 vereditos definitivos
+(<code>pt</code>/<code>es</code>/<code>en</code>) entre as 146 respostas lidas, a leitura contradisse <strong>0</strong>. O
+classificador nunca chamou de certa uma resposta errada, nem de errada uma
+certa; as únicas falhas dele são as 3 "indeterminadas" que eram inglês simples.
+Para as 414 respostas que <strong>não</strong> foram sinalizadas (todas concordantes com a
+expectativa), uma amostra foi lida: 60 sorteadas com
+<code>random.Random(20260929).sample(range(414), 60)</code> sobre as respostas na ordem de
+<code>respostas.jsonl</code>, mais as 14 respostas C06/C12 não sinalizadas com <code>en</code>
+esperado que o sorteio não pegou (elas decidem o limiar, então foram lidas
+inteiras) — 74 lidas, <strong>0 divergentes</strong> (limite superior de Wilson a 95%: 4,9%).
+Somadas às 39 respostas concordantes que o hash de 1 em 10 já tinha sinalizado
+e que também foram lidas, a parte aleatória dá 0 em 99 (limite superior 3,7%):
+no máximo ~15 das 414 poderiam estar erradas, e a amostra sugere nenhuma. Dois
+deslizes vistos na amostra são inserções de uma palavra (<code>"What falta for us…"</code>,
+<code>"reminders automáticos"</code>) que não mudam o idioma da resposta.</p>
+<p>O que o classificador <strong>não</strong> consegue ver é o formulário: <code>clf=en</code> numa
+resposta em inglês não dizia que as perguntas dela estavam em português (ele só
+sinalizou essas respostas como indeterminadas quando a mistura era pesada). É
+por isso que a amostra leu inteiras as respostas C06/C12, e por isso que existem
+as duas leituras abaixo.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=the-threshold-recomputed-with-the-reviewed-labels>O limiar, recalculado com os rótulos revisados<a href=#the-threshold-recomputed-with-the-reviewed-labels class=hash-link aria-label="Link direto para O limiar, recalculado com os rótulos revisados" title="Link direto para O limiar, recalculado com os rótulos revisados" translate=no>​</a></h3>
+<p>Braço tratado, C01–C04 e C06–C15 (n = 95), espanhol contado pelo idioma
+<strong>real</strong> de toda resposta tratada onde se espera pt-BR (C05 incluído). Intervalo
+de Wilson a 95%. Duas leituras independentes: <strong>C11</strong> (a do dono, em aberto) e
+<strong>formulário</strong> (prosa certa, formulário em português — o agente a resolveu como
+fato sobre o que o usuário lê, e mostra o outro lado para que possa ser
+contradito).</p>
 
 
 
@@ -704,65 +717,66 @@ the user reads, and shows the other side so it can be contradicted).</p>
 
 
 
-<table><thead><tr><th>model<th>C11 counts<th>form counts<th>hits<th>rate<th>95% interval<th>Spanish (pt expected)<th>verdict<tbody><tr><td>DeepSeek<td>yes<td>yes<td>93/95<td>97.9%<td>92.6–99.4%<td>0<td>passes<tr><td>DeepSeek<td><strong>yes</strong><td><strong>no</strong><td>87/95<td>91.6%<td>84.3–95.7%<td>0<td>does not pass<tr><td>DeepSeek<td>no<td>yes<td>88/95<td>92.6%<td>85.6–96.4%<td>0<td>does not pass<tr><td>DeepSeek<td>no<td>no<td>82/95<td>86.3%<td>78.0–91.8%<td>0<td>does not pass<tr><td>Haiku<td>yes<td>(any)<td>85/95<td>89.5%<td>81.7–94.2%<td>3 (C05)<td>does not pass<tr><td>Haiku<td>no<td>(any)<td>81/95<td>85.3%<td>76.8–91.0%<td>3 (C05)<td>does not pass</table>
-<p>The pass threshold is 91 hits of 95 (94.7% fails). Reading the table:</p>
+<table><thead><tr><th>modelo<th>C11 conta<th>formulário conta<th>acertos<th>taxa<th>intervalo de 95%<th>espanhol (pt esperado)<th>veredito<tbody><tr><td>DeepSeek<td>sim<td>sim<td>93/95<td>97,9%<td>92,6–99,4%<td>0<td>passa<tr><td>DeepSeek<td><strong>sim</strong><td><strong>não</strong><td>87/95<td>91,6%<td>84,3–95,7%<td>0<td>não passa<tr><td>DeepSeek<td>não<td>sim<td>88/95<td>92,6%<td>85,6–96,4%<td>0<td>não passa<tr><td>DeepSeek<td>não<td>não<td>82/95<td>86,3%<td>78,0–91,8%<td>0<td>não passa<tr><td>Haiku<td>sim<td>(qualquer)<td>85/95<td>89,5%<td>81,7–94,2%<td>3 (C05)<td>não passa<tr><td>Haiku<td>não<td>(qualquer)<td>81/95<td>85,3%<td>76,8–91,0%<td>3 (C05)<td>não passa</table>
+<p>O limiar de aprovação é 91 acertos de 95 (94,7% reprova). Lendo a tabela:</p>
 <ul>
-<li class=""><strong>Haiku fails in every reading</strong>: 3 Spanish answers in C05 (the zero-Spanish
-clause alone) and, with everything accepted, 85/95.</li>
-<li class=""><strong>DeepSeek passes in exactly one cell</strong>: C11 accepted <strong>and</strong> English prose
-with a Portuguese form accepted. Reject either one and it fails — by 4
-answers if the form is rejected (87 of the 91 needed), by 3 if C11 is (88). Reject both and it
-is the classifier's number, 82.</li>
-<li class="">The C11 decision therefore only matters if the form is accepted. With the form
-counted as a miss, DeepSeek fails whatever C11 is, and the finding to act on
-is not C11 but the form: in the treated arm, 8 of DeepSeek's 15 C06+C12
-answers carry Portuguese text inside an English answer (6 form-only, 2
-interleaved), while 7 are clean English, forms included. The model can
-write the form in English — it does so about half of the time.
-<strong>Where it came from (AT-282, <a class="" href=/brabo/dev/business-rules#rn-667>RN-667</a>):</strong> the
-tool's own description told the model the <code>label</code> was "o texto da pergunta,
-<strong>em pt-BR</strong>" — a second, fixed language instruction outside the facade,
-competing with the trailing orientation in every call. It now says "no
-idioma da sua resposta" and names no language; the orientation itself is
-unchanged. The after-measurement was <strong>not run</strong> (no OpenRouter key on the
-machine that made the change) and is pending the owner — C06 and C12,
-treated arm, 5 rounds, with the budget cap in the RN.</li>
+<li class=""><strong>O Haiku falha em toda leitura</strong>: 3 respostas em espanhol no C05 (só a
+cláusula de zero espanhol já basta) e, com tudo aceito, 85/95.</li>
+<li class=""><strong>O DeepSeek passa em exatamente uma célula</strong>: C11 aceito <strong>e</strong> prosa em
+inglês com formulário em português aceita. Recuse qualquer um dos dois e ele
+falha — por 4 respostas se o formulário for recusado (87 dos 91 necessários),
+por 3 se for o C11 (88). Recuse os dois e é o número do classificador, 82.</li>
+<li class="">A decisão do C11 portanto só importa se o formulário for aceito. Com o
+formulário contado como falha, o DeepSeek falha seja qual for o C11, e o
+achado sobre o qual agir não é o C11 mas o formulário: no braço tratado, 8 das
+15 respostas C06+C12 do DeepSeek trazem texto em português dentro de uma
+resposta em inglês (6 só no formulário, 2 intercaladas), enquanto 7 são inglês
+limpo, formulários incluídos. O modelo consegue escrever o formulário em
+inglês — faz isso mais ou menos metade das vezes.
+<strong>De onde veio (AT-282, <a class="" href=/brabo/dev/business-rules#rn-667>RN-667</a>):</strong> a própria
+descrição da ferramenta dizia ao modelo que o <code>label</code> era "o texto da pergunta,
+<strong>em pt-BR</strong>" — uma segunda instrução de idioma, fixa, fora da fachada,
+competindo com a orientação do fim em toda chamada. Agora ela diz "no idioma
+da sua resposta" e não nomeia idioma; a orientação em si não mudou. A medição
+do depois <strong>não foi rodada</strong> (sem chave do OpenRouter na máquina que fez a
+mudança) e está pendente com o dono — C06 e C12, braço tratado, 5 rodadas,
+com o teto de orçamento da RN.</li>
 </ul>
-<p>What C11 is, in the data. DeepSeek's 5 treated misses: 3 have the English
-translation quoted in a Portuguese frame ("Registrei a regra… A tradução que
-você pediu: > …"), and 2 have <strong>no translation in the recorded text</strong> — the run
-keeps only the last message of a turn, and these turns called <code>emit_artifact</code>
-first, so the translation was in an earlier message of the same turn (10 calls
-for 5 conversations, two per conversation), so the translation was presumably
-in an earlier message of the same turn, and was not kept. Both are counted as
-frame-only, i.e. as hits under "C11 counts". Haiku's 4 treated misses are an
-English translation with a Portuguese note or Portuguese alternatives around it.</p>
+<p>O que o C11 é, nos dados. As 5 falhas tratadas do DeepSeek: 3 têm a tradução em
+inglês citada numa moldura em português ("Registrei a regra… A tradução que
+você pediu: > …"), e 2 <strong>não têm tradução no texto gravado</strong> — a execução guarda
+só a última mensagem de um turno, e esses turnos chamaram <code>emit_artifact</code>
+primeiro, então a tradução estava numa mensagem anterior do mesmo turno (10
+chamadas para 5 conversas, duas por conversa), então a tradução presumivelmente
+estava numa mensagem anterior do mesmo turno, e não foi guardada. As duas são
+contadas como só-moldura, ou seja, como acertos em "C11 conta". As 4 falhas
+tratadas do Haiku são uma tradução em inglês com uma nota em português ou
+alternativas em português em volta.</p>
 <blockquote>
-<p><strong>TODO(humano):</strong> Does a translation into English inside a Portuguese frame
-count as correct in C11? It decides the C11 axis of the table above:
-<strong>accepted</strong> → DeepSeek 93/95 and passes (if English prose with a Portuguese
-form is also accepted; 87/95 if not); <strong>rejected</strong> → DeepSeek 88/95 (or 82/95)
-and fails. Haiku fails either way. Recommendation, in one sentence: accept it
-— the orientation's exception covers only the requested translation and the
-frame stays in the author's language, so rejecting it would penalise exactly
-the behaviour the orientation is meant to produce. (The second question, the
-form in Portuguese, is a product-scope question and is stated as a finding
-above; it was not put to the owner because the agent resolved it as a fact —
-what the user reads.)</p>
+<p><strong>TODO(humano):</strong> Uma tradução para o inglês dentro de uma moldura em português
+conta como correta no C11? Ela decide o eixo C11 da tabela acima:
+<strong>aceita</strong> → DeepSeek 93/95 e passa (se a prosa em inglês com formulário em
+português também for aceita; 87/95 se não); <strong>recusada</strong> → DeepSeek 88/95 (ou
+82/95) e falha. O Haiku falha de qualquer jeito. Recomendação, em uma frase:
+aceitar — a exceção da orientação cobre só a tradução pedida e a moldura fica
+no idioma do autor, então recusá-la penalizaria exatamente o comportamento que
+a orientação existe para produzir. (A segunda pergunta, o formulário em
+português, é de escopo de produto e está enunciada como achado acima; não foi
+levada ao dono porque o agente a resolveu como fato — o que o usuário lê.)</p>
 </blockquote>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=part-b--is-it-the-position-of-the-orientation-at-279>Part B — is it the position of the orientation? (AT-279)<a href=#part-b--is-it-the-position-of-the-orientation-at-279 class=hash-link aria-label="Link direto para Part B — is it the position of the orientation? (AT-279)" title="Link direto para Part B — is it the position of the orientation? (AT-279)" translate=no>​</a></h3>
-<p>The hypothesis: for Anthropic models OpenRouter lifts the trailing <code>system</code>
-message into the top system prompt, losing its recency. Test: C12 (author
-preference <code>en</code>, messages in pt-BR), <code>anthropic/claude-haiku-4.5</code>, first turn,
-5 rounds per position, the orientation text <strong>read from the product</strong> (it was
-<code>Respond in English (en), unless the user explicitly asks for another language in this message. Write project artifacts in pt-BR.</code>), only its position varied:</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=part-b--is-it-the-position-of-the-orientation-at-279>Parte B — é a posição da orientação? (AT-279)<a href=#part-b--is-it-the-position-of-the-orientation-at-279 class=hash-link aria-label="Link direto para Parte B — é a posição da orientação? (AT-279)" title="Link direto para Parte B — é a posição da orientação? (AT-279)" translate=no>​</a></h3>
+<p>A hipótese: para modelos da Anthropic o OpenRouter sobe a mensagem <code>system</code> do
+fim para o system prompt do topo, perdendo a recência dela. Teste: C12
+(preferência do autor <code>en</code>, mensagens em pt-BR), <code>anthropic/claude-haiku-4.5</code>,
+primeiro turno, 5 rodadas por posição, o texto da orientação <strong>lido do produto</strong>
+(era <code>Respond in English (en), unless the user explicitly asks for another language in this message. Write project artifacts in pt-BR.</code>), variando só a posição:</p>
 <ol>
-<li class=""><code>ultima-system</code> — as today (<code>idioma_da_resposta.ex:231</code>, a trailing
-<code>role: "system"</code>);</li>
-<li class=""><code>system-fundido</code> — appended to the first <code>system</code> (persona + orientation);</li>
-<li class=""><code>sufixo-user</code> — suffix of the last <code>user</code> message, <strong>no</strong> <code>system</code> added;</li>
-<li class=""><code>ultima-system-e-sufixo-user</code> — the trailing <code>system</code> <strong>plus</strong> the same
-sentence as a suffix.</li>
+<li class=""><code>ultima-system</code> — como hoje (<code>idioma_da_resposta.ex:231</code>, um
+<code>role: "system"</code> no fim);</li>
+<li class=""><code>system-fundido</code> — acrescentada ao primeiro <code>system</code> (persona + orientação);</li>
+<li class=""><code>sufixo-user</code> — sufixo da última mensagem <code>user</code>, <strong>sem</strong> <code>system</code> acrescentado;</li>
+<li class=""><code>ultima-system-e-sufixo-user</code> — o <code>system</code> do fim <strong>mais</strong> a mesma frase como
+sufixo.</li>
 </ol>
 
 
@@ -804,40 +818,42 @@ sentence as a suffix.</li>
 
 
 
-<table><thead><tr><th>position<th>classifier hits<th>read<tbody><tr><td>1 <code>ultima-system</code> (as today)<td>0/5<td>5 Portuguese, forms included<tr><td>2 <code>system-fundido</code><td>0/5<td>5 Portuguese<tr><td>3 <code>sufixo-user</code><td>0/5<td>5 Portuguese<tr><td>4 <code>ultima-system-e-sufixo-user</code><td>0/5<td>5 Portuguese<tr><td>control: 1, without the artifact clause<td>0/5<td>5 Portuguese<tr><td>control: 3, without the artifact clause<td>0/5<td>5 Portuguese</table>
-<p>The four positions were read in full and the two controls read in part, and all
-30 answers were also checked for English function words (none in any): all 30
-are Portuguese, prose and form. The
-position-1 defect is <strong>reproduced</strong> (0/5, as the 0/10 of the paid run), and
-<strong>no position corrects it</strong> — not even the one where the orientation is inside
-the user's own last message and there is no trailing <code>system</code> at all. The
-hypothesis is <strong>not confirmed</strong>. The prompt-token counts show the text reached
-the model in every position (2 426, 2 427, 2 427 and 2 454 input tokens: +1 for
-the two single placements and +28 for the double), so this is not a dropped
-message. The control also excludes the suspect second sentence: the artifact
-clause ("Write project artifacts in pt-BR.", RN-623) is not the cause either
-(0/10 without it).</p>
-<p>What this does not exclude, and was not measured: the second turn (only the
-first was run, for budget — the paid run had the second turn wrong 5/5 as well);
-a stronger wording (the sentence says "unless the user explicitly asks", and
-Portuguese input may be read as that); the language of the persona itself
-(<code>CRIATIVO_INSTRUCTIONS</code> is Portuguese); and the upstream (all 30 calls were
-served by Amazon Bedrock, so an upstream effect cannot be separated). DeepSeek
-follows the same orientation in the same case — its treated C12 answers were
-English prose in 8 of 10 — which points at the model, not at the placement.</p>
-<p><strong>Proposed change: none about position.</strong> The one place a position would be
-changed, if it had helped, is <code>Engine.Harness.IdiomaDaResposta.anexar/4</code>
-(<code>apps/engine/lib/engine/harness/idioma_da_resposta.ex:231</code>, the <code>messages ++ [%{"role" => "system", …}]</code>), called from the two <code>llm_turn</code> paths of
-<code>apps/engine/lib/engine/sessions/engine_api_client.ex:609</code> and <code>:661</code>. It stays
-as it is. The next activity, if the owner wants Haiku to obey <code>en</code> over
-Portuguese input, is to test wording and persona language (the list above),
-with this same script.</p>
-<p><strong>Spend</strong> (sum of each response's <code>usage.cost</code>, never the <code>/key</code> counter): US$
-0.0980 for the four positions (20 calls) and US$ 0.0505 for the two controls
-(10 calls) — <strong>US$ 0.1485</strong> of the US$ 0.20 ceiling, 30 calls, none failed.</p>
-<p>To reproduce Part B (the key file holds <code>OPENROUTER_TEST_KEY=…</code>; it is never
-printed; the output goes outside the checkout):</p>
+<table><thead><tr><th>posição<th>acertos do classificador<th>leitura<tbody><tr><td>1 <code>ultima-system</code> (como hoje)<td>0/5<td>5 em português, formulários incluídos<tr><td>2 <code>system-fundido</code><td>0/5<td>5 em português<tr><td>3 <code>sufixo-user</code><td>0/5<td>5 em português<tr><td>4 <code>ultima-system-e-sufixo-user</code><td>0/5<td>5 em português<tr><td>controle: 1, sem a cláusula de artefato<td>0/5<td>5 em português<tr><td>controle: 3, sem a cláusula de artefato<td>0/5<td>5 em português</table>
+<p>As quatro posições foram lidas por inteiro e os dois controles em parte, e as
+30 respostas foram também conferidas atrás de palavras funcionais do inglês
+(nenhuma em nenhuma): as 30 são em português, prosa e formulário. O defeito da
+posição 1 é <strong>reproduzido</strong> (0/5, como o 0/10 da execução paga), e <strong>nenhuma
+posição o corrige</strong> — nem aquela em que a orientação está dentro da própria
+última mensagem do usuário e não há <code>system</code> no fim. A hipótese <strong>não se
+confirma</strong>. As contagens de tokens de prompt mostram que o texto chegou ao
+modelo em toda posição (2 426, 2 427, 2 427 e 2 454 tokens de entrada: +1 para
+as duas colocações simples e +28 para a dupla), então não é mensagem descartada.
+O controle exclui também a segunda frase suspeita: a cláusula de artefato
+("Write project artifacts in pt-BR.", RN-623) também não é a causa (0/10 sem
+ela).</p>
+<p>O que isto não exclui, e não foi medido: o segundo turno (só o primeiro rodou,
+por orçamento — a execução paga teve o segundo turno errado 5/5 também); uma
+redação mais forte (a frase diz "unless the user explicitly asks", e entrada em
+português pode ser lida assim); o idioma da própria persona
+(<code>CRIATIVO_INSTRUCTIONS</code> é em português); e o upstream (as 30 chamadas foram
+servidas pelo Amazon Bedrock, então um efeito de upstream não pode ser
+separado). O DeepSeek segue a mesma orientação no mesmo caso — as respostas C12
+tratadas dele foram prosa em inglês em 8 de 10 —, o que aponta para o modelo,
+não para a colocação.</p>
+<p><strong>Mudança proposta: nenhuma sobre posição.</strong> O único lugar onde uma posição
+seria mudada, se tivesse ajudado, é <code>Engine.Harness.IdiomaDaResposta.anexar/4</code>
+(<code>apps/engine/lib/engine/harness/idioma_da_resposta.ex:231</code>, o <code>messages ++ [%{"role" => "system", …}]</code>), chamado pelos dois caminhos <code>llm_turn</code> de
+<code>apps/engine/lib/engine/sessions/engine_api_client.ex:609</code> e <code>:661</code>. Ele fica
+como está. A próxima atividade, se o dono quiser que o Haiku obedeça <code>en</code> diante
+de entrada em português, é testar a redação e o idioma da persona (a lista
+acima), com este mesmo script.</p>
+<p><strong>Gasto</strong> (soma do <code>usage.cost</code> de cada resposta, nunca o contador de <code>/key</code>):
+US$ 0,0980 para as quatro posições (20 chamadas) e US$ 0,0505 para os dois
+controles (10 chamadas) — <strong>US$ 0,1485</strong> do teto de US$ 0,20, 30 chamadas,
+nenhuma falhou.</p>
+<p>Para reproduzir a Parte B (o arquivo de chave guarda <code>OPENROUTER_TEST_KEY=…</code>;
+ela nunca é impressa; a saída vai para fora do checkout):</p>
 <div class="language-bash codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-bash codeBlock_mqej thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_uNqR><div class=token-line style=color:#F8F8F2><span class="token plain">pnpm --filter @brabo/scripts idioma:diagnosticar \</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  --arquivo-de-chave ~/.config/brabo/openrouter-test.env \</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  --turnos 1 --rodadas 5 --teto-usd 0.13 --concorrencia 4          # the four positions</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">pnpm --filter @brabo/scripts idioma:diagnosticar \</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  --arquivo-de-chave ~/.config/brabo/openrouter-test.env \</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  --turnos 1 --rodadas 5 --posicoes ultima-system,sufixo-user --sem-clausula \</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  --saida ~/.cache/brabo/validacao-idioma/&lt;date>-diagnostico-haiku-sem-clausula \</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  --teto-usd 0.06 --concorrencia 4                                  # the controls</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">pnpm --filter @brabo/scripts idioma:revisar                          # Part A tables</span><br/></div></code></pre></div></div>
-<p><code>--turnos N</code> and <code>--sem-clausula</code> exist only for this diagnosis; the product
-never places the orientation anywhere but last, and <code>posicionar</code> in
-<code>validacao.ts</code> is not used by it.</div><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_yZb9"><a href=https://github.com/daneiel/brabo/blob/dev/docs/explanation/medicao-do-idioma.md target=_blank rel="noopener noreferrer" class=theme-edit-this-page><svg fill=currentColor height=20 width=20 viewBox="0 0 40 40" class=iconEdit_ANja aria-hidden=true><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"/></g></svg>Editar esta página</a></div><div class="col lastUpdated_Kb4y"><span class=theme-last-updated>Última atualização<!-- --> em <b><time datetime=2026-09-30T23:05:48.000Z itemprop=dateModified>30 de set. de 2026</time></b> por <b>Claude</b></span></div></div></footer></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Páginas de documento"><a class="pagination-nav__link pagination-nav__link--prev" href=/brabo/dev/explanation/fase-30-runner-por-maquina><div class=pagination-nav__sublabel>Anterior</div><div class=pagination-nav__label>FASE 30 — agente local da máquina</div></a><a class="pagination-nav__link pagination-nav__link--next" href=/brabo/dev/explanation/medicao-do-jev><div class=pagination-nav__sublabel>Próxima</div><div class=pagination-nav__label>Measuring the Jev tool router</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_wOiH thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href=#what-exists class="table-of-contents__link toc-highlight">What exists</a><li><a href=#the-two-corpora-and-where-each-one-lives class="table-of-contents__link toc-highlight">The two corpora, and where each one lives</a><li><a href=#running-it class="table-of-contents__link toc-highlight">Running it</a><li><a href=#numbers-on-the-synthetic-corpus-2026-09-28 class="table-of-contents__link toc-highlight">Numbers on the synthetic corpus (2026-09-28)</a><li><a href=#what-the-numbers-say class="table-of-contents__link toc-highlight">What the numbers say</a><li><a href=#the-products-provisional-thresholds class="table-of-contents__link toc-highlight">The product's provisional thresholds</a><li><a href=#paid-validation-of-the-language-orientation-at-167-2026-09-29 class="table-of-contents__link toc-highlight">Paid validation of the language orientation (AT-167, 2026-09-29)</a><ul><li><a href=#where-it-runs-and-what-is-and-is-not-the-product class="table-of-contents__link toc-highlight">Where it runs, and what is (and is not) the product</a><li><a href=#step-zero-not-reproduced class="table-of-contents__link toc-highlight">Step zero: not reproduced</a><li><a href=#results-by-case--arm--model class="table-of-contents__link toc-highlight">Results by case × arm × model</a><li><a href=#against-the-threshold class="table-of-contents__link toc-highlight">Against the threshold</a><li><a href=#incremental-cost-of-the-orientation class="table-of-contents__link toc-highlight">Incremental cost of the orientation</a><li><a href=#spend class="table-of-contents__link toc-highlight">Spend</a><li><a href=#reproducing class="table-of-contents__link toc-highlight">Reproducing</a></ul><li><a href=#human-review-and-the-haiku-diagnosis-at-167-follow-up class="table-of-contents__link toc-highlight">Human review and the Haiku diagnosis (AT-167 follow-up)</a><ul><li><a href=#part-a--the-review-of-the-146 class="table-of-contents__link toc-highlight">Part A — the review of the 146</a><li><a href=#the-threshold-recomputed-with-the-reviewed-labels class="table-of-contents__link toc-highlight">The threshold, recomputed with the reviewed labels</a><li><a href=#part-b--is-it-the-position-of-the-orientation-at-279 class="table-of-contents__link toc-highlight">Part B — is it the position of the orientation? (AT-279)</a></ul></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Documentação</div><ul class="footer__items clean-list"><li class=footer__item><a class=footer__link-item href=/brabo/dev/getting-started>Primeiros passos</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/architecture>Arquitetura</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/business-rules>Regras de negócio</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/runbook>Runbook</a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Comunidade</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class=footer__link-item>Como contribuir<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class=footer__link-item>Onde pedir ajuda<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class=footer__link-item>Segurança<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Mais</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class=footer__link-item>GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CHANGELOG.md target=_blank rel="noopener noreferrer" class=footer__link-item>CHANGELOG<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/LICENSE target=_blank rel="noopener noreferrer" class=footer__link-item>Licença MIT<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/THIRD_PARTY_NOTICES.md target=_blank rel="noopener noreferrer" class=footer__link-item>Avisos de terceiros<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div></div><div class="footer__bottom text--center"><div class=footer__copyright>Copyright © 2026 Daniel Souza. Licenciado sob a MIT. Ferramentas de terceiros mantêm as próprias licenças — ver Avisos de terceiros.</div></div></div></footer></div></body>
+<p><code>--turnos N</code> e <code>--sem-clausula</code> existem só para este diagnóstico; o produto
+nunca põe a orientação em outro lugar que não o fim, e <code>posicionar</code> em
+<code>validacao.ts</code> não é usado por ele.</div><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_yZb9"><a href=https://github.com/daneiel/brabo/blob/dev/docs/explanation/medicao-do-idioma.md target=_blank rel="noopener noreferrer" class=theme-edit-this-page><svg fill=currentColor height=20 width=20 viewBox="0 0 40 40" class=iconEdit_ANja aria-hidden=true><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"/></g></svg>Editar esta página</a></div><div class="col lastUpdated_Kb4y"><span class=theme-last-updated>Última atualização<!-- --> em <b><time datetime=2026-10-15T07:50:47.000Z itemprop=dateModified>15 de out. de 2026</time></b> por <b>Daniel Souza</b></span></div></div></footer></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Páginas de documento"><a class="pagination-nav__link pagination-nav__link--prev" href=/brabo/dev/explanation/fase-30-runner-por-maquina><div class=pagination-nav__sublabel>Anterior</div><div class=pagination-nav__label>FASE 30 — agente local da máquina</div></a><a class="pagination-nav__link pagination-nav__link--next" href=/brabo/dev/explanation/medicao-do-jev><div class=pagination-nav__sublabel>Próxima</div><div class=pagination-nav__label>Medição do roteador de ferramentas Jev</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_wOiH thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href=#what-exists class="table-of-contents__link toc-highlight">O que existe</a><li><a href=#the-two-corpora-and-where-each-one-lives class="table-of-contents__link toc-highlight">Os dois corpora, e onde cada um mora</a><li><a href=#running-it class="table-of-contents__link toc-highlight">Como rodar</a><li><a href=#numbers-on-the-synthetic-corpus-2026-09-28 class="table-of-contents__link toc-highlight">Números no corpus sintético (2026-09-28)</a><li><a href=#what-the-numbers-say class="table-of-contents__link toc-highlight">O que os números dizem</a><li><a href=#the-products-provisional-thresholds class="table-of-contents__link toc-highlight">Os limiares provisórios do produto</a><li><a href=#paid-validation-of-the-language-orientation-at-167-2026-09-29 class="table-of-contents__link toc-highlight">Validação paga da orientação de idioma (AT-167, 2026-09-29)</a><ul><li><a href=#where-it-runs-and-what-is-and-is-not-the-product class="table-of-contents__link toc-highlight">Onde roda, e o que é (e o que não é) o produto</a><li><a href=#step-zero-not-reproduced class="table-of-contents__link toc-highlight">Passo zero: não reproduzido</a><li><a href=#results-by-case--arm--model class="table-of-contents__link toc-highlight">Resultados por caso × braço × modelo</a><li><a href=#against-the-threshold class="table-of-contents__link toc-highlight">Contra o limiar</a><li><a href=#incremental-cost-of-the-orientation class="table-of-contents__link toc-highlight">Custo incremental da orientação</a><li><a href=#spend class="table-of-contents__link toc-highlight">Gasto</a><li><a href=#reproducing class="table-of-contents__link toc-highlight">Como reproduzir</a></ul><li><a href=#human-review-and-the-haiku-diagnosis-at-167-follow-up class="table-of-contents__link toc-highlight">Revisão humana e o diagnóstico do Haiku (continuação da AT-167)</a><ul><li><a href=#part-a--the-review-of-the-146 class="table-of-contents__link toc-highlight">Parte A — a revisão das 146</a><li><a href=#the-threshold-recomputed-with-the-reviewed-labels class="table-of-contents__link toc-highlight">O limiar, recalculado com os rótulos revisados</a><li><a href=#part-b--is-it-the-position-of-the-orientation-at-279 class="table-of-contents__link toc-highlight">Parte B — é a posição da orientação? (AT-279)</a></ul></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Documentação</div><ul class="footer__items clean-list"><li class=footer__item><a class=footer__link-item href=/brabo/dev/getting-started>Primeiros passos</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/architecture>Arquitetura</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/business-rules>Regras de negócio</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/runbook>Runbook</a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Comunidade</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class=footer__link-item>Como contribuir<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class=footer__link-item>Onde pedir ajuda<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class=footer__link-item>Segurança<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Mais</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class=footer__link-item>GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CHANGELOG.md target=_blank rel="noopener noreferrer" class=footer__link-item>CHANGELOG<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/LICENSE target=_blank rel="noopener noreferrer" class=footer__link-item>Licença MIT<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/THIRD_PARTY_NOTICES.md target=_blank rel="noopener noreferrer" class=footer__link-item>Avisos de terceiros<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div></div><div class="footer__bottom text--center"><div class=footer__copyright>Copyright © 2026 Daniel Souza. Licenciado sob a MIT. Ferramentas de terceiros mantêm as próprias licenças — ver Avisos de terceiros.</div></div></div></footer></div></body>
