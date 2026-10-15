@@ -1,0 +1,21 @@
+{
+  "tabs": {
+    "overview": { "label": "Обзор" },
+    "executors": { "label": "Исполнители" },
+    "criativo": { "label": "Criativo" },
+    "chat": { "label": "Чат" },
+    "insights": { "label": "Наблюдения" },
+    "code": { "label": "Код" },
+    "prs": { "label": "PR" },
+    "approvals": { "label": "Одобрения" },
+    "backlog": { "label": "Истории" },
+    "architecture": { "label": "Архитектура" },
+    "spend": { "label": "Расходы" },
+    "settings": { "label": "Настройки" }
+  },
+  "groups": {
+    "agentes": { "label": "Агенты" },
+    "dev": { "label": "Dev" },
+    "documentacao": { "label": "Документация" }
+  }
+}

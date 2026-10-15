@@ -1,0 +1,41 @@
+{
+  "carousel": {
+    "roleDescription": "轮播",
+    "counter": "{{current}} / {{total}}",
+    "previousLabel": "上一个用户故事",
+    "nextLabel": "下一个用户故事",
+    "dotsGroupLabel": "跳转到用户故事",
+    "slideLabel": "幻灯片 {{index}}",
+    "slideLabelNamed": "幻灯片 {{index}}：{{label}}",
+    "dotLabel": "用户故事 {{index}}",
+    "dotLabelNamed": "用户故事 {{index}}：{{label}}"
+  },
+  "input": {
+    "showPassword": "显示密码",
+    "hidePassword": "隐藏密码"
+  },
+  "modal": {
+    "closeLabel": "关闭"
+  },
+  "markdownMessage": {
+    "codeFence": {
+      "defaultLanguage": "文本",
+      "mostrarLinhas_other": "显示全部 {{count}} 行",
+      "recolher": "收起"
+    },
+    "table": {
+      "emptyMessage": "表格没有行。"
+    }
+  },
+  "table": {
+    "emptyMessage": "这里还没有内容。"
+  },
+  "toast": {
+    "closeLabel": "关闭通知"
+  },
+  "erroDeCarregamento": {
+    "defaultMessage": "无法连接到 api。",
+    "trace": "trace {{traceId}}",
+    "retry": "重试"
+  }
+}

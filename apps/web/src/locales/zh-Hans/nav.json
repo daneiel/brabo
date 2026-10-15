@@ -1,0 +1,51 @@
+{
+  "tabs": {
+    "overview": {
+      "label": "概览"
+    },
+    "executors": {
+      "label": "执行者"
+    },
+    "criativo": {
+      "label": "Criativo"
+    },
+    "chat": {
+      "label": "对话"
+    },
+    "insights": {
+      "label": "洞察"
+    },
+    "code": {
+      "label": "代码"
+    },
+    "prs": {
+      "label": "PR"
+    },
+    "approvals": {
+      "label": "审批"
+    },
+    "backlog": {
+      "label": "用户故事"
+    },
+    "architecture": {
+      "label": "架构"
+    },
+    "spend": {
+      "label": "费用"
+    },
+    "settings": {
+      "label": "设置"
+    }
+  },
+  "groups": {
+    "agentes": {
+      "label": "智能体"
+    },
+    "dev": {
+      "label": "开发"
+    },
+    "documentacao": {
+      "label": "文档"
+    }
+  }
+}

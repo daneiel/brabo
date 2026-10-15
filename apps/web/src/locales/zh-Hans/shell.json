@@ -1,0 +1,70 @@
+{
+  "sidebar": {
+    "theme": {
+      "light": "浅色主题",
+      "dark": "深色主题"
+    },
+    "brand": {
+      "dashboardLink": "前往仪表盘"
+    },
+    "nav": {
+      "trilhaAriaLabel": "项目与活动",
+      "projectsLabel": "项目",
+      "newProject": "新建项目"
+    },
+    "projects": {
+      "loadError": "无法加载项目。",
+      "retry": "重试",
+      "expand": "展开 {{name}}",
+      "collapse": "收起 {{name}}",
+      "tabsAriaLabel": "{{name}} 的标签页"
+    },
+    "activities": {
+      "label": "活动",
+      "openProjectHint": "打开一个项目以查看智能体的活动。",
+      "empty": "最近的会话中还没有智能体开始行动。",
+      "emptyExecution": "执行会话中还没有智能体开始行动。",
+      "noSession": "此项目还没有会话。",
+      "loadError": "无法加载活动。",
+      "noMarksYet": "暂无里程碑",
+      "instancesCount_other": "{{count}} 个实例"
+    },
+    "collapseButton": {
+      "expand": "展开菜单",
+      "collapse": "收起菜单"
+    },
+    "mobile": {
+      "openMenu": "打开导航",
+      "closeMenu": "关闭导航",
+      "drawerLabel": "导航"
+    },
+    "footer": {
+      "accountFallback": "账户",
+      "logout": "退出"
+    }
+  },
+  "notificationBell": {
+    "label": "通知",
+    "markRead": {
+      "default": "标为已读",
+      "withCount": "将 {{total}} 条标为已读"
+    },
+    "windowNote_other": "显示每个项目的最新通知。另有 {{count}} 条较早的通知放不下——打开项目即可查看。",
+    "empty": "这里还没有通知。",
+    "older_other": "+ {{count}} 条较早的"
+  },
+  "tokenMeter": {
+    "unitTokens": "tokens",
+    "live": {
+      "indicator": "实时",
+      "remaining": "剩余 {{value}}"
+    },
+    "overLimit": "月度上限的 {{pct}}%",
+    "savingsPct": "本周期节省了 {{pct}}% 的 tokens",
+    "noBudgetCta": "设置预算",
+    "compactFooter": {
+      "spent": "已花费 {{value}}",
+      "balance": "余额 {{value}}"
+    }
+  }
+}

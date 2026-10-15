@@ -1,0 +1,137 @@
+{
+  "modal": {
+    "title": "新建项目"
+  },
+  "steps": {
+    "mode": "新建或接管现有项目",
+    "provider": "托管位置",
+    "credential": "访问凭据",
+    "details": "代码存放位置",
+    "confirm": "确认"
+  },
+  "mode": {
+    "create": {
+      "label": "新建",
+      "desc": "一个新项目。git 仓库会在你接受交给 Arquiteto 的 handoff 后创建。"
+    },
+    "adopt": {
+      "label": "接管现有",
+      "desc": "将项目指向一个已存在的仓库。不会创建任何东西，未经你批准也不会修改任何东西。"
+    }
+  },
+  "workspaceMode": {
+    "container": {
+      "label": "容器",
+      "desc": "由 Brabo 管理文件夹，位于与 engine 共享的卷中。无需你做任何事。"
+    },
+    "mounted": {
+      "label": "挂载文件夹",
+      "desc": "代码存放在你自己的文件夹中，位于本次安装的项目根目录内。文件夹会在 Infra 启动容器时创建。"
+    },
+    "runner": {
+      "label": "本地 runner",
+      "desc": "代码存放在你自己的文件夹中，不使用任何 bind-mount。你在自己的机器上运行 brabo-runner CLI，它连接时会确认路径。"
+    }
+  },
+  "provider": {
+    "github": {
+      "label": "GitHub",
+      "desc": "通过 GitHub API 管理仓库"
+    },
+    "gitlab": {
+      "label": "GitLab",
+      "desc": "通过 GitLab API 管理仓库"
+    },
+    "local": {
+      "label": "本地",
+      "desc": "本地 git 仓库，无外部 provider"
+    }
+  },
+  "credential": {
+    "tokenValidated": "令牌已验证",
+    "errors": {
+      "invalidToken": "令牌无效或权限范围不足。请检查后重试。",
+      "generic": "暂时无法验证令牌。"
+    }
+  },
+  "toasts": {
+    "createFailedWithReason": "无法创建项目",
+    "createFailedGeneric": "创建项目失败",
+    "folderNavigationPrepareFailed": "暂时无法准备文件夹浏览"
+  },
+  "details": {
+    "adopt": {
+      "repoLabel": "现有仓库",
+      "placeholderLocal": "/caminho/do/repo.git",
+      "placeholderRemote": "acme/checkout",
+      "hintLocal": "bare 仓库的绝对路径",
+      "hintRemote": "格式为 所有者/仓库，与 URL 中一致",
+      "note": "现在不会创建或修改任何东西。下一步会显示 bootstrap 将对此仓库执行的<strong>计划</strong>——由你决定是应用还是按原样接管。"
+    },
+    "create": {
+      "nameLabel": "项目",
+      "namePlaceholder": "例如：网上商店",
+      "repoPreview": "仓库：{{slug}}",
+      "visibilityLabel": "可见性",
+      "visibilityPrivate": "私有",
+      "visibilityPublic": "公开"
+    }
+  },
+  "workspace": {
+    "pathLabel": "文件夹路径",
+    "pathPlaceholder": "/home/voce/projetos/loja",
+    "browseButton": "浏览文件夹...",
+    "preparing": "准备中…",
+    "hintMounted": "绝对路径，位于下方显示的项目根目录内",
+    "hintRunner": "绝对路径，按其在你机器上的样子填写",
+    "mountedUnderBase": "该文件夹位于本次安装的<strong>项目根目录内</strong>（<code>{{base}}</code>）——这是你电脑上 api 和 engine 容器唯一能看到的文件夹。它<strong>现在不必存在</strong>：会在 Infra 启动项目容器时创建。",
+    "mountedOutsideBase": "该路径位于本次安装的<strong>项目根目录之外</strong>（<code>{{base}}</code>），api 会<strong>拒绝创建</strong>位于其外的挂载项目。请选择 <code>{{base}}</code> 下的文件夹。",
+    "noBroker": "<strong>此安装不会为“容器”和“挂载文件夹”模式启动容器。</strong>它没有容器 broker（<code>BROKER_URL</code> 为空），而这两种模式的容器正是由它启动的——没有容器，任何开发智能体都无法工作。请使用<strong>本地 runner</strong>：代码存放在你自己的文件夹中，由本地代理在你的机器上启动容器。",
+    "runnerHint": {
+      "intro": "创建项目后，在你的机器上运行：",
+      "introExisting": "项目已存在——在你的机器上运行：",
+      "command": "brabo-runner --project {{id}} --dir {{caminho}}",
+      "placeholderId": "<项目 id>",
+      "note": "runner 连接时会确认路径——在此之前不会运行任何命令。"
+    },
+    "browseRunner": {
+      "requires": "<strong>“浏览文件夹...”只有在你的机器上运行着 <code>brabo-runner</code> 并已连接到此项目时才可用</strong>——在此模式下，列表来自本地代理，而不是服务器。点击会立即创建项目，以便代理有可连接的对象；之后运行：",
+      "alternative": "如果 runner 未运行，<strong>请在上方字段中输入路径</strong>：效果相同，runner 连接时会确认文件夹。",
+      "placeholderPath": "<文件夹>",
+      "blockedName": "浏览文件夹前请先填写项目名称（至少 2 个字符）：在此模式下，点击就会创建项目。",
+      "blockedAdoptName": "浏览文件夹前请先填写要接管的仓库：在此模式下，点击就会创建项目，名称取自该仓库。",
+      "blockedPath": "输入的路径不是绝对路径或包含 \"..\"——请在浏览文件夹前修正（或清空）它，否则 api 会拒绝创建。"
+    }
+  },
+  "confirm": {
+    "modeLabel": "模式",
+    "providerLabel": "Provider",
+    "workspaceModeLabel": "文件夹模式",
+    "codeAtLabel": "代码位置",
+    "repoLabel": "仓库",
+    "bootstrapLabel": "Bootstrap",
+    "visibilityLabel": "可见性",
+    "managedFolder": "由 Brabo 管理的文件夹",
+    "promotionLabel": "用户故事提升",
+    "promotionAutoValue": "自动——由 PO 提升（新项目默认；可在设置中更改）",
+    "bootstrapAdoptValue": "未经你批准不会运行任何东西",
+    "bootstrapStepsValue_other": "{{count}} 个 Gitflow 步骤",
+    "unknownProvider": "—",
+    "localProvider": "本地（git 仓库存放在本次安装中）",
+    "bootstrapCreateValue": "仓库会在你接受交给 Arquiteto 的 handoff 时创建——届时才运行 Gitflow bootstrap"
+  },
+  "footer": {
+    "back": "返回",
+    "stepLabel": "第 {{atual}} 步，共 {{total}} 步",
+    "continue": "继续",
+    "submitting": "创建中…",
+    "viewPlan": "查看计划",
+    "provision": "创建项目",
+    "blocked": {
+      "mode": "请选择新建项目或接管现有项目以继续。",
+      "provider": "请选择仓库所在位置以继续。",
+      "credential": "请选择或添加访问凭据以继续。",
+      "details": "请填写名称（至少 2 个字符），如模式需要，再填写绝对路径以继续。"
+    }
+  }
+}
