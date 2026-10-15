@@ -134,13 +134,6 @@ export const FONTES = {
       return m === null ? null : [...m[1].matchAll(/'[a-z-]+'/g)].length;
     },
   },
-  imagensNonRootNoSmoke: {
-    descricao: 'o laço non-root de `docker/smoke.sh`',
-    contar: ({ ler }) => {
-      const m = /non-root'\n\s*for svc in ([^;]+); do/.exec(ler('docker/smoke.sh'));
-      return m === null ? null : m[1].trim().split(/\s+/).length;
-    },
-  },
   operacoesDoGit: {
     descricao: 'os métodos de `GitProviderContract` em `packages/shared/src/index.ts`',
     contar: ({ ler }) => {
@@ -156,15 +149,6 @@ export const FONTES = {
       const corpo = trecho(ler('packages/docker-port/src/docker-port.ts'), 'export abstract class DockerPort {', '\n}');
       if (corpo === null) return null;
       const n = [...corpo.matchAll(/^\s+abstract [a-zA-Z]+\(/gm)].length;
-      return n === 0 ? null : n;
-    },
-  },
-  abasDoProjeto: {
-    descricao: 'as entradas de `REGISTRO` em `apps/web/src/routes/project-tabs.ts`',
-    contar: ({ ler }) => {
-      const corpo = trecho(ler('apps/web/src/routes/project-tabs.ts'), 'const REGISTRO = [', '] as const');
-      if (corpo === null) return null;
-      const n = [...corpo.matchAll(/^ {4}key: '/gm)].length;
       return n === 0 ? null : n;
     },
   },
