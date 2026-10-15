@@ -1,6 +1,7 @@
 ---
 title: From zero to a deliverable
 description: A real project walked end to end on Brabo — create, pick a model, answer the agents' open questions in the chat, confirm the architecture, approve the plan, and merge every pull request without leaving the Creative's chat.
+traducao_de: 2b694a01e7d46ec116a8a07e97e7ccbbafca28db
 ---
 
 # From zero to a deliverable
