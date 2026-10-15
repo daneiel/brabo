@@ -681,3 +681,332 @@ PO 一个接一个地创建故事，每个 `backlog.story_promotion_proposed`
   `apps/engine/test/engine/harness/tools/create_c4_diagram_test.exs`,
   `apps/web/src/components/C4DiagramView.test.tsx`（成功变成 SVG，语法错误变成可读的 Alert 而不破坏界面，空图不尝试渲染）
 - **来源：** 用户的请求——在项目概览中显示 Arquiteto 的 C4 图（ADR 0068）
+
+### RN-150 — `search_workspace` 有命中*数量*上限和*字节*上限，各自带有标记 {#rn-150}
+
+在一次 PR 审查中发现：`search_workspace`（dev agent 以及两个 QA/gate agent，`qa_tools.ex` 和 `qa_performance_seguranca_agent.ex`——后者只有 `read_file`/`search_workspace`，刻意没有 `Terminal`）返回*全部*搜索结果，没有任何上限——与发现 S（`Engine.Actions.TerminalExecutor.truncate/2`）以及 `read_file` 的修正（`Engine.Harness.Tools.ReadFile.truncate/2`）同类：结果留在循环的历史中并在之后的每个回合中传输，一棵大目录树就足以触发提供方的 `{413, "request entity too large"}`。
+
+两个独立的上限，因为搜索会以两种不同方式溢出：
+
+1. **命中数量**——一棵有数千个文件匹配搜索词的树会产生数千行 `- caminho`，即使没有任何单个文件很大。只在最后按*字节*截断，仍然要付出扫描并读取每个文件内容然后再组装字符串的代价。因此数量上限（`SEARCH_WORKSPACE_MAX_HITS`，默认 500）位于 `WorkspaceFiles.search/3` 中，它一旦找到足够的命中就*停止*消费搜索——流水线运行在 `Stream` 上，`Enum.take(stream, max_hits + 1)` 只从源头读取产生前 `max_hits + 1` 个结果所需的东西。"+1"使得可以说明*还有*更多，而不必继续扫描其余部分来计算准确总数——计算总数会再次付出上限要避免的 I/O，因此标记说"显示前 N 个"，从不编造总数。
+2. **最终文本的字节数**——即使命中受限，非常长的路径也可能产生大字符串。字节上限（`SEARCH_WORKSPACE_MAX_BYTES`，默认 32,768），与 `terminal_output_max_bytes`/`read_file_max_bytes` 同一模式——*独立*的变量，不复用另外两个：同一类溢出，改动其中一个不应该需要触碰其他的。
+
+截断标记是写给*模型*的，而不是给人的：它说明截断了什么（命中和/或字节），并指示细化搜索词——与 `TerminalExecutor`/`ReadFile` 标记的精神相同。
+
+- **位置：** `apps/engine/lib/engine/harness/workspace_files.ex`
+  （`search/3`、`take_capped/2`），
+  `apps/engine/lib/engine/harness/tools/search_workspace.ex`
+  （`truncate/3`、`marca_de_truncagem/5`），
+  `apps/engine/config/runtime.exs`（`search_workspace_max_hits`、
+  `search_workspace_max_bytes`）
+- **测试：** `apps/engine/test/engine/harness/workspace_files_test.exs`
+  （带 `max_hits` 的 `search/3` 截断*数量*，只有在多于上限时才标记截断），
+  `apps/engine/test/engine/harness/search_workspace_test.exs`（结果少的搜索不被改变；命中多于上限的搜索被截断并给出清楚的提示；大于字节上限的最终文本也被截断）
+- **来源：** PR 审查中的发现——审查中 413 的第二个真实原因，在 `read_file` 修正之后
+
+---
+
+### RN-151 — 侧边栏中的项目徽章是待批准数，而不是未读活动 {#rn-151}
+
+`Shell.tsx` 中每个项目名称旁边的数字原来来自 `useProjectsUnread`——`latestSeq`（会话中已写入的最新 `seq`）减去浏览器在 `read-state.ts` 中保存的"上次查看"游标。这计算的是*任何*新事件——`tool.call`、`agent.response`、聊天——而不只是待定的决定。一个测试项目在侧边栏中显示"392"（一次真实执行累积的活动），而*同一*项目的审批标签页显示"8"（真实的计数）。一个点击后与任何可操作之事都对应不上的数字，比没有数字更糟。
+
+仪表板的读模型（`ProjectsSummaryRepository.summarizeForWorkspace`，
+RN-090）新增了 `pendingApprovalsCount`：对 `status = 'pending'` 的 `proposed_actions` 执行 `COUNT(*)`，按 `project_id` 聚合，作为已有 `Promise.all` 中多出的一次查询——与 `storiesAwaitingPromotion`（RN-048）相同的形式，不增加每个项目访问数据库的次数。汇总的是*整个*项目的所有会话——刻意与审批标签页（`ProjectApprovalsTab.tsx`）不同，后者只显示*最近*会话的待定项：徽章是按*项目*的，而不是按会话，旧会话中的待定项仍然是待定项。
+
+`Shell.tsx` 不再导入 `useProjectsUnread`——它在那里唯一的消费者就是这个徽章。`Dashboard.tsx`/`ProjectCard.tsx` 获得了同样的连线：`ProjectCard` 的 `unreadCount` prop 从未有调用者（`ProjectCardContainer` 没有传它），它变成了 `pendingApprovalsCount`，值与侧边栏相同——两个界面，一个数字，一个来源。
+
+- **位置：** `apps/api/src/application/ports/projects-summary-repository.port.ts`
+  （`ProjectCardSummary.pendingApprovalsCount`），
+  `apps/api/src/infrastructure/persistence/drizzle/projects-summary.repository.ts`
+  （`summarizeForWorkspace`，对 `proposed_actions` 的聚合查询），
+  `apps/web/src/routes/Shell.tsx`，`apps/web/src/routes/Dashboard.tsx`,
+  `apps/web/src/components/ProjectCard.tsx`
+- **测试：**
+  `apps/api/test/infrastructure/persistence/drizzle/projects-summary.repository.spec.ts`
+  （`pendingApprovalsCount soma o projeto INTEIRO...`，只计算 `pending`，不在项目之间泄漏，查询次数保持恒定），
+  `apps/web/src/routes/Shell.test.tsx`（待批准徽章）
+- **来源：** 用户浏览应用时的发现——侧边栏徽章显示"392"，而同一项目的审批标签页中真实数字是"8"
+
+---
+
+### RN-152 — 任务的分支在代码标签页的下拉菜单中说明它属于哪个 dev agent 和模块 {#rn-152}
+
+`CodeBranchPicker` 本来就列出仓库的每个分支，包括 dev agent 的分支（`feature/task-XXXXXXXX`，`Engine.Dev.AgentIo`），但没有任何关于谁创建了它的线索——只有原始名称。`ReadProjectCodeUseCase.branches` 无需对 git 提供方多做调用就解决了这个问题：`feature/task-` 之后的 8 个字符正好是任务 uuid 的第一个连字符分组（`"feature/task-" <> String.slice(to_string(row.task_id), 0, 8)`，而不是任意的子串），因此可以与 `TaskRepository
+.findByProjectAndIdPrefix` 匹配（按*项目*连接，使 8 字符前缀永远不会泄漏另一个项目的任务）。任务的 `assignedTo` 是 agent_id（`dev-<modulo>`/`dev-<modulo>-2`，RN-087）；模块通过与项目*现行* `module_map` 比较来解析，使用生成它的*同一*函数（`activate-execution.use-case.ts` 中的 `devAgentId`/`extraDevAgentId`）——绝不用反向正则，那会对带特殊字符的模块名退化为歧义。
+
+`producedBy: { agentId, moduleId } | null` 是诚实的降级，与 `ahead`/`behind` 本来的方式相同：对不符合模式的分支（用户手动创建的，或 `main`/`dev`/`qa`）为 `null`，当模式匹配但任务/模块不再可解析（任务已删除、模块从现行映射中移除）时也是如此——绝不是编造的值。在下拉菜单中，每个由 dev 产生的分支获得该 agent 的图标和颜色（`AGENTS`/`agents.ts`，RN-087），复用 `apps/web/src/lib/agent-status.ts` 已经为实时名册使用的*同一*降级：在 `AGENTS` 中没有固定键的模块继承 `dev-backend` 的图标/颜色。
+
+- **位置：** `apps/api/src/application/use-cases/git/read-project-code.use-case.ts`
+  （`branches`/`producedBy`/`moduloDoAgente`），
+  `apps/api/src/application/ports/backlog-repository.port.ts`
+  （`TaskRepository.findByProjectAndIdPrefix`），
+  `apps/api/src/infrastructure/persistence/drizzle/backlog.repository.ts`,
+  `apps/api/src/interfaces/http/git/dto/code.response.dto.ts`
+  （`CodeBranchProducedByResponseDto`），`apps/web/src/lib/api-types.ts`
+  （`CodeBranchProducedBy`），`apps/web/src/routes/code/CodeBranchPicker.tsx`
+  （`IconeDoAgenteProdutor`/`defDoAgenteProdutor`）
+- **测试：**
+  `apps/api/test/application/use-cases/git/read-project-code.use-case.spec.ts`
+  （describe "producedBy da branch de task"——带模块和带额外 agent `-2` 的已解析任务；不符合模式的分支即使有可匹配前缀的任务也绝不获得 `producedBy`；项目中没有任务的前缀、从现行映射中移除的模块以及还没有所有者的任务都降级为 `null`），
+  `apps/web/src/routes/code/CodeBranchPicker.test.tsx`（任务分支显示所属 dev agent 的标记；不符合模式的分支没有任何标记）
+- **来源：** 用户的请求——在 FASE 26b 的丰富下拉菜单中没有关于谁创建了分支的视觉线索
+
+### RN-153 — "自动模式"：`ApprovalCard` 为一个 agent 之后的*任何*动作打开自主权 {#rn-153}
+
+> **由 [RN-603](#rn-603) 修订**（ADR 0167）：`decide()` 开始同时接收自主权的*来源*，自动模式（处于 `auto_approve` 的通配符）不再经过路径范围上限。下面关于 `decide()` "不变"的内容描述的是原始设计。
+
+在这条 RN 之前，`agent_autonomy` 只知道按 `(项目, agent, 动作类型)` 授予自主权——每种类型一行，一次 upsert *一条*规则（`SetAgentAutonomyUseCase`，
+`apps/api/src/application/use-cases/actions/set-agent-autonomy.use-case.ts`）。广泛信任一个 agent 需要每种类型一行——`terminal`、`write_file`、`pr_open`……——而新类型诞生时没有规则，回到 `require_approval`。
+
+"自动模式"是*同一*张表和*同一*端点（`PUT /projects/:projectId/agent-autonomy`）中的特殊值 `actionType: "*"`——不是新机制，而是现有的列（`agent_autonomy.action_type`，自由 `text`，没有枚举也没有外键——`apps/api/src/db/schema/agents.ts`）多接受一个值。通配符意味着"此 agent 的任何动作类型都有自主权"，在 `DrizzleAgentAutonomyRepository.findMode` 中解析（`apps/api/src/infrastructure/persistence/drizzle/agent-autonomy.repository.ts`）：在同一查询中查找*具体*规则和通配符，具体规则总是胜出——在 `"*": auto_approve` 已打开的情况下写入 `terminal: deny`，仍会拒绝该 agent 的 `terminal`，而放行其余。`decide()`（`apps/api/src/domain/actions/decide.ts`）不变：它在 `ctx.autonomyMode` 中接收已解析的 `PermissionPolicy`，与通配符出现之前完全一样——这就是绝对上限无需知道"自动模式"存在就能生效的原因（见 [RN-154](#rn-154)）。
+
+`ApprovalCard`（`apps/web/src/components/ApprovalCard.tsx`）在"始终允许"旁边新增了"自动模式"按钮，只在以下情况下可见：(a) 动作处于 `pending`，(b) 提议者是 *AGENT*（`actor.kind === 'agent'`——没有可授予用户的 agent 自主权）以及 (c) 调用方（`ProjectApprovalsTab.tsx`/`SessionPage.tsx`）已经确认在 workspace 中拥有 `maintainer`/`owner` 角色——与端点的要求相同（`@RequireRole('maintainer')`，未改变）。对没有该角色的人，`onActivateAutoMode` prop 为 `undefined`——卡片*隐藏*按钮，而不是显示为禁用，检查位于调用方而不在卡片中（展示型组件，没有自己的查询）。
+
+**关闭**复用 agent 卡片已有的手动/自动开关（Fase 8d）——没有新界面。`AgentTeamGrid.tsx` 开始在代表性规则*之前*查找 agent 的通配符规则（`autonomyActionTypeFor`）：如果存在，卡片的开关反映并编辑*通配符*，而不再是代表性类型——关闭就是把同一通配符写为 `require_approval`，而 agent 卡片上的开关正是这个"关闭"。
+
+- **位置：** `apps/api/src/domain/actions/decide.ts`
+  （`AGENT_AUTONOMY_ALL_ACTIONS`、`AgentAutonomyActionType`），
+  `apps/api/src/infrastructure/persistence/drizzle/agent-autonomy.repository.ts`
+  （具体 > 通配符优先级的 `findMode`），
+  `apps/api/src/interfaces/http/actions/dto/set-agent-autonomy.dto.ts`
+  （接受 `"*"`），`apps/web/src/components/ApprovalCard.tsx`（"自动模式"按钮），`apps/web/src/components/AgentTeamGrid.tsx`（开关开始优先考虑通配符），`apps/web/src/routes/ProjectApprovalsTab.tsx`
+  和 `apps/web/src/routes/SessionPage.tsx`（`handleActivateAutoMode`，通过 `useCurrentWorkspaceWithRole` 的角色闸门）
+- **测试：**
+  `apps/api/test/infrastructure/persistence/drizzle/agent-autonomy.repository.spec.ts`
+  （具体 > 通配符优先级；通配符按 agent；关闭就是把通配符重写为 `require_approval`），
+  `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts`
+  （自动模式在*不*查询 `permissions.json` 的情况下自动批准普通动作；处于 `deny` 的具体规则胜过通配符），
+  `apps/api/test/interfaces/http/actions/agent-autonomy.controller.spec.ts`
+  （`PUT`/`GET` 仍要求 `maintainer`；DTO 接受 `"*"` 并拒绝列表之外的字符串），`apps/web/src/components/ApprovalCard.test.tsx`
+  （没有 `onActivateAutoMode` 时按钮消失；点击调用回调；说明解释仍需决定的上限）
+- **来源：** 用户的请求——"始终允许"只写入一个具体的命令模式，而 `agent_autonomy` 一次只覆盖一种动作类型；缺的是一键广泛信任一个 agent
+
+### RN-154 — 即使"自动模式"打开，三个绝对上限仍然阻止 {#rn-154}
+
+> **由 [RN-603](#rn-603) 修订**（ADR 0167）：这里列出的上限在自动模式下仍然有效；对它不再有效的是*路径范围*上限（ADR 0055），而那从来不在这个列表中。
+
+"自动模式"（[RN-153](#rn-153)）的设计刻意无法突破 `decide()` 中已有的三个上限——它们*最后*应用，作用于 `current.policy`，不看宽松来自哪里（具体类型的 `agent_autonomy`、通配符或 `permissions.json`——该函数从来不知道如何区分来源，现在也仍然不知道）：
+
+1. **在受保护分支上合并**（目标为 `dev`/`qa`/`rc`/`main` 的 `git_merge`，[RN-006](../business-rules.md#rn-006)）——合并锁（`isProtectedBranch`）总是把 `auto_approve` 降为 `require_approval`，即使为该 agent 打开了 `"*": auto_approve`。
+2. **`instruction_patch`**（[RN-007](../business-rules.md#rn-007)）——更改另一个 agent 的指令要求人看到 diff；自动模式不改变这一点。
+3. **`parallelize`/`raise_max_parallel`**（[RN-086](../business-rules/custo.md#rn-086)）——提高并行上限，或在上限之上请求更多 agent，仍然是用户的决定；打开了自动模式的 agent 无法自行授予自己更多的花费权力。
+
+证明是靠*构造*，而不是逐个情形：由于三个上限只检查 `current.policy === 'auto_approve'`——从不检查来源——，而"自动模式"只能通过具体 `agent_autonomy` 规则本来就使用的*同一*路径（`ctx.autonomyMode`）到达 `current.policy === 'auto_approve'`，已经约束 `agent_autonomy` 的上限无需新代码就继续约束通配符。真正的风险不在上限——而在于有人在把 `agent_autonomy` 泛化为接受 `"*"` 时，把通配符检查插到上限*之前*，重新打开这扇门；因此 `AGENT_AUTONOMY_ALL_ACTIONS` 完全在*仓储*中解析（在 `decide()` 运行之前），`decide()` 本身没有增加任何一行——恰好足以让通配符没有地方可以突破。
+
+- **位置：** `apps/api/src/domain/actions/decide.ts`（三个上限块，约第 207–258 行，未被这个功能改变）
+- **测试：**
+  `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts`
+  （"auto mode NÃO auto-aprova merge em branch protegida"、"... instruction_patch"、
+  "... parallelize/raise_max_parallel"——三者都把 `agent_autonomy` "*" 写为 `auto_approve`，裁决仍为 `require_approval`）
+- **来源：** 用户在请求"自动模式"时确认的设计约束——三个上限是不能倒退的保证
+
+### RN-603 — 自动模式放开路径范围，且只放开它 {#rn-603}
+
+产品所有者在 2026-09-26 的决定（AT-226，
+[ADR 0167](../adr/0167-modo-automatico-libera-o-escopo-de-caminho.md)）：在某个 agent 上打开"自动模式"——[RN-153](#rn-153) 的通配符 `"*"` 解析为 `auto_approve`——时，agent 无需请求批准就能运行*任何*终端命令，*包括*在项目文件夹之外。ADR 0055 的路径范围上限对该 agent 不再有效。在 `exp001`（`mounted` 模式，容器运行中）中测得：模式打开时有 51 条命令请求批准，其中 47 条仅仅因为引用了 `/work` 或 `/tmp`——dev agent 在容器中运行，而范围是与*主机*的根比较的。
+
+`decide()` 开始接收自主权的*来源*（`ctx.autonomyOrigin`：
+`'especifica'` 或 `'curinga'`），由已经解析优先级的*同一*仓储解析——`findMode` 成为 `resolve` 的一种读取，而不是第二把尺子。只有处于 `auto_approve` 的通配符才是自动模式（`modoAutomaticoDoAgente`）；缺少来源视为具体规则。在自动模式下，有两种请求不再存在：*范围*上限，以及当某段在 `permissions.json` 中没有任何规则时*复合*命令合成的 `require_approval`（文件没有意见，它从不降级之前的阶段）——没有第二点，`cd /work && npm test` 仍会请求批准。
+
+在自动模式下，其余一切照旧：`deny`（来自文件、内置模式或具体自主权）胜出；文件中*写明*的 `ask` 会请求批准；外部效果/特权命令上限（push、PR、部署、`sudo`/`doas`，[RN-418](../business-rules.md#rn-418)）先运行且不看来源；在受保护分支上合并、`instruction_patch`、
+`parallelize`/`raise_max_parallel` 和 `container_remove` 永远不可自动批准（[RN-154](#rn-154)）。该类型的具体规则在仓储中胜过通配符，并以 `'especifica'` 到达：通配符打开时，`terminal: require_approval` 仍然请求批准。关闭（agent 卡片的开关把通配符写为 `require_approval`）恢复上限。自
+[RN-670](../business-rules.md#rn-670)（ADR 0189）起，位于 `auto_approve` 通配符之下的 `auto_approve` 具体规则——dev agent 的"始终允许"所写入的——解析为*通配符*，不再关闭自动模式；而在自动模式之外，范围与真实的执行文件夹比较（[RN-669](../business-rules.md#rn-669)）。
+
+界面在点击之前说明模式放开了什么、什么仍然需要请求：`ApprovalCard` 的说明出现在*两种*变体中（聊天和审批队列），agent 卡片在开关下方显示一句话——只在*通配符*打开时，因为针对代表性类型的开关写入的是具体规则，它不放开范围。
+
+- **位置：** `apps/api/src/domain/actions/decide.ts:295` (`modoAutomaticoDoAgente`),
+  `apps/api/src/domain/actions/decide.ts:370`（被忽略的复合命令合成裁决），`apps/api/src/domain/actions/decide.ts:455`（被跳过的范围上限），
+  `apps/api/src/infrastructure/persistence/drizzle/agent-autonomy.repository.ts:25`
+  （`resolve`，带来源），
+  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:216`
+  (`autonomyOrigin`), `apps/web/src/components/AgentTeamGrid.tsx:108`
+  (`autonomyHint`), `apps/web/src/components/ApprovalCard.tsx:313`（两种变体中的说明）
+- **测试：** `apps/api/test/domain/actions/decide.spec.ts`（"modo automático
+  libera o escopo de caminho (RN-603)"：范围之外和复合命令自动批准；push/`sudo`/`deny`/写明的 `ask` 照旧；具体规则和关闭的通配符不放开；其他上限不变），
+  `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts`
+  （使用真实仓储的端到端），
+  `apps/api/test/infrastructure/persistence/drizzle/agent-autonomy.repository.spec.ts`
+  （`resolve` 返回来源），`apps/web/src/components/AgentTeamGrid.test.tsx`,
+  `apps/web/src/components/AgentCard.test.tsx`,
+  `apps/web/src/components/ApprovalCard.test.tsx`
+- **来源：** 产品所有者在 `exp001` 测试之后的决定（AT-226）
+
+### RN-155 — 时间线排序使用 `proposed_action.created` 关联，绝不使用原始的 `action.seq` {#rn-155}
+
+`SessionPage.tsx` 的 `timeline` 按单一可比较的数值轴对事件和提议动作排序。对事件而言是 `event.seq`（无间隙，按会话）。对动作而言是相关的 `proposed_action.created` 事件的 `seq`（通过 `payload.actionId === action.id` 找到，由 `ProposeActionUseCase` 在创建动作的*同一*事务中写入）——绝不是 `action.seq`，它是整张 `proposed_actions` 表唯一且全局的 `bigserial`，由系统的所有会话和项目共享，因此与 `event.seq` 不可比较（刻意的对比，见
+`apps/api/src/db/schema/actions.ts`）。直接比较两者会在每次 `ApprovalCard` 与普通事件混在一起时产生不可预测的顺序。没有这种关联的动作（只有 Gitflow 的 bootstrap——
+`git_repo_create`/`git_branch_create`，它们只写 outbox）降级为按 `createdAt` 插值的位置，锚定在之前的最后一个事件上。
+
+- **位置：** `apps/web/src/routes/SessionPage.tsx`（`ordemDaAcaoNaTimeline`）
+- **测试：** `apps/web/src/routes/SessionPage.ordenacao-e-avisos.test.tsx`
+- **来源：** PR #286 的发现——审批卡片在时间线中顺序错乱，与普通事件混在一起
+
+### RN-156 — 5s 等待指示器使用固定文本，不插入 agent 名称 {#rn-156}
+
+5s 无响应后出现的指示器（`pensandoVisivel`）显示固定句子"Reunindo informações..."，不插入 agent 的名称——取代了之前的文本"{Agente} está escrevendo…"。真实文本流一开始，agent 的名称就在头部可见；在等待指示器中重复它对阅读没有帮助。
+
+- **位置：** `apps/web/src/routes/SessionPage.tsx`
+- **测试：** `apps/web/src/routes/SessionPage.pista-e-status.test.tsx`,
+  `apps/web/src/routes/SessionPage.ordenacao-e-avisos.test.tsx`
+- **来源：** PR #286 的发现——之前的文本点名的是一个已经在头部可见的 agent
+
+### RN-157 — PO 创建史诗/故事成为紧凑提示，而不是完整气泡 {#rn-157}
+
+`backlog.epic_created`/`backlog.story_created` 事件不再渲染为完整的消息气泡（`.message`/`.bubble`，32px 头像——与真正的 agent 回复相同的视觉分量），而是使用 `.handoffDivider`/`.handoffPill` 已经用于交接棒的相同紧凑提示格式：带水平细线和紧凑药丸的居中行，保留"在 Backlog 中查看"链接。`agentId` 在 `TimelineEntry` 中继续填充——与 handoff 分隔线不同，这不标志 agent 之间的过渡，而是 PO 在自己回合内的一个动作，仍然适用按 agent 的折叠（[RN-138](../business-rules.md#rn-138)）。
+
+- **位置：** `apps/web/src/routes/SessionPage.tsx`
+- **测试：** `apps/web/src/routes/SessionPage.handoff-inline-e-links.test.tsx`,
+  `apps/web/src/routes/SessionPage.ordenacao-e-avisos.test.tsx`
+- **来源：** PR #286 的发现——对于 PO 的一个元数据动作，完整气泡的视觉分量与真正的 agent 回复相同
+
+### RN-158 — 聊天中带高亮的轻量 Markdown {#rn-158}
+
+会话消息流中的 `agent.response` 渲染 Markdown 的一个子集（粗体 `**texto**`、斜体 `*texto*`/`_texto_`、行内代码
+`` `texto` ``、标题 `#`/`##`/`###`、列表 `-`/`1.`、链接
+`[texto](url)` 以及代码围栏 ```` ```linguagem ````），通过基于正则的自有解析器（`apps/web/src/lib/markdown.ts`），没有新依赖。`chat.message`（用户输入的文本）保持原样——Markdown 只应用于 agent/LLM 的*输出*，绝不应用于人的输入。
+
+安全：解析器从不产生 HTML——它返回一棵数据树，由 `MarkdownMessage.tsx` 直接转换为 React 元素（绝不用 `dangerouslySetInnerHTML`）。只有当 URL 的协议为 `http`、`https` 或相对路径（`/...`、`#...`）时，链接才变成可点击的 `<a href>`；任何其他协议（`javascript:`、`data:` 等）降级为链接文本，绝不是可执行的 `href`。
+
+围栏中的代码获得按 token 的高亮，复用
+`apps/web/src/routes/code/highlight.ts` 中的 `highlightLine`/`highlightFile`——与已经为代码标签页着色的同一函数。`sh`/`bash` 获得了自己的 shell 关键字词汇（之前只映射了行注释 `#`，并落入 JS 的回退）。围栏
+```` ```sh ````/```` ```bash ```` 获得终端的视觉风格（每个命令行的 `$` 提示符），与 `ApprovalCard` 已经用于 `terminal` 动作的 `$ comando` 一致。
+
+- **位置：** `apps/web/src/lib/markdown.ts`,
+  `apps/web/src/components/ui/MarkdownMessage.tsx`,
+  `apps/web/src/routes/code/highlight.ts`
+- **测试：** `apps/web/src/lib/markdown.test.ts`,
+  `apps/web/src/components/ui/MarkdownMessage.test.tsx`,
+  `apps/web/src/routes/code/highlight.test.ts`,
+  `apps/web/src/routes/SessionPage.markdown-resposta.test.tsx`
+- **来源：** PR #288——带列表、代码和链接的 agent 回复以原始文本到达消息流，没有任何结构
+
+### RN-159 — 生成的工件按 agent 分组 {#rn-159}
+
+会话的"生成的工件"面板（`SessionPage.tsx` 中的 `ContextAside`）列出 dev 的 PR（`pr_open`）、Arquiteto 的 ADR PR（`open_adr_pr`）以及 PO 创建的史诗/故事（`backlog.epic_created`/`backlog.story_created`），按 `agentId`——生成每个工件的人——分组，使用与 [RN-138](../business-rules.md#rn-138) 相同的可折叠 `Disclosure` 模式（agent 名称 + 数量，可展开为每个工件的标题）。
+
+每个工件都导航到它所在的地方：PR（dev 或 ADR）打开真实 URL（`executionResult.pullRequestUrl`，与 `ProjectOverviewTab.tsx` 已经为 ADR PR 读取的字段相同）；史诗/故事导航到 `/projects/:projectId?tab=backlog`（与主消息流中 PO 的紧凑提示已经使用的 `Link` 模式相同，[RN-124](../business-rules.md#rn-124)/
+[RN-157](#rn-157)）。还没有 `pullRequestUrl` 的 PR（执行待定）出现在面板中，但不成为可点击的链接。
+
+出于记录在代码注释中（`SessionPage.tsx` 中的 `ContextAside`）的决定而不在范围内的：module_map/C4——它们是项目的*现行*状态（一个当前版本，每次生成时被覆盖），而不是像 PR/史诗/故事那样按*会话*标注日期的工件；概览标签页（`ProjectOverviewTab.tsx`）如今已经是它们的位置，没有自己的锚点——处理这一点不在本次交付范围之内。
+
+- **位置：** `apps/web/src/routes/SessionPage.tsx`（`ContextAside`）
+- **测试：** `apps/web/src/routes/SessionPage.artefatos-gerados.test.tsx`
+- **来源：** PR #288——面板不区分谁生成了每个工件，也不覆盖 ADR PR 和史诗/故事，只覆盖 dev 的 PR
+
+### RN-160 — "确认架构就绪"要求至少 1 个已晋升的故事 {#rn-160}
+
+"确认架构就绪"按钮（Arquiteto→Dev Lead 的 handoff，通过 `confirmArchitectureReadiness`）在项目 backlog 中存在至少 1 个状态不是 `draft` 的故事之前一直处于 `disabled`——也就是说，已经通过 `PromoteStoriesUseCase`/`TransitionStoryUseCase` 晋升（[RN-048](../business-rules/custo.md#rn-048)），只捕获了业务规则是不够的。`in_progress`/`done` 也算，因为只有经过 `ready` 才能到达那里。来源与 Backlog 标签页已经使用的*相同*（`useBacklog`，`ProjectBacklogTab.tsx`，相同的 queryKey `['backlog', projectId]`）——没有新的往返。在没有已晋升故事期间，按钮在 `title` 中显示解释原因的提示。
+
+- **位置：** `apps/web/src/routes/SessionPage.tsx`（`hasPromotedStory`，按钮的渲染）
+- **测试：** `apps/web/src/routes/SessionPage.readiness-arquitetura-exige-historia.test.tsx`
+- **来源：** 用户的请求——Arquiteto→Dev Lead 的 handoff 按钮没有任何闸门
+
+这只在*客户端*生效：直接的 HTTP 调用会忽略这条规则。由
+[RN-404](../business-rules.md#rn-404)（ADR 0094）关闭，它在后端重新校验。
+
+### RN-161 — 当有效角色已经授权时，接受给 Dev Lead 的 handoff 会串联执行的激活 {#rn-161}
+
+> **由 [RN-677](../business-rules.md#rn-677) 修订（ADR 0194，所有者在 10月1日的决定）：** 接受给 Dev Lead 的 handoff 不再串联执行的激活，对*所有*角色都是如此——接受只是让它来*规划*，激活的是对其计划（`propose_execution_plan`）的*批准*。下面的文本描述的是当时的合并方式。
+
+当 `toAgent === 'dev-lead'` *且*接受者的*有效*角色——从与已经授权"自动模式"（[RN-153](#rn-153)）以及审批/设置界面的同一个 `useCurrentWorkspaceWithRole()` 读取——是 `owner` 或 `maintainer` 时，`handleAcceptHandoff`（`SessionPage.tsx`）会自动串联 `activateExecution`。对于 `developer`（或尚未解析的角色），现有流程保持不变：接受不激活任何东西，"激活执行"仍作为第二个按钮。检查只在客户端——
+`POST .../execution/activate` 在后端仍要求 `maintainer`
+（[RN-137](../business-rules.md#rn-137)）；合并只是为本来就拥有两个角色的人省去一次多余的点击。复用"激活执行"按钮已经调用的*同一个* `handleActivateExecution`，它处理自己的错误（toast +
+`mensagemDaApi`）且从不重新抛出——避免一个迟来的激活错误被报告为"无法接受 handoff"。
+
+- **位置：** `apps/web/src/routes/SessionPage.tsx`
+  （`podeFundirHandoffComExecucao`、`handleAcceptHandoff`）
+- **测试：** `apps/web/src/routes/SessionPage.handoff-devlead-e-colapso.test.tsx`，
+  describe "problema 4"
+- **架构决策：** [ADR 0069](../adr/0069-fusao-condicional-do-handoff-com-a-ativacao-de-execucao.md)
+- **来源：** 用户的请求（已批准的设计）
+
+### RN-162 — Criativo 的结构化问题 {#rn-162}
+
+当 Criativo 在同一个回答中提出*多个*问题时，它可以以*结构化*格式发出列表，而不是让用户用自由文本逐项回答——新工具 `ask_structured_questions`
+（`apps/engine/lib/engine/harness/tools/ask_structured_questions.ex`，
+`:direct`），与 `emit_artifact` 并列注册。Schema：
+`{ questions: [{ id, label, type?, options? }] }`——`id` 唯一且非空，`label` 非空，`type` ∈ `text|textarea|select`（默认 `text`），当 `type: select` 时 `options` 必填且非空。写入 `chat.structured_question`。
+
+前端（`StructuredQuestionCard`，`SessionPage.tsx`）渲染一个每个问题一个字段的表单——根据 `type` 使用设计系统的 `Input`/`Textarea`/`Select`。`POST .../agents/:agent/structured-
+question/:questionSetId/answer`（`AnswerStructuredQuestionUseCase`）校验每个问题都有非空回答，写入
+`chat.structured_question_answered`（引用 `questionSetId` = 问题事件的 id），并*复用* `SendAgentMessageUseCase`——回答变成一条拼接的消息（"1. {label}: {resposta}\n2. ..."），就像用户在消息流中输入的一样；没有"agent 读取结构化回答"的新通道。一组问题只能被回答*一次*：重新提交以 409 被拒绝，表单甚至不会再出现——一旦存在之后带相同 `questionSetId` 的 `chat.structured_question_answered`，卡片就变为只读。
+
+- **位置：** `apps/engine/lib/engine/harness/tools/ask_structured_questions.ex`,
+  `apps/engine/lib/engine/agents/criativo_server.ex`,
+  `apps/api/src/application/use-cases/agents/answer-structured-question.use-case.ts`,
+  `apps/api/src/interfaces/http/agents/agents.controller.ts`,
+  `apps/web/src/routes/SessionPage.tsx`（`StructuredQuestionCard`）
+- **测试：** `apps/engine/test/engine/harness/tools/ask_structured_questions_test.exs`,
+  `apps/engine/test/engine/agents/criativo_server_test.exs`,
+  `apps/api/test/application/use-cases/agents/answer-structured-question.use-case.spec.ts`,
+  `apps/web/src/routes/SessionPage.perguntas-estruturadas.test.tsx`
+- **来源：** 用户的请求——聊天中没有结构化输入的先例
+
+### RN-163 — Criativo 兑现重试的承诺 {#rn-163}
+
+Criativo 的每个回合都运行一个**有界的工具使用循环**，上限为 **12** 次模型调用——与 PO 和 Arquiteto 已有的设计相同。以前每个回合只调用模型*一次*：工具结果被附加到内存中的历史，再也没有人读它，因此*"vou corrigir e tentar de novo"*这句话——代码中的字面量——只有在用户再发一条消息时才会兑现。对使用者来说，Criativo 在说它要修正之后就干脆不再回应了。
+
+四个后果，每一个都是规则：
+
+1. **工具错误是输入，而不是终点。** 原因作为 `tool` 消息回到模型，循环再次调用模型，模型在同一回合*之内*发出修正后的结果。
+2. **不宣布代码不会执行的东西。** 重试的句子在派发工具之后、在知道还剩多少圈的情况下决定：有剩余的圈数时，agent 说它会修正；没有时，它不作承诺。
+3. **工具失败变成了带来源的持久 `agent.error`**（[RN-059](../business-rules/custo.md#rn-059)）——原来是 `agent.response`，在事件日志中与正常回答无法区分。api 拒绝 `append_event` 时为 `origem: infra`；对于模型写出的 payload（错误的键、不是列表的 `origin`、重复的规则、系统发出的类型）为 `origem: modelo`。payload 携带 `tool` 和 `retentativa`。
+4. **上限耗尽不会以沉默结束。** 它变成带 `reason: "limite_de_iteracoes"` 和 `origem: modelo` 的 `agent.error`，与 `ToolLoop` 的 `toolloop.limit_reached` 相同的解读。事件名*不*被复用：这个 agent 不在 `ToolLoop` 内运行，那个事件会就谁产生了它撒谎。
+
+循环的两个边界，都是刻意的：成功的 `ask_structured_questions` **结束**回合（球在用户那边，回答会在未来的回合中返回——[RN-162](#rn-162)）；某一圈失败过的回合在消息流中以*汇总*的结果收尾，使最后一句话不是一圈之后已经被修正的错误。
+
+- **位置：** `apps/engine/lib/engine/agents/criativo_server.ex`
+  （`run_turn_capturing/3`、`continuar/4`、`emit_falha_de_ferramenta/4`、
+  `emit_falha_limite/2`）
+- **测试：** `apps/engine/test/engine/agents/criativo_server_test.exs`
+  （真正修正的循环、叙述出的上限耗尽、来源 `infra` 与 `modelo`、结束回合的结构化问题）
+- **来源：** `exp001` 项目中的真实使用——"o Criativo não respondeu depois
+  de dizer que iria corrigir e tentar de novo"
+
+### RN-169 — 项目选择代码存放的位置：本地或容器 {#rn-169}
+
+**由 [RN-421](../business-rules.md#rn-421) 修订（ADR 0104）**：`workspace_mode`/`local` 变成了有*三个*值的 `execution_mode`（`container`/`mounted`/`runner`，迁移 `0048`）——本条目的其余部分是历史，忠实于修订之前的有效内容。
+
+项目诞生时带有一个**workspace 模式**（`projects.workspace_mode`，迁移 `0043`），由它决定范围根从哪里推导：
+
+- **`container`**（默认，也是一直存在的行为）：由产品*托管*的文件夹，`join(PROJECT_WORKSPACES_ROOT, workspace_dir_name)`
+  （[RN-109](#rn-109)）；
+- **`local`**：*用户*的文件夹，位于 `projects.workspace_path` 的绝对路径。
+
+这一对由数据库中的 CHECK 约束绑定
+（`(workspace_mode = 'local') = (workspace_path IS NOT NULL)`），而不仅仅由用例绑定：该列由*两个*进程（api 和 engine）读取，并由不经过用例的 seed/回填脚本写入。没有路径的 `local` 会让终端范围指向无处；带路径的 `container` 会成为等待与第一个分歧的第二个事实来源。
+
+推导仍然**唯一**——`projectScopeRoot` 开始接收位置（`{workspaceDirName, workspaceMode, workspacePath}`）并选择分支；四个消费者（[RN-092](../business-rules/custo.md#rn-092)）中没有一个获得自己的校验。engine 在*查询*中解析同一个定位器（`container` 中是文件夹名，`local` 中是绝对路径），并通过开头的斜杠区分两者，这是无歧义的，因为文件夹名会对照 `^[A-Za-z0-9_-]{1,64}$` 校验。
+
+`local` 模式的两个明确后果：
+
+1. **Arquiteto 的镜像闸门（[RN-105](#rn-105)）*不*适用。**
+   **由 [RN-494](../business-rules.md#rn-494) 撤销（ADR 0135）**：豁免结束了——三种模式都开始要求在打开代码标签页之前作出镜像决定。本项的其余部分是历史。本地项目不启动容器，因此代码标签页会放行，而不等待一个永远不会发生的决定。豁免与 api 中的闸门位于同一漏斗中，界面也一致：当项目是本地时，`ProjectCodeTab` 甚至不去询问容器的状态（[RN-107](#rn-107)）——如果只有 api 豁免，标签页会因为一个不存在的决定而在界面上保持阻塞。
+2. **`permissions.json` 位于用户的文件夹中**，与代码在一起——因为策略必须从终端范围所授权的*同一*根读取。
+
+`workspace_mode` 不要与 `GitProviderName` `'local'` 混淆：一个说的是*代码*在磁盘上的位置，另一个说的是 git *仓库*的位置，两种选择是正交的。
+
+- **位置：** `apps/api/src/db/schema/iam.ts`（`projects`），
+  `apps/api/src/infrastructure/filesystem/project-workspaces-root.ts`
+  （`projectScopeRoot`），`apps/api/src/domain/iam/project.entity.ts`,
+  `apps/api/src/application/use-cases/git/read-project-code.use-case.ts`
+  （`portaoDoContainer`），`apps/web/src/routes/ProjectCodeTab.tsx`,
+  `apps/engine/lib/engine/projects/project.ex`,
+  `apps/engine/lib/engine/actions/workspace.ex`（`workspace_dir/2`），
+  `apps/engine/lib/engine/dev/worktree_cleanup.ex`（它原是手写的第二个推导，改为使用唯一的那个），
+  `apps/web/src/routes/NewProjectWizard.tsx`
+- **测试：** `apps/api/test/infrastructure/filesystem/project-workspaces-root.spec.ts`
+  （describe "projectScopeRoot no modo local"），
+  `apps/api/test/infrastructure/filesystem/fs-permissions-file-store.spec.ts`
+  （用户文件夹中的 permissions.json），
+  `apps/api/test/application/use-cases/iam/create-project-modo-de-workspace.spec.ts`,
+  `apps/api/test/application/use-cases/git/read-project-code.use-case.spec.ts`
+  （本地项目不经过闸门），
+  `apps/api/test/interfaces/http/iam/project-dto-modo-de-workspace.spec.ts`
+  （模式被冻结：PATCH 不改变它），
+  `apps/web/src/routes/ProjectCodeTab.test.tsx`（界面也豁免 gate），
+  `apps/engine/test/engine/actions/workspace_test.exs`
+  （describe "workspace_dir/2 com o localizador já resolvido"），
+  `apps/web/src/routes/NewProjectWizard.test.tsx`
+- **架构决策：** [ADR 0072](../adr/0072-projeto-local-ou-container.md)
+- **来源：** 用户的请求（他的决定，明确选择了自由路径的变体）
