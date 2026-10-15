@@ -1,3 +1,7 @@
+---
+traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
+---
+
 # ADR 0070 — Observability in the local Compose: metric and log, no trace
 
 - **Status:** accepted

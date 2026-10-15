@@ -1,3 +1,7 @@
+---
+traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
+---
+
 # ADR 0060 — The code-reading surface, contained and budgeted
 
 - **Status:** accepted
