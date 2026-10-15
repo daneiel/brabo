@@ -1,0 +1,59 @@
+{
+  "projectInsightsTab": {
+    "header": "Наблюдения",
+    "errorTitle": "Не удалось загрузить гипотезы.",
+    "loading": "Загрузка гипотез…",
+    "empty": "Гипотез пока нет — Psicólogo анализирует каждую завершённую сессию.",
+    "emptyPaused": "Psicólogo приостановлен — сессии не анализируются, пока он не будет снова включён.",
+    "summary_one": "{{count}} гипотеза · {{pending}} ждут решения",
+    "summary_few": "{{count}} гипотезы · {{pending}} ждут решения",
+    "summary_many": "{{count}} гипотез · {{pending}} ждут решения",
+    "summary_other": "{{count}} гипотезы · {{pending}} ждут решения",
+    "analysisStrip": {
+      "tier": "сортировка {{tier}}",
+      "sessionLabel": "сессия {{id}}",
+      "metaEvents_one": "{{count}} событие",
+      "metaEvents_few": "{{count}} события",
+      "metaEvents_many": "{{count}} событий",
+      "metaEvents_other": "{{count}} события",
+      "metaHypotheses_one": "{{count}} гипотеза",
+      "metaHypotheses_few": "{{count}} гипотезы",
+      "metaHypotheses_many": "{{count}} гипотез",
+      "metaHypotheses_other": "{{count}} гипотезы",
+      "reanalyzeButton": "Проанализировать заново",
+      "reanalyzeTitleDisabled": "Psicólogo приостановлен глобально",
+      "reanalyzeTitleEnabled": "Запускает анализ заново и расходует бюджет; предыдущий остаётся в истории"
+    },
+    "pausedNotice": "Psicólogo приостановлен глобально по решению команды — новых повторных анализов пока не будет. Уже выданные гипотезы остаются здесь.",
+    "toasts": {
+      "acceptError": "Не удалось принять гипотезу",
+      "dismissError": "Не удалось отклонить гипотезу",
+      "genericErrorTitle": "Ошибка",
+      "reanalyzeQueuedTitle": "Повторный анализ поставлен в очередь",
+      "reanalyzeQueuedMessage": "Psicólogo проанализирует эту сессию заново.",
+      "psychologistPausedTitle": "Psicólogo приостановлен",
+      "psychologistPausedFallback": "Psicólogo отключён глобально.",
+      "reanalyzeError": "Не удалось поставить повторный анализ в очередь"
+    }
+  },
+  "hypothesisCard": {
+    "status": {
+      "accepted": "принята",
+      "dismissed": "отклонена",
+      "proposed": "предложена"
+    },
+    "confidence": "уверенность {{percent}}%",
+    "disclosureTitle": "На что опирался Psicólogo",
+    "disclosureTrailing_one": "{{count}} свидетельство",
+    "disclosureTrailing_few": "{{count}} свидетельства",
+    "disclosureTrailing_many": "{{count}} свидетельств",
+    "disclosureTrailing_other": "{{count}} свидетельства",
+    "observationLabel": "Наблюдение",
+    "suggestionLabel": "Предложение",
+    "evidenceLabel": "Свидетельства",
+    "terminationLabel": "Аварийное завершение · {{cause}}",
+    "terminationState": "Состояние на тот момент: {{state}}",
+    "acceptButton": "Принять",
+    "dismissButton": "Отклонить"
+  }
+}
