@@ -1,5 +1,5 @@
 ---
-traducao_de: 23e727d97992c1974a3df731360a293b67fd669c
+traducao_de: b0a0b069960bcdc9bc59daf649a8cda2df7727f9
 ---
 
 # ADR 0104 — `execution_mode` in three values, and the workspace is born `unverified` when the runner is the one who verifies it
