@@ -1,99 +1,93 @@
-# ADR 0108 — In `runner` mode, the project is born when clicking "Browse folder...", not only at confirmation
+# ADR 0108 — No modo `runner`, o projeto nasce ao clicar em "Navegar pasta...", não só na confirmação
 
-- **Status:** Accepted
-- **Date:** 2026-08-22
-- **Context:** closes the gap that [ADR 0107](0107-navegacao-de-pasta-local-via-o-runner.md) had already declared, in its own Consequences section
-- **Extends (without editing):** [ADR 0104](0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md), [ADR 0107](0107-navegacao-de-pasta-local-via-o-runner.md)
+- **Status:** Aceito
+- **Data:** 2026-08-22
+- **Contexto:** fecha a lacuna que o [ADR 0107](0107-navegacao-de-pasta-local-via-o-runner.md) já tinha declarado, na própria seção de Consequências
+- **Estende (sem editar):** [ADR 0104](0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md), [ADR 0107](0107-navegacao-de-pasta-local-via-o-runner.md)
 
-## Context
+## Contexto {#context}
 
-ADR 0107 delivered local folder navigation via the Runner, but it
-explicitly declared, in its Consequences section, an accepted architectural
-gap: the Phoenix channel ticket (`terminal:<projectId>`) is issued PER
-PROJECT, and on the creation screen (`NewProjectWizard.tsx`) the project is
-only born at the confirmation step (`handleConfirm`) — so the "Browse
-folder..." button on the "Where the code will live" step had nothing to
-anchor the ticket to, and always fell into the declared state ("available
-after the project exists"). ADR 0107 itself listed the two possible ways
-out: "(a) a ticket/channel mode for the Runner that isn't anchored to a
-project, or (b) the project being created earlier in the wizard flow
-(before confirmation)" — and deferred the choice to "a future delivery the
-product owner prioritizes."
+O ADR 0107 entregou a navegação de pasta local via o Runner, mas declarou
+explicitamente, na seção de Consequências, uma lacuna arquitetural aceita: o
+ticket do canal Phoenix (`terminal:<projectId>`) é emitido POR PROJETO, e na
+tela de criação (`NewProjectWizard.tsx`) o projeto só nasce no passo de
+confirmação (`handleConfirm`) — então o botão "Navegar pasta..." do passo
+"Onde o código vai morar" não tinha a que ancorar o ticket, e caía sempre no
+estado declarado ("disponível depois que o projeto existir"). O próprio ADR
+0107 listou as duas saídas possíveis: "(a) um modo de ticket/canal para o
+Runner não ancorado em projeto, ou (b) o projeto ser criado mais cedo no
+fluxo do assistente (antes da confirmação)" — e adiou a escolha para "uma
+entrega futura que o dono do produto priorizar".
 
-This is that delivery, tested live by the product owner while creating a
-real project: unable to navigate folders on the creation screen, he was
-forced to type the path from memory — exactly the friction ADR 0107 existed
-to eliminate, except the gap was left right where navigation would make the
-biggest difference.
+Esta é essa entrega, testada ao vivo pelo dono do produto criando um projeto
+real: sem conseguir navegar pastas na tela de criação, ele foi forçado a
+digitar o caminho de memória — exatamente o atrito que o ADR 0107 existia
+para eliminar, só que a lacuna ficou justamente onde a navegação faria mais
+diferença.
 
-Option (b) was the one chosen, not (a): a ticket mode without a project
-would change the channel's contract (`Engine.Runners.Registry`, today keyed
-by `projectId`) for the entire Runner surface — exec, PTY, and
-navigation — just to solve a use case that already has a cheaper way out:
-ADR 0104 itself already establishes that `createProject` in `runner` mode
-is a LIGHT operation (just the project row — no remote repository, no
-Gitflow bootstrap) and that `workspacePath` in that mode is **provisional
-by design**: the real runner, on connecting, OVERWRITES the path with what
-it reports from the host (RN-423). Creating the project earlier doesn't
-introduce a second source of truth about the path — the runner remains the
-only one.
+A opção escolhida foi a (b), não a (a): um modo de ticket sem projeto mudaria
+o contrato do canal (`Engine.Runners.Registry`, hoje chaveado por
+`projectId`) para toda a superfície do Runner — exec, PTY e navegação — só
+para resolver um caso de uso que já tem saída mais barata: o próprio ADR 0104
+já estabelece que `createProject` no modo `runner` é uma operação LEVE (só a
+linha do projeto — sem repositório remoto, sem bootstrap do Gitflow) e que o
+`workspacePath` nesse modo é **provisório por desenho**: o runner real, ao
+conectar, SOBRESCREVE o caminho com o que ele informa do host (RN-423). Criar
+o projeto mais cedo não introduz uma segunda fonte de verdade sobre o
+caminho — o runner continua sendo a única.
 
-## Decision
+## Decisão {#decision}
 
-**Scope: only `execution_mode = 'runner'`.** The `mounted` mode continues
-with `projectId: null` at the workspace step, untouched — there the disk
-validation runs INSIDE the api container, at creation time
-(RN-422/RN-170), and creating early with a path not yet typed would return
-the refusal message (which teaches how to mount the folder) at a moment
-when the user hasn't even started thinking about the path yet. `runner`
-doesn't have this problem: creation in that mode only validates the
-LEXICAL part of the path (ADR 0104, item 2), never touches disk.
+**Escopo: só `execution_mode = 'runner'`.** O modo `mounted` continua com
+`projectId: null` no passo do workspace, intocado — ali a validação de disco
+roda DENTRO do container da api, no momento da criação (RN-422/RN-170), e
+criar cedo com um caminho ainda não digitado devolveria a mensagem de recusa
+(que ensina a montar a pasta) num momento em que o usuário nem começou a
+pensar no caminho. `runner` não tem esse problema: a criação nesse modo só
+valida a parte LÉXICA do caminho (ADR 0104, item 2), nunca toca o disco.
 
-1. **`NewProjectWizard.tsx` creates the project when "Browse folder..." is
-   clicked**, no longer only at confirmation — but only when the mode is
-   `runner`. If the path field is still empty, it uses a lexically valid
-   and clearly provisional placeholder (`/workspace-a-confirmar`) instead of
-   blocking the click — the real runner overwrites this value when it
-   connects (RN-423), so the placeholder never ends up being the truth
-   about the path, it only unblocks navigation.
-2. **Reuse by identity SNAPSHOT, not by "I already created some project
-   before."** The snapshot stores only `name`/`externalId`/`adotando` — the
-   fields that decide WHICH project is being created — never
-   `caminhoLocal`, because the whole purpose of navigating is precisely to
-   REFINE the path after a project already exists: including it in the
-   snapshot would invalidate the reuse on every click. As long as the
-   identity doesn't change, a second click on "Browse folder..." and the
-   final confirmation REUSE the same project; changing the name (or going
-   back and switching the repository being adopted) invalidates the
-   snapshot and the next navigation creates another one.
-3. **`handleConfirm` reuses the project created while browsing, when the
-   snapshot still matches** — it never calls `createProject` again for the
-   same "Provision"/"View the plan" click. Two rows for the same project
-   would be a bug, not a feature.
+1. **`NewProjectWizard.tsx` cria o projeto ao clicar em "Navegar pasta..."**,
+   não mais só na confirmação — mas só quando o modo é `runner`. Se o campo
+   de caminho ainda estiver vazio, ele usa um marcador lexicamente válido e
+   claramente provisório (`/workspace-a-confirmar`) em vez de bloquear o
+   clique — o runner real sobrescreve esse valor ao conectar (RN-423), então
+   o marcador nunca acaba sendo a verdade sobre o caminho, só destrava a
+   navegação.
+2. **Reuso por RETRATO de identidade, não por "já criei algum projeto
+   antes".** O retrato guarda só `name`/`externalId`/`adotando` — os campos
+   que decidem QUAL projeto está sendo criado —, nunca `caminhoLocal`,
+   porque todo o propósito de navegar é justamente REFINAR o caminho depois
+   que um projeto já existe: incluí-lo no retrato invalidaria o reuso a cada
+   clique. Enquanto a identidade não muda, um segundo clique em "Navegar
+   pasta..." e a confirmação final REUSAM o mesmo projeto; mudar o nome (ou
+   voltar e trocar o repositório adotado) invalida o retrato, e a próxima
+   navegação cria outro.
+3. **`handleConfirm` reusa o projeto criado durante a navegação, quando o
+   retrato ainda bate** — nunca chama `createProject` de novo para o mesmo
+   clique em "Provisionar"/"Ver o plano". Duas linhas para o mesmo projeto
+   seriam um defeito, não uma funcionalidade.
 
-## Consequences
+## Consequências {#consequences}
 
-- **An orphaned "not provisioned" project, if the wizard is closed without
-  finishing.** Clicking "Browse folder..." and closing the wizard without
-  reaching "Provision" leaves a row created, with no repository and no
-  bootstrap. This is the accepted side effect, and the reason for accepting
-  it is that **it isn't a NEW state**: any interrupted creation today — the
-  tab closed between confirmation and the provisioning screen loading, for
-  example — already produces the same result. The product doesn't have a
-  mechanism today for cleaning up orphaned projects (not even for this
-  pre-existing case), and this ADR doesn't create one — it just stops being
-  a rarer case, because creation now happens at an earlier step in the
-  flow. If a cleanup mechanism comes to exist, it resolves both cases with
-  the same rule.
-- **`UpdateProjectDto` remains without `executionMode`/`workspacePath`.**
-  ADR 0104's finding (that converting between modes for an EXISTING project
-  isn't a trivial PATCH) doesn't change here — this delivery doesn't
-  introduce any editing, it only moves up the moment of the FIRST write.
-- **`FolderBrowserModal` gains a second reason to receive a non-null
-  `projectId` before confirmation**, but the component's contract doesn't
-  change: it still doesn't know WHETHER the project it received is final or
-  provisional — the wizard decides that, in the snapshot.
-- **This ADR does NOT reopen ADR 0107's decision (a)** (ticket without a
-  project): it continues not to exist, and continues not being necessary —
-  the Runner's exec and PTY surface keeps requiring a real project, as it
-  always did.
+- **Um projeto órfão "não provisionado", se o assistente for fechado sem
+  terminar.** Clicar em "Navegar pasta..." e fechar o assistente sem chegar
+  a "Provisionar" deixa uma linha criada, sem repositório e sem bootstrap.
+  Esse é o efeito colateral aceito, e o motivo de aceitá-lo é que **ele não é
+  um estado NOVO**: qualquer criação interrompida hoje — a aba fechada entre
+  a confirmação e o carregamento da tela de provisionamento, por exemplo — já
+  produz o mesmo resultado. O produto não tem hoje mecanismo de limpeza de
+  projetos órfãos (nem para esse caso preexistente), e este ADR não cria um —
+  só deixa de ser um caso mais raro, porque a criação agora acontece num
+  passo anterior do fluxo. Se um mecanismo de limpeza vier a existir, ele
+  resolve os dois casos com a mesma regra.
+- **`UpdateProjectDto` continua sem `executionMode`/`workspacePath`.** A
+  constatação do ADR 0104 (que converter entre modos um projeto EXISTENTE não
+  é um PATCH trivial) não muda aqui — esta entrega não introduz edição
+  nenhuma, só antecipa o momento da PRIMEIRA escrita.
+- **`FolderBrowserModal` ganha um segundo motivo para receber um `projectId`
+  não nulo antes da confirmação**, mas o contrato do componente não muda: ele
+  continua sem saber SE o projeto que recebeu é final ou provisório — quem
+  decide isso é o assistente, no retrato.
+- **Este ADR NÃO reabre a decisão (a) do ADR 0107** (ticket sem projeto): ela
+  continua não existindo, e continua não sendo necessária — a superfície de
+  exec e PTY do Runner segue exigindo um projeto real, como sempre exigiu.
