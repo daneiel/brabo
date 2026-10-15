@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- A lateral do site agrupa os ADRs por tema (derivado de `docs/adr/temas.yml`) e a Explicação em cinco grupos por assunto (AT-560).
 - A fonte da documentação passa a ser pt-BR também nas 53 páginas que ainda
   estavam em inglês (AT-549, lote 1, ADR 0216): o runbook, as regras de custo,
   as missões, 11 páginas de `explanation/`, `architecture.md`,
