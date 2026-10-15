@@ -856,6 +856,17 @@ Pages, embora o job dele ainda se chame "Publish to GitHub Pages".
 O desenho inteiro, com as alternativas descartadas, está no
 [ADR 0034](../adr/0034-documentacao-publicada-por-degrau.md).
 
+## As cores do site vêm do produto {#site-colors-come-from-the-product}
+
+O `website/src/css/custom.css` IMPORTA `design/tokens.css` — a mesma fonte
+de cor do `apps/web` (ADR 0181) — e só aponta os `--ifm-*` do Infima para os
+tokens: escuro preto, claro branco, primary terracota (`--accent`), realce de
+código pelos `--syntax-*`. Nenhum hex é copiado. As fontes ficam as de sistema
+de propósito: o site não carrega as famílias que os `--font-*` nomeiam.
+`scripts/docs/contraste-do-site.spec.ts` resolve os `--ifm-*` de texto até hex
+nos dois temas e reprova abaixo de 4,5:1 contra o fundo (e reprova como CEGO
+se nada resolver).
+
 ## Rodando na sua máquina {#running-it-on-your-machine}
 
 `website/` tem `pnpm-lock.yaml` próprio desde o [ADR 0117](../adr/0117-lockfile-proprio-para-o-website.md) —

@@ -6,6 +6,10 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- O site de documentação usa as cores do produto nos dois temas (escuro
+  preto, claro branco, primary terracota): importa `design/tokens.css` em vez
+  de copiar uma paleta, com realce de código pelos tokens e contraste de 4,5:1
+  cobrado por teste (AT-561).
 - O README (e as traduções) ficou só com a visão do produto: estrutura, banco,
   testes, observabilidade, produção, Kubernetes, CI, frontend, convenções e
   estado saíram, e o detalhe técnico mora no site (AT-558).

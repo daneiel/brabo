@@ -1,6 +1,19 @@
 import type * as Preset from '@docusaurus/preset-classic';
 import type { Config } from '@docusaurus/types';
-import { themes as prismThemes } from 'prism-react-renderer';
+import type { PrismTheme } from 'prism-react-renderer';
+
+const TEMA_DO_CODIGO: PrismTheme = {
+  plain: { color: 'var(--syntax-text)', backgroundColor: 'var(--code-bg)' },
+  styles: [
+    { types: ['comment', 'prolog', 'doctype', 'cdata'], style: { color: 'var(--syntax-comment)', fontStyle: 'italic' } },
+    { types: ['keyword', 'tag', 'selector', 'important', 'atrule'], style: { color: 'var(--syntax-keyword)' } },
+    { types: ['function', 'attr-name'], style: { color: 'var(--syntax-function)' } },
+    { types: ['string', 'char', 'attr-value', 'regex', 'url'], style: { color: 'var(--syntax-string)' } },
+    { types: ['number', 'boolean', 'constant', 'symbol'], style: { color: 'var(--syntax-number)' } },
+    { types: ['class-name', 'builtin', 'property'], style: { color: 'var(--syntax-type)' } },
+    { types: ['operator', 'punctuation'], style: { color: 'var(--syntax-operator)' } },
+  ],
+};
 import { reescreverLinkDeGap } from '../scripts/docs/links-do-locale.mjs';
 
 // A branch que o botão "editar esta página" aponta. PRs de doc miram `dev`;
@@ -241,7 +254,7 @@ const config: Config = {
         specs: [
           { spec: '../docs/reference/openapi.json', route: '/reference/api/' },
         ],
-        theme: { primaryColor: '#c4552d' },
+        theme: { primaryColor: '#a4502c', primaryColorDark: '#c8744f' },
       },
     ],
   ],
@@ -256,6 +269,7 @@ const config: Config = {
           },
         }
       : {}),
+    mermaid: { theme: { light: 'neutral', dark: 'dark' } },
     colorMode: {
       defaultMode: 'dark',
       respectPrefersColorScheme: true,
@@ -353,8 +367,9 @@ const config: Config = {
         'Ferramentas de terceiros mantêm as próprias licenças — ver Avisos de terceiros.',
     },
     prism: {
-      theme: prismThemes.github,
-      darkTheme: prismThemes.dracula,
+      // Um tema só, sobre os tokens: os dois modos trocam pelas variáveis.
+      theme: TEMA_DO_CODIGO,
+      darkTheme: TEMA_DO_CODIGO,
       additionalLanguages: ['bash', 'json', 'sql', 'elixir', 'yaml'],
     },
   } satisfies Preset.ThemeConfig,
