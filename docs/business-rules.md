@@ -19540,8 +19540,8 @@ OBRIGATÓRIAS da `coverageMatrix` (e portanto reprovar entrega).
   `:715` (`plano_de_teste_da_entrega`), `:716` (`plano_ja_emitido`),
   `:721` (`arquivos_alterados`);
   `apps/engine/lib/engine/gates/qa_estrategia_agent.ex:86` (`run`),
-  `:104` (`token_budget_micros`), `:175` (`descrever_arquivos`);
-  `apps/engine/lib/engine/gates/qa_automacao_agent.ex:189` (`com_o_plano`);
+  `:104` (`token_budget_micros`), `:188` (`descrever_arquivos`);
+  `apps/engine/lib/engine/gates/qa_automacao_agent.ex:207` (`com_o_plano`);
   `apps/engine/lib/engine/agents/dev_lead_tools.ex:457` (`run_assessment`),
   `:538` (`propor_parecer`);
   `apps/engine/lib/engine/harness/artifact_schemas.ex:59` (`taskId`);
@@ -22358,7 +22358,7 @@ sem dizer qual.
 
   `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:82` (`secao_da_forma`),
   `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:195`
-  (`tarefasIrmas`) e `apps/engine/lib/engine/gates/qa_automacao_agent.ex:186`
+  (`tarefasIrmas`) e `apps/engine/lib/engine/gates/qa_automacao_agent.ex:204`
   (`com_o_recorte`)
 - **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs` (desde
   a AT-479 também "regra que quantifica por item pede a conferência da forma da
@@ -23089,7 +23089,7 @@ sem dizer qual.
   revisão segue sem plano, como já seguia quando o plano falha; a Automação
   também normaliza os critérios que recebe.
 - **Onde:** `apps/engine/lib/engine/gates/hooks/termination_plano_de_teste.ex:23`
-  (`criterios_executaveis`), `apps/engine/lib/engine/gates/qa_estrategia_agent.ex:216`
+  (`criterios_executaveis`), `apps/engine/lib/engine/gates/qa_estrategia_agent.ex:231`
   (`emit_returning`)
 - **Teste:** `apps/engine/test/engine/gates/qa_estrategia_agent_test.exs`
   ("critérios em string JSON viram lista: o plano é gravado e devolvido como lista")
@@ -24773,3 +24773,23 @@ sem dizer qual.
   aparece no chat do Criativo"; falhas: "time todo já em automático: nada
   aparece", "sem execução no projeto: nada aparece e nem a leitura acontece")
 - **Origem:** AT-540
+
+### RN-890 — O QA cobra o código de saída do comando de linha, na recusa também {#rn-890}
+
+- **Regra:** a instrução do QA de Automação manda conferir, no teste que
+  prova um comando de linha da entrega (CLI, script do `package.json`), o
+  código de saída 0 no caminho feliz e diferente de 0 quando o comando recusa
+  a entrada; teste sem essa conferência na recusa é regra sem cobertura e vai
+  para `itens`. A instrução da QA-estratégia pede, em `criteriosExecutaveis`,
+  esses dois critérios para todo comando que recusa entrada. É instrução de
+  agente: nenhum gate novo, nenhuma mudança de veredito ou de estrutura.
+- **Onde:** `apps/engine/lib/engine/gates/qa_automacao_agent.ex:142`
+  (`instrucao_de_codigo_de_saida`),
+  `apps/engine/lib/engine/gates/qa_estrategia_agent.ex:129`
+  (`instrucao_de_codigo_de_saida`)
+- **Teste:** `apps/engine/test/engine/gates/qa_automacao_agent_test.exs` ("a
+  instrução cobra código de saída 0 no feliz e diferente de 0 na recusa");
+  `apps/engine/test/engine/gates/qa_estrategia_agent_test.exs` ("os arquivos
+  da entrega entram na mensagem")
+- **Origem:** AT-542 (TP-01, 17ª: `npm run user:create` recusava a senha e
+  saía com 0)

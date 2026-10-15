@@ -133,6 +133,22 @@ defmodule Engine.Gates.QaAutomacaoAgent do
   # NEGÓCIO sob revisão (`enviar(payload)`) em vez de usar uma ferramenta — o
   # loop encerrava sem parecer. O DevAgent tem o AGENTS.md do repositório
   # guiando cada passo; o QA não tinha nada equivalente.
+  @doc """
+  RN-890 (AT-542): ao provar um comando de linha do entregável (CLI, script
+  do `package.json`), o QA confere o código de saída no caminho feliz (0) E
+  na recusa de entrada (diferente de 0). Instrução, não gate novo.
+  """
+  @spec instrucao_de_codigo_de_saida() :: String.t()
+  def instrucao_de_codigo_de_saida do
+    """
+    Comando de linha da entrega (CLI, script do `package.json`): o teste que
+    o prova confere o CÓDIGO DE SAÍDA — 0 no caminho feliz e DIFERENTE de 0
+    quando o comando recusa a entrada. Recusa que sai com 0 engana quem o
+    chama (script, CI); teste que não confere o código de saída na recusa é
+    regra sem cobertura e entra em `itens`.
+    """
+  end
+
   defp initial_message(task, story) do
     regras = Enum.concat(story["rf"] || [], story["rnf"] || [])
 
@@ -159,6 +175,8 @@ defmodule Engine.Gates.QaAutomacaoAgent do
       3. `emit_qa_verdict` com uma linha de `coverageMatrix` por regra —
          `rule` (o texto da regra), `tests` (os arquivos que a cobrem, lista
          vazia se nenhum) e `covered` (true/false).
+
+      #{instrucao_de_codigo_de_saida()}
 
       Veredito: `approved` só se a suite saiu com exit 0 E toda regra tem pelo
       menos um teste. Se alguma regra ficou sem teste, use
