@@ -1,5 +1,5 @@
 ---
-traducao_de: 1b6809016dba7f83632a49a7ee233407f72932c0
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
 # ADR 0148 — The agents' artifacts projected to files, in a `docs/` folder

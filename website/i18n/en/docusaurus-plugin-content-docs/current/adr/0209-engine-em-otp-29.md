@@ -1,5 +1,5 @@
 ---
-traducao_de: 660c5d03bfdbd1589e922ea13f2e31c74ea9a13a
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
 # ADR 0209 — The engine moves up to Elixir 1.20.4 / OTP 29.1.1

@@ -1,5 +1,5 @@
 ---
-traducao_de: a58e2abe46dee1d68d49868a5df5911c6c19683e
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
 # ADR 0217 — QA 处于测试阶段时，`dev` → `qa` 自动晋升

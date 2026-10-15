@@ -1,5 +1,5 @@
 ---
-traducao_de: 1f58364ef056b293fa60dc3aa0ddc5731b64f515
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
 # ADR 0215 — The project's decision reaches the dev and QA

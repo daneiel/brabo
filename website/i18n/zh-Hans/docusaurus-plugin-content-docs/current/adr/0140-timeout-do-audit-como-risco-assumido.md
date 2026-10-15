@@ -1,5 +1,5 @@
 ---
-traducao_de: 13603dddc11848b2458bb703718cbc1709f9c47d
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
 # ADR 0140 — `pnpm audit` 反复超时是承担的风险；发现问题仍然失败

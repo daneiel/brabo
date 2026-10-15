@@ -1,5 +1,5 @@
 ---
-traducao_de: 285d458e5d984ace5ddf0fb39263b3b1ae7e8ff0
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
 # ADR 0146 — 在 bootstrap 中经同意设定的 base，以及 `mounted` 作为本地默认值

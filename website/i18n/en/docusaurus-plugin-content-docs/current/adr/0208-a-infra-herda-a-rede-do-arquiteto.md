@@ -1,5 +1,5 @@
 ---
-traducao_de: 8d6d3ff7815b9c1a57462ad2061380c148299f42
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
 # ADR 0208 — Infra inherits the network the Arquiteto declared

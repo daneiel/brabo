@@ -1,5 +1,5 @@
 ---
-traducao_de: 14e6e1b2b934a17e2fb2f0bd237cbfd802c298e0
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
 # ADR 0132 — Golden-set попаданий RAG и gate `rag-acertivo`

@@ -1,5 +1,5 @@
 ---
-traducao_de: 8841a171692a9823fb48590d1b9cbe883920fab4
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
 # ADR 0197 — Образ workflows берётся из compose, и Dependabot для образов включается

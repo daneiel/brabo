@@ -1,5 +1,5 @@
 ---
-traducao_de: f97894b6489d2e6970b87610f36b64414277b26d
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
 # ADR 0200 — 模块间合约成为 Arquiteto 的版本化工件，dev agent 读取它而不是别人的 worktree

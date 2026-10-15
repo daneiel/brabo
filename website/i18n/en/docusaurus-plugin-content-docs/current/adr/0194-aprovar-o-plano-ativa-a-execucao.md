@@ -1,5 +1,5 @@
 ---
-traducao_de: fe6d073c10c82c4a1844c7be6fc497a0a5733af9
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
 # ADR 0194 — Approving the Dev Lead's plan activates execution, and the task gains the module it assigns

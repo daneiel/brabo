@@ -1,5 +1,5 @@
 ---
-traducao_de: a6158ee3620a338091376dafb0ce4c4e3b04436c
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
 # ADR 0190 — Infra 在接受 handoff 时启动容器，由服务器执行这一步并预置自主度，并由它交接给 Dev Lead

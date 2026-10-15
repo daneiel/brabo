@@ -1,5 +1,5 @@
 ---
-traducao_de: 5130851198a3ebcb5cb5bdc3e6f5c0a02f2a4935
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
 # ADR 0177 — 回答的语言存放在三个地方——账户、会话和项目——采用开放的 BCP-47 列表，绝不放在 `users.locale` 中

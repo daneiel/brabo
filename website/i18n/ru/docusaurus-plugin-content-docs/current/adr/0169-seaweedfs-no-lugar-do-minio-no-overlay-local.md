@@ -1,5 +1,5 @@
 ---
-traducao_de: 7b4435d8e9a6289bb11b8029fe64df5e4264ebf8
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
 # ADR 0169 — Назначением S3 локального overlay перестаёт быть MinIO и становится SeaweedFS

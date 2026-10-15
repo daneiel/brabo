@@ -1,5 +1,5 @@
 ---
-traducao_de: 89cbb17db55cf80033647930d80fa91cf9fecfd6
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
 # ADR 0192 — The test plan is born after the dev's delivery, and the `implementavel` gate starts judging itself on the story and the `module_map`

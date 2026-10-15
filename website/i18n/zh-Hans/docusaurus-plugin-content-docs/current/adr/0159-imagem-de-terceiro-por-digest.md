@@ -1,5 +1,5 @@
 ---
-traducao_de: cf708bdefd987dda6e1cb40b3aa9e520113eb6b8
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
 # ADR 0159 — 第三方镜像按 digest 引入，lint 让忘记的人失败

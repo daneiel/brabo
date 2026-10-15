@@ -1,5 +1,5 @@
 ---
-traducao_de: 8430361a5eb1565035e5bda35db3531f112b2752
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
 # ADR 0203 — 通过浏览器配置 runner 的流程退役，路径改为安装程序

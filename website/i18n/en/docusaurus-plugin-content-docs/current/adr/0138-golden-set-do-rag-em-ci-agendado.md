@@ -1,5 +1,5 @@
 ---
-traducao_de: 1eb71c3229b3ec8770369028759fe2f4281495a4
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
 # ADR 0138 — The RAG golden-set now runs in CI, scheduled — and remains `warn`

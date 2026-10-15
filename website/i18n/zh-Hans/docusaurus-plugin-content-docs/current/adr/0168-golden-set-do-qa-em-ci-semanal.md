@@ -1,5 +1,5 @@
 ---
-traducao_de: efa7cf0930491b8af046a8f8972a5856c69f5aca
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
 # ADR 0168 — QA 的 golden-set 开始在 CI 中按周定时运行

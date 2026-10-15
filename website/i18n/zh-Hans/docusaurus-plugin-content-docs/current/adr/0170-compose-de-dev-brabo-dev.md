@@ -1,5 +1,5 @@
 ---
-traducao_de: e2a7fe26f22f39affff778e1bf6efb9bdc7f3be1
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
 # ADR 0170 — 开发用 compose 改名为 `brabo-dev`，开发环境拒绝在安装旁边启动

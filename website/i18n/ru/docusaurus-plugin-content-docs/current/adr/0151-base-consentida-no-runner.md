@@ -1,5 +1,5 @@
 ---
-traducao_de: 213fbcc7470e8f4bae01648d030a1e3437751cf6
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
 # ADR 0151 — Согласованная база в runner и создание папки через канал

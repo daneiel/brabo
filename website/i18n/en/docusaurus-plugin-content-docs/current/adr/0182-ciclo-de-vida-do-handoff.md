@@ -1,5 +1,5 @@
 ---
-traducao_de: bc37a486a802cb4f98fc31c0b53619d72c5a77ce
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
 # ADR 0182 — The handoff offer gains a lifecycle: one pending per destination, and `superseded`

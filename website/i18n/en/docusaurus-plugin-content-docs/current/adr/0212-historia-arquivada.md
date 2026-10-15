@@ -1,5 +1,5 @@
 ---
-traducao_de: 122ec00d6ff5390cc968dd5404c70d8661e896e4
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
 # ADR 0212 — The archived story: a column, not a state of the machine

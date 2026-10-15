@@ -3,9 +3,9 @@ id: adr-index
 title: Architectural decisions (ADR)
 sidebar_label: ADR index
 sidebar_position: 0
-description: Brabo's 213 architectural decision records, grouped by theme, with what each one decided.
+description: Brabo's 214 architectural decision records, grouped by theme, with what each one decided.
 keywords: [ADR, architectural decision, architecture, history]
-traducao_de: 7ab25176352c551c329517531f17c7db6c79f92f
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
 # Architectural decisions
@@ -349,12 +349,14 @@ How documentation is generated, verified and published.
 | [0202](0202-o-indice-de-adr-por-tema.md) | The ADR index is grouped by THEME, with the theme OUTSIDE the ADR (AT-137, owner decision 01/10, finding `BRB-026`): `docs/adr/temas.yml` holds the closed list of 15 themes and one main theme per ADR, so no accepted ADR is edited, not even to gain frontmatter. The index is CHECKED, not generated — its one-line descriptions stay curated — and `docs:check` (`scripts/docs/temas-de-adr.mjs`, each rule proved by mutation) fails an ADR without a theme, a theme not in the list, a theme with no ADR, and an index row under the wrong section, outside any section or out of numeric order. The taxonomy comes from the product's fronts, not from the phases or the code folders, and is the lane's proposal for the owner to review; a new ADR's author picks its theme in the same PR, and going past 15 themes takes an ADR |
 | [0206](0206-referencia-da-api-numa-pagina-redoc.md) | The API reference becomes ONE server-rendered Redoc page (redocusaurus) at `/reference/api/`, revising the publishing half of [0033](0033-referencia-de-api-gerada-do-openapi.md): the OpenAPI plugin and theme dragged `postman-collection` → `@faker-js/faker@5.5.3` (High alert #43) with no fixable path. The per-operation pages, tag sidebar, per-operation URLs, playground and cURL snippets go away by owner decision; `api-render-check.mjs` now asserts the title and one SSR section per operation |
 | [0216](0216-quatro-idiomas-com-pt-br-como-fonte.md) | Four languages for docs and UI — pt-BR becomes the SOURCE and default, with English, Russian and Simplified Chinese as translations in phases, measured parity and a per-page notice for untranslated or stale pages (AT-545, owner decisions 15/10) |
+| [0218](0218-titulo-de-adr-com-prefixo.md) | Every ADR is titled "ADR NNNN — title": the H1 gets the `ADR` prefix, a 4-digit number and an em dash; the file name (the URL) does not change, and normalizing the title label is not editing the decision (AT-559, owner decision 15/10) |
 
 ## The convention
 
 - **One file per decision**, at `docs/adr/NNNN-short-title.md`, with
-  sequential 4-digit numbering. **No number reuse**, not even when an ADR
-  is superseded — the next one is **0218**.
+  sequential 4-digit numbering, and the title `# ADR NNNN — <title>`
+  ([0218](0218-titulo-de-adr-com-prefixo.md)). **No number reuse**, not even when an ADR
+  is superseded — the next one is **0219**.
 - **One theme per decision**, chosen by whoever writes the ADR, in the same
   PR: a line in `docs/adr/temas.yml` and the index row under that theme's
   section, in numeric order. The reviewer confirms it. A new theme is a

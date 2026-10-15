@@ -1,5 +1,5 @@
 ---
-traducao_de: acad6bd367a09a0b48f20de94df3482e772dc258
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
 # ADR 0187 — runner 的独立二进制不再承诺 Windows

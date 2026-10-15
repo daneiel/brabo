@@ -1,5 +1,5 @@
 ---
-traducao_de: 3b61c3e15ad44f6d269a4dc6745c50bb636a42b7
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
 # ADR 0183 — A closed session can be reopened: a dedicated exit from the terminal states, to `active`, with a new event

@@ -1,5 +1,5 @@
 ---
-traducao_de: 7bfeee6425479907d175deb72a8730fc2fdc22c5
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
 # ADR 0181 — 深色主题变为中性黑，对比度债务结束

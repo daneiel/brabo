@@ -5,7 +5,7 @@ sidebar_label: 架构
 sidebar_position: 2
 description: Brabo 的地图——容器、代码地图、一次智能体轮次的流程、层级不变量和已知债务。
 keywords: [架构, 代码地图, 不变量, harness, event log]
-traducao_de: 23e727d97992c1974a3df731360a293b67fd669c
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
 # 架构
@@ -13,7 +13,7 @@ traducao_de: 23e727d97992c1974a3df731360a293b67fd669c
 本文档是给要在代码上**工作**的人的地图。它告诉你从哪里开始读、每条边界承诺什么，
 以及哪些地方已知是歪的。
 
-决策及其理由在 [ADR](adr/index.md) 中——共 213 个，其中好几个记录了在执行中发现的
+决策及其理由在 [ADR](adr/index.md) 中——共 214 个，其中好几个记录了在执行中发现的
 真实缺陷。这里不重复论证：只指向它。
 
 ## 外部视角 {#the-outside-view}

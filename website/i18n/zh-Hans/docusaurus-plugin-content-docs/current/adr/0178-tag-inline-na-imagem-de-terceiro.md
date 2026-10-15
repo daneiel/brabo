@@ -1,5 +1,5 @@
 ---
-traducao_de: cc6cd4e5f762017286b36c6232f5d75f5a0739e3
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
 # ADR 0178 — 第三方镜像的 tag 住在引用**之内**，位于 digest 之前

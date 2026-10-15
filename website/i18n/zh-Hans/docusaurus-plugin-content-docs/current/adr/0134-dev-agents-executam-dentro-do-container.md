@@ -1,5 +1,5 @@
 ---
-traducao_de: eb32fa72c74cb4f32985f16a3c1440e93357c0b9
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
 # ADR 0134 — dev agent 在项目的真实容器**内部**执行，终端在其中获得一个自动批准的下限

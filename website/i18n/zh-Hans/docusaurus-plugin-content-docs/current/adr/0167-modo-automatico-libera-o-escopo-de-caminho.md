@@ -1,5 +1,5 @@
 ---
-traducao_de: bc436f20d320ce519c89beb3c0674f0a623ce711
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
 # ADR 0167 — 自动模式放行路径范围，而且只有它放行

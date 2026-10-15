@@ -1,5 +1,5 @@
 ---
-traducao_de: 8b290c0ec233be29106b78a1b8943317bc25347c
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
 # ADR 0157 — workspace upsert 中的自我变动上限，以及原本是漏洞的自我晋升

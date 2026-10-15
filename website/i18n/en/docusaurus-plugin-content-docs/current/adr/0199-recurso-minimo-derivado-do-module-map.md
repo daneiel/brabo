@@ -1,5 +1,5 @@
 ---
-traducao_de: e5037d8a16735316f5929c9b1ea0894b428eb7bc
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
 # ADR 0199 — The container's minimum resource is derived from the `module_map`: each module declares its own, and Infra starts with the sum

@@ -1,5 +1,5 @@
 ---
-traducao_de: 1f7d3231649a224f5c952aa6fcf49df753af3680
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
 # ADR 0216 — Four languages, with pt-BR as SOURCE and default: documentation and interface in Portuguese, English, Russian and Simplified Chinese

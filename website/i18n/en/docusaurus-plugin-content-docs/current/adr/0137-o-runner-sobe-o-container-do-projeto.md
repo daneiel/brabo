@@ -1,5 +1,5 @@
 ---
-traducao_de: 108d81cc745edfc5d09ee2d41c473e37736f3186
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
 # ADR 0137 — `brabo-runner` brings up the project's container on the user's machine

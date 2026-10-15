@@ -1,5 +1,5 @@
 ---
-traducao_de: 26aa218023eb19bf5313e2303545808e0b972a08
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
 # ADR 0143 — dev agent 只在容器之后

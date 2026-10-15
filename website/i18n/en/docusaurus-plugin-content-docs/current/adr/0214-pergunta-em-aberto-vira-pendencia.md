@@ -1,5 +1,5 @@
 ---
-traducao_de: 9c7537aa5bade6f0ca4b80237a1928a72b654a38
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
 # ADR 0214 — An open question becomes a pending item to resolve

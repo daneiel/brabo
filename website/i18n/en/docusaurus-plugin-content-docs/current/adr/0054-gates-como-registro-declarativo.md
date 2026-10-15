@@ -1,5 +1,5 @@
 ---
-traducao_de: 23e727d97992c1974a3df731360a293b67fd669c
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
 # ADR 0054 — Gates as a declarative registry

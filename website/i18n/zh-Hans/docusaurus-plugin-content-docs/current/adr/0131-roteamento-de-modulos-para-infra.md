@@ -1,5 +1,5 @@
 ---
-traducao_de: e27637347c3751bbf825284e720697ab103880db
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
 # ADR 0131 — Arquiteto 把模块路由给 infra：它**提名**，Infra **选定**

@@ -1,5 +1,5 @@
 ---
-traducao_de: 94baaa08c45cd0a4b4685d1b071035095fc6285a
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
 # ADR 0193 — 带凭据的 git 在 runner 的**宿主机**上运行；代码在容器中运行

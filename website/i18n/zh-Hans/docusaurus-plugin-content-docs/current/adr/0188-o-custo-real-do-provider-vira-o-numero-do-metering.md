@@ -1,5 +1,5 @@
 ---
-traducao_de: 8397a73e2338fe4d24d56ee0a87b33fdff223ff8
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
 # ADR 0188 — provider 返回的真实成本成为计量的数字

@@ -1,5 +1,5 @@
 ---
-traducao_de: 9a25c430731ce944336ddabb81a070a0a49a3239
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
 # ADR 0189 — The autopilot: automatic mode approves everything except the ceilings, the scope compares against the real execution folder, and "Always allow" records verb + subcommand

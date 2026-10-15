@@ -1,5 +1,5 @@
 ---
-traducao_de: 18ac246302f60de11fbc0120ea43c24ea800e722
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
 # ADR 0179 — The loop asks Jev which tool, and the user's model sees only the menu that remains

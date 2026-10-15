@@ -1,5 +1,5 @@
 ---
-traducao_de: 8b4e3fbcf8776909f26bdab5da0c730a4daffecd
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
 # ADR 0165 — 仓库在接受给 Arquiteto 的 handoff 时诞生，没有它执行就不会开始

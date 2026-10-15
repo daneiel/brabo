@@ -1,5 +1,5 @@
 ---
-traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
 # ADR 0041 — 一个 OpenAI 兼容基类、一份 LLM provider 合约，以及会拒绝 binding 的 capabilities

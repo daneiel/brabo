@@ -1,5 +1,5 @@
 ---
-traducao_de: 15e14c662cd4de7b1d041babd7caf3ef71f9ae2a
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
 # ADR 0173 — workspace 成员的移除诞生，由同一条款保护

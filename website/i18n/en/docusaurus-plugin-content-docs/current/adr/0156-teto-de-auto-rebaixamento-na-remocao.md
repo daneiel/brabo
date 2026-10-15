@@ -1,5 +1,5 @@
 ---
-traducao_de: 7f43cfbc8975d56e3b161b9ce51ea92fe137a0d7
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
 # ADR 0156 — The self-downgrade ceiling also on project member removal

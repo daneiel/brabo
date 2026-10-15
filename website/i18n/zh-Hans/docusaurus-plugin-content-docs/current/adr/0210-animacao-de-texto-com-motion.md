@@ -1,5 +1,5 @@
 ---
-traducao_de: 9d4f011ddd0f94cccc993a6640002463803b1925
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
 # ADR 0210 — 用 `motion` 做文本动画

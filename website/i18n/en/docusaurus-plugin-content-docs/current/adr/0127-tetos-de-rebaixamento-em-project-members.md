@@ -1,5 +1,5 @@
 ---
-traducao_de: 30cd83cf109ffd8ec272c1821c14a1288b65e4f1
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
 # ADR 0127 — Two downgrade ceilings on `project_members`, and the override stays

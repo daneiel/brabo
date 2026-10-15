@@ -1,5 +1,5 @@
 ---
-traducao_de: a5e4f1bc5ada7985eb268f8b7322903a396032ee
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
 # ADR 0202 — The ADR index by theme, with the theme outside the ADR
