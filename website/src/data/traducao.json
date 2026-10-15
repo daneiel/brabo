@@ -1030,13 +1030,17 @@
     }
   },
   "ru": {
-    "business-rules/autenticacao.md": {
-      "defasada": false,
-      "data": "2026-10-11"
-    },
-    "business-rules/custo.md": {
+    "adr/index.md": {
       "defasada": false,
       "data": "2026-10-15"
+    },
+    "business-rules.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "explanation/historico-de-fases.md": {
+      "defasada": false,
+      "data": "2026-10-01"
     },
     "getting-started.md": {
       "defasada": false,
@@ -1050,7 +1054,7 @@
       "defasada": false,
       "data": "2026-10-15"
     },
-    "security-surface.md": {
+    "runbook.md": {
       "defasada": false,
       "data": "2026-10-15"
     },
