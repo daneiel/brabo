@@ -331,13 +331,21 @@ rules:
     severity: warn
     note: "Mudou o que a mensagem de ambiente diz, para quem, ou de onde lê: atualizar a RN-706."
 
+  # RN-622/623/878 — a orientação de idioma que a fachada acrescenta no fim.
+  - id: idioma-da-resposta
+    watch:
+      - "apps/engine/lib/engine/harness/idioma_da_resposta.ex"
+    docs: ["docs/business-rules.md"]
+    severity: warn
+    note: "Mudou o texto, para quem vale ou o teto da orientação de idioma: atualizar a RN-622/623/878."
+
   # RN-765/813/814/817..819 — o recorte da tarefa que o gate de QA julga.
   - id: recorte-do-qa
     watch:
       - "apps/engine/lib/engine/gates/recorte_da_tarefa.ex"
     docs: ["docs/business-rules.md"]
     severity: warn
-    note: "Mudou o que o recorte pede ao QA: atualizar a RN-765 e as extensões (RN-813/814/817/818/819)."
+    note: "Mudou o que o recorte pede ao QA: atualizar a RN-765 e as extensões (RN-813/814/817/818/819/863/865/879/880/881)."
 
   # RN-810..812 — retentativa de rede do provider, a dev atualizada antes do
   # "já na dev" e a PR aberta da branch reaproveitada.
@@ -360,6 +368,14 @@ rules:
     docs: ["docs/business-rules.md", "docs/reference/internal-api.md"]
     severity: warn
     note: "Mudou o fluxo que os conversacionais recebem: atualizar a RN-711 e a mensagem descrita na internal-api."
+
+  # RN-874 — decisões e perguntas abertas do projeto no turno do PO.
+  - id: decisoes-do-projeto
+    watch:
+      - "apps/engine/lib/engine/harness/decisoes_do_projeto.ex"
+    docs: ["docs/business-rules.md"]
+    severity: warn
+    note: "Mudou o que o PO recebe de decisões/perguntas, o teto ou a leitura: atualizar a RN-874."
 
   - id: recusas-locais-de-proposta
     watch:
@@ -784,6 +800,18 @@ rules:
       - "apps/engine/mix.exs"
       - "docs/adr/*.md"
       - "docs/gates.yml"
-    docs: ["CLAUDE.md"]
+    # O CLAUDE.md foi partido em `.claude/contexto/` (importadas por ele) e em
+    # `.claude/rules/` (regras de caminho, carregadas sob demanda): a
+    # regra vale para o conjunto, então tocar QUALQUER uma das partes satisfaz.
+    docs_alternativos:
+      - "CLAUDE.md"
+      - ".claude/contexto/historico.md"
+      - ".claude/contexto/estado-atual.md"
+      - ".claude/contexto/stack.md"
+      - ".claude/contexto/convencoes-repositorio-e-dominio.md"
+      - ".claude/contexto/convencoes-agentes-e-telas.md"
+      - ".claude/rules/runner.md"
+      - ".claude/rules/broker-e-containers.md"
+      - ".claude/rules/ci-e-cadeia-de-suprimentos.md"
     severity: warn
     note: "Stack, Convenções, 'O que NÃO fazer' e o estado das fases envelhecem em silêncio."

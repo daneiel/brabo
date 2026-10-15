@@ -25,6 +25,7 @@ defmodule Engine.Gates.RecorteDaTarefa do
     total = Map.get(dev_context, :module_open_tasks_total, length(abertas))
     contrato = Map.get(dev_context, :module_contract)
     decisoes = Map.get(dev_context, :decisoes, [])
+    decisoes_do_projeto = Map.get(dev_context, :decisoes_do_projeto, [])
 
     """
 
@@ -62,8 +63,12 @@ defmodule Engine.Gates.RecorteDaTarefa do
 
     Requisito marcado "não confirmado pelo usuário" (ou contradito por decisão
     vigente) → `needs_user_decision`, nunca `changes_requested`: mande a
-    `pergunta` e a sua `sugestao`.
-    #{Engine.Dev.ContextBuilder.secao_de_decisoes(decisoes)}    #{secao_do_ambiente_limpo()}#{secao_da_forma(regras, task)}#{secao_do_ponto_de_entrada(task)}#{secao_do_contrato(contrato)}
+    `pergunta` e a sua `sugestao`. ANTES de `needs_user_decision`, confira as
+    decisões listadas abaixo: requisito que uma delas já responde NÃO é
+    pergunta — aplique a decisão. `openQuestionId` só com o uuid de uma
+    pergunta ABERTA; sem esse uuid, a pergunta nova vai em
+    `pergunta`/`sugestao`.
+    #{Engine.Dev.ContextBuilder.secao_de_decisoes(decisoes)}#{Engine.Dev.ContextBuilder.secao_de_decisoes_do_projeto(decisoes_do_projeto)}    #{secao_do_ambiente_limpo()}#{secao_da_forma(regras, task)}#{secao_do_ponto_de_entrada(task)}#{secao_do_contrato(contrato)}
     """
   end
 
@@ -96,7 +101,11 @@ defmodule Engine.Gates.RecorteDaTarefa do
   # o próprio app. Quando a tarefa toca o ponto de entrada, a fiação ou o README
   # de execução, o recorte exige evidência de que o entrypoint REAL sobe e
   # responde; a ausência dela vai para `itens`.
-  @ponto_de_entrada ~r/(server\.[jt]s|main\.[jt]s|index\.[jt]s|entrypoint|ponto de entrada|app\.listen|\bREADME|npm start|pnpm start|\bstart\b|\bfia[cç][aã]o|\bmigra[cç][aã]o|\brotas?\b|\broutes?\b)/iu
+  # RN-865 (AT-527): "endpoint" e verbo HTTP com caminho também são rota. No
+  # TP-01 as tarefas de `POST /links` e `GET /panel` diziam só "Endpoint
+  # protegido", a régua não casava, e nem o dev recebeu a cláusula do OpenAPI
+  # nem o QA a conferência — as duas rotas ficaram fora do `/openapi.json`.
+  @ponto_de_entrada ~r/(server\.[jt]s|main\.[jt]s|index\.[jt]s|entrypoint|ponto de entrada|app\.listen|\bREADME|npm start|pnpm start|\bstart\b|\bfia[cç][aã]o|\bmigra[cç][aã]o|\brotas?\b|\broutes?\b|\bendpoints?\b|\b(GET|POST|PUT|PATCH|DELETE)\s+\/)/iu
 
   @doc """
   A tarefa toca ponto de entrada, fiação ou rotas? Régua ÚNICA, usada pelo
@@ -135,9 +144,26 @@ defmodule Engine.Gates.RecorteDaTarefa do
       `node -e "fetch(...)"`) e encerre o GRUPO de processos ao fim. Rota que
       não responde, ou JSON que não é OpenAPI 3, vai a `itens`. Cada rota da
       seção "Rotas HTTP" do README precisa estar em `paths` do `/openapi.json`
-      servido (com o método): rota faltando é ITEM, nunca observação. O
+      servido (com o método), e também cada rota que o CÓDIGO registra
+      (procure o registro de rotas, ex.: `app.get(`, `app.post(`, `router.`):
+      rota faltando é ITEM, nunca observação. O
       `docker compose up` real cite no `resumo` como "provado só na máquina do
       usuário", nunca em `itens`.
+
+      URL, erro e CORS (RN-879/880): URL absoluta devolvida pela API (ex.: um
+      link curto) sai de `PUBLIC_BASE_URL` ou do `Host` da requisição COM a
+      porta; `http://localhost` fixo ou hostname sem porta é ITEM. O mesmo caso
+      de erro (ex.: recurso inexistente) responde o mesmo `code` em todas as
+      rotas; divergência (ex.: `not_found` numa, `link_not_found` noutra) é
+      ITEM. Prove CORS (RN-885) com um preflight contra a porta PUBLICADA
+      (`APP_PORT` do compose, nunca a interna `PORT`), uma vez para cada
+      origem, `http://localhost:<APP_PORT>` e `http://127.0.0.1:<APP_PORT>`
+      (`curl -i -X OPTIONS -H 'Origin: <origem>' -H
+      'Access-Control-Request-Method: POST'`): cada resposta precisa de
+      `OPTIONS` 204 E do header `Access-Control-Allow-Origin` com a origem
+      enviada, além dos `Access-Control-Allow-*` (com `Authorization` e
+      `Content-Type`); 204 sem esse header, ou CORS só na porta interna, é ITEM. `servers` com URL ABSOLUTA no
+      `/openapi.json`, ou swagger-ui de CDN sem versão exata (ex.: `@5`), é ITEM.
       """,
       else: ""
   end

@@ -334,3 +334,57 @@ describe('ProjectBacklogTab — corrigir história (RN-727)', () => {
     ).toBe(true);
   });
 });
+
+describe('ProjectBacklogTab — estado da tarefa (RN-887, AT-536)', () => {
+  function tarefa(over: Partial<Story['tasks'][number]>): Story['tasks'][number] {
+    return {
+      id: 't1',
+      storyId: 'story-1',
+      title: 'Tarefa',
+      description: '',
+      status: 'todo',
+      assignedTo: null,
+      blocked: false,
+      blockedReason: null,
+      gateStatus: null,
+      gateCorrectionCount: 0,
+      createdAt: '2026-08-02T00:00:00.000Z',
+      updatedAt: '2026-08-02T00:00:00.000Z',
+      ...over,
+    };
+  }
+
+  async function linhaDa(titulo: string): Promise<HTMLElement> {
+    fireEvent.click(await screen.findByText('Cadastrar usuário'));
+    return (await screen.findByText(titulo)).closest('li')!;
+  }
+
+  it('a bloqueada mostra "Bloqueada" e o motivo, sem o selo "a fazer"', async () => {
+    listBacklog.mockResolvedValue([
+      epic([
+        story({
+          status: 'ready',
+          proposedReady: false,
+          tasks: [
+            tarefa({ id: 'tb', title: 'Presa', blocked: true, blockedReason: 'limite de correções' }),
+          ],
+        }),
+      ]),
+    ]);
+    montar();
+    const li = await linhaDa('Presa');
+    expect(li.getAttribute('data-task-state')).toBe('blocked');
+    expect(li.textContent).toContain('Bloqueada');
+    expect(li.textContent).toContain('limite de correções');
+    expect(li.textContent).not.toContain('a fazer');
+  });
+
+  it('a todo sem bloqueio mostra "a fazer"', async () => {
+    listBacklog.mockResolvedValue([
+      epic([story({ status: 'ready', proposedReady: false, tasks: [tarefa({ title: 'Livre' })] })]),
+    ]);
+    montar();
+    const li = await linhaDa('Livre');
+    expect(li.textContent).toContain('a fazer');
+  });
+});

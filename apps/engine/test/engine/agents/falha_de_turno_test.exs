@@ -183,4 +183,33 @@ defmodule Engine.Agents.FalhaDeTurnoTest do
       assert FalhaDeTurno.origem("algo inesperado") == "codigo"
     end
   end
+
+  describe "RN-886: o 403 de orçamento do OpenRouter" do
+    @corpo ~s(orçamento da chave esgotado em openrouter \(403\): {"error":{"message":"Budget limit exceeded \(monthly limit\)","code":403,"metadata":{"limit_source":"openrouter_guardrail_budget","limit_usd":30,"spend_usd":30.02,"resets_at":"2026-11-01T00:00:00.000Z"}}})
+
+    test "é crédito esgotado, origem infra, nunca passageira" do
+      assert FalhaDeTurno.credito_esgotado?(%{
+               "errorCode" => "insufficient_credit",
+               "error" => @corpo
+             })
+
+      assert FalhaDeTurno.credito_esgotado?(@corpo)
+      assert FalhaDeTurno.origem({:final, @corpo, "insufficient_credit"}) == "infra"
+      refute FalhaDeTurno.passageira?(%{"errorCode" => "insufficient_credit", "error" => @corpo})
+    end
+
+    test "a frase diz limite, gasto e reset" do
+      frase = FalhaDeTurno.mensagem({:final, @corpo, "insufficient_credit"})
+      assert frase =~ "limite US$ 30"
+      assert frase =~ "gasto US$ 30.02"
+      assert frase =~ "renova em 2026-11-01"
+      assert frase =~ "admin do OpenRouter"
+      refute frase =~ "metadata"
+    end
+
+    test "falha: o 402 sem orçamento segue com a frase de crédito" do
+      assert FalhaDeTurno.orcamento_esgotado("crédito insuficiente (402)") == nil
+      assert FalhaDeTurno.mensagem({:final, "x (402)", "insufficient_credit"}) =~ "recarregue"
+    end
+  end
 end

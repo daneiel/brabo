@@ -80,10 +80,39 @@ defmodule Engine.Harness.IdiomaDaRespostaTest do
     test "recebe o idioma do PROJETO, no fim da lista" do
       project_id = projeto("en")
 
-      enviado = IdiomaDaResposta.anexar(@historico, project_id, "dev-api")
+      enviado = IdiomaDaResposta.anexar(@historico, project_id, "arquiteto")
 
       assert Enum.take(enviado, 2) == @historico
       assert orientacao_enviada(enviado) =~ "Respond in English"
+    end
+
+    # RN-878 (AT-530): o agente de execução abria o turno em inglês num projeto
+    # pt-BR; a orientação dele diz que vale desde a PRIMEIRA frase.
+    test "agente de execução: vale desde a primeira frase, dentro do teto" do
+      for agente <- ["dev-encurtador-api", "qa-automacao"] do
+        enviado = IdiomaDaResposta.anexar(@historico, projeto("pt-BR"), agente)
+        assert orientacao_enviada(enviado) =~ "desde a primeira frase"
+        assert orientacao_enviada(enviado) =~ "antes de cada ferramenta"
+      end
+
+      for idioma <- ["pt-BR", "en", "es-MX", "zh-Hant-TW", "tlh-Piqd-419"] do
+        texto = IdiomaDaResposta.orientacao_de_execucao(idioma)
+        assert texto =~ ~r/primeira frase|first sentence/, idioma
+        assert String.length(texto) <= IdiomaDaResposta.teto_de_caracteres(), idioma
+      end
+
+      # Fora da forma curta: a orientação de sempre, que já cabia no teto.
+      longo = "Abcdefgh-a1b2c3d4-Qwertyui-z9y8x7w6-Mnbvcxzl"
+      assert IdiomaDaResposta.orientacao_de_execucao(longo) == IdiomaDaResposta.orientacao(longo)
+    end
+
+    test "agente de execução sem idioma resolvido: nada é acrescentado" do
+      assert IdiomaDaResposta.anexar(@historico, projeto(nil), "dev-api") == @historico
+
+      assert IdiomaDaResposta.anexar(@historico, Ecto.UUID.generate(), "qa-automacao") ==
+               @historico
+
+      assert IdiomaDaResposta.orientacao_de_execucao(nil) == nil
     end
 
     test "projeto sem idioma (ou inexistente): lista intacta" do

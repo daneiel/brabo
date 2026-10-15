@@ -381,7 +381,7 @@ defmodule Engine.Agents.DevLeadTools do
             "- task_id=#{Map.get(tarefa, "id")} | #{Map.get(tarefa, "title")} " <>
               "| história: #{Map.get(historia, "title")} " <>
               "(módulos da história: #{Enum.join(Map.get(historia, "moduleIds", []), ", ")})" <>
-              modulo_atual(tarefa)
+              modulo_atual(tarefa) <> bloqueio(tarefa)
           end
 
         mostradas = Enum.take(linhas, @max_tarefas)
@@ -404,6 +404,20 @@ defmodule Engine.Agents.DevLeadTools do
           "não invente task_id.)"
     end
   end
+
+  # RN-887 (AT-536): o bloqueio é ortogonal ao `status` — a bloqueada segue
+  # `todo`, então a linha diz que está BLOQUEADA, e por quê.
+  defp bloqueio(%{"blocked" => true} = tarefa) do
+    motivo =
+      case Map.get(tarefa, "blockedReason") do
+        m when is_binary(m) and m != "" -> String.slice(m, 0, 120)
+        _ -> "sem motivo registrado"
+      end
+
+    " | BLOQUEADA: #{motivo}"
+  end
+
+  defp bloqueio(_), do: ""
 
   defp modulo_atual(%{"module" => m}) when is_binary(m) and m != "",
     do: " [módulo atual: #{m}]"

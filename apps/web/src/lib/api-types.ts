@@ -21,7 +21,7 @@ export type Role = 'owner' | 'maintainer' | 'developer' | 'viewer';
  * O idioma da interface (fundação de i18n, Onda 6a). Espelha o enum
  * `user_locale` da api — fechado a dois valores.
  */
-export type UserLocale = 'pt-BR' | 'en';
+export type UserLocale = 'pt-BR' | 'en' | 'ru' | 'zh-Hans';
 
 /**
  * De onde veio o idioma em que os agentes respondem (RN-618) — a tela NOMEIA
