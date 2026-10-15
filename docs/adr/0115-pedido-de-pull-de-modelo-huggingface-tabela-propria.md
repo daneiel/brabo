@@ -1,190 +1,192 @@
-# ADR 0115 — Hugging Face model pull: a dedicated table, two-step confirmation, and an official-publisher allowlist — never `proposed_actions`
+# ADR 0115 — Pull de modelo do Hugging Face: tabela própria, confirmação em dois passos e allowlist de publicadores oficiais — nunca `proposed_actions`
 
-- **Status:** Accepted
-- **Date:** 2026-08-26
-- **Context:** lets a workspace owner/maintainer search the Hugging Face Hub and pull a GGUF model into the local Ollama daemon from Project/Workspace Settings, closing a gap the local-LLM path had no answer for (getting a model that isn't one of the few baked into the compose entrypoint)
-- **References (without editing):** [ADR 0042](0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md) ("never activate an auto-discovered model" — the rule this decision applies to a new surface), [ADR 0100](0100-rag-search-e-modelos-garantidos-no-boot.md) (Ollama as the local daemon this pulls into), the original FASE 1 ADR that introduced `proposed_actions` and `decide()`
+- **Status:** Aceito
+- **Data:** 2026-08-26
+- **Contexto:** permite a um owner/maintainer do workspace buscar no Hugging Face Hub e fazer pull de um modelo GGUF para o daemon local do Ollama a partir das Configurações do Projeto/Workspace, fechando uma lacuna para a qual o caminho de LLM local não tinha resposta (obter um modelo que não está entre os poucos embutidos no entrypoint do compose)
+- **Referências (sem editar):** [ADR 0042](0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md) ("nunca ativar um modelo descoberto automaticamente" — a regra que esta decisão aplica a uma superfície nova), [ADR 0100](0100-rag-search-e-modelos-garantidos-no-boot.md) (o Ollama como o daemon local que recebe o pull), o ADR original da FASE 1 que introduziu `proposed_actions` e `decide()`
 
-## Context
+## Contexto
 
-The product already has a pipeline for "an agent proposes, a human decides":
-`proposed_actions`, `permissions.json`/`decide()`, and the three screens that
-read from it (Aprovações, session chat, Insights). Pulling a Hugging Face
-model into Ollama looked, on the surface, like it might fit — it's an action
-with a real external effect (a multi-gigabyte download, then activating a
-model other agents can spend against) and the product wants a deliberate,
-two-step confirmation before it runs, not a single click.
+O produto já tem um pipeline para "um agente propõe, um humano decide":
+`proposed_actions`, `permissions.json`/`decide()` e as três telas que leem
+dele (Aprovações, chat da sessão, Insights). Fazer pull de um modelo do
+Hugging Face para o Ollama parecia, na superfície, que poderia caber — é uma
+ação com efeito externo real (um download de vários gigabytes, depois a
+ativação de um modelo contra o qual outros agentes podem gastar) e o produto
+quer uma confirmação deliberada, em dois passos, antes de ela rodar, não um
+clique só.
 
-It doesn't fit, and the mismatch only shows up once you trace what the
-pipeline is actually built around.
+Não cabe, e o descompasso só aparece quando se rastreia em torno do que o
+pipeline foi de fato construído.
 
-## Decision
+## Decisão
 
-### `huggingface_model_pull_requests` is a new, small table — not `proposed_actions`
+### `huggingface_model_pull_requests` é uma tabela nova e pequena — não `proposed_actions`
 
-Before building anything, the mechanism traced four things `proposed_actions`
-requires and checked whether they're true here:
+Antes de construir qualquer coisa, o mecanismo rastreou quatro coisas que
+`proposed_actions` exige e conferiu se valem aqui:
 
-- `proposed_actions.session_id` is `NOT NULL` (FK to `sessions`, cascade).
-  This feature has no session — it's invoked from Project/Workspace
-  Settings, not from an agent's turn inside a session. Fitting it in would
-  mean fabricating a session for an action that has nothing to do with one.
-- `actor_kind`/`actor_id` record **who proposed** (`user`/`agent`/`system`),
-  and `resolved_policy` is always the output of running `decide()` against
-  `permissions.json`/`agent_autonomy` — a policy-resolution stage built for
-  autonomy tiers (`auto_approve`/`require_approval`/`deny`) on **agent**
-  behavior. Here the actor requesting the pull **is** the human — already
-  gated by `@RequireRole('maintainer')` on the route
+- `proposed_actions.session_id` é `NOT NULL` (FK para `sessions`, cascade).
+  Esta funcionalidade não tem sessão — ela é invocada das Configurações do
+  Projeto/Workspace, não do turno de um agente dentro de uma sessão. Encaixá-la
+  significaria fabricar uma sessão para uma ação que nada tem a ver com uma.
+- `actor_kind`/`actor_id` registram **quem propôs** (`user`/`agent`/`system`),
+  e `resolved_policy` é sempre a saída de rodar `decide()` contra
+  `permissions.json`/`agent_autonomy` — um estágio de resolução de política
+  construído para níveis de autonomia (`auto_approve`/`require_approval`/`deny`)
+  sobre o comportamento de **agente**. Aqui o ator que pede o pull **é** o
+  humano — já barrado por `@RequireRole('maintainer')` na rota
   (`apps/api/src/interfaces/http/llm/huggingface-models.controller.ts:63-72`)
-  — and there is no agent to supervise. Running it through `decide()` would
-  apply autonomy-tier semantics to a case that has no autonomy tier: a
-  maintainer confirming their own request a second time.
-- `action_type` is validated against `decide.ts`'s closed `ActionType`
-  union, and CLAUDE.md's own rule for that union is direct: a type new type
-  needs a phrase in `apps/web/src/lib/aprovacoes.ts`, and it renders on the
-  three screens built for agent supervision. Fabricating an entry there for
-  "a human clicked confirm on their own Settings action" would surface it on
-  UI built to answer a different question ("what is an agent asking me to
-  approve") for an action that never asks that question.
-- The "second explicit confirmation" this feature needs is a UX/safety gate
-  on a **direct human action**, not an approval-of-an-agent's-proposal gate
-  — a different shape of "are you sure," not the same one.
+  — e não há agente a supervisionar. Passá-lo por `decide()` aplicaria a
+  semântica de nível de autonomia a um caso que não tem nível de autonomia: um
+  maintainer confirmando o próprio pedido uma segunda vez.
+- `action_type` é validado contra a união fechada `ActionType` de `decide.ts`,
+  e a regra do próprio CLAUDE.md para essa união é direta: um tipo novo
+  precisa de uma frase em `apps/web/src/lib/aprovacoes.ts`, e ele aparece nas
+  três telas construídas para supervisão de agente. Fabricar uma entrada ali
+  para "um humano clicou em confirmar na própria ação de Configurações" a
+  exporia numa UI construída para responder a outra pergunta ("o que um agente
+  está me pedindo para aprovar") por uma ação que nunca faz essa pergunta.
+- A "segunda confirmação explícita" de que esta funcionalidade precisa é um
+  portão de UX/segurança sobre uma **ação humana direta**, não um portão de
+  aprovação da proposta de um agente — outra forma de "tem certeza", não a
+  mesma.
 
-Given that, forcing this into `proposed_actions` would mean bending a
-mechanism built for supervising an untrustworthy agent onto a case with no
-agent in it — coupling the feature to `permissions.json`/`agent_autonomy`
-semantics it doesn't need and was never designed to answer.
+Dado isso, forçar isto para dentro de `proposed_actions` significaria dobrar
+um mecanismo construído para supervisionar um agente não confiável sobre um
+caso sem agente — acoplando a funcionalidade a semânticas de
+`permissions.json`/`agent_autonomy` de que ela não precisa e que nunca foram
+desenhadas para respondê-la.
 
-**The new table**, `huggingface_model_pull_requests` (migration
+**A tabela nova**, `huggingface_model_pull_requests` (migration
 `0053_optimal_sauron.sql`): `id`, `workspace_id` (FK `workspaces`, cascade),
-`requested_by` (FK `users`), `repo_id`, `estimated_size_bytes` (nullable —
-never guessed when the Hub doesn't publish one), `status`
+`requested_by` (FK `users`), `repo_id`, `estimated_size_bytes` (anulável —
+nunca adivinhado quando o Hub não publica um), `status`
 (`huggingface_model_pull_status`: `pending_confirmation` → `confirmed` →
-`pulling` → `active` | `failed`), `confirmed_at`, `failed_reason` (always
-prefixed with the ADR 0020 origin vocabulary — `infra`/`modelo`/`código`/
-`política`), timestamps, and an index on `workspace_id`
+`pulling` → `active` | `failed`), `confirmed_at`, `failed_reason` (sempre
+prefixado com o vocabulário de origem do ADR 0020 — `infra`/`modelo`/`código`/
+`política`), timestamps e um índice em `workspace_id`
 (`apps/api/src/db/schema.ts:2371-2393`).
 
-### The two-step confirmation IS the state machine, not an extra flag
+### A confirmação em dois passos É a máquina de estados, não uma flag a mais
 
 `RequestModelPullUseCase`
 (`apps/api/src/application/use-cases/llm/huggingface/request-model-pull.use-case.ts:23`)
-creates the row in `pending_confirmation` and does nothing else — no
-network call, no side effect. Only a **separate** call to
+cria a linha em `pending_confirmation` e não faz mais nada — nenhuma chamada
+de rede, nenhum efeito colateral. Só uma chamada **separada** a
 `ConfirmModelPullUseCase`
-(`.../huggingface/confirm-model-pull.use-case.ts:45`), reachable exclusively
-via `POST .../pull-requests/:id/confirm`, moves the row to `confirmed` →
-`pulling` and actually calls `OllamaProvider.pullModel`. There is no third
-flag or column recording "was this confirmed" — the `pending_confirmation
-→ confirmed` transition itself **is** the second confirmation, and
-`ConfirmModelPullUseCase` refuses (409, `ConflictException`) to run it
-twice: a row that isn't `pending_confirmation` anymore cannot be confirmed
-again.
+(`.../huggingface/confirm-model-pull.use-case.ts:45`), alcançável
+exclusivamente por `POST .../pull-requests/:id/confirm`, move a linha para
+`confirmed` → `pulling` e de fato chama `OllamaProvider.pullModel`. Não há
+terceira flag nem coluna registrando "isto foi confirmado" — a própria
+transição `pending_confirmation → confirmed` **é** a segunda confirmação, e
+`ConfirmModelPullUseCase` recusa (409, `ConflictException`) rodá-la duas
+vezes: uma linha que não está mais em `pending_confirmation` não pode ser
+confirmada de novo.
 
-### `repoId` travels in the request body, not the route
+### `repoId` viaja no corpo do request, não na rota
 
-The Hub's real id shape is `<publisher>/<model>` (e.g.
-`meta-llama/Llama-3.1-8B-Instruct-GGUF`) — a `/` inside what would have been
-a `:repoId` path segment breaks Nest/Express single-segment route matching.
-`POST .../pull-requests` takes it in the body (`RequestModelPullDto`)
-instead, the same choice already made for file paths in
-`apps/api/src/interfaces/http/git/code.controller.ts` for the identical
-reason.
+O formato real de id do Hub é `<publisher>/<model>` (ex.:
+`meta-llama/Llama-3.1-8B-Instruct-GGUF`) — uma `/` dentro do que seria um
+segmento de caminho `:repoId` quebra o casamento de rota de segmento único do
+Nest/Express. `POST .../pull-requests` o recebe no corpo
+(`RequestModelPullDto`), a mesma escolha já feita para caminhos de arquivo em
+`apps/api/src/interfaces/http/git/code.controller.ts` pelo mesmo motivo.
 
-### The pull runs synchronously inside the confirming HTTP request
+### O pull roda de forma síncrona dentro do request HTTP que confirma
 
-`ConfirmModelPullUseCase` awaits the whole download before returning. The
-api has no background-job runner reachable from itself — Oban lives in the
-Elixir engine, and no synchronous command channel from the api to it exists
-for this. Firing the pull and returning immediately would mean losing the
-unhandled exception the moment the calling function returned, and the
-`markFailed` in the use case's `catch` would never run.
-`GET .../pull-requests/:id` exists for callers who don't want to hold that
-connection open (a reverse proxy or gateway often times out sooner than a
-multi-gigabyte download finishes) — the pull itself keeps running
-server-side regardless of whether anyone is still polling.
+`ConfirmModelPullUseCase` espera o download inteiro antes de retornar. A api
+não tem executor de jobs em segundo plano alcançável a partir dela — o Oban
+mora no engine Elixir, e não existe canal síncrono de comando da api para ele
+para isto. Disparar o pull e retornar na hora significaria perder a exceção
+não tratada no instante em que a função chamadora retornasse, e o
+`markFailed` no `catch` do caso de uso nunca rodaria.
+`GET .../pull-requests/:id` existe para quem não quer segurar essa conexão
+aberta (um proxy reverso ou gateway muitas vezes estoura o tempo antes de um
+download de vários gigabytes terminar) — o pull em si continua rodando no
+servidor, haja ou não alguém ainda consultando.
 
-### Official-publisher allowlist — the ADR 0042 rule, applied to a new badge
+### Allowlist de publicadores oficiais — a regra do ADR 0042, aplicada a um selo novo
 
 `HUGGINFACE_OFFICIAL_PUBLISHERS`
-(`apps/api/src/domain/llm/huggingface-official-publishers.ts:17-26`) is a
-short, hand-curated, case-sensitive list of Hub orgs recognized as the
-actual manufacturer of what they publish (`meta-llama`, `google`,
-`mistralai`, `microsoft`, `Qwen`, `deepseek-ai`, `openai`, `nvidia`) — the
-same "never activate an auto-discovered model, curation is always manual"
-posture ADR 0042 already holds for the LLM catalog, applied here to the
-"official" badge instead of to activation. `isOfficialPublisher` compares
-the `repoId`'s publisher segment exactly, not case-folded: the Hub itself is
-case-sensitive (`Qwen`, not `qwen`), and normalizing case would let a
-lowercase reupload — which is *not* the official org — earn the badge by
-accident.
+(`apps/api/src/domain/llm/huggingface-official-publishers.ts:17-26`) é uma
+lista curta, curada à mão e sensível a maiúsculas de orgs do Hub reconhecidas
+como o fabricante de fato do que publicam (`meta-llama`, `google`,
+`mistralai`, `microsoft`, `Qwen`, `deepseek-ai`, `openai`, `nvidia`) — a mesma
+postura "nunca ativar um modelo descoberto automaticamente, curadoria é sempre
+manual" que o ADR 0042 já mantém para o catálogo de LLM, aplicada aqui ao selo
+"oficial" em vez de à ativação. `isOfficialPublisher` compara o segmento do
+publicador do `repoId` exatamente, sem normalizar maiúsculas: o próprio Hub é
+sensível a maiúsculas (`Qwen`, não `qwen`), e normalizar deixaria um reupload
+em minúsculas — que *não* é a org oficial — ganhar o selo por acidente.
 
 `SearchHuggingFaceModelsUseCase`
-(`.../huggingface/search-huggingface-models.use-case.ts:28`) filters to
-`official: true` results **by default**; `includeCommunity: true` returns
-every publisher, each tagged `official`/not, and never hides the
-distinction. The web side
-(`apps/web/src/components/HuggingFaceModelBrowser.tsx:190-203`) renders that
-choice as an off-by-default toggle plus a persistent, explicit danger-toned
-warning banner (`Alert tone="danger"`) that only appears while community
-results are showing — the opt-in and the risk warning are the same gesture,
-never a setting a user can turn on once and forget is on.
+(`.../huggingface/search-huggingface-models.use-case.ts:28`) filtra para
+resultados `official: true` **por padrão**; `includeCommunity: true` devolve
+todo publicador, cada um marcado `official`/não, e nunca esconde a distinção.
+O lado web (`apps/web/src/components/HuggingFaceModelBrowser.tsx:190-203`)
+desenha essa escolha como um toggle desligado por padrão mais um banner de
+aviso persistente, explícito e em tom de perigo (`Alert tone="danger"`) que só
+aparece enquanto resultados da comunidade estão sendo mostrados — o opt-in e o
+aviso de risco são o mesmo gesto, nunca uma configuração que alguém liga uma
+vez e esquece que está ligada.
 
-## Consequences
+## Consequências
 
-**A route-shape deviation the caller must respect.** `repoId` is a body
-field, never interpolated into a URL path — documented at the route and
-repeated here so a future edit doesn't "simplify" it back into a path
-param and reintroduce the `/`-in-a-segment bug.
+**Um desvio de formato de rota que quem chama deve respeitar.** `repoId` é
+campo do corpo, nunca interpolado num caminho de URL — documentado na rota e
+repetido aqui para que uma edição futura não o "simplifique" de volta para
+parâmetro de caminho e reintroduza o defeito da `/` dentro do segmento.
 
-**A real, declared corner cut: no queue.** The synchronous pull is a
-deliberate trade-off, not an oversight — flagged in the use case's own
-comment as ADR-worthy, which this ADR closes. A proper background queue in
-the api is the natural next step if pull volume ever justifies the added
-complexity; nothing here blocks building one later.
+**Um corte real e declarado: sem fila.** O pull síncrono é uma troca
+deliberada, não um descuido — sinalizado no próprio comentário do caso de uso
+como digno de ADR, que este ADR fecha. Uma fila de verdade em segundo plano na
+api é o próximo passo natural se o volume de pulls algum dia justificar a
+complexidade a mais; nada aqui impede construí-la depois.
 
-**Pulled models are priced and activated the same way any other local
-Ollama model is.** `ConfirmModelPullUseCase` inserts into `models` with
-price `0`/`manualPricing: false` (mirroring
-`sync-model-catalog.use-case.ts`'s treatment of every other local Ollama
-entry) and activates the model **only for the requesting workspace** via
-`WorkspaceModelRepository.setActive`. This is not the "never activate an
-auto-discovered model" rule from ADR 0042 being violated — that rule is
-about a background sync discovering something nobody asked for; here
-activation is the direct, traceable consequence of one human asking for
-this exact model twice (request, then confirm).
+**Modelos baixados por pull recebem preço e ativação do mesmo jeito que
+qualquer outro modelo local do Ollama.** `ConfirmModelPullUseCase` insere em
+`models` com preço `0`/`manualPricing: false` (espelhando o tratamento que
+`sync-model-catalog.use-case.ts` dá a toda outra entrada local do Ollama) e
+ativa o modelo **só para o workspace que pediu** via
+`WorkspaceModelRepository.setActive`. Isto não é a regra "nunca ativar um
+modelo descoberto automaticamente" do ADR 0042 sendo violada — aquela regra
+trata de uma sincronização em segundo plano descobrindo algo que ninguém
+pediu; aqui a ativação é a consequência direta e rastreável de um humano pedir
+este modelo exato duas vezes (pedido, depois confirmação).
 
-**Display name is the raw `repoId`.** A pulled model's `displayName` is
-whatever the Hub called it (e.g.
-`meta-llama/Llama-3.1-8B-Instruct-GGUF`), never reformatted — left as a
-product/UX question for later, not resolved here.
+**O nome exibido é o `repoId` cru.** O `displayName` de um modelo baixado é o
+que o Hub o chamou (ex.: `meta-llama/Llama-3.1-8B-Instruct-GGUF`), nunca
+reformatado — deixado como questão de produto/UX para depois, não resolvida
+aqui.
 
-**The Hub search response carries no size estimate today.** The estimate
-shown at confirmation time only ever comes from what the client already
-knew when it called `POST .../pull-requests` (`estimatedSizeBytes`, always
-`null` when not supplied) — the search endpoint doesn't populate one, so the
-confirm screen will usually show "not reported by the Hub" rather than a
-real number. Consistent with the product's declared rule of never
-fabricating an estimate; not a bug, a real current limitation of what the
-Hub's search response exposes.
+**A resposta da busca do Hub não traz estimativa de tamanho hoje.** A
+estimativa mostrada na confirmação só vem do que o cliente já sabia quando
+chamou `POST .../pull-requests` (`estimatedSizeBytes`, sempre `null` quando
+não informado) — o endpoint de busca não preenche uma, então a tela de
+confirmação normalmente mostrará "não informado pelo Hub" em vez de um número
+real. Coerente com a regra declarada do produto de nunca fabricar uma
+estimativa; não é bug, é uma limitação real atual do que a resposta de busca
+do Hub expõe.
 
-## Alternatives considered
+## Alternativas consideradas
 
-- **Reuse `proposed_actions`.** Rejected for the reasons traced in
-  Decision above: no session to hang it from, a policy-resolution stage
-  built for agent autonomy tiers that doesn't apply to a human's own
-  request, a closed `ActionType` vocabulary whose UI surfaces are built for
-  a different question, and a "second confirmation" that is a direct-action
-  safety gate, not an approve/deny gate on someone else's proposal.
-- **A boolean `confirmed` flag on a single-step request, instead of a
-  state machine.** Rejected: the two-request shape (`create` then a
-  separate `confirm` call, gated by role on both routes) is what makes the
-  confirmation **explicit and re-visitable** — a flag flipped in the same
-  request as creation would collapse the two steps the product explicitly
-  wants kept apart, and `ConfirmModelPullUseCase`'s refusal to re-confirm
-  falls directly out of modeling it as states instead of a flag.
-- **Case-insensitive publisher matching for the official badge.** Rejected:
-  the Hub itself treats publisher names as case-sensitive, and folding case
-  would hand the "official" badge to a lowercase reupload of an official
-  org's name — exactly the kind of name a less careful third-party
-  publisher would choose on purpose.
+- **Reusar `proposed_actions`.** Rejeitada pelos motivos rastreados em
+  Decisão acima: nenhuma sessão onde pendurá-la, um estágio de resolução de
+  política construído para níveis de autonomia de agente que não se aplica ao
+  pedido do próprio humano, um vocabulário `ActionType` fechado cujas
+  superfícies de UI foram construídas para outra pergunta, e uma "segunda
+  confirmação" que é portão de segurança de ação direta, não um portão de
+  aprovar/negar a proposta de outrem.
+- **Uma flag booleana `confirmed` num pedido de passo único, em vez de uma
+  máquina de estados.** Rejeitada: o formato de dois requests (`create` e
+  depois uma chamada `confirm` separada, barrada por papel nas duas rotas) é o
+  que torna a confirmação **explícita e revisitável** — uma flag virada no
+  mesmo request da criação colapsaria os dois passos que o produto quer
+  explicitamente separados, e a recusa de `ConfirmModelPullUseCase` a
+  reconfirmar decorre diretamente de modelá-la como estados em vez de flag.
+- **Casamento de publicador sem sensibilidade a maiúsculas para o selo
+  oficial.** Rejeitada: o próprio Hub trata nomes de publicador como sensíveis
+  a maiúsculas, e normalizar entregaria o selo "oficial" a um reupload em
+  minúsculas do nome de uma org oficial — exatamente o tipo de nome que um
+  publicador terceiro menos cuidadoso escolheria de propósito.
