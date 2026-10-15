@@ -1,108 +1,108 @@
 ---
-title: From zero to a deliverable
-description: A real project walked end to end on Brabo — create, pick a model, answer the agents' open questions in the chat, confirm the architecture, approve the plan, and merge every pull request without leaving the Creative's chat.
+title: Do zero a um entregável
+description: Um projeto real percorrido de ponta a ponta no Brabo — criar, escolher um modelo, responder no chat as perguntas abertas dos agentes, confirmar a arquitetura, aprovar o plano e mergear cada pull request sem sair do chat do Criativo.
 ---
 
-# From zero to a deliverable
+# Do zero a um entregável
 
-This page follows one real project, recorded live on 2026-10-14, from an empty
-workspace to a running deliverable. The project, `viralabs-app-2026-10-14b`,
-is a link shortener (Node 22 + SQLite). The whole team ran on **Claude Haiku
-5.5**, and the run cost **US$ 1.07**. From the idea to execution took
-**13 minutes**, and to the last merge about **57 minutes** of interaction.
+Esta página acompanha um projeto real, gravado ao vivo em 2026-10-14, de um
+workspace vazio até um entregável rodando. O projeto,
+`viralabs-app-2026-10-14b`, é um encurtador de links (Node 22 + SQLite). O
+time inteiro rodou com **Claude Haiku 5.5**, e a execução custou
+**US$ 1,07**. Da ideia à execução foram **13 minutos**, e até o último merge
+cerca de **57 minutos** de interação.
 
-What came out at the end: **8 of 8 tasks**, plus the ADR and the
-infrastructure pull request, merged into the project's `dev` branch, and a
-deliverable whose test suite passes **102/102** in a clean clone and that
-starts with `docker compose up`.
+O que saiu no fim: **8 de 8 tarefas**, mais o ADR e a pull request de
+infraestrutura, mergeadas na branch `dev` do projeto, e um entregável cuja
+suíte de testes passa **102/102** num clone limpo e que sobe com
+`docker compose up`.
 
-The whole run was driven from **one place, the Creative's session chat**:
-open questions, the architecture confirmation and every merge were decided
-there, without reloading the page or opening another tab. Each step below
-says what you do and what the agents hand back. The recordings are the real
-screen of Brabo; the path of the mounted folder is blurred in step 1.
+A execução inteira foi conduzida de **um lugar só, o chat da sessão do
+Criativo**: perguntas abertas, a confirmação da arquitetura e cada merge foram
+decididos ali, sem recarregar a página nem abrir outra aba. Cada passo abaixo
+diz o que você faz e o que os agentes devolvem. As gravações são a tela real
+do Brabo; o caminho da pasta montada está borrado no passo 1.
 
-## 1. Create the project
+## 1. Criar o projeto
 
-You create the project in the wizard and choose where the code lives. Here it
-is a **mounted folder**: the wizard suggests a path inside the installation's
-projects base, and the folder only needs to exist when the Infra brings the
-container up. Nothing is provisioned yet — the repository is born later, when
-the Architect is brought in.
+Você cria o projeto no assistente e escolhe onde o código mora. Aqui é uma
+**pasta montada**: o assistente sugere um caminho dentro da base de projetos
+da instalação, e a pasta só precisa existir quando a Infra sobe o container.
+Nada é provisionado ainda — o repositório nasce depois, quando o Arquiteto
+entra.
 
-![Creating the project](../assets/fluxo-do-zero/passo-01-criar-projeto.gif)
+![Criando o projeto](../assets/fluxo-do-zero/passo-01-criar-projeto.gif)
 
-## 2. Give the team a model
+## 2. Dar um modelo ao time
 
-In Settings you apply one model to every agent in one action. This run applied
-Claude Haiku 5.5 to the whole team.
+Em Configurações você aplica um modelo a todos os agentes numa ação só. Esta
+execução aplicou o Claude Haiku 5.5 ao time inteiro.
 
-![Applying the model to the team](../assets/fluxo-do-zero/passo-02-modelo-ao-time.gif)
+![Aplicando o modelo ao time](../assets/fluxo-do-zero/passo-02-modelo-ao-time.gif)
 
-## 3. The idea, and the questions the agents ask back
+## 3. A ideia, e as perguntas que os agentes devolvem
 
-You describe the product in the Creative's chat. In its first turn the
-**Creative** records **7 business rules and 1 decision**, and turns what it
-could not decide on its own into **open questions**, each with a suggested
-answer and the rules it affects ("when a link is deleted, is its click history
-deleted too?"). The questions sit in the "Open questions" queue at the top of
-the chat: you accept the suggestion or type your own answer, and the answer is
-recorded as a decision. The closing line of the turn says what was written
-("Recorded this turn: 7 business rules, 1 decision, 2 open questions").
-When you are done, **"I'm ready — the need is validated"** hands the work to
-the PO.
+Você descreve o produto no chat do Criativo. No primeiro turno o **Criativo**
+grava **7 regras de negócio e 1 decisão**, e transforma o que não conseguiu
+decidir sozinho em **perguntas abertas**, cada uma com uma resposta sugerida e
+as regras que ela afeta ("quando um link é apagado, o histórico de cliques
+dele também é?"). As perguntas ficam na fila "Perguntas abertas" no topo do
+chat: você aceita a sugestão ou digita a sua resposta, e a resposta é gravada
+como decisão. A linha de fecho do turno diz o que foi gravado ("Gravado neste
+turno: 7 regras de negócio, 1 decisão, 2 perguntas abertas"). Quando você
+terminar, **"Estou pronto — a necessidade está validada"** passa o trabalho ao
+PO.
 
-![The idea and the open questions](../assets/fluxo-do-zero/passo-03-ideacao-e-perguntas.gif)
+![A ideia e as perguntas abertas](../assets/fluxo-do-zero/passo-03-ideacao-e-perguntas.gif)
 
-## 4. PO, Architect and the ADR
+## 4. PO, Arquiteto e o ADR
 
-The **PO** breaks the rules into a backlog — **4 epics, 8 stories and 8
-tasks**, in about a minute and a half — and asks back too when a rule is
-missing a value ("what is the minimum password length?"). With every rule
-covered by a story, the handoff to the **Architect** is accepted
-automatically. The Architect proposes the ADR as a pull request
-(`arquiteto[bot]`, PR #1, "Single module with SQLite on a persistent volume")
-and, once the architecture is defined, asks you to confirm it:
-**"Confirm architecture ready"** is what brings the Infra in.
+O **PO** quebra as regras num backlog — **4 épicos, 8 histórias e 8
+tarefas**, em cerca de um minuto e meio — e também pergunta de volta quando
+falta um valor a uma regra ("qual o tamanho mínimo da senha?"). Com toda regra
+coberta por uma história, o handoff ao **Arquiteto** é aceito
+automaticamente. O Arquiteto propõe o ADR como pull request
+(`arquiteto[bot]`, PR #1, "Módulo único com SQLite em volume persistente") e,
+com a arquitetura definida, pede que você a confirme:
+**"Confirmar arquitetura pronta"** é o que traz a Infra.
 
-![PO, Architect and the ADR](../assets/fluxo-do-zero/passo-04-po-arquiteto-adr.gif)
+![PO, Arquiteto e o ADR](../assets/fluxo-do-zero/passo-04-po-arquiteto-adr.gif)
 
-## 5. Infra, the plan and automatic mode
+## 5. Infra, o plano e o modo automático
 
-The **Infra Lead** brings the project's container up on its own and opens the
-infrastructure pull request (`infra[bot]`, PR #2). The **Dev Lead** reads the
-backlog and the module map and proposes the execution plan; approving the
-plan is what activates execution. The screen offers **automatic mode** for the
-whole team in one click, saying what it does not release: merges into a
-protected branch stay yours. From then on the dev agent works inside the
-container (`/work`), and you can read each command it ran and its output in
-the chat.
+O **Infra Lead** sobe o container do projeto sozinho e abre a pull request de
+infraestrutura (`infra[bot]`, PR #2). O **Dev Lead** lê o backlog e o mapa de
+módulos e propõe o plano de execução; aprovar o plano é o que ativa a
+execução. A tela oferece o **modo automático** para o time inteiro num
+clique, dizendo o que ele não libera: merges em branch protegida continuam
+seus. Daí em diante o dev agent trabalha dentro do container (`/work`), e você
+pode ler no chat cada comando que ele rodou e a saída.
 
-![Infra, the plan and automatic mode](../assets/fluxo-do-zero/passo-05-infra-plano-modo-automatico.gif)
+![Infra, o plano e o modo automático](../assets/fluxo-do-zero/passo-05-infra-plano-modo-automatico.gif)
 
-## 6. Merges from the chat
+## 6. Merges pelo chat
 
-Each task runs in the dev agent (90 s on average from picking the task to the
-pull request, between 36 s and 144 s) and goes through the pipeline **Dev →
-QA → SecOps → You**. A pull request that passes the gates lands in the
-**"PRs ready to merge"** queue at the top of the Creative's chat: **Merge**
-proposes the merge and **Approve**, in the same block, confirms it. In this
-run the last seven pull requests (#4 to #10) were merged in about two minutes,
-with no page reload.
+Cada tarefa roda no dev agent (90 s em média de pegar a tarefa até a pull
+request, entre 36 s e 144 s) e passa pela esteira **Dev → QA → SecOps →
+Você**. A pull request que passa nos gates cai na fila **"PRs prontas para
+merge"** no topo do chat do Criativo: **Mergear** propõe o merge e
+**Aprovar**, no mesmo bloco, o confirma. Nesta execução as últimas sete pull
+requests (#4 a #10) foram mergeadas em cerca de dois minutos, sem recarregar a
+página.
 
-![Merges from the chat](../assets/fluxo-do-zero/passo-06-merges-pelo-chat.gif)
+![Merges pelo chat](../assets/fluxo-do-zero/passo-06-merges-pelo-chat.gif)
 
-## The deliverable
+## O entregável
 
-The `dev` branch of the project repository, cloned clean and run in
-`node:22` with `npm test`, passed **102/102** tests. `docker compose up`
-brought the API up on port 8080, and every rule was checked over HTTP: a wrong
-login and a request without a token get 401; an `ftp` URL or one longer than
-2048 characters gets 400 `INVALID_URL`; the short code has 7 characters; the
-public redirect is a 302 that records the click; an unknown code gets 404
-`LINK_NOT_FOUND` and an expired link 410 `LINK_EXPIRED` without counting the
-click; deleting a link returns 204 and removes its clicks; the panel shows the
-count and the click history; `npm run user:create` refuses a password shorter
-than 12 characters; and `/docs` serves the API reference. The CORS preflight
-from `127.0.0.1:8080` and from `localhost:8080` gets each its own
-`Access-Control-Allow-Origin`, and a foreign origin gets none.
+A branch `dev` do repositório do projeto, clonada limpa e rodada em `node:22`
+com `npm test`, passou em **102/102** testes. `docker compose up` subiu a API
+na porta 8080, e cada regra foi conferida por HTTP: login errado e requisição
+sem token recebem 401; uma URL `ftp` ou com mais de 2048 caracteres recebe 400
+`INVALID_URL`; o código curto tem 7 caracteres; o redirecionamento público é
+um 302 que grava o clique; código desconhecido recebe 404 `LINK_NOT_FOUND` e
+link expirado 410 `LINK_EXPIRED` sem contar o clique; apagar um link devolve
+204 e remove os cliques dele; o painel mostra a contagem e o histórico de
+cliques; `npm run user:create` recusa senha com menos de 12 caracteres; e
+`/docs` serve a referência da API. O preflight de CORS a partir de
+`127.0.0.1:8080` e de `localhost:8080` recebe cada um o seu
+`Access-Control-Allow-Origin`, e uma origem estranha não recebe nenhum.

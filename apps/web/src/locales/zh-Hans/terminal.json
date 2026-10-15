@@ -1,0 +1,76 @@
+{
+  "terminalPanel": {
+    "loading": "正在打开终端…",
+    "connectionLost": "与 runner 的连接已断开。请关闭并重新打开此标签页重试。"
+  },
+  "folderBrowserModal": {
+    "title": "选择文件夹",
+    "shortcutsLabel": "快捷方式",
+    "personalFolder": "个人文件夹",
+    "projectsBase": "项目根目录",
+    "root": "根目录",
+    "breadcrumbLabel": "当前路径",
+    "entriesLabel": "此文件夹中的项目",
+    "loading": "加载中…",
+    "empty": "这里没有子文件夹。",
+    "truncated": "仅显示前 500 个子文件夹。",
+    "hiddenFiles_other": "{{count}} 个文件未显示（只列出文件夹）。",
+    "hiddenLinks_other": "{{count}} 个快捷方式未显示（不跟随链接）。",
+    "detailsLabel": "详情",
+    "folderType": "文件夹",
+    "itemCount_other": "{{count}} 项",
+    "cancel": "取消",
+    "select": "使用此文件夹",
+    "initialDirError": "无法获取初始文件夹。",
+    "origemRunner": "此列表来自本地代理（brabo-runner），显示的是你自己机器上的磁盘——而不是服务器的。",
+    "origemApi": "此列表来自服务器，位于本次安装的项目根目录内——而不是你机器上的磁盘。",
+    "semRespostaRessalva": "没有及时收到响应。这并不能证明没有本地代理在运行：可能是机器或网络较慢。"
+  },
+  "runnerOnboarding": {
+    "defaultMessage": "此项目没有已连接的 runner。",
+    "noProjectMessage": "创建项目后，可以在这里配置 runner。",
+    "instructionPrefix": "在你的机器上，于 Brabo 的检出目录中（参见",
+    "instructionSuffix": "）：",
+    "command": "brabo-runner --project {{projectId}} --dir {{caminho}} --token <在 设置 → 访问令牌 中生成>",
+    "detail": "runner 一旦运行就会自动连接——这里无需任何额外操作。",
+    "retryButton": "已安装，连接",
+    "placeholderProjectId": "<项目 id>",
+    "placeholderPath": "<文件夹>",
+    "passoHumano": "这一步需要你来做：浏览器不会在你的机器上运行程序。",
+    "copyButton": "复制",
+    "copiedButton": "已复制！",
+    "manualDisclosureSummary": "其他机器，或手动运行",
+    "instaladorIntro": "通过 Brabo 安装程序安装本地代理。在安装了 Brabo 的机器上，于终端中运行：",
+    "instaladorFaz": "安装程序会下载 runner，按发布版本的签名清单进行校验，安装为可执行文件并配对此机器——无需在浏览器中处理密钥、下载或 chmod。",
+    "instaladorOutraMaquina": "在其他机器上，或者如果你不想运行安装程序，请使用下面的手动命令，并配合访问令牌。"
+  },
+  "esperaDoRunner": {
+    "esperando": "正在查找 runner…",
+    "esperandoDetalhe": "runner 连接后，此页面会自动提示。{{minutos}} 分钟后停止查找。",
+    "confirmado": "runner 已连接——文件夹确认于 {{data}}。",
+    "caminhoDoRunner": "这是 runner 从你机器上报告的路径；它会替换之前输入的路径。",
+    "semResposta": "{{minutos}} 分钟内未看到 runner 连接。",
+    "semRespostaRessalva": "这并不能证明它没有在运行：请检查你粘贴命令的终端；如果此项目之前已用同一文件夹确认过，时间戳不会被重写——实时状态请看“代码”标签页。",
+    "procurarDeNovo": "重新查找"
+  },
+  "agenteDeMaquina": {
+    "verificando": "正在检查你的账户是否已有配对的机器…",
+    "semPapel": "设备密钥属于每个人，而列出你的密钥需要此项目的 developer 角色——因此此页面没有检查你是否已有配对的机器。",
+    "naoSei": "无法检查你的账户是否已有配对的机器。这不代表没有——只代表不知道。",
+    "pareada": "你的账户已有配对的机器：{{nomes}}。本地代理最后一次使用该密钥是在 {{data}}。",
+    "pareadaNuncaUsada": "你的账户已有配对的机器：{{nomes}}——但还没有本地代理使用过该密钥。",
+    "revogada": "此账户的机器密钥（{{nomes}}）已被撤销：没有本地代理能用它连接。请在下方重新配对。",
+    "ressalvaNaoEBatimento": "已注册的密钥不等于代理正在运行：它只证明机器曾经配对过，而不能证明代理现在在线。",
+    "ressalvaDaConta": "此列表属于你的账户，而不是这个浏览器：如果你在另一台机器上，这台机器仍需配对。",
+    "alcance": "一把机器密钥服务于你所有 runner 模式的项目——撤销它会让所有这些项目的本地代理断开。",
+    "gesto": "在已配对的机器上，检查本地代理服务：",
+    "comandoDeServico": "brabo-runner service status --machine"
+  },
+  "chaveDeProjeto": {
+    "pareada": "此项目已配对：{{nomes}}。本地代理最后一次使用该密钥是在 {{data}}。",
+    "pareadaNuncaUsada": "此项目已配对：{{nomes}}——但还没有本地代理使用过该密钥。",
+    "revogada": "此项目的密钥（{{nomes}}）已被撤销：没有本地代理能用它连接。请在下方重新配对。",
+    "alcance": "项目密钥只服务于此项目——撤销它只会断开这里的本地代理，不影响你的其他项目。",
+    "comandoDeServico": "brabo-runner service status --project {{projectId}}"
+  }
+}

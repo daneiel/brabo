@@ -406,17 +406,59 @@
     },
     "getting-started.md": {
       "defasada": false,
-      "data": null
+      "data": "2026-10-15"
+    },
+    "glossary.md": {
+      "defasada": true,
+      "data": "2026-10-15"
     },
     "intro.md": {
       "defasada": false,
-      "data": null
+      "data": "2026-10-15"
     },
     "missions/colheita-esqueleto.md": {
       "defasada": false,
       "data": null
+    },
+    "tutorials/from-zero-to-deliverable.md": {
+      "defasada": true,
+      "data": "2026-10-15"
     }
   },
-  "ru": {},
-  "zh-Hans": {}
+  "ru": {
+    "getting-started.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "glossary.md": {
+      "defasada": true,
+      "data": "2026-10-11"
+    },
+    "intro.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "tutorials/from-zero-to-deliverable.md": {
+      "defasada": true,
+      "data": "2026-10-15"
+    }
+  },
+  "zh-Hans": {
+    "getting-started.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "glossary.md": {
+      "defasada": true,
+      "data": "2026-10-11"
+    },
+    "intro.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "tutorials/from-zero-to-deliverable.md": {
+      "defasada": true,
+      "data": "2026-10-15"
+    }
+  }
 }

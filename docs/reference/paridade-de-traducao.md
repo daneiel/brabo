@@ -13,11 +13,26 @@ A fonte é o pt-BR em `docs/` (ADR 0216); `docs/reference/**` é gerado e fica f
 
 | locale | páginas traduzidas | caracteres traduzidos | em dia | defasadas | sem procedência | ausentes | órfãs |
 |---|---|---|---|---|---|---|---|
-| `en` | 104 de 256 (40.6%) | 16.5% de 5.274.718 | 0 | 0 | 104 | 152 | 0 |
-| `ru` | 0 de 256 (0.0%) | 0.0% de 5.274.718 | 0 | 0 | 0 | 256 | 0 |
-| `zh-Hans` | 0 de 256 (0.0%) | 0.0% de 5.274.718 | 0 | 0 | 0 | 256 | 0 |
+| `en` | 106 de 257 (41.2%) | 17.0% de 5.280.280 | 2 | 2 | 102 | 151 | 0 |
+| `ru` | 4 de 257 (1.6%) | 0.9% de 5.280.280 | 2 | 2 | 0 | 253 | 0 |
+| `zh-Hans` | 4 de 257 (1.6%) | 0.9% de 5.280.280 | 2 | 2 | 0 | 253 | 0 |
 
 > **TODO(humano):** revisão nativa por idioma — quem revisou e quando. Ainda não há revisão nativa registrada.
+
+### Defasadas em `en`
+
+- `glossary.md` (tradução de 2026-10-15)
+- `tutorials/from-zero-to-deliverable.md` (tradução de 2026-10-15)
+
+### Defasadas em `ru`
+
+- `glossary.md` (tradução de 2026-10-11)
+- `tutorials/from-zero-to-deliverable.md` (tradução de 2026-10-15)
+
+### Defasadas em `zh-Hans`
+
+- `glossary.md` (tradução de 2026-10-11)
+- `tutorials/from-zero-to-deliverable.md` (tradução de 2026-10-15)
 
 ## Interface
 
@@ -26,8 +41,8 @@ Chaves de `apps/web/src/locales/<locale>/` contra o pt-BR. Chave plural conta um
 | locale | formas de plural | chaves presentes | plurais incompletos |
 |---|---|---|---|
 | `en` | one, other | 2302 de 2316 (99.4%) | 7 |
-| `ru` | one, few, many, other | catálogo ausente (0 de 2520) | 0 |
-| `zh-Hans` | other | catálogo ausente (0 de 2214) | 0 |
+| `ru` | one, few, many, other | 2520 de 2520 (100.0%) | 0 |
+| `zh-Hans` | other | 2214 de 2214 (100.0%) | 0 |
 
 ### Namespaces incompletos em `en`
 

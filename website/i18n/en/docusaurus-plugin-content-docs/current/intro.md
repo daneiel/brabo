@@ -6,6 +6,7 @@ sidebar_position: 1
 slug: /
 description: A platform that orchestrates AI agents to run the full lifecycle of an application, keeping final authority with the human.
 keywords: [brabo, AI agents, engineering, orchestration, approval]
+traducao_de: cca4f282a22c9a427ae98001465238933cce3f47
 ---
 
 # What Brabo Is

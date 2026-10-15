@@ -80,6 +80,12 @@ export interface EntradaEscada {
   owner?: string;
   /** Modo community: handles por papel. */
   aprovadores?: Partial<Record<Papel, string[]>>;
+  /** A branch de ORIGEM do PR (head ref). */
+  origem?: string;
+  /** Variável `QA_FASE_DE_TESTE == 'true'` (ADR 0217). */
+  faseDeTesteQa?: boolean;
+  /** O login do usuário do `BRABO_BOT_TOKEN`, resolvido no workflow. */
+  botLogin?: string;
 }
 
 /** O que o emparelhamento produz: sempre um papel de verdade. */
@@ -106,6 +112,25 @@ export interface VereditoDeEscada {
   avisos: string[];
   /** Ninguém precisou aprovar — o PR é do próprio owner, no modo solo. */
   dispensadoPorAutoria: boolean;
+  /** Promoção automática `dev` → `qa` em fase de teste (ADR 0217). */
+  dispensadoPorFaseDeTeste?: boolean;
+}
+
+/**
+ * A promoção automática da fase de teste (ADR 0217, AT-555): SÓ `dev` → `qa`,
+ * SÓ com a variável ligada e SÓ quando o autor é o usuário do
+ * `BRABO_BOT_TOKEN`. Qualquer outro par — `qa` → `main` em especial — segue
+ * exigindo aprovação. Sem `botLogin` resolvido, nunca dispensa.
+ */
+export function ehPromocaoAutomaticaDaFaseDeTeste(entrada: EntradaEscada): boolean {
+  const bot = entrada.botLogin?.trim();
+  return (
+    entrada.faseDeTesteQa === true &&
+    entrada.destino === 'qa' &&
+    entrada.origem === 'dev' &&
+    !!bot &&
+    entrada.autorDoPr === bot
+  );
 }
 
 // ---------------------------------------------------- reviews que contam
@@ -211,6 +236,20 @@ export function avaliarEscada(entrada: EntradaEscada): VereditoDeEscada {
       faltando: [
         `destino \`${entrada.destino}\` não é uma branch permanente — ` +
           `a escada só se aplica a ${ESCADA.map((p) => `\`${p}\``).join(', ')}.`,
+      ],
+    };
+  }
+
+  if (ehPromocaoAutomaticaDaFaseDeTeste(entrada)) {
+    return {
+      ...base,
+      ok: true,
+      dispensadoPorFaseDeTeste: true,
+      faltando: [],
+      avisos: [
+        'promoção automática `dev` → `qa` em fase de teste (`QA_FASE_DE_TESTE=true`, ADR 0217): ' +
+          `PR aberto pelo bot (\`${entrada.botLogin}\`), aprovação dispensada. ` +
+          'A qa ainda não é considerada ambiente validado; `qa` → `main` segue exigindo aprovação.',
       ],
     };
   }
@@ -361,6 +400,13 @@ export function formatarEscada(
   l.push(`approval-ladder: → ${entrada.destino}   modo: ${veredito.modo}`);
   l.push('');
 
+  if (veredito.dispensadoPorFaseDeTeste) {
+    l.push('  ✓ APROVADO — promoção automática dev → qa da fase de teste.');
+    l.push('');
+    for (const a of veredito.avisos) l.push(`  ⚠ ${a}`);
+    return l.join('\n');
+  }
+
   if (veredito.dispensadoPorAutoria) {
     l.push('  ✓ APROVADO — PR de autoria do owner, dispensado de review.');
     l.push('');
@@ -466,6 +512,9 @@ async function principal(): Promise<void> {
       po: listaDaVariavel(process.env.APROVADORES_PO),
       gestao: listaDaVariavel(process.env.APROVADORES_GESTAO),
     },
+    origem: process.env.PR_HEAD_REF,
+    faseDeTesteQa: process.env.QA_FASE_DE_TESTE === 'true',
+    botLogin: process.env.BOT_LOGIN,
   };
 
   const veredito = avaliarEscada(entrada);

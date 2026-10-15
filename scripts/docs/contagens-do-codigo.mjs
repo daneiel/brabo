@@ -268,8 +268,8 @@ export const AFERICOES = [
   // web, compose, ações, banco
   { arquivo: 'README.md', padrao: /— (\S+) abas, derivadas de um registro único/, fonte: 'abasDoProjeto', forma: 'pt_f' },
   { arquivo: '.claude/contexto/convencoes-repositorio-e-dominio.md', padrao: /Os (\S+) serviços do compose de DEV têm healthcheck/, fonte: 'servicosDoComposeDeDev', forma: 'pt_m' },
-  { arquivo: 'docs/glossary.md', padrao: /executes directly\. (\S+) types\./, fonte: 'tiposDeAcao', forma: 'en' },
-  { arquivo: 'docs/glossary.md', padrao: /executes directly\. \S+ types\. (\S+) states/, fonte: 'estadosDeAcao', forma: 'en' },
+  { arquivo: 'docs/glossary.md', padrao: /nunca executa direto\.\s+São (\d+) tipos/, fonte: 'tiposDeAcao', forma: 'digito' },
+  { arquivo: 'docs/glossary.md', padrao: /nunca executa direto\.\s+São \d+ tipos e (\d+) estados/, fonte: 'estadosDeAcao', forma: 'digito' },
   { arquivo: 'docs/architecture.md', padrao: /^(\d+) tables in total\./m, fonte: 'tabelasDoBanco', forma: 'digito' },
 
   // artefatos e providers
