@@ -6,6 +6,9 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- A interface fala russo: `apps/web/src/locales/ru/` traz os 27 namespaces
+  traduzidos da fonte pt-BR, com o plural russo (`_one`/`_few`/`_many`/`_other`),
+  e escolher `ru` na Conta deixa de cair no pt-BR (ADR 0216, AT-551).
 - O cache de prompt passa a valer no Haiku (e nos demais `anthropic/*`) pelo
   OpenRouter: a capability `promptCaching` do OpenRouter vira `true`, provada
   por smoke com credencial em 15/10 (`cached_input_tokens=8011` na segunda
