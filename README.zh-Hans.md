@@ -28,7 +28,7 @@
 
 </div>
 
-> 源文本和受校验的版本是葡萄牙语的 [README.md](README.md)：其中写有当前版本和各项数量（规则、决策、提供方）。本译文有意不写这些数字。
+> 源文本和受校验的版本是葡萄牙语的 [README.md](README.md)：其中写有当前版本和业务规则的数量。本译文有意不写这些数字。
 
 ---
 
@@ -53,9 +53,9 @@
 
 ### 架构师以书面方式做决定
 
-<img src="docs/assets/readme/arquitetura-e-adr.png" alt="架构师以 pull request 的形式提出 ADR，并请你确认架构" />
+<img src="docs/assets/readme/arquitetura-e-adr.png" alt="架构师以 pull request 的形式提出架构决策，并请你确认架构" />
 
-ADR 以 pull request 的形式产生，架构只有在你确认后才继续推进。
+架构决策以 pull request 的形式产生，架构只有在你确认后才继续推进。
 
 ### 开发者在容器内工作
 
@@ -162,35 +162,9 @@ pnpm bootstrap --help                         # 用法说明
 
 `NO_COLOR=1` 关闭颜色；否则它会以 24 位 ANSI 使用设计系统的 token，在终端不支持时降级为 256 色。
 
-> **`pnpm dev` 与 `make deploy-local` 不能共存。** 两者把 api 和 engine 发布在相同端口上——这是有意的（ADR 0025），以便冒烟测试对两者都有效。本地集群运行时，**5173 打不开**，web 位于 <http://localhost:8088>。`pnpm dev:preflight` 会告诉你当前处于哪种模式；`make k8s-down` 切回本模式。详见[入门指南](docs/getting-started.md#os-dois-modos-locais-não-coexistem)。
+> **`pnpm dev` 与 `make deploy-local` 不能共存。** 两者把 api 和 engine 发布在相同端口上——这是有意的，以便冒烟测试对两者都有效。本地集群运行时，**5173 打不开**，web 位于 <http://localhost:8088>。`pnpm dev:preflight` 会告诉你当前处于哪种模式；`make k8s-down` 切回本模式。详见[入门指南](docs/getting-started.md#os-dois-modos-locais-não-coexistem)。
 
 > `api`、`web` 和 `engine` 容器以与你的主机用户**相同**的 UID/GID 运行——绝不以 root 运行——这样 `apps/api/dist` 以及智能体在 bind mount 中写入的其他内容一产生就归**你**所有。用 `id -u` 和 `id -g` 查看你的组合；如果与默认值（1000/1000，单人开发的 Linux 机器上最常见）不符，请在首次 `docker compose up` 之前把 `DEV_UID`/`DEV_GID` 写入 `.env`（参见 `.env.example`）。在此改动之前就已存在的环境：`node_modules`/`_build`/`deps`/`.mix`/`.hex` 的命名卷中仍有旧容器以 root 写入的内容——执行一次 `sudo chown -R $USER apps/api/dist apps/*/node_modules`（或用 `docker compose down -v` 删除这些卷，让下一次 `up` 重新创建）来清理被卡住的部分。
-
-## 一个回合如何运作
-
-```mermaid
-sequenceDiagram
-  participant U as 你
-  participant W as web
-  participant A as api
-  participant E as engine
-  participant L as LLM
-
-  U->>W: 打开会话
-  W->>A: POST /sessions
-  A->>A: 写入 session.created（事件日志 + outbox）
-  A-->>E: Oban 消费 outbox
-  E->>E: SessionServer + Harness 组装上下文
-  E->>L: 回合
-  L-->>E: “我想运行这个工具”
-  E->>A: 变成 proposed_action
-  A->>A: IAM → agent_autonomy → permissions.json → 上限
-  A-->>U: 请求批准
-  U->>A: 批准
-  A-->>E: 执行
-  E->>A: 不可变事件
-  A-->>W: 广播——面板更新
-```
 
 ## 文档
 
@@ -212,7 +186,6 @@ sequenceDiagram
 | [工件](docs/reference/artifacts.md) | 各个 schema 以及谁可以产生它们 |
 | [Git 提供方](docs/reference/git-providers.md) | 操作契约和能力声明 |
 | [内部 API](docs/reference/internal-api.md) | api ↔ engine 契约 |
-| [ADR](docs/adr/index.md) | 各项决策及其理由（数量见[葡萄牙语 README](README.md)） |
 | [安全](SECURITY.md) | 如何报告漏洞 |
 | [参与贡献](CONTRIBUTING.md) | 流程、Definition of Done、接受什么 |
 | [治理](GOVERNANCE.md) | 当前模式（单一维护者）、`community` 模式的三个角色及准入标准 |
@@ -230,171 +203,6 @@ sequenceDiagram
 | deploy | 通过 Kustomize 部署到 Kubernetes；开发用 Docker Compose |
 
 没有 Redis：队列通过 Oban 存放在 Postgres 中，限流是 SQL 中的滑动窗口。
-
-## 目录结构
-
-```
-apps/
-  api/      NestJS + Drizzle          → schema "public"
-  engine/   Elixir/OTP + Phoenix      → schema "engine"
-  web/      React + Vite
-packages/
-  shared/   共享的 TS 类型（仅 import type）
-design/     设计系统——UI 的事实来源
-docker/     dev 和 prod 的 compose、Dockerfile、smoke.sh
-deploy/k8s/ base + local/staging/prod overlays（Kustomize）
-docs/       本文档，包括 ADR
-scripts/
-  ci/       发布自动化与分支策略（用 vitest 测试）
-  dev/      本地工具——`pnpm bootstrap` 菜单和 preflight
-  docs/     文档的生成与校验
-website/    Docusaurus，读取 docs/——绝不读取 website/docs/
-```
-
-`apps/engine` 不在 pnpm workspace 中（它是 Mix 项目），根目录的脚本会委托给 `mix`：
-
-```bash
-pnpm engine:setup    # deps.get + ecto.create + ecto.migrate
-pnpm engine:dev      # 在 Docker 外运行 phx.server
-pnpm engine:test     # mix test
-```
-
-> **Elixir 1.20.4 / OTP 29.1.1** 是项目使用的版本，Dockerfile 和 CI 中相同。更新版本的 `mix format` 输出不同，会让 CI 的 `--check-formatted` 变红。如果你的主机版本不同，请通过容器格式化：
->
-> ```bash
-> docker run --rm -v "$PWD/apps/engine:/app" -w /app \
->   hexpm/elixir:1.20.4-erlang-29.1.1-alpine-3.24.2 mix format
-> ```
-
-## 数据库
-
-一个 Postgres，一个数据库（`brabo`），两个 schema，永不冲突：
-
-- **api（Drizzle）**——领域在 `public`；迁移位于 `apps/api/src/db/migrations/`，用 `pnpm db:migrate` 应用（修改 `apps/api/src/db/schema/<聚合>.ts` 后运行 `pnpm db:generate`——自 [ADR 0121](docs/adr/0121-schema-dividido-por-agregado-de-dominio.md) 起每个聚合一个文件；`db/schema.ts` 只是 `export *` 的 barrel）。
-- **engine（Ecto/Oban）**——领域和 Oban 在 `engine`，通过 `migration_default_prefix`。迁移位于 `apps/engine/priv/repo/migrations/`。
-
-pgvector 由 `docker/postgres/init.sql` 启用，它只在创建数据卷时运行一次。
-
-## 测试
-
-```bash
-pnpm --filter api test      # vitest
-pnpm --filter web test      # vitest
-pnpm engine:test            # ExUnit
-```
-
-没有正常路径测试**和**一个失败用例，任何功能都不会合入。git 提供方由**同一套契约测试**针对三者（Local、GitHub、GitLab）进行验证。有两个测试值得一提，因为它们保护的是属性而不是实现：
-
-- `apps/api/test/interfaces/route-surface.spec.ts` 在运行时枚举路由并与 [`docs/security-surface.md`](docs/security-surface.md) 对照——**没有分类的新路由会让测试失败**。
-- `apps/engine/test/engine_web/route_surface_test.exs` 对每个已注册路由发送不带 token 的请求，并要求返回 401，具名例外除外。
-
-## 健康检查与可观测性
-
-`GET /health` 在两个服务中都会检查 Postgres 连接。在 Kubernetes 中探针有**三个**，因为问题不同（ADR 0025）：`/live` 不访问数据库就响应——与 Postgres 绑定的 liveness 会在数据库变慢时一次性重启所有副本——，`/health` 是 api 的 readiness，engine 上的 `/ready` 只有在会话再水合完成后才放行流量。
-
-一个会话是一条贯穿 api 和 engine 的**根 trace**，`trace_id` 产生于浏览器——三条日志流携带同一个 id。这**无需采集器**也成立：埋点和导出是两个独立的决定，所以即使 `monitoring` 中什么都没运行，`pnpm dev` 也有关联。
-
-生产环境中日志是每个事件一行 JSON，开发环境中则便于人读，每个请求还会输出一行**跨层路径**及每一步的耗时：
-
-```
-POST /projects/…/sessions — 34.1ms trace=4bf92f35
-  interfaces        SessionsController.create         0ms
-    ↳ application     CreateSessionUseCase.execute    31.2ms
-      ↳ infrastructure  DrizzleOutboxRepository.append  2.1ms
-```
-
-Prometheus 指标涵盖按项目的 token/分钟和成本/小时、Oban 队列、活跃会话和批准率。Grafana 仪表板以代码形式配置。完整模型见[可观测性](docs/explanation/observability.md)。
-
-## 生产环境
-
-多阶段、**非 root**、只读 rootfs、无 bind mount 的镜像：`docker/<app>/Dockerfile.prod`。api 在 `dist` 上运行 `node main.js`，engine 运行 `mix release`（无 Mix、无源码），web 通过 nginx 提供。
-
-```bash
-# 必填：此 compose 以 NODE_ENV=production 运行，若这四个秘密中任何一个
-# 使用仓库中的示例密钥，api 都会拒绝启动（ADR 0059，RN-093/RN-114）。
-# `smoke.sh` 会自行生成。
-export GIT_OAUTH_STATE_SECRET="$(openssl rand -base64 32)"
-export AUTH_JWT_SECRET="$(openssl rand -base64 32)"
-export BRABO_SERVICE_TOKEN="$(openssl rand -base64 32)"
-export CREDENTIALS_MASTER_KEY="$(openssl rand -base64 32)"
-export SECRET_KEY_BASE="$(openssl rand -base64 64)"
-
-docker compose -f docker/docker-compose.prod.yml up -d --build --wait
-bash docker/smoke.sh
-docker compose -f docker/docker-compose.prod.yml down -v
-```
-
-`smoke.sh` 检查三个镜像以非 root 运行，登录，创建 workspace → 项目 → 会话并检查健康状态。它与 CI 使用的是同一个脚本。
-
-**api 和 engine 中的两个数据卷必须完全一致：**
-
-| 路径 | 内容 |
-|---|---|
-| `/data/project-workspaces` | 每个项目的工作树、每个智能体的 worktree、`permissions.json` |
-| `/data/git-repos` | 本地 bare 仓库（开发智能体 `git push` 的目标） |
-
-api 把 bare 仓库的绝对路径存入数据库，engine 按字面使用它；挂载到不同位置会让 push 以 `remote unpack failed` 失败。
-
-## 部署到 Kubernetes
-
-清单位于 `deploy/k8s/`，使用 **Kustomize**（base + `local`、`staging`、`prod` overlays）——选择理由见 [ADR 0025](docs/adr/0025-fase5-deploy-kubernetes-kustomize.md)。第三方 operator（External Secrets、CloudNativePG、Prometheus、prometheus-adapter）通过 Helm 安装，版本由 bootstrap 固定。
-
-```bash
-make deploy-local     # 启动 k3d 集群，安装全部内容并运行冒烟测试
-make hpa-test         # 填满 Oban 队列并证明 HPA 会扩容
-make rollout-test     # 证明 engine 的 rollout 不会留下孤儿会话
-make test-restore     # 触发真实备份，恢复并验证
-make test-restore-mutacao  # 故意破坏恢复，并要求验证失败
-make k8s-validate     # 构建并校验 overlays（无需集群）
-make k8s-down         # 删除集群
-```
-
-engine 按 **Oban 队列深度**扩缩：`/metrics` 暴露 `oban_queue_depth{queue,state}`，HPA 使用 `state="available"`。按状态过滤不是细节——有三个 worker 会自行重新调度，所以 `oban_jobs` 永远不会为空，不加过滤的 HPA 会在空闲系统上扩到最大。
-
-分步说明和诊断见 [runbook](docs/runbook.md#deploy-local)。
-
-## CI
-
-`.github/workflows/ci.yml` 在推送到 `feature/**` 和向 `dev` 发起 PR 时运行：检查模式的 lint、api/web/engine 测试、清单校验（`kustomize build` + `kubeconform` + shellcheck）、带缓存的镜像构建、对镜像运行 **Trivy**、对仓库运行 **gitleaks**、以严重级别为门槛的依赖审计，以及冒烟测试。
-
-依赖门槛用一个故意植入的严重漏洞验证过：job 失败了，revert 之后又重新通过。
-
-## 前端
-
-自有登录（`/login`、`/registrar`、`/esqueci-senha`、`/definir-senha`）：access token 保存在内存中，refresh 存放在 httpOnly cookie 里，因此会话在刷新页面后依然保留，无需经过 `localStorage`。这四个页面遵循设计系统已批准的样稿，标志位于卡片上方，页脚显示工件版本（[ADR 0036](docs/adr/0036-telas-de-auth-fieis-ao-design-e-fontes-auto-hospedadas.md)）。登录后应用在用户的第一个 workspace 上工作：
-
-- **Dashboard**（`/`）——项目网格和「新建项目」向导
-- **项目**（`/projects/:id`）——标签页由单一注册表派生（`apps/web/src/routes/project-tabs.ts`，而不是多份并行列表）：概览（智能体团队、架构和 C4 图）、执行者、创意、聊天、Insights、代码、PR、审批（队列 + `permissions.json` 表）、Backlog、架构、开销和设置（按智能体和按领域的模型、成员、凭据、并行上限）
-- **会话**（`/projects/:id/sessions/:sid`）——流式聊天、模型选择器、实时 `TokenMeter` 以及内联的动作审批
-
-`/status` 是 auth 之外唯一的**公开**路由：它查询 api 和 engine 的 `/health`，这两个本来就是公开的，因为 kubelet 要调用它们。
-
-智能体的流式输出通过 Phoenix 通道 `session:<id>` 到达（`agent.delta`、`agent.status`、`agent.done`）；列表和计数器使用 TanStack Query。
-
-设计系统的三个字体家族（Space Grotesk、Archivo、IBM Plex Mono）**自行托管**在 `apps/web/public/fonts/`。这不是偏好：生产镜像的 CSP 是 `font-src 'self' data:`，之前指向 Google Fonts 的 `<link>` 会被静默拦截——生产环境中字体会退回系统字体，标题和正文变得无法区分。
-
-## 约定
-
-- **始终**在从 `dev` 分出的 `feature/*` 上工作。永久分支：`dev`、`qa`、`rc`、`main`。
-- 使用 **pt-BR** 的 Conventional commits。
-- 合并到受保护分支**始终**是手动的——没有自动化选项，并由测试保证。
-- 智能体的 commit 使用 `<智能体>[bot]` 身份，用户作为 co-author。
-- 每个领域事件都不可变：事件表上绝不 `UPDATE`。
-- 重要的架构决策会成为 [ADR](docs/adr/index.md)。
-
-`CLAUDE.md` 包含完整细节，也是智能体所读的内容——内容按章节分成多部分存放在 `.claude/contexto/`，由它导入。
-
-## 状态
-
-**第 1 至 26 阶段已完成**；当前版本见[葡萄牙语 README](README.md) 和 [CHANGELOG](CHANGELOG.md)。发布流水线已端到端演练，自有 auth 无需 Keycloak，多个 LLM 提供方共用同一底座，整条链路已在真实 GitHub 上验证——仓库接管、故事推进、开发智能体写代码、PR 打开、关卡评判、结论返回。
-
-阶段之后的工作不是来自路线图，而是来自**使用产品**。16–26 计划诞生于第一次真正使用应用（设计 handoff 的八个界面、只读的代码标签页、由架构师决定的每项目容器、面向两类受众的开销），之后的各轮来自现场测试会话，每个发现都变成带 `文件:行号` 和测试的 RN。
-
-尚不存在的东西都在重要的地方写明了，值得一读：
-
-- [已知技术债](docs/architecture.md#divida-tecnica)——文档中的一个章节，而不是遗漏；
-- [真实运行中的发现](docs/explanation/achados-execucao-real.md)——在真实 GitHub 上运行发现了什么，以及哪些**出于决定**仍然开放，包括两个结论为「通往自主的道路不经过放松策略」的案例；
-- 每项目容器的生命周期是第 25 阶段的**已声明的裁剪**，而不是遗忘：在它启动之前，ADR 0055 的终端策略照旧有效。
 
 ## 许可证
 

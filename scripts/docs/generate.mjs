@@ -688,12 +688,6 @@ function verificarContagensEmProsa() {
       oque: 'a contagem de ADRs',
     },
     {
-      arquivo: 'README.md',
-      padrao: /as (\d+) decisões e o porquê/,
-      esperado: total,
-      oque: 'a contagem de ADRs',
-    },
-    {
       // O `description` do FRONTMATTER do próprio índice, e ele ficou de fora
       // até 2026-09-12 dizendo **134** com 156 ADRs escritos — deriva de 22,
       // no arquivo cuja única função é indexar ADRs. Passou despercebido
@@ -724,14 +718,6 @@ function verificarContagensEmProsa() {
       padrao: /as (\d+) RNs, cada uma com/,
       esperado: String(regras),
       oque: 'a contagem de RNs',
-    },
-    {
-      // Por EXTENSO nesta frase, e é assim que ela está escrita desde sempre —
-      // o check compara com a palavra, não força o texto a virar algarismo.
-      arquivo: 'README.md',
-      padrao: /(\w+) providers de LLM sobre uma base única/,
-      esperado: POR_EXTENSO[providers] ?? String(providers),
-      oque: 'a contagem de providers',
     },
     {
       // O glossário dizia "Seven closed schemas" com ONZE escritos, e listava
@@ -896,12 +882,6 @@ function verificarFrasesAncoradasNoCodigo() {
     {
       arquivo: 'docs/getting-started.md',
       padrao: /db:generate\s+# depois de mudar (apps\/api\/src\/db\/schema(?:\/|\.ts))/,
-      esperado: moradaDoSchema,
-      oque: 'onde o `db:generate` manda mexer',
-    },
-    {
-      arquivo: 'README.md',
-      padrao: /depois de mudar `(apps\/api\/src\/db\/schema(?:\/|\.ts))/,
       esperado: moradaDoSchema,
       oque: 'onde o `db:generate` manda mexer',
     },
