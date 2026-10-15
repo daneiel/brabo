@@ -1,8 +1,8 @@
 ---
-traducao_de: 42943eb911ce4bccd8d00101edc9e854ff9d8c3c
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
-# 0149 — Signature of published artifacts
+# ADR 0149 — Signature of published artifacts
 
 ## Status
 

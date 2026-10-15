@@ -1,4 +1,4 @@
-# 0040 — Moeda do dashboard: USD por ora, câmbio manual por workspace adiado
+# ADR 0040 — Moeda do dashboard: USD por ora, câmbio manual por workspace adiado
 
 ## Contexto
 

@@ -1,8 +1,8 @@
 ---
-traducao_de: 1f58364ef056b293fa60dc3aa0ddc5731b64f515
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
-# 0215 — Решение проекта доходит до dev и QA
+# ADR 0215 — Решение проекта доходит до dev и QA
 
 ## Статус {#status}
 

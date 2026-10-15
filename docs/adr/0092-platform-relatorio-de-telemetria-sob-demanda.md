@@ -1,4 +1,4 @@
-# 0092 — `platform` nasce como script de relatório sob demanda, não agente
+# ADR 0092 — `platform` nasce como script de relatório sob demanda, não agente
 
 ## Status
 

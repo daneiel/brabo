@@ -1,8 +1,8 @@
 ---
-traducao_de: 14e6e1b2b934a17e2fb2f0bd237cbfd802c298e0
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
-# 0132 — RAG accuracy golden-set, and the `rag-acertivo` gate
+# ADR 0132 — RAG accuracy golden-set, and the `rag-acertivo` gate
 
 ## Context
 

@@ -1,8 +1,8 @@
 ---
-traducao_de: 1eb71c3229b3ec8770369028759fe2f4281495a4
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
-# 0138 — RAG 的 golden-set 开始在 CI 中定时运行——并且仍然是 `warn`
+# ADR 0138 — RAG 的 golden-set 开始在 CI 中定时运行——并且仍然是 `warn`
 
 ## Context {#context}
 

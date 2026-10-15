@@ -1,4 +1,4 @@
-# 0004 — Cadastro de credenciais de git do usuário
+# ADR 0004 — Cadastro de credenciais de git do usuário
 
 ## Contexto
 

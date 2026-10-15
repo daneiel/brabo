@@ -1,8 +1,8 @@
 ---
-traducao_de: 23e727d97992c1974a3df731360a293b67fd669c
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
-# 0027 — Backup/restore, усиление api, открытая поверхность и релиз
+# ADR 0027 — Backup/restore, усиление api, открытая поверхность и релиз
 
 ## Контекст {#contexto}
 

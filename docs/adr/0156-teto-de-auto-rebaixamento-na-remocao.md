@@ -1,4 +1,4 @@
-# 0156 — O teto de auto-rebaixamento também na remoção de membro de projeto
+# ADR 0156 — O teto de auto-rebaixamento também na remoção de membro de projeto
 
 ## Status
 

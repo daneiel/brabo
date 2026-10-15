@@ -1,4 +1,4 @@
-# 0036 — Telas de auth fiéis ao design, e as três fontes que não carregavam
+# ADR 0036 — Telas de auth fiéis ao design, e as três fontes que não carregavam
 
 ## Contexto
 

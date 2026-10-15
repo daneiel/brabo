@@ -1,4 +1,4 @@
-# 0038 — Hierarquia de agentes: áreas, leads e delegação
+# ADR 0038 — Hierarquia de agentes: áreas, leads e delegação
 
 ## Contexto
 

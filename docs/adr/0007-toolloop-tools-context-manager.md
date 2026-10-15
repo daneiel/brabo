@@ -1,4 +1,4 @@
-# 0007 — ToolLoop, ferramentas, ContextManager (harness com LLM)
+# ADR 0007 — ToolLoop, ferramentas, ContextManager (harness com LLM)
 
 ## Contexto
 

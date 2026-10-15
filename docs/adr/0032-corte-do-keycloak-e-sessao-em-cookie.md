@@ -1,4 +1,4 @@
-# 0032 — O corte do Keycloak: emissor próprio, service token e sessão em cookie
+# ADR 0032 — O corte do Keycloak: emissor próprio, service token e sessão em cookie
 
 ## Contexto
 

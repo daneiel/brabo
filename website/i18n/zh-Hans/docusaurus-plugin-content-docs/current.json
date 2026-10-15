@@ -54,5 +54,85 @@
   "sidebar.docs.link.Reportar vulnerabilidade": {
     "message": "报告漏洞",
     "description": "The label for link 'Reportar vulnerabilidade' in sidebar 'docs', linking to 'https://github.com/daneiel/brabo/blob/dev/SECURITY.md'"
+  },
+  "sidebar.docs.category.Git, repositório e política de branches": {
+    "message": "Git、仓库与分支策略",
+    "description": "The label for category 'Git, repositório e política de branches' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Harness de agente, turnos e sessões": {
+    "message": "智能体运行框架、轮次与会话",
+    "description": "The label for category 'Harness de agente, turnos e sessões' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.O time de agentes — papéis, áreas e handoffs": {
+    "message": "智能体团队 — 角色、领域与交接",
+    "description": "The label for category 'O time de agentes — papéis, áreas e handoffs' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Gates, QA e revisão de segurança": {
+    "message": "门禁、QA 与安全审查",
+    "description": "The label for category 'Gates, QA e revisão de segurança' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Execução, política de terminal e aprovações": {
+    "message": "执行、终端策略与审批",
+    "description": "The label for category 'Execução, política de terminal e aprovações' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Onde o código mora — modos de execução": {
+    "message": "代码存放位置 — 执行模式",
+    "description": "The label for category 'Onde o código mora — modos de execução' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Container do projeto e broker": {
+    "message": "项目容器与 broker",
+    "description": "The label for category 'Container do projeto e broker' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.O runner local": {
+    "message": "本地 runner",
+    "description": "The label for category 'O runner local' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Autenticação, acesso e segredos": {
+    "message": "认证、访问与密钥",
+    "description": "The label for category 'Autenticação, acesso e segredos' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Providers de LLM, modelos e gasto": {
+    "message": "LLM 提供方、模型与花费",
+    "description": "The label for category 'Providers de LLM, modelos e gasto' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.RAG, grafo de conhecimento e artefatos": {
+    "message": "RAG、知识图谱与工件",
+    "description": "The label for category 'RAG, grafo de conhecimento e artefatos' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Interface web e design system": {
+    "message": "Web 界面与设计系统",
+    "description": "The label for category 'Interface web e design system' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Operação, deploy e instalação": {
+    "message": "运维、部署与安装",
+    "description": "The label for category 'Operação, deploy e instalação' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.CI, release e cadeia de suprimentos": {
+    "message": "CI、发布与供应链",
+    "description": "The label for category 'CI, release e cadeia de suprimentos' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Documentação": {
+    "message": "文档",
+    "description": "The label for category 'Documentação' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Processo e esteira": {
+    "message": "流程与流水线",
+    "description": "The label for category 'Processo e esteira' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Validações e medições": {
+    "message": "验证与测量",
+    "description": "The label for category 'Validações e medições' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.História das fases": {
+    "message": "阶段历史",
+    "description": "The label for category 'História das fases' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Localização": {
+    "message": "本地化",
+    "description": "The label for category 'Localização' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Notas técnicas": {
+    "message": "技术笔记",
+    "description": "The label for category 'Notas técnicas' in sidebar 'docs'"
   }
 }

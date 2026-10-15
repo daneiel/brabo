@@ -1,8 +1,8 @@
 ---
-traducao_de: f97894b6489d2e6970b87610f36b64414277b26d
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
-# 0200 — The contract between modules becomes a versioned Arquiteto artifact, and the dev agent reads it instead of someone else's worktree
+# ADR 0200 — The contract between modules becomes a versioned Arquiteto artifact, and the dev agent reads it instead of someone else's worktree
 
 ## Status
 

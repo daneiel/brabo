@@ -1,8 +1,8 @@
 ---
-traducao_de: 8430361a5eb1565035e5bda35db3531f112b2752
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
-# 0203 — The runner flow through the browser is retired, and the path is the installer
+# ADR 0203 — The runner flow through the browser is retired, and the path is the installer
 
 ## Status
 

@@ -1,8 +1,8 @@
 ---
-traducao_de: 072ea006db81a742be1bd92ba503bb37e0f9cdd3
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
-# 0162 — broker 成为第五个发布的镜像，安装程序**询问**是否启用它
+# ADR 0162 — broker 成为第五个发布的镜像，安装程序**询问**是否启用它
 
 ## 状态 {#status}
 

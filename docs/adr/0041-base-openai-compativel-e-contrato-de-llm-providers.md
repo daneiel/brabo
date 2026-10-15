@@ -1,4 +1,4 @@
-# 0041 — Uma base OpenAI-compatível, um contrato de LLM providers e capabilities que recusam binding
+# ADR 0041 — Uma base OpenAI-compatível, um contrato de LLM providers e capabilities que recusam binding
 
 ## Contexto
 

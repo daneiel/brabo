@@ -1,8 +1,8 @@
 ---
-traducao_de: e377ff4a1b1caac762cf61ae2001d296ee190e55
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
-# 0213 — Результат работает на машине пользователя через compose от Infra
+# ADR 0213 — Результат работает на машине пользователя через compose от Infra
 
 ## Статус {#status}
 

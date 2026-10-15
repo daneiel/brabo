@@ -1,8 +1,8 @@
 ---
-traducao_de: 7bb8172e06f04a3473660371149177023de99b0a
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
-# 0154 — The machine device key
+# ADR 0154 — The machine device key
 
 ## Status
 

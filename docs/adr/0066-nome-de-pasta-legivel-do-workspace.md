@@ -1,4 +1,4 @@
-# 0066 — Nome de pasta legível do workspace
+# ADR 0066 — Nome de pasta legível do workspace
 
 ## Status
 

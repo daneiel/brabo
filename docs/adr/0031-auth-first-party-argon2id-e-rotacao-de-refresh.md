@@ -1,4 +1,4 @@
-# 0031 — Auth first-party: argon2id, EdDSA e rotação de refresh
+# ADR 0031 — Auth first-party: argon2id, EdDSA e rotação de refresh
 
 ## Contexto
 

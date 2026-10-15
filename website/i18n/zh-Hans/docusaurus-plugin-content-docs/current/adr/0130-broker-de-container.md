@@ -1,8 +1,8 @@
 ---
-traducao_de: cafd5034a6fac22a916b448ad445e4358b957651
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
-# 0130 — 容器 broker：谁与服务器的 Docker 对话，以及它为什么不接受规格
+# ADR 0130 — 容器 broker：谁与服务器的 Docker 对话，以及它为什么不接受规格
 
 ## 背景 {#context}
 

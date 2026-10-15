@@ -1,8 +1,8 @@
 ---
-traducao_de: fe6d073c10c82c4a1844c7be6fc497a0a5733af9
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
-# 0194 — 批准 Dev Lead 的计划会激活执行，任务获得它所分配的模块
+# ADR 0194 — 批准 Dev Lead 的计划会激活执行，任务获得它所分配的模块
 
 ## 状态 {#status}
 

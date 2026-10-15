@@ -1,8 +1,8 @@
 ---
-traducao_de: cacbded6233a83c548068768eaea16dd24d84bb5
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
-# 0158 — 主密钥的 id 写入信封，作为可观测性，绝不作为权威
+# ADR 0158 — 主密钥的 id 写入信封，作为可观测性，绝不作为权威
 
 ## 状态 {#status}
 

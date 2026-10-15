@@ -1,8 +1,8 @@
 ---
-traducao_de: 49c077e7cccbc6b1d2fd343ab8f95003c2675bed
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
-# 0145 — Docker 成为 `runner` 模式的真正前提
+# ADR 0145 — Docker 成为 `runner` 模式的真正前提
 
 ## Context {#context}
 

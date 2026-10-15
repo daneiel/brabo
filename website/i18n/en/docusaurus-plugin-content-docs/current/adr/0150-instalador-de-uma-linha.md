@@ -1,8 +1,8 @@
 ---
-traducao_de: b4ee01ec5b0fa2bb837b94747022ab4b10cdc213
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
-# 0150 — The one-line installer, with a chosen source and a marker
+# ADR 0150 — The one-line installer, with a chosen source and a marker
 
 ## Status
 

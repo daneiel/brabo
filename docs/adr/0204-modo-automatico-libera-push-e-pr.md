@@ -1,4 +1,4 @@
-# 0204 — O modo automático libera push e PR
+# ADR 0204 — O modo automático libera push e PR
 
 ## Status
 

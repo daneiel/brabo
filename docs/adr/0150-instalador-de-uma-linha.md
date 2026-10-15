@@ -1,4 +1,4 @@
-# 0150 — O instalador de uma linha, com fonte escolhida e marcador
+# ADR 0150 — O instalador de uma linha, com fonte escolhida e marcador
 
 ## Status
 

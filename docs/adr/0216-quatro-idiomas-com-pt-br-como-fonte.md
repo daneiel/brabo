@@ -1,4 +1,4 @@
-# 0216 — Quatro idiomas, com pt-BR como FONTE e padrão: a documentação e a interface em português, inglês, russo e chinês simplificado
+# ADR 0216 — Quatro idiomas, com pt-BR como FONTE e padrão: a documentação e a interface em português, inglês, russo e chinês simplificado
 
 ## Status
 

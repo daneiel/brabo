@@ -1,8 +1,8 @@
 ---
-traducao_de: 54df79826307229989b14a56d4e2eb6da04478e5
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
-# 0142 — Validation of the mounted workspace is deferred until materialization
+# ADR 0142 — Validation of the mounted workspace is deferred until materialization
 
 ## Context
 

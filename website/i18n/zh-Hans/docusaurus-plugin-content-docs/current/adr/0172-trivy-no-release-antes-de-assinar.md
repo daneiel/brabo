@@ -1,8 +1,8 @@
 ---
-traducao_de: 209fd3641c5685b064dbe9c5625201180387c5f7
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
-# 0172 — 发布在签名之前按 digest 用 Trivy 扫描它所发布的东西
+# ADR 0172 — 发布在签名之前按 digest 用 Trivy 扫描它所发布的东西
 
 ## 状态 {#status}
 

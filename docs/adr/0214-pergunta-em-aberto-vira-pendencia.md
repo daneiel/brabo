@@ -1,4 +1,4 @@
-# 0214 — Pergunta em aberto vira pendência a resolver
+# ADR 0214 — Pergunta em aberto vira pendência a resolver
 
 ## Status
 

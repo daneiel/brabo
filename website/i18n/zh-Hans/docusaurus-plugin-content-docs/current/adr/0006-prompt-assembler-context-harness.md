@@ -1,8 +1,8 @@
 ---
-traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
-# 0006 — agent 的 harness：确定性的上下文组装
+# ADR 0006 — agent 的 harness：确定性的上下文组装
 
 ## 背景 {#contexto}
 

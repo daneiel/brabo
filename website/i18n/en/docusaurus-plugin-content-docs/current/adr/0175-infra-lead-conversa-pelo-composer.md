@@ -1,8 +1,8 @@
 ---
-traducao_de: 647a615b764cb1f27b5073762d7a6e80f1c8cd15
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
-# 0175 — The Infra Lead converses through the composer, and first its turn goes through `TurnoAssincrono`
+# ADR 0175 — The Infra Lead converses through the composer, and first its turn goes through `TurnoAssincrono`
 
 ## Status
 

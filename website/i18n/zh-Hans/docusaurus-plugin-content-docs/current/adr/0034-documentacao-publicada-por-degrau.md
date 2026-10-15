@@ -1,8 +1,8 @@
 ---
-traducao_de: 5393558baeec7d7521831b2be845200534784d83
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
-# 0034 — 按阶梯发布的文档，位于 Pages 的子目录中
+# ADR 0034 — 按阶梯发布的文档，位于 Pages 的子目录中
 
 ## 背景 {#contexto}
 

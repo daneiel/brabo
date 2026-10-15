@@ -54,5 +54,85 @@
   "sidebar.docs.link.Reportar vulnerabilidade": {
     "message": "Report a vulnerability",
     "description": "The label for link 'Reportar vulnerabilidade' in sidebar 'docs', linking to 'https://github.com/daneiel/brabo/blob/dev/SECURITY.md'"
+  },
+  "sidebar.docs.category.Git, repositório e política de branches": {
+    "message": "Git, repository and branch policy",
+    "description": "The label for category 'Git, repositório e política de branches' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Harness de agente, turnos e sessões": {
+    "message": "Agent harness, turns and sessions",
+    "description": "The label for category 'Harness de agente, turnos e sessões' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.O time de agentes — papéis, áreas e handoffs": {
+    "message": "The agent team — roles, areas and handoffs",
+    "description": "The label for category 'O time de agentes — papéis, áreas e handoffs' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Gates, QA e revisão de segurança": {
+    "message": "Gates, QA and security review",
+    "description": "The label for category 'Gates, QA e revisão de segurança' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Execução, política de terminal e aprovações": {
+    "message": "Execution, terminal policy and approvals",
+    "description": "The label for category 'Execução, política de terminal e aprovações' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Onde o código mora — modos de execução": {
+    "message": "Where the code lives — execution modes",
+    "description": "The label for category 'Onde o código mora — modos de execução' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Container do projeto e broker": {
+    "message": "Project container and broker",
+    "description": "The label for category 'Container do projeto e broker' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.O runner local": {
+    "message": "The local runner",
+    "description": "The label for category 'O runner local' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Autenticação, acesso e segredos": {
+    "message": "Authentication, access and secrets",
+    "description": "The label for category 'Autenticação, acesso e segredos' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Providers de LLM, modelos e gasto": {
+    "message": "LLM providers, models and spend",
+    "description": "The label for category 'Providers de LLM, modelos e gasto' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.RAG, grafo de conhecimento e artefatos": {
+    "message": "RAG, knowledge graph and artifacts",
+    "description": "The label for category 'RAG, grafo de conhecimento e artefatos' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Interface web e design system": {
+    "message": "Web interface and design system",
+    "description": "The label for category 'Interface web e design system' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Operação, deploy e instalação": {
+    "message": "Operations, deployment and installation",
+    "description": "The label for category 'Operação, deploy e instalação' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.CI, release e cadeia de suprimentos": {
+    "message": "CI, release and supply chain",
+    "description": "The label for category 'CI, release e cadeia de suprimentos' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Documentação": {
+    "message": "Documentation",
+    "description": "The label for category 'Documentação' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Processo e esteira": {
+    "message": "Process and pipeline",
+    "description": "The label for category 'Processo e esteira' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Validações e medições": {
+    "message": "Validations and measurements",
+    "description": "The label for category 'Validações e medições' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.História das fases": {
+    "message": "Phase history",
+    "description": "The label for category 'História das fases' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Localização": {
+    "message": "Localization",
+    "description": "The label for category 'Localização' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Notas técnicas": {
+    "message": "Technical notes",
+    "description": "The label for category 'Notas técnicas' in sidebar 'docs'"
   }
 }

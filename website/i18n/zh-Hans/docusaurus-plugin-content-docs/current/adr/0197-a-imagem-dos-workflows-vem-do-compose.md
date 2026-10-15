@@ -1,8 +1,8 @@
 ---
-traducao_de: 8841a171692a9823fb48590d1b9cbe883920fab4
+traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
 ---
 
-# 0197 — workflow 的镜像来自 compose，并启用镜像的 Dependabot
+# ADR 0197 — workflow 的镜像来自 compose，并启用镜像的 Dependabot
 
 ## 状态 {#status}
 

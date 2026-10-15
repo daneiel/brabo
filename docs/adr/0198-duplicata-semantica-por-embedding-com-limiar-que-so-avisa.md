@@ -1,4 +1,4 @@
-# 0198 — A duplicata semântica de história e regra é avisada por embedding com limiar, e o gasto entra no metering
+# ADR 0198 — A duplicata semântica de história e regra é avisada por embedding com limiar, e o gasto entra no metering
 
 ## Status
 
