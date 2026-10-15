@@ -1,5 +1,9 @@
 {
   "en": {
+    "adr/0001-git-provider-contract-shape.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
     "adr/0002-git-error-normalization.md": {
       "defasada": false,
       "data": null
@@ -80,6 +84,14 @@
       "defasada": false,
       "data": null
     },
+    "adr/0022-fechamento-4b-psicologo.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0023-fechamento-4b-anamnese.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
     "adr/0024-fase5-imagens-producao-ci.md": {
       "defasada": false,
       "data": null
@@ -91,6 +103,10 @@
     "adr/0026-fase5-observabilidade-e-graceful-shutdown.md": {
       "defasada": false,
       "data": null
+    },
+    "adr/0027-fase5-backup-hardening-release.md": {
+      "defasada": false,
+      "data": "2026-10-15"
     },
     "adr/0028-protecao-de-branch-divergencia-entre-providers.md": {
       "defasada": false,
@@ -136,6 +152,10 @@
       "defasada": false,
       "data": null
     },
+    "adr/0039-actionlint-e-validacao-do-pipeline-de-ci-gerado.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
     "adr/0040-moeda-do-dashboard.md": {
       "defasada": false,
       "data": null
@@ -156,6 +176,10 @@
       "defasada": false,
       "data": null
     },
+    "adr/0045-reagendamento-por-evento-do-dev-agent.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
     "adr/0046-promocao-de-story-com-autoridade-do-usuario.md": {
       "defasada": false,
       "data": null
@@ -172,6 +196,10 @@
       "defasada": false,
       "data": null
     },
+    "adr/0050-credencial-sempre-cifrada-verificacao-explicita.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
     "adr/0051-facetas-de-capability-e-curadoria-por-uso.md": {
       "defasada": false,
       "data": null
@@ -179,6 +207,14 @@
     "adr/0052-dev-agent-espera-aprovacao-no-meio-do-laco.md": {
       "defasada": false,
       "data": null
+    },
+    "adr/0053-dev-lead-e-paralelismo-autorizado.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0054-gates-como-registro-declarativo.md": {
+      "defasada": false,
+      "data": "2026-10-15"
     },
     "adr/0055-escopo-de-caminho-na-politica-de-terminal.md": {
       "defasada": false,
@@ -372,9 +408,41 @@
       "defasada": false,
       "data": null
     },
+    "adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0105-personal-access-token-do-runner-escopado-por-construcao.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0106-distribuicao-do-runner-via-tsup-e-npm-publish.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
     "adr/0107-navegacao-de-pasta-local-via-o-runner.md": {
       "defasada": false,
       "data": null
+    },
+    "adr/0108-projeto-runner-nasce-ao-navegar-pasta-no-wizard.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0109-handoff-manual-a-agente-a-escolha.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0110-budget-por-area-aditivo-nao-cascata.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0111-conversao-de-execution-mode-de-projeto-existente.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "architecture.md": {
+      "defasada": false,
+      "data": "2026-10-15"
     },
     "explanation/aceite-providers.md": {
       "defasada": false,
