@@ -909,3 +909,635 @@ Criativo agent 始终是项目的入口：第一次对话就是与它进行的�
   `apps/api/test/domain/git/git-read-cache.spec.ts`
 - **来源：** FASE 26b，16–26 计划的第 34 项；约束扩展了
   [RN-092](#rn-092)（[ADR 0058](../adr/0058-csp-fechado-na-api-e-escopo-de-projeto-contido.md)）
+
+### RN-127 — 代码标签页的 `ref`/`path` 拒绝以*数组*形式到达，而不只是拒绝范围之外的路径 {#rn-127}
+
+`@Query('ref') ref?: string` 和 `@Query('path') path?: string`
+（`code.controller.ts`）提取原始值，中间没有 DTO/`class-validator`，全局的 `ValidationPipe`（`main.ts`）也帮不上忙：按 Nest 的设计，它跳过原生基本类型（`String`），因此在 `ref`/`path` 作为方法参数到达之前，没有任何东西拦截它们。Express 把 `?ref=a&ref=b` 作为**数组**而不是字符串交付——TypeScript 的 `string` 注解只存在于编译期。
+
+数组会逃过 [RN-095](#rn-095) 原本把值当作字符串进行的*两项*检查：在数组上，`ref.includes('..')` 的语义是*精确元素*（而不是子串），而 `REF_VALIDO.test(ref)` 在匹配之前对数组调用 `.toString()`——像 `['x/../y']` 这样的值包含 `..`，却仍能通过两项检查。
+
+`garantirQueryEscalar(valor, criarErro)` 在任何其他检查*之前*拒绝数组，只在一处，由两个把查询当作字符串处理的地方复用：`caminhoDeRepositorioContido`（与 RN-092/095 同一文件）和
+`ReadProjectCodeUseCase.alvo`（`ref`）。具体的错误（`CaminhoForaDoEscopoError`
+或 `BadRequestException`）由调用者决定，以工厂形式传入——中央函数不决定错误类型，只决定检查的形式。
+
+正常路径不变：每个合法的 `ref`/`path` 本来就是字符串。
+
+- **位置：** `apps/api/src/infrastructure/filesystem/project-workspaces-root.ts`
+  （`garantirQueryEscalar`，用于 `caminhoDeRepositorioContido`），
+  `apps/api/src/application/use-cases/git/read-project-code.use-case.ts`
+  （`alvo`，`ref`）
+- **测试：**
+  `apps/api/test/infrastructure/filesystem/project-workspaces-root.spec.ts`
+  （单独的 `garantirQueryEscalar`，以及拒绝数组的 `caminhoDeRepositorioContido`），`apps/api/test/application/use-cases/git/read-project-code.use-case.spec.ts`
+  （作为数组的 `ref`/`path` 在 `tree` 上是 400，所有其他路由通过 `alvo` 复用它）
+- **来源：** CodeQL 的*严重*警报（HTTP 查询参数的类型混淆），阻塞了 qa→main 的晋升，在 PR #256 期间发现；扩展了
+  [RN-095](#rn-095)
+
+### RN-093 — 在生产环境中，api 不会以 OAuth `state` 的示例密钥启动 {#rn-093}
+
+当 `NODE_ENV === 'production'` 且 `GIT_OAUTH_STATE_SECRET` 缺失、等于仓库的示例字面量或少于 16 个字符时，`resolveOauthStateSecret()` **使启动失败**。在生产环境之外，开发默认值继续有效。
+
+这个密钥签署 git OAuth 的 `state`，而 `state` 是唯一阻止回调 `GET /git/oauth/:provider/callback`——出于必要而公开的路由——被伪造的东西。密钥一旦为人所知，任何人都能为任意的 `{projectId, userId, provider}` 签发 `state`，让回调把从提供方获得的 git token 写入该 payload 所指的项目。
+
+**为什么拒绝字面量，而不只是空值。** 默认值位于一个开源仓库的 `.env.example` 中——它是已发布的秘密，而不是弱秘密。而 `docker-compose.prod.yml` 把它作为回退值提供，因此在真实的出错路径上变量是**已定义的**：一个"非空"检查会对整个缺陷视而不见。
+
+解析位于唯一的函数中，而不是每个调用者中，理由与 [RN-092](#rn-092) 相同——原来是同一字面量的两份副本，而副本会分歧。在这里分歧的话，回调会拒绝所有合法的 `state`。
+
+- **位置：** `apps/api/src/infrastructure/security/oauth-state-secret.ts`
+  （`resolveOauthStateSecret`），在 `apps/api/src/main.ts` 启动时调用
+- **测试：** `apps/api/test/infrastructure/security/oauth-state-secret.spec.ts`
+- **来源：** [ADR 0059](../adr/0059-segredo-do-state-de-oauth-sem-default.md)
+### RN-114 — `GIT_OAUTH_STATE_SECRET` 的四个姊妹秘密在生产环境中同样不会以示例值启动 {#rn-114}
+
+[ADR 0059](../adr/0059-segredo-do-state-de-oauth-sem-default.md) 为 `GIT_OAUTH_STATE_SECRET` 关闭了这个模式，并明确保留了同一失败模式适用于四个姊妹秘密这一开放问题，它们在 `docker-compose.prod.yml` 中都有开发默认值：`AUTH_JWT_SECRET`、
+`BRABO_SERVICE_TOKEN`、`CREDENTIALS_MASTER_KEY` 和 `SECRET_KEY_BASE`。这条 RN 关闭了这四个，完全复制同一条规则——这不是新的决定，而是把同一决定应用于姊妹们。
+
+在生产环境（`NODE_ENV === 'production'`）中，当变量缺失/只有空格、等于仓库的示例字面量（它是公开的——在 `.env.example` 中）或少于 16 个字符时，每个解析器都**使启动失败**。在生产环境之外，开发默认值继续有效，因为没有 `.env` 的 `docker compose up` 必须能工作。
+
+- `AUTH_JWT_SECRET`——推导出签署 access token 的 Ed25519 密钥对。使用公开默认值时，任何人都能伪造有效的 access token。
+- `BRABO_SERVICE_TOKEN`——认证 api ↔ engine 的内部流量。使用公开默认值时，任何人都能不经过
+  `EngineServiceGuard` 调用 `/internal/*` 路由。
+- `CREDENTIALS_MASTER_KEY`——包裹加密用户凭据（LLM 密钥、git token）的 DEK。使用公开默认值时，任何人都能解密整个存量。**此处不在范围内**：任何轮换机制——它已经存在（`CREDENTIALS_MASTER_KEY_PREVIOUS` +
+  `src/scripts/rewrap-deks.ts`）且不变；这里只是*启动*检查。
+- `SECRET_KEY_BASE`（engine）——没有该变量时本来就会使启动失败（`runtime.exs`，`:prod` 块，Phoenix 的标准样板）。真正的缺陷不是 Elixir 中缺少检查：而是 `docker-compose.prod.yml` 把公开字面量作为回退值提供，使变量总是以*已定义*状态到达，掩盖了本已存在的 `raise`。这里的修正只是从 compose 中移除回退值——没有改动一行 Elixir。
+
+拒绝字面量而不只是空值，理由与 ADR 0059 相同：`docker-compose.prod.yml` 把四个字面量作为回退值提供，因此在真实的出错路径上这些变量是**已定义的**——一个"非空"检查会对整个缺陷视而不见。
+
+- **位置：** `apps/api/src/infrastructure/security/auth-key-material.ts`
+  （`passphraseAtual`），`apps/api/src/infrastructure/security/service-token.ts`
+  （`tokenDeServicoAtual`）和
+  `apps/api/src/infrastructure/security/envelope-encryption.service.ts`
+  （`EnvelopeEncryptionService`，在构造函数中检查）——前两个在 `apps/api/src/main.ts` 启动时调用，第三个在
+  `NestFactory.create` 装配 provider 图时被执行。`SECRET_KEY_BASE` 在
+  `apps/engine/config/runtime.exs`（未改变），回退值已从
+  `docker/docker-compose.prod.yml` 中移除
+- **测试：** `apps/api/test/infrastructure/security/auth-key-material.spec.ts`,
+  `apps/api/test/infrastructure/security/service-token.spec.ts` 以及
+  `apps/api/test/infrastructure/security/envelope-encryption.service.spec.ts` 中的 describe
+  `validação de produção`
+- **来源：** [ADR 0059](../adr/0059-segredo-do-state-de-oauth-sem-default.md)
+
+### RN-076 — git 凭据从不写入文件 {#rn-076}
+
+engine 在远程仓库上工作，方式是向 api 请求**工作远程**（`GET /internal/projects/:projectId/git-remote`），后者返回**干净的**来源，并单独返回 owner 的 token。token 通过**子进程的环境**进入 git 调用，别无他处：
+
+- **不在 `origin` 中**——写入 `.git/config` 的是干净的 URL；
+- **不在 argv 中**——`ps` 会显示任何进程的命令行；
+- **不在文件中**——既没有持久化的 helper，也没有 `~/.git-credentials`。
+
+凭据 helper 通过 `-c` 传入，只对那个进程有效，并且位于一个空的 `credential.helper=` 之后：helper 是累加的，第一个响应的胜出，因此不先清零的话，主机上的 helper 会抢先响应。
+
+**为什么这是规则而不是偏好。** 把
+`https://x-access-token:TOKEN@github.com/…` 写进 `origin`——几乎每个教程都这么教——会以明文把凭据写进**项目文件夹内部**，正是 [RN-075](#rn-075) 给予 dev agent **自动批准**读取权限的地方。一个 `cat .git/config` 就会在不经任何审批的情况下返回 token，而它会在循环的历史中传到 LLM 提供方。路径范围防止 agent 读取项目*之外*的东西；它无法防止产品自己放在*内部*的秘密。
+
+凭据是 **workspace owner** 的，通过 [RN-058](#rn-058) 的同一个解析器——两条"凭据属于谁"的规则会分歧。`local` 提供方没有 token，也不询问 api：它直接从数据库解析，这是 `pnpm dev` 和整个测试套件所走的路径。
+
+- **位置：** `apps/engine/lib/engine/actions/git_auth.ex`,
+  `engine/projects/project_repository.ex`（`remoto_de_trabalho/1`），
+  `apps/api/src/application/use-cases/git/get-project-git-remote.use-case.ts`
+- **测试：** `apps/engine/test/engine/actions/git_auth_test.exs`（token 不出现在 argv 中，也不在 helper 中）和
+  `apps/api/test/application/use-cases/git/get-project-git-remote.use-case.spec.ts`
+  （返回的来源不包含 token，也不包含 `@`）
+- **来源：** [ADR 0056](../adr/0056-o-engine-trabalha-em-repositorio-remoto.md)，
+  发现 N，[backlog](../explanation/backlog.md) 的 Fase B
+
+### RN-077 — 失败的来源总是四者之一 {#rn-077}
+
+每个失败结果都以 [ADR 0020](../adr/0020-destravar-gates-qa-secops.md) 的**封闭**词汇点名*来源*——
+`infra | modelo | codigo | politica`。没有第五个值：`null` 和
+`"indeterminada"` 已不再可能。
+
+两项结构性保证，没有一项依赖某人记得：
+
+- **`AgentIo.block_task/4` 没有来源的默认值。** 它原来"在精神上是必需的"，默认值是 `"indeterminada"`——而真实执行中代价最高的结果正是这样产生的，因为调用点什么都没传。没有默认值，忘记就成了编译错误。
+- **`FalhaDeTurno.origem/1` 总是返回四者之一**，并有一个表格测试，只要任何条目——包括从未见过的形式——产生别的东西就会失败。
+
+**为什么去掉 `indeterminada`。** 它的存在有一个合理的论点：不瞎猜比在黑暗中选择更诚实。实际效果恰恰相反——`indeterminada` **不指向任何行动**，分诊下一轮的人要从零开始调查。它实际的意思是*分类器没有识别出这种形式*，这是我们代码的缺口：`codigo` 才是指向正确行动的来源（补上缺失的子句）。诊断仍然原样传递，因此什么都没丢。
+
+**来源不是瞎猜。** ToolLoop 的每个结果都说明是谁决定停下的：`report_blocked` 和迭代上限属于**模型**（它作出了决定，或用完了它所拥有的）；预算和未批准的 PR 属于**策略**（是一个决定，没有东西坏掉）；重启和装配上下文失败属于**基础设施**；当存在 `last_error` 时，来源出自诊断所叙述的*同一个*错误——原先自相矛盾的正是这一对，`diagnosis` 说 `{413, …}`，同一行中 `origem` 却说 "indeterminada"。
+
+- **位置：** `apps/engine/lib/engine/agents/falha_de_turno.ex`,
+  `engine/dev/agent_io.ex`（`block_task/4`，没有默认值），
+  `engine/dev/dev_agent_server.ex`（`origem_da_parada/1`）
+- **测试：** `apps/engine/test/engine/agents/falha_de_turno_test.exs`
+  （`o vocabulário é fechado`）和
+  `apps/engine/test/engine/dev/dev_agent_server_test.exs`，它断言发出事件中的来源
+- **来源：**
+  [achados-execucao-real.md](../explanation/achados-execucao-real.md) 的发现 P、Q 和 T，[backlog](../explanation/backlog.md) 的 Fase G
+
+### RN-078 — 保护分支的失败可以被确认，且只有它可以 {#rn-078}
+
+在 GitHub 免费计划的私有仓库中，`protect_branches` 会失败——向导**在开始之前就提醒这一点**。用户可以确认这个失败并继续；bootstrap 结束，项目变得可以访问。
+
+**这解锁的东西比看起来更大。** 失败后唯一提供的按钮是"重试"，而它总是因为同样的原因失败。而 `provision_failed` 让仪表板**把点击项目重定向回部署页面**——项目永远无法访问，困在一个不可能成功的步骤中。
+
+**只有保护可以被确认。** 它是*最后*一步，也是唯一一个失败后仍留下可用仓库的步骤：仓库存在，文件已提交，分支已创建。创建仓库或提交失败是另一回事——在那里"继续"会产生一个没有地方工作的项目，按钮会成为第一个谎言之上的第二个谎言。拒绝会说明这一点，而不只是否定。
+
+**产品的保证不变。** 合并锁（[RN-006](../business-rules.md#rn-006)）在 `decide.ts` 中施加，而不是由提供方的保护施加。没有它继续，去掉的是第二层，即 GitHub 的那一层——而不是 Brabo 的。正是这一点让这个出口诚实，而不是捷径。
+
+决定以**用户**为执行者、原始错误放在 payload 中进入事件日志：不带保护继续是他的选择，之后阅读的人需要知道究竟豁免了什么。
+
+- **位置：** `apps/api/src/application/use-cases/git/acknowledge-protection-failure.use-case.ts`,
+  路由在 `interfaces/http/git/git.controller.ts`，按钮在
+  `apps/web/src/routes/ProvisioningPage.tsx`
+- **测试：** `apps/api/test/application/use-cases/git/acknowledge-protection-failure.use-case.spec.ts`
+  （解锁；带执行者的日志中的决定；以及对先前失败的拒绝）
+- **来源：** 发现 D，[backlog](../explanation/backlog.md) 的 Fase D
+
+### RN-079 — Psicólogo 不分析没有可分析事件的会话 {#rn-079}
+
+在花费一个模型回合之前，分析会先问有没有可分析的东西。没有的话，它**不运行**，结果成为 `psychologist.analysis_skipped`。
+
+**"可分析"排除两样东西，原因不同：**
+
+- **分析者自身的痕迹。** Psicólogo 把它的回合写进它所分析的会话日志（`agent.response`、`tool.call`、`tool.result`、假设）。把这些计算在内，会让一个空会话**从第一次分析起**就显得充实，每次重试都会让它更满——标准将再也不会失败。Anamnese 同理；
+- **`bootstrap.*`**，即独自运行的仓库部署：九个机器步骤对这个人什么也说明不了。
+
+其他一切都算，包括 `proposed_action.*`——用户不写任何消息地批准和拒绝**就是**行为，这是 Anamnese 已经学到的教训（[RN-063](#rn-063)）。
+
+**这是两个计数，它们不能互相替代。** 原始计数衡量工作量（要读多少日志，进而用哪个分诊层级，轻还是重）；可分析计数决定是否有工作。混淆它们就是缺陷：一个只有 bootstrap 的会话被当作"20 个事件"，实际上一个都没有，于是获得了分析，而模型——没有任何东西可以引用——会编造不存在的 `seq`，直到证据校验拒绝它、它放弃为止，而预算已经花掉了。
+
+**跳过同样适用于手动重新处理。** 重新处理不会制造材料：点击的人会在日志中收到原因，而不是关于一份不存在的日志的编造假设。
+
+跳过会成为**事件**，这与 Anamnese 的跳过不同，后者只是日志——那个每 15 分钟运行一次，会变成噪音；这个每次会话关闭运行一次，而一个没有任何叙述的缺席分析是无法诊断的。
+
+- **位置：** `apps/engine/lib/engine/session_events/event.ex`（`count_analisaveis/1`），
+  `apps/engine/lib/engine/psychologist/triage.ex`（`should_run?/1`），
+  `apps/engine/lib/engine/workers/psychologist_worker.ex`
+- **测试：** `apps/engine/test/engine/session_events/event_analisaveis_test.exs`
+  （包括对发现中那个会话的复现：14 个事件，没有一个可分析），
+  `apps/engine/test/engine/workers/psychologist_worker_test.exs`
+- **来源：** 发现 J，[backlog](../explanation/backlog.md) 的 Fase E
+
+### RN-080 — 重复的业务规则在入口被拒绝 {#rn-080}
+
+标题已经存在于**项目中**的 `business_rule` 不会被写入。拒绝通过与无效 payload 相同的路径回到模型，它会继续处理下一条规则，而不是停下。
+
+**在入口，因为没有别的地方。** 没有规则表：工件*就是* `artifact.business_rule` 事件，而领域事件既不能删除也不能编辑。放它进来就意味着永远与重复共存。
+
+**范围是项目，而不是会话**——重复是在会话之间产生的。再次运行 Criativo 会打开新会话，按会话的检查看不到上一轮，而这正是发现中的情形。
+
+比较会规范化大小写、重音和多余空格；标点保留。**语义重复仍会通过，这是声明的，而不是遗忘：**
+"Saudação com nome" 和 "Quem chama pode se identificar" 仍是两条规则，因为区分它们需要判断，放不进一个 `if`。
+自 [RN-681](#rn-681) 起，*标题*的语义重复会在写入后通过 embedding **发出警告**——仍然通过，在这里从不被拒绝。
+
+- **位置：** `apps/engine/lib/engine/harness/artifact_dedupe.ex`,
+  `apps/engine/lib/engine/harness/tools/emit_artifact.ex`,
+  `apps/engine/lib/engine/session_events/event.ex`（`titulos_de_regras/1`）
+- **测试：** `apps/engine/test/engine/harness/artifact_dedupe_test.exs`,
+  `apps/engine/test/engine/harness/emit_artifact_dedupe_test.exs`
+- **来源：** 发现 K，[backlog](../explanation/backlog.md) 的 Fase E
+
+### RN-081 — 重复的故事：相同标题拒绝，相同理由警告 {#rn-081}
+
+对两个不同的问题给出两种不同的回应：
+
+- 项目中**相同的标题**是错误，而不是选择：故事被**拒绝**，什么都不创建；
+- **相同的理由**——故事引用的所有业务规则都已被另一个故事覆盖——是可疑，而不是错误。故事**会被创建**，并发出 `backlog.story_overlap_warned`。同一规则的第二种切分可能是正当的，因此由用户来判断；产品只是拒绝让它不被注意地通过。
+
+**是包含，不是交集。** 两个故事共享一条规则是正常的，对此发出警告会变成没人读的噪音。只有当新故事没有增加任何覆盖时，信号才存在。不引用任何规则的故事不产生警告：把空集当作一切的子集会指控所有故事。
+
+**界限与 [RN-080](#rn-080) 相同，而发现中的那一对恰好越过了它：**
+"Endpoint público de saudação determinística" 和 "Endpoint público GET /hello que
+responde saudação imediata" 以不同的标题和理由覆盖同一个端点——没有任何机械的东西把它们联系起来，它们继续通过。有测试断言这一点，让界限可见而不是隐含。
+自 [RN-681](#rn-681) 起，这一对会通过 embedding 被*警告*——仍然通过，断言*这个*机制界限的测试依然有效。
+
+- **位置：** `apps/api/src/domain/backlog/story-overlap.ts`,
+  `apps/api/src/application/use-cases/backlog/create-story.use-case.ts`
+- **测试：** `apps/api/test/domain/backlog/story-overlap.spec.ts`,
+  `apps/api/test/application/use-cases/backlog/create-story.use-case.spec.ts`
+- **来源：** 发现 R，[backlog](../explanation/backlog.md) 的 Fase E
+
+### RN-082 — 动作的 git 凭据是 workspace *OWNER* 的 {#rn-082}
+
+当 api 针对远程提供方执行 git 动作（`pr_open`、
+`git_merge`）时，token 来自 **workspace owner**——与 [RN-058](#rn-058) 同一个解析器，而不是来自决定该动作的人。
+
+**按决定者解析只在人工点击时有效。** 由策略自动批准的动作没有决定者：`decided_by` 为 `NULL`，token 为 `undefined`，GitHub 回应 `Requires authentication`。实际上，在自主权打开时——而这正是 ADR 0055 要实现的模式——**没有任何 dev agent 能在远程提供方上打开 PR**。
+
+**暴露缺陷的对照**发生在同一次执行中：在同一轮里，`git_push` 通过而 `pr_open` 失败。push 由 *ENGINE* 执行，它已经注入了 owner 的凭据（[RN-076](#rn-076)）；PR 由 API 打开，而它处于不对称之中。
+
+此前没有出现，因为之前的每次验证都使用 `LocalGitProvider`，那里根本不查询 token。
+
+原则与 RN-058 相同，值得重复，因为正是它防止两条规则随时间分歧：**付账的人为 agent 买单**，这不随点击者而变化。这就是解析器被*复用*而不是重新实现的原因。
+
+- **位置：** `apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts`，
+  复用 `application/use-cases/llm/resolve-credential-owner.use-case.ts`
+- **测试：** `apps/api/test/application/use-cases/actions/execute-git-action.use-case.spec.ts`
+  （自动批准的 `pr_open`，带 `decidedBy: null`，请求 owner 的凭据）
+- **来源：** 发现 AA，[13b 的真实验证](../explanation/validacao-real.md)
+
+### RN-083 — lead 决定并行度；超过上限时由你授权 {#rn-083}
+
+启动多少个 agent 不再是代码中的一个数字：评估的是**区域的 lead**。但它的决定在*花费*上并不至高无上——在 `agent_areas.max_parallel`（默认 **2**）之内它直接启动并继续；**超过时就成为 `parallelize` 类型的 `proposed_action`**，经过与所有外部效果动作相同的流水线。
+
+**上限属于*会话*，而不是模块。** 这是规则中唯一不显而易见的部分，也是粗心的重构会撤销的部分：按模块计数会允许 N 个模块 × 2 个 agent 而不需要任何授权——换了个名字的旧漏洞。有测试正好断言这一点。
+
+**零或负数的上限是无效配置，而不是"无限制"。** 把它当作无限，会把一个输入错误变成无限制的花费，这与流水线存在的目的正相反。
+
+**提出请求的是 lead；作出决定的是你。** `proposed_action` 以 lead 为执行者诞生，决定以你的名字留在事件日志中——正是这一区分让历史之后可以重建（[ADR 0048](../adr/0048-decisao-no-log-e-a-ordem-do-gate.md)）。
+
+原因在*不可变*的 payload 中传输，带三个数字（现有多少、请求多少、上限是多少）：六个月后阅读的人需要在不重建会话状态的情况下理解授权了什么。
+
+`AcceptParallelizationUseCase` 不变：它仍然是*执行*者，无论是在直接路径上，还是在动作被批准时。从内部吸收它而不是重写它，正是让 Fase 4 的测试套件无需修改就保持绿色的原因——这证明了这一更换没有泄漏到外部契约。
+
+**上限可按区域配置，并且只能由你配置。** `PATCH
+/projects/:projectId/agent-areas/:key/max-parallel` 要求 `maintainer`——与激活执行相同的角色，理由也相同：改变上限就是决定产品可以不询问就花多少钱。没有自动提高它的途径。Anamnese 在注意到授权已成例行公事时可以*提议*，而提议在你接受之后仍要经过这条路由——一个自己提高自己花费上限的产品，正是审批流水线要阻止的东西。
+
+改变上限对*之后*的请求有效。已经在等待决定的保持等待：动作在 payload 中带着它被创建时现行的上限，用新上限重新解读它，会改变你读完之后即将决定的东西。
+
+- **位置：** `apps/api/src/domain/execution/paralelismo.ts`（纯规则），
+  `application/use-cases/execution/request-parallelization.use-case.ts`,
+  `application/use-cases/execution/set-area-max-parallel.use-case.ts`，
+  在 `interfaces/http/execution/execution.controller.ts` 中暴露，在
+  `apps/web/src/routes/settings/ParallelismSection.tsx` 中配置
+- **测试：** `apps/api/test/domain/execution/paralelismo.spec.ts`,
+  `test/application/use-cases/execution/request-parallelization.use-case.spec.ts`,
+  `test/application/use-cases/execution/set-area-max-parallel.use-case.spec.ts`
+  以及 `apps/web/src/routes/ProjectSettingsTab.test.tsx`（`ParallelismSection`）
+- **Gate：** `docs/gates.yml`（`paralelismo-autorizado`）——自 fluxo.yml × 代码审计（发现 A1/B5）起为 `status: active`；机制本身没有变，变的只是自 FASE 14d 起错误地保持 `planned` 的登记，见
+  [gates.md](../explanation/gates.md#a-registry-can-age-in-the-wrong-direction--stale-not-inactive)
+- **来源：** [ADR 0053](../adr/0053-dev-lead-e-paralelismo-autorizado.md)，FASE 14d
+
+### RN-094 — agent 区域与项目一同诞生 {#rn-094}
+
+创建项目会在 `agent_areas` 中写入三个区域（`dev`、`qa`、`infra`），以及每个区域的 lead 和在 `agent_area_members` 中**可枚举**的成员——在与创建*相同*的事务中。如果 seed 失败，项目不会诞生：没有区域的项目，就是 RN-083 读到空表、在没有任何人决定的情况下落到默认值的项目。
+
+**这是对缺陷的修正，而不是新能力。** `agent_areas` 自 FASE 14d 起就存在，却从未被写入——`AgentAreaRepository.upsert` 有测试，却*没有任何*调用者。在生产环境中表是空的，`GET /projects/:projectId/agent-areas` 返回 `[]`，读取它的四个用例在虚无上运行。这与 FASE 14d 自身的失败相同，写在 CLAUDE.md 中：**测试部件不等于测试通向它的路径**。因此这条规则的测试从路由调用的用例进入，使用真实仓储：这里的假对象只会证明已经被证明且已经坏掉的东西。
+
+**在*两个*地方 seed，每一处回答不同的问题。** 项目创建让区域*存在*——设置界面读取的是一个从未执行过的项目。执行激活说明 `dev` 区域的*成员*是谁：`module_map` 的每个模块一个 `dev-<modulo>`，项目诞生时还不存在。在成员被写入之前，支撑寻址规则（RN-087）的是谓词 `ehDevDeModulo`，它不查询数据库。
+
+**seed 从不发送 `max_parallel`。** 激活是可重复的，发送默认值会让你提高到 5 的上限悄无声息地回到 2——产品在撤销你的决定。回填迁移也一样：它让区域存在，就此止步。
+
+在此之前创建的项目由迁移 `0038` 覆盖，两张表都使用 `ON
+CONFLICT DO NOTHING`。没有它，缺陷只会对从零开始的人得到修正。
+
+- **位置：**
+  `apps/api/src/application/use-cases/agents/seed-agent-areas.use-case.ts`，
+  由 `application/use-cases/iam/create-project.use-case.ts` 和
+  `application/use-cases/execution/activate-execution.use-case.ts` 调用；
+  规范列表在 `apps/api/src/domain/agents/agent-areas.ts`；
+  回填在 `apps/api/src/db/migrations/0038_wandering_lila_cheney.sql`
+- **测试：**
+  `test/application/use-cases/iam/create-project-semeia-areas.spec.ts`（针对数据库的路径，包括让创建失败的那种失败），
+  `test/db/agent-areas-backfill.spec.ts`（真正运行的迁移，运行两次）以及 `test/application/use-cases/execution/activate-execution.use-case.spec.ts`
+  （dev 的成员，以及从不发送的上限）
+- **来源：** FASE 18，在 16–26 计划的调查中发现的缺陷；
+  表来自 [ADR 0053](../adr/0053-dev-lead-e-paralelismo-autorizado.md)
+
+### RN-084 — 显示的流水线来自 gate 注册表 {#rn-084}
+
+团队面板显示 PR 所处的阶段，方法是**从
+`docs/gates.yml` 推导**，而不是来自写在界面上的列表。离开注册表的 gate 从流水线上消失；`planned` gate 永不出现。
+
+**这条规则因一种特定的老化形式而存在。** 在 FASE
+15b 之前，界面的阶段固定在组件中，而注册表（FASE 15a）在别处描述 gate。没有东西把两者联系起来：在 YAML 中加一个 gate 不会改变界面，删除一个会让界面继续显示一个已不存在的阶段——没有任何测试失败，因为两个来源各自都是正确的。这与 `docs/.docmap.yml` 要防止的腐坏相同，回应也相同：只有一个来源，并对其消费进行检查。
+
+三个边界情况的决定，都是为了让界面**降级**而不是消失：
+
+- 界面还不知道怎么绘制的 PR gate 会被**忽略**，而不是破坏渲染——注册表可能先于界面获得标签而获得一个 gate；
+- **标签属于界面**，而不是注册表：YAML 描述的是工程，界面对话的是等待 PR 的人；
+- **没有注册表**（路由失败）时，显示完整流水线而不是空白——一条通用流水线比什么都没有提供更多信息。
+
+- **位置：** `apps/web/src/components/PrGateTimeline.tsx`（`etapasDaEsteira`），
+  读取 `GET /gates`（`apps/api/src/interfaces/http/gates/gates.controller.ts`）
+- **测试：** `apps/web/src/components/PrGateTimeline.test.ts`
+  （`gate que SAI do registro some da tela`、`gate de PR que a tela ainda não
+  sabe desenhar é IGNORADO`、`sem registro, mostra a esteira completa`）
+- **来源：** [ADR 0054](../adr/0054-gates-como-registro-declarativo.md)，FASE 15b
+
+### RN-085 — 迭代上限按 agent *类型*设置 {#rn-085}
+
+一个 agent 在工具循环中可以转多少圈，取决于它所做的工作：对话者为 **8**，dev agent 和 QA 子 agent 为 **60**。不再有单一的数字。
+
+**8 的上限诞生于对话型 agent，被做工作的 agent 继承了。** 在 13b 的真实验证中，这表现为阻塞：dev agent 把八圈都花在探索一个新部署的仓库上，**从未写过一个文件**；改为 25 后，它写了三个并运行了测试。记录的结果是 `limite de iterações atingido`，来源 `modelo`——技术上正确，实际上毫无用处，因为模型从未来得及判断任何东西。
+
+**提高全局默认值是错误的修正**，而这正是规则所保护的：Criativo 对话不需要 60 圈，上限也是防止无限循环的锁。
+
+**能提高的不是"工作多的"，而是下面有花费锁的。** 迭代上限防止无限循环；保护*钱包*的是 `token_budget_micros`。dev agent 和 QA 子 agent 带着任务的 `task_budget_micros` 运行，因此放宽圈数不会放宽账单。`infra-workflows` 使用重型工具，却仍然**保持 8**：它在没有预算的情况下运行，对它来说上限是唯一存在的锁。
+
+两个有专门测试的边界情况：
+
+- **`dev-lead` 是对话型的**，尽管有识别 dev agent 的 `dev-` 前缀（`dev-<modulo>`、`dev-<modulo>-2`）。lead 负责决定和委派，没有显式子句的话，它会因命名的偶然而以重型工作的上限诞生。
+- **未知 agent 落到最低上限。** 向便宜的一侧犯错：需要更多圈数的会以 `limite de iterações atingido` 出现并被修正；错误地获得 60 的会悄无声息地花钱。
+
+- **位置：** `apps/engine/lib/engine/harness/iteracoes.ex`，应用于
+  `apps/engine/lib/engine/harness/tool_loop.ex`（`init/1`）
+- **测试：** `apps/engine/test/engine/harness/iteracoes_test.exs` 和
+  `apps/engine/test/engine/harness/tool_loop_test.exs`
+  （`o teto vem do TIPO do agente quando o chamador não passa um`、
+  `teto explícito do chamador VENCE o do tipo`）
+- **来源：** 发现 X，[13b 的真实验证](../explanation/validacao-real.md)；
+  [ADR 0053](../adr/0053-dev-lead-e-paralelismo-autorizado.md)，FASE 14d
+
+### RN-086 — 为更多 agent 花钱永远不会自动批准 {#rn-086}
+
+触及**产品可以独自花多少钱**的两个动作——
+`parallelize`（现在就超过上限）和 `raise_max_parallel`（改变上限）
+——永远不可自动批准。`agent_autonomy` 不行，
+`permissions.json` 也不行。这与合并锁和指令补丁上限是同一类保证。
+
+**没有这一点，[RN-083](#rn-083) 的上限就只是装饰。** 一个在 `allow` 中带 `Parallelize()` 的 `permissions.json` 会让每次超限都自行批准——要*求*用户决定的规则会变成免除用户决定。而 `raise_max_parallel` 是更严重的情形：那将是产品提高自己的花费上限，正是审批流水线要阻止的东西。
+
+**Anamnese 可以*提议*，它做的正是这件事。** 当再授权一个 agent 成为例行公事时，上限就是错的，而最先察觉的是阅读历史的那一方。信号本来就会到达它：窗口内用户的决定来自 `proposed_actions`，带有 `actionType` 和 `status`。
+
+阈值是**三次批准且没有拒绝**，两半都重要：
+
+- **两次不是例行——就是两次。** 三次是区分"发生过"与"总在发生"的东西；
+- **一次拒绝就推翻整个信号**，不管有多少次批准。如果用户曾经拒绝过，上限就在做它的工作，提议提高它就是把信号读反了。
+
+提议一个**等于或小于**现行值的上限会被 api 拒绝：Anamnese 周期性运行，每轮都会重新提议同样的东西，让用户需要阅读的队列充满噪音。
+
+批准应用的是 **payload** 中的值，而不是当时重新计算的值——那是你在作决定时读到的数字。
+
+- **位置：** `apps/api/src/domain/actions/decide.ts`（上限），
+  `application/use-cases/execution/propose-max-parallel.use-case.ts`,
+  `execute-max-parallel-raise.use-case.ts`,
+  `apps/engine/lib/engine/anamnese/tools/propose_max_parallel.ex`，阈值在
+  `apps/engine/lib/engine/workers/anamnese_worker.ex`（`nota_de_paralelismo/1`）
+- **测试：** `apps/api/test/domain/actions/decide.spec.ts`
+  （`decide — teto do paralelismo`），
+  `test/application/use-cases/execution/propose-max-parallel.use-case.spec.ts`,
+  `execute-max-parallel-raise.use-case.spec.ts`,
+  `apps/engine/test/engine/anamnese/tools_test.exs` 和
+  `test/engine/workers/anamnese_worker_test.exs`（`duas aprovacoes NAO sao
+  rotina`、`uma NEGACAO derruba o sinal`）
+- **来源：** [ADR 0053](../adr/0053-dev-lead-e-paralelismo-autorizado.md)，FASE 14d
+
+### RN-087 — Dev Lead 是执行的唯一外部地址 {#rn-087}
+
+存在一个对话型 agent `dev-lead`，它接收 Arquiteto 的 handoff（自 [RN-672](../business-rules.md#rn-672) 起，来自 Infra，项目容器处于 `running`），并提议**执行计划**：每个模块多少个 agent 以及为什么。它不写代码——它分配工作并为之负责。
+
+**在它之前，[RN-083](#rn-083) 中"由 lead 决定"这句话没有主人。** Arquiteto 完成后，执行由一个按钮启动，中间没有人评估有多少工作。
+
+**`dev-<modulo>` 不再能通过 handoff 寻址。** 这不是新的例外：这是 [ADR 0038](../adr/0038-hierarquia-de-agentes.md) 的规则——外部 handoff 只寻址区域的 lead 或没有区域的 agent——开始像对 QA 和 Infra 一样对 dev 生效。在没有 Dev Lead 时，它们是*没有*区域的 agent，因此是有效目标；成为成员后，就不再是了。
+
+**`dev` 区域是第一个*动态*区域**，正是它迫使使用谓词：成员是 `module_map` 的每个模块一个，由 Arquiteto 决定，每个项目都不同，因此没有可枚举的列表。`dev-lead` 与成员匹配相同的 `dev-` 前缀，排除它的是通用规则**lead 永远不是自己区域的成员**——它适用于任何区域，只存在于一处。第一个版本在三处重复这个排除，变异检查表明没有一份副本是测试可达的：每一份都能在另一份被变异时存活。
+
+**计划是 `proposed_action`（由 [ADR 0086](../adr/0086-dev-lead-plano-suspende-para-aprovacao.md)、[RN-284](../business-rules.md#rn-284) 修订）。**
+在这次变更之前，计划成为简单的*事件*，没有审批：理由是提议没有外部效果——花费发生在 agent 启动时，上限在那里要求授权；把提议变成待决定的动作会让你对同一件事决定两次。对 `docs/fluxo.yml` × 代码的审计发现，自 ADR 0085 起流程就已经把这个输出声明为 `via: proposed_action`，而代码从未被调整为一致——产品所有者判定是代码错了：计划是会话将在并行上花多少钱的*第一个*真实决定，用户开始在*看到*一次真正的审批之后才决定激活执行，而不只是读到消息流中的一行。旧的教训没有消失——它正是
+`propose_execution_plan` *没有*进入 `decide.ts` 绝对上限块的原因（见 RN-284）。
+
+***成功*的计划结束回合——在*没有*暂停的路径上。** 在第一次真实执行中，Dev Lead 在同一会话中登记了**两次** `execution.plan_proposed`——文本不同，总数相同——因为循环回到了模型，它又提议了一次。事件日志是不可变的：留下了两份提议，没有任何东西说明哪个有效。工具 spec 中"只用一次"的指示是请求，不是保证；保证的是循环停止。自 ADR 0086 起，当提议处于 `pending` 时，结束回合的是暂停的*停止*（RN-284）——立即成功（`auto_approved`/`executed`/`approved`，见 RN-284）继续以一贯的方式关闭循环。
+
+**是成功，而不是"调用了工具"**：被拒绝的计划（空的，或某个模块零个 agent）让循环继续，否则拒绝会变成回合结束，模型永远没机会修正。这道防护的第一个版本只看工具名称，就有这个缺陷——是由行为测试发现的，而不是靠阅读。
+
+空计划，或某个模块零个 agent 的计划，**在提议任何东西之前**就被拒绝——提议一旦创建，就是用户的真实决定，而一个提议了一半的计划无从撤回。
+
+- **位置：** `apps/engine/lib/engine/agents/dev_lead_server.ex` 和
+  `dev_lead_tools.ex`；寻址规则在
+  `apps/api/src/domain/agents/agent-areas.ts`；handoff 在
+  `application/use-cases/agents/offer-infra-handoff.use-case.ts`
+- **测试：** `apps/engine/test/engine/agents/dev_lead_tools_test.exs`,
+  `dev_lead_server_test.exs`（`o plano ENCERRA o turno`、`o plano recusado NÃO
+  encerra o turno`），
+  `apps/api/test/domain/agents/agent-areas.spec.ts`（`o dev de módulo DEIXOU de
+  ser endereçável`、`` `dev-lead` É endereçável, apesar do prefixo ``）和
+  `test/application/use-cases/agents/offer-infra-handoff.use-case.spec.ts`
+- **来源：** [ADR 0053](../adr/0053-dev-lead-e-paralelismo-autorizado.md)，FASE 14d；
+  审批机制由 [ADR 0086](../adr/0086-dev-lead-plano-suspende-para-aprovacao.md) 修订
+
+### RN-064 — 心跳不会结束有待定工作的会话 {#rn-064}
+
+> **由 [RN-581](../business-rules.md#rn-581)（AT-072）扩展：** 等待用户的对话型 agent 成为*第五个*信号，也是唯一有上限的（8h，原因 `conversation_idle_timeout`）；响应新增了
+> `aguardandoUsuarioDesde`。这条规则的其余部分照旧有效。
+
+心跳超时衡量的是**标签页**的不活动，而不是**工作**的不活动。在结束之前，`SessionServer` 询问 api 是否还有剩余工作（`GET /internal/sessions/:id/pending-work`）；如果有，它重新安排超时并在日志中记录原因，而不是杀死会话。
+
+默认值是 **30 秒**。离开会话切换到 Backlog 标签页就足以杀死它——在一次真实执行中，这把一个给 Arquiteto 的 `offered` handoff 困在了一个已关闭的会话中：史诗和四个故事都已就绪，而链条无法继续，因为没有地方可以接受已死会话的 handoff。
+
+关闭会话关乎工作是否结束，而不是谁在看。
+
+**api 宕机*不*会阻止结束**：`{:error, _}` 照样结束，在日志中给出警告。用永生的会话换掉孤儿会话，就是用一个缺陷换另一个。
+
+"待定工作"是**三个**信号——第二个来自发现 V，第三个来自 Criativo→PO→Arquiteto 的真实 bug：
+
+1. **`offered` 的 handoff**——上面的原始情形；
+2. **状态为 `pending` 的 `proposed_action`**——有人在等*你的*决定，某个 agent 可能已暂停等待结果（[RN-073](#rn-073)）；
+3. **已*激活*且仍在回合中的 agent**——在会话中发过言的每个执行者的最后一个 `agent.status` 是 `working`，之后没有 `idle`。
+
+第二个是第一个的同一缺陷低一个层级，而 `hello-limpo` 的执行显示了代价：会话诞生于 23:34:12，一个动作在 23:34:13 变为 `pending`，心跳在 **23:34:42——恰好是超时的 30s**——关闭了它。dev agent 在一个数据库认为已结束的会话中又工作了一个多小时，这毒害了每一项按会话的指标：时长、成本以及"多少个好好结束了"都开始读取一个不描述实际发生之事的状态。
+
+第三个是同一个窗口，在前两个任何一个存在之前一步：`AcceptHandoffUseCase` 把旧 handoff 标记为 `accepted` 并立即激活下一个 agent，但 engine 中的激活是 `GenServer.cast`，发出即不管——在 agent 甚至开始之前就响应 201。由 Criativo 的 handoff 激活的 PO 运行一个最多 12 次 LLM 迭代的 kickoff，只使用 `category: :direct` 的工具（`create_epic`/`create_story`/`create_task`），它们从不产生 `proposed_action`，并且只在整个回合*结束*时才提供下一个 handoff（信号 1）。在激活与那个结束之间，信号 1 和信号 2 都不存在——只有每 10s 一次的 Phoenix 通道 ping 撑着会话，任何超过 30s 超时的延迟都会在 PO 仍在生成 backlog 时关闭会话，从根上打断 handoff 链：下一个 handoff 最终被提供在一个已经 `closed`、不再接受任何东西的会话中。
+
+`agent.status`（`working`/`idle`）是每个对话型 agent（Criativo/PO/Arquiteto/Dev Lead/Infra）已经在回合边界叙述的东西，并且被*持久化*在事件日志中，而不只是在通道中广播
+（`Engine.Sessions.LiveBroadcast.agent_status/4`，[ADR 0021](../adr/0021-fechamento-4a-infra-e-painel.md)）
+——团队面板已经读取同一个信号来推导名册（`apps/web/src/lib/agent-status.ts` 中的 `conversationalStatus`）。在这里复用它不需要任何新事件：第三个信号是在会话中发过言的*每个*执行者的最后一个 `agent.status`，并且按事件类型是通用的——它覆盖任何由 handoff 激活的 agent，而不只是 PO。
+
+这条规则的上一个版本白纸黑字地写着，把 agent 的工作包括进来"而没有证明这种交互的测试，就是在猜"。执行产生了证明，测试现在存在了。
+
+**仍然排除在外的：**没有待定动作、没有 handoff、也没有未完回合的 `in_progress` 任务。dev agent 有自己的状态机，自行持有 worktree；api 拥有且执行已证实的信号是待定动作。把任务包括进来需要 api 读取属于 engine 的 `dev_agent_states`——这是边界决定，不是顺手修复。dev agent 也不发出 `agent.status`（它们用自己的状态机运行，而不是对话型的回合循环）——第三个信号不覆盖它们，也不需要：待定动作已经覆盖了它们的路径。
+
+- **位置：** `apps/api/src/application/use-cases/sessions/get-session-pending-work.use-case.ts`,
+  `apps/api/src/application/ports/session-event-repository.port.ts`
+  （`listByTypeInSession`），`apps/engine/lib/engine/sessions/session_server.ex`
+  （`handle_info(:heartbeat_timeout, …)`）
+- **测试：** `apps/engine/test/engine/sessions/session_lifecycle_test.exs`
+  （`heartbeat NÃO encerra sessão com trabalho pendente` 以及相反的情形）和
+  `apps/api/test/application/use-cases/sessions/get-session-pending-work.use-case.spec.ts`
+  （三个信号、已经决定因而*不*撑住会话的动作、释放会话的 `idle`、按执行者的隔离、按 agent 类型的通用性以及按会话的范围）
+- **来源：** FASE 13b 的真实执行；发现 V，[backlog](../explanation/backlog.md) 的 Fase H；Criativo→PO→Arquiteto 链式衔接的真实 bug
+
+### RN-063 — 不产出而结束是结果，不是失败 {#rn-063}
+
+Anamnese 有一个工具用来说**"没有什么要发出，原因如下"**（`skip_proficiency`）。这一轮以 `anamnese.run_skipped` 结束，原因放在 payload 中——绝不以 `anamnese.run_failed` 结束。
+
+之前它没有这个动词。唯一的工具是 `emit_proficiency`，它拒绝空列表（有道理：空档案不是档案）。在没有合格成员的窗口中，Anamnese 在*第一次*迭代就发现了这一点，用散文写下"没有合格成员"，以 `profiles: []` 调用 `emit_proficiency`，被拒绝——然后重复直到迭代上限。每一圈都会重新发送历史，而历史每圈都在增长。
+
+在一次真实执行中，这花费了 **14.5 万输入 token，是 Criativo 和 PO 花费总和的 4 倍**，什么都没产出。而且它会在调度器的每次 tick 时回来，每 15 分钟一次，永远如此。
+
+迭代上限是有效的——这不是无限循环。浪费是**每一轮的，无限重复**，这更糟：循环会卡住，有人会注意到；这个是慢慢流血。
+
+为一个做了正确事情的轮次叙述 `run_failed` 也是缺陷：读日志的人会学会忽略失败事件。
+
+- **位置：** `apps/engine/lib/engine/anamnese/tools/skip_proficiency.ex`,
+  `apps/engine/lib/engine/anamnese/hooks/termination.ex`,
+  `apps/engine/lib/engine/workers/anamnese_worker.ex`（`handle_outcome`）
+- **测试：** `apps/engine/test/engine/workers/anamnese_worker_test.exs`
+  (`encerrar sem perfis é DESFECHO: narra run_skipped com o motivo, não falha`)
+- **来源：** FASE 13b 的真实执行
+
+### RN-062 — 发给对话型 agent 的消息会*重新水合*进程 {#rn-062}
+
+发给 Criativo、PO 或 Arquiteto 的消息，如果进程没有在运行，会在投递之前启动它。每个服务器的 `init` 本来就会从事件日志重建历史；缺的是调用它的人。
+
+以前，engine 重启会悄无声息地杀死对话：会话以 `active` 存活下来，agent 的进程却没有，下一条消息以 `GenServer.call ... exited` 死掉——没有事件，界面上没有错误，什么都没有。用户看到自己的消息出现，却永远没有回复到来。
+
+`revise/2` 的注释说，这条路由上的 agent 死掉"是一个 bug"。确实是——而 engine 只要重启就会发生。这是 Fase 12b 给 dev agent 的同一保证，应用于对话型 agent。
+
+- **位置：** `apps/engine/lib/engine_web/controllers/agent_command_controller.ex`
+  （`message/2`）
+- **测试：** 由 agent 测试套件覆盖；执行证明在
+  docs/explanation/validacao-real.md
+- **来源：** FASE 13b 的真实执行
+
+### RN-060 — 密钥的花费属于 owner，只有他能看到 {#rn-060}
+
+按凭据的消耗报告（`GET /workspaces/:id/credential-spend`）要求在 workspace 中是 **`owner`**。不是 `maintainer`：自
+[RN-058](#rn-058) 起，所有项目的 agent 都消耗所有者的凭据，而他的账单与只是操作某个项目的人无关。
+
+报告按**提供方**分组，因为那是凭据的单位——每人每个提供方一个密钥。单一总数无法与任何账单对上。
+
+并且它把 **agent** 与**人**分开：自 RN-058 起，两者都出自同一个密钥，而"我的 agent 贵吗？"与"我聊天用得多吗？"是不同的问题。这就是为什么这是产品中唯一*没有* [RN-038](#rn-038) 的 `actor_kind = 'agent'` 过滤器的成本汇总——这里的问题是从密钥中流出了多少，而 owner 自己的聊天也从中流出。
+
+**已移除**凭据的花费仍留在报告中，带标记：消耗确实发生了，隐藏它会得到一个与提供方账单对不上的总数。
+
+没有任何秘密穿过：响应包含提供方、token 和成本——绝不包含密钥，即使是加密的也不包含（[ADR 0050](../adr/0050-credencial-sempre-cifrada-verificacao-explicita.md)）。
+
+- **位置：**
+  `apps/api/src/application/use-cases/llm/get-credential-spend.use-case.ts`,
+  `apps/api/src/interfaces/http/llm/budgets.controller.ts`,
+  `apps/web/src/components/CredentialSpendSection.tsx`
+- **测试：** `test/application/use-cases/llm/get-credential-spend.use-case.spec.ts`
+  （按提供方分组；把 agent 与人分开；已移除的密钥带标记保留）；
+  `apps/web/src/components/CredentialSpendSection.test.tsx`
+- **来源：** 用户与 RN-058 一同作出的决定
+
+### RN-101 — 同一笔花费，两类受众：账单属于 owner，消耗属于花钱的人 {#rn-101}
+
+产品回答关于 `token_usage` 的**两个不同问题**，没有一个是另一个的切片。
+
+**owner 的问题是按*凭据*的。** `GET /workspaces/:id/credential-spend` 保持 [RN-060](#rn-060) 留下的样子——按提供方，要求 `owner`，回答"从我的密钥里流出了多少"。与它一起，`GET /workspaces/:id/spend-report`（同样是 `owner`）按**模型、提供方、项目、执行者和日期**拆分 workspace——提供方维度由 [RN-186](#rn-186) 引入。owner 能看到两者，因为他是唯一能看到两者的人。
+
+**成员的问题是按*执行者*的。** `GET /projects/:id/spend/me`（角色 `viewer`）以 token 和**估算**成本返回**调用者**在该项目中消耗了什么，按会话和日期。它**不按提供方或凭据拆分**——运行的密钥是 owner 的（[RN-058](#rn-058)），而他账单的一个切片不是成员所问的东西。
+
+执行者**不是参数**：它来自已认证的用户，没有地方可以写入别人的 id。"成员看不到其他执行者的行"是用例签名的性质，而不是某个人可能忘记调用的检查。
+
+**agent 不计入成员的账。** `token_usage` 记录的是谁*花了*钱，而不是谁让花钱；把 agent 归给启动它的人，就是编造一个表中没有的数据。agent 的花费出现在 owner 的报告中，密钥是他的。
+
+**`provider` 维度存在，而成员够不着它。** 在
+[ADR 0076](../adr/0076-provider-volta-a-ser-dimensao-de-gasto.md) 之前，它在聚合中根本不存在，正是这种缺失约束着成员的视图。如今
+`sumGroupedBy` 有六个维度（`model`、`provider`、`project`、`actor`、
+`session`、`day`），约束改变的是形式而不是力度：约束它的是*类型*——见 [RN-186](#rn-186) 和 [RN-187](#rn-187)。没有改变的是，提供同一模型名称的两个提供方，在 `model` 维度上仍然落在同一行。
+
+- **位置：**
+  `apps/api/src/application/use-cases/llm/get-my-spend.use-case.ts`,
+  `apps/api/src/application/use-cases/llm/get-workspace-spend-report.use-case.ts`,
+  `apps/api/src/application/ports/token-usage-repository.port.ts`,
+  `apps/api/src/interfaces/http/llm/spend.controller.ts`,
+  `apps/web/src/routes/ProjectSpendTab.tsx`
+- **测试：** `apps/api/test/application/use-cases/llm/spend-audiencias.use-case.spec.ts`
+  （成员看不到其他执行者的行，也看不到 agent 或 owner 的行；过滤按 `(kind, id)` 这一对进行；响应不携带提供方）；
+  `apps/web/src/routes/ProjectSpendTab.test.tsx`
+- **来源：** [ADR 0063](../adr/0063-duas-audiencias-para-o-mesmo-gasto.md)（FASE 22），
+  由 [ADR 0076](../adr/0076-provider-volta-a-ser-dimensao-de-gasto.md) 修订
+
+### RN-186 — `provider` 是 owner 报告的维度，且只属于它 {#rn-186}
+
+`sumGroupedBy` 接受 `provider` 作为维度，
+`GET /workspaces/:id/spend-report` 在模型、项目、执行者和日期旁边返回 `porProvider` 列表。[ADR 0063](../adr/0063-duas-audiencias-para-o-mesmo-gasto.md)
+曾把这个维度排除在外；[ADR 0076](../adr/0076-provider-volta-a-ser-dimensao-de-gasto.md)
+把它带了回来，**却没有推翻那个论点**：按提供方拆分花费仍然就是按*凭据*拆分，因此这个维度位于一条已经要求 `owner`（[RN-060](#rn-060)）的路由上——与 `credential-spend` 同一把尺子，后者继续回答*账单*的问题（按月，与今天存在的密钥相关联）。
+
+`GET /projects/:id/spend/me` **什么都没有获得**。不对称正是设计：两个响应仍然不是彼此的切片（[RN-101](#rn-101)）。
+
+`model` 维度**没有改变**：提供同一模型名称的两个提供方仍然在同一行。想要按凭据拆分的人有专门的列表，而交叉两个维度会让排名的行数成倍增加，却回答不了两个单独列表回答不了的问题。
+
+- **位置：** `apps/api/src/application/ports/token-usage-repository.port.ts:137`
+  （`SpendDimension`），
+  `apps/api/src/infrastructure/persistence/drizzle/token-usage.repository.ts:255`
+  （`GROUP BY`），`apps/api/src/application/use-cases/llm/get-workspace-spend-report.use-case.ts:112`,
+  `apps/api/src/interfaces/http/llm/spend.controller.ts:56`
+- **测试：** `apps/api/test/application/use-cases/llm/spend-audiencias.use-case.spec.ts`
+  （"quebra por PROVIDER, e o mesmo nome de modelo em dois providers segue UMA
+  linha"）
+- **来源：** [ADR 0076](../adr/0076-provider-volta-a-ser-dimensao-de-gasto.md)
+
+### RN-187 — 成员视图够不着 `provider`，保证它的是*类型* {#rn-187}
+
+在这个维度不存在时，约束成员视图的是没有可传的参数这一**缺失**。维度回来之后，约束改由签名承担：`sumGroupedBy` 有**两个重载**，接受带 `actor` 的范围的那个——成员受众的范围，也是成员唯一拥有的——只接收
+`SpendDimensionDoAtor`，即 `Exclude<SpendDimension, 'provider'>`。
+`sumGroupedBy('provider', escopoComAtor)` **无法编译**。
+
+仓储和用例都刻意没有针对这种组合的 `if`：运行时检查会给人一种保证是动态的印象，而支撑它的其实是编译器——而 `if` 正是下一次重构会在没有任何测试变红的情况下删掉的东西。
+
+屏障是双重的，两半彼此独立：成员的路由**也没有维度参数**（只有 `projectId` 和 `dias`），因此像 `?dimensao=provider` 这样编造的查询在到达 handler 之前就被 Nest 丢弃。
+
+用 `Exclude` 而不是第二个手写列表是刻意的：新维度诞生时两类受众都能触及，而把它移出成员的触及范围，会成为*在这一处*的显式行为——绝不是另一个文件中的遗忘。
+
+- **位置：** `apps/api/src/application/ports/token-usage-repository.port.ts:121`
+  （两个重载），`:147`（`SpendDimensionDoAtor`），`:163`/`:173`（两个范围），`apps/api/src/application/use-cases/llm/get-my-spend.use-case.ts:73`,
+  `apps/api/src/interfaces/http/llm/spend.controller.ts:98`
+- **测试：** `apps/api/test/application/use-cases/llm/spend-audiencias.use-case.spec.ts`
+  （"não compila pedir `provider` com escopo de ator"——一个 `@ts-expect-error`，如果屏障倒下，`tsc` 会把它作为*未使用*的指令拒绝；以及 "só pede as
+  dimensões `session` e `day`"），
+  `apps/api/test/interfaces/spend.controller.spec.ts`（成员的路由只接受 `dias`，别无其他）
+- **来源：** [ADR 0076](../adr/0076-provider-volta-a-ser-dimensao-de-gasto.md)
+
+### RN-188 — 人与 agent 是按执行者列表的划分，不多做查询 {#rn-188}
+
+owner 的报告除了保持完整的 `porAtor` 之外，还带有 `porOwner`（`actor_kind = 'user'` 的行）和
+`porAgente`（`actor_kind = 'agent'`）。这两块在用例中由 `porAtor` **推导**——`actorKind` 自 FASE 22 起就已经在行中——，而不是两次带 `where actor_kind` 的查询。原因是测量过的：[ADR 0063](../adr/0063-duas-audiencias-para-o-mesmo-gasto.md)
+表明这些查询的成本随 `token_usage` 的大小而不是请求的大小增长，因此为了分开已经在内存中分开的东西而多扫描两次窗口，会因为错误的原因而昂贵。
+
+既不是人也不是 agent 的 `actor_kind`（目前是 `system`）**不进入任何一块**，并在 `porAtor` 和总数中保持可见。为它开第三块，就等于说产品有一类它并没有的受众。
+
+"按 owner"这个标签来自设计 handoff，依据 [RN-058](#rn-058) 成立——所有这些行花的都是 owner 的密钥。workspace 的所有者是谁，仍然由 `ownerId` 字段决定，而不是每行的 `actorKind`。
+
+- **位置：** `apps/api/src/application/use-cases/llm/get-workspace-spend-report.use-case.ts:120`
+- **测试：** `apps/api/test/application/use-cases/llm/spend-audiencias.use-case.spec.ts`
+  （"separa PESSOA de AGENTE em dois blocos, sem perder a lista por ator"）
+- **来源：** [ADR 0076](../adr/0076-provider-volta-a-ser-dimensao-de-gasto.md)
+
+### RN-102 — 区域的模型是可继承的默认值；偏离是 agent 的决定，恢复继承会抹去该决定 {#rn-102}
+
+binding 级联增加了一层：`sessão > agente > **área** > projeto >
+workspace`。`area` 位于 agent 和项目*之间*——它是一个区域的 lead 和子 agent 共享的*默认值*（`qa`/`qa-automacao`/
+`qa-performance-seguranca`、`infra`/`infra-workflows`、`dev`/`dev-<módulo>`），而 agent 自己的 binding 是覆盖它的*偏离*。如果区域位于 agent *之上*，它总会胜出，"可继承的默认值"实际上就成了"强加的默认值"——没有任何 agent 能选择别的模型。
+
+新的层级进入与 [RN-041](#rn-041)/[RN-043](#rn-043) *相同*的能力重新校验：从提供方消失或不做 tool calling 的区域模型会被*跳过*并记录在 `skipped` 中，与 `agent` 原来一样。`assertModelFitsBindingScope`（RN-040）开始在 `area` 范围也要求 `supports_tool_calling`——它从不被人工聊天读取，只被 agent 读取，因此放它通过只会把同样的无声失败推迟一个层级。
+
+**"恢复继承"会删除 binding，从不把下层的模型复制到上层。** 把区域决定的模型写入 agent，在界面上看起来一样，但并不一样：它会成为一份*副本*，区域的下一次变更会在无人察觉的情况下把这个 agent 甩在后面。继承是*没有*自己的决定，撤销偏离就是删除那一行——`DELETE
+/projects/:id/agent-bindings/:slug` 和 `DELETE
+/projects/:id/area-bindings/:key`，都是 204，当范围已经在继承时都是 404（如果是静默的 204，幂等性就会*撒谎*：删除不存在的东西和真正删除，对同一界面来说是不同的回答）。
+
+更改*区域*的模型要求 `maintainer`，而不是像单个 agent 那样的 `developer`——理由与并行上限相同（[RN-083](#rn-083)）：区域的 binding 一次触及 lead 和*所有*子 agent，而选择模型就是决定产品不询问就花多少钱。
+
+***界面*开始遵守*两个*最低要求，而且确实是两个。** 在此之前，
+`ModelsSection`——按 agent 的模型表——不检查任何角色：现行模型列的 `ModelPicker` 和来源列的"恢复继承"对所有人都显示为可点击，包括 `viewer`，而 api 以 403 拒绝。出路*不*是复制姊妹部分的闸门（`owner || maintainer`）：那会把缺陷换成*相反*的缺陷，把一个 `developer` 锁在 `PUT`/`DELETE .../agent-bindings/:slug` 接受的操作之外——而相反的缺陷更糟，因为提供会被拒绝的东西至少会以一个 toast 告终，而失去能力对失去它的人是不可见的。最低要求属于*端点*，而不是部分，这两个部分在*同一*界面上相邻，最低要求却不同。比较从界面中移出，成为 `roleAtLeast`（`apps/web/src/lib/roles.ts`），基于已经存在的 `ROLE_ORDER`——与后端函数同名，因为这是线路两侧的同一条规则；手写层级（`role === 'owner' || role === 'maintainer'`）在最低要求高时碰巧正确，在低时悄无声息地出错。*缺失*的角色（查询进行中，或失败了）什么也够不着：向禁用的一侧犯错，重新加载就能修复。
+
+**消失的是*控件*，绝不是*信息***（ADR 0064）。不能编辑的人仍然在触发器中看到现行模型以及完整的来源链（[RN-470](#rn-470)），"恢复继承"仍留在该行中，处于非活动状态——正是它*说明*那个 agent 发生了偏离，隐藏它会抹去一个可以读取却不能更改的状态。它们变灰的原因在该部分的说明文字中以文字说*一次*，而不是在每一行用 `title` 说明：在 Chromium 中，`disabled` 元素上的 tooltip 不会打开（浏览器不在禁用控件上派发鼠标事件），一个不会出现的解释就是多了些代码的同一种缺失。
+
+**这些都不是安全边界，限制是声明过的。** 拒绝的仍然是 `RolesGuard`。界面读取的角色是 *WORKSPACE* 的（`useCurrentWorkspaceWithRole`），而另一侧授权的是*项目*的有效角色（`ResolveEffectiveRoleUseCase.forProject`），`project_members` 中的一行会在两个方向上*覆盖*它——因此在项目中拥有自己角色的人，可能在这里看到一个 api 本会接受的禁用控件。关闭这一点需要一个 web 还没有的*按项目*角色查询，这与 `AreaModelsSection` 已经带着的缺口相同；只在一个部分中发明第二个角色来源，会比这个缺口更糟。
+
+> **附加说明（[RN-471](../business-rules.md#rn-471)）：** 上一段的缺口是*一个*，而不是每个部分一个，在界面*已经*按项目查询角色的地方，它被关闭而不是被声明。**成员**部分获取
+> `listProjectMembers`，它一次性为所有人执行 `findMemberRole`，并组合出 `projectRole ?? workspaceRole`——正是 `forProject` 所做的。这不是本段所拒绝的第二个角色来源：而是*同一*组合，来自该部分手头已有的数据。两个模型部分因为没有这些数据，继续使用近似。阅读上面的"在两个方向上*覆盖*"时要小心：它是字面意思，而有三处 OpenAPI 描述声称相反——见 RN-471。
+
+- **位置：** `apps/api/src/domain/llm/binding-resolver.ts`（优先级），
+  `apps/api/src/domain/llm/model-capabilities.ts`（`area` 的能力），
+  `apps/api/src/application/use-cases/llm/resolve-model-binding.use-case.ts`
+  （agent 的区域来自 `agent-areas.ts` 目录，无需往返数据库），`apps/api/src/application/use-cases/llm/clear-model-binding.use-case.ts`,
+  `apps/api/src/interfaces/http/llm/model-bindings.controller.ts`
+  （`area-bindings`，`agent-bindings` 和 `area-bindings` 上的 `DELETE`），
+  `apps/web/src/routes/settings/AreaModelsSection.tsx`（带"恢复继承"的来源列，以及基于 `roleAtLeast` 重写、最低要求不变的 `maintainer` 闸门），
+  `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:273` 和 `:301`
+  （两个 agent 端点上的 `developer`——这些行*没有*改变），
+  `apps/web/src/lib/roles.ts:49`（`roleAtLeast`——缺失的比较），
+  `apps/web/src/routes/settings/ModelsSection.tsx:89`（`podeEditar`，以及为什么是
+  `developer` 而不是 `maintainer`），`:379`（禁用的选择器），`:446`（禁用的按钮，以及为什么原因不放在 `title` 中），`:546`（说明原因的说明文字）
+- **测试：** `test/domain/llm/binding-resolver.spec.ts`,
+  `test/domain/llm/model-capabilities.spec.ts`,
+  `test/application/use-cases/llm/resolve-model-binding.use-case.spec.ts`,
+  `test/application/use-cases/llm/clear-model-binding.use-case.spec.ts`,
+  `apps/web/src/routes/ProjectSettingsTab.test.tsx`,
+  `apps/web/src/routes/settings/papel-na-tabela-de-agentes.test.tsx`
+  （`viewer` 不能编辑，点击不会到达 api；`developer` 能编辑，PUT/DELETE 会到达；缺失的角色是非活动的；行中的信息在控件变灰后保留；以及阻止"统一"两个部分的情形——同一个
+  `developer` 同时看到 agent 表启用而区域表禁用）
+- **来源：** [ADR 0064](../adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global.md)（FASE 23）
+
+### RN-103 — agent 的 binding 是*按项目*的，不再是全局的 {#rn-103}
+
+在 FASE 23 之前，`scope = 'agent'` 保存一个全局 SLUG（`scope_id = 'qa'`），而 `PUT /projects/:id/agent-bindings/:slug` 在路由中接收 `:projectId` 却刻意*丢弃*它——在一个项目的界面上选择 Arquiteto 的模型，会改变它在*所有*项目中的模型。当区域成为可继承的默认值（RN-102）之后，这站不住了：区域是按项目的，而一个位于按项目默认值*之上*的全局 agent binding，会让同一个 agent 只在存在区域的地方解析出不同的模型——并且会让"恢复继承"抹去一个波及无人关注的项目的决定。
+
+出路是让 `agent` 也按项目，而不是把区域降到 agent 之下：`agent` 和 `area` 的 `scope_id` 变成*复合*的——`<projectId>:<agent 的 slug|区域的键>`——而不是为每个 binding 保存一个项目而发明一张新表。项目 UUID 和 agent slug 从不包含 `:`，这让第一个 `:` 成为无歧义的分隔符；读取在第一个处切分，而不是在所有处，这样带 `:` 的 slug（目前一个都没有，但没有什么阻止它）不会变成三段。
+
+没有项目的 `scope_id`（旧格式）在写入时被*拒绝*，而不是被接受后忽略：写入它会创建一个级联再也找不到的 binding——不可见，而不是一个错误。迁移 0040 把每个现有的全局 agent binding 展开为每个项目一行（保留每个项目在变更之前解析的结果），并删除旧格式；之所以是*展开*而不是删除，是因为全局行从未保存它"属于"谁的信息——编造一个所有者项目就是编造原本不存在的数据。
+
+- **位置：** `apps/api/src/domain/llm/binding-scope-id.ts`（格式和校验），`apps/api/src/application/use-cases/llm/set-model-binding.use-case.ts`
+  （`workspaceDoEscopo` 也开始从 `agent`/`area` 推导 workspace——在此之前 RN-043 的策展在它们上无法核对），`apps/api/src/db/migrations/0040_tearful_night_nurse.sql`
+- **测试：** `test/domain/llm/binding-scope-id.spec.ts`,
+  `test/application/use-cases/llm/set-model-binding.use-case.spec.ts`,
+  `test/application/use-cases/llm/resolve-model-binding.use-case.spec.ts`
+  （"o binding de agente é POR PROJETO: o vizinho não o enxerga"）
+- **来源：** [ADR 0064](../adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global.md)（FASE 23）
