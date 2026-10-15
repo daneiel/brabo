@@ -1,7 +1,7 @@
 ---
 id: medicao-do-jev
 title: Medição do roteador de ferramentas Jev
-description: O replay que pergunta ao Jev, para cada passo de agente já gravado no event log local, qual ferramenta ele teria oferecido — a concordância, a curva de confiança, a latência e o custo que produziu em 2026-09-29, e uma segunda rodada que separa a régua, a entrada e o ritmo do próprio agente na distância até 90%, com tamanhos de amostra e o que o replay não enxerga; e a comparação ao vivo com e sem da AT-239 — instrumento, protocolo, regra de decisão e estimativa de custo escritos antes de qualquer execução, e a execução de 2026-10-01 (40 execuções, US$ 0,52) — restringir: o roteador compensou no Haiku e perdeu no DeepSeek, cujo cache de prompt ele quebra.
+description: "O replay que pergunta ao Jev, para cada passo de agente já gravado no event log local, qual ferramenta ele teria oferecido — a concordância, a curva de confiança, a latência e o custo que produziu em 2026-09-29, e uma segunda rodada que separa a régua, a entrada e o ritmo do próprio agente na distância até 90%, com tamanhos de amostra e o que o replay não enxerga; e a comparação ao vivo com e sem da AT-239 — instrumento, protocolo, regra de decisão e estimativa de custo escritos antes de qualquer execução, e a execução de 2026-10-01 (40 execuções, US$ 0,52) — restringir: o roteador compensou no Haiku e perdeu no DeepSeek, cujo cache de prompt ele quebra."
 ---
 
 # Medição do roteador de ferramentas Jev {#measuring-the-jev-tool-router}
