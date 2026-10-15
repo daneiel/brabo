@@ -1,3 +1,7 @@
+---
+traducao_de: 2f301391630d5be632e27036026760d416d43da1
+---
+
 # ADR 0112 — Standalone binary of `@brabo/runner` via `bun build --compile`, native `.node` addon embedded by real extraction to a temp directory
 
 - **Status:** Accepted

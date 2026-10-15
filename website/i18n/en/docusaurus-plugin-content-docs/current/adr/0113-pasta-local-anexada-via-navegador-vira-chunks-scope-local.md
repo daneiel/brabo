@@ -1,3 +1,7 @@
+---
+traducao_de: 2f301391630d5be632e27036026760d416d43da1
+---
+
 # ADR 0113 — Locally attached folder becomes `chunks.scope = 'local'`, read by the BROWSER, never a host path
 
 ## Status

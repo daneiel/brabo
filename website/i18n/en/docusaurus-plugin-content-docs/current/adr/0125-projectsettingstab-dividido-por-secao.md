@@ -1,3 +1,7 @@
+---
+traducao_de: 2f301391630d5be632e27036026760d416d43da1
+---
+
 # ADR 0125 — `ProjectSettingsTab.tsx` split into one file per section, behind a barrel
 
 - **Status:** accepted

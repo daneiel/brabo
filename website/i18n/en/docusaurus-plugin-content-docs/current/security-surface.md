@@ -1,3 +1,7 @@
+---
+traducao_de: 2f301391630d5be632e27036026760d416d43da1
+---
+
 # Api's Exposed Surface
 
 Every registered route, with its authentication classification and the

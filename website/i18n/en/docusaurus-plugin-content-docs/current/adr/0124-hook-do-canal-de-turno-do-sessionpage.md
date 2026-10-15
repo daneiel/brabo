@@ -1,3 +1,7 @@
+---
+traducao_de: 2f301391630d5be632e27036026760d416d43da1
+---
+
 # ADR 0124 — Turn-channel state cluster extracted into `useTurnoDoAgente`
 
 - **Status:** accepted

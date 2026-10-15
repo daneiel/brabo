@@ -1,3 +1,7 @@
+---
+traducao_de: 2f301391630d5be632e27036026760d416d43da1
+---
+
 # ADR 0118 — Browser-driven runner setup: an Ed25519 device key as a second `runner-ticket` credential, a GitHub Releases proxy for the binary, and the File System Access API for a one-click configured folder
 
 - **Status:** Accepted
