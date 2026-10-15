@@ -1030,195 +1030,195 @@
     }
   },
   "ru": {
-    "adr/0014-infra-agent-painel-phoenix.md": {
+    "adr/0020-destravar-gates-qa-secops.md": {
       "defasada": false,
       "data": "2026-10-15"
     },
-    "adr/0027-fase5-backup-hardening-release.md": {
+    "adr/0021-fechamento-4a-infra-e-painel.md": {
       "defasada": false,
       "data": "2026-10-15"
     },
-    "adr/0030-politica-de-branches-mecanizada.md": {
+    "adr/0022-fechamento-4b-psicologo.md": {
       "defasada": false,
       "data": "2026-10-15"
     },
-    "adr/0032-corte-do-keycloak-e-sessao-em-cookie.md": {
+    "adr/0023-fechamento-4b-anamnese.md": {
       "defasada": false,
       "data": "2026-10-15"
     },
-    "adr/0037-cors-do-engine-e-a-porta-como-contrato.md": {
+    "adr/0024-fase5-imagens-producao-ci.md": {
       "defasada": false,
       "data": "2026-10-15"
     },
-    "adr/0043-seis-providers-de-llm-e-o-fechamento-da-fase-9b.md": {
+    "adr/0025-fase5-deploy-kubernetes-kustomize.md": {
       "defasada": false,
       "data": "2026-10-15"
     },
-    "adr/0067-o-gate-sobrevive-ao-restart.md": {
+    "adr/0026-fase5-observabilidade-e-graceful-shutdown.md": {
       "defasada": false,
       "data": "2026-10-15"
     },
-    "adr/0072-projeto-local-ou-container.md": {
+    "adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh.md": {
       "defasada": false,
       "data": "2026-10-15"
     },
-    "adr/0074-tema-alcancavel-e-o-boot-sob-csp.md": {
+    "adr/0035-observabilidade-legivel-e-trace-sem-coletor.md": {
       "defasada": false,
       "data": "2026-10-15"
     },
-    "adr/0080-busca-hibrida-pesos-limiar-e-citacao.md": {
+    "adr/0036-telas-de-auth-fieis-ao-design-e-fontes-auto-hospedadas.md": {
       "defasada": false,
       "data": "2026-10-15"
     },
-    "adr/0081-ciclo-de-vida-do-container-tabela-sem-orquestrador.md": {
+    "adr/0038-hierarquia-de-agentes.md": {
       "defasada": false,
       "data": "2026-10-15"
     },
-    "adr/0086-dev-lead-plano-suspende-para-aprovacao.md": {
+    "adr/0045-reagendamento-por-evento-do-dev-agent.md": {
       "defasada": false,
       "data": "2026-10-15"
     },
-    "adr/0087-ux-designer-agente.md": {
+    "adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md": {
       "defasada": false,
       "data": "2026-10-15"
     },
-    "adr/0090-qa-estrategia-e-appsec-segundo-momento.md": {
+    "adr/0112-binario-standalone-do-runner-via-bun-build-compile.md": {
       "defasada": false,
       "data": "2026-10-15"
     },
-    "adr/0106-distribuicao-do-runner-via-tsup-e-npm-publish.md": {
+    "adr/0115-pedido-de-pull-de-modelo-huggingface-tabela-propria.md": {
       "defasada": false,
       "data": "2026-10-15"
     },
-    "adr/0109-handoff-manual-a-agente-a-escolha.md": {
+    "adr/0118-configuracao-automatica-do-runner-pelo-navegador.md": {
       "defasada": false,
       "data": "2026-10-15"
     },
-    "adr/0111-conversao-de-execution-mode-de-projeto-existente.md": {
+    "adr/0123-golden-set-regressao-qa-automacao.md": {
       "defasada": false,
       "data": "2026-10-15"
     },
-    "adr/0113-pasta-local-anexada-via-navegador-vira-chunks-scope-local.md": {
+    "adr/0125-projectsettingstab-dividido-por-secao.md": {
       "defasada": false,
       "data": "2026-10-15"
     },
-    "adr/0114-deteccao-de-ollama-nativo-no-bootstrap-dev.md": {
+    "adr/0126-trilho-vertical-de-navegacao-do-projeto.md": {
       "defasada": false,
       "data": "2026-10-15"
     },
-    "adr/0116-tipos-do-web-gerados-do-openapi.md": {
-      "defasada": false,
-      "data": "2026-10-15"
-    },
-    "adr/0121-schema-dividido-por-agregado-de-dominio.md": {
-      "defasada": false,
-      "data": "2026-10-15"
-    },
-    "adr/0122-sessionpage-dividido-em-cinco-prs.md": {
-      "defasada": false,
-      "data": "2026-10-15"
-    },
-    "adr/0124-hook-do-canal-de-turno-do-sessionpage.md": {
-      "defasada": false,
-      "data": "2026-10-15"
-    },
-    "adr/0127-tetos-de-rebaixamento-em-project-members.md": {
-      "defasada": false,
-      "data": "2026-08-30"
-    },
-    "adr/0129-telemetria-de-busca-do-rag-como-tabela.md": {
+    "adr/0128-porta-de-docker-e-a-prova-de-empacotamento.md": {
       "defasada": false,
       "data": "2026-09-02"
     },
-    "adr/0137-o-runner-sobe-o-container-do-projeto.md": {
+    "adr/0130-broker-de-container.md": {
+      "defasada": false,
+      "data": "2026-09-02"
+    },
+    "adr/0132-golden-set-de-acerto-do-rag.md": {
+      "defasada": false,
+      "data": "2026-09-02"
+    },
+    "adr/0134-dev-agents-executam-dentro-do-container.md": {
       "defasada": false,
       "data": "2026-09-03"
     },
-    "adr/0141-base-unica-dos-projetos-montados.md": {
+    "adr/0146-base-consentida-no-bootstrap.md": {
       "defasada": false,
-      "data": "2026-09-26"
+      "data": "2026-09-06"
     },
-    "adr/0148-artefatos-projetados-em-arquivo.md": {
+    "adr/0147-agente-local-com-capacidades.md": {
       "defasada": false,
-      "data": "2026-09-10"
+      "data": "2026-09-06"
     },
-    "adr/0149-assinatura-dos-artefatos-publicados.md": {
-      "defasada": false,
-      "data": "2026-09-08"
-    },
-    "adr/0150-instalador-de-uma-linha.md": {
-      "defasada": false,
-      "data": "2026-09-08"
-    },
-    "adr/0155-a-primeira-conta-nasce-no-terminal.md": {
+    "adr/0154-chave-de-dispositivo-de-maquina.md": {
       "defasada": false,
       "data": "2026-09-27"
     },
-    "adr/0158-o-id-da-chave-mestra-gravado-no-envelope.md": {
+    "adr/0157-teto-de-auto-movimento-no-upsert-de-workspace.md": {
       "defasada": false,
       "data": "2026-09-12"
     },
-    "adr/0159-imagem-de-terceiro-por-digest.md": {
+    "adr/0179-o-laco-pergunta-ao-jev-qual-ferramenta.md": {
       "defasada": false,
-      "data": "2026-09-12"
-    },
-    "adr/0160-o-compose-do-instalador-viaja-assinado.md": {
-      "defasada": false,
-      "data": "2026-09-13"
-    },
-    "adr/0162-broker-publicado-e-oferecido-pelo-instalador.md": {
-      "defasada": false,
-      "data": "2026-09-18"
-    },
-    "adr/0165-o-repositorio-nasce-no-handoff-ao-arquiteto.md": {
-      "defasada": false,
-      "data": "2026-09-18"
-    },
-    "adr/0169-seaweedfs-no-lugar-do-minio-no-overlay-local.md": {
-      "defasada": false,
-      "data": "2026-09-27"
-    },
-    "adr/0173-remocao-de-membro-de-workspace.md": {
-      "defasada": false,
-      "data": "2026-09-28"
-    },
-    "adr/0176-sessionpage-abaixo-de-mil-linhas.md": {
-      "defasada": false,
-      "data": "2026-09-28"
-    },
-    "adr/0189-o-piloto-automatico.md": {
-      "defasada": false,
-      "data": "2026-10-01"
-    },
-    "adr/0190-a-infra-sobe-o-container-no-aceite.md": {
-      "defasada": false,
-      "data": "2026-10-01"
-    },
-    "adr/0192-plano-de-teste-depois-da-entrega.md": {
-      "defasada": false,
-      "data": "2026-10-01"
-    },
-    "adr/0197-a-imagem-dos-workflows-vem-do-compose.md": {
-      "defasada": false,
-      "data": "2026-10-01"
-    },
-    "adr/0201-revogacao-por-chave.md": {
-      "defasada": false,
-      "data": "2026-10-01"
+      "data": "2026-09-30"
     },
     "adr/index.md": {
       "defasada": false,
       "data": "2026-10-15"
     },
-    "explanation/fase-28-pasta-do-usuario.md": {
-      "defasada": false,
-      "data": "2026-09-07"
-    },
-    "explanation/primeiro-dogfooding.md": {
+    "architecture.md": {
       "defasada": false,
       "data": "2026-10-15"
     },
-    "explanation/validacao-fase-12.md": {
+    "business-rules.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "business-rules/autenticacao.md": {
+      "defasada": false,
+      "data": "2026-10-11"
+    },
+    "business-rules/custo.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "explanation/aceite-providers.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "explanation/achados-execucao-real.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "explanation/auditoria-fluxo-vs-codigo.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "explanation/auditoria-visual-rodada-29.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "explanation/backlog.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "explanation/branching-policy.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "explanation/cadeia-de-suprimentos-do-ci.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "explanation/documentation-workflow.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "explanation/fase-29-instalacao-de-uma-linha.md": {
+      "defasada": false,
+      "data": "2026-09-09"
+    },
+    "explanation/fase-30-runner-por-maquina.md": {
+      "defasada": false,
+      "data": "2026-09-26"
+    },
+    "explanation/gates.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "explanation/historico-de-fases.md": {
+      "defasada": false,
+      "data": "2026-10-01"
+    },
+    "explanation/medicao-do-idioma.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "explanation/medicao-do-jev.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "explanation/validacao-real.md": {
       "defasada": false,
       "data": "2026-10-15"
     },
@@ -1234,11 +1234,19 @@
       "defasada": false,
       "data": "2026-10-15"
     },
-    "missions/colheita-esqueleto.md": {
+    "missions/doc-mission.md": {
       "defasada": false,
       "data": "2026-10-15"
     },
-    "missions/inputs/01-contrato-gitprovider.md": {
+    "missions/dogfooding-mission.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "runbook.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "security-surface.md": {
       "defasada": false,
       "data": "2026-10-15"
     },
