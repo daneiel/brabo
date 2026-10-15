@@ -237,13 +237,13 @@ export const AFERICOES = [
 
   // golden-set do RAG
   { arquivo: '.claude/contexto/estado-atual.md', padrao: /um corpo de (\S+) perguntas medindo/, fonte: 'goldenSetRagCasos', forma: 'digito' },
-  { arquivo: 'docs/explanation/gates.md', padrao: /\((\S+) questions composed from real RNs/, fonte: 'goldenSetRagCasos', forma: 'digito' },
+  { arquivo: 'docs/explanation/gates.md', padrao: /\((\S+) perguntas compostas a partir de RNs/, fonte: 'goldenSetRagCasos', forma: 'digito' },
   { arquivo: '.claude/contexto/estado-atual.md', padrao: /corpus CURADO \((\S+) arquivos, não os/, fonte: 'goldenSetRagCorpus', forma: 'digito' },
   { arquivo: '.claude/contexto/estado-atual.md', padrao: /corpus CURADO \((\S+) arquivos\), não os/, fonte: 'goldenSetRagCorpus', forma: 'digito' },
   { arquivo: '.claude/contexto/estado-atual.md', padrao: /medido de verdade \((\d+\/\d+),/, fonte: 'goldenSetRagPiso', forma: 'digito' },
 
   // imagens de terceiro presas por digest
-  { arquivo: 'docs/explanation/cadeia-de-suprimentos-do-ci.md', padrao: /all (\S+) third-party references/, fonte: 'imagensDeTerceiro', forma: 'digito' },
+  { arquivo: 'docs/explanation/cadeia-de-suprimentos-do-ci.md', padrao: /todas as (\S+) referências de terceiros/, fonte: 'imagensDeTerceiro', forma: 'digito' },
 
   // imagens que o produto publica / que o smoke confere
   { arquivo: '.claude/contexto/stack.md', padrao: /As (\S+) imagens de\s+produção são PUBLICADAS/, fonte: 'imagensPublicadas', forma: 'pt_f' },

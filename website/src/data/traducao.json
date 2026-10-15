@@ -516,9 +516,53 @@
       "defasada": false,
       "data": null
     },
+    "explanation/auditoria-fluxo-vs-codigo.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "explanation/auditoria-visual-rodada-29.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "explanation/backlog.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "explanation/branching-policy.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "explanation/cadeia-de-suprimentos-do-ci.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "explanation/documentation-workflow.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
     "explanation/execucao-real-hello-world.md": {
       "defasada": false,
       "data": null
+    },
+    "explanation/gates.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "explanation/medicao-do-idioma.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "explanation/medicao-do-jev.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "explanation/modelo-de-time.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "explanation/observability.md": {
+      "defasada": false,
+      "data": "2026-10-15"
     },
     "explanation/primeiro-dogfooding.md": {
       "defasada": false,
