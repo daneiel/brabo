@@ -6,6 +6,10 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- O cache de prompt passa a valer no Haiku (e nos demais `anthropic/*`) pelo
+  OpenRouter: a capability `promptCaching` do OpenRouter vira `true`, provada
+  por smoke com credencial em 15/10 (`cached_input_tokens=8011` na segunda
+  chamada) (RN-892, AT-543).
 - O site da documentação abre em pt-BR, que passa a ser a FONTE em `docs/` e o
   locale padrão, com inglês, russo e chinês simplificado ao lado (ADR 0216,
   AT-546). O inglês sai da raiz para `/brabo/<ambiente>/en/…`, e o 404 da raiz
