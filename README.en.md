@@ -57,9 +57,9 @@ business rules.
 
 ### The Architect decides in writing
 
-<img src="docs/assets/readme/arquitetura-e-adr.png" alt="The Architect proposes the ADR as a pull request and asks you to confirm the architecture" />
+<img src="docs/assets/readme/arquitetura-e-adr.png" alt="The Architect proposes the architecture decision as a pull request and asks you to confirm the architecture" />
 
-The ADR is born as a pull request, and the architecture only moves on with
+The architecture decision is born as a pull request, and the architecture only moves on with
 your confirmation.
 
 ### The devs work inside the container
@@ -233,7 +233,7 @@ is pure arithmetic, and this way it's testable without a TTY.
 24-bit ANSI and degrades to 256 colors where the terminal doesn't support it.
 
 > **`pnpm dev` and `make deploy-local` don't coexist.** Both publish api and
-> engine on the same ports — on purpose (ADR 0025), so the smoke test holds for
+> engine on the same ports — on purpose, so the smoke test holds for
 > both. With the local cluster up, **5173 doesn't open**, and the web is at
 > <http://localhost:8088>. `pnpm dev:preflight` tells you which mode you're in;
 > `make k8s-down` brings you back to this one. Details in
@@ -251,32 +251,6 @@ is pure arithmetic, and this way it's testable without a TTY.
 > `sudo chown -R $USER apps/api/dist apps/*/node_modules` (or delete the
 > volumes with `docker compose down -v` and let the next `up` recreate them) to
 > clear what got stuck.
-
-## How a turn works
-
-```mermaid
-sequenceDiagram
-  participant U as You
-  participant W as web
-  participant A as api
-  participant E as engine
-  participant L as LLM
-
-  U->>W: opens a session
-  W->>A: POST /sessions
-  A->>A: writes session.created (event log + outbox)
-  A-->>E: Oban consumes the outbox
-  E->>E: SessionServer + Harness assemble the context
-  E->>L: turn
-  L-->>E: "I want to run this tool"
-  E->>A: becomes a proposed_action
-  A->>A: IAM → agent_autonomy → permissions.json → ceilings
-  A-->>U: asks for approval
-  U->>A: approves
-  A-->>E: executes
-  E->>A: immutable event
-  A-->>W: broadcast — the panel updates
-```
 
 ## Documentation
 
@@ -301,7 +275,6 @@ in `dev`: for the latest state, read the files here.
 | [Artifacts](docs/reference/artifacts.md) | the schemas and who may emit each one |
 | [Git providers](docs/reference/git-providers.md) | the operation contract and the capabilities |
 | [Internal API](docs/reference/internal-api.md) | the api ↔ engine contract |
-| [ADRs](docs/adr/index.md) | the decisions and the why of each one (count in the [Portuguese README](README.md)) |
 | [Security](SECURITY.md) | how to report a vulnerability |
 | [Contributing](CONTRIBUTING.md) | flow, Definition of Done, what is accepted |
 | [Governance](GOVERNANCE.md) | today's model (single maintainer), the three roles of the `community` mode and who gets into each |
@@ -320,259 +293,6 @@ in `dev`: for the latest state, read the files here.
 
 No Redis: queues live in Postgres via Oban, and the rate limit is a sliding
 window in SQL.
-
-## Structure
-
-```
-apps/
-  api/      NestJS + Drizzle          → schema "public"
-  engine/   Elixir/OTP + Phoenix      → schema "engine"
-  web/      React + Vite
-packages/
-  shared/   shared TS types (import type only)
-design/     design system — source of truth for UI
-docker/     dev and prod compose, Dockerfiles, smoke.sh
-deploy/k8s/ base + local/staging/prod overlays (Kustomize)
-docs/       this documentation, including the ADRs
-scripts/
-  ci/       release automation and branch policy (tested with vitest)
-  dev/      local tools — the `pnpm bootstrap` menu and the preflight
-  docs/     documentation generation and checking
-website/    Docusaurus, which reads from docs/ — never from website/docs/
-```
-
-`apps/engine` sits outside the pnpm workspace (it's a Mix project), with
-scripts at the root that delegate to `mix`:
-
-```bash
-pnpm engine:setup    # deps.get + ecto.create + ecto.migrate
-pnpm engine:dev      # phx.server outside Docker
-pnpm engine:test     # mix test
-```
-
-> **Elixir 1.20.4 / OTP 29.1.1** is the project's version, the same in the
-> Dockerfiles and in CI. `mix format` from newer versions produces different
-> output and turns CI's `--check-formatted` red. If your host has another
-> version, format through the container:
->
-> ```bash
-> docker run --rm -v "$PWD/apps/engine:/app" -w /app \
->   hexpm/elixir:1.20.4-erlang-29.1.1-alpine-3.24.2 mix format
-> ```
-
-## Database
-
-One Postgres, one database (`brabo`), two schemas so they never collide:
-
-- **api (Drizzle)** — domain in `public`; migrations in
-  `apps/api/src/db/migrations/`, applied with `pnpm db:migrate`
-  (`pnpm db:generate` after changing `apps/api/src/db/schema/<aggregate>.ts` —
-  one file per aggregate since [ADR 0121](docs/adr/0121-schema-dividido-por-agregado-de-dominio.md);
-  `db/schema.ts` is just the `export *` barrel).
-- **engine (Ecto/Oban)** — domain and Oban in `engine`, via
-  `migration_default_prefix`. Migrations in `apps/engine/priv/repo/migrations/`.
-
-pgvector is enabled by `docker/postgres/init.sql`, which runs once when the
-volume is created.
-
-## Tests
-
-```bash
-pnpm --filter api test      # vitest
-pnpm --filter web test      # vitest
-pnpm engine:test            # ExUnit
-```
-
-No feature gets in without a happy-path test **and** a failure case. The git
-providers are validated by a **single contract suite** run against all three
-(Local, GitHub, GitLab). Two tests deserve a mention because they protect
-properties, not implementations:
-
-- `apps/api/test/interfaces/route-surface.spec.ts` enumerates the routes at
-  runtime and checks them against
-  [`docs/security-surface.md`](docs/security-surface.md) — **a new route with
-  no classification breaks the test**.
-- `apps/engine/test/engine_web/route_surface_test.exs` sends a request with no
-  token to every registered route and requires 401, save for named exceptions.
-
-## Health and observability
-
-`GET /health` checks the Postgres connection in both services. On Kubernetes
-there are **three** probes, because the questions are different (ADR 0025):
-`/live` answers without touching the database — a liveness tied to Postgres
-would restart every replica at once on a slow database —, `/health` is the
-api's readiness, and `/ready` on the engine only lets traffic in after session
-rehydration has finished.
-
-A session is a **root trace** spanning api and engine, and the `trace_id` is
-born in the browser — the three log streams carry the same id. That holds
-**without a collector**: instrumenting and exporting are separate decisions, so
-`pnpm dev` has correlation even with nothing running in `monitoring`.
-
-The log is one JSON line per event in production and human-readable in
-development, where each request also yields a line with the **path across
-layers** and the duration of each step:
-
-```
-POST /projects/…/sessions — 34.1ms trace=4bf92f35
-  interfaces        SessionsController.create         0ms
-    ↳ application     CreateSessionUseCase.execute    31.2ms
-      ↳ infrastructure  DrizzleOutboxRepository.append  2.1ms
-```
-
-Prometheus metrics cover tokens/min and cost/hour per project, the Oban queue,
-active sessions and approval rate. Grafana dashboards are provisioned as code.
-The whole model is in [observability](docs/explanation/observability.md).
-
-## Production
-
-Multi-stage, **non-root** images, read-only rootfs, no bind mount:
-`docker/<app>/Dockerfile.prod`. The api runs `node main.js` over `dist`, the
-engine runs a `mix release` (no Mix, no source code) and the web ships through
-nginx.
-
-```bash
-# Required: this compose runs with NODE_ENV=production, and the api refuses
-# to start with the repository's example key for any of these four
-# secrets (ADR 0059, RN-093/RN-114). `smoke.sh` generates its own.
-export GIT_OAUTH_STATE_SECRET="$(openssl rand -base64 32)"
-export AUTH_JWT_SECRET="$(openssl rand -base64 32)"
-export BRABO_SERVICE_TOKEN="$(openssl rand -base64 32)"
-export CREDENTIALS_MASTER_KEY="$(openssl rand -base64 32)"
-export SECRET_KEY_BASE="$(openssl rand -base64 64)"
-
-docker compose -f docker/docker-compose.prod.yml up -d --build --wait
-bash docker/smoke.sh
-docker compose -f docker/docker-compose.prod.yml down -v
-```
-
-`smoke.sh` checks that the three images run non-root, logs in, creates
-workspace → project → session and checks the healths. It's the same script as
-CI.
-
-**Two volumes must be identical in api and engine:**
-
-| path | content |
-|---|---|
-| `/data/project-workspaces` | working tree per project, worktrees per agent, `permissions.json` |
-| `/data/git-repos` | local bare repos (target of the dev agent's `git push`) |
-
-The api persists the bare repo's absolute path in the database and the engine
-uses it literally; mounting them in different places breaks the push with
-`remote unpack failed`.
-
-## Deploying on Kubernetes
-
-Manifests in `deploy/k8s/` with **Kustomize** (base + `local`, `staging`,
-`prod` overlays) — the choice is in
-[ADR 0025](docs/adr/0025-fase5-deploy-kubernetes-kustomize.md). Third-party
-operators (External Secrets, CloudNativePG, Prometheus, prometheus-adapter)
-come through Helm, with versions pinned by the bootstrap.
-
-```bash
-make deploy-local     # brings up a k3d cluster, installs everything and runs the smoke
-make hpa-test         # fills the Oban queue and proves the HPA scales
-make rollout-test     # proves an engine rollout leaves no orphan session
-make test-restore     # triggers a real backup, restores and validates
-make test-restore-mutacao  # breaks the restore on purpose and requires the proof to fail
-make k8s-validate     # builds and validates the overlays (no cluster needed)
-make k8s-down         # removes the cluster
-```
-
-The engine scales by **Oban queue depth**: `/metrics` exposes
-`oban_queue_depth{queue,state}` and the HPA consumes `state="available"`. The
-filter by state is not a detail — three workers reschedule themselves, so
-`oban_jobs` is never empty and an unfiltered HPA would scale to the max on an
-idle system.
-
-Step by step and diagnosis in the [runbook](docs/runbook.md#deploy-local).
-
-## CI
-
-`.github/workflows/ci.yml` runs on push to `feature/**` and on PRs to `dev`:
-lint in check mode, api/web/engine tests, manifest validation
-(`kustomize build` + `kubeconform` + shellcheck), building the images with
-cache, **Trivy** on the images, **gitleaks** on the repository, a dependency
-audit gated on critical, and the smoke test.
-
-The dependency gate was verified with a planted critical vulnerability: the job
-failed, and passed again after the revert.
-
-## Frontend
-
-Its own login (`/login`, `/registrar`, `/esqueci-senha`, `/definir-senha`): the
-access token lives in memory and the refresh in an httpOnly cookie, so the
-session survives a reload without going through `localStorage`. The four follow
-the design system's approved mockup, with the brand above the card and the
-artifact version in the footer
-([ADR 0036](docs/adr/0036-telas-de-auth-fieis-ao-design-e-fontes-auto-hospedadas.md)).
-After login the app works on the user's first workspace:
-
-- **Dashboard** (`/`) — the project grid and the "New project" wizard
-- **Project** (`/projects/:id`) — tabs derived from a single registry
-  (`apps/web/src/routes/project-tabs.ts`, not from parallel lists): Overview
-  (agent team, architecture and the C4 diagram), Executors, Creative, Chat,
-  Insights, Code, PRs, Approvals (queue + the `permissions.json` table),
-  Backlog, Architecture, Spending and Settings (models per agent and per area,
-  members, credentials, parallelism ceiling)
-- **Session** (`/projects/:id/sessions/:sid`) — streaming chat, model picker,
-  live `TokenMeter` and inline action approval
-
-`/status` is the only **public** route outside auth: it queries the `/health`
-of the api and the engine, which are already public because the kubelet calls
-them.
-
-The agent's streaming arrives over the Phoenix channel `session:<id>`
-(`agent.delta`, `agent.status`, `agent.done`); lists and counters use TanStack
-Query.
-
-The design system's three families (Space Grotesk, Archivo, IBM Plex Mono) are
-**self-hosted** in `apps/web/public/fonts/`. It's not a preference: the
-production image's CSP is `font-src 'self' data:`, and the `<link>` to Google
-Fonts that existed before was silently blocked — in production the typography
-fell back to a system font, and title and body became indistinguishable.
-
-## Conventions
-
-- **Always** work in `feature/*` off `dev`. Permanent branches: `dev`, `qa`,
-  `rc`, `main`.
-- Conventional commits in **pt-BR**.
-- Merging into a protected branch is **always** manual — there's no option to
-  automate it, and a test guarantees that.
-- Agent commits use the `<agent>[bot]` identity with the user as co-author.
-- Every domain event is immutable: never `UPDATE` on an event table.
-- Relevant architectural decisions become an [ADR](docs/adr/index.md).
-
-`CLAUDE.md` has the full detail, and it's what the agents read — the content
-lives in parts per section in `.claude/contexto/`, imported by it.
-
-## Status
-
-**Phases 1 to 26 done**; the current version is in the
-[Portuguese README](README.md) and in the [CHANGELOG](CHANGELOG.md). A release
-pipeline exercised end to end, first-party auth without Keycloak, several LLM
-providers over a single base, and the whole chain proven against a real GitHub
-— repository adoption, story promotion, a dev agent writing code, a PR opened,
-a gate judging and the verdict coming back.
-
-What came after the phases didn't come from a roadmap: it came from **using the
-product**. Program 16–26 was born from the first real walk through the app (the
-eight screens of the design handoff, the read-only Code tab, the per-project
-container decided by the Architect, spending with two audiences), and the
-following rounds came from live test sessions, each finding becoming an RN with
-`file:line` and a test.
-
-What doesn't exist yet is said where it matters, and it's meant to be read:
-
-- [known technical debt](docs/architecture.md#divida-tecnica) — a section of
-  the documentation, not an omission;
-- [findings from the real run](docs/explanation/achados-execucao-real.md) —
-  what the run against a real GitHub found and what stays open **by decision**,
-  including the two cases where the conclusion was that the road to autonomy
-  doesn't go through loosening policy;
-- the per-project container lifecycle is a **declared cut** of Phase 25, not
-  something forgotten: until it comes up, the terminal policy of ADR 0055 keeps
-  holding as it is.
 
 ## License
 

@@ -57,9 +57,9 @@
 
 ### Архитектор решает письменно
 
-<img src="docs/assets/readme/arquitetura-e-adr.png" alt="Архитектор предлагает ADR как pull request и просит подтвердить архитектуру" />
+<img src="docs/assets/readme/arquitetura-e-adr.png" alt="Архитектор предлагает архитектурное решение как pull request и просит подтвердить архитектуру" />
 
-ADR рождается как pull request, а архитектура идёт дальше только после вашего
+Архитектурное решение рождается как pull request, а архитектура идёт дальше только после вашего
 подтверждения.
 
 ### Разработчики работают внутри контейнера
@@ -233,7 +233,7 @@ pnpm bootstrap --help                         # заголовок с испол
 ANSI с деградацией до 256 цветов там, где терминал их не поддерживает.
 
 > **`pnpm dev` и `make deploy-local` не сосуществуют.** Оба публикуют api и
-> engine на одних и тех же портах — намеренно (ADR 0025), чтобы smoke-тест был
+> engine на одних и тех же портах — намеренно, чтобы smoke-тест был
 > верен для обоих. С поднятым локальным кластером **5173 не открывается**, а web
 > находится на <http://localhost:8088>. `pnpm dev:preflight` скажет, в каком
 > режиме вы находитесь; `make k8s-down` вернёт в этот. Подробнее в
@@ -251,32 +251,6 @@ ANSI с деградацией до 256 цветов там, где термин
 > `sudo chown -R $USER apps/api/dist apps/*/node_modules` (или удалите тома
 > через `docker compose down -v` и дайте следующему `up` создать их заново),
 > чтобы освободить застрявшее.
-
-## Как работает ход
-
-```mermaid
-sequenceDiagram
-  participant U as Вы
-  participant W as web
-  participant A as api
-  participant E as engine
-  participant L as LLM
-
-  U->>W: открывает сессию
-  W->>A: POST /sessions
-  A->>A: записывает session.created (журнал событий + outbox)
-  A-->>E: Oban потребляет outbox
-  E->>E: SessionServer + Harness собирают контекст
-  E->>L: ход
-  L-->>E: «хочу запустить этот инструмент»
-  E->>A: становится proposed_action
-  A->>A: IAM → agent_autonomy → permissions.json → потолки
-  A-->>U: запрашивает одобрение
-  U->>A: одобряет
-  A-->>E: выполняет
-  E->>A: неизменяемое событие
-  A-->>W: broadcast — панель обновляется
-```
 
 ## Документация
 
@@ -301,7 +275,6 @@ sequenceDiagram
 | [Артефакты](docs/reference/artifacts.md) | схемы и кто может выпускать каждую |
 | [Git-провайдеры](docs/reference/git-providers.md) | контракт операций и capabilities |
 | [Внутренний API](docs/reference/internal-api.md) | контракт api ↔ engine |
-| [ADR](docs/adr/index.md) | решения и причины каждого (количество — в [README на португальском](README.md)) |
 | [Безопасность](SECURITY.md) | как сообщить об уязвимости |
 | [Участие](CONTRIBUTING.md) | процесс, Definition of Done, что принимается |
 | [Управление](GOVERNANCE.md) | текущая модель (один сопровождающий), три роли режима `community` и критерий допуска в каждую |
@@ -320,255 +293,6 @@ sequenceDiagram
 
 Без Redis: очереди живут в Postgres через Oban, а rate limit — скользящее окно
 на SQL.
-
-## Структура
-
-```
-apps/
-  api/      NestJS + Drizzle          → схема "public"
-  engine/   Elixir/OTP + Phoenix      → схема "engine"
-  web/      React + Vite
-packages/
-  shared/   общие типы TS (только import type)
-design/     дизайн-система — источник истины для UI
-docker/     compose для dev и prod, Dockerfile, smoke.sh
-deploy/k8s/ base + overlays local/staging/prod (Kustomize)
-docs/       эта документация, включая ADR
-scripts/
-  ci/       автоматизация релизов и политика веток (тесты на vitest)
-  dev/      локальные инструменты — меню `pnpm bootstrap` и preflight
-  docs/     генерация и проверка документации
-website/    Docusaurus, читающий из docs/ — никогда из website/docs/
-```
-
-`apps/engine` находится вне pnpm-workspace (это проект Mix), а скрипты в корне
-делегируют в `mix`:
-
-```bash
-pnpm engine:setup    # deps.get + ecto.create + ecto.migrate
-pnpm engine:dev      # phx.server вне Docker
-pnpm engine:test     # mix test
-```
-
-> **Elixir 1.20.4 / OTP 29.1.1** — версия проекта, та же в Dockerfile и в CI.
-> `mix format` более новых версий даёт другой результат и делает
-> `--check-formatted` в CI красным. Если на хосте другая версия, форматируйте
-> через контейнер:
->
-> ```bash
-> docker run --rm -v "$PWD/apps/engine:/app" -w /app \
->   hexpm/elixir:1.20.4-erlang-29.1.1-alpine-3.24.2 mix format
-> ```
-
-## База данных
-
-Один Postgres, одна база (`brabo`), две схемы, чтобы никогда не пересекаться:
-
-- **api (Drizzle)** — домен в `public`; миграции в
-  `apps/api/src/db/migrations/`, применяются через `pnpm db:migrate`
-  (`pnpm db:generate` после изменения `apps/api/src/db/schema/<агрегат>.ts` —
-  по файлу на агрегат начиная с [ADR 0121](docs/adr/0121-schema-dividido-por-agregado-de-dominio.md);
-  `db/schema.ts` — просто barrel из `export *`).
-- **engine (Ecto/Oban)** — домен и Oban в `engine`, через
-  `migration_default_prefix`. Миграции в `apps/engine/priv/repo/migrations/`.
-
-pgvector включается файлом `docker/postgres/init.sql`, который выполняется один
-раз при создании тома.
-
-## Тесты
-
-```bash
-pnpm --filter api test      # vitest
-pnpm --filter web test      # vitest
-pnpm engine:test            # ExUnit
-```
-
-Ни одна функция не входит без теста основного сценария **и** одного сценария
-сбоя. Git-провайдеры проверяются **единым набором контрактных тестов**,
-запускаемым против всех трёх (Local, GitHub, GitLab). Два теста стоит
-упомянуть, потому что они защищают свойства, а не реализации:
-
-- `apps/api/test/interfaces/route-surface.spec.ts` перечисляет маршруты во
-  время выполнения и сверяет их с
-  [`docs/security-surface.md`](docs/security-surface.md) — **новый маршрут без
-  классификации ломает тест**.
-- `apps/engine/test/engine_web/route_surface_test.exs` отправляет запрос без
-  токена на каждый зарегистрированный маршрут и требует 401, кроме названных
-  исключений.
-
-## Здоровье и наблюдаемость
-
-`GET /health` проверяет соединение с Postgres в обоих сервисах. В Kubernetes
-проб **три**, потому что вопросы разные (ADR 0025): `/live` отвечает, не
-трогая базу, — liveness, привязанный к Postgres, перезапустил бы все реплики
-сразу при медленной базе, — `/health` — это readiness api, а `/ready` в engine
-пропускает трафик только после завершения регидратации сессий.
-
-Сессия — это **корневой trace**, проходящий через api и engine, а `trace_id`
-рождается в браузере — три потока логов несут один и тот же id. Это работает
-**без коллектора**: инструментирование и экспорт — отдельные решения, поэтому у
-`pnpm dev` есть корреляция, даже когда в `monitoring` ничего не запущено.
-
-Лог — одна строка JSON на событие в production и читаемый для человека в
-разработке, где каждый запрос также даёт строку с **путём между слоями** и
-длительностью каждого шага:
-
-```
-POST /projects/…/sessions — 34.1ms trace=4bf92f35
-  interfaces        SessionsController.create         0ms
-    ↳ application     CreateSessionUseCase.execute    31.2ms
-      ↳ infrastructure  DrizzleOutboxRepository.append  2.1ms
-```
-
-Метрики Prometheus покрывают токены/мин и стоимость/час по проекту, очередь
-Oban, активные сессии и долю одобрений. Дашборды Grafana поставляются как код.
-Вся модель описана в [наблюдаемости](docs/explanation/observability.md).
-
-## Production
-
-Многоэтапные образы, **не от root**, rootfs только для чтения, без bind mount:
-`docker/<app>/Dockerfile.prod`. api запускает `node main.js` поверх `dist`,
-engine — `mix release` (без Mix и без исходников), а web отдаётся через nginx.
-
-```bash
-# Обязательно: этот compose работает с NODE_ENV=production, и api отказывается
-# стартовать с примерным ключом из репозитория для любого из этих четырёх
-# секретов (ADR 0059, RN-093/RN-114). `smoke.sh` генерирует свои сам.
-export GIT_OAUTH_STATE_SECRET="$(openssl rand -base64 32)"
-export AUTH_JWT_SECRET="$(openssl rand -base64 32)"
-export BRABO_SERVICE_TOKEN="$(openssl rand -base64 32)"
-export CREDENTIALS_MASTER_KEY="$(openssl rand -base64 32)"
-export SECRET_KEY_BASE="$(openssl rand -base64 64)"
-
-docker compose -f docker/docker-compose.prod.yml up -d --build --wait
-bash docker/smoke.sh
-docker compose -f docker/docker-compose.prod.yml down -v
-```
-
-`smoke.sh` проверяет, что три образа работают не от root, выполняет вход,
-создаёт workspace → проект → сессию и проверяет health. Это тот же скрипт, что
-и в CI.
-
-**Два тома должны быть одинаковыми в api и engine:**
-
-| путь | содержимое |
-|---|---|
-| `/data/project-workspaces` | рабочее дерево по проекту, worktree по агенту, `permissions.json` |
-| `/data/git-repos` | локальные bare-репозитории (цель `git push` dev-агента) |
-
-api хранит абсолютный путь bare-репозитория в базе, а engine использует его
-буквально; монтирование в разные места ломает push с `remote unpack failed`.
-
-## Деплой в Kubernetes
-
-Манифесты в `deploy/k8s/` на **Kustomize** (base + overlays `local`, `staging`,
-`prod`) — выбор описан в
-[ADR 0025](docs/adr/0025-fase5-deploy-kubernetes-kustomize.md). Сторонние
-операторы (External Secrets, CloudNativePG, Prometheus, prometheus-adapter)
-ставятся через Helm, с версиями, закреплёнными bootstrap.
-
-```bash
-make deploy-local     # поднимает кластер k3d, ставит всё и запускает smoke
-make hpa-test         # заполняет очередь Oban и доказывает, что HPA масштабирует
-make rollout-test     # доказывает, что rollout engine не оставляет осиротевших сессий
-make test-restore     # запускает настоящий бэкап, восстанавливает и проверяет
-make test-restore-mutacao  # намеренно ломает restore и требует, чтобы проверка провалилась
-make k8s-validate     # собирает и проверяет overlays (кластер не нужен)
-make k8s-down         # удаляет кластер
-```
-
-engine масштабируется по **глубине очереди Oban**: `/metrics` отдаёт
-`oban_queue_depth{queue,state}`, а HPA потребляет `state="available"`. Фильтр по
-состоянию — не мелочь: три воркера перепланируют сами себя, поэтому
-`oban_jobs` никогда не пуста, и HPA без фильтра масштабировался бы до максимума
-в простаивающей системе.
-
-Пошагово и с диагностикой — в [runbook](docs/runbook.md#deploy-local).
-
-## CI
-
-`.github/workflows/ci.yml` запускается на push в `feature/**` и на PR в `dev`:
-lint в режиме проверки, тесты api/web/engine, проверка манифестов
-(`kustomize build` + `kubeconform` + shellcheck), сборка образов с кэшем,
-**Trivy** по образам, **gitleaks** по репозиторию, аудит зависимостей с гейтом
-на критических и smoke-тест.
-
-Гейт зависимостей проверили на подброшенной критической уязвимости: job упал и
-снова прошёл после revert.
-
-## Frontend
-
-Собственный вход (`/login`, `/registrar`, `/esqueci-senha`, `/definir-senha`):
-access token живёт в памяти, а refresh — в httpOnly-cookie, поэтому сессия
-переживает перезагрузку без `localStorage`. Все четыре следуют одобренному
-макету дизайн-системы, с логотипом над карточкой и версией артефакта в подвале
-([ADR 0036](docs/adr/0036-telas-de-auth-fieis-ao-design-e-fontes-auto-hospedadas.md)).
-После входа приложение работает с первым workspace пользователя:
-
-- **Dashboard** (`/`) — сетка проектов и мастер «Новый проект»
-- **Проект** (`/projects/:id`) — вкладки, выведенные из единого реестра
-  (`apps/web/src/routes/project-tabs.ts`, а не из параллельных списков): Обзор
-  (команда агентов, архитектура и C4-диаграмма), Исполнители, Креатив, Чат,
-  Insights, Код, PR, Одобрения (очередь + таблица `permissions.json`), Бэклог,
-  Архитектура, Расходы и Настройки (модели по агенту и по области, участники,
-  учётные данные, потолок параллелизма)
-- **Сессия** (`/projects/:id/sessions/:sid`) — чат со стримингом, выбор модели,
-  живой `TokenMeter` и одобрение действий прямо в ленте
-
-`/status` — единственный **публичный** маршрут вне auth: он опрашивает
-`/health` api и engine, которые и так публичны, потому что их вызывает kubelet.
-
-Стриминг агента приходит по каналу Phoenix `session:<id>` (`agent.delta`,
-`agent.status`, `agent.done`); списки и счётчики используют TanStack Query.
-
-Три семейства шрифтов дизайн-системы (Space Grotesk, Archivo, IBM Plex Mono)
-**размещены у себя** в `apps/web/public/fonts/`. Это не предпочтение: CSP
-production-образа — `font-src 'self' data:`, и прежний `<link>` на Google Fonts
-молча блокировался — в production типографика падала на системный шрифт, и
-заголовок с текстом становились неразличимы.
-
-## Соглашения
-
-- **Всегда** работайте в `feature/*` от `dev`. Постоянные ветки: `dev`, `qa`,
-  `rc`, `main`.
-- Conventional commits на **pt-BR**.
-- Merge в защищённую ветку **всегда** ручной — автоматизировать нельзя, и это
-  гарантирует тест.
-- Commit агентов используют идентичность `<агент>[bot]` с пользователем как
-  co-author.
-- Любое доменное событие неизменяемо: никогда `UPDATE` в таблице событий.
-- Значимые архитектурные решения становятся [ADR](docs/adr/index.md).
-
-`CLAUDE.md` содержит полную детализацию, и именно его читают агенты —
-содержимое разложено по частям в `.claude/contexto/` и импортируется им.
-
-## Состояние
-
-**Фазы с 1 по 26 завершены**; текущая версия — в
-[README на португальском](README.md) и в [CHANGELOG](CHANGELOG.md). Конвейер
-релизов проверен от начала до конца, собственная auth без Keycloak, несколько
-LLM-провайдеров на единой основе и вся цепочка, доказанная против настоящего
-GitHub: принятие репозитория, продвижение истории, dev-агент пишет код, PR
-открыт, гейт выносит вердикт, и вердикт возвращается.
-
-То, что пришло после фаз, взялось не из дорожной карты, а из **использования
-продукта**. Программа 16–26 родилась из первого настоящего прохода по
-приложению (восемь экранов дизайн-handoff, вкладка Код только для чтения,
-контейнер на проект, решаемый Архитектором, расходы с двумя аудиториями), а
-следующие раунды пришли из живых тестовых сессий, где каждая находка
-становилась RN с `файл:строка` и тестом.
-
-То, чего ещё нет, сказано там, где это важно, и это нужно прочитать:
-
-- [известный технический долг](docs/architecture.md#divida-tecnica) — раздел
-  документации, а не умолчание;
-- [находки реального прогона](docs/explanation/achados-execucao-real.md) — что
-  нашёл прогон против настоящего GitHub и что остаётся открытым **по
-  решению**, включая два случая, где вывод был в том, что путь к автономии
-  не лежит через ослабление политики;
-- жизненный цикл контейнера на проект — **объявленное сокращение** фазы 25, а
-  не забытое: пока он не поднимается, политика терминала из ADR 0055 действует
-  как есть.
 
 ## Лицензия
 

@@ -247,11 +247,9 @@ export const AFERICOES = [
 
   // imagens que o produto publica / que o smoke confere
   { arquivo: '.claude/contexto/stack.md', padrao: /As (\S+) imagens de\s+produção são PUBLICADAS/, fonte: 'imagensPublicadas', forma: 'pt_f' },
-  { arquivo: 'README.md', padrao: /build das (\S+) imagens com/, fonte: 'imagensPublicadas', forma: 'pt_f' },
   // RN-524 e RN-527 (AT-192): ficaram em "quatro" depois do ADR 0162
   { arquivo: 'docs/business-rules.md', padrao: /- as \*\*(\S+) imagens\*\* são assinadas \*\*por DIGEST\*\*/, fonte: 'imagensPublicadas', forma: 'pt_f' },
   { arquivo: 'docs/business-rules.md', padrao: /- as (\S+) imagens vêm de \*\*variável obrigatória\*\*/, fonte: 'imagensPublicadas', forma: 'pt_f' },
-  { arquivo: 'README.md', padrao: /confere que as (\S+) imagens rodam non-root/, fonte: 'imagensNonRootNoSmoke', forma: 'pt_f' },
 
   // contrato de git
   { arquivo: 'README.md', padrao: /o contrato de (\S+) operações e as capabilities/, fonte: 'operacoesDoGit', forma: 'pt_f' },
@@ -266,7 +264,6 @@ export const AFERICOES = [
   { arquivo: 'docs/architecture.md', padrao: /a PORTA do Docker \((\S+) operações\)/, fonte: 'operacoesDoDocker', forma: 'pt_f' },
 
   // web, compose, ações, banco
-  { arquivo: 'README.md', padrao: /— (\S+) abas, derivadas de um registro único/, fonte: 'abasDoProjeto', forma: 'pt_f' },
   { arquivo: '.claude/contexto/convencoes-repositorio-e-dominio.md', padrao: /Os (\S+) serviços do compose de DEV têm healthcheck/, fonte: 'servicosDoComposeDeDev', forma: 'pt_m' },
   { arquivo: 'docs/glossary.md', padrao: /nunca executa direto\.\s+São (\d+) tipos/, fonte: 'tiposDeAcao', forma: 'digito' },
   { arquivo: 'docs/glossary.md', padrao: /nunca executa direto\.\s+São \d+ tipos e (\d+) estados/, fonte: 'estadosDeAcao', forma: 'digito' },
