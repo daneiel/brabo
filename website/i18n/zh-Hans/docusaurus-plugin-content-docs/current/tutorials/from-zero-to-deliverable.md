@@ -1,7 +1,7 @@
 ---
 title: 从零到交付物
 description: 在 Brabo 上端到端走完的一个真实项目——创建、选择模型、在聊天中回答智能体的开放问题、确认架构、批准计划，并且不离开 Criativo 的聊天就合并每一个 pull request。
-traducao_de: 86a5b46f9f9b7734b0e1fe09771a255dbae448be
+traducao_de: 2b694a01e7d46ec116a8a07e97e7ccbbafca28db
 ---
 
 # 从零到交付物 {#from-zero-to-a-deliverable}
@@ -22,13 +22,13 @@ traducao_de: 86a5b46f9f9b7734b0e1fe09771a255dbae448be
 你在向导中创建项目，并选择代码存放的位置。这里是一个**挂载文件夹**：向导会在安装的项目根目录中建议一个路径，
 而该文件夹只需在 Infra 启动容器时存在。此时还没有任何东西被供应——仓库要到之后 Arquiteto 被引入时才诞生。
 
-![Creating the project](../../../../../../docs/assets/fluxo-do-zero/passo-01-criar-projeto.gif)
+![创建项目](../../../../../../docs/assets/fluxo-do-zero/passo-01-criar-projeto.gif)
 
 ## 2. 给团队一个模型 {#2-give-the-team-a-model}
 
 在设置中，你可以通过一个操作把一个模型应用到所有智能体。这次运行把 Claude Haiku 5.5 应用到了整个团队。
 
-![Applying the model to the team](../../../../../../docs/assets/fluxo-do-zero/passo-02-modelo-ao-time.gif)
+![把模型应用到团队](../../../../../../docs/assets/fluxo-do-zero/passo-02-modelo-ao-time.gif)
 
 ## 3. 想法，以及智能体反问的问题 {#3-the-idea-and-the-questions-the-agents-ask-back}
 
@@ -38,7 +38,7 @@ traducao_de: 86a5b46f9f9b7734b0e1fe09771a255dbae448be
 回合的结束语会说明写入了什么（"本回合已记录：7 条业务规则、1 项决定、2 个开放问题"）。完成后，
 **"我准备好了——需求已验证"**会把工作交给 PO。
 
-![The idea and the open questions](../../../../../../docs/assets/fluxo-do-zero/passo-03-ideacao-e-perguntas.gif)
+![想法与开放问题](../../../../../../docs/assets/fluxo-do-zero/passo-03-ideacao-e-perguntas.gif)
 
 ## 4. PO、Arquiteto 与 ADR {#4-po-architect-and-the-adr}
 
@@ -47,7 +47,7 @@ traducao_de: 86a5b46f9f9b7734b0e1fe09771a255dbae448be
 接受。Arquiteto 以 pull request 的形式提出 ADR（`arquiteto[bot]`，PR #1，"单模块，SQLite 位于持久卷上"），
 并在架构定义后请你确认：**"确认架构就绪"**会把 Infra 引入。
 
-![PO, Architect and the ADR](../../../../../../docs/assets/fluxo-do-zero/passo-04-po-arquiteto-adr.gif)
+![PO、Arquiteto 与 ADR](../../../../../../docs/assets/fluxo-do-zero/passo-04-po-arquiteto-adr.gif)
 
 ## 5. Infra、计划与自动模式 {#5-infra-the-plan-and-automatic-mode}
 
@@ -56,7 +56,7 @@ backlog 和模块图并提出执行计划；批准计划就会激活执行。界
 什么：合并到受保护分支仍由你决定。从那时起，dev agent 在容器内（`/work`）工作，你可以在聊天中查看它运行的
 每条命令及其输出。
 
-![Infra, the plan and automatic mode](../../../../../../docs/assets/fluxo-do-zero/passo-05-infra-plano-modo-automatico.gif)
+![Infra、计划与自动模式](../../../../../../docs/assets/fluxo-do-zero/passo-05-infra-plano-modo-automatico.gif)
 
 ## 6. 从聊天中合并 {#6-merges-from-the-chat}
 
@@ -65,7 +65,7 @@ backlog 和模块图并提出执行计划；批准计划就会激活执行。界
 **Merge** 提出合并，同一区块中的 **Approve** 确认合并。在这次运行中，最后七个 pull request（#4 到 #10）在
 约两分钟内合并完毕，无需刷新页面。
 
-![Merges from the chat](../../../../../../docs/assets/fluxo-do-zero/passo-06-merges-pelo-chat.gif)
+![通过聊天合并](../../../../../../docs/assets/fluxo-do-zero/passo-06-merges-pelo-chat.gif)
 
 ## 交付物 {#the-deliverable}
 

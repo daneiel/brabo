@@ -15,14 +15,9 @@ A fonte é o pt-BR em `docs/` (ADR 0216); `docs/reference/**` é gerado e fica f
 |---|---|---|---|---|---|---|---|
 | `en` | 257 de 257 (100.0%) | 100.0% de 5.300.103 | 257 | 0 | 0 | 0 | 0 |
 | `ru` | 257 de 257 (100.0%) | 100.0% de 5.300.103 | 257 | 0 | 0 | 0 | 0 |
-| `zh-Hans` | 69 de 257 (26.8%) | 45.1% de 5.300.103 | 66 | 2 | 1 | 188 | 0 |
+| `zh-Hans` | 194 de 257 (75.5%) | 90.2% de 5.300.103 | 194 | 0 | 0 | 63 | 0 |
 
 > **TODO(humano):** revisão nativa por idioma — quem revisou e quando. Ainda não há revisão nativa registrada.
-
-### Defasadas em `zh-Hans`
-
-- `glossary.md` (tradução de 2026-10-11)
-- `tutorials/from-zero-to-deliverable.md` (tradução de 2026-10-15)
 
 ## Interface
 

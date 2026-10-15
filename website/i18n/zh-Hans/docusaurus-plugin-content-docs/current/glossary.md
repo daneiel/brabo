@@ -5,7 +5,7 @@ sidebar_label: 术语表
 sidebar_position: 9
 description: Brabo 的通用语言——出现在代码、界面和 ADR 中的术语，以及它们在这里承载的含义。
 keywords: [glossary, ubiquitous language, harness, gate, handoff, DEK, outbox]
-traducao_de: 19e47f4dc62d76241ca3d674b3a7638affb0e556
+traducao_de: 093f918421b29e274e4f77c0a40f80a4a3ea1545
 ---
 
 # 术语表 {#glossary}
@@ -141,7 +141,7 @@ gate 仍需读取它时保留它。
 ## 审批 {#approval}
 
 **`proposed_action`**——每个带外部效果的动作（终端命令、commit、push、PR、merge、花费）都在这里**诞生**，
-从不直接执行。二十一种类型。六种状态（[RN-003](business-rules.md#rn-003)）。
+从不直接执行。共 21 种类型和 6 种状态（[RN-003](business-rules.md#rn-003)）。
 
 **`permissions.json`**——项目的策略文件。匹配命令模式（结构化，不是子字符串），返回 `allow`、`deny` 或
 `require_approval`。
