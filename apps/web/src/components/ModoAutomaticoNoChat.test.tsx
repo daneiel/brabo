@@ -73,3 +73,62 @@ describe('ModoAutomaticoNoChat (RN-883)', () => {
     expect(listAgentAutonomy).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * RN-889 (AT-540): a sessão do Criativo não tem execução; a sessão de
+ * execução do projeto tem (o roster do resumo). A oferta aparece no chat do
+ * Criativo com os dev agents de lá.
+ */
+function montarCriativo(execucaoNoProjeto: { ativa: boolean; ativados: string[] }) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={client}>
+      <ModoAutomaticoNoChat
+        projectId="proj-1"
+        comExecucao={false}
+        ativados={['criativo', 'po']}
+        execucaoNoProjeto={execucaoNoProjeto}
+        podeLigar
+      />
+    </QueryClientProvider>,
+  );
+}
+
+describe('ModoAutomaticoNoChat (RN-889)', () => {
+  const daExecucao = { ativa: true, ativados: ['dev-lead', 'dev-core'] };
+
+  it('caminho feliz: execução ativa noutra sessão do projeto, time em manual — a oferta aparece no chat do Criativo', async () => {
+    montarCriativo(daExecucao);
+    const botao = await screen.findByRole('button', { name: /Ligar para/ });
+    await waitFor(() => expect(botao).not.toBeDisabled());
+    expect(setAgentAutonomy).not.toHaveBeenCalled();
+    fireEvent.click(botao);
+    await waitFor(() =>
+      expect(setAgentAutonomy).toHaveBeenCalledWith('proj-1', {
+        agentId: 'dev-core',
+        actionType: '*',
+        mode: 'auto_approve',
+      }),
+    );
+  });
+
+  it('time todo já em automático: nada aparece', async () => {
+    listAgentAutonomy.mockResolvedValue(
+      agentesDoChat(daExecucao.ativados).map((agentId) => ({
+        agentId,
+        actionType: '*',
+        mode: 'auto_approve',
+      })),
+    );
+    montarCriativo(daExecucao);
+    await waitFor(() => expect(listAgentAutonomy).toHaveBeenCalled());
+    await new Promise((r) => setTimeout(r, 20));
+    expect(screen.queryByRole('button', { name: /Ligar para/ })).toBeNull();
+  });
+
+  it('sem execução no projeto: nada aparece e nem a leitura acontece', () => {
+    const { container } = montarCriativo({ ativa: false, ativados: ['dev-core'] });
+    expect(container).toBeEmptyDOMElement();
+    expect(listAgentAutonomy).not.toHaveBeenCalled();
+  });
+});
