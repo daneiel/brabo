@@ -14,6 +14,37 @@ A autoridade final continua sendo sua — por construção, não por convenção
 
 ---
 
+<div align="center">
+
+<table>
+  <tr>
+    <td width="50%" align="center">
+      <img src="docs/assets/readme/perguntas-no-chat.png" alt="O Criativo registra as regras e devolve as perguntas em aberto no chat, cada uma com uma sugestão" /><br />
+      <sub><b>A ideia vira regras, e o que falta vira pergunta.</b> O Criativo devolve as dúvidas no chat, com sugestão e as regras que cada uma afeta.</sub>
+    </td>
+    <td width="50%" align="center">
+      <img src="docs/assets/readme/arquitetura-e-adr.png" alt="O Arquiteto propõe a ADR como pull request e pede a confirmação da arquitetura" /><br />
+      <sub><b>O Arquiteto decide por escrito.</b> A ADR nasce como pull request, e a arquitetura só segue com a sua confirmação.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center">
+      <img src="docs/assets/readme/dev-agent-trabalhando.png" alt="O dev agent narra o que está corrigindo enquanto trabalha dentro do container" /><br />
+      <sub><b>Os devs trabalham dentro do container.</b> Cada comando passa pela política do projeto, e o que ele faz fica no fio.</sub>
+    </td>
+    <td width="50%" align="center">
+      <img src="docs/assets/readme/merges-pelo-chat.png" alt="A fila de PRs prontas para merge no chat do Criativo, com Aprovar e Negar" /><br />
+      <sub><b>O merge é sempre seu.</b> As PRs que passam pelos gates chegam ao chat, e um clique em Aprovar confirma.</sub>
+    </td>
+  </tr>
+</table>
+
+**Do zero ao entregável, numa execução real:** [o passo a passo com as gravações](https://daneiel.github.io/brabo/prd/tutorials/from-zero-to-deliverable) — 8 de 8 tarefas, 102/102 testes, US$ 1,07.
+
+</div>
+
+---
+
 ## O que é
 
 O Brabo orquestra agentes especializados — Criativo, PO, Arquiteto, Dev Lead e
