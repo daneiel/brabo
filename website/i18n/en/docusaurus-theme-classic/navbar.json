@@ -1,0 +1,42 @@
+{
+  "title": {
+    "message": "Brabo",
+    "description": "The title in the navbar"
+  },
+  "logo.alt": {
+    "message": "Brabo",
+    "description": "The alt text of navbar logo"
+  },
+  "item.label.Documentação": {
+    "message": "Documentation",
+    "description": "Navbar item with label Documentação"
+  },
+  "item.label.Runbook": {
+    "message": "Runbook",
+    "description": "Navbar item with label Runbook"
+  },
+  "item.label.ADRs": {
+    "message": "ADRs",
+    "description": "Navbar item with label ADRs"
+  },
+  "item.label.prd": {
+    "message": "prd",
+    "description": "Navbar item with label prd"
+  },
+  "item.label.GitHub": {
+    "message": "GitHub",
+    "description": "Navbar item with label GitHub"
+  },
+  "item.label.prd — estável ✓": {
+    "message": "prd — stable ✓",
+    "description": "Navbar item with label prd — estável ✓"
+  },
+  "item.label.qa — candidata": {
+    "message": "qa — candidate",
+    "description": "Navbar item with label qa — candidata"
+  },
+  "item.label.dev — em desenvolvimento": {
+    "message": "dev — in development",
+    "description": "Navbar item with label dev — em desenvolvimento"
+  }
+}

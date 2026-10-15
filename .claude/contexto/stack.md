@@ -101,7 +101,10 @@
   overlay as QUATRO que o kustomize conhece (o broker fica fora do k8s). O overlay do repositório
   guarda o MARCADOR, nunca uma release congelada; nada disso faz deploy
   sozinho (ver `DEPLOY_ENABLED` acima, que continua não existindo)
-- Docs: Docusaurus 3.x em website/ lendo de docs/; Mermaid; busca local
+- Docs: Docusaurus 3.x em website/ lendo de docs/, que é a FONTE em pt-BR e o
+  locale padrão (ADR 0216); `en`, `ru` e `zh-Hans` moram em
+  `website/i18n/<locale>/`, e página sem tradução cai na fonte; Mermaid; busca
+  local (`pt`, `en`, `ru`, `zh`)
 - CI/CD de release e cadeia de suprimentos (pin por SHA/digest, assinatura,
   Trivy, `install-e2e.yml`): as regras moram em
   `.claude/rules/ci-e-cadeia-de-suprimentos.md`, carregadas quando a sessão lê

@@ -58,7 +58,7 @@ coisas saíram do import sem perder uma palavra:
   somando os três por glob. Âncora `{#rn-NNN}` é o contrato: ela não muda
   quando uma RN muda de arquivo, e link de fora aponta para o arquivo que a
   hospeda hoje. Cabeçalho de RN sem ela, ou com outro número, REPROVA o
-  `docs:check` — nos três arquivos e nas traduções pt-BR deles
+  `docs:check` — nos três arquivos e nas traduções deles (`en`, `ru`, `zh-Hans`, ADR 0216)
   (`scripts/docs/ancoras-de-rn.mjs`, AT-230): o `docs:build` não pega, porque
   sem âncora o Docusaurus gera um id pelo título e compila.
 - TODA mudança verifica se ESTE arquivo — com as partes que ele importa de

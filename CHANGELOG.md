@@ -10,6 +10,16 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   OpenRouter: a capability `promptCaching` do OpenRouter vira `true`, provada
   por smoke com credencial em 15/10 (`cached_input_tokens=8011` na segunda
   chamada) (RN-892, AT-543).
+- O site da documentação abre em pt-BR, que passa a ser a FONTE em `docs/` e o
+  locale padrão, com inglês, russo e chinês simplificado ao lado (ADR 0216,
+  AT-546). O inglês sai da raiz para `/brabo/<ambiente>/en/…`, e o 404 da raiz
+  reescreve os links antigos `/brabo/<ambiente>/pt-BR/…` para
+  `/brabo/<ambiente>/…`. As 38 traduções pt-BR em dia e os 66 ADRs cuja cópia
+  pt-BR é o texto original voltaram para `docs/`, com o inglês em
+  `website/i18n/en/`; as páginas cuja tradução estava defasada ficam no idioma
+  em que estão até o lote delas. A regra `traducao-pt-br` do docmap vira
+  `traducao` (`warn`).
+
 - O provider ganha a capability `promptCaching` (RN-892, AT-543): com ela
   ligada, o OpenRouter marca `cache_control` nas instruções e no fim do
   histórico das chamadas a modelos `anthropic/*`, deixando as mensagens

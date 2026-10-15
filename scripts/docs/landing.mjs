@@ -65,6 +65,11 @@ const ESTAVEL = 'prd';
 // senão `/brabo/main/architecture` viraria `/brabo/prd/main/architecture`.
 const CAMINHO_APOSENTADO = 'main';
 
+// O prefixo de locale que o ADR 0216 aposentou: pt-BR virou o locale PADRÃO e
+// passou a morar na raiz do degrau. Link salvo para `/brabo/<degrau>/pt-BR/…`
+// é reescrito para `/brabo/<degrau>/…`, no molde do `main` acima.
+const LOCALE_APOSENTADO = 'pt-BR';
+
 /**
  * A versão publicada num degrau, lida das tags do próprio repositório.
  *
@@ -240,6 +245,13 @@ function pagina404() {
     var aposentado = /^${CAMINHO_APOSENTADO}(?:\\/(.*))?$/.exec(resto);
     if (aposentado) {
       window.location.replace(raiz + '${ESTAVEL}/' + (aposentado[1] || '') + cauda);
+      return;
+    }
+    // O locale aposentado (ADR 0216): pt-BR virou o padrão e saiu do prefixo,
+    // então /brabo/<degrau>/${LOCALE_APOSENTADO}/<algo> -> /brabo/<degrau>/<algo>.
+    var localeAntigo = /^(${guarda})\\/${LOCALE_APOSENTADO}(?:\\/(.*))?$/.exec(resto);
+    if (localeAntigo) {
+      window.location.replace(raiz + localeAntigo[1] + '/' + (localeAntigo[2] || '') + cauda);
       return;
     }
     // Já está dentro de um degrau publicado: a página realmente não existe.

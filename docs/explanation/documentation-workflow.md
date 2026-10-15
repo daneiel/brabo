@@ -325,13 +325,15 @@ file and line. Zero headings found is `CEGO` and also fails.
 inherited debt (the two missing anchors were added in the same change),
 and each new heading is written by the PR that adds it.
 
-**The pt-BR translation is covered too.** The files are found by glob:
-`docs/business-rules.md`, `docs/business-rules/*.md`, and the same two
-paths under `website/i18n/pt-BR/docusaurus-plugin-content-docs/current/`.
-The pt-BR site serves `business-rules#rn-305` from the translated file,
-and the translation had copied the heading without its anchor. The rule
-is per heading, so a partial translation isn't a problem: an RN that
-wasn't translated falls back to the English page, which is checked
+**The translations are covered too.** The files are found by glob:
+`docs/business-rules.md`, `docs/business-rules/*.md` (the pt-BR source,
+ADR 0216), and the same two paths under
+`website/i18n/<locale>/docusaurus-plugin-content-docs/current/` for each
+translated locale in `LOCALES_TRADUZIDOS` (`en`, `ru`, `zh-Hans`). A
+locale's site serves `business-rules#rn-305` from the translated file,
+and an earlier translation had copied the heading without its anchor. The
+rule is per heading, so a partial translation isn't a problem: an RN that
+wasn't translated falls back to the pt-BR source, which is checked
 anyway.
 
 ### The runbook's procedures table {#the-runbook-procedures-table}
@@ -382,10 +384,10 @@ born with every row checked, so there is no inherited debt, and whatever
 breaks it later (a renamed spec, a workflow that lost its schedule) is the
 fault of the PR that broke it, which is also the PR that can fix it.
 
-**Only the English runbook carries the table.** The pt-BR translation is
-behind the English one (AT-209), its `traducao-pt-br` docmap rule is `warn`,
-and its headings do not carry the ten explicit ids this table added to the
-English page. A
+**Only the source runbook (`docs/runbook.md`) carries the table.** Its old
+pt-BR copy was behind (AT-209) and left with ADR 0216; a future translation
+under `website/i18n/<locale>/` falls under the `traducao` docmap rule
+(`warn`) and would not carry the ten explicit ids this table added. A
 second, unchecked copy of the table there would be exactly the copy the table
 exists to replace.
 
@@ -418,8 +420,8 @@ map, or an index with no theme section at all (the old by-phase index) is
 
 **Severity: `block`**, like the runbook table: it was born with every ADR
 classified, so whatever breaks it later is a new ADR whose PR forgot its line
-in `temas.yml` — the PR that can fix it. The pt-BR translation of the index is
-still by phase and behind the English one; the `traducao-pt-br` rule warns, as
+in `temas.yml` — the PR that can fix it. Translations of the index live under
+`website/i18n/<locale>/` and are not checked; the `traducao` rule warns, as
 always.
 
 ## The pieces
@@ -639,6 +641,28 @@ The same episode produced the map's `site-e-publicacao` rule:
 `website/**` wasn't covered by any rule, and changing the site config
 didn't demand documentation.
 
+### Four locales, with pt-BR as the source (ADR 0216)
+
+`docs/` is the **pt-BR** tree, the source and the default locale
+(`defaultLocale: 'pt-BR'`, served at the root of each environment). The
+translated locales are `en`, `ru` and `zh-Hans`, under
+`website/i18n/<locale>/docusaurus-plugin-content-docs/current/`, with their
+theme labels in `website/i18n/<locale>/docusaurus-theme-classic/` and the
+sidebar labels in `.../docusaurus-plugin-content-docs/current.json`. A page
+with no translation in a locale is served from the pt-BR source at the same
+slug. The local search indexes `pt`, `en`, `ru` and `zh`. Pages whose old
+pt-BR copy was out of date stay in `docs/` in the language they are in
+until their batch.
+
+The English site moved from the root to `/brabo/<environment>/en/…`, and old
+links to `/brabo/<environment>/pt-BR/…` are rewritten by the root `404.html`
+(`scripts/docs/landing.mjs`) to `/brabo/<environment>/…`, in the same mold
+as `/main/` → `/prd/` (ADR 0073).
+
+The docmap rule `traducao` (it was `traducao-pt-br`) watches the source
+and points at `website/i18n/`. It is `warn` and never `block`: requiring a
+translation in every doc PR would cost three translations per change.
+
 ### `links-do-locale.mjs` — a rewritten link skips the broken-link check
 
 The `markdown.hooks.onBrokenMarkdownLinks` hook in
@@ -662,7 +686,15 @@ exists there (translated, or served by fallback at the same slug). The
 same module, run after `docs:build` in `docs-check.yml`, scans the
 built HTML and fails on any `href` with a doubled locale prefix. A new
 locale goes into `LOCALES_COM_PREFIXO` too, or its duplication passes
-silently.
+silently. Since ADR 0216 that list is `en`, `ru` and `zh-Hans` — pt-BR is
+the default and has no prefix.
+
+With partial translations, compiling `en` breaks a link from an
+untranslated page (served from the pt-BR source) to a translated one in
+any folder, not only in the three zones. So a link is also treated as a
+gap when its target **exists in the source `docs/`**
+(`paginaExisteNaFonte`) — that is the page the locale serves, translated
+or by fallback. A target that exists nowhere still fails the build.
 
 The `adr/` exemption used to swallow a misspelled ADR filename too:
 it looked only at the *shape* of the name (`NNNN-*.md`), so

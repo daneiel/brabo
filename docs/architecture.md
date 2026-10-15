@@ -706,7 +706,7 @@ with a "Lead" badge + collapsible sub-specialties), groups Insights by
 area, and narrates `delegation.completed`/`failed`/`dispensed` in the feed
 (`activity.ts`). `consolidated_verdict` (decision #4 of ADR 0038) never
 became a real artifact — QA and Infra reuse `qa_verdict`/`open_infra_pr`,
-see the [ADR's closing note](adr/0038-hierarquia-de-agentes.md#closure-phase-8d).
+see the [ADR's closing note](adr/0038-hierarquia-de-agentes.md#fechamento-fase-8d).
 
 ## Data
 

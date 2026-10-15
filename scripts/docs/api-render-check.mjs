@@ -34,7 +34,8 @@ const esperadas = Object.values(SPEC.paths).reduce(
 );
 
 let falhas = 0;
-for (const rel of ['reference/api.html', 'pt-BR/reference/api.html']) {
+// pt-BR é o locale padrão na raiz (ADR 0216); os outros três têm prefixo.
+for (const rel of ['reference/api.html', 'en/reference/api.html', 'ru/reference/api.html', 'zh-Hans/reference/api.html']) {
   const arquivo = join(DIR_BUILD, rel);
   if (!existsSync(arquivo)) {
     console.error(`[api-render] ${rel} não existe no build — a rota /reference/api/ sumiu.`);
