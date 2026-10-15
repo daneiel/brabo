@@ -21827,7 +21827,7 @@ sem dizer qual.
   cortada pelo limite de tamanho.", qualquer outro — ou nenhum — "Response cut
   off by the length limit.". O Ollama não lê o motivo de parada (fora do
   escopo, declarado).
-- **Onde:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:278`
+- **Onde:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:257`
   (`cortadaPeloTeto`),
   `apps/api/src/infrastructure/llm/anthropic-provider.ts:198` (`finalMessage`),
   `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:204`
@@ -21886,7 +21886,7 @@ sem dizer qual.
   ITERAÇÕES, não o de tokens). Hipótese NÃO medida com chave real: que a
   reserva explica o 402 do TP-01.
 - **Onde:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:38`
-  (`MAX_TOKENS_PADRAO`), `:462` (`flags`)
+  (`MAX_TOKENS_PADRAO`), `:484` (`flags`)
 - **Teste:** `apps/api/test/infrastructure/llm/openai-compatible-provider.contract.spec.ts`
   (sem `maxTokens` o corpo leva `max_tokens: 4096`; com `maxTokens: 123` leva
   123; com `maxTokensField: 'max_completion_tokens'` o campo muda e
@@ -21956,7 +21956,7 @@ sem dizer qual.
   com credencial de 10/10 mostrou que o Haiku 5.5 IGNORA `reasoning.max_tokens`;
   o campo deixou de ser enviado e a folga no `max_tokens` ficou.
 - **Onde:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:48`
-  (`ORCAMENTO_DE_RACIOCINIO`), `:470` (`controla`)
+  (`ORCAMENTO_DE_RACIOCINIO`), `:490` (`controla`)
 - **Teste:** `apps/api/test/infrastructure/llm/openai-compatible-provider.contract.spec.ts`
   (`raciocínio com orçamento próprio (RN-741)`: orçamento e teto somado; sem
   raciocínio o corpo não muda; provider sem campo não inventa orçamento)
@@ -22653,7 +22653,7 @@ sem dizer qual.
   chamado pelos três casos de uso de turno. O TODO(humano) da RN-741 fecha com
   essa medição.
 - **Onde:** `apps/api/src/domain/llm/raciocinio-do-agente.ts:18`
-  (`opcoesDeRaciocinio`), `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:470`
+  (`opcoesDeRaciocinio`), `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:490`
   (`controla`), `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:189`
   (`opcoesDeRaciocinio`)
 - **Teste:** `apps/api/test/infrastructure/llm/openai-compatible-provider.contract.spec.ts`

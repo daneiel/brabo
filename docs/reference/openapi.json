@@ -19486,6 +19486,11 @@
             "type": "boolean",
             "example": false,
             "description": "The provider accepts a ROUTING PREFERENCE (`price`, `throughput`, `latency`) to pick among the upstreams serving the same model (ADR 0166). Only `true` after a smoke against the real API returned the chosen upstream — reading the docs does not count."
+          },
+          "promptCaching": {
+            "type": "boolean",
+            "example": false,
+            "description": "The provider accepts explicit PROMPT-CACHE breakpoints (`cache_control`) on the stable prefix of a call (RN-892). Only `true` after a smoke against the real API showed cached input tokens on a repeated call."
           }
         },
         "required": [
@@ -19493,7 +19498,8 @@
           "toolCalling",
           "listModels",
           "embeddings",
-          "routingPreference"
+          "routingPreference",
+          "promptCaching"
         ]
       },
       "LlmTurnResponseDto": {

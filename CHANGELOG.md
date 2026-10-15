@@ -6,6 +6,12 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- O provider ganha a capability `promptCaching` (RN-892, AT-543): com ela
+  ligada, o OpenRouter marca `cache_control` nas instruções e no fim do
+  histórico das chamadas a modelos `anthropic/*`, deixando as mensagens
+  efêmeras do fim depois do último ponto. Nasce `false` nos nove providers até
+  o smoke `openrouter-provider.cache.smoke.spec.ts` rodar com credencial; o
+  corpo de hoje não muda.
 - A interface passa a abrir em português do Brasil por padrão (antes, inglês)
   e a conta aceita quatro idiomas — português, inglês, russo e chinês
   simplificado. Navegador em idioma sem tradução abre em português; russo e

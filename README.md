@@ -1,47 +1,75 @@
 <div align="center">
 
-# Brabo
+**Português** · English (em breve) · Русский (em breve) · 简体中文 (em breve)
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="website/static/img/logo.svg" />
+  <source media="(prefers-color-scheme: light)" srcset="website/static/img/logo.svg" />
+  <img src="website/static/img/logo.svg" alt="Logo do Brabo" width="96" />
+</picture>
+
+<h1>Brabo</h1>
 
 **Um time de agentes de IA conduz sua aplicação do brief ao deploy.
 A autoridade final continua sendo sua — por construção, não por convenção.**
 
-[![CI](https://github.com/daneiel/brabo/actions/workflows/ci.yml/badge.svg)](https://github.com/daneiel/brabo/actions/workflows/ci.yml)
-[![Licença: MIT](https://img.shields.io/badge/licença-MIT-blue.svg)](LICENSE)
-[![Versão](https://img.shields.io/github/v/release/daneiel/brabo?label=vers%C3%A3o&color=informational)](CHANGELOG.md)
-[![Documentação](https://img.shields.io/badge/docs-daneiel.github.io/brabo-8A2BE2.svg)](https://daneiel.github.io/brabo/)
+[![CI](https://img.shields.io/github/actions/workflow/status/daneiel/brabo/ci.yml?branch=dev&label=CI&style=flat-square)](https://github.com/daneiel/brabo/actions/workflows/ci.yml)
+[![Licença: MIT](https://img.shields.io/badge/licença-MIT-blue.svg?style=flat-square)](LICENSE)
+[![Versão](https://img.shields.io/github/v/release/daneiel/brabo?label=vers%C3%A3o&color=informational&style=flat-square)](CHANGELOG.md)
+[![Documentação](https://img.shields.io/badge/docs-daneiel.github.io/brabo-8A2BE2.svg?style=flat-square)](https://daneiel.github.io/brabo/)
+
+[Documentação](https://daneiel.github.io/brabo/) · [Do zero ao entregável](https://daneiel.github.io/brabo/prd/tutorials/from-zero-to-deliverable) · [CHANGELOG](CHANGELOG.md) · [Segurança](SECURITY.md) · [Contribuir](CONTRIBUTING.md)
+
+<img src="docs/assets/readme/perguntas-no-chat.png" alt="Tela de sessão do Brabo: o Criativo registra as regras de negócio e devolve no chat as perguntas em aberto, cada uma com uma sugestão e as regras que ela afeta" />
+
+<sub>A ideia vira regras, e o que falta vira pergunta — o Criativo devolve as dúvidas no chat.</sub>
+
+[Diferenciais](#diferenciais) · [Recursos](#recursos) · [O que é](#o-que-é) · [Começar](#começar-em-três-comandos) · [Documentação](#documentação) · [Licença](#licença)
 
 </div>
 
 ---
 
-<div align="center">
+## Diferenciais
 
 <table>
   <tr>
-    <td width="50%" align="center">
-      <img src="docs/assets/readme/perguntas-no-chat.png" alt="O Criativo registra as regras e devolve as perguntas em aberto no chat, cada uma com uma sugestão" /><br />
-      <sub><b>A ideia vira regras, e o que falta vira pergunta.</b> O Criativo devolve as dúvidas no chat, com sugestão e as regras que cada uma afeta.</sub>
-    </td>
-    <td width="50%" align="center">
-      <img src="docs/assets/readme/arquitetura-e-adr.png" alt="O Arquiteto propõe a ADR como pull request e pede a confirmação da arquitetura" /><br />
-      <sub><b>O Arquiteto decide por escrito.</b> A ADR nasce como pull request, e a arquitetura só segue com a sua confirmação.</sub>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%" align="center">
-      <img src="docs/assets/readme/dev-agent-trabalhando.png" alt="O dev agent narra o que está corrigindo enquanto trabalha dentro do container" /><br />
-      <sub><b>Os devs trabalham dentro do container.</b> Cada comando passa pela política do projeto, e o que ele faz fica no fio.</sub>
-    </td>
-    <td width="50%" align="center">
-      <img src="docs/assets/readme/merges-pelo-chat.png" alt="A fila de PRs prontas para merge no chat do Criativo, com Aprovar e Negar" /><br />
-      <sub><b>O merge é sempre seu.</b> As PRs que passam pelos gates chegam ao chat, e um clique em Aprovar confirma.</sub>
-    </td>
+    <td width="25%" valign="top">🛑 <b>Nada sai sem aprovação</b><br />Todo efeito externo nasce como <code>proposed_action</code> e passa pela política do projeto; merge em branch protegida é sempre seu.</td>
+    <td width="25%" valign="top">🧱 <b>Agente não confiável por construção</b><br />Tetos de iteração, de correção e de orçamento no código. Prompt não é garantia; código é.</td>
+    <td width="25%" valign="top">📜 <b>Tudo registrado e imutável</b><br />Event log append-only com numeração densa por sessão: custo auditável e backup verificável.</td>
+    <td width="25%" valign="top">👥 <b>Um time do brief ao entregável</b><br />Criativo, PO, Arquiteto, Dev Lead, devs por módulo, Infra, QA e SecOps sobre um repositório git real.</td>
   </tr>
 </table>
 
-**Do zero ao entregável, numa execução real:** [o passo a passo com as gravações](https://daneiel.github.io/brabo/prd/tutorials/from-zero-to-deliverable) — 8 de 8 tarefas, 102/102 testes, US$ 1,07.
+## Recursos
 
-</div>
+### A ideia vira regras, e o que falta vira pergunta
+
+<img src="docs/assets/readme/perguntas-no-chat.png" alt="O Criativo registra as regras e devolve as perguntas em aberto no chat, cada uma com uma sugestão" />
+
+O Criativo devolve as dúvidas no chat, com sugestão e as regras que cada uma
+afeta. Você responde ali mesmo, e as respostas viram regras de negócio.
+
+### O Arquiteto decide por escrito
+
+<img src="docs/assets/readme/arquitetura-e-adr.png" alt="O Arquiteto propõe a ADR como pull request e pede a confirmação da arquitetura" />
+
+A ADR nasce como pull request, e a arquitetura só segue com a sua confirmação.
+
+### Os devs trabalham dentro do container
+
+<img src="docs/assets/readme/dev-agent-trabalhando.png" alt="O dev agent narra o que está corrigindo enquanto trabalha dentro do container" />
+
+Cada comando passa pela política do projeto, e o que o dev agent faz fica no fio
+da sessão.
+
+### O merge é sempre seu
+
+<img src="docs/assets/readme/merges-pelo-chat.png" alt="A fila de PRs prontas para merge no chat do Criativo, com Aprovar e Negar" />
+
+As PRs que passam pelos gates chegam ao chat, e um clique em Aprovar confirma.
+
+**Do zero ao entregável, numa execução real:** [o passo a passo com as gravações](https://daneiel.github.io/brabo/prd/tutorials/from-zero-to-deliverable) — 8 de 8 tarefas, 102/102 testes, US$ 1,07.
 
 ---
 
@@ -248,7 +276,7 @@ merge em `main`, e por isso fica um ciclo de promoção atrás do que está em
 | [Introdução](docs/intro.md) | o panorama |
 | [Primeiros passos](docs/getting-started.md) | do clone ao primeiro turno de agente |
 | [Arquitetura](docs/architecture.md) | code map, fronteiras, invariantes, dívida técnica |
-| [Regras de negócio](docs/business-rules.md) | as 715 RNs, cada uma com `arquivo:linha` e o teste que a cobre |
+| [Regras de negócio](docs/business-rules.md) | as 716 RNs, cada uma com `arquivo:linha` e o teste que a cobre |
 | [Runbook](docs/runbook.md) | deploy, rollout, restore, rotação de chave, incidente de custo |
 | [Glossário](docs/glossary.md) | harness, gate, handoff, DEK, outbox, ciclo K |
 | [Observabilidade](docs/explanation/observability.md) | como se segue uma ação pelos três processos: trace, log e o caminho entre camadas |
