@@ -1,4 +1,5 @@
 ---
+traducao_de: 17fe83498b0a1eea177367926431ffddda3ce9ff
 id: aceite-providers
 title: Acceptance of LLM providers with real credentials
 sidebar_label: Provider acceptance

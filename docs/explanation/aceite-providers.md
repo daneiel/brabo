@@ -22,6 +22,35 @@ provada. Enquanto um smoke não rodou contra chave real, o que existe sobre
 aquele provider é leitura de documentação oficial — boa, verificada linha a
 linha na Fase 11, e ainda assim não é execução.
 
+## Estado em 2026-09-25 — mensagem `system` depois de `user`/`tool` (AT-161)
+
+Outro eixo, a mesma régua. A suite de contrato agora prova onde cada adapter
+põe um `role: "system"` que chega DEPOIS de `user` ou `tool` (no fim de
+`messages` em oito; içado para o `system` do topo no Anthropic — ver
+[a tabela de divergências](../reference/llm-providers.md#a-system-message-at-the-end-of-the-conversation-at-161)).
+Se o provider ACEITA esse corpo é o que
+`sistema-tardio.smoke.spec.ts` pergunta, e só uma chamada real responde:
+
+```bash
+OLLAMA_SISTEMA_TARDIO_SMOKE=1 pnpm --filter api exec vitest run test/infrastructure/llm/sistema-tardio
+# providers de nuvem: exporte a mesma *_TEST_KEY dos smokes de aceite (ANTHROPIC_TEST_KEY para o Anthropic)
+```
+
+| provider | `system` tardio aceito pelo provider real? | como |
+|---|---|---|
+| Ollama | ✅ **sim**, depois de `user` e depois de `tool` | daemon local 0.32.15, `qwen2.5-coder:7b`; os dois turnos terminaram com texto e sem chunk de erro |
+| Anthropic | ❌ não provado | falta `ANTHROPIC_TEST_KEY` — e o corpo que ele envia não tem `system` tardio de qualquer forma (içado) |
+| OpenAI | ❌ não provado | falta `OPENAI_TEST_KEY` |
+| OpenRouter | ❌ não provado | falta `OPENROUTER_TEST_KEY` neste ambiente; num hub a resposta é por upstream, então uma rodada prova o upstream que a serviu |
+| NVIDIA NIM | ❌ não provado | falta `NVIDIA_NIM_TEST_KEY` |
+| Together AI | ❌ não provado | falta `TOGETHER_TEST_KEY` |
+| DeepInfra | ❌ não provado | falta `DEEPINFRA_TEST_KEY` |
+| Bitdeer | ❌ não provado | falta `BITDEER_TEST_KEY` |
+| Vultr | ❌ não provado | falta `VULTR_TEST_KEY` |
+
+O smoke prova só o ACEITE (o turno termina com texto, sem chunk de erro). Se
+o modelo OBEDECE à orientação é pergunta de qualidade, e pertence à AT-082.
+
 ## Estado em 2026-08-14 — a capability de embedding (ADR 0075)
 
 Eixo NOVO nesta lista. Até aqui "aceite" queria dizer o roteiro de CHAT; o

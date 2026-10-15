@@ -69,6 +69,26 @@ function pluraisForaDoIdioma(arvore: Arvore, lng: string): string[] {
     .sort();
 }
 
+/**
+ * Plural da fonte sem as formas do idioma. A comparação de chaves normaliza
+ * o sufixo, então `x` simples no locale "casava" com `x_one/x_other` da fonte
+ * e a falta passava (AT-549): aqui toda raiz plural da fonte exige, no
+ * locale, cada categoria do `Intl.PluralRules` dele.
+ */
+function pluraisIncompletos(fonteNs: Arvore, lngNs: Arvore, lng: string): string[] {
+  const categorias = new Intl.PluralRules(lng).resolvedOptions().pluralCategories;
+  const doLocale = new Set(folhas(lngNs));
+  const raizes = new Set(
+    folhas(fonteNs)
+      .filter((c) => SUFIXO_DE_PLURAL.test(c))
+      .map((c) => c.replace(SUFIXO_DE_PLURAL, '')),
+  );
+  return [...raizes]
+    .flatMap((r) => categorias.map((cat) => `${r}_${cat}`))
+    .filter((c) => !doLocale.has(c))
+    .sort();
+}
+
 const locales = porLocale();
 const fonte = locales.get(FONTE) ?? new Map<string, Arvore>();
 const traduzidos = [...locales.keys()].filter((l) => l !== FONTE).sort();
@@ -94,6 +114,10 @@ describe('paridade de chaves contra a fonte pt-BR (AT-289, RN-891)', () => {
     }).toEqual({ faltamNoLocale: [], sobramNoLocale: [] });
   });
 
+  it.each(pares)('"%s" / namespace "%s": todo plural da fonte tem as formas do idioma', (lng, ns) => {
+    expect(pluraisIncompletos(fonte.get(ns) ?? {}, doLocale(lng).get(ns) ?? {}, lng)).toEqual([]);
+  });
+
   it.each([...locales.keys()].sort())('"%s": plurais só nas categorias do Intl.PluralRules', (lng) => {
     const fora = [...doLocale(lng).values()].flatMap((arvore) => pluraisForaDoIdioma(arvore, lng));
     expect(fora).toEqual([]);
@@ -107,6 +131,9 @@ describe('paridade de chaves contra a fonte pt-BR (AT-289, RN-891)', () => {
     expect(pluraisForaDoIdioma({ k_few: 'x', k_other: 'y' }, 'en')).toEqual(['k_few']);
     expect(pluraisForaDoIdioma({ k_zero: 'x', k_other: 'y' }, 'pt-BR')).toEqual([]);
     expect(pluraisForaDoIdioma({ k_few: 'x' }, 'ru')).toEqual([]);
+    const fontePlural = { k_zero: '0', k_one: '1', k_other: 'n' };
+    expect(pluraisIncompletos(fontePlural, { k: 'sem plural' }, 'en')).toEqual(['k_one', 'k_other']);
+    expect(pluraisIncompletos(fontePlural, { k_one: '1', k_other: 'n' }, 'en')).toEqual([]);
   });
 
   it('locale previsto sem pasta não reprova (declarado: catálogo de ru/zh-Hans é outra rodada)', () => {

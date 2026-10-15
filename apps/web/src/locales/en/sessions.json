@@ -50,7 +50,8 @@
       "reading": "Reading files…",
       "emptyFolder": "No eligible files found in this folder (recognized text/code).",
       "summary": "{{files}}, {{skipped}} (too large or binary)",
-      "skippedCount": "{{count}} skipped",
+      "skippedCount_one": "{{count}} skipped",
+      "skippedCount_other": "{{count}} skipped",
       "summaryNoSkipped_one": "{{count}} file from “{{folderName}}”",
       "summaryNoSkipped_other": "{{count}} files from “{{folderName}}”",
       "tooManyFiles_one": "The folder has {{count}} file — the cap is {{limit}}. Choose a smaller folder.",
@@ -109,7 +110,8 @@
     "localAttachedAt": "attached on {{date}}",
     "chunksInIndex_one": "{{count}} chunk in the index",
     "chunksInIndex_other": "{{count}} chunks in the index",
-    "chunksWithoutVector": "{{count}} without a vector — indexed with lexical signal only"
+    "chunksWithoutVector_one": "{{count}} without a vector — indexed with lexical signal only",
+    "chunksWithoutVector_other": "{{count}} without a vector — indexed with lexical signal only"
   },
   "sessionFailure": {
     "noMessage": "The turn failed and the reason was not recorded. Try again; if it happens again, the event log has the raw payload.",
@@ -179,8 +181,10 @@
     "contagem": {
       "acoesPropostas_one": "{{count}} proposed action in these sessions",
       "acoesPropostas_other": "{{count}} proposed actions in these sessions",
-      "decididasPorVoce": "{{count}} decided by you",
-      "autoAprovadas": "{{count}} auto-approved by policy",
+      "decididasPorVoce_one": "{{count}} decided by you",
+      "decididasPorVoce_other": "{{count}} decided by you",
+      "autoAprovadas_one": "{{count}} auto-approved by policy",
+      "autoAprovadas_other": "{{count}} auto-approved by policy",
       "aguardando": "{{count}} awaiting",
       "auto": "{{count}} auto"
     },

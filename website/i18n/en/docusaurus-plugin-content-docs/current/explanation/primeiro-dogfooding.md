@@ -1,4 +1,5 @@
 ---
+traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
 id: primeiro-dogfooding
 title: What the first dogfooding run taught
 sidebar_label: First dogfooding

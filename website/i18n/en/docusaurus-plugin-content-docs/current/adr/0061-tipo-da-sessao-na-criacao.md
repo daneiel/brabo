@@ -1,3 +1,7 @@
+---
+traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
+---
+
 # ADR 0061 — The session's type is data set at creation, and execution stays an event
 
 - **Status:** accepted
