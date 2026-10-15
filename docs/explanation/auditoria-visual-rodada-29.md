@@ -1,104 +1,106 @@
 ---
 id: auditoria-visual-rodada-29
-title: Visual audit, before and after Rodada 29
-description: AT-290's screen audit — the main routes captured in both themes at 1440 px and 390 px, the layout checker run on every screen, and what Rodada 29 fixed, what persists and what is new, measured on 2026-09-30 against dev at 79e6b1209f.
+title: Auditoria visual, antes e depois da Rodada 29
+description: A auditoria de telas da AT-290 — as rotas principais capturadas nos dois temas a 1440 px e 390 px, o verificador de layout rodado em cada tela, e o que a Rodada 29 corrigiu, o que persiste e o que é novo, medido em 2026-09-30 contra a dev em 79e6b1209f.
 ---
 
-# Visual audit, before and after Rodada 29
+# Auditoria visual, antes e depois da Rodada 29 {#visual-audit-before-and-after-rodada-29}
 
-> AT-290 (EP-031, HS-074). A **measurement, not a change**: nothing in `apps/`
-> was touched to write this page. The "before" capture ran on 2026-09-30
-> against `dev` at `de18e6a6e2`; the "after" capture ran the same day against
-> `dev` at `79e6b1209f`, which already carries all of Rodada 29 — the neutral
-> black theme with the soft terracotta accent (AT-283/284), `Card`/`Chip`/
-> `Badge`/`Button` (AT-286..288), the mobile shell (AT-316), the session bar
-> (AT-317), the thread cut (AT-319), the approvals fixes (AT-296..299, AT-310,
-> AT-318, AT-320), the Settings budget (AT-321), the PRs and Containers texts
-> (AT-323, AT-324), and the i18n pass (AT-289, AT-326).
+> AT-290 (EP-031, HS-074). Uma **medição, não uma mudança**: nada em `apps/`
+> foi tocado para escrever esta página. A captura do "antes" rodou em 2026-09-30
+> contra a `dev` em `de18e6a6e2`; a do "depois" rodou no mesmo dia contra a
+> `dev` em `79e6b1209f`, que já traz toda a Rodada 29 — o tema preto neutro
+> com o acento terracota suave (AT-283/284), `Card`/`Chip`/`Badge`/`Button`
+> (AT-286..288), a moldura mobile (AT-316), a barra da sessão (AT-317), o corte
+> do fio (AT-319), as correções de aprovações (AT-296..299, AT-310, AT-318,
+> AT-320), o orçamento de Configurações (AT-321), os textos de PRs e Containers
+> (AT-323, AT-324) e a passada de i18n (AT-289, AT-326).
 >
-> The screenshots are **not** in the repository. Every finding cites the
-> capture file name so whoever holds the capture folder can open it; every
-> finding that the checker measured also cites the number.
+> As capturas de tela **não** estão no repositório. Todo achado cita o nome do
+> arquivo da captura para que quem tem a pasta de capturas possa abri-lo; todo
+> achado que o verificador mediu cita também o número.
 
-## How the product was brought up (and what that does not cover)
+## Como o produto foi levantado (e o que isso não cobre) {#how-the-product-was-brought-up-and-what-that-does-not-cover}
 
-The task asks for the production compose through `docker/smoke.sh` with
-`SMOKE_KEEP_UP=1`. It was tried, on a throwaway compose project
-(`COMPOSE_PROJECT_NAME=r30visual`), and it **fails in this environment** for
-the same reason the "before" run recorded: the egress proxy blocks
-`dl-cdn.alpinelinux.org` (and `repo.hex.pm`/`builds.hex.pm`), so the first
-`apk add --no-cache build-base git` of `docker/engine/Dockerfile.prod` exits 2
-and no production image builds. The throwaway project was removed with
-`down -v`.
+A tarefa pede o compose de produção por `docker/smoke.sh` com
+`SMOKE_KEEP_UP=1`. Isso foi tentado, num projeto compose descartável
+(`COMPOSE_PROJECT_NAME=r30visual`), e **falha neste ambiente** pelo mesmo
+motivo que o "antes" registrou: o proxy de saída bloqueia
+`dl-cdn.alpinelinux.org` (e `repo.hex.pm`/`builds.hex.pm`), então o primeiro
+`apk add --no-cache build-base git` do `docker/engine/Dockerfile.prod` sai com 2
+e nenhuma imagem de produção é construída. O projeto descartável foi removido
+com `down -v`.
 
-So the "after" ran on the **same stand-in the "before" used**, on purpose — a
-different stack would make the comparison measure the stack:
+Por isso o "depois" rodou sobre o **mesmo substituto que o "antes" usou**, de
+propósito — uma pilha diferente faria a comparação medir a pilha:
 
-- **Postgres**: `pgvector/pgvector:pg16` in a container, the api migrations and
-  `pnpm seed` (the seed ran cleanly on a fresh database).
-- **api**: `node dist/main` built from this checkout, port 3000.
-- **engine**: an HTTP stub on port 4000 that answers 200 to everything. No
-  Phoenix channel, no `engine.*` schema.
-- **web**: `vite` dev server on port 5173.
-- **data**: the seed plus the same scripted population the "before" used — a
-  creative session with conversation, brief, business rule, a Criativo→PO
-  handoff, epic/story/task and a `module_map`; a second creative session with a
-  realistic thread and an `agent.error`; and **4 pending `proposed_actions` in
-  3 sessions** (3 `terminal`, 1 `git_push`), the same shape as before.
+- **Postgres**: `pgvector/pgvector:pg16` num container, as migrations da api e
+  `pnpm seed` (o seed rodou limpo num banco novo).
+- **api**: `node dist/main` construída deste checkout, porta 3000.
+- **engine**: um stub HTTP na porta 4000 que responde 200 a tudo. Sem canal
+  Phoenix, sem schema `engine.*`.
+- **web**: servidor de desenvolvimento do `vite` na porta 5173.
+- **dados**: o seed mais a mesma população roteirizada que o "antes" usou — uma
+  sessão criativa com conversa, brief, regra de negócio, um handoff
+  Criativo→PO, épico/história/tarefa e um `module_map`; uma segunda sessão
+  criativa com um fio realista e um `agent.error`; e **4 `proposed_actions`
+  pendentes em 3 sessões** (3 `terminal`, 1 `git_push`), o mesmo formato de
+  antes.
 
-Consequences for reading this page:
+Consequências para a leitura desta página:
 
-- The session socket always fails, so the turn's activity strip and the Code
-  terminal never render, and sessions poll on the fallback interval.
-- `GET /workspaces/:id/projects-summary` answers 500 because
-  `engine.dev_agent_states` does not exist — an artifact of the stub, as in the
-  "before". "0 agentes" on the Dashboard is not a finding.
-- The data is **not identical** to the "before": the seed now activates its own
-  session, the Criativo→PO offer was superseded when the PO's backlog events
-  arrived (AT-291/292), and the most recent session is a consultative one. Where
-  a "before" finding depends on data that no longer exists, it is marked **not
-  re-verified** instead of "fixed".
-- The captures are `fullPage`, but most screens scroll inside an inner
-  container, so they show the viewport. Targeted crops (`detalhe-*`) cover what
-  the full captures cannot.
+- O socket da sessão sempre falha, então a faixa de atividade do turno e o
+  terminal de Código nunca aparecem, e as sessões pollam no intervalo de
+  fallback.
+- `GET /workspaces/:id/projects-summary` responde 500 porque
+  `engine.dev_agent_states` não existe — artefato do stub, como no "antes".
+  "0 agentes" no Dashboard não é achado.
+- Os dados **não são idênticos** aos do "antes": o seed agora ativa a própria
+  sessão, a oferta Criativo→PO foi superada quando chegaram os eventos de
+  backlog do PO (AT-291/292), e a sessão mais recente é consultiva. Onde um
+  achado do "antes" depende de dados que não existem mais, ele está marcado
+  **não reverificado** em vez de "corrigido".
+- As capturas são `fullPage`, mas a maioria das telas rola dentro de um
+  contêiner interno, então elas mostram a viewport. Recortes direcionados
+  (`detalhe-*`) cobrem o que as capturas inteiras não alcançam.
 
-The capture was **paced** — 6 s between screens and 65 s between theme/viewport
-passes — and recorded zero 429 responses. The "before" was not paced, so its
-Settings captures were partly taken under the rate limit; the rate limit is
-measured separately below (G1).
+A captura foi **cadenciada** — 6 s entre telas e 65 s entre passadas de
+tema/viewport — e registrou zero respostas 429. O "antes" não foi cadenciado,
+então suas capturas de Configurações foram tiradas em parte sob o rate limit; o
+rate limit é medido à parte, abaixo (G1).
 
-## Files
+## Arquivos {#files}
 
-Kept outside the repository, in the session scratchpad (`shots-depois/`):
+Guardados fora do repositório, no scratchpad da sessão (`shots-depois/`):
 
-- `<screen>--<dark|light>--<desktop|mobile>.png`: 19 screens (login, dashboard,
-  the 12 project tabs, two sessions, `/containers`, `/account`, `/status`) × 2
-  themes × 2 viewports (1440×900 and 390×844) = 76 captures.
-- `detalhe-*`: the session at 1280 and 1024, the top of the thread, the
-  collapsed side-sessions panel, the end of a session, "Precisa de você", the
-  mobile drawer in both themes, the 11 Settings sections and the last section
-  reached under the rate limit.
-- `validacao-visual.json`: the output of `scripts/dev/validacao-visual.js`
-  injected in each capture, plus the theme actually applied (`data-theme`), the
-  page's horizontal scroll width, the requests to the api during the load and
-  the 429s.
-- `console-erros.json`, `sondas-dark.json`, `g1.json`, `g1-cliques.json`: the
-  console errors and the DOM probes quoted below.
+- `<screen>--<dark|light>--<desktop|mobile>.png`: 19 telas (login, dashboard,
+  as 12 abas do projeto, duas sessões, `/containers`, `/account`, `/status`) × 2
+  temas × 2 viewports (1440×900 e 390×844) = 76 capturas.
+- `detalhe-*`: a sessão a 1280 e 1024, o topo do fio, o painel de sessões
+  laterais recolhido, o fim de uma sessão, "Precisa de você", a gaveta mobile
+  nos dois temas, as 11 seções de Configurações e a última seção alcançada sob
+  o rate limit.
+- `validacao-visual.json`: a saída do `scripts/dev/validacao-visual.js`
+  injetado em cada captura, mais o tema efetivamente aplicado (`data-theme`), a
+  largura de rolagem horizontal da página, as requisições à api durante a carga
+  e os 429.
+- `console-erros.json`, `sondas-dark.json`, `g1.json`, `g1-cliques.json`: os
+  erros de console e as sondas de DOM citados abaixo.
 
-The capture scripts (`capturar-depois.mjs`, `detalhes-depois.mjs`, `g1.mjs`,
-`g1-cliques.mjs`, `gaveta.mjs`) are the "before" scripts with the pacing and
-the probes added.
+Os scripts de captura (`capturar-depois.mjs`, `detalhes-depois.mjs`, `g1.mjs`,
+`g1-cliques.mjs`, `gaveta.mjs`) são os scripts do "antes" com a cadência e as
+sondas acrescentadas.
 
-## The checker, screen by screen
+## O verificador, tela por tela {#the-checker-screen-by-screen}
 
-`validacao-visual.js` counts four kinds of layout defect (`texto-cortado`,
-`fora-da-viewport`, `recortado-por-ancestral`, `alvo-pequeno` under 24 px). The
-numbers are the same in both themes on every screen, before and after, so one
-column per viewport is enough. The "before" mobile numbers are **not directly
-comparable**: before AT-316 most content was pushed off-screen, and what the
-checker cannot see it does not count.
+O `validacao-visual.js` conta quatro tipos de defeito de layout
+(`texto-cortado`, `fora-da-viewport`, `recortado-por-ancestral`, `alvo-pequeno`
+abaixo de 24 px). Os números são os mesmos nos dois temas em toda tela, antes e
+depois, então uma coluna por viewport basta. Os números mobile do "antes" **não
+são diretamente comparáveis**: antes da AT-316 a maior parte do conteúdo era
+empurrada para fora da tela, e o que o verificador não vê ele não conta.
 
-| screen | desktop before → after | mobile before → after | api requests per load (after) |
+| tela | desktop antes → depois | mobile antes → depois | requisições à api por carga (depois) |
 |---|---|---|---|
 | login | 6 → 6 | 8 → 8 | — |
 | dashboard | 0 → 0 | 1 → 0 | 6 |
@@ -120,140 +122,140 @@ checker cannot see it does not count.
 | account | 0 → 0 | 6 → 2 | 7 |
 | status | 1 → 1 | 1 → 1 | 2 |
 
-Only one screen scrolls the whole page sideways at 390 px: `/status`
-(`scrollWidth` 413 against 390, both themes).
+Só uma tela rola a página inteira para o lado a 390 px: `/status`
+(`scrollWidth` 413 contra 390, nos dois temas).
 
-## The "before" findings, one by one
+## Os achados do "antes", um por um {#the-before-findings-one-by-one}
 
-Severity as in the "before": **A** high (breaks use or misleads), **M**
-medium, **B** low (polish). Status: **fixed**, **partial**, **persists**, or
-**not re-verified** (the data that showed it no longer exists).
+Severidade como no "antes": **A** alta (quebra o uso ou engana), **M** média,
+**B** baixa (acabamento). Estado: **corrigido**, **parcial**, **persiste** ou
+**não reverificado** (os dados que o mostravam não existem mais).
 
-### Shell and navigation
+### Moldura e navegação {#shell-and-navigation}
 
-| # | Sev | Status | What the "after" shows | Evidence |
+| # | Sev | Estado | O que o "depois" mostra | Evidência |
 |---|---|---|---|---|
-| S1 | A | partial | The shell reflows at 390 px: the sidebar becomes a drawer, the project rail a horizontal strip, and no authenticated screen but `/status` scrolls sideways. The **session** route did not follow — see N1. | `*--mobile.png`, `detalhe-gaveta-mobile--*.png` |
-| S2 | M | persists | Sidebar "ATIVIDADES — Nenhum agente entrou em ação ainda." next to an Overview with the Criativo "aguardando" and 4 pending approvals. | `projeto-overview--dark--desktop.png` |
-| S3 | M | persists | The sidebar tab list has no counters and does not mark the current tab; the rail shows "Aprovações 4" and "Arquitetura 1" and highlights the tab. | idem |
-| S4 | M | fixed | One active treatment now: terracotta tint with terracotta text on the rail; the sidebar project row is neutral. | idem |
-| S5 | B | persists | The theme toggle still reads the state ("Tema escuro"/"Tema claro"); "sair" still lower-case. | any authenticated screen |
-| S6 | B | persists | Project name in mono in the sidebar and in display type in the header. | idem |
+| S1 | A | parcial | A moldura se reorganiza a 390 px: a sidebar vira gaveta, o trilho do projeto uma faixa horizontal, e nenhuma tela autenticada além de `/status` rola para o lado. A rota de **sessão** não acompanhou — ver N1. | `*--mobile.png`, `detalhe-gaveta-mobile--*.png` |
+| S2 | M | persiste | Sidebar "ATIVIDADES — Nenhum agente entrou em ação ainda." ao lado de uma Visão geral com o Criativo "aguardando" e 4 aprovações pendentes. | `projeto-overview--dark--desktop.png` |
+| S3 | M | persiste | A lista de abas da sidebar não tem contadores e não marca a aba atual; o trilho mostra "Aprovações 4" e "Arquitetura 1" e destaca a aba. | idem |
+| S4 | M | corrigido | Um tratamento de ativo só: tinta terracota com texto terracota no trilho; a linha do projeto na sidebar é neutra. | idem |
+| S5 | B | persiste | O alternador de tema ainda lê o estado ("Tema escuro"/"Tema claro"); "sair" continua em minúsculas. | qualquer tela autenticada |
+| S6 | B | persiste | Nome do projeto em mono na sidebar e em fonte de display no cabeçalho. | idem |
 
-### Login, Dashboard
+### Login, Dashboard {#login-dashboard}
 
-| # | Sev | Status | What the "after" shows | Evidence |
+| # | Sev | Estado | O que o "depois" mostra | Evidência |
 |---|---|---|---|---|
-| L1 | B | persists | The same 4 targets under 24 px. | `validacao-visual.json`, `login--*` |
-| L2 | B | persists | The same text clipped by its box. | idem |
-| D1 | M | persists | "0 / 0 USD" and "0%" in green on a project without a budget. | `dashboard--dark--desktop.png` |
-| D2 | M | persists | "Sem atividade ainda" on a project with 4 sessions and dozens of events (partly the stub's 500, see the top). | idem |
-| D3 | B | persists | "+ Novo projeto" with an icon; "+ Nova ideação" and "+ Nova conversa" with a literal "+". | dashboard × creative × chat |
+| L1 | B | persiste | Os mesmos 4 alvos abaixo de 24 px. | `validacao-visual.json`, `login--*` |
+| L2 | B | persiste | O mesmo texto cortado pela própria caixa. | idem |
+| D1 | M | persiste | "0 / 0 USD" e "0%" em verde num projeto sem orçamento. | `dashboard--dark--desktop.png` |
+| D2 | M | persiste | "Sem atividade ainda" num projeto com 4 sessões e dezenas de eventos (em parte o 500 do stub, ver o topo). | idem |
+| D3 | B | persiste | "+ Novo projeto" com ícone; "+ Nova ideação" e "+ Nova conversa" com um "+" literal. | dashboard × creative × chat |
 
-### Overview
+### Visão geral {#overview}
 
-| # | Sev | Status | What the "after" shows | Evidence |
+| # | Sev | Estado | O que o "depois" mostra | Evidência |
 |---|---|---|---|---|
-| O1 | M | not re-verified | The feed only shows the latest (consultative) session, which has no PO/Arquiteto events. | `projeto-overview--*` |
-| O2 | M | persists | Longer now: "dev-web: ação aguardando decisão — A política decidiu por: default (sem regra aplicável) · raiz do escopo: pasta gerenciada “core-api-665191a6”". | idem |
-| O3 | B | not re-verified | The team timeline is empty with this data. | idem |
-| O4 | B | partial | The per-origin footers are gone ("1 de 1 carregados"), but the header reads "1 eventos" — see N9. | idem |
+| O1 | M | não reverificado | O feed só mostra a sessão mais recente (consultiva), que não tem eventos de PO/Arquiteto. | `projeto-overview--*` |
+| O2 | M | persiste | Mais longo agora: "dev-web: ação aguardando decisão — A política decidiu por: default (sem regra aplicável) · raiz do escopo: pasta gerenciada “core-api-665191a6”". | idem |
+| O3 | B | não reverificado | A linha do tempo do time está vazia com estes dados. | idem |
+| O4 | B | parcial | Os rodapés por origem sumiram ("1 de 1 carregados"), mas o cabeçalho diz "1 eventos" — ver N9. | idem |
 
-### Creative, Chat, Insights, Executors
+### Criativo, Chat, Percepções, Executores {#creative-chat-insights-executors}
 
-| # | Sev | Status | What the "after" shows | Evidence |
+| # | Sev | Estado | O que o "depois" mostra | Evidência |
 |---|---|---|---|---|
-| C1 | M | persists | Mono pills in Criativo and Chat, rectangular sans tabs in PRs. | `projeto-criativo--*`, `projeto-chat--*`, `projeto-prs--*` |
-| C2 | B | partial | "1 história" now pluralizes; "3 ação(ões) proposta(s) … 0 decidida(s) … auto-aprovada(s)" and "0 chamada(s)" remain (`sessions.json:164,172,173`, `spend.json:20,37`). | creative, chat, spend |
-| C3 | B | not re-verified | The seed session is now `active`, so the double "aguardando" does not appear. | creative |
-| C4 | B | persists | Four empty-state shapes (plain text in Insights, lock card in Code, none in Chat, a red card in the Backlog's traceability). | tabs |
-| C5 | B | persists | Percepções and Arquitetura start their title at y≈145, the other tabs at y≈116; Histórias has only the eyebrow. | `projeto-insights--*`, `projeto-arquitetura--*`, `projeto-backlog--*` |
-| C6 | B | persists | "Conversar/Buscar" above the "Chat" title. | `projeto-chat--*` |
+| C1 | M | persiste | Pílulas em mono no Criativo e no Chat, abas sans retangulares em PRs. | `projeto-criativo--*`, `projeto-chat--*`, `projeto-prs--*` |
+| C2 | B | parcial | "1 história" agora flexiona; "3 ação(ões) proposta(s) … 0 decidida(s) … auto-aprovada(s)" e "0 chamada(s)" continuam (`sessions.json:164,172,173`, `spend.json:20,37`). | creative, chat, spend |
+| C3 | B | não reverificado | A sessão do seed agora é `active`, então o "aguardando" duplo não aparece. | creative |
+| C4 | B | persiste | Quatro formatos de estado vazio (texto puro em Percepções, cartão de cadeado em Código, nenhum no Chat, um cartão vermelho na rastreabilidade do Backlog). | abas |
+| C5 | B | persiste | Percepções e Arquitetura começam o título em y≈145, as outras abas em y≈116; Histórias tem só o sobretítulo. | `projeto-insights--*`, `projeto-arquitetura--*`, `projeto-backlog--*` |
+| C6 | B | persiste | "Conversar/Buscar" acima do título "Chat". | `projeto-chat--*` |
 
-### Code and PRs
+### Código e PRs {#code-and-prs}
 
-| # | Sev | Status | What the "after" shows | Evidence |
+| # | Sev | Estado | O que o "depois" mostra | Evidência |
 |---|---|---|---|---|
-| P1 | M | fixed | PRs says "A lista de PRs ainda não está liberada" and explains the shared gate; Code says "A aba Código ainda não está liberada". | `projeto-prs--*`, `projeto-code--*` |
-| P2 | B | persists | The "Já sabe o id?" rule still touches the bottom of the gate card. | `projeto-prs--dark--desktop.png` |
+| P1 | M | corrigido | PRs diz "A lista de PRs ainda não está liberada" e explica o portão compartilhado; Código diz "A aba Código ainda não está liberada". | `projeto-prs--*`, `projeto-code--*` |
+| P2 | B | persiste | A linha "Já sabe o id?" ainda encosta no fundo do cartão do portão. | `projeto-prs--dark--desktop.png` |
 
-### Approvals
+### Aprovações {#approvals}
 
-| # | Sev | Status | What the "after" shows | Evidence |
+| # | Sev | Estado | O que o "depois" mostra | Evidência |
 |---|---|---|---|---|
-| A1 | A | fixed | The rail, the Approvals tab and "Precisa de você" show **4**, the database's number, including the `git_push` from another session; the side-sessions panel in a session shows the 3 that belong to the others. | `projeto-approvals--*`, `detalhe-precisa-de-voce--dark.png`, `detalhe-sessao2-topo--dark.png` |
-| A2 | A | fixed | The `git_push` card offers Aprovar/Negar/Modo automático, no "Sempre permitir". | `projeto-approvals--*` |
-| A3 | M | persists | Still several variants: 4 buttons plus a long mono note in the tab, 3 buttons and no note in "Precisa de você", 3 stretched buttons in the side-sessions panel. The "Sempre permitir" note still says two things: "grava a regra em .brabo/permissions.json" in the thread and "libera este tipo de ação só para dev-api" in the panel. | `detalhe-sessao2-topo--dark.png`, `detalhe-precisa-de-voce--dark.png` |
-| A4 | B | persists | The ⚠ glyph is still ~8 px and the mono paragraph outweighs the decision. | `projeto-approvals--*` |
-| A5 | B | persists | The command still appears between straight quotes in the proportional font. | idem |
+| A1 | A | corrigido | O trilho, a aba Aprovações e "Precisa de você" mostram **4**, o número do banco, incluindo o `git_push` de outra sessão; o painel de sessões laterais numa sessão mostra as 3 que pertencem às outras. | `projeto-approvals--*`, `detalhe-precisa-de-voce--dark.png`, `detalhe-sessao2-topo--dark.png` |
+| A2 | A | corrigido | O cartão do `git_push` oferece Aprovar/Negar/Modo automático, sem "Sempre permitir". | `projeto-approvals--*` |
+| A3 | M | persiste | Ainda várias variantes: 4 botões mais uma nota longa em mono na aba, 3 botões e nenhuma nota em "Precisa de você", 3 botões esticados no painel de sessões laterais. A nota de "Sempre permitir" ainda diz duas coisas: "grava a regra em .brabo/permissions.json" no fio e "libera este tipo de ação só para dev-api" no painel. | `detalhe-sessao2-topo--dark.png`, `detalhe-precisa-de-voce--dark.png` |
+| A4 | B | persiste | O glifo ⚠ ainda tem ~8 px e o parágrafo em mono pesa mais que a decisão. | `projeto-approvals--*` |
+| A5 | B | persiste | O comando ainda aparece entre aspas retas na fonte proporcional. | idem |
 
-### Session
+### Sessão {#session}
 
-| # | Sev | Status | What the "after" shows | Evidence |
+| # | Sev | Estado | O que o "depois" mostra | Evidência |
 |---|---|---|---|---|
-| X1 | A | fixed | At 1440, 1280 and 1024 the bar fits: the model and the answer language became one chip, the title and the meta are whole, "Encerrar" turns into an icon at 1024. The only clip left is the chip's own ellipsis ("… · pt…", 230 px in 217). | `sessao*--*--desktop.png`, `detalhe-sessao-1280--dark.png`, `detalhe-sessao-1024--dark.png`, `sondas-dark.json` |
-| X2 | A | partial | The panel now has the thread's width (x 302–1082), groups proposals per session ("2 propostas na sessão #cde43f7c") and no longer repeats the label. It is still a fixed block of **345 of 900 px** above the composer, and the item behind it shows through its top border (y≈387). | `detalhe-sessao2-topo--dark.png`, `detalhe-sessao-fim--dark.png`, `sondas-dark.json` |
-| X3 | A | fixed | No origin groups; the thread reads question → answer in order. | `detalhe-sessao2-topo--dark.png` (`grupos: []` in `sondas-dark.json`) |
-| X4 | M | partial | The handoff card is not in this data (the offer was superseded), but the composer still says "Endereçar handoff". | `sessao*--*` |
-| X5 | M | not re-verified | No handoff card to compare widths with. | — |
-| X6 | M | persists | "ARTEFATOS GERADOS 3" lists one group ("PO 1"); in the second session the brief exists and the panel says "0 · Nada ainda". | `sessao--*`, `sessao2--*` |
-| X7 | B | partial | "ORIGEM: 0 REF(S)" became "ORIGEM: 0 REFERÊNCIA" — no jargon, wrong number; see N9. | `sessao2--*` |
-| X8 | B | persists | The same session opened at different scroll positions in the two themes. | `sessao2--dark--desktop.png` × `sessao2--light--desktop.png` |
+| X1 | A | corrigido | A 1440, 1280 e 1024 a barra cabe: o modelo e o idioma da resposta viraram um chip só, o título e os metadados aparecem inteiros, "Encerrar" vira ícone a 1024. O único corte que sobra é a reticência do próprio chip ("… · pt…", 230 px em 217). | `sessao*--*--desktop.png`, `detalhe-sessao-1280--dark.png`, `detalhe-sessao-1024--dark.png`, `sondas-dark.json` |
+| X2 | A | parcial | O painel agora tem a largura do fio (x 302–1082), agrupa propostas por sessão ("2 propostas na sessão #cde43f7c") e não repete mais o rótulo. Ainda é um bloco fixo de **345 de 900 px** acima do composer, e o item atrás dele aparece pela borda de cima (y≈387). | `detalhe-sessao2-topo--dark.png`, `detalhe-sessao-fim--dark.png`, `sondas-dark.json` |
+| X3 | A | corrigido | Sem grupos por origem; o fio lê pergunta → resposta, em ordem. | `detalhe-sessao2-topo--dark.png` (`grupos: []` em `sondas-dark.json`) |
+| X4 | M | parcial | O cartão de handoff não está nestes dados (a oferta foi superada), mas o composer ainda diz "Endereçar handoff". | `sessao*--*` |
+| X5 | M | não reverificado | Não há cartão de handoff com que comparar larguras. | — |
+| X6 | M | persiste | "ARTEFATOS GERADOS 3" lista um grupo ("PO 1"); na segunda sessão o brief existe e o painel diz "0 · Nada ainda". | `sessao--*`, `sessao2--*` |
+| X7 | B | parcial | "ORIGEM: 0 REF(S)" virou "ORIGEM: 0 REFERÊNCIA" — sem jargão, número errado; ver N9. | `sessao2--*` |
+| X8 | B | persiste | A mesma sessão abriu em posições de rolagem diferentes nos dois temas. | `sessao2--dark--desktop.png` × `sessao2--light--desktop.png` |
 
-### /containers, /account, /status
+### /containers, /account, /status {#containers-account-status}
 
-| # | Sev | Status | What the "after" shows | Evidence |
+| # | Sev | Estado | O que o "depois" mostra | Evidência |
 |---|---|---|---|---|
-| K1 | M | fixed | "Parar" and "Remover" are `disabled` (opacity 0.5) and the row says "Nunca provisionado: não há container para parar nem remover". | `containers--*--desktop.png`, `sondas-dark.json` |
-| K2 | M | fixed | The broker reason is one line with a "Por quê?" disclosure; no `BROKER_URL` in the UI. | idem |
-| K3 | B | persists | Project link 53×14 px. | `validacao-visual.json` |
-| U1 | M | fixed | The "only this page is translated" sentence is gone. | `account--*` |
-| U2 | B | fixed | No RN number in the subtitles ("Agente local"); the long paragraph before the table stays. | idem |
-| T1 | B | persists | Raw ISO timestamp, "Último check", "—" for the engine, and "Voltar" as a small link. At 390 px the page also overflows — see N5. | `status--*` |
+| K1 | M | corrigido | "Parar" e "Remover" estão `disabled` (opacidade 0.5) e a linha diz "Nunca provisionado: não há container para parar nem remover". | `containers--*--desktop.png`, `sondas-dark.json` |
+| K2 | M | corrigido | O motivo do broker é uma linha só com um "Por quê?" expansível; nenhum `BROKER_URL` na interface. | idem |
+| K3 | B | persiste | Link do projeto com 53×14 px. | `validacao-visual.json` |
+| U1 | M | corrigido | A frase "só esta página está traduzida" sumiu. | `account--*` |
+| U2 | B | corrigido | Nenhum número de RN nos subtítulos ("Agente local"); o parágrafo longo antes da tabela fica. | idem |
+| T1 | B | persiste | Carimbo ISO cru, "Último check", "—" para o engine e "Voltar" como link pequeno. A 390 px a página também transborda — ver N5. | `status--*` |
 
-### Settings
+### Configurações {#settings}
 
-| # | Sev | Status | What the "after" shows | Evidence |
+| # | Sev | Estado | O que o "depois" mostra | Evidência |
 |---|---|---|---|---|
-| G1 | A | partial | The screen's own path is fixed: one load (52 requests) plus clicking the 11 entries of "Nesta página" costs **18** more requests in 28 s, no 429. Reloading by deep link (`?section=`) still costs **52 per load** (55 before): the sixth reload inside 16 s tripped the limit and the page showed "Limite de requisições excedido" (`g1.json`: 362 requests, 51 × 429 in 30 s). | `g1-cliques.json`, `g1.json`, `detalhe-g1-ultima-secao--dark.png` |
-| G2 | M | partial | The four columns are gone: "Nesta página" lies above the sections. "Modelos por agente" still clips the agent name ("QA de Performance e Segurança", 201 px in 119) and the model (173 in 143). On mobile the table collapses — see N4. | `projeto-settings--*--desktop.png`, `validacao-visual.json` |
-| G3 | M | partial | "Tarefas bloqueadas seguidas até parar" replaced "Tasks blocked"; "dev agent(s)", "bind-mount", "permissions.json" and "runner" remain in the Execution and "Onde o código mora" sections. | `projeto-settings--*--desktop.png` |
-| G4 | M | persists | "Salvar" in Execução is active (terracotta) with nothing pending and no count; "Converter" is inert. | idem |
-| G5–G7 | B | not re-verified | The anchored-section outline, the capability chips and the PAT placeholder were not re-captured under the same conditions. | — |
+| G1 | A | parcial | O caminho da própria tela está corrigido: uma carga (52 requisições) mais clicar nas 11 entradas de "Nesta página" custa **18** requisições a mais em 28 s, sem 429. Recarregar por link direto (`?section=`) ainda custa **52 por carga** (55 antes): a sexta recarga em 16 s estourou o limite e a página mostrou "Limite de requisições excedido" (`g1.json`: 362 requisições, 51 × 429 em 30 s). | `g1-cliques.json`, `g1.json`, `detalhe-g1-ultima-secao--dark.png` |
+| G2 | M | parcial | As quatro colunas sumiram: "Nesta página" fica acima das seções. "Modelos por agente" ainda corta o nome do agente ("QA de Performance e Segurança", 201 px em 119) e o modelo (173 em 143). No mobile a tabela colapsa — ver N4. | `projeto-settings--*--desktop.png`, `validacao-visual.json` |
+| G3 | M | parcial | "Tarefas bloqueadas seguidas até parar" substituiu "Tasks blocked"; "dev agent(s)", "bind-mount", "permissions.json" e "runner" continuam nas seções Execução e "Onde o código mora". | `projeto-settings--*--desktop.png` |
+| G4 | M | persiste | "Salvar" em Execução está ativo (terracota) sem nada pendente e sem contagem; "Converter" está inerte. | idem |
+| G5–G7 | B | não reverificado | O sumário de seções ancoradas, os chips de capacidade e o placeholder do PAT não foram recapturados nas mesmas condições. | — |
 
-### Architecture, Backlog, Spend, light theme
+### Arquitetura, Backlog, Gastos, tema claro {#architecture-backlog-spend-light-theme}
 
-| # | Sev | Status | What the "after" shows | Evidence |
+| # | Sev | Estado | O que o "depois" mostra | Evidência |
 |---|---|---|---|---|
-| R1 | B | persists | "a partir do module_map (create_c4_diagram)". | `projeto-arquitetura--*` |
-| R2 | B | persists | Orphan paragraph on top, "Gastos do workspace" inside a project tab, an axis-only chart. | `projeto-spend--*` |
-| R3 | B | persists | The story icon is still the Criativo's light bulb. | `projeto-backlog--*` |
-| CL1 | M | persists | Inert "Converter" is still barely visible on the light background. | `projeto-settings--light--desktop.png` |
+| R1 | B | persiste | "a partir do module_map (create_c4_diagram)". | `projeto-arquitetura--*` |
+| R2 | B | persiste | Parágrafo órfão no topo, "Gastos do workspace" dentro de uma aba de projeto, um gráfico só com eixos. | `projeto-spend--*` |
+| R3 | B | persiste | O ícone de história ainda é a lâmpada do Criativo. | `projeto-backlog--*` |
+| CL1 | M | persiste | "Converter" inerte ainda mal aparece sobre o fundo claro. | `projeto-settings--light--desktop.png` |
 
-## New findings
+## Achados novos {#new-findings}
 
-Things the "before" did not list — either new, or hidden until a fix made the
-screen reachable. None was fixed here; each is a candidate AT.
+Coisas que o "antes" não listou — ou novas, ou escondidas até uma correção
+tornar a tela alcançável. Nenhuma foi corrigida aqui; cada uma é candidata a AT.
 
-| # | Sev | Screen / theme | Finding | Evidence |
+| # | Sev | Tela / tema | Achado | Evidência |
 |---|---|---|---|---|
-| N1 | A | Session, both themes, 390 px | The session page did not get the mobile layout. "Contexto da sessão" keeps ~320 px, the thread gets ~70 px and wraps one word per line, the side-sessions panel is unreadable, and "Iniciar ideação"/"Encerrar" fall off the right edge. | `sessao--*--mobile.png`, `sessao2--*--mobile.png`, `detalhe-sessao2-mobile--*.png`; checker 19–21 `texto-cortado` |
-| N2 | M | Session, both themes | Every `chat.message` is drawn as the **viewer** — avatar and name come from the logged-in user, never from `actorKind`/`actorId` (`apps/web/src/routes/session-timeline-montagem.tsx:379-395`). An agent's `chat.message` shows as "owner@brabo.dev"; in a shared session another person's message would show under the viewer's name. It was hidden while the thread folded history into origin groups (X3). | `detalhe-sessao2-topo--dark.png`; `sondas-dark.json` (`autoriaChatMessage`: three times "owner@brabo.dev" for user, agent, user) |
-| N3 | M | /containers, both themes, 390 px | The table squeezes its seven columns into the width: the headers "REGISTRADO/OBSERVADO/RECURSOS/DESDE" overlap, cells wrap one word per line, and the action buttons are cut at the right. | `containers--*--mobile.png`; checker 8 `texto-cortado` |
-| N4 | M | Settings, both themes, 390 px | "Modelos por agente" is unusable on mobile: the agent name gets a 6 px box, the model trigger 0 px. | `projeto-settings--*--mobile.png`; checker 33–35 `texto-cortado` |
-| N5 | B | /status, both themes, 390 px | The only page that scrolls sideways: `scrollWidth` 413 against 390; the table's right edge is cut. | `status--*--mobile.png`, `validacao-visual.json` |
-| N6 | B | Dashboard, both themes, 390 px | The search collapses to "Bus" and "Novo projeto" wraps into two lines. | `dashboard--*--mobile.png` |
-| N7 | B | Criativo, both themes, 390 px | The session id of each row gets a 0 px box ("#ae1e5746", "#cde43f7c"), so rows lose what identifies them. | `projeto-criativo--*--mobile.png`, `validacao-visual.json` |
-| N8 | B | Project rail, both themes, 390 px | The active tab is not scrolled fully into view ("Config…" cut, the "4" of Aprovações clipped) and nothing signals that the strip scrolls. | `projeto-settings--*--mobile.png`, `projeto-approvals--*--mobile.png` |
-| N9 | B | Overview and session, both themes | Plural slips of the i18next pass: "1 eventos" (`overview.json:70` has one form only) and "0 referência" (the pt rule puts 0 in `one`, so `origemRefs_one` is used for zero). | `projeto-overview--*--desktop.png`, `sessao2--*` |
-| N10 | B | Login, both themes | The backdrop glow is `--success-soft` (`apps/web/src/routes/AuthLayout.module.css:80-84`): with the old teal it read as the brand; on the neutral theme it is a green haze behind a terracotta page. | `login--dark--desktop.png`, `login--light--desktop.png` |
-| N11 | B | Approvals tab, both themes | Every card carries "Motivo da política fora dos eventos carregados nesta tela" — true (the reason lives in the other session's log) but it is the tool explaining itself, repeated per card. | `projeto-approvals--*` |
+| N1 | A | Sessão, dois temas, 390 px | A página de sessão não ganhou o layout mobile. "Contexto da sessão" mantém ~320 px, o fio fica com ~70 px e quebra uma palavra por linha, o painel de sessões laterais fica ilegível, e "Iniciar ideação"/"Encerrar" caem para fora da borda direita. | `sessao--*--mobile.png`, `sessao2--*--mobile.png`, `detalhe-sessao2-mobile--*.png`; verificador 19–21 `texto-cortado` |
+| N2 | M | Sessão, dois temas | Todo `chat.message` é desenhado como o **visualizador** — avatar e nome vêm do usuário logado, nunca de `actorKind`/`actorId` (`apps/web/src/routes/session-timeline-montagem.tsx:379-395`). O `chat.message` de um agente aparece como "owner@brabo.dev"; numa sessão compartilhada a mensagem de outra pessoa apareceria com o nome de quem vê. Estava escondido enquanto o fio dobrava o histórico em grupos por origem (X3). | `detalhe-sessao2-topo--dark.png`; `sondas-dark.json` (`autoriaChatMessage`: três vezes "owner@brabo.dev" para usuário, agente, usuário) |
+| N3 | M | /containers, dois temas, 390 px | A tabela espreme as sete colunas na largura: os cabeçalhos "REGISTRADO/OBSERVADO/RECURSOS/DESDE" se sobrepõem, as células quebram uma palavra por linha, e os botões de ação são cortados à direita. | `containers--*--mobile.png`; verificador 8 `texto-cortado` |
+| N4 | M | Configurações, dois temas, 390 px | "Modelos por agente" fica inutilizável no mobile: o nome do agente ganha uma caixa de 6 px, o gatilho do modelo 0 px. | `projeto-settings--*--mobile.png`; verificador 33–35 `texto-cortado` |
+| N5 | B | /status, dois temas, 390 px | A única página que rola para o lado: `scrollWidth` 413 contra 390; a borda direita da tabela é cortada. | `status--*--mobile.png`, `validacao-visual.json` |
+| N6 | B | Dashboard, dois temas, 390 px | A busca encolhe para "Bus" e "Novo projeto" quebra em duas linhas. | `dashboard--*--mobile.png` |
+| N7 | B | Criativo, dois temas, 390 px | O id de sessão de cada linha ganha uma caixa de 0 px ("#ae1e5746", "#cde43f7c"), então as linhas perdem o que as identifica. | `projeto-criativo--*--mobile.png`, `validacao-visual.json` |
+| N8 | B | Trilho do projeto, dois temas, 390 px | A aba ativa não é rolada inteira para a vista ("Config…" cortado, o "4" de Aprovações recortado) e nada sinaliza que a faixa rola. | `projeto-settings--*--mobile.png`, `projeto-approvals--*--mobile.png` |
+| N9 | B | Visão geral e sessão, dois temas | Deslizes de plural da passada do i18next: "1 eventos" (`overview.json:70` tem uma forma só) e "0 referência" (a regra do pt põe o 0 em `one`, então `origemRefs_one` é usado para zero). | `projeto-overview--*--desktop.png`, `sessao2--*` |
+| N10 | B | Login, dois temas | O brilho de fundo é `--success-soft` (`apps/web/src/routes/AuthLayout.module.css:80-84`): com o antigo verde-azulado ele lia como a marca; no tema neutro é uma névoa verde atrás de uma página terracota. | `login--dark--desktop.png`, `login--light--desktop.png` |
+| N11 | B | Aba Aprovações, dois temas | Todo cartão traz "Motivo da política fora dos eventos carregados nesta tela" — verdade (o motivo mora no log da outra sessão), mas é a ferramenta explicando a si mesma, repetida por cartão. | `projeto-approvals--*` |
 
-## What this page does not measure
+## O que esta página não mede {#what-this-page-does-not-measure}
 
-- Contrast. That is arithmetic over the tokens and lives in the web suite
-  (`apps/web/src/lib/contraste.ts`); the checker here only sees layout.
-- Anything behind the engine: the live turn strip, the terminal, dev agents'
-  presence. The stub cannot produce them.
-- The production build. `vite` dev serves the same components and CSS, but not
-  the production CSP or the nginx in front of the web image.
+- Contraste. Isso é aritmética sobre os tokens e mora na suíte do web
+  (`apps/web/src/lib/contraste.ts`); o verificador aqui só vê layout.
+- Nada que esteja atrás do engine: a faixa do turno ao vivo, o terminal, a
+  presença dos dev agents. O stub não consegue produzi-los.
+- O build de produção. O `vite` de desenvolvimento serve os mesmos componentes e
+  CSS, mas não a CSP de produção nem o nginx na frente da imagem do web.

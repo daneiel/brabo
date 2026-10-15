@@ -890,7 +890,7 @@ function verificarFrasesAncoradasNoCodigo() {
     },
     {
       arquivo: 'docs/explanation/branching-policy.md',
-      padrao: /^description: The (.+?) ladder/m,
+      padrao: /^description: A escada (.+?), a taxonomia/m,
       esperado: [...escada[1].matchAll(/'([a-z-]+)'/g)].map((m) => m[1]).join(' → '),
       oque: 'a escada da esteira no `description` do frontmatter',
     },
