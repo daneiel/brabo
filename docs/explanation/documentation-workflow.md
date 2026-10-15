@@ -1,854 +1,864 @@
 ---
 id: documentation-workflow
-title: How documentation stays alive
-sidebar_label: Docs sync
+title: Como a documentação se mantém viva
+sidebar_label: Sincronia da doc
 sidebar_position: 1
-description: The mechanism that keeps documentation from rotting — what each piece does, why it exists, and what to do when the check complains unfairly.
+description: O mecanismo que impede a documentação de apodrecer — o que cada peça faz, por que existe e o que fazer quando a checagem reclama injustamente.
 keywords: [documentation, drift, docmap, CI, generation]
 ---
 
-# How documentation stays alive
+# Como a documentação se mantém viva {#how-documentation-stays-alive}
 
-Documentation doesn't die from a lack of initial writing. It dies from
-**drift**: the code changes, the doc stays, and one day someone
-notices it describes a system that no longer exists. From that point
-on nobody trusts any page, including the ones that are right.
+Documentação não morre por falta de escrita inicial. Ela morre por
+**drift**: o código muda, a doc fica, e um dia alguém percebe que ela
+descreve um sistema que não existe mais. Desse ponto em diante ninguém
+confia em página nenhuma, inclusive nas que estão certas.
 
-This page explains the mechanism that exists to prevent that. Read it
-if CI complained about you — and read it before turning off any part
-of it.
+Esta página explica o mecanismo que existe para evitar isso. Leia-a se
+o CI reclamou de você — e leia-a antes de desligar qualquer parte dele.
 
-## The principle: generate > verify > remember
+## O princípio: gerar > verificar > lembrar {#the-principle-generate--verify--remember}
 
-Three levels, in decreasing order of reliability:
+Três níveis, em ordem decrescente de confiabilidade:
 
-| level | how it works | when to use it |
+| nível | como funciona | quando usar |
 |---|---|---|
-| **Generate** | the doc comes out of the code; drift is impossible | the list IS the content |
-| **Verify** | the doc is hand-written, CI checks that it's complete | the prose matters more than the list |
-| **Remember** | CI warns whoever opened the PR | when human judgment is required |
+| **Gerar** | a doc sai do código; drift é impossível | a lista É o conteúdo |
+| **Verificar** | a doc é escrita à mão, o CI confere que está completa | a prosa importa mais que a lista |
+| **Lembrar** | o CI avisa quem abriu o PR | quando é preciso julgamento humano |
 
-The last level is the weakest, and that's why it's the last resort. A
-warning nobody reads protects nothing.
+O último nível é o mais fraco, e é por isso que ele é o último recurso.
+Um aviso que ninguém lê não protege nada.
 
-### A number in prose is a *verify* case
+### Número em prosa é caso de *verificar* {#a-number-in-prose-is-a-verify-case}
 
-A number in the middle of a sentence — "the 30 ADRs," "next is
-`0031`" — isn't generatable: it lives inside the text, and replacing
-it with a placeholder would make the source prose unreadable. But it's
-**verifiable**, and that's where it should live.
+Um número no meio de uma frase — "os 30 ADRs", "o próximo é `0031`" —
+não é gerável: ele mora dentro do texto, e trocá-lo por um marcador
+deixaria a prosa da fonte ilegível. Mas ele é **verificável**, e é aí
+que deve morar.
 
-Without that, it ages silently. That's what happened: the published
-site said "28 of them" and "the 29 decisions" when there were already
-30, and "next is 0030" with 0030 already done. Nothing broke, no check
-complained — it just went wrong.
+Sem isso, ele envelhece calado. Foi o que aconteceu: o site publicado
+dizia "28 deles" e "as 29 decisões" quando já eram 30, e "o próximo é
+0030" com o 0030 já feito. Nada quebrou, nenhuma checagem reclamou — só
+ficou errado.
 
-**The list of verified numbers grew after a third case proved the same
-point.** An external review found the README announcing "the 158 RNs"
-when 331 were written — wrong by more than double, in the table that
-introduces the repository. It was corrected by hand (PR #412), which
-only resets the clock: the next RN would put it back out of date. So the
-check stopped covering ADR counts alone and now covers **three**
-families, each read from the ARTIFACT and never from other prose:
+**A lista de números verificados cresceu depois que um terceiro caso
+provou o mesmo ponto.** Uma revisão externa achou o README anunciando
+"as 158 RNs" quando havia 331 escritas — errado por mais do dobro, na
+tabela que apresenta o repositório. Foi corrigido à mão (PR #412), o que
+só zera o relógio: a próxima RN o deixaria desatualizado de novo. Então
+a checagem deixou de cobrir só contagens de ADR e passou a cobrir
+**três** famílias, cada uma lida do ARTEFATO e nunca de outra prosa:
 
-| number in prose | source of truth |
+| número em prosa | fonte de verdade |
 |---|---|
-| ADR count, next ADR number | the files in `docs/adr/` |
-| RN count | the `### RN-NNN` headings in `business-rules.md` |
-| LLM provider count | the `capabilities` literals `descobrirProviders()` finds — the same source as the generated table in `llm-providers.md` |
+| contagem de ADRs, número do próximo ADR | os arquivos em `docs/adr/` |
+| contagem de RNs | os cabeçalhos `### RN-NNN` em `business-rules.md` |
+| contagem de providers de LLM | os literais `capabilities` que `descobrirProviders()` encontra — a mesma fonte da tabela gerada em `llm-providers.md` |
 
-The provider one is written **in words** ("nove providers"), and the
-check compares against the word rather than forcing the prose to become
-a digit: the check exists to protect the text, not to reshape it.
+A de providers é escrita **por extenso** ("nove providers"), e a
+checagem compara com a palavra em vez de forçar a prosa a virar dígito:
+a checagem existe para proteger o texto, não para remodelá-lo.
 
-**Since AT-399 (2026-10-03) these numbers are also rewritten.** Parallel
-PRs that each add an RN or ADR wrote the shared numbers by hand, and every
-merge left the others stale: the docs guardian failed 8 of 30 runs in three
-hours for that reason alone. So `pnpm docs:generate` (write mode) now fixes
-in place what the source determines — the ADR and RN counts above, the
-next ADR number (dropping a duplicate "the next one is" line left by a
-merge), the indentation of `docs/adr/temas.yml` entries written at column 0,
-and the line of a symbol reference (below). The pure functions live in
+**Desde a AT-399 (2026-10-03) esses números também são reescritos.** PRs
+paralelos que adicionavam cada um uma RN ou um ADR escreviam os números
+compartilhados à mão, e cada merge deixava os outros desatualizados: o
+guardião de docs falhou 8 de 30 execuções em três horas só por isso.
+Então `pnpm docs:generate` (modo de escrita) agora corrige no lugar o que
+a fonte determina — as contagens de ADR e RN acima, o número do próximo
+ADR (descartando uma linha duplicada "o próximo é" deixada por um merge),
+o recuo das entradas de `docs/adr/temas.yml` escritas na coluna 0 e a
+linha de uma referência com símbolo (abaixo). As funções puras moram em
 `scripts/docs/reescrita.mjs`, `refs-com-simbolo.mjs` (`novaLinha`,
-`reancorar`) and `temas-de-adr.mjs` (`corrigirRecuo`). `--check` keeps the
-same severity: a stale committed file still fails CI, and the fix is
-`pnpm docs:generate` plus a commit, as with generated files. What still
-needs a human: a phrase whose pattern stopped matching (`CEGO`), an ADR
-without a theme, a variable without a description, and a reference whose
-symbol left the file, moved more than 40 lines, or ties between two nearest
-occurrences.
+`reancorar`) e `temas-de-adr.mjs` (`corrigirRecuo`). `--check` mantém a
+mesma severidade: arquivo commitado desatualizado continua reprovando o
+CI, e a correção é `pnpm docs:generate` mais um commit, como nos
+arquivos gerados. O que ainda precisa de um humano: uma frase cujo
+padrão parou de casar (`CEGO`), um ADR sem tema, uma variável sem
+descrição e uma referência cujo símbolo saiu do arquivo, andou mais de
+40 linhas ou empata entre duas ocorrências mais próximas.
 
-The most expensive case was the **version announced in prose**: the
-README announced `v0.1.0` from Phase 5 all the way to v2.1.0 — seven
-releases behind reality, in the first thing a newcomer reads. The
-check compares the prose against the first `## vX.Y.Z` in the
-CHANGELOG, which is written by the release workflow and comes back via
-PR; a tag read from git wouldn't work, because the CI's shallow
-checkout might not have any tag at all. The **badge**, on the other
-hand, left the check and became generation: it reads the GitHub
-release directly (`shields.io/github/v/release`) and updates itself —
-you only verify what can't be generated.
+O caso mais caro foi a **versão anunciada em prosa**: o README anunciou
+`v0.1.0` da Fase 5 até a v2.1.0 — sete releases atrás da realidade, na
+primeira coisa que um recém-chegado lê. A checagem compara a prosa com o
+primeiro `## vX.Y.Z` do CHANGELOG, que é escrito pelo workflow de
+release e volta por PR; uma tag lida do git não funcionaria, porque o
+checkout raso do CI pode não ter tag nenhuma. O **badge**, por outro
+lado, saiu da checagem e virou geração: ele lê a release do GitHub
+direto (`shields.io/github/v/release`) e se atualiza sozinho — só se
+verifica o que não dá para gerar.
 
-And it happened **once per entry point**. `docs/intro.md` — the
-published site's first page, which not everyone reaches through the
-README — kept saying "Phases 1 to 5 complete, v0.1.0" while the
-product was at Phase 26. Checking only the README never protected the
-second door, so `verificarVersaoAnunciada` received both files in a
-list, and `scripts/ci/readme-version.ts` started writing to both in
-the same commit as the CHANGELOG. The two halves move together on
-purpose: a check that demands what the generator doesn't write would
-make every release be born red on a PR the bot opens and nobody can
-fix.
+E aconteceu **uma vez por porta de entrada**. `docs/intro.md` — a
+primeira página do site publicado, à qual nem todo mundo chega pelo
+README — continuou dizendo "Fases 1 a 5 concluídas, v0.1.0" enquanto o
+produto estava na Fase 26. Conferir só o README nunca protegeu a segunda
+porta, então `verificarVersaoAnunciada` passou a receber os dois
+arquivos numa lista, e `scripts/ci/readme-version.ts` passou a escrever
+nos dois no mesmo commit do CHANGELOG. As duas metades andam juntas de
+propósito: uma checagem que cobrasse o que o gerador não escreve faria
+todo release nascer vermelho num PR que o bot abre e ninguém consegue
+consertar.
 
-The `intro.md` pattern requires the **whole** sentence — "Phases 1
-through NN complete, version vX.Y.Z" — not just the version: the two
-halves age together, and matching only half would leave the phase
-count lying next to a correct version. The phase count isn't
-generatable from here: the release knows the version, not the phase.
+O padrão do `intro.md` exige a frase **inteira** — "Phases 1 through NN
+complete, version vX.Y.Z" — e não só a versão: as duas metades
+envelhecem juntas, e casar só metade deixaria a contagem de fases
+mentindo ao lado de uma versão correta. A contagem de fases não é
+gerável daqui: o release sabe a versão, não a fase.
 
-`generate.mjs` now checks these claims against the directory's
-reality. And **a pattern that stops matching also fails**: a check
-whose regex stopped finding the sentence is worse than no check at
-all, because it stays green forever claiming to have checked something
-it never looked at. When the sentence changes, CI says `CEGO` and
-asks for the pattern to be adjusted.
+`generate.mjs` agora confere essas afirmações contra a realidade do
+diretório. E **padrão que para de casar também reprova**: uma checagem
+cuja regex parou de achar a frase é pior que checagem nenhuma, porque
+fica verde para sempre afirmando ter conferido algo para o qual nunca
+olhou. Quando a frase muda, o CI diz `CEGO` e pede que o padrão seja
+ajustado.
 
-Adding a new claim to the check is an entry in one of the `afericoes`
-lists — `verificarContagensDeAdr` (file, pattern, expected value) when
-the source of truth is the ADR directory, `verificarVersaoAnunciada`
-when it's the CHANGELOG's latest release — or a function of its own
-next to them, when it's neither.
+Acrescentar uma afirmação nova à checagem é uma entrada numa das listas
+`afericoes` — `verificarContagensDeAdr` (arquivo, padrão, valor
+esperado) quando a fonte de verdade é o diretório de ADRs,
+`verificarVersaoAnunciada` quando é a última release do CHANGELOG — ou
+uma função própria ao lado delas, quando não é nenhum dos dois.
 
-**Counts derived from code (AT-123).** A sweep on 2026-09-25 of
-`docs/`, `README.md`, `CONTRIBUTING.md`, `THIRD_PARTY_NOTICES.md` and
-`CLAUDE.md` found five numbers already wrong — "nove schemas" (eleven),
-"doze operações" of the git contract (fifteen), "dez abas" (twelve),
-"três imagens" built by CI (five), "Thirteen types" of
-`proposed_action` (twenty-one) — none with a check behind it. The
-counts whose source is a place in the code now live in
-`scripts/docs/contagens-do-codigo.mjs`, called by
-`verificarContagensDerivadasDoCodigo`: one table row per SENTENCE
-(the same count said in two files is two sentences that age apart),
-each pointing at an extractor that counts the artifact — the
-`overrides` blocks of the two `pnpm-workspace.yaml`, the golden-set's
-`CASOS` and `ARQUIVOS_CURADOS` and its `floor.json`, the total that
-`scripts/ci/imagens-pinadas.ts` prints, `ALVOS`, the smoke's non-root
-loop, the methods of `GitProviderContract` and of `DockerPort`, the
-tab `REGISTRO`, the dev compose services without `profiles:` (which
-must ALL have a healthcheck, or the expected value becomes a sentence
-the prose doesn't have), `ACTION_TYPES`, the `action_status` enum and
-the `pgTable(` calls. Comparison ignores case and follows the
-sentence's form (Portuguese masculine/feminine words, English words,
-or digits). Because the extractors are many, each is proven by
-MUTATION in `contagens-do-codigo.spec.ts`: change the artifact and not
-the prose, and it must fail `DESATUAL`; remove the sentence or the
-source, and it must fail `CEGO`.
+**Contagens derivadas do código (AT-123).** Uma varredura em 2026-09-25
+de `docs/`, `README.md`, `CONTRIBUTING.md`, `THIRD_PARTY_NOTICES.md` e
+`CLAUDE.md` achou cinco números já errados — "nove schemas" (onze),
+"doze operações" do contrato de git (quinze), "dez abas" (doze), "três
+imagens" construídas pelo CI (cinco), "Thirteen types" de
+`proposed_action` (vinte e um) — nenhum com checagem por trás. As
+contagens cuja fonte é um lugar do código agora moram em
+`scripts/docs/contagens-do-codigo.mjs`, chamado por
+`verificarContagensDerivadasDoCodigo`: uma linha de tabela por FRASE (a
+mesma contagem dita em dois arquivos são duas frases que envelhecem
+separadas), cada uma apontando para um extrator que conta o artefato —
+os blocos `overrides` dos dois `pnpm-workspace.yaml`, os `CASOS` e
+`ARQUIVOS_CURADOS` do golden-set e o `floor.json` dele, o total que
+`scripts/ci/imagens-pinadas.ts` imprime, `ALVOS`, o laço non-root do
+smoke, os métodos de `GitProviderContract` e de `DockerPort`, o
+`REGISTRO` de abas, os serviços do compose de dev sem `profiles:` (que
+precisam TODOS ter healthcheck, senão o valor esperado vira uma frase
+que a prosa não tem), `ACTION_TYPES`, o enum `action_status` e as
+chamadas `pgTable(`. A comparação ignora maiúsculas e segue a forma da
+frase (palavras em português no masculino/feminino, palavras em inglês
+ou dígitos). Como os extratores são muitos, cada um é provado por
+MUTAÇÃO em `contagens-do-codigo.spec.ts`: mude o artefato e não a prosa,
+e ele tem de reprovar `DESATUAL`; remova a frase ou a fonte, e ele tem
+de reprovar `CEGO`.
 
-What was **dated instead of derived**, and why: the per-app file counts
-in `architecture.md` and the broker's "six routes" change with almost
-every PR or are read off a `switch`, so a check would only add noise —
-they carry "measured 2026-09-25". Numbers that describe a design
-invariant ("two layers", "three states") or a past measurement already
-dated in place (`THIRD_PARTY_NOTICES.md`, the runbook's restore
-transcripts) were left as they are.
+O que foi **datado em vez de derivado**, e por quê: as contagens de
+arquivos por app em `architecture.md` e as "seis rotas" do broker mudam
+com quase todo PR ou são lidas de um `switch`, então uma checagem só
+acrescentaria ruído — elas levam "medido em 2026-09-25". Números que
+descrevem um invariante de desenho ("duas camadas", "três estados") ou
+uma medição passada já datada no lugar (`THIRD_PARTY_NOTICES.md`, as
+transcrições de restauração do runbook) ficaram como estavam.
 
-### Line references with a symbol
+### Referências de linha com símbolo {#line-references-with-a-symbol}
 
-An RN cites code by `path:line`, and a line number goes stale every
-time someone edits the file. RN-547 cited `fechar_a_instalacao` at
-`install.sh:966` and `post_interno` at `:682`. By 2026-09-17 they were
-at `:1107` and `:809`, and by 2026-09-18 at `:1463` and `:1165`. A line
-number can't be generated, and in general it can't be verified either,
-because `apps/api/src/foo.ts:40` alone doesn't say what should be
-there. When the RN also **names the symbol** next to the line, though,
-the line *can* be verified. That's the only case `generate.mjs` checks
-(`verificarRefsComSimbolo`, with its logic in
-`scripts/docs/refs-com-simbolo.mjs`, tested).
+Uma RN cita código por `caminho:linha`, e um número de linha envelhece
+toda vez que alguém edita o arquivo. A RN-547 citava
+`fechar_a_instalacao` em `install.sh:966` e `post_interno` em `:682`. Em
+2026-09-17 eles estavam em `:1107` e `:809`, e em 2026-09-18 em `:1463`
+e `:1165`. Um número de linha não pode ser gerado e, em geral, também
+não pode ser verificado, porque `apps/api/src/foo.ts:40` sozinho não diz
+o que deveria estar lá. Quando a RN também **nomeia o símbolo** ao lado
+da linha, porém, a linha *pode* ser verificada. Esse é o único caso que
+`generate.mjs` confere (`verificarRefsComSimbolo`, com a lógica em
+`scripts/docs/refs-com-simbolo.mjs`, testada).
 
-**The pattern is narrow on purpose.** A noisy check gets switched off in
-its first month. It reads the three RN files (`business-rules.md`,
-`business-rules/custo.md`, `business-rules/autenticacao.md`) and takes
-only these two forms:
+**O padrão é estreito de propósito.** Uma checagem barulhenta é
+desligada no primeiro mês. Ela lê os três arquivos de RN
+(`business-rules.md`, `business-rules/custo.md`,
+`business-rules/autenticacao.md`) e pega só estas duas formas:
 
 ```
 `<path>:<N>` (`<symbol>`     explicit reference
 `:<N>` (`<symbol>`           continuation — inherits the path
 ```
 
-- The symbol has to come **right after** the reference, opening a
-  parenthesis and in backticks. Only whitespace may sit between them,
-  including a line break.
-- The symbol has to be an **identifier**: `fechar_a_instalacao`,
+- O símbolo tem de vir **logo depois** da referência, abrindo um
+  parêntese e entre crases. Só espaço em branco pode ficar entre eles,
+  inclusive uma quebra de linha.
+- O símbolo tem de ser um **identificador**: `fechar_a_instalacao`,
   `join/3`, `git_dir?`, `Engine.Runners.RunnerReadiness`, `decide()`.
-  `MARCADOR_SCHEMA=3`, a phrase or a path is not a symbol, and gets
-  skipped.
-- **Ambiguous pairs are skipped**: `:640`/`:647` (`a`/`b`), or two
-  references before one symbol. The check can't know which symbol goes
-  with which line.
-- A continuation inherits the last explicit path **in the same list
-  item**. A blank line or a new `- ` ends the item.
-- The path resolves from the repo root. If it isn't there, the check
-  uses the **single** tracked file whose path ends with it. If no file
-  matches, or more than one does, the reference is counted apart as
-  unresolved.
+  `MARCADOR_SCHEMA=3`, uma frase ou um caminho não é símbolo, e é
+  pulado.
+- **Pares ambíguos são pulados**: `:640`/`:647` (`a`/`b`), ou duas
+  referências antes de um símbolo. A checagem não tem como saber qual
+  símbolo vai com qual linha.
+- Uma continuação herda o último caminho explícito **no mesmo item de
+  lista**. Uma linha em branco ou um novo `- ` encerra o item.
+- O caminho é resolvido a partir da raiz do repositório. Se não estiver
+  lá, a checagem usa o **único** arquivo rastreado cujo caminho termina
+  com ele. Se nenhum arquivo casar, ou mais de um casar, a referência é
+  contada à parte como não resolvida.
 
-A reference **matches** when the symbol, or its last `.` segment, shows
-up as a whole word within **±3 lines** of `N`. The window allows for a
-citation that points at the docblock rather than the signature. It stays
-small because drift moves by dozens or hundreds of lines. When a
-reference doesn't match, the output names the nearest line where the
-symbol does appear. Since AT-399, `pnpm docs:generate` rewrites `N` to
-that line when the nearest occurrence is **unique** (no tie at the same
-distance) and at most **40 lines** away (`DISTANCIA_MAXIMA_DE_REANCORA`);
-when the symbol is gone from the file, moved further, or two occurrences tie,
-the reference is left alone and must be re-read by symbol by hand. The
-nearest occurrence may be a call rather than the definition — that is the
-price accepted for not hand-editing numbers across parallel PRs, and the
-diff of the regenerated file shows each move for review.
+Uma referência **bate** quando o símbolo, ou o último segmento dele
+após `.`, aparece como palavra inteira a até **±3 linhas** de `N`. A
+janela admite uma citação que aponta para o docblock em vez da
+assinatura. Ela fica pequena porque o drift anda dezenas ou centenas de
+linhas. Quando uma referência não bate, a saída nomeia a linha mais
+próxima onde o símbolo aparece. Desde a AT-399, `pnpm docs:generate`
+reescreve `N` para essa linha quando a ocorrência mais próxima é
+**única** (sem empate na mesma distância) e está a no máximo **40
+linhas** (`DISTANCIA_MAXIMA_DE_REANCORA`); quando o símbolo sumiu do
+arquivo, andou mais longe ou duas ocorrências empatam, a referência fica
+como está e tem de ser relida pelo símbolo, à mão. A ocorrência mais
+próxima pode ser uma chamada e não a definição — esse é o preço aceito
+por não editar números à mão através de PRs paralelos, e o diff do
+arquivo regenerado mostra cada movimento para revisão.
 
-**Measured on 2026-09-18**, over every `path:N` in the three files:
+**Medido em 2026-09-18**, sobre todo `caminho:N` dos três arquivos:
 
-| | count |
+| | contagem |
 |---|---|
-| `…:N` references in total | 592 |
-| match the pattern | 187 |
-| correct (within ±3) | 116 |
-| wrong | 71 |
-| unresolved path | 0 |
+| referências `…:N` no total | 592 |
+| casam com o padrão | 187 |
+| corretas (dentro de ±3) | 116 |
+| erradas | 71 |
+| caminho não resolvido | 0 |
 
-A spot check of the 71 found no false positives: each reference it
-covered was real drift, a rename, or a symbol that moved to another
-file. Widening the window to ±5 would clear only three of them. Nine are
-between 4 and 10 lines off, and the other 62 are further. The RN-547 code bullet was
-re-read by symbol and fixed in the same PR, which leaves **63**. They
-are too many to fix one by one inside this change, and the nearest
-occurrence is not always the definition. The list is what `pnpm
-docs:check` prints.
+Uma conferência por amostragem das 71 não achou falso positivo: cada
+referência que ela cobriu era drift real, uma renomeação ou um símbolo
+que mudou de arquivo. Alargar a janela para ±5 limparia só três delas.
+Nove estão entre 4 e 10 linhas fora, e as outras 62 mais longe. O item
+de código da RN-547 foi relido pelo símbolo e corrigido no mesmo PR, o
+que deixa **63**. São muitas para corrigir uma a uma dentro desta
+mudança, e a ocorrência mais próxima nem sempre é a definição. A lista é
+o que `pnpm docs:check` imprime.
 
-**Severity at birth: `warn`.** It reported and didn't fail, because a
-`block` would have stopped every PR that touched an RN file over debt
-someone else left. There was one exception, the house rule: if the check
-extracts **zero** references, that is `CEGO` and **fails**. Zero means
-the RN syntax changed or the extractor broke, and a blind check stays
-green forever.
+**Severidade ao nascer: `warn`.** Ela relatava e não reprovava, porque
+um `block` teria parado todo PR que tocasse um arquivo de RN por uma
+dívida que outra pessoa deixou. Havia uma exceção, a regra da casa: se a
+checagem extrai **zero** referências, isso é `CEGO` e **reprova**. Zero
+significa que a sintaxe de RN mudou ou o extrator quebrou, e uma
+checagem cega fica verde para sempre.
 
-**The original criterion for `block`** (PR #593): once the list is **empty**, and
-after **four consecutive weeks** of `docs:check` on `dev` with no new
-wrong references in RNs touched during those weeks. At that point every
-new wrong reference is the current PR's fault, and the PR can fix it.
-Promote it earlier and it charges each PR for someone else's debt. If
-the pattern shows a real false positive before then, narrow the
-pattern. Don't widen the window.
+**O critério original para `block`** (PR #593): quando a lista estiver
+**vazia**, e depois de **quatro semanas seguidas** de `docs:check` na
+`dev` sem nenhuma referência errada nova nas RNs tocadas nessas semanas.
+A partir daí, toda referência errada nova é culpa do PR corrente, e o PR
+pode corrigi-la. Promover antes cobraria de cada PR a dívida de outra
+pessoa. Se o padrão mostrar um falso positivo real antes disso, estreite
+o padrão. Não alargue a janela.
 
-**The list went empty on 2026-09-26** (AT-122). In the eight days after
-the check landed, the 63 known-wrong references had grown to **75**. That
-growth is the drift the check exists to show. All 75 were re-read by
-symbol against the code of that day, and none was a false positive of
-the pattern. Most had drifted by dozens of lines. One was a rename:
-`modo_de_execucao/1` became `exigencias_do_projeto/1` in RN-516. One had
-moved to another file: `escreverEnv` went from `preflight.mjs` to
-`env-file.mjs`. Two pointed at the right test, but at the `it(` line,
-while the symbol (`types`) only shows up a few lines below, in the body.
-Those two now point at the body line. The window stayed at ±3. The
-bullets with the worst drift (RN-566, RN-567, RN-570 and RN-514) had
-their unchecked neighbouring references re-read in the same pass. After
-that, **273 references match the pattern, 273 are correct, and 0 are
-wrong**. The four weeks were to start when that change reached `dev`.
+**A lista zerou em 2026-09-26** (AT-122). Nos oito dias depois de a
+checagem entrar, as 63 referências sabidamente erradas tinham crescido
+para **75**. Esse crescimento é o drift que a checagem existe para
+mostrar. As 75 foram relidas pelo símbolo contra o código daquele dia, e
+nenhuma era falso positivo do padrão. A maioria tinha andado dezenas de
+linhas. Uma era renomeação: `modo_de_execucao/1` virou
+`exigencias_do_projeto/1` na RN-516. Uma tinha mudado de arquivo:
+`escreverEnv` foi de `preflight.mjs` para `env-file.mjs`. Duas
+apontavam para o teste certo, mas na linha do `it(`, enquanto o símbolo
+(`types`) só aparece algumas linhas abaixo, no corpo. Essas duas agora
+apontam para a linha do corpo. A janela ficou em ±3. Os itens com o pior
+drift (RN-566, RN-567, RN-570 e RN-514) tiveram as referências vizinhas
+não conferidas relidas na mesma passada. Depois disso, **273
+referências casam com o padrão, 273 estão corretas e 0 estão erradas**.
+As quatro semanas começariam a contar quando essa mudança chegasse à
+`dev`.
 
-**Promoted to `block` on 2026-10-01** (AT-122), by the maintainer's
-decision, without waiting out the four weeks. Five days after the list
-went empty, `dev` had **140** wrong references again, out of 896 that
-match the pattern: the `warn` didn't hold the drift back, because a
-warning nobody has to act on is a warning nobody reads. The 140 were
-re-read by symbol in the same change that promoted the check, never by
-adding a delta, and the window stayed at ±3. None was a false positive
-of the pattern, and no symbol was missing from its file. What the pass
-found besides line drift:
+**Promovida a `block` em 2026-10-01** (AT-122), por decisão do
+mantenedor, sem esperar as quatro semanas. Cinco dias depois de a lista
+zerar, a `dev` tinha **140** referências erradas de novo, de 896 que
+casam com o padrão: o `warn` não segurou o drift, porque um aviso sobre
+o qual ninguém tem de agir é um aviso que ninguém lê. As 140 foram
+relidas pelo símbolo na mesma mudança que promoveu a checagem, nunca
+somando um delta, e a janela ficou em ±3. Nenhuma era falso positivo do
+padrão, e nenhum símbolo faltava no arquivo dele. O que a passada achou
+além do drift de linha:
 
-- **Merge leftovers.** Three bullets had been duplicated by conflict
-  resolution, one copy with older numbers next to one with newer ones
-  (RN-120's `Where`, RN-547's `Código` and RN-626's `SessionPage.tsx`
-  line). The stale copy was removed, which is why the total went from 896
-  to **883**.
-- **One reference whose subject changed (state drift, not line drift).**
-  RN-587 cited the test for an `infra` message; since RN-617 the Infra
-  Lead converses, and the test now uses `qa` as the roster agent without
-  a conversation. The reference now says so. The RN's rule did not
-  change.
-- Unchecked neighbours in the bullets with the worst drift (RN-547,
-  RN-567, RN-587, RN-609, RN-663, RN-566) were re-read in the same pass
-  where the test or clause they name could be identified.
+- **Sobras de merge.** Três itens tinham sido duplicados por resolução
+  de conflito, uma cópia com números mais antigos ao lado de uma com
+  números mais novos (o `Where` da RN-120, o `Código` da RN-547 e a
+  linha de `SessionPage.tsx` da RN-626). A cópia desatualizada foi
+  removida, e é por isso que o total foi de 896 para **883**.
+- **Uma referência cujo assunto mudou (drift de estado, não de
+  linha).** A RN-587 citava o teste de uma mensagem do `infra`; desde a
+  RN-617 o Infra Lead conversa, e o teste agora usa `qa` como o agente
+  do roster sem conversa. A referência agora diz isso. A regra da RN
+  não mudou.
+- Vizinhas não conferidas nos itens com o pior drift (RN-547, RN-567,
+  RN-587, RN-609, RN-663, RN-566) foram relidas na mesma passada onde
+  o teste ou a cláusula que elas nomeiam pôde ser identificado.
 
-After that, **883 references match the pattern, 883 are correct, and 0
-are wrong**.
+Depois disso, **883 referências casam com o padrão, 883 estão corretas
+e 0 estão erradas**.
 
-**Severity now: `block`.** A reference that doesn't match, **or** whose
-path no longer resolves to a single tracked file, fails `docs:check`.
-Both are the same drift: the RN points where the code isn't. Zero
-references is still `CEGO` and still fails. The verdict is `veredito` in
-`refs-com-simbolo.mjs`, proved by mutation in the spec next to it: a
-reference moved out of the window fails, a symbol that left the file
-fails, a path that no longer resolves fails, and text rewritten until
-extraction yields zero is `CEGO`, never `ok`. When it fails, fix the
-reference **by the symbol** (the output names the nearest line where it
-appears, which is a hint, not a fix). Don't widen the window, and don't
-narrow the pattern to make a real reference disappear; narrow it only
-for a real false positive, with the case in the spec.
+**Severidade agora: `block`.** Uma referência que não bate, **ou** cujo
+caminho não resolve mais a um único arquivo rastreado, reprova o
+`docs:check`. As duas são o mesmo drift: a RN aponta para onde o código
+não está. Zero referências continua `CEGO` e continua reprovando. O
+veredito é `veredito` em `refs-com-simbolo.mjs`, provado por mutação no
+spec ao lado: uma referência movida para fora da janela reprova, um
+símbolo que saiu do arquivo reprova, um caminho que não resolve mais
+reprova, e texto reescrito até a extração dar zero é `CEGO`, nunca `ok`.
+Quando reprovar, corrija a referência **pelo símbolo** (a saída nomeia
+a linha mais próxima onde ele aparece, o que é uma pista, não uma
+correção). Não alargue a janela, e não estreite o padrão para fazer uma
+referência real sumir; estreite-o só por um falso positivo real, com o
+caso no spec.
 
-The pt-BR translations of the three RN files under `website/i18n/` are
-**not** checked. They carry few references (23 match the pattern, 15 of
-them wrong on 2026-10-01), and the translation is behind the English
-source anyway; checking a copy nobody keeps in step would fail every PR
-over the translation's lag.
+As traduções pt-BR dos três arquivos de RN sob `website/i18n/` **não**
+são conferidas. Elas têm poucas referências (23 casam com o padrão, 15
+delas erradas em 2026-10-01), e a tradução está atrás da fonte em inglês
+de todo modo; conferir uma cópia que ninguém mantém em dia reprovaria
+todo PR pelo atraso da tradução.
 
-### Every RN heading carries its anchor
+### Todo cabeçalho de RN carrega sua âncora {#every-rn-heading-carries-its-anchor}
 
-The `{#rn-NNN}` anchor on an RN heading is the contract for links from
-outside: it survives a retitled RN and an RN moved to another file. On
-2026-09-26 (AT-230) `dev` had **451** `### RN-` headings and **449**
-anchors. RN-305 and RN-306 had been written without one, in
-`business-rules.md` and in its pt-BR translation, and nothing failed.
-The site build doesn't catch it: without an explicit anchor Docusaurus
-derives the id from the heading text and the page compiles. What breaks
-is a `#rn-305` link someone writes later. The RN count doesn't catch it
-either, because it counts headings, not anchors.
+A âncora `{#rn-NNN}` num cabeçalho de RN é o contrato para links de
+fora: ela sobrevive a uma RN com título novo e a uma RN movida para
+outro arquivo. Em 2026-09-26 (AT-230) a `dev` tinha **451** cabeçalhos
+`### RN-` e **449** âncoras. A RN-305 e a RN-306 tinham sido escritas
+sem uma, em `business-rules.md` e na tradução pt-BR dele, e nada
+reprovou. O build do site não pega isso: sem âncora explícita o
+Docusaurus deriva o id do texto do cabeçalho e a página compila. O que
+quebra é um link `#rn-305` que alguém escreve depois. A contagem de RNs
+também não pega, porque conta cabeçalhos, não âncoras.
 
-`generate.mjs` now checks it (`verificarAncorasDeRn`, with its logic in
-`scripts/docs/ancoras-de-rn.mjs`, proven by mutation in
-`ancoras-de-rn.spec.ts`). Every heading, at any level, that **starts**
-with `RN-<digits>` has to **end** in `{#rn-<same digits>}`, leading
-zeros included (`RN-001` → `rn-001`). A missing anchor and an anchor
-with another number or name both fail, one line per heading, with the
-file and line. Zero headings found is `CEGO` and also fails.
+`generate.mjs` agora confere isso (`verificarAncorasDeRn`, com a lógica
+em `scripts/docs/ancoras-de-rn.mjs`, provada por mutação em
+`ancoras-de-rn.spec.ts`). Todo cabeçalho, de qualquer nível, que
+**começa** com `RN-<dígitos>` tem de **terminar** em `{#rn-<mesmos
+dígitos>}`, zeros à esquerda incluídos (`RN-001` → `rn-001`). Âncora
+ausente e âncora com outro número ou nome reprovam as duas, uma linha
+por cabeçalho, com arquivo e linha. Zero cabeçalhos encontrados é
+`CEGO` e também reprova.
 
-**Severity: `block`**, unlike the line references above: there is no
-inherited debt (the two missing anchors were added in the same change),
-and each new heading is written by the PR that adds it.
+**Severidade: `block`**, diferente das referências de linha acima: não
+há dívida herdada (as duas âncoras ausentes foram acrescentadas na
+mesma mudança), e cada cabeçalho novo é escrito pelo PR que o
+acrescenta.
 
-**The translations are covered too.** The files are found by glob:
-`docs/business-rules.md`, `docs/business-rules/*.md` (the pt-BR source,
-ADR 0216), and the same two paths under
-`website/i18n/<locale>/docusaurus-plugin-content-docs/current/` for each
-translated locale in `LOCALES_TRADUZIDOS` (`en`, `ru`, `zh-Hans`). A
-locale's site serves `business-rules#rn-305` from the translated file,
-and an earlier translation had copied the heading without its anchor. The
-rule is per heading, so a partial translation isn't a problem: an RN that
-wasn't translated falls back to the pt-BR source, which is checked
-anyway.
+**As traduções também são cobertas.** Os arquivos são achados por glob:
+`docs/business-rules.md`, `docs/business-rules/*.md` (a fonte pt-BR,
+ADR 0216), e os mesmos dois caminhos sob
+`website/i18n/<locale>/docusaurus-plugin-content-docs/current/` para
+cada locale traduzido em `LOCALES_TRADUZIDOS` (`en`, `ru`, `zh-Hans`).
+O site de um locale serve `business-rules#rn-305` a partir do arquivo
+traduzido, e uma tradução anterior tinha copiado o cabeçalho sem a
+âncora. A regra é por cabeçalho, então uma tradução parcial não é
+problema: uma RN que não foi traduzida cai na fonte pt-BR, que é
+conferida de qualquer modo.
 
-### The runbook's procedures table {#the-runbook-procedures-table}
+### A tabela de procedimentos do runbook {#the-runbook-procedures-table}
 
-The runbook ends with a table of its **operation** procedures —
-`procedure | anchor | verification | schedule` — saying what proves each one
-and what runs that proof
+O runbook termina com uma tabela dos seus procedimentos de **operação**
+— `procedure | anchor | verification | schedule` — dizendo o que prova
+cada um e o que roda essa prova
 ([Procedures and how each is verified](../runbook.md#procedimentos-e-verificacao)).
-It exists because of EP-015's closing criterion: no row with an empty
-verification or one that says "see below", and the proofs that exist run on a
-schedule, not from memory. Measured on 2026-09-25 (AT-129), the table the
-criterion talked about did not exist in the repository: a seven-row copy lived
-in the maintainer's notes, against 28 operation procedures here, and one row
-pointed at another note. A hand-written table of file names ages the same way
-prose numbers do — a spec gets renamed, a workflow loses its `schedule:`, and
-the cell keeps claiming.
+Ela existe por causa do critério de fechamento do EP-015: nenhuma linha
+com verificação vazia ou que diga "ver abaixo", e as provas que existem
+rodam por agenda, não de memória. Medido em 2026-09-25 (AT-129), a
+tabela de que o critério falava não existia no repositório: uma cópia
+de sete linhas morava nas notas do mantenedor, contra 28 procedimentos
+de operação aqui, e uma linha apontava para outra nota. Uma tabela de
+nomes de arquivo escrita à mão envelhece do mesmo jeito que números em
+prosa — um spec é renomeado, um workflow perde o `schedule:`, e a
+célula continua afirmando.
 
-`generate.mjs` checks it (`verificarProcedimentosDoRunbook`, logic in
-`scripts/docs/procedimentos-do-runbook.mjs`, proven by mutation in
-`procedimentos-do-runbook.spec.ts`). Per row, it fails when:
+`generate.mjs` a confere (`verificarProcedimentosDoRunbook`, lógica em
+`scripts/docs/procedimentos-do-runbook.mjs`, provada por mutação em
+`procedimentos-do-runbook.spec.ts`). Por linha, ela reprova quando:
 
-- the **anchor** cell has no `(#id)` link, or the id is not an explicit
-  `{#id}` on a heading of the runbook — the same contract as the RN anchors:
-  a retitled section must not break the link;
-- the **verification** cell is empty, says "see below/above", names a file
-  that is not tracked by git or a `make` target the `Makefile` does not have,
-  or names nothing checkable and does not start with `**None**` — the explicit
-  statement that no proof exists;
-- a **schedule** segment (they are separated by `;`) does not start with its
-  trigger class — `weekly`/`daily`/`monthly`, `every PR`, `every tag` or
-  `manual` — or a workflow it cites is missing or does not have that trigger
-  in its parsed `on:` (`schedule:`, `pull_request`, `push: tags`). A `manual`
-  segment may not cite a workflow.
+- a célula **anchor** não tem link `(#id)`, ou o id não é um `{#id}`
+  explícito num cabeçalho do runbook — o mesmo contrato das âncoras de
+  RN: uma seção com título novo não pode quebrar o link;
+- a célula **verification** está vazia, diz "see below/above", nomeia
+  um arquivo que não é rastreado pelo git ou um alvo `make` que o
+  `Makefile` não tem, ou não nomeia nada conferível e não começa com
+  `**None**` — a declaração explícita de que não existe prova;
+- um segmento de **schedule** (eles são separados por `;`) não começa
+  com sua classe de gatilho — `weekly`/`daily`/`monthly`, `every PR`,
+  `every tag` ou `manual` — ou um workflow que ele cita não existe ou
+  não tem esse gatilho no `on:` lido (`schedule:`, `pull_request`,
+  `push: tags`). Um segmento `manual` não pode citar workflow.
 
-The column is called `schedule` and still accepts `every PR` and `every tag`
-on purpose. The criterion's question is "does it run without someone
-remembering?", and a spec that `ci.yml` runs on every pull request answers
-yes; calling it `manual` would be wrong in the other direction. What the check
-guarantees is that the class written is the one the workflow **has**: `weekly`
-pointing at a workflow with no `schedule:` fails, which is the case AT-193
-named.
+A coluna se chama `schedule` e ainda aceita `every PR` e `every tag` de
+propósito. A pergunta do critério é "roda sem alguém lembrar?", e um
+spec que o `ci.yml` roda em todo pull request responde que sim;
+chamá-lo de `manual` seria errar no sentido oposto. O que a checagem
+garante é que a classe escrita é a que o workflow **tem**: `weekly`
+apontando para um workflow sem `schedule:` reprova, que é o caso que a
+AT-193 nomeou.
 
-A missing section, a missing table, changed column headers or zero rows is
-`CEGO` and fails.
+Seção ausente, tabela ausente, cabeçalhos de coluna mudados ou zero
+linhas é `CEGO` e reprova.
 
-**Severity: `block`**, for the same reason as the RN anchors: the table was
-born with every row checked, so there is no inherited debt, and whatever
-breaks it later (a renamed spec, a workflow that lost its schedule) is the
-fault of the PR that broke it, which is also the PR that can fix it.
+**Severidade: `block`**, pelo mesmo motivo das âncoras de RN: a tabela
+nasceu com toda linha conferida, então não há dívida herdada, e o que a
+quebrar depois (um spec renomeado, um workflow que perdeu a agenda) é
+culpa do PR que a quebrou, que é também o PR que pode consertá-la.
 
-**Only the source runbook (`docs/runbook.md`) carries the table.** Its old
-pt-BR copy was behind (AT-209) and left with ADR 0216; a future translation
-under `website/i18n/<locale>/` falls under the `traducao` docmap rule
-(`warn`) and would not carry the ten explicit ids this table added. A
-second, unchecked copy of the table there would be exactly the copy the table
-exists to replace.
+**Só o runbook da fonte (`docs/runbook.md`) tem a tabela.** A cópia
+pt-BR antiga dele estava atrás (AT-209) e saiu com o ADR 0216; uma
+tradução futura sob `website/i18n/<locale>/` cai na regra `traducao` do
+docmap (`warn`) e não teria os dez ids explícitos que esta tabela
+acrescentou. Uma segunda cópia da tabela ali, sem conferência, seria
+exatamente a cópia que a tabela existe para substituir.
 
-### The ADR index is grouped by theme {#the-adr-index-is-grouped-by-theme}
+### O índice de ADR é agrupado por tema {#the-adr-index-is-grouped-by-theme}
 
-The ADR index used to be grouped by phase. Once the phases ended, the last
-section became the index: measured on 2026-10-01, 148 of its 191 rows lived
-under `## Phase 12`. [ADR 0202](../adr/0202-o-indice-de-adr-por-tema.md)
-groups it by **theme** instead, and puts the theme **outside** the ADR — an
-accepted ADR is never edited, not even to gain a `tema:` frontmatter key.
+O índice de ADR era agrupado por fase. Quando as fases acabaram, a
+última seção virou o índice: medido em 2026-10-01, 148 das 191 linhas
+moravam sob `## Phase 12`. O [ADR 0202](../adr/0202-o-indice-de-adr-por-tema.md)
+o agrupa por **tema**, e põe o tema **fora** do ADR — um ADR aceito
+nunca é editado, nem para ganhar uma chave `tema:` no frontmatter.
 
-The theme lives in `docs/adr/temas.yml`, next to the index: `temas:` is the
-closed, ordered list (`id`, `titulo`, `descricao`) and `adrs:` maps each ADR
-number to ONE theme. The index is **checked, not generated** — its one-line
-descriptions are curated and no script writes them, the same reason
-`verificarIndiceAdr` gives — and each theme is a section
-`## <titulo> {#tema-<id>}`, in the list's order, with its rows in numeric
-order.
+O tema mora em `docs/adr/temas.yml`, ao lado do índice: `temas:` é a
+lista fechada e ordenada (`id`, `titulo`, `descricao`) e `adrs:` mapeia
+cada número de ADR para UM tema. O índice é **conferido, não gerado** —
+as descrições de uma linha são curadas e nenhum script as escreve, o
+mesmo motivo que `verificarIndiceAdr` dá — e cada tema é uma seção
+`## <titulo> {#tema-<id>}`, na ordem da lista, com as linhas em ordem
+numérica.
 
-`generate.mjs` checks it (`verificarTemasDeAdr`, right after
-`verificarIndiceAdr`; logic in `scripts/docs/temas-de-adr.mjs`, proven by
-mutation in `temas-de-adr.spec.ts`). It fails an ADR file with no theme, a
-theme in the map that is not in the list, a map entry for an ADR that does not
-exist, a listed theme with no ADR, a repeated or malformed theme id or title,
-and, in the index, a missing, repeated, misnamed, out-of-order or unknown
-theme section, or an ADR row under another theme's section, outside any theme
-section, repeated or out of numeric order. Unreadable YAML, an empty list or
-map, or an index with no theme section at all (the old by-phase index) is
-`CEGO` and fails.
+`generate.mjs` o confere (`verificarTemasDeAdr`, logo depois de
+`verificarIndiceAdr`; lógica em `scripts/docs/temas-de-adr.mjs`,
+provada por mutação em `temas-de-adr.spec.ts`). Ele reprova um arquivo
+de ADR sem tema, um tema no mapa que não está na lista, uma entrada do
+mapa para um ADR que não existe, um tema listado sem ADR, um id ou
+título de tema repetido ou malformado e, no índice, uma seção de tema
+ausente, repetida, com nome errado, fora de ordem ou desconhecida, ou
+uma linha de ADR sob a seção de outro tema, fora de qualquer seção de
+tema, repetida ou fora de ordem numérica. YAML ilegível, lista ou mapa
+vazio, ou um índice sem seção de tema nenhuma (o antigo índice por
+fase) é `CEGO` e reprova.
 
-**Severity: `block`**, like the runbook table: it was born with every ADR
-classified, so whatever breaks it later is a new ADR whose PR forgot its line
-in `temas.yml` — the PR that can fix it. Translations of the index live under
-`website/i18n/<locale>/` and are not checked; the `traducao` rule warns, as
-always.
+**Severidade: `block`**, como a tabela do runbook: nasceu com todo ADR
+classificado, então o que a quebrar depois é um ADR novo cujo PR
+esqueceu a linha dele em `temas.yml` — o PR que pode consertá-la. As
+traduções do índice moram sob `website/i18n/<locale>/` e não são
+conferidas; a regra `traducao` avisa, como sempre.
 
-## The pieces
+## As peças {#the-pieces}
 
 ```mermaid
 flowchart TD
-  A[docs/.docmap.yml<br/>code → doc map] --> B[docmap.mjs<br/>validates the map]
-  A --> C[drift.mjs<br/>enforces in the PR]
-  D[code] --> E[generate.mjs<br/>generates and verifies]
+  A[docs/.docmap.yml<br/>mapa código → doc] --> B[docmap.mjs<br/>valida o mapa]
+  A --> C[drift.mjs<br/>cobra no PR]
+  D[código] --> E[generate.mjs<br/>gera e verifica]
   E --> F[docs/]
-  C --> G[docs-check.yml<br/>PR guardian]
+  C --> G[docs-check.yml<br/>guardião do PR]
   B --> G
   E --> G
-  F --> H[docs-build<br/>broken link fails]
+  F --> H[docs-build<br/>link quebrado reprova]
   H --> G
-  A --> I[audit.mjs<br/>monthly: stale docs]
+  A --> I[audit.mjs<br/>mensal: docs velhas]
 ```
 
-### `docs/.docmap.yml` — the map
+### `docs/.docmap.yml` — o mapa {#docsdocmapyml--the-map}
 
-Links code paths to the documents that depend on them. It's the only
-source that says "whoever touches this needs to review that."
+Liga caminhos de código aos documentos que dependem deles. É a única
+fonte que diz "quem mexe nisto precisa revisar aquilo".
 
-Two severities: `block` fails the PR, `warn` only comments. And a
-`generated: true` attribute, which marks the documents that come out
-of the generator.
+Duas severidades: `block` reprova o PR, `warn` só comenta. E um
+atributo `generated: true`, que marca os documentos que saem do gerador.
 
-A rule that charges for what makes no sense teaches people to reach for
-the escape hatch by reflex. That is why `politica-de-branches` watches an
-**allow-list** in `scripts/ci/` — the scripts that *are* the branch policy
-and their specs — instead of `scripts/ci/**` minus a hand-kept list of
-exclusions, which every new repository-wide spec in that folder had to join
-(eleven by AT-206). The allow-list does not give up failing closed:
-`scripts/docs/politica-de-branches.spec.ts` derives the set from the
-repository — every `scripts/ci/` file whose opening docblock cites
-`branching-policy.md`, plus its spec — and fails if the rule diverges. A new
-policy script declares its source in its header, like the others, and the
-spec does the rest.
+Uma regra que cobra o que não faz sentido ensina as pessoas a recorrer
+à saída de emergência por reflexo. É por isso que `politica-de-branches`
+vigia uma **lista de permitidos** em `scripts/ci/` — os scripts que *são*
+a política de branches e os specs deles — em vez de `scripts/ci/**`
+menos uma lista de exclusões mantida à mão, na qual todo spec novo de
+alcance do repositório inteiro naquela pasta tinha de entrar (onze até
+a AT-206). A lista de permitidos não abre mão de falhar fechada:
+`scripts/docs/politica-de-branches.spec.ts` deriva o conjunto do
+repositório — todo arquivo de `scripts/ci/` cujo docblock de abertura
+cita `branching-policy.md`, mais o spec dele — e reprova se a regra
+divergir. Um script novo de política declara sua fonte no cabeçalho,
+como os outros, e o spec faz o resto.
 
-### `docmap.mjs` — validates the map
+### `docmap.mjs` — valida o mapa {#docmapmjs--validates-the-map}
 
-Runs before everything else, because a broken map makes the rest lie.
-It fails if:
+Roda antes de todo o resto, porque um mapa quebrado faz o resto mentir.
+Reprova se:
 
-- **a glob matches no file** — a dead rule. It never fires, and gives
-  the impression of coverage that doesn't exist. This is the most
-  silent defect a docmap can have, and it was found in 8 globs when
-  the validator was introduced.
-- a document the map points to doesn't exist
-- there's a duplicate id or an invalid `severity`
+- **um glob não casa com arquivo nenhum** — uma regra morta. Ela nunca
+  dispara, e dá a impressão de uma cobertura que não existe. É o defeito
+  mais silencioso que um docmap pode ter, e foi encontrado em 8 globs
+  quando o validador entrou.
+- um documento para o qual o mapa aponta não existe
+- há id duplicado ou `severity` inválida
 
-### `generate.mjs` — generates and verifies
+### `generate.mjs` — gera e verifica {#generatemjs--generates-and-verifies}
 
-Two output modes:
+Dois modos de saída:
 
-**Whole file** — `docs/reference/scripts.md`. There's no prose to
-preserve: the list of commands is the content. It comes from each
-package's `package.json` and the `Makefile`'s annotated targets. The
-package list is declared in `gerarScripts`, including the two packages
-outside the workspace (`website/`, `e2e/`, run with `--dir`), and a
-`package.json` that is missing or doesn't parse fails generation by
-name — it used to drop the package silently (AT-224).
+**Arquivo inteiro** — `docs/reference/scripts.md`. Não há prosa a
+preservar: a lista de comandos é o conteúdo. Ela vem do `package.json`
+de cada pacote e dos alvos anotados do `Makefile`. A lista de pacotes é
+declarada em `gerarScripts`, incluindo os dois pacotes fora do
+workspace (`website/`, `e2e/`, rodados com `--dir`), e um `package.json`
+ausente ou que não parseia reprova a geração nomeando-o — antes ele
+descartava o pacote em silêncio (AT-224).
 
-**Marked block** — the stretch between `<!-- BEGIN:GENERATED:<id> -->`
-and `<!-- END:GENERATED:<id> -->` inside a hand-written file. That's
-the case for `configuration.md` and `events.md`: there, the prose
-("what breaks when this variable is wrong") is worth much more than
-the list, but the **list** needs to be complete. The block is the
-inventory; the surrounding text is the explanation.
+**Bloco marcado** — o trecho entre `<!-- BEGIN:GENERATED:<id> -->` e
+`<!-- END:GENERATED:<id> -->` dentro de um arquivo escrito à mão. É o
+caso de `configuration.md` e `events.md`: ali, a prosa ("o que quebra
+quando esta variável está errada") vale muito mais que a lista, mas a
+**lista** precisa estar completa. O bloco é o inventário; o texto em
+volta é a explicação.
 
-The inventory marks with ⚠️ whatever shows up in the code and has
-**no** description in the prose. That's how `tool.result` and
-`agent.response` — two real event types — showed up after being left
-out of the first draft.
+O inventário marca com ⚠️ o que aparece no código e **não** tem
+descrição na prosa. Foi assim que `tool.result` e `agent.response` —
+dois tipos de evento reais — apareceram depois de terem ficado de fora
+do primeiro rascunho.
 
-**What the environment inventory catches, measured (AT-124,
-2026-09-25).** The sources and their globs live in
-`scripts/docs/fontes-de-env.mjs`, proven against the real tree by
-`fontes-de-env.spec.ts`. A mutation per source — a new
-`process.env.X` in a file straight under `e2e/`, nested in
-`e2e/suporte/`, straight under `apps/api/scripts/` and nested one level
-below it, each `git add`ed — made `--check` fail with `DESATUAL` on
-`configuration.md` in all four. One hole was found and closed: the
-`.spec.` filter, right for sources where a spec is a unit test sitting
-next to the code, was also dropping `e2e/testes/*.spec.ts` — the
-Playwright tests themselves, where a new `e2e/` variable is most likely
-to be born — and that mutation passed green. One limit stays declared:
-the inventory reads only **versioned** files (`git ls-files`), so an
-untracked file is invisible until `git add`.
+**O que o inventário de ambiente pega, medido (AT-124, 2026-09-25).**
+As fontes e seus globs moram em `scripts/docs/fontes-de-env.mjs`,
+provadas contra a árvore real por `fontes-de-env.spec.ts`. Uma mutação
+por fonte — um `process.env.X` novo num arquivo direto sob `e2e/`,
+aninhado em `e2e/suporte/`, direto sob `apps/api/scripts/` e aninhado
+um nível abaixo dele, cada um com `git add` — fez o `--check` reprovar
+com `DESATUAL` em `configuration.md` nos quatro. Um buraco foi achado e
+fechado: o filtro `.spec.`, certo para fontes onde um spec é teste
+unitário ao lado do código, também descartava `e2e/testes/*.spec.ts` —
+os próprios testes Playwright, onde uma variável nova de `e2e/` tem mais
+chance de nascer — e essa mutação passava verde. Um limite fica
+declarado: o inventário lê só arquivos **versionados** (`git ls-files`),
+então um arquivo não rastreado é invisível até o `git add`.
 
-**`deploy/k8s/*.sh` became a source (AT-212, 2026-09-28).** The bootstrap
-and the property proofs read twenty-odd variables from the environment —
-cluster name, namespace, the smoke account, each proof's ceilings — and none
-was in the inventory. They are a `ferramenta` source, matched by the shell's
-**expansion with a default** (`${X:-…}`, `${X:=…}`, `${X:?…}`) and only by it:
-a bare `${X}` is almost always the script's own variable. Mutation: a new
-`${X:-x}` in `deploy/k8s/validate.sh`, staged, made `--check` fail with
-`DESATUAL` and a `SEM DESC.` line naming the variable and the file.
+**`deploy/k8s/*.sh` virou fonte (AT-212, 2026-09-28).** O bootstrap e
+as provas de propriedade leem vinte e poucas variáveis do ambiente —
+nome do cluster, namespace, a conta do smoke, os tetos de cada prova — e
+nenhuma estava no inventário. Elas são fonte `ferramenta`, casadas pela
+**expansão com default** do shell (`${X:-…}`, `${X:=…}`, `${X:?…}`) e só
+por ela: um `${X}` puro é quase sempre variável do próprio script.
+Mutação: um `${X:-x}` novo em `deploy/k8s/validate.sh`, no stage, fez o
+`--check` reprovar com `DESATUAL` e uma linha `SEM DESC.` nomeando a
+variável e o arquivo.
 
-**The environment ⚠️ is a gate (AT-211, 2026-09-27).** Until then what
-failed was only the **stale block**: once `docs:generate` rewrote it,
-the variable sat there with ⚠️ and `--check` passed —
-`HUGGINGFACE_API_TOKEN` and `HUGGINGFACE_HUB_URL` stayed that way for
-months. By the maintainer's decision, `--check` now fails on **any**
-⚠️ in the environment inventory, for **both** kinds of source
-(`produto` and `ferramenta`), even with the block up to date. The
-failure names the variable, the file that reads it and the section of
-`configuration.md` where the description goes (`SEM DESC.` lines). The
-rule lives in `scripts/docs/inventario-de-env.mjs` and is proven by
-mutation in `inventario-de-env.spec.ts`: a new variable without a
-description fails, the same one with a description passes.
+**O ⚠️ de ambiente é portão (AT-211, 2026-09-27).** Até então o que
+reprovava era só o **bloco desatualizado**: assim que o `docs:generate`
+o reescrevia, a variável ficava ali com ⚠️ e o `--check` passava —
+`HUGGINGFACE_API_TOKEN` e `HUGGINGFACE_HUB_URL` ficaram assim por meses.
+Por decisão do mantenedor, o `--check` agora reprova **qualquer** ⚠️ no
+inventário de ambiente, para as **duas** espécies de fonte (`produto` e
+`ferramenta`), mesmo com o bloco em dia. A falha nomeia a variável, o
+arquivo que a lê e a seção de `configuration.md` onde a descrição vai
+(linhas `SEM DESC.`). A regra mora em `scripts/docs/inventario-de-env.mjs`
+e é provada por mutação em `inventario-de-env.spec.ts`: uma variável
+nova sem descrição reprova, a mesma com descrição passa.
 
-A `**TODO(humano):**` on the line that cites the variable **counts as a
-description** and doesn't fail: the docs rule is "never invent; without
-information, TODO(humano)", and a gate that failed the TODO would push
-whoever doesn't know what the variable does into inventing a sentence
-to get green. The TODO is a **declared** gap, with the question written
-where the answer goes; the ⚠️ is a **silent** one. `--check` still lists
-variables described only by a TODO, on a `TODO` line, without failing.
-The event inventory in `events.md` keeps its ⚠️ as a visible gap — the
-decision covered the environment inventory only.
+Um `**TODO(humano):**` na linha que cita a variável **conta como
+descrição** e não reprova: a regra de docs é "nunca inventar; sem
+informação, TODO(humano)", e um portão que reprovasse o TODO empurraria
+quem não sabe o que a variável faz a inventar uma frase para ficar
+verde. O TODO é uma lacuna **declarada**, com a pergunta escrita onde a
+resposta vai; o ⚠️ é uma lacuna **silenciosa**. O `--check` ainda lista
+as variáveis descritas só por um TODO, numa linha `TODO`, sem reprovar.
+O inventário de eventos em `events.md` mantém seu ⚠️ como lacuna
+visível — a decisão cobriu só o inventário de ambiente.
 
-`--check` writes nothing and fails if anything would be different.
-That's CI's mode.
+`--check` não escreve nada e reprova se qualquer coisa fosse ficar
+diferente. É o modo do CI.
 
-### `drift.mjs` — enforces it in the PR
+### `drift.mjs` — cobra no PR {#driftmjs--enforces-it-in-the-pr}
 
-Cross-references `git diff --name-only <base>...HEAD` with the map.
-For every triggered rule whose document wasn't touched: `block` fails
-it, `warn` comments.
+Cruza `git diff --name-only <base>...HEAD` com o mapa. Para toda regra
+disparada cujo documento não foi tocado: `block` reprova, `warn`
+comenta.
 
-For a Dependabot PR whose diff is only action-pin bumps, a step just before the
-drift (`scripts/ci/dependabot-justifica-pin.ts`) writes the `docs-not-needed:`
-line into the body, in the same job so it writes and reads in one execution.
-The workflow listens to `edited`, and `@dependabot rebase` emits `synchronize`
-and `edited` together; `concurrency` cancels one, so the surviving run may be
-the `edited` one. Hence the step also evaluates on `edited` **when the editor is
-the bot** (AT-100), and never when it is a human (their deletion of the line
-wins). It can't loop: body edits made with the workflow token don't fire
-`edited`. Failure stays closed: if the write fails, the drift reads the event
-body and the PR stays blocked.
+Num PR do Dependabot cujo diff é só troca de pin de action, um passo
+logo antes do drift (`scripts/ci/dependabot-justifica-pin.ts`) escreve a
+linha `docs-not-needed:` no corpo, no mesmo job, para escrever e ler
+numa execução só. O workflow escuta `edited`, e `@dependabot rebase`
+emite `synchronize` e `edited` juntos; o `concurrency` cancela um, então
+a execução que sobrevive pode ser a do `edited`. Por isso o passo também
+avalia no `edited` **quando quem editou é o bot** (AT-100), e nunca
+quando é um humano (a remoção da linha por ele vence). Não tem como
+entrar em laço: edições de corpo feitas com o token do workflow não
+disparam `edited`. A falha fica fechada: se a escrita falha, o drift lê
+o corpo do evento e o PR continua bloqueado.
 
-### `audit.mjs` — the monthly audit
+### `audit.mjs` — a auditoria mensal {#auditmjs--the-monthly-audit}
 
-The drift check catches a doc that went **wrong** in a PR. The audit
-catches a doc that went **stale** with nobody touching it — which is
-harder to notice. It reports:
+A checagem de drift pega uma doc que ficou **errada** num PR. A
+auditoria pega uma doc que ficou **velha** sem ninguém mexer nela — o
+que é mais difícil de notar. Ela relata:
 
-- pages untouched for months whose corresponding code changed since
-- pending `TODO(human)` items
-- `file:line` references that no longer resolve
-- ADRs in `proposed` status for more than 60 days
+- páginas sem alteração há meses cujo código correspondente mudou desde
+  então
+- itens `TODO(human)` pendentes
+- referências `arquivo:linha` que não resolvem mais
+- ADRs em status `proposed` há mais de 60 dias
 
-Always in the **same** issue, updated in place. A new issue every
-month becomes spam, and spam gets turned off.
+Sempre na **mesma** issue, atualizada no lugar. Uma issue nova todo mês
+vira spam, e spam é desligado.
 
-### The site build
+### O build do site {#the-site-build}
 
-`onBrokenLinks`, `onBrokenAnchors` and `onBrokenMarkdownLinks` are set
-to `throw`. Moving a file without fixing whoever points to it breaks
-CI instead of turning into a 404 in production. It's the cheapest
-mechanism in the whole set.
+`onBrokenLinks`, `onBrokenAnchors` e `onBrokenMarkdownLinks` estão em
+`throw`. Mover um arquivo sem corrigir quem aponta para ele quebra o CI
+em vez de virar um 404 em produção. É o mecanismo mais barato do
+conjunto inteiro.
 
-### A new page needs to be added to `sidebars.ts` by hand
+### Página nova precisa entrar à mão no `sidebars.ts` {#a-new-page-needs-to-be-added-to-sidebarsts-by-hand}
 
-The Markdown content lives in `docs/`, but the **routing** lives in
-`website/sidebars.ts` — and its sections enumerate items one by one,
-instead of scanning the directory. Creating a file in `docs/` without
-adding it there produces a page that exists, is served by direct URL,
-and **doesn't show up in navigation**.
+O conteúdo Markdown mora em `docs/`, mas o **roteamento** mora em
+`website/sidebars.ts` — e as seções dele enumeram os itens um a um, em
+vez de varrer o diretório. Criar um arquivo em `docs/` sem acrescentá-lo
+lá produz uma página que existe, é servida por URL direta e **não
+aparece na navegação**.
 
-The build **doesn't** fail on this: an orphan page isn't a broken
-link. It's a visual check, and it's the only step in the mechanism
-with no safety net — after `pnpm docs:build`, open the sidebar and
-confirm the page is there.
+O build **não** reprova por isso: uma página órfã não é um link
+quebrado. É uma conferência visual, e é o único passo do mecanismo sem
+rede de segurança — depois do `pnpm docs:build`, abra a barra lateral e
+confirme que a página está lá.
 
-### `api-render-check.mjs` — a green build isn't a page that renders
+### `api-render-check.mjs` — build verde não é página que renderiza {#api-render-checkmjs--a-green-build-isnt-a-page-that-renders}
 
-This piece exists because of an expensive lesson: **the API
-reference's 117 operation pages went live dead in releases `v1.0.0`
-and `v1.0.1`**, and no check caught it.
+Esta peça existe por causa de uma lição cara: **as 117 páginas de
+operação da referência da API foram ao ar mortas nas releases `v1.0.0`
+e `v1.0.1`**, e nenhuma checagem pegou.
 
-The Docusaurus config didn't declare `docItemComponent:
-'@theme/ApiItem'`, so Docusaurus used the default `@theme/DocItem`.
-`ApiItem` is the only place in `docusaurus-theme-openapi-docs` that
-mounts redux's `<Provider>`, and the `@theme/ApiExplorer/MethodEndpoint`
-each `.api.mdx` imports reads that store with `useSelector`. Without
-the wrapper, the context is null — and the error boundary swapped the
-whole page for *"This page crashed."*
+A configuração do Docusaurus não declarava `docItemComponent:
+'@theme/ApiItem'`, então o Docusaurus usou o `@theme/DocItem` padrão.
+`ApiItem` é o único lugar do `docusaurus-theme-openapi-docs` que monta o
+`<Provider>` do redux, e o `@theme/ApiExplorer/MethodEndpoint` que cada
+`.api.mdx` importa lê esse store com `useSelector`. Sem o invólucro, o
+contexto é nulo — e o error boundary trocava a página inteira por
+*"This page crashed."*
 
-The failure mode is what matters here, because it defeats every other
-piece of this mechanism:
+O modo de falha é o que importa aqui, porque ele derrota todas as outras
+peças deste mecanismo:
 
-| stage | result |
+| etapa | resultado |
 |---|---|
-| MDX compiles | ✅ theme components exist and resolve |
-| SSR renders | ✅ the served HTML has the route's content |
-| `pnpm docs:build` | ✅ **green** |
-| hydration in the browser | ❌ the page gets wiped |
+| MDX compila | ✅ os componentes do tema existem e resolvem |
+| SSR renderiza | ✅ o HTML servido tem o conteúdo da rota |
+| `pnpm docs:build` | ✅ **verde** |
+| hidratação no navegador | ❌ a página é apagada |
 
-In other words: **"the build passed" was never proof the page
-works.**
+Em outras palavras: **"o build passou" nunca foi prova de que a página
+funciona.**
 
-Since ADR 0206 that plugin is gone: the reference is **one Redoc page**
-(redocusaurus, server-side rendered) at `/reference/api/`, and there is
-no `ApiItem` to forget. The lesson stays, so the guard stays too:
-`api-render-check.mjs` runs after `docs:build` and asserts, in both
-locales, that `reference/api.html` exists, carries the spec's
-`info.title`, and contains one server-rendered section per operation in
-`docs/reference/openapi.json` (Redoc's
-`data-section-id=tag/<tag>/operation/<id>`).
+Desde o ADR 0206 esse plugin saiu: a referência é **uma página Redoc**
+(redocusaurus, renderizada no servidor) em `/reference/api/`, e não há
+`ApiItem` para esquecer. A lição fica, então a guarda fica também:
+`api-render-check.mjs` roda depois do `docs:build` e afirma, nos dois
+locales, que `reference/api.html` existe, carrega o `info.title` do spec
+e contém uma seção renderizada no servidor por operação de
+`docs/reference/openapi.json` (o `data-section-id=tag/<tag>/operation/<id>`
+do Redoc).
 
-It catches the page vanishing, rendering empty or losing operations —
-not a hydration failure, which would need a headless browser.
+Ela pega a página sumindo, renderizando vazia ou perdendo operações —
+não uma falha de hidratação, que exigiria um navegador headless.
 
-The same episode produced the map's `site-e-publicacao` rule:
-`website/**` wasn't covered by any rule, and changing the site config
-didn't demand documentation.
+O mesmo episódio produziu a regra `site-e-publicacao` do mapa:
+`website/**` não era coberto por regra nenhuma, e mudar a configuração
+do site não cobrava documentação.
 
-### Four locales, with pt-BR as the source (ADR 0216)
+### Quatro locales, com pt-BR como fonte (ADR 0216) {#four-locales-with-pt-br-as-the-source-adr-0216}
 
-`docs/` is the **pt-BR** tree, the source and the default locale
-(`defaultLocale: 'pt-BR'`, served at the root of each environment). The
-translated locales are `en`, `ru` and `zh-Hans`, under
-`website/i18n/<locale>/docusaurus-plugin-content-docs/current/`, with their
-theme labels in `website/i18n/<locale>/docusaurus-theme-classic/` and the
-sidebar labels in `.../docusaurus-plugin-content-docs/current.json`. A page
-with no translation in a locale is served from the pt-BR source at the same
-slug. The local search indexes `pt`, `en`, `ru` and `zh`. Pages whose old
-pt-BR copy was out of date stay in `docs/` in the language they are in
-until their batch.
+`docs/` é a árvore **pt-BR**, a fonte e o locale padrão
+(`defaultLocale: 'pt-BR'`, servido na raiz de cada ambiente). Os locales
+traduzidos são `en`, `ru` e `zh-Hans`, sob
+`website/i18n/<locale>/docusaurus-plugin-content-docs/current/`, com os
+rótulos do tema em `website/i18n/<locale>/docusaurus-theme-classic/` e
+os rótulos da barra lateral em
+`.../docusaurus-plugin-content-docs/current.json`. Uma página sem
+tradução num locale é servida a partir da fonte pt-BR no mesmo slug. A
+busca local indexa `pt`, `en`, `ru` e `zh`. Páginas cuja cópia pt-BR
+antiga estava desatualizada ficam em `docs/` no idioma em que estão até
+o lote delas.
 
-The English site moved from the root to `/brabo/<environment>/en/…`, and old
-links to `/brabo/<environment>/pt-BR/…` are rewritten by the root `404.html`
-(`scripts/docs/landing.mjs`) to `/brabo/<environment>/…`, in the same mold
-as `/main/` → `/prd/` (ADR 0073).
+O site em inglês saiu da raiz para `/brabo/<environment>/en/…`, e links
+antigos para `/brabo/<environment>/pt-BR/…` são reescritos pelo
+`404.html` da raiz (`scripts/docs/landing.mjs`) para
+`/brabo/<environment>/…`, no mesmo molde de `/main/` → `/prd/` (ADR
+0073).
 
-The docmap rule `traducao` (it was `traducao-pt-br`) watches the source
-and points at `website/i18n/`. It is `warn` and never `block`: requiring a
-translation in every doc PR would cost three translations per change.
+A regra `traducao` do docmap (era `traducao-pt-br`) vigia a fonte e
+aponta para `website/i18n/`. Ela é `warn` e nunca `block`: exigir
+tradução em todo PR de doc custaria três traduções por mudança.
 
-### Translation parity is generated, and the page says when it is behind (AT-550)
+### A paridade de tradução é gerada, e a página diz quando está atrás (AT-550) {#translation-parity-is-generated-and-the-page-says-when-it-is-behind-at-550}
 
-What holds the lag back is measurement, not the docmap.
-`scripts/docs/paridade-de-traducao.mjs` (proved by mutation in the spec next
-to it) runs inside `pnpm docs:generate` and writes two files:
-`docs/reference/paridade-de-traducao.md` (`generated: true`) and
-`website/src/data/traducao.json`. Per locale it counts pages and characters
-translated over the source (`docs/` minus `docs/reference/**`), and splits the
-translated pages into **up to date**, **stale** and **without provenance**.
-Provenance is the `traducao_de: <SHA>` in the translated page's frontmatter,
-the last source commit it translates. A page is stale when the source has a
-commit with a later COMMIT DATE than that SHA, when the source has
-uncommitted changes, or when the SHA does not exist. It never uses the clock,
-so `--check` gives the same answer before and after the commit that touches
-the source. For the UI it compares the keys of each namespace in
-`apps/web/src/locales/<l>/` with pt-BR, and requires every plural form that
-`Intl.PluralRules` gives that locale. `--check` fails when either file is out
-of date.
+O que segura o atraso é medição, não o docmap.
+`scripts/docs/paridade-de-traducao.mjs` (provado por mutação no spec ao
+lado) roda dentro do `pnpm docs:generate` e escreve dois arquivos:
+`docs/reference/paridade-de-traducao.md` (`generated: true`) e
+`website/src/data/traducao.json`. Por locale ele conta páginas e
+caracteres traduzidos sobre a fonte (`docs/` menos `docs/reference/**`),
+e divide as páginas traduzidas em **em dia**, **desatualizadas** e **sem
+proveniência**. A proveniência é o `traducao_de: <SHA>` no frontmatter
+da página traduzida, o último commit da fonte que ela traduz. Uma página
+está desatualizada quando a fonte tem um commit com COMMIT DATE
+posterior a esse SHA, quando a fonte tem alterações não commitadas, ou
+quando o SHA não existe. Ele nunca usa o relógio, então o `--check` dá a
+mesma resposta antes e depois do commit que toca a fonte. Para a UI ele
+compara as chaves de cada namespace em `apps/web/src/locales/<l>/` com o
+pt-BR, e exige toda forma de plural que o `Intl.PluralRules` dá àquele
+locale. O `--check` reprova quando qualquer um dos dois arquivos está
+desatualizado.
 
-The banner is a wrap swizzle of `@theme/DocItem/Content`
-(`website/src/theme/DocItem/Content/index.tsx`). Outside pt-BR, a page whose
-`metadata.source` is under `@site/docs/` is the pt-BR fallback and says so;
-a translated page that `traducao.json` marks stale shows the translation
-date and says the original changed. The texts live in each locale's
-`code.json`. `scripts/docs/faixa-de-traducao-check.mjs` runs after
-`pnpm docs:build` and checks the static HTML: a fallback page under `/en/`
-has the banner, while the same page at the root and a translated page that is
-not stale do not. The rules for translators are in
-[Localização](localizacao.md).
+A faixa é um swizzle de wrap de `@theme/DocItem/Content`
+(`website/src/theme/DocItem/Content/index.tsx`). Fora do pt-BR, uma
+página cujo `metadata.source` está sob `@site/docs/` é o fallback pt-BR
+e diz isso; uma página traduzida que o `traducao.json` marca como
+desatualizada mostra a data da tradução e diz que o original mudou. Os
+textos moram no `code.json` de cada locale.
+`scripts/docs/faixa-de-traducao-check.mjs` roda depois do
+`pnpm docs:build` e confere o HTML estático: uma página de fallback sob
+`/en/` tem a faixa, enquanto a mesma página na raiz e uma página
+traduzida que não está desatualizada não têm. As regras para quem
+traduz estão em [Localização](localizacao.md).
 
-### `links-do-locale.mjs` — a rewritten link skips the broken-link check
+### `links-do-locale.mjs` — link reescrito escapa da checagem de link quebrado {#links-do-localemjs--a-rewritten-link-skips-the-broken-link-check}
 
-The `markdown.hooks.onBrokenMarkdownLinks` hook in
-`website/docusaurus.config.ts` rewrites links that break only because
-of a known translation gap (`reference/`, `adr/`, `explanation/`) to
-`pathname://`. That's Docusaurus's official escape hatch, and escaping
-is the point: **a `pathname://` link is never checked again**, so a
-wrong rewrite can't fail the build.
+O hook `markdown.hooks.onBrokenMarkdownLinks` em
+`website/docusaurus.config.ts` reescreve links que quebram só por causa
+de uma lacuna de tradução conhecida (`reference/`, `adr/`,
+`explanation/`) para `pathname://`. Essa é a saída de emergência oficial
+do Docusaurus, e escapar é o objetivo: **um link `pathname://` nunca
+mais é conferido**, então uma reescrita errada não consegue reprovar o
+build.
 
-One did, for the whole pt-BR site (AT-221). The rewrite returned
-`pathname:///pt-BR/<slug>`, but `pathname://` isn't a domain-absolute
-path — `<Link>` passes it through `useBaseUrl`, and the pt-BR build's
-baseUrl already is `/brabo/prd/pt-BR/`. Every rewritten link came out
-as `/brabo/prd/pt-BR/pt-BR/...`: 441 hrefs on 56 pages, all 404, with
-`docs:build` green.
+Uma reprovou, para o site pt-BR inteiro (AT-221). A reescrita devolvia
+`pathname:///pt-BR/<slug>`, mas `pathname://` não é um caminho absoluto
+no domínio — o `<Link>` o passa por `useBaseUrl`, e o baseUrl do build
+pt-BR já é `/brabo/prd/pt-BR/`. Todo link reescrito saía como
+`/brabo/prd/pt-BR/pt-BR/...`: 441 hrefs em 56 páginas, todos 404, com o
+`docs:build` verde.
 
-The rewrite now lives in `scripts/docs/links-do-locale.mjs` as a pure
-function with a spec, and returns the bare slug — the locale comes from
-the baseUrl of whichever locale is compiling, and the target page
-exists there (translated, or served by fallback at the same slug). The
-same module, run after `docs:build` in `docs-check.yml`, scans the
-built HTML and fails on any `href` with a doubled locale prefix. A new
-locale goes into `LOCALES_COM_PREFIXO` too, or its duplication passes
-silently. Since ADR 0216 that list is `en`, `ru` and `zh-Hans` — pt-BR is
-the default and has no prefix.
+A reescrita agora mora em `scripts/docs/links-do-locale.mjs` como
+função pura com spec, e devolve o slug puro — o locale vem do baseUrl
+de qualquer locale que esteja compilando, e a página de destino existe
+lá (traduzida, ou servida por fallback no mesmo slug). O mesmo módulo,
+rodado depois do `docs:build` no `docs-check.yml`, varre o HTML gerado
+e reprova qualquer `href` com prefixo de locale duplicado. Um locale
+novo entra também em `LOCALES_COM_PREFIXO`, senão a duplicação dele
+passa calada. Desde o ADR 0216 essa lista é `en`, `ru` e `zh-Hans` — o
+pt-BR é o padrão e não tem prefixo.
 
-With partial translations, compiling `en` breaks a link from an
-untranslated page (served from the pt-BR source) to a translated one in
-any folder, not only in the three zones. So a link is also treated as a
-gap when its target **exists in the source `docs/`**
-(`paginaExisteNaFonte`) — that is the page the locale serves, translated
-or by fallback. A target that exists nowhere still fails the build.
+Com traduções parciais, compilar `en` quebra um link de uma página não
+traduzida (servida da fonte pt-BR) para uma traduzida em qualquer
+pasta, não só nas três zonas. Então um link também é tratado como
+lacuna quando o destino **existe na fonte `docs/`**
+(`paginaExisteNaFonte`) — essa é a página que o locale serve, traduzida
+ou por fallback. Um destino que não existe em lugar nenhum continua
+reprovando o build.
 
-The `adr/` exemption used to swallow a misspelled ADR filename too:
-it looked only at the *shape* of the name (`NNNN-*.md`), so
-`0055-politica-de-terminal.md` — an ADR that never existed under that
-name — was rewritten to a slug no locale has. Twenty-three such links
-sat in the docs, 404 (AT-227). Since then a target that looks
-like an ADR must exist in `docs/adr/` **before** any gap exemption
-applies, including a source inside `adr/`, `reference/` or
-`explanation/`; a wrong slug fails `docs:build` in every locale.
+A isenção de `adr/` também engolia um nome de arquivo de ADR digitado
+errado: ela olhava só a *forma* do nome (`NNNN-*.md`), então
+`0055-politica-de-terminal.md` — um ADR que nunca existiu com esse nome
+— era reescrito para um slug que nenhum locale tem. Vinte e três links
+assim estavam nas docs, 404 (AT-227). Desde então um destino com cara
+de ADR tem de existir em `docs/adr/` **antes** de qualquer isenção de
+lacuna valer, inclusive de uma fonte dentro de `adr/`, `reference/` ou
+`explanation/`; um slug errado reprova o `docs:build` em todo locale.
 
-What the guard still does **not** catch: a non-ADR link from inside one
-of the gap zones whose target doesn't exist in the repository at all.
+O que a guarda ainda **não** pega: um link que não é de ADR, de dentro
+de uma das zonas de lacuna, cujo destino não existe no repositório.
 
-### Publishing, one site per rung
+### Publicação, um site por degrau {#publishing-one-site-per-rung}
 
-Each permanent branch publishes to its own spot on the same GitHub
+Cada branch permanente publica no seu próprio lugar do mesmo GitHub
 Pages:
 
-| branch | URL | indexed by search engines |
+| branch | URL | indexado por buscadores |
 |---|---|---|
-| — (index) | `https://daneiel.github.io/brabo/` | ❌ |
+| — (índice) | `https://daneiel.github.io/brabo/` | ❌ |
 | `main` | `https://daneiel.github.io/brabo/prd/` | ✅ |
 | `qa` | `https://daneiel.github.io/brabo/qa/` | ❌ |
 | `dev` | `https://daneiel.github.io/brabo/dev/` | ❌ |
 
-All three have been **symmetric** since
-[ADR 0071](../adr/0071-publicacao-simetrica-por-degrau.md); the root
-is a generated page listing all three with each one's stamped version,
-and every site has a selector at the top for switching rungs. Before
-that, `main` published at the root, and that special case forced the
-workflow to preserve `/dev/` and `/qa/` on a path that only ran a
-third of the time.
+Os três são **simétricos** desde o
+[ADR 0071](../adr/0071-publicacao-simetrica-por-degrau.md); a raiz é
+uma página gerada que lista os três com a versão carimbada de cada um,
+e todo site tem um seletor no topo para trocar de degrau. Antes disso, a
+`main` publicava na raiz, e esse caso especial obrigava o workflow a
+preservar `/dev/` e `/qa/` num caminho que só rodava um terço das vezes.
 
-**The path isn't the branch name.**
-[ADR 0073](../adr/0073-o-caminho-publicado-nomeia-o-ambiente.md)
-separated the two: the address names the **environment** for readers,
-and `main` is vocabulary for whoever commits. That's why `main`
-publishes at `/prd/`; `qa` and `dev` match by coincidence, not by
-rule. The branch→path map exists at one point per process — the
-workflow's "which rung, and where it publishes" step, the `DEGRAUS`
-table in `docusaurus.config.ts`, and the one in `landing.mjs` — and
-everything else derives from it.
+**O caminho não é o nome da branch.**
+O [ADR 0073](../adr/0073-o-caminho-publicado-nomeia-o-ambiente.md)
+separou os dois: o endereço nomeia o **ambiente** para quem lê, e
+`main` é vocabulário de quem commita. É por isso que a `main` publica
+em `/prd/`; `qa` e `dev` coincidem por acaso, não por regra. O mapa
+branch→caminho existe num ponto por processo — o passo "qual degrau, e
+onde publica" do workflow, a tabela `DEGRAUS` em `docusaurus.config.ts`
+e a de `landing.mjs` — e todo o resto deriva dele.
 
-Two consequences worth remembering before touching this:
+Duas consequências que vale lembrar antes de mexer nisso:
 
-- **`/brabo/main/` used to be published, and no longer is.** Since the
-  tree is assembled and pushed with `keep_files: false`, the directory
-  disappears. What preserves saved links is the root's `404.html`,
-  which **rewrites** the prefix (`/brabo/main/<something>` →
-  `/brabo/prd/<something>`) as its own case, separate from the generic
-  redirect — which would produce `/brabo/prd/main/<something>`. The
-  loop guard only covers paths that exist (`prd|qa|dev`).
-- **`/prd/` was seeded from `gh-pages:main`** during the transition,
-  for the same reason ADR 0071 seeded `/main/` from the old root:
-  without it, `/brabo/prd/` would respond 404 between `dev`'s first
-  push and the next promotion to `main`. The seed is **rewritten** from
-  `/brabo/main/` to `/brabo/prd/`, because `404.html` doesn't save
-  sub-resources — CSS and JS requested at the old address would get
-  HTML back with a 404 status, and the site would serve bare text.
+- **`/brabo/main/` era publicado, e não é mais.** Como a árvore é
+  montada e empurrada com `keep_files: false`, o diretório some. O que
+  preserva os links salvos é o `404.html` da raiz, que **reescreve** o
+  prefixo (`/brabo/main/<algo>` → `/brabo/prd/<algo>`) como caso
+  próprio, separado do redirecionamento genérico — que produziria
+  `/brabo/prd/main/<algo>`. A guarda contra laço só cobre caminhos que
+  existem (`prd|qa|dev`).
+- **`/prd/` foi semeado a partir de `gh-pages:main`** na transição,
+  pelo mesmo motivo por que o ADR 0071 semeou `/main/` a partir da raiz
+  antiga: sem isso, `/brabo/prd/` responderia 404 entre o primeiro push
+  da `dev` e a próxima promoção para a `main`. A semente é
+  **reescrita** de `/brabo/main/` para `/brabo/prd/`, porque o
+  `404.html` não salva sub-recursos — CSS e JS pedidos no endereço
+  antigo receberiam HTML de volta com status 404, e o site serviria
+  texto cru.
 
-This closes a gap in the pipeline: between a merge into `dev` and the
-final promotion, reading the documentation for that state required
-cloning the repository. `docs-check` builds the site on every PR but
-**discards the build** — its verdict is "builds with no broken links,"
-never "lives somewhere I can open." And it was exactly that gap
-between writing and looking that let the API reference go live broken
-for two releases.
+Isso fecha uma lacuna da esteira: entre um merge na `dev` e a promoção
+final, ler a documentação daquele estado exigia clonar o repositório. O
+`docs-check` constrói o site em todo PR mas **descarta o build** — o
+veredito dele é "constrói sem links quebrados", nunca "mora em algum
+lugar que eu possa abrir". E foi exatamente essa lacuna entre escrever e
+olhar que deixou a referência da API ir ao ar quebrada por duas
+releases.
 
-Three details that aren't obvious and have each already cost a bug:
+Três detalhes que não são óbvios e já custaram um bug cada:
 
-- **`baseUrl` comes from `DOCS_BASE_URL`**, defaulting to the
-  production value. It goes into every asset URL: a site at
-  `/brabo/dev/` with `baseUrl: '/brabo/'` loads the HTML and nothing
-  else, and the page is *broken with no error*.
-- **The rung is declared in `DOCS_BRANCH`, not deduced from
-  `baseUrl`.** This used to be `BASE_URL === '/brabo/'`, and it worked
-  while `main` was the only one at the root. With all three under a
-  subdirectory, that comparison turns false for `main` too, and the
-  effect would be `noIndex` on the REAL documentation — outside
-  Google, silently, with CI green, because nothing in the build fails
-  for under-indexing. ADR 0073 is exactly the scenario this separation
-  was built for: the path changed to `/prd/` and `E_PRODUCAO` didn't
-  need to know about it.
-- **`noIndex` outside `main` requires `forceIgnoreNoIndex` in
-  search.** `@easyops-cn/docusaurus-search-local` discards every page
-  with `<meta name="robots" content="noindex">`, so the two safeguards
-  would cancel each other: the rungs would publish with search dead, a
-  666-byte index, *"No results"* for everything. `noIndex` talks to
-  **external** search engines; `forceIgnoreNoIndex` talks to the
-  **local** index.
-- **`main` assembles the tree before publishing**, bringing `/dev/`
-  and `/qa/` back. `keep_files: true` would be simpler and would be
-  wrong: it would never remove anything, and a page deleted from the
-  repository would stay published forever.
+- **`baseUrl` vem de `DOCS_BASE_URL`**, com o valor de produção como
+  padrão. Ele entra em toda URL de asset: um site em `/brabo/dev/` com
+  `baseUrl: '/brabo/'` carrega o HTML e mais nada, e a página fica
+  *quebrada sem erro*.
+- **O degrau é declarado em `DOCS_BRANCH`, não deduzido do `baseUrl`.**
+  Antes era `BASE_URL === '/brabo/'`, e funcionava enquanto a `main`
+  era a única na raiz. Com os três sob um subdiretório, essa comparação
+  vira falsa também para a `main`, e o efeito seria `noIndex` na
+  documentação REAL — fora do Google, calado, com o CI verde, porque
+  nada no build reprova por subindexação. O ADR 0073 é exatamente o
+  cenário para o qual essa separação foi construída: o caminho mudou
+  para `/prd/` e `E_PRODUCAO` não precisou saber.
+- **`noIndex` fora da `main` exige `forceIgnoreNoIndex` na busca.**
+  O `@easyops-cn/docusaurus-search-local` descarta toda página com
+  `<meta name="robots" content="noindex">`, então as duas salvaguardas
+  se anulariam: os degraus publicariam com a busca morta, um índice de
+  666 bytes, *"No results"* para tudo. `noIndex` fala com buscadores
+  **externos**; `forceIgnoreNoIndex` fala com o índice **local**.
+- **A `main` monta a árvore antes de publicar**, trazendo `/dev/` e
+  `/qa/` de volta. `keep_files: true` seria mais simples e estaria
+  errado: nunca removeria nada, e uma página apagada do repositório
+  ficaria publicada para sempre.
 
-### Publishing is TWO workflows, and only one is ours
+### Publicar são DOIS workflows, e só um é nosso {#publishing-is-two-workflows-and-only-one-is-ours}
 
-This trips up anyone looking for the deploy in the Actions tab:
+Isto engana quem procura o deploy na aba Actions:
 
-| order | workflow | where it lives | what it does |
+| ordem | workflow | onde mora | o que faz |
 |---|---|---|---|
-| 1 | **`Documentação`** (`docs-deploy.yml`) | `.github/workflows/` | builds the site and **commits to `gh-pages`** |
-| 2 | **`pages build and deployment`** | `dynamic/pages/` — **generated by GitHub** | reads `gh-pages` and **serves it** |
+| 1 | **`Documentação`** (`docs-deploy.yml`) | `.github/workflows/` | constrói o site e **commita no `gh-pages`** |
+| 2 | **`pages build and deployment`** | `dynamic/pages/` — **gerado pelo GitHub** | lê o `gh-pages` e **o serve** |
 
-The second one isn't in the repository and doesn't show up in the list
-of versioned workflows; GitHub creates it on its own when the Pages
-source is a branch. Our workflow ends at the commit — it does **not**
-publish to Pages, even though its job is still called "Publish to
-GitHub Pages."
+O segundo não está no repositório e não aparece na lista de workflows
+versionados; o GitHub o cria sozinho quando a fonte do Pages é uma
+branch. O nosso workflow termina no commit — ele **não** publica no
+Pages, embora o job dele ainda se chame "Publish to GitHub Pages".
 
-> **Practical consequence:** the site can be stale even with
-> `Documentação` green. If Pages' `build_type` isn't `legacy`/`gh-pages`,
-> the commit happens and nobody serves it — and nothing in CI turns
-> red. The check is `gh api repos/daneiel/brabo/pages`, recorded in
-> [Rulesets](../reference/rulesets.md).
+> **Consequência prática:** o site pode estar velho mesmo com
+> `Documentação` verde. Se o `build_type` do Pages não for
+> `legacy`/`gh-pages`, o commit acontece e ninguém o serve — e nada no
+> CI fica vermelho. A conferência é `gh api repos/daneiel/brabo/pages`,
+> registrada em [Rulesets](../reference/rulesets.md).
 
-The whole design, with the discarded alternatives, is in
+O desenho inteiro, com as alternativas descartadas, está no
 [ADR 0034](../adr/0034-documentacao-publicada-por-degrau.md).
 
-## Running it on your machine
+## Rodando na sua máquina {#running-it-on-your-machine}
 
-`website/` has its own `pnpm-lock.yaml` since [ADR 0117](../adr/0117-lockfile-proprio-para-o-website.md) —
-the root `pnpm install` no longer reaches it, so the first time (or after its
-lockfile changes) needs one extra step:
+`website/` tem `pnpm-lock.yaml` próprio desde o [ADR 0117](../adr/0117-lockfile-proprio-para-o-website.md) —
+o `pnpm install` da raiz não o alcança mais, então a primeira vez (ou
+depois que o lockfile dele muda) precisa de um passo a mais:
 
 ```bash
 cd website && pnpm install && cd ..  # only the first time, or when website/pnpm-lock.yaml changes
@@ -865,90 +875,93 @@ node scripts/docs/api-render-check.mjs
 node scripts/docs/links-do-locale.mjs   # no href with a doubled locale prefix (AT-221)
 ```
 
-Or, if you're in Claude Code, `/sync-docs` runs the whole cycle and
-delivers a report of what changed, what became a `TODO(human)`, and
-what was deliberately **left** unchanged.
+Ou, se você está no Claude Code, `/sync-docs` roda o ciclo inteiro e
+entrega um relatório do que mudou, do que virou `TODO(human)` e do que
+foi deliberadamente **deixado** sem mudar.
 
-### Conjunction by default, disjunction when the doc was split
+### Conjunção por padrão, disjunção quando a doc foi partida {#conjunction-by-default-disjunction-when-the-doc-was-split}
 
-A rule's `docs:` list is a **conjunction**: every document listed has to
-change, or the rule fires. That's the right default — it's what makes
-"changed the gate, update the gate doc AND the rules" enforceable.
+A lista `docs:` de uma regra é uma **conjunção**: todo documento listado
+tem de mudar, senão a regra dispara. É o padrão certo — é o que torna
+cobrável "mudou o gate, atualize a doc do gate E as regras".
 
-It became wrong exactly once, and the fix is `docs_alternativos:`, a
-**disjunction**: any one of the listed documents satisfies the rule. It
-exists because `business-rules.md` was split by size (Cost and
-Authentication alone were half of a 640 KB page), so a business rule now
-lives in one of three files. Under conjunction, changing an auth rule
-would demand the index too — a file that no longer contains that rule —
-and the way out for whoever got asked would be the `docs-not-needed`
-escape hatch. **A rule that teaches people to use the escape hatch is
-worse than no rule**: it trains them to ignore the check.
+Ele ficou errado exatamente uma vez, e a correção é `docs_alternativos:`,
+uma **disjunção**: qualquer um dos documentos listados satisfaz a regra.
+Ela existe porque `business-rules.md` foi partido por tamanho (Custo e
+Autenticação sozinhos eram metade de uma página de 640 KB), então uma
+regra de negócio agora mora em um de três arquivos. Sob conjunção, mudar
+uma regra de auth cobraria também o índice — um arquivo que não contém
+mais aquela regra — e a saída de quem fosse cobrado seria a saída de
+emergência `docs-not-needed`. **Uma regra que ensina as pessoas a usar a
+saída de emergência é pior que regra nenhuma**: ela as treina a ignorar
+a checagem.
 
-`docmap.mjs` validates both lists the same way: a path that doesn't
-exist is the same silent error as a dead glob — an alternative with a
-typo could never satisfy the rule, and nobody would see it.
+`docmap.mjs` valida as duas listas do mesmo jeito: um caminho que não
+existe é o mesmo erro silencioso de um glob morto — uma alternativa com
+erro de digitação nunca poderia satisfazer a regra, e ninguém veria.
 
-## When the check complains unfairly
+## Quando a checagem reclama injustamente {#when-the-check-complains-unfairly}
 
-It will complain unfairly sometimes. A refactor that renames internal
-variables triggers `dominio-e-regras` without changing any business
-rule. That's expected: the map works by file path, not by semantics.
+Ela vai reclamar injustamente às vezes. Uma refatoração que renomeia
+variáveis internas dispara `dominio-e-regras` sem mudar regra de negócio
+nenhuma. Isso é esperado: o mapa funciona por caminho de arquivo, não
+por semântica.
 
-There are **two** ways out, and both require someone explaining why:
+Há **duas** saídas, e as duas exigem alguém explicando por quê:
 
 ```
 PR label:      docs-not-needed
 or in the body: docs-not-needed: internal refactor, no RN changed
 ```
 
-Use it without guilt when it applies. The escape hatch exists **on
-purpose**: without a legitimate way out, the habit that forms is to
-cheat — a cosmetic commit to the doc just to make the check pass. Then
-the mechanism starts lying, which is worse than not existing.
+Use sem culpa quando couber. A saída de emergência existe **de
+propósito**: sem uma saída legítima, o hábito que se forma é trapacear
+— um commit cosmético na doc só para a checagem passar. Aí o mecanismo
+começa a mentir, o que é pior que não existir.
 
-**One class of PR gets the body line from a bot**, and only one: a Dependabot
-PR whose diff is nothing but action pin changes (the `uses:` SHA and its
-version comment). A step right before the drift writes the line, marked as the
-bot's, and the drift still reads only the line — see
+**Uma classe de PR recebe a linha do corpo de um bot**, e só uma: um PR
+do Dependabot cujo diff não é nada além de trocas de pin de action (o
+SHA do `uses:` e o comentário de versão dele). Um passo logo antes do
+drift escreve a linha, marcada como do bot, e o drift continua lendo só
+a linha — ver
 [A pin bump justifies itself](./branching-policy.md#a-pin-bump-justifies-itself).
-Because editing the body with `GITHUB_TOKEN` fires no `edited` event, and a
-re-run reuses the original payload, the drift reads the body from
-`PR_BODY_FILE` when that step rewrote it, and from the event otherwise.
+Como editar o corpo com o `GITHUB_TOKEN` não dispara evento `edited`, e
+uma reexecução reusa o payload original, o drift lê o corpo de
+`PR_BODY_FILE` quando esse passo o reescreveu, e do evento caso
+contrário.
 
-What's **not** okay is using the escape hatch out of haste. If you
-used it three times in the same week for the same rule, the rule is
-the problem: adjust the glob in `docs/.docmap.yml`, or lower the
-severity from `block` to `warn`.
+O que **não** está certo é usar a saída de emergência por pressa. Se
+você a usou três vezes na mesma semana para a mesma regra, a regra é o
+problema: ajuste o glob em `docs/.docmap.yml`, ou baixe a severidade de
+`block` para `warn`.
 
-## When the mechanism itself is wrong
+## Quando o próprio mecanismo está errado {#when-the-mechanism-itself-is-wrong}
 
-| symptom | fix |
+| sintoma | correção |
 |---|---|
-| rule fires on an irrelevant change | glob too broad — narrow the `watch` |
-| rule never fires | dead glob — `pnpm docs:check` flags it |
-| generated content is always stale in CI | someone hand-edited it; fix the generator or the source |
-| build breaks on `{` or loose HTML | `.md` is CommonMark; if it needs a React component, rename to `.mdx` |
-| the audit reports itself | add the file to the `META` list in `audit.mjs` |
+| a regra dispara numa mudança irrelevante | glob largo demais — estreite o `watch` |
+| a regra nunca dispara | glob morto — o `pnpm docs:check` o aponta |
+| o conteúdo gerado está sempre desatualizado no CI | alguém o editou à mão; corrija o gerador ou a fonte |
+| o build quebra num `{` ou num HTML solto | `.md` é CommonMark; se precisar de componente React, renomeie para `.mdx` |
+| a auditoria relata a si mesma | acrescente o arquivo à lista `META` em `audit.mjs` |
 
-## What this mechanism doesn't do
+## O que este mecanismo não faz {#what-this-mechanism-doesnt-do}
 
-**It doesn't check whether the text is correct.** It checks whether
-the text was *reviewed* when the code changed, and whether the lists
-are complete. A factually wrong sentence nobody touched passes every
-check — that's what human reading, and `/sync-docs`, are for.
+**Ele não confere se o texto está correto.** Ele confere se o texto foi
+*revisado* quando o código mudou, e se as listas estão completas. Uma
+frase factualmente errada que ninguém tocou passa em toda checagem — é
+para isso que servem a leitura humana e o `/sync-docs`.
 
-**It doesn't write documentation.** It generates an inventory and
-demands review. What a variable does when it's wrong, why a cap
-exists, what to investigate during an incident — that's still work
-that has to be written.
+**Ele não escreve documentação.** Ele gera um inventário e cobra
+revisão. O que uma variável faz quando está errada, por que um teto
+existe, o que investigar durante um incidente — isso continua sendo
+trabalho que tem de ser escrito.
 
-**It doesn't enforce `README.md`, nor anything no rule watches.** The
-docmap is a floor, not a ceiling: as of 2026-07-29 no rule was watching
-the heart of observability (`tracing.ts`,
-`infrastructure/observability/**`, `telemetry/**`, `lib/logger.ts`),
-and `README.md` is barely required by any rule at all. Delivering only
-what CI demands is how the two sentences about
-`OTEL_EXPORTER_OTLP_ENDPOINT` stayed wrong for months. When you change
-code, sweep `docs/` looking for what the change made false — including
-what nobody asked you to look at.
+**Ele não cobra o `README.md`, nem nada que regra nenhuma vigia.** O
+docmap é piso, não teto: em 2026-07-29 nenhuma regra vigiava o coração
+da observabilidade (`tracing.ts`, `infrastructure/observability/**`,
+`telemetry/**`, `lib/logger.ts`), e o `README.md` mal é exigido por
+alguma regra. Entregar só o que o CI cobra é como as duas frases sobre
+`OTEL_EXPORTER_OTLP_ENDPOINT` ficaram erradas por meses. Quando você
+mudar código, varra `docs/` procurando o que a mudança tornou falso —
+inclusive o que ninguém pediu para você olhar.

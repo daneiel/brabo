@@ -679,12 +679,10 @@ function verificarContagensEmProsa() {
       oque: 'o próximo número de ADR',
     },
     {
-      // `docs/architecture.md` já foi traduzido pra inglês (Onda 6b) — a
-      // frase virou "— N of them", não mais "— N deles". `\s+` entre
-      // "of"/"them" porque o Markdown prosa dá wrap de linha aqui — "deles"
-      // era uma palavra só e nunca precisou disso.
+      // `docs/architecture.md` voltou a ser pt-BR (fonte, ADR 0216). `\s+`
+      // porque o Markdown prosa quebra a linha entre o número e "deles".
       arquivo: 'docs/architecture.md',
-      padrao: /\[ADRs\]\([^)]*\) — (\d+) of\s+them/,
+      padrao: /\[ADRs\]\([^)]*\) — (\d+)\s+deles/,
       esperado: total,
       oque: 'a contagem de ADRs',
     },
@@ -890,7 +888,7 @@ function verificarFrasesAncoradasNoCodigo() {
     },
     {
       arquivo: 'docs/explanation/branching-policy.md',
-      padrao: /^description: The (.+?) ladder/m,
+      padrao: /^description: A escada (.+?), a taxonomia/m,
       esperado: [...escada[1].matchAll(/'([a-z-]+)'/g)].map((m) => m[1]).join(' → '),
       oque: 'a escada da esteira no `description` do frontmatter',
     },
