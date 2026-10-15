@@ -466,7 +466,8 @@ fonte de sistema, e título e corpo ficavam indistinguíveis.
 - Todo evento de domínio é imutável: nunca `UPDATE` em tabela de evento.
 - Decisões arquiteturais relevantes viram [ADR](docs/adr/index.md).
 
-`CLAUDE.md` traz o detalhamento completo, e é o que os agentes leem.
+`CLAUDE.md` traz o detalhamento completo, e é o que os agentes leem — o
+conteúdo mora em partes por seção em `.claude/contexto/`, importadas por ele.
 
 ## Estado
 

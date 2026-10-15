@@ -32,7 +32,7 @@ function ultimaMudanca(caminho) {
 // A missão de documentação e o CLAUDE.md FALAM sobre `TODO(humano)` — citar o
 // marcador não é ter uma pendência. Sem esta exclusão a auditoria reporta a si
 // mesma, e relatório com ruído é relatório que ninguém lê.
-const META = ['docs/missions/', 'CLAUDE.md', 'CONTRIBUTING.md'];
+const META = ['docs/missions/', 'CLAUDE.md', '.claude/contexto/', 'CONTRIBUTING.md'];
 
 function arquivos(...globs) {
   return git('ls-files', ...globs)

@@ -800,6 +800,14 @@ rules:
       - "apps/engine/mix.exs"
       - "docs/adr/*.md"
       - "docs/gates.yml"
-    docs: ["CLAUDE.md"]
+    # O CLAUDE.md foi partido em `.claude/contexto/` (importadas por ele): a
+    # regra vale para o conjunto, então tocar QUALQUER uma das partes satisfaz.
+    docs_alternativos:
+      - "CLAUDE.md"
+      - ".claude/contexto/historico.md"
+      - ".claude/contexto/estado-atual.md"
+      - ".claude/contexto/stack.md"
+      - ".claude/contexto/convencoes-repositorio-e-dominio.md"
+      - ".claude/contexto/convencoes-agentes-e-telas.md"
     severity: warn
     note: "Stack, Convenções, 'O que NÃO fazer' e o estado das fases envelhecem em silêncio."
