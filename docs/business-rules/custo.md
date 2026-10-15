@@ -225,8 +225,8 @@ foram raciocínio).
    no protocolo dele (`cache_read_input_tokens`) e isso NÃO é lido aqui — fica
    `null`, declarado; o Ollama não informa.
 
-- **Where:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:301` (`cachedInputTokens`),
-  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:615` (`contagem`),
+- **Where:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:323` (`cachedInputTokens`),
+  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:650` (`contagem`),
   `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:175` (`cachedInputTokens`),
   `apps/api/src/application/use-cases/llm/record-llm-usage.use-case.ts:113` (`cachedInputTokens`),
   `apps/api/src/db/schema/llm.ts:374` (`cachedInputTokens`),
@@ -276,7 +276,7 @@ gasto somam. Sem ele, o preço congelado do catálogo produz o número, como no
   `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:225` (`custoDaChamada`),
   `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:238` (`custoDaChamada`),
   `apps/api/src/application/use-cases/llm/send-chat-message.use-case.ts:227` (`custoDaChamada`),
-  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:297` (`extrairCustoReal`),
+  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:319` (`extrairCustoReal`),
   `apps/api/src/infrastructure/llm/openrouter-provider.ts:243` (`extrairCustoRealOpenRouter`),
   `apps/api/src/db/schema/llm.ts:357` (`priceImplicit`)
 - **Test:** `test/domain/llm/custo-da-chamada.spec.ts`,
@@ -382,7 +382,7 @@ comportamento de sempre, nada vai ao fio e o hub decide sozinho.
   `apps/api/src/domain/llm/binding-resolver.ts:100` (viaja com o binding),
   `apps/api/src/application/use-cases/llm/record-llm-usage.use-case.ts:118`
   (congela no metering),
-  `apps/api/src/infrastructure/llm/openrouter-provider.ts:259` (`openrouterConfig`,
+  `apps/api/src/infrastructure/llm/openrouter-provider.ts:327` (`openrouterConfig`,
   a capability provada)
 - **Test:** `test/domain/llm/routing-preference.spec.ts`,
   `test/application/use-cases/llm/set-model-binding.use-case.spec.ts`,
@@ -3182,3 +3182,32 @@ um espelho declarado, porque a tela não deve copiar a constante e o engine não
 - **Teste:** `apps/web/src/lib/aprovacoes.test.ts` (it "RN-802 (AT-473)": 8 tarefas, 1 módulo → US$ 4,50; 3 tarefas, 2 módulos → US$ 2,50; sem orçamento, sem número — caso de falha);
   `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts` ("plano válido nasce pending")
 - **Origem:** AT-473
+
+### RN-892 — O prefixo estável da chamada pode ir marcado para o cache de prompt, e a capability nasce desligada {#rn-892}
+
+Medido no TP-01 (15/10): o `anthropic/claude-haiku-5.5` pelo OpenRouter
+recebeu 8,40 M tokens de entrada com **0** em cache, e a entrada foi US$ 0,84
+dos US$ 1,02. Modelos Anthropic só leem do cache o prefixo marcado com
+`cache_control: { type: "ephemeral" }` num bloco de conteúdo de texto (até
+quatro pontos, TTL de 5 min — https://openrouter.ai/docs/features/prompt-caching).
+
+1. **Capability de provider, obrigatória.** `LLMProviderCapabilities.promptCaching`
+   é `false` nos nove providers. Declará-la sem o hook `marcarCacheDePrompt`
+   falha na construção. Desligada, o corpo é byte a byte o de antes.
+2. **Camada de modelo na config.** No OpenRouter só `anthropic/*` recebe ponto;
+   os demais cacheiam sozinhos e voltam intactos.
+3. **Dois pontos, sobre o que não muda.** A última `system` do prefixo
+   (instruções, e as ferramentas antes delas) e a última `user`/`tool` antes
+   da cauda de `system` do fim. A cauda — idioma (RN-622), ambiente (RN-706),
+   fluxo (RN-711), perfil (RN-680) — fica DEPOIS do último ponto, e a ordem
+   das mensagens nunca muda.
+4. **Lacuna declarada.** A capability segue `false` até o smoke rodar com
+   credencial e a segunda chamada voltar com `cached_tokens` > 0
+   (ADRs 0041/0042): `OPENROUTER_TEST_KEY=… pnpm --filter api exec vitest run
+   test/infrastructure/llm/openrouter-provider.cache.smoke.spec.ts`. O ganho
+   aparece no metering pela [RN-666](#rn-666).
+
+- **Código:** `apps/api/src/infrastructure/llm/openrouter-provider.ts:276` (`marcarCacheDePromptOpenRouter`);
+  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:501` (`mensagens`)
+- **Teste:** `apps/api/test/infrastructure/llm/openrouter-provider.contract.spec.ts` ("pontos de cache de prompt (RN-892)": ligada marca os dois pontos; desligada é byte a byte; capability sem hook falha — caso de falha)
+- **Origem:** AT-543

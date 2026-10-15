@@ -99,6 +99,19 @@ export interface LLMProviderCapabilities {
    * responde a ele — nunca por leitura de documentação (ADR 0041).
    */
   readonly routingPreference: boolean;
+  /**
+   * O provider sabe receber PONTOS DE CACHE DE PROMPT explícitos
+   * (`cache_control: { type: "ephemeral" }` em blocos de conteúdo, RN-892) —
+   * o prefixo estável da chamada (ferramentas, instruções, histórico) é lido
+   * do cache do upstream em vez de cobrado inteiro a cada chamada. Camada de
+   * PROVIDER; a de modelo é decidida pela config do provider (no OpenRouter,
+   * só modelo `anthropic/*` precisa do ponto explícito).
+   *
+   * Obrigatório pelo mesmo motivo de `embeddings`, e `true` só depois de um
+   * smoke contra a API real mostrar `cached_tokens` > 0 na segunda chamada —
+   * nunca por leitura de documentação (ADR 0041).
+   */
+  readonly promptCaching: boolean;
 }
 
 /**
