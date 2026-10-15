@@ -14,15 +14,10 @@ A fonte é o pt-BR em `docs/` (ADR 0216); `docs/reference/**` é gerado e fica f
 | locale | páginas traduzidas | caracteres traduzidos | em dia | defasadas | sem procedência | ausentes | órfãs |
 |---|---|---|---|---|---|---|---|
 | `en` | 257 de 257 (100.0%) | 100.0% de 5.300.103 | 257 | 0 | 0 | 0 | 0 |
-| `ru` | 168 de 257 (65.4%) | 91.7% de 5.300.103 | 166 | 2 | 0 | 89 | 0 |
-| `zh-Hans` | 6 de 257 (2.3%) | 9.8% de 5.300.103 | 4 | 2 | 0 | 251 | 0 |
+| `ru` | 257 de 257 (100.0%) | 100.0% de 5.300.103 | 257 | 0 | 0 | 0 | 0 |
+| `zh-Hans` | 9 de 257 (3.5%) | 44.3% de 5.300.103 | 7 | 2 | 0 | 248 | 0 |
 
 > **TODO(humano):** revisão nativa por idioma — quem revisou e quando. Ainda não há revisão nativa registrada.
-
-### Defasadas em `ru`
-
-- `glossary.md` (tradução de 2026-10-11)
-- `tutorials/from-zero-to-deliverable.md` (tradução de 2026-10-15)
 
 ### Defasadas em `zh-Hans`
 
