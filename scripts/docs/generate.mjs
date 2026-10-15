@@ -20,6 +20,7 @@ import { execFileSync } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { RAIZ } from './docmap.mjs';
+import { dadosDaFaixa, medirDoRepositorio, relatorio as relatorioDeParidade } from './paridade-de-traducao.mjs';
 import {
   aferir as aferirRefsComSimbolo,
   JANELA,
@@ -1187,6 +1188,14 @@ function verificarVersaoAnunciada() {
   else console.log(`  ok        versão anunciada (v${ultima[1]}, em ${afericoes.length} arquivos)`);
 }
 
+// AT-550 (ADR 0216 itens 6–7): a paridade de tradução é MEDIDA e gerada; o
+// JSON alimenta a faixa de `website/src/theme/DocItem/Content`.
+function gerarParidadeDeTraducao() {
+  const { docs, ui } = medirDoRepositorio(RAIZ);
+  escrever('docs/reference/paridade-de-traducao.md', relatorioDeParidade(docs, ui, AVISO) + '\n');
+  escrever('website/src/data/traducao.json', dadosDaFaixa(docs));
+}
+
 // ------------------------------------------------------------------- main
 
 console.log(CHECAR ? '[docs:generate] verificando…' : '[docs:generate] gerando…');
@@ -1195,6 +1204,7 @@ gerarEnv();
 gerarEventos();
 gerarOpenapi();
 gerarProvidersDeLlm();
+gerarParidadeDeTraducao();
 verificarIndiceAdr();
 verificarTemasDeAdr();
 verificarContagensEmProsa();

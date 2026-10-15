@@ -61,6 +61,7 @@ const sidebars: SidebarsConfig = {
         'reference/internal-api',
         'reference/scripts',
         'reference/rulesets',
+        'reference/paridade-de-traducao',
         'reference/brb',
         'security-surface',
         {
@@ -97,6 +98,10 @@ const sidebars: SidebarsConfig = {
         'explanation/medicao-do-jev',
         'explanation/auditoria-visual-rodada-29',
         'explanation/tanstack-ai',
+        'explanation/localizacao',
+        'explanation/localizacao-en',
+        'explanation/localizacao-ru',
+        'explanation/localizacao-zh-hans',
       ],
     },
     {

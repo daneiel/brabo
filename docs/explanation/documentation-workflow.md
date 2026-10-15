@@ -663,6 +663,36 @@ The docmap rule `traducao` (it was `traducao-pt-br`) watches the source
 and points at `website/i18n/`. It is `warn` and never `block`: requiring a
 translation in every doc PR would cost three translations per change.
 
+### Translation parity is generated, and the page says when it is behind (AT-550)
+
+What holds the lag back is measurement, not the docmap.
+`scripts/docs/paridade-de-traducao.mjs` (proved by mutation in the spec next
+to it) runs inside `pnpm docs:generate` and writes two files:
+`docs/reference/paridade-de-traducao.md` (`generated: true`) and
+`website/src/data/traducao.json`. Per locale it counts pages and characters
+translated over the source (`docs/` minus `docs/reference/**`), and splits the
+translated pages into **up to date**, **stale** and **without provenance**.
+Provenance is the `traducao_de: <SHA>` in the translated page's frontmatter,
+the last source commit it translates. A page is stale when the source has a
+commit with a later COMMIT DATE than that SHA, when the source has
+uncommitted changes, or when the SHA does not exist. It never uses the clock,
+so `--check` gives the same answer before and after the commit that touches
+the source. For the UI it compares the keys of each namespace in
+`apps/web/src/locales/<l>/` with pt-BR, and requires every plural form that
+`Intl.PluralRules` gives that locale. `--check` fails when either file is out
+of date.
+
+The banner is a wrap swizzle of `@theme/DocItem/Content`
+(`website/src/theme/DocItem/Content/index.tsx`). Outside pt-BR, a page whose
+`metadata.source` is under `@site/docs/` is the pt-BR fallback and says so;
+a translated page that `traducao.json` marks stale shows the translation
+date and says the original changed. The texts live in each locale's
+`code.json`. `scripts/docs/faixa-de-traducao-check.mjs` runs after
+`pnpm docs:build` and checks the static HTML: a fallback page under `/en/`
+has the banner, while the same page at the root and a translated page that is
+not stale do not. The rules for translators are in
+[Localização](localizacao.md).
+
 ### `links-do-locale.mjs` — a rewritten link skips the broken-link check
 
 The `markdown.hooks.onBrokenMarkdownLinks` hook in

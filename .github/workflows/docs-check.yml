@@ -265,6 +265,12 @@ jobs:
       - name: A referência de API renderiza
         run: node scripts/docs/api-render-check.mjs
 
+      # AT-550 (ADR 0216 item 6): a faixa de tradução aparece na página servida
+      # do fallback pt-BR em `/en/` e não aparece na tradução em dia nem na
+      # raiz. Mesmo molde: afirma sobre o HTML do build.
+      - name: A faixa de tradução aparece onde deve
+        run: node scripts/docs/faixa-de-traducao-check.mjs
+
       # Mesma classe de buraco, outra página: o link que o hook
       # `onBrokenMarkdownLinks` reescreve para `pathname://` PULA o checador de
       # link quebrado, então um prefixo de locale duplicado

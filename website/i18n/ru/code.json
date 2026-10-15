@@ -360,5 +360,13 @@
   "theme.tags.tagsPageTitle": {
     "message": "Теги",
     "description": "The title of the tag list page"
+  },
+  "traducao.faixa.naoTraduzida": {
+    "message": "Эта страница ещё не переведена; вы читаете оригинал на португальском.",
+    "description": "Faixa da página servida do fallback pt-BR (AT-550)"
+  },
+  "traducao.faixa.defasada": {
+    "message": "Перевод от {data}; оригинал с тех пор изменился.",
+    "description": "Faixa da tradução cuja fonte mudou depois do traducao_de (AT-550)"
   }
 }

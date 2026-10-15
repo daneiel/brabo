@@ -360,5 +360,13 @@
   "theme.tags.tagsPageTitle": {
     "message": "标签",
     "description": "The title of the tag list page"
+  },
+  "traducao.faixa.naoTraduzida": {
+    "message": "本页尚未翻译；您正在阅读葡萄牙语原文。",
+    "description": "Faixa da página servida do fallback pt-BR (AT-550)"
+  },
+  "traducao.faixa.defasada": {
+    "message": "译文日期 {data}；原文此后已有更改。",
+    "description": "Faixa da tradução cuja fonte mudou depois do traducao_de (AT-550)"
   }
 }
