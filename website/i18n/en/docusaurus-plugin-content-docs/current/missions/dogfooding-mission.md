@@ -1,3 +1,7 @@
+---
+traducao_de: 715e7330f7f738c55bc7cd3a0d770a0fc9304e11
+---
+
 # Mission: first dogfooding — Bitbucket and Generic by the agents' own hand
 
 Phase 10 delivers two git providers from the backlog — `BitbucketProvider`

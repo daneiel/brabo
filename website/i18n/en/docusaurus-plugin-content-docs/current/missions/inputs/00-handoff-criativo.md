@@ -1,3 +1,7 @@
+---
+traducao_de: 715e7330f7f738c55bc7cd3a0d770a0fc9304e11
+---
+
 # Input 0 — the session 0 (Creative) input text
 
 Operational material for Phase 10b. This file has the **literal text** to

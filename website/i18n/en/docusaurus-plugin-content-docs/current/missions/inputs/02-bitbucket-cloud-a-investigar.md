@@ -1,3 +1,7 @@
+---
+traducao_de: 715e7330f7f738c55bc7cd3a0d770a0fc9304e11
+---
+
 # Input 2 — Bitbucket Cloud: what to investigate before coding
 
 Input material for the PO and the Architect in Phase 10.

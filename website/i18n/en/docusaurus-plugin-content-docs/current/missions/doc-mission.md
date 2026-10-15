@@ -1,3 +1,7 @@
+---
+traducao_de: 715e7330f7f738c55bc7cd3a0d770a0fc9304e11
+---
+
 # Mission: complete, self-sustaining documentation for this repository
 
 You are a Staff Engineer + Technical Writer responsible for creating the

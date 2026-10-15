@@ -1,3 +1,7 @@
+---
+traducao_de: 715e7330f7f738c55bc7cd3a0d770a0fc9304e11
+---
+
 # Input 1 — the GitProvider contract that already exists
 
 Input material for the PO in Phase 10. Describes **what's already
