@@ -6,6 +6,11 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- A branch mergeada deixa de ser arquivada no instante do merge: o
+  `archive-merged-branch.yml` roda uma vez por dia e arquiva (move para
+  `refs/archive/<nome>`, nunca apaga) só a branch mergeada há 7 dias ou mais,
+  sem PR aberta e sem commit depois do merge. Branch sem PR mergeada não é
+  tocada (AT-557).
 - A interface fala russo: `apps/web/src/locales/ru/` traz os 27 namespaces
   traduzidos da fonte pt-BR, com o plural russo (`_one`/`_few`/`_many`/`_other`),
   e escolher `ru` na Conta deixa de cair no pt-BR (ADR 0216, AT-551).
