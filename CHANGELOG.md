@@ -6,6 +6,9 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- O índice da raiz da documentação (`/brabo/`) também usa as cores do produto,
+  escuro e claro pela preferência do sistema, em vez da paleta petróleo antiga
+  (AT-561).
 - O site de documentação usa as cores do produto nos dois temas (escuro
   preto, claro branco, primary terracota): importa `design/tokens.css` em vez
   de copiar uma paleta, com realce de código pelos tokens e contraste de 4,5:1
