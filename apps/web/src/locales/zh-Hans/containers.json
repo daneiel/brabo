@@ -1,0 +1,76 @@
+{
+  "title": "容器",
+  "subtitle": "此工作区的所有项目——镜像、状态、资源，以及停止、删除或启动容器的操作。",
+  "loadError": "无法加载容器。",
+  "loading": "加载中…",
+  "empty": "此工作区还没有任何项目。",
+  "table": {
+    "project": "项目",
+    "image": "镜像",
+    "imageUnresolved": "（镜像不可用）",
+    "imageDecidedNotFrozen": "已决定，尚未固定",
+    "imageUndecided": "尚未决定镜像",
+    "registered": "已登记",
+    "observed": "已观测",
+    "resources": "资源",
+    "resourcesValue": "{{cpus}} CPU · {{memoryMb}} MB · {{pidsLimit}} pids",
+    "resourcesNone": "—",
+    "since": "起始",
+    "sinceNone": "—",
+    "actions": "操作"
+  },
+  "status": {
+    "provisioning": "正在创建",
+    "running": "运行中",
+    "stopped": "已停止",
+    "failed": "失败",
+    "removed": "已删除",
+    "nuncaProvisionado": "从未创建"
+  },
+  "observed": {
+    "none": "未观测",
+    "naoVerificado": {
+      "fora_do_escopo_da_verificacao": "未核实——登记的状态无需守护进程确认",
+      "teto_de_verificacoes_atingido": "未核实——已达到本次加载的核实上限",
+      "sem_container_registrado": "没有可观测的容器"
+    },
+    "naoObservado": {
+      "broker-nao-configurado": "未配置 broker",
+      "broker-sem-resposta": "broker 无响应",
+      "broker-recusou": "broker 拒绝了请求"
+    }
+  },
+  "actions": {
+    "stop": "停止",
+    "remove": "删除",
+    "start": "启动容器",
+    "startAgain": "重新启动",
+    "errorTitle": "无法提议该操作",
+    "startNoDecisionTitle": "此项目没有镜像决定",
+    "startNoDecisionMessage": "Arquiteto（或 Infra）尚未为此项目决定镜像——没有可用于启动的镜像。",
+    "startRationale": "由用户在容器页面请求启动。",
+    "bloqueio": {
+      "ja_esta_de_pe": "容器已在运行——请先停止再重新启动。",
+      "sem_broker_na_instalacao": "此安装无法为“容器”或“挂载文件夹”项目启动容器：它没有容器 broker（BROKER_URL 为空），而启动它们的正是 broker。批准启动只会以失败告终。“本地 Runner”项目不依赖它——它们的容器由本地智能体启动。",
+      "sem_broker_para_parar": "此安装没有容器 broker（BROKER_URL 为空），而停止和删除“容器”或“挂载文件夹”项目容器的正是它：停止或删除只会以失败告终。",
+      "sem_imagem_decidida": "尚未决定镜像：在启动任何容器之前，Arquiteto（或 Infra）需要先决定一个。",
+      "runner_nunca_confirmou": "从未有本地智能体确认过此项目的文件夹——请先在那台机器上运行 `brabo-runner` 再启动。",
+      "sem_papel": "启动容器需要此工作区的 maintainer 角色。",
+      "sem_sessao": "此项目还没有会话——提议该操作需要一个会话。"
+    },
+    "ressalva": {
+      "runner_pode_estar_desconectado": "该文件夹曾被本地智能体确认过；如果它现在没有运行，操作在批准时会失败。",
+      "registrado_rodando_observado_parado": "登记显示运行中，但容器已停止（Docker 重启了？）。重新启动会唤起同一个容器，无需先停止。"
+    },
+    "semContainer": {
+      "nuncaProvisionado": "从未创建：没有可停止或删除的容器。",
+      "removido": "容器已删除：没有可停止或删除的内容。"
+    },
+    "bloqueioCurto": {
+      "sem_broker_na_instalacao": "此安装没有容器 broker：启动只会以失败告终。",
+      "sem_broker_para_parar": "此安装没有容器 broker：停止和删除只会以失败告终。",
+      "sem_broker_ambos": "此安装没有容器 broker：启动、停止和删除都只会以失败告终。"
+    },
+    "bloqueioDetalhe": "为什么？"
+  }
+}

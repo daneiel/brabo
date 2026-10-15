@@ -744,8 +744,10 @@ function verificarContagensEmProsa() {
       // providers. A aferição é da CONTAGEM, não da lista: conferir os onze
       // nomes exigiria parsear a prosa, e a contagem já é o que deriva.
       arquivo: 'docs/glossary.md',
-      padrao: /\*\*Artifact\*\* — an agent's structured, validated output\. (\w+)\n?\s*closed/,
-      esperado: POR_EXTENSO_EN[schemas] ?? String(schemas),
+      padrao: /\*\*Artefato\*\* — a saída estruturada e validada de um agente\. (\S+)\n?\s*schemas\s+fechados/,
+      esperado: POR_EXTENSO[schemas]
+        ? POR_EXTENSO[schemas][0].toUpperCase() + POR_EXTENSO[schemas].slice(1)
+        : String(schemas),
       oque: 'a contagem de schemas de artefato',
     },
   ];

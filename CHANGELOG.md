@@ -9,6 +9,9 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - A interface fala russo: `apps/web/src/locales/ru/` traz os 27 namespaces
   traduzidos da fonte pt-BR, com o plural russo (`_one`/`_few`/`_many`/`_other`),
   e escolher `ru` na Conta deixa de cair no pt-BR (ADR 0216, AT-551).
+- A interface ganha chinês simplificado (`zh-Hans`): os 27 namespaces de
+  `apps/web/src/locales/zh-Hans/`, traduzidos da fonte pt-BR, com plural só em
+  `_other` (ADR 0216, AT-552). Revisão por falante nativo: ainda não.
 - Com a variável de repositório `QA_FASE_DE_TESTE=true`, cada merge na `dev`
   abre (ou atualiza) e mergeia sozinho o PR de promoção `dev` → `qa`, depois
   de todos os checks terminarem verdes; a escada dispensa a aprovação só

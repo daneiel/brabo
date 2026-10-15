@@ -1,0 +1,38 @@
+{
+  "provisioningPage": {
+    "title": "正在创建仓库",
+    "fallbackProjectName": "项目",
+    "subtitle": "{{name}} · Gitflow bootstrap",
+    "successBanner": "仓库创建成功。",
+    "failedBannerTitle": "失败于：{{step}}",
+    "failedBannerTitleNoStep": "无法创建仓库",
+    "protectionFailureNote": "在免费套餐的私有仓库中，分支保护通常会失败。您可以不设置保护继续 —— Brabo 的合并锁不依赖 provider 的保护，仍然有效。",
+    "starting": "正在开始创建…",
+    "goToProject": "前往项目",
+    "retry": "重试",
+    "proceedWithoutProtection": "不保护分支，继续",
+    "working": "处理中…",
+    "timedOut": "我们在 {{minutes}} 分钟后停止了跟踪。",
+    "timedOutDetail": "这并不表示已失败 —— 创建过程在请求内运行，较慢的 provider 可能仍在处理。重试是安全的：bootstrap 是幂等的，会从中断的步骤继续。",
+    "watchAgain": "再次查看",
+    "genericError": "无法创建仓库。"
+  },
+  "bootstrapSteps": {
+    "stepLabel": {
+      "commitPrTemplate": "提交 PR 模板",
+      "commitBranchingPolicy": "提交分支策略",
+      "commitGitignore": "提交基础 .gitignore",
+      "createDevBranch": "创建 dev 分支",
+      "createQaBranch": "创建 qa 分支",
+      "protectBranches": "保护分支"
+    },
+    "stateLabel": {
+      "pendente": "待处理",
+      "rodando": "运行中",
+      "ok": "OK",
+      "skip": "已跳过",
+      "falha": "失败"
+    },
+    "notSupportedNote": "不支持"
+  }
+}
