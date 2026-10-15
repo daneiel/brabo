@@ -6,7 +6,7 @@ traducao_de: 929963d24eb727bd64875486f2f1889172f3084a
 
 > Context consolidated from the team-model design session
 > (Aug/2026), audited against the product's real state. The formal
-> specification lives in [`docs/fluxo.yml`](../fluxo.yml); this document
+> specification lives in [`docs/fluxo.yml`](https://github.com/daneiel/brabo/blob/dev/docs/fluxo.yml); this document
 > explains the decisions. Structural decision: ADR 0085. Sibling
 > pieces: `docs/gates.yml` (ADR 0054) and `agent-areas.ts` (catalog,
 > PHASE 18).

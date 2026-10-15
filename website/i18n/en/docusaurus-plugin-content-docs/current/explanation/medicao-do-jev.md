@@ -2,7 +2,7 @@
 id: medicao-do-jev
 title: Measuring the Jev tool router
 description: The replay that asks the Jev, for every agent step already recorded in the local event log, which tool it would have offered — the agreement, confidence curve, latency and cost it produced on 2026-09-29, and a second round that separates the ruler, the input and the agent's own rhythm in the gap to 90%, with sample sizes and what the replay cannot see; and the live with-and-without comparison of AT-239 — instrument, protocol, decision rule and cost estimate written before any run, and the run of 2026-10-01 (40 executions, US$ 0.52) — restrict, the router paid off on Haiku and lost on DeepSeek, whose prompt cache it breaks.
-traducao_de: 929963d24eb727bd64875486f2f1889172f3084a
+traducao_de: ecdb4939d75fa1e38739b157f898f47ca33c247a
 ---
 
 # Measuring the Jev tool router
