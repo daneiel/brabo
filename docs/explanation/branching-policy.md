@@ -145,6 +145,8 @@ Every PR gets a family label, applied automatically:
 The label isn't decoration: it's what lets you answer "how many hotfixes
 did we have this quarter?" without git archaeology.
 
+<a id="push-direto-é-bloqueado"></a>
+
 ## Direct push is blocked
 
 None of the three permanents accept direct push. Every change enters via

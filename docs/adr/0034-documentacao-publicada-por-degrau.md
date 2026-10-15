@@ -48,7 +48,7 @@ publicação passa a `peaceiris/actions-gh-pages`, que **commita na branch
 
 Isso abre a **terceira exceção** à porta única de PR, ao lado das tags e do
 `.release/gate.json` — e ela está registrada na
-[política de branches](../explanation/branching-policy.md#direct-push-is-blocked),
+[política de branches](../explanation/branching-policy.md#push-direto-é-bloqueado),
 porque exceção que não está documentada vira precedente.
 
 O que torna esta exceção diferente das outras duas, e mais fácil de aceitar: a
