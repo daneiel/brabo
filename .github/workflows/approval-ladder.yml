@@ -47,6 +47,22 @@ jobs:
         with:
           node-version: 26.10.0
 
+      # O login do usuário do `BRABO_BOT_TOKEN` — é assim que a escada sabe
+      # que o PR `dev` → `qa` foi aberto pela promoção automática (ADR 0217).
+      # Sem o segredo (PR de fork) ou com a variável desligada, fica vazio e
+      # nada é dispensado.
+      - name: Quem é o bot
+        id: bot
+        env:
+          BOT_TOKEN: ${{ secrets.BRABO_BOT_TOKEN }}
+          FASE: ${{ vars.QA_FASE_DE_TESTE }}
+        run: |
+          login=""
+          if [ "$FASE" = "true" ] && [ -n "${BOT_TOKEN:-}" ]; then
+            login="$(GH_TOKEN="$BOT_TOKEN" gh api user --jq .login || true)"
+          fi
+          echo "login=$login" >> "$GITHUB_OUTPUT"
+
       - name: Avaliar a escada
         env:
           GH_TOKEN: ${{ github.token }}
@@ -55,6 +71,9 @@ jobs:
           PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           PR_AUTOR: ${{ github.event.pull_request.user.login }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          QA_FASE_DE_TESTE: ${{ vars.QA_FASE_DE_TESTE }}
+          BOT_LOGIN: ${{ steps.bot.outputs.login }}
           # O modo e os aprovadores são VARIÁVEIS de repositório — trocar de
           # solo para community é mudar isto aqui, sem tocar em código.
           APPROVAL_MODE: ${{ vars.APPROVAL_MODE || 'solo' }}

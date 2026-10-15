@@ -59,6 +59,12 @@ const DEGRAUS = [
 // próprio valor em vez de exibir `undefined`.
 const CAMINHO_ATUAL = DEGRAUS.find((d) => d.branch === DOCS_BRANCH)?.caminho ?? DOCS_BRANCH;
 
+// Fase de teste da QA (ADR 0217): enquanto a `qa` é promovida sozinha a cada
+// merge na `dev`, o site do degrau `qa` avisa que ele não é ambiente validado.
+// O texto é o MESMO de `AVISO_DA_FASE_DE_TESTE` em `scripts/ci/promote.ts`.
+const AVISO_DA_QA =
+  'Fase de teste: a QA é promovida automaticamente a cada merge na dev e ainda não é considerada ambiente validado.';
+
 const config: Config = {
   title: 'Brabo',
   tagline:
@@ -241,6 +247,15 @@ const config: Config = {
   ],
 
   themeConfig: {
+    ...(DOCS_BRANCH === 'qa'
+      ? {
+          announcementBar: {
+            id: 'qa-fase-de-teste',
+            content: AVISO_DA_QA,
+            isCloseable: false,
+          },
+        }
+      : {}),
     colorMode: {
       defaultMode: 'dark',
       respectPrefersColorScheme: true,
