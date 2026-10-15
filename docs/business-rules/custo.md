@@ -3183,7 +3183,7 @@ um espelho declarado, porque a tela não deve copiar a constante e o engine não
   `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts` ("plano válido nasce pending")
 - **Origem:** AT-473
 
-### RN-892 — O prefixo estável da chamada pode ir marcado para o cache de prompt, e a capability nasce desligada {#rn-892}
+### RN-892 — O prefixo estável da chamada vai marcado para o cache de prompt, e a capability é ligada só no OpenRouter, provada {#rn-892}
 
 Medido no TP-01 (15/10): o `anthropic/claude-haiku-5.5` pelo OpenRouter
 recebeu 8,40 M tokens de entrada com **0** em cache, e a entrada foi US$ 0,84
@@ -3192,7 +3192,7 @@ dos US$ 1,02. Modelos Anthropic só leem do cache o prefixo marcado com
 quatro pontos, TTL de 5 min — https://openrouter.ai/docs/features/prompt-caching).
 
 1. **Capability de provider, obrigatória.** `LLMProviderCapabilities.promptCaching`
-   é `false` nos nove providers. Declará-la sem o hook `marcarCacheDePrompt`
+   é `true` só no OpenRouter e `false` nos outros oito. Declará-la sem o hook `marcarCacheDePrompt`
    falha na construção. Desligada, o corpo é byte a byte o de antes.
 2. **Camada de modelo na config.** No OpenRouter só `anthropic/*` recebe ponto;
    os demais cacheiam sozinhos e voltam intactos.
@@ -3201,11 +3201,13 @@ quatro pontos, TTL de 5 min — https://openrouter.ai/docs/features/prompt-cachi
    da cauda de `system` do fim. A cauda — idioma (RN-622), ambiente (RN-706),
    fluxo (RN-711), perfil (RN-680) — fica DEPOIS do último ponto, e a ordem
    das mensagens nunca muda.
-4. **Lacuna declarada.** A capability segue `false` até o smoke rodar com
-   credencial e a segunda chamada voltar com `cached_tokens` > 0
-   (ADRs 0041/0042): `OPENROUTER_TEST_KEY=… pnpm --filter api exec vitest run
-   test/infrastructure/llm/openrouter-provider.cache.smoke.spec.ts`. O ganho
-   aparece no metering pela [RN-666](#rn-666).
+4. **Prova (ADRs 0041/0042).** Em 2026-10-15 o smoke rodou com credencial
+   real (`OPENROUTER_TEST_KEY=… pnpm --filter api exec vitest run
+   test/infrastructure/llm/openrouter-provider.cache.smoke.spec.ts`) e a
+   segunda chamada a `anthropic/claude-haiku-5.5` voltou com
+   `cached_input_tokens=8011`; só então a capability do OpenRouter passou a
+   `true`. Ligar outro provider exige o smoke equivalente. O ganho aparece no
+   metering pela [RN-666](#rn-666).
 
 - **Código:** `apps/api/src/infrastructure/llm/openrouter-provider.ts:276` (`marcarCacheDePromptOpenRouter`);
   `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:501` (`mensagens`)

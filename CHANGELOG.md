@@ -6,6 +6,10 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- O cache de prompt passa a valer no Haiku (e nos demais `anthropic/*`) pelo
+  OpenRouter: a capability `promptCaching` do OpenRouter vira `true`, provada
+  por smoke com credencial em 15/10 (`cached_input_tokens=8011` na segunda
+  chamada) (RN-892, AT-543).
 - O provider ganha a capability `promptCaching` (RN-892, AT-543): com ela
   ligada, o OpenRouter marca `cache_control` nas instruções e no fim do
   histórico das chamadas a modelos `anthropic/*`, deixando as mensagens
