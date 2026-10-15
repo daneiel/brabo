@@ -6,6 +6,9 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- A interface fala russo: `apps/web/src/locales/ru/` traz os 27 namespaces
+  traduzidos da fonte pt-BR, com o plural russo (`_one`/`_few`/`_many`/`_other`),
+  e escolher `ru` na Conta deixa de cair no pt-BR (ADR 0216, AT-551).
 - Com a variável de repositório `QA_FASE_DE_TESTE=true`, cada merge na `dev`
   abre (ou atualiza) e mergeia sozinho o PR de promoção `dev` → `qa`, depois
   de todos os checks terminarem verdes; a escada dispensa a aprovação só
