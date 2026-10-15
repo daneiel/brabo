@@ -23,6 +23,7 @@ describe('classificar', () => {
       '.github/workflows/docs-check.yml',
       'CHANGELOG.md',
       'CLAUDE.md',
+      '.claude/contexto/stack.md',
       'design/README.md',
     ]);
     expect(r.rodar).toBe(false);
