@@ -211,7 +211,7 @@ to `key`, and whoever writes `active` receives the raw key from
 - **Where:** `apps/web/src/routes/project-tabs.ts:95` (both entries),
   `apps/web/src/routes/ProjectSessionsTab.tsx:114` (the filter by recorded
   `kind`) and `:98` (the CTA creating in the tab's `kind`),
-  `apps/web/src/routes/SessionPage.tsx:712` (`conviteVisivel`, the one
+  `apps/web/src/routes/SessionPage.tsx:716` (`conviteVisivel`, the one
   question the topbar and the invite share)
 - **Test:** `apps/web/src/routes/ProjectSessionsTab.test.tsx`,
   `apps/web/src/routes/project-tabs.test.tsx`,
@@ -239,7 +239,7 @@ either of the two paths. What changed is that the FIRST MESSAGE now also
 counts as that gesture: no one should need a separate click before talking
 to whoever the screen already invited them to talk to.
 
-- **Where:** `apps/web/src/routes/SessionPage.tsx:674` (`handleSend`)
+- **Where:** `apps/web/src/routes/SessionPage.tsx:678` (`handleSend`)
 - **Test:** `apps/web/src/routes/SessionPage.ideacao-automatica.test.tsx`
 - **Edge case:** a `consultiva` session has no Creative agent — the rule
   doesn't apply, and the generic SSE path stays the right one for it.
@@ -275,7 +275,7 @@ one.
 > follows that recipient. What survives from this rule is the half about the
 > model: the binding route receives the agent, never falls back silently.
 
-- **Where:** `apps/web/src/lib/session-destinatario.ts:254`
+- **Where:** `apps/web/src/lib/session-destinatario.ts:272`
   (`useDestinatarioDoChat`, since RN-631),
   `apps/web/src/lib/api-client.ts:1124` (`getSessionModelBinding`, the
   `agentId`), `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:166`
@@ -17312,7 +17312,7 @@ continuam SEM decisão inline (não há `ApprovalCard` para elas).
   (`PendenciasDeOutrasSessoes`); `apps/web/src/routes/MergearNoChat.tsx:28`
   (`prAbertaDaAcao`), `:56` (`jaHaMergeDaPr`), `:89` (`MergearNoChat`);
   `apps/web/src/routes/SessionPage.tsx:150` (`podeDecidir`), `:272`
-  (`useRetomarTurnoDoLog`), `:763` (`PendenciasDeOutrasSessoes`)
+  (`useRetomarTurnoDoLog`), `:767` (`PendenciasDeOutrasSessoes`)
 - **Teste:** `apps/web/src/components/ApprovalCard.decisao-em-voo.test.tsx:37`
   (duplo clique), `:52` (409 no card e botões inertes — caso de falha), `:67`
   (erro que não é 409 devolve os botões); `apps/web/src/lib/turno-em-curso-no-log.test.ts:18`
@@ -17660,11 +17660,11 @@ passa a ler `DESTINATARIO_DA_SESSAO_CRIATIVA` em vez do literal de
 `SessionPage.tsx`: todo destino que o composer pode dar continua tendo
 cláusula própria no engine. Nenhuma mudança de api nem de engine.
 
-- **Onde:** `apps/web/src/lib/session-destinatario.ts:191` (`agentesEmConversa`),
-  `:219` (`resolverDestinatario`), `:254` (`useDestinatarioDoChat`), `:116`
+- **Onde:** `apps/web/src/lib/session-destinatario.ts:210` (`agentesEmConversa`),
+  `:237` (`resolverDestinatario`), `:272` (`useDestinatarioDoChat`), `:116`
   (`useAtivadosNaSessaoInteira`), `:141` (`ativadosSemJanela`);
   `apps/web/src/routes/SessionComposer.tsx:287` (`destinatarioRow`), `:193`
-  (`ofertasForaDaJanela`); `apps/web/src/routes/SessionPage.tsx:346`
+  (`ofertasForaDaJanela`); `apps/web/src/routes/SessionPage.tsx:350`
   (`aceitarHandoff`); `apps/web/src/routes/session-timeline-montagem.tsx:547`
   (`handoffIdDoEvento`), `:555` (`origem`); `apps/web/src/lib/session-handoffs.ts:68`
   (`activeFor`), `:120` (`ofertasAcionaveis`), `:142` (`ofertasForaDaJanela`)
@@ -19959,8 +19959,8 @@ isso a recusa da api mora na ROTA, e o caso de uso não muda.
   `apps/api/src/application/use-cases/llm/garantir-destinatario-do-chat.use-case.ts:27`
   (`GarantirDestinatarioDoChatUseCase`);
   `apps/api/src/interfaces/http/llm/chat.controller.ts:82` (`chat`);
-  `apps/web/src/lib/session-destinatario.ts:311` (`agentesParaChamar`);
-  `apps/web/src/routes/SessionPage.tsx:674` (`handleSend`);
+  `apps/web/src/lib/session-destinatario.ts:329` (`agentesParaChamar`);
+  `apps/web/src/routes/SessionPage.tsx:678` (`handleSend`);
   `apps/web/src/routes/SessionComposer.tsx:276`
 - **Teste:** `apps/api/test/application/use-cases/llm/garantir-destinatario-do-chat.use-case.spec.ts:82`
   (consultiva sem agente — caso de falha), `:96`, `:113`, `:120`;
@@ -20397,7 +20397,7 @@ E o composer e os campos de texto das perguntas estruturadas levam
 `data-form-type="other"`): cada foco abria o popup de autofill do navegador.
 
 - **Onde:** `apps/web/src/lib/conversa-comecou.ts:15` (`conversaComecou`),
-  `:29` (`SEM_AUTOFILL`); `apps/web/src/routes/SessionPage.tsx:432`
+  `:29` (`SEM_AUTOFILL`); `apps/web/src/routes/SessionPage.tsx:436`
   (`conversaComecou`); `apps/web/src/routes/SessionComposer.tsx:389`
   (`SEM_AUTOFILL`); `apps/web/src/routes/StructuredQuestionCard.tsx:206`
   (`SEM_AUTOFILL`)
@@ -21078,7 +21078,7 @@ quando o turno termina entregando um formulário (`gravar_texto_do_turno(state,
 
 - **Onde:** `apps/web/src/lib/texto-plano.ts:7` (`textoPlanoDoMarkdown`),
   `apps/web/src/lib/eco-de-formulario.ts:17` (`ecosDeRespostaEstruturada`),
-  `apps/web/src/lib/session-destinatario.ts:219` (`resolverDestinatario`),
+  `apps/web/src/lib/session-destinatario.ts:237` (`resolverDestinatario`),
   `apps/web/src/components/ui/MarkdownMessage.tsx:74` (`CodeFence`)
 - **Teste:** `apps/web/src/lib/texto-plano.test.ts`,
   `apps/web/src/lib/eco-de-formulario.test.ts`,
@@ -21506,7 +21506,7 @@ O kickoff do PO diz as três coisas.
   pegam as tarefas como estão ([RN-677](#rn-677)).
 - **Onde:** `apps/web/src/lib/mensagem-otimista.ts:14` (`otimistaJaNoLog`),
   `apps/web/src/lib/mensagem-otimista.ts:22` (`nomeDaMensagemOtimista`),
-  `apps/web/src/routes/SessionPage.tsx:785` (`otimistaJaNoLog`),
+  `apps/web/src/routes/SessionPage.tsx:790` (`otimistaJaNoLog`),
   `apps/web/src/routes/session-timeline-montagem.tsx:609`
   (`handleActivateExecution`)
 - **Teste:** `apps/web/src/lib/mensagem-otimista.test.ts` (feliz: o id no log
@@ -22155,8 +22155,8 @@ sem dizer qual.
   texto, e as duas frases são o contrato com `Engine.Harness.RespostaCortada`.
 - **Onde:** `apps/web/src/lib/resposta-cortada.ts:14` (`respostaCortada`),
   `apps/web/src/routes/session-timeline-montagem.tsx:889` (`respostaCortada`),
-  `apps/web/src/routes/SessionPage.tsx:443` (`continuarRespostaCortada`),
-  `:682` (`enviarMensagem`)
+  `apps/web/src/routes/SessionPage.tsx:447` (`continuarRespostaCortada`),
+  `:686` (`enviarMensagem`)
 - **Teste:** `apps/web/src/lib/resposta-cortada.test.ts` (`respostaCortada
   (RN-749)`: as duas linhas reconhecidas; resposta inteira e a frase no meio do
   texto não)
@@ -22430,7 +22430,7 @@ sem dizer qual.
 - **Onde:** `apps/api/src/application/use-cases/actions/execute-adr-pr.use-case.ts:96`
   (`openPullRequest`); `apps/engine/lib/engine/infra/infra_lead_server.ex:1521`
   (`gravar_texto_do_turno`); `apps/engine/lib/engine/dev/dev_agent_server.ex:1164`
-  (`propose_pr`); `apps/web/src/lib/session-destinatario.ts:192`
+  (`propose_pr`); `apps/web/src/lib/session-destinatario.ts:210`
   (`agentesEmConversa`) e `apps/web/src/lib/session-kind.ts:69`
   (`tipoDaSessao`); `apps/web/src/routes/NewProjectWizard.tsx:1122`
   (`quebraPorSegmento`); `apps/web/src/components/ui/MarkdownMessage.tsx:139`
@@ -24701,7 +24701,7 @@ sem dizer qual.
   (`agentesDaOfertaEmLote`); papel `maintainer` (o do endpoint). Sem execução,
   nada aparece e `agent_autonomy` nem é lido. Some quando todos já estão em
   automático.
-- **Onde:** `apps/web/src/components/ModoAutomaticoNoChat.tsx:22`
+- **Onde:** `apps/web/src/components/ModoAutomaticoNoChat.tsx:41`
   (`ModoAutomaticoNoChat`), `:18` (`agentesDoChat`)
 - **Teste:** `apps/web/src/components/ModoAutomaticoNoChat.test.tsx` ("caminho
   feliz: com execução, a oferta aparece e só o clique grava"; falha: "sem
@@ -24747,6 +24747,32 @@ sem dizer qual.
   `apps/engine/test/engine/agents/dev_lead_tools_test.exs` ("a tarefa
   bloqueada diz BLOQUEADA e o motivo; a todo normal não")
 - **Origem:** AT-536
+
+### RN-889 — A oferta em lote do modo automático aparece no chat de qualquer sessão ativa do projeto em execução {#rn-889}
+
+- **Regra:** estende a RN-883. Aprovar o plano do Dev Lead cria a sessão de
+  EXECUÇÃO, separada da do Criativo, e é no chat do Criativo que o usuário
+  conduz. A oferta em lote (RN-661) aparece no chat de toda sessão ATIVA
+  quando o PROJETO tem execução — `roster.executionActivated` do resumo de
+  projetos (a sessão mais recente, a de execução), a MESMA leitura e `queryKey`
+  que o chat já fazia (`useAtivosNoProjeto`, RN-633), sem query nova nem poll
+  novo. Os dev agents de lá (`roster.activatedAgents`) somam aos desta sessão.
+  Mesmo componente, mesmo endpoint, mesmo texto, nada gravado sem o clique,
+  espera saber quem já está ligado (RN-803) e some com o time todo em
+  automático. Sem execução no projeto, nada aparece e `agent_autonomy` nem é
+  lido. Lacuna declarada: o sinal é `roster.executionActivated` da sessão mais
+  recente, que diz que ela TEVE `execution.activated`, não que segue aberta;
+  com a sessão de execução já encerrada, a oferta ainda aparece no chat do
+  Criativo — declarado, não corrigido, porque distinguir exigiria uma leitura
+  nova (o orçamento de requisições).
+- **Onde:** `apps/web/src/components/ModoAutomaticoNoChat.tsx:29`
+  (`ofertaDoChat`); `apps/web/src/lib/session-destinatario.ts:174`
+  (`useExecucaoNoProjeto`)
+- **Teste:** `apps/web/src/components/ModoAutomaticoNoChat.test.tsx` ("caminho
+  feliz: execução ativa noutra sessão do projeto, time em manual — a oferta
+  aparece no chat do Criativo"; falhas: "time todo já em automático: nada
+  aparece", "sem execução no projeto: nada aparece e nem a leitura acontece")
+- **Origem:** AT-540
 
 ### RN-890 — O QA cobra o código de saída do comando de linha, na recusa também {#rn-890}
 
