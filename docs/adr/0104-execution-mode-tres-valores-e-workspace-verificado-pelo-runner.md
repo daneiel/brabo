@@ -106,7 +106,7 @@ Esta decisão (itens 1–3 acima) é **P1**: sem ela, o runner existe mas
 ninguém consegue chegar nele sem primeiro montar a pasta que ele foi
 desenhado para dispensar. O que fica para depois, na ordem que o dono do
 produto já definiu (detalhe completo em
-[backlog.md](../explanation/backlog.md#backlog-do-runnerexecution_mode-adr-0104)):
+[backlog.md](../explanation/backlog.md#backlog-of-the-runnerexecution_mode-adr-0104)):
 
 - **Distribuição do runner** (`tsup` → pacote único + `npm publish
   @brabo/runner`) — hoje é `"private": true` com `bin` apontando pra um
