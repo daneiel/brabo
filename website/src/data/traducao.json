@@ -1034,45 +1034,21 @@
       "defasada": false,
       "data": "2026-10-15"
     },
-    "architecture.md": {
+    "business-rules.md": {
       "defasada": false,
       "data": "2026-10-15"
     },
-    "explanation/achados-execucao-real.md": {
+    "business-rules/autenticacao.md": {
+      "defasada": false,
+      "data": "2026-10-11"
+    },
+    "business-rules/custo.md": {
       "defasada": false,
       "data": "2026-10-15"
     },
-    "explanation/backlog.md": {
+    "explanation/historico-de-fases.md": {
       "defasada": false,
-      "data": "2026-10-15"
-    },
-    "explanation/branching-policy.md": {
-      "defasada": false,
-      "data": "2026-10-15"
-    },
-    "explanation/cadeia-de-suprimentos-do-ci.md": {
-      "defasada": false,
-      "data": "2026-10-15"
-    },
-    "explanation/documentation-workflow.md": {
-      "defasada": false,
-      "data": "2026-10-15"
-    },
-    "explanation/fase-30-runner-por-maquina.md": {
-      "defasada": false,
-      "data": "2026-09-26"
-    },
-    "explanation/gates.md": {
-      "defasada": false,
-      "data": "2026-10-15"
-    },
-    "explanation/medicao-do-idioma.md": {
-      "defasada": false,
-      "data": "2026-10-15"
-    },
-    "explanation/medicao-do-jev.md": {
-      "defasada": false,
-      "data": "2026-10-15"
+      "data": "2026-10-01"
     },
     "getting-started.md": {
       "defasada": false,
@@ -1086,7 +1062,11 @@
       "defasada": false,
       "data": "2026-10-15"
     },
-    "missions/dogfooding-mission.md": {
+    "runbook.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "security-surface.md": {
       "defasada": false,
       "data": "2026-10-15"
     },
