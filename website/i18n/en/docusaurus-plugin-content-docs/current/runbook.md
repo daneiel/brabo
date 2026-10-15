@@ -4,6 +4,7 @@ title: Operational Runbook
 sidebar_label: Runbook
 sidebar_position: 4
 description: Brabo operational procedures — deploy, rollout, restore, key rotation, cost incident, and observability.
+traducao_de: e5c0b27947f7c700f9f117f65f8ca437569ab9c6
 keywords: [runbook, operations, incident, restore, rollout, kubernetes]
 ---
 
