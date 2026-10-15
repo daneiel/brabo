@@ -27,7 +27,9 @@ const TRADUZIDAS_EN = join(RAIZ, 'website/i18n/en/docusaurus-plugin-content-docs
 function rotaSimples(arquivo) {
   if (!existsSync(arquivo)) return false;
   const fm = /^---\r?\n([\s\S]*?)\r?\n---/.exec(readFileSync(arquivo, 'utf8'));
-  return !(fm && /^(slug|id):/m.test(fm[1]));
+  // `id` igual ao nome do arquivo não muda a rota; só `slug` ou `id` diferente mudam.
+  const id = fm && /^id:\s*(\S+)/m.exec(fm[1])?.[1];
+  return !(fm && (/^slug:/m.test(fm[1]) || (id && id !== arquivo.replace(/^.*\//, '').replace(/\.md$/, ''))));
 }
 
 function html(rota) {
