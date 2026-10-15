@@ -258,19 +258,19 @@ export const AFERICOES = [
   { arquivo: 'CONTRIBUTING.md', padrao: /implementar as (\S+) operações, declarar/, fonte: 'operacoesDoGit', forma: 'pt_f' },
   { arquivo: 'docs/reference/git-providers.md', padrao: /\*\*(\S+) operations\*\* —/, fonte: 'operacoesDoGit', forma: 'en' },
   { arquivo: 'docs/reference/git-providers.md', padrao: /implementing all (\S+) operations, honestly/, fonte: 'operacoesDoGit', forma: 'en' },
-  { arquivo: 'docs/architecture.md', padrao: /`GitProviderContract` — (\S+) operations, \*\*types/, fonte: 'operacoesDoGit', forma: 'en' },
+  { arquivo: 'docs/architecture.md', padrao: /`GitProviderContract` — (\S+) operações, \*\*tipos/, fonte: 'operacoesDoGit', forma: 'pt_f' },
 
   // porta de Docker
   { arquivo: '.claude/rules/runner.md', padrao: /PORTA de\s+(\S+) operações \(`packages\/docker-port`/, fonte: 'operacoesDoDocker', forma: 'pt_f' },
   { arquivo: '.claude/rules/broker-e-containers.md', padrao: /das (\S+) operações da `DockerPort`/, fonte: 'operacoesDoDocker', forma: 'pt_f' },
-  { arquivo: 'docs/architecture.md', padrao: /the Docker PORT \((\S+) operations\)/, fonte: 'operacoesDoDocker', forma: 'en' },
+  { arquivo: 'docs/architecture.md', padrao: /a PORTA do Docker \((\S+) operações\)/, fonte: 'operacoesDoDocker', forma: 'pt_f' },
 
   // web, compose, ações, banco
   { arquivo: 'README.md', padrao: /— (\S+) abas, derivadas de um registro único/, fonte: 'abasDoProjeto', forma: 'pt_f' },
   { arquivo: '.claude/contexto/convencoes-repositorio-e-dominio.md', padrao: /Os (\S+) serviços do compose de DEV têm healthcheck/, fonte: 'servicosDoComposeDeDev', forma: 'pt_m' },
   { arquivo: 'docs/glossary.md', padrao: /nunca executa direto\.\s+São (\d+) tipos/, fonte: 'tiposDeAcao', forma: 'digito' },
   { arquivo: 'docs/glossary.md', padrao: /nunca executa direto\.\s+São \d+ tipos e (\d+) estados/, fonte: 'estadosDeAcao', forma: 'digito' },
-  { arquivo: 'docs/architecture.md', padrao: /^(\d+) tables in total\./m, fonte: 'tabelasDoBanco', forma: 'digito' },
+  { arquivo: 'docs/architecture.md', padrao: /^(\d+) tabelas no total\./m, fonte: 'tabelasDoBanco', forma: 'digito' },
 
   // artefatos e providers
   { arquivo: 'README.md', padrao: /os (\S+) schemas e quem pode emitir/, fonte: 'schemasDeArtefato', forma: 'pt_m' },
