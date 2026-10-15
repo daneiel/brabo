@@ -500,6 +500,182 @@
       "defasada": false,
       "data": "2026-10-15"
     },
+    "adr/0127-tetos-de-rebaixamento-em-project-members.md": {
+      "defasada": false,
+      "data": "2026-08-30"
+    },
+    "adr/0128-porta-de-docker-e-a-prova-de-empacotamento.md": {
+      "defasada": false,
+      "data": "2026-09-02"
+    },
+    "adr/0129-telemetria-de-busca-do-rag-como-tabela.md": {
+      "defasada": false,
+      "data": "2026-09-02"
+    },
+    "adr/0130-broker-de-container.md": {
+      "defasada": false,
+      "data": "2026-09-02"
+    },
+    "adr/0131-roteamento-de-modulos-para-infra.md": {
+      "defasada": false,
+      "data": "2026-09-02"
+    },
+    "adr/0132-golden-set-de-acerto-do-rag.md": {
+      "defasada": false,
+      "data": "2026-09-02"
+    },
+    "adr/0133-infra-elege-imagem-do-roteamento.md": {
+      "defasada": false,
+      "data": "2026-09-03"
+    },
+    "adr/0134-dev-agents-executam-dentro-do-container.md": {
+      "defasada": false,
+      "data": "2026-09-03"
+    },
+    "adr/0135-portao-de-imagem-nos-tres-modos.md": {
+      "defasada": false,
+      "data": "2026-09-03"
+    },
+    "adr/0136-pagina-global-de-containers.md": {
+      "defasada": false,
+      "data": "2026-09-03"
+    },
+    "adr/0137-o-runner-sobe-o-container-do-projeto.md": {
+      "defasada": false,
+      "data": "2026-09-03"
+    },
+    "adr/0138-golden-set-do-rag-em-ci-agendado.md": {
+      "defasada": false,
+      "data": "2026-09-03"
+    },
+    "adr/0139-o-alarme-de-esteira-ganha-destinatario.md": {
+      "defasada": false,
+      "data": "2026-09-04"
+    },
+    "adr/0140-timeout-do-audit-como-risco-assumido.md": {
+      "defasada": false,
+      "data": "2026-09-04"
+    },
+    "adr/0141-base-unica-dos-projetos-montados.md": {
+      "defasada": false,
+      "data": "2026-09-26"
+    },
+    "adr/0142-validacao-de-workspace-montado-adiada.md": {
+      "defasada": false,
+      "data": "2026-09-04"
+    },
+    "adr/0143-agentes-de-dev-so-depois-do-container.md": {
+      "defasada": false,
+      "data": "2026-09-04"
+    },
+    "adr/0144-a-segunda-raiz-do-broker.md": {
+      "defasada": false,
+      "data": "2026-09-04"
+    },
+    "adr/0145-docker-pre-requisito-do-runner.md": {
+      "defasada": false,
+      "data": "2026-09-05"
+    },
+    "adr/0146-base-consentida-no-bootstrap.md": {
+      "defasada": false,
+      "data": "2026-09-06"
+    },
+    "adr/0147-agente-local-com-capacidades.md": {
+      "defasada": false,
+      "data": "2026-09-06"
+    },
+    "adr/0148-artefatos-projetados-em-arquivo.md": {
+      "defasada": false,
+      "data": "2026-09-10"
+    },
+    "adr/0149-assinatura-dos-artefatos-publicados.md": {
+      "defasada": false,
+      "data": "2026-09-08"
+    },
+    "adr/0150-instalador-de-uma-linha.md": {
+      "defasada": false,
+      "data": "2026-09-08"
+    },
+    "adr/0151-base-consentida-no-runner.md": {
+      "defasada": false,
+      "data": "2026-09-08"
+    },
+    "adr/0152-backup-de-volumes-contra-compose.md": {
+      "defasada": false,
+      "data": "2026-09-08"
+    },
+    "adr/0153-deploy-enabled-o-gatilho-que-ninguem-cria.md": {
+      "defasada": false,
+      "data": "2026-09-09"
+    },
+    "adr/0154-chave-de-dispositivo-de-maquina.md": {
+      "defasada": false,
+      "data": "2026-09-27"
+    },
+    "adr/0155-a-primeira-conta-nasce-no-terminal.md": {
+      "defasada": false,
+      "data": "2026-09-27"
+    },
+    "adr/0156-teto-de-auto-rebaixamento-na-remocao.md": {
+      "defasada": false,
+      "data": "2026-09-12"
+    },
+    "adr/0157-teto-de-auto-movimento-no-upsert-de-workspace.md": {
+      "defasada": false,
+      "data": "2026-09-12"
+    },
+    "adr/0158-o-id-da-chave-mestra-gravado-no-envelope.md": {
+      "defasada": false,
+      "data": "2026-09-12"
+    },
+    "adr/0159-imagem-de-terceiro-por-digest.md": {
+      "defasada": false,
+      "data": "2026-09-12"
+    },
+    "adr/0160-o-compose-do-instalador-viaja-assinado.md": {
+      "defasada": false,
+      "data": "2026-09-13"
+    },
+    "adr/0161-a-tela-so-oferece-o-modo-que-a-instalacao-executa.md": {
+      "defasada": false,
+      "data": "2026-09-18"
+    },
+    "adr/0162-broker-publicado-e-oferecido-pelo-instalador.md": {
+      "defasada": false,
+      "data": "2026-09-18"
+    },
+    "adr/0163-o-clique-responde-ao-aceitar.md": {
+      "defasada": false,
+      "data": "2026-09-18"
+    },
+    "adr/0165-o-repositorio-nasce-no-handoff-ao-arquiteto.md": {
+      "defasada": false,
+      "data": "2026-09-18"
+    },
+    "adr/0166-preferencia-de-roteamento-no-binding-de-modelo.md": {
+      "defasada": false,
+      "data": "2026-09-19"
+    },
+    "adr/0167-modo-automatico-libera-o-escopo-de-caminho.md": {
+      "defasada": false,
+      "data": "2026-09-26"
+    },
+    "adr/0168-golden-set-do-qa-em-ci-semanal.md": {
+      "defasada": false,
+      "data": "2026-09-27"
+    },
+    "adr/0169-seaweedfs-no-lugar-do-minio-no-overlay-local.md": {
+      "defasada": false,
+      "data": "2026-09-27"
+    },
+    "adr/0170-compose-de-dev-brabo-dev.md": {
+      "defasada": false,
+      "data": "2026-09-27"
+    },
+    "adr/0172-trivy-no-release-antes-de-assinar.md": {
+      "defasada": false,
+      "data": "2026-09-27"
+    },
     "adr/0173-remocao-de-membro-de-workspace.md": {
       "defasada": false,
       "data": "2026-09-28"
