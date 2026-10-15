@@ -1,0 +1,18 @@
+{
+  "title": "接管现有仓库",
+  "fallbackProjectName": "项目",
+  "readingRepo": "正在读取仓库…",
+  "genericAdoptError": "暂时无法读取该仓库。",
+  "planChangedError": "自本页面加载以来计划已发生变化。请刷新后基于当前计划做决定。",
+  "decisionError": "暂时无法记录该决定。",
+  "introBefore": "仓库尚未做任何更改。以下是 bootstrap ",
+  "introStrong": "将要执行",
+  "introAfter": "的内容 —— 未经您的批准，不会覆盖任何现有保护设置。",
+  "nothingToDo": "仓库已符合模板的预期，无需应用任何内容。",
+  "divergencesTitle": "差异",
+  "approvePlan": "批准计划",
+  "adoptAsIs": "按现状接管",
+  "adoptedAsIsAlert": "仓库已按现状接管。已跳过 bootstrap —— 未做任何更改。",
+  "goToProject": "前往项目",
+  "applyingPlan": "正在应用计划…"
+}
