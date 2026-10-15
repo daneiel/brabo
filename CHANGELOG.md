@@ -6,6 +6,12 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- O provider ganha a capability `promptCaching` (RN-892, AT-543): com ela
+  ligada, o OpenRouter marca `cache_control` nas instruções e no fim do
+  histórico das chamadas a modelos `anthropic/*`, deixando as mensagens
+  efêmeras do fim depois do último ponto. Nasce `false` nos nove providers até
+  o smoke `openrouter-provider.cache.smoke.spec.ts` rodar com credencial; o
+  corpo de hoje não muda.
 - A oferta "Ligar para N agentes" do modo automático aparece também no chat do
   Criativo quando o projeto tem execução ativa noutra sessão — antes ela só
   aparecia na sessão de execução, e o dev esperava o clique num `terminal`

@@ -108,6 +108,7 @@ function capacidades(hubAceita: boolean): ProviderCapabilities[] {
     listModels: true,
     embeddings: false,
     routingPreference: false,
+    promptCaching: false,
   };
   return [
     { provider: 'ollama', capabilities: base },

@@ -7284,6 +7284,11 @@ export interface components {
              * @example false
              */
             routingPreference: boolean;
+            /**
+             * @description The provider accepts explicit PROMPT-CACHE breakpoints (`cache_control`) on the stable prefix of a call (RN-892). Only `true` after a smoke against the real API showed cached input tokens on a repeated call.
+             * @example false
+             */
+            promptCaching: boolean;
         };
         LlmTurnResponseDto: {
             message: components["schemas"]["LlmMessageResponseDto"];
