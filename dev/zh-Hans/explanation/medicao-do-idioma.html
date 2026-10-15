@@ -1,33 +1,22 @@
-<!doctype html><html lang=zh-Hans dir=ltr class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-explanation/medicao-do-idioma" data-has-hydrated=false><head><meta charset=UTF-8><meta name=generator content="Docusaurus v3.10.2"><title data-rh=true>Medição da heurística de idioma | Brabo</title><meta data-rh=true name=viewport content="width=device-width, initial-scale=1.0"/><meta data-rh=true name=robots content="noindex, nofollow"/><meta data-rh=true name=twitter:card content=summary_large_image /><meta data-rh=true property=og:url content=https://daneiel.github.io/brabo/dev/zh-Hans/explanation/medicao-do-idioma /><meta data-rh=true property=og:locale content=zh_Hans /><meta data-rh=true property=og:locale:alternate content=pt_BR /><meta data-rh=true property=og:locale:alternate content=en /><meta data-rh=true property=og:locale:alternate content=ru /><meta data-rh=true name=docusaurus_locale content=zh-Hans /><meta data-rh=true name=docsearch:language content=zh-Hans /><meta data-rh=true name=docusaurus_version content=current /><meta data-rh=true name=docusaurus_tag content=docs-default-current /><meta data-rh=true name=docsearch:version content=current /><meta data-rh=true name=docsearch:docusaurus_tag content=docs-default-current /><meta data-rh=true property=og:title content="Medição da heurística de idioma | Brabo"/><meta data-rh=true name=description content="O instrumento que mede a heurística de detecção de idioma da AT-080 contra um corpus rotulado, os números que ele produziu no corpus sintético, e a validação paga da orientação de idioma e do custo dela (AT-167, 2026-09-29)."/><meta data-rh=true property=og:description content="O instrumento que mede a heurística de detecção de idioma da AT-080 contra um corpus rotulado, os números que ele produziu no corpus sintético, e a validação paga da orientação de idioma e do custo dela (AT-167, 2026-09-29)."/><link data-rh=true rel=icon href=/brabo/dev/zh-Hans/img/favicon.ico /><link data-rh=true rel=canonical href=https://daneiel.github.io/brabo/dev/zh-Hans/explanation/medicao-do-idioma /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/explanation/medicao-do-idioma hreflang=pt-BR /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/en/explanation/medicao-do-idioma hreflang=en /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/ru/explanation/medicao-do-idioma hreflang=ru /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/zh-Hans/explanation/medicao-do-idioma hreflang=zh-Hans /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/explanation/medicao-do-idioma hreflang=x-default /><script data-rh=true type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","item":"https://daneiel.github.io/brabo/dev/zh-Hans/explanation/medicao-do-idioma","name":"Medição da heurística de idioma","position":1}]}</script><link rel=stylesheet href=/brabo/dev/zh-Hans/assets/css/styles.7f2bd764.css /><script src=/brabo/dev/zh-Hans/assets/js/runtime~main.2473694d.js defer></script><script src=/brabo/dev/zh-Hans/assets/js/main.80ab1eb3.js defer></script></head><body><svg style="display: none;"><defs>
+<!doctype html><html lang=zh-Hans dir=ltr class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-explanation/medicao-do-idioma" data-has-hydrated=false><head><meta charset=UTF-8><meta name=generator content="Docusaurus v3.10.2"><title data-rh=true>语言启发式的测量 | Brabo</title><meta data-rh=true name=viewport content="width=device-width, initial-scale=1.0"/><meta data-rh=true name=robots content="noindex, nofollow"/><meta data-rh=true name=twitter:card content=summary_large_image /><meta data-rh=true property=og:url content=https://daneiel.github.io/brabo/dev/zh-Hans/explanation/medicao-do-idioma /><meta data-rh=true property=og:locale content=zh_Hans /><meta data-rh=true property=og:locale:alternate content=pt_BR /><meta data-rh=true property=og:locale:alternate content=en /><meta data-rh=true property=og:locale:alternate content=ru /><meta data-rh=true name=docusaurus_locale content=zh-Hans /><meta data-rh=true name=docsearch:language content=zh-Hans /><meta data-rh=true name=docusaurus_version content=current /><meta data-rh=true name=docusaurus_tag content=docs-default-current /><meta data-rh=true name=docsearch:version content=current /><meta data-rh=true name=docsearch:docusaurus_tag content=docs-default-current /><meta data-rh=true property=og:title content="语言启发式的测量 | Brabo"/><meta data-rh=true name=description content="针对一个带标签的语料库测量 AT-080 语言检测启发式的工具、它在合成语料库上产生的数字，以及语言引导及其成本的付费验证（AT-167，2026-09-29）。"/><meta data-rh=true property=og:description content="针对一个带标签的语料库测量 AT-080 语言检测启发式的工具、它在合成语料库上产生的数字，以及语言引导及其成本的付费验证（AT-167，2026-09-29）。"/><link data-rh=true rel=icon href=/brabo/dev/zh-Hans/img/favicon.ico /><link data-rh=true rel=canonical href=https://daneiel.github.io/brabo/dev/zh-Hans/explanation/medicao-do-idioma /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/explanation/medicao-do-idioma hreflang=pt-BR /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/en/explanation/medicao-do-idioma hreflang=en /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/ru/explanation/medicao-do-idioma hreflang=ru /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/zh-Hans/explanation/medicao-do-idioma hreflang=zh-Hans /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/explanation/medicao-do-idioma hreflang=x-default /><script data-rh=true type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","item":"https://daneiel.github.io/brabo/dev/zh-Hans/explanation/medicao-do-idioma","name":"语言启发式的测量","position":1}]}</script><link rel=stylesheet href=/brabo/dev/zh-Hans/assets/css/styles.7f2bd764.css /><script src=/brabo/dev/zh-Hans/assets/js/runtime~main.6f05c45f.js defer></script><script src=/brabo/dev/zh-Hans/assets/js/main.fe66643c.js defer></script></head><body><svg style="display: none;"><defs>
 <symbol id=theme-svg-external-link viewBox="0 0 24 24"><path fill=currentColor d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
 </defs></svg>
-<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme-3f2")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")),document.documentElement.setAttribute("data-theme-choice",t||"system")}(),function(){try{for(var[t,e]of new URLSearchParams(window.location.search).entries())if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id=__docusaurus><link rel=preload as=image href=/brabo/dev/zh-Hans/img/logo.svg /><div role=region aria-label=跳到主要内容><a class=skipToContent_CFOX href=#__docusaurus_skipToContent_fallback>跳到主要内容</a></div><nav aria-label=主导航 class="theme-layout-navbar navbar navbar--fixed-top"><div class=navbar__inner><div class="theme-layout-navbar-left navbar__items"><button aria-label=切换导航栏 aria-expanded=false class="navbar__toggle clean-btn" type=button><svg width=30 height=30 viewBox="0 0 30 30" aria-hidden=true><path stroke=currentColor stroke-linecap=round stroke-miterlimit=10 stroke-width=2 d="M4 7h22M4 15h22M4 23h22"/></svg></button><a class=navbar__brand href=/brabo/dev/zh-Hans/><div class=navbar__logo><img src=/brabo/dev/zh-Hans/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--light_vzqw"/><img src=/brabo/dev/zh-Hans/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--dark_FhTf"/></div><b class="navbar__title text--truncate">Brabo</b></a><a aria-current=page class="navbar__item navbar__link navbar__link--active" href=/brabo/dev/zh-Hans/>文档</a><a class="navbar__item navbar__link" href=/brabo/dev/zh-Hans/runbook>Runbook</a><a class="navbar__item navbar__link" href=/brabo/dev/zh-Hans/adr>ADRs</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a href=# aria-haspopup=true aria-expanded=false role=button class=navbar__link>dev</a><ul class=dropdown__menu><li><a href=https://daneiel.github.io/brabo/prd/ target=_blank rel="noopener noreferrer" class=dropdown__link>prd — estável<svg width=12 height=12 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/qa/ target=_blank rel="noopener noreferrer" class=dropdown__link>qa — 候选版<svg width=12 height=12 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/dev/ target=_blank rel="noopener noreferrer" class=dropdown__link>dev — em desenvolvimento ✓<svg width=12 height=12 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><div class="toggle_pnX7 colorModeToggle_Dj3Z"><button class="clean-btn toggleButton_DKER toggleButtonDisabled_qzkp" type=button disabled title=跟随系统 aria-label=切换浅色/暗黑模式（当前为跟随系统）><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL lightToggleIcon_E8tM"><path fill=currentColor d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL darkToggleIcon_rXjT"><path fill=currentColor d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL systemToggleIcon_zwCm"><path fill=currentColor d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"/></svg></button></div><div class=navbarSearchContainer_zRAa><div class="navbar__search searchBarContainer_eGzj" dir=ltr><svg aria-hidden=true class=searchIcon_PXpx focusable=false viewBox="0 0 16 16"><path fill=currentColor d="M6.02945 10.20327a4.17382 4.17382 0 1 1 4.17382-4.17382 4.15609 4.15609 0 0 1-4.17382 4.17382Zm9.69195 4.2199-4.8225-4.82338A5.88021 5.88021 0 0 0 12.058 6.02856 6.00467 6.00467 0 1 0 9.59979 10.8989l4.82338 4.82338a.89729.89729 0 0 0 1.29912 0 .89749.89749 0 0 0-.00087-1.29909Z"/></svg><input placeholder=搜索 aria-label=Search class="navbar__search-input searchInput_xOBI" value="" /><div class="loadingRing_JccP searchBarLoadingRing_aTss"><div></div><div></div><div></div><div></div></div></div></div></div></div><div role=presentation class=navbar-sidebar__backdrop></div></nav><div id=__docusaurus_skipToContent_fallback class="theme-layout-main main-wrapper mainWrapper_WJkx"><div class=docsWrapper_mIeg><button aria-label=回到顶部 class="clean-btn theme-back-to-top-button backToTopButton_Afc8" type=button></button><div class=docRoot_XZYc><aside class="theme-doc-sidebar-container docSidebarContainer_FPqZ"><div class=sidebarViewport_waOe><div class=sidebar_RQC4><nav aria-label=文档侧边栏 class="menu thin-scrollbar menu_ZM4U"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/><span class=categoryLinkLabel_jKch>🚀 从这里开始</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/><span class=linkLabel_CzBh>简介</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/getting-started><span class=linkLabel_CzBh>快速开始</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/tutorials/from-zero-to-deliverable><span class=linkLabel_CzBh>从零到交付物</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/architecture><span class=categoryLinkLabel_jKch>🏗️ 架构</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/architecture><span class=linkLabel_CzBh>Arquitetura</span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist" tabindex=0 href=/brabo/dev/zh-Hans/adr><span class=categoryLinkLabel_jKch>决策（ADR）</span></a><button aria-label="展开侧边栏分类 '决策（ADR）'" aria-expanded=false type=button class="clean-btn menu__caret"></button></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/business-rules><span class=categoryLinkLabel_jKch>📐 规则</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/business-rules><span class=linkLabel_CzBh>业务规则</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/business-rules/custo><span class=linkLabel_CzBh>成本与计量</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/business-rules/autenticacao><span class=linkLabel_CzBh>认证</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/reference/configuration><span class=categoryLinkLabel_jKch>📖 参考</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/configuration><span class=linkLabel_CzBh>Configuration</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/events><span class=linkLabel_CzBh>Events</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/permissions><span class=linkLabel_CzBh>Permissions</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/artifacts><span class=linkLabel_CzBh>Artifacts</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/git-providers><span class=linkLabel_CzBh>Git Providers</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/internal-api><span class=linkLabel_CzBh>Internal API</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/scripts><span class=linkLabel_CzBh>Scripts</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/rulesets><span class=linkLabel_CzBh>Rulesets</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/paridade-de-traducao><span class=linkLabel_CzBh>Paridade de tradução</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/brb><span class=linkLabel_CzBh>BRB register</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/security-surface><span class=linkLabel_CzBh>api 的暴露面</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/api><span class=linkLabel_CzBh>API 参考</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role=button aria-expanded=true href=/brabo/dev/zh-Hans/explanation/documentation-workflow><span class=categoryLinkLabel_jKch>💡 解释</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/documentation-workflow><span class=linkLabel_CzBh>Sincronia da doc</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/branching-policy><span class=linkLabel_CzBh>Política de branches</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/cadeia-de-suprimentos-do-ci><span class=linkLabel_CzBh>Cadeia de suprimentos do CI</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/observability><span class=linkLabel_CzBh>Observabilidade</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/primeiro-dogfooding><span class=linkLabel_CzBh>Primeiro dogfooding</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/execucao-real-hello-world><span class=linkLabel_CzBh>Execução real (hello world)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/achados-execucao-real><span class=linkLabel_CzBh>Achados da execução real da esteira</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/backlog><span class=linkLabel_CzBh>Backlog triado</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/validacao-fase-12><span class=linkLabel_CzBh>Validação da Fase 12</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/validacao-real><span class=linkLabel_CzBh>Validação real (13b)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/aceite-providers><span class=linkLabel_CzBh>Aceite dos providers</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/gates><span class=linkLabel_CzBh>Os gates, e como eles são medidos</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/auditoria-fluxo-vs-codigo><span class=linkLabel_CzBh>Auditoria: fluxo.yml × código (v3, ADR 0085)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/historico-de-fases><span class=linkLabel_CzBh>阶段历史</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/fase-28-pasta-do-usuario><span class=linkLabel_CzBh>FASE 28 — pasta do usuário</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/fase-29-instalacao-de-uma-linha><span class=linkLabel_CzBh>FASE 29 — instalação de uma linha</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/fase-30-runner-por-maquina><span class=linkLabel_CzBh>FASE 30 — agente local da máquina</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link menu__link--active" aria-current=page tabindex=0 href=/brabo/dev/zh-Hans/explanation/medicao-do-idioma><span class=linkLabel_CzBh>Medição da heurística de idioma</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/medicao-do-jev><span class=linkLabel_CzBh>Medição do roteador de ferramentas Jev</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/auditoria-visual-rodada-29><span class=linkLabel_CzBh>Auditoria visual, antes e depois da Rodada 29</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/tanstack-ai><span class=linkLabel_CzBh>TanStack AI — não adotado</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/localizacao><span class=linkLabel_CzBh>Localização</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/localizacao-en><span class=linkLabel_CzBh>Localização — inglês (en)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/localizacao-ru><span class=linkLabel_CzBh>Localização — russo (ru)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/localizacao-zh-hans><span class=linkLabel_CzBh>Localização — chinês simplificado (zh-Hans)</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/runbook><span class=categoryLinkLabel_jKch>🛠️ 运维</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/runbook><span class=linkLabel_CzBh>运维手册</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/glossary><span class=categoryLinkLabel_jKch>📚 词汇</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/glossary><span class=linkLabel_CzBh>术语表</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true><span class=categoryLinkLabel_jKch>🤝 贡献</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>如何贡献</span><svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>在哪里求助</span><svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>报告漏洞</span><svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></ul></nav></div></div></aside><main class=docMainContainer_ia8v><div class="container padding-top--md padding-bottom--lg"><div class=row><div class="col docItemCol_xjE4"><div class=docItemContainer_cPej><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_sZul" aria-label=页面路径><ul class=breadcrumbs><li class=breadcrumbs__item><a aria-label=主页面 class=breadcrumbs__link href=/brabo/dev/zh-Hans/><svg viewBox="0 0 24 24" class=breadcrumbHomeIcon_AUjL><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill=currentColor /></svg></a><li class=breadcrumbs__item><span class=breadcrumbs__link>💡 解释</span><li class="breadcrumbs__item breadcrumbs__item--active"><span class=breadcrumbs__link>Medição da heurística de idioma</span></ul></nav><div class="tocCollapsible_nbAK theme-doc-toc-mobile tocMobile_r92C"><button type=button class="clean-btn tocCollapsibleButton_hcyq">本页总览</button></div><div class="alert alert--warning margin-bottom--md" role=note data-faixa-de-traducao="">本页尚未翻译；您正在阅读葡萄牙语原文。</div><div class="theme-doc-markdown markdown"><header><h1>Medição da heurística de idioma</h1></header>
+<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme-3f2")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")),document.documentElement.setAttribute("data-theme-choice",t||"system")}(),function(){try{for(var[t,e]of new URLSearchParams(window.location.search).entries())if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id=__docusaurus><link rel=preload as=image href=/brabo/dev/zh-Hans/img/logo.svg /><div role=region aria-label=跳到主要内容><a class=skipToContent_CFOX href=#__docusaurus_skipToContent_fallback>跳到主要内容</a></div><nav aria-label=主导航 class="theme-layout-navbar navbar navbar--fixed-top"><div class=navbar__inner><div class="theme-layout-navbar-left navbar__items"><button aria-label=切换导航栏 aria-expanded=false class="navbar__toggle clean-btn" type=button><svg width=30 height=30 viewBox="0 0 30 30" aria-hidden=true><path stroke=currentColor stroke-linecap=round stroke-miterlimit=10 stroke-width=2 d="M4 7h22M4 15h22M4 23h22"/></svg></button><a class=navbar__brand href=/brabo/dev/zh-Hans/><div class=navbar__logo><img src=/brabo/dev/zh-Hans/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--light_vzqw"/><img src=/brabo/dev/zh-Hans/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--dark_FhTf"/></div><b class="navbar__title text--truncate">Brabo</b></a><a aria-current=page class="navbar__item navbar__link navbar__link--active" href=/brabo/dev/zh-Hans/>文档</a><a class="navbar__item navbar__link" href=/brabo/dev/zh-Hans/runbook>Runbook</a><a class="navbar__item navbar__link" href=/brabo/dev/zh-Hans/adr>ADRs</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a href=# aria-haspopup=true aria-expanded=false role=button class=navbar__link>dev</a><ul class=dropdown__menu><li><a href=https://daneiel.github.io/brabo/prd/ target=_blank rel="noopener noreferrer" class=dropdown__link>prd — estável<svg width=12 height=12 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/qa/ target=_blank rel="noopener noreferrer" class=dropdown__link>qa — 候选版<svg width=12 height=12 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/dev/ target=_blank rel="noopener noreferrer" class=dropdown__link>dev — em desenvolvimento ✓<svg width=12 height=12 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><div class="toggle_pnX7 colorModeToggle_Dj3Z"><button class="clean-btn toggleButton_DKER toggleButtonDisabled_qzkp" type=button disabled title=跟随系统 aria-label=切换浅色/暗黑模式（当前为跟随系统）><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL lightToggleIcon_E8tM"><path fill=currentColor d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL darkToggleIcon_rXjT"><path fill=currentColor d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL systemToggleIcon_zwCm"><path fill=currentColor d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"/></svg></button></div><div class=navbarSearchContainer_zRAa><div class="navbar__search searchBarContainer_eGzj" dir=ltr><svg aria-hidden=true class=searchIcon_PXpx focusable=false viewBox="0 0 16 16"><path fill=currentColor d="M6.02945 10.20327a4.17382 4.17382 0 1 1 4.17382-4.17382 4.15609 4.15609 0 0 1-4.17382 4.17382Zm9.69195 4.2199-4.8225-4.82338A5.88021 5.88021 0 0 0 12.058 6.02856 6.00467 6.00467 0 1 0 9.59979 10.8989l4.82338 4.82338a.89729.89729 0 0 0 1.29912 0 .89749.89749 0 0 0-.00087-1.29909Z"/></svg><input placeholder=搜索 aria-label=Search class="navbar__search-input searchInput_xOBI" value="" /><div class="loadingRing_JccP searchBarLoadingRing_aTss"><div></div><div></div><div></div><div></div></div></div></div></div></div><div role=presentation class=navbar-sidebar__backdrop></div></nav><div id=__docusaurus_skipToContent_fallback class="theme-layout-main main-wrapper mainWrapper_WJkx"><div class=docsWrapper_mIeg><button aria-label=回到顶部 class="clean-btn theme-back-to-top-button backToTopButton_Afc8" type=button></button><div class=docRoot_XZYc><aside class="theme-doc-sidebar-container docSidebarContainer_FPqZ"><div class=sidebarViewport_waOe><div class=sidebar_RQC4><nav aria-label=文档侧边栏 class="menu thin-scrollbar menu_ZM4U"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/><span class=categoryLinkLabel_jKch>🚀 从这里开始</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/><span class=linkLabel_CzBh>简介</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/getting-started><span class=linkLabel_CzBh>快速开始</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/tutorials/from-zero-to-deliverable><span class=linkLabel_CzBh>从零到交付物</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/architecture><span class=categoryLinkLabel_jKch>🏗️ 架构</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/architecture><span class=linkLabel_CzBh>架构</span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist" tabindex=0 href=/brabo/dev/zh-Hans/adr><span class=categoryLinkLabel_jKch>决策（ADR）</span></a><button aria-label="展开侧边栏分类 '决策（ADR）'" aria-expanded=false type=button class="clean-btn menu__caret"></button></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/business-rules><span class=categoryLinkLabel_jKch>📐 规则</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/business-rules><span class=linkLabel_CzBh>业务规则</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/business-rules/custo><span class=linkLabel_CzBh>成本与计量</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/business-rules/autenticacao><span class=linkLabel_CzBh>认证</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/reference/configuration><span class=categoryLinkLabel_jKch>📖 参考</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/configuration><span class=linkLabel_CzBh>Configuration</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/events><span class=linkLabel_CzBh>Events</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/permissions><span class=linkLabel_CzBh>Permissions</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/artifacts><span class=linkLabel_CzBh>Artifacts</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/git-providers><span class=linkLabel_CzBh>Git Providers</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/internal-api><span class=linkLabel_CzBh>Internal API</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/scripts><span class=linkLabel_CzBh>Scripts</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/rulesets><span class=linkLabel_CzBh>Rulesets</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/paridade-de-traducao><span class=linkLabel_CzBh>Paridade de tradução</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/brb><span class=linkLabel_CzBh>BRB register</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/security-surface><span class=linkLabel_CzBh>api 的暴露面</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/api><span class=linkLabel_CzBh>API 参考</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role=button aria-expanded=true href=/brabo/dev/zh-Hans/explanation/documentation-workflow><span class=categoryLinkLabel_jKch>💡 解释</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/documentation-workflow><span class=linkLabel_CzBh>文档同步</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/branching-policy><span class=linkLabel_CzBh>分支策略</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/cadeia-de-suprimentos-do-ci><span class=linkLabel_CzBh>CI 的供应链</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/observability><span class=linkLabel_CzBh>Observabilidade</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/primeiro-dogfooding><span class=linkLabel_CzBh>Primeiro dogfooding</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/execucao-real-hello-world><span class=linkLabel_CzBh>Execução real (hello world)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/achados-execucao-real><span class=linkLabel_CzBh>流水线真实执行中的发现</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/backlog><span class=linkLabel_CzBh>已分类的 backlog</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/validacao-fase-12><span class=linkLabel_CzBh>Validação da Fase 12</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/validacao-real><span class=linkLabel_CzBh>Validação real (13b)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/aceite-providers><span class=linkLabel_CzBh>Aceite dos providers</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/gates><span class=linkLabel_CzBh>gates，以及如何测量它们</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/auditoria-fluxo-vs-codigo><span class=linkLabel_CzBh>Auditoria: fluxo.yml × código (v3, ADR 0085)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/historico-de-fases><span class=linkLabel_CzBh>阶段历史</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/fase-28-pasta-do-usuario><span class=linkLabel_CzBh>FASE 28 — pasta do usuário</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/fase-29-instalacao-de-uma-linha><span class=linkLabel_CzBh>FASE 29 — instalação de uma linha</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/fase-30-runner-por-maquina><span class=linkLabel_CzBh>FASE 30——机器的本地智能体</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link menu__link--active" aria-current=page tabindex=0 href=/brabo/dev/zh-Hans/explanation/medicao-do-idioma><span class=linkLabel_CzBh>语言启发式的测量</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/medicao-do-jev><span class=linkLabel_CzBh>Jev 工具路由器的测量</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/auditoria-visual-rodada-29><span class=linkLabel_CzBh>Auditoria visual, antes e depois da Rodada 29</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/tanstack-ai><span class=linkLabel_CzBh>TanStack AI — não adotado</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/localizacao><span class=linkLabel_CzBh>Localização</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/localizacao-en><span class=linkLabel_CzBh>Localização — inglês (en)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/localizacao-ru><span class=linkLabel_CzBh>Localização — russo (ru)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/localizacao-zh-hans><span class=linkLabel_CzBh>Localização — chinês simplificado (zh-Hans)</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/runbook><span class=categoryLinkLabel_jKch>🛠️ 运维</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/runbook><span class=linkLabel_CzBh>运维手册</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/glossary><span class=categoryLinkLabel_jKch>📚 词汇</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/glossary><span class=linkLabel_CzBh>术语表</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true><span class=categoryLinkLabel_jKch>🤝 贡献</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>如何贡献</span><svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>在哪里求助</span><svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>报告漏洞</span><svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></ul></nav></div></div></aside><main class=docMainContainer_ia8v><div class="container padding-top--md padding-bottom--lg"><div class=row><div class="col docItemCol_xjE4"><div class=docItemContainer_cPej><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_sZul" aria-label=页面路径><ul class=breadcrumbs><li class=breadcrumbs__item><a aria-label=主页面 class=breadcrumbs__link href=/brabo/dev/zh-Hans/><svg viewBox="0 0 24 24" class=breadcrumbHomeIcon_AUjL><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill=currentColor /></svg></a><li class=breadcrumbs__item><span class=breadcrumbs__link>💡 解释</span><li class="breadcrumbs__item breadcrumbs__item--active"><span class=breadcrumbs__link>语言启发式的测量</span></ul></nav><div class="tocCollapsible_nbAK theme-doc-toc-mobile tocMobile_r92C"><button type=button class="clean-btn tocCollapsibleButton_hcyq">本页总览</button></div><div class="theme-doc-markdown markdown"><header><h1>语言启发式的测量</h1></header>
 <blockquote>
-<p>AT-160 (EP-028, HS-053). A heurística medida é a que a especificação da
-AT-080 propôs ("A — heurística própria, sem dependência"). Desde a AT-163
-(<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-624>RN-624</a>) o produto a roda: a api detecta
-o idioma do autor com ela e PERGUNTA antes de qualquer coisa mudar. Os
-limiares do produto são <strong>provisórios</strong> — veja
-<a href=#the-products-provisional-thresholds class="">Os limiares provisórios do produto</a>.</p>
+<p>AT-160（EP-028，HS-053）。被测量的启发式是 AT-080 的规范所提出的（"A — heurística própria, sem
+dependência"）。自 AT-163（<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-624>RN-624</a>）起产品运行它：api 用它检测作者的语言，
+并在任何东西改变之前<strong>询问</strong>。产品的阈值是<strong>临时的</strong>——见<a href=#the-products-provisional-thresholds class="">产品的临时阈值</a>。</p>
 </blockquote>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=what-exists>O que existe<a href=#what-exists class=hash-link aria-label="O que existe的直接链接" title="O que existe的直接链接" translate=no>​</a></h2>
-<p>O instrumento mora em <code>scripts/idioma/</code> e roda com o Node do repositório
-(type stripping, sem passo de build). <strong>Nenhuma dependência nova</strong>: a heurística
-é lista de marcadores e expressões regulares, e a extração fala com o Postgres
-por <code>psql</code> dentro do container do banco.</p>
-<p>A heurística em si mora na <strong>api</strong> —
-<code>apps/api/src/domain/iam/heuristica-de-idioma.ts</code> — e <code>scripts/idioma/heuristica.ts</code>
-só a reexporta, então o instrumento mede exatamente o código que o produto
-roda. Essa direção é forçada: a api não alcança nem <code>scripts/</code> nem pacote de
-runtime nenhum sem passo de build, e <code>packages/shared</code> é só tipos. O arquivo
-não tem imports, então o Node o roda a partir de <code>scripts/</code> por type stripping
-(os comandos <code>idioma:*</code> silenciam o aviso de "typeless package" que vem junto),
-e <code>scripts/idioma/</code> tem <code>tsconfig.json</code> próprio — a única diferença é desligar
-<code>verbatimModuleSyntax</code>, que recusa todo <code>export</code> de módulo CommonJS como os da
-api. Um arquivo <code>.mts</code> foi tentado primeiro: passou nos dois typechecks e no
-build, e quebrou todo script <code>ts-node</code> da api. A regra do <em>que é evidência</em>
-(<code>evidenciasDoAutor</code>) se mudou junto com a heurística, e a extração do corpus
-real usa a mesma.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=what-exists>现有内容<a href=#what-exists class=hash-link aria-label=现有内容的直接链接 title=现有内容的直接链接 translate=no>​</a></h2>
+<p>工具位于 <code>scripts/idioma/</code>，用仓库的 Node 运行（type stripping，无构建步骤）。<strong>没有新依赖</strong>：启发式是标记
+列表和正则表达式，提取通过数据库容器内的 <code>psql</code> 与 Postgres 对话。</p>
+<p>启发式本身位于 <strong>api</strong>——<code>apps/api/src/domain/iam/heuristica-de-idioma.ts</code>——而 <code>scripts/idioma/heuristica.ts</code>
+只是重新导出它，因此工具测量的恰好是产品运行的代码。这个方向是被迫的：api 无法在没有构建步骤的情况下触及
+<code>scripts/</code> 或任何运行时包，而 <code>packages/shared</code> 只有类型。该文件没有 import，因此 Node 通过 type stripping
+从 <code>scripts/</code> 运行它（<code>idioma:*</code> 命令会静默随之而来的 "typeless package" 警告），<code>scripts/idioma/</code> 有自己的
+<code>tsconfig.json</code>——唯一的区别是关闭 <code>verbatimModuleSyntax</code>，它会拒绝像 api 那样的 CommonJS 模块的每个
+<code>export</code>。最先尝试的是 <code>.mts</code> 文件：它通过了两次类型检查和构建，却破坏了 api 的每个 <code>ts-node</code> 脚本。<em>什么算
+证据</em>的规则（<code>evidenciasDoAutor</code>）随启发式一起搬走了，真实语料库的提取使用同一条规则。</p>
 
 
 
@@ -61,56 +50,37 @@ real usa a mesma.</p>
 
 
 
-<table><thead><tr><th>arquivo<th>papel<tbody><tr><td><code>heuristica.ts</code><td>reexporta a heurística da api: limpeza, pontuação contrastiva, o candidato e os parâmetros provisórios, a amostra de 10 mensagens, a histerese e a regra de evidência<tr><td><code>corpus-sintetico.jsonl</code><td>o corpus sintético <strong>versionado</strong> — toda linha escrita à mão para o instrumento, <code>origem: "sintetico"</code><tr><td><code>sequencias-sinteticas.json</code><td>conversas sintéticas para o caminho da amostra e da histerese<tr><td><code>medicao.ts</code> / <code>medir.ts</code><td>o instrumento e o CLI dele<tr><td><code>extrair.ts</code><td>extrai o corpus <strong>real</strong> do event log local, para um arquivo fora do git<tr><td><code>rotular.ts</code><td>rotulação assistida do corpus real, no terminal</table>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=the-two-corpora-and-where-each-one-lives>Os dois corpora, e onde cada um mora<a href=#the-two-corpora-and-where-each-one-lives class=hash-link aria-label="Os dois corpora, e onde cada um mora的直接链接" title="Os dois corpora, e onde cada um mora的直接链接" translate=no>​</a></h2>
-<p>A decisão do mantenedor (AT-168, resposta 5) é <strong>real + sintético</strong>. Eles têm
-regras de armazenamento opostas:</p>
+<table><thead><tr><th>文件<th>作用<tbody><tr><td><code>heuristica.ts</code><td>重新导出 api 的启发式：清理、对比打分、候选参数和临时参数、10 条消息的样本、迟滞以及证据规则<tr><td><code>corpus-sintetico.jsonl</code><td><strong>版本化</strong>的合成语料库——每一行都是为工具手写的，<code>origem: "sintetico"</code><tr><td><code>sequencias-sinteticas.json</code><td>用于样本和迟滞路径的合成对话<tr><td><code>medicao.ts</code> / <code>medir.ts</code><td>工具及其 CLI<tr><td><code>extrair.ts</code><td>从本地 event log 提取<strong>真实</strong>语料库，写到 git 之外的文件中<tr><td><code>rotular.ts</code><td>在终端中辅助标注真实语料库</table>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=the-two-corpora-and-where-each-one-lives>两个语料库，以及各自存放在哪里<a href=#the-two-corpora-and-where-each-one-lives class=hash-link aria-label=两个语料库，以及各自存放在哪里的直接链接 title=两个语料库，以及各自存放在哪里的直接链接 translate=no>​</a></h2>
+<p>维护者的决定（AT-168，答复 5）是<strong>真实 + 合成</strong>。它们的存储规则相反：</p>
 <ul>
-<li class=""><strong>Sintético</strong> — versionado, revisado como código. Cobre os nove casos
-obrigatórios da AT-080 (erros de digitação, espanhol legítimo, inglês, texto
-misto, "ok", código, logs, citações em outro idioma) mais português cheio de
-jargão em inglês, identificadores inline, e idiomas fora dos três (francês,
-italiano, alemão, galego, catalão, holandês) — a lista de idiomas é aberta
-(AT-168, resposta 2).</li>
-<li class=""><strong>Real</strong> — as mensagens do próprio usuário no event log <strong>local</strong>. Nunca
-entra no git, numa fixture, num log de CI nem no corpo de uma PR. <code>extrair.ts</code>
-e <code>corpus.ts</code> recusam qualquer destino dentro do checkout, e o arquivo é
-gravado com modo 600 em <code>$XDG_CACHE_HOME/brabo/corpus-idioma/</code> (senão
-<code>~/.cache/…</code>). O relatório nunca imprime o texto de um item — só ids, rótulos
-e contagens —, então a saída dele pode ser colada numa PR.</li>
+<li class=""><strong>合成</strong>——版本化，像代码一样审阅。覆盖 AT-080 的九种必需情况（拼写错误、合法的西班牙语、英语、混合文本、
+"ok"、代码、日志、其他语言的引文），外加满是英语行话的葡萄牙语、内联标识符，以及三种之外的语言（法语、
+意大利语、德语、加利西亚语、加泰罗尼亚语、荷兰语）——语言列表是开放的（AT-168，答复 2）。</li>
+<li class=""><strong>真实</strong>——用户自己在<strong>本地</strong> event log 中的消息。它从不进入 git、fixture、CI 日志或 PR 正文。<code>extrair.ts</code>
+和 <code>corpus.ts</code> 拒绝检出目录内的任何目标，文件以模式 600 写入 <code>$XDG_CACHE_HOME/brabo/corpus-idioma/</code>（否则
+<code>~/.cache/…</code>）。报告从不打印条目的文本——只有 id、标签和计数——因此它的输出可以粘贴到 PR 中。</li>
 </ul>
-<p>O que a extração toma como evidência segue a limpeza da AT-080: só eventos
-cujo ator é o <strong>usuário</strong> (a resposta do agente nunca é evidência, então uma
-resposta em espanhol do modelo não pode realimentar a detecção) e, no
-formulário estruturado, só as <strong>respostas</strong> — o <code>chat.message</code> concatenado que
-a api grava logo depois, cujos rótulos são texto do agente, é pulado.</p>
-<p>O assistente de rotulação <strong>não</strong> pré-preenche o palpite da heurística:
-aceitá-lo com ENTER ancoraria o rótulo justamente na coisa que o rótulo existe
-para medir. ENTER aceita o idioma que o dono declara com <code>--padrao</code>.</p>
-<p>Rótulos: um código BCP-47 (<code>pt-BR</code>, <code>es</code>, <code>fr</code>…), <code>und</code> (nada a decidir: "ok",
-só código, só um log) ou <code>mul</code> (misto, sem idioma dominante). Pontuação:
-<code>pt</code>/<code>es</code>/<code>en</code> têm de receber o próprio idioma; <code>und</code>, <code>mul</code> e qualquer outro
-idioma têm de receber <code>indeterminado</code> — a única resposta correta que uma
-heurística de três idiomas pode dar a eles. Um <code>indeterminado</code> num item
-decidível é <strong>cobertura perdida</strong> (a preferência conhecida fica); um idioma
-errado é <strong>erro</strong>, e <code>falso es</code> é contado à parte porque é o defeito que o
-épico existe para remover.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=running-it>Como rodar<a href=#running-it class=hash-link aria-label="Como rodar的直接链接" title="Como rodar的直接链接" translate=no>​</a></h2>
+<p>提取所采纳的证据遵循 AT-080 的清理：只有执行者是<strong>用户</strong>的事件（智能体的回答从不是证据，因此模型的一个
+西班牙语回答不能反馈到检测中），并且在结构化表单中，只有<strong>回答</strong>——api 紧随其后写入的拼接的 <code>chat.message</code>，
+其标签是智能体的文本，被跳过。</p>
+<p>标注助手<strong>不</strong>预填启发式的猜测：用 ENTER 接受它会把标签锚定在标签本来要测量的东西上。ENTER 接受负责人用
+<code>--padrao</code> 声明的语言。</p>
+<p>标签：一个 BCP-47 代码（<code>pt-BR</code>、<code>es</code>、<code>fr</code>……）、<code>und</code>（无可判断："ok"、只有代码、只有日志）或 <code>mul</code>（混合，
+没有主导语言）。打分：<code>pt</code>/<code>es</code>/<code>en</code> 必须得到自己的语言；<code>und</code>、<code>mul</code> 和任何其他语言必须得到
+<code>indeterminado</code>——一个三语言启发式对它们能给出的唯一正确答案。可判断条目上的 <code>indeterminado</code> 是<strong>丢失的覆盖</strong>
+（已知偏好保持不变）；错误的语言是<strong>错误</strong>，而 <code>falso es</code> 单独计数，因为它是这个史诗要消除的缺陷。</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=running-it>如何运行<a href=#running-it class=hash-link aria-label=如何运行的直接链接 title=如何运行的直接链接 translate=no>​</a></h2>
 <div class="language-bash codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-bash codeBlock_mqej thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_uNqR><div class=token-line style=color:#F8F8F2><span class="token plain"># synthetic corpus (the default)</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">pnpm --filter @brabo/scripts idioma:medir</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain" style=display:inline-block></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain"># the owner's real corpus, on the owner's machine</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">pnpm --filter @brabo/scripts idioma:extrair --container brabo-dev-postgres-1</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">pnpm --filter @brabo/scripts idioma:rotular --padrao pt-BR</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">pnpm --filter @brabo/scripts idioma:medir --real</span><br/></div></code></pre></div></div>
-<p><code>--container</code> roda <code>psql</code> dentro desse container com um único <code>SELECT</code> só de
-leitura em <code>session_events</code> (<code>--usuario</code>/<code>--banco</code> têm como default o
-<code>brabo</code>/<code>brabo</code> do compose); <code>--database-url &lt;url></code> usa um <code>psql</code> do host no
-lugar. Rodar a extração de novo mantém os rótulos existentes e acrescenta as
-mensagens novas sem rótulo.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=numbers-on-the-synthetic-corpus-2026-09-28>Números no corpus sintético (2026-09-28)<a href=#numbers-on-the-synthetic-corpus-2026-09-28 class=hash-link aria-label="Números no corpus sintético (2026-09-28)的直接链接" title="Números no corpus sintético (2026-09-28)的直接链接" translate=no>​</a></h2>
-<p>123 itens rotulados, 7 sequências, parâmetros candidatos da AT-080 (mínimo de
-20 palavras, limiar 0,8, margem 0,3, 10 mensagens / 2.000 caracteres, histerese
-2). Duas listas de marcadores: <code>at080</code> é a lista da especificação, literal;
-<code>ampliada</code> é uma lista maior escrita por este instrumento <strong>antes</strong> de ele rodar
-contra o corpus (palavras funcionais frequentes ausentes dos outros dois
-idiomas). Mesmo corpus, então <code>ampliada</code> não é validada por estes números — quem
-pode dizer é o corpus real.</p>
-<p>Por mensagem, parâmetros candidatos:</p>
+<p><code>--container</code> 在该容器内运行 <code>psql</code>，对 <code>session_events</code> 执行单个只读 <code>SELECT</code>（<code>--usuario</code>/<code>--banco</code> 默认是
+compose 的 <code>brabo</code>/<code>brabo</code>）；<code>--database-url &lt;url></code> 改用宿主的 <code>psql</code>。再次运行提取会保留已有标签，并追加
+没有标签的新消息。</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=numbers-on-the-synthetic-corpus-2026-09-28>合成语料库上的数字（2026-09-28）<a href=#numbers-on-the-synthetic-corpus-2026-09-28 class=hash-link aria-label=合成语料库上的数字（2026-09-28）的直接链接 title=合成语料库上的数字（2026-09-28）的直接链接 translate=no>​</a></h2>
+<p>123 个带标签的条目，7 个序列，AT-080 的候选参数（最少 20 个词，阈值 0,8，差距 0,3，10 条消息 / 2.000 个字符，
+迟滞 2）。两个标记列表：<code>at080</code> 是规范中的列表，按字面；<code>ampliada</code> 是本工具在对语料库运行<strong>之前</strong>写下的一个
+更大的列表（另外两种语言中没有的常见功能词）。同一个语料库，因此 <code>ampliada</code> 并没有被这些数字验证——能说明的
+是真实语料库。</p>
+<p>按消息，候选参数：</p>
 
 
 
@@ -172,52 +142,37 @@ pode dizer é o corpus real.</p>
 
 
 
-<table><thead><tr><th>rótulo<th>n<th><code>at080</code> correto<th><code>at080</code> indeterminado<th><code>ampliada</code> correto<th><code>ampliada</code> indeterminado<tbody><tr><td>pt<td>56<td>26 (46,4%)<td>30<td>30 (53,6%)<td>26<tr><td>es<td>20<td>6 (30,0%)<td>14<td>7 (35,0%)<td>13<tr><td>en<td>14<td>6 (42,9%)<td>8<td>6 (42,9%)<td>8<tr><td>und<td>15<td>15 (100%)<td>0<td>15 (100%)<td>0<tr><td>mul<td>5<td>5 (100%)<td>0<td>5 (100%)<td>0<tr><td>outros idiomas<td>13<td>10<td>0<td>9<td>0</table>
-<p>Vereditos de idioma errado: <strong>nenhum num item <code>pt</code>/<code>es</code>/<code>en</code></strong>, em nenhuma das
-listas. Todos estão em idiomas fora dos três — <code>at080</code>: francês → pt (o <code>ê</code> de
-<em>arrêté</em>), <strong>galego → es</strong> (o único <code>falso es</code>), holandês → en; <code>ampliada</code>:
-francês → es, alemão → pt e → en, holandês → en.</p>
-<p>A limpeza removeu mais da metade das palavras de <strong>zero</strong> itens decidíveis.</p>
-<p>As sete sequências sintéticas terminam onde se espera com no máximo o número
-permitido de trocas, nas duas listas — inclusive português com uma citação
-longa em espanhol, uma mensagem inteira em espanhol no meio do português, e
-português denso de jargão em inglês.</p>
-<p>CPU nesta máquina: <code>at080</code> 11,7 µs por mensagem e 49 µs por avaliação da
-amostra de 10 mensagens; <code>ampliada</code> 16,8 µs e 60 µs. Varia com a máquina; o que
-importa é a ordem de grandeza.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=what-the-numbers-say>O que os números dizem<a href=#what-the-numbers-say class=hash-link aria-label="O que os números dizem的直接链接" title="O que os números dizem的直接链接" translate=no>​</a></h2>
+<table><thead><tr><th>标签<th>n<th><code>at080</code> 正确<th><code>at080</code> 不确定<th><code>ampliada</code> 正确<th><code>ampliada</code> 不确定<tbody><tr><td>pt<td>56<td>26 (46,4%)<td>30<td>30 (53,6%)<td>26<tr><td>es<td>20<td>6 (30,0%)<td>14<td>7 (35,0%)<td>13<tr><td>en<td>14<td>6 (42,9%)<td>8<td>6 (42,9%)<td>8<tr><td>und<td>15<td>15 (100%)<td>0<td>15 (100%)<td>0<tr><td>mul<td>5<td>5 (100%)<td>0<td>5 (100%)<td>0<tr><td>其他语言<td>13<td>10<td>0<td>9<td>0</table>
+<p>语言错误的裁决：在两个列表中，<strong><code>pt</code>/<code>es</code>/<code>en</code> 条目上一个都没有</strong>。全部都在三种之外的语言中——<code>at080</code>：法语
+→ pt（<em>arrêté</em> 的 <code>ê</code>）、<strong>加利西亚语 → es</strong>（唯一的 <code>falso es</code>）、荷兰语 → en；<code>ampliada</code>：法语 → es、德语
+→ pt 和 → en、荷兰语 → en。</p>
+<p>清理在<strong>零</strong>个可判断条目中删除了超过一半的词。</p>
+<p>七个合成序列在两个列表中都以预期的结果结束，切换次数不超过允许值——包括带一段很长的西班牙语引文的葡萄牙语、
+葡萄牙语中间一整条西班牙语消息，以及满是英语行话的葡萄牙语。</p>
+<p>本机 CPU：<code>at080</code> 每条消息 11,7 µs，每次评估 10 条消息的样本 49 µs；<code>ampliada</code> 16,8 µs 和 60 µs。随机器而变；
+重要的是数量级。</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=what-the-numbers-say>数字说明了什么<a href=#what-the-numbers-say class=hash-link aria-label=数字说明了什么的直接链接 title=数字说明了什么的直接链接 translate=no>​</a></h2>
 <ul>
-<li class=""><strong>Com a lista <code>at080</code>, o limiar e a margem nunca atuam.</strong> 66 dos 67 itens que
-pontuam alguma coisa pontuam para um idioma só (confiança = 1,0), então
-varrer o limiar de 0,5 a 1,0 não muda nada. O mínimo de palavras é o único
-botão que age: por mensagem, os itens decidíveis chegam ao idioma deles 42,2%
-das vezes com 20 palavras, 58,9% com 10 e 66,7% sem mínimo — com 20 ele joga
-fora toda mensagem curta e com erro de digitação e a maior parte das técnicas.</li>
-<li class=""><strong>Tirar o mínimo deixa texto misto decidir.</strong> Sem mínimo, <code>at080</code> transforma
-três das cinco mensagens mistas em <code>en</code> ou <code>pt</code>, e <code>ampliada</code> também decide
-dois itens <code>und</code> como <code>en</code> — código sem cerca (<code>const total = itens.reduce(…)</code>)
-e saída do pnpm (<code>ELIFECYCLE  Test failed. See above for more details.</code>) passam
-pela limpeza, que só conhece código cercado e os formatos de log que a AT-080
-listou.</li>
-<li class=""><strong>A margem de 0,3 é redundante com o limiar de 0,8</strong> em qualquer lista: com
-três idiomas, um vencedor com ≥ 0,8 fica pelo menos 0,6 acima do segundo.</li>
-<li class=""><strong>A unidade que importa é a amostra, não a mensagem</strong> — nas sequências, a
-janela de 10 mensagens chega ao idioma com mensagens que sozinhas seriam
-<code>indeterminado</code>. Uma única mensagem em espanhol numa janela em português torna
-a amostra <code>indeterminado</code> enquanto ela estiver na janela (sequência <code>q03</code>):
-nenhuma troca, mas nenhuma confirmação também.</li>
-<li class=""><strong>A lista aberta de idiomas é onde estão os erros.</strong> Com três idiomas, um
-usuário galego ou francês pode ouvir que escreve espanhol ou português. Pela
-regra da AT-168 a detecção só <em>pergunta</em>, e o usuário confirma, então o custo
-é uma pergunta errada — mas continua sendo o único modo de falha da heurística
-aqui.</li>
+<li class=""><strong>用 <code>at080</code> 列表时，阈值和差距从不起作用。</strong> 67 个有得分的条目中有 66 个只为一种语言得分（置信度 = 1,0），
+因此把阈值从 0,5 扫到 1,0 什么也不改变。最少词数是唯一起作用的旋钮：按消息，可判断条目在 20 个词时有
+42,2% 到达自己的语言，10 个词时 58,9%，没有最小值时 66,7%——在 20 时它丢掉了每条短的、有拼写错误的消息和
+大部分技术性消息。</li>
+<li class=""><strong>去掉最小值会让混合文本作出判断。</strong> 没有最小值时，<code>at080</code> 把五条混合消息中的三条变成 <code>en</code> 或 <code>pt</code>，
+<code>ampliada</code> 也把两个 <code>und</code> 条目判为 <code>en</code>——没有围栏的代码（<code>const total = itens.reduce(…)</code>）和 pnpm 的输出
+（<code>ELIFECYCLE  Test failed. See above for more details.</code>）通过了清理，而清理只认识有围栏的代码和 AT-080
+列出的日志格式。</li>
+<li class=""><strong>0,3 的差距与 0,8 的阈值是冗余的</strong>，在任何列表中：有三种语言时，≥ 0,8 的胜者至少比第二名高 0,6。</li>
+<li class=""><strong>重要的单位是样本，而不是消息</strong>——在序列中，10 条消息的窗口能用单独看来会是 <code>indeterminado</code> 的消息到达
+语言。葡萄牙语窗口中的一条西班牙语消息，只要还在窗口中，就让样本成为 <code>indeterminado</code>（序列 <code>q03</code>）：没有
+切换，但也没有确认。</li>
+<li class=""><strong>开放的语言列表正是错误所在。</strong> 只有三种语言时，一个加利西亚语或法语用户可能被告知他写的是西班牙语或
+葡萄牙语。按 AT-168 的规则检测只会<em>询问</em>，用户确认，因此代价是一个错误的问题——但这仍是启发式在这里唯一的
+失败模式。</li>
 </ul>
-<p>Estes são números sintéticos: o corpus foi escrito pela mesma mão que escreveu
-a heurística. Os limiares da AT-163 deveriam vir do corpus real.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=the-products-provisional-thresholds>Os limiares provisórios do produto<a href=#the-products-provisional-thresholds class=hash-link aria-label="Os limiares provisórios do produto的直接链接" title="Os limiares provisórios do produto的直接链接" translate=no>​</a></h2>
-<p>A AT-163 tinha de sair com <em>algum</em> número antes de o corpus real existir, então
-a api lê <code>PARAMETROS_PROVISORIOS</code> — <strong>provisórios, não calibrados</strong>, e assim
-declarados na <a class="" href=/brabo/dev/zh-Hans/business-rules#rn-624>RN-624</a>:</p>
+<p>这些是合成的数字：语料库由编写启发式的同一只手写成。AT-163 的阈值应该来自真实语料库。</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=the-products-provisional-thresholds>产品的临时阈值<a href=#the-products-provisional-thresholds class=hash-link aria-label=产品的临时阈值的直接链接 title=产品的临时阈值的直接链接 translate=no>​</a></h2>
+<p>AT-163 必须在真实语料库存在之前带着<em>某个</em>数字发布，因此 api 读取 <code>PARAMETROS_PROVISORIOS</code>——<strong>临时的，未经
+校准</strong>，并在 <a class="" href=/brabo/dev/zh-Hans/business-rules#rn-624>RN-624</a> 中如此声明：</p>
 
 
 
@@ -259,77 +214,49 @@ declarados na <a class="" href=/brabo/dev/zh-Hans/business-rules#rn-624>RN-624</
 
 
 
-<table><thead><tr><th>parâmetro<th>provisório<th>candidato da AT-080<th>por quê<tbody><tr><td>lista de marcadores<td><code>at080</code><td>—<td><code>ampliada</code> ganha 4 pontos em pt e erra o alemão duas vezes; nenhuma das duas é validada por dado real<tr><td>mínimo de palavras (sobre a amostra)<td><strong>10</strong><td>20<td>cobertura dos itens decidíveis 42,2% → 58,9% com os <strong>mesmos</strong> três vereditos errados (francês, galego, holandês — idiomas fora dos três); abaixo de 10, texto misto começa a decidir<tr><td>limiar / margem<td>0,8 / 0,3<td>0,8 / 0,3<td>nunca atuam no corpus sintético, então ainda não há número melhor para escolher<tr><td>amostra<td>10 mensagens / 2.000 caracteres<td>igual<td>—<tr><td>histerese<td>2<td>2<td>—</table>
-<p>A histerese é <strong>recalculada, nunca guardada</strong>: a api lê as últimas 11
-evidências e pergunta se as duas últimas avaliações da amostra concordam. CPU
-nesta máquina, corpus sintético: 11,6 µs para limpar e classificar uma
-mensagem, 110 µs por detecção (11 mensagens, duas avaliações). A leitura é
-servida por um índice parcial em <code>session_events</code>: 0,056 ms contra 13,5 ms de
-uma varredura sequencial, medidos sobre 200.000 eventos.</p>
-<p>Para recalibrar: rode o corpus real (<code>idioma:medir --real</code>) e depois mude
-<code>PARAMETROS_PROVISORIOS</code> na api — é o único lugar de onde o produto os lê, e o
-instrumento importa o mesmo arquivo (o relatório dele continua varrendo os
-candidatos da AT-080).</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=paid-validation-of-the-language-orientation-at-167-2026-09-29>Validação paga da orientação de idioma (AT-167, 2026-09-29)<a href=#paid-validation-of-the-language-orientation-at-167-2026-09-29 class=hash-link aria-label="Validação paga da orientação de idioma (AT-167, 2026-09-29)的直接链接" title="Validação paga da orientação de idioma (AT-167, 2026-09-29)的直接链接" translate=no>​</a></h2>
+<table><thead><tr><th>参数<th>临时值<th>AT-080 的候选值<th>原因<tbody><tr><td>标记列表<td><code>at080</code><td>—<td><code>ampliada</code> 在 pt 上多 4 个百分点，并两次判错德语；两者都没有被真实数据验证<tr><td>最少词数（针对样本）<td><strong>10</strong><td>20<td>可判断条目的覆盖率 42,2% → 58,9%，<strong>相同的</strong>三个错误裁决（法语、加利西亚语、荷兰语——三种之外的语言）；低于 10 时，混合文本开始作出判断<tr><td>阈值 / 差距<td>0,8 / 0,3<td>0,8 / 0,3<td>在合成语料库上从不起作用，因此还没有更好的数字可选<tr><td>样本<td>10 条消息 / 2.000 个字符<td>相同<td>—<tr><td>迟滞<td>2<td>2<td>—</table>
+<p>迟滞是<strong>重新计算的，从不保存</strong>：api 读取最后 11 条证据，并询问样本的最后两次评估是否一致。本机 CPU，合成
+语料库：清理并分类一条消息 11,6 µs，每次检测 110 µs（11 条消息，两次评估）。读取由 <code>session_events</code> 上的一个
+部分索引提供：0,056 ms 对比顺序扫描的 13,5 ms，在 200.000 个事件上测量。</p>
+<p>要重新校准：运行真实语料库（<code>idioma:medir --real</code>），然后在 api 中改 <code>PARAMETROS_PROVISORIOS</code>——这是产品读取
+它们的唯一地方，工具导入的也是同一个文件（它的报告继续扫描 AT-080 的候选值）。</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=paid-validation-of-the-language-orientation-at-167-2026-09-29>语言引导的付费验证（AT-167，2026-09-29）<a href=#paid-validation-of-the-language-orientation-at-167-2026-09-29 class=hash-link aria-label=语言引导的付费验证（AT-167，2026-09-29）的直接链接 title=语言引导的付费验证（AT-167，2026-09-29）的直接链接 translate=no>​</a></h2>
 <blockquote>
-<p>O protocolo é o da AT-082, com as decisões da AT-169: orçamento de US$ 5,
-5 rodadas por caso e braço, limiar de aceite "no braço tratado, <strong>zero</strong>
-respostas em espanhol onde se espera pt-BR, e idioma correto <strong>≥ 95%</strong> em
-C01–C04 e C06–C15", modelo sob teste <code>deepseek/deepseek-v4.1-flash</code>, modelo
-de comparação <code>anthropic/claude-haiku-4.5</code>, teto de custo incremental de
-50 tokens de entrada por chamada. Código em <code>d48f99f8e</code> (a <code>dev</code> de 2026-09-29).</p>
+<p>协议是 AT-082 的，带有 AT-169 的决定：预算 US$ 5，每个用例和组 5 轮，验收阈值"在处理组中，在期望 pt-BR 的
+地方<strong>零</strong>个西班牙语回答，并且 C01–C04 和 C06–C15 中语言正确 <strong>≥ 95%</strong>"，被测模型
+<code>deepseek/deepseek-v4.1-flash</code>，对照模型 <code>anthropic/claude-haiku-4.5</code>，增量成本上限为每次调用 50 个输入
+token。代码在 <code>d48f99f8e</code>（2026-09-29 的 <code>dev</code>）。</p>
 </blockquote>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=where-it-runs-and-what-is-and-is-not-the-product>Onde roda, e o que é (e o que não é) o produto<a href=#where-it-runs-and-what-is-and-is-not-the-product class=hash-link aria-label="Onde roda, e o que é (e o que não é) o produto的直接链接" title="Onde roda, e o que é (e o que não é) o produto的直接链接" translate=no>​</a></h3>
-<p>Um script fora do produto, <code>scripts/idioma/validar.ts</code> (a parte pura — matriz,
-julgamento, relatório — em <code>validacao.ts</code>, testada por <code>validacao.spec.ts</code>). Ele
-chama o OpenRouter <strong>direto</strong> e não grava nada no banco. O que o produto manda
-ao modelo é <strong>lido dos arquivos do produto a cada execução</strong>, nunca copiado — a
-leitura lança, nomeando o que não achou, se um arquivo mudar de forma:</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=where-it-runs-and-what-is-and-is-not-the-product>在哪里运行，以及什么是（什么不是）产品<a href=#where-it-runs-and-what-is-and-is-not-the-product class=hash-link aria-label=在哪里运行，以及什么是（什么不是）产品的直接链接 title=在哪里运行，以及什么是（什么不是）产品的直接链接 translate=no>​</a></h3>
+<p>一个产品之外的脚本 <code>scripts/idioma/validar.ts</code>（纯的部分——矩阵、判定、报告——在 <code>validacao.ts</code> 中，由
+<code>validacao.spec.ts</code> 测试）。它<strong>直接</strong>调用 OpenRouter，不向数据库写入任何东西。产品发送给模型的内容<strong>在每次
+执行时从产品的文件中读取</strong>，从不复制——如果某个文件改变了形式，读取会抛出异常并点名它没找到的东西：</p>
 <ul>
-<li class="">a orientação (RN-622/623): <code>@textos</code>, a frase genérica, a cláusula de
-artefato, <code>@forma_curta</code> e <code>@ferramentas_de_artefato</code> de
-<code>apps/engine/lib/engine/harness/idioma_da_resposta.ex</code>, enviada como a ÚLTIMA
-mensagem, <code>role: "system"</code>, em toda chamada de um turno tratado (iterações de
-ferramenta incluídas) e nunca mantida no histórico;</li>
-<li class="">o prompt de resumo e a frase de idioma dele (RN-621) de
-<code>apps/engine/lib/engine/harness/context_manager.ex</code>;</li>
-<li class="">a persona do Criativo (<code>CRIATIVO_INSTRUCTIONS</code>), as duas ferramentas dele com
-as descrições reais, e os resultados de ferramenta que o produto devolve.</li>
+<li class="">引导（RN-622/623）：<code>apps/engine/lib/engine/harness/idioma_da_resposta.ex</code> 中的 <code>@textos</code>、通用句、工件子句、
+<code>@forma_curta</code> 和 <code>@ferramentas_de_artefato</code>，作为<strong>最后</strong>一条消息、<code>role: "system"</code> 发送，在处理组轮次的每次
+调用中（包括工具迭代），且从不保留在历史中；</li>
+<li class=""><code>apps/engine/lib/engine/harness/context_manager.ex</code> 中的摘要提示词及其语言句（RN-621）；</li>
+<li class="">Criativo 的人设（<code>CRIATIVO_INSTRUCTIONS</code>）、它带真实描述的两个工具，以及产品返回的工具结果。</li>
 </ul>
-<p>Diferenças declaradas em relação ao produto: o system prompt é só a persona
-(sem as camadas do <code>ContextBuilder</code>); a compactação é <strong>forçada</strong> antes do
-quinto turno do C04 (mantendo as duas últimas mensagens, o <code>keep_recent</code> do
-produto), com o modelo sob teste como resumidor; a retomada (C15) é o histórico
-reconstruído como texto, a forma de <code>Engine.Agents.Reidratacao</code>; no máximo 4
-chamadas ao modelo por turno (o Criativo permite 12); e <code>max_tokens</code> tem teto
-de 4000 (o produto não manda nenhum). O provider upstream <strong>não</strong> foi fixado —
-registrado por chamada como confundidor. Baseline = o código antes da
-RN-621/622: sem orientação <strong>e</strong> com o prompt de resumo antigo (AT-169 resposta
-4: a validação mede o conjunto, não há baseline isolado do resumo antigo).</p>
-<p>O idioma resolvido do autor de cada mensagem faz parte do caso: <code>pt-BR</code> para a
-Ana (C01–C05, C07–C11, C13–C15), <code>en</code> para o Bob (C06 como <code>en</code> detectado e
-confirmado, C12 como preferência <code>en</code> explícita escrevendo português); idioma
-do projeto <code>pt-BR</code>. O C05 espera <strong>pt-BR</strong>: pela resposta 4 da AT-168 a
-detecção só <em>pergunta</em>, então o idioma resolvido do autor continua pt-BR até a
-confirmação.</p>
-<p>Uma primeira execução do passo zero com <code>max_tokens</code> 1000 foi <strong>descartada</strong>: o
-raciocínio do DeepSeek gastou o teto inteiro em 7 chamadas e a resposta voltou
-vazia (dois resumos viraram o texto de fallback do produto). Os registros dela
-ficam à parte na pasta de saída; resposta vazia agora conta como <code>falha</code>, nunca
-<code>indeterminado</code>.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=step-zero-not-reproduced>Passo zero: não reproduzido<a href=#step-zero-not-reproduced class=hash-link aria-label="Passo zero: não reproduzido的直接链接" title="Passo zero: não reproduzido的直接链接" translate=no>​</a></h3>
-<p>Só baseline, <code>deepseek/deepseek-v4.1-flash</code>, C01–C04, 5 rodadas: <strong>0 respostas
-em espanhol em 35 respostas julgadas</strong> (35 pt, 0 indeterminadas). O relato de
-13/09 (espanhol a partir de entrada em português) <strong>não é reproduzido</strong>, então
-nenhuma melhora <em>naquele</em> defeito pode ser atribuída ao tratamento. A execução
-continuou porque o limiar da AT-169 é absoluto no braço tratado e os outros
-casos (C05, C06, C12, C16, C17) mostram, sim, o baseline respondendo no idioma
-errado.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=results-by-case--arm--model>Resultados por caso × braço × modelo<a href=#results-by-case--arm--model class=hash-link aria-label="Resultados por caso × braço × modelo的直接链接" title="Resultados por caso × braço × modelo的直接链接" translate=no>​</a></h3>
-<p>Primeiro juiz: o classificador local (lista <code>ampliada</code>, parâmetros candidatos)
-sobre a prosa. "ok" = idioma esperado; "errado (es)" = outro idioma (dos quais
-espanhol); "ind." = indeterminado. n é o número de respostas julgadas (5 rodadas
-× turnos julgados).</p>
+<p>与产品之间已声明的差异：系统提示词只有人设（没有 <code>ContextBuilder</code> 的各层）；压缩在 C04 的第五个轮次之前被
+<strong>强制</strong>进行（保留最后两条消息，即产品的 <code>keep_recent</code>），由被测模型充当摘要器；恢复（C15）是以文本重建的历史，
+即 <code>Engine.Agents.Reidratacao</code> 的形式；每个轮次最多 4 次模型调用（Criativo 允许 12 次）；<code>max_tokens</code> 上限为
+4000（产品不发送任何值）。上游 provider <strong>没有</strong>固定——按调用记录为混杂因素。基线 = RN-621/622 之前的代码：
+没有引导<strong>并且</strong>使用旧的摘要提示词（AT-169 答复 4：验证测量的是整体，没有旧摘要的单独基线）。</p>
+<p>每条消息的作者的已解析语言是用例的一部分：Ana 为 <code>pt-BR</code>（C01–C05、C07–C11、C13–C15），Bob 为 <code>en</code>（C06 是
+检测到并确认的 <code>en</code>，C12 是写葡萄牙语的显式 <code>en</code> 偏好）；项目语言 <code>pt-BR</code>。C05 期望 <strong>pt-BR</strong>：按 AT-168 的
+答复 4，检测只会<em>询问</em>，因此作者的已解析语言在确认之前仍是 pt-BR。</p>
+<p><code>max_tokens</code> 为 1000 的第零步第一次执行被<strong>丢弃</strong>：DeepSeek 的推理在 7 次调用中用完了整个上限，回答返回为空
+（两个摘要变成了产品的回退文本）。它的记录单独放在输出目录中；空回答现在计为 <code>falha</code>，从不计为
+<code>indeterminado</code>。</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=step-zero-not-reproduced>第零步：未复现<a href=#step-zero-not-reproduced class=hash-link aria-label=第零步：未复现的直接链接 title=第零步：未复现的直接链接 translate=no>​</a></h3>
+<p>只有基线，<code>deepseek/deepseek-v4.1-flash</code>，C01–C04，5 轮：<strong>35 个被判定的回答中 0 个西班牙语</strong>（35 pt，0 个
+不确定）。9月13日的报告（从葡萄牙语输入得到西班牙语）<strong>没有复现</strong>，因此<em>那个</em>缺陷上的任何改善都不能归功于处理。
+执行继续进行，因为 AT-169 的阈值在处理组中是绝对的，而其他用例（C05、C06、C12、C16、C17）确实显示基线以错误的
+语言回答。</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=results-by-case--arm--model>按用例 × 组 × 模型的结果<a href=#results-by-case--arm--model class=hash-link aria-label="按用例 × 组 × 模型的结果的直接链接" title="按用例 × 组 × 模型的结果的直接链接" translate=no>​</a></h3>
+<p>第一个判定者：针对散文的本地分类器（<code>ampliada</code> 列表，候选参数）。"ok" = 期望的语言；"错误 (es)" = 另一种语言
+（其中西班牙语若干）；"不确定" = indeterminado。n 是被判定的回答数（5 轮 × 被判定的轮次）。</p>
 
 
 
@@ -433,9 +360,9 @@ espanhol); "ind." = indeterminado. n é o número de respostas julgadas (5 rodad
 
 
 
-<table><thead><tr><th>caso<th>DeepSeek baseline<th>DeepSeek tratamento<th>Haiku baseline<th>Haiku tratamento<tbody><tr><td>C01 (n=5)<td>5 ok<td>5 ok<td>5 ok<td>5 ok<tr><td>C02 (n=5)<td>5 ok<td>5 ok<td>5 ok<td>5 ok<tr><td>C03 (n=15)<td>15 ok<td>15 ok<td>15 ok<td>15 ok<tr><td>C04 (n=10)<td>10 ok<td>10 ok<td>10 ok<td>10 ok<tr><td>C05 (n=5, fora da lista dos 95%)<td>1 ok, 4 errados (4 es)<td>5 ok<td>0 ok, 5 errados (5 es)<td>2 ok, 3 errados (3 es)<tr><td>C06 (n=5)<td>2 ok, 2 errados, 1 ind.<td>3 ok, 2 ind.<td>4 ok, 1 errado<td>5 ok<tr><td>C07–C10 (n=5 cada)<td>todos ok<td>todos ok<td>todos ok<td>todos ok<tr><td>C11 (n=10)<td>6 ok, 4 errados<td>5 ok, 5 errados<td>5 ok, 1 errado, 4 ind.<td>6 ok, 4 errados<tr><td>C12 (n=10)<td>0 ok, 10 errados<td>4 ok, 6 ind.<td>0 ok, 10 errados<td><strong>0 ok, 10 errados</strong><tr><td>C13 (n=5)<td>5 ok<td>5 ok<td>5 ok<td>5 ok<tr><td>C14, C15 (n=5 cada)<td>todos ok<td>todos ok<td>todos ok<td>todos ok<tr><td>C16 (n=20, fora da lista)<td>10 ok, 10 errados<td>19 ok, 1 ind.<td>10 ok, 10 errados<td>18 ok, 2 errados<tr><td>C17 (n=20, fora da lista)<td>12 ok, 8 errados<td>20 ok<td>16 ok, 4 errados<td>20 ok</table>
-<p>O C13 chamou <code>emit_artifact</code> em 20 de 20 conversas. Nenhuma chamada falhou.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=against-the-threshold>Contra o limiar<a href=#against-the-threshold class=hash-link aria-label="Contra o limiar的直接链接" title="Contra o limiar的直接链接" translate=no>​</a></h3>
+<table><thead><tr><th>用例<th>DeepSeek 基线<th>DeepSeek 处理<th>Haiku 基线<th>Haiku 处理<tbody><tr><td>C01 (n=5)<td>5 ok<td>5 ok<td>5 ok<td>5 ok<tr><td>C02 (n=5)<td>5 ok<td>5 ok<td>5 ok<td>5 ok<tr><td>C03 (n=15)<td>15 ok<td>15 ok<td>15 ok<td>15 ok<tr><td>C04 (n=10)<td>10 ok<td>10 ok<td>10 ok<td>10 ok<tr><td>C05 (n=5，不在 95% 列表中)<td>1 ok，4 错误（4 es）<td>5 ok<td>0 ok，5 错误（5 es）<td>2 ok，3 错误（3 es）<tr><td>C06 (n=5)<td>2 ok，2 错误，1 不确定<td>3 ok，2 不确定<td>4 ok，1 错误<td>5 ok<tr><td>C07–C10（各 n=5）<td>全部 ok<td>全部 ok<td>全部 ok<td>全部 ok<tr><td>C11 (n=10)<td>6 ok，4 错误<td>5 ok，5 错误<td>5 ok，1 错误，4 不确定<td>6 ok，4 错误<tr><td>C12 (n=10)<td>0 ok，10 错误<td>4 ok，6 不确定<td>0 ok，10 错误<td><strong>0 ok，10 错误</strong><tr><td>C13 (n=5)<td>5 ok<td>5 ok<td>5 ok<td>5 ok<tr><td>C14、C15（各 n=5）<td>全部 ok<td>全部 ok<td>全部 ok<td>全部 ok<tr><td>C16 (n=20，不在列表中)<td>10 ok，10 错误<td>19 ok，1 不确定<td>10 ok，10 错误<td>18 ok，2 错误<tr><td>C17 (n=20，不在列表中)<td>12 ok，8 错误<td>20 ok<td>16 ok，4 错误<td>20 ok</table>
+<p>C13 在 20 次对话中的 20 次调用了 <code>emit_artifact</code>。没有调用失败。</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=against-the-threshold>对照阈值<a href=#against-the-threshold class=hash-link aria-label=对照阈值的直接链接 title=对照阈值的直接链接 translate=no>​</a></h3>
 
 
 
@@ -459,33 +386,24 @@ espanhol); "ind." = indeterminado. n é o número de respostas julgadas (5 rodad
 
 
 
-<table><thead><tr><th>modelo<th>espanhol onde se espera pt-BR (tratado)<th>corretos em C01–C04, C06–C15 (estrito, classificador)<th>veredito pelo classificador<tbody><tr><td><code>deepseek/deepseek-v4.1-flash</code><td>0<td>82/95 (86,3%), 8 indeterminados<td><strong>não passa</strong><tr><td><code>anthropic/claude-haiku-4.5</code><td>3 (todos no C05)<td>81/95 (85,3%), 0 indeterminados<td><strong>não passa</strong></table>
-<p>As 13 falhas do DeepSeek formam dois grupos. A leitura abaixo foi a do agente,
-feita ANTES da revisão; a revisão (<a href=#human-review-and-the-haiku-diagnosis-at-167-follow-up class="">próxima seção</a>)
-a corrigiu — os 8 indeterminados não são todos prosa em inglês:</p>
+<table><thead><tr><th>模型<th>期望 pt-BR 处的西班牙语（处理组）<th>C01–C04、C06–C15 中正确（严格，分类器）<th>按分类器的裁决<tbody><tr><td><code>deepseek/deepseek-v4.1-flash</code><td>0<td>82/95 (86,3%)，8 个不确定<td><strong>不通过</strong><tr><td><code>anthropic/claude-haiku-4.5</code><td>3（全部在 C05）<td>81/95 (85,3%)，0 个不确定<td><strong>不通过</strong></table>
+<p>DeepSeek 的 13 个失败分为两组。下面的解读是智能体的，在审阅<strong>之前</strong>作出；审阅（<a href=#human-review-and-the-haiku-diagnosis-at-167-follow-up class="">下一节</a>）
+更正了它——8 个不确定的并不都是英语散文：</p>
 <ul>
-<li class="">os 8 indeterminados (C06 ×2, C12 ×6) parecem prosa em inglês — a lista
-<code>ampliada</code> pontua mal o inglês ("Great starting point — …");</li>
-<li class="">as 5 falhas do C11 respondem ao pedido de tradução com a <strong>tradução em inglês
-dentro de uma moldura em português</strong>, o que a orientação permite ("a menos que
-o usuário peça explicitamente … nesta mensagem" cobre a tradução, não a
-moldura). O "tradução em en" do protocolo não diz qual dos dois está certo.</li>
+<li class="">8 个不确定的（C06 ×2，C12 ×6）看起来是英语散文——<code>ampliada</code> 列表对英语打分很差（"Great starting point — …"）；</li>
+<li class="">C11 的 5 个失败以<strong>葡萄牙语框架中的英语翻译</strong>回应翻译请求，而这是引导所允许的（"a menos que o usuário peça
+explicitamente … nesta mensagem" 涵盖翻译，不涵盖框架）。协议中的 "tradução em en" 没有说明两者哪个是对的。</li>
 </ul>
-<p>Se a revisão aceitar os dois grupos, o DeepSeek chega a 95/95 e <strong>passa</strong>; se
-recusar o C11, 90/95 (94,7%) e falha por uma resposta. O Haiku <strong>falha de
-qualquer jeito</strong>: com a preferência <code>en</code> explícita e mensagens em português
-(C12) ele respondeu em português em 10 de 10 respostas tratadas, e respondeu 3
-de 5 mensagens em espanhol em espanhol (C05). Uma hipótese, não medida: para
-modelos da Anthropic o OpenRouter sobe a mensagem <code>system</code> do fim para o system
-prompt do topo, onde ela perde a recência que tem no fim da lista. (Medido
-depois, e <strong>não confirmado</strong>: veja o diagnóstico abaixo.)</p>
-<p>As respostas a revisar (toda indeterminada ou divergente, toda tradução do C11,
-e uma amostra determinística de 1 em 10 das concordantes) são 146 de 560,
-listadas em <code>revisao.md</code> na pasta de saída.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=incremental-cost-of-the-orientation>Custo incremental da orientação<a href=#incremental-cost-of-the-orientation class=hash-link aria-label="Custo incremental da orientação的直接链接" title="Custo incremental da orientação的直接链接" translate=no>​</a></h3>
-<p><code>prompt_tokens</code> pareados da <strong>primeira</strong> chamada de cada conversa (entrada
-idêntica nos dois braços, salvo a orientação), tirados do <code>usage</code> do OpenRouter,
-nunca estimados:</p>
+<p>如果审阅接受这两组，DeepSeek 达到 95/95 并<strong>通过</strong>；如果拒绝 C11，则是 90/95（94,7%），差一个回答而失败。Haiku
+<strong>无论如何都失败</strong>：在显式 <code>en</code> 偏好和葡萄牙语消息（C12）下，它在 10 个处理组回答中有 10 个用葡萄牙语回答，并对
+5 条西班牙语消息中的 3 条用西班牙语回答（C05）。一个未测量的假设：对 Anthropic 的模型，OpenRouter 把末尾的
+<code>system</code> 消息提升到顶部的系统提示词中，在那里它失去了在列表末尾时的近因效应。（之后测量了，<strong>未得到证实</strong>：见
+下面的诊断。）</p>
+<p>需要审阅的回答（每个不确定或分歧的、C11 的每个翻译，以及一致者中 10 取 1 的确定性样本）是 560 个中的 146 个，
+列在输出目录的 <code>revisao.md</code> 中。</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=incremental-cost-of-the-orientation>引导的增量成本<a href=#incremental-cost-of-the-orientation class=hash-link aria-label=引导的增量成本的直接链接 title=引导的增量成本的直接链接 translate=no>​</a></h3>
+<p>每次对话<strong>第一次</strong>调用的成对 <code>prompt_tokens</code>（两组的输入相同，除了引导），取自 OpenRouter 的 <code>usage</code>，从不
+估计：</p>
 
 
 
@@ -521,59 +439,39 @@ nunca estimados:</p>
 
 
 
-<table><thead><tr><th>modelo<th>orientação<th>pares<th>Δ tokens de entrada<tbody><tr><td>DeepSeek<td>pt-BR (108 caracteres)<td>75<td>32 (todo par)<tr><td>DeepSeek<td>en + cláusula de artefato (128 caracteres)<td>15<td>27<tr><td>Haiku<td>pt-BR<td>75<td>30<tr><td>Haiku<td>en + cláusula de artefato<td>15<td>27</table>
-<p>Tudo abaixo do teto de 50 tokens. Ao preço de entrada do catálogo isso dá cerca
-de US$ 0,0000096 por chamada no DeepSeek e US$ 0,00003 no Haiku — um limite
-superior, já que o DeepSeek serviu a maior parte da entrada do cache (os tokens
-em cache são devolvidos; o custo por chamada com cache está dentro de
-<code>usage.cost</code>, não separado por mensagem). A orientação vai em toda chamada de
-um turno, então um turno com iterações de ferramenta a paga uma vez por iteração.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=spend>Gasto<a href=#spend class=hash-link aria-label=Gasto的直接链接 title=Gasto的直接链接 translate=no>​</a></h3>
-<p>O custo da validação é a soma do <code>usage.cost</code> de cada resposta, guardado por
-chamada em <code>chamadas.jsonl</code>: <strong>US$ 2,3071</strong> no total — US$ 2,2629 nas execuções
-contadas (DeepSeek 0,1526 baseline + 0,2133 tratamento; Haiku 0,9526 + 0,9443;
-865 chamadas), US$ 0,0281 no passo zero descartado e US$ 0,0162 num smoke de um
-caso. O contador de <code>GET /api/v1/key</code> foi de 1,8301 a 4,1578 (Δ 2,3277) no mesmo
-período, mas a chave é compartilhada com outras lanes pagas rodando ao mesmo
-tempo e o contador atrasa, então esse delta é contexto, não o gasto desta
-validação. Os ids de geração não foram gravados, então o custo por chamada não
-foi conferido contra <code>GET /api/v1/generation</code>. O metering do próprio produto
-(<code>token_usage</code>) não entrou: o script passa por fora da api.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=reproducing>Como reproduzir<a href=#reproducing class=hash-link aria-label="Como reproduzir的直接链接" title="Como reproduzir的直接链接" translate=no>​</a></h3>
+<table><thead><tr><th>模型<th>引导<th>对数<th>输入 token 的 Δ<tbody><tr><td>DeepSeek<td>pt-BR（108 个字符）<td>75<td>32（每对）<tr><td>DeepSeek<td>en + 工件子句（128 个字符）<td>15<td>27<tr><td>Haiku<td>pt-BR<td>75<td>30<tr><td>Haiku<td>en + 工件子句<td>15<td>27</table>
+<p>全部低于 50 token 的上限。按目录的输入价格，这在 DeepSeek 上约为每次调用 US$ 0,0000096，在 Haiku 上 US$ 0,00003
+——这是上限，因为 DeepSeek 的大部分输入来自缓存（缓存 token 会被返回；带缓存的每次调用成本包含在 <code>usage.cost</code>
+中，而不是按消息分开）。引导在一个轮次的每次调用中都会发送，因此带工具迭代的轮次每次迭代都要付一次。</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=spend>花费<a href=#spend class=hash-link aria-label=花费的直接链接 title=花费的直接链接 translate=no>​</a></h3>
+<p>验证的成本是每个回答的 <code>usage.cost</code> 之和，按调用保存在 <code>chamadas.jsonl</code> 中：总计 <strong>US$ 2,3071</strong>——计入的执行中
+US$ 2,2629（DeepSeek 基线 0,1526 + 处理 0,2133；Haiku 0,9526 + 0,9443；865 次调用），丢弃的第零步 US$ 0,0281，
+一个单用例 smoke US$ 0,0162。同一期间 <code>GET /api/v1/key</code> 的计数器从 1,8301 变为 4,1578（Δ 2,3277），但这把密钥
+与同时运行的其他付费 lane 共享，且计数器有延迟，因此这个差值是背景，而不是本次验证的花费。生成 id 没有被记录，
+因此每次调用的成本没有对照 <code>GET /api/v1/generation</code> 核对。产品自身的 metering（<code>token_usage</code>）没有参与：脚本
+绕过了 api。</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=reproducing>如何复现<a href=#reproducing class=hash-link aria-label=如何复现的直接链接 title=如何复现的直接链接 translate=no>​</a></h3>
 <div class="language-bash codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-bash codeBlock_mqej thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_uNqR><div class=token-line style=color:#F8F8F2><span class="token plain"># the key file holds OPENROUTER_TEST_KEY=…; the key is never printed</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">pnpm --filter @brabo/scripts idioma:validar --arquivo-de-chave ~/.config/brabo/openrouter-test.env \</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  --modelos deepseek/deepseek-v4.1-flash --bracos baseline --casos C01,C02,C03,C04   # step zero</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">pnpm --filter @brabo/scripts idioma:validar --arquivo-de-chave ~/.config/brabo/openrouter-test.env \</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  --pular-existentes --teto-usd 2.5                                                 # everything else</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">pnpm --filter @brabo/scripts idioma:validar --relatorio                             # report only</span><br/></div></code></pre></div></div>
-<p>A saída vai para <code>$XDG_CACHE_HOME/brabo/validacao-idioma/&lt;date>/</code> (senão
-<code>~/.cache/…</code>), modo 600, e o script recusa pasta dentro do checkout.
-<code>--teto-usd</code> para antes da chamada que o ultrapassaria, pela soma corrente de
-<code>usage.cost</code>.</p>
-<p>Não medidos: a economia de cache em si, o system prompt completo do produto, a
-compactação real (disparada por limiar), um reinício do engine real, a contagem
-do tokenizador da cláusula de artefato em português, e qualquer upstream fixo.</p>
-<p>As 146 respostas foram revisadas à mão; o resultado, e a única decisão que
-continua sendo do dono, estão na próxima seção.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=human-review-and-the-haiku-diagnosis-at-167-follow-up>Revisão humana e o diagnóstico do Haiku (continuação da AT-167)<a href=#human-review-and-the-haiku-diagnosis-at-167-follow-up class=hash-link aria-label="Revisão humana e o diagnóstico do Haiku (continuação da AT-167)的直接链接" title="Revisão humana e o diagnóstico do Haiku (continuação da AT-167)的直接链接" translate=no>​</a></h2>
-<p>Duas continuações offline ou baratas da validação paga, ambas sobre a mesma
-execução (<code>respostas.jsonl</code>, 560 respostas julgadas): a revisão humana das 146
-respostas que o classificador sinalizou (Parte A, sem gasto), e o teste da
-hipótese "o OpenRouter iça a mensagem <code>system</code> do fim" para o Haiku (Parte B,
-US$ 0,1485). Nenhuma das duas muda o produto.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=part-a--the-review-of-the-146>Parte A — a revisão das 146<a href=#part-a--the-review-of-the-146 class=hash-link aria-label="Parte A — a revisão das 146的直接链接" title="Parte A — a revisão das 146的直接链接" translate=no>​</a></h3>
-<p>Cada uma das 146 respostas de <code>revisao.md</code> foi lida, uma a uma, pelo agente que
-escreveu esta seção (não por um segundo humano; o arquivo de rótulos fica
-guardado para quem quiser contradizê-lo). Para cada uma: o idioma <strong>real</strong> do
-texto que o usuário lê, se ele está correto para o caso, e um motivo em uma
-linha. Os arquivos moram fora do git, junto com as respostas —
-<code>~/.cache/brabo/validacao-idioma/2026-09-29/revisao-feita.md</code> (as 146) e
-<code>amostra-lida.md</code> (a amostra abaixo). <code>pnpm --filter @brabo/scripts idioma:revisar</code> os lê e imprime toda tabela desta seção; os rótulos são dado, a
-aritmética é código (<code>scripts/idioma/revisao.ts</code>, testado).</p>
-<p>Os rótulos são quatro, porque a leitura achou um fato que o classificador não
-enxerga:</p>
+<p>输出写到 <code>$XDG_CACHE_HOME/brabo/validacao-idioma/&lt;date>/</code>（否则 <code>~/.cache/…</code>），模式 600，脚本拒绝检出目录内的
+目录。<code>--teto-usd</code> 按 <code>usage.cost</code> 的累计和，在会超过它的调用之前停止。</p>
+<p>未测量的：缓存节省本身、产品完整的系统提示词、真实的压缩（由阈值触发）、真实 engine 的重启、葡萄牙语工件子句的
+分词器计数，以及任何固定的上游。</p>
+<p>146 个回答经过了手工审阅；结果，以及仍属于负责人的唯一决定，在下一节中。</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=human-review-and-the-haiku-diagnosis-at-167-follow-up>人工审阅与 Haiku 的诊断（AT-167 的后续）<a href=#human-review-and-the-haiku-diagnosis-at-167-follow-up class=hash-link aria-label="人工审阅与 Haiku 的诊断（AT-167 的后续）的直接链接" title="人工审阅与 Haiku 的诊断（AT-167 的后续）的直接链接" translate=no>​</a></h2>
+<p>付费验证的两个离线或廉价的后续，都基于同一次执行（<code>respostas.jsonl</code>，560 个被判定的回答）：对分类器标记的 146 个
+回答的人工审阅（A 部分，无花费），以及对 Haiku 的假设"OpenRouter 把末尾的 <code>system</code> 消息提升上去"的测试（B 部分，
+US$ 0,1485）。两者都不改变产品。</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=part-a--the-review-of-the-146>A 部分——对 146 个的审阅<a href=#part-a--the-review-of-the-146 class=hash-link aria-label="A 部分——对 146 个的审阅的直接链接" title="A 部分——对 146 个的审阅的直接链接" translate=no>​</a></h3>
+<p><code>revisao.md</code> 中 146 个回答的每一个都被编写本节的智能体逐一阅读（不是第二个人类；标签文件被保存，供想要反驳的人
+使用）。对每一个：用户所读文本的<strong>真实</strong>语言、它对该用例是否正确，以及一行原因。文件与回答一起位于 git 之外——
+<code>~/.cache/brabo/validacao-idioma/2026-09-29/revisao-feita.md</code>（146 个）和 <code>amostra-lida.md</code>（下面的样本）。
+<code>pnpm --filter @brabo/scripts idioma:revisar</code> 读取它们并打印本节的每张表；标签是数据，算术是代码（<code>scripts/idioma/revisao.ts</code>，已测试）。</p>
+<p>标签有四个，因为阅读发现了一个分类器看不到的事实：</p>
 <ul>
-<li class=""><code>sim</code> / <code>nao</code>: a resposta está / não está no idioma esperado;</li>
-<li class=""><code>formulario</code>: a <strong>prosa</strong> está no idioma esperado, mas as perguntas do
-formulário estruturado (<code>ask_structured_questions</code>, a substância de uma
-primeira resposta) saíram em português para um autor cujo idioma é <code>en</code>;</li>
-<li class=""><code>c11</code>: uma tradução para o inglês dentro de uma moldura em português — decisão
-do dono, veja abaixo.</li>
+<li class=""><code>sim</code> / <code>nao</code>：回答在 / 不在期望的语言中；</li>
+<li class=""><code>formulario</code>：<strong>散文</strong>在期望的语言中，但结构化表单（<code>ask_structured_questions</code>，第一个回答的实质内容）的问题
+对一个语言为 <code>en</code> 的作者以葡萄牙语给出；</li>
+<li class=""><code>c11</code>：葡萄牙语框架中的英语翻译——负责人的决定，见下文。</li>
 </ul>
 
 
@@ -608,40 +506,24 @@ do dono, veja abaixo.</li>
 
 
 
-<table><thead><tr><th>das 146<th>corretas<th>incorretas<th>prosa certa, formulário em português<th>C11 (decisão do dono)<tbody><tr><td>todas<td>42<td>81<td>8<td>15<tr><td>braço baseline (89)<td>18<td>64<td>1<td>6<tr><td>braço tratado (57)<td>24<td>17<td>7<td>9</table>
-<p>As 14 respostas que o classificador chamou de <strong>indeterminadas</strong> eram, uma vez
-lidas: 3 respostas em inglês (traduções simples do C11 pelo Haiku), 2
-incorretas (DeepSeek C12, frases em português e em inglês intercaladas na
-prosa), 8 de prosa em inglês com o formulário em português, e 1 C11. Então a
-frase anterior do agente — "os 8 indeterminados parecem prosa em inglês" —
-estava meio certa: a prosa era inglês, e o formulário <strong>não</strong> era em 6 dos 8.</p>
-<p><strong>O erro do classificador, medido.</strong> Nos 118 vereditos definitivos
-(<code>pt</code>/<code>es</code>/<code>en</code>) entre as 146 respostas lidas, a leitura contradisse <strong>0</strong>. O
-classificador nunca chamou de certa uma resposta errada, nem de errada uma
-certa; as únicas falhas dele são as 3 "indeterminadas" que eram inglês simples.
-Para as 414 respostas que <strong>não</strong> foram sinalizadas (todas concordantes com a
-expectativa), uma amostra foi lida: 60 sorteadas com
-<code>random.Random(20260929).sample(range(414), 60)</code> sobre as respostas na ordem de
-<code>respostas.jsonl</code>, mais as 14 respostas C06/C12 não sinalizadas com <code>en</code>
-esperado que o sorteio não pegou (elas decidem o limiar, então foram lidas
-inteiras) — 74 lidas, <strong>0 divergentes</strong> (limite superior de Wilson a 95%: 4,9%).
-Somadas às 39 respostas concordantes que o hash de 1 em 10 já tinha sinalizado
-e que também foram lidas, a parte aleatória dá 0 em 99 (limite superior 3,7%):
-no máximo ~15 das 414 poderiam estar erradas, e a amostra sugere nenhuma. Dois
-deslizes vistos na amostra são inserções de uma palavra (<code>"What falta for us…"</code>,
-<code>"reminders automáticos"</code>) que não mudam o idioma da resposta.</p>
-<p>O que o classificador <strong>não</strong> consegue ver é o formulário: <code>clf=en</code> numa
-resposta em inglês não dizia que as perguntas dela estavam em português (ele só
-sinalizou essas respostas como indeterminadas quando a mistura era pesada). É
-por isso que a amostra leu inteiras as respostas C06/C12, e por isso que existem
-as duas leituras abaixo.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=the-threshold-recomputed-with-the-reviewed-labels>O limiar, recalculado com os rótulos revisados<a href=#the-threshold-recomputed-with-the-reviewed-labels class=hash-link aria-label="O limiar, recalculado com os rótulos revisados的直接链接" title="O limiar, recalculado com os rótulos revisados的直接链接" translate=no>​</a></h3>
-<p>Braço tratado, C01–C04 e C06–C15 (n = 95), espanhol contado pelo idioma
-<strong>real</strong> de toda resposta tratada onde se espera pt-BR (C05 incluído). Intervalo
-de Wilson a 95%. Duas leituras independentes: <strong>C11</strong> (a do dono, em aberto) e
-<strong>formulário</strong> (prosa certa, formulário em português — o agente a resolveu como
-fato sobre o que o usuário lê, e mostra o outro lado para que possa ser
-contradito).</p>
+<table><thead><tr><th>146 个中<th>正确<th>不正确<th>散文正确，表单为葡萄牙语<th>C11（负责人的决定）<tbody><tr><td>全部<td>42<td>81<td>8<td>15<tr><td>基线组（89）<td>18<td>64<td>1<td>6<tr><td>处理组（57）<td>24<td>17<td>7<td>9</table>
+<p>分类器称为<strong>不确定</strong>的 14 个回答，读过之后是：3 个英语回答（Haiku 对 C11 的简单翻译）、2 个不正确的（DeepSeek
+C12，散文中葡萄牙语和英语句子交错）、8 个英语散文带葡萄牙语表单，以及 1 个 C11。所以智能体之前的那句话——"8 个
+不确定的看起来是英语散文"——对了一半：散文是英语，而表单在 8 个中有 6 个<strong>不是</strong>。</p>
+<p><strong>分类器的错误，经过测量。</strong> 在读过的 146 个回答中的 118 个确定裁决（<code>pt</code>/<code>es</code>/<code>en</code>）中，阅读反驳了 <strong>0</strong> 个。
+分类器从未把一个错误的回答称为正确，也从未把正确的称为错误；它唯一的失败是那 3 个其实是简单英语的"不确定"。
+对<strong>没有</strong>被标记的 414 个回答（全部与预期一致），读了一个样本：在按 <code>respostas.jsonl</code> 顺序排列的回答上用
+<code>random.Random(20260929).sample(range(414), 60)</code> 抽取 60 个，加上抽样没抽到的、期望为 <code>en</code> 的 14 个未标记
+C06/C12 回答（它们决定阈值，所以被完整阅读）——读了 74 个，<strong>0 个分歧</strong>（95% Wilson 上限：4,9%）。加上 10 取 1
+的哈希已经标记、也被阅读的 39 个一致回答，随机部分是 99 个中 0 个（上限 3,7%）：414 个中最多约 15 个可能是错的，
+而样本表明一个都没有。样本中看到的两个小失误是单个词的插入（<code>"What falta for us…"</code>、
+<code>"reminders automáticos"</code>），它们不改变回答的语言。</p>
+<p>分类器<strong>看不到</strong>的是表单：英语回答上的 <code>clf=en</code> 并没有说明它的问题是葡萄牙语的（只有在混合严重时，它才把这些
+回答标记为不确定）。这就是样本完整阅读 C06/C12 回答的原因，也是下面存在两种解读的原因。</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=the-threshold-recomputed-with-the-reviewed-labels>用审阅后的标签重新计算阈值<a href=#the-threshold-recomputed-with-the-reviewed-labels class=hash-link aria-label=用审阅后的标签重新计算阈值的直接链接 title=用审阅后的标签重新计算阈值的直接链接 translate=no>​</a></h3>
+<p>处理组，C01–C04 和 C06–C15（n = 95），西班牙语按每个期望 pt-BR 的处理组回答的<strong>真实</strong>语言计算（包括 C05）。95%
+Wilson 区间。两个独立的解读：<strong>C11</strong>（负责人的，未决）和<strong>表单</strong>（散文正确，表单为葡萄牙语——智能体把它作为
+关于用户所读内容的事实来解决，并展示另一面以便被反驳）。</p>
 
 
 
@@ -717,41 +599,26 @@ contradito).</p>
 
 
 
-<table><thead><tr><th>modelo<th>C11 conta<th>formulário conta<th>acertos<th>taxa<th>intervalo de 95%<th>espanhol (pt esperado)<th>veredito<tbody><tr><td>DeepSeek<td>sim<td>sim<td>93/95<td>97,9%<td>92,6–99,4%<td>0<td>passa<tr><td>DeepSeek<td><strong>sim</strong><td><strong>não</strong><td>87/95<td>91,6%<td>84,3–95,7%<td>0<td>não passa<tr><td>DeepSeek<td>não<td>sim<td>88/95<td>92,6%<td>85,6–96,4%<td>0<td>não passa<tr><td>DeepSeek<td>não<td>não<td>82/95<td>86,3%<td>78,0–91,8%<td>0<td>não passa<tr><td>Haiku<td>sim<td>(qualquer)<td>85/95<td>89,5%<td>81,7–94,2%<td>3 (C05)<td>não passa<tr><td>Haiku<td>não<td>(qualquer)<td>81/95<td>85,3%<td>76,8–91,0%<td>3 (C05)<td>não passa</table>
-<p>O limiar de aprovação é 91 acertos de 95 (94,7% reprova). Lendo a tabela:</p>
+<table><thead><tr><th>模型<th>C11 计入<th>表单计入<th>命中<th>比率<th>95% 区间<th>西班牙语（期望 pt）<th>裁决<tbody><tr><td>DeepSeek<td>是<td>是<td>93/95<td>97,9%<td>92,6–99,4%<td>0<td>通过<tr><td>DeepSeek<td><strong>是</strong><td><strong>否</strong><td>87/95<td>91,6%<td>84,3–95,7%<td>0<td>不通过<tr><td>DeepSeek<td>否<td>是<td>88/95<td>92,6%<td>85,6–96,4%<td>0<td>不通过<tr><td>DeepSeek<td>否<td>否<td>82/95<td>86,3%<td>78,0–91,8%<td>0<td>不通过<tr><td>Haiku<td>是<td>（任意）<td>85/95<td>89,5%<td>81,7–94,2%<td>3（C05）<td>不通过<tr><td>Haiku<td>否<td>（任意）<td>81/95<td>85,3%<td>76,8–91,0%<td>3（C05）<td>不通过</table>
+<p>通过的阈值是 95 中命中 91（94,7% 不通过）。解读这张表：</p>
 <ul>
-<li class=""><strong>O Haiku falha em toda leitura</strong>: 3 respostas em espanhol no C05 (só a
-cláusula de zero espanhol já basta) e, com tudo aceito, 85/95.</li>
-<li class=""><strong>O DeepSeek passa em exatamente uma célula</strong>: C11 aceito <strong>e</strong> prosa em
-inglês com formulário em português aceita. Recuse qualquer um dos dois e ele
-falha — por 4 respostas se o formulário for recusado (87 dos 91 necessários),
-por 3 se for o C11 (88). Recuse os dois e é o número do classificador, 82.</li>
-<li class="">A decisão do C11 portanto só importa se o formulário for aceito. Com o
-formulário contado como falha, o DeepSeek falha seja qual for o C11, e o
-achado sobre o qual agir não é o C11 mas o formulário: no braço tratado, 8 das
-15 respostas C06+C12 do DeepSeek trazem texto em português dentro de uma
-resposta em inglês (6 só no formulário, 2 intercaladas), enquanto 7 são inglês
-limpo, formulários incluídos. O modelo consegue escrever o formulário em
-inglês — faz isso mais ou menos metade das vezes.
-<strong>De onde veio (AT-282, <a class="" href=/brabo/dev/zh-Hans/business-rules#rn-667>RN-667</a>):</strong> a própria
-descrição da ferramenta dizia ao modelo que o <code>label</code> era "o texto da pergunta,
-<strong>em pt-BR</strong>" — uma segunda instrução de idioma, fixa, fora da fachada,
-competindo com a orientação do fim em toda chamada. Agora ela diz "no idioma
-da sua resposta" e não nomeia idioma; a orientação em si não mudou. A medição
-do depois <strong>não foi rodada</strong> (sem chave do OpenRouter na máquina que fez a
-mudança) e está pendente com o dono — C06 e C12, braço tratado, 5 rodadas,
-com o teto de orçamento da RN.</li>
+<li class=""><strong>Haiku 在每种解读中都失败</strong>：C05 中 3 个西班牙语回答（仅零西班牙语这一条就足够了），全部接受时为 85/95。</li>
+<li class=""><strong>DeepSeek 恰好在一个单元格中通过</strong>：C11 被接受<strong>并且</strong>带葡萄牙语表单的英语散文被接受。拒绝两者中任何一个它就
+失败——如果表单被拒绝，差 4 个回答（需要 91 个中的 87 个），如果是 C11，差 3 个（88）。两者都拒绝，就是分类器
+的数字 82。</li>
+<li class="">因此 C11 的决定只在表单被接受时才重要。表单计为失败时，无论 C11 如何 DeepSeek 都失败，而需要采取行动的发现不是
+C11 而是表单：在处理组中，DeepSeek 的 15 个 C06+C12 回答中有 8 个在英语回答中带有葡萄牙语文本（6 个只在表单中，
+2 个交错），而 7 个是干净的英语，包括表单。模型能用英语写表单——它大约一半的时候这样做。
+<strong>它从哪里来（AT-282，<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-667>RN-667</a>）：</strong> 工具本身的描述告诉模型 <code>label</code> 是
+"o texto da pergunta, <strong>em pt-BR</strong>"——第二条固定的语言指令，在门面之外，在每次调用中与末尾的引导竞争。现在它说
+"no idioma da sua resposta"，不点名任何语言；引导本身没有改变。改动之后的测量<strong>没有运行</strong>（做改动的机器上没有
+OpenRouter 的密钥），由负责人待办——C06 和 C12，处理组，5 轮，在 RN 的预算上限内。</li>
 </ul>
-<p>O que o C11 é, nos dados. As 5 falhas tratadas do DeepSeek: 3 têm a tradução em
-inglês citada numa moldura em português ("Registrei a regra… A tradução que
-você pediu: > …"), e 2 <strong>não têm tradução no texto gravado</strong> — a execução guarda
-só a última mensagem de um turno, e esses turnos chamaram <code>emit_artifact</code>
-primeiro, então a tradução estava numa mensagem anterior do mesmo turno (10
-chamadas para 5 conversas, duas por conversa), então a tradução presumivelmente
-estava numa mensagem anterior do mesmo turno, e não foi guardada. As duas são
-contadas como só-moldura, ou seja, como acertos em "C11 conta". As 4 falhas
-tratadas do Haiku são uma tradução em inglês com uma nota em português ou
-alternativas em português em volta.</p>
+<p>C11 在数据中是什么。DeepSeek 的 5 个处理组失败：3 个在葡萄牙语框架中引用了英语翻译（"Registrei a regra… A
+tradução que você pediu: > …"），2 个<strong>在记录的文本中没有翻译</strong>——执行只保存一个轮次的最后一条消息，而这些轮次
+先调用了 <code>emit_artifact</code>，因此翻译在同一轮次的前一条消息中（5 次对话 10 次调用，每次对话两次），所以翻译推测在
+同一轮次的前一条消息中，没有被保存。这两个被计为仅框架，也就是在"C11 计入"中算作命中。Haiku 的 4 个处理组失败
+是带葡萄牙语注释或周围有葡萄牙语备选的英语翻译。</p>
 <blockquote>
 <p><strong>TODO(humano):</strong> Uma tradução para o inglês dentro de uma moldura em português
 conta como correta no C11? Ela decide o eixo C11 da tabela acima:
@@ -764,19 +631,15 @@ a orientação existe para produzir. (A segunda pergunta, o formulário em
 português, é de escopo de produto e está enunciada como achado acima; não foi
 levada ao dono porque o agente a resolveu como fato — o que o usuário lê.)</p>
 </blockquote>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=part-b--is-it-the-position-of-the-orientation-at-279>Parte B — é a posição da orientação? (AT-279)<a href=#part-b--is-it-the-position-of-the-orientation-at-279 class=hash-link aria-label="Parte B — é a posição da orientação? (AT-279)的直接链接" title="Parte B — é a posição da orientação? (AT-279)的直接链接" translate=no>​</a></h3>
-<p>A hipótese: para modelos da Anthropic o OpenRouter sobe a mensagem <code>system</code> do
-fim para o system prompt do topo, perdendo a recência dela. Teste: C12
-(preferência do autor <code>en</code>, mensagens em pt-BR), <code>anthropic/claude-haiku-4.5</code>,
-primeiro turno, 5 rodadas por posição, o texto da orientação <strong>lido do produto</strong>
-(era <code>Respond in English (en), unless the user explicitly asks for another language in this message. Write project artifacts in pt-BR.</code>), variando só a posição:</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=part-b--is-it-the-position-of-the-orientation-at-279>B 部分——是引导的位置吗？（AT-279）<a href=#part-b--is-it-the-position-of-the-orientation-at-279 class=hash-link aria-label="B 部分——是引导的位置吗？（AT-279）的直接链接" title="B 部分——是引导的位置吗？（AT-279）的直接链接" translate=no>​</a></h3>
+<p>假设：对 Anthropic 的模型，OpenRouter 把末尾的 <code>system</code> 消息提升到顶部的系统提示词，使它失去近因效应。测试：
+C12（作者偏好 <code>en</code>，pt-BR 消息），<code>anthropic/claude-haiku-4.5</code>，第一个轮次，每个位置 5 轮，引导文本<strong>从产品读取</strong>
+（是 <code>Respond in English (en), unless the user explicitly asks for another language in this message. Write project artifacts in pt-BR.</code>），只改变位置：</p>
 <ol>
-<li class=""><code>ultima-system</code> — como hoje (<code>idioma_da_resposta.ex:231</code>, um
-<code>role: "system"</code> no fim);</li>
-<li class=""><code>system-fundido</code> — acrescentada ao primeiro <code>system</code> (persona + orientação);</li>
-<li class=""><code>sufixo-user</code> — sufixo da última mensagem <code>user</code>, <strong>sem</strong> <code>system</code> acrescentado;</li>
-<li class=""><code>ultima-system-e-sufixo-user</code> — o <code>system</code> do fim <strong>mais</strong> a mesma frase como
-sufixo.</li>
+<li class=""><code>ultima-system</code>——与今天一样（<code>idioma_da_resposta.ex:231</code>，末尾的一个 <code>role: "system"</code>）；</li>
+<li class=""><code>system-fundido</code>——追加到第一个 <code>system</code> 中（人设 + 引导）；</li>
+<li class=""><code>sufixo-user</code>——最后一条 <code>user</code> 消息的后缀，<strong>不</strong>追加 <code>system</code>；</li>
+<li class=""><code>ultima-system-e-sufixo-user</code>——末尾的 <code>system</code> <strong>加上</strong>同一句话作为后缀。</li>
 </ol>
 
 
@@ -818,42 +681,24 @@ sufixo.</li>
 
 
 
-<table><thead><tr><th>posição<th>acertos do classificador<th>leitura<tbody><tr><td>1 <code>ultima-system</code> (como hoje)<td>0/5<td>5 em português, formulários incluídos<tr><td>2 <code>system-fundido</code><td>0/5<td>5 em português<tr><td>3 <code>sufixo-user</code><td>0/5<td>5 em português<tr><td>4 <code>ultima-system-e-sufixo-user</code><td>0/5<td>5 em português<tr><td>controle: 1, sem a cláusula de artefato<td>0/5<td>5 em português<tr><td>controle: 3, sem a cláusula de artefato<td>0/5<td>5 em português</table>
-<p>As quatro posições foram lidas por inteiro e os dois controles em parte, e as
-30 respostas foram também conferidas atrás de palavras funcionais do inglês
-(nenhuma em nenhuma): as 30 são em português, prosa e formulário. O defeito da
-posição 1 é <strong>reproduzido</strong> (0/5, como o 0/10 da execução paga), e <strong>nenhuma
-posição o corrige</strong> — nem aquela em que a orientação está dentro da própria
-última mensagem do usuário e não há <code>system</code> no fim. A hipótese <strong>não se
-confirma</strong>. As contagens de tokens de prompt mostram que o texto chegou ao
-modelo em toda posição (2 426, 2 427, 2 427 e 2 454 tokens de entrada: +1 para
-as duas colocações simples e +28 para a dupla), então não é mensagem descartada.
-O controle exclui também a segunda frase suspeita: a cláusula de artefato
-("Write project artifacts in pt-BR.", RN-623) também não é a causa (0/10 sem
-ela).</p>
-<p>O que isto não exclui, e não foi medido: o segundo turno (só o primeiro rodou,
-por orçamento — a execução paga teve o segundo turno errado 5/5 também); uma
-redação mais forte (a frase diz "unless the user explicitly asks", e entrada em
-português pode ser lida assim); o idioma da própria persona
-(<code>CRIATIVO_INSTRUCTIONS</code> é em português); e o upstream (as 30 chamadas foram
-servidas pelo Amazon Bedrock, então um efeito de upstream não pode ser
-separado). O DeepSeek segue a mesma orientação no mesmo caso — as respostas C12
-tratadas dele foram prosa em inglês em 8 de 10 —, o que aponta para o modelo,
-não para a colocação.</p>
-<p><strong>Mudança proposta: nenhuma sobre posição.</strong> O único lugar onde uma posição
-seria mudada, se tivesse ajudado, é <code>Engine.Harness.IdiomaDaResposta.anexar/4</code>
-(<code>apps/engine/lib/engine/harness/idioma_da_resposta.ex:231</code>, o <code>messages ++ [%{"role" => "system", …}]</code>), chamado pelos dois caminhos <code>llm_turn</code> de
-<code>apps/engine/lib/engine/sessions/engine_api_client.ex:609</code> e <code>:661</code>. Ele fica
-como está. A próxima atividade, se o dono quiser que o Haiku obedeça <code>en</code> diante
-de entrada em português, é testar a redação e o idioma da persona (a lista
-acima), com este mesmo script.</p>
-<p><strong>Gasto</strong> (soma do <code>usage.cost</code> de cada resposta, nunca o contador de <code>/key</code>):
-US$ 0,0980 para as quatro posições (20 chamadas) e US$ 0,0505 para os dois
-controles (10 chamadas) — <strong>US$ 0,1485</strong> do teto de US$ 0,20, 30 chamadas,
-nenhuma falhou.</p>
-<p>Para reproduzir a Parte B (o arquivo de chave guarda <code>OPENROUTER_TEST_KEY=…</code>;
-ela nunca é impressa; a saída vai para fora do checkout):</p>
+<table><thead><tr><th>位置<th>分类器命中<th>阅读<tbody><tr><td>1 <code>ultima-system</code>（与今天一样）<td>0/5<td>5 个葡萄牙语，包括表单<tr><td>2 <code>system-fundido</code><td>0/5<td>5 个葡萄牙语<tr><td>3 <code>sufixo-user</code><td>0/5<td>5 个葡萄牙语<tr><td>4 <code>ultima-system-e-sufixo-user</code><td>0/5<td>5 个葡萄牙语<tr><td>对照：1，不带工件子句<td>0/5<td>5 个葡萄牙语<tr><td>对照：3，不带工件子句<td>0/5<td>5 个葡萄牙语</table>
+<p>四个位置被完整阅读，两个对照部分阅读，30 个回答还都被检查了英语功能词（一个都没有）：30 个都是葡萄牙语，散文和
+表单都是。位置 1 的缺陷被<strong>复现</strong>（0/5，与付费执行的 0/10 一样），而<strong>没有任何位置纠正它</strong>——即使是引导就在用户
+最后一条消息内部、末尾没有 <code>system</code> 的那个。假设<strong>未得到证实</strong>。提示词 token 计数显示文本在每个位置都到达了模型
+（2 426、2 427、2 427 和 2 454 个输入 token：两个简单放置 +1，双重放置 +28），所以不是消息被丢弃。对照也排除了
+第二个可疑句子：工件子句（"Write project artifacts in pt-BR."，RN-623）也不是原因（没有它时 0/10）。</p>
+<p>这没有排除、也没有测量的：第二个轮次（出于预算只运行了第一个——付费执行中第二个轮次也是 5/5 错误）；更强的措辞
+（句子说 "unless the user explicitly asks"，葡萄牙语输入可能被这样理解）；人设本身的语言（<code>CRIATIVO_INSTRUCTIONS</code>
+是葡萄牙语的）；以及上游（30 次调用都由 Amazon Bedrock 提供，因此无法分离上游的效应）。DeepSeek 在同一用例中遵循
+同样的引导——它的处理组 C12 回答 10 个中有 8 个是英语散文——这指向模型，而不是放置位置。</p>
+<p><strong>提议的改动：关于位置，没有。</strong> 如果有帮助的话，唯一会改变位置的地方是
+<code>Engine.Harness.IdiomaDaResposta.anexar/4</code>（<code>apps/engine/lib/engine/harness/idioma_da_resposta.ex:231</code>，即
+<code>messages ++ [%{"role" => "system", …}]</code>），由 <code>apps/engine/lib/engine/sessions/engine_api_client.ex:609</code> 和 <code>:661</code> 的两条
+<code>llm_turn</code> 路径调用。它保持原样。如果负责人希望 Haiku 在葡萄牙语输入面前遵守 <code>en</code>，下一项活动是用这同一个脚本
+测试措辞和人设的语言（上面的列表）。</p>
+<p><strong>花费</strong>（每个回答的 <code>usage.cost</code> 之和，从不是 <code>/key</code> 的计数器）：四个位置 US$ 0,0980（20 次调用），两个对照
+US$ 0,0505（10 次调用）——US$ 0,20 的上限中用了 <strong>US$ 0,1485</strong>，30 次调用，没有失败。</p>
+<p>复现 B 部分（密钥文件保存 <code>OPENROUTER_TEST_KEY=…</code>；它从不被打印；输出写到检出目录之外）：</p>
 <div class="language-bash codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-bash codeBlock_mqej thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_uNqR><div class=token-line style=color:#F8F8F2><span class="token plain">pnpm --filter @brabo/scripts idioma:diagnosticar \</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  --arquivo-de-chave ~/.config/brabo/openrouter-test.env \</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  --turnos 1 --rodadas 5 --teto-usd 0.13 --concorrencia 4          # the four positions</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">pnpm --filter @brabo/scripts idioma:diagnosticar \</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  --arquivo-de-chave ~/.config/brabo/openrouter-test.env \</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  --turnos 1 --rodadas 5 --posicoes ultima-system,sufixo-user --sem-clausula \</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  --saida ~/.cache/brabo/validacao-idioma/&lt;date>-diagnostico-haiku-sem-clausula \</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  --teto-usd 0.06 --concorrencia 4                                  # the controls</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">pnpm --filter @brabo/scripts idioma:revisar                          # Part A tables</span><br/></div></code></pre></div></div>
-<p><code>--turnos N</code> e <code>--sem-clausula</code> existem só para este diagnóstico; o produto
-nunca põe a orientação em outro lugar que não o fim, e <code>posicionar</code> em
-<code>validacao.ts</code> não é usado por ele.</div><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_yZb9"><a href=https://github.com/daneiel/brabo/blob/dev/docs/explanation/medicao-do-idioma.md target=_blank rel="noopener noreferrer" class=theme-edit-this-page><svg fill=currentColor height=20 width=20 viewBox="0 0 40 40" class=iconEdit_ANja aria-hidden=true><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"/></g></svg>编辑此页</a></div><div class="col lastUpdated_Kb4y"><span class=theme-last-updated>最后<!-- -->由 <b>Daniel Souza</b> <!-- -->于 <b><time datetime=2026-10-15T07:50:47.000Z itemprop=dateModified>2026年10月15日</time></b> <!-- -->更新</span></div></div></footer></article><nav class="docusaurus-mt-lg pagination-nav" aria-label=文件选项卡><a class="pagination-nav__link pagination-nav__link--prev" href=/brabo/dev/zh-Hans/explanation/fase-30-runner-por-maquina><div class=pagination-nav__sublabel>上一页</div><div class=pagination-nav__label>FASE 30 — agente local da máquina</div></a><a class="pagination-nav__link pagination-nav__link--next" href=/brabo/dev/zh-Hans/explanation/medicao-do-jev><div class=pagination-nav__sublabel>下一页</div><div class=pagination-nav__label>Medição do roteador de ferramentas Jev</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_wOiH thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href=#what-exists class="table-of-contents__link toc-highlight">O que existe</a><li><a href=#the-two-corpora-and-where-each-one-lives class="table-of-contents__link toc-highlight">Os dois corpora, e onde cada um mora</a><li><a href=#running-it class="table-of-contents__link toc-highlight">Como rodar</a><li><a href=#numbers-on-the-synthetic-corpus-2026-09-28 class="table-of-contents__link toc-highlight">Números no corpus sintético (2026-09-28)</a><li><a href=#what-the-numbers-say class="table-of-contents__link toc-highlight">O que os números dizem</a><li><a href=#the-products-provisional-thresholds class="table-of-contents__link toc-highlight">Os limiares provisórios do produto</a><li><a href=#paid-validation-of-the-language-orientation-at-167-2026-09-29 class="table-of-contents__link toc-highlight">Validação paga da orientação de idioma (AT-167, 2026-09-29)</a><ul><li><a href=#where-it-runs-and-what-is-and-is-not-the-product class="table-of-contents__link toc-highlight">Onde roda, e o que é (e o que não é) o produto</a><li><a href=#step-zero-not-reproduced class="table-of-contents__link toc-highlight">Passo zero: não reproduzido</a><li><a href=#results-by-case--arm--model class="table-of-contents__link toc-highlight">Resultados por caso × braço × modelo</a><li><a href=#against-the-threshold class="table-of-contents__link toc-highlight">Contra o limiar</a><li><a href=#incremental-cost-of-the-orientation class="table-of-contents__link toc-highlight">Custo incremental da orientação</a><li><a href=#spend class="table-of-contents__link toc-highlight">Gasto</a><li><a href=#reproducing class="table-of-contents__link toc-highlight">Como reproduzir</a></ul><li><a href=#human-review-and-the-haiku-diagnosis-at-167-follow-up class="table-of-contents__link toc-highlight">Revisão humana e o diagnóstico do Haiku (continuação da AT-167)</a><ul><li><a href=#part-a--the-review-of-the-146 class="table-of-contents__link toc-highlight">Parte A — a revisão das 146</a><li><a href=#the-threshold-recomputed-with-the-reviewed-labels class="table-of-contents__link toc-highlight">O limiar, recalculado com os rótulos revisados</a><li><a href=#part-b--is-it-the-position-of-the-orientation-at-279 class="table-of-contents__link toc-highlight">Parte B — é a posição da orientação? (AT-279)</a></ul></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class=footer__title>文档</div><ul class="footer__items clean-list"><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/getting-started>快速开始</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/architecture>架构</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/business-rules>业务规则</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/runbook>Runbook</a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>社区</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class=footer__link-item>如何贡献<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class=footer__link-item>在哪里求助<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class=footer__link-item>安全<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>更多</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class=footer__link-item>GitHub<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CHANGELOG.md target=_blank rel="noopener noreferrer" class=footer__link-item>CHANGELOG<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/LICENSE target=_blank rel="noopener noreferrer" class=footer__link-item>MIT 许可证<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/THIRD_PARTY_NOTICES.md target=_blank rel="noopener noreferrer" class=footer__link-item>第三方声明<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div></div><div class="footer__bottom text--center"><div class=footer__copyright>Copyright © 2026 Daniel Souza。基于 MIT 许可证授权。第三方工具保留各自的许可证——参见第三方声明。</div></div></div></footer></div></body>
+<p><code>--turnos N</code> 和 <code>--sem-clausula</code> 只为这次诊断而存在；产品从不把引导放在末尾以外的地方，<code>validacao.ts</code> 中的
+<code>posicionar</code> 不被它使用。</div><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_yZb9"><a href=https://github.com/daneiel/brabo/blob/dev/docs/explanation/medicao-do-idioma.md target=_blank rel="noopener noreferrer" class=theme-edit-this-page><svg fill=currentColor height=20 width=20 viewBox="0 0 40 40" class=iconEdit_ANja aria-hidden=true><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"/></g></svg>编辑此页</a></div><div class="col lastUpdated_Kb4y"><span class=theme-last-updated>最后<!-- -->由 <b>Daniel Souza</b> <!-- -->于 <b><time datetime=2026-10-15T21:15:43.000Z itemprop=dateModified>2026年10月15日</time></b> <!-- -->更新</span></div></div></footer></article><nav class="docusaurus-mt-lg pagination-nav" aria-label=文件选项卡><a class="pagination-nav__link pagination-nav__link--prev" href=/brabo/dev/zh-Hans/explanation/fase-30-runner-por-maquina><div class=pagination-nav__sublabel>上一页</div><div class=pagination-nav__label>FASE 30——机器的本地智能体</div></a><a class="pagination-nav__link pagination-nav__link--next" href=/brabo/dev/zh-Hans/explanation/medicao-do-jev><div class=pagination-nav__sublabel>下一页</div><div class=pagination-nav__label>Jev 工具路由器的测量</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_wOiH thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href=#what-exists class="table-of-contents__link toc-highlight">现有内容</a><li><a href=#the-two-corpora-and-where-each-one-lives class="table-of-contents__link toc-highlight">两个语料库，以及各自存放在哪里</a><li><a href=#running-it class="table-of-contents__link toc-highlight">如何运行</a><li><a href=#numbers-on-the-synthetic-corpus-2026-09-28 class="table-of-contents__link toc-highlight">合成语料库上的数字（2026-09-28）</a><li><a href=#what-the-numbers-say class="table-of-contents__link toc-highlight">数字说明了什么</a><li><a href=#the-products-provisional-thresholds class="table-of-contents__link toc-highlight">产品的临时阈值</a><li><a href=#paid-validation-of-the-language-orientation-at-167-2026-09-29 class="table-of-contents__link toc-highlight">语言引导的付费验证（AT-167，2026-09-29）</a><ul><li><a href=#where-it-runs-and-what-is-and-is-not-the-product class="table-of-contents__link toc-highlight">在哪里运行，以及什么是（什么不是）产品</a><li><a href=#step-zero-not-reproduced class="table-of-contents__link toc-highlight">第零步：未复现</a><li><a href=#results-by-case--arm--model class="table-of-contents__link toc-highlight">按用例 × 组 × 模型的结果</a><li><a href=#against-the-threshold class="table-of-contents__link toc-highlight">对照阈值</a><li><a href=#incremental-cost-of-the-orientation class="table-of-contents__link toc-highlight">引导的增量成本</a><li><a href=#spend class="table-of-contents__link toc-highlight">花费</a><li><a href=#reproducing class="table-of-contents__link toc-highlight">如何复现</a></ul><li><a href=#human-review-and-the-haiku-diagnosis-at-167-follow-up class="table-of-contents__link toc-highlight">人工审阅与 Haiku 的诊断（AT-167 的后续）</a><ul><li><a href=#part-a--the-review-of-the-146 class="table-of-contents__link toc-highlight">A 部分——对 146 个的审阅</a><li><a href=#the-threshold-recomputed-with-the-reviewed-labels class="table-of-contents__link toc-highlight">用审阅后的标签重新计算阈值</a><li><a href=#part-b--is-it-the-position-of-the-orientation-at-279 class="table-of-contents__link toc-highlight">B 部分——是引导的位置吗？（AT-279）</a></ul></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class=footer__title>文档</div><ul class="footer__items clean-list"><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/getting-started>快速开始</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/architecture>架构</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/business-rules>业务规则</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/runbook>Runbook</a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>社区</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class=footer__link-item>如何贡献<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class=footer__link-item>在哪里求助<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class=footer__link-item>安全<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>更多</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class=footer__link-item>GitHub<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CHANGELOG.md target=_blank rel="noopener noreferrer" class=footer__link-item>CHANGELOG<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/LICENSE target=_blank rel="noopener noreferrer" class=footer__link-item>MIT 许可证<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/THIRD_PARTY_NOTICES.md target=_blank rel="noopener noreferrer" class=footer__link-item>第三方声明<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div></div><div class="footer__bottom text--center"><div class=footer__copyright>Copyright © 2026 Daniel Souza。基于 MIT 许可证授权。第三方工具保留各自的许可证——参见第三方声明。</div></div></div></footer></div></body>

@@ -1,15 +1,12 @@
-<!doctype html><html lang=zh-Hans dir=ltr class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-explanation/documentation-workflow" data-has-hydrated=false><head><meta charset=UTF-8><meta name=generator content="Docusaurus v3.10.2"><title data-rh=true>Como a documentação se mantém viva | Brabo</title><meta data-rh=true name=viewport content="width=device-width, initial-scale=1.0"/><meta data-rh=true name=robots content="noindex, nofollow"/><meta data-rh=true name=twitter:card content=summary_large_image /><meta data-rh=true property=og:url content=https://daneiel.github.io/brabo/dev/zh-Hans/explanation/documentation-workflow /><meta data-rh=true property=og:locale content=zh_Hans /><meta data-rh=true property=og:locale:alternate content=pt_BR /><meta data-rh=true property=og:locale:alternate content=en /><meta data-rh=true property=og:locale:alternate content=ru /><meta data-rh=true name=docusaurus_locale content=zh-Hans /><meta data-rh=true name=docsearch:language content=zh-Hans /><meta data-rh=true name=docusaurus_version content=current /><meta data-rh=true name=docusaurus_tag content=docs-default-current /><meta data-rh=true name=docsearch:version content=current /><meta data-rh=true name=docsearch:docusaurus_tag content=docs-default-current /><meta data-rh=true property=og:title content="Como a documentação se mantém viva | Brabo"/><meta data-rh=true name=description content="O mecanismo que impede a documentação de apodrecer — o que cada peça faz, por que existe e o que fazer quando a checagem reclama injustamente."/><meta data-rh=true property=og:description content="O mecanismo que impede a documentação de apodrecer — o que cada peça faz, por que existe e o que fazer quando a checagem reclama injustamente."/><meta data-rh=true name=keywords content=documentation,drift,docmap,CI,generation /><link data-rh=true rel=icon href=/brabo/dev/zh-Hans/img/favicon.ico /><link data-rh=true rel=canonical href=https://daneiel.github.io/brabo/dev/zh-Hans/explanation/documentation-workflow /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/explanation/documentation-workflow hreflang=pt-BR /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/en/explanation/documentation-workflow hreflang=en /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/ru/explanation/documentation-workflow hreflang=ru /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/zh-Hans/explanation/documentation-workflow hreflang=zh-Hans /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/explanation/documentation-workflow hreflang=x-default /><script data-rh=true type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","item":"https://daneiel.github.io/brabo/dev/zh-Hans/explanation/documentation-workflow","name":"Sincronia da doc","position":1}]}</script><link rel=stylesheet href=/brabo/dev/zh-Hans/assets/css/styles.7f2bd764.css /><script src=/brabo/dev/zh-Hans/assets/js/runtime~main.2473694d.js defer></script><script src=/brabo/dev/zh-Hans/assets/js/main.80ab1eb3.js defer></script></head><body><svg style="display: none;"><defs>
+<!doctype html><html lang=zh-Hans dir=ltr class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-explanation/documentation-workflow" data-has-hydrated=false><head><meta charset=UTF-8><meta name=generator content="Docusaurus v3.10.2"><title data-rh=true>文档如何保持鲜活 | Brabo</title><meta data-rh=true name=viewport content="width=device-width, initial-scale=1.0"/><meta data-rh=true name=robots content="noindex, nofollow"/><meta data-rh=true name=twitter:card content=summary_large_image /><meta data-rh=true property=og:url content=https://daneiel.github.io/brabo/dev/zh-Hans/explanation/documentation-workflow /><meta data-rh=true property=og:locale content=zh_Hans /><meta data-rh=true property=og:locale:alternate content=pt_BR /><meta data-rh=true property=og:locale:alternate content=en /><meta data-rh=true property=og:locale:alternate content=ru /><meta data-rh=true name=docusaurus_locale content=zh-Hans /><meta data-rh=true name=docsearch:language content=zh-Hans /><meta data-rh=true name=docusaurus_version content=current /><meta data-rh=true name=docusaurus_tag content=docs-default-current /><meta data-rh=true name=docsearch:version content=current /><meta data-rh=true name=docsearch:docusaurus_tag content=docs-default-current /><meta data-rh=true property=og:title content="文档如何保持鲜活 | Brabo"/><meta data-rh=true name=description content=阻止文档腐烂的机制——每个部件做什么、为什么存在，以及当检查不公正地抱怨时该怎么办。 /><meta data-rh=true property=og:description content=阻止文档腐烂的机制——每个部件做什么、为什么存在，以及当检查不公正地抱怨时该怎么办。 /><meta data-rh=true name=keywords content=documentation,drift,docmap,CI,generation /><link data-rh=true rel=icon href=/brabo/dev/zh-Hans/img/favicon.ico /><link data-rh=true rel=canonical href=https://daneiel.github.io/brabo/dev/zh-Hans/explanation/documentation-workflow /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/explanation/documentation-workflow hreflang=pt-BR /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/en/explanation/documentation-workflow hreflang=en /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/ru/explanation/documentation-workflow hreflang=ru /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/zh-Hans/explanation/documentation-workflow hreflang=zh-Hans /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/explanation/documentation-workflow hreflang=x-default /><script data-rh=true type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","item":"https://daneiel.github.io/brabo/dev/zh-Hans/explanation/documentation-workflow","name":"文档同步","position":1}]}</script><link rel=stylesheet href=/brabo/dev/zh-Hans/assets/css/styles.7f2bd764.css /><script src=/brabo/dev/zh-Hans/assets/js/runtime~main.6f05c45f.js defer></script><script src=/brabo/dev/zh-Hans/assets/js/main.fe66643c.js defer></script></head><body><svg style="display: none;"><defs>
 <symbol id=theme-svg-external-link viewBox="0 0 24 24"><path fill=currentColor d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
 </defs></svg>
-<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme-3f2")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")),document.documentElement.setAttribute("data-theme-choice",t||"system")}(),function(){try{for(var[t,e]of new URLSearchParams(window.location.search).entries())if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id=__docusaurus><link rel=preload as=image href=/brabo/dev/zh-Hans/img/logo.svg /><div role=region aria-label=跳到主要内容><a class=skipToContent_CFOX href=#__docusaurus_skipToContent_fallback>跳到主要内容</a></div><nav aria-label=主导航 class="theme-layout-navbar navbar navbar--fixed-top"><div class=navbar__inner><div class="theme-layout-navbar-left navbar__items"><button aria-label=切换导航栏 aria-expanded=false class="navbar__toggle clean-btn" type=button><svg width=30 height=30 viewBox="0 0 30 30" aria-hidden=true><path stroke=currentColor stroke-linecap=round stroke-miterlimit=10 stroke-width=2 d="M4 7h22M4 15h22M4 23h22"/></svg></button><a class=navbar__brand href=/brabo/dev/zh-Hans/><div class=navbar__logo><img src=/brabo/dev/zh-Hans/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--light_vzqw"/><img src=/brabo/dev/zh-Hans/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--dark_FhTf"/></div><b class="navbar__title text--truncate">Brabo</b></a><a aria-current=page class="navbar__item navbar__link navbar__link--active" href=/brabo/dev/zh-Hans/>文档</a><a class="navbar__item navbar__link" href=/brabo/dev/zh-Hans/runbook>Runbook</a><a class="navbar__item navbar__link" href=/brabo/dev/zh-Hans/adr>ADRs</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a href=# aria-haspopup=true aria-expanded=false role=button class=navbar__link>dev</a><ul class=dropdown__menu><li><a href=https://daneiel.github.io/brabo/prd/ target=_blank rel="noopener noreferrer" class=dropdown__link>prd — estável<svg width=12 height=12 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/qa/ target=_blank rel="noopener noreferrer" class=dropdown__link>qa — 候选版<svg width=12 height=12 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/dev/ target=_blank rel="noopener noreferrer" class=dropdown__link>dev — em desenvolvimento ✓<svg width=12 height=12 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><div class="toggle_pnX7 colorModeToggle_Dj3Z"><button class="clean-btn toggleButton_DKER toggleButtonDisabled_qzkp" type=button disabled title=跟随系统 aria-label=切换浅色/暗黑模式（当前为跟随系统）><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL lightToggleIcon_E8tM"><path fill=currentColor d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL darkToggleIcon_rXjT"><path fill=currentColor d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL systemToggleIcon_zwCm"><path fill=currentColor d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"/></svg></button></div><div class=navbarSearchContainer_zRAa><div class="navbar__search searchBarContainer_eGzj" dir=ltr><svg aria-hidden=true class=searchIcon_PXpx focusable=false viewBox="0 0 16 16"><path fill=currentColor d="M6.02945 10.20327a4.17382 4.17382 0 1 1 4.17382-4.17382 4.15609 4.15609 0 0 1-4.17382 4.17382Zm9.69195 4.2199-4.8225-4.82338A5.88021 5.88021 0 0 0 12.058 6.02856 6.00467 6.00467 0 1 0 9.59979 10.8989l4.82338 4.82338a.89729.89729 0 0 0 1.29912 0 .89749.89749 0 0 0-.00087-1.29909Z"/></svg><input placeholder=搜索 aria-label=Search class="navbar__search-input searchInput_xOBI" value="" /><div class="loadingRing_JccP searchBarLoadingRing_aTss"><div></div><div></div><div></div><div></div></div></div></div></div></div><div role=presentation class=navbar-sidebar__backdrop></div></nav><div id=__docusaurus_skipToContent_fallback class="theme-layout-main main-wrapper mainWrapper_WJkx"><div class=docsWrapper_mIeg><button aria-label=回到顶部 class="clean-btn theme-back-to-top-button backToTopButton_Afc8" type=button></button><div class=docRoot_XZYc><aside class="theme-doc-sidebar-container docSidebarContainer_FPqZ"><div class=sidebarViewport_waOe><div class=sidebar_RQC4><nav aria-label=文档侧边栏 class="menu thin-scrollbar menu_ZM4U"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/><span class=categoryLinkLabel_jKch>🚀 从这里开始</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/><span class=linkLabel_CzBh>简介</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/getting-started><span class=linkLabel_CzBh>快速开始</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/tutorials/from-zero-to-deliverable><span class=linkLabel_CzBh>从零到交付物</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/architecture><span class=categoryLinkLabel_jKch>🏗️ 架构</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/architecture><span class=linkLabel_CzBh>Arquitetura</span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist" tabindex=0 href=/brabo/dev/zh-Hans/adr><span class=categoryLinkLabel_jKch>决策（ADR）</span></a><button aria-label="展开侧边栏分类 '决策（ADR）'" aria-expanded=false type=button class="clean-btn menu__caret"></button></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/business-rules><span class=categoryLinkLabel_jKch>📐 规则</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/business-rules><span class=linkLabel_CzBh>业务规则</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/business-rules/custo><span class=linkLabel_CzBh>成本与计量</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/business-rules/autenticacao><span class=linkLabel_CzBh>认证</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/reference/configuration><span class=categoryLinkLabel_jKch>📖 参考</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/configuration><span class=linkLabel_CzBh>Configuration</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/events><span class=linkLabel_CzBh>Events</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/permissions><span class=linkLabel_CzBh>Permissions</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/artifacts><span class=linkLabel_CzBh>Artifacts</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/git-providers><span class=linkLabel_CzBh>Git Providers</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/internal-api><span class=linkLabel_CzBh>Internal API</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/scripts><span class=linkLabel_CzBh>Scripts</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/rulesets><span class=linkLabel_CzBh>Rulesets</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/paridade-de-traducao><span class=linkLabel_CzBh>Paridade de tradução</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/brb><span class=linkLabel_CzBh>BRB register</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/security-surface><span class=linkLabel_CzBh>api 的暴露面</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/api><span class=linkLabel_CzBh>API 参考</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role=button aria-expanded=true href=/brabo/dev/zh-Hans/explanation/documentation-workflow><span class=categoryLinkLabel_jKch>💡 解释</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link menu__link--active" aria-current=page tabindex=0 href=/brabo/dev/zh-Hans/explanation/documentation-workflow><span class=linkLabel_CzBh>Sincronia da doc</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/branching-policy><span class=linkLabel_CzBh>Política de branches</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/cadeia-de-suprimentos-do-ci><span class=linkLabel_CzBh>Cadeia de suprimentos do CI</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/observability><span class=linkLabel_CzBh>Observabilidade</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/primeiro-dogfooding><span class=linkLabel_CzBh>Primeiro dogfooding</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/execucao-real-hello-world><span class=linkLabel_CzBh>Execução real (hello world)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/achados-execucao-real><span class=linkLabel_CzBh>Achados da execução real da esteira</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/backlog><span class=linkLabel_CzBh>Backlog triado</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/validacao-fase-12><span class=linkLabel_CzBh>Validação da Fase 12</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/validacao-real><span class=linkLabel_CzBh>Validação real (13b)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/aceite-providers><span class=linkLabel_CzBh>Aceite dos providers</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/gates><span class=linkLabel_CzBh>Os gates, e como eles são medidos</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/auditoria-fluxo-vs-codigo><span class=linkLabel_CzBh>Auditoria: fluxo.yml × código (v3, ADR 0085)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/historico-de-fases><span class=linkLabel_CzBh>阶段历史</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/fase-28-pasta-do-usuario><span class=linkLabel_CzBh>FASE 28 — pasta do usuário</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/fase-29-instalacao-de-uma-linha><span class=linkLabel_CzBh>FASE 29 — instalação de uma linha</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/fase-30-runner-por-maquina><span class=linkLabel_CzBh>FASE 30 — agente local da máquina</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/medicao-do-idioma><span class=linkLabel_CzBh>Medição da heurística de idioma</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/medicao-do-jev><span class=linkLabel_CzBh>Medição do roteador de ferramentas Jev</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/auditoria-visual-rodada-29><span class=linkLabel_CzBh>Auditoria visual, antes e depois da Rodada 29</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/tanstack-ai><span class=linkLabel_CzBh>TanStack AI — não adotado</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/localizacao><span class=linkLabel_CzBh>Localização</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/localizacao-en><span class=linkLabel_CzBh>Localização — inglês (en)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/localizacao-ru><span class=linkLabel_CzBh>Localização — russo (ru)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/localizacao-zh-hans><span class=linkLabel_CzBh>Localização — chinês simplificado (zh-Hans)</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/runbook><span class=categoryLinkLabel_jKch>🛠️ 运维</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/runbook><span class=linkLabel_CzBh>运维手册</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/glossary><span class=categoryLinkLabel_jKch>📚 词汇</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/glossary><span class=linkLabel_CzBh>术语表</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true><span class=categoryLinkLabel_jKch>🤝 贡献</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>如何贡献</span><svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>在哪里求助</span><svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>报告漏洞</span><svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></ul></nav></div></div></aside><main class=docMainContainer_ia8v><div class="container padding-top--md padding-bottom--lg"><div class=row><div class="col docItemCol_xjE4"><div class=docItemContainer_cPej><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_sZul" aria-label=页面路径><ul class=breadcrumbs><li class=breadcrumbs__item><a aria-label=主页面 class=breadcrumbs__link href=/brabo/dev/zh-Hans/><svg viewBox="0 0 24 24" class=breadcrumbHomeIcon_AUjL><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill=currentColor /></svg></a><li class=breadcrumbs__item><span class=breadcrumbs__link>💡 解释</span><li class="breadcrumbs__item breadcrumbs__item--active"><span class=breadcrumbs__link>Sincronia da doc</span></ul></nav><div class="tocCollapsible_nbAK theme-doc-toc-mobile tocMobile_r92C"><button type=button class="clean-btn tocCollapsibleButton_hcyq">本页总览</button></div><div class="alert alert--warning margin-bottom--md" role=note data-faixa-de-traducao="">本页尚未翻译；您正在阅读葡萄牙语原文。</div><div class="theme-doc-markdown markdown"><header><h1>Como a documentação se mantém viva</h1></header>
-<p>Documentação não morre por falta de escrita inicial. Ela morre por
-<strong>drift</strong>: o código muda, a doc fica, e um dia alguém percebe que ela
-descreve um sistema que não existe mais. Desse ponto em diante ninguém
-confia em página nenhuma, inclusive nas que estão certas.</p>
-<p>Esta página explica o mecanismo que existe para evitar isso. Leia-a se
-o CI reclamou de você — e leia-a antes de desligar qualquer parte dele.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=the-principle-generate--verify--remember>O princípio: gerar > verificar > lembrar<a href=#the-principle-generate--verify--remember class=hash-link aria-label="O princípio: gerar > verificar > lembrar的直接链接" title="O princípio: gerar > verificar > lembrar的直接链接" translate=no>​</a></h2>
-<p>Três níveis, em ordem decrescente de confiabilidade:</p>
+<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme-3f2")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")),document.documentElement.setAttribute("data-theme-choice",t||"system")}(),function(){try{for(var[t,e]of new URLSearchParams(window.location.search).entries())if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id=__docusaurus><link rel=preload as=image href=/brabo/dev/zh-Hans/img/logo.svg /><div role=region aria-label=跳到主要内容><a class=skipToContent_CFOX href=#__docusaurus_skipToContent_fallback>跳到主要内容</a></div><nav aria-label=主导航 class="theme-layout-navbar navbar navbar--fixed-top"><div class=navbar__inner><div class="theme-layout-navbar-left navbar__items"><button aria-label=切换导航栏 aria-expanded=false class="navbar__toggle clean-btn" type=button><svg width=30 height=30 viewBox="0 0 30 30" aria-hidden=true><path stroke=currentColor stroke-linecap=round stroke-miterlimit=10 stroke-width=2 d="M4 7h22M4 15h22M4 23h22"/></svg></button><a class=navbar__brand href=/brabo/dev/zh-Hans/><div class=navbar__logo><img src=/brabo/dev/zh-Hans/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--light_vzqw"/><img src=/brabo/dev/zh-Hans/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--dark_FhTf"/></div><b class="navbar__title text--truncate">Brabo</b></a><a aria-current=page class="navbar__item navbar__link navbar__link--active" href=/brabo/dev/zh-Hans/>文档</a><a class="navbar__item navbar__link" href=/brabo/dev/zh-Hans/runbook>Runbook</a><a class="navbar__item navbar__link" href=/brabo/dev/zh-Hans/adr>ADRs</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a href=# aria-haspopup=true aria-expanded=false role=button class=navbar__link>dev</a><ul class=dropdown__menu><li><a href=https://daneiel.github.io/brabo/prd/ target=_blank rel="noopener noreferrer" class=dropdown__link>prd — estável<svg width=12 height=12 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/qa/ target=_blank rel="noopener noreferrer" class=dropdown__link>qa — 候选版<svg width=12 height=12 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/dev/ target=_blank rel="noopener noreferrer" class=dropdown__link>dev — em desenvolvimento ✓<svg width=12 height=12 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><div class="toggle_pnX7 colorModeToggle_Dj3Z"><button class="clean-btn toggleButton_DKER toggleButtonDisabled_qzkp" type=button disabled title=跟随系统 aria-label=切换浅色/暗黑模式（当前为跟随系统）><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL lightToggleIcon_E8tM"><path fill=currentColor d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL darkToggleIcon_rXjT"><path fill=currentColor d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL systemToggleIcon_zwCm"><path fill=currentColor d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"/></svg></button></div><div class=navbarSearchContainer_zRAa><div class="navbar__search searchBarContainer_eGzj" dir=ltr><svg aria-hidden=true class=searchIcon_PXpx focusable=false viewBox="0 0 16 16"><path fill=currentColor d="M6.02945 10.20327a4.17382 4.17382 0 1 1 4.17382-4.17382 4.15609 4.15609 0 0 1-4.17382 4.17382Zm9.69195 4.2199-4.8225-4.82338A5.88021 5.88021 0 0 0 12.058 6.02856 6.00467 6.00467 0 1 0 9.59979 10.8989l4.82338 4.82338a.89729.89729 0 0 0 1.29912 0 .89749.89749 0 0 0-.00087-1.29909Z"/></svg><input placeholder=搜索 aria-label=Search class="navbar__search-input searchInput_xOBI" value="" /><div class="loadingRing_JccP searchBarLoadingRing_aTss"><div></div><div></div><div></div><div></div></div></div></div></div></div><div role=presentation class=navbar-sidebar__backdrop></div></nav><div id=__docusaurus_skipToContent_fallback class="theme-layout-main main-wrapper mainWrapper_WJkx"><div class=docsWrapper_mIeg><button aria-label=回到顶部 class="clean-btn theme-back-to-top-button backToTopButton_Afc8" type=button></button><div class=docRoot_XZYc><aside class="theme-doc-sidebar-container docSidebarContainer_FPqZ"><div class=sidebarViewport_waOe><div class=sidebar_RQC4><nav aria-label=文档侧边栏 class="menu thin-scrollbar menu_ZM4U"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/><span class=categoryLinkLabel_jKch>🚀 从这里开始</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/><span class=linkLabel_CzBh>简介</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/getting-started><span class=linkLabel_CzBh>快速开始</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/tutorials/from-zero-to-deliverable><span class=linkLabel_CzBh>从零到交付物</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/architecture><span class=categoryLinkLabel_jKch>🏗️ 架构</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/architecture><span class=linkLabel_CzBh>架构</span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist" tabindex=0 href=/brabo/dev/zh-Hans/adr><span class=categoryLinkLabel_jKch>决策（ADR）</span></a><button aria-label="展开侧边栏分类 '决策（ADR）'" aria-expanded=false type=button class="clean-btn menu__caret"></button></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/business-rules><span class=categoryLinkLabel_jKch>📐 规则</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/business-rules><span class=linkLabel_CzBh>业务规则</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/business-rules/custo><span class=linkLabel_CzBh>成本与计量</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/business-rules/autenticacao><span class=linkLabel_CzBh>认证</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/reference/configuration><span class=categoryLinkLabel_jKch>📖 参考</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/configuration><span class=linkLabel_CzBh>Configuration</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/events><span class=linkLabel_CzBh>Events</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/permissions><span class=linkLabel_CzBh>Permissions</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/artifacts><span class=linkLabel_CzBh>Artifacts</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/git-providers><span class=linkLabel_CzBh>Git Providers</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/internal-api><span class=linkLabel_CzBh>Internal API</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/scripts><span class=linkLabel_CzBh>Scripts</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/rulesets><span class=linkLabel_CzBh>Rulesets</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/paridade-de-traducao><span class=linkLabel_CzBh>Paridade de tradução</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/brb><span class=linkLabel_CzBh>BRB register</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/security-surface><span class=linkLabel_CzBh>api 的暴露面</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/api><span class=linkLabel_CzBh>API 参考</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role=button aria-expanded=true href=/brabo/dev/zh-Hans/explanation/documentation-workflow><span class=categoryLinkLabel_jKch>💡 解释</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link menu__link--active" aria-current=page tabindex=0 href=/brabo/dev/zh-Hans/explanation/documentation-workflow><span class=linkLabel_CzBh>文档同步</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/branching-policy><span class=linkLabel_CzBh>分支策略</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/cadeia-de-suprimentos-do-ci><span class=linkLabel_CzBh>CI 的供应链</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/observability><span class=linkLabel_CzBh>Observabilidade</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/primeiro-dogfooding><span class=linkLabel_CzBh>Primeiro dogfooding</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/execucao-real-hello-world><span class=linkLabel_CzBh>Execução real (hello world)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/achados-execucao-real><span class=linkLabel_CzBh>流水线真实执行中的发现</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/backlog><span class=linkLabel_CzBh>已分类的 backlog</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/validacao-fase-12><span class=linkLabel_CzBh>Validação da Fase 12</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/validacao-real><span class=linkLabel_CzBh>Validação real (13b)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/aceite-providers><span class=linkLabel_CzBh>Aceite dos providers</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/gates><span class=linkLabel_CzBh>gates，以及如何测量它们</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/auditoria-fluxo-vs-codigo><span class=linkLabel_CzBh>Auditoria: fluxo.yml × código (v3, ADR 0085)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/historico-de-fases><span class=linkLabel_CzBh>阶段历史</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/fase-28-pasta-do-usuario><span class=linkLabel_CzBh>FASE 28 — pasta do usuário</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/fase-29-instalacao-de-uma-linha><span class=linkLabel_CzBh>FASE 29 — instalação de uma linha</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/fase-30-runner-por-maquina><span class=linkLabel_CzBh>FASE 30——机器的本地智能体</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/medicao-do-idioma><span class=linkLabel_CzBh>语言启发式的测量</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/medicao-do-jev><span class=linkLabel_CzBh>Jev 工具路由器的测量</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/auditoria-visual-rodada-29><span class=linkLabel_CzBh>Auditoria visual, antes e depois da Rodada 29</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/tanstack-ai><span class=linkLabel_CzBh>TanStack AI — não adotado</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/localizacao><span class=linkLabel_CzBh>Localização</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/localizacao-en><span class=linkLabel_CzBh>Localização — inglês (en)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/localizacao-ru><span class=linkLabel_CzBh>Localização — russo (ru)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/localizacao-zh-hans><span class=linkLabel_CzBh>Localização — chinês simplificado (zh-Hans)</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/runbook><span class=categoryLinkLabel_jKch>🛠️ 运维</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/runbook><span class=linkLabel_CzBh>运维手册</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/glossary><span class=categoryLinkLabel_jKch>📚 词汇</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/glossary><span class=linkLabel_CzBh>术语表</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true><span class=categoryLinkLabel_jKch>🤝 贡献</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>如何贡献</span><svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>在哪里求助</span><svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>报告漏洞</span><svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></ul></nav></div></div></aside><main class=docMainContainer_ia8v><div class="container padding-top--md padding-bottom--lg"><div class=row><div class="col docItemCol_xjE4"><div class=docItemContainer_cPej><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_sZul" aria-label=页面路径><ul class=breadcrumbs><li class=breadcrumbs__item><a aria-label=主页面 class=breadcrumbs__link href=/brabo/dev/zh-Hans/><svg viewBox="0 0 24 24" class=breadcrumbHomeIcon_AUjL><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill=currentColor /></svg></a><li class=breadcrumbs__item><span class=breadcrumbs__link>💡 解释</span><li class="breadcrumbs__item breadcrumbs__item--active"><span class=breadcrumbs__link>文档同步</span></ul></nav><div class="tocCollapsible_nbAK theme-doc-toc-mobile tocMobile_r92C"><button type=button class="clean-btn tocCollapsibleButton_hcyq">本页总览</button></div><div class="theme-doc-markdown markdown"><header><h1>文档如何保持鲜活</h1></header>
+<p>文档不是因为最初没写而死的。它死于<strong>漂移</strong>：代码变了，文档没变，有一天有人发现它描述的是一个已经
+不存在的系统。从那一刻起，没有人再信任任何页面，包括那些正确的页面。</p>
+<p>本页解释为避免这种情况而存在的机制。如果 CI 对你抱怨了，读它——并且在关闭它的任何部分之前读它。</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=the-principle-generate--verify--remember>原则：生成 > 验证 > 提醒<a href=#the-principle-generate--verify--remember class=hash-link aria-label="原则：生成 > 验证 > 提醒的直接链接" title="原则：生成 > 验证 > 提醒的直接链接" translate=no>​</a></h2>
+<p>三个层次，按可靠性递减排列：</p>
 
 
 
@@ -35,25 +32,18 @@ o CI reclamou de você — e leia-a antes de desligar qualquer parte dele.</p>
 
 
 
-<table><thead><tr><th>nível<th>como funciona<th>quando usar<tbody><tr><td><strong>Gerar</strong><td>a doc sai do código; drift é impossível<td>a lista É o conteúdo<tr><td><strong>Verificar</strong><td>a doc é escrita à mão, o CI confere que está completa<td>a prosa importa mais que a lista<tr><td><strong>Lembrar</strong><td>o CI avisa quem abriu o PR<td>quando é preciso julgamento humano</table>
-<p>O último nível é o mais fraco, e é por isso que ele é o último recurso.
-Um aviso que ninguém lê não protege nada.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=a-number-in-prose-is-a-verify-case>Número em prosa é caso de <em>verificar</em><a href=#a-number-in-prose-is-a-verify-case class=hash-link aria-label=a-number-in-prose-is-a-verify-case的直接链接 title=a-number-in-prose-is-a-verify-case的直接链接 translate=no>​</a></h3>
-<p>Um número no meio de uma frase — "os 30 ADRs", "o próximo é <code>0031</code>" —
-não é gerável: ele mora dentro do texto, e trocá-lo por um marcador
-deixaria a prosa da fonte ilegível. Mas ele é <strong>verificável</strong>, e é aí
-que deve morar.</p>
-<p>Sem isso, ele envelhece calado. Foi o que aconteceu: o site publicado
-dizia "28 deles" e "as 29 decisões" quando já eram 30, e "o próximo é
-0030" com o 0030 já feito. Nada quebrou, nenhuma checagem reclamou — só
-ficou errado.</p>
-<p><strong>A lista de números verificados cresceu depois que um terceiro caso
-provou o mesmo ponto.</strong> Uma revisão externa achou o README anunciando
-"as 158 RNs" quando havia 331 escritas — errado por mais do dobro, na
-tabela que apresenta o repositório. Foi corrigido à mão (PR #412), o que
-só zera o relógio: a próxima RN o deixaria desatualizado de novo. Então
-a checagem deixou de cobrir só contagens de ADR e passou a cobrir
-<strong>três</strong> famílias, cada uma lida do ARTEFATO e nunca de outra prosa:</p>
+<table><thead><tr><th>层次<th>如何运作<th>何时使用<tbody><tr><td><strong>生成</strong><td>文档从代码中产出；漂移不可能<td>列表<strong>就是</strong>内容<tr><td><strong>验证</strong><td>文档手写，CI 核对它是完整的<td>散文比列表更重要<tr><td><strong>提醒</strong><td>CI 提醒打开 PR 的人<td>需要人类判断时</table>
+<p>最后一层是最弱的，这就是为什么它是最后的手段。一个没人读的提醒保护不了任何东西。</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=a-number-in-prose-is-a-verify-case>散文中的数字属于<em>验证</em>的情况<a href=#a-number-in-prose-is-a-verify-case class=hash-link aria-label=a-number-in-prose-is-a-verify-case的直接链接 title=a-number-in-prose-is-a-verify-case的直接链接 translate=no>​</a></h3>
+<p>句子中间的数字——"os 30 ADRs"、"o próximo é <code>0031</code>"——是不可生成的：它住在文本里面，把它换成
+标记会让源中的散文难以阅读。但它是<strong>可验证的</strong>，它应该住在那里。</p>
+<p>没有这个，它会悄悄变老。事情就是这样发生的：已发布的网站在已经有 30 个时写着 "28 deles" 和
+"as 29 decisões"，并在 0030 已经完成时写着 "o próximo é 0030"。没有任何东西坏掉，没有任何检查
+抱怨——只是错了。</p>
+<p><strong>在第三个案例证明了同一点之后，被验证的数字列表增长了。</strong> 一次外部审查发现 README 宣称
+"as 158 RNs"，而实际已写了 331 条——错了一倍多，就在介绍仓库的表格中。它被手工修正了（PR #412），
+这只是让时钟归零：下一条 RN 又会让它过时。于是检查不再只覆盖 ADR 计数，而是覆盖<strong>三个</strong>家族，每个
+都从<strong>工件</strong>读取，绝不从其他散文读取：</p>
 
 
 
@@ -75,142 +65,82 @@ a checagem deixou de cobrir só contagens de ADR e passou a cobrir
 
 
 
-<table><thead><tr><th>número em prosa<th>fonte de verdade<tbody><tr><td>contagem de ADRs, número do próximo ADR<td>os arquivos em <code>docs/adr/</code><tr><td>contagem de RNs<td>os cabeçalhos <code>### RN-NNN</code> em <code>business-rules.md</code><tr><td>contagem de providers de LLM<td>os literais <code>capabilities</code> que <code>descobrirProviders()</code> encontra — a mesma fonte da tabela gerada em <code>llm-providers.md</code></table>
-<p>A de providers é escrita <strong>por extenso</strong> ("nove providers"), e a
-checagem compara com a palavra em vez de forçar a prosa a virar dígito:
-a checagem existe para proteger o texto, não para remodelá-lo.</p>
-<p><strong>Desde a AT-399 (2026-10-03) esses números também são reescritos.</strong> PRs
-paralelos que adicionavam cada um uma RN ou um ADR escreviam os números
-compartilhados à mão, e cada merge deixava os outros desatualizados: o
-guardião de docs falhou 8 de 30 execuções em três horas só por isso.
-Então <code>pnpm docs:generate</code> (modo de escrita) agora corrige no lugar o que
-a fonte determina — as contagens de ADR e RN acima, o número do próximo
-ADR (descartando uma linha duplicada "o próximo é" deixada por um merge),
-o recuo das entradas de <code>docs/adr/temas.yml</code> escritas na coluna 0 e a
-linha de uma referência com símbolo (abaixo). As funções puras moram em
-<code>scripts/docs/reescrita.mjs</code>, <code>refs-com-simbolo.mjs</code> (<code>novaLinha</code>,
-<code>reancorar</code>) e <code>temas-de-adr.mjs</code> (<code>corrigirRecuo</code>). <code>--check</code> mantém a
-mesma severidade: arquivo commitado desatualizado continua reprovando o
-CI, e a correção é <code>pnpm docs:generate</code> mais um commit, como nos
-arquivos gerados. O que ainda precisa de um humano: uma frase cujo
-padrão parou de casar (<code>CEGO</code>), um ADR sem tema, uma variável sem
-descrição e uma referência cujo símbolo saiu do arquivo, andou mais de
-40 linhas ou empata entre duas ocorrências mais próximas.</p>
-<p>O caso mais caro foi a <strong>versão anunciada em prosa</strong>: o README anunciou
-<code>v0.1.0</code> da Fase 5 até a v2.1.0 — sete releases atrás da realidade, na
-primeira coisa que um recém-chegado lê. A checagem compara a prosa com o
-primeiro <code>## vX.Y.Z</code> do CHANGELOG, que é escrito pelo workflow de
-release e volta por PR; uma tag lida do git não funcionaria, porque o
-checkout raso do CI pode não ter tag nenhuma. O <strong>badge</strong>, por outro
-lado, saiu da checagem e virou geração: ele lê a release do GitHub
-direto (<code>shields.io/github/v/release</code>) e se atualiza sozinho — só se
-verifica o que não dá para gerar.</p>
-<p>E aconteceu <strong>uma vez por porta de entrada</strong>. <code>docs/intro.md</code> — a
-primeira página do site publicado, à qual nem todo mundo chega pelo
-README — continuou dizendo "Fases 1 a 5 concluídas, v0.1.0" enquanto o
-produto estava na Fase 26. Conferir só o README nunca protegeu a segunda
-porta, então <code>verificarVersaoAnunciada</code> passou a receber os dois
-arquivos numa lista, e <code>scripts/ci/readme-version.ts</code> passou a escrever
-nos dois no mesmo commit do CHANGELOG. As duas metades andam juntas de
-propósito: uma checagem que cobrasse o que o gerador não escreve faria
-todo release nascer vermelho num PR que o bot abre e ninguém consegue
-consertar.</p>
-<p>O padrão do <code>intro.md</code> exige a frase <strong>inteira</strong> — "Phases 1 through NN
-complete, version vX.Y.Z" — e não só a versão: as duas metades
-envelhecem juntas, e casar só metade deixaria a contagem de fases
-mentindo ao lado de uma versão correta. A contagem de fases não é
-gerável daqui: o release sabe a versão, não a fase.</p>
-<p><code>generate.mjs</code> agora confere essas afirmações contra a realidade do
-diretório. E <strong>padrão que para de casar também reprova</strong>: uma checagem
-cuja regex parou de achar a frase é pior que checagem nenhuma, porque
-fica verde para sempre afirmando ter conferido algo para o qual nunca
-olhou. Quando a frase muda, o CI diz <code>CEGO</code> e pede que o padrão seja
-ajustado.</p>
-<p>Acrescentar uma afirmação nova à checagem é uma entrada numa das listas
-<code>afericoes</code> — <code>verificarContagensDeAdr</code> (arquivo, padrão, valor
-esperado) quando a fonte de verdade é o diretório de ADRs,
-<code>verificarVersaoAnunciada</code> quando é a última release do CHANGELOG — ou
-uma função própria ao lado delas, quando não é nenhum dos dois.</p>
-<p><strong>Contagens derivadas do código (AT-123).</strong> Uma varredura em 2026-09-25
-de <code>docs/</code>, <code>README.md</code>, <code>CONTRIBUTING.md</code>, <code>THIRD_PARTY_NOTICES.md</code> e
-<code>CLAUDE.md</code> achou cinco números já errados — "nove schemas" (onze),
-"doze operações" do contrato de git (quinze), "dez abas" (doze), "três
-imagens" construídas pelo CI (cinco), "Thirteen types" de
-<code>proposed_action</code> (vinte e um) — nenhum com checagem por trás. As
-contagens cuja fonte é um lugar do código agora moram em
-<code>scripts/docs/contagens-do-codigo.mjs</code>, chamado por
-<code>verificarContagensDerivadasDoCodigo</code>: uma linha de tabela por FRASE (a
-mesma contagem dita em dois arquivos são duas frases que envelhecem
-separadas), cada uma apontando para um extrator que conta o artefato —
-os blocos <code>overrides</code> dos dois <code>pnpm-workspace.yaml</code>, os <code>CASOS</code> e
-<code>ARQUIVOS_CURADOS</code> do golden-set e o <code>floor.json</code> dele, o total que
-<code>scripts/ci/imagens-pinadas.ts</code> imprime, <code>ALVOS</code>, o laço non-root do
-smoke, os métodos de <code>GitProviderContract</code> e de <code>DockerPort</code>, o
-<code>REGISTRO</code> de abas, os serviços do compose de dev sem <code>profiles:</code> (que
-precisam TODOS ter healthcheck, senão o valor esperado vira uma frase
-que a prosa não tem), <code>ACTION_TYPES</code>, o enum <code>action_status</code> e as
-chamadas <code>pgTable(</code>. A comparação ignora maiúsculas e segue a forma da
-frase (palavras em português no masculino/feminino, palavras em inglês
-ou dígitos). Como os extratores são muitos, cada um é provado por
-MUTAÇÃO em <code>contagens-do-codigo.spec.ts</code>: mude o artefato e não a prosa,
-e ele tem de reprovar <code>DESATUAL</code>; remova a frase ou a fonte, e ele tem
-de reprovar <code>CEGO</code>.</p>
-<p>O que foi <strong>datado em vez de derivado</strong>, e por quê: as contagens de
-arquivos por app em <code>architecture.md</code> e as "seis rotas" do broker mudam
-com quase todo PR ou são lidas de um <code>switch</code>, então uma checagem só
-acrescentaria ruído — elas levam "medido em 2026-09-25". Números que
-descrevem um invariante de desenho ("duas camadas", "três estados") ou
-uma medição passada já datada no lugar (<code>THIRD_PARTY_NOTICES.md</code>, as
-transcrições de restauração do runbook) ficaram como estavam.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=line-references-with-a-symbol>Referências de linha com símbolo<a href=#line-references-with-a-symbol class=hash-link aria-label="Referências de linha com símbolo的直接链接" title="Referências de linha com símbolo的直接链接" translate=no>​</a></h3>
-<p>Uma RN cita código por <code>caminho:linha</code>, e um número de linha envelhece
-toda vez que alguém edita o arquivo. A RN-547 citava
-<code>fechar_a_instalacao</code> em <code>install.sh:966</code> e <code>post_interno</code> em <code>:682</code>. Em
-2026-09-17 eles estavam em <code>:1107</code> e <code>:809</code>, e em 2026-09-18 em <code>:1463</code>
-e <code>:1165</code>. Um número de linha não pode ser gerado e, em geral, também
-não pode ser verificado, porque <code>apps/api/src/foo.ts:40</code> sozinho não diz
-o que deveria estar lá. Quando a RN também <strong>nomeia o símbolo</strong> ao lado
-da linha, porém, a linha <em>pode</em> ser verificada. Esse é o único caso que
-<code>generate.mjs</code> confere (<code>verificarRefsComSimbolo</code>, com a lógica em
-<code>scripts/docs/refs-com-simbolo.mjs</code>, testada).</p>
-<p><strong>O padrão é estreito de propósito.</strong> Uma checagem barulhenta é
-desligada no primeiro mês. Ela lê os três arquivos de RN
-(<code>business-rules.md</code>, <code>business-rules/custo.md</code>,
-<code>business-rules/autenticacao.md</code>) e pega só estas duas formas:</p>
+<table><thead><tr><th>散文中的数字<th>事实来源<tbody><tr><td>ADR 计数、下一个 ADR 的编号<td><code>docs/adr/</code> 中的文件<tr><td>RN 计数<td><code>business-rules.md</code> 中的 <code>### RN-NNN</code> 标题<tr><td>LLM provider 计数<td><code>descobrirProviders()</code> 找到的 <code>capabilities</code> 字面量——与 <code>llm-providers.md</code> 中生成的表格同一来源</table>
+<p>provider 的计数以<strong>文字</strong>写出（"nove providers"），检查与这个词比较，而不是强迫散文变成数字：检查
+的存在是为了保护文本，而不是重塑它。</p>
+<p><strong>自 AT-399（2026-10-03）起，这些数字也会被改写。</strong> 每个都添加一条 RN 或一个 ADR 的并行 PR 手工
+写入共享的数字，每次合并都让其他的过时：文档守卫仅因此就在三小时内的 30 次执行中失败了 8 次。所以
+<code>pnpm docs:generate</code>（写入模式）现在就地修正来源所决定的东西——上面的 ADR 和 RN 计数、下一个 ADR 的
+编号（丢弃合并留下的重复的 "o próximo é" 行）、<code>docs/adr/temas.yml</code> 中写在第 0 列的条目的缩进，以及
+带符号引用的行号（见下文）。纯函数位于 <code>scripts/docs/reescrita.mjs</code>、<code>refs-com-simbolo.mjs</code>
+（<code>novaLinha</code>、<code>reancorar</code>）和 <code>temas-de-adr.mjs</code>（<code>corrigirRecuo</code>）。<code>--check</code> 保持同样的严重性：
+已提交的过时文件仍然让 CI 失败，修正方法是 <code>pnpm docs:generate</code> 再加一次提交，与生成的文件一样。
+仍需要人类的：模式不再匹配的句子（<code>CEGO</code>）、没有主题的 ADR、没有描述的变量，以及符号离开了文件、
+移动超过 40 行或在两个最近的出现之间打平的引用。</p>
+<p>代价最高的案例是<strong>散文中宣布的版本</strong>：README 从 Fase 5 一直宣布 <code>v0.1.0</code> 直到 v2.1.0——比现实落后
+七个版本，就在新人读到的第一件东西上。检查把散文与 CHANGELOG 的第一个 <code>## vX.Y.Z</code> 比较，它由 release
+workflow 写入并通过 PR 回来；从 git 读取 tag 行不通，因为 CI 的浅检出可能一个 tag 都没有。另一方面，
+<strong>徽章</strong>离开了检查，变成了生成：它直接读取 GitHub 的 release（<code>shields.io/github/v/release</code>）并自行
+更新——只验证无法生成的东西。</p>
+<p>而这在<strong>每个入口都发生了一次</strong>。<code>docs/intro.md</code>——已发布网站的第一页，并不是每个人都通过 README 到达
+那里——在产品已处于 Fase 26 时仍写着 "Fases 1 a 5 concluídas, v0.1.0"。只核对 README 从来没有保护
+第二个入口，因此 <code>verificarVersaoAnunciada</code> 改为在一个列表中接收两个文件，而
+<code>scripts/ci/readme-version.ts</code> 改为在 CHANGELOG 的同一个提交中写入两者。两半故意一起移动：一个要求
+生成器不写之物的检查，会让每个发布都在一个由机器人打开、没人能修复的 PR 中生来就是红的。</p>
+<p><code>intro.md</code> 的模式要求<strong>整个</strong>句子——"Phases 1 through NN complete, version vX.Y.Z"——而不只是版本：
+两半一起变老，只匹配一半会让阶段计数在正确的版本旁边撒谎。阶段计数无法从这里生成：release 知道版本，
+不知道阶段。</p>
+<p><code>generate.mjs</code> 现在把这些断言与目录的现实核对。而且<strong>不再匹配的模式也会失败</strong>：一个正则不再能找到
+句子的检查比没有检查更糟，因为它会永远绿着，声称核对了它从未看过的东西。当句子改变时，CI 说 <code>CEGO</code>
+并要求调整模式。</p>
+<p>向检查添加一个新断言，就是在某个 <code>afericoes</code> 列表中加一项——当事实来源是 ADR 目录时是
+<code>verificarContagensDeAdr</code>（文件、模式、期望值），当它是 CHANGELOG 的最新 release 时是
+<code>verificarVersaoAnunciada</code>——或者，当两者都不是时，在它们旁边写一个自己的函数。</p>
+<p><strong>从代码派生的计数（AT-123）。</strong> 2026-09-25 对 <code>docs/</code>、<code>README.md</code>、<code>CONTRIBUTING.md</code>、
+<code>THIRD_PARTY_NOTICES.md</code> 和 <code>CLAUDE.md</code> 的一次扫描发现五个已经错了的数字——"nove schemas"（十一个）、
+git 契约的 "doze operações"（十五个）、"dez abas"（十二个）、CI 构建的 "três imagens"（五个）、
+<code>proposed_action</code> 的 "Thirteen types"（二十一个）——背后都没有检查。来源是代码中某个位置的计数现在
+位于 <code>scripts/docs/contagens-do-codigo.mjs</code>，由 <code>verificarContagensDerivadasDoCodigo</code> 调用：每个
+<strong>句子</strong>一行表格（同一计数在两个文件中说出，是两个分别变老的句子），每行指向一个统计工件的提取器——
+两个 <code>pnpm-workspace.yaml</code> 的 <code>overrides</code> 块、golden-set 的 <code>CASOS</code> 和 <code>ARQUIVOS_CURADOS</code> 及其
+<code>floor.json</code>、<code>scripts/ci/imagens-pinadas.ts</code> 打印的总数、<code>ALVOS</code>、smoke 的非 root 循环、
+<code>GitProviderContract</code> 和 <code>DockerPort</code> 的方法、标签页的 <code>REGISTRO</code>、dev compose 中没有 <code>profiles:</code> 的
+服务（它们必须<strong>全部</strong>有 healthcheck，否则期望值会变成散文中没有的句子）、<code>ACTION_TYPES</code>、枚举
+<code>action_status</code> 以及 <code>pgTable(</code> 调用。比较忽略大小写并遵循句子的形式（阴性/阳性的葡萄牙语单词、英语
+单词或数字）。由于提取器很多，每一个都在 <code>contagens-do-codigo.spec.ts</code> 中经过<strong>变异</strong>证明：改变工件
+而不改散文，它必须以 <code>DESATUAL</code> 失败；删除句子或来源，它必须以 <code>CEGO</code> 失败。</p>
+<p>被<strong>标注日期而不是派生</strong>的，以及原因：<code>architecture.md</code> 中每个应用的文件计数和 broker 的
+"seis rotas" 几乎随每个 PR 变化，或从一个 <code>switch</code> 读出，因此检查只会增加噪音——它们带着
+"medido em 2026-09-25"。描述设计不变量（"duas camadas"、"três estados"）或已就地标注日期的过去测量
+（<code>THIRD_PARTY_NOTICES.md</code>、runbook 的恢复记录）的数字保持原样。</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=line-references-with-a-symbol>带符号的行引用<a href=#line-references-with-a-symbol class=hash-link aria-label=带符号的行引用的直接链接 title=带符号的行引用的直接链接 translate=no>​</a></h3>
+<p>RN 通过 <code>caminho:linha</code> 引用代码，而每次有人编辑文件，行号就会变老。RN-547 引用了 <code>install.sh:966</code> 中
+的 <code>fechar_a_instalacao</code> 和 <code>:682</code> 中的 <code>post_interno</code>。在 2026-09-17 它们在 <code>:1107</code> 和 <code>:809</code>，在
+2026-09-18 在 <code>:1463</code> 和 <code>:1165</code>。行号无法生成，一般来说也无法验证，因为单独的
+<code>apps/api/src/foo.ts:40</code> 并不说明那里应该有什么。然而，当 RN 也在行号旁边<strong>命名符号</strong>时，这一行<em>就
+可以</em>被验证。这是 <code>generate.mjs</code> 核对的唯一情况（<code>verificarRefsComSimbolo</code>，逻辑在
+<code>scripts/docs/refs-com-simbolo.mjs</code> 中，已测试）。</p>
+<p><strong>模式故意很窄。</strong> 嘈杂的检查会在第一个月就被关掉。它读取三个 RN 文件（<code>business-rules.md</code>、
+<code>business-rules/custo.md</code>、<code>business-rules/autenticacao.md</code>），只捕获这两种形式：</p>
 <div class="language-text codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-text codeBlock_mqej thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_uNqR><div class=token-line style=color:#F8F8F2><span class="token plain">`&lt;path>:&lt;N>` (`&lt;symbol>`     explicit reference</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">`:&lt;N>` (`&lt;symbol>`           continuation — inherits the path</span><br/></div></code></pre></div></div>
 <ul>
-<li class="">O símbolo tem de vir <strong>logo depois</strong> da referência, abrindo um
-parêntese e entre crases. Só espaço em branco pode ficar entre eles,
-inclusive uma quebra de linha.</li>
-<li class="">O símbolo tem de ser um <strong>identificador</strong>: <code>fechar_a_instalacao</code>,
-<code>join/3</code>, <code>git_dir?</code>, <code>Engine.Runners.RunnerReadiness</code>, <code>decide()</code>.
-<code>MARCADOR_SCHEMA=3</code>, uma frase ou um caminho não é símbolo, e é
-pulado.</li>
-<li class=""><strong>Pares ambíguos são pulados</strong>: <code>:640</code>/<code>:647</code> (<code>a</code>/<code>b</code>), ou duas
-referências antes de um símbolo. A checagem não tem como saber qual
-símbolo vai com qual linha.</li>
-<li class="">Uma continuação herda o último caminho explícito <strong>no mesmo item de
-lista</strong>. Uma linha em branco ou um novo <code>- </code> encerra o item.</li>
-<li class="">O caminho é resolvido a partir da raiz do repositório. Se não estiver
-lá, a checagem usa o <strong>único</strong> arquivo rastreado cujo caminho termina
-com ele. Se nenhum arquivo casar, ou mais de um casar, a referência é
-contada à parte como não resolvida.</li>
+<li class="">符号必须<strong>紧跟</strong>在引用之后，以括号开头并在反引号之间。它们之间只能有空白，包括换行。</li>
+<li class="">符号必须是一个<strong>标识符</strong>：<code>fechar_a_instalacao</code>、<code>join/3</code>、<code>git_dir?</code>、
+<code>Engine.Runners.RunnerReadiness</code>、<code>decide()</code>。<code>MARCADOR_SCHEMA=3</code>、一个句子或一个路径不是符号，
+会被跳过。</li>
+<li class=""><strong>有歧义的成对引用被跳过</strong>：<code>:640</code>/<code>:647</code>（<code>a</code>/<code>b</code>），或一个符号前有两个引用。检查无法知道哪个
+符号对应哪一行。</li>
+<li class="">续接继承<strong>同一列表项中</strong>最后一个显式路径。空行或新的 <code>- </code> 结束该项。</li>
+<li class="">路径从仓库根目录解析。如果不在那里，检查使用路径以它结尾的<strong>唯一</strong>被跟踪文件。如果没有文件匹配，
+或有多个匹配，该引用被单独计为未解析。</li>
 </ul>
-<p>Uma referência <strong>bate</strong> quando o símbolo, ou o último segmento dele
-após <code>.</code>, aparece como palavra inteira a até <strong>±3 linhas</strong> de <code>N</code>. A
-janela admite uma citação que aponta para o docblock em vez da
-assinatura. Ela fica pequena porque o drift anda dezenas ou centenas de
-linhas. Quando uma referência não bate, a saída nomeia a linha mais
-próxima onde o símbolo aparece. Desde a AT-399, <code>pnpm docs:generate</code>
-reescreve <code>N</code> para essa linha quando a ocorrência mais próxima é
-<strong>única</strong> (sem empate na mesma distância) e está a no máximo <strong>40
-linhas</strong> (<code>DISTANCIA_MAXIMA_DE_REANCORA</code>); quando o símbolo sumiu do
-arquivo, andou mais longe ou duas ocorrências empatam, a referência fica
-como está e tem de ser relida pelo símbolo, à mão. A ocorrência mais
-próxima pode ser uma chamada e não a definição — esse é o preço aceito
-por não editar números à mão através de PRs paralelos, e o diff do
-arquivo regenerado mostra cada movimento para revisão.</p>
-<p><strong>Medido em 2026-09-18</strong>, sobre todo <code>caminho:N</code> dos três arquivos:</p>
+<p>当符号或其 <code>.</code> 之后的最后一段作为完整单词出现在 <code>N</code> 的 <strong>±3 行</strong>之内时，引用<strong>匹配</strong>。这个窗口允许
+指向文档块而不是签名的引用。它保持很小，因为漂移会移动几十或几百行。当引用不匹配时，输出会点名符号
+出现的最近一行。自 AT-399 起，当最近的出现是<strong>唯一</strong>的（在相同距离上没有并列）且最多在 <strong>40 行</strong>之内
+（<code>DISTANCIA_MAXIMA_DE_REANCORA</code>）时，<code>pnpm docs:generate</code> 把 <code>N</code> 改写为那一行；当符号从文件中消失、
+移动得更远或两个出现打平时，引用保持原样，必须按符号手工重读。最近的出现可能是一次调用而不是定义——
+这是为了不在并行 PR 之间手工编辑数字而接受的代价，重新生成文件的 diff 会显示每次移动以供审查。</p>
+<p><strong>于 2026-09-18 测量</strong>，针对三个文件中的每个 <code>caminho:N</code>：</p>
 
 
 
@@ -240,346 +170,206 @@ arquivo regenerado mostra cada movimento para revisão.</p>
 
 
 
-<table><thead><tr><th><th>contagem<tbody><tr><td>referências <code>…:N</code> no total<td>592<tr><td>casam com o padrão<td>187<tr><td>corretas (dentro de ±3)<td>116<tr><td>erradas<td>71<tr><td>caminho não resolvido<td>0</table>
-<p>Uma conferência por amostragem das 71 não achou falso positivo: cada
-referência que ela cobriu era drift real, uma renomeação ou um símbolo
-que mudou de arquivo. Alargar a janela para ±5 limparia só três delas.
-Nove estão entre 4 e 10 linhas fora, e as outras 62 mais longe. O item
-de código da RN-547 foi relido pelo símbolo e corrigido no mesmo PR, o
-que deixa <strong>63</strong>. São muitas para corrigir uma a uma dentro desta
-mudança, e a ocorrência mais próxima nem sempre é a definição. A lista é
-o que <code>pnpm docs:check</code> imprime.</p>
-<p><strong>Severidade ao nascer: <code>warn</code>.</strong> Ela relatava e não reprovava, porque
-um <code>block</code> teria parado todo PR que tocasse um arquivo de RN por uma
-dívida que outra pessoa deixou. Havia uma exceção, a regra da casa: se a
-checagem extrai <strong>zero</strong> referências, isso é <code>CEGO</code> e <strong>reprova</strong>. Zero
-significa que a sintaxe de RN mudou ou o extrator quebrou, e uma
-checagem cega fica verde para sempre.</p>
-<p><strong>O critério original para <code>block</code></strong> (PR #593): quando a lista estiver
-<strong>vazia</strong>, e depois de <strong>quatro semanas seguidas</strong> de <code>docs:check</code> na
-<code>dev</code> sem nenhuma referência errada nova nas RNs tocadas nessas semanas.
-A partir daí, toda referência errada nova é culpa do PR corrente, e o PR
-pode corrigi-la. Promover antes cobraria de cada PR a dívida de outra
-pessoa. Se o padrão mostrar um falso positivo real antes disso, estreite
-o padrão. Não alargue a janela.</p>
-<p><strong>A lista zerou em 2026-09-26</strong> (AT-122). Nos oito dias depois de a
-checagem entrar, as 63 referências sabidamente erradas tinham crescido
-para <strong>75</strong>. Esse crescimento é o drift que a checagem existe para
-mostrar. As 75 foram relidas pelo símbolo contra o código daquele dia, e
-nenhuma era falso positivo do padrão. A maioria tinha andado dezenas de
-linhas. Uma era renomeação: <code>modo_de_execucao/1</code> virou
-<code>exigencias_do_projeto/1</code> na RN-516. Uma tinha mudado de arquivo:
-<code>escreverEnv</code> foi de <code>preflight.mjs</code> para <code>env-file.mjs</code>. Duas
-apontavam para o teste certo, mas na linha do <code>it(</code>, enquanto o símbolo
-(<code>types</code>) só aparece algumas linhas abaixo, no corpo. Essas duas agora
-apontam para a linha do corpo. A janela ficou em ±3. Os itens com o pior
-drift (RN-566, RN-567, RN-570 e RN-514) tiveram as referências vizinhas
-não conferidas relidas na mesma passada. Depois disso, <strong>273
-referências casam com o padrão, 273 estão corretas e 0 estão erradas</strong>.
-As quatro semanas começariam a contar quando essa mudança chegasse à
-<code>dev</code>.</p>
-<p><strong>Promovida a <code>block</code> em 2026-10-01</strong> (AT-122), por decisão do
-mantenedor, sem esperar as quatro semanas. Cinco dias depois de a lista
-zerar, a <code>dev</code> tinha <strong>140</strong> referências erradas de novo, de 896 que
-casam com o padrão: o <code>warn</code> não segurou o drift, porque um aviso sobre
-o qual ninguém tem de agir é um aviso que ninguém lê. As 140 foram
-relidas pelo símbolo na mesma mudança que promoveu a checagem, nunca
-somando um delta, e a janela ficou em ±3. Nenhuma era falso positivo do
-padrão, e nenhum símbolo faltava no arquivo dele. O que a passada achou
-além do drift de linha:</p>
+<table><thead><tr><th><th>计数<tbody><tr><td><code>…:N</code> 引用总数<td>592<tr><td>匹配模式<td>187<tr><td>正确（±3 之内）<td>116<tr><td>错误<td>71<tr><td>路径未解析<td>0</table>
+<p>对这 71 个的一次抽样核对没有发现误报：它覆盖的每个引用都是真实的漂移、一次重命名或一个换了文件的
+符号。把窗口放宽到 ±5 只会清除其中三个。九个偏差在 4 到 10 行之间，其余 62 个更远。RN-547 的代码项
+按符号重读并在同一个 PR 中修正，剩下 <strong>63</strong> 个。在这次改动中逐个修正太多了，而最近的出现并不总是
+定义。列表就是 <code>pnpm docs:check</code> 打印的内容。</p>
+<p><strong>诞生时的严重性：<code>warn</code>。</strong> 它报告而不失败，因为 <code>block</code> 会因为别人留下的债务而阻止每一个触及 RN
+文件的 PR。有一个例外，即本仓库的规则：如果检查提取到<strong>零</strong>个引用，那就是 <code>CEGO</code> 并且<strong>失败</strong>。零
+意味着 RN 的语法变了或提取器坏了，而一个盲的检查会永远绿着。</p>
+<p><strong>升级为 <code>block</code> 的原始标准</strong>（PR #593）：当列表<strong>为空</strong>，并且在 <code>dev</code> 上连续<strong>四周</strong>的 <code>docs:check</code>
+中，这几周触及的 RN 里没有新的错误引用。从那时起，每个新的错误引用都是当前 PR 的责任，PR 可以修正
+它。更早升级会让每个 PR 为别人的债务买单。如果在此之前模式显示出真实的误报，就收窄模式。不要放宽
+窗口。</p>
+<p><strong>列表在 2026-09-26 清零</strong>（AT-122）。在检查加入后的八天里，已知错误的 63 个引用增长到了 <strong>75</strong> 个。
+这种增长就是检查要展示的漂移。这 75 个按符号对照当天的代码重读，没有一个是模式的误报。大多数移动了
+几十行。一个是重命名：<code>modo_de_execucao/1</code> 在 RN-516 中变成了 <code>exigencias_do_projeto/1</code>。一个换了
+文件：<code>escreverEnv</code> 从 <code>preflight.mjs</code> 移到了 <code>env-file.mjs</code>。两个
+指向正确的测试，但指在 <code>it(</code> 那一行，而符号（<code>types</code>）只在下面几行的正文中出现。这两个现在指向正文
+那一行。窗口保持 ±3。漂移最严重的条目（RN-566、RN-567、RN-570 和 RN-514）在同一轮中重读了相邻的
+未核对引用。此后，<strong>273 个引用匹配模式，273 个正确，0 个错误</strong>。四周将从这次改动到达 <code>dev</code> 时开始
+计算。</p>
+<p><strong>于 2026-10-01 升级为 <code>block</code></strong>（AT-122），由维护者决定，没有等待四周。列表清零五天后，<code>dev</code> 在
+896 个匹配模式的引用中又有了 <strong>140</strong> 个错误：<code>warn</code> 没有拦住漂移，因为一个没有人必须对其采取行动的
+警告是没人读的警告。这 140 个在升级检查的同一次改动中按符号重读，从不累加差量，窗口保持 ±3。没有
+一个是模式的误报，也没有任何符号在它的文件中缺失。这一轮在行漂移之外发现的：</p>
 <ul>
-<li class=""><strong>Sobras de merge.</strong> Três itens tinham sido duplicados por resolução
-de conflito, uma cópia com números mais antigos ao lado de uma com
-números mais novos (o <code>Where</code> da RN-120, o <code>Código</code> da RN-547 e a
-linha de <code>SessionPage.tsx</code> da RN-626). A cópia desatualizada foi
-removida, e é por isso que o total foi de 896 para <strong>883</strong>.</li>
-<li class=""><strong>Uma referência cujo assunto mudou (drift de estado, não de
-linha).</strong> A RN-587 citava o teste de uma mensagem do <code>infra</code>; desde a
-RN-617 o Infra Lead conversa, e o teste agora usa <code>qa</code> como o agente
-do roster sem conversa. A referência agora diz isso. A regra da RN
-não mudou.</li>
-<li class="">Vizinhas não conferidas nos itens com o pior drift (RN-547, RN-567,
-RN-587, RN-609, RN-663, RN-566) foram relidas na mesma passada onde
-o teste ou a cláusula que elas nomeiam pôde ser identificado.</li>
+<li class=""><strong>合并残留。</strong> 三个条目被冲突解决复制了，一个带旧数字的副本挨着一个带新数字的副本（RN-120 的
+<code>Where</code>、RN-547 的 <code>Código</code> 和 RN-626 的 <code>SessionPage.tsx</code> 那一行）。过时的副本被删除，这就是
+总数从 896 变为 <strong>883</strong> 的原因。</li>
+<li class=""><strong>一个主题发生了变化的引用（状态漂移，而不是行漂移）。</strong> RN-587 引用了一条 <code>infra</code> 消息的测试；
+自 RN-617 起 Infra Lead 会对话，测试现在使用 <code>qa</code> 作为花名册中不对话的智能体。引用现在这样说。
+RN 的规则没有变。</li>
+<li class="">漂移最严重的条目（RN-547、RN-567、RN-587、RN-609、RN-663、RN-566）中未核对的相邻引用在同一轮中
+重读，前提是它们所命名的测试或子句能被识别。</li>
 </ul>
-<p>Depois disso, <strong>883 referências casam com o padrão, 883 estão corretas
-e 0 estão erradas</strong>.</p>
-<p><strong>Severidade agora: <code>block</code>.</strong> Uma referência que não bate, <strong>ou</strong> cujo
-caminho não resolve mais a um único arquivo rastreado, reprova o
-<code>docs:check</code>. As duas são o mesmo drift: a RN aponta para onde o código
-não está. Zero referências continua <code>CEGO</code> e continua reprovando. O
-veredito é <code>veredito</code> em <code>refs-com-simbolo.mjs</code>, provado por mutação no
-spec ao lado: uma referência movida para fora da janela reprova, um
-símbolo que saiu do arquivo reprova, um caminho que não resolve mais
-reprova, e texto reescrito até a extração dar zero é <code>CEGO</code>, nunca <code>ok</code>.
-Quando reprovar, corrija a referência <strong>pelo símbolo</strong> (a saída nomeia
-a linha mais próxima onde ele aparece, o que é uma pista, não uma
-correção). Não alargue a janela, e não estreite o padrão para fazer uma
-referência real sumir; estreite-o só por um falso positivo real, com o
-caso no spec.</p>
-<p>As traduções pt-BR dos três arquivos de RN sob <code>website/i18n/</code> <strong>não</strong>
-são conferidas. Elas têm poucas referências (23 casam com o padrão, 15
-delas erradas em 2026-10-01), e a tradução está atrás da fonte em inglês
-de todo modo; conferir uma cópia que ninguém mantém em dia reprovaria
-todo PR pelo atraso da tradução.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=every-rn-heading-carries-its-anchor>Todo cabeçalho de RN carrega sua âncora<a href=#every-rn-heading-carries-its-anchor class=hash-link aria-label="Todo cabeçalho de RN carrega sua âncora的直接链接" title="Todo cabeçalho de RN carrega sua âncora的直接链接" translate=no>​</a></h3>
-<p>A âncora <code>{#rn-NNN}</code> num cabeçalho de RN é o contrato para links de
-fora: ela sobrevive a uma RN com título novo e a uma RN movida para
-outro arquivo. Em 2026-09-26 (AT-230) a <code>dev</code> tinha <strong>451</strong> cabeçalhos
-<code>### RN-</code> e <strong>449</strong> âncoras. A RN-305 e a RN-306 tinham sido escritas
-sem uma, em <code>business-rules.md</code> e na tradução pt-BR dele, e nada
-reprovou. O build do site não pega isso: sem âncora explícita o
-Docusaurus deriva o id do texto do cabeçalho e a página compila. O que
-quebra é um link <code>#rn-305</code> que alguém escreve depois. A contagem de RNs
-também não pega, porque conta cabeçalhos, não âncoras.</p>
-<p><code>generate.mjs</code> agora confere isso (<code>verificarAncorasDeRn</code>, com a lógica
-em <code>scripts/docs/ancoras-de-rn.mjs</code>, provada por mutação em
-<code>ancoras-de-rn.spec.ts</code>). Todo cabeçalho, de qualquer nível, que
-<strong>começa</strong> com <code>RN-&lt;dígitos></code> tem de <strong>terminar</strong> em <code>{#rn-&lt;mesmos dígitos>}</code>, zeros à esquerda incluídos (<code>RN-001</code> → <code>rn-001</code>). Âncora
-ausente e âncora com outro número ou nome reprovam as duas, uma linha
-por cabeçalho, com arquivo e linha. Zero cabeçalhos encontrados é
-<code>CEGO</code> e também reprova.</p>
-<p><strong>Severidade: <code>block</code></strong>, diferente das referências de linha acima: não
-há dívida herdada (as duas âncoras ausentes foram acrescentadas na
-mesma mudança), e cada cabeçalho novo é escrito pelo PR que o
-acrescenta.</p>
-<p><strong>As traduções também são cobertas.</strong> Os arquivos são achados por glob:
-<code>docs/business-rules.md</code>, <code>docs/business-rules/*.md</code> (a fonte pt-BR,
-ADR 0216), e os mesmos dois caminhos sob
-<code>website/i18n/&lt;locale>/docusaurus-plugin-content-docs/current/</code> para
-cada locale traduzido em <code>LOCALES_TRADUZIDOS</code> (<code>en</code>, <code>ru</code>, <code>zh-Hans</code>).
-O site de um locale serve <code>business-rules#rn-305</code> a partir do arquivo
-traduzido, e uma tradução anterior tinha copiado o cabeçalho sem a
-âncora. A regra é por cabeçalho, então uma tradução parcial não é
-problema: uma RN que não foi traduzida cai na fonte pt-BR, que é
-conferida de qualquer modo.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=the-runbook-procedures-table>A tabela de procedimentos do runbook<a href=#the-runbook-procedures-table class=hash-link aria-label="A tabela de procedimentos do runbook的直接链接" title="A tabela de procedimentos do runbook的直接链接" translate=no>​</a></h3>
-<p>O runbook termina com uma tabela dos seus procedimentos de <strong>operação</strong>
-— <code>procedure | anchor | verification | schedule</code> — dizendo o que prova
-cada um e o que roda essa prova
-(<a class="" href=/brabo/dev/zh-Hans/runbook#procedimentos-e-verificacao>Procedures and how each is verified</a>).
-Ela existe por causa do critério de fechamento do EP-015: nenhuma linha
-com verificação vazia ou que diga "ver abaixo", e as provas que existem
-rodam por agenda, não de memória. Medido em 2026-09-25 (AT-129), a
-tabela de que o critério falava não existia no repositório: uma cópia
-de sete linhas morava nas notas do mantenedor, contra 28 procedimentos
-de operação aqui, e uma linha apontava para outra nota. Uma tabela de
-nomes de arquivo escrita à mão envelhece do mesmo jeito que números em
-prosa — um spec é renomeado, um workflow perde o <code>schedule:</code>, e a
-célula continua afirmando.</p>
-<p><code>generate.mjs</code> a confere (<code>verificarProcedimentosDoRunbook</code>, lógica em
-<code>scripts/docs/procedimentos-do-runbook.mjs</code>, provada por mutação em
-<code>procedimentos-do-runbook.spec.ts</code>). Por linha, ela reprova quando:</p>
+<p>此后，<strong>883 个引用匹配模式，883 个正确，0 个错误</strong>。</p>
+<p><strong>现在的严重性：<code>block</code>。</strong> 一个不匹配的引用，<strong>或</strong>路径不再解析为单一被跟踪文件的引用，会让
+<code>docs:check</code> 失败。两者是同一种漂移：RN 指向代码不在的地方。零个引用仍是 <code>CEGO</code> 并仍会失败。裁决是
+<code>refs-com-simbolo.mjs</code> 中的 <code>veredito</code>，由旁边的 spec 经变异证明：移出窗口的引用失败，离开文件的符号
+失败，不再解析的路径失败，被改写到提取结果为零的文本是 <code>CEGO</code>，绝不是 <code>ok</code>。失败时，<strong>按符号</strong>修正
+引用（输出点名符号出现的最近一行，这是一个线索，不是修正）。不要放宽窗口，也不要为了让一个真实的引用
+消失而收窄模式；只有在出现真实的误报时才收窄，并把该用例放进 spec。</p>
+<p><code>website/i18n/</code> 下三个 RN 文件的 pt-BR 翻译<strong>不</strong>被核对。它们的引用很少（23 个匹配模式，2026-10-01
+时其中 15 个是错的），而且翻译无论如何都落后于英语源；核对一份没人保持更新的副本，会因翻译的滞后而
+让每个 PR 失败。</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=every-rn-heading-carries-its-anchor>每个 RN 标题都带有其锚点<a href=#every-rn-heading-carries-its-anchor class=hash-link aria-label="每个 RN 标题都带有其锚点的直接链接" title="每个 RN 标题都带有其锚点的直接链接" translate=no>​</a></h3>
+<p>RN 标题上的锚点 <code>{#rn-NNN}</code> 是外部链接的契约：它能在 RN 改标题和 RN 移到另一个文件后存活。在
+2026-09-26（AT-230），<code>dev</code> 有 <strong>451</strong> 个 <code>### RN-</code> 标题和 <strong>449</strong> 个锚点。RN-305 和 RN-306 在
+<code>business-rules.md</code> 及其 pt-BR 翻译中写的时候没有锚点，而没有任何东西失败。网站构建抓不到这个：
+没有显式锚点时 Docusaurus 从标题文本推导 id，页面照样编译。坏掉的是之后有人写的 <code>#rn-305</code> 链接。
+RN 计数也抓不到，因为它计的是标题，不是锚点。</p>
+<p><code>generate.mjs</code> 现在核对这一点（<code>verificarAncorasDeRn</code>，逻辑在 <code>scripts/docs/ancoras-de-rn.mjs</code>，在
+<code>ancoras-de-rn.spec.ts</code> 中经变异证明）。每个以 <code>RN-&lt;dígitos></code> <strong>开头</strong>的标题，无论哪一级，都必须以
+<code>{#rn-&lt;mesmos dígitos>}</code> <strong>结尾</strong>，包括前导零（<code>RN-001</code> → <code>rn-001</code>）。缺失的锚点和带其他编号或名称的锚点
+都会失败，每个标题一行，带文件和行号。找到零个标题是 <code>CEGO</code>，同样失败。</p>
+<p><strong>严重性：<code>block</code></strong>，与上面的行引用不同：没有继承的债务（两个缺失的锚点在同一次改动中补上了），每个
+新标题都由添加它的 PR 写入。</p>
+<p><strong>翻译也被覆盖。</strong> 文件通过 glob 找到：<code>docs/business-rules.md</code>、<code>docs/business-rules/*.md</code>
+（pt-BR 源，ADR 0216），以及 <code>LOCALES_TRADUZIDOS</code>（<code>en</code>、<code>ru</code>、<code>zh-Hans</code>）中每个已翻译 locale 在
+<code>website/i18n/&lt;locale>/docusaurus-plugin-content-docs/current/</code> 下的同样两个路径。一个 locale 的网站
+从翻译后的文件提供 <code>business-rules#rn-305</code>，而之前的一次翻译复制了标题却没有锚点。规则是按标题的，
+因此部分翻译不是问题：未翻译的 RN 回落到 pt-BR 源，而源无论如何都会被核对。</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=the-runbook-procedures-table>runbook 的步骤表<a href=#the-runbook-procedures-table class=hash-link aria-label="runbook 的步骤表的直接链接" title="runbook 的步骤表的直接链接" translate=no>​</a></h3>
+<p>runbook 以其<strong>运维</strong>步骤的表格结尾——<code>procedure | anchor | verification | schedule</code>——说明证明每个
+步骤的是什么以及运行这个证明的是什么（<a class="" href=/brabo/dev/zh-Hans/runbook#procedimentos-e-verificacao>Procedures and how each is verified</a>）。
+它的存在是因为 EP-015 的关闭标准：没有一行的验证为空或写着"见下文"，而存在的证明按计划运行，不靠
+记忆。于 2026-09-25 测量（AT-129），标准所说的那张表并不在仓库中：一份七行的副本在维护者的笔记里，
+而这里有 28 个运维步骤，其中一行指向另一条笔记。一张手写的文件名表格与散文中的数字以同样的方式变老
+——一个 spec 被重命名，一个 workflow 失去了 <code>schedule:</code>，而单元格仍在断言。</p>
+<p><code>generate.mjs</code> 核对它（<code>verificarProcedimentosDoRunbook</code>，逻辑在
+<code>scripts/docs/procedimentos-do-runbook.mjs</code>，在 <code>procedimentos-do-runbook.spec.ts</code> 中经变异证明）。
+对每一行，在以下情况下失败：</p>
 <ul>
-<li class="">a célula <strong>anchor</strong> não tem link <code>(#id)</code>, ou o id não é um <code>{#id}</code>
-explícito num cabeçalho do runbook — o mesmo contrato das âncoras de
-RN: uma seção com título novo não pode quebrar o link;</li>
-<li class="">a célula <strong>verification</strong> está vazia, diz "see below/above", nomeia
-um arquivo que não é rastreado pelo git ou um alvo <code>make</code> que o
-<code>Makefile</code> não tem, ou não nomeia nada conferível e não começa com
-<code>**None**</code> — a declaração explícita de que não existe prova;</li>
-<li class="">um segmento de <strong>schedule</strong> (eles são separados por <code>;</code>) não começa
-com sua classe de gatilho — <code>weekly</code>/<code>daily</code>/<code>monthly</code>, <code>every PR</code>,
-<code>every tag</code> ou <code>manual</code> — ou um workflow que ele cita não existe ou
-não tem esse gatilho no <code>on:</code> lido (<code>schedule:</code>, <code>pull_request</code>,
-<code>push: tags</code>). Um segmento <code>manual</code> não pode citar workflow.</li>
+<li class=""><strong>anchor</strong> 单元格没有 <code>(#id)</code> 链接，或者该 id 不是 runbook 某个标题上的显式 <code>{#id}</code>——与 RN 锚点
+相同的契约：改了标题的小节不能破坏链接；</li>
+<li class=""><strong>verification</strong> 单元格为空、写着 "see below/above"、点名一个不被 git 跟踪的文件或一个 <code>Makefile</code>
+没有的 <code>make</code> 目标，或者没有点名任何可核对的东西且不以 <code>**None**</code> 开头——这是不存在证明的显式声明；</li>
+<li class=""><strong>schedule</strong> 的某个片段（以 <code>;</code> 分隔）不以其触发类别开头——<code>weekly</code>/<code>daily</code>/<code>monthly</code>、<code>every PR</code>、
+<code>every tag</code> 或 <code>manual</code>——或者它引用的 workflow 不存在，或在读取到的 <code>on:</code> 中没有该触发器
+（<code>schedule:</code>、<code>pull_request</code>、<code>push: tags</code>）。<code>manual</code> 片段不能引用 workflow。</li>
 </ul>
-<p>A coluna se chama <code>schedule</code> e ainda aceita <code>every PR</code> e <code>every tag</code> de
-propósito. A pergunta do critério é "roda sem alguém lembrar?", e um
-spec que o <code>ci.yml</code> roda em todo pull request responde que sim;
-chamá-lo de <code>manual</code> seria errar no sentido oposto. O que a checagem
-garante é que a classe escrita é a que o workflow <strong>tem</strong>: <code>weekly</code>
-apontando para um workflow sem <code>schedule:</code> reprova, que é o caso que a
-AT-193 nomeou.</p>
-<p>Seção ausente, tabela ausente, cabeçalhos de coluna mudados ou zero
-linhas é <code>CEGO</code> e reprova.</p>
-<p><strong>Severidade: <code>block</code></strong>, pelo mesmo motivo das âncoras de RN: a tabela
-nasceu com toda linha conferida, então não há dívida herdada, e o que a
-quebrar depois (um spec renomeado, um workflow que perdeu a agenda) é
-culpa do PR que a quebrou, que é também o PR que pode consertá-la.</p>
-<p><strong>Só o runbook da fonte (<code>docs/runbook.md</code>) tem a tabela.</strong> A cópia
-pt-BR antiga dele estava atrás (AT-209) e saiu com o ADR 0216; uma
-tradução futura sob <code>website/i18n/&lt;locale>/</code> cai na regra <code>traducao</code> do
-docmap (<code>warn</code>) e não teria os dez ids explícitos que esta tabela
-acrescentou. Uma segunda cópia da tabela ali, sem conferência, seria
-exatamente a cópia que a tabela existe para substituir.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=the-adr-index-is-grouped-by-theme>O índice de ADR é agrupado por tema<a href=#the-adr-index-is-grouped-by-theme class=hash-link aria-label="O índice de ADR é agrupado por tema的直接链接" title="O índice de ADR é agrupado por tema的直接链接" translate=no>​</a></h3>
-<p>O índice de ADR era agrupado por fase. Quando as fases acabaram, a
-última seção virou o índice: medido em 2026-10-01, 148 das 191 linhas
-moravam sob <code>## Phase 12</code>. O <a class="" href=/brabo/dev/zh-Hans/adr/0202-o-indice-de-adr-por-tema>ADR 0202</a>
-o agrupa por <strong>tema</strong>, e põe o tema <strong>fora</strong> do ADR — um ADR aceito
-nunca é editado, nem para ganhar uma chave <code>tema:</code> no frontmatter.</p>
-<p>O tema mora em <code>docs/adr/temas.yml</code>, ao lado do índice: <code>temas:</code> é a
-lista fechada e ordenada (<code>id</code>, <code>titulo</code>, <code>descricao</code>) e <code>adrs:</code> mapeia
-cada número de ADR para UM tema. O índice é <strong>conferido, não gerado</strong> —
-as descrições de uma linha são curadas e nenhum script as escreve, o
-mesmo motivo que <code>verificarIndiceAdr</code> dá — e cada tema é uma seção
-<code>## &lt;titulo> {#tema-&lt;id>}</code>, na ordem da lista, com as linhas em ordem
-numérica.</p>
-<p><code>generate.mjs</code> o confere (<code>verificarTemasDeAdr</code>, logo depois de
-<code>verificarIndiceAdr</code>; lógica em <code>scripts/docs/temas-de-adr.mjs</code>,
-provada por mutação em <code>temas-de-adr.spec.ts</code>). Ele reprova um arquivo
-de ADR sem tema, um tema no mapa que não está na lista, uma entrada do
-mapa para um ADR que não existe, um tema listado sem ADR, um id ou
-título de tema repetido ou malformado e, no índice, uma seção de tema
-ausente, repetida, com nome errado, fora de ordem ou desconhecida, ou
-uma linha de ADR sob a seção de outro tema, fora de qualquer seção de
-tema, repetida ou fora de ordem numérica. YAML ilegível, lista ou mapa
-vazio, ou um índice sem seção de tema nenhuma (o antigo índice por
-fase) é <code>CEGO</code> e reprova.</p>
-<p><strong>Severidade: <code>block</code></strong>, como a tabela do runbook: nasceu com todo ADR
-classificado, então o que a quebrar depois é um ADR novo cujo PR
-esqueceu a linha dele em <code>temas.yml</code> — o PR que pode consertá-la. As
-traduções do índice moram sob <code>website/i18n/&lt;locale>/</code> e não são
-conferidas; a regra <code>traducao</code> avisa, como sempre.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=the-pieces>As peças<a href=#the-pieces class=hash-link aria-label="As peças的直接链接" title="As peças的直接链接" translate=no>​</a></h2>
+<p>这一列叫 <code>schedule</code> 却仍故意接受 <code>every PR</code> 和 <code>every tag</code>。标准的问题是"没人记着它也会运行吗？"，
+而一个 <code>ci.yml</code> 在每个 pull request 上都运行的 spec 回答是的；把它叫做 <code>manual</code> 会在相反的方向上犯错。
+检查保证的是写下的类别就是 workflow <strong>拥有</strong>的：指向没有 <code>schedule:</code> 的 workflow 的 <code>weekly</code> 会失败，
+这正是 AT-193 点名的情况。</p>
+<p>缺少小节、缺少表格、列标题改变或零行都是 <code>CEGO</code> 并失败。</p>
+<p><strong>严重性：<code>block</code></strong>，原因与 RN 锚点相同：表格诞生时每一行都已核对，因此没有继承的债务，之后破坏它的
+东西（一个被重命名的 spec，一个失去计划的 workflow）是破坏它的 PR 的责任，而那个 PR 也能修复它。</p>
+<p><strong>只有源的 runbook（<code>docs/runbook.md</code>）有这张表。</strong> 它旧的 pt-BR 副本落后了（AT-209），并随 ADR 0216
+移除；<code>website/i18n/&lt;locale>/</code> 下的未来翻译落入 docmap 的 <code>traducao</code> 规则（<code>warn</code>），也不会有这张表
+添加的十个显式 id。在那里放第二份未经核对的表格副本，正是这张表要取代的那种副本。</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=the-adr-index-is-grouped-by-theme>ADR 索引按主题分组<a href=#the-adr-index-is-grouped-by-theme class=hash-link aria-label="ADR 索引按主题分组的直接链接" title="ADR 索引按主题分组的直接链接" translate=no>​</a></h3>
+<p>ADR 索引过去按阶段分组。阶段结束后，最后一节变成了索引本身：于 2026-10-01 测量，191 行中有 148 行
+位于 <code>## Phase 12</code> 之下。<a href=/brabo/dev/zh-Hans/adr/0202-o-indice-de-adr-por-tema target=_blank rel="noopener noreferrer" class="">ADR 0202</a> 把它按<strong>主题</strong>分组，并把
+主题放在 ADR <strong>之外</strong>——已接受的 ADR 永不编辑，即使是为了在 frontmatter 中加一个 <code>tema:</code> 键。</p>
+<p>主题位于 <code>docs/adr/temas.yml</code>，挨着索引：<code>temas:</code> 是封闭且有序的列表（<code>id</code>、<code>titulo</code>、<code>descricao</code>），
+<code>adrs:</code> 把每个 ADR 编号映射到<strong>一个</strong>主题。索引是<strong>核对的，不是生成的</strong>——单行描述是精心编写的，
+没有脚本写它们，这与 <code>verificarIndiceAdr</code> 给出的原因相同——每个主题是一个 <code>## &lt;titulo> {#tema-&lt;id>}</code>
+小节，按列表顺序，各行按编号排序。</p>
+<p><code>generate.mjs</code> 核对它（<code>verificarTemasDeAdr</code>，紧接在 <code>verificarIndiceAdr</code> 之后；逻辑在
+<code>scripts/docs/temas-de-adr.mjs</code>，在 <code>temas-de-adr.spec.ts</code> 中经变异证明）。它在以下情况失败：没有主题
+的 ADR 文件、映射中不在列表里的主题、映射中指向不存在的 ADR 的条目、没有 ADR 的列出主题、重复或格式
+错误的主题 id 或标题，以及在索引中：缺失、重复、名称错误、顺序错误或未知的主题小节，或者一行 ADR 位于
+另一个主题的小节下、在任何主题小节之外、重复或不按编号排序。不可读的 YAML、空的列表或映射，或一个完全
+没有主题小节的索引（旧的按阶段索引）是 <code>CEGO</code> 并失败。</p>
+<p><strong>严重性：<code>block</code></strong>，与 runbook 表格一样：它诞生时每个 ADR 都已分类，因此之后破坏它的是一个新 ADR，
+其 PR 忘了在 <code>temas.yml</code> 中加它的那一行——也就是能修复它的 PR。索引的翻译位于
+<code>website/i18n/&lt;locale>/</code> 之下，不被核对；<code>traducao</code> 规则照常提醒。</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=the-pieces>部件<a href=#the-pieces class=hash-link aria-label=部件的直接链接 title=部件的直接链接 translate=no>​</a></h2>
 <!-- -->
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=docsdocmapyml--the-map><code>docs/.docmap.yml</code> — o mapa<a href=#docsdocmapyml--the-map class=hash-link aria-label=docsdocmapyml--the-map的直接链接 title=docsdocmapyml--the-map的直接链接 translate=no>​</a></h3>
-<p>Liga caminhos de código aos documentos que dependem deles. É a única
-fonte que diz "quem mexe nisto precisa revisar aquilo".</p>
-<p>Duas severidades: <code>block</code> reprova o PR, <code>warn</code> só comenta. E um
-atributo <code>generated: true</code>, que marca os documentos que saem do gerador.</p>
-<p>Uma regra que cobra o que não faz sentido ensina as pessoas a recorrer
-à saída de emergência por reflexo. É por isso que <code>politica-de-branches</code>
-vigia uma <strong>lista de permitidos</strong> em <code>scripts/ci/</code> — os scripts que <em>são</em>
-a política de branches e os specs deles — em vez de <code>scripts/ci/**</code>
-menos uma lista de exclusões mantida à mão, na qual todo spec novo de
-alcance do repositório inteiro naquela pasta tinha de entrar (onze até
-a AT-206). A lista de permitidos não abre mão de falhar fechada:
-<code>scripts/docs/politica-de-branches.spec.ts</code> deriva o conjunto do
-repositório — todo arquivo de <code>scripts/ci/</code> cujo docblock de abertura
-cita <code>branching-policy.md</code>, mais o spec dele — e reprova se a regra
-divergir. Um script novo de política declara sua fonte no cabeçalho,
-como os outros, e o spec faz o resto.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=docmapmjs--validates-the-map><code>docmap.mjs</code> — valida o mapa<a href=#docmapmjs--validates-the-map class=hash-link aria-label=docmapmjs--validates-the-map的直接链接 title=docmapmjs--validates-the-map的直接链接 translate=no>​</a></h3>
-<p>Roda antes de todo o resto, porque um mapa quebrado faz o resto mentir.
-Reprova se:</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=docsdocmapyml--the-map><code>docs/.docmap.yml</code>——映射<a href=#docsdocmapyml--the-map class=hash-link aria-label=docsdocmapyml--the-map的直接链接 title=docsdocmapyml--the-map的直接链接 translate=no>​</a></h3>
+<p>把代码路径与依赖它们的文档联系起来。它是唯一说明"改动这个的人需要审阅那个"的来源。</p>
+<p>两种严重性：<code>block</code> 让 PR 失败，<code>warn</code> 只评论。还有一个属性 <code>generated: true</code>，标记从生成器产出的
+文档。</p>
+<p>一条要求无意义之事的规则会教人们条件反射地使用紧急出口。这就是为什么 <code>politica-de-branches</code> 监视
+<code>scripts/ci/</code> 中的一个<strong>允许列表</strong>——那些<em>就是</em>分支策略的脚本及其 spec——而不是 <code>scripts/ci/**</code> 减去
+一个手工维护的排除列表，在那个列表中，该文件夹里每个新的全仓库范围的 spec 都必须加入（到 AT-206 时
+已有十一个）。允许列表并没有放弃失败即关闭：<code>scripts/docs/politica-de-branches.spec.ts</code> 从仓库推导出
+这个集合——<code>scripts/ci/</code> 中开头文档块引用了 <code>branching-policy.md</code> 的每个文件，加上它的 spec——并在规则
+偏离时失败。新的策略脚本像其他脚本一样在文件头中声明其来源，spec 负责其余的事。</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=docmapmjs--validates-the-map><code>docmap.mjs</code>——验证映射<a href=#docmapmjs--validates-the-map class=hash-link aria-label=docmapmjs--validates-the-map的直接链接 title=docmapmjs--validates-the-map的直接链接 translate=no>​</a></h3>
+<p>在其他一切之前运行，因为坏掉的映射会让其余部分撒谎。在以下情况下失败：</p>
 <ul>
-<li class=""><strong>um glob não casa com arquivo nenhum</strong> — uma regra morta. Ela nunca
-dispara, e dá a impressão de uma cobertura que não existe. É o defeito
-mais silencioso que um docmap pode ter, e foi encontrado em 8 globs
-quando o validador entrou.</li>
-<li class="">um documento para o qual o mapa aponta não existe</li>
-<li class="">há id duplicado ou <code>severity</code> inválida</li>
+<li class=""><strong>一个 glob 不匹配任何文件</strong>——一条死规则。它永远不会触发，并给人一种并不存在的覆盖的印象。这是
+docmap 可能有的最安静的缺陷，验证器加入时在 8 个 glob 中发现了它。</li>
+<li class="">映射指向的文档不存在</li>
+<li class="">有重复的 id 或无效的 <code>severity</code></li>
 </ul>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=generatemjs--generates-and-verifies><code>generate.mjs</code> — gera e verifica<a href=#generatemjs--generates-and-verifies class=hash-link aria-label=generatemjs--generates-and-verifies的直接链接 title=generatemjs--generates-and-verifies的直接链接 translate=no>​</a></h3>
-<p>Dois modos de saída:</p>
-<p><strong>Arquivo inteiro</strong> — <code>docs/reference/scripts.md</code>. Não há prosa a
-preservar: a lista de comandos é o conteúdo. Ela vem do <code>package.json</code>
-de cada pacote e dos alvos anotados do <code>Makefile</code>. A lista de pacotes é
-declarada em <code>gerarScripts</code>, incluindo os dois pacotes fora do
-workspace (<code>website/</code>, <code>e2e/</code>, rodados com <code>--dir</code>), e um <code>package.json</code>
-ausente ou que não parseia reprova a geração nomeando-o — antes ele
-descartava o pacote em silêncio (AT-224).</p>
-<p><strong>Bloco marcado</strong> — o trecho entre <code>&lt;!-- BEGIN:GENERATED:&lt;id> --></code> e
-<code>&lt;!-- END:GENERATED:&lt;id> --></code> dentro de um arquivo escrito à mão. É o
-caso de <code>configuration.md</code> e <code>events.md</code>: ali, a prosa ("o que quebra
-quando esta variável está errada") vale muito mais que a lista, mas a
-<strong>lista</strong> precisa estar completa. O bloco é o inventário; o texto em
-volta é a explicação.</p>
-<p>O inventário marca com ⚠️ o que aparece no código e <strong>não</strong> tem
-descrição na prosa. Foi assim que <code>tool.result</code> e <code>agent.response</code> —
-dois tipos de evento reais — apareceram depois de terem ficado de fora
-do primeiro rascunho.</p>
-<p><strong>O que o inventário de ambiente pega, medido (AT-124, 2026-09-25).</strong>
-As fontes e seus globs moram em <code>scripts/docs/fontes-de-env.mjs</code>,
-provadas contra a árvore real por <code>fontes-de-env.spec.ts</code>. Uma mutação
-por fonte — um <code>process.env.X</code> novo num arquivo direto sob <code>e2e/</code>,
-aninhado em <code>e2e/suporte/</code>, direto sob <code>apps/api/scripts/</code> e aninhado
-um nível abaixo dele, cada um com <code>git add</code> — fez o <code>--check</code> reprovar
-com <code>DESATUAL</code> em <code>configuration.md</code> nos quatro. Um buraco foi achado e
-fechado: o filtro <code>.spec.</code>, certo para fontes onde um spec é teste
-unitário ao lado do código, também descartava <code>e2e/testes/*.spec.ts</code> —
-os próprios testes Playwright, onde uma variável nova de <code>e2e/</code> tem mais
-chance de nascer — e essa mutação passava verde. Um limite fica
-declarado: o inventário lê só arquivos <strong>versionados</strong> (<code>git ls-files</code>),
-então um arquivo não rastreado é invisível até o <code>git add</code>.</p>
-<p><strong><code>deploy/k8s/*.sh</code> virou fonte (AT-212, 2026-09-28).</strong> O bootstrap e
-as provas de propriedade leem vinte e poucas variáveis do ambiente —
-nome do cluster, namespace, a conta do smoke, os tetos de cada prova — e
-nenhuma estava no inventário. Elas são fonte <code>ferramenta</code>, casadas pela
-<strong>expansão com default</strong> do shell (<code>${X:-…}</code>, <code>${X:=…}</code>, <code>${X:?…}</code>) e só
-por ela: um <code>${X}</code> puro é quase sempre variável do próprio script.
-Mutação: um <code>${X:-x}</code> novo em <code>deploy/k8s/validate.sh</code>, no stage, fez o
-<code>--check</code> reprovar com <code>DESATUAL</code> e uma linha <code>SEM DESC.</code> nomeando a
-variável e o arquivo.</p>
-<p><strong>O ⚠️ de ambiente é portão (AT-211, 2026-09-27).</strong> Até então o que
-reprovava era só o <strong>bloco desatualizado</strong>: assim que o <code>docs:generate</code>
-o reescrevia, a variável ficava ali com ⚠️ e o <code>--check</code> passava —
-<code>HUGGINGFACE_API_TOKEN</code> e <code>HUGGINGFACE_HUB_URL</code> ficaram assim por meses.
-Por decisão do mantenedor, o <code>--check</code> agora reprova <strong>qualquer</strong> ⚠️ no
-inventário de ambiente, para as <strong>duas</strong> espécies de fonte (<code>produto</code> e
-<code>ferramenta</code>), mesmo com o bloco em dia. A falha nomeia a variável, o
-arquivo que a lê e a seção de <code>configuration.md</code> onde a descrição vai
-(linhas <code>SEM DESC.</code>). A regra mora em <code>scripts/docs/inventario-de-env.mjs</code>
-e é provada por mutação em <code>inventario-de-env.spec.ts</code>: uma variável
-nova sem descrição reprova, a mesma com descrição passa.</p>
-<p>Um <code>**TODO(humano):**</code> na linha que cita a variável <strong>conta como
-descrição</strong> e não reprova: a regra de docs é "nunca inventar; sem
-informação, TODO(humano)", e um portão que reprovasse o TODO empurraria
-quem não sabe o que a variável faz a inventar uma frase para ficar
-verde. O TODO é uma lacuna <strong>declarada</strong>, com a pergunta escrita onde a
-resposta vai; o ⚠️ é uma lacuna <strong>silenciosa</strong>. O <code>--check</code> ainda lista
-as variáveis descritas só por um TODO, numa linha <code>TODO</code>, sem reprovar.
-O inventário de eventos em <code>events.md</code> mantém seu ⚠️ como lacuna
-visível — a decisão cobriu só o inventário de ambiente.</p>
-<p><code>--check</code> não escreve nada e reprova se qualquer coisa fosse ficar
-diferente. É o modo do CI.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=driftmjs--enforces-it-in-the-pr><code>drift.mjs</code> — cobra no PR<a href=#driftmjs--enforces-it-in-the-pr class=hash-link aria-label=driftmjs--enforces-it-in-the-pr的直接链接 title=driftmjs--enforces-it-in-the-pr的直接链接 translate=no>​</a></h3>
-<p>Cruza <code>git diff --name-only &lt;base>...HEAD</code> com o mapa. Para toda regra
-disparada cujo documento não foi tocado: <code>block</code> reprova, <code>warn</code>
-comenta.</p>
-<p>Num PR do Dependabot cujo diff é só troca de pin de action, um passo
-logo antes do drift (<code>scripts/ci/dependabot-justifica-pin.ts</code>) escreve a
-linha <code>docs-not-needed:</code> no corpo, no mesmo job, para escrever e ler
-numa execução só. O workflow escuta <code>edited</code>, e <code>@dependabot rebase</code>
-emite <code>synchronize</code> e <code>edited</code> juntos; o <code>concurrency</code> cancela um, então
-a execução que sobrevive pode ser a do <code>edited</code>. Por isso o passo também
-avalia no <code>edited</code> <strong>quando quem editou é o bot</strong> (AT-100), e nunca
-quando é um humano (a remoção da linha por ele vence). Não tem como
-entrar em laço: edições de corpo feitas com o token do workflow não
-disparam <code>edited</code>. A falha fica fechada: se a escrita falha, o drift lê
-o corpo do evento e o PR continua bloqueado.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=auditmjs--the-monthly-audit><code>audit.mjs</code> — a auditoria mensal<a href=#auditmjs--the-monthly-audit class=hash-link aria-label=auditmjs--the-monthly-audit的直接链接 title=auditmjs--the-monthly-audit的直接链接 translate=no>​</a></h3>
-<p>A checagem de drift pega uma doc que ficou <strong>errada</strong> num PR. A
-auditoria pega uma doc que ficou <strong>velha</strong> sem ninguém mexer nela — o
-que é mais difícil de notar. Ela relata:</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=generatemjs--generates-and-verifies><code>generate.mjs</code>——生成并验证<a href=#generatemjs--generates-and-verifies class=hash-link aria-label=generatemjs--generates-and-verifies的直接链接 title=generatemjs--generates-and-verifies的直接链接 translate=no>​</a></h3>
+<p>两种输出模式：</p>
+<p><strong>整个文件</strong>——<code>docs/reference/scripts.md</code>。没有需要保留的散文：命令列表就是内容。它来自每个包的
+<code>package.json</code> 和 <code>Makefile</code> 中带注释的目标。包列表在 <code>gerarScripts</code> 中声明，包括 workspace 之外的
+两个包（<code>website/</code>、<code>e2e/</code>，用 <code>--dir</code> 运行），缺失或无法解析的 <code>package.json</code> 会让生成失败并点名
+它——以前它会悄悄丢弃这个包（AT-224）。</p>
+<p><strong>标记块</strong>——手写文件中 <code>&lt;!-- BEGIN:GENERATED:&lt;id> --></code> 与 <code>&lt;!-- END:GENERATED:&lt;id> --></code> 之间的
+片段。这是 <code>configuration.md</code> 和 <code>events.md</code> 的情况：在那里，散文（"这个变量错了时什么会坏"）比列表
+价值高得多，但<strong>列表</strong>必须完整。块是清单；周围的文本
+是解释。</p>
+<p>清单用 ⚠️ 标记出现在代码中却<strong>没有</strong>散文描述的东西。<code>tool.result</code> 和 <code>agent.response</code>——两种真实的
+事件类型——就是这样在被第一稿遗漏之后出现的。</p>
+<p><strong>环境清单能捕获什么，已测量（AT-124，2026-09-25）。</strong> 来源及其 glob 位于
+<code>scripts/docs/fontes-de-env.mjs</code>，由 <code>fontes-de-env.spec.ts</code> 对照真实的树证明。每个来源一次变异——在
+直接位于 <code>e2e/</code> 下、嵌套在 <code>e2e/suporte/</code> 中、直接位于 <code>apps/api/scripts/</code> 下以及在它下面嵌套一层的
+文件中加一个新的 <code>process.env.X</code>，每个都 <code>git add</code>——在四种情况下都让 <code>--check</code> 以 <code>configuration.md</code>
+中的 <code>DESATUAL</code> 失败。发现并关闭了一个漏洞：<code>.spec.</code> 过滤器对于 spec 是代码旁单元测试的来源是对的，
+但它也丢弃了 <code>e2e/testes/*.spec.ts</code>——Playwright 测试本身，<code>e2e/</code> 的新变量最可能在那里诞生——而那个
+变异是绿的。一个限制被声明：清单只读取<strong>版本化</strong>的文件（<code>git ls-files</code>），因此未跟踪的文件在
+<code>git add</code> 之前是不可见的。</p>
+<p><strong><code>deploy/k8s/*.sh</code> 成为来源（AT-212，2026-09-28）。</strong> bootstrap 和属性证明从环境中读取二十多个变量——
+集群名称、命名空间、smoke 账户、每个证明的上限——没有一个在清单中。它们是 <code>ferramenta</code> 来源，通过 shell
+的<strong>带默认值的展开</strong>（<code>${X:-…}</code>、<code>${X:=…}</code>、<code>${X:?…}</code>）匹配，并且只通过它：单纯的 <code>${X}</code> 几乎总是脚本
+自己的变量。变异：在 <code>deploy/k8s/validate.sh</code> 中暂存一个新的 <code>${X:-x}</code>，让 <code>--check</code> 以 <code>DESATUAL</code> 和
+一行点名变量和文件的 <code>SEM DESC.</code> 失败。</p>
+<p><strong>环境的 ⚠️ 是闸门（AT-211，2026-09-27）。</strong> 在那之前失败的只是<strong>过时的块</strong>：一旦 <code>docs:generate</code>
+重写了它，变量就带着 ⚠️ 留在那里，<code>--check</code> 通过——<code>HUGGINGFACE_API_TOKEN</code> 和 <code>HUGGINGFACE_HUB_URL</code>
+就这样过了好几个月。按维护者的决定，<code>--check</code> 现在对环境清单中的<strong>任何</strong> ⚠️ 失败，针对<strong>两种</strong>来源
+（<code>produto</code> 和 <code>ferramenta</code>），即使块是最新的。失败会点名变量、读取它的文件以及描述应放在
+<code>configuration.md</code> 的哪个小节（<code>SEM DESC.</code> 行）。规则位于 <code>scripts/docs/inventario-de-env.mjs</code>，在
+<code>inventario-de-env.spec.ts</code> 中经变异证明：没有描述的新变量失败，带描述的同一变量通过。</p>
+<p>在引用该变量的那一行中的 <code>**TODO(humano):**</code> <strong>算作描述</strong>，不会失败：文档规则是"绝不编造；没有信息，
+就 TODO(humano)"，而一个让 TODO 失败的闸门会把不知道变量做什么的人推向编一句话来变绿。TODO 是一个
+<strong>已声明</strong>的缺口，问题写在答案应该在的地方；⚠️ 是一个<strong>沉默</strong>的缺口。<code>--check</code> 仍会在一行 <code>TODO</code> 中
+列出只由 TODO 描述的变量，而不失败。<code>events.md</code> 中的事件清单保留它的 ⚠️ 作为可见的缺口——这个决定只
+涵盖环境清单。</p>
+<p><code>--check</code> 不写任何东西，如果任何东西会变得不同就失败。这是 CI 的模式。</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=driftmjs--enforces-it-in-the-pr><code>drift.mjs</code>——在 PR 中强制执行<a href=#driftmjs--enforces-it-in-the-pr class=hash-link aria-label=driftmjs--enforces-it-in-the-pr的直接链接 title=driftmjs--enforces-it-in-the-pr的直接链接 translate=no>​</a></h3>
+<p>把 <code>git diff --name-only &lt;base>...HEAD</code> 与映射交叉。对于每条被触发而其文档未被触及的规则：<code>block</code>
+失败，<code>warn</code> 评论。</p>
+<p>在一个 diff 只是 action 固定版本更换的 Dependabot PR 中，漂移检查之前的一个步骤
+（<code>scripts/ci/dependabot-justifica-pin.ts</code>）在同一个 job 中把 <code>docs-not-needed:</code> 这一行写入正文，以便
+在一次执行中写入和读取。workflow 监听 <code>edited</code>，而 <code>@dependabot rebase</code> 同时发出 <code>synchronize</code> 和
+<code>edited</code>；<code>concurrency</code> 取消其中一个，因此幸存的执行可能是 <code>edited</code> 的那个。因此该步骤也在<strong>编辑者是
+机器人时</strong>的 <code>edited</code> 上评估（AT-100），而在编辑者是人类时绝不评估（他删除这一行会胜出）。它不会进入
+循环：用 workflow 的 token 做的正文编辑不会触发 <code>edited</code>。失败保持关闭：如果写入失败，漂移检查读取
+事件的正文，PR 仍被阻止。</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=auditmjs--the-monthly-audit><code>audit.mjs</code>——每月审计<a href=#auditmjs--the-monthly-audit class=hash-link aria-label=auditmjs--the-monthly-audit的直接链接 title=auditmjs--the-monthly-audit的直接链接 translate=no>​</a></h3>
+<p>漂移检查捕获在 PR 中变<strong>错</strong>的文档。审计捕获在无人改动的情况下变<strong>旧</strong>的文档——这更难察觉。它报告：</p>
 <ul>
-<li class="">páginas sem alteração há meses cujo código correspondente mudou desde
-então</li>
-<li class="">itens <code>TODO(human)</code> pendentes</li>
-<li class="">referências <code>arquivo:linha</code> que não resolvem mais</li>
-<li class="">ADRs em status <code>proposed</code> há mais de 60 dias</li>
+<li class="">几个月没有改动、而对应代码此后已改变的页面</li>
+<li class="">待处理的 <code>TODO(human)</code> 条目</li>
+<li class="">不再能解析的 <code>arquivo:linha</code> 引用</li>
+<li class="">处于 <code>proposed</code> 状态超过 60 天的 ADR</li>
 </ul>
-<p>Sempre na <strong>mesma</strong> issue, atualizada no lugar. Uma issue nova todo mês
-vira spam, e spam é desligado.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=the-site-build>O build do site<a href=#the-site-build class=hash-link aria-label="O build do site的直接链接" title="O build do site的直接链接" translate=no>​</a></h3>
-<p><code>onBrokenLinks</code>, <code>onBrokenAnchors</code> e <code>onBrokenMarkdownLinks</code> estão em
-<code>throw</code>. Mover um arquivo sem corrigir quem aponta para ele quebra o CI
-em vez de virar um 404 em produção. É o mecanismo mais barato do
-conjunto inteiro.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=a-new-page-needs-to-be-added-to-sidebarsts-by-hand>Página nova precisa entrar à mão no <code>sidebars.ts</code><a href=#a-new-page-needs-to-be-added-to-sidebarsts-by-hand class=hash-link aria-label=a-new-page-needs-to-be-added-to-sidebarsts-by-hand的直接链接 title=a-new-page-needs-to-be-added-to-sidebarsts-by-hand的直接链接 translate=no>​</a></h3>
-<p>O conteúdo Markdown mora em <code>docs/</code>, mas o <strong>roteamento</strong> mora em
-<code>website/sidebars.ts</code> — e as seções dele enumeram os itens um a um, em
-vez de varrer o diretório. Criar um arquivo em <code>docs/</code> sem acrescentá-lo
-lá produz uma página que existe, é servida por URL direta e <strong>não
-aparece na navegação</strong>.</p>
-<p>O build <strong>não</strong> reprova por isso: uma página órfã não é um link
-quebrado. É uma conferência visual, e é o único passo do mecanismo sem
-rede de segurança — depois do <code>pnpm docs:build</code>, abra a barra lateral e
-confirme que a página está lá.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=api-render-checkmjs--a-green-build-isnt-a-page-that-renders><code>api-render-check.mjs</code> — build verde não é página que renderiza<a href=#api-render-checkmjs--a-green-build-isnt-a-page-that-renders class=hash-link aria-label=api-render-checkmjs--a-green-build-isnt-a-page-that-renders的直接链接 title=api-render-checkmjs--a-green-build-isnt-a-page-that-renders的直接链接 translate=no>​</a></h3>
-<p>Esta peça existe por causa de uma lição cara: <strong>as 117 páginas de
-operação da referência da API foram ao ar mortas nas releases <code>v1.0.0</code>
-e <code>v1.0.1</code></strong>, e nenhuma checagem pegou.</p>
-<p>A configuração do Docusaurus não declarava <code>docItemComponent: '@theme/ApiItem'</code>, então o Docusaurus usou o <code>@theme/DocItem</code> padrão.
-<code>ApiItem</code> é o único lugar do <code>docusaurus-theme-openapi-docs</code> que monta o
-<code>&lt;Provider></code> do redux, e o <code>@theme/ApiExplorer/MethodEndpoint</code> que cada
-<code>.api.mdx</code> importa lê esse store com <code>useSelector</code>. Sem o invólucro, o
-contexto é nulo — e o error boundary trocava a página inteira por
-<em>"This page crashed."</em></p>
-<p>O modo de falha é o que importa aqui, porque ele derrota todas as outras
-peças deste mecanismo:</p>
+<p>始终在<strong>同一个</strong> issue 中，原地更新。每个月一个新 issue 会变成垃圾信息，而垃圾信息会被关掉。</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=the-site-build>网站构建<a href=#the-site-build class=hash-link aria-label=网站构建的直接链接 title=网站构建的直接链接 translate=no>​</a></h3>
+<p><code>onBrokenLinks</code>、<code>onBrokenAnchors</code> 和 <code>onBrokenMarkdownLinks</code> 设为 <code>throw</code>。移动一个文件而不修正指向它
+的东西会让 CI 失败，而不是变成生产中的 404。这是整套机制中最便宜的一个。</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=a-new-page-needs-to-be-added-to-sidebarsts-by-hand>新页面需要手工加入 <code>sidebars.ts</code><a href=#a-new-page-needs-to-be-added-to-sidebarsts-by-hand class=hash-link aria-label=a-new-page-needs-to-be-added-to-sidebarsts-by-hand的直接链接 title=a-new-page-needs-to-be-added-to-sidebarsts-by-hand的直接链接 translate=no>​</a></h3>
+<p>Markdown 内容在 <code>docs/</code> 中，但<strong>路由</strong>在 <code>website/sidebars.ts</code> 中——它的各节逐一列举条目，而不是扫描
+目录。在 <code>docs/</code> 中创建一个文件而不在那里加入它，会产生一个存在的、可通过直接 URL 访问却<strong>不出现在
+导航中</strong>的页面。</p>
+<p>构建<strong>不会</strong>因此失败：孤立页面不是坏链接。这是一项目视检查，也是机制中唯一没有安全网的步骤——在
+<code>pnpm docs:build</code> 之后，打开侧边栏确认页面在那里。</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=api-render-checkmjs--a-green-build-isnt-a-page-that-renders><code>api-render-check.mjs</code>——绿色的构建不等于能渲染的页面<a href=#api-render-checkmjs--a-green-build-isnt-a-page-that-renders class=hash-link aria-label=api-render-checkmjs--a-green-build-isnt-a-page-that-renders的直接链接 title=api-render-checkmjs--a-green-build-isnt-a-page-that-renders的直接链接 translate=no>​</a></h3>
+<p>这个部件的存在源于一个昂贵的教训：<strong>API 参考的 117 个操作页面在 <code>v1.0.0</code> 和 <code>v1.0.1</code> 版本中以死掉的
+状态上线</strong>，而没有任何检查捕获到。</p>
+<p>Docusaurus 配置没有声明 <code>docItemComponent: '@theme/ApiItem'</code>，因此 Docusaurus 使用了默认的 <code>@theme/DocItem</code>。<code>ApiItem</code> 是
+<code>docusaurus-theme-openapi-docs</code> 中唯一挂载 redux <code>&lt;Provider></code> 的地方，而每个 <code>.api.mdx</code> 导入的
+<code>@theme/ApiExplorer/MethodEndpoint</code> 用 <code>useSelector</code> 读取这个 store。没有这层包装，上下文为空——错误
+边界把整个页面换成了 <em>"This page crashed."</em></p>
+<p>这里重要的是失败模式，因为它击败了这个机制的所有其他部件：</p>
 
 
 
@@ -605,116 +395,71 @@ peças deste mecanismo:</p>
 
 
 
-<table><thead><tr><th>etapa<th>resultado<tbody><tr><td>MDX compila<td>✅ os componentes do tema existem e resolvem<tr><td>SSR renderiza<td>✅ o HTML servido tem o conteúdo da rota<tr><td><code>pnpm docs:build</code><td>✅ <strong>verde</strong><tr><td>hidratação no navegador<td>❌ a página é apagada</table>
-<p>Em outras palavras: <strong>"o build passou" nunca foi prova de que a página
-funciona.</strong></p>
-<p>Desde o ADR 0206 esse plugin saiu: a referência é <strong>uma página Redoc</strong>
-(redocusaurus, renderizada no servidor) em <code>/reference/api/</code>, e não há
-<code>ApiItem</code> para esquecer. A lição fica, então a guarda fica também:
-<code>api-render-check.mjs</code> roda depois do <code>docs:build</code> e afirma, nos dois
-locales, que <code>reference/api.html</code> existe, carrega o <code>info.title</code> do spec
-e contém uma seção renderizada no servidor por operação de
-<code>docs/reference/openapi.json</code> (o <code>data-section-id=tag/&lt;tag>/operation/&lt;id></code>
-do Redoc).</p>
-<p>Ela pega a página sumindo, renderizando vazia ou perdendo operações —
-não uma falha de hidratação, que exigiria um navegador headless.</p>
-<p>O mesmo episódio produziu a regra <code>site-e-publicacao</code> do mapa:
-<code>website/**</code> não era coberto por regra nenhuma, e mudar a configuração
-do site não cobrava documentação.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=four-locales-with-pt-br-as-the-source-adr-0216>Quatro locales, com pt-BR como fonte (ADR 0216)<a href=#four-locales-with-pt-br-as-the-source-adr-0216 class=hash-link aria-label="Quatro locales, com pt-BR como fonte (ADR 0216)的直接链接" title="Quatro locales, com pt-BR como fonte (ADR 0216)的直接链接" translate=no>​</a></h3>
-<p><code>docs/</code> é a árvore <strong>pt-BR</strong>, a fonte e o locale padrão
-(<code>defaultLocale: 'pt-BR'</code>, servido na raiz de cada ambiente). Os locales
-traduzidos são <code>en</code>, <code>ru</code> e <code>zh-Hans</code>, sob
-<code>website/i18n/&lt;locale>/docusaurus-plugin-content-docs/current/</code>, com os
-rótulos do tema em <code>website/i18n/&lt;locale>/docusaurus-theme-classic/</code> e
-os rótulos da barra lateral em
-<code>.../docusaurus-plugin-content-docs/current.json</code>. Uma página sem
-tradução num locale é servida a partir da fonte pt-BR no mesmo slug. A
-busca local indexa <code>pt</code>, <code>en</code>, <code>ru</code> e <code>zh</code>. Páginas cuja cópia pt-BR
-antiga estava desatualizada ficam em <code>docs/</code> no idioma em que estão até
-o lote delas.</p>
-<p>O site em inglês saiu da raiz para <code>/brabo/&lt;environment>/en/…</code>, e links
-antigos para <code>/brabo/&lt;environment>/pt-BR/…</code> são reescritos pelo
-<code>404.html</code> da raiz (<code>scripts/docs/landing.mjs</code>) para
-<code>/brabo/&lt;environment>/…</code>, no mesmo molde de <code>/main/</code> → <code>/prd/</code> (ADR
-0073).</p>
-<p>A regra <code>traducao</code> do docmap (era <code>traducao-pt-br</code>) vigia a fonte e
-aponta para <code>website/i18n/</code>. Ela é <code>warn</code> e nunca <code>block</code>: exigir
-tradução em todo PR de doc custaria três traduções por mudança.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=translation-parity-is-generated-and-the-page-says-when-it-is-behind-at-550>A paridade de tradução é gerada, e a página diz quando está atrás (AT-550)<a href=#translation-parity-is-generated-and-the-page-says-when-it-is-behind-at-550 class=hash-link aria-label="A paridade de tradução é gerada, e a página diz quando está atrás (AT-550)的直接链接" title="A paridade de tradução é gerada, e a página diz quando está atrás (AT-550)的直接链接" translate=no>​</a></h3>
-<p>O que segura o atraso é medição, não o docmap.
-<code>scripts/docs/paridade-de-traducao.mjs</code> (provado por mutação no spec ao
-lado) roda dentro do <code>pnpm docs:generate</code> e escreve dois arquivos:
-<code>docs/reference/paridade-de-traducao.md</code> (<code>generated: true</code>) e
-<code>website/src/data/traducao.json</code>. Por locale ele conta páginas e
-caracteres traduzidos sobre a fonte (<code>docs/</code> menos <code>docs/reference/**</code>),
-e divide as páginas traduzidas em <strong>em dia</strong>, <strong>desatualizadas</strong> e <strong>sem
-proveniência</strong>. A proveniência é o <code>traducao_de: &lt;SHA></code> no frontmatter
-da página traduzida, o último commit da fonte que ela traduz. Uma página
-está desatualizada quando a fonte tem um commit com COMMIT DATE
-posterior a esse SHA, quando a fonte tem alterações não commitadas, ou
-quando o SHA não existe. Ele nunca usa o relógio, então o <code>--check</code> dá a
-mesma resposta antes e depois do commit que toca a fonte. Para a UI ele
-compara as chaves de cada namespace em <code>apps/web/src/locales/&lt;l>/</code> com o
-pt-BR, e exige toda forma de plural que o <code>Intl.PluralRules</code> dá àquele
-locale. O <code>--check</code> reprova quando qualquer um dos dois arquivos está
-desatualizado.</p>
-<p>A faixa é um swizzle de wrap de <code>@theme/DocItem/Content</code>
-(<code>website/src/theme/DocItem/Content/index.tsx</code>). Fora do pt-BR, uma
-página cujo <code>metadata.source</code> está sob <code>@site/docs/</code> é o fallback pt-BR
-e diz isso; uma página traduzida que o <code>traducao.json</code> marca como
-desatualizada mostra a data da tradução e diz que o original mudou. Os
-textos moram no <code>code.json</code> de cada locale.
-<code>scripts/docs/faixa-de-traducao-check.mjs</code> roda depois do
-<code>pnpm docs:build</code> e confere o HTML estático: uma página de fallback tem a
-faixa (a amostra vem do primeiro locale, <code>en</code>, <code>ru</code> ou <code>zh-Hans</code>, que ainda
-tenha página sem tradução; com todos completos não há fallback a conferir),
-enquanto a mesma página na raiz e uma página traduzida para <code>en</code> que não está
-desatualizada não têm. As regras para quem
-traduz estão em <a class="" href=/brabo/dev/zh-Hans/explanation/localizacao>Localização</a>.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=links-do-localemjs--a-rewritten-link-skips-the-broken-link-check><code>links-do-locale.mjs</code> — link reescrito escapa da checagem de link quebrado<a href=#links-do-localemjs--a-rewritten-link-skips-the-broken-link-check class=hash-link aria-label=links-do-localemjs--a-rewritten-link-skips-the-broken-link-check的直接链接 title=links-do-localemjs--a-rewritten-link-skips-the-broken-link-check的直接链接 translate=no>​</a></h3>
-<p>O hook <code>markdown.hooks.onBrokenMarkdownLinks</code> em
-<code>website/docusaurus.config.ts</code> reescreve links que quebram só por causa
-de uma lacuna de tradução conhecida (<code>reference/</code>, <code>adr/</code>,
-<code>explanation/</code>) para <code>pathname://</code>. Essa é a saída de emergência oficial
-do Docusaurus, e escapar é o objetivo: <strong>um link <code>pathname://</code> nunca
-mais é conferido</strong>, então uma reescrita errada não consegue reprovar o
-build.</p>
-<p>Uma reprovou, para o site pt-BR inteiro (AT-221). A reescrita devolvia
-<code>pathname:///pt-BR/&lt;slug></code>, mas <code>pathname://</code> não é um caminho absoluto
-no domínio — o <code>&lt;Link></code> o passa por <code>useBaseUrl</code>, e o baseUrl do build
-pt-BR já é <code>/brabo/prd/pt-BR/</code>. Todo link reescrito saía como
-<code>/brabo/prd/pt-BR/pt-BR/...</code>: 441 hrefs em 56 páginas, todos 404, com o
-<code>docs:build</code> verde.</p>
-<p>A reescrita agora mora em <code>scripts/docs/links-do-locale.mjs</code> como
-função pura com spec, e devolve o slug puro — o locale vem do baseUrl
-de qualquer locale que esteja compilando, e a página de destino existe
-lá (traduzida, ou servida por fallback no mesmo slug). O mesmo módulo,
-rodado depois do <code>docs:build</code> no <code>docs-check.yml</code>, varre o HTML gerado
-e reprova qualquer <code>href</code> com prefixo de locale duplicado. Um locale
-novo entra também em <code>LOCALES_COM_PREFIXO</code>, senão a duplicação dele
-passa calada. Desde o ADR 0216 essa lista é <code>en</code>, <code>ru</code> e <code>zh-Hans</code> — o
-pt-BR é o padrão e não tem prefixo.</p>
-<p>Com traduções parciais, compilar <code>en</code> quebra um link de uma página não
-traduzida (servida da fonte pt-BR) para uma traduzida em qualquer
-pasta, não só nas três zonas. Então um link também é tratado como
-lacuna quando o destino <strong>existe na fonte <code>docs/</code></strong>
-(<code>paginaExisteNaFonte</code>) — essa é a página que o locale serve, traduzida
-ou por fallback. Um destino que não existe em lugar nenhum continua
-reprovando o build.</p>
-<p>A isenção de <code>adr/</code> também engolia um nome de arquivo de ADR digitado
-errado: ela olhava só a <em>forma</em> do nome (<code>NNNN-*.md</code>), então
-<code>0055-politica-de-terminal.md</code> — um ADR que nunca existiu com esse nome
-— era reescrito para um slug que nenhum locale tem. Vinte e três links
-assim estavam nas docs, 404 (AT-227). Desde então um destino com cara
-de ADR tem de existir em <code>docs/adr/</code> <strong>antes</strong> de qualquer isenção de
-lacuna valer, inclusive de uma fonte dentro de <code>adr/</code>, <code>reference/</code> ou
-<code>explanation/</code>; um slug errado reprova o <code>docs:build</code> em todo locale.</p>
-<p>O que a guarda ainda <strong>não</strong> pega: um link que não é de ADR, de dentro
-de uma das zonas de lacuna, cujo destino não existe no repositório.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=publishing-one-site-per-rung>Publicação, um site por degrau<a href=#publishing-one-site-per-rung class=hash-link aria-label="Publicação, um site por degrau的直接链接" title="Publicação, um site por degrau的直接链接" translate=no>​</a></h3>
-<p>Cada branch permanente publica no seu próprio lugar do mesmo GitHub
-Pages:</p>
+<table><thead><tr><th>阶段<th>结果<tbody><tr><td>MDX 编译<td>✅ 主题组件存在并能解析<tr><td>SSR 渲染<td>✅ 提供的 HTML 有路由的内容<tr><td><code>pnpm docs:build</code><td>✅ <strong>绿色</strong><tr><td>浏览器中的水合<td>❌ 页面被清空</table>
+<p>换句话说：<strong>"构建通过了"从来不是页面能工作的证明。</strong></p>
+<p>自 ADR 0206 起该插件被移除：参考是 <code>/reference/api/</code> 下的<strong>一个 Redoc 页面</strong>（redocusaurus，服务端
+渲染），没有可忘记的 <code>ApiItem</code>。教训留下了，因此守卫也留下：<code>api-render-check.mjs</code> 在 <code>docs:build</code>
+之后运行，在两个 locale 中断言 <code>reference/api.html</code> 存在、带有 spec 的 <code>info.title</code>，并为
+<code>docs/reference/openapi.json</code> 的每个操作包含一个服务端渲染的小节（Redoc 的
+<code>data-section-id=tag/&lt;tag>/operation/&lt;id></code>）。</p>
+<p>它能捕获页面消失、渲染为空或丢失操作——而不是水合失败，那需要一个无头浏览器。</p>
+<p>同一事件产生了映射中的规则 <code>site-e-publicacao</code>：<code>website/**</code> 没有被任何规则覆盖，改动网站配置不要求
+文档。</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=four-locales-with-pt-br-as-the-source-adr-0216>四个 locale，以 pt-BR 为源（ADR 0216）<a href=#four-locales-with-pt-br-as-the-source-adr-0216 class=hash-link aria-label="四个 locale，以 pt-BR 为源（ADR 0216）的直接链接" title="四个 locale，以 pt-BR 为源（ADR 0216）的直接链接" translate=no>​</a></h3>
+<p><code>docs/</code> 是 <strong>pt-BR</strong> 树，是源，也是默认 locale（<code>defaultLocale: 'pt-BR'</code>，在每个环境的根路径提供）。
+已翻译的 locale 是 <code>en</code>、<code>ru</code> 和 <code>zh-Hans</code>，位于
+<code>website/i18n/&lt;locale>/docusaurus-plugin-content-docs/current/</code> 下，主题的标签在
+<code>website/i18n/&lt;locale>/docusaurus-theme-classic/</code> 中，侧边栏的标签在
+<code>.../docusaurus-plugin-content-docs/current.json</code> 中。在某个 locale 中没有翻译的页面以同一 slug 从
+pt-BR 源提供。本地搜索为 <code>pt</code>、<code>en</code>、<code>ru</code> 和 <code>zh</code> 建立索引。旧的 pt-BR 副本已过时的页面，以它们当前的
+语言留在 <code>docs/</code> 中，直到轮到它们那一批。</p>
+<p>英文网站从根路径移到了 <code>/brabo/&lt;environment>/en/…</code>，指向 <code>/brabo/&lt;environment>/pt-BR/…</code> 的旧链接由根
+路径的 <code>404.html</code>（<code>scripts/docs/landing.mjs</code>）改写为 <code>/brabo/&lt;environment>/…</code>，与 <code>/main/</code> → <code>/prd/</code>
+（ADR 0073）同一模式。</p>
+<p>docmap 的规则 <code>traducao</code>（原为 <code>traducao-pt-br</code>）监视源并指向 <code>website/i18n/</code>。它是 <code>warn</code>，绝不是
+<code>block</code>：在每个文档 PR 中要求翻译会让每次改动付出三份翻译的代价。</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=translation-parity-is-generated-and-the-page-says-when-it-is-behind-at-550>翻译一致性是生成的，页面会说明何时落后（AT-550）<a href=#translation-parity-is-generated-and-the-page-says-when-it-is-behind-at-550 class=hash-link aria-label=翻译一致性是生成的，页面会说明何时落后（AT-550）的直接链接 title=翻译一致性是生成的，页面会说明何时落后（AT-550）的直接链接 translate=no>​</a></h3>
+<p>拦住滞后的是测量，而不是 docmap。<code>scripts/docs/paridade-de-traducao.mjs</code>（由旁边的 spec 经变异证明）在
+<code>pnpm docs:generate</code> 内部运行并写入两个文件：<code>docs/reference/paridade-de-traducao.md</code>
+（<code>generated: true</code>）和 <code>website/src/data/traducao.json</code>。对每个 locale，它统计相对于源（<code>docs/</code> 减去
+<code>docs/reference/**</code>）已翻译的页面和字符，并把已翻译的页面分为<strong>最新</strong>、<strong>过时</strong>和<strong>无来源</strong>。来源是
+翻译页面 frontmatter 中的 <code>traducao_de: &lt;SHA></code>，即它所翻译的源的最后一次提交。当源有一个 COMMIT DATE
+晚于该 SHA 的提交、源有未提交的改动，或该 SHA 不存在时，页面就是过时的。它从不使用时钟，因此
+<code>--check</code> 在触及源的提交之前和之后给出相同的答案。对于 UI，它把 <code>apps/web/src/locales/&lt;l>/</code> 中每个
+命名空间的键与 pt-BR 比较，并要求 <code>Intl.PluralRules</code> 为该 locale 给出的每种复数形式。当两个文件中任何
+一个过时时，<code>--check</code> 失败。</p>
+<p>横幅是对 <code>@theme/DocItem/Content</code> 的 wrap swizzle（<code>website/src/theme/DocItem/Content/index.tsx</code>）。在
+pt-BR 之外，<code>metadata.source</code> 位于 <code>@site/docs/</code> 下的页面是 pt-BR 回落并说明这一点；被
+<code>traducao.json</code> 标记为过时的翻译页面显示翻译日期并说明原文已改变。文本位于每个 locale 的 <code>code.json</code>
+中。<code>scripts/docs/faixa-de-traducao-check.mjs</code> 在 <code>pnpm docs:build</code> 之后运行并核对静态 HTML：一个回落
+页面有横幅（样本来自第一个仍有未翻译页面的 locale，<code>en</code>、<code>ru</code> 或 <code>zh-Hans</code>；全部完成时就没有可核对的
+回落），而根路径上的同一页面以及一个不过时的 <code>en</code> 翻译页面没有。给译者的规则在
+<a href=/brabo/dev/zh-Hans/explanation/localizacao target=_blank rel="noopener noreferrer" class="">本地化</a> 中。</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=links-do-localemjs--a-rewritten-link-skips-the-broken-link-check><code>links-do-locale.mjs</code>——被改写的链接逃过了坏链接检查<a href=#links-do-localemjs--a-rewritten-link-skips-the-broken-link-check class=hash-link aria-label=links-do-localemjs--a-rewritten-link-skips-the-broken-link-check的直接链接 title=links-do-localemjs--a-rewritten-link-skips-the-broken-link-check的直接链接 translate=no>​</a></h3>
+<p><code>website/docusaurus.config.ts</code> 中的钩子 <code>markdown.hooks.onBrokenMarkdownLinks</code> 把仅因已知翻译缺口
+（<code>reference/</code>、<code>adr/</code>、<code>explanation/</code>）而断掉的链接改写为 <code>pathname://</code>。这是 Docusaurus 官方的紧急
+出口，而逃避正是目的：<strong>一个 <code>pathname://</code> 链接再也不会被核对</strong>，因此错误的改写无法让构建失败。</p>
+<p>有一次让整个 pt-BR 网站失败了（AT-221）。改写返回 <code>pathname:///pt-BR/&lt;slug></code>，但 <code>pathname://</code> 不是
+域上的绝对路径——<code>&lt;Link></code> 让它经过 <code>useBaseUrl</code>，而 pt-BR 构建的 baseUrl 已经是 <code>/brabo/prd/pt-BR/</code>。
+每个被改写的链接都变成了 <code>/brabo/prd/pt-BR/pt-BR/...</code>：56 个页面中 441 个 href，全部 404，而
+<code>docs:build</code> 是绿的。</p>
+<p>改写现在作为带 spec 的纯函数位于 <code>scripts/docs/links-do-locale.mjs</code>，返回单纯的 slug——locale 来自
+正在编译的那个 locale 的 baseUrl，而目标页面在那里存在（已翻译，或以同一 slug 回落提供）。同一个模块
+在 <code>docs-check.yml</code> 中于 <code>docs:build</code> 之后运行，扫描生成的 HTML，并让任何带重复 locale 前缀的 <code>href</code>
+失败。新的 locale 也要加入 <code>LOCALES_COM_PREFIXO</code>，否则它的重复会悄悄通过。自 ADR 0216 起这个列表是
+<code>en</code>、<code>ru</code> 和 <code>zh-Hans</code>——pt-BR 是默认的，没有前缀。</p>
+<p>在部分翻译的情况下，编译 <code>en</code> 会破坏一个从未翻译页面（从 pt-BR 源提供）指向一个已翻译页面的链接，在任何
+文件夹中，而不只是在三个区域中。因此，当目标<strong>存在于源 <code>docs/</code></strong> 中时（<code>paginaExisteNaFonte</code>），链接也
+被视为缺口——那就是该 locale 提供的页面，无论已翻译还是回落。一个在任何地方都不存在的目标仍会让构建
+失败。</p>
+<p><code>adr/</code> 的豁免也吞掉了拼错的 ADR 文件名：它只看名称的<em>形式</em>（<code>NNNN-*.md</code>），因此
+<code>0055-politica-de-terminal.md</code>——一个从未以这个名字存在的 ADR——被改写为一个没有任何 locale 拥有的
+slug。文档中有二十三个这样的链接，都是 404（AT-227）。从那以后，一个看起来像 ADR 的目标必须<strong>先</strong>存在
+于 <code>docs/adr/</code> 中，任何缺口豁免才生效，包括来自 <code>adr/</code>、<code>reference/</code> 或 <code>explanation/</code> 内部的源；错误的
+slug 会在每个 locale 中让 <code>docs:build</code> 失败。</p>
+<p>守卫仍然<strong>抓不到</strong>的：来自某个缺口区域内部、不是 ADR、且目标在仓库中不存在的链接。</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=publishing-one-site-per-rung>发布，每一级一个网站<a href=#publishing-one-site-per-rung class=hash-link aria-label=发布，每一级一个网站的直接链接 title=发布，每一级一个网站的直接链接 translate=no>​</a></h3>
+<p>每个永久分支都发布到同一个 GitHub Pages 中自己的位置：</p>
 
 
 
@@ -745,73 +490,46 @@ Pages:</p>
 
 
 
-<table><thead><tr><th>branch<th>URL<th>indexado por buscadores<tbody><tr><td>— (índice)<td><code>https://daneiel.github.io/brabo/</code><td>❌<tr><td><code>main</code><td><code>https://daneiel.github.io/brabo/prd/</code><td>✅<tr><td><code>qa</code><td><code>https://daneiel.github.io/brabo/qa/</code><td>❌<tr><td><code>dev</code><td><code>https://daneiel.github.io/brabo/dev/</code><td>❌</table>
-<p>Os três são <strong>simétricos</strong> desde o
-<a class="" href=/brabo/dev/zh-Hans/adr/0071-publicacao-simetrica-por-degrau>ADR 0071</a>; a raiz é
-uma página gerada que lista os três com a versão carimbada de cada um,
-e todo site tem um seletor no topo para trocar de degrau. Antes disso, a
-<code>main</code> publicava na raiz, e esse caso especial obrigava o workflow a
-preservar <code>/dev/</code> e <code>/qa/</code> num caminho que só rodava um terço das vezes.</p>
-<p><strong>O caminho não é o nome da branch.</strong>
-O <a class="" href=/brabo/dev/zh-Hans/adr/0073-o-caminho-publicado-nomeia-o-ambiente>ADR 0073</a>
-separou os dois: o endereço nomeia o <strong>ambiente</strong> para quem lê, e
-<code>main</code> é vocabulário de quem commita. É por isso que a <code>main</code> publica
-em <code>/prd/</code>; <code>qa</code> e <code>dev</code> coincidem por acaso, não por regra. O mapa
-branch→caminho existe num ponto por processo — o passo "qual degrau, e
-onde publica" do workflow, a tabela <code>DEGRAUS</code> em <code>docusaurus.config.ts</code>
-e a de <code>landing.mjs</code> — e todo o resto deriva dele.</p>
-<p>Duas consequências que vale lembrar antes de mexer nisso:</p>
+<table><thead><tr><th>分支<th>URL<th>被搜索引擎索引<tbody><tr><td>—（索引）<td><code>https://daneiel.github.io/brabo/</code><td>❌<tr><td><code>main</code><td><code>https://daneiel.github.io/brabo/prd/</code><td>✅<tr><td><code>qa</code><td><code>https://daneiel.github.io/brabo/qa/</code><td>❌<tr><td><code>dev</code><td><code>https://daneiel.github.io/brabo/dev/</code><td>❌</table>
+<p>自 <a href=/brabo/dev/zh-Hans/adr/0071-publicacao-simetrica-por-degrau target=_blank rel="noopener noreferrer" class="">ADR 0071</a> 起三者是<strong>对称</strong>的；根路径是一个生成的
+页面，列出三者及各自盖章的版本，每个网站顶部都有一个切换级别的选择器。在此之前，<code>main</code> 发布到根路径，
+这个特殊情况迫使 workflow 在一条只有三分之一时间运行的路径中保留 <code>/dev/</code> 和 <code>/qa/</code>。</p>
+<p><strong>路径不是分支的名称。</strong>
+<a href=/brabo/dev/zh-Hans/adr/0073-o-caminho-publicado-nomeia-o-ambiente target=_blank rel="noopener noreferrer" class="">ADR 0073</a> 把两者分开了：地址为读者命名
+<strong>环境</strong>，而 <code>main</code> 是提交者的词汇。这就是 <code>main</code> 发布到 <code>/prd/</code> 的原因；<code>qa</code> 和 <code>dev</code> 的一致是巧合，
+不是规则。分支→路径的映射在每个进程中存在于一个点——workflow 中"哪一级，发布到哪里"的步骤、
+<code>docusaurus.config.ts</code> 中的 <code>DEGRAUS</code> 表以及 <code>landing.mjs</code> 中的那个——其余一切都从它派生。</p>
+<p>在动它之前值得记住的两个后果：</p>
 <ul>
-<li class=""><strong><code>/brabo/main/</code> era publicado, e não é mais.</strong> Como a árvore é
-montada e empurrada com <code>keep_files: false</code>, o diretório some. O que
-preserva os links salvos é o <code>404.html</code> da raiz, que <strong>reescreve</strong> o
-prefixo (<code>/brabo/main/&lt;algo></code> → <code>/brabo/prd/&lt;algo></code>) como caso
-próprio, separado do redirecionamento genérico — que produziria
-<code>/brabo/prd/main/&lt;algo></code>. A guarda contra laço só cobre caminhos que
-existem (<code>prd|qa|dev</code>).</li>
-<li class=""><strong><code>/prd/</code> foi semeado a partir de <code>gh-pages:main</code></strong> na transição,
-pelo mesmo motivo por que o ADR 0071 semeou <code>/main/</code> a partir da raiz
-antiga: sem isso, <code>/brabo/prd/</code> responderia 404 entre o primeiro push
-da <code>dev</code> e a próxima promoção para a <code>main</code>. A semente é
-<strong>reescrita</strong> de <code>/brabo/main/</code> para <code>/brabo/prd/</code>, porque o
-<code>404.html</code> não salva sub-recursos — CSS e JS pedidos no endereço
-antigo receberiam HTML de volta com status 404, e o site serviria
-texto cru.</li>
+<li class=""><strong><code>/brabo/main/</code> 曾被发布，现在不再发布。</strong> 由于树是以 <code>keep_files: false</code> 组装和推送的，这个目录
+会消失。保留已保存链接的是根路径的 <code>404.html</code>，它作为一个独立情况<strong>改写</strong>前缀（<code>/brabo/main/&lt;algo></code>
+→ <code>/brabo/prd/&lt;algo></code>），与通用重定向分开——通用重定向会产生 <code>/brabo/prd/main/&lt;algo></code>。防循环守卫
+只覆盖存在的路径（<code>prd|qa|dev</code>）。</li>
+<li class=""><strong><code>/prd/</code> 在过渡时从 <code>gh-pages:main</code> 播种</strong>，原因与 ADR 0071 从旧根路径播种 <code>/main/</code> 相同：没有它，
+在 <code>dev</code> 的第一次推送和下一次晋升到 <code>main</code> 之间，<code>/brabo/prd/</code> 会返回 404。种子被从 <code>/brabo/main/</code>
+<strong>改写</strong>为 <code>/brabo/prd/</code>，因为 <code>404.html</code> 救不了子资源——在旧地址请求的 CSS 和 JS 会收到状态 404 的
+HTML，网站会提供原始文本。</li>
 </ul>
-<p>Isso fecha uma lacuna da esteira: entre um merge na <code>dev</code> e a promoção
-final, ler a documentação daquele estado exigia clonar o repositório. O
-<code>docs-check</code> constrói o site em todo PR mas <strong>descarta o build</strong> — o
-veredito dele é "constrói sem links quebrados", nunca "mora em algum
-lugar que eu possa abrir". E foi exatamente essa lacuna entre escrever e
-olhar que deixou a referência da API ir ao ar quebrada por duas
-releases.</p>
-<p>Três detalhes que não são óbvios e já custaram um bug cada:</p>
+<p>这关闭了流水线的一个缺口：在合并到 <code>dev</code> 和最终晋升之间，阅读那个状态的文档需要克隆仓库。<code>docs-check</code>
+在每个 PR 中构建网站，但<strong>丢弃构建结果</strong>——它的裁决是"构建时没有坏链接"，从来不是"住在某个我能打开的
+地方"。而正是写与看之间的这个缺口，让 API 参考坏着上线了两个版本。</p>
+<p>三个并不显而易见、各自已经造成过一个 bug 的细节：</p>
 <ul>
-<li class=""><strong><code>baseUrl</code> vem de <code>DOCS_BASE_URL</code></strong>, com o valor de produção como
-padrão. Ele entra em toda URL de asset: um site em <code>/brabo/dev/</code> com
-<code>baseUrl: '/brabo/'</code> carrega o HTML e mais nada, e a página fica
-<em>quebrada sem erro</em>.</li>
-<li class=""><strong>O degrau é declarado em <code>DOCS_BRANCH</code>, não deduzido do <code>baseUrl</code>.</strong>
-Antes era <code>BASE_URL === '/brabo/'</code>, e funcionava enquanto a <code>main</code>
-era a única na raiz. Com os três sob um subdiretório, essa comparação
-vira falsa também para a <code>main</code>, e o efeito seria <code>noIndex</code> na
-documentação REAL — fora do Google, calado, com o CI verde, porque
-nada no build reprova por subindexação. O ADR 0073 é exatamente o
-cenário para o qual essa separação foi construída: o caminho mudou
-para <code>/prd/</code> e <code>E_PRODUCAO</code> não precisou saber.</li>
-<li class=""><strong><code>noIndex</code> fora da <code>main</code> exige <code>forceIgnoreNoIndex</code> na busca.</strong>
-O <code>@easyops-cn/docusaurus-search-local</code> descarta toda página com
-<code>&lt;meta name="robots" content="noindex"></code>, então as duas salvaguardas
-se anulariam: os degraus publicariam com a busca morta, um índice de
-666 bytes, <em>"No results"</em> para tudo. <code>noIndex</code> fala com buscadores
-<strong>externos</strong>; <code>forceIgnoreNoIndex</code> fala com o índice <strong>local</strong>.</li>
-<li class=""><strong>A <code>main</code> monta a árvore antes de publicar</strong>, trazendo <code>/dev/</code> e
-<code>/qa/</code> de volta. <code>keep_files: true</code> seria mais simples e estaria
-errado: nunca removeria nada, e uma página apagada do repositório
-ficaria publicada para sempre.</li>
+<li class=""><strong><code>baseUrl</code> 来自 <code>DOCS_BASE_URL</code></strong>，默认是生产值。它进入每个资源 URL：一个在 <code>/brabo/dev/</code> 下、
+<code>baseUrl: '/brabo/'</code> 的网站只加载 HTML 而什么都不加载，页面<em>坏了却没有错误</em>。</li>
+<li class=""><strong>级别在 <code>DOCS_BRANCH</code> 中声明，而不是从 <code>baseUrl</code> 推断。</strong> 以前是 <code>BASE_URL === '/brabo/'</code>，在
+<code>main</code> 是唯一在根路径的时候它有效。三者都在子目录下时，这个比较对 <code>main</code> 也变成假，效果会是<strong>真实</strong>
+文档上的 <code>noIndex</code>——从 Google 消失，悄无声息，CI 绿着，因为构建中没有任何东西会因索引不足而失败。
+ADR 0073 正是这种分离所针对的场景：路径改成了 <code>/prd/</code>，而 <code>E_PRODUCAO</code> 不需要知道。</li>
+<li class=""><strong><code>main</code> 之外的 <code>noIndex</code> 需要搜索中的 <code>forceIgnoreNoIndex</code>。</strong> <code>@easyops-cn/docusaurus-search-local</code>
+丢弃每个带 <code>&lt;meta name="robots" content="noindex"></code> 的页面，因此两个保护措施会相互抵消：各级会带着
+死掉的搜索发布，一个 666 字节的索引，对一切都是 <em>"No results"</em>。<code>noIndex</code> 面向<strong>外部</strong>搜索引擎；
+<code>forceIgnoreNoIndex</code> 面向<strong>本地</strong>索引。</li>
+<li class=""><strong><code>main</code> 在发布前组装树</strong>，把 <code>/dev/</code> 和 <code>/qa/</code> 带回来。<code>keep_files: true</code> 会更简单但是错的：它永远
+不会删除任何东西，从仓库中删除的页面会永远保持发布状态。</li>
 </ul>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=publishing-is-two-workflows-and-only-one-is-ours>Publicar são DOIS workflows, e só um é nosso<a href=#publishing-is-two-workflows-and-only-one-is-ours class=hash-link aria-label="Publicar são DOIS workflows, e só um é nosso的直接链接" title="Publicar são DOIS workflows, e só um é nosso的直接链接" translate=no>​</a></h3>
-<p>Isto engana quem procura o deploy na aba Actions:</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=publishing-is-two-workflows-and-only-one-is-ours>发布是<strong>两个</strong> workflow，只有一个是我们的<a href=#publishing-is-two-workflows-and-only-one-is-ours class=hash-link aria-label=publishing-is-two-workflows-and-only-one-is-ours的直接链接 title=publishing-is-two-workflows-and-only-one-is-ours的直接链接 translate=no>​</a></h3>
+<p>这会骗过在 Actions 标签页寻找部署的人：</p>
 
 
 
@@ -835,71 +553,47 @@ ficaria publicada para sempre.</li>
 
 
 
-<table><thead><tr><th>ordem<th>workflow<th>onde mora<th>o que faz<tbody><tr><td>1<td><strong><code>Documentação</code></strong> (<code>docs-deploy.yml</code>)<td><code>.github/workflows/</code><td>constrói o site e <strong>commita no <code>gh-pages</code></strong><tr><td>2<td><strong><code>pages build and deployment</code></strong><td><code>dynamic/pages/</code> — <strong>gerado pelo GitHub</strong><td>lê o <code>gh-pages</code> e <strong>o serve</strong></table>
-<p>O segundo não está no repositório e não aparece na lista de workflows
-versionados; o GitHub o cria sozinho quando a fonte do Pages é uma
-branch. O nosso workflow termina no commit — ele <strong>não</strong> publica no
-Pages, embora o job dele ainda se chame "Publish to GitHub Pages".</p>
+<table><thead><tr><th>顺序<th>workflow<th>位于哪里<th>做什么<tbody><tr><td>1<td><strong><code>Documentação</code></strong>（<code>docs-deploy.yml</code>）<td><code>.github/workflows/</code><td>构建网站并<strong>提交到 <code>gh-pages</code></strong><tr><td>2<td><strong><code>pages build and deployment</code></strong><td><code>dynamic/pages/</code>——<strong>由 GitHub 生成</strong><td>读取 <code>gh-pages</code> 并<strong>提供它</strong></table>
+<p>第二个不在仓库中，也不出现在版本化 workflow 的列表中；当 Pages 的来源是一个分支时，GitHub 自己创建它。
+我们的 workflow 在提交处结束——它<strong>不</strong>发布到 Pages，尽管它的 job 仍叫 "Publish to GitHub Pages"。</p>
 <blockquote>
-<p><strong>Consequência prática:</strong> o site pode estar velho mesmo com
-<code>Documentação</code> verde. Se o <code>build_type</code> do Pages não for
-<code>legacy</code>/<code>gh-pages</code>, o commit acontece e ninguém o serve — e nada no
-CI fica vermelho. A conferência é <code>gh api repos/daneiel/brabo/pages</code>,
-registrada em <a class="" href=/brabo/dev/zh-Hans/reference/rulesets>Rulesets</a>.</p>
+<p><strong>实际后果：</strong> 即使 <code>Documentação</code> 是绿的，网站也可能是旧的。如果 Pages 的 <code>build_type</code> 不是
+<code>legacy</code>/<code>gh-pages</code>，提交会发生而没人提供它——CI 中也没有任何东西变红。核对方法是
+<code>gh api repos/daneiel/brabo/pages</code>，记录在 <a href=/brabo/dev/zh-Hans/reference/rulesets target=_blank rel="noopener noreferrer" class="">Rulesets</a> 中。</p>
 </blockquote>
-<p>O desenho inteiro, com as alternativas descartadas, está no
-<a class="" href=/brabo/dev/zh-Hans/adr/0034-documentacao-publicada-por-degrau>ADR 0034</a>.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=running-it-on-your-machine>Rodando na sua máquina<a href=#running-it-on-your-machine class=hash-link aria-label="Rodando na sua máquina的直接链接" title="Rodando na sua máquina的直接链接" translate=no>​</a></h2>
-<p><code>website/</code> tem <code>pnpm-lock.yaml</code> próprio desde o <a class="" href=/brabo/dev/zh-Hans/adr/0117-lockfile-proprio-para-o-website>ADR 0117</a> —
-o <code>pnpm install</code> da raiz não o alcança mais, então a primeira vez (ou
-depois que o lockfile dele muda) precisa de um passo a mais:</p>
+<p>整个设计，连同被放弃的替代方案，在 <a href=/brabo/dev/zh-Hans/adr/0034-documentacao-publicada-por-degrau target=_blank rel="noopener noreferrer" class="">ADR 0034</a> 中。</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=running-it-on-your-machine>在你的机器上运行<a href=#running-it-on-your-machine class=hash-link aria-label=在你的机器上运行的直接链接 title=在你的机器上运行的直接链接 translate=no>​</a></h2>
+<p>自 <a href=/brabo/dev/zh-Hans/adr/0117-lockfile-proprio-para-o-website target=_blank rel="noopener noreferrer" class="">ADR 0117</a> 起 <code>website/</code> 有自己的 <code>pnpm-lock.yaml</code>——
+根目录的 <code>pnpm install</code> 不再覆盖它，因此第一次（或它的 lockfile 改变之后）需要多一步：</p>
 <div class="language-bash codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-bash codeBlock_mqej thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_uNqR><div class=token-line style=color:#F8F8F2><span class="token plain">cd website && pnpm install && cd ..  # only the first time, or when website/pnpm-lock.yaml changes</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain" style=display:inline-block></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">pnpm docs:check      # validates the map + checks generated content is up to date</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">pnpm docs:generate   # regenerates</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">pnpm docs:drift      # simulates the PR check (origin/dev...HEAD)</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">pnpm docs:build      # the build CI runs — pnpm --dir website build under the hood</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">pnpm docs:start      # local server, with hot reload</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain" style=display:inline-block></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain"># does the API reference render? needs the build above, and isn't part</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain"># of docs:check because that one doesn't build the site</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">node scripts/docs/api-render-check.mjs</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">node scripts/docs/links-do-locale.mjs   # no href with a doubled locale prefix (AT-221)</span><br/></div></code></pre></div></div>
-<p>Ou, se você está no Claude Code, <code>/sync-docs</code> roda o ciclo inteiro e
-entrega um relatório do que mudou, do que virou <code>TODO(human)</code> e do que
-foi deliberadamente <strong>deixado</strong> sem mudar.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=conjunction-by-default-disjunction-when-the-doc-was-split>Conjunção por padrão, disjunção quando a doc foi partida<a href=#conjunction-by-default-disjunction-when-the-doc-was-split class=hash-link aria-label="Conjunção por padrão, disjunção quando a doc foi partida的直接链接" title="Conjunção por padrão, disjunção quando a doc foi partida的直接链接" translate=no>​</a></h3>
-<p>A lista <code>docs:</code> de uma regra é uma <strong>conjunção</strong>: todo documento listado
-tem de mudar, senão a regra dispara. É o padrão certo — é o que torna
-cobrável "mudou o gate, atualize a doc do gate E as regras".</p>
-<p>Ele ficou errado exatamente uma vez, e a correção é <code>docs_alternativos:</code>,
-uma <strong>disjunção</strong>: qualquer um dos documentos listados satisfaz a regra.
-Ela existe porque <code>business-rules.md</code> foi partido por tamanho (Custo e
-Autenticação sozinhos eram metade de uma página de 640 KB), então uma
-regra de negócio agora mora em um de três arquivos. Sob conjunção, mudar
-uma regra de auth cobraria também o índice — um arquivo que não contém
-mais aquela regra — e a saída de quem fosse cobrado seria a saída de
-emergência <code>docs-not-needed</code>. <strong>Uma regra que ensina as pessoas a usar a
-saída de emergência é pior que regra nenhuma</strong>: ela as treina a ignorar
-a checagem.</p>
-<p><code>docmap.mjs</code> valida as duas listas do mesmo jeito: um caminho que não
-existe é o mesmo erro silencioso de um glob morto — uma alternativa com
-erro de digitação nunca poderia satisfazer a regra, e ninguém veria.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=when-the-check-complains-unfairly>Quando a checagem reclama injustamente<a href=#when-the-check-complains-unfairly class=hash-link aria-label="Quando a checagem reclama injustamente的直接链接" title="Quando a checagem reclama injustamente的直接链接" translate=no>​</a></h2>
-<p>Ela vai reclamar injustamente às vezes. Uma refatoração que renomeia
-variáveis internas dispara <code>dominio-e-regras</code> sem mudar regra de negócio
-nenhuma. Isso é esperado: o mapa funciona por caminho de arquivo, não
-por semântica.</p>
-<p>Há <strong>duas</strong> saídas, e as duas exigem alguém explicando por quê:</p>
+<p>或者，如果你在 Claude Code 中，<code>/sync-docs</code> 会运行整个循环，并交付一份报告，说明改了什么、什么变成了
+<code>TODO(human)</code>，以及什么被故意<strong>保留</strong>不变。</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=conjunction-by-default-disjunction-when-the-doc-was-split>默认是合取，文档被拆分时是析取<a href=#conjunction-by-default-disjunction-when-the-doc-was-split class=hash-link aria-label=默认是合取，文档被拆分时是析取的直接链接 title=默认是合取，文档被拆分时是析取的直接链接 translate=no>​</a></h3>
+<p>规则的 <code>docs:</code> 列表是一个<strong>合取</strong>：列出的每个文档都必须改变，否则规则触发。这是正确的默认——正是它让
+"改了 gate，就更新 gate 的文档<strong>和</strong>规则"变得可以强制执行。</p>
+<p>它恰好错过一次，修正是 <code>docs_alternativos:</code>，一个<strong>析取</strong>：列出的任何一个文档都能满足规则。它存在是因为
+<code>business-rules.md</code> 按大小被拆分了（仅 Custo 和 Autenticação 就占了一个 640 KB 页面的一半），因此一条
+业务规则现在位于三个文件之一。在合取下，改一条认证规则也会要求改索引——一个已不再包含那条规则的文件——
+而被要求的人的出路会是紧急出口 <code>docs-not-needed</code>。<strong>一条教人使用紧急出口的规则比没有规则更糟</strong>：它训练
+人们忽略检查。</p>
+<p><code>docmap.mjs</code> 以同样的方式验证两个列表：一个不存在的路径与死 glob 是同一种沉默的错误——一个有拼写错误的
+替代项永远无法满足规则，而没人会看到。</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=when-the-check-complains-unfairly>当检查不公正地抱怨时<a href=#when-the-check-complains-unfairly class=hash-link aria-label=当检查不公正地抱怨时的直接链接 title=当检查不公正地抱怨时的直接链接 translate=no>​</a></h2>
+<p>它有时会不公正地抱怨。一次重命名内部变量的重构会触发 <code>dominio-e-regras</code> 而没有改变任何业务规则。这是
+预期的：映射按文件路径而不是语义工作。</p>
+<p>有<strong>两个</strong>出口，两者都需要有人解释原因：</p>
 <div class="language-text codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-text codeBlock_mqej thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_uNqR><div class=token-line style=color:#F8F8F2><span class="token plain">PR label:      docs-not-needed</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">or in the body: docs-not-needed: internal refactor, no RN changed</span><br/></div></code></pre></div></div>
-<p>Use sem culpa quando couber. A saída de emergência existe <strong>de
-propósito</strong>: sem uma saída legítima, o hábito que se forma é trapacear
-— um commit cosmético na doc só para a checagem passar. Aí o mecanismo
-começa a mentir, o que é pior que não existir.</p>
-<p><strong>Uma classe de PR recebe a linha do corpo de um bot</strong>, e só uma: um PR
-do Dependabot cujo diff não é nada além de trocas de pin de action (o
-SHA do <code>uses:</code> e o comentário de versão dele). Um passo logo antes do
-drift escreve a linha, marcada como do bot, e o drift continua lendo só
-a linha — ver
-<a class="" href=/brabo/dev/zh-Hans/explanation/branching-policy#a-pin-bump-justifies-itself>A pin bump justifies itself</a>.
-Como editar o corpo com o <code>GITHUB_TOKEN</code> não dispara evento <code>edited</code>, e
-uma reexecução reusa o payload original, o drift lê o corpo de
-<code>PR_BODY_FILE</code> quando esse passo o reescreveu, e do evento caso
-contrário.</p>
-<p>O que <strong>não</strong> está certo é usar a saída de emergência por pressa. Se
-você a usou três vezes na mesma semana para a mesma regra, a regra é o
-problema: ajuste o glob em <code>docs/.docmap.yml</code>, ou baixe a severidade de
-<code>block</code> para <code>warn</code>.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=when-the-mechanism-itself-is-wrong>Quando o próprio mecanismo está errado<a href=#when-the-mechanism-itself-is-wrong class=hash-link aria-label="Quando o próprio mecanismo está errado的直接链接" title="Quando o próprio mecanismo está errado的直接链接" translate=no>​</a></h2>
+<p>合适时问心无愧地使用。紧急出口是<strong>故意</strong>存在的：没有合法的出口，形成的习惯就是作弊——为了让检查通过而
+对文档做一次装饰性提交。那时机制就开始撒谎，这比它不存在更糟。</p>
+<p><strong>有一类 PR 从机器人那里得到正文中的这一行</strong>，而且只有一类：一个 diff 只是 action 固定版本更换（<code>uses:</code>
+的 SHA 及其版本注释）的 Dependabot PR。漂移检查之前的一个步骤写入这一行，标记为机器人写的，漂移检查
+仍然只读取这一行——见
+<a class="" href=/brabo/dev/zh-Hans/explanation/branching-policy#a-pin-bump-justifies-itself>A pin bump justifies itself</a>。由于用 <code>GITHUB_TOKEN</code>
+编辑正文不会触发 <code>edited</code> 事件，而重新运行会复用原始载荷，当该步骤改写了正文时，漂移检查从
+<code>PR_BODY_FILE</code> 读取正文，否则从事件读取。</p>
+<p><strong>不</strong>对的是因为匆忙而使用紧急出口。如果你在同一周内为同一条规则用了三次，问题在规则：调整
+<code>docs/.docmap.yml</code> 中的 glob，或把严重性从 <code>block</code> 降为 <code>warn</code>。</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=when-the-mechanism-itself-is-wrong>当机制本身是错的<a href=#when-the-mechanism-itself-is-wrong class=hash-link aria-label=当机制本身是错的的直接链接 title=当机制本身是错的的直接链接 translate=no>​</a></h2>
 
 
 
@@ -929,21 +623,14 @@ problema: ajuste o glob em <code>docs/.docmap.yml</code>, ou baixe a severidade 
 
 
 
-<table><thead><tr><th>sintoma<th>correção<tbody><tr><td>a regra dispara numa mudança irrelevante<td>glob largo demais — estreite o <code>watch</code><tr><td>a regra nunca dispara<td>glob morto — o <code>pnpm docs:check</code> o aponta<tr><td>o conteúdo gerado está sempre desatualizado no CI<td>alguém o editou à mão; corrija o gerador ou a fonte<tr><td>o build quebra num <code>{</code> ou num HTML solto<td><code>.md</code> é CommonMark; se precisar de componente React, renomeie para <code>.mdx</code><tr><td>a auditoria relata a si mesma<td>acrescente o arquivo à lista <code>META</code> em <code>audit.mjs</code></table>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=what-this-mechanism-doesnt-do>O que este mecanismo não faz<a href=#what-this-mechanism-doesnt-do class=hash-link aria-label="O que este mecanismo não faz的直接链接" title="O que este mecanismo não faz的直接链接" translate=no>​</a></h2>
-<p><strong>Ele não confere se o texto está correto.</strong> Ele confere se o texto foi
-<em>revisado</em> quando o código mudou, e se as listas estão completas. Uma
-frase factualmente errada que ninguém tocou passa em toda checagem — é
-para isso que servem a leitura humana e o <code>/sync-docs</code>.</p>
-<p><strong>Ele não escreve documentação.</strong> Ele gera um inventário e cobra
-revisão. O que uma variável faz quando está errada, por que um teto
-existe, o que investigar durante um incidente — isso continua sendo
-trabalho que tem de ser escrito.</p>
-<p><strong>Ele não cobra o <code>README.md</code>, nem nada que regra nenhuma vigia.</strong> O
-docmap é piso, não teto: em 2026-07-29 nenhuma regra vigiava o coração
-da observabilidade (<code>tracing.ts</code>, <code>infrastructure/observability/**</code>,
-<code>telemetry/**</code>, <code>lib/logger.ts</code>), e o <code>README.md</code> mal é exigido por
-alguma regra. Entregar só o que o CI cobra é como as duas frases sobre
-<code>OTEL_EXPORTER_OTLP_ENDPOINT</code> ficaram erradas por meses. Quando você
-mudar código, varra <code>docs/</code> procurando o que a mudança tornou falso —
-inclusive o que ninguém pediu para você olhar.</div><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_yZb9"><a href=https://github.com/daneiel/brabo/blob/dev/docs/explanation/documentation-workflow.md target=_blank rel="noopener noreferrer" class=theme-edit-this-page><svg fill=currentColor height=20 width=20 viewBox="0 0 40 40" class=iconEdit_ANja aria-hidden=true><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"/></g></svg>编辑此页</a></div><div class="col lastUpdated_Kb4y"><span class=theme-last-updated>最后<!-- -->由 <b>Daniel Souza</b> <!-- -->于 <b><time datetime=2026-10-15T11:39:29.000Z itemprop=dateModified>2026年10月15日</time></b> <!-- -->更新</span></div></div></footer></article><nav class="docusaurus-mt-lg pagination-nav" aria-label=文件选项卡><a class="pagination-nav__link pagination-nav__link--prev" href=/brabo/dev/zh-Hans/security-surface><div class=pagination-nav__sublabel>上一页</div><div class=pagination-nav__label>api 的暴露面</div></a><a class="pagination-nav__link pagination-nav__link--next" href=/brabo/dev/zh-Hans/explanation/branching-policy><div class=pagination-nav__sublabel>下一页</div><div class=pagination-nav__label>Política de branches</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_wOiH thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href=#the-principle-generate--verify--remember class="table-of-contents__link toc-highlight">O princípio: gerar > verificar > lembrar</a><ul><li><a href=#a-number-in-prose-is-a-verify-case class="table-of-contents__link toc-highlight">Número em prosa é caso de <em>verificar</em></a><li><a href=#line-references-with-a-symbol class="table-of-contents__link toc-highlight">Referências de linha com símbolo</a><li><a href=#every-rn-heading-carries-its-anchor class="table-of-contents__link toc-highlight">Todo cabeçalho de RN carrega sua âncora</a><li><a href=#the-runbook-procedures-table class="table-of-contents__link toc-highlight">A tabela de procedimentos do runbook</a><li><a href=#the-adr-index-is-grouped-by-theme class="table-of-contents__link toc-highlight">O índice de ADR é agrupado por tema</a></ul><li><a href=#the-pieces class="table-of-contents__link toc-highlight">As peças</a><ul><li><a href=#docsdocmapyml--the-map class="table-of-contents__link toc-highlight"><code>docs/.docmap.yml</code> — o mapa</a><li><a href=#docmapmjs--validates-the-map class="table-of-contents__link toc-highlight"><code>docmap.mjs</code> — valida o mapa</a><li><a href=#generatemjs--generates-and-verifies class="table-of-contents__link toc-highlight"><code>generate.mjs</code> — gera e verifica</a><li><a href=#driftmjs--enforces-it-in-the-pr class="table-of-contents__link toc-highlight"><code>drift.mjs</code> — cobra no PR</a><li><a href=#auditmjs--the-monthly-audit class="table-of-contents__link toc-highlight"><code>audit.mjs</code> — a auditoria mensal</a><li><a href=#the-site-build class="table-of-contents__link toc-highlight">O build do site</a><li><a href=#a-new-page-needs-to-be-added-to-sidebarsts-by-hand class="table-of-contents__link toc-highlight">Página nova precisa entrar à mão no <code>sidebars.ts</code></a><li><a href=#api-render-checkmjs--a-green-build-isnt-a-page-that-renders class="table-of-contents__link toc-highlight"><code>api-render-check.mjs</code> — build verde não é página que renderiza</a><li><a href=#four-locales-with-pt-br-as-the-source-adr-0216 class="table-of-contents__link toc-highlight">Quatro locales, com pt-BR como fonte (ADR 0216)</a><li><a href=#translation-parity-is-generated-and-the-page-says-when-it-is-behind-at-550 class="table-of-contents__link toc-highlight">A paridade de tradução é gerada, e a página diz quando está atrás (AT-550)</a><li><a href=#links-do-localemjs--a-rewritten-link-skips-the-broken-link-check class="table-of-contents__link toc-highlight"><code>links-do-locale.mjs</code> — link reescrito escapa da checagem de link quebrado</a><li><a href=#publishing-one-site-per-rung class="table-of-contents__link toc-highlight">Publicação, um site por degrau</a><li><a href=#publishing-is-two-workflows-and-only-one-is-ours class="table-of-contents__link toc-highlight">Publicar são DOIS workflows, e só um é nosso</a></ul><li><a href=#running-it-on-your-machine class="table-of-contents__link toc-highlight">Rodando na sua máquina</a><ul><li><a href=#conjunction-by-default-disjunction-when-the-doc-was-split class="table-of-contents__link toc-highlight">Conjunção por padrão, disjunção quando a doc foi partida</a></ul><li><a href=#when-the-check-complains-unfairly class="table-of-contents__link toc-highlight">Quando a checagem reclama injustamente</a><li><a href=#when-the-mechanism-itself-is-wrong class="table-of-contents__link toc-highlight">Quando o próprio mecanismo está errado</a><li><a href=#what-this-mechanism-doesnt-do class="table-of-contents__link toc-highlight">O que este mecanismo não faz</a></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class=footer__title>文档</div><ul class="footer__items clean-list"><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/getting-started>快速开始</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/architecture>架构</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/business-rules>业务规则</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/runbook>Runbook</a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>社区</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class=footer__link-item>如何贡献<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class=footer__link-item>在哪里求助<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class=footer__link-item>安全<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>更多</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class=footer__link-item>GitHub<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CHANGELOG.md target=_blank rel="noopener noreferrer" class=footer__link-item>CHANGELOG<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/LICENSE target=_blank rel="noopener noreferrer" class=footer__link-item>MIT 许可证<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/THIRD_PARTY_NOTICES.md target=_blank rel="noopener noreferrer" class=footer__link-item>第三方声明<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div></div><div class="footer__bottom text--center"><div class=footer__copyright>Copyright © 2026 Daniel Souza。基于 MIT 许可证授权。第三方工具保留各自的许可证——参见第三方声明。</div></div></div></footer></div></body>
+<table><thead><tr><th>症状<th>修正<tbody><tr><td>规则在无关的改动上触发<td>glob 太宽——收窄 <code>watch</code><tr><td>规则从不触发<td>死 glob——<code>pnpm docs:check</code> 会指出它<tr><td>生成的内容在 CI 中总是过时<td>有人手工编辑了它；修正生成器或来源<tr><td>构建在一个 <code>{</code> 或游离的 HTML 上崩溃<td><code>.md</code> 是 CommonMark；如果需要 React 组件，重命名为 <code>.mdx</code><tr><td>审计报告了它自己<td>把该文件加入 <code>audit.mjs</code> 中的 <code>META</code> 列表</table>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=what-this-mechanism-doesnt-do>这个机制不做什么<a href=#what-this-mechanism-doesnt-do class=hash-link aria-label=这个机制不做什么的直接链接 title=这个机制不做什么的直接链接 translate=no>​</a></h2>
+<p><strong>它不核对文本是否正确。</strong> 它核对代码改变时文本是否被<em>审阅</em>过，以及列表是否完整。一个没人碰过的事实
+错误的句子会通过每一项检查——这正是人类阅读和 <code>/sync-docs</code> 的用处。</p>
+<p><strong>它不写文档。</strong> 它生成清单并要求审阅。一个变量错了时会做什么、一个上限为什么存在、事故中要调查什么——
+这些仍是必须写下来的工作。</p>
+<p><strong>它不要求 <code>README.md</code>，也不要求任何没有规则监视的东西。</strong> docmap 是下限，不是上限：在 2026-07-29，没有
+任何规则监视可观测性的核心（<code>tracing.ts</code>、<code>infrastructure/observability/**</code>、<code>telemetry/**</code>、
+<code>lib/logger.ts</code>），而 <code>README.md</code> 几乎不被任何规则要求。只交付 CI 要求的东西，正是关于
+<code>OTEL_EXPORTER_OTLP_ENDPOINT</code> 的两句话错了好几个月的原因。当你改代码时，扫描 <code>docs/</code>，寻找这次改动变成
+错误的东西——包括没有人要你看的东西。</div><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_yZb9"><a href=https://github.com/daneiel/brabo/blob/dev/docs/explanation/documentation-workflow.md target=_blank rel="noopener noreferrer" class=theme-edit-this-page><svg fill=currentColor height=20 width=20 viewBox="0 0 40 40" class=iconEdit_ANja aria-hidden=true><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"/></g></svg>编辑此页</a></div><div class="col lastUpdated_Kb4y"><span class=theme-last-updated>最后<!-- -->由 <b>Daniel Souza</b> <!-- -->于 <b><time datetime=2026-10-15T21:08:21.000Z itemprop=dateModified>2026年10月15日</time></b> <!-- -->更新</span></div></div></footer></article><nav class="docusaurus-mt-lg pagination-nav" aria-label=文件选项卡><a class="pagination-nav__link pagination-nav__link--prev" href=/brabo/dev/zh-Hans/security-surface><div class=pagination-nav__sublabel>上一页</div><div class=pagination-nav__label>api 的暴露面</div></a><a class="pagination-nav__link pagination-nav__link--next" href=/brabo/dev/zh-Hans/explanation/branching-policy><div class=pagination-nav__sublabel>下一页</div><div class=pagination-nav__label>分支策略</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_wOiH thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href=#the-principle-generate--verify--remember class="table-of-contents__link toc-highlight">原则：生成 > 验证 > 提醒</a><ul><li><a href=#a-number-in-prose-is-a-verify-case class="table-of-contents__link toc-highlight">散文中的数字属于<em>验证</em>的情况</a><li><a href=#line-references-with-a-symbol class="table-of-contents__link toc-highlight">带符号的行引用</a><li><a href=#every-rn-heading-carries-its-anchor class="table-of-contents__link toc-highlight">每个 RN 标题都带有其锚点</a><li><a href=#the-runbook-procedures-table class="table-of-contents__link toc-highlight">runbook 的步骤表</a><li><a href=#the-adr-index-is-grouped-by-theme class="table-of-contents__link toc-highlight">ADR 索引按主题分组</a></ul><li><a href=#the-pieces class="table-of-contents__link toc-highlight">部件</a><ul><li><a href=#docsdocmapyml--the-map class="table-of-contents__link toc-highlight"><code>docs/.docmap.yml</code>——映射</a><li><a href=#docmapmjs--validates-the-map class="table-of-contents__link toc-highlight"><code>docmap.mjs</code>——验证映射</a><li><a href=#generatemjs--generates-and-verifies class="table-of-contents__link toc-highlight"><code>generate.mjs</code>——生成并验证</a><li><a href=#driftmjs--enforces-it-in-the-pr class="table-of-contents__link toc-highlight"><code>drift.mjs</code>——在 PR 中强制执行</a><li><a href=#auditmjs--the-monthly-audit class="table-of-contents__link toc-highlight"><code>audit.mjs</code>——每月审计</a><li><a href=#the-site-build class="table-of-contents__link toc-highlight">网站构建</a><li><a href=#a-new-page-needs-to-be-added-to-sidebarsts-by-hand class="table-of-contents__link toc-highlight">新页面需要手工加入 <code>sidebars.ts</code></a><li><a href=#api-render-checkmjs--a-green-build-isnt-a-page-that-renders class="table-of-contents__link toc-highlight"><code>api-render-check.mjs</code>——绿色的构建不等于能渲染的页面</a><li><a href=#four-locales-with-pt-br-as-the-source-adr-0216 class="table-of-contents__link toc-highlight">四个 locale，以 pt-BR 为源（ADR 0216）</a><li><a href=#translation-parity-is-generated-and-the-page-says-when-it-is-behind-at-550 class="table-of-contents__link toc-highlight">翻译一致性是生成的，页面会说明何时落后（AT-550）</a><li><a href=#links-do-localemjs--a-rewritten-link-skips-the-broken-link-check class="table-of-contents__link toc-highlight"><code>links-do-locale.mjs</code>——被改写的链接逃过了坏链接检查</a><li><a href=#publishing-one-site-per-rung class="table-of-contents__link toc-highlight">发布，每一级一个网站</a><li><a href=#publishing-is-two-workflows-and-only-one-is-ours class="table-of-contents__link toc-highlight">发布是<strong>两个</strong> workflow，只有一个是我们的</a></ul><li><a href=#running-it-on-your-machine class="table-of-contents__link toc-highlight">在你的机器上运行</a><ul><li><a href=#conjunction-by-default-disjunction-when-the-doc-was-split class="table-of-contents__link toc-highlight">默认是合取，文档被拆分时是析取</a></ul><li><a href=#when-the-check-complains-unfairly class="table-of-contents__link toc-highlight">当检查不公正地抱怨时</a><li><a href=#when-the-mechanism-itself-is-wrong class="table-of-contents__link toc-highlight">当机制本身是错的</a><li><a href=#what-this-mechanism-doesnt-do class="table-of-contents__link toc-highlight">这个机制不做什么</a></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class=footer__title>文档</div><ul class="footer__items clean-list"><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/getting-started>快速开始</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/architecture>架构</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/business-rules>业务规则</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/runbook>Runbook</a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>社区</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class=footer__link-item>如何贡献<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class=footer__link-item>在哪里求助<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class=footer__link-item>安全<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>更多</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class=footer__link-item>GitHub<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CHANGELOG.md target=_blank rel="noopener noreferrer" class=footer__link-item>CHANGELOG<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/LICENSE target=_blank rel="noopener noreferrer" class=footer__link-item>MIT 许可证<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/THIRD_PARTY_NOTICES.md target=_blank rel="noopener noreferrer" class=footer__link-item>第三方声明<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div></div><div class="footer__bottom text--center"><div class=footer__copyright>Copyright © 2026 Daniel Souza。基于 MIT 许可证授权。第三方工具保留各自的许可证——参见第三方声明。</div></div></div></footer></div></body>

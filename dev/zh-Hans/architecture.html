@@ -1,97 +1,73 @@
-<!doctype html><html lang=zh-Hans dir=ltr class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-architecture" data-has-hydrated=false><head><meta charset=UTF-8><meta name=generator content="Docusaurus v3.10.2"><title data-rh=true>Arquitetura | Brabo</title><meta data-rh=true name=viewport content="width=device-width, initial-scale=1.0"/><meta data-rh=true name=robots content="noindex, nofollow"/><meta data-rh=true name=twitter:card content=summary_large_image /><meta data-rh=true property=og:url content=https://daneiel.github.io/brabo/dev/zh-Hans/architecture /><meta data-rh=true property=og:locale content=zh_Hans /><meta data-rh=true property=og:locale:alternate content=pt_BR /><meta data-rh=true property=og:locale:alternate content=en /><meta data-rh=true property=og:locale:alternate content=ru /><meta data-rh=true name=docusaurus_locale content=zh-Hans /><meta data-rh=true name=docsearch:language content=zh-Hans /><meta data-rh=true name=docusaurus_version content=current /><meta data-rh=true name=docusaurus_tag content=docs-default-current /><meta data-rh=true name=docsearch:version content=current /><meta data-rh=true name=docsearch:docusaurus_tag content=docs-default-current /><meta data-rh=true property=og:title content="Arquitetura | Brabo"/><meta data-rh=true name=description content="Mapa do Brabo — containers, mapa do código, o fluxo de um turno de agente, invariantes de camada e dívida conhecida."/><meta data-rh=true property=og:description content="Mapa do Brabo — containers, mapa do código, o fluxo de um turno de agente, invariantes de camada e dívida conhecida."/><meta data-rh=true name=keywords content="arquitetura,mapa do código,invariantes,harness,event log"/><link data-rh=true rel=icon href=/brabo/dev/zh-Hans/img/favicon.ico /><link data-rh=true rel=canonical href=https://daneiel.github.io/brabo/dev/zh-Hans/architecture /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/architecture hreflang=pt-BR /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/en/architecture hreflang=en /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/ru/architecture hreflang=ru /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/zh-Hans/architecture hreflang=zh-Hans /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/architecture hreflang=x-default /><script data-rh=true type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","item":"https://daneiel.github.io/brabo/dev/zh-Hans/architecture","name":"Arquitetura","position":1}]}</script><link rel=stylesheet href=/brabo/dev/zh-Hans/assets/css/styles.7f2bd764.css /><script src=/brabo/dev/zh-Hans/assets/js/runtime~main.2473694d.js defer></script><script src=/brabo/dev/zh-Hans/assets/js/main.80ab1eb3.js defer></script></head><body><svg style="display: none;"><defs>
+<!doctype html><html lang=zh-Hans dir=ltr class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-architecture" data-has-hydrated=false><head><meta charset=UTF-8><meta name=generator content="Docusaurus v3.10.2"><title data-rh=true>架构 | Brabo</title><meta data-rh=true name=viewport content="width=device-width, initial-scale=1.0"/><meta data-rh=true name=robots content="noindex, nofollow"/><meta data-rh=true name=twitter:card content=summary_large_image /><meta data-rh=true property=og:url content=https://daneiel.github.io/brabo/dev/zh-Hans/architecture /><meta data-rh=true property=og:locale content=zh_Hans /><meta data-rh=true property=og:locale:alternate content=pt_BR /><meta data-rh=true property=og:locale:alternate content=en /><meta data-rh=true property=og:locale:alternate content=ru /><meta data-rh=true name=docusaurus_locale content=zh-Hans /><meta data-rh=true name=docsearch:language content=zh-Hans /><meta data-rh=true name=docusaurus_version content=current /><meta data-rh=true name=docusaurus_tag content=docs-default-current /><meta data-rh=true name=docsearch:version content=current /><meta data-rh=true name=docsearch:docusaurus_tag content=docs-default-current /><meta data-rh=true property=og:title content="架构 | Brabo"/><meta data-rh=true name=description content="Brabo 的地图——容器、代码地图、一次智能体轮次的流程、层级不变量和已知债务。"/><meta data-rh=true property=og:description content="Brabo 的地图——容器、代码地图、一次智能体轮次的流程、层级不变量和已知债务。"/><meta data-rh=true name=keywords content="架构,代码地图,不变量,harness,event log"/><link data-rh=true rel=icon href=/brabo/dev/zh-Hans/img/favicon.ico /><link data-rh=true rel=canonical href=https://daneiel.github.io/brabo/dev/zh-Hans/architecture /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/architecture hreflang=pt-BR /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/en/architecture hreflang=en /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/ru/architecture hreflang=ru /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/zh-Hans/architecture hreflang=zh-Hans /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/architecture hreflang=x-default /><script data-rh=true type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","item":"https://daneiel.github.io/brabo/dev/zh-Hans/architecture","name":"架构","position":1}]}</script><link rel=stylesheet href=/brabo/dev/zh-Hans/assets/css/styles.7f2bd764.css /><script src=/brabo/dev/zh-Hans/assets/js/runtime~main.6f05c45f.js defer></script><script src=/brabo/dev/zh-Hans/assets/js/main.fe66643c.js defer></script></head><body><svg style="display: none;"><defs>
 <symbol id=theme-svg-external-link viewBox="0 0 24 24"><path fill=currentColor d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
 </defs></svg>
-<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme-3f2")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")),document.documentElement.setAttribute("data-theme-choice",t||"system")}(),function(){try{for(var[t,e]of new URLSearchParams(window.location.search).entries())if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id=__docusaurus><link rel=preload as=image href=/brabo/dev/zh-Hans/img/logo.svg /><div role=region aria-label=跳到主要内容><a class=skipToContent_CFOX href=#__docusaurus_skipToContent_fallback>跳到主要内容</a></div><nav aria-label=主导航 class="theme-layout-navbar navbar navbar--fixed-top"><div class=navbar__inner><div class="theme-layout-navbar-left navbar__items"><button aria-label=切换导航栏 aria-expanded=false class="navbar__toggle clean-btn" type=button><svg width=30 height=30 viewBox="0 0 30 30" aria-hidden=true><path stroke=currentColor stroke-linecap=round stroke-miterlimit=10 stroke-width=2 d="M4 7h22M4 15h22M4 23h22"/></svg></button><a class=navbar__brand href=/brabo/dev/zh-Hans/><div class=navbar__logo><img src=/brabo/dev/zh-Hans/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--light_vzqw"/><img src=/brabo/dev/zh-Hans/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--dark_FhTf"/></div><b class="navbar__title text--truncate">Brabo</b></a><a aria-current=page class="navbar__item navbar__link navbar__link--active" href=/brabo/dev/zh-Hans/>文档</a><a class="navbar__item navbar__link" href=/brabo/dev/zh-Hans/runbook>Runbook</a><a class="navbar__item navbar__link" href=/brabo/dev/zh-Hans/adr>ADRs</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a href=# aria-haspopup=true aria-expanded=false role=button class=navbar__link>dev</a><ul class=dropdown__menu><li><a href=https://daneiel.github.io/brabo/prd/ target=_blank rel="noopener noreferrer" class=dropdown__link>prd — estável<svg width=12 height=12 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/qa/ target=_blank rel="noopener noreferrer" class=dropdown__link>qa — 候选版<svg width=12 height=12 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/dev/ target=_blank rel="noopener noreferrer" class=dropdown__link>dev — em desenvolvimento ✓<svg width=12 height=12 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><div class="toggle_pnX7 colorModeToggle_Dj3Z"><button class="clean-btn toggleButton_DKER toggleButtonDisabled_qzkp" type=button disabled title=跟随系统 aria-label=切换浅色/暗黑模式（当前为跟随系统）><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL lightToggleIcon_E8tM"><path fill=currentColor d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL darkToggleIcon_rXjT"><path fill=currentColor d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL systemToggleIcon_zwCm"><path fill=currentColor d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"/></svg></button></div><div class=navbarSearchContainer_zRAa><div class="navbar__search searchBarContainer_eGzj" dir=ltr><svg aria-hidden=true class=searchIcon_PXpx focusable=false viewBox="0 0 16 16"><path fill=currentColor d="M6.02945 10.20327a4.17382 4.17382 0 1 1 4.17382-4.17382 4.15609 4.15609 0 0 1-4.17382 4.17382Zm9.69195 4.2199-4.8225-4.82338A5.88021 5.88021 0 0 0 12.058 6.02856 6.00467 6.00467 0 1 0 9.59979 10.8989l4.82338 4.82338a.89729.89729 0 0 0 1.29912 0 .89749.89749 0 0 0-.00087-1.29909Z"/></svg><input placeholder=搜索 aria-label=Search class="navbar__search-input searchInput_xOBI" value="" /><div class="loadingRing_JccP searchBarLoadingRing_aTss"><div></div><div></div><div></div><div></div></div></div></div></div></div><div role=presentation class=navbar-sidebar__backdrop></div></nav><div id=__docusaurus_skipToContent_fallback class="theme-layout-main main-wrapper mainWrapper_WJkx"><div class=docsWrapper_mIeg><button aria-label=回到顶部 class="clean-btn theme-back-to-top-button backToTopButton_Afc8" type=button></button><div class=docRoot_XZYc><aside class="theme-doc-sidebar-container docSidebarContainer_FPqZ"><div class=sidebarViewport_waOe><div class=sidebar_RQC4><nav aria-label=文档侧边栏 class="menu thin-scrollbar menu_ZM4U"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/><span class=categoryLinkLabel_jKch>🚀 从这里开始</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/><span class=linkLabel_CzBh>简介</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/getting-started><span class=linkLabel_CzBh>快速开始</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/tutorials/from-zero-to-deliverable><span class=linkLabel_CzBh>从零到交付物</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role=button aria-expanded=true href=/brabo/dev/zh-Hans/architecture><span class=categoryLinkLabel_jKch>🏗️ 架构</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link menu__link--active" aria-current=page tabindex=0 href=/brabo/dev/zh-Hans/architecture><span class=linkLabel_CzBh>Arquitetura</span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist" tabindex=0 href=/brabo/dev/zh-Hans/adr><span class=categoryLinkLabel_jKch>决策（ADR）</span></a><button aria-label="展开侧边栏分类 '决策（ADR）'" aria-expanded=false type=button class="clean-btn menu__caret"></button></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/business-rules><span class=categoryLinkLabel_jKch>📐 规则</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/business-rules><span class=linkLabel_CzBh>业务规则</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/business-rules/custo><span class=linkLabel_CzBh>成本与计量</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/business-rules/autenticacao><span class=linkLabel_CzBh>认证</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/reference/configuration><span class=categoryLinkLabel_jKch>📖 参考</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/configuration><span class=linkLabel_CzBh>Configuration</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/events><span class=linkLabel_CzBh>Events</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/permissions><span class=linkLabel_CzBh>Permissions</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/artifacts><span class=linkLabel_CzBh>Artifacts</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/git-providers><span class=linkLabel_CzBh>Git Providers</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/internal-api><span class=linkLabel_CzBh>Internal API</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/scripts><span class=linkLabel_CzBh>Scripts</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/rulesets><span class=linkLabel_CzBh>Rulesets</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/paridade-de-traducao><span class=linkLabel_CzBh>Paridade de tradução</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/brb><span class=linkLabel_CzBh>BRB register</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/security-surface><span class=linkLabel_CzBh>api 的暴露面</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/api><span class=linkLabel_CzBh>API 参考</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/explanation/documentation-workflow><span class=categoryLinkLabel_jKch>💡 解释</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/documentation-workflow><span class=linkLabel_CzBh>Sincronia da doc</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/branching-policy><span class=linkLabel_CzBh>Política de branches</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/cadeia-de-suprimentos-do-ci><span class=linkLabel_CzBh>Cadeia de suprimentos do CI</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/observability><span class=linkLabel_CzBh>Observabilidade</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/primeiro-dogfooding><span class=linkLabel_CzBh>Primeiro dogfooding</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/execucao-real-hello-world><span class=linkLabel_CzBh>Execução real (hello world)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/achados-execucao-real><span class=linkLabel_CzBh>Achados da execução real da esteira</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/backlog><span class=linkLabel_CzBh>Backlog triado</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/validacao-fase-12><span class=linkLabel_CzBh>Validação da Fase 12</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/validacao-real><span class=linkLabel_CzBh>Validação real (13b)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/aceite-providers><span class=linkLabel_CzBh>Aceite dos providers</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/gates><span class=linkLabel_CzBh>Os gates, e como eles são medidos</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/auditoria-fluxo-vs-codigo><span class=linkLabel_CzBh>Auditoria: fluxo.yml × código (v3, ADR 0085)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/historico-de-fases><span class=linkLabel_CzBh>阶段历史</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/fase-28-pasta-do-usuario><span class=linkLabel_CzBh>FASE 28 — pasta do usuário</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/fase-29-instalacao-de-uma-linha><span class=linkLabel_CzBh>FASE 29 — instalação de uma linha</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/fase-30-runner-por-maquina><span class=linkLabel_CzBh>FASE 30 — agente local da máquina</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/medicao-do-idioma><span class=linkLabel_CzBh>Medição da heurística de idioma</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/medicao-do-jev><span class=linkLabel_CzBh>Medição do roteador de ferramentas Jev</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/auditoria-visual-rodada-29><span class=linkLabel_CzBh>Auditoria visual, antes e depois da Rodada 29</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/tanstack-ai><span class=linkLabel_CzBh>TanStack AI — não adotado</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/localizacao><span class=linkLabel_CzBh>Localização</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/localizacao-en><span class=linkLabel_CzBh>Localização — inglês (en)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/localizacao-ru><span class=linkLabel_CzBh>Localização — russo (ru)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/localizacao-zh-hans><span class=linkLabel_CzBh>Localização — chinês simplificado (zh-Hans)</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/runbook><span class=categoryLinkLabel_jKch>🛠️ 运维</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/runbook><span class=linkLabel_CzBh>运维手册</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/glossary><span class=categoryLinkLabel_jKch>📚 词汇</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/glossary><span class=linkLabel_CzBh>术语表</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true><span class=categoryLinkLabel_jKch>🤝 贡献</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>如何贡献</span><svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>在哪里求助</span><svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>报告漏洞</span><svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></ul></nav></div></div></aside><main class=docMainContainer_ia8v><div class="container padding-top--md padding-bottom--lg"><div class=row><div class="col docItemCol_xjE4"><div class=docItemContainer_cPej><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_sZul" aria-label=页面路径><ul class=breadcrumbs><li class=breadcrumbs__item><a aria-label=主页面 class=breadcrumbs__link href=/brabo/dev/zh-Hans/><svg viewBox="0 0 24 24" class=breadcrumbHomeIcon_AUjL><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill=currentColor /></svg></a><li class=breadcrumbs__item><span class=breadcrumbs__link>🏗️ 架构</span><li class="breadcrumbs__item breadcrumbs__item--active"><span class=breadcrumbs__link>Arquitetura</span></ul></nav><div class="tocCollapsible_nbAK theme-doc-toc-mobile tocMobile_r92C"><button type=button class="clean-btn tocCollapsibleButton_hcyq">本页总览</button></div><div class="alert alert--warning margin-bottom--md" role=note data-faixa-de-traducao="">本页尚未翻译；您正在阅读葡萄牙语原文。</div><div class="theme-doc-markdown markdown"><header><h1>Arquitetura</h1></header>
-<p>Este documento é o mapa para quem vai <strong>trabalhar</strong> no código. Ele diz por
-onde começar a ler, o que cada fronteira promete e o que já se sabe que está
-torto.</p>
-<p>As decisões e suas justificativas moram nos <a class="" href=/brabo/dev/zh-Hans/adr>ADRs</a> — 213
-deles, vários registrando um defeito real encontrado em execução. Aqui não
-repetimos o argumento: apontamos para ele.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=the-outside-view>A visão de fora<a href=#the-outside-view class=hash-link aria-label="A visão de fora的直接链接" title="A visão de fora的直接链接" translate=no>​</a></h2>
-<p>O Brabo recebe <strong>uma intenção de produto</strong> ("quero um sistema que faça X") e
-devolve <strong>um repositório git com código, testes e um histórico de decisões</strong>,
-produzido por um time de agentes de IA. Entre a entrada e a saída, toda ação
-com efeito no mundo — rodar um comando, commitar, abrir uma PR, gastar
-tokens — passa por um pedido de aprovação que o humano decide.</p>
-<p>Visto de fora, é uma aplicação web. O que a distingue é que o trabalho é
-feito por processos de longa duração conversando com modelos de linguagem, e
-que o sistema é construído para que <strong>nada aconteça sem rastro e sem
-permissão</strong>.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=containers>Containers<a href=#containers class=hash-link aria-label=Containers的直接链接 title=Containers的直接链接 translate=no>​</a></h2>
+<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme-3f2")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")),document.documentElement.setAttribute("data-theme-choice",t||"system")}(),function(){try{for(var[t,e]of new URLSearchParams(window.location.search).entries())if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id=__docusaurus><link rel=preload as=image href=/brabo/dev/zh-Hans/img/logo.svg /><div role=region aria-label=跳到主要内容><a class=skipToContent_CFOX href=#__docusaurus_skipToContent_fallback>跳到主要内容</a></div><nav aria-label=主导航 class="theme-layout-navbar navbar navbar--fixed-top"><div class=navbar__inner><div class="theme-layout-navbar-left navbar__items"><button aria-label=切换导航栏 aria-expanded=false class="navbar__toggle clean-btn" type=button><svg width=30 height=30 viewBox="0 0 30 30" aria-hidden=true><path stroke=currentColor stroke-linecap=round stroke-miterlimit=10 stroke-width=2 d="M4 7h22M4 15h22M4 23h22"/></svg></button><a class=navbar__brand href=/brabo/dev/zh-Hans/><div class=navbar__logo><img src=/brabo/dev/zh-Hans/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--light_vzqw"/><img src=/brabo/dev/zh-Hans/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--dark_FhTf"/></div><b class="navbar__title text--truncate">Brabo</b></a><a aria-current=page class="navbar__item navbar__link navbar__link--active" href=/brabo/dev/zh-Hans/>文档</a><a class="navbar__item navbar__link" href=/brabo/dev/zh-Hans/runbook>Runbook</a><a class="navbar__item navbar__link" href=/brabo/dev/zh-Hans/adr>ADRs</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a href=# aria-haspopup=true aria-expanded=false role=button class=navbar__link>dev</a><ul class=dropdown__menu><li><a href=https://daneiel.github.io/brabo/prd/ target=_blank rel="noopener noreferrer" class=dropdown__link>prd — estável<svg width=12 height=12 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/qa/ target=_blank rel="noopener noreferrer" class=dropdown__link>qa — 候选版<svg width=12 height=12 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/dev/ target=_blank rel="noopener noreferrer" class=dropdown__link>dev — em desenvolvimento ✓<svg width=12 height=12 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><div class="toggle_pnX7 colorModeToggle_Dj3Z"><button class="clean-btn toggleButton_DKER toggleButtonDisabled_qzkp" type=button disabled title=跟随系统 aria-label=切换浅色/暗黑模式（当前为跟随系统）><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL lightToggleIcon_E8tM"><path fill=currentColor d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL darkToggleIcon_rXjT"><path fill=currentColor d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL systemToggleIcon_zwCm"><path fill=currentColor d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"/></svg></button></div><div class=navbarSearchContainer_zRAa><div class="navbar__search searchBarContainer_eGzj" dir=ltr><svg aria-hidden=true class=searchIcon_PXpx focusable=false viewBox="0 0 16 16"><path fill=currentColor d="M6.02945 10.20327a4.17382 4.17382 0 1 1 4.17382-4.17382 4.15609 4.15609 0 0 1-4.17382 4.17382Zm9.69195 4.2199-4.8225-4.82338A5.88021 5.88021 0 0 0 12.058 6.02856 6.00467 6.00467 0 1 0 9.59979 10.8989l4.82338 4.82338a.89729.89729 0 0 0 1.29912 0 .89749.89749 0 0 0-.00087-1.29909Z"/></svg><input placeholder=搜索 aria-label=Search class="navbar__search-input searchInput_xOBI" value="" /><div class="loadingRing_JccP searchBarLoadingRing_aTss"><div></div><div></div><div></div><div></div></div></div></div></div></div><div role=presentation class=navbar-sidebar__backdrop></div></nav><div id=__docusaurus_skipToContent_fallback class="theme-layout-main main-wrapper mainWrapper_WJkx"><div class=docsWrapper_mIeg><button aria-label=回到顶部 class="clean-btn theme-back-to-top-button backToTopButton_Afc8" type=button></button><div class=docRoot_XZYc><aside class="theme-doc-sidebar-container docSidebarContainer_FPqZ"><div class=sidebarViewport_waOe><div class=sidebar_RQC4><nav aria-label=文档侧边栏 class="menu thin-scrollbar menu_ZM4U"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/><span class=categoryLinkLabel_jKch>🚀 从这里开始</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/><span class=linkLabel_CzBh>简介</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/getting-started><span class=linkLabel_CzBh>快速开始</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/tutorials/from-zero-to-deliverable><span class=linkLabel_CzBh>从零到交付物</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role=button aria-expanded=true href=/brabo/dev/zh-Hans/architecture><span class=categoryLinkLabel_jKch>🏗️ 架构</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link menu__link--active" aria-current=page tabindex=0 href=/brabo/dev/zh-Hans/architecture><span class=linkLabel_CzBh>架构</span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist" tabindex=0 href=/brabo/dev/zh-Hans/adr><span class=categoryLinkLabel_jKch>决策（ADR）</span></a><button aria-label="展开侧边栏分类 '决策（ADR）'" aria-expanded=false type=button class="clean-btn menu__caret"></button></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/business-rules><span class=categoryLinkLabel_jKch>📐 规则</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/business-rules><span class=linkLabel_CzBh>业务规则</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/business-rules/custo><span class=linkLabel_CzBh>成本与计量</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/business-rules/autenticacao><span class=linkLabel_CzBh>认证</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/reference/configuration><span class=categoryLinkLabel_jKch>📖 参考</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/configuration><span class=linkLabel_CzBh>Configuration</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/events><span class=linkLabel_CzBh>Events</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/permissions><span class=linkLabel_CzBh>Permissions</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/artifacts><span class=linkLabel_CzBh>Artifacts</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/git-providers><span class=linkLabel_CzBh>Git Providers</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/internal-api><span class=linkLabel_CzBh>Internal API</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/scripts><span class=linkLabel_CzBh>Scripts</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/rulesets><span class=linkLabel_CzBh>Rulesets</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/paridade-de-traducao><span class=linkLabel_CzBh>Paridade de tradução</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/brb><span class=linkLabel_CzBh>BRB register</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/security-surface><span class=linkLabel_CzBh>api 的暴露面</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/api><span class=linkLabel_CzBh>API 参考</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/explanation/documentation-workflow><span class=categoryLinkLabel_jKch>💡 解释</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/documentation-workflow><span class=linkLabel_CzBh>文档同步</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/branching-policy><span class=linkLabel_CzBh>分支策略</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/cadeia-de-suprimentos-do-ci><span class=linkLabel_CzBh>CI 的供应链</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/observability><span class=linkLabel_CzBh>Observabilidade</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/primeiro-dogfooding><span class=linkLabel_CzBh>Primeiro dogfooding</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/execucao-real-hello-world><span class=linkLabel_CzBh>Execução real (hello world)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/achados-execucao-real><span class=linkLabel_CzBh>流水线真实执行中的发现</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/backlog><span class=linkLabel_CzBh>已分类的 backlog</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/validacao-fase-12><span class=linkLabel_CzBh>Validação da Fase 12</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/validacao-real><span class=linkLabel_CzBh>Validação real (13b)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/aceite-providers><span class=linkLabel_CzBh>Aceite dos providers</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/gates><span class=linkLabel_CzBh>gates，以及如何测量它们</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/auditoria-fluxo-vs-codigo><span class=linkLabel_CzBh>Auditoria: fluxo.yml × código (v3, ADR 0085)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/historico-de-fases><span class=linkLabel_CzBh>阶段历史</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/fase-28-pasta-do-usuario><span class=linkLabel_CzBh>FASE 28 — pasta do usuário</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/fase-29-instalacao-de-uma-linha><span class=linkLabel_CzBh>FASE 29 — instalação de uma linha</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/fase-30-runner-por-maquina><span class=linkLabel_CzBh>FASE 30——机器的本地智能体</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/medicao-do-idioma><span class=linkLabel_CzBh>语言启发式的测量</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/medicao-do-jev><span class=linkLabel_CzBh>Jev 工具路由器的测量</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/auditoria-visual-rodada-29><span class=linkLabel_CzBh>Auditoria visual, antes e depois da Rodada 29</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/tanstack-ai><span class=linkLabel_CzBh>TanStack AI — não adotado</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/localizacao><span class=linkLabel_CzBh>Localização</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/localizacao-en><span class=linkLabel_CzBh>Localização — inglês (en)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/localizacao-ru><span class=linkLabel_CzBh>Localização — russo (ru)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/localizacao-zh-hans><span class=linkLabel_CzBh>Localização — chinês simplificado (zh-Hans)</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/runbook><span class=categoryLinkLabel_jKch>🛠️ 运维</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/runbook><span class=linkLabel_CzBh>运维手册</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/glossary><span class=categoryLinkLabel_jKch>📚 词汇</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/glossary><span class=linkLabel_CzBh>术语表</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true><span class=categoryLinkLabel_jKch>🤝 贡献</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>如何贡献</span><svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>在哪里求助</span><svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>报告漏洞</span><svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></ul></nav></div></div></aside><main class=docMainContainer_ia8v><div class="container padding-top--md padding-bottom--lg"><div class=row><div class="col docItemCol_xjE4"><div class=docItemContainer_cPej><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_sZul" aria-label=页面路径><ul class=breadcrumbs><li class=breadcrumbs__item><a aria-label=主页面 class=breadcrumbs__link href=/brabo/dev/zh-Hans/><svg viewBox="0 0 24 24" class=breadcrumbHomeIcon_AUjL><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill=currentColor /></svg></a><li class=breadcrumbs__item><span class=breadcrumbs__link>🏗️ 架构</span><li class="breadcrumbs__item breadcrumbs__item--active"><span class=breadcrumbs__link>架构</span></ul></nav><div class="tocCollapsible_nbAK theme-doc-toc-mobile tocMobile_r92C"><button type=button class="clean-btn tocCollapsibleButton_hcyq">本页总览</button></div><div class="theme-doc-markdown markdown"><header><h1>架构</h1></header>
+<p>本文档是给要在代码上<strong>工作</strong>的人的地图。它告诉你从哪里开始读、每条边界承诺什么，
+以及哪些地方已知是歪的。</p>
+<p>决策及其理由在 <a class="" href=/brabo/dev/zh-Hans/adr>ADR</a> 中——共 213 个，其中好几个记录了在执行中发现的
+真实缺陷。这里不重复论证：只指向它。</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=the-outside-view>外部视角<a href=#the-outside-view class=hash-link aria-label=外部视角的直接链接 title=外部视角的直接链接 translate=no>​</a></h2>
+<p>Brabo 接收<strong>一个产品意图</strong>（"我想要一个做 X 的系统"），交回<strong>一个带有代码、测试和
+决策历史的 git 仓库</strong>，由一个 AI 智能体团队产出。在输入和输出之间，每一个对外界有
+影响的动作——运行命令、提交、开 PR、花费 token——都要经过一个由人决定的审批请求。</p>
+<p>从外部看，它是一个 Web 应用。它的不同之处在于，工作由与语言模型对话的长时间运行的
+进程完成，而系统的构建方式使得<strong>没有任何事情会在没有痕迹、没有许可的情况下发生</strong>。</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=containers>容器<a href=#containers class=hash-link aria-label=容器的直接链接 title=容器的直接链接 translate=no>​</a></h2>
 <!-- -->
-<p>Duas coisas neste desenho não são óbvias e explicam muito:</p>
-<p><strong>O engine nunca fala com o LLM nem com o git diretamente.</strong> Ele pede à api.
-É isso que garante que metering, orçamento e o pipeline de aprovação não têm
-desvio — não há caminho que escape deles.</p>
-<p><strong>A comunicação api→engine é dupla.</strong> Um evento assíncrono via <em>transactional
-outbox</em> no Postgres (consumido pelo Oban), e HTTP interno para um comando
-síncrono. O outbox existe porque gravar o estado e publicar o evento precisam
-ser a mesma transação; o HTTP existe porque algumas operações precisam de
-resposta imediata.</p>
-<p>O outbox drena três <code>aggregate_type</code>s: <code>session</code> (desde a Fase 5),
-<code>task</code> (Fase 12b — <code>task.gate_resolved</code>/<code>task.became_claimable</code>, o
-reagendamento do dev agent depois que um gate resolve ou uma tarefa nova fica
-pegável) e <code>container</code> (<a class="" href=/brabo/dev/zh-Hans/adr/0143-agentes-de-dev-so-depois-do-container>ADR 0143</a>
-/<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-502>RN-502</a> — <code>container.running</code>, anexado na
-mesma transação que registra o container do projeto chegando a <code>running</code>, para
-que os dev agents que a ausência dele estacionou em <code>:idle</code> acordem sozinhos; um
-agregado próprio em vez de um <code>task</code> emprestado, porque o evento não é sobre
-tarefa nenhuma).
-O motivo de ser um outbox, e não uma chamada HTTP síncrona como as outras:
-um reinício do engine entre o veredito do gate e a reação do agente não pode
-perder o sinal — a linha sobrevive ao processo que a leria, o HTTP não
-sobreviveria à morte de quem esperava a resposta.
-Um dev agent que CAI (qualquer saída que não seja <code>:normal</code>/<code>:shutdown</code>) não é
-tratado como encerrado: <code>Engine.Dev.Monitor</code> registra um <code>agent.error</code> durável
-(origem <code>infra</code>) e o reinicia a partir da própria linha em <code>dev_agent_states</code>, até
-três vezes; a tarefa interrompida é bloqueada com diagnóstico pela recuperação
-de reinício que já existia (<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-742>RN-742</a>).
-<code>dev_agent_states</code> ganhou <code>consecutive_blocked</code>/<code>max_consecutive_blocked</code>
-(o disjuntor, <a class="" href=/brabo/dev/zh-Hans/business-rules/custo#rn-047>RN-047</a>); a decisão completa está no
-<a class="" href=/brabo/dev/zh-Hans/adr/0045-reagendamento-por-evento-do-dev-agent>ADR 0045</a>.
-Uma tarefa bloqueada por falha transitória de rede/provider (DNS, conexão
-resetada, 5xx/429) é desbloqueada de novo por um job do Oban depois de 1, 3 e 10 min
-(até três vezes, pelo mesmo caso de uso de desbloqueio do humano), e o
-dev agent pausa por um minuto em vez de pegar a próxima tarefa
-(<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-864>RN-864</a>).</p>
-<p>Os agentes de gate (<code>QaLeadServer</code>/<code>SecOpsAgentServer</code>) não passam pelo
-outbox nas transições intermediárias (<code>correct</code>/<code>run_secops</code> continuam uma
-chamada direta em memória — a prova mecânica está no comentário de
-<code>record-gate-verdict.use-case.ts</code>: só os desfechos TERMINAIS, <code>done</code>/<code>blocked</code>,
-viajam pelo outbox), então ganharam a MESMA rede de segurança que os dev agents
-já tinham: <code>gate_states</code>, mais um <code>GateRescuer</code> que varre ciclos parados e os
-retoma sozinho — nenhuma tabela nova para o caminho do outbox, porque o problema
-não era falta de outbox, era falta de estado durável para o que acontece
-ENTRE duas chamadas no mesmo processo. Ver
-<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-140>RN-140</a>, <a class="" href=/brabo/dev/zh-Hans/adr/0067-o-gate-sobrevive-ao-restart>ADR 0067</a>.</p>
-<p>O gate de QA tem um TERCEIRO veredito além de <code>approved</code>/<code>changes_requested</code>:
-<code>needs_user_decision</code>, para um requisito que o usuário nunca confirmou (ou que
-uma decisão vigente contradiz). Ele não consome uma correção; o QA Lead
-o consolida acima de <code>approved</code>, e o ciclo é ESTACIONADO pelo mecanismo do
-<a class="" href=/brabo/dev/zh-Hans/adr/0207-ciclo-de-gate-velho-estaciona>ADR 0207</a> até o usuário responder à
-pergunta, o que o retoma. O lado conversacional da mesma regra é a ferramenta
-<code>declare_open_question</code> (Criativo, PO, Arquiteto, Dev Lead), que grava
-<code>artifact.open_question</code>; as respostas do usuário voltam ao dev e ao QA como
-"decisões do usuário" no dev-context (<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-862>RN-862</a>,
-<a class="" href=/brabo/dev/zh-Hans/adr/0214-pergunta-em-aberto-vira-pendencia>ADR 0214</a>).</p>
-<p>Quem PEDE um gate nunca é o próprio gate: <code>Engine.Gates.Dispatcher</code> é um
-behaviour com cinco callbacks (QA de PR e SecOps, os dois gates de infra
-determinísticos e o AppSec de design — o de estratégia de QA saiu com o
-<a class="" href=/brabo/dev/zh-Hans/adr/0192-plano-de-teste-depois-da-entrega>ADR 0192</a>, quando o plano de teste
-virou o primeiro passo do próprio QA de PR) cujo único trabalho é subir o
-GenServer por projeto se necessário e fazer cast nele. A indireção existe para
-os testes de quem chama: <code>Engine.Agents.DevLeadTools</code> é exercitado por um teste
-LEVE sem sandbox do Ecto, e subir um GenServer real ali só para provar que um gate
-foi PEDIDO amarraria o teste do Dev Lead ao banco. O mais novo dos
-cinco, <code>run_appsec_design/2</code>, fechou o último gate que era acionável sem
-chamador de produção: <code>assess_implementability</code> agora pede o modelo de ameaças
-de design da história EM PARALELO — o veredito nunca espera por ele, e o pedido
-acontece uma única vez por história (<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-539>RN-539</a>,
-<a class="" href=/brabo/dev/zh-Hans/adr/0090-qa-estrategia-e-appsec-segundo-momento>ADR 0090</a>).</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=code-map>Mapa do código<a href=#code-map class=hash-link aria-label="Mapa do código的直接链接" title="Mapa do código的直接链接" translate=no>​</a></h2>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=appsapi--nestjs-906-files-in-src-measured-2026-09-25><code>apps/api</code> — NestJS, 906 arquivos em <code>src/</code> (medido em 2026-09-25)<a href=#appsapi--nestjs-906-files-in-src-measured-2026-09-25 class=hash-link aria-label=appsapi--nestjs-906-files-in-src-measured-2026-09-25的直接链接 title=appsapi--nestjs-906-files-in-src-measured-2026-09-25的直接链接 translate=no>​</a></h3>
-<p>Quatro camadas, e a ordem importa:</p>
+<p>这张图中有两件事并不显而易见，却能解释很多：</p>
+<p><strong>engine 从不直接与 LLM 或 git 对话。</strong> 它请求 api。正是这一点保证了 metering、
+预算和审批管道没有旁路——没有任何路径能绕过它们。</p>
+<p><strong>api→engine 的通信是双重的。</strong> 一个通过 Postgres 中的 <em>transactional outbox</em> 的
+异步事件（由 Oban 消费），以及用于同步命令的内部 HTTP。outbox 之所以存在，是因为
+写入状态和发布事件必须是同一个事务；HTTP 之所以存在，是因为某些操作需要立即响应。</p>
+<p>outbox 排空三种 <code>aggregate_type</code>：<code>session</code>（自 Fase 5 起）、<code>task</code>（Fase 12b——
+<code>task.gate_resolved</code>/<code>task.became_claimable</code>，在 gate 解决或新任务变得可领取后对 dev
+agent 的重新调度）以及 <code>container</code>（<a class="" href=/brabo/dev/zh-Hans/adr/0143-agentes-de-dev-so-depois-do-container>ADR 0143</a>
+/<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-502>RN-502</a>——<code>container.running</code>，在记录项目容器到达
+<code>running</code> 的同一事务中附加，使因其缺失而停在 <code>:idle</code> 的 dev agents 自行醒来；用一个
+独立的聚合而不是借用 <code>task</code>，因为这个事件与任何任务都无关）。
+它之所以是 outbox，而不是像其他一样的同步 HTTP 调用：在 gate 裁决和智能体反应之间
+engine 的一次重启不能丢失信号——这一行能比要读取它的进程活得更久，而 HTTP 无法在
+等待响应者死亡后幸存。
+一个<strong>崩溃</strong>的 dev agent（任何不是 <code>:normal</code>/<code>:shutdown</code> 的退出）不被当作已结束：
+<code>Engine.Dev.Monitor</code> 记录一个持久的 <code>agent.error</code>（来源 <code>infra</code>），并从它在
+<code>dev_agent_states</code> 中自己的那一行重启它，最多三次；被中断的任务由已有的重启恢复
+机制带着诊断阻塞（<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-742>RN-742</a>）。
+<code>dev_agent_states</code> 增加了 <code>consecutive_blocked</code>/<code>max_consecutive_blocked</code>
+（断路器，<a class="" href=/brabo/dev/zh-Hans/business-rules/custo#rn-047>RN-047</a>）；完整决定在
+<a class="" href=/brabo/dev/zh-Hans/adr/0045-reagendamento-por-evento-do-dev-agent>ADR 0045</a> 中。
+因网络/provider 的暂时故障（DNS、连接重置、5xx/429）而阻塞的任务，会在 1、3 和
+10 分钟后由一个 Oban job 再次解除阻塞（最多三次，通过人工解除阻塞的同一用例），
+dev agent 暂停一分钟而不是去领取下一个任务（<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-864>RN-864</a>）。</p>
+<p>gate 智能体（<code>QaLeadServer</code>/<code>SecOpsAgentServer</code>）在中间转换时不经过 outbox
+（<code>correct</code>/<code>run_secops</code> 仍是内存中的直接调用——机制上的证明在
+<code>record-gate-verdict.use-case.ts</code> 的注释中：只有终止结果 <code>done</code>/<code>blocked</code> 经由
+outbox 传递），因此它们获得了与 dev agents 已有的<strong>相同</strong>的安全网：<code>gate_states</code>，
+外加一个 <code>GateRescuer</code>，扫描停滞的周期并自行恢复它们——outbox 路径不需要新表，因为
+问题不在于缺少 outbox，而在于同一进程中两次调用<strong>之间</strong>发生的事缺少持久状态。见
+<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-140>RN-140</a>、<a class="" href=/brabo/dev/zh-Hans/adr/0067-o-gate-sobrevive-ao-restart>ADR 0067</a>。</p>
+<p>QA 的 gate 在 <code>approved</code>/<code>changes_requested</code> 之外还有<strong>第三种</strong>裁决：
+<code>needs_user_decision</code>，用于用户从未确认过的需求（或与现行决策相矛盾的需求）。它不
+消耗一次修正；QA Lead 把它合并在 <code>approved</code> 之上，周期由
+<a class="" href=/brabo/dev/zh-Hans/adr/0207-ciclo-de-gate-velho-estaciona>ADR 0207</a> 的机制<strong>停放</strong>，直到用户回答
+问题，这会恢复它。同一规则在会话侧的对应是工具 <code>declare_open_question</code>（Criativo、
+PO、Arquiteto、Dev Lead），它写入 <code>artifact.open_question</code>；用户的回答作为 dev-context
+中的"用户的决定"回到 dev 和 QA（<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-862>RN-862</a>、
+<a class="" href=/brabo/dev/zh-Hans/adr/0214-pergunta-em-aberto-vira-pendencia>ADR 0214</a>）。</p>
+<p><strong>请求</strong> gate 的从来不是 gate 自己：<code>Engine.Gates.Dispatcher</code> 是一个有五个回调的
+behaviour（PR 的 QA 和 SecOps、两个确定性的 infra gates 以及设计阶段的 AppSec——QA
+策略的那个随 <a class="" href=/brabo/dev/zh-Hans/adr/0192-plano-de-teste-depois-da-entrega>ADR 0192</a> 移除，当时测试
+计划变成了 PR 的 QA 自身的第一步），它唯一的工作是在需要时启动每个项目的
+GenServer 并对其 cast。这层间接是为调用方的测试而存在的：<code>Engine.Agents.DevLeadTools</code>
+由一个不带 Ecto sandbox 的<strong>轻量</strong>测试覆盖，而仅仅为了证明 gate 被<strong>请求</strong>过就在那里
+启动一个真实的 GenServer，会把 Dev Lead 的测试绑到数据库上。五个中最新的
+<code>run_appsec_design/2</code> 关闭了最后一个没有生产调用方也能触发的 gate：
+<code>assess_implementability</code> 现在<strong>并行</strong>请求用户故事的设计威胁模型——裁决从不等待它，
+并且每个用户故事只请求一次（<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-539>RN-539</a>、
+<a class="" href=/brabo/dev/zh-Hans/adr/0090-qa-estrategia-e-appsec-segundo-momento>ADR 0090</a>）。</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=code-map>代码地图<a href=#code-map class=hash-link aria-label=代码地图的直接链接 title=代码地图的直接链接 translate=no>​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=appsapi--nestjs-906-files-in-src-measured-2026-09-25><code>apps/api</code> — NestJS，<code>src/</code> 中 906 个文件（2026-09-25 测量）<a href=#appsapi--nestjs-906-files-in-src-measured-2026-09-25 class=hash-link aria-label=appsapi--nestjs-906-files-in-src-measured-2026-09-25的直接链接 title=appsapi--nestjs-906-files-in-src-measured-2026-09-25的直接链接 translate=no>​</a></h3>
+<p>四层，顺序很重要：</p>
 
 
 
@@ -127,15 +103,13 @@ acontece uma única vez por história (<a class="" href=/brabo/dev/zh-Hans/busin
 
 
 
-<table><thead><tr><th>diretório<th>o que é<th>comece por<th>para o que <strong>não</strong> serve<tbody><tr><td><code>src/domain/</code> (72)<td>regra de negócio pura. Sem IO, sem framework<td><code>actions/decide.ts</code> — o coração da aprovação<td>não sabe o que é HTTP, banco ou NestJS<tr><td><code>src/application/</code> (177)<td>casos de uso. Orquestram domínio e portas<td><code>use-cases/sessions/</code><td>não guarda regra; se tem um <code>if</code> de negócio, está no lugar errado<tr><td><code>src/infrastructure/</code> (76)<td>implementações de porta: Drizzle, clientes HTTP, cripto<td><code>persistence/drizzle/</code><td>não decide nada<tr><td><code>src/interfaces/http/</code> (105)<td>controllers, guards, DTOs<td><code>auth/jwt-auth.guard.ts</code><td>não tem regra nem consulta</table>
-<p>Símbolos para dar grep quando estiver perdido: <code>decide(</code>, <code>assertTransition</code>,
-<code>@RequireRole</code>, <code>PROTECTED_BRANCHES</code>, <code>EncryptionService</code>.</p>
-<p><strong>Ponto de entrada:</strong> <code>src/main.ts</code> — e a ordem dos <code>imports</code> nele é
-significativa (<code>./tracing-boot</code> é o primeiro de propósito; a
-auto-instrumentação do OpenTelemetry não pega um módulo já carregado, e um
-módulo separado é o que garante isso: o TypeScript iça todos os <code>require</code>s para
-o topo, então uma chamada escrita entre imports rodaria tarde demais).</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=appsengine--elixirotp-219-files-in-lib-measured-2026-09-25><code>apps/engine</code> — Elixir/OTP, 219 arquivos em <code>lib/</code> (medido em 2026-09-25)<a href=#appsengine--elixirotp-219-files-in-lib-measured-2026-09-25 class=hash-link aria-label=appsengine--elixirotp-219-files-in-lib-measured-2026-09-25的直接链接 title=appsengine--elixirotp-219-files-in-lib-measured-2026-09-25的直接链接 translate=no>​</a></h3>
+<table><thead><tr><th>目录<th>是什么<th>从哪里开始<th><strong>不</strong>用于什么<tbody><tr><td><code>src/domain/</code> (72)<td>纯业务规则。无 IO，无框架<td><code>actions/decide.ts</code>——审批的核心<td>不知道什么是 HTTP、数据库或 NestJS<tr><td><code>src/application/</code> (177)<td>用例。编排领域和端口<td><code>use-cases/sessions/</code><td>不存放规则；如果有业务上的 <code>if</code>，就放错了地方<tr><td><code>src/infrastructure/</code> (76)<td>端口的实现：Drizzle、HTTP 客户端、加密<td><code>persistence/drizzle/</code><td>不做任何决定<tr><td><code>src/interfaces/http/</code> (105)<td>controllers、guards、DTO<td><code>auth/jwt-auth.guard.ts</code><td>没有规则也没有查询</table>
+<p>迷路时可以 grep 的符号：<code>decide(</code>、<code>assertTransition</code>、<code>@RequireRole</code>、
+<code>PROTECTED_BRANCHES</code>、<code>EncryptionService</code>。</p>
+<p><strong>入口：</strong> <code>src/main.ts</code>——其中 <code>imports</code> 的顺序是有意义的（<code>./tracing-boot</code> 故意排
+第一；OpenTelemetry 的自动插桩无法捕获已加载的模块，而单独的模块正是保证这一点的方式：
+TypeScript 会把所有 <code>require</code> 提升到顶部，所以写在 import 之间的调用会运行得太晚）。</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=appsengine--elixirotp-219-files-in-lib-measured-2026-09-25><code>apps/engine</code> — Elixir/OTP，<code>lib/</code> 中 219 个文件（2026-09-25 测量）<a href=#appsengine--elixirotp-219-files-in-lib-measured-2026-09-25 class=hash-link aria-label=appsengine--elixirotp-219-files-in-lib-measured-2026-09-25的直接链接 title=appsengine--elixirotp-219-files-in-lib-measured-2026-09-25的直接链接 translate=no>​</a></h3>
 
 
 
@@ -186,13 +160,13 @@ o topo, então uma chamada escrita entre imports rodaria tarde demais).</p>
 
 
 
-<table><thead><tr><th>módulo<th>o que é<th>comece por<tbody><tr><td><code>harness/</code> (33)<td>montagem de contexto, ToolLoop, compactação. <strong>Nenhuma chamada de LLM acontece fora daqui</strong><td><code>harness/tool_loop/</code><tr><td><code>dev/</code> (15)<td>dev agents, worktrees, monitor<td><code>dev/dev_agent_server.ex</code><tr><td><code>gates/</code> (20)<td>a área de QA (Lead + Automação, subespecialidades de Performance/Segurança e de estratégia de QA — o segundo momento do Lead, ADR 0090 — todas com LLM) e SecOps (determinístico)<td><code>gates/qa_lead_server.ex</code><tr><td><code>infra/</code> (9)<td>a área de Infra (Lead conversacional, escopado à sessão — desde a <a class="" href=/brabo/dev/zh-Hans/business-rules#rn-617>RN-617</a> o sétimo agente conversacional, alcançável pelo composer e rodando seus turnos no <code>TurnoAssincrono</code> — + subespecialidade Workflows via ToolLoop — duas famílias arquiteturais na mesma área, ver RN-037)<td><code>infra/infra_lead_server.ex</code><tr><td><code>sessions/</code> (9)<td>ciclo de vida da sessão, registro <code>:global</code><td><code>sessions/session_server.ex</code><tr><td><code>actions/</code> (9)<td>executores de terminal e git, detectores de lint/scanner<td><code>actions/git_executor.ex</code><tr><td><code>agents/</code> (16)<td>Criativo, PO, Arquiteto, Dev Lead, Staff (ADR 0088, dormente para disparo automático) — cada turno roda numa Task supervisionada (<code>TurnoAssincrono</code>, RN-122), não mais dentro do <code>handle_call</code>, então um <code>:cancel</code> consegue de fato interrompê-lo<td><code>agents/turno_assincrono.ex</code><tr><td><code>psychologist/</code> (6) · <code>anamnese/</code> (6)<td>análise e melhoria do time<td>—</table>
-<p><strong>Ponto de entrada:</strong> <code>lib/engine/application.ex</code> — a árvore de supervisão
-inteira está lá, e é o melhor arquivo para entender o que está rodando.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=appsbroker--nodets-9-files-in-src-measured-2026-09-25><code>apps/broker</code> — Node/TS, 9 arquivos em <code>src/</code> (medido em 2026-09-25)<a href=#appsbroker--nodets-9-files-in-src-measured-2026-09-25 class=hash-link aria-label=appsbroker--nodets-9-files-in-src-measured-2026-09-25的直接链接 title=appsbroker--nodets-9-files-in-src-measured-2026-09-25的直接链接 translate=no>​</a></h3>
-<p>O único processo do produto com acesso a um Docker daemon
-(<a class="" href=/brabo/dev/zh-Hans/adr/0130-broker-de-container>ADR 0130</a>), e o menor serviço daqui:
-sem framework, <code>node:http</code>, seis rotas (medido em 2026-09-25 em <code>src/servidor.ts</code>).</p>
+<table><thead><tr><th>模块<th>是什么<th>从哪里开始<tbody><tr><td><code>harness/</code> (33)<td>上下文组装、ToolLoop、压缩。<strong>没有任何 LLM 调用发生在这里之外</strong><td><code>harness/tool_loop/</code><tr><td><code>dev/</code> (15)<td>dev agents、worktrees、monitor<td><code>dev/dev_agent_server.ex</code><tr><td><code>gates/</code> (20)<td>QA 领域（Lead + 自动化，Performance/安全以及 QA 策略的子专长——Lead 的第二时刻，ADR 0090——全部使用 LLM）和 SecOps（确定性）<td><code>gates/qa_lead_server.ex</code><tr><td><code>infra/</code> (9)<td>Infra 领域（会话型 Lead，限定于会话——自 <a class="" href=/brabo/dev/zh-Hans/business-rules#rn-617>RN-617</a> 起是第七个会话型智能体，可通过 composer 访问并在 <code>TurnoAssincrono</code> 中运行其轮次——+ 通过 ToolLoop 的 Workflows 子专长——同一领域中的两个架构家族，见 RN-037）<td><code>infra/infra_lead_server.ex</code><tr><td><code>sessions/</code> (9)<td>会话生命周期，<code>:global</code> 注册<td><code>sessions/session_server.ex</code><tr><td><code>actions/</code> (9)<td>终端和 git 执行器，lint/扫描器检测器<td><code>actions/git_executor.ex</code><tr><td><code>agents/</code> (16)<td>Criativo、PO、Arquiteto、Dev Lead、Staff（ADR 0088，对自动触发处于休眠）——每个轮次在一个受监督的 Task 中运行（<code>TurnoAssincrono</code>，RN-122），不再在 <code>handle_call</code> 内部，因此 <code>:cancel</code> 确实能中断它<td><code>agents/turno_assincrono.ex</code><tr><td><code>psychologist/</code> (6) · <code>anamnese/</code> (6)<td>团队的分析与改进<td>—</table>
+<p><strong>入口：</strong> <code>lib/engine/application.ex</code>——整棵监督树都在那里，是理解有什么在运行的
+最佳文件。</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=appsbroker--nodets-9-files-in-src-measured-2026-09-25><code>apps/broker</code> — Node/TS，<code>src/</code> 中 9 个文件（2026-09-25 测量）<a href=#appsbroker--nodets-9-files-in-src-measured-2026-09-25 class=hash-link aria-label=appsbroker--nodets-9-files-in-src-measured-2026-09-25的直接链接 title=appsbroker--nodets-9-files-in-src-measured-2026-09-25的直接链接 translate=no>​</a></h3>
+<p>产品中唯一能访问 Docker daemon 的进程（<a class="" href=/brabo/dev/zh-Hans/adr/0130-broker-de-container>ADR 0130</a>），
+也是这里最小的服务：无框架，<code>node:http</code>，六个路由（2026-09-25 在 <code>src/servidor.ts</code> 中
+测量）。</p>
 
 
 
@@ -218,15 +192,14 @@ sem framework, <code>node:http</code>, seis rotas (medido em 2026-09-25 em <code
 
 
 
-<table><thead><tr><th>arquivo<th>o que é<tbody><tr><td><code>src/operacoes.ts</code><td>as CINCO operações, e a composição da spec. Nada que vira um <code>docker run</code> vem de fora<tr><td><code>src/servidor.ts</code><td>a lista fechada de rotas, a checagem do token e a tabela de falhas (status + <code>origem</code>)<tr><td><code>src/api-client.ts</code><td>como ele LÊ a decisão do Arquiteto na api — a chamada que o faz não aceitar uma spec<tr><td><code>src/config.ts</code><td>quatro variáveis de ambiente, e a recusa de subir em produção com o token público do repositório</table>
-<p><strong>Ponto de entrada:</strong> <code>src/index.ts</code>. O acesso ao Docker em si não está aqui: vem de
-<code>packages/docker-port</code>, o mesmo arquivo que o runner usa.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=appsweb--react-19-487-files-in-src-measured-2026-09-25><code>apps/web</code> — React 19, 487 arquivos em <code>src/</code> (medido em 2026-09-25)<a href=#appsweb--react-19-487-files-in-src-measured-2026-09-25 class=hash-link aria-label=appsweb--react-19-487-files-in-src-measured-2026-09-25的直接链接 title=appsweb--react-19-487-files-in-src-measured-2026-09-25的直接链接 translate=no>​</a></h3>
-<p><code>src/lib/api-types.ts</code> e <code>src/lib/activity.ts</code> são os dois arquivos que vale
-ler primeiro: o primeiro é o contrato com a api, o segundo
-classifica os 40 tipos de evento do log em algo exibível — é a
-melhor fonte de verdade sobre o que cada evento significa.</p>
-<p>Três derivações do mesmo event log, respondendo perguntas diferentes:</p>
+<table><thead><tr><th>文件<th>是什么<tbody><tr><td><code>src/operacoes.ts</code><td><strong>五个</strong>操作，以及 spec 的组合。任何变成 <code>docker run</code> 的东西都不来自外部<tr><td><code>src/servidor.ts</code><td>封闭的路由列表、token 检查和故障表（状态 + <code>origem</code>）<tr><td><code>src/api-client.ts</code><td>它如何在 api 中<strong>读取</strong> Arquiteto 的决定——正是这次调用使它不接受 spec<tr><td><code>src/config.ts</code><td>四个环境变量，以及在生产中使用仓库公开 token 时拒绝启动</table>
+<p><strong>入口：</strong> <code>src/index.ts</code>。对 Docker 的访问本身不在这里：它来自
+<code>packages/docker-port</code>，与 runner 使用的是同一个文件。</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=appsweb--react-19-487-files-in-src-measured-2026-09-25><code>apps/web</code> — React 19，<code>src/</code> 中 487 个文件（2026-09-25 测量）<a href=#appsweb--react-19-487-files-in-src-measured-2026-09-25 class=hash-link aria-label=appsweb--react-19-487-files-in-src-measured-2026-09-25的直接链接 title=appsweb--react-19-487-files-in-src-measured-2026-09-25的直接链接 translate=no>​</a></h3>
+<p><code>src/lib/api-types.ts</code> 和 <code>src/lib/activity.ts</code> 是值得先读的两个文件：前者是与 api
+的契约，后者把日志的 40 种事件类型分类为可显示的东西——它是关于每个事件含义的最佳
+事实来源。</p>
+<p>同一个 event log 的三种派生，回答不同的问题：</p>
 
 
 
@@ -248,219 +221,160 @@ melhor fonte de verdade sobre o que cada evento significa.</p>
 
 
 
-<table><thead><tr><th>arquivo<th>responde<tbody><tr><td><code>lib/activity.ts</code><td>"o que aconteceu" — o feed cronológico<tr><td><code>lib/agent-status.ts</code><td>"quem existe e em que estado está" — os cards do time<tr><td><code>lib/timeline-tree.ts</code><td>"o que cada agente fez, e o que está fazendo AGORA" — a árvore</table>
-<p><code>lib/aprovacoes.ts</code> responde uma quarta pergunta, e ela não vem do
-event log: "o que acontece se eu aprovar". O verbo e a frase de cada tipo de
-<code>proposed_action</code> moram ali, e as três telas de decisão os consomem — a
-fila de Aprovações, o card dentro do chat e a aba Insights
-(<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-096>RN-096</a>).</p>
-<p><strong>A união <code>ActionType</code> ERA uma cópia, e a cópia envelheceu — duas vezes, em
-produção</strong> (os três tipos do bootstrap do Gitflow; depois
-<code>parallelize</code>/<code>raise_max_parallel</code>), as duas vezes sem o compilador perceber,
-porque <code>apps/api</code> não é dependência de <code>apps/web</code>. O ADR 0116 fechou a
-classe: <code>ActionType</code> agora é gerado pelo <code>openapi-typescript</code> a partir de
-<code>docs/reference/openapi.json</code> (<code>lib/api-types.generated.ts</code>, reexportado por
-<code>lib/api-types.ts</code>) em vez de digitado à mão, e o compilador agora exige que os
-mapas <code>Record&lt;ActionType, ...></code> em <code>lib/aprovacoes.ts</code> sejam exaustivos a cada
-edição. O resto de <code>api-types.ts</code> — ~1600 linhas — continua escrito à mão; só
-este tipo, com um custo repetido provado, migrou. <code>lib/aprovacoes.test.ts</code>
-também fica, mas para um trabalho mais estreito: não precisa mais pegar uma
-entrada FALTANDO (o compilador pega), só uma ruim — frase curta demais, sem
-ponto final, <code>snake_case</code> cru vazando para a prosa em português. Na dúvida, a UI
-ainda degrada em vez de derrubar a árvore do React.</p>
-<p>A árvore inverte o eixo do feed (agente primeiro, tempo depois) porque numa
-sessão com Criativo, PO, Arquiteto e N devs a coluna cronológica
-não conseguia responder quem estava fazendo o quê. Nenhuma das três tem estado
-ou rota própria — todas derivam dos mesmos eventos, e um evento que não está no
-log não aparece em nenhuma delas.</p>
-<p><strong>Escopo de leitura: a tela de projeto pergunta por sessão, a tela de lista
-pergunta por workspace.</strong> Dentro de um projeto as consultas são por sessão e
-por projeto, que é o recorte natural do que está aberto. Mas o dashboard e a
-sidebar mostram TODOS os projetos, e ali o recorte por projeto vira N+1 — eram
-sete consultas com polling por card, 3.824 req/min com 23 projetos contra um
-limite de 300, e a tela se derrubava sozinha com 429s. As duas leem
-de <code>GET /workspaces/:id/projects-summary</code> — um read model que atravessa
-agregados (git, orçamento, sessão, backlog, arquitetura) e cujo número de
-idas e voltas ao banco não cresce com a quantidade de projetos
-(<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-090>RN-090</a>).</p>
-<p>A gaveta do sino segue o mesmo recorte, com uma diferença que vale
-registrar: ela precisa do ponto de corte de leitura de cada projeto, e esse
-ponto é um <code>seq</code> guardado no navegador de quem está olhando (<code>lib/read-state.ts</code>) — o
-servidor não tem, e não vai ter, um "marcar como lido". Então o cliente
-<strong>envia</strong> o mapa <code>project → afterSeq</code> no corpo de
-<code>POST /workspaces/:id/unread-events</code>, que é uma leitura apesar do verbo e
-devolve <code>200</code> (<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-091>RN-091</a>). O verbo decorre
-do corpo, não de uma mutação: são dezenas de pares, e uma query string desse
-tamanho quebra num proxy, além de pôr ids de projeto em logs de acesso.</p>
-<p>Esse endpoint devolve FATOS do event log, nunca componentes
-montados: <code>lib/agents.ts</code> (quem é lead, ícone, cor) e <code>rosterFromFacts</code>
-(<code>lib/agent-status.ts</code>) continuam sendo trabalho do web, e a regra de presença é a
-mesma que o painel do time usa. É a mesma fronteira das três
-derivações acima — a api diz o que aconteceu, o web decide o que se
-desenha a partir disso.</p>
-<p>Duas checagens de UI são automáticas: contraste (<code>lib/contraste.ts</code>, um teste sobre
-<code>design/tokens.css</code>) e layout (<code>scripts/dev/validacao-visual.js</code>, rodado no
-navegador). Explicadas em <code>design/README.md</code>.</p>
-<p><strong>A instalação decide o que o assistente de projeto oferece.</strong> <code>getProjectsBase</code>
-(<code>lib/api-client.ts</code>) lê <code>GET /workspaces/:workspaceId/projects-base</code> — a
-base única de projetos montados desta instalação (<a class="" href=/brabo/dev/zh-Hans/adr/0141-base-unica-dos-projetos-montados>ADR
-0141</a>) — e o assistente de Novo
-Projeto é seu único chamador (<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-513>RN-513</a>). <code>projectsBase: null</code> é um estado normal, não uma falha: a instalação não tem
-<code>BRABO_PROJECTS_BASE</code>, então o card de pasta montada simplesmente não é oferecido e
-<code>container</code> continua o padrão. O mesmo vale enquanto a resposta está a caminho e
-quando a consulta FALHA — desconhecido nunca vira oferta, a mesma regra da
-<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-088>RN-088</a>/<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-468>RN-468</a>. Com uma
-base, o card vem PRÉ-SELECIONADO e o campo de caminho abre em <code>&lt;base>/&lt;slug></code>,
-composto por <code>caminhoSugeridoNaBase</code> (<code>lib/wizard.ts</code>) — uma função pura, ao lado
-de <code>caminhoDentroDaBase</code>, que responde "este caminho está sob a base?" por
-SEGMENTO e espelha o <code>dentroDoEscopo</code> da api. Nem a pré-seleção nem a
-sugestão sobrescrevem uma escolha humana.</p>
-<p><strong>O seletor de pastas é a única leitura do web com DOIS TRANSPORTES</strong>, e a interface
-que a torna uma só mora em <code>lib/fs-browser.ts</code>
-(<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-504>RN-504</a>). <code>FsBrowser</code> — <code>listarDiretorio</code> /
-<code>diretorioInicial</code> / <code>fechar</code> — tem duas implementações, e elas não falam
-com a mesma máquina: <code>criarFsBrowserViaApi(workspaceId)</code> chama
-<code>GET /workspaces/:workspaceId/project-folders</code> na api, escopado rigidamente a
-<code>BRABO_PROJECTS_BASE</code> (<a class="" href=/brabo/dev/zh-Hans/adr/0141-base-unica-dos-projetos-montados>ADR 0141</a>),
-enquanto <code>connectFsBrowserChannel(projectId)</code> (<code>lib/fs-browser-channel.ts</code>) fala
-o canal Phoenix <code>terminal:&lt;projectId></code> e lê o disco do USUÁRIO pelo
-runner.</p>
-<p>A interface foi extraída do módulo do canal justamente porque ele
-deixou de ter uma implementação só. <code>FolderBrowserModal</code> escolhe entre elas com
-uma união discriminada — <code>origem: { tipo: 'api'; workspaceId } | { tipo: 'runner'; projectId }</code>, não duas props opcionais, para que "nenhuma" e "ambas" não
-sejam estados representáveis que o componente precise tratar em runtime — e o corpo
-dele nunca fica sabendo qual recebeu. Só três coisas ramificam por <code>origem</code>: qual
-fábrica roda, quais atalhos existem (<code>/</code> não é oferecido pelo transporte da api;
-está fora da base por construção, e o botão só poderia terminar num
-400) e se o <code>RunnerOnboardingPanel</code> faz sentido.</p>
-<p><code>ListagemResultado</code> ganhou três campos OPCIONAIS — <code>arquivos</code>, <code>simbolicos</code>,
-<code>truncado</code> — e eles são opcionais porque só o transporte da api conta o que
-excluiu. O protocolo do runner (<code>FsEntrada</code> em <code>apps/runner/src/channel.ts</code>)
-devolve pastas e arquivos misturados e não conta nada; preencher zeros ali
-afirmaria "nada ficou de fora", o que é diferente de não saber.</p>
-<p>A RN-504 apontou OS DOIS modos para a api e declarou o preço: para <code>runner</code>, a
-lista deixou de ser a máquina do usuário e virou a base. Isso foi aceito
-porque o modo <code>runner</code> sairia do assistente de criação — não saiu, e a
-<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-533>RN-533</a> (<a class="" href=/brabo/dev/zh-Hans/adr/0151-base-consentida-no-runner>ADR 0151</a>
-ponto 7) o reverte. Agora é o MODO que escolhe o transporte, porque eles respondem
-perguntas diferentes: <code>mounted</code> pergunta à api (sua pasta mora sob a base, no
-SERVIDOR), <code>runner</code> pergunta ao agente local (sua pasta mora numa máquina que o
-servidor não enxerga). O ramo <code>runner</code> se ancora no projeto que o assistente
-já criou antecipadamente (<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-437>RN-437</a>); quando essa
-criação falha, nenhum modal abre, porque cair para a api
-mostraria a base do SERVIDOR sob o rótulo "sua máquina".</p>
-<p>A falha carrega um motivo DISCRIMINADO (<code>MotivoDeFalhaDoAgente</code>): <code>sem-agente</code>
-é o servidor AFIRMANDO que não há runner, <code>sem-resposta</code> é um timeout, um
-socket caído ou um ticket recusado — ignorância, dita como ignorância
-(<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-088>RN-088</a>/<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-468>RN-468</a>). O
-componente decidia por <code>includes('Nenhum runner conectado')</code>, casando uma
-frase em pt-BR que mora no <code>.ex</code> do engine; o casamento de substring agora mora
-em exatamente um lugar, o módulo dono do protocolo do canal, e uma mensagem do
-engine reescrita degrada para <code>sem-resposta</code>, nunca para "há um agente". Os dois
-motivos montam <code>EsperaDoRunner</code> — a espera da RN-474, REUSADA: mesmos três estados, mesmo
-teto, mesmo sinal — que refaz sozinha a listagem que falhou quando o
-carimbo muda. Uma espera por tela: <code>RunnerOnboardingPanel</code> recebe
-<code>mostrarEspera</code>, falso só onde o hospedeiro dele já mostra uma. E o seletor
-DIZ de quem é o disco que está listando, nas duas origens — a única pista antes disso era
-o rótulo de um atalho, que nomeia um lugar, não uma máquina.</p>
-<p><strong>O painel também RECONHECE uma máquina que já está pareada</strong>
-(<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-548>RN-548</a>, <a class="" href=/brabo/dev/zh-Hans/adr/0154-chave-de-dispositivo-de-maquina>ADR 0154</a>).
-<code>listRunnerDeviceKeys</code> em <code>lib/api-client.ts</code> lê
-<code>GET /projects/:projectId/runner-device-keys</code>, que desde a
-<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-543>RN-543</a> marca a ESPÉCIE de cada chave — e a
-derivação inteira mora fora do componente, em <code>lib/agente-de-maquina.ts</code>, porque
-a regra é sobre o DADO e o componente é sobre o desenho. Sete estados,
-nenhum colapsando em outro, e a falha é derivada de <code>isError</code> e não
-de um status, então um erro de rede diz "não sei" em vez de girar em
-"verificando…" para sempre. Uma chave registrada NÃO é um agente rodando — a mesma
-disciplina que <code>workspaceVerifiedAt</code> já impõe — e a lista pertence à
-CONTA, não a este navegador, então a frase mais forte disponível é "sua
-conta tem uma máquina pareada". Os dois limites são ditos na tela. O
-fluxo pelo navegador do <a class="" href=/brabo/dev/zh-Hans/adr/0118-configuracao-automatica-do-runner-pelo-navegador>ADR 0118</a>
-(gerar a chave, baixar o binário, gravar a pasta) foi
-aposentado no <a class="" href=/brabo/dev/zh-Hans/adr/0203-aposenta-o-fluxo-do-runner-pelo-navegador>ADR 0203</a>
-(<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-687>RN-687</a>): o painel agora mostra o comando do <code>install.sh</code>,
-que sai quando uma chave que atende o projeto é reconhecida, e o
-comando manual com PAT fica num <code>&lt;details></code> nomeado pelo caso que ele responde
-(outra máquina). O mínimo da leitura vem de <code>roleAtLeast</code>
-contra o <code>developer</code> do ENDPOINT, e um 403 real cai no mesmo estado —
-o papel de workspace é um proxy, a api é a autoridade.</p>
-<p><strong>A aba Código (FASE 26) é o mesmo padrão de leitura</strong>, aplicado a código
-em vez de eventos: <code>getContainerState</code>/<code>getCodeTree</code>/<code>getCodeFile</code>/
-<code>searchCode</code>/<code>getCodeDiff</code> em <code>lib/api-client.ts</code> espelham as rotas de leitura da
-api (<code>container</code> mais as sete em <code>code.controller.ts</code>, FASE 26b), com
-os tipos em <code>lib/api-types.ts</code> (<code>EstadoDoContainer</code>, <code>CodeTree</code>, <code>CodeFile</code>,
-<code>CodeSearchResult</code>, <code>CodeDiff</code>) copiados dos DTOs — a mesma convenção
-do resto do arquivo, sem importar <code>apps/api</code>. <code>routes/code/ highlight.ts</code> é um tokenizador PRÓPRIO baseado em regex para realce de sintaxe,
-zero dependência nova. O portão do <code>ProjectCodeTab.tsx</code> (RN-107) pergunta pelo
-estado do container ANTES de tentar ler código, para que ele apareça como
-mensagem própria em vez de como nota de rodapé de um 409.</p>
-<p><strong>A FASE 26b acrescentou <code>getCodeBlame</code>/<code>getCodePullRequests</code>/<code>getCodeBranches</code> ao
-mesmo padrão</strong>, com <code>CodeBlame</code>/<code>CodePullRequestList</code>/
-<code>CodeBranchDetailList</code> em <code>lib/api-types.ts</code> — fundação para os três itens
-pendentes declarados da aba Código (RN-110/111/112). Os três agora têm
-consumidor: <code>CodeEditor.tsx</code> (o toggle de blame), <code>code/PrListAndDiff.tsx</code> (lista
-de PRs + diff, consumido tanto por <code>CodeDiffPanel.tsx</code> quanto pela aba <code>prs</code>
-avulsa) e <code>CodeBranchPicker.tsx</code> (o dropdown rico de branches).</p>
-<p>O portão da imagem de container (RN-105) é um funil único
-(<code>ReadProjectCodeUseCase.alvo</code>) compartilhado pelas sete rotas, então qualquer uma delas
-pode dar 409 enquanto o Arquiteto não decidiu a imagem — não só a árvore.
-<code>ProjectCodeTab.tsx</code> evita esse 409 com uma pré-checagem (<code>RN-107</code>, acima); a
-aba <code>prs</code> não tem leitura de árvore/arquivo contra a qual pré-checar, então
-<code>code/PrListAndDiff.tsx</code> reage ao 409 das próprias chamadas
-<code>getCodePullRequests</code>/<code>getCodeDiff</code>. Os dois caminhos renderizam a mesma
-apresentação, <code>ContainerImageGateNotice</code>
-(<code>components/ContainerImageGate.tsx</code>), detectada por <code>isContainerImageGateError</code>
-(<code>lib/api-client.ts</code>, casa <code>ApiError.status === 409</code>) — um bug achado pelo
-uso: antes disso, a aba <code>prs</code> exibia esse 409 como um erro transitório genérico
-com um botão "tentar de novo", que é a affordance errada para um estado
-que só se resolve quando o Arquiteto age.</p>
-<p><strong>A página global de containers (<code>/containers</code>, ADR 0136/RN-495) é uma leitura de
-WORKSPACE</strong>, não de projeto — <code>getContainersOverview</code> em <code>lib/api-client.ts</code>
-chama <code>GET workspaces/:workspaceId/containers</code>, e <code>ContainerOverviewItem</code>
-em <code>lib/api-types.ts</code> espelha <code>ContainerOverviewItemResponseDto</code>. O lado da
-api é um read model dedicado, <code>ContainersOverviewRepository</code>/
-<code>DrizzleContainersOverviewRepository</code>, com a mesma disciplina de "sem N+1 entre
-projetos" do <code>ProjectsSummaryRepository</code> — três consultas constantes (<code>projects</code>
-com LEFT JOIN nas linhas de container, os eventos <code>artifact.project_image</code> em
-lote, as <code>proposed_actions</code> de container pendentes em lote), nunca uma por
-projeto. O que NÃO dá para fazer em lote — perguntar ao broker o estado observado —
-ganha em vez disso um orçamento explícito por carga
-(<code>ObterVisaoGeralDeContainersUseCase.TETO_DE_VERIFICACOES_POR_CARGA</code>, só
-linhas <code>provisioning</code>/<code>running</code> são perguntadas, com teto de 20): uma linha fora do
-orçamento diz <code>naoVerificado</code>, nunca reaproveitando em silêncio a resposta de outra
-linha nem herdando o estado registrado. As ações (parar/remover/subir) são
-<code>proposed_action</code>s como em todo lugar — a página nunca chama o broker
-diretamente — e a ação pendente de cada linha (se houver) vem junto na mesma
-leitura em lote, renderizada como um <code>ApprovalCard</code> inline, o mesmo padrão
-que <code>ProjectPrsTab.tsx</code> já usa para propostas de merge.</p>
-<p>Desde a <a class="" href=/brabo/dev/zh-Hans/business-rules#rn-521>RN-521</a> o join é LEFT e a página
-lista TODO projeto do workspace, porque ela virou o caminho humano para subir
-o PRIMEIRO container: uma subida que falha antes de registrar não deixa linha, e
-o INNER JOIN antigo escondia exatamente o projeto que precisava da página.
-<code>ContainerOverviewItem.registrado</code> é portanto anulável — um terceiro estado nomeado
-no tipo, distinto de <code>stopped</code> e de "não pôde ser observado" — e linhas
-sem container nunca são elegíveis ao orçamento do broker, então não podem
-expulsar um container real. A ramificação entre <code>container_start</code> (broker) e
-<code>container_start_via_runner</code> (agente local) é uma função pura do CLIENTE,
-<code>routes/containers-subida.ts</code>: ela também decide quando NÃO oferecer o botão (sem
-imagem decidida, <code>runner</code> cuja pasta nenhum agente jamais confirmou, papel abaixo de
-<code>maintainer</code> por <code>roleAtLeast</code>) e cada recusa tem texto próprio — a tela
-nunca propõe uma ação que já sabe que vai falhar, e nunca esconde por quê.</p>
-<p>O OUTRO proponente — o agente Infra Lead — ramifica do mesmo jeito desde a
-<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-566>RN-566</a>. As duas ferramentas dele passam por uma única
-<code>recusa_local_de_subida/2</code> em <code>infra_lead_server.ex</code>, que lê o projeto
-UMA vez (<code>Project.get/1</code>, mesmo processo BEAM, nunca HTTP: uma chamada de rede dentro do
-laço do agente é o custo que esta correção não podia pagar) e devolve <code>nil</code> ou um motivo
-NOMEADO, uma cláusula por ferramenta — <code>container</code>/<code>mounted</code> propõem <code>container_start</code>,
-<code>runner</code> é recusado apontando para <code>container_start_via_runner</code>, e a
-cláusula de <code>container_start</code> é uma LISTA DE PERMITIDOS como a do broker, então um modo novo
-no enum nasce recusado. A recusa é texto de RESULTADO de ferramenta que o modelo lê (entrada do laço,
-<a class="" href=/brabo/dev/zh-Hans/business-rules/autenticacao#rn-163>RN-163</a>), nunca um <code>agent.error</code>, e o <code>tool.call</code>
-continua sendo emitido para que uma recusa local nunca suma da timeline. O que o
-agente NÃO checa, e a tela checa, é a imagem decidida e a
-pasta confirmada.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=outside-the-applications>Fora das aplicações<a href=#outside-the-applications class=hash-link aria-label="Fora das aplicações的直接链接" title="Fora das aplicações的直接链接" translate=no>​</a></h3>
+<table><thead><tr><th>文件<th>回答<tbody><tr><td><code>lib/activity.ts</code><td>"发生了什么"——按时间顺序的信息流<tr><td><code>lib/agent-status.ts</code><td>"谁存在，处于什么状态"——团队卡片<tr><td><code>lib/timeline-tree.ts</code><td>"每个智能体做了什么，<strong>现在</strong>在做什么"——树</table>
+<p><code>lib/aprovacoes.ts</code> 回答第四个问题，而它不来自 event log："如果我批准会发生什么"。
+每种 <code>proposed_action</code> 的动词和句子都在那里，三个决策界面使用它们——审批队列、聊天中
+的卡片和 Insights 标签页（<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-096>RN-096</a>）。</p>
+<p><strong>联合类型 <code>ActionType</code> 曾经是一份副本，而副本过时了——两次，在生产中</strong>（Gitflow
+bootstrap 的三种类型；然后是 <code>parallelize</code>/<code>raise_max_parallel</code>），两次编译器都没有
+察觉，因为 <code>apps/api</code> 不是 <code>apps/web</code> 的依赖。ADR 0116 关闭了这一类问题：<code>ActionType</code>
+现在由 <code>openapi-typescript</code> 从 <code>docs/reference/openapi.json</code> 生成
+（<code>lib/api-types.generated.ts</code>，由 <code>lib/api-types.ts</code> 重新导出），而不是手写，编译器
+现在要求 <code>lib/aprovacoes.ts</code> 中的 <code>Record&lt;ActionType, ...></code> 映射在每次编辑时都穷尽。
+<code>api-types.ts</code> 的其余部分——约 1600 行——仍然是手写的；只有这个被证明有重复成本的类型
+迁移了。<code>lib/aprovacoes.test.ts</code> 也保留，但做更窄的工作：它不再需要抓出<strong>缺失</strong>的条目
+（编译器会抓），只抓坏的——句子太短、没有句号、原始的 <code>snake_case</code> 泄漏到葡萄牙语
+文本中。拿不准时，UI 仍然降级而不是让 React 树崩溃。</p>
+<p>树把信息流的轴反过来（先智能体，后时间），因为在一个有 Criativo、PO、Arquiteto 和
+N 个 dev 的会话中，按时间排列的列无法回答谁在做什么。三者都没有自己的状态或路由——
+全部从同样的事件派生，不在日志中的事件不会出现在其中任何一个里。</p>
+<p><strong>读取范围：项目界面按会话询问，列表界面按 workspace 询问。</strong> 在一个项目内部，查询
+按会话和按项目进行，这是打开内容的自然切分。但仪表板和侧边栏显示<strong>所有</strong>项目，在
+那里按项目切分会变成 N+1——每张卡片七个带轮询的查询，23 个项目时 3.824 req/min，
+而限额是 300，界面会因 429 自己把自己拖垮。两者都读取
+<code>GET /workspaces/:id/projects-summary</code>——一个跨聚合（git、预算、会话、backlog、架构）
+的读模型，其与数据库的往返次数不随项目数量增长（<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-090>RN-090</a>）。</p>
+<p>铃铛抽屉遵循同样的切分，有一个值得记录的差异：它需要每个项目的已读截止点，而这个点
+是保存在查看者浏览器中的一个 <code>seq</code>（<code>lib/read-state.ts</code>）——服务器没有、也不会有
+"标记为已读"。因此客户端在 <code>POST /workspaces/:id/unread-events</code> 的请求体中<strong>发送</strong>
+<code>project → afterSeq</code> 映射，尽管动词如此，它是一次读取并返回 <code>200</code>
+（<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-091>RN-091</a>）。动词来自请求体，而不是一次变更：有几十对，
+这么长的查询字符串会在代理处断掉，还会把项目 id 放进访问日志。</p>
+<p>这个端点返回 event log 的<strong>事实</strong>，从不返回组装好的组件：<code>lib/agents.ts</code>（谁是 lead、
+图标、颜色）和 <code>rosterFromFacts</code>（<code>lib/agent-status.ts</code>）仍然是 web 的工作，在场规则
+与团队面板使用的相同。这与上面三种派生是同一条边界——api 说发生了什么，web 决定据此
+画什么。</p>
+<p>有两项 UI 检查是自动的：对比度（<code>lib/contraste.ts</code>，一个针对 <code>design/tokens.css</code> 的
+测试）和布局（<code>scripts/dev/validacao-visual.js</code>，在浏览器中运行）。说明在
+<code>design/README.md</code> 中。</p>
+<p><strong>安装决定项目向导提供什么。</strong> <code>getProjectsBase</code>（<code>lib/api-client.ts</code>）读取
+<code>GET /workspaces/:workspaceId/projects-base</code>——本安装挂载项目的唯一基目录（<a class="" href=/brabo/dev/zh-Hans/adr/0141-base-unica-dos-projetos-montados>ADR
+0141</a>）——新建项目向导是它唯一的调用方
+（<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-513>RN-513</a>）。<code>projectsBase: null</code> 是正常状态，不是故障：
+安装没有 <code>BRABO_PROJECTS_BASE</code>，于是挂载文件夹的卡片就不提供，<code>container</code> 仍是默认。
+响应在途中以及查询<strong>失败</strong>时同样如此——未知永远不会变成提供，与
+<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-088>RN-088</a>/<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-468>RN-468</a> 是同一条规则。
+有基目录时，卡片<strong>预选</strong>，路径字段以 <code>&lt;base>/&lt;slug></code> 打开，由 <code>caminhoSugeridoNaBase</code>
+（<code>lib/wizard.ts</code>）组成——一个纯函数，旁边是 <code>caminhoDentroDaBase</code>，它按<strong>路径段</strong>回答
+"这个路径在基目录之下吗？"，并镜像 api 的 <code>dentroDoEscopo</code>。预选和建议都不会覆盖人的
+选择。</p>
+<p><strong>文件夹选择器是 web 中唯一有两种传输方式的读取</strong>，使其成为一体的接口位于
+<code>lib/fs-browser.ts</code>（<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-504>RN-504</a>）。<code>FsBrowser</code>——
+<code>listarDiretorio</code> / <code>diretorioInicial</code> / <code>fechar</code>——有两种实现，而它们不与同一台机器
+对话：<code>criarFsBrowserViaApi(workspaceId)</code> 调用 api 中的
+<code>GET /workspaces/:workspaceId/project-folders</code>，严格限定于 <code>BRABO_PROJECTS_BASE</code>
+（<a class="" href=/brabo/dev/zh-Hans/adr/0141-base-unica-dos-projetos-montados>ADR 0141</a>），而
+<code>connectFsBrowserChannel(projectId)</code>（<code>lib/fs-browser-channel.ts</code>）使用 Phoenix 通道
+<code>terminal:&lt;projectId></code>，通过 runner 读取<strong>用户</strong>的磁盘。</p>
+<p>接口之所以从通道模块中抽出来，正是因为它不再只有一种实现。<code>FolderBrowserModal</code> 用一个
+可辨识联合在两者之间选择——<code>origem: { tipo: 'api'; workspaceId } | { tipo: 'runner'; projectId }</code>，而不是两个可选 prop，使"都没有"和"两者都有"不成为组件需要在
+运行时处理的可表示状态——它的主体从不知道收到的是哪一个。只有三件事按 <code>origem</code> 分支：
+运行哪个工厂、存在哪些快捷方式（api 传输不提供 <code>/</code>；它按构造就在基目录之外，按钮只能
+以 400 结束），以及 <code>RunnerOnboardingPanel</code> 是否有意义。</p>
+<p><code>ListagemResultado</code> 增加了三个<strong>可选</strong>字段——<code>arquivos</code>、<code>simbolicos</code>、<code>truncado</code>——
+它们是可选的，因为只有 api 传输会统计它排除了什么。runner 的协议（<code>apps/runner/src/channel.ts</code>
+中的 <code>FsEntrada</code>）返回混在一起的文件夹和文件，什么也不统计；在那里填零会断言"没有
+遗漏任何东西"，这与不知道是两回事。</p>
+<p>RN-504 把<strong>两种</strong>模式都指向 api 并声明了代价：对 <code>runner</code> 来说，列表不再是用户的机器，
+而变成了基目录。之所以接受，是因为 <code>runner</code> 模式本要从创建向导中移除——它没有被移除，
+而 <a class="" href=/brabo/dev/zh-Hans/business-rules#rn-533>RN-533</a>（<a class="" href=/brabo/dev/zh-Hans/adr/0151-base-consentida-no-runner>ADR 0151</a>
+第 7 点）撤销了它。现在是<strong>模式</strong>选择传输，因为它们回答不同的问题：<code>mounted</code> 询问 api
+（它的文件夹位于<strong>服务器</strong>上的基目录之下），<code>runner</code> 询问本地智能体（它的文件夹位于
+服务器看不到的机器上）。<code>runner</code> 分支锚定在向导已提前创建的项目上
+（<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-437>RN-437</a>）；当这次创建失败时，不会打开任何模态框，因为
+回落到 api 会在"你的机器"的标签下显示<strong>服务器</strong>的基目录。</p>
+<p>失败带有一个<strong>可辨识</strong>的原因（<code>MotivoDeFalhaDoAgente</code>）：<code>sem-agente</code> 是服务器<strong>断言</strong>
+没有 runner，<code>sem-resposta</code> 是超时、断开的 socket 或被拒绝的 ticket——无知，就作为无知
+说出（<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-088>RN-088</a>/<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-468>RN-468</a>）。组件过去
+用 <code>includes('Nenhum runner conectado')</code> 判断，匹配一句位于 engine 的 <code>.ex</code> 中的 pt-BR
+句子；子串匹配现在只在一个地方，即拥有通道协议的模块中，engine 改写过的消息会降级为
+<code>sem-resposta</code>，而绝不会变成"有一个智能体"。两个原因都会挂载 <code>EsperaDoRunner</code>——RN-474
+的等待，被<strong>复用</strong>：同样的三种状态、同样的上限、同样的信号——它在时间戳变化时自行重做
+失败的列表。每个界面一个等待：<code>RunnerOnboardingPanel</code> 接收 <code>mostrarEspera</code>，只在其宿主
+已经显示一个的地方为假。而选择器在两种来源下都<strong>说明</strong>它正在列出的是谁的磁盘——此前
+唯一的线索是一个快捷方式的标签，它命名的是一个位置，而不是一台机器。</p>
+<p><strong>面板还会识别一台已配对的机器</strong>（<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-548>RN-548</a>、
+<a class="" href=/brabo/dev/zh-Hans/adr/0154-chave-de-dispositivo-de-maquina>ADR 0154</a>）。<code>lib/api-client.ts</code> 中的
+<code>listRunnerDeviceKeys</code> 读取 <code>GET /projects/:projectId/runner-device-keys</code>，自
+<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-543>RN-543</a> 起它标记每把密钥的<strong>种类</strong>——而整个派生都在组件之外，
+在 <code>lib/agente-de-maquina.ts</code> 中，因为规则关乎<strong>数据</strong>，组件关乎绘制。七种状态，没有
+一种塌缩成另一种，失败由 <code>isError</code> 而不是某个状态派生，因此网络错误说"不知道"，而不是
+永远转着"正在检查……"。已注册的密钥<strong>不是</strong>正在运行的智能体——与 <code>workspaceVerifiedAt</code>
+已经施加的纪律相同——而列表属于<strong>账户</strong>而不是这个浏览器，因此能用的最强的说法是"你的
+账户有一台已配对的机器"。这两个限制都在界面上说明。
+<a class="" href=/brabo/dev/zh-Hans/adr/0118-configuracao-automatica-do-runner-pelo-navegador>ADR 0118</a> 的浏览器流程
+（生成密钥、下载二进制、写入文件夹）已在
+<a class="" href=/brabo/dev/zh-Hans/adr/0203-aposenta-o-fluxo-do-runner-pelo-navegador>ADR 0203</a>
+（<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-687>RN-687</a>）中退役：面板现在显示 <code>install.sh</code> 的命令，当识别到
+服务于该项目的密钥时它就消失，而带 PAT 的手动命令放在一个以其回答的情况（另一台机器）
+命名的 <code>&lt;details></code> 中。读取的最低要求来自针对<strong>端点</strong>的 <code>developer</code> 的 <code>roleAtLeast</code>，
+真实的 403 落入同一状态——workspace 角色是代理，api 才是权威。</p>
+<p><strong>代码标签页（FASE 26）是同样的读取模式</strong>，应用于代码而不是事件：
+<code>lib/api-client.ts</code> 中的 <code>getContainerState</code>/<code>getCodeTree</code>/<code>getCodeFile</code>/
+<code>searchCode</code>/<code>getCodeDiff</code> 镜像 api 的读取路由（<code>container</code> 加上 <code>code.controller.ts</code>
+中的七个，FASE 26b），类型在 <code>lib/api-types.ts</code> 中（<code>EstadoDoContainer</code>、<code>CodeTree</code>、
+<code>CodeFile</code>、<code>CodeSearchResult</code>、<code>CodeDiff</code>），从 DTO 复制——与文件其余部分相同的约定，
+不导入 <code>apps/api</code>。<code>routes/code/ highlight.ts</code> 是一个<strong>自有</strong>的基于正则的语法高亮分词器，零新依赖。<code>ProjectCodeTab.tsx</code>
+的闸门（RN-107）在尝试读取代码<strong>之前</strong>询问容器的状态，使它作为独立的消息出现，而不是
+作为一个 409 的脚注。</p>
+<p><strong>FASE 26b 把 <code>getCodeBlame</code>/<code>getCodePullRequests</code>/<code>getCodeBranches</code> 加入同一模式</strong>，
+<code>CodeBlame</code>/<code>CodePullRequestList</code>/<code>CodeBranchDetailList</code> 在 <code>lib/api-types.ts</code> 中——
+代码标签页三个已声明待办项（RN-110/111/112）的基础。三者现在都有消费者：
+<code>CodeEditor.tsx</code>（blame 开关）、<code>code/PrListAndDiff.tsx</code>（PR 列表 + diff，被
+<code>CodeDiffPanel.tsx</code> 和独立的 <code>prs</code> 标签页共同使用）和 <code>CodeBranchPicker.tsx</code>（丰富的
+分支下拉框）。</p>
+<p>容器镜像闸门（RN-105）是一个单一漏斗（<code>ReadProjectCodeUseCase.alvo</code>），由七个路由
+共享，因此在 Arquiteto 决定镜像之前它们中的任何一个都可能返回 409——不只是树。
+<code>ProjectCodeTab.tsx</code> 用一次预检避免这个 409（<code>RN-107</code>，见上）；<code>prs</code> 标签页没有可以
+预检的树/文件读取，所以 <code>code/PrListAndDiff.tsx</code> 对它自己的
+<code>getCodePullRequests</code>/<code>getCodeDiff</code> 调用的 409 作出反应。两条路径渲染同样的呈现
+<code>ContainerImageGateNotice</code>（<code>components/ContainerImageGate.tsx</code>），由
+<code>isContainerImageGateError</code>（<code>lib/api-client.ts</code>，匹配 <code>ApiError.status === 409</code>）检测
+——这是使用中发现的 bug：在此之前，<code>prs</code> 标签页把这个 409 显示为通用的暂时错误，带一个
+"重试"按钮，而对于只有 Arquiteto 采取行动才能解决的状态来说，这是错误的 affordance。</p>
+<p><strong>全局容器页面（<code>/containers</code>，ADR 0136/RN-495）是 workspace 的读取</strong>，不是项目的——
+<code>lib/api-client.ts</code> 中的 <code>getContainersOverview</code> 调用
+<code>GET workspaces/:workspaceId/containers</code>，<code>lib/api-types.ts</code> 中的 <code>ContainerOverviewItem</code>
+镜像 <code>ContainerOverviewItemResponseDto</code>。api 一侧是一个专门的读模型
+<code>ContainersOverviewRepository</code>/<code>DrizzleContainersOverviewRepository</code>，与
+<code>ProjectsSummaryRepository</code> 有同样的"项目之间无 N+1"纪律——三个恒定的查询（<code>projects</code>
+LEFT JOIN 容器行、批量的 <code>artifact.project_image</code> 事件、批量的待处理容器
+<code>proposed_actions</code>），从不按项目查询。<strong>无法</strong>批量完成的——向 broker 询问观察到的状态——
+改为获得每次加载的显式预算（<code>ObterVisaoGeralDeContainersUseCase.TETO_DE_VERIFICACOES_POR_CARGA</code>，
+只询问 <code>provisioning</code>/<code>running</code> 行，上限 20）：预算之外的行显示 <code>naoVerificado</code>，绝不
+悄悄复用另一行的回答，也不继承已记录的状态。动作（停止/移除/启动）与其他地方一样是
+<code>proposed_action</code>——页面从不直接调用 broker——每行的待处理动作（如果有）随同一次批量读取
+一起到来，渲染为内联的 <code>ApprovalCard</code>，与 <code>ProjectPrsTab.tsx</code> 用于合并提议的模式相同。</p>
+<p>自 <a class="" href=/brabo/dev/zh-Hans/business-rules#rn-521>RN-521</a> 起 join 是 LEFT，页面列出 workspace 的<strong>每个</strong>
+项目，因为它成了人工启动<strong>第一个</strong>容器的路径：在登记之前就失败的启动不会留下行，而旧的
+INNER JOIN 恰好隐藏了需要这个页面的项目。因此 <code>ContainerOverviewItem.registrado</code> 可为
+空——类型中命名的第三种状态，不同于 <code>stopped</code> 和"无法观察"——没有容器的行永远没有资格
+占用 broker 的预算，所以它们不能挤掉真实的容器。<code>container_start</code>（broker）与
+<code>container_start_via_runner</code>（本地智能体）之间的分支是<strong>客户端</strong>的一个纯函数
+<code>routes/containers-subida.ts</code>：它还决定何时<strong>不</strong>提供按钮（没有已决定的镜像、没有任何
+智能体确认过其文件夹的 <code>runner</code>、按 <code>roleAtLeast</code> 低于 <code>maintainer</code> 的角色），每种拒绝
+都有自己的文本——界面从不提议一个它已知会失败的动作，也从不隐藏原因。</p>
+<p><strong>另一个</strong>提议者——Infra Lead 智能体——自 <a class="" href=/brabo/dev/zh-Hans/business-rules#rn-566>RN-566</a> 起以同样
+方式分支。它的两个工具都经过 <code>infra_lead_server.ex</code> 中唯一的
+<code>recusa_local_de_subida/2</code>，它<strong>只</strong>读取项目一次（<code>Project.get/1</code>，同一个 BEAM 进程，
+从不 HTTP：智能体循环内的网络调用正是这次修正付不起的代价），返回 <code>nil</code> 或一个<strong>命名</strong>的
+原因，每个工具一个子句——<code>container</code>/<code>mounted</code> 提议 <code>container_start</code>，<code>runner</code> 被拒绝
+并指向 <code>container_start_via_runner</code>，而 <code>container_start</code> 的子句是与 broker 一样的
+<strong>允许列表</strong>，因此枚举中的新模式生来就被拒绝。拒绝是模型读取的工具<strong>结果</strong>文本（循环的
+输入，<a class="" href=/brabo/dev/zh-Hans/business-rules/autenticacao#rn-163>RN-163</a>），绝不是 <code>agent.error</code>，并且
+<code>tool.call</code> 仍会发出，使本地拒绝永远不会从时间线上消失。智能体<strong>不</strong>检查而界面检查的，
+是已决定的镜像和已确认的文件夹。</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=outside-the-applications>应用之外<a href=#outside-the-applications class=hash-link aria-label=应用之外的直接链接 title=应用之外的直接链接 translate=no>​</a></h3>
 
 
 
@@ -490,93 +404,69 @@ pasta confirmada.</p>
 
 
 
-<table><thead><tr><th>diretório<th>o que é<tbody><tr><td><code>packages/shared/</code><td>o <code>GitProviderContract</code> — quinze operações, <strong>tipos e nada mais</strong>: um valor que sobrevive ao <code>tsc</code> quebra o boot da api (travado por um teste), então a constante mora no consumidor<tr><td><code>packages/docker-port/</code><td>a PORTA do Docker (cinco operações) e seu adaptador de CLI, compartilhados por <code>apps/runner</code> e <code>apps/broker</code> — <a class="" href=/brabo/dev/zh-Hans/adr/0130-broker-de-container>ADR 0130</a>. É código de runtime, e é exatamente por isso que NÃO está em <code>packages/shared</code>; não tem passo de build e os dois consumidores o EMPACOTAM, então nenhuma imagem jamais o resolve a partir de <code>node_modules</code><tr><td><code>docker/</code><td>imagens de dev e de produção; <code>smoke.sh</code><tr><td><code>deploy/k8s/</code><td>base do Kustomize + overlays (local, staging, prod)<tr><td><code>design/</code><td>design system: tokens, tipografia, componentes</table>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=an-agent-turns-flow>O fluxo de um turno de agente<a href=#an-agent-turns-flow class=hash-link aria-label="O fluxo de um turno de agente的直接链接" title="O fluxo de um turno de agente的直接链接" translate=no>​</a></h2>
-<p>O caminho quente, de ponta a ponta. É aqui que mora a maior parte da complexidade.</p>
+<table><thead><tr><th>目录<th>是什么<tbody><tr><td><code>packages/shared/</code><td><code>GitProviderContract</code>——十五个操作，<strong>只有类型，别无其他</strong>：一个在 <code>tsc</code> 之后仍存在的值会破坏 api 的启动（由一个测试锁定），所以常量放在消费者处<tr><td><code>packages/docker-port/</code><td>Docker 的<strong>端口</strong>（五个操作）及其 CLI 适配器，由 <code>apps/runner</code> 和 <code>apps/broker</code> 共享——<a class="" href=/brabo/dev/zh-Hans/adr/0130-broker-de-container>ADR 0130</a>。它是运行时代码，正因如此它<strong>不</strong>在 <code>packages/shared</code> 中；它没有构建步骤，两个消费者都会<strong>打包</strong>它，因此没有任何镜像会从 <code>node_modules</code> 解析它<tr><td><code>docker/</code><td>dev 和生产镜像；<code>smoke.sh</code><tr><td><code>deploy/k8s/</code><td>Kustomize 基础 + overlays（local、staging、prod）<tr><td><code>design/</code><td>设计系统：tokens、字体、组件</table>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=an-agent-turns-flow>一次智能体轮次的流程<a href=#an-agent-turns-flow class=hash-link aria-label=一次智能体轮次的流程的直接链接 title=一次智能体轮次的流程的直接链接 translate=no>​</a></h2>
+<p>热路径，端到端。大部分复杂性都在这里。</p>
 <!-- -->
-<p>O laço <code>Harness → chamada de ferramenta → aprovação → evento</code> se repete até o agente
-chamar a ferramenta de encerramento ou bater num teto (iterações, tokens, orçamento).</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=boundaries-and-invariants>Fronteiras e invariantes<a href=#boundaries-and-invariants class=hash-link aria-label="Fronteiras e invariantes的直接链接" title="Fronteiras e invariantes的直接链接" translate=no>​</a></h2>
-<p>Esta é a parte que mais importa. Cada item abaixo é verificável, e
-vários têm um teste que falha na violação.</p>
-<p><strong>1. O domínio é puro.</strong> <code>apps/api/src/domain/</code> não importa
-<code>infrastructure</code>, <code>application</code>, <code>@nestjs</code> nem nenhum driver de banco —
-verificado: <strong>zero</strong> ocorrências dos três. A direção é sempre
-<code>interfaces → application → domain</code>, e 89 arquivos de <code>application</code> importam
-<code>domain</code>. Se você precisa de IO dentro de <code>domain/</code>, o desenho está errado: crie uma
-porta em <code>application/ports/</code>.</p>
-<p><strong>2. Um evento de domínio é imutável.</strong> Nunca há <code>UPDATE</code> numa tabela de
-eventos. <code>session_events</code> tem <code>unique(session_id, seq)</code> e o <code>seq</code> é denso por
-sessão — o teste de restauração verifica que não há buraco. Estado que precisa
-mudar (o ciclo de vida de uma hipótese, o status de um handoff) mora na sua própria
-tabela mutável, ao lado dos eventos. Uma oferta de handoff que deixa de ser a vigente
-vira <code>superseded</code> nessa tabela e ganha seu próprio evento <code>handoff.superseded</code>
-— nunca uma edição do <code>handoff.offered</code> que a anunciou (<a class="" href=/brabo/dev/zh-Hans/adr/0182-ciclo-de-vida-do-handoff>ADR
-0182</a>).</p>
-<p><strong>3. Nenhuma chamada de LLM fora do Harness.</strong> Não é convenção: o engine
-não tem cliente de LLM. Ele pede à api, que faz o metering.</p>
-<p><strong>4. Toda ação com efeito externo vira um <code>proposed_action</code>.</strong>
-<code>deny</code> sempre vence <code>allow</code> no <code>permissions.json</code>, e dois <strong>tetos</strong> são
-aplicados por último, por cima do veredito já calculado: merge numa
-branch protegida e um patch de instrução <strong>nunca</strong> são auto-aprováveis.
-Ver <a class="" href=/brabo/dev/zh-Hans/business-rules>RN-006 e RN-007</a>.</p>
-<p><strong>5. Merge numa branch protegida é manual.</strong> Não há opção de
-automatizá-lo. É um teto no domínio (<code>decide.ts</code>), garantido por um
-teste.</p>
-<p><strong>6. Uma sessão, um dono.</strong> O <code>SessionServer</code> é registrado sob
-<code>:global</code>, não num <code>Registry</code> local — sem isso, N réplicas hospedariam N
-cópias da mesma sessão, e as cópias sem heartbeat matariam
-a sessão viva (<a class="" href=/brabo/dev/zh-Hans/adr/0026-fase5-observabilidade-e-graceful-shutdown>ADR 0026</a>).</p>
-<p><strong>7. Falha de agente registra a ORIGEM</strong> (<code>infra | model | code | policy</code>),
-nunca um diagnóstico por eliminação. Uma lição cara do
-<a class="" href=/brabo/dev/zh-Hans/adr/0020-destravar-gates-qa-secops>ADR 0020</a>: uma queda de provider foi
-registrada como "o modelo parou sem sinalizar", e o sistema culpou
-o modelo por um problema de infraestrutura.</p>
-<p><strong>8. O container de um projeto é decidido, nunca implícito.</strong> A aba Código só
-destrava depois que o Arquiteto emite <code>artifact.project_image</code> — enquanto o
-estado é <code>sem_decisao</code>, ler código devolve <code>409</code>
-(<a class="" href=/brabo/dev/zh-Hans/business-rules/autenticacao#rn-105>RN-105</a>). E <code>git push</code>, abrir uma PR e
-deploy não passam pelo terminal, mesmo dentro do escopo do projeto:
-<code>decide()</code> os reconhece pelo prefixo do comando e devolve <code>deny</code> ANTES de qualquer
-etapa permissiva — não <code>require_approval</code>, porque "sempre permitir" gravaria
-o padrão em <code>allow</code> e reabriria a porta
-(<a class="" href=/brabo/dev/zh-Hans/business-rules/autenticacao#rn-106>RN-106</a>,
-<a class="" href=/brabo/dev/zh-Hans/adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica>ADR 0065</a>).
-O ciclo de vida do container (provisionar, reciclar, limpar) ainda não existe
-— um corte declarado da FASE 25, registrado no CLAUDE.md — então este invariante
-convive, por ora, com a política de escopo de caminho do
-<a class="" href=/brabo/dev/zh-Hans/adr/0055-escopo-de-caminho-na-politica-de-terminal>ADR 0055</a>.</p>
-<p>E desde o <a class="" href=/brabo/dev/zh-Hans/adr/0143-agentes-de-dev-so-depois-do-container>ADR 0143</a>
-/<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-502>RN-502</a>, uma imagem decidida não é mais a única
-pré-condição: <strong>um dev agent não pega tarefa nenhuma até o container do
-projeto estar REGISTRADO <code>running</code></strong>. A guarda mora em
-<code>Engine.Dev.AgentIo.try_claim/2</code> — o ponto único de claim — e não só no
-<code>activate-execution</code> da api, porque a reidratação chega a <code>try_claim/2</code>
-sem passar por rota nenhuma (<code>DevAgentServer.init/1</code> ->
-<code>finish_restart_recovery/1</code>). Sem container o agente cai para <code>:idle</code>
-(o único estado que um wake ainda resgata) e diz isso com
-<code>dev.blocked_by_container</code>. A outra metade da mesma regra é que
-<code>Engine.Actions.TerminalExecutor</code> deixou de cair no <code>System.cmd</code> dentro
-do processo do engine quando não há container: ele recusa, nomeado, como o
-modo <code>runner</code> já fazia.</p>
-<p><strong>9. Um agente que ESCREVE tem de poder LER e tem de poder PERGUNTAR.</strong>
-As duas metades são a mesma lição, e vieram de um agente que só tinha
-ferramentas de escrita: o PO montava o contexto uma vez, no kickoff, e agia dali em diante
-sobre um retrato velho — diante de uma lacuna, escolhia entre inventar e
-parar (<a class="" href=/brabo/dev/zh-Hans/business-rules/autenticacao#rn-164>RN-164</a>,
-<a class="" href=/brabo/dev/zh-Hans/business-rules/autenticacao#rn-165>RN-165</a>). Ler <strong>não</strong> vira um
-<code>proposed_action</code> (o invariante 4 é sobre efeito EXTERNO, e ler não é
-um), mas é contido no sentido do
-<a class="" href=/brabo/dev/zh-Hans/adr/0060-superficie-de-leitura-de-codigo>ADR 0060</a>: escopo fechado pelo
-caminho da rota, custo constante por chamada e um teto de linhas no texto
-entregue ao modelo. E o laço de um agente não termina calado — um
-teto de iterações emite <code>toolloop.limit_reached</code>, uma obrigação não cumprida emite
-um desfecho durável com origem (<a class="" href=/brabo/dev/zh-Hans/business-rules/autenticacao#rn-166>RN-166</a>).</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=cross-cutting-concerns>Preocupações transversais<a href=#cross-cutting-concerns class=hash-link aria-label="Preocupações transversais的直接链接" title="Preocupações transversais的直接链接" translate=no>​</a></h2>
-<p><strong>Origem cruzada.</strong> O web é servido da própria origem e fala com
-<strong>duas</strong> outras, então CORS é uma fronteira arquitetural, não um detalhe de
-configuração (<a class="" href=/brabo/dev/zh-Hans/adr/0037-cors-do-engine-e-a-porta-como-contrato>ADR 0037</a>).
-Quatro caminhos, e só três passam por CORS:</p>
+<p><code>Harness → 工具调用 → 审批 → 事件</code> 这个循环会重复，直到智能体调用结束工具或碰到上限
+（迭代、token、预算）。</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=boundaries-and-invariants>边界与不变量<a href=#boundaries-and-invariants class=hash-link aria-label=边界与不变量的直接链接 title=边界与不变量的直接链接 translate=no>​</a></h2>
+<p>这是最重要的部分。下面每一项都是可验证的，其中好几项有一个在违反时会失败的测试。</p>
+<p><strong>1. 领域是纯的。</strong> <code>apps/api/src/domain/</code> 不导入 <code>infrastructure</code>、<code>application</code>、
+<code>@nestjs</code> 或任何数据库驱动——已验证：三者都是<strong>零</strong>出现。方向始终是
+<code>interfaces → application → domain</code>，<code>application</code> 中有 89 个文件导入 <code>domain</code>。如果你
+需要在 <code>domain/</code> 中做 IO，设计就错了：在 <code>application/ports/</code> 中创建一个端口。</p>
+<p><strong>2. 领域事件是不可变的。</strong> 事件表上永远没有 <code>UPDATE</code>。<code>session_events</code> 有
+<code>unique(session_id, seq)</code>，且 <code>seq</code> 在每个会话内是连续的——恢复测试会验证没有空洞。
+需要变化的状态（假设的生命周期、handoff 的状态）放在它自己的可变表中，与事件并列。
+不再是现行的 handoff 提议在该表中变为 <code>superseded</code>，并获得它自己的
+<code>handoff.superseded</code> 事件——绝不是对宣布它的 <code>handoff.offered</code> 的编辑（<a class="" href=/brabo/dev/zh-Hans/adr/0182-ciclo-de-vida-do-handoff>ADR
+0182</a>）。</p>
+<p><strong>3. Harness 之外没有 LLM 调用。</strong> 这不是约定：engine 没有 LLM 客户端。它请求 api，
+由 api 做 metering。</p>
+<p><strong>4. 每个有外部效果的动作都变成 <code>proposed_action</code>。</strong> 在 <code>permissions.json</code> 中 <code>deny</code>
+总是胜过 <code>allow</code>，而两个<strong>上限</strong>最后施加，覆盖已计算出的裁决：受保护分支上的合并和
+指令补丁<strong>永远</strong>不能自动批准。见 <a class="" href=/brabo/dev/zh-Hans/business-rules>RN-006 e RN-007</a>。</p>
+<p><strong>5. 受保护分支上的合并是手动的。</strong> 没有将其自动化的选项。这是领域中的一个上限
+（<code>decide.ts</code>），由一个测试保证。</p>
+<p><strong>6. 一个会话，一个所有者。</strong> <code>SessionServer</code> 注册在 <code>:global</code> 下，而不是本地的
+<code>Registry</code>——否则 N 个副本会托管同一会话的 N 份拷贝，而没有心跳的拷贝会杀死活着的
+会话（<a class="" href=/brabo/dev/zh-Hans/adr/0026-fase5-observabilidade-e-graceful-shutdown>ADR 0026</a>）。</p>
+<p><strong>7. 智能体故障记录来源</strong>（<code>infra | model | code | policy</code>），绝不是排除法诊断。来自
+<a class="" href=/brabo/dev/zh-Hans/adr/0020-destravar-gates-qa-secops>ADR 0020</a> 的昂贵教训：一次 provider 宕机被记录为
+"模型停止了而没有发出信号"，系统把一个基础设施问题归咎于模型。</p>
+<p><strong>8. 项目的容器是被决定的，绝不是隐含的。</strong> 代码标签页只有在 Arquiteto 发出
+<code>artifact.project_image</code> 之后才解锁——在状态为 <code>sem_decisao</code> 时，读取代码返回 <code>409</code>
+（<a class="" href=/brabo/dev/zh-Hans/business-rules/autenticacao#rn-105>RN-105</a>）。而 <code>git push</code>、开 PR 和部署不经过
+终端，即使在项目范围之内：<code>decide()</code> 通过命令前缀识别它们，并在任何宽松步骤<strong>之前</strong>
+返回 <code>deny</code>——不是 <code>require_approval</code>，因为"总是允许"会把模式写入 <code>allow</code> 并重新打开
+这扇门（<a class="" href=/brabo/dev/zh-Hans/business-rules/autenticacao#rn-106>RN-106</a>、
+<a class="" href=/brabo/dev/zh-Hans/adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica>ADR 0065</a>）。
+容器的生命周期（配置、回收、清理）尚不存在——FASE 25 的一个已声明的削减，记录在
+CLAUDE.md 中——因此这个不变量目前与
+<a class="" href=/brabo/dev/zh-Hans/adr/0055-escopo-de-caminho-na-politica-de-terminal>ADR 0055</a> 的路径范围策略共存。</p>
+<p>而自 <a class="" href=/brabo/dev/zh-Hans/adr/0143-agentes-de-dev-so-depois-do-container>ADR 0143</a>
+/<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-502>RN-502</a> 起，已决定的镜像不再是唯一的前提条件：<strong>在项目的
+容器被登记为 <code>running</code> 之前，dev agent 不领取任何任务</strong>。守卫位于
+<code>Engine.Dev.AgentIo.try_claim/2</code>——唯一的领取点——而不仅在 api 的
+<code>activate-execution</code> 中，因为重新水合会在不经过任何路由的情况下到达 <code>try_claim/2</code>
+（<code>DevAgentServer.init/1</code> -> <code>finish_restart_recovery/1</code>）。没有容器时智能体落到
+<code>:idle</code>（唤醒仍能挽救的唯一状态），并用 <code>dev.blocked_by_container</code> 说明这一点。同一
+规则的另一半是，<code>Engine.Actions.TerminalExecutor</code> 在没有容器时不再回落到 engine 进程
+内的 <code>System.cmd</code>：它拒绝，并命名原因，就像 <code>runner</code> 模式已经做的那样。</p>
+<p><strong>9. 会写的智能体必须能读，也必须能问。</strong> 这两半是同一个教训，来自一个只有写入工具
+的智能体：PO 在 kickoff 时组装一次上下文，此后基于一张旧快照行事——面对缺口，它在
+编造和停止之间选择（<a class="" href=/brabo/dev/zh-Hans/business-rules/autenticacao#rn-164>RN-164</a>、
+<a class="" href=/brabo/dev/zh-Hans/business-rules/autenticacao#rn-165>RN-165</a>）。读取<strong>不</strong>变成 <code>proposed_action</code>
+（不变量 4 关乎<strong>外部</strong>效果，而读取不是），但它在
+<a class="" href=/brabo/dev/zh-Hans/adr/0060-superficie-de-leitura-de-codigo>ADR 0060</a> 的意义上受到约束：范围由路由
+路径封闭、每次调用成本恒定、交给模型的文本有行数上限。而智能体的循环不会悄无声息地
+结束——迭代上限发出 <code>toolloop.limit_reached</code>，未履行的义务发出带来源的持久结果
+（<a class="" href=/brabo/dev/zh-Hans/business-rules/autenticacao#rn-166>RN-166</a>）。</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=cross-cutting-concerns>横切关注点<a href=#cross-cutting-concerns class=hash-link aria-label=横切关注点的直接链接 title=横切关注点的直接链接 translate=no>​</a></h2>
+<p><strong>跨源。</strong> web 从自己的源提供服务，并与<strong>另外两个</strong>源对话，因此 CORS 是一条架构边界，
+而不是配置细节（<a class="" href=/brabo/dev/zh-Hans/adr/0037-cors-do-engine-e-a-porta-como-contrato>ADR 0037</a>）。四条
+路径，只有三条经过 CORS：</p>
 
 
 
@@ -602,209 +492,143 @@ Quatro caminhos, e só três passam por CORS:</p>
 
 
 
-<table><thead><tr><th>caminho<th>mecanismo<tbody><tr><td>web → api, HTTP<td>o CORS do Nest, origem exata de <code>WEB_ORIGIN</code> + <code>credentials</code><tr><td>web → engine, HTTP (<code>/health</code>)<td><code>EngineWeb.Plugs.Cors</code>, só rotas de health<tr><td>web → engine, WebSocket<td>o <code>check_origin</code> do endpoint Phoenix — <strong>WebSocket não passa por CORS</strong><tr><td>api ↔ engine, HTTP<td><strong>CORS não se aplica</strong>: um cliente de servidor, não um navegador</table>
-<p>Uma única variável — <code>WEB_ORIGIN</code> — alimenta as três primeiras, nos dois
-serviços. Lê-la duas vezes de forma independente foi como o CORS do engine acabou
-sem origem nenhuma enquanto o <code>check_origin</code> já tinha a lista certa; no
-engine ela agora é resolvida uma vez, em <code>runtime.exs</code>.</p>
-<p>E a <strong>porta faz parte da origem</strong>: o web em <code>:5174</code> é um sistema diferente
-aos olhos do navegador. É por isso que <code>vite.config.ts</code> usa
-<code>strictPort</code>.</p>
-<p><strong>Autenticação.</strong> First-party, no domínio da api — não há IdP
-externo. Senhas com argon2id, um access token EdDSA de 15 minutos e um refresh
-token opaco com rotação obrigatória; a sessão do web mora num cookie
-<code>httpOnly</code> com CSRF por double-submit. <code>JwtAuthGuard</code> é global e
-<strong>lê</strong> o usuário pelo <code>sub</code> do token (que é <code>users.id</code>); uma rota aberta
-exige <code>@Public()</code> explícito.</p>
-<p>Nenhuma decisão de RBAC lê uma claim do token: o papel vem de <code>request.user.id</code> e
-de linhas no banco. É por isso que a matriz de permissões sobreviveu à troca de
-emissor sem mudar. Decisões no
-<a class="" href=/brabo/dev/zh-Hans/adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh>ADR 0031</a> e no
-<a class="" href=/brabo/dev/zh-Hans/adr/0032-corte-do-keycloak-e-sessao-em-cookie>ADR 0032</a>.</p>
-<p>Chamadas do engine não passam pelo JWT: as rotas <code>/internal/*</code> são
-<code>@ServiceRoute()</code> e o <code>EngineServiceGuard</code> compara um segredo compartilhado
-(<code>BRABO_SERVICE_TOKEN</code>) em tempo constante. A superfície inteira está classificada em
-<a class="" href=/brabo/dev/zh-Hans/security-surface><code>security-surface.md</code></a>, e um teste de tabela reprova uma
-rota nova sem classificação.</p>
-<p><strong>Autorização.</strong> RBAC no domínio, com o papel efetivo resolvido
-a partir do projeto (caindo para o workspace). <code>@RequireRole</code> nas
-rotas.</p>
-<p><strong>Erro.</strong> Erros de domínio são classes tipadas
-(<code>InvalidSessionTransitionError</code>, <code>StoryNotReadyError</code>) traduzidas para HTTP
-por filtros globais em <code>main.ts</code>. Erros de provider de git são normalizados por um
-contrato único (<a class="" href=/brabo/dev/zh-Hans/adr/0002-git-error-normalization>ADR 0002</a>) — quem
-chama não sabe se falou com GitHub ou GitLab.</p>
-<p><strong>Logging.</strong> JSON de <strong>uma linha</strong> por evento em produção nos três
-apps, com <code>trace_id</code> correlacionado; legível por humanos em desenvolvimento. A api
-usa pino com redação obrigatória de <code>apiKey</code>, <code>access_token</code>,
-<code>clientSecret</code> e do service token api↔engine. Cada linha diz de qual
-classe e método veio, e uma linha por request mostra o <strong>caminho
-pelas camadas</strong> com a duração de cada passo — ver
-<a class="" href=/brabo/dev/zh-Hans/explanation/observability>observabilidade</a>.</p>
-<p><strong>Transação.</strong> O padrão é <em>unit of work</em>: gravar o estado e publicar o
-evento na <strong>mesma</strong> transação, via outbox. Publicar fora da
-transação criaria um evento para um estado que nunca persistiu.</p>
-<p><strong>Tracing.</strong> OpenTelemetry de ponta a ponta, e o <code>trace_id</code> nasce no
-<strong>web</strong>: o navegador gera o <code>traceparent</code>, a api o adota como
-pai, e o engine adota o da api. Uma sessão é <strong>um trace raiz</strong> —
-o <code>traceparent</code> é persistido em <code>sessions.trace_parent</code> e viaja no
-envelope do outbox, então o trabalho assíncrono disparado por um evento fica no
-trace de quem o produziu.</p>
-<p>Instrumentar e <strong>exportar</strong> são independentes
-(<a class="" href=/brabo/dev/zh-Hans/adr/0035-observabilidade-legivel-e-trace-sem-coletor>ADR 0035</a>): um
-span é sempre criado e o <code>trace_id</code> sempre vai para o log, mesmo
-sem coletor; <code>OTEL_EXPORTER_OTLP_ENDPOINT</code> só decide se ele
-sai do processo. É isso que dá correlação no <code>pnpm dev</code>.</p>
-<p><strong>Segredos.</strong> Envelope encryption: uma DEK aleatória por registro, embrulhada pela
-chave mestra. Rotação sem downtime via <code>CREDENTIALS_MASTER_KEY_PREVIOUS</code> —
-ver o <a class="" href=/brabo/dev/zh-Hans/runbook>runbook</a>.</p>
-<p><strong>Hierarquia de agentes.</strong> Desde a Fase 8b
-(<a class="" href=/brabo/dev/zh-Hans/adr/0038-hierarquia-de-agentes>ADR 0038</a>), uma área pode ter um LEAD e
-subespecialidades — hoje "qa" (<code>qa-lead</code>, <code>qa-automacao</code>,
-<code>qa-performance-seguranca</code>) e "infra" (<code>infra</code> como lead,
-<code>infra-workflows</code> como subagente — Fase 8c, RN-037). O lead é o único
-ponto de contato externo: a delegação interna nunca vira handoff, e
-nunca é visível fora da área. A primeira instância prova a garantia
-central do modelo — <code>QaLeadServer</code> consolida os vereditos das duas
-subespecialidades num único <code>qa_verdict</code>, e o contrato que a api já tinha
-(<code>RecordGateVerdictUseCase</code>, <code>nextGateStatus</code>) não mudou uma linha. A
-segunda mostra que o modelo não exige a mesma implementação interna:
-<code>InfraLeadServer</code> continua um GenServer conversacional escopado à sessão
-(espelhando o <code>ArquitetoServer</code>, contato externo inalterado por pedido
-explícito do CLAUDE.md 8c), e delega ao <code>WorkflowsAgent</code> — que, sem
-usuário do outro lado, roda como um <code>ToolLoop</code> limitado, igual aos
-subagentes de QA. Desde a <a class="" href=/brabo/dev/zh-Hans/business-rules#rn-617>RN-617</a>
-(<a class="" href=/brabo/dev/zh-Hans/adr/0175-infra-lead-conversa-pelo-composer>ADR 0175</a>) o Infra Lead
-também recebe mensagens do composer, e os três turnos dele (kickoff, correção
-de gate, mensagem) rodam na mesma Task do <code>TurnoAssincrono</code> que os outros seis
-agentes conversacionais. As <code>delegations</code> genéricas da 8b precisaram de UM ajuste para servir
-à segunda área: <code>task_id</code> virou anulável, porque a Infra delega sobre a
-sessão, não sobre uma tarefa do backlog.</p>
-<p>A Fase 8d fecha o ciclo do lado de <code>apps/web</code>, sem rota nova —
-tudo vem dos mesmos <code>session_events</code> que o painel já busca
-(<code>useSessionEvents</code>). <code>apps/web/src/lib/agents.ts</code> ganhou
-<code>AREAS</code>/<code>areaFor</code>: o registro que liga a <code>AgentKey</code> de um subagente
-(<code>qa-automacao</code>, <code>qa-performance-seguranca</code>, <code>infra-workflows</code>) à
-área do lead — é essa busca reversa que agrupa o painel do time (lead
-com um selo "Lead" + subespecialidades recolhíveis), agrupa o Insights por
-área e narra <code>delegation.completed</code>/<code>failed</code>/<code>dispensed</code> no feed
-(<code>activity.ts</code>). <code>consolidated_verdict</code> (decisão nº 4 do ADR 0038) nunca
-virou um artefato real — QA e Infra reusam <code>qa_verdict</code>/<code>open_infra_pr</code>,
-ver a <a class="" href=/brabo/dev/zh-Hans/adr/0038-hierarquia-de-agentes#fechamento-fase-8d>nota de fechamento do ADR</a>.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=data>Dados<a href=#data class=hash-link aria-label=Dados的直接链接 title=Dados的直接链接 translate=no>​</a></h2>
+<table><thead><tr><th>路径<th>机制<tbody><tr><td>web → api，HTTP<td>Nest 的 CORS，<code>WEB_ORIGIN</code> 的精确源 + <code>credentials</code><tr><td>web → engine，HTTP（<code>/health</code>）<td><code>EngineWeb.Plugs.Cors</code>，仅 health 路由<tr><td>web → engine，WebSocket<td>Phoenix endpoint 的 <code>check_origin</code>——<strong>WebSocket 不经过 CORS</strong><tr><td>api ↔ engine，HTTP<td><strong>CORS 不适用</strong>：服务器客户端，不是浏览器</table>
+<p>单一变量——<code>WEB_ORIGIN</code>——在两个服务中为前三条供值。独立地读取两次，正是 engine 的
+CORS 最终没有任何源、而 <code>check_origin</code> 已有正确列表的原因；在 engine 中它现在只在
+<code>runtime.exs</code> 中解析一次。</p>
+<p>而<strong>端口是源的一部分</strong>：在浏览器看来，<code>:5174</code> 上的 web 是另一个系统。这就是
+<code>vite.config.ts</code> 使用 <code>strictPort</code> 的原因。</p>
+<p><strong>认证。</strong> first-party，在 api 的领域中——没有外部 IdP。密码用 argon2id，15 分钟的
+EdDSA access token，以及强制轮换的不透明 refresh token；web 的会话保存在 <code>httpOnly</code>
+cookie 中，用 double-submit 做 CSRF。<code>JwtAuthGuard</code> 是全局的，通过 token 的 <code>sub</code>
+（即 <code>users.id</code>）<strong>读取</strong>用户；开放路由需要显式的 <code>@Public()</code>。</p>
+<p>没有任何 RBAC 决策读取 token 的 claim：角色来自 <code>request.user.id</code> 和数据库中的行。这就是
+权限矩阵在更换签发者后无需改变而幸存的原因。决定见
+<a class="" href=/brabo/dev/zh-Hans/adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh>ADR 0031</a> 和
+<a class="" href=/brabo/dev/zh-Hans/adr/0032-corte-do-keycloak-e-sessao-em-cookie>ADR 0032</a>。</p>
+<p>engine 的调用不经过 JWT：<code>/internal/*</code> 路由是 <code>@ServiceRoute()</code>，<code>EngineServiceGuard</code>
+以恒定时间比较一个共享密钥（<code>BRABO_SERVICE_TOKEN</code>）。整个表面在
+<a class="" href=/brabo/dev/zh-Hans/security-surface><code>security-surface.md</code></a> 中分类，一个表格测试会拒绝未分类的新路由。</p>
+<p><strong>授权。</strong> 领域中的 RBAC，有效角色从项目解析（回落到 workspace）。路由上使用
+<code>@RequireRole</code>。</p>
+<p><strong>错误。</strong> 领域错误是有类型的类（<code>InvalidSessionTransitionError</code>、
+<code>StoryNotReadyError</code>），由 <code>main.ts</code> 中的全局过滤器转换为 HTTP。git provider 的错误由
+单一契约规范化（<a class="" href=/brabo/dev/zh-Hans/adr/0002-git-error-normalization>ADR 0002</a>）——调用方不知道它是在
+与 GitHub 还是 GitLab 对话。</p>
+<p><strong>日志。</strong> 在生产中三个应用每个事件都是<strong>单行</strong> JSON，带有相关联的 <code>trace_id</code>；在开发
+中对人可读。api 使用 pino，强制脱敏 <code>apiKey</code>、<code>access_token</code>、<code>clientSecret</code> 以及
+api↔engine 的服务 token。每一行都说明它来自哪个类和方法，每个请求一行显示<strong>经过各层的
+路径</strong>及每一步的耗时——见<a class="" href=/brabo/dev/zh-Hans/explanation/observability>可观测性</a>。</p>
+<p><strong>事务。</strong> 模式是 <em>unit of work</em>：通过 outbox 在<strong>同一</strong>事务中写入状态和发布事件。在
+事务之外发布会为一个从未持久化的状态创建事件。</p>
+<p><strong>追踪。</strong> 端到端的 OpenTelemetry，<code>trace_id</code> 诞生于 <strong>web</strong>：浏览器生成
+<code>traceparent</code>，api 把它作为父级采用，engine 采用 api 的。一个会话是<strong>一条根 trace</strong>——
+<code>traceparent</code> 持久化在 <code>sessions.trace_parent</code> 中并在 outbox 的信封中传递，因此由事件
+触发的异步工作留在产生它的那个 trace 中。</p>
+<p>插桩和<strong>导出</strong>是相互独立的（<a class="" href=/brabo/dev/zh-Hans/adr/0035-observabilidade-legivel-e-trace-sem-coletor>ADR 0035</a>）：
+span 总是被创建，<code>trace_id</code> 总是进入日志，即使没有收集器；<code>OTEL_EXPORTER_OTLP_ENDPOINT</code>
+只决定它是否离开进程。这就是 <code>pnpm dev</code> 中能获得关联的原因。</p>
+<p><strong>密钥。</strong> 信封加密：每条记录一个随机 DEK，由主密钥包裹。通过
+<code>CREDENTIALS_MASTER_KEY_PREVIOUS</code> 实现无停机轮换——见 <a class="" href=/brabo/dev/zh-Hans/runbook>runbook</a>。</p>
+<p><strong>智能体层级。</strong> 自 Fase 8b 起（<a class="" href=/brabo/dev/zh-Hans/adr/0038-hierarquia-de-agentes>ADR 0038</a>），一个
+领域可以有一个 LEAD 和若干子专长——目前是 "qa"（<code>qa-lead</code>、<code>qa-automacao</code>、
+<code>qa-performance-seguranca</code>）和 "infra"（<code>infra</code> 作为 lead，<code>infra-workflows</code> 作为子智能体
+——Fase 8c，RN-037）。lead 是唯一的外部联系点：内部委派从不变成 handoff，也从不在领域
+之外可见。第一个实例证明了模型的核心保证——<code>QaLeadServer</code> 把两个子专长的裁决合并为
+单一的 <code>qa_verdict</code>，而 api 已有的契约（<code>RecordGateVerdictUseCase</code>、<code>nextGateStatus</code>）
+一行都没有改。第二个实例表明模型并不要求相同的内部实现：<code>InfraLeadServer</code> 仍是一个
+限定于会话的会话型 GenServer（镜像 <code>ArquitetoServer</code>，按 CLAUDE.md 8c 的明确要求保持
+外部联系不变），并委派给 <code>WorkflowsAgent</code>——它在另一端没有用户，作为一个有限的
+<code>ToolLoop</code> 运行，与 QA 的子智能体一样。自 <a class="" href=/brabo/dev/zh-Hans/business-rules#rn-617>RN-617</a>
+（<a class="" href=/brabo/dev/zh-Hans/adr/0175-infra-lead-conversa-pelo-composer>ADR 0175</a>）起，Infra Lead 也接收来自
+composer 的消息，它的三种轮次（kickoff、gate 修正、消息）运行在与其他六个会话型智能体
+相同的 <code>TurnoAssincrono</code> Task 中。8b 的通用 <code>delegations</code> 需要<strong>一处</strong>调整才能服务第二个
+领域：<code>task_id</code> 变为可空，因为 Infra 是针对会话委派，而不是针对 backlog 中的任务。</p>
+<p>Fase 8d 在 <code>apps/web</code> 一侧闭合了这个循环，没有新路由——一切都来自面板已经获取的同样的
+<code>session_events</code>（<code>useSessionEvents</code>）。<code>apps/web/src/lib/agents.ts</code> 增加了
+<code>AREAS</code>/<code>areaFor</code>：把子智能体的 <code>AgentKey</code>（<code>qa-automacao</code>、<code>qa-performance-seguranca</code>、
+<code>infra-workflows</code>）关联到 lead 所在领域的登记——正是这种反向查找把团队面板分组（lead 带
+"Lead" 徽章 + 可折叠的子专长），按领域分组 Insights，并在信息流中叙述
+<code>delegation.completed</code>/<code>failed</code>/<code>dispensed</code>（<code>activity.ts</code>）。<code>consolidated_verdict</code>
+（ADR 0038 的第 4 项决定）从未成为真正的工件——QA 和 Infra 复用
+<code>qa_verdict</code>/<code>open_infra_pr</code>，见 <a class="" href=/brabo/dev/zh-Hans/adr/0038-hierarquia-de-agentes#fechamento-fase-8d>ADR 的收尾说明</a>。</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=data>数据<a href=#data class=hash-link aria-label=数据的直接链接 title=数据的直接链接 translate=no>​</a></h2>
 <!-- -->
-<p>56 tabelas no total. A mais recente é <code>detected_language_declines</code>
-(<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-624>RN-624</a>): uma linha por pessoa e idioma que a
-pessoa RECUSOU quando perguntada "notamos que você escreve em X — usar X nas
-respostas?", com a data. A presença dela é o que impede a mesma pergunta de
-voltar; confirmar esse idioma depois apaga a linha. A detecção
-em si não guarda estado — a amostra é lida de <code>session_events</code> pelo
-índice parcial <code>session_events_evidencia_de_idioma_idx</code> (ator usuário, os dois
-tipos de evidência) e a histerese é recalculada —, então esta tabela e o
-par confirmado em <code>users</code> são tudo o que ela grava, e só quando a pessoa responde.
-Antes dela, a mais recente era <code>session_language_overrides</code>
-(<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-618>RN-618</a>,
-<a class="" href=/brabo/dev/zh-Hans/adr/0177-idioma-das-respostas-por-conta-sessao-e-projeto>ADR 0177</a>): o
-idioma de resposta que uma pessoa fixou numa sessão, chaveado pelo PAR
-<code>{session_id, user_id}</code> para que dois participantes nunca se toquem. É
-configuração, não evento — fixar de novo é um upsert, liberar é um
-<code>DELETE</code>. O mesmo ADR acrescenta <code>users.response_language</code> (<code>NULL</code> é "automático")
-e o par de detecção confirmada <code>users.detected_language</code> /
-<code>detected_language_confirmed_at</code>, amarrados por um CHECK; <code>users.locale</code> continua sendo o
-idioma da interface, fechado em <code>pt-BR</code>/<code>en</code>. E <code>projects.language</code>
-(<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-619>RN-619</a>) é o idioma do que não tem autor
-humano — artefatos compartilhados e turnos que ninguém digitou —, sempre um código
-BCP-47 concreto. Antes dela, a mais recente era
-<code>project_mirror_states</code>
-(<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-517>RN-517</a>,
-<a class="" href=/brabo/dev/zh-Hans/adr/0147-agente-local-com-capacidades>ADR 0147</a> ponto 7): uma linha por
-projeto, <code>project_id</code> único, guardando o que a ÚLTIMA rodada de espelho fez — a última
-sincronização bem-sucedida com suas três contagens e seu destino congelado, mais o último
-erro. Uma TABELA e não um evento pelo mesmo motivo de <code>rag_searches</code> logo
-acima: uma rodada de espelho não tem sessão, e <code>session_events.session_id</code> é
-<code>NOT NULL</code>, então o event log descartaria tudo em silêncio. Três estados
-que nunca colapsam (<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-088>RN-088</a>): "nunca sincronizado" é a
-linha AUSENTE, "sincronizado e não copiou nada" é uma linha presente com <code>files_copied = 0</code>,
-e "falhou" é <code>last_error_at</code> mais novo que <code>last_synced_at</code>. As colunas de sucesso e de falha
-são DISJUNTAS e nenhuma escrita toca as da outra — e é por isso que a
-tela consegue dizer "falhando desde hoje, a última cópia boa foi ontem com 412
-arquivos" em vez de perder a coisa mais útil que tem.</p>
-<p>As duas antes dela são <code>rag_searches</code>/<code>rag_feedback</code>
-(RN-479/480): o rastro da busca híbrida e o voto sobre o que ela
-devolveu, acrescentadas porque <code>rag-search-limits.ts</code> declara no próprio comentário
-que nenhum dos quatro números da busca híbrida vem de calibração
-com dados reais — e não havia como calibrar enquanto a busca não deixava
-rastro. São TABELAS e não só eventos de sessão por um motivo concreto:
-<code>session_events.session_id</code> é <code>NOT NULL</code>, e uma busca vinda da aba de RAG
-é uma busca de <em>projeto</em> sem sessão, então o event log descartaria em silêncio
-exatamente as buscas que um humano rodou olhando os scores (a mesma
-classe de problema que forçou o corte do metering de embedding do
-<a class="" href=/brabo/dev/zh-Hans/adr/0075-embeddings-no-contrato-de-llm-provider>ADR 0075</a>).
-<code>rag_searches.pesos</code> congela os pesos de cada busca na própria linha —
-mesma disciplina do preço congelado no metering
-(<a class="" href=/brabo/dev/zh-Hans/adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel>ADR 0042</a>) — para que uma
-calibração posterior não mude em silêncio o que toda medição anterior significava.
-<code>session_socket_tickets</code> fica fora do diagrama pelo mesmo motivo de
-<code>refresh_tokens</code>/<code>account_tokens</code>: um mecanismo de auth, não uma relação de domínio.</p>
-<p><code>projects.mirror_path</code> (FASE 28, <a class="" href=/brabo/dev/zh-Hans/business-rules#rn-515>RN-515</a>,
-<a class="" href=/brabo/dev/zh-Hans/adr/0147-agente-local-com-capacidades>ADR 0147</a> ponto 4) é uma coluna e
-não uma tabela porque é UM valor opcional por projeto: o caminho absoluto,
-na máquina do USUÁRIO, para onde a capacidade <code>espelho</code> do agente local copia o
-trabalho. É anulável e <code>NULL</code> é o estado NORMAL — um projeto sem
-espelho é a maioria, e o produto nunca escolhe um destino sozinho.
-Ela deliberadamente <strong>não</strong> carrega CHECK que a amarre a <code>execution_mode</code>, ao contrário de
-<code>workspace_path</code> logo ao lado: <code>container</code> não pode ter destino (sua
-origem é um volume gerenciado no SERVIDOR, e o processo que copiaria roda
-na máquina do usuário), mas <code>execution_mode</code> é CONVERSÍVEL
-(<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-447>RN-447</a>, <a class="" href=/brabo/dev/zh-Hans/adr/0111-conversao-de-execution-mode-de-projeto-existente>ADR 0111</a>),
-então um CHECK faria a conversão para <code>container</code> explodir no Postgres em vez de
-recusar com motivo. A recusa mora no caso de uso, e a conversão
-zera a coluna — a mesma forma de <code>workspace_verified_at</code>, e por um
-motivo adicional: os dois sentidos do laço origem↔destino foram
-validados contra o <code>workspace_path</code> ANTIGO.
-Desde a <a class="" href=/brabo/dev/zh-Hans/business-rules#rn-516>RN-516</a> o engine LÊ esta coluna — é
-ela que decide se o <code>join</code> do runner exige a capacidade <code>espelho</code>, e
-é ela que viaja de volta na concessão desse join (<code>Engine.Runners.Espelho</code>,
-<code>EngineWeb.TerminalChannel</code>). O engine nunca a escreve. Desde a
-<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-517>RN-517</a> HÁ uma rota interna na
-vizinhança — <code>POST /internal/projects/:projectId/mirror-sync-result</code> — mas ela
-grava <code>project_mirror_states</code>, nunca esta coluna: o destino é
-CONFIGURAÇÃO (o usuário o declara) e o desfecho da rodada é TELEMETRIA (o
-agente local o relata), e fundi-los deixaria um relato sobrescrever uma escolha.
-<strong>As constraints são regras de negócio</strong>: o unique <code>(session_id, seq)</code> do event log, o <code>check</code> que exige
-exatamente um escopo em <code>budgets</code> (projeto <strong>ou</strong> sessão, nunca os dois), os
-índices parciais que garantem a idempotência da análise — e, desde a Fase 8b,
-os três <code>check</code>s de <code>delegations</code> que travam qual campo é obrigatório por
-<code>status</code> (<code>completed</code> → <code>parecerArtifactId</code>, <code>failed</code> → <code>failureOrigin</code>,
-<code>dispensed</code> → <code>justification</code>; ver
-<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-036>RN-036</a>). <code>delegations.task_id</code> nasceu
-<code>NOT NULL</code> e virou anulável na Fase 8c — a área de Infra delega sobre
-a sessão, sem tarefa de backlog por trás de uma PR de infra (ver
-<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-037>RN-037</a>).</p>
-<p><code>agent_areas</code> (FASE 14d,
-<a class="" href=/brabo/dev/zh-Hans/adr/0053-dev-lead-e-paralelismo-autorizado>ADR 0053</a>) é o que a Fase 8
-tinha cortado. Voltou porque a área de <strong>dev</strong> não é enumerável no código:
-<code>qa</code> e <code>infra</code> cabem numa lista fixa, mas os membros de dev são um por
-módulo do <code>module_map</code>, decididos pelo Arquiteto e diferentes em cada
-projeto. O unique <code>(project_id, key)</code> é o que torna a semeadura idempotente,
-e <code>max_parallel</code> (padrão 2) é o teto que o lead usa sem perguntar
-— acima dele, <code>proposed_action</code>
-(ver <a class="" href=/brabo/dev/zh-Hans/business-rules/custo#rn-083>RN-083</a>). <code>budget_micros</code>/<code>spent_micros</code>
-(ADR 0110) espelham <code>max_parallel</code> na mesma linha — um teto de gasto que é
-ADITIVO a <code>budgets</code> (projeto/sessão), nunca uma cascata: é checado
-e incrementado de forma independente, pelos mesmos <code>CheckBudgetGateUseCase</code>/
-<code>RecordLlmUsageUseCase</code> que já cuidam do gasto de projeto e de sessão (ver
-<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-443>RN-443</a>). Não confunda isso com a cascata de
-binding de modelo do <a class="" href=/brabo/dev/zh-Hans/adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global>ADR 0064</a>
-(<code>session > agent > area > project > workspace</code>) — aquela escolhe um único
-vencedor; o orçamento de área nunca escolhe.</p>
-<p><strong>Migrations:</strong> Drizzle na api (<code>src/db/migrations/</code>, aplicadas por um
-Job de execução única — as réplicas <strong>não</strong> migram no boot, senão disputariam a
-mesma migration) e Ecto no engine, no seu próprio schema (<code>engine</code>).
-Não há referência cruzada entre os dois schemas, então eles rodam em
-paralelo.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=divida-tecnica>Dívida técnica conhecida<a href=#divida-tecnica class=hash-link aria-label="Dívida técnica conhecida的直接链接" title="Dívida técnica conhecida的直接链接" translate=no>​</a></h2>
-<p>Derivada dos hotspots do histórico e dos ADRs que registram estado em aberto.</p>
+<p>总共 56 张表。最新的是 <code>detected_language_declines</code>（<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-624>RN-624</a>）：
+每个人和语言一行，记录此人在被问到"我们注意到你用 X 写作——回答中使用 X 吗？"时<strong>拒绝</strong>
+的语言，以及日期。它的存在使同一问题不会再回来；之后确认该语言会删除这一行。检测本身
+不保存状态——样本通过部分索引 <code>session_events_evidencia_de_idioma_idx</code>（用户执行者、两种
+证据类型）从 <code>session_events</code> 读取，迟滞会重新计算——因此这张表和 <code>users</code> 中已确认的那对
+字段就是它写入的全部，而且只在本人回答时写入。在它之前，最新的是
+<code>session_language_overrides</code>（<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-618>RN-618</a>、
+<a class="" href=/brabo/dev/zh-Hans/adr/0177-idioma-das-respostas-por-conta-sessao-e-projeto>ADR 0177</a>）：一个人在一个会话
+中固定的回答语言，以 <code>{session_id, user_id}</code> <strong>对</strong>为键，使两个参与者永不相互影响。它是
+配置，不是事件——再次固定是 upsert，释放是 <code>DELETE</code>。同一个 ADR 增加了
+<code>users.response_language</code>（<code>NULL</code> 表示"自动"）以及已确认检测的那对字段
+<code>users.detected_language</code> / <code>detected_language_confirmed_at</code>，由一个 CHECK 绑定；
+<code>users.locale</code> 仍是界面语言，限定为 <code>pt-BR</code>/<code>en</code>。而 <code>projects.language</code>
+（<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-619>RN-619</a>）是没有人类作者之物的语言——共享工件和无人输入的
+轮次——始终是一个具体的 BCP-47 代码。在它之前，最新的是 <code>project_mirror_states</code>
+（<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-517>RN-517</a>、<a class="" href=/brabo/dev/zh-Hans/adr/0147-agente-local-com-capacidades>ADR 0147</a>
+第 7 点）：每个项目一行，<code>project_id</code> 唯一，保存<strong>最后一轮</strong>镜像做了什么——最后一次成功
+同步及其三个计数和冻结的目标，加上最后一个错误。它是<strong>表</strong>而不是事件，原因与上面的
+<code>rag_searches</code> 相同：一轮镜像没有会话，而 <code>session_events.session_id</code> 是 <code>NOT NULL</code>，因此
+event log 会悄悄丢弃一切。三种永不塌缩的状态（<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-088>RN-088</a>）：
+"从未同步"是<strong>不存在</strong>的行，"已同步但什么都没复制"是存在且 <code>files_copied = 0</code> 的行，
+"失败"是 <code>last_error_at</code> 比 <code>last_synced_at</code> 新。成功列和失败列是<strong>不相交</strong>的，任何写入都
+不触碰另一方的列——这正是界面能够说"从今天开始失败，最后一次好的复制是昨天，412 个文件"，
+而不是丢掉它拥有的最有用信息的原因。</p>
+<p>在它之前的两张是 <code>rag_searches</code>/<code>rag_feedback</code>（RN-479/480）：混合搜索的痕迹以及对其返回
+内容的投票，之所以加入，是因为 <code>rag-search-limits.ts</code> 在自己的注释中声明混合搜索的四个
+数字没有一个来自基于真实数据的校准——而在搜索不留痕迹时无法校准。它们是<strong>表</strong>而不只是
+会话事件，原因很具体：<code>session_events.session_id</code> 是 <code>NOT NULL</code>，而来自 RAG 标签页的搜索
+是没有会话的<em>项目</em>搜索，因此 event log 会悄悄丢弃恰恰是人类看着分数运行的那些搜索（与
+迫使 <a class="" href=/brabo/dev/zh-Hans/adr/0075-embeddings-no-contrato-de-llm-provider>ADR 0075</a> 削减 embedding metering
+的是同一类问题）。<code>rag_searches.pesos</code> 在行内冻结每次搜索的权重——与 metering 中冻结价格
+（<a class="" href=/brabo/dev/zh-Hans/adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel>ADR 0042</a>）同样的
+纪律——使后来的校准不会悄悄改变之前每次测量的含义。<code>session_socket_tickets</code> 不在图中，
+原因与 <code>refresh_tokens</code>/<code>account_tokens</code> 相同：它是认证机制，不是领域关系。</p>
+<p><code>projects.mirror_path</code>（FASE 28，<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-515>RN-515</a>、
+<a class="" href=/brabo/dev/zh-Hans/adr/0147-agente-local-com-capacidades>ADR 0147</a> 第 4 点）是一列而不是一张表，因为它是
+每个项目<strong>一个</strong>可选值：本地智能体的 <code>espelho</code> 能力把工作复制到的、位于<strong>用户</strong>机器上的
+绝对路径。它可为空，<code>NULL</code> 是<strong>正常</strong>状态——没有镜像的项目占大多数，产品从不自行选择
+目标。它故意<strong>不</strong>带有把它绑定到 <code>execution_mode</code> 的 CHECK，这与旁边的 <code>workspace_path</code>
+不同：<code>container</code> 不能有目标（它的来源是<strong>服务器</strong>上的托管卷，而会做复制的进程运行在用户
+机器上），但 <code>execution_mode</code> 是<strong>可转换</strong>的（<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-447>RN-447</a>、
+<a class="" href=/brabo/dev/zh-Hans/adr/0111-conversao-de-execution-mode-de-projeto-existente>ADR 0111</a>），所以 CHECK 会让
+向 <code>container</code> 的转换在 Postgres 中爆炸，而不是带着原因拒绝。拒绝放在用例中，转换会清空
+这一列——与 <code>workspace_verified_at</code> 的形式相同，还有一个额外原因：来源↔目标循环的两个方向
+都是针对<strong>旧的</strong> <code>workspace_path</code> 验证的。
+自 <a class="" href=/brabo/dev/zh-Hans/business-rules#rn-516>RN-516</a> 起 engine <strong>读取</strong>这一列——由它决定 runner 的 <code>join</code>
+是否要求 <code>espelho</code> 能力，也是它在该 join 的授予中传回（<code>Engine.Runners.Espelho</code>、
+<code>EngineWeb.TerminalChannel</code>）。engine 从不写它。自 <a class="" href=/brabo/dev/zh-Hans/business-rules#rn-517>RN-517</a> 起
+附近<strong>有</strong>一个内部路由——<code>POST /internal/projects/:projectId/mirror-sync-result</code>——但它写入
+<code>project_mirror_states</code>，从不写这一列：目标是<strong>配置</strong>（用户声明它），一轮的结果是<strong>遥测</strong>
+（本地智能体报告它），把两者合并会让一次报告覆盖一个选择。
+<strong>约束就是业务规则</strong>：event log 的唯一 <code>(session_id, seq)</code>、在 <code>budgets</code> 中要求恰好一个
+范围的 <code>check</code>（项目<strong>或</strong>会话，绝不两者都有）、保证分析幂等性的部分索引——以及自 Fase 8b
+起，<code>delegations</code> 的三个 <code>check</code>，锁定每个 <code>status</code> 哪个字段是必需的（<code>completed</code> →
+<code>parecerArtifactId</code>，<code>failed</code> → <code>failureOrigin</code>，<code>dispensed</code> → <code>justification</code>；见
+<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-036>RN-036</a>）。<code>delegations.task_id</code> 生来是 <code>NOT NULL</code>，在 Fase 8c
+变为可空——Infra 领域针对会话委派，infra PR 背后没有 backlog 任务（见
+<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-037>RN-037</a>）。</p>
+<p><code>agent_areas</code>（FASE 14d，<a class="" href=/brabo/dev/zh-Hans/adr/0053-dev-lead-e-paralelismo-autorizado>ADR 0053</a>）是 Fase 8
+曾经削减的东西。它回来了，因为 <strong>dev</strong> 领域无法在代码中枚举：<code>qa</code> 和 <code>infra</code> 能放进固定
+列表，但 dev 的成员是 <code>module_map</code> 中每个模块一个，由 Arquiteto 决定，每个项目都不同。唯一
+<code>(project_id, key)</code> 使播种幂等，<code>max_parallel</code>（默认 2）是 lead 无需询问就能使用的上限——
+超过它，就是 <code>proposed_action</code>（见 <a class="" href=/brabo/dev/zh-Hans/business-rules/custo#rn-083>RN-083</a>）。
+<code>budget_micros</code>/<code>spent_micros</code>（ADR 0110）在同一行中镜像 <code>max_parallel</code>——一个与
+<code>budgets</code>（项目/会话）<strong>叠加</strong>的花费上限，绝不是级联：它由已经负责项目和会话花费的同样的
+<code>CheckBudgetGateUseCase</code>/<code>RecordLlmUsageUseCase</code> 独立检查和递增（见
+<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-443>RN-443</a>）。不要把它与
+<a class="" href=/brabo/dev/zh-Hans/adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global>ADR 0064</a> 的模型 binding
+级联（<code>session > agent > area > project > workspace</code>）混淆——那个选择唯一的胜出者；领域预算
+从不选择。</p>
+<p><strong>迁移：</strong> api 中用 Drizzle（<code>src/db/migrations/</code>，由一次性执行的 Job 应用——副本<strong>不</strong>在
+启动时迁移，否则它们会争抢同一个迁移），engine 中用 Ecto，在它自己的 schema（<code>engine</code>）中。
+两个 schema 之间没有交叉引用，因此它们并行运行。</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=divida-tecnica>已知技术债务<a href=#divida-tecnica class=hash-link aria-label=已知技术债务的直接链接 title=已知技术债务的直接链接 translate=no>​</a></h2>
+<p>从历史热点和记录未决状态的 ADR 中得出。</p>
 
 
 
@@ -860,4 +684,4 @@ paralelo.</p>
 
 
 
-<table><thead><tr><th>dívida<th>evidência<th>impacto<tbody><tr><td><del><code>schema.ts</code> é o arquivo mais alterado do repo (23 mudanças) e concentra 51 tabelas num único arquivo</del><td>histórico → <strong>fechada pelo</strong> <a class="" href=/brabo/dev/zh-Hans/adr/0121-schema-dividido-por-agregado-de-dominio>ADR 0121</a><td>o schema agora é um arquivo por agregado de domínio em <code>apps/api/src/db/schema/</code>, espelhando <code>src/domain/*</code>, com o caminho antigo mantido como barrel de <code>export *</code> para que nenhum dos 144 consumidores mudasse nada. Dois agregados agora podem ser editados ao mesmo tempo sem conflito. O que isto NÃO toca: as migrations são idênticas byte a byte (o critério de aceite foi um <code>drizzle-kit generate</code> com diff zero), e a linha do contrato api↔engine abaixo é uma dívida diferente, ainda aberta<tr><td>O contrato api↔engine está espalhado por 4 arquivos quentes (<code>internal-sessions.controller.ts</code>, <code>api-to-engine-client.ts</code>, <code>engine_api_client.ex</code>, <code>router.ex</code>) sem fonte única<td>histórico<td>uma mudança exige editar os quatro em sincronia; nada garante que concordem<tr><td>A demo dos gates <strong>não é teste de regressão</strong> — depende do julgamento de um modelo local de 7B<td><a class="" href=/brabo/dev/zh-Hans/adr/0020-destravar-gates-qa-secops>ADR 0020</a><td>o caminho semântico do gate não tem cobertura automatizada<tr><td>Fase 4a com um critério de aceite marcado <strong>NÃO FECHADO</strong><td><a class="" href=/brabo/dev/zh-Hans/adr/0021-fechamento-4a-infra-e-painel>ADR 0021</a><td>há trabalho admitidamente incompleto sem issue de acompanhamento<tr><td>A fila do Oban acumula <code>AnamneseWorker</code> de execuções anteriores; a guarda só bloqueia enfileiramentos <strong>novos</strong><td><a class="" href=/brabo/dev/zh-Hans/adr/0020-destravar-gates-qa-secops>ADR 0020</a><td>desligar a guarda não basta — a fila precisa ser expurgada<tr><td><code>TerminalExecutor</code> roda a suíte do projeto gerenciado <strong>dentro</strong> da imagem do engine<td><a class="" href=/brabo/dev/zh-Hans/adr/0024-fase5-imagens-producao-ci>ADR 0024</a><td>não escala para stacks arbitrárias; a saída é sandbox por projeto<tr><td><del>As imagens não são publicadas num registry; o overlay de produção aponta para <code>ghcr.io/OWNER/*</code></del><td><a class="" href=/brabo/dev/zh-Hans/adr/0027-fase5-backup-hardening-release>ADR 0027</a> → <strong>fechada pelo</strong> <a class="" href=/brabo/dev/zh-Hans/adr/0119-imagens-publicadas-no-ghcr-por-digest>ADR 0119</a><td>as quatro imagens publicam no GHCR a cada tag final e o overlay fixa por digest a partir de <code>.release/images.json</code>. O que sobra NÃO é esta dívida: nada faz deploy automaticamente, e as imagens não são assinadas nem atestadas<tr><td><del><code>SessionPage.tsx</code> tinha 169 KiB com 25 arquivos de teste importando-o; <code>ProjectSettingsTab.tsx</code> tinha 90 KiB</del><td><a class="" href=/brabo/dev/zh-Hans/adr/0122-sessionpage-dividido-em-cinco-prs>ADR 0122</a> + <a class="" href=/brabo/dev/zh-Hans/adr/0124-hook-do-canal-de-turno-do-sessionpage>ADR 0124</a> + <a class="" href=/brabo/dev/zh-Hans/adr/0125-projectsettingstab-dividido-por-secao>ADR 0125</a> — <strong>esta linha FECHA nas duas metades</strong><td>as cinco PRs mecânicas do ADR 0122 foram mergeadas primeiro: a PR 1 extraiu os helpers puros de timeline/turno para <code>apps/web/src/lib/session-timeline.ts</code>, a PR 2 extraiu <code>StorySlide</code> para <code>apps/web/src/routes/StorySlide.tsx</code>, a PR 3 extraiu <code>StructuredQuestionCard</code> (mais seu helper privado <code>permiteOutra</code>) para <code>apps/web/src/routes/StructuredQuestionCard.tsx</code>, a PR 4 extraiu os helpers da árvore de backlog (<code>urlDaPr</code>, <code>vinculoDeBacklog</code>, <code>montarArvoreDeBacklog</code>, <code>totalDeDescendentes</code>) para <code>apps/web/src/lib/session-backlog-tree.ts</code> e <code>ItemDeBacklog</code> + <code>ContextAside</code> (a sidebar direita inteira) para <code>apps/web/src/routes/ContextAside.tsx</code>, e a PR 5 extraiu as seis derivações de prontidão (<code>criativoActive</code>, <code>arquitetoActive</code>, <code>hasBusinessRule</code>, <code>hasPromotedStory</code>, <code>hasProductBrief</code>, <code>activeAgent</code>) para um hook <code>useSessionReadiness</code> em <code>apps/web/src/lib/session-readiness.ts</code> — <code>SessionPage.tsx</code> foi de 3 807 para 2 661 linhas, deixando explicitamente fora de escopo o aglomerado de estado do canal de turno (<code>turnoViaCanal</code>/<code>statusAgent</code>/<code>pensandoVisivel</code>/<code>atividadeDoTurno</code>) para um ADR futuro próprio. O ADR 0124 é esse ADR: uma PR mecânica de deduplicação primeiro fez <code>handleSend</code>/<code>handleReadiness</code>/<code>handleArchitectureReadiness</code> chamarem o par já existente <code>iniciarTurnoDoAgente</code>/<code>finalizarTurnoDoAgente</code> em vez de duplicar o braço deles inline, e depois uma segunda PR extraiu o estado, o efeito de canal <code>connectSessionHeartbeat</code> e as três funções de ciclo de vida para um hook <code>useTurnoDoAgente</code> (<code>apps/web/src/lib/session-turno.ts</code>). <code>SessionPage.tsx</code> agora tem 2 479 linhas; os 25 (24 depois da migração da PR 1) arquivos <code>SessionPage.*.test.tsx</code> passaram sem edição pelas sete PRs dos dois ADRs. O ADR 0125 fecha a OUTRA metade, numa PR em vez de cinco: <code>ProjectSettingsTab.tsx</code> se divide em um arquivo por seção em <code>apps/web/src/routes/settings/</code> (17 seções + um <code>settings/shared.ts</code> de dois símbolos guardando só <code>ORIGIN_TONE</code> e <code>formatarCustoMicros</code>, os dois helpers com mais de um chamador), indo de 2 532 para 77 linhas e FICANDO no seu caminho como entrada e barrel — o que sustenta carga, porque <code>ProjectSettingsTab.test.tsx</code> importa 11 nomes dele e <code>ProjectPage.test.tsx</code>/<code>project-tabs.test.tsx</code> fazem <code>vi.mock</code> dele PELO CAMINHO. Uma PR e não cinco porque este arquivo nunca teve o formato do <code>SessionPage.tsx</code>: o pai não guardava estado nenhum (17 filhos JSX, nenhum hook, nenhuma query, nenhuma checagem de papel), nenhuma seção recebia mais que <code>{projectId}</code>, e 11 das 17 já eram exportadas. <code>ProjectSettingsTab.module.css</code> continua uma folha de estilo compartilhada com 15 importadores (a mesma resposta que o ADR 0122 deu para <code>SessionPage.module.css</code>). A suíte inteira do web — 142 arquivos, 1 537 testes — passou com ZERO arquivos de teste editados<tr><td><del><code>SessionPage.tsx</code> voltou a crescer depois de a linha dele fechar: <strong>2 559 linhas</strong> (116 KiB, 26 arquivos <code>SessionPage.*.test.tsx</code>), medido na <code>dev</code> em <code>b61bc49cd</code> em <strong>2026-09-13</strong> — a linha acima o fechou em <strong>2 479</strong></del><td><code>git show --numstat</code> nos dois commits que o tocaram desde o <a class="" href=/brabo/dev/zh-Hans/adr/0124-hook-do-canal-de-turno-do-sessionpage>ADR 0124</a>: <code>62eebad55</code> (+8, o seletor de modelo "aptos para agentes") e <code>a26ddd84d</code> (+72, o card acionável de handoff da Infra, RN-499)<td>a linha fechada acima está certa para <code>ProjectSettingsTab.tsx</code> (agora uma barra e barrel de 96 linhas) e <strong>não está mais certa para <code>SessionPage.tsx</code></strong>. Ninguém fez nada errado — cada acréscimo foi uma feature legítima — e é exatamente por isso que uma dívida fechada <strong>por um número</strong> precisa do número remedido: sem isso, a regressão é a soma de decisões corretas. Esta linha <strong>declara</strong>, não decompõe: dividir mais é um programa com ADR próprio, no molde de 0122/0125. Não há portão de tamanho no CI, de propósito — uma catraca num arquivo que ninguém está decompondo só produz PRs vermelhas. A linha fechada fica como histórico. <strong>O programa agora existe:</strong> o <a class="" href=/brabo/dev/zh-Hans/adr/0176-sessionpage-abaixo-de-mil-linhas>ADR 0176</a> (AT-138, 2026-09-28) remediu <strong>2 637 linhas</strong> na <code>dev</code> em <code>018b8cd24c</code> e declara dez PRs mecânicas empilhadas até 834, com o portão de tamanho nascendo só na última. <strong>Fechada</strong> pela última PR desse programa: o arquivo tem <strong>834 linhas</strong>, e <code>apps/web/src/routes/SessionPage.teto.test.ts</code> o reprova com 1 000 ou mais — o portão de tamanho que esta linha recusou num arquivo que ninguém estava decompondo existe agora que alguém decompôs</table></div><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_yZb9"><a href=https://github.com/daneiel/brabo/blob/dev/docs/architecture.md target=_blank rel="noopener noreferrer" class=theme-edit-this-page><svg fill=currentColor height=20 width=20 viewBox="0 0 40 40" class=iconEdit_ANja aria-hidden=true><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"/></g></svg>编辑此页</a></div><div class="col lastUpdated_Kb4y"><span class=theme-last-updated>最后<!-- -->由 <b>Daniel Souza</b> <!-- -->于 <b><time datetime=2026-10-15T07:48:55.000Z itemprop=dateModified>2026年10月15日</time></b> <!-- -->更新</span></div></div></footer></article><nav class="docusaurus-mt-lg pagination-nav" aria-label=文件选项卡><a class="pagination-nav__link pagination-nav__link--prev" href=/brabo/dev/zh-Hans/tutorials/from-zero-to-deliverable><div class=pagination-nav__sublabel>上一页</div><div class=pagination-nav__label>从零到交付物</div></a><a class="pagination-nav__link pagination-nav__link--next" href=/brabo/dev/zh-Hans/adr><div class=pagination-nav__sublabel>下一页</div><div class=pagination-nav__label>ADR 索引</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_wOiH thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href=#the-outside-view class="table-of-contents__link toc-highlight">A visão de fora</a><li><a href=#containers class="table-of-contents__link toc-highlight">Containers</a><li><a href=#code-map class="table-of-contents__link toc-highlight">Mapa do código</a><ul><li><a href=#appsapi--nestjs-906-files-in-src-measured-2026-09-25 class="table-of-contents__link toc-highlight"><code>apps/api</code> — NestJS, 906 arquivos em <code>src/</code> (medido em 2026-09-25)</a><li><a href=#appsengine--elixirotp-219-files-in-lib-measured-2026-09-25 class="table-of-contents__link toc-highlight"><code>apps/engine</code> — Elixir/OTP, 219 arquivos em <code>lib/</code> (medido em 2026-09-25)</a><li><a href=#appsbroker--nodets-9-files-in-src-measured-2026-09-25 class="table-of-contents__link toc-highlight"><code>apps/broker</code> — Node/TS, 9 arquivos em <code>src/</code> (medido em 2026-09-25)</a><li><a href=#appsweb--react-19-487-files-in-src-measured-2026-09-25 class="table-of-contents__link toc-highlight"><code>apps/web</code> — React 19, 487 arquivos em <code>src/</code> (medido em 2026-09-25)</a><li><a href=#outside-the-applications class="table-of-contents__link toc-highlight">Fora das aplicações</a></ul><li><a href=#an-agent-turns-flow class="table-of-contents__link toc-highlight">O fluxo de um turno de agente</a><li><a href=#boundaries-and-invariants class="table-of-contents__link toc-highlight">Fronteiras e invariantes</a><li><a href=#cross-cutting-concerns class="table-of-contents__link toc-highlight">Preocupações transversais</a><li><a href=#data class="table-of-contents__link toc-highlight">Dados</a><li><a href=#divida-tecnica class="table-of-contents__link toc-highlight">Dívida técnica conhecida</a></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class=footer__title>文档</div><ul class="footer__items clean-list"><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/getting-started>快速开始</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/architecture>架构</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/business-rules>业务规则</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/runbook>Runbook</a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>社区</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class=footer__link-item>如何贡献<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class=footer__link-item>在哪里求助<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class=footer__link-item>安全<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>更多</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class=footer__link-item>GitHub<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CHANGELOG.md target=_blank rel="noopener noreferrer" class=footer__link-item>CHANGELOG<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/LICENSE target=_blank rel="noopener noreferrer" class=footer__link-item>MIT 许可证<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/THIRD_PARTY_NOTICES.md target=_blank rel="noopener noreferrer" class=footer__link-item>第三方声明<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div></div><div class="footer__bottom text--center"><div class=footer__copyright>Copyright © 2026 Daniel Souza。基于 MIT 许可证授权。第三方工具保留各自的许可证——参见第三方声明。</div></div></div></footer></div></body>
+<table><thead><tr><th>债务<th>证据<th>影响<tbody><tr><td><del><code>schema.ts</code> 是仓库中改动最多的文件（23 次改动），把 51 张表集中在单个文件中</del><td>历史 → <strong>由</strong> <a class="" href=/brabo/dev/zh-Hans/adr/0121-schema-dividido-por-agregado-de-dominio>ADR 0121</a> <strong>关闭</strong><td>schema 现在是 <code>apps/api/src/db/schema/</code> 中每个领域聚合一个文件，镜像 <code>src/domain/*</code>，旧路径保留为 <code>export *</code> 的 barrel，使 144 个消费者都无需改动。两个聚合现在可以同时编辑而不冲突。它<strong>不</strong>涉及的：迁移逐字节相同（验收标准是一次 diff 为零的 <code>drizzle-kit generate</code>），而下面 api↔engine 契约那一行是另一项仍未关闭的债务<tr><td>api↔engine 契约分散在 4 个热点文件中（<code>internal-sessions.controller.ts</code>、<code>api-to-engine-client.ts</code>、<code>engine_api_client.ex</code>、<code>router.ex</code>），没有单一来源<td>历史<td>一次改动需要同步编辑这四个；没有任何东西保证它们一致<tr><td>gates 的演示<strong>不是回归测试</strong>——它依赖一个本地 7B 模型的判断<td><a class="" href=/brabo/dev/zh-Hans/adr/0020-destravar-gates-qa-secops>ADR 0020</a><td>gate 的语义路径没有自动化覆盖<tr><td>Fase 4a 有一条验收标准被标为<strong>未关闭</strong><td><a class="" href=/brabo/dev/zh-Hans/adr/0021-fechamento-4a-infra-e-painel>ADR 0021</a><td>有公认未完成的工作而没有跟踪 issue<tr><td>Oban 队列积累了之前执行的 <code>AnamneseWorker</code>；守卫只阻止<strong>新的</strong>入队<td><a class="" href=/brabo/dev/zh-Hans/adr/0020-destravar-gates-qa-secops>ADR 0020</a><td>关闭守卫是不够的——队列需要清除<tr><td><code>TerminalExecutor</code> 在 engine 镜像<strong>内部</strong>运行受管项目的测试套件<td><a class="" href=/brabo/dev/zh-Hans/adr/0024-fase5-imagens-producao-ci>ADR 0024</a><td>无法扩展到任意技术栈；出路是按项目的沙箱<tr><td><del>镜像没有发布到 registry；生产 overlay 指向 <code>ghcr.io/OWNER/*</code></del><td><a class="" href=/brabo/dev/zh-Hans/adr/0027-fase5-backup-hardening-release>ADR 0027</a> → <strong>由</strong> <a class="" href=/brabo/dev/zh-Hans/adr/0119-imagens-publicadas-no-ghcr-por-digest>ADR 0119</a> <strong>关闭</strong><td>四个镜像在每个最终 tag 时发布到 GHCR，overlay 从 <code>.release/images.json</code> 按 digest 固定。剩下的<strong>不是</strong>这项债务：没有任何东西会自动部署，镜像也没有签名或证明<tr><td><del><code>SessionPage.tsx</code> 有 169 KiB，25 个测试文件导入它；<code>ProjectSettingsTab.tsx</code> 有 90 KiB</del><td><a class="" href=/brabo/dev/zh-Hans/adr/0122-sessionpage-dividido-em-cinco-prs>ADR 0122</a> + <a class="" href=/brabo/dev/zh-Hans/adr/0124-hook-do-canal-de-turno-do-sessionpage>ADR 0124</a> + <a class="" href=/brabo/dev/zh-Hans/adr/0125-projectsettingstab-dividido-por-secao>ADR 0125</a>——<strong>这一行的两半都已关闭</strong><td>ADR 0122 的五个机械 PR 先被合并：PR 1 把 timeline/轮次的纯辅助函数抽到 <code>apps/web/src/lib/session-timeline.ts</code>，PR 2 把 <code>StorySlide</code> 抽到 <code>apps/web/src/routes/StorySlide.tsx</code>，PR 3 把 <code>StructuredQuestionCard</code>（加上其私有辅助函数 <code>permiteOutra</code>）抽到 <code>apps/web/src/routes/StructuredQuestionCard.tsx</code>，PR 4 把 backlog 树的辅助函数（<code>urlDaPr</code>、<code>vinculoDeBacklog</code>、<code>montarArvoreDeBacklog</code>、<code>totalDeDescendentes</code>）抽到 <code>apps/web/src/lib/session-backlog-tree.ts</code>，并把 <code>ItemDeBacklog</code> + <code>ContextAside</code>（整个右侧边栏）抽到 <code>apps/web/src/routes/ContextAside.tsx</code>，PR 5 把六个就绪派生（<code>criativoActive</code>、<code>arquitetoActive</code>、<code>hasBusinessRule</code>、<code>hasPromotedStory</code>、<code>hasProductBrief</code>、<code>activeAgent</code>）抽到 <code>apps/web/src/lib/session-readiness.ts</code> 中的 hook <code>useSessionReadiness</code>——<code>SessionPage.tsx</code> 从 3 807 行降到 2 661 行，明确把轮次通道的状态集群（<code>turnoViaCanal</code>/<code>statusAgent</code>/<code>pensandoVisivel</code>/<code>atividadeDoTurno</code>）留给未来一个自己的 ADR。ADR 0124 就是那个 ADR：一个机械去重 PR 先让 <code>handleSend</code>/<code>handleReadiness</code>/<code>handleArchitectureReadiness</code> 调用已有的那对 <code>iniciarTurnoDoAgente</code>/<code>finalizarTurnoDoAgente</code>，而不是内联重复它们的分支，然后第二个 PR 把状态、通道效果 <code>connectSessionHeartbeat</code> 和三个生命周期函数抽到 hook <code>useTurnoDoAgente</code>（<code>apps/web/src/lib/session-turno.ts</code>）。<code>SessionPage.tsx</code> 现在有 2 479 行；25 个（PR 1 迁移后为 24 个）<code>SessionPage.*.test.tsx</code> 文件在两个 ADR 的七个 PR 中都未经编辑就通过了。ADR 0125 在一个 PR 而不是五个中关闭了<strong>另一</strong>半：<code>ProjectSettingsTab.tsx</code> 拆分为 <code>apps/web/src/routes/settings/</code> 中每节一个文件（17 节 + 一个只有两个符号的 <code>settings/shared.ts</code>，只保存 <code>ORIGIN_TONE</code> 和 <code>formatarCustoMicros</code>，即有多个调用方的两个辅助函数），从 2 532 行降到 77 行，并<strong>留在</strong>原路径作为入口和 barrel——这是承重的，因为 <code>ProjectSettingsTab.test.tsx</code> 从它导入 11 个名称，而 <code>ProjectPage.test.tsx</code>/<code>project-tabs.test.tsx</code> <strong>按路径</strong>对它做 <code>vi.mock</code>。一个 PR 而不是五个，因为这个文件从未有 <code>SessionPage.tsx</code> 的形状：父组件不保存任何状态（17 个 JSX 子组件，没有 hook，没有查询，没有角色检查），没有任何一节接收多于 <code>{projectId}</code> 的东西，17 节中有 11 节已经被导出。<code>ProjectSettingsTab.module.css</code> 仍是一个有 15 个导入者的共享样式表（与 ADR 0122 对 <code>SessionPage.module.css</code> 给出的答案相同）。web 的整个测试套件——142 个文件、1 537 个测试——在<strong>零</strong>个测试文件被编辑的情况下通过<tr><td><del><code>SessionPage.tsx</code> 在其那一行关闭后又开始增长：<strong>2 559 行</strong>（116 KiB，26 个 <code>SessionPage.*.test.tsx</code> 文件），于 <strong>2026-09-13</strong> 在 <code>dev</code> 的 <code>b61bc49cd</code> 上测得——上面那一行在 <strong>2 479</strong> 时关闭了它</del><td>自 <a class="" href=/brabo/dev/zh-Hans/adr/0124-hook-do-canal-de-turno-do-sessionpage>ADR 0124</a> 以来触及它的两个提交上的 <code>git show --numstat</code>：<code>62eebad55</code>（+8，"适合智能体"的模型选择器）和 <code>a26ddd84d</code>（+72，Infra 的可操作 handoff 卡片，RN-499）<td>上面关闭的那一行对 <code>ProjectSettingsTab.tsx</code>（现在是 96 行的条带和 barrel）是对的，而<strong>对 <code>SessionPage.tsx</code> 已不再正确</strong>。没有人做错任何事——每次增加都是合理的功能——而这正是为什么<strong>以一个数字</strong>关闭的债务需要重新测量这个数字：否则，回退就是正确决定的总和。这一行<strong>声明</strong>，不分解：进一步拆分是一个有自己 ADR 的计划，按 0122/0125 的模式。CI 中故意没有大小闸门——在一个没人分解的文件上加棘轮只会产生红色的 PR。关闭的那一行作为历史保留。<strong>这个计划现在存在了：</strong><a class="" href=/brabo/dev/zh-Hans/adr/0176-sessionpage-abaixo-de-mil-linhas>ADR 0176</a>（AT-138，2026-09-28）在 <code>dev</code> 的 <code>018b8cd24c</code> 上重新测得 <strong>2 637 行</strong>，并声明了十个堆叠的机械 PR 直到 834 行，大小闸门只在最后一个中诞生。由该计划的最后一个 PR <strong>关闭</strong>：文件有 <strong>834 行</strong>，<code>apps/web/src/routes/SessionPage.teto.test.ts</code> 在 1 000 行或以上时拒绝它——这一行在一个没人分解的文件上拒绝的大小闸门，现在在有人分解之后存在了</table></div><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_yZb9"><a href=https://github.com/daneiel/brabo/blob/dev/docs/architecture.md target=_blank rel="noopener noreferrer" class=theme-edit-this-page><svg fill=currentColor height=20 width=20 viewBox="0 0 40 40" class=iconEdit_ANja aria-hidden=true><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"/></g></svg>编辑此页</a></div><div class="col lastUpdated_Kb4y"><span class=theme-last-updated>最后<!-- -->由 <b>Daniel Souza</b> <!-- -->于 <b><time datetime=2026-10-15T20:57:40.000Z itemprop=dateModified>2026年10月15日</time></b> <!-- -->更新</span></div></div></footer></article><nav class="docusaurus-mt-lg pagination-nav" aria-label=文件选项卡><a class="pagination-nav__link pagination-nav__link--prev" href=/brabo/dev/zh-Hans/tutorials/from-zero-to-deliverable><div class=pagination-nav__sublabel>上一页</div><div class=pagination-nav__label>从零到交付物</div></a><a class="pagination-nav__link pagination-nav__link--next" href=/brabo/dev/zh-Hans/adr><div class=pagination-nav__sublabel>下一页</div><div class=pagination-nav__label>ADR 索引</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_wOiH thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href=#the-outside-view class="table-of-contents__link toc-highlight">外部视角</a><li><a href=#containers class="table-of-contents__link toc-highlight">容器</a><li><a href=#code-map class="table-of-contents__link toc-highlight">代码地图</a><ul><li><a href=#appsapi--nestjs-906-files-in-src-measured-2026-09-25 class="table-of-contents__link toc-highlight"><code>apps/api</code> — NestJS，<code>src/</code> 中 906 个文件（2026-09-25 测量）</a><li><a href=#appsengine--elixirotp-219-files-in-lib-measured-2026-09-25 class="table-of-contents__link toc-highlight"><code>apps/engine</code> — Elixir/OTP，<code>lib/</code> 中 219 个文件（2026-09-25 测量）</a><li><a href=#appsbroker--nodets-9-files-in-src-measured-2026-09-25 class="table-of-contents__link toc-highlight"><code>apps/broker</code> — Node/TS，<code>src/</code> 中 9 个文件（2026-09-25 测量）</a><li><a href=#appsweb--react-19-487-files-in-src-measured-2026-09-25 class="table-of-contents__link toc-highlight"><code>apps/web</code> — React 19，<code>src/</code> 中 487 个文件（2026-09-25 测量）</a><li><a href=#outside-the-applications class="table-of-contents__link toc-highlight">应用之外</a></ul><li><a href=#an-agent-turns-flow class="table-of-contents__link toc-highlight">一次智能体轮次的流程</a><li><a href=#boundaries-and-invariants class="table-of-contents__link toc-highlight">边界与不变量</a><li><a href=#cross-cutting-concerns class="table-of-contents__link toc-highlight">横切关注点</a><li><a href=#data class="table-of-contents__link toc-highlight">数据</a><li><a href=#divida-tecnica class="table-of-contents__link toc-highlight">已知技术债务</a></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class=footer__title>文档</div><ul class="footer__items clean-list"><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/getting-started>快速开始</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/architecture>架构</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/business-rules>业务规则</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/runbook>Runbook</a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>社区</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class=footer__link-item>如何贡献<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class=footer__link-item>在哪里求助<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class=footer__link-item>安全<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>更多</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class=footer__link-item>GitHub<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CHANGELOG.md target=_blank rel="noopener noreferrer" class=footer__link-item>CHANGELOG<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/LICENSE target=_blank rel="noopener noreferrer" class=footer__link-item>MIT 许可证<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/THIRD_PARTY_NOTICES.md target=_blank rel="noopener noreferrer" class=footer__link-item>第三方声明<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div></div><div class="footer__bottom text--center"><div class=footer__copyright>Copyright © 2026 Daniel Souza。基于 MIT 许可证授权。第三方工具保留各自的许可证——参见第三方声明。</div></div></div></footer></div></body>
