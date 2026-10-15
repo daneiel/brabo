@@ -877,6 +877,12 @@ de propósito: o site não carrega as famílias que os `--font-*` nomeiam.
 nos dois temas e reprova abaixo de 4,5:1 contra o fundo (e reprova como CEGO
 se nada resolver).
 
+A exceção é o índice da raiz (`/brabo/`, escrito por `scripts/docs/landing.mjs`):
+ele é HTML avulso no Pages, não alcança o `tokens.css` e por isso COPIA os
+valores, nos dois temas pela preferência do sistema. A cópia é amarrada por
+`scripts/docs/landing.spec.ts`, que resolve os tokens e reprova o valor que
+divergir — ela já ficou petróleo uma vez depois do ADR 0181.
+
 ## Rodando na sua máquina {#running-it-on-your-machine}
 
 `website/` tem `pnpm-lock.yaml` próprio desde o [ADR 0117](../adr/0117-lockfile-proprio-para-o-website.md) —

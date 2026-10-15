@@ -141,15 +141,29 @@ function paginaIndice(degraus) {
 <meta name="robots" content="noindex, follow">
 <link rel="canonical" href="https://daneiel.github.io/brabo/${ESTAVEL}/">
 <style>
+  /* Valores de design/tokens.css (o índice é um HTML avulso na raiz do Pages e
+     não alcança o arquivo): surface-0/1, border, text-primary/secondary/muted e
+     accent, escuro e claro. Mudou a paleta lá, mude aqui. */
   :root {
-    color-scheme: dark;
-    --fundo: #061b24;
-    --superficie: #0a2e3d;
-    --borda: #1c4a5a;
-    --texto: #f5ede0;
-    --suave: #aec6ce;
-    --tenue: #6e8a94;
-    --destaque: #d6633a;
+    color-scheme: dark light;
+    --fundo: #0d0d0f;
+    --superficie: #141417;
+    --borda: #2a2a30;
+    --texto: #ececef;
+    --suave: #a1a1aa;
+    --tenue: #86868f;
+    --destaque: #c8744f;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --fundo: #ffffff;
+      --superficie: #fafafa;
+      --borda: #e4e4e7;
+      --texto: #18181b;
+      --suave: #52525b;
+      --tenue: #696972;
+      --destaque: #a4502c;
+    }
   }
   * { box-sizing: border-box; }
   body {

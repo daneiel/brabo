@@ -145,6 +145,35 @@ describe('landing — a página que escolhe o degrau', () => {
     expect(indice).toContain('rel="canonical" href="https://daneiel.github.io/brabo/prd/"');
   });
 
+  it('as cores são as de design/tokens.css, nos dois temas', () => {
+    // O índice COPIA os valores (é HTML avulso na raiz do Pages), e a cópia já
+    // envelheceu uma vez: ficou petróleo depois do ADR 0181. Isto amarra a cópia.
+    const tokens = readFileSync(path.join(RAIZ, 'design/tokens.css'), 'utf8');
+    const bloco = (seletor: string) => {
+      const i = tokens.indexOf(`${seletor} {`);
+      return tokens.slice(i, tokens.indexOf('}', i));
+    };
+    const resolver = (corpo: string, nome: string): string => {
+      const v = (corpo.match(new RegExp(`--${nome}:\\s*([^;]+);`)) ??
+        bloco(':root').match(new RegExp(`--${nome}:\\s*([^;]+);`)))?.[1].trim();
+      const ref = v?.match(/^var\(--([\w-]+)\)$/);
+      return ref ? resolver(corpo, ref[1]) : (v ?? '').toLowerCase();
+    };
+    const MAPA = {
+      fundo: 'surface-0', superficie: 'surface-1', borda: 'border', texto: 'text-primary',
+      suave: 'text-secondary', tenue: 'text-muted', destaque: 'accent',
+    };
+    const { indice } = gerar(['prd']);
+    const escuro = indice.slice(0, indice.indexOf('@media (prefers-color-scheme: light)'));
+    const claro = indice.slice(indice.indexOf('@media (prefers-color-scheme: light)'));
+    for (const [local, token] of Object.entries(MAPA)) {
+      expect(escuro, `--${local} escuro`).toContain(`--${local}: ${resolver(bloco(':root'), token)};`);
+      expect(claro, `--${local} claro`).toContain(
+        `--${local}: ${resolver(bloco("[data-theme='light']"), token)};`,
+      );
+    }
+  });
+
   it('gera o .nojekyll — sem ele o Pages come os diretórios com _', () => {
     const { destino } = gerar(['prd']);
     expect(() => readFileSync(path.join(destino, '.nojekyll'))).not.toThrow();
