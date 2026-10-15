@@ -24404,7 +24404,9 @@
             "example": "pt-BR",
             "enum": [
               "pt-BR",
-              "en"
+              "en",
+              "ru",
+              "zh-Hans"
             ],
             "description": "The user's language preference (i18n foundation, Wave 6a). It comes here — and not in a separate call — so the web app never needs an extra round-trip just to know which language to render the screen in."
           }
@@ -24783,7 +24785,9 @@
             "type": "string",
             "enum": [
               "pt-BR",
-              "en"
+              "en",
+              "ru",
+              "zh-Hans"
             ],
             "example": "pt-BR"
           },
@@ -26050,7 +26054,9 @@
             "type": "string",
             "enum": [
               "pt-BR",
-              "en"
+              "en",
+              "ru",
+              "zh-Hans"
             ],
             "example": "en",
             "description": "The interface language. Closed to the list — not free-form BCP-47."
@@ -26223,7 +26229,9 @@
             "type": "string",
             "enum": [
               "pt-BR",
-              "en"
+              "en",
+              "ru",
+              "zh-Hans"
             ],
             "example": "pt-BR"
           },

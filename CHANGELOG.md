@@ -6,6 +6,11 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- A interface passa a abrir em português do Brasil por padrão (antes, inglês)
+  e a conta aceita quatro idiomas — português, inglês, russo e chinês
+  simplificado. Navegador em idioma sem tradução abre em português; russo e
+  chinês aparecem no seletor da Conta como "tradução em andamento" até os
+  catálogos chegarem (RN-891, ADR 0216, AT-548).
 - A oferta "Ligar para N agentes" do modo automático aparece também no chat do
   Criativo quando o projeto tem execução ativa noutra sessão — antes ela só
   aparecia na sessão de execução, e o dev esperava o clique num `terminal`
