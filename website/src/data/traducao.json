@@ -409,7 +409,7 @@
       "data": "2026-10-15"
     },
     "glossary.md": {
-      "defasada": true,
+      "defasada": false,
       "data": "2026-10-15"
     },
     "intro.md": {
@@ -421,7 +421,7 @@
       "data": null
     },
     "tutorials/from-zero-to-deliverable.md": {
-      "defasada": true,
+      "defasada": false,
       "data": "2026-10-15"
     }
   },
