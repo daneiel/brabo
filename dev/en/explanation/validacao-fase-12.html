@@ -1,0 +1,312 @@
+<!doctype html><html lang=en dir=ltr class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-explanation/validacao-fase-12" data-has-hydrated=false><head><meta charset=UTF-8><meta name=generator content="Docusaurus v3.10.2"><title data-rh=true>The validation that the three findings died | Brabo</title><meta data-rh=true name=viewport content="width=device-width, initial-scale=1.0"/><meta data-rh=true name=robots content="noindex, nofollow"/><meta data-rh=true name=twitter:card content=summary_large_image /><meta data-rh=true property=og:url content=https://daneiel.github.io/brabo/dev/en/explanation/validacao-fase-12 /><meta data-rh=true property=og:locale content=en /><meta data-rh=true property=og:locale:alternate content=pt_BR /><meta data-rh=true property=og:locale:alternate content=ru /><meta data-rh=true property=og:locale:alternate content=zh_Hans /><meta data-rh=true name=docusaurus_locale content=en /><meta data-rh=true name=docsearch:language content=en /><meta data-rh=true name=docusaurus_version content=current /><meta data-rh=true name=docusaurus_tag content=docs-default-current /><meta data-rh=true name=docsearch:version content=current /><meta data-rh=true name=docsearch:docusaurus_tag content=docs-default-current /><meta data-rh=true property=og:title content="The validation that the three findings died | Brabo"/><meta data-rh=true name=description content="The auditable script that exercises adoption, manual promotion, and rescheduling in a single execution — with event ids extracted from the database, and what the validation deliberately doesn't prove."/><meta data-rh=true property=og:description content="The auditable script that exercises adoption, manual promotion, and rescheduling in a single execution — with event ids extracted from the database, and what the validation deliberately doesn't prove."/><meta data-rh=true name=keywords content="validation,Phase 12,dogfooding,adoption,rescheduling,promotion"/><link data-rh=true rel=icon href=/brabo/dev/en/img/favicon.ico /><link data-rh=true rel=canonical href=https://daneiel.github.io/brabo/dev/en/explanation/validacao-fase-12 /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/explanation/validacao-fase-12 hreflang=pt-BR /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/en/explanation/validacao-fase-12 hreflang=en /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/ru/explanation/validacao-fase-12 hreflang=ru /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/zh-Hans/explanation/validacao-fase-12 hreflang=zh-Hans /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/explanation/validacao-fase-12 hreflang=x-default /><script data-rh=true type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","item":"https://daneiel.github.io/brabo/dev/en/explanation/validacao-fase-12","name":"Phase 12 validation","position":1}]}</script><link rel=stylesheet href=/brabo/dev/en/assets/css/styles.7f2bd764.css /><script src=/brabo/dev/en/assets/js/runtime~main.49ad11e1.js defer></script><script src=/brabo/dev/en/assets/js/main.def2b8dc.js defer></script></head><body><svg style="display: none;"><defs>
+<symbol id=theme-svg-external-link viewBox="0 0 24 24"><path fill=currentColor d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
+</defs></svg>
+<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme-d93")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")),document.documentElement.setAttribute("data-theme-choice",t||"system")}(),function(){try{for(var[t,e]of new URLSearchParams(window.location.search).entries())if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id=__docusaurus><link rel=preload as=image href=/brabo/dev/en/img/logo.svg /><div role=region aria-label="Skip to main content"><a class=skipToContent_CFOX href=#__docusaurus_skipToContent_fallback>Skip to main content</a></div><nav aria-label=Main class="theme-layout-navbar navbar navbar--fixed-top"><div class=navbar__inner><div class="theme-layout-navbar-left navbar__items"><button aria-label="Toggle navigation bar" aria-expanded=false class="navbar__toggle clean-btn" type=button><svg width=30 height=30 viewBox="0 0 30 30" aria-hidden=true><path stroke=currentColor stroke-linecap=round stroke-miterlimit=10 stroke-width=2 d="M4 7h22M4 15h22M4 23h22"/></svg></button><a class=navbar__brand href=/brabo/dev/en/><div class=navbar__logo><img src=/brabo/dev/en/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--light_vzqw"/><img src=/brabo/dev/en/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--dark_FhTf"/></div><b class="navbar__title text--truncate">Brabo</b></a><a aria-current=page class="navbar__item navbar__link navbar__link--active" href=/brabo/dev/en/>Documentation</a><a class="navbar__item navbar__link" href=/brabo/dev/en/runbook>Runbook</a><a class="navbar__item navbar__link" href=/brabo/dev/en/adr>ADRs</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a href=# aria-haspopup=true aria-expanded=false role=button class=navbar__link>dev</a><ul class=dropdown__menu><li><a href=https://daneiel.github.io/brabo/prd/ target=_blank rel="noopener noreferrer" class=dropdown__link>prd — estável<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/qa/ target=_blank rel="noopener noreferrer" class=dropdown__link>qa — candidate<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/dev/ target=_blank rel="noopener noreferrer" class=dropdown__link>dev — em desenvolvimento ✓<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><div class="toggle_pnX7 colorModeToggle_Dj3Z"><button class="clean-btn toggleButton_DKER toggleButtonDisabled_qzkp" type=button disabled title="system mode" aria-label="Switch between dark and light mode (currently system mode)"><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL lightToggleIcon_E8tM"><path fill=currentColor d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL darkToggleIcon_rXjT"><path fill=currentColor d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL systemToggleIcon_zwCm"><path fill=currentColor d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"/></svg></button></div><div class=navbarSearchContainer_zRAa><div class="navbar__search searchBarContainer_eGzj" dir=ltr><svg aria-hidden=true class=searchIcon_PXpx focusable=false viewBox="0 0 16 16"><path fill=currentColor d="M6.02945 10.20327a4.17382 4.17382 0 1 1 4.17382-4.17382 4.15609 4.15609 0 0 1-4.17382 4.17382Zm9.69195 4.2199-4.8225-4.82338A5.88021 5.88021 0 0 0 12.058 6.02856 6.00467 6.00467 0 1 0 9.59979 10.8989l4.82338 4.82338a.89729.89729 0 0 0 1.29912 0 .89749.89749 0 0 0-.00087-1.29909Z"/></svg><input placeholder=Search aria-label=Search class="navbar__search-input searchInput_xOBI" value="" /><div class="loadingRing_JccP searchBarLoadingRing_aTss"><div></div><div></div><div></div><div></div></div></div></div></div></div><div role=presentation class=navbar-sidebar__backdrop></div></nav><div id=__docusaurus_skipToContent_fallback class="theme-layout-main main-wrapper mainWrapper_WJkx"><div class=docsWrapper_mIeg><button aria-label="Scroll back to top" class="clean-btn theme-back-to-top-button backToTopButton_Afc8" type=button></button><div class=docRoot_XZYc><aside class="theme-doc-sidebar-container docSidebarContainer_FPqZ"><div class=sidebarViewport_waOe><div class=sidebar_RQC4><nav aria-label="Docs sidebar" class="menu thin-scrollbar menu_ZM4U"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/en/><span class=categoryLinkLabel_jKch>🚀 Start here</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/><span class=linkLabel_CzBh>Introduction</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/getting-started><span class=linkLabel_CzBh>Getting Started</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/tutorials/from-zero-to-deliverable><span class=linkLabel_CzBh>From zero to a deliverable</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/en/architecture><span class=categoryLinkLabel_jKch>🏗️ Architecture</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/architecture><span class=linkLabel_CzBh>Architecture</span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist" tabindex=0 href=/brabo/dev/en/adr><span class=categoryLinkLabel_jKch>Decisions (ADR)</span></a><button aria-label="Expand sidebar category 'Decisions (ADR)'" aria-expanded=false type=button class="clean-btn menu__caret"></button></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/en/business-rules><span class=categoryLinkLabel_jKch>📐 Rules</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/business-rules><span class=linkLabel_CzBh>Regras de negócio</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/business-rules/custo><span class=linkLabel_CzBh>Custo e metering</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/business-rules/autenticacao><span class=linkLabel_CzBh>Autenticação</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/en/reference/configuration><span class=categoryLinkLabel_jKch>📖 Reference</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/reference/configuration><span class=linkLabel_CzBh>Configuration</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/reference/events><span class=linkLabel_CzBh>Events</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/reference/permissions><span class=linkLabel_CzBh>Permissions</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/reference/artifacts><span class=linkLabel_CzBh>Artifacts</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/reference/git-providers><span class=linkLabel_CzBh>Git Providers</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/reference/internal-api><span class=linkLabel_CzBh>Internal API</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/reference/scripts><span class=linkLabel_CzBh>Scripts</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/reference/rulesets><span class=linkLabel_CzBh>Rulesets</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/reference/brb><span class=linkLabel_CzBh>BRB register</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/security-surface><span class=linkLabel_CzBh>Api's Exposed Surface</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/reference/api><span class=linkLabel_CzBh>API reference</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role=button aria-expanded=true href=/brabo/dev/en/explanation/documentation-workflow><span class=categoryLinkLabel_jKch>💡 Explanation</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/explanation/documentation-workflow><span class=linkLabel_CzBh>Docs sync</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/explanation/branching-policy><span class=linkLabel_CzBh>Branching policy</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/explanation/cadeia-de-suprimentos-do-ci><span class=linkLabel_CzBh>CI supply chain</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/explanation/observability><span class=linkLabel_CzBh>Observability</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/explanation/primeiro-dogfooding><span class=linkLabel_CzBh>First dogfooding</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/explanation/execucao-real-hello-world><span class=linkLabel_CzBh>Real execution (hello world)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/explanation/achados-execucao-real><span class=linkLabel_CzBh>Findings from the real execution of the pipeline</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/explanation/backlog><span class=linkLabel_CzBh>Triaged backlog</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link menu__link--active" aria-current=page tabindex=0 href=/brabo/dev/en/explanation/validacao-fase-12><span class=linkLabel_CzBh>Phase 12 validation</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/explanation/validacao-real><span class=linkLabel_CzBh>Real validation (13b)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/explanation/aceite-providers><span class=linkLabel_CzBh>Provider acceptance</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/explanation/gates><span class=linkLabel_CzBh>The gates, and how they're measured</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/explanation/auditoria-fluxo-vs-codigo><span class=linkLabel_CzBh>Audit: fluxo.yml × code (v3, ADR 0085)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/explanation/historico-de-fases><span class=linkLabel_CzBh>Histórico de fases</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/explanation/fase-28-pasta-do-usuario><span class=linkLabel_CzBh>FASE 28 — pasta do usuário</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/explanation/fase-29-instalacao-de-uma-linha><span class=linkLabel_CzBh>FASE 29 — instalação de uma linha</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/explanation/fase-30-runner-por-maquina><span class=linkLabel_CzBh>FASE 30 — agente local da máquina</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/explanation/medicao-do-idioma><span class=linkLabel_CzBh>Measuring the language heuristic</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/explanation/medicao-do-jev><span class=linkLabel_CzBh>Measuring the Jev tool router</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/explanation/auditoria-visual-rodada-29><span class=linkLabel_CzBh>Visual audit, before and after Rodada 29</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/explanation/tanstack-ai><span class=linkLabel_CzBh>TanStack AI — not adopted</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/en/runbook><span class=categoryLinkLabel_jKch>🛠️ Operations</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/runbook><span class=linkLabel_CzBh>Runbook</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/en/glossary><span class=categoryLinkLabel_jKch>📚 Vocabulary</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/glossary><span class=linkLabel_CzBh>Glossary</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true><span class=categoryLinkLabel_jKch>🤝 Contributing</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>Contributing</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>Getting help</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>Report a vulnerability</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></ul></nav></div></div></aside><main class=docMainContainer_ia8v><div class="container padding-top--md padding-bottom--lg"><div class=row><div class="col docItemCol_xjE4"><div class=docItemContainer_cPej><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_sZul" aria-label=Breadcrumbs><ul class=breadcrumbs><li class=breadcrumbs__item><a aria-label="Home page" class=breadcrumbs__link href=/brabo/dev/en/><svg viewBox="0 0 24 24" class=breadcrumbHomeIcon_AUjL><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill=currentColor /></svg></a><li class=breadcrumbs__item><span class=breadcrumbs__link>💡 Explanation</span><li class="breadcrumbs__item breadcrumbs__item--active"><span class=breadcrumbs__link>Phase 12 validation</span></ul></nav><div class="tocCollapsible_nbAK theme-doc-toc-mobile tocMobile_r92C"><button type=button class="clean-btn tocCollapsibleButton_hcyq">On this page</button></div><div class="theme-doc-markdown markdown"><header><h1>The validation that the three findings died</h1></header>
+<p>The <a class="" href=/brabo/dev/en/explanation/primeiro-dogfooding>first dogfooding harvest</a> left three P1
+operability findings. Phase 12 addressed them one by one; this document is
+the proof that all three died <strong>in the same execution</strong>, and not only in
+unit tests each slice wrote for itself.</p>
+<p>The validation is a script: <code>pnpm --filter api validacao:fase-12</code>. It exits
+with a nonzero code when a criterion isn't met — it's an acceptance
+criterion, not a report — and at the end it prints the evidence table
+<strong>read from the database</strong>. The ids below aren't transcribed by hand.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=what-it-does-not-prove>What it does NOT prove<a href=#what-it-does-not-prove class=hash-link aria-label="Direct link to What it does NOT prove" title="Direct link to What it does NOT prove" translate=no>​</a></h2>
+<p>This comes first, not as a footnote, because a validation that hides its own
+limits is worth less than none.</p>
+<p><strong>It doesn't prove remote GitHub.</strong> Adoption runs against the
+<code>LocalGitProvider</code>. The reason isn't convenience: the fork used in Phase 10
+was <strong>never named</strong> — line 135 of the mission is still a
+<code>TODO(humano): which owner/repo of the fork?</code> — so there's no target to
+re-adopt. The path exercised is the same in both providers (<code>getRepo</code> →
+plan → <code>origin: 'adopted'</code>); what changes is the network, and that
+difference is covered by the <code>adopt-repository.smoke.spec.ts</code> smoke test,
+which only runs with real <code>ADOPT_TEST_REPO</code> and <code>GITHUB_TEST_TOKEN</code>.</p>
+<p><strong>It doesn't prove the gates' judgment.</strong> QA and SecOps are LLM agents. Here
+the verdict enters through <code>RecordGateVerdictUseCase</code> — which is the
+<strong>real</strong> funnel their opinion goes through, and where the
+<code>task.gate_resolved</code> outbox line is born. What Phase 12b needs to prove is
+the chain verdict → outbox → wake → claim, not whether the model can read a
+test suite. The judgment itself remains covered by Phase 4a's acceptance
+tests, which <a class="" href=/brabo/dev/en/adr/0020-destravar-gates-qa-secops>ADR 0020</a> explicitly
+declares <strong>non-deterministic</strong> with a local model.</p>
+<p><strong>It doesn't merge.</strong> Merging into a protected branch is the user's
+decision, by design (<a href=/brabo/dev/en/business-rules#rn-014 target=_blank rel="noopener noreferrer" class="">RN-014</a>). Step 6 of the
+script shows the lock refusing exactly that, with <code>auto_approve</code> autonomy
+and <code>permissions.json</code> allowing it.</p>
+<p><strong>It doesn't use an LLM anywhere.</strong> The dev is the <code>NoopDevAgentServer</code>. It
+doesn't write real code — but since Phase 12d it exercises the <strong>same state
+machine</strong> as the real agent (<code>Engine.Dev.AgentIo</code>), and that's what's under
+test here. Before that, the Noop would process one task and stop: finding
+#10 survived inside the measuring instrument itself, which would have
+failed the "zero restarts" criterion due to a defect in the tool, not the
+product.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=the-script>The script<a href=#the-script class=hash-link aria-label="Direct link to The script" title="Direct link to The script" translate=no>​</a></h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>#<th>step<th>what is asserted<tbody><tr><td>0<td>create project<td>born with <code>story_promotion = manual</code> <strong>without anyone configuring anything</strong><tr><td>1<td>adopt a pre-existing bare repo, with <code>main</code> and <code>develop</code>, without <code>qa</code> or <code>rc</code><td><code>origin = 'adopted'</code>; the plan diagnoses a missing branch <strong>and</strong> a branch outside the template; <code>plan_decision</code> stays <strong>null</strong>; no row inserted by hand<tr><td>1b<td>decide "adopt as is"<td>the template is <strong>not</strong> forced onto the user's repository (<a href=/brabo/dev/en/business-rules/custo#rn-045 target=_blank rel="noopener noreferrer" class="">RN-045</a>)<tr><td>2<td>the PO creates a complete story, with 3 tasks<td>the story becomes <code>draft</code> + <code>proposed_ready</code>; <strong><code>claimNext</code> returns <code>null</code></strong><tr><td>3<td>the user promotes<td>the story becomes <code>ready</code>; the proposal leaves the queue; the event records <code>user</code>, not <code>agent/po</code><tr><td>4<td>activate execution and resolve 3 gates in sequence<td>3 tasks, 1 agent, <strong>0 engine restarts</strong><tr><td>5<td>empty queue<td>explicit <code>dev.idle</code>, process alive<tr><td>6<td>propose a merge into a protected branch with everything allowed<td><code>pending</code> — still your decision</table>
+<p>Step 2 is what kills finding #13 in a verifiable way: it's not enough for
+the story to become <code>draft</code>, it also has to be true that <strong>nothing is
+claimable</strong>. That's why the script calls <code>claimNext</code> directly and requires
+<code>null</code>. Step 4 is what kills #10: from the second round on, nobody triggers
+<code>:work</code> — the agent claims on its own, woken by the previous round's
+<code>task.gate_resolved</code>.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=the-evidence>The evidence<a href=#the-evidence class=hash-link aria-label="Direct link to The evidence" title="Direct link to The evidence" translate=no>​</a></h2>
+<p>Paste here the table the script prints. Each line is a <code>session_events.id</code>
+(ULID) that exists in the database and can be queried later.</p>
+<p>Run on <strong>2026-08-07</strong>, exit <code>0</code>, with the dev stack up and the script
+running from inside the api container. The ids below came out of the
+database during the run itself — project <code>f84f7226</code>, backlog session
+<code>680ab9e9</code>, execution session <code>91f384fa</code>.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>step<th>event<th>id<th>seq<tbody><tr><td>1. adoption<td><code>bootstrap.repository_adopted</code><td><code>01KZCW6SBGZZ5J2DTNKR35EQPC</code><td>1<tr><td>1. adoption (as is)<td><code>bootstrap.adopted_as_is</code><td><code>01KZCW6SETRNVJEX5V018GY5Q0</code><td>2<tr><td>2. the PO proposes<td><code>backlog.story_promotion_proposed</code><td><code>01KZCW6SGJJQX623FW4TQ28ZV3</code><td>3<tr><td>3. you promote<td><code>backlog.story_transitioned</code><td><code>01KZCW6SH7F14Y1QCJQHNJNF50</code><td>4<tr><td>4. dev claims<td><code>dev.working</code><td><code>01KZCW6SWFY33TF8DDX9MYHG40</code><td>5<tr><td>4. PR opened, waiting on the gate<td><code>dev.awaiting_gate</code><td><code>01KZCW6TB712EMZCC29WDK7YJC</code><td>14<tr><td>4. dev claims<td><code>dev.working</code><td><code>01KZCW6VAYQD1R0XH6J3VKKKJ9</code><td>18<tr><td>4. PR opened, waiting on the gate<td><code>dev.awaiting_gate</code><td><code>01KZCW6VQ3TZSH72CHAECBHZSX</code><td>27<tr><td>4. dev claims<td><code>dev.working</code><td><code>01KZCW6XA40AVK9N71PPRWKG4N</code><td>31<tr><td>4. PR opened, waiting on the gate<td><code>dev.awaiting_gate</code><td><code>01KZCW6XKXYTNW6ARDWF4VRW42</code><td>40<tr><td>5. empty queue, agent idle<td><code>dev.idle</code><td><code>01KZCW6Y812HAPVG3ZYS2CM6WA</code><td>43</table>
+<p>The three <code>dev.working</code> → <code>dev.awaiting_gate</code> pairs are the three tasks,
+<strong>with a single agent and no engine restart between them</strong> — finding #10,
+proven by execution instead of by unit test. The final <code>dev.idle</code> is step
+5: an empty queue with the process alive, not dead.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=what-the-first-run-cost>What the first run cost<a href=#what-the-first-run-cost class=hash-link aria-label="Direct link to What the first run cost" title="Direct link to What the first run cost" translate=no>​</a></h2>
+<p>The table above took <strong>four fixes</strong> to exist, and it's worth recording
+which, because three were in the INSTRUMENT and one was in the PRODUCT —
+the distinction is the point.</p>
+<p><strong>In the instrument</strong> (the script and the <code>NoopDevAgentServer</code>):</p>
+<ol>
+<li class="">The test fixture was born in <code>os.tmpdir()</code>, local to the container. The
+api is who adopts; the dev agent, which runs in the engine, is who
+clones to set up the worktree. The bare repo sat in the api's <code>/tmp</code> and
+the engine couldn't see it. It now gets created in
+<code>GIT_LOCAL_REPOS_ROOT</code>, the shared volume — which the script's own
+header already declared as a prerequisite.</li>
+<li class="">The Noop marked the task <code>in_review</code> and stopped there, without calling
+<code>open_gate</code>: <code>tasks.gate_status</code> stayed NULL. <code>awaiting_gate</code> with no
+gate open, and nothing to judge.</li>
+<li class=""><code>{:pr_settled, %{opened: true}}</code> arriving while the agent was already in
+<code>:awaiting_gate</code> had no matching clause in the Noop. <code>FunctionClauseError</code>,
+and since the server is <code>restart: :temporary</code>, the process died for
+good.</li>
+</ol>
+<p>All three are the same story: the Noop was aligned with the real agent in
+Phase 12d, but didn't keep up with what came after. It's exactly the risk
+this document already named — <em>"finding #10 survived inside the measuring
+instrument itself"</em> — now in three new instances.</p>
+<p><strong>In the product</strong>, and this is the finding that only a real execution
+finds:</p>
+<ol start=4>
+<li class="">
+<p>With the queue empty, <code>POST /internal/sessions/:id/tasks/claim</code> responds
+<code>201</code> with <code>content-length: 0</code>. The use case returns <code>null</code>, but NestJS
+serializes that as an EMPTY body; <code>Req</code> delivers <code>""</code>, which isn't
+<code>nil</code>, and <code>AgentIo.try_claim/2</code> matched the "task found" clause —
+calling <code>run_task("")</code> and throwing <code>BadMapError</code>.</p>
+<p><code>try_claim/2</code> lives in <code>AgentIo</code>, <strong>shared with the real
+<code>DevAgentServer</code></strong>: every dev agent would die the moment its module's
+queue emptied, which is the most common outcome there is. And it died
+for good — server <code>restart: :temporary</code>, with <code>Monitor</code> wiping the
+state row behind it. The exact opposite of what Phase 12b delivered:
+instead of supervised, event-wakeable <code>dev.idle</code>, a dead process.</p>
+<p>The suite never caught this because the fake correctly returns <code>nil</code>.
+It's fixed at the boundary (<code>claim_task/4</code>) and guarded in the contract
+(<code>try_claim/2</code>), without touching the route's HTTP status.</p>
+</li>
+</ol>
+<p>Finding 4 is the empirical answer to the question this phase exists to ask:
+what does a real execution prove that a test doesn't.</p>
+<p>The script refuses to end successfully if any step it claimed to exercise
+leaves no evidence in the event log — without that check, a wrong query
+would produce a short table and the validation would pass anyway, which is
+the classic failure mode of a generated report.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=before--now>Before × now<a href=#before--now class=hash-link aria-label="Direct link to Before × now" title="Direct link to Before × now" translate=no>​</a></h2>
+<p>The <strong>Phase 10</strong> column cites only what's derivable from what was written
+down. Everything that would depend on a live count appears as
+<code>not measured</code>, for the reason explained in the
+<a class="" href=/brabo/dev/en/explanation/primeiro-dogfooding>harvest</a>.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th><th>Phase 10<th>Now<tbody><tr><td>pointing the project at an existing repository<td>manual seed in two tables, <strong>before the first session</strong> (<code>dogfooding-mission.md:104-134</code>)<td>adoption route; <code>origin = 'adopted'</code>; zero hand-written data<tr><td>repository policy diverging<td>no diagnosis existed — bootstrap was the only path, and it forced the template<td>dry-run plan that <strong>describes</strong> the divergence and applies nothing without approval<tr><td>engine restarts per delivered task<td><strong>1, by construction</strong> — a property of finding #10 (<code>:666</code>), not an observed estimate. Real total: <strong>not measured</strong><td><strong>0</strong><tr><td>batches<td>the entire phase ran in batches (<code>:393-416</code>)<td>don't exist: the agent works through the module's queue on its own<tr><td>agent with no task<td>dead process (<code>restart: :temporary</code>)<td>explicit <code>idle</code>, supervised, event-wakeable<tr><td>sequence of failures<td>burned budget in a row<td>circuit breaker stops at <code>idle_tripped</code> (<a href=/brabo/dev/en/business-rules/custo#rn-047 target=_blank rel="noopener noreferrer" class="">RN-047</a>)<tr><td>story → <code>ready</code><td>automatic on creation, no human step (finding #13, <code>:669</code>)<td>user decision, actor recorded in the event log (<a href=/brabo/dev/en/business-rules/custo#rn-048 target=_blank rel="noopener noreferrer" class="">RN-048</a>)<tr><td>declining a story<td>no state, event, or button existed (finding #14)<td>returned to the PO with the reason pinned to their session<tr><td>total manual interventions<td><strong>not measured</strong> — the observation table stayed blank (<code>:488-490</code>)<td>those from the approval pipeline, which the phase did <strong>not</strong> change<tr><td>merge into a protected branch<td>manual, by design<td>manual, by design — unchanged, and step 6 proves it</table>
+<p>The last row matters as much as the others. Phase 12 is about the agent not
+dying between tasks and about the decision returning to the user; it does
+<strong>not</strong> expand autonomy at all. The approval pipeline is exactly as it was.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=how-to-run-it>How to run it<a href=#how-to-run-it class=hash-link aria-label="Direct link to How to run it" title="Direct link to How to run it" translate=no>​</a></h2>
+<div class="language-bash codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-bash codeBlock_mqej thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_uNqR><div class=token-line style=color:#F8F8F2><span class="token plain"># the dev stack up (api and engine sharing /data)</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">pnpm dev</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain" style=display:inline-block></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain"># from inside the api container</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">docker compose -f docker/docker-compose.yml exec api \</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  pnpm --filter api validacao:fase-12</span><br/></div></code></pre></div></div>
+<p>If a criterion isn't met, the script says which — the message starts with
+<code>CRITÉRIO NÃO FECHOU:</code> and names the failed assertion.</div><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_yZb9"><a href=https://github.com/daneiel/brabo/blob/dev/docs/explanation/validacao-fase-12.md target=_blank rel="noopener noreferrer" class=theme-edit-this-page><svg fill=currentColor height=20 width=20 viewBox="0 0 40 40" class=iconEdit_ANja aria-hidden=true><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"/></g></svg>Edit this page</a></div><div class="col lastUpdated_Kb4y"><span class=theme-last-updated>Last updated<!-- --> on <b><time datetime=2026-10-15T04:12:25.000Z itemprop=dateModified>Oct 15, 2026</time></b> by <b>Daniel Souza</b></span></div></div></footer></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href=/brabo/dev/en/explanation/backlog><div class=pagination-nav__sublabel>Previous</div><div class=pagination-nav__label>Triaged backlog</div></a><a class="pagination-nav__link pagination-nav__link--next" href=/brabo/dev/en/explanation/validacao-real><div class=pagination-nav__sublabel>Next</div><div class=pagination-nav__label>Real validation (13b)</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_wOiH thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href=#what-it-does-not-prove class="table-of-contents__link toc-highlight">What it does NOT prove</a><li><a href=#the-script class="table-of-contents__link toc-highlight">The script</a><li><a href=#the-evidence class="table-of-contents__link toc-highlight">The evidence</a><li><a href=#what-the-first-run-cost class="table-of-contents__link toc-highlight">What the first run cost</a><li><a href=#before--now class="table-of-contents__link toc-highlight">Before × now</a><li><a href=#how-to-run-it class="table-of-contents__link toc-highlight">How to run it</a></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Documentation</div><ul class="footer__items clean-list"><li class=footer__item><a class=footer__link-item href=/brabo/dev/en/getting-started>Getting started</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/en/architecture>Architecture</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/en/business-rules>Business rules</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/en/runbook>Runbook</a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Community</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class=footer__link-item>Contributing<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class=footer__link-item>Getting help<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class=footer__link-item>Security<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>More</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class=footer__link-item>GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CHANGELOG.md target=_blank rel="noopener noreferrer" class=footer__link-item>CHANGELOG<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/LICENSE target=_blank rel="noopener noreferrer" class=footer__link-item>MIT License<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/THIRD_PARTY_NOTICES.md target=_blank rel="noopener noreferrer" class=footer__link-item>Third-party notices<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div></div><div class="footer__bottom text--center"><div class=footer__copyright>Copyright © 2026 Daniel Souza. Licensed under the MIT. Third-party tools keep their own licenses — see Third-party notices.</div></div></div></footer></div></body>

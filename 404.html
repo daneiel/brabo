@@ -17,6 +17,13 @@
       window.location.replace(raiz + 'prd/' + (aposentado[1] || '') + cauda);
       return;
     }
+    // O locale aposentado (ADR 0216): pt-BR virou o padrão e saiu do prefixo,
+    // então /brabo/<degrau>/pt-BR/<algo> -> /brabo/<degrau>/<algo>.
+    var localeAntigo = /^(prd|qa|dev)\/pt-BR(?:\/(.*))?$/.exec(resto);
+    if (localeAntigo) {
+      window.location.replace(raiz + localeAntigo[1] + '/' + (localeAntigo[2] || '') + cauda);
+      return;
+    }
     // Já está dentro de um degrau publicado: a página realmente não existe.
     if (/^(prd|qa|dev)(\/|$)/.test(resto)) return;
     window.location.replace(raiz + 'prd/' + resto + cauda);

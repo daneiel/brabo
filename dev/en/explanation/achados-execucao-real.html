@@ -1,0 +1,727 @@
+<!doctype html><html lang=en dir=ltr class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-explanation/achados-execucao-real" data-has-hydrated=false><head><meta charset=UTF-8><meta name=generator content="Docusaurus v3.10.2"><title data-rh=true>Findings from the real execution of the pipeline | Brabo</title><meta data-rh=true name=viewport content="width=device-width, initial-scale=1.0"/><meta data-rh=true name=robots content="noindex, nofollow"/><meta data-rh=true name=twitter:card content=summary_large_image /><meta data-rh=true property=og:url content=https://daneiel.github.io/brabo/dev/en/explanation/achados-execucao-real /><meta data-rh=true property=og:locale content=en /><meta data-rh=true property=og:locale:alternate content=pt_BR /><meta data-rh=true property=og:locale:alternate content=ru /><meta data-rh=true property=og:locale:alternate content=zh_Hans /><meta data-rh=true name=docusaurus_locale content=en /><meta data-rh=true name=docsearch:language content=en /><meta data-rh=true name=docusaurus_version content=current /><meta data-rh=true name=docusaurus_tag content=docs-default-current /><meta data-rh=true name=docsearch:version content=current /><meta data-rh=true name=docsearch:docusaurus_tag content=docs-default-current /><meta data-rh=true property=og:title content="Findings from the real execution of the pipeline | Brabo"/><meta data-rh=true name=description content="Gathered in a browser-driven execution session on 2026-08-05, with an"/><meta data-rh=true property=og:description content="Gathered in a browser-driven execution session on 2026-08-05, with an"/><link data-rh=true rel=icon href=/brabo/dev/en/img/favicon.ico /><link data-rh=true rel=canonical href=https://daneiel.github.io/brabo/dev/en/explanation/achados-execucao-real /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/explanation/achados-execucao-real hreflang=pt-BR /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/en/explanation/achados-execucao-real hreflang=en /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/ru/explanation/achados-execucao-real hreflang=ru /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/zh-Hans/explanation/achados-execucao-real hreflang=zh-Hans /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/explanation/achados-execucao-real hreflang=x-default /><script data-rh=true type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","item":"https://daneiel.github.io/brabo/dev/en/explanation/achados-execucao-real","name":"Findings from the real execution of the pipeline","position":1}]}</script><link rel=stylesheet href=/brabo/dev/en/assets/css/styles.7f2bd764.css /><script src=/brabo/dev/en/assets/js/runtime~main.49ad11e1.js defer></script><script src=/brabo/dev/en/assets/js/main.def2b8dc.js defer></script></head><body><svg style="display: none;"><defs>
+<symbol id=theme-svg-external-link viewBox="0 0 24 24"><path fill=currentColor d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
+</defs></svg>
+<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme-d93")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")),document.documentElement.setAttribute("data-theme-choice",t||"system")}(),function(){try{for(var[t,e]of new URLSearchParams(window.location.search).entries())if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id=__docusaurus><link rel=preload as=image href=/brabo/dev/en/img/logo.svg /><div role=region aria-label="Skip to main content"><a class=skipToContent_CFOX href=#__docusaurus_skipToContent_fallback>Skip to main content</a></div><nav aria-label=Main class="theme-layout-navbar navbar navbar--fixed-top"><div class=navbar__inner><div class="theme-layout-navbar-left navbar__items"><button aria-label="Toggle navigation bar" aria-expanded=false class="navbar__toggle clean-btn" type=button><svg width=30 height=30 viewBox="0 0 30 30" aria-hidden=true><path stroke=currentColor stroke-linecap=round stroke-miterlimit=10 stroke-width=2 d="M4 7h22M4 15h22M4 23h22"/></svg></button><a class=navbar__brand href=/brabo/dev/en/><div class=navbar__logo><img src=/brabo/dev/en/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--light_vzqw"/><img src=/brabo/dev/en/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--dark_FhTf"/></div><b class="navbar__title text--truncate">Brabo</b></a><a aria-current=page class="navbar__item navbar__link navbar__link--active" href=/brabo/dev/en/>Documentation</a><a class="navbar__item navbar__link" href=/brabo/dev/en/runbook>Runbook</a><a class="navbar__item navbar__link" href=/brabo/dev/en/adr>ADRs</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a href=# aria-haspopup=true aria-expanded=false role=button class=navbar__link>dev</a><ul class=dropdown__menu><li><a href=https://daneiel.github.io/brabo/prd/ target=_blank rel="noopener noreferrer" class=dropdown__link>prd — estável<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/qa/ target=_blank rel="noopener noreferrer" class=dropdown__link>qa — candidate<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/dev/ target=_blank rel="noopener noreferrer" class=dropdown__link>dev — em desenvolvimento ✓<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><div class="toggle_pnX7 colorModeToggle_Dj3Z"><button class="clean-btn toggleButton_DKER toggleButtonDisabled_qzkp" type=button disabled title="system mode" aria-label="Switch between dark and light mode (currently system mode)"><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL lightToggleIcon_E8tM"><path fill=currentColor d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL darkToggleIcon_rXjT"><path fill=currentColor d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL systemToggleIcon_zwCm"><path fill=currentColor d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"/></svg></button></div><div class=navbarSearchContainer_zRAa><div class="navbar__search searchBarContainer_eGzj" dir=ltr><svg aria-hidden=true class=searchIcon_PXpx focusable=false viewBox="0 0 16 16"><path fill=currentColor d="M6.02945 10.20327a4.17382 4.17382 0 1 1 4.17382-4.17382 4.15609 4.15609 0 0 1-4.17382 4.17382Zm9.69195 4.2199-4.8225-4.82338A5.88021 5.88021 0 0 0 12.058 6.02856 6.00467 6.00467 0 1 0 9.59979 10.8989l4.82338 4.82338a.89729.89729 0 0 0 1.29912 0 .89749.89749 0 0 0-.00087-1.29909Z"/></svg><input placeholder=Search aria-label=Search class="navbar__search-input searchInput_xOBI" value="" /><div class="loadingRing_JccP searchBarLoadingRing_aTss"><div></div><div></div><div></div><div></div></div></div></div></div></div><div role=presentation class=navbar-sidebar__backdrop></div></nav><div id=__docusaurus_skipToContent_fallback class="theme-layout-main main-wrapper mainWrapper_WJkx"><div class=docsWrapper_mIeg><button aria-label="Scroll back to top" class="clean-btn theme-back-to-top-button backToTopButton_Afc8" type=button></button><div class=docRoot_XZYc><aside class="theme-doc-sidebar-container docSidebarContainer_FPqZ"><div class=sidebarViewport_waOe><div class=sidebar_RQC4><nav aria-label="Docs sidebar" class="menu thin-scrollbar menu_ZM4U"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/en/><span class=categoryLinkLabel_jKch>🚀 Start here</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/><span class=linkLabel_CzBh>Introduction</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/getting-started><span class=linkLabel_CzBh>Getting Started</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/tutorials/from-zero-to-deliverable><span class=linkLabel_CzBh>From zero to a deliverable</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/en/architecture><span class=categoryLinkLabel_jKch>🏗️ Architecture</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/architecture><span class=linkLabel_CzBh>Architecture</span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist" tabindex=0 href=/brabo/dev/en/adr><span class=categoryLinkLabel_jKch>Decisions (ADR)</span></a><button aria-label="Expand sidebar category 'Decisions (ADR)'" aria-expanded=false type=button class="clean-btn menu__caret"></button></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/en/business-rules><span class=categoryLinkLabel_jKch>📐 Rules</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/business-rules><span class=linkLabel_CzBh>Regras de negócio</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/business-rules/custo><span class=linkLabel_CzBh>Custo e metering</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/business-rules/autenticacao><span class=linkLabel_CzBh>Autenticação</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/en/reference/configuration><span class=categoryLinkLabel_jKch>📖 Reference</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/reference/configuration><span class=linkLabel_CzBh>Configuration</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/reference/events><span class=linkLabel_CzBh>Events</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/reference/permissions><span class=linkLabel_CzBh>Permissions</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/reference/artifacts><span class=linkLabel_CzBh>Artifacts</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/reference/git-providers><span class=linkLabel_CzBh>Git Providers</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/reference/internal-api><span class=linkLabel_CzBh>Internal API</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/reference/scripts><span class=linkLabel_CzBh>Scripts</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/reference/rulesets><span class=linkLabel_CzBh>Rulesets</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/reference/brb><span class=linkLabel_CzBh>BRB register</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/security-surface><span class=linkLabel_CzBh>Api's Exposed Surface</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/reference/api><span class=linkLabel_CzBh>API reference</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role=button aria-expanded=true href=/brabo/dev/en/explanation/documentation-workflow><span class=categoryLinkLabel_jKch>💡 Explanation</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/explanation/documentation-workflow><span class=linkLabel_CzBh>Docs sync</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/explanation/branching-policy><span class=linkLabel_CzBh>Branching policy</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/explanation/cadeia-de-suprimentos-do-ci><span class=linkLabel_CzBh>CI supply chain</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/explanation/observability><span class=linkLabel_CzBh>Observability</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/explanation/primeiro-dogfooding><span class=linkLabel_CzBh>First dogfooding</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/explanation/execucao-real-hello-world><span class=linkLabel_CzBh>Real execution (hello world)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link menu__link--active" aria-current=page tabindex=0 href=/brabo/dev/en/explanation/achados-execucao-real><span class=linkLabel_CzBh>Findings from the real execution of the pipeline</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/explanation/backlog><span class=linkLabel_CzBh>Triaged backlog</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/explanation/validacao-fase-12><span class=linkLabel_CzBh>Phase 12 validation</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/explanation/validacao-real><span class=linkLabel_CzBh>Real validation (13b)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/explanation/aceite-providers><span class=linkLabel_CzBh>Provider acceptance</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/explanation/gates><span class=linkLabel_CzBh>The gates, and how they're measured</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/explanation/auditoria-fluxo-vs-codigo><span class=linkLabel_CzBh>Audit: fluxo.yml × code (v3, ADR 0085)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/explanation/historico-de-fases><span class=linkLabel_CzBh>Histórico de fases</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/explanation/fase-28-pasta-do-usuario><span class=linkLabel_CzBh>FASE 28 — pasta do usuário</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/explanation/fase-29-instalacao-de-uma-linha><span class=linkLabel_CzBh>FASE 29 — instalação de uma linha</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/explanation/fase-30-runner-por-maquina><span class=linkLabel_CzBh>FASE 30 — agente local da máquina</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/explanation/medicao-do-idioma><span class=linkLabel_CzBh>Measuring the language heuristic</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/explanation/medicao-do-jev><span class=linkLabel_CzBh>Measuring the Jev tool router</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/explanation/auditoria-visual-rodada-29><span class=linkLabel_CzBh>Visual audit, before and after Rodada 29</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/explanation/tanstack-ai><span class=linkLabel_CzBh>TanStack AI — not adopted</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/en/runbook><span class=categoryLinkLabel_jKch>🛠️ Operations</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/runbook><span class=linkLabel_CzBh>Runbook</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/en/glossary><span class=categoryLinkLabel_jKch>📚 Vocabulary</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/en/glossary><span class=linkLabel_CzBh>Glossary</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true><span class=categoryLinkLabel_jKch>🤝 Contributing</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>Contributing</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>Getting help</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>Report a vulnerability</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></ul></nav></div></div></aside><main class=docMainContainer_ia8v><div class="container padding-top--md padding-bottom--lg"><div class=row><div class="col docItemCol_xjE4"><div class=docItemContainer_cPej><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_sZul" aria-label=Breadcrumbs><ul class=breadcrumbs><li class=breadcrumbs__item><a aria-label="Home page" class=breadcrumbs__link href=/brabo/dev/en/><svg viewBox="0 0 24 24" class=breadcrumbHomeIcon_AUjL><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill=currentColor /></svg></a><li class=breadcrumbs__item><span class=breadcrumbs__link>💡 Explanation</span><li class="breadcrumbs__item breadcrumbs__item--active"><span class=breadcrumbs__link>Findings from the real execution of the pipeline</span></ul></nav><div class="tocCollapsible_nbAK theme-doc-toc-mobile tocMobile_r92C"><button type=button class="clean-btn tocCollapsibleButton_hcyq">On this page</button></div><div class="theme-doc-markdown markdown"><header><h1>Findings from the real execution of the pipeline</h1></header>
+<blockquote>
+<p>Gathered in a browser-driven execution session on <strong>2026-08-05</strong>, with an
+API model (not local) and a real git provider. It is the input for the
+FASE 13c triage: each item has a file:line or event that proves it, and
+none was fixed "in passing" — those that were closed have a named PR.</p>
+</blockquote>
+<p>Project CREATED (not adopted) on GitHub via the wizard. Real repo: <code>daneiel/hello-api</code>,
+private. Wizard session: <code>f15b0cc9</code>. Healthy session: <code>36abf7e7</code>.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=fixed-during-execution-were-blocking>Fixed during execution (were blocking)<a href=#fixed-during-execution-were-blocking class=hash-link aria-label="Direct link to Fixed during execution (were blocking)" title="Direct link to Fixed during execution (were blocking)" translate=no>​</a></h2>
+<ol>
+<li class=""><strong>The meter wasn't metering</strong> (PR #136, merged) — <code>db.execute</code>
+destructured as an array + agent read from the event's actor instead of
+the payload.</li>
+<li class=""><strong><code>llm_turn_stream</code> without <code>receive_timeout</code></strong> (PR #137, merged) — fell
+into Req's default 15s; the 4 conversational agents only pass through
+there.</li>
+<li class=""><strong><code>ApprovalCard</code> crashed the session screen</strong> (to be committed) — the
+web's <code>ActionType</code> was a subset of the backend's; <code>ACTION_ICON[actionType]</code>
+→ <code>undefined</code> for <code>git_repo_create</code>/<code>git_branch_create</code>/<code>git_branch_protect</code>,
+which is exactly what EVERY project created on a provider generates. The
+"generic fallback" only existed in the comment. It only failed to appear
+for an ADOPTED project (no bootstrap).</li>
+</ol>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=open--for-the-13c-triage>Open — for the 13c triage<a href=#open--for-the-13c-triage class=hash-link aria-label="Direct link to Open — for the 13c triage" title="Direct link to Open — for the 13c triage" translate=no>​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=a-the-provisioning-session-is-born-without-an-engine-process-severe>A. The provisioning session is born without an engine process (SEVERE)<a href=#a-the-provisioning-session-is-born-without-an-engine-process-severe class=hash-link aria-label="Direct link to A. The provisioning session is born without an engine process (SEVERE)" title="Direct link to A. The provisioning session is born without an engine process (SEVERE)" translate=no>​</a></h3>
+<blockquote>
+<p><strong>CLOSED</strong> — became <a href=/brabo/dev/en/business-rules/custo#rn-067 target=_blank rel="noopener noreferrer" class="">RN-067</a>. The four call
+sites cited below started creating sessions through <code>CreateSessionUseCase</code>
+(<code>provision-repository:119</code> and <code>:125</code>, <code>adopt-repository</code>, <code>activate-execution</code>),
+and the rule declares it the <strong>only</strong> place that creates a session. Kept
+registered here because the contrast proof below is what made the defect
+visible.</p>
+</blockquote>
+<p><code>CreateSessionUseCase</code> is the only place that emits <code>session.created</code> on
+the outbox. Sessions created directly in the repository, bypassing it:</p>
+<ul>
+<li class=""><code>apps/api/src/application/use-cases/git/provision-repository.use-case.ts:112</code> and <code>:121</code></li>
+<li class=""><code>apps/api/src/application/use-cases/git/adopt-repository.use-case.ts:176</code></li>
+<li class=""><code>apps/api/src/application/use-cases/execution/activate-execution.use-case.ts:156</code>
+← this is the session where the DEV AGENTS run</li>
+</ul>
+<p>Effect: the engine never knows the session exists → eternal <code>REFUSED JOIN</code>,
+no channel, no live updates, no heartbeat, and the session <strong>never closes</strong>
+(stays <code>active</code> forever). The UI only complains in the console.</p>
+<p>Contrast proof:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>session<th><code>session.created</code><th><code>engine.session_states</code><th>channel<tbody><tr><td>wizard <code>f15b0cc9</code><td>no<td>empty<td><code>REFUSED JOIN</code><tr><td>normal route <code>36abf7e7</code><td>yes<td><code>active</code><td><code>JOINED</code></table>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=b-start-model-user-decision>B. Start model (USER DECISION)<a href=#b-start-model-user-decision class=hash-link aria-label="Direct link to B. Start model (USER DECISION)" title="Direct link to B. Start model (USER DECISION)" translate=no>​</a></h3>
+<p>The session is always born on the workspace default (<code>llama3.2:1b</code>, local)
+— ADR 0020 forbids small local 7B/1B in the semantic step, and it had to
+be manually swapped in both sessions. Request: configurable start model,
+inheriting the <strong>Creative agent's</strong> in this scenario, since it's always
+the project's entry point.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=c-its-the-model-that-talks-not-the-agent-defect-flagged-by-the-user>C. It's the model that talks, not the agent (DEFECT, flagged by the user)<a href=#c-its-the-model-that-talks-not-the-agent-defect-flagged-by-the-user class=hash-link aria-label="Direct link to C. It's the model that talks, not the agent (DEFECT, flagged by the user)" title="Direct link to C. It's the model that talks, not the agent (DEFECT, flagged by the user)" translate=no>​</a></h3>
+<p>The live-streamed bubble comes labeled with the MODEL's name
+("DeepSeek V4 Flash Latest"); only when the persisted event arrives does
+the agent (<code>po</code>) appear. Effects: the wrong name appears first, and the
+message ends up DUPLICATED on screen (stream bubble + event bubble). The
+stream isn't reconciled with the persisted event.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=d-an-impossible-step-traps-the-wizard-with-no-way-out>D. An impossible step traps the wizard with no way out<a href=#d-an-impossible-step-traps-the-wizard-with-no-way-out class=hash-link aria-label="Direct link to D. An impossible step traps the wizard with no way out" title="Direct link to D. An impossible step traps the wizard with no way out" translate=no>​</a></h3>
+<p><code>Protect branches</code> fails on a private repo on the free plan — the wizard
+itself WARNS about this beforehand. But the only action offered afterward
+is "Try again," which will always fail. Missing: acknowledge and move on.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=e-the-repository-preview-lies>E. The repository preview lies<a href=#e-the-repository-preview-lies class=hash-link aria-label="Direct link to E. The repository preview lies" title="Direct link to E. The repository preview lies" translate=no>​</a></h3>
+<p><code>apps/web/src/routes/NewProjectWizard.tsx:331</code> has <code>repo: brabo/{slug}</code>
+hardcoded. The real owner comes from the PAT (<code>createForAuthenticatedUser</code>),
+i.e. <code>daneiel/hello-api</code>. The error reaches the CONFIRMATION screen.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=f-the-wizard-announces-rc>F. The wizard announces <code>rc</code><a href=#f-the-wizard-announces-rc class=hash-link aria-label="Direct link to f-the-wizard-announces-rc" title="Direct link to f-the-wizard-announces-rc" translate=no>​</a></h3>
+<p>The "Branch policy" step lists <code>rc</code> among the permanent branches and
+<code>rc ← qa</code> in the cascade. The current policy only has <code>dev</code>/<code>qa</code>/<code>main</code>;
+the return of <code>rc</code> is in ADR 0030's backlog.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=g-the-creative-agents-invitation-doesnt-show-up-in-a-created-project>G. The Creative agent's invitation doesn't show up in a created project<a href=#g-the-creative-agents-invitation-doesnt-show-up-in-a-created-project class=hash-link aria-label="Direct link to G. The Creative agent's invitation doesn't show up in a created project" title="Direct link to G. The Creative agent's invitation doesn't show up in a created project" translate=no>​</a></h3>
+<p>The "It's your turn" empty state only renders with an empty thread. In a
+created project the thread already has the bootstrap cards, so the user
+never gets invited.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=h-generic-activity-feed>H. Generic activity feed<a href=#h-generic-activity-feed class=hash-link aria-label="Direct link to H. Generic activity feed" title="Direct link to H. Generic activity feed" translate=no>​</a></h3>
+<p>The 10 bootstrap events all appear as "activity in system," without
+saying what happened.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=i-the-action-card-shows-the-sessions-current-model>I. The action card shows the session's CURRENT model<a href=#i-the-action-card-shows-the-sessions-current-model class=hash-link aria-label="Direct link to I. The action card shows the session's CURRENT model" title="Direct link to I. The action card shows the session's CURRENT model" translate=no>​</a></h3>
+<p>Changing the session's model retroactively rewrites the label on old
+action cards. <code>token_usage</code> freezes the right price; it's just the screen.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=j-the-psychologist-runs-on-an-empty-session>J. The Psychologist runs on an empty session<a href=#j-the-psychologist-runs-on-an-empty-session class=hash-link aria-label="Direct link to J. The Psychologist runs on an empty session" title="Direct link to J. The Psychologist runs on an empty session" translate=no>​</a></h3>
+<blockquote>
+<p><strong>CLOSED</strong> — became <a href=/brabo/dev/en/business-rules/custo#rn-079 target=_blank rel="noopener noreferrer" class="">RN-079</a>. The analysis
+only runs when there's an ANALYZABLE event, and "analyzable" discounts
+the bootstrap's machine steps and the analysts' own trail — without that
+second discount, the first analysis would make the session look
+populated forever. With no material, <code>psychologist.analysis_skipped</code>
+fires and nothing is spent. The finding's session is reproduced as a
+test (14 events, none analyzable).
+In session <code>b2fceb9e</code>, freshly opened: it received the previous session's
+hypotheses along with the new one's log (empty), tried to cite
+non-existent <code>seq 60-78</code>, had the evidence rejected twice and gave up
+(<code>psychologist.analysis_failed</code>). Validation held back the invention — but
+running an analysis on a session with no event is wasted spend.</p>
+</blockquote>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=k-duplicate-business-rule-isnt-deduplicated>K. Duplicate business rule isn't deduplicated<a href=#k-duplicate-business-rule-isnt-deduplicated class=hash-link aria-label="Direct link to K. Duplicate business rule isn't deduplicated" title="Direct link to K. Duplicate business rule isn't deduplicated" translate=no>​</a></h3>
+<blockquote>
+<p><strong>PARTIALLY CLOSED</strong> — became <a href=/brabo/dev/en/business-rules/custo#rn-080 target=_blank rel="noopener noreferrer" class="">RN-080</a>.
+An EXACT duplicate (same title, ignoring case, accents and spacing) is
+refused at emission time, scoped to the project — it's BETWEEN sessions
+that it arises. <strong>Semantic</strong> duplicates remain open, and are declared as
+such: telling "Greeting with name" apart from "Whoever calls can
+identify themselves" is judgment, not an <code>if</code>.
+Running the Creative agent twice on the same project left 10 rules, 5
+orphaned ("discovered — no story"). An artifact of my own script, not of
+the product, but it shows there's no dedupe or warning.</p>
+</blockquote>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=l-the-footer-button-goes-stale>L. The footer button goes stale<a href=#l-the-footer-button-goes-stale class=hash-link aria-label="Direct link to L. The footer button goes stale" title="Direct link to L. The footer button goes stale" translate=no>​</a></h3>
+<p>Still reads "I'm ready to produce" after the thread has already handed
+off to the PO.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=worked-as-designed-worth-recording-too>Worked as designed (worth recording too)<a href=#worked-as-designed-worth-recording-too class=hash-link aria-label="Direct link to Worked as designed (worth recording too)" title="Direct link to Worked as designed (worth recording too)" translate=no>​</a></h2>
+<ul>
+<li class="">RN-059: durable <code>agent.error</code>, with <code>origem: infra</code>, agent speaking in
+the thread and going back to <code>idle</code> (seen 2x in the 15s timeouts).</li>
+<li class="">The Psychologist's evidence validation rejecting made-up event ids.</li>
+<li class="">GitHub Gitflow bootstrap: 4/5 steps, real repo with <code>main</code>/<code>dev</code>/<code>qa</code>.</li>
+<li class=""><code>proposed_action</code> pipeline: 6 bootstrap actions, auto-approved by policy.</li>
+<li class="">12c: manual promotion as the default, <code>story_promotion_proposed</code> as a
+proposal.</li>
+<li class="">Rule ↔ story traceability, separating covered from discovered.</li>
+<li class="">Live bootstrap progress, with the failure showing GitHub's message.</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=m-the-architect-is-blind-to-its-own-module_map-p1--the-runs-failure>M. THE ARCHITECT IS BLIND TO ITS OWN module_map (P1 — the run's failure)<a href=#m-the-architect-is-blind-to-its-own-module_map-p1--the-runs-failure class=hash-link aria-label="Direct link to M. THE ARCHITECT IS BLIND TO ITS OWN module_map (P1 — the run's failure)" title="Direct link to M. THE ARCHITECT IS BLIND TO ITS OWN module_map (P1 — the run's failure)" translate=no>​</a></h3>
+<blockquote>
+<p><strong>CLOSED</strong> — became <a href=/brabo/dev/en/business-rules/custo#rn-066 target=_blank rel="noopener noreferrer" class="">RN-066</a> and is
+confirmed in production in this page's final section: 4 calls to
+<code>assign_story_modules</code> instead of 18, zero made-up name, 1 module_map
+instead of 4.</p>
+</blockquote>
+<p>Session <code>36abf7e7</code>, seq 80-131. The Architect emitted the map (modules
+<code>saudacao</code> and <code>api_http</code>) and then <strong>could not read it back</strong>. There's no
+tool to read the current module_map, and <code>assign_story_modules</code>'s refusal
+doesn't return the valid names. Result: brute force.</p>
+<p>18+ guesses: <code>api</code>, <code>core</code>, <code>http</code>, <code>greeting</code>, <code>domain</code>, <code>web</code>,
+<code>hello-api</code>, <code>hello</code>, <code>greeting-api</code>, <code>saudacao</code> (got it right by luck),
+<code>app</code>, <code>server</code>, <code>publico</code>, <code>public-api</code>, <code>api-publica</code>, …</p>
+<p>In its own words (seq 94, 99, 124):</p>
+<blockquote>
+<p>"the names I tried (<code>api</code>, <code>core</code>) don't match. I'll <strong>discover the valid
+names by testing plausible candidates</strong>"
+"I need to <strong>discover the real names</strong> of the 2 modules. I'll <strong>test
+additional candidates</strong>."</p>
+</blockquote>
+<p>Three consequences, in order of severity:</p>
+<ol>
+<li class=""><strong>Wrong data, declared correct.</strong> All 4 stories ended up under
+<code>["saudacao"]</code>, including the one for the ENDPOINT. <code>api_http</code> ended up
+with no story at all. And the closing message (seq 130) asserts:
+"All 4 stories were successfully linked to the modules." The log ends
+with a confident lie.</li>
+<li class=""><strong>Breaks downstream execution.</strong> <code>activate-execution</code> spins up one dev
+agent PER MODULE. With everything under <code>saudacao</code>, the <code>api_http</code>
+module gets no agent and the designed architecture isn't the one that
+gets built.</li>
+<li class=""><strong>No <code>tool.result</code> is recorded</strong> for <code>assign_story_modules</code>. The whole
+loop is invisible in the event log — you can only infer it from the
+repeated <code>tool.call</code>s.</li>
+</ol>
+<p>Loop cost: 9 LLM calls from the architect, 27,804 in / 8,012 out. Session
+total: 7,271 micros (US$ 0.007) — cheap only because it's a flash model.</p>
+<p>The module_map loop (PR #135) was a SYMPTOM of this: the Architect kept
+re-emitting the map precisely to try to fix names it couldn't read back.
+#135 fixed the data corruption; the blindness remains.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=execution-project-17229425-execution-session-dbb84ce8--2026-08-05>Execution (project 17229425, execution session dbb84ce8) — 2026-08-05<a href=#execution-project-17229425-execution-session-dbb84ce8--2026-08-05 class=hash-link aria-label="Direct link to Execution (project 17229425, execution session dbb84ce8) — 2026-08-05" title="Direct link to Execution (project 17229425, execution session dbb84ce8) — 2026-08-05" translate=no>​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=n-the-execution-half-only-works-with-the-local-provider-p1-blocks-13b>N. THE EXECUTION HALF ONLY WORKS WITH THE <code>local</code> PROVIDER (P1, blocks 13b)<a href=#n-the-execution-half-only-works-with-the-local-provider-p1-blocks-13b class=hash-link aria-label="Direct link to n-the-execution-half-only-works-with-the-local-provider-p1-blocks-13b" title="Direct link to n-the-execution-half-only-works-with-the-local-provider-p1-blocks-13b" translate=no>​</a></h3>
+<p><code>Engine.Projects.ProjectRepository.get_local_repo_path/1</code> returns
+<code>{:error, {:unsupported_provider, "github"}}</code> for any provider other than
+<code>local</code>. It's documented as a scope cut in its own moduledoc:</p>
+<blockquote>
+<p>"Only supports the 'local' provider (remote github/gitlab are out of
+scope for the terminal executor for now)"
+— <code>apps/engine/lib/engine/projects/project_repository.ex:25-27</code></p>
+</blockquote>
+<p>Five call sites depend on it:</p>
+<ul>
+<li class=""><code>lib/engine/dev/worktree_manager.ex:20</code> — the dev agent's worktree</li>
+<li class=""><code>lib/engine/actions/terminal_executor.ex:39</code> — command execution</li>
+<li class=""><code>lib/engine/gates/diff.ex:17</code> — the diff QA and SecOps read</li>
+<li class=""><code>lib/engine/harness/project_context.ex:30</code> — project context</li>
+</ul>
+<p>Observed effect: I activated execution on the GitHub project, the 3 dev
+agents spun up, each grabbed a task, and all 3 got blocked in the same
+second with <code>failed to prepare the worktree</code>.</p>
+<p>The asymmetry is the key: the <strong>api</strong> speaks GitHub over HTTP (it's the
+one that created the repo, committed the template, and created dev/qa).
+The <strong>engine</strong> works on the file system and only knows local bare repos.
+So a GitHub project runs the CONVERSATIONAL half (Creative agent, PO,
+Architect) and the bootstrap, but not the BUILD half.</p>
+<p>Consequence for FASE 13b: the CLAUDE.md script ("ADOPTED project, forked
+via remote GithubProvider, real DevAgent, dev implements → remote PR →
+gates") <strong>isn't executable today</strong>. This isn't a bug to fix in passing:
+supporting remote requires clone, credentials inside the engine and push —
+a feature with an ADR.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=o-the-dev-agent-is-born-on-the-local-model-same-root-as-finding-b>O. The dev agent is born on the local model (same root as finding B)<a href=#o-the-dev-agent-is-born-on-the-local-model-same-root-as-finding-b class=hash-link aria-label="Direct link to O. The dev agent is born on the local model (same root as finding B)" title="Direct link to O. The dev agent is born on the local model (same root as finding B)" translate=no>​</a></h3>
+<p>The three dev agents came up on <code>Llama 3.2 1B (local)</code>, inherited from the
+workspace default. ADR 0020 forbids small local models in the semantic
+step, and a dev agent writing code is the most expensive semantic step
+that exists.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=p-blocking-event-with-no-origin>P. Blocking event with no origin<a href=#p-blocking-event-with-no-origin class=hash-link aria-label="Direct link to P. Blocking event with no origin" title="Direct link to P. Blocking event with no origin" translate=no>​</a></h3>
+<p><code>{"origin": null, "reason": "failed to prepare the worktree", "diagnosis": "{:unsupported_provider, \"github\"}"}</code>. CLAUDE.md requires every failure
+outcome to record an ORIGIN (infra | model | code | policy). Here it's
+<code>code</code> (a known product limit) and it came back <code>null</code>. The diagnosis
+saved the day, but the rule wasn't followed.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=q-agenterror-with-undetermined-origin>Q. <code>agent.error</code> with "undetermined origin"<a href=#q-agenterror-with-undetermined-origin class=hash-link aria-label="Direct link to q-agenterror-with-undetermined-origin" title="Direct link to q-agenterror-with-undetermined-origin" translate=no>​</a></h3>
+<p>On the Creative agent, an aborted turn: the thread showed
+<code>failure · undetermined origin</code>. RN-059 worked (durable error, agent
+spoke, clean recovery), but "undetermined" isn't one of the four origins —
+it's diagnosis by elimination, which ADR 0020 forbids.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=r-the-po-generated-overlapping-stories>R. The PO generated overlapping stories<a href=#r-the-po-generated-overlapping-stories class=hash-link aria-label="Direct link to R. The PO generated overlapping stories" title="Direct link to R. The PO generated overlapping stories" translate=no>​</a></h3>
+<blockquote>
+<p><strong>PARTIALLY CLOSED</strong> — became <a href=/brabo/dev/en/business-rules/custo#rn-081 target=_blank rel="noopener noreferrer" class="">RN-081</a>.
+Identical title is refused; a story that adds no coverage over the rules
+it cites becomes <code>backlog.story_overlap_warned</code>, a warning rather than a
+block. <strong>This finding's exact pair still passes</strong> — different titles and
+justifications for the same endpoint have nothing mechanical linking
+them. There's a test asserting that limit, so it stays visible rather
+than implicit.
+"Deterministic public greeting endpoint" and "Public GET /hello endpoint
+that returns an immediate greeting" cover the same endpoint. No dedupe or
+warning.</p>
+</blockquote>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=hello-clean-run-project-9c7c84f0-session-1f94de49--2026-08-06>Hello-clean run (project <code>9c7c84f0</code>, session <code>1f94de49</code>) — 2026-08-06<a href=#hello-clean-run-project-9c7c84f0-session-1f94de49--2026-08-06 class=hash-link aria-label="Direct link to hello-clean-run-project-9c7c84f0-session-1f94de49--2026-08-06" title="Direct link to hello-clean-run-project-9c7c84f0-session-1f94de49--2026-08-06" translate=no>​</a></h2>
+<p>Real dev agent, DeepSeek V4 Flash via OpenRouter, with the approval
+pipeline on and every action decided by hand. The task was "Expose a
+public GET /api/saudacao route." It never started: <strong>18 turns, 292,211
+input tokens, US$ 0.0275 and zero lines written</strong>, and the run ended in a
+provider error.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=s-accumulated-context-overflows-the-providers-limit-and-kills-the-run-p1>S. Accumulated context overflows the provider's limit and KILLS the run (P1)<a href=#s-accumulated-context-overflows-the-providers-limit-and-kills-the-run-p1 class=hash-link aria-label="Direct link to S. Accumulated context overflows the provider's limit and KILLS the run (P1)" title="Direct link to S. Accumulated context overflows the provider's limit and KILLS the run (P1)" translate=no>​</a></h3>
+<p>On turn 18 the model call came back
+<code>{413, %{"message" => "request entity too large", "statusCode" => 413}}</code>,
+the <code>ToolLoop</code> had no way to continue and the task got blocked
+(<code>dev.blocked</code>, <code>artifact.task_blocked</code>, seq 151–152).</p>
+<p>The cause is mechanical and cumulative: every terminal command dumps its
+entire output into the loop's history, and that history travels along in
+<strong>every</strong> subsequent turn. The largest SUCCESSFUL request recorded in
+<code>token_usage</code> was 28,993 input tokens; the one that failed never got to
+record usage. The overflow is one of <strong>request size in bytes</strong>, not
+context window — a <code>find</code> or a <code>git ls-files</code> with a long output weighs
+much more in bytes than in useful tokens.</p>
+<p>This connects directly to <a class="" href=/brabo/dev/en/adr/0055-escopo-de-caminho-na-politica-de-terminal>ADR 0055</a>,
+from an angle the ADR didn't foresee: the approval ladder doesn't just
+make execution more expensive, it <strong>kills</strong> it. Every question to the user
+pushes the agent into one more exploratory command, whose output stays in
+the history forever. The run ends in a 413 before the first line of code
+gets written.</p>
+<p>What the triage needs to decide is whose job the fix is — the
+<code>ContextManager</code>'s (compact or truncate tool output by size, not just by
+age), the terminal executor's (a byte cap per output, with a truncation
+marker) or both. Today there's no cap anywhere on the path.</p>
+<ul>
+<li class=""><strong>Evidence:</strong> <code>session_events</code> seq 150–152 of session <code>1f94de49</code>;
+<code>token_usage</code> for actor <code>dev-http-api</code>.</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=t-the-failures-origin-is-still-outside-the-four-recurrence-of-p-and-q>T. The failure's origin is STILL outside the four (recurrence of P and Q)<a href=#t-the-failures-origin-is-still-outside-the-four-recurrence-of-p-and-q class=hash-link aria-label="Direct link to T. The failure's origin is STILL outside the four (recurrence of P and Q)" title="Direct link to T. The failure's origin is STILL outside the four (recurrence of P and Q)" translate=no>​</a></h3>
+<p>The <code>dev.blocked</code> from finding S recorded:</p>
+<div class="language-json codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-json codeBlock_mqej thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_uNqR><div class=token-line style=color:#F8F8F2><span class="token punctuation" style="color:rgb(248, 248, 242)">{</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  </span><span class="token property">"origem"</span><span class="token operator">:</span><span class="token plain"> </span><span class="token string" style="color:rgb(255, 121, 198)">"indeterminada"</span><span class="token punctuation" style="color:rgb(248, 248, 242)">,</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  </span><span class="token property">"reason"</span><span class="token operator">:</span><span class="token plain"> </span><span class="token string" style="color:rgb(255, 121, 198)">"parou sem concluir nem reportar bloqueio"</span><span class="token punctuation" style="color:rgb(248, 248, 242)">,</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">  </span><span class="token property">"diagnosis"</span><span class="token operator">:</span><span class="token plain"> </span><span class="token string" style="color:rgb(255, 121, 198)">"falha na chamada ao modelo: {413, %{\"message\" => \"request entity too large\", \"statusCode\" => 413}}"</span><span class="token plain"></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain"></span><span class="token punctuation" style="color:rgb(248, 248, 242)">}</span><br/></div></code></pre></div></div>
+<p>Not a new finding: it's the <strong>third</strong> occurrence of the same rule being
+violated, and is therefore recorded as a recurrence rather than a separate
+item. <a href=#p-blocking-event-with-no-origin class="">P</a> caught <code>origin: null</code> on a
+<code>dev.blocked</code>; <a href=#q-agenterror-with-undetermined-origin class="">Q</a> caught
+<code>"indeterminada"</code> on an <code>agent.error</code>. Here the two meet: a blocking
+event, value <code>"indeterminada"</code>.</p>
+<p>What this occurrence adds, and what makes the case stronger than the
+previous ones: <strong>the origin was trivially derivable</strong>. A known HTTP status
+from the provider is unambiguously <code>model</code> — the <code>diagnosis</code> field itself
+names it on the very line where <code>origem</code> gives up. It's not an edge case,
+it's the error path not looking at what it just wrote itself.</p>
+<p>The <code>reason</code> also lies: "stopped without concluding or reporting a block"
+describes silence, and what happened was a failure with an identified
+cause. Anyone reading only the <code>reason</code> in the panel would conclude the
+model got lost.</p>
+<ul>
+<li class=""><strong>Evidence:</strong> <code>session_events</code> seq 151 of session <code>1f94de49</code>.</li>
+<li class=""><strong>Rule violated:</strong> CLAUDE.md ("every failure outcome records its
+ORIGIN — infra | model | code | policy — never diagnosis by
+elimination"), originating in
+<a class="" href=/brabo/dev/en/adr/0020-destravar-gates-qa-secops>ADR 0020</a>.</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=u-the-terminal-executor-has-no-project-boundary-p1>U. The terminal executor has no project boundary (P1)<a href=#u-the-terminal-executor-has-no-project-boundary-p1 class=hash-link aria-label="Direct link to U. The terminal executor has no project boundary (P1)" title="Direct link to U. The terminal executor has no project boundary (P1)" translate=no>​</a></h3>
+<p>Inside the container that runs the actions, <code>/workspace</code> is the <strong>Brabo
+monorepo itself</strong> — not the project's worktree, which lives at
+<code>/data/project-workspaces/&lt;projectId>/.worktrees/&lt;agentId></code>.</p>
+<p>The <code>hello-limpo</code> dev agent spent turns there thinking it was its own
+project: it read <code>apps/engine/mix.exs</code>, and even proposed
+<code>cat lib/engine/actions/git_executor.ex</code> and
+<code>sed -n '1,120p' lib/engine/dev/context_builder.ex</code> — the platform's own
+git executor and context builder that was running it.</p>
+<p>And the reach doesn't stop at Brabo. A <code>for</code> over
+<code>/data/project-workspaces/*/</code> listed <strong>another project's</strong> worktree
+(<code>dbd3e508-e0c7-4e29-b134-5d393f518269</code>) with its commits and files; the
+next step the agent proposed was entering it to read <code>git remote -v</code> and
+<code>git log</code>. It was refused by hand.</p>
+<p>None of this is model malice: it's looking for its own project and the
+file system doesn't say where it ends. In a multi-tenant deployment, the
+same command would read another customer's repository.</p>
+<p><a class="" href=/brabo/dev/en/adr/0055-escopo-de-caminho-na-politica-de-terminal>ADR 0055</a>
+designs the POLICY half of this and explicitly says it doesn't solve the
+other half: path scoping depends on the rule getting it right, and what's
+missing is <strong>isolation</strong> — per-project mount, or per-project container.
+This finding is the half the ADR left explicitly open.</p>
+<ul>
+<li class=""><strong>Evidence:</strong> <code>proposed_actions</code> <code>d1bfeda3</code> (refused) and <code>56374def</code>
+(approved, listed the other project) of session <code>1f94de49</code>.</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=v-the-session-shows-closed-while-execution-keeps-going-p2>V. The session shows <code>closed</code> while execution keeps going (P2)<a href=#v-the-session-shows-closed-while-execution-keeps-going-p2 class=hash-link aria-label="Direct link to v-the-session-shows-closed-while-execution-keeps-going-p2" title="Direct link to v-the-session-shows-closed-while-execution-keeps-going-p2" translate=no>​</a></h3>
+<p><code>sessions.status</code> for <code>1f94de49</code> has been <code>closed</code> since <strong>23:34:42</strong>,
+thirty seconds after it was born. Execution kept going until <strong>00:56</strong> —
+over an hour of an agent working, proposing actions and spending tokens
+in a session the database considers over.</p>
+<p>Both sides end up incoherent at the same time: the UI shows "Session
+closed — cannot send messages" <strong>and</strong> renders the approval cards, which
+work normally. Approving in a closed session actually executes the
+command.</p>
+<p>This contradicts the state machine CLAUDE.md declares
+(<code>created → active → closing → closed | closed_abnormally</code>): <code>closed</code>
+should be terminal. It also poisons any per-session measurement — duration,
+cost and "how many sessions ended well" all read a state that doesn't
+describe what happened.</p>
+<p>Didn't investigate who wrote the <code>closed</code> or why; that's work for whatever
+phase addresses it, not for the triage.</p>
+<ul>
+<li class=""><strong>Evidence:</strong> <code>sessions.updated_at</code> = 23:34:42 with <code>status = closed</code>;
+<code>session_events</code> for the same session up to seq 152, at 00:56:46.</li>
+</ul>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=confirmed-in-production-this-round>Confirmed in production this round<a href=#confirmed-in-production-this-round class=hash-link aria-label="Direct link to Confirmed in production this round" title="Direct link to Confirmed in production this round" translate=no>​</a></h2>
+<ul>
+<li class=""><strong>RN-066</strong> (Architect's blindness): 4 calls to <code>assign_story_modules</code>
+instead of 18, zero made-up name, 1 module_map instead of 4, each story
+in the semantically correct module. Session cost dropped from 7,271 to
+3,259 micros.</li>
+<li class=""><strong>RN-067</strong> (session with no process): execution session <code>dbb84ce8</code>
+appears in <code>sessions</code> AND in <code>engine.session_states</code> — before,
+<code>activate-execution</code>'s session was born orphaned.</li>
+</ul>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=running-the-phase-12-validation--2026-08-07>Running the Phase 12 validation — 2026-08-07<a href=#running-the-phase-12-validation--2026-08-07 class=hash-link aria-label="Direct link to Running the Phase 12 validation — 2026-08-07" title="Direct link to Running the Phase 12 validation — 2026-08-07" translate=no>​</a></h2>
+<p>First real run of <code>pnpm --filter api validacao:fase-12</code>, item 13a.1's
+pending task. The criterion closed (exit <code>0</code>), but only after four fixes —
+three in the INSTRUMENT and one in the PRODUCT. The instrument's are
+counted in <a class="" href=/brabo/dev/en/explanation/validacao-fase-12>validacao-fase-12.md</a>; this is the
+product's.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=w-the-dev-agent-dies-when-the-modules-queue-empties-p1--closed>W. The dev agent DIES when the module's queue empties (P1) — CLOSED<a href=#w-the-dev-agent-dies-when-the-modules-queue-empties-p1--closed class=hash-link aria-label="Direct link to W. The dev agent DIES when the module's queue empties (P1) — CLOSED" title="Direct link to W. The dev agent DIES when the module's queue empties (P1) — CLOSED" translate=no>​</a></h3>
+<p>With an empty queue, <code>POST /internal/sessions/:id/tasks/claim</code> responds
+<code>201</code> with <code>content-length: 0</code>. The use case returns <code>null</code>, but NestJS
+serializes that as an EMPTY body — <code>Req</code> receives <code>""</code>, which is not
+<code>nil</code>.</p>
+<p><code>AgentIo.try_claim/2</code> matched the "task found" clause and called
+<code>run_task("")</code>, blowing up with <code>BadMapError</code> in <code>Map.get("", "id", nil)</code>.
+Since the server is <code>restart: :temporary</code>, the agent died for good, with
+<code>Monitor</code> erasing the state row right behind it.</p>
+<p><strong>Applies to the REAL dev agent</strong>, not just the Noop: <code>try_claim/2</code> lives
+in the shared <code>AgentIo</code>. And it fires on the most common outcome there is
+— the queue running out. The effect is the exact opposite of what Phase
+12b delivered: instead of a supervised, event-wakeable <code>dev.idle</code>, a dead
+process.</p>
+<p>The suite never caught it because the fake correctly returns <code>nil</code>.
+<strong>Only real execution exposes it</strong> — which is, literally, this phase's
+thesis.</p>
+<blockquote>
+<p><strong>CLOSED</strong> — fixed at the boundary (<code>EngineApiClient.claim_task/4</code>
+normalizes an empty body) and guarded in the contract
+(<code>AgentIo.try_claim/2</code> accepts <code>""</code> alongside <code>nil</code>), without touching
+the route's HTTP status. Exception to the FASE 13 freeze authorized by
+the user, for the same reason as Phase F: the measurement wasn't
+reachable without this. Verified by mutation.</p>
+</blockquote>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=real-execution-with-remote-github-fase-13b--2026-08-07>Real execution with remote GitHub (FASE 13b) — 2026-08-07<a href=#real-execution-with-remote-github-fase-13b--2026-08-07 class=hash-link aria-label="Direct link to Real execution with remote GitHub (FASE 13b) — 2026-08-07" title="Direct link to Real execution with remote GitHub (FASE 13b) — 2026-08-07" translate=no>​</a></h2>
+<p>First execution against a real remote repository (<code>daneiel/test</code>), with a
+real dev agent and <code>openai/gpt-5-mini</code>. The chain up to promotion went
+through in full; the dev agent didn't. Detail and measurement in
+<a class="" href=/brabo/dev/en/explanation/validacao-real>validacao-real.md</a>.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=x-the-dev-agent-burns-the-iteration-cap-in-an-empty-repository-p1>X. The dev agent burns the iteration cap in an empty repository (P1)<a href=#x-the-dev-agent-burns-the-iteration-cap-in-an-empty-repository-p1 class=hash-link aria-label="Direct link to X. The dev agent burns the iteration cap in an empty repository (P1)" title="Direct link to X. The dev agent burns the iteration cap in an empty repository (P1)" translate=no>​</a></h3>
+<p>Task <em>"Expose GET /saudacao"</em> in a freshly provisioned repository — only
+the Gitflow template, no code. The agent spent all eight iterations on
+<code>search_workspace</code>/<code>read_file</code> looking for "where's the project," <strong>never
+ran a single terminal command and never wrote a file</strong>. Block:
+"iteration limit reached", origin <code>model</code>, diagnosis "(no terminal run)".</p>
+<p>The <code>model</code> origin is technically true and practically useless: the model
+didn't make a bad judgment call, it never got to judge at all. Cost: 8
+calls, 205 output tokens.</p>
+<p>It's the <strong>first</strong> scenario where the dev agent starts from absolute zero
+— every previous test and demo started from a workspace with existing
+code.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=y-search_workspace-doesnt-distinguish-empty-from-found-nothing--closed>Y. <code>search_workspace</code> doesn't distinguish "empty" from "found nothing" — CLOSED<a href=#y-search_workspace-doesnt-distinguish-empty-from-found-nothing--closed class=hash-link aria-label="Direct link to y-search_workspace-doesnt-distinguish-empty-from-found-nothing--closed" title="Direct link to y-search_workspace-doesnt-distinguish-empty-from-found-nothing--closed" translate=no>​</a></h3>
+<p>The first five calls all returned "no results," and the agent read that as
+"search harder" instead of "there's nothing here." It was the actionable
+piece of finding X.</p>
+<blockquote>
+<p><strong>CLOSED</strong> — the tool now responds differently for different situations.
+A workspace with no files at all returns <em>"the workspace is EMPTY […]
+CREATE the necessary files (write_file) instead of continuing to
+search"</em>; a workspace with files returns the count, saying the search
+worked and it's the term that doesn't match.</p>
+<p><strong>The fix is the message, not the cap.</strong> The agent didn't need more
+iterations — it needed to know there was nothing to search for. And the
+finding's case (only bootstrap's <code>.github/</code> and <code>docs/</code>) is NOT empty —
+there's a test asserting that in that case the right answer is the
+count, not the instruction to create.</p>
+<p><strong>A new run was made, and X did NOT close.</strong> Same outcome —
+"iteration limit reached," 8 calls, no PR. The behavior changed (one
+search instead of five), the result didn't. The hypothesis that the
+message was the cause was WRONG: of the eight iterations, seven are
+exploration, leaving one to write, commit, push and open a PR.</p>
+<p><strong>The cap WAS the cause.</strong> With <code>TOOL_LOOP_MAX_ITERATIONS=25</code> the dev
+agent explored, wrote THREE files and ran <code>npm test</code> — and stopped at
+<code>dev.awaiting_approval</code>, not at a block. The cap of 8 was designed for a
+conversational agent and doesn't fit a dev agent that needs to
+understand the repository before acting
+(<code>apps/engine/config/runtime.exs:100</code>).</p>
+<p>X stops being "burns the cap exploring" and becomes <strong>"the cap is wrong
+for this agent."</strong> The product fix is NOT raising the global default —
+the Creative agent doesn't need 25 iterations to converse. It's a cap
+per agent type, and that's a product decision: it goes into the triage.</p>
+<p><strong>CLOSED in FASE 14d</strong> (<a href=/brabo/dev/en/business-rules/custo#rn-085 target=_blank rel="noopener noreferrer" class="">RN-085</a>). The cap
+became per-type in <code>Engine.Harness.Iteracoes</code>: <code>8</code> for conversational
+agents, <code>60</code> for the dev agent and QA subagent. The criterion for who
+gets to go up isn't "works a lot" — it's having a
+<code>token_budget_micros</code> underneath holding down spend, and that's why
+<code>infra-workflows</code> uses a heavy tool and <strong>stays at 8</strong>: it runs without
+a budget, and for it the cap is the only guardrail there is.</p>
+</blockquote>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=z-the-terminal-allowlist-governs-the-verb-scope-only-protects-the-path>Z. The terminal allowlist governs the VERB; scope only protects the PATH<a href=#z-the-terminal-allowlist-governs-the-verb-scope-only-protects-the-path class=hash-link aria-label="Direct link to Z. The terminal allowlist governs the VERB; scope only protects the PATH" title="Direct link to Z. The terminal allowlist governs the VERB; scope only protects the PATH" translate=no>​</a></h3>
+<p>With the cap resolved, execution started stopping at terminal approvals.
+The 2026-08-06 request was <em>"always allow commands as long as they're
+inside the project's folder"</em>; ADR 0055 delivered a CAP (outside the
+folder never auto-approves), while the verb is still governed by a closed
+list.</p>
+<p>Whitelisting <code>npm</code>/<code>pnpm</code>/<code>node</code>/<code>npx</code> wasn't enough: the agent ran
+<code>ls -la</code>. Every new verb falls into <code>require_approval</code>.</p>
+<p>This isn't a defect in ADR 0055, which never promised to promote a verb —
+it's the gap between what was asked and what was delivered, and it's what
+keeps the ladder standing.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=worked-as-designed-worth-recording-too-1>Worked as designed (worth recording too)<a href=#worked-as-designed-worth-recording-too-1 class=hash-link aria-label="Direct link to Worked as designed (worth recording too)" title="Direct link to Worked as designed (worth recording too)" translate=no>​</a></h3>
+<p>The <strong>Psychologist diagnosed on its own</strong>, at the heavy tier, reading the
+failed execution's event log — and named both causes more precisely than
+any script assertion could: the absence of a terminal <code>tool.call</code>, and
+<code>search_workspace</code> misleading the agent. The product's introspection
+works.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=aa-auto-approved-pr_open-has-no-credential-and-always-fails-on-remote-p1>AA. Auto-approved <code>pr_open</code> has no credential and always fails on remote (P1)<a href=#aa-auto-approved-pr_open-has-no-credential-and-always-fails-on-remote-p1 class=hash-link aria-label="Direct link to aa-auto-approved-pr_open-has-no-credential-and-always-fails-on-remote-p1" title="Direct link to aa-auto-approved-pr_open-has-no-credential-and-always-fails-on-remote-p1" translate=no>​</a></h3>
+<blockquote>
+<p><strong>CLOSED</strong> — became <a href=/brabo/dev/en/business-rules/custo#rn-082 target=_blank rel="noopener noreferrer" class="">RN-082</a>. The api
+started resolving git credentials by the workspace OWNER, reusing the
+same resolver as RN-058 instead of reimplementing the rule. Verified by
+mutation.</p>
+</blockquote>
+<p>Found in the 5th execution of 13b, the first in which the chain reached
+the PR.</p>
+<p><code>ExecuteGitActionUseCase</code> resolves the git token from <strong><code>action.decidedBy</code></strong>
+— the user who DECIDED the action (<code>execute-git-action.use-case.ts:100</code>).
+When policy auto-approves, no one decides: <code>decided_by</code> ends up NULL,
+<code>accessToken</code> ends up <code>undefined</code>, and GitHub responds
+<code>Requires authentication</code>.</p>
+<p>The contrast within the same run is the proof:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>action<th>who executes<th>credential<th>outcome<tbody><tr><td><code>git_push</code><td><strong>engine</strong><td>injected from the owner (<code>git_auth.ex</code>, RN-076)<td>✅ executed<tr><td><code>pr_open</code><td><strong>api</strong><td><code>action.decidedBy</code> → NULL<td>❌ failed</table>
+<p>The push reached GitHub — the branch <code>feature/task-d4b36a5b</code> exists on the
+remote. What failed was only the REST call that opens the PR.</p>
+<p>It's the same class of issue that
+<a href=/brabo/dev/en/business-rules/custo#rn-058 target=_blank rel="noopener noreferrer" class="">RN-058</a> fixed for LLM ("the key the agent
+spends is the OWNER's"): the api's git path still resolves by "who
+decided," rather than by "whose workspace it is."</p>
+<p><strong>Practical consequence:</strong> with autonomy configured — which is exactly the
+mode Phase F exists to enable — no dev agent can open a PR on a remote
+provider. The path only works when a human clicks each PR, which is
+precisely the declared-unviable ladder.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=ab-the-gate-agent-doesnt-know-how-to-wait-for-approval--becomes-an-infra-failure-p1>AB. The GATE agent doesn't know how to wait for approval — becomes an <code>infra</code> failure (P1)<a href=#ab-the-gate-agent-doesnt-know-how-to-wait-for-approval--becomes-an-infra-failure-p1 class=hash-link aria-label="Direct link to ab-the-gate-agent-doesnt-know-how-to-wait-for-approval--becomes-an-infra-failure-p1" title="Direct link to ab-the-gate-agent-doesnt-know-how-to-wait-for-approval--becomes-an-infra-failure-p1" translate=no>​</a></h3>
+<blockquote>
+<p><strong>CLOSED</strong> — <a class="" href=/brabo/dev/en/adr/0057-o-gate-espera-a-aprovacao>ADR 0057</a>. The
+gate agents now SUSPEND and resume, like the dev agent has since
+ADR 0052: the subagent returns <code>{:awaiting, ...}</code> with the whole <code>ctx</code>,
+<code>QaLeadServer</code> holds the in-flight state, subscribes to <code>Wake</code> for the
+subagents, and continues the area from where it stopped once the
+decision arrives.</p>
+<p>While pending, the area <strong>doesn't</strong> consolidate, doesn't emit a verdict
+and doesn't block the task — it waits. A refusal also resumes, with the
+reason in place of the result.</p>
+<p>Declared limit: a restart in the middle of the wait loses the loop,
+because <code>pendente</code> lives in the lead's memory. The gate runs again via
+the <code>Dispatcher</code> when the task returns to the cycle.</p>
+</blockquote>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=ac-redirection-2devnull-makes-any-command-unapprovable-p1>AC. Redirection (<code>2>/dev/null</code>) makes any command unapprovable (P1)<a href=#ac-redirection-2devnull-makes-any-command-unapprovable-p1 class=hash-link aria-label="Direct link to ac-redirection-2devnull-makes-any-command-unapprovable-p1" title="Direct link to ac-redirection-2devnull-makes-any-command-unapprovable-p1" translate=no>​</a></h3>
+<blockquote>
+<p><strong>CLOSED on both pieces.</strong></p>
+<ol>
+<li class=""><code>parseCommand</code> stopped treating <code>></code>/<code>>></code>/<code>&lt;</code> as a separator — they
+don't chain any command. The target still counts as a TOKEN of the
+segment, on purpose: that's what keeps <code>echo x > /etc/passwd</code> still
+barred by the scope cap. The verb became correct without the path
+becoming free.</li>
+<li class=""><code>/dev/null</code>, <code>/dev/stdin</code>, <code>/dev/stdout</code> and <code>/dev/stderr</code> stopped
+counting as user paths. That's the exact list and <strong>not</strong> all of
+<code>/dev</code> — there's a test asserting <code>/dev/sda</code> remains out of scope,
+because opening up <code>/dev</code> would trade a nuisance for a hole.</li>
+</ol>
+<p>Verified by mutation in both directions: loosening <code>/dev</code> breaks the
+disk test, and disabling the chaining breaks 11 tests.</p>
+</blockquote>
+<p>Found in the 7th execution of 13b, after widening the allowlist to 25
+verbs. The QA agent ran:</p>
+<div class="language-text codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-text codeBlock_mqej thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_uNqR><div class=token-line style=color:#F8F8F2><span class="token plain">ls -la && echo "---" && cat package.json 2>/dev/null; echo "---"; ls *.md 2>/dev/null</span><br/></div></code></pre></div></div>
+<p><strong>Every verb was already allowed</strong> — <code>ls</code>, <code>echo</code>, <code>cat</code>. Even so it
+became <code>require_approval</code>. Running the pure functions against the command:</p>
+<div class="language-text codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-text codeBlock_mqej thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_uNqR><div class=token-line style=color:#F8F8F2><span class="token plain">segmentos: [["ls","-la"],["echo","---"],["cat","package.json","2"],["/dev/null"],…]</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">tokens de caminho: ["/dev/null","/dev/null"]</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">no escopo? false</span><br/></div></code></pre></div></div>
+<p><code>parseCommand</code> treats <code>></code> as a segment separator, so <code>2>/dev/null</code> becomes
+<strong>a segment of its own</strong>. This breaks in two independent ways:</p>
+<ol>
+<li class="">the <code>/dev/null</code> segment has <code>/dev/null</code> itself as its "verb," which
+will never be in <code>allow</code> — and a composite command requires EVERY
+segment allowed;</li>
+<li class=""><code>/dev/null</code> is an ABSOLUTE path token outside the project folder, so
+the <a href=/brabo/dev/en/business-rules/custo#rn-075 target=_blank rel="noopener noreferrer" class="">RN-075</a> cap downgrades to
+<code>auto_approve</code>.</li>
+</ol>
+<p><strong>The impact is large because <code>2>/dev/null</code> is idiomatic.</strong> Models use it
+all the time to silence expected errors. In practice, any command with
+output redirection is unapprovable by policy — only clears with a human
+click.</p>
+<p>It's not a missing verb: it's the command's <strong>form</strong>. Widening the
+allowlist doesn't fix it, and the 7th execution proves it — 25 verbs
+allowed, and it still got stuck.</p>
+<p>Two distinct pieces for triage:</p>
+<ul>
+<li class="">the <code>></code>-based segmentation in <code>command-matcher.ts</code> (pre-existing, and
+debatable: redirection isn't command composition like <code>&&</code> and <code>|</code>);</li>
+<li class="">the scope cap treating <code>/dev/null</code> as a user path (<code>path-scope.ts</code>,
+from Phase F).</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=ad-the-agent-wraps-commands-in-bash--lc-and-the-allowlist-has-no-answer-p1>AD. The agent wraps commands in <code>bash -lc</code>, and the allowlist has no answer (P1)<a href=#ad-the-agent-wraps-commands-in-bash--lc-and-the-allowlist-has-no-answer-p1 class=hash-link aria-label="Direct link to ad-the-agent-wraps-commands-in-bash--lc-and-the-allowlist-has-no-answer-p1" title="Direct link to ad-the-agent-wraps-commands-in-bash--lc-and-the-allowlist-has-no-answer-p1" translate=no>​</a></h3>
+<p>Eighth execution of 13b, with findings Y, AA, AB and AC already fixed. The
+dev agent made ONE tool call:</p>
+<div class="language-text codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-text codeBlock_mqej thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_uNqR><div class=token-line style=color:#F8F8F2><span class="token plain">bash -lc npm test --silent</span><br/></div></code></pre></div></div>
+<p>The verb is <code>bash</code>. It's not in <code>allow</code>, and it became <code>require_approval</code>.</p>
+<p><strong>The refusal is correct, and it's important that it is.</strong> Allowing
+<code>bash</code> would nullify the entire allowlist: <code>bash -lc &lt;anything></code> bypasses
+the verb check, including the built-in <code>deny</code>s. An allowlist that accepts
+<code>bash</code> isn't an allowlist.</p>
+<p>But this closes the argument that executions 6, 7 and 8 had been
+building:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>execution<th>what got stuck<th>what I did<tbody><tr><td>6th<td><code>head</code> outside the list<td>widened to 25 verbs<tr><td>7th<td><code>2>/dev/null</code> (FORM, not verb)<td>fixed the parser and the scope (AC)<tr><td>8th<td><code>bash -lc</code> (INVOCATION)<td>—</table>
+<p>Each round revealed a new category, and none of them was "missing a
+verb." <strong>The verb allowlist doesn't converge</strong> against an agent that
+freely chooses how to invoke what it wants to run — and the three forms
+(verb, form, invocation) are different spaces, not points on one list.</p>
+<p>What this does NOT mean: that the allowlist is wrong. It does exactly what
+it promises, and <code>bash</code>'s refusal proves the boundary works. What it
+doesn't do is enable agent autonomy without human intervention.</p>
+<p>Two directions for triage, and they're different in nature:</p>
+<ol>
+<li class=""><strong>Suspendable gate agents</strong> (finding AB, half open). Doesn't eliminate
+approval — makes the agent WAIT for it instead of dying, so the user's
+click unblocks it instead of refusing it. It's the path ADR 0052
+already opened for the dev agent.</li>
+<li class=""><strong>Policy by agent profile.</strong> A dev agent in an isolated worktree is
+different from an agent touching the user's workspace. Today both use
+the same <code>permissions.json</code>. This is a product decision with an ADR.</li>
+</ol>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=ae-the-qa-agent-tries-to-fix-the-code-its-judging-p2>AE. The QA agent tries to fix the code it's judging (P2)<a href=#ae-the-qa-agent-tries-to-fix-the-code-its-judging-p2 class=hash-link aria-label="Direct link to AE. The QA agent tries to fix the code it's judging (P2)" title="Direct link to AE. The QA agent tries to fix the code it's judging (P2)" translate=no>​</a></h3>
+<p>In the final executions of 13b, with LLM-based gates finally running, the
+QA subagent <strong>tried to fix the code it was evaluating</strong> — against its own
+role. Whoever judges doesn't fix: a gate that edits what it's analyzing
+stops being a gate and becomes just another author, and the verdict ends
+up being about its own work.</p>
+<p><strong>It didn't succeed, and the reason is structural before it's political.</strong>
+The QA tool registry is
+<code>[ReadFile, SearchWorkspace, Terminal, EmitQaVerdict]</code>
+(<code>apps/engine/lib/engine/gates/qa_tools.ex:10</code>): <strong>there is no
+<code>write_file</code></strong>. To write, it would have to go through <code>terminal</code> — and
+there it runs into two barriers that already existed for other reasons:</p>
+<ol>
+<li class="">the <strong>verb allowlist</strong>, which governs what can run
+(<a href=/brabo/dev/en/business-rules/custo#rn-075 target=_blank rel="noopener noreferrer" class="">RN-075</a> and findings Z/AD);</li>
+<li class="">the <strong>path scope cap</strong>, which downgrades any command outside the
+project folder to <code>require_approval</code>.</li>
+</ol>
+<p>They are <strong>independent</strong> barriers: neither was designed for this case,
+and that's exactly why the containment is reliable — it doesn't depend on
+the prompt convincing the model.</p>
+<p><strong>Why it's P2 and not P1.</strong> Nothing leaked: the behavior was attempted and
+blocked. What the finding records is a <strong>divergence between what the
+prompt asks and what the model does</strong>, and that divergence is the data —
+it shows that the instruction alone doesn't hold the role, and that the
+structural barrier is what does.</p>
+<p><strong>What isn't measured.</strong> How many times it tried, in which exact
+execution, and with what command: executions 9 and 10 don't have the
+detail recorded in <a class="" href=/brabo/dev/en/explanation/validacao-real>validacao-real.md</a>, which covers up
+to the eighth. Recording the finding without those numbers is deliberate
+— the alternative was making them up, and Phase 10's lesson was precisely
+that a number recalled from memory isn't worth anything.</p>
+<p><strong>Direction for triage</strong>, and it's the same as finding AD's "policy by
+agent profile": the right tool for a gate isn't the same as an author's.
+Today the difference is achieved by omission (the QA's registry doesn't
+include <code>write_file</code>), which works but isn't declared anywhere as a
+guarantee — it'll vanish the day someone adds the tool "for convenience."</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=executions-with-two-modules--2026-08-08-and-2026-08-09>Executions with TWO modules — 2026-08-08 and 2026-08-09<a href=#executions-with-two-modules--2026-08-08-and-2026-08-09 class=hash-link aria-label="Direct link to Executions with TWO modules — 2026-08-08 and 2026-08-09" title="Direct link to Executions with TWO modules — 2026-08-08 and 2026-08-09" translate=no>​</a></h2>
+<p>Two stories, one in <code>api</code> and one in <code>web</code>, two dev agents coming up
+<strong>at the same time</strong>. Running it this way matters because the parallelism
+cap in <a href=/brabo/dev/en/business-rules/custo#rn-083 target=_blank rel="noopener noreferrer" class="">RN-083</a> only means something when
+there's genuinely independent work — with a single module, the Dev Lead
+refuses to parallelize, and rightly so.</p>
+<p>There were three rounds, and their order is the argument:</p>
+<ol>
+<li class=""><strong>2026-08-08, the one that broke.</strong> <code>dev-web</code> grabbed the task and died
+with <code>fatal: not a git repository</code> <strong>before the first turn</strong>: zero
+token spent, task blocked, agent <code>idle</code>. It's finding AF below.</li>
+<li class=""><strong>2026-08-08, right after the fix.</strong> <code>dev-web</code> went from <strong>0 to 16
+calls</strong>, and both modules were implemented in parallel.</li>
+<li class=""><strong>2026-08-09 (project <code>9443f1f1</code>, session <code>94428b1f</code>), the measured
+one.</strong> Clean run with the fix already in place, extracted entirely by
+<code>medir:execucao</code>: <strong>3m56s, 33 calls, &lt; US$ 0.01</strong>, no engine restart,
+no silent turn, and both gates (<code>qa</code> and <code>secops</code>) approving. Serves
+as the baseline cost for a two-module execution.</li>
+</ol>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=af-two-dev-agents-coming-up-together-corrupt-each-others-workspace-p1>AF. Two dev agents coming up together corrupt each other's workspace (P1)<a href=#af-two-dev-agents-coming-up-together-corrupt-each-others-workspace-p1 class=hash-link aria-label="Direct link to AF. Two dev agents coming up together corrupt each other's workspace (P1)" title="Direct link to AF. Two dev agents coming up together corrupt each other's workspace (P1)" translate=no>​</a></h3>
+<p><code>Engine.Actions.Workspace.ensure!/4</code> serializes per-project working tree
+initialization with <code>:global.trans</code> — precisely for the case of N dev
+agents coming up when execution is activated. The lock was correct. <strong>The
+guard that decided whether it was worth grabbing, wasn't.</strong></p>
+<p>The fast path, without the lock, asked whether <code>.git</code> existed
+(<code>apps/engine/lib/engine/actions/workspace.ex:51</code>). And <code>init_from_bare!</code>
+starts with <code>git init</code>, which creates <code>.git</code> on the <strong>first line</strong> —
+before the <code>fetch</code> and before the <code>checkout</code>. Whoever hit that window read
+"ready," skipped the lock entirely, and ran <code>git worktree add</code> against a
+half-baked repository:</p>
+<div class="language-text codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-text codeBlock_mqej thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_uNqR><div class=token-line style=color:#F8F8F2><span class="token plain">fatal: not a git repository</span><br/></div></code></pre></div></div>
+<p><strong>Why it went ten executions without showing up.</strong> The window only exists
+if a second agent arrives <em>during</em> initialization, and activation only
+spins up one agent per module. With a single entry in <code>module_map</code> there
+was never a second agent. This defect belongs to Phase 14d (parallelism)
+and needed the first genuinely parallel execution to reveal itself.</p>
+<p><strong>The fix</strong> is an on-disk marker, <code>.brabo-workspace-pronto</code>, written only
+at the <strong>end</strong> of initialization; the fast path now checks for it instead.
+The lock didn't move — the criterion for "already ready" changed, and now
+it's only true when it actually is. A workspace created before the marker
+existed is <strong>adopted and stamped</strong>, never re-initialized: re-initializing
+would wipe uncommitted work.</p>
+<p><strong>What this teaches about the test that missed it.</strong> There was already a
+test with 8 concurrent <code>ensure/3</code> calls, and it <strong>passed with the bug</strong>.
+All 8 start together, all see an empty directory, all go for the lock —
+the window is never exercised. Trying to reproduce it by timing doesn't
+work either: against a local bare repo the <code>fetch</code> finishes too fast, and
+a test racing after the window always passes without proving anything.</p>
+<p>What closed the hole in
+<code>apps/engine/test/engine/actions/workspace_test.exs</code> was <strong>constructing
+the intermediate state by hand</strong> instead of trying to time it: a <code>git init</code>
+in the directory, with no fetch and no checkout, which is exactly what the
+second agent was seeing. With the old guard, <code>ensure!</code> returns the
+directory and never writes the marker — and it's the marker's absence
+that the assertion checks for. The other two tests guard the migration
+(a pre-marker workspace isn't re-initialized) and the real case of two
+concurrent <code>ensure!</code> calls.</p>
+<p>It's the same pattern as the three gaps in Phase 14d itself, recorded
+there: <strong>testing the piece isn't testing the path to it.</strong> Here the piece
+(the lock) was correct and tested; it was the path to it that decided
+wrong.</div><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_yZb9"><a href=https://github.com/daneiel/brabo/blob/dev/docs/explanation/achados-execucao-real.md target=_blank rel="noopener noreferrer" class=theme-edit-this-page><svg fill=currentColor height=20 width=20 viewBox="0 0 40 40" class=iconEdit_ANja aria-hidden=true><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"/></g></svg>Edit this page</a></div><div class="col lastUpdated_Kb4y"><span class=theme-last-updated>Last updated<!-- --> on <b><time datetime=2026-10-15T04:12:25.000Z itemprop=dateModified>Oct 15, 2026</time></b> by <b>Daniel Souza</b></span></div></div></footer></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href=/brabo/dev/en/explanation/execucao-real-hello-world><div class=pagination-nav__sublabel>Previous</div><div class=pagination-nav__label>Real execution (hello world)</div></a><a class="pagination-nav__link pagination-nav__link--next" href=/brabo/dev/en/explanation/backlog><div class=pagination-nav__sublabel>Next</div><div class=pagination-nav__label>Triaged backlog</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_wOiH thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href=#fixed-during-execution-were-blocking class="table-of-contents__link toc-highlight">Fixed during execution (were blocking)</a><li><a href=#open--for-the-13c-triage class="table-of-contents__link toc-highlight">Open — for the 13c triage</a><ul><li><a href=#a-the-provisioning-session-is-born-without-an-engine-process-severe class="table-of-contents__link toc-highlight">A. The provisioning session is born without an engine process (SEVERE)</a><li><a href=#b-start-model-user-decision class="table-of-contents__link toc-highlight">B. Start model (USER DECISION)</a><li><a href=#c-its-the-model-that-talks-not-the-agent-defect-flagged-by-the-user class="table-of-contents__link toc-highlight">C. It's the model that talks, not the agent (DEFECT, flagged by the user)</a><li><a href=#d-an-impossible-step-traps-the-wizard-with-no-way-out class="table-of-contents__link toc-highlight">D. An impossible step traps the wizard with no way out</a><li><a href=#e-the-repository-preview-lies class="table-of-contents__link toc-highlight">E. The repository preview lies</a><li><a href=#f-the-wizard-announces-rc class="table-of-contents__link toc-highlight">F. The wizard announces <code>rc</code></a><li><a href=#g-the-creative-agents-invitation-doesnt-show-up-in-a-created-project class="table-of-contents__link toc-highlight">G. The Creative agent's invitation doesn't show up in a created project</a><li><a href=#h-generic-activity-feed class="table-of-contents__link toc-highlight">H. Generic activity feed</a><li><a href=#i-the-action-card-shows-the-sessions-current-model class="table-of-contents__link toc-highlight">I. The action card shows the session's CURRENT model</a><li><a href=#j-the-psychologist-runs-on-an-empty-session class="table-of-contents__link toc-highlight">J. The Psychologist runs on an empty session</a><li><a href=#k-duplicate-business-rule-isnt-deduplicated class="table-of-contents__link toc-highlight">K. Duplicate business rule isn't deduplicated</a><li><a href=#l-the-footer-button-goes-stale class="table-of-contents__link toc-highlight">L. The footer button goes stale</a></ul><li><a href=#worked-as-designed-worth-recording-too class="table-of-contents__link toc-highlight">Worked as designed (worth recording too)</a><ul><li><a href=#m-the-architect-is-blind-to-its-own-module_map-p1--the-runs-failure class="table-of-contents__link toc-highlight">M. THE ARCHITECT IS BLIND TO ITS OWN module_map (P1 — the run's failure)</a></ul><li><a href=#execution-project-17229425-execution-session-dbb84ce8--2026-08-05 class="table-of-contents__link toc-highlight">Execution (project 17229425, execution session dbb84ce8) — 2026-08-05</a><ul><li><a href=#n-the-execution-half-only-works-with-the-local-provider-p1-blocks-13b class="table-of-contents__link toc-highlight">N. THE EXECUTION HALF ONLY WORKS WITH THE <code>local</code> PROVIDER (P1, blocks 13b)</a><li><a href=#o-the-dev-agent-is-born-on-the-local-model-same-root-as-finding-b class="table-of-contents__link toc-highlight">O. The dev agent is born on the local model (same root as finding B)</a><li><a href=#p-blocking-event-with-no-origin class="table-of-contents__link toc-highlight">P. Blocking event with no origin</a><li><a href=#q-agenterror-with-undetermined-origin class="table-of-contents__link toc-highlight">Q. <code>agent.error</code> with "undetermined origin"</a><li><a href=#r-the-po-generated-overlapping-stories class="table-of-contents__link toc-highlight">R. The PO generated overlapping stories</a></ul><li><a href=#hello-clean-run-project-9c7c84f0-session-1f94de49--2026-08-06 class="table-of-contents__link toc-highlight">Hello-clean run (project <code>9c7c84f0</code>, session <code>1f94de49</code>) — 2026-08-06</a><ul><li><a href=#s-accumulated-context-overflows-the-providers-limit-and-kills-the-run-p1 class="table-of-contents__link toc-highlight">S. Accumulated context overflows the provider's limit and KILLS the run (P1)</a><li><a href=#t-the-failures-origin-is-still-outside-the-four-recurrence-of-p-and-q class="table-of-contents__link toc-highlight">T. The failure's origin is STILL outside the four (recurrence of P and Q)</a><li><a href=#u-the-terminal-executor-has-no-project-boundary-p1 class="table-of-contents__link toc-highlight">U. The terminal executor has no project boundary (P1)</a><li><a href=#v-the-session-shows-closed-while-execution-keeps-going-p2 class="table-of-contents__link toc-highlight">V. The session shows <code>closed</code> while execution keeps going (P2)</a></ul><li><a href=#confirmed-in-production-this-round class="table-of-contents__link toc-highlight">Confirmed in production this round</a><li><a href=#running-the-phase-12-validation--2026-08-07 class="table-of-contents__link toc-highlight">Running the Phase 12 validation — 2026-08-07</a><ul><li><a href=#w-the-dev-agent-dies-when-the-modules-queue-empties-p1--closed class="table-of-contents__link toc-highlight">W. The dev agent DIES when the module's queue empties (P1) — CLOSED</a></ul><li><a href=#real-execution-with-remote-github-fase-13b--2026-08-07 class="table-of-contents__link toc-highlight">Real execution with remote GitHub (FASE 13b) — 2026-08-07</a><ul><li><a href=#x-the-dev-agent-burns-the-iteration-cap-in-an-empty-repository-p1 class="table-of-contents__link toc-highlight">X. The dev agent burns the iteration cap in an empty repository (P1)</a><li><a href=#y-search_workspace-doesnt-distinguish-empty-from-found-nothing--closed class="table-of-contents__link toc-highlight">Y. <code>search_workspace</code> doesn't distinguish "empty" from "found nothing" — CLOSED</a><li><a href=#z-the-terminal-allowlist-governs-the-verb-scope-only-protects-the-path class="table-of-contents__link toc-highlight">Z. The terminal allowlist governs the VERB; scope only protects the PATH</a><li><a href=#worked-as-designed-worth-recording-too-1 class="table-of-contents__link toc-highlight">Worked as designed (worth recording too)</a><li><a href=#aa-auto-approved-pr_open-has-no-credential-and-always-fails-on-remote-p1 class="table-of-contents__link toc-highlight">AA. Auto-approved <code>pr_open</code> has no credential and always fails on remote (P1)</a><li><a href=#ab-the-gate-agent-doesnt-know-how-to-wait-for-approval--becomes-an-infra-failure-p1 class="table-of-contents__link toc-highlight">AB. The GATE agent doesn't know how to wait for approval — becomes an <code>infra</code> failure (P1)</a><li><a href=#ac-redirection-2devnull-makes-any-command-unapprovable-p1 class="table-of-contents__link toc-highlight">AC. Redirection (<code>2>/dev/null</code>) makes any command unapprovable (P1)</a><li><a href=#ad-the-agent-wraps-commands-in-bash--lc-and-the-allowlist-has-no-answer-p1 class="table-of-contents__link toc-highlight">AD. The agent wraps commands in <code>bash -lc</code>, and the allowlist has no answer (P1)</a><li><a href=#ae-the-qa-agent-tries-to-fix-the-code-its-judging-p2 class="table-of-contents__link toc-highlight">AE. The QA agent tries to fix the code it's judging (P2)</a></ul><li><a href=#executions-with-two-modules--2026-08-08-and-2026-08-09 class="table-of-contents__link toc-highlight">Executions with TWO modules — 2026-08-08 and 2026-08-09</a><ul><li><a href=#af-two-dev-agents-coming-up-together-corrupt-each-others-workspace-p1 class="table-of-contents__link toc-highlight">AF. Two dev agents coming up together corrupt each other's workspace (P1)</a></ul></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Documentation</div><ul class="footer__items clean-list"><li class=footer__item><a class=footer__link-item href=/brabo/dev/en/getting-started>Getting started</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/en/architecture>Architecture</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/en/business-rules>Business rules</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/en/runbook>Runbook</a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Community</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class=footer__link-item>Contributing<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class=footer__link-item>Getting help<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class=footer__link-item>Security<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>More</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class=footer__link-item>GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CHANGELOG.md target=_blank rel="noopener noreferrer" class=footer__link-item>CHANGELOG<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/LICENSE target=_blank rel="noopener noreferrer" class=footer__link-item>MIT License<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/THIRD_PARTY_NOTICES.md target=_blank rel="noopener noreferrer" class=footer__link-item>Third-party notices<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div></div><div class="footer__bottom text--center"><div class=footer__copyright>Copyright © 2026 Daniel Souza. Licensed under the MIT. Third-party tools keep their own licenses — see Third-party notices.</div></div></div></footer></div></body>

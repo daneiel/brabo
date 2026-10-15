@@ -1,0 +1,944 @@
+<!doctype html><html lang=zh-Hans dir=ltr class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-reference/rulesets" data-has-hydrated=false><head><meta charset=UTF-8><meta name=generator content="Docusaurus v3.10.2"><title data-rh=true>Repository rulesets | Brabo</title><meta data-rh=true name=viewport content="width=device-width, initial-scale=1.0"/><meta data-rh=true name=robots content="noindex, nofollow"/><meta data-rh=true name=twitter:card content=summary_large_image /><meta data-rh=true property=og:url content=https://daneiel.github.io/brabo/dev/zh-Hans/reference/rulesets /><meta data-rh=true property=og:locale content=zh_Hans /><meta data-rh=true property=og:locale:alternate content=pt_BR /><meta data-rh=true property=og:locale:alternate content=en /><meta data-rh=true property=og:locale:alternate content=ru /><meta data-rh=true name=docusaurus_locale content=zh-Hans /><meta data-rh=true name=docsearch:language content=zh-Hans /><meta data-rh=true name=docusaurus_version content=current /><meta data-rh=true name=docusaurus_tag content=docs-default-current /><meta data-rh=true name=docsearch:version content=current /><meta data-rh=true name=docsearch:docusaurus_tag content=docs-default-current /><meta data-rh=true property=og:title content="Repository rulesets | Brabo"/><meta data-rh=true name=description content="The exact configuration of the rulesets for the three permanent branches and tags, for manual application — the repository versions the source, GitHub receives the application."/><meta data-rh=true property=og:description content="The exact configuration of the rulesets for the three permanent branches and tags, for manual application — the repository versions the source, GitHub receives the application."/><meta data-rh=true name=keywords content="rulesets,branch protection,required checks,tags,release"/><link data-rh=true rel=icon href=/brabo/dev/zh-Hans/img/favicon.ico /><link data-rh=true rel=canonical href=https://daneiel.github.io/brabo/dev/zh-Hans/reference/rulesets /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/reference/rulesets hreflang=pt-BR /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/en/reference/rulesets hreflang=en /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/ru/reference/rulesets hreflang=ru /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/zh-Hans/reference/rulesets hreflang=zh-Hans /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/reference/rulesets hreflang=x-default /><script data-rh=true type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","item":"https://daneiel.github.io/brabo/dev/zh-Hans/reference/rulesets","name":"Rulesets","position":1}]}</script><link rel=stylesheet href=/brabo/dev/zh-Hans/assets/css/styles.7f2bd764.css /><script src=/brabo/dev/zh-Hans/assets/js/runtime~main.5f9b6346.js defer></script><script src=/brabo/dev/zh-Hans/assets/js/main.9fc457ff.js defer></script></head><body><svg style="display: none;"><defs>
+<symbol id=theme-svg-external-link viewBox="0 0 24 24"><path fill=currentColor d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
+</defs></svg>
+<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme-3f2")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")),document.documentElement.setAttribute("data-theme-choice",t||"system")}(),function(){try{for(var[t,e]of new URLSearchParams(window.location.search).entries())if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id=__docusaurus><link rel=preload as=image href=/brabo/dev/zh-Hans/img/logo.svg /><div role=region aria-label=跳到主要内容><a class=skipToContent_CFOX href=#__docusaurus_skipToContent_fallback>跳到主要内容</a></div><nav aria-label=主导航 class="theme-layout-navbar navbar navbar--fixed-top"><div class=navbar__inner><div class="theme-layout-navbar-left navbar__items"><button aria-label=切换导航栏 aria-expanded=false class="navbar__toggle clean-btn" type=button><svg width=30 height=30 viewBox="0 0 30 30" aria-hidden=true><path stroke=currentColor stroke-linecap=round stroke-miterlimit=10 stroke-width=2 d="M4 7h22M4 15h22M4 23h22"/></svg></button><a class=navbar__brand href=/brabo/dev/zh-Hans/><div class=navbar__logo><img src=/brabo/dev/zh-Hans/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--light_vzqw"/><img src=/brabo/dev/zh-Hans/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--dark_FhTf"/></div><b class="navbar__title text--truncate">Brabo</b></a><a aria-current=page class="navbar__item navbar__link navbar__link--active" href=/brabo/dev/zh-Hans/>Documentação</a><a class="navbar__item navbar__link" href=/brabo/dev/zh-Hans/runbook>Runbook</a><a class="navbar__item navbar__link" href=/brabo/dev/zh-Hans/adr>ADRs</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a href=# aria-haspopup=true aria-expanded=false role=button class=navbar__link>dev</a><ul class=dropdown__menu><li><a href=https://daneiel.github.io/brabo/prd/ target=_blank rel="noopener noreferrer" class=dropdown__link>prd — estável<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/qa/ target=_blank rel="noopener noreferrer" class=dropdown__link>qa — candidata<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/dev/ target=_blank rel="noopener noreferrer" class=dropdown__link>dev — em desenvolvimento ✓<svg width=12 height=12 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><div class="toggle_pnX7 colorModeToggle_Dj3Z"><button class="clean-btn toggleButton_DKER toggleButtonDisabled_qzkp" type=button disabled title="system mode" aria-label="切换浅色/暗黑模式（当前为system mode）"><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL lightToggleIcon_E8tM"><path fill=currentColor d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL darkToggleIcon_rXjT"><path fill=currentColor d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL systemToggleIcon_zwCm"><path fill=currentColor d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"/></svg></button></div><div class=navbarSearchContainer_zRAa><div class="navbar__search searchBarContainer_eGzj" dir=ltr><svg aria-hidden=true class=searchIcon_PXpx focusable=false viewBox="0 0 16 16"><path fill=currentColor d="M6.02945 10.20327a4.17382 4.17382 0 1 1 4.17382-4.17382 4.15609 4.15609 0 0 1-4.17382 4.17382Zm9.69195 4.2199-4.8225-4.82338A5.88021 5.88021 0 0 0 12.058 6.02856 6.00467 6.00467 0 1 0 9.59979 10.8989l4.82338 4.82338a.89729.89729 0 0 0 1.29912 0 .89749.89749 0 0 0-.00087-1.29909Z"/></svg><input placeholder=搜索 aria-label=Search class="navbar__search-input searchInput_xOBI" value="" /><div class="loadingRing_JccP searchBarLoadingRing_aTss"><div></div><div></div><div></div><div></div></div></div></div></div></div><div role=presentation class=navbar-sidebar__backdrop></div></nav><div id=__docusaurus_skipToContent_fallback class="theme-layout-main main-wrapper mainWrapper_WJkx"><div class=docsWrapper_mIeg><button aria-label=回到顶部 class="clean-btn theme-back-to-top-button backToTopButton_Afc8" type=button></button><div class=docRoot_XZYc><aside class="theme-doc-sidebar-container docSidebarContainer_FPqZ"><div class=sidebarViewport_waOe><div class=sidebar_RQC4><nav aria-label=文档侧边栏 class="menu thin-scrollbar menu_ZM4U"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/><span class=categoryLinkLabel_jKch>🚀 Comece aqui</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/><span class=linkLabel_CzBh>Introdução</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/getting-started><span class=linkLabel_CzBh>Primeiros passos</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/tutorials/from-zero-to-deliverable><span class=linkLabel_CzBh>From zero to a deliverable</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/architecture><span class=categoryLinkLabel_jKch>🏗️ Arquitetura</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/architecture><span class=linkLabel_CzBh>Architecture</span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist" tabindex=0 href=/brabo/dev/zh-Hans/adr><span class=categoryLinkLabel_jKch>Decisões (ADR)</span></a><button aria-label="展开侧边栏分类 'Decisões (ADR)'" aria-expanded=false type=button class="clean-btn menu__caret"></button></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/business-rules><span class=categoryLinkLabel_jKch>📐 Regras</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/business-rules><span class=linkLabel_CzBh>Regras de negócio</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/business-rules/custo><span class=linkLabel_CzBh>Custo e metering</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/business-rules/autenticacao><span class=linkLabel_CzBh>Autenticação</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role=button aria-expanded=true href=/brabo/dev/zh-Hans/reference/configuration><span class=categoryLinkLabel_jKch>📖 Referência</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/configuration><span class=linkLabel_CzBh>Configuration</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/events><span class=linkLabel_CzBh>Events</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/permissions><span class=linkLabel_CzBh>Permissions</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/artifacts><span class=linkLabel_CzBh>Artifacts</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/git-providers><span class=linkLabel_CzBh>Git Providers</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/internal-api><span class=linkLabel_CzBh>Internal API</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/scripts><span class=linkLabel_CzBh>Scripts</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link menu__link--active" aria-current=page tabindex=0 href=/brabo/dev/zh-Hans/reference/rulesets><span class=linkLabel_CzBh>Rulesets</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/brb><span class=linkLabel_CzBh>BRB register</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/security-surface><span class=linkLabel_CzBh>Api's Exposed Surface</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/api><span class=linkLabel_CzBh>Referência da API</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/explanation/documentation-workflow><span class=categoryLinkLabel_jKch>💡 Explicação</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/documentation-workflow><span class=linkLabel_CzBh>Docs sync</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/branching-policy><span class=linkLabel_CzBh>Branching policy</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/cadeia-de-suprimentos-do-ci><span class=linkLabel_CzBh>CI supply chain</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/observability><span class=linkLabel_CzBh>Observability</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/primeiro-dogfooding><span class=linkLabel_CzBh>Primeiro dogfooding</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/execucao-real-hello-world><span class=linkLabel_CzBh>Execução real (hello world)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/achados-execucao-real><span class=linkLabel_CzBh>Achados da execução real da esteira</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/backlog><span class=linkLabel_CzBh>Triaged backlog</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/validacao-fase-12><span class=linkLabel_CzBh>Validação da Fase 12</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/validacao-real><span class=linkLabel_CzBh>Validação real (13b)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/aceite-providers><span class=linkLabel_CzBh>Aceite dos providers</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/gates><span class=linkLabel_CzBh>The gates, and how they're measured</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/auditoria-fluxo-vs-codigo><span class=linkLabel_CzBh>Audit: fluxo.yml × code (v3, ADR 0085)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/historico-de-fases><span class=linkLabel_CzBh>Histórico de fases</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/fase-28-pasta-do-usuario><span class=linkLabel_CzBh>FASE 28 — pasta do usuário</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/fase-29-instalacao-de-uma-linha><span class=linkLabel_CzBh>FASE 29 — instalação de uma linha</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/fase-30-runner-por-maquina><span class=linkLabel_CzBh>FASE 30 — agente local da máquina</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/medicao-do-idioma><span class=linkLabel_CzBh>Measuring the language heuristic</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/medicao-do-jev><span class=linkLabel_CzBh>Measuring the Jev tool router</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/auditoria-visual-rodada-29><span class=linkLabel_CzBh>Visual audit, before and after Rodada 29</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/tanstack-ai><span class=linkLabel_CzBh>TanStack AI — não adotado</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/runbook><span class=categoryLinkLabel_jKch>🛠️ Operação</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/runbook><span class=linkLabel_CzBh>Runbook</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/glossary><span class=categoryLinkLabel_jKch>📚 Vocabulário</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/glossary><span class=linkLabel_CzBh>Glossary</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true><span class=categoryLinkLabel_jKch>🤝 Contribuir</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>Como contribuir</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>Onde pedir ajuda</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>Reportar vulnerabilidade</span><svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></ul></nav></div></div></aside><main class=docMainContainer_ia8v><div class="container padding-top--md padding-bottom--lg"><div class=row><div class="col docItemCol_xjE4"><div class=docItemContainer_cPej><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_sZul" aria-label=页面路径><ul class=breadcrumbs><li class=breadcrumbs__item><a aria-label=主页面 class=breadcrumbs__link href=/brabo/dev/zh-Hans/><svg viewBox="0 0 24 24" class=breadcrumbHomeIcon_AUjL><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill=currentColor /></svg></a><li class=breadcrumbs__item><span class=breadcrumbs__link>📖 Referência</span><li class="breadcrumbs__item breadcrumbs__item--active"><span class=breadcrumbs__link>Rulesets</span></ul></nav><div class="tocCollapsible_nbAK theme-doc-toc-mobile tocMobile_r92C"><button type=button class="clean-btn tocCollapsibleButton_hcyq">本页总览</button></div><div class="theme-doc-markdown markdown"><header><h1>Repository rulesets</h1></header>
+<p>This page is the <strong>versioned source</strong> of the protection. Applying it on
+GitHub is a <strong>manual</strong> step — the repository has no way to protect itself,
+and this asymmetry is intentional: whoever loosens the protection has to be
+a person, with a record.</p>
+<p>The policy that these rules apply is in
+<a class="" href=/brabo/dev/zh-Hans/explanation/branching-policy>Branch policy</a>.</p>
+<blockquote>
+<p><strong>Current state:</strong> <code>gh api repos/daneiel/brabo/rulesets</code> returns <strong>0</strong>.
+Nothing applied yet. Until then, everything here is declared intent, not
+real protection.</p>
+</blockquote>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=prerequisite-the-three-branches-must-exist>Prerequisite: the three branches must exist<a href=#prerequisite-the-three-branches-must-exist class=hash-link aria-label="Prerequisite: the three branches must exist的直接链接" title="Prerequisite: the three branches must exist的直接链接" translate=no>​</a></h2>
+<p>The ladder has three rungs, and a ruleset can't target what doesn't exist.</p>
+<div class="language-bash codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-bash codeBlock_mqej thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_uNqR><div class=token-line style=color:#F8F8F2><span class="token plain">git fetch origin</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">git push origin origin/dev:refs/heads/qa</span><br/></div></code></pre></div></div>
+<p><code>dev</code> and <code>main</code> already exist. <code>qa</code> is born from <code>dev</code> — the ladder starts
+empty and is filled by promotions.</p>
+<blockquote>
+<p>The <code>rc</code> branch was <strong>removed</strong> from the ladder. If it still exists on the
+remote of an old clone, delete it: <code>git push origin --delete rc</code>. A
+permanent branch that isn't in the ladder is an invitation for a PR to
+target a rung that no longer exists.</p>
+</blockquote>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=ruleset-1--the-three-permanent-branches>Ruleset 1 — the three permanent branches<a href=#ruleset-1--the-three-permanent-branches class=hash-link aria-label="Ruleset 1 — the three permanent branches的直接链接" title="Ruleset 1 — the three permanent branches的直接链接" translate=no>​</a></h2>
+<p><strong>Name:</strong> <code>permanentes</code>
+<strong>Enforcement:</strong> <code>Active</code>
+<strong>Target:</strong> Branch → <code>Include by pattern</code>, three entries: <code>dev</code>, <code>qa</code>, <code>main</code></p>
+<blockquote>
+<p>One ruleset for all three, not three rulesets: the requirement is
+identical across all of them. What differs between rungs is <strong>who
+approves</strong>, and that is decided by <code>approval-ladder</code> based on the
+destination, not by the protection.</p>
+</blockquote>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=rules-to-check>Rules to check<a href=#rules-to-check class=hash-link aria-label="Rules to check的直接链接" title="Rules to check的直接链接" translate=no>​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>rule<th>value<th>why<tbody><tr><td><strong>Restrict deletions</strong><td>✅<td>deleting <code>main</code> by accident is irreversible through the interface<tr><td><strong>Block force pushes</strong><td>✅<td>force-pushing to a permanent branch rewrites what has already been promoted; the rung's tag would end up pointing to a nonexistent commit<tr><td><strong>Require a pull request before merging</strong><td>✅<td>this is the central rule: no change gets in without a PR<tr><td>↳ Required approvals<td><strong>0</strong><td>the counting is done by <code>approval-ladder</code>, which knows the mode and the destination. GitHub's native number doesn't distinguish <code>dev</code> from <code>main</code><tr><td>↳ Dismiss stale approvals on push<td>✅<td>approval of an old commit doesn't count — what was approved isn't what's going to be merged<tr><td>↳ Require review from Code Owners<td>✅<td><code>CODEOWNERS</code> sets the owner as reviewer for everything<tr><td><strong>Require status checks to pass</strong><td>✅<td>see the list below<tr><td>↳ Require branches to be up to date<td>❌<td>would force a rebase on every merge into <code>dev</code>; CI already runs on the merge commit<tr><td><strong>Block merge queue</strong><td>—<td>not used</table>
+<p><strong>Required approvals = 0 is not a loosening.</strong> GitHub can only count; it
+doesn't know that <code>main</code> requires PO + manager and <code>dev</code> requires one dev,
+nor that in <code>solo</code> mode the owner's own PR passes without review. Setting
+<code>1</code> here would <strong>break</strong> solo mode: the owner can't approve their own PR
+through the interface, and the PR would stay stuck forever. The real
+requirement lives in <code>approval-ladder</code>, which is a required check — and a
+required check can't be cheated.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=the-two-configurations-side-by-side>The two configurations, side by side<a href=#the-two-configurations-side-by-side class=hash-link aria-label="The two configurations, side by side的直接链接" title="The two configurations, side by side的直接链接" translate=no>​</a></h3>
+<p>The ruleset is the <strong>same</strong> in both modes. What changes is the variable —
+and that's why the migration doesn't go through Settings → Rules.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th><th><code>solo</code> (today)<th><code>community</code> (future)<tbody><tr><td><strong>Required approvals in the ruleset</strong><td><strong>0</strong><td><strong>0</strong><tr><td>who requires it<td>the <code>Escada de aprovação</code> check<td>the same check<tr><td>variables<td><code>APPROVAL_MODE=solo</code>, <code>OWNER_HANDLE</code><td><code>APPROVAL_MODE=community</code>, <code>APROVADORES_*</code><tr><td><code>dev</code><td>1 from the owner<td>1 × devs<tr><td><code>qa</code><td>1 from the owner<td>2 × devs<tr><td><code>main</code><td>1 from the owner<td>1 × PO + 1 × management<tr><td>the owner's own PR<td>passes without review<td>follows the ladder like anyone else's<tr><td>distinct people<td>suspended<td>applies on <code>main</code></table>
+<p><strong>Required approvals stays at 0 in both cases, and that's deliberate.</strong>
+GitHub can only count: it doesn't distinguish <code>dev</code> from <code>main</code>, doesn't
+know about roles, and doesn't know that in solo mode the owner's own PR
+passes without review. Setting <code>1</code> there <strong>would break solo mode</strong> — the
+owner can't approve their own PR through the interface, and every one of
+their PRs would stay stuck forever. The real requirement lives in the
+check, which is required and can't be cheated.</p>
+<p>Copy-paste to activate each mode:</p>
+<div class="language-bash codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-bash codeBlock_mqej thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_uNqR><div class=token-line style=color:#F8F8F2><span class="token plain"># solo — what's in effect today</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">gh variable set APPROVAL_MODE --body solo</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">gh variable set OWNER_HANDLE  --body daneiel</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain" style=display:inline-block></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain"># community — fill in the lists BEFORE flipping the switch</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">gh variable set APROVADORES_DEVS   --body "ana,bruno,carla"</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">gh variable set APROVADORES_PO     --body "paula"</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">gh variable set APROVADORES_GESTAO --body "gustavo"</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">gh variable set APPROVAL_MODE      --body community</span><br/></div></code></pre></div></div>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=required-checks>Required checks<a href=#required-checks class=hash-link aria-label="Required checks的直接链接" title="Required checks的直接链接" translate=no>​</a></h3>
+<p><strong>Exact</strong> name, as GitHub registers it (it's the job's <code>name:</code>, not the
+workflow's):</p>
+<p>The duration column is <strong>measured</strong>, not estimated — three real runs, cold
+and warm cache. It exists so that "optimizing CI" starts from the number,
+not the guess. <code>*</code> marks a row measured from a single real run instead of
+three — the job is new (or just renamed) and hasn't been re-sampled cold vs.
+warm yet; the same number fills both columns until it is.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>check<th>workflow<th>cold<th>warm<tbody><tr><td><code>Build, scan e smoke das imagens de produção</code><td><code>ci.yml</code><td><strong>295s</strong><td>109s<tr><td><code>Testes TS (api)</code><td><code>ci.yml</code><td>177s*<td><strong>177s</strong>*<tr><td><code>Testes TS (web)</code><td><code>ci.yml</code><td>169s*<td><strong>169s</strong>*<tr><td><code>Testes TS (pacotes)</code><td><code>ci.yml</code><td>56s*<td><strong>56s</strong>*<tr><td><code>Testes do engine (ExUnit)</code><td><code>ci.yml</code><td>124s<td>39s<tr><td><code>Auditoria de dependências</code><td><code>ci.yml</code><td>99s<td>85s<tr><td><code>Lint</code><td><code>ci.yml</code><td>66s<td>69s<tr><td><code>Drift, gerados e build</code><td><code>docs-check.yml</code><td>53s<td>51s<tr><td><code>Manifests de Kubernetes</code><td><code>ci.yml</code><td>14s<td>13s<tr><td><code>Gitleaks no repositório</code><td><code>ci.yml</code><td>5s<td>7s<tr><td><code>Política de branches</code><td><code>pr-police.yml</code><td>7s<td>7s<tr><td><code>Escada de aprovação</code><td><code>approval-ladder.yml</code><td>13s<td>15s<tr><td><code>Check de promoção</code><td><code>promotion-check.yml</code><td>9s<td>9s<tr><td><code>Backmerge gate</code><td><code>backmerge-gate.yml</code><td>7s<td>7s</table>
+<p><strong>After AT-303..306 (free changes only, no paid runner).</strong> The names in the
+table above did <strong>not</strong> change — a renamed required check locks every PR —
+and the numbers above are the BEFORE. What changed underneath:</p>
+<ul>
+<li class=""><strong><code>Build, scan e smoke das imagens de produção</code> skips its heavy steps when
+the diff doesn't touch an image</strong> (AT-303). The first step classifies the
+PR's diff with <code>scripts/ci/diff-toca-imagem.ts</code> (an allow-list of what
+never enters an image, the smoke or the E2E: <code>docs/</code> except
+<code>docs/gates.yml</code>, <code>website/</code>, <code>scripts/docs/</code>, <code>deploy/k8s/</code>, <code>.github/</code>
+except <code>ci.yml</code>, root <code>*.md</code> except <code>THIRD_PARTY_NOTICES.md</code>, <code>design/*.md</code>;
+the spec proves the list against the real Dockerfiles, by mutation). Bake,
+Trivy, broker, smoke and E2E carry <code>if:</code> <strong>per step</strong>, and the job always
+finishes — green, saying why in the job summary. Never <code>paths:</code> on the
+trigger nor <code>if:</code> on the job: both would leave the required check pending
+or pasted with a stale verdict. In doubt (empty diff, HEAD that isn't the
+PR's merge commit, <code>git diff</code> failing) it runs everything.</li>
+<li class=""><strong>The same job caches the Playwright browser, the <code>e2e/</code> pnpm store and
+the Trivy database</strong> (AT-304) — see
+<a class="" href=/brabo/dev/zh-Hans/explanation/cadeia-de-suprimentos-do-ci#images-job-caches>what the images job caches</a>.</li>
+<li class=""><strong><code>Testes TS (api)</code> and <code>Testes TS (web)</code> became AGGREGATORS of two shards
+each</strong> (AT-305). The jobs <code>Testes TS (api) — shard N/2</code> and <code>Testes TS (web) — shard N/2</code> run half the files each with coverage but with the floor
+zeroed, and write a vitest <code>blob</code> report; the aggregator — which keeps the
+required name — checks both shards ended <code>success</code>, that both reports
+arrived, and runs <code>vitest --merge-reports --coverage</code>, which applies the
+UNCHANGED <code>coverage.thresholds</code> of <code>vitest.config.ts</code>/<code>vite.config.ts</code> to
+the merged coverage (measured locally: merged coverage identical to the
+single-run one). The aggregator has <code>if: always()</code> on purpose: without
+it a red shard would make it <code>skipped</code>, and <code>skipped</code> counts as green for
+a required check. The shard names are <strong>not</strong> required checks and must
+not be listed in a ruleset. Typecheck runs in shard 1 only.</li>
+<li class=""><strong><code>Testes do engine (ExUnit)</code> and the api shards wait for a new job,
+<code>imagens / Ler as imagens do compose</code></strong> (ADR 0197): it reads the pgvector
+reference from <code>docker/docker-compose.yml</code> and hands it to their
+<code>services:</code>, so no workflow holds an image literal. It is <strong>not</strong> a
+required check and must not be listed in a ruleset — whatever it decides
+shows up in the jobs that need it. Those jobs carry <code>if: ${{ !cancelled() }}</code>
+for the same reason as the aggregators above: if <code>imagens</code> failed, the
+default would SKIP <code>Testes do engine (ExUnit)</code>, and <code>skipped</code> counts as green
+for a required check; with it the job runs, gets an empty image and fails.</li>
+<li class=""><code>claude-code-review.yml</code> got <code>concurrency</code> (cancel-in-progress, per PR) and
+<code>timeout-minutes: 30</code>; <code>docs-check.yml</code> got <code>timeout-minutes</code> on both jobs
+(AT-306).</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>check<th>before, cold<th>before, warm<th>after, cold<th>after, warm<th>after, docs-only PR<tbody><tr><td><code>Build, scan e smoke das imagens de produção</code><td>295s<td>109s<td>TODO(humano)<td>TODO(humano)<td>TODO(humano)<tr><td><code>Testes TS (api)</code> (shards + aggregator, wall clock)<td>177s<td>177s<td>TODO(humano)<td>TODO(humano)<td>—<tr><td><code>Testes TS (web)</code> (shards + aggregator, wall clock)<td>169s<td>169s<td>TODO(humano)<td>TODO(humano)<td>—</table>
+<blockquote>
+<p><strong>TODO(humano):</strong> fill the "after" columns from this PR's own runs (cold:
+the first push; warm: a re-run of the same commit; docs-only: a PR that
+only touches <code>docs/</code>), and then move the numbers into the main table.</p>
+</blockquote>
+<p><strong>Consequence for the <code>edited</code> criterion below:</strong> the images job now
+depends on the BASE too (the diff is taken against it), while <code>ci.yml</code> still
+doesn't re-run on <code>edited</code>. The only unsafe direction is a PR that skipped
+its images against one base and is then retargeted to a base where its diff
+would touch an image — rare, since promotions run from permanent-branch
+heads (whose diff always touches something) and retargets usually shrink the
+diff. The next push re-classifies.</p>
+<p><strong><code>ci.yml</code> is parallel except for the two aggregators</strong> — <code>test-api</code> and
+<code>test-web</code> <code>need</code> their shards, nothing else has <code>needs:</code>.
+The full PR verdict costs the SLOWEST chain, not the sum (which is ~12min of
+CPU). Before AT-303..305, anyone wanting to shorten the PR had two targets,
+and only two:</p>
+<ul>
+<li class="">
+<p><strong>cold cache: the images job</strong>, where 195s of the 295s are the
+<code>docker buildx bake</code> — the single largest item in all of CI, 3× the
+second. The bakefile already builds all four in parallel with <code>type=gha</code>
+cache per image, and the comment at its top measures why breaking it
+into a job matrix would be WORSE: 1.7 GB of images per artifact costs
+more than the build, and the smoke test needs all four on the same
+daemon;</p>
+</li>
+<li class="">
+<p><strong>the old <code>Testes TS (api + web)</code> job</strong>, where 91s of the 159s were
+<code>pnpm --filter api test</code>, serialized by <code>fileParallelism: false</code> in
+<code>apps/api/vitest.config.ts</code> because the ~80 specs that touch the database
+shared ONE <code>brabo_test</code> and ran TRUNCATE between tests — arrivals in
+parallel would collide. That's fixed
+(<code>perf/banco-por-worker-nos-testes-da-api</code>, CHANGELOG): each Vitest worker
+gets its OWN database instead — <code>test/support/global-setup.ts</code> migrates a
+TEMPLATE once and clones one database per worker via
+<code>CREATE DATABASE ... TEMPLATE</code> (cheap, a page copy, not a migration
+replay), <code>test/support/test-db-name.ts</code> resolves which one a given spec
+connects to from <code>VITEST_POOL_ID</code>, and <code>vitest.config.ts</code> flips
+<code>fileParallelism: true</code> with <code>maxWorkers: 4</code> (fixed at the runner's 4
+vCPU, not auto-detected — the number has to be the SAME on a dev machine
+with more cores and on the runner, or the locally measured behavior isn't
+what runs there). Measured locally: the api suite's own duration dropped
+from 792.58s to 471.23s on a clean run (~40%, three repeats with no
+flakiness). Re-sampled on the actual GitHub-hosted runner (PR #491,
+<code>ci.yml</code>): the <code>pnpm --filter api test</code> step itself dropped to <strong>96s</strong> —
+right at the <code>91s</code> warm-cache floor this table used to cite as the
+theoretical best case, not a lucky outlier.</p>
+<p>That fix changed the shape of the job it ran inside, and that's what made
+the SECOND cut possible. <code>apps/web</code>'s own test step had grown to 125s in
+the same run that measured the job's <code>343s</code> total (PR #494, job
+<code>101317149006</code>) — no longer the small tail the callout below used to
+describe, but a peer of the api's. <code>perf/paraleliza-testes-ts</code> (CHANGELOG)
+split the job into three parallel ones — <code>test-api</code> (keeps the <code>postgres</code>
+service and the <code>DATABASE_URL</code>/<code>TEST_DATABASE_URL</code> env, since it's the
+only one that touches the database), <code>test-web</code>, and <code>test-packages</code>
+(scripts de CI, porta de Docker, broker, runner — the six components that
+never needed Postgres) — each with its own <code>checkout</code> + <code>setup-node</code> +
+<code>pnpm install</code>. Measured on the actual GitHub-hosted runner (PR #495,
+<code>ci.yml</code>): <strong>177s</strong> (<code>test-api</code>), <strong>169s</strong> (<code>test-web</code>), <strong>56s</strong>
+(<code>test-packages</code>), against <strong>343s</strong> for the job they replaced — the check
+that used to gate the PR is now the SLOWEST of the three, not their sum, a
+real <strong>~48%</strong> cut.</p>
+<p><code>test-web</code> and <code>test-packages</code> were stable across every run of this PR
+(164–169s and 55–56s). <code>test-api</code> was not: a second push measured it at
+<strong>388s</strong> — worse than the old job's 343s total — with every step still
+green, then a bare re-run of the SAME commit measured <strong>172s</strong>. Three real
+samples of <code>test-api</code> on this PR: 177s, 388s, 172s. Two out of three land
+where <code>test-web</code> and <code>test-packages</code> do (comfortably inside the ~4min
+target); the 388s run is consistent with shared-runner contention on
+GitHub's side rather than a regression from the split — nothing in the
+job changed between that run and the retry that measured 172s. Recorded
+as observed, not smoothed away: whoever chases the next slow <code>test-api</code>
+run should know this variance already existed the day the job was split,
+and check for contention before assuming a new regression.</p>
+</li>
+</ul>
+<blockquote>
+<p><strong>The "two costs" warning that used to live here doesn't apply anymore —
+both premises changed.</strong> It used to say splitting <code>Testes TS (api + web)</code>
+would (1) erase a required check by renaming it, locking every PR forever
+unless a fan-in job or a Settings change preserved the name, and (2) not
+pay off, because the api's 91s would carry the setup regardless of how
+many jobs it's split into, for a ~7s net gain.</p>
+<p>Premise 2 stopped being true once the web suite grew to cost as much as
+the api's — splitting three comparably-sized components, not one big one
+plus small tails, is what turns "≈150s vs 159s" into "177s vs 343s".
+Premise 1 stopped applying for an orthogonal reason: <strong>no ruleset is
+applied to this repository yet</strong> — <code>gh api repos/daneiel/brabo/branches/dev/protection</code> still returns <code>404</code>, same as
+the "Current state" note at the top of this page — so there was no
+required check to erase. The required-checks table above already reflects
+the rename. <strong>If a ruleset is ever applied</strong>, list <code>Testes TS (api)</code>,
+<code>Testes TS (web)</code> and <code>Testes TS (pacotes)</code> — never the retired <code>Testes TS (api + web)</code> name, which would silently match nothing and lock every
+future PR, exactly as the general warning further below describes.</p>
+</blockquote>
+<blockquote>
+<p><strong>The check's name is smaller than what it guards.</strong> <code>Drift, gerados e build</code> is three things in the title and <strong>five</strong> gates in the job:
+<code>.docmap.yml</code> integrity, generated files up to date, drift, site build,
+and — ever since the API reference shipped broken in two releases — <strong>the
+API reference renders</strong> (<code>scripts/docs/api-render-check.mjs</code>).</p>
+<p>That last one exists because a green build isn't a page that renders: the
+MDX compiles, the SSR writes the content, <code>docs:build</code> passes, and the
+page dies at hydration in the browser. The whole mechanism is in
+<code>docs/explanation/documentation-workflow.md</code>. When adding a gate to this
+job, the check's name <strong>doesn't</strong> change — and that's why it doesn't need
+to be re-entered into the table above, but it needs to be written down
+somewhere. Here it is.</p>
+</blockquote>
+<blockquote>
+<p><strong><code>pull_request_target</code> requires the workflow to be on the DEFAULT
+branch.</strong> Being on the PR's base branch isn't enough. This was measured,
+not assumed: with <code>pull_request_target</code>, <code>pr-police</code> had <strong>zero runs</strong>,
+while <code>approval-ladder</code> and <code>docs-check</code> — which use <code>pull_request</code> — ran
+normally from the same commit. Since the default is <code>main</code> and it only
+advances through the ladder that the check itself guards, the trigger
+would be a chicken-and-egg problem. Both use <code>pull_request</code>.</p>
+</blockquote>
+<blockquote>
+<p><strong>Where GitHub reads each workflow from — three families, three
+answers.</strong> This cost three separate discoveries during this phase, and
+it isn't obvious anywhere:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>trigger<th>reads the workflow from<th>consequence here<tbody><tr><td><code>pull_request</code>, <code>push</code><td>the <strong>event's branch</strong><td>works from the first PR<tr><td><code>pull_request_target</code><td>the <strong>default branch</strong><td>wasn't running: <code>main</code> is behind<tr><td><code>workflow_dispatch</code><td>the <strong>default branch</strong><td>doesn't even appear in the workflow list</table>
+<p>The last two create a chicken-and-egg problem when the default branch is
+out of date: the workflow that makes the pipeline move needs to already
+be on <code>main</code> to be triggerable. The workaround was running the <code>promote</code>
+script by hand on the first promotion — the same script, just the manual
+trigger. Once <code>main</code> receives the workflows, the dispatch works forever.</p>
+</blockquote>
+<blockquote>
+<p><strong>A required check that never runs locks the PR forever.</strong> That's why
+<code>ci.yml</code>'s trigger covers all three permanent branches — before FASE 6 it
+only fired on PRs targeting <code>dev</code>, and requiring these checks on a
+<code>dev→qa</code> promotion would produce an eternally pending PR. The <code>push</code>
+trigger was removed: with <code>pull_request</code> covering everything, it only
+duplicated runs. When adding a new job to CI, either it enters this
+list, or it's left out on purpose and someone writes down why.</p>
+</blockquote>
+<blockquote>
+<p><strong>And a required check that doesn't RE-run pastes on a stale verdict.</strong>
+This is the other side of the lesson above, and it cost a PR a mistaken
+failure.</p>
+<p><code>pull_request</code>'s defaults are <code>opened</code>, <code>reopened</code>, and <code>synchronize</code> —
+none of those cover <strong>changing the base</strong>. And changing the base is
+routine: GitHub opens the PR against the default branch, the author then
+corrects it to <code>dev</code>. On PR #71, <code>Drift, gerados e build</code> ran in the
+first half-dozen seconds, against <code>origin/main...HEAD</code>, and failed on
+seven files that had already been reviewed and merged in #70. The
+retarget didn't re-run it; the red stayed.</p>
+<p>The criterion for knowing who needs <code>edited</code> is <strong>what the check depends
+on</strong>:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>the check depends on…<th>needs <code>edited</code>?<th>who<tbody><tr><td>only the HEAD<td>no<td><code>ci.yml</code> — tests the commit, and the base doesn't change the result (except the images job's skip decision since AT-303 — see "Consequence for the <code>edited</code> criterion" above)<tr><td>the BASE, or the PR's BODY<td><strong>yes</strong><td><code>pr-police</code>, <code>approval-ladder</code>, <code>promotion-check</code>, <code>backmerge-gate</code>, <code>docs-check</code></table>
+<p>In <code>docs-check</code> it's both: the drift compares a range that starts at the
+base, and reads the body past the <code>docs-not-needed:</code> line. Without
+<code>edited</code>, the escape hatch documented just below was unreachable —
+writing the justification in the body didn't reevaluate anything, and
+only a fake commit would unlock the PR.</p>
+</blockquote>
+<p><strong><code>claude-review</code> is deliberately left out of this list</strong>, and this is the
+"someone writes down why": LLM review is opinionated and costs tokens, so
+it informs the PR without being able to block it. Since it isn't required,
+the job can be skipped without leaving the PR pending — and it is skipped
+on every PR opened by a <strong>bot</strong>. The action refuses to run with a non-human
+actor (<em>"Workflow initiated by non-human actor: &lt;name> (type: Bot)"</em>), so
+without that <code>if</code> the check fails every time. That happened twice: on PRs
+#64 and #65 of the <code>v0.3.1</code> cycle (promotion, opened by
+<code>github-actions[bot]</code>) and again on PR #526 (Dependabot).</p>
+<p>The second time was a consequence of <strong>how</strong> the condition was written. It
+enumerated one login — <code>github-actions[bot]</code> — which is right until the set
+changes, and wrong silently the day a new bot shows up; <code>dependabot.yml</code>
+landed on PR #520 and the next Dependabot PR reproduced the failure whose
+lesson was already written down. The condition now tests the author's
+<code>type</code>, mirroring <code>ehAutorBot</code> (<code>scripts/ci/pr-police.ts</code>), with the
+<code>[bot]</code> login suffix as a backstop — GitHub does not allow <code>[</code> in a human
+login, so it cannot be forged.</p>
+<p>For promotion PRs there is a second, independent reason: it would be the
+same diff reviewed again, since the promotion only carries commits already
+reviewed in the PR to <code>dev</code>. And for Dependabot there is a third, which
+closes the door on its own — its PRs run with the <strong>Dependabot secret
+store</strong>, separate from the Actions one, so <code>CLAUDE_CODE_OAUTH_TOKEN</code>
+arrives empty. Even allowing the actor, the review would have no
+credential, and a check that fails for a missing secret is worse than a
+skipped one: it reads as a code defect.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=what-a-pr-between-permanent-branches-cant-satisfy>What a PR between permanent branches can't satisfy<a href=#what-a-pr-between-permanent-branches-cant-satisfy class=hash-link aria-label="What a PR between permanent branches can't satisfy的直接链接" title="What a PR between permanent branches can't satisfy的直接链接" translate=no>​</a></h3>
+<p><code>Drift, gerados e build</code> <strong>is</strong> required, so it runs on every PR — but the
+<strong>drift</strong> step declares itself inapplicable when the head is a permanent
+branch of the repository itself (promotion <code>dev→qa</code>, <code>qa→main</code>; back-merge
+<code>main→qa</code>, <code>qa→dev</code>). The job's other steps — docmap, generated files, and
+site build — keep running: they only depend on the HEAD, and apply at any
+rung.</p>
+<p>The reason is the same as <code>claude-review</code>'s, with one aggravating factor.
+Redundancy, first: a PR between permanent branches has no <strong>authorship</strong>,
+it packages commits whose drift was already charged in the PR to <code>dev</code>,
+file by file. Charging again means charging the same debt at every rung.
+But, unlike LLM review, here the requirement was <strong>unsatisfiable</strong> — and
+it's what failed #72, the promotion for the <code>v1.0.1</code> cycle, over
+<code>docker/**</code> files that came from #70:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>the apparent way out<th>why it doesn't exist<tbody><tr><td>updating the doc in the promotion PR<td><code>promotion-check</code> requires a <strong>clean range</strong> — the head has to be the tip of the source. Committing there fails the other required check<tr><td>repeating the original PR's <code>docs-not-needed:</code><td>the promotion PR's body is generated by <code>promote</code>; #70's justification doesn't carry across the rung<tr><td>putting the label on every promotion<td>that's teaching people to use the escape hatch by reflex, until it stops meaning anything — the opposite of what <code>.docmap.yml</code> asks for</table>
+<p>The filter lives <strong>inside</strong> the step, not in an <code>if:</code> on the job,
+following the same principle <code>promotion-check</code> records: a required check
+indexed by sha that doesn't run leaves the PR pending forever. The step
+runs, decides it doesn't apply, and writes that in the summary — instead
+of disappearing.</p>
+<blockquote>
+<p><strong>A head called <code>main</code> coming from a fork is not a promotion.</strong> It's a
+third party's working branch, and it goes through the drift check like
+any other. That's why the condition matches the name <strong>and</strong> requires
+the same repository — the same caveat <code>pr-police</code> applies when
+classifying the PR's family.</p>
+</blockquote>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=bypass>Bypass<a href=#bypass class=hash-link aria-label=Bypass的直接链接 title=Bypass的直接链接 translate=no>​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>who<th>mode<th>for what<tbody><tr><td>the <code>BRABO_BOT_TOKEN</code> actor<td><code>Always</code><td>writing <code>.release/gate.json</code> on <code>main</code></table>
+<p><strong>No person has bypass</strong> — not even the owner. This one belongs to the
+bot, and it exists for a reason with no workaround: the gate locks the
+branches, and a PR to open the lock would be blocked by the gate itself.
+The commit stays in <code>git log</code>, with date and content, and <code>tag-release</code>
+recognizes it by what it touches (<code>.release/</code> and nothing else), not by
+who it claims to be.</p>
+<blockquote>
+<p><strong>Warning about the bypass's reach.</strong> GitHub rulesets grant bypass to
+the <strong>actor</strong>, not to a path: whoever can write <code>.release/gate.json</code> on
+<code>main</code> can, technically, write anything. There's no way to restrict by
+path in the interface. What actually limits it is the workflow — it
+only writes that one file — and the history, where any other direct
+commit stands out immediately. Recorded for what it is: a limitation of
+the tool, not a decision.</p>
+</blockquote>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=the-brabo_bot_token-secret>The <code>BRABO_BOT_TOKEN</code> secret<a href=#the-brabo_bot_token-secret class=hash-link aria-label=the-brabo_bot_token-secret的直接链接 title=the-brabo_bot_token-secret的直接链接 translate=no>​</a></h3>
+<p>Classic PAT with <code>repo</code> + <code>workflow</code> scopes, in <strong>Settings → Secrets and
+variables → Actions</strong>:</p>
+<div class="language-bash codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-bash codeBlock_mqej thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_uNqR><div class=token-line style=color:#F8F8F2><span class="token plain">gh secret set BRABO_BOT_TOKEN --body '&lt;token>'</span><br/></div></code></pre></div></div>
+<p>It isn't a convenience. Two things depend on it, and both fail silently
+without it:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>what<th>why<tbody><tr><td>the tag triggering <code>Release</code><td><strong>a tag created with <code>GITHUB_TOKEN</code> doesn't trigger a workflow</strong><tr><td>back-merge PRs being born with checks<td><strong>a PR opened with <code>GITHUB_TOKEN</code> doesn't trigger a workflow</strong></table>
+<p>It's GitHub's rule against recursion, and it already took its toll: the
+<code>v0.2.0</code> Release never published because of it. The second case is worse
+— a back-merge PR without a check would never go green, and the chain
+would lock up forever. That's why the gate job <strong>fails loudly</strong> when the
+secret doesn't exist, instead of proceeding and leaving the repository in
+a dead end.</p>
+<p>The <code>workflow</code> scope isn't overkill: back-merge PRs carry the entire
+branch, and it may contain a change to <code>.github/workflows/**</code>. Without
+that scope the push is rejected in exactly the case that matters most —
+propagating a CI fix.</p>
+<blockquote>
+<p><strong>Current state: configured and exercised.</strong> On <code>v1.1.1</code> the pipeline
+closed on its own for the first time — <code>tag-release</code> skipped the warning
+step, pushed the tag with the PAT, and that <strong>triggered</strong> <code>release.yml</code>,
+which published the Release. A tag pushed with <code>GITHUB_TOKEN</code> wouldn't
+trigger it; that trigger is proof the token is valid and has push scope.</p>
+<p><strong>Six tags remain orphaned</strong> — <code>v0.2.0</code>, <code>v0.3.0</code>, <code>v0.3.1</code>, <code>v1.0.0</code>,
+<code>v1.0.1</code>, and <code>v1.1.0</code> — from the period when the secret didn't exist.
+The PAT doesn't recover them: it only applies to new tags. For those,
+the procedure is below.</p>
+</blockquote>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=republishing-a-tag-that-was-orphaned>Republishing a tag that was orphaned<a href=#republishing-a-tag-that-was-orphaned class=hash-link aria-label="Republishing a tag that was orphaned的直接链接" title="Republishing a tag that was orphaned的直接链接" translate=no>​</a></h3>
+<p><code>release.yml</code> has <code>workflow_dispatch</code> with a tag input, and it exists
+because of the six above. Only the <code>push: tags</code> trigger would make the
+failure <strong>irreversible</strong>: republishing would require deleting and
+recreating the tag, that is, rewriting the record to fix its effect.</p>
+<div class="language-bash codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-bash codeBlock_mqej thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_uNqR><div class=token-line style=color:#F8F8F2><span class="token plain">gh workflow run release.yml -f tag=v1.1.0</span><br/></div></code></pre></div></div>
+<p>Three guards, and each exists because of a concrete failure mode:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>guard<th>against what<tbody><tr><td>only <code>OWNER_HANDLE</code> can trigger it (<code>solo</code> mode)<td>same restriction as <code>promote</code>; the push trigger doesn't go through here, because there what authorized it was the tag<tr><td>the input has to match <code>^v[0-9]+\.[0-9]+\.[0-9]+$</code><td><code>workflow_dispatch</code> accepts free text. Without this, <code>-qa.1</code> would publish a Release of something nobody validated as final<tr><td>refuses if the Release already exists<td>a published note is a record; overwriting silently would erase what someone already read or linked to</table>
+<p>And the <code>checkout</code> is done <strong>on the tag</strong>, not on the event's ref. In a
+dispatch, <code>github.ref_name</code> is the default branch — without this care,
+republishing would generate a Release called <code>main</code>, with <code>main</code>'s
+changelog, with no error at all.</p>
+<blockquote>
+<p><strong>The dispatch only works after this reaches <code>main</code>.</strong> It's the
+chicken-and-egg problem from the trigger table above: <code>workflow_dispatch</code>
+reads the workflow from the <strong>default</strong> branch. While the change is only
+on <code>dev</code>, the input doesn't even show up.</p>
+</blockquote>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=ruleset-2--version-tags>Ruleset 2 — version tags<a href=#ruleset-2--version-tags class=hash-link aria-label="Ruleset 2 — version tags的直接链接" title="Ruleset 2 — version tags的直接链接" translate=no>​</a></h2>
+<p><strong>Name:</strong> <code>tags-de-release</code>
+<strong>Enforcement:</strong> <code>Active</code>
+<strong>Target:</strong> Tag → <code>Include by pattern</code> → <code>v*</code></p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>rule<th>value<tbody><tr><td><strong>Restrict creations</strong><td>✅<tr><td><strong>Restrict updates</strong><td>✅<tr><td><strong>Restrict deletions</strong><td>✅</table>
+<p>The <code>v*</code> pattern covers the three forms the pipeline creates: <code>-dev.N</code>,
+<code>-qa.N</code>, and the final one. Only <code>tag-release</code> can create them.</p>
+<blockquote>
+<p><strong>What a final tag runs, and why none of it is a required check.</strong>
+Pushing <code>vX.Y.Z</code> fires <code>release.yml</code>, <code>build-runner-binaries.yml</code> and
+<code>publish-runner.yml</code> in parallel. Their jobs never appear in the
+required-checks table above, and that is structural rather than an
+omission: required checks gate a <strong>pull request</strong>, and by the time a
+tag exists the PR has already merged. What gates the tag is the
+ruleset — only <code>tag-release</code> creates it, and only after the pipeline
+it runs at the end of.</p>
+<p>A final tag also fires <code>install-e2e.yml</code>, which exercises the published
+<code>install.sh</code> on a <strong>clean machine</strong> — which is what an ephemeral Actions
+runner is. Since <a class="" href=/brabo/dev/zh-Hans/business-rules#rn-549>RN-549</a> it goes all the way to
+the end: the five links that close the installation, the local agent standing
+up and waiting, and the first <code>runner</code> project being picked up. It does not
+run on <code>pull_request</code>, and the reason is the same one that keeps signing out
+of PRs: the signed manifest only exists after a final tag, and making the
+script run there would mean giving it a door to skip verification
+(<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-534>RN-534</a>). The consequence is stated rather than
+hidden — <strong>the PR that writes a change to this workflow does not run it</strong> —
+and what does run on every PR is <code>scripts/dev/install-e2e.spec.ts</code>, which
+fails if the trigger gains <code>pull_request</code> or if a phrase the workflow greps
+for stops existing in <code>install.sh</code>.</p>
+<p>Since <a class="" href=/brabo/dev/zh-Hans/adr/0149-assinatura-dos-artefatos-publicados>ADR 0149</a>,
+<code>build-runner-binaries.yml</code> has <strong>two</strong> jobs rather than one: the
+<code>build</code> matrix (four targets, <code>fail-fast: false</code>) and a <code>checksums</code>
+job. Since <a class="" href=/brabo/dev/zh-Hans/business-rules#rn-565>RN-565</a> the second one has no
+<code>needs:</code> on the matrix — it waits, with a ceiling, for the Release
+<strong>assets</strong> rather than the slowest job — so a target that failed to build,
+or never got a runner, does not deny the others a signed manifest. It
+names in the log which targets the manifest does <strong>not</strong> cover, because a
+<code>checksums.txt</code> that lists three and stays quiet about the fourth is worse
+than none: whoever verifies the three concludes they verified the release.</p>
+<p>The <code>darwin-x64</code> target (Intel Mac) <strong>left the matrix</strong> in
+<a class="" href=/brabo/dev/zh-Hans/adr/0174-runner-sem-binario-darwin-x64>ADR 0174</a>, and the cause is
+measured (AT-065, 2026-09-13): its <code>macos-13</code> label pointed at an image
+GitHub retired in December 2025, and the Intel replacement,
+<code>macos-15-intel</code>, is scheduled within seconds and builds, but fails
+<code>--self-test-pty</code> under Bun (the <code>node-pty</code> <code>onData</code> never fires —
+oven-sh/bun#25822, open). The same proof passes under Node, so an Intel Mac
+installs the runner with <code>npm install -g @brabo/runner</code>. A workflow run with an empty
+<code>tag</code> input is a dry run: it builds and smoke-tests without attaching
+anything, which is how that was measured without cutting a tag.</p>
+</blockquote>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=bypass-1>Bypass<a href=#bypass-1 class=hash-link aria-label=Bypass的直接链接 title=Bypass的直接链接 translate=no>​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>who<th>mode<tbody><tr><td>the app/bot that runs the release workflow<td><code>Always</code></table>
+<p>This is the push exception that the policy allows for: <strong>a version is
+born from a workflow, never by hand</strong>. A manually created tag doesn't go
+through the verification that the final tag points to the same commit as
+the last <code>-qa.N</code>, and it's exactly that verification that prevents
+publishing something different from what was validated.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=how-to-apply>How to apply<a href=#how-to-apply class=hash-link aria-label="How to apply的直接链接" title="How to apply的直接链接" translate=no>​</a></h2>
+<p>Interface: <strong>Settings → Rules → Rulesets → New ruleset</strong>.</p>
+<p>Via API, if you'd rather version the command:</p>
+<div class="language-bash codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-bash codeBlock_mqej thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_uNqR><div class=token-line style=color:#F8F8F2><span class="token plain">gh api -X POST repos/daneiel/brabo/rulesets --input ruleset-permanentes.json</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">gh api repos/daneiel/brabo/rulesets --jq '.[] | "\(.name): \(.enforcement)"'</span><br/></div></code></pre></div></div>
+<blockquote>
+<p><strong>TODO(human):</strong> the two payload <code>.json</code> files aren't versioned here
+because the rulesets API requires <code>repository_id</code> and app ids that vary
+by installation — a fixed file would get copied wrong. If you want to
+version them, generate with
+<code>gh api repos/daneiel/brabo/rulesets/&lt;id> > docs/reference/...</code> after
+applying through the interface, and this document will then point to
+them.</p>
+</blockquote>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=settings--pages-the-source-is-the-gh-pages-branch>Settings → Pages: the source is the <code>gh-pages</code> branch<a href=#settings--pages-the-source-is-the-gh-pages-branch class=hash-link aria-label=settings--pages-the-source-is-the-gh-pages-branch的直接链接 title=settings--pages-the-source-is-the-gh-pages-branch的直接链接 translate=no>​</a></h2>
+<p><strong>Manual</strong> application, for the same reason as the rulesets: the
+repository versions the source, GitHub receives the application.</p>
+<p><strong>Settings → Pages → Build and deployment → Source:
+<code>Deploy from a branch</code></strong>, with branch <strong><code>gh-pages</code></strong> and folder
+<strong><code>/ (root)</code></strong>.</p>
+<p><strong>Already applied.</strong> <code>gh api repos/daneiel/brabo/pages</code> returns
+<code>"build_type": "legacy"</code> with <code>source.branch: "gh-pages"</code>, and all three
+rungs respond live.</p>
+<p>The intermediate step is worth recording, because it's confusing: while
+<code>build_type</code> was <code>"workflow"</code>, <code>docs-deploy.yml</code> committed to <code>gh-pages</code>
+<strong>and Pages served nothing from there</strong> — the publication stayed in the
+repository without going live, with the old site still responding from
+<code>actions/deploy-pages</code>'s last artifact. Nothing in CI goes red in that
+state.</p>
+<p>Why the switch is mandatory and not a preference: <code>actions/deploy-pages</code>
+publishes <strong>one artifact as the entire site</strong> and doesn't know how to
+update part of a tree, which is incompatible with one subdirectory per
+rung. The full design, the discarded alternatives, and the push exception
+this opens are in
+<a class="" href=/brabo/dev/zh-Hans/adr/0034-documentacao-publicada-por-degrau>ADR 0034</a>.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>branch<th>URL<th>indexed<tbody><tr><td>— (index of all three)<td><code>https://daneiel.github.io/brabo/</code><td>❌ <code>noindex, follow</code><tr><td><code>main</code><td><code>https://daneiel.github.io/brabo/prd/</code><td>✅<tr><td><code>qa</code><td><code>https://daneiel.github.io/brabo/qa/</code><td>❌ <code>noIndex</code><tr><td><code>dev</code><td><code>https://daneiel.github.io/brabo/dev/</code><td>❌ <code>noIndex</code></table>
+<p>The three became symmetric in
+<a class="" href=/brabo/dev/zh-Hans/adr/0071-publicacao-simetrica-por-degrau>ADR 0071</a>, which also
+explains the generated root and the <code>404.html</code> that forwards old links to
+the stable rung. <a class="" href=/brabo/dev/zh-Hans/adr/0073-o-caminho-publicado-nomeia-o-ambiente>ADR 0073</a>
+separated the PATH from the BRANCH: <code>main</code> publishes at <code>/prd/</code>, because
+the address names the environment for the reader. <code>404.html</code> started
+rewriting <code>/brabo/main/&lt;something></code> to <code>/brabo/prd/&lt;something></code> — the old
+directory leaves the tree, and <code>keep_files: false</code> removes it.</p>
+<p><strong>The Pages configuration doesn't change with either of these</strong> — the
+source remains the <code>gh-pages</code> branch in the <code>/ (root)</code> folder; what
+changed is the content the workflow assembles before pushing. And <code>prd</code>
+<strong>is not</strong> a branch: it's in no ruleset, it doesn't exist in <code>git</code>, and
+it's just the name of a directory in <code>gh-pages</code>.</p>
+<blockquote>
+<p><strong><code>gh-pages</code> does NOT enter the permanent-branches ruleset.</strong> It isn't
+permanent, and the bot needs to push to it — including it would lock up
+the publication itself. That's also why <code>GITHUB_TOKEN</code> is enough there,
+with no bypass and no <code>BRABO_BOT_TOKEN</code>.</p>
+</blockquote>
+<blockquote>
+<p><strong>And it's excluded from Gitleaks' scope, for a reason that only
+surfaced later.</strong> <code>gitleaks detect</code> scans <strong>every reachable commit</strong>,
+not just the HEAD history — and <code>fetch-depth: 0</code> brings in all refs. As
+soon as <code>gh-pages</code> was born, the built site entered the scan: <strong>112
+<code>generic-api-key</code> findings</strong> in a single commit, all in
+<code>dev/assets/js/*.js</code>, which are avatar filenames inside a minified
+bundle with entropy too high for the rule. It failed the promotion PR
+<strong>#78</strong>, the first one scanned after its debut.</p>
+<p><code>ci.yml</code> now deletes <code>refs/remotes/origin/gh-pages</code> before scanning.
+<strong>Not</strong> via a path allowlist in <code>.gitleaks.toml</code>: that would apply to
+every commit, and a <code>dev/</code> that one day showed up in the source code
+would silently go unscanned. Excluding the ref excludes exactly the
+commits that aren't source.</p>
+<p>Measured with gitleaks 8.30.1, CI's version: 133 commits and 112
+findings before, 132 and none after — and a GitHub PAT with real entropy
+planted in <code>apps/api/src/</code> is still detected, which is proof it didn't
+open a hole.</p>
+</blockquote>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=the-family-labels-need-to-exist>The family labels need to exist<a href=#the-family-labels-need-to-exist class=hash-link aria-label="The family labels need to exist的直接链接" title="The family labels need to exist的直接链接" translate=no>​</a></h2>
+<p><code>pr-police</code> applies one of the four labels, and <code>gh pr edit --add-label</code>
+<strong>fails</strong> if the label doesn't exist — which would leave the PR silently
+unclassified.</p>
+<div class="language-bash codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-bash codeBlock_mqej thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_uNqR><div class=token-line style=color:#F8F8F2><span class="token plain">gh label create trabalho        --color 0E8A16 --description "Work PR: taxonomy prefix for dev"</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">gh label create promocao        --color 1D76DB --description "Promotion between adjacent rungs, going up"</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">gh label create retropropagacao --color 5319E7 --description "Back-propagation between adjacent rungs, going down"</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">gh label create correcao-alta   --color D93F0B --description "hotfix: a fix that's born high on the ladder"</span><br/></div></code></pre></div></div>
+<p>No <code>|| true</code> on purpose: if the command fails, you need to see it.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=verify-its-standing>Verify it's standing<a href=#verify-its-standing class=hash-link aria-label="Verify it's standing的直接链接" title="Verify it's standing的直接链接" translate=no>​</a></h2>
+<div class="language-bash codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:#F8F8F2;--prism-background-color:#282A36><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-bash codeBlock_mqej thin-scrollbar" style=color:#F8F8F2;background-color:#282A36><code class=codeBlockLines_uNqR><div class=token-line style=color:#F8F8F2><span class="token plain"># do the rulesets exist and are they active?</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">gh api repos/daneiel/brabo/rulesets --jq '.[] | "\(.name): \(.enforcement)"'</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain" style=display:inline-block></span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain"># does the protection respond? (should be REJECTED)</span><br/></div><div class=token-line style=color:#F8F8F2><span class="token plain">git push origin HEAD:dev</span><br/></div></code></pre></div></div>
+<p>The second command is the test that matters. A ruleset configured but not
+verified is indistinguishable from a ruleset that's absent — and the
+difference only shows up on the day someone pushes directly to <code>main</code>.</div><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_yZb9"><a href=https://github.com/daneiel/brabo/blob/dev/docs/reference/rulesets.md target=_blank rel="noopener noreferrer" class=theme-edit-this-page><svg fill=currentColor height=20 width=20 viewBox="0 0 40 40" class=iconEdit_ANja aria-hidden=true><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"/></g></svg>编辑此页</a></div><div class="col lastUpdated_Kb4y"><span class=theme-last-updated>最后<!-- -->由 <b>Claude</b> <!-- -->于 <b><time datetime=2026-10-01T01:22:39.000Z itemprop=dateModified>2026年10月1日</time></b> <!-- -->更新</span></div></div></footer></article><nav class="docusaurus-mt-lg pagination-nav" aria-label=文件选项卡><a class="pagination-nav__link pagination-nav__link--prev" href=/brabo/dev/zh-Hans/reference/scripts><div class=pagination-nav__sublabel>上一页</div><div class=pagination-nav__label>Scripts</div></a><a class="pagination-nav__link pagination-nav__link--next" href=/brabo/dev/zh-Hans/reference/brb><div class=pagination-nav__sublabel>下一页</div><div class=pagination-nav__label>BRB register</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_wOiH thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href=#prerequisite-the-three-branches-must-exist class="table-of-contents__link toc-highlight">Prerequisite: the three branches must exist</a><li><a href=#ruleset-1--the-three-permanent-branches class="table-of-contents__link toc-highlight">Ruleset 1 — the three permanent branches</a><ul><li><a href=#rules-to-check class="table-of-contents__link toc-highlight">Rules to check</a><li><a href=#the-two-configurations-side-by-side class="table-of-contents__link toc-highlight">The two configurations, side by side</a><li><a href=#required-checks class="table-of-contents__link toc-highlight">Required checks</a><li><a href=#what-a-pr-between-permanent-branches-cant-satisfy class="table-of-contents__link toc-highlight">What a PR between permanent branches can't satisfy</a><li><a href=#bypass class="table-of-contents__link toc-highlight">Bypass</a><li><a href=#the-brabo_bot_token-secret class="table-of-contents__link toc-highlight">The <code>BRABO_BOT_TOKEN</code> secret</a><li><a href=#republishing-a-tag-that-was-orphaned class="table-of-contents__link toc-highlight">Republishing a tag that was orphaned</a></ul><li><a href=#ruleset-2--version-tags class="table-of-contents__link toc-highlight">Ruleset 2 — version tags</a><ul><li><a href=#bypass-1 class="table-of-contents__link toc-highlight">Bypass</a></ul><li><a href=#how-to-apply class="table-of-contents__link toc-highlight">How to apply</a><li><a href=#settings--pages-the-source-is-the-gh-pages-branch class="table-of-contents__link toc-highlight">Settings → Pages: the source is the <code>gh-pages</code> branch</a><li><a href=#the-family-labels-need-to-exist class="table-of-contents__link toc-highlight">The family labels need to exist</a><li><a href=#verify-its-standing class="table-of-contents__link toc-highlight">Verify it's standing</a></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Documentação</div><ul class="footer__items clean-list"><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/getting-started>Primeiros passos</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/architecture>Arquitetura</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/business-rules>Regras de negócio</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/runbook>Runbook</a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Comunidade</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class=footer__link-item>Como contribuir<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class=footer__link-item>Onde pedir ajuda<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class=footer__link-item>Segurança<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Mais</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class=footer__link-item>GitHub<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CHANGELOG.md target=_blank rel="noopener noreferrer" class=footer__link-item>CHANGELOG<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/LICENSE target=_blank rel="noopener noreferrer" class=footer__link-item>Licença MIT<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/THIRD_PARTY_NOTICES.md target=_blank rel="noopener noreferrer" class=footer__link-item>Avisos de terceiros<svg width=13.5 height=13.5 aria-label="(opens in new tab)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div></div><div class="footer__bottom text--center"><div class=footer__copyright>Copyright © 2026 Daniel Souza. Licenciado sob a MIT. Ferramentas de terceiros mantêm as próprias licenças — ver Avisos de terceiros.</div></div></div></footer></div></body>
