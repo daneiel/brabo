@@ -34,7 +34,7 @@ const L2 = '| [0002](0002-b.md) | two |';
 const L3 = '| [0003](0003-c.md) | three |';
 
 function indice(corpo: string[] = [...SECAO_GIT, L1, L3, '', ...SECAO_WEB, L2, '']): string {
-  return ['---', 'id: adr-index', '---', '# Architectural decisions', '', 'Intro.', '', ...corpo, '## The convention', '', '- the next one is **0004**.', ''].join('\n');
+  return ['---', 'id: adr-index', '---', '# Decisões arquiteturais', '', 'Intro.', '', ...corpo, '## A convenção', '', '- o próximo é **0004**.', ''].join('\n');
 }
 
 function conferir(over: { temasYml?: string; arquivosAdr?: string[]; indice?: string } = {}) {

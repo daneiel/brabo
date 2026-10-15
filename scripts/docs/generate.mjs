@@ -27,7 +27,7 @@ import {
   reancorar,
   veredito as vereditoDasRefs,
 } from './refs-com-simbolo.mjs';
-import { deduplicarProximoAdr, substituirGrupo } from './reescrita.mjs';
+import { deduplicarProximoAdr, PROXIMO_ADR, substituirGrupo } from './reescrita.mjs';
 import { aferirAncoras, arquivosDeRn } from './ancoras-de-rn.mjs';
 import { aferirContagens } from './contagens-do-codigo.mjs';
 import { conferirTabela, repositorio, RUNBOOK } from './procedimentos-do-runbook.mjs';
@@ -671,10 +671,11 @@ function verificarContagensEmProsa() {
 
   const afericoes = [
     {
-      // `docs/adr/index.md` já foi traduzido pra inglês (Onda 6b) — a frase
-      // virou "the next one is **NNNN**", não mais "o próximo é **NNNN**".
+      // `docs/adr/index.md` voltou a ser pt-BR (fonte, ADR 0216) — a frase
+      // é de novo "o próximo é **NNNN**". O padrão é o MESMO `PROXIMO_ADR`
+      // de `reescrita.mjs`, que deduplica a linha antes de contar.
       arquivo: 'docs/adr/index.md',
-      padrao: /the next one is \*\*(\d{4})\*\*/,
+      padrao: PROXIMO_ADR,
       esperado: proximo,
       oque: 'o próximo número de ADR',
     },
@@ -703,7 +704,7 @@ function verificarContagensEmProsa() {
       // a prosa, então a deriva aqui é mais silenciosa que em qualquer outra
       // linha desta tabela.
       arquivo: 'docs/adr/index.md',
-      padrao: /Brabo's (\d+) architectural decision records/,
+      padrao: /Os (\d+) registros de decisão arquitetural do Brabo/,
       esperado: total,
       oque: 'a contagem de ADRs',
     },
@@ -751,7 +752,7 @@ function verificarContagensEmProsa() {
     },
   ];
 
-  // A duplicata de "the next one is" que um merge deixa sai antes de contar.
+  // A duplicata de "o próximo é" que um merge deixa sai antes de contar.
   reescreverSeDerivavel('docs/adr/index.md', deduplicarProximoAdr, 'linha repetida do próximo ADR');
 
   let problemas = 0;

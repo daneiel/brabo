@@ -24,13 +24,13 @@ describe('substituirGrupo — contagens de ADR/RN e próximo ADR', () => {
 
 describe('deduplicarProximoAdr', () => {
   it('a linha repetida pelo merge sai, a primeira fica', () => {
-    const t = 'a\nis superseded — the next one is **0209**.\nis superseded — the next one is **0210**.\nb';
+    const t = 'a\né substituído — o próximo é **0209**.\né substituído — o próximo é **0210**.\nb';
     const saida = deduplicarProximoAdr(t);
-    expect(saida).toBe('a\nis superseded — the next one is **0209**.\nb');
+    expect(saida).toBe('a\né substituído — o próximo é **0209**.\nb');
     expect(substituirGrupo(saida, PROXIMO_ADR, '0211')).toContain('**0211**');
   });
   it('sem duplicata, intocado', () => {
-    const t = 'x the next one is **0209**.';
+    const t = 'x o próximo é **0209**.';
     expect(deduplicarProximoAdr(t)).toBe(t);
   });
 });

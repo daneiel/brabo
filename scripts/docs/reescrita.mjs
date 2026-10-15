@@ -26,10 +26,10 @@ export function substituirGrupo(texto, padrao, valor) {
 }
 
 /** A frase do "próximo ADR" no índice. */
-export const PROXIMO_ADR = /the next one is \*\*(\d{4})\*\*/;
+export const PROXIMO_ADR = /o próximo é \*\*(\d{4})\*\*/;
 
 /**
- * Merge de dois PRs que acrescentam ADR deixa DUAS linhas "the next one is"
+ * Merge de dois PRs que acrescentam ADR deixa DUAS linhas "o próximo é"
  * (cada lado trocou o número). Fica a primeira; o número dela é acertado
  * depois pela contagem.
  */
