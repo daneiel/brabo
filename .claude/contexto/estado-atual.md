@@ -444,6 +444,12 @@ zero projetos) e nas lacunas abaixo. Trabalho novo nasce do kanban do vault.
   para eles, a feature segue DORMENTE (422 na rota). Ligar outro provider exige
   o smoke equivalente com credencial e a saída citada no PR — doc do hub não é
   prova. Não "ligue de passagem"
+- A capability `promptCaching` (RN-892, AT-543) é `true` SÓ no OpenRouter
+  desde 2026-10-15, PROVADA: `openrouter-provider.cache.smoke.spec.ts` rodou
+  com credencial real e a segunda chamada a `anthropic/claude-haiku-5.5`
+  voltou com `cached_input_tokens=8011`. O hook segue marcando só
+  `anthropic/*`; os outros oito providers seguem `false`, e ligá-los exige o
+  smoke equivalente
 - `NPM_TOKEN` não configurado — `publish-runner.yml` avisa e pula
 - Binário standalone: TRÊS alvos na matriz desde o ADR 0187, os três PROVADOS
   em ensaio, e DOIS chegando à Release. `v4.0.1` e `v5.0.0` anexam
