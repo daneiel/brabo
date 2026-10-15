@@ -118,9 +118,11 @@
       "skippedNoCapability": "no catalog listing",
       "skippedNoCredential": "no credential registered",
       "failed": "failed · origin {{origin}}",
-      "novos": "{{count}} new",
+      "novos_one": "{{count}} new",
+      "novos_other": "{{count}} new",
       "deVolta": "{{count}} back",
-      "sumidos": "{{count}} gone"
+      "sumidos_one": "{{count}} gone",
+      "sumidos_other": "{{count}} gone"
     },
     "search": {
       "aria": "Search the model catalog",
