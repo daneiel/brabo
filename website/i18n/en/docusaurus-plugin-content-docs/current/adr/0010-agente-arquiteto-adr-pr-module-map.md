@@ -1,3 +1,7 @@
+---
+traducao_de: 5caf47d7db6498d5fe8053e4452379fd992e8c0b
+---
+
 # ADR 0010 — Architect agent: ADRs via a real PR, module_map and cross-validation
 
 - Status: accepted
