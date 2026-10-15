@@ -893,7 +893,7 @@ function verificarFrasesAncoradasNoCodigo() {
     },
     {
       arquivo: 'docs/getting-started.md',
-      padrao: /db:generate\s+# after changing (apps\/api\/src\/db\/schema(?:\/|\.ts))/,
+      padrao: /db:generate\s+# depois de mudar (apps\/api\/src\/db\/schema(?:\/|\.ts))/,
       esperado: moradaDoSchema,
       oque: 'onde o `db:generate` manda mexer',
     },
@@ -1150,12 +1150,12 @@ function verificarVersaoAnunciada() {
     },
     {
       // A primeira página do site publicado. O padrão exige a frase INTEIRA
-      // ("Phases 1 through NN complete**, version **vX.Y.Z**") de propósito:
+      // ("Fases 1 a NN concluídas**, versão **vX.Y.Z**") de propósito:
       // as duas metades envelhecem juntas, e casar só a versão deixaria a
-      // contagem de fases mentindo do lado dela sem nada reprovar. Traduzido
-      // pra inglês na Onda 6b — a frase pt-BR virou a versão em inglês.
+      // contagem de fases mentindo do lado dela sem nada reprovar. Voltou a pt-BR
+      // com o ADR 0216 (pt-BR é a fonte); a tradução em inglês não é aferida.
       arquivo: 'docs/intro.md',
-      padrao: /\*\*Phases 1 through \d+ complete\*\*, version \*\*v(\d+\.\d+\.\d+)\*\*/,
+      padrao: /\*\*Fases 1 a \d+ concluídas\*\*, versão \*\*v(\d+\.\d+\.\d+)\*\*/,
     },
   ];
 

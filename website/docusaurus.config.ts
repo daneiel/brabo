@@ -96,22 +96,17 @@ const config: Config = {
     faster: true,
   },
 
-  // Onda 6a do PROGRAMA (i18n): `docs/` na raiz passa a ser a árvore em
-  // INGLÊS (é o `path` do plugin de docs, e o Docusaurus trata o conteúdo
-  // nesse path como pertencendo ao `defaultLocale`). O snapshot pt-BR
-  // ORIGINAL foi preservado em
-  // `website/i18n/pt-BR/docusaurus-plugin-content-docs/current/` antes de
-  // qualquer tradução acontecer — é essa cópia que o Docusaurus serve para
-  // `pt-BR`, pela convenção padrão do plugin `@docusaurus/plugin-content-docs`
-  // (id `default`, o mesmo id declarado no preset abaixo). Nenhuma UI de
-  // troca de locale nova foi construída: o tema clássico já gera o seletor
-  // de idioma no navbar sozinho quando `locales` tem mais de um item.
+  // ADR 0216: `docs/` é a árvore pt-BR, a FONTE e o padrão. `en`, `ru` e
+  // `zh-Hans` moram em `website/i18n/<locale>/`; página sem tradução num
+  // locale cai na fonte pt-BR, no mesmo slug.
   i18n: {
-    defaultLocale: 'en',
-    locales: ['en', 'pt-BR'],
+    defaultLocale: 'pt-BR',
+    locales: ['pt-BR', 'en', 'ru', 'zh-Hans'],
     localeConfigs: {
-      en: { label: 'English' },
       'pt-BR': { label: 'Português (Brasil)' },
+      en: { label: 'English' },
+      ru: { label: 'Русский' },
+      'zh-Hans': { label: '简体中文' },
     },
   },
 
@@ -126,14 +121,14 @@ const config: Config = {
     hooks: {
       // Onda 6a (i18n): `docs/reference/**` é GERADO e continua fora da
       // tradução por ora (mesma exclusão do `docs/.docmap.yml`, regra
-      // `traducao-pt-br` — localizar o gerador é gap maior, fora desta
+      // `traducao` — localizar o gerador é gap maior, fora desta
       // entrega). Isso abre um vão de link nos DOIS sentidos só quando o
-      // Docusaurus compila o locale `pt-BR`: os arquivos de `reference/`
-      // (sem override em `website/i18n/pt-BR/...`, compilados por
+      // Docusaurus compila um locale traduzido (`en`, `ru`, `zh-Hans`): os arquivos de `reference/`
+      // (sem override em `website/i18n/<locale>/...`, compilados por
       // FALLBACK do locale default) apontam para páginas que TÊM versão
-      // pt-BR (`adr/`, `business-rules.md`, `explanation/`), e o inverso —
+      // traduzida (`adr/`, `business-rules.md`, `explanation/`), e o inverso —
       // páginas traduzidas apontam para `reference/`, que só existe na
-      // árvore em inglês. Nos dois casos o arquivo alvo EXISTE no
+      // árvore fonte. Nos dois casos o arquivo alvo EXISTE no
       // repositório — só não existe DENTRO do locale que está compilando
       // agora, então o link markdown relativo (resolvido por caminho de
       // ARQUIVO) não bate com a árvore de rota do locale certo.
@@ -175,7 +170,7 @@ const config: Config = {
       require.resolve('@easyops-cn/docusaurus-search-local'),
       {
         hashed: true,
-        language: ['pt', 'en'],
+        language: ['pt', 'en', 'ru', 'zh'],
         indexBlog: false,
         docsRouteBasePath: '/',
         highlightSearchTermsOnTargetPage: true,

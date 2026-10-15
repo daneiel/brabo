@@ -221,7 +221,7 @@ alongside the free text, which keeps existing for humans to read.
   an incomplete verdict silently), but there's also no automatic alarm.
   Left for when there's a real case, not a hypothetical one.
 
-## Closure (Phase 8d)
+## Closure (Phase 8d) {#fechamento-fase-8d}
 
 The two instances anticipated by this ADR were built — QA (8b) and the
 Workflows subagent within Infra (8c) — plus the presentation side (8d:

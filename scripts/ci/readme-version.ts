@@ -36,7 +36,7 @@ const ARQUIVOS = ['README.md', 'docs/intro.md'];
  * `verificarVersaoAnunciada`: são os dois lados do mesmo contrato, e se
  * divergirem um escreve o que o outro não encontra.
  *
- * `docs/intro.md` foi traduzido pra inglês (Onda 6b) e o README não — "versão"
+ * `docs/intro.md` foi traduzido pra inglês (Onda 6b) e voltou a pt-BR (ADR 0216) — "versão"
  * virou "version" só num dos dois arquivos. O grupo 1 captura qual PALAVRA
  * casou para a troca devolver a mesma, em vez de fixar "versão" e quebrar
  * silenciosamente o arquivo em inglês (ou vice-versa, se o README também for

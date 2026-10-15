@@ -179,6 +179,15 @@ describe('landing — o 404 que segura os links antigos', () => {
     expect(redirecionoDe(erro, '/brabo/main')).toBe('/brabo/prd/');
   });
 
+  it('reescreve /brabo/<degrau>/pt-BR/<algo> para /brabo/<degrau>/<algo> (ADR 0216)', () => {
+    const { erro } = gerar(['prd']);
+    expect(redirecionoDe(erro, '/brabo/prd/pt-BR/architecture')).toBe('/brabo/prd/architecture');
+    expect(redirecionoDe(erro, '/brabo/dev/pt-BR/adr/0001-x#d')).toBe('/brabo/dev/adr/0001-x#d');
+    expect(redirecionoDe(erro, '/brabo/qa/pt-BR')).toBe('/brabo/qa/');
+    // O inglês ganhou prefixo, e não é reescrito: é caminho que existe.
+    expect(redirecionoDe(erro, '/brabo/prd/en/pagina-que-nao-existe')).toBeNull();
+  });
+
   it('tem a guarda que impede o laço de redirecionamento', () => {
     // Sem ela, uma página inexistente DENTRO de /prd/ seria reencaminhada
     // para /prd/ de novo, e o navegador ficaria girando. A guarda cobre os

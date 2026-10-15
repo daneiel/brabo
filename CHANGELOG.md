@@ -6,6 +6,15 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- O site da documentação abre em pt-BR, que passa a ser a FONTE em `docs/` e o
+  locale padrão, com inglês, russo e chinês simplificado ao lado (ADR 0216,
+  AT-546). O inglês sai da raiz para `/brabo/<ambiente>/en/…`, e o 404 da raiz
+  reescreve os links antigos `/brabo/<ambiente>/pt-BR/…` para
+  `/brabo/<ambiente>/…`. As 38 traduções pt-BR em dia e os 66 ADRs cuja cópia
+  pt-BR é o texto original voltaram para `docs/`, com o inglês em
+  `website/i18n/en/`; as páginas cuja tradução estava defasada ficam no idioma
+  em que estão até o lote delas. A regra `traducao-pt-br` do docmap vira
+  `traducao` (`warn`).
 - A oferta "Ligar para N agentes" do modo automático aparece também no chat do
   Criativo quando o projeto tem execução ativa noutra sessão — antes ela só
   aparecia na sessão de execução, e o dev esperava o clique num `terminal`

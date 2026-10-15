@@ -41,7 +41,7 @@ subida você não precisa editar nada.
 `pnpm dev` sobe Postgres 16 + pgvector, api, engine e web, e aplica as
 migrações dos dois lados. A primeira vez baixa imagens e leva alguns minutos.
 
-### Os dois modos locais não coexistem
+### Os dois modos locais não coexistem {#the-two-local-modes-dont-coexist}
 
 Há duas formas de rodar o Brabo na sua máquina, e elas **disputam as mesmas
 portas**:
@@ -89,7 +89,7 @@ docker compose -f <pasta da instalação>/docker/docker-compose.install.yml \
 avisa. Copiar os dados, recomeçar do zero e distinguir os volumes do dev antigo
 dos de uma instalação estão no runbook, "Moving a dev environment to brabo-dev".
 
-### Pasta local dos workspaces
+### Pasta local dos workspaces {#local-folder-for-workspaces}
 
 Por padrão, os arquivos que os agentes escrevem vivem num volume Docker
 gerenciado — não é uma pasta que você abre no Finder/Explorer. Para trocar
@@ -275,7 +275,7 @@ pnpm --filter api test      # vitest
 pnpm --filter web test      # vitest
 pnpm engine:test            # ExUnit
 pnpm build                  # build de tudo
-pnpm db:generate            # depois de mudar apps/api/src/db/schema.ts
+pnpm db:generate            # depois de mudar apps/api/src/db/schema/<agregado>.ts
 pnpm db:migrate             # aplica as migrações
 pnpm dev:down               # derruba tudo
 ```
