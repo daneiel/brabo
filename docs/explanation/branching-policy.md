@@ -529,7 +529,11 @@ until **every** check run on the PR head has finished — the repository has
 no required checks, so `--auto` would not wait — and merges with a merge
 commit only if none ended `failure`, `cancelled` or `timed_out` (among
 others). Any failure stops the promotion and the job summary names the check
-and its link. Without `BRABO_BOT_TOKEN` the job fails visibly.
+and its link. Without `BRABO_BOT_TOKEN` the job fails visibly. A push with
+nothing new in the cycle (a promotion merge, a back-merge, `dev` already
+equal to `qa`) is a normal outcome, not a failure: a `::notice::` and "nada a
+promover: o ciclo está vazio" in the summary, exit 0, no PR. In the manual
+`promote` an empty cycle still fails.
 
 The approval ladder waives the owner's approval **only** for that PR: pair
 `dev` → `qa`, variable on, and author equal to the `BRABO_BOT_TOKEN` user

@@ -64,8 +64,11 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: node scripts/ci/promote.ts
 
+      # Ciclo vazio (merge de promoção, backmerge, dev igual à qa) é desfecho
+      # normal: `promote.ts` sai 0 com `vazio=true` e nada é aberto.
       - name: Abrir ou atualizar o PR de promoção
         id: pr
+        if: steps.calculo.outputs.vazio != 'true'
         env:
           GH_TOKEN: ${{ secrets.BRABO_BOT_TOKEN }}
           DE: ${{ steps.calculo.outputs.de }}
@@ -74,6 +77,7 @@ jobs:
         run: bash scripts/ci/abrir-pr-de-promocao.sh
 
       - name: Esperar os checks e mergear
+        if: steps.calculo.outputs.vazio != 'true'
         env:
           GH_TOKEN: ${{ secrets.BRABO_BOT_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}

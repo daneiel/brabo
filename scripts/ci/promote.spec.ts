@@ -1,5 +1,19 @@
 import { describe, it, expect } from 'vitest';
-import { AVISO_DA_FASE_DE_TESTE, celulaDeTabela, corpoDaPromocao } from './promote.ts';
+import {
+  AVISO_DA_FASE_DE_TESTE,
+  celulaDeTabela,
+  cicloVazioEhFalha,
+  corpoDaPromocao,
+} from './promote.ts';
+
+describe('cicloVazioEhFalha', () => {
+  it('na promoção automática, ciclo vazio não promove e não falha', () => {
+    expect(cicloVazioEhFalha(true)).toBe(false);
+  });
+  it('na promoção manual, ciclo vazio segue falha', () => {
+    expect(cicloVazioEhFalha(false)).toBe(true);
+  });
+});
 
 /**
  * Escape de célula da tabela do corpo do PR de promoção (CodeQL

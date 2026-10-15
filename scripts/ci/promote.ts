@@ -53,6 +53,17 @@ export const AVISO_DA_FASE_DE_TESTE =
   'Fase de teste: a QA é promovida automaticamente a cada merge na dev e ainda ' +
   'não é considerada ambiente validado.';
 
+export const MENSAGEM_DO_CICLO_VAZIO = 'nada a promover: o ciclo está vazio';
+
+/**
+ * Ciclo vazio é falha só na promoção MANUAL (alguém pediu algo impossível).
+ * Na automática (ADR 0217) é desfecho normal de todo push na `dev` sem
+ * trabalho novo — vermelho recorrente ensinaria a ignorar o vermelho.
+ */
+export function cicloVazioEhFalha(automatica: boolean): boolean {
+  return !automatica;
+}
+
 /** O corpo do PR: cada PR do ciclo, seu impacto, e a versão proposta. */
 export function corpoDaPromocao(
   de: string,
@@ -217,6 +228,14 @@ async function principal(): Promise<void> {
     versao = proximaVersao(ultimaFinal, prs);
   } catch (erro) {
     if (erro instanceof CicloVazioError) {
+      if (!cicloVazioEhFalha(process.env.PROMOCAO_AUTOMATICA === 'true')) {
+        console.log(`::notice title=promote::${MENSAGEM_DO_CICLO_VAZIO}`);
+        if (process.env.GITHUB_STEP_SUMMARY) {
+          appendFileSync(process.env.GITHUB_STEP_SUMMARY, `### promote: ${MENSAGEM_DO_CICLO_VAZIO}\n`);
+        }
+        if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, 'vazio=true\n');
+        return;
+      }
       falhar('ciclo vazio', erro.message);
       return;
     }

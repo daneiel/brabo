@@ -36,16 +36,21 @@ automação.
    esperar, nunca mergear. Qualquer falha para a promoção e escreve no resumo
    do job qual check e o link. Teto de 50 minutos de espera. Concurrency
    `promote-auto-qa`, sem cancelamento.
-3. **Sem `BRABO_BOT_TOKEN`, falha visível**: o job sai vermelho dizendo isso.
+3. **Ciclo vazio não é falha** na promoção automática (`cicloVazioEhFalha`):
+   push na `dev` sem trabalho novo — merge de promoção, backmerge, `dev` já
+   igual à `qa` — sai 0 com `::notice::` e "nada a promover: o ciclo está
+   vazio" no resumo, sem abrir PR. Vermelho recorrente ensinaria a ignorar o
+   vermelho. No `promote.yml` manual segue falha.
+4. **Sem `BRABO_BOT_TOKEN`, falha visível**: o job sai vermelho dizendo isso.
    O token padrão abriria o PR com checks em `action_required` e o merge dele
    não dispararia `tag-release` nem `docs-deploy`.
-4. **A escada** (`scripts/ci/approval-ladder.ts`,
+5. **A escada** (`scripts/ci/approval-ladder.ts`,
    `ehPromocaoAutomaticaDaFaseDeTeste`) dispensa a aprovação SÓ quando o par é
    `dev` → `qa`, a variável está ligada e o autor do PR é o usuário do
    `BRABO_BOT_TOKEN` — resolvido no workflow por `gh api user` com o próprio
    segredo, nunca por nome fixo. A razão sai no resumo do check. `qa` → `main`
    e qualquer outro par seguem exigindo aprovação, nos dois modos.
-5. **O aviso**: o site publicado em `/brabo/qa/` ganha `announcementBar` fixo,
+6. **O aviso**: o site publicado em `/brabo/qa/` ganha `announcementBar` fixo,
    e o corpo do PR automático abre com o mesmo texto — *"Fase de teste: a QA é
    promovida automaticamente a cada merge na dev e ainda não é considerada
    ambiente validado."*
