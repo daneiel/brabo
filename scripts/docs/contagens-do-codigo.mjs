@@ -261,8 +261,8 @@ export const AFERICOES = [
   { arquivo: 'docs/architecture.md', padrao: /`GitProviderContract` — (\S+) operations, \*\*types/, fonte: 'operacoesDoGit', forma: 'en' },
 
   // porta de Docker
-  { arquivo: '.claude/contexto/stack.md', padrao: /PORTA de\s+(\S+) operações \(`packages\/docker-port`/, fonte: 'operacoesDoDocker', forma: 'pt_f' },
-  { arquivo: '.claude/contexto/stack.md', padrao: /das (\S+) operações da `DockerPort`/, fonte: 'operacoesDoDocker', forma: 'pt_f' },
+  { arquivo: '.claude/rules/runner.md', padrao: /PORTA de\s+(\S+) operações \(`packages\/docker-port`/, fonte: 'operacoesDoDocker', forma: 'pt_f' },
+  { arquivo: '.claude/rules/broker-e-containers.md', padrao: /das (\S+) operações da `DockerPort`/, fonte: 'operacoesDoDocker', forma: 'pt_f' },
   { arquivo: 'docs/architecture.md', padrao: /the Docker PORT \((\S+) operations\)/, fonte: 'operacoesDoDocker', forma: 'en' },
 
   // web, compose, ações, banco
