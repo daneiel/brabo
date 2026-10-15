@@ -6,6 +6,10 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- O site de documentação usa as cores do produto nos dois temas (escuro
+  preto, claro branco, primary terracota): importa `design/tokens.css` em vez
+  de copiar uma paleta, com realce de código pelos tokens e contraste de 4,5:1
+  cobrado por teste (AT-561).
 - Todo ADR passa a se chamar "ADR NNNN — título" (ADR 0218): os 131 títulos `# NNNN —` ganham o prefixo, nas quatro línguas, e o `docs:check` reprova H1 fora do padrão; os nomes de arquivo (as URLs) não mudam.
 - A lateral do site agrupa os ADRs por tema (derivado de `docs/adr/temas.yml`) e a Explicação em cinco grupos por assunto (AT-560).
 - O README (e as traduções) ficou só com a visão do produto: estrutura, banco,

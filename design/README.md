@@ -2,7 +2,8 @@
 
 Design system do Brabo — fidelidade estrita exigida na UI (ver `CLAUDE.md`).
 
-- **`tokens.css`** — cores (paleta + tokens semânticos dark/light),
+- **`tokens.css`** — também consumido pelo site de documentação
+  (`website/src/css/custom.css` o importa; AT-561) — cores (paleta + tokens semânticos dark/light),
   tipografia (Space Grotesk/Archivo/IBM Plex Mono, mais a escala `--fs-*`),
   espaçamento, radius e as métricas do shell (`--sidebar-w`, `--header-h`,
   `--tabs-h`). Extraído do projeto claude.ai/design ["Brabo Design
