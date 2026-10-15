@@ -29,8 +29,7 @@ Final authority stays yours — by construction, not by convention.**
 </div>
 
 > The Portuguese [README.md](README.md) is the source and the one that is
-> checked: it carries the current version and the counts (rules, decisions,
-> providers). This translation leaves the numbers out on purpose.
+> checked: it carries the current version and the count of business rules. This translation leaves the numbers out on purpose.
 
 ---
 

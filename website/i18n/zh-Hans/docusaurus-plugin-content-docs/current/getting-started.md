@@ -5,7 +5,7 @@ sidebar_label: 快速开始
 sidebar_position: 5
 description: 从克隆到智能体的第一个回合，以及每一步不工作时该检查什么。
 keywords: [instalação, setup, onboarding, primeiro projeto, ollama]
-traducao_de: cca4f282a22c9a427ae98001465238933cce3f47
+traducao_de: 504041e6506e0dc6341e30836aaa2a38efa393e4
 ---
 
 # 快速开始 {#primeiros-passos}
@@ -236,6 +236,63 @@ pnpm build                  # build de tudo
 pnpm db:generate            # depois de mudar apps/api/src/db/schema/<agregado>.ts
 pnpm db:migrate             # aplica as migrações
 pnpm dev:down               # derruba tudo
+```
+
+### 各部分在哪里 {#onde-fica-cada-coisa}
+
+```
+apps/
+  api/      NestJS + Drizzle          → schema "public"
+  engine/   Elixir/OTP + Phoenix      → schema "engine"
+  web/      React + Vite
+packages/
+  shared/   tipos TS compartilhados (import type only)
+design/     design system — fonte de verdade de UI
+docker/     compose de dev e prod, Dockerfiles, smoke.sh
+deploy/k8s/ base + overlays local/staging/prod (Kustomize)
+docs/       esta documentação, incluindo os ADRs
+scripts/
+  ci/       automação de release e política de branch (testada com vitest)
+  dev/      ferramentas locais — o menu do `pnpm bootstrap` e o preflight
+  docs/     geração e verificação da documentação
+website/    Docusaurus, que lê de docs/ — nunca de website/docs/
+```
+
+`apps/engine` 位于 pnpm workspace 之外（它是一个 Mix 项目），根目录的脚本委托给 `mix`（`pnpm engine:setup`、`pnpm engine:dev`、`pnpm engine:test`）。如果主机上的 Elixir 不是项目的版本，请通过容器格式化：
+
+```bash
+docker run --rm -v "$PWD/apps/engine:/app" -w /app \
+  hexpm/elixir:1.20.4-erlang-29.1.1-alpine-3.24.2 mix format
+```
+
+**数据库。** 一个 Postgres，一个数据库（`brabo`），两个 schema，互不冲突：api（Drizzle）使用 `public`，迁移位于 `apps/api/src/db/migrations/`，每个聚合一个 schema 文件（`db/schema.ts` 只是 barrel）；engine（Ecto/Oban）通过 `migration_default_prefix` 使用 `engine`，迁移位于 `apps/engine/priv/repo/migrations/`。pgvector 由 `docker/postgres/init.sql` 启用，它只在创建卷时运行一次。
+
+**保护属性的测试。** 没有正常路径测试和一个失败场景测试，任何功能都不能进入。git 提供方通过一套统一的契约测试，针对全部三个（Local、GitHub、GitLab）运行。`apps/api/test/interfaces/route-surface.spec.ts` 将路由与 [`security-surface.md`](security-surface.md) 对照——没有分类的新路由会让测试失败——而 `apps/engine/test/engine_web/route_surface_test.exs` 要求 engine 的每个路由在没有 token 时返回 401，具名例外除外。
+
+**一个回合，从头到尾：**
+
+```mermaid
+sequenceDiagram
+  participant U as Você
+  participant W as web
+  participant A as api
+  participant E as engine
+  participant L as LLM
+
+  U->>W: abre uma sessão
+  W->>A: POST /sessions
+  A->>A: grava session.created (event log + outbox)
+  A-->>E: Oban consome a outbox
+  E->>E: SessionServer + Harness montam o contexto
+  E->>L: turno
+  L-->>E: "quero rodar esta ferramenta"
+  E->>A: vira proposed_action
+  A->>A: IAM → agent_autonomy → permissions.json → tetos
+  A-->>U: pede aprovação
+  U->>A: aprova
+  A-->>E: executa
+  E->>A: evento imutável
+  A-->>W: broadcast — o painel atualiza
 ```
 
 ### 菜单，免得把这些全记住 {#o-menu-para-não-decorar-isso-tudo}
