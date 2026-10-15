@@ -53,7 +53,7 @@ function runbook(linhas: string[] = LINHAS_CERTAS, cabecalho = CABECALHO): strin
     '## Installing {#instalando}',
     '### Secrets: fallback to sealed-secrets {#fallback-sealed-secrets}',
     '',
-    '## Procedures and how each is verified {#procedimentos-e-verificacao}',
+    '## Procedimentos e como cada um é verificado {#procedimentos-e-verificacao}',
     '',
     'Texto antes da tabela.',
     '',
@@ -181,7 +181,7 @@ describe('conferirTabela — mutações da coluna anchor', () => {
 
 describe('conferirTabela — o check cego', () => {
   it('MUTAÇÃO: a seção sumiu', () => {
-    const r = conferirTabela(runbook().replace('## Procedures and how each is verified', '## Procedures'), repo);
+    const r = conferirTabela(runbook().replace(' {#procedimentos-e-verificacao}', ''), repo);
     expect(r.cego).toMatch(/não achei a seção/);
   });
 

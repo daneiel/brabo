@@ -878,8 +878,8 @@ function verificarFrasesAncoradasNoCodigo() {
     },
     {
       arquivo: 'docs/runbook.md',
-      padrao: /the (\S+) images the product publishes are already resolved/,
-      esperado: imagensEn,
+      padrao: /as (\S+) imagens que o produto publica já estão resolvidas/,
+      esperado: imagensPt,
       oque: 'quantas imagens o produto publica no GHCR',
     },
     {
