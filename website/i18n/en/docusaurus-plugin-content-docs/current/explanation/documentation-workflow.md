@@ -5,7 +5,7 @@ sidebar_label: Docs sync
 sidebar_position: 1
 description: The mechanism that keeps documentation from rotting — what each piece does, why it exists, and what to do when the check complains unfairly.
 keywords: [documentation, drift, docmap, CI, generation]
-traducao_de: 96a04ed7489e6c9035ff600bc57269ef8305ea58
+traducao_de: 533ceeea898444e4d43ea714775482f74e65a781
 ---
 
 # How documentation stays alive
@@ -598,6 +598,16 @@ The build **doesn't** fail on this: an orphan page isn't a broken
 link. It's a visual check, and it's the only step in the mechanism
 with no safety net — after `pnpm docs:build`, open the sidebar and
 confirm the page is there.
+
+The exception is the ADRs: the "Decisões (ADR)" group is **derived** on
+every build from `docs/adr/temas.yml` and the files in `docs/adr/` — one
+subcategory per theme, in the list's order, with the ADRs in numeric order
+(AT-560). A new ADR lands in its theme's group without touching
+`sidebars.ts`. If the parser finds no themes, no mapped ADRs, or an ADR
+without a theme (which `docs:check` already rejects), the build fails with a
+named error instead of drawing a wrong sidebar. The Explanation section is
+listed by hand in five groups by subject, and a new page there still goes in
+by the path above.
 
 ### `api-render-check.mjs` — a green build isn't a page that renders
 

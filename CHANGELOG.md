@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- A lateral do site agrupa os ADRs por tema (derivado de `docs/adr/temas.yml`) e a Explicação em cinco grupos por assunto (AT-560).
 - O README (e as traduções) ficou só com a visão do produto: estrutura, banco,
   testes, observabilidade, produção, Kubernetes, CI, frontend, convenções e
   estado saíram, e o detalhe técnico mora no site (AT-558).
