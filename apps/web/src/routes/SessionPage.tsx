@@ -51,6 +51,7 @@ import {
 import { ContextAside } from './ContextAside';
 import { useEncerrarComConfirmacao } from './ConfirmarEncerramento';
 import { sessaoTemExecucao } from '../lib/sessao-de-execucao';
+import { ModoAutomaticoNoChat } from '../components/ModoAutomaticoNoChat';
 import { useSessionReadiness } from '../lib/session-readiness';
 import { agruparNarracoesDoTurno, agruparTimelinePorAgente, dividirFio } from './session-fio';
 import { montarTimeline } from './session-timeline-montagem';
@@ -62,6 +63,7 @@ import {
   DESTINATARIO_DA_SESSAO_CRIATIVA,
   useAtivadosNaSessaoInteira,
   useAtivosNoProjeto,
+  useExecucaoNoProjeto,
   useDestinatarioDoChat,
 } from '../lib/session-destinatario';
 import { derivarHandoffsDaSessao } from '../lib/session-handoffs';
@@ -312,6 +314,8 @@ export function SessionPage({
   // RN-633 (AT-294): quem já roda na sessão MAIS RECENTE do projeto (a de
   // execução, depois de ativada) — a oferta a ele não é acionável aqui.
   const ativosNoProjeto = useAtivosNoProjeto(workspaceComPapel?.workspace.id, projectId);
+  // RN-889 (AT-540): a execução noutra sessão do projeto também traz a oferta.
+  const execucaoNoProjeto = useExecucaoNoProjeto(workspaceComPapel?.workspace.id, projectId);
 
   // As derivações de "prontidão" (RN-160/RN-161/RN-824) moram em
   // `../lib/session-readiness.ts` desde o PR 5/5 do ADR 0122.
@@ -764,6 +768,14 @@ export function SessionPage({
             projectId={projectId}
             sessionId={sessionId}
             podeDecidir={podeDecidir}
+          />
+          <ModoAutomaticoNoChat
+            projectId={projectId}
+            comExecucao={isActive && sessaoTemExecucao(events, ativadosNaSessaoInteira)}
+            ativados={ativadosNaSessaoInteira}
+            execucaoNoProjeto={execucaoNoProjeto}
+            sessaoAtiva={isActive}
+            podeLigar={roleAtLeast(workspaceComPapel?.role, 'maintainer')}
           />
           <div className={styles.messages} ref={scrollContainerRef} onScroll={aoRolarOFio} role="log" aria-label={t('fio.rotuloDoFio')}>
             <div className={styles.messagesInner} ref={messagesInnerRef}>

@@ -6,6 +6,84 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- O provider ganha a capability `promptCaching` (RN-892, AT-543): com ela
+  ligada, o OpenRouter marca `cache_control` nas instruções e no fim do
+  histórico das chamadas a modelos `anthropic/*`, deixando as mensagens
+  efêmeras do fim depois do último ponto. Nasce `false` nos nove providers até
+  o smoke `openrouter-provider.cache.smoke.spec.ts` rodar com credencial; o
+  corpo de hoje não muda.
+- A interface passa a abrir em português do Brasil por padrão (antes, inglês)
+  e a conta aceita quatro idiomas — português, inglês, russo e chinês
+  simplificado. Navegador em idioma sem tradução abre em português; russo e
+  chinês aparecem no seletor da Conta como "tradução em andamento" até os
+  catálogos chegarem (RN-891, ADR 0216, AT-548).
+- A oferta "Ligar para N agentes" do modo automático aparece também no chat do
+  Criativo quando o projeto tem execução ativa noutra sessão — antes ela só
+  aparecia na sessão de execução, e o dev esperava o clique num `terminal`
+  (RN-889, AT-540).
+- O QA passa a cobrar o código de saída de comando de linha da entrega: 0 no
+  caminho feliz e diferente de 0 na recusa de entrada, e o plano de teste
+  pede os dois critérios para todo comando que recusa entrada (RN-890).
+- A tarefa bloqueada deixa de aparecer como "a fazer": a aba Histórias mostra
+  um selo de estado em cada tarefa ("Bloqueada", com o motivo, vence o
+  status), e o backlog que o Dev Lead lê marca a linha com `BLOQUEADA` e o
+  motivo (RN-887).
+- O engine passa a usar o `bandit` do commit `d88b219` de `mtrudel/bandit`,
+  preso ao SHA, em vez da 1.12.5 da hex: a advisory EEF-CVE-2026-105659
+  (GHSA-69m6-wcv4-rwcf, HIGH, HTTP/2) afeta toda release `>= 1.4.0` e a
+  correção ainda não saiu em release. Temporário: volta para `~> 1.12` da hex
+  quando sair a release que contém o commit.
+- O composer da Sessão não perde mais teclas na digitação rápida: o campo
+  guarda o próprio valor e uma renderização atrasada da página não o reescreve
+  (RN-882).
+- A oferta de ligar o modo automático para o time aparece também no chat da
+  Sessão com a execução ativa, pelo mesmo controle da aba Executores (RN-883).
+- A pergunta respondida no chat oferece "Corrigir a história" quando a
+  história afetada ainda é rascunho sem tarefa em execução, levando à aba
+  Histórias com ela aberta (RN-884).
+- O dev agent e o gate de QA passam a cobrar do entregável que toca rotas: URL
+  absoluta com a porta (`PUBLIC_BASE_URL` ou o `Host`), o mesmo `code` para o
+  mesmo erro em todas as rotas, CORS configurável por `CORS_ORIGINS` com
+  preflight 204, `servers` relativo no `/openapi.json` e swagger-ui com versão
+  exata (RN-879, RN-880, AT-531, AT-532).
+- O CORS do entregável usa a porta publicada (`APP_PORT`), nunca a interna, e
+  o QA faz o preflight nessa porta para `localhost` e `127.0.0.1`, conferindo o
+  `Access-Control-Allow-Origin` (RN-885, AT-535).
+- O 403 de orçamento do OpenRouter (guardrail mensal da chave) passa a ser
+  crédito esgotado: origem `infra`, sem retomada automática, e frase curta com
+  limite, gasto e reset em vez de "parou sem concluir" (RN-886, AT-534).
+- O dev e o QA recebem as outras decisões do projeto numa seção própria,
+  depois das da tarefa (RN-881, AT-526).
+
+- O gate de QA deixa de estacionar quando a api recusa a pergunta do
+  `needs_user_decision` (id que não é uuid, pergunta inexistente ou já
+  respondida): a recusa volta ao QA, que tenta de novo ou aplica a decisão já
+  tomada; teto esgotado bloqueia a tarefa com o motivo. O recorte do QA manda
+  conferir as decisões antes de perguntar (RN-876, RN-877, AT-526).
+- Os agentes de execução (`dev-*`, `qa-*`) recebem a orientação de idioma
+  dizendo que ela vale desde a primeira frase, inclusive a narração antes de
+  cada ferramenta: o QA de Automação abria o turno em inglês num projeto
+  pt-BR (RN-878, AT-530).
+- O aviso do gate estacionado no fio deixa de dizer "parado mais de 2 h"
+  quando o motivo é uma pergunta em aberto: diz que o gate espera a resposta e
+  aponta o cartão "Perguntas em aberto" (RN-867, AT-528).
+- O tick do resgate de gates deixa de se multiplicar: o reagendamento é único
+  como o do boot, e a mesma linha do `GateRescuer` não sai mais 11 vezes por
+  tick (RN-868, AT-529).
+- O dev e o QA passam a tratar como rota a tarefa que diz só "endpoint" ou
+  verbo HTTP com caminho (`POST /links`): ela recebe a cláusula do OpenAPI e a
+  conferência do `/openapi.json`, que agora cobra também as rotas registradas
+  no código, e a que falta reprova (RN-865, AT-527).
+- O PO passa a receber no turno as decisões do usuário e as perguntas ainda
+  abertas do projeto, e escreve a resposta decidida na história em vez de
+  "pergunta em aberto N" (RN-874, AT-526).
+- O QA não estaciona mais o gate esperando uma pergunta que não existe ou que
+  o usuário já respondeu: o veredito com `openQuestionId` desconhecido é
+  recusado (404) e o de pergunta já respondida volta 409 com a decisão do
+  usuário, sem gravar nada. Pergunta em aberto que cita a regra pelo TÍTULO
+  passa a guardar o id dela, e a decisão do usuário que não toca a tarefa
+  chega ao dev e ao QA numa lista própria do contexto (`decisoesDoProjeto`),
+  dentro do mesmo teto de 10 (AT-526, RN-870..872, ADR 0215).
 - A task bloqueada por falha passageira de rede ou do provedor (DNS, conexão
   caída, 5xx/429) volta sozinha em até 3 tentativas, depois de 1, 3 e 10 min,
   e o dev agent pausa 1 min em vez de bloquear a fila inteira; crédito

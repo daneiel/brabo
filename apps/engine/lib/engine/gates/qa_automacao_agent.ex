@@ -69,6 +69,22 @@ defmodule Engine.Gates.QaAutomacaoAgent do
     |> handle_outcome(task_id)
   end
 
+  @doc """
+  AT-526 (RN-876): a api recusou o veredito `needs_user_decision`. Retoma o
+  laço de onde ele parou, com a recusa como mensagem nova (RN-163: erro é
+  entrada do laço). A volta CONTA no teto de iterações do mesmo `ctx`.
+  """
+  def devolver(ctx, texto_da_recusa, task_id) do
+    ctx
+    |> Map.update!(:messages, fn messages ->
+      Enum.reject(messages, &(Map.get(&1, "role") == "system")) ++
+        [%{"role" => "user", "content" => texto_da_recusa, :pinned => false}]
+    end)
+    |> Map.update(:iteration, 1, &(&1 + 1))
+    |> ToolLoop.run()
+    |> handle_outcome(task_id)
+  end
+
   defp build_ctx(
          project_id,
          session_id,
@@ -117,6 +133,22 @@ defmodule Engine.Gates.QaAutomacaoAgent do
   # NEGÓCIO sob revisão (`enviar(payload)`) em vez de usar uma ferramenta — o
   # loop encerrava sem parecer. O DevAgent tem o AGENTS.md do repositório
   # guiando cada passo; o QA não tinha nada equivalente.
+  @doc """
+  RN-890 (AT-542): ao provar um comando de linha do entregável (CLI, script
+  do `package.json`), o QA confere o código de saída no caminho feliz (0) E
+  na recusa de entrada (diferente de 0). Instrução, não gate novo.
+  """
+  @spec instrucao_de_codigo_de_saida() :: String.t()
+  def instrucao_de_codigo_de_saida do
+    """
+    Comando de linha da entrega (CLI, script do `package.json`): o teste que
+    o prova confere o CÓDIGO DE SAÍDA — 0 no caminho feliz e DIFERENTE de 0
+    quando o comando recusa a entrada. Recusa que sai com 0 engana quem o
+    chama (script, CI); teste que não confere o código de saída na recusa é
+    regra sem cobertura e entra em `itens`.
+    """
+  end
+
   defp initial_message(task, story) do
     regras = Enum.concat(story["rf"] || [], story["rnf"] || [])
 
@@ -143,6 +175,8 @@ defmodule Engine.Gates.QaAutomacaoAgent do
       3. `emit_qa_verdict` com uma linha de `coverageMatrix` por regra —
          `rule` (o texto da regra), `tests` (os arquivos que a cobrem, lista
          vazia se nenhum) e `covered` (true/false).
+
+      #{instrucao_de_codigo_de_saida()}
 
       Veredito: `approved` só se a suite saiu com exit 0 E toda regra tem pelo
       menos um teste. Se alguma regra ficou sem teste, use
@@ -194,6 +228,16 @@ defmodule Engine.Gates.QaAutomacaoAgent do
 
     Estratégia de automação: #{Map.get(plano, :estrategia_de_automacao, "")}
     """
+  end
+
+  # AT-526 (RN-876): o `needs_user_decision` leva o `ctx` do laço, para a
+  # recusa da api voltar a ele (`devolver/3`). Nunca entra em artefato: quem
+  # emite lê os campos nomeados.
+  defp handle_outcome(
+         {:halted, {"emit_qa_verdict", %{veredito: "needs_user_decision"} = verdict}, ctx},
+         _task_id
+       ) do
+    {:ok, Map.put(verdict, :retomada, ctx)}
   end
 
   defp handle_outcome({:halted, {"emit_qa_verdict", verdict}, _ctx}, _task_id) do

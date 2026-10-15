@@ -19,6 +19,7 @@ import { useLayoutMovel } from '../lib/layout-movel';
 import { BranchIcon, GitHubIcon, GitLabIcon, LocalRepoIcon } from '../components/ui/icons';
 import { ABA_PADRAO, abaPorChave, ehChaveDeAba, type ChaveDeAba } from './project-tabs';
 import { ContextoDeSecaoInicial } from './settings/secao-inicial';
+import { ContextoDeHistoriaInicial } from '../lib/historia-inicial';
 import type { ChaveDeSecao } from './settings/sumario';
 import { Badge } from '../components/ui/Badge';
 import styles from './ProjectPage.module.css';
@@ -38,9 +39,11 @@ interface ProjectPageProps {
    * faria a moldura voltar a carregar dado específico de uma aba.
    */
   initialSection?: ChaveDeSecao;
+  /** RN-884: a história que a aba Histórias abre, pelo mesmo caminho. */
+  initialStory?: string;
 }
 
-export function ProjectPage({ projectId, initialTab, initialSection }: ProjectPageProps) {
+export function ProjectPage({ projectId, initialTab, initialSection, initialStory }: ProjectPageProps) {
   const { t } = useTranslation('projectPage');
   const [tab, setTab] = useState<ChaveDeAba>(initialTab ?? ABA_PADRAO);
   const [painelAberto, setPainelAberto] = useState(false);
@@ -227,12 +230,14 @@ export function ProjectPage({ projectId, initialTab, initialSection }: ProjectPa
             (o feed é um trilho com divisória à esquerda, não um card solto). */}
         <div className={[styles.body, aba.semRespiro && styles.bodyRente].filter(Boolean).join(' ')}>
           <ContextoDeSecaoInicial.Provider value={initialSection}>
+          <ContextoDeHistoriaInicial.Provider value={initialStory}>
             {/* Cada painel é um chunk próprio (AT-300): o `Suspense` fica AQUI,
                 em volta só do painel, para que trocar de aba nunca apague o
                 cabeçalho enquanto o chunk chega. */}
             <Suspense fallback={<CarregandoRota />}>
               <PainelDaAba projectId={projectId} />
             </Suspense>
+          </ContextoDeHistoriaInicial.Provider>
           </ContextoDeSecaoInicial.Provider>
         </div>
       </div>

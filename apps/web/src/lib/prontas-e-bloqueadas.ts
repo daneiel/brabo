@@ -67,7 +67,7 @@ export function assinaturaDoBacklog(epics: readonly Epic[] | undefined): string 
   return (epics ?? [])
     .flatMap((e) =>
       (e.stories ?? []).flatMap((s) =>
-        (s.tasks ?? []).map((t) => `${t.id}:${t.status}:${t.gateStatus ?? ''}`),
+        (s.tasks ?? []).map((t) => `${t.id}:${t.status}:${t.gateStatus ?? ''}:${t.blocked ? 'b' : ''}`),
       ),
     )
     .sort()

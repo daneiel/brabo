@@ -484,6 +484,23 @@ defmodule Engine.Sessions.FakeEngineApiClient do
       ) do
     notify({:gate_verdict_recorded, task_id, gate, veredito, resumo, itens, max_corrections})
     if extras != %{}, do: notify({:gate_verdict_extras, task_id, gate, extras})
+
+    # AT-526: fila opcional de respostas (recusa e depois aceite).
+    case Process.get(:fake_gate_verdict_responses, []) do
+      [resposta | resto] ->
+        Process.put(:fake_gate_verdict_responses, resto)
+
+        case resposta do
+          {:error, _} = erro -> erro
+          valor -> {:ok, valor}
+        end
+
+      [] ->
+        record_gate_verdict_padrao(task_id)
+    end
+  end
+
+  defp record_gate_verdict_padrao(task_id) do
     reply(:fake_gate_verdict_response, %{"nextAction" => "done", "task" => %{"id" => task_id}})
   end
 

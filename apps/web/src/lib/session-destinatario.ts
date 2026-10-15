@@ -166,6 +166,24 @@ export function useAtivosNoProjeto(
   return resumo?.find((c) => c.projectId === projectId)?.roster.activatedAgents;
 }
 
+/**
+ * RN-889 (AT-540): a execução do PROJETO, lida do MESMO resumo (mesma
+ * `queryKey` de `useAtivosNoProjeto`, nenhuma leitura nova): o roster é o da
+ * sessão mais recente, que é a de execução depois de aprovado o plano.
+ */
+export function useExecucaoNoProjeto(
+  workspaceId: string | undefined,
+  projectId: string,
+): { ativa: boolean; ativados: string[] } {
+  const { data: resumo } = useQuery({
+    queryKey: ['projects-summary', workspaceId],
+    queryFn: () => getProjectsSummary(workspaceId!),
+    enabled: !!workspaceId,
+  });
+  const roster = resumo?.find((c) => c.projectId === projectId)?.roster;
+  return { ativa: roster?.executionActivated === true, ativados: roster?.activatedAgents ?? [] };
+}
+
 /** A cadência da terceira fonte de `useAtivadosNaSessaoInteira`. */
 export const INTERVALO_DO_GASTO_COMO_PRESENCA_MS = 60_000;
 

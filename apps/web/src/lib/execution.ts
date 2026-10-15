@@ -1,4 +1,15 @@
-import type { Epic, SessionEvent } from './api-types';
+import type { Epic, SessionEvent, Task } from './api-types';
+
+export type EstadoDaTarefa = 'blocked' | 'todo' | 'in_progress' | 'in_review' | 'done';
+
+/**
+ * RN-887 (AT-536): o estado que a tela mostra de uma tarefa. O bloqueio é
+ * ORTOGONAL ao `status` (a bloqueada segue `todo`/`in_progress` com
+ * `blocked: true`), então quem mostra lê os dois — e `blocked` vence.
+ */
+export function estadoDaTarefa(task: Pick<Task, 'status' | 'blocked'>): EstadoDaTarefa {
+  return task.blocked ? 'blocked' : task.status;
+}
 
 /**
  * RN-794 (AT-469): quantas tarefas do backlog ainda não terminaram — `todo`

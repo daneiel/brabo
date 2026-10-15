@@ -47,8 +47,17 @@ defmodule Engine.Dev.ContextBuilder do
       module_contract: Map.get(ctx, "moduleContract"),
       # ADR 0214 (RN-862): decisões do usuário ligadas à história/tarefa.
       decisoes: Map.get(ctx, "decisoes", []),
+      # RN-881 (ADR 0215, RN-872): as outras decisões do projeto, já com teto da api.
+      decisoes_do_projeto: Map.get(ctx, "decisoesDoProjeto", []),
       business_rules_units: business_rules_units(rules),
-      task_state_units: task_state_units(task, story, adrs, Map.get(ctx, "decisoes", []))
+      task_state_units:
+        task_state_units(
+          task,
+          story,
+          adrs,
+          Map.get(ctx, "decisoes", []),
+          Map.get(ctx, "decisoesDoProjeto", [])
+        )
     }
   end
 
@@ -61,8 +70,14 @@ defmodule Engine.Dev.ContextBuilder do
     end)
   end
 
-  defp task_state_units(task, story, adrs, decisoes) do
-    story_unit = %{id: :story, content: story_content(story) <> secao_de_decisoes(decisoes)}
+  defp task_state_units(task, story, adrs, decisoes, decisoes_do_projeto) do
+    story_unit = %{
+      id: :story,
+      content:
+        story_content(story) <>
+          secao_de_decisoes(decisoes) <> secao_de_decisoes_do_projeto(decisoes_do_projeto)
+    }
+
     task_unit = %{id: :task, content: "Task: #{task["title"]}\n#{task["description"]}"}
 
     adr_units =
@@ -109,6 +124,18 @@ defmodule Engine.Dev.ContextBuilder do
   end
 
   def secao_de_decisoes(_), do: ""
+
+  @doc """
+  As OUTRAS decisões do projeto (RN-881; a api as devolve em
+  `decisoesDoProjeto`, RN-872/ADR 0215, já com teto). Seção separada, depois
+  das da tarefa; vazio ou ausente não escreve nada.
+  """
+  def secao_de_decisoes_do_projeto(decisoes) when is_list(decisoes) and decisoes != [] do
+    linhas = Enum.map_join(decisoes, "\n", &"- #{linha_de_decisao(&1)}")
+    "\nOutras decisões do projeto:\n#{linhas}\n"
+  end
+
+  def secao_de_decisoes_do_projeto(_), do: ""
 
   defp linha_de_decisao(d) when is_map(d) do
     pergunta = Map.get(d, "pergunta") || Map.get(d, "context") || ""

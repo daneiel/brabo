@@ -352,4 +352,35 @@ defmodule Engine.Agents.DevLeadToolsTest do
       assert Engine.Agents.DevLeadTools.resumo_do_plano(%{}) == ""
     end
   end
+
+  describe "tarefas_do_backlog (RN-887)" do
+    test "a tarefa bloqueada diz BLOQUEADA e o motivo; a todo normal não" do
+      Process.put(:fake_backlog, [
+        %{
+          "stories" => [
+            %{
+              "title" => "H1",
+              "moduleIds" => ["api"],
+              "tasks" => [
+                %{
+                  "id" => "t-b",
+                  "title" => "Presa",
+                  "status" => "todo",
+                  "blocked" => true,
+                  "blockedReason" => "limite de correções"
+                },
+                %{"id" => "t-n", "title" => "Livre", "status" => "todo", "blocked" => false}
+              ]
+            }
+          ]
+        }
+      ])
+
+      texto = DevLeadTools.tarefas_do_backlog("proj-1")
+      [presa] = texto |> String.split("\n") |> Enum.filter(&(&1 =~ "task_id=t-b"))
+      [livre] = texto |> String.split("\n") |> Enum.filter(&(&1 =~ "task_id=t-n"))
+      assert presa =~ "BLOQUEADA: limite de correções"
+      refute livre =~ "BLOQUEADA"
+    end
+  end
 end

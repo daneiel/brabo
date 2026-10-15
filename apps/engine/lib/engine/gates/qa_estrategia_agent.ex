@@ -121,6 +121,19 @@ defmodule Engine.Gates.QaEstrategiaAgent do
     |> Hooks.register(:post_tool_use, TerminationPlanoDeTeste)
   end
 
+  @doc """
+  RN-890 (AT-542): o plano pede, para todo comando de linha da entrega que
+  recusa entrada, critério de código de saída no caminho feliz e na recusa.
+  """
+  @spec instrucao_de_codigo_de_saida() :: String.t()
+  def instrucao_de_codigo_de_saida do
+    """
+    Todo comando de linha da entrega (CLI, script do `package.json`) que
+    RECUSA entrada ganha em `criteriosExecutaveis` dois critérios de CÓDIGO
+    DE SAÍDA: 0 no caminho feliz e DIFERENTE de 0 na recusa.
+    """
+  end
+
   defp initial_message(task, story, arquivos_alterados) do
     %{
       "role" => "user",
@@ -156,6 +169,8 @@ defmodule Engine.Gates.QaEstrategiaAgent do
         Z" em vez de prosa vaga);
       - `estrategiaDeAutomacao`: GENÉRICA e curta — que NÍVEL de teste
         (unidade/integração/e2e) e ONDE, sem escolher framework específico.
+
+      #{instrucao_de_codigo_de_saida()}
 
       Você tem poucas iterações: duas ou três leituras e então
       `emit_plano_de_teste`. Responda SEMPRE chamando uma ferramenta.

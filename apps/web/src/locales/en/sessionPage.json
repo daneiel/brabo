@@ -271,7 +271,11 @@
       "responder": "Answer",
       "soOAutor": "Only the person who created the session where the question was asked can answer it.",
       "erro": "The answer could not be saved.",
-      "recorte": "Showing {{mostradas}} of {{total}} questions."
+      "recorte": "Showing {{mostradas}} of {{total}} questions.",
+      "respondida": "Answered. The answer was saved as a decision.",
+      "corrigir": "Fix the story",
+      "corrigirHistoria": "Affected story: {{titulo}}",
+      "dispensar": "Dismiss"
     }
   },
   "mergearNoChat": {
@@ -311,6 +315,7 @@
   },
   "gateEstacionado": {
     "aviso": "The {{gate}} gate cycle for task {{taskId}} stalled for more than 2 h and was parked: it does not restart on its own.",
+    "avisoPergunta": "The {{gate}} gate cycle for task {{taskId}} is parked waiting for your answer to an open question: answer it in the \"Open questions\" card and the gate restarts.",
     "botao": "Resume gate",
     "nota": "Dispatches the {{gate}} gate again for this task.",
     "semPapel": "Resuming the gate requires the developer role on the project.",

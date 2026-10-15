@@ -93,7 +93,8 @@ defmodule Engine.Gates.QaLead do
        resumo: "#{label} pede decisão do usuário: #{verdict.resumo}",
        itens: itens_prefixados(pareceres),
        coverage_matrix: coverage_matrix_de(pareceres),
-       decisao_do_usuario: Map.get(verdict, :decisao_do_usuario, %{})
+       decisao_do_usuario: Map.get(verdict, :decisao_do_usuario, %{}),
+       retomada: Map.get(verdict, :retomada)
      }}
   end
 

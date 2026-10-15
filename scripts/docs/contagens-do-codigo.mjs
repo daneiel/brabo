@@ -18,8 +18,8 @@
  *                 não pôde ser contada. Um check cego fica verde dizendo que
  *                 conferiu o que não olhou — por isso reprova.
  *
- * A comparação ignora CAIXA (o `CLAUDE.md` escreve "SEIS" e "CINCO" para dar
- * ênfase), e a FORMA do número é a da frase: por extenso em pt-BR (masculino
+ * A comparação ignora CAIXA (as partes do `CLAUDE.md`, em `.claude/contexto/`,
+ * escrevem "SEIS" e "CINCO" para dar ênfase), e a FORMA do número é a da frase: por extenso em pt-BR (masculino
  * ou feminino), por extenso em inglês, ou algarismo. Passar do fim da tabela
  * por extenso cai no algarismo — que a frase então não vai dizer, e reprova
  * como DESATUAL em vez de passar calado.
@@ -232,21 +232,21 @@ export const FONTES = {
 
 export const AFERICOES = [
   // overrides — "já são catorze na raiz e treze no website"
-  { arquivo: 'CLAUDE.md', padrao: /já são (\S+) na raiz e \S+ no website/, fonte: 'overridesRaiz', forma: 'pt_m' },
-  { arquivo: 'CLAUDE.md', padrao: /já são \S+ na raiz e (\S+) no website/, fonte: 'overridesWebsite', forma: 'pt_m' },
+  { arquivo: '.claude/contexto/stack.md', padrao: /já são (\S+) na raiz e \S+ no website/, fonte: 'overridesRaiz', forma: 'pt_m' },
+  { arquivo: '.claude/contexto/stack.md', padrao: /já são \S+ na raiz e (\S+) no website/, fonte: 'overridesWebsite', forma: 'pt_m' },
 
   // golden-set do RAG
-  { arquivo: 'CLAUDE.md', padrao: /um corpo de (\S+) perguntas medindo/, fonte: 'goldenSetRagCasos', forma: 'digito' },
+  { arquivo: '.claude/contexto/estado-atual.md', padrao: /um corpo de (\S+) perguntas medindo/, fonte: 'goldenSetRagCasos', forma: 'digito' },
   { arquivo: 'docs/explanation/gates.md', padrao: /\((\S+) questions composed from real RNs/, fonte: 'goldenSetRagCasos', forma: 'digito' },
-  { arquivo: 'CLAUDE.md', padrao: /corpus CURADO \((\S+) arquivos, não os/, fonte: 'goldenSetRagCorpus', forma: 'digito' },
-  { arquivo: 'CLAUDE.md', padrao: /corpus CURADO \((\S+) arquivos\), não os/, fonte: 'goldenSetRagCorpus', forma: 'digito' },
-  { arquivo: 'CLAUDE.md', padrao: /medido de verdade \((\d+\/\d+),/, fonte: 'goldenSetRagPiso', forma: 'digito' },
+  { arquivo: '.claude/contexto/estado-atual.md', padrao: /corpus CURADO \((\S+) arquivos, não os/, fonte: 'goldenSetRagCorpus', forma: 'digito' },
+  { arquivo: '.claude/contexto/estado-atual.md', padrao: /corpus CURADO \((\S+) arquivos\), não os/, fonte: 'goldenSetRagCorpus', forma: 'digito' },
+  { arquivo: '.claude/contexto/estado-atual.md', padrao: /medido de verdade \((\d+\/\d+),/, fonte: 'goldenSetRagPiso', forma: 'digito' },
 
   // imagens de terceiro presas por digest
   { arquivo: 'docs/explanation/cadeia-de-suprimentos-do-ci.md', padrao: /all (\S+) third-party references/, fonte: 'imagensDeTerceiro', forma: 'digito' },
 
   // imagens que o produto publica / que o smoke confere
-  { arquivo: 'CLAUDE.md', padrao: /As (\S+) imagens de\s+produção são PUBLICADAS/, fonte: 'imagensPublicadas', forma: 'pt_f' },
+  { arquivo: '.claude/contexto/stack.md', padrao: /As (\S+) imagens de\s+produção são PUBLICADAS/, fonte: 'imagensPublicadas', forma: 'pt_f' },
   { arquivo: 'README.md', padrao: /build das (\S+) imagens com/, fonte: 'imagensPublicadas', forma: 'pt_f' },
   // RN-524 e RN-527 (AT-192): ficaram em "quatro" depois do ADR 0162
   { arquivo: 'docs/business-rules.md', padrao: /- as \*\*(\S+) imagens\*\* são assinadas \*\*por DIGEST\*\*/, fonte: 'imagensPublicadas', forma: 'pt_f' },
@@ -261,13 +261,13 @@ export const AFERICOES = [
   { arquivo: 'docs/architecture.md', padrao: /`GitProviderContract` — (\S+) operations, \*\*types/, fonte: 'operacoesDoGit', forma: 'en' },
 
   // porta de Docker
-  { arquivo: 'CLAUDE.md', padrao: /PORTA de\s+(\S+) operações \(`packages\/docker-port`/, fonte: 'operacoesDoDocker', forma: 'pt_f' },
-  { arquivo: 'CLAUDE.md', padrao: /das (\S+) operações da `DockerPort`/, fonte: 'operacoesDoDocker', forma: 'pt_f' },
+  { arquivo: '.claude/rules/runner.md', padrao: /PORTA de\s+(\S+) operações \(`packages\/docker-port`/, fonte: 'operacoesDoDocker', forma: 'pt_f' },
+  { arquivo: '.claude/rules/broker-e-containers.md', padrao: /das (\S+) operações da `DockerPort`/, fonte: 'operacoesDoDocker', forma: 'pt_f' },
   { arquivo: 'docs/architecture.md', padrao: /the Docker PORT \((\S+) operations\)/, fonte: 'operacoesDoDocker', forma: 'en' },
 
   // web, compose, ações, banco
   { arquivo: 'README.md', padrao: /— (\S+) abas, derivadas de um registro único/, fonte: 'abasDoProjeto', forma: 'pt_f' },
-  { arquivo: 'CLAUDE.md', padrao: /Os (\S+) serviços do compose de DEV têm healthcheck/, fonte: 'servicosDoComposeDeDev', forma: 'pt_m' },
+  { arquivo: '.claude/contexto/convencoes-repositorio-e-dominio.md', padrao: /Os (\S+) serviços do compose de DEV têm healthcheck/, fonte: 'servicosDoComposeDeDev', forma: 'pt_m' },
   { arquivo: 'docs/glossary.md', padrao: /executes directly\. (\S+) types\./, fonte: 'tiposDeAcao', forma: 'en' },
   { arquivo: 'docs/glossary.md', padrao: /executes directly\. \S+ types\. (\S+) states/, fonte: 'estadosDeAcao', forma: 'en' },
   { arquivo: 'docs/architecture.md', padrao: /^(\d+) tables in total\./m, fonte: 'tabelasDoBanco', forma: 'digito' },
@@ -275,7 +275,7 @@ export const AFERICOES = [
   // artefatos e providers
   { arquivo: 'README.md', padrao: /os (\S+) schemas e quem pode emitir/, fonte: 'schemasDeArtefato', forma: 'pt_m' },
   { arquivo: 'docs/reference/artifacts.md', padrao: /^description: The (\S+) artifact schemas/m, fonte: 'schemasDeArtefato', forma: 'en' },
-  { arquivo: 'CLAUDE.md', padrao: /; (\d+) providers \(ADR 0043\)/, fonte: 'providersDeLlm', forma: 'digito' },
+  { arquivo: '.claude/contexto/stack.md', padrao: /; (\d+) providers \(ADR 0043\)/, fonte: 'providersDeLlm', forma: 'digito' },
 ];
 
 /**

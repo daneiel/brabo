@@ -216,6 +216,23 @@ defmodule Engine.SessionEvents.Event do
     )
   end
 
+  @doc """
+  Os eventos de certos TIPOS no PROJETO inteiro (todas as sessões), os
+  `limit` mais recentes, em ordem cronológica. Leitura local, sem HTTP — é o
+  que `Engine.Harness.DecisoesDoProjeto` (RN-874) usa no turno do PO.
+  """
+  def list_types_for_project(project_id, types, limit) when is_list(types) do
+    from(e in __MODULE__,
+      join: s in Engine.Sessions.ProjectSession,
+      on: e.session_id == s.id,
+      where: s.project_id == type(^project_id, :binary_id) and e.type in ^types,
+      order_by: [desc: e.created_at, desc: e.seq],
+      limit: ^limit
+    )
+    |> Repo.all()
+    |> Enum.reverse()
+  end
+
   defp project_window_query(project_id, from_time, to_time) do
     from(e in __MODULE__,
       join: s in Engine.Sessions.ProjectSession,
