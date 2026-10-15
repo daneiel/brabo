@@ -9812,7 +9812,7 @@ export interface components {
              * @example pt-BR
              * @enum {string}
              */
-            locale: "pt-BR" | "en";
+            locale: "pt-BR" | "en" | "ru" | "zh-Hans";
         };
         SessionContextSummaryResponseDto: {
             /** @description The requested session plus the execution session(s) its approved Dev Lead plan activated (RN-828). */
@@ -10041,7 +10041,7 @@ export interface components {
              * @example pt-BR
              * @enum {string}
              */
-            interfaceLocale: "pt-BR" | "en";
+            interfaceLocale: "pt-BR" | "en" | "ru" | "zh-Hans";
             /**
              * @description The language YOUR recent messages point to, when the screen should ASK whether to use it for the answers (RN-624) — `null` means no question. Detection never changes the preference by itself: only answering `confirm` on `POST /users/me/preferences/detected-language` does. Never asked when the effective language comes from an explicit choice (this session or the Account), when it already is the detected one, or when you declined this language before. Best effort: a detection failure is `null`, never an error of this route.
              * @example es
@@ -10707,7 +10707,7 @@ export interface components {
              * @example en
              * @enum {string}
              */
-            locale?: "pt-BR" | "en";
+            locale?: "pt-BR" | "en" | "ru" | "zh-Hans";
             /**
              * @description The language agents answer in (RN-618): `automatico` or ANY BCP-47 code whose language the server recognizes — an open list, unlike `locale`. Stored canonical (`pt-br` becomes `pt-BR`). An unrecognized code is a 400 that names the rule. Never changes `locale`.
              * @example es
@@ -10793,7 +10793,7 @@ export interface components {
              * @example pt-BR
              * @enum {string}
              */
-            locale: "pt-BR" | "en";
+            locale: "pt-BR" | "en" | "ru" | "zh-Hans";
             /**
              * @description `automatico` (every account starts there) or the BCP-47 code explicitly chosen on the Account page.
              * @example automatico

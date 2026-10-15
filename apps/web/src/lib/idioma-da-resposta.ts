@@ -34,6 +34,7 @@ export const IDIOMAS_SUGERIDOS: readonly string[] = [
   'it',
   'ja',
   'zh-Hans',
+  'ru',
 ];
 
 /** Valor do `<option>` que abre o campo livre — nunca vai para a api. */
