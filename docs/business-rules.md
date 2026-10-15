@@ -4703,6 +4703,9 @@ badigar por isso seria ruído.
 
 ### RN-432 — Preferência de idioma vem no payload de login/refresh, nunca numa chamada extra {#rn-432}
 
+> Revisada pela [RN-891](#rn-891): a coluna aceita também `ru` e `zh-Hans`,
+> e o padrão do web passou de `en` para `pt-BR` (ADR 0216).
+
 Fundação de i18n da interface (Onda 6a de um programa maior — a extração em
 massa das strings do resto do app é etapa separada, em paralelo). Coluna
 `locale` em `users` (`'pt-BR' | 'en'`, default `'pt-BR'` — nunca flipa
@@ -16621,8 +16624,8 @@ daquele turno. A Conta deixou de dizer que o valor "ainda não chega".
 
 - **Código:** `apps/api/src/domain/iam/idioma-de-resposta.ts:56`
   (`normalizarIdiomaBcp47`), `:118` (`resolverIdiomaDaResposta`);
-  `apps/api/src/db/schema/iam.ts:98` (`responseLanguage`), `:105`
-  (`detectedLanguage`), `:122` (`users_idioma_detectado_so_confirmado`);
+  `apps/api/src/db/schema/iam.ts:104` (`responseLanguage`), `:111`
+  (`detectedLanguage`), `:128` (`users_idioma_detectado_so_confirmado`);
   `apps/api/src/db/schema/sessions.ts:120` (`sessionLanguageOverrides`);
   `apps/api/src/application/use-cases/iam/resolver-idioma-da-resposta.use-case.ts:44`
   (`ResolverIdiomaDaRespostaUseCase`);
@@ -16683,7 +16686,7 @@ toda chamada de LLM de turno SEM autor humano, e desde a [RN-623](#rn-623)
 também como idioma do artefato compartilhado que um agente grava DURANTE um
 turno com autor humano — a divergência que esta regra declarava fechou.
 
-- **Código:** `apps/api/src/db/schema/iam.ts:257` (`language`);
+- **Código:** `apps/api/src/db/schema/iam.ts:262` (`language`);
   `apps/api/src/db/migrations/0062_idioma_do_projeto.sql` (o backfill);
   `apps/api/src/application/use-cases/iam/idioma-do-projeto.ts:13`
   (`idiomaDoProjetoOuRecusa`);
@@ -17103,7 +17106,7 @@ para aceitar os `export` de um módulo CommonJS.
   `:123` (`responder`);
   `apps/api/src/infrastructure/persistence/drizzle/deteccao-de-idioma.repository.ts:27`
   (`ultimasEvidencias`), `:75` (`confirmar`);
-  `apps/api/src/db/schema/iam.ts:138` (`detectedLanguageDeclines`);
+  `apps/api/src/db/schema/iam.ts:144` (`detectedLanguageDeclines`);
   `apps/api/src/db/schema/sessions.ts:164`
   (`session_events_evidencia_de_idioma_idx`);
   `apps/api/src/interfaces/http/iam/session-response-language.controller.ts:66`
@@ -17205,7 +17208,7 @@ endpoint é ALPHA e o smoke manual
   `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:152`
   (`decisaoDoJev`); `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:167`
   (`preparar`); `apps/api/src/infrastructure/llm/jev-tool-router.ts:32`
-  (`decidir`); `apps/api/src/db/schema/iam.ts:164` (`toolRouterEnabled`);
+  (`decidir`); `apps/api/src/db/schema/iam.ts:169` (`toolRouterEnabled`);
   `apps/api/src/db/schema/llm.ts:356` (`priceImplicit`);
   `apps/engine/lib/engine/harness/roteamento_de_ferramenta.ex:60` (`registrar`),
   `:112` (`custo_micros`), `:123` (`repetir_com_catalogo_inteiro?`), `:146`
@@ -18775,7 +18778,7 @@ vale só para aquele projeto. Os dois scripts de validação que exercitam o flu
 manual (`validacao-fase-12.ts`, `validacao-real.ts`) passam a pedir `manual`
 explícito.
 
-- **Código:** `apps/api/src/db/schema/iam.ts:282` (`storyPromotion`);
+- **Código:** `apps/api/src/db/schema/iam.ts:287` (`storyPromotion`);
   `apps/api/src/db/migrations/0065_default_de_promocao_auto.sql`;
   `apps/web/src/routes/NewProjectWizard.tsx:978` (a linha do Confirmar);
   `apps/web/src/routes/settings/PromotionSection.tsx:75` (a nota do default)
@@ -21824,7 +21827,7 @@ sem dizer qual.
   cortada pelo limite de tamanho.", qualquer outro — ou nenhum — "Response cut
   off by the length limit.". O Ollama não lê o motivo de parada (fora do
   escopo, declarado).
-- **Onde:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:278`
+- **Onde:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:257`
   (`cortadaPeloTeto`),
   `apps/api/src/infrastructure/llm/anthropic-provider.ts:198` (`finalMessage`),
   `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:204`
@@ -21883,7 +21886,7 @@ sem dizer qual.
   ITERAÇÕES, não o de tokens). Hipótese NÃO medida com chave real: que a
   reserva explica o 402 do TP-01.
 - **Onde:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:38`
-  (`MAX_TOKENS_PADRAO`), `:462` (`flags`)
+  (`MAX_TOKENS_PADRAO`), `:484` (`flags`)
 - **Teste:** `apps/api/test/infrastructure/llm/openai-compatible-provider.contract.spec.ts`
   (sem `maxTokens` o corpo leva `max_tokens: 4096`; com `maxTokens: 123` leva
   123; com `maxTokensField: 'max_completion_tokens'` o campo muda e
@@ -21953,7 +21956,7 @@ sem dizer qual.
   com credencial de 10/10 mostrou que o Haiku 5.5 IGNORA `reasoning.max_tokens`;
   o campo deixou de ser enviado e a folga no `max_tokens` ficou.
 - **Onde:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:48`
-  (`ORCAMENTO_DE_RACIOCINIO`), `:470` (`controla`)
+  (`ORCAMENTO_DE_RACIOCINIO`), `:490` (`controla`)
 - **Teste:** `apps/api/test/infrastructure/llm/openai-compatible-provider.contract.spec.ts`
   (`raciocínio com orçamento próprio (RN-741)`: orçamento e teto somado; sem
   raciocínio o corpo não muda; provider sem campo não inventa orçamento)
@@ -22650,7 +22653,7 @@ sem dizer qual.
   chamado pelos três casos de uso de turno. O TODO(humano) da RN-741 fecha com
   essa medição.
 - **Onde:** `apps/api/src/domain/llm/raciocinio-do-agente.ts:18`
-  (`opcoesDeRaciocinio`), `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:470`
+  (`opcoesDeRaciocinio`), `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:490`
   (`controla`), `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:189`
   (`opcoesDeRaciocinio`)
 - **Teste:** `apps/api/test/infrastructure/llm/openai-compatible-provider.contract.spec.ts`
@@ -24793,3 +24796,24 @@ sem dizer qual.
   da entrega entram na mensagem")
 - **Origem:** AT-542 (TP-01, 17ª: `npm run user:create` recusava a senha e
   saía com 0)
+
+### RN-891 — A interface tem quatro idiomas, com pt-BR como padrão e fallback {#rn-891}
+
+- **Regra:** o idioma da interface (`users.locale`) aceita `pt-BR`, `en`, `ru`
+  e `zh-Hans`, e recusa qualquer outro; o padrão da conta continua `pt-BR`.
+  No web, `pt-BR` é o padrão e o `fallbackLng` (revisa a RN-432, que fazia do
+  `en` o padrão do web). A escolha gravada na conta vence sempre; sem ela, o
+  navegador sugere: `pt*` → `pt-BR`; `zh`, `zh-CN`, `zh-SG`, `zh-Hans*` →
+  `zh-Hans`; `ru*` → `ru`; `en*` → `en`; o resto (alemão, chinês
+  tradicional…) → `pt-BR`. Locale sem catálogo em `locales/` não quebra o boot:
+  a tela cai no pt-BR e o seletor da Conta, com os rótulos nativos, diz
+  "tradução em andamento". `<html lang>` acompanha o idioma ativo. A paridade
+  de chaves compara cada locale existente com a fonte pt-BR.
+- **Onde:** `apps/api/src/domain/iam/user.entity.ts:8` (`USER_LOCALES`),
+  `apps/web/src/lib/idioma.ts:65` (`resolverIdiomaDoNavegador`),
+  `apps/web/src/lib/i18n.ts:72` (`fallbackLng`)
+- **Teste:** `apps/api/test/interfaces/http/iam/user-preferences-locale.dto.spec.ts`
+  ("aceita pt-BR, en, ru e zh-Hans"; "recusa idioma fora da lista");
+  `apps/web/src/lib/idioma.test.ts` ("idioma sem catálogo cai no pt-BR, nunca
+  no inglês"); `apps/web/src/lib/i18n-paridade.test.ts`
+- **Origem:** AT-548, ADR 0216 (itens 1–4)

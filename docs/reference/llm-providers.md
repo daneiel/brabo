@@ -70,6 +70,7 @@ poorer than the provider, never richer.
 | `toolCalling` | provider + `models.supports_tool_calling` | reject agent binding ([RN-040](../business-rules/custo.md#rn-040)) |
 | `listModels` | provider only | enable/skip catalog sync ([RN-043](../business-rules/custo.md#rn-043)) |
 | `embeddings` | provider + `supportsEmbeddings` on the catalog row | allow/reject the embedding call ([RN-190](../business-rules/custo.md#rn-190)) |
+| `promptCaching` | provider + a per-model hook (`marcarCacheDePrompt`; on OpenRouter only `anthropic/*`) | mark the stable prefix with `cache_control` so repeated input is billed at the cached price ([RN-892](../business-rules/custo.md#rn-892)); `false` in all 9 providers until the cache smoke runs with a real key |
 | `context_length` | `models.context_window` | context budget |
 | `vision` | `models.supports_vision` | filter the catalog ([RN-056](../business-rules/custo.md#rn-056)) |
 | `reasoning` | `models.supports_reasoning` | same |

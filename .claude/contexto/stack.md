@@ -23,8 +23,9 @@
   (`sys_sigaltstack`, erlang/otp#11349) — não desça o OTP sem descer a musl
 - `apps/web`: React 19 + Vite + TanStack Query/Router; `react-i18next`+
   `i18next` (fundação de i18n, RN-432) atrás de `lib/i18n.ts`/`lib/idioma.ts`
-  — `en` ainda é o idioma default do web, MAS o ADR 0216 (EP-032) decidiu `pt-BR`
-  como padrão e FONTE, com `en`, `ru` e `zh-Hans` (a virada vem na fase 1),
+  — `pt-BR` é o padrão, o `fallbackLng` e a FONTE da paridade (ADR 0216,
+  RN-891), com os quatro locales `pt-BR`, `en`, `ru` e `zh-Hans` (os catálogos
+  de `ru`/`zh-Hans` chegam em rodada própria; sem pasta, a tela cai no pt-BR),
   servidor é a fonte de verdade
   (`localStorage` só evita flash no primeiro paint); `mermaid` (runtime,
   ADR 0068) para o diagrama C4 do Arquiteto, isolado atrás de

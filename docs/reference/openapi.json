@@ -19486,6 +19486,11 @@
             "type": "boolean",
             "example": false,
             "description": "The provider accepts a ROUTING PREFERENCE (`price`, `throughput`, `latency`) to pick among the upstreams serving the same model (ADR 0166). Only `true` after a smoke against the real API returned the chosen upstream — reading the docs does not count."
+          },
+          "promptCaching": {
+            "type": "boolean",
+            "example": false,
+            "description": "The provider accepts explicit PROMPT-CACHE breakpoints (`cache_control`) on the stable prefix of a call (RN-892). Only `true` after a smoke against the real API showed cached input tokens on a repeated call."
           }
         },
         "required": [
@@ -19493,7 +19498,8 @@
           "toolCalling",
           "listModels",
           "embeddings",
-          "routingPreference"
+          "routingPreference",
+          "promptCaching"
         ]
       },
       "LlmTurnResponseDto": {
@@ -24404,7 +24410,9 @@
             "example": "pt-BR",
             "enum": [
               "pt-BR",
-              "en"
+              "en",
+              "ru",
+              "zh-Hans"
             ],
             "description": "The user's language preference (i18n foundation, Wave 6a). It comes here — and not in a separate call — so the web app never needs an extra round-trip just to know which language to render the screen in."
           }
@@ -24783,7 +24791,9 @@
             "type": "string",
             "enum": [
               "pt-BR",
-              "en"
+              "en",
+              "ru",
+              "zh-Hans"
             ],
             "example": "pt-BR"
           },
@@ -26050,7 +26060,9 @@
             "type": "string",
             "enum": [
               "pt-BR",
-              "en"
+              "en",
+              "ru",
+              "zh-Hans"
             ],
             "example": "en",
             "description": "The interface language. Closed to the list — not free-form BCP-47."
@@ -26223,7 +26235,9 @@
             "type": "string",
             "enum": [
               "pt-BR",
-              "en"
+              "en",
+              "ru",
+              "zh-Hans"
             ],
             "example": "pt-BR"
           },

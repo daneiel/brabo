@@ -2,17 +2,14 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { emailDaSessao } from '../lib/auth';
 import { mensagemDaApi } from '../lib/api-client';
-import { definirIdioma, IDIOMAS, type Idioma } from '../lib/idioma';
+import { definirIdioma, ehIdioma, IDIOMA_PADRAO, IDIOMAS, ROTULO_NATIVO, type Idioma } from '../lib/idioma';
+import { temCatalogo } from '../lib/i18n';
 import { useToast } from '../components/ui/ToastProvider';
 import { Select } from '../components/ui/Select';
 import styles from './AccountPage.module.css';
 import { MachineDeviceKeysSection } from './MachineDeviceKeysSection';
 import { ResponseLanguageSection } from './ResponseLanguageSection';
 
-const ROTULO: Record<Idioma, (t: (chave: string) => string) => string> = {
-  'pt-BR': (t) => t('account.language.ptBR'),
-  en: (t) => t('account.language.en'),
-};
 
 /**
  * A tela de conta (`/account`, fundação de i18n — Onda 6a).
@@ -41,7 +38,7 @@ export function AccountPage() {
   const [salvando, setSalvando] = useState(false);
   const email = emailDaSessao();
 
-  const idiomaAtual: Idioma = i18n.language === 'pt-BR' ? 'pt-BR' : 'en';
+  const idiomaAtual: Idioma = ehIdioma(i18n.language) ? i18n.language : IDIOMA_PADRAO;
 
   async function trocarIdioma(novo: Idioma) {
     if (novo === idiomaAtual) return;
@@ -83,7 +80,11 @@ export function AccountPage() {
           <div className={styles.cardInfo}>
             <div className={styles.cardTitle}>{t('account.language.title')}</div>
             <div className={styles.cardHint}>
-              {salvando ? t('account.language.saving') : ROTULO[idiomaAtual](t)}
+              {salvando
+                ? t('account.language.saving')
+                : temCatalogo(idiomaAtual)
+                  ? ROTULO_NATIVO[idiomaAtual]
+                  : `${ROTULO_NATIVO[idiomaAtual]} — ${t('account.language.inProgress')}`}
             </div>
           </div>
           <div className={styles.cardControl}>
@@ -95,7 +96,9 @@ export function AccountPage() {
             >
               {IDIOMAS.map((idioma) => (
                 <option key={idioma} value={idioma}>
-                  {ROTULO[idioma](t)}
+                  {temCatalogo(idioma)
+                    ? ROTULO_NATIVO[idioma]
+                    : `${ROTULO_NATIVO[idioma]} — ${t('account.language.inProgress')}`}
                 </option>
               ))}
             </Select>
