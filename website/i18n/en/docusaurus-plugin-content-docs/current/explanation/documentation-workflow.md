@@ -5,7 +5,7 @@ sidebar_label: Docs sync
 sidebar_position: 1
 description: The mechanism that keeps documentation from rotting — what each piece does, why it exists, and what to do when the check complains unfairly.
 keywords: [documentation, drift, docmap, CI, generation]
-traducao_de: 929963d24eb727bd64875486f2f1889172f3084a
+traducao_de: 96a04ed7489e6c9035ff600bc57269ef8305ea58
 ---
 
 # How documentation stays alive
@@ -689,9 +689,11 @@ The banner is a wrap swizzle of `@theme/DocItem/Content`
 a translated page that `traducao.json` marks stale shows the translation
 date and says the original changed. The texts live in each locale's
 `code.json`. `scripts/docs/faixa-de-traducao-check.mjs` runs after
-`pnpm docs:build` and checks the static HTML: a fallback page under `/en/`
-has the banner, while the same page at the root and a translated page that is
-not stale do not. The rules for translators are in
+`pnpm docs:build` and checks the static HTML: a fallback page has the banner
+(the sample comes from the first locale, `en`, `ru` or `zh-Hans`, that still has
+an untranslated page; with all of them complete there is no fallback to check),
+while the same page at the root and a page translated to `en` that is not stale
+do not. The rules for translators are in
 [Localização](localizacao.md).
 
 ### `links-do-locale.mjs` — a rewritten link skips the broken-link check
