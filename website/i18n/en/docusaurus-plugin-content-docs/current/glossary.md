@@ -5,7 +5,7 @@ sidebar_label: Glossary
 sidebar_position: 9
 description: Brabo's ubiquitous language — the terms that show up in the code, the screens, and the ADRs, with the meaning they carry here.
 keywords: [glossary, ubiquitous language, harness, gate, handoff, DEK, outbox]
-traducao_de: 2b694a01e7d46ec116a8a07e97e7ccbbafca28db
+traducao_de: 093f918421b29e274e4f77c0a40f80a4a3ea1545
 ---
 
 # Glossary
