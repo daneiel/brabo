@@ -5,7 +5,7 @@ sidebar_label: Getting Started
 sidebar_position: 5
 description: From clone to a first agent turn, with what to check when each step doesn't work.
 keywords: [installation, setup, onboarding, first project, ollama]
-traducao_de: cca4f282a22c9a427ae98001465238933cce3f47
+traducao_de: 504041e6506e0dc6341e30836aaa2a38efa393e4
 ---
 
 # Getting Started
@@ -318,6 +318,78 @@ docker compose -f docker/docker-compose.prod.yml down -v
 
 `e2e/` is not a workspace member — it has its own lockfile, so `pnpm --filter`
 won't find it. That's deliberate, and `e2e/README.md` says why.
+
+### Where everything lives {#onde-fica-cada-coisa}
+
+```
+apps/
+  api/      NestJS + Drizzle          → schema "public"
+  engine/   Elixir/OTP + Phoenix      → schema "engine"
+  web/      React + Vite
+packages/
+  shared/   tipos TS compartilhados (import type only)
+design/     design system — fonte de verdade de UI
+docker/     compose de dev e prod, Dockerfiles, smoke.sh
+deploy/k8s/ base + overlays local/staging/prod (Kustomize)
+docs/       esta documentação, incluindo os ADRs
+scripts/
+  ci/       automação de release e política de branch (testada com vitest)
+  dev/      ferramentas locais — o menu do `pnpm bootstrap` e o preflight
+  docs/     geração e verificação da documentação
+website/    Docusaurus, que lê de docs/ — nunca de website/docs/
+```
+
+`apps/engine` sits outside the pnpm workspace (it is a Mix project), with root
+scripts that delegate to `mix` (`pnpm engine:setup`, `pnpm engine:dev`,
+`pnpm engine:test`). If the host's Elixir is not the project's, format through
+the container:
+
+```bash
+docker run --rm -v "$PWD/apps/engine:/app" -w /app \
+  hexpm/elixir:1.20.4-erlang-29.1.1-alpine-3.24.2 mix format
+```
+
+**Database.** One Postgres, one database (`brabo`), two schemas so they never
+collide: the api (Drizzle) uses `public`, with migrations in
+`apps/api/src/db/migrations/` and one schema file per aggregate
+(`db/schema.ts` is only the barrel); the engine (Ecto/Oban) uses `engine`, via
+`migration_default_prefix`, with migrations in
+`apps/engine/priv/repo/migrations/`. pgvector is enabled by
+`docker/postgres/init.sql`, which runs once when the volume is created.
+
+**Tests that protect properties.** No feature goes in without a happy-path
+test and a failure-case test. The git providers go through a single contract
+suite, run against all three (Local, GitHub, GitLab).
+`apps/api/test/interfaces/route-surface.spec.ts` checks the routes against
+[`security-surface.md`](security-surface.md) — a new route without a
+classification breaks the test —, and `apps/engine/test/engine_web/route_surface_test.exs`
+requires 401 without a token on every engine route, save for named exceptions.
+
+**A turn, end to end:**
+
+```mermaid
+sequenceDiagram
+  participant U as Você
+  participant W as web
+  participant A as api
+  participant E as engine
+  participant L as LLM
+
+  U->>W: abre uma sessão
+  W->>A: POST /sessions
+  A->>A: grava session.created (event log + outbox)
+  A-->>E: Oban consome a outbox
+  E->>E: SessionServer + Harness montam o contexto
+  E->>L: turno
+  L-->>E: "quero rodar esta ferramenta"
+  E->>A: vira proposed_action
+  A->>A: IAM → agent_autonomy → permissions.json → tetos
+  A-->>U: pede aprovação
+  U->>A: aprova
+  A-->>E: executa
+  E->>A: evento imutável
+  A-->>W: broadcast — o painel atualiza
+```
 
 ### The menu, so you don't have to memorize all this
 

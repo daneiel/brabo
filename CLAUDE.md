@@ -94,10 +94,11 @@ coisas saíram do import sem perder uma palavra:
 - Frase ancorada num lugar do CÓDIGO entra em
   `verificarFrasesAncoradasNoCodigo` (`scripts/docs/generate.mjs`) — mesma
   tabela-por-frase das contagens, só que o esperado é DERIVADO do artefato e
-  não é um número. Hoje são seis: a escada da esteira no `description` do
+  não é um número. Hoje são cinco: a escada da esteira no `description` do
   `branching-policy.md`, derivada de `ESCADA` em `scripts/ci/pr-police.ts`
-  (NUNCA de `PROTECTED_BRANCHES`, que tem `rc` de propósito), e as duas frases
-  de `db:generate` (`README.md` e `docs/getting-started.md`), derivadas de
+  (NUNCA de `PROTECTED_BRANCHES`, que tem `rc` de propósito), a frase
+  de `db:generate` (`docs/getting-started.md`; o README é só vitrine desde a
+  AT-558 e não tem mais detalhe técnico), derivada de
   `apps/api/src/db/schema.ts` ser ou não barrel; e, desde a AT-123, as três
   frases de QUANTAS imagens o produto publica (`THIRD_PARTY_NOTICES.md`,
   `docs/runbook.md`, `docs/reference/brb.md`), derivadas de `ALVOS` em

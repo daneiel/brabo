@@ -6,6 +6,9 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- O README (e as traduções) ficou só com a visão do produto: estrutura, banco,
+  testes, observabilidade, produção, Kubernetes, CI, frontend, convenções e
+  estado saíram, e o detalhe técnico mora no site (AT-558).
 - A fonte da documentação passa a ser pt-BR também nas 53 páginas que ainda
   estavam em inglês (AT-549, lote 1, ADR 0216): o runbook, as regras de custo,
   as missões, 11 páginas de `explanation/`, `architecture.md`,

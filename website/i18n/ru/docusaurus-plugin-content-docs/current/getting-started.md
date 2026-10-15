@@ -5,7 +5,7 @@ sidebar_label: Первые шаги
 sidebar_position: 5
 description: От клонирования до первого хода агента, с тем, что проверить, когда какой-то этап не работает.
 keywords: [instalação, setup, onboarding, primeiro projeto, ollama]
-traducao_de: cca4f282a22c9a427ae98001465238933cce3f47
+traducao_de: 504041e6506e0dc6341e30836aaa2a38efa393e4
 ---
 
 # Первые шаги {#primeiros-passos}
@@ -279,6 +279,78 @@ pnpm build                  # build de tudo
 pnpm db:generate            # depois de mudar apps/api/src/db/schema/<agregado>.ts
 pnpm db:migrate             # aplica as migrações
 pnpm dev:down               # derruba tudo
+```
+
+### Где что лежит {#onde-fica-cada-coisa}
+
+```
+apps/
+  api/      NestJS + Drizzle          → schema "public"
+  engine/   Elixir/OTP + Phoenix      → schema "engine"
+  web/      React + Vite
+packages/
+  shared/   tipos TS compartilhados (import type only)
+design/     design system — fonte de verdade de UI
+docker/     compose de dev e prod, Dockerfiles, smoke.sh
+deploy/k8s/ base + overlays local/staging/prod (Kustomize)
+docs/       esta documentação, incluindo os ADRs
+scripts/
+  ci/       automação de release e política de branch (testada com vitest)
+  dev/      ferramentas locais — o menu do `pnpm bootstrap` e o preflight
+  docs/     geração e verificação da documentação
+website/    Docusaurus, que lê de docs/ — nunca de website/docs/
+```
+
+`apps/engine` находится вне pnpm workspace (это проект Mix); скрипты в корне
+делегируют `mix` (`pnpm engine:setup`, `pnpm engine:dev`, `pnpm engine:test`).
+Если Elixir на хосте не совпадает с версией проекта, форматирование
+выполняется через контейнер:
+
+```bash
+docker run --rm -v "$PWD/apps/engine:/app" -w /app \
+  hexpm/elixir:1.20.4-erlang-29.1.1-alpine-3.24.2 mix format
+```
+
+**База данных.** Один Postgres, одна база (`brabo`), две схемы, чтобы ничего не
+пересекалось: api (Drizzle) использует `public`, с миграциями в
+`apps/api/src/db/migrations/` и одним файлом схемы на агрегат
+(`db/schema.ts` — только barrel); engine (Ecto/Oban) использует `engine` через
+`migration_default_prefix`, с миграциями в
+`apps/engine/priv/repo/migrations/`. pgvector включается файлом
+`docker/postgres/init.sql`, который выполняется один раз при создании тома.
+
+**Тесты, защищающие свойства.** Ни одна функция не принимается без теста
+успешного сценария и одного сценария отказа. Git-провайдеры проходят единый
+контрактный набор, запускаемый против всех трёх (Local, GitHub, GitLab).
+`apps/api/test/interfaces/route-surface.spec.ts` сверяет маршруты с
+[`security-surface.md`](security-surface.md) — новый маршрут без
+классификации ломает тест, — а `apps/engine/test/engine_web/route_surface_test.exs`
+требует 401 без токена на каждом маршруте engine, кроме названных исключений.
+
+**Ход от начала до конца:**
+
+```mermaid
+sequenceDiagram
+  participant U as Você
+  participant W as web
+  participant A as api
+  participant E as engine
+  participant L as LLM
+
+  U->>W: abre uma sessão
+  W->>A: POST /sessions
+  A->>A: grava session.created (event log + outbox)
+  A-->>E: Oban consome a outbox
+  E->>E: SessionServer + Harness montam o contexto
+  E->>L: turno
+  L-->>E: "quero rodar esta ferramenta"
+  E->>A: vira proposed_action
+  A->>A: IAM → agent_autonomy → permissions.json → tetos
+  A-->>U: pede aprovação
+  U->>A: aprova
+  A-->>E: executa
+  E->>A: evento imutável
+  A-->>W: broadcast — o painel atualiza
 ```
 
 ### Меню, чтобы не запоминать всё это {#o-menu-para-não-decorar-isso-tudo}
