@@ -1,58 +1,58 @@
 {
   "version.label": {
-    "message": "Next",
+    "message": "下一版",
     "description": "The label for version current"
   },
   "sidebar.docs.category.🚀 Comece aqui": {
-    "message": "🚀 Comece aqui",
+    "message": "🚀 从这里开始",
     "description": "The label for category '🚀 Comece aqui' in sidebar 'docs'"
   },
   "sidebar.docs.category.🏗️ Arquitetura": {
-    "message": "🏗️ Arquitetura",
+    "message": "🏗️ 架构",
     "description": "The label for category '🏗️ Arquitetura' in sidebar 'docs'"
   },
   "sidebar.docs.category.Decisões (ADR)": {
-    "message": "Decisões (ADR)",
+    "message": "决策（ADR）",
     "description": "The label for category 'Decisões (ADR)' in sidebar 'docs'"
   },
   "sidebar.docs.category.📐 Regras": {
-    "message": "📐 Regras",
+    "message": "📐 规则",
     "description": "The label for category '📐 Regras' in sidebar 'docs'"
   },
   "sidebar.docs.category.📖 Referência": {
-    "message": "📖 Referência",
+    "message": "📖 参考",
     "description": "The label for category '📖 Referência' in sidebar 'docs'"
   },
   "sidebar.docs.category.💡 Explicação": {
-    "message": "💡 Explicação",
+    "message": "💡 解释",
     "description": "The label for category '💡 Explicação' in sidebar 'docs'"
   },
   "sidebar.docs.category.🛠️ Operação": {
-    "message": "🛠️ Operação",
+    "message": "🛠️ 运维",
     "description": "The label for category '🛠️ Operação' in sidebar 'docs'"
   },
   "sidebar.docs.category.📚 Vocabulário": {
-    "message": "📚 Vocabulário",
+    "message": "📚 词汇",
     "description": "The label for category '📚 Vocabulário' in sidebar 'docs'"
   },
   "sidebar.docs.category.🤝 Contribuir": {
-    "message": "🤝 Contribuir",
+    "message": "🤝 贡献",
     "description": "The label for category '🤝 Contribuir' in sidebar 'docs'"
   },
   "sidebar.docs.link.Referência da API": {
-    "message": "Referência da API",
+    "message": "API 参考",
     "description": "The label for link 'Referência da API' in sidebar 'docs', linking to '/reference/api/'"
   },
   "sidebar.docs.link.Como contribuir": {
-    "message": "Como contribuir",
+    "message": "如何贡献",
     "description": "The label for link 'Como contribuir' in sidebar 'docs', linking to 'https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md'"
   },
   "sidebar.docs.link.Onde pedir ajuda": {
-    "message": "Onde pedir ajuda",
+    "message": "在哪里求助",
     "description": "The label for link 'Onde pedir ajuda' in sidebar 'docs', linking to 'https://github.com/daneiel/brabo/blob/dev/SUPPORT.md'"
   },
   "sidebar.docs.link.Reportar vulnerabilidade": {
-    "message": "Reportar vulnerabilidade",
+    "message": "报告漏洞",
     "description": "The label for link 'Reportar vulnerabilidade' in sidebar 'docs', linking to 'https://github.com/daneiel/brabo/blob/dev/SECURITY.md'"
   }
 }

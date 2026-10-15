@@ -8,7 +8,7 @@
     "description": "The alt text of navbar logo"
   },
   "item.label.Documentação": {
-    "message": "Documentação",
+    "message": "文档",
     "description": "Navbar item with label Documentação"
   },
   "item.label.Runbook": {
@@ -28,15 +28,15 @@
     "description": "Navbar item with label GitHub"
   },
   "item.label.prd — estável ✓": {
-    "message": "prd — estável ✓",
+    "message": "prd — 稳定 ✓",
     "description": "Navbar item with label prd — estável ✓"
   },
   "item.label.qa — candidata": {
-    "message": "qa — candidata",
+    "message": "qa — 候选版",
     "description": "Navbar item with label qa — candidata"
   },
   "item.label.dev — em desenvolvimento": {
-    "message": "dev — em desenvolvimento",
+    "message": "dev — 开发中",
     "description": "Navbar item with label dev — em desenvolvimento"
   }
 }
