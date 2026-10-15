@@ -409,7 +409,7 @@
       "data": null
     },
     "adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md": {
-      "defasada": true,
+      "defasada": false,
       "data": "2026-10-15"
     },
     "adr/0105-personal-access-token-do-runner-escopado-por-construcao.md": {
@@ -855,6 +855,10 @@
     "architecture.md": {
       "defasada": false,
       "data": "2026-10-15"
+    },
+    "business-rules/autenticacao.md": {
+      "defasada": false,
+      "data": "2026-10-11"
     },
     "business-rules/custo.md": {
       "defasada": false,
