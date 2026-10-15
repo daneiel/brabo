@@ -24,6 +24,7 @@ describe('classificar', () => {
       'CHANGELOG.md',
       'CLAUDE.md',
       '.claude/contexto/stack.md',
+      '.claude/rules/runner.md',
       'design/README.md',
     ]);
     expect(r.rodar).toBe(false);

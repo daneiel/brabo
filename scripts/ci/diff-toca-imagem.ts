@@ -62,6 +62,10 @@ export const REGRAS_SEM_IMAGEM: readonly RegraSemImagem[] = [
     descricao: '.claude/contexto/ (as partes do CLAUDE.md, contexto de sessão)',
     casa: (a) => a.startsWith('.claude/contexto/'),
   },
+  {
+    descricao: '.claude/rules/ (as regras de caminho do CLAUDE.md, contexto de sessão)',
+    casa: (a) => a.startsWith('.claude/rules/'),
+  },
   { descricao: 'design/*.md (o .dockerignore os exclui; design/tokens.css NÃO)', casa: (a) => /^design\/[^/]+\.md$/.test(a) },
 ];
 

@@ -1,5 +1,5 @@
-> Parte do `CLAUDE.md` da raiz, importada por ele e lida em toda sessão.
-> Edite aqui; o `CLAUDE.md` só guarda o índice das partes.
+> Parte do `CLAUDE.md` da raiz que NÃO é importada: é índice, lido sob demanda
+> (fora do import para o contexto de sessão caber no teto de 150 mil caracteres).
 
 ## Histórico
 

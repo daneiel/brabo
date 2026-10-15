@@ -13,7 +13,18 @@ por SEÇÃO em `.claude/contexto/`. As partes são IMPORTADAS abaixo, então
 continuam sendo lidas em toda sessão, na mesma ordem de antes. Ao editar,
 mexa na parte da seção; regra nova entra na parte do assunto, nunca aqui.
 
-@.claude/contexto/historico.md
+O Claude Code AVISA quando os arquivos de instrução somam mais de 150 mil
+caracteres, e o que é lido em toda sessão estava em 218 mil. Por isso duas
+coisas saíram do import sem perder uma palavra:
+- `.claude/contexto/historico.md` é ÍNDICE para localizar a narrativa de cada
+  fase, não regra: leia-o sob demanda, ao procurar onde uma fase está contada.
+- Os blocos que só valem para uma área moram em `.claude/rules/`, com `paths:`
+  no cabeçalho, e o Claude Code os carrega quando a sessão LÊ arquivo daquela
+  área: `runner.md` (o `apps/runner`), `broker-e-containers.md` (o broker, a
+  `DockerPort` e o corte da FASE 25b) e `ci-e-cadeia-de-suprimentos.md` (CI/CD,
+  pin por SHA/digest, assinatura e o `install-e2e.yml`). Quem vai mexer nessas
+  áreas por outro caminho (um script, um workflow citado de longe) LÊ a regra
+  antes.
 
 @.claude/contexto/estado-atual.md
 
@@ -60,8 +71,13 @@ mexa na parte da seção; regra nova entra na parte do assunto, nunca aqui.
   promover sem estender o checker criaria regra que se burla com
   `docs-not-needed`); tocar qualquer um deles satisfaz a regra. Parte nova
   entra no import daqui, no `docs_alternativos` da regra `claude-md` e, se
-  tiver frase contada, em `scripts/docs/contagens-do-codigo.mjs`. Nenhuma
-  parte passa de ~50 mil caracteres: crescendo, divida por assunto.
+  tiver frase contada, em `scripts/docs/contagens-do-codigo.mjs`. O teto é a
+  SOMA do que é lido em toda sessão — este arquivo, as partes importadas e os
+  `CLAUDE.md` do usuário —, que não passa de 150 mil caracteres (o aviso do
+  Claude Code, medido com `wc -m`, nunca `wc -c`). Crescendo, o que só vale
+  para uma área vira regra de caminho em `.claude/rules/` (com `paths:` e
+  entrada no `docs_alternativos`), e índice que só serve para localizar sai do
+  import.
 - A documentação publica um site por branch permanente, e o CAMINHO nomeia o
   AMBIENTE, não a branch (ADR 0073): `main` → `/brabo/prd/`, `qa` → `/brabo/qa/`,
   `dev` → `/brabo/dev/`, com a raiz sendo o índice gerado por
