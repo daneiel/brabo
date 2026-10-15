@@ -1010,3 +1010,360 @@ Criativo 的每个回合都运行一个**有界的工具使用循环**，上限�
   `apps/web/src/routes/NewProjectWizard.test.tsx`
 - **架构决策：** [ADR 0072](../adr/0072-projeto-local-ou-container.md)
 - **来源：** 用户的请求（他的决定，明确选择了自由路径的变体）
+
+### RN-170 — 本地路径在*创建*时校验，拒绝会给出指引 {#rn-170}
+
+**由 [RN-422](../business-rules.md#rn-422) 修订（ADR 0104）**：创建时的校验开始按模式*分歧*——`mounted`（改名后的 `local`）仍按此处描述触碰磁盘，`runner` 只校验*词法*，不做 I/O——本条目的其余部分是历史，忠实于修订之前的有效内容。
+
+以 `local` 模式和一个 api 够不着的路径创建项目，会产生一个**之后才卡住**的项目——在第一个 agent 的第一个工具上，远离作出决定的那个界面。因此创建**以 400 拒绝**，消息说明还缺什么。
+
+路径必须：
+
+1. **是绝对路径**，任何段中都没有 `..` 或 `.`（写入的路径就是读取的路径；`/srv/app/../../etc` 就是 `/etc`，看起来却不像）；
+2. **在 api 容器内存在且是文件夹**；
+3. **进程可写**（`access(W_OK|X_OK)`）——镜像以非 root 运行（[ADR 0024](../adr/0024-fase5-imagens-producao-ci.md)），所有者不同的主机文件夹实际上会以只读方式挂载进来；
+4. **位于根目录和系统文件夹之外**（`/`、`/etc`、`/usr`、`/var`、`/data`……及其下的一切）：项目的根是*授权* agent 终端的范围（[ADR 0055](../adr/0055-escopo-de-caminho-na-politica-de-terminal.md)），根在 `/etc` 的项目会把"agent 在它的项目里写东西"变成"agent 重写容器"；
+5. **在*两个*方向上都不与 Brabo 的 checkout 重叠**——*包含*单体仓库的文件夹和位于其*内部*的文件夹。第二种情形就是 ADR 0055 报告的真实发生过的问题。
+
+写入的路径是*规范化*后的，而不是原始字符串：校验一个字符串却写入另一个，就是校验在第二天失效的方式。与 `workspace_mode: container` 一起发送的 `workspacePath` 会被*拒绝*，而不是被忽略——被静默丢弃的字段会变成"可我配置过了"。
+
+*词法*部分（第 1、4 和 5 项）**在读取时也会运行**，在每次推导 `projectScopeRoot` 时：绕过创建的唯一途径是直接写数据库，而由此得到的是 `/` 上的终端范围。*磁盘*部分（第 2 和 3 项）只在创建时运行，那时用户还可以修正。
+
+文件夹缺失的拒绝会附带挂载说明——文件、两个服务以及那一行（`- <caminho>:<caminho>`），并指向
+[runbook](../runbook.md)。只在 api 中挂载会产生一个 api 接受而 engine 看不到的项目：api 校验的是它看到的东西，无从得知另一个容器中挂载了什么。
+
+- **位置：** `apps/api/src/infrastructure/filesystem/project-workspaces-root.ts`
+  （`validarCaminhoDeWorkspaceLocal`、`CaminhoLocalInvalidoError`），
+  `apps/api/src/application/use-cases/iam/create-project.use-case.ts`
+  （`caminhoValidado`），`apps/api/src/interfaces/http/iam/dto/create-project.dto.ts`,
+  `apps/web/src/lib/wizard.ts`（`caminhoLocalParecePlausivel`）
+- **测试：** `apps/api/test/infrastructure/filesystem/project-workspaces-root.spec.ts`
+  （describe "validarCaminhoDeWorkspaceLocal"），
+  `apps/api/test/application/use-cases/iam/create-project-modo-de-workspace.spec.ts`
+  （describe "a criação RECUSA o caminho que travaria depois"），
+  `apps/web/src/lib/wizard.test.ts`, `apps/web/src/routes/NewProjectWizard.test.tsx`
+- **架构决策：** [ADR 0072](../adr/0072-projeto-local-ou-container.md)
+- **来源：** 自由路径变体所要求的防护（ADR 0072）
+
+---
+
+### RN-164 — PO *读取*已存在的东西，范围限定在项目 {#rn-164}
+
+PO 获得了两个*读取*工具——`listar_regras_de_negocio` 和
+`listar_backlog`（`:direct`，没有任何参数）——由两条范围限定在**项目**的内部路由提供：`GET /internal/projects/:projectId/business-rules`
+和 `GET /internal/projects/:projectId/backlog`。
+
+第一个返回项目各会话中的每个 `artifact.business_rule`，带完整的 `description`、哪些故事已经引用了每条规则，以及
+`uncoveredCount`；第二个返回与 Backlog 标签页*相同*的史诗 → 故事 → 任务树，通过同一个 `ListBacklogUseCase`（每个项目三次读取，绝不是 N+1）。返回给模型的文本把*未覆盖*的规则放在最前，把*孤立*的史诗放在树之前——这正是产生工作的东西。
+
+规则修正的是：在此之前 PO 有**四个工具，全部是写入的**。它的上下文在 kickoff 时一次性组装，来自**会话**最近的 200 个事件——从那以后它不知道存在哪些规则、已经覆盖了哪些，也不知道已经创建了什么。范围刻意是项目而不是会话：在之前的会话中捕获的规则，正是按会话读取所隐藏的东西。
+
+读取**不**会变成 `proposed_action`（不是外部效果），但它在 ADR 0060 的意义上是*受约束*的：两条路由除项目 id 外都不接受参数——没有搜索、没有分页、没有过滤器——，每次调用的成本是常数，交给模型的文本有行数上限，截断时说明真实总数。
+
+- **位置：** `apps/engine/lib/engine/harness/tools/listar_regras_de_negocio.ex`,
+  `apps/engine/lib/engine/harness/tools/listar_backlog.ex`,
+  `apps/engine/lib/engine/agents/po_server.ex`,
+  `apps/engine/lib/engine/sessions/engine_api_client.ex`,
+  `apps/api/src/application/use-cases/backlog/list-business-rules.use-case.ts`,
+  `apps/api/src/interfaces/http/internal/internal-projects.controller.ts`
+- **测试：** `apps/engine/test/engine/harness/tools/listar_regras_de_negocio_test.exs`,
+  `apps/engine/test/engine/harness/tools/listar_backlog_test.exs`,
+  `apps/engine/test/engine/agents/po_server_test.exs`,
+  `apps/api/test/application/use-cases/backlog/list-business-rules.use-case.spec.ts`
+- **来源：** `exp001` 项目中的真实使用——"crie ferramenta para o PO
+  conseguir listar as regras de negócio"
+
+---
+
+### RN-165 — 没有故事的史诗会被追究，PO 在不知道时提问 {#rn-165}
+
+当 PO 结束一个回合时创建了一个史诗却**没有为它创建任何故事**，这会成为*显式*的结果：持久事件
+`backlog.epic_without_story`（带 `origem: "modelo"`、史诗的 id 和标题以及消息）外加 `agent.error` 广播——[RN-059](../business-rules/custo.md#rn-059) 的模式：日志是留存下来的东西，广播是 agent 在消息流中说话。追究按*发生*计：报告一次后，待办列表会被清空，不会变成每个回合都重复的警报。
+
+算数的是*成功*的创建：被 api 拒绝的 `create_story`（例如不存在的 `business_rule_id`）不会结清史诗。把它当作结清，就是用一种沉默换另一种沉默。待处理的史诗存在于 `PoServer` 的 state 中，*不*会被重新水合：追究的是回合中承担的义务，从事件日志重建它会重新打开用户已经用别的方式解决了的旧史诗。
+
+同时到来的还有 PO 除了停下之外拥有另一条出路所缺少的两样东西：
+`ask_structured_questions`——与 Criativo（[RN-162](#rn-162)）*相同*的工具，只是在 `po_server` 中开始声明——以及明确写明没有故事的史诗会卡住执行、并且**缺少信息时要*提问***、绝不停下也绝不编造的 kickoff 指令。之前的指令对面对缺口时该怎么做只字未提，而面对没有指令的缺口，模型会在编造与停下之间选择。
+
+- **位置：** `apps/engine/lib/engine/agents/po_server.ex`
+  （`anotar_obrigacao/4`、`encerrar_turno/1`、`obrigacoes/0`），
+  `apps/engine/lib/engine/harness/tools/create_epic.ex`（`id_no_resultado/1`），
+  `apps/web/src/lib/activity.ts`
+- **测试：** `apps/engine/test/engine/agents/po_server_test.exs`
+  （describe "RN-165"），`apps/web/src/lib/activity.test.ts`
+- **来源：** `exp001` 项目中的真实使用——没有故事的 backlog，因而没有任务，因而执行卡住而没有可见的错误
+
+---
+
+### RN-166 — PO 的迭代上限会留下痕迹 {#rn-166}
+
+`PoServer` 工具循环的迭代上限（12）耗尽时，回合发出带 `{iteration, max_iterations}` 的 `toolloop.limit_reached`——与 `Engine.Harness.ToolLoop` 自 Fase 3 起就发出的*相同*类型和相同 payload。以前，该子句返回 state 就结束了：从外部看，耗尽的循环与一个只是结束了的回合无法区分。
+
+复用这个标识符而不是创建 `po.*` 是刻意的：这是同一个事实（循环撞到了上限），阅读事件日志的人不应该因为对话型 agent 有自己的循环而不使用 `ToolLoop`，就需要学习第二个名称。
+
+- **位置：** `apps/engine/lib/engine/agents/po_server.ex`（`run_turn/2`，
+  `remaining <= 0` 子句）
+- **测试：** `apps/engine/test/engine/agents/po_server_test.exs`
+  （"teto de iterações emite toolloop.limit_reached"）
+- **来源：** 对 `exp001` 卡住的调查——循环在沉默中结束
+
+---
+
+### RN-172 — handoff 和审批是回合的*结果* {#rn-172}
+
+在会话的消息流中，**提供的 handoff** 和**审批卡片**出现在它们诞生的那个回合的最后一句话*之后*——绝不在中间。
+
+这**不修正排序**：RN-155 完整有效，时间线仍按事件日志的 `seq` 排序。日志记录的是事实：`po_server.ex`（`run_turn/2`）在*同一*次迭代中发出回合的 `agent.response`，*然后*是 `offer_handoff` 的 `tool.call`（写入 `handoff.offered`），*然后*才递归到收尾的 `agent.response`。handoff 的 `seq` 诚实地小于最后一句话的 `seq`。对于 `proposed_action.created` 也一样，它诞生于回合中间，而 agent 还有话要说。在对话中间显示"交出了接力棒"或"批准这个"，是对正确数据的错误解读——因此这条规则属于*呈现*，在一次单独且显式的处理（`afundarDesfechos`）中应用，在按 `seq` 的 `sort` 之后，而不是藏在一个有三项的比较器中。
+
+不同的回合**永远不会混合**。一个结果向下沉到它正下方那一段的末尾，并停在第一个不满足以下三个条件中任何一个的条目处：
+
+1. **同一回合**——回合是条目之前最后一个*开启*的 `seq`，而开启是执行者为 `user` 的事件（`chat.message`、`agent.activated`、故事的晋升/退回）。这保护了两个回合之间的边界没有任何*可见*条目的情形：`agent.activated` 开启回合，却不会成为消息流中的一项。
+2. **同一作者**——在*执行*会话中，多个 agent 在用户一句话都不说的情况下写入，它们都在同一个回合中；一个 agent 的结果不能越过另一个 agent 的话。
+3. **不是结果**——两个连续的结果保持彼此之间的顺序（在同一次确认中，Infra 的 `handoff.offered` 在 Dev Lead 的之前）。
+
+执行者 `system` *不*开启回合：它是消息流中间的基础设施噪音，而不是对话者的决定。
+
+- **位置：** `apps/web/src/routes/SessionPage.tsx`
+  （`aberturasDeTurno`、`turnoDoSeq`、`afundarDesfechos`，以及 `TimelineEntry` 的
+  `autor`/`turno`/`desfecho` 字段）
+- **测试：** `apps/web/src/routes/SessionPage.ordenacao-e-avisos.test.tsx`
+  （describe "RN-172 — turno e desfecho (unidade)" 和 "RN-172 — a sequência
+  REAL do engine, renderizada"）
+- **来源：** `exp001` 中的真实使用——"a passagem de bastão do PO para o
+  arquiteto está aparecendo acima da última mensagem do PO" 和 "a mensagem de
+  aprovação apareceu acima do chat do arquiteto até ele finalizar a resposta"
+
+---
+
+### RN-173 — 消息流跟随一切增长的内容，且只跟随已经在末尾的人 {#rn-173}
+
+当内容增长时，聊天滚动到末尾——**而不只是在新事件到达时**。时间线的两个来源是*分开*的查询（`events` 和 `actions`），而高度在两者都不变的情况下仍会变化：打开/关闭一个 `Disclosure`（RN-138 的按 agent 折叠、审批卡片的"详情"）、Markdown 重排、图表在之后渲染。因此有两种机制：effect 的依赖覆盖 React 知道的（`events.length`、`actions.length`、`streamingText`），而对消息流*内容*的 `ResizeObserver` 覆盖只有布局才知道的。
+
+防护**保持不变且是刻意的**：只有已经在距离末尾 120px 以内的人才会被滚动。向上翻阅历史的人不会被拖走——消息流跟随对话，而不劫持阅读。
+
+在同一消息流中，审批卡片不再占满整列的 780px：它获得 560px 的上限并居中，与 `.handoffCard`/`.handoffDivider` 本来的样子一样。像气泡那样缩进 45px 是错误的——卡片不是任何人的话，而是向用户请求的决定。审批标签页的队列不变：在那里卡片*应该*填满网格的列。自 AT-322 起，卡片在所有界面上都是*同一个*，并填满容器——在消息流中施加上限和居中的是它的容器（`.acaoNoFio`），而不再是卡片的变体。
+
+- **位置：** `apps/web/src/routes/SessionPage.tsx`（`acompanharOFim` 以及调用它的两个 effect）；`apps/web/src/components/ApprovalCard.module.css`
+  （`.card`）和 `apps/web/src/routes/SessionPage.module.css`（`.acaoNoFio`）
+- **测试：** `apps/web/src/routes/SessionPage.ordenacao-e-avisos.test.tsx`
+  （describe "RN-173 — o fio acompanha o que cresce"，包括用户向上滚动过的情形）
+- **来源：** `exp001` 中的真实使用——"o scroll do chat deve ficar sempre no
+  final seguindo o chat" 和 "aprovação mal diagramado deve ficar ao centro"
+
+### RN-171 — 列表问题默认有自由文本的出口 {#rn-171}
+
+`ask_structured_questions`（RN-162）的 `type: "select"` 问题接受**列表之外**的回答。字段是 `allowOther`，**默认为 `true`**：什么都不声明的人会提供这个出口。关闭列表需要显式的 `allowOther: false`，并且只在列表真正封闭时（"是"/"否"）才有意义。
+
+开放的默认值不是风格偏好。因模型*遗忘*而关闭的列表会卡住整个对话，而用户无法从外部解开它——这正是真实使用中遇到的：模型提供了一个"自己填写"之类的选项，表单却没有地方可写，因为工具的 schema 不知道如何表达"除了这些，你想要什么都行"。被错误打开的列表，最坏情况下多提供一个字段。两种错误的代价不同。出于同样的原因，工具描述**禁止**在 `options` 中创建"其他"选项：表单会自己提供它，同一列表中的两个出口会造成困惑。
+
+`allowOther` 只存在于 `select` 中——在 `text`/`textarea` 中字段本来就是自由文本，engine 把这两者规范化为 `false`，而不是在事件日志中写入没有意义的状态。在界面上，选择"其他（填写）"会把 `Select` 换成 `Input`：界面哨兵（`__outra__`）**绝不**传到后端，传的是输入的*文本*。提交按钮仍然要求*所有*问题都已填写——`AnswerStructuredQuestion
+UseCase` 以 400 拒绝并列出缺少的内容，因此在字段为空时启用只会产生一个服务器错误——，而处于"其他"且文本仍为空白*不*算已填写。
+
+卡片也不再是消息流中唯一一个不与任何东西对齐的项：它与 `chat` 变体中的 `ApprovalCard`（[RN-173](#rn-173)）一样以 560px 上限居中，并获得 agent 的头像和颜色，正是这一点让它读起来像某人的*话*，而不是孤立的表单。以前它贴着左边诞生，上限 480px，而气泡从 45px 处开始。
+
+- **位置：** `apps/engine/lib/engine/harness/tools/ask_structured_questions.ex`
+  （schema、校验和 `normalizar/1`），`apps/web/src/lib/api-types.ts`
+  （`StructuredQuestion.allowOther`），`apps/web/src/routes/SessionPage.tsx`
+  （`StructuredQuestionCard`、`OUTRA_RESPOSTA`、`permiteOutra`），
+  `apps/web/src/routes/SessionPage.module.css`（`.structuredQuestionCard`、
+  `.structuredQuestionCabecalho`）
+- **测试：** `apps/engine/test/engine/harness/tools/ask_structured_questions_test.exs`
+  （默认开放、显式 `false`、拒绝非布尔的 `allowOther`），
+  `apps/web/src/routes/SessionPage.perguntas-estruturadas.test.tsx`
+  （describe "saída por texto livre no select"）
+- **来源：** `exp001` 中的真实使用——"sempre dê a opção de input do usuário
+  quando ele seleciona Escreva"
+
+### RN-174 — 触发 agent 回合的动作会武装消息流的指示器 {#rn-174}
+
+"agent 正在工作"的指示器（5s 之后的三个点，
+[RN-131](../business-rules.md#rn-131)/[RN-156](#rn-156)）只在 `streaming` 或 `statusAgent` 有效时出现，而它们原来在三个地方被打开：输入框（`handleSend`）、就绪确认以及 Phoenix 通道。**界面上每一个在 engine 中触发同步回合的动作也开始武装它。**
+
+有两个，都不是输入框：
+
+1. **回答结构化问题表单**——
+   `AnswerStructuredQuestionUseCase` 复用 `SendAgentMessageUseCase`
+   （[RN-162](#rn-162)），调用只在整个回合之后才返回。
+2. **把故事退还给 PO**——`ReturnStoryUseCase` 调用 `reviseStory`，即 `po_server` 中的 `handle_call({:revise, …})`：HTTP 响应要等 PO 重写故事。
+
+Phoenix 通道并不能填补这个空缺，正是这一点让修正成为必要而不是多余：当它还没完成连接（ticket + join，[RN-108](#rn-108)）时，"working" 的 `agent.status` 广播没有监听者而丢失——界面会在几十秒内完全沉默，这与"什么都不会发生"无法区分。
+
+这一对是在 `await` **之前**调用 `iniciarTurnoDoAgente(agente)`（通道的 `agent.status` 可能先到达，没有固定 agent 的话指示器诞生时会不知道谁在说话），以及在 `finally` 中调用 `finalizarTurnoDoAgente()`——在*两条*路径上，因为一个让 `streaming` 保持打开的错误会把输入框卡到下一个回合。调用返回作为回合结束的信号，与通道的 `agent.done` 一样可靠，而 `finalizarTurnoDoAgente` 是幂等的。5s 的期限不变：快速响应的回合仍然不显示任何东西。
+
+- **位置：** `apps/web/src/routes/SessionPage.tsx`（`iniciarTurnoDoAgente`、
+  `handleReturnStory`、`StructuredQuestionCard`）
+- **测试：** `apps/web/src/routes/SessionPage.perguntas-estruturadas.test.tsx`
+  和 `apps/web/src/routes/SessionPage.promocao-inline-e-volta.test.tsx`
+  （RN-174 的 describe，失败用例证明指示器不会卡住）
+- **来源：** `exp001` 中的真实使用——"caso a web, api e engine demore mais de
+  5s para ter uma resposta, a web deve apresentar uma animação no chat
+  mostrando que o agente está pensando"
+
+### RN-175 — 每个 agent 回复都说明它是用哪个模型生成的 {#rn-175}
+
+`agent.response` 在该事件的**三个**生产者中都携带 `modelName`，而不只是在四个对话型 agent 中：
+
+| 生产者 | 谁经过那里 | 之前 |
+|---|---|---|
+| 四个对话型 agent（`criativo`/`po`/`arquiteto`/`dev_lead`） | 聊天 | 自 [RN-146](#rn-146) 起已经写入 |
+| `Engine.Harness.ToolLoop` | *所有*执行和 gate agent——`dev-*`、QA、SecOps、Infra-Workflows、Psicólogo、Anamnese | **从未写入** |
+| `SendChatMessageUseCase`（api） | 没有活跃 agent 的聊天，回答的是模型 | **从未写入** |
+
+没有新的调用：`RunLlmTurnUseCase` 已经在响应体中返回 `modelName`，`StreamLlmTurnUseCase` 已经把它放在 `final` 帧中——值是**已解析 binding** 的模型名称（`model.name`），而不是提供方的回声。当回合在解析 binding 之前失败时为 `null`，在这条规则之前写入的事件中则缺失。
+
+在界面上，模型不再是 agent 名称旁边以 10px 等宽 `--text-muted` 显示的孤零零的词 `modelo`——那读起来像模型*叫做*"modelo"，而且不满足阅读文本的对比度。它变成了一个带模型图标的**芯片**，`--surface-2` 上的 `--text-secondary`，未知时的标签变为"modelo não registrado"。数据缺失时，界面**不会**根据 agent 的*当前* binding 猜测模型：把一个可能在它生成时根本不存在的模型归于一个旧回复，就是编造来源，而编造的来源比缺失更糟——与 `token_usage` 中冻结价格（[RN-044](../business-rules/custo.md#rn-044)）的论点相同。
+
+已声明不在范围内：在四个服务器中，`agent.error` 仍然不带模型，即使 api 在错误帧中发送了它（例如预算超支）。那是另一个事件的变更，要回答的是另一个问题。
+
+- **位置：** `apps/engine/lib/engine/harness/tool_loop.ex`,
+  `apps/api/src/application/use-cases/llm/send-chat-message.use-case.ts`,
+  `apps/web/src/routes/SessionPage.tsx`（`agent.response` 中的芯片），
+  `apps/web/src/routes/SessionPage.module.css`（`.messageModelo`）
+- **测试：** `apps/engine/test/engine/harness/tool_loop_test.exs`,
+  `apps/api/test/application/use-cases/llm/send-chat-message.use-case.spec.ts`,
+  `apps/web/src/routes/SessionPage.arquiteto-modelo-icone.test.tsx`,
+  `apps/web/src/design-contraste.test.ts`（芯片的颜色对）
+- **来源：** `exp001` 中的真实使用——"PO não mostrou o modelo que estava
+  utilizando; todos os agentes devem apresentar o seu modelo ao lado do nome"
+
+### RN-176 — 消息流中的 Markdown 表格变成真正的表格 {#rn-176}
+
+聊天的轻量 Markdown（[RN-158](#rn-158)）开始识别 **GFM 表格**，并用设计系统的 `Table` 渲染它——与设置、花费和执行者中的同一个组件，而不是自己的 `<table>`："Brabo 如何绘制表格"只是一个决定。以前，Arquiteto 在回复中写的模块映射表格会作为带字面竖线的段落输出。
+
+区分表格与带 `|` 的散文的是**分隔行**，它与 GFM 中一样是必需的：没有它，块仍然是段落，因此"escolha entre a | b | c"不会被误认为表格。表头决定列数——短行获得空单元格，长行丢弃多余部分——，转义的 `\|` 留在单元格内，对齐来自分隔行的冒号。零新依赖：解析器仍然是自有的、基于正则的，数据树仍然直接变成 React 元素（没有任何 `dangerouslySetInnerHTML`）。
+
+**`artifact.module_map` 工件仍然*不*进入消息流**，这个选择是刻意的：它是项目的*现行*状态，而不是按会话标注日期的工件——与 [RN-159](#rn-159) 中已记录的决定相同——，它位于概览中。用户要求的是*消息中*的表格，被绘制出来的正是它；这一修正服务于*任何*写表格的 agent，而不只是模块映射。
+
+在气泡中，表格**水平滚动**而不是挤压列：消息流约 700px，而一个 `module_map` 有 4 列。
+
+- **位置：** `apps/web/src/lib/markdown.ts`（`table` 块、`celulasDaLinha`），
+  `apps/web/src/components/ui/MarkdownMessage.tsx`（`TabelaMarkdown`），
+  `apps/web/src/components/ui/MarkdownMessage.module.css`
+- **测试：** `apps/web/src/lib/markdown.test.ts`（describe "tabela (RN-176)"），
+  `apps/web/src/components/ui/MarkdownMessage.test.tsx`
+- **来源：** `exp001` 中的真实使用——"a tabela dentro da mensagem do Mapa de
+  Módulos do arquiteto tem que ficar bem estruturada em formato tabela,
+  utilizar design system do próprio Brabo"
+
+### RN-177 — 日志显示一切，历史按*来源*折叠 {#rn-177}
+
+活动信息流隐藏了六种事件类型（`tool.call`、`tool.result`、
+`agent.response`、`agent.delta`、`agent.status`、`context.compacted`），**却不提供任何替代方案**：想看 agent 与 harness 之间交换了什么的人，只能去打开数据库。过滤器仍然存在，并且仍然**默认关闭**——它的理由没有变（193 个真实事件中有 116 个是这些类型，见 `isMachineEvent`）——，但它变成了一个**选择**：在类型芯片的同一轨道上的"机器事件"按钮。
+
+显示一切只解决了一半：一个长会话会变成没有人浏览的列表。因此**最近的 5 条保持展开**，其余的进入按**来源**的折叠——一种*新*的分类，并不取代 `ActivityKind`：`kind` 说明事件谈论的是什么*主题*（commit、PR、权限），决定图标和颜色；`origem` 说明它来自哪一*层*，正是它让历史以小把的方式变得可读。六种来源出自现有的数据——`actor.kind` 和 `type` 的前缀——，绝不出自假设：
+
+| 来源 | 落入其中的东西 |
+|---|---|
+| `harness` | `tool.*`、`toolloop.*`、`agent.status`、`context.compacted` |
+| `llm` | `agent.response`、`agent.delta`、`llm.*` |
+| `usuario` | 任何 `actor.kind === 'user'` 的事件 |
+| `sistema` | 任何 `actor.kind === 'system'` 的事件 |
+| `agente` | 其余的 `agent.*`、`handoff.*`、`delegation.*`、agent 的 `chat.*` |
+| `eventos` | 领域事件日志（backlog、git、PR、工件、bootstrap……） |
+
+**优先级**让分类可预测，它体现在 `if` 的顺序中：机制（`harness`、`llm`）胜过执行者，因为无论执行者是谁，`tool.call` 都属于 harness；执行者胜过 agent 前缀，因为 `chat.message` 两侧都存在，区分它们的是说话的人。没有人预见到的类型落入 `eventos`——绝不会消失，也绝不会发明类别。
+
+**同一规则也适用于会话的*消息流***，只是轴相反：消息流是升序的（最新的靠近输入框），因此最后 5 条在下方保持展开，折叠的历史位于*顶部*。截断作用于已经按 agent 分组的列表（[RN-138](../business-rules.md#rn-138)）——计数的是用户看到的，一个十二条消息的折叠在界面上是*一个*条目。**在消息流中由 [RN-644](../business-rules.md#rn-644) 修订：**在那里截断只计算*消息*，回溯到回合的开启处，历史是*一个*按时间顺序的块，而不是按来源的分组（那会把回答放在问题之上）。日志面板仍按此处描述。
+
+- **位置：** `apps/web/src/lib/activity.ts:94`（`OrigemDeEvento`），`:125`
+  （`origemDoEvento`），`:152`（`agruparPorOrigem`）；
+  `apps/web/src/components/ActivityFeed.tsx:34`（5 条的截断），`:66`（开关）；`apps/web/src/routes/session-fio.tsx:119`（消息流的截断），`:291`
+  （`dividirFio`）；`apps/web/src/routes/SessionPage.tsx:516`（`fio`）
+  toggle); `apps/web/src/routes/session-fio.tsx:119` (o corte do fio), `:291`
+  (`dividirFio`); `apps/web/src/routes/SessionPage.tsx:516` (`fio`)
+- **测试：** `apps/web/src/lib/activity-origem.test.ts`,
+  `apps/web/src/components/ActivityFeed.test.tsx`（describe "ordem,
+  agrupamento e o toggle de máquina"），
+  `apps/web/src/routes/SessionPage.painel-e-agrupamento.test.tsx`（describe
+  "RN-177"）
+- **来源：** `exp001` 中的真实使用——"em log de eventos mostrar também log do
+  sistema, concentrar a mensagem em grupo, ou seja mantém as últimas 5
+  mensagens mas abaixo vira o grupo de log de eventos, sistema, llm, harness,
+  agente, usuário"
+
+### RN-178 — 会话面板从最后一条读到第一条，规则列表分页 {#rn-178}
+
+上下文面板的四个部分（业务规则、生成的工件、触及的文件和事件日志）原来是**升序**的：从会话开始处打开。在一个有数千事件的会话中，这交付的是错误的界面——打开面板的人想要的是刚刚发生的东西。四个部分都改为**降序**，包括 backlog 树内部（[RN-179](#rn-179)）。
+
+随之而来的一个后果：信息流的"加载更早的"按钮（[RN-099](../business-rules.md#rn-099)）**换了边**。它原来位于列表*上方*，因为列表是升序的，过去在上面；顺序反转后，过去在末尾，位于顶部的按钮会要求朝它所加载内容的相反方向滚动——与之前同一论点，只是符号相反。
+
+并且**超过 5 条规则时列表分页**，而不是无止境地增长：面板只有一列宽，一个构思会话轻易就超过二十条规则。当前页通过*钳制*（`min(pagina, total - 1)`）解析，而不是通过同步 effect：一条通过轮询到达的新规则会让列表变长，而 `useEffect` 会先以无效的页渲染一次再修正。5 条或更少时，分页器**不存在**——什么都不分页的控件是占据高度的噪音。
+
+- **位置：** `apps/web/src/routes/ContextAside.tsx:109`（`REGRAS_POR_PAGINA`）以及同一文件中四个部分的排序；
+  `apps/web/src/components/ActivityFeed.tsx:98`（降序的 `sort`）
+- **测试：** `apps/web/src/routes/SessionPage.painel-e-agrupamento.test.tsx`
+  （describe "RN-178"），`apps/web/src/components/ActivityFeed.test.tsx`
+- **来源：** `exp001` 中的真实使用——"mostrar log de eventos, arquivos tocados
+  e regras de negócio sempre em ordem do último para o primeiro de acordo com
+  a data" 和 "caso as regras de negócio ficar acima de 5, deve-se paginar"
+
+### RN-179 — PO 的工件是一棵*树*：史诗 → 故事 → 任务 {#rn-179}
+
+"生成的工件"面板（[RN-159](#rn-159)）把史诗和故事并排平铺，并且**忽略了 `backlog.task_created`**——而那正是 dev agent 领取来工作的东西。三者组成了一棵树，子节点位于父节点的折叠之内，任务以*折叠*状态诞生：一个有三十个任务的史诗会在没有人要求的情况下占据整个面板。
+
+亲属关系来自**事件已经携带的关联**——
+`backlog.story_created` 写入 `epicId`，`backlog.task_created` 写入 `storyId`
+——，绝不来自日志中的相邻关系。父节点不在已加载事件中的节点**上升到根部**，而不是挂到最近的史诗上：编造亲属关系比显示一个孤立的节点更糟，而一个其故事落在窗口之外的任务是正常情形，不是错误。
+
+每一层仍然是通往 Backlog 的**链接**，子节点的折叠位于该行*下方*，而不是在头部内部——`Disclosure` 的头部是 `<button>`，而 `<button>` 内的 `<a>` 是无效的 HTML，点击目标也有歧义。部分头部的计数器计算*整*棵树，而不只是根：在里面有十八个任务时说"3"，就是 [RN-151](#rn-151) 从侧边栏中去掉的那种与任何东西都对应不上的数字。
+
+- **位置：** `apps/web/src/lib/session-backlog-tree.ts:68`
+  （`montarArvoreDeBacklog`），`apps/web/src/routes/ContextAside.tsx:210`（根变成项），`:225`（树的计数）
+- **测试：** `apps/web/src/routes/SessionPage.artefatos-gerados.test.tsx`
+  （用例 "épico/história/tarefa do PO viram árvore" 和 "nó sem pai carregado
+  aparece na raiz"）
+- **来源：** `exp001` 中的真实使用——"mostrar também as tarefas criadas no
+  artefato do PO, mas abaixo do épico e ter opção de colapsar"
+
+### RN-180 — 面板说明它*没有*显示什么 {#rn-180}
+
+`useSessionEvents` 获取 `{ limit: 200, latest: true }`，上下文面板通过 prop 读取这个切片。后果：在一个有数千事件的会话中，四个部分把尾部显示得**好像就是整个会话**——在构思开始时捕获的业务规则就这样不存在了，没有任何提示。
+
+面板开始读取概览的活动标签页已经在使用的同一份分页历史（[RN-099](../business-rules.md#rn-099)），尾部的 `queryKey` 与消息流共享——在轮询周期中**零额外请求**（[RN-090](../business-rules.md#rn-090)/[RN-091](../business-rules.md#rn-091)）。随之改变了两件事：
+
+1. **信息流获得了组件一直都有的分页器。** `onLoadOlder`/`hasOlder`/`loadingOlder` 这些 prop 自 RN-099 起就是可选的，而这个调用点从未传入它们——这正是会话悄无声息地丢失开头的原因。
+2. **一条说明会计算还缺多少事件。** 数字来自对 `seq`（无间隙且按会话）的*减法*：`已下载的最小 seq − 1`。绝不来自多一次请求——与铃铛的"+ N 条更早的"（[RN-100](../business-rules.md#rn-100)）相同的机制。到达会话开头时，说明**消失**，而不是断言一个零。
+
+派生的部分读取 `baixados`（已经到来的一切），而不是 `events`（信息流 100 条的窗口）：它们不逐项分页，把它们截断在窗口上会让它们显示的比这次变更之前*更少*。为两者提供数据的是同一个按钮。
+
+`pausarPoll` 经由 `useSessionEventHistory` 下传到 `useSessionEvents`，这不是细节：重新获取的间隔属于每个*观察者*，而不是查询。同一键的第二个观察者如果开着计时器，就会复活界面在回合期间暂停的轮询——随之而来的是流式气泡的视觉重复。
+
+- **位置：** `apps/web/src/lib/hooks.ts:262`（历史的 `pausarPoll`），
+  `:388`（`baixados`）；`apps/web/src/routes/ContextAside.tsx:154`
+  （`eventosAnteriores`）以及同一文件末尾带分页器的 `ActivityFeed`
+- **测试：** `apps/web/src/routes/SessionPage.painel-e-agrupamento.test.tsx`
+  （describe "RN-180"）
+- **来源：** 本轮自身的审查——200 的上限在四个部分中悄无声息地存在
+
+### RN-181 — 区域委派出现在消息流中 {#rn-181}
+
+当一个区域（QA、Infra）委派给子 agent 并汇总裁决时，lead 记录的三种结果——`delegation.completed`、`delegation.failed` 和
+`delegation.dispensed`——只存在于日志面板中。关注会话的人看到 gate 打开又关闭，**没有任何迹象**表明底下有过第二次尝试。
+
+三者开始在消息流中以**紧凑提示**叙述，采用 [RN-157](#rn-157) 的格式——而不是气泡：这是关于区域内部发生了什么的通知，而不是一句话。*句子*来自 `classifyEvent`，与面板中的相同，因为同一事件的两种措辞会在 payload 第一次变更时分歧；而且它已经点名了子 agent 和区域，因此**不**加 lead 前缀（否则会产生"QA Lead QA Automação concluiu a delegação (qa)"）。
+
+区域的外部契约**不变**（ADR 0038）：消息流并不开始寻址子 agent，只是叙述 lead 已经记录的东西。失败的来源随 `delegation.failed` 一起传输，理由与 [RN-059](../business-rules/custo.md#rn-059) 相同——正是它说明下一步是换密钥、等提供方还是开一个 bug。
+
+- **位置：** `apps/web/src/routes/session-timeline-montagem.tsx:754`
+- **测试：** `apps/web/src/routes/SessionPage.painel-e-agrupamento.test.tsx`
+  （describe "RN-181"）
+- **来源：** `exp001` 中的真实使用——"quando houver uma nova tentativa e
+  consolidação de algum agente deve apresentar no chat"
+
+### RN-182 — 主题被选择、持久化，并在首次绘制之前应用 {#rn-182}
+
+浅色主题从一开始就存在于 `design/tokens.css` 中，位于
+`[data-theme='light']` 之下，而 **`apps/web` 中没有任何东西写入这个属性**：看到浅色主题的唯一方法是在 DevTools 中输入该属性。现在它变得可以到达。
+
+偏好存放在 `localStorage['brabo.theme']` 中，**只**接受 `'dark'` 或
+`'light'`，默认是 `dark`——设计系统的主主题。应用它的是 `apps/web/public/theme-boot.js`，**在 `<head>` 中同步执行，且在 bundle 之前**：`data-theme` 决定整个 `tokens.css` 的颜色，在水合之后再应用会让浅色主题的用户在每次加载时看到一次深色闪烁。
+
+它是**文件，而不是内联脚本**，理由与字体自托管（ADR 0036）相同：生产镜像在 `script-src 'self'`（`docker/web/nginx.conf`）下提供服务，没有 `'unsafe-inline'`，也没有 nonce。内联在 `pnpm dev:web` 中能工作，却会**在发布的镜像中被阻止**——最糟糕的失败模式，因为它只在部署之后出现。
+
+整条路径都是降级而不是崩溃：`localStorage` 可能抛出（隐私模式、iframe 中存储被阻止），而主题是偏好，不是功能；未知值落到默认值，而不是变成一个 CSS 不认识、会在没有任何主题的情况下渲染的 `data-theme`。
+
+- **位置：** `apps/web/public/theme-boot.js:41`,
+  `apps/web/index.html:53`
+- **测试：** `apps/web/src/lib/tema.test.ts`（describe "contrato com o script
+  de boot"）
+- **ADR：** [0074](../adr/0074-tema-alcancavel-e-o-boot-sob-csp.md)
