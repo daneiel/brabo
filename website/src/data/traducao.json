@@ -1,9 +1,5 @@
 {
   "en": {
-    "adr/0001-git-provider-contract-shape.md": {
-      "defasada": false,
-      "data": "2026-10-15"
-    },
     "adr/0002-git-error-normalization.md": {
       "defasada": false,
       "data": null
@@ -84,14 +80,6 @@
       "defasada": false,
       "data": null
     },
-    "adr/0022-fechamento-4b-psicologo.md": {
-      "defasada": false,
-      "data": "2026-10-15"
-    },
-    "adr/0023-fechamento-4b-anamnese.md": {
-      "defasada": false,
-      "data": "2026-10-15"
-    },
     "adr/0024-fase5-imagens-producao-ci.md": {
       "defasada": false,
       "data": null
@@ -103,10 +91,6 @@
     "adr/0026-fase5-observabilidade-e-graceful-shutdown.md": {
       "defasada": false,
       "data": null
-    },
-    "adr/0027-fase5-backup-hardening-release.md": {
-      "defasada": false,
-      "data": "2026-10-15"
     },
     "adr/0028-protecao-de-branch-divergencia-entre-providers.md": {
       "defasada": false,
@@ -152,10 +136,6 @@
       "defasada": false,
       "data": null
     },
-    "adr/0039-actionlint-e-validacao-do-pipeline-de-ci-gerado.md": {
-      "defasada": false,
-      "data": "2026-10-15"
-    },
     "adr/0040-moeda-do-dashboard.md": {
       "defasada": false,
       "data": null
@@ -176,10 +156,6 @@
       "defasada": false,
       "data": null
     },
-    "adr/0045-reagendamento-por-evento-do-dev-agent.md": {
-      "defasada": false,
-      "data": "2026-10-15"
-    },
     "adr/0046-promocao-de-story-com-autoridade-do-usuario.md": {
       "defasada": false,
       "data": null
@@ -196,10 +172,6 @@
       "defasada": false,
       "data": null
     },
-    "adr/0050-credencial-sempre-cifrada-verificacao-explicita.md": {
-      "defasada": false,
-      "data": "2026-10-15"
-    },
     "adr/0051-facetas-de-capability-e-curadoria-por-uso.md": {
       "defasada": false,
       "data": null
@@ -207,14 +179,6 @@
     "adr/0052-dev-agent-espera-aprovacao-no-meio-do-laco.md": {
       "defasada": false,
       "data": null
-    },
-    "adr/0053-dev-lead-e-paralelismo-autorizado.md": {
-      "defasada": false,
-      "data": "2026-10-15"
-    },
-    "adr/0054-gates-como-registro-declarativo.md": {
-      "defasada": false,
-      "data": "2026-10-15"
     },
     "adr/0055-escopo-de-caminho-na-politica-de-terminal.md": {
       "defasada": false,
@@ -408,39 +372,67 @@
       "defasada": false,
       "data": null
     },
-    "adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md": {
-      "defasada": false,
-      "data": "2026-10-15"
-    },
-    "adr/0105-personal-access-token-do-runner-escopado-por-construcao.md": {
-      "defasada": false,
-      "data": "2026-10-15"
-    },
-    "adr/0106-distribuicao-do-runner-via-tsup-e-npm-publish.md": {
-      "defasada": false,
-      "data": "2026-10-15"
-    },
     "adr/0107-navegacao-de-pasta-local-via-o-runner.md": {
       "defasada": false,
       "data": null
     },
-    "adr/0108-projeto-runner-nasce-ao-navegar-pasta-no-wizard.md": {
+    "adr/0112-binario-standalone-do-runner-via-bun-build-compile.md": {
       "defasada": false,
       "data": "2026-10-15"
     },
-    "adr/0109-handoff-manual-a-agente-a-escolha.md": {
+    "adr/0113-pasta-local-anexada-via-navegador-vira-chunks-scope-local.md": {
       "defasada": false,
       "data": "2026-10-15"
     },
-    "adr/0110-budget-por-area-aditivo-nao-cascata.md": {
+    "adr/0114-deteccao-de-ollama-nativo-no-bootstrap-dev.md": {
       "defasada": false,
       "data": "2026-10-15"
     },
-    "adr/0111-conversao-de-execution-mode-de-projeto-existente.md": {
+    "adr/0115-pedido-de-pull-de-modelo-huggingface-tabela-propria.md": {
       "defasada": false,
       "data": "2026-10-15"
     },
-    "architecture.md": {
+    "adr/0116-tipos-do-web-gerados-do-openapi.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0117-lockfile-proprio-para-o-website.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0118-configuracao-automatica-do-runner-pelo-navegador.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0119-imagens-publicadas-no-ghcr-por-digest.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0120-e2e-de-navegador-contra-o-compose-de-producao.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0121-schema-dividido-por-agregado-de-dominio.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0122-sessionpage-dividido-em-cinco-prs.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0123-golden-set-regressao-qa-automacao.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0124-hook-do-canal-de-turno-do-sessionpage.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0125-projectsettingstab-dividido-por-secao.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0126-trilho-vertical-de-navegacao-do-projeto.md": {
       "defasada": false,
       "data": "2026-10-15"
     },
@@ -487,6 +479,10 @@
     "missions/colheita-esqueleto.md": {
       "defasada": false,
       "data": null
+    },
+    "security-surface.md": {
+      "defasada": false,
+      "data": "2026-10-15"
     },
     "tutorials/from-zero-to-deliverable.md": {
       "defasada": false,

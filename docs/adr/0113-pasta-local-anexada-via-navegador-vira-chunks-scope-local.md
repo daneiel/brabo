@@ -1,169 +1,176 @@
-# ADR 0113 — Locally attached folder becomes `chunks.scope = 'local'`, read by the BROWSER, never a host path
+# ADR 0113 — Pasta local anexada vira `chunks.scope = 'local'`, lida pelo NAVEGADOR, nunca um caminho do host
 
 ## Status
 
-Accepted.
+Aceito.
 
-References (without editing): [ADR 0072](0072-projeto-local-ou-container.md),
+Referencia (sem editar): [ADR 0072](0072-projeto-local-ou-container.md),
 [ADR 0079](0079-tabela-de-chunks-vetor-e-tsvector-juntos.md),
 [ADR 0080](0080-busca-hibrida-pesos-limiar-e-citacao.md),
 [ADR 0107](0107-navegacao-de-pasta-local-via-o-runner.md),
 [ADR 0108](0108-projeto-runner-nasce-ao-navegar-pasta-no-wizard.md).
 
-## Context
+## Contexto
 
-### The request
+### O pedido
 
-Let a user attach a local folder from their own machine to a project as
-READ-ONLY REFERENCE material for agents — explicitly WITHOUT running the
-`brabo-runner` CLI (ADR 0103). This is NOT project execution or workspace:
-`execution_mode: runner` (ADR 0104) exists precisely because execution needs
-a real HOST path the container/engine can route commands to, confirmed by a
-runner connecting and verifying it (RN-423). This feature is closer to
-"attach files to a conversation" than to "mount a workspace."
+Deixar o usuário anexar a um projeto uma pasta local da própria máquina como
+material de REFERÊNCIA SOMENTE LEITURA para os agentes — explicitamente SEM
+rodar a CLI `brabo-runner` (ADR 0103). Isto NÃO é execução de projeto nem
+workspace: o `execution_mode: runner` (ADR 0104) existe justamente porque a
+execução precisa de um caminho REAL do HOST para o qual o container/engine
+possa rotear comandos, confirmado por um runner que se conecta e o verifica
+(RN-423). Esta feature está mais perto de "anexar arquivos a uma conversa" do
+que de "montar um workspace".
 
-### What ADR 0072 and ADR 0107 actually rejected, and why this is different
+### O que o ADR 0072 e o ADR 0107 de fato recusaram, e por que isto é diferente
 
-Both of those decisions are about resolving an absolute HOST PATH from the
-browser. ADR 0072 rejected a folder *picker* at project creation because "a
-picker would require the api to enumerate the CONTAINER's filesystem to the
-browser" — new surface just for ergonomics, and a wrong-context filesystem
-besides. ADR 0107 solved folder *navigation* by routing the read through the
-Runner (a process with the user's own privileges on their own machine, not
-the api) precisely because the api can never see the user's real filesystem.
+As duas decisões tratam de resolver um CAMINHO absoluto DO HOST a partir do
+navegador. O ADR 0072 recusou um *seletor* de pasta na criação do projeto
+porque "um seletor exigiria que a api enumerasse para o navegador o sistema
+de arquivos do CONTAINER" — superfície nova só por ergonomia, e ainda por
+cima um sistema de arquivos do contexto errado. O ADR 0107 resolveu a
+*navegação* de pasta roteando a leitura pelo Runner (um processo com os
+privilégios do próprio usuário na própria máquina dele, não a api)
+justamente porque a api nunca enxerga o sistema de arquivos real do usuário.
 
-Both are about WHERE A PATH ON THE USER'S DISK COMES FROM, and both matter
-because a path feeds either project creation (`workspace_path`) or command
-execution (`TerminalExecutor`'s `cwd`) — contexts where a WRONG path is a
-security and correctness problem: it decides what an agent can execute
-against.
+As duas tratam de DE ONDE VEM UM CAMINHO NO DISCO DO USUÁRIO, e as duas
+importam porque um caminho alimenta ou a criação do projeto
+(`workspace_path`) ou a execução de comando (o `cwd` do `TerminalExecutor`) —
+contextos em que um caminho ERRADO é problema de segurança e de correção: ele
+decide contra o que um agente pode executar.
 
-This feature never resolves a host path. The browser's `<input
-webkitdirectory>` returns `File` objects; the code reads their *content*
-(`File.text()`) and their *relative* path within the chosen folder
-(`File.webkitRelativePath`) — never an absolute path, because the browser
-File API doesn't expose one, by design, for any website. What crosses the
-network is TEXT the browser already had a legitimate right to read, exactly
-the same trust model as any ordinary `<input type="file">` upload on any
-site. There is no path to validate, sandbox, or route to a runner, because
-there is no path at all. Building a runner-style relay for this would be
-solving a problem this feature doesn't have.
+Esta feature nunca resolve um caminho do host. O `<input webkitdirectory>` do
+navegador devolve objetos `File`; o código lê o *conteúdo* deles
+(`File.text()`) e o caminho *relativo* dentro da pasta escolhida
+(`File.webkitRelativePath`) — nunca um caminho absoluto, porque a File API
+do navegador não expõe um, por desenho, para site nenhum. O que atravessa a
+rede é TEXTO que o navegador já tinha direito legítimo de ler, exatamente o
+mesmo modelo de confiança de qualquer upload comum por `<input type="file">`
+em qualquer site. Não há caminho a validar, isolar ou rotear para um runner,
+porque não há caminho nenhum. Construir um repasse no estilo do runner para
+isto seria resolver um problema que esta feature não tem.
 
-### Why reuse the RAG pipeline instead of a parallel mechanism
+### Por que reusar o pipeline do RAG em vez de um mecanismo paralelo
 
-The product already has a working chunking/embedding/hybrid-search pipeline
-(ADR 0079/0080): the `chunks` table, `RagEmbeddingService`,
+O produto já tem um pipeline de chunking/embedding/busca híbrida que
+funciona (ADR 0079/0080): a tabela `chunks`, o `RagEmbeddingService`,
 `chunkText`/`chunkMarkdownDocument`, `ChunkRepository.searchByVector`/
-`searchByLexicalQuery`, and the Chat RAG tab's citation rendering
-(`RagCitationCard`, `origemDoChunk`). A locally attached file is,
-structurally, the same shape as an indexed doc/ADR file: a path plus
-content that should be searchable and citable. Building a second,
-parallel "attached files" store and a second citation UI would duplicate a
-pipeline that already does exactly this job, for no reason other than the
-source of the bytes being a browser upload instead of a git blob.
+`searchByLexicalQuery`, e a renderização de citação da aba Chat RAG
+(`RagCitationCard`, `origemDoChunk`). Um arquivo anexado localmente tem,
+estruturalmente, a mesma forma de um arquivo de doc/ADR indexado: um caminho
+mais conteúdo que deve ser buscável e citável. Construir um segundo
+armazenamento paralelo de "arquivos anexados" e uma segunda UI de citação
+duplicaria um pipeline que já faz exatamente esse trabalho, sem outro motivo
+além de a origem dos bytes ser um upload do navegador em vez de um blob do
+git.
 
-## Decision
+## Decisão
 
-**`chunks.scope` gains a fourth value, `'local'`**, added via `ALTER TYPE
-... ADD VALUE` (migration `0052`) — additive, no data migration, no new
-CHECK: the existing `chunks_session_id_casa_com_escopo`/
-`chunks_source_path_casa_com_escopo` constraints (migration `0045`) are
-already written as "is it `session` or not," so `local` falls on the same
-side as `docs`/`adr` (has `source_path`, no `session_id`) with zero schema
-change beyond the enum value.
+**`chunks.scope` ganha um quarto valor, `'local'`**, acrescentado via `ALTER
+TYPE ... ADD VALUE` (migration `0052`) — aditivo, sem migração de dados, sem
+CHECK novo: as constraints existentes `chunks_session_id_casa_com_escopo`/
+`chunks_source_path_casa_com_escopo` (migration `0045`) já estão escritas
+como "é `session` ou não", então `local` cai do mesmo lado de `docs`/`adr`
+(tem `source_path`, não tem `session_id`) com zero mudança de schema além do
+valor do enum.
 
-**`IndexLocalFolderUseCase`** mirrors `IndexProjectDocsUseCase` closely:
-chunk each file (Markdown-aware via `chunkMarkdownDocument` for `.md`/
-`.mdx`, `chunkText` otherwise), call the same `RagEmbeddingService`, write
-chunks with `embedding: null` on embedding failure (the same honesty
-pattern `docs`/`adr` already use — RN-233), full `deleteByScope(projectId,
-'local')` + recreate on every call. `origemDoChunk` needed ZERO changes:
-`local` chunks carry `sourcePath` exactly like `docs`/`adr`, so they fall
-into the existing `kind: 'file'` branch — the citation UI already handles
-them.
+**`IndexLocalFolderUseCase`** espelha de perto o `IndexProjectDocsUseCase`:
+divide cada arquivo em chunks (ciente de Markdown via
+`chunkMarkdownDocument` para `.md`/`.mdx`, `chunkText` nos demais), chama o
+mesmo `RagEmbeddingService`, grava chunks com `embedding: null` quando o
+embedding falha (o mesmo padrão de honestidade que `docs`/`adr` já usam —
+RN-233), e faz `deleteByScope(projectId, 'local')` completo + recriação a
+cada chamada. `origemDoChunk` precisou de ZERO mudança: chunks `local`
+carregam `sourcePath` exatamente como `docs`/`adr`, então caem no ramo
+existente `kind: 'file'` — a UI de citação já os trata.
 
-**One-shot rejection, never silent truncation.** Unlike `docs`/`adr`
-(a background scan with no user watching), attaching a folder is a single
-user gesture with a folder picker in front of it. `IndexLocalFolderUseCase`
-REJECTS (400) the whole upload when the aggregate caps are exceeded (file
-count, summed bytes) — the person who clicked "Attach" is looking at the
-screen and can pick a smaller folder. An individual oversized file or
-unrecognized extension is only SKIPPED (`filesSkipped`), never fails the
-batch — the same distinction `IndexProjectDocsUseCase` already makes
-implicitly by filtering to `.md` only.
+**Recusa de uma vez, nunca truncamento silencioso.** Ao contrário de
+`docs`/`adr` (uma varredura em segundo plano sem usuário olhando), anexar uma
+pasta é um gesto único do usuário, com um seletor de pasta na frente dele. O
+`IndexLocalFolderUseCase` RECUSA (400) o upload inteiro quando os tetos
+agregados são ultrapassados (contagem de arquivos, soma de bytes) — quem
+clicou em "Anexar" está olhando a tela e pode escolher uma pasta menor. Um
+arquivo individual grande demais ou com extensão não reconhecida é só
+PULADO (`filesSkipped`), nunca derruba o lote — a mesma distinção que o
+`IndexProjectDocsUseCase` já faz implicitamente ao filtrar só `.md`.
 
-**Never wired into the generic "Reindex now."** `ReindexProjectUseCase`
-re-reads from a source the SERVER can revisit — the project's repository
-(`docs`/`adr`) and the event log (`session`). The `local` scope has no such
-source: the text lives only in the browser of whoever attached it, and the
-server never persisted a host path (there isn't one). Calling
-`deleteByScope(projectId, 'local')` from the generic reindex button would
-delete the user's attached reference material with no way to recreate it —
-re-uploading the folder is the ONLY resync mechanism, and it is a
-deliberately separate button (`POST .../rag/local`, `maintainer`, same role
-as `reindex` because it also triggers the embedding provider and replaces
-what's indexed). Both use cases carry an explicit code comment pointing at
-each other and at this ADR, so a future "fix" doesn't wire them together and
-silently delete users' reference material on an unrelated click.
+**Nunca ligado ao "Reindexar agora" genérico.** O `ReindexProjectUseCase`
+relê de uma fonte que o SERVIDOR pode revisitar — o repositório do projeto
+(`docs`/`adr`) e o event log (`session`). O escopo `local` não tem fonte
+assim: o texto vive só no navegador de quem o anexou, e o servidor nunca
+persistiu um caminho do host (não existe um). Chamar `deleteByScope(projectId,
+'local')` pelo botão genérico de reindexar apagaria o material de referência
+anexado pelo usuário sem forma de recriá-lo — reenviar a pasta é o ÚNICO
+mecanismo de ressincronização, e ele é um botão deliberadamente separado
+(`POST .../rag/local`, `maintainer`, o mesmo papel de `reindex` porque ele
+também aciona o provider de embedding e substitui o que está indexado). Os
+dois casos de uso levam um comentário explícito no código apontando um para o
+outro e para este ADR, para que uma futura "correção" não os ligue e apague
+em silêncio o material de referência dos usuários num clique sem relação.
 
-**Coverage tells the truth about what `local` actually is.**
-`RagCoverage.local` is a NEW shape (`RagLocalCoverage`), not a reuse of
-`RagFileCoverage`: there is no "total files in repo" to compare against — a
-browser upload has no repository to re-scan. It reports what's indexed NOW
-(`filesIndexed`, `folderName`, `lastAttachedAt`). `lastAttachedAt` is the
-ONE declared exception to the product's "never show a guessed timestamp"
-rule (RN-237/ADR 0080): it's a real `MAX(chunks.created_at)` over the scope,
-not a computed or estimated value — the same honesty discipline, applied to
-a scope where a real timestamp happens to be answerable.
+**A cobertura diz a verdade sobre o que `local` de fato é.**
+`RagCoverage.local` é uma forma NOVA (`RagLocalCoverage`), não um reuso de
+`RagFileCoverage`: não há "total de arquivos no repositório" com que
+comparar — um upload do navegador não tem repositório a revarrer. Ela
+informa o que está indexado AGORA (`filesIndexed`, `folderName`,
+`lastAttachedAt`). `lastAttachedAt` é a ÚNICA exceção declarada à regra do
+produto de "nunca mostrar um timestamp chutado" (RN-237/ADR 0080): é um
+`MAX(chunks.created_at)` real sobre o escopo, não um valor calculado ou
+estimado — a mesma disciplina de honestidade, aplicada a um escopo em que um
+timestamp real por acaso tem resposta.
 
-## What this ADR does NOT do
+## O que este ADR NÃO faz
 
-- **It doesn't touch `execution_mode`/`workspace_path`/the runner.** Those
-  remain exactly what ADR 0072/0104/0107 describe: how a project's code
-  EXECUTES. This feature adds reference material to the RAG index; it has
-  no opinion about where a project's code lives or runs.
-- **It doesn't add a fifth "attached files" concept.** No new table, no
-  parallel citation format — `local` is a value of the same `ChunkScope`
-  the rest of the pipeline already speaks.
-- **It doesn't index the project's own repository a second time.** `docs`/
-  `adr` continue being read from the project's git repository via
-  `ReadProjectCodeUseCase`; `local` is deliberately a SEPARATE source, for
-  material that has nothing to do with the project's own repo (a spec, a
-  reference implementation, a competitor's docs, anything the user wants an
-  agent to be able to search).
+- **Não toca `execution_mode`/`workspace_path`/o runner.** Eles continuam
+  exatamente como os ADRs 0072/0104/0107 descrevem: como o código de um
+  projeto EXECUTA. Esta feature acrescenta material de referência ao índice
+  do RAG; não tem opinião sobre onde o código de um projeto mora ou roda.
+- **Não acrescenta um quinto conceito de "arquivos anexados".** Nenhuma
+  tabela nova, nenhum formato de citação paralelo — `local` é um valor do
+  mesmo `ChunkScope` que o resto do pipeline já fala.
+- **Não indexa o repositório do próprio projeto uma segunda vez.** `docs`/
+  `adr` continuam sendo lidos do repositório git do projeto via
+  `ReadProjectCodeUseCase`; `local` é deliberadamente uma fonte SEPARADA,
+  para material que não tem nada a ver com o repositório do próprio projeto
+  (uma spec, uma implementação de referência, a doc de um concorrente,
+  qualquer coisa que o usuário queira que um agente consiga buscar).
 
-## Consequences
+## Consequências
 
-- **A second upload replaces the first, entirely.** There is no
-  "append to what's attached" — `IndexLocalFolderUseCase` deletes the whole
-  `local` scope before writing the new one. This is the SAME idempotent
-  full-rebuild discipline `docs`/`adr`/`session` already follow (RN-231),
-  applied consistently rather than invented specially for this scope.
-- **Binary and oversized files are silently absent from search, declared
-  via `filesSkipped`.** The extension allowlist (`RAG_LOCAL_ALLOWED_EXTENSIONS`)
-  is a real content restriction, not just UX polish — the server enforces
-  it independently of whatever the browser pre-filtered, because the
-  client-side pre-filter is convenience, not the guarantee.
-- **The trust boundary is exactly an ordinary file upload's.** No
-  sandboxing, no path allowlist, no runner ticket — because there is no
-  path in this feature at all, only bytes the browser already had.
-  Anyone who can call `POST .../rag/local` (role `maintainer`) can put
-  arbitrary text into the project's search index; that's the same
-  authority the route already requires for `reindex`.
+- **Um segundo upload substitui o primeiro, inteiro.** Não há "acrescentar
+  ao que está anexado" — o `IndexLocalFolderUseCase` apaga o escopo `local`
+  inteiro antes de gravar o novo. É a MESMA disciplina de reconstrução
+  completa e idempotente que `docs`/`adr`/`session` já seguem (RN-231),
+  aplicada de forma coerente em vez de inventada especialmente para este
+  escopo.
+- **Arquivos binários e grandes demais ficam ausentes da busca em silêncio,
+  declarados via `filesSkipped`.** A allowlist de extensões
+  (`RAG_LOCAL_ALLOWED_EXTENSIONS`) é uma restrição real de conteúdo, não só
+  acabamento de UX — o servidor a impõe independentemente do que o navegador
+  tenha pré-filtrado, porque o pré-filtro do lado do cliente é conveniência,
+  não a garantia.
+- **A fronteira de confiança é exatamente a de um upload de arquivo comum.**
+  Sem isolamento, sem allowlist de caminho, sem ticket de runner — porque não
+  há caminho nenhum nesta feature, só bytes que o navegador já tinha. Quem
+  pode chamar `POST .../rag/local` (papel `maintainer`) pode pôr texto
+  arbitrário no índice de busca do projeto; é a mesma autoridade que a rota
+  já exige para `reindex`.
 
-## Alternatives considered
+## Alternativas consideradas
 
-- **Route the read through the Runner (ADR 0103/0107), like folder
-  navigation.** Rejected: the Runner exists to give the ENGINE a real host
-  path to execute commands against, on a machine the user has explicitly
-  set up with the CLI. This feature is explicitly meant to work WITHOUT the
-  CLI, for read-only reference material — routing it through the Runner
-  would make the CLI a requirement this feature was designed not to have.
-- **A new `attachments` table, independent of `chunks`.** Rejected: it
-  would duplicate chunking, embedding, hybrid search and citation
-  rendering for no benefit — the shape of "path + content, searchable,
-  citable" is exactly what `chunks` already models.
-- **Wire `local` into `ReindexProjectUseCase`.** Rejected: there is nothing
-  server-side to re-read for this scope; wiring it in would make the
-  generic reindex button silently delete users' attached reference
-  material with no way to bring it back.
+- **Rotear a leitura pelo Runner (ADR 0103/0107), como a navegação de
+  pasta.** Recusada: o Runner existe para dar ao ENGINE um caminho real do
+  host contra o qual executar comandos, numa máquina que o usuário configurou
+  explicitamente com a CLI. Esta feature foi pensada explicitamente para
+  funcionar SEM a CLI, para material de referência somente leitura — roteá-la
+  pelo Runner tornaria a CLI um requisito que esta feature foi desenhada para
+  não ter.
+- **Uma tabela `attachments` nova, independente de `chunks`.** Recusada:
+  duplicaria chunking, embedding, busca híbrida e renderização de citação
+  sem benefício nenhum — a forma "caminho + conteúdo, buscável, citável" é
+  exatamente o que `chunks` já modela.
+- **Ligar `local` ao `ReindexProjectUseCase`.** Recusada: não há nada do lado
+  do servidor a reler para este escopo; ligá-lo faria o botão genérico de
+  reindexar apagar em silêncio o material de referência anexado pelos
+  usuários, sem forma de trazê-lo de volta.
