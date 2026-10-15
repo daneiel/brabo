@@ -280,6 +280,78 @@ pnpm db:migrate             # aplica as migrações
 pnpm dev:down               # derruba tudo
 ```
 
+### Onde fica cada coisa
+
+```
+apps/
+  api/      NestJS + Drizzle          → schema "public"
+  engine/   Elixir/OTP + Phoenix      → schema "engine"
+  web/      React + Vite
+packages/
+  shared/   tipos TS compartilhados (import type only)
+design/     design system — fonte de verdade de UI
+docker/     compose de dev e prod, Dockerfiles, smoke.sh
+deploy/k8s/ base + overlays local/staging/prod (Kustomize)
+docs/       esta documentação, incluindo os ADRs
+scripts/
+  ci/       automação de release e política de branch (testada com vitest)
+  dev/      ferramentas locais — o menu do `pnpm bootstrap` e o preflight
+  docs/     geração e verificação da documentação
+website/    Docusaurus, que lê de docs/ — nunca de website/docs/
+```
+
+`apps/engine` fica fora do workspace pnpm (é um projeto Mix), com scripts na
+raiz que delegam para o `mix` (`pnpm engine:setup`, `pnpm engine:dev`,
+`pnpm engine:test`). Se o Elixir do host não for o do projeto, formate pelo
+container:
+
+```bash
+docker run --rm -v "$PWD/apps/engine:/app" -w /app \
+  hexpm/elixir:1.20.4-erlang-29.1.1-alpine-3.24.2 mix format
+```
+
+**Banco.** Um Postgres, uma database (`brabo`), dois schemas para nunca
+colidir: a api (Drizzle) usa `public`, com migrações em
+`apps/api/src/db/migrations/` e um arquivo de schema por agregado
+(`db/schema.ts` é só o barrel); o engine (Ecto/Oban) usa `engine`, via
+`migration_default_prefix`, com migrações em
+`apps/engine/priv/repo/migrations/`. O pgvector é habilitado por
+`docker/postgres/init.sql`, que roda uma vez na criação do volume.
+
+**Testes que protegem propriedades.** Nenhuma feature entra sem teste do
+caminho feliz e de um caso de falha. Os providers de git passam por uma suíte
+de contrato única, rodada contra os três (Local, GitHub, GitLab).
+`apps/api/test/interfaces/route-surface.spec.ts` confere as rotas contra
+[`security-surface.md`](security-surface.md) — rota nova sem classificação
+quebra o teste —, e `apps/engine/test/engine_web/route_surface_test.exs` exige
+401 sem token em cada rota do engine, salvo exceções nomeadas.
+
+**Um turno, de ponta a ponta:**
+
+```mermaid
+sequenceDiagram
+  participant U as Você
+  participant W as web
+  participant A as api
+  participant E as engine
+  participant L as LLM
+
+  U->>W: abre uma sessão
+  W->>A: POST /sessions
+  A->>A: grava session.created (event log + outbox)
+  A-->>E: Oban consome a outbox
+  E->>E: SessionServer + Harness montam o contexto
+  E->>L: turno
+  L-->>E: "quero rodar esta ferramenta"
+  E->>A: vira proposed_action
+  A->>A: IAM → agent_autonomy → permissions.json → tetos
+  A-->>U: pede aprovação
+  U->>A: aprova
+  A-->>E: executa
+  E->>A: evento imutável
+  A-->>W: broadcast — o painel atualiza
+```
+
 ### O menu, para não decorar isso tudo
 
 ```bash
