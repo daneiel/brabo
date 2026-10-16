@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { classificar, dadosDaFaixa, medirDocs, medirInterface, relatorio, traducaoDe } from './paridade-de-traducao.mjs';
+import { classificar, ehFonteTraduzivel, dadosDaFaixa, medirDocs, medirInterface, relatorio, traducaoDe } from './paridade-de-traducao.mjs';
 
 /**
  * AT-550 (ADR 0216 itens 6–7). Cada reprovação é uma MUTAÇÃO de um caso certo:
@@ -77,5 +77,19 @@ describe('medirInterface', () => {
     expect(r.en.presentes).toBe(r.en.chaves - 1);
     expect(r['zh-Hans'].existe).toBe(false);
     expect(r['zh-Hans'].presentes).toBe(0);
+  });
+});
+
+describe('ehFonteTraduzivel (ADR 0219)', () => {
+  it('reference/ entra na paridade', () => {
+    expect(ehFonteTraduzivel('reference/configuration.md')).toBe(true);
+    expect(ehFonteTraduzivel('reference/brb.md')).toBe(true);
+    expect(ehFonteTraduzivel('adr/0219-x.md')).toBe(true);
+  });
+  it('o próprio relatório e o openapi.json ficam fora', () => {
+    expect(ehFonteTraduzivel('reference/paridade-de-traducao.md')).toBe(false);
+    expect(ehFonteTraduzivel('reference/openapi.json')).toBe(false);
+    // mutação: o nome sozinho fora de reference/ não é exceção
+    expect(ehFonteTraduzivel('explanation/paridade-de-traducao.md')).toBe(true);
   });
 });

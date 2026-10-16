@@ -349,6 +349,7 @@ Como a documentação é gerada, verificada e publicada.
 | [0206](0206-referencia-da-api-numa-pagina-redoc.md) | A referência da API vira UMA página Redoc renderizada no servidor (redocusaurus) em `/reference/api/`, revisando a metade de publicação do [0033](0033-referencia-de-api-gerada-do-openapi.md): o plugin e o tema de OpenAPI arrastavam `postman-collection` → `@faker-js/faker@5.5.3` (alerta High #43) sem caminho de correção. As páginas por operação, a sidebar por tag, as URLs por operação, o playground e os trechos de cURL saem por decisão do dono; o `api-render-check.mjs` agora afirma o título e uma seção SSR por operação |
 | [0216](0216-quatro-idiomas-com-pt-br-como-fonte.md) | Quatro idiomas para a documentação e a interface — o pt-BR vira a FONTE e o padrão, com inglês, russo e chinês simplificado como traduções em fases, paridade medida e um aviso por página para páginas não traduzidas ou defasadas (AT-545, decisões do dono de 15/10) |
 | [0218](0218-titulo-de-adr-com-prefixo.md) | Todo ADR se chama "ADR NNNN — título": o H1 ganha o prefixo `ADR`, número de 4 dígitos e travessão; o nome do arquivo (a URL) não muda, e normalizar o rótulo do título não é editar a decisão (AT-559, decisão do dono de 15/10) |
+| [0219](0219-referencia-entra-na-traducao.md) | A referência entra na tradução: `docs/reference/**` passa a ser fonte pt-BR traduzida e medida na paridade, inclusive o bloco gerado, menos o próprio relatório de paridade e o `openapi.json`; a página Redoc fica para a AT-565 (AT-564, decisões do dono de 15/10) |
 
 ## A convenção
 
