@@ -114,14 +114,14 @@ Read from the `capabilities` literals in `apps/api/src/infrastructure/llm/` — 
 | provider | streaming | tool calling | list_models | embeddings | routing preference | credential | model origin | summarized quirks | source |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `anthropic` | yes | yes | yes | no | no | API key | sync + seed | — | `apps/api/src/infrastructure/llm/anthropic-provider.ts` |
-| `bitdeer` | yes | yes | no | no | no | API key | seed | `Authorization: Bearer <chave>` CONFIRMED; `GET /v1/models` exists and is authenticated; Three REAL model ids confirmed; No stream/error quirk confirmed | `apps/api/src/infrastructure/llm/bitdeer-provider.ts` |
-| `deepinfra` | yes | yes | yes | no | no | API key | sync + seed | The catalog is PUBLIC — no authentication at all; `stream_options.include_usage` confirmed supported; Error in standard shape | `apps/api/src/infrastructure/llm/deepinfra-provider.ts` |
-| `nvidia-nim` | yes | yes | no | no | no | API key | seed | No dedicated header; Tool calling is PER MODEL, not per API; `stream_options.include_usage` not confirmed | `apps/api/src/infrastructure/llm/nvidia-nim-provider.ts` |
+| `bitdeer` | yes | yes | no | no | no | API key | seed | `Authorization: Bearer <chave>` CONFIRMADO; `GET /v1/models` existe e é autenticado; Três ids REAIS de modelo confirmados; Nenhuma peculiaridade de stream/erro confirmada | `apps/api/src/infrastructure/llm/bitdeer-provider.ts` |
+| `deepinfra` | yes | yes | yes | no | no | API key | sync + seed | O catálogo é PÚBLICO — sem autenticação nenhuma; `stream_options.include_usage` confirmado como suportado; Erro no formato padrão | `apps/api/src/infrastructure/llm/deepinfra-provider.ts` |
+| `nvidia-nim` | yes | yes | no | no | no | API key | seed | Sem cabeçalho dedicado; Tool calling é POR MODELO, não por API; `stream_options.include_usage` não confirmado | `apps/api/src/infrastructure/llm/nvidia-nim-provider.ts` |
 | `ollama` | yes | yes | yes | yes | no | none (local) | sync + seed | — | `apps/api/src/infrastructure/llm/ollama-provider.ts` |
 | `openai` | yes | yes | yes | no | no | API key | sync + seed | — | `apps/api/src/infrastructure/llm/openai-provider.ts` |
-| `openrouter` | yes | yes | yes | no | yes | API key | sync | Own headers; Model id prefixed by the upstream; Catalog with pricing on its own row; Error IN THE MIDDLE of the stream; Real cost in `usage.cost`; Free-routing alias (`~…`) is synced but cannot be curated | `apps/api/src/infrastructure/llm/openrouter-provider.ts` |
-| `together` | yes | yes | yes | no | no | API key | sync + seed | Price unit NOT explicitly documented by Together; Namespaced ids; `stream_options.include_usage` not confirmed; 429 carries `error_type: dynamic_request_limited \| dynamic_token_limited` | `apps/api/src/infrastructure/llm/together-provider.ts` |
-| `vultr` | yes | yes | no | no | no | API key | seed | Tool calling CONFIRMED with a real example; `-normalize` suffix | `apps/api/src/infrastructure/llm/vultr-provider.ts` |
+| `openrouter` | yes | yes | yes | no | yes | API key | sync | Cabeçalhos próprios; Id de modelo prefixado pelo upstream; Catálogo com preço na própria linha; Erro NO MEIO do stream; Custo real em `usage.cost`; Alias de roteamento livre (`~…`) é sincronizado mas não pode ser curado | `apps/api/src/infrastructure/llm/openrouter-provider.ts` |
+| `together` | yes | yes | yes | no | no | API key | sync + seed | Unidade de preço NÃO documentada explicitamente pela Together; Ids com namespace; `stream_options.include_usage` não confirmado; 429 leva `error_type: dynamic_request_limited \| dynamic_token_limited` | `apps/api/src/infrastructure/llm/together-provider.ts` |
+| `vultr` | yes | yes | no | no | no | API key | seed | Tool calling CONFIRMADO com exemplo real; Sufixo `-normalize` | `apps/api/src/infrastructure/llm/vultr-provider.ts` |
 
 A provider without `list_models` is SKIPPED by the catalog sync, with the reason
 logged in the report — never treated as "the catalog came back empty".
