@@ -1,101 +1,98 @@
 ---
 id: rulesets
-title: Repository rulesets
+title: Rulesets do repositório
 sidebar_label: Rulesets
 sidebar_position: 8
-description: The exact configuration of the rulesets for the three permanent branches and tags, for manual application — the repository versions the source, GitHub receives the application.
-keywords: [rulesets, branch protection, required checks, tags, release]
+description: A configuração exata dos rulesets das três branches permanentes e das tags, para aplicação manual — o repositório versiona a fonte, o GitHub recebe a aplicação.
+keywords: [rulesets, proteção de branch, checks obrigatórios, tags, release]
 ---
 
-# Repository rulesets
+# Rulesets do repositório
 
-This page is the **versioned source** of the protection. Applying it on
-GitHub is a **manual** step — the repository has no way to protect itself,
-and this asymmetry is intentional: whoever loosens the protection has to be
-a person, with a record.
+Esta página é a **fonte versionada** da proteção. Aplicá-la no GitHub é um
+passo **manual** — o repositório não tem como proteger a si mesmo, e essa
+assimetria é intencional: quem afrouxa a proteção tem de ser uma pessoa, com
+registro.
 
-The policy that these rules apply is in
-[Branch policy](../explanation/branching-policy.md).
+A política que estas regras aplicam está em
+[Política de branches](../explanation/branching-policy.md).
 
-> **Current state:** `gh api repos/daneiel/brabo/rulesets` returns **0**.
-> Nothing applied yet. Until then, everything here is declared intent, not
-> real protection.
+> **Estado atual:** `gh api repos/daneiel/brabo/rulesets` devolve **0**.
+> Nada aplicado ainda. Até lá, tudo aqui é intenção declarada, não proteção
+> real.
 
-## Prerequisite: the three branches must exist
+## Pré-requisito: as três branches precisam existir
 
-The ladder has three rungs, and a ruleset can't target what doesn't exist.
+A escada tem três degraus, e um ruleset não mira o que não existe.
 
 ```bash
 git fetch origin
 git push origin origin/dev:refs/heads/qa
 ```
 
-`dev` and `main` already exist. `qa` is born from `dev` — the ladder starts
-empty and is filled by promotions.
+`dev` e `main` já existem. `qa` nasce de `dev` — a escada começa vazia e é
+preenchida pelas promoções.
 
-> The `rc` branch was **removed** from the ladder. If it still exists on the
-> remote of an old clone, delete it: `git push origin --delete rc`. A
-> permanent branch that isn't in the ladder is an invitation for a PR to
-> target a rung that no longer exists.
+> A branch `rc` foi **removida** da escada. Se ela ainda existir no remoto de
+> um clone antigo, apague-a: `git push origin --delete rc`. Uma branch
+> permanente que não está na escada é um convite para uma PR mirar um degrau
+> que não existe mais.
 
-## Ruleset 1 — the three permanent branches
+## Ruleset 1 — as três branches permanentes
 
-**Name:** `permanentes`
+**Nome:** `permanentes`
 **Enforcement:** `Active`
-**Target:** Branch → `Include by pattern`, three entries: `dev`, `qa`, `main`
+**Alvo:** Branch → `Include by pattern`, três entradas: `dev`, `qa`, `main`
 
-> One ruleset for all three, not three rulesets: the requirement is
-> identical across all of them. What differs between rungs is **who
-> approves**, and that is decided by `approval-ladder` based on the
-> destination, not by the protection.
+> Um ruleset para as três, não três rulesets: a exigência é idêntica em todas.
+> O que difere entre degraus é **quem aprova**, e isso é decidido pelo
+> `approval-ladder` a partir do destino, não pela proteção.
 
-### Rules to check
+### Regras a marcar
 
-| rule | value | why |
+| regra | valor | por quê |
 |---|---|---|
-| **Restrict deletions** | ✅ | deleting `main` by accident is irreversible through the interface |
-| **Block force pushes** | ✅ | force-pushing to a permanent branch rewrites what has already been promoted; the rung's tag would end up pointing to a nonexistent commit |
-| **Require a pull request before merging** | ✅ | this is the central rule: no change gets in without a PR |
-| ↳ Required approvals | **0** | the counting is done by `approval-ladder`, which knows the mode and the destination. GitHub's native number doesn't distinguish `dev` from `main` |
-| ↳ Dismiss stale approvals on push | ✅ | approval of an old commit doesn't count — what was approved isn't what's going to be merged |
-| ↳ Require review from Code Owners | ✅ | `CODEOWNERS` sets the owner as reviewer for everything |
-| **Require status checks to pass** | ✅ | see the list below |
-| ↳ Require branches to be up to date | ❌ | would force a rebase on every merge into `dev`; CI already runs on the merge commit |
-| **Block merge queue** | — | not used |
+| **Restrict deletions** | ✅ | apagar a `main` por acidente é irreversível pela interface |
+| **Block force pushes** | ✅ | force-push numa branch permanente reescreve o que já foi promovido; a tag do degrau acabaria apontando para um commit inexistente |
+| **Require a pull request before merging** | ✅ | esta é a regra central: nenhuma mudança entra sem PR |
+| ↳ Required approvals | **0** | quem conta é o `approval-ladder`, que conhece o modo e o destino. O número nativo do GitHub não distingue `dev` de `main` |
+| ↳ Dismiss stale approvals on push | ✅ | aprovação de um commit antigo não conta — o que foi aprovado não é o que vai ser mergeado |
+| ↳ Require review from Code Owners | ✅ | o `CODEOWNERS` põe o dono como revisor de tudo |
+| **Require status checks to pass** | ✅ | ver a lista abaixo |
+| ↳ Require branches to be up to date | ❌ | forçaria um rebase a cada merge na `dev`; a CI já roda sobre o merge commit |
+| **Block merge queue** | — | não usado |
 
-**Required approvals = 0 is not a loosening.** GitHub can only count; it
-doesn't know that `main` requires PO + manager and `dev` requires one dev,
-nor that in `solo` mode the owner's own PR passes without review. Setting
-`1` here would **break** solo mode: the owner can't approve their own PR
-through the interface, and the PR would stay stuck forever. The real
-requirement lives in `approval-ladder`, which is a required check — and a
-required check can't be cheated.
+**Required approvals = 0 não é afrouxamento.** O GitHub só sabe contar; ele
+não sabe que a `main` exige PO + gestão e a `dev` exige um dev, nem que no modo
+`solo` a PR do próprio dono passa sem revisão. Pôr `1` aqui **quebraria** o
+modo solo: o dono não consegue aprovar a própria PR pela interface, e a PR
+ficaria presa para sempre. A exigência real mora no `approval-ladder`, que é
+check obrigatório — e check obrigatório não se burla.
 
-### The two configurations, side by side
+### As duas configurações, lado a lado
 
-The ruleset is the **same** in both modes. What changes is the variable —
-and that's why the migration doesn't go through Settings → Rules.
+O ruleset é o **mesmo** nos dois modos. O que muda é a variável — e é por isso
+que a migração não passa por Settings → Rules.
 
-| | `solo` (today) | `community` (future) |
+| | `solo` (hoje) | `community` (futuro) |
 |---|---|---|
-| **Required approvals in the ruleset** | **0** | **0** |
-| who requires it | the `Escada de aprovação` check | the same check |
-| variables | `APPROVAL_MODE=solo`, `OWNER_HANDLE` | `APPROVAL_MODE=community`, `APROVADORES_*` |
-| `dev` | 1 from the owner | 1 × devs |
-| `qa` | 1 from the owner | 2 × devs |
-| `main` | 1 from the owner | 1 × PO + 1 × management |
-| the owner's own PR | passes without review | follows the ladder like anyone else's |
-| distinct people | suspended | applies on `main` |
+| **Required approvals no ruleset** | **0** | **0** |
+| quem exige | o check `Escada de aprovação` | o mesmo check |
+| variáveis | `APPROVAL_MODE=solo`, `OWNER_HANDLE` | `APPROVAL_MODE=community`, `APROVADORES_*` |
+| `dev` | 1 do dono | 1 × devs |
+| `qa` | 1 do dono | 2 × devs |
+| `main` | 1 do dono | 1 × PO + 1 × gestão |
+| a PR do próprio dono | passa sem revisão | segue a escada como a de qualquer um |
+| pessoas distintas | suspenso | vale na `main` |
 
-**Required approvals stays at 0 in both cases, and that's deliberate.**
-GitHub can only count: it doesn't distinguish `dev` from `main`, doesn't
-know about roles, and doesn't know that in solo mode the owner's own PR
-passes without review. Setting `1` there **would break solo mode** — the
-owner can't approve their own PR through the interface, and every one of
-their PRs would stay stuck forever. The real requirement lives in the
-check, which is required and can't be cheated.
+**Required approvals fica em 0 nos dois casos, e isso é deliberado.** O
+GitHub só sabe contar: não distingue `dev` de `main`, não conhece papéis e não
+sabe que no modo solo a PR do próprio dono passa sem revisão. Pôr `1` ali
+**quebraria o modo solo** — o dono não consegue aprovar a própria PR pela
+interface, e toda PR dele ficaria presa para sempre. A exigência real mora no
+check, que é obrigatório e não se burla.
 
-Copy-paste to activate each mode:
+Copie e cole para ativar cada modo:
 
 ```bash
 # solo — what's in effect today
@@ -109,18 +106,18 @@ gh variable set APROVADORES_GESTAO --body "gustavo"
 gh variable set APPROVAL_MODE      --body community
 ```
 
-### Required checks
+### Checks obrigatórios
 
-**Exact** name, as GitHub registers it (it's the job's `name:`, not the
-workflow's):
+Nome **exato**, como o GitHub o registra (é o `name:` do job, não o do
+workflow):
 
-The duration column is **measured**, not estimated — three real runs, cold
-and warm cache. It exists so that "optimizing CI" starts from the number,
-not the guess. `*` marks a row measured from a single real run instead of
-three — the job is new (or just renamed) and hasn't been re-sampled cold vs.
-warm yet; the same number fills both columns until it is.
+A coluna de duração é **medida**, não estimada — três execuções reais, cache
+frio e quente. Ela existe para que "otimizar a CI" comece pelo número, não
+pelo palpite. `*` marca uma linha medida a partir de uma única execução real
+em vez de três — o job é novo (ou acabou de ser renomeado) e ainda não foi
+reamostrado frio × quente; o mesmo número preenche as duas colunas até ser.
 
-| check | workflow | cold | warm |
+| check | workflow | frio | quente |
 |---|---|---|---|
 | `Build, scan e smoke das imagens de produção` | `ci.yml` | **295s** | 109s |
 | `Testes TS (api)` | `ci.yml` | 177s\* | **177s**\* |
@@ -137,546 +134,534 @@ warm yet; the same number fills both columns until it is.
 | `Check de promoção` | `promotion-check.yml` | 9s | 9s |
 | `Backmerge gate` | `backmerge-gate.yml` | 7s | 7s |
 
-**After AT-303..306 (free changes only, no paid runner).** The names in the
-table above did **not** change — a renamed required check locks every PR —
-and the numbers above are the BEFORE. What changed underneath:
+**Depois da AT-303..306 (só mudanças gratuitas, sem runner pago).** Os nomes
+da tabela acima **não** mudaram — um check obrigatório renomeado trava toda
+PR — e os números acima são o ANTES. O que mudou por baixo:
 
-- **`Build, scan e smoke das imagens de produção` skips its heavy steps when
-  the diff doesn't touch an image** (AT-303). The first step classifies the
-  PR's diff with `scripts/ci/diff-toca-imagem.ts` (an allow-list of what
-  never enters an image, the smoke or the E2E: `docs/` except
+- **`Build, scan e smoke das imagens de produção` pula os passos pesados
+  quando o diff não toca imagem** (AT-303). O primeiro passo classifica o
+  diff da PR com `scripts/ci/diff-toca-imagem.ts` (uma lista de permitidos do
+  que nunca entra numa imagem, no smoke ou no E2E: `docs/` exceto
   `docs/gates.yml`, `website/`, `scripts/docs/`, `deploy/k8s/`, `.github/`
-  except `ci.yml`, root `*.md` except `THIRD_PARTY_NOTICES.md`, `design/*.md`;
-  the spec proves the list against the real Dockerfiles, by mutation). Bake,
-  Trivy, broker, smoke and E2E carry `if:` **per step**, and the job always
-  finishes — green, saying why in the job summary. Never `paths:` on the
-  trigger nor `if:` on the job: both would leave the required check pending
-  or pasted with a stale verdict. In doubt (empty diff, HEAD that isn't the
-  PR's merge commit, `git diff` failing) it runs everything.
-- **The same job caches the Playwright browser, the `e2e/` pnpm store and
-  the Trivy database** (AT-304) — see
-  [what the images job caches](../explanation/cadeia-de-suprimentos-do-ci.md#images-job-caches).
-- **`Testes TS (api)` and `Testes TS (web)` became AGGREGATORS of two shards
-  each** (AT-305). The jobs `Testes TS (api) — shard N/2` and `Testes TS
-  (web) — shard N/2` run half the files each with coverage but with the floor
-  zeroed, and write a vitest `blob` report; the aggregator — which keeps the
-  required name — checks both shards ended `success`, that both reports
-  arrived, and runs `vitest --merge-reports --coverage`, which applies the
-  UNCHANGED `coverage.thresholds` of `vitest.config.ts`/`vite.config.ts` to
-  the merged coverage (measured locally: merged coverage identical to the
-  single-run one). The aggregator has `if: always()` on purpose: without
-  it a red shard would make it `skipped`, and `skipped` counts as green for
-  a required check. The shard names are **not** required checks and must
-  not be listed in a ruleset. Typecheck runs in shard 1 only.
-- **`Testes do engine (ExUnit)` and the api shards wait for a new job,
-  `imagens / Ler as imagens do compose`** (ADR 0197): it reads the pgvector
-  reference from `docker/docker-compose.yml` and hands it to their
-  `services:`, so no workflow holds an image literal. It is **not** a
-  required check and must not be listed in a ruleset — whatever it decides
-  shows up in the jobs that need it. Those jobs carry `if: ${{ !cancelled() }}`
-  for the same reason as the aggregators above: if `imagens` failed, the
-  default would SKIP `Testes do engine (ExUnit)`, and `skipped` counts as green
-  for a required check; with it the job runs, gets an empty image and fails.
-- `claude-code-review.yml` got `concurrency` (cancel-in-progress, per PR) and
-  `timeout-minutes: 30`; `docs-check.yml` got `timeout-minutes` on both jobs
-  (AT-306).
+  exceto `ci.yml`, `*.md` da raiz exceto `THIRD_PARTY_NOTICES.md`,
+  `design/*.md`; o spec prova a lista contra os Dockerfiles reais, por
+  mutação). Bake, Trivy, broker, smoke e E2E levam `if:` **por passo**, e o
+  job sempre termina — verde, dizendo por quê no resumo do job. Nunca
+  `paths:` no gatilho nem `if:` no job: os dois deixariam o check obrigatório
+  pendente ou colado num veredito velho. Na dúvida (diff vazio, HEAD que não é
+  o merge commit da PR, `git diff` falhando) roda tudo.
+- **O mesmo job guarda em cache o navegador do Playwright, o store do pnpm de
+  `e2e/` e o banco do Trivy** (AT-304) — ver
+  [o que o job de imagens guarda em cache](../explanation/cadeia-de-suprimentos-do-ci.md#images-job-caches).
+- **`Testes TS (api)` e `Testes TS (web)` viraram AGREGADORES de dois shards
+  cada** (AT-305). Os jobs `Testes TS (api) — shard N/2` e `Testes TS
+  (web) — shard N/2` rodam metade dos arquivos cada, com cobertura mas com o
+  piso zerado, e escrevem um relatório `blob` do vitest; o agregador — que
+  mantém o nome obrigatório — confere que os dois shards terminaram `success`,
+  que os dois relatórios chegaram, e roda `vitest --merge-reports --coverage`,
+  que aplica os `coverage.thresholds` INALTERADOS de
+  `vitest.config.ts`/`vite.config.ts` à cobertura mesclada (medido
+  localmente: cobertura mesclada idêntica à da execução única). O agregador
+  tem `if: always()` de propósito: sem ele um shard vermelho o deixaria
+  `skipped`, e `skipped` conta como verde para um check obrigatório. Os nomes
+  dos shards **não** são checks obrigatórios e não devem ser listados num
+  ruleset. O typecheck roda só no shard 1.
+- **`Testes do engine (ExUnit)` e os shards da api esperam um job novo,
+  `imagens / Ler as imagens do compose`** (ADR 0197): ele lê a referência do
+  pgvector de `docker/docker-compose.yml` e a entrega aos `services:` deles,
+  então nenhum workflow guarda literal de imagem. Ele **não** é check
+  obrigatório e não deve ser listado num ruleset — o que ele decidir aparece
+  nos jobs que dependem dele. Esses jobs levam `if: ${{ !cancelled() }}` pelo
+  mesmo motivo dos agregadores acima: se `imagens` falhasse, o padrão PULARIA
+  `Testes do engine (ExUnit)`, e `skipped` conta como verde para um check
+  obrigatório; com ele o job roda, recebe uma imagem vazia e falha.
+- `claude-code-review.yml` ganhou `concurrency` (cancel-in-progress, por PR) e
+  `timeout-minutes: 30`; `docs-check.yml` ganhou `timeout-minutes` nos dois
+  jobs (AT-306).
 
-| check | before, cold | before, warm | after, cold | after, warm | after, docs-only PR |
+| check | antes, frio | antes, quente | depois, frio | depois, quente | depois, PR só de docs |
 |---|---|---|---|---|---|
 | `Build, scan e smoke das imagens de produção` | 295s | 109s | TODO(humano) | TODO(humano) | TODO(humano) |
-| `Testes TS (api)` (shards + aggregator, wall clock) | 177s | 177s | TODO(humano) | TODO(humano) | — |
-| `Testes TS (web)` (shards + aggregator, wall clock) | 169s | 169s | TODO(humano) | TODO(humano) | — |
+| `Testes TS (api)` (shards + agregador, tempo de relógio) | 177s | 177s | TODO(humano) | TODO(humano) | — |
+| `Testes TS (web)` (shards + agregador, tempo de relógio) | 169s | 169s | TODO(humano) | TODO(humano) | — |
 
-> **TODO(humano):** fill the "after" columns from this PR's own runs (cold:
-> the first push; warm: a re-run of the same commit; docs-only: a PR that
-> only touches `docs/`), and then move the numbers into the main table.
+> **TODO(humano):** preencher as colunas "depois" com as execuções desta
+> própria PR (frio: o primeiro push; quente: uma reexecução do mesmo commit;
+> só de docs: uma PR que só toca `docs/`), e então levar os números para a
+> tabela principal.
 
-**Consequence for the `edited` criterion below:** the images job now
-depends on the BASE too (the diff is taken against it), while `ci.yml` still
-doesn't re-run on `edited`. The only unsafe direction is a PR that skipped
-its images against one base and is then retargeted to a base where its diff
-would touch an image — rare, since promotions run from permanent-branch
-heads (whose diff always touches something) and retargets usually shrink the
-diff. The next push re-classifies.
+**Consequência para o critério de `edited` abaixo:** o job de imagens agora
+depende também da BASE (o diff é tirado contra ela), enquanto o `ci.yml` segue
+sem reexecutar em `edited`. A única direção insegura é uma PR que pulou as
+imagens contra uma base e depois é redirecionada para uma base onde o diff
+dela tocaria imagem — raro, já que promoções rodam a partir das pontas das
+branches permanentes (cujo diff sempre toca algo) e redirecionamentos costumam
+encolher o diff. O próximo push reclassifica.
 
-**`ci.yml` is parallel except for the two aggregators** — `test-api` and
-`test-web` `need` their shards, nothing else has `needs:`.
-The full PR verdict costs the SLOWEST chain, not the sum (which is ~12min of
-CPU). Before AT-303..305, anyone wanting to shorten the PR had two targets,
-and only two:
+**O `ci.yml` é paralelo, exceto pelos dois agregadores** — `test-api` e
+`test-web` têm `needs` nos seus shards, nada mais tem `needs:`.
+O veredito completo da PR custa a cadeia MAIS LENTA, não a soma (que é ~12min
+de CPU). Antes da AT-303..305, quem quisesse encurtar a PR tinha dois alvos, e
+só dois:
 
-- **cold cache: the images job**, where 195s of the 295s are the
-  `docker buildx bake` — the single largest item in all of CI, 3× the
-  second. The bakefile already builds all four in parallel with `type=gha`
-  cache per image, and the comment at its top measures why breaking it
-  into a job matrix would be WORSE: 1.7 GB of images per artifact costs
-  more than the build, and the smoke test needs all four on the same
-  daemon;
-- **the old `Testes TS (api + web)` job**, where 91s of the 159s were
-  `pnpm --filter api test`, serialized by `fileParallelism: false` in
-  `apps/api/vitest.config.ts` because the ~80 specs that touch the database
-  shared ONE `brabo_test` and ran TRUNCATE between tests — arrivals in
-  parallel would collide. That's fixed
-  (`perf/banco-por-worker-nos-testes-da-api`, CHANGELOG): each Vitest worker
-  gets its OWN database instead — `test/support/global-setup.ts` migrates a
-  TEMPLATE once and clones one database per worker via
-  `CREATE DATABASE ... TEMPLATE` (cheap, a page copy, not a migration
-  replay), `test/support/test-db-name.ts` resolves which one a given spec
-  connects to from `VITEST_POOL_ID`, and `vitest.config.ts` flips
-  `fileParallelism: true` with `maxWorkers: 4` (fixed at the runner's 4
-  vCPU, not auto-detected — the number has to be the SAME on a dev machine
-  with more cores and on the runner, or the locally measured behavior isn't
-  what runs there). Measured locally: the api suite's own duration dropped
-  from 792.58s to 471.23s on a clean run (~40%, three repeats with no
-  flakiness). Re-sampled on the actual GitHub-hosted runner (PR #491,
-  `ci.yml`): the `pnpm --filter api test` step itself dropped to **96s** —
-  right at the `91s` warm-cache floor this table used to cite as the
-  theoretical best case, not a lucky outlier.
+- **cache frio: o job de imagens**, onde 195s dos 295s são o
+  `docker buildx bake` — o maior item isolado de toda a CI, 3× o segundo. O
+  bakefile já constrói as quatro em paralelo com cache `type=gha` por imagem,
+  e o comentário no topo dele mede por que quebrá-lo numa matriz de jobs
+  seria PIOR: 1,7 GB de imagens por artefato custa mais que o build, e o smoke
+  precisa das quatro no mesmo daemon;
+- **o antigo job `Testes TS (api + web)`**, onde 91s dos 159s eram
+  `pnpm --filter api test`, serializado por `fileParallelism: false` em
+  `apps/api/vitest.config.ts` porque os ~80 specs que tocam o banco
+  compartilhavam UM `brabo_test` e rodavam TRUNCATE entre testes — chegadas em
+  paralelo colidiriam. Isso foi corrigido
+  (`perf/banco-por-worker-nos-testes-da-api`, CHANGELOG): cada worker do
+  Vitest ganha o PRÓPRIO banco — `test/support/global-setup.ts` migra um
+  TEMPLATE uma vez e clona um banco por worker via
+  `CREATE DATABASE ... TEMPLATE` (barato, uma cópia de páginas, não uma
+  reexecução de migrations), `test/support/test-db-name.ts` resolve a qual
+  deles um spec se conecta a partir de `VITEST_POOL_ID`, e `vitest.config.ts`
+  liga `fileParallelism: true` com `maxWorkers: 4` (fixo nas 4 vCPU do runner,
+  não autodetectado — o número tem de ser o MESMO numa máquina de dev com mais
+  núcleos e no runner, senão o comportamento medido localmente não é o que
+  roda lá). Medido localmente: a duração da própria suíte da api caiu de
+  792,58s para 471,23s numa execução limpa (~40%, três repetições sem
+  instabilidade). Reamostrado no runner hospedado do GitHub de verdade (PR
+  #491, `ci.yml`): o próprio passo `pnpm --filter api test` caiu para **96s**
+  — bem no piso de `91s` de cache quente que esta tabela citava como o melhor
+  caso teórico, não um ponto fora da curva de sorte.
 
-  That fix changed the shape of the job it ran inside, and that's what made
-  the SECOND cut possible. `apps/web`'s own test step had grown to 125s in
-  the same run that measured the job's `343s` total (PR #494, job
-  `101317149006`) — no longer the small tail the callout below used to
-  describe, but a peer of the api's. `perf/paraleliza-testes-ts` (CHANGELOG)
-  split the job into three parallel ones — `test-api` (keeps the `postgres`
-  service and the `DATABASE_URL`/`TEST_DATABASE_URL` env, since it's the
-  only one that touches the database), `test-web`, and `test-packages`
-  (scripts de CI, porta de Docker, broker, runner — the six components that
-  never needed Postgres) — each with its own `checkout` + `setup-node` +
-  `pnpm install`. Measured on the actual GitHub-hosted runner (PR #495,
-  `ci.yml`): **177s** (`test-api`), **169s** (`test-web`), **56s**
-  (`test-packages`), against **343s** for the job they replaced — the check
-  that used to gate the PR is now the SLOWEST of the three, not their sum, a
-  real **~48%** cut.
+  Essa correção mudou a forma do job onde ela rodava, e foi isso que tornou
+  possível o SEGUNDO corte. O passo de testes do próprio `apps/web` tinha
+  crescido para 125s na mesma execução que mediu os `343s` totais do job (PR
+  #494, job `101317149006`) — não mais a cauda pequena que o destaque abaixo
+  descrevia, mas um par do da api. `perf/paraleliza-testes-ts` (CHANGELOG)
+  dividiu o job em três paralelos — `test-api` (mantém o serviço `postgres` e
+  o ambiente `DATABASE_URL`/`TEST_DATABASE_URL`, já que é o único que toca o
+  banco), `test-web` e `test-packages` (scripts de CI, porta de Docker,
+  broker, runner — os seis componentes que nunca precisaram de Postgres) —,
+  cada um com o próprio `checkout` + `setup-node` + `pnpm install`. Medido no
+  runner hospedado do GitHub de verdade (PR #495, `ci.yml`): **177s**
+  (`test-api`), **169s** (`test-web`), **56s** (`test-packages`), contra
+  **343s** do job que eles substituíram — o check que segurava a PR agora é o
+  MAIS LENTO dos três, não a soma deles, um corte real de **~48%**.
 
-  `test-web` and `test-packages` were stable across every run of this PR
-  (164–169s and 55–56s). `test-api` was not: a second push measured it at
-  **388s** — worse than the old job's 343s total — with every step still
-  green, then a bare re-run of the SAME commit measured **172s**. Three real
-  samples of `test-api` on this PR: 177s, 388s, 172s. Two out of three land
-  where `test-web` and `test-packages` do (comfortably inside the ~4min
-  target); the 388s run is consistent with shared-runner contention on
-  GitHub's side rather than a regression from the split — nothing in the
-  job changed between that run and the retry that measured 172s. Recorded
-  as observed, not smoothed away: whoever chases the next slow `test-api`
-  run should know this variance already existed the day the job was split,
-  and check for contention before assuming a new regression.
+  `test-web` e `test-packages` foram estáveis em todas as execuções desta PR
+  (164–169s e 55–56s). `test-api` não: um segundo push o mediu em **388s** —
+  pior que os 343s totais do job antigo — com todos os passos ainda verdes, e
+  depois uma simples reexecução do MESMO commit mediu **172s**. Três amostras
+  reais de `test-api` nesta PR: 177s, 388s, 172s. Duas de três caem onde
+  `test-web` e `test-packages` caem (com folga dentro da meta de ~4min); a
+  execução de 388s é coerente com disputa de runner compartilhado do lado do
+  GitHub, e não com uma regressão da divisão — nada no job mudou entre aquela
+  execução e a reexecução que mediu 172s. Registrado como observado, não
+  suavizado: quem for atrás da próxima execução lenta de `test-api` deve saber
+  que essa variação já existia no dia em que o job foi dividido, e conferir
+  disputa antes de supor uma regressão nova.
 
-> **The "two costs" warning that used to live here doesn't apply anymore —
-> both premises changed.** It used to say splitting `Testes TS (api + web)`
-> would (1) erase a required check by renaming it, locking every PR forever
-> unless a fan-in job or a Settings change preserved the name, and (2) not
-> pay off, because the api's 91s would carry the setup regardless of how
-> many jobs it's split into, for a ~7s net gain.
+> **O aviso dos "dois custos" que morava aqui não vale mais — as duas
+> premissas mudaram.** Ele dizia que dividir `Testes TS (api + web)` iria (1)
+> apagar um check obrigatório ao renomeá-lo, travando toda PR para sempre a
+> menos que um job de fan-in ou uma mudança em Settings preservasse o nome, e
+> (2) não compensar, porque os 91s da api carregariam o setup não importa em
+> quantos jobs fosse dividido, por um ganho líquido de ~7s.
 >
-> Premise 2 stopped being true once the web suite grew to cost as much as
-> the api's — splitting three comparably-sized components, not one big one
-> plus small tails, is what turns "≈150s vs 159s" into "177s vs 343s".
-> Premise 1 stopped applying for an orthogonal reason: **no ruleset is
-> applied to this repository yet** — `gh api
-> repos/daneiel/brabo/branches/dev/protection` still returns `404`, same as
-> the "Current state" note at the top of this page — so there was no
-> required check to erase. The required-checks table above already reflects
-> the rename. **If a ruleset is ever applied**, list `Testes TS (api)`,
-> `Testes TS (web)` and `Testes TS (pacotes)` — never the retired `Testes TS
-> (api + web)` name, which would silently match nothing and lock every
-> future PR, exactly as the general warning further below describes.
+> A premissa 2 deixou de ser verdade quando a suíte do web cresceu até custar
+> o mesmo que a da api — dividir três componentes de tamanho comparável, e não
+> um grande mais caudas pequenas, é o que transforma "≈150s contra 159s" em
+> "177s contra 343s". A premissa 1 deixou de valer por um motivo ortogonal:
+> **nenhum ruleset está aplicado a este repositório ainda** — `gh api
+> repos/daneiel/brabo/branches/dev/protection` ainda devolve `404`, igual à
+> nota de "Estado atual" no topo desta página —, então não havia check
+> obrigatório a apagar. A tabela de checks obrigatórios acima já reflete o
+> novo nome. **Se um ruleset for aplicado algum dia**, liste `Testes TS (api)`,
+> `Testes TS (web)` e `Testes TS (pacotes)` — nunca o nome aposentado `Testes TS
+> (api + web)`, que não casaria com nada em silêncio e travaria toda PR
+> futura, exatamente como o aviso geral mais abaixo descreve.
 
-> **The check's name is smaller than what it guards.** `Drift, gerados e
-> build` is three things in the title and **five** gates in the job:
-> `.docmap.yml` integrity, generated files up to date, drift, site build,
-> and — ever since the API reference shipped broken in two releases — **the
-> API reference renders** (`scripts/docs/api-render-check.mjs`).
+> **O nome do check é menor do que aquilo que ele guarda.** `Drift, gerados e
+> build` são três coisas no título e **cinco** gates no job: integridade do
+> `.docmap.yml`, gerados em dia, drift, build do site e — desde que a
+> referência da API foi publicada quebrada em duas releases — **a referência
+> da API renderiza** (`scripts/docs/api-render-check.mjs`).
 >
-> That last one exists because a green build isn't a page that renders: the
-> MDX compiles, the SSR writes the content, `docs:build` passes, and the
-> page dies at hydration in the browser. The whole mechanism is in
-> `docs/explanation/documentation-workflow.md`. When adding a gate to this
-> job, the check's name **doesn't** change — and that's why it doesn't need
-> to be re-entered into the table above, but it needs to be written down
-> somewhere. Here it is.
+> Este último existe porque build verde não é página que renderiza: o MDX
+> compila, o SSR escreve o conteúdo, o `docs:build` passa, e a página morre na
+> hidratação no navegador. O mecanismo inteiro está em
+> `docs/explanation/documentation-workflow.md`. Ao acrescentar um gate a este
+> job, o nome do check **não** muda — e é por isso que ele não precisa ser
+> reinscrito na tabela acima, mas precisa estar escrito em algum lugar. Está
+> aqui.
 
-> **`pull_request_target` requires the workflow to be on the DEFAULT
-> branch.** Being on the PR's base branch isn't enough. This was measured,
-> not assumed: with `pull_request_target`, `pr-police` had **zero runs**,
-> while `approval-ladder` and `docs-check` — which use `pull_request` — ran
-> normally from the same commit. Since the default is `main` and it only
-> advances through the ladder that the check itself guards, the trigger
-> would be a chicken-and-egg problem. Both use `pull_request`.
+> **`pull_request_target` exige que o workflow esteja na branch DEFAULT.**
+> Estar na branch de base da PR não basta. Isso foi medido, não suposto: com
+> `pull_request_target`, o `pr-police` teve **zero execuções**, enquanto o
+> `approval-ladder` e o `docs-check` — que usam `pull_request` — rodaram
+> normalmente a partir do mesmo commit. Como a default é a `main` e ela só
+> avança pela escada que o próprio check guarda, o gatilho seria um problema
+> de ovo e galinha. Os dois usam `pull_request`.
 
-> **Where GitHub reads each workflow from — three families, three
-> answers.** This cost three separate discoveries during this phase, and
-> it isn't obvious anywhere:
+> **De onde o GitHub lê cada workflow — três famílias, três respostas.** Isso
+> custou três descobertas separadas durante esta fase, e não está óbvio em
+> lugar nenhum:
 >
-> | trigger | reads the workflow from | consequence here |
+> | gatilho | lê o workflow de | consequência aqui |
 > |---|---|---|
-> | `pull_request`, `push` | the **event's branch** | works from the first PR |
-> | `pull_request_target` | the **default branch** | wasn't running: `main` is behind |
-> | `workflow_dispatch` | the **default branch** | doesn't even appear in the workflow list |
+> | `pull_request`, `push` | a **branch do evento** | funciona desde a primeira PR |
+> | `pull_request_target` | a **branch default** | não rodava: a `main` está atrás |
+> | `workflow_dispatch` | a **branch default** | nem aparece na lista de workflows |
 >
-> The last two create a chicken-and-egg problem when the default branch is
-> out of date: the workflow that makes the pipeline move needs to already
-> be on `main` to be triggerable. The workaround was running the `promote`
-> script by hand on the first promotion — the same script, just the manual
-> trigger. Once `main` receives the workflows, the dispatch works forever.
+> Os dois últimos criam um problema de ovo e galinha quando a branch default
+> está desatualizada: o workflow que faz a esteira andar precisa já estar na
+> `main` para poder ser disparado. O contorno foi rodar o script `promote` à
+> mão na primeira promoção — o mesmo script, só o gatilho manual. Depois que a
+> `main` recebe os workflows, o dispatch funciona para sempre.
 
-> **A required check that never runs locks the PR forever.** That's why
-> `ci.yml`'s trigger covers all three permanent branches — before FASE 6 it
-> only fired on PRs targeting `dev`, and requiring these checks on a
-> `dev→qa` promotion would produce an eternally pending PR. The `push`
-> trigger was removed: with `pull_request` covering everything, it only
-> duplicated runs. When adding a new job to CI, either it enters this
-> list, or it's left out on purpose and someone writes down why.
+> **Um check obrigatório que nunca roda trava a PR para sempre.** É por isso
+> que o gatilho do `ci.yml` cobre as três branches permanentes — antes da
+> FASE 6 ele só disparava em PRs para a `dev`, e exigir estes checks numa
+> promoção `dev→qa` produziria uma PR eternamente pendente. O gatilho `push`
+> foi removido: com `pull_request` cobrindo tudo, ele só duplicava execuções.
+> Ao acrescentar um job novo à CI, ou ele entra nesta lista, ou fica de fora
+> de propósito e alguém escreve por quê.
 
-> **And a required check that doesn't RE-run pastes on a stale verdict.**
-> This is the other side of the lesson above, and it cost a PR a mistaken
-> failure.
+> **E um check obrigatório que não REEXECUTA fica colado num veredito
+> velho.** Este é o outro lado da lição acima, e custou a uma PR uma falha
+> equivocada.
 >
-> `pull_request`'s defaults are `opened`, `reopened`, and `synchronize` —
-> none of those cover **changing the base**. And changing the base is
-> routine: GitHub opens the PR against the default branch, the author then
-> corrects it to `dev`. On PR #71, `Drift, gerados e build` ran in the
-> first half-dozen seconds, against `origin/main...HEAD`, and failed on
-> seven files that had already been reviewed and merged in #70. The
-> retarget didn't re-run it; the red stayed.
+> Os padrões de `pull_request` são `opened`, `reopened` e `synchronize` —
+> nenhum deles cobre **mudar a base**. E mudar a base é rotina: o GitHub abre
+> a PR contra a branch default, e o autor depois a corrige para a `dev`. Na PR
+> #71, `Drift, gerados e build` rodou nos primeiros meia dúzia de segundos,
+> contra `origin/main...HEAD`, e falhou em sete arquivos que já tinham sido
+> revisados e mergeados na #70. O redirecionamento não o reexecutou; o
+> vermelho ficou.
 >
-> The criterion for knowing who needs `edited` is **what the check depends
-> on**:
+> O critério para saber quem precisa de `edited` é **do que o check
+> depende**:
 >
-> | the check depends on… | needs `edited`? | who |
+> | o check depende de… | precisa de `edited`? | quem |
 > |---|---|---|
-> | only the HEAD | no | `ci.yml` — tests the commit, and the base doesn't change the result (except the images job's skip decision since AT-303 — see "Consequence for the `edited` criterion" above) |
-> | the BASE, or the PR's BODY | **yes** | `pr-police`, `approval-ladder`, `promotion-check`, `backmerge-gate`, `docs-check` |
+> | só do HEAD | não | `ci.yml` — testa o commit, e a base não muda o resultado (exceto a decisão de pular do job de imagens desde a AT-303 — ver "Consequência para o critério de `edited`" acima) |
+> | da BASE, ou do CORPO da PR | **sim** | `pr-police`, `approval-ladder`, `promotion-check`, `backmerge-gate`, `docs-check` |
 >
-> In `docs-check` it's both: the drift compares a range that starts at the
-> base, and reads the body past the `docs-not-needed:` line. Without
-> `edited`, the escape hatch documented just below was unreachable —
-> writing the justification in the body didn't reevaluate anything, and
-> only a fake commit would unlock the PR.
+> No `docs-check` são as duas coisas: o drift compara um intervalo que começa
+> na base, e lê o corpo atrás da linha `docs-not-needed:`. Sem `edited`, a
+> válvula de escape documentada logo abaixo era inalcançável — escrever a
+> justificativa no corpo não reavaliava nada, e só um commit falso destravaria
+> a PR.
 
-**`claude-review` is deliberately left out of this list**, and this is the
-"someone writes down why": LLM review is opinionated and costs tokens, so
-it informs the PR without being able to block it. Since it isn't required,
-the job can be skipped without leaving the PR pending — and it is skipped
-on every PR opened by a **bot**. The action refuses to run with a non-human
-actor (*"Workflow initiated by non-human actor: &lt;name&gt; (type: Bot)"*), so
-without that `if` the check fails every time. That happened twice: on PRs
-#64 and #65 of the `v0.3.1` cycle (promotion, opened by
-`github-actions[bot]`) and again on PR #526 (Dependabot).
+**O `claude-review` fica de fora desta lista de propósito**, e este é o
+"alguém escreve por quê": revisão por LLM é opinativa e custa tokens, então
+ela informa a PR sem poder bloqueá-la. Como não é obrigatório, o job pode ser
+pulado sem deixar a PR pendente — e ele é pulado em toda PR aberta por um
+**bot**. A action se recusa a rodar com ator não humano (*"Workflow initiated
+by non-human actor: &lt;name&gt; (type: Bot)"*), então sem esse `if` o check falha
+toda vez. Isso aconteceu duas vezes: nas PRs #64 e #65 do ciclo `v0.3.1`
+(promoção, abertas por `github-actions[bot]`) e de novo na PR #526
+(Dependabot).
 
-The second time was a consequence of **how** the condition was written. It
-enumerated one login — `github-actions[bot]` — which is right until the set
-changes, and wrong silently the day a new bot shows up; `dependabot.yml`
-landed on PR #520 and the next Dependabot PR reproduced the failure whose
-lesson was already written down. The condition now tests the author's
-`type`, mirroring `ehAutorBot` (`scripts/ci/pr-police.ts`), with the
-`[bot]` login suffix as a backstop — GitHub does not allow `[` in a human
-login, so it cannot be forged.
+A segunda vez foi consequência de **como** a condição estava escrita. Ela
+enumerava um login — `github-actions[bot]` —, o que está certo até o conjunto
+mudar, e errado em silêncio no dia em que aparece um bot novo; o
+`dependabot.yml` chegou na PR #520 e a PR seguinte do Dependabot reproduziu a
+falha cuja lição já estava escrita. A condição agora testa o `type` do autor,
+espelhando `ehAutorBot` (`scripts/ci/pr-police.ts`), com o sufixo `[bot]` do
+login como rede de segurança — o GitHub não permite `[` num login humano,
+então ele não se forja.
 
-For promotion PRs there is a second, independent reason: it would be the
-same diff reviewed again, since the promotion only carries commits already
-reviewed in the PR to `dev`. And for Dependabot there is a third, which
-closes the door on its own — its PRs run with the **Dependabot secret
-store**, separate from the Actions one, so `CLAUDE_CODE_OAUTH_TOKEN`
-arrives empty. Even allowing the actor, the review would have no
-credential, and a check that fails for a missing secret is worse than a
-skipped one: it reads as a code defect.
+Para PRs de promoção há um segundo motivo, independente: seria o mesmo diff
+revisado de novo, já que a promoção só leva commits já revisados na PR para a
+`dev`. E para o Dependabot há um terceiro, que fecha a porta sozinho — as PRs
+dele rodam com o **cofre de segredos do Dependabot**, separado do das
+Actions, então `CLAUDE_CODE_OAUTH_TOKEN` chega vazio. Mesmo permitindo o ator,
+a revisão não teria credencial, e um check que falha por falta de segredo é
+pior que um pulado: ele se lê como defeito de código.
 
-### What a PR between permanent branches can't satisfy
+### O que uma PR entre branches permanentes não consegue cumprir
 
-`Drift, gerados e build` **is** required, so it runs on every PR — but the
-**drift** step declares itself inapplicable when the head is a permanent
-branch of the repository itself (promotion `dev→qa`, `qa→main`; back-merge
-`main→qa`, `qa→dev`). The job's other steps — docmap, generated files, and
-site build — keep running: they only depend on the HEAD, and apply at any
-rung.
+`Drift, gerados e build` **é** obrigatório, então roda em toda PR — mas o
+passo de **drift** se declara inaplicável quando o head é uma branch
+permanente do próprio repositório (promoção `dev→qa`, `qa→main`; back-merge
+`main→qa`, `qa→dev`). Os outros passos do job — docmap, gerados e build do
+site — continuam rodando: só dependem do HEAD, e valem em qualquer degrau.
 
-The reason is the same as `claude-review`'s, with one aggravating factor.
-Redundancy, first: a PR between permanent branches has no **authorship**,
-it packages commits whose drift was already charged in the PR to `dev`,
-file by file. Charging again means charging the same debt at every rung.
-But, unlike LLM review, here the requirement was **unsatisfiable** — and
-it's what failed #72, the promotion for the `v1.0.1` cycle, over
-`docker/**` files that came from #70:
+O motivo é o mesmo do `claude-review`, com um agravante. Redundância,
+primeiro: uma PR entre branches permanentes não tem **autoria**, ela empacota
+commits cujo drift já foi cobrado na PR para a `dev`, arquivo por arquivo.
+Cobrar de novo é cobrar a mesma dívida em cada degrau. Mas, ao contrário da
+revisão por LLM, aqui a exigência era **impossível de cumprir** — e foi o que
+reprovou a #72, a promoção do ciclo `v1.0.1`, por arquivos de `docker/**` que
+vieram da #70:
 
-| the apparent way out | why it doesn't exist |
+| a saída aparente | por que ela não existe |
 |---|---|
-| updating the doc in the promotion PR | `promotion-check` requires a **clean range** — the head has to be the tip of the source. Committing there fails the other required check |
-| repeating the original PR's `docs-not-needed:` | the promotion PR's body is generated by `promote`; #70's justification doesn't carry across the rung |
-| putting the label on every promotion | that's teaching people to use the escape hatch by reflex, until it stops meaning anything — the opposite of what `.docmap.yml` asks for |
+| atualizar a doc na PR de promoção | o `promotion-check` exige um **intervalo limpo** — o head tem de ser a ponta da origem. Commitar ali reprova o outro check obrigatório |
+| repetir o `docs-not-needed:` da PR original | o corpo da PR de promoção é gerado pelo `promote`; a justificativa da #70 não atravessa o degrau |
+| pôr o rótulo em toda promoção | é ensinar a usar a válvula de escape por reflexo, até ela não significar mais nada — o contrário do que o `.docmap.yml` pede |
 
-The filter lives **inside** the step, not in an `if:` on the job,
-following the same principle `promotion-check` records: a required check
-indexed by sha that doesn't run leaves the PR pending forever. The step
-runs, decides it doesn't apply, and writes that in the summary — instead
-of disappearing.
+O filtro mora **dentro** do passo, não num `if:` no job, seguindo o mesmo
+princípio que o `promotion-check` registra: um check obrigatório indexado por
+sha que não roda deixa a PR pendente para sempre. O passo roda, decide que não
+se aplica e escreve isso no resumo — em vez de sumir.
 
-> **A head called `main` coming from a fork is not a promotion.** It's a
-> third party's working branch, and it goes through the drift check like
-> any other. That's why the condition matches the name **and** requires
-> the same repository — the same caveat `pr-police` applies when
-> classifying the PR's family.
+> **Um head chamado `main` vindo de um fork não é promoção.** É a branch de
+> trabalho de um terceiro, e passa pelo drift como qualquer outra. É por isso
+> que a condição casa o nome **e** exige o mesmo repositório — a mesma
+> ressalva que o `pr-police` aplica ao classificar a família da PR.
 
 ### Bypass
 
-| who | mode | for what |
+| quem | modo | para quê |
 |---|---|---|
-| the `BRABO_BOT_TOKEN` actor | `Always` | writing `.release/gate.json` on `main` |
+| o ator do `BRABO_BOT_TOKEN` | `Always` | escrever `.release/gate.json` na `main` |
 
-**No person has bypass** — not even the owner. This one belongs to the
-bot, and it exists for a reason with no workaround: the gate locks the
-branches, and a PR to open the lock would be blocked by the gate itself.
-The commit stays in `git log`, with date and content, and `tag-release`
-recognizes it by what it touches (`.release/` and nothing else), not by
-who it claims to be.
+**Nenhuma pessoa tem bypass** — nem o dono. Este é do bot, e existe por um
+motivo sem contorno: o gate trava as branches, e uma PR para abrir a trava
+seria bloqueada pelo próprio gate. O commit fica no `git log`, com data e
+conteúdo, e o `tag-release` o reconhece pelo que ele toca (`.release/` e nada
+mais), não por quem ele diz ser.
 
-> **Warning about the bypass's reach.** GitHub rulesets grant bypass to
-> the **actor**, not to a path: whoever can write `.release/gate.json` on
-> `main` can, technically, write anything. There's no way to restrict by
-> path in the interface. What actually limits it is the workflow — it
-> only writes that one file — and the history, where any other direct
-> commit stands out immediately. Recorded for what it is: a limitation of
-> the tool, not a decision.
+> **Aviso sobre o alcance do bypass.** Os rulesets do GitHub concedem bypass
+> ao **ator**, não a um caminho: quem consegue escrever `.release/gate.json`
+> na `main` consegue, tecnicamente, escrever qualquer coisa. Não há como
+> restringir por caminho na interface. O que de fato limita é o workflow — ele
+> só escreve aquele arquivo — e o histórico, onde qualquer outro commit direto
+> salta aos olhos na hora. Registrado pelo que é: uma limitação da ferramenta,
+> não uma decisão.
 
-### The `BRABO_BOT_TOKEN` secret
+### O segredo `BRABO_BOT_TOKEN`
 
-Classic PAT with `repo` + `workflow` scopes, in **Settings → Secrets and
+PAT clássico com os escopos `repo` + `workflow`, em **Settings → Secrets and
 variables → Actions**:
 
 ```bash
 gh secret set BRABO_BOT_TOKEN --body '<token>'
 ```
 
-It isn't a convenience. Two things depend on it, and both fail silently
-without it:
+Não é conveniência. Duas coisas dependem dele, e as duas falham em silêncio
+sem ele:
 
-| what | why |
+| o quê | por quê |
 |---|---|
-| the tag triggering `Release` | **a tag created with `GITHUB_TOKEN` doesn't trigger a workflow** |
-| back-merge PRs being born with checks | **a PR opened with `GITHUB_TOKEN` doesn't trigger a workflow** |
+| a tag disparar o `Release` | **uma tag criada com `GITHUB_TOKEN` não dispara workflow** |
+| as PRs de back-merge nascerem com checks | **uma PR aberta com `GITHUB_TOKEN` não dispara workflow** |
 
-It's GitHub's rule against recursion, and it already took its toll: the
-`v0.2.0` Release never published because of it. The second case is worse
-— a back-merge PR without a check would never go green, and the chain
-would lock up forever. That's why the gate job **fails loudly** when the
-secret doesn't exist, instead of proceeding and leaving the repository in
-a dead end.
+É a regra do GitHub contra recursão, e ela já cobrou o preço: a Release da
+`v0.2.0` nunca foi publicada por causa dela. O segundo caso é pior — uma PR de
+back-merge sem check nunca ficaria verde, e a cadeia travaria para sempre. É
+por isso que o job do gate **falha alto** quando o segredo não existe, em vez
+de seguir e deixar o repositório num beco sem saída.
 
-The `workflow` scope isn't overkill: back-merge PRs carry the entire
-branch, and it may contain a change to `.github/workflows/**`. Without
-that scope the push is rejected in exactly the case that matters most —
-propagating a CI fix.
+O escopo `workflow` não é exagero: as PRs de back-merge levam a branch
+inteira, e ela pode conter uma mudança em `.github/workflows/**`. Sem esse
+escopo o push é recusado exatamente no caso que mais importa — propagar uma
+correção de CI.
 
-> **Current state: configured and exercised.** On `v1.1.1` the pipeline
-> closed on its own for the first time — `tag-release` skipped the warning
-> step, pushed the tag with the PAT, and that **triggered** `release.yml`,
-> which published the Release. A tag pushed with `GITHUB_TOKEN` wouldn't
-> trigger it; that trigger is proof the token is valid and has push scope.
+> **Estado atual: configurado e exercitado.** Na `v1.1.1` a esteira fechou
+> sozinha pela primeira vez — o `tag-release` pulou o passo de aviso, empurrou
+> a tag com o PAT, e isso **disparou** o `release.yml`, que publicou a Release.
+> Uma tag empurrada com `GITHUB_TOKEN` não o dispararia; esse disparo é a prova
+> de que o token é válido e tem escopo de push.
 >
-> **Six tags remain orphaned** — `v0.2.0`, `v0.3.0`, `v0.3.1`, `v1.0.0`,
-> `v1.0.1`, and `v1.1.0` — from the period when the secret didn't exist.
-> The PAT doesn't recover them: it only applies to new tags. For those,
-> the procedure is below.
+> **Seis tags seguem órfãs** — `v0.2.0`, `v0.3.0`, `v0.3.1`, `v1.0.0`,
+> `v1.0.1` e `v1.1.0` — do período em que o segredo não existia. O PAT não as
+> recupera: ele só vale para tags novas. Para elas, o procedimento está abaixo.
 
-### Republishing a tag that was orphaned
+### Republicando uma tag que ficou órfã {#republishing-a-tag-that-was-orphaned}
 
-`release.yml` has `workflow_dispatch` with a tag input, and it exists
-because of the six above. Only the `push: tags` trigger would make the
-failure **irreversible**: republishing would require deleting and
-recreating the tag, that is, rewriting the record to fix its effect.
+O `release.yml` tem `workflow_dispatch` com uma entrada de tag, e ele existe
+por causa das seis acima. Só o gatilho `push: tags` tornaria a falha
+**irreversível**: republicar exigiria apagar e recriar a tag, isto é,
+reescrever o registro para corrigir o efeito dele.
 
 ```bash
 gh workflow run release.yml -f tag=v1.1.0
 ```
 
-Three guards, and each exists because of a concrete failure mode:
+Três guardas, e cada uma existe por causa de um modo de falha concreto:
 
-| guard | against what |
+| guarda | contra o quê |
 |---|---|
-| only `OWNER_HANDLE` can trigger it (`solo` mode) | same restriction as `promote`; the push trigger doesn't go through here, because there what authorized it was the tag |
-| the input has to match `^v[0-9]+\.[0-9]+\.[0-9]+$` | `workflow_dispatch` accepts free text. Without this, `-qa.1` would publish a Release of something nobody validated as final |
-| refuses if the Release already exists | a published note is a record; overwriting silently would erase what someone already read or linked to |
+| só o `OWNER_HANDLE` pode dispará-lo (modo `solo`) | mesma restrição do `promote`; o gatilho de push não passa por aqui, porque ali quem autorizou foi a tag |
+| a entrada tem de casar `^v[0-9]+\.[0-9]+\.[0-9]+$` | `workflow_dispatch` aceita texto livre. Sem isso, `-qa.1` publicaria uma Release de algo que ninguém validou como final |
+| recusa se a Release já existe | uma nota publicada é um registro; sobrescrevê-la em silêncio apagaria o que alguém já leu ou linkou |
 
-And the `checkout` is done **on the tag**, not on the event's ref. In a
-dispatch, `github.ref_name` is the default branch — without this care,
-republishing would generate a Release called `main`, with `main`'s
-changelog, with no error at all.
+E o `checkout` é feito **na tag**, não na ref do evento. Num dispatch,
+`github.ref_name` é a branch default — sem esse cuidado, republicar geraria
+uma Release chamada `main`, com o changelog da `main`, sem erro nenhum.
 
-> **The dispatch only works after this reaches `main`.** It's the
-> chicken-and-egg problem from the trigger table above: `workflow_dispatch`
-> reads the workflow from the **default** branch. While the change is only
-> on `dev`, the input doesn't even show up.
+> **O dispatch só funciona depois que isto chega à `main`.** É o problema de
+> ovo e galinha da tabela de gatilhos acima: `workflow_dispatch` lê o workflow
+> da branch **default**. Enquanto a mudança está só na `dev`, a entrada nem
+> aparece.
 
-## Ruleset 2 — version tags
+## Ruleset 2 — tags de versão
 
-**Name:** `tags-de-release`
+**Nome:** `tags-de-release`
 **Enforcement:** `Active`
-**Target:** Tag → `Include by pattern` → `v*`
+**Alvo:** Tag → `Include by pattern` → `v*`
 
-| rule | value |
+| regra | valor |
 |---|---|
 | **Restrict creations** | ✅ |
 | **Restrict updates** | ✅ |
 | **Restrict deletions** | ✅ |
 
-The `v*` pattern covers the three forms the pipeline creates: `-dev.N`,
-`-qa.N`, and the final one. Only `tag-release` can create them.
+O padrão `v*` cobre as três formas que a esteira cria: `-dev.N`, `-qa.N` e a
+final. Só o `tag-release` pode criá-las.
 
-> **What a final tag runs, and why none of it is a required check.**
-> Pushing `vX.Y.Z` fires `release.yml`, `build-runner-binaries.yml` and
-> `publish-runner.yml` in parallel. Their jobs never appear in the
-> required-checks table above, and that is structural rather than an
-> omission: required checks gate a **pull request**, and by the time a
-> tag exists the PR has already merged. What gates the tag is the
-> ruleset — only `tag-release` creates it, and only after the pipeline
-> it runs at the end of.
+> **O que uma tag final roda, e por que nada disso é check obrigatório.**
+> Empurrar `vX.Y.Z` dispara `release.yml`, `build-runner-binaries.yml` e
+> `publish-runner.yml` em paralelo. Os jobs deles nunca aparecem na tabela de
+> checks obrigatórios acima, e isso é estrutural e não omissão: checks
+> obrigatórios seguram uma **pull request**, e quando uma tag existe a PR já
+> foi mergeada. O que segura a tag é o ruleset — só o `tag-release` a cria, e
+> só depois da esteira ao fim da qual ele roda.
 >
-> A final tag also fires `install-e2e.yml`, which exercises the published
-> `install.sh` on a **clean machine** — which is what an ephemeral Actions
-> runner is. Since [RN-549](../business-rules.md#rn-549) it goes all the way to
-> the end: the five links that close the installation, the local agent standing
-> up and waiting, and the first `runner` project being picked up. It does not
-> run on `pull_request`, and the reason is the same one that keeps signing out
-> of PRs: the signed manifest only exists after a final tag, and making the
-> script run there would mean giving it a door to skip verification
-> ([RN-534](../business-rules.md#rn-534)). The consequence is stated rather than
-> hidden — **the PR that writes a change to this workflow does not run it** —
-> and what does run on every PR is `scripts/dev/install-e2e.spec.ts`, which
-> fails if the trigger gains `pull_request` or if a phrase the workflow greps
-> for stops existing in `install.sh`.
+> Uma tag final também dispara o `install-e2e.yml`, que exercita o
+> `install.sh` publicado numa **máquina limpa** — que é o que um runner
+> efêmero das Actions é. Desde a [RN-549](../business-rules.md#rn-549) ele vai
+> até o fim: os cinco elos que fecham a instalação, o agente local de pé e
+> esperando, e o primeiro projeto `runner` sendo pego. Ele não roda em
+> `pull_request`, e o motivo é o mesmo que mantém a assinatura fora das PRs: o
+> manifesto assinado só existe depois de uma tag final, e fazer o script rodar
+> ali seria dar a ele uma porta para pular a verificação
+> ([RN-534](../business-rules.md#rn-534)). A consequência é dita em vez de
+> escondida — **a PR que escreve uma mudança neste workflow não o roda** —, e o
+> que roda em toda PR é `scripts/dev/install-e2e.spec.ts`, que reprova se o
+> gatilho ganhar `pull_request` ou se uma frase que o workflow procura com grep
+> deixar de existir no `install.sh`.
 >
-> Since [ADR 0149](../adr/0149-assinatura-dos-artefatos-publicados.md),
-> `build-runner-binaries.yml` has **two** jobs rather than one: the
-> `build` matrix (four targets, `fail-fast: false`) and a `checksums`
-> job. Since [RN-565](../business-rules.md#rn-565) the second one has no
-> `needs:` on the matrix — it waits, with a ceiling, for the Release
-> **assets** rather than the slowest job — so a target that failed to build,
-> or never got a runner, does not deny the others a signed manifest. It
-> names in the log which targets the manifest does **not** cover, because a
-> `checksums.txt` that lists three and stays quiet about the fourth is worse
-> than none: whoever verifies the three concludes they verified the release.
+> Desde o [ADR 0149](../adr/0149-assinatura-dos-artefatos-publicados.md), o
+> `build-runner-binaries.yml` tem **dois** jobs em vez de um: a matriz `build`
+> (quatro alvos, `fail-fast: false`) e um job `checksums`. Desde a
+> [RN-565](../business-rules.md#rn-565) o segundo não tem `needs:` na matriz —
+> ele espera, com teto, pelos **assets** da Release e não pelo job mais lento —,
+> então um alvo que falhou no build, ou nunca ganhou runner, não nega aos
+> outros um manifesto assinado. Ele nomeia no log quais alvos o manifesto
+> **não** cobre, porque um `checksums.txt` que lista três e se cala sobre o
+> quarto é pior que nenhum: quem verifica os três conclui que verificou a
+> release.
 >
-> The `darwin-x64` target (Intel Mac) **left the matrix** in
-> [ADR 0174](../adr/0174-runner-sem-binario-darwin-x64.md), and the cause is
-> measured (AT-065, 2026-09-13): its `macos-13` label pointed at an image
-> GitHub retired in December 2025, and the Intel replacement,
-> `macos-15-intel`, is scheduled within seconds and builds, but fails
-> `--self-test-pty` under Bun (the `node-pty` `onData` never fires —
-> oven-sh/bun#25822, open). The same proof passes under Node, so an Intel Mac
-> installs the runner with `npm install -g @brabo/runner`. A workflow run with an empty
-> `tag` input is a dry run: it builds and smoke-tests without attaching
-> anything, which is how that was measured without cutting a tag.
+> O alvo `darwin-x64` (Mac Intel) **saiu da matriz** no
+> [ADR 0174](../adr/0174-runner-sem-binario-darwin-x64.md), e a causa é medida
+> (AT-065, 2026-09-13): o rótulo `macos-13` dele apontava para uma imagem que o
+> GitHub aposentou em dezembro de 2025, e o substituto Intel,
+> `macos-15-intel`, é agendado em segundos e constrói, mas reprova o
+> `--self-test-pty` sob o Bun (o `onData` do `node-pty` nunca dispara —
+> oven-sh/bun#25822, aberto). A mesma prova passa sob o Node, então um Mac
+> Intel instala o runner com `npm install -g @brabo/runner`. Uma execução do
+> workflow com a entrada `tag` vazia é um ensaio: constrói e faz o smoke sem
+> anexar nada, e foi assim que isso foi medido sem cortar uma tag.
 
 ### Bypass
 
-| who | mode |
+| quem | modo |
 |---|---|
-| the app/bot that runs the release workflow | `Always` |
+| o app/bot que roda o workflow de release | `Always` |
 
-This is the push exception that the policy allows for: **a version is
-born from a workflow, never by hand**. A manually created tag doesn't go
-through the verification that the final tag points to the same commit as
-the last `-qa.N`, and it's exactly that verification that prevents
-publishing something different from what was validated.
+Esta é a exceção de push que a política prevê: **uma versão nasce de um
+workflow, nunca à mão**. Uma tag criada à mão não passa pela verificação de
+que a tag final aponta para o mesmo commit do último `-qa.N`, e é exatamente
+essa verificação que impede publicar algo diferente do que foi validado.
 
-## How to apply
+## Como aplicar
 
 Interface: **Settings → Rules → Rulesets → New ruleset**.
 
-Via API, if you'd rather version the command:
+Pela API, se preferir versionar o comando:
 
 ```bash
 gh api -X POST repos/daneiel/brabo/rulesets --input ruleset-permanentes.json
 gh api repos/daneiel/brabo/rulesets --jq '.[] | "\(.name): \(.enforcement)"'
 ```
 
-> **TODO(human):** the two payload `.json` files aren't versioned here
-> because the rulesets API requires `repository_id` and app ids that vary
-> by installation — a fixed file would get copied wrong. If you want to
-> version them, generate with
-> `gh api repos/daneiel/brabo/rulesets/<id> > docs/reference/...` after
-> applying through the interface, and this document will then point to
-> them.
+> **TODO(humano):** os dois arquivos `.json` de payload não são versionados
+> aqui porque a API de rulesets exige `repository_id` e ids de app que variam
+> por instalação — um arquivo fixo seria copiado errado. Se quiser
+> versioná-los, gere com
+> `gh api repos/daneiel/brabo/rulesets/<id> > docs/reference/...` depois de
+> aplicar pela interface, e este documento passará a apontar para eles.
 
-## Settings → Pages: the source is the `gh-pages` branch
+## Settings → Pages: a fonte é a branch `gh-pages`
 
-**Manual** application, for the same reason as the rulesets: the
-repository versions the source, GitHub receives the application.
+Aplicação **manual**, pelo mesmo motivo dos rulesets: o repositório versiona a
+fonte, o GitHub recebe a aplicação.
 
 **Settings → Pages → Build and deployment → Source:
-`Deploy from a branch`**, with branch **`gh-pages`** and folder
+`Deploy from a branch`**, com a branch **`gh-pages`** e a pasta
 **`/ (root)`**.
 
-**Already applied.** `gh api repos/daneiel/brabo/pages` returns
-`"build_type": "legacy"` with `source.branch: "gh-pages"`, and all three
-rungs respond live.
+**Já aplicado.** `gh api repos/daneiel/brabo/pages` devolve
+`"build_type": "legacy"` com `source.branch: "gh-pages"`, e os três degraus
+respondem no ar.
 
-The intermediate step is worth recording, because it's confusing: while
-`build_type` was `"workflow"`, `docs-deploy.yml` committed to `gh-pages`
-**and Pages served nothing from there** — the publication stayed in the
-repository without going live, with the old site still responding from
-`actions/deploy-pages`'s last artifact. Nothing in CI goes red in that
-state.
+O passo intermediário vale o registro, porque confunde: enquanto o
+`build_type` era `"workflow"`, o `docs-deploy.yml` commitava na `gh-pages`
+**e o Pages não servia nada dali** — a publicação ficava no repositório sem ir
+ao ar, com o site antigo ainda respondendo a partir do último artefato do
+`actions/deploy-pages`. Nada na CI fica vermelho nesse estado.
 
-Why the switch is mandatory and not a preference: `actions/deploy-pages`
-publishes **one artifact as the entire site** and doesn't know how to
-update part of a tree, which is incompatible with one subdirectory per
-rung. The full design, the discarded alternatives, and the push exception
-this opens are in
+Por que a troca é obrigatória e não preferência: o `actions/deploy-pages`
+publica **um artefato como o site inteiro** e não sabe atualizar parte de uma
+árvore, o que é incompatível com um subdiretório por degrau. O desenho
+completo, as alternativas descartadas e a exceção de push que isso abre estão
+no
 [ADR 0034](../explanation/../adr/0034-documentacao-publicada-por-degrau.md).
 
-| branch | URL | indexed |
+| branch | URL | indexado |
 |---|---|---|
-| — (index of all three) | `https://daneiel.github.io/brabo/` | ❌ `noindex, follow` |
+| — (índice dos três) | `https://daneiel.github.io/brabo/` | ❌ `noindex, follow` |
 | `main` | `https://daneiel.github.io/brabo/prd/` | ✅ |
 | `qa` | `https://daneiel.github.io/brabo/qa/` | ❌ `noIndex` |
 | `dev` | `https://daneiel.github.io/brabo/dev/` | ❌ `noIndex` |
 
-The three became symmetric in
-[ADR 0071](../adr/0071-publicacao-simetrica-por-degrau.md), which also
-explains the generated root and the `404.html` that forwards old links to
-the stable rung. [ADR 0073](../adr/0073-o-caminho-publicado-nomeia-o-ambiente.md)
-separated the PATH from the BRANCH: `main` publishes at `/prd/`, because
-the address names the environment for the reader. `404.html` started
-rewriting `/brabo/main/<something>` to `/brabo/prd/<something>` — the old
-directory leaves the tree, and `keep_files: false` removes it.
+Os três ficaram simétricos no
+[ADR 0071](../adr/0071-publicacao-simetrica-por-degrau.md), que também explica
+a raiz gerada e o `404.html` que encaminha links antigos ao degrau estável. O
+[ADR 0073](../adr/0073-o-caminho-publicado-nomeia-o-ambiente.md) separou o
+CAMINHO da BRANCH: a `main` publica em `/prd/`, porque o endereço nomeia o
+ambiente para quem lê. O `404.html` passou a reescrever
+`/brabo/main/<algo>` para `/brabo/prd/<algo>` — o diretório antigo sai da
+árvore, e `keep_files: false` o remove.
 
-**The Pages configuration doesn't change with either of these** — the
-source remains the `gh-pages` branch in the `/ (root)` folder; what
-changed is the content the workflow assembles before pushing. And `prd`
-**is not** a branch: it's in no ruleset, it doesn't exist in `git`, and
-it's just the name of a directory in `gh-pages`.
+**A configuração do Pages não muda com nenhum dos dois** — a fonte continua
+sendo a branch `gh-pages` na pasta `/ (root)`; o que mudou é o conteúdo que o
+workflow monta antes de empurrar. E `prd` **não é** uma branch: não está em
+ruleset nenhum, não existe no `git`, e é só o nome de um diretório na
+`gh-pages`.
 
-> **`gh-pages` does NOT enter the permanent-branches ruleset.** It isn't
-> permanent, and the bot needs to push to it — including it would lock up
-> the publication itself. That's also why `GITHUB_TOKEN` is enough there,
-> with no bypass and no `BRABO_BOT_TOKEN`.
+> **A `gh-pages` NÃO entra no ruleset das branches permanentes.** Ela não é
+> permanente, e o bot precisa empurrar nela — incluí-la travaria a própria
+> publicação. É também por isso que o `GITHUB_TOKEN` basta ali, sem bypass e
+> sem `BRABO_BOT_TOKEN`.
 
-> **And it's excluded from Gitleaks' scope, for a reason that only
-> surfaced later.** `gitleaks detect` scans **every reachable commit**,
-> not just the HEAD history — and `fetch-depth: 0` brings in all refs. As
-> soon as `gh-pages` was born, the built site entered the scan: **112
-> `generic-api-key` findings** in a single commit, all in
-> `dev/assets/js/*.js`, which are avatar filenames inside a minified
-> bundle with entropy too high for the rule. It failed the promotion PR
-> **#78**, the first one scanned after its debut.
+> **E ela fica fora do escopo do Gitleaks, por um motivo que só apareceu
+> depois.** O `gitleaks detect` varre **todo commit alcançável**, não só o
+> histórico do HEAD — e `fetch-depth: 0` traz todas as refs. Assim que a
+> `gh-pages` nasceu, o site construído entrou na varredura: **112 achados
+> `generic-api-key`** num único commit, todos em `dev/assets/js/*.js`, que são
+> nomes de arquivo de avatar dentro de um bundle minificado com entropia alta
+> demais para a regra. Isso reprovou a PR de promoção **#78**, a primeira
+> varrida depois da estreia dela.
 >
-> `ci.yml` now deletes `refs/remotes/origin/gh-pages` before scanning.
-> **Not** via a path allowlist in `.gitleaks.toml`: that would apply to
-> every commit, and a `dev/` that one day showed up in the source code
-> would silently go unscanned. Excluding the ref excludes exactly the
-> commits that aren't source.
+> O `ci.yml` agora apaga `refs/remotes/origin/gh-pages` antes de varrer.
+> **Não** por uma allowlist de caminho no `.gitleaks.toml`: ela valeria para
+> todo commit, e um `dev/` que um dia aparecesse no código-fonte deixaria de
+> ser varrido em silêncio. Excluir a ref exclui exatamente os commits que não
+> são fonte.
 >
-> Measured with gitleaks 8.30.1, CI's version: 133 commits and 112
-> findings before, 132 and none after — and a GitHub PAT with real entropy
-> planted in `apps/api/src/` is still detected, which is proof it didn't
-> open a hole.
+> Medido com o gitleaks 8.30.1, a versão da CI: 133 commits e 112 achados
+> antes, 132 e nenhum depois — e um PAT do GitHub com entropia real plantado
+> em `apps/api/src/` continua sendo detectado, o que prova que não se abriu um
+> buraco.
 
-## The family labels need to exist
+## Os rótulos de família precisam existir
 
-`pr-police` applies one of the four labels, and `gh pr edit --add-label`
-**fails** if the label doesn't exist — which would leave the PR silently
-unclassified.
+O `pr-police` aplica um dos quatro rótulos, e `gh pr edit --add-label`
+**falha** se o rótulo não existe — o que deixaria a PR sem classificação, em
+silêncio.
 
 ```bash
 gh label create trabalho        --color 0E8A16 --description "Work PR: taxonomy prefix for dev"
@@ -685,9 +670,9 @@ gh label create retropropagacao --color 5319E7 --description "Back-propagation b
 gh label create correcao-alta   --color D93F0B --description "hotfix: a fix that's born high on the ladder"
 ```
 
-No `|| true` on purpose: if the command fails, you need to see it.
+Sem `|| true` de propósito: se o comando falhar, você precisa ver.
 
-## Verify it's standing
+## Conferir que está de pé
 
 ```bash
 # do the rulesets exist and are they active?
@@ -697,6 +682,6 @@ gh api repos/daneiel/brabo/rulesets --jq '.[] | "\(.name): \(.enforcement)"'
 git push origin HEAD:dev
 ```
 
-The second command is the test that matters. A ruleset configured but not
-verified is indistinguishable from a ruleset that's absent — and the
-difference only shows up on the day someone pushes directly to `main`.
+O segundo comando é o teste que importa. Um ruleset configurado mas não
+conferido é indistinguível de um ruleset ausente — e a diferença só aparece no
+dia em que alguém empurra direto na `main`.
