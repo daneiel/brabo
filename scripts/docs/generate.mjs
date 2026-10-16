@@ -169,6 +169,7 @@ sidebar_label: Scripts
 sidebar_position: 7
 description: Every pnpm script and Makefile target in the repository, extracted from source.
 keywords: [scripts, pnpm, make, commands]
+idioma_original: en
 ---
 
 # Scripts and commands
@@ -872,8 +873,8 @@ function verificarFrasesAncoradasNoCodigo() {
     },
     {
       arquivo: 'docs/reference/brb.md',
-      padrao: /The (\S+) images the product publishes are \*\*deliberately not covered/,
-      esperado: imagensEn,
+      padrao: /As (\S+) imagens que o produto publica \*\*deliberadamente não são cobertas/,
+      esperado: imagensPt,
       oque: 'quantas imagens o produto publica no GHCR',
     },
     {

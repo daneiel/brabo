@@ -5,6 +5,7 @@ sidebar_label: Scripts
 sidebar_position: 7
 description: Every pnpm script and Makefile target in the repository, extracted from source.
 keywords: [scripts, pnpm, make, commands]
+idioma_original: en
 ---
 
 # Scripts and commands
