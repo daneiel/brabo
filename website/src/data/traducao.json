@@ -1032,6 +1032,14 @@
       "defasada": false,
       "data": "2026-10-15"
     },
+    "reference/configuration.md": {
+      "defasada": false,
+      "data": "2026-10-16"
+    },
+    "reference/events.md": {
+      "defasada": false,
+      "data": "2026-10-16"
+    },
     "reference/git-providers.md": {
       "defasada": false,
       "data": "2026-10-15"
@@ -1039,6 +1047,10 @@
     "reference/internal-api.md": {
       "defasada": false,
       "data": "2026-10-15"
+    },
+    "reference/llm-providers.md": {
+      "defasada": false,
+      "data": "2026-10-16"
     },
     "reference/permissions.md": {
       "defasada": false,
@@ -2098,6 +2110,14 @@
       "defasada": false,
       "data": "2026-10-15"
     },
+    "reference/configuration.md": {
+      "defasada": false,
+      "data": "2026-10-16"
+    },
+    "reference/events.md": {
+      "defasada": false,
+      "data": "2026-10-16"
+    },
     "reference/git-providers.md": {
       "defasada": false,
       "data": "2026-10-15"
@@ -2105,6 +2125,10 @@
     "reference/internal-api.md": {
       "defasada": false,
       "data": "2026-10-15"
+    },
+    "reference/llm-providers.md": {
+      "defasada": false,
+      "data": "2026-10-16"
     },
     "reference/permissions.md": {
       "defasada": false,
