@@ -2,7 +2,7 @@
 id: localizacao
 title: 本地化
 description: Brabo 的四种语言（pt-BR 作为来源，以及 en、ru 和 zh-Hans）、语言代码、复数形式、语言如何解析、缺失文本如何处理，以及永不翻译的内容。
-traducao_de: 6c63fd6fa862f500aceef2b84db51df6456c21e6
+traducao_de: 74ac4990672a22f97b68fac9cece5c509a34fe89
 ---
 
 # 本地化
@@ -41,7 +41,7 @@ agent **回答**所用的语言是另一项偏好，有自己的机制（ADR 017
 
 每个已翻译页面的 frontmatter 中都带有 `traducao_de: <SHA>`——它所翻译的来源的最后一次提交。正是它区分“最新”与“过时”。当前的测量见[翻译一致性](../reference/paridade-de-traducao.md)，由 `pnpm docs:generate` 生成。
 
-侧边栏“参考”中的标签和顶部导航栏的标签来自 `website/sidebars.ts` 以及各语言的 `navbar.json`/`current.json`；生成的 `reference/` 页面内容不在翻译范围内。
+侧边栏“参考”中的标签和顶部导航栏的标签来自 `website/sidebars.ts` 以及各语言的 `navbar.json`/`current.json`；自 ADR 0219 起，`reference/` 页面的内容（包括生成块）也会翻译，只有平价页面除外。
 
 ## 永不翻译的内容 {#o-que-nunca-se-traduz}
 

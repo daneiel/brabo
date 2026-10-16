@@ -7,15 +7,15 @@ title: Paridade de tradução
 
 # Paridade de tradução
 
-A fonte é o pt-BR em `docs/` (ADR 0216); `docs/reference/**` é gerado e fica fora. Uma tradução está **em dia** quando o `traducao_de:` do frontmatter é um commit tão ou mais novo que o último commit da fonte, e **defasada** quando a fonte mudou depois. Sem o campo, ela conta como **sem procedência**. As regras estão em [Localização](../explanation/localizacao.md).
+A fonte é o pt-BR em `docs/` (ADR 0216), inclusive `docs/reference/**` (ADR 0219); só esta página fica fora. Uma tradução está **em dia** quando o `traducao_de:` do frontmatter é um commit tão ou mais novo que o último commit da fonte, e **defasada** quando a fonte mudou depois. Sem o campo, ela conta como **sem procedência**. As regras estão em [Localização](../explanation/localizacao.md).
 
 ## Documentação
 
 | locale | páginas traduzidas | caracteres traduzidos | em dia | defasadas | sem procedência | ausentes | órfãs |
 |---|---|---|---|---|---|---|---|
-| `en` | 258 de 258 (100.0%) | 100.0% de 5.308.788 | 258 | 0 | 0 | 0 | 1 |
-| `ru` | 258 de 258 (100.0%) | 100.0% de 5.308.788 | 258 | 0 | 0 | 0 | 0 |
-| `zh-Hans` | 258 de 258 (100.0%) | 100.0% de 5.308.788 | 258 | 0 | 0 | 0 | 0 |
+| `en` | 259 de 269 (96.3%) | 92.3% de 5.753.929 | 259 | 0 | 0 | 10 | 0 |
+| `ru` | 259 de 269 (96.3%) | 92.3% de 5.753.929 | 259 | 0 | 0 | 10 | 0 |
+| `zh-Hans` | 259 de 269 (96.3%) | 92.3% de 5.753.929 | 259 | 0 | 0 | 10 | 0 |
 
 > **TODO(humano):** revisão nativa por idioma — quem revisou e quando. Ainda não há revisão nativa registrada.
 

@@ -2,7 +2,8 @@
  * Paridade de tradução (AT-550, ADR 0216 itens 5–7).
  *
  * Mede, por locale (`en`, `ru`, `zh-Hans`), quanto da fonte pt-BR (`docs/`,
- * fora `docs/reference/**`, que é gerado) tem tradução em
+ * inclusive `docs/reference/**` desde o ADR 0219, menos o próprio relatório e
+ * o `openapi.json` — `ehFonteTraduzivel`) tem tradução em
  * `website/i18n/<locale>/docusaurus-plugin-content-docs/current/`, e se cada
  * tradução está EM DIA ou DEFASADA. A procedência é o `traducao_de:` do
  * frontmatter (o commit da fonte que foi traduzido). Defasada = a fonte tem
@@ -156,7 +157,7 @@ export function relatorio(docs, ui, aviso) {
   l.push('---', 'id: paridade-de-traducao', 'title: Paridade de tradução', '---', '', aviso, '');
   l.push('# Paridade de tradução', '');
   l.push(
-    'A fonte é o pt-BR em `docs/` (ADR 0216); `docs/reference/**` é gerado e fica fora. ' +
+    'A fonte é o pt-BR em `docs/` (ADR 0216), inclusive `docs/reference/**` (ADR 0219); só esta página fica fora. ' +
       'Uma tradução está **em dia** quando o `traducao_de:` do frontmatter é um commit tão ou mais novo ' +
       'que o último commit da fonte, e **defasada** quando a fonte mudou depois. Sem o campo, ela conta ' +
       'como **sem procedência**. As regras estão em [Localização](../explanation/localizacao.md).',
@@ -228,6 +229,9 @@ function listar(dir, base = dir) {
   });
 }
 
+/** ADR 0219: `reference/` entra; o relatório (D4) e o spec OpenAPI não. */
+export const ehFonteTraduzivel = (rel) => !/^reference\/(paridade-de-traducao\.mdx?|openapi\.json)$/.test(rel);
+
 export function medirDoRepositorio(raiz) {
   const git = (...a) => execFileSync('git', a, { cwd: raiz, encoding: 'utf8' }).trim();
   const sujas = new Set(
@@ -238,7 +242,7 @@ export function medirDoRepositorio(raiz) {
   );
   const fontes = new Map();
   for (const rel of listar(join(raiz, 'docs'))) {
-    if (rel.startsWith('reference/')) continue;
+    if (!ehFonteTraduzivel(rel)) continue;
     const data = git('log', '-1', '--format=%cI', '--', `docs/${rel}`) || null;
     fontes.set(rel, { chars: readFileSync(join(raiz, 'docs', rel), 'utf8').length, data, suja: sujas.has(rel) });
   }

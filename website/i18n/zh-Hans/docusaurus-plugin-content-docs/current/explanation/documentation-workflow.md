@@ -5,7 +5,7 @@ sidebar_label: 文档同步
 sidebar_position: 1
 description: 阻止文档腐烂的机制——每个部件做什么、为什么存在，以及当检查不公正地抱怨时该怎么办。
 keywords: [documentation, drift, docmap, CI, generation]
-traducao_de: 372d04694ec63538d46e0150e58e31c03960091b
+traducao_de: 74ac4990672a22f97b68fac9cece5c509a34fe89
 ---
 
 # 文档如何保持鲜活 {#how-documentation-stays-alive}
@@ -462,8 +462,8 @@ docmap 的规则 `traducao`（原为 `traducao-pt-br`）监视源并指向 `webs
 
 拦住滞后的是测量，而不是 docmap。`scripts/docs/paridade-de-traducao.mjs`（由旁边的 spec 经变异证明）在
 `pnpm docs:generate` 内部运行并写入两个文件：`docs/reference/paridade-de-traducao.md`
-（`generated: true`）和 `website/src/data/traducao.json`。对每个 locale，它统计相对于源（`docs/` 减去
-`docs/reference/**`）已翻译的页面和字符，并把已翻译的页面分为**最新**、**过时**和**无来源**。来源是
+（`generated: true`）和 `website/src/data/traducao.json`。对每个 locale，它统计相对于源（整个 `docs/`，自 ADR 0219 起包括
+`reference/`，但不含报告本身和 `openapi.json`）已翻译的页面和字符，并把已翻译的页面分为**最新**、**过时**和**无来源**。来源是
 翻译页面 frontmatter 中的 `traducao_de: <SHA>`，即它所翻译的源的最后一次提交。当源有一个 COMMIT DATE
 晚于该 SHA 的提交、源有未提交的改动，或该 SHA 不存在时，页面就是过时的。它从不使用时钟，因此
 `--check` 在触及源的提交之前和之后给出相同的答案。对于 UI，它把 `apps/web/src/locales/<l>/` 中每个

@@ -368,5 +368,9 @@
   "traducao.faixa.defasada": {
     "message": "Перевод от {data}; оригинал с тех пор изменился.",
     "description": "Faixa da tradução cuja fonte mudou depois do traducao_de (AT-550)"
+  },
+  "traducao.faixa.originalEmIngles": {
+    "message": "Эта страница пока на английском.",
+    "description": "Faixa da página cuja fonte ainda está em inglês (idioma_original: en, AT-564)"
   }
 }

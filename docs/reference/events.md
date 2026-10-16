@@ -5,6 +5,7 @@ sidebar_label: Events
 sidebar_position: 2
 description: The event types in the immutable log, the channel broadcasts, and the trace spans — three different things with similar names.
 keywords: [events, event log, session_events, broadcast, span, outbox]
+idioma_original: en
 ---
 
 # Events

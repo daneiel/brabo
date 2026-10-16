@@ -5,7 +5,7 @@ sidebar_label: ADR index
 sidebar_position: 0
 description: Brabo's 214 architectural decision records, grouped by theme, with what each one decided.
 keywords: [ADR, architectural decision, architecture, history]
-traducao_de: af448f7079e9400a7098c2181f8eb48a105e637c
+traducao_de: f598899499ed64857e2c888cdcc72aaafe4bff35
 ---
 
 # Architectural decisions
@@ -350,13 +350,14 @@ How documentation is generated, verified and published.
 | [0206](0206-referencia-da-api-numa-pagina-redoc.md) | The API reference becomes ONE server-rendered Redoc page (redocusaurus) at `/reference/api/`, revising the publishing half of [0033](0033-referencia-de-api-gerada-do-openapi.md): the OpenAPI plugin and theme dragged `postman-collection` → `@faker-js/faker@5.5.3` (High alert #43) with no fixable path. The per-operation pages, tag sidebar, per-operation URLs, playground and cURL snippets go away by owner decision; `api-render-check.mjs` now asserts the title and one SSR section per operation |
 | [0216](0216-quatro-idiomas-com-pt-br-como-fonte.md) | Four languages for docs and UI — pt-BR becomes the SOURCE and default, with English, Russian and Simplified Chinese as translations in phases, measured parity and a per-page notice for untranslated or stale pages (AT-545, owner decisions 15/10) |
 | [0218](0218-titulo-de-adr-com-prefixo.md) | Every ADR is titled "ADR NNNN — title": the H1 gets the `ADR` prefix, a 4-digit number and an em dash; the file name (the URL) does not change, and normalizing the title label is not editing the decision (AT-559, owner decision 15/10) |
+| [0219](0219-referencia-entra-na-traducao.md) | The reference enters translation: `docs/reference/**` becomes pt-BR source, translated and measured in parity, generated block included, except the parity report itself and `openapi.json`; the Redoc page is left to AT-565 (AT-564, owner's decisions of 10/15) |
 
 ## The convention
 
 - **One file per decision**, at `docs/adr/NNNN-short-title.md`, with
   sequential 4-digit numbering, and the title `# ADR NNNN — <title>`
   ([0218](0218-titulo-de-adr-com-prefixo.md)). **No number reuse**, not even when an ADR
-  is superseded — the next one is **0219**.
+  is superseded — the next one is **0220**.
 - **One theme per decision**, chosen by whoever writes the ADR, in the same
   PR: a line in `docs/adr/temas.yml` and the index row under that theme's
   section, in numeric order. The reviewer confirms it. A new theme is a
