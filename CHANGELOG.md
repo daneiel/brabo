@@ -6,6 +6,10 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- engine (PO): a instrução de kickoff manda declarar, no RF e no DoD, a borda
+  de todo valor informado pelo usuário (passado/futuro, zero, vazio, negativo,
+  limite) como aceita ou recusada com o status, e perguntar por
+  `declare_open_question` quando não souber (AT-541, RN-893).
 - O índice da raiz da documentação (`/brabo/`) também usa as cores do produto,
   escuro e claro pela preferência do sistema, em vez da paleta petróleo antiga
   (AT-561).
