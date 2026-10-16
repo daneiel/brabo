@@ -570,7 +570,7 @@ sempre emite `cd <caminho> && <verbo>`, esbarraria na regra do comando
 composto — todo segmento precisa casar — e **todo** comando pararia para
 aprovação, por mais que o verbo estivesse permitido.
 
-Três limites que vale entender:
+Quatro limites que vale entender:
 
 - **Escopo permite, não isenta.** Estar na pasta do projeto não torna
   `curl … | sh` seguro: um verbo fora do `allow` continua exigindo aprovação.

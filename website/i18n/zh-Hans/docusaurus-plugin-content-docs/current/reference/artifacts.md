@@ -1,5 +1,5 @@
 ---
-traducao_de: 1e8de709a9b131f82f750ed20dcb7718152d56bb
+traducao_de: 630991643540998cb86812005eeb468f94a1b9c0
 id: artifacts
 title: 工件
 sidebar_position: 4
@@ -164,7 +164,7 @@ UX Designer 产出的原型（ADR 0087），基于创意的
 Designer 通过 `propose_prototype` 发出，这是一个**专用**工具
 （`Engine.Agents.UxDesignerTools`），本模块只校验**形式**，与 `product_brief` 同一机制：在这里可校验，却不在可通过 `emit_artifact` 发出的类型列表中。
 
-`personas`/`jornadas` 为空，或 `prototipo` 没有任何页面，会按与 `business_rule.origin` 相同的规则被拒绝（第 59 行）：没有内容的工件不值得记录。成功的 `propose_prototype` 会结束本轮（与 `propose_execution_plan`/`propose_infra_pr` 同理）——没有 `proposed_action`，没有挂起：提出原型没有外部效果。
+`personas`/`jornadas` 为空，或 `prototipo` 没有任何页面，会按与 `business_rule.origin` 相同的规则被拒绝（见上方 `business_rule` 表格）：没有内容的工件不值得记录。成功的 `propose_prototype` 会结束本轮（与 `propose_execution_plan`/`propose_infra_pr` 同理）——没有 `proposed_action`，没有挂起：提出原型没有外部效果。
 
 ### `plano_de_teste` — 服务器
 

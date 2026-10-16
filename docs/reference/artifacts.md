@@ -219,7 +219,7 @@ mecanismo do `product_brief`: validável aqui sem estar na lista de tipos
 emitíveis via `emit_artifact`.
 
 `personas`/`jornadas` vazias, ou um `prototipo` sem tela nenhuma, reprovam
-pela mesma regra de `business_rule.origin` (linha 59): artefato sem conteúdo
+pela mesma regra de `business_rule.origin` (a tabela de `business_rule` acima): artefato sem conteúdo
 não vale o registro. Um `propose_prototype` bem-sucedido encerra o turno (o
 mesmo raciocínio de `propose_execution_plan`/`propose_infra_pr`) — sem
 `proposed_action`, sem suspensão: propor um protótipo não tem efeito externo.
