@@ -139,16 +139,16 @@ const config: Config = {
     format: 'detect',
     // O `sidebar_label` que o gerador escreve em `docs/reference/` venceria o
     // `label` de `sidebars.ts`, que é o que tem chave de tradução (AT-563).
+    // Vale também para as cópias traduzidas (`.../current/reference/`).
     parseFrontMatter: async (params) => {
       const resultado = await params.defaultParseFrontMatter(params);
-      if (params.filePath.includes('/docs/reference/')) delete resultado.frontMatter.sidebar_label;
+      if (/\/(docs|current)\/reference\//.test(params.filePath)) delete resultado.frontMatter.sidebar_label;
       return resultado;
     },
     hooks: {
-      // Onda 6a (i18n): `docs/reference/**` é GERADO e continua fora da
-      // tradução por ora (mesma exclusão do `docs/.docmap.yml`, regra
-      // `traducao` — localizar o gerador é gap maior, fora desta
-      // entrega). Isso abre um vão de link nos DOIS sentidos só quando o
+      // Onda 6a (i18n): `docs/reference/**` nasceu fora da tradução e passa a
+      // ser traduzida (ADR 0219), em lotes — a página ainda sem cópia num
+      // locale cai no fallback pt-BR. Isso abre um vão de link nos DOIS sentidos só quando o
       // Docusaurus compila um locale traduzido (`en`, `ru`, `zh-Hans`): os arquivos de `reference/`
       // (sem override em `website/i18n/<locale>/...`, compilados por
       // FALLBACK do locale default) apontam para páginas que TÊM versão
