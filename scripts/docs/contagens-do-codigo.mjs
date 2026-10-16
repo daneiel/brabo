@@ -238,8 +238,8 @@ export const AFERICOES = [
   // contrato de git
   { arquivo: 'README.md', padrao: /o contrato de (\S+) operações e as capabilities/, fonte: 'operacoesDoGit', forma: 'pt_f' },
   { arquivo: 'CONTRIBUTING.md', padrao: /implementar as (\S+) operações, declarar/, fonte: 'operacoesDoGit', forma: 'pt_f' },
-  { arquivo: 'docs/reference/git-providers.md', padrao: /\*\*(\S+) operations\*\* —/, fonte: 'operacoesDoGit', forma: 'en' },
-  { arquivo: 'docs/reference/git-providers.md', padrao: /implementing all (\S+) operations, honestly/, fonte: 'operacoesDoGit', forma: 'en' },
+  { arquivo: 'docs/reference/git-providers.md', padrao: /O contrato tem \*\*(\S+) operações\*\* —/, fonte: 'operacoesDoGit', forma: 'pt_f' },
+  { arquivo: 'docs/reference/git-providers.md', padrao: /implementar todas as\s+(\S+) operações, declarando/, fonte: 'operacoesDoGit', forma: 'pt_f' },
   { arquivo: 'docs/architecture.md', padrao: /`GitProviderContract` — (\S+) operações, \*\*tipos/, fonte: 'operacoesDoGit', forma: 'pt_f' },
 
   // porta de Docker
@@ -255,7 +255,7 @@ export const AFERICOES = [
 
   // artefatos e providers
   { arquivo: 'README.md', padrao: /os (\S+) schemas e quem pode emitir/, fonte: 'schemasDeArtefato', forma: 'pt_m' },
-  { arquivo: 'docs/reference/artifacts.md', padrao: /^description: The (\S+) artifact schemas/m, fonte: 'schemasDeArtefato', forma: 'en' },
+  { arquivo: 'docs/reference/artifacts.md', padrao: /^description: Os (\S+) schemas de artefato/m, fonte: 'schemasDeArtefato', forma: 'pt_m' },
   { arquivo: '.claude/contexto/stack.md', padrao: /; (\d+) providers \(ADR 0043\)/, fonte: 'providersDeLlm', forma: 'digito' },
 ];
 
