@@ -134,5 +134,45 @@
   "sidebar.docs.category.Notas técnicas": {
     "message": "Технические заметки",
     "description": "The label for category 'Notas técnicas' in sidebar 'docs'"
+  },
+  "sidebar.docs.doc.Configuração": {
+    "message": "Конфигурация",
+    "description": "The label for the doc item 'Configuração' in sidebar 'docs', linking to the doc reference/configuration"
+  },
+  "sidebar.docs.doc.Eventos": {
+    "message": "События",
+    "description": "The label for the doc item 'Eventos' in sidebar 'docs', linking to the doc reference/events"
+  },
+  "sidebar.docs.doc.Permissões": {
+    "message": "Права доступа",
+    "description": "The label for the doc item 'Permissões' in sidebar 'docs', linking to the doc reference/permissions"
+  },
+  "sidebar.docs.doc.Artefatos": {
+    "message": "Артефакты",
+    "description": "The label for the doc item 'Artefatos' in sidebar 'docs', linking to the doc reference/artifacts"
+  },
+  "sidebar.docs.doc.Provedores de git": {
+    "message": "Git-провайдеры",
+    "description": "The label for the doc item 'Provedores de git' in sidebar 'docs', linking to the doc reference/git-providers"
+  },
+  "sidebar.docs.doc.API interna": {
+    "message": "Внутренний API",
+    "description": "The label for the doc item 'API interna' in sidebar 'docs', linking to the doc reference/internal-api"
+  },
+  "sidebar.docs.doc.Scripts e comandos": {
+    "message": "Скрипты и команды",
+    "description": "The label for the doc item 'Scripts e comandos' in sidebar 'docs', linking to the doc reference/scripts"
+  },
+  "sidebar.docs.doc.Rulesets do repositório": {
+    "message": "Правила репозитория (rulesets)",
+    "description": "The label for the doc item 'Rulesets do repositório' in sidebar 'docs', linking to the doc reference/rulesets"
+  },
+  "sidebar.docs.doc.Paridade de tradução": {
+    "message": "Паритет переводов",
+    "description": "The label for the doc item 'Paridade de tradução' in sidebar 'docs', linking to the doc reference/paridade-de-traducao"
+  },
+  "sidebar.docs.doc.Registro BRB": {
+    "message": "Реестр BRB",
+    "description": "The label for the doc item 'Registro BRB' in sidebar 'docs', linking to the doc reference/brb"
   }
 }
