@@ -5,7 +5,7 @@ sidebar_label: 文档同步
 sidebar_position: 1
 description: 阻止文档腐烂的机制——每个部件做什么、为什么存在，以及当检查不公正地抱怨时该怎么办。
 keywords: [documentation, drift, docmap, CI, generation]
-traducao_de: 74ac4990672a22f97b68fac9cece5c509a34fe89
+traducao_de: b9d61abd7060c5a35f8eba1155204e01a065ab40
 ---
 
 # 文档如何保持鲜活 {#how-documentation-stays-alive}
@@ -477,6 +477,19 @@ pt-BR 之外，`metadata.source` 位于 `@site/docs/` 下的页面是 pt-BR 回�
 页面有横幅（样本来自第一个仍有未翻译页面的 locale，`en`、`ru` 或 `zh-Hans`；全部完成时就没有可核对的
 回落），而根路径上的同一页面以及一个不过时的 `en` 翻译页面没有。给译者的规则在
 [本地化](localizacao.md) 中。
+
+### API 页面按目录翻译（ADR 0220） {#the-api-page-is-translated-by-catalog-adr-0220}
+
+Redoc 页面描述的源仍是 api 装饰器的文本，几乎全是英文。每个语言环境有一个目录
+`website/i18n/<locale>/openapi-textos.json`，以源文本的 sha1（12 位十六进制）为键，
+包含 `fonte` 和 `traducao`。`docusaurus.config.ts` 读取
+`DOCUSAURUS_CURRENT_LOCALE`，用 `scripts/docs/openapi-por-locale.mjs`（纯函数，由旁边
+spec 的变异测试证明）应用目录，并把该语言环境的 spec 写入 git 之外的
+`website/.openapi/`。未翻译的文本保持源文本；`en` 只翻译 pt-BR 的文本。Redoc 在
+`labels` 中接受的 18 个标签会被翻译；其他固定文本保持英文。`docs:check` 拒绝孤立键
+（文本已从 api 移除）和无效条目（源与哈希不符，或 `` `…` `` 片段数量不同）；缺失只
+警告，并在一致性报告中单独成节。`pnpm docs:openapi-textos <locale>` 把缺失的键以
+`traducao: ""` 加入目录。
 
 ### `links-do-locale.mjs`——被改写的链接逃过了坏链接检查 {#links-do-localemjs--a-rewritten-link-skips-the-broken-link-check}
 

@@ -22,6 +22,7 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import { LOCALES_DA_API, lerCatalogo, medirApi } from './openapi-por-locale.mjs';
 
 export const LOCALES = ['en', 'ru', 'zh-Hans'];
 export const LOCALE_FONTE = 'pt-BR';
@@ -152,7 +153,7 @@ export function medirInterface(namespaces) {
 const pct = (a, b) => (b === 0 ? '—' : `${((100 * a) / b).toFixed(1)}%`);
 
 /** O relatório Markdown (determinístico: só depende das medições). */
-export function relatorio(docs, ui, aviso) {
+export function relatorio(docs, ui, aviso, api) {
   const l = [];
   l.push('---', 'id: paridade-de-traducao', 'title: Paridade de tradução', '---', '', aviso, '');
   l.push('# Paridade de tradução', '');
@@ -201,6 +202,18 @@ export function relatorio(docs, ui, aviso) {
     if (faltando.length === 0) continue;
     l.push(`### Namespaces incompletos em \`${loc}\``, '');
     for (const [ns, n] of faltando) l.push(`- \`${ns}\`: ${n.presentes} de ${n.esperadas}`);
+    l.push('');
+  }
+  if (api) {
+    l.push('## API (Redoc)', '');
+    l.push(
+      'Textos distintos da referência da API (`/reference/api/`) contra o catálogo `website/i18n/<locale>/openapi-textos.json` (ADR 0220). ' +
+        'A fonte é o texto dos decorators da api, quase todo em inglês: `pt-BR`, `ru` e `zh-Hans` traduzem todos, e `en` só os que estão em pt-BR ' +
+        '(diacrítico do português ou palavra funcional como "não", "para", "que"). Não soma aos caracteres das páginas.',
+      '',
+    );
+    l.push('| locale | textos traduzidos |', '|---|---|');
+    for (const [loc, r] of Object.entries(api)) l.push(`| \`${loc}\` | ${r.traduzidos} de ${r.total} (${pct(r.traduzidos, r.total)}) |`);
     l.push('');
   }
   return l.join('\n');
@@ -272,5 +285,7 @@ export function medirDoRepositorio(raiz) {
         .map((n) => [n.slice(0, -5), JSON.parse(readFileSync(join(dir, n), 'utf8'))]),
     );
   }
-  return { docs: medirDocs(fontes, traducoes, commitDe), ui: medirInterface(namespaces) };
+  const spec = JSON.parse(readFileSync(join(raiz, 'docs/reference/openapi.json'), 'utf8'));
+  const api = medirApi(spec, Object.fromEntries(LOCALES_DA_API.map((l) => [l, lerCatalogo(raiz, l)])));
+  return { docs: medirDocs(fontes, traducoes, commitDe), ui: medirInterface(namespaces), api };
 }

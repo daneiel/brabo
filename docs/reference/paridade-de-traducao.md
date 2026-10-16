@@ -13,9 +13,9 @@ A fonte é o pt-BR em `docs/` (ADR 0216), inclusive `docs/reference/**` (ADR 021
 
 | locale | páginas traduzidas | caracteres traduzidos | em dia | defasadas | sem procedência | ausentes | órfãs |
 |---|---|---|---|---|---|---|---|
-| `en` | 269 de 269 (100.0%) | 100.0% de 5.750.177 | 268 | 0 | 1 | 0 | 0 |
-| `ru` | 269 de 269 (100.0%) | 100.0% de 5.750.177 | 268 | 0 | 1 | 0 | 0 |
-| `zh-Hans` | 269 de 269 (100.0%) | 100.0% de 5.750.177 | 268 | 0 | 1 | 0 | 0 |
+| `en` | 270 de 270 (100.0%) | 100.0% de 5.754.780 | 269 | 0 | 1 | 0 | 0 |
+| `ru` | 270 de 270 (100.0%) | 100.0% de 5.754.780 | 269 | 0 | 1 | 0 | 0 |
+| `zh-Hans` | 270 de 270 (100.0%) | 100.0% de 5.754.780 | 269 | 0 | 1 | 0 | 0 |
 
 > **TODO(humano):** revisão nativa por idioma — quem revisou e quando. Ainda não há revisão nativa registrada.
 
@@ -28,4 +28,15 @@ Chaves de `apps/web/src/locales/<locale>/` contra o pt-BR. Chave plural conta um
 | `en` | one, other | 2316 de 2316 (100.0%) | 0 |
 | `ru` | one, few, many, other | 2520 de 2520 (100.0%) | 0 |
 | `zh-Hans` | other | 2214 de 2214 (100.0%) | 0 |
+
+## API (Redoc)
+
+Textos distintos da referência da API (`/reference/api/`) contra o catálogo `website/i18n/<locale>/openapi-textos.json` (ADR 0220). A fonte é o texto dos decorators da api, quase todo em inglês: `pt-BR`, `ru` e `zh-Hans` traduzem todos, e `en` só os que estão em pt-BR (diacrítico do português ou palavra funcional como "não", "para", "que"). Não soma aos caracteres das páginas.
+
+| locale | textos traduzidos |
+|---|---|
+| `pt-BR` | 0 de 1331 (0.0%) |
+| `en` | 0 de 51 (0.0%) |
+| `ru` | 0 de 1331 (0.0%) |
+| `zh-Hans` | 0 de 1331 (0.0%) |
 

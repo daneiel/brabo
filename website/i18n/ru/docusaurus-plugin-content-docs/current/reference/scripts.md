@@ -42,6 +42,7 @@ keywords: [scripts, pnpm, make, commands]
 | `pnpm docs:serve` | `pnpm --dir website serve` |
 | `pnpm docs:clear` | `pnpm --dir website clear` |
 | `pnpm docs:generate` | `node scripts/docs/generate.mjs` |
+| `pnpm docs:openapi-textos` | `node scripts/docs/openapi-textos.mjs` |
 | `pnpm docs:landing` | `node scripts/docs/landing.mjs` |
 | `pnpm docs:check` | `node scripts/docs/docmap.mjs && node scripts/docs/generate.mjs --check` |
 | `pnpm docs:drift` | `node scripts/docs/drift.mjs` |
@@ -201,4 +202,4 @@ keywords: [scripts, pnpm, make, commands]
 
 ---
 
-Всего команд: 136. Цель Makefile без аннотации `## описание` здесь не появляется — добавьте её в исходнике.
+Всего команд: 137. Цель Makefile без аннотации `## описание` здесь не появляется — добавьте её в исходнике.

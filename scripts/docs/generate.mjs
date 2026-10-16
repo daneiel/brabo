@@ -40,6 +40,7 @@ import {
   inventariar,
   mensagemDaLacuna,
 } from './inventario-de-env.mjs';
+import { aplicar as aplicarCatalogo, LOCALES_DA_API, lerCatalogo } from './openapi-por-locale.mjs';
 import { chavesFaltando, copiaDoLocale, LOCALES_GERADOS, TEXTOS } from './textos-gerados.mjs';
 import {
   arquivos,
@@ -1175,9 +1176,23 @@ function verificarVersaoAnunciada() {
 // AT-550 (ADR 0216 itens 6–7): a paridade de tradução é MEDIDA e gerada; o
 // JSON alimenta a faixa de `website/src/theme/DocItem/Content`.
 function gerarParidadeDeTraducao() {
-  const { docs, ui } = medirDoRepositorio(RAIZ);
-  escrever('docs/reference/paridade-de-traducao.md', relatorioDeParidade(docs, ui, AVISO) + '\n');
+  const { docs, ui, api } = medirDoRepositorio(RAIZ);
+  escrever('docs/reference/paridade-de-traducao.md', relatorioDeParidade(docs, ui, AVISO, api) + '\n');
   escrever('website/src/data/traducao.json', dadosDaFaixa(docs));
+}
+
+// ADR 0220: órfã ou entrada inválida no catálogo da API reprova; faltando só avisa.
+function verificarCatalogosDaApi() {
+  const spec = JSON.parse(ler(SPEC));
+  for (const loc of LOCALES_DA_API) {
+    const { orfas, invalidas, faltando } = aplicarCatalogo(spec, lerCatalogo(RAIZ, loc));
+    if (orfas.length + invalidas.length > 0) {
+      pendencias.push(`catálogo da API (${loc})`);
+      console.log(`  DESATUAL. website/i18n/${loc}/openapi-textos.json — órfãs: ${orfas.join(', ') || '0'}; inválidas: ${invalidas.join(', ') || '0'}`);
+    } else {
+      console.log(`  ok        website/i18n/${loc}/openapi-textos.json (${faltando.length} textos ainda na fonte)`);
+    }
+  }
 }
 
 // ------------------------------------------------------------------- main
@@ -1189,6 +1204,7 @@ gerarEventos();
 gerarOpenapi();
 gerarProvidersDeLlm();
 gerarParidadeDeTraducao();
+verificarCatalogosDaApi();
 verificarIndiceAdr();
 verificarTemasDeAdr();
 verificarContagensEmProsa();

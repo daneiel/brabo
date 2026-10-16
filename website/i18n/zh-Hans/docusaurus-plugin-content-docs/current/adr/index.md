@@ -5,7 +5,7 @@ sidebar_label: ADR 索引
 sidebar_position: 0
 description: Brabo 的 214 条架构决策记录，按主题分组，并附上每条决策的内容。
 keywords: [ADR, 架构决策, 架构, 历史]
-traducao_de: f598899499ed64857e2c888cdcc72aaafe4bff35
+traducao_de: b9d61abd7060c5a35f8eba1155204e01a065ab40
 ---
 
 # 架构决策
@@ -351,6 +351,7 @@ chunks 和混合搜索、对它的测量、Neo4j 图谱，以及从事件日志�
 | [0216](0216-quatro-idiomas-com-pt-br-como-fonte.md) | 文档和界面使用四种语言——pt-BR 成为**来源**和默认，英语、俄语和简体中文作为分阶段的翻译，测量一致性，并对未翻译或过时的页面逐页给出提示（AT-545，所有者 10月15日的决定） |
 | [0218](0218-titulo-de-adr-com-prefixo.md) | 每个 ADR 都命名为“ADR NNNN — 标题”：H1 加上 `ADR` 前缀、4 位编号和破折号；文件名（即 URL）不变，规范标题标签不算编辑决策（AT-559，所有者 10月15日的决定） |
 | [0219](0219-referencia-entra-na-traducao.md) | 参考文档纳入翻译：`docs/reference/**` 成为 pt-BR 源，被翻译并计入平价统计（包括生成块），平价报告本身和 `openapi.json` 除外；Redoc 页面留给 AT-565（AT-564，所有者 10/15 的决定） |
+| [0220](0220-api-traduzida-por-catalogo.md) | API 页面按目录翻译：源仍是 api 装饰器文本（pt-BR 源的例外），每个语言环境一个以文本哈希为键的目录，spec 在构建时派生且不进 git，孤立键失败、缺失只警告，Redoc 固定标签保持英文（AT-565，所有者 10/16 的决定） |
 
 ## 约定 {#a-convenção}
 
