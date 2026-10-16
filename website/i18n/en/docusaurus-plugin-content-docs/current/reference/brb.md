@@ -1,4 +1,5 @@
 ---
+traducao_de: 67d5067daf28ece21602f1fa6bd0cd4c6677f5aa
 id: brb
 title: BRB register
 sidebar_label: BRB register
