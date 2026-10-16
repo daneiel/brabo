@@ -856,8 +856,12 @@
       "defasada": false,
       "data": "2026-10-15"
     },
-    "adr/index.md": {
+    "adr/0219-referencia-entra-na-traducao.md": {
       "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/index.md": {
+      "defasada": true,
       "data": "2026-10-15"
     },
     "architecture.md": {
@@ -1890,8 +1894,12 @@
       "defasada": false,
       "data": "2026-10-15"
     },
-    "adr/index.md": {
+    "adr/0219-referencia-entra-na-traducao.md": {
       "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/index.md": {
+      "defasada": true,
       "data": "2026-10-15"
     },
     "architecture.md": {
@@ -2924,8 +2932,12 @@
       "defasada": false,
       "data": "2026-10-15"
     },
-    "adr/index.md": {
+    "adr/0219-referencia-entra-na-traducao.md": {
       "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/index.md": {
+      "defasada": true,
       "data": "2026-10-15"
     },
     "architecture.md": {
