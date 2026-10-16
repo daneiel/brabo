@@ -13,11 +13,23 @@ A fonte é o pt-BR em `docs/` (ADR 0216); `docs/reference/**` é gerado e fica f
 
 | locale | páginas traduzidas | caracteres traduzidos | em dia | defasadas | sem procedência | ausentes | órfãs |
 |---|---|---|---|---|---|---|---|
-| `en` | 258 de 258 (100.0%) | 100.0% de 5.307.111 | 258 | 0 | 0 | 0 | 0 |
-| `ru` | 258 de 258 (100.0%) | 100.0% de 5.307.111 | 258 | 0 | 0 | 0 | 0 |
-| `zh-Hans` | 258 de 258 (100.0%) | 100.0% de 5.307.111 | 258 | 0 | 0 | 0 | 0 |
+| `en` | 258 de 258 (100.0%) | 100.0% de 5.308.304 | 257 | 1 | 0 | 0 | 0 |
+| `ru` | 258 de 258 (100.0%) | 100.0% de 5.308.304 | 257 | 1 | 0 | 0 | 0 |
+| `zh-Hans` | 258 de 258 (100.0%) | 100.0% de 5.308.304 | 257 | 1 | 0 | 0 | 0 |
 
 > **TODO(humano):** revisão nativa por idioma — quem revisou e quando. Ainda não há revisão nativa registrada.
+
+### Defasadas em `en`
+
+- `business-rules.md` (tradução de 2026-10-15)
+
+### Defasadas em `ru`
+
+- `business-rules.md` (tradução de 2026-10-15)
+
+### Defasadas em `zh-Hans`
+
+- `business-rules.md` (tradução de 2026-10-15)
 
 ## Interface
 
