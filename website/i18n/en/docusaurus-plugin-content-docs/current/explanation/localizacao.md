@@ -2,7 +2,7 @@
 id: localizacao
 title: Localization
 description: Brabo's four languages (pt-BR as the source, en, ru and zh-Hans), the codes, the plural forms, how the language is resolved, what happens to missing text and what is never translated.
-traducao_de: 28623069eba685a830004c4b447b705ae2e81989
+traducao_de: 3fb5a5dd9632b0a0ea88f0b240ebd8633f8f6886
 ---
 
 # Localization
@@ -22,6 +22,11 @@ All new text is born in pt-BR; the other languages are translations of it.
 
 The codes are the same in Docusaurus, in i18next, in `<html lang>` and in
 `users.locale`. The site's local search uses its own (`pt`, `en`, `ru`, `zh`).
+
+On the site, the language selector sits in the top bar (`localeDropdown` in
+`website/docusaurus.config.ts`), with the labels above, and takes you to the same
+page in the chosen language; each language lives under its own path (`/en/`,
+`/ru/`, `/zh-Hans/`; pt-BR at the root of the stage).
 
 ## Resolving the interface language {#resolução-do-idioma-na-interface}
 
