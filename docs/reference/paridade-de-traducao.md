@@ -13,23 +13,11 @@ A fonte é o pt-BR em `docs/` (ADR 0216), inclusive `docs/reference/**` (ADR 021
 
 | locale | páginas traduzidas | caracteres traduzidos | em dia | defasadas | sem procedência | ausentes | órfãs |
 |---|---|---|---|---|---|---|---|
-| `en` | 259 de 269 (96.3%) | 92.3% de 5.753.869 | 258 | 1 | 0 | 10 | 0 |
-| `ru` | 259 de 269 (96.3%) | 92.3% de 5.753.869 | 258 | 1 | 0 | 10 | 0 |
-| `zh-Hans` | 259 de 269 (96.3%) | 92.3% de 5.753.869 | 258 | 1 | 0 | 10 | 0 |
+| `en` | 259 de 269 (96.3%) | 92.3% de 5.753.869 | 259 | 0 | 0 | 10 | 0 |
+| `ru` | 259 de 269 (96.3%) | 92.3% de 5.753.869 | 259 | 0 | 0 | 10 | 0 |
+| `zh-Hans` | 259 de 269 (96.3%) | 92.3% de 5.753.869 | 259 | 0 | 0 | 10 | 0 |
 
 > **TODO(humano):** revisão nativa por idioma — quem revisou e quando. Ainda não há revisão nativa registrada.
-
-### Defasadas em `en`
-
-- `architecture.md` (tradução de 2026-10-15)
-
-### Defasadas em `ru`
-
-- `architecture.md` (tradução de 2026-10-15)
-
-### Defasadas em `zh-Hans`
-
-- `architecture.md` (tradução de 2026-10-15)
 
 ## Interface
 
