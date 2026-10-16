@@ -5,7 +5,7 @@ sidebar_label: Business rules
 sidebar_position: 3
 description: Brabo's domain rules, numbered, with where they live in the code and the test that covers each one.
 keywords: [business rules, domain, state machine, approval, RBAC]
-traducao_de: 841f39b834f295dd8e67b539cf317dfbd3c94e26
+traducao_de: e6dc35de643740217772aa51fbe06e28020a16fb
 ---
 
 # Business rules
@@ -24802,3 +24802,23 @@ without saying which.
   `apps/web/src/lib/idioma.test.ts` ("idioma sem catálogo cai no pt-BR, nunca
   no inglês"); `apps/web/src/lib/i18n-paridade.test.ts`
 - **Origin:** AT-548, ADR 0216 (items 1–4)
+
+### RN-893 — The PO declares the edge of the provided value in the RF and the DoD {#rn-893}
+
+- **Rule:** the PO's kickoff instruction (with or without an event log) carries a
+  third obligation: every RF that receives a value provided by the user (date,
+  number, text, list, limit) declares, in the RF and the DoD, whether the edge —
+  past/future, zero, empty, negative, the limit itself — is ACCEPTED or
+  REFUSED (with the HTTP status/error); the example is an expiration in the
+  past. When unsure, the PO calls `declare_open_question` with
+  `afeta.historias` and a suggestion, never inventing or omitting. A PROMPT
+  rule, in the mold of [RN-790](#rn-790): no tool refuses a story without an
+  edge. The PO does NOT start rewriting `business_rule`; Creative, QA, schema
+  and gate do not change.
+- **Where:** `apps/engine/lib/engine/agents/po_server.ex:649` (`obrigacoes`)
+- **Test:** `apps/engine/test/engine/agents/po_server_test.exs:438` (the
+  kickoff instruction carries the edge obligation) and `:460` (without an event
+  log, the kickoff still carries it)
+- **Origin:** AT-541 (TP-01 of 10/14: the deliverable accepted `expiresAt` in
+  the past and the link was born expired, 410; the story's RF only said the
+  expiration is optional), owner's decision of 10/15

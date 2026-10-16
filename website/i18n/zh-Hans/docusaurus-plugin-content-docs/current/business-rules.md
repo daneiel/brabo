@@ -5,7 +5,7 @@ sidebar_label: 业务规则
 sidebar_position: 3
 description: Brabo 的领域规则，带编号，注明它们在代码中的位置以及覆盖每一条的测试。
 keywords: [业务规则, 领域, 状态机, 审批, RBAC]
-traducao_de: 841f39b834f295dd8e67b539cf317dfbd3c94e26
+traducao_de: e6dc35de643740217772aa51fbe06e28020a16fb
 ---
 
 # 业务规则
@@ -12242,3 +12242,10 @@ PO 的 kickoff 说明这三件事。
   `apps/web/src/lib/idioma.test.ts`（"idioma sem catálogo cai no pt-BR, nunca
   no inglês"）；`apps/web/src/lib/i18n-paridade.test.ts`
 - **来源：** AT-548，ADR 0216（第 1–4 项）
+
+### RN-893 — PO 在 RF 和 DoD 中声明所提供值的边界 {#rn-893}
+
+- **规则：** PO 的 kickoff 指令（无论有无事件日志）带有第三项义务：每个接收用户所提供值（日期、数字、文本、列表、限制）的 RF，都要在 RF 和 DoD 中声明边界——过去/未来、零、空、负数、限制本身——是被接受还是被拒绝（附 HTTP 状态/错误）；示例是过去的过期时间。不确定时，PO 调用 `declare_open_question`，带上 `afeta.historias` 和一条建议，绝不编造或省略。这是一条提示词规则，仿照 [RN-790](#rn-790)：没有工具会拒绝没有边界的故事。PO 不会开始重写 `business_rule`；创意、QA、schema 和 gate 均不变。
+- **位置：** `apps/engine/lib/engine/agents/po_server.ex:649` (`obrigacoes`)
+- **测试：** `apps/engine/test/engine/agents/po_server_test.exs:438`（kickoff 指令带有边界义务）和 `:460`（没有事件日志时，kickoff 仍带有它）
+- **来源：** AT-541（10/14 的 TP-01：交付物接受了过去的 `expiresAt`，链接一创建就已过期，410；故事的 RF 只说过期时间是可选的），所有者 10/15 的决定

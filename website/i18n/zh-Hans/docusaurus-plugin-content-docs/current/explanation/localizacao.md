@@ -2,7 +2,7 @@
 id: localizacao
 title: 本地化
 description: Brabo 的四种语言（pt-BR 作为来源，以及 en、ru 和 zh-Hans）、语言代码、复数形式、语言如何解析、缺失文本如何处理，以及永不翻译的内容。
-traducao_de: 28623069eba685a830004c4b447b705ae2e81989
+traducao_de: 3fb5a5dd9632b0a0ea88f0b240ebd8633f8f6886
 ---
 
 # 本地化
@@ -19,6 +19,8 @@ Brabo 在文档和界面中使用四种语言，而**巴西葡萄牙语是这两
 | 简体中文 | `zh-Hans` | other | [中文说明](localizacao-zh-hans.md) |
 
 这些代码在 Docusaurus、i18next、`<html lang>` 和 `users.locale` 中是一样的。站点的本地搜索使用它自己的代码（`pt`、`en`、`ru`、`zh`）。
+
+在站点上，语言选择器位于顶部栏（`website/docusaurus.config.ts` 中的 `localeDropdown`），使用上表中的标签，并跳转到所选语言的同一页面；每种语言都有自己的路径（`/en/`、`/ru/`、`/zh-Hans/`；pt-BR 位于该阶段的根路径）。
 
 ## 界面中的语言解析 {#resolução-do-idioma-na-interface}
 
