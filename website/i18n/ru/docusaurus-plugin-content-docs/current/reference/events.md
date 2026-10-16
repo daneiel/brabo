@@ -410,6 +410,121 @@ sequenceDiagram
 написал.
 
 <!-- BEGIN:GENERATED:eventos-inventario -->
+
+> ⚠️ Блок сгенерирован `pnpm docs:generate`. Не редактируйте вручную — следующая сборка его перезапишет.
+
+Извлечено из точек генерации идентификаторов: **110**, из них не описаны выше: **3**.
+
+- `action.failed` <sub>(apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts)</sub>
+- `agent.activated` <sub>(apps/api/src/application/use-cases/agents/activate-agent.use-case.ts)</sub>
+- `agent.delta` <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub>
+- `agent.done` <sub>(apps/engine/lib/engine/agents/turno_assincrono.ex)</sub>
+- `agent.error` <sub>(apps/api/src/application/use-cases/agents/aceite-implicito-do-po.use-case.ts)</sub>
+- `agent.response` <sub>(apps/api/src/application/use-cases/llm/send-chat-message.use-case.ts)</sub>
+- `agent.status` <sub>(apps/engine/lib/engine/agents/turno_assincrono.ex)</sub>
+- `agent.turn` <sub>(apps/engine/lib/engine/harness/tool_loop.ex)</sub>
+- `anamnese.agent_deviation` <sub>(apps/engine/lib/engine/anamnese/tools/report_agent_deviation.ex)</sub>
+- `anamnese.analysis` <sub>(apps/engine/lib/engine/workers/anamnese_worker.ex)</sub>
+- `anamnese.profile_updated` <sub>(apps/api/src/application/use-cases/anamnese/record-proficiency.use-case.ts)</sub>
+- `anamnese.run_completed` <sub>(apps/api/src/application/use-cases/anamnese/record-proficiency.use-case.ts)</sub>
+- `anamnese.run_failed` <sub>(apps/engine/lib/engine/session_events/event.ex)</sub>
+- `anamnese.run_skipped` <sub>(apps/engine/lib/engine/session_events/event.ex)</sub>
+- `architecture.readiness_confirmed` <sub>(apps/api/src/application/use-cases/agents/offer-infra-handoff.use-case.ts)</sub>
+- `artifact.business_rule` <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub>
+- `artifact.decision_record` <sub>(apps/api/src/application/use-cases/backlog/perguntas-em-aberto.use-case.ts)</sub>
+- `artifact.insight` <sub>(apps/engine/lib/engine/harness/tools/emit_insight.ex)</sub>
+- `artifact.module_map` <sub>(apps/api/src/application/use-cases/architecture/create-module-map.use-case.ts)</sub>
+- `artifact.open_question` — ⚠️ **не описан выше** <sub>(apps/engine/lib/engine/harness/decisoes_do_projeto.ex)</sub>
+- `artifact.plano_de_teste` <sub>(apps/engine/lib/engine/gates/qa_lead_server.ex)</sub>
+- `artifact.product_brief` <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub>
+- `artifact.project_image` <sub>(apps/engine/lib/engine/harness/ambiente_do_agente.ex)</sub>
+- `artifact.prototipo_navegavel` <sub>(apps/engine/lib/engine/agents/ux_designer_tools.ex)</sub>
+- `artifact.rfc_staff` <sub>(apps/engine/lib/engine/agents/staff_tools.ex)</sub>
+- `artifact.secops_verdict` — ⚠️ **не описан выше** <sub>(apps/engine/lib/engine/gates/secops_agent_server.ex)</sub>
+- `artifact.threat_model` <sub>(apps/engine/lib/engine/agents/dev_lead_tools.ex)</sub>
+- `backlog.epic_created` <sub>(apps/api/src/application/use-cases/backlog/create-epic.use-case.ts)</sub>
+- `backlog.epic_without_story` <sub>(apps/engine/lib/engine/agents/po_server.ex)</sub>
+- `backlog.handoff_not_offered` <sub>(apps/engine/lib/engine/agents/po_server.ex)</sub>
+- `backlog.semantic_duplicate_check_skipped` <sub>(apps/api/src/application/use-cases/backlog/verificar-duplicata-semantica.use-case.ts)</sub>
+- `backlog.semantic_duplicate_warned` <sub>(apps/api/src/application/use-cases/backlog/verificar-duplicata-semantica.use-case.ts)</sub>
+- `backlog.story_archived` <sub>(apps/api/src/application/use-cases/backlog/corrigir-historia.use-case.ts)</sub>
+- `backlog.story_completed` <sub>(apps/api/src/application/use-cases/backlog/complete-story.use-case.ts)</sub>
+- `backlog.story_created` <sub>(apps/api/src/application/use-cases/backlog/create-story.use-case.ts)</sub>
+- `backlog.story_demoted` <sub>(apps/api/src/application/use-cases/architecture/create-module-map.use-case.ts)</sub>
+- `backlog.story_modules_assigned` <sub>(apps/api/src/application/use-cases/architecture/assign-story-modules.use-case.ts)</sub>
+- `backlog.story_overlap_warned` <sub>(apps/api/src/application/use-cases/backlog/create-story.use-case.ts)</sub>
+- `backlog.story_promotion_proposed` <sub>(apps/api/src/application/use-cases/backlog/complete-story.use-case.ts)</sub>
+- `backlog.story_promotion_returned` <sub>(apps/api/src/application/use-cases/backlog/return-story.use-case.ts)</sub>
+- `backlog.story_transitioned` <sub>(apps/api/src/application/use-cases/backlog/transition-story.use-case.ts)</sub>
+- `backlog.story_updated` <sub>(apps/api/src/application/use-cases/backlog/corrigir-historia.use-case.ts)</sub>
+- `backlog.task_blocked` <sub>(apps/api/src/application/use-cases/execution/mark-task-blocked.use-case.ts)</sub>
+- `backlog.task_claimed` <sub>(apps/api/src/application/use-cases/execution/claim-next-task.use-case.ts)</sub>
+- `backlog.task_created` <sub>(apps/api/src/application/use-cases/backlog/create-task.use-case.ts)</sub>
+- `backlog.task_merge_conflict` <sub>(apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts)</sub>
+- `backlog.task_status_changed` <sub>(apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts)</sub>
+- `backlog.task_unblocked` <sub>(apps/api/src/application/use-cases/execution/unblock-task.use-case.ts)</sub>
+- `bootstrap.adopted_as_is` <sub>(apps/api/src/application/use-cases/git/decide-bootstrap-plan.use-case.ts)</sub>
+- `bootstrap.plan_approved` <sub>(apps/api/src/application/use-cases/git/decide-bootstrap-plan.use-case.ts)</sub>
+- `bootstrap.repository_adopted` <sub>(apps/api/src/application/use-cases/git/adopt-repository.use-case.ts)</sub>
+- `bootstrap.step_acknowledged` — ⚠️ **не описан выше** <sub>(apps/api/src/application/use-cases/git/acknowledge-protection-failure.use-case.ts)</sub>
+- `bootstrap.step_completed` <sub>(apps/api/src/application/use-cases/git/bootstrap-runner.ts)</sub>
+- `bootstrap.step_degraded` <sub>(apps/api/src/application/use-cases/git/bootstrap-runner.ts)</sub>
+- `bootstrap.step_failed` <sub>(apps/api/src/application/use-cases/git/bootstrap-runner.ts)</sub>
+- `bootstrap.step_skipped` <sub>(apps/api/src/application/use-cases/git/bootstrap-runner.ts)</sub>
+- `bootstrap.step_started` <sub>(apps/api/src/application/use-cases/git/bootstrap-runner.ts)</sub>
+- `budget.threshold_crossed` <sub>(apps/api/src/application/use-cases/llm/record-llm-usage.use-case.ts)</sub>
+- `chat.message` <sub>(apps/api/src/application/use-cases/agents/send-agent-message.use-case.ts)</sub>
+- `chat.message_cancelled` <sub>(apps/engine/lib/engine/agents/fila_de_mensagens.ex)</sub>
+- `chat.message_delivered` <sub>(apps/engine/lib/engine/agents/fila_de_mensagens.ex)</sub>
+- `chat.message_queued` <sub>(apps/engine/lib/engine/agents/fila_de_mensagens.ex)</sub>
+- `chat.structured_question` <sub>(apps/engine/lib/engine/agents/reidratacao.ex)</sub>
+- `chat.structured_question_answered` <sub>(apps/api/src/application/use-cases/agents/answer-structured-question.use-case.ts)</sub>
+- `delegation.completed` <sub>(apps/api/src/application/use-cases/execution/record-delegation.use-case.ts)</sub>
+- `delegation.dispensed` <sub>(apps/api/src/application/use-cases/execution/record-delegation.use-case.ts)</sub>
+- `delegation.failed` <sub>(apps/api/src/application/use-cases/execution/record-delegation.use-case.ts)</sub>
+- `event.appended` <sub>(apps/engine/lib/engine/sessions/live_broadcast.ex)</sub>
+- `execution.activated` <sub>(apps/api/src/application/use-cases/execution/activate-execution.use-case.ts)</sub>
+- `execution.parallelization_accepted` <sub>(apps/api/src/application/use-cases/execution/accept-parallelization.use-case.ts)</sub>
+- `execution.parallelization_suggested` <sub>(apps/api/src/application/use-cases/execution/activate-execution.use-case.ts)</sub>
+- `gate.interrupted` <sub>(apps/engine/lib/engine/gates/gate_rescuer.ex)</sub>
+- `gate.rescue_parked` <sub>(apps/engine/lib/engine/gates/gate_rescuer.ex)</sub>
+- `gate.scanner` <sub>(apps/engine/lib/engine/gates/scanner.ex)</sub>
+- `handoff.accepted` <sub>(apps/api/src/application/use-cases/agents/accept-handoff.use-case.ts)</sub>
+- `handoff.auto_accept_failed` <sub>(apps/api/src/application/use-cases/agents/aceitar-handoff-automaticamente.use-case.ts)</sub>
+- `handoff.offered` <sub>(apps/api/src/application/use-cases/agents/create-handoff.use-case.ts)</sub>
+- `handoff.superseded` <sub>(apps/api/src/application/use-cases/agents/ciclo-de-vida-do-handoff.service.ts)</sub>
+- `infra.artifact_blocked` <sub>(apps/api/src/application/use-cases/execution/mark-infra-artifact-blocked.use-case.ts)</sub>
+- `infra.gate_changed` <sub>(apps/api/src/application/use-cases/execution/record-infra-gate-verdict.use-case.ts)</sub>
+- `instruction.rolled_back` <sub>(apps/api/src/application/use-cases/instructions/rollback-instruction.use-case.ts)</sub>
+- `llm.turn` <sub>(apps/engine/lib/engine/sessions/engine_api_client.ex)</sub>
+- `necessity.validated` <sub>(apps/api/src/application/use-cases/agents/confirm-readiness.use-case.ts)</sub>
+- `permission.granted` <sub>(apps/api/src/application/use-cases/actions/approve-always-action.use-case.ts)</sub>
+- `pr.gate_changed` <sub>(apps/api/src/application/use-cases/execution/open-gate.use-case.ts)</sub>
+- `project.git_connected` <sub>(apps/api/src/application/use-cases/git/handle-git-oauth-callback.use-case.ts)</sub>
+- `project.repository_adopted` <sub>(apps/api/src/application/use-cases/git/adopt-repository.use-case.ts)</sub>
+- `project.repository_provisioned` <sub>(apps/api/src/application/use-cases/git/provision-repository.use-case.ts)</sub>
+- `project.workspace_verified` <sub>(apps/api/src/application/use-cases/iam/confirm-project-workspace.use-case.ts)</sub>
+- `proposed_action.approved` <sub>(apps/api/src/application/use-cases/actions/approve-action.use-case.ts)</sub>
+- `proposed_action.created` <sub>(apps/api/src/application/use-cases/actions/propose-action.use-case.ts)</sub>
+- `proposed_action.denied` <sub>(apps/api/src/application/use-cases/actions/deny-action.use-case.ts)</sub>
+- `proposed_action.executed` <sub>(apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts)</sub>
+- `psychologist.analysis_completed` <sub>(apps/api/src/application/use-cases/execution/propose-hypotheses.use-case.ts)</sub>
+- `psychologist.analysis_failed` <sub>(apps/engine/lib/engine/workers/psychologist_worker.ex)</sub>
+- `psychologist.analysis_skipped` <sub>(apps/engine/lib/engine/workers/psychologist_worker.ex)</sub>
+- `psychologist.hypothesis_accepted` <sub>(apps/api/src/application/use-cases/execution/accept-hypothesis.use-case.ts)</sub>
+- `psychologist.hypothesis_accepted_for_anamnese` <sub>(apps/api/src/application/use-cases/execution/accept-hypothesis.use-case.ts)</sub>
+- `psychologist.hypothesis_dismissed` <sub>(apps/api/src/application/use-cases/execution/dismiss-hypothesis.use-case.ts)</sub>
+- `psychologist.hypothesis_proposed` <sub>(apps/api/src/application/use-cases/execution/propose-hypotheses.use-case.ts)</sub>
+- `rag.feedback` <sub>(apps/api/src/application/use-cases/rag/record-rag-feedback.use-case.ts)</sub>
+- `rag.search` <sub>(apps/api/src/application/use-cases/rag/hybrid-search.use-case.ts)</sub>
+- `readiness.confirmed` <sub>(apps/api/src/application/use-cases/agents/confirm-readiness.use-case.ts)</sub>
+- `session.activated` <sub>(apps/api/src/db/seed.ts)</sub>
+- `session.closed` <sub>(apps/engine/lib/engine/outbox/drain.ex)</sub>
+- `session.closed_abnormally` <sub>(apps/engine/lib/engine/outbox/drain.ex)</sub>
+- `session.created` <sub>(apps/api/src/application/use-cases/sessions/create-session.use-case.ts)</sub>
+- `session.draining` <sub>(apps/engine/lib/engine/shutdown.ex)</sub>
+- `tool.call` <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub>
+- `tool.result` <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub>
 <!-- END:GENERATED:eventos-inventario -->
 
 ---
