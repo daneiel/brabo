@@ -1,4 +1,5 @@
 ---
+traducao_de: f6d9c3688e413d451640bbae2d5606da150cc14e
 id: rulesets
 title: Repository rulesets
 sidebar_label: Rulesets
