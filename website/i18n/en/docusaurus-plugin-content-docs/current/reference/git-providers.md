@@ -5,6 +5,7 @@ sidebar_label: Git Providers
 sidebar_position: 5
 description: The fifteen-operation contract that makes Local, GitHub, and GitLab interchangeable, with capabilities, normalized errors, and retry policy.
 keywords: [git, GitProvider, GitHub, GitLab, capabilities, retry]
+traducao_de: c51acb4a5b495be1be6f3e263783d9fd5ad91911
 ---
 
 # Git Providers

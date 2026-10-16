@@ -5,6 +5,7 @@ sidebar_label: Artifacts
 sidebar_position: 4
 description: The twelve artifact schemas validated in the engine, who can emit each one, and why most are not emittable by the model.
 keywords: [artifact, schema, emit_artifact, qa_verdict, business_rule, decision_record]
+traducao_de: 1e8de709a9b131f82f750ed20dcb7718152d56bb
 ---
 
 # Artifacts

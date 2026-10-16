@@ -5,6 +5,7 @@ sidebar_label: Permissions
 sidebar_position: 3
 description: The format of permissions.json, how a pattern matches a command, and the exact order in which the decision is made.
 keywords: [permissions.json, approval, policy, deny, allow, proposed_action]
+traducao_de: c4409623b6c90f98057eda3bd1ac803e1297f348
 ---
 
 # Permissions
