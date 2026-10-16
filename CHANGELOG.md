@@ -6,6 +6,8 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- O site da documentação tem um seletor de idioma na barra de cima, que leva à
+  mesma página em português, inglês, russo ou chinês (AT-562).
 - engine (PO): a instrução de kickoff manda declarar, no RF e no DoD, a borda
   de todo valor informado pelo usuário (passado/futuro, zero, vazio, negativo,
   limite) como aceita ou recusada com o status, e perguntar por

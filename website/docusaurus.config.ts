@@ -289,6 +289,9 @@ const config: Config = {
         },
         { to: '/runbook', label: 'Runbook', position: 'left' },
         { to: '/adr/', label: 'ADRs', position: 'left' },
+        // O idioma, pelos rótulos nativos de `localeConfigs`; leva à MESMA
+        // página no outro locale (página sem tradução cai na fonte pt-BR).
+        { type: 'localeDropdown', position: 'right' },
         // O degrau que você está lendo, e como trocar. Fica à esquerda do
         // GitHub porque é navegação do próprio site, não link externo.
         {

@@ -22,6 +22,11 @@ Todo texto novo nasce em pt-BR; os outros idiomas são traduções dele.
 Os códigos são os mesmos no Docusaurus, no i18next, no `<html lang>` e em
 `users.locale`. A busca local do site usa os dela (`pt`, `en`, `ru`, `zh`).
 
+No site, o seletor de idioma fica na barra de cima (`localeDropdown` em
+`website/docusaurus.config.ts`), com os rótulos acima, e leva à mesma página no
+idioma escolhido; cada idioma mora no próprio caminho (`/en/`, `/ru/`,
+`/zh-Hans/`; o pt-BR na raiz do degrau).
+
 ## Resolução do idioma na interface
 
 A escolha gravada na conta **vence sempre** e nunca é sobrescrita por detecção.
