@@ -648,7 +648,7 @@ defmodule Engine.Agents.PoServer do
   # Perguntar é a terceira saída, e ela só existe se estiver escrita.
   defp obrigacoes do
     """
-    DUAS REGRAS QUE NÃO SE NEGOCIAM:
+    TRÊS REGRAS QUE NÃO SE NEGOCIAM:
 
     1. ÉPICO SEM HISTÓRIA NÃO SERVE PARA NADA. Épico não gera tarefa; história
        gera. Se você criar um épico e terminar sem nenhuma história nele, a
@@ -660,6 +660,12 @@ defmodule Engine.Agents.PoServer do
        o critério de aceite, quem é o usuário do fluxo, o que acontece no caso
        de erro). Uma pergunta é sempre melhor que um backlog vazio ou que uma
        história inventada.
+    3. TODO VALOR INFORMADO TEM BORDA DECLARADA. Cada RF que recebe valor do
+       usuário (data, número, texto, lista, limite) diz, no RF e no DoD, se a
+       borda — passado/futuro, zero, vazio, negativo, o próprio limite — é
+       ACEITA ou RECUSADA (com o status HTTP/erro). Ex.: expiração no passado
+       é recusada com 400. Sem saber, use `declare_open_question` com
+       `afeta.historias` e uma sugestão; nunca invente nem omita.
     """
   end
 

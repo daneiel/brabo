@@ -452,6 +452,24 @@ defmodule Engine.Agents.PoServerTest do
       # AT-466 (RN-790): o README de como subir é critério do DoD.
       assert instrucao["content"] =~ "README diz como instalar"
       assert instrucao["content"] =~ "variáveis de ambiente obrigatórias"
+      # AT-541 (RN-893): a borda do valor informado vai no RF e no DoD.
+      assert instrucao["content"] =~ "TODO VALOR INFORMADO TEM BORDA DECLARADA"
+      assert instrucao["content"] =~ "declare_open_question"
+    end
+
+    test "sem event log, o kickoff ainda carrega a obrigação da borda (RN-893)", %{state: state} do
+      Process.put(:fake_events_error, :boom)
+      Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("ok")])
+
+      assert {:noreply, new_state} = sync_cast(PoServer, :kickoff, state)
+
+      instrucao =
+        Enum.find(new_state.messages, fn m ->
+          m["role"] == "user" and String.contains?(m["content"], "Gere o backlog do produto")
+        end)
+
+      assert instrucao["content"] =~ "TODO VALOR INFORMADO TEM BORDA DECLARADA"
+      assert instrucao["content"] =~ "declare_open_question"
     end
   end
 

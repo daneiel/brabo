@@ -24817,3 +24817,22 @@ sem dizer qual.
   `apps/web/src/lib/idioma.test.ts` ("idioma sem catálogo cai no pt-BR, nunca
   no inglês"); `apps/web/src/lib/i18n-paridade.test.ts`
 - **Origem:** AT-548, ADR 0216 (itens 1–4)
+
+### RN-893 — O PO declara a borda do valor informado no RF e no DoD {#rn-893}
+
+- **Regra:** a instrução de kickoff do PO (com ou sem event log) traz uma
+  terceira obrigação: todo RF que recebe um valor informado pelo usuário
+  (data, número, texto, lista, limite) declara, no RF e no DoD, se a borda —
+  passado/futuro, zero, vazio, negativo, o próprio limite — é ACEITA ou
+  RECUSADA (com o status HTTP/erro); o exemplo é a expiração no passado. Sem
+  saber, o PO chama `declare_open_question` com `afeta.historias` e uma
+  sugestão, nunca inventa nem omite. Régua de PROMPT, no molde da
+  [RN-790](#rn-790): nenhuma ferramenta recusa história sem borda. O PO NÃO
+  passa a reescrever `business_rule`; Criativo, QA, schema e gate não mudam.
+- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:649` (`obrigacoes`)
+- **Teste:** `apps/engine/test/engine/agents/po_server_test.exs:438` (a
+  instrução de kickoff traz a obrigação da borda) e `:460` (sem event log, o
+  kickoff ainda a carrega)
+- **Origem:** AT-541 (TP-01 de 14/10: o entregável aceitou `expiresAt` no
+  passado e o link nasceu expirado, 410; o RF da história só dizia que a
+  expiração é opcional), decisão do dono de 15/10
