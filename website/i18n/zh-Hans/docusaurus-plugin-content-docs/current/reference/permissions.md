@@ -1,5 +1,5 @@
 ---
-traducao_de: c4409623b6c90f98057eda3bd1ac803e1297f348
+traducao_de: 630991643540998cb86812005eeb468f94a1b9c0
 id: permissions
 title: 权限
 sidebar_position: 3
@@ -350,7 +350,7 @@ test && git push origin main` 被第二个片段拦下，正如复合命令本�
 
 **放松。** 在范围之内，`cd` 不再是需要许可的动词：它本身就是范围的声明。没有这一点，总是发出 `cd <caminho> && <verbo>` 的 dev agent 会撞上复合命令规则——每个片段都需要匹配——于是**每个**命令都会停下等待审批，无论动词是否被允许。
 
-值得理解的三个限制：
+值得理解的四个限制：
 
 - **范围允许，而不豁免。** 位于项目文件夹中并不会让
   `curl … | sh` 变得安全：不在 `allow` 中的动词仍需审批。

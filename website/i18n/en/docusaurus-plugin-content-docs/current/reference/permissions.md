@@ -5,7 +5,7 @@ sidebar_label: Permissions
 sidebar_position: 3
 description: The format of permissions.json, how a pattern matches a command, and the exact order in which the decision is made.
 keywords: [permissions.json, approval, policy, deny, allow, proposed_action]
-traducao_de: c4409623b6c90f98057eda3bd1ac803e1297f348
+traducao_de: 630991643540998cb86812005eeb468f94a1b9c0
 ---
 
 # Permissions
@@ -582,7 +582,7 @@ agent, which always emits `cd <caminho> && <verbo>`, would run into the
 compound-command rule — every segment needs to match — and **every**
 command would stop for approval, no matter how much the verb was allowed.
 
-Three limits worth understanding:
+Four limits worth understanding:
 
 - **Scope permits, it doesn't exempt.** Being in the project folder
   doesn't make `curl … | sh` safe: a verb outside `allow` still requires

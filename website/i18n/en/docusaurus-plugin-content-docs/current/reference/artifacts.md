@@ -5,7 +5,7 @@ sidebar_label: Artifacts
 sidebar_position: 4
 description: The twelve artifact schemas validated in the engine, who can emit each one, and why most are not emittable by the model.
 keywords: [artifact, schema, emit_artifact, qa_verdict, business_rule, decision_record]
-traducao_de: 1e8de709a9b131f82f750ed20dcb7718152d56bb
+traducao_de: 630991643540998cb86812005eeb468f94a1b9c0
 ---
 
 # Artifacts
@@ -219,7 +219,7 @@ the same mechanism as `product_brief`: validatable here without being on the
 list of types emittable via `emit_artifact`.
 
 Empty `personas`/`jornadas`, or a `prototipo` with no screen at all, fail by
-the same rule as `business_rule.origin` (line 59): an artifact with no content
+the same rule as `business_rule.origin` (the `business_rule` table above): an artifact with no content
 isn't worth recording. A successful `propose_prototype` ends the turn (the same
 reasoning as `propose_execution_plan`/`propose_infra_pr`) — no
 `proposed_action`, no suspension: proposing a prototype has no external effect.

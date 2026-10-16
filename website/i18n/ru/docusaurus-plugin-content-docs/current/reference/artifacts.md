@@ -4,7 +4,7 @@ title: Артефакты
 sidebar_position: 4
 description: Двенадцать схем артефактов, проверяемых в engine, кто может выпускать каждый из них и почему большинство из них модель выпустить не может.
 keywords: [artifact, schema, emit_artifact, qa_verdict, business_rule, decision_record]
-traducao_de: 1e8de709a9b131f82f750ed20dcb7718152d56bb
+traducao_de: 630991643540998cb86812005eeb468f94a1b9c0
 ---
 
 # Артефакты
@@ -221,7 +221,7 @@ Designer выпускает его через `propose_prototype`, ВЫДЕЛЕ�
 выпускаемых через `emit_artifact`.
 
 Пустые `personas`/`jornadas` или `prototipo` без единого экрана отклоняются
-по тому же правилу, что и `business_rule.origin` (строка 59): артефакт без
+по тому же правилу, что и `business_rule.origin` (см. таблицу `business_rule` выше): артефакт без
 содержания не стоит записи. Успешный `propose_prototype` завершает ход (то же
 рассуждение, что у `propose_execution_plan`/`propose_infra_pr`) — без
 `proposed_action`, без приостановки: предложение прототипа не имеет внешнего
