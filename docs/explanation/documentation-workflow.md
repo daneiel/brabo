@@ -690,7 +690,7 @@ O que segura o atraso é medição, não o docmap.
 lado) roda dentro do `pnpm docs:generate` e escreve dois arquivos:
 `docs/reference/paridade-de-traducao.md` (`generated: true`) e
 `website/src/data/traducao.json`. Por locale ele conta páginas e
-caracteres traduzidos sobre a fonte (`docs/` menos `docs/reference/**`),
+caracteres traduzidos sobre a fonte (`docs/` inteiro, `reference/` incluído desde o ADR 0219, menos o próprio relatório e o `openapi.json`),
 e divide as páginas traduzidas em **em dia**, **desatualizadas** e **sem
 proveniência**. A proveniência é o `traducao_de: <SHA>` no frontmatter
 da página traduzida, o último commit da fonte que ela traduz. Uma página

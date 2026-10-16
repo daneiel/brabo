@@ -368,5 +368,9 @@
   "traducao.faixa.defasada": {
     "message": "译文日期 {data}；原文此后已有更改。",
     "description": "Faixa da tradução cuja fonte mudou depois do traducao_de (AT-550)"
+  },
+  "traducao.faixa.originalEmIngles": {
+    "message": "本页目前仍为英文。",
+    "description": "Faixa da página cuja fonte ainda está em inglês (idioma_original: en, AT-564)"
   }
 }
