@@ -1,6 +1,5 @@
 ---
 id: rulesets
-id: rulesets
 title: 仓库 Rulesets
 sidebar_position: 8
 description: 三个永久分支和标签的 ruleset 的精确配置，供手动应用——仓库对来源做版本管理，GitHub 接收应用。
