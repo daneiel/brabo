@@ -5,7 +5,7 @@ sidebar_label: Руководство по эксплуатации
 sidebar_position: 4
 description: Операционные процедуры Brabo — deploy, rollout, restore, ротация ключей, инцидент стоимости и наблюдаемость.
 keywords: [runbook, operations, incident, restore, rollout, kubernetes]
-traducao_de: e5c0b27947f7c700f9f117f65f8ca437569ab9c6
+traducao_de: d6ad631fba3edac691608e1f31d9000e12640253
 ---
 
 # Операционный runbook
