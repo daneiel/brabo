@@ -21,15 +21,15 @@ A fonte é o pt-BR em `docs/` (ADR 0216), inclusive `docs/reference/**` (ADR 021
 
 ### Defasadas em `en`
 
-- `adr/index.md` (tradução de 2026-10-15)
+- `architecture.md` (tradução de 2026-10-15)
 
 ### Defasadas em `ru`
 
-- `adr/index.md` (tradução de 2026-10-15)
+- `architecture.md` (tradução de 2026-10-15)
 
 ### Defasadas em `zh-Hans`
 
-- `adr/index.md` (tradução de 2026-10-15)
+- `architecture.md` (tradução de 2026-10-15)
 
 ## Interface
 
