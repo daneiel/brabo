@@ -531,7 +531,7 @@ still by token prefix, the caps still run after the file in `decide()`, and
 the path scope still applies outside auto mode. A module dev agent's click
 still goes to `agent_autonomy`, not to a pattern ([RN-509](../business-rules.md#rn-509)).
 
-## Path scope
+## Path scope {#path-scope}
 
 A `terminal` command is also evaluated by **where it touches**, not just
 by the verb ([ADR 0055](../adr/0055-escopo-de-caminho-na-politica-de-terminal.md),
@@ -612,7 +612,7 @@ result stays `auto_approve` — the file doesn't "vote against" by
 omission. Each stage can only raise the permissiveness of the previous
 one.
 
-## Caps
+## Caps {#caps}
 
 Applied **last**, after everything else:
 
