@@ -1,0 +1,204 @@
+---
+id: scripts
+title: Скрипты и команды
+sidebar_label: Scripts
+sidebar_position: 7
+description: Все pnpm-скрипты и цели Makefile репозитория, извлечённые из исходников.
+keywords: [scripts, pnpm, make, commands]
+---
+
+# Скрипты и команды
+
+> ⚠️ Файл сгенерирован `pnpm docs:generate`. Не редактируйте вручную — следующая сборка его перезапишет.
+
+Источник: `package.json` каждого пакета и корневой `Makefile`.
+
+## Корень — `package.json`
+
+| команда | запускает |
+|---|---|
+| `pnpm bootstrap` | `bash scripts/dev/bootstrap.sh` |
+| `pnpm dev` | `node scripts/dev/preflight.mjs && docker compose -f docker/docker-compose.yml --env-file .env up` |
+| `pnpm dev:build` | `node scripts/dev/preflight.mjs && docker compose -f docker/docker-compose.yml --env-file .env up --build` |
+| `pnpm dev:down` | `docker compose -f docker/docker-compose.yml --env-file .env down` |
+| `pnpm dev:gpu` | `node scripts/dev/preflight.mjs && docker compose -f docker/docker-compose.yml -f docker/docker-compose.gpu.yml --env-file .env up` |
+| `pnpm dev:obs` | `node scripts/dev/preflight.mjs && docker compose -f docker/docker-compose.yml -f docker/docker-compose.observability.yml --env-file .env up -d && node scripts/dev/observabilidade-pronta.mjs` |
+| `pnpm obs:down` | `docker compose -f docker/docker-compose.yml -f docker/docker-compose.observability.yml --env-file .env stop grafana prometheus loki alloy` |
+| `pnpm dev:preflight` | `node scripts/dev/preflight.mjs` |
+| `pnpm dev:api` | `pnpm --filter api start:dev` |
+| `pnpm dev:web` | `pnpm --filter web dev` |
+| `pnpm build` | `pnpm --filter api build && pnpm --filter web build` |
+| `pnpm test` | `pnpm --filter api test && pnpm --filter web test` |
+| `pnpm db:generate` | `pnpm --filter api db:generate` |
+| `pnpm db:migrate` | `pnpm --filter api db:migrate` |
+| `pnpm engine:setup` | `cd apps/engine && mix deps.get && mix ecto.create && mix ecto.migrate` |
+| `pnpm engine:dev` | `cd apps/engine && mix phx.server` |
+| `pnpm engine:test` | `cd apps/engine && mix test` |
+| `pnpm engine:migrate` | `cd apps/engine && mix ecto.migrate` |
+| `pnpm e2e` | `pnpm --dir e2e test` |
+| `pnpm e2e:navegadores` | `pnpm --dir e2e navegadores` |
+| `pnpm docs:start` | `pnpm --dir website start` |
+| `pnpm docs:build` | `pnpm --dir website build` |
+| `pnpm docs:serve` | `pnpm --dir website serve` |
+| `pnpm docs:clear` | `pnpm --dir website clear` |
+| `pnpm docs:generate` | `node scripts/docs/generate.mjs` |
+| `pnpm docs:landing` | `node scripts/docs/landing.mjs` |
+| `pnpm docs:check` | `node scripts/docs/docmap.mjs && node scripts/docs/generate.mjs --check` |
+| `pnpm docs:drift` | `node scripts/docs/drift.mjs` |
+| `pnpm docs:audit` | `node scripts/docs/audit.mjs` |
+
+## api — `apps/api/package.json`
+
+| команда | запускает |
+|---|---|
+| `pnpm --filter api build` | `nest build` |
+| `pnpm --filter api format` | `prettier --write "src/**/*.ts" "test/**/*.ts"` |
+| `pnpm --filter api start` | `nest start` |
+| `pnpm --filter api start:dev` | `nest start --watch` |
+| `pnpm --filter api start:debug` | `nest start --debug --watch` |
+| `pnpm --filter api start:prod` | `node dist/main` |
+| `pnpm --filter api lint` | `eslint "{src,apps,libs,test}/**/*.ts" --fix` |
+| `pnpm --filter api test` | `vitest run` |
+| `pnpm --filter api typecheck` | `tsc -p tsconfig.build.json --noEmit` |
+| `pnpm --filter api test:watch` | `vitest` |
+| `pnpm --filter api test:cov` | `vitest run --coverage` |
+| `pnpm --filter api seed` | `ts-node src/db/seed.ts` |
+| `pnpm --filter api openapi:export` | `ts-node src/scripts/export-openapi.ts` |
+| `pnpm --filter api demo:repo-bootstrap` | `ts-node scripts/demo-repo-bootstrap.ts` |
+| `pnpm --filter api demo:noop-execution` | `ts-node scripts/demo-noop-execution.ts` |
+| `pnpm --filter api demo:dev-agent-real` | `ts-node scripts/demo-dev-agent-real.ts` |
+| `pnpm --filter api demo:pr-gates` | `ts-node scripts/demo-pr-gates.ts` |
+| `pnpm --filter api demo:pr-gates-area-qa` | `ts-node scripts/demo-pr-gates-area-qa.ts` |
+| `pnpm --filter api golden-set:qa-seed` | `ts-node scripts/seed-golden-set-qa.ts` |
+| `pnpm --filter api golden-set:rag-seed` | `ts-node scripts/seed-golden-set-rag.ts` |
+| `pnpm --filter api demo:infra-agent` | `ts-node scripts/demo-infra-agent.ts` |
+| `pnpm --filter api demo:infra-workflows-github` | `ts-node scripts/demo-infra-workflows-github.ts` |
+| `pnpm --filter api demo:psicologo` | `ts-node scripts/demo-psicologo.ts` |
+| `pnpm --filter api demo:anamnese` | `ts-node scripts/demo-anamnese.ts` |
+| `pnpm --filter api validacao:fase-12` | `ts-node scripts/validacao-fase-12.ts` |
+| `pnpm --filter api validacao:real` | `ts-node scripts/validacao-real.ts` |
+| `pnpm --filter api validacao:gates` | `ts-node scripts/validacao-gates.ts` |
+| `pnpm --filter api medir:execucao` | `ts-node scripts/medir-execucao.ts` |
+| `pnpm --filter api medir:rag` | `ts-node scripts/medir-rag.ts` |
+| `pnpm --filter api analise:funil` | `ts-node scripts/analise-funil.ts` |
+| `pnpm --filter api relatorio:seguranca-runtime` | `ts-node scripts/relatorio-seguranca-runtime.ts` |
+| `pnpm --filter api relatorio:telemetria` | `ts-node scripts/relatorio-telemetria.ts` |
+| `pnpm --filter api gerar:areas` | `ts-node scripts/gerar-areas.ts` |
+| `pnpm --filter api lint:migracao` | `ts-node scripts/lint-migracao.ts` |
+| `pnpm --filter api relatorio:backup` | `ts-node scripts/relatorio-backup.ts` |
+| `pnpm --filter api grafo:reprojetar` | `ts-node src/scripts/reprojetar-grafo.ts` |
+| `pnpm --filter api artefatos:reprojetar` | `ts-node src/scripts/reprojetar-artefatos.ts` |
+| `pnpm --filter api db:generate` | `drizzle-kit generate` |
+| `pnpm --filter api db:migrate` | `drizzle-kit migrate` |
+
+## web — `apps/web/package.json`
+
+| команда | запускает |
+|---|---|
+| `pnpm --filter web dev` | `vite` |
+| `pnpm --filter web build` | `tsc -b && vite build` |
+| `pnpm --filter web typecheck` | `tsc -b --force` |
+| `pnpm --filter web lint` | `oxlint` |
+| `pnpm --filter web preview` | `vite preview` |
+| `pnpm --filter web test` | `vitest run` |
+| `pnpm --filter web openapi:types` | `openapi-typescript ../../docs/reference/openapi.json -o src/lib/api-types.generated.ts` |
+| `pnpm --filter web openapi:types:check` | `openapi-typescript ../../docs/reference/openapi.json -o src/lib/api-types.generated.ts --check` |
+
+## runner — `apps/runner/package.json`
+
+| команда | запускает |
+|---|---|
+| `pnpm --filter @brabo/runner start` | `node src/index.ts` |
+| `pnpm --filter @brabo/runner build` | `tsup` |
+| `pnpm --filter @brabo/runner build:bin` | `node scripts/build-bin.mjs` |
+| `pnpm --filter @brabo/runner smoke` | `node scripts/smoke-dist.mjs` |
+| `pnpm --filter @brabo/runner smoke:bin` | `node scripts/smoke-bin.mjs` |
+| `pnpm --filter @brabo/runner test` | `vitest run` |
+| `pnpm --filter @brabo/runner typecheck` | `tsc --noEmit` |
+| `pnpm --filter @brabo/runner lint` | `oxlint --deny-warnings src scripts` |
+
+## broker — `apps/broker/package.json`
+
+| команда | запускает |
+|---|---|
+| `pnpm --filter @brabo/broker start` | `node src/index.ts` |
+| `pnpm --filter @brabo/broker build` | `tsup` |
+| `pnpm --filter @brabo/broker test` | `vitest run` |
+| `pnpm --filter @brabo/broker typecheck` | `tsc --noEmit` |
+| `pnpm --filter @brabo/broker lint` | `oxlint --deny-warnings src tsup.config.ts vitest.config.ts` |
+
+## docker-port — `packages/docker-port/package.json`
+
+| команда | запускает |
+|---|---|
+| `pnpm --filter @brabo/docker-port test` | `vitest run` |
+| `pnpm --filter @brabo/docker-port typecheck` | `tsc --noEmit` |
+| `pnpm --filter @brabo/docker-port lint` | `oxlint --deny-warnings src vitest.config.ts` |
+
+## website — `website/package.json`
+
+| команда | запускает |
+|---|---|
+| `pnpm --dir website docusaurus` | `docusaurus` |
+| `pnpm --dir website start` | `docusaurus start` |
+| `pnpm --dir website build` | `docusaurus build` |
+| `pnpm --dir website swizzle` | `docusaurus swizzle` |
+| `pnpm --dir website deploy` | `docusaurus deploy` |
+| `pnpm --dir website clear` | `docusaurus clear` |
+| `pnpm --dir website serve` | `docusaurus serve` |
+| `pnpm --dir website write-translations` | `docusaurus write-translations` |
+| `pnpm --dir website write-heading-ids` | `docusaurus write-heading-ids` |
+| `pnpm --dir website typecheck` | `tsc` |
+
+## e2e — `e2e/package.json`
+
+| команда | запускает |
+|---|---|
+| `pnpm --dir e2e test` | `playwright test` |
+| `pnpm --dir e2e test:headed` | `playwright test --headed` |
+| `pnpm --dir e2e relatorio` | `playwright show-report` |
+| `pnpm --dir e2e navegadores` | `playwright install --with-deps chromium` |
+| `pnpm --dir e2e typecheck` | `tsc --noEmit` |
+
+## scripts — `scripts/package.json`
+
+| команда | запускает |
+|---|---|
+| `pnpm --filter scripts test` | `vitest run` |
+| `pnpm --filter scripts typecheck` | `tsc --noEmit && tsc --noEmit -p idioma && tsc --noEmit -p jev/vivo` |
+| `pnpm --filter scripts idioma:medir` | `node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON idioma/medir.ts` |
+| `pnpm --filter scripts idioma:extrair` | `node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON idioma/extrair.ts` |
+| `pnpm --filter scripts idioma:rotular` | `node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON idioma/rotular.ts` |
+| `pnpm --filter scripts jev:replay` | `node jev/replay.ts` |
+| `pnpm --filter scripts jev:analise` | `node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON jev/analise.ts` |
+| `pnpm --filter scripts jev:menu` | `node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON jev/menu-relatorio.ts` |
+| `pnpm --filter scripts jev:vivo` | `node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON jev/vivo/vivo.ts` |
+| `pnpm --filter scripts idioma:validar` | `node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON idioma/validar.ts` |
+| `pnpm --filter scripts idioma:diagnosticar` | `node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON idioma/diagnostico-haiku.ts` |
+| `pnpm --filter scripts idioma:revisar` | `node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON idioma/revisao.ts` |
+
+## Makefile
+
+| цель | делает |
+|---|---|
+| `make help` | Lists the available targets |
+| `make deploy-local` | Brings up the local cluster, installs everything and runs the smoke test (TAG=vX.Y.Z-qa.N optional) |
+| `make deploy-local-clean` | Same as deploy-local, but without rebuilding the images |
+| `make imagens-do-release` | Applies the digests from .release/images.json to an overlay (OVERLAY=prod|staging) |
+| `make smoke-k8s` | Runs only the smoke test against the cluster already up |
+| `make hpa-test` | Fills the Oban queue and proves the engine's HPA scales |
+| `make rollout-test` | Opens active sessions, does a rollout restart and proves none is orphaned |
+| `make test-restore` | Triggers a real backup, restores it into a new database and validates it |
+| `make test-restore-mutacao` | Breaks the restore on purpose (dump without a table) and requires the proof to catch it |
+| `make test-restore-compose` | Same proof as test-restore, against docker compose (no cluster); BRABO_ENV_FILE passes the installation .env |
+| `make test-reprojecao` | Wipes a graph scenario, reprojects it from the event log and compares counts (needs Neo4j up) |
+| `make test-reprojecao-k8s` | Same proof as test-reprojecao, inside the local cluster (needs `make deploy-local` first) |
+| `make test-reprojecao-artefatos-k8s` | Wipes an artifact file inside the cluster, reprojects it from the event log and compares it (needs `make deploy-local` first) |
+| `make test-rotacao-chave-mestra-k8s` | Rehearses the master key rotation (three runbook steps) inside the local cluster (needs `make deploy-local` first; leaves the cluster on a new key) |
+| `make k8s-validate` | Renders the overlays and validates them against the Kubernetes schema |
+| `make k8s-logs` | Last lines from each workload |
+| `make k8s-down` | Removes the local cluster |
+
+---
+
+Всего команд: 136. Цель Makefile без аннотации `## описание` здесь не появляется — добавьте её в исходнике.
