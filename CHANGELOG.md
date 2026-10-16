@@ -6,6 +6,10 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- As páginas geradas da Referência (configuração, eventos, provedores de LLM e
+  scripts) também ficam no idioma da página (ADR 0219, AT-564): a fonte é
+  pt-BR e o gerador escreve o bloco gerado em cada idioma; com isso a
+  Referência inteira está em português, inglês, russo e chinês.
 - A Referência da documentação entra na tradução (ADR 0219, AT-564): as seis
   páginas escritas à mão (API interna, permissões, artefatos, provedores de git,
   registro BRB e rulesets) passam a ter a fonte em português, com a cópia em
