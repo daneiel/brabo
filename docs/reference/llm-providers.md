@@ -114,14 +114,14 @@ Lido dos literais `capabilities` em `apps/api/src/infrastructure/llm/` — **9 p
 | provider | streaming | tool calling | list_models | embeddings | preferência de roteamento | credencial | origem dos modelos | quirks resumidos | fonte |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `anthropic` | sim | sim | sim | não | não | chave de API | sync + seed | — | `apps/api/src/infrastructure/llm/anthropic-provider.ts` |
-| `bitdeer` | sim | sim | não | não | não | chave de API | seed | `Authorization: Bearer <chave>` CONFIRMED; `GET /v1/models` exists and is authenticated; Three REAL model ids confirmed; No stream/error quirk confirmed | `apps/api/src/infrastructure/llm/bitdeer-provider.ts` |
-| `deepinfra` | sim | sim | sim | não | não | chave de API | sync + seed | The catalog is PUBLIC — no authentication at all; `stream_options.include_usage` confirmed supported; Error in standard shape | `apps/api/src/infrastructure/llm/deepinfra-provider.ts` |
-| `nvidia-nim` | sim | sim | não | não | não | chave de API | seed | No dedicated header; Tool calling is PER MODEL, not per API; `stream_options.include_usage` not confirmed | `apps/api/src/infrastructure/llm/nvidia-nim-provider.ts` |
+| `bitdeer` | sim | sim | não | não | não | chave de API | seed | `Authorization: Bearer <chave>` CONFIRMADO; `GET /v1/models` existe e é autenticado; Três ids REAIS de modelo confirmados; Nenhuma peculiaridade de stream/erro confirmada | `apps/api/src/infrastructure/llm/bitdeer-provider.ts` |
+| `deepinfra` | sim | sim | sim | não | não | chave de API | sync + seed | O catálogo é PÚBLICO — sem autenticação nenhuma; `stream_options.include_usage` confirmado como suportado; Erro no formato padrão | `apps/api/src/infrastructure/llm/deepinfra-provider.ts` |
+| `nvidia-nim` | sim | sim | não | não | não | chave de API | seed | Sem cabeçalho dedicado; Tool calling é POR MODELO, não por API; `stream_options.include_usage` não confirmado | `apps/api/src/infrastructure/llm/nvidia-nim-provider.ts` |
 | `ollama` | sim | sim | sim | sim | não | nenhuma (local) | sync + seed | — | `apps/api/src/infrastructure/llm/ollama-provider.ts` |
 | `openai` | sim | sim | sim | não | não | chave de API | sync + seed | — | `apps/api/src/infrastructure/llm/openai-provider.ts` |
-| `openrouter` | sim | sim | sim | não | sim | chave de API | sync | Own headers; Model id prefixed by the upstream; Catalog with pricing on its own row; Error IN THE MIDDLE of the stream; Real cost in `usage.cost`; Free-routing alias (`~…`) is synced but cannot be curated | `apps/api/src/infrastructure/llm/openrouter-provider.ts` |
-| `together` | sim | sim | sim | não | não | chave de API | sync + seed | Price unit NOT explicitly documented by Together; Namespaced ids; `stream_options.include_usage` not confirmed; 429 carries `error_type: dynamic_request_limited \| dynamic_token_limited` | `apps/api/src/infrastructure/llm/together-provider.ts` |
-| `vultr` | sim | sim | não | não | não | chave de API | seed | Tool calling CONFIRMED with a real example; `-normalize` suffix | `apps/api/src/infrastructure/llm/vultr-provider.ts` |
+| `openrouter` | sim | sim | sim | não | sim | chave de API | sync | Cabeçalhos próprios; Id de modelo prefixado pelo upstream; Catálogo com preço na própria linha; Erro NO MEIO do stream; Custo real em `usage.cost`; Alias de roteamento livre (`~…`) é sincronizado mas não pode ser curado | `apps/api/src/infrastructure/llm/openrouter-provider.ts` |
+| `together` | sim | sim | sim | não | não | chave de API | sync + seed | Unidade de preço NÃO documentada explicitamente pela Together; Ids com namespace; `stream_options.include_usage` não confirmado; 429 leva `error_type: dynamic_request_limited \| dynamic_token_limited` | `apps/api/src/infrastructure/llm/together-provider.ts` |
+| `vultr` | sim | sim | não | não | não | chave de API | seed | Tool calling CONFIRMADO com exemplo real; Sufixo `-normalize` | `apps/api/src/infrastructure/llm/vultr-provider.ts` |
 
 Provider sem `list_models` é PULADO pela sincronização do catálogo, com o motivo
 no relatório — nunca tratado como "o catálogo voltou vazio".
