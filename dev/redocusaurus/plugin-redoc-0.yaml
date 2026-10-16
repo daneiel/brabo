@@ -10003,7 +10003,45 @@ info:
     guards `/auth/*` is the progressive lockout, not the rate limit.
   version: 0.1.0
   contact: {}
-tags: []
+tags:
+  - name: auth
+    x-displayName: auth
+  - name: gates
+    x-displayName: gates
+  - name: git
+    x-displayName: git
+  - name: infrastructure
+    x-displayName: infrastructure
+  - name: internal
+    x-displayName: internal
+  - name: llm
+    x-displayName: llm
+  - name: projects
+    x-displayName: projects
+  - name: actions
+    x-displayName: actions
+  - name: execution
+    x-displayName: execution
+  - name: anamnesis
+    x-displayName: anamnesis
+  - name: backlog
+    x-displayName: backlog
+  - name: psychologist
+    x-displayName: psychologist
+  - name: projetos
+    x-displayName: projetos
+  - name: rag
+    x-displayName: rag
+  - name: sessions
+    x-displayName: sessions
+  - name: agents
+    x-displayName: agents
+  - name: credentials
+    x-displayName: credentials
+  - name: users
+    x-displayName: users
+  - name: workspaces
+    x-displayName: workspaces
 servers: []
 components:
   securitySchemes:
