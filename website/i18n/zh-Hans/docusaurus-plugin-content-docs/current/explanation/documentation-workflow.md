@@ -5,7 +5,7 @@ sidebar_label: 文档同步
 sidebar_position: 1
 description: 阻止文档腐烂的机制——每个部件做什么、为什么存在，以及当检查不公正地抱怨时该怎么办。
 keywords: [documentation, drift, docmap, CI, generation]
-traducao_de: 533ceeea898444e4d43ea714775482f74e65a781
+traducao_de: 372d04694ec63538d46e0150e58e31c03960091b
 ---
 
 # 文档如何保持鲜活 {#how-documentation-stays-alive}
@@ -576,6 +576,12 @@ slug 会在每个 locale 中让 `docs:build` 失败。
 > `gh api repos/daneiel/brabo/pages`，记录在 [Rulesets](../reference/rulesets.md) 中。
 
 整个设计，连同被放弃的替代方案，在 [ADR 0034](../adr/0034-documentacao-publicada-por-degrau.md) 中。
+
+## 站点的颜色来自产品 {#site-colors-come-from-the-product}
+
+`website/src/css/custom.css` 导入 `design/tokens.css`——与 `apps/web` 相同的颜色来源（ADR 0181）——只是把 Infima 的 `--ifm-*` 指向这些令牌：深色为黑，浅色为白，primary 为赤陶色（`--accent`），代码高亮使用 `--syntax-*`。没有复制任何 hex。字体刻意保持系统字体：站点不加载 `--font-*` 所命名的字体族。`scripts/docs/contraste-do-site.spec.ts` 在两个主题中把文本 `--ifm-*` 解析到 hex，对背景低于 4.5:1 即判失败（如果什么都没解析出来，则以 BLIND（盲）判失败）。
+
+例外是根索引（`/brabo/`，由 `scripts/docs/landing.mjs` 写出）：它是 Pages 上的独立 HTML，够不到 `tokens.css`，因此复制这些值，并按系统偏好覆盖两个主题。这份复制由 `scripts/docs/landing.spec.ts` 约束，它解析令牌并对不一致的值判失败——在 ADR 0181 之后它就曾经变成过石油蓝色。
 
 ## 在你的机器上运行 {#running-it-on-your-machine}
 
