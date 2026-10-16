@@ -319,9 +319,9 @@ sequenceDiagram
 
 <!-- BEGIN:GENERATED:eventos-inventario -->
 
-> ⚠️ Bloco gerado por `pnpm docs:generate`. Não edite à mão — o próximo build o sobrescreve.
+> ⚠️ 此区块由 `pnpm docs:generate` 生成。请勿手动编辑——下次构建会覆盖它。
 
-Extraídos dos pontos de emissão: **110 identificadores**, dos quais **3** não estão descritos acima.
+从发出点提取：**110 个标识符**，其中 **3** 个未在上文描述。
 
 - `action.failed` <sub>(apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts)</sub>
 - `agent.activated` <sub>(apps/api/src/application/use-cases/agents/activate-agent.use-case.ts)</sub>
@@ -342,13 +342,13 @@ Extraídos dos pontos de emissão: **110 identificadores**, dos quais **3** não
 - `artifact.decision_record` <sub>(apps/api/src/application/use-cases/backlog/perguntas-em-aberto.use-case.ts)</sub>
 - `artifact.insight` <sub>(apps/engine/lib/engine/harness/tools/emit_insight.ex)</sub>
 - `artifact.module_map` <sub>(apps/api/src/application/use-cases/architecture/create-module-map.use-case.ts)</sub>
-- `artifact.open_question` — ⚠️ **não descrito acima** <sub>(apps/engine/lib/engine/harness/decisoes_do_projeto.ex)</sub>
+- `artifact.open_question` — ⚠️ **上文未描述** <sub>(apps/engine/lib/engine/harness/decisoes_do_projeto.ex)</sub>
 - `artifact.plano_de_teste` <sub>(apps/engine/lib/engine/gates/qa_lead_server.ex)</sub>
 - `artifact.product_brief` <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub>
 - `artifact.project_image` <sub>(apps/engine/lib/engine/harness/ambiente_do_agente.ex)</sub>
 - `artifact.prototipo_navegavel` <sub>(apps/engine/lib/engine/agents/ux_designer_tools.ex)</sub>
 - `artifact.rfc_staff` <sub>(apps/engine/lib/engine/agents/staff_tools.ex)</sub>
-- `artifact.secops_verdict` — ⚠️ **não descrito acima** <sub>(apps/engine/lib/engine/gates/secops_agent_server.ex)</sub>
+- `artifact.secops_verdict` — ⚠️ **上文未描述** <sub>(apps/engine/lib/engine/gates/secops_agent_server.ex)</sub>
 - `artifact.threat_model` <sub>(apps/engine/lib/engine/agents/dev_lead_tools.ex)</sub>
 - `backlog.epic_created` <sub>(apps/api/src/application/use-cases/backlog/create-epic.use-case.ts)</sub>
 - `backlog.epic_without_story` <sub>(apps/engine/lib/engine/agents/po_server.ex)</sub>
@@ -374,7 +374,7 @@ Extraídos dos pontos de emissão: **110 identificadores**, dos quais **3** não
 - `bootstrap.adopted_as_is` <sub>(apps/api/src/application/use-cases/git/decide-bootstrap-plan.use-case.ts)</sub>
 - `bootstrap.plan_approved` <sub>(apps/api/src/application/use-cases/git/decide-bootstrap-plan.use-case.ts)</sub>
 - `bootstrap.repository_adopted` <sub>(apps/api/src/application/use-cases/git/adopt-repository.use-case.ts)</sub>
-- `bootstrap.step_acknowledged` — ⚠️ **não descrito acima** <sub>(apps/api/src/application/use-cases/git/acknowledge-protection-failure.use-case.ts)</sub>
+- `bootstrap.step_acknowledged` — ⚠️ **上文未描述** <sub>(apps/api/src/application/use-cases/git/acknowledge-protection-failure.use-case.ts)</sub>
 - `bootstrap.step_completed` <sub>(apps/api/src/application/use-cases/git/bootstrap-runner.ts)</sub>
 - `bootstrap.step_degraded` <sub>(apps/api/src/application/use-cases/git/bootstrap-runner.ts)</sub>
 - `bootstrap.step_failed` <sub>(apps/api/src/application/use-cases/git/bootstrap-runner.ts)</sub>

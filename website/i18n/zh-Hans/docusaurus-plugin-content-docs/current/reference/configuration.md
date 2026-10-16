@@ -548,13 +548,13 @@ bootstrap（`make deploy-local`）以及 `.github/workflows/propriedades.yml` �
 
 <!-- BEGIN:GENERATED:env-inventario -->
 
-> ⚠️ Bloco gerado por `pnpm docs:generate`. Não edite à mão — o próximo build o sobrescreve.
+> ⚠️ 此区块由 `pnpm docs:generate` 生成。请勿手动编辑——下次构建会覆盖它。
 
-Inventário extraído do código: **180 variáveis** lidas em tempo de execução. Todas têm descrição nas tabelas acima.
+从代码中提取的清单：运行时读取 **180 个变量**。全部都在上方表格中有描述。
 
-Cada fonte é marcada **produto** — o que quem opera a instalação configura no `.env` do deploy — ou **ferramenta**, lida só pelo CI e por quem desenvolve o produto. Variável de ferramenta nunca pertence ao `.env` de um operador.
+每个来源都标记为 **产品**——运维安装的人在部署 `.env` 中设置的内容——或 **工具**，仅由 CI 和开发产品的人读取。工具变量绝不应出现在运维人员的 `.env` 中。
 
-**api** — 65 variáveis · produto
+**api** — 65 个变量 · 产品
 
 - `API_JSON_BODY_LIMIT` <sub>(apps/api/src/main.ts)</sub>
 - `API_PUBLIC_URL` <sub>(apps/api/src/application/use-cases/auth/start-social-login.use-case.ts)</sub>
@@ -622,7 +622,7 @@ Cada fonte é marcada **produto** — o que quem opera a instalação configura 
 - `SMTP_USER` <sub>(apps/api/src/infrastructure/mail/smtp-config.ts)</sub>
 - `WEB_ORIGIN` <sub>(apps/api/src/infrastructure/mail/smtp-mail-sender.ts)</sub>
 
-**engine** — 63 variáveis · produto
+**engine** — 63 个变量 · 产品
 
 - `ANAMNESE_BUDGET_MICROS` <sub>(apps/engine/config/runtime.exs)</sub>
 - `ANAMNESE_ENABLED` <sub>(apps/engine/config/runtime.exs)</sub>
@@ -688,14 +688,14 @@ Cada fonte é marcada **produto** — o que quem opera a instalação configura 
 - `TRANSPORT_MAX_BODY_BYTES` <sub>(apps/engine/config/runtime.exs)</sub>
 - `WEB_ORIGIN` <sub>(apps/engine/config/runtime.exs)</sub>
 
-**web** — 4 variáveis · produto
+**web** — 4 个变量 · 产品
 
 - `VITE_API_URL` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
 - `VITE_BRABO_VERSION` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
 - `VITE_ENGINE_URL` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
 - `VITE_LOG_LEVEL` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
 
-**broker** — 7 variáveis · produto
+**broker** — 7 个变量 · 产品
 
 - `API_URL` <sub>(apps/broker/src/config.ts)</sub>
 - `BRABO_PROJECTS_HOST_BASE` <sub>(apps/broker/src/config.ts)</sub>
@@ -705,7 +705,7 @@ Cada fonte é marcada **produto** — o que quem opera a instalação configura 
 - `NODE_ENV` <sub>(apps/broker/src/config.ts)</sub>
 - `PROJECT_WORKSPACES_HOST_ROOT` <sub>(apps/broker/src/config.ts)</sub>
 
-**api/scripts** — 15 variáveis · ferramenta
+**api/scripts** — 15 个变量 · 工具
 
 - `DATABASE_URL` <sub>(apps/api/scripts/demo-repo-bootstrap.ts)</sub>
 - `DEMO_ANAMNESE_TIMEOUT_MS` <sub>(apps/api/scripts/demo-anamnese.ts)</sub>
@@ -723,14 +723,14 @@ Cada fonte é marcada **produto** — o que quem opera a instalação configura 
 - `OLLAMA_HOST` <sub>(apps/api/scripts/demo-psicologo.ts)</sub>
 - `RATE_LIMIT_WINDOW_MS` <sub>(apps/api/scripts/relatorio-seguranca-runtime.ts)</sub>
 
-**e2e** — 4 variáveis · ferramenta
+**e2e** — 4 个变量 · 工具
 
 - `E2E_API_URL` <sub>(e2e/suporte/api.ts)</sub>
 - `E2E_PASSWORD` <sub>(e2e/suporte/api.ts)</sub>
 - `E2E_USER` <sub>(e2e/suporte/api.ts)</sub>
 - `E2E_WEB_URL` <sub>(e2e/playwright.config.ts)</sub>
 
-**deploy/k8s** — 22 variáveis · ferramenta
+**deploy/k8s** — 22 个变量 · 工具
 
 - `API_URL` <sub>(deploy/k8s/rollout-test.sh)</sub>
 - `BRABO_CLUSTER_NAME` <sub>(deploy/k8s/bootstrap.sh)</sub>

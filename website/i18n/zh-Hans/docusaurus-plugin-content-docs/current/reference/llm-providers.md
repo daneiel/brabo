@@ -85,34 +85,34 @@ tool calling 和 token 计数都没有单独的方法：工具放在 `options.to
 
 <!-- BEGIN:GENERATED:providers-capabilities -->
 
-> ⚠️ Bloco gerado por `pnpm docs:generate`. Não edite à mão — o próximo build o sobrescreve.
+> ⚠️ 此区块由 `pnpm docs:generate` 生成。请勿手动编辑——下次构建会覆盖它。
 
-Lido dos literais `capabilities` em `apps/api/src/infrastructure/llm/` — **9 providers**.
+读取自 `apps/api/src/infrastructure/llm/` 中的 `capabilities` 字面量——**9 个 provider**。
 
-| provider | streaming | tool calling | list_models | embeddings | preferência de roteamento | credencial | origem dos modelos | quirks resumidos | fonte |
+| provider | streaming | tool calling | list_models | embeddings | 路由偏好 | 凭据 | 模型来源 | 特性摘要 | 来源 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `anthropic` | sim | sim | sim | não | não | chave de API | sync + seed | — | `apps/api/src/infrastructure/llm/anthropic-provider.ts` |
-| `bitdeer` | sim | sim | não | não | não | chave de API | seed | `Authorization: Bearer <chave>` CONFIRMADO; `GET /v1/models` existe e é autenticado; Três ids REAIS de modelo confirmados; Nenhuma peculiaridade de stream/erro confirmada | `apps/api/src/infrastructure/llm/bitdeer-provider.ts` |
-| `deepinfra` | sim | sim | sim | não | não | chave de API | sync + seed | O catálogo é PÚBLICO — sem autenticação nenhuma; `stream_options.include_usage` confirmado como suportado; Erro no formato padrão | `apps/api/src/infrastructure/llm/deepinfra-provider.ts` |
-| `nvidia-nim` | sim | sim | não | não | não | chave de API | seed | Sem cabeçalho dedicado; Tool calling é POR MODELO, não por API; `stream_options.include_usage` não confirmado | `apps/api/src/infrastructure/llm/nvidia-nim-provider.ts` |
-| `ollama` | sim | sim | sim | sim | não | nenhuma (local) | sync + seed | — | `apps/api/src/infrastructure/llm/ollama-provider.ts` |
-| `openai` | sim | sim | sim | não | não | chave de API | sync + seed | — | `apps/api/src/infrastructure/llm/openai-provider.ts` |
-| `openrouter` | sim | sim | sim | não | sim | chave de API | sync | Cabeçalhos próprios; Id de modelo prefixado pelo upstream; Catálogo com preço na própria linha; Erro NO MEIO do stream; Custo real em `usage.cost`; Alias de roteamento livre (`~…`) é sincronizado mas não pode ser curado | `apps/api/src/infrastructure/llm/openrouter-provider.ts` |
-| `together` | sim | sim | sim | não | não | chave de API | sync + seed | Unidade de preço NÃO documentada explicitamente pela Together; Ids com namespace; `stream_options.include_usage` não confirmado; 429 leva `error_type: dynamic_request_limited \| dynamic_token_limited` | `apps/api/src/infrastructure/llm/together-provider.ts` |
-| `vultr` | sim | sim | não | não | não | chave de API | seed | Tool calling CONFIRMADO com exemplo real; Sufixo `-normalize` | `apps/api/src/infrastructure/llm/vultr-provider.ts` |
+| `anthropic` | 是 | 是 | 是 | 否 | 否 | API 密钥 | sync + seed | — | `apps/api/src/infrastructure/llm/anthropic-provider.ts` |
+| `bitdeer` | 是 | 是 | 否 | 否 | 否 | API 密钥 | seed | `Authorization: Bearer <chave>` CONFIRMADO; `GET /v1/models` existe e é autenticado; Três ids REAIS de modelo confirmados; Nenhuma peculiaridade de stream/erro confirmada | `apps/api/src/infrastructure/llm/bitdeer-provider.ts` |
+| `deepinfra` | 是 | 是 | 是 | 否 | 否 | API 密钥 | sync + seed | O catálogo é PÚBLICO — sem autenticação nenhuma; `stream_options.include_usage` confirmado como suportado; Erro no formato padrão | `apps/api/src/infrastructure/llm/deepinfra-provider.ts` |
+| `nvidia-nim` | 是 | 是 | 否 | 否 | 否 | API 密钥 | seed | Sem cabeçalho dedicado; Tool calling é POR MODELO, não por API; `stream_options.include_usage` não confirmado | `apps/api/src/infrastructure/llm/nvidia-nim-provider.ts` |
+| `ollama` | 是 | 是 | 是 | 是 | 否 | 无（本地） | sync + seed | — | `apps/api/src/infrastructure/llm/ollama-provider.ts` |
+| `openai` | 是 | 是 | 是 | 否 | 否 | API 密钥 | sync + seed | — | `apps/api/src/infrastructure/llm/openai-provider.ts` |
+| `openrouter` | 是 | 是 | 是 | 否 | 是 | API 密钥 | sync | Cabeçalhos próprios; Id de modelo prefixado pelo upstream; Catálogo com preço na própria linha; Erro NO MEIO do stream; Custo real em `usage.cost`; Alias de roteamento livre (`~…`) é sincronizado mas não pode ser curado | `apps/api/src/infrastructure/llm/openrouter-provider.ts` |
+| `together` | 是 | 是 | 是 | 否 | 否 | API 密钥 | sync + seed | Unidade de preço NÃO documentada explicitamente pela Together; Ids com namespace; `stream_options.include_usage` não confirmado; 429 leva `error_type: dynamic_request_limited \| dynamic_token_limited` | `apps/api/src/infrastructure/llm/together-provider.ts` |
+| `vultr` | 是 | 是 | 否 | 否 | 否 | API 密钥 | seed | Tool calling CONFIRMADO com exemplo real; Sufixo `-normalize` | `apps/api/src/infrastructure/llm/vultr-provider.ts` |
 
-Provider sem `list_models` é PULADO pela sincronização do catálogo, com o motivo
-no relatório — nunca tratado como "o catálogo voltou vazio".
-"Origem dos modelos": `sync` descobre sozinho, `seed` só entra por
-`apps/api/src/db/seed.ts`, `sync + seed` tem os dois (o seed é só o bootstrap
-antes da primeira sincronização). "Quirks resumidos" são os RÓTULOS em negrito da
-seção de prosa do provider abaixo — o porquê de cada um mora lá, não aqui.
-"embeddings" é a capability do ADR 0075, e só é `sim` com PROVA de execução:
-ler a documentação não conta, e o motivo de cada `não` está no comentário do
-literal, no arquivo da última coluna.
-"preferência de roteamento" é a capability do ADR 0166 (um hub escolhendo o upstream
-por `price`, `throughput` ou `latency`), sob a mesma régua: `sim` só depois de
-um smoke contra a API real devolver o upstream escolhido.
+没有 `list_models` 的 provider 会被目录同步跳过，原因记录在报告中——
+绝不会被当作“目录返回为空”。
+“模型来源”：`sync` 自行发现，`seed` 只通过
+`apps/api/src/db/seed.ts` 进入，`sync + seed` 两者都有（seed 只是首次同步前的
+引导）。“特性摘要”是下方该 provider 文字章节中的粗体标签——
+每一项的原因写在那里，而不是这里。
+“embeddings” 是 ADR 0075 的能力，只有在有执行证明时才为 `是`：
+阅读文档不算数，每个 `否` 的原因写在字面量的注释里，
+即最后一列所列的文件中。
+“路由偏好” 是 ADR 0166 的能力（hub 按 `price`、`throughput` 或 `latency`
+选择 upstream），规则相同：只有在针对真实 API 的 smoke 测试
+返回所选 upstream 之后才为 `是`。
 <!-- END:GENERATED:providers-capabilities -->
 
 `supports_tool_calling` 的默认值是 `false`。这是故意的：自动同步（Fase 9c）发现的模型进入时不带任何没人验证过的承诺。种子中的模型显式声明这一 capability，migration `0026` 在已存在的数据库中做同样的回填——只针对种子的七行，绝不是对整张表盲目 `UPDATE`。
