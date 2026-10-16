@@ -287,8 +287,8 @@ const config: Config = {
           position: 'left',
           label: 'Documentação',
         },
-        { to: '/runbook', label: 'Runbook', position: 'left' },
-        { to: '/adr/', label: 'ADRs', position: 'left' },
+        { to: '/runbook', label: 'Manual de operação', position: 'left' },
+        { to: '/adr/', label: 'Decisões (ADRs)', position: 'left' },
         // O idioma, pelos rótulos nativos de `localeConfigs`; leva à MESMA
         // página no outro locale (página sem tradução cai na fonte pt-BR).
         { type: 'localeDropdown', position: 'right' },
@@ -326,7 +326,7 @@ const config: Config = {
             { label: 'Primeiros passos', to: '/getting-started' },
             { label: 'Arquitetura', to: '/architecture' },
             { label: 'Regras de negócio', to: '/business-rules' },
-            { label: 'Runbook', to: '/runbook' },
+            { label: 'Manual de operação', to: '/runbook' },
           ],
         },
         {

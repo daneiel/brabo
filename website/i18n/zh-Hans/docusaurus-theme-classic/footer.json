@@ -23,10 +23,6 @@
     "message": "业务规则",
     "description": "The label of footer link with label=Regras de negócio linking to /business-rules"
   },
-  "link.item.label.Runbook": {
-    "message": "Runbook",
-    "description": "The label of footer link with label=Runbook linking to /runbook"
-  },
   "link.item.label.Como contribuir": {
     "message": "如何贡献",
     "description": "The label of footer link with label=Como contribuir linking to https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md"
@@ -58,5 +54,9 @@
   "copyright": {
     "message": "Copyright © 2026 Daniel Souza。基于 MIT 许可证授权。第三方工具保留各自的许可证——参见第三方声明。",
     "description": "The footer copyright"
+  },
+  "link.item.label.Manual de operação": {
+    "message": "运维手册",
+    "description": "The label of footer link with label=Manual de operação linking to /runbook"
   }
 }

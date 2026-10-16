@@ -11,14 +11,6 @@
     "message": "Документация",
     "description": "Navbar item with label Documentação"
   },
-  "item.label.Runbook": {
-    "message": "Runbook",
-    "description": "Navbar item with label Runbook"
-  },
-  "item.label.ADRs": {
-    "message": "ADRs",
-    "description": "Navbar item with label ADRs"
-  },
   "item.label.prd": {
     "message": "prd",
     "description": "Navbar item with label prd"
@@ -38,5 +30,13 @@
   "item.label.dev — em desenvolvimento": {
     "message": "dev — в разработке",
     "description": "Navbar item with label dev — em desenvolvimento"
+  },
+  "item.label.Manual de operação": {
+    "message": "Руководство по эксплуатации",
+    "description": "Navbar item with label Manual de operação"
+  },
+  "item.label.Decisões (ADRs)": {
+    "message": "Решения (ADR)",
+    "description": "Navbar item with label Decisões (ADRs)"
   }
 }

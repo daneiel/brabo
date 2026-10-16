@@ -6,6 +6,9 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- O site da documentação mostra traduzidos, nos quatro idiomas, os itens de
+  Referência da lateral e os da barra de cima ("Manual de operação",
+  "Decisões (ADRs)"); o conteúdo gerado de `reference/` segue sem tradução (AT-563).
 - O site da documentação tem um seletor de idioma na barra de cima, que leva à
   mesma página em português, inglês, russo ou chinês (AT-562).
 - engine (PO): a instrução de kickoff manda declarar, no RF e no DoD, a borda

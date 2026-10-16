@@ -56,6 +56,8 @@ commit da fonte que ela traduz. É ele que separa "em dia" de "defasada". A
 medição de hoje está em [Paridade de tradução](../reference/paridade-de-traducao.md),
 gerada por `pnpm docs:generate`.
 
+Os rótulos da lateral de Referência e da barra de cima vêm de `website/sidebars.ts` e dos `navbar.json`/`current.json` de cada idioma; o conteúdo das páginas de `reference/`, gerado, segue fora da tradução.
+
 ## O que nunca se traduz
 
 - **Brabo**, e os nomes de agente e de papel do [glossário](../glossary.md)
