@@ -4,6 +4,7 @@ title: Internal API (api ↔ engine)
 sidebar_label: Internal API
 sidebar_position: 6
 description: The two directions of communication between api and engine — HTTP for synchronous commands, outbox and Oban for events.
+traducao_de: 1298c53b46d1828fcd8068dd77614879d3606fd9
 keywords: [internal api, engine, outbox, oban, engine-service, contract]
 ---
 
