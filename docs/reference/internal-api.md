@@ -568,7 +568,7 @@ Two things this route does **not** do, and that used to be different:
   `model_price_changes` with origin `sync` — within the same transaction as the write
   ([RN-044](../business-rules/custo.md#rn-044), [RN-051](../business-rules/custo.md#rn-051)).
 
-### Project working remote
+### Project working remote {#project-working-remote}
 
 | method | path |
 |---|---|
@@ -1332,7 +1332,7 @@ reach the graph via `GraphProjector`, on the api side, draining a
 second line of the transactional outbox; the engine never writes to the graph directly
 ([RN-416](../business-rules.md#rn-416)).
 
-## broker → api
+## broker → api {#broker--api}
 
 Since [ADR 0130](../adr/0130-broker-de-container.md) there is a THIRD service,
 and it speaks the same internal protocol: the container **broker**
