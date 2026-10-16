@@ -6,6 +6,11 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- A Referência da documentação entra na tradução (ADR 0219, AT-564): as seis
+  páginas escritas à mão (API interna, permissões, artefatos, provedores de git,
+  registro BRB e rulesets) passam a ter a fonte em português, com a cópia em
+  inglês; a paridade passa a medir `reference/`; e a faixa de tradução diz o
+  idioma real da página ("ainda está em inglês") em vez de supor português.
 - O site da documentação mostra traduzidos, nos quatro idiomas, os itens de
   Referência da lateral e os da barra de cima ("Manual de operação",
   "Decisões (ADRs)"); o conteúdo gerado de `reference/` segue sem tradução (AT-563).
