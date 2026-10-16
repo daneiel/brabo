@@ -8,7 +8,9 @@
  *   - uma página SEM tradução (servida do fallback pt-BR) tem a faixa, no primeiro
  *     locale que ainda tiver uma — ou nada a conferir, se todos estiverem completos;
  *   - uma página traduzida para `en` que não está defasada NÃO tem a faixa;
- *   - a mesma página em pt-BR (raiz) nunca tem a faixa.
+ *   - a mesma página em pt-BR (raiz) nunca tem a faixa;
+ *   - uma página com `idioma_original: en` (fonte ainda em inglês, AT-564) tem a
+ *     faixa na raiz pt-BR e no fallback de outro locale, e NÃO no `en`.
  *
  * As páginas são escolhidas pelo `website/src/data/traducao.json` e pela
  * árvore de tradução, não fixadas: o lote que traduzir a página-exemplo não
@@ -17,6 +19,7 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { idiomaOriginal } from './faixa-de-traducao.mjs';
 
 const RAIZ = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const DIR_BUILD = resolve(RAIZ, process.argv[2] ?? 'website/build');
@@ -49,7 +52,9 @@ const docs = (dir, base = '') =>
 const fonte = join(RAIZ, 'docs');
 const LOCALES = ['en', 'ru', 'zh-Hans'];
 const traduzidasEm = (loc) => join(RAIZ, 'website/i18n', loc, 'docusaurus-plugin-content-docs/current');
-const daFonte = (rel) => !rel.startsWith('reference/') && rotaSimples(join(fonte, rel));
+const emIngles = (rel) => idiomaOriginal(readFileSync(join(fonte, rel), 'utf8')) === 'en';
+// `reference/` entra desde a AT-564 (ADR 0219); a página ainda em inglês tem caso próprio.
+const daFonte = (rel) => rotaSimples(join(fonte, rel)) && !emIngles(rel);
 // A amostra sem tradução vem do primeiro locale que ainda tem uma: com o en completo, ru e zh-Hans seguem servindo.
 let naoTraduzida, localeDoFallback;
 for (const loc of LOCALES) {
@@ -85,5 +90,14 @@ if (naoTraduzida) {
   conferir(`fallback pt-BR em /${localeDoFallback}/`, `${localeDoFallback}/${sem(naoTraduzida)}`, true);
   conferir('pt-BR na raiz', sem(naoTraduzida), false);
 } else console.log('  ok        nenhum locale tem página sem tradução: não há fallback a conferir');
+const loc = LOCALES.find((l) => l !== 'en');
+const ingles = docs(fonte).find(
+  (rel) => rotaSimples(join(fonte, rel)) && emIngles(rel) && !existsSync(join(traduzidasEm(loc), rel)),
+);
+if (ingles) {
+  conferir('fonte em inglês na raiz pt-BR', sem(ingles), true);
+  conferir(`fonte em inglês em /${loc}/`, `${loc}/${sem(ingles)}`, true);
+  if (!existsSync(join(TRADUZIDAS_EN, ingles))) conferir('fonte em inglês em /en/', `en/${sem(ingles)}`, false);
+} else console.log('  ok        nenhuma página com idioma_original: en sem tradução');
 conferir('tradução en não defasada', traduzida && `en/${sem(traduzida)}`, false);
 process.exit(falhas ? 1 : 0);
