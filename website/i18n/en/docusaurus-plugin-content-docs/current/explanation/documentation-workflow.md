@@ -5,7 +5,7 @@ sidebar_label: Docs sync
 sidebar_position: 1
 description: The mechanism that keeps documentation from rotting — what each piece does, why it exists, and what to do when the check complains unfairly.
 keywords: [documentation, drift, docmap, CI, generation]
-traducao_de: 533ceeea898444e4d43ea714775482f74e65a781
+traducao_de: 372d04694ec63538d46e0150e58e31c03960091b
 ---
 
 # How documentation stays alive
@@ -856,6 +856,23 @@ GitHub Pages."
 
 The whole design, with the discarded alternatives, is in
 [ADR 0034](../adr/0034-documentacao-publicada-por-degrau.md).
+
+## The site's colors come from the product {#site-colors-come-from-the-product}
+
+`website/src/css/custom.css` IMPORTS `design/tokens.css` — the same color
+source as `apps/web` (ADR 0181) — and only points Infima's `--ifm-*` at the
+tokens: dark is black, light is white, primary terracotta (`--accent`), code
+highlighting through the `--syntax-*`. No hex is copied. The fonts stay the
+system ones on purpose: the site does not load the families the `--font-*`
+name. `scripts/docs/contraste-do-site.spec.ts` resolves the text `--ifm-*`
+down to hex in both themes and fails below 4.5:1 against the background (and
+fails as BLIND if nothing resolves).
+
+The exception is the root index (`/brabo/`, written by `scripts/docs/landing.mjs`):
+it is standalone HTML on Pages, cannot reach `tokens.css` and therefore COPIES
+the values, in both themes through the system preference. The copy is tied by
+`scripts/docs/landing.spec.ts`, which resolves the tokens and fails the value
+that diverges — it already turned petrol once after ADR 0181.
 
 ## Running it on your machine
 
