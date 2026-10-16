@@ -5,7 +5,7 @@ sidebar_label: Docs sync
 sidebar_position: 1
 description: The mechanism that keeps documentation from rotting — what each piece does, why it exists, and what to do when the check complains unfairly.
 keywords: [documentation, drift, docmap, CI, generation]
-traducao_de: 372d04694ec63538d46e0150e58e31c03960091b
+traducao_de: 74ac4990672a22f97b68fac9cece5c509a34fe89
 ---
 
 # How documentation stays alive
@@ -681,7 +681,7 @@ What holds the lag back is measurement, not the docmap.
 to it) runs inside `pnpm docs:generate` and writes two files:
 `docs/reference/paridade-de-traducao.md` (`generated: true`) and
 `website/src/data/traducao.json`. Per locale it counts pages and characters
-translated over the source (`docs/` minus `docs/reference/**`), and splits the
+translated over the source (all of `docs/`, `reference/` included since ADR 0219, minus the report itself and `openapi.json`), and splits the
 translated pages into **up to date**, **stale** and **without provenance**.
 Provenance is the `traducao_de: <SHA>` in the translated page's frontmatter,
 the last source commit it translates. A page is stale when the source has a

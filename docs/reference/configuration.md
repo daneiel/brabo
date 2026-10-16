@@ -5,6 +5,7 @@ sidebar_label: Configuration
 sidebar_position: 1
 description: All environment variables for the api, engine and web, with defaults and what breaks when they're wrong.
 keywords: [configuration, environment variables, env, deploy]
+idioma_original: en
 ---
 
 # Configuration

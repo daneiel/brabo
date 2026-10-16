@@ -856,6 +856,10 @@
       "defasada": false,
       "data": "2026-10-15"
     },
+    "adr/0219-referencia-entra-na-traducao.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
     "adr/index.md": {
       "defasada": false,
       "data": "2026-10-15"
@@ -1017,6 +1021,18 @@
       "data": "2026-10-15"
     },
     "missions/inputs/03-escopo-do-generic.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "reference/brb.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "reference/internal-api.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "reference/rulesets.md": {
       "defasada": false,
       "data": "2026-10-15"
     },
@@ -1887,6 +1903,10 @@
       "data": "2026-10-15"
     },
     "adr/0218-titulo-de-adr-com-prefixo.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0219-referencia-entra-na-traducao.md": {
       "defasada": false,
       "data": "2026-10-15"
     },
@@ -2921,6 +2941,10 @@
       "data": "2026-10-15"
     },
     "adr/0218-titulo-de-adr-com-prefixo.md": {
+      "defasada": false,
+      "data": "2026-10-15"
+    },
+    "adr/0219-referencia-entra-na-traducao.md": {
       "defasada": false,
       "data": "2026-10-15"
     },

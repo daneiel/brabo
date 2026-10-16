@@ -776,14 +776,25 @@ rules:
   # e `zh-Hans` moram em `website/i18n/<locale>/`. `warn` e NUNCA `block`:
   # exigir tradução em todo PR de doc custaria quatro traduções por mudança, e
   # quem segura a defasagem é o relatório de paridade e a faixa na página.
-  # `docs/reference/**` fica de fora do watch de propósito — é gerado e não
-  # entra na tradução.
+  # `docs/reference/**` entra no watch desde o ADR 0219 (inclusive o bloco
+  # gerado); fica fora só a página de paridade, que é o próprio relatório — por isso as
+  # páginas são listadas uma a uma (o docmap não tem negação de glob).
   - id: traducao
     watch:
       - "docs/*.md"
       - "docs/adr/**"
       - "docs/explanation/**"
       - "docs/missions/**"
+      - "docs/reference/artifacts.md"
+      - "docs/reference/brb.md"
+      - "docs/reference/configuration.md"
+      - "docs/reference/events.md"
+      - "docs/reference/git-providers.md"
+      - "docs/reference/internal-api.md"
+      - "docs/reference/llm-providers.md"
+      - "docs/reference/permissions.md"
+      - "docs/reference/rulesets.md"
+      - "docs/reference/scripts.md"
     docs:
       - "website/i18n/"
     severity: warn

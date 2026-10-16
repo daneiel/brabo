@@ -5,6 +5,7 @@ sidebar_label: LLM Providers
 sidebar_position: 9
 description: The single contract that makes Ollama, OpenAI, and Anthropic interchangeable, with capabilities per provider and per model, catalog sync, model lifecycle, normalized errors, and an inactivity ceiling.
 keywords: [LLM, provider, OpenAI, Anthropic, Ollama, capabilities, tool calling, streaming, catalog, pricing]
+idioma_original: en
 ---
 
 # LLM Providers
