@@ -13,7 +13,7 @@ A fonte é o pt-BR em `docs/` (ADR 0216), inclusive `docs/reference/**` (ADR 021
 
 | locale | páginas traduzidas | caracteres traduzidos | em dia | defasadas | sem procedência | ausentes | órfãs |
 |---|---|---|---|---|---|---|---|
-| `en` | 266 de 269 (98.9%) | 96.9% de 5.750.150 | 265 | 0 | 1 | 3 | 0 |
+| `en` | 269 de 269 (100.0%) | 100.0% de 5.750.150 | 268 | 0 | 1 | 0 | 0 |
 | `ru` | 266 de 269 (98.9%) | 96.9% de 5.750.150 | 265 | 0 | 1 | 3 | 0 |
 | `zh-Hans` | 266 de 269 (98.9%) | 96.9% de 5.750.150 | 265 | 0 | 1 | 3 | 0 |
 
