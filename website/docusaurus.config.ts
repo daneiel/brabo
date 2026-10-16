@@ -137,6 +137,13 @@ const config: Config = {
     // nenhuma página aqui usa componente React, CommonMark é o formato certo;
     // o dia que uma precisar, ela vira `.mdx`.
     format: 'detect',
+    // O `sidebar_label` que o gerador escreve em `docs/reference/` venceria o
+    // `label` de `sidebars.ts`, que é o que tem chave de tradução (AT-563).
+    parseFrontMatter: async (params) => {
+      const resultado = await params.defaultParseFrontMatter(params);
+      if (params.filePath.includes('/docs/reference/')) delete resultado.frontMatter.sidebar_label;
+      return resultado;
+    },
     hooks: {
       // Onda 6a (i18n): `docs/reference/**` é GERADO e continua fora da
       // tradução por ora (mesma exclusão do `docs/.docmap.yml`, regra
