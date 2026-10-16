@@ -1,7 +1,7 @@
 ---
 id: runbook
 title: Runbook operacional
-sidebar_label: Runbook
+sidebar_label: Manual de operação
 sidebar_position: 4
 description: Procedimentos operacionais do Brabo — deploy, rollout, restore, rotação de chaves, incidente de custo e observabilidade.
 keywords: [runbook, operations, incident, restore, rollout, kubernetes]

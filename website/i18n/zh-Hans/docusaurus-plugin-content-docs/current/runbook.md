@@ -5,7 +5,7 @@ sidebar_label: 运维手册
 sidebar_position: 4
 description: Brabo 的运维流程——部署、滚动发布、恢复、密钥轮换、成本事件与可观测性。
 keywords: [runbook, operations, incident, restore, rollout, kubernetes]
-traducao_de: e5c0b27947f7c700f9f117f65f8ca437569ab9c6
+traducao_de: d6ad631fba3edac691608e1f31d9000e12640253
 ---
 
 # 运维手册
