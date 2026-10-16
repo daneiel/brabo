@@ -6,6 +6,11 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- A página da API do site sai por idioma (ADR 0220, AT-565): cada locale
+  aplica um catálogo de traduções sobre a spec no build, e os rótulos que o
+  Redoc permite trocar ("Respostas", "Exemplos de requisição"…) saem no idioma
+  da página; os catálogos nascem vazios, então o texto das operações segue o
+  da api até a rodada de tradução.
 - As páginas geradas da Referência (configuração, eventos, provedores de LLM e
   scripts) também ficam no idioma da página (ADR 0219, AT-564): a fonte é
   pt-BR e o gerador escreve o bloco gerado em cada idioma; com isso a

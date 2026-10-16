@@ -15,6 +15,25 @@ const TEMA_DO_CODIGO: PrismTheme = {
   ],
 };
 import { reescreverLinkDeGap } from '../scripts/docs/links-do-locale.mjs';
+import { aplicar, lerCatalogo, ROTULOS_DO_REDOC } from '../scripts/docs/openapi-por-locale.mjs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+
+// ADR 0220: a spec da API sai traduzida por locale. O Docusaurus carrega o
+// config uma vez por locale com `DOCUSAURUS_CURRENT_LOCALE` definido (`start`
+// sem `--locale` cai no pt-BR). O derivado vai para `website/.openapi/`,
+// ignorado pelo git, porque o plugin só aceita caminho de arquivo.
+const LOCALE_ATUAL = process.env.DOCUSAURUS_CURRENT_LOCALE || 'pt-BR';
+const RAIZ_DO_REPO = resolve(__dirname, '..');
+const SPEC_DO_LOCALE = (() => {
+  const fonte = JSON.parse(readFileSync(join(RAIZ_DO_REPO, 'docs/reference/openapi.json'), 'utf8'));
+  const { spec } = aplicar(fonte, lerCatalogo(RAIZ_DO_REPO, LOCALE_ATUAL));
+  const dir = join(__dirname, '.openapi');
+  mkdirSync(dir, { recursive: true });
+  const saida = join(dir, `openapi.${LOCALE_ATUAL}.json`);
+  writeFileSync(saida, JSON.stringify(spec));
+  return saida;
+})();
 
 // A branch que o botão "editar esta página" aponta. PRs de doc miram `dev`;
 // o site publicado sai de `main` (ver CLAUDE.md).
@@ -258,10 +277,12 @@ const config: Config = {
       // (ADR 0206). A spec é a mesma que `pnpm docs:generate` exporta.
       'redocusaurus',
       {
-        specs: [
-          { spec: '../docs/reference/openapi.json', route: '/reference/api/' },
-        ],
-        theme: { primaryColor: '#a4502c', primaryColorDark: '#c8744f' },
+        specs: [{ spec: SPEC_DO_LOCALE, route: '/reference/api/' }],
+        theme: {
+          primaryColor: '#a4502c',
+          primaryColorDark: '#c8744f',
+          options: { labels: ROTULOS_DO_REDOC[LOCALE_ATUAL] ?? ROTULOS_DO_REDOC['pt-BR'] },
+        },
       },
     ],
   ],

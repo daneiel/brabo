@@ -694,6 +694,23 @@ pt-BR и говорит об этом; переведённая страница
 `en` неустаревшая страница её не имеют. Правила для переводчиков — в
 [Localização](localizacao.md).
 
+### Страница API переводится по каталогу (ADR 0220) {#the-api-page-is-translated-by-catalog-adr-0220}
+
+Источником описаний страницы Redoc остаётся текст декораторов api, почти
+весь на английском. У каждой локали есть каталог
+`website/i18n/<locale>/openapi-textos.json` с ключом sha1 (12 hex) исходного
+текста и полями `fonte` и `traducao`. `docusaurus.config.ts` читает
+`DOCUSAURUS_CURRENT_LOCALE`, применяет каталог через
+`scripts/docs/openapi-por-locale.mjs` (чистая функция, доказанная мутацией в
+spec рядом) и пишет spec локали в `website/.openapi/`, вне git. Непереведённый
+текст остаётся исходным; `en` переводит только тексты на pt-BR. 18 подписей,
+которые Redoc принимает в `labels`, переводятся; остальные его фиксированные
+тексты остаются на английском. `docs:check` отклоняет осиротевший ключ (текст
+ушёл из api) и неверную запись (источник не совпадает с хешем или другое
+число фрагментов `` `…` ``); отсутствующие только предупреждают, а паритет
+считает их в отдельном разделе. `pnpm docs:openapi-textos <locale>` добавляет
+в каталог недостающие ключи с `traducao: ""`.
+
 ### `links-do-locale.mjs` — переписанная ссылка ускользает от проверки битых ссылок {#links-do-localemjs--a-rewritten-link-skips-the-broken-link-check}
 
 Хук `markdown.hooks.onBrokenMarkdownLinks` в `website/docusaurus.config.ts`

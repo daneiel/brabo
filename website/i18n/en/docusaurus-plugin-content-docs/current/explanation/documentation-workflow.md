@@ -706,6 +706,23 @@ while the same page at the root and a page translated to `en` that is not stale
 do not. The rules for translators are in
 [Localização](localizacao.md).
 
+### The API page is translated by catalog (ADR 0220) {#the-api-page-is-translated-by-catalog-adr-0220}
+
+The source of the Redoc page descriptions is still the api decorator text,
+almost all in English. Each locale has a catalog
+`website/i18n/<locale>/openapi-textos.json`, keyed by the sha1 (12 hex) of the
+source text, with `fonte` and `traducao`. `docusaurus.config.ts` reads
+`DOCUSAURUS_CURRENT_LOCALE`, applies the catalog with
+`scripts/docs/openapi-por-locale.mjs` (a pure function, proven by mutation in
+the spec next to it) and writes the locale spec to `website/.openapi/`,
+outside git. Untranslated text stays as the source; `en` only translates the
+texts that are in pt-BR. The 18 labels Redoc accepts in `labels` are
+translated; its other fixed texts stay in English. `docs:check` fails an
+orphan key (the text left the api) and an invalid entry (source that does not
+match the hash, or a different number of `` `…` `` spans); missing only
+warns, and parity counts it in its own section. `pnpm docs:openapi-textos
+<locale>` adds the missing keys to the catalog with `traducao: ""`.
+
 ### `links-do-locale.mjs` — a rewritten link skips the broken-link check
 
 The `markdown.hooks.onBrokenMarkdownLinks` hook in

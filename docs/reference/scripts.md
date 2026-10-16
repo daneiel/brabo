@@ -42,6 +42,7 @@ Fonte: o `package.json` de cada pacote e o `Makefile` da raiz.
 | `pnpm docs:serve` | `pnpm --dir website serve` |
 | `pnpm docs:clear` | `pnpm --dir website clear` |
 | `pnpm docs:generate` | `node scripts/docs/generate.mjs` |
+| `pnpm docs:openapi-textos` | `node scripts/docs/openapi-por-locale.mjs` |
 | `pnpm docs:landing` | `node scripts/docs/landing.mjs` |
 | `pnpm docs:check` | `node scripts/docs/docmap.mjs && node scripts/docs/generate.mjs --check` |
 | `pnpm docs:drift` | `node scripts/docs/drift.mjs` |
@@ -201,4 +202,4 @@ Fonte: o `package.json` de cada pacote e o `Makefile` da raiz.
 
 ---
 
-136 comandos no total. Alvo do Makefile sem a anotação `## descrição` não aparece aqui — anote-o na fonte.
+137 comandos no total. Alvo do Makefile sem a anotação `## descrição` não aparece aqui — anote-o na fonte.

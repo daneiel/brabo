@@ -351,6 +351,7 @@ How documentation is generated, verified and published.
 | [0216](0216-quatro-idiomas-com-pt-br-como-fonte.md) | Four languages for docs and UI — pt-BR becomes the SOURCE and default, with English, Russian and Simplified Chinese as translations in phases, measured parity and a per-page notice for untranslated or stale pages (AT-545, owner decisions 15/10) |
 | [0218](0218-titulo-de-adr-com-prefixo.md) | Every ADR is titled "ADR NNNN — title": the H1 gets the `ADR` prefix, a 4-digit number and an em dash; the file name (the URL) does not change, and normalizing the title label is not editing the decision (AT-559, owner decision 15/10) |
 | [0219](0219-referencia-entra-na-traducao.md) | The reference enters translation: `docs/reference/**` becomes pt-BR source, translated and measured in parity, generated block included, except the parity report itself and `openapi.json`; the Redoc page is left to AT-565 (AT-564, owner's decisions of 10/15) |
+| [0220](0220-api-traduzida-por-catalogo.md) | The API page is translated by catalog: the source stays the api decorator text (an exception to the pt-BR source), one catalog per locale keyed by the text hash, spec derived at build time and kept out of git, orphan fails and missing warns, Redoc's fixed labels in English (AT-565, owner's decisions of 10/16) |
 
 ## The convention
 

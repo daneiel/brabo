@@ -3,7 +3,7 @@ id: adr-index
 title: Decisões arquiteturais (ADR)
 sidebar_label: Índice de ADRs
 sidebar_position: 0
-description: Os 215 registros de decisão arquitetural do Brabo, agrupados por tema, com o que cada um decidiu.
+description: Os 216 registros de decisão arquitetural do Brabo, agrupados por tema, com o que cada um decidiu.
 keywords: [ADR, decisão arquitetural, arquitetura, histórico]
 ---
 
@@ -350,13 +350,14 @@ Como a documentação é gerada, verificada e publicada.
 | [0216](0216-quatro-idiomas-com-pt-br-como-fonte.md) | Quatro idiomas para a documentação e a interface — o pt-BR vira a FONTE e o padrão, com inglês, russo e chinês simplificado como traduções em fases, paridade medida e um aviso por página para páginas não traduzidas ou defasadas (AT-545, decisões do dono de 15/10) |
 | [0218](0218-titulo-de-adr-com-prefixo.md) | Todo ADR se chama "ADR NNNN — título": o H1 ganha o prefixo `ADR`, número de 4 dígitos e travessão; o nome do arquivo (a URL) não muda, e normalizar o rótulo do título não é editar a decisão (AT-559, decisão do dono de 15/10) |
 | [0219](0219-referencia-entra-na-traducao.md) | A referência entra na tradução: `docs/reference/**` passa a ser fonte pt-BR traduzida e medida na paridade, inclusive o bloco gerado, menos o próprio relatório de paridade e o `openapi.json`; a página Redoc fica para a AT-565 (AT-564, decisões do dono de 15/10) |
+| [0220](0220-api-traduzida-por-catalogo.md) | A página da API sai traduzida por catálogo: a fonte segue sendo o texto dos decorators da api (exceção à fonte pt-BR), um catálogo por locale chaveado pelo hash do texto, spec derivada no build e fora do git, órfã reprova e faltando avisa, rótulos fixos do Redoc em inglês (AT-565, decisões do dono de 16/10) |
 
 ## A convenção
 
 - **Um arquivo por decisão**, em `docs/adr/NNNN-short-title.md`, com
   numeração sequencial de 4 dígitos, e título `# ADR NNNN — <título>`
   ([0218](0218-titulo-de-adr-com-prefixo.md)). **Sem reuso de número**, nem quando um ADR
-  é substituído — o próximo é **0220**.
+  é substituído — o próximo é **0221**.
 - **Um tema por decisão**, escolhido por quem escreve o ADR, no mesmo
   PR: uma linha em `docs/adr/temas.yml` e a linha do índice sob a seção desse
   tema, em ordem numérica. Quem revisa confirma. Um tema novo é uma

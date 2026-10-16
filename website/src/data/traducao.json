@@ -860,8 +860,12 @@
       "defasada": false,
       "data": "2026-10-15"
     },
-    "adr/index.md": {
+    "adr/0220-api-traduzida-por-catalogo.md": {
       "defasada": false,
+      "data": null
+    },
+    "adr/index.md": {
+      "defasada": true,
       "data": "2026-10-15"
     },
     "architecture.md": {
@@ -909,7 +913,7 @@
       "data": "2026-10-15"
     },
     "explanation/documentation-workflow.md": {
-      "defasada": false,
+      "defasada": true,
       "data": "2026-10-15"
     },
     "explanation/execucao-real-hello-world.md": {
@@ -1938,8 +1942,12 @@
       "defasada": false,
       "data": "2026-10-15"
     },
-    "adr/index.md": {
+    "adr/0220-api-traduzida-por-catalogo.md": {
       "defasada": false,
+      "data": null
+    },
+    "adr/index.md": {
+      "defasada": true,
       "data": "2026-10-15"
     },
     "architecture.md": {
@@ -1987,7 +1995,7 @@
       "data": "2026-10-15"
     },
     "explanation/documentation-workflow.md": {
-      "defasada": false,
+      "defasada": true,
       "data": "2026-10-15"
     },
     "explanation/execucao-real-hello-world.md": {
@@ -3016,8 +3024,12 @@
       "defasada": false,
       "data": "2026-10-15"
     },
-    "adr/index.md": {
+    "adr/0220-api-traduzida-por-catalogo.md": {
       "defasada": false,
+      "data": null
+    },
+    "adr/index.md": {
+      "defasada": true,
       "data": "2026-10-15"
     },
     "architecture.md": {
@@ -3065,7 +3077,7 @@
       "data": "2026-10-15"
     },
     "explanation/documentation-workflow.md": {
-      "defasada": false,
+      "defasada": true,
       "data": "2026-10-15"
     },
     "explanation/execucao-real-hello-world.md": {
