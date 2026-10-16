@@ -862,14 +862,14 @@
     },
     "adr/0220-api-traduzida-por-catalogo.md": {
       "defasada": false,
-      "data": null
+      "data": "2026-10-16"
     },
     "adr/index.md": {
-      "defasada": true,
-      "data": "2026-10-15"
+      "defasada": false,
+      "data": "2026-10-16"
     },
     "architecture.md": {
-      "defasada": false,
+      "defasada": true,
       "data": "2026-10-15"
     },
     "business-rules.md": {
@@ -913,8 +913,8 @@
       "data": "2026-10-15"
     },
     "explanation/documentation-workflow.md": {
-      "defasada": true,
-      "data": "2026-10-15"
+      "defasada": false,
+      "data": "2026-10-16"
     },
     "explanation/execucao-real-hello-world.md": {
       "defasada": false,
@@ -1944,14 +1944,14 @@
     },
     "adr/0220-api-traduzida-por-catalogo.md": {
       "defasada": false,
-      "data": null
+      "data": "2026-10-16"
     },
     "adr/index.md": {
-      "defasada": true,
-      "data": "2026-10-15"
+      "defasada": false,
+      "data": "2026-10-16"
     },
     "architecture.md": {
-      "defasada": false,
+      "defasada": true,
       "data": "2026-10-15"
     },
     "business-rules.md": {
@@ -1995,8 +1995,8 @@
       "data": "2026-10-15"
     },
     "explanation/documentation-workflow.md": {
-      "defasada": true,
-      "data": "2026-10-15"
+      "defasada": false,
+      "data": "2026-10-16"
     },
     "explanation/execucao-real-hello-world.md": {
       "defasada": false,
@@ -3026,14 +3026,14 @@
     },
     "adr/0220-api-traduzida-por-catalogo.md": {
       "defasada": false,
-      "data": null
+      "data": "2026-10-16"
     },
     "adr/index.md": {
-      "defasada": true,
-      "data": "2026-10-15"
+      "defasada": false,
+      "data": "2026-10-16"
     },
     "architecture.md": {
-      "defasada": false,
+      "defasada": true,
       "data": "2026-10-15"
     },
     "business-rules.md": {
@@ -3077,8 +3077,8 @@
       "data": "2026-10-15"
     },
     "explanation/documentation-workflow.md": {
-      "defasada": true,
-      "data": "2026-10-15"
+      "defasada": false,
+      "data": "2026-10-16"
     },
     "explanation/execucao-real-hello-world.md": {
       "defasada": false,

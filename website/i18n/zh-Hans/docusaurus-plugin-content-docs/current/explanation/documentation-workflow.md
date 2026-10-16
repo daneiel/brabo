@@ -5,7 +5,7 @@ sidebar_label: 文档同步
 sidebar_position: 1
 description: 阻止文档腐烂的机制——每个部件做什么、为什么存在，以及当检查不公正地抱怨时该怎么办。
 keywords: [documentation, drift, docmap, CI, generation]
-traducao_de: 74ac4990672a22f97b68fac9cece5c509a34fe89
+traducao_de: b9d61abd7060c5a35f8eba1155204e01a065ab40
 ---
 
 # 文档如何保持鲜活 {#how-documentation-stays-alive}

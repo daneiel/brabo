@@ -13,26 +13,23 @@ A fonte é o pt-BR em `docs/` (ADR 0216), inclusive `docs/reference/**` (ADR 021
 
 | locale | páginas traduzidas | caracteres traduzidos | em dia | defasadas | sem procedência | ausentes | órfãs |
 |---|---|---|---|---|---|---|---|
-| `en` | 270 de 270 (100.0%) | 100.0% de 5.754.784 | 266 | 2 | 2 | 0 | 0 |
-| `ru` | 270 de 270 (100.0%) | 100.0% de 5.754.784 | 266 | 2 | 2 | 0 | 0 |
-| `zh-Hans` | 270 de 270 (100.0%) | 100.0% de 5.754.784 | 266 | 2 | 2 | 0 | 0 |
+| `en` | 270 de 270 (100.0%) | 100.0% de 5.754.780 | 268 | 1 | 1 | 0 | 0 |
+| `ru` | 270 de 270 (100.0%) | 100.0% de 5.754.780 | 268 | 1 | 1 | 0 | 0 |
+| `zh-Hans` | 270 de 270 (100.0%) | 100.0% de 5.754.780 | 268 | 1 | 1 | 0 | 0 |
 
 > **TODO(humano):** revisão nativa por idioma — quem revisou e quando. Ainda não há revisão nativa registrada.
 
 ### Defasadas em `en`
 
-- `adr/index.md` (tradução de 2026-10-15)
-- `explanation/documentation-workflow.md` (tradução de 2026-10-15)
+- `architecture.md` (tradução de 2026-10-15)
 
 ### Defasadas em `ru`
 
-- `adr/index.md` (tradução de 2026-10-15)
-- `explanation/documentation-workflow.md` (tradução de 2026-10-15)
+- `architecture.md` (tradução de 2026-10-15)
 
 ### Defasadas em `zh-Hans`
 
-- `adr/index.md` (tradução de 2026-10-15)
-- `explanation/documentation-workflow.md` (tradução de 2026-10-15)
+- `architecture.md` (tradução de 2026-10-15)
 
 ## Interface
 

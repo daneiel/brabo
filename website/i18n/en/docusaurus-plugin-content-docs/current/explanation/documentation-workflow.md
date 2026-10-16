@@ -5,7 +5,7 @@ sidebar_label: Docs sync
 sidebar_position: 1
 description: The mechanism that keeps documentation from rotting — what each piece does, why it exists, and what to do when the check complains unfairly.
 keywords: [documentation, drift, docmap, CI, generation]
-traducao_de: 74ac4990672a22f97b68fac9cece5c509a34fe89
+traducao_de: b9d61abd7060c5a35f8eba1155204e01a065ab40
 ---
 
 # How documentation stays alive

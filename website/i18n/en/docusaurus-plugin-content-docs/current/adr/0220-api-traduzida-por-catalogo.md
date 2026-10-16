@@ -1,5 +1,5 @@
 ---
-traducao_de: PENDENTE
+traducao_de: b9d61abd7060c5a35f8eba1155204e01a065ab40
 ---
 
 # ADR 0220 — The API page is translated by catalog

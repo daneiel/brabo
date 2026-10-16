@@ -5,7 +5,7 @@ sidebar_label: ADR 索引
 sidebar_position: 0
 description: Brabo 的 214 条架构决策记录，按主题分组，并附上每条决策的内容。
 keywords: [ADR, 架构决策, 架构, 历史]
-traducao_de: f598899499ed64857e2c888cdcc72aaafe4bff35
+traducao_de: b9d61abd7060c5a35f8eba1155204e01a065ab40
 ---
 
 # 架构决策

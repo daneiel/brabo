@@ -5,7 +5,7 @@ sidebar_label: Индекс ADR
 sidebar_position: 0
 description: 214 записей архитектурных решений Brabo, сгруппированных по темам, с тем, что решила каждая из них.
 keywords: [ADR, архитектурное решение, архитектура, история]
-traducao_de: f598899499ed64857e2c888cdcc72aaafe4bff35
+traducao_de: b9d61abd7060c5a35f8eba1155204e01a065ab40
 ---
 
 # Архитектурные решения

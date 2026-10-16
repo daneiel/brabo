@@ -5,12 +5,12 @@
  * CATÁLOGO em `website/i18n/<locale>/openapi-textos.json`, chaveado pelo sha1
  * (12 hex) do texto da fonte: `{ "<hash>": { "fonte": "...", "traducao": "..." } }`.
  *
- * Funções PURAS (o config do site e o `generate.mjs` as chamam) e um comando:
- * `node scripts/docs/openapi-por-locale.mjs <locale>` acrescenta ao catálogo
- * as chaves que faltam, com `traducao: ""`, para a rodada de tradução.
+ * Funções PURAS (o config do site e o `generate.mjs` as chamam). O comando que
+ * acrescenta as chaves faltando mora em `openapi-textos.mjs`, porque o config
+ * é carregado pelo jiti em CommonJS e não aceita `import.meta`.
  */
 import { createHash } from 'node:crypto';
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 
 export const LOCALES_DA_API = ['pt-BR', 'en', 'ru', 'zh-Hans'];
@@ -199,23 +199,3 @@ export const lerCatalogo = (raiz, locale) => {
   const p = caminhoDoCatalogo(raiz, locale);
   return existsSync(p) ? JSON.parse(readFileSync(p, 'utf8')) : {};
 };
-
-// Comando: acrescenta as chaves que faltam ao catálogo do locale, com `traducao: ""`.
-if (import.meta.url === `file://${process.argv[1]}`) {
-  const locale = process.argv[2];
-  if (!LOCALES_DA_API.includes(locale)) {
-    console.error(`uso: pnpm docs:openapi-textos <${LOCALES_DA_API.join('|')}>`);
-    process.exit(2);
-  }
-  const raiz = join(import.meta.dirname, '../..');
-  const spec = JSON.parse(readFileSync(join(raiz, 'docs/reference/openapi.json'), 'utf8'));
-  const cat = lerCatalogo(raiz, locale);
-  let n = 0;
-  for (const [h, t] of textosDaFonte(spec)) {
-    if (cat[h] || !precisaDeTraducao(locale, t)) continue;
-    cat[h] = { fonte: t, traducao: '' };
-    n++;
-  }
-  writeFileSync(caminhoDoCatalogo(raiz, locale), JSON.stringify(cat, null, 2) + '\n');
-  console.log(`${locale}: ${n} chaves novas com traducao "" em ${caminhoDoCatalogo(raiz, locale)}`);
-}

@@ -5,7 +5,7 @@ sidebar_label: ADR index
 sidebar_position: 0
 description: Brabo's 214 architectural decision records, grouped by theme, with what each one decided.
 keywords: [ADR, architectural decision, architecture, history]
-traducao_de: f598899499ed64857e2c888cdcc72aaafe4bff35
+traducao_de: b9d61abd7060c5a35f8eba1155204e01a065ab40
 ---
 
 # Architectural decisions

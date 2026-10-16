@@ -30,7 +30,7 @@
     "docs:serve": "pnpm --dir website serve",
     "docs:clear": "pnpm --dir website clear",
     "docs:generate": "node scripts/docs/generate.mjs",
-    "docs:openapi-textos": "node scripts/docs/openapi-por-locale.mjs",
+    "docs:openapi-textos": "node scripts/docs/openapi-textos.mjs",
     "docs:landing": "node scripts/docs/landing.mjs",
     "docs:check": "node scripts/docs/docmap.mjs && node scripts/docs/generate.mjs --check",
     "docs:drift": "node scripts/docs/drift.mjs",
