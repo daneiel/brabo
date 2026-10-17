@@ -1201,275 +1201,275 @@
   },
   "85634048ed98": {
     "fonte": "SYNCHRONOUS: the response only comes back after the whole bootstrap (permanent branches, protections, templates) has run — there is no worker and no queue behind this. It is IDEMPOTENT AND RESUMABLE, so calling it again after a failure resumes from the step that failed. Track progress and read the failure reason via `GET /projects/:id/git/bootstrap`.",
-    "traducao": ""
+    "traducao": "SÍNCRONA: a resposta só volta depois que o bootstrap inteiro (branches permanentes, proteções, templates) rodou — não há worker nem fila por trás. É IDEMPOTENTE E RETOMÁVEL, então chamá-la de novo depois de uma falha retoma do passo que falhou. Acompanhe o progresso e leia o motivo da falha por `GET /projects/:id/git/bootstrap`."
   },
   "425c5aa0f676": {
     "fonte": "Invalid provider, or missing credential.",
-    "traducao": ""
+    "traducao": "Provider inválido, ou credencial ausente."
   },
   "d826523a7397": {
     "fonte": "Creates the repository and runs the Gitflow bootstrap",
-    "traducao": ""
+    "traducao": "Cria o repositório e roda o bootstrap do Gitflow"
   },
   "5b65a75f7543": {
     "fonte": "Validates access with `getRepo` and produces a PLAN (dry-run) of what the bootstrap would do — missing branches, missing protections, files. NOTHING is executed on the repository: decide afterward via `plan/approve` or `plan/skip`. Re-adopting the same repository converges (regenerates the plan without duplicating a row).",
-    "traducao": ""
+    "traducao": "Valida o acesso com `getRepo` e produz um PLANO (dry-run) do que o bootstrap faria — branches faltando, proteções faltando, arquivos. NADA é executado no repositório: decida depois por `plan/approve` ou `plan/skip`. Readotar o mesmo repositório converge (regenera o plano sem duplicar linha)."
   },
   "da81ce8966e7": {
     "fonte": "The repository exists, but the registered credential can't reach it.",
-    "traducao": ""
+    "traducao": "O repositório existe, mas a credencial registrada não o alcança."
   },
   "219d4a101d00": {
     "fonte": "The repository doesn't exist on the provider — check the identifier.",
-    "traducao": ""
+    "traducao": "O repositório não existe no provider — confira o identificador."
   },
   "ec569dcae871": {
     "fonte": "Adopts an existing repository, without creating anything",
-    "traducao": ""
+    "traducao": "Adota um repositório existente, sem criar nada"
   },
   "f9843a5be8f6": {
     "fonte": "Which step it is on, whether it failed and where, and how many attempts there were. The step-by-step detail comes from the `bootstrap.step_*` events of the dedicated session.",
-    "traducao": ""
+    "traducao": "Em que passo está, se falhou e onde, e quantas tentativas houve. O detalhe passo a passo vem dos eventos `bootstrap.step_*` da sessão dedicada."
   },
   "bac7198ab1a8": {
     "fonte": "Returns the Gitflow bootstrap state",
-    "traducao": ""
+    "traducao": "Devolve o estado do bootstrap do Gitflow"
   },
   "3ac1948b1a5f": {
     "fonte": "`protect_branches` fails on a private repository on the free plan, and the wizard warns about this BEFOREHAND. Without this exit the only button was \"Try again\", which always fails for the same reason — and `provision_failed` makes the dashboard redirect the project back to the provisioning page, leaving it unreachable forever. Only a failure in PROTECTING can be acknowledged: it is the last step and the only one whose failure leaves a usable repository. The product's merge lock (RN-006) doesn't depend on the provider's protection and keeps applying.",
-    "traducao": ""
+    "traducao": "`protect_branches` falha em repositório privado no plano gratuito, e o assistente avisa disso ANTES. Sem esta saída o único botão era \"Tentar de novo\", que sempre falha pelo mesmo motivo — e `provision_failed` faz o painel redirecionar o projeto de volta para a página de provisionamento, deixando-o inalcançável para sempre. Só falha em PROTEGER pode ser reconhecida: é o último passo e o único cuja falha deixa um repositório utilizável. A trava de merge do produto (RN-006) não depende da proteção do provider e continua valendo."
   },
   "2123a2625fe2": {
     "fonte": "The bootstrap did not fail, or it failed on a step before protection — moving on there would leave the project without a usable repository.",
-    "traducao": ""
+    "traducao": "O bootstrap não falhou, ou falhou num passo anterior à proteção — seguir adiante ali deixaria o projeto sem repositório utilizável."
   },
   "9e3d223cd2c3": {
     "fonte": "Acknowledges the branch-protection failure and moves on",
-    "traducao": ""
+    "traducao": "Reconhece a falha de proteção de branch e segue adiante"
   },
   "cc43e897daf7": {
     "fonte": "`decision: null` with a plan present is the state where NOTHING runs — waiting for approval or as-is adoption (RN-045).",
-    "traducao": ""
+    "traducao": "`decision: null` com plano presente é o estado em que NADA roda — aguardando aprovação ou adoção como está (RN-045)."
   },
   "6f2c7e0124b3": {
     "fonte": "Returns the bootstrap plan and what was decided about it",
-    "traducao": ""
+    "traducao": "Devolve o plano de bootstrap e o que se decidiu sobre ele"
   },
   "b6214c95d9c5": {
     "fonte": "Approval is all-or-nothing: approving loose steps would break the `dev←main, qa←dev, rc←qa` cascade. What runs is the plan RE-DERIVED at execution time — equal to or smaller than what was shown, never larger.",
-    "traducao": ""
+    "traducao": "A aprovação é tudo ou nada: aprovar passos soltos quebraria a cascata `dev←main, qa←dev, rc←qa`. O que roda é o plano RE-DERIVADO na hora da execução — igual ou menor que o mostrado, nunca maior."
   },
   "95e84c7d9321": {
     "fonte": "The plan was regenerated since you last saw it, or it had already been decided.",
-    "traducao": ""
+    "traducao": "O plano foi regenerado desde que você o viu, ou já tinha sido decidido."
   },
   "c17d8a0e61bb": {
     "fonte": "Approves the WHOLE plan and runs the bootstrap",
-    "traducao": ""
+    "traducao": "Aprova o plano INTEIRO e roda o bootstrap"
   },
   "0a98f9293c69": {
     "fonte": "Records the decision and doesn't touch the repository. The plan stays stored as evidence of what was deliberately not applied, and the bootstrap cursor is NOT tampered with — no step ran.",
-    "traducao": ""
+    "traducao": "Grava a decisão e não toca o repositório. O plano fica guardado como evidência do que deliberadamente não foi aplicado, e o cursor do bootstrap NÃO é mexido — nenhum passo rodou."
   },
   "9bf1b27d8637": {
     "fonte": "Adopts the repository AS IS, dismissing the bootstrap",
-    "traducao": ""
+    "traducao": "Adota o repositório COMO ESTÁ, dispensando o bootstrap"
   },
   "61bfe0486038": {
     "fonte": "Returns the project's provisioned repository",
-    "traducao": ""
+    "traducao": "Devolve o repositório provisionado do projeto"
   },
   "b3808acec8e1": {
     "fonte": "Each hypothesis cites the events that support it (`evidenceEventIds`) — this is what makes it auditable instead of taken on faith.",
-    "traducao": ""
+    "traducao": "Cada hipótese cita os eventos que a sustentam (`evidenceEventIds`) — é isso que a torna auditável em vez de aceita por fé."
   },
   "07ec4e2b58f0": {
     "fonte": "Project, session, or hypothesis does not exist.",
-    "traducao": ""
+    "traducao": "Projeto, sessão ou hipótese não existe."
   },
   "4c6924286c6c": {
     "fonte": "Lists the Psychologist's hypotheses about the agents",
-    "traducao": ""
+    "traducao": "Lista as hipóteses do Psicólogo sobre os agentes"
   },
   "5d9075b3f799": {
     "fonte": "Moves `proposed` → `accepted`. NOT a `proposed_action`: the Psychologist is read-only and nothing here has an external effect.",
-    "traducao": ""
+    "traducao": "Move `proposed` → `accepted`. NÃO é `proposed_action`: o Psicólogo é somente leitura e nada aqui tem efeito externo."
   },
   "6923c595eddd": {
     "fonte": "The hypothesis was already decided.",
-    "traducao": ""
+    "traducao": "A hipótese já foi decidida."
   },
   "683e7e8b97e3": {
     "fonte": "Accepts a hypothesis",
-    "traducao": ""
+    "traducao": "Aceita uma hipótese"
   },
   "4e2bf28f4f7c": {
     "fonte": "Moves `proposed` → `dismissed`. Same reasoning as accepting.",
-    "traducao": ""
+    "traducao": "Move `proposed` → `dismissed`. Mesmo raciocínio do aceite."
   },
   "d1b59cbb9c18": {
     "fonte": "Dismisses a hypothesis",
-    "traducao": ""
+    "traducao": "Descarta uma hipótese"
   },
   "5b1d302556f8": {
     "fonte": "InfraAgent's artifacts (Dockerfile, compose, CI). They go through the SAME QA and SecOps gates as dev PRs, with no task or worktree behind them.",
-    "traducao": ""
+    "traducao": "Artefatos do InfraAgent (Dockerfile, compose, CI). Passam pelos MESMOS gates de QA e SecOps das PRs de dev, sem tarefa nem worktree por trás."
   },
   "6ea264e56392": {
     "fonte": "Lists infra PRs and the gate stage of each one",
-    "traducao": ""
+    "traducao": "Lista as PRs de infra e o estágio de gate de cada uma"
   },
   "a72f4a1ae226": {
     "fonte": "Starts from whoever HAS a version in the project, not from a static roster — this is what makes the per-module dev agents (`dev-api`) show up.",
-    "traducao": ""
+    "traducao": "Parte de quem TEM versão no projeto, não de uma lista estática — é isso que faz os dev agents por módulo (`dev-api`) aparecerem."
   },
   "1e0e70dfee2b": {
     "fonte": "Lists the instruction history of every agent in the project",
-    "traducao": ""
+    "traducao": "Lista o histórico de instruções de todo agente do projeto"
   },
   "ddae0c0f11d2": {
     "fonte": "Only who was associated HERE, with the role of that association — whoever reaches the project through the workspace alone has no row and doesn't show up.",
-    "traducao": ""
+    "traducao": "Só quem foi associado AQUI, com o papel dessa associação — quem alcança o projeto só pelo workspace não tem linha e não aparece."
   },
   "3c05338d64a1": {
     "fonte": "Lists the project's members",
-    "traducao": ""
+    "traducao": "Lista os membros do projeto"
   },
   "70e16fb2438c": {
     "fonte": "This role OVERRIDES whatever the person has in the workspace, in both directions: associating someone as `viewer` here really does restrict a workspace `developer` on this project. Two movements are refused with 403 and cannot be enabled anywhere: downgrading a workspace `owner`, and changing your OWN role — down or up, since self-promotion is the half that escalates privilege.",
-    "traducao": ""
+    "traducao": "Este papel SOBREPÕE o que a pessoa tem no workspace, nos dois sentidos: associar alguém como `viewer` aqui restringe de fato um `developer` do workspace neste projeto. Dois movimentos são recusados com 403 e não podem ser habilitados em lugar nenhum: rebaixar um `owner` do workspace, e mudar o PRÓPRIO papel — para baixo ou para cima, já que a autopromoção é a metade que escala privilégio."
   },
   "ed665d78b2ec": {
     "fonte": "Insufficient role on the project, OR one of the two caps (the target is a workspace `owner`; the target is the caller and the requested role differs from their current effective one).",
-    "traducao": ""
+    "traducao": "Papel insuficiente no projeto, OU um dos dois tetos (o alvo é `owner` do workspace; o alvo é quem chama e o papel pedido difere do efetivo atual dele)."
   },
   "59bf39f18628": {
     "fonte": "Associates a user with the project",
-    "traducao": ""
+    "traducao": "Associa um usuário ao projeto"
   },
   "8732b06a8abf": {
     "fonte": "Removes only the PROJECT association. Whoever has a role in the workspace keeps seeing the project through inheritance — and because the project role OVERRIDES the workspace one in both directions, that inheritance can be LOWER than what the row granted. Removing your own row is therefore refused with 403 whenever the net effect is a downgrade (including when there is no workspace role at all); removing it when the workspace holds the same role, and removing anyone else, still work.",
-    "traducao": ""
+    "traducao": "Remove só a associação de PROJETO. Quem tem papel no workspace continua vendo o projeto por herança — e como o papel de projeto SOBREPÕE o de workspace nos dois sentidos, essa herança pode ser MENOR que o que a linha concedia. Remover a própria linha é, por isso, recusado com 403 sempre que o efeito líquido é rebaixamento (inclusive quando não há papel de workspace nenhum); removê-la quando o workspace segura o mesmo papel, e remover qualquer outra pessoa, continuam funcionando."
   },
   "ef185602e81c": {
     "fonte": "Association removed. No body.",
-    "traducao": ""
+    "traducao": "Associação removida. Sem corpo."
   },
   "3a3099f8a647": {
     "fonte": "Insufficient role on the project, OR the caller is removing their own row and would end up with a lower role than they have today.",
-    "traducao": ""
+    "traducao": "Papel insuficiente no projeto, OU quem chama está removendo a própria linha e ficaria com papel menor que o de hoje."
   },
   "e51ea1912c88": {
     "fonte": "Disassociates a user from the project",
-    "traducao": ""
+    "traducao": "Desassocia um usuário do projeto"
   },
   "6a201851a09b": {
     "fonte": "The absolute path, ON THE USER MACHINE, where the local agent copies the work to (RN-515, ADR 0147) — a folder OUTSIDE the mounted base, which is the whole reason the mirror exists. Per project and never global: one global destination would land project B artifacts in project A's folder, and the user would find out from the contents, not from an error. `mirrorPath: null` CLEARS it and turns the mirror off — the key is required, omitting it is a 400, because a body that omits the field would be indistinguishable from asking to clear. `null` is the NORMAL state of a project. `maintainer`, the same minimum as `execution-mode` and `projects-base`: this route talks about a path on the operator's own filesystem. It validates ONLY the LEXICAL shape and refuses, with 400, a destination inside `workspacePath` or containing it (both directions of the same loop), and any destination at all on a `container` project. It never touches disk: the API cannot see the machine where the destination will live. Writing the mirror is NOT a proposed_action — it is configuration the user declared, not an agent asking to act.",
-    "traducao": ""
+    "traducao": "O caminho absoluto, NA MÁQUINA DO USUÁRIO, para onde o agente local copia o trabalho (RN-515, ADR 0147) — uma pasta FORA da base montada, que é toda a razão de o espelho existir. Por projeto e nunca global: um destino global aterrissaria os artefatos do projeto B na pasta do projeto A, e o usuário descobriria pelo conteúdo, não por um erro. `mirrorPath: null` o LIMPA e desliga o espelho — a chave é obrigatória, omiti-la é 400, porque um corpo que omite o campo seria indistinguível de pedir para limpar. `null` é o estado NORMAL de um projeto. `maintainer`, o mesmo mínimo de `execution-mode` e `projects-base`: esta rota fala de um caminho no próprio sistema de arquivos do operador. Valida SÓ a forma LÉXICA e recusa, com 400, destino dentro de `workspacePath` ou que o contenha (os dois sentidos do mesmo laço), e qualquer destino num projeto `container`. Nunca toca o disco: a API não enxerga a máquina onde o destino vai morar. Gravar o espelho NÃO é proposed_action — é configuração que o usuário declarou, não agente pedindo para agir."
   },
   "352a0ead4db1": {
     "fonte": "Declares (or clears) the project's mirror destination",
-    "traducao": ""
+    "traducao": "Declara (ou limpa) o destino de espelho do projeto"
   },
   "6a3719577d82": {
     "fonte": "Telemetry the local agent pushed over the channel after copying the work to the user folder (ADR 0147, point 7) — never the event log, because a mirror round has no session and `session_events.session_id` is `NOT NULL` (the same reasoning that made `rag_searches` a table). THREE answers that never collapse into one (RN-088): `never` (no round ever reported), `synced` (the last round copied — `filesCopied` may be `0`, which means \"looked and there was nothing to copy\") and `failed`. A failure never erases the last successful sync, and a success never erases the last error: which one is CURRENT comes from comparing the two timestamps, so the screen can say \"failing since today, last good copy was yesterday with 412 files\". `lastDestination` is FROZEN — it diverges from `mirrorPath` after someone changes the destination, because the grant travels in the join and only changes when the runner reconnects (RN-516). `viewer`, the same minimum as reading the project, which already carries `mirrorPath`.",
-    "traducao": ""
+    "traducao": "Telemetria que o agente local empurrou pelo canal depois de copiar o trabalho para a pasta do usuário (ADR 0147, ponto 7) — nunca o event log, porque rodada de espelho não tem sessão e `session_events.session_id` é `NOT NULL` (o mesmo raciocínio que fez de `rag_searches` uma tabela). TRÊS respostas que nunca colapsam numa só (RN-088): `never` (nenhuma rodada relatada), `synced` (a última rodada copiou — `filesCopied` pode ser `0`, que quer dizer \"olhou e não havia nada a copiar\") e `failed`. Uma falha nunca apaga a última sincronização bem-sucedida, e um sucesso nunca apaga o último erro: qual é o CORRENTE sai da comparação dos dois carimbos, então a tela pode dizer \"falhando desde hoje, a última cópia boa foi ontem com 412 arquivos\". `lastDestination` é CONGELADO — diverge de `mirrorPath` depois que alguém troca o destino, porque a concessão viaja no join e só muda quando o runner reconecta (RN-516). `viewer`, o mesmo mínimo de ler o projeto, que já traz `mirrorPath`."
   },
   "ce620a7b9820": {
     "fonte": "What the last mirror round did (RN-517)",
-    "traducao": ""
+    "traducao": "O que a última rodada de espelho fez (RN-517)"
   },
   "741d577561dd": {
     "fonte": "This scope's RAW binding — `null` if the project only inherits from the workspace.",
-    "traducao": ""
+    "traducao": "O binding CRU deste escopo — `null` se o projeto só herda do workspace."
   },
   "1bda381ded51": {
     "fonte": "Reads the project model binding",
-    "traducao": ""
+    "traducao": "Lê o binding de modelo do projeto"
   },
   "f855c2d87bc1": {
     "fonte": "Sets the project's model",
-    "traducao": ""
+    "traducao": "Define o modelo do projeto"
   },
   "8d247ed80b92": {
     "fonte": "Batch form of `GET .../agent-bindings/:agentSlug` and `GET .../area-bindings/:areaKey`: each requested key gets EXACTLY the value its single-key route answers (same cascade, same origins, `null` when no level has a model). It exists so the Settings tab reads 20 resolved bindings with one request instead of 20 — the rate limit is per USER. Keys are comma-separated, deduplicated, and a malformed key or more than 64 keys in total is 400, never silently dropped.",
-    "traducao": ""
+    "traducao": "Forma em lote de `GET .../agent-bindings/:agentSlug` e `GET .../area-bindings/:areaKey`: cada chave pedida recebe EXATAMENTE o valor que a rota de chave única dela responde (mesma cascata, mesmas origens, `null` quando nenhum nível tem modelo). Existe para a aba Configurações ler 20 bindings resolvidos com uma requisição em vez de 20 — o rate limit é por USUÁRIO. As chaves são separadas por vírgula, deduplicadas, e chave malformada ou mais de 64 chaves no total é 400, nunca descartada em silêncio."
   },
   "3a560aac6007": {
     "fonte": "Comma-separated agent slugs.",
-    "traducao": ""
+    "traducao": "Slugs de agente separados por vírgula."
   },
   "b4659069b4bf": {
     "fonte": "Comma-separated area keys.",
-    "traducao": ""
+    "traducao": "Chaves de área separadas por vírgula."
   },
   "0369168a97ec": {
     "fonte": "A malformed key, or more keys than the batch cap.",
-    "traducao": ""
+    "traducao": "Chave malformada, ou mais chaves que o teto do lote."
   },
   "43c8677486a3": {
     "fonte": "Resolves the model of several agents and areas in one read",
-    "traducao": ""
+    "traducao": "Resolve o modelo de vários agentes e áreas numa leitura só"
   },
   "d694fdd021d6": {
     "fonte": "The `local` category are Ollama's, which spend no money; `cloud` are the paid API ones. A model the workspace has not activated does not appear here, but stays in the historical costs — to see it use the catalog route. The list is the project's OWNER workspace: the same model can be on in one workspace and off in the neighboring one (ADR 0049).",
-    "traducao": ""
+    "traducao": "A categoria `local` são os do Ollama, que não gastam dinheiro; `cloud` são os de API paga. Modelo que o workspace não ativou não aparece aqui, mas fica nos custos históricos — para vê-lo use a rota do catálogo. A lista é a do workspace DONO do projeto: o mesmo modelo pode estar ligado num workspace e desligado no vizinho (ADR 0049)."
   },
   "34541ee5bccd": {
     "fonte": "Lists the models active IN THE PROJECT's WORKSPACE",
-    "traducao": ""
+    "traducao": "Lista os modelos ativos NO WORKSPACE do projeto"
   },
   "8bdcce4584c6": {
     "fonte": "Status comes from the event log: open is an `artifact.open_question` without `open_question.answered`. Newest first, capped at 50 with `total`.",
-    "traducao": ""
+    "traducao": "O status vem do event log: aberta é um `artifact.open_question` sem `open_question.answered`. A mais nova primeiro, teto de 50 com `total`."
   },
   "9a3dd66dd5cf": {
     "fonte": "Lists the agents' open questions of the project (RN-858)",
-    "traducao": ""
+    "traducao": "Lista as perguntas abertas dos agentes do projeto (RN-858)"
   },
   "5d2bb207a64c": {
     "fonte": "Only the author of the session where the question was born answers. Writes a `decision_record` (actor: the user, with `questionId`) and `open_question.answered`, and asks the engine to resume the parked QA gate of each affected task (RN-860), best effort.",
-    "traducao": ""
+    "traducao": "Só o autor da sessão onde a pergunta nasceu responde. Grava um `decision_record` (ator: o usuário, com `questionId`) e `open_question.answered`, e pede ao engine para retomar o gate de QA estacionado de cada tarefa afetada (RN-860), em melhor esforço."
   },
   "94bf1b034f7e": {
     "fonte": "No answer, or a suggestion accepted where there is none.",
-    "traducao": ""
+    "traducao": "Sem resposta, ou sugestão aceita onde não há nenhuma."
   },
   "5d5c5152548c": {
     "fonte": "Not the session author — body with `reason: \"so_o_autor_da_sessao\"`.",
-    "traducao": ""
+    "traducao": "Não é o autor da sessão — corpo com `reason: \"so_o_autor_da_sessao\"`."
   },
   "10f84fe7bfec": {
     "fonte": "Question is not in this project.",
-    "traducao": ""
+    "traducao": "A pergunta não é deste projeto."
   },
   "b0b73b75bdc3": {
     "fonte": "Already answered — `reason: \"pergunta_ja_respondida\"`.",
-    "traducao": ""
+    "traducao": "Já respondida — `reason: \"pergunta_ja_respondida\"`."
   },
   "de96af9f33b5": {
     "fonte": "Answers an open question (RN-858)",
-    "traducao": ""
+    "traducao": "Responde uma pergunta aberta (RN-858)"
   },
   "4f90e109e5a4": {
     "fonte": "It's the physical file at the root of the project's workspace, not a database column.",
-    "traducao": ""
+    "traducao": "É o arquivo físico na raiz do workspace do projeto, não uma coluna do banco."
   },
   "0e6adcbfd29d": {
     "fonte": "Reads the project's permissions.json",
-    "traducao": ""
+    "traducao": "Lê o permissions.json do projeto"
   },
   "5a6d3f24eaf9": {
     "fonte": "Replaces all three lists at once. `deny` still beats `allow` in evaluation — there's no way to allow something denied through here.",
-    "traducao": ""
+    "traducao": "Substitui as três listas de uma vez. `deny` continua vencendo `allow` na avaliação — não há como liberar por aqui algo negado."
   },
   "8bf956000ab0": {
     "fonte": "Rewrites the project's permissions.json",
-    "traducao": ""
+    "traducao": "Reescreve o permissions.json do projeto"
   },
   "8773756f5e0e": {
     "fonte": "Nunca inclui o token bruto — só o que já foi emitido.",
-    "traducao": ""
+    "traducao": "Nunca inclui o token bruto — só o que já foi emitido."
   },
   "3df1aadf49da": {
     "fonte": "Papel insuficiente no projeto.",
@@ -1477,15 +1477,15 @@
   },
   "47803d62e463": {
     "fonte": "Projeto não encontrado.",
-    "traducao": ""
+    "traducao": "Projeto não encontrado."
   },
   "bdfdb304ed9a": {
     "fonte": "Lista os próprios Personal Access Tokens deste projeto",
-    "traducao": ""
+    "traducao": "Lista os próprios Personal Access Tokens deste projeto"
   },
   "6ab605bd4801": {
     "fonte": "O token bruto (`brb_...`) só aparece NESTA resposta — não fica recuperável depois, só o hash é guardado. Use em `--token`/`BRABO_ACCOUNT_TOKEN` do `brabo-runner`.",
-    "traducao": ""
+    "traducao": "O token bruto (`brb_...`) só aparece NESTA resposta — não fica recuperável depois, só o hash é guardado. Use em `--token`/`BRABO_ACCOUNT_TOKEN` do `brabo-runner`."
   },
   "d070defb402e": {
     "fonte": "Emite um Personal Access Token pro runner local",
@@ -1493,7 +1493,7 @@
   },
   "2e87542c8669": {
     "fonte": "Idempotente — revogar de novo não é erro. Desde a RN-685 (ADR 0201) também DERRUBA as conexões de runner abertas com ESTE token, e só elas — a chave de dispositivo do mesmo usuário fica de pé —, e anula os tickets dele ainda não usados. Engine fora do ar NÃO faz a revogação falhar.",
-    "traducao": ""
+    "traducao": "Idempotente — revogar de novo não é erro. Desde a RN-685 (ADR 0201) também DERRUBA as conexões de runner abertas com ESTE token, e só elas — a chave de dispositivo do mesmo usuário fica de pé —, e anula os tickets dele ainda não usados. Engine fora do ar NÃO faz a revogação falhar."
   },
   "06a391f20d58": {
     "fonte": "Token revogado. Sem corpo.",
@@ -1501,127 +1501,127 @@
   },
   "6d1cb634bc11": {
     "fonte": "Revoga um Personal Access Token próprio",
-    "traducao": ""
+    "traducao": "Revoga um Personal Access Token próprio"
   },
   "c93c131cfd01": {
     "fonte": "Resposta a incidente — dev desligado com token vazando (RN-427). Idempotente — revogar de novo não é erro. Desde a RN-685 (ADR 0201) também DERRUBA o runner já conectado com este token, e só ele.",
-    "traducao": ""
+    "traducao": "Resposta a incidente — dev desligado com token vazando (RN-427). Idempotente — revogar de novo não é erro. Desde a RN-685 (ADR 0201) também DERRUBA o runner já conectado com este token, e só ele."
   },
   "10dad7b354cd": {
     "fonte": "Revoga o Personal Access Token de QUALQUER usuário no projeto",
-    "traducao": ""
+    "traducao": "Revoga o Personal Access Token de QUALQUER usuário no projeto"
   },
   "0f34d0f00690": {
     "fonte": "Visão de `maintainer` para resposta a incidente (RN-427) — inclui o dono de cada token. Nunca inclui o token bruto.",
-    "traducao": ""
+    "traducao": "Visão de `maintainer` para resposta a incidente (RN-427) — inclui o dono de cada token. Nunca inclui o token bruto."
   },
   "7824d73678b0": {
     "fonte": "Lista TODOS os Personal Access Tokens do projeto, de qualquer usuário",
-    "traducao": ""
+    "traducao": "Lista TODOS os Personal Access Tokens do projeto, de qualquer usuário"
   },
   "fb4c8cf195f8": {
     "fonte": "The user's OWN profile by default; the aggregated team view only for whoever administers the project. A competency profile is data ABOUT the person, and the least surprising default is seeing your own.",
-    "traducao": ""
+    "traducao": "O PRÓPRIO perfil do usuário por padrão; a visão agregada do time só para quem administra o projeto. Perfil de competência é dado SOBRE a pessoa, e o padrão menos surpreendente é ver o seu."
   },
   "52ac21f88d87": {
     "fonte": "Returns the proficiency profile",
-    "traducao": ""
+    "traducao": "Devolve o perfil de proficiência"
   },
   "f6c6b7f4c172": {
     "fonte": "Only the caller's OWN profile, never someone else's. The opt-out comes along because without it the next round would re-derive everything and the deletion would be cosmetic. It is `viewer` on purpose: profiling covers all members, so requiring `developer` would leave a profiled viewer unable to delete their own.",
-    "traducao": ""
+    "traducao": "Só o PRÓPRIO perfil de quem chama, nunca o de outra pessoa. O opt-out vem junto porque sem ele a próxima rodada re-derivaria tudo e a exclusão seria cosmética. É `viewer` de propósito: a perfilagem cobre todos os membros, então exigir `developer` deixaria um viewer perfilado sem conseguir apagar o próprio."
   },
   "d0578a29308c": {
     "fonte": "Deletes your own profile and records the opt-out",
-    "traducao": ""
+    "traducao": "Apaga o próprio perfil e grava o opt-out"
   },
   "20e5cb746f27": {
     "fonte": "Undoes the opt-out. Profiles start being derived again from the next round on.",
-    "traducao": ""
+    "traducao": "Desfaz o opt-out. Os perfis voltam a ser derivados a partir da próxima rodada."
   },
   "287ed70a8096": {
     "fonte": "Re-enables the user's own profiling",
-    "traducao": ""
+    "traducao": "Reativa a perfilagem do próprio usuário"
   },
   "dcd4892d203c": {
     "fonte": "`costMicros` is summed from the round's `token_usage`. This is what makes the cost difference between light and heavy triage VISIBLE, instead of just asserted — the two tiers use genuinely different models.",
-    "traducao": ""
+    "traducao": "`costMicros` é somado do `token_usage` da rodada. É isso que torna VISÍVEL a diferença de custo entre triagem leve e pesada, em vez de só afirmada — as duas faixas usam modelos de fato diferentes."
   },
   "bf920722bf10": {
     "fonte": "Lists the analysis rounds with tier and real cost",
-    "traducao": ""
+    "traducao": "Lista as rodadas de análise com faixa e custo real"
   },
   "bc0df5718b31": {
     "fonte": "Read-only — has no side effect. `enabled: false` means the pause is a PRODUCT decision (not a bug): existing analyses and hypotheses aren't touched by it.",
-    "traducao": ""
+    "traducao": "Somente leitura — não tem efeito colateral. `enabled: false` quer dizer que a pausa é decisão de PRODUTO (não bug): análises e hipóteses existentes não são tocadas por ela."
   },
   "077f5c1f2bc9": {
     "fonte": "Reports whether the Psychologist can run a NEW analysis today",
-    "traducao": ""
+    "traducao": "Informa se o Psicólogo pode rodar uma análise NOVA hoje"
   },
   "597479753a85": {
     "fonte": "Real count (never estimated) of `.md` files under `docs`/`docs/adr` in the project's repository against how many have a chunk, and the project's sessions against how many have a chunk. Does not include \"N minutes ago\" for those three scopes — there is no per-scope indexing timestamp column, and a guessed number would lie (same rule as ADR 0042 for model rating). `local` (RN-455) is the one exception: `lastAttachedAt` is a real `MAX(created_at)` over that scope, because a browser upload has no repository state to compare against.",
-    "traducao": ""
+    "traducao": "Contagem real (nunca estimada) de arquivos `.md` sob `docs`/`docs/adr` no repositório do projeto contra quantos têm chunk, e das sessões do projeto contra quantas têm chunk. Não inclui \"há N minutos\" para esses três escopos — não há coluna de carimbo de indexação por escopo, e um número chutado mentiria (mesma régua do ADR 0042 para nota de modelo). `local` (RN-455) é a única exceção: `lastAttachedAt` é um `MAX(created_at)` real sobre aquele escopo, porque upload pelo navegador não tem estado de repositório contra o qual comparar."
   },
   "16cfbd6e7593": {
     "fonte": "Index coverage: indexed files/sessions against the real total",
-    "traducao": ""
+    "traducao": "Cobertura do índice: arquivos/sessões indexados contra o total real"
   },
   "f4e67b946d9c": {
     "fonte": "The only signal of TRUTH the RAG measurement has: latency and degradation rate say whether the search RAN, never whether it was RIGHT. Same role as `search` — whoever can read the result is who can judge it. Re-voting the same chunk of the same search overwrites your own vote rather than adding a second one (unique per actor), so the metric measures accuracy and not enthusiasm.",
-    "traducao": ""
+    "traducao": "O único sinal de VERDADE que a medição do RAG tem: latência e taxa de degradação dizem se a busca RODOU, nunca se ACERTOU. Mesmo papel de `search` — quem pode ler o resultado é quem pode julgá-lo. Votar de novo no mesmo chunk da mesma busca sobrescreve o próprio voto em vez de somar um segundo (único por ator), para a métrica medir acerto e não entusiasmo."
   },
   "4dfd10d52f49": {
     "fonte": "Unknown `searchId` for this project, or a `chunkId` that was not among that search hits — a vote without a rank would be a number without meaning.",
-    "traducao": ""
+    "traducao": "`searchId` desconhecido para este projeto, ou um `chunkId` que não estava entre os acertos daquela busca — voto sem posição seria número sem significado."
   },
   "9c1dfd0c4cde": {
     "fonte": "Judges one hit of one search as useful or irrelevant (RN-480)",
-    "traducao": ""
+    "traducao": "Julga um acerto de uma busca como útil ou irrelevante (RN-480)"
   },
   "127d023757d6": {
     "fonte": "Text content already read by the browser (`<input webkitdirectory>`), never a host path — that distinction is the whole point of ADR 0113. Idempotent full rebuild of the `local` scope: every call deletes and recreates it from the files sent THIS time, so re-uploading is the resync mechanism. Rejects (400) over the file-count/total-bytes caps instead of truncating silently — this is a one-shot user gesture with a folder picker in front of it, not a background scan. An individual oversized or unrecognized-extension file is only skipped, never fails the batch.",
-    "traducao": ""
+    "traducao": "Conteúdo de texto já lido pelo navegador (`<input webkitdirectory>`), nunca um caminho do host — essa distinção é todo o ponto do ADR 0113. Reconstrução completa e idempotente do escopo `local`: toda chamada o apaga e recria a partir dos arquivos enviados DESTA vez, então reenviar é o mecanismo de ressincronização. Recusa (400) acima dos tetos de quantidade de arquivos/bytes totais em vez de cortar em silêncio — é um gesto único do usuário com um seletor de pasta à frente, não uma varredura em segundo plano. Arquivo individual grande demais ou de extensão não reconhecida é só pulado, nunca reprova o lote."
   },
   "7cc688448f32": {
     "fonte": "Attaches a local folder (browser upload) as read-only reference (RN-455, ADR 0113)",
-    "traducao": ""
+    "traducao": "Anexa uma pasta local (upload pelo navegador) como referência somente leitura (RN-455, ADR 0113)"
   },
   "3724606b2da5": {
     "fonte": "\"Reindex now\" from the Chat RAG panel. Deletes and recreates the chunks of the three honest scopes (RN-219) from the CURRENT state — there is no automatic watcher on push/session close (decision recorded in ADR 0079/0080). Can take a while on projects with many sessions: it runs one indexing pass per session, each possibly calling the embedding provider in batch.",
-    "traducao": ""
+    "traducao": "\"Reindexar agora\" do painel de RAG do Chat. Apaga e recria os chunks dos três escopos honestos (RN-219) a partir do estado CORRENTE — não há watcher automático em push/fechamento de sessão (decisão registrada nos ADRs 0079/0080). Pode demorar em projetos com muitas sessões: roda uma passada de indexação por sessão, cada uma possivelmente chamando o provider de embedding em lote."
   },
   "7a1ad1f88bdc": {
     "fonte": "Reindexes the project's docs/ADR/sessions (idempotent full rebuild)",
-    "traducao": ""
+    "traducao": "Reindexa docs/ADRs/sessões do projeto (reconstrução completa idempotente)"
   },
   "25d9b780d95a": {
     "fonte": "Combines cosine similarity (pgvector) with lexical `ts_rank` (tsvector), each from an independent query, merged by weighted sum and cut off by the threshold (ADR 0080). `vectorAvailable: false` warns when the embedding provider did not respond and the search ran with only the lexical signal — it never pretends to have run the full hybrid.",
-    "traducao": ""
+    "traducao": "Combina similaridade de cosseno (pgvector) com `ts_rank` léxico (tsvector), cada um de uma consulta independente, mesclados por soma ponderada e cortados pelo limiar (ADR 0080). `vectorAvailable: false` avisa quando o provider de embedding não respondeu e a busca rodou só com o sinal léxico — nunca finge ter rodado o híbrido completo."
   },
   "ea9249f92616": {
     "fonte": "Hybrid search (vector + lexical) over the project's indexed chunks",
-    "traducao": ""
+    "traducao": "Busca híbrida (vetorial + léxica) sobre os chunks indexados do projeto"
   },
   "c852aef04ec6": {
     "fonte": "RN-852 (ADR 0213): the current `artifact.run_instructions`, emitted when an `open_infra_pr` with `run` executes. DECLARED by the Infra agent, never verified on the reader's machine. `null` when there is none.",
-    "traducao": ""
+    "traducao": "RN-852 (ADR 0213): o `artifact.run_instructions` vigente, emitido quando um `open_infra_pr` com `run` executa. DECLARADO pelo agente de Infra, nunca verificado na máquina de quem lê. `null` quando não há."
   },
   "13fe96a05550": {
     "fonte": "Returns how to run the deliverable on your machine",
-    "traducao": ""
+    "traducao": "Devolve como rodar o entregável na sua máquina"
   },
   "ebed25b083e5": {
     "fonte": "Ninguém revoga o que não consegue ver (RN-519). Inclui as já REVOGADAS — sumir com a linha faria a tela afirmar que a chave nunca existiu. Nunca devolve a JWK pública, e a privada a api nunca viu. `lastUsedAt` nulo é o sinal de uma chave ÓRFÃ: registrada e nunca usada por runner nenhum. Desde a RN-543 inclui também as chaves de MÁQUINA do chamador (`especie: \"maquina\"`, `projectId` nulo), que servem este projeto sem pertencer a ele — sem elas na lista, uma chave de máquina seria invisível em toda tela.",
-    "traducao": ""
+    "traducao": "Ninguém revoga o que não consegue ver (RN-519). Inclui as já REVOGADAS — sumir com a linha faria a tela afirmar que a chave nunca existiu. Nunca devolve a JWK pública, e a privada a api nunca viu. `lastUsedAt` nulo é o sinal de uma chave ÓRFÃ: registrada e nunca usada por runner nenhum. Desde a RN-543 inclui também as chaves de MÁQUINA do chamador (`especie: \"maquina\"`, `projectId` nulo), que servem este projeto sem pertencer a ele — sem elas na lista, uma chave de máquina seria invisível em toda tela."
   },
   "dc5e321e6bd3": {
     "fonte": "Lista as próprias chaves de dispositivo deste projeto",
-    "traducao": ""
+    "traducao": "Lista as próprias chaves de dispositivo deste projeto"
   },
   "562a5037d652": {
     "fonte": "Idempotente — revogar de novo não é erro. Desde a RN-520 também DERRUBA a conexão viva: antes, revogar só impedia ticket NOVO, e um runner já conectado seguia executando comando aprovado. Desde a RN-685 (ADR 0201) o alvo é a CHAVE: caem só as conexões abertas com ela — em todo projeto, se for de máquina —, e outro runner do mesmo usuário, conectado com PAT ou com outra chave, fica de pé. Os tickets dela ainda não usados são anulados. Engine fora do ar ou nenhum runner conectado NÃO fazem a revogação falhar.",
-    "traducao": ""
+    "traducao": "Idempotente — revogar de novo não é erro. Desde a RN-520 também DERRUBA a conexão viva: antes, revogar só impedia ticket NOVO, e um runner já conectado seguia executando comando aprovado. Desde a RN-685 (ADR 0201) o alvo é a CHAVE: caem só as conexões abertas com ela — em todo projeto, se for de máquina —, e outro runner do mesmo usuário, conectado com PAT ou com outra chave, fica de pé. Os tickets dela ainda não usados são anulados. Engine fora do ar ou nenhum runner conectado NÃO fazem a revogação falhar."
   },
   "0e75ab2d6a1a": {
     "fonte": "Chave revogada. Sem corpo.",
@@ -1629,55 +1629,55 @@
   },
   "b3e3e7db4326": {
     "fonte": "Revoga uma chave de dispositivo própria",
-    "traducao": ""
+    "traducao": "Revoga uma chave de dispositivo própria"
   },
   "2b14d5214034": {
     "fonte": "Autentica `connect/3` do socket Phoenix `/runner` (tópico `terminal:<projectId>`, papel \"runner\") — NÃO é o JWT reaproveitado, e esta rota em si só aceita um Personal Access Token no lugar do JWT de sessão (ADR 0105). TTL de 30s e uso único. Recusa com 400 se o projeto não estiver no modo \"runner\" (RN-421): o runner não tem o que servir num projeto cujo código mora no container gerenciado.",
-    "traducao": ""
+    "traducao": "Autentica `connect/3` do socket Phoenix `/runner` (tópico `terminal:<projectId>`, papel \"runner\") — NÃO é o JWT reaproveitado, e esta rota em si só aceita um Personal Access Token no lugar do JWT de sessão (ADR 0105). TTL de 30s e uso único. Recusa com 400 se o projeto não estiver no modo \"runner\" (RN-421): o runner não tem o que servir num projeto cujo código mora no container gerenciado."
   },
   "1ee17ead0a64": {
     "fonte": "Projeto não está no modo \"runner\".",
-    "traducao": ""
+    "traducao": "Projeto não está no modo \"runner\"."
   },
   "90b80f5b9f58": {
     "fonte": "Emite um ticket de uso único para o runner local conectar",
-    "traducao": ""
+    "traducao": "Emite um ticket de uso único para o runner local conectar"
   },
   "dd6fa1168e0a": {
     "fonte": "Each item carries `technical`: `true` only for the session opened by repository provisioning (linked from `repo_bootstraps`).",
-    "traducao": ""
+    "traducao": "Cada item traz `technical`: `true` só para a sessão aberta pelo provisionamento do repositório (ligada por `repo_bootstraps`)."
   },
   "c35d6d35254f": {
     "fonte": "Insufficient role in the project.",
-    "traducao": ""
+    "traducao": "Papel insuficiente no projeto."
   },
   "9e057a03e759": {
     "fonte": "Project or session does not exist.",
-    "traducao": ""
+    "traducao": "Projeto ou sessão não existe."
   },
   "1d212402cd34": {
     "fonte": "Lists the project's sessions",
-    "traducao": ""
+    "traducao": "Lista as sessões do projeto"
   },
   "3efea209729f": {
     "fonte": "The session is born in `created` and is the container for everything agents do: the event log, proposed actions and the token budget all hang off it. `kind` is REQUIRED and gets recorded: `consultiva` (consultative) only converses, `criativa` (creative) produces and is the only one that accepts `execution.activated`.",
-    "traducao": ""
+    "traducao": "A sessão nasce em `created` e é o contêiner de tudo o que os agentes fazem: o event log, as ações propostas e o orçamento de tokens ficam pendurados nela. `kind` é OBRIGATÓRIO e fica gravado: `consultiva` só conversa, `criativa` produz e é a única que aceita `execution.activated`."
   },
   "f92cf1eb0936": {
     "fonte": "Body without `kind`, or with a value outside the allowed list.",
-    "traducao": ""
+    "traducao": "Corpo sem `kind`, ou com valor fora da lista permitida."
   },
   "aa87ac446a4f": {
     "fonte": "Opens a session in the project",
-    "traducao": ""
+    "traducao": "Abre uma sessão no projeto"
   },
   "3bca08712336": {
     "fonte": "Returns a session by id",
-    "traducao": ""
+    "traducao": "Devolve uma sessão pelo id"
   },
   "37243093302d": {
     "fonte": "The name is a navigation label and does NOT replace the id's hashtag — screens compose the two, and without a name they degrade to just the hashtag. `null` or a blank string clears the name. There is no way to change `kind`: it is the creation intent, and changing it later would turn it into state.",
-    "traducao": ""
+    "traducao": "O nome é rótulo de navegação e NÃO substitui a hashtag do id — as telas compõem os dois, e sem nome degradam para só a hashtag. `null` ou texto em branco limpa o nome. Não há como mudar o `kind`: é a intenção de criação, e mudá-lo depois o transformaria em estado."
   },
   "8d2d781c7480": {
     "fonte": "Body without `name`, or a name above the character limit.",
@@ -2177,39 +2177,39 @@
   },
   "b6056c3f57f7": {
     "fonte": "Mesmo socket `/runner`, mesmo tópico, papel \"terminal\" — quem VÊ o terminal (o comando em si só roda de verdade se houver um runner conectado). Vale para qualquer modo de projeto.",
-    "traducao": ""
+    "traducao": "Mesmo socket `/runner`, mesmo tópico, papel \"terminal\" — quem VÊ o terminal (o comando em si só roda de verdade se houver um runner conectado). Vale para qualquer modo de projeto."
   },
   "0abdf9f25224": {
     "fonte": "Emite um ticket de uso único para a aba Terminal da web",
-    "traducao": ""
+    "traducao": "Emite um ticket de uso único para a aba Terminal da web"
   },
   "bdf87f4330ef": {
     "fonte": "Proxy de GitHub Releases — `platform` aceita só linux-x64, linux-arm64, darwin-arm64. Sem autenticação: o binário não é segredo. Os bytes são conferidos contra o `checksums.txt` da mesma Release antes de qualquer coisa ser respondida (ADR 0149, RN-525); a rota NÃO verifica a assinatura do manifesto — isso é integridade, não procedência, e quem verifica assinatura é o `install.sh`.",
-    "traducao": ""
+    "traducao": "Proxy de GitHub Releases — `platform` aceita só linux-x64, linux-arm64, darwin-arm64. Sem autenticação: o binário não é segredo. Os bytes são conferidos contra o `checksums.txt` da mesma Release antes de qualquer coisa ser respondida (ADR 0149, RN-525); a rota NÃO verifica a assinatura do manifesto — isso é integridade, não procedência, e quem verifica assinatura é o `install.sh`."
   },
   "f64ea695edce": {
     "fonte": "O binário do runner, em stream, com o sha256 já conferido contra o manifesto. Não é JSON: `Content-Type: application/octet-stream`. O header `Content-Digest` repete o hash conferido (RFC 9530).",
-    "traducao": ""
+    "traducao": "O binário do runner, em stream, com o sha256 já conferido contra o manifesto. Não é JSON: `Content-Type: application/octet-stream`. O header `Content-Digest` repete o hash conferido (RFC 9530)."
   },
   "f84e59b2b309": {
     "fonte": "Recusa nomeada — nunca bytes com aviso. O corpo traz `motivo`: `plataforma_nao_publicada`, `release_sem_manifesto`, `manifesto_nao_cobre_a_plataforma`, `manifesto_ilegivel`, `download_falhou` ou `hash_divergente`.",
-    "traducao": ""
+    "traducao": "Recusa nomeada — nunca bytes com aviso. O corpo traz `motivo`: `plataforma_nao_publicada`, `release_sem_manifesto`, `manifesto_nao_cobre_a_plataforma`, `manifesto_ilegivel`, `download_falhou` ou `hash_divergente`."
   },
   "f15904bddcc7": {
     "fonte": "Baixa o binário standalone do runner local pra plataforma pedida",
-    "traducao": ""
+    "traducao": "Baixa o binário standalone do runner local pra plataforma pedida"
   },
   "f93fb9749cd2": {
     "fonte": "Autenticada por uma chave de dispositivo de MÁQUINA (ADR 0154) — NUNCA por JWT de sessão, e nunca por uma credencial presa a um projeto, que responde 403. Devolve os projetos em `execution_mode: \"runner\"` nos quais o dono da chave alcança pelo menos `developer` (o mesmo mínimo de `POST .../runner-ticket`), com o nome da pasta e o estado de verificação de cada um. O agente pergunta em vez de varrer o disco: a base da máquina é do usuário e pode ter pasta que não é projeto nenhum.",
-    "traducao": ""
+    "traducao": "Autenticada por uma chave de dispositivo de MÁQUINA (ADR 0154) — NUNCA por JWT de sessão, e nunca por uma credencial presa a um projeto, que responde 403. Devolve os projetos em `execution_mode: \"runner\"` nos quais o dono da chave alcança pelo menos `developer` (o mesmo mínimo de `POST .../runner-ticket`), com o nome da pasta e o estado de verificação de cada um. O agente pergunta em vez de varrer o disco: a base da máquina é do usuário e pode ter pasta que não é projeto nenhum."
   },
   "169d7b6fea8b": {
     "fonte": "A credencial apresentada está presa a um projeto — esta rota exige uma chave de dispositivo de máquina.",
-    "traducao": ""
+    "traducao": "A credencial apresentada está presa a um projeto — esta rota exige uma chave de dispositivo de máquina."
   },
   "a467111d8084": {
     "fonte": "Lista os projetos em modo \"runner\" que este agente local atende",
-    "traducao": ""
+    "traducao": "Lista os projetos em modo \"runner\" que este agente local atende"
   },
   "c11293a41969": {
     "fonte": "No role required: a credential is about whoever called, not about a workspace or project. Covers LLM keys and git tokens in the same listing.",
@@ -3205,15 +3205,15 @@
   },
   "3b8add966613": {
     "fonte": "`false` quando o broker recusou ou não respondeu — os outros campos ficam ausentes e `motivo` explica.",
-    "traducao": ""
+    "traducao": "`false` quando o broker recusou ou não respondeu — os outros campos ficam ausentes e `motivo` explica."
   },
   "145eeeb078d9": {
     "fonte": "Presente só quando `sucesso: true`.",
-    "traducao": ""
+    "traducao": "Presente só quando `sucesso: true`."
   },
   "cac484bde0d3": {
     "fonte": "Presente só quando `sucesso: false`.",
-    "traducao": ""
+    "traducao": "Presente só quando `sucesso: false`."
   },
   "75170d0a772c": {
     "fonte": "Where this project's container comes up (RN-497/503). `container` and `mounted` go through the broker, on the server; `runner` goes through the local agent on the user's machine. It is what branches the start action between `container_start` and `container_start_via_runner`.",
@@ -3301,11 +3301,11 @@
   },
   "37083255c7d2": {
     "fonte": "O novo modo de execução. Pode repetir o modo atual do projeto — nesse caso, só `workspacePath` muda de verdade.",
-    "traducao": ""
+    "traducao": "O novo modo de execução. Pode repetir o modo atual do projeto — nesse caso, só `workspacePath` muda de verdade."
   },
   "acda20ec05b1": {
     "fonte": "O caminho absoluto da pasta do usuário — obrigatório quando `executionMode` é `mounted` ou `runner`, recusado quando é `container`. Mesma validação da criação (RN-170/RN-422/RN-423): em `mounted`, precisa existir e ser gravável de dentro do container; em `runner`, só o formato é validado agora — a confirmação de verdade vem do runner conectando de novo.",
-    "traducao": ""
+    "traducao": "O caminho absoluto da pasta do usuário — obrigatório quando `executionMode` é `mounted` ou `runner`, recusado quando é `container`. Mesma validação da criação (RN-170/RN-422/RN-423): em `mounted`, precisa existir e ser gravável de dentro do container; em `runner`, só o formato é validado agora — a confirmação de verdade vem do runner conectando de novo."
   },
   "571df21d08b2": {
     "fonte": "How many rules have no story at all. Each one is a discovery.",
@@ -3681,7 +3681,7 @@
   },
   "3afdaf3ccba2": {
     "fonte": "O publisher está no allowlist curado de fabricantes conhecidos (`domain/llm/huggingface-official-publishers.ts`). `false` é qualquer reupload de terceiro — a tela mostra o aviso de segurança quando `includeCommunity=true` trouxe este resultado.",
-    "traducao": ""
+    "traducao": "O publisher está no allowlist curado de fabricantes conhecidos (`domain/llm/huggingface-official-publishers.ts`). `false` é qualquer reupload de terceiro — a tela mostra o aviso de segurança quando `includeCommunity=true` trouxe este resultado."
   },
   "7ea92a3462fc": {
     "fonte": "Combined (RAG_SEARCH_WEIGHT_VECTOR*vector + RAG_SEARCH_WEIGHT_LEXICAL*lexical), already filtered by the threshold — every returned hit has passed it.",
@@ -3801,15 +3801,15 @@
   },
   "311878f10a4a": {
     "fonte": "Nome pra você reconhecer este token depois — não é único.",
-    "traducao": ""
+    "traducao": "Nome pra você reconhecer este token depois — não é único."
   },
   "a11dabd734a3": {
     "fonte": "Expira em N dias. Omitido = sem expiração (revogável a qualquer hora, mas nunca expira sozinho).",
-    "traducao": ""
+    "traducao": "Expira em N dias. Omitido = sem expiração (revogável a qualquer hora, mas nunca expira sozinho)."
   },
   "85fb77b87d3a": {
     "fonte": "Nulo = sem expiração.",
-    "traducao": ""
+    "traducao": "Nulo = sem expiração."
   },
   "2f6568eab1c5": {
     "fonte": "Nulo = nunca usado.",
@@ -3817,7 +3817,7 @@
   },
   "77ef050aa7b7": {
     "fonte": "Guarde agora — não é recuperável depois. Use em --token ou BRABO_ACCOUNT_TOKEN.",
-    "traducao": ""
+    "traducao": "Guarde agora — não é recuperável depois. Use em --token ou BRABO_ACCOUNT_TOKEN."
   },
   "3dae3a00b619": {
     "fonte": "How another module uses the item: call a function, hit a route, subscribe to an event, or build a data shape.",
@@ -4061,19 +4061,19 @@
   },
   "a03aee1e30a3": {
     "fonte": "Só presente quando o Hub publicou `usedStorage` na busca — nunca estimado por palpite.",
-    "traducao": ""
+    "traducao": "Só presente quando o Hub publicou `usedStorage` na busca — nunca estimado por palpite."
   },
   "6cf9d179be59": {
     "fonte": "`pending_confirmation` → `confirmed` → `pulling` → `active` | `failed`. Os dois primeiros estados SÃO a segunda confirmação explícita que o produto exige antes de qualquer download rodar.",
-    "traducao": ""
+    "traducao": "`pending_confirmation` → `confirmed` → `pulling` → `active` | `failed`. Os dois primeiros estados SÃO a segunda confirmação explícita que o produto exige antes de qualquer download rodar."
   },
   "7478c7389267": {
     "fonte": "Quando o clique de confirmação aconteceu.",
-    "traducao": ""
+    "traducao": "Quando o clique de confirmação aconteceu."
   },
   "749c4b474dd7": {
     "fonte": "Só em `failed`, prefixado pela origem (infra | modelo | código | política) — nunca falha calada.",
-    "traducao": ""
+    "traducao": "Só em `failed`, prefixado pela origem (infra | modelo | código | política) — nunca falha calada."
   },
   "649956545cc3": {
     "fonte": "History is immutable: each new map is one more version, and the current one is the one with the highest `version`.",
@@ -4673,7 +4673,7 @@
   },
   "a916ccac4168": {
     "fonte": "Vem da busca quando o Hub publicou o tamanho — nunca estimado por palpite no cliente.",
-    "traducao": ""
+    "traducao": "Vem da busca quando o Hub publicou o tamanho — nunca estimado por palpite no cliente."
   },
   "c6e252398113": {
     "fonte": "Single-use token received by email.",
@@ -4765,7 +4765,7 @@
   },
   "0b59ed8216bf": {
     "fonte": "Nome do módulo — precisa existir no module_map vigente.",
-    "traducao": ""
+    "traducao": "Nome do módulo — precisa existir no module_map vigente."
   },
   "9f031b0ffc1b": {
     "fonte": "OCI reference with an explicit TAG or digest for this module. `latest` is REFUSED with 400 — the rule is domain-level.",
@@ -4801,11 +4801,11 @@
   },
   "f95503adf814": {
     "fonte": "Nulo = chave de MÁQUINA (ADR 0154): vale para qualquer projeto do dono dela, e não só para este. Ver `especie`.",
-    "traducao": ""
+    "traducao": "Nulo = chave de MÁQUINA (ADR 0154): vale para qualquer projeto do dono dela, e não só para este. Ver `especie`."
   },
   "fec321ac95fe": {
     "fonte": "`projeto` = presa ao projeto desta rota (ADR 0118). `maquina` = descreve a MÁQUINA (ADR 0154) e aparece na listagem de todo projeto que ela atende — revogá-la derruba o agente local em todos eles.",
-    "traducao": ""
+    "traducao": "`projeto` = presa ao projeto desta rota (ADR 0118). `maquina` = descreve a MÁQUINA (ADR 0154) e aparece na listagem de todo projeto que ela atende — revogá-la derruba o agente local em todos eles."
   },
   "dc4df0141780": {
     "fonte": "Nulo = ativa. Revogada continua aparecendo na lista.",
@@ -4813,27 +4813,27 @@
   },
   "af6a95209c7b": {
     "fonte": "Nulo = nunca usada — o sinal de uma chave órfã (aba fechada no meio do fluxo de configuração automática do runner).",
-    "traducao": ""
+    "traducao": "Nulo = nunca usada — o sinal de uma chave órfã (aba fechada no meio do fluxo de configuração automática do runner)."
   },
   "fe968ce3da57": {
     "fonte": "O nome da pasta do projeto (RN-109) — segmento relativo sob a base da máquina, nunca um caminho absoluto.",
-    "traducao": ""
+    "traducao": "O nome da pasta do projeto (RN-109) — segmento relativo sob a base da máquina, nunca um caminho absoluto."
   },
   "89c48374c3fc": {
     "fonte": "Quando o runner confirmou a pasta pela primeira vez (RN-423). Nulo = nunca confirmada. É registro de uma confirmação, não batimento (RN-468): não diz que a pasta está de pé agora.",
-    "traducao": ""
+    "traducao": "Quando o runner confirmou a pasta pela primeira vez (RN-423). Nulo = nunca confirmada. É registro de uma confirmação, não batimento (RN-468): não diz que a pasta está de pé agora."
   },
   "c127cadb5b2e": {
     "fonte": "Token opaco de uso único, base64url. TTL de 30s: some depois do primeiro `connect/3` bem-sucedido no socket `/runner`, ou quando expira.",
-    "traducao": ""
+    "traducao": "Token opaco de uso único, base64url. TTL de 30s: some depois do primeiro `connect/3` bem-sucedido no socket `/runner`, ou quando expira."
   },
   "e5d70cd5cb3f": {
     "fonte": "Quando o ticket expira (ISO 8601).",
-    "traducao": ""
+    "traducao": "Quando o ticket expira (ISO 8601)."
   },
   "884d21ac2d71": {
     "fonte": "URL pública do socket Phoenix `/runner`, já em ws(s):// — pronta para o cliente (runner CLI ou web) abrir a conexão com `{ticket}` nos params.",
-    "traducao": ""
+    "traducao": "URL pública do socket Phoenix `/runner`, já em ws(s):// — pronta para o cliente (runner CLI ou web) abrir a conexão com `{ticket}` nos params."
   },
   "5b74c2fc4358": {
     "fonte": "Title of the rule JUST appended. Rules with the same normalized title (RN-080 makes it the new one) are left out of the comparison.",
@@ -5025,7 +5025,7 @@
   },
   "9096fdb7719e": {
     "fonte": "The COMPLETE list of uses — replaces the previous one, does not add to it. An empty list unmarks all. A closed vocabulary: a use outside it fails the call, because free text would give `code`, `coding`, and `código` in the same filter.",
-    "traducao": ""
+    "traducao": "The COMPLETE list of uses — replaces the previous one, does not add to it. An empty list unmarks all. A closed vocabulary: a use outside it fails the call, because free text would give `code`, `coding`, and `código` in the same filter."
   },
   "2cb2db2751ec": {
     "fonte": "Forbidden patterns. `deny` beats `allow` and beats the agent's autonomy.",
