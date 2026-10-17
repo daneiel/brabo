@@ -2065,7 +2065,7 @@
   },
   "d817474d3235": {
     "fonte": "The ticket authenticates the session's Phoenix socket `session:<id>` `connect/3` on the engine — it is NOT the reused JWT. 30s TTL and single use: every reconnection (including automatic ones) requests a new ticket. `scope: \"heartbeat\"` requires the `viewer` role; `scope: \"terminal\"` requires `developer`, the same minimum role as terminal actions.",
-    "traducao": ""
+    "traducao": "O ticket autentica o socket Phoenix `session:<id>` da sessão, no `connect/3` do engine — NÃO é o JWT reaproveitado. TTL de 30s e uso único: toda reconexão (inclusive as automáticas) pede um ticket novo. `scope: \"heartbeat\"` exige o papel `viewer`; `scope: \"terminal\"` exige `developer`, o mesmo papel mínimo das ações de terminal."
   },
   "6e61f0fa88cc": {
     "fonte": "Insufficient role for the requested scope.",
@@ -2145,35 +2145,35 @@
   },
   "ae34e3e00950": {
     "fonte": "Empty title or over 200 characters.",
-    "traducao": ""
+    "traducao": "Título vazio ou com mais de 200 caracteres."
   },
   "07cc58f9f20b": {
     "fonte": "Corrects the title of a draft story (RN-727)",
-    "traducao": ""
+    "traducao": "Corrige o título de uma história em rascunho (RN-727)"
   },
   "dbe4c52f44b6": {
     "fonte": "The human step that `manual` mode (default since Phase 12c) hands back to the user: until promotion, NO task from the story is pickable by any dev agent. Promoting releases the batch of tasks at once and wakes up the idle agents of the module (Phase 12b). The batch is NOT all-or-nothing — whatever didn't pass comes back as `failed` with the reason, and whatever passed is promoted.",
-    "traducao": ""
+    "traducao": "O passo humano que o modo `manual` (padrão desde a Fase 12c) devolve ao usuário: até a promoção, NENHUMA tarefa da história é pegável por dev agent algum. Promover libera o lote de tarefas de uma vez e acorda os agentes ociosos do módulo (Fase 12b). O lote NÃO é tudo ou nada — o que não passou volta como `failed` com o motivo, e o que passou é promovido."
   },
   "cabcb1b532d0": {
     "fonte": "Promotes stories the PO proposed to `ready`",
-    "traducao": ""
+    "traducao": "Promove para `ready` histórias que o PO propôs"
   },
   "cabfc04a294c": {
     "fonte": "A gate cycle stalled for more than 2 h is parked instead of restarted on its own (ADR 0207). This is the human gesture that resumes it.",
-    "traducao": ""
+    "traducao": "Ciclo de gate parado há mais de 2 h é estacionado em vez de reiniciado sozinho (ADR 0207). Este é o gesto humano que o retoma."
   },
   "644839f40554": {
     "fonte": "Role below `developer` on the project.",
-    "traducao": ""
+    "traducao": "Papel abaixo de `developer` no projeto."
   },
   "61937e759b84": {
     "fonte": "The cycle is not parked — body with `reason: \"gate_nao_estacionado\"`.",
-    "traducao": ""
+    "traducao": "O ciclo não está estacionado — corpo com `reason: \"gate_nao_estacionado\"`."
   },
   "76b0f9582dd0": {
     "fonte": "Resumes a parked gate cycle",
-    "traducao": ""
+    "traducao": "Retoma um ciclo de gate estacionado"
   },
   "b6056c3f57f7": {
     "fonte": "Mesmo socket `/runner`, mesmo tópico, papel \"terminal\" — quem VÊ o terminal (o comando em si só roda de verdade se houver um runner conectado). Vale para qualquer modo de projeto.",
@@ -2213,479 +2213,479 @@
   },
   "c11293a41969": {
     "fonte": "No role required: a credential is about whoever called, not about a workspace or project. Covers LLM keys and git tokens in the same listing.",
-    "traducao": ""
+    "traducao": "Nenhum papel exigido: credencial é sobre quem chamou, não sobre um workspace ou projeto. Cobre chaves de LLM e tokens de git na mesma listagem."
   },
   "fedc948e26fc": {
     "fonte": "Lists the current user's own credentials",
-    "traducao": ""
+    "traducao": "Lista as credenciais do próprio usuário corrente"
   },
   "ff087e82419b": {
     "fonte": "Upsert by (user, provider). The key is encrypted via envelope encryption before touching the database, and the response carries only the PROJECTION — never the secret, not even encrypted.",
-    "traducao": ""
+    "traducao": "Upsert por (usuário, provider). A chave é cifrada por envelope encryption antes de tocar o banco, e a resposta traz só a PROJEÇÃO — nunca o segredo, nem cifrado."
   },
   "bf9aed3d99e4": {
     "fonte": "Registers or replaces a provider's API key",
-    "traducao": ""
+    "traducao": "Registra ou substitui a API key de um provider"
   },
   "58bf8c9a0d17": {
     "fonte": "Idempotent: deleting what does not exist also responds `{ ok: true }`.",
-    "traducao": ""
+    "traducao": "Idempotente: apagar o que não existe também responde `{ ok: true }`."
   },
   "cfbecffddf77": {
     "fonte": "Removes a provider's credential",
-    "traducao": ""
+    "traducao": "Remove a credencial de um provider"
   },
   "5ed98e17dc1a": {
     "fonte": "The check is an explicit action, separate from registration (ADR 0050): the api decrypts the secret, calls the provider, and returns ONLY the verdict — the key never comes back, not even in part. Responds 200 for all three outcomes, because the request was processed; `refused` is an outcome, not a protocol error. 404 when there is no credential for (user, provider) — then there is nothing to test.",
-    "traducao": ""
+    "traducao": "A checagem é uma ação explícita, separada do registro (ADR 0050): a api decifra o segredo, chama o provider e devolve SÓ o veredito — a chave nunca volta, nem em parte. Responde 200 para os três desfechos, porque o pedido foi processado; `refused` é um desfecho, não erro de protocolo. 404 quando não há credencial para (usuário, provider) — aí não há o que testar."
   },
   "a52407672ad9": {
     "fonte": "No credential for this provider.",
-    "traducao": ""
+    "traducao": "Sem credencial para este provider."
   },
   "8e6cfeb845e3": {
     "fonte": "Checks the ALREADY stored credential against the provider",
-    "traducao": ""
+    "traducao": "Confere contra o provider a credencial JÁ guardada"
   },
   "d09466b0548c": {
     "fonte": "Its own path, not the `users/me/credentials` one, because the body is different (`token`, and the provider enum is `github`/`gitlab`). The token is encrypted and stored without prior verification (ADR 0050); to verify it, `POST /users/me/credentials/{provider}/test`. Reading, removal, and testing reuse the `users/me/credentials` routes — it's the same table.",
-    "traducao": ""
+    "traducao": "Caminho próprio, não o de `users/me/credentials`, porque o corpo é diferente (`token`, e o enum de provider é `github`/`gitlab`). O token é cifrado e guardado sem verificação prévia (ADR 0050); para verificá-lo, `POST /users/me/credentials/{provider}/test`. Leitura, remoção e teste reusam as rotas de `users/me/credentials` — é a mesma tabela."
   },
   "1fa671c2e5dc": {
     "fonte": "Registers a git token (encrypted, without testing)",
-    "traducao": ""
+    "traducao": "Registra um token de git (cifrado, sem testar)"
   },
   "d1f7bc0cef1d": {
     "fonte": "Account-level, with no project in the path (RN-611): the one-line install creates a machine key before any project exists, and every other listing is per project. Returns ONLY machine keys (`especie: \"maquina\"`, `projectId: null`) and ONLY the caller’s — project keys stay in their project’s listing, and no one sees another user’s keys (RN-519). Revoked keys are INCLUDED: registering a new machine key revokes the previous one (RN-552), and this list is where that shows. `lastUsedAt` is a recorded use, never a live connection; null means the key was never used.",
-    "traducao": ""
+    "traducao": "Por conta, sem projeto no caminho (RN-611): a instalação de uma linha cria uma chave de máquina antes de existir qualquer projeto, e toda outra listagem é por projeto. Devolve SÓ chaves de máquina (`especie: \"maquina\"`, `projectId: null`) e SÓ as do chamador — chaves de projeto ficam na listagem do projeto delas, e ninguém vê chave de outro usuário (RN-519). Chaves revogadas ENTRAM: registrar uma chave de máquina nova revoga a anterior (RN-552), e é nesta lista que isso aparece. `lastUsedAt` é uso registrado, nunca conexão viva; nulo quer dizer que a chave nunca foi usada."
   },
   "d61be42a9613": {
     "fonte": "Lists the authenticated user's own MACHINE device keys",
-    "traducao": ""
+    "traducao": "Lista as próprias chaves de dispositivo de MÁQUINA do usuário autenticado"
   },
   "c596d6934895": {
     "fonte": "Idempotent — revoking again is not an error. Same revocation as `DELETE /projects/{projectId}/runner-device-keys/{deviceKeyId}`: it also drops the LIVE connections opened with this key, in EVERY project (RN-520/RN-543). Since RN-685 (ADR 0201) the target is the KEY: another runner of the same user, connected with a PAT or with another key, stays up. The key’s still-unused tickets are voided. With no project yet there is no connection to drop. A PROJECT key, a key that does not exist and another user’s key all answer the same 404.",
-    "traducao": ""
+    "traducao": "Idempotente — revogar de novo não é erro. Mesma revogação de `DELETE /projects/{projectId}/runner-device-keys/{deviceKeyId}`: também derruba as conexões VIVAS abertas com esta chave, em TODO projeto (RN-520/RN-543). Desde a RN-685 (ADR 0201) o alvo é a CHAVE: outro runner do mesmo usuário, conectado com PAT ou com outra chave, fica de pé. Os tickets da chave ainda não usados são anulados. Sem projeto ainda, não há conexão a derrubar. Chave de PROJETO, chave que não existe e chave de outro usuário respondem o mesmo 404."
   },
   "739839bde83c": {
     "fonte": "Key revoked. No body.",
-    "traducao": ""
+    "traducao": "Chave revogada. Sem corpo."
   },
   "51b1cb18b7bd": {
     "fonte": "No machine key with this id belongs to the caller (it does not exist, is a project key, or is someone else’s — one answer for all).",
-    "traducao": ""
+    "traducao": "Nenhuma chave de máquina com este id pertence a quem chama (não existe, é chave de projeto, ou é de outra pessoa — uma resposta para todos)."
   },
   "63c062169084": {
     "fonte": "Revokes one of the authenticated user’s own MACHINE device keys",
-    "traducao": ""
+    "traducao": "Revoga uma das próprias chaves de dispositivo de MÁQUINA do usuário autenticado"
   },
   "4e0285e38905": {
     "fonte": "Reads the authenticated user's interface language and agent response language",
-    "traducao": ""
+    "traducao": "Lê o idioma da interface e o idioma de resposta dos agentes do usuário autenticado"
   },
   "e7f08f7413f7": {
     "fonte": "Both fields are optional and independent — sending one never touches the other, and a body with neither is a 400. `locale` (the interface) stays closed to the `pt-BR`/`en` list. `responseLanguage` (RN-618) is `automatico` or any recognized BCP-47 code, stored canonical; an unrecognized code is a 400 and nothing in the body is written.",
-    "traducao": ""
+    "traducao": "Os dois campos são opcionais e independentes — mandar um nunca toca o outro, e corpo sem nenhum é 400. `locale` (a interface) continua fechado à lista `pt-BR`/`en`. `responseLanguage` (RN-618) é `automatico` ou qualquer código BCP-47 reconhecido, gravado na forma canônica; código não reconhecido é 400 e nada do corpo é gravado."
   },
   "978e42a82cb1": {
     "fonte": "Writes the authenticated user's interface language and/or agent response language",
-    "traducao": ""
+    "traducao": "Grava o idioma da interface e/ou o idioma de resposta dos agentes do usuário autenticado"
   },
   "d0765926a5fc": {
     "fonte": "The only way a detected language becomes a preference (RN-624): detection alone never changes anything. `confirm` writes `detectedLanguage` + `detectedLanguageConfirmedAt`; `decline` records the refusal so the same language is not asked again. Returns the preferences after the answer.",
-    "traducao": ""
+    "traducao": "O único jeito de um idioma detectado virar preferência (RN-624): a detecção sozinha nunca muda nada. `confirm` grava `detectedLanguage` + `detectedLanguageConfirmedAt`; `decline` registra a recusa para o mesmo idioma não ser perguntado de novo. Devolve as preferências depois da resposta."
   },
   "d6b3175c9a03": {
     "fonte": "A code that is not a recognized BCP-47 language.",
-    "traducao": ""
+    "traducao": "Código que não é um idioma BCP-47 reconhecido."
   },
   "b22bd7b3e0f1": {
     "fonte": "`deteccao_mudou`: on `confirm`, your recent messages no longer point to that language — nothing was written.",
-    "traducao": ""
+    "traducao": "`deteccao_mudou`: no `confirm`, as suas mensagens recentes não apontam mais para aquele idioma — nada foi gravado."
   },
   "728a9eaf4308": {
     "fonte": "Answers the detected-language question",
-    "traducao": ""
+    "traducao": "Responde a pergunta do idioma detectado"
   },
   "b27e4b7607bc": {
     "fonte": "Already filtered by association — there is no global listing. Each item carries the caller's own role.",
-    "traducao": ""
+    "traducao": "Já filtrada por associação — não há listagem global. Cada item traz o papel do próprio chamador."
   },
   "58e2d9d2ef8b": {
     "fonte": "Insufficient role in the workspace.",
-    "traducao": ""
+    "traducao": "Papel insuficiente no workspace."
   },
   "0ca72d5b71cf": {
     "fonte": "Workspace doesn't exist or is invisible to the caller.",
-    "traducao": ""
+    "traducao": "O workspace não existe ou é invisível para quem chama."
   },
   "322ad19c3614": {
     "fonte": "Lists the caller's workspaces",
-    "traducao": ""
+    "traducao": "Lista os workspaces de quem chama"
   },
   "8f65698eab56": {
     "fonte": "Requires no role: whoever creates it becomes `owner`. It's the only entry point for someone who doesn't belong to any workspace yet.",
-    "traducao": ""
+    "traducao": "Não exige papel: quem cria vira `owner`. É a única porta de entrada para quem ainda não pertence a workspace nenhum."
   },
   "bce3555e8456": {
     "fonte": "A workspace with this slug already exists.",
-    "traducao": ""
+    "traducao": "Já existe um workspace com este slug."
   },
   "7a1af884d44c": {
     "fonte": "Creates a workspace",
-    "traducao": ""
+    "traducao": "Cria um workspace"
   },
   "98268d798653": {
     "fonte": "Returns a workspace by id",
-    "traducao": ""
+    "traducao": "Devolve um workspace pelo id"
   },
   "58c610901a1c": {
     "fonte": "Changes the workspace's name or slug",
-    "traducao": ""
+    "traducao": "Muda o nome ou o slug do workspace"
   },
   "dc5c18e9e7a3": {
     "fonte": "Requires `owner`. Takes its projects, sessions, and their history along with it.",
-    "traducao": ""
+    "traducao": "Exige `owner`. Leva junto os projetos, as sessões e o histórico deles."
   },
   "2c815c195922": {
     "fonte": "Removes the workspace",
-    "traducao": ""
+    "traducao": "Remove o workspace"
   },
   "e6a60f4f0cc5": {
     "fonte": "One row per project of the workspace — since RN-521 a project that never provisioned a container is PRESENT with `registrado: null` instead of absent, because this page is the human path to start the first one. The observed state is asked of the broker only for rows `provisioning`/`running`, and only up to a per-load budget — see `naoVerificado` on rows that were skipped, and ADR 0136 for the reasoning.",
-    "traducao": ""
+    "traducao": "Uma linha por projeto do workspace — desde a RN-521 um projeto que nunca provisionou container está PRESENTE com `registrado: null` em vez de ausente, porque esta página é o caminho humano para subir o primeiro. O estado observado só é perguntado ao broker para linhas `provisioning`/`running`, e só até um orçamento por carga — ver `naoVerificado` nas linhas puladas, e o ADR 0136 para o raciocínio."
   },
   "5243afc8c00e": {
     "fonte": "Lists every project in the workspace and its container, if any",
-    "traducao": ""
+    "traducao": "Lista todo projeto do workspace e o container dele, se houver"
   },
   "5c8813284399": {
     "fonte": "Exists because the key agents spend is the workspace OWNER's (RN-058) — whoever pays the bill needs to see the bill. Groups by provider because that is the unit of the credential, and separates what went out by AGENT from what went out by a person in chat: the two come out of the same key and answer different questions. Returns no secret at all.",
-    "traducao": ""
+    "traducao": "Existe porque a chave que os agentes gastam é a do DONO do workspace (RN-058) — quem paga a fatura precisa ver a fatura. Agrupa por provider porque essa é a unidade da credencial, e separa o que saiu por AGENTE do que saiu por uma pessoa no chat: os dois saem da mesma chave e respondem perguntas diferentes. Não devolve segredo nenhum."
   },
   "29d69c2d518a": {
     "fonte": "Requires `owner` on the workspace.",
-    "traducao": ""
+    "traducao": "Exige `owner` no workspace."
   },
   "ac93370cf8a5": {
     "fonte": "How much the owner's keys spent, by provider and by month",
-    "traducao": ""
+    "traducao": "Quanto as chaves do owner gastaram, por provider e por mês"
   },
   "c373a491cbed": {
     "fonte": "Filters to OFFICIAL publishers only by default (the allowlist in `domain/llm/huggingface-official-publishers.ts`) — same \"manual curation always\" spirit as the LLM catalog (ADR 0042), applied to the \"official\" badge instead of to activation. `includeCommunity=true` brings in every publisher, each one tagged `official: false` for the screen to render the security warning — never hidden.",
-    "traducao": ""
+    "traducao": "Filtra por padrão só publishers OFICIAIS (o allowlist em `domain/llm/huggingface-official-publishers.ts`) — o mesmo espírito de \"curadoria manual sempre\" do catálogo de LLM (ADR 0042), aplicado ao selo de \"oficial\" em vez da ativação. `includeCommunity=true` traz todo publisher, cada um marcado `official: false` para a tela desenhar o aviso de segurança — nunca escondido."
   },
   "745ef69c56a6": {
     "fonte": "Search text.",
-    "traducao": ""
+    "traducao": "Texto de busca."
   },
   "deef0d027b78": {
     "fonte": "Pass `true` to also include non-official publishers.",
-    "traducao": ""
+    "traducao": "Passe `true` para incluir também publishers não oficiais."
   },
   "6459fa8c67ff": {
     "fonte": "Requires `maintainer` on the workspace.",
-    "traducao": ""
+    "traducao": "Exige `maintainer` no workspace."
   },
   "07db63d60751": {
     "fonte": "Searches GGUF models on the Hugging Face Hub",
-    "traducao": ""
+    "traducao": "Busca modelos GGUF no Hugging Face Hub"
   },
   "6e56c828337c": {
     "fonte": "First of two explicit steps: this call only records the intent, in `pending_confirmation`. Nothing is pulled until a separate call to `POST .../pull-requests/:id/confirm` — the product never runs an automatic, silent pull.",
-    "traducao": ""
+    "traducao": "Primeiro de dois passos explícitos: esta chamada só registra a intenção, em `pending_confirmation`. Nada é baixado até uma chamada separada a `POST .../pull-requests/:id/confirm` — o produto nunca roda um pull automático e silencioso."
   },
   "96b5adffa046": {
     "fonte": "Creates a PENDING pull request — nothing downloads yet",
-    "traducao": ""
+    "traducao": "Cria um pedido de pull PENDENTE — nada é baixado ainda"
   },
   "78877f273331": {
     "fonte": "Pull request not found.",
-    "traducao": ""
+    "traducao": "Pedido de pull não encontrado."
   },
   "6e89f5ba3957": {
     "fonte": "Status of a pull request, for the frontend to poll",
-    "traducao": ""
+    "traducao": "Status de um pedido de pull, para o frontend consultar"
   },
   "3c7bf5737ebb": {
     "fonte": "Moves `pending_confirmation` → `confirmed` → `pulling`, calls the Ollama daemon, and on success upserts the model into the catalog (`models`) and activates it for THIS workspace. On failure the request ends in `failed` with a reason declaring its origin (infra | model | code | policy) — never a silent failure. This call runs SYNCHRONOUSLY for the whole pull (see the use case for why); use the GET route below to poll instead of holding this connection open.",
-    "traducao": ""
+    "traducao": "Move `pending_confirmation` → `confirmed` → `pulling`, chama o daemon do Ollama e, em caso de sucesso, faz upsert do modelo no catálogo (`models`) e o ativa para ESTE workspace. Em caso de falha o pedido termina em `failed` com um motivo que declara a origem (infra | modelo | código | política) — nunca falha calada. Esta chamada roda de forma SÍNCRONA durante o pull inteiro (ver o caso de uso para o porquê); use a rota GET abaixo para consultar em vez de segurar esta conexão aberta."
   },
   "c4d634c95923": {
     "fonte": "The second confirmation — actually runs the pull",
-    "traducao": ""
+    "traducao": "A segunda confirmação — roda o pull de fato"
   },
   "d07109f5f5d4": {
     "fonte": "Who is associated with the WORKSPACE, with the workspace role — the role every project inherits unless a project row overrides it. Completes `GET projects/:projectId/members`, which lists only project rows: whoever reaches a project through the workspace alone shows up here and not there. Only id, name, e-mail and role.",
-    "traducao": ""
+    "traducao": "Quem está associado ao WORKSPACE, com o papel de workspace — o papel que todo projeto herda a menos que uma linha de projeto o sobreponha. Completa `GET projects/:projectId/members`, que lista só linhas de projeto: quem alcança um projeto só pelo workspace aparece aqui e não lá. Só id, nome, e-mail e papel."
   },
   "5956ff550cc0": {
     "fonte": "Lists the workspace's members",
-    "traducao": ""
+    "traducao": "Lista os membros do workspace"
   },
   "4d5644eb0ff4": {
     "fonte": "Only `owner` can touch the member roster. The role here is inherited by ALL of the workspace's projects. That role is NECESSARY but not SUFFICIENT: changing YOUR OWN role here is refused with 403 in both directions, and cannot be enabled anywhere. There is no level above to catch the fall, so a self downgrade would be unrecoverable through the UI. Demoting ANOTHER `owner` is still allowed — it is the only way ownership is revoked.",
-    "traducao": ""
+    "traducao": "Só `owner` mexe na lista de membros. O papel aqui é herdado por TODOS os projetos do workspace. Esse papel é NECESSÁRIO mas não SUFICIENTE: mudar o SEU PRÓPRIO papel aqui é recusado com 403 nos dois sentidos, e não pode ser habilitado em lugar nenhum. Não há nível acima para segurar a queda, então um autorrebaixamento seria irrecuperável pela interface. Rebaixar OUTRO `owner` continua permitido — é o único jeito de revogar propriedade."
   },
   "edc472bcc62f": {
     "fonte": "Not `owner` of the workspace, OR the target is the caller and the requested role differs from their current one (self-movement cap).",
-    "traducao": ""
+    "traducao": "Não é `owner` do workspace, OU o alvo é quem chama e o papel pedido difere do atual dele (teto de automovimento)."
   },
   "672e86be1fbf": {
     "fonte": "Associates a user with the workspace",
-    "traducao": ""
+    "traducao": "Associa um usuário ao workspace"
   },
   "114550f4f81c": {
     "fonte": "Only `owner`, like the upsert. Removes the workspace row AND, in the same transaction, the user's rows in every project of this workspace (the project role overrides the workspace one, so leaving them would keep the user inside those projects), plus the user's PROJECT device keys and personal access tokens in them. Afterwards the live runner connection of that user in each project is dropped, best effort. Machine device keys and open sessions are left alone — they stop reaching this workspace because the role resolves to none.\n\nRemoving YOURSELF is refused with 403 and cannot be enabled anywhere: there is no level above to catch the fall. That same clause is what protects the last `owner` — only an `owner` can call this route and nobody removes themselves, so every successful call leaves at least the caller as `owner`. Removing ANOTHER `owner` is allowed — it is how ownership is revoked — except the OWNER OF RECORD (`createdBy`), refused with 409 `criador_do_workspace` until `PUT :workspaceId/owner-of-record` moves it to another owner: the LLM key agents spend and the spend report are theirs. Idempotent: a target without a workspace row still has this workspace's project rows cleared, and gets `204`.",
-    "traducao": ""
+    "traducao": "Só `owner`, como o upsert. Remove a linha do workspace E, na mesma transação, as linhas do usuário em todo projeto deste workspace (o papel de projeto sobrepõe o de workspace, então deixá-las manteria o usuário dentro desses projetos), mais as chaves de dispositivo de PROJETO e os personal access tokens do usuário neles. Depois a conexão de runner viva desse usuário em cada projeto é derrubada, em melhor esforço. Chaves de dispositivo de máquina e sessões abertas ficam como estão — deixam de alcançar este workspace porque o papel resolve para nenhum.\n\nRemover a SI MESMO é recusado com 403 e não pode ser habilitado em lugar nenhum: não há nível acima para segurar a queda. Essa mesma cláusula é o que protege o último `owner` — só um `owner` chama esta rota e ninguém se remove, então toda chamada bem-sucedida deixa ao menos quem chamou como `owner`. Remover OUTRO `owner` é permitido — é como se revoga propriedade —, exceto o TITULAR (`createdBy`), recusado com 409 `criador_do_workspace` até `PUT :workspaceId/owner-of-record` passá-lo a outro owner: a chave de LLM que os agentes gastam e o relatório de gasto são dele. Idempotente: alvo sem linha de workspace ainda tem as linhas de projeto deste workspace limpas, e recebe `204`."
   },
   "417b7262562b": {
     "fonte": "Not `owner` of the workspace, OR the target is the caller (self-removal cap).",
-    "traducao": ""
+    "traducao": "Não é `owner` do workspace, OU o alvo é quem chama (teto de autorremoção)."
   },
   "6d6ff03833fa": {
     "fonte": "`criador_do_workspace`: the target is the owner of record; transfer it first.",
-    "traducao": ""
+    "traducao": "`criador_do_workspace`: o alvo é o titular; transfira a titularidade antes."
   },
   "eb3722a0772a": {
     "fonte": "Disassociates a user from the workspace",
-    "traducao": ""
+    "traducao": "Desassocia um usuário do workspace"
   },
   "d1942d320b80": {
     "fonte": "This scope's RAW binding. It is the root of the cascade.",
-    "traducao": ""
+    "traducao": "O binding CRU deste escopo. É a raiz da cascata."
   },
   "feb7ff2409ce": {
     "fonte": "Reads the workspace model binding",
-    "traducao": ""
+    "traducao": "Lê o binding de modelo do workspace"
   },
   "be13d17bee1f": {
     "fonte": "Applies to every project that has no binding of its own.",
-    "traducao": ""
+    "traducao": "Vale para todo projeto que não tem binding próprio."
   },
   "9c17ac9a67a8": {
     "fonte": "Sets the default model for the workspace",
-    "traducao": ""
+    "traducao": "Define o modelo padrão do workspace"
   },
   "085ef134b963": {
     "fonte": "Most recent first. It is an immutable log: never gets an UPDATE, and the row carries the before/after pair so the audit does not depend on reconstructing the \"before\" from the previous row.",
-    "traducao": ""
+    "traducao": "A mais recente primeiro. É um log imutável: nunca recebe UPDATE, e a linha traz o par antes/depois para que a auditoria não dependa de reconstruir o \"antes\" a partir da linha anterior."
   },
   "f06c7fadb23b": {
     "fonte": "Insufficient role on the workspace.",
-    "traducao": ""
+    "traducao": "Papel insuficiente no workspace."
   },
   "40f2ea7bd6e4": {
     "fonte": "History of a model's price changes",
-    "traducao": ""
+    "traducao": "Histórico das mudanças de preço de um modelo"
   },
   "6ff046a53c6c": {
     "fonte": "Applies from now on and NEVER re-prices the past: each `token_usage` row keeps the price that produced its cost. The change stays recorded with the before/after pair — queryable on the history route.",
-    "traducao": ""
+    "traducao": "Vale daqui em diante e NUNCA reprecifica o passado: cada linha de `token_usage` guarda o preço que produziu o custo dela. A mudança fica registrada com o par antes/depois — consultável na rota de histórico."
   },
   "46451d2e9e3a": {
     "fonte": "Model not found.",
-    "traducao": ""
+    "traducao": "Modelo não encontrado."
   },
   "5aa799caa6d6": {
     "fonte": "Corrects a model's price",
-    "traducao": ""
+    "traducao": "Corrige o preço de um modelo"
   },
   "962300129d65": {
     "fonte": "Owner's curation, APPLYING ONLY TO THIS WORKSPACE (ADR 0049). Only touches `isActive` — `availability` is what the sync observed at the provider, is global, and does not change here. Whole batch or nothing: a non-existent id fails the call without applying any row.",
-    "traducao": ""
+    "traducao": "Curadoria do owner, VALENDO SÓ PARA ESTE WORKSPACE (ADR 0049). Só toca `isActive` — `availability` é o que o sync observou no provider, é global, e não muda aqui. Lote inteiro ou nada: id inexistente reprova a chamada sem aplicar linha nenhuma."
   },
   "d0c4ada01f61": {
     "fonte": "Some id in the batch doesn't exist.",
-    "traducao": ""
+    "traducao": "Algum id do lote não existe."
   },
   "f3d5706f8744": {
     "fonte": "Activating an OpenRouter free-routing alias (`~…`) — `code: \"alias_de_roteamento_livre\"`, with the `modelIds` refused. The whole batch is refused. Deactivating one is always allowed (AT-271, RN-679).",
-    "traducao": ""
+    "traducao": "Ativar um alias de roteamento livre do OpenRouter (`~…`) — `code: \"alias_de_roteamento_livre\"`, com os `modelIds` recusados. O lote inteiro é recusado. Desativar um é sempre permitido (AT-271, RN-679)."
   },
   "9e819d6af351": {
     "fonte": "Turns models on or off in the selector (batch)",
-    "traducao": ""
+    "traducao": "Liga ou desliga modelos no seletor (em lote)"
   },
   "f0f895c3218b": {
     "fonte": "The curation screen. A model discovered by the sync comes in as `isActive: false` and only appears here until someone activates it; a model that disappeared from the provider comes with `availability: \"unavailable\"` and is never deleted, because bindings and cost history point to it. `isActive` is FOR THIS workspace (ADR 0049); `availability` is global, because it is what the sync observed at the provider.",
-    "traducao": ""
+    "traducao": "A tela de curadoria. Modelo descoberto pelo sync entra como `isActive: false` e só aparece aqui até alguém ativá-lo; modelo que sumiu do provider vem com `availability: \"unavailable\"` e nunca é apagado, porque bindings e histórico de custo apontam para ele. `isActive` é PARA ESTE workspace (ADR 0049); `availability` é global, porque é o que o sync observou no provider."
   },
   "b1f515fc405b": {
     "fonte": "Lists the WHOLE catalog, including inactive and unavailable",
-    "traducao": ""
+    "traducao": "Lista o catálogo INTEIRO, inclusive inativos e indisponíveis"
   },
   "1bed7775d620": {
     "fonte": "Same use case as the internal route the engine schedules — the curation screen's refresh button has no path of its own, so there are never two reconciliations that could diverge.",
-    "traducao": ""
+    "traducao": "Mesmo caso de uso da rota interna que o engine agenda — o botão de atualizar da tela de curadoria não tem caminho próprio, então nunca há duas reconciliações que possam divergir."
   },
   "5b32a7b45be6": {
     "fonte": "Forces the catalog sync the periodic job does, right now",
-    "traducao": ""
+    "traducao": "Força agora o sync do catálogo que o job periódico faz"
   },
   "e09def7357f8": {
     "fonte": "The axis no catalog publishes: \"good for code\" is not a capability declared by any provider, it is the operator's opinion — and applies ONLY to this workspace (ADR 0049). Axis independent of activation: marking a use does not turn the model on in the selector, and changing the use does not turn off what was on. The uses list REPLACES the previous one.",
-    "traducao": ""
+    "traducao": "O eixo que nenhum catálogo publica: \"bom para código\" não é capability declarada por provider nenhum, é opinião do operador — e vale SÓ para este workspace (ADR 0049). Eixo independente da ativação: marcar um uso não liga o modelo no seletor, e mudar o uso não desliga o que estava ligado. A lista de usos SUBSTITUI a anterior."
   },
   "53a3cdf6d373": {
     "fonte": "Marks what the workspace uses each model for (batch)",
-    "traducao": ""
+    "traducao": "Marca para que o workspace usa cada modelo (em lote)"
   },
   "cae5e0905ce3": {
     "fonte": "The owner of record is `createdBy`: whose LLM credential the agents spend and whose git credential agent actions use (RN-058), and who owns the spend report (RN-060). It does not grant authorization — roles do. The target must already be an `owner` of the workspace (409 `titular_precisa_ser_owner` otherwise). From the commit on, agent turns look up the NEW owner of record's credential; if they have none for the model provider, the turn ends with the existing \"no credential registered\" outcome for that provider — this route does not check it beforehand. Any `owner` may call it, including for another owner. Transferring to the current owner of record is a no-op.",
-    "traducao": ""
+    "traducao": "O titular é `createdBy`: de quem é a credencial de LLM que os agentes gastam e a credencial de git que as ações de agente usam (RN-058), e de quem é o relatório de gasto (RN-060). Não concede autorização — quem concede são os papéis. O alvo já tem de ser `owner` do workspace (senão 409 `titular_precisa_ser_owner`). A partir do commit, os turnos de agente buscam a credencial do NOVO titular; se ele não tem uma para o provider do modelo, o turno termina com o desfecho de sempre de \"nenhuma credencial cadastrada\" para aquele provider — esta rota não confere isso antes. Qualquer `owner` pode chamá-la, inclusive para outro owner. Transferir para o titular atual não faz nada."
   },
   "525e8c572539": {
     "fonte": "`titular_precisa_ser_owner`: the target is not an `owner` of the workspace.",
-    "traducao": ""
+    "traducao": "`titular_precisa_ser_owner`: o alvo não é `owner` do workspace."
   },
   "81b152ca36e5": {
     "fonte": "Transfers the workspace's owner of record",
-    "traducao": ""
+    "traducao": "Transfere a titularidade do workspace"
   },
   "7b77f642a9c7": {
     "fonte": "The folder picker for Mounted mode, served by the api instead of by the runner (RN-504). Scoped HARD to `BRABO_PROJECTS_BASE` (ADR 0141): `path` is optional and defaults to the base itself, and any `path` outside it is a `400` — a malformed request, not a permission problem, since no role browses outside the base.\n\nCapped on purpose: directories only, at most 500 of them (sorted BEFORE the cut, with `truncado` saying so), never recursive, dot-prefixed entries excluded, and symlinks reported but never followed. What is left out is COUNTED (`arquivos`, `simbolicos`) so a folder full of code never looks empty.\n\nThere is no POST companion: creating a folder belongs to materializing the mounted workspace, never to the picker.",
-    "traducao": ""
+    "traducao": "O navegador de pastas do modo Mounted, servido pela api em vez do runner (RN-504). Escopado RIGIDAMENTE a `BRABO_PROJECTS_BASE` (ADR 0141): `path` é opcional e tem como padrão a própria base, e qualquer `path` fora dela é `400` — pedido malformado, não problema de permissão, já que papel nenhum navega fora da base.\n\nCom teto de propósito: só diretórios, no máximo 500 (ordenados ANTES do corte, com `truncado` dizendo isso), nunca recursivo, entradas com ponto no início excluídas, e symlinks relatados mas nunca seguidos. O que fica de fora é CONTADO (`arquivos`, `simbolicos`) para uma pasta cheia de código nunca parecer vazia.\n\nNão há POST irmão: criar pasta é parte de materializar o workspace montado, nunca do navegador."
   },
   "8a2dce7e6655": {
     "fonte": "Absolute path to list. Omitted means the base itself. Must be inside `BRABO_PROJECTS_BASE`; `..`, `.` and relative paths are refused outright rather than resolved.",
-    "traducao": ""
+    "traducao": "Caminho absoluto a listar. Omitido quer dizer a própria base. Tem de estar dentro de `BRABO_PROJECTS_BASE`; `..`, `.` e caminhos relativos são recusados de cara em vez de resolvidos."
   },
   "61defa6b58d5": {
     "fonte": "The path is outside the projects base, or malformed.",
-    "traducao": ""
+    "traducao": "O caminho está fora da base de projetos, ou malformado."
   },
   "a9c9f688c607": {
     "fonte": "Lists the subfolders of a folder inside the projects base",
-    "traducao": ""
+    "traducao": "Lista as subpastas de uma pasta dentro da base de projetos"
   },
   "d00954fb55bc": {
     "fonte": "Lists the workspace's projects",
-    "traducao": ""
+    "traducao": "Lista os projetos do workspace"
   },
   "5c42b9b39b5f": {
     "fonte": "Creates a project inside the workspace",
-    "traducao": ""
+    "traducao": "Cria um projeto dentro do workspace"
   },
   "e56ecdd82e52": {
     "fonte": "The single folder on the operator machine that the api and engine containers can see, mounted by identity (ADR 0141). `null` — a normal state, never an error — means this installation has no `BRABO_PROJECTS_BASE`, so the project wizard must not offer Mounted mode at all. The same value for every workspace: it is installation configuration, and `workspaceId` only scopes the authorization.\n\n`brokerConfigurado` answers the other half of the same question: `container` and `mounted` only start a container through the broker (ADR 0144), so without it the wizard does not pre-select Mounted and offers Runner instead (ADR 0161, RN-573).",
-    "traducao": ""
+    "traducao": "A única pasta da máquina do operador que os containers da api e do engine enxergam, montada por identidade (ADR 0141). `null` — estado normal, nunca erro — quer dizer que esta instalação não tem `BRABO_PROJECTS_BASE`, então o assistente de projeto não deve oferecer o modo Mounted de jeito nenhum. O mesmo valor para todo workspace: é configuração da instalação, e `workspaceId` só escopa a autorização.\n\n`brokerConfigurado` responde a outra metade da mesma pergunta: `container` e `mounted` só sobem container pelo broker (ADR 0144), então sem ele o assistente não pré-seleciona Mounted e oferece Runner no lugar (ADR 0161, RN-573)."
   },
   "98745459edcc": {
     "fonte": "The base folder for projects in Mounted mode",
-    "traducao": ""
+    "traducao": "A pasta base dos projetos no modo Mounted"
   },
   "2bf592c79860": {
     "fonte": "One row per workspace project with a blocked task — feeds the dashboard sidebar's status dot with a single query instead of N calls to the backlog.",
-    "traducao": ""
+    "traducao": "Uma linha por projeto do workspace com tarefa bloqueada — alimenta o ponto de status da barra lateral do painel com uma consulta só em vez de N chamadas ao backlog."
   },
   "e35c03ef1621": {
     "fonte": "Count of blocked tasks per project",
-    "traducao": ""
+    "traducao": "Contagem de tarefas bloqueadas por projeto"
   },
   "2db635c78362": {
     "fonte": "One row per workspace project with git provider, provisioning status, budget, last activity, stories awaiting promotion, and the facts that decide the agent roster (RN-090).\n\nSame idea as `projects-status`, one floor up: the card grid is a WORKSPACE read, not N project reads. The previous path made seven polled queries per card, and with 23 projects the dashboard alone blew through the 300 req/min rate limit.",
-    "traducao": ""
+    "traducao": "Uma linha por projeto do workspace com provider de git, status de provisionamento, orçamento, última atividade, histórias aguardando promoção e os fatos que decidem a lista de agentes (RN-090).\n\nMesma ideia de `projects-status`, um andar acima: a grade de cards é uma leitura de WORKSPACE, não N leituras de projeto. O caminho anterior fazia sete consultas com poll por card, e com 23 projetos só o painel estourava o rate limit de 300 req/min."
   },
   "d0b76f54176d": {
     "fonte": "Everything the dashboard cards render, in one call",
-    "traducao": ""
+    "traducao": "Tudo o que os cards do painel desenham, numa chamada só"
   },
   "584bfd914dbc": {
     "fonte": "The OWNER's audience. The PROVIDER axis came back (ADR 0076, RN-186) and is here, not on the member's route, because breaking down by provider is breaking down by CREDENTIAL — and credential is whoever pays's business (RN-060). Complements `credential-spend`, which keeps answering the INVOICE question (per month, with the tie to the key that exists today). Person and agent also come in separate blocks, by `actor_kind`. Sliding window in days, and the daily series comes DENSE — a day with no spend comes in as zero, otherwise the sparkline lies about the pace.",
-    "traducao": ""
+    "traducao": "O público do OWNER. O eixo de PROVIDER voltou (ADR 0076, RN-186) e está aqui, não na rota do membro, porque quebrar por provider é quebrar por CREDENCIAL — e credencial é assunto de quem paga (RN-060). Complementa `credential-spend`, que continua respondendo a pergunta da FATURA (por mês, com o vínculo à chave que existe hoje). Pessoa e agente também vêm em blocos separados, por `actor_kind`. Janela deslizante em dias, e a série diária vem DENSA — dia sem gasto entra como zero, senão o sparkline mente sobre o ritmo."
   },
   "db8ca5850449": {
     "fonte": "Breaks down the workspace's spend by model, provider, project, actor, and day",
-    "traducao": ""
+    "traducao": "Quebra o gasto do workspace por modelo, provider, projeto, ator e dia"
   },
   "4b77fd0dfe8c": {
     "fonte": "Project count, agents that spent tokens this month, and this month's spend — feeds the summary line of the project dashboard.",
-    "traducao": ""
+    "traducao": "Contagem de projetos, agentes que gastaram tokens neste mês e o gasto do mês — alimenta a linha de resumo do painel de projetos."
   },
   "d485701c92c4": {
     "fonte": "Aggregated workspace summary",
-    "traducao": ""
+    "traducao": "Resumo agregado do workspace"
   },
   "7324cea83b26": {
     "fonte": "On by default. When on AND the turn model is from OpenRouter, an agent step with two or more tools first asks the Jev which tool fits, and the chat model is offered only that tool and the previous one. The Jev never approves or denies anything: an action that needs approval still does. Any failure of the Jev falls back to the whole catalog. Turning it off stops every call to the Jev, and its cost with them.",
-    "traducao": ""
+    "traducao": "Ligado por padrão. Quando ligado E o modelo do turno é do OpenRouter, um passo de agente com duas ou mais ferramentas primeiro pergunta ao Jev qual ferramenta cabe, e ao modelo de chat só são oferecidas essa ferramenta e a anterior. O Jev nunca aprova nem nega nada: ação que exige aprovação continua exigindo. Qualquer falha do Jev cai no catálogo inteiro. Desligá-lo para toda chamada ao Jev, e o custo delas junto."
   },
   "579f77465fbb": {
     "fonte": "Turns the Jev tool routing on or off for the workspace",
-    "traducao": ""
+    "traducao": "Liga ou desliga o roteamento de ferramentas do Jev no workspace"
   },
   "3362f14aeb7e": {
     "fonte": "The bell's drawer, for the whole workspace (RN-091). Each cursor says up to which `seq` that project has already been read, and the response carries what came after that in each one's most recent session.\n\n**It's POST because it's the only verb with a BODY, not because it changes state.** The server doesn't know where each reader stopped: \"read up to here\" is a `seq` per project stored in the browser, and there is (deliberately) no mark-as-read endpoint. So the cutoff needs to TRAVEL in the request, and there are dozens of pairs — in a query string that becomes a long URL, which a proxy truncates, and would also put the user's project ids in access logs. The route is idempotent and has no side effect: it responds `200`, never `201`.\n\nReplaces one request PER PROJECT with the drawer open — 23 projects cost 286 req/min against a limit of 300.",
-    "traducao": ""
+    "traducao": "A gaveta do sino, para o workspace inteiro (RN-091). Cada cursor diz até qual `seq` aquele projeto já foi lido, e a resposta traz o que veio depois disso na sessão mais recente de cada um.\n\n**É POST porque é o único verbo com CORPO, não porque muda estado.** O servidor não sabe onde cada leitor parou: \"lido até aqui\" é um `seq` por projeto guardado no navegador, e (de propósito) não há endpoint de marcar como lido. Então o corte precisa VIAJAR no pedido, e são dezenas de pares — numa query string isso vira uma URL longa, que um proxy corta, e ainda poria os ids de projeto do usuário em logs de acesso. A rota é idempotente e não tem efeito colateral: responde `200`, nunca `201`.\n\nSubstitui um pedido POR PROJETO com a gaveta aberta — 23 projetos custavam 286 req/min contra um limite de 300."
   },
   "e5506d806b03": {
     "fonte": "Unread events across multiple projects, in one call",
-    "traducao": ""
+    "traducao": "Eventos não lidos de vários projetos, numa chamada só"
   },
   "28196f689266": {
     "fonte": "The Brabo API. Every endpoint returns JSON, except the four explicitly\ndocumented with a different `content-type` (two SSE ones, the metrics one,\nand the OAuth callback, which redirects).\n\n## Authentication\n\nThe access token is a **15-minute EdDSA JWT**, presented in\n`Authorization: Bearer <token>`. The public key lives at\n`GET /.well-known/jwks.json`.\n\nThe refresh **is not** a JWT: it's an opaque token that lives in an\n`httpOnly` cookie (`brabo_refresh`, `Path=/auth`, `SameSite=Strict`) and\nnever appears in any response body. `POST /auth/refresh` and\n`POST /auth/logout` read the cookie and require the `X-CSRF-Token` header\nto match the `brabo_csrf` cookie.\n\n**Rotation is mandatory.** Each refresh consumes the presented token and\nissues another. Re-presenting an already-consumed one is a theft signature\nand revokes the WHOLE family — including the legitimate session. A client\nthat fires two concurrent refreshes takes itself down; use a single in-flight\ncall.\n\nThe `/internal/*` routes are the api ↔ engine surface and sit **outside the\nJWT**: they require the `X-Brabo-Service-Token` header with the shared\nsecret. A user token doesn't open any of them.\n\n## Errors\n\nNestJS default format: `{ \"statusCode\": number, \"message\": string | string[], \"error\": string }`.\n\n| code | when |\n|---|---|\n| `400` | invalid body — the `ValidationPipe` runs with `whitelist` and `forbidNonWhitelisted`, so an unknown field also fails |\n| `401` | no token, expired token, or invalid credential |\n| `403` | authenticated but without the role RBAC requires, or a wrong service token |\n| `404` | resource doesn't exist **or** is invisible to the caller |\n| `409` | state conflict — invalid session transition, resource already exists |\n| `429` | rate limit or progressive lockout |\n\nAuth routes respond **deliberately indistinguishably** between a nonexistent\nemail, a wrong password, and a locked account: same body, same status, same\ntiming. That's what closes account enumeration, and it's not a diagnostic\ndefect.\n\n## Rate limit\n\nSliding window in Postgres: 300 requests per user and 600 per IP every 60s,\nconfigurable. A `@Public()` route and a service route are **exempt** — what\nguards `/auth/*` is the progressive lockout, not the rate limit.",
-    "traducao": ""
+    "traducao": "A API do Brabo. Todo endpoint devolve JSON, exceto os quatro explicitamente\ndocumentados com outro `content-type` (os dois de SSE, o de métricas,\ne o callback OAuth, que redireciona).\n\n## Autenticação\n\nO access token é um **JWT EdDSA de 15 minutos**, apresentado em\n`Authorization: Bearer <token>`. A chave pública mora em\n`GET /.well-known/jwks.json`.\n\nO refresh **não** é JWT: é um token opaco que mora num cookie\n`httpOnly` (`brabo_refresh`, `Path=/auth`, `SameSite=Strict`) e\nnunca aparece em corpo de resposta nenhum. `POST /auth/refresh` e\n`POST /auth/logout` leem o cookie e exigem que o cabeçalho `X-CSRF-Token`\nbata com o cookie `brabo_csrf`.\n\n**A rotação é obrigatória.** Cada refresh consome o token apresentado e\nemite outro. Reapresentar um já consumido é assinatura de roubo\ne revoga a família INTEIRA — inclusive a sessão legítima. Um cliente\nque dispara dois refreshes concorrentes derruba a si mesmo; use uma única\nchamada em voo.\n\nAs rotas `/internal/*` são a superfície api ↔ engine e ficam **fora do\nJWT**: exigem o cabeçalho `X-Brabo-Service-Token` com o segredo\ncompartilhado. Token de usuário não abre nenhuma delas.\n\n## Erros\n\nFormato padrão do NestJS: `{ \"statusCode\": number, \"message\": string | string[], \"error\": string }`.\n\n| código | quando |\n|---|---|\n| `400` | corpo inválido — o `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova |\n| `401` | sem token, token expirado ou credencial inválida |\n| `403` | autenticado mas sem o papel que o RBAC exige, ou service token errado |\n| `404` | o recurso não existe **ou** é invisível para quem chama |\n| `409` | conflito de estado — transição de sessão inválida, recurso já existe |\n| `429` | rate limit ou bloqueio progressivo |\n\nAs rotas de auth respondem de forma **deliberadamente indistinguível** entre\ne-mail inexistente, senha errada e conta bloqueada: mesmo corpo, mesmo status, mesmo\ntempo. É isso que fecha a enumeração de contas, e não é defeito de\ndiagnóstico.\n\n## Rate limit\n\nJanela deslizante no Postgres: 300 requisições por usuário e 600 por IP a cada 60s,\nconfigurável. Rota `@Public()` e rota de serviço são **isentas** — o que\nprotege `/auth/*` é o bloqueio progressivo, não o rate limit."
   },
   "826ad62ab4f2": {
     "fonte": "Module name, as it appears in the `module_map`. Starts a dev agent dedicated to it, in an isolated worktree.",
-    "traducao": ""
+    "traducao": "Nome do módulo, como aparece no `module_map`. Sobe um dev agent dedicado a ele, num worktree isolado."
   },
   "35d0c99429a7": {
     "fonte": "Why a person still has to click. `falhou`: the system tried and the accept failed — `handoff.auto_accept_failed` is in the event log.",
-    "traducao": ""
+    "traducao": "Por que uma pessoa ainda precisa clicar. `falhou`: o sistema tentou e o aceite falhou — `handoff.auto_accept_failed` está no event log."
   },
   "0cdcd9eece57": {
     "fonte": "Generic message, identical for a known and an unknown address — see the enumeration note in the reference.",
-    "traducao": ""
+    "traducao": "Mensagem genérica, idêntica para endereço conhecido e desconhecido — ver a nota de enumeração na referência."
   },
   "cd4c8846c66d": {
     "fonte": "Budget per task in micro-USD. Omitted uses the domain default (DEFAULT_TASK_BUDGET_MICROS).",
-    "traducao": ""
+    "traducao": "Orçamento por tarefa em micro-USD. Omitido usa o padrão do domínio (DEFAULT_TASK_BUDGET_MICROS)."
   },
   "68d2800d5d8b": {
     "fonte": "How many dev↔gate round trips before the task becomes `blocked`. It is what stops an agent from spending its budget in a correction loop.",
-    "traducao": ""
+    "traducao": "Quantas idas e voltas dev↔gate antes de a tarefa virar `blocked`. É o que impede um agente de gastar o orçamento num laço de correção."
   },
   "372590c5f331": {
     "fonte": "`noop` starts the dev agents WITHOUT an LLM, to exercise the execution infrastructure end to end without spending tokens. Omitted uses `real`.",
-    "traducao": ""
+    "traducao": "`noop` sobe os dev agents SEM LLM, para exercitar a infraestrutura de execução de ponta a ponta sem gastar tokens. Omitido usa `real`."
   },
   "3970abe2c782": {
     "fonte": "Patterns released in `permissions.json` for the dev agents to run the test suite. `deny` still wins over anything listed here.",
-    "traducao": ""
+    "traducao": "Padrões liberados no `permissions.json` para os dev agents rodarem a suíte de testes. `deny` continua vencendo qualquer coisa listada aqui."
   },
   "578f8cab6354": {
     "fonte": "Id of the CHAT session the \"activate execution\" click came from — the Dev Lead/PO's creative/consultative session, never the execution one. Omitted (legacy caller, e.g. activation from the Overview without session context) closes no session, same as before. When given, it is closed at the end — but only if it has no pending handoff/action/turn (RN-135), and never if it is the execution session itself.",
-    "traducao": ""
+    "traducao": "Id da sessão de CHAT de onde veio o clique \"ativar execução\" — a sessão criativa/consultiva do Dev Lead/PO, nunca a de execução. Omitido (chamador legado, ex.: ativação pela Visão geral sem contexto de sessão) não fecha sessão nenhuma, como antes. Quando dado, ela é fechada no fim — mas só se não tiver handoff/ação/turno pendente (RN-135), e nunca se for a própria sessão de execução."
   },
   "8dbf00abc4cf": {
     "fonte": "Nature of who acted.",
-    "traducao": ""
+    "traducao": "Natureza de quem agiu."
   },
   "bd55b1122268": {
     "fonte": "The user's id when `kind=user`; the agent's slug when `kind=agent`.",
-    "traducao": ""
+    "traducao": "O id do usuário quando `kind=user`; o slug do agente quando `kind=agent`."
   },
   "0545e2e92a27": {
     "fonte": "Id of the user to associate.",
-    "traducao": ""
+    "traducao": "Id do usuário a associar."
   },
   "7cca09a78419": {
     "fonte": "Role in this association. On a PROJECT it OVERRIDES the workspace role in both directions — the effective role is this one whenever the association exists, higher OR lower — and two movements are refused with 403: downgrading a workspace `owner`, and changing your own role (either way). On a WORKSPACE it is simply the role, with only the second of those caps: you cannot change your own.",
-    "traducao": ""
+    "traducao": "Papel nesta associação. Num PROJETO ele SOBREPÕE o papel de workspace nos dois sentidos — o papel efetivo é este sempre que a associação existe, maior OU menor — e dois movimentos são recusados com 403: rebaixar um `owner` do workspace, e mudar o próprio papel (em qualquer sentido). Num WORKSPACE é simplesmente o papel, só com o segundo desses tetos: você não muda o seu."
   },
   "0852b6feb92f": {
     "fonte": "The repository's identifier ON THE PROVIDER: `owner/repo` on github, `namespace/path` on gitlab, the bare repo's absolute path locally. Nothing is created — the repository must already exist and the registered credential must be able to reach it.",
-    "traducao": ""
+    "traducao": "O identificador do repositório NO PROVIDER: `owner/repo` no github, `namespace/path` no gitlab, o caminho absoluto do repositório bare no local. Nada é criado — o repositório já tem de existir e a credencial registrada tem de alcançá-lo."
   },
   "de1352c5b2a8": {
     "fonte": "The DRY-RUN: nothing was executed on the repository. Decide via `POST .../bootstrap/plan/approve` or `.../plan/skip`.",
-    "traducao": ""
+    "traducao": "O DRY-RUN: nada foi executado no repositório. Decida por `POST .../bootstrap/plan/approve` ou `.../plan/skip`."
   },
   "0171834f108d": {
     "fonte": "`true` when the project had already adopted THIS repository — nothing was created, the plan was just regenerated over the current state.",
-    "traducao": ""
+    "traducao": "`true` quando o projeto já tinha adotado ESTE repositório — nada foi criado, o plano só foi regenerado sobre o estado atual."
   },
   "d2939bb40589": {
     "fonte": "Id of the `open_adr_pr` `proposed_action` that opened the ADR.",
@@ -2693,7 +2693,7 @@
   },
   "34190daf6c43": {
     "fonte": "`null` while the PR has not actually been opened.",
-    "traducao": ""
+    "traducao": "`null` enquanto a PR não foi de fato aberta."
   },
   "6aba820934c0": {
     "fonte": "The action type, or `\"*\"` — \"auto mode\" (RN-153): autonomy for ANY action type of this agent.",
