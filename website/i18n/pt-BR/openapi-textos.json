@@ -1,1203 +1,1203 @@
 {
   "74608b05b1cb": {
     "fonte": "One key in normal operation; two during an AUTH_JWT_SECRET rotation.",
-    "traducao": ""
+    "traducao": "Uma chave em operação normal; duas durante uma rotação de AUTH_JWT_SECRET."
   },
   "56846b2824d9": {
     "fonte": "Public access token verification keys",
-    "traducao": ""
+    "traducao": "Chaves públicas de verificação do access token"
   },
   "d7b2d4576955": {
     "fonte": "A nonexistent email, wrong password, and a locked account all return exactly the same 401 response — same body, same status.",
-    "traducao": ""
+    "traducao": "E-mail inexistente, senha errada e conta bloqueada devolvem exatamente a mesma resposta 401 — mesmo corpo, mesmo status."
   },
   "14c80109d8f4": {
     "fonte": "Invalid body. The `ValidationPipe` runs with `whitelist` and `forbidNonWhitelisted`, so an unknown field also fails.",
-    "traducao": ""
+    "traducao": "Corpo inválido. O `ValidationPipe` roda com `whitelist` e `forbidNonWhitelisted`, então campo desconhecido também reprova."
   },
   "ab31c5406104": {
     "fonte": "Invalid credentials.",
-    "traducao": ""
+    "traducao": "Credenciais inválidas."
   },
   "ae10ce9ce1f2": {
     "fonte": "Email not yet verified.",
-    "traducao": ""
+    "traducao": "E-mail ainda não verificado."
   },
   "a60fdf9df63f": {
     "fonte": "Authenticates and issues the access + refresh pair",
-    "traducao": ""
+    "traducao": "Autentica e emite o par access + refresh"
   },
   "7191bedfd407": {
     "fonte": "Always 204, even for an unknown token — answering 401 here would be a token-validity oracle.",
-    "traducao": ""
+    "traducao": "Sempre 204, mesmo para token desconhecido — responder 401 aqui seria um oráculo de validade de token."
   },
   "015a414aa28c": {
     "fonte": "Session ended. The session cookies are cleared.",
-    "traducao": ""
+    "traducao": "Sessão encerrada. Os cookies da sessão são limpos."
   },
   "b23d222e7390": {
     "fonte": "Revokes the family of the presented refresh",
-    "traducao": ""
+    "traducao": "Revoga a família do refresh apresentado"
   },
   "8a8b643c3dd7": {
     "fonte": "Success goes to `WEB_ORIGIN/` already with the session cookies set; failure goes to `WEB_ORIGIN/login?oauth_error=1`, without detailing the reason.",
-    "traducao": ""
+    "traducao": "Sucesso vai para `WEB_ORIGIN/` já com os cookies da sessão gravados; falha vai para `WEB_ORIGIN/login?oauth_error=1`, sem detalhar o motivo."
   },
   "8bbbfd72cc0e": {
     "fonte": "Redirects to the web app.",
-    "traducao": ""
+    "traducao": "Redireciona para a web."
   },
   "19f1b0b671b6": {
     "fonte": "Destination on the web app.",
-    "traducao": ""
+    "traducao": "Destino na web."
   },
   "636474f5b19f": {
     "fonte": "Receives the social login OAuth callback",
-    "traducao": ""
+    "traducao": "Recebe o callback OAuth do login social"
   },
   "20ceb345f1be": {
     "fonte": "The `state` goes signed by HMAC with its OWN purpose — never the git connection-to-project flow's (see ADR 0084).",
-    "traducao": ""
+    "traducao": "O `state` vai assinado por HMAC com propósito PRÓPRIO — nunca o do fluxo de conexão de git ao projeto (ver ADR 0084)."
   },
   "713a13492b83": {
     "fonte": "Redirects to the provider.",
-    "traducao": ""
+    "traducao": "Redireciona para o provider."
   },
   "76f7ebff8fcb": {
     "fonte": "The provider's authorization URL.",
-    "traducao": ""
+    "traducao": "A URL de autorização do provider."
   },
   "1ce8ed5a9c60": {
     "fonte": "Provider outside `github`/`gitlab`.",
-    "traducao": ""
+    "traducao": "Provider fora de `github`/`gitlab`."
   },
   "d1b086298fe9": {
     "fonte": "Redirects to the OAuth provider for social login",
-    "traducao": ""
+    "traducao": "Redireciona para o provider OAuth do login social"
   },
   "90ac96a73307": {
     "fonte": "The presented refresh is consumed. Re-presenting an already-rotated token revokes the WHOLE family and records a security event — even when the cause was a client double-submit.",
-    "traducao": ""
+    "traducao": "O refresh apresentado é consumido. Reapresentar um token já rotacionado revoga a família INTEIRA e grava um evento de segurança — mesmo quando a causa foi um duplo envio do cliente."
   },
   "0d4bf5b979bd": {
     "fonte": "Refresh invalid, expired, or already used.",
-    "traducao": ""
+    "traducao": "Refresh inválido, expirado ou já usado."
   },
   "0786df7a7756": {
     "fonte": "Rotates the refresh and issues a new pair",
-    "traducao": ""
+    "traducao": "Rotaciona o refresh e emite um par novo"
   },
   "cc63c588147e": {
     "fonte": "Responds 202 for both a new address and an already-registered one — the response doesn't reveal whether the account exists. In the second case nothing is created and the address's owner gets a notice.",
-    "traducao": ""
+    "traducao": "Responde 202 tanto para endereço novo quanto para um já cadastrado — a resposta não revela se a conta existe. No segundo caso nada é criado e o dono do endereço recebe um aviso."
   },
   "a8b319ab6b4f": {
     "fonte": "Password fails the minimum policy.",
-    "traducao": ""
+    "traducao": "Senha não cumpre a política mínima."
   },
   "0bbca0ea9a83": {
     "fonte": "Registration closed (AUTH_REGISTRATION_ENABLED=false).",
-    "traducao": ""
+    "traducao": "Cadastro fechado (AUTH_REGISTRATION_ENABLED=false)."
   },
   "c9acd2aeb77c": {
     "fonte": "Creates an account and sends the verification email",
-    "traducao": ""
+    "traducao": "Cria uma conta e envia o e-mail de verificação"
   },
   "7ea65060051a": {
     "fonte": "Responds 202 for both a known and an unknown address. It is also the path for whoever was imported from Keycloak and hasn't set a password yet.",
-    "traducao": ""
+    "traducao": "Responde 202 tanto para endereço conhecido quanto desconhecido. É também o caminho de quem foi importado do Keycloak e ainda não definiu senha."
   },
   "e150b80bce00": {
     "fonte": "Requests the password reset link",
-    "traducao": ""
+    "traducao": "Pede o link de redefinição de senha"
   },
   "7bb1c589de7c": {
     "fonte": "Revokes ALL of the user's sessions. Does not issue tokens: whoever resets the password is sent to login, so that compromising the email doesn't equal taking over the account in a single step.",
-    "traducao": ""
+    "traducao": "Revoga TODAS as sessões do usuário. Não emite tokens: quem redefine a senha é mandado ao login, para que comprometer o e-mail não equivalha a tomar a conta num passo só."
   },
   "60639ecc7d2f": {
     "fonte": "Password set. ALL of the user's live sessions are revoked along with it.",
-    "traducao": ""
+    "traducao": "Senha definida. TODAS as sessões vivas do usuário são revogadas junto."
   },
   "64596efdd059": {
     "fonte": "Link invalid/expired, or password fails the policy.",
-    "traducao": ""
+    "traducao": "Link inválido/expirado, ou senha não cumpre a política."
   },
   "b97f0dc61fa8": {
     "fonte": "Sets the new password from the token",
-    "traducao": ""
+    "traducao": "Define a senha nova a partir do token"
   },
   "d2a6eb3ac05f": {
     "fonte": "Email verified; login already works.",
-    "traducao": ""
+    "traducao": "E-mail verificado; o login já funciona."
   },
   "45eb44a1aa8b": {
     "fonte": "Link invalid, expired, or already used — all three with the same response.",
-    "traducao": ""
+    "traducao": "Link inválido, expirado ou já usado — os três com a mesma resposta."
   },
   "a8cd84658cdf": {
     "fonte": "Confirms the email with the single-use token",
-    "traducao": ""
+    "traducao": "Confirma o e-mail com o token de uso único"
   },
   "f435096e49c9": {
     "fonte": "Declarative index of the flow gates (ADR 0054). The screen derives from here which steps exist and who judges each one, instead of repeating the list in code — which is how it used to go stale unnoticed.",
-    "traducao": ""
+    "traducao": "Índice declarativo dos gates do fluxo (ADR 0054). A tela deriva daqui quais etapas existem e quem julga cada uma, em vez de repetir a lista no código — que era como ela envelhecia sem ninguém notar."
   },
   "3c9dd8aad272": {
     "fonte": "No token, expired token, or invalid signature.",
-    "traducao": ""
+    "traducao": "Sem token, token expirado ou assinatura inválida."
   },
   "67624ff9687c": {
     "fonte": "Rate limit per user or per IP.",
-    "traducao": ""
+    "traducao": "Rate limit por usuário ou por IP."
   },
   "aafdf27ee50c": {
     "fonte": "The registry of active gates",
-    "traducao": ""
+    "traducao": "O registro de gates ativos"
   },
   "4ad1836ee485": {
     "fonte": "Public because whoever arrives is the user's BROWSER coming from the provider, without an api session. It isn't unrestricted: the `state` is verified by HMAC and without a valid one the call is refused. Never responds with JSON — always redirects, because a raw error body in a browser navigation would be a terrible experience.",
-    "traducao": ""
+    "traducao": "Pública porque quem chega é o NAVEGADOR do usuário vindo do provider, sem sessão da api. Não é irrestrita: o `state` é verificado por HMAC e sem um válido a chamada é recusada. Nunca responde JSON — sempre redireciona, porque um corpo de erro cru numa navegação do navegador seria uma experiência péssima."
   },
   "8de3bdb387ec": {
     "fonte": "Success goes to `WEB_ORIGIN/projects/:id?git=connected`; failure goes to `WEB_ORIGIN/git-error`. The error does NOT leak the reason in the URL.",
-    "traducao": ""
+    "traducao": "Sucesso vai para `WEB_ORIGIN/projects/:id?git=connected`; falha vai para `WEB_ORIGIN/git-error`. O erro NÃO vaza o motivo na URL."
   },
   "8b0da7096107": {
     "fonte": "Insufficient role on the project.",
-    "traducao": ""
+    "traducao": "Papel insuficiente no projeto."
   },
   "a68693d799ed": {
     "fonte": "Project does not exist.",
-    "traducao": ""
+    "traducao": "Projeto não existe."
   },
   "fb174a844e15": {
     "fonte": "Receives the OAuth return and redirects to the web app",
-    "traducao": ""
+    "traducao": "Recebe o retorno OAuth e redireciona para a web"
   },
   "63408f677539": {
     "fonte": "Runs a `select 1`. Reveals only whether the database responds; no topology or version. Public because the caller is kubelet, which carries no token.",
-    "traducao": ""
+    "traducao": "Executa um `select 1`. Revela só se o banco responde; nem topologia nem versão. Pública porque quem chama é o kubelet, que não carrega token."
   },
   "05c715dc55bc": {
     "fonte": "The database did not respond. The body carries the message in `details`.",
-    "traducao": ""
+    "traducao": "O banco não respondeu. O corpo traz a mensagem em `details`."
   },
   "2086297f8dec": {
     "fonte": "Readiness — the process can actually serve traffic",
-    "traducao": ""
+    "traducao": "Readiness — o processo consegue de fato servir tráfego"
   },
   "4abbc5007943": {
     "fonte": "For the one-line installer, which runs where no mail transport is configured: the generated `.env` carries no mail variable, `MAIL_TRANSPORT` falls to `log`, and normal registration waits on an e-mail that never arrives. The account is born verified because whoever runs the installer already proved something STRONGER than controlling a mailbox — they control the machine, the `.env` and the Docker daemon. Normal registration is untouched. Refuses with 409 when the installation has ANY user: the condition is about the installation, not about this e-mail, so a migration restore silences the step by the same test. The password is never generated here and never stored anywhere but as an argon2id hash; the personal workspace (RN-410) is born in the same transaction.",
-    "traducao": ""
+    "traducao": "Para o instalador de uma linha, que roda onde nenhum transporte de e-mail está configurado: o `.env` gerado não traz variável de e-mail, `MAIL_TRANSPORT` cai em `log`, e o cadastro normal espera um e-mail que nunca chega. A conta nasce verificada porque quem roda o instalador já provou algo MAIS FORTE que controlar uma caixa de e-mail — controla a máquina, o `.env` e o daemon do Docker. O cadastro normal não muda. Recusa com 409 quando a instalação tem QUALQUER usuário: a condição é sobre a instalação, não sobre este e-mail, então a restauração de uma migração silencia o passo pelo mesmo teste. A senha nunca é gerada aqui e nunca é guardada em lugar nenhum senão como hash argon2id; o workspace pessoal (RN-410) nasce na mesma transação."
   },
   "99771357f02b": {
     "fonte": "Malformed e-mail, or a password the DOMAIN policy refuses — the same code registration calls, never a second rule.",
-    "traducao": ""
+    "traducao": "E-mail malformado, ou senha que a política do DOMÍNIO recusa — o mesmo código que o cadastro chama, nunca uma segunda régua."
   },
   "e8373cfffd23": {
     "fonte": "Service token missing or different from the shared one.",
-    "traducao": ""
+    "traducao": "Service token ausente ou diferente do compartilhado."
   },
   "bebd2d48a1c8": {
     "fonte": "The installation already has a user. Nothing was created.",
-    "traducao": ""
+    "traducao": "A instalação já tem usuário. Nada foi criado."
   },
   "65aff100e642": {
     "fonte": "Creates the FIRST account of an installation, already verified",
-    "traducao": ""
+    "traducao": "Cria a PRIMEIRA conta de uma instalação, já verificada"
   },
   "0245af2b703e": {
     "fonte": "The registry DESCRIBES, it does not execute: no gate becomes enforced because of it, and changing a field here changes no behavior at all. Each gate says where the proof that it passed lives (`evidencia`), because not every proof is in the event log.",
-    "traducao": ""
+    "traducao": "O registro DESCREVE, não executa: nenhum gate passa a ser aplicado por causa dele, e mudar um campo aqui não muda comportamento nenhum. Cada gate diz onde mora a prova de que passou (`evidencia`), porque nem toda prova está no event log."
   },
   "bd8242e60caa": {
     "fonte": "Reads the declarative gate registry",
-    "traducao": ""
+    "traducao": "Lê o registro declarativo de gates"
   },
   "d149677ebec1": {
     "fonte": "If a version with the SAME hash already exists for the same `name`, no new version is created — the existing one is returned (the idempotency hit does not change the HTTP status: always 201, for simplicity — the body is identical to what would have been created).",
-    "traducao": ""
+    "traducao": "Se já existe uma versão com o MESMO hash para o mesmo `name`, nenhuma versão nova é criada — a existente é devolvida (o acerto de idempotência não muda o status HTTP: sempre 201, por simplicidade — o corpo é idêntico ao que teria sido criado)."
   },
   "694b981bc61a": {
     "fonte": "Neo4j not configured or unreachable — no fallback possible for reading/writing a template.",
-    "traducao": ""
+    "traducao": "Neo4j não configurado ou inalcançável — não há fallback possível para ler/gravar um template."
   },
   "346920b0a0b9": {
     "fonte": "Publishes a prompt template version, idempotent by hash",
-    "traducao": ""
+    "traducao": "Publica uma versão de prompt template, idempotente por hash"
   },
   "111c2f242dc6": {
     "fonte": "A specific `version` looks up by equality; omitted, it looks up the most recent `active` version. 404 if the template (or the requested version) does not exist.",
-    "traducao": ""
+    "traducao": "Uma `version` específica busca por igualdade; omitida, busca a versão `active` mais recente. 404 se o template (ou a versão pedida) não existe."
   },
   "59284adc51c7": {
     "fonte": "Template does not exist, or lacks the requested version.",
-    "traducao": ""
+    "traducao": "Template não existe, ou não tem a versão pedida."
   },
   "8b440347e2df": {
     "fonte": "Looks up a prompt template by name",
-    "traducao": ""
+    "traducao": "Busca um prompt template pelo nome"
   },
   "8ba7b9904e23": {
     "fonte": "For the one-line installer, right after it creates the first account: the local agent needs a credential, and the only one that existed was bound to a PROJECT — in an installation that has none yet. The pair is generated ON THE MACHINE and only the public half arrives here; write the returned `id` into the private JWK as `kid` (RN-475), which is the only link between the file on disk and the public half on the server. There is no `userId` in the body ON PURPOSE: the owner is the installation's SOLE user, resolved by the api, so holding the service token never means choosing whose credential to mint. Registering REPLACES: the owner's active machine keys are revoked in the same transaction, so a reinstalled machine works and a thousand machine keys cannot exist. Project keys (ADR 0118) are never touched.",
-    "traducao": ""
+    "traducao": "Para o instalador de uma linha, logo depois de criar a primeira conta: o agente local precisa de uma credencial, e a única que existia era presa a um PROJETO — numa instalação que ainda não tem nenhum. O par é gerado NA MÁQUINA e só a metade pública chega aqui; grave o `id` devolvido na JWK privada como `kid` (RN-475), que é o único vínculo entre o arquivo em disco e a metade pública no servidor. Não há `userId` no corpo DE PROPÓSITO: o dono é o ÚNICO usuário da instalação, resolvido pela api, então ter o service token nunca significa escolher de quem é a credencial cunhada. Registrar SUBSTITUI: as chaves de máquina ativas do dono são revogadas na mesma transação, então uma máquina reinstalada funciona e mil chaves de máquina não podem existir. Chaves de projeto (ADR 0118) nunca são tocadas."
   },
   "b3933f25eb13": {
     "fonte": "The JWK is not a PUBLIC Ed25519 key — malformed JSON, wrong `kty`/`crv`, missing `x`, or carrying `d` (that is the private half, and it is refused by name rather than stored).",
-    "traducao": ""
+    "traducao": "A JWK não é uma chave PÚBLICA Ed25519 — JSON malformado, `kty`/`crv` errados, `x` ausente, ou trazendo `d` (essa é a metade privada, e é recusada pelo nome em vez de guardada)."
   },
   "b4f76326d3a2": {
     "fonte": "The installation has no user, or more than one. Nothing was written. This route belongs to the moment of installation and goes quiet for good once the installation has a team.",
-    "traducao": ""
+    "traducao": "A instalação não tem usuário, ou tem mais de um. Nada foi gravado. Esta rota é do momento da instalação e se cala de vez quando a instalação tem um time."
   },
   "08c197795761": {
     "fonte": "Registers the MACHINE device key of a fresh installation",
-    "traducao": ""
+    "traducao": "Registra a chave de dispositivo de MÁQUINA de uma instalação nova"
   },
   "3ae0eb54332e": {
     "fonte": "Never fails because of one provider: each one answers for itself in the report, with the reason it was skipped and the origin of the failure when there was one. A provider that did not respond is SKIPPED, not marked unavailable.",
-    "traducao": ""
+    "traducao": "Nunca falha por causa de um provider: cada um responde por si no relatório, com o motivo de ter sido pulado e a origem da falha quando houve. Provider que não respondeu é PULADO, não marcado indisponível."
   },
   "22fd20fb2954": {
     "fonte": "Syncs the model catalog across all providers",
-    "traducao": ""
+    "traducao": "Sincroniza o catálogo de modelos de todos os providers"
   },
   "57f68b5c69de": {
     "fonte": "The SAME epic → story → task tree as the Backlog tab, through the same use case (three reads per project, never N+1). It is with this that the PO sees an orphan epic and a story with no task instead of re-creating what already exists (RN-164).",
-    "traducao": ""
+    "traducao": "A MESMA árvore épico → história → tarefa da aba Backlog, pelo mesmo caso de uso (três leituras por projeto, nunca N+1). É com ela que o PO vê um épico órfão e uma história sem tarefa em vez de recriar o que já existe (RN-164)."
   },
   "6c9bce23bb8a": {
     "fonte": "The project's backlog as a tree, for the PO to read what was already written",
-    "traducao": ""
+    "traducao": "O backlog do projeto em árvore, para o PO ler o que já foi escrito"
   },
   "c09937a5d148": {
     "fonte": "Every `artifact.business_rule` from the project's sessions — not just the current session's, which was the ceiling of the PO's kickoff context — with the full `description` and which stories already cite each rule. `uncoveredCount` is the pending item: a rule no story covers (RN-164). A project with no rule at all responds `200` with an empty list: \"no rule captured yet\" is not an error.",
-    "traducao": ""
+    "traducao": "Todo `artifact.business_rule` das sessões do projeto — não só o da sessão corrente, que era o teto do contexto de kickoff do PO — com a `description` inteira e quais histórias já citam cada regra. `uncoveredCount` é a pendência: regra que nenhuma história cobre (RN-164). Projeto sem regra nenhuma responde `200` com lista vazia: \"nenhuma regra capturada ainda\" não é erro."
   },
   "a05de13fdd77": {
     "fonte": "The project's business rules, with coverage, for the PO to read",
-    "traducao": ""
+    "traducao": "As regras de negócio do projeto, com cobertura, para o PO ler"
   },
   "ea962dac1e27": {
     "fonte": "Called only by the engine, when `Engine.Actions.TerminalExecutor` decided the command belongs inside the real container (`execution_mode: container` with a REGISTERED `running` row). Proxies to `ContainerBrokerPort.exec` (ADR 0130/0134) — the last of the broker's five operations to gain a real caller. `sucesso: false` in the response — never a thrown error — is the NORMAL shape for a refused or unreachable broker: the container may have died or been removed from outside between the registered `running` row and this call (RN-486, registered and observed never merge), and that is a command failure, not a transport error.",
-    "traducao": ""
+    "traducao": "Chamada só pelo engine, quando `Engine.Actions.TerminalExecutor` decidiu que o comando cabe dentro do container real (`execution_mode: container` com uma linha `running` REGISTRADA). Faz proxy para `ContainerBrokerPort.exec` (ADR 0130/0134) — a última das cinco operações do broker a ganhar chamador real. `sucesso: false` na resposta — nunca um erro lançado — é a forma NORMAL de broker que recusou ou é inalcançável: o container pode ter morrido ou sido removido por fora entre a linha `running` registrada e esta chamada (RN-486, registrado e observado nunca se fundem), e isso é falha do comando, não erro de transporte."
   },
   "f2ff2f712365": {
     "fonte": "Runs a terminal command INSIDE the project real container (RN-492)",
-    "traducao": ""
+    "traducao": "Executa um comando de terminal DENTRO do container real do projeto (RN-492)"
   },
   "cebc969b44d8": {
     "fonte": "Project identity, execution mode and the Architect's current image decision. The broker revalidates all of it before handing anything to the daemon — reading from here is not the same as trusting it, and the refusal names the field. No ABSOLUTE path is returned: the bind source is resolved by the daemon against the HOST filesystem, and a path from inside the api container would silently mount an empty folder. What travels is `localizacao` (RN-503) — which of the two broker roots to use, plus the relative segment that root does not cover.",
-    "traducao": ""
+    "traducao": "Identidade do projeto, modo de execução e a decisão de imagem vigente do Arquiteto. O broker revalida tudo antes de entregar qualquer coisa ao daemon — ler daqui não é o mesmo que confiar, e a recusa nomeia o campo. Nenhum caminho ABSOLUTO é devolvido: a origem do bind é resolvida pelo daemon contra o sistema de arquivos do HOST, e um caminho de dentro do container da api montaria em silêncio uma pasta vazia. O que viaja é `localizacao` (RN-503) — qual das duas raízes do broker usar, mais o segmento relativo que a raiz não cobre."
   },
   "3df51f20c969": {
     "fonte": "Project not found.",
-    "traducao": ""
+    "traducao": "Projeto não encontrado."
   },
   "431d769c54f7": {
     "fonte": "What the broker needs to compose the container spec itself",
-    "traducao": ""
+    "traducao": "O que o broker precisa para compor ele mesmo a spec do container"
   },
   "6c67a0823c2d": {
     "fonte": "Returns the clean origin (no credential embedded) and, for a remote provider, the workspace OWNER's token (RN-058) decrypted on the fly. Whoever consumes it injects the token per invocation and NEVER writes it to a file — `.git/config` sits inside the folder where RN-075 grants the dev agent auto-approved read access.",
-    "traducao": ""
+    "traducao": "Devolve a origem limpa (sem credencial embutida) e, para provider remoto, o token do DONO do workspace (RN-058) decifrado na hora. Quem consome injeta o token por invocação e NUNCA o grava em arquivo — `.git/config` fica dentro da pasta onde a RN-075 concede ao dev agent leitura auto-aprovada."
   },
   "e5259907cd40": {
     "fonte": "Project with no provisioned repository, or the workspace owner has no registered credential for the repository provider.",
-    "traducao": ""
+    "traducao": "Projeto sem repositório provisionado, ou o dono do workspace não tem credencial registrada para o provider do repositório."
   },
   "f574738f1417": {
     "fonte": "The project's working remote, to fetch and push",
-    "traducao": ""
+    "traducao": "O remoto de trabalho do projeto, para fetch e push"
   },
   "7b4f0f5ebca2": {
     "fonte": "Called only by the engine, after the runner pushes `mirror_sync_result` over the channel — the SAME path as `workspace_confirm` (runner → channel → engine → api), never a second mechanism: the engine reports, it does not write the table. This is TELEMETRY, not a domain event: never `session_events` (a mirror round has no session and `session_id` is `NOT NULL`, the same reasoning that made `rag_searches` a table) and never a `proposed_action` (the mirror write is configuration the user declared, not an agent asking to act). `ok` is what decides the outcome — never the presence of a count or of a message: a round that copied 0 files is normal and must not be indistinguishable from one that never ran. Recording never breaks what it measures: the copy is already done when this is called, and the engine only logs a refusal here. A project whose destination was cleared meanwhile STILL records — the round happened, and its error is usually what explains what went wrong.",
-    "traducao": ""
+    "traducao": "Chamada só pelo engine, depois que o runner empurra `mirror_sync_result` pelo canal — o MESMO caminho do `workspace_confirm` (runner → canal → engine → api), nunca um segundo mecanismo: o engine relata, não grava a tabela. Isto é TELEMETRIA, não evento de domínio: nunca `session_events` (rodada de espelho não tem sessão e `session_id` é `NOT NULL`, o mesmo raciocínio que fez de `rag_searches` uma tabela) e nunca `proposed_action` (a escrita do espelho é configuração que o usuário declarou, não agente pedindo para agir). `ok` é o que decide o desfecho — nunca a presença de uma contagem ou de uma mensagem: rodada que copiou 0 arquivos é normal e não pode ser indistinguível de uma que nunca rodou. Gravar nunca derruba o que mede: a cópia já está feita quando isto é chamado, e o engine só registra em log uma recusa aqui. Projeto cujo destino foi limpo nesse meio-tempo AINDA grava — a rodada aconteceu, e o erro dela costuma ser o que explica o que deu errado."
   },
   "a7346f5ad9b9": {
     "fonte": "The local agent reports the outcome of a mirror round (RN-517)",
-    "traducao": ""
+    "traducao": "O agente local relata o desfecho de uma rodada de espelho (RN-517)"
   },
   "e9335fd9cce1": {
     "fonte": "One entry per module of the CURRENT module_map: what it consumes (`dependeDe`, the map's `dependsOn`) and what it exposes (`expoe`, from the Architect's current `artifact.module_contracts`, or `null` when none was declared). It is what a dev agent reads instead of opening another module's worktree (ADR 0200). A project with no contract responds `200` with `status: sem_contratos`.",
-    "traducao": ""
+    "traducao": "Uma entrada por módulo do module_map VIGENTE: o que ele consome (`dependeDe`, o `dependsOn` do mapa) e o que expõe (`expoe`, do `artifact.module_contracts` vigente do Arquiteto, ou `null` quando nenhum foi declarado). É o que um dev agent lê em vez de abrir o worktree de outro módulo (ADR 0200). Projeto sem contrato responde `200` com `status: sem_contratos`."
   },
   "e34c17f7d2e0": {
     "fonte": "The contracts between modules, for a dev agent to read (RN-684)",
-    "traducao": ""
+    "traducao": "Os contratos entre módulos, para um dev agent ler (RN-684)"
   },
   "0b341f919e07": {
     "fonte": "The SAME report as the `analise:funil` script (ADR 0089) — session → commit → PR → merge funnel, real lead time and real deployment frequency — through the same pure functions and the same query (`apps/api/src/application/services/funil-metrics.ts`), so the two never diverge from the same fact. Closes `docs/fluxo.yml` (role `po`, input `metricas-de-produto`, previously `status: lacuna`) (RN-407).",
-    "traducao": ""
+    "traducao": "O MESMO relatório do script `analise:funil` (ADR 0089) — funil sessão → commit → PR → merge, lead time real e frequência de deploy real — pelas mesmas funções puras e a mesma consulta (`apps/api/src/application/services/funil-metrics.ts`), para que os dois nunca divirjam sobre o mesmo fato. Fecha `docs/fluxo.yml` (papel `po`, entrada `metricas-de-produto`, antes `status: lacuna`) (RN-407)."
   },
   "5fbaa52eb40e": {
     "fonte": "The project's delivery funnel and partial DORA metrics, for the PO to read",
-    "traducao": ""
+    "traducao": "O funil de entrega do projeto e métricas DORA parciais, para o PO ler"
   },
   "f70670c078a4": {
     "fonte": "Called only by the engine, after a runner connects and sends `workspace_confirm` over the channel. The runner is the SOURCE OF TRUTH for the path — the api overwrites `workspacePath` with what it reported, after re-validating it lexically (system root/overlap with Brabo are still forbidden even coming from the runner). Idempotent: reconnecting with the SAME path writes nothing again.",
-    "traducao": ""
+    "traducao": "Chamada só pelo engine, depois que um runner conecta e manda `workspace_confirm` pelo canal. O runner é a FONTE DE VERDADE do caminho — a api sobrescreve `workspacePath` com o que ele relatou, depois de revalidá-lo lexicamente (raiz de sistema/sobreposição com o Brabo seguem proibidas mesmo vindo do runner). Idempotente: reconectar com o MESMO caminho não grava nada de novo."
   },
   "4c1bff4ad93b": {
     "fonte": "Lexically invalid path, or the project is not in \"runner\" mode.",
-    "traducao": ""
+    "traducao": "Caminho lexicamente inválido, ou o projeto não está no modo \"runner\"."
   },
   "132054238949": {
     "fonte": "The runner confirms the path of a \"runner\" project (RN-423)",
-    "traducao": ""
+    "traducao": "O runner confirma o caminho de um projeto \"runner\" (RN-423)"
   },
   "29573312e4d8": {
     "fonte": "Same use case as the human route — no second judgement path. An unknown `searchId`/`chunkId` is a 400 that the engine turns into an error tool-result for the model to correct (RN-061), never a crash.",
-    "traducao": ""
+    "traducao": "Mesmo caso de uso da rota humana — nenhum segundo caminho de julgamento. `searchId`/`chunkId` desconhecido é um 400 que o engine transforma em tool-result de erro para o modelo corrigir (RN-061), nunca um crash."
   },
   "a4d70c84aaad": {
     "fonte": "Unknown `searchId` for this project, or a `chunkId` that was not among that search hits.",
-    "traducao": ""
+    "traducao": "`searchId` desconhecido para este projeto, ou um `chunkId` que não estava entre os acertos daquela busca."
   },
   "7a0f094d4fea": {
     "fonte": "The agent's vote on one retrieved chunk (RN-480)",
-    "traducao": ""
+    "traducao": "O voto do agente sobre um chunk recuperado (RN-480)"
   },
   "e0ba0db64000": {
     "fonte": "Same engine as `POST /projects/:projectId/rag/search` (human route), projected into the format the engine's `rag_search` tool expects.",
-    "traducao": ""
+    "traducao": "Mesmo motor de `POST /projects/:projectId/rag/search` (rota humana), projetado no formato que a ferramenta `rag_search` do engine espera."
   },
   "eff9fa95c7af": {
     "fonte": "Hybrid search over the project's RAG index, for the engine's tool",
-    "traducao": ""
+    "traducao": "Busca híbrida sobre o índice RAG do projeto, para a ferramenta do engine"
   },
   "69ae54762dea": {
     "fonte": "The ONLY door through which an agent touches git, terminal, or spend. `permissions.json` decides at creation, and `deny` beats any autonomy granted to the agent.",
-    "traducao": ""
+    "traducao": "A ÚNICA porta pela qual um agente toca git, terminal ou gasto. `permissions.json` decide na criação, e `deny` vence qualquer autonomia concedida ao agente."
   },
   "265af43f783c": {
     "fonte": "Invalid body.",
-    "traducao": ""
+    "traducao": "Corpo inválido."
   },
   "70f6e7e55a03": {
     "fonte": "Session, project, or resource not found.",
-    "traducao": ""
+    "traducao": "Sessão, projeto ou recurso não encontrado."
   },
   "66400d0dcc60": {
     "fonte": "Proposes an action with an external effect on behalf of an agent",
-    "traducao": ""
+    "traducao": "Propõe uma ação com efeito externo em nome de um agente"
   },
   "cb6029db4a3c": {
     "fonte": "Everything in one call, mirroring the Psychologist's context. Members already come EXCLUDING whoever opted out of being profiled, and the user's decisions within the window come through here because they aren't in the event log. The engine reads the events themselves straight from Postgres — carrying them over HTTP would be more expensive without being more correct.",
-    "traducao": ""
+    "traducao": "Tudo numa chamada só, espelhando o contexto do Psicólogo. Os membros já vêm SEM quem optou por não ser perfilado, e as decisões do usuário dentro da janela vêm por aqui porque não estão no event log. O engine lê os eventos em si direto do Postgres — carregá-los por HTTP seria mais caro sem ser mais correto."
   },
   "42627d143337": {
     "fonte": "Assembles the context for an Anamnesis round",
-    "traducao": ""
+    "traducao": "Monta o contexto de uma rodada da Anamnese"
   },
   "cf2d42b95c60": {
     "fonte": "Records an anamnese run with zero profiles so the next round starts at windowTo — without it, the window never advanced and every tick paid for a new round over the same material.",
-    "traducao": ""
+    "traducao": "Grava uma rodada da Anamnese com zero perfis para que a próxima comece em windowTo — sem isso, a janela nunca avançava e todo tick pagava uma rodada nova sobre o mesmo material."
   },
   "09d842393b05": {
     "fonte": "Closes the Anamnese window of a round that emitted no profile",
-    "traducao": ""
+    "traducao": "Fecha a janela da Anamnese de uma rodada que não emitiu perfil"
   },
   "dd228ca8180d": {
     "fonte": "The artifact IS the `artifact.c4_diagram` event: immutable, versioned, and with an author, alongside `artifact.module_map`. Requires a current module_map — without one there is no Container level to draw (400).",
-    "traducao": ""
+    "traducao": "O artefato É o evento `artifact.c4_diagram`: imutável, versionado e com autor, ao lado de `artifact.module_map`. Exige um module_map vigente — sem ele não há nível Container para desenhar (400)."
   },
   "15617ee13e87": {
     "fonte": "Missing `system_name`, invalid actor, or no current module_map.",
-    "traducao": ""
+    "traducao": "`system_name` ausente, ator inválido, ou sem module_map vigente."
   },
   "da681e0866ad": {
     "fonte": "Generates a new version of the C4 diagram (Context + Container)",
-    "traducao": ""
+    "traducao": "Gera uma versão nova do diagrama C4 (Context + Container)"
   },
   "72a59e59a012": {
     "fonte": "`completed` (with the verdict), `failed` (with the origin), or `dispensed` (with the justification) — the lead never calls this route with a halfway outcome: every delegation is born here already resolved.",
-    "traducao": ""
+    "traducao": "`completed` (com o veredito), `failed` (com a origem) ou `dispensed` (com a justificativa) — o lead nunca chama esta rota com desfecho pela metade: toda delegação já nasce aqui resolvida."
   },
   "5e0c4b4de0f2": {
     "fonte": "Records the outcome of an area delegation",
-    "traducao": ""
+    "traducao": "Registra o desfecho de uma delegação de área"
   },
   "16f1ab1fdea6": {
     "fonte": "A single call with everything the prompt needs: the whole story, the resolved business rules, and the applicable ADRs. `module` restricts the ADRs to that dev's module; an ADR with no declared module is CROSS-CUTTING and always comes in. Omitting `module` brings the whole collection, which is what the QA and SecOps gates want when reusing this same context.",
-    "traducao": ""
+    "traducao": "Uma chamada só com tudo de que o prompt precisa: a história inteira, as regras de negócio resolvidas e os ADRs aplicáveis. `module` restringe os ADRs ao módulo daquele dev; ADR sem módulo declarado é TRANSVERSAL e sempre entra. Omitir `module` traz a coleção inteira, que é o que os gates de QA e SecOps querem ao reusar este mesmo contexto."
   },
   "172425b2e446": {
     "fonte": "Assembles the full context of a task for the dev agent",
-    "traducao": ""
+    "traducao": "Monta o contexto completo de uma tarefa para o dev agent"
   },
   "331f49027377": {
     "fonte": "Creates a backlog epic",
-    "traducao": ""
+    "traducao": "Cria um épico do backlog"
   },
   "176044dade05": {
     "fonte": "Used to REHYDRATE a conversational agent's history and to read the artifacts its kickoff needs. The equivalent human route is protected by RBAC; this one, by the service token. `latest=true` returns the TAIL (still in ascending `seq`) and ignores `afterSeq`; `types` restricts the page to those event types. The page is capped at 200 either way (ADR 0060).",
-    "traducao": ""
+    "traducao": "Usada para REIDRATAR o histórico de um agente conversacional e para ler os artefatos de que o kickoff dele precisa. A rota humana equivalente é protegida por RBAC; esta, pelo service token. `latest=true` devolve a CAUDA (ainda em `seq` crescente) e ignora `afterSeq`; `types` restringe a página a esses tipos de evento. A página tem teto de 200 em qualquer caso (ADR 0060)."
   },
   "f1559bace793": {
     "fonte": "Fetches the tail of the log; ignores `afterSeq`.",
-    "traducao": ""
+    "traducao": "Busca a cauda do log; ignora `afterSeq`."
   },
   "787c21557a07": {
     "fonte": "Comma-separated event types (at most 20). Only events of these types count toward `limit`.",
-    "traducao": ""
+    "traducao": "Tipos de evento separados por vírgula (no máximo 20). Só eventos desses tipos contam para `limit`."
   },
   "81c85ccd34a7": {
     "fonte": "Paginates the session's event log for the engine",
-    "traducao": ""
+    "traducao": "Pagina o event log da sessão para o engine"
   },
   "d84667412ffd": {
     "fonte": "Same use case and same atomic `seq` assignment as the human route. The Psychologist's hypotheses do NOT go through here: they have their own route, with evidence validation.",
-    "traducao": ""
+    "traducao": "Mesmo caso de uso e mesma atribuição atômica de `seq` da rota humana. As hipóteses do Psicólogo NÃO passam por aqui: têm rota própria, com validação de evidência."
   },
   "1ba916deedae": {
     "fonte": "Appends an event to the session's log, on behalf of an agent",
-    "traducao": ""
+    "traducao": "Acrescenta um evento ao log da sessão, em nome de um agente"
   },
   "6768f0b3f50a": {
     "fonte": "The response's `nextAction` is what the engine obeys: `correct` returns to dev, `run_secops` advances the gate, `done` releases it to the user, `await_user` parks the cycle until the open question is answered (RN-860, no correction counted), and `blocked` means the correction cap ran out. MERGE is never automatic — `done` only means it's the human's turn.",
-    "traducao": ""
+    "traducao": "O `nextAction` da resposta é o que o engine obedece: `correct` volta ao dev, `run_secops` avança o gate, `done` libera para o usuário, `await_user` estaciona o ciclo até a pergunta aberta ser respondida (RN-860, sem contar correção), e `blocked` significa que o teto de correções acabou. O MERGE nunca é automático — `done` só quer dizer que é a vez do humano."
   },
   "f6594a9da06b": {
     "fonte": "Records QA's or SecOps's verdict on a task's PR",
-    "traducao": ""
+    "traducao": "Registra o veredito de QA ou SecOps sobre a PR de uma tarefa"
   },
   "4708b57d9849": {
     "fonte": "Born as `offered`. Who accepts is a PERSON, via the human route — an agent doesn't activate an agent. Two exceptions. The Creative→PO offer carrying the `product_brief` that an \"I'm ready — the need is validated\" click asked for is accepted on behalf of whoever clicked, with that person as the actor and `implicito` in the payload (RN-658, ADR 0185). The PO's handoff to the Arquiteto is accepted by the SYSTEM when the backlog is covered (at least one business rule, none without a story) and the repository is `local` with no git credential in the project (RN-660, ADR 0186); `aceiteAutomatico` says whether it happened and, if not, why. Either way the response then carries `status: accepted`.",
-    "traducao": ""
+    "traducao": "Nasce `offered`. Quem aceita é uma PESSOA, pela rota humana — agente não ativa agente. Duas exceções. A oferta Criativo→PO que leva o `product_brief` pedido por um clique em \"Estou pronto — a necessidade está validada\" é aceita em nome de quem clicou, com essa pessoa como ator e `implicito` no payload (RN-658, ADR 0185). O handoff do PO ao Arquiteto é aceito pelo SISTEMA quando o backlog está coberto (ao menos uma regra de negócio, nenhuma sem história) e o repositório é `local` sem credencial de git no projeto (RN-660, ADR 0186); `aceiteAutomatico` diz se aconteceu e, se não, por quê. Em qualquer dos casos a resposta então traz `status: accepted`."
   },
   "763c75a40406": {
     "fonte": "`agente_ja_ativo` (ADR 0182, RN-635): the target is already active in a non-closed session of the project. The `message` is the text the agent reads as the tool result.",
-    "traducao": ""
+    "traducao": "`agente_ja_ativo` (ADR 0182, RN-635): o alvo já está ativo numa sessão não encerrada do projeto. A `message` é o texto que o agente lê como resultado da ferramenta."
   },
   "d9b229ef718a": {
     "fonte": "Offers a handoff from one agent to another",
-    "traducao": ""
+    "traducao": "Oferece um handoff de um agente para outro"
   },
   "cdbd13bb8755": {
     "fonte": "Each hypothesis needs to cite events that EXIST in this session — made-up evidence is rejected with 400, and that is what separates a hypothesis from an opinion. The session's previous round becomes superseded.",
-    "traducao": ""
+    "traducao": "Cada hipótese precisa citar eventos que EXISTEM nesta sessão — evidência inventada é recusada com 400, e é isso que separa uma hipótese de uma opinião. A rodada anterior da sessão passa a superada."
   },
   "f13530215a03": {
     "fonte": "A current analysis already exists for this session.",
-    "traducao": ""
+    "traducao": "Já existe uma análise vigente para esta sessão."
   },
   "146b5961a3cf": {
     "fonte": "Records an analysis round and its hypotheses",
-    "traducao": ""
+    "traducao": "Registra uma rodada de análise e suas hipóteses"
   },
   "5a56f6abd432": {
     "fonte": "The content comes from the `proposed_action`'s own payload: an infra artifact never touches a worktree, same as ADRs.",
-    "traducao": ""
+    "traducao": "O conteúdo vem do próprio payload da `proposed_action`: artefato de infra nunca toca worktree, como os ADRs."
   },
   "3b08dbe3cd28": {
     "fonte": "Returns the files of an infra PR for the gates to read",
-    "traducao": ""
+    "traducao": "Devolve os arquivos de uma PR de infra para os gates lerem"
   },
   "ea1b10b1af23": {
     "fonte": "The current module_map plus the relevant infrastructure ADRs, plus the Architect's module routing (ADR 0131) — the candidates the Infra Lead elects among when proposing container_start.",
-    "traducao": ""
+    "traducao": "O module_map vigente mais os ADRs de infraestrutura relevantes, mais o roteamento de módulos do Arquiteto (ADR 0131) — as candidatas entre as quais o Infra Lead elege ao propor container_start."
   },
   "b249a7ed1932": {
     "fonte": "Assembles the InfraAgent's initial context",
-    "traducao": ""
+    "traducao": "Monta o contexto inicial do InfraAgent"
   },
   "b769469aaed7": {
     "fonte": "Same pipeline and same state machine as dev PRs.",
-    "traducao": ""
+    "traducao": "Mesmo pipeline e mesma máquina de estados das PRs de dev."
   },
   "283228057564": {
     "fonte": "Records QA's or SecOps's verdict on an infra PR",
-    "traducao": ""
+    "traducao": "Registra o veredito de QA ou SecOps sobre uma PR de infra"
   },
   "901d9be9b032": {
     "fonte": "Becomes a `proposed_action`, not a direct write: changing an agent's behavior is an external effect and goes through the same approval pipeline as everything else. This closes the hypothesis → patch loop.",
-    "traducao": ""
+    "traducao": "Vira `proposed_action`, não escrita direta: mudar o comportamento de um agente é efeito externo e passa pelo mesmo pipeline de aprovação de todo o resto. Isso fecha o laço hipótese → patch."
   },
   "aa7236a66a69": {
     "fonte": "Proposes a patch to an agent's instruction file",
-    "traducao": ""
+    "traducao": "Propõe um patch no arquivo de instruções de um agente"
   },
   "605758c8c494": {
     "fonte": "Metering is MANDATORY: every turn records `token_usage`, and that is what makes the budget mean something. Doesn't record any event — the engine narrates the event log. A provider failure comes back in `error` with 200, because the accounting in `usage` remains valid: the turn spent even while failing.",
-    "traducao": ""
+    "traducao": "O metering é OBRIGATÓRIO: todo turno grava `token_usage`, e é isso que dá sentido ao orçamento. Não grava evento nenhum — quem narra o event log é o engine. Falha de provider volta em `error` com 200, porque a contabilidade em `usage` continua valendo: o turno gastou mesmo falhando."
   },
   "46c5c98cdd22": {
     "fonte": "Budget exceeded with `policy=block`, or invalid service token.",
-    "traducao": ""
+    "traducao": "Orçamento estourado com `policy=block`, ou service token inválido."
   },
   "502fb9cf379f": {
     "fonte": "Runs a metered LLM turn, with tool support",
-    "traducao": ""
+    "traducao": "Executa um turno de LLM medido, com suporte a ferramentas"
   },
   "62f541cb7d6f": {
     "fonte": "Same semantics as `llm-turn`, delivered frame by frame. The `done` frame carries the `usage` — without it the turn would have come out with no accounting.",
-    "traducao": ""
+    "traducao": "Mesma semântica de `llm-turn`, entregue quadro a quadro. O quadro `done` traz o `usage` — sem ele o turno sairia sem contabilidade."
   },
   "016241203617": {
     "fonte": "Stream of frames up to `done` or `error`.",
-    "traducao": ""
+    "traducao": "Fluxo de quadros até `done` ou `error`."
   },
   "1acad5e56c1e": {
     "fonte": "Runs an LLM turn with the response streamed",
-    "traducao": ""
+    "traducao": "Executa um turno de LLM com a resposta em streaming"
   },
   "d2070d12e914": {
     "fonte": "Refuses to propose a cap equal to or lower than the current one: the Anamnesis runs periodically, and would re-propose the same thing every round, filling with noise a queue the user needs to read.",
-    "traducao": ""
+    "traducao": "Recusa propor teto igual ou menor que o atual: a Anamnese roda periodicamente e repropria a mesma coisa a cada rodada, enchendo de ruído uma fila que o usuário precisa ler."
   },
   "eaf2b4097ce4": {
     "fonte": "Proposes raising an area's parallelism cap",
-    "traducao": ""
+    "traducao": "Propõe subir o teto de paralelismo de uma área"
   },
   "8be0ca4f3cae": {
     "fonte": "The artifact IS the `artifact.module_contracts` event: immutable, versioned, and with an author, alongside `artifact.module_map`. Each call carries the WHOLE list and replaces the previous version. What a module consumes is not written here: it is the current module_map's `dependsOn`.",
-    "traducao": ""
+    "traducao": "O artefato É o evento `artifact.module_contracts`: imutável, versionado e com autor, ao lado de `artifact.module_map`. Cada chamada leva a lista INTEIRA e substitui a versão anterior. O que um módulo consome não se escreve aqui: é o `dependsOn` do module_map vigente."
   },
   "5f89ce213c29": {
     "fonte": "Empty list, repeated module, module outside the current module_map (or no module_map), a module with an empty or oversized `expoe`, an item with an unknown `tipo`, or a missing/oversized `assinatura`.",
-    "traducao": ""
+    "traducao": "Lista vazia, módulo repetido, módulo fora do module_map vigente (ou sem module_map), módulo com `expoe` vazio ou grande demais, item com `tipo` desconhecido, ou `assinatura` ausente/grande demais."
   },
   "f00ae06c1a00": {
     "fonte": "Declares a new version of the contracts between modules",
-    "traducao": ""
+    "traducao": "Declara uma versão nova dos contratos entre módulos"
   },
   "32f8e378a862": {
     "fonte": "The history is immutable: each publication is one more version, and the current one is the one with the highest `version`. A dependency CYCLE between modules gets the map REJECTED with 400 — the graph needs to be acyclic.",
-    "traducao": ""
+    "traducao": "O histórico é imutável: cada publicação é uma versão a mais, e a vigente é a de maior `version`. CICLO de dependência entre módulos faz o mapa ser RECUSADO com 400 — o grafo precisa ser acíclico."
   },
   "09dffffea2aa": {
     "fonte": "Dependency cycle between modules.",
-    "traducao": ""
+    "traducao": "Ciclo de dependência entre módulos."
   },
   "f46084a10e06": {
     "fonte": "Publishes a new version of the module_map",
-    "traducao": ""
+    "traducao": "Publica uma versão nova do module_map"
   },
   "92a9c3a1797f": {
     "fonte": "The artifact IS the `artifact.module_routing` event: immutable, versioned, and with an author, alongside `artifact.module_map`/`artifact.project_image`/`artifact.c4_diagram`. Each item is validated with the same rule as `choose_project_image` (explicit tag/digest, `latest` rejected, non-trivial `rationale`); a module name outside the current module_map, an empty list, or a repeated module are all rejected with 400.",
-    "traducao": ""
+    "traducao": "O artefato É o evento `artifact.module_routing`: imutável, versionado e com autor, ao lado de `artifact.module_map`/`artifact.project_image`/`artifact.c4_diagram`. Cada item é validado com a mesma régua de `choose_project_image` (tag/digest explícito, `latest` recusado, `rationale` não trivial); nome de módulo fora do module_map vigente, lista vazia ou módulo repetido são recusados com 400."
   },
   "1f7b1d5662b3": {
     "fonte": "Empty list, repeated module, module outside the current module_map, or a candidate image that fails `choose_project_image`'s rule (no explicit tag, `latest`, or short `rationale`).",
-    "traducao": ""
+    "traducao": "Lista vazia, módulo repetido, módulo fora do module_map vigente, ou imagem candidata que reprova na régua de `choose_project_image` (sem tag explícita, `latest`, ou `rationale` curto)."
   },
   "48451450d449": {
     "fonte": "Routes each module of the current module_map to a candidate image",
-    "traducao": ""
+    "traducao": "Roteia cada módulo do module_map vigente para uma imagem candidata"
   },
   "a01ffe8c5815": {
     "fonte": "Queried by the engine's `SessionServer` on heartbeat timeout. `pending: true` makes the timeout get rescheduled instead of closing, and the `motivo` goes into the engine's log — a session that doesn't close without saying why is undiagnosable.",
-    "traducao": ""
+    "traducao": "Consultada pelo `SessionServer` do engine no timeout de heartbeat. `pending: true` faz o timeout ser reagendado em vez de fechar, e o `motivo` vai para o log do engine — sessão que não fecha sem dizer por quê é indiagnosticável."
   },
   "8f5539017a81": {
     "fonte": "Does the session have pending work that blocks closing it?",
-    "traducao": ""
+    "traducao": "A sessão tem trabalho pendente que impede fechá-la?"
   },
   "9df047ebe55e": {
     "fonte": "A competency outside the catalog is REJECTED, and so is evidence that cites an event from another project — both validations exist because the model gets both things wrong.",
-    "traducao": ""
+    "traducao": "Competência fora do catálogo é RECUSADA, e evidência que cita evento de outro projeto também — as duas validações existem porque o modelo erra as duas coisas."
   },
   "12f17f85b5a6": {
     "fonte": "Records the proficiency profiles derived in the round",
-    "traducao": ""
+    "traducao": "Registra os perfis de proficiência derivados na rodada"
   },
   "7512272e89b9": {
     "fonte": "The artifact IS the `artifact.project_image` event: immutable, versioned, and with an author. Revising means issuing a new version, never overwriting. While there isn't one yet, the project's container does not come up and the Code tab responds 409.",
-    "traducao": ""
+    "traducao": "O artefato É o evento `artifact.project_image`: imutável, versionado e com autor. Revisar é emitir versão nova, nunca sobrescrever. Enquanto não houver uma, o container do projeto não sobe e a aba Código responde 409."
   },
   "2eaf825afc8e": {
     "fonte": "Image with no explicit tag (or `latest`), `rationale` too short, `network` outside {none, egress}, or a resource above the cap.",
-    "traducao": ""
+    "traducao": "Imagem sem tag explícita (ou `latest`), `rationale` curto demais, `network` fora de {none, egress}, ou recurso acima do teto."
   },
   "093e745c485d": {
     "fonte": "Sets the project's container image",
-    "traducao": ""
+    "traducao": "Define a imagem de container do projeto"
   },
   "402cf03940dd": {
     "fonte": "`alreadyAnalyzed` is what gives the automatic path IDEMPOTENCY: with `true` the worker short-circuits without spending a token. The prior hypotheses come along so the round doesn't repeat itself.",
-    "traducao": ""
+    "traducao": "`alreadyAnalyzed` é o que dá IDEMPOTÊNCIA ao caminho automático: com `true` o worker encerra cedo sem gastar token. As hipóteses anteriores vêm junto para a rodada não se repetir."
   },
   "d798540cd6b6": {
     "fonte": "Assembles the context for a Psychologist round",
-    "traducao": ""
+    "traducao": "Monta o contexto de uma rodada do Psicólogo"
   },
   "c24eb184b52f": {
     "fonte": "Embeds the title and the titles of the project rules (the 100 most recent) with the RAG embedding model and warns at cosine ≥ the threshold. Never refuses. Without an embedding provider the check is SKIPPED with the reason, also narrated in the event log. The embedding spend is metered as its own `token_usage` row (actor `system`/`duplicata-semantica`).",
-    "traducao": ""
+    "traducao": "Vetoriza o título e os títulos das regras do projeto (as 100 mais recentes) com o modelo de embedding do RAG e avisa com cosseno ≥ o limiar. Nunca recusa. Sem provider de embedding a checagem é PULADA com o motivo, narrado também no event log. O gasto de embedding é medido como linha própria de `token_usage` (ator `system`/`duplicata-semantica`)."
   },
   "2a4a62ae2c65": {
     "fonte": "Warns when a just-written business rule looks like an existing one",
-    "traducao": ""
+    "traducao": "Avisa quando uma regra de negócio recém-escrita parece com uma existente"
   },
   "8e265e014ecf": {
     "fonte": "`businessRuleIds` is what feeds the rule→story coverage. Each id has to reference an `artifact.business_rule` event that EXISTS — validation rejects a made-up id. The response also carries `semanticDuplicate` (RN-681): an embedding-based WARNING against the project stories, never a refusal.",
-    "traducao": ""
+    "traducao": "`businessRuleIds` é o que alimenta a cobertura regra→história. Cada id tem de referenciar um evento `artifact.business_rule` que EXISTE — a validação recusa id inventado. A resposta traz também `semanticDuplicate` (RN-681): um AVISO por embedding contra as histórias do projeto, nunca uma recusa."
   },
   "233e8ee75dcb": {
     "fonte": "Creates a story with functional/non-functional requirements, DoD, DoR, and covered rules",
-    "traducao": ""
+    "traducao": "Cria uma história com requisitos funcionais/não funcionais, DoD, DoR e regras cobertas"
   },
   "29e0565252db": {
     "fonte": "The story and its tasks leave the backlog, coverage, plan and claim; the row stays and `backlog.story_archived` records it, with the PO as actor (RN-727).",
-    "traducao": ""
+    "traducao": "A história e suas tarefas saem do backlog, da cobertura, do plano e do claim; a linha fica e `backlog.story_archived` a registra, com o PO como ator (RN-727)."
   },
   "75d2960eae35": {
     "fonte": "Story is not in this project.",
-    "traducao": ""
+    "traducao": "A história não é deste projeto."
   },
   "4c721b719891": {
     "fonte": "Named refusal (`reason`): `historia_arquivada`, `historia_nao_draft` or `historia_com_tarefa_em_execucao`.",
-    "traducao": ""
+    "traducao": "Recusa nomeada (`reason`): `historia_arquivada`, `historia_nao_draft` ou `historia_com_tarefa_em_execucao`."
   },
   "6216d9a49402": {
     "fonte": "Archives a draft story",
-    "traducao": ""
+    "traducao": "Arquiva uma história em rascunho"
   },
   "cc9a7ee9a573": {
     "fonte": "`businessRuleIds` is ADDED to the rules already linked; non-empty lists replace the current ones and omitted lists stay. After writing, the story is promoted by the SAME criterion as story creation (`ready` in `auto` mode, `proposedReady` in `manual`) (RN-720).",
-    "traducao": ""
+    "traducao": "`businessRuleIds` é SOMADO às regras já ligadas; listas não vazias substituem as atuais e listas omitidas ficam. Depois de gravar, a história é promovida pelo MESMO critério da criação de história (`ready` no modo `auto`, `proposedReady` no `manual`) (RN-720)."
   },
   "95bc9cbc5b80": {
     "fonte": "A business_rule_id does not reference an existing rule.",
-    "traducao": ""
+    "traducao": "Um business_rule_id não referencia uma regra existente."
   },
   "51d1cc68ac16": {
     "fonte": "Story is no longer `draft`.",
-    "traducao": ""
+    "traducao": "A história não está mais em `draft`."
   },
   "2a2af28d7b79": {
     "fonte": "Completes an existing draft story instead of re-creating it",
-    "traducao": ""
+    "traducao": "Completa uma história em rascunho existente em vez de recriá-la"
   },
   "1079be04d691": {
     "fonte": "Only a `draft` story with no task in execution; writes `backlog.story_updated` with the PO as actor (RN-727). A `ready` one too when `questionId` cites an open question the user already answered (RN-859).",
-    "traducao": ""
+    "traducao": "Só história `draft` sem tarefa em execução; grava `backlog.story_updated` com o PO como ator (RN-727). Uma `ready` também, quando `questionId` cita uma pergunta aberta que o usuário já respondeu (RN-859)."
   },
   "7de1c2f01619": {
     "fonte": "No field, or an empty title.",
-    "traducao": ""
+    "traducao": "Nenhum campo, ou título vazio."
   },
   "a8c4faca4e70": {
     "fonte": "Corrects the title and/or description of a draft story",
-    "traducao": ""
+    "traducao": "Corrige o título e/ou a descrição de uma história em rascunho"
   },
   "183668864d4f": {
     "fonte": "This is the cross-validation: a module that doesn't exist in the current map becomes an architecture pending item instead of slipping through unnoticed.",
-    "traducao": ""
+    "traducao": "Esta é a validação cruzada: módulo que não existe no mapa vigente vira pendência de arquitetura em vez de passar despercebido."
   },
   "ad3075b1615d": {
     "fonte": "Associates a story with the modules it touches",
-    "traducao": ""
+    "traducao": "Associa uma história aos módulos que ela toca"
   },
   "deb4277e76f6": {
     "fonte": "Creates a task inside a story",
-    "traducao": ""
+    "traducao": "Cria uma tarefa dentro de uma história"
   },
   "042528deb750": {
     "fonte": "There is no automatic unblocking: whoever unblocks it is a person, via the human route. That is what stops an agent from spinning indefinitely.",
-    "traducao": ""
+    "traducao": "Não há desbloqueio automático: quem desbloqueia é uma pessoa, pela rota humana. É isso que impede um agente de girar indefinidamente."
   },
   "f4e627f6a241": {
     "fonte": "Marks the task as blocked, with the reason",
-    "traducao": ""
+    "traducao": "Marca a tarefa como bloqueada, com o motivo"
   },
   "e59b0fb593f9": {
     "fonte": "Called when the dev agent's PR is ready for review.",
-    "traducao": ""
+    "traducao": "Chamada quando a PR do dev agent está pronta para revisão."
   },
   "9ac8d2a27c73": {
     "fonte": "Opens the task's gate pipeline, starting with QA",
-    "traducao": ""
+    "traducao": "Abre o pipeline de gates da tarefa, começando por QA"
   },
   "ab0aa63d9098": {
     "fonte": "Invalid transition, or another agent's task.",
-    "traducao": ""
+    "traducao": "Transição inválida, ou tarefa de outro agente."
   },
   "4bea11b2cacf": {
     "fonte": "Moves the task's state as work progresses",
-    "traducao": ""
+    "traducao": "Move o estado da tarefa conforme o trabalho avança"
   },
   "a2f805bbc5ce": {
     "fonte": "Called by the engine retry job (up to 3 times, after 1, 3 and 10 min). Same use case as the human unblock, with a `system` actor; a task that is no longer blocked is left untouched.",
-    "traducao": ""
+    "traducao": "Chamada pelo job de retentativa do engine (até 3 vezes, depois de 1, 3 e 10 min). Mesmo caso de uso do desbloqueio humano, com ator `system`; tarefa que não está mais bloqueada fica intocada."
   },
   "ac68fe604a06": {
     "fonte": "Unblocks a task after a transient network/provider failure",
-    "traducao": ""
+    "traducao": "Desbloqueia uma tarefa depois de uma falha transitória de rede/provider"
   },
   "0fc337be20a8": {
     "fonte": "ATOMIC by design: with several dev agents on the same module, two concurrent claims cannot return the same task. With no task available, returns empty instead of an error.",
-    "traducao": ""
+    "traducao": "ATÔMICA por desenho: com vários dev agents no mesmo módulo, dois claims concorrentes não podem devolver a mesma tarefa. Sem tarefa disponível, devolve vazio em vez de erro."
   },
   "931b8941cc62": {
     "fonte": "Atomically claims the module's next claimable task",
-    "traducao": ""
+    "traducao": "Reivindica atomicamente a próxima tarefa reivindicável do módulo"
   },
   "79e71e90305d": {
     "fonte": "Not blocked and outside the PR gates; empty unless the session is an execution session. Used by the engine when stopping an execution, to block the ones no live dev agent holds.",
-    "traducao": ""
+    "traducao": "Não bloqueadas e fora dos gates de PR; vazio a menos que a sessão seja de execução. Usada pelo engine ao parar uma execução, para bloquear as que nenhum dev agent vivo segura."
   },
   "bd9691bd5e1c": {
     "fonte": "Lists the project's in-progress tasks held by a dev agent",
-    "traducao": ""
+    "traducao": "Lista as tarefas em andamento do projeto seguradas por um dev agent"
   },
   "deb27635af24": {
     "fonte": "Only terminations the api did NOT cause reach here — crash, kill, `heartbeat_timeout`, defensive shutdown. A stop planned by the api itself doesn't go through here: the engine already learned of it via the outbox, and reporting it back would be an echo.",
-    "traducao": ""
+    "traducao": "Só chegam aqui os encerramentos que a api NÃO causou — crash, kill, `heartbeat_timeout`, desligamento defensivo. Uma parada planejada pela própria api não passa por aqui: o engine já soube dela pela outbox, e relatá-la de volta seria eco."
   },
   "ee1132f0d867": {
     "fonte": "Reports that the session process terminated in the engine",
-    "traducao": ""
+    "traducao": "Relata que o processo da sessão terminou no engine"
   },
   "b4d2b0e85e88": {
     "fonte": "Does NOT touch the database, on purpose. If it did, a slow Postgres would restart ALL replicas at once and turn degradation into a total outage. The pod is pulled from the load balancer by `/health`.",
-    "traducao": ""
+    "traducao": "NÃO toca o banco, de propósito. Se tocasse, um Postgres lento reiniciaria TODAS as réplicas de uma vez e transformaria degradação em queda total. O pod sai do balanceador pelo `/health`."
   },
   "d73b2dbd2597": {
     "fonte": "Liveness — the process still serves requests",
-    "traducao": ""
+    "traducao": "Liveness — o processo ainda atende requisições"
   },
   "c76a2158fb2d": {
     "fonte": "The PROVIDER layer of the capabilities (ADR 0041) for the nine providers, read from the same instances that serve the calls. A capability is only `true` when proven against the real API. The screen reads `routingPreference` from here before offering a routing preference on a binding (ADR 0166).",
-    "traducao": ""
+    "traducao": "A camada de PROVIDER das capabilities (ADR 0041) para os nove providers, lida das mesmas instâncias que servem as chamadas. Uma capability só é `true` quando provada contra a API real. A tela lê `routingPreference` daqui antes de oferecer preferência de roteamento num binding (ADR 0166)."
   },
   "e37147654490": {
     "fonte": "Lists what each LLM provider can do, independent of the model",
-    "traducao": ""
+    "traducao": "Lista o que cada provider de LLM sabe fazer, independente do modelo"
   },
   "27b557e803b3": {
     "fonte": "Not JSON: it's `text/plain` in exposition format. Public out of necessity (the scraper carries no token) and restricted by NETWORK — the production Ingress blocks this path at the edge and the NetworkPolicy only allows the monitoring namespace.",
-    "traducao": ""
+    "traducao": "Não é JSON: é `text/plain` no formato de exposição. Pública por necessidade (o scraper não carrega token) e restrita por REDE — o Ingress de produção bloqueia este caminho na borda e a NetworkPolicy só libera o namespace de monitoramento."
   },
   "c8197a0cb19b": {
     "fonte": "Metrics in exposition format.",
-    "traducao": ""
+    "traducao": "Métricas no formato de exposição."
   },
   "585e693b9b76": {
     "fonte": "Exposes metrics in Prometheus exposition format",
-    "traducao": ""
+    "traducao": "Expõe métricas no formato de exposição do Prometheus"
   },
   "08643f444643": {
     "fonte": "Project doesn't exist or is invisible to the caller.",
-    "traducao": ""
+    "traducao": "O projeto não existe ou é invisível para quem chama."
   },
   "9dd42a64f0fb": {
     "fonte": "Returns a project by id",
-    "traducao": ""
+    "traducao": "Devolve um projeto pelo id"
   },
   "8963ccafacbc": {
     "fonte": "A project with this slug already exists in the workspace.",
-    "traducao": ""
+    "traducao": "Já existe um projeto com este slug no workspace."
   },
   "1e95b1755d73": {
     "fonte": "Changes the project's name or slug",
-    "traducao": ""
+    "traducao": "Muda o nome ou o slug do projeto"
   },
   "03533c7ce954": {
     "fonte": "Takes its sessions, event log, and proposed actions along with it.",
-    "traducao": ""
+    "traducao": "Leva junto as sessões, o event log e as ações propostas."
   },
   "b4cf1e7cddc5": {
     "fonte": "Removes the project",
-    "traducao": ""
+    "traducao": "Remove o projeto"
   },
   "c1a505f5268e": {
     "fonte": "`status` is `pending` (the default) or `failed`. `actionType` filters by type — e.g. `git_merge`, for the PRs tab to find the merge proposal for a PR without knowing which session created it. `status=failed` REQUIRES `actionType` and lists the actions whose execution failed — the PRs tab reads the last refused merge of each PR from it (a merge conflict carries `executionResult.conflictingFiles`).",
-    "traducao": ""
+    "traducao": "`status` é `pending` (o padrão) ou `failed`. `actionType` filtra por tipo — ex.: `git_merge`, para a aba de PRs achar a proposta de merge de uma PR sem saber qual sessão a criou. `status=failed` EXIGE `actionType` e lista as ações cuja execução falhou — a aba de PRs lê dali o último merge recusado de cada PR (conflito de merge traz `executionResult.conflictingFiles`)."
   },
   "78b8c1f4e12e": {
     "fonte": "Lists the PENDING actions of the whole project, across any session",
-    "traducao": ""
+    "traducao": "Lista as ações PENDENTES do projeto inteiro, de qualquer sessão"
   },
   "3ac3973daf15": {
     "fonte": "The project is born with the three areas (RN-094), so the list comes back full even before there is a `module_map`. What activating execution adds are the MEMBERS of the dev area, one per module.",
-    "traducao": ""
+    "traducao": "O projeto nasce com as três áreas (RN-094), então a lista volta cheia mesmo antes de existir `module_map`. O que ativar a execução acrescenta são os MEMBROS da área de dev, um por módulo."
   },
   "95ed4f16e899": {
     "fonte": "Project, session, or task not found.",
-    "traducao": ""
+    "traducao": "Projeto, sessão ou tarefa não encontrado."
   },
   "58855c88b3ae": {
     "fonte": "The project's agent areas, with each lead's cap",
-    "traducao": ""
+    "traducao": "As áreas de agentes do projeto, com o teto de cada lead"
   },
   "02aff7dabbcb": {
     "fonte": "Requires `maintainer`, same reason as the parallelism cap: this is an INDEPENDENT, additive check next to the project and session budgets (ADR 0110) — not a cascade, and not a replacement for either. The limit comes in as DOLLARS and is converted to micro-USD server-side, same convention as `BudgetsController`. `null` clears the cap.",
-    "traducao": ""
+    "traducao": "Exige `maintainer`, pelo mesmo motivo do teto de paralelismo: é uma checagem INDEPENDENTE e aditiva ao lado dos orçamentos de projeto e de sessão (ADR 0110) — não é cascata, nem substitui nenhum dos dois. O limite entra em DÓLARES e é convertido para micro-USD no servidor, a mesma convenção do `BudgetsController`. `null` limpa o teto."
   },
   "cbeefb89e2d4": {
     "fonte": "`limitUsd` is neither `null` nor a number >= 0.",
-    "traducao": ""
+    "traducao": "`limitUsd` não é `null` nem um número >= 0."
   },
   "3364d064f855": {
     "fonte": "Sets (or clears) an area's spend cap",
-    "traducao": ""
+    "traducao": "Define (ou limpa) o teto de gasto de uma área"
   },
   "ac90a29d094d": {
     "fonte": "Requires `maintainer`, not `developer`, for the same reason as activating execution: raising the cap is deciding how much the product can spend without asking. Applies to the NEXT requests — whatever is already awaiting your decision keeps waiting.",
-    "traducao": ""
+    "traducao": "Exige `maintainer`, não `developer`, pelo mesmo motivo de ativar a execução: subir o teto é decidir quanto o produto pode gastar sem perguntar. Vale para os PRÓXIMOS pedidos — o que já aguarda a sua decisão continua aguardando."
   },
   "26bf949d1423": {
     "fonte": "`maxParallel` is not an integer >= 1.",
-    "traducao": ""
+    "traducao": "`maxParallel` não é um inteiro >= 1."
   },
   "d94368c4e651": {
     "fonte": "Changes an area's parallelism cap",
-    "traducao": ""
+    "traducao": "Muda o teto de paralelismo de uma área"
   },
   "428cb79e5989": {
     "fonte": "Only the explicitly recorded rules. An agent with no row here falls back to the project's `permissions.json` default.",
-    "traducao": ""
+    "traducao": "Só as regras gravadas explicitamente. Agente sem linha aqui cai no padrão do `permissions.json` do projeto."
   },
   "c086999b82c6": {
     "fonte": "Lists the autonomy granted to each agent",
-    "traducao": ""
+    "traducao": "Lista a autonomia concedida a cada agente"
   },
   "d3ccb9e83d33": {
     "fonte": "Upsert by (agent, type). It does NOT override `permissions.json`: a pattern already in `deny` stays blocked no matter how much autonomy is granted here. `actionType: \"*\"` is \"auto mode\" (RN-153) — autonomy for ANY action type of this agent; a specific rule recorded afterwards still wins over the wildcard for that type.",
-    "traducao": ""
+    "traducao": "Upsert por (agente, tipo). NÃO sobrepõe o `permissions.json`: padrão já em `deny` continua bloqueado por mais autonomia que se conceda aqui. `actionType: \"*\"` é o \"modo automático\" (RN-153) — autonomia para QUALQUER tipo de ação deste agente; regra específica gravada depois continua vencendo a curinga para aquele tipo."
   },
   "409dc016a082": {
     "fonte": "Rule recorded. No body.",
-    "traducao": ""
+    "traducao": "Regra gravada. Sem corpo."
   },
   "73e41dcf7c56": {
     "fonte": "Sets an agent's autonomy for an action type",
-    "traducao": ""
+    "traducao": "Define a autonomia de um agente para um tipo de ação"
   },
   "3db136ec9ec7": {
     "fonte": "Agent → area → project → workspace cascade, WITHOUT a session: it is the agent's configuration on the project, not that of a specific conversation. `origin: \"agent\"` means this agent DIVERGED from its area's default; any other origin means it inherits.",
-    "traducao": ""
+    "traducao": "Cascata agente → área → projeto → workspace, SEM sessão: é a configuração do agente no projeto, não a de uma conversa específica. `origin: \"agent\"` quer dizer que este agente DIVERGIU do padrão da área; qualquer outra origem quer dizer que ele herda."
   },
   "752114d081f2": {
     "fonte": "Insufficient role on the scope.",
-    "traducao": ""
+    "traducao": "Papel insuficiente no escopo."
   },
   "bf9d48e06411": {
     "fonte": "Scope not found.",
-    "traducao": ""
+    "traducao": "Escopo não encontrado."
   },
   "52a2dc1d604b": {
     "fonte": "Resolves which model an agent uses, and where it came from",
-    "traducao": ""
+    "traducao": "Resolve qual modelo um agente usa, e de onde veio"
   },
   "9251e93e2597": {
     "fonte": "Applies to every session in this project that has no binding of its own, and only to those — before ADR 0064 the binding was global and reached other projects too. This is how a cheap model is given to the Psychologist and an expensive one to the Architect in the same project, and also how an agent DIVERGES from its area's default.",
-    "traducao": ""
+    "traducao": "Vale para toda sessão deste projeto que não tem binding próprio, e só para elas — antes do ADR 0064 o binding era global e alcançava outros projetos também. É assim que se dá um modelo barato ao Psicólogo e um caro ao Arquiteto no mesmo projeto, e também é como um agente DIVERGE do padrão da área."
   },
   "b8a0454deb68": {
     "fonte": "Pins an agent's model in THIS project",
-    "traducao": ""
+    "traducao": "Fixa o modelo de um agente NESTE projeto"
   },
   "b0ad60c27ad4": {
     "fonte": "DELETES the agent's binding — it does not copy the area's model into it. Copying would look the same on screen and is not: it would become a copy, and the area's next change would silently leave this agent behind. 404 when it already inherits.",
-    "traducao": ""
+    "traducao": "APAGA o binding do agente — não copia o modelo da área para ele. Copiar pareceria igual na tela e não é: viraria uma cópia, e a próxima mudança da área deixaria este agente para trás em silêncio. 404 quando ele já herda."
   },
   "6629b058cd70": {
     "fonte": "The agent went back to inheriting. No body.",
-    "traducao": ""
+    "traducao": "O agente voltou a herdar. Sem corpo."
   },
   "55f8d1e101a3": {
     "fonte": "Makes the agent go back to inheriting the area's model",
-    "traducao": ""
+    "traducao": "Faz o agente voltar a herdar o modelo da área"
   },
   "b595aae150f2": {
     "fonte": "A SLIDING 30-day window, not the current calendar month: that is the label the screen shows, and with a calendar month the estimate would plunge on the 1st from the page turning over, not from a change in usage. Only `actor_kind = agent` counts (RN-038). An agent that never ran does not appear in the list — the screen shows a dash for it, which is different from zero.",
-    "traducao": ""
+    "traducao": "Janela DESLIZANTE de 30 dias, não o mês civil corrente: é o rótulo que a tela mostra, e com mês civil a estimativa despencaria no dia 1º por virar a página, não por mudança de uso. Só conta `actor_kind = agent` (RN-038). Agente que nunca rodou não aparece na lista — a tela mostra um traço para ele, o que é diferente de zero."
   },
   "ea6f8dd71686": {
     "fonte": "Project or session not found.",
-    "traducao": ""
+    "traducao": "Projeto ou sessão não encontrado."
   },
   "860674af615c": {
     "fonte": "Breaks down the project spend by agent, over the last 30 days",
-    "traducao": ""
+    "traducao": "Quebra o gasto do projeto por agente, nos últimos 30 dias"
   },
   "43334b99e0c0": {
     "fonte": "Most recent first, each already carrying its diff against the previous one, computed server-side.",
-    "traducao": ""
+    "traducao": "A mais recente primeiro, cada uma já trazendo o diff contra a anterior, calculado no servidor."
   },
   "2584c20c7f80": {
     "fonte": "Project, event, or version does not exist.",
-    "traducao": ""
+    "traducao": "Projeto, evento ou versão não existe."
   },
   "38ce21951a9a": {
     "fonte": "Lists an agent's instruction versions",
-    "traducao": ""
+    "traducao": "Lista as versões de instrução de um agente"
   },
   "1f76622fe176": {
     "fonte": "The history is immutable: restoring deletes nothing, it CREATES a new version with the old content. Requires `maintainer` because it changes the agent's behavior from that point on — same calibration as the patch.",
-    "traducao": ""
+    "traducao": "O histórico é imutável: restaurar não apaga nada, CRIA uma versão nova com o conteúdo antigo. Exige `maintainer` porque muda o comportamento do agente dali em diante — mesmo calibre do patch."
   },
   "21bf69ef053a": {
     "fonte": "Version to restore.",
-    "traducao": ""
+    "traducao": "Versão a restaurar."
   },
   "51e2565c9355": {
     "fonte": "Version is not a positive integer.",
-    "traducao": ""
+    "traducao": "A versão não é um inteiro positivo."
   },
   "240431e0d9d9": {
     "fonte": "Restores a previous version of an agent's instruction",
-    "traducao": ""
+    "traducao": "Restaura uma versão anterior da instrução de um agente"
   },
   "89d7cce0e7a9": {
     "fonte": "Requires `maintainer` for the same reason as the Psychologist reanalysis: it runs the ToolLoop and spends real budget.",
-    "traducao": ""
+    "traducao": "Exige `maintainer` pelo mesmo motivo da reanálise do Psicólogo: roda o ToolLoop e gasta orçamento real."
   },
   "279ad91eb2b2": {
     "fonte": "The Anamnese is disabled globally by the user's decision (not a bug) — body with `reason: \"anamnese_disabled\"`.",
-    "traducao": ""
+    "traducao": "A Anamnese está desligada globalmente por decisão do usuário (não é bug) — corpo com `reason: \"anamnese_disabled\"`."
   },
   "d0effece8720": {
     "fonte": "Runs the Anamnese now, without waiting for the tick",
-    "traducao": ""
+    "traducao": "Roda a Anamnese agora, sem esperar o tick"
   },
   "c7d847df16dd": {
     "fonte": "The current map is the one with the highest `version` (history is immutable). The pending items are the story↔map cross-validation: a story with no module, or pointing at a module that doesn't exist.",
-    "traducao": ""
+    "traducao": "O mapa vigente é o de maior `version` (o histórico é imutável). As pendências são a validação cruzada história↔mapa: história sem módulo, ou apontando para módulo que não existe."
   },
   "a22ac26471bd": {
     "fonte": "Returns the current module_map, the ADRs, and the pending items",
-    "traducao": ""
+    "traducao": "Devolve o module_map vigente, os ADRs e as pendências"
   },
   "e84919f81879": {
     "fonte": "The default the lead and the area's subagents share. `origin: \"area\"` means someone chose it for this area; any other origin means the area itself inherits from the project or the workspace.",
-    "traducao": ""
+    "traducao": "O padrão que o lead e os subagentes da área compartilham. `origin: \"area\"` quer dizer que alguém o escolheu para esta área; qualquer outra origem quer dizer que a própria área herda do projeto ou do workspace."
   },
   "9b70a945cead": {
     "fonte": "Resolves what an area's default model is, and where it came from",
-    "traducao": ""
+    "traducao": "Resolve qual é o modelo padrão de uma área, e de onde veio"
   },
   "6b02953bc1b2": {
     "fonte": "Applies to the lead and to every subagent of the area that has no binding of its own (RN-102). Requires `maintainer` because it reaches the whole area at once, and choosing a model is deciding spend — the same reason as the parallelism cap.",
-    "traducao": ""
+    "traducao": "Vale para o lead e para todo subagente da área que não tem binding próprio (RN-102). Exige `maintainer` porque alcança a área inteira de uma vez, e escolher modelo é decidir gasto — o mesmo motivo do teto de paralelismo."
   },
   "220538dceef6": {
     "fonte": "Sets an area's default model",
-    "traducao": ""
+    "traducao": "Define o modelo padrão de uma área"
   },
   "3dcd74b6fa38": {
     "fonte": "The area stops having its own default and starts inheriting from the project (or the workspace). Agents that diverged keep diverging: their binding is a different one, and deleting this one cannot decide for them.",
-    "traducao": ""
+    "traducao": "A área deixa de ter padrão próprio e passa a herdar do projeto (ou do workspace). Agentes que divergiram continuam divergindo: o binding deles é outro, e apagar este não pode decidir por eles."
   },
   "f00904a10d26": {
     "fonte": "The area went back to inheriting. No body.",
-    "traducao": ""
+    "traducao": "A área voltou a herdar. Sem corpo."
   },
   "e56afd581881": {
     "fonte": "Makes the area go back to inheriting the project's model",
-    "traducao": ""
+    "traducao": "Faz a área voltar a herdar o modelo do projeto"
   },
   "a6855d72213d": {
     "fonte": "Nested and complete, in a single call. ARCHIVED stories (RN-727) are not listed. Backlog is written by agents, through the `/internal/*` routes.",
-    "traducao": ""
+    "traducao": "Aninhada e completa, numa chamada só. Histórias ARQUIVADAS (RN-727) não são listadas. O backlog é escrito por agentes, pelas rotas `/internal/*`."
   },
   "c88fcf6e7486": {
     "fonte": "Returns the epic → story → task tree",
-    "traducao": ""
+    "traducao": "Devolve a árvore épico → história → tarefa"
   },
   "9045852031a6": {
     "fonte": "Values in micro-USD. Requires `maintainer` — it is cost information.",
-    "traducao": ""
+    "traducao": "Valores em micro-USD. Exige `maintainer` — é informação de custo."
   },
   "0892a2da4cf4": {
     "fonte": "Reads the project budget and how much has already been spent",
-    "traducao": ""
+    "traducao": "Lê o orçamento do projeto e quanto já foi gasto"
   },
   "a669bfef5c18": {
     "fonte": "The limit comes in as DOLLARS and is converted to micro-USD. With `policy=block` the call that would exceed the cap is REFUSED, not just recorded.",
-    "traducao": ""
+    "traducao": "O limite entra em DÓLARES e é convertido para micro-USD. Com `policy=block` a chamada que estouraria o teto é RECUSADA, não só registrada."
   },
   "8eadce18bad1": {
     "fonte": "Sets the project spend cap",
-    "traducao": ""
+    "traducao": "Define o teto de gasto do projeto"
   },
   "c781529ac831": {
     "fonte": "Foundation for the declared blame pending item (PHASE 26b) — the UI that annotates the editor line by line doesn't exist yet. `truncated` warns when the file went past the annotated-lines cap.",
-    "traducao": ""
+    "traducao": "Base para a pendência declarada do blame (FASE 26b) — a interface que anota o editor linha a linha ainda não existe. `truncated` avisa quando o arquivo passou do teto de linhas anotadas."
   },
   "f8be131ab180": {
     "fonte": "Path of the file to annotate.",
-    "traducao": ""
+    "traducao": "Caminho do arquivo a anotar."
   },
   "96200b8adecb": {
     "fonte": "Branch, tag, or sha. Absent uses the repository's default branch.",
-    "traducao": ""
+    "traducao": "Branch, tag ou sha. Ausente usa a branch padrão do repositório."
   },
   "d459b55c4f74": {
     "fonte": "Path outside the project scope (RN-095), malformed ref, or a search term that is too short or too long.",
-    "traducao": ""
+    "traducao": "Caminho fora do escopo do projeto (RN-095), ref malformada, ou termo de busca curto ou longo demais."
   },
   "1ae48b204c74": {
     "fonte": "Project without a provisioned repository, or a nonexistent ref/path/PR.",
-    "traducao": ""
+    "traducao": "Projeto sem repositório provisionado, ou ref/caminho/PR inexistente."
   },
   "96482c86c782": {
     "fonte": "The project's provider does not declare the operation's capability — `listTree`, `pullRequestDiff`, `blame`, `pullRequestsList`, or `branchesDetailed`. A capability is only declared once proven by the contract suite, so this is a legitimate response, not a defect.",
-    "traducao": ""
+    "traducao": "O provider do projeto não declara a capability da operação — `listTree`, `pullRequestDiff`, `blame`, `pullRequestsList` ou `branchesDetailed`. Capability só é declarada depois de provada pela suíte de contrato, então esta é uma resposta legítima, não um defeito."
   },
   "73c4835fc41b": {
     "fonte": "Annotates every line of a file with the commit that touched it",
-    "traducao": ""
+    "traducao": "Anota cada linha de um arquivo com o commit que a tocou"
   },
   "bb1f17698ae4": {
     "fonte": "Foundation for the rich dropdown (PHASE 26b) — today the ref selector is a plain text field. `ahead`/`behind` are relative to the repository's DEFAULT branch; `null` when the provider can't compute it (an honest degradation, not an error). It is NOT `listBranches` (which the Gitflow bootstrap uses) — it is its own operation, because enriching costs an extra call to the provider PER BRANCH.",
-    "traducao": ""
+    "traducao": "Base para o dropdown rico (FASE 26b) — hoje o seletor de ref é um campo de texto simples. `ahead`/`behind` são relativos à branch PADRÃO do repositório; `null` quando o provider não consegue calcular (degradação honesta, não erro). NÃO é `listBranches` (que o bootstrap do Gitflow usa) — é operação própria, porque enriquecer custa uma chamada a mais ao provider POR BRANCH."
   },
   "fec4c22d1338": {
     "fonte": "Lists branches with ahead/behind and the associated open PR",
-    "traducao": ""
+    "traducao": "Lista branches com ahead/behind e a PR aberta associada"
   },
   "8a21884594d2": {
     "fonte": "UTF-8, cut at the byte cap with `truncated: true` when it's exceeded. A path that escapes the project folder is refused with 400 by the central check in RN-095 — never with 404, which would invite probing.",
-    "traducao": ""
+    "traducao": "UTF-8, cortado no teto de bytes com `truncated: true` quando passa dele. Caminho que escapa da pasta do projeto é recusado com 400 pela checagem central da RN-095 — nunca com 404, que convidaria a sondar."
   },
   "62fbca8d9970": {
     "fonte": "File path.",
-    "traducao": ""
+    "traducao": "Caminho do arquivo."
   },
   "05a58bb38df2": {
     "fonte": "Branch, tag, or sha.",
-    "traducao": ""
+    "traducao": "Branch, tag ou sha."
   },
   "417d1fee6498": {
     "fonte": "Returns a file's content",
-    "traducao": ""
+    "traducao": "Devolve o conteúdo de um arquivo"
   },
   "69c34d3c9761": {
     "fonte": "Foundation for the navigable list (PHASE 26b) — today the diff is only reachable by a known id (e.g. coming from Approvals); this route resolves how to reach the id without having to know it by heart. `truncated` warns when the list went past the per-call cap.",
-    "traducao": ""
+    "traducao": "Base para a lista navegável (FASE 26b) — hoje o diff só é alcançável por um id conhecido (ex.: vindo de Aprovações); esta rota resolve como chegar ao id sem ter de sabê-lo de cor. `truncated` avisa quando a lista passou do teto por chamada."
   },
   "e806d7c56b31": {
     "fonte": "Absent lists all states.",
-    "traducao": ""
+    "traducao": "Ausente lista todos os estados."
   },
   "3a6f80db24fc": {
     "fonte": "Lists the repository's PRs/MRs",
-    "traducao": ""
+    "traducao": "Lista as PRs/MRs do repositório"
   },
   "922d92f67f1f": {
     "fonte": "A null `patch` distinguishes the case where the provider didn't deliver the text (binary, or a patch too large) from the case where the text came back empty. Collapsing the two would make the screen say a changed binary didn't change. The `truncated` field warns when the file list went past the cap.",
-    "traducao": ""
+    "traducao": "`patch` nulo distingue o caso em que o provider não entregou o texto (binário, ou patch grande demais) do caso em que o texto voltou vazio. Juntar os dois faria a tela dizer que um binário alterado não mudou. O campo `truncated` avisa quando a lista de arquivos passou do teto."
   },
   "d8f2f0fd82ce": {
     "fonte": "Returns the diff of a PR, normalized across providers",
-    "traducao": ""
+    "traducao": "Devolve o diff de uma PR, normalizado entre providers"
   },
   "200e9eea8ea9": {
     "fonte": "Search is NOT a git contract operation: it is composed over the tree and the content, and so is the only read whose cost grows with the size of the repository. Three budgets cap it — directories walked, files opened, and matches returned — and `truncated` says it stopped. `filesScanned` shows the cost it incurred.",
-    "traducao": ""
+    "traducao": "A busca NÃO é operação do contrato de git: é composta sobre a árvore e o conteúdo, e por isso é a única leitura cujo custo cresce com o tamanho do repositório. Três orçamentos a limitam — diretórios percorridos, arquivos abertos e acertos devolvidos — e `truncated` diz que ela parou. `filesScanned` mostra o custo que ela teve."
   },
   "90bc88b437d2": {
     "fonte": "Term, 2 to 200 characters.",
-    "traducao": ""
+    "traducao": "Termo, de 2 a 200 caracteres."
   },
   "f40778fb2b2c": {
     "fonte": "Subtree to search in. Narrowing this is what avoids truncation.",
-    "traducao": ""
+    "traducao": "Subárvore onde buscar. Estreitar isto é o que evita o corte."
   },
   "1063a0011451": {
     "fonte": "Searches text in the repository, with a budget",
-    "traducao": ""
+    "traducao": "Busca texto no repositório, com orçamento"
   },
   "8259b9034451": {
     "fonte": "Not recursive, by contract design: the tab navigates on demand, and requesting the whole tree of a large repository is exactly the traffic amplifier this phase forbids. `truncated` warns when the level went past the entry cap.",
-    "traducao": ""
+    "traducao": "Não recursiva, por desenho do contrato: a aba navega sob demanda, e pedir a árvore inteira de um repositório grande é exatamente o amplificador de tráfego que esta fase proíbe. `truncated` avisa quando o nível passou do teto de entradas."
   },
   "79c283b1db1f": {
     "fonte": "Directory to list. Absent or empty is the root.",
-    "traducao": ""
+    "traducao": "Diretório a listar. Ausente ou vazio é a raiz."
   },
   "b1d0f6ae4769": {
     "fonte": "Lists ONE level of the repository tree",
-    "traducao": ""
+    "traducao": "Lista UM nível da árvore do repositório"
   },
   "681d2f58aab4": {
     "fonte": "While the status is `sem_decisao`, the project container does not come up and the Code tab responds 409 — that's the RN-105 gate. Seeing the state requires the same permission as seeing the project, so `viewer`.",
-    "traducao": ""
+    "traducao": "Enquanto o status é `sem_decisao`, o container do projeto não sobe e a aba Código responde 409 — esse é o portão da RN-105. Ver o estado exige a mesma permissão de ver o projeto, então `viewer`."
   },
   "42f90ee7ed91": {
     "fonte": "State of the project's container (the current image decision)",
-    "traducao": ""
+    "traducao": "Estado do container do projeto (a decisão de imagem vigente)"
   },
   "e27baaa6d4a1": {
     "fonte": "`null` when the project was never provisioned — the common case today, because no real orchestrator transitions this table yet (RN-243/RN-267). `status`/`imageVersion`/`resources` are what was RECORDED; `observado` is what the Docker daemon reports right now, asked through the broker (ADR 0130). The two are never fused: a container killed from the outside reads as recorded `running` and observed `exited`. When there was no way to look, `observado` is `null` and `naoObservado` says why — it never inherits the recorded state (RN-468).",
-    "traducao": ""
+    "traducao": "`null` quando o projeto nunca foi provisionado — o caso comum hoje, porque nenhum orquestrador real transiciona esta tabela ainda (RN-243/RN-267). `status`/`imageVersion`/`resources` são o que foi REGISTRADO; `observado` é o que o daemon do Docker relata agora, perguntado pelo broker (ADR 0130). Os dois nunca se fundem: um container morto por fora aparece como `running` registrado e `exited` observado. Quando não houve como olhar, `observado` é `null` e `naoObservado` diz por quê — ele nunca herda o estado registrado (RN-468)."
   },
   "f26a5929d74d": {
     "fonte": "The recorded lifecycle, or `null` (never provisioned).",
-    "traducao": ""
+    "traducao": "O ciclo de vida registrado, ou `null` (nunca provisionado)."
   },
   "dbdff9f115e8": {
     "fonte": "Lifecycle of the project's container (recorded state)",
-    "traducao": ""
+    "traducao": "Ciclo de vida do container do projeto (estado registrado)"
   },
   "a695aaa80d9e": {
     "fonte": "Cross-references the project's rules with the stories' `businessRuleIds`. A rule with no story at all is a DISCOVERY — a pending item for the PO, not an error.",
-    "traducao": ""
+    "traducao": "Cruza as regras do projeto com os `businessRuleIds` das histórias. Regra sem história nenhuma é uma DESCOBERTA — pendência para o PO, não erro."
   },
   "7502b8436032": {
     "fonte": "Computes business-rule → stories coverage",
-    "traducao": ""
+    "traducao": "Calcula a cobertura regra de negócio → histórias"
   },
   "365c01449677": {
     "fonte": "Different from the event-by-session route: here the session isn't known. This is what makes the profile's evidence chip land on the right event, since the Anamnese's window spans several sessions.",
-    "traducao": ""
+    "traducao": "Diferente da rota de evento por sessão: aqui a sessão não é conhecida. É isto que faz o chip de evidência do perfil cair no evento certo, já que a janela da Anamnese atravessa várias sessões."
   },
   "0845e5ad3504": {
     "fonte": "Returns a project event by id, resolving its session",
-    "traducao": ""
+    "traducao": "Devolve um evento do projeto pelo id, resolvendo a sessão dele"
   },
   "8d4f9d8a9e20": {
     "fonte": "Migrates `execution_mode`/`workspacePath` for a project that ALREADY exists (RN-447..450, ADR 0111) — dedicated route, separate from PATCH, because it orchestrates more than a column write: it moves permissions.json to the new scope root, retires the container lifecycle row when leaving `container` mode, and refuses (409) while any dev agent of the project is non-idle, since a running agent doesn't re-resolve its worktree location on its own.",
-    "traducao": ""
+    "traducao": "Migra `execution_mode`/`workspacePath` de um projeto que JÁ existe (RN-447..450, ADR 0111) — rota dedicada, separada do PATCH, porque orquestra mais do que gravar uma coluna: move o permissions.json para a raiz de escopo nova, aposenta a linha de ciclo de vida do container ao sair do modo `container`, e recusa (409) enquanto qualquer dev agent do projeto não estiver ocioso, já que um agente rodando não re-resolve sozinho onde está o worktree dele."
   },
   "63db64378c0b": {
     "fonte": "A dev agent of this project is working or stuck right now.",
-    "traducao": ""
+    "traducao": "Um dev agent deste projeto está trabalhando ou travado agora."
   },
   "c0c6604683dd": {
     "fonte": "Converts the project's execution mode",
-    "traducao": ""
+    "traducao": "Converte o modo de execução do projeto"
   },
   "dd19e7fd56e6": {
     "fonte": "Requires `maintainer`, not `developer`, because the dev agents' git actions inherit the role of WHOEVER ACTIVATED it in the IAM evaluation — activating as developer would leave agents unable to open a PR. Each module in the `module_map` gets an agent in an isolated worktree.",
-    "traducao": ""
+    "traducao": "Exige `maintainer`, não `developer`, porque as ações de git dos dev agents herdam o papel de QUEM ATIVOU na avaliação de IAM — ativar como developer deixaria os agentes sem conseguir abrir PR. Cada módulo do `module_map` ganha um agente num worktree isolado."
   },
   "31d41522eab0": {
     "fonte": "No current `module_map` (the Architect has to define the modules first), or the project's stored workspace location is incoherent — the `permissions.json` seeded here cannot be derived from it (RN-478).",
-    "traducao": ""
+    "traducao": "Sem `module_map` vigente (o Arquiteto tem de definir os módulos primeiro), ou a localização de workspace gravada do projeto é incoerente — o `permissions.json` semeado aqui não pode ser derivado dela (RN-478)."
   },
   "bfde8273c994": {
     "fonte": "The project has no repository yet (RN-582): the dev agents work in worktrees of it, so nothing starts. The message names what is missing — the handoff to the Architect (or, as a second door, to the Dev Lead) whose acceptance provisions it, or the provisioning page when that handoff was already accepted and left no repository. Also: the origin session is `consultiva` and refuses `execution.activated` (RN-097). Activating twice is NOT a conflict: it is idempotent by `findActiveExecutionSession`, and reactivates inside the same session.",
-    "traducao": ""
+    "traducao": "O projeto ainda não tem repositório (RN-582): os dev agents trabalham em worktrees dele, então nada começa. A mensagem nomeia o que falta — o handoff ao Arquiteto (ou, como segunda porta, ao Dev Lead) cujo aceite o provisiona, ou a página de provisionamento quando esse handoff já foi aceito e não deixou repositório. Também: a sessão de origem é `consultiva` e recusa `execution.activated` (RN-097). Ativar duas vezes NÃO é conflito: é idempotente por `findActiveExecutionSession`, e reativa dentro da mesma sessão."
   },
   "2e0c39e9378d": {
     "fonte": "Activates the execution phase and starts one dev agent per module",
-    "traducao": ""
+    "traducao": "Ativa a fase de execução e sobe um dev agent por módulo"
   },
   "7ef1413dfdfd": {
     "fonte": "The most recent `active` session that already carries `execution.activated` — the SAME criterion `activate` uses to decide whether to reactivate or create one (RN-139). `null` when no execution is in progress. Exists so the Executors tab stops inferring this session from the project's most recent one, which shifts from session to session with no clue at all in the UI.",
-    "traducao": ""
+    "traducao": "A sessão `active` mais recente que já traz `execution.activated` — o MESMO critério que `activate` usa para decidir entre reativar ou criar uma (RN-139). `null` quando não há execução em andamento. Existe para a aba Executores parar de inferir esta sessão a partir da mais recente do projeto, que muda de sessão em sessão sem pista nenhuma na interface."
   },
   "ad6f3e11ea0d": {
     "fonte": "`null` in the body when there is no active execution.",
-    "traducao": ""
+    "traducao": "`null` no corpo quando não há execução ativa."
   },
   "14adc7c8988f": {
     "fonte": "Returns the project's current execution session, or nothing",
-    "traducao": ""
+    "traducao": "Devolve a sessão de execução corrente do projeto, ou nada"
   },
   "ad8f8fe5bda1": {
     "fonte": "Doesn't redirect: returns the URL for the client to decide when to send the browser. The `state` goes signed by HMAC, and that is what prevents the callback from being forged.",
-    "traducao": ""
+    "traducao": "Não redireciona: devolve a URL para o cliente decidir quando mandar o navegador. O `state` vai assinado por HMAC, e é isso que impede o callback de ser forjado."
   },
   "ca3ebd2826cf": {
     "fonte": "Starts OAuth with the git provider",
-    "traducao": ""
+    "traducao": "Inicia o OAuth com o provider de git"
   },
   "85634048ed98": {
     "fonte": "SYNCHRONOUS: the response only comes back after the whole bootstrap (permanent branches, protections, templates) has run — there is no worker and no queue behind this. It is IDEMPOTENT AND RESUMABLE, so calling it again after a failure resumes from the step that failed. Track progress and read the failure reason via `GET /projects/:id/git/bootstrap`.",
