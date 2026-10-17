@@ -1473,7 +1473,7 @@
   },
   "3df1aadf49da": {
     "fonte": "Papel insuficiente no projeto.",
-    "traducao": ""
+    "traducao": "Papel insuficiente no projeto."
   },
   "47803d62e463": {
     "fonte": "Projeto não encontrado.",
@@ -1489,7 +1489,7 @@
   },
   "d070defb402e": {
     "fonte": "Emite um Personal Access Token pro runner local",
-    "traducao": ""
+    "traducao": "Emite um Personal Access Token pro runner local"
   },
   "2e87542c8669": {
     "fonte": "Idempotente — revogar de novo não é erro. Desde a RN-685 (ADR 0201) também DERRUBA as conexões de runner abertas com ESTE token, e só elas — a chave de dispositivo do mesmo usuário fica de pé —, e anula os tickets dele ainda não usados. Engine fora do ar NÃO faz a revogação falhar.",
@@ -1497,7 +1497,7 @@
   },
   "06a391f20d58": {
     "fonte": "Token revogado. Sem corpo.",
-    "traducao": ""
+    "traducao": "Token revogado. Sem corpo."
   },
   "6d1cb634bc11": {
     "fonte": "Revoga um Personal Access Token próprio",
@@ -1625,7 +1625,7 @@
   },
   "0e75ab2d6a1a": {
     "fonte": "Chave revogada. Sem corpo.",
-    "traducao": ""
+    "traducao": "Chave revogada. Sem corpo."
   },
   "b3e3e7db4326": {
     "fonte": "Revoga uma chave de dispositivo própria",
@@ -1681,387 +1681,387 @@
   },
   "8d2d781c7480": {
     "fonte": "Body without `name`, or a name above the character limit.",
-    "traducao": ""
+    "traducao": "Corpo sem `name`, ou nome acima do limite de caracteres."
   },
   "75eab3fb90e7": {
     "fonte": "Sets or clears the session's friendly name",
-    "traducao": ""
+    "traducao": "Define ou limpa o nome amigável da sessão"
   },
   "bf165b83738d": {
     "fonte": "Ordered by `seq`; use `nextCursor` as `afterSeq`. `latest=true` fetches the TAIL instead (the newest `limit` actions, still ascending) and ignores `afterSeq`. `status=pending` keeps only the actions waiting for a decision — with `latest`, the newest pending ones, so a session with more than 200 actions does not push a new pending one out of the window (RN-637).",
-    "traducao": ""
+    "traducao": "Ordenadas por `seq`; use `nextCursor` como `afterSeq`. `latest=true` busca a CAUDA em vez disso (as `limit` ações mais novas, ainda em ordem crescente) e ignora `afterSeq`. `status=pending` mantém só as ações esperando decisão — com `latest`, as pendentes mais novas, para que uma sessão com mais de 200 ações não empurre uma pendente nova para fora da janela (RN-637)."
   },
   "f7076a1a6eab": {
     "fonte": "Fetches the tail of the session; ignores `afterSeq`.",
-    "traducao": ""
+    "traducao": "Busca a cauda da sessão; ignora `afterSeq`."
   },
   "42d800d3c823": {
     "fonte": "Only `pending` is supported.",
-    "traducao": ""
+    "traducao": "Só `pending` é suportado."
   },
   "6220f97d706a": {
     "fonte": "Project, session, or action not found.",
-    "traducao": ""
+    "traducao": "Projeto, sessão ou ação não encontrado."
   },
   "c7f82e1fe042": {
     "fonte": "Paginates the proposed actions in the session",
-    "traducao": ""
+    "traducao": "Pagina as ações propostas da sessão"
   },
   "68deb20f30fb": {
     "fonte": "The action is evaluated against the project's `permissions.json` on creation. The response's `resolvedPolicy` says what the policy decided: `auto_approve` comes out already executable, `require_approval` waits for a human decision, and `deny` is born rejected. There is no path that executes without going through here.",
-    "traducao": ""
+    "traducao": "A ação é avaliada contra o `permissions.json` do projeto na criação. O `resolvedPolicy` da resposta diz o que a política decidiu: `auto_approve` já sai executável, `require_approval` espera decisão humana, e `deny` nasce recusada. Não há caminho que execute sem passar por aqui."
   },
   "ac3c7f700623": {
     "fonte": "Proposes an action with external effect",
-    "traducao": ""
+    "traducao": "Propõe uma ação com efeito externo"
   },
   "06c5a6ba7bb3": {
     "fonte": "Applies only to this action. The decision stays in the event log with the id of who decided.",
-    "traducao": ""
+    "traducao": "Vale só para esta ação. A decisão fica no event log com o id de quem decidiu."
   },
   "50a8cfb9b794": {
     "fonte": "The action was already decided or executed.",
-    "traducao": ""
+    "traducao": "A ação já foi decidida ou executada."
   },
   "3ab3796a5a27": {
     "fonte": "Approves the action, once",
-    "traducao": ""
+    "traducao": "Aprova a ação, uma vez"
   },
   "8e28f2bb1651": {
     "fonte": "Besides releasing this action, it adds the corresponding pattern to the project's `allow` list — future matching actions come out `auto_approved` without asking. A pattern already in `deny` stays blocked. The approval and the pattern are recorded in the same transaction. Clicking an action that was already APPROVED is idempotent success (`desfecho: ja_aprovada`), recording the pattern only if it is missing.",
-    "traducao": ""
+    "traducao": "Além de liberar esta ação, acrescenta o padrão correspondente à lista `allow` do projeto — ações futuras que casem saem `auto_approved` sem perguntar. Padrão já em `deny` continua bloqueado. A aprovação e o padrão são gravados na mesma transação. Clicar numa ação já APROVADA é sucesso idempotente (`desfecho: ja_aprovada`), gravando o padrão só se ele faltar."
   },
   "92d7fd67c264": {
     "fonte": "The action was already DENIED (`reason: acao_ja_recusada`); no pattern is recorded.",
-    "traducao": ""
+    "traducao": "A ação já foi RECUSADA (`reason: acao_ja_recusada`); nenhum padrão é gravado."
   },
   "63ec00353619": {
     "fonte": "Approves the action and records the pattern in permissions.json",
-    "traducao": ""
+    "traducao": "Aprova a ação e grava o padrão no permissions.json"
   },
   "3e7ef317734e": {
     "fonte": "The reason, if given, stays in the event log alongside the decision.",
-    "traducao": ""
+    "traducao": "O motivo, se dado, fica no event log junto com a decisão."
   },
   "e4e7c39538e4": {
     "fonte": "Denies the action",
-    "traducao": ""
+    "traducao": "Recusa a ação"
   },
   "d800848c70d1": {
     "fonte": "The composer's \"Stop\" button (RN-122): kills the in-flight LLM call in the engine, cutting the connection mid-stream — it saves tokens for real, not just stops rendering on the client. Idempotent: with no turn in progress, it is accepted with no effect.",
-    "traducao": ""
+    "traducao": "O botão \"Parar\" do composer (RN-122): mata a chamada de LLM em voo no engine, cortando a conexão no meio do stream — economiza tokens de verdade, não só para de renderizar no cliente. Idempotente: sem turno em andamento, é aceito sem efeito."
   },
   "2e0a3bdb6900": {
     "fonte": "Slug of the active agent.",
-    "traducao": ""
+    "traducao": "Slug do agente ativo."
   },
   "14a71535c0a6": {
     "fonte": "Project, session, or handoff not found.",
-    "traducao": ""
+    "traducao": "Projeto, sessão ou handoff não encontrado."
   },
   "f8d69071a2f6": {
     "fonte": "Cancels the active agent's turn in progress",
-    "traducao": ""
+    "traducao": "Cancela o turno em andamento do agente ativo"
   },
   "1dc85c417bf6": {
     "fonte": "The response is just the acknowledgment, and it returns on ACCEPTANCE — before the agent's turn ends (ADR 0163). What the agent replies arrives via the session's event log and channel — not through this call. If the agent is mid-turn, the message is NOT refused: it joins the agent's queue (`entrega: \"enfileirada\"`) and is read, with any others queued, in one turn when the current one ends; it can be cancelled while it waits (RN-673, ADR 0191).",
-    "traducao": ""
+    "traducao": "A resposta é só a confirmação, e volta no ACEITE — antes de o turno do agente terminar (ADR 0163). O que o agente responde chega pelo event log e pelo canal da sessão — não por esta chamada. Se o agente está no meio de um turno, a mensagem NÃO é recusada: entra na fila do agente (`entrega: \"enfileirada\"`) e é lida, com as outras enfileiradas, num turno só quando o atual terminar; pode ser cancelada enquanto espera (RN-673, ADR 0191)."
   },
   "c2617b193847": {
     "fonte": "Slug of the conversational agent that reads the message: criativo, po, arquiteto, dev-lead, ux-designer or staff. Any other slug — infra included — is refused with 422; it is never delivered to a default agent (RN-584).",
-    "traducao": ""
+    "traducao": "Slug do agente conversacional que lê a mensagem: criativo, po, arquiteto, dev-lead, ux-designer ou staff. Qualquer outro slug — infra inclusive — é recusado com 422; nunca é entregue a um agente padrão (RN-584)."
   },
   "dd771a86dc53": {
     "fonte": "The agent is not active in this session; or it is waiting on an execution-plan decision; or its queue already holds 10 messages (`fila_de_mensagens_cheia`) — the message was recorded but NOT read by the agent (ADR 0163, RN-673).",
-    "traducao": ""
+    "traducao": "O agente não está ativo nesta sessão; ou está esperando decisão sobre o plano de execução; ou a fila dele já tem 10 mensagens (`fila_de_mensagens_cheia`) — a mensagem foi gravada mas NÃO lida pelo agente (ADR 0163, RN-673)."
   },
   "ca39c7ed0c01": {
     "fonte": "The agent does not take chat messages (the Infra Lead works by proposal, and any slug without its own clause in the engine is refused by name) — the message was recorded but NO agent read it (RN-584).",
-    "traducao": ""
+    "traducao": "O agente não recebe mensagens de chat (o Infra Lead trabalha por proposta, e todo slug sem cláusula própria no engine é recusado pelo nome) — a mensagem foi gravada mas NENHUM agente a leu (RN-584)."
   },
   "f714ff0a5771": {
     "fonte": "Sends a message to the active agent",
-    "traducao": ""
+    "traducao": "Envia uma mensagem ao agente ativo"
   },
   "620f44280356": {
     "fonte": "A message sent while the agent is mid-turn waits in a queue and is read when the turn ends (RN-673). While it waits, the person who SENT it can cancel it: the engine removes it from the queue and records `chat.message_cancelled`; it is never shown to the model. Someone else's message is 403.",
-    "traducao": ""
+    "traducao": "Mensagem enviada com o agente no meio de um turno espera numa fila e é lida quando o turno termina (RN-673). Enquanto espera, quem a ENVIOU pode cancelá-la: o engine a tira da fila e grava `chat.message_cancelled`; ela nunca é mostrada ao modelo. Mensagem de outra pessoa é 403."
   },
   "7ede478660ce": {
     "fonte": "Slug of the agent whose queue holds the message.",
-    "traducao": ""
+    "traducao": "Slug do agente em cuja fila está a mensagem."
   },
   "2d9d9623ef34": {
     "fonte": "Id of the `chat.message` event (the `mensagemId` the message route returned).",
-    "traducao": ""
+    "traducao": "Id do evento `chat.message` (o `mensagemId` que a rota de mensagem devolveu)."
   },
   "001f5486cce2": {
     "fonte": "The message is no longer queued — the agent already read it, or it was already cancelled; or the session is closed (RN-581).",
-    "traducao": ""
+    "traducao": "A mensagem não está mais na fila — o agente já a leu, ou ela já foi cancelada; ou a sessão está encerrada (RN-581)."
   },
   "33c01790f1ad": {
     "fonte": "Cancels one message waiting in the agent's queue",
-    "traducao": ""
+    "traducao": "Cancela uma mensagem que espera na fila do agente"
   },
   "576adac005e7": {
     "fonte": "Only the Criativo can be started by a direct command. Every other agent requires an ACCEPTED handoff pointing to it — the rule lives in the domain, not here, and trying to bypass it returns 409.",
-    "traducao": ""
+    "traducao": "Só o Criativo pode ser iniciado por comando direto. Todo outro agente exige um handoff ACEITO apontando para ele — a regra mora no domínio, não aqui, e tentar contorná-la devolve 409."
   },
   "1d7ad6e6cfef": {
     "fonte": "Agent slug.",
-    "traducao": ""
+    "traducao": "Slug do agente."
   },
   "9fdee5d97b0c": {
     "fonte": "Agent without an accepted handoff, or already active in the session.",
-    "traducao": ""
+    "traducao": "Agente sem handoff aceito, ou já ativo na sessão."
   },
   "706cad3c86ac": {
     "fonte": "Starts an agent in the session",
-    "traducao": ""
+    "traducao": "Inicia um agente na sessão"
   },
   "6690f6821108": {
     "fonte": "Records `chat.structured_question_answered` and resends the answers to the agent as a normal message. A question set can only be answered once. Returns on ACCEPTANCE, before the agent's turn ends (ADR 0163): the turn keeps running in the engine and its narration, end and failures arrive through the session channel and the event log (`agent.status`, `agent.response`, `agent.error`) — never through this response.",
-    "traducao": ""
+    "traducao": "Grava `chat.structured_question_answered` e reenvia as respostas ao agente como mensagem normal. Um conjunto de perguntas só pode ser respondido uma vez. Volta no ACEITE, antes de o turno do agente terminar (ADR 0163): o turno segue rodando no engine e a narração, o fim e as falhas dele chegam pelo canal da sessão e pelo event log (`agent.status`, `agent.response`, `agent.error`) — nunca por esta resposta."
   },
   "6fbbc38e2c91": {
     "fonte": "Slug of the agent that asked the questions (and will read the answer).",
-    "traducao": ""
+    "traducao": "Slug do agente que fez as perguntas (e vai ler a resposta)."
   },
   "bb8e80baacc3": {
     "fonte": "Id of the answered `chat.structured_question` event.",
-    "traducao": ""
+    "traducao": "Id do evento `chat.structured_question` respondido."
   },
   "2c0f7203559e": {
     "fonte": "This question set has already been answered; or the agent is still in the middle of a turn and did not read the answers (ADR 0163).",
-    "traducao": ""
+    "traducao": "Este conjunto de perguntas já foi respondido; ou o agente ainda está no meio de um turno e não leu as respostas (ADR 0163)."
   },
   "ac083c3a147f": {
     "fonte": "The agent that asked does not take chat messages — the answers were recorded but NO agent read them (RN-584).",
-    "traducao": ""
+    "traducao": "O agente que perguntou não recebe mensagens de chat — as respostas foram gravadas mas NENHUM agente as leu (RN-584)."
   },
   "025c51ef277b": {
     "fonte": "Answers a set of the agent's structured questions",
-    "traducao": ""
+    "traducao": "Responde um conjunto de perguntas estruturadas do agente"
   },
   "1e2a410aaf88": {
     "fonte": "Resets the consecutive blocked-tasks counter (RN-047) and puts the agent back to trying to claim work. It is the only way out of `idle_tripped` — there is no automatic unblock.",
-    "traducao": ""
+    "traducao": "Zera o contador de tarefas bloqueadas consecutivas (RN-047) e devolve o agente a tentar reivindicar trabalho. É a única saída de `idle_tripped` — não há desbloqueio automático."
   },
   "f82575dcdc0c": {
     "fonte": "Rearms a dev agent tripped by the circuit breaker",
-    "traducao": ""
+    "traducao": "Rearma um dev agent desarmado pelo circuit breaker"
   },
   "4cd39aecab8f": {
     "fonte": "Dedicated endpoint instead of reusing `readiness`, which belongs to the Criativo: they are two different milestones of the session, and conflating them would make the event log ambiguous. Returns on ACCEPTANCE, before the agent's turn ends (ADR 0163): the turn keeps running in the engine and its narration, end and failures arrive through the session channel and the event log (`agent.status`, `agent.response`, `agent.error`) — never through this response. The Dev Lead handoff still comes AFTER the Infra one: the engine holds it until the closing turn ends. Idempotent (ADR 0182, RN-635): a target that already has a pending offer or is active in the project is not triggered again, and with both like that nothing is recorded.",
-    "traducao": ""
+    "traducao": "Endpoint dedicado em vez de reusar `readiness`, que é do Criativo: são dois marcos diferentes da sessão, e confundi-los tornaria o event log ambíguo. Volta no ACEITE, antes de o turno do agente terminar (ADR 0163): o turno segue rodando no engine e a narração, o fim e as falhas dele chegam pelo canal da sessão e pelo event log (`agent.status`, `agent.response`, `agent.error`) — nunca por esta resposta. O handoff ao Dev Lead continua vindo DEPOIS do de Infra: o engine o segura até o turno de fechamento terminar. Idempotente (ADR 0182, RN-635): alvo que já tem oferta pendente ou está ativo no projeto não é disparado de novo, e com os dois assim nada é gravado."
   },
   "fd9842d0eb20": {
     "fonte": "The Arquiteto is still in the middle of a turn — the confirmation was recorded but the closing turn did not start (ADR 0163).",
-    "traducao": ""
+    "traducao": "O Arquiteto ainda está no meio de um turno — a confirmação foi gravada mas o turno de fechamento não começou (ADR 0163)."
   },
   "53235ced5a61": {
     "fonte": "Confirms the architecture is ready and offers the handoff to Infra",
-    "traducao": ""
+    "traducao": "Confirma que a arquitetura está pronta e oferece o handoff à Infra"
   },
   "93b4e36929b5": {
     "fonte": "Records `necessity.validated`. Requires the Criativo to have already consolidated a `product_brief` in this session (RN-406) — without it, it is refused: there is nothing to validate. Since ADR 0185 (RN-657) the \"I'm ready — the need is validated\" click (`POST .../readiness`) records this event itself, and the web no longer calls this route; it stays for sessions whose readiness click predates that ADR.",
-    "traducao": ""
+    "traducao": "Grava `necessity.validated`. Exige que o Criativo já tenha consolidado um `product_brief` nesta sessão (RN-406) — sem ele, é recusado: não há o que validar. Desde o ADR 0185 (RN-657) o clique \"Estou pronto — a necessidade está validada\" (`POST .../readiness`) grava ele mesmo este evento, e a web não chama mais esta rota; ela fica para sessões cujo clique de prontidão é anterior a esse ADR."
   },
   "310091a73d7f": {
     "fonte": "Confirms the Criativo's business need has been validated",
-    "traducao": ""
+    "traducao": "Confirma que a necessidade de negócio do Criativo foi validada"
   },
   "d78772c65f1e": {
     "fonte": "This is what feeds the session screen's live token meter.",
-    "traducao": ""
+    "traducao": "É isto que alimenta o medidor de tokens ao vivo da tela de sessão."
   },
   "230fafbf2a6d": {
     "fonte": "Reads the session budget and the accumulated spend",
-    "traducao": ""
+    "traducao": "Lê o orçamento da sessão e o gasto acumulado"
   },
   "3c0f43993b4c": {
     "fonte": "Same dollar-to-micro-USD conversion as the project budget.",
-    "traducao": ""
+    "traducao": "Mesma conversão de dólar para micro-USD do orçamento do projeto."
   },
   "88055e819c9c": {
     "fonte": "Sets the session spend cap",
-    "traducao": ""
+    "traducao": "Define o teto de gasto da sessão"
   },
   "b084eb49262f": {
     "fonte": "Server-Sent Events. `delta` frames carry the incremental text and `done` closes with the token and cost accounting. A `metering_failed` frame means the RESPONSE went out but the cost was not accounted for — the failure shows up instead of disappearing. If the budget is exceeded with `policy=block`, the stream carries `error` and no `delta`. This route carries NO agent: it sends the text alone to the bound model, with no history and no system prompt. In a `consultiva` session where no agent was ever activated it is refused before any effect (RN-682) — talk to an agent through `.../agents/:agent/message` instead.",
-    "traducao": ""
+    "traducao": "Server-Sent Events. Quadros `delta` levam o texto incremental e `done` fecha com a contabilidade de tokens e custo. Um quadro `metering_failed` quer dizer que a RESPOSTA saiu mas o custo não foi contabilizado — a falha aparece em vez de sumir. Se o orçamento estourar com `policy=block`, o stream leva `error` e nenhum `delta`. Esta rota NÃO leva agente: manda o texto sozinho ao modelo vinculado, sem histórico e sem prompt de sistema. Numa sessão `consultiva` onde nenhum agente foi ativado ela é recusada antes de qualquer efeito (RN-682) — converse com um agente por `.../agents/:agent/message`."
   },
   "537b44ab6f10": {
     "fonte": "Stream of frames until `done` or `error`.",
-    "traducao": ""
+    "traducao": "Fluxo de quadros até `done` ou `error`."
   },
   "6d26be099b0f": {
     "fonte": "`destinatario_ausente`: a `consultiva` session with no agent — the message has no recipient. Nothing was recorded and no model was called (RN-682).",
-    "traducao": ""
+    "traducao": "`destinatario_ausente`: sessão `consultiva` sem agente — a mensagem não tem destinatário. Nada foi gravado e nenhum modelo foi chamado (RN-682)."
   },
   "0497ad273c5a": {
     "fonte": "Talks to the session's model, with the response streamed",
-    "traducao": ""
+    "traducao": "Conversa com o modelo da sessão, com a resposta em streaming"
   },
   "cf9c4eb2f6ba": {
     "fonte": "Business rules, decision records and artifacts per agent counted over the WHOLE session log (the screen reads a 200-event tail), plus the files touched by `git_commit`/`git_push` in this session and in the execution session its approved Dev Lead plan activated (RN-828). Since RN-844 it also returns the ITEMS of rules and decisions (latest 50 each; the totals stay in `regras`/`decisoes`) and the files of the PRs opened in those sessions, read from the same diff the PRs tab reads, for at most 20 PRs per call; `prsNaoLidas` says how many were left out or failed. Read only; no new table.",
-    "traducao": ""
+    "traducao": "Regras de negócio, registros de decisão e artefatos por agente contados sobre o log INTEIRO da sessão (a tela lê uma cauda de 200 eventos), mais os arquivos tocados por `git_commit`/`git_push` nesta sessão e na sessão de execução que o plano aprovado do Dev Lead dela ativou (RN-828). Desde a RN-844 devolve também os ITENS de regras e decisões (os 50 mais recentes de cada; os totais ficam em `regras`/`decisoes`) e os arquivos das PRs abertas nessas sessões, lidos do mesmo diff que a aba de PRs lê, para no máximo 20 PRs por chamada; `prsNaoLidas` diz quantas ficaram de fora ou falharam. Só leitura; nenhuma tabela nova."
   },
   "32a79499b546": {
     "fonte": "Counts the whole session for the context panel",
-    "traducao": ""
+    "traducao": "Conta a sessão inteira para o painel de contexto"
   },
   "87e7ced60c9c": {
     "fonte": "The log is IMMUTABLE and ordered by `seq`. Normal pagination is incremental: pass the previous response's `nextCursor` as `afterSeq`. `latest=true` does the opposite — it fetches the TAIL and ignores `afterSeq`, for a screen that opens at the end instead of reconstructing the whole session from the start (ADR 0021).",
-    "traducao": ""
+    "traducao": "O log é IMUTÁVEL e ordenado por `seq`. A paginação normal é incremental: passe o `nextCursor` da resposta anterior como `afterSeq`. `latest=true` faz o contrário — busca a CAUDA e ignora `afterSeq`, para uma tela que abre no fim em vez de reconstruir a sessão inteira desde o começo (ADR 0021)."
   },
   "2a1ba8561df6": {
     "fonte": "Returns the events with `seq` greater than this.",
-    "traducao": ""
+    "traducao": "Devolve os eventos com `seq` maior que este."
   },
   "60d40650bf67": {
     "fonte": "Only the events whose `payload.actionId` is this action — e.g. its `proposed_action.created`, which carries the policy `reason` and `scopeRoot` the action row does not keep (RN-614). Combines with the other parameters; `seq` is no longer contiguous in the page, so a caller filtering by action must not derive omitted counts from it. An empty value is a `400`.",
-    "traducao": ""
+    "traducao": "Só os eventos cujo `payload.actionId` é esta ação — ex.: o `proposed_action.created` dela, que traz o `reason` da política e o `scopeRoot` que a linha da ação não guarda (RN-614). Combina com os outros parâmetros; o `seq` deixa de ser contíguo na página, então quem filtra por ação não deve derivar dele contagem de omitidos. Valor vazio é `400`."
   },
   "862df70d75a6": {
     "fonte": "`actionId` is present but empty.",
-    "traducao": ""
+    "traducao": "`actionId` está presente mas vazio."
   },
   "f39ba57edafc": {
     "fonte": "Paginates the session's event log",
-    "traducao": ""
+    "traducao": "Pagina o event log da sessão"
   },
   "805e6b59b2ff": {
     "fonte": "Append-only: `seq` is assigned by the server and nothing in the log is updated or removed afterward. There is no edit endpoint, by design.",
-    "traducao": ""
+    "traducao": "Append-only: o `seq` é atribuído pelo servidor e nada no log é atualizado ou removido depois. Não há endpoint de edição, por desenho."
   },
   "9e00f9e0adeb": {
     "fonte": "Appends an event to the session's log",
-    "traducao": ""
+    "traducao": "Acrescenta um evento ao log da sessão"
   },
   "30c5b3bf0b09": {
     "fonte": "Exists so the Psychologist's hypothesis evidence can reach the cited event regardless of which page it fell on or the feed's filters.",
-    "traducao": ""
+    "traducao": "Existe para que a evidência das hipóteses do Psicólogo alcance o evento citado não importa em que página ele caiu nem os filtros do feed."
   },
   "2711d3f1cabb": {
     "fonte": "Returns a log event by id",
-    "traducao": ""
+    "traducao": "Devolve um evento do log pelo id"
   },
   "246067ba5eb3": {
     "fonte": "Goes through the dev area CAP (RN-083): under it, the agent starts right away, in its own worktree; above it, the response is a `proposed_action` of type `parallelize` awaiting your decision, and NOTHING starts until you decide. What the cap is set to is configurable per lead in Settings.",
-    "traducao": ""
+    "traducao": "Passa pelo TETO da área de dev (RN-083): abaixo dele, o agente sobe na hora, no próprio worktree; acima, a resposta é uma `proposed_action` do tipo `parallelize` aguardando a sua decisão, e NADA sobe até você decidir. O valor do teto é configurável por lead em Configurações."
   },
   "40a9e87bffa9": {
     "fonte": "Requests one more dev agent for a module",
-    "traducao": ""
+    "traducao": "Pede mais um dev agent para um módulo"
   },
   "4c850548604d": {
     "fonte": "Lists the session's agent-to-agent handoffs",
-    "traducao": ""
+    "traducao": "Lista os handoffs entre agentes da sessão"
   },
   "f39618e332b4": {
     "fonte": "Born as `offered`, exactly like an agent's own `offer_handoff` — the only difference is who decided. `toAgent` has to be in the addressable catalog (area lead or area-less agent); a subagent or an unknown slug is refused with 400. At most one pending offer per (project, target): see `desfecho` (ADR 0182, RN-635).",
-    "traducao": ""
+    "traducao": "Nasce `offered`, exatamente como o `offer_handoff` de um agente — a única diferença é quem decidiu. `toAgent` tem de estar no catálogo endereçável (lead de área ou agente sem área); subagente ou slug desconhecido é recusado com 400. No máximo uma oferta pendente por (projeto, alvo): ver `desfecho` (ADR 0182, RN-635)."
   },
   "d7a294cf5d93": {
     "fonte": "`agente_ja_ativo` (ADR 0182, RN-635): the target is already active in a non-closed session of the project — no offer is created.",
-    "traducao": ""
+    "traducao": "`agente_ja_ativo` (ADR 0182, RN-635): o alvo já está ativo numa sessão não encerrada do projeto — nenhuma oferta é criada."
   },
   "ccd44f00a537": {
     "fonte": "Manually offers a handoff to a chosen agent",
-    "traducao": ""
+    "traducao": "Oferece manualmente um handoff a um agente escolhido"
   },
   "75c06d1eef86": {
     "fonte": "One thing only: transition to `accepted` AND start the destination agent. It is the normal activation path for every agent other than the Criativo.",
-    "traducao": ""
+    "traducao": "Uma coisa só: transicionar para `accepted` E iniciar o agente de destino. É o caminho normal de ativação de todo agente que não é o Criativo."
   },
   "231ca14b79e1": {
     "fonte": "The handoff is not in `offered`.",
-    "traducao": ""
+    "traducao": "O handoff não está em `offered`."
   },
   "60dc4cff0643": {
     "fonte": "Accepts a handoff and activates the destination agent",
-    "traducao": ""
+    "traducao": "Aceita um handoff e ativa o agente de destino"
   },
   "5d6751ce81ab": {
     "fonte": "Returns the binding RESOLVED by the cascade, not the session's raw binding: a session with no binding of its own uses the project's, and answering `null` here would be the wrong answer to the right question. The `origin` field says which scope the value came from.\n\n`agentId` is optional and is the agent REALLY active in the session right now (the same one `RunLlmTurnUseCase` uses to run the turn) — without it, the cascade only sees session→project→workspace (plus the fixed fallback to Creative) and never reflects PO/Architect/Dev Lead/area after a handoff.",
-    "traducao": ""
+    "traducao": "Devolve o binding RESOLVIDO pela cascata, não o binding cru da sessão: sessão sem binding próprio usa o do projeto, e responder `null` aqui seria a resposta errada para a pergunta certa. O campo `origin` diz de qual escopo veio o valor.\n\n`agentId` é opcional e é o agente REALMENTE ativo na sessão agora (o mesmo que `RunLlmTurnUseCase` usa para rodar o turno) — sem ele, a cascata só enxerga sessão→projeto→workspace (mais o fallback fixo ao Criativo) e nunca reflete PO/Arquiteto/Dev Lead/área depois de um handoff."
   },
   "b39f0ae769da": {
     "fonte": "Agent currently active in this session (e.g. \"po\", \"arquiteto\", \"dev-lead\").",
-    "traducao": ""
+    "traducao": "Agente ativo agora nesta sessão (ex.: \"po\", \"arquiteto\", \"dev-lead\")."
   },
   "ce2331b253b2": {
     "fonte": "Resolves which model the session uses, and where it came from",
-    "traducao": ""
+    "traducao": "Resolve qual modelo a sessão usa, e de onde veio"
   },
   "97120add6f39": {
     "fonte": "Beats everything else in the cascade for as long as the session lives.",
-    "traducao": ""
+    "traducao": "Vence todo o resto da cascata enquanto a sessão viver."
   },
   "e49374c4bf3d": {
     "fonte": "Pins the model for this session",
-    "traducao": ""
+    "traducao": "Fixa o modelo desta sessão"
   },
   "c7c03f8e55ed": {
     "fonte": "Requires `maintainer`, not `developer`, because it runs the ToolLoop again and SPENDS real budget — unlike accepting or dismissing, which only move local state. The previous analysis is marked superseded.",
-    "traducao": ""
+    "traducao": "Exige `maintainer`, não `developer`, porque roda o ToolLoop de novo e GASTA orçamento real — ao contrário de aceitar ou descartar, que só mexem em estado local. A análise anterior é marcada como superada."
   },
   "c4515f4005a0": {
     "fonte": "The Psychologist is disabled globally by the user's decision (not a bug) — body with `reason: \"psychologist_disabled\"`.",
-    "traducao": ""
+    "traducao": "O Psicólogo está desligado globalmente por decisão do usuário (não é bug) — corpo com `reason: \"psychologist_disabled\"`."
   },
   "48e0d61dd151": {
     "fonte": "Triggers a reanalysis of the session",
-    "traducao": ""
+    "traducao": "Dispara uma reanálise da sessão"
   },
   "d5536790c7f2": {
     "fonte": "It's the button that triggers the `product_brief` and the handoff to the PO. Records `readiness.confirmed` in the event log. Returns on ACCEPTANCE, before the agent's turn ends (ADR 0163): the turn keeps running in the engine and its narration, end and failures arrive through the session channel and the event log (`agent.status`, `agent.response`, `agent.error`) — never through this response.",
-    "traducao": ""
+    "traducao": "É o botão que dispara o `product_brief` e o handoff ao PO. Grava `readiness.confirmed` no event log. Volta no ACEITE, antes de o turno do agente terminar (ADR 0163): o turno segue rodando no engine e a narração, o fim e as falhas dele chegam pelo canal da sessão e pelo event log (`agent.status`, `agent.response`, `agent.error`) — nunca por esta resposta."
   },
   "23d6f123d6a3": {
     "fonte": "The Criativo is still in the middle of a turn — the confirmation was recorded but the brief did not start (ADR 0163).",
-    "traducao": ""
+    "traducao": "O Criativo ainda está no meio de um turno — a confirmação foi gravada mas o brief não começou (ADR 0163)."
   },
   "3b9496c6114e": {
     "fonte": "No business rule was captured in this conversation — there is nothing to consolidate into a brief yet (ADR 0163).",
-    "traducao": ""
+    "traducao": "Nenhuma regra de negócio foi capturada nesta conversa — ainda não há o que consolidar num brief (ADR 0163)."
   },
   "ab1a44aee58b": {
     "fonte": "Confirms that the discovery session with the Criativo is done",
-    "traducao": ""
+    "traducao": "Confirma que a sessão de descoberta com o Criativo terminou"
   },
   "bdb553d6ce42": {
     "fonte": "Only `closed`/`closed_abnormally` reopen, and only to `active` — `closing` never goes back (ADR 0183). The session keeps its event log, artifacts, answered questions and handoffs; `kind` is untouched. A NEW event `session.reopened` records the previous `closedAt` and `terminationReason`, which the row clears. A session that carries `execution.activated` is refused (`sessao_com_execucao`): open a new session and activate execution there. No time limit. Requires `developer` (ADR 0184).",
-    "traducao": ""
+    "traducao": "Só `closed`/`closed_abnormally` reabrem, e só para `active` — `closing` nunca volta (ADR 0183). A sessão mantém o event log, os artefatos, as perguntas respondidas e os handoffs; o `kind` não é tocado. Um evento NOVO `session.reopened` registra o `closedAt` e o `terminationReason` anteriores, que a linha limpa. Sessão que traz `execution.activated` é recusada (`sessao_com_execucao`): abra uma sessão nova e ative a execução nela. Sem prazo. Exige `developer` (ADR 0184)."
   },
   "1902f6be1b81": {
     "fonte": "Session is not closed (`reason: sessao_nao_encerrada`), or it activated execution (`reason: sessao_com_execucao`).",
-    "traducao": ""
+    "traducao": "A sessão não está encerrada (`reason: sessao_nao_encerrada`), ou ativou execução (`reason: sessao_com_execucao`)."
   },
   "5f83ce857a7e": {
     "fonte": "Reopens a closed session, keeping everything it had",
-    "traducao": ""
+    "traducao": "Reabre uma sessão encerrada, mantendo tudo o que ela tinha"
   },
   "a8fe7f6878d9": {
     "fonte": "Resolved for the CALLER, never for the session: session override > Account choice > detected-and-confirmed > interface language (RN-618). Returns the winner, its origin and every link of the chain — and, when your recent messages point to another language and the screen should ask about it, `detectionQuestion` (RN-624).",
-    "traducao": ""
+    "traducao": "Resolvido para QUEM CHAMA, nunca para a sessão: sobreposição da sessão > escolha da Conta > detectado-e-confirmado > idioma da interface (RN-618). Devolve o vencedor, a origem dele e cada elo da cadeia — e, quando as suas mensagens recentes apontam para outro idioma e a tela deveria perguntar sobre isso, `detectionQuestion` (RN-624)."
   },
   "1f1ef8c4b225": {
     "fonte": "The language agents answer YOU in, in this session",
-    "traducao": ""
+    "traducao": "O idioma em que os agentes respondem a VOCÊ, nesta sessão"
   },
   "49d5d6fb2b02": {
     "fonte": "Only for the caller, only in this session (RN-618) — the other participants and your Account choice are untouched. `null` goes back to inheriting from the Account.",
-    "traducao": ""
+    "traducao": "Só para quem chama, só nesta sessão (RN-618) — os outros participantes e a sua escolha na Conta não são tocados. `null` volta a herdar da Conta."
   },
   "9f83f8aeadfb": {
     "fonte": "Body without `language`, or a code that is not a recognized BCP-47 language.",
-    "traducao": ""
+    "traducao": "Corpo sem `language`, ou código que não é um idioma BCP-47 reconhecido."
   },
   "b313c61f9584": {
     "fonte": "Fixes (or releases) YOUR response language in this session",
-    "traducao": ""
+    "traducao": "Fixa (ou solta) o SEU idioma de resposta nesta sessão"
   },
   "d817474d3235": {
     "fonte": "The ticket authenticates the session's Phoenix socket `session:<id>` `connect/3` on the engine — it is NOT the reused JWT. 30s TTL and single use: every reconnection (including automatic ones) requests a new ticket. `scope: \"heartbeat\"` requires the `viewer` role; `scope: \"terminal\"` requires `developer`, the same minimum role as terminal actions.",
@@ -2069,79 +2069,79 @@
   },
   "6e61f0fa88cc": {
     "fonte": "Insufficient role for the requested scope.",
-    "traducao": ""
+    "traducao": "Papel insuficiente para o escopo pedido."
   },
   "fd9caa91b878": {
     "fonte": "Issues an opaque, single-use ticket for the session's socket",
-    "traducao": ""
+    "traducao": "Emite um ticket opaco de uso único para o socket da sessão"
   },
   "cbeceeb7cdb9": {
     "fonte": "Resets the gate correction counter and hands the task back to the agent. It is the human escape hatch for the correction cap — there is no automatic unblock.",
-    "traducao": ""
+    "traducao": "Zera o contador de correções do gate e devolve a tarefa ao agente. É a saída humana do teto de correções — não há desbloqueio automático."
   },
   "d1dfd1f6ff40": {
     "fonte": "Unblocks a blocked task",
-    "traducao": ""
+    "traducao": "Desbloqueia uma tarefa bloqueada"
   },
   "207fea7eae22": {
     "fonte": "The data was always in `token_usage`, but without aggregation or a route the team panel had no way to show the cost per card. Same role required as the session budget.",
-    "traducao": ""
+    "traducao": "O dado sempre esteve em `token_usage`, mas sem agregação nem rota o painel do time não tinha como mostrar o custo por card. Mesmo papel exigido pelo orçamento da sessão."
   },
   "8751a9bcf96e": {
     "fonte": "Breaks down the session spend by agent",
-    "traducao": ""
+    "traducao": "Quebra o gasto da sessão por agente"
   },
   "5af771b4e1f5": {
     "fonte": "The transition is validated by the domain's state machine, not by the client: created → active → closing → closed | closed_abnormally. An invalid jump is 409.",
-    "traducao": ""
+    "traducao": "A transição é validada pela máquina de estados do domínio, não pelo cliente: created → active → closing → closed | closed_abnormally. Salto inválido é 409."
   },
   "c2576b1270c1": {
     "fonte": "Returns 201, not 200, because the handler is `@Post` without `@HttpCode` — that's Nest's default. Documented as-is instead of changed: the semantics are debatable, the behavior isn't defective, and the table test fails on any divergence between the two.",
-    "traducao": ""
+    "traducao": "Devolve 201, não 200, porque o handler é `@Post` sem `@HttpCode` — é o padrão do Nest. Documentado como está em vez de mudado: a semântica é discutível, o comportamento não é defeituoso, e o teste da tabela reprova qualquer divergência entre os dois."
   },
   "3d40a3c5b36b": {
     "fonte": "Transition not allowed from the current state.",
-    "traducao": ""
+    "traducao": "Transição não permitida a partir do estado atual."
   },
   "6cfee32d99f7": {
     "fonte": "Moves the session to another state",
-    "traducao": ""
+    "traducao": "Move a sessão para outro estado"
   },
   "171ef5ae365e": {
     "fonte": "The MEMBER's audience. Only the caller's own rows — the actor comes from the authenticated token and there is no parameter to swap it. In tokens and ESTIMATED cost, without breaking down by provider or by credential: the key that ran is the owner's (RN-058) and its invoice is theirs (RN-060). The provider axis came to exist in the owner's report (ADR 0076) and remains unreachable from here — there is no dimension parameter on this route, and the repository type refuses the combination (RN-187). Agent doesn't count: `token_usage` records who spent, not who ordered the spend.",
-    "traducao": ""
+    "traducao": "O público do MEMBRO. Só as linhas do próprio chamador — o ator vem do token autenticado e não há parâmetro para trocá-lo. Em tokens e custo ESTIMADO, sem quebrar por provider nem por credencial: a chave que rodou é a do owner (RN-058) e a fatura dela é dele (RN-060). O eixo de provider passou a existir no relatório do owner (ADR 0076) e continua inalcançável daqui — não há parâmetro de dimensão nesta rota, e o tipo do repositório recusa a combinação (RN-187). Agente não conta: `token_usage` registra quem gastou, não quem mandou gastar."
   },
   "69ef97481fcb": {
     "fonte": "Sliding window. Default 30, max 180.",
-    "traducao": ""
+    "traducao": "Janela deslizante. Padrão 30, máximo 180."
   },
   "bc3437b94d7a": {
     "fonte": "Insufficient role.",
-    "traducao": ""
+    "traducao": "Papel insuficiente."
   },
   "3568acb68ff3": {
     "fonte": "My own consumption in this project, by session and by day",
-    "traducao": ""
+    "traducao": "Meu próprio consumo neste projeto, por sessão e por dia"
   },
   "9262cbe64aff": {
     "fonte": "The story leaves the backlog, the coverage, the promotion queue, the Dev Lead's plan and the claim — and so do its tasks. Nothing is deleted: the row stays with `archivedAt`, and `backlog.story_archived` records who, why and which tasks. Only a `draft` story with no task in execution.",
-    "traducao": ""
+    "traducao": "A história sai do backlog, da cobertura, da fila de promoção, do plano do Dev Lead e do claim — e as tarefas dela também. Nada é apagado: a linha fica com `archivedAt`, e `backlog.story_archived` registra quem, por quê e quais tarefas. Só história `draft` sem tarefa em execução."
   },
   "cfc259e35cdc": {
     "fonte": "Archives a draft story (RN-727)",
-    "traducao": ""
+    "traducao": "Arquiva uma história em rascunho (RN-727)"
   },
   "52fad7b40260": {
     "fonte": "The story leaves the proposal queue and the reason becomes a message pinned to the PO's session — the same pattern as returning a gate to dev. If that session's PO is no longer up, the return is recorded anyway: it's the user's decision and does not depend on an agent listening.",
-    "traducao": ""
+    "traducao": "A história sai da fila de proposta e o motivo vira uma mensagem fixada na sessão do PO — o mesmo padrão de devolver um gate ao dev. Se o PO daquela sessão não está mais de pé, a devolução é gravada mesmo assim: é decisão do usuário e não depende de um agente ouvindo."
   },
   "971ed6695adf": {
     "fonte": "Returns a refused story to the PO, with the reason",
-    "traducao": ""
+    "traducao": "Devolve uma história recusada ao PO, com o motivo"
   },
   "af4584adb98d": {
     "fonte": "Only a `draft` story with no task in execution (`in_progress`/`in_review`). Writes `backlog.story_updated` with the previous and the new title. Same role as the other backlog writes (promote/return).",
-    "traducao": ""
+    "traducao": "Só história `draft` sem tarefa em execução (`in_progress`/`in_review`). Grava `backlog.story_updated` com o título anterior e o novo. Mesmo papel das outras escritas do backlog (promover/devolver)."
   },
   "ae34e3e00950": {
     "fonte": "Empty title or over 200 characters.",
