@@ -1467,58 +1467,6 @@
     "fonte": "Rewrites the project's permissions.json",
     "traducao": "Перезаписывает permissions.json проекта"
   },
-  "8773756f5e0e": {
-    "fonte": "Nunca inclui o token bruto — só o que já foi emitido.",
-    "traducao": "Никогда не включает сырой токен — только то, что уже было выпущено."
-  },
-  "3df1aadf49da": {
-    "fonte": "Papel insuficiente no projeto.",
-    "traducao": "Недостаточная роль в проекте."
-  },
-  "47803d62e463": {
-    "fonte": "Projeto não encontrado.",
-    "traducao": "Проект не найден."
-  },
-  "bdfdb304ed9a": {
-    "fonte": "Lista os próprios Personal Access Tokens deste projeto",
-    "traducao": "Перечисляет собственные Personal Access Token этого проекта"
-  },
-  "6ab605bd4801": {
-    "fonte": "O token bruto (`brb_...`) só aparece NESTA resposta — não fica recuperável depois, só o hash é guardado. Use em `--token`/`BRABO_ACCOUNT_TOKEN` do `brabo-runner`.",
-    "traducao": "Сырой токен (`brb_...`) появляется только в ЭТОМ ответе — потом его нельзя восстановить, хранится только хеш. Используйте в `--token`/`BRABO_ACCOUNT_TOKEN` у `brabo-runner`."
-  },
-  "d070defb402e": {
-    "fonte": "Emite um Personal Access Token pro runner local",
-    "traducao": "Выпускает Personal Access Token для локального runner"
-  },
-  "2e87542c8669": {
-    "fonte": "Idempotente — revogar de novo não é erro. Desde a RN-685 (ADR 0201) também DERRUBA as conexões de runner abertas com ESTE token, e só elas — a chave de dispositivo do mesmo usuário fica de pé —, e anula os tickets dele ainda não usados. Engine fora do ar NÃO faz a revogação falhar.",
-    "traducao": "Идемпотентно — повторный отзыв не является ошибкой. Начиная с RN-685 (ADR 0201) также РАЗРЫВАЕТ соединения runner, открытые с ЭТИМ токеном, и только их — ключ устройства того же пользователя остаётся, — и аннулирует его ещё не использованные тикеты. Недоступный engine НЕ приводит к сбою отзыва."
-  },
-  "06a391f20d58": {
-    "fonte": "Token revogado. Sem corpo.",
-    "traducao": "Токен отозван. Без тела."
-  },
-  "6d1cb634bc11": {
-    "fonte": "Revoga um Personal Access Token próprio",
-    "traducao": "Отзывает собственный Personal Access Token"
-  },
-  "c93c131cfd01": {
-    "fonte": "Resposta a incidente — dev desligado com token vazando (RN-427). Idempotente — revogar de novo não é erro. Desde a RN-685 (ADR 0201) também DERRUBA o runner já conectado com este token, e só ele.",
-    "traducao": "Реагирование на инцидент — уволенный разработчик с утёкшим токеном (RN-427). Идемпотентно — повторный отзыв не является ошибкой. Начиная с RN-685 (ADR 0201) также РАЗРЫВАЕТ уже подключённый с этим токеном runner, и только его."
-  },
-  "10dad7b354cd": {
-    "fonte": "Revoga o Personal Access Token de QUALQUER usuário no projeto",
-    "traducao": "Отзывает Personal Access Token ЛЮБОГО пользователя в проекте"
-  },
-  "0f34d0f00690": {
-    "fonte": "Visão de `maintainer` para resposta a incidente (RN-427) — inclui o dono de cada token. Nunca inclui o token bruto.",
-    "traducao": "Представление для `maintainer` для реагирования на инциденты (RN-427) — включает владельца каждого токена. Никогда не включает сырой токен."
-  },
-  "7824d73678b0": {
-    "fonte": "Lista TODOS os Personal Access Tokens do projeto, de qualquer usuário",
-    "traducao": "Перечисляет ВСЕ Personal Access Token проекта, любого пользователя"
-  },
   "fb4c8cf195f8": {
     "fonte": "The user's OWN profile by default; the aggregated team view only for whoever administers the project. A competency profile is data ABOUT the person, and the least surprising default is seeing your own.",
     "traducao": "По умолчанию СОБСТВЕННЫЙ профиль пользователя; агрегированное представление команды — только для тех, кто администрирует проект. Профиль компетенций — это данные О человеке, и наименее неожиданное значение по умолчанию — видеть свой."
@@ -1610,38 +1558,6 @@
   "13fe96a05550": {
     "fonte": "Returns how to run the deliverable on your machine",
     "traducao": "Возвращает, как запустить результат на вашей машине"
-  },
-  "ebed25b083e5": {
-    "fonte": "Ninguém revoga o que não consegue ver (RN-519). Inclui as já REVOGADAS — sumir com a linha faria a tela afirmar que a chave nunca existiu. Nunca devolve a JWK pública, e a privada a api nunca viu. `lastUsedAt` nulo é o sinal de uma chave ÓRFÃ: registrada e nunca usada por runner nenhum. Desde a RN-543 inclui também as chaves de MÁQUINA do chamador (`especie: \"maquina\"`, `projectId` nulo), que servem este projeto sem pertencer a ele — sem elas na lista, uma chave de máquina seria invisível em toda tela.",
-    "traducao": "Никто не отзовёт то, чего не видит (RN-519). Включает и уже ОТОЗВАННЫЕ — исчезновение строки заставило бы экран утверждать, что ключа никогда не было. Никогда не возвращает публичный JWK, а приватный api никогда не видела. Нулевой `lastUsedAt` — признак ОСИРОТЕВШЕГО ключа: зарегистрированного и ни разу не использованного ни одним runner. Начиная с RN-543 также включает МАШИННЫЕ ключи вызывающего (`especie: \"maquina\"`, `projectId` нулевой), которые обслуживают этот проект, не принадлежа ему, — без них в списке машинный ключ был бы невидим на любом экране."
-  },
-  "dc5e321e6bd3": {
-    "fonte": "Lista as próprias chaves de dispositivo deste projeto",
-    "traducao": "Перечисляет собственные ключи устройств этого проекта"
-  },
-  "562a5037d652": {
-    "fonte": "Idempotente — revogar de novo não é erro. Desde a RN-520 também DERRUBA a conexão viva: antes, revogar só impedia ticket NOVO, e um runner já conectado seguia executando comando aprovado. Desde a RN-685 (ADR 0201) o alvo é a CHAVE: caem só as conexões abertas com ela — em todo projeto, se for de máquina —, e outro runner do mesmo usuário, conectado com PAT ou com outra chave, fica de pé. Os tickets dela ainda não usados são anulados. Engine fora do ar ou nenhum runner conectado NÃO fazem a revogação falhar.",
-    "traducao": "Идемпотентно — повторный отзыв не является ошибкой. Начиная с RN-520 также РАЗРЫВАЕТ живое соединение: раньше отзыв только не давал получить НОВЫЙ тикет, а уже подключённый runner продолжал выполнять одобренные команды. Начиная с RN-685 (ADR 0201) целью является КЛЮЧ: разрываются только соединения, открытые с ним, — во всех проектах, если он машинный, — а другой runner того же пользователя, подключённый с PAT или другим ключом, остаётся. Его ещё не использованные тикеты аннулируются. Недоступный engine или отсутствие подключённого runner НЕ приводят к сбою отзыва."
-  },
-  "0e75ab2d6a1a": {
-    "fonte": "Chave revogada. Sem corpo.",
-    "traducao": "Ключ отозван. Без тела."
-  },
-  "b3e3e7db4326": {
-    "fonte": "Revoga uma chave de dispositivo própria",
-    "traducao": "Отзывает собственный ключ устройства"
-  },
-  "2b14d5214034": {
-    "fonte": "Autentica `connect/3` do socket Phoenix `/runner` (tópico `terminal:<projectId>`, papel \"runner\") — NÃO é o JWT reaproveitado, e esta rota em si só aceita um Personal Access Token no lugar do JWT de sessão (ADR 0105). TTL de 30s e uso único. Recusa com 400 se o projeto não estiver no modo \"runner\" (RN-421): o runner não tem o que servir num projeto cujo código mora no container gerenciado.",
-    "traducao": "Аутентифицирует `connect/3` сокета Phoenix `/runner` (топик `terminal:<projectId>`, роль \"runner\") — это НЕ переиспользованный JWT, и этот маршрут сам принимает только Personal Access Token вместо JWT сессии (ADR 0105). TTL 30 с и однократное использование. Отклоняет с 400, если проект не в режиме \"runner\" (RN-421): runner нечего обслуживать в проекте, код которого живёт в управляемом контейнере."
-  },
-  "1ee17ead0a64": {
-    "fonte": "Projeto não está no modo \"runner\".",
-    "traducao": "Проект не в режиме \"runner\"."
-  },
-  "90b80f5b9f58": {
-    "fonte": "Emite um ticket de uso único para o runner local conectar",
-    "traducao": "Выпускает одноразовый тикет для подключения локального runner"
   },
   "dd6fa1168e0a": {
     "fonte": "Each item carries `technical`: `true` only for the session opened by repository provisioning (linked from `repo_bootstraps`).",
@@ -2175,42 +2091,6 @@
     "fonte": "Resumes a parked gate cycle",
     "traducao": "Возобновляет припаркованный цикл gate"
   },
-  "b6056c3f57f7": {
-    "fonte": "Mesmo socket `/runner`, mesmo tópico, papel \"terminal\" — quem VÊ o terminal (o comando em si só roda de verdade se houver um runner conectado). Vale para qualquer modo de projeto.",
-    "traducao": "Тот же сокет `/runner`, тот же топик, роль \"terminal\" — тот, кто ВИДИТ терминал (сама команда действительно выполняется, только если подключён runner). Действует для любого режима проекта."
-  },
-  "0abdf9f25224": {
-    "fonte": "Emite um ticket de uso único para a aba Terminal da web",
-    "traducao": "Выпускает одноразовый тикет для вкладки Терминал в вебе"
-  },
-  "bdf87f4330ef": {
-    "fonte": "Proxy de GitHub Releases — `platform` aceita só linux-x64, linux-arm64, darwin-arm64. Sem autenticação: o binário não é segredo. Os bytes são conferidos contra o `checksums.txt` da mesma Release antes de qualquer coisa ser respondida (ADR 0149, RN-525); a rota NÃO verifica a assinatura do manifesto — isso é integridade, não procedência, e quem verifica assinatura é o `install.sh`.",
-    "traducao": "Прокси GitHub Releases — `platform` принимает только linux-x64, linux-arm64, darwin-arm64. Без аутентификации: бинарный файл не секрет. Байты сверяются с `checksums.txt` той же Release до того, как что-либо будет отдано (ADR 0149, RN-525); маршрут НЕ проверяет подпись манифеста — это целостность, а не происхождение, и подпись проверяет `install.sh`."
-  },
-  "f64ea695edce": {
-    "fonte": "O binário do runner, em stream, com o sha256 já conferido contra o manifesto. Não é JSON: `Content-Type: application/octet-stream`. O header `Content-Digest` repete o hash conferido (RFC 9530).",
-    "traducao": "Бинарный файл runner потоком, с sha256, уже сверенным с манифестом. Не JSON: `Content-Type: application/octet-stream`. Заголовок `Content-Digest` повторяет сверенный хеш (RFC 9530)."
-  },
-  "f84e59b2b309": {
-    "fonte": "Recusa nomeada — nunca bytes com aviso. O corpo traz `motivo`: `plataforma_nao_publicada`, `release_sem_manifesto`, `manifesto_nao_cobre_a_plataforma`, `manifesto_ilegivel`, `download_falhou` ou `hash_divergente`.",
-    "traducao": "Именованный отказ — никогда байты с предупреждением. Тело содержит `motivo`: `plataforma_nao_publicada`, `release_sem_manifesto`, `manifesto_nao_cobre_a_plataforma`, `manifesto_ilegivel`, `download_falhou` или `hash_divergente`."
-  },
-  "f15904bddcc7": {
-    "fonte": "Baixa o binário standalone do runner local pra plataforma pedida",
-    "traducao": "Скачивает автономный бинарный файл локального runner для запрошенной платформы"
-  },
-  "f93fb9749cd2": {
-    "fonte": "Autenticada por uma chave de dispositivo de MÁQUINA (ADR 0154) — NUNCA por JWT de sessão, e nunca por uma credencial presa a um projeto, que responde 403. Devolve os projetos em `execution_mode: \"runner\"` nos quais o dono da chave alcança pelo menos `developer` (o mesmo mínimo de `POST .../runner-ticket`), com o nome da pasta e o estado de verificação de cada um. O agente pergunta em vez de varrer o disco: a base da máquina é do usuário e pode ter pasta que não é projeto nenhum.",
-    "traducao": "Аутентифицируется МАШИННЫМ ключом устройства (ADR 0154) — НИКОГДА JWT сессии и никогда учётными данными, привязанными к проекту, на которые отвечает 403. Возвращает проекты в `execution_mode: \"runner\"`, в которых владелец ключа достигает как минимум `developer` (тот же минимум, что и у `POST .../runner-ticket`), с именем папки и состоянием проверки каждого. Агент спрашивает, а не сканирует диск: база машины принадлежит пользователю и может содержать папки, не являющиеся проектами."
-  },
-  "169d7b6fea8b": {
-    "fonte": "A credencial apresentada está presa a um projeto — esta rota exige uma chave de dispositivo de máquina.",
-    "traducao": "Предъявленные учётные данные привязаны к проекту — этот маршрут требует машинного ключа устройства."
-  },
-  "a467111d8084": {
-    "fonte": "Lista os projetos em modo \"runner\" que este agente local atende",
-    "traducao": "Перечисляет проекты в режиме \"runner\", которые обслуживает этот локальный агент"
-  },
   "c11293a41969": {
     "fonte": "No role required: a credential is about whoever called, not about a workspace or project. Covers LLM keys and git tokens in the same listing.",
     "traducao": "Роль не требуется: учётные данные относятся к тому, кто вызвал, а не к рабочему пространству или проекту. Охватывает ключи LLM и токены git в одном списке."
@@ -2490,10 +2370,6 @@
   "5aa799caa6d6": {
     "fonte": "Corrects a model's price",
     "traducao": "Исправляет цену модели"
-  },
-  "962300129d65": {
-    "fonte": "Owner's curation, APPLYING ONLY TO THIS WORKSPACE (ADR 0049). Only touches `isActive` — `availability` is what the sync observed at the provider, is global, and does not change here. Whole batch or nothing: a non-existent id fails the call without applying any row.",
-    "traducao": "Курация владельца, ПРИМЕНЯЕМАЯ ТОЛЬКО К ЭТОМУ РАБОЧЕМУ ПРОСТРАНСТВУ (ADR 0049). Затрагивает только `isActive` — `availability` — это то, что синхронизация наблюдала у провайдера, оно глобально и здесь не меняется. Весь пакет или ничего: несуществующий id приводит к сбою вызова без применения какой-либо строки."
   },
   "d0c4ada01f61": {
     "fonte": "Some id in the batch doesn't exist.",
@@ -3203,18 +3079,6 @@
     "fonte": "Timeout in milliseconds. Omitted uses the broker default.",
     "traducao": "Таймаут в миллисекундах. Если опущен, используется значение broker по умолчанию."
   },
-  "3b8add966613": {
-    "fonte": "`false` quando o broker recusou ou não respondeu — os outros campos ficam ausentes e `motivo` explica.",
-    "traducao": "`false`, когда broker отказал или не ответил, — остальные поля отсутствуют, а `motivo` объясняет."
-  },
-  "145eeeb078d9": {
-    "fonte": "Presente só quando `sucesso: true`.",
-    "traducao": "Присутствует только при `sucesso: true`."
-  },
-  "cac484bde0d3": {
-    "fonte": "Presente só quando `sucesso: false`.",
-    "traducao": "Присутствует только при `sucesso: false`."
-  },
   "75170d0a772c": {
     "fonte": "Where this project's container comes up (RN-497/503). `container` and `mounted` go through the broker, on the server; `runner` goes through the local agent on the user's machine. It is what branches the start action between `container_start` and `container_start_via_runner`.",
     "traducao": "Где поднимается контейнер этого проекта (RN-497/503). `container` и `mounted` идут через broker, на сервере; `runner` — через локального агента на машине пользователя. Именно это разветвляет действие запуска между `container_start` и `container_start_via_runner`."
@@ -3299,14 +3163,6 @@
     "fonte": "Contracts of modules the current module_map no longer has — said, never attached to a module that does not exist.",
     "traducao": "Контракты модулей, которых больше нет в текущем module_map, — указаны, но никогда не привязаны к несуществующему модулю."
   },
-  "37083255c7d2": {
-    "fonte": "O novo modo de execução. Pode repetir o modo atual do projeto — nesse caso, só `workspacePath` muda de verdade.",
-    "traducao": "Новый режим выполнения. Может повторять текущий режим проекта — в этом случае реально меняется только `workspacePath`."
-  },
-  "acda20ec05b1": {
-    "fonte": "O caminho absoluto da pasta do usuário — obrigatório quando `executionMode` é `mounted` ou `runner`, recusado quando é `container`. Mesma validação da criação (RN-170/RN-422/RN-423): em `mounted`, precisa existir e ser gravável de dentro do container; em `runner`, só o formato é validado agora — a confirmação de verdade vem do runner conectando de novo.",
-    "traducao": "Абсолютный путь к папке пользователя — обязателен, когда `executionMode` равен `mounted` или `runner`, и отклоняется, когда он `container`. Та же проверка, что и при создании (RN-170/RN-422/RN-423): в `mounted` он должен существовать и быть доступен для записи изнутри контейнера; в `runner` сейчас проверяется только формат — настоящее подтверждение приходит от повторного подключения runner."
-  },
   "571df21d08b2": {
     "fonte": "How many rules have no story at all. Each one is a discovery.",
     "traducao": "Сколько правил вообще не имеют истории. Каждое — открытие."
@@ -3342,10 +3198,6 @@
   "3c5706ef9b11": {
     "fonte": "Definition of ready.",
     "traducao": "Критерии готовности к работе (Definition of ready)."
-  },
-  "db2a33b31eb2": {
-    "fonte": "Modules from the `module_map` that the story touches. A story with no module, or with a non-existent module, becomes an architecture pending item.",
-    "traducao": "Модули из `module_map`, которых касается история. История без модуля или с несуществующим модулем становится незакрытым вопросом архитектуры."
   },
   "cb646ec7c3dc": {
     "fonte": "The PO finished the story and it's waiting on the user's decision (Phase 12c — RN-048). Coexists with `status: \"draft\"`: it is a proposal, not a state. Always `false` in a project in `auto` mode.",
@@ -3675,14 +3527,6 @@
     "fonte": "Only when `status=error`, with the failure message. A healthy response has no detail at all, on purpose: liveness is not the place to expose topology.",
     "traducao": "Только при `status=error`, с сообщением о сбое. У здорового ответа деталей нет вовсе, намеренно: liveness — не место для раскрытия топологии."
   },
-  "6b45cf45f75b": {
-    "fonte": "`<publisher>/<modelo>` no Hugging Face Hub.",
-    "traducao": "`<publisher>/<modelo>` в Hugging Face Hub."
-  },
-  "3afdaf3ccba2": {
-    "fonte": "O publisher está no allowlist curado de fabricantes conhecidos (`domain/llm/huggingface-official-publishers.ts`). `false` é qualquer reupload de terceiro — a tela mostra o aviso de segurança quando `includeCommunity=true` trouxe este resultado.",
-    "traducao": "Издатель находится в курируемом списке разрешённых известных производителей (`domain/llm/huggingface-official-publishers.ts`). `false` — любая повторная загрузка третьей стороной; экран показывает предупреждение о безопасности, когда `includeCommunity=true` вернул этот результат."
-  },
   "7ea92a3462fc": {
     "fonte": "Combined (RAG_SEARCH_WEIGHT_VECTOR*vector + RAG_SEARCH_WEIGHT_LEXICAL*lexical), already filtered by the threshold — every returned hit has passed it.",
     "traducao": "Комбинированное (RAG_SEARCH_WEIGHT_VECTOR*vector + RAG_SEARCH_WEIGHT_LEXICAL*lexical), уже отфильтрованное порогом, — каждый возвращённый результат его прошёл."
@@ -3799,26 +3643,6 @@
     "fonte": "Diff of this version against the previous one, computed server-side so the UI does not need its own differ. The oldest one is diffed against empty, so it shows up as all-addition.",
     "traducao": "Diff этой версии относительно предыдущей, вычисленный на сервере, чтобы интерфейсу не нужен был собственный инструмент сравнения. Самая старая сравнивается с пустой, поэтому отображается целиком как добавление."
   },
-  "311878f10a4a": {
-    "fonte": "Nome pra você reconhecer este token depois — não é único.",
-    "traducao": "Имя, чтобы вы потом узнали этот токен, — не уникально."
-  },
-  "a11dabd734a3": {
-    "fonte": "Expira em N dias. Omitido = sem expiração (revogável a qualquer hora, mas nunca expira sozinho).",
-    "traducao": "Истекает через N дней. Опущено = без срока действия (можно отозвать в любой момент, но сам он никогда не истекает)."
-  },
-  "85fb77b87d3a": {
-    "fonte": "Nulo = sem expiração.",
-    "traducao": "Нулевое = без срока действия."
-  },
-  "2f6568eab1c5": {
-    "fonte": "Nulo = nunca usado.",
-    "traducao": "Нулевое = ни разу не использовался."
-  },
-  "77ef050aa7b7": {
-    "fonte": "Guarde agora — não é recuperável depois. Use em --token ou BRABO_ACCOUNT_TOKEN.",
-    "traducao": "Сохраните сейчас — потом восстановить нельзя. Используйте в --token или BRABO_ACCOUNT_TOKEN."
-  },
   "3dae3a00b619": {
     "fonte": "How another module uses the item: call a function, hit a route, subscribe to an event, or build a data shape.",
     "traducao": "Как другой модуль использует элемент: вызывает функцию, обращается к маршруту, подписывается на событие или строит форму данных."
@@ -3858,10 +3682,6 @@
   "e723527e14f1": {
     "fonte": "The provider failure's normalized `code` (ADR 0041) — `auth`, `rate_limit`, `insufficient_credit` (HTTP 402, RN-730), `model_not_found`, `context_length`, `timeout`, `connection` or `upstream`. `null` with no error, or when the error is not the provider's (budget, missing binding). Decide by this, never by the text of `error`.",
     "traducao": "Нормализованный `code` сбоя провайдера (ADR 0041) — `auth`, `rate_limit`, `insufficient_credit` (HTTP 402, RN-730), `model_not_found`, `context_length`, `timeout`, `connection` или `upstream`. `null` без ошибки или когда ошибка не от провайдера (бюджет, отсутствующий binding). Решайте по нему, никогда по тексту `error`."
-  },
-  "729098251af8": {
-    "fonte": "Name of the model that generated the response (finding from problem 2) — `null` when the turn failed before resolving a model (no binding, or binding to a non-existent model).",
-    "traducao": "Имя модели, сгенерировавшей ответ (вывод из проблемы 2), — `null`, когда ход завершился сбоем до разрешения модели (нет binding или binding на несуществующую модель)."
   },
   "f79b198ccadd": {
     "fonte": "Present (always `true`) only when the provider cut the response at the output cap (`finish_reason: \"length\"` / `stop_reason: \"max_tokens\"`, RN-737): the text and the `toolCalls` arguments are truncated. The engine refuses to run a truncated tool call and narrates the cut.",
@@ -4058,22 +3878,6 @@
   "e26c2d27b03d": {
     "fonte": "`null` when it came from sync — no person behind it.",
     "traducao": "`null`, когда пришло из синхронизации, — за этим нет человека."
-  },
-  "a03aee1e30a3": {
-    "fonte": "Só presente quando o Hub publicou `usedStorage` na busca — nunca estimado por palpite.",
-    "traducao": "Присутствует, только когда Hub опубликовал `usedStorage` в поиске, — никогда не оценивается наугад."
-  },
-  "6cf9d179be59": {
-    "fonte": "`pending_confirmation` → `confirmed` → `pulling` → `active` | `failed`. Os dois primeiros estados SÃO a segunda confirmação explícita que o produto exige antes de qualquer download rodar.",
-    "traducao": "`pending_confirmation` → `confirmed` → `pulling` → `active` | `failed`. Первые два состояния И ЕСТЬ второе явное подтверждение, которого продукт требует перед запуском любого скачивания."
-  },
-  "7478c7389267": {
-    "fonte": "Quando o clique de confirmação aconteceu.",
-    "traducao": "Когда произошёл клик подтверждения."
-  },
-  "749c4b474dd7": {
-    "fonte": "Só em `failed`, prefixado pela origem (infra | modelo | código | política) — nunca falha calada.",
-    "traducao": "Только в `failed`, с префиксом источника (infra | модель | код | политика) — никогда молчаливый сбой."
   },
   "649956545cc3": {
     "fonte": "History is immutable: each new map is one more version, and the current one is the one with the highest `version`.",
@@ -4282,10 +4086,6 @@
   "f2ecbb9e56d1": {
     "fonte": "User of the HTTP Basic pair; the token is the password.",
     "traducao": "Пользователь пары HTTP Basic; токен — пароль."
-  },
-  "d7256bdaa259": {
-    "fonte": "EFFECTIVE role: the higher of the project one and the one inherited from the workspace. Whoever is workspace `owner` isn't downgraded by a lesser project association.",
-    "traducao": "ЭФФЕКТИВНАЯ роль: большая из роли проекта и унаследованной от рабочего пространства. Того, кто является `owner` рабочего пространства, меньшая связь с проектом не понижает."
   },
   "3c55afbbb568": {
     "fonte": "Linear hierarchy: owner > maintainer > developer > viewer. Each role includes the permissions of the ones after it.",
@@ -4671,10 +4471,6 @@
     "fonte": "Slug of the target agent. Must be a lead or an area-less agent — never a subagent.",
     "traducao": "Slug целевого агента. Должен быть lead или агентом без области — никогда субагентом."
   },
-  "a916ccac4168": {
-    "fonte": "Vem da busca quando o Hub publicou o tamanho — nunca estimado por palpite no cliente.",
-    "traducao": "Приходит из поиска, когда Hub опубликовал размер, — никогда не оценивается наугад на клиенте."
-  },
   "c6e252398113": {
     "fonte": "Single-use token received by email.",
     "traducao": "Одноразовый токен, полученный по email."
@@ -4763,10 +4559,6 @@
     "fonte": "An `accepted` handoff to `staff` exists in the most recent session (docs/fluxo.yml, ADR 0088) — dormant for automatic triggering, only reflects an already-accepted MANUAL activation.",
     "traducao": "В самой свежей сессии есть handoff в состоянии `accepted` к `staff` (docs/fluxo.yml, ADR 0088) — спящий для автоматического запуска, лишь отражает уже принятую РУЧНУЮ активацию."
   },
-  "0b59ed8216bf": {
-    "fonte": "Nome do módulo — precisa existir no module_map vigente.",
-    "traducao": "Имя модуля — должно существовать в текущем module_map."
-  },
   "9f031b0ffc1b": {
     "fonte": "OCI reference with an explicit TAG or digest for this module. `latest` is REFUSED with 400 — the rule is domain-level.",
     "traducao": "Ссылка OCI с явным ТЕГОМ или digest для этого модуля. `latest` ОТКЛОНЯЕТСЯ с 400 — правило на уровне домена."
@@ -4798,42 +4590,6 @@
   "f1c33c93ec58": {
     "fonte": "Asks for the WHOLE tool catalog: the Jev tool router (ADR 0179) is skipped for this call. The engine sets it when it repeats a step whose restricted menu made the model answer without calling a tool.",
     "traducao": "Запрашивает ВЕСЬ каталог инструментов: маршрутизатор инструментов Jev (ADR 0179) для этого вызова пропускается. Engine устанавливает это, когда повторяет шаг, на котором ограниченное меню заставило модель ответить без вызова инструмента."
-  },
-  "f95503adf814": {
-    "fonte": "Nulo = chave de MÁQUINA (ADR 0154): vale para qualquer projeto do dono dela, e não só para este. Ver `especie`.",
-    "traducao": "Нулевое = МАШИННЫЙ ключ (ADR 0154): действует для любого проекта его владельца, а не только для этого. См. `especie`."
-  },
-  "fec321ac95fe": {
-    "fonte": "`projeto` = presa ao projeto desta rota (ADR 0118). `maquina` = descreve a MÁQUINA (ADR 0154) e aparece na listagem de todo projeto que ela atende — revogá-la derruba o agente local em todos eles.",
-    "traducao": "`projeto` = привязан к проекту этого маршрута (ADR 0118). `maquina` = описывает МАШИНУ (ADR 0154) и появляется в списке каждого проекта, который она обслуживает, — его отзыв обрывает локального агента во всех них."
-  },
-  "dc4df0141780": {
-    "fonte": "Nulo = ativa. Revogada continua aparecendo na lista.",
-    "traducao": "Нулевое = активен. Отозванный продолжает появляться в списке."
-  },
-  "af6a95209c7b": {
-    "fonte": "Nulo = nunca usada — o sinal de uma chave órfã (aba fechada no meio do fluxo de configuração automática do runner).",
-    "traducao": "Нулевое = ни разу не использовался — признак осиротевшего ключа (вкладка закрыта посреди потока автоматической настройки runner)."
-  },
-  "fe968ce3da57": {
-    "fonte": "O nome da pasta do projeto (RN-109) — segmento relativo sob a base da máquina, nunca um caminho absoluto.",
-    "traducao": "Имя папки проекта (RN-109) — относительный сегмент под базой машины, никогда не абсолютный путь."
-  },
-  "89c48374c3fc": {
-    "fonte": "Quando o runner confirmou a pasta pela primeira vez (RN-423). Nulo = nunca confirmada. É registro de uma confirmação, não batimento (RN-468): não diz que a pasta está de pé agora.",
-    "traducao": "Когда runner впервые подтвердил папку (RN-423). Нулевое = никогда не подтверждалась. Это запись одного подтверждения, а не heartbeat (RN-468): оно не говорит, что папка доступна сейчас."
-  },
-  "c127cadb5b2e": {
-    "fonte": "Token opaco de uso único, base64url. TTL de 30s: some depois do primeiro `connect/3` bem-sucedido no socket `/runner`, ou quando expira.",
-    "traducao": "Непрозрачный одноразовый токен, base64url. TTL 30 с: исчезает после первого успешного `connect/3` на сокете `/runner` или по истечении."
-  },
-  "e5d70cd5cb3f": {
-    "fonte": "Quando o ticket expira (ISO 8601).",
-    "traducao": "Когда истекает тикет (ISO 8601)."
-  },
-  "884d21ac2d71": {
-    "fonte": "URL pública do socket Phoenix `/runner`, já em ws(s):// — pronta para o cliente (runner CLI ou web) abrir a conexão com `{ticket}` nos params.",
-    "traducao": "Публичный URL сокета Phoenix `/runner`, уже в ws(s):// — готов, чтобы клиент (CLI runner или веб) открыл соединение с `{ticket}` в параметрах."
   },
   "5b74c2fc4358": {
     "fonte": "Title of the rule JUST appended. Rules with the same normalized title (RN-080 makes it the new one) are left out of the comparison.",
@@ -5295,10 +5051,6 @@
     "fonte": "psychologist",
     "traducao": "психолог"
   },
-  "862069863df8": {
-    "fonte": "projetos",
-    "traducao": "проекты (runner)"
-  },
   "69a537093ff9": {
     "fonte": "rag",
     "traducao": "rag"
@@ -5322,5 +5074,229 @@
   "e6f0a06db490": {
     "fonte": "workspaces",
     "traducao": "рабочие пространства"
+  },
+  "f0aee2d54af5": {
+    "fonte": "Never includes the raw token — only what was already issued.",
+    "traducao": "Никогда не включает сырой токен — только то, что уже было выпущено."
+  },
+  "986548ec1662": {
+    "fonte": "Lists your own Personal Access Tokens for this project",
+    "traducao": "Перечисляет собственные Personal Access Token этого проекта"
+  },
+  "e80fd80e4996": {
+    "fonte": "The raw token (`brb_...`) appears only in THIS response — it is not recoverable later, only the hash is stored. Use it in `--token`/`BRABO_ACCOUNT_TOKEN` of `brabo-runner`.",
+    "traducao": "Сырой токен (`brb_...`) появляется только в ЭТОМ ответе — потом его нельзя восстановить, хранится только хеш. Используйте в `--token`/`BRABO_ACCOUNT_TOKEN` у `brabo-runner`."
+  },
+  "d62b0b1d8759": {
+    "fonte": "Issues a Personal Access Token for the local runner",
+    "traducao": "Выпускает Personal Access Token для локального runner"
+  },
+  "5166f644f9f3": {
+    "fonte": "Idempotent — revoking again is not an error. Since RN-685 (ADR 0201) it also DROPS the runner connections opened with THIS token, and only those — the same user's device key stays up —, and voids its still-unused tickets. The engine being down does NOT make the revocation fail.",
+    "traducao": "Идемпотентно — повторный отзыв не является ошибкой. Начиная с RN-685 (ADR 0201) также РАЗРЫВАЕТ соединения runner, открытые с ЭТИМ токеном, и только их — ключ устройства того же пользователя остаётся, — и аннулирует его ещё не использованные тикеты. Недоступный engine НЕ приводит к сбою отзыва."
+  },
+  "3e5963823cf6": {
+    "fonte": "Token revoked. No body.",
+    "traducao": "Токен отозван. Без тела."
+  },
+  "ee3862256ca1": {
+    "fonte": "Revokes one of your own Personal Access Tokens",
+    "traducao": "Отзывает собственный Personal Access Token"
+  },
+  "a3c3ec2ec97d": {
+    "fonte": "Incident response — a departed dev with a leaking token (RN-427). Idempotent — revoking again is not an error. Since RN-685 (ADR 0201) it also DROPS the runner already connected with this token, and only it.",
+    "traducao": "Реагирование на инцидент — уволенный разработчик с утёкшим токеном (RN-427). Идемпотентно — повторный отзыв не является ошибкой. Начиная с RN-685 (ADR 0201) также РАЗРЫВАЕТ уже подключённый с этим токеном runner, и только его."
+  },
+  "db21e9de9157": {
+    "fonte": "Revokes the Personal Access Token of ANY user in the project",
+    "traducao": "Отзывает Personal Access Token ЛЮБОГО пользователя в проекте"
+  },
+  "f139b0908c16": {
+    "fonte": "The `maintainer` view for incident response (RN-427) — includes the owner of each token. Never includes the raw token.",
+    "traducao": "Представление для `maintainer` для реагирования на инциденты (RN-427) — включает владельца каждого токена. Никогда не включает сырой токен."
+  },
+  "761e4cb7e6b9": {
+    "fonte": "Lists ALL Personal Access Tokens of the project, from any user",
+    "traducao": "Перечисляет ВСЕ Personal Access Token проекта, любого пользователя"
+  },
+  "52a0d1d2a8d9": {
+    "fonte": "Nobody revokes what they cannot see (RN-519). Includes the already REVOKED ones — dropping the row would make the screen claim the key never existed. Never returns the public JWK, and the api never saw the private one. A null `lastUsedAt` is the sign of an ORPHAN key: registered and never used by any runner. Since RN-543 it also includes the caller's MACHINE keys (`especie: \"maquina\"`, null `projectId`), which serve this project without belonging to it — without them in the list, a machine key would be invisible on every screen.",
+    "traducao": "Никто не отзовёт то, чего не видит (RN-519). Включает и уже ОТОЗВАННЫЕ — исчезновение строки заставило бы экран утверждать, что ключа никогда не было. Никогда не возвращает публичный JWK, а приватный api никогда не видела. Нулевой `lastUsedAt` — признак ОСИРОТЕВШЕГО ключа: зарегистрированного и ни разу не использованного ни одним runner. Начиная с RN-543 также включает МАШИННЫЕ ключи вызывающего (`especie: \"maquina\"`, `projectId` нулевой), которые обслуживают этот проект, не принадлежа ему, — без них в списке машинный ключ был бы невидим на любом экране."
+  },
+  "0b43cc837c41": {
+    "fonte": "Lists your own device keys for this project",
+    "traducao": "Перечисляет собственные ключи устройств этого проекта"
+  },
+  "085b7f09fec0": {
+    "fonte": "Idempotent — revoking again is not an error. Since RN-520 it also DROPS the live connection: before, revoking only prevented a NEW ticket, and an already connected runner kept running approved commands. Since RN-685 (ADR 0201) the target is the KEY: only the connections opened with it drop — in every project, if it is a machine key —, and another runner of the same user, connected with a PAT or another key, stays up. Its still-unused tickets are voided. The engine being down or no runner connected does NOT make the revocation fail.",
+    "traducao": "Идемпотентно — повторный отзыв не является ошибкой. Начиная с RN-520 также РАЗРЫВАЕТ живое соединение: раньше отзыв только не давал получить НОВЫЙ тикет, а уже подключённый runner продолжал выполнять одобренные команды. Начиная с RN-685 (ADR 0201) целью является КЛЮЧ: разрываются только соединения, открытые с ним, — во всех проектах, если он машинный, — а другой runner того же пользователя, подключённый с PAT или другим ключом, остаётся. Его ещё не использованные тикеты аннулируются. Недоступный engine или отсутствие подключённого runner НЕ приводят к сбою отзыва."
+  },
+  "2b8b9bf8f5cc": {
+    "fonte": "Revokes one of your own device keys",
+    "traducao": "Отзывает собственный ключ устройства"
+  },
+  "bb259bf040ba": {
+    "fonte": "Authenticates `connect/3` of the Phoenix socket `/runner` (topic `terminal:<projectId>`, role \"runner\") — it is NOT the reused JWT, and this route itself only accepts a Personal Access Token instead of the session JWT (ADR 0105). 30s TTL and single use. Refuses with 400 if the project is not in \"runner\" mode (RN-421): the runner has nothing to serve in a project whose code lives in the managed container.",
+    "traducao": "Аутентифицирует `connect/3` сокета Phoenix `/runner` (топик `terminal:<projectId>`, роль \"runner\") — это НЕ переиспользованный JWT, и этот маршрут сам принимает только Personal Access Token вместо JWT сессии (ADR 0105). TTL 30 с и однократное использование. Отклоняет с 400, если проект не в режиме \"runner\" (RN-421): runner нечего обслуживать в проекте, код которого живёт в управляемом контейнере."
+  },
+  "a9c6668ef3c1": {
+    "fonte": "Project is not in \"runner\" mode.",
+    "traducao": "Проект не в режиме \"runner\"."
+  },
+  "1ab50b15093b": {
+    "fonte": "Issues a single-use ticket for the local runner to connect",
+    "traducao": "Выпускает одноразовый тикет для подключения локального runner"
+  },
+  "0a76aa0c1749": {
+    "fonte": "Same `/runner` socket, same topic, role \"terminal\" — whoever SEES the terminal (the command itself only really runs if a runner is connected). Valid for any project mode.",
+    "traducao": "Тот же сокет `/runner`, тот же топик, роль \"terminal\" — тот, кто ВИДИТ терминал (сама команда действительно выполняется, только если подключён runner). Действует для любого режима проекта."
+  },
+  "43f4d64d2cba": {
+    "fonte": "Issues a single-use ticket for the web Terminal tab",
+    "traducao": "Выпускает одноразовый тикет для вкладки Терминал в вебе"
+  },
+  "1375ea1d80a9": {
+    "fonte": "GitHub Releases proxy — `platform` accepts only linux-x64, linux-arm64, darwin-arm64. No authentication: the binary is not a secret. The bytes are checked against the `checksums.txt` of the same Release before anything is answered (ADR 0149, RN-525); the route does NOT verify the manifest signature — that is integrity, not provenance, and whoever verifies the signature is `install.sh`.",
+    "traducao": "Прокси GitHub Releases — `platform` принимает только linux-x64, linux-arm64, darwin-arm64. Без аутентификации: бинарный файл не секрет. Байты сверяются с `checksums.txt` той же Release до того, как что-либо будет отдано (ADR 0149, RN-525); маршрут НЕ проверяет подпись манифеста — это целостность, а не происхождение, и подпись проверяет `install.sh`."
+  },
+  "f06f04d69566": {
+    "fonte": "The runner binary, streamed, with the sha256 already checked against the manifest. Not JSON: `Content-Type: application/octet-stream`. The `Content-Digest` header repeats the checked hash (RFC 9530).",
+    "traducao": "Бинарный файл runner потоком, с sha256, уже сверенным с манифестом. Не JSON: `Content-Type: application/octet-stream`. Заголовок `Content-Digest` повторяет сверенный хеш (RFC 9530)."
+  },
+  "bb52626b760a": {
+    "fonte": "Named refusal — never bytes with a warning. The body carries `motivo`: `plataforma_nao_publicada`, `release_sem_manifesto`, `manifesto_nao_cobre_a_plataforma`, `manifesto_ilegivel`, `download_falhou` or `hash_divergente`.",
+    "traducao": "Именованный отказ — никогда байты с предупреждением. Тело содержит `motivo`: `plataforma_nao_publicada`, `release_sem_manifesto`, `manifesto_nao_cobre_a_plataforma`, `manifesto_ilegivel`, `download_falhou` или `hash_divergente`."
+  },
+  "a94f522de7e3": {
+    "fonte": "Downloads the standalone local runner binary for the requested platform",
+    "traducao": "Скачивает автономный бинарный файл локального runner для запрошенной платформы"
+  },
+  "156f26ec9edd": {
+    "fonte": "Authenticated by a MACHINE device key (ADR 0154) — NEVER by a session JWT, and never by a credential bound to a project, which answers 403. Returns the projects in `execution_mode: \"runner\"` in which the key owner reaches at least `developer` (the same minimum as `POST .../runner-ticket`), with the folder name and verification state of each. The agent asks instead of scanning the disk: the machine base belongs to the user and may hold folders that are not projects.",
+    "traducao": "Аутентифицируется МАШИННЫМ ключом устройства (ADR 0154) — НИКОГДА JWT сессии и никогда учётными данными, привязанными к проекту, на которые отвечает 403. Возвращает проекты в `execution_mode: \"runner\"`, в которых владелец ключа достигает как минимум `developer` (тот же минимум, что и у `POST .../runner-ticket`), с именем папки и состоянием проверки каждого. Агент спрашивает, а не сканирует диск: база машины принадлежит пользователю и может содержать папки, не являющиеся проектами."
+  },
+  "135fd1c52012": {
+    "fonte": "The presented credential is bound to a project — this route requires a machine device key.",
+    "traducao": "Предъявленные учётные данные привязаны к проекту — этот маршрут требует машинного ключа устройства."
+  },
+  "dc6357f7d501": {
+    "fonte": "Lists the projects in \"runner\" mode that this local agent serves",
+    "traducao": "Перечисляет проекты в режиме \"runner\", которые обслуживает этот локальный агент"
+  },
+  "0f14ddf3e2fd": {
+    "fonte": "Owner's curation, APPLYING ONLY TO THIS WORKSPACE (ADR 0049). Only touches `isActive` — `availability` is what the sync observed at the provider, is global, and does not change here. Whole batch or nothing: a nonexistent id fails the call without applying any row.",
+    "traducao": "Курация владельца, ПРИМЕНЯЕМАЯ ТОЛЬКО К ЭТОМУ РАБОЧЕМУ ПРОСТРАНСТВУ (ADR 0049). Затрагивает только `isActive` — `availability` — это то, что синхронизация наблюдала у провайдера, оно глобально и здесь не меняется. Весь пакет или ничего: несуществующий id приводит к сбою вызова без применения какой-либо строки."
+  },
+  "691d34cfcc05": {
+    "fonte": "`false` when the broker refused or did not answer — the other fields are absent and `motivo` explains.",
+    "traducao": "`false`, когда broker отказал или не ответил, — остальные поля отсутствуют, а `motivo` объясняет."
+  },
+  "4a2fdae13861": {
+    "fonte": "Present only when `sucesso: true`.",
+    "traducao": "Присутствует только при `sucesso: true`."
+  },
+  "51395e18910c": {
+    "fonte": "Present only when `sucesso: false`.",
+    "traducao": "Присутствует только при `sucesso: false`."
+  },
+  "721d6bcfba74": {
+    "fonte": "The new execution mode. It may repeat the current project mode — in that case, only `workspacePath` really changes.",
+    "traducao": "Новый режим выполнения. Может повторять текущий режим проекта — в этом случае реально меняется только `workspacePath`."
+  },
+  "b3b89ca7b8ca": {
+    "fonte": "The absolute path of the user folder — required when `executionMode` is `mounted` or `runner`, refused when it is `container`. Same validation as creation (RN-170/RN-422/RN-423): in `mounted`, it must exist and be writable from inside the container; in `runner`, only the format is validated now — the real confirmation comes from the runner connecting again.",
+    "traducao": "Абсолютный путь к папке пользователя — обязателен, когда `executionMode` равен `mounted` или `runner`, и отклоняется, когда он `container`. Та же проверка, что и при создании (RN-170/RN-422/RN-423): в `mounted` он должен существовать и быть доступен для записи изнутри контейнера; в `runner` сейчас проверяется только формат — настоящее подтверждение приходит от повторного подключения runner."
+  },
+  "a96ad6048adb": {
+    "fonte": "Modules from the `module_map` that the story touches. A story with no module, or with a nonexistent module, becomes an architecture pending item.",
+    "traducao": "Модули из `module_map`, которых касается история. История без модуля или с несуществующим модулем становится незакрытым вопросом архитектуры."
+  },
+  "e139de76ec74": {
+    "fonte": "`<publisher>/<model>` on the Hugging Face Hub.",
+    "traducao": "`<publisher>/<modelo>` в Hugging Face Hub."
+  },
+  "6af4062beb14": {
+    "fonte": "The publisher is in the curated allowlist of known vendors (`domain/llm/huggingface-official-publishers.ts`). `false` is any third-party reupload — the screen shows the security warning when `includeCommunity=true` brought this result.",
+    "traducao": "Издатель находится в курируемом списке разрешённых известных производителей (`domain/llm/huggingface-official-publishers.ts`). `false` — любая повторная загрузка третьей стороной; экран показывает предупреждение о безопасности, когда `includeCommunity=true` вернул этот результат."
+  },
+  "a361c150a6d5": {
+    "fonte": "A name for you to recognize this token later — not unique.",
+    "traducao": "Имя, чтобы вы потом узнали этот токен, — не уникально."
+  },
+  "b92e5d104330": {
+    "fonte": "Expires in N days. Omitted = no expiration (revocable at any time, but never expires on its own).",
+    "traducao": "Истекает через N дней. Опущено = без срока действия (можно отозвать в любой момент, но сам он никогда не истекает)."
+  },
+  "67e77b894a09": {
+    "fonte": "Null = no expiration.",
+    "traducao": "Нулевое = без срока действия."
+  },
+  "6f17b8fb97b8": {
+    "fonte": "Null = never used.",
+    "traducao": "Нулевое = ни разу не использовался."
+  },
+  "598aa5e666cd": {
+    "fonte": "Store it now — it is not recoverable later. Use it in --token or BRABO_ACCOUNT_TOKEN.",
+    "traducao": "Сохраните сейчас — потом восстановить нельзя. Используйте в --token или BRABO_ACCOUNT_TOKEN."
+  },
+  "9060f5df5ded": {
+    "fonte": "Name of the model that generated the response (finding from problem 2) — `null` when the turn failed before resolving a model (no binding, or binding to a nonexistent model).",
+    "traducao": "Имя модели, сгенерировавшей ответ (вывод из проблемы 2), — `null`, когда ход завершился сбоем до разрешения модели (нет binding или binding на несуществующую модель)."
+  },
+  "271ba70750e6": {
+    "fonte": "Present only when the Hub published `usedStorage` in the search — never guessed.",
+    "traducao": "Присутствует, только когда Hub опубликовал `usedStorage` в поиске, — никогда не оценивается наугад."
+  },
+  "924a145824b8": {
+    "fonte": "`pending_confirmation` → `confirmed` → `pulling` → `active` | `failed`. The first two states ARE the second explicit confirmation the product requires before any download runs.",
+    "traducao": "`pending_confirmation` → `confirmed` → `pulling` → `active` | `failed`. Первые два состояния И ЕСТЬ второе явное подтверждение, которого продукт требует перед запуском любого скачивания."
+  },
+  "a78c9d41cc05": {
+    "fonte": "When the confirmation click happened.",
+    "traducao": "Когда произошёл клик подтверждения."
+  },
+  "2736f0339175": {
+    "fonte": "Only in `failed`, prefixed by the origin (infra | model | code | policy) — never a silent failure.",
+    "traducao": "Только в `failed`, с префиксом источника (infra | модель | код | политика) — никогда молчаливый сбой."
+  },
+  "871defad0a8a": {
+    "fonte": "EFFECTIVE role: the project role when there is one, otherwise the one inherited from the workspace (RN-471) — the project role OVERRIDES the workspace one in both directions, higher or lower.",
+    "traducao": "ЭФФЕКТИВНАЯ роль: роль проекта, если она есть, иначе унаследованная от рабочего пространства (RN-471) — роль проекта ПЕРЕКРЫВАЕТ роль рабочего пространства в обе стороны, вверх или вниз."
+  },
+  "01560d3753dc": {
+    "fonte": "Comes from the search when the Hub published the size — never guessed by the client.",
+    "traducao": "Приходит из поиска, когда Hub опубликовал размер, — никогда не оценивается наугад на клиенте."
+  },
+  "da5827a077d7": {
+    "fonte": "Null = MACHINE key (ADR 0154): valid for any project of its owner, not only this one. See `especie`.",
+    "traducao": "Нулевое = МАШИННЫЙ ключ (ADR 0154): действует для любого проекта его владельца, а не только для этого. См. `especie`."
+  },
+  "60c091ab023a": {
+    "fonte": "`projeto` = bound to the project of this route (ADR 0118). `maquina` = describes the MACHINE (ADR 0154) and appears in the listing of every project it serves — revoking it drops the local agent in all of them.",
+    "traducao": "`projeto` = привязан к проекту этого маршрута (ADR 0118). `maquina` = описывает МАШИНУ (ADR 0154) и появляется в списке каждого проекта, который она обслуживает, — его отзыв обрывает локального агента во всех них."
+  },
+  "2292ea5ef3fe": {
+    "fonte": "Null = active. A revoked key keeps appearing in the list.",
+    "traducao": "Нулевое = активен. Отозванный продолжает появляться в списке."
+  },
+  "787a14172e94": {
+    "fonte": "Null = never used — the sign of an orphan key (tab closed in the middle of the runner automatic setup flow).",
+    "traducao": "Нулевое = ни разу не использовался — признак осиротевшего ключа (вкладка закрыта посреди потока автоматической настройки runner)."
+  },
+  "54da24437fc4": {
+    "fonte": "The project folder name (RN-109) — a relative segment under the machine base, never an absolute path.",
+    "traducao": "Имя папки проекта (RN-109) — относительный сегмент под базой машины, никогда не абсолютный путь."
+  },
+  "95bad40ccd19": {
+    "fonte": "When the runner first confirmed the folder (RN-423). Null = never confirmed. It records a confirmation, not a heartbeat (RN-468): it does not say the folder is up now.",
+    "traducao": "Когда runner впервые подтвердил папку (RN-423). Нулевое = никогда не подтверждалась. Это запись одного подтверждения, а не heartbeat (RN-468): оно не говорит, что папка доступна сейчас."
+  },
+  "ed0bae24bf2f": {
+    "fonte": "Opaque single-use token, base64url. 30s TTL: gone after the first successful `connect/3` on the `/runner` socket, or when it expires.",
+    "traducao": "Непрозрачный одноразовый токен, base64url. TTL 30 с: исчезает после первого успешного `connect/3` на сокете `/runner` или по истечении."
+  },
+  "b060fe72314f": {
+    "fonte": "Public URL of the Phoenix `/runner` socket, already in ws(s):// — ready for the client (runner CLI or web) to open the connection with `{ticket}` in the params.",
+    "traducao": "Публичный URL сокета Phoenix `/runner`, уже в ws(s):// — готов, чтобы клиент (CLI runner или веб) открыл соединение с `{ticket}` в параметрах."
   }
 }

@@ -1467,58 +1467,6 @@
     "fonte": "Rewrites the project's permissions.json",
     "traducao": "重写项目的 permissions.json"
   },
-  "8773756f5e0e": {
-    "fonte": "Nunca inclui o token bruto — só o que já foi emitido.",
-    "traducao": "从不包含原始令牌——只包含已签发的信息。"
-  },
-  "3df1aadf49da": {
-    "fonte": "Papel insuficiente no projeto.",
-    "traducao": "在项目上的角色不足。"
-  },
-  "47803d62e463": {
-    "fonte": "Projeto não encontrado.",
-    "traducao": "未找到项目。"
-  },
-  "bdfdb304ed9a": {
-    "fonte": "Lista os próprios Personal Access Tokens deste projeto",
-    "traducao": "列出自己在此项目中的 Personal Access Token"
-  },
-  "6ab605bd4801": {
-    "fonte": "O token bruto (`brb_...`) só aparece NESTA resposta — não fica recuperável depois, só o hash é guardado. Use em `--token`/`BRABO_ACCOUNT_TOKEN` do `brabo-runner`.",
-    "traducao": "原始令牌（`brb_...`）只出现在这个响应中——之后无法找回，只保存哈希。用于 `--token`/`BRABO_ACCOUNT_TOKEN`（`brabo-runner` 的参数）。"
-  },
-  "d070defb402e": {
-    "fonte": "Emite um Personal Access Token pro runner local",
-    "traducao": "为本地 runner 签发一个 Personal Access Token"
-  },
-  "2e87542c8669": {
-    "fonte": "Idempotente — revogar de novo não é erro. Desde a RN-685 (ADR 0201) também DERRUBA as conexões de runner abertas com ESTE token, e só elas — a chave de dispositivo do mesmo usuário fica de pé —, e anula os tickets dele ainda não usados. Engine fora do ar NÃO faz a revogação falhar.",
-    "traducao": "幂等——再次撤销不是错误。自 RN-685（ADR 0201）起，它还会断开用此令牌打开的 runner 连接，且只断开这些——同一用户的设备密钥不受影响——并作废其尚未使用的票据。engine 宕机不会导致撤销失败。"
-  },
-  "06a391f20d58": {
-    "fonte": "Token revogado. Sem corpo.",
-    "traducao": "令牌已撤销。无响应体。"
-  },
-  "6d1cb634bc11": {
-    "fonte": "Revoga um Personal Access Token próprio",
-    "traducao": "撤销自己的 Personal Access Token"
-  },
-  "c93c131cfd01": {
-    "fonte": "Resposta a incidente — dev desligado com token vazando (RN-427). Idempotente — revogar de novo não é erro. Desde a RN-685 (ADR 0201) também DERRUBA o runner já conectado com este token, e só ele.",
-    "traducao": "事件响应——离职的开发者令牌泄露（RN-427）。幂等——再次撤销不是错误。自 RN-685（ADR 0201）起，它还会断开已用此令牌连接的 runner，且只断开它。"
-  },
-  "10dad7b354cd": {
-    "fonte": "Revoga o Personal Access Token de QUALQUER usuário no projeto",
-    "traducao": "撤销项目中任意用户的 Personal Access Token"
-  },
-  "0f34d0f00690": {
-    "fonte": "Visão de `maintainer` para resposta a incidente (RN-427) — inclui o dono de cada token. Nunca inclui o token bruto.",
-    "traducao": "供 `maintainer` 用于事件响应的视图（RN-427）——包含每个令牌的所有者。从不包含原始令牌。"
-  },
-  "7824d73678b0": {
-    "fonte": "Lista TODOS os Personal Access Tokens do projeto, de qualquer usuário",
-    "traducao": "列出项目中所有用户的全部 Personal Access Token"
-  },
   "fb4c8cf195f8": {
     "fonte": "The user's OWN profile by default; the aggregated team view only for whoever administers the project. A competency profile is data ABOUT the person, and the least surprising default is seeing your own.",
     "traducao": "默认是用户自己的画像；团队汇总视图只对管理该项目的人开放。能力画像是关于这个人的数据，最不令人意外的默认是看到你自己的。"
@@ -1610,38 +1558,6 @@
   "13fe96a05550": {
     "fonte": "Returns how to run the deliverable on your machine",
     "traducao": "返回如何在你的机器上运行交付物"
-  },
-  "ebed25b083e5": {
-    "fonte": "Ninguém revoga o que não consegue ver (RN-519). Inclui as já REVOGADAS — sumir com a linha faria a tela afirmar que a chave nunca existiu. Nunca devolve a JWK pública, e a privada a api nunca viu. `lastUsedAt` nulo é o sinal de uma chave ÓRFÃ: registrada e nunca usada por runner nenhum. Desde a RN-543 inclui também as chaves de MÁQUINA do chamador (`especie: \"maquina\"`, `projectId` nulo), que servem este projeto sem pertencer a ele — sem elas na lista, uma chave de máquina seria invisível em toda tela.",
-    "traducao": "没有人能撤销看不到的东西（RN-519）。包含已撤销的密钥——让记录消失会让界面声称该密钥从未存在。从不返回 JWK 公钥，私钥 api 从未见过。`lastUsedAt` 为空是孤立密钥的信号：已登记但从未被任何 runner 使用。自 RN-543 起，还包含调用方的机器密钥（`especie: \"maquina\"`，`projectId` 为空），它们服务于此项目却不属于它——如果列表中没有它们，机器密钥在任何界面上都将不可见。"
-  },
-  "dc5e321e6bd3": {
-    "fonte": "Lista as próprias chaves de dispositivo deste projeto",
-    "traducao": "列出自己在此项目中的设备密钥"
-  },
-  "562a5037d652": {
-    "fonte": "Idempotente — revogar de novo não é erro. Desde a RN-520 também DERRUBA a conexão viva: antes, revogar só impedia ticket NOVO, e um runner já conectado seguia executando comando aprovado. Desde a RN-685 (ADR 0201) o alvo é a CHAVE: caem só as conexões abertas com ela — em todo projeto, se for de máquina —, e outro runner do mesmo usuário, conectado com PAT ou com outra chave, fica de pé. Os tickets dela ainda não usados são anulados. Engine fora do ar ou nenhum runner conectado NÃO fazem a revogação falhar.",
-    "traducao": "幂等——再次撤销不是错误。自 RN-520 起还会断开活动连接：此前撤销只阻止新票据，已连接的 runner 会继续执行已批准的命令。自 RN-685（ADR 0201）起，目标是密钥本身：只断开用它打开的连接——如果是机器密钥则遍及所有项目——同一用户用 PAT 或其他密钥连接的另一个 runner 不受影响。它尚未使用的票据会被作废。engine 宕机或没有 runner 连接都不会导致撤销失败。"
-  },
-  "0e75ab2d6a1a": {
-    "fonte": "Chave revogada. Sem corpo.",
-    "traducao": "密钥已撤销。无响应体。"
-  },
-  "b3e3e7db4326": {
-    "fonte": "Revoga uma chave de dispositivo própria",
-    "traducao": "撤销自己的一把设备密钥"
-  },
-  "2b14d5214034": {
-    "fonte": "Autentica `connect/3` do socket Phoenix `/runner` (tópico `terminal:<projectId>`, papel \"runner\") — NÃO é o JWT reaproveitado, e esta rota em si só aceita um Personal Access Token no lugar do JWT de sessão (ADR 0105). TTL de 30s e uso único. Recusa com 400 se o projeto não estiver no modo \"runner\" (RN-421): o runner não tem o que servir num projeto cujo código mora no container gerenciado.",
-    "traducao": "用于 `connect/3` 认证，对象是 Phoenix 套接字 `/runner`（主题 `terminal:<projectId>`，角色 “runner”）——不是复用的 JWT，此路由本身只接受 Personal Access Token 代替会话 JWT（ADR 0105）。TTL 30 秒，一次性使用。如果项目不处于 “runner” 模式则以 400 拒绝（RN-421）：在代码位于托管容器中的项目里，runner 无事可做。"
-  },
-  "1ee17ead0a64": {
-    "fonte": "Projeto não está no modo \"runner\".",
-    "traducao": "项目不处于 “runner” 模式。"
-  },
-  "90b80f5b9f58": {
-    "fonte": "Emite um ticket de uso único para o runner local conectar",
-    "traducao": "为本地 runner 连接签发一次性票据"
   },
   "dd6fa1168e0a": {
     "fonte": "Each item carries `technical`: `true` only for the session opened by repository provisioning (linked from `repo_bootstraps`).",
@@ -2175,42 +2091,6 @@
     "fonte": "Resumes a parked gate cycle",
     "traducao": "恢复一个被暂停的 gate 周期"
   },
-  "b6056c3f57f7": {
-    "fonte": "Mesmo socket `/runner`, mesmo tópico, papel \"terminal\" — quem VÊ o terminal (o comando em si só roda de verdade se houver um runner conectado). Vale para qualquer modo de projeto.",
-    "traducao": "同一个 `/runner` 套接字、同一个主题，角色为 “terminal”——即查看终端的一方（命令本身只有在有 runner 连接时才会真正运行）。适用于任何项目模式。"
-  },
-  "0abdf9f25224": {
-    "fonte": "Emite um ticket de uso único para a aba Terminal da web",
-    "traducao": "为 Web 的 Terminal 标签页签发一次性票据"
-  },
-  "bdf87f4330ef": {
-    "fonte": "Proxy de GitHub Releases — `platform` aceita só linux-x64, linux-arm64, darwin-arm64. Sem autenticação: o binário não é segredo. Os bytes são conferidos contra o `checksums.txt` da mesma Release antes de qualquer coisa ser respondida (ADR 0149, RN-525); a rota NÃO verifica a assinatura do manifesto — isso é integridade, não procedência, e quem verifica assinatura é o `install.sh`.",
-    "traducao": "GitHub Releases 代理——`platform` 只接受 linux-x64、linux-arm64、darwin-arm64。无需认证：二进制文件不是机密。在返回任何内容之前，字节会与同一 Release 的 `checksums.txt` 核对（ADR 0149，RN-525）；该路由不验证清单的签名——这是完整性而非来源，验证签名的是 `install.sh`。"
-  },
-  "f64ea695edce": {
-    "fonte": "O binário do runner, em stream, com o sha256 já conferido contra o manifesto. Não é JSON: `Content-Type: application/octet-stream`. O header `Content-Digest` repete o hash conferido (RFC 9530).",
-    "traducao": "以流方式返回 runner 二进制文件，其 sha256 已与清单核对。不是 JSON：`Content-Type: application/octet-stream`。`Content-Digest` 头重复已核对的哈希（RFC 9530）。"
-  },
-  "f84e59b2b309": {
-    "fonte": "Recusa nomeada — nunca bytes com aviso. O corpo traz `motivo`: `plataforma_nao_publicada`, `release_sem_manifesto`, `manifesto_nao_cobre_a_plataforma`, `manifesto_ilegivel`, `download_falhou` ou `hash_divergente`.",
-    "traducao": "具名拒绝——绝不返回带警告的字节。响应体带有 `motivo`：`plataforma_nao_publicada`、`release_sem_manifesto`、`manifesto_nao_cobre_a_plataforma`、`manifesto_ilegivel`、`download_falhou` 或 `hash_divergente`。"
-  },
-  "f15904bddcc7": {
-    "fonte": "Baixa o binário standalone do runner local pra plataforma pedida",
-    "traducao": "为所请求的平台下载本地 runner 的独立二进制文件"
-  },
-  "f93fb9749cd2": {
-    "fonte": "Autenticada por uma chave de dispositivo de MÁQUINA (ADR 0154) — NUNCA por JWT de sessão, e nunca por uma credencial presa a um projeto, que responde 403. Devolve os projetos em `execution_mode: \"runner\"` nos quais o dono da chave alcança pelo menos `developer` (o mesmo mínimo de `POST .../runner-ticket`), com o nome da pasta e o estado de verificação de cada um. O agente pergunta em vez de varrer o disco: a base da máquina é do usuário e pode ter pasta que não é projeto nenhum.",
-    "traducao": "通过机器设备密钥认证（ADR 0154）——绝不通过会话 JWT，也绝不通过绑定到项目的凭据，后者返回 403。返回处于 `execution_mode: \"runner\"` 的项目，其中密钥所有者至少拥有 `developer`（与 `POST .../runner-ticket` 的最低要求相同），并附带每个项目的文件夹名称和验证状态。代理会询问而不是扫描磁盘：机器的基目录属于用户，其中可能有并非任何项目的文件夹。"
-  },
-  "169d7b6fea8b": {
-    "fonte": "A credencial apresentada está presa a um projeto — esta rota exige uma chave de dispositivo de máquina.",
-    "traducao": "所出示的凭据绑定到某个项目——此路由需要机器设备密钥。"
-  },
-  "a467111d8084": {
-    "fonte": "Lista os projetos em modo \"runner\" que este agente local atende",
-    "traducao": "列出此本地代理所服务的 “runner” 模式项目"
-  },
   "c11293a41969": {
     "fonte": "No role required: a credential is about whoever called, not about a workspace or project. Covers LLM keys and git tokens in the same listing.",
     "traducao": "无需角色：凭据关乎调用者本人，而不是某个 workspace 或项目。在同一列表中涵盖 LLM 密钥和 git 令牌。"
@@ -2490,10 +2370,6 @@
   "5aa799caa6d6": {
     "fonte": "Corrects a model's price",
     "traducao": "修正模型的价格"
-  },
-  "962300129d65": {
-    "fonte": "Owner's curation, APPLYING ONLY TO THIS WORKSPACE (ADR 0049). Only touches `isActive` — `availability` is what the sync observed at the provider, is global, and does not change here. Whole batch or nothing: a non-existent id fails the call without applying any row.",
-    "traducao": "所有者的策展，仅适用于此 workspace（ADR 0049）。只改动 `isActive`——`availability` 是同步在提供商处观测到的，是全局的，在这里不会改变。整批全有或全无：不存在的 id 会让调用失败，不应用任何一行。"
   },
   "d0c4ada01f61": {
     "fonte": "Some id in the batch doesn't exist.",
@@ -3203,18 +3079,6 @@
     "fonte": "Timeout in milliseconds. Omitted uses the broker default.",
     "traducao": "超时时间，以毫秒计。省略时使用 broker 的默认值。"
   },
-  "3b8add966613": {
-    "fonte": "`false` quando o broker recusou ou não respondeu — os outros campos ficam ausentes e `motivo` explica.",
-    "traducao": "当 broker 拒绝或没有响应时为 `false`——其他字段缺失，由 `motivo` 解释原因。"
-  },
-  "145eeeb078d9": {
-    "fonte": "Presente só quando `sucesso: true`.",
-    "traducao": "仅当 `sucesso: true` 时存在。"
-  },
-  "cac484bde0d3": {
-    "fonte": "Presente só quando `sucesso: false`.",
-    "traducao": "仅当 `sucesso: false` 时存在。"
-  },
   "75170d0a772c": {
     "fonte": "Where this project's container comes up (RN-497/503). `container` and `mounted` go through the broker, on the server; `runner` goes through the local agent on the user's machine. It is what branches the start action between `container_start` and `container_start_via_runner`.",
     "traducao": "此项目的容器在哪里启动（RN-497/503）。`container` 和 `mounted` 通过服务器上的 broker；`runner` 通过用户机器上的本地代理。正是它让启动操作在 `container_start` 和 `container_start_via_runner` 之间分支。"
@@ -3299,14 +3163,6 @@
     "fonte": "Contracts of modules the current module_map no longer has — said, never attached to a module that does not exist.",
     "traducao": "当前 module_map 已不再包含的模块的契约——会被说明，绝不会挂到一个不存在的模块上。"
   },
-  "37083255c7d2": {
-    "fonte": "O novo modo de execução. Pode repetir o modo atual do projeto — nesse caso, só `workspacePath` muda de verdade.",
-    "traducao": "新的执行模式。可以与项目当前的模式相同——这种情况下，真正改变的只有 `workspacePath`。"
-  },
-  "acda20ec05b1": {
-    "fonte": "O caminho absoluto da pasta do usuário — obrigatório quando `executionMode` é `mounted` ou `runner`, recusado quando é `container`. Mesma validação da criação (RN-170/RN-422/RN-423): em `mounted`, precisa existir e ser gravável de dentro do container; em `runner`, só o formato é validado agora — a confirmação de verdade vem do runner conectando de novo.",
-    "traducao": "用户文件夹的绝对路径——当 `executionMode` 为 `mounted` 或 `runner` 时必需，为 `container` 时拒绝。与创建时的校验相同（RN-170/RN-422/RN-423）：在 `mounted` 中，它必须存在且可从容器内写入；在 `runner` 中，现在只校验格式——真正的确认来自 runner 重新连接。"
-  },
   "571df21d08b2": {
     "fonte": "How many rules have no story at all. Each one is a discovery.",
     "traducao": "有多少条规则完全没有 story。每一条都是一项发现。"
@@ -3342,10 +3198,6 @@
   "3c5706ef9b11": {
     "fonte": "Definition of ready.",
     "traducao": "就绪的定义（DoR）。"
-  },
-  "db2a33b31eb2": {
-    "fonte": "Modules from the `module_map` that the story touches. A story with no module, or with a non-existent module, becomes an architecture pending item.",
-    "traducao": "story 涉及的来自 `module_map` 的模块。没有模块或模块不存在的 story 会变成一项架构待办。"
   },
   "cb646ec7c3dc": {
     "fonte": "The PO finished the story and it's waiting on the user's decision (Phase 12c — RN-048). Coexists with `status: \"draft\"`: it is a proposal, not a state. Always `false` in a project in `auto` mode.",
@@ -3675,14 +3527,6 @@
     "fonte": "Only when `status=error`, with the failure message. A healthy response has no detail at all, on purpose: liveness is not the place to expose topology.",
     "traducao": "仅当 `status=error` 时，附带失败消息。健康的响应刻意不带任何细节：存活检查不是暴露拓扑的地方。"
   },
-  "6b45cf45f75b": {
-    "fonte": "`<publisher>/<modelo>` no Hugging Face Hub.",
-    "traducao": "Hugging Face Hub 上的 `<publisher>/<modelo>`。"
-  },
-  "3afdaf3ccba2": {
-    "fonte": "O publisher está no allowlist curado de fabricantes conhecidos (`domain/llm/huggingface-official-publishers.ts`). `false` é qualquer reupload de terceiro — a tela mostra o aviso de segurança quando `includeCommunity=true` trouxe este resultado.",
-    "traducao": "该发布者在已知厂商的策展允许列表中（`domain/llm/huggingface-official-publishers.ts`）。`false` 表示任何第三方的重新上传——当 `includeCommunity=true` 带来此结果时，界面会显示安全警告。"
-  },
   "7ea92a3462fc": {
     "fonte": "Combined (RAG_SEARCH_WEIGHT_VECTOR*vector + RAG_SEARCH_WEIGHT_LEXICAL*lexical), already filtered by the threshold — every returned hit has passed it.",
     "traducao": "组合值（RAG_SEARCH_WEIGHT_VECTOR*vector + RAG_SEARCH_WEIGHT_LEXICAL*lexical），已按阈值过滤——返回的每个命中都已通过阈值。"
@@ -3799,26 +3643,6 @@
     "fonte": "Diff of this version against the previous one, computed server-side so the UI does not need its own differ. The oldest one is diffed against empty, so it shows up as all-addition.",
     "traducao": "此版本与上一版本的 diff，由服务端计算，因此界面不需要自己的比较器。最旧的版本与空内容比较，所以显示为全部新增。"
   },
-  "311878f10a4a": {
-    "fonte": "Nome pra você reconhecer este token depois — não é único.",
-    "traducao": "供你以后认出这个令牌的名称——不要求唯一。"
-  },
-  "a11dabd734a3": {
-    "fonte": "Expira em N dias. Omitido = sem expiração (revogável a qualquer hora, mas nunca expira sozinho).",
-    "traducao": "N 天后过期。省略 = 不过期（随时可撤销，但绝不会自行过期）。"
-  },
-  "85fb77b87d3a": {
-    "fonte": "Nulo = sem expiração.",
-    "traducao": "为空 = 不过期。"
-  },
-  "2f6568eab1c5": {
-    "fonte": "Nulo = nunca usado.",
-    "traducao": "为空 = 从未使用。"
-  },
-  "77ef050aa7b7": {
-    "fonte": "Guarde agora — não é recuperável depois. Use em --token ou BRABO_ACCOUNT_TOKEN.",
-    "traducao": "现在就保存——之后无法找回。用于 --token 或 BRABO_ACCOUNT_TOKEN。"
-  },
   "3dae3a00b619": {
     "fonte": "How another module uses the item: call a function, hit a route, subscribe to an event, or build a data shape.",
     "traducao": "另一个模块如何使用该条目：调用函数、访问路由、订阅事件，或构建数据结构。"
@@ -3858,10 +3682,6 @@
   "e723527e14f1": {
     "fonte": "The provider failure's normalized `code` (ADR 0041) — `auth`, `rate_limit`, `insufficient_credit` (HTTP 402, RN-730), `model_not_found`, `context_length`, `timeout`, `connection` or `upstream`. `null` with no error, or when the error is not the provider's (budget, missing binding). Decide by this, never by the text of `error`.",
     "traducao": "提供商失败的规范化 `code`（ADR 0041）——`auth`、`rate_limit`、`insufficient_credit`（HTTP 402，RN-730）、`model_not_found`、`context_length`、`timeout`、`connection` 或 `upstream`。没有错误，或错误不属于提供商（预算、缺少 binding）时为 `null`。请依据它做判断，绝不依据 `error` 的文本。"
-  },
-  "729098251af8": {
-    "fonte": "Name of the model that generated the response (finding from problem 2) — `null` when the turn failed before resolving a model (no binding, or binding to a non-existent model).",
-    "traducao": "生成响应的模型名称（问题 2 的发现）——当回合在解析模型之前就失败时（没有 binding，或 binding 指向不存在的模型）为 `null`。"
   },
   "f79b198ccadd": {
     "fonte": "Present (always `true`) only when the provider cut the response at the output cap (`finish_reason: \"length\"` / `stop_reason: \"max_tokens\"`, RN-737): the text and the `toolCalls` arguments are truncated. The engine refuses to run a truncated tool call and narrates the cut.",
@@ -4058,22 +3878,6 @@
   "e26c2d27b03d": {
     "fonte": "`null` when it came from sync — no person behind it.",
     "traducao": "来自同步时为 `null`——背后没有人。"
-  },
-  "a03aee1e30a3": {
-    "fonte": "Só presente quando o Hub publicou `usedStorage` na busca — nunca estimado por palpite.",
-    "traducao": "仅当 Hub 在搜索中公布了 `usedStorage` 时出现——绝不凭猜测估算。"
-  },
-  "6cf9d179be59": {
-    "fonte": "`pending_confirmation` → `confirmed` → `pulling` → `active` | `failed`. Os dois primeiros estados SÃO a segunda confirmação explícita que o produto exige antes de qualquer download rodar.",
-    "traducao": "`pending_confirmation` → `confirmed` → `pulling` → `active` | `failed`。前两个状态就是产品在任何下载运行之前要求的第二次显式确认。"
-  },
-  "7478c7389267": {
-    "fonte": "Quando o clique de confirmação aconteceu.",
-    "traducao": "确认点击发生的时间。"
-  },
-  "749c4b474dd7": {
-    "fonte": "Só em `failed`, prefixado pela origem (infra | modelo | código | política) — nunca falha calada.",
-    "traducao": "仅在 `failed` 时，以来源为前缀（infra | 模型 | 代码 | 策略）——绝不静默失败。"
   },
   "649956545cc3": {
     "fonte": "History is immutable: each new map is one more version, and the current one is the one with the highest `version`.",
@@ -4282,10 +4086,6 @@
   "f2ecbb9e56d1": {
     "fonte": "User of the HTTP Basic pair; the token is the password.",
     "traducao": "HTTP Basic 凭据对中的用户；令牌就是密码。"
-  },
-  "d7256bdaa259": {
-    "fonte": "EFFECTIVE role: the higher of the project one and the one inherited from the workspace. Whoever is workspace `owner` isn't downgraded by a lesser project association.",
-    "traducao": "有效角色：项目角色与从 workspace 继承的角色中较高的那个。workspace `owner` 不会因为较低的项目关联而被降级。"
   },
   "3c55afbbb568": {
     "fonte": "Linear hierarchy: owner > maintainer > developer > viewer. Each role includes the permissions of the ones after it.",
@@ -4671,10 +4471,6 @@
     "fonte": "Slug of the target agent. Must be a lead or an area-less agent — never a subagent.",
     "traducao": "目标代理的 slug。必须是 lead 或没有区域的代理——绝不能是子代理。"
   },
-  "a916ccac4168": {
-    "fonte": "Vem da busca quando o Hub publicou o tamanho — nunca estimado por palpite no cliente.",
-    "traducao": "当 Hub 公布了大小时来自搜索结果——绝不在客户端凭猜测估算。"
-  },
   "c6e252398113": {
     "fonte": "Single-use token received by email.",
     "traducao": "通过邮件收到的一次性令牌。"
@@ -4763,10 +4559,6 @@
     "fonte": "An `accepted` handoff to `staff` exists in the most recent session (docs/fluxo.yml, ADR 0088) — dormant for automatic triggering, only reflects an already-accepted MANUAL activation.",
     "traducao": "最近的会话中存在一个 `accepted` handoff，目标为 `staff`（docs/fluxo.yml，ADR 0088）——对自动触发处于休眠状态，只反映已被接受的手动激活。"
   },
-  "0b59ed8216bf": {
-    "fonte": "Nome do módulo — precisa existir no module_map vigente.",
-    "traducao": "模块名称——必须存在于当前的 module_map 中。"
-  },
   "9f031b0ffc1b": {
     "fonte": "OCI reference with an explicit TAG or digest for this module. `latest` is REFUSED with 400 — the rule is domain-level.",
     "traducao": "此模块带有显式 TAG 或 digest 的 OCI 引用。`latest` 会以 400 拒绝——该规则位于领域层。"
@@ -4798,42 +4590,6 @@
   "f1c33c93ec58": {
     "fonte": "Asks for the WHOLE tool catalog: the Jev tool router (ADR 0179) is skipped for this call. The engine sets it when it repeats a step whose restricted menu made the model answer without calling a tool.",
     "traducao": "请求完整的工具目录：此次调用跳过 Jev 工具路由器（ADR 0179）。当某一步受限的菜单导致模型没有调用工具就作答、engine 重复这一步时会设置它。"
-  },
-  "f95503adf814": {
-    "fonte": "Nulo = chave de MÁQUINA (ADR 0154): vale para qualquer projeto do dono dela, e não só para este. Ver `especie`.",
-    "traducao": "为空 = 机器密钥（ADR 0154）：适用于其所有者的任何项目，而不只是这一个。见 `especie`。"
-  },
-  "fec321ac95fe": {
-    "fonte": "`projeto` = presa ao projeto desta rota (ADR 0118). `maquina` = descreve a MÁQUINA (ADR 0154) e aparece na listagem de todo projeto que ela atende — revogá-la derruba o agente local em todos eles.",
-    "traducao": "`projeto` = 绑定到此路由的项目（ADR 0118）。`maquina` = 描述的是机器（ADR 0154），会出现在它所服务的每个项目的列表中——撤销它会断开所有这些项目中的本地代理。"
-  },
-  "dc4df0141780": {
-    "fonte": "Nulo = ativa. Revogada continua aparecendo na lista.",
-    "traducao": "为空 = 有效。已撤销的仍会出现在列表中。"
-  },
-  "af6a95209c7b": {
-    "fonte": "Nulo = nunca usada — o sinal de uma chave órfã (aba fechada no meio do fluxo de configuração automática do runner).",
-    "traducao": "为空 = 从未使用——孤立密钥的信号（在 runner 自动配置流程中途关闭了标签页）。"
-  },
-  "fe968ce3da57": {
-    "fonte": "O nome da pasta do projeto (RN-109) — segmento relativo sob a base da máquina, nunca um caminho absoluto.",
-    "traducao": "项目文件夹的名称（RN-109）——机器基目录下的相对段，绝不是绝对路径。"
-  },
-  "89c48374c3fc": {
-    "fonte": "Quando o runner confirmou a pasta pela primeira vez (RN-423). Nulo = nunca confirmada. É registro de uma confirmação, não batimento (RN-468): não diz que a pasta está de pé agora.",
-    "traducao": "runner 第一次确认该文件夹的时间（RN-423）。为空 = 从未确认。它记录的是一次确认，不是心跳（RN-468）：并不说明文件夹此刻可用。"
-  },
-  "c127cadb5b2e": {
-    "fonte": "Token opaco de uso único, base64url. TTL de 30s: some depois do primeiro `connect/3` bem-sucedido no socket `/runner`, ou quando expira.",
-    "traducao": "不透明的一次性令牌，base64url 编码。TTL 30 秒：在第一次成功的 `connect/3`（于 `/runner` 套接字上）之后或过期时失效。"
-  },
-  "e5d70cd5cb3f": {
-    "fonte": "Quando o ticket expira (ISO 8601).",
-    "traducao": "票据的过期时间（ISO 8601）。"
-  },
-  "884d21ac2d71": {
-    "fonte": "URL pública do socket Phoenix `/runner`, já em ws(s):// — pronta para o cliente (runner CLI ou web) abrir a conexão com `{ticket}` nos params.",
-    "traducao": "Phoenix 套接字 `/runner` 的公开 URL，已是 ws(s):// 形式——客户端（runner CLI 或 Web）可直接在参数中带上 `{ticket}` 打开连接。"
   },
   "5b74c2fc4358": {
     "fonte": "Title of the rule JUST appended. Rules with the same normalized title (RN-080 makes it the new one) are left out of the comparison.",
@@ -5295,10 +5051,6 @@
     "fonte": "psychologist",
     "traducao": "Psychologist"
   },
-  "862069863df8": {
-    "fonte": "projetos",
-    "traducao": "项目（runner）"
-  },
   "69a537093ff9": {
     "fonte": "rag",
     "traducao": "RAG"
@@ -5322,5 +5074,229 @@
   "e6f0a06db490": {
     "fonte": "workspaces",
     "traducao": "workspace"
+  },
+  "f0aee2d54af5": {
+    "fonte": "Never includes the raw token — only what was already issued.",
+    "traducao": "从不包含原始令牌——只包含已签发的信息。"
+  },
+  "986548ec1662": {
+    "fonte": "Lists your own Personal Access Tokens for this project",
+    "traducao": "列出自己在此项目中的 Personal Access Token"
+  },
+  "e80fd80e4996": {
+    "fonte": "The raw token (`brb_...`) appears only in THIS response — it is not recoverable later, only the hash is stored. Use it in `--token`/`BRABO_ACCOUNT_TOKEN` of `brabo-runner`.",
+    "traducao": "原始令牌（`brb_...`）只出现在这个响应中——之后无法找回，只保存哈希。用于 `--token`/`BRABO_ACCOUNT_TOKEN`（`brabo-runner` 的参数）。"
+  },
+  "d62b0b1d8759": {
+    "fonte": "Issues a Personal Access Token for the local runner",
+    "traducao": "为本地 runner 签发一个 Personal Access Token"
+  },
+  "5166f644f9f3": {
+    "fonte": "Idempotent — revoking again is not an error. Since RN-685 (ADR 0201) it also DROPS the runner connections opened with THIS token, and only those — the same user's device key stays up —, and voids its still-unused tickets. The engine being down does NOT make the revocation fail.",
+    "traducao": "幂等——再次撤销不是错误。自 RN-685（ADR 0201）起，它还会断开用此令牌打开的 runner 连接，且只断开这些——同一用户的设备密钥不受影响——并作废其尚未使用的票据。engine 宕机不会导致撤销失败。"
+  },
+  "3e5963823cf6": {
+    "fonte": "Token revoked. No body.",
+    "traducao": "令牌已撤销。无响应体。"
+  },
+  "ee3862256ca1": {
+    "fonte": "Revokes one of your own Personal Access Tokens",
+    "traducao": "撤销自己的 Personal Access Token"
+  },
+  "a3c3ec2ec97d": {
+    "fonte": "Incident response — a departed dev with a leaking token (RN-427). Idempotent — revoking again is not an error. Since RN-685 (ADR 0201) it also DROPS the runner already connected with this token, and only it.",
+    "traducao": "事件响应——离职的开发者令牌泄露（RN-427）。幂等——再次撤销不是错误。自 RN-685（ADR 0201）起，它还会断开已用此令牌连接的 runner，且只断开它。"
+  },
+  "db21e9de9157": {
+    "fonte": "Revokes the Personal Access Token of ANY user in the project",
+    "traducao": "撤销项目中任意用户的 Personal Access Token"
+  },
+  "f139b0908c16": {
+    "fonte": "The `maintainer` view for incident response (RN-427) — includes the owner of each token. Never includes the raw token.",
+    "traducao": "供 `maintainer` 用于事件响应的视图（RN-427）——包含每个令牌的所有者。从不包含原始令牌。"
+  },
+  "761e4cb7e6b9": {
+    "fonte": "Lists ALL Personal Access Tokens of the project, from any user",
+    "traducao": "列出项目中所有用户的全部 Personal Access Token"
+  },
+  "52a0d1d2a8d9": {
+    "fonte": "Nobody revokes what they cannot see (RN-519). Includes the already REVOKED ones — dropping the row would make the screen claim the key never existed. Never returns the public JWK, and the api never saw the private one. A null `lastUsedAt` is the sign of an ORPHAN key: registered and never used by any runner. Since RN-543 it also includes the caller's MACHINE keys (`especie: \"maquina\"`, null `projectId`), which serve this project without belonging to it — without them in the list, a machine key would be invisible on every screen.",
+    "traducao": "没有人能撤销看不到的东西（RN-519）。包含已撤销的密钥——让记录消失会让界面声称该密钥从未存在。从不返回 JWK 公钥，私钥 api 从未见过。`lastUsedAt` 为空是孤立密钥的信号：已登记但从未被任何 runner 使用。自 RN-543 起，还包含调用方的机器密钥（`especie: \"maquina\"`，`projectId` 为空），它们服务于此项目却不属于它——如果列表中没有它们，机器密钥在任何界面上都将不可见。"
+  },
+  "0b43cc837c41": {
+    "fonte": "Lists your own device keys for this project",
+    "traducao": "列出自己在此项目中的设备密钥"
+  },
+  "085b7f09fec0": {
+    "fonte": "Idempotent — revoking again is not an error. Since RN-520 it also DROPS the live connection: before, revoking only prevented a NEW ticket, and an already connected runner kept running approved commands. Since RN-685 (ADR 0201) the target is the KEY: only the connections opened with it drop — in every project, if it is a machine key —, and another runner of the same user, connected with a PAT or another key, stays up. Its still-unused tickets are voided. The engine being down or no runner connected does NOT make the revocation fail.",
+    "traducao": "幂等——再次撤销不是错误。自 RN-520 起还会断开活动连接：此前撤销只阻止新票据，已连接的 runner 会继续执行已批准的命令。自 RN-685（ADR 0201）起，目标是密钥本身：只断开用它打开的连接——如果是机器密钥则遍及所有项目——同一用户用 PAT 或其他密钥连接的另一个 runner 不受影响。它尚未使用的票据会被作废。engine 宕机或没有 runner 连接都不会导致撤销失败。"
+  },
+  "2b8b9bf8f5cc": {
+    "fonte": "Revokes one of your own device keys",
+    "traducao": "撤销自己的一把设备密钥"
+  },
+  "bb259bf040ba": {
+    "fonte": "Authenticates `connect/3` of the Phoenix socket `/runner` (topic `terminal:<projectId>`, role \"runner\") — it is NOT the reused JWT, and this route itself only accepts a Personal Access Token instead of the session JWT (ADR 0105). 30s TTL and single use. Refuses with 400 if the project is not in \"runner\" mode (RN-421): the runner has nothing to serve in a project whose code lives in the managed container.",
+    "traducao": "用于 `connect/3` 认证，对象是 Phoenix 套接字 `/runner`（主题 `terminal:<projectId>`，角色 “runner”）——不是复用的 JWT，此路由本身只接受 Personal Access Token 代替会话 JWT（ADR 0105）。TTL 30 秒，一次性使用。如果项目不处于 “runner” 模式则以 400 拒绝（RN-421）：在代码位于托管容器中的项目里，runner 无事可做。"
+  },
+  "a9c6668ef3c1": {
+    "fonte": "Project is not in \"runner\" mode.",
+    "traducao": "项目不处于 “runner” 模式。"
+  },
+  "1ab50b15093b": {
+    "fonte": "Issues a single-use ticket for the local runner to connect",
+    "traducao": "为本地 runner 连接签发一次性票据"
+  },
+  "0a76aa0c1749": {
+    "fonte": "Same `/runner` socket, same topic, role \"terminal\" — whoever SEES the terminal (the command itself only really runs if a runner is connected). Valid for any project mode.",
+    "traducao": "同一个 `/runner` 套接字、同一个主题，角色为 “terminal”——即查看终端的一方（命令本身只有在有 runner 连接时才会真正运行）。适用于任何项目模式。"
+  },
+  "43f4d64d2cba": {
+    "fonte": "Issues a single-use ticket for the web Terminal tab",
+    "traducao": "为 Web 的 Terminal 标签页签发一次性票据"
+  },
+  "1375ea1d80a9": {
+    "fonte": "GitHub Releases proxy — `platform` accepts only linux-x64, linux-arm64, darwin-arm64. No authentication: the binary is not a secret. The bytes are checked against the `checksums.txt` of the same Release before anything is answered (ADR 0149, RN-525); the route does NOT verify the manifest signature — that is integrity, not provenance, and whoever verifies the signature is `install.sh`.",
+    "traducao": "GitHub Releases 代理——`platform` 只接受 linux-x64、linux-arm64、darwin-arm64。无需认证：二进制文件不是机密。在返回任何内容之前，字节会与同一 Release 的 `checksums.txt` 核对（ADR 0149，RN-525）；该路由不验证清单的签名——这是完整性而非来源，验证签名的是 `install.sh`。"
+  },
+  "f06f04d69566": {
+    "fonte": "The runner binary, streamed, with the sha256 already checked against the manifest. Not JSON: `Content-Type: application/octet-stream`. The `Content-Digest` header repeats the checked hash (RFC 9530).",
+    "traducao": "以流方式返回 runner 二进制文件，其 sha256 已与清单核对。不是 JSON：`Content-Type: application/octet-stream`。`Content-Digest` 头重复已核对的哈希（RFC 9530）。"
+  },
+  "bb52626b760a": {
+    "fonte": "Named refusal — never bytes with a warning. The body carries `motivo`: `plataforma_nao_publicada`, `release_sem_manifesto`, `manifesto_nao_cobre_a_plataforma`, `manifesto_ilegivel`, `download_falhou` or `hash_divergente`.",
+    "traducao": "具名拒绝——绝不返回带警告的字节。响应体带有 `motivo`：`plataforma_nao_publicada`、`release_sem_manifesto`、`manifesto_nao_cobre_a_plataforma`、`manifesto_ilegivel`、`download_falhou` 或 `hash_divergente`。"
+  },
+  "a94f522de7e3": {
+    "fonte": "Downloads the standalone local runner binary for the requested platform",
+    "traducao": "为所请求的平台下载本地 runner 的独立二进制文件"
+  },
+  "156f26ec9edd": {
+    "fonte": "Authenticated by a MACHINE device key (ADR 0154) — NEVER by a session JWT, and never by a credential bound to a project, which answers 403. Returns the projects in `execution_mode: \"runner\"` in which the key owner reaches at least `developer` (the same minimum as `POST .../runner-ticket`), with the folder name and verification state of each. The agent asks instead of scanning the disk: the machine base belongs to the user and may hold folders that are not projects.",
+    "traducao": "通过机器设备密钥认证（ADR 0154）——绝不通过会话 JWT，也绝不通过绑定到项目的凭据，后者返回 403。返回处于 `execution_mode: \"runner\"` 的项目，其中密钥所有者至少拥有 `developer`（与 `POST .../runner-ticket` 的最低要求相同），并附带每个项目的文件夹名称和验证状态。代理会询问而不是扫描磁盘：机器的基目录属于用户，其中可能有并非任何项目的文件夹。"
+  },
+  "135fd1c52012": {
+    "fonte": "The presented credential is bound to a project — this route requires a machine device key.",
+    "traducao": "所出示的凭据绑定到某个项目——此路由需要机器设备密钥。"
+  },
+  "dc6357f7d501": {
+    "fonte": "Lists the projects in \"runner\" mode that this local agent serves",
+    "traducao": "列出此本地代理所服务的 “runner” 模式项目"
+  },
+  "0f14ddf3e2fd": {
+    "fonte": "Owner's curation, APPLYING ONLY TO THIS WORKSPACE (ADR 0049). Only touches `isActive` — `availability` is what the sync observed at the provider, is global, and does not change here. Whole batch or nothing: a nonexistent id fails the call without applying any row.",
+    "traducao": "所有者的策展，仅适用于此 workspace（ADR 0049）。只改动 `isActive`——`availability` 是同步在提供商处观测到的，是全局的，在这里不会改变。整批全有或全无：不存在的 id 会让调用失败，不应用任何一行。"
+  },
+  "691d34cfcc05": {
+    "fonte": "`false` when the broker refused or did not answer — the other fields are absent and `motivo` explains.",
+    "traducao": "当 broker 拒绝或没有响应时为 `false`——其他字段缺失，由 `motivo` 解释原因。"
+  },
+  "4a2fdae13861": {
+    "fonte": "Present only when `sucesso: true`.",
+    "traducao": "仅当 `sucesso: true` 时存在。"
+  },
+  "51395e18910c": {
+    "fonte": "Present only when `sucesso: false`.",
+    "traducao": "仅当 `sucesso: false` 时存在。"
+  },
+  "721d6bcfba74": {
+    "fonte": "The new execution mode. It may repeat the current project mode — in that case, only `workspacePath` really changes.",
+    "traducao": "新的执行模式。可以与项目当前的模式相同——这种情况下，真正改变的只有 `workspacePath`。"
+  },
+  "b3b89ca7b8ca": {
+    "fonte": "The absolute path of the user folder — required when `executionMode` is `mounted` or `runner`, refused when it is `container`. Same validation as creation (RN-170/RN-422/RN-423): in `mounted`, it must exist and be writable from inside the container; in `runner`, only the format is validated now — the real confirmation comes from the runner connecting again.",
+    "traducao": "用户文件夹的绝对路径——当 `executionMode` 为 `mounted` 或 `runner` 时必需，为 `container` 时拒绝。与创建时的校验相同（RN-170/RN-422/RN-423）：在 `mounted` 中，它必须存在且可从容器内写入；在 `runner` 中，现在只校验格式——真正的确认来自 runner 重新连接。"
+  },
+  "a96ad6048adb": {
+    "fonte": "Modules from the `module_map` that the story touches. A story with no module, or with a nonexistent module, becomes an architecture pending item.",
+    "traducao": "story 涉及的来自 `module_map` 的模块。没有模块或模块不存在的 story 会变成一项架构待办。"
+  },
+  "e139de76ec74": {
+    "fonte": "`<publisher>/<model>` on the Hugging Face Hub.",
+    "traducao": "Hugging Face Hub 上的 `<publisher>/<modelo>`。"
+  },
+  "6af4062beb14": {
+    "fonte": "The publisher is in the curated allowlist of known vendors (`domain/llm/huggingface-official-publishers.ts`). `false` is any third-party reupload — the screen shows the security warning when `includeCommunity=true` brought this result.",
+    "traducao": "该发布者在已知厂商的策展允许列表中（`domain/llm/huggingface-official-publishers.ts`）。`false` 表示任何第三方的重新上传——当 `includeCommunity=true` 带来此结果时，界面会显示安全警告。"
+  },
+  "a361c150a6d5": {
+    "fonte": "A name for you to recognize this token later — not unique.",
+    "traducao": "供你以后认出这个令牌的名称——不要求唯一。"
+  },
+  "b92e5d104330": {
+    "fonte": "Expires in N days. Omitted = no expiration (revocable at any time, but never expires on its own).",
+    "traducao": "N 天后过期。省略 = 不过期（随时可撤销，但绝不会自行过期）。"
+  },
+  "67e77b894a09": {
+    "fonte": "Null = no expiration.",
+    "traducao": "为空 = 不过期。"
+  },
+  "6f17b8fb97b8": {
+    "fonte": "Null = never used.",
+    "traducao": "为空 = 从未使用。"
+  },
+  "598aa5e666cd": {
+    "fonte": "Store it now — it is not recoverable later. Use it in --token or BRABO_ACCOUNT_TOKEN.",
+    "traducao": "现在就保存——之后无法找回。用于 --token 或 BRABO_ACCOUNT_TOKEN。"
+  },
+  "9060f5df5ded": {
+    "fonte": "Name of the model that generated the response (finding from problem 2) — `null` when the turn failed before resolving a model (no binding, or binding to a nonexistent model).",
+    "traducao": "生成响应的模型名称（问题 2 的发现）——当回合在解析模型之前就失败时（没有 binding，或 binding 指向不存在的模型）为 `null`。"
+  },
+  "271ba70750e6": {
+    "fonte": "Present only when the Hub published `usedStorage` in the search — never guessed.",
+    "traducao": "仅当 Hub 在搜索中公布了 `usedStorage` 时出现——绝不凭猜测估算。"
+  },
+  "924a145824b8": {
+    "fonte": "`pending_confirmation` → `confirmed` → `pulling` → `active` | `failed`. The first two states ARE the second explicit confirmation the product requires before any download runs.",
+    "traducao": "`pending_confirmation` → `confirmed` → `pulling` → `active` | `failed`。前两个状态就是产品在任何下载运行之前要求的第二次显式确认。"
+  },
+  "a78c9d41cc05": {
+    "fonte": "When the confirmation click happened.",
+    "traducao": "确认点击发生的时间。"
+  },
+  "2736f0339175": {
+    "fonte": "Only in `failed`, prefixed by the origin (infra | model | code | policy) — never a silent failure.",
+    "traducao": "仅在 `failed` 时，以来源为前缀（infra | 模型 | 代码 | 策略）——绝不静默失败。"
+  },
+  "871defad0a8a": {
+    "fonte": "EFFECTIVE role: the project role when there is one, otherwise the one inherited from the workspace (RN-471) — the project role OVERRIDES the workspace one in both directions, higher or lower.",
+    "traducao": "有效角色：有项目角色时取项目角色，否则取从 workspace 继承的角色（RN-471）——项目角色在两个方向上都覆盖 workspace 角色，无论更高还是更低。"
+  },
+  "01560d3753dc": {
+    "fonte": "Comes from the search when the Hub published the size — never guessed by the client.",
+    "traducao": "当 Hub 公布了大小时来自搜索结果——绝不在客户端凭猜测估算。"
+  },
+  "da5827a077d7": {
+    "fonte": "Null = MACHINE key (ADR 0154): valid for any project of its owner, not only this one. See `especie`.",
+    "traducao": "为空 = 机器密钥（ADR 0154）：适用于其所有者的任何项目，而不只是这一个。见 `especie`。"
+  },
+  "60c091ab023a": {
+    "fonte": "`projeto` = bound to the project of this route (ADR 0118). `maquina` = describes the MACHINE (ADR 0154) and appears in the listing of every project it serves — revoking it drops the local agent in all of them.",
+    "traducao": "`projeto` = 绑定到此路由的项目（ADR 0118）。`maquina` = 描述的是机器（ADR 0154），会出现在它所服务的每个项目的列表中——撤销它会断开所有这些项目中的本地代理。"
+  },
+  "2292ea5ef3fe": {
+    "fonte": "Null = active. A revoked key keeps appearing in the list.",
+    "traducao": "为空 = 有效。已撤销的仍会出现在列表中。"
+  },
+  "787a14172e94": {
+    "fonte": "Null = never used — the sign of an orphan key (tab closed in the middle of the runner automatic setup flow).",
+    "traducao": "为空 = 从未使用——孤立密钥的信号（在 runner 自动配置流程中途关闭了标签页）。"
+  },
+  "54da24437fc4": {
+    "fonte": "The project folder name (RN-109) — a relative segment under the machine base, never an absolute path.",
+    "traducao": "项目文件夹的名称（RN-109）——机器基目录下的相对段，绝不是绝对路径。"
+  },
+  "95bad40ccd19": {
+    "fonte": "When the runner first confirmed the folder (RN-423). Null = never confirmed. It records a confirmation, not a heartbeat (RN-468): it does not say the folder is up now.",
+    "traducao": "runner 第一次确认该文件夹的时间（RN-423）。为空 = 从未确认。它记录的是一次确认，不是心跳（RN-468）：并不说明文件夹此刻可用。"
+  },
+  "ed0bae24bf2f": {
+    "fonte": "Opaque single-use token, base64url. 30s TTL: gone after the first successful `connect/3` on the `/runner` socket, or when it expires.",
+    "traducao": "不透明的一次性令牌，base64url 编码。TTL 30 秒：在第一次成功的 `connect/3`（于 `/runner` 套接字上）之后或过期时失效。"
+  },
+  "b060fe72314f": {
+    "fonte": "Public URL of the Phoenix `/runner` socket, already in ws(s):// — ready for the client (runner CLI or web) to open the connection with `{ticket}` in the params.",
+    "traducao": "Phoenix 套接字 `/runner` 的公开 URL，已是 ws(s):// 形式——客户端（runner CLI 或 Web）可直接在参数中带上 `{ticket}` 打开连接。"
   }
 }

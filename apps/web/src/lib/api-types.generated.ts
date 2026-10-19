@@ -2536,14 +2536,14 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Lista os próprios Personal Access Tokens deste projeto
-         * @description Nunca inclui o token bruto — só o que já foi emitido.
+         * Lists your own Personal Access Tokens for this project
+         * @description Never includes the raw token — only what was already issued.
          */
         get: operations["PersonalAccessTokensController_listPats"];
         put?: never;
         /**
-         * Emite um Personal Access Token pro runner local
-         * @description O token bruto (`brb_...`) só aparece NESTA resposta — não fica recuperável depois, só o hash é guardado. Use em `--token`/`BRABO_ACCOUNT_TOKEN` do `brabo-runner`.
+         * Issues a Personal Access Token for the local runner
+         * @description The raw token (`brb_...`) appears only in THIS response — it is not recoverable later, only the hash is stored. Use it in `--token`/`BRABO_ACCOUNT_TOKEN` of `brabo-runner`.
          */
         post: operations["PersonalAccessTokensController_issuePat"];
         delete?: never;
@@ -2563,8 +2563,8 @@ export interface paths {
         put?: never;
         post?: never;
         /**
-         * Revoga um Personal Access Token próprio
-         * @description Idempotente — revogar de novo não é erro. Desde a RN-685 (ADR 0201) também DERRUBA as conexões de runner abertas com ESTE token, e só elas — a chave de dispositivo do mesmo usuário fica de pé —, e anula os tickets dele ainda não usados. Engine fora do ar NÃO faz a revogação falhar.
+         * Revokes one of your own Personal Access Tokens
+         * @description Idempotent — revoking again is not an error. Since RN-685 (ADR 0201) it also DROPS the runner connections opened with THIS token, and only those — the same user's device key stays up —, and voids its still-unused tickets. The engine being down does NOT make the revocation fail.
          */
         delete: operations["PersonalAccessTokensController_revokePat"];
         options?: never;
@@ -2583,8 +2583,8 @@ export interface paths {
         put?: never;
         post?: never;
         /**
-         * Revoga o Personal Access Token de QUALQUER usuário no projeto
-         * @description Resposta a incidente — dev desligado com token vazando (RN-427). Idempotente — revogar de novo não é erro. Desde a RN-685 (ADR 0201) também DERRUBA o runner já conectado com este token, e só ele.
+         * Revokes the Personal Access Token of ANY user in the project
+         * @description Incident response — a departed dev with a leaking token (RN-427). Idempotent — revoking again is not an error. Since RN-685 (ADR 0201) it also DROPS the runner already connected with this token, and only it.
          */
         delete: operations["PersonalAccessTokensController_revokePatAsMaintainer"];
         options?: never;
@@ -2600,8 +2600,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Lista TODOS os Personal Access Tokens do projeto, de qualquer usuário
-         * @description Visão de `maintainer` para resposta a incidente (RN-427) — inclui o dono de cada token. Nunca inclui o token bruto.
+         * Lists ALL Personal Access Tokens of the project, from any user
+         * @description The `maintainer` view for incident response (RN-427) — includes the owner of each token. Never includes the raw token.
          */
         get: operations["PersonalAccessTokensController_listAllPats"];
         put?: never;
@@ -2840,8 +2840,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Lista as próprias chaves de dispositivo deste projeto
-         * @description Ninguém revoga o que não consegue ver (RN-519). Inclui as já REVOGADAS — sumir com a linha faria a tela afirmar que a chave nunca existiu. Nunca devolve a JWK pública, e a privada a api nunca viu. `lastUsedAt` nulo é o sinal de uma chave ÓRFÃ: registrada e nunca usada por runner nenhum. Desde a RN-543 inclui também as chaves de MÁQUINA do chamador (`especie: "maquina"`, `projectId` nulo), que servem este projeto sem pertencer a ele — sem elas na lista, uma chave de máquina seria invisível em toda tela.
+         * Lists your own device keys for this project
+         * @description Nobody revokes what they cannot see (RN-519). Includes the already REVOKED ones — dropping the row would make the screen claim the key never existed. Never returns the public JWK, and the api never saw the private one. A null `lastUsedAt` is the sign of an ORPHAN key: registered and never used by any runner. Since RN-543 it also includes the caller's MACHINE keys (`especie: "maquina"`, null `projectId`), which serve this project without belonging to it — without them in the list, a machine key would be invisible on every screen.
          */
         get: operations["RunnerDeviceKeysController_listDeviceKeys"];
         put?: never;
@@ -2863,8 +2863,8 @@ export interface paths {
         put?: never;
         post?: never;
         /**
-         * Revoga uma chave de dispositivo própria
-         * @description Idempotente — revogar de novo não é erro. Desde a RN-520 também DERRUBA a conexão viva: antes, revogar só impedia ticket NOVO, e um runner já conectado seguia executando comando aprovado. Desde a RN-685 (ADR 0201) o alvo é a CHAVE: caem só as conexões abertas com ela — em todo projeto, se for de máquina —, e outro runner do mesmo usuário, conectado com PAT ou com outra chave, fica de pé. Os tickets dela ainda não usados são anulados. Engine fora do ar ou nenhum runner conectado NÃO fazem a revogação falhar.
+         * Revokes one of your own device keys
+         * @description Idempotent — revoking again is not an error. Since RN-520 it also DROPS the live connection: before, revoking only prevented a NEW ticket, and an already connected runner kept running approved commands. Since RN-685 (ADR 0201) the target is the KEY: only the connections opened with it drop — in every project, if it is a machine key —, and another runner of the same user, connected with a PAT or another key, stays up. Its still-unused tickets are voided. The engine being down or no runner connected does NOT make the revocation fail.
          */
         delete: operations["RunnerDeviceKeysController_revokeDeviceKey"];
         options?: never;
@@ -2882,8 +2882,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Emite um ticket de uso único para o runner local conectar
-         * @description Autentica `connect/3` do socket Phoenix `/runner` (tópico `terminal:<projectId>`, papel "runner") — NÃO é o JWT reaproveitado, e esta rota em si só aceita um Personal Access Token no lugar do JWT de sessão (ADR 0105). TTL de 30s e uso único. Recusa com 400 se o projeto não estiver no modo "runner" (RN-421): o runner não tem o que servir num projeto cujo código mora no container gerenciado.
+         * Issues a single-use ticket for the local runner to connect
+         * @description Authenticates `connect/3` of the Phoenix socket `/runner` (topic `terminal:<projectId>`, role "runner") — it is NOT the reused JWT, and this route itself only accepts a Personal Access Token instead of the session JWT (ADR 0105). 30s TTL and single use. Refuses with 400 if the project is not in "runner" mode (RN-421): the runner has nothing to serve in a project whose code lives in the managed container.
          */
         post: operations["RunnerTicketsController_runnerTicket"];
         delete?: never;
@@ -3670,8 +3670,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Emite um ticket de uso único para a aba Terminal da web
-         * @description Mesmo socket `/runner`, mesmo tópico, papel "terminal" — quem VÊ o terminal (o comando em si só roda de verdade se houver um runner conectado). Vale para qualquer modo de projeto.
+         * Issues a single-use ticket for the web Terminal tab
+         * @description Same `/runner` socket, same topic, role "terminal" — whoever SEES the terminal (the command itself only really runs if a runner is connected). Valid for any project mode.
          */
         post: operations["RunnerTicketsController_terminalTicket"];
         delete?: never;
@@ -3688,8 +3688,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Baixa o binário standalone do runner local pra plataforma pedida
-         * @description Proxy de GitHub Releases — `platform` aceita só linux-x64, linux-arm64, darwin-arm64. Sem autenticação: o binário não é segredo. Os bytes são conferidos contra o `checksums.txt` da mesma Release antes de qualquer coisa ser respondida (ADR 0149, RN-525); a rota NÃO verifica a assinatura do manifesto — isso é integridade, não procedência, e quem verifica assinatura é o `install.sh`.
+         * Downloads the standalone local runner binary for the requested platform
+         * @description GitHub Releases proxy — `platform` accepts only linux-x64, linux-arm64, darwin-arm64. No authentication: the binary is not a secret. The bytes are checked against the `checksums.txt` of the same Release before anything is answered (ADR 0149, RN-525); the route does NOT verify the manifest signature — that is integrity, not provenance, and whoever verifies the signature is `install.sh`.
          */
         get: operations["RunnerReleasesController_binary"];
         put?: never;
@@ -3708,8 +3708,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Lista os projetos em modo "runner" que este agente local atende
-         * @description Autenticada por uma chave de dispositivo de MÁQUINA (ADR 0154) — NUNCA por JWT de sessão, e nunca por uma credencial presa a um projeto, que responde 403. Devolve os projetos em `execution_mode: "runner"` nos quais o dono da chave alcança pelo menos `developer` (o mesmo mínimo de `POST .../runner-ticket`), com o nome da pasta e o estado de verificação de cada um. O agente pergunta em vez de varrer o disco: a base da máquina é do usuário e pode ter pasta que não é projeto nenhum.
+         * Lists the projects in "runner" mode that this local agent serves
+         * @description Authenticated by a MACHINE device key (ADR 0154) — NEVER by a session JWT, and never by a credential bound to a project, which answers 403. Returns the projects in `execution_mode: "runner"` in which the key owner reaches at least `developer` (the same minimum as `POST .../runner-ticket`), with the folder name and verification state of each. The agent asks instead of scanning the disk: the machine base belongs to the user and may hold folders that are not projects.
          */
         get: operations["RunnerProjectsController_listRunnerProjects"];
         put?: never;
@@ -4169,7 +4169,7 @@ export interface paths {
         put?: never;
         /**
          * Turns models on or off in the selector (batch)
-         * @description Owner's curation, APPLYING ONLY TO THIS WORKSPACE (ADR 0049). Only touches `isActive` — `availability` is what the sync observed at the provider, is global, and does not change here. Whole batch or nothing: a non-existent id fails the call without applying any row.
+         * @description Owner's curation, APPLYING ONLY TO THIS WORKSPACE (ADR 0049). Only touches `isActive` — `availability` is what the sync observed at the provider, is global, and does not change here. Whole batch or nothing: a nonexistent id fails the call without applying any row.
          */
         post: operations["ModelsController_activate"];
         delete?: never;
@@ -5730,27 +5730,27 @@ export interface components {
         };
         ContainerExecInternalResponseDto: {
             /**
-             * @description `false` quando o broker recusou ou não respondeu — os outros campos ficam ausentes e `motivo` explica.
+             * @description `false` when the broker refused or did not answer — the other fields are absent and `motivo` explains.
              * @example true
              */
             sucesso: boolean;
             /**
-             * @description Presente só quando `sucesso: true`.
+             * @description Present only when `sucesso: true`.
              * @example 0
              */
             exitCode?: number;
             /**
-             * @description Presente só quando `sucesso: true`.
+             * @description Present only when `sucesso: true`.
              * @example ok
              */
             output?: string;
             /**
-             * @description Presente só quando `sucesso: true`.
+             * @description Present only when `sucesso: true`.
              * @example false
              */
             timedOut?: boolean;
             /**
-             * @description Presente só quando `sucesso: false`.
+             * @description Present only when `sucesso: false`.
              * @example o broker de container não respondeu em http://broker:8090: timeout
              */
             motivo?: string;
@@ -5886,13 +5886,13 @@ export interface components {
         };
         ConvertExecutionModeDto: {
             /**
-             * @description O novo modo de execução. Pode repetir o modo atual do projeto — nesse caso, só `workspacePath` muda de verdade.
+             * @description The new execution mode. It may repeat the current project mode — in that case, only `workspacePath` really changes.
              * @example runner
              * @enum {string}
              */
             executionMode: "container" | "mounted" | "runner";
             /**
-             * @description O caminho absoluto da pasta do usuário — obrigatório quando `executionMode` é `mounted` ou `runner`, recusado quando é `container`. Mesma validação da criação (RN-170/RN-422/RN-423): em `mounted`, precisa existir e ser gravável de dentro do container; em `runner`, só o formato é validado agora — a confirmação de verdade vem do runner conectando de novo.
+             * @description The absolute path of the user folder — required when `executionMode` is `mounted` or `runner`, refused when it is `container`. Same validation as creation (RN-170/RN-422/RN-423): in `mounted`, it must exist and be writable from inside the container; in `runner`, only the format is validated now — the real confirmation comes from the runner connecting again.
              * @example /home/you/projects/store
              */
             workspacePath?: string;
@@ -5989,7 +5989,7 @@ export interface components {
              */
             dor: string[];
             /**
-             * @description Modules from the `module_map` that the story touches. A story with no module, or with a non-existent module, becomes an architecture pending item.
+             * @description Modules from the `module_map` that the story touches. A story with no module, or with a nonexistent module, becomes an architecture pending item.
              * @example [
              *       "api"
              *     ]
@@ -6840,7 +6840,7 @@ export interface components {
         };
         HuggingFaceModelResponseDto: {
             /**
-             * @description `<publisher>/<modelo>` no Hugging Face Hub.
+             * @description `<publisher>/<model>` on the Hugging Face Hub.
              * @example meta-llama/Llama-3.1-8B-Instruct-GGUF
              */
             repoId: string;
@@ -6851,7 +6851,7 @@ export interface components {
             /** @example 210 */
             likes: number;
             /**
-             * @description O publisher está no allowlist curado de fabricantes conhecidos (`domain/llm/huggingface-official-publishers.ts`). `false` é qualquer reupload de terceiro — a tela mostra o aviso de segurança quando `includeCommunity=true` trouxe este resultado.
+             * @description The publisher is in the curated allowlist of known vendors (`domain/llm/huggingface-official-publishers.ts`). `false` is any third-party reupload — the screen shows the security warning when `includeCommunity=true` brought this result.
              * @example true
              */
             official: boolean;
@@ -7157,12 +7157,12 @@ export interface components {
         };
         IssuePatRequestDto: {
             /**
-             * @description Nome pra você reconhecer este token depois — não é único.
+             * @description A name for you to recognize this token later — not unique.
              * @example laptop
              */
             name: string;
             /**
-             * @description Expira em N dias. Omitido = sem expiração (revogável a qualquer hora, mas nunca expira sozinho).
+             * @description Expires in N days. Omitted = no expiration (revocable at any time, but never expires on its own).
              * @example 90
              */
             expiresInDays?: number;
@@ -7180,19 +7180,19 @@ export interface components {
              */
             createdAt: string;
             /**
-             * @description Nulo = sem expiração.
+             * @description Null = no expiration.
              * @example null
              */
             expiresAt: Record<string, never> | null;
             /** @example null */
             revokedAt: Record<string, never> | null;
             /**
-             * @description Nulo = nunca usado.
+             * @description Null = never used.
              * @example null
              */
             lastUsedAt: Record<string, never> | null;
             /**
-             * @description Guarde agora — não é recuperável depois. Use em --token ou BRABO_ACCOUNT_TOKEN.
+             * @description Store it now — it is not recoverable later. Use it in --token or BRABO_ACCOUNT_TOKEN.
              * @example brb_9f8a...
              */
             token: string;
@@ -7304,7 +7304,7 @@ export interface components {
              */
             errorCode: Record<string, never> | null;
             /**
-             * @description Name of the model that generated the response (finding from problem 2) — `null` when the turn failed before resolving a model (no binding, or binding to a non-existent model).
+             * @description Name of the model that generated the response (finding from problem 2) — `null` when the turn failed before resolving a model (no binding, or binding to a nonexistent model).
              * @example llama3.2:3b
              */
             modelName: Record<string, never> | null;
@@ -7685,24 +7685,24 @@ export interface components {
             /** @example meta-llama/Llama-3.1-8B-Instruct-GGUF */
             repoId: string;
             /**
-             * @description Só presente quando o Hub publicou `usedStorage` na busca — nunca estimado por palpite.
+             * @description Present only when the Hub published `usedStorage` in the search — never guessed.
              * @example null
              */
             estimatedSizeBytes: Record<string, never> | null;
             /**
-             * @description `pending_confirmation` → `confirmed` → `pulling` → `active` | `failed`. Os dois primeiros estados SÃO a segunda confirmação explícita que o produto exige antes de qualquer download rodar.
+             * @description `pending_confirmation` → `confirmed` → `pulling` → `active` | `failed`. The first two states ARE the second explicit confirmation the product requires before any download runs.
              * @example pending_confirmation
              * @enum {string}
              */
             status: "pending_confirmation" | "confirmed" | "pulling" | "active" | "failed";
             /**
              * Format: date-time
-             * @description Quando o clique de confirmação aconteceu.
+             * @description When the confirmation click happened.
              * @example null
              */
             confirmedAt: Record<string, never> | null;
             /**
-             * @description Só em `failed`, prefixado pela origem (infra | modelo | código | política) — nunca falha calada.
+             * @description Only in `failed`, prefixed by the origin (infra | model | code | policy) — never a silent failure.
              * @example null
              */
             failedReason: Record<string, never> | null;
@@ -8130,14 +8130,14 @@ export interface components {
              */
             createdAt: string;
             /**
-             * @description Nulo = sem expiração.
+             * @description Null = no expiration.
              * @example null
              */
             expiresAt: Record<string, never> | null;
             /** @example null */
             revokedAt: Record<string, never> | null;
             /**
-             * @description Nulo = nunca usado.
+             * @description Null = never used.
              * @example null
              */
             lastUsedAt: Record<string, never> | null;
@@ -8159,14 +8159,14 @@ export interface components {
              */
             createdAt: string;
             /**
-             * @description Nulo = sem expiração.
+             * @description Null = no expiration.
              * @example null
              */
             expiresAt: Record<string, never> | null;
             /** @example null */
             revokedAt: Record<string, never> | null;
             /**
-             * @description Nulo = nunca usado.
+             * @description Null = never used.
              * @example null
              */
             lastUsedAt: Record<string, never> | null;
@@ -8460,7 +8460,7 @@ export interface components {
             /** @example 01JC4Z0000USUARIO0000000002 */
             userId: string;
             /**
-             * @description EFFECTIVE role: the higher of the project one and the one inherited from the workspace. Whoever is workspace `owner` isn't downgraded by a lesser project association.
+             * @description EFFECTIVE role: the project role when there is one, otherwise the one inherited from the workspace (RN-471) — the project role OVERRIDES the workspace one in both directions, higher or lower.
              * @example maintainer
              * @enum {string}
              */
@@ -9197,13 +9197,13 @@ export interface components {
             /**
              * @description What needs to change, item by item.
              * @example [
-             *       "No test for a non-existent SKU"
+             *       "No test for a nonexistent SKU"
              *     ]
              */
             itens: string[];
             /**
              * @description With `needs_user_decision`: the new open question (up to 500 chars).
-             * @example Should a non-existent code answer 404?
+             * @example Should a nonexistent code answer 404?
              */
             pergunta?: string;
             /**
@@ -9414,12 +9414,12 @@ export interface components {
         };
         RequestModelPullDto: {
             /**
-             * @description `<publisher>/<modelo>` no Hugging Face Hub.
+             * @description `<publisher>/<model>` on the Hugging Face Hub.
              * @example meta-llama/Llama-3.1-8B-Instruct-GGUF
              */
             repoId: string;
             /**
-             * @description Vem da busca quando o Hub publicou o tamanho — nunca estimado por palpite no cliente.
+             * @description Comes from the search when the Hub published the size — never guessed by the client.
              * @example 4900000000
              */
             estimatedSizeBytes?: number;
@@ -9569,7 +9569,7 @@ export interface components {
         };
         RoteamentoDeModuloInternalDto: {
             /**
-             * @description Nome do módulo — precisa existir no module_map vigente.
+             * @description Module name — must exist in the current module_map.
              * @example checkout-api
              */
             modulo: string;
@@ -9674,12 +9674,12 @@ export interface components {
             /** @example laptop */
             name: string;
             /**
-             * @description Nulo = chave de MÁQUINA (ADR 0154): vale para qualquer projeto do dono dela, e não só para este. Ver `especie`.
+             * @description Null = MACHINE key (ADR 0154): valid for any project of its owner, not only this one. See `especie`.
              * @example 01JC4Z0000PROJETO000000001
              */
             projectId: Record<string, never> | null;
             /**
-             * @description `projeto` = presa ao projeto desta rota (ADR 0118). `maquina` = descreve a MÁQUINA (ADR 0154) e aparece na listagem de todo projeto que ela atende — revogá-la derruba o agente local em todos eles.
+             * @description `projeto` = bound to the project of this route (ADR 0118). `maquina` = describes the MACHINE (ADR 0154) and appears in the listing of every project it serves — revoking it drops the local agent in all of them.
              * @example projeto
              * @enum {string}
              */
@@ -9690,12 +9690,12 @@ export interface components {
              */
             createdAt: string;
             /**
-             * @description Nulo = ativa. Revogada continua aparecendo na lista.
+             * @description Null = active. A revoked key keeps appearing in the list.
              * @example null
              */
             revokedAt: Record<string, never> | null;
             /**
-             * @description Nulo = nunca usada — o sinal de uma chave órfã (aba fechada no meio do fluxo de configuração automática do runner).
+             * @description Null = never used — the sign of an orphan key (tab closed in the middle of the runner automatic setup flow).
              * @example null
              */
             lastUsedAt: Record<string, never> | null;
@@ -9706,26 +9706,26 @@ export interface components {
             /** @example Brabo */
             name: string;
             /**
-             * @description O nome da pasta do projeto (RN-109) — segmento relativo sob a base da máquina, nunca um caminho absoluto.
+             * @description The project folder name (RN-109) — a relative segment under the machine base, never an absolute path.
              * @example brabo-01jc4z
              */
             workspaceDirName: string;
             /**
-             * @description Quando o runner confirmou a pasta pela primeira vez (RN-423). Nulo = nunca confirmada. É registro de uma confirmação, não batimento (RN-468): não diz que a pasta está de pé agora.
+             * @description When the runner first confirmed the folder (RN-423). Null = never confirmed. It records a confirmation, not a heartbeat (RN-468): it does not say the folder is up now.
              * @example null
              */
             workspaceVerifiedAt: Record<string, never> | null;
         };
         RunnerTicketResponseDto: {
-            /** @description Token opaco de uso único, base64url. TTL de 30s: some depois do primeiro `connect/3` bem-sucedido no socket `/runner`, ou quando expira. */
+            /** @description Opaque single-use token, base64url. 30s TTL: gone after the first successful `connect/3` on the `/runner` socket, or when it expires. */
             ticket: string;
             /**
-             * @description Quando o ticket expira (ISO 8601).
+             * @description When the ticket expires (ISO 8601).
              * @example 2026-08-09T12:00:30.000Z
              */
             expiresAt: string;
             /**
-             * @description URL pública do socket Phoenix `/runner`, já em ws(s):// — pronta para o cliente (runner CLI ou web) abrir a conexão com `{ticket}` nos params.
+             * @description Public URL of the Phoenix `/runner` socket, already in ws(s):// — ready for the client (runner CLI or web) to open the connection with `{ticket}` in the params.
              * @example ws://localhost:4000/runner
              */
             engineWsUrl: string;
@@ -10281,7 +10281,7 @@ export interface components {
              */
             dor: string[];
             /**
-             * @description Modules from the `module_map` that the story touches. A story with no module, or with a non-existent module, becomes an architecture pending item.
+             * @description Modules from the `module_map` that the story touches. A story with no module, or with a nonexistent module, becomes an architecture pending item.
              * @example [
              *       "api"
              *     ]
@@ -10379,7 +10379,7 @@ export interface components {
              */
             dor: string[];
             /**
-             * @description Modules from the `module_map` that the story touches. A story with no module, or with a non-existent module, becomes an architecture pending item.
+             * @description Modules from the `module_map` that the story touches. A story with no module, or with a nonexistent module, becomes an architecture pending item.
              * @example [
              *       "api"
              *     ]
@@ -17469,14 +17469,14 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Papel insuficiente no projeto. */
+            /** @description Insufficient role on the project. */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Projeto não encontrado. */
+            /** @description Project not found. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -17529,14 +17529,14 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Papel insuficiente no projeto. */
+            /** @description Insufficient role on the project. */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Projeto não encontrado. */
+            /** @description Project not found. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -17564,7 +17564,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Token revogado. Sem corpo. */
+            /** @description Token revoked. No body. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -17578,14 +17578,14 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Papel insuficiente no projeto. */
+            /** @description Insufficient role on the project. */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Projeto não encontrado. */
+            /** @description Project not found. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -17613,7 +17613,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Token revogado. Sem corpo. */
+            /** @description Token revoked. No body. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -17627,14 +17627,14 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Papel insuficiente no projeto. */
+            /** @description Insufficient role on the project. */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Projeto não encontrado. */
+            /** @description Project not found. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -17676,14 +17676,14 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Papel insuficiente no projeto. */
+            /** @description Insufficient role on the project. */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Projeto não encontrado. */
+            /** @description Project not found. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -18295,14 +18295,14 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Papel insuficiente no projeto. */
+            /** @description Insufficient role on the project. */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Projeto não encontrado. */
+            /** @description Project not found. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -18330,7 +18330,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Chave revogada. Sem corpo. */
+            /** @description Key revoked. No body. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -18344,14 +18344,14 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Papel insuficiente no projeto. */
+            /** @description Insufficient role on the project. */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Projeto não encontrado. */
+            /** @description Project not found. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -18386,7 +18386,7 @@ export interface operations {
                     "application/json": components["schemas"]["RunnerTicketResponseDto"];
                 };
             };
-            /** @description Projeto não está no modo "runner". */
+            /** @description Project is not in "runner" mode. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -18400,14 +18400,14 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Papel insuficiente no projeto. */
+            /** @description Insufficient role on the project. */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Projeto não encontrado. */
+            /** @description Project not found. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -21086,14 +21086,14 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Papel insuficiente no projeto. */
+            /** @description Insufficient role on the project. */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Projeto não encontrado. */
+            /** @description Project not found. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -21118,7 +21118,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description O binário do runner, em stream, com o sha256 já conferido contra o manifesto. Não é JSON: `Content-Type: application/octet-stream`. O header `Content-Digest` repete o hash conferido (RFC 9530). */
+            /** @description The runner binary, streamed, with the sha256 already checked against the manifest. Not JSON: `Content-Type: application/octet-stream`. The `Content-Digest` header repeats the checked hash (RFC 9530). */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -21127,7 +21127,7 @@ export interface operations {
                     "application/octet-stream": string;
                 };
             };
-            /** @description Recusa nomeada — nunca bytes com aviso. O corpo traz `motivo`: `plataforma_nao_publicada`, `release_sem_manifesto`, `manifesto_nao_cobre_a_plataforma`, `manifesto_ilegivel`, `download_falhou` ou `hash_divergente`. */
+            /** @description Named refusal — never bytes with a warning. The body carries `motivo`: `plataforma_nao_publicada`, `release_sem_manifesto`, `manifesto_nao_cobre_a_plataforma`, `manifesto_ilegivel`, `download_falhou` or `hash_divergente`. */
             502: {
                 headers: {
                     [name: string]: unknown;
@@ -21160,7 +21160,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description A credencial apresentada está presa a um projeto — esta rota exige uma chave de dispositivo de máquina. */
+            /** @description The presented credential is bound to a project — this route requires a machine device key. */
             403: {
                 headers: {
                     [name: string]: unknown;
