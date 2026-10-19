@@ -35,8 +35,8 @@ Textos distintos da referência da API (`/reference/api/`) contra o catálogo `w
 
 | locale | textos traduzidos |
 |---|---|
-| `pt-BR` | 1331 de 1331 (100.0%) |
-| `en` | 51 de 51 (100.0%) |
-| `ru` | 1331 de 1331 (100.0%) |
-| `zh-Hans` | 1331 de 1331 (100.0%) |
+| `pt-BR` | 1325 de 1325 (100.0%) |
+| `en` | 1 de 1 (100.0%) |
+| `ru` | 1325 de 1325 (100.0%) |
+| `zh-Hans` | 1325 de 1325 (100.0%) |
 

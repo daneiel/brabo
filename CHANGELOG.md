@@ -6,6 +6,12 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- A página da API tem o texto-fonte todo em inglês (AT-566): os textos de
+  PAT, chave de dispositivo, tickets do runner, binário, pull do Hugging Face,
+  conversão de modo e `container-exec` saíram do português, a tag `projetos`
+  virou `projects`, e o papel efetivo de membro passa a ser descrito como
+  sobreposição (`projectRole ?? workspaceRole`, RN-471), não como "o maior dos
+  dois".
 - A página da API do site sai por idioma (ADR 0220, AT-565): cada locale
   aplica um catálogo de traduções sobre a spec no build, e os rótulos que o
   Redoc permite trocar ("Respostas", "Exemplos de requisição"…) saem no idioma
