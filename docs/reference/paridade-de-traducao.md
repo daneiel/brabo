@@ -37,6 +37,6 @@ Textos distintos da referência da API (`/reference/api/`) contra o catálogo `w
 |---|---|
 | `pt-BR` | 0 de 1331 (0.0%) |
 | `en` | 0 de 51 (0.0%) |
-| `ru` | 0 de 1331 (0.0%) |
+| `ru` | 1331 de 1331 (100.0%) |
 | `zh-Hans` | 0 de 1331 (0.0%) |
 
