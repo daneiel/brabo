@@ -2689,7 +2689,7 @@
   },
   "d2939bb40589": {
     "fonte": "Id of the `open_adr_pr` `proposed_action` that opened the ADR.",
-    "traducao": ""
+    "traducao": "Id действия `open_adr_pr` (`proposed_action`), которое открыло ADR."
   },
   "34190daf6c43": {
     "fonte": "`null` while the PR has not actually been opened.",
@@ -2985,983 +2985,983 @@
   },
   "6bca4101bfeb": {
     "fonte": "Mermaid `C4Container` syntax — the current module_map's modules and the dependencies between them.",
-    "traducao": ""
+    "traducao": "Синтаксис Mermaid `C4Container` — модули текущего module_map и зависимости между ними."
   },
   "4bd15b14ef76": {
     "fonte": "`delta` carries incremental `text`; `done` closes with the token/cost accounting; `error` aborts; `metering_failed` means the RESPONSE went out but the cost was not accounted for — the frame exists so that failure does not go unnoticed.",
-    "traducao": ""
+    "traducao": "`delta` несёт инкрементальный `text`; `done` закрывает поток с учётом токенов/стоимости; `error` прерывает; `metering_failed` означает, что ОТВЕТ ушёл, но стоимость не была учтена, — кадр существует, чтобы этот сбой не остался незамеченным."
   },
   "8111b37973dc": {
     "fonte": "Only on `delta`.",
-    "traducao": ""
+    "traducao": "Только в `delta`."
   },
   "94a48d3b5fc1": {
     "fonte": "Only on `done`.",
-    "traducao": ""
+    "traducao": "Только в `done`."
   },
   "4f09cc7046a0": {
     "fonte": "Only on `done`, micro-USD.",
-    "traducao": ""
+    "traducao": "Только в `done`, микро-USD."
   },
   "cf865467a636": {
     "fonte": "Only on `done`. `true` when the provider did not return a count and the cost was ESTIMATED — the number is worth less and the UI needs to be able to say so.",
-    "traducao": ""
+    "traducao": "Только в `done`. `true`, когда провайдер не вернул счётчик и стоимость была ОЦЕНЕНА, — число стоит меньше, и интерфейс должен уметь об этом сказать."
   },
   "90a2df65ab73": {
     "fonte": "Only on `error` and `metering_failed`.",
-    "traducao": ""
+    "traducao": "Только в `error` и `metering_failed`."
   },
   "f2b6d6e4f3a9": {
     "fonte": "What was RECORDED, not what a Docker daemon confirms — no real orchestrator transitions this table today (RN-243).",
-    "traducao": ""
+    "traducao": "То, что было ЗАПИСАНО, а не то, что подтверждает демон Docker, — сегодня ни один реальный оркестратор не переводит эту таблицу (RN-243)."
   },
   "ec790a3ec196": {
     "fonte": "Version of `artifact.project_image` FROZEN at the first transition (RN-245) — not reapplied on every read.",
-    "traducao": ""
+    "traducao": "Версия `artifact.project_image`, ЗАМОРОЖЕННАЯ при первом переходе (RN-245), — не применяется заново при каждом чтении."
   },
   "059cfea3dd8d": {
     "fonte": "Cap DECLARED at provisioning time — not enforced (RN-248).",
-    "traducao": ""
+    "traducao": "Лимит, ОБЪЯВЛЕННЫЙ при создании, — не применяется принудительно (RN-248)."
   },
   "546f8e9a857c": {
     "fonte": "Only populated on a transition to `failed`.",
-    "traducao": ""
+    "traducao": "Заполняется только при переходе в `failed`."
   },
   "a98f620cb147": {
     "fonte": "What the Docker daemon reports RIGHT NOW, asked through the broker (ADR 0130) — never fused with the fields above, which are what was RECORDED. A container killed from the outside shows up as recorded `running` and observed `exited`, and that is the point. `null` means either \"there is no container\" or \"I could not look\" — read `naoObservado` to tell them apart.",
-    "traducao": ""
+    "traducao": "То, что демон Docker сообщает ПРЯМО СЕЙЧАС, по запросу через broker (ADR 0130), — никогда не сливается с полями выше, которые являются ЗАПИСАННЫМ. Контейнер, убитый извне, отображается как записанный `running` и наблюдаемый `exited`, и в этом весь смысл. `null` означает либо «контейнера нет», либо «не удалось посмотреть» — читайте `naoObservado`, чтобы их различить."
   },
   "e8595a366487": {
     "fonte": "`null` when the observation actually HAPPENED — including when it came back empty, which is the positive statement \"I looked and there is no container\". Filled in when there was no way to look, saying why. Inheriting the recorded state here is exactly what RN-468 forbids.",
-    "traducao": ""
+    "traducao": "`null`, когда наблюдение действительно СОСТОЯЛОСЬ, — в том числе когда оно вернулось пустым, что является положительным утверждением «я посмотрел, и контейнера нет». Заполняется, когда посмотреть не удалось, с указанием причины. Наследовать здесь записанное состояние — именно то, что запрещает RN-468."
   },
   "6bb1336bb1ce": {
     "fonte": "The broker's own message, when there was one.",
-    "traducao": ""
+    "traducao": "Собственное сообщение broker, если оно было."
   },
   "1f12b729a5d1": {
     "fonte": "Only tasks from this module enter the draw.",
-    "traducao": ""
+    "traducao": "В выбор попадают только задачи этого модуля."
   },
   "74d5ff79b701": {
     "fonte": "1-based, like every editor shows.",
-    "traducao": ""
+    "traducao": "С 1, как показывает любой редактор."
   },
   "104b6da08339": {
     "fonte": "The file went past the per-call annotated-lines cap.",
-    "traducao": ""
+    "traducao": "Файл превысил лимит аннотируемых строк на вызов."
   },
   "9fc6bf26f1fe": {
     "fonte": "The list was cut at the enriched-branches cap.",
-    "traducao": ""
+    "traducao": "Список обрезан на лимите обогащённых веток."
   },
   "96bd1f648cc2": {
     "fonte": "Commits ahead of the default branch. `null` when not computable.",
-    "traducao": ""
+    "traducao": "Коммиты впереди ветки по умолчанию. `null`, когда не вычисляется."
   },
   "84b1c3233342": {
     "fonte": "Commits behind the default branch.",
-    "traducao": ""
+    "traducao": "Коммиты позади ветки по умолчанию."
   },
   "6ce33080ad5d": {
     "fonte": "Dev agent/module owning the branch (RN-152), when the name matches `feature/task-XXXXXXXX` and the task/module are still resolvable. `null` for a user's manual branch or for `main`/`dev`/`qa`.",
-    "traducao": ""
+    "traducao": "Dev agent/модуль, владеющий веткой (RN-152), когда имя соответствует `feature/task-XXXXXXXX` и задача/модуль ещё разрешимы. `null` для ручной ветки пользователя или для `main`/`dev`/`qa`."
   },
   "5211960be94b": {
     "fonte": "agent_id of the dev who created the branch (`dev-<module>`/`dev-<module>-2`, RN-087).",
-    "traducao": ""
+    "traducao": "agent_id того dev, который создал ветку (`dev-<module>`/`dev-<module>-2`, RN-087)."
   },
   "5cd7663338de": {
     "fonte": "Module name, from the project's current `module_map`.",
-    "traducao": ""
+    "traducao": "Имя модуля, из текущего `module_map` проекта."
   },
   "96453fdc9725": {
     "fonte": "Path AFTER the change (for `removed`, what disappeared).",
-    "traducao": ""
+    "traducao": "Путь ПОСЛЕ изменения (для `removed` — то, что исчезло)."
   },
   "ce4d43d189af": {
     "fonte": "Previous path; only filled in when `status` is `renamed`.",
-    "traducao": ""
+    "traducao": "Прежний путь; заполняется, только когда `status` равен `renamed`."
   },
   "2144a4d57673": {
     "fonte": "The file's unified diff. `null` when the provider doesn't deliver it (binary, or the patch is too large) — distinct from `\"\"`, which is \"came back empty\". Without this distinction the screen would say \"no changes\" on a changed binary.",
-    "traducao": ""
+    "traducao": "Unified diff файла. `null`, когда провайдер его не передаёт (бинарный файл или слишком большой патч), — в отличие от `\"\"`, что означает «вернулся пустым». Без этого различия экран говорил бы «нет изменений» про изменённый бинарный файл."
   },
   "922abe9a48b5": {
     "fonte": "The list was cut at the per-diff file cap.",
-    "traducao": ""
+    "traducao": "Список обрезан на лимите файлов на diff."
   },
   "60cd595e97b2": {
     "fonte": "UTF-8 content. Binary is not served by this route.",
-    "traducao": ""
+    "traducao": "Содержимое UTF-8. Бинарные файлы этим маршрутом не отдаются."
   },
   "988b80db0ee0": {
     "fonte": "The file went past the byte cap and `content` is the beginning of it. The tab is read-only: truncating and warning is better than refusing the file.",
-    "traducao": ""
+    "traducao": "Файл превысил лимит байтов, и `content` — его начало. Вкладка только для чтения: обрезать и предупредить лучше, чем отказать в файле."
   },
   "7287756cccaa": {
     "fonte": "Bytes RETURNED — after the cut, not before.",
-    "traducao": ""
+    "traducao": "ВОЗВРАЩЁННЫЕ байты — после обрезки, а не до."
   },
   "c3af80205aef": {
     "fonte": "The list was cut at the per-call PR cap.",
-    "traducao": ""
+    "traducao": "Список обрезан на лимите PR на вызов."
   },
   "4e3e6aabf139": {
     "fonte": "Login/username of who opened it. `null` when the provider doesn't report it.",
-    "traducao": ""
+    "traducao": "Логин/имя пользователя того, кто открыл. `null`, когда провайдер этого не сообщает."
   },
   "06438a7562ca": {
     "fonte": "`null` when the provider doesn't report it.",
-    "traducao": ""
+    "traducao": "`null`, когда провайдер этого не сообщает."
   },
   "dc90e06c39da": {
     "fonte": "The whole line, trimmed so a minified file is never returned in full.",
-    "traducao": ""
+    "traducao": "Вся строка, укороченная, чтобы минифицированный файл никогда не возвращался целиком."
   },
   "d0961f8a94dd": {
     "fonte": "Subtree the search ran over.",
-    "traducao": ""
+    "traducao": "Поддерево, по которому выполнялся поиск."
   },
   "eff8b668a7f8": {
     "fonte": "Files actually opened. This is the search's real cost, and it is in the response so it doesn't stay invisible.",
-    "traducao": ""
+    "traducao": "Фактически открытые файлы. Это реальная стоимость поиска, и она в ответе, чтобы не оставаться невидимой."
   },
   "d86c343586ae": {
     "fonte": "The scan stopped by budget (directories, files, or matches) before finishing the tree. Narrow the `path` or the term.",
-    "traducao": ""
+    "traducao": "Сканирование остановилось по бюджету (каталоги, файлы или совпадения), не пройдя дерево до конца. Сузьте `path` или запрос."
   },
   "3b871ea416ae": {
     "fonte": "Full path from the repository's root.",
-    "traducao": ""
+    "traducao": "Полный путь от корня репозитория."
   },
   "a7f412543a7e": {
     "fonte": "Last segment of `path`.",
-    "traducao": ""
+    "traducao": "Последний сегмент `path`."
   },
   "b6532ee64242": {
     "fonte": "Bytes. `null` for a directory and when the provider doesn't report it — distinguishing it from `0` matters so the screen never claims \"empty file\".",
-    "traducao": ""
+    "traducao": "Байты. `null` для каталога и когда провайдер этого не сообщает — отличать это от `0` важно, чтобы экран никогда не утверждал «пустой файл»."
   },
   "abcf3f30d234": {
     "fonte": "Branch, tag, or sha read.",
-    "traducao": ""
+    "traducao": "Прочитанная ветка, тег или sha."
   },
   "4fd837775f52": {
     "fonte": "Listed directory; `\"\"` is the root.",
-    "traducao": ""
+    "traducao": "Перечисленный каталог; `\"\"` — корень."
   },
   "62d337ec48ae": {
     "fonte": "The listing was cut at the per-level entry cap. There is more in the directory than what came back here.",
-    "traducao": ""
+    "traducao": "Список обрезан на лимите записей на уровень. В каталоге больше, чем вернулось здесь."
   },
   "a4d6ce12e42a": {
     "fonte": "ADDED to the rules the story already cites (completing never unlinks a rule); each new id has to reference an existing `artifact.business_rule`.",
-    "traducao": ""
+    "traducao": "ДОБАВЛЯЕТСЯ к правилам, на которые история уже ссылается (дополнение никогда не отвязывает правило); каждый новый id должен ссылаться на существующий `artifact.business_rule`."
   },
   "aa4fc6d86f1d": {
     "fonte": "RN-859 (ADR 0214): an open question the user ALREADY answered — only then a `ready` story (no task in execution) can be corrected.",
-    "traducao": ""
+    "traducao": "RN-859 (ADR 0214): открытый вопрос, на который пользователь УЖЕ ответил, — только тогда можно исправить историю `ready` (без задачи в работе)."
   },
   "d47f094d6f45": {
     "fonte": "`confirmado`: the Infra was triggered. `ja_oferecido`: it already had a pending offer or was active in the project — nothing was recorded nor asked of the engine (double click, second tab). The Dev Lead is no longer a target here: the Infra offers it once the container is `running` (RN-672).",
-    "traducao": ""
+    "traducao": "`confirmado`: Infra запущен. `ja_oferecido`: у него уже было ожидающее предложение или он был активен в проекте — ничего не записано и у engine ничего не запрошено (двойной клик, вторая вкладка). Dev Lead здесь больше не цель: Infra предлагает его, когда контейнер становится `running` (RN-672)."
   },
   "d97c87f622f5": {
     "fonte": "Absolute path confirmed by the runner ON THE HOST — the source of truth (RN-423). Re-validated LEXICALLY here before writing; invalid is 400, never written.",
-    "traducao": ""
+    "traducao": "Абсолютный путь, подтверждённый runner НА ХОСТЕ, — источник истины (RN-423). Здесь перед записью ЛЕКСИЧЕСКИ перепроверяется; недопустимый — 400, никогда не записывается."
   },
   "1c1b941e6e90": {
     "fonte": "The project's most recent session (`ProjectSession.latest_id/1`), resolved on the engine side. `null`/omitted when the project doesn't have any session yet — the project is still updated, only the audit event is skipped (accepted gap, RN-423).",
-    "traducao": ""
+    "traducao": "Самая свежая сессия проекта (`ProjectSession.latest_id/1`), определённая на стороне engine. `null`/опущено, когда у проекта ещё нет сессий, — проект всё равно обновляется, пропускается только событие аудита (принятая лакуна, RN-423)."
   },
   "48440aed853e": {
     "fonte": "Who requested the runner ticket (owner of the socket that confirmed) — becomes the actor of the `project.workspace_verified` event. Omitted: the event (if there is a session) is born with no identified actor.",
-    "traducao": ""
+    "traducao": "Кто запросил тикет runner (владелец сокета, который подтвердил), — становится актором события `project.workspace_verified`. Если опущено: событие (если есть сессия) рождается без идентифицированного актора."
   },
   "d0a517177288": {
     "fonte": "Always `true` when the call did not throw — confirmation is idempotent. `changed` says whether ANYTHING changed on this call.",
-    "traducao": ""
+    "traducao": "Всегда `true`, когда вызов не выбросил исключение, — подтверждение идемпотентно. `changed` говорит, изменилось ли ЧТО-НИБУДЬ в этом вызове."
   },
   "a4dd082470d3": {
     "fonte": "The WRITTEN (normalized) path — can differ from what creation had, because the runner is the source of truth and overwrites it.",
-    "traducao": ""
+    "traducao": "ЗАПИСАННЫЙ (нормализованный) путь — может отличаться от того, что был при создании, потому что runner — источник истины и перезаписывает его."
   },
   "04ef12648b90": {
     "fonte": "`true` on the first confirmation, or when the reported path is DIFFERENT from what was already written. `false` on a reconnection that reports the same path as always — nothing was rewritten.",
-    "traducao": ""
+    "traducao": "`true` при первом подтверждении или когда сообщённый путь ОТЛИЧАЕТСЯ от уже записанного. `false` при переподключении, сообщающем тот же путь, что и всегда, — ничего не перезаписано."
   },
   "8eb3ebff3139": {
     "fonte": "The shell command, interpreted by `sh -c` INSIDE the container — same convention as the terminal action run outside one.",
-    "traducao": ""
+    "traducao": "Команда оболочки, интерпретируемая `sh -c` ВНУТРИ контейнера, — то же соглашение, что и у действия терминала, выполняемого вне его."
   },
   "e6c4f6e2fc0e": {
     "fonte": "Working directory INSIDE the container. Already translated from the host path by the engine (RN-492) — this DTO doesn't repeat that translation. Omitted runs at `/work`, the project root. The broker re-validates it is inside `/work` and refuses (`DiretorioForaDoEscopoError`) otherwise.",
-    "traducao": ""
+    "traducao": "Рабочий каталог ВНУТРИ контейнера. Уже переведён из пути хоста engine (RN-492) — этот DTO не повторяет этот перевод. Если опущен, выполняется в `/work`, корне проекта. Broker перепроверяет, что он внутри `/work`, и иначе отклоняет (`DiretorioForaDoEscopoError`)."
   },
   "a6045a222ce5": {
     "fonte": "Timeout in milliseconds. Omitted uses the broker default.",
-    "traducao": ""
+    "traducao": "Таймаут в миллисекундах. Если опущен, используется значение broker по умолчанию."
   },
   "3b8add966613": {
     "fonte": "`false` quando o broker recusou ou não respondeu — os outros campos ficam ausentes e `motivo` explica.",
-    "traducao": ""
+    "traducao": "`false`, когда broker отказал или не ответил, — остальные поля отсутствуют, а `motivo` объясняет."
   },
   "145eeeb078d9": {
     "fonte": "Presente só quando `sucesso: true`.",
-    "traducao": ""
+    "traducao": "Присутствует только при `sucesso: true`."
   },
   "cac484bde0d3": {
     "fonte": "Presente só quando `sucesso: false`.",
-    "traducao": ""
+    "traducao": "Присутствует только при `sucesso: false`."
   },
   "75170d0a772c": {
     "fonte": "Where this project's container comes up (RN-497/503). `container` and `mounted` go through the broker, on the server; `runner` goes through the local agent on the user's machine. It is what branches the start action between `container_start` and `container_start_via_runner`.",
-    "traducao": ""
+    "traducao": "Где поднимается контейнер этого проекта (RN-497/503). `container` и `mounted` идут через broker, на сервере; `runner` — через локального агента на машине пользователя. Именно это разветвляет действие запуска между `container_start` и `container_start_via_runner`."
   },
   "c546538d5af2": {
     "fonte": "`null` means this project NEVER provisioned a container — a THIRD state, not a `status` value: it is neither `stopped` (a container that existed and stopped) nor \"could not be observed\" (which is about the daemon). Read `naoVerificado: \"sem_container_registrado\"` alongside it.",
-    "traducao": ""
+    "traducao": "`null` означает, что этот проект НИКОГДА не создавал контейнер, — ТРЕТЬЕ состояние, а не значение `status`: это ни `stopped` (контейнер, который существовал и остановился), ни «не удалось наблюдать» (что касается демона). Читайте вместе с этим `naoVerificado: \"sem_container_registrado\"`."
   },
   "7e8e55e0735a": {
     "fonte": "Whether ANY `artifact.project_image` exists for this project — the RN-105 gate, which since RN-494/ADR 0135 applies to all THREE modes. `false` means starting a container is impossible right now, and the page says so instead of proposing an action that is known to fail.",
-    "traducao": ""
+    "traducao": "Существует ли ХОТЬ ОДИН `artifact.project_image` для этого проекта — gate RN-105, который начиная с RN-494/ADR 0135 применяется ко всем ТРЁМ режимам. `false` означает, что запустить контейнер сейчас невозможно, и страница говорит об этом, а не предлагает действие, заведомо обречённое на неудачу."
   },
   "b710e7d10943": {
     "fonte": "When a runner CONFIRMED the folder (RN-423) — only meaningful for `executionMode: \"runner\"`. It records ONE confirmation and is never a heartbeat (RN-468): non-null does NOT prove a local agent is connected now. What it does prove is the negative — `null` on a `runner` project means no runner ever connected.",
-    "traducao": ""
+    "traducao": "Когда runner ПОДТВЕРДИЛ папку (RN-423), — имеет смысл только для `executionMode: \"runner\"`. Записывает ОДНО подтверждение и никогда не является heartbeat (RN-468): ненулевое значение НЕ доказывает, что локальный агент подключён сейчас. Доказывает оно отрицательное — `null` у проекта `runner` означает, что ни один runner никогда не подключался."
   },
   "26534169fedb": {
     "fonte": "What the broker reports right now — `null` either because there is no container, because it could not be asked (`naoObservado`), or because this row was not asked this load (`naoVerificado`).",
-    "traducao": ""
+    "traducao": "То, что broker сообщает прямо сейчас, — `null` либо потому, что контейнера нет, либо потому, что спросить не удалось (`naoObservado`), либо потому, что эту строку в эту загрузку не спрашивали (`naoVerificado`)."
   },
   "2c1a2c1e10ac": {
     "fonte": "Non-null when this row was NOT asked of the broker this load — never confused with `naoObservado`, which means it WAS asked and failed. `fora_do_escopo_da_verificacao`: status is `stopped`/`failed`/`removed`, where daemon confirmation does not matter. `teto_de_verificacoes_atingido`: eligible, but the per-load broker call budget was already spent by other rows. `sem_container_registrado`: the project never provisioned one, so there is nothing to observe — and it never spends a call from the budget either.",
-    "traducao": ""
+    "traducao": "Ненулевое, когда эту строку в эту загрузку НЕ спрашивали у broker, — никогда не путается с `naoObservado`, что означает, что спрашивали и не удалось. `fora_do_escopo_da_verificacao`: статус `stopped`/`failed`/`removed`, где подтверждение демона не важно. `teto_de_verificacoes_atingido`: подходит, но бюджет вызовов broker на загрузку уже израсходован другими строками. `sem_container_registrado`: проект его никогда не создавал, поэтому наблюдать нечего, — и он тоже никогда не тратит вызов из бюджета."
   },
   "495c82fadfcd": {
     "fonte": "The pending `container_start`/`container_stop`/`container_remove`/`container_start_via_runner` action for this project, if any — in ANY of its sessions. The page renders the inline `ApprovalCard` for it instead of the action button, same pattern as the PRs tab.",
-    "traducao": ""
+    "traducao": "Ожидающее действие `container_start`/`container_stop`/`container_remove`/`container_start_via_runner` для этого проекта, если есть, — в ЛЮБОЙ из его сессий. Страница отображает для него встроенный `ApprovalCard` вместо кнопки действия, по тому же шаблону, что и вкладка PR."
   },
   "5b332ed32d2d": {
     "fonte": "Whether THIS INSTALLATION has a container broker configured (`BROKER_URL` set, ADR 0130) — the same value on every row, because it is installation configuration and not a property of the project. `container` and `mounted` projects only start a container through the broker (ADR 0144), so with `false` the page refuses the start button for them BEFORE the click and says why (ADR 0161, RN-574); `runner` projects are unaffected. It says the variable exists, never that the broker answers — that is what `naoObservado` reports.",
-    "traducao": ""
+    "traducao": "Настроен ли у ЭТОЙ УСТАНОВКИ broker контейнеров (`BROKER_URL` задан, ADR 0130), — одно и то же значение в каждой строке, потому что это конфигурация установки, а не свойство проекта. Проекты `container` и `mounted` поднимают контейнер только через broker (ADR 0144), поэтому при `false` страница отказывает им в кнопке запуска ДО клика и говорит почему (ADR 0161, RN-574); проекты `runner` не затрагиваются. Говорит, что переменная существует, и никогда — что broker отвечает: это сообщает `naoObservado`."
   },
   "fff355cf37e0": {
     "fonte": "Folder name FROZEN at project creation (RN-109). It is the single source of the container name (`brabo-<workspaceDirName>`) in ALL three modes. Where the FOLDER is is a different question, answered by `localizacao` (RN-503) — the api still never sends an absolute path, because a path from inside the api container is not a path the Docker daemon can resolve.",
-    "traducao": ""
+    "traducao": "Имя папки, ЗАМОРОЖЕННОЕ при создании проекта (RN-109). Это единственный источник имени контейнера (`brabo-<workspaceDirName>`) во ВСЕХ трёх режимах. Где находится ПАПКА — другой вопрос, на который отвечает `localizacao` (RN-503), — api по-прежнему никогда не отправляет абсолютный путь, потому что путь изнутри контейнера api — это не путь, который может разрешить демон Docker."
   },
   "ce5f15fcf712": {
     "fonte": "Where the code lives. The broker serves `container` AND `mounted` (RN-503): since ADR 0141 the mounted folder lives under one base this server mounts by identity, so the daemon reaches it. It still refuses `runner`: that folder is on the user's machine and no root here sees it — there, the runner is what brings a container up (ADR 0137).",
-    "traducao": ""
+    "traducao": "Где живёт код. Broker обслуживает `container` И `mounted` (RN-503): начиная с ADR 0141 смонтированная папка живёт под одной базой, которую этот сервер монтирует по идентичности, поэтому демон до неё достаёт. Он по-прежнему отклоняет `runner`: эта папка на машине пользователя, и ни один корень здесь её не видит, — там контейнер поднимает runner (ADR 0137)."
   },
   "f488c1c3f7b3": {
     "fonte": "The discriminated locator of the project folder (RN-503): which of the broker's two roots resolves it, and the relative segment to join to that root.",
-    "traducao": ""
+    "traducao": "Дискриминированный локатор папки проекта (RN-503): какой из двух корней broker её разрешает и относительный сегмент, который нужно присоединить к этому корню."
   },
   "e0ccabe76c05": {
     "fonte": "The OWNER of the project folder, measured by the api (ADR 0180): the broker starts the container with `--user uid:gid` so the dev agent can write to the folder under `--cap-drop ALL`. `null` when the folder cannot be measured, the project is `runner`, or the owner is root — the container then starts as before. Never accepted from a request to the broker.",
-    "traducao": ""
+    "traducao": "ВЛАДЕЛЕЦ папки проекта, измеренный api (ADR 0180): broker запускает контейнер с `--user uid:gid`, чтобы dev agent мог писать в папку при `--cap-drop ALL`. `null`, когда папку невозможно измерить, проект `runner` или владелец — root, — тогда контейнер запускается как раньше. Никогда не принимается из запроса к broker."
   },
   "3387e3ba8440": {
     "fonte": "`null` while the Architect has not decided (RN-105) — `start` is then refused with 409 on the broker side, and the other four operations still work.",
-    "traducao": ""
+    "traducao": "`null`, пока Архитектор не принял решение (RN-105), — тогда `start` отклоняется с 409 на стороне broker, а остальные четыре операции продолжают работать."
   },
   "f380d07e0ad2": {
     "fonte": "Version of the current artifact; 0 when there is no decision. It ends up on the container as the `brabo.image.version` label.",
-    "traducao": ""
+    "traducao": "Версия текущего артефакта; 0, когда решения нет. Попадает в контейнер как метка `brabo.image.version`."
   },
   "bde4aa31c1ce": {
     "fonte": "Module name — must exist in the current module_map.",
-    "traducao": ""
+    "traducao": "Имя модуля — должно существовать в текущем module_map."
   },
   "72bc3f01ff7c": {
     "fonte": "What the module exposes to whoever depends on it. 1 to 40.",
-    "traducao": ""
+    "traducao": "Что модуль предоставляет тем, кто от него зависит. От 1 до 40."
   },
   "46d2aefe4f19": {
     "fonte": "The current module_map's `dependsOn`: what this module CONSUMES.",
-    "traducao": ""
+    "traducao": "`dependsOn` текущего module_map: что этот модуль ПОТРЕБЛЯЕТ."
   },
   "e7b9d7ccd810": {
     "fonte": "What it exposes. `null` = the Architect declared no contract for this module (different from exposing nothing).",
-    "traducao": ""
+    "traducao": "Что он предоставляет. `null` = Архитектор не объявил контракт для этого модуля (отличается от «ничего не предоставляет»)."
   },
   "217a76e7b730": {
     "fonte": "0 when there is no contract.",
-    "traducao": ""
+    "traducao": "0, когда контракта нет."
   },
   "629003985ff3": {
     "fonte": "One per module of the CURRENT module_map, in map order.",
-    "traducao": ""
+    "traducao": "По одному на модуль ТЕКУЩЕГО module_map, в порядке карты."
   },
   "87e2a48ff32e": {
     "fonte": "Contracts of modules the current module_map no longer has — said, never attached to a module that does not exist.",
-    "traducao": ""
+    "traducao": "Контракты модулей, которых больше нет в текущем module_map, — указаны, но никогда не привязаны к несуществующему модулю."
   },
   "37083255c7d2": {
     "fonte": "O novo modo de execução. Pode repetir o modo atual do projeto — nesse caso, só `workspacePath` muda de verdade.",
-    "traducao": ""
+    "traducao": "Новый режим выполнения. Может повторять текущий режим проекта — в этом случае реально меняется только `workspacePath`."
   },
   "acda20ec05b1": {
     "fonte": "O caminho absoluto da pasta do usuário — obrigatório quando `executionMode` é `mounted` ou `runner`, recusado quando é `container`. Mesma validação da criação (RN-170/RN-422/RN-423): em `mounted`, precisa existir e ser gravável de dentro do container; em `runner`, só o formato é validado agora — a confirmação de verdade vem do runner conectando de novo.",
-    "traducao": ""
+    "traducao": "Абсолютный путь к папке пользователя — обязателен, когда `executionMode` равен `mounted` или `runner`, и отклоняется, когда он `container`. Та же проверка, что и при создании (RN-170/RN-422/RN-423): в `mounted` он должен существовать и быть доступен для записи изнутри контейнера; в `runner` сейчас проверяется только формат — настоящее подтверждение приходит от повторного подключения runner."
   },
   "571df21d08b2": {
     "fonte": "How many rules have no story at all. Each one is a discovery.",
-    "traducao": ""
+    "traducao": "Сколько правил вообще не имеют истории. Каждое — открытие."
   },
   "444922eda3a6": {
     "fonte": "Always an agent on this route.",
-    "traducao": ""
+    "traducao": "На этом маршруте всегда агент."
   },
   "46780185004e": {
     "fonte": "System/project name, for the diagram's label.",
-    "traducao": ""
+    "traducao": "Имя системы/проекта для подписи диаграммы."
   },
   "1733861d5b0d": {
     "fonte": "External actors of the Context level (Simon Brown). The Container level's containers do NOT go here: they come from the project's current module_map.",
-    "traducao": ""
+    "traducao": "Внешние акторы уровня Context (Simon Brown). Контейнеры уровня Container сюда НЕ входят: они берутся из текущего module_map проекта."
   },
   "305c9355f8ae": {
     "fonte": "Functional requirements.",
-    "traducao": ""
+    "traducao": "Функциональные требования."
   },
   "a54fa26e2f65": {
     "fonte": "Non-functional requirements.",
-    "traducao": ""
+    "traducao": "Нефункциональные требования."
   },
   "addfc1ac9af9": {
     "fonte": "Business rules covered. This is where rule→story coverage is computed in `GET /projects/:id/coverage`.",
-    "traducao": ""
+    "traducao": "Покрытые бизнес-правила. Именно отсюда вычисляется покрытие правило→история в `GET /projects/:id/coverage`."
   },
   "6cca215a91f5": {
     "fonte": "Definition of done.",
-    "traducao": ""
+    "traducao": "Критерии готовности (Definition of done)."
   },
   "3c5706ef9b11": {
     "fonte": "Definition of ready.",
-    "traducao": ""
+    "traducao": "Критерии готовности к работе (Definition of ready)."
   },
   "db2a33b31eb2": {
     "fonte": "Modules from the `module_map` that the story touches. A story with no module, or with a non-existent module, becomes an architecture pending item.",
-    "traducao": ""
+    "traducao": "Модули из `module_map`, которых касается история. История без модуля или с несуществующим модулем становится незакрытым вопросом архитектуры."
   },
   "cb646ec7c3dc": {
     "fonte": "The PO finished the story and it's waiting on the user's decision (Phase 12c — RN-048). Coexists with `status: \"draft\"`: it is a proposal, not a state. Always `false` in a project in `auto` mode.",
-    "traducao": ""
+    "traducao": "PO завершил историю, и она ждёт решения пользователя (Фаза 12c — RN-048). Сосуществует со `status: \"draft\"`: это предложение, а не состояние. Всегда `false` в проекте в режиме `auto`."
   },
   "cf8ac6e9b38f": {
     "fonte": "Why the user returned the story to the PO. `null` when it was never returned.",
-    "traducao": ""
+    "traducao": "Почему пользователь вернул историю PO. `null`, когда её никогда не возвращали."
   },
   "154057f24977": {
     "fonte": "When the story was ARCHIVED (RN-727). Archived stories leave the backlog, the coverage, the plan and the claim; `null` is a story in play.",
-    "traducao": ""
+    "traducao": "Когда история была АРХИВИРОВАНА (RN-727). Архивные истории уходят из backlog, покрытия, плана и claim; `null` — история в игре."
   },
   "6958e0b863c3": {
     "fonte": "Why it was archived, when someone said (RN-727).",
-    "traducao": ""
+    "traducao": "Почему она была архивирована, если кто-то сказал (RN-727)."
   },
   "07c6fe33859d": {
     "fonte": "ULID of the session_event for the artifact that motivated the handoff.",
-    "traducao": ""
+    "traducao": "ULID session_event артефакта, который стал причиной handoff."
   },
   "4082366024e1": {
     "fonte": "Only if nobody got it yet (ADR 0182, RN-636): with a pending offer to the target in ANY session of the project, return it (`desfecho: ja_oferecido`) instead of replacing it. AppSec sends it.",
-    "traducao": ""
+    "traducao": "Только если его ещё никто не получил (ADR 0182, RN-636): при ожидающем предложении цели в ЛЮБОЙ сессии проекта вернуть его (`desfecho: ja_oferecido`), а не заменять. Отправляет AppSec."
   },
   "ea69a5a6f2dc": {
     "fonte": "Module graph. A CYCLE makes the map get rejected with 400 — the validation is domain-level. Each module may declare `resources` (cpus, memoryMb, pidsLimit — all three or none); a partial declaration, a value above the container ceiling, or a SUM over modules above it is also 400 (RN-683).",
-    "traducao": ""
+    "traducao": "Граф модулей. ЦИКЛ приводит к отклонению карты с 400 — проверка на уровне домена. Каждый модуль может объявить `resources` (cpus, memoryMb, pidsLimit — все три или ни одного); частичное объявление, значение выше потолка контейнера или СУММА по модулям выше него — тоже 400 (RN-683)."
   },
   "f724502c85c1": {
     "fonte": "kebab-case. Unique within the workspace.",
-    "traducao": ""
+    "traducao": "kebab-case. Уникален в пределах рабочего пространства."
   },
   "29ae0cfe1c40": {
     "fonte": "Circuit breaker (Phase 12b — RN-047): how many consecutive tasks ending blocked stop the module's dev agent at idle_tripped. Omitted uses the domain default (DEFAULT_MAX_CONSECUTIVE_BLOCKED). Applies from the NEXT execution activation onward — doesn't affect agents already running.",
-    "traducao": ""
+    "traducao": "Предохранитель (Фаза 12b — RN-047): сколько последовательных задач, закончившихся блокировкой, останавливают dev agent модуля в idle_tripped. Если опущено, используется значение домена по умолчанию (DEFAULT_MAX_CONSECUTIVE_BLOCKED). Применяется со СЛЕДУЮЩЕЙ активации выполнения — не затрагивает уже работающих агентов."
   },
   "9d4baa560379": {
     "fonte": "Who promotes a story from `draft` to `ready` (Phase 12c — RN-048). `auto` (new-project default since RN-659): a complete story is already born `ready`, with no human step. `manual`: the PO proposes and YOU decide, in the Backlog tab. Changing the default did not rewrite any existing project. The domain validations (DoD/DoR/RF/rule/modules) are the SAME in both modes; the mode only changes who triggers it.",
-    "traducao": ""
+    "traducao": "Кто продвигает историю из `draft` в `ready` (Фаза 12c — RN-048). `auto` (по умолчанию для новых проектов начиная с RN-659): полная история сразу рождается `ready`, без шага человека. `manual`: PO предлагает, а ВЫ решаете во вкладке Backlog. Смена значения по умолчанию не переписала ни одного существующего проекта. Проверки домена (DoD/DoR/RF/правило/модули) ОДИНАКОВЫ в обоих режимах; режим меняет только то, кто запускает."
   },
   "6d5b00404383": {
     "fonte": "WHERE this project's command EXECUTES (RN-169/RN-421 — ADR 0072/0104). `container` (default): the folder managed by the product inside PROJECT_WORKSPACES_ROOT, the usual behavior. `mounted`: a folder of YOURS, given in `workspacePath`, inside the installation-wide base `BRABO_PROJECTS_BASE` (ADR 0141) — creation validates only the path FORMAT plus that base, and the folder itself is created later, when Infra starts the container (RN-501, ADR 0142). `runner`: a folder of YOURS that does NOT need a bind-mount — creation only validates the path format and the project is born \"unverified\"; run `brabo-runner --project <id> --dir <folder>` on your machine to confirm it (RN-423).",
-    "traducao": ""
+    "traducao": "ГДЕ ВЫПОЛНЯЕТСЯ команда этого проекта (RN-169/RN-421 — ADR 0072/0104). `container` (по умолчанию): папка, управляемая продуктом внутри PROJECT_WORKSPACES_ROOT, обычное поведение. `mounted`: ВАША папка, указанная в `workspacePath`, внутри общей для установки базы `BRABO_PROJECTS_BASE` (ADR 0141), — при создании проверяется только ФОРМАТ пути плюс эта база, а сама папка создаётся позже, когда Infra запускает контейнер (RN-501, ADR 0142). `runner`: ВАША папка, которой НЕ нужен bind-mount, — при создании проверяется только формат пути, и проект рождается «непроверенным»; запустите `brabo-runner --project <id> --dir <folder>` на своей машине, чтобы подтвердить его (RN-423)."
   },
   "197bf63295c2": {
     "fonte": "The folder's ABSOLUTE path, required when `executionMode` is `mounted` or `runner`, and refused when it is `container`. In BOTH of them only the FORMAT is validated now — absolute, no `..`, not the system root, not a system folder, not overlapping the Brabo checkout (RN-422/RN-423). `mounted` adds one rule: it must sit inside `BRABO_PROJECTS_BASE`, the single folder of your machine the Brabo containers can see (ADR 0141) — with no base configured the mode is not available on this installation and creation says so. Disk is touched later: by the runner in `runner`, and when Infra starts the container in `mounted` (RN-501, ADR 0142).",
-    "traducao": ""
+    "traducao": "АБСОЛЮТНЫЙ путь к папке, обязательный, когда `executionMode` равен `mounted` или `runner`, и отклоняемый, когда он `container`. В ОБОИХ сейчас проверяется только ФОРМАТ — абсолютный, без `..`, не системный корень, не системная папка, не пересекается с checkout Brabo (RN-422/RN-423). `mounted` добавляет одно правило: он должен находиться внутри `BRABO_PROJECTS_BASE`, единственной папки вашей машины, которую видят контейнеры Brabo (ADR 0141), — без настроенной базы режим недоступен в этой установке, и создание об этом сообщает. Диска касаются позже: runner в `runner` и Infra при запуске контейнера в `mounted` (RN-501, ADR 0142)."
   },
   "4093c29acf0c": {
     "fonte": "The PROJECT's language (RN-619) — shared artifacts and turns with no human author use it. Any BCP-47 code the server recognizes, stored canonical; an unrecognized one is a 400. Omitted, the project starts with its creator's effective response language (RN-618: account choice > confirmed detection > interface language).",
-    "traducao": ""
+    "traducao": "Язык ПРОЕКТА (RN-619) — его используют общие артефакты и ходы без автора-человека. Любой код BCP-47, распознаваемый сервером, хранимый в каноническом виде; нераспознанный — это 400. Если опущен, проект начинает с эффективного языка ответов своего создателя (RN-618: выбор в учётной записи > подтверждённое обнаружение > язык интерфейса)."
   },
   "df95c3d3dc58": {
     "fonte": "The session's intent. `consultiva` (consultative) is conversation only; `criativa` (creative) is the one that produces — it opens ideation with the Creative agent and is the only one that enters execution. REQUIRED: without it the response is 400, because the type is the opener's choice and gets recorded.",
-    "traducao": ""
+    "traducao": "Намерение сессии. `consultiva` (консультационная) — только беседа; `criativa` (творческая) — та, что производит: она открывает генерацию идей с агентом Креатив и единственная входит в выполнение. ОБЯЗАТЕЛЬНО: без него ответ — 400, потому что тип — выбор того, кто открывает, и он записывается."
   },
   "2224d672b4ee": {
     "fonte": "Friendly name, optional. Does not replace the id's hashtag — screens compose the two. Blank counts as absent.",
-    "traducao": ""
+    "traducao": "Понятное имя, необязательно. Не заменяет хештег id — экраны составляют их вместе. Пустое считается отсутствующим."
   },
   "04d99750e984": {
     "fonte": "`heartbeat` requires the `viewer` role; `terminal` requires `developer` — the same minimum role as `MIN_ROLE_FOR_ACTION_TYPE.terminal`.",
-    "traducao": ""
+    "traducao": "`heartbeat` требует роли `viewer`; `terminal` требует `developer` — ту же минимальную роль, что и `MIN_ROLE_FOR_ACTION_TYPE.terminal`."
   },
   "af0507888f64": {
     "fonte": "Each id needs to reference an `artifact.business_rule` event that EXISTS — a made-up id is refused.",
-    "traducao": ""
+    "traducao": "Каждый id должен ссылаться на СУЩЕСТВУЮЩЕЕ событие `artifact.business_rule` — выдуманный id отклоняется."
   },
   "1b447715b737": {
     "fonte": "kebab-case. Unique in the system and visible in the URL.",
-    "traducao": ""
+    "traducao": "kebab-case. Уникален в системе и виден в URL."
   },
   "bded8708a170": {
     "fonte": "The credential exists TODAY. `false` is historical spend from a key that was already removed — the consumption happened and does not disappear from the report because of that.",
-    "traducao": ""
+    "traducao": "Учётные данные существуют СЕГОДНЯ. `false` — исторические расходы по ключу, который уже удалён, — потребление произошло и не исчезает из отчёта из-за этого."
   },
   "cee868b8d412": {
     "fonte": "Portion spent by AGENTS — the tab RN-058 started charging to the owner.",
-    "traducao": ""
+    "traducao": "Часть, потраченная АГЕНТАМИ, — та статья, которую RN-058 начала относить на владельца."
   },
   "9b24aab72aba": {
     "fonte": "Portion spent by PEOPLE in chat. Comes from the same key, and it is a different question.",
-    "traducao": ""
+    "traducao": "Часть, потраченная ЛЮДЬМИ в чате. Идёт из того же ключа, и это другой вопрос."
   },
   "70f287bab798": {
     "fonte": "Owner of the keys — who funds this workspace's agents (RN-058).",
-    "traducao": ""
+    "traducao": "Владелец ключей — тот, кто финансирует агентов этого рабочего пространства (RN-058)."
   },
   "be6541b85a08": {
     "fonte": "`ok` — the provider accepted the credential. `recusado` — the provider rejected it (invalid/revoked key, no balance, network). `nao_suportado` — this provider has no verified test endpoint (`ollama`, `anthropic`, `openai`): NOTHING was verified, and saying \"ok\" here would be a lie.",
-    "traducao": ""
+    "traducao": "`ok` — провайдер принял учётные данные. `recusado` — провайдер их отклонил (недействительный/отозванный ключ, нет баланса, сеть). `nao_suportado` — у этого провайдера нет проверенного endpoint для проверки (`ollama`, `anthropic`, `openai`): НИЧЕГО не проверено, и сказать здесь «ok» было бы ложью."
   },
   "95069aa8757f": {
     "fonte": "Only on `recusado` — the reason the provider gave.",
-    "traducao": ""
+    "traducao": "Только при `recusado` — причина, которую назвал провайдер."
   },
   "91c1f9f9212a": {
     "fonte": "Business rules in the project.",
-    "traducao": ""
+    "traducao": "Бизнес-правила в проекте."
   },
   "c42f9a1334ef": {
     "fonte": "Rules cited by at least one story — equal to `regras`.",
-    "traducao": ""
+    "traducao": "Правила, на которые ссылается хотя бы одна история, — равно `regras`."
   },
   "a2ab566c6e0a": {
     "fonte": "`local`: the project already had a `local` repository. `a_provisionar_local`: none yet — the accept provisions a `local` one.",
-    "traducao": ""
+    "traducao": "`local`: у проекта уже был репозиторий `local`. `a_provisionar_local`: пока нет — принятие создаёт репозиторий `local`."
   },
   "d61138aa7a27": {
     "fonte": "The `generatedAt` of the plan you SAW. Optimistic lock: if the plan has been regenerated since then (re-adoption, or the repository changed), the decision is refused with 409 instead of applying a yes given about something else.",
-    "traducao": ""
+    "traducao": "`generatedAt` плана, который вы ВИДЕЛИ. Оптимистическая блокировка: если план с тех пор пересоздан (повторное подключение или изменение репозитория), решение отклоняется с 409, а не применяет «да», данное о чём-то другом."
   },
   "422ef1aaa83c": {
     "fonte": "Where the bootstrap ended up. On `skip` the cursor does NOT advance: no step ran, and the record says so.",
-    "traducao": ""
+    "traducao": "Где оказался bootstrap. При `skip` курсор НЕ продвигается: ни один шаг не выполнялся, и запись об этом говорит."
   },
   "dc2cae8b5fdf": {
     "fonte": "OCI reference with an explicit TAG or digest. `latest` is REFUSED with 400 — the rule is domain-level.",
-    "traducao": ""
+    "traducao": "Ссылка OCI с явным ТЕГОМ или digest. `latest` ОТКЛОНЯЕТСЯ с 400 — правило на уровне домена."
   },
   "b26cc24862f6": {
     "fonte": "Why this image. Minimum of 10 characters.",
-    "traducao": ""
+    "traducao": "Почему этот образ. Минимум 10 символов."
   },
   "f8f61da3415e": {
     "fonte": "The container's network posture. `none` is the default, and it is what makes \"inside, the agent is free\" a safe sentence.",
-    "traducao": ""
+    "traducao": "Сетевая позиция контейнера. `none` — значение по умолчанию, и именно оно делает фразу «внутри агент свободен» безопасной."
   },
   "5834dd6381cf": {
     "fonte": "Resource cap. Above the maximum, the decision is REFUSED, never silently downgraded.",
-    "traducao": ""
+    "traducao": "Лимит ресурсов. Выше максимума решение ОТКЛОНЯЕТСЯ, а не молча понижается."
   },
   "9f087cd39028": {
     "fonte": "OCI reference with an explicit TAG or digest. `latest` is refused: the artifact needs to say the same thing six months from now.",
-    "traducao": ""
+    "traducao": "Ссылка OCI с явным ТЕГОМ или digest. `latest` отклоняется: артефакт должен говорить то же самое и через шесть месяцев."
   },
   "93d0919b0bbb": {
     "fonte": "Why THIS image. This is what makes the decision reviewable.",
-    "traducao": ""
+    "traducao": "Почему ЭТОТ образ. Именно это делает решение проверяемым."
   },
   "7df512aaddb5": {
     "fonte": "The container's network posture, decided ONCE in the artifact and not command by command. `egress` is cost and surface: the Architect asks, the user authorizes it at provisioning time.",
-    "traducao": ""
+    "traducao": "Сетевая позиция контейнера, решаемая ОДИН раз в артефакте, а не от команды к команде. `egress` — это стоимость и поверхность атаки: Архитектор просит, пользователь разрешает при создании."
   },
   "d762807f57ae": {
     "fonte": "The WHOLE contract list: each call is a new version that replaces the previous one. What a module CONSUMES is not here — it is derived from the current module_map's `dependsOn` when read.",
-    "traducao": ""
+    "traducao": "ВЕСЬ список контрактов: каждый вызов — новая версия, заменяющая предыдущую. То, что модуль ПОТРЕБЛЯЕТ, здесь не указано — оно выводится из `dependsOn` текущего module_map при чтении."
   },
   "2bd2fde9ba7b": {
     "fonte": "null when the area has no backlog task behind it (Infra, Phase 8c).",
-    "traducao": ""
+    "traducao": "null, когда за областью нет задачи backlog (Infra, Фаза 8c)."
   },
   "c73d11297ef7": {
     "fonte": "Stays in the event log alongside the denial. Optional, but recommended.",
-    "traducao": ""
+    "traducao": "Остаётся в журнале событий вместе с отклонением. Необязательно, но рекомендуется."
   },
   "a492ac6fd8fe": {
     "fonte": "Flagged by the Architect. Becomes an informative checklist in SecOps's verdict — there's no line-by-line correlation, and claiming there were would misrepresent the depth of the check.",
-    "traducao": ""
+    "traducao": "Отмечено Архитектором. Становится информационным чек-листом в вердикте SecOps — построчной корреляции нет, и утверждать обратное значило бы исказить глубину проверки."
   },
   "e3419086ed5a": {
     "fonte": "The question that was decided.",
-    "traducao": ""
+    "traducao": "Вопрос, по которому принято решение."
   },
   "9ec7d1fb3e3d": {
     "fonte": "The user's decision.",
-    "traducao": ""
+    "traducao": "Решение пользователя."
   },
   "53760e9586f6": {
     "fonte": "ADRs that apply: the cross-cutting ones (no module declared) plus the ones that cite this agent's module.",
-    "traducao": ""
+    "traducao": "Применимые ADR: сквозные (без объявленного модуля) плюс те, что ссылаются на модуль этого агента."
   },
   "deeae5a59cfa": {
     "fonte": "The other tasks of the same story, with their status. The QA gate judges the delivery by what belongs to THIS task; a requirement of a sibling task is an observation, never a rejection (RN-765).",
-    "traducao": ""
+    "traducao": "Остальные задачи той же истории, с их статусом. Gate QA оценивает поставку по тому, что относится к ЭТОЙ задаче; требование соседней задачи — это замечание, никогда не отклонение (RN-765)."
   },
   "365ee88e1937": {
     "fonte": "Tasks of OTHER stories of the same module that are not done yet, with the story title (at most 20). A requirement that depends on what another story will deliver is an observation for the QA gate, never a rejection (RN-785).",
-    "traducao": ""
+    "traducao": "Задачи ДРУГИХ историй того же модуля, ещё не завершённые, с заголовком истории (не более 20). Требование, зависящее от того, что поставит другая история, — это замечание для gate QA, никогда не отклонение (RN-785)."
   },
   "4f4c6272ed77": {
     "fonte": "Real number of open tasks of the module in other stories — larger than `moduleOpenTasks.length` when the list was cut.",
-    "traducao": ""
+    "traducao": "Реальное число открытых задач модуля в других историях — больше, чем `moduleOpenTasks.length`, когда список обрезан."
   },
   "12ced586b1cc": {
     "fonte": "The current contract of the task module (`artifact.module_contracts`) — the source of the INTERFACE for the QA gate. When the story and the contract diverge, the verdict names the divergence instead of rejecting the dev that followed the contract (RN-786). `null` without a resolvable module or contract.",
-    "traducao": ""
+    "traducao": "Текущий контракт модуля задачи (`artifact.module_contracts`) — источник ИНТЕРФЕЙСА для gate QA. Когда история и контракт расходятся, вердикт называет расхождение, а не отклоняет dev, следовавшего контракту (RN-786). `null` без разрешимого модуля или контракта."
   },
   "9b2c6271ccd6": {
     "fonte": "Whether this is the FIRST task of the module: the oldest `backlog.task_claimed` of the project for `module` is this task. The engine gives it twice the per-task budget (RN-774). `false` without `module`.",
-    "traducao": ""
+    "traducao": "Является ли это ПЕРВОЙ задачей модуля: самый старый `backlog.task_claimed` проекта для `module` — это эта задача. Engine даёт ей двойной бюджет на задачу (RN-774). `false` без `module`."
   },
   "852be1d2394b": {
     "fonte": "RN-859: the user's decisions tied to this task, its story or its rules by `afeta` — they win over RF/DoR on conflict. Newest first, at most 10, each text cut at 1,500 characters.",
-    "traducao": ""
+    "traducao": "RN-859: решения пользователя, привязанные к этой задаче, её истории или её правилам через `afeta`, — при конфликте они побеждают RF/DoR. Сначала новые, не более 10, каждый текст обрезан до 1 500 символов."
   },
   "f4bc4fb85f3a": {
     "fonte": "RN-872 (ADR 0215): the project's OTHER decisions — those whose `afeta` does not touch this task. Separate section, inside the SAME cap of 10 as `decisoes` (task decisions take the cap first), newest first.",
-    "traducao": ""
+    "traducao": "RN-872 (ADR 0215): ПРОЧИЕ решения проекта — те, чей `afeta` не касается этой задачи. Отдельный раздел, в пределах ТОГО ЖЕ лимита в 10, что и `decisoes` (решения задачи занимают лимит первыми), сначала новые."
   },
   "7c03bde560a9": {
     "fonte": "`sem_diagrama` is the initial state: the Architect has not generated one yet.",
-    "traducao": ""
+    "traducao": "`sem_diagrama` — начальное состояние: Архитектор ещё не сгенерировал диаграмму."
   },
   "7bf904021ab3": {
     "fonte": "The current diagram, or `null` while there is none.",
-    "traducao": ""
+    "traducao": "Текущая диаграмма или `null`, пока её нет."
   },
   "55dd3b4d6931": {
     "fonte": "Version of the current artifact; 0 when there is no diagram. Revising means generating again — history is never rewritten.",
-    "traducao": ""
+    "traducao": "Версия текущего артефакта; 0, когда диаграммы нет. Пересмотр означает повторную генерацию — история никогда не переписывается."
   },
   "69f8307f26af": {
     "fonte": "`sem_decisao` is the initial state of every project and is what closes the RN-105 gate: no image means no container, and the Code tab doesn't open.",
-    "traducao": ""
+    "traducao": "`sem_decisao` — начальное состояние каждого проекта, и именно оно закрывает gate RN-105: нет образа — нет контейнера, и вкладка Code не открывается."
   },
   "a411b304372e": {
     "fonte": "The current decision, or `null` when there is none yet.",
-    "traducao": ""
+    "traducao": "Текущее решение или `null`, когда его ещё нет."
   },
   "b36fddeae8e2": {
     "fonte": "Version of the current artifact; 0 when there is no decision. Revising means issuing a new version — history is never rewritten.",
-    "traducao": ""
+    "traducao": "Версия текущего артефакта; 0, когда решения нет. Пересмотр означает выпуск новой версии — история никогда не переписывается."
   },
   "142afb93c18f": {
     "fonte": "Id of the event that fixed the current decision, for auditing.",
-    "traducao": ""
+    "traducao": "Id события, зафиксировавшего текущее решение, для аудита."
   },
   "7ed4dd5bdbe2": {
     "fonte": "Execution session created.",
-    "traducao": ""
+    "traducao": "Созданная сессия выполнения."
   },
   "d51164d7ecb5": {
     "fonte": "Modules of the `module_map` that got a dev agent. One agent per module, each in an isolated worktree.",
-    "traducao": ""
+    "traducao": "Модули `module_map`, получившие dev agent. Один агент на модуль, каждый в изолированном worktree."
   },
   "6e3483ec09dc": {
     "fonte": "The owner e-mail, typed at the TTY. Normalized before anything is written; it is what the installer records in its marker, since an e-mail identifies and is not a secret.",
-    "traducao": ""
+    "traducao": "Email владельца, введённый в TTY. Нормализуется до любой записи; именно его установщик записывает в свой маркер, поскольку email идентифицирует и не является секретом."
   },
   "e32e9ff98245": {
     "fonte": "Read without echo and confirmed by the installer. Used and discarded — never written to the `.env`, to the marker or to a log, and never generated by any code: there is no path where an account is born with a password the script chose. The minimum is the DOMAIN policy, the same code registration uses; the max length here is argon2id protection, not policy.",
-    "traducao": ""
+    "traducao": "Читается без эха и подтверждается установщиком. Используется и отбрасывается — никогда не записывается в `.env`, маркер или лог и никогда не генерируется никаким кодом: нет пути, при котором учётная запись рождается с паролем, выбранным скриптом. Минимум — политика ДОМЕНА, тот же код, что использует регистрация; максимальная длина здесь — защита argon2id, а не политика."
   },
   "b6028c0aa550": {
     "fonte": "Display name. Omitted: the personal workspace's name falls back to the e-mail local-part (RN-410) — nothing is invented.",
-    "traducao": ""
+    "traducao": "Отображаемое имя. Если опущено: имя личного рабочего пространства берётся из локальной части email (RN-410) — ничего не выдумывается."
   },
   "565dc5b47b98": {
     "fonte": "The user that was created.",
-    "traducao": ""
+    "traducao": "Созданный пользователь."
   },
   "60ab4d893529": {
     "fonte": "The NORMALIZED e-mail — what was actually written, which can differ from what was typed. This is what the installer records in its marker.",
-    "traducao": ""
+    "traducao": "НОРМАЛИЗОВАННЫЙ email — то, что реально записано, может отличаться от введённого. Именно его установщик записывает в свой маркер."
   },
   "1b8f4ac9018f": {
     "fonte": "The personal workspace born in the SAME transaction (RN-410), with the account as its `owner`. Without it the install would close with a login that works and a dashboard where \"New project\" has nowhere to create.",
-    "traducao": ""
+    "traducao": "Личное рабочее пространство, рождённое в ТОЙ ЖЕ транзакции (RN-410), с учётной записью в роли `owner`. Без него установка завершилась бы рабочим входом и дашбордом, где «Новый проект» негде создать."
   },
   "c21788334a53": {
     "fonte": "The decision is the user's — either a direct click, or delegated by a policy they wrote. Invariant across the four constitutionally manual gates (RN-071).",
-    "traducao": ""
+    "traducao": "Решение за пользователем — либо прямой клик, либо делегированное политикой, которую он написал. Инвариант для четырёх конституционно ручных gate (RN-071)."
   },
   "e296c342d05f": {
     "fonte": "Where the proof that the gate passed lives: `event_log` (types + payload filter), `teste` or `ci` (target path). Absent on a `planned` gate.",
-    "traducao": ""
+    "traducao": "Где находится доказательство прохождения gate: `event_log` (типы + фильтр payload), `teste` или `ci` (целевой путь). Отсутствует у gate `planned`."
   },
   "fe9b9c54e401": {
     "fonte": "Flow the gate belongs to.",
-    "traducao": ""
+    "traducao": "Поток, к которому относится gate."
   },
   "bcece0eda7b5": {
     "fonte": "Who judges.",
-    "traducao": ""
+    "traducao": "Кто оценивает."
   },
   "14f91c24ef69": {
     "fonte": "What needs to exist for the gate to open.",
-    "traducao": ""
+    "traducao": "Что должно существовать, чтобы gate открылся."
   },
   "92372a8b117f": {
     "fonte": "What the gate produces when it passes.",
-    "traducao": ""
+    "traducao": "Что gate производит при прохождении."
   },
   "abc8dd3fad3b": {
     "fonte": "The decision is the user's — direct on click OR delegated by a policy they wrote themselves (see RN-071).",
-    "traducao": ""
+    "traducao": "Решение за пользователем — прямое по клику ИЛИ делегированное политикой, которую он сам написал (см. RN-071)."
   },
   "f7fd78531648": {
     "fonte": "Version of the registry format.",
-    "traducao": ""
+    "traducao": "Версия формата реестра."
   },
   "80391193549e": {
     "fonte": "Only ACTIVE gates. A `planned` gate describes a future role and should not appear on a screen that says what is happening right now.",
-    "traducao": ""
+    "traducao": "Только АКТИВНЫЕ gate. Gate `planned` описывает будущую роль и не должен появляться на экране, который говорит, что происходит прямо сейчас."
   },
   "0f1472383ca4": {
     "fonte": "What happens next. `correct` returns to dev; `run_secops` advances the gate; `done` releases it to the user; `await_user` parks the cycle until the open question is answered (RN-860); `blocked` means the correction cap ran out and only a human can unblock it.",
-    "traducao": ""
+    "traducao": "Что происходит дальше. `correct` возвращает к dev; `run_secops` продвигает gate; `done` передаёт пользователю; `await_user` ставит цикл на паузу до ответа на открытый вопрос (RN-860); `blocked` означает, что лимит исправлений исчерпан и разблокировать может только человек."
   },
   "604a7a943439": {
     "fonte": "With `await_user`: the open question the cycle waits on.",
-    "traducao": ""
+    "traducao": "При `await_user`: открытый вопрос, которого ждёт цикл."
   },
   "f5fca77e8624": {
     "fonte": "Where to send the browser. The `state` is signed by HMAC with `GIT_OAUTH_STATE_SECRET` — this is what prevents the callback from being forged.",
-    "traducao": ""
+    "traducao": "Куда отправить браузер. `state` подписан HMAC с `GIT_OAUTH_STATE_SECRET` — именно это не даёт подделать callback."
   },
   "ee0e113b5719": {
     "fonte": "Slug of the agent that passed the baton.",
-    "traducao": ""
+    "traducao": "Slug агента, который передал эстафету."
   },
   "a193161f6fb3": {
     "fonte": "Slug of the receiving agent.",
-    "traducao": ""
+    "traducao": "Slug принимающего агента."
   },
   "d6144008a838": {
     "fonte": "Artifact that motivated the handoff (product_brief, module_map…).",
-    "traducao": ""
+    "traducao": "Артефакт, ставший причиной handoff (product_brief, module_map…)."
   },
   "69ac694d685e": {
     "fonte": "This field is MUTABLE — it is the current state. Each transition also becomes an immutable `handoff.*` event in the log, which is where the history lives. `superseded` (ADR 0182, RN-635): the offer stopped being the current one — the target agent was activated by another path, or a newer offer to the same target in the project replaced it (`handoff.superseded`). Only `offered` can be accepted.",
-    "traducao": ""
+    "traducao": "Это поле ИЗМЕНЯЕМО — это текущее состояние. Каждый переход также становится неизменяемым событием `handoff.*` в журнале, где и живёт история. `superseded` (ADR 0182, RN-635): предложение перестало быть текущим — целевой агент был активирован другим путём, или более новое предложение той же цели в проекте заменило его (`handoff.superseded`). Принять можно только `offered`."
   },
   "b1c588d3500d": {
     "fonte": "Only when `status=error`, with the failure message. A healthy response has no detail at all, on purpose: liveness is not the place to expose topology.",
-    "traducao": ""
+    "traducao": "Только при `status=error`, с сообщением о сбое. У здорового ответа деталей нет вовсе, намеренно: liveness — не место для раскрытия топологии."
   },
   "6b45cf45f75b": {
     "fonte": "`<publisher>/<modelo>` no Hugging Face Hub.",
-    "traducao": ""
+    "traducao": "`<publisher>/<modelo>` в Hugging Face Hub."
   },
   "3afdaf3ccba2": {
     "fonte": "O publisher está no allowlist curado de fabricantes conhecidos (`domain/llm/huggingface-official-publishers.ts`). `false` é qualquer reupload de terceiro — a tela mostra o aviso de segurança quando `includeCommunity=true` trouxe este resultado.",
-    "traducao": ""
+    "traducao": "Издатель находится в курируемом списке разрешённых известных производителей (`domain/llm/huggingface-official-publishers.ts`). `false` — любая повторная загрузка третьей стороной; экран показывает предупреждение о безопасности, когда `includeCommunity=true` вернул этот результат."
   },
   "7ea92a3462fc": {
     "fonte": "Combined (RAG_SEARCH_WEIGHT_VECTOR*vector + RAG_SEARCH_WEIGHT_LEXICAL*lexical), already filtered by the threshold — every returned hit has passed it.",
-    "traducao": ""
+    "traducao": "Комбинированное (RAG_SEARCH_WEIGHT_VECTOR*vector + RAG_SEARCH_WEIGHT_LEXICAL*lexical), уже отфильтрованное порогом, — каждый возвращённый результат его прошёл."
   },
   "3b386ad7be58": {
     "fonte": "Cosine similarity, 0..1. `null` when this chunk had no vector.",
-    "traducao": ""
+    "traducao": "Косинусное сходство, 0..1. `null`, когда у этого фрагмента не было вектора."
   },
   "3f3f6fad7f41": {
     "fonte": "Normalized `ts_rank`, 0..1. `null` when the term did not match in this chunk.",
-    "traducao": ""
+    "traducao": "Нормализованный `ts_rank`, 0..1. `null`, когда запрос не совпал в этом фрагменте."
   },
   "c4220aac8f85": {
     "fonte": "Discriminated union by `kind`: \"file\" (`sourcePath`/`headingPath`) or \"session\" (`sessionId`/`eventId`). See `domain/rag/rag-citation.ts`.",
-    "traducao": ""
+    "traducao": "Дискриминированное объединение по `kind`: \"file\" (`sourcePath`/`headingPath`) или \"session\" (`sessionId`/`eventId`). См. `domain/rag/rag-citation.ts`."
   },
   "c07799affbb1": {
     "fonte": "Between 2 and 500 characters — same rule as the Code tab search.",
-    "traducao": ""
+    "traducao": "От 2 до 500 символов — то же правило, что и у поиска во вкладке Code."
   },
   "4fff1b7e5419": {
     "fonte": "When absent, searches all four scopes (RN-219/454).",
-    "traducao": ""
+    "traducao": "Если отсутствует, поиск идёт по всем четырём областям (RN-219/454)."
   },
   "3538b8d81ee9": {
     "fonte": "1 to 10 — when absent, uses the cap.",
-    "traducao": ""
+    "traducao": "От 1 до 10 — если отсутствует, используется лимит."
   },
   "03f6db6a7e46": {
     "fonte": "The `rag_searches` row this search left (RN-479) — the id a vote attaches to. `null` means the telemetry row was NOT written (the insert failed), which is not the same as \"no results\": there is nothing to attach a vote to, and the UI needs the two apart so it does not offer a control the api will refuse.",
-    "traducao": ""
+    "traducao": "Строка `rag_searches`, оставленная этим поиском (RN-479), — id, к которому привязывается голос. `null` означает, что строка телеметрии НЕ записана (вставка не удалась), что не то же самое, что «нет результатов»: привязать голос не к чему, и интерфейсу нужно их различать, чтобы не предлагать элемент управления, который api отклонит."
   },
   "f6a49193e0f3": {
     "fonte": "`false` when the embedding provider did not respond — the search ran with only the lexical signal (RN-233).",
-    "traducao": ""
+    "traducao": "`false`, когда провайдер эмбеддингов не ответил, — поиск выполнился только с лексическим сигналом (RN-233)."
   },
   "ca6ea5e2da8c": {
     "fonte": "Self-reported by the model, not measured.",
-    "traducao": ""
+    "traducao": "Сообщено самой моделью, не измерено."
   },
   "0ebcab0ee6b9": {
     "fonte": "At least one, and each one has to EXIST in this session. Made-up evidence is rejected with 400 — that is what separates a hypothesis from an opinion.",
-    "traducao": ""
+    "traducao": "Как минимум одно, и каждое должно СУЩЕСТВОВАТЬ в этой сессии. Выдуманные доказательства отклоняются с 400 — именно это отличает гипотезу от мнения."
   },
   "55f5493c0654": {
     "fonte": "REQUIRED when `cause` indicates an abnormal termination.",
-    "traducao": ""
+    "traducao": "ОБЯЗАТЕЛЬНО, когда `cause` указывает на аварийное завершение."
   },
   "61ccb5ec987e": {
     "fonte": "The analysis round that generated this hypothesis.",
-    "traducao": ""
+    "traducao": "Раунд анализа, породивший эту гипотезу."
   },
   "d220dec3fbf2": {
     "fonte": "Which agent the hypothesis is about.",
-    "traducao": ""
+    "traducao": "О каком агенте гипотеза."
   },
   "e224dc75d833": {
     "fonte": "Confidence declared by the model itself. Not a measurement, a self-report.",
-    "traducao": ""
+    "traducao": "Уверенность, заявленная самой моделью. Не измерение, а самоотчёт."
   },
   "2aff35acdc14": {
     "fonte": "Log events that support the hypothesis. This is what makes the evidence auditable instead of taken on faith.",
-    "traducao": ""
+    "traducao": "События журнала, подтверждающие гипотезу. Именно это делает доказательства проверяемыми, а не принимаемыми на веру."
   },
   "3a4c8dbf6677": {
     "fonte": "Present only on hypotheses about an abnormally terminated session.",
-    "traducao": ""
+    "traducao": "Присутствует только в гипотезах об аварийно завершённой сессии."
   },
   "e2e24520a106": {
     "fonte": "The ORIGIN of the failure. Never deduced by elimination — lesson from ADR 0020.",
-    "traducao": ""
+    "traducao": "ИСТОЧНИК сбоя. Никогда не выводится методом исключения — урок из ADR 0020."
   },
   "4c06a58a5edb": {
     "fonte": "OCI reference with an explicit tag or digest.",
-    "traducao": ""
+    "traducao": "Ссылка OCI с явным тегом или digest."
   },
   "93bc99fd4213": {
     "fonte": "Id of the `open_infra_pr` `proposed_action` that opened the PR. It is what the engine knows in return — there is no separate artifact id.",
-    "traducao": ""
+    "traducao": "Id действия `open_infra_pr` (`proposed_action`), которое открыло PR. Это то, что engine знает в ответ, — отдельного id артефакта нет."
   },
   "95a9fdbd9c2d": {
     "fonte": "Goes through the SAME QA and SecOps gates as dev PRs.",
-    "traducao": ""
+    "traducao": "Проходит ТЕ ЖЕ gate QA и SecOps, что и PR dev."
   },
   "2988459bf6fe": {
     "fonte": "null when the project hasn't provisioned a repository yet. The Workflows subagent (Phase 8c) decides the CI pipeline format from this: \"gitlab\" generates .gitlab-ci.yml, any other value generates GitHub Actions.",
-    "traducao": ""
+    "traducao": "null, когда проект ещё не создал репозиторий. Субагент Workflows (Фаза 8c) решает по этому формат CI-конвейера: \"gitlab\" генерирует .gitlab-ci.yml, любое другое значение — GitHub Actions."
   },
   "5f48b9159e40": {
     "fonte": "The Architect-routed candidates (route_modules_to_infra, ADR 0131) — what the Infra Lead elects among when proposing container_start (ADR 0130/0133). \"sem_roteamento\" when the Architect has not routed anything yet.",
-    "traducao": ""
+    "traducao": "Кандидаты, маршрутизированные Архитектором (route_modules_to_infra, ADR 0131), — среди них Infra Lead выбирает при предложении container_start (ADR 0130/0133). \"sem_roteamento\", когда Архитектор ещё ничего не маршрутизировал."
   },
   "bc693491d86d": {
     "fonte": "RN-852: the CURRENT artifact.project_image decision (image, network, resources) — the FROM of the Dockerfile and the network the Infra compose respects. null when no image has been decided.",
-    "traducao": ""
+    "traducao": "RN-852: ТЕКУЩЕЕ решение artifact.project_image (образ, сеть, ресурсы) — FROM в Dockerfile и сеть, которую соблюдает compose Infra. null, когда образ не выбран."
   },
   "2e6a7f3ecf54": {
     "fonte": "The content comes from the `proposed_action`'s own payload: an infra artifact NEVER touches a worktree, same as ADRs.",
-    "traducao": ""
+    "traducao": "Содержимое берётся из собственного payload `proposed_action`: инфраструктурный артефакт НИКОГДА не касается worktree, так же как ADR."
   },
   "de7ff2ca022f": {
     "fonte": "The patch `proposed_action` that produced this version, if there was one.",
-    "traducao": ""
+    "traducao": "`proposed_action` патча, породивший эту версию, если он был."
   },
   "2b3f47064d44": {
     "fonte": "The Psychologist's hypothesis that motivated the patch — the closed loop.",
-    "traducao": ""
+    "traducao": "Гипотеза Психолога, ставшая причиной патча, — замкнутый цикл."
   },
   "13df3ae06489": {
     "fonte": "Whether this is the version in effect.",
-    "traducao": ""
+    "traducao": "Является ли это действующей версией."
   },
   "e8ab91377c9a": {
     "fonte": "Diff of this version against the previous one, computed server-side so the UI does not need its own differ. The oldest one is diffed against empty, so it shows up as all-addition.",
-    "traducao": ""
+    "traducao": "Diff этой версии относительно предыдущей, вычисленный на сервере, чтобы интерфейсу не нужен был собственный инструмент сравнения. Самая старая сравнивается с пустой, поэтому отображается целиком как добавление."
   },
   "311878f10a4a": {
     "fonte": "Nome pra você reconhecer este token depois — não é único.",
-    "traducao": ""
+    "traducao": "Имя, чтобы вы потом узнали этот токен, — не уникально."
   },
   "a11dabd734a3": {
     "fonte": "Expira em N dias. Omitido = sem expiração (revogável a qualquer hora, mas nunca expira sozinho).",
-    "traducao": ""
+    "traducao": "Истекает через N дней. Опущено = без срока действия (можно отозвать в любой момент, но сам он никогда не истекает)."
   },
   "85fb77b87d3a": {
     "fonte": "Nulo = sem expiração.",
-    "traducao": ""
+    "traducao": "Нулевое = без срока действия."
   },
   "2f6568eab1c5": {
     "fonte": "Nulo = nunca usado.",
-    "traducao": ""
+    "traducao": "Нулевое = ни разу не использовался."
   },
   "77ef050aa7b7": {
     "fonte": "Guarde agora — não é recuperável depois. Use em --token ou BRABO_ACCOUNT_TOKEN.",
-    "traducao": ""
+    "traducao": "Сохраните сейчас — потом восстановить нельзя. Используйте в --token или BRABO_ACCOUNT_TOKEN."
   },
   "3dae3a00b619": {
     "fonte": "How another module uses the item: call a function, hit a route, subscribe to an event, or build a data shape.",
-    "traducao": ""
+    "traducao": "Как другой модуль использует элемент: вызывает функцию, обращается к маршруту, подписывается на событие или строит форму данных."
   },
   "3c88f50638cd": {
     "fonte": "How another module uses it. Up to 300 characters.",
-    "traducao": ""
+    "traducao": "Как другой модуль его использует. До 300 символов."
   },
   "001d4405596b": {
     "fonte": "How many origin references the rule cites.",
-    "traducao": ""
+    "traducao": "Сколько ссылок на источник цитирует правило."
   },
   "c506c0c1cde5": {
     "fonte": "Active public Ed25519 keys. Two during a rotation.",
-    "traducao": ""
+    "traducao": "Активные публичные ключи Ed25519. Два во время ротации."
   },
   "48dd0efec223": {
     "fonte": "The provider can LIST its own catalog (catalog sync).",
-    "traducao": ""
+    "traducao": "Провайдер может ПЕРЕЧИСЛИТЬ собственный каталог (синхронизация каталога)."
   },
   "16b214287231": {
     "fonte": "Text → vector (ADR 0075). Only `true` when proven.",
-    "traducao": ""
+    "traducao": "Текст → вектор (ADR 0075). `true` только при доказательстве."
   },
   "e705bb58c344": {
     "fonte": "The provider accepts a ROUTING PREFERENCE (`price`, `throughput`, `latency`) to pick among the upstreams serving the same model (ADR 0166). Only `true` after a smoke against the real API returned the chosen upstream — reading the docs does not count.",
-    "traducao": ""
+    "traducao": "Провайдер принимает ПРЕДПОЧТЕНИЕ МАРШРУТИЗАЦИИ (`price`, `throughput`, `latency`) для выбора среди upstream, обслуживающих одну и ту же модель (ADR 0166). `true` только после того, как smoke против реального API вернул выбранный upstream, — чтение документации не считается."
   },
   "73c8e8eeb55f": {
     "fonte": "The provider accepts explicit PROMPT-CACHE breakpoints (`cache_control`) on the stable prefix of a call (RN-892). Only `true` after a smoke against the real API showed cached input tokens on a repeated call.",
-    "traducao": ""
+    "traducao": "Провайдер принимает явные точки PROMPT-CACHE (`cache_control`) на стабильном префиксе вызова (RN-892). `true` только после того, как smoke против реального API показал закешированные входные токены при повторном вызове."
   },
   "9e2d1cace77f": {
     "fonte": "The provider's failure. Comes in the BODY with 200, not as an HTTP error, because the accounting in `usage` remains valid — the turn spent, even while failing.",
-    "traducao": ""
+    "traducao": "Сбой провайдера. Приходит в ТЕЛЕ с 200, а не как ошибка HTTP, потому что учёт в `usage` остаётся действительным — ход потратил, даже завершаясь сбоем."
   },
   "e723527e14f1": {
     "fonte": "The provider failure's normalized `code` (ADR 0041) — `auth`, `rate_limit`, `insufficient_credit` (HTTP 402, RN-730), `model_not_found`, `context_length`, `timeout`, `connection` or `upstream`. `null` with no error, or when the error is not the provider's (budget, missing binding). Decide by this, never by the text of `error`.",
-    "traducao": ""
+    "traducao": "Нормализованный `code` сбоя провайдера (ADR 0041) — `auth`, `rate_limit`, `insufficient_credit` (HTTP 402, RN-730), `model_not_found`, `context_length`, `timeout`, `connection` или `upstream`. `null` без ошибки или когда ошибка не от провайдера (бюджет, отсутствующий binding). Решайте по нему, никогда по тексту `error`."
   },
   "729098251af8": {
     "fonte": "Name of the model that generated the response (finding from problem 2) — `null` when the turn failed before resolving a model (no binding, or binding to a non-existent model).",
-    "traducao": ""
+    "traducao": "Имя модели, сгенерировавшей ответ (вывод из проблемы 2), — `null`, когда ход завершился сбоем до разрешения модели (нет binding или binding на несуществующую модель)."
   },
   "f79b198ccadd": {
     "fonte": "Present (always `true`) only when the provider cut the response at the output cap (`finish_reason: \"length\"` / `stop_reason: \"max_tokens\"`, RN-737): the text and the `toolCalls` arguments are truncated. The engine refuses to run a truncated tool call and narrates the cut.",
-    "traducao": ""
+    "traducao": "Присутствует (всегда `true`) только когда провайдер обрезал ответ на лимите вывода (`finish_reason: \"length\"` / `stop_reason: \"max_tokens\"`, RN-737): текст и аргументы `toolCalls` усечены. Engine отказывается выполнять усечённый вызов инструмента и сообщает об обрезке."
   },
   "dcbac7edbc4e": {
     "fonte": "The step where the Jev chose the tool (ADR 0179, RN-625). Absent when the router was not consulted (provider other than OpenRouter, fewer than two tools, workspace switch off). The engine narrates it as `tool_router.decided`.",
-    "traducao": ""
+    "traducao": "Шаг, на котором Jev выбрал инструмент (ADR 0179, RN-625). Отсутствует, когда маршрутизатор не запрашивался (провайдер не OpenRouter, меньше двух инструментов, переключатель рабочего пространства выключен). Engine сообщает об этом как `tool_router.decided`."
   },
   "6b61e82ccc20": {
     "fonte": "`delta` carries `text`; `done` closes with `usage`; `error` carries `message`.",
-    "traducao": ""
+    "traducao": "`delta` несёт `text`; `done` закрывает поток с `usage`; `error` несёт `message`."
   },
   "1c59dae56a43": {
     "fonte": "Only on the `done`/`final` frame — name of the model that generated the response (finding from problem 2). `null` when the turn failed before resolving a model.",
-    "traducao": ""
+    "traducao": "Только в кадре `done`/`final` — имя модели, сгенерировавшей ответ (вывод из проблемы 2). `null`, когда ход завершился сбоем до разрешения модели."
   },
   "04a17c7678ff": {
     "fonte": "Only on the `final` frame, and only when the provider cut the response at the output cap (RN-737).",
-    "traducao": ""
+    "traducao": "Только в кадре `final`, и только когда провайдер обрезал ответ на лимите вывода (RN-737)."
   },
   "de7da047ca36": {
     "fonte": "Cost in micro-USD: the REAL cost the provider returned when it did (OpenRouter's `usage.cost`), otherwise the frozen catalog price (ADR 0188, RN-665).",
-    "traducao": ""
+    "traducao": "Стоимость в микро-USD: РЕАЛЬНАЯ стоимость, которую вернул провайдер, если вернул (`usage.cost` у OpenRouter), иначе замороженная цена каталога (ADR 0188, RN-665)."
   },
   "d74fa0c25f6a": {
     "fonte": "`true` when the provider did not return a count and the cost was ESTIMATED. The number is worth less, and whoever consumes it needs to be able to say so.",
-    "traducao": ""
+    "traducao": "`true`, когда провайдер не вернул счётчик и стоимость была ОЦЕНЕНА. Число стоит меньше, и потребитель должен уметь об этом сказать."
   },
   "f2d3323e6f9a": {
     "fonte": "Relative path within the chosen folder — never absolute, never `..`.",
-    "traducao": ""
+    "traducao": "Относительный путь внутри выбранной папки — никогда не абсолютный, никогда не `..`."
   },
   "a9057d980902": {
     "fonte": "Plain UTF-8 text — never base64.",
-    "traducao": ""
+    "traducao": "Простой текст UTF-8 — никогда не base64."
   },
   "939bef6a417e": {
     "fonte": "Which of the broker's roots resolves this folder. `gerenciada` → `PROJECT_WORKSPACES_HOST_ROOT` (the product-managed folder, named by `workspaceDirName`); `montada` → `BRABO_PROJECTS_HOST_BASE` (the single base of Mounted projects, ADR 0141); `indisponivel` → no root of this server reaches it, and `motivo` says why. Three states, not two: `runner` projects and legacy `mounted` projects created outside the base are refusals with DIFFERENT fixes, and collapsing them into a null would make the caller guess which one it got.",
-    "traducao": ""
+    "traducao": "Какой из корней broker разрешает эту папку. `gerenciada` → `PROJECT_WORKSPACES_HOST_ROOT` (папка, управляемая продуктом, названная по `workspaceDirName`); `montada` → `BRABO_PROJECTS_HOST_BASE` (единая база проектов Mounted, ADR 0141); `indisponivel` → ни один корень этого сервера до неё не достаёт, и `motivo` говорит почему. Три состояния, а не два: проекты `runner` и устаревшие проекты `mounted`, созданные вне базы, — это отказы с РАЗНЫМИ способами исправления, и их слияние в null заставило бы вызывающего гадать, какой он получил."
   },
   "5e8d249affa6": {
     "fonte": "The part the broker's root does NOT cover, joined to it as `<root>/<segmento>`. For `gerenciada` it is `workspaceDirName`; for `montada`, the RELATIVE path under the base (it may contain `/`). ABSENT — not null — when `tipo` is `indisponivel`: the two variants are a discriminated union on the api side and the wire says the same thing, so a caller that reads `segmento` without checking `tipo` breaks loudly instead of composing `<root>/null`.",
-    "traducao": ""
+    "traducao": "Часть, которую корень broker НЕ покрывает, присоединяемая к нему как `<root>/<segmento>`. Для `gerenciada` это `workspaceDirName`; для `montada` — ОТНОСИТЕЛЬНЫЙ путь внутри базы (может содержать `/`). ОТСУТСТВУЕТ — а не null, — когда `tipo` равен `indisponivel`: два варианта — дискриминированное объединение на стороне api, и протокол говорит то же самое, поэтому вызывающий, читающий `segmento` без проверки `tipo`, ломается громко, а не составляет `<root>/null`."
   },
   "070b95c13ecf": {
     "fonte": "Why no root reaches this folder. Present only when `tipo` is `indisponivel`. It is a message meant to be repeated back to whoever operates, so it names the mode or the base.",
-    "traducao": ""
+    "traducao": "Почему ни один корень не достаёт до этой папки. Присутствует только когда `tipo` равен `indisponivel`. Это сообщение, предназначенное для передачи тому, кто управляет, поэтому оно называет режим или базу."
   },
   "fd8d91cbec8c": {
     "fonte": "A name for a human to recognize this MACHINE later, in the device key list of every project it serves. Not unique. The installer suggests the hostname; nothing here is derived from it by the api.",
-    "traducao": ""
+    "traducao": "Имя, чтобы человек потом узнал эту МАШИНУ в списке ключей устройств каждого проекта, который она обслуживает. Не уникально. Установщик предлагает hostname; api ничего из него здесь не выводит."
   },
   "09e3c0832001": {
     "fonte": "The PUBLIC Ed25519 JWK (RFC 8037), serialized as JSON. The pair is generated on the machine and the private half never travels — a JWK carrying `d` is refused with 400 saying so, never stored.",
-    "traducao": ""
+    "traducao": "ПУБЛИЧНЫЙ JWK Ed25519 (RFC 8037), сериализованный как JSON. Пара генерируется на машине, и приватная половина никогда не передаётся — JWK с `d` отклоняется с 400 с указанием этого и никогда не сохраняется."
   },
   "f3814516b810": {
     "fonte": "The registration id. Write it into the PRIVATE JWK as `kid` before saving the file (RN-475): it is the only link between the key on disk and the public half on the server, and every step downstream only passes it along.",
-    "traducao": ""
+    "traducao": "Id регистрации. Запишите его в ПРИВАТНЫЙ JWK как `kid` перед сохранением файла (RN-475): это единственная связь между ключом на диске и публичной половиной на сервере, и каждый последующий шаг лишь передаёт его дальше."
   },
   "a6a2c8026466": {
     "fonte": "The owner the api RESOLVED — the installation's sole user. The caller does not choose it and does not send it; this field is here so the installer can check it against the account it just created rather than assume.",
-    "traducao": ""
+    "traducao": "Владелец, которого ОПРЕДЕЛИЛА api, — единственный пользователь установки. Вызывающий его не выбирает и не отправляет; это поле здесь, чтобы установщик мог сверить его с только что созданной учётной записью, а не предполагать."
   },
   "2d20014a3b98": {
     "fonte": "Ids of the MACHINE keys this one REPLACED — revoked in the same transaction. Empty is the normal case (a fresh installation). Non-empty means a local agent still holding one of them stops getting tickets, and the installer should say so instead of letting it be discovered. Project keys (ADR 0118) are never touched.",
-    "traducao": ""
+    "traducao": "Id МАШИННЫХ ключей, которые этот ЗАМЕНИЛ, — отозваны в той же транзакции. Пусто — обычный случай (новая установка). Непусто означает, что локальный агент, всё ещё держащий один из них, перестаёт получать тикеты, и установщик должен об этом сказать, а не оставлять это на обнаружение. Ключи проекта (ADR 0118) никогда не затрагиваются."
   },
   "6221031982c4": {
     "fonte": "Only the agent that claimed the task can move it.",
-    "traducao": ""
+    "traducao": "Двигать задачу может только агент, который её забрал."
   },
   "afe59aa93922": {
     "fonte": "Always `true`; failure becomes an HTTP error.",
-    "traducao": ""
+    "traducao": "Всегда `true`; сбой становится ошибкой HTTP."
   },
   "9fededbc5585": {
     "fonte": "Id of the `chat.message` event recorded for this message — the id that cancels it while it waits in the queue.",
-    "traducao": ""
+    "traducao": "Id события `chat.message`, записанного для этого сообщения, — id, которым его отменяют, пока оно ждёт в очереди."
   },
   "231ec72bae34": {
     "fonte": "`lida`: the agent started a turn with it right away. `enfileirada`: the agent was mid-turn, so the message joined its queue and will be read, together with any others queued, in ONE turn when the current one ends (RN-673). The session log carries `chat.message_queued` / `chat.message_delivered` / `chat.message_cancelled`.",
-    "traducao": ""
+    "traducao": "`lida`: агент сразу начал с ним ход. `enfileirada`: агент был посреди хода, поэтому сообщение попало в его очередь и будет прочитано вместе с другими поставленными в очередь за ОДИН ход, когда текущий закончится (RN-673). Журнал сессии несёт `chat.message_queued` / `chat.message_delivered` / `chat.message_cancelled`."
   },
   "58de0b2694b3": {
     "fonte": "Position in the queue (1 = next). Present only when `entrega` is `enfileirada`.",
-    "traducao": ""
+    "traducao": "Позиция в очереди (1 = следующее). Присутствует, только когда `entrega` равен `enfileirada`."
   },
   "9cfcab6cdebb": {
     "fonte": "The REAL outcome of the copy, reported by the local agent after it finished — never an optimistic \"ok\" before the round ends.",
-    "traducao": ""
+    "traducao": "РЕАЛЬНЫЙ исход копирования, сообщённый локальным агентом после завершения, — никогда не оптимистичное «ok» до окончания раунда."
   },
   "0324344a3804": {
     "fonte": "The destination the round actually resolved (success) or tried to use (failure), on the USER machine. FROZEN in the row: showing the project's current destination next to yesterday's copy would be the screen asserting about a folder that round never touched. Omitted when the failure is about the destination itself.",
-    "traducao": ""
+    "traducao": "Назначение, которое раунд фактически разрешил (успех) или пытался использовать (сбой), на машине ПОЛЬЗОВАТЕЛЯ. ЗАМОРОЖЕНО в строке: показ текущего назначения проекта рядом со вчерашней копией был бы утверждением экрана о папке, которой тот раунд не касался. Опущено, когда сбой касается самого назначения."
   },
   "e4790e5cc2e3": {
     "fonte": "Regular files copied in this round. `0` is a number, not an absence — \"synced and copied nothing\" is a state of its own (RN-088).",
-    "traducao": ""
+    "traducao": "Обычные файлы, скопированные в этом раунде. `0` — это число, а не отсутствие: «синхронизировано и ничего не скопировано» — отдельное состояние (RN-088)."
   },
   "c33c77eb02a0": {
     "fonte": "Entries git listed that are not regular files — a nested repository (a dev agent's worktree is one), a symlink, or a file that vanished between the listing and the copy.",
