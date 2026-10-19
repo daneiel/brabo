@@ -5289,7 +5289,7 @@ paths:
         '401':
           description: No token, expired token, or invalid signature.
         '403':
-          description: Papel insuficiente no projeto.
+          description: Insufficient role on the project.
         '404':
           description: Project not found.
         '429':
@@ -5298,11 +5298,11 @@ paths:
         - bearer: []
       summary: Lists your own Personal Access Tokens for this project
       tags:
-        - projetos
+        - projects
     post:
       description: >-
-        The raw token (`brb_...`) only appears in THIS response — it cannot be
-        recovered later, only the hash is stored. Use it in
+        The raw token (`brb_...`) appears only in THIS response — it is not
+        recoverable later, only the hash is stored. Use it in
         `--token`/`BRABO_ACCOUNT_TOKEN` of `brabo-runner`.
       operationId: PersonalAccessTokensController_issuePat
       parameters:
@@ -5331,23 +5331,23 @@ paths:
         '401':
           description: No token, expired token, or invalid signature.
         '403':
-          description: Papel insuficiente no projeto.
+          description: Insufficient role on the project.
         '404':
           description: Project not found.
         '429':
           description: Rate limit per user or per IP.
       security:
         - bearer: []
-      summary: Emite um Personal Access Token pro runner local
+      summary: Issues a Personal Access Token for the local runner
       tags:
-        - projetos
+        - projects
   /projects/{projectId}/personal-access-tokens/{tokenId}:
     delete:
       description: >-
         Idempotent — revoking again is not an error. Since RN-685 (ADR 0201) it
         also DROPS the runner connections opened with THIS token, and only those
         — the same user's device key stays up —, and voids its still-unused
-        tickets. Engine down does NOT make the revocation fail.
+        tickets. The engine being down does NOT make the revocation fail.
       operationId: PersonalAccessTokensController_revokePat
       parameters:
         - name: projectId
@@ -5362,11 +5362,11 @@ paths:
             type: string
       responses:
         '204':
-          description: Token revogado. Sem corpo.
+          description: Token revoked. No body.
         '401':
           description: No token, expired token, or invalid signature.
         '403':
-          description: Papel insuficiente no projeto.
+          description: Insufficient role on the project.
         '404':
           description: Project not found.
         '429':
@@ -5375,11 +5375,11 @@ paths:
         - bearer: []
       summary: Revokes one of your own Personal Access Tokens
       tags:
-        - projetos
+        - projects
   /projects/{projectId}/personal-access-tokens/{tokenId}/admin:
     delete:
       description: >-
-        Incident response — dev offboarded with a leaking token (RN-427).
+        Incident response — a departed dev with a leaking token (RN-427).
         Idempotent — revoking again is not an error. Since RN-685 (ADR 0201) it
         also DROPS the runner already connected with this token, and only it.
       operationId: PersonalAccessTokensController_revokePatAsMaintainer
@@ -5396,25 +5396,25 @@ paths:
             type: string
       responses:
         '204':
-          description: Token revogado. Sem corpo.
+          description: Token revoked. No body.
         '401':
           description: No token, expired token, or invalid signature.
         '403':
-          description: Papel insuficiente no projeto.
+          description: Insufficient role on the project.
         '404':
           description: Project not found.
         '429':
           description: Rate limit per user or per IP.
       security:
         - bearer: []
-      summary: Revokes ANY user's Personal Access Token in the project
+      summary: Revokes the Personal Access Token of ANY user in the project
       tags:
-        - projetos
+        - projects
   /projects/{projectId}/personal-access-tokens/all:
     get:
       description: >-
-        `maintainer` view for incident response (RN-427) — includes each token's
-        owner. Never includes the raw token.
+        The `maintainer` view for incident response (RN-427) — includes the
+        owner of each token. Never includes the raw token.
       operationId: PersonalAccessTokensController_listAllPats
       parameters:
         - name: projectId
@@ -5434,7 +5434,7 @@ paths:
         '401':
           description: No token, expired token, or invalid signature.
         '403':
-          description: Papel insuficiente no projeto.
+          description: Insufficient role on the project.
         '404':
           description: Project not found.
         '429':
@@ -5443,7 +5443,7 @@ paths:
         - bearer: []
       summary: Lists ALL Personal Access Tokens of the project, from any user
       tags:
-        - projetos
+        - projects
   /projects/{projectId}/proficiency:
     get:
       description: >-
@@ -5863,7 +5863,7 @@ paths:
     get:
       description: >-
         Nobody revokes what they cannot see (RN-519). Includes the already
-        REVOKED ones — removing the row would make the screen claim the key
+        REVOKED ones — dropping the row would make the screen claim the key
         never existed. Never returns the public JWK, and the api never saw the
         private one. A null `lastUsedAt` is the sign of an ORPHAN key:
         registered and never used by any runner. Since RN-543 it also includes
@@ -5889,7 +5889,7 @@ paths:
         '401':
           description: No token, expired token, or invalid signature.
         '403':
-          description: Papel insuficiente no projeto.
+          description: Insufficient role on the project.
         '404':
           description: Project not found.
         '429':
@@ -5898,18 +5898,18 @@ paths:
         - bearer: []
       summary: Lists your own device keys for this project
       tags:
-        - projetos
+        - projects
   /projects/{projectId}/runner-device-keys/{deviceKeyId}:
     delete:
       description: >-
         Idempotent — revoking again is not an error. Since RN-520 it also DROPS
         the live connection: before, revoking only prevented a NEW ticket, and
-        an already connected runner kept executing approved commands. Since
-        RN-685 (ADR 0201) the target is the KEY: only the connections opened
-        with it drop — in every project, if it is a machine key —, and another
-        runner of the same user, connected with a PAT or another key, stays up.
-        Its still-unused tickets are voided. Engine down or no runner connected
-        does NOT make the revocation fail.
+        an already connected runner kept running approved commands. Since RN-685
+        (ADR 0201) the target is the KEY: only the connections opened with it
+        drop — in every project, if it is a machine key —, and another runner of
+        the same user, connected with a PAT or another key, stays up. Its
+        still-unused tickets are voided. The engine being down or no runner
+        connected does NOT make the revocation fail.
       operationId: RunnerDeviceKeysController_revokeDeviceKey
       parameters:
         - name: projectId
@@ -5924,11 +5924,11 @@ paths:
             type: string
       responses:
         '204':
-          description: Chave revogada. Sem corpo.
+          description: Key revoked. No body.
         '401':
           description: No token, expired token, or invalid signature.
         '403':
-          description: Papel insuficiente no projeto.
+          description: Insufficient role on the project.
         '404':
           description: Project not found.
         '429':
@@ -5937,13 +5937,13 @@ paths:
         - bearer: []
       summary: Revokes one of your own device keys
       tags:
-        - projetos
+        - projects
   /projects/{projectId}/runner-ticket:
     post:
       description: >-
         Authenticates `connect/3` of the Phoenix socket `/runner` (topic
         `terminal:<projectId>`, role "runner") — it is NOT the reused JWT, and
-        this route itself only accepts a Personal Access Token in place of the
+        this route itself only accepts a Personal Access Token instead of the
         session JWT (ADR 0105). 30s TTL and single use. Refuses with 400 if the
         project is not in "runner" mode (RN-421): the runner has nothing to
         serve in a project whose code lives in the managed container.
@@ -5966,7 +5966,7 @@ paths:
         '401':
           description: No token, expired token, or invalid signature.
         '403':
-          description: Papel insuficiente no projeto.
+          description: Insufficient role on the project.
         '404':
           description: Project not found.
         '429':
@@ -5975,7 +5975,7 @@ paths:
         - bearer: []
       summary: Issues a single-use ticket for the local runner to connect
       tags:
-        - projetos
+        - projects
   /projects/{projectId}/sessions:
     get:
       description: >-
@@ -8167,7 +8167,7 @@ paths:
         '401':
           description: No token, expired token, or invalid signature.
         '403':
-          description: Papel insuficiente no projeto.
+          description: Insufficient role on the project.
         '404':
           description: Project not found.
         '429':
@@ -8176,16 +8176,16 @@ paths:
         - bearer: []
       summary: Issues a single-use ticket for the web Terminal tab
       tags:
-        - projetos
+        - projects
   /runner-releases/binary:
     get:
       description: >-
         GitHub Releases proxy — `platform` accepts only linux-x64, linux-arm64,
         darwin-arm64. No authentication: the binary is not a secret. The bytes
-        are checked against the same Release's `checksums.txt` before anything
-        is answered (ADR 0149, RN-525); the route does NOT verify the manifest
-        signature — this is integrity, not provenance, and signature
-        verification is done by `install.sh`.
+        are checked against the `checksums.txt` of the same Release before
+        anything is answered (ADR 0149, RN-525); the route does NOT verify the
+        manifest signature — that is integrity, not provenance, and whoever
+        verifies the signature is `install.sh`.
       operationId: RunnerReleasesController_binary
       parameters: []
       responses:
@@ -8205,19 +8205,19 @@ paths:
             `motivo`: `plataforma_nao_publicada`, `release_sem_manifesto`,
             `manifesto_nao_cobre_a_plataforma`, `manifesto_ilegivel`,
             `download_falhou` or `hash_divergente`.
-      summary: Downloads the local runner standalone binary for the requested platform
+      summary: Downloads the standalone local runner binary for the requested platform
       tags:
         - infrastructure
   /runner/projects:
     get:
       description: >-
-        Authenticated by a MACHINE device key (ADR 0154) — NEVER by session JWT,
-        and never by a credential bound to a project, which answers 403. Returns
-        the projects in `execution_mode: "runner"` in which the key owner
-        reaches at least `developer` (the same minimum as `POST
-        .../runner-ticket`), with each one's folder name and verification state.
-        The agent asks instead of scanning the disk: the machine base belongs to
-        the user and may have folders that are no project at all.
+        Authenticated by a MACHINE device key (ADR 0154) — NEVER by a session
+        JWT, and never by a credential bound to a project, which answers 403.
+        Returns the projects in `execution_mode: "runner"` in which the key
+        owner reaches at least `developer` (the same minimum as `POST
+        .../runner-ticket`), with the folder name and verification state of
+        each. The agent asks instead of scanning the disk: the machine base
+        belongs to the user and may hold folders that are not projects.
       operationId: RunnerProjectsController_listRunnerProjects
       parameters: []
       responses:
@@ -8241,7 +8241,7 @@ paths:
         - bearer: []
       summary: Lists the projects in "runner" mode that this local agent serves
       tags:
-        - projetos
+        - projects
   /users/me/credentials:
     get:
       description: >-
@@ -9263,7 +9263,7 @@ paths:
         Owner's curation, APPLYING ONLY TO THIS WORKSPACE (ADR 0049). Only
         touches `isActive` — `availability` is what the sync observed at the
         provider, is global, and does not change here. Whole batch or nothing: a
-        non-existent id fails the call without applying any row.
+        nonexistent id fails the call without applying any row.
       operationId: ModelsController_activate
       parameters:
         - name: workspaceId
@@ -10028,8 +10028,6 @@ tags:
     x-displayName: backlog
   - name: psychologist
     x-displayName: psychologist
-  - name: projetos
-    x-displayName: projetos
   - name: rag
     x-displayName: rag
   - name: sessions
@@ -12483,18 +12481,18 @@ components:
             - runner
           example: runner
           description: >-
-            The new execution mode. It may repeat the project's current mode —
-            in that case, only `workspacePath` really changes.
+            The new execution mode. It may repeat the current project mode — in
+            that case, only `workspacePath` really changes.
         workspacePath:
           type: string
           example: /home/you/projects/store
           description: >-
-            The absolute path of the user's folder — required when
-            `executionMode` is `mounted` or `runner`, refused when it is
-            `container`. Same validation as creation (RN-170/RN-422/RN-423): in
-            `mounted`, it must exist and be writable from inside the container;
-            in `runner`, only the format is validated now — the real
-            confirmation comes from the runner connecting again.
+            The absolute path of the user folder — required when `executionMode`
+            is `mounted` or `runner`, refused when it is `container`. Same
+            validation as creation (RN-170/RN-422/RN-423): in `mounted`, it must
+            exist and be writable from inside the container; in `runner`, only
+            the format is validated now — the real confirmation comes from the
+            runner connecting again.
       required:
         - executionMode
     CoverageReportResponseDto:
@@ -12644,7 +12642,7 @@ components:
             - api
           description: >-
             Modules from the `module_map` that the story touches. A story with
-            no module, or with a non-existent module, becomes an architecture
+            no module, or with a nonexistent module, becomes an architecture
             pending item.
           type: array
           items:
@@ -14099,7 +14097,7 @@ components:
         repoId:
           type: string
           example: meta-llama/Llama-3.1-8B-Instruct-GGUF
-          description: '`<publisher>/<modelo>` no Hugging Face Hub.'
+          description: '`<publisher>/<model>` on the Hugging Face Hub.'
         publisher:
           type: string
           example: meta-llama
@@ -14733,12 +14731,12 @@ components:
           type: object
           example: null
           nullable: true
-          description: Nulo = nunca usado.
+          description: Null = never used.
         token:
           type: string
           example: brb_9f8a...
           description: >-
-            Save it now — it cannot be recovered later. Use in --token or
+            Store it now — it is not recoverable later. Use it in --token or
             BRABO_ACCOUNT_TOKEN.
       required:
         - id
@@ -14951,7 +14949,7 @@ components:
           description: >-
             Name of the model that generated the response (finding from problem
             2) — `null` when the turn failed before resolving a model (no
-            binding, or binding to a non-existent model).
+            binding, or binding to a nonexistent model).
         truncated:
           type: boolean
           enum:
@@ -15570,8 +15568,8 @@ components:
           example: null
           nullable: true
           description: >-
-            Only present when the Hub published `usedStorage` in the search —
-            never estimated by guess.
+            Present only when the Hub published `usedStorage` in the search —
+            never guessed.
         status:
           type: string
           enum:
@@ -16319,7 +16317,7 @@ components:
           type: object
           example: null
           nullable: true
-          description: Nulo = nunca usado.
+          description: Null = never used.
         userId:
           type: string
           example: 01JC4Z0000USUARIO000000001
@@ -16365,7 +16363,7 @@ components:
           type: object
           example: null
           nullable: true
-          description: Nulo = nunca usado.
+          description: Null = never used.
       required:
         - id
         - name
@@ -16902,9 +16900,9 @@ components:
             - owner
           example: maintainer
           description: >-
-            EFFECTIVE role: the higher of the project one and the one inherited
-            from the workspace. Whoever is workspace `owner` isn't downgraded by
-            a lesser project association.
+            EFFECTIVE role: the project role when there is one, otherwise the
+            one inherited from the workspace (RN-471) — the project role
+            OVERRIDES the workspace one in both directions, higher or lower.
         name:
           type: object
           example: Senior Dev
@@ -18234,14 +18232,14 @@ components:
           example: Missing tests for the insufficient-stock path.
         itens:
           example:
-            - No test for a non-existent SKU
+            - No test for a nonexistent SKU
           description: What needs to change, item by item.
           type: array
           items:
             type: string
         pergunta:
           type: string
-          example: Should a non-existent code answer 404?
+          example: Should a nonexistent code answer 404?
           description: 'With `needs_user_decision`: the new open question (up to 500 chars).'
         sugestao:
           type: string
@@ -18599,13 +18597,13 @@ components:
         repoId:
           type: string
           example: meta-llama/Llama-3.1-8B-Instruct-GGUF
-          description: '`<publisher>/<modelo>` no Hugging Face Hub.'
+          description: '`<publisher>/<model>` on the Hugging Face Hub.'
         estimatedSizeBytes:
           type: number
           example: 4900000000
           description: >-
             Comes from the search when the Hub published the size — never
-            estimated by guess on the client.
+            guessed by the client.
       required:
         - repoId
     RequestPasswordResetDto:
@@ -19035,7 +19033,7 @@ components:
           nullable: true
           description: >-
             Null = MACHINE key (ADR 0154): valid for any project of its owner,
-            not just this one. See `especie`.
+            not only this one. See `especie`.
         especie:
           type: string
           enum:
@@ -19043,10 +19041,10 @@ components:
             - maquina
           example: projeto
           description: >-
-            `projeto` = bound to this route's project (ADR 0118). `maquina` =
-            describes the MACHINE (ADR 0154) and appears in the listing of every
-            project it serves — revoking it drops the local agent in all of
-            them.
+            `projeto` = bound to the project of this route (ADR 0118). `maquina`
+            = describes the MACHINE (ADR 0154) and appears in the listing of
+            every project it serves — revoking it drops the local agent in all
+            of them.
         createdAt:
           type: string
           example: '2026-08-27T12:00:00.000Z'
@@ -19055,14 +19053,14 @@ components:
           type: object
           example: null
           nullable: true
-          description: Nulo = ativa. Revogada continua aparecendo na lista.
+          description: Null = active. A revoked key keeps appearing in the list.
         lastUsedAt:
           type: object
           example: null
           nullable: true
           description: >-
             Null = never used — the sign of an orphan key (tab closed in the
-            middle of the runner's automatic setup flow).
+            middle of the runner automatic setup flow).
       required:
         - id
         - name
@@ -19092,8 +19090,8 @@ components:
           nullable: true
           description: >-
             When the runner first confirmed the folder (RN-423). Null = never
-            confirmed. It is the record of a confirmation, not a heartbeat
-            (RN-468): it does not say the folder is up now.
+            confirmed. It records a confirmation, not a heartbeat (RN-468): it
+            does not say the folder is up now.
       required:
         - projectId
         - name
@@ -19105,9 +19103,8 @@ components:
         ticket:
           type: string
           description: >-
-            Opaque single-use token, base64url. 30s TTL: it disappears after the
-            first successful `connect/3` on the `/runner` socket, or when it
-            expires.
+            Opaque single-use token, base64url. 30s TTL: gone after the first
+            successful `connect/3` on the `/runner` socket, or when it expires.
         expiresAt:
           type: string
           example: '2026-08-09T12:00:30.000Z'
@@ -20043,7 +20040,7 @@ components:
             - api
           description: >-
             Modules from the `module_map` that the story touches. A story with
-            no module, or with a non-existent module, becomes an architecture
+            no module, or with a nonexistent module, becomes an architecture
             pending item.
           type: array
           items:
@@ -20186,7 +20183,7 @@ components:
             - api
           description: >-
             Modules from the `module_map` that the story touches. A story with
-            no module, or with a non-existent module, becomes an architecture
+            no module, or with a nonexistent module, becomes an architecture
             pending item.
           type: array
           items:

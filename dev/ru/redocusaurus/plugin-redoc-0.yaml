@@ -5327,7 +5327,7 @@ paths:
         - bearer: []
       summary: Перечисляет собственные Personal Access Token этого проекта
       tags:
-        - projetos
+        - projects
     post:
       description: >-
         Сырой токен (`brb_...`) появляется только в ЭТОМ ответе — потом его
@@ -5370,7 +5370,7 @@ paths:
         - bearer: []
       summary: Выпускает Personal Access Token для локального runner
       tags:
-        - projetos
+        - projects
   /projects/{projectId}/personal-access-tokens/{tokenId}:
     delete:
       description: >-
@@ -5406,7 +5406,7 @@ paths:
         - bearer: []
       summary: Отзывает собственный Personal Access Token
       tags:
-        - projetos
+        - projects
   /projects/{projectId}/personal-access-tokens/{tokenId}/admin:
     delete:
       description: >-
@@ -5441,7 +5441,7 @@ paths:
         - bearer: []
       summary: Отзывает Personal Access Token ЛЮБОГО пользователя в проекте
       tags:
-        - projetos
+        - projects
   /projects/{projectId}/personal-access-tokens/all:
     get:
       description: >-
@@ -5475,7 +5475,7 @@ paths:
         - bearer: []
       summary: Перечисляет ВСЕ Personal Access Token проекта, любого пользователя
       tags:
-        - projetos
+        - projects
   /projects/{projectId}/proficiency:
     get:
       description: >-
@@ -5944,7 +5944,7 @@ paths:
         - bearer: []
       summary: Перечисляет собственные ключи устройств этого проекта
       tags:
-        - projetos
+        - projects
   /projects/{projectId}/runner-device-keys/{deviceKeyId}:
     delete:
       description: >-
@@ -5984,7 +5984,7 @@ paths:
         - bearer: []
       summary: Отзывает собственный ключ устройства
       tags:
-        - projetos
+        - projects
   /projects/{projectId}/runner-ticket:
     post:
       description: >-
@@ -6022,7 +6022,7 @@ paths:
         - bearer: []
       summary: Выпускает одноразовый тикет для подключения локального runner
       tags:
-        - projetos
+        - projects
   /projects/{projectId}/sessions:
     get:
       description: >-
@@ -8233,7 +8233,7 @@ paths:
         - bearer: []
       summary: Выпускает одноразовый тикет для вкладки Терминал в вебе
       tags:
-        - projetos
+        - projects
   /runner-releases/binary:
     get:
       description: >-
@@ -8301,7 +8301,7 @@ paths:
         Перечисляет проекты в режиме "runner", которые обслуживает этот
         локальный агент
       tags:
-        - projetos
+        - projects
   /users/me/credentials:
     get:
       description: >-
@@ -10132,8 +10132,6 @@ tags:
     x-displayName: backlog
   - name: psychologist
     x-displayName: психолог
-  - name: projetos
-    x-displayName: проекты (runner)
   - name: rag
     x-displayName: rag
   - name: sessions
@@ -17044,9 +17042,9 @@ components:
             - owner
           example: maintainer
           description: >-
-            ЭФФЕКТИВНАЯ роль: большая из роли проекта и унаследованной от
-            рабочего пространства. Того, кто является `owner` рабочего
-            пространства, меньшая связь с проектом не понижает.
+            ЭФФЕКТИВНАЯ роль: роль проекта, если она есть, иначе унаследованная
+            от рабочего пространства (RN-471) — роль проекта ПЕРЕКРЫВАЕТ роль
+            рабочего пространства в обе стороны, вверх или вниз.
         name:
           type: object
           example: Senior Dev
@@ -18374,14 +18372,14 @@ components:
           example: Missing tests for the insufficient-stock path.
         itens:
           example:
-            - No test for a non-existent SKU
+            - No test for a nonexistent SKU
           description: Что нужно изменить, пункт за пунктом.
           type: array
           items:
             type: string
         pergunta:
           type: string
-          example: Should a non-existent code answer 404?
+          example: Should a nonexistent code answer 404?
           description: 'При `needs_user_decision`: новый открытый вопрос (до 500 символов).'
         sugestao:
           type: string
