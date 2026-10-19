@@ -3261,7 +3261,7 @@
   },
   "e0ccabe76c05": {
     "fonte": "The OWNER of the project folder, measured by the api (ADR 0180): the broker starts the container with `--user uid:gid` so the dev agent can write to the folder under `--cap-drop ALL`. `null` when the folder cannot be measured, the project is `runner`, or the owner is root — the container then starts as before. Never accepted from a request to the broker.",
-    "traducao": ""
+    "traducao": "项目文件夹的所有者，由 api 测量（ADR 0180）：broker 以 `--user uid:gid` 启动容器，使 dev agent 在 `--cap-drop ALL` 下仍能写入该文件夹。为 `null` 的情况：文件夹无法测量、项目为 `runner`，或所有者是 root——此时容器像以前一样启动。绝不接受来自对 broker 请求中的值。"
   },
   "3387e3ba8440": {
     "fonte": "`null` while the Architect has not decided (RN-105) — `start` is then refused with 409 on the broker side, and the other four operations still work.",
@@ -3349,7 +3349,7 @@
   },
   "cb646ec7c3dc": {
     "fonte": "The PO finished the story and it's waiting on the user's decision (Phase 12c — RN-048). Coexists with `status: \"draft\"`: it is a proposal, not a state. Always `false` in a project in `auto` mode.",
-    "traducao": ""
+    "traducao": "PO 已完成该 story，正在等待用户的决定（Phase 12c——RN-048）。与 `status: \"draft\"` 共存：它是一个提议，不是一个状态。始终为 `false`，如果项目处于 `auto` 模式。"
   },
   "cf8ac6e9b38f": {
     "fonte": "Why the user returned the story to the PO. `null` when it was never returned.",
@@ -3537,7 +3537,7 @@
   },
   "9b2c6271ccd6": {
     "fonte": "Whether this is the FIRST task of the module: the oldest `backlog.task_claimed` of the project for `module` is this task. The engine gives it twice the per-task budget (RN-774). `false` without `module`.",
-    "traducao": ""
+    "traducao": "这是否是该模块的第一个任务：项目中最早的那个 `backlog.task_claimed`（针对 `module`）就是此任务。engine 会给它两倍的单任务预算（RN-774）。值为 `false`，如果没有 `module`。"
   },
   "852be1d2394b": {
     "fonte": "RN-859: the user's decisions tied to this task, its story or its rules by `afeta` — they win over RF/DoR on conflict. Newest first, at most 10, each text cut at 1,500 characters.",
@@ -3857,1470 +3857,1470 @@
   },
   "e723527e14f1": {
     "fonte": "The provider failure's normalized `code` (ADR 0041) — `auth`, `rate_limit`, `insufficient_credit` (HTTP 402, RN-730), `model_not_found`, `context_length`, `timeout`, `connection` or `upstream`. `null` with no error, or when the error is not the provider's (budget, missing binding). Decide by this, never by the text of `error`.",
-    "traducao": ""
+    "traducao": "提供商失败的规范化 `code`（ADR 0041）——`auth`、`rate_limit`、`insufficient_credit`（HTTP 402，RN-730）、`model_not_found`、`context_length`、`timeout`、`connection` 或 `upstream`。没有错误，或错误不属于提供商（预算、缺少 binding）时为 `null`。请依据它做判断，绝不依据 `error` 的文本。"
   },
   "729098251af8": {
     "fonte": "Name of the model that generated the response (finding from problem 2) — `null` when the turn failed before resolving a model (no binding, or binding to a non-existent model).",
-    "traducao": ""
+    "traducao": "生成响应的模型名称（问题 2 的发现）——当回合在解析模型之前就失败时（没有 binding，或 binding 指向不存在的模型）为 `null`。"
   },
   "f79b198ccadd": {
     "fonte": "Present (always `true`) only when the provider cut the response at the output cap (`finish_reason: \"length\"` / `stop_reason: \"max_tokens\"`, RN-737): the text and the `toolCalls` arguments are truncated. The engine refuses to run a truncated tool call and narrates the cut.",
-    "traducao": ""
+    "traducao": "仅当提供商在输出上限处截断了响应时出现（始终为 `true`）（`finish_reason: \"length\"` / `stop_reason: \"max_tokens\"`，RN-737）：文本和 `toolCalls` 的参数都被截断。engine 拒绝执行被截断的工具调用，并叙述这一截断。"
   },
   "dcbac7edbc4e": {
     "fonte": "The step where the Jev chose the tool (ADR 0179, RN-625). Absent when the router was not consulted (provider other than OpenRouter, fewer than two tools, workspace switch off). The engine narrates it as `tool_router.decided`.",
-    "traducao": ""
+    "traducao": "Jev 选择工具的那一步（ADR 0179，RN-625）。未咨询路由器时缺省（提供商不是 OpenRouter、工具少于两个、workspace 开关关闭）。engine 将其叙述为 `tool_router.decided`。"
   },
   "6b61e82ccc20": {
     "fonte": "`delta` carries `text`; `done` closes with `usage`; `error` carries `message`.",
-    "traducao": ""
+    "traducao": "`delta` 携带 `text`；`done` 以 `usage` 收尾；`error` 携带 `message`。"
   },
   "1c59dae56a43": {
     "fonte": "Only on the `done`/`final` frame — name of the model that generated the response (finding from problem 2). `null` when the turn failed before resolving a model.",
-    "traducao": ""
+    "traducao": "仅在 `done`/`final` 帧中——生成响应的模型名称（问题 2 的发现）。当回合在解析模型之前就失败时为 `null`。"
   },
   "04a17c7678ff": {
     "fonte": "Only on the `final` frame, and only when the provider cut the response at the output cap (RN-737).",
-    "traducao": ""
+    "traducao": "仅在 `final` 帧中，且仅当提供商在输出上限处截断了响应时（RN-737）。"
   },
   "de7da047ca36": {
     "fonte": "Cost in micro-USD: the REAL cost the provider returned when it did (OpenRouter's `usage.cost`), otherwise the frozen catalog price (ADR 0188, RN-665).",
-    "traducao": ""
+    "traducao": "成本，以微美元计：提供商返回真实成本时使用它（OpenRouter 的 `usage.cost`），否则使用冻结的目录价格（ADR 0188，RN-665）。"
   },
   "d74fa0c25f6a": {
     "fonte": "`true` when the provider did not return a count and the cost was ESTIMATED. The number is worth less, and whoever consumes it needs to be able to say so.",
-    "traducao": ""
+    "traducao": "当提供商没有返回计数、成本是估算出来的时候为 `true`。这个数字的价值较低，使用它的一方需要能够说明这一点。"
   },
   "f2d3323e6f9a": {
     "fonte": "Relative path within the chosen folder — never absolute, never `..`.",
-    "traducao": ""
+    "traducao": "所选文件夹内的相对路径——绝不是绝对路径，绝不包含 `..`。"
   },
   "a9057d980902": {
     "fonte": "Plain UTF-8 text — never base64.",
-    "traducao": ""
+    "traducao": "纯 UTF-8 文本——绝不是 base64。"
   },
   "939bef6a417e": {
     "fonte": "Which of the broker's roots resolves this folder. `gerenciada` → `PROJECT_WORKSPACES_HOST_ROOT` (the product-managed folder, named by `workspaceDirName`); `montada` → `BRABO_PROJECTS_HOST_BASE` (the single base of Mounted projects, ADR 0141); `indisponivel` → no root of this server reaches it, and `motivo` says why. Three states, not two: `runner` projects and legacy `mounted` projects created outside the base are refusals with DIFFERENT fixes, and collapsing them into a null would make the caller guess which one it got.",
-    "traducao": ""
+    "traducao": "由 broker 的哪个根目录解析此文件夹。`gerenciada` → `PROJECT_WORKSPACES_HOST_ROOT`（产品管理的文件夹，由 `workspaceDirName` 命名）；`montada` → `BRABO_PROJECTS_HOST_BASE`（Mounted 项目的唯一基目录，ADR 0141）；`indisponivel` → 此服务器没有任何根目录能访问它，`motivo` 说明原因。三种状态而不是两种：`runner` 项目和在基目录之外创建的旧版 `mounted` 项目都是拒绝，但修复方式不同，把它们合并成一个 null 会让调用方去猜自己遇到的是哪一种。"
   },
   "5e8d249affa6": {
     "fonte": "The part the broker's root does NOT cover, joined to it as `<root>/<segmento>`. For `gerenciada` it is `workspaceDirName`; for `montada`, the RELATIVE path under the base (it may contain `/`). ABSENT — not null — when `tipo` is `indisponivel`: the two variants are a discriminated union on the api side and the wire says the same thing, so a caller that reads `segmento` without checking `tipo` breaks loudly instead of composing `<root>/null`.",
-    "traducao": ""
+    "traducao": "broker 的根目录没有覆盖的部分，以 `<root>/<segmento>` 的形式拼接上去。对 `gerenciada` 而言是 `workspaceDirName`；对 `montada` 而言，是基目录下的相对路径（可能包含 `/`）。缺省——而不是 null——当 `tipo` 为 `indisponivel` 时：这两种变体在 api 端是可辨识联合，线上传输也表达同样的意思，因此读取 `segmento` 却不检查 `tipo` 的调用方会明显地出错，而不是拼出 `<root>/null`。"
   },
   "070b95c13ecf": {
     "fonte": "Why no root reaches this folder. Present only when `tipo` is `indisponivel`. It is a message meant to be repeated back to whoever operates, so it names the mode or the base.",
-    "traducao": ""
+    "traducao": "为什么没有任何根目录能访问此文件夹。仅当 `tipo` 为 `indisponivel` 时出现。这是一条要转述给运营者的消息，因此会指明模式或基目录。"
   },
   "fd8d91cbec8c": {
     "fonte": "A name for a human to recognize this MACHINE later, in the device key list of every project it serves. Not unique. The installer suggests the hostname; nothing here is derived from it by the api.",
-    "traducao": ""
+    "traducao": "供人以后认出这台机器的名称，显示在它所服务的每个项目的设备密钥列表中。不要求唯一。安装器会建议主机名；api 不会从中推导任何东西。"
   },
   "09e3c0832001": {
     "fonte": "The PUBLIC Ed25519 JWK (RFC 8037), serialized as JSON. The pair is generated on the machine and the private half never travels — a JWK carrying `d` is refused with 400 saying so, never stored.",
-    "traducao": ""
+    "traducao": "Ed25519 公钥 JWK（RFC 8037），序列化为 JSON。密钥对在机器上生成，私有的一半从不传输——携带 `d` 的 JWK 会以 400 拒绝并说明原因，绝不存储。"
   },
   "f3814516b810": {
     "fonte": "The registration id. Write it into the PRIVATE JWK as `kid` before saving the file (RN-475): it is the only link between the key on disk and the public half on the server, and every step downstream only passes it along.",
-    "traducao": ""
+    "traducao": "注册 id。在保存文件之前把它作为 `kid` 写入私有 JWK（RN-475）：它是磁盘上的密钥与服务器上公开一半之间唯一的关联，下游的每一步都只是传递它。"
   },
   "a6a2c8026466": {
     "fonte": "The owner the api RESOLVED — the installation's sole user. The caller does not choose it and does not send it; this field is here so the installer can check it against the account it just created rather than assume.",
-    "traducao": ""
+    "traducao": "api 解析出的所有者——该安装的唯一用户。调用方不选择也不发送它；此字段存在是为了让安装器能与刚创建的账户核对，而不是想当然。"
   },
   "2d20014a3b98": {
     "fonte": "Ids of the MACHINE keys this one REPLACED — revoked in the same transaction. Empty is the normal case (a fresh installation). Non-empty means a local agent still holding one of them stops getting tickets, and the installer should say so instead of letting it be discovered. Project keys (ADR 0118) are never touched.",
-    "traducao": ""
+    "traducao": "被这把密钥替换的机器密钥 id——在同一事务中被撤销。为空是正常情况（全新安装）。非空表示仍持有其中某把密钥的本地代理将不再获得票据，安装器应当说明这一点，而不是让人自己发现。项目密钥（ADR 0118）不受影响。"
   },
   "6221031982c4": {
     "fonte": "Only the agent that claimed the task can move it.",
-    "traducao": ""
+    "traducao": "只有认领了任务的代理才能移动它。"
   },
   "afe59aa93922": {
     "fonte": "Always `true`; failure becomes an HTTP error.",
-    "traducao": ""
+    "traducao": "始终为 `true`；失败会变成 HTTP 错误。"
   },
   "9fededbc5585": {
     "fonte": "Id of the `chat.message` event recorded for this message — the id that cancels it while it waits in the queue.",
-    "traducao": ""
+    "traducao": "为这条消息记录的 `chat.message` 事件的 id——在它于队列中等待时用来取消它的 id。"
   },
   "231ec72bae34": {
     "fonte": "`lida`: the agent started a turn with it right away. `enfileirada`: the agent was mid-turn, so the message joined its queue and will be read, together with any others queued, in ONE turn when the current one ends (RN-673). The session log carries `chat.message_queued` / `chat.message_delivered` / `chat.message_cancelled`.",
-    "traducao": ""
+    "traducao": "`lida`：代理立即用它开始了一个回合。`enfileirada`：代理正处于回合中，因此消息进入了它的队列，会在当前回合结束时与其他排队的消息在一个回合中一起被读取（RN-673）。会话日志会记录 `chat.message_queued` / `chat.message_delivered` / `chat.message_cancelled`。"
   },
   "58de0b2694b3": {
     "fonte": "Position in the queue (1 = next). Present only when `entrega` is `enfileirada`.",
-    "traducao": ""
+    "traducao": "在队列中的位置（1 = 下一个）。仅当 `entrega` 为 `enfileirada` 时出现。"
   },
   "9cfcab6cdebb": {
     "fonte": "The REAL outcome of the copy, reported by the local agent after it finished — never an optimistic \"ok\" before the round ends.",
-    "traducao": ""
+    "traducao": "复制的真实结果，由本地代理在完成后报告——绝不是在这一轮结束前乐观地报“ok”。"
   },
   "0324344a3804": {
     "fonte": "The destination the round actually resolved (success) or tried to use (failure), on the USER machine. FROZEN in the row: showing the project's current destination next to yesterday's copy would be the screen asserting about a folder that round never touched. Omitted when the failure is about the destination itself.",
-    "traducao": ""
+    "traducao": "这一轮实际解析到的目标（成功时）或尝试使用的目标（失败时），位于用户的机器上。在记录中冻结：把项目当前的目标显示在昨天的复制旁边，等于界面在对一个那轮从未触及的文件夹做出断言。当失败与目标本身有关时省略。"
   },
   "e4790e5cc2e3": {
     "fonte": "Regular files copied in this round. `0` is a number, not an absence — \"synced and copied nothing\" is a state of its own (RN-088).",
-    "traducao": ""
+    "traducao": "这一轮复制的普通文件数。`0` 是一个数字，而不是缺失——“已同步但什么也没复制”是一种独立的状态（RN-088）。"
   },
   "c33c77eb02a0": {
     "fonte": "Entries git listed that are not regular files — a nested repository (a dev agent's worktree is one), a symlink, or a file that vanished between the listing and the copy.",
-    "traducao": ""
+    "traducao": "git 列出的、不是普通文件的条目——嵌套仓库（dev agent 的 worktree 就是一个）、符号链接，或在列出和复制之间消失的文件。"
   },
   "0e1f98ec8aee": {
     "fonte": "Targets the per-file guard refused (a symlink escaping the destination). Counted, never swallowed.",
-    "traducao": ""
+    "traducao": "被逐文件防护拒绝的目标（逃出目标目录的符号链接）。会被计数，绝不吞掉。"
   },
   "4f66e215b010": {
     "fonte": "The NAMED failure message. Stored truncated when very long, saying it was truncated. It never erases the last successful sync — which row is CURRENT is decided by comparing the two timestamps.",
-    "traducao": ""
+    "traducao": "具名的失败消息。很长时会截断存储，并说明已截断。它绝不会抹去最近一次成功的同步——哪条是当前的，由比较两个时间戳决定。"
   },
   "c09fbef908e9": {
     "fonte": "Which of the three states is CURRENT after this write. `never` is unreachable here (every write stamps one of the two timestamps) and is listed because the vocabulary is the same one the screen reads.",
-    "traducao": ""
+    "traducao": "此次写入后三种状态中哪一种是当前的。`never` 在这里不可能出现（每次写入都会标记两个时间戳之一），列出它是因为词汇与界面读取的相同。"
   },
   "c84f6b0dae1c": {
     "fonte": "Id of the workspace, project, or session the binding is pinned to. In the `agent` and `area` scopes, which exist PER PROJECT, it is composite: `<projectId>:<agent slug|area key>` (ADR 0064).",
-    "traducao": ""
+    "traducao": "binding 所固定的 workspace、项目或会话的 id。在按项目存在的 `agent` 和 `area` 范围中，它是复合的：`<projectId>:<agent slug|area key>`（ADR 0064）。"
   },
   "fd12e70de725": {
     "fonte": "How a hub picks the upstream for this binding (ADR 0166, RN-583). `null` = the hub decides on its own. Only ever set for a provider that declares the `routingPreference` capability.",
-    "traducao": ""
+    "traducao": "中转平台如何为此 binding 选择上游（ADR 0166，RN-583）。`null` = 由中转平台自行决定。只会为声明了 `routingPreference` 能力的提供商设置。"
   },
   "046627ab83c9": {
     "fonte": "Identifier at the provider.",
-    "traducao": ""
+    "traducao": "在提供商处的标识符。"
   },
   "7a1630764096": {
     "fonte": "Price per million INPUT tokens, in micro-USD.",
-    "traducao": ""
+    "traducao": "每百万输入 token 的价格，以微美元计。"
   },
   "6b93aefd72a1": {
     "fonte": "Price per million OUTPUT tokens, in micro-USD.",
-    "traducao": ""
+    "traducao": "每百万输出 token 的价格，以微美元计。"
   },
   "0668c24c7422": {
     "fonte": "Also the model's `context_length` capability.",
-    "traducao": ""
+    "traducao": "同时也是模型的 `context_length` 能力。"
   },
   "909e5c2ca7ea": {
     "fonte": "NATIVE tool calling. Without this the model is chat-only and cannot be bound to an agent (RN-040).",
-    "traducao": ""
+    "traducao": "原生工具调用。没有它，模型只能聊天，不能绑定到代理（RN-040）。"
   },
   "fe76f3e7f8e5": {
     "fonte": "Accepts IMAGE input. `false` means the provider did not declare the modality — not that the model can't do it (ADR 0041).",
-    "traducao": ""
+    "traducao": "接受图像输入。`false` 表示提供商没有声明该模态——而不是模型做不到（ADR 0041）。"
   },
   "6ee8c2bc5bb6": {
     "fonte": "Accepts explicit reasoning (thinking). On OpenRouter it comes from `supported_parameters: reasoning`.",
-    "traducao": ""
+    "traducao": "接受显式推理（thinking）。在 OpenRouter 上来自 `supported_parameters: reasoning`。"
   },
   "f79f0d13068e": {
     "fonte": "PRODUCES image — an axis different from accepting it as input. Few models have it, and confusing the two sends the user to the wrong model.",
-    "traducao": ""
+    "traducao": "生成图像——与接受图像输入是不同的维度。具备的模型很少，把两者混淆会让用户选错模型。"
   },
   "7ee61c01b792": {
     "fonte": "Price typed in from the provider's docs, not synced. The price sync does not overwrite a row marked without an explicit decision.",
-    "traducao": ""
+    "traducao": "根据提供商文档手动输入的价格，而不是同步而来。价格同步在没有明确决定的情况下不会覆盖被标记的记录。"
   },
   "36243d13b9b6": {
     "fonte": "REMOTE reality observed by sync, an axis independent from curation. `unavailable` is a model that vanished from the provider catalog — it is never deleted, because bindings and cost history point to it.",
-    "traducao": ""
+    "traducao": "同步观测到的远程现实，与策展相互独立的维度。`unavailable` 是从提供商目录中消失的模型——它绝不会被删除，因为 binding 和成本历史都指向它。"
   },
   "d0e86d667623": {
     "fonte": "Last time sync saw the model in the provider catalog.",
-    "traducao": ""
+    "traducao": "同步最后一次在提供商目录中看到该模型的时间。"
   },
   "1701024afcda": {
     "fonte": "Curation by the OWNER **of this workspace**: a deactivated model disappears from the selector but stays in historical costs. A model discovered by sync has no curation row, and no row means `false`.",
-    "traducao": ""
+    "traducao": "**此 workspace** 所有者的策展：被停用的模型会从选择器中消失，但保留在历史成本中。同步发现的模型没有策展记录，没有记录即表示 `false`。"
   },
   "7336b82fb21f": {
     "fonte": "What THIS workspace uses the model for. The operator's opinion, not a provider capability — no catalog publishes \"good for code\". An empty list means \"nobody has an opinion\", not \"not fit for it\".",
-    "traducao": ""
+    "traducao": "此 workspace 将该模型用于什么。是运营者的意见，而不是提供商的能力——没有任何目录会公布“适合写代码”。空列表表示“没有人有意见”，而不是“不适合”。"
   },
   "0f5d2a87ecd7": {
     "fonte": "OpenRouter free-routing alias (an id starting with `~`): the catalog price is a showcase price and the bill comes from whichever upstream served the call. Curation refuses to ACTIVATE it (422 `alias_de_roteamento_livre`); one activated before the rule stays active, marked by this flag, and once deactivated it cannot come back. Derived from provider and name on read, never stored.",
-    "traducao": ""
+    "traducao": "OpenRouter 免费路由别名（以 `~` 开头的 id）：目录价格只是展示价，账单来自实际处理调用的那个上游。策展拒绝激活它（422 `alias_de_roteamento_livre`）；在该规则之前激活的保持激活，并以此标志标记，一旦停用就无法再恢复。读取时根据提供商和名称推导，从不存储。"
   },
   "bcbaf25a1875": {
     "fonte": "Micro-USD per 1M, before.",
-    "traducao": ""
+    "traducao": "每百万的微美元数，变更前。"
   },
   "d302d38fe6e0": {
     "fonte": "Micro-USD per 1M, after.",
-    "traducao": ""
+    "traducao": "每百万的微美元数，变更后。"
   },
   "ea9c49cdfd18": {
     "fonte": "`manual` was someone typing from the provider's docs; `sync` came from the remote catalog.",
-    "traducao": ""
+    "traducao": "`manual` 是有人根据提供商文档手动输入；`sync` 来自远程目录。"
   },
   "e26c2d27b03d": {
     "fonte": "`null` when it came from sync — no person behind it.",
-    "traducao": ""
+    "traducao": "来自同步时为 `null`——背后没有人。"
   },
   "a03aee1e30a3": {
     "fonte": "Só presente quando o Hub publicou `usedStorage` na busca — nunca estimado por palpite.",
-    "traducao": ""
+    "traducao": "仅当 Hub 在搜索中公布了 `usedStorage` 时出现——绝不凭猜测估算。"
   },
   "6cf9d179be59": {
     "fonte": "`pending_confirmation` → `confirmed` → `pulling` → `active` | `failed`. Os dois primeiros estados SÃO a segunda confirmação explícita que o produto exige antes de qualquer download rodar.",
-    "traducao": ""
+    "traducao": "`pending_confirmation` → `confirmed` → `pulling` → `active` | `failed`。前两个状态就是产品在任何下载运行之前要求的第二次显式确认。"
   },
   "7478c7389267": {
     "fonte": "Quando o clique de confirmação aconteceu.",
-    "traducao": ""
+    "traducao": "确认点击发生的时间。"
   },
   "749c4b474dd7": {
     "fonte": "Só em `failed`, prefixado pela origem (infra | modelo | código | política) — nunca falha calada.",
-    "traducao": ""
+    "traducao": "仅在 `failed` 时，以来源为前缀（infra | 模型 | 代码 | 策略）——绝不静默失败。"
   },
   "649956545cc3": {
     "fonte": "History is immutable: each new map is one more version, and the current one is the one with the highest `version`.",
-    "traducao": ""
+    "traducao": "历史不可变：每个新映射都是新增一个版本，当前版本是 `version` 最高的那个。"
   },
   "de44d433b2a2": {
     "fonte": "Names of other modules. A cycle here gets the map REJECTED on write.",
-    "traducao": ""
+    "traducao": "其他模块的名称。这里出现环会让映射在写入时被拒绝。"
   },
   "75277d4665d0": {
     "fonte": "What THIS module needs alone inside the project container (RN-683, ADR 0199). Absent when the Architect did not declare it. The Infra starts the container with the SUM over modules, floored at the default while any module is undeclared.",
-    "traducao": ""
+    "traducao": "此模块单独在项目容器内所需的资源（RN-683，ADR 0199）。Architect 未声明时缺省。Infra 以所有模块的总和启动容器，只要有任何模块未声明，就以默认值为下限。"
   },
   "dc52a6d34c1a": {
     "fonte": "The report's actor — always whoever called. Another actor's row does not get in.",
-    "traducao": ""
+    "traducao": "报告的参与者——始终是调用者本人。其他参与者的记录不会进来。"
   },
   "840a6c02e6e6": {
     "fonte": "The daemon's own state, with no translation and no collapse.",
-    "traducao": ""
+    "traducao": "守护进程自身的状态，不做翻译也不做合并。"
   },
   "e5134b388aea": {
     "fonte": "`null` when the container has never started.",
-    "traducao": ""
+    "traducao": "容器从未启动过时为 `null`。"
   },
   "292362f8deef": {
     "fonte": "`criado`: a new offer. `substituiu_oferta`: a new offer, and the pending one(s) to the same target became `superseded`. `ja_oferecido`: no new row — the pending offer already there is returned (same session and no new artifact, or `seAusente`).",
-    "traducao": ""
+    "traducao": "`criado`：新提议。`substituiu_oferta`：新提议，且给同一目标的待处理提议变为 `superseded`。`ja_oferecido`：没有新记录——返回已存在的待处理提议（同一会话且没有新制品，或 `seAusente`）。"
   },
   "8331e2b066fe": {
     "fonte": "The agent that asked.",
-    "traducao": ""
+    "traducao": "提问的代理。"
   },
   "a83c2809615a": {
     "fonte": "The user who created the origin session — the only one who may answer.",
-    "traducao": ""
+    "traducao": "创建来源会话的用户——唯一可以回答的人。"
   },
   "2fbfe18a16f3": {
     "fonte": "Total matching the filter; `itens` is capped at 50 (RN-180).",
-    "traducao": ""
+    "traducao": "符合过滤条件的总数；`itens` 上限为 50（RN-180）。"
   },
   "fcae4fe7b421": {
     "fonte": "Pass as `afterSeq` on the next page; `null` means end of list.",
-    "traducao": ""
+    "traducao": "在下一页作为 `afterSeq` 传入；`null` 表示列表结束。"
   },
   "9921c4173faf": {
     "fonte": "Pass as `afterSeq` for the next page. `null` means end of the log.",
-    "traducao": ""
+    "traducao": "在下一页作为 `afterSeq` 传入。`null` 表示日志结束。"
   },
   "b4385acaeb69": {
     "fonte": "`executado`: the agent started, within the lead's cap. `aguardando_autorizacao`: the request became a `proposed_action` and NOTHING started until you decide. `recusado`: the area has an invalid `max_parallel`.",
-    "traducao": ""
+    "traducao": "`executado`：代理已在 lead 的上限内启动。`aguardando_autorizacao`：请求变成了 `proposed_action`，在你决定之前什么都不会启动。`recusado`：该区域的 `max_parallel` 无效。"
   },
   "6b212e680cd2": {
     "fonte": "The action to decide on. Only in `aguardando_autorizacao`.",
-    "traducao": ""
+    "traducao": "需要决定的操作。仅在 `aguardando_autorizacao` 中。"
   },
   "ac5d16314dcc": {
     "fonte": "Dev agents already up IN THE SESSION, summed across all modules.",
-    "traducao": ""
+    "traducao": "会话中已在运行的 dev agent，所有模块求和。"
   },
   "52c981026ac2": {
     "fonte": "The cap the lead uses without asking.",
-    "traducao": ""
+    "traducao": "lead 无需询问即可使用的上限。"
   },
   "4e61ecd631a8": {
     "fonte": "Why the request was refused. Only in `recusado`.",
-    "traducao": ""
+    "traducao": "请求被拒绝的原因。仅在 `recusado` 中。"
   },
   "ecce2e802f0f": {
     "fonte": "How many profiles were deleted.",
-    "traducao": ""
+    "traducao": "删除了多少个画像。"
   },
   "e79ff1e71a26": {
     "fonte": "Always `true`: deleting WITHOUT recording the opt-out would be cosmetic, because the next round would re-derive everything.",
-    "traducao": ""
+    "traducao": "始终为 `true`：删除而不记录选择退出只是装样子，因为下一轮会重新推导一切。"
   },
   "61bc52dc96d4": {
     "fonte": "Automatically approved patterns.",
-    "traducao": ""
+    "traducao": "自动批准的模式。"
   },
   "6de805383f29": {
     "fonte": "Forbidden patterns. `deny` wins over `allow` and over the agent's autonomy — no configuration combination releases what is listed here.",
-    "traducao": ""
+    "traducao": "禁止的模式。`deny` 优先于 `allow` 和代理的自主权——没有任何配置组合能放行这里列出的内容。"
   },
   "5324484332f9": {
     "fonte": "Patterns that always require a human decision.",
-    "traducao": ""
+    "traducao": "始终需要人工决定的模式。"
   },
   "e9fd914b2acd": {
     "fonte": "`null` on the first stage — there is no \"conversion from\" anything.",
-    "traducao": ""
+    "traducao": "第一个阶段为 `null`——不存在从任何东西“转化而来”。"
   },
   "118a02816bb3": {
     "fonte": "Simple average in ms — `null` with no session having both a commit AND a merge.",
-    "traducao": ""
+    "traducao": "简单平均值，以毫秒计——没有任何会话同时具有提交和合并时为 `null`。"
   },
   "75ae240d1c22": {
     "fonte": "Git actions considered (git_commit/pr_open/git_merge, any status).",
-    "traducao": ""
+    "traducao": "纳入统计的 git 操作（git_commit/pr_open/git_merge，任意状态）。"
   },
   "6400b28e9de9": {
     "fonte": "Has to be in the catalog returned by `anamnese-context` — a made-up competency is REJECTED. The catalog depends on the `module_map`, which is why the validation is a domain one, not a DTO one.",
-    "traducao": ""
+    "traducao": "必须在 `anamnese-context` 返回的目录中——编造的能力会被拒绝。目录取决于 `module_map`，这就是为什么校验在领域层而不是 DTO 层。"
   },
   "1ea74227ffc3": {
     "fonte": "Each id has to be from a session event OF THIS project — citing an event from another project is refused.",
-    "traducao": ""
+    "traducao": "每个 id 都必须来自此项目的会话事件——引用其他项目的事件会被拒绝。"
   },
   "1635b673c4cc": {
     "fonte": "The \"whys\" behind the level. Without this the profile would be a verdict with no appeal.",
-    "traducao": ""
+    "traducao": "该等级背后的“为什么”。没有它，画像就是一个无法申诉的裁决。"
   },
   "065dbf47e893": {
     "fonte": "Log events that support the level.",
-    "traducao": ""
+    "traducao": "支持该等级的日志事件。"
   },
   "d7beed0aca88": {
     "fonte": "`null` when whoever has the profile is no longer a project member — the profile survives the member's removal.",
-    "traducao": ""
+    "traducao": "当拥有该画像的人已不再是项目成员时为 `null`——画像在成员被移除后仍然保留。"
   },
   "965aea382c6d": {
     "fonte": "The `artifact.business_rule` EVENT's id. This is the value that goes into `business_rule_ids` when creating the story — there is no rules table.",
-    "traducao": ""
+    "traducao": "`artifact.business_rule` 事件的 id。这是创建 story 时放入 `business_rule_ids` 的值——没有规则表。"
   },
   "355aa9722da1": {
     "fonte": "The rule's content, not just the statement: the story's requirement comes from it. This is the field that distinguishes this reading from the screen's coverage.",
-    "traducao": ""
+    "traducao": "规则的内容，而不只是陈述：story 的需求来源于它。正是这个字段把这次读取与界面的覆盖率区分开来。"
   },
   "de5659732e9b": {
     "fonte": "Stories that already cite this rule.",
-    "traducao": ""
+    "traducao": "已引用此规则的 story。"
   },
   "edfab23f39ed": {
     "fonte": "How many rules no story covers. This is the PO's pending item, and the number that the `listar_regras_de_negocio` tool puts in front of the model.",
-    "traducao": ""
+    "traducao": "有多少条规则没有任何 story 覆盖。这是 PO 的待办项，也是 `listar_regras_de_negocio` 工具摆在模型面前的数字。"
   },
   "709cc527a0be": {
     "fonte": "`local` when the project doesn't have a provisioned repository yet.",
-    "traducao": ""
+    "traducao": "项目还没有已置备的仓库时为 `local`。"
   },
   "b80020357b47": {
     "fonte": "`null` when the bootstrap never started. Derived from the cursor.",
-    "traducao": ""
+    "traducao": "引导从未开始时为 `null`。由游标推导。"
   },
   "e8cd5d8fe9e7": {
     "fonte": "`null` when the project NEVER had a budget set — distinct from a zeroed-out row, and this is what makes the card offer \"Set budget\".",
-    "traducao": ""
+    "traducao": "项目从未设置过预算时为 `null`——不同于被清零的记录，正是这一点让卡片提供“设置预算”。"
   },
   "a443dd94fed3": {
     "fonte": "Last `seq` already recorded in the most recent session (`nextSeq - 1`); 0 when there is no session. The web compares this against what has already been seen to count unread.",
-    "traducao": ""
+    "traducao": "最近会话中已记录的最后一个 `seq`（`nextSeq - 1`）；没有会话时为 0。Web 端将其与已看过的内容比较来统计未读数。"
   },
   "adfe1097832d": {
     "fonte": "The most recent session's last event — the card's footer line.",
-    "traducao": ""
+    "traducao": "最近会话的最后一个事件——卡片的页脚行。"
   },
   "121934799371": {
     "fonte": "Stories the PO finished and that are awaiting the user's promotion (RN-048).",
-    "traducao": ""
+    "traducao": "PO 已完成、等待用户提升的 story（RN-048）。"
   },
   "423146ac2a8c": {
     "fonte": "`proposed_actions` with `status = pending` across the WHOLE project, all sessions — not just the most recent one. This is what the sidebar shows as the project's badge (RN-151).",
-    "traducao": ""
+    "traducao": "`proposed_actions`，其 `status = pending`，覆盖整个项目所有会话——而不仅是最近的会话。这就是侧边栏显示为项目徽标的内容（RN-151）。"
   },
   "bad9489d4cf4": {
     "fonte": "How many agents are ONLINE right now — working or with a pending item awaiting a decision (RN-409). Never team size: an `idle`/`idle_tripped` dev agent does not count, an `idle` conversational agent does not count, QA/SecOps never count (single verdict per invocation).",
-    "traducao": ""
+    "traducao": "此刻有多少代理在线——正在工作或有等待决定的待办项（RN-409）。绝不是团队规模：`idle`/`idle_tripped` 的 dev agent 不计入，`idle` 的对话式代理不计入，QA/SecOps 永不计入（每次调用只有一个裁决）。"
   },
   "a49237519b86": {
     "fonte": "The mounted-projects base of this installation (`BRABO_PROJECTS_BASE`, ADR 0141) — the same value `GET .../projects-base` returns, repeated here so a client can render the breadcrumb without a second call. `null` means the installation offers no Mounted mode.",
-    "traducao": ""
+    "traducao": "此安装的挂载项目基目录（`BRABO_PROJECTS_BASE`，ADR 0141）——与 `GET .../projects-base` 返回的值相同，在此重复，以便客户端无需第二次调用即可渲染面包屑。`null` 表示此安装不提供 Mounted 模式。"
   },
   "ef437edad08b": {
     "fonte": "The folder actually listed, normalized. Equals `base` when the request omitted `path`. `null` only when there is no base at all: nothing was listed because there is nowhere to list.",
-    "traducao": ""
+    "traducao": "实际列出的文件夹，已规范化。等于 `base`，当请求省略 `path` 时。仅当完全没有基目录时为 `null`：什么都没列出，因为无处可列。"
   },
   "d4ae49bf2910": {
     "fonte": "The SUBDIRECTORY names directly under `path`, sorted, never recursive. Files, symlinks and dot-prefixed entries are excluded — see `arquivos`, `simbolicos` and `truncado`.",
-    "traducao": ""
+    "traducao": "`path` 正下方的子目录名称，已排序，绝不递归。文件、符号链接和以点开头的条目会被排除——见 `arquivos`、`simbolicos` 和 `truncado`。"
   },
   "136b98c84b77": {
     "fonte": "The folder holds more than 500 subdirectories and only the first 500 came back. Sorting happens BEFORE the cut, so the cut is deterministic instead of \"whatever the filesystem returned first\".",
-    "traducao": ""
+    "traducao": "该文件夹包含超过 500 个子目录，只返回了前 500 个。排序在截断之前进行，因此截断是确定性的，而不是“文件系统先返回什么就是什么”。"
   },
   "cb2fe25824a0": {
     "fonte": "How many non-directory entries were left out. A folder full of code must not look empty (RN-180).",
-    "traducao": ""
+    "traducao": "有多少个非目录条目被略去。满是代码的文件夹绝不能看起来是空的（RN-180）。"
   },
   "3d7811af155d": {
     "fonte": "How many symlinks were left out. The browser never follows one — a link is reported, never descended into, so a link pointing outside the base is not a way out of it.",
-    "traducao": ""
+    "traducao": "有多少个符号链接被略去。浏览器从不跟随链接——链接只报告而绝不进入，因此指向基目录之外的链接不是逃出基目录的途径。"
   },
   "90d5be97ed08": {
     "fonte": "`local` is a bare-repo path on disk with no credential; `remote` is a URL that requires authentication.",
-    "traducao": ""
+    "traducao": "`local` 是磁盘上没有凭据的裸仓库路径；`remote` 是需要认证的 URL。"
   },
   "79634fd47a60": {
     "fonte": "What becomes `git remote add origin <this>`. **No credential embedded**, by design: this is the value that gets written into the workspace's `.git/config`, readable by anyone with access to the project's directory.",
-    "traducao": ""
+    "traducao": "会变成 `git remote add origin <this>` 的内容。**按设计不嵌入凭据**：这个值会被写入 workspace 的 `.git/config`，任何能访问项目目录的人都能读取。"
   },
   "33702717c052": {
     "fonte": "Only on `remote`. The workspace OWNER's token (RN-058), decrypted at call time. Whoever receives it injects it per invocation and discards it.",
-    "traducao": ""
+    "traducao": "仅在 `remote` 时。workspace 所有者的令牌（RN-058），在调用时解密。接收方按每次调用注入并随即丢弃。"
   },
   "f2ecbb9e56d1": {
     "fonte": "User of the HTTP Basic pair; the token is the password.",
-    "traducao": ""
+    "traducao": "HTTP Basic 凭据对中的用户；令牌就是密码。"
   },
   "d7256bdaa259": {
     "fonte": "EFFECTIVE role: the higher of the project one and the one inherited from the workspace. Whoever is workspace `owner` isn't downgraded by a lesser project association.",
-    "traducao": ""
+    "traducao": "有效角色：项目角色与从 workspace 继承的角色中较高的那个。workspace `owner` 不会因为较低的项目关联而被降级。"
   },
   "3c55afbbb568": {
     "fonte": "Linear hierarchy: owner > maintainer > developer > viewer. Each role includes the permissions of the ones after it.",
-    "traducao": ""
+    "traducao": "线性层级：owner > maintainer > developer > viewer。每个角色都包含其后角色的权限。"
   },
   "f80886fedab5": {
     "fonte": "The destination declared TODAY (`projects.mirror_path`, RN-515). `null` means the project has no mirror — the NORMAL state, and what makes the screen hide this line entirely instead of inventing an absence.",
-    "traducao": ""
+    "traducao": "今天声明的目标（`projects.mirror_path`，RN-515）。`null` 表示项目没有镜像——这是正常状态，也是界面完全隐藏这一行而不是凭空编造缺失的原因。"
   },
   "acf015dbef4d": {
     "fonte": "`never` — no runner has reported a round yet (there is no row). `synced` — the last round copied; `filesCopied` may be `0`, which is \"looked and there was nothing to copy\" and has a sentence of its own. `failed` — the last round failed, and the error is newer than the last success. The API derives this from the two timestamps so the rule has one source; the screen still gets the raw fields to write the sentence.",
-    "traducao": ""
+    "traducao": "`never`——还没有 runner 报告过任何一轮（没有记录）。`synced`——最近一轮已复制；`filesCopied` 可能为 `0`，表示“看过了，没有需要复制的”，有自己专门的语句。`failed`——最近一轮失败，且错误比最近一次成功更新。API 根据两个时间戳推导出它，让这条规则只有一个来源；界面仍会拿到原始字段来组织语句。"
   },
   "9d6a5a13614f": {
     "fonte": "The last SUCCESSFUL sync. A later failure never erases it — it is the most useful thing this screen has while the mirror is broken.",
-    "traducao": ""
+    "traducao": "最近一次成功的同步。之后的失败绝不会抹去它——在镜像损坏期间，这是此界面最有用的信息。"
   },
   "f9145e366f15": {
     "fonte": "Where the last round actually wrote — FROZEN. It diverges from `mirrorPath` after someone changes the destination, because the grant travels in the join and only changes when the runner reconnects (RN-516).",
-    "traducao": ""
+    "traducao": "最近一轮实际写入的位置——已冻结。在有人修改目标后它会与 `mirrorPath` 不同，因为授权随 join 传递，只在 runner 重连时才会改变（RN-516）。"
   },
   "9237904eccf8": {
     "fonte": "Unique within the workspace.",
-    "traducao": ""
+    "traducao": "在 workspace 内唯一。"
   },
   "719bf67c17ce": {
     "fonte": "Name of this project's physical workspace folder in PROJECT_WORKSPACES_ROOT (RN-109). `<slug>-<8 id chars>` on a new project; the raw UUID on a project created before this column existed. Frozen at creation — editing `slug` later doesn't recompute it.",
-    "traducao": ""
+    "traducao": "此项目在 PROJECT_WORKSPACES_ROOT 中的物理 workspace 文件夹名称（RN-109）。新项目为 `<slug>-<8 id chars>`；在此列存在之前创建的项目为原始 UUID。在创建时冻结——之后编辑 `slug` 不会重新计算它。"
   },
   "d0af51d13fc2": {
     "fonte": "WHERE the command executes (RN-169/RN-421 — ADR 0072/0104). `container`: the folder managed in PROJECT_WORKSPACES_ROOT. `mounted`: the user's folder in `workspacePath`, inside `BRABO_PROJECTS_BASE` and reached through the base bind-mount (ADR 0141). `runner`: the user's folder confirmed by the runner. Both `mounted` and `runner` report the confirmation in `workspaceVerifiedAt`.",
-    "traducao": ""
+    "traducao": "命令在哪里执行（RN-169/RN-421——ADR 0072/0104）。`container`：在 PROJECT_WORKSPACES_ROOT 中托管的文件夹。`mounted`：`workspacePath` 中的用户文件夹，位于 `BRABO_PROJECTS_BASE` 内，通过基目录的 bind-mount 访问（ADR 0141）。`runner`：由 runner 确认的用户文件夹。`mounted` 和 `runner` 都会在 `workspaceVerifiedAt` 中报告确认。"
   },
   "032f0161bdc8": {
     "fonte": "The user's folder absolute path — filled in for `mounted`/`runner`, always `null` in `container` mode.",
-    "traducao": ""
+    "traducao": "用户文件夹的绝对路径——`mounted`/`runner` 时填写，始终为 `null`，在 `container` 模式下。"
   },
   "cab656f2a5d2": {
     "fonte": "When the path was confirmed on disk. `null` = not yet verified. In `runner` the confirmation comes from the CLI connecting (RN-423); in `mounted` it is stamped when Infra starts the container and the folder is materialized (RN-501, ADR 0142). `container` never fills this field in. It records A confirmation, never a heartbeat.",
-    "traducao": ""
+    "traducao": "路径在磁盘上被确认的时间。`null` = 尚未验证。在 `runner` 中，确认来自 CLI 连接（RN-423）；在 `mounted` 中，在 Infra 启动容器、文件夹被物化时打上时间戳（RN-501，ADR 0142）。`container` 从不填写此字段。它记录的是一次确认，绝不是心跳。"
   },
   "a2a627cf5914": {
     "fonte": "The mirror destination on the USER'S machine — the folder OUTSIDE the mounted base where the local agent copies the work to (RN-515, ADR 0147). `null` means the project has no mirror, and that is the NORMAL state, never an error. Only `mounted`/`runner` can have one. Set through `PUT /projects/:projectId/mirror-path`; it rides along every project read so nothing needs a dedicated endpoint to learn it. The value was validated LEXICALLY only — whether the folder exists is known by the local agent, not by this API.",
-    "traducao": ""
+    "traducao": "用户机器上的镜像目标——位于挂载基目录之外、本地代理把工作复制到的文件夹（RN-515，ADR 0147）。`null` 表示项目没有镜像，这是正常状态，绝不是错误。只有 `mounted`/`runner` 可以有。通过 `PUT /projects/:projectId/mirror-path` 设置；它随每次项目读取一并返回，因此不需要专用端点来获知。该值只经过词法校验——文件夹是否存在由本地代理知道，而不是此 API。"
   },
   "24d31a58a2f8": {
     "fonte": "The PROJECT's language (RN-619): the language of everything with no human author — shared artifacts (product brief, business rules, ADRs) and turns nobody typed (kickoff, dev agents, gates, commit messages, PR bodies). A canonical BCP-47 code, open list. A new project starts with its creator's effective response language (RN-618). Set through `PATCH /projects/:projectId` (`maintainer`). The engine sends it to the model as an ephemeral system message at the end of every LLM call of a turn with no human author (RN-622); an artifact emitted during a person's turn still follows that person's response language.",
-    "traducao": ""
+    "traducao": "项目的语言（RN-619）：所有没有人类作者的内容所使用的语言——共享制品（产品简介、业务规则、ADR）以及没有人输入的回合（启动、dev agent、gate、提交信息、PR 正文）。规范的 BCP-47 代码，开放列表。新项目以其创建者的有效回复语言开始（RN-618）。通过 `PATCH /projects/:projectId`（`maintainer`）设置。engine 在每个没有人类作者的回合的每次 LLM 调用末尾，以临时系统消息的形式把它发送给模型（RN-622）；在某人的回合中发出的制品仍遵循此人的回复语言。"
   },
   "afd16e45ca74": {
     "fonte": "Token cap per dev agent task, in micro-USD. `null` uses the domain default.",
-    "traducao": ""
+    "traducao": "每个 dev agent 任务的 token 上限，以微美元计。`null` 使用领域默认值。"
   },
   "34ef274a750d": {
     "fonte": "Circuit breaker per dev agent (Phase 12b — RN-047): consecutive tasks ending blocked before stopping at idle_tripped. `null` uses the domain default.",
-    "traducao": ""
+    "traducao": "每个 dev agent 的熔断器（Phase 12b——RN-047）：在停到 idle_tripped 之前，连续以阻塞结束的任务数。`null` 使用领域默认值。"
   },
   "335bbcdaa082": {
     "fonte": "Who promotes a story to `ready` (Phase 12c — RN-048). `manual`: the PO proposes and the user decides. `auto`: automatic promotion on creation — the new-project default since RN-659; projects created before it keep whatever value they had.",
-    "traducao": ""
+    "traducao": "谁把 story 提升为 `ready`（Phase 12c——RN-048）。`manual`：PO 提议，用户决定。`auto`：创建时自动提升——自 RN-659 起为新项目的默认值；之前创建的项目保留原有的值。"
   },
   "bb0917ec62ae": {
     "fonte": "The single folder on the operator's computer that the Brabo containers can see, mounted by IDENTITY (`$X:$X`) into `api` and `engine` (ADR 0141). `null` means `BRABO_PROJECTS_BASE` is not set: the installation offers no Mounted mode, and the project wizard must not offer it. Never a failure — absent is a normal state.",
-    "traducao": ""
+    "traducao": "运营者电脑上 Brabo 容器唯一能看到的文件夹，按身份（`$X:$X`）挂载到 `api` 和 `engine` 中（ADR 0141）。`null` 表示未设置 `BRABO_PROJECTS_BASE`：此安装不提供 Mounted 模式，项目向导不得提供它。绝不是失败——缺省是正常状态。"
   },
   "3fa587ba7ae9": {
     "fonte": "Whether this installation has a container broker configured (`BROKER_URL` set, ADR 0130). `container` and `mounted` projects only start a container through the broker (ADR 0144), and without one every dev agent is blocked forever (ADR 0143). With `false` the project wizard does not pre-select Mounted, keeps Container and Mounted visible but not selectable with the reason in text, and pre-selects Runner (ADR 0161, RN-573). It says the variable exists, never that the broker answers. Installation configuration, like `projectsBase`: the same for every workspace.",
-    "traducao": ""
+    "traducao": "此安装是否配置了容器 broker（已设置 `BROKER_URL`，ADR 0130）。`container` 和 `mounted` 项目只通过 broker 启动容器（ADR 0144），没有它，每个 dev agent 都会永远被阻塞（ADR 0143）。为 `false` 时，项目向导不会预选 Mounted，Container 和 Mounted 保持可见但不可选并以文字说明原因，并预选 Runner（ADR 0161，RN-573）。它说明的是变量存在，而绝不是 broker 有响应。与 `projectsBase` 一样是安装配置：每个 workspace 都相同。"
   },
   "ed76fb68ed7f": {
     "fonte": "The project's MOST RECENT session — the same one `projects-summary` reports in `latestSessionId`.",
-    "traducao": ""
+    "traducao": "项目最近的会话——与 `projects-summary` 在 `latestSessionId` 中报告的相同。"
   },
   "07db13f277b9": {
     "fonte": "In DESCENDING `seq` order — the first item is the most recent (RN-100). At most 50 per project, the same cap `GET .../events` applies without `limit`, and when there are more unread than that the ones returned are the NEWEST. How many were left out comes from `latestSeq` minus the cutoff, without another request.",
-    "traducao": ""
+    "traducao": "按 `seq` 降序——第一项是最新的（RN-100）。每个项目最多 50 条，与 `GET .../events` 在不带 `limit` 时应用的上限相同；当未读数超过上限时，返回的是最新的那些。有多少被略去由 `latestSeq` 减去截止点得出，无需再发请求。"
   },
   "b9927bae12b1": {
     "fonte": "Readable reason. The story may have lost its readiness, or one of its modules may have dropped out of `module_map` between the proposal and the decision.",
-    "traducao": ""
+    "traducao": "可读的原因。story 可能已失去就绪状态，或者在提议与决定之间它的某个模块已从 `module_map` 中移除。"
   },
   "6d5d4fa26110": {
     "fonte": "Ids of the stories to promote to `ready`. A single one is a batch of 1. Each story is validated and promoted on its own — one that fails does not block the others.",
-    "traducao": ""
+    "traducao": "要提升为 `ready` 的 story 的 id。单个即为一批 1 个。每个 story 独立校验和提升——失败的不会阻塞其他的。"
   },
   "e17adb67b0be": {
     "fonte": "Ids that went to `ready`, with their tasks already pickable.",
-    "traducao": ""
+    "traducao": "已变为 `ready` 的 id，其任务已可被认领。"
   },
   "046857801cde": {
     "fonte": "Empty when the whole batch passed.",
-    "traducao": ""
+    "traducao": "整批都通过时为空。"
   },
   "5758058267cf": {
     "fonte": "Whether this is the current version of the template. Always `true` right after an upsert that created a new version; can come back `false` when the idempotency hit (same hash) points to a version that a LATER publish already deactivated.",
-    "traducao": ""
+    "traducao": "这是否是模板的当前版本。在创建了新版本的 upsert 之后立即始终为 `true`；当幂等命中（相同哈希）指向一个已被之后的发布停用的版本时，可能返回 `false`。"
   },
   "570f4815b49c": {
     "fonte": "Action type. Each type has its own minimum role: `git_push`, `git_merge`, and `git_branch_protect` require `maintainer`, the rest `developer`.",
-    "traducao": ""
+    "traducao": "操作类型。每种类型都有自己的最低角色：`git_push`、`git_merge` 和 `git_branch_protect` 需要 `maintainer`，其余需要 `developer`。"
   },
   "bf69945bf862": {
     "fonte": "Who is proposing it.",
-    "traducao": ""
+    "traducao": "提议者。"
   },
   "7e7b92f8260c": {
     "fonte": "Action parameters, with a shape specific to the `actionType`.",
-    "traducao": ""
+    "traducao": "操作参数，形态因 `actionType` 而异。"
   },
   "de770ec5299e": {
     "fonte": "The two tiers use genuinely different models; the cost diverges.",
-    "traducao": ""
+    "traducao": "两个层级使用的确实是不同的模型；成本也不同。"
   },
   "20a4a558ad5b": {
     "fonte": "Size of the analyzed log.",
-    "traducao": ""
+    "traducao": "被分析日志的大小。"
   },
   "517e311e9a99": {
     "fonte": "Cause CLASSIFIED by the engine. It, not the terminal status, decides whether `terminationAnalysis` is required. Optional so as not to break an older engine during a rolling deploy.",
-    "traducao": ""
+    "traducao": "由 engine 分类的原因。决定是否需要 `terminationAnalysis` 的是它，而不是终止状态。设为可选，以免在滚动部署期间破坏旧版 engine。"
   },
   "1fc8c626ad6f": {
     "fonte": "The created round. This session's previous one becomes superseded.",
-    "traducao": ""
+    "traducao": "创建的轮次。本会话的上一轮将被取代。"
   },
   "89edf905d81b": {
     "fonte": "The WHOLE file as it would end up, not a diff.",
-    "traducao": ""
+    "traducao": "文件最终的完整内容，而不是 diff。"
   },
   "81399cc2f8d9": {
     "fonte": "The hypothesis that motivated the patch. This is what closes the Anamnesis loop.",
-    "traducao": ""
+    "traducao": "引发该补丁的假设。正是它闭合了 Anamnesis 循环。"
   },
   "e37ba2f2717b": {
     "fonte": "The area whose cap would go up.",
-    "traducao": ""
+    "traducao": "上限将要提高的区域。"
   },
   "ce502d54f035": {
     "fonte": "The proposed cap. Has to be HIGHER than the current one — proposing the same or less turns into noise in a queue the user needs to read, and the Anamnesis runs periodically.",
-    "traducao": ""
+    "traducao": "提议的上限。必须高于当前值——提议相同或更低的值会成为用户需要阅读的队列中的噪声，而 Anamnesis 是周期性运行的。"
   },
   "233240400cd8": {
     "fonte": "Anchored in OBSERVED DECISIONS, not an impression.",
-    "traducao": ""
+    "traducao": "以观察到的决定为依据，而不是印象。"
   },
   "ee4b972fd2d2": {
     "fonte": "The repository's id on the provider.",
-    "traducao": ""
+    "traducao": "仓库在提供商上的 id。"
   },
   "d393c4c29798": {
     "fonte": "The project's policy uses `dev`, `qa`, and `main` as permanent branches.",
-    "traducao": ""
+    "traducao": "项目的策略使用 `dev`、`qa` 和 `main` 作为永久分支。"
   },
   "b8a90c93e8e6": {
     "fonte": "`created` = Brabo created the repository; `adopted` = it pointed to one that already existed. Immutable once recorded (RN-046).",
-    "traducao": ""
+    "traducao": "`created` = Brabo 创建了仓库；`adopted` = 它指向了一个已存在的仓库。一旦记录即不可变（RN-046）。"
   },
   "1b1764b832b2": {
     "fonte": "Repository name on the provider.",
-    "traducao": ""
+    "traducao": "仓库在提供商上的名称。"
   },
   "7de199733d30": {
     "fonte": "Organization or group. When omitted, the repository is created in whoever registered the credential's personal account.",
-    "traducao": ""
+    "traducao": "组织或群组。省略时，仓库创建在登记凭据者的个人账户下。"
   },
   "2c056f4f241e": {
     "fonte": "Where the Gitflow bootstrap stopped. Work continues in the background — track it via `GET /projects/:id/git/bootstrap`.",
-    "traducao": ""
+    "traducao": "Gitflow 引导停在了哪里。工作在后台继续——通过 `GET /projects/:id/git/bootstrap` 跟踪。"
   },
   "ce469513bff6": {
     "fonte": "Triage tier. The two use GENUINELY different models — this is what makes the cost actually diverge instead of just the label.",
-    "traducao": ""
+    "traducao": "分诊层级。两者使用的确实是不同的模型——正是这一点让成本真正产生差异，而不只是标签不同。"
   },
   "a45a39f87826": {
     "fonte": "`manual` is the reanalysis requested by a human.",
-    "traducao": ""
+    "traducao": "`manual` 是由人请求的重新分析。"
   },
   "056fab293dac": {
     "fonte": "Id of the analysis this one replaces.",
-    "traducao": ""
+    "traducao": "此分析所替代的分析的 id。"
   },
   "a93c0978b5f7": {
     "fonte": "Log size at the time of the analysis — the snapshot it saw.",
-    "traducao": ""
+    "traducao": "分析时的日志大小——它所看到的快照。"
   },
   "f789e2d2cacb": {
     "fonte": "Real cost in micro-USD, summed from the round's `token_usage`. There is only a row here for a COMPLETED run: a failed run does not record one, on purpose.",
-    "traducao": ""
+    "traducao": "真实成本，以微美元计，由该轮的 `token_usage` 求和而得。只有已完成的运行才会在这里有记录：失败的运行刻意不记录。"
   },
   "7d18738ee73e": {
     "fonte": "How many hypotheses the round yielded.",
-    "traducao": ""
+    "traducao": "该轮产出了多少条假设。"
   },
   "b73850d42b8d": {
     "fonte": "A CURRENT analysis already exists for this session. This is what makes the automatic path idempotent: with `true` the worker short-circuits without spending anything.",
-    "traducao": ""
+    "traducao": "本会话已存在一份当前分析。正是这一点让自动路径是幂等的：为 `true` 时 worker 直接短路，不花费任何东西。"
   },
   "967c2161a111": {
     "fonte": "What was already proposed before, so the round doesn't repeat itself.",
-    "traducao": ""
+    "traducao": "之前已经提议过的内容，以免本轮重复。"
   },
   "d7108745091a": {
     "fonte": "Whether a NEW analysis round can run today, automatic or on-demand. Disabled does not touch existing data — past analyses and hypotheses stay intact and visible.",
-    "traducao": ""
+    "traducao": "今天是否可以运行新的分析轮次，无论自动还是按需。禁用不会触及已有数据——过去的分析和假设保持完整且可见。"
   },
   "c1778e082e8d": {
     "fonte": "Agent slug — the voter.",
-    "traducao": ""
+    "traducao": "代理 slug——投票者。"
   },
   "5b314256df80": {
     "fonte": "The 1-based position the judged chunk held in THAT search.",
-    "traducao": ""
+    "traducao": "被评判的分块在那次搜索中所处的位置（从 1 开始）。"
   },
   "0f0e7c2a5560": {
     "fonte": "The `searchId` returned by the search that produced this hit — never invented by the client.",
-    "traducao": ""
+    "traducao": "产生此命中的搜索所返回的 `searchId`——绝不由客户端编造。"
   },
   "62cf2bada50a": {
     "fonte": "The chunk being judged. Must be one of the hits THAT search returned, otherwise 400.",
-    "traducao": ""
+    "traducao": "被评判的分块。必须是那次搜索返回的命中之一，否则返回 400。"
   },
   "30926ac53a33": {
     "fonte": "Two values, not a 1-5 scale: a finer scale invites per-voter differences in ruler that no aggregation recovers later.",
-    "traducao": ""
+    "traducao": "两个值，而不是 1-5 分制：更细的刻度会招致每个投票者标尺不同，之后任何聚合都无法还原。"
   },
   "b12252f28167": {
     "fonte": "The 1-based position the judged chunk held in THAT search — the number that separates \"the index is poor\" from \"the weights are wrong\".",
-    "traducao": ""
+    "traducao": "被评判的分块在那次搜索中所处的位置（从 1 开始）——正是这个数字区分了“索引不好”和“权重不对”。"
   },
   "7f78d932ed43": {
     "fonte": "Real `MAX(chunks.created_at)` for this scope — never a guessed \"N minutes ago\" (RN-455).",
-    "traducao": ""
+    "traducao": "此范围真实的 `MAX(chunks.created_at)`——绝不是猜测的“N 分钟前”（RN-455）。"
   },
   "99f1c434f2e4": {
     "fonte": "The session the agent is running in. Absent means the caller had no session — the telemetry row is still written (RN-479), only the `rag.search` timeline narration is skipped. Never invented by the api: a session it did not receive is a session that did not exist.",
-    "traducao": ""
+    "traducao": "代理正在运行的会话。缺省表示调用方没有会话——遥测记录仍会写入（RN-479），只是跳过 `rag.search` 时间线叙述。api 绝不编造：没收到的会话就是不存在的会话。"
   },
   "c3174faa170e": {
     "fonte": "Agent slug, recorded as the telemetry actor (`actor_kind: agent`). Absent falls back to the `system` actor rather than inventing a user.",
-    "traducao": ""
+    "traducao": "代理 slug，记录为遥测参与者（`actor_kind: agent`）。缺省时回落为 `system` 参与者，而不是编造一个用户。"
   },
   "9a47dab396c0": {
     "fonte": "The chunk id — half of the reference a `rag_feedback` vote needs (RN-480). Without it the agent could read a hit and have no way to say it was useful.",
-    "traducao": ""
+    "traducao": "分块 id——`rag_feedback` 投票所需引用的一半（RN-480）。没有它，代理读到一个命中后将无法说明它是否有用。"
   },
   "07f6bdb5b9cf": {
     "fonte": "File path (`docs`/`adr` scopes) or `session:<id>` (`session` scope, no real file path).",
-    "traducao": ""
+    "traducao": "文件路径（`docs`/`adr` 范围）或 `session:<id>`（`session` 范围，没有真实文件路径）。"
   },
   "28049648cf45": {
     "fonte": "The full content of the retrieved chunk.",
-    "traducao": ""
+    "traducao": "检索到的分块的完整内容。"
   },
   "a1901f039b1a": {
     "fonte": "Combined score (vector + lexical), already filtered by the threshold.",
-    "traducao": ""
+    "traducao": "组合得分（向量 + 词法），已按阈值过滤。"
   },
   "c5ce60050b05": {
     "fonte": "Short preview of the chunk, for display without blowing up the model's context.",
-    "traducao": ""
+    "traducao": "分块的简短预览，用于展示而不会撑爆模型的上下文。"
   },
   "715ef57056a2": {
     "fonte": "The `rag_searches` row this search left (RN-479) — the other half of the vote reference. `null` when the telemetry row was not written; the tool then omits the ids instead of offering the model a reference that would be refused.",
-    "traducao": ""
+    "traducao": "此次搜索留下的 `rag_searches` 记录（RN-479）——投票引用的另一半。遥测记录没有写入时为 `null`；此时工具会省略这些 id，而不是给模型一个会被拒绝的引用。"
   },
   "51771f2849fa": {
     "fonte": "`true` when the QUERY embedding was not available and the search fell back to lexical-only (same semantics as `vectorAvailable: false` from `HybridSearchUseCase`).",
-    "traducao": ""
+    "traducao": "`true`，当查询的嵌入不可用、搜索回落为仅词法时（与 `vectorAvailable: false`——来自 `HybridSearchUseCase`——的语义相同）。"
   },
   "388e38eb4a00": {
     "fonte": "Since `protect_branches` is the LAST step, acknowledging its failure closes the bootstrap — the project becomes reachable from the dashboard.",
-    "traducao": ""
+    "traducao": "由于 `protect_branches` 是最后一步，确认其失败就会结束引导——项目变得可以从仪表盘进入。"
   },
   "0a199135d2c6": {
     "fonte": "The area that delegated — \"qa\" (Phase 8b) or \"infra\" (Phase 8c). Text, not enum.",
-    "traducao": ""
+    "traducao": "进行委派的区域——“qa”（Phase 8b）或 “infra”（Phase 8c）。是文本，不是枚举。"
   },
   "2e0c4491ab38": {
     "fonte": "The backlog task behind the delegation, when it exists. QA (Phase 8b) always sends it; Infra (Phase 8c) never does — the delegation is about the SESSION, not a task.",
-    "traducao": ""
+    "traducao": "委派背后的 backlog 任务（如存在）。QA（Phase 8b）总会发送它；Infra（Phase 8c）从不发送——委派针对的是会话，而不是任务。"
   },
   "d4009639f20d": {
     "fonte": "Id of the `artifact.qa_verdict` session_event for THIS subspecialty's VERDICT — required when `status` is \"completed\".",
-    "traducao": ""
+    "traducao": "此子专业裁决对应的 `artifact.qa_verdict` session_event 的 id——当 `status` 为 “completed” 时必需。"
   },
   "47070e1dce7c": {
     "fonte": "The ORIGIN of the failure (ADR 0020/0038), never by elimination — required when `status` is \"failed\".",
-    "traducao": ""
+    "traducao": "失败的来源（ADR 0020/0038），绝不通过排除法——当 `status` 为 “failed” 时必需。"
   },
   "9a857c9fab39": {
     "fonte": "Why the lead chose NOT to delegate — required when `status` is \"dispensed\". Never left blank: dispensing is a recorded decision, not silence (CLAUDE.md, Phase 8b item 2).",
-    "traducao": ""
+    "traducao": "lead 为何选择不委派——当 `status` 为 “dispensed” 时必需。绝不留空：放弃委派是一项被记录的决定，而不是沉默（CLAUDE.md，Phase 8b 第 2 项）。"
   },
   "6724e9232730": {
     "fonte": "`needs_user_decision` (QA only, RN-860): the cycle waits for the user's answer to an open question — it does not count as a correction.",
-    "traducao": ""
+    "traducao": "`needs_user_decision`（仅 QA，RN-860）：周期等待用户对一个未决问题的回答——不计为一次修正。"
   },
   "b3020bf77eb0": {
     "fonte": "What needs to change, item by item.",
-    "traducao": ""
+    "traducao": "需要修改什么，逐项列出。"
   },
   "008029db3a75": {
     "fonte": "With `needs_user_decision`: the new open question (up to 500 chars).",
-    "traducao": ""
+    "traducao": "配合 `needs_user_decision`：新的未决问题（最多 500 个字符）。"
   },
   "092a64a389eb": {
     "fonte": "With `needs_user_decision`: the agent's suggestion.",
-    "traducao": ""
+    "traducao": "配合 `needs_user_decision`：代理的建议。"
   },
   "e14e7fd8492c": {
     "fonte": "With `needs_user_decision`: an EXISTING open question instead of a new one.",
-    "traducao": ""
+    "traducao": "配合 `needs_user_decision`：一个已存在的未决问题，而不是新问题。"
   },
   "083f26d2f772": {
     "fonte": "Cap on round trips before the task becomes `blocked`. Omitted uses the domain's default.",
-    "traducao": ""
+    "traducao": "任务变为 `blocked` 之前往返次数的上限。省略时使用领域默认值。"
   },
   "86257017cbf9": {
     "fonte": "The `open_infra_pr` `proposed_action` that opened the PR.",
-    "traducao": ""
+    "traducao": "打开该 PR 的 `open_infra_pr` `proposed_action`。"
   },
   "3afd3121d59a": {
     "fonte": "The profiles recorded in this round.",
-    "traducao": ""
+    "traducao": "本轮记录的画像。"
   },
   "6c21723f5aa9": {
     "fonte": "CPUs, fractional value allowed.",
-    "traducao": ""
+    "traducao": "CPU 数，允许小数。"
   },
   "c4a45f493889": {
     "fonte": "Memory in MiB.",
-    "traducao": ""
+    "traducao": "内存，以 MiB 计。"
   },
   "52120de299f1": {
     "fonte": "Process cap. This is what contains a fork bomb without depending on a verb allowlist.",
-    "traducao": ""
+    "traducao": "进程数上限。正是它在不依赖动词允许列表的情况下遏制 fork 炸弹。"
   },
   "ef2ccd77cb0c": {
     "fonte": "The account's email.",
-    "traducao": ""
+    "traducao": "账户的邮箱。"
   },
   "ec48e6da3b89": {
     "fonte": "Password. Minimum of 12 characters; no requirement for uppercase, digit, or symbol.",
-    "traducao": ""
+    "traducao": "密码。至少 12 个字符；不要求大写字母、数字或符号。"
   },
   "4957f6d9339a": {
     "fonte": "Personal access token. Encrypted by envelope encryption before touching the database and never returned, not even encrypted. Registration does NOT test the token (ADR 0050) — to verify it use `POST /users/me/credentials/{provider}/test`. The 512-character cap is protection against an absurd payload, not format validation.",
-    "traducao": ""
+    "traducao": "个人访问令牌。在接触数据库之前通过信封加密进行加密，绝不返回，即使是加密后的也不返回。登记时不会测试令牌（ADR 0050）——如需验证，请使用 `POST /users/me/credentials/{provider}/test`。512 个字符的上限是防止荒谬载荷的保护，而不是格式校验。"
   },
   "ec9f1a61ebef": {
     "fonte": "What was RECORDED (project_containers.status).",
-    "traducao": ""
+    "traducao": "登记的内容（project_containers.status）。"
   },
   "405d7b087036": {
     "fonte": "The image FROZEN at `imageVersion`, resolved from the `artifact.project_image` event at that exact version — never the current one, which may have been revised since. `null` when that version's event could not be found.",
-    "traducao": ""
+    "traducao": "在 `imageVersion` 处冻结的镜像，从该确切版本的 `artifact.project_image` 事件解析而来——绝不是当前版本，它可能已被修订。找不到该版本的事件时为 `null`。"
   },
   "f04cb56bb374": {
     "fonte": "The new name. `null` (or a blank string) CLEARS the name and the session goes back to identifying itself only by the hashtag — this is the undo path, which is why the field accepts null instead of requiring a removal route.",
-    "traducao": ""
+    "traducao": "新名称。`null`（或空白字符串）会清除名称，会话恢复为只用井号标签标识——这是撤销的路径，因此该字段接受 null，而不需要单独的删除路由。"
   },
   "15c8fadcf592": {
     "fonte": "`null` when there was never a provisioning in this project. `awaiting_plan_decision` is an ADOPTED repository with a generated plan not yet decided: nothing runs until someone approves the plan or adopts it as is.",
-    "traducao": ""
+    "traducao": "项目中从未进行过置备时为 `null`。`awaiting_plan_decision` 是一个已接入、计划已生成但尚未决定的仓库：在有人批准计划或按原样接入之前，什么都不会运行。"
   },
   "15203e9736e6": {
     "fonte": "The bootstrap's DEDICATED session. The progress screen reads its `bootstrap.step_*` events to build the live checklist.",
-    "traducao": ""
+    "traducao": "引导的专用会话。进度界面读取其 `bootstrap.step_*` 事件来构建实时清单。"
   },
   "f88e152bf491": {
     "fonte": "How many times the bootstrap has already been attempted. It is idempotent and resumable: repeating doesn't duplicate what already worked.",
-    "traducao": ""
+    "traducao": "引导已经尝试了多少次。它是幂等且可恢复的：重复执行不会重复已成功的部分。"
   },
   "530a4bc700e8": {
     "fonte": "`closing` is NOT terminal: it means \"I am releasing this session\". If another replica adopts it, it stays alive; if no one adopts it before the timeout, the drain sends `closed_abnormally`. `created` and `active` are left out because entering them is a decision made by the api, never by the engine reporting a termination.",
-    "traducao": ""
+    "traducao": "`closing` 不是终止状态：它表示“我正在释放这个会话”。如果另一个副本接管了它，它会继续存活；如果在超时前没有人接管，排空过程会发送 `closed_abnormally`。`created` 和 `active` 被排除在外，因为进入它们是 api 做出的决定，绝不是由 engine 报告终止而来。"
   },
   "60913a1ba859": {
     "fonte": "The ORIGIN of the termination, not a diagnosis by elimination.",
-    "traducao": ""
+    "traducao": "终止的来源，而不是通过排除法得出的诊断。"
   },
   "a1db5986ca1a": {
     "fonte": "Slug of the target agent. Must be a lead or an area-less agent — never a subagent.",
-    "traducao": ""
+    "traducao": "目标代理的 slug。必须是 lead 或没有区域的代理——绝不能是子代理。"
   },
   "a916ccac4168": {
     "fonte": "Vem da busca quando o Hub publicou o tamanho — nunca estimado por palpite no cliente.",
-    "traducao": ""
+    "traducao": "当 Hub 公布了大小时来自搜索结果——绝不在客户端凭猜测估算。"
   },
   "c6e252398113": {
     "fonte": "Single-use token received by email.",
-    "traducao": ""
+    "traducao": "通过邮件收到的一次性令牌。"
   },
   "015c0815f447": {
     "fonte": "Which scope the value came from. The cascade is session → agent → project → workspace, and exposing the ORIGIN is what lets the UI say \"inherited from the project\" instead of showing a value with no provenance.",
-    "traducao": ""
+    "traducao": "该值来自哪个范围。级联顺序为 会话 → 代理 → 项目 → workspace，暴露来源正是让界面可以说“继承自项目”，而不是显示一个来历不明的值。"
   },
   "20ccb72a4433": {
     "fonte": "The routing preference OF THE BINDING THAT WON the cascade (ADR 0166). It never cascades on its own: a skipped level takes its preference with it, and no level inherits only the preference of another.",
-    "traducao": ""
+    "traducao": "在级联中胜出的那个 binding 的路由偏好（ADR 0166）。它从不独立级联：被跳过的层级会带走它的偏好，没有任何层级只继承另一层级的偏好。"
   },
   "1fdef4fbd32a": {
     "fonte": "More specific scopes the cascade discarded before reaching `origin`. Empty on the normal path.",
-    "traducao": ""
+    "traducao": "级联在到达 `origin` 之前丢弃的更具体的范围。在正常路径上为空。"
   },
   "da0bf60157fe": {
     "fonte": "Present when the agent asked about had no model of its own (nor of its area or project) and inherited the RESOLVED binding of its area lead (RN-703). `origin` is then the origin of the lead binding.",
-    "traducao": ""
+    "traducao": "当所询问的代理没有自己的模型（其区域或项目也没有）并继承了其区域 lead 已解析的 binding 时出现（RN-703）。此时 `origin` 是 lead binding 的来源。"
   },
   "6e4ca0169e65": {
     "fonte": "Models that did not exist in the database. They enter INACTIVE — activating is the owner's curation (RN-043).",
-    "traducao": ""
+    "traducao": "数据库中原本不存在的模型。它们以未激活状态进入——激活是所有者的策展（RN-043）。"
   },
   "b005c74f81e9": {
     "fonte": "Models that were `unavailable` and came back to the catalog. Their `isActive` is left untouched: the owner's choice survives the absence.",
-    "traducao": ""
+    "traducao": "曾为 `unavailable` 又回到目录中的模型。它们的 `isActive` 保持不变：所有者的选择在缺席期间得以保留。"
   },
   "1250cbe8e706": {
     "fonte": "Models that disappeared from the remote catalog. They become `unavailable` and are NEVER deleted — bindings and cost history point to them.",
-    "traducao": ""
+    "traducao": "从远程目录中消失的模型。它们变为 `unavailable`，且绝不删除——binding 和成本历史都指向它们。"
   },
   "2690b6776154": {
     "fonte": "Present when the provider was not synced. A skipped provider does not mark anything unavailable: \"I don't know what's there\" is not \"there's nothing there\".",
-    "traducao": ""
+    "traducao": "当提供商没有被同步时出现。被跳过的提供商不会把任何东西标记为不可用：“我不知道那里有什么”不等于“那里什么都没有”。"
   },
   "5ea5fe446ac3": {
     "fonte": "Only with `pulado: \"falha\"`. Origin vocabulary from ADR 0020 — `infra` when the provider was never even reached, `modelo` when it responded refusing.",
-    "traducao": ""
+    "traducao": "仅配合 `pulado: \"falha\"`。来源词汇来自 ADR 0020——从未连通提供商时为 `infra`，提供商响应但拒绝时为 `modelo`。"
   },
   "591c14ff6969": {
     "fonte": "The reason is REQUIRED: it becomes a message pinned to the PO session, and a return with no reason hands back work with no information.",
-    "traducao": ""
+    "traducao": "理由是必需的：它会变成固定在 PO 会话中的消息，没有理由的退回等于交还了没有任何信息的工作。"
   },
   "55cace89b159": {
     "fonte": "The version whose content was restored.",
-    "traducao": ""
+    "traducao": "被恢复内容的版本。"
   },
   "93dde2c785fe": {
     "fonte": "The NEW version the rollback created. History is immutable: restoring deletes nothing, it adds.",
-    "traducao": ""
+    "traducao": "回滚创建的新版本。历史不可变：恢复不会删除任何东西，而是新增。"
   },
   "b0837e149b7b": {
     "fonte": "Whether the engine's instruction cache was successfully invalidated.",
-    "traducao": ""
+    "traducao": "engine 的指令缓存是否成功失效。"
   },
   "f38e097814f7": {
     "fonte": "The most recent session has already recorded `execution.activated` — this is what brings per-module dev agents into the roster.",
-    "traducao": ""
+    "traducao": "最近的会话已经记录了 `execution.activated`——正是这一点把按模块划分的 dev agent 带入名单。"
   },
   "6a80ca6729e3": {
     "fonte": "Module names from the CURRENT module_map (highest `version`). One dev agent per module, once execution has been activated.",
-    "traducao": ""
+    "traducao": "来自当前 module_map（`version` 最高）的模块名称。执行激活后，每个模块一个 dev agent。"
   },
   "27a7462ebc7f": {
     "fonte": "Some PR gate (dev or infra) has opened AT LEAST ONCE in this session — this is what brings QA and SecOps into the roster. Covers the whole session, not a window of the last N events.",
-    "traducao": ""
+    "traducao": "本会话中某个 PR gate（dev 或 infra）至少打开过一次——正是这一点把 QA 和 SecOps 带入名单。覆盖整个会话，而不是最近 N 个事件的窗口。"
   },
   "b85d6dbc14d2": {
     "fonte": "Subagents with at least one delegation recorded in the session, whatever the outcome — dismissal is a recorded decision, not silence.",
-    "traducao": ""
+    "traducao": "在会话中至少记录过一次委派的子代理，无论结果如何——放弃委派是一项被记录的决定，而不是沉默。"
   },
   "0bd0fa62f614": {
     "fonte": "Agents with at least one `agent.activated` in the session, most recently activated first (by `seq`), one entry per agent (RN-630). Covers the WHOLE session, not the 200-event window: the client sums it to the window and trusts it only when `latestSessionId` is the session it is reading.",
-    "traducao": ""
+    "traducao": "在会话中至少有一次 `agent.activated` 的代理，最近激活的在前（按 `seq`），每个代理一条（RN-630）。覆盖整个会话，而不是 200 个事件的窗口：客户端将其与窗口合并，并且只有当 `latestSessionId` 是它正在读取的会话时才信任它。"
   },
   "e45811d3936c": {
     "fonte": "An `accepted` handoff to `infra` exists in the most recent session.",
-    "traducao": ""
+    "traducao": "最近的会话中存在一个 `accepted` handoff，目标为 `infra`。"
   },
   "36543b4538de": {
     "fonte": "An `accepted` handoff to `ux-designer` exists in the most recent session (ADR 0087).",
-    "traducao": ""
+    "traducao": "最近的会话中存在一个 `accepted` handoff，目标为 `ux-designer`（ADR 0087）。"
   },
   "5eee4ad79e0c": {
     "fonte": "An `accepted` handoff to `staff` exists in the most recent session (docs/fluxo.yml, ADR 0088) — dormant for automatic triggering, only reflects an already-accepted MANUAL activation.",
-    "traducao": ""
+    "traducao": "最近的会话中存在一个 `accepted` handoff，目标为 `staff`（docs/fluxo.yml，ADR 0088）——对自动触发处于休眠状态，只反映已被接受的手动激活。"
   },
   "0b59ed8216bf": {
     "fonte": "Nome do módulo — precisa existir no module_map vigente.",
-    "traducao": ""
+    "traducao": "模块名称——必须存在于当前的 module_map 中。"
   },
   "9f031b0ffc1b": {
     "fonte": "OCI reference with an explicit TAG or digest for this module. `latest` is REFUSED with 400 — the rule is domain-level.",
-    "traducao": ""
+    "traducao": "此模块带有显式 TAG 或 digest 的 OCI 引用。`latest` 会以 400 拒绝——该规则位于领域层。"
   },
   "9f87833e5428": {
     "fonte": "Why THIS image for THIS module. Minimum of 10 characters.",
-    "traducao": ""
+    "traducao": "为什么这个模块用这个镜像。至少 10 个字符。"
   },
   "ce7199a3c9f7": {
     "fonte": "One item per module of the current module_map. The candidate image is the Architect proposing, not deciding — Infra elects among the candidates in a later step.",
-    "traducao": ""
+    "traducao": "当前 module_map 的每个模块一项。候选镜像是 Architect 的提议，而不是决定——Infra 在之后的步骤中从候选项中选择。"
   },
   "343bb3b82480": {
     "fonte": "The PR commits a `.env.example` to copy before running.",
-    "traducao": ""
+    "traducao": "该 PR 提交了一个运行前需要复制的 `.env.example`。"
   },
   "7a2c4562c661": {
     "fonte": "Attributes the cost to this agent in the team panel.",
-    "traducao": ""
+    "traducao": "在团队面板中把成本归到此代理名下。"
   },
   "37f5a30cb673": {
     "fonte": "History already assembled by the engine's ContextManager.",
-    "traducao": ""
+    "traducao": "已由 engine 的 ContextManager 组装好的历史。"
   },
   "19e7a9c2d4dd": {
     "fonte": "Tools offered to the model; `parameters` is JSON Schema.",
-    "traducao": ""
+    "traducao": "提供给模型的工具；`parameters` 是 JSON Schema。"
   },
   "f1c33c93ec58": {
     "fonte": "Asks for the WHOLE tool catalog: the Jev tool router (ADR 0179) is skipped for this call. The engine sets it when it repeats a step whose restricted menu made the model answer without calling a tool.",
-    "traducao": ""
+    "traducao": "请求完整的工具目录：此次调用跳过 Jev 工具路由器（ADR 0179）。当某一步受限的菜单导致模型没有调用工具就作答、engine 重复这一步时会设置它。"
   },
   "f95503adf814": {
     "fonte": "Nulo = chave de MÁQUINA (ADR 0154): vale para qualquer projeto do dono dela, e não só para este. Ver `especie`.",
-    "traducao": ""
+    "traducao": "为空 = 机器密钥（ADR 0154）：适用于其所有者的任何项目，而不只是这一个。见 `especie`。"
   },
   "fec321ac95fe": {
     "fonte": "`projeto` = presa ao projeto desta rota (ADR 0118). `maquina` = descreve a MÁQUINA (ADR 0154) e aparece na listagem de todo projeto que ela atende — revogá-la derruba o agente local em todos eles.",
-    "traducao": ""
+    "traducao": "`projeto` = 绑定到此路由的项目（ADR 0118）。`maquina` = 描述的是机器（ADR 0154），会出现在它所服务的每个项目的列表中——撤销它会断开所有这些项目中的本地代理。"
   },
   "dc4df0141780": {
     "fonte": "Nulo = ativa. Revogada continua aparecendo na lista.",
-    "traducao": ""
+    "traducao": "为空 = 有效。已撤销的仍会出现在列表中。"
   },
   "af6a95209c7b": {
     "fonte": "Nulo = nunca usada — o sinal de uma chave órfã (aba fechada no meio do fluxo de configuração automática do runner).",
-    "traducao": ""
+    "traducao": "为空 = 从未使用——孤立密钥的信号（在 runner 自动配置流程中途关闭了标签页）。"
   },
   "fe968ce3da57": {
     "fonte": "O nome da pasta do projeto (RN-109) — segmento relativo sob a base da máquina, nunca um caminho absoluto.",
-    "traducao": ""
+    "traducao": "项目文件夹的名称（RN-109）——机器基目录下的相对段，绝不是绝对路径。"
   },
   "89c48374c3fc": {
     "fonte": "Quando o runner confirmou a pasta pela primeira vez (RN-423). Nulo = nunca confirmada. É registro de uma confirmação, não batimento (RN-468): não diz que a pasta está de pé agora.",
-    "traducao": ""
+    "traducao": "runner 第一次确认该文件夹的时间（RN-423）。为空 = 从未确认。它记录的是一次确认，不是心跳（RN-468）：并不说明文件夹此刻可用。"
   },
   "c127cadb5b2e": {
     "fonte": "Token opaco de uso único, base64url. TTL de 30s: some depois do primeiro `connect/3` bem-sucedido no socket `/runner`, ou quando expira.",
-    "traducao": ""
+    "traducao": "不透明的一次性令牌，base64url 编码。TTL 30 秒：在第一次成功的 `connect/3`（于 `/runner` 套接字上）之后或过期时失效。"
   },
   "e5d70cd5cb3f": {
     "fonte": "Quando o ticket expira (ISO 8601).",
-    "traducao": ""
+    "traducao": "票据的过期时间（ISO 8601）。"
   },
   "884d21ac2d71": {
     "fonte": "URL pública do socket Phoenix `/runner`, já em ws(s):// — pronta para o cliente (runner CLI ou web) abrir a conexão com `{ticket}` nos params.",
-    "traducao": ""
+    "traducao": "Phoenix 套接字 `/runner` 的公开 URL，已是 ws(s):// 形式——客户端（runner CLI 或 Web）可直接在参数中带上 `{ticket}` 打开连接。"
   },
   "5b74c2fc4358": {
     "fonte": "Title of the rule JUST appended. Rules with the same normalized title (RN-080 makes it the new one) are left out of the comparison.",
-    "traducao": ""
+    "traducao": "刚刚追加的规则的标题。规范化后标题相同的规则（RN-080 让新的生效）不参与比较。"
   },
   "0b4dfba897f9": {
     "fonte": "`warned` NEVER blocks: the item was already written. `skipped` carries the reason — no embedding provider, daemon down, the 10 s ceiling — and is also narrated in the event log.",
-    "traducao": ""
+    "traducao": "`warned` 绝不阻塞：条目已经写入。`skipped` 携带原因——没有嵌入提供商、守护进程宕机、10 秒上限——也会在事件日志中叙述。"
   },
   "be1f48c67bac": {
     "fonte": "Cosine threshold — a STARTING POINT, not calibrated (ADR 0198).",
-    "traducao": ""
+    "traducao": "余弦阈值——一个起点，尚未校准（ADR 0198）。"
   },
   "4ed647c470ac": {
     "fonte": "How many existing items were compared (the most recent, up to 100).",
-    "traducao": ""
+    "traducao": "比较了多少个已有条目（最近的，最多 100 个）。"
   },
   "9afbae4ce067": {
     "fonte": "How many exist in the project.",
-    "traducao": ""
+    "traducao": "项目中共有多少个。"
   },
   "489014ab9ac9": {
     "fonte": "The sentence the agent reads in the tool result; `null` when there is nothing to say.",
-    "traducao": ""
+    "traducao": "代理在工具结果中读到的句子；无话可说时为 `null`。"
   },
   "1b2a15d743e1": {
     "fonte": "User's message to the session's active agent.",
-    "traducao": ""
+    "traducao": "用户发给会话活跃代理的消息。"
   },
   "dcbc1fa1dbab": {
     "fonte": "The user's message. The response comes back as an SSE stream.",
-    "traducao": ""
+    "traducao": "用户的消息。响应以 SSE 流返回。"
   },
   "482d275aed66": {
     "fonte": "Short-lived EdDSA JWT.",
-    "traducao": ""
+    "traducao": "短期有效的 EdDSA JWT。"
   },
   "61834b551608": {
     "fonte": "Seconds until the access token expires.",
-    "traducao": ""
+    "traducao": "访问令牌过期前的秒数。"
   },
   "b4fcc30cc2ea": {
     "fonte": "The user's language preference (i18n foundation, Wave 6a). It comes here — and not in a separate call — so the web app never needs an extra round-trip just to know which language to render the screen in.",
-    "traducao": ""
+    "traducao": "用户的语言偏好（i18n 基础，Wave 6a）。它放在这里——而不是单独调用——这样 Web 应用永远不需要额外一次往返只为知道用哪种语言渲染界面。"
   },
   "c7e0652abe22": {
     "fonte": "The requested session plus the execution session(s) its approved Dev Lead plan activated (RN-828).",
-    "traducao": ""
+    "traducao": "所请求的会话，加上其已批准的 Dev Lead 计划所激活的执行会话（RN-828）。"
   },
   "f9ffb6dbbd13": {
     "fonte": "`artifact.business_rule` in the whole session.",
-    "traducao": ""
+    "traducao": "整个会话中的 `artifact.business_rule`。"
   },
   "99e509649a83": {
     "fonte": "`artifact.decision_record` in the whole session.",
-    "traducao": ""
+    "traducao": "整个会话中的 `artifact.decision_record`。"
   },
   "6a9ce289851e": {
     "fonte": "Latest business rules of the session, capped at 50; the total is `regras` (RN-844).",
-    "traducao": ""
+    "traducao": "会话中最新的业务规则，上限 50 条；总数为 `regras`（RN-844）。"
   },
   "1d3260ced9bf": {
     "fonte": "Latest decision records of the session, capped at 50; the total is `decisoes` (RN-844).",
-    "traducao": ""
+    "traducao": "会话中最新的决策记录，上限 50 条；总数为 `decisoes`（RN-844）。"
   },
   "310df734d674": {
     "fonte": "Files of the PRs opened in this session and in the linked execution session (read from the PR diff, RN-844), then files from `git_commit`/`git_push` payloads.",
-    "traducao": ""
+    "traducao": "此会话及关联执行会话中打开的 PR 的文件（从 PR diff 读取，RN-844），然后是 `git_commit`/`git_push` 载荷中的文件。"
   },
   "df6f9af793ef": {
     "fonte": "The event's ULID.",
-    "traducao": ""
+    "traducao": "事件的 ULID。"
   },
   "4b870230a1b0": {
     "fonte": "Order within the session. Monotonic and gapless.",
-    "traducao": ""
+    "traducao": "在会话中的顺序。单调递增且无间隙。"
   },
   "9c72a55f5191": {
     "fonte": "Free-form shape, specific to each `type`. See the events reference.",
-    "traducao": ""
+    "traducao": "自由形态，因 `type` 而异。见事件参考。"
   },
   "62bfca00a0a5": {
     "fonte": "The session's ULID.",
-    "traducao": ""
+    "traducao": "会话的 ULID。"
   },
   "68b2b7d77471": {
     "fonte": "Who opened the session.",
-    "traducao": ""
+    "traducao": "打开会话的人。"
   },
   "94e77925cb39": {
     "fonte": "Explicit state machine: created → active → closing → closed | closed_abnormally. An invalid transition responds 409.",
-    "traducao": ""
+    "traducao": "显式状态机：created → active → closing → closed | closed_abnormally。无效的转换返回 409。"
   },
   "217f70a0cc5d": {
     "fonte": "The INTENT with which the session was opened, chosen at creation and immutable. `consultiva` (consultative) is conversation only; `criativa` (creative) produces and is the only one that enters execution. Not to be confused with execution state, which remains the `execution.activated` event in the log.",
-    "traducao": ""
+    "traducao": "打开会话时的意图，在创建时选择且不可变。`consultiva`（咨询式）只是对话；`criativa`（创作式）产出内容，并且是唯一会进入执行的。不要与执行状态混淆，执行状态仍是日志中的 `execution.activated` 事件。"
   },
   "255e3c90b5bb": {
     "fonte": "Friendly name, or `null`. Screens compose it with the id's hashtag; it never replaces it.",
-    "traducao": ""
+    "traducao": "友好名称，或 `null`。界面会将其与 id 的井号标签组合；它从不取代井号标签。"
   },
   "b4882837877d": {
     "fonte": "Next `seq` of the event log. Serves as a cursor: `?afterSeq=41` fetches everything after 41.",
-    "traducao": ""
+    "traducao": "事件日志的下一个 `seq`。用作游标：`?afterSeq=41` 获取 41 之后的所有内容。"
   },
   "4de5c3a52e45": {
     "fonte": "Only filled in terminal states.",
-    "traducao": ""
+    "traducao": "仅在终止状态下填写。"
   },
   "313406325720": {
     "fonte": "Reason reported by the engine when terminating (heartbeat_timeout, conversation_idle_timeout, killed, exception…). `null` on a human close or a still-live session.",
-    "traducao": ""
+    "traducao": "engine 终止时报告的原因（heartbeat_timeout、conversation_idle_timeout、killed、exception……）。人工关闭或会话仍存活时为 `null`。"
   },
   "550081cd9f42": {
     "fonte": "W3C `traceparent` of the root span. This is how the whole session is recovered in Tempo.",
-    "traducao": ""
+    "traducao": "根 span 的 W3C `traceparent`。正是靠它在 Tempo 中找回整个会话。"
   },
   "d12fb810e353": {
     "fonte": "Whether this is the TECHNICAL session opened by repository provisioning (the one linked from `repo_bootstraps`), as opposed to a work session. It is the link, never the name: renaming the session does not change it. Screens that pick \"the most recent session\" skip it unless it is the only one.",
-    "traducao": ""
+    "traducao": "这是否是由仓库置备打开的技术会话（从 `repo_bootstraps` 关联的那个），而不是工作会话。依据的是关联，绝不是名称：重命名会话不会改变它。挑选“最近会话”的界面会跳过它，除非它是唯一的会话。"
   },
   "f161659d5dff": {
     "fonte": "There is work that blocks closing due to tab inactivity: an `offered` handoff, a `pending` action, an agent mid-turn, a dev agent working or blocked, or a conversational agent waiting for the user (RN-064, RN-581).",
-    "traducao": ""
+    "traducao": "存在因标签页不活跃而阻止关闭的工作：一个 `offered` handoff、一个 `pending` 操作、一个处于回合中的代理、一个正在工作或被阻塞的 dev agent，或一个正在等待用户的对话式代理（RN-064，RN-581）。"
   },
   "97e7a7a63f62": {
     "fonte": "What is hanging. `null` when there's nothing.",
-    "traducao": ""
+    "traducao": "悬而未决的是什么。没有时为 `null`。"
   },
   "d06250a168b8": {
     "fonte": "Set ONLY when the one thing pending is a conversational agent waiting for the user (RN-581): the instant its turn ended. It is the only pending signal with a ceiling, and the engine applies it (`SESSION_CONVERSATION_IDLE_TIMEOUT_MS`, default 8h) — past it the session closes with `conversation_idle_timeout`. `null` otherwise.",
-    "traducao": ""
+    "traducao": "仅当唯一的待办是正在等待用户的对话式代理时设置（RN-581）：其回合结束的时刻。这是唯一带有上限的待办信号，由 engine 应用（`SESSION_CONVERSATION_IDLE_TIMEOUT_MS`，默认 8 小时）——超过后会话以 `conversation_idle_timeout` 关闭。其他情况下为 `null`。"
   },
   "2445492d620f": {
     "fonte": "The effective language.",
-    "traducao": ""
+    "traducao": "有效语言。"
   },
   "32d4d9605d28": {
     "fonte": "Where `language` came from: `sessao` (fixed in this session) > `conta` (Account choice) > `detectado` (detected AND confirmed) > `interface` (the interface language).",
-    "traducao": ""
+    "traducao": "`language` 的来源：`sessao`（在此会话中固定）> `conta`（账户选择）> `detectado`（检测到且已确认）> `interface`（界面语言）。"
   },
   "f8f3f52b94ad": {
     "fonte": "`automatico` or the code chosen on the Account.",
-    "traducao": ""
+    "traducao": "`automatico` 或在账户中选择的代码。"
   },
   "52bea62ad4f4": {
     "fonte": "The language YOUR recent messages point to, when the screen should ASK whether to use it for the answers (RN-624) — `null` means no question. Detection never changes the preference by itself: only answering `confirm` on `POST /users/me/preferences/detected-language` does. Never asked when the effective language comes from an explicit choice (this session or the Account), when it already is the detected one, or when you declined this language before. Best effort: a detection failure is `null`, never an error of this route.",
-    "traducao": ""
+    "traducao": "你最近的消息所指向的语言，当界面应当询问是否用它来回答时（RN-624）——`null` 表示没有问题。检测本身从不改变偏好：只有回答 `confirm`（在 `POST /users/me/preferences/detected-language` 上）才会。当有效语言来自明确选择（此会话或账户）、已经是检测到的语言，或你之前拒绝过这种语言时，绝不询问。尽力而为：检测失败为 `null`，绝不是此路由的错误。"
   },
   "2b5fcb56761b": {
     "fonte": "Action type, or `\"*\"` for EVERY action type of this agent — the \"auto mode\" of the ApprovalCard (RN-153). A SPECIFIC rule always wins over the wildcard: recording `terminal: deny` with `\"*\": auto_approve` already on still denies terminal.",
-    "traducao": ""
+    "traducao": "操作类型，或 `\"*\"` 表示该代理的所有操作类型——即 ApprovalCard 的“自动模式”（RN-153）。特定规则始终优先于通配符：记录 `terminal: deny` 时，即使已开启 `\"*\": auto_approve`，仍会拒绝终端操作。"
   },
   "1d802ac8fa3f": {
     "fonte": "This agent's autonomy for this type. Does NOT override `permissions.json`: a pattern in `deny` stays blocked no matter how much autonomy the agent has.",
-    "traducao": ""
+    "traducao": "该代理对此类型的自主权。不会覆盖 `permissions.json`：`deny` 中的模式无论代理有多少自主权都保持阻止。"
   },
   "8854a2cbe953": {
     "fonte": "Cap in DOLLARS for the area — same dollar-in, micro-USD-out convention as the project/session budgets (`BudgetsController`). `null` CLEARS the cap: the area goes back to unlimited, which is also the default for an area that never had one set.",
-    "traducao": ""
+    "traducao": "区域的上限，以美元计——与项目/会话预算（`BudgetsController`）相同的美元输入、微美元输出约定。`null` 清除上限：区域恢复为无限制，这也是从未设置过上限的区域的默认值。"
   },
   "70af353b48fa": {
     "fonte": "How many agents the area's lead can have in the session WITHOUT requesting your authorization. Minimum 1 — zero does not mean \"unlimited\", it means invalid configuration, and treating it as unlimited would turn a typo into unrestricted spending.",
-    "traducao": ""
+    "traducao": "区域 lead 在会话中无需请求你授权即可拥有的代理数量。最小为 1——零不表示“无限制”，而是无效配置，把它当作无限制会让一个笔误变成不受限制的花费。"
   },
   "d3f733cb61bc": {
     "fonte": "The absolute path, ON THE USER'S MACHINE, where the local agent copies the project work to (RN-515, ADR 0147). Send `null` — the key is REQUIRED, omitting it is a 400 — to clear the destination and turn the mirror off; `null` is the normal state of a project, not an error. Only `mounted`/`runner` projects can have one: in `container` the source is a server-side managed volume the local agent cannot see, and the request is refused with 400 naming that reason. The API validates ONLY the LEXICAL shape (absolute, no `..`/`.`, never the root, a system folder, or overlapping Brabo's own checkout) plus the two directions of the origin↔destination loop (the destination cannot be inside `workspacePath`, nor contain it) — it never touches the disk, because it cannot see the machine where the destination will live, exactly as in `runner` mode (RN-423). Resolving symlinks is the local agent’s half of the guard, not this one.",
-    "traducao": ""
+    "traducao": "用户机器上的绝对路径，本地代理会把项目工作复制到这里（RN-515，ADR 0147）。发送 `null`——该键是必需的，省略返回 400——以清除目标并关闭镜像；`null` 是项目的正常状态，不是错误。只有 `mounted`/`runner` 项目可以有：在 `container` 中，来源是本地代理看不到的服务端托管卷，请求会以 400 拒绝并说明这一原因。API 只校验词法形态（绝对路径，不含 `..`/`.`，绝不是根目录、系统文件夹或与 Brabo 自身检出目录重叠）以及来源↔目标循环的两个方向（目标不能位于 `workspacePath` 内部，也不能包含它）——它从不触碰磁盘，因为它看不到目标所在的机器，与 `runner` 模式完全一样（RN-423）。解析符号链接是本地代理负责的那一半防护，而不是这里。"
   },
   "dbed3e9c85a5": {
     "fonte": "Model to pin to this scope. Must exist in `GET /models`.",
-    "traducao": ""
+    "traducao": "要固定到此范围的模型。必须存在于 `GET /models` 中。"
   },
   "5d1fad9e2e23": {
     "fonte": "How a HUB picks the upstream that serves the model (ADR 0166, RN-583). ABSENT keeps the stored value when the new model's provider accepts it, and clears it otherwise; `null` clears it; a value for a model whose provider does not declare the `routingPreference` capability (`GET /llm/provider-capabilities`) is refused with 422. It travels WITH this binding: it never cascades on its own.",
-    "traducao": ""
+    "traducao": "中转平台如何选择服务该模型的上游（ADR 0166，RN-583）。缺省时，若新模型的提供商接受则保留已存储的值，否则清除；`null` 清除它；为提供商未声明 `routingPreference` 能力（`GET /llm/provider-capabilities`）的模型设置值会以 422 拒绝。它随此 binding 一起传递：从不独立级联。"
   },
   "98b8c42a2824": {
     "fonte": "Models to turn on or off. Whole batch or nothing.",
-    "traducao": ""
+    "traducao": "要开启或关闭的模型。整批全有或全无。"
   },
   "f0b58c4fdb79": {
     "fonte": "`true` makes the model appear in the selector and be able to receive a new binding. Does not touch `availability`, which is what sync observed on the provider.",
-    "traducao": ""
+    "traducao": "`true` 让模型出现在选择器中并能接收新的 binding。不改动 `availability`，那是同步在提供商处观测到的。"
   },
   "f39e88214cfb": {
     "fonte": "Models to mark. Whole batch or nothing.",
-    "traducao": ""
+    "traducao": "要标记的模型。整批全有或全无。"
   },
   "9096fdb7719e": {
     "fonte": "The COMPLETE list of uses — replaces the previous one, does not add to it. An empty list unmarks all. A closed vocabulary: a use outside it fails the call, because free text would give `code`, `coding`, and `código` in the same filter.",
-    "traducao": ""
+    "traducao": "完整的用途列表——替换之前的列表，而不是追加。空列表会取消全部标记。封闭词汇：词汇之外的用途会让调用失败，因为自由文本会在同一个过滤器中出现 `code`、`coding` 和 `código`。"
   },
   "2cb2db2751ec": {
     "fonte": "Forbidden patterns. `deny` beats `allow` and beats the agent's autonomy.",
-    "traducao": ""
+    "traducao": "禁止的模式。`deny` 优先于 `allow`，也优先于代理的自主权。"
   },
   "a80afa26f94d": {
     "fonte": "Patterns that always ask for a human decision.",
-    "traducao": ""
+    "traducao": "始终需要人工决定的模式。"
   },
   "16b15c5153ed": {
     "fonte": "The language agents answer YOU in, in THIS session only (RN-618) — other participants are never affected. Any BCP-47 code the server recognizes, stored canonical. Send `null` (or `automatico`) — the key is REQUIRED — to go back to inheriting from your Account.",
-    "traducao": ""
+    "traducao": "代理仅在此会话中回答你所使用的语言（RN-618）——其他参与者绝不受影响。服务器能识别的任何 BCP-47 代码，以规范形式存储。发送 `null`（或 `automatico`）——该键是必需的——以恢复为从你的账户继承。"
   },
   "d11c21a9f575": {
     "fonte": "Whether the Jev chooses the tool of each agent step. On by default; it only acts when the turn model is from OpenRouter.",
-    "traducao": ""
+    "traducao": "是否由 Jev 为代理的每一步选择工具。默认开启；仅当回合模型来自 OpenRouter 时才起作用。"
   },
   "4901ebdec580": {
     "fonte": "`unavailable`: the model vanished from the provider catalog. `sem_tool_calling`: the request is from an agent and the model is chat-only — the cascade revalidates the capability at every level so as not to silently violate RN-040.",
-    "traducao": ""
+    "traducao": "`unavailable`：模型已从提供商目录中消失。`sem_tool_calling`：请求来自代理而模型只能聊天——级联会在每个层级重新校验该能力，以免悄悄违反 RN-040。"
   },
   "acc64f0f7a20": {
     "fonte": "Opaque, single-use, base64url token. 30s TTL and single use: it disappears after the first successful `connect/3`, or when it expires.",
-    "traducao": ""
+    "traducao": "不透明的一次性令牌，base64url 编码。TTL 30 秒，一次性使用：在第一次成功 `connect/3` 之后或过期时失效。"
   },
   "19f3dfaf49f5": {
     "fonte": "When the ticket expires (ISO 8601).",
-    "traducao": ""
+    "traducao": "票据的过期时间（ISO 8601）。"
   },
   "966c3fc3748a": {
     "fonte": "The grouping key: model name, provider name, project id, actor id, or session id, depending on which list the row appears in.",
-    "traducao": ""
+    "traducao": "分组键：模型名称、提供商名称、项目 id、参与者 id 或会话 id，取决于该行出现在哪个列表中。"
   },
   "bdce692f90bd": {
     "fonte": "Readable name, when there is a table with a name (project). `null` when the key is already the label.",
-    "traducao": ""
+    "traducao": "可读名称，当存在带名称的表时（项目）。当键本身就是标签时为 `null`。"
   },
   "e4cc78c7ad48": {
     "fonte": "Only the per-actor lists fill this in (`porAtor`, `porOwner`, `porAgente`); on the others it is `null`.",
-    "traducao": ""
+    "traducao": "只有按参与者的列表会填写（`porAtor`、`porOwner`、`porAgente`）；其他列表中为 `null`。"
   },
   "d1a4563a3d6c": {
     "fonte": "Day in UTC. The series is DENSE: a day with no spend comes as zero.",
-    "traducao": ""
+    "traducao": "UTC 日期。序列是稠密的：没有花费的日子以零出现。"
   },
   "e3cc6a747c4c": {
     "fonte": "The dev agent holding it.",
-    "traducao": ""
+    "traducao": "持有它的 dev agent。"
   },
   "501317f0b154": {
     "fonte": "Slug of the dev agent that claimed the task.",
-    "traducao": ""
+    "traducao": "认领该任务的 dev agent 的 slug。"
   },
   "343a1d8a6380": {
     "fonte": "Task blocked waiting on a decision or a dependency.",
-    "traducao": ""
+    "traducao": "任务被阻塞，等待决定或依赖。"
   },
   "c2b836dc7971": {
     "fonte": "The ORIGIN of the block (ADR 0020/0038), when known. `null` for every Phase 4a block — only the QA Lead (Phase 8b) fills it in.",
-    "traducao": ""
+    "traducao": "阻塞的来源（ADR 0020/0038），如已知。Phase 4a 的所有阻塞均为 `null`——只有 QA Lead（Phase 8b）会填写。"
   },
   "a82549230e42": {
     "fonte": "Where the task's PR is in the gate pipeline: QA, then SecOps, then the user. `null` while no PR is open.",
-    "traducao": ""
+    "traducao": "任务的 PR 在 gate 流水线中的位置：QA，然后 SecOps，然后用户。没有打开 PR 时为 `null`。"
   },
   "ab55bb164f29": {
     "fonte": "How many correction rounds the gates have already requested.",
-    "traducao": ""
+    "traducao": "gate 已经要求了多少轮修正。"
   },
   "be5b18ab31b8": {
     "fonte": "The module the task belongs to, assigned by the Dev Lead in the approved execution plan (RN-678). Only the dev agent of that module claims it. `null` while no plan assigned one — such a task is claimable only when its story has exactly one module.",
-    "traducao": ""
+    "traducao": "任务所属的模块，由 Dev Lead 在已批准的执行计划中分配（RN-678）。只有该模块的 dev agent 会认领它。在没有计划分配之前为 `null`——这样的任务只有在其 story 恰好只有一个模块时才可被认领。"
   },
   "4a08472ccd19": {
     "fonte": "Already deserialized; the engine dispatches to the tool by `name`.",
-    "traducao": ""
+    "traducao": "已经反序列化；engine 按 `name` 分派到对应工具。"
   },
   "8dd6a960bf79": {
     "fonte": "How many tools the agent had at this step.",
-    "traducao": ""
+    "traducao": "代理在这一步拥有多少个工具。"
   },
   "44d343656561": {
     "fonte": "The tool names BEFORE the router.",
-    "traducao": ""
+    "traducao": "路由器之前的工具名称。"
   },
   "c242f43831de": {
     "fonte": "The tool names the chat model was offered (the whole catalog on any fall).",
-    "traducao": ""
+    "traducao": "提供给聊天模型的工具名称（任何回落时为整个目录）。"
   },
   "547e5a17a223": {
     "fonte": "The previous tool of the same run.",
-    "traducao": ""
+    "traducao": "同一次运行中的上一个工具。"
   },
   "e17d3ccfd8a1": {
     "fonte": "The Jev answered AND the menu came out smaller than the catalog.",
-    "traducao": ""
+    "traducao": "Jev 作出了回答，且菜单比目录更小。"
   },
   "47a59fe266b1": {
     "fonte": "REAL cost of the Jev answer (`usage.cost`), in micro-USD.",
-    "traducao": ""
+    "traducao": "Jev 回答的真实成本（`usage.cost`），以微美元计。"
   },
   "27459dc0f5f4": {
     "fonte": "`true` when the Jev charged but the `token_usage` row could not be written.",
-    "traducao": ""
+    "traducao": "`true` 表示 Jev 已计费，但 `token_usage` 记录无法写入。"
   },
   "6320b4169520": {
     "fonte": "Id of the user who becomes the owner of record. Must already be an `owner` of this workspace.",
-    "traducao": ""
+    "traducao": "将成为记录所有者的用户 id。必须已经是此 workspace 的 `owner`。"
   },
   "58137bb18011": {
     "fonte": "Target state. The state machine refuses an invalid jump with 409 — from `created` you can only go to `active`, and there is no going back from a terminal state.",
-    "traducao": ""
+    "traducao": "目标状态。状态机会以 409 拒绝无效的跳转——从 `created` 只能到 `active`，并且从终止状态无法返回。"
   },
   "4db5cb59f3c6": {
     "fonte": "The dev agent whose transient failure scheduled the retry.",
-    "traducao": ""
+    "traducao": "因短暂失败而安排了重试的 dev agent。"
   },
   "e8ca5cb34143": {
     "fonte": "Last `seq` THIS browser has already seen in this project. Returns events with strictly greater `seq`. `0` means \"never saw anything\" and brings the start of the most recent session.",
-    "traducao": ""
+    "traducao": "此浏览器在该项目中已看过的最后一个 `seq`。返回 `seq` 严格更大的事件。`0` 表示“什么都没看过”，会带来最近会话的开头。"
   },
   "9a1d8f662372": {
     "fonte": "One cursor per project to query. An EMPTY list returns an empty list — \"I asked for nothing\" is not \"give me everything\". A project from another workspace is silently ignored, because the cursor comes from the caller's local storage and may carry leftovers from an old workspace.",
-    "traducao": ""
+    "traducao": "每个要查询的项目一个游标。空列表返回空列表——“我什么都没要”不等于“全都给我”。来自其他 workspace 的项目会被静默忽略，因为游标来自调用方的本地存储，可能带有旧 workspace 的残留。"
   },
   "0ab75a1121b9": {
     "fonte": "Trimmed; 1 to 200 characters.",
-    "traducao": ""
+    "traducao": "已去除首尾空白；1 到 200 个字符。"
   },
   "b0332a3ddc26": {
     "fonte": "The interface language. Closed to the list — not free-form BCP-47.",
-    "traducao": ""
+    "traducao": "界面语言。限定在列表中——不是自由形式的 BCP-47。"
   },
   "d4ac5cc31f8c": {
     "fonte": "The language agents answer in (RN-618): `automatico` or ANY BCP-47 code whose language the server recognizes — an open list, unlike `locale`. Stored canonical (`pt-br` becomes `pt-BR`). An unrecognized code is a 400 that names the rule. Never changes `locale`.",
-    "traducao": ""
+    "traducao": "代理回答所用的语言（RN-618）：`automatico` 或服务器能识别其语言的任何 BCP-47 代码——开放列表，与 `locale` 不同。以规范形式存储（`pt-br` 变为 `pt-BR`）。无法识别的代码返回 400 并指明规则。绝不改变 `locale`。"
   },
   "117673ba5569": {
     "fonte": "Cap in DOLLARS — the only place in the contract that speaks in dollars, because that is what a person types. The api converts it to micro-USD, and responses come back in micro-USD.",
-    "traducao": ""
+    "traducao": "上限，以美元计——契约中唯一以美元表述的地方，因为那是人会输入的单位。api 将其转换为微美元，响应以微美元返回。"
   },
   "a54f548500a2": {
     "fonte": "The key in plain text. It is encrypted via envelope encryption before touching the database and NEVER comes back in any response — not even encrypted. The 512-character cap is protection against an absurd payload, not format validation: whether the key is any good is answered by the provider, at `POST /users/me/credentials/{provider}/test`.",
-    "traducao": ""
+    "traducao": "明文密钥。它在接触数据库之前通过信封加密进行加密，绝不会出现在任何响应中——即使是加密后的也不会。512 个字符的上限是防止荒谬载荷的保护，而不是格式校验：密钥是否有效由提供商在 `POST /users/me/credentials/{provider}/test` 回答。"
   },
   "724587b9c7f8": {
     "fonte": "Covers LLM keys and git tokens (`github`, `gitlab`).",
-    "traducao": ""
+    "traducao": "涵盖 LLM 密钥和 git 令牌（`github`、`gitlab`）。"
   },
   "4bf529085a71": {
     "fonte": "`automatico` (every account starts there) or the BCP-47 code explicitly chosen on the Account page.",
-    "traducao": ""
+    "traducao": "`automatico`（每个账户的初始值）或在账户页面中明确选择的 BCP-47 代码。"
   },
   "441e5823f616": {
     "fonte": "The language detected from your own messages AND confirmed by you — never an unconfirmed detection. `null` until a confirmation exists.",
-    "traducao": ""
+    "traducao": "从你自己的消息中检测到且经你确认的语言——绝不是未确认的检测结果。在存在确认之前为 `null`。"
   },
   "5a5c762bb95c": {
     "fonte": "What applies today OUTSIDE any session, and where it came from: account choice > confirmed detection > interface language.",
-    "traducao": ""
+    "traducao": "今天在任何会话之外适用的语言及其来源：账户选择 > 已确认的检测 > 界面语言。"
   },
   "0495f6330c33": {
     "fonte": "The CALLER's role in this workspace.",
-    "traducao": ""
+    "traducao": "调用方在此 workspace 中的角色。"
   },
   "beee64a3430e": {
     "fonte": "The WORKSPACE role — what every project of the workspace inherits unless a project row overrides it (RN-471).",
-    "traducao": ""
+    "traducao": "workspace 角色——除非项目记录覆盖它，workspace 的每个项目都会继承（RN-471）。"
   },
   "2bff12806480": {
     "fonte": "Unique in the system; it's what appears in the URL.",
-    "traducao": ""
+    "traducao": "在系统中唯一；它会出现在 URL 中。"
   },
   "09fee2ccd915": {
     "fonte": "Whether the tool-routing step by the Jev (ADR 0179) runs for this workspace. On by default; it only acts when the turn model is from OpenRouter, so `true` on a workspace without OpenRouter does nothing.",
-    "traducao": ""
+    "traducao": "是否为此 workspace 运行由 Jev 进行的工具路由步骤（ADR 0179）。默认开启；仅当回合模型来自 OpenRouter 时才起作用，因此在没有 OpenRouter 的 workspace 上为 `true` 不会产生任何效果。"
   },
   "d2a3c5ff5116": {
     "fonte": "Owner of the keys that funded this spend (RN-058).",
-    "traducao": ""
+    "traducao": "为这笔花费出资的密钥的所有者（RN-058）。"
   },
   "bed7e94200a2": {
     "fonte": "Sliding window, in days.",
-    "traducao": ""
+    "traducao": "滑动窗口，以天计。"
   },
   "7827e51a1e31": {
     "fonte": "By MODEL. Two providers serving the same name fall into the same row — separating them would reintroduce the credential axis under another name.",
-    "traducao": ""
+    "traducao": "按模型。两个提供商服务同一名称时会落入同一行——把它们分开会以另一个名义重新引入凭据维度。"
   },
   "8db1902eda93": {
     "fonte": "By PROVIDER (ADR 0076, RN-186). This axis speaks of CREDENTIAL and so only exists here, on a route that requires `owner` (RN-060) — the member's response does not have it, and it is not a filter that hides it: it is the repository's type that refuses it with an actor scope (RN-187).",
-    "traducao": ""
+    "traducao": "按提供商（ADR 0076，RN-186）。这个维度关乎凭据，因此只存在于这里，在要求 `owner` 的路由上（RN-060）——成员的响应中没有它，而且这不是一个把它隐藏起来的过滤器：是仓储类型在参与者范围下拒绝它（RN-187）。"
   },
   "88cb6dc559a1": {
     "fonte": "By PROJECT within the workspace.",
-    "traducao": ""
+    "traducao": "按 workspace 内的项目。"
   },
   "7b6ad956f30d": {
     "fonte": "By ACTOR — agent and person in the same list, distinguished by `actorKind`.",
-    "traducao": ""
+    "traducao": "按参与者——代理和人在同一列表中，以 `actorKind` 区分。"
   },
   "56d35df2ac4e": {
     "fonte": "The PERSON rows (`actor_kind = \"user\"`) — the block the handoff calls \"By owner\", because under RN-058 it is the owner's key that all of them spend. Who the owner is sits in `ownerId`. A partition of `porAtor`, with no extra query (RN-188).",
-    "traducao": ""
+    "traducao": "人的行（`actor_kind = \"user\"`）——handoff 称之为“按所有者”的块，因为依据 RN-058，他们花费的都是所有者的密钥。所有者是谁见 `ownerId`。是 `porAtor` 的一个分区，无需额外查询（RN-188）。"
   },
   "f6386be2e105": {
     "fonte": "The AGENT rows (`actor_kind = \"agent\"`). The other half of `porAtor`.",
-    "traducao": ""
+    "traducao": "代理的行（`actor_kind = \"agent\"`）。`porAtor` 的另一半。"
   },
   "806255c3caee": {
     "fonte": "Number of projects in the workspace. There is no \"active\" flag in the domain — every project counts.",
-    "traducao": ""
+    "traducao": "workspace 中的项目数。领域中没有“活跃”标志——每个项目都计入。"
   },
   "e9f65b506efc": {
     "fonte": "Distinct agents (actorKind=agent) that spent tokens this month, summed across all of the workspace's projects — includes area subspecialties (Phase 8).",
-    "traducao": ""
+    "traducao": "本月花费过 token 的不同代理（actorKind=agent），在 workspace 所有项目中求和——包括区域子专业（Phase 8）。"
   },
   "9bf85f243f67": {
     "fonte": "Current month's spend, in micro-USD, summed by token_usage.createdAt.",
-    "traducao": ""
+    "traducao": "本月花费，以微美元计，按 token_usage.createdAt 求和。"
   },
   "66a36e77fd00": {
     "fonte": "auth",
-    "traducao": ""
+    "traducao": "认证"
   },
   "742998edafdb": {
     "fonte": "gates",
-    "traducao": ""
+    "traducao": "gate"
   },
   "46f1a0bd5592": {
     "fonte": "git",
-    "traducao": ""
+    "traducao": "git"
   },
   "35f8b7463f1e": {
     "fonte": "infrastructure",
-    "traducao": ""
+    "traducao": "基础设施"
   },
   "9f33a7c798af": {
     "fonte": "internal",
-    "traducao": ""
+    "traducao": "内部"
   },
   "4cddc093d54b": {
     "fonte": "llm",
-    "traducao": ""
+    "traducao": "LLM"
   },
   "b37b5674e3d0": {
     "fonte": "projects",
-    "traducao": ""
+    "traducao": "项目"
   },
   "326b426f9ac7": {
     "fonte": "actions",
-    "traducao": ""
+    "traducao": "操作"
   },
   "1e2147459888": {
     "fonte": "execution",
-    "traducao": ""
+    "traducao": "执行"
   },
   "50de035c9505": {
     "fonte": "anamnesis",
-    "traducao": ""
+    "traducao": "Anamnesis"
   },
   "ff9e8f1eca88": {
     "fonte": "backlog",
-    "traducao": ""
+    "traducao": "Backlog"
   },
   "487bf0f57271": {
     "fonte": "psychologist",
-    "traducao": ""
+    "traducao": "Psychologist"
   },
   "862069863df8": {
     "fonte": "projetos",
-    "traducao": ""
+    "traducao": "项目（runner）"
   },
   "69a537093ff9": {
     "fonte": "rag",
-    "traducao": ""
+    "traducao": "RAG"
   },
   "781791f54cc0": {
     "fonte": "sessions",
-    "traducao": ""
+    "traducao": "会话"
   },
   "e7052aeb5d20": {
     "fonte": "agents",
-    "traducao": ""
+    "traducao": "代理"
   },
   "d506bd5213c4": {
     "fonte": "credentials",
-    "traducao": ""
+    "traducao": "凭据"
   },
   "5b7dcd14a4fa": {
     "fonte": "users",
-    "traducao": ""
+    "traducao": "用户"
   },
   "e6f0a06db490": {
     "fonte": "workspaces",
-    "traducao": ""
+    "traducao": "workspace"
   }
 }
