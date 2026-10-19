@@ -4753,15 +4753,15 @@
   },
   "e45811d3936c": {
     "fonte": "An `accepted` handoff to `infra` exists in the most recent session.",
-    "traducao": ""
+    "traducao": "В самой свежей сессии есть handoff в состоянии `accepted` к `infra`."
   },
   "36543b4538de": {
     "fonte": "An `accepted` handoff to `ux-designer` exists in the most recent session (ADR 0087).",
-    "traducao": ""
+    "traducao": "В самой свежей сессии есть handoff в состоянии `accepted` к `ux-designer` (ADR 0087)."
   },
   "5eee4ad79e0c": {
     "fonte": "An `accepted` handoff to `staff` exists in the most recent session (docs/fluxo.yml, ADR 0088) — dormant for automatic triggering, only reflects an already-accepted MANUAL activation.",
-    "traducao": ""
+    "traducao": "В самой свежей сессии есть handoff в состоянии `accepted` к `staff` (docs/fluxo.yml, ADR 0088) — спящий для автоматического запуска, лишь отражает уже принятую РУЧНУЮ активацию."
   },
   "0b59ed8216bf": {
     "fonte": "Nome do módulo — precisa existir no module_map vigente.",
@@ -5173,154 +5173,154 @@
   },
   "724587b9c7f8": {
     "fonte": "Covers LLM keys and git tokens (`github`, `gitlab`).",
-    "traducao": ""
+    "traducao": "Охватывает ключи LLM и токены git (`github`, `gitlab`)."
   },
   "4bf529085a71": {
     "fonte": "`automatico` (every account starts there) or the BCP-47 code explicitly chosen on the Account page.",
-    "traducao": ""
+    "traducao": "`automatico` (с него начинается каждая учётная запись) или код BCP-47, явно выбранный на странице Учётной записи."
   },
   "441e5823f616": {
     "fonte": "The language detected from your own messages AND confirmed by you — never an unconfirmed detection. `null` until a confirmation exists.",
-    "traducao": ""
+    "traducao": "Язык, обнаруженный в ваших собственных сообщениях И подтверждённый вами, — никогда не неподтверждённое обнаружение. `null`, пока нет подтверждения."
   },
   "5a5c762bb95c": {
     "fonte": "What applies today OUTSIDE any session, and where it came from: account choice > confirmed detection > interface language.",
-    "traducao": ""
+    "traducao": "Что действует сегодня ВНЕ любой сессии и откуда это взялось: выбор в учётной записи > подтверждённое обнаружение > язык интерфейса."
   },
   "0495f6330c33": {
     "fonte": "The CALLER's role in this workspace.",
-    "traducao": ""
+    "traducao": "Роль ВЫЗЫВАЮЩЕГО в этом рабочем пространстве."
   },
   "beee64a3430e": {
     "fonte": "The WORKSPACE role — what every project of the workspace inherits unless a project row overrides it (RN-471).",
-    "traducao": ""
+    "traducao": "Роль РАБОЧЕГО ПРОСТРАНСТВА — то, что наследует каждый проект рабочего пространства, если строка проекта её не переопределяет (RN-471)."
   },
   "2bff12806480": {
     "fonte": "Unique in the system; it's what appears in the URL.",
-    "traducao": ""
+    "traducao": "Уникален в системе; именно он появляется в URL."
   },
   "09fee2ccd915": {
     "fonte": "Whether the tool-routing step by the Jev (ADR 0179) runs for this workspace. On by default; it only acts when the turn model is from OpenRouter, so `true` on a workspace without OpenRouter does nothing.",
-    "traducao": ""
+    "traducao": "Выполняется ли шаг маршрутизации инструментов через Jev (ADR 0179) для этого рабочего пространства. Включено по умолчанию; действует, только когда модель хода от OpenRouter, поэтому `true` в рабочем пространстве без OpenRouter ничего не делает."
   },
   "d2a3c5ff5116": {
     "fonte": "Owner of the keys that funded this spend (RN-058).",
-    "traducao": ""
+    "traducao": "Владелец ключей, профинансировавших этот расход (RN-058)."
   },
   "bed7e94200a2": {
     "fonte": "Sliding window, in days.",
-    "traducao": ""
+    "traducao": "Скользящее окно, в днях."
   },
   "7827e51a1e31": {
     "fonte": "By MODEL. Two providers serving the same name fall into the same row — separating them would reintroduce the credential axis under another name.",
-    "traducao": ""
+    "traducao": "По МОДЕЛИ. Два провайдера, обслуживающие одно и то же имя, попадают в одну строку — их разделение вернуло бы ось учётных данных под другим именем."
   },
   "8db1902eda93": {
     "fonte": "By PROVIDER (ADR 0076, RN-186). This axis speaks of CREDENTIAL and so only exists here, on a route that requires `owner` (RN-060) — the member's response does not have it, and it is not a filter that hides it: it is the repository's type that refuses it with an actor scope (RN-187).",
-    "traducao": ""
+    "traducao": "По ПРОВАЙДЕРУ (ADR 0076, RN-186). Эта ось говорит об УЧЁТНЫХ ДАННЫХ и поэтому существует только здесь, на маршруте, требующем `owner` (RN-060), — в ответе участника её нет, и это не фильтр, который её скрывает: её отклоняет тип репозитория при области действия актора (RN-187)."
   },
   "88cb6dc559a1": {
     "fonte": "By PROJECT within the workspace.",
-    "traducao": ""
+    "traducao": "По ПРОЕКТУ внутри рабочего пространства."
   },
   "7b6ad956f30d": {
     "fonte": "By ACTOR — agent and person in the same list, distinguished by `actorKind`.",
-    "traducao": ""
+    "traducao": "По АКТОРУ — агент и человек в одном списке, различаемые по `actorKind`."
   },
   "56d35df2ac4e": {
     "fonte": "The PERSON rows (`actor_kind = \"user\"`) — the block the handoff calls \"By owner\", because under RN-058 it is the owner's key that all of them spend. Who the owner is sits in `ownerId`. A partition of `porAtor`, with no extra query (RN-188).",
-    "traducao": ""
+    "traducao": "Строки ЛЮДЕЙ (`actor_kind = \"user\"`) — блок, который handoff называет «По владельцу», потому что по RN-058 все они тратят ключ владельца. Кто владелец, указано в `ownerId`. Разбиение `porAtor`, без дополнительного запроса (RN-188)."
   },
   "f6386be2e105": {
     "fonte": "The AGENT rows (`actor_kind = \"agent\"`). The other half of `porAtor`.",
-    "traducao": ""
+    "traducao": "Строки АГЕНТОВ (`actor_kind = \"agent\"`). Вторая половина `porAtor`."
   },
   "806255c3caee": {
     "fonte": "Number of projects in the workspace. There is no \"active\" flag in the domain — every project counts.",
-    "traducao": ""
+    "traducao": "Число проектов в рабочем пространстве. В домене нет флага «активный» — учитывается каждый проект."
   },
   "e9f65b506efc": {
     "fonte": "Distinct agents (actorKind=agent) that spent tokens this month, summed across all of the workspace's projects — includes area subspecialties (Phase 8).",
-    "traducao": ""
+    "traducao": "Различные агенты (actorKind=agent), потратившие токены в этом месяце, суммарно по всем проектам рабочего пространства, — включая подспециальности областей (Фаза 8)."
   },
   "9bf85f243f67": {
     "fonte": "Current month's spend, in micro-USD, summed by token_usage.createdAt.",
-    "traducao": ""
+    "traducao": "Расходы текущего месяца в микро-USD, суммированные по token_usage.createdAt."
   },
   "66a36e77fd00": {
     "fonte": "auth",
-    "traducao": ""
+    "traducao": "аутентификация"
   },
   "742998edafdb": {
     "fonte": "gates",
-    "traducao": ""
+    "traducao": "gate"
   },
   "46f1a0bd5592": {
     "fonte": "git",
-    "traducao": ""
+    "traducao": "git"
   },
   "35f8b7463f1e": {
     "fonte": "infrastructure",
-    "traducao": ""
+    "traducao": "инфраструктура"
   },
   "9f33a7c798af": {
     "fonte": "internal",
-    "traducao": ""
+    "traducao": "внутреннее"
   },
   "4cddc093d54b": {
     "fonte": "llm",
-    "traducao": ""
+    "traducao": "llm"
   },
   "b37b5674e3d0": {
     "fonte": "projects",
-    "traducao": ""
+    "traducao": "проекты"
   },
   "326b426f9ac7": {
     "fonte": "actions",
-    "traducao": ""
+    "traducao": "действия"
   },
   "1e2147459888": {
     "fonte": "execution",
-    "traducao": ""
+    "traducao": "выполнение"
   },
   "50de035c9505": {
     "fonte": "anamnesis",
-    "traducao": ""
+    "traducao": "анамнез"
   },
   "ff9e8f1eca88": {
     "fonte": "backlog",
-    "traducao": ""
+    "traducao": "backlog"
   },
   "487bf0f57271": {
     "fonte": "psychologist",
-    "traducao": ""
+    "traducao": "психолог"
   },
   "862069863df8": {
     "fonte": "projetos",
-    "traducao": ""
+    "traducao": "проекты (runner)"
   },
   "69a537093ff9": {
     "fonte": "rag",
-    "traducao": ""
+    "traducao": "rag"
   },
   "781791f54cc0": {
     "fonte": "sessions",
-    "traducao": ""
+    "traducao": "сессии"
   },
   "e7052aeb5d20": {
     "fonte": "agents",
-    "traducao": ""
+    "traducao": "агенты"
   },
   "d506bd5213c4": {
     "fonte": "credentials",
-    "traducao": ""
+    "traducao": "учётные данные"
   },
   "5b7dcd14a4fa": {
     "fonte": "users",
-    "traducao": ""
+    "traducao": "пользователи"
   },
   "e6f0a06db490": {
     "fonte": "workspaces",
-    "traducao": ""
+    "traducao": "рабочие пространства"
   }
 }
