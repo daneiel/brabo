@@ -408,6 +408,26 @@ defmodule Engine.Agents.PoServerTest do
       assert new_state.epicos_sem_historia == %{}
     end
 
+    test "create_epic sem id no resultado não faz o create_story recusar UUID legítimo", %{
+      state: state
+    } do
+      Process.put(:fake_events, brief_and_rules())
+      Process.put(:fake_epic, %{"id" => "", "title" => "Cadastro"})
+
+      Process.put(:fake_llm_turns, [
+        tool_turn("create_epic", %{"title" => "Cadastro"}),
+        tool_turn("create_story", %{
+          "epic_id" => "11111111-1111-4111-8111-111111111111",
+          "title" => "x",
+          "business_rule_ids" => ["evt-r1"]
+        }),
+        FakeEngineApiClient.final_response("ok")
+      ])
+
+      assert {:noreply, _} = sync_cast(PoServer, :kickoff, state)
+      assert_received {:story_created, _}
+    end
+
     test "épico COM história não gera cobrança nenhuma", %{state: state} do
       Process.put(:fake_events, brief_and_rules())
 
