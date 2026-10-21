@@ -24823,6 +24823,20 @@ without saying which.
   the past and the link was born expired, 410; the story's RF only said the
   expiration is optional), owner's decision of 10/15
 
+### RN-904 — The output-ceiling cut is not repeated with the full catalog {#rn-904}
+
+- **Rule:** when Jev restricts the menu and the model answers WITHOUT a tool,
+  the step is repeated ONCE with the full catalog (RN-625) — except when the
+  response was CUT by the output ceiling (`truncated`). The cut is not a menu
+  error: retrying with the full catalog would only enlarge the prompt and spend
+  another output ceiling. It applies to both facades (`llm_turn` and
+  `llm_turn_stream`, the latter only without text already delivered). The
+  RN-780 retry in `ToolLoop` handles the cut and does not change.
+- **Where:** `apps/engine/lib/engine/harness/roteamento_de_ferramenta.ex:126` (`repetir_com_catalogo_inteiro?`)
+- **Test:** `apps/engine/test/engine/harness/roteamento_de_ferramenta_test.exs:274`
+  (an empty cut response is not repeated, in both paths; without a cut it is)
+- **Origin:** AT-578 (EP-026, survey of 10/21): the PO's first turn in the 18th
+  round spent two 8192-token output rounds.
 ### RN-900 — `write_file` refuses to rewrite the README and drop the Infra's usage section {#rn-900}
 
 - **Rule:** `write_file` replaces the whole file. When the `path` is a README

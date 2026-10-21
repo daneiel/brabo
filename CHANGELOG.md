@@ -6,6 +6,9 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- Resposta vazia cortada pelo teto de saída não é mais repetida com o catálogo
+  inteiro (AT-578, RN-904): o corte não é erro de menu, e a volta só gastava
+  outro teto de saída. A retentativa da RN-780 no `ToolLoop` segue igual.
 - A ferramenta `write_file` do dev agent recusa reescrever um README que tem a
   seção "Rodar na sua máquina" sem essa seção: ela substitui o arquivo inteiro,
   e o erro diz para reescrever o README completo mantendo a seção (AT-571,
