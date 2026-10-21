@@ -6,6 +6,9 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- O PO não cria mais um épico com o mesmo título de outro do projeto
+  (AT-581, RN-894): `create_epic` recusa e devolve o id do existente para ser
+  usado em `epic_id`, com a mesma régua de título igual da história.
 - O bloqueio de task do dev agent por 429 do provider diz "limite de uso do
   modelo atingido (429)" e manda trocar o modelo, em vez de "falha passageira
   de rede" (AT-594, RN-903). A origem `infra` e a retomada automática (RN-864)
