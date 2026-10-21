@@ -10,8 +10,8 @@ defmodule Engine.Harness.ArgumentosDeFerramenta do
        em 02/10) manda lista/objeto como STRING JSON —
        `"business_rule_ids": "[\\"01M…\\"]"`. Para cada argumento cujo schema
        declara `array` ou `object`, string que é JSON válido do tipo certo vira
-       o valor; string que não é recusa NOMEADA ("o campo X precisa ser uma
-       lista"), antes de a ferramenta rodar. Campo declarado `string` nunca é
+       o valor; o que não é recusa NOMEADA com o tipo que chegou e o formato
+       esperado ("o campo X chegou como texto; envie uma lista JSON…", RN-895), antes de a ferramenta rodar. Campo declarado `string` nunca é
        tocado.
     2. Exceção levantada pela ferramenta vira `{:error, motivo}` com o prefixo
        de `falha_interna?/1` — o `tool.result` sai `ok: false` com origem
@@ -81,8 +81,18 @@ defmodule Engine.Harness.ArgumentosDeFerramenta do
     case Jason.decode(valor) do
       {:ok, lista} when tipo == "array" and is_list(lista) -> {:ok, lista}
       {:ok, mapa} when tipo == "object" and is_map(mapa) -> {:ok, mapa}
-      _ -> {:error, "o campo #{campo} precisa ser #{nome_do_tipo(tipo)}"}
+      # RN-895: diz o que chegou e o formato esperado, nunca o valor (RN-725).
+      _ -> {:error, "o campo #{campo} chegou como texto; envie #{formato(tipo)}"}
     end
+  end
+
+  defp coagir(campo, tipo, valor) when tipo in ["array", "object"] and not is_nil(valor) do
+    ok? = if tipo == "array", do: is_list(valor), else: is_map(valor)
+
+    if ok?,
+      do: {:ok, valor},
+      else:
+        {:error, "o campo #{campo} chegou como #{tipo_recebido(valor)}; envie #{formato(tipo)}"}
   end
 
   defp coagir(_campo, _tipo, valor) when is_binary(valor), do: {:ok, decodificar_escapes(valor)}
@@ -160,8 +170,14 @@ defmodule Engine.Harness.ArgumentosDeFerramenta do
 
   defp com_chaves_recebidas(resultado, _args), do: resultado
 
-  defp nome_do_tipo("array"), do: "uma lista"
-  defp nome_do_tipo("object"), do: "um objeto"
+  defp formato("array"), do: ~s(uma lista JSON de strings, ex.: ["item 1","item 2"])
+  defp formato("object"), do: ~s(um objeto JSON, ex.: {"chave":"valor"})
+
+  defp tipo_recebido(v) when is_number(v), do: "número"
+  defp tipo_recebido(v) when is_boolean(v), do: "booleano"
+  defp tipo_recebido(v) when is_list(v), do: "lista"
+  defp tipo_recebido(v) when is_map(v), do: "objeto"
+  defp tipo_recebido(_), do: "outro tipo"
 
   defp achar_spec(_name, nil), do: nil
   defp achar_spec(_name, %{} = spec), do: spec

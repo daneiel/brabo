@@ -155,6 +155,7 @@ defmodule Engine.Agents.PoServer do
        # reconstruído do event log reabriria cobrança de épico antigo que o
        # usuário já resolveu de outro jeito.
        epicos_sem_historia: %{},
+       epicos_conhecidos: %{},
        # RN-700: o handoff ao Arquiteto já foi oferecido (pelo modelo ou pelo
        # servidor) NESTE processo. Não reidratado: depois de um restart a api
        # deduplica a oferta pendente e recusa com 409 nomeado o destino já
@@ -407,19 +408,29 @@ defmodule Engine.Agents.PoServer do
     # Sem id parseável a obrigação ainda existe — ela só passa a ser
     # identificada pelo título. Perder a cobrança porque a frase do tool-result
     # mudou seria trocar um defeito silencioso por outro.
-    chave = CreateEpic.id_no_resultado(texto) || "titulo:#{Map.get(args, "title")}"
+    id = CreateEpic.id_no_resultado(texto)
+    chave = id || "titulo:#{Map.get(args, "title")}"
+    titulo = Map.get(args, "title", "(sem título)")
+
+    # Só id real entra em `epicos_conhecidos`: chave por título tornaria o mapa
+    # não vazio e faria o `create_story` recusar UUID legítimo (RN-896).
+    conhecidos = Map.get(state, :epicos_conhecidos, %{})
 
     %{
       state
-      | epicos_sem_historia:
-          Map.put(state.epicos_sem_historia, chave, Map.get(args, "title", "(sem título)"))
+      | epicos_sem_historia: Map.put(state.epicos_sem_historia, chave, titulo),
+        epicos_conhecidos: if(id, do: Map.put(conhecidos, id, titulo), else: conhecidos)
     }
   end
 
   defp anotar_obrigacao(state, "create_story", args, {:ok, _texto}) do
+    id = Map.get(args, "epic_id")
+
     %{
       state
-      | epicos_sem_historia: Map.delete(state.epicos_sem_historia, Map.get(args, "epic_id"))
+      | epicos_sem_historia: Map.delete(state.epicos_sem_historia, id),
+        epicos_conhecidos:
+          Map.put_new(Map.get(state, :epicos_conhecidos, %{}), id, "(do backlog)")
     }
   end
 

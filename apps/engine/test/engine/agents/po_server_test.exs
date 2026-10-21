@@ -63,10 +63,15 @@ defmodule Engine.Agents.PoServerTest do
   test "kickoff: encadeia create_epic → create_story e injeta o resultado", %{state: state} do
     Process.put(:fake_events, brief_and_rules())
 
+    Process.put(:fake_epic, %{
+      "id" => "11111111-1111-4111-8111-111111111111",
+      "title" => "Cadastro"
+    })
+
     Process.put(:fake_llm_turns, [
       tool_turn("create_epic", %{"title" => "Cadastro"}),
       tool_turn("create_story", %{
-        "epic_id" => "ep-1",
+        "epic_id" => "11111111-1111-4111-8111-111111111111",
         "title" => "Cadastrar usuário",
         "rf" => ["formulário de cadastro"],
         "dod" => ["testes passando"],
@@ -119,11 +124,17 @@ defmodule Engine.Agents.PoServerTest do
     state: state
   } do
     Process.put(:fake_events, brief_and_rules())
+
+    Process.put(:fake_epic, %{
+      "id" => "11111111-1111-4111-8111-111111111111",
+      "title" => "Cadastro"
+    })
+
     Process.put(:fake_story_error, {422, %{"message" => "business_rule_id inexistente"}})
 
     Process.put(:fake_llm_turns, [
       tool_turn("create_story", %{
-        "epic_id" => "ep-1",
+        "epic_id" => "11111111-1111-4111-8111-111111111111",
         "title" => "x",
         "business_rule_ids" => ["nao-existe"]
       }),
@@ -410,14 +421,38 @@ defmodule Engine.Agents.PoServerTest do
       assert new_state.epicos_sem_historia == %{}
     end
 
-    test "épico COM história não gera cobrança nenhuma", %{state: state} do
+    test "create_epic sem id no resultado não faz o create_story recusar UUID legítimo", %{
+      state: state
+    } do
       Process.put(:fake_events, brief_and_rules())
-      Process.put(:fake_epic, %{"id" => "ep-42", "title" => "Cadastro"})
+      Process.put(:fake_epic, %{"id" => "", "title" => "Cadastro"})
 
       Process.put(:fake_llm_turns, [
         tool_turn("create_epic", %{"title" => "Cadastro"}),
         tool_turn("create_story", %{
-          "epic_id" => "ep-42",
+          "epic_id" => "11111111-1111-4111-8111-111111111111",
+          "title" => "x",
+          "business_rule_ids" => ["evt-r1"]
+        }),
+        FakeEngineApiClient.final_response("ok")
+      ])
+
+      assert {:noreply, _} = sync_cast(PoServer, :kickoff, state)
+      assert_received {:story_created, _}
+    end
+
+    test "épico COM história não gera cobrança nenhuma", %{state: state} do
+      Process.put(:fake_events, brief_and_rules())
+
+      Process.put(:fake_epic, %{
+        "id" => "11111111-1111-4111-8111-111111111111",
+        "title" => "Cadastro"
+      })
+
+      Process.put(:fake_llm_turns, [
+        tool_turn("create_epic", %{"title" => "Cadastro"}),
+        tool_turn("create_story", %{
+          "epic_id" => "11111111-1111-4111-8111-111111111111",
           "title" => "Cadastrar usuário",
           "business_rule_ids" => ["evt-r1"]
         }),
@@ -434,12 +469,20 @@ defmodule Engine.Agents.PoServerTest do
       # O caminho que mais engana: o modelo "criou" a história, a api recusou
       # (regra inexistente), e sem esta distinção o épico sairia como coberto.
       Process.put(:fake_events, brief_and_rules())
-      Process.put(:fake_epic, %{"id" => "ep-42", "title" => "Cadastro"})
+
+      Process.put(:fake_epic, %{
+        "id" => "11111111-1111-4111-8111-111111111111",
+        "title" => "Cadastro"
+      })
+
       Process.put(:fake_story_error, {422, %{"message" => "business_rule_id inexistente"}})
 
       Process.put(:fake_llm_turns, [
         tool_turn("create_epic", %{"title" => "Cadastro"}),
-        tool_turn("create_story", %{"epic_id" => "ep-42", "title" => "x"}),
+        tool_turn("create_story", %{
+          "epic_id" => "11111111-1111-4111-8111-111111111111",
+          "title" => "x"
+        }),
         FakeEngineApiClient.final_response("desisti")
       ])
 

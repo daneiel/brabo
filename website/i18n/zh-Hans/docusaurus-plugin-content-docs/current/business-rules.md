@@ -12250,6 +12250,26 @@ PO 的 kickoff 说明这三件事。
 - **测试：** `apps/engine/test/engine/agents/po_server_test.exs:438`（kickoff 指令带有边界义务）和 `:460`（没有事件日志时，kickoff 仍带有它）
 - **来源：** AT-541（10/14 的 TP-01：交付物接受了过去的 `expiresAt`，链接一创建就已过期，410；故事的 RF 只说过期时间是可选的），所有者 10/15 的决定
 
+### RN-895 — 参数拒绝说明收到了什么以及期望的格式 {#rn-895}
+
+- **规则：** 修订 [RN-719](#rn-719) 和 [RN-725](#rn-725)。声明为 `array`/`object` 的字段若以非 JSON 文本、数字、布尔或错误类型到达，会在工具运行前被拒绝，信息为"字段 X 以 <类型> 到达；请发送 <格式>"，并附示例（`["item 1","item 2"]`、`{"chave":"valor"}`），绝不回显取值。`emit_plano_de_teste` 的句子现在用反引号包住键名，因此拒绝会带上收到的键。
+- **位置：** `apps/engine/lib/engine/harness/argumentos_de_ferramenta.ex:80`（`coagir`）；`apps/engine/lib/engine/gates/tools/emit_plano_de_teste.ex:73`（`run`）
+- **测试：** `apps/engine/test/engine/harness/argumentos_de_ferramenta_test.exs:193` 与 `:201`（格式与收到的类型）以及 `:210`（收到的键）
+- **来源：** AT-583（TP-01 第 18、19 次：`dod` 以 markdown 清单到达，测试计划被拒 4 次却未说明收到了什么）
+
+### RN-896 — `epic_id` 在到达 api 之前被校验 {#rn-896}
+
+- **规则：** `create_story` 拒绝不是 UUID 的 `epic_id`（"epic_id inválido; …"）。当 PO 已在本进程中创建史诗（`epicos_conhecidos`）且该 id 不在其中时，只重读一次 backlog（`list_backlog`）：id 在其中则接受；否则拒绝并列出 backlog 的 `id=标题`（最多 20 行，截断时说明总数，ADR 0060）。空映射或 backlog 读取失败表示“未知”，不拒绝——由 api 决定。
+- **位置：** `apps/engine/lib/engine/harness/tools/create_story.ex:57`（`epico_valido`）
+- **测试：** `apps/engine/test/engine/harness/argumentos_de_ferramenta_test.exs:224` 与 `:233`
+- **来源：** AT-584（qwen 发送了 `EPIC_ID_PLACEHOLDER_NAO_USAR_AQUI`，api 以 DTO 名称回应）
+
+### RN-897 — 门中因 `max_tokens` 造成的提供方截断，来源为 `modelo` {#rn-897}
+
+- **规则：** 门 `qa-estrategia`、`qa-automacao`、`qa-performance-seguranca` 和 `appsec` 的 `agent.error` 将"Tool calls cutoff by max_tokens"归类为 `modelo`（推理耗尽了上限，RN-059）；其他 LLM 错误仍为 `infra`。
+- **位置：** `apps/engine/lib/engine/gates/origem_do_erro.ex:10`（`de_llm`）
+- **测试：** `apps/engine/test/engine/gates/origem_do_erro_test.exs:7`
+- **来源：** AT-586（BaseTen 502 被记为 `infra`）
 ### RN-898 — A response cut by the cap with no text closes the turn, stated {#rn-898}
 
 - **Rule:** a conversational agent turn whose last LLM response was cut by the output cap ([RN-737](#rn-737)) and wrote no text in any round does NOT close silently: the line "Response cut off by the length limit." becomes the closing `agent.response` with `modelName`, and the bubble shows "Continue where it left off" ([RN-749](#rn-749)). It covers the seven conversational agents.

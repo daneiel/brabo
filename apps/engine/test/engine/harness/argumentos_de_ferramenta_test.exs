@@ -45,7 +45,7 @@ defmodule Engine.Harness.ArgumentosDeFerramentaTest do
 
   test "create_story com business_rule_ids em string JSON grava os ids", %{ctx: ctx} do
     args = %{
-      "epic_id" => "ep-1",
+      "epic_id" => "11111111-1111-4111-8111-111111111111",
       "title" => "Comprar",
       "business_rule_ids" => "[\"01M3YM49TM61FBS4JZ9BSQSK20\"]"
     }
@@ -66,7 +66,8 @@ defmodule Engine.Harness.ArgumentosDeFerramentaTest do
   test "string que não é JSON num campo array vira recusa nomeada", %{ctx: ctx} do
     args = %{"system_name" => "Loja", "actors" => "Cliente e GitHub"}
 
-    assert {:error, "o campo actors precisa ser uma lista"} =
+    assert {:error,
+            ~s(o campo actors chegou como texto; envie uma lista JSON de strings, ex.: ["item 1","item 2"])} =
              executar(CreateC4Diagram, args, ctx)
 
     refute_received {:c4_diagram_created, _}
@@ -185,6 +186,77 @@ defmodule Engine.Harness.ArgumentosDeFerramentaTest do
                })
 
       assert msg =~ "falta: business_rule_ids."
+    end
+  end
+
+  describe "RN-895 (AT-583)" do
+    test "objeto que não é JSON diz o formato esperado" do
+      spec = %{parameters: %{"properties" => %{"meta" => %{"type" => "object"}}}}
+
+      assert {:error,
+              ~s(o campo meta chegou como texto; envie um objeto JSON, ex.: {"chave":"valor"})} =
+               ArgumentosDeFerramenta.normalizar(%{"meta" => "chave: valor"}, spec)
+    end
+
+    test "número num campo lista diz o tipo que chegou" do
+      spec = %{parameters: %{"properties" => %{"dod" => %{"type" => "array"}}}}
+
+      assert {:error, "o campo dod chegou como número; envie uma lista" <> _} =
+               ArgumentosDeFerramenta.normalizar(%{"dod" => 3}, spec)
+
+      assert {:ok, %{"dod" => ["a"]}} = ArgumentosDeFerramenta.normalizar(%{"dod" => ["a"]}, spec)
+    end
+
+    test "recusa do emit_plano_de_teste leva as chaves recebidas" do
+      args = %{"planoDeTeste" => "segredo"}
+
+      assert {:error, msg} =
+               ArgumentosDeFerramenta.executar("emit_plano_de_teste", args, nil, fn a ->
+                 Engine.Gates.Tools.EmitPlanoDeTeste.run(a, %{})
+               end)
+
+      assert msg =~ "chaves recebidas: planoDeTeste"
+      refute msg =~ "segredo"
+    end
+  end
+
+  describe "RN-896 (AT-584)" do
+    test "epic_id que não é UUID é recusado antes da api" do
+      ctx = %{project_id: "p1", session_id: "s1"}
+
+      assert {:error, "epic_id inválido; use o id" <> _} =
+               CreateStory.run(%{"epic_id" => "EPIC_ID_PLACEHOLDER", "title" => "x"}, ctx)
+
+      refute_received {:story_created, _}
+    end
+
+    @outro "22222222-2222-4222-8222-222222222222"
+
+    defp com_conhecidos do
+      %{
+        project_id: "p1",
+        session_id: "s1",
+        epicos_conhecidos: %{"11111111-1111-4111-8111-111111111111" => "Cadastro"}
+      }
+    end
+
+    test "épico fora do mapa mas no backlog é aceito" do
+      Process.put(:fake_backlog, [%{"id" => @outro, "title" => "Antigo", "stories" => []}])
+      assert {:ok, _} = CreateStory.run(%{"epic_id" => @outro, "title" => "x"}, com_conhecidos())
+    end
+
+    test "id fora do mapa e do backlog é recusado listando o backlog" do
+      Process.put(:fake_backlog, [%{"id" => @outro, "title" => "Antigo", "stories" => []}])
+      id = "33333333-3333-4333-8333-333333333333"
+
+      assert {:error, msg} = CreateStory.run(%{"epic_id" => id, "title" => "x"}, com_conhecidos())
+      assert msg =~ "#{@outro}=Antigo"
+      refute_received {:story_created, _}
+    end
+
+    test "backlog que falha não recusa" do
+      Process.put(:fake_backlog, {:error, :boom})
+      assert {:ok, _} = CreateStory.run(%{"epic_id" => @outro, "title" => "x"}, com_conhecidos())
     end
   end
 end

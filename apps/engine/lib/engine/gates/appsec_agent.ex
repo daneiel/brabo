@@ -180,8 +180,11 @@ defmodule Engine.Gates.AppSecAgent do
 
   defp diagnostico_de_parada(ctx) do
     case Map.get(ctx, :last_error) do
-      nil -> {"o modelo parou sem chamar emit_threat_model", "modelo"}
-      error -> {"falha no turno de LLM: #{inspect(error)}", "infra"}
+      nil ->
+        {"o modelo parou sem chamar emit_threat_model", "modelo"}
+
+      error ->
+        {"falha no turno de LLM: #{inspect(error)}", Engine.Gates.OrigemDoErro.de_llm(error)}
     end
   end
 end

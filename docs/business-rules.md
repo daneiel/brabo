@@ -20557,8 +20557,8 @@ origem `infra`. Regra descoberta, ou backlog sem regra/história, não é julgad
 A instrução do PO passa a exigir tarefa por história. Quem cria as tarefas é o
 PO (decisão do agente principal na AT-364: ele já tem `create_task`).
 
-- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:475` (`fechar_handoff`);
-  `:502` (`oferecer_handoff`)
+- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:486` (`fechar_handoff`);
+  `:513` (`oferecer_handoff`)
 - **Teste:** `apps/engine/test/engine/agents/po_server_test.exs:592` (oferece e
   não repete), `:610` (história sem tarefa: não oferece, nomeia)
 - **Origem:** AT-364
@@ -21549,8 +21549,8 @@ sem dizer qual.
 4. `complete_story` nomeia exatamente o que falta (`falta: business_rule_ids`),
    pela mesma régua de `missingForReady` da api, lida da história devolvida.
 
-- **Onde:** `apps/engine/lib/engine/harness/argumentos_de_ferramenta.ex:88`
-  (`decodificar_escapes`), `:135` (`chaves_recebidas`), `:152`
+- **Onde:** `apps/engine/lib/engine/harness/argumentos_de_ferramenta.ex:98`
+  (`decodificar_escapes`), `:148` (`chaves_recebidas`), `:162`
   (`com_chaves_recebidas`); `apps/engine/lib/engine/harness/tools/complete_story.ex:80`
   (`faltam`); `apps/api/src/domain/backlog/story-overlap.ts:39`
   (`decodificarEscapesLiterais`), `:25` (`normalizarTitulo`);
@@ -21755,7 +21755,7 @@ sem dizer qual.
   não cláusula da RN-725, porque a superfície é outra (resposta do modelo, não
   argumento de ferramenta) e a decisão sobre o delta é desta.
 - **Onde:** `apps/engine/lib/engine/agents/texto_do_turno.ex:65` (`payload_do_turno`),
-  `apps/engine/lib/engine/harness/argumentos_de_ferramenta.ex:88` (`decodificar_escapes`)
+  `apps/engine/lib/engine/harness/argumentos_de_ferramenta.ex:98` (`decodificar_escapes`)
 - **Teste:** `apps/engine/test/engine/agents/texto_do_turno_test.exs` (feliz:
   os cinco escapes medidos, no fecho e num passo; intacto: texto sem escape e
   bloco de código com `\n` literal)
@@ -22904,7 +22904,7 @@ sem dizer qual.
   outra variante — o dev agent atualizar o README em toda tarefa que mexe em
   configuração/entrada — NÃO foi feita: exigiria classificar a tarefa no
   `AmbienteDoAgente` ou no `report_done`, regra nova de código — declarado.
-- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:560` (`kickoff_instruction`)
+- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:571` (`kickoff_instruction`)
 - **Teste:** `apps/engine/test/engine/agents/po_server_test.exs:438` (a
   instrução de kickoff traz o critério do README)
 - **Origem:** AT-466 (TP-01 de 09/10: o `encurtador-api` saiu com um README só
@@ -24829,7 +24829,7 @@ sem dizer qual.
   sugestão, nunca inventa nem omite. Régua de PROMPT, no molde da
   [RN-790](#rn-790): nenhuma ferramenta recusa história sem borda. O PO NÃO
   passa a reescrever `business_rule`; Criativo, QA, schema e gate não mudam.
-- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:649` (`obrigacoes`)
+- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:660` (`obrigacoes`)
 - **Teste:** `apps/engine/test/engine/agents/po_server_test.exs:438` (a
   instrução de kickoff traz a obrigação da borda) e `:460` (sem event log, o
   kickoff ainda a carrega)
@@ -24837,6 +24837,26 @@ sem dizer qual.
   passado e o link nasceu expirado, 410; o RF da história só dizia que a
   expiração é opcional), decisão do dono de 15/10
 
+### RN-895 — A recusa de argumento diz o que chegou e o formato esperado {#rn-895}
+
+- **Regra:** revisa a [RN-719](#rn-719) e a [RN-725](#rn-725). Campo declarado `array`/`object` que chega como texto fora de JSON, ou como número/booleano/tipo trocado, é recusado antes da ferramenta com "o campo X chegou como <tipo>; envie <formato>", com exemplo (`["item 1","item 2"]`, `{"chave":"valor"}`), nunca com o valor. A frase do `emit_plano_de_teste` passou a pôr as chaves entre crases, e por isso a recusa leva as chaves recebidas.
+- **Onde:** `apps/engine/lib/engine/harness/argumentos_de_ferramenta.ex:80` (`coagir`); `apps/engine/lib/engine/gates/tools/emit_plano_de_teste.ex:73` (`run`)
+- **Teste:** `apps/engine/test/engine/harness/argumentos_de_ferramenta_test.exs:193` e `:201` (o formato e o tipo recebido) e `:210` (as chaves recebidas)
+- **Origem:** AT-583 (TP-01 18ª e 19ª: o `dod` chegou como checklist markdown e o plano de teste foi recusado 4 vezes sem dizer o que veio)
+
+### RN-896 — O `epic_id` é validado antes da api {#rn-896}
+
+- **Regra:** `create_story` recusa `epic_id` que não é UUID ("epic_id inválido; …"). Quando o PO já criou épicos neste processo (`epicos_conhecidos`) e o id não é um deles, relê o backlog UMA vez (`list_backlog`): se o id está lá, aceita; senão recusa listando `id=título` do backlog (teto de 20 linhas, dizendo o total se truncar, ADR 0060). Mapa vazio ou leitura do backlog que falha é "não sei" e não recusa — a api decide.
+- **Onde:** `apps/engine/lib/engine/harness/tools/create_story.ex:57` (`epico_valido`)
+- **Teste:** `apps/engine/test/engine/harness/argumentos_de_ferramenta_test.exs:224` e `:233`
+- **Origem:** AT-584 (o qwen mandou `EPIC_ID_PLACEHOLDER_NAO_USAR_AQUI` e a api respondeu com o nome do DTO)
+
+### RN-897 — O corte do provider por `max_tokens` num gate é origem `modelo` {#rn-897}
+
+- **Regra:** o `agent.error` dos gates `qa-estrategia`, `qa-automacao`, `qa-performance-seguranca` e `appsec` classifica "Tool calls cutoff by max_tokens" como `modelo` (o raciocínio comeu o teto, RN-059); qualquer outro erro de LLM segue `infra`.
+- **Onde:** `apps/engine/lib/engine/gates/origem_do_erro.ex:10` (`de_llm`)
+- **Teste:** `apps/engine/test/engine/gates/origem_do_erro_test.exs:7`
+- **Origem:** AT-586 (BaseTen 502 gravado como `infra`)
 ### RN-898 — Resposta cortada pelo teto, sem texto algum, fecha o turno dita {#rn-898}
 
 - **Regra:** o turno de agente conversacional cuja última resposta de LLM foi

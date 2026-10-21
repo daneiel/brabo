@@ -25540,6 +25540,26 @@ Kickoff PO говорит все три вещи.
   и ссылка родилась просроченной, 410; RF истории говорил только, что срок
   действия необязателен), решение владельца от 15.10
 
+### RN-895 — Отказ по аргументу говорит, что пришло и какой формат ожидается {#rn-895}
+
+- **Правило:** пересматривает [RN-719](#rn-719) и [RN-725](#rn-725). Поле `array`/`object`, пришедшее как текст не в JSON либо как число/булево/другой тип, отклоняется до инструмента фразой «поле X пришло как <тип>; отправьте <формат>» с примером (`["item 1","item 2"]`, `{"chave":"valor"}`), но никогда не со значением. Фраза `emit_plano_de_teste` теперь берёт ключи в обратные кавычки, поэтому отказ несёт полученные ключи.
+- **Где:** `apps/engine/lib/engine/harness/argumentos_de_ferramenta.ex:80` (`coagir`); `apps/engine/lib/engine/gates/tools/emit_plano_de_teste.ex:73` (`run`)
+- **Тест:** `apps/engine/test/engine/harness/argumentos_de_ferramenta_test.exs:193` и `:201` (формат и полученный тип) и `:210` (полученные ключи)
+- **Происхождение:** AT-583 (TP-01 18-й и 19-й: `dod` пришёл как markdown-чеклист, и план тестов отклонили 4 раза без объяснения)
+
+### RN-896 — `epic_id` проверяется до api {#rn-896}
+
+- **Правило:** `create_story` отклоняет `epic_id`, не являющийся UUID («epic_id inválido; …»). Когда PO уже создал эпики в этом процессе (`epicos_conhecidos`), а id среди них нет, бэклог перечитывается ОДИН раз (`list_backlog`): если id там есть — принимается; иначе отказ с перечислением `id=название` из бэклога (не более 20 строк, с указанием общего числа при усечении, ADR 0060). Пустая карта или сбой чтения бэклога означает «не знаю» и не отклоняет — решает api.
+- **Где:** `apps/engine/lib/engine/harness/tools/create_story.ex:57` (`epico_valido`)
+- **Тест:** `apps/engine/test/engine/harness/argumentos_de_ferramenta_test.exs:224` и `:233`
+- **Происхождение:** AT-584 (qwen отправил `EPIC_ID_PLACEHOLDER_NAO_USAR_AQUI`, а api ответила именем DTO)
+
+### RN-897 — Обрыв провайдера по `max_tokens` в гейте имеет источник `modelo` {#rn-897}
+
+- **Правило:** `agent.error` гейтов `qa-estrategia`, `qa-automacao`, `qa-performance-seguranca` и `appsec` классифицирует «Tool calls cutoff by max_tokens» как `modelo` (рассуждение съело лимит, RN-059); любая другая ошибка LLM остаётся `infra`.
+- **Где:** `apps/engine/lib/engine/gates/origem_do_erro.ex:10` (`de_llm`)
+- **Тест:** `apps/engine/test/engine/gates/origem_do_erro_test.exs:7`
+- **Происхождение:** AT-586 (BaseTen 502 записан как `infra`)
 ### RN-898 — A response cut by the cap with no text closes the turn, stated {#rn-898}
 
 - **Rule:** a conversational agent turn whose last LLM response was cut by the output cap ([RN-737](#rn-737)) and wrote no text in any round does NOT close silently: the line "Response cut off by the length limit." becomes the closing `agent.response` with `modelName`, and the bubble shows "Continue where it left off" ([RN-749](#rn-749)). It covers the seven conversational agents.

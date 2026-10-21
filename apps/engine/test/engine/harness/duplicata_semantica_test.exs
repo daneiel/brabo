@@ -57,7 +57,11 @@ defmodule Engine.Harness.DuplicataSemanticaTest do
   end
 
   defp historia do
-    %{"epic_id" => "ep-1", "title" => "GET /hello", "business_rule_ids" => ["r1"]}
+    %{
+      "epic_id" => "11111111-1111-4111-8111-111111111111",
+      "title" => "GET /hello",
+      "business_rule_ids" => ["r1"]
+    }
   end
 
   describe "emit_artifact de business_rule" do
