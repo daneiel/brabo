@@ -1,9 +1,12 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { AppendSessionEventUseCase } from '../sessions/append-session-event.use-case';
+import { ModuleMapRepository } from '../../ports/module-map-repository.port';
+import { ContainerRepository } from '../../ports/container-repository.port';
 import { ObterContainerDoProjetoUseCase } from './obter-container-do-projeto.use-case';
 import {
   EVENTO_IMAGEM_DO_PROJETO,
   ImagemInvalidaError,
+  stackQueBaixaDependencias,
   validarDecisaoDeImagem,
   type DecisaoDeImagem,
   type DecisaoDeImagemInput,
@@ -12,6 +15,11 @@ import {
 export interface ImagemDecidida {
   decisao: DecisaoDeImagem;
   version: number;
+  /**
+   * O container registrado `running`/`stopped` (RN-902): a decisão nova NÃO o
+   * muda — só vale ao recriá-lo. `null` sem container de pé.
+   */
+  containerDePe: { status: 'running' | 'stopped'; imageVersion: number } | null;
 }
 
 /**
@@ -43,6 +51,8 @@ export class DecidirImagemDoProjetoUseCase {
   constructor(
     private readonly appendEvent: AppendSessionEventUseCase,
     private readonly obterContainer: ObterContainerDoProjetoUseCase,
+    private readonly containers: ContainerRepository,
+    private readonly moduleMaps: ModuleMapRepository,
   ) {}
 
   async execute(
@@ -63,6 +73,22 @@ export class DecidirImagemDoProjetoUseCase {
       throw e;
     }
 
+    // RN-906: `none` + stack que baixa dependência é recusado (nunca trocado
+    // sozinho: `egress` é autorização do usuário). Sem mapa/sem casar, só o aviso.
+    if (decisao.network === 'none') {
+      const mapa = await this.moduleMaps.findCurrent(projectId);
+      const achado = stackQueBaixaDependencias(mapa?.modules ?? []);
+      if (achado) {
+        throw new BadRequestException(
+          `Rede "none" recusada: o módulo "${achado.modulo}" tem stack ` +
+            `"${achado.stack}" (${achado.termo}), que baixa dependências ` +
+            `(npm, pip, mix, cargo...) e sem rede a instalação falha. ` +
+            `Decida a imagem de novo com network "egress" (quem decide a ` +
+            `rede é o Arquiteto; a Infra herda a dele).`,
+        );
+      }
+    }
+
     const atual = await this.obterContainer.execute(projectId);
     const version = atual.version + 1;
 
@@ -72,6 +98,13 @@ export class DecidirImagemDoProjetoUseCase {
       payload: { ...decisao, version },
     });
 
-    return { decisao, version };
+    const registrado = await this.containers.findByProject(projectId);
+    const containerDePe =
+      registrado &&
+      (registrado.status === 'running' || registrado.status === 'stopped')
+        ? { status: registrado.status, imageVersion: registrado.imageVersion }
+        : null;
+
+    return { decisao, version, containerDePe };
   }
 }

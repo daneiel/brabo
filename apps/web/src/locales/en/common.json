@@ -4,7 +4,8 @@
   },
   "sidebar": {
     "account": "Account",
-    "containers": "Containers"
+    "containers": "Containers",
+    "providers": "Providers"
   },
   "account": {
     "title": "Account",

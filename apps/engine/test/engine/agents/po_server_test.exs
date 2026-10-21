@@ -63,10 +63,15 @@ defmodule Engine.Agents.PoServerTest do
   test "kickoff: encadeia create_epic → create_story e injeta o resultado", %{state: state} do
     Process.put(:fake_events, brief_and_rules())
 
+    Process.put(:fake_epic, %{
+      "id" => "11111111-1111-4111-8111-111111111111",
+      "title" => "Cadastro"
+    })
+
     Process.put(:fake_llm_turns, [
       tool_turn("create_epic", %{"title" => "Cadastro"}),
       tool_turn("create_story", %{
-        "epic_id" => "ep-1",
+        "epic_id" => "11111111-1111-4111-8111-111111111111",
         "title" => "Cadastrar usuário",
         "rf" => ["formulário de cadastro"],
         "dod" => ["testes passando"],
@@ -119,11 +124,17 @@ defmodule Engine.Agents.PoServerTest do
     state: state
   } do
     Process.put(:fake_events, brief_and_rules())
+
+    Process.put(:fake_epic, %{
+      "id" => "11111111-1111-4111-8111-111111111111",
+      "title" => "Cadastro"
+    })
+
     Process.put(:fake_story_error, {422, %{"message" => "business_rule_id inexistente"}})
 
     Process.put(:fake_llm_turns, [
       tool_turn("create_story", %{
-        "epic_id" => "ep-1",
+        "epic_id" => "11111111-1111-4111-8111-111111111111",
         "title" => "x",
         "business_rule_ids" => ["nao-existe"]
       }),
@@ -189,6 +200,19 @@ defmodule Engine.Agents.PoServerTest do
                        type: "agent.response",
                        payload: %{content: "Backlog pronto.", modelName: "llama3.2:3b"}
                      }}
+  end
+
+  # AT-572 (RN-899): fecho sem texto, sem corte e sem ferramenta não é calado.
+  test "resposta vazia sem corte grava agent.error de origem modelo, não agent.response",
+       %{state: state, session_id: session_id} do
+    Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("", "m")])
+
+    assert {:reply, :ok, _} = sync_call(PoServer, {:user_message, "oi"}, state)
+
+    assert_received {:event_appended, _, ^session_id,
+                     %{type: "agent.error", payload: %{origem: "modelo"}}}
+
+    refute_received {:event_appended, _, _, %{type: "agent.response"}}
   end
 
   describe "revise/2 — devolução de história recusada (Fase 12c, RN-048)" do
@@ -397,14 +421,38 @@ defmodule Engine.Agents.PoServerTest do
       assert new_state.epicos_sem_historia == %{}
     end
 
-    test "épico COM história não gera cobrança nenhuma", %{state: state} do
+    test "create_epic sem id no resultado não faz o create_story recusar UUID legítimo", %{
+      state: state
+    } do
       Process.put(:fake_events, brief_and_rules())
-      Process.put(:fake_epic, %{"id" => "ep-42", "title" => "Cadastro"})
+      Process.put(:fake_epic, %{"id" => "", "title" => "Cadastro"})
 
       Process.put(:fake_llm_turns, [
         tool_turn("create_epic", %{"title" => "Cadastro"}),
         tool_turn("create_story", %{
-          "epic_id" => "ep-42",
+          "epic_id" => "11111111-1111-4111-8111-111111111111",
+          "title" => "x",
+          "business_rule_ids" => ["evt-r1"]
+        }),
+        FakeEngineApiClient.final_response("ok")
+      ])
+
+      assert {:noreply, _} = sync_cast(PoServer, :kickoff, state)
+      assert_received {:story_created, _}
+    end
+
+    test "épico COM história não gera cobrança nenhuma", %{state: state} do
+      Process.put(:fake_events, brief_and_rules())
+
+      Process.put(:fake_epic, %{
+        "id" => "11111111-1111-4111-8111-111111111111",
+        "title" => "Cadastro"
+      })
+
+      Process.put(:fake_llm_turns, [
+        tool_turn("create_epic", %{"title" => "Cadastro"}),
+        tool_turn("create_story", %{
+          "epic_id" => "11111111-1111-4111-8111-111111111111",
           "title" => "Cadastrar usuário",
           "business_rule_ids" => ["evt-r1"]
         }),
@@ -421,12 +469,20 @@ defmodule Engine.Agents.PoServerTest do
       # O caminho que mais engana: o modelo "criou" a história, a api recusou
       # (regra inexistente), e sem esta distinção o épico sairia como coberto.
       Process.put(:fake_events, brief_and_rules())
-      Process.put(:fake_epic, %{"id" => "ep-42", "title" => "Cadastro"})
+
+      Process.put(:fake_epic, %{
+        "id" => "11111111-1111-4111-8111-111111111111",
+        "title" => "Cadastro"
+      })
+
       Process.put(:fake_story_error, {422, %{"message" => "business_rule_id inexistente"}})
 
       Process.put(:fake_llm_turns, [
         tool_turn("create_epic", %{"title" => "Cadastro"}),
-        tool_turn("create_story", %{"epic_id" => "ep-42", "title" => "x"}),
+        tool_turn("create_story", %{
+          "epic_id" => "11111111-1111-4111-8111-111111111111",
+          "title" => "x"
+        }),
         FakeEngineApiClient.final_response("desisti")
       ])
 
@@ -486,6 +542,46 @@ defmodule Engine.Agents.PoServerTest do
 
     assert_received {:event_appended, _, ^session_id,
                      %{type: "toolloop.limit_reached", payload: %{max_iterations: 12}}}
+  end
+
+  # AT-590: o teto diz o que foi gravado (RN-731) e quantas regras faltam.
+  test "teto: toolloop.limit_reached leva gravado e regrasSemHistoria", %{
+    state: state,
+    session_id: session_id
+  } do
+    Process.put(:fake_business_rules, %{"rules" => [%{"id" => "r"}], "uncoveredCount" => 2})
+
+    Process.put(
+      :fake_llm_always,
+      tool_turn("create_task", %{"story_id" => "st-1", "title" => "t"})
+    )
+
+    assert {:reply, :ok, _} = sync_call(PoServer, {:user_message, "vai"}, state)
+
+    assert_received {:event_appended, _, ^session_id,
+                     %{type: "toolloop.limit_reached", payload: payload}}
+
+    assert payload.gravado =~ "12 tasks"
+    assert payload.regrasSemHistoria == 2
+  end
+
+  test "CASO DE FALHA: teto sem leitura de regras sai sem regrasSemHistoria", %{
+    state: state,
+    session_id: session_id
+  } do
+    Process.put(:fake_business_rules, {:error, :boom})
+
+    Process.put(
+      :fake_llm_always,
+      tool_turn("create_task", %{"story_id" => "st-1", "title" => "t"})
+    )
+
+    assert {:reply, :ok, _} = sync_call(PoServer, {:user_message, "vai"}, state)
+
+    assert_received {:event_appended, _, ^session_id,
+                     %{type: "toolloop.limit_reached", payload: payload}}
+
+    refute Map.has_key?(payload, :regrasSemHistoria)
   end
 
   test "rehydration: reconstrói o histórico do event log no init", %{} do

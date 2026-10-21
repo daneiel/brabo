@@ -24822,3 +24822,204 @@ without saying which.
 - **Origin:** AT-541 (TP-01 of 10/14: the deliverable accepted `expiresAt` in
   the past and the link was born expired, 410; the story's RF only said the
   expiration is optional), owner's decision of 10/15
+
+### RN-894 — An epic with the same title as another in the project is refused {#rn-894}
+
+- **Rule:** `create_epic` refuses (400) an epic whose normalized title equals
+  that of another epic in the SAME project, and the refusal returns the
+  existing id to the model: "Já existe o épico «título» (id …) neste projeto —
+  use este id em epic_id". The rule is the SAME as the story's (finding R,
+  `tituloDuplicado`), with no second copy. The SEMANTIC duplicate check
+  (RN-681) does not apply to epics: only an equal title. Nothing is created or
+  written to the event log when it refuses.
+- **Where:** `apps/api/src/application/use-cases/backlog/create-epic.use-case.ts:25` (`tituloDuplicado`)
+- **Test:** `apps/api/test/application/use-cases/backlog/create-epic.use-case.spec.ts:41`
+  (creates without an equal title) and `:49` (refuses the equal title with the existing id)
+- **Origin:** AT-581
+
+### RN-895 — The argument refusal says what arrived and the expected format {#rn-895}
+
+- **Rule:** revises [RN-719](#rn-719) and [RN-725](#rn-725). A field declared `array`/`object` that arrives as non-JSON text, or as a number/boolean/wrong type, is refused before the tool with "the field X arrived as <type>; send <format>", with an example (`["item 1","item 2"]`, `{"chave":"valor"}`), never with the value. The `emit_plano_de_teste` sentence now puts the keys in backticks, so the refusal carries the received keys.
+- **Where:** `apps/engine/lib/engine/harness/argumentos_de_ferramenta.ex:80` (`coagir`); `apps/engine/lib/engine/gates/tools/emit_plano_de_teste.ex:73` (`run`)
+- **Test:** `apps/engine/test/engine/harness/argumentos_de_ferramenta_test.exs:193` and `:201` (the format and the received type) and `:210` (the received keys)
+- **Origin:** AT-583 (TP-01 18th and 19th: `dod` arrived as a markdown checklist and the test plan was refused 4 times without saying what came)
+
+### RN-896 — The `epic_id` is validated before the api {#rn-896}
+
+- **Rule:** `create_story` refuses an `epic_id` that is not a UUID ("epic_id inválido; …"). When the PO already created epics in this process (`epicos_conhecidos`) and the id is not among them, it rereads the backlog ONCE (`list_backlog`): if the id is there, it accepts; otherwise it refuses listing the backlog's `id=title` (cap of 20 lines, stating the total if truncated, ADR 0060). An empty map or a failing backlog read means "unknown" and does not refuse — the api decides.
+- **Where:** `apps/engine/lib/engine/harness/tools/create_story.ex:57` (`epico_valido`)
+- **Test:** `apps/engine/test/engine/harness/argumentos_de_ferramenta_test.exs:224` and `:233`
+- **Origin:** AT-584 (qwen sent `EPIC_ID_PLACEHOLDER_NAO_USAR_AQUI` and the api answered with the DTO name)
+
+### RN-897 — A provider cut by `max_tokens` in a gate is origin `modelo` {#rn-897}
+
+- **Rule:** the `agent.error` of the `qa-estrategia`, `qa-automacao`, `qa-performance-seguranca` and `appsec` gates classifies "Tool calls cutoff by max_tokens" as `modelo` (the reasoning ate the cap, RN-059); any other LLM error stays `infra`.
+- **Where:** `apps/engine/lib/engine/gates/origem_do_erro.ex:10` (`de_llm`)
+- **Test:** `apps/engine/test/engine/gates/origem_do_erro_test.exs:7`
+- **Origin:** AT-586 (BaseTen 502 recorded as `infra`)
+
+### RN-898 — A response cut by the cap with no text closes the turn, stated {#rn-898}
+
+- **Rule:** a conversational agent turn whose last LLM response was cut by the output cap ([RN-737](#rn-737)) and wrote no text in any round does NOT close silently: the line "Response cut off by the length limit." becomes the closing `agent.response` with `modelName`, and the bubble shows "Continue where it left off" ([RN-749](#rn-749)). It covers the seven conversational agents.
+- **Where:** `apps/engine/lib/engine/agents/texto_do_turno.ex:65` (`payload_do_turno`)
+- **Test:** `apps/engine/test/engine/harness/resposta_cortada_test.exs:104`
+- **Origin:** AT-570 (TP-01 18th)
+
+### RN-899 — An empty response without a cut becomes an agent.error of origin model {#rn-899}
+
+- **Rule:** a conversational loop closing with no text, no tool and no cut records `agent.error` with origin `modelo` and "the model returned no response" (`FalhaDeTurno`), in the seven servers. It is an agent utterance for the heartbeat ([RN-581](#rn-581)); per-tab project presence does NOT enter ([RN-064](business-rules/custo.md#rn-064)).
+- **Where:** `apps/engine/lib/engine/agents/falha_de_turno.ex:63` (`origem`), `apps/engine/lib/engine/agents/po_server.ex:303` (`gravar_texto_do_turno`)
+- **Test:** `apps/engine/test/engine/agents/po_server_test.exs:194` and `apps/engine/test/engine/agents/texto_do_turno_test.exs:96`
+- **Origin:** AT-572 (TP-01 18th, finding 4)
+
+### RN-900 — `write_file` refuses to rewrite the README and drop the Infra's usage section {#rn-900}
+
+- **Rule:** `write_file` replaces the whole file. When the `path` is a README
+  (`README*`), the current file has the `## Rodar na sua máquina` section and
+  the new content does not, the tool refuses with a named error and writes
+  nothing. Changing a fragment requires rewriting the full README, keeping the
+  section. The title is one constant (`titulo_secao_de_uso/0`), also used by the
+  Infra and dev prompts, so the refusal and the instruction do not diverge. It
+  is not a gate: the refusal belongs to the tool itself and does not cover
+  writes by `terminal` (`cat >`, `sed -i`).
+- **Where:** `apps/engine/lib/engine/harness/tools/write_file.ex:62`
+  (`recusa_de_secao_perdida`)
+- **Test:** `apps/engine/test/engine/harness/tools/write_file_test.exs:41`
+  (a rewrite without the section is refused and the file stays intact); the
+  happy path is covered by the first two tests in the same file
+- **Origin:** AT-571 (TP-01 18th run of 10/19: the dev agent rewrote the README
+  while fixing a QA finding and the usage section the Infra had written was
+  lost; no gate noticed)
+
+### RN-901 — The auto mode batch offer in the chat includes the dev agents of the approved plan {#rn-901}
+
+- **Rule:** extends RN-889. `roster.activatedAgents` of the project summary
+  NEVER carries a dev agent: the dev does not record `agent.activated`, only
+  `dev.started`. The chat's batch offer (RN-883/889) read only that list and
+  did not list the `dev-<module>` of the active execution, which the user had
+  to turn on from the Executors tab. The project execution (`execucaoDoRoster`)
+  now adds, only with `roster.executionActivated`, the `dev-<module>` of
+  `roster.moduleNames` (the current `module_map`), through the SAME `devAgentId`
+  the Executors tab uses (RN-661, `rosterFromFacts`), with no new derivation.
+  Without an active execution no dev enters. Declared gap: the list comes from
+  the CURRENT `module_map`; if the approved plan used a subset of the modules,
+  the offer inherits that divergence. No ceiling moves and nothing is written
+  without the click.
+- **Where:** `apps/web/src/lib/session-destinatario.ts:194` (`execucaoDoRoster`),
+  called by `useExecucaoNoProjeto` (`apps/web/src/lib/session-destinatario.ts:175`)
+- **Test:** `apps/web/src/lib/session-destinatario.test.ts` ("CAMINHO FELIZ:
+  execução ativa soma o dev-<modulo> do module_map aos ativados"; failure: "sem
+  execução ativa, o módulo do plano NÃO vira dev agent"), and
+  `apps/web/src/components/ModoAutomaticoNoChat.test.tsx` (fixture derived from
+  the real roster, "caminho feliz")
+- **Origin:** AT-573 (TP-01 18th, 19/10: the 1st task stopped at `dev.awaiting_approval`
+  because the dev was not in auto mode)
+
+### RN-902 — Recreating the container freezes the current image decision, and an outdated image is flagged {#rn-902}
+
+- **Rule:** the `removed → provisioning` and `failed → provisioning`
+  transitions RE-READ the current image decision and rewrite `imageVersion` and
+  `resources` on the `project_containers` row (before, only creating the row
+  froze them, and the Image column stayed on the old version after Remove →
+  Start). With no current decision it is a 409 ([RN-105](business-rules/autenticacao.md#rn-105)).
+  `stopped → running` does NOT change the version: the reused container is the
+  old one. The `/containers` page gains `decisaoVigente` and
+  `imagemDesatualizada` per row — the divergence compares CONTENT (image,
+  network, resources), never the version number, because the Infra election
+  writes v+1 with the same content on every start — and, with a diverging
+  `running`/`stopped`/`provisioning` container, the row says in text "Stop →
+  Remove → Start again" and says why "Start again" does not apply the new image.
+  The `choose_project_image` result carries `containerDePe` and its text warns
+  that the decision only applies once the container is recreated. A one-action
+  "Recreate" does NOT exist; no approval ceiling changes
+  ([RN-495](#rn-495)).
+- **Where:** `apps/api/src/application/use-cases/containers/registrar-transicao-de-container.use-case.ts:131`
+  (`recongelar`), `apps/api/src/domain/containers/project-container.ts:342`
+  (`containerDivergeDaDecisao`),
+  `apps/engine/lib/engine/harness/tools/choose_project_image.ex:99`
+  (`mensagem_de_fixada`)
+- **Test:** `apps/api/test/application/use-cases/containers/ciclo-de-vida-do-container.use-case.spec.ts`;
+  `apps/api/test/domain/containers/project-container.spec.ts`;
+  `apps/api/test/infrastructure/persistence/drizzle/containers-overview.repository.spec.ts`;
+  `apps/web/src/routes/ContainersPage.test.tsx`;
+  `apps/engine/test/engine/harness/tools/choose_project_image_test.exs`
+- **Origin:** AT-595 (TP-01 20th: the v3 `egress` decision did not reach the v2
+  `none` container and the Image column stayed on v2)
+
+### RN-903 — The provider's 429 is the model's usage limit, not a network failure {#rn-903}
+
+- **Rule:** a task the dev agent blocks because the model answered 429 (code
+  `rate_limit`, or text with `(429)` or "limite de uso") says in the reason
+  "limite de uso do modelo atingido (429)", and the automatic retry says that,
+  if it repeats, the dev agent's model should be changed. It never says "falha
+  passageira de rede" (transient network failure). The origin stays `infra`
+  and the RN-864 retry does not change (up to 3, after 1, 3 and 10 min; a 60 s
+  pause, which `dev.idle` names as "depois de limite de uso do modelo"). A
+  network failure keeps its usual text.
+- **Where:** `apps/engine/lib/engine/dev/dev_agent_server.ex:1136`
+  (`limite_de_uso?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:1127`
+  (`motivo_da_parada`), `apps/engine/lib/engine/dev/dev_agent_server.ex:997`
+  (`bloquear_passageira`), `apps/engine/lib/engine/dev/agent_io.ex:293`
+  (`pausar_por_rede`)
+- **Test:** `apps/engine/test/engine/dev/dev_agent_server_test.exs` ("429 do
+  provider: o motivo diz limite de uso do modelo, não rede"; failure: "falha de
+  rede continua com o texto de rede, não de limite")
+- **Origin:** AT-594 (TP-01 20th, 10/19: the 429 of `laguna-s-2.1:free` blocked
+  the tasks as "falha passageira de rede", while the diagnosis said usage limit)
+
+### RN-904 — The output-ceiling cut is not repeated with the full catalog {#rn-904}
+
+- **Rule:** when Jev restricts the menu and the model answers WITHOUT a tool,
+  the step is repeated ONCE with the full catalog (RN-625) — except when the
+  response was CUT by the output ceiling (`truncated`). The cut is not a menu
+  error: retrying with the full catalog would only enlarge the prompt and spend
+  another output ceiling. It applies to both facades (`llm_turn` and
+  `llm_turn_stream`, the latter only without text already delivered). The
+  RN-780 retry in `ToolLoop` handles the cut and does not change.
+- **Where:** `apps/engine/lib/engine/harness/roteamento_de_ferramenta.ex:126` (`repetir_com_catalogo_inteiro?`)
+- **Test:** `apps/engine/test/engine/harness/roteamento_de_ferramenta_test.exs:274`
+  (an empty cut response is not repeated, in both paths; without a cut it is)
+- **Origin:** AT-578 (EP-026, survey of 10/21): the PO's first turn in the 18th
+  round spent two 8192-token output rounds.
+### RN-905 — The step ceiling says what was recorded and what is missing, and offers to continue {#rn-905}
+
+- **Rule:** when a conversational agent stops at the step limit, the ceiling
+  event (`toolloop.limit_reached`; for the Creative, the `agent.error` with
+  `reason: "limite_de_iteracoes"`) carries `gravado`, the RN-731 line read
+  BEFORE the turn text is written (it goes there and not in the
+  `agent.response`, never in both). The PO also carries `regrasSemHistoria`, the
+  `uncoveredCount` that `fechar_handoff` already reads; a failed read leaves the
+  key absent, never an error. The thread shows the reason without jargon, the
+  recorded line, the rules without a story and the "Continue where you left
+  off" button (RN-749, a user message that the RN-673 queue absorbs while a turn
+  runs) only for the seven conversational agents with the session active;
+  `dev-*`/`qa-*` get the text, with no button. The button never continues on its
+  own.
+- **Where:** `apps/engine/lib/engine/agents/po_server.ex:257` (`run_turn`);
+  `apps/web/src/routes/session-timeline-montagem.tsx:976` (`conversacional`)
+- **Test:** `apps/engine/test/engine/agents/po_server_test.exs:548` (gravado and
+  regrasSemHistoria; without the read, no key);
+  `apps/web/src/routes/session-timeline-montagem.falha-de-turno.test.tsx:108`
+  (bubble, button to the same agent; no button for `dev-*` and inactive session)
+- **Origin:** AT-590 (EP-031).
+
+### RN-906 — The API refuses network `none` when a module's stack downloads dependencies {#rn-906}
+
+- **Rule:** when deciding the project image, if the network is `none` and any
+  module of the current `module_map` has a `stack` that matches, as a whole
+  word, the closed list of ecosystems that download dependencies (node, npm,
+  pnpm, yarn, python, pip, elixir, mix, go, rust, cargo, ruby, java, maven,
+  gradle, php, dotnet...), the API answers 400 naming the module, the stack and
+  the term, and asks for `egress`. Nothing is written and the network is never
+  switched on its own: `egress` is the user's authorization. It applies to the
+  Architect (`choose_project_image`) and to the Infra election, which go through
+  the same use case (for Infra, `container_start` ends `failed` with the reason,
+  without calling the broker). With no `module_map`, or a stack that does not
+  match, only the RN-735 warning remains. No configurable exception. Revises
+  RN-735 (warning → refusal in that case).
+- **Where:** `apps/api/src/application/use-cases/containers/decidir-imagem-do-projeto.use-case.ts:80`
+  (`stackQueBaixaDependencias`)
+- **Test:** `apps/api/test/application/use-cases/containers/container-do-projeto.use-case.spec.ts`;
+  `apps/api/test/domain/containers/project-container.spec.ts`;
+  `apps/api/test/application/use-cases/actions/execute-container-start.use-case.spec.ts`
+- **Origin:** AT-593 (EP-031).

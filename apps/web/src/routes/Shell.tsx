@@ -211,6 +211,17 @@ function LinkDeContainers({ colapsado }: { colapsado: boolean }) {
   );
 }
 
+function LinkDeProviders({ colapsado }: { colapsado: boolean }) {
+  const { t } = useTranslation();
+  const rotulo = t('sidebar.providers');
+  return (
+    <Link to="/providers" className={styles.footerButton} title={rotulo} aria-label={rotulo}>
+      <ServerIcon size={15} />
+      {!colapsado && <span>{rotulo}</span>}
+    </Link>
+  );
+}
+
 /** Projeto FECHADO: só Aprovações tem número, do resumo do dashboard. */
 function contagensDoResumo(aprovacoesPendentes: number): ContagensDeAba {
   return {
@@ -913,6 +924,7 @@ export function Shell() {
         <div className={styles.footer}>
           <BotaoDeTema colapsado={colapsado} />
           <LinkDeContainers colapsado={colapsado} />
+          <LinkDeProviders colapsado={colapsado} />
           <LinkDeConta colapsado={colapsado} />
           {/* Na gaveta não há o que recolher — ela já some inteira. */}
           {!movel && (

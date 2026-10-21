@@ -418,11 +418,14 @@ defmodule Engine.Infra.InfraLeadServer do
   # correção da RN-166/RN-459 nos outros seis: esgotá-lo terminava o turno sem
   # evento nenhum, indistinguível de um turno que simplesmente acabou.
   defp run_turn(state, remaining) when remaining <= 0 do
+    # AT-590: lê a linha ANTES de gravar o texto (que a esvaziaria) e a põe no evento.
+    gravado = Engine.Agents.GravadoNoTurno.descarregar()
     gravar_texto_do_turno(state, "")
 
     emit(state, "toolloop.limit_reached", %{
       iteration: @max_iterations,
-      max_iterations: @max_iterations
+      max_iterations: @max_iterations,
+      gravado: gravado
     })
 
     {:done, state}
@@ -458,7 +461,10 @@ defmodule Engine.Infra.InfraLeadServer do
 
         case tool_calls(message, state.tool_specs) do
           [] ->
-            gravar_texto_do_turno(state, content, model_name)
+            # AT-572: fecho sem texto nem corte é falha do modelo, dita no fio (agent.error).
+            if gravar_texto_do_turno(state, content, model_name) == :vazio,
+              do: emit_falha(state, :resposta_vazia)
+
             {:done, state}
 
           calls ->
@@ -1346,7 +1352,7 @@ defmodule Engine.Infra.InfraLeadServer do
     do:
       "Proponha os artefatos de infra que sobem o APP na máquina do usuário " <>
         "(Dockerfile por módulo, docker-compose.yml com porta ${APP_PORT:-8080}, " <>
-        ".env.example e a seção \"Rodar na sua máquina\" no README) e chame " <>
+        ".env.example e a seção \"#{Engine.Harness.Tools.WriteFile.titulo_secao_de_uso()}\" no README) e chame " <>
         "`propose_infra_pr` com `run`."
 
   # Os passos 5 e 6 do kickoff — o que o modelo precisa saber da subida. Com
@@ -1452,7 +1458,7 @@ defmodule Engine.Infra.InfraLeadServer do
        porta `${APP_PORT:-8080}:<porta interna>`, volume para dados persistentes e
        `env_file: .env`, com um `.env.example` commitado listando as variáveis
        obrigatórias (nunca um `.env`).
-    3. No README, a seção "Rodar na sua máquina": o comando e as URLs. Módulo
+    3. No README, a seção "#{Engine.Harness.Tools.WriteFile.titulo_secao_de_uso()}": o comando e as URLs. Módulo
        HTTP declara SEMPRE `/docs` (a UI Swagger, `kind: "api_docs"`) mesmo antes
        de existir, e módulo web a página inicial — nunca rota de negócio.
     4. Valide CADA arquivo com `validate_infra_file` (path + content) antes de propor.
@@ -1522,7 +1528,7 @@ defmodule Engine.Infra.InfraLeadServer do
   # RN-698: o texto do turno inteiro, numa `agent.response` só.
   defp gravar_texto_do_turno(state, ultimo, model_name \\ nil) do
     case TextoDoTurno.payload_do_turno(ultimo, model_name) do
-      nil -> :ok
+      nil -> :vazio
       payload -> emit(state, "agent.response", payload)
     end
   end

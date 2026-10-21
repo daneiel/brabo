@@ -179,8 +179,11 @@ defmodule Engine.Gates.QaPerformanceSegurancaAgent do
 
   defp diagnostico_de_parada(ctx) do
     case Map.get(ctx, :last_error) do
-      nil -> {"o modelo parou sem chamar emit_perf_seguranca_verdict", "modelo"}
-      error -> {"falha no turno de LLM: #{inspect(error)}", "infra"}
+      nil ->
+        {"o modelo parou sem chamar emit_perf_seguranca_verdict", "modelo"}
+
+      error ->
+        {"falha no turno de LLM: #{inspect(error)}", Engine.Gates.OrigemDoErro.de_llm(error)}
     end
   end
 end

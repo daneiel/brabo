@@ -1,0 +1,13 @@
+{
+  "title": "Providers",
+  "subtitle": "Chaves, capacidades, modelos e gasto dos providers de LLM. Vale para todos os projetos.",
+  "capabilities": {
+    "title": "O que cada provider sabe fazer",
+    "note": "Verdadeiro só existe com smoke contra a api real; \"não provado\" é a ausência de prova, não prova de ausência.",
+    "provider": "Provider",
+    "proven": "provado",
+    "notProven": "não provado",
+    "loadError": "Não foi possível carregar as capacidades dos providers."
+  },
+  "routing": "O critério de roteamento do OpenRouter é escolhido no modelo do agente ou da área, em Configurações do projeto; não há controle aqui."
+}

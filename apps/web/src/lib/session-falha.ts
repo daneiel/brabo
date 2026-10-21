@@ -34,3 +34,8 @@ export function lerFalhaDeTurno(payload: unknown): FalhaDeTurno {
 
   return { mensagem, origem };
 }
+
+/** AT-590: o `agent.error` do Criativo no teto de passos (o evento dos outros é `toolloop.limit_reached`). */
+export function ehTetoDoCriativo(payload: unknown): boolean {
+  return (payload as { reason?: unknown } | null)?.reason === 'limite_de_iteracoes';
+}

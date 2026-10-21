@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach, afterAll } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import i18n from '../lib/i18n';
+import { execucaoDoRoster } from '../lib/session-destinatario';
 
 /**
  * RN-883 (AT-537): a oferta em lote do modo automático no chat da Sessão,
@@ -95,7 +96,12 @@ function montarCriativo(execucaoNoProjeto: { ativa: boolean; ativados: string[] 
 }
 
 describe('ModoAutomaticoNoChat (RN-889)', () => {
-  const daExecucao = { ativa: true, ativados: ['dev-lead', 'dev-core'] };
+  // RN-901: a fixture é o roster REAL: activatedAgents sem dev, dev vindo do module_map.
+  const daExecucao = execucaoDoRoster({
+    executionActivated: true,
+    moduleNames: ['core'],
+    activatedAgents: ['criativo', 'po'],
+  });
 
   it('caminho feliz: execução ativa noutra sessão do projeto, time em manual — a oferta aparece no chat do Criativo', async () => {
     montarCriativo(daExecucao);

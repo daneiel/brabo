@@ -16380,6 +16380,21 @@
               }
             ]
           },
+          "decisaoVigente": {
+            "type": "object",
+            "nullable": true,
+            "example": {
+              "version": 3,
+              "image": "node:22",
+              "network": "egress"
+            },
+            "description": "The current (highest version) image decision, or null."
+          },
+          "imagemDesatualizada": {
+            "type": "boolean",
+            "example": false,
+            "description": "The registered container (running/stopped/provisioning) differs in CONTENT (image, network, resources) from the current decision; only recreating it (stop, remove, start) applies the new one."
+          },
           "brokerConfigurado": {
             "type": "boolean",
             "example": false,
@@ -16399,6 +16414,8 @@
           "detalheDaObservacao",
           "naoVerificado",
           "acaoPendente",
+          "decisaoVigente",
+          "imagemDesatualizada",
           "brokerConfigurado"
         ]
       },
@@ -18863,11 +18880,21 @@
           "version": {
             "type": "number",
             "example": 1
+          },
+          "containerDePe": {
+            "type": "object",
+            "nullable": true,
+            "example": {
+              "status": "running",
+              "imageVersion": 2
+            },
+            "description": "The `running`/`stopped` container registered for the project, or null. The new decision does NOT change it: it only applies once the container is recreated (stop, remove, start)."
           }
         },
         "required": [
           "decisao",
-          "version"
+          "version",
+          "containerDePe"
         ]
       },
       "ImagemParaOBrokerResponseDto": {
@@ -19487,6 +19514,11 @@
             "example": false,
             "description": "The provider accepts a ROUTING PREFERENCE (`price`, `throughput`, `latency`) to pick among the upstreams serving the same model (ADR 0166). Only `true` after a smoke against the real API returned the chosen upstream — reading the docs does not count."
           },
+          "stickySession": {
+            "type": "boolean",
+            "example": false,
+            "description": "The provider pins a conversation to the upstream that served it when given a session key (ADR 0221). Only `true` after a smoke against the real API showed one upstream with the key and several without it."
+          },
           "promptCaching": {
             "type": "boolean",
             "example": false,
@@ -19499,6 +19531,7 @@
           "listModels",
           "embeddings",
           "routingPreference",
+          "stickySession",
           "promptCaching"
         ]
       },

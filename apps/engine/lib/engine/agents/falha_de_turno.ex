@@ -58,6 +58,10 @@ defmodule Engine.Agents.FalhaDeTurno do
   # `indeterminada` é para o que não se sabe, não para o que ninguém escreveu.
   def origem(:aborted), do: "infra"
 
+  # AT-572: a chamada terminou sem texto, sem corte e sem ferramenta — o modelo
+  # não devolveu resposta.
+  def origem(:resposta_vazia), do: "modelo"
+
   # A api recusou a oferta de handoff porque o destino já está ativo no projeto
   # (ADR 0182, RN-635): não há defeito de código, há uma regra de produto.
   def origem({409, %{"reason" => "agente_ja_ativo"}}), do: "politica"
@@ -272,6 +276,7 @@ defmodule Engine.Agents.FalhaDeTurno do
   defp portugues?(_), do: true
 
   defp motivo(:no_final_event), do: "a resposta do modelo foi interrompida antes do fim"
+  defp motivo(:resposta_vazia), do: "o modelo não devolveu resposta"
   defp motivo(:aborted), do: "a conexão com a api foi abortada no meio do turno"
   defp motivo({:final, texto}) when is_binary(texto), do: curto(texto)
   defp motivo({:final, texto, _code}) when is_binary(texto), do: curto(texto)

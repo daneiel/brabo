@@ -155,6 +155,7 @@ defmodule Engine.Agents.PoServer do
        # reconstruído do event log reabriria cobrança de épico antigo que o
        # usuário já resolveu de outro jeito.
        epicos_sem_historia: %{},
+       epicos_conhecidos: %{},
        # RN-700: o handoff ao Arquiteto já foi oferecido (pelo modelo ou pelo
        # servidor) NESTE processo. Não reidratado: depois de um restart a api
        # deduplica a oferta pendente e recusa com 409 nomeado o destino já
@@ -254,12 +255,19 @@ defmodule Engine.Agents.PoServer do
   # fora. Mesmo tipo de evento e mesmo payload: quem lê o log não precisa
   # aprender um segundo nome para o mesmo fato.
   defp run_turn(state, remaining) when remaining <= 0 do
+    # AT-590: lê a linha ANTES de gravar o texto (que a esvaziaria) e a põe no evento.
+    gravado = Engine.Agents.GravadoNoTurno.descarregar()
     gravar_texto_do_turno(state, "", nil)
 
-    emit(state, "toolloop.limit_reached", %{
-      iteration: @max_iterations,
-      max_iterations: @max_iterations
-    })
+    payload =
+      %{
+        iteration: @max_iterations,
+        max_iterations: @max_iterations,
+        gravado: gravado
+      }
+      |> Map.merge(regras_sem_historia(state))
+
+    emit(state, "toolloop.limit_reached", payload)
 
     encerrar_turno(state)
   end
@@ -300,7 +308,10 @@ defmodule Engine.Agents.PoServer do
 
         case tool_calls(message, state.tool_specs) do
           [] ->
-            gravar_texto_do_turno(state, content, model_name)
+            # AT-572: fecho sem texto nem corte é falha do modelo, dita no fio (agent.error).
+            if gravar_texto_do_turno(state, content, model_name) == :vazio,
+              do: emit_falha(state, :resposta_vazia)
+
             encerrar_turno(state)
 
           calls ->
@@ -322,10 +333,19 @@ defmodule Engine.Agents.PoServer do
     end
   end
 
+  # AT-590: o que falta no teto — a MESMA leitura de `fechar_handoff/1`. Falha da
+  # leitura = chave ausente, nunca erro.
+  defp regras_sem_historia(state) do
+    case EngineApiClient.list_business_rules(state.project_id) do
+      {:ok, %{"uncoveredCount" => n}} when is_integer(n) -> %{regrasSemHistoria: n}
+      _ -> %{}
+    end
+  end
+
   # RN-698: o texto do turno inteiro, numa `agent.response` só.
   defp gravar_texto_do_turno(state, ultimo, model_name) do
     case TextoDoTurno.payload_do_turno(ultimo, model_name) do
-      nil -> :ok
+      nil -> :vazio
       payload -> emit(state, "agent.response", payload)
     end
   end
@@ -404,19 +424,29 @@ defmodule Engine.Agents.PoServer do
     # Sem id parseável a obrigação ainda existe — ela só passa a ser
     # identificada pelo título. Perder a cobrança porque a frase do tool-result
     # mudou seria trocar um defeito silencioso por outro.
-    chave = CreateEpic.id_no_resultado(texto) || "titulo:#{Map.get(args, "title")}"
+    id = CreateEpic.id_no_resultado(texto)
+    chave = id || "titulo:#{Map.get(args, "title")}"
+    titulo = Map.get(args, "title", "(sem título)")
+
+    # Só id real entra em `epicos_conhecidos`: chave por título tornaria o mapa
+    # não vazio e faria o `create_story` recusar UUID legítimo (RN-896).
+    conhecidos = Map.get(state, :epicos_conhecidos, %{})
 
     %{
       state
-      | epicos_sem_historia:
-          Map.put(state.epicos_sem_historia, chave, Map.get(args, "title", "(sem título)"))
+      | epicos_sem_historia: Map.put(state.epicos_sem_historia, chave, titulo),
+        epicos_conhecidos: if(id, do: Map.put(conhecidos, id, titulo), else: conhecidos)
     }
   end
 
   defp anotar_obrigacao(state, "create_story", args, {:ok, _texto}) do
+    id = Map.get(args, "epic_id")
+
     %{
       state
-      | epicos_sem_historia: Map.delete(state.epicos_sem_historia, Map.get(args, "epic_id"))
+      | epicos_sem_historia: Map.delete(state.epicos_sem_historia, id),
+        epicos_conhecidos:
+          Map.put_new(Map.get(state, :epicos_conhecidos, %{}), id, "(do backlog)")
     }
   end
 

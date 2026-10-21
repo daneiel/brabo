@@ -6,6 +6,47 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- O OpenRouter passa a receber `session_id` = `brabo:<sessão>:<agente>` e prende cada agente ao upstream que o atendeu (AT-580, RN-907, ADR 0221): capability nova `stickySession`, provada por smoke (6 de 6 no mesmo upstream com a chave, 4 upstreams em 6 sem ela) e exposta em `/llm/provider-capabilities`.
+- A api recusa a rede `none` da imagem do projeto quando a stack de um módulo do
+  `module_map` baixa dependências (node, python, elixir, go, rust...), pedindo
+  `egress`; vale para o Arquiteto e para a eleição da Infra (AT-593, RN-906).
+- Quando o agente para no limite de passos, o fio diz por que parou, o que foi
+  gravado no turno e, no PO, quantas regras de negócio ainda estão sem história,
+  e oferece "Continuar de onde parou" (AT-590, RN-905).
+- A recusa de argumento de ferramenta diz o que chegou e o formato esperado
+  (AT-583, RN-895); `create_story` valida o `epic_id` antes da api (AT-584,
+  RN-896); e o corte do provider por `max_tokens` nos gates de QA e AppSec é
+  origem `modelo`, não `infra` (AT-586, RN-897).
+- O turno de agente cortado pelo teto de saída sem texto algum deixa de fechar calado (AT-570, RN-898): vira a linha "Resposta cortada pelo limite de tamanho." com o botão de continuar. A resposta vazia sem corte grava `agent.error` de origem `modelo` (AT-572, RN-899), e a sessão não fecha por heartbeat com turno calado.
+- Mudar a imagem do projeto avisa que o container de pé ficou desatualizado
+  (AT-595, RN-902): Remover → Subir de novo passa a regravar a versão e os
+  recursos da decisão vigente (a coluna Imagem deixa de mentir), `/containers`
+  mostra o aviso com os passos Parar → Remover → Subir de novo quando o
+  CONTEÚDO da decisão difere do container, e o resultado de
+  `choose_project_image` diz que a decisão só vale ao recriá-lo.
+- A oferta de modo automático do chat da Sessão inclui os dev agents da
+  execução ativa (AT-573, RN-901): antes, a lista vinha só de
+  `activatedAgents`, que nunca tem `dev-*`, e "Ligar para sugeridos" deixava
+  o dev de fora. Agora os `dev-<módulo>` do `module_map` entram pela mesma
+  derivação da aba Executores.
+- Os providers ganham uma página própria, `/providers`, no rodapé do menu
+  (AT-577): chaves, capacidades de cada provider, catálogo de modelos e, só para
+  `owner`, o gasto por chave. Sem rota nem escrita novas na api.
+- O PO não cria mais um épico com o mesmo título de outro do projeto
+  (AT-581, RN-894): `create_epic` recusa e devolve o id do existente para ser
+  usado em `epic_id`, com a mesma régua de título igual da história.
+- O bloqueio de task do dev agent por 429 do provider diz "limite de uso do
+  modelo atingido (429)" e manda trocar o modelo, em vez de "falha passageira
+  de rede" (AT-594, RN-903). A origem `infra` e a retomada automática (RN-864)
+  não mudam.
+- Resposta vazia cortada pelo teto de saída não é mais repetida com o catálogo
+  inteiro (AT-578, RN-904): o corte não é erro de menu, e a volta só gastava
+  outro teto de saída. A retentativa da RN-780 no `ToolLoop` segue igual.
+- A ferramenta `write_file` do dev agent recusa reescrever um README que tem a
+  seção "Rodar na sua máquina" sem essa seção: ela substitui o arquivo inteiro,
+  e o erro diz para reescrever o README completo mantendo a seção (AT-571,
+  RN-900). O título é uma constante usada também pelos prompts da Infra e do dev.
+
 - A página da API tem o texto-fonte todo em inglês (AT-566): os textos de
   PAT, chave de dispositivo, tickets do runner, binário, pull do Hugging Face,
   conversão de modo e `container-exec` saíram do português, a tag `projetos`

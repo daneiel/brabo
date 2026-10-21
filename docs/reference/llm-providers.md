@@ -71,6 +71,7 @@ que o provider, nunca mais rico.
 | `listModels` | só provider | habilitar/pular a sincronização do catálogo ([RN-043](../business-rules/custo.md#rn-043)) |
 | `embeddings` | provider + `supportsEmbeddings` na linha do catálogo | permitir/recusar a chamada de embedding ([RN-190](../business-rules/custo.md#rn-190)) |
 | `promptCaching` | provider + o filtro de modelo no hook de configuração (`anthropic/*` no OpenRouter) | marcar `cache_control` no prefixo estável ([RN-892](../business-rules/custo.md#rn-892)); `true` só no OpenRouter, provado por smoke em 2026-10-15 |
+| `stickySession` | só provider | mandar `session_id` e prender a conversa ao upstream que a atendeu ([RN-907](../business-rules/custo.md#rn-907)); `true` só no OpenRouter, provado por smoke em 2026-10-21 |
 | `context_length` | `models.context_window` | orçamento de contexto |
 | `vision` | `models.supports_vision` | filtrar o catálogo ([RN-056](../business-rules/custo.md#rn-056)) |
 | `reasoning` | `models.supports_reasoning` | idem |
@@ -150,6 +151,16 @@ sete linhas do seed, nunca um `UPDATE` cego na tabela.
 default `false` faz o binding ser recusado, inclusive quando o modelo é
 apontado por `DEMO_QA_MODEL` nos scripts de demonstração de gate.
 :::
+
+## Onde a pessoa vê e edita os providers
+
+Os providers têm página própria, `/providers`, no rodapé do menu ao lado de
+Containers (AT-577). Ela só compõe o que já existe em Configurações do projeto,
+com os mesmos endpoints e `queryKey`s: chaves, a tabela do que cada provider
+sabe fazer (lida de `GET /llm/provider-capabilities`, uma coluna por chave da
+resposta), o catálogo de modelos e, só para `owner`, o gasto por chave. O
+critério de roteamento do OpenRouter continua sendo do modelo do agente ou da
+área, escolhido nas Configurações do projeto.
 
 ## Catálogo de modelos: descoberta e ciclo de vida
 

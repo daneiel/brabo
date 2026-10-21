@@ -13,11 +13,44 @@ A fonte é o pt-BR em `docs/` (ADR 0216), inclusive `docs/reference/**` (ADR 021
 
 | locale | páginas traduzidas | caracteres traduzidos | em dia | defasadas | sem procedência | ausentes | órfãs |
 |---|---|---|---|---|---|---|---|
-| `en` | 270 de 270 (100.0%) | 100.0% de 5.754.780 | 269 | 0 | 1 | 0 | 0 |
-| `ru` | 270 de 270 (100.0%) | 100.0% de 5.754.780 | 269 | 0 | 1 | 0 | 0 |
-| `zh-Hans` | 270 de 270 (100.0%) | 100.0% de 5.754.780 | 269 | 0 | 1 | 0 | 0 |
+| `en` | 270 de 271 (99.6%) | 99.9% de 5.776.095 | 261 | 8 | 1 | 1 | 0 |
+| `ru` | 270 de 271 (99.6%) | 99.9% de 5.776.095 | 261 | 8 | 1 | 1 | 0 |
+| `zh-Hans` | 270 de 271 (99.6%) | 99.9% de 5.776.095 | 261 | 8 | 1 | 1 | 0 |
 
 > **TODO(humano):** revisão nativa por idioma — quem revisou e quando. Ainda não há revisão nativa registrada.
+
+### Defasadas em `en`
+
+- `adr/index.md` (tradução de 2026-10-16)
+- `architecture.md` (tradução de 2026-10-16)
+- `business-rules.md` (tradução de 2026-10-15)
+- `business-rules/autenticacao.md` (tradução de 2026-10-11)
+- `business-rules/custo.md` (tradução de 2026-10-15)
+- `explanation/cadeia-de-suprimentos-do-ci.md` (tradução de 2026-10-15)
+- `reference/configuration.md` (tradução de 2026-10-16)
+- `reference/llm-providers.md` (tradução de 2026-10-16)
+
+### Defasadas em `ru`
+
+- `adr/index.md` (tradução de 2026-10-16)
+- `architecture.md` (tradução de 2026-10-16)
+- `business-rules.md` (tradução de 2026-10-15)
+- `business-rules/autenticacao.md` (tradução de 2026-10-11)
+- `business-rules/custo.md` (tradução de 2026-10-15)
+- `explanation/cadeia-de-suprimentos-do-ci.md` (tradução de 2026-10-15)
+- `reference/configuration.md` (tradução de 2026-10-16)
+- `reference/llm-providers.md` (tradução de 2026-10-16)
+
+### Defasadas em `zh-Hans`
+
+- `adr/index.md` (tradução de 2026-10-16)
+- `architecture.md` (tradução de 2026-10-16)
+- `business-rules.md` (tradução de 2026-10-15)
+- `business-rules/autenticacao.md` (tradução de 2026-10-11)
+- `business-rules/custo.md` (tradução de 2026-10-15)
+- `explanation/cadeia-de-suprimentos-do-ci.md` (tradução de 2026-10-15)
+- `reference/configuration.md` (tradução de 2026-10-16)
+- `reference/llm-providers.md` (tradução de 2026-10-16)
 
 ## Interface
 
@@ -25,9 +58,9 @@ Chaves de `apps/web/src/locales/<locale>/` contra o pt-BR. Chave plural conta um
 
 | locale | formas de plural | chaves presentes | plurais incompletos |
 |---|---|---|---|
-| `en` | one, other | 2316 de 2316 (100.0%) | 0 |
-| `ru` | one, few, many, other | 2520 de 2520 (100.0%) | 0 |
-| `zh-Hans` | other | 2214 de 2214 (100.0%) | 0 |
+| `en` | one, other | 2329 de 2329 (100.0%) | 0 |
+| `ru` | one, few, many, other | 2535 de 2535 (100.0%) | 0 |
+| `zh-Hans` | other | 2226 de 2226 (100.0%) | 0 |
 
 ## API (Redoc)
 
@@ -35,8 +68,8 @@ Textos distintos da referência da API (`/reference/api/`) contra o catálogo `w
 
 | locale | textos traduzidos |
 |---|---|
-| `pt-BR` | 1325 de 1325 (100.0%) |
+| `pt-BR` | 1325 de 1329 (99.7%) |
 | `en` | 1 de 1 (100.0%) |
-| `ru` | 1325 de 1325 (100.0%) |
-| `zh-Hans` | 1325 de 1325 (100.0%) |
+| `ru` | 1325 de 1329 (99.7%) |
+| `zh-Hans` | 1325 de 1329 (99.7%) |
 

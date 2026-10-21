@@ -312,7 +312,10 @@ defmodule Engine.Agents.CriativoServer do
 
         case tool_calls(message, state.tool_specs) do
           [] ->
-            gravar_texto_do_turno(state, content, model_name)
+            # AT-572: fecho sem texto nem corte é falha do modelo, dita no fio (agent.error).
+            if gravar_texto_do_turno(state, content, model_name) == :vazio,
+              do: emit_falha(state, :resposta_vazia)
+
             {encerrar(state, acc), acc.conteudo}
 
           calls ->
@@ -358,8 +361,9 @@ defmodule Engine.Agents.CriativoServer do
       # ferramenta que erra doze vezes seguidas acaba num silêncio idêntico ao
       # de um turno bem-sucedido.
       remaining <= 0 ->
+        gravado = Engine.Agents.GravadoNoTurno.descarregar()
         gravar_texto_do_turno(state, "", nil)
-        emit_falha_limite(state, acc)
+        emit_falha_limite(state, acc, gravado)
         {state, acc.conteudo}
 
       # Perguntas estruturadas ENTREGUES: a bola está com o usuário, e as
@@ -378,7 +382,7 @@ defmodule Engine.Agents.CriativoServer do
   # RN-698: o texto do turno inteiro, numa `agent.response` só.
   defp gravar_texto_do_turno(state, ultimo, model_name) do
     case TextoDoTurno.payload_do_turno(ultimo, model_name) do
-      nil -> :ok
+      nil -> :vazio
       payload -> emit(state, "agent.response", payload)
     end
   end
@@ -654,7 +658,7 @@ defmodule Engine.Agents.CriativoServer do
   # `agent.error` e não `toolloop.limit_reached` porque este agente não roda
   # dentro do `ToolLoop`: reusar o nome faria o evento mentir sobre quem o
   # produziu, e `agent.error` é o que a tela do fio já sabe mostrar.
-  defp emit_falha_limite(state, acc) do
+  defp emit_falha_limite(state, acc, gravado) do
     origem = "modelo"
 
     mensagem =
@@ -673,7 +677,8 @@ defmodule Engine.Agents.CriativoServer do
       origem: origem,
       mensagem: mensagem,
       reason: "limite_de_iteracoes",
-      max_iterations: @max_iterations
+      max_iterations: @max_iterations,
+      gravado: gravado
     })
 
     broadcast(state, "agent.error", %{origem: origem, mensagem: mensagem})
