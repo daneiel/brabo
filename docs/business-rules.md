@@ -275,7 +275,7 @@ one.
 > follows that recipient. What survives from this rule is the half about the
 > model: the binding route receives the agent, never falls back silently.
 
-- **Where:** `apps/web/src/lib/session-destinatario.ts:272`
+- **Where:** `apps/web/src/lib/session-destinatario.ts:290`
   (`useDestinatarioDoChat`, since RN-631),
   `apps/web/src/lib/api-client.ts:1124` (`getSessionModelBinding`, the
   `agentId`), `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:166`
@@ -17663,8 +17663,8 @@ passa a ler `DESTINATARIO_DA_SESSAO_CRIATIVA` em vez do literal de
 `SessionPage.tsx`: todo destino que o composer pode dar continua tendo
 cláusula própria no engine. Nenhuma mudança de api nem de engine.
 
-- **Onde:** `apps/web/src/lib/session-destinatario.ts:210` (`agentesEmConversa`),
-  `:237` (`resolverDestinatario`), `:272` (`useDestinatarioDoChat`), `:116`
+- **Onde:** `apps/web/src/lib/session-destinatario.ts:228` (`agentesEmConversa`),
+  `:255` (`resolverDestinatario`), `:290` (`useDestinatarioDoChat`), `:116`
   (`useAtivadosNaSessaoInteira`), `:141` (`ativadosSemJanela`);
   `apps/web/src/routes/SessionComposer.tsx:287` (`destinatarioRow`), `:193`
   (`ofertasForaDaJanela`); `apps/web/src/routes/SessionPage.tsx:350`
@@ -19962,7 +19962,7 @@ isso a recusa da api mora na ROTA, e o caso de uso não muda.
   `apps/api/src/application/use-cases/llm/garantir-destinatario-do-chat.use-case.ts:27`
   (`GarantirDestinatarioDoChatUseCase`);
   `apps/api/src/interfaces/http/llm/chat.controller.ts:82` (`chat`);
-  `apps/web/src/lib/session-destinatario.ts:329` (`agentesParaChamar`);
+  `apps/web/src/lib/session-destinatario.ts:347` (`agentesParaChamar`);
   `apps/web/src/routes/SessionPage.tsx:678` (`handleSend`);
   `apps/web/src/routes/SessionComposer.tsx:276`
 - **Teste:** `apps/api/test/application/use-cases/llm/garantir-destinatario-do-chat.use-case.spec.ts:82`
@@ -21081,7 +21081,7 @@ quando o turno termina entregando um formulário (`gravar_texto_do_turno(state,
 
 - **Onde:** `apps/web/src/lib/texto-plano.ts:7` (`textoPlanoDoMarkdown`),
   `apps/web/src/lib/eco-de-formulario.ts:17` (`ecosDeRespostaEstruturada`),
-  `apps/web/src/lib/session-destinatario.ts:237` (`resolverDestinatario`),
+  `apps/web/src/lib/session-destinatario.ts:255` (`resolverDestinatario`),
   `apps/web/src/components/ui/MarkdownMessage.tsx:74` (`CodeFence`)
 - **Teste:** `apps/web/src/lib/texto-plano.test.ts`,
   `apps/web/src/lib/eco-de-formulario.test.ts`,
@@ -22433,7 +22433,7 @@ sem dizer qual.
 - **Onde:** `apps/api/src/application/use-cases/actions/execute-adr-pr.use-case.ts:96`
   (`openPullRequest`); `apps/engine/lib/engine/infra/infra_lead_server.ex:1521`
   (`gravar_texto_do_turno`); `apps/engine/lib/engine/dev/dev_agent_server.ex:1164`
-  (`propose_pr`); `apps/web/src/lib/session-destinatario.ts:210`
+  (`propose_pr`); `apps/web/src/lib/session-destinatario.ts:228`
   (`agentesEmConversa`) e `apps/web/src/lib/session-kind.ts:69`
   (`tipoDaSessao`); `apps/web/src/routes/NewProjectWizard.tsx:1122`
   (`quebraPorSegmento`); `apps/web/src/components/ui/MarkdownMessage.tsx:139`
@@ -24836,3 +24836,26 @@ sem dizer qual.
 - **Origem:** AT-541 (TP-01 de 14/10: o entregável aceitou `expiresAt` no
   passado e o link nasceu expirado, 410; o RF da história só dizia que a
   expiração é opcional), decisão do dono de 15/10
+
+### RN-901 — A oferta de modo automático do chat inclui os dev agents do plano aprovado {#rn-901}
+
+- **Regra:** estende a RN-889. `roster.activatedAgents` do resumo de projetos
+  NUNCA traz dev agent: o dev não grava `agent.activated`, só `dev.started`. A
+  oferta em lote do chat (RN-883/889) lia só essa lista e não listava o
+  `dev-<modulo>` da execução ativa, que o usuário precisava ligar pela aba
+  Executores. A execução do projeto (`execucaoDoRoster`) passa a somar, só com
+  `roster.executionActivated`, os `dev-<modulo>` dos `roster.moduleNames` (o
+  `module_map` vigente), pela MESMA `devAgentId` que a aba Executores usa
+  (RN-661, `rosterFromFacts`), sem derivação nova. Sem execução ativa, nenhum
+  dev entra. Lacuna declarada: a lista sai do `module_map` VIGENTE; se o plano
+  aprovado usou um subconjunto dos módulos, a oferta herda essa divergência.
+  Nenhum teto se move e nada é gravado sem o clique.
+- **Onde:** `apps/web/src/lib/session-destinatario.ts:194` (`execucaoDoRoster`),
+  chamado por `useExecucaoNoProjeto` (`apps/web/src/lib/session-destinatario.ts:175`)
+- **Teste:** `apps/web/src/lib/session-destinatario.test.ts` ("CAMINHO FELIZ:
+  execução ativa soma o dev-<modulo> do module_map aos ativados"; falha: "sem
+  execução ativa, o módulo do plano NÃO vira dev agent"), e
+  `apps/web/src/components/ModoAutomaticoNoChat.test.tsx` (fixture derivada do
+  roster real, "caminho feliz")
+- **Origem:** AT-573 (TP-01 18ª, 19/10: a 1ª tarefa parou em `dev.awaiting_approval`
+  porque o dev não estava no modo automático)

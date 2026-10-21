@@ -6,6 +6,11 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- A oferta de modo automático do chat da Sessão inclui os dev agents da
+  execução ativa (AT-573, RN-901): antes, a lista vinha só de
+  `activatedAgents`, que nunca tem `dev-*`, e "Ligar para sugeridos" deixava
+  o dev de fora. Agora os `dev-<módulo>` do `module_map` entram pela mesma
+  derivação da aba Executores.
 - A página da API tem o texto-fonte todo em inglês (AT-566): os textos de
   PAT, chave de dispositivo, tickets do runner, binário, pull do Hugging Face,
   conversão de modo e `container-exec` saíram do português, a tag `projetos`
