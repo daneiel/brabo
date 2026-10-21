@@ -10,6 +10,14 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   modelo atingido (429)" e manda trocar o modelo, em vez de "falha passageira
   de rede" (AT-594, RN-903). A origem `infra` e a retomada automática (RN-864)
   não mudam.
+- Resposta vazia cortada pelo teto de saída não é mais repetida com o catálogo
+  inteiro (AT-578, RN-904): o corte não é erro de menu, e a volta só gastava
+  outro teto de saída. A retentativa da RN-780 no `ToolLoop` segue igual.
+- A ferramenta `write_file` do dev agent recusa reescrever um README que tem a
+  seção "Rodar na sua máquina" sem essa seção: ela substitui o arquivo inteiro,
+  e o erro diz para reescrever o README completo mantendo a seção (AT-571,
+  RN-900). O título é uma constante usada também pelos prompts da Infra e do dev.
+
 - A página da API tem o texto-fonte todo em inglês (AT-566): os textos de
   PAT, chave de dispositivo, tickets do runner, binário, pull do Hugging Face,
   conversão de modo e `container-exec` saíram do português, a tag `projetos`

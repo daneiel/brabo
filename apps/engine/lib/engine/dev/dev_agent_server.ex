@@ -652,7 +652,7 @@ defmodule Engine.Dev.DevAgentServer do
           "`/docs` (UI Swagger); sem rede ou sem pacote, `/docs` é uma página HTML " <>
           "que carrega o swagger-ui de CDN (quem baixa é o navegador do usuário). " <>
           "Módulo web serve a página inicial. Ao criar, acrescente a URL na seção " <>
-          "\"Rodar na sua máquina\" do README (que a Infra escreve)." <>
+          "\"#{Engine.Harness.Tools.WriteFile.titulo_secao_de_uso()}\" do README (que a Infra escreve)." <>
           "\n\nURL absoluta que a API devolve (ex.: um link curto) vem de " <>
           "`PUBLIC_BASE_URL` ou do `Host` da requisição COM a porta — nunca " <>
           "`http://localhost` fixo nem o hostname sem porta. O mesmo erro (ex.: " <>

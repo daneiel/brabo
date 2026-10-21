@@ -118,7 +118,9 @@ defmodule Engine.Harness.RoteamentoDeFerramenta do
   @doc """
   O menu foi restringido E o modelo não chamou ferramenta nenhuma (nem em
   texto recuperável)? Então o passo volta uma vez com o catálogo inteiro.
-  Resposta com erro do provider não repete: o problema não é o menu.
+  Resposta com erro do provider não repete: o problema não é o menu. Nem
+  resposta cortada pelo teto de saída: o corte não é o menu, e a volta com o
+  catálogo inteiro só aumentaria o prompt (a retentativa da RN-780 cobre).
   """
   @spec repetir_com_catalogo_inteiro?(map(), [map()]) :: boolean()
   def repetir_com_catalogo_inteiro?(
@@ -127,12 +129,13 @@ defmodule Engine.Harness.RoteamentoDeFerramenta do
       )
       when is_map(message) do
     sem_erro? = Map.get(resp, "error") in [nil, ""]
+    sem_corte? = Map.get(resp, "truncated") != true
     sem_chamada? = (Map.get(message, "toolCalls") || []) == []
 
     sem_recuperavel? =
       ToolCallRecovery.from_content(Map.get(message, "content") || "", nomes(tools)) == []
 
-    sem_erro? and sem_chamada? and sem_recuperavel?
+    sem_erro? and sem_corte? and sem_chamada? and sem_recuperavel?
   end
 
   def repetir_com_catalogo_inteiro?(_resp, _tools), do: false
