@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- O turno de agente cortado pelo teto de saída sem texto algum deixa de fechar calado (AT-570, RN-898): vira a linha "Resposta cortada pelo limite de tamanho." com o botão de continuar. A resposta vazia sem corte grava `agent.error` de origem `modelo` (AT-572, RN-899), e a sessão não fecha por heartbeat com turno calado.
 - A página da API tem o texto-fonte todo em inglês (AT-566): os textos de
   PAT, chave de dispositivo, tickets do runner, binário, pull do Hugging Face,
   conversão de modo e `container-exec` saíram do português, a tag `projetos`

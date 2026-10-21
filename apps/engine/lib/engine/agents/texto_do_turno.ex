@@ -69,8 +69,13 @@ defmodule Engine.Agents.TextoDoTurno do
     case Enum.reject(pedacos ++ [ultimo || ""], &(&1 == "")) do
       [] ->
         Engine.Agents.GravadoNoTurno.descarregar()
-        Engine.Harness.RespostaCortada.descarregar()
-        nil
+
+        # AT-570: resposta cortada sem texto algum NÃO fecha calada — a linha
+        # da RN-737 vira o fecho (o fio mostra "Continuar de onde parou").
+        case Engine.Harness.RespostaCortada.descarregar() do
+          nil -> nil
+          linha -> %{content: linha, modelName: modelo || visto}
+        end
 
       textos ->
         # RN-732: o escape `\uXXXX` literal do modelo é decodificado pela MESMA
