@@ -12249,3 +12249,10 @@ PO 的 kickoff 说明这三件事。
 - **位置：** `apps/engine/lib/engine/agents/po_server.ex:649` (`obrigacoes`)
 - **测试：** `apps/engine/test/engine/agents/po_server_test.exs:438`（kickoff 指令带有边界义务）和 `:460`（没有事件日志时，kickoff 仍带有它）
 - **来源：** AT-541（10/14 的 TP-01：交付物接受了过去的 `expiresAt`，链接一创建就已过期，410；故事的 RF 只说过期时间是可选的），所有者 10/15 的决定
+
+### RN-902 — 重建容器会冻结当前的镜像决策，过期镜像会被提示 {#rn-902}
+
+- **规则：** `removed → provisioning` 和 `failed → provisioning` 转换会重新读取当前镜像决策，并重写 `project_containers` 行的 `imageVersion` 和 `resources`。没有当前决策时返回 409（[RN-105](business-rules/autenticacao.md#rn-105)）。`stopped → running` 不改变版本。`/containers` 页面新增 `decisaoVigente` 和 `imagemDesatualizada`；差异比较的是内容（镜像、网络、资源），而不是版本号，并以文字提示"停止 → 移除 → 再次启动"。`choose_project_image` 的结果带有 `containerDePe`，并提醒该决策只有在重建容器后才生效。不存在一步"重建"；审批上限不变（[RN-495](#rn-495)）。
+- **位置：** `apps/api/src/application/use-cases/containers/registrar-transicao-de-container.use-case.ts:131`（`recongelar`）、`apps/api/src/domain/containers/project-container.ts:342`（`containerDivergeDaDecisao`）、`apps/engine/lib/engine/harness/tools/choose_project_image.ex:99`（`mensagem_de_fixada`）
+- **测试：** `apps/api/test/application/use-cases/containers/ciclo-de-vida-do-container.use-case.spec.ts`；`apps/api/test/domain/containers/project-container.spec.ts`；`apps/web/src/routes/ContainersPage.test.tsx`
+- **来源：** AT-595

@@ -200,3 +200,25 @@ export function conversaoSemBroker(input: {
     input.brokerConfigurado === false
   );
 }
+
+/**
+ * A decisão de imagem vigente difere do CONTEÚDO do container registrado
+ * (RN-902)? Só o container recriado (Parar → Remover → Subir de novo) aplica a
+ * nova; a api decide a divergência, a tela só a diz.
+ */
+export function avisoDeImagemDesatualizada(item: ContainerOverviewItem): {
+  de: number;
+  para: number;
+  imagem: string;
+  rede: 'none' | 'egress';
+} | null {
+  if (!item.imagemDesatualizada || !item.registrado || !item.decisaoVigente) {
+    return null;
+  }
+  return {
+    de: item.registrado.imageVersion,
+    para: item.decisaoVigente.version,
+    imagem: item.decisaoVigente.image,
+    rede: item.decisaoVigente.network,
+  };
+}

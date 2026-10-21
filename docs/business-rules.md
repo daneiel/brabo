@@ -14183,10 +14183,10 @@ instalação sem broker continua possível pelo agente.
 - **Teste:** `apps/api/test/application/use-cases/containers/obter-visao-geral-de-containers.use-case.spec.ts:252`
   (sem broker, `false` em toda linha — caso de falha), `:264` (com broker,
   `true`); `apps/web/src/routes/containers-subida.test.ts:54` (`container` e
-  `mounted` recusam antes da imagem), `:70` (`runner` não é afetado), `:84`
+  `mounted` recusam antes da imagem), `:75` (`runner` não é afetado), `:84`
   (campo ausente recusa), `:93` (já de pé continua dizendo isso);
   `apps/web/src/routes/ContainersPage.test.tsx:562` (botão inerte e o motivo
-  em texto, nunca propõe), `:636` (`runner` segue subindo)
+  em texto, nunca propõe), `:672` (`runner` segue subindo)
 - **Origem:** AT-085 — instalação real da v6.1.0 em 2026-09-14, decidido pelo
   mantenedor em 2026-09-18
 
@@ -18154,7 +18154,7 @@ só terminariam em falha"), com os dois detalhes atrás do mesmo `<details>`.
 - **Código:** `apps/web/src/components/ContainerImageGate.tsx:33`
   (`ContainerImageGateNotice`), `:42` (`bloco`);
   `apps/web/src/routes/ProjectPrsTab.tsx:157` (`superficie="prs"`);
-  `apps/web/src/routes/ContainersPage.tsx:261` (`semContainer`), `:276`
+  `apps/web/src/routes/ContainersPage.tsx:261` (`semContainer`), `:280`
   (`chaveCurtaDoBroker`); `apps/web/src/components/ui/Button.module.css:101`
   (`.danger:disabled`)
 - **Teste:** `apps/web/src/routes/ProjectPrsTab.test.tsx` ("409 do portão vira
@@ -24836,3 +24836,35 @@ sem dizer qual.
 - **Origem:** AT-541 (TP-01 de 14/10: o entregável aceitou `expiresAt` no
   passado e o link nasceu expirado, 410; o RF da história só dizia que a
   expiração é opcional), decisão do dono de 15/10
+
+### RN-902 — Recriar o container congela a decisão de imagem vigente, e a imagem desatualizada é avisada {#rn-902}
+
+- **Regra:** a transição `removed → provisioning` e `failed → provisioning`
+  RELÊ a decisão de imagem vigente e regrava `imageVersion` e `resources` da
+  linha de `project_containers` (antes só a criação da linha os congelava, e a
+  coluna Imagem seguia na versão antiga depois de Remover → Subir). Sem decisão
+  vigente é 409 ([RN-105](business-rules/autenticacao.md#rn-105)). `stopped → running` NÃO muda a versão: o
+  container reaproveitado é o antigo. A página `/containers` ganha
+  `decisaoVigente` e `imagemDesatualizada` por linha — a divergência compara
+  CONTEÚDO (imagem, rede, recursos), nunca o número da versão, porque a eleição
+  da Infra grava v+1 com o mesmo conteúdo a cada subida — e, com
+  `running`/`stopped`/`provisioning` divergente, a linha diz em texto "Parar →
+  Remover → Subir de novo" e passa a dizer por que "Subir de novo" não aplica a
+  imagem nova. O resultado de `choose_project_image` traz `containerDePe` e o
+  texto avisa que a decisão só vale ao recriar o container. "Recriar" numa só
+  ação NÃO existe; nenhum teto de aprovação muda ([RN-495](#rn-495)).
+- **Onde:** `apps/api/src/application/use-cases/containers/registrar-transicao-de-container.use-case.ts:131`
+  (`recongelar`), `apps/api/src/domain/containers/project-container.ts:342`
+  (`containerDivergeDaDecisao`),
+  `apps/engine/lib/engine/harness/tools/choose_project_image.ex:99`
+  (`mensagem_de_fixada`)
+- **Teste:** `apps/api/test/application/use-cases/containers/ciclo-de-vida-do-container.use-case.spec.ts`
+  ("recongela versão e recursos", "sem decisão vigente é 409", "mantém a versão
+  congelada"); `apps/api/test/domain/containers/project-container.spec.ts`
+  (`containerDivergeDaDecisao`);
+  `apps/api/test/infrastructure/persistence/drizzle/containers-overview.repository.spec.ts`
+  ("imagemDesatualizada compara CONTEÚDO");
+  `apps/web/src/routes/ContainersPage.test.tsx` (aviso e motivo);
+  `apps/engine/test/engine/harness/tools/choose_project_image_test.exs`
+- **Origem:** AT-595 (TP-01 20ª: a decisão v3 `egress` não alcançou o container
+  v2 `none` e a coluna Imagem seguiu em v2)

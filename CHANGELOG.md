@@ -6,6 +6,12 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- Mudar a imagem do projeto avisa que o container de pé ficou desatualizado
+  (AT-595, RN-902): Remover → Subir de novo passa a regravar a versão e os
+  recursos da decisão vigente (a coluna Imagem deixa de mentir), `/containers`
+  mostra o aviso com os passos Parar → Remover → Subir de novo quando o
+  CONTEÚDO da decisão difere do container, e o resultado de
+  `choose_project_image` diz que a decisão só vale ao recriá-lo.
 - A página da API tem o texto-fonte todo em inglês (AT-566): os textos de
   PAT, chave de dispositivo, tickets do runner, binário, pull do Hugging Face,
   conversão de modo e `container-exec` saíram do português, a tag `projetos`

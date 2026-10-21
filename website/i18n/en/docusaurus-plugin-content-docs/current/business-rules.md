@@ -24822,3 +24822,34 @@ without saying which.
 - **Origin:** AT-541 (TP-01 of 10/14: the deliverable accepted `expiresAt` in
   the past and the link was born expired, 410; the story's RF only said the
   expiration is optional), owner's decision of 10/15
+
+### RN-902 — Recreating the container freezes the current image decision, and an outdated image is flagged {#rn-902}
+
+- **Rule:** the `removed → provisioning` and `failed → provisioning`
+  transitions RE-READ the current image decision and rewrite `imageVersion` and
+  `resources` on the `project_containers` row (before, only creating the row
+  froze them, and the Image column stayed on the old version after Remove →
+  Start). With no current decision it is a 409 ([RN-105](business-rules/autenticacao.md#rn-105)).
+  `stopped → running` does NOT change the version: the reused container is the
+  old one. The `/containers` page gains `decisaoVigente` and
+  `imagemDesatualizada` per row — the divergence compares CONTENT (image,
+  network, resources), never the version number, because the Infra election
+  writes v+1 with the same content on every start — and, with a diverging
+  `running`/`stopped`/`provisioning` container, the row says in text "Stop →
+  Remove → Start again" and says why "Start again" does not apply the new image.
+  The `choose_project_image` result carries `containerDePe` and its text warns
+  that the decision only applies once the container is recreated. A one-action
+  "Recreate" does NOT exist; no approval ceiling changes
+  ([RN-495](#rn-495)).
+- **Where:** `apps/api/src/application/use-cases/containers/registrar-transicao-de-container.use-case.ts:131`
+  (`recongelar`), `apps/api/src/domain/containers/project-container.ts:342`
+  (`containerDivergeDaDecisao`),
+  `apps/engine/lib/engine/harness/tools/choose_project_image.ex:99`
+  (`mensagem_de_fixada`)
+- **Test:** `apps/api/test/application/use-cases/containers/ciclo-de-vida-do-container.use-case.spec.ts`;
+  `apps/api/test/domain/containers/project-container.spec.ts`;
+  `apps/api/test/infrastructure/persistence/drizzle/containers-overview.repository.spec.ts`;
+  `apps/web/src/routes/ContainersPage.test.tsx`;
+  `apps/engine/test/engine/harness/tools/choose_project_image_test.exs`
+- **Origin:** AT-595 (TP-01 20th: the v3 `egress` decision did not reach the v2
+  `none` container and the Image column stayed on v2)

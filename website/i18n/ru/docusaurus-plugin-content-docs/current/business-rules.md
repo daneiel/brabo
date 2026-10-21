@@ -25539,3 +25539,25 @@ Kickoff PO говорит все три вещи.
 - **Источник:** AT-541 (TP-01 от 14.10: результат принял `expiresAt` в прошлом,
   и ссылка родилась просроченной, 410; RF истории говорил только, что срок
   действия необязателен), решение владельца от 15.10
+
+### RN-902 — Пересоздание контейнера замораживает текущее решение об образе, а устаревший образ помечается {#rn-902}
+
+- **Правило:** переходы `removed → provisioning` и `failed → provisioning`
+  ЗАНОВО читают текущее решение об образе и перезаписывают `imageVersion` и
+  `resources` строки `project_containers`. Без текущего решения — 409
+  ([RN-105](business-rules/autenticacao.md#rn-105)). `stopped → running` версию НЕ меняет. Страница
+  `/containers` получает `decisaoVigente` и `imagemDesatualizada`; расхождение
+  сравнивает СОДЕРЖИМОЕ (образ, сеть, ресурсы), а не номер версии, и строка
+  текстом говорит «Остановить → Удалить → Запустить снова». Результат
+  `choose_project_image` содержит `containerDePe` и предупреждает, что решение
+  действует только после пересоздания контейнера. Пересоздания одним действием
+  нет; потолки одобрения не меняются ([RN-495](#rn-495)).
+- **Где:** `apps/api/src/application/use-cases/containers/registrar-transicao-de-container.use-case.ts:131`
+  (`recongelar`), `apps/api/src/domain/containers/project-container.ts:342`
+  (`containerDivergeDaDecisao`),
+  `apps/engine/lib/engine/harness/tools/choose_project_image.ex:99`
+  (`mensagem_de_fixada`)
+- **Тест:** `apps/api/test/application/use-cases/containers/ciclo-de-vida-do-container.use-case.spec.ts`;
+  `apps/api/test/domain/containers/project-container.spec.ts`;
+  `apps/web/src/routes/ContainersPage.test.tsx`
+- **Источник:** AT-595
