@@ -12345,3 +12345,20 @@ PO 的 kickoff 说明这三件事。
 - **测试：** `apps/engine/test/engine/agents/po_server_test.exs:548`；
   `apps/web/src/routes/session-timeline-montagem.falha-de-turno.test.tsx:108`
 - **来源：** AT-590（EP-031）。
+
+### RN-906 — 当模块技术栈需要下载依赖时，API 拒绝网络 `none` {#rn-906}
+
+- **规则：** 决定项目镜像时，若网络为 `none`，且当前 `module_map` 中某模块的 `stack`
+  按整词匹配封闭的依赖下载生态列表（node、npm、pnpm、yarn、python、pip、elixir、
+  mix、go、rust、cargo、ruby、java、maven、gradle、php、dotnet……），API 返回 400，
+  指明模块、技术栈和匹配词，并要求使用 `egress`。不写入任何内容，也绝不自行切换网络：
+  `egress` 由用户授权。适用于架构师（`choose_project_image`）和 Infra 的选择，二者走
+  同一个用例（对 Infra，`container_start` 以 `failed` 结束并给出原因，不调用 broker）。
+  没有 `module_map` 或技术栈不匹配时，仍只有 RN-735 的警告。无可配置的例外。修订
+  RN-735（该情形下由警告变为拒绝）。
+- **位置：** `apps/api/src/application/use-cases/containers/decidir-imagem-do-projeto.use-case.ts:80`
+  (`stackQueBaixaDependencias`)
+- **测试：** `apps/api/test/application/use-cases/containers/container-do-projeto.use-case.spec.ts`；
+  `apps/api/test/domain/containers/project-container.spec.ts`；
+  `apps/api/test/application/use-cases/actions/execute-container-start.use-case.spec.ts`
+- **来源：** AT-593（EP-031）。

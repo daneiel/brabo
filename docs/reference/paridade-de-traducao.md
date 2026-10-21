@@ -13,37 +13,28 @@ A fonte é o pt-BR em `docs/` (ADR 0216), inclusive `docs/reference/**` (ADR 021
 
 | locale | páginas traduzidas | caracteres traduzidos | em dia | defasadas | sem procedência | ausentes | órfãs |
 |---|---|---|---|---|---|---|---|
-| `en` | 270 de 271 (99.6%) | 99.9% de 5.774.526 | 263 | 6 | 1 | 1 | 0 |
-| `ru` | 270 de 271 (99.6%) | 99.9% de 5.774.526 | 263 | 6 | 1 | 1 | 0 |
-| `zh-Hans` | 270 de 271 (99.6%) | 99.9% de 5.774.526 | 263 | 6 | 1 | 1 | 0 |
+| `en` | 270 de 270 (100.0%) | 100.0% de 5.770.555 | 266 | 3 | 1 | 0 | 0 |
+| `ru` | 270 de 270 (100.0%) | 100.0% de 5.770.555 | 266 | 3 | 1 | 0 | 0 |
+| `zh-Hans` | 270 de 270 (100.0%) | 100.0% de 5.770.555 | 266 | 3 | 1 | 0 | 0 |
 
 > **TODO(humano):** revisão nativa por idioma — quem revisou e quando. Ainda não há revisão nativa registrada.
 
 ### Defasadas em `en`
 
-- `adr/index.md` (tradução de 2026-10-16)
-- `architecture.md` (tradução de 2026-10-16)
 - `business-rules.md` (tradução de 2026-10-15)
 - `business-rules/autenticacao.md` (tradução de 2026-10-11)
-- `business-rules/custo.md` (tradução de 2026-10-15)
 - `reference/llm-providers.md` (tradução de 2026-10-16)
 
 ### Defasadas em `ru`
 
-- `adr/index.md` (tradução de 2026-10-16)
-- `architecture.md` (tradução de 2026-10-16)
 - `business-rules.md` (tradução de 2026-10-15)
 - `business-rules/autenticacao.md` (tradução de 2026-10-11)
-- `business-rules/custo.md` (tradução de 2026-10-15)
 - `reference/llm-providers.md` (tradução de 2026-10-16)
 
 ### Defasadas em `zh-Hans`
 
-- `adr/index.md` (tradução de 2026-10-16)
-- `architecture.md` (tradução de 2026-10-16)
 - `business-rules.md` (tradução de 2026-10-15)
 - `business-rules/autenticacao.md` (tradução de 2026-10-11)
-- `business-rules/custo.md` (tradução de 2026-10-15)
 - `reference/llm-providers.md` (tradução de 2026-10-16)
 
 ## Interface
@@ -62,8 +53,8 @@ Textos distintos da referência da API (`/reference/api/`) contra o catálogo `w
 
 | locale | textos traduzidos |
 |---|---|
-| `pt-BR` | 1325 de 1329 (99.7%) |
+| `pt-BR` | 1325 de 1328 (99.8%) |
 | `en` | 1 de 1 (100.0%) |
-| `ru` | 1325 de 1329 (99.7%) |
-| `zh-Hans` | 1325 de 1329 (99.7%) |
+| `ru` | 1325 de 1328 (99.8%) |
+| `zh-Hans` | 1325 de 1328 (99.8%) |
 
