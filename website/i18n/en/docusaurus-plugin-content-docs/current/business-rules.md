@@ -24822,3 +24822,24 @@ without saying which.
 - **Origin:** AT-541 (TP-01 of 10/14: the deliverable accepted `expiresAt` in
   the past and the link was born expired, 410; the story's RF only said the
   expiration is optional), owner's decision of 10/15
+
+### RN-903 — The provider's 429 is the model's usage limit, not a network failure {#rn-903}
+
+- **Rule:** a task the dev agent blocks because the model answered 429 (code
+  `rate_limit`, or text with `(429)` or "limite de uso") says in the reason
+  "limite de uso do modelo atingido (429)", and the automatic retry says that,
+  if it repeats, the dev agent's model should be changed. It never says "falha
+  passageira de rede" (transient network failure). The origin stays `infra`
+  and the RN-864 retry does not change (up to 3, after 1, 3 and 10 min; a 60 s
+  pause, which `dev.idle` names as "depois de limite de uso do modelo"). A
+  network failure keeps its usual text.
+- **Where:** `apps/engine/lib/engine/dev/dev_agent_server.ex:1136`
+  (`limite_de_uso?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:1127`
+  (`motivo_da_parada`), `apps/engine/lib/engine/dev/dev_agent_server.ex:997`
+  (`bloquear_passageira`), `apps/engine/lib/engine/dev/agent_io.ex:293`
+  (`pausar_por_rede`)
+- **Test:** `apps/engine/test/engine/dev/dev_agent_server_test.exs` ("429 do
+  provider: o motivo diz limite de uso do modelo, não rede"; failure: "falha de
+  rede continua com o texto de rede, não de limite")
+- **Origin:** AT-594 (TP-01 20th, 10/19: the 429 of `laguna-s-2.1:free` blocked
+  the tasks as "falha passageira de rede", while the diagnosis said usage limit)

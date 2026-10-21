@@ -6,6 +6,10 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- O bloqueio de task do dev agent por 429 do provider diz "limite de uso do
+  modelo atingido (429)" e manda trocar o modelo, em vez de "falha passageira
+  de rede" (AT-594, RN-903). A origem `infra` e a retomada automática (RN-864)
+  não mudam.
 - A página da API tem o texto-fonte todo em inglês (AT-566): os textos de
   PAT, chave de dispositivo, tickets do runner, binário, pull do Hugging Face,
   conversão de modo e `container-exec` saíram do português, a tag `projetos`

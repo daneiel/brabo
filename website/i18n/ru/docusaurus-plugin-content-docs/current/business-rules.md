@@ -25539,3 +25539,23 @@ Kickoff PO говорит все три вещи.
 - **Источник:** AT-541 (TP-01 от 14.10: результат принял `expiresAt` в прошлом,
   и ссылка родилась просроченной, 410; RF истории говорил только, что срок
   действия необязателен), решение владельца от 15.10
+
+### RN-903 — 429 провайдера — это лимит использования модели, а не сбой сети {#rn-903}
+
+- **Правило:** задача, которую dev-агент блокирует из-за ответа модели 429
+  (код `rate_limit` или текст с `(429)` / «limite de uso»), в причине пишет
+  «limite de uso do modelo atingido (429)», а автоматический повтор сообщает,
+  что при повторе нужно сменить модель dev-агента. Никогда не пишет «falha
+  passageira de rede». Origem остаётся `infra`, повтор RN-864 не меняется (до
+  3, через 1, 3 и 10 мин; пауза 60 с, которую `dev.idle` называет «depois de
+  limite de uso do modelo»). Сетевой сбой сохраняет свой обычный текст.
+- **Где:** `apps/engine/lib/engine/dev/dev_agent_server.ex:1136`
+  (`limite_de_uso?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:1127`
+  (`motivo_da_parada`), `apps/engine/lib/engine/dev/dev_agent_server.ex:997`
+  (`bloquear_passageira`), `apps/engine/lib/engine/dev/agent_io.ex:293`
+  (`pausar_por_rede`)
+- **Тест:** `apps/engine/test/engine/dev/dev_agent_server_test.exs` («429 do
+  provider: o motivo diz limite de uso do modelo, não rede»; отказ: «falha de
+  rede continua com o texto de rede, não de limite»)
+- **Источник:** AT-594 (TP-01 20-й, 19.10: 429 у `laguna-s-2.1:free` блокировал
+  задачи как «falha passageira de rede», а диагноз говорил о лимите использования)

@@ -998,22 +998,30 @@ defmodule Engine.Dev.DevAgentServer do
     task_id = state.task_id
     retomadas = Map.get(state, :retomadas_automaticas, %{})
     feitas = Map.get(retomadas, task_id, 0)
+    limite? = limite_de_uso?(ctx)
+
+    # AT-594: no 429 o texto nomeia a cota e manda trocar de modelo; a rede
+    # segue com o texto de sempre.
+    {causa, dica_esgotada} =
+      if limite?,
+        do: {"limite de uso do modelo", "troque o modelo do dev agent ou desbloqueie à mão"},
+        else: {"falha passageira de rede", "desbloqueie à mão"}
 
     {sufixo, state} =
       case RetomadaDeTarefaWorker.agendar(state, task_id, feitas) do
         {:ok, minutos} ->
           {" — retomada automática #{feitas + 1} de #{RetomadaDeTarefaWorker.teto()} " <>
-             "em #{minutos} min (falha passageira de rede)",
+             "em #{minutos} min (#{causa}#{if limite?, do: "; se repetir, troque o modelo do dev agent"})",
            Map.put(state, :retomadas_automaticas, Map.put(retomadas, task_id, feitas + 1))}
 
         :esgotado ->
-          {" — #{feitas} retomadas automáticas já tentadas; desbloqueie à mão",
+          {" — #{feitas} retomadas automáticas já tentadas; #{dica_esgotada}",
            Map.put(state, :retomadas_automaticas, Map.delete(retomadas, task_id))}
       end
 
     state
     |> AgentIo.block_task(motivo_da_parada(ctx, sufixo), stop_diagnosis(ctx), "infra")
-    |> AgentIo.pausar_por_rede()
+    |> AgentIo.pausar_por_rede(causa)
   end
 
   # Caminho normal (autonomia `auto_approve`, o default da ativação): a PR
@@ -1114,7 +1122,23 @@ defmodule Engine.Dev.DevAgentServer do
   @motivo_do_corte "resposta só de raciocínio, cortada pelo teto"
 
   defp motivo_da_parada(%{corte_pelo_teto: true}, sufixo), do: @motivo_do_corte <> sufixo
-  defp motivo_da_parada(_ctx, sufixo), do: "parou sem concluir nem reportar bloqueio" <> sufixo
+
+  # AT-594: o 429 do provider é cota do modelo, não rede — o motivo diz isso.
+  defp motivo_da_parada(ctx, sufixo) do
+    if limite_de_uso?(ctx),
+      do: "limite de uso do modelo atingido (429)" <> sufixo,
+      else: "parou sem concluir nem reportar bloqueio" <> sufixo
+  end
+
+  # AT-594: 429 (código `rate_limit` ou texto "(429)"/"limite de uso") é limite
+  # de uso do modelo. Predicado privado de propósito: `falha_de_turno.ex` não
+  # muda aqui, e a origem continua `infra` (RN-810/RN-864).
+  defp limite_de_uso?(ctx) do
+    erro = Map.get(ctx, :last_error)
+
+    Map.get(ctx, :last_error_code) == "rate_limit" or
+      (is_binary(erro) and erro =~ ~r/\(429\)|limite de uso/iu)
+  end
 
   defp stop_diagnosis(%{corte_pelo_teto: true}) do
     "o modelo gastou o teto de saída sem produzir texto nem chamada de ferramenta " <>
