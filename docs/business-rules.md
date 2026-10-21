@@ -22432,7 +22432,7 @@ sem dizer qual.
   (medido no Chromium: 2 236px num balão de 708px) e a última coluna sumia.
 - **Onde:** `apps/api/src/application/use-cases/actions/execute-adr-pr.use-case.ts:96`
   (`openPullRequest`); `apps/engine/lib/engine/infra/infra_lead_server.ex:1521`
-  (`gravar_texto_do_turno`); `apps/engine/lib/engine/dev/dev_agent_server.ex:1164`
+  (`gravar_texto_do_turno`); `apps/engine/lib/engine/dev/dev_agent_server.ex:1188`
   (`propose_pr`); `apps/web/src/lib/session-destinatario.ts:210`
   (`agentesEmConversa`) e `apps/web/src/lib/session-kind.ts:69`
   (`tipoDaSessao`); `apps/web/src/routes/NewProjectWizard.tsx:1122`
@@ -22737,8 +22737,8 @@ sem dizer qual.
   `reasoningTokens` (ficam só em `token_usage`), então a resposta vazia que
   bate no teto sem `finish_reason: length` não é reconhecida.
 - **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:219`
-  (`parada_sem_chamada`), `apps/engine/lib/engine/dev/dev_agent_server.ex:1116`
-  (`motivo_da_parada`), `:1119` (`stop_diagnosis`)
+  (`parada_sem_chamada`), `apps/engine/lib/engine/dev/dev_agent_server.ex:1124`
+  (`motivo_da_parada`), `:1143` (`stop_diagnosis`)
 - **Teste:** `apps/engine/test/engine/harness/tool_loop_test.exs` (`corte só
   de raciocínio`: retentada uma vez e segue; repetido para com
   `corte_pelo_teto`), `apps/engine/test/engine/dev/dev_agent_server_test.exs`
@@ -23020,7 +23020,7 @@ sem dizer qual.
   cobre também o merge por squash que a [RN-760](#rn-760) declara não ver.
   Declarado: a PR antiga da branch, se existir, não é fechada no provider.
 - **Onde:** `apps/engine/lib/engine/dev/worktree_manager.ex:246`
-  (`sem_diff_contra_a_dev?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:1048`
+  (`sem_diff_contra_a_dev?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:1056`
   (`ja_na_dev`)
 - **Teste:** `apps/engine/test/engine/dev/tarefa_ja_na_dev_test.exs`
 - **Origem:** AT-474
@@ -24836,3 +24836,71 @@ sem dizer qual.
 - **Origem:** AT-541 (TP-01 de 14/10: o entregável aceitou `expiresAt` no
   passado e o link nasceu expirado, 410; o RF da história só dizia que a
   expiração é opcional), decisão do dono de 15/10
+
+### RN-894 — Épico com o mesmo título de outro do projeto é recusado {#rn-894}
+
+- **Regra:** `create_epic` recusa (400) o épico cujo título, normalizado,
+  é igual ao de outro épico do MESMO projeto, e a recusa devolve ao modelo o
+  id do existente: "Já existe o épico «título» (id …) neste projeto — use
+  este id em epic_id". A régua é a MESMA da história (achado R,
+  `tituloDuplicado`), sem segunda cópia. A duplicata SEMÂNTICA
+  ([RN-681](business-rules/custo.md#rn-681)) não vale para épico: só título
+  igual. Nada é criado nem gravado no event log quando recusa.
+- **Onde:** `apps/api/src/application/use-cases/backlog/create-epic.use-case.ts:25` (`tituloDuplicado`)
+- **Teste:** `apps/api/test/application/use-cases/backlog/create-epic.use-case.spec.ts:41`
+  (cria sem título igual) e `:49` (recusa o título igual com o id do existente)
+- **Origem:** AT-581
+### RN-903 — O 429 do provider é limite de uso do modelo, não falha de rede {#rn-903}
+
+- **Regra:** a task que o dev agent bloqueia porque o modelo respondeu 429
+  (código `rate_limit`, ou texto com `(429)` ou "limite de uso") diz no motivo
+  "limite de uso do modelo atingido (429)", e a retomada automática diz que,
+  se repetir, é para trocar o modelo do dev agent. Nunca diz "falha
+  passageira de rede". A origem segue `infra` e a retomada da RN-864 não muda
+  (até 3, depois de 1, 3 e 10 min; pausa de 60 s, que o `dev.idle` nomeia como
+  "depois de limite de uso do modelo"). A falha de rede segue com o texto de
+  sempre.
+- **Onde:** `apps/engine/lib/engine/dev/dev_agent_server.ex:1136`
+  (`limite_de_uso?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:1127`
+  (`motivo_da_parada`), `apps/engine/lib/engine/dev/dev_agent_server.ex:997`
+  (`bloquear_passageira`), `apps/engine/lib/engine/dev/agent_io.ex:293`
+  (`pausar_por_rede`)
+- **Teste:** `apps/engine/test/engine/dev/dev_agent_server_test.exs` ("429 do
+  provider: o motivo diz limite de uso do modelo, não rede"; falha: "falha de
+  rede continua com o texto de rede, não de limite")
+- **Origem:** AT-594 (TP-01 20ª, 19/10: o 429 do `laguna-s-2.1:free` bloqueou
+  as tarefas com "falha passageira de rede", e o diagnóstico dizia limite de
+  uso)
+### RN-904 — O corte do teto de saída não repete a chamada com o catálogo inteiro {#rn-904}
+
+- **Regra:** quando o Jev restringe o menu e o modelo responde SEM ferramenta,
+  o passo é repetido UMA vez com o catálogo inteiro (RN-625) — exceto quando a
+  resposta veio CORTADA pelo teto de saída (`truncated`). O corte não é erro de
+  menu: a volta com o catálogo inteiro só aumentaria o prompt e gastaria outro
+  teto de saída. Vale nas duas fachadas (`llm_turn` e `llm_turn_stream`, esta
+  só sem texto já entregue). Quem trata o corte é a retentativa da RN-780 no
+  `ToolLoop`, que não muda.
+- **Onde:** `apps/engine/lib/engine/harness/roteamento_de_ferramenta.ex:126` (`repetir_com_catalogo_inteiro?`)
+- **Teste:** `apps/engine/test/engine/harness/roteamento_de_ferramenta_test.exs:274`
+  (resposta vazia cortada não repete, nos dois caminhos; sem corte, repete)
+- **Origem:** AT-578 (EP-026, levantamento de 21/10): o 1º turno do PO na 18ª
+  rodada gastou duas voltas de 8192 tokens de saída.
+### RN-900 — `write_file` recusa reescrever o README e apagar a seção de uso da Infra {#rn-900}
+
+- **Regra:** `write_file` substitui o arquivo inteiro. Quando o `path` é um
+  README (`README*`), o arquivo atual tem a seção `## Rodar na sua máquina` e o
+  conteúdo novo não a traz, a ferramenta recusa com erro nomeado e não escreve
+  nada. Trocar um trecho exige reescrever o README completo, com a seção. O
+  título é uma constante só (`titulo_secao_de_uso/0`), usada também pelos
+  prompts da Infra e do dev, para que a recusa e a instrução não divirjam. Não
+  é gate: a recusa é da própria ferramenta, e não cobre escrita pelo `terminal`
+  (`cat >`, `sed -i`).
+- **Onde:** `apps/engine/lib/engine/harness/tools/write_file.ex:62`
+  (`recusa_de_secao_perdida`)
+- **Teste:** `apps/engine/test/engine/harness/tools/write_file_test.exs:41`
+  (a reescrita sem a seção é recusada e o arquivo fica intacto); o caminho
+  feliz (README com a seção reescrito com a seção, e arquivo que não é README)
+  está nas primeiras duas provas do mesmo arquivo
+- **Origem:** AT-571 (TP-01 18ª de 19/10: o dev agent reescreveu o README ao
+  corrigir um parecer do QA e a seção de uso que a Infra escrevera sumiu; nenhum
+  gate notou)

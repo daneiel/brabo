@@ -24822,3 +24822,69 @@ without saying which.
 - **Origin:** AT-541 (TP-01 of 10/14: the deliverable accepted `expiresAt` in
   the past and the link was born expired, 410; the story's RF only said the
   expiration is optional), owner's decision of 10/15
+
+### RN-894 — An epic with the same title as another in the project is refused {#rn-894}
+
+- **Rule:** `create_epic` refuses (400) an epic whose normalized title equals
+  that of another epic in the SAME project, and the refusal returns the
+  existing id to the model: "Já existe o épico «título» (id …) neste projeto —
+  use este id em epic_id". The rule is the SAME as the story's (finding R,
+  `tituloDuplicado`), with no second copy. The SEMANTIC duplicate check
+  (RN-681) does not apply to epics: only an equal title. Nothing is created or
+  written to the event log when it refuses.
+- **Where:** `apps/api/src/application/use-cases/backlog/create-epic.use-case.ts:25` (`tituloDuplicado`)
+- **Test:** `apps/api/test/application/use-cases/backlog/create-epic.use-case.spec.ts:41`
+  (creates without an equal title) and `:49` (refuses the equal title with the existing id)
+- **Origin:** AT-581
+### RN-903 — The provider's 429 is the model's usage limit, not a network failure {#rn-903}
+
+- **Rule:** a task the dev agent blocks because the model answered 429 (code
+  `rate_limit`, or text with `(429)` or "limite de uso") says in the reason
+  "limite de uso do modelo atingido (429)", and the automatic retry says that,
+  if it repeats, the dev agent's model should be changed. It never says "falha
+  passageira de rede" (transient network failure). The origin stays `infra`
+  and the RN-864 retry does not change (up to 3, after 1, 3 and 10 min; a 60 s
+  pause, which `dev.idle` names as "depois de limite de uso do modelo"). A
+  network failure keeps its usual text.
+- **Where:** `apps/engine/lib/engine/dev/dev_agent_server.ex:1136`
+  (`limite_de_uso?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:1127`
+  (`motivo_da_parada`), `apps/engine/lib/engine/dev/dev_agent_server.ex:997`
+  (`bloquear_passageira`), `apps/engine/lib/engine/dev/agent_io.ex:293`
+  (`pausar_por_rede`)
+- **Test:** `apps/engine/test/engine/dev/dev_agent_server_test.exs` ("429 do
+  provider: o motivo diz limite de uso do modelo, não rede"; failure: "falha de
+  rede continua com o texto de rede, não de limite")
+- **Origin:** AT-594 (TP-01 20th, 10/19: the 429 of `laguna-s-2.1:free` blocked
+  the tasks as "falha passageira de rede", while the diagnosis said usage limit)
+### RN-904 — The output-ceiling cut is not repeated with the full catalog {#rn-904}
+
+- **Rule:** when Jev restricts the menu and the model answers WITHOUT a tool,
+  the step is repeated ONCE with the full catalog (RN-625) — except when the
+  response was CUT by the output ceiling (`truncated`). The cut is not a menu
+  error: retrying with the full catalog would only enlarge the prompt and spend
+  another output ceiling. It applies to both facades (`llm_turn` and
+  `llm_turn_stream`, the latter only without text already delivered). The
+  RN-780 retry in `ToolLoop` handles the cut and does not change.
+- **Where:** `apps/engine/lib/engine/harness/roteamento_de_ferramenta.ex:126` (`repetir_com_catalogo_inteiro?`)
+- **Test:** `apps/engine/test/engine/harness/roteamento_de_ferramenta_test.exs:274`
+  (an empty cut response is not repeated, in both paths; without a cut it is)
+- **Origin:** AT-578 (EP-026, survey of 10/21): the PO's first turn in the 18th
+  round spent two 8192-token output rounds.
+### RN-900 — `write_file` refuses to rewrite the README and drop the Infra's usage section {#rn-900}
+
+- **Rule:** `write_file` replaces the whole file. When the `path` is a README
+  (`README*`), the current file has the `## Rodar na sua máquina` section and
+  the new content does not, the tool refuses with a named error and writes
+  nothing. Changing a fragment requires rewriting the full README, keeping the
+  section. The title is one constant (`titulo_secao_de_uso/0`), also used by the
+  Infra and dev prompts, so the refusal and the instruction do not diverge. It
+  is not a gate: the refusal belongs to the tool itself and does not cover
+  writes by `terminal` (`cat >`, `sed -i`).
+- **Where:** `apps/engine/lib/engine/harness/tools/write_file.ex:62`
+  (`recusa_de_secao_perdida`)
+- **Test:** `apps/engine/test/engine/harness/tools/write_file_test.exs:41`
+  (a rewrite without the section is refused and the file stays intact); the
+  happy path is covered by the first two tests in the same file
+- **Origin:** AT-571 (TP-01 18th run of 10/19: the dev agent rewrote the README
+  while fixing a QA finding and the usage section the Infra had written was
+  lost; no gate noticed)
