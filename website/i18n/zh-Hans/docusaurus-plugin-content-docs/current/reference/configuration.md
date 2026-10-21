@@ -403,7 +403,7 @@ URL 属于**环境**：同一个镜像需要与 staging 的 api 和生产的 api
 | `OLLAMA_KEEP_ALIVE` | 模型常驻的时长 |
 | `DEMO_QA_MODEL` | 把 QA gate 指向一个 API 模型——按 agent 的 binding 优先于项目的 |
 
-> **`ollama` 镜像的版本不是变量——是 digest。** 与 `docker/` 中所有第三方镜像一样，它被固定为 `ollama/ollama:0.40.3@sha256:…`（[ADR 0159](../adr/0159-imagem-de-terceiro-por-digest.md)，自 [ADR 0178](../adr/0178-tag-inline-na-imagem-de-terceiro.md) 起 tag 内联），`ci.yml`/`golden-set-rag.yml` 使用同一个 digest，因为 RAG golden-set 的下限按模型而不是按环境区分（[ADR 0138](../adr/0138-golden-set-do-rag-em-ci-agendado.md)）。因此，两次 `docker compose pull` 之间推理行为发生变化不再是可能的原因：除非有人编辑 digest，否则什么都不会变。升级版本是[一个 runbook 流程](../runbook.md#subindo-imagem-de-terceiro)，`scripts/ci/imagens-pinadas.ts` 会拒绝只覆盖了 tag 出现位置之一部分的升级。
+> **`ollama` 镜像的版本不是变量——是 digest。** 与 `docker/` 中所有第三方镜像一样，它被固定为 `ollama/ollama:0.40.6@sha256:…`（[ADR 0159](../adr/0159-imagem-de-terceiro-por-digest.md)，自 [ADR 0178](../adr/0178-tag-inline-na-imagem-de-terceiro.md) 起 tag 内联），`ci.yml`/`golden-set-rag.yml` 使用同一个 digest，因为 RAG golden-set 的下限按模型而不是按环境区分（[ADR 0138](../adr/0138-golden-set-do-rag-em-ci-agendado.md)）。因此，两次 `docker compose pull` 之间推理行为发生变化不再是可能的原因：除非有人编辑 digest，否则什么都不会变。升级版本是[一个 runbook 流程](../runbook.md#subindo-imagem-de-terceiro)，`scripts/ci/imagens-pinadas.ts` 会拒绝只覆盖了 tag 出现位置之一部分的升级。
 
 ---
 

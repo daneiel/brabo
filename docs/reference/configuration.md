@@ -582,7 +582,7 @@ A tabela de sintomas está no
 
 > **A versão da imagem `ollama` não é variável — é digest.** Como toda imagem
 > de terceiro em `docker/`, ela é pinada como
-> `ollama/ollama:0.40.3@sha256:…`
+> `ollama/ollama:0.40.6@sha256:…`
 > ([ADR 0159](../adr/0159-imagem-de-terceiro-por-digest.md), tag inline desde o
 > [ADR 0178](../adr/0178-tag-inline-na-imagem-de-terceiro.md)), e o mesmo
 > digest é usado por `ci.yml`/`golden-set-rag.yml`, porque o piso do

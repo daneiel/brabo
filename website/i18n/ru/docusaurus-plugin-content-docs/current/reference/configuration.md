@@ -582,7 +582,7 @@ CronJob Kubernetes. Пять переменных `BACKUP_S3_*` перестал
 
 > **Версия образа `ollama` — не переменная, а digest.** Как и любой сторонний
 > образ в `docker/`, он закреплён как
-> `ollama/ollama:0.40.3@sha256:…`
+> `ollama/ollama:0.40.6@sha256:…`
 > ([ADR 0159](../adr/0159-imagem-de-terceiro-por-digest.md), inline-тег с
 > [ADR 0178](../adr/0178-tag-inline-na-imagem-de-terceiro.md)), и тот же
 > digest используется `ci.yml`/`golden-set-rag.yml`, потому что нижняя граница
