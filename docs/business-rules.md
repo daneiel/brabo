@@ -24837,6 +24837,20 @@ sem dizer qual.
   passado e o link nasceu expirado, 410; o RF da história só dizia que a
   expiração é opcional), decisão do dono de 15/10
 
+### RN-894 — Épico com o mesmo título de outro do projeto é recusado {#rn-894}
+
+- **Regra:** `create_epic` recusa (400) o épico cujo título, normalizado,
+  é igual ao de outro épico do MESMO projeto, e a recusa devolve ao modelo o
+  id do existente: "Já existe o épico «título» (id …) neste projeto — use
+  este id em epic_id". A régua é a MESMA da história (achado R,
+  `tituloDuplicado`), sem segunda cópia. A duplicata SEMÂNTICA
+  ([RN-681](business-rules/custo.md#rn-681)) não vale para épico: só título
+  igual. Nada é criado nem gravado no event log quando recusa.
+- **Onde:** `apps/api/src/application/use-cases/backlog/create-epic.use-case.ts:25` (`tituloDuplicado`)
+- **Teste:** `apps/api/test/application/use-cases/backlog/create-epic.use-case.spec.ts:41`
+  (cria sem título igual) e `:49` (recusa o título igual com o id do existente)
+- **Origem:** AT-581
+
 ### RN-895 — A recusa de argumento diz o que chegou e o formato esperado {#rn-895}
 
 - **Regra:** revisa a [RN-719](#rn-719) e a [RN-725](#rn-725). Campo declarado `array`/`object` que chega como texto fora de JSON, ou como número/booleano/tipo trocado, é recusado antes da ferramenta com "o campo X chegou como <tipo>; envie <formato>", com exemplo (`["item 1","item 2"]`, `{"chave":"valor"}`), nunca com o valor. A frase do `emit_plano_de_teste` passou a pôr as chaves entre crases, e por isso a recusa leva as chaves recebidas.
@@ -24857,6 +24871,7 @@ sem dizer qual.
 - **Onde:** `apps/engine/lib/engine/gates/origem_do_erro.ex:10` (`de_llm`)
 - **Teste:** `apps/engine/test/engine/gates/origem_do_erro_test.exs:7`
 - **Origem:** AT-586 (BaseTen 502 gravado como `infra`)
+
 ### RN-898 — Resposta cortada pelo teto, sem texto algum, fecha o turno dita {#rn-898}
 
 - **Regra:** o turno de agente conversacional cuja última resposta de LLM foi
@@ -24886,6 +24901,50 @@ sem dizer qual.
 - **Teste:** `apps/engine/test/engine/agents/po_server_test.exs:194` e
   `apps/engine/test/engine/agents/texto_do_turno_test.exs:96`
 - **Origem:** AT-572 (TP-01 18ª, achado 4)
+
+### RN-900 — `write_file` recusa reescrever o README e apagar a seção de uso da Infra {#rn-900}
+
+- **Regra:** `write_file` substitui o arquivo inteiro. Quando o `path` é um
+  README (`README*`), o arquivo atual tem a seção `## Rodar na sua máquina` e o
+  conteúdo novo não a traz, a ferramenta recusa com erro nomeado e não escreve
+  nada. Trocar um trecho exige reescrever o README completo, com a seção. O
+  título é uma constante só (`titulo_secao_de_uso/0`), usada também pelos
+  prompts da Infra e do dev, para que a recusa e a instrução não divirjam. Não
+  é gate: a recusa é da própria ferramenta, e não cobre escrita pelo `terminal`
+  (`cat >`, `sed -i`).
+- **Onde:** `apps/engine/lib/engine/harness/tools/write_file.ex:62`
+  (`recusa_de_secao_perdida`)
+- **Teste:** `apps/engine/test/engine/harness/tools/write_file_test.exs:41`
+  (a reescrita sem a seção é recusada e o arquivo fica intacto); o caminho
+  feliz (README com a seção reescrito com a seção, e arquivo que não é README)
+  está nas primeiras duas provas do mesmo arquivo
+- **Origem:** AT-571 (TP-01 18ª de 19/10: o dev agent reescreveu o README ao
+  corrigir um parecer do QA e a seção de uso que a Infra escrevera sumiu; nenhum
+  gate notou)
+
+### RN-901 — A oferta de modo automático do chat inclui os dev agents do plano aprovado {#rn-901}
+
+- **Regra:** estende a RN-889. `roster.activatedAgents` do resumo de projetos
+  NUNCA traz dev agent: o dev não grava `agent.activated`, só `dev.started`. A
+  oferta em lote do chat (RN-883/889) lia só essa lista e não listava o
+  `dev-<modulo>` da execução ativa, que o usuário precisava ligar pela aba
+  Executores. A execução do projeto (`execucaoDoRoster`) passa a somar, só com
+  `roster.executionActivated`, os `dev-<modulo>` dos `roster.moduleNames` (o
+  `module_map` vigente), pela MESMA `devAgentId` que a aba Executores usa
+  (RN-661, `rosterFromFacts`), sem derivação nova. Sem execução ativa, nenhum
+  dev entra. Lacuna declarada: a lista sai do `module_map` VIGENTE; se o plano
+  aprovado usou um subconjunto dos módulos, a oferta herda essa divergência.
+  Nenhum teto se move e nada é gravado sem o clique.
+- **Onde:** `apps/web/src/lib/session-destinatario.ts:194` (`execucaoDoRoster`),
+  chamado por `useExecucaoNoProjeto` (`apps/web/src/lib/session-destinatario.ts:175`)
+- **Teste:** `apps/web/src/lib/session-destinatario.test.ts` ("CAMINHO FELIZ:
+  execução ativa soma o dev-<modulo> do module_map aos ativados"; falha: "sem
+  execução ativa, o módulo do plano NÃO vira dev agent"), e
+  `apps/web/src/components/ModoAutomaticoNoChat.test.tsx` (fixture derivada do
+  roster real, "caminho feliz")
+- **Origem:** AT-573 (TP-01 18ª, 19/10: a 1ª tarefa parou em `dev.awaiting_approval`
+  porque o dev não estava no modo automático)
+
 ### RN-902 — Recriar o container congela a decisão de imagem vigente, e a imagem desatualizada é avisada {#rn-902}
 
 - **Regra:** a transição `removed → provisioning` e `failed → provisioning`
@@ -24917,41 +24976,7 @@ sem dizer qual.
   `apps/engine/test/engine/harness/tools/choose_project_image_test.exs`
 - **Origem:** AT-595 (TP-01 20ª: a decisão v3 `egress` não alcançou o container
   v2 `none` e a coluna Imagem seguiu em v2)
-### RN-901 — A oferta de modo automático do chat inclui os dev agents do plano aprovado {#rn-901}
 
-- **Regra:** estende a RN-889. `roster.activatedAgents` do resumo de projetos
-  NUNCA traz dev agent: o dev não grava `agent.activated`, só `dev.started`. A
-  oferta em lote do chat (RN-883/889) lia só essa lista e não listava o
-  `dev-<modulo>` da execução ativa, que o usuário precisava ligar pela aba
-  Executores. A execução do projeto (`execucaoDoRoster`) passa a somar, só com
-  `roster.executionActivated`, os `dev-<modulo>` dos `roster.moduleNames` (o
-  `module_map` vigente), pela MESMA `devAgentId` que a aba Executores usa
-  (RN-661, `rosterFromFacts`), sem derivação nova. Sem execução ativa, nenhum
-  dev entra. Lacuna declarada: a lista sai do `module_map` VIGENTE; se o plano
-  aprovado usou um subconjunto dos módulos, a oferta herda essa divergência.
-  Nenhum teto se move e nada é gravado sem o clique.
-- **Onde:** `apps/web/src/lib/session-destinatario.ts:194` (`execucaoDoRoster`),
-  chamado por `useExecucaoNoProjeto` (`apps/web/src/lib/session-destinatario.ts:175`)
-- **Teste:** `apps/web/src/lib/session-destinatario.test.ts` ("CAMINHO FELIZ:
-  execução ativa soma o dev-<modulo> do module_map aos ativados"; falha: "sem
-  execução ativa, o módulo do plano NÃO vira dev agent"), e
-  `apps/web/src/components/ModoAutomaticoNoChat.test.tsx` (fixture derivada do
-  roster real, "caminho feliz")
-- **Origem:** AT-573 (TP-01 18ª, 19/10: a 1ª tarefa parou em `dev.awaiting_approval`
-  porque o dev não estava no modo automático)
-### RN-894 — Épico com o mesmo título de outro do projeto é recusado {#rn-894}
-
-- **Regra:** `create_epic` recusa (400) o épico cujo título, normalizado,
-  é igual ao de outro épico do MESMO projeto, e a recusa devolve ao modelo o
-  id do existente: "Já existe o épico «título» (id …) neste projeto — use
-  este id em epic_id". A régua é a MESMA da história (achado R,
-  `tituloDuplicado`), sem segunda cópia. A duplicata SEMÂNTICA
-  ([RN-681](business-rules/custo.md#rn-681)) não vale para épico: só título
-  igual. Nada é criado nem gravado no event log quando recusa.
-- **Onde:** `apps/api/src/application/use-cases/backlog/create-epic.use-case.ts:25` (`tituloDuplicado`)
-- **Teste:** `apps/api/test/application/use-cases/backlog/create-epic.use-case.spec.ts:41`
-  (cria sem título igual) e `:49` (recusa o título igual com o id do existente)
-- **Origem:** AT-581
 ### RN-903 — O 429 do provider é limite de uso do modelo, não falha de rede {#rn-903}
 
 - **Regra:** a task que o dev agent bloqueia porque o modelo respondeu 429
@@ -24973,6 +24998,7 @@ sem dizer qual.
 - **Origem:** AT-594 (TP-01 20ª, 19/10: o 429 do `laguna-s-2.1:free` bloqueou
   as tarefas com "falha passageira de rede", e o diagnóstico dizia limite de
   uso)
+
 ### RN-904 — O corte do teto de saída não repete a chamada com o catálogo inteiro {#rn-904}
 
 - **Regra:** quando o Jev restringe o menu e o modelo responde SEM ferramenta,

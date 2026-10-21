@@ -25540,6 +25540,20 @@ Kickoff PO говорит все три вещи.
   и ссылка родилась просроченной, 410; RF истории говорил только, что срок
   действия необязателен), решение владельца от 15.10
 
+### RN-894 — Эпик с тем же заголовком, что и другой в проекте, отклоняется {#rn-894}
+
+- **Правило:** `create_epic` отклоняет (400) эпик, нормализованный заголовок
+  которого совпадает с заголовком другого эпика ТОГО ЖЕ проекта, и отказ
+  возвращает модели id существующего: "Já existe o épico «título» (id …) neste
+  projeto — use este id em epic_id". Правило то же, что и для истории (находка
+  R, `tituloDuplicado`), без второй копии. СЕМАНТИЧЕСКИЙ дубликат (RN-681) к
+  эпику не применяется: только одинаковый заголовок. При отказе ничего не
+  создаётся и не пишется в журнал событий.
+- **Где:** `apps/api/src/application/use-cases/backlog/create-epic.use-case.ts:25` (`tituloDuplicado`)
+- **Тест:** `apps/api/test/application/use-cases/backlog/create-epic.use-case.spec.ts:41`
+  (создаёт без совпадения) и `:49` (отклоняет совпадение с id существующего)
+- **Происхождение:** AT-581
+
 ### RN-895 — Отказ по аргументу говорит, что пришло и какой формат ожидается {#rn-895}
 
 - **Правило:** пересматривает [RN-719](#rn-719) и [RN-725](#rn-725). Поле `array`/`object`, пришедшее как текст не в JSON либо как число/булево/другой тип, отклоняется до инструмента фразой «поле X пришло как <тип>; отправьте <формат>» с примером (`["item 1","item 2"]`, `{"chave":"valor"}`), но никогда не со значением. Фраза `emit_plano_de_teste` теперь берёт ключи в обратные кавычки, поэтому отказ несёт полученные ключи.
@@ -25560,6 +25574,7 @@ Kickoff PO говорит все три вещи.
 - **Где:** `apps/engine/lib/engine/gates/origem_do_erro.ex:10` (`de_llm`)
 - **Тест:** `apps/engine/test/engine/gates/origem_do_erro_test.exs:7`
 - **Происхождение:** AT-586 (BaseTen 502 записан как `infra`)
+
 ### RN-898 — A response cut by the cap with no text closes the turn, stated {#rn-898}
 
 - **Rule:** a conversational agent turn whose last LLM response was cut by the output cap ([RN-737](#rn-737)) and wrote no text in any round does NOT close silently: the line "Response cut off by the length limit." becomes the closing `agent.response` with `modelName`, and the bubble shows "Continue where it left off" ([RN-749](#rn-749)). It covers the seven conversational agents.
@@ -25573,27 +25588,26 @@ Kickoff PO говорит все три вещи.
 - **Where:** `apps/engine/lib/engine/agents/falha_de_turno.ex:63` (`origem`), `apps/engine/lib/engine/agents/po_server.ex:303` (`gravar_texto_do_turno`)
 - **Test:** `apps/engine/test/engine/agents/po_server_test.exs:194` and `apps/engine/test/engine/agents/texto_do_turno_test.exs:96`
 - **Origin:** AT-572 (TP-01 18th, finding 4)
-### RN-902 — Пересоздание контейнера замораживает текущее решение об образе, а устаревший образ помечается {#rn-902}
 
-- **Правило:** переходы `removed → provisioning` и `failed → provisioning`
-  ЗАНОВО читают текущее решение об образе и перезаписывают `imageVersion` и
-  `resources` строки `project_containers`. Без текущего решения — 409
-  ([RN-105](business-rules/autenticacao.md#rn-105)). `stopped → running` версию НЕ меняет. Страница
-  `/containers` получает `decisaoVigente` и `imagemDesatualizada`; расхождение
-  сравнивает СОДЕРЖИМОЕ (образ, сеть, ресурсы), а не номер версии, и строка
-  текстом говорит «Остановить → Удалить → Запустить снова». Результат
-  `choose_project_image` содержит `containerDePe` и предупреждает, что решение
-  действует только после пересоздания контейнера. Пересоздания одним действием
-  нет; потолки одобрения не меняются ([RN-495](#rn-495)).
-- **Где:** `apps/api/src/application/use-cases/containers/registrar-transicao-de-container.use-case.ts:131`
-  (`recongelar`), `apps/api/src/domain/containers/project-container.ts:342`
-  (`containerDivergeDaDecisao`),
-  `apps/engine/lib/engine/harness/tools/choose_project_image.ex:99`
-  (`mensagem_de_fixada`)
-- **Тест:** `apps/api/test/application/use-cases/containers/ciclo-de-vida-do-container.use-case.spec.ts`;
-  `apps/api/test/domain/containers/project-container.spec.ts`;
-  `apps/web/src/routes/ContainersPage.test.tsx`
-- **Источник:** AT-595
+### RN-900 — `write_file` не перезаписывает README с потерей секции использования Infra {#rn-900}
+
+- **Правило:** `write_file` заменяет файл целиком. Если `path` — README
+  (`README*`), в текущем файле есть секция `## Rodar na sua máquina`, а в новом
+  содержимом её нет, инструмент отказывает с именованной ошибкой и ничего не
+  пишет. Чтобы изменить фрагмент, нужно переписать README целиком, сохранив
+  секцию. Заголовок — одна константа (`titulo_secao_de_uso/0`), которую также
+  используют промпты Infra и dev, чтобы отказ и инструкция не расходились. Это не
+  gate: отказ принадлежит самому инструменту и не покрывает запись через
+  `terminal` (`cat >`, `sed -i`).
+- **Где:** `apps/engine/lib/engine/harness/tools/write_file.ex:62`
+  (`recusa_de_secao_perdida`)
+- **Тест:** `apps/engine/test/engine/harness/tools/write_file_test.exs:41`
+  (перезапись без секции отклоняется, файл остаётся неизменным); счастливый путь
+  покрыт первыми двумя тестами того же файла
+- **Источник:** AT-571 (TP-01 от 19.10, 18-й прогон: dev-агент переписал README,
+  исправляя замечание QA, и секция использования, которую написала Infra, пропала;
+  ни один gate этого не заметил)
+
 ### RN-901 — Пакетное предложение автоматического режима в чате включает dev-агентов утверждённого плана {#rn-901}
 
 - **Правило:** дополняет RN-889. `roster.activatedAgents` сводки проектов
@@ -25617,19 +25631,29 @@ Kickoff PO говорит все три вещи.
   сводки, «caminho feliz»)
 - **Происхождение:** AT-573 (TP-01 18-й, 19/10: первая задача остановилась в
   `dev.awaiting_approval`, потому что dev не был в автоматическом режиме)
-### RN-894 — Эпик с тем же заголовком, что и другой в проекте, отклоняется {#rn-894}
 
-- **Правило:** `create_epic` отклоняет (400) эпик, нормализованный заголовок
-  которого совпадает с заголовком другого эпика ТОГО ЖЕ проекта, и отказ
-  возвращает модели id существующего: "Já existe o épico «título» (id …) neste
-  projeto — use este id em epic_id". Правило то же, что и для истории (находка
-  R, `tituloDuplicado`), без второй копии. СЕМАНТИЧЕСКИЙ дубликат (RN-681) к
-  эпику не применяется: только одинаковый заголовок. При отказе ничего не
-  создаётся и не пишется в журнал событий.
-- **Где:** `apps/api/src/application/use-cases/backlog/create-epic.use-case.ts:25` (`tituloDuplicado`)
-- **Тест:** `apps/api/test/application/use-cases/backlog/create-epic.use-case.spec.ts:41`
-  (создаёт без совпадения) и `:49` (отклоняет совпадение с id существующего)
-- **Происхождение:** AT-581
+### RN-902 — Пересоздание контейнера замораживает текущее решение об образе, а устаревший образ помечается {#rn-902}
+
+- **Правило:** переходы `removed → provisioning` и `failed → provisioning`
+  ЗАНОВО читают текущее решение об образе и перезаписывают `imageVersion` и
+  `resources` строки `project_containers`. Без текущего решения — 409
+  ([RN-105](business-rules/autenticacao.md#rn-105)). `stopped → running` версию НЕ меняет. Страница
+  `/containers` получает `decisaoVigente` и `imagemDesatualizada`; расхождение
+  сравнивает СОДЕРЖИМОЕ (образ, сеть, ресурсы), а не номер версии, и строка
+  текстом говорит «Остановить → Удалить → Запустить снова». Результат
+  `choose_project_image` содержит `containerDePe` и предупреждает, что решение
+  действует только после пересоздания контейнера. Пересоздания одним действием
+  нет; потолки одобрения не меняются ([RN-495](#rn-495)).
+- **Где:** `apps/api/src/application/use-cases/containers/registrar-transicao-de-container.use-case.ts:131`
+  (`recongelar`), `apps/api/src/domain/containers/project-container.ts:342`
+  (`containerDivergeDaDecisao`),
+  `apps/engine/lib/engine/harness/tools/choose_project_image.ex:99`
+  (`mensagem_de_fixada`)
+- **Тест:** `apps/api/test/application/use-cases/containers/ciclo-de-vida-do-container.use-case.spec.ts`;
+  `apps/api/test/domain/containers/project-container.spec.ts`;
+  `apps/web/src/routes/ContainersPage.test.tsx`
+- **Источник:** AT-595
+
 ### RN-903 — 429 провайдера — это лимит использования модели, а не сбой сети {#rn-903}
 
 - **Правило:** задача, которую dev-агент блокирует из-за ответа модели 429
@@ -25649,6 +25673,7 @@ Kickoff PO говорит все три вещи.
   rede continua com o texto de rede, não de limite»)
 - **Источник:** AT-594 (TP-01 20-й, 19.10: 429 у `laguna-s-2.1:free` блокировал
   задачи как «falha passageira de rede», а диагноз говорил о лимите использования)
+
 ### RN-904 — Ответ, обрезанный лимитом вывода, не повторяется с полным каталогом {#rn-904}
 
 - **Правило:** если Jev ограничивает меню и модель отвечает БЕЗ инструмента, шаг повторяется ОДИН раз с полным каталогом (RN-625), кроме случая, когда ответ обрезан лимитом вывода (`truncated`). Обрезка не является ошибкой меню: повтор с полным каталогом лишь увеличит промпт и потратит ещё один лимит вывода. Действует в обоих входах (`llm_turn` и `llm_turn_stream`, последний — только без уже доставленного текста). Обрезку обрабатывает повтор RN-780 в `ToolLoop`, он не меняется.
