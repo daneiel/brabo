@@ -390,6 +390,16 @@ rules:
     severity: warn
     note: "Recusa local de tool (RN-566, RN-577) mudou? A RN diz arquivo:linha e o teste; o predicado tem de continuar o MESMO do caso de uso de execução na api."
 
+  # RN-900 (AT-571) — a recusa de reescrever o README sem a seção de uso da
+  # Infra mora na própria write_file; o título é a constante que a Infra e o dev
+  # também usam.
+  - id: secao-de-uso-do-readme
+    watch:
+      - "apps/engine/lib/engine/harness/tools/write_file.ex"
+    docs: ["docs/business-rules.md"]
+    severity: warn
+    note: "Mudou a recusa de write_file sobre README ou o título da seção? A RN-900 diz arquivo:linha e o teste."
+
   # O registro de gates é índice do que barra o trabalho. Gate novo, ou
   # evidência que mudou de lugar, exige a linha no registro e a RN — senão o
   # arquivo vira uma lista que descreve um produto que não existe mais.
