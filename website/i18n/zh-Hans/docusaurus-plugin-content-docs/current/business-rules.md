@@ -12250,6 +12250,12 @@ PO 的 kickoff 说明这三件事。
 - **测试：** `apps/engine/test/engine/agents/po_server_test.exs:438`（kickoff 指令带有边界义务）和 `:460`（没有事件日志时，kickoff 仍带有它）
 - **来源：** AT-541（10/14 的 TP-01：交付物接受了过去的 `expiresAt`，链接一创建就已过期，410；故事的 RF 只说过期时间是可选的），所有者 10/15 的决定
 
+### RN-903 — 提供方的 429 是模型的使用限额，而非网络故障 {#rn-903}
+
+- **规则：** dev agent 因模型返回 429（代码 `rate_limit`，或文本含 `(429)` / "limite de uso"）而阻塞的任务，其原因写作"limite de uso do modelo atingido (429)"，自动重试会说明若再次出现，应更换 dev agent 的模型。绝不写"falha passageira de rede"（短暂网络故障）。来源仍为 `infra`，RN-864 的重试不变（最多 3 次，分别在 1、3、10 分钟后；暂停 60 秒，`dev.idle` 将其称为"depois de limite de uso do modelo"）。网络故障保留原有文本。
+- **位置：** `apps/engine/lib/engine/dev/dev_agent_server.ex:1136`（`limite_de_uso?`），`apps/engine/lib/engine/dev/dev_agent_server.ex:1127`（`motivo_da_parada`），`apps/engine/lib/engine/dev/dev_agent_server.ex:997`（`bloquear_passageira`），`apps/engine/lib/engine/dev/agent_io.ex:293`（`pausar_por_rede`）
+- **测试：** `apps/engine/test/engine/dev/dev_agent_server_test.exs`（"429 do provider: o motivo diz limite de uso do modelo, não rede"；失败情形："falha de rede continua com o texto de rede, não de limite"）
+- **来源：** AT-594（TP-01 第 20 次，10/19：`laguna-s-2.1:free` 的 429 将任务阻塞为"falha passageira de rede"，而诊断却写的是使用限额）
 ### RN-904 — 输出上限截断的响应不以完整目录重试 {#rn-904}
 
 - **规则：** 当 Jev 限制菜单且模型未调用工具作答时，按 RN-625 以完整目录重试一次——但响应被输出上限截断（`truncated`）时除外。截断不是菜单错误：以完整目录重试只会加大提示并再次消耗输出上限。两个入口（`llm_turn` 与 `llm_turn_stream`，后者仅限尚未交付文本时）均适用。处理截断的是 `ToolLoop` 中的 RN-780 重试，保持不变。

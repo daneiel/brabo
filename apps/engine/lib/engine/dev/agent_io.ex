@@ -290,7 +290,7 @@ defmodule Engine.Dev.AgentIo do
   pegar a próxima com a rede fora só bloquearia a fila inteira, que foi o
   medido no TP-01. Quem retoma é `:fim_da_pausa_de_rede`.
   """
-  def pausar_por_rede(state) do
+  def pausar_por_rede(state, causa \\ "falha passageira de rede") do
     state =
       state
       |> levar_branch_para_a_proxima()
@@ -306,7 +306,7 @@ defmodule Engine.Dev.AgentIo do
 
     emit(state, "dev.idle", %{
       agentId: state.agent_id,
-      reason: "pausa de #{div(pausa_de_rede_ms(), 1000)} s depois de falha passageira de rede"
+      reason: "pausa de #{div(pausa_de_rede_ms(), 1000)} s depois de #{causa}"
     })
 
     Process.send_after(self(), :fim_da_pausa_de_rede, pausa_de_rede_ms())

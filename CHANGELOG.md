@@ -6,6 +6,10 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- O bloqueio de task do dev agent por 429 do provider diz "limite de uso do
+  modelo atingido (429)" e manda trocar o modelo, em vez de "falha passageira
+  de rede" (AT-594, RN-903). A origem `infra` e a retomada automática (RN-864)
+  não mudam.
 - Resposta vazia cortada pelo teto de saída não é mais repetida com o catálogo
   inteiro (AT-578, RN-904): o corte não é erro de menu, e a volta só gastava
   outro teto de saída. A retentativa da RN-780 no `ToolLoop` segue igual.
