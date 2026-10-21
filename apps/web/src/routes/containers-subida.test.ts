@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   acaoDeSubidaDoModo,
+  avisoDeImagemDesatualizada,
   conversaoSemBroker,
   semBrokerParaCicloDeVida,
   decidirSubida,
@@ -38,6 +39,8 @@ function item(overrides: Partial<ContainerOverviewItem> = {}): ContainerOverview
     naoVerificado: 'sem_container_registrado',
     acaoPendente: null,
     brokerConfigurado: true,
+    decisaoVigente: null,
+    imagemDesatualizada: false,
     ...overrides,
   };
 }
@@ -307,5 +310,31 @@ describe('sem broker: parar/remover e conversão (AT-105, RN-591)', () => {
     expect(conversaoSemBroker({ ...base, brokerConfigurado: undefined })).toBe(false);
     expect(conversaoSemBroker({ atual: 'container', alvo: 'runner', brokerConfigurado: false })).toBe(false);
     expect(conversaoSemBroker({ atual: 'container', alvo: 'container', brokerConfigurado: false })).toBe(false);
+  });
+});
+
+describe('avisoDeImagemDesatualizada (RN-902)', () => {
+  it('desatualizada: diz de qual versão para qual, com imagem e rede da vigente', () => {
+    expect(
+      avisoDeImagemDesatualizada(
+        item({
+          registrado: registro({ imageVersion: 2 }),
+          imagemDesatualizada: true,
+          decisaoVigente: { version: 3, image: 'node:22', network: 'egress' },
+        }),
+      ),
+    ).toEqual({ de: 2, para: 3, imagem: 'node:22', rede: 'egress' });
+  });
+
+  it('sem divergência (ou sem container/decisão): nenhum aviso', () => {
+    const vigente = { version: 3, image: 'node:22', network: 'none' as const };
+    expect(
+      avisoDeImagemDesatualizada(
+        item({ registrado: registro(), imagemDesatualizada: false, decisaoVigente: vigente }),
+      ),
+    ).toBeNull();
+    expect(
+      avisoDeImagemDesatualizada(item({ imagemDesatualizada: true, decisaoVigente: vigente })),
+    ).toBeNull();
   });
 });

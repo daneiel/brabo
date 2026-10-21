@@ -5795,6 +5795,20 @@ export interface components {
             /** @description The pending `container_start`/`container_stop`/`container_remove`/`container_start_via_runner` action for this project, if any — in ANY of its sessions. The page renders the inline `ApprovalCard` for it instead of the action button, same pattern as the PRs tab. */
             acaoPendente: components["schemas"]["ProposedActionResponseDto"] | null;
             /**
+             * @description The current (highest version) image decision, or null.
+             * @example {
+             *       "version": 3,
+             *       "image": "node:22",
+             *       "network": "egress"
+             *     }
+             */
+            decisaoVigente: Record<string, never> | null;
+            /**
+             * @description The registered container (running/stopped/provisioning) differs in CONTENT (image, network, resources) from the current decision; only recreating it (stop, remove, start) applies the new one.
+             * @example false
+             */
+            imagemDesatualizada: boolean;
+            /**
              * @description Whether THIS INSTALLATION has a container broker configured (`BROKER_URL` set, ADR 0130) — the same value on every row, because it is installation configuration and not a property of the project. `container` and `mounted` projects only start a container through the broker (ADR 0144), so with `false` the page refuses the start button for them BEFORE the click and says why (ADR 0161, RN-574); `runner` projects are unaffected. It says the variable exists, never that the broker answers — that is what `naoObservado` reports.
              * @example false
              */
@@ -7006,6 +7020,14 @@ export interface components {
             decisao: components["schemas"]["DecisaoDeImagemResponseDto"];
             /** @example 1 */
             version: number;
+            /**
+             * @description The `running`/`stopped` container registered for the project, or null. The new decision does NOT change it: it only applies once the container is recreated (stop, remove, start).
+             * @example {
+             *       "status": "running",
+             *       "imageVersion": 2
+             *     }
+             */
+            containerDePe: Record<string, never> | null;
         };
         ImagemParaOBrokerResponseDto: {
             /**

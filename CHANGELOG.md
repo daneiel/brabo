@@ -6,6 +6,12 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- Mudar a imagem do projeto avisa que o container de pé ficou desatualizado
+  (AT-595, RN-902): Remover → Subir de novo passa a regravar a versão e os
+  recursos da decisão vigente (a coluna Imagem deixa de mentir), `/containers`
+  mostra o aviso com os passos Parar → Remover → Subir de novo quando o
+  CONTEÚDO da decisão difere do container, e o resultado de
+  `choose_project_image` diz que a decisão só vale ao recriá-lo.
 - A oferta de modo automático do chat da Sessão inclui os dev agents da
   execução ativa (AT-573, RN-901): antes, a lista vinha só de
   `activatedAgents`, que nunca tem `dev-*`, e "Ligar para sugeridos" deixava
