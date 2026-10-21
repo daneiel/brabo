@@ -25002,3 +25002,24 @@ without saying which.
   `apps/web/src/routes/session-timeline-montagem.falha-de-turno.test.tsx:108`
   (bubble, button to the same agent; no button for `dev-*` and inactive session)
 - **Origin:** AT-590 (EP-031).
+
+### RN-906 — The API refuses network `none` when a module's stack downloads dependencies {#rn-906}
+
+- **Rule:** when deciding the project image, if the network is `none` and any
+  module of the current `module_map` has a `stack` that matches, as a whole
+  word, the closed list of ecosystems that download dependencies (node, npm,
+  pnpm, yarn, python, pip, elixir, mix, go, rust, cargo, ruby, java, maven,
+  gradle, php, dotnet...), the API answers 400 naming the module, the stack and
+  the term, and asks for `egress`. Nothing is written and the network is never
+  switched on its own: `egress` is the user's authorization. It applies to the
+  Architect (`choose_project_image`) and to the Infra election, which go through
+  the same use case (for Infra, `container_start` ends `failed` with the reason,
+  without calling the broker). With no `module_map`, or a stack that does not
+  match, only the RN-735 warning remains. No configurable exception. Revises
+  RN-735 (warning → refusal in that case).
+- **Where:** `apps/api/src/application/use-cases/containers/decidir-imagem-do-projeto.use-case.ts:80`
+  (`stackQueBaixaDependencias`)
+- **Test:** `apps/api/test/application/use-cases/containers/container-do-projeto.use-case.spec.ts`;
+  `apps/api/test/domain/containers/project-container.spec.ts`;
+  `apps/api/test/application/use-cases/actions/execute-container-start.use-case.spec.ts`
+- **Origin:** AT-593 (EP-031).
