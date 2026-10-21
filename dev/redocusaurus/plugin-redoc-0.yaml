@@ -12203,6 +12203,21 @@ components:
           type: object
           allOf:
             - $ref: '#/components/schemas/ProposedActionResponseDto'
+        decisaoVigente:
+          type: object
+          nullable: true
+          example:
+            version: 3
+            image: node:22
+            network: egress
+          description: The current (highest version) image decision, or null.
+        imagemDesatualizada:
+          type: boolean
+          example: false
+          description: >-
+            The registered container (running/stopped/provisioning) differs in
+            CONTENT (image, network, resources) from the current decision; only
+            recreating it (stop, remove, start) applies the new one.
         brokerConfigurado:
           type: boolean
           example: false
@@ -12228,6 +12243,8 @@ components:
         - detalheDaObservacao
         - naoVerificado
         - acaoPendente
+        - decisaoVigente
+        - imagemDesatualizada
         - brokerConfigurado
     ContainerSpecInternalResponseDto:
       type: object
@@ -14336,9 +14353,20 @@ components:
         version:
           type: number
           example: 1
+        containerDePe:
+          type: object
+          nullable: true
+          example:
+            status: running
+            imageVersion: 2
+          description: >-
+            The `running`/`stopped` container registered for the project, or
+            null. The new decision does NOT change it: it only applies once the
+            container is recreated (stop, remove, start).
       required:
         - decisao
         - version
+        - containerDePe
     ImagemParaOBrokerResponseDto:
       type: object
       properties:
