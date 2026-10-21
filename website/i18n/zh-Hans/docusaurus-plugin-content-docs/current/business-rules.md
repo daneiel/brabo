@@ -12250,6 +12250,18 @@ PO 的 kickoff 说明这三件事。
 - **测试：** `apps/engine/test/engine/agents/po_server_test.exs:438`（kickoff 指令带有边界义务）和 `:460`（没有事件日志时，kickoff 仍带有它）
 - **来源：** AT-541（10/14 的 TP-01：交付物接受了过去的 `expiresAt`，链接一创建就已过期，410；故事的 RF 只说过期时间是可选的），所有者 10/15 的决定
 
+### RN-894 — 与项目中另一史诗同名的史诗会被拒绝 {#rn-894}
+
+- **规则：** `create_epic` 拒绝（400）规范化标题与同一项目中另一史诗相同的史诗，
+  拒绝时把已有史诗的 id 返回给模型："Já existe o épico «título» (id …) neste
+  projeto — use este id em epic_id"。规则与用户故事相同（发现 R，
+  `tituloDuplicado`），没有第二份副本。语义重复（RN-681）不适用于史诗：只看标题相同。
+  拒绝时不创建任何内容，也不写入事件日志。
+- **位置：** `apps/api/src/application/use-cases/backlog/create-epic.use-case.ts:25` (`tituloDuplicado`)
+- **测试：** `apps/api/test/application/use-cases/backlog/create-epic.use-case.spec.ts:41`
+  （无同名时创建）和 `:49`（同名时拒绝并返回已有 id）
+- **来源：** AT-581
+
 ### RN-895 — 参数拒绝说明收到了什么以及期望的格式 {#rn-895}
 
 - **规则：** 修订 [RN-719](#rn-719) 和 [RN-725](#rn-725)。声明为 `array`/`object` 的字段若以非 JSON 文本、数字、布尔或错误类型到达，会在工具运行前被拒绝，信息为"字段 X 以 <类型> 到达；请发送 <格式>"，并附示例（`["item 1","item 2"]`、`{"chave":"valor"}`），绝不回显取值。`emit_plano_de_teste` 的句子现在用反引号包住键名，因此拒绝会带上收到的键。
@@ -12270,6 +12282,7 @@ PO 的 kickoff 说明这三件事。
 - **位置：** `apps/engine/lib/engine/gates/origem_do_erro.ex:10`（`de_llm`）
 - **测试：** `apps/engine/test/engine/gates/origem_do_erro_test.exs:7`
 - **来源：** AT-586（BaseTen 502 被记为 `infra`）
+
 ### RN-898 — A response cut by the cap with no text closes the turn, stated {#rn-898}
 
 - **Rule:** a conversational agent turn whose last LLM response was cut by the output cap ([RN-737](#rn-737)) and wrote no text in any round does NOT close silently: the line "Response cut off by the length limit." becomes the closing `agent.response` with `modelName`, and the bubble shows "Continue where it left off" ([RN-749](#rn-749)). It covers the seven conversational agents.
@@ -12283,44 +12296,38 @@ PO 的 kickoff 说明这三件事。
 - **Where:** `apps/engine/lib/engine/agents/falha_de_turno.ex:63` (`origem`), `apps/engine/lib/engine/agents/po_server.ex:303` (`gravar_texto_do_turno`)
 - **Test:** `apps/engine/test/engine/agents/po_server_test.exs:194` and `apps/engine/test/engine/agents/texto_do_turno_test.exs:96`
 - **Origin:** AT-572 (TP-01 18th, finding 4)
-### RN-902 — 重建容器会冻结当前的镜像决策，过期镜像会被提示 {#rn-902}
 
-- **规则：** `removed → provisioning` 和 `failed → provisioning` 转换会重新读取当前镜像决策，并重写 `project_containers` 行的 `imageVersion` 和 `resources`。没有当前决策时返回 409（[RN-105](business-rules/autenticacao.md#rn-105)）。`stopped → running` 不改变版本。`/containers` 页面新增 `decisaoVigente` 和 `imagemDesatualizada`；差异比较的是内容（镜像、网络、资源），而不是版本号，并以文字提示"停止 → 移除 → 再次启动"。`choose_project_image` 的结果带有 `containerDePe`，并提醒该决策只有在重建容器后才生效。不存在一步"重建"；审批上限不变（[RN-495](#rn-495)）。
-- **位置：** `apps/api/src/application/use-cases/containers/registrar-transicao-de-container.use-case.ts:131`（`recongelar`）、`apps/api/src/domain/containers/project-container.ts:342`（`containerDivergeDaDecisao`）、`apps/engine/lib/engine/harness/tools/choose_project_image.ex:99`（`mensagem_de_fixada`）
-- **测试：** `apps/api/test/application/use-cases/containers/ciclo-de-vida-do-container.use-case.spec.ts`；`apps/api/test/domain/containers/project-container.spec.ts`；`apps/web/src/routes/ContainersPage.test.tsx`
-- **来源：** AT-595
-### RN-901 — 聊天中的自动模式批量提议包含已批准计划的 dev 代理 {#rn-901}
-
-- **规则：** 扩展 RN-889。项目摘要的 `roster.activatedAgents` 从不包含 dev 代理：dev 不记录 `agent.activated`，只记录 `dev.started`。聊天的批量提议（RN-883/889）只读取该列表，不显示正在执行的 `dev-<模块>`，用户必须在执行者标签页中手动开启。项目执行（`execucaoDoRoster`）现在仅在 `roster.executionActivated` 为真时，把 `roster.moduleNames`（当前 `module_map`）的 `dev-<模块>` 加入列表，使用与执行者标签页相同的 `devAgentId`（RN-661，`rosterFromFacts`），不做新的推导。没有活动执行时不加入任何 dev。已声明的缺口：列表来自当前 `module_map`；若已批准计划只用了部分模块，提议会沿用这一差异。没有任何上限改变，未经点击不写入任何内容。
-- **位置：** `apps/web/src/lib/session-destinatario.ts:194`（`execucaoDoRoster`），由 `useExecucaoNoProjeto`（`apps/web/src/lib/session-destinatario.ts:175`）调用
-- **测试：** `apps/web/src/lib/session-destinatario.test.ts`（"CAMINHO FELIZ：执行活动时把 module_map 的 dev-<模块> 加入已激活项"；失败："无活动执行时，计划的模块不成为 dev 代理"），以及 `apps/web/src/components/ModoAutomaticoNoChat.test.tsx`（由真实 roster 推导的夹具，"caminho feliz"）
-- **来源：** AT-573（TP-01 第 18 轮，19/10：第一个任务因 dev 未处于自动模式而停在 `dev.awaiting_approval`）
-### RN-894 — 与项目中另一史诗同名的史诗会被拒绝 {#rn-894}
-
-- **规则：** `create_epic` 拒绝（400）规范化标题与同一项目中另一史诗相同的史诗，
-  拒绝时把已有史诗的 id 返回给模型："Já existe o épico «título» (id …) neste
-  projeto — use este id em epic_id"。规则与用户故事相同（发现 R，
-  `tituloDuplicado`），没有第二份副本。语义重复（RN-681）不适用于史诗：只看标题相同。
-  拒绝时不创建任何内容，也不写入事件日志。
-- **位置：** `apps/api/src/application/use-cases/backlog/create-epic.use-case.ts:25` (`tituloDuplicado`)
-- **测试：** `apps/api/test/application/use-cases/backlog/create-epic.use-case.spec.ts:41`
-  （无同名时创建）和 `:49`（同名时拒绝并返回已有 id）
-- **来源：** AT-581
-### RN-903 — 提供方的 429 是模型的使用限额，而非网络故障 {#rn-903}
-
-- **规则：** dev agent 因模型返回 429（代码 `rate_limit`，或文本含 `(429)` / "limite de uso"）而阻塞的任务，其原因写作"limite de uso do modelo atingido (429)"，自动重试会说明若再次出现，应更换 dev agent 的模型。绝不写"falha passageira de rede"（短暂网络故障）。来源仍为 `infra`，RN-864 的重试不变（最多 3 次，分别在 1、3、10 分钟后；暂停 60 秒，`dev.idle` 将其称为"depois de limite de uso do modelo"）。网络故障保留原有文本。
-- **位置：** `apps/engine/lib/engine/dev/dev_agent_server.ex:1136`（`limite_de_uso?`），`apps/engine/lib/engine/dev/dev_agent_server.ex:1127`（`motivo_da_parada`），`apps/engine/lib/engine/dev/dev_agent_server.ex:997`（`bloquear_passageira`），`apps/engine/lib/engine/dev/agent_io.ex:293`（`pausar_por_rede`）
-- **测试：** `apps/engine/test/engine/dev/dev_agent_server_test.exs`（"429 do provider: o motivo diz limite de uso do modelo, não rede"；失败情形："falha de rede continua com o texto de rede, não de limite"）
-- **来源：** AT-594（TP-01 第 20 次，10/19：`laguna-s-2.1:free` 的 429 将任务阻塞为"falha passageira de rede"，而诊断却写的是使用限额）
-### RN-904 — 输出上限截断的响应不以完整目录重试 {#rn-904}
-
-- **规则：** 当 Jev 限制菜单且模型未调用工具作答时，按 RN-625 以完整目录重试一次——但响应被输出上限截断（`truncated`）时除外。截断不是菜单错误：以完整目录重试只会加大提示并再次消耗输出上限。两个入口（`llm_turn` 与 `llm_turn_stream`，后者仅限尚未交付文本时）均适用。处理截断的是 `ToolLoop` 中的 RN-780 重试，保持不变。
-- **位置：** `apps/engine/lib/engine/harness/roteamento_de_ferramenta.ex:126`（`repetir_com_catalogo_inteiro?`）
-- **测试：** `apps/engine/test/engine/harness/roteamento_de_ferramenta_test.exs:274`（被截断的空响应两条路径都不重试；无截断则重试）
-- **来源：** AT-578（EP-026，10/21 调研）：PO 在第 18 轮的第一回合花费了两次 8192 输出 token。
 ### RN-900 — `write_file` 拒绝重写 README 而丢失 Infra 的使用章节 {#rn-900}
 
 - **规则：** `write_file` 整体替换文件。当 `path` 是 README（`README*`），当前文件有 `## Rodar na sua máquina` 章节而新内容没有时，该工具以具名错误拒绝，且不写入任何内容。要修改某一段，必须整体重写 README 并保留该章节。标题只有一个常量（`titulo_secao_de_uso/0`），Infra 和 dev 的提示词也使用它，使拒绝与指令不至于分歧。这不是 gate：拒绝属于工具本身，且不覆盖通过 `terminal`（`cat >`、`sed -i`）的写入。
 - **位置：** `apps/engine/lib/engine/harness/tools/write_file.ex:62`（`recusa_de_secao_perdida`）
 - **测试：** `apps/engine/test/engine/harness/tools/write_file_test.exs:41`（不带该章节的重写被拒绝且文件保持不变）；正常路径由同一文件的前两个测试覆盖
 - **来源：** AT-571（10/19 的 TP-01 第 18 轮：dev 代理在修正 QA 意见时重写了 README，Infra 写的使用章节丢失；没有任何 gate 发现）
+
+### RN-901 — 聊天中的自动模式批量提议包含已批准计划的 dev 代理 {#rn-901}
+
+- **规则：** 扩展 RN-889。项目摘要的 `roster.activatedAgents` 从不包含 dev 代理：dev 不记录 `agent.activated`，只记录 `dev.started`。聊天的批量提议（RN-883/889）只读取该列表，不显示正在执行的 `dev-<模块>`，用户必须在执行者标签页中手动开启。项目执行（`execucaoDoRoster`）现在仅在 `roster.executionActivated` 为真时，把 `roster.moduleNames`（当前 `module_map`）的 `dev-<模块>` 加入列表，使用与执行者标签页相同的 `devAgentId`（RN-661，`rosterFromFacts`），不做新的推导。没有活动执行时不加入任何 dev。已声明的缺口：列表来自当前 `module_map`；若已批准计划只用了部分模块，提议会沿用这一差异。没有任何上限改变，未经点击不写入任何内容。
+- **位置：** `apps/web/src/lib/session-destinatario.ts:194`（`execucaoDoRoster`），由 `useExecucaoNoProjeto`（`apps/web/src/lib/session-destinatario.ts:175`）调用
+- **测试：** `apps/web/src/lib/session-destinatario.test.ts`（"CAMINHO FELIZ：执行活动时把 module_map 的 dev-<模块> 加入已激活项"；失败："无活动执行时，计划的模块不成为 dev 代理"），以及 `apps/web/src/components/ModoAutomaticoNoChat.test.tsx`（由真实 roster 推导的夹具，"caminho feliz"）
+- **来源：** AT-573（TP-01 第 18 轮，19/10：第一个任务因 dev 未处于自动模式而停在 `dev.awaiting_approval`）
+
+### RN-902 — 重建容器会冻结当前的镜像决策，过期镜像会被提示 {#rn-902}
+
+- **规则：** `removed → provisioning` 和 `failed → provisioning` 转换会重新读取当前镜像决策，并重写 `project_containers` 行的 `imageVersion` 和 `resources`。没有当前决策时返回 409（[RN-105](business-rules/autenticacao.md#rn-105)）。`stopped → running` 不改变版本。`/containers` 页面新增 `decisaoVigente` 和 `imagemDesatualizada`；差异比较的是内容（镜像、网络、资源），而不是版本号，并以文字提示"停止 → 移除 → 再次启动"。`choose_project_image` 的结果带有 `containerDePe`，并提醒该决策只有在重建容器后才生效。不存在一步"重建"；审批上限不变（[RN-495](#rn-495)）。
+- **位置：** `apps/api/src/application/use-cases/containers/registrar-transicao-de-container.use-case.ts:131`（`recongelar`）、`apps/api/src/domain/containers/project-container.ts:342`（`containerDivergeDaDecisao`）、`apps/engine/lib/engine/harness/tools/choose_project_image.ex:99`（`mensagem_de_fixada`）
+- **测试：** `apps/api/test/application/use-cases/containers/ciclo-de-vida-do-container.use-case.spec.ts`；`apps/api/test/domain/containers/project-container.spec.ts`；`apps/web/src/routes/ContainersPage.test.tsx`
+- **来源：** AT-595
+
+### RN-903 — 提供方的 429 是模型的使用限额，而非网络故障 {#rn-903}
+
+- **规则：** dev agent 因模型返回 429（代码 `rate_limit`，或文本含 `(429)` / "limite de uso"）而阻塞的任务，其原因写作"limite de uso do modelo atingido (429)"，自动重试会说明若再次出现，应更换 dev agent 的模型。绝不写"falha passageira de rede"（短暂网络故障）。来源仍为 `infra`，RN-864 的重试不变（最多 3 次，分别在 1、3、10 分钟后；暂停 60 秒，`dev.idle` 将其称为"depois de limite de uso do modelo"）。网络故障保留原有文本。
+- **位置：** `apps/engine/lib/engine/dev/dev_agent_server.ex:1136`（`limite_de_uso?`），`apps/engine/lib/engine/dev/dev_agent_server.ex:1127`（`motivo_da_parada`），`apps/engine/lib/engine/dev/dev_agent_server.ex:997`（`bloquear_passageira`），`apps/engine/lib/engine/dev/agent_io.ex:293`（`pausar_por_rede`）
+- **测试：** `apps/engine/test/engine/dev/dev_agent_server_test.exs`（"429 do provider: o motivo diz limite de uso do modelo, não rede"；失败情形："falha de rede continua com o texto de rede, não de limite"）
+- **来源：** AT-594（TP-01 第 20 次，10/19：`laguna-s-2.1:free` 的 429 将任务阻塞为"falha passageira de rede"，而诊断却写的是使用限额）
+
+### RN-904 — 输出上限截断的响应不以完整目录重试 {#rn-904}
+
+- **规则：** 当 Jev 限制菜单且模型未调用工具作答时，按 RN-625 以完整目录重试一次——但响应被输出上限截断（`truncated`）时除外。截断不是菜单错误：以完整目录重试只会加大提示并再次消耗输出上限。两个入口（`llm_turn` 与 `llm_turn_stream`，后者仅限尚未交付文本时）均适用。处理截断的是 `ToolLoop` 中的 RN-780 重试，保持不变。
+- **位置：** `apps/engine/lib/engine/harness/roteamento_de_ferramenta.ex:126`（`repetir_com_catalogo_inteiro?`）
+- **测试：** `apps/engine/test/engine/harness/roteamento_de_ferramenta_test.exs:274`（被截断的空响应两条路径都不重试；无截断则重试）
+- **来源：** AT-578（EP-026，10/21 调研）：PO 在第 18 轮的第一回合花费了两次 8192 输出 token。

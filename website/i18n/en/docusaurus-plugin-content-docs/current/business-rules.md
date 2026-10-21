@@ -24823,6 +24823,20 @@ without saying which.
   the past and the link was born expired, 410; the story's RF only said the
   expiration is optional), owner's decision of 10/15
 
+### RN-894 — An epic with the same title as another in the project is refused {#rn-894}
+
+- **Rule:** `create_epic` refuses (400) an epic whose normalized title equals
+  that of another epic in the SAME project, and the refusal returns the
+  existing id to the model: "Já existe o épico «título» (id …) neste projeto —
+  use este id em epic_id". The rule is the SAME as the story's (finding R,
+  `tituloDuplicado`), with no second copy. The SEMANTIC duplicate check
+  (RN-681) does not apply to epics: only an equal title. Nothing is created or
+  written to the event log when it refuses.
+- **Where:** `apps/api/src/application/use-cases/backlog/create-epic.use-case.ts:25` (`tituloDuplicado`)
+- **Test:** `apps/api/test/application/use-cases/backlog/create-epic.use-case.spec.ts:41`
+  (creates without an equal title) and `:49` (refuses the equal title with the existing id)
+- **Origin:** AT-581
+
 ### RN-895 — The argument refusal says what arrived and the expected format {#rn-895}
 
 - **Rule:** revises [RN-719](#rn-719) and [RN-725](#rn-725). A field declared `array`/`object` that arrives as non-JSON text, or as a number/boolean/wrong type, is refused before the tool with "the field X arrived as <type>; send <format>", with an example (`["item 1","item 2"]`, `{"chave":"valor"}`), never with the value. The `emit_plano_de_teste` sentence now puts the keys in backticks, so the refusal carries the received keys.
@@ -24843,6 +24857,7 @@ without saying which.
 - **Where:** `apps/engine/lib/engine/gates/origem_do_erro.ex:10` (`de_llm`)
 - **Test:** `apps/engine/test/engine/gates/origem_do_erro_test.exs:7`
 - **Origin:** AT-586 (BaseTen 502 recorded as `infra`)
+
 ### RN-898 — A response cut by the cap with no text closes the turn, stated {#rn-898}
 
 - **Rule:** a conversational agent turn whose last LLM response was cut by the output cap ([RN-737](#rn-737)) and wrote no text in any round does NOT close silently: the line "Response cut off by the length limit." becomes the closing `agent.response` with `modelName`, and the bubble shows "Continue where it left off" ([RN-749](#rn-749)). It covers the seven conversational agents.
@@ -24856,6 +24871,50 @@ without saying which.
 - **Where:** `apps/engine/lib/engine/agents/falha_de_turno.ex:63` (`origem`), `apps/engine/lib/engine/agents/po_server.ex:303` (`gravar_texto_do_turno`)
 - **Test:** `apps/engine/test/engine/agents/po_server_test.exs:194` and `apps/engine/test/engine/agents/texto_do_turno_test.exs:96`
 - **Origin:** AT-572 (TP-01 18th, finding 4)
+
+### RN-900 — `write_file` refuses to rewrite the README and drop the Infra's usage section {#rn-900}
+
+- **Rule:** `write_file` replaces the whole file. When the `path` is a README
+  (`README*`), the current file has the `## Rodar na sua máquina` section and
+  the new content does not, the tool refuses with a named error and writes
+  nothing. Changing a fragment requires rewriting the full README, keeping the
+  section. The title is one constant (`titulo_secao_de_uso/0`), also used by the
+  Infra and dev prompts, so the refusal and the instruction do not diverge. It
+  is not a gate: the refusal belongs to the tool itself and does not cover
+  writes by `terminal` (`cat >`, `sed -i`).
+- **Where:** `apps/engine/lib/engine/harness/tools/write_file.ex:62`
+  (`recusa_de_secao_perdida`)
+- **Test:** `apps/engine/test/engine/harness/tools/write_file_test.exs:41`
+  (a rewrite without the section is refused and the file stays intact); the
+  happy path is covered by the first two tests in the same file
+- **Origin:** AT-571 (TP-01 18th run of 10/19: the dev agent rewrote the README
+  while fixing a QA finding and the usage section the Infra had written was
+  lost; no gate noticed)
+
+### RN-901 — The auto mode batch offer in the chat includes the dev agents of the approved plan {#rn-901}
+
+- **Rule:** extends RN-889. `roster.activatedAgents` of the project summary
+  NEVER carries a dev agent: the dev does not record `agent.activated`, only
+  `dev.started`. The chat's batch offer (RN-883/889) read only that list and
+  did not list the `dev-<module>` of the active execution, which the user had
+  to turn on from the Executors tab. The project execution (`execucaoDoRoster`)
+  now adds, only with `roster.executionActivated`, the `dev-<module>` of
+  `roster.moduleNames` (the current `module_map`), through the SAME `devAgentId`
+  the Executors tab uses (RN-661, `rosterFromFacts`), with no new derivation.
+  Without an active execution no dev enters. Declared gap: the list comes from
+  the CURRENT `module_map`; if the approved plan used a subset of the modules,
+  the offer inherits that divergence. No ceiling moves and nothing is written
+  without the click.
+- **Where:** `apps/web/src/lib/session-destinatario.ts:194` (`execucaoDoRoster`),
+  called by `useExecucaoNoProjeto` (`apps/web/src/lib/session-destinatario.ts:175`)
+- **Test:** `apps/web/src/lib/session-destinatario.test.ts` ("CAMINHO FELIZ:
+  execução ativa soma o dev-<modulo> do module_map aos ativados"; failure: "sem
+  execução ativa, o módulo do plano NÃO vira dev agent"), and
+  `apps/web/src/components/ModoAutomaticoNoChat.test.tsx` (fixture derived from
+  the real roster, "caminho feliz")
+- **Origin:** AT-573 (TP-01 18th, 19/10: the 1st task stopped at `dev.awaiting_approval`
+  because the dev was not in auto mode)
+
 ### RN-902 — Recreating the container freezes the current image decision, and an outdated image is flagged {#rn-902}
 
 - **Rule:** the `removed → provisioning` and `failed → provisioning`
@@ -24886,42 +24945,7 @@ without saying which.
   `apps/engine/test/engine/harness/tools/choose_project_image_test.exs`
 - **Origin:** AT-595 (TP-01 20th: the v3 `egress` decision did not reach the v2
   `none` container and the Image column stayed on v2)
-### RN-901 — The auto mode batch offer in the chat includes the dev agents of the approved plan {#rn-901}
 
-- **Rule:** extends RN-889. `roster.activatedAgents` of the project summary
-  NEVER carries a dev agent: the dev does not record `agent.activated`, only
-  `dev.started`. The chat's batch offer (RN-883/889) read only that list and
-  did not list the `dev-<module>` of the active execution, which the user had
-  to turn on from the Executors tab. The project execution (`execucaoDoRoster`)
-  now adds, only with `roster.executionActivated`, the `dev-<module>` of
-  `roster.moduleNames` (the current `module_map`), through the SAME `devAgentId`
-  the Executors tab uses (RN-661, `rosterFromFacts`), with no new derivation.
-  Without an active execution no dev enters. Declared gap: the list comes from
-  the CURRENT `module_map`; if the approved plan used a subset of the modules,
-  the offer inherits that divergence. No ceiling moves and nothing is written
-  without the click.
-- **Where:** `apps/web/src/lib/session-destinatario.ts:194` (`execucaoDoRoster`),
-  called by `useExecucaoNoProjeto` (`apps/web/src/lib/session-destinatario.ts:175`)
-- **Test:** `apps/web/src/lib/session-destinatario.test.ts` ("CAMINHO FELIZ:
-  execução ativa soma o dev-<modulo> do module_map aos ativados"; failure: "sem
-  execução ativa, o módulo do plano NÃO vira dev agent"), and
-  `apps/web/src/components/ModoAutomaticoNoChat.test.tsx` (fixture derived from
-  the real roster, "caminho feliz")
-- **Origin:** AT-573 (TP-01 18th, 19/10: the 1st task stopped at `dev.awaiting_approval`
-  because the dev was not in auto mode)
-### RN-894 — An epic with the same title as another in the project is refused {#rn-894}
-
-- **Rule:** `create_epic` refuses (400) an epic whose normalized title equals
-  that of another epic in the SAME project, and the refusal returns the
-  existing id to the model: "Já existe o épico «título» (id …) neste projeto —
-  use este id em epic_id". The rule is the SAME as the story's (finding R,
-  `tituloDuplicado`), with no second copy. The SEMANTIC duplicate check
-  (RN-681) does not apply to epics: only an equal title. Nothing is created or
-  written to the event log when it refuses.
-- **Where:** `apps/api/src/application/use-cases/backlog/create-epic.use-case.ts:25` (`tituloDuplicado`)
-- **Test:** `apps/api/test/application/use-cases/backlog/create-epic.use-case.spec.ts:41`
-  (creates without an equal title) and `:49` (refuses the equal title with the existing id)
-- **Origin:** AT-581
 ### RN-903 — The provider's 429 is the model's usage limit, not a network failure {#rn-903}
 
 - **Rule:** a task the dev agent blocks because the model answered 429 (code
@@ -24942,6 +24966,7 @@ without saying which.
   rede continua com o texto de rede, não de limite")
 - **Origin:** AT-594 (TP-01 20th, 10/19: the 429 of `laguna-s-2.1:free` blocked
   the tasks as "falha passageira de rede", while the diagnosis said usage limit)
+
 ### RN-904 — The output-ceiling cut is not repeated with the full catalog {#rn-904}
 
 - **Rule:** when Jev restricts the menu and the model answers WITHOUT a tool,
@@ -24956,21 +24981,3 @@ without saying which.
   (an empty cut response is not repeated, in both paths; without a cut it is)
 - **Origin:** AT-578 (EP-026, survey of 10/21): the PO's first turn in the 18th
   round spent two 8192-token output rounds.
-### RN-900 — `write_file` refuses to rewrite the README and drop the Infra's usage section {#rn-900}
-
-- **Rule:** `write_file` replaces the whole file. When the `path` is a README
-  (`README*`), the current file has the `## Rodar na sua máquina` section and
-  the new content does not, the tool refuses with a named error and writes
-  nothing. Changing a fragment requires rewriting the full README, keeping the
-  section. The title is one constant (`titulo_secao_de_uso/0`), also used by the
-  Infra and dev prompts, so the refusal and the instruction do not diverge. It
-  is not a gate: the refusal belongs to the tool itself and does not cover
-  writes by `terminal` (`cat >`, `sed -i`).
-- **Where:** `apps/engine/lib/engine/harness/tools/write_file.ex:62`
-  (`recusa_de_secao_perdida`)
-- **Test:** `apps/engine/test/engine/harness/tools/write_file_test.exs:41`
-  (a rewrite without the section is refused and the file stays intact); the
-  happy path is covered by the first two tests in the same file
-- **Origin:** AT-571 (TP-01 18th run of 10/19: the dev agent rewrote the README
-  while fixing a QA finding and the usage section the Infra had written was
-  lost; no gate noticed)
