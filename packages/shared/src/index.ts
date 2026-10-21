@@ -100,6 +100,13 @@ export interface LLMProviderCapabilities {
    */
   readonly routingPreference: boolean;
   /**
+   * O hub prende a conversa ao upstream que a atendeu quando recebe uma CHAVE
+   * DE SESSÃO (`ChatOptions.sessionKey`, ADR 0221). Obrigatório e `true` só
+   * depois de um smoke contra a API real mostrar o mesmo upstream em todas as
+   * chamadas com a chave e mais de um sem ela — nunca por leitura de doc.
+   */
+  readonly stickySession: boolean;
+  /**
    * O provider sabe receber PONTOS DE CACHE DE PROMPT explícitos
    * (`cache_control: { type: "ephemeral" }` em blocos de conteúdo, RN-892) —
    * o prefixo estável da chamada (ferramentas, instruções, histórico) é lido
@@ -285,6 +292,11 @@ export interface ChatOptions {
    * declara `capabilities.routingPreference` IGNORA — nunca falha por ele.
    */
   routingPreference?: RoutingPreference;
+  /**
+   * Chave de sessão do agente (`brabo:<sessionId>:<agentId>`, ADR 0221).
+   * Provider que não declara `capabilities.stickySession` IGNORA.
+   */
+  sessionKey?: string;
   /**
    * O modelo RACIOCINA (`models.supports_reasoning`, do catálogo). Provider que
    * sabe controlar o raciocínio soma uma FOLGA ao teto de saída, para o
