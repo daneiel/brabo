@@ -125,6 +125,9 @@ export type CampoDeRoteamento = (
   preferencia: RoutingPreference,
 ) => Record<string, unknown>;
 
+/** Como um hub recebe a chave de sessão (ADR 0221). Capability sem hook falha na construção. */
+export type CampoDeSessao = (chave: string) => Record<string, unknown>;
+
 /**
  * Como um provider informa o CUSTO REAL da chamada no `usage` (ADR 0188,
  * RN-665). O OpenRouter o põe em `usage.cost`, em USD; a OpenAI não informa.
@@ -155,6 +158,8 @@ export interface OpenAICompatibleConfig {
   readonly parseErrorFrame?: ParseErrorFrame;
   /** Só em hubs — ver `CampoDeRoteamento`. */
   readonly campoDeRoteamento?: CampoDeRoteamento;
+  /** Só em hubs — ver `CampoDeSessao`. */
+  readonly campoDeSessao?: CampoDeSessao;
   /** Só quem informa custo na resposta — ver `ExtrairCustoReal`. */
   readonly extrairCustoReal?: ExtrairCustoReal;
   /** Só quem sabe controlar o raciocínio — ver `CampoDeRaciocinioDesligado`. */
@@ -210,6 +215,12 @@ export class OpenAICompatibleProvider implements LLMProvider {
       throw new Error(
         `${config.name} declara \`routingPreference\` sem \`campoDeRoteamento\` ` +
           '— a capability afirmaria um campo que nunca iria ao fio (ADR 0166).',
+      );
+    }
+    if (config.capabilities.stickySession && !config.campoDeSessao) {
+      throw new Error(
+        `${config.name} declara \`stickySession\` sem \`campoDeSessao\` ` +
+          '— a capability afirmaria um campo que nunca iria ao fio (ADR 0221).',
       );
     }
     if (config.capabilities.promptCaching && !config.marcarCacheDePrompt) {
@@ -529,6 +540,12 @@ export class OpenAICompatibleProvider implements LLMProvider {
       options.routingPreference &&
       this.config.campoDeRoteamento
         ? this.config.campoDeRoteamento(options.routingPreference)
+        : {}),
+      // Só com a capability PROVADA e com chave (ADR 0221).
+      ...(this.capabilities.stickySession &&
+      options.sessionKey &&
+      this.config.campoDeSessao
+        ? this.config.campoDeSessao(options.sessionKey)
         : {}),
     };
   }

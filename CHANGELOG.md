@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- O OpenRouter passa a receber `session_id` = `brabo:<sessão>:<agente>` e prende cada agente ao upstream que o atendeu (AT-580, RN-907, ADR 0221): capability nova `stickySession`, provada por smoke (6 de 6 no mesmo upstream com a chave, 4 upstreams em 6 sem ela) e exposta em `/llm/provider-capabilities`.
 - Quando o agente para no limite de passos, o fio diz por que parou, o que foi
   gravado no turno e, no PO, quantas regras de negócio ainda estão sem história,
   e oferece "Continuar de onde parou" (AT-590, RN-905).

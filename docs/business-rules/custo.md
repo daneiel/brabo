@@ -223,9 +223,9 @@ foram raciocínio).
    no protocolo dele (`cache_read_input_tokens`) e isso NÃO é lido aqui — fica
    `null`, declarado; o Ollama não informa.
 
-- **Onde:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:323` (`cachedInputTokens`),
-  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:650` (`contagem`),
-  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:175` (`cachedInputTokens`),
+- **Onde:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:334` (`cachedInputTokens`),
+  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:667` (`contagem`),
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:179` (`cachedInputTokens`),
   `apps/api/src/application/use-cases/llm/record-llm-usage.use-case.ts:113` (`cachedInputTokens`),
   `apps/api/src/db/schema/llm.ts:374` (`cachedInputTokens`),
   `apps/api/scripts/medir-execucao.ts:89` (`formatarParteMedida`)
@@ -271,11 +271,11 @@ gasto somam. Sem ele, o preço congelado do catálogo produz o número, como no
    cobrada por fora — a linha cai no catálogo.
 
 - **Onde:** `apps/api/src/domain/llm/custo-da-chamada.ts:43` (`custoDaChamada`),
-  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:225` (`custoDaChamada`),
-  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:238` (`custoDaChamada`),
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:231` (`custoDaChamada`),
+  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:244` (`custoDaChamada`),
   `apps/api/src/application/use-cases/llm/send-chat-message.use-case.ts:227` (`custoDaChamada`),
-  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:319` (`extrairCustoReal`),
-  `apps/api/src/infrastructure/llm/openrouter-provider.ts:243` (`extrairCustoRealOpenRouter`),
+  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:330` (`extrairCustoReal`),
+  `apps/api/src/infrastructure/llm/openrouter-provider.ts:253` (`extrairCustoRealOpenRouter`),
   `apps/api/src/db/schema/llm.ts:357` (`priceImplicit`)
 - **Teste:** `test/domain/llm/custo-da-chamada.spec.ts`,
   `test/infrastructure/llm/openrouter-provider.contract.spec.ts` (resposta
@@ -380,7 +380,7 @@ comportamento de sempre, nada vai ao fio e o hub decide sozinho.
   `apps/api/src/domain/llm/binding-resolver.ts:100` (viaja com o binding),
   `apps/api/src/application/use-cases/llm/record-llm-usage.use-case.ts:118`
   (congela no metering),
-  `apps/api/src/infrastructure/llm/openrouter-provider.ts:327` (`openrouterConfig`,
+  `apps/api/src/infrastructure/llm/openrouter-provider.ts:334` (`openrouterConfig`,
   a capability provada)
 - **Teste:** `test/domain/llm/routing-preference.spec.ts`,
   `test/application/use-cases/llm/set-model-binding.use-case.spec.ts`,
@@ -3151,7 +3151,34 @@ quatro pontos, TTL de 5 min — https://openrouter.ai/docs/features/prompt-cachi
    `true`. Ligar outro provider exige o smoke equivalente. O ganho aparece no
    metering pela [RN-666](#rn-666).
 
-- **Código:** `apps/api/src/infrastructure/llm/openrouter-provider.ts:276` (`marcarCacheDePromptOpenRouter`);
-  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:501` (`mensagens`)
+- **Código:** `apps/api/src/infrastructure/llm/openrouter-provider.ts:283` (`marcarCacheDePromptOpenRouter`);
+  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:512` (`mensagens`)
 - **Teste:** `apps/api/test/infrastructure/llm/openrouter-provider.contract.spec.ts` ("pontos de cache de prompt (RN-892)": ligada marca os dois pontos; desligada é byte a byte; capability sem hook falha — caso de falha)
 - **Origem:** AT-543
+
+### RN-907 — O OpenRouter recebe uma chave de sessão por agente, e a conversa fica presa ao upstream que a atendeu {#rn-907}
+
+Sem chave, o hub trata cada tarefa do dev agent (outra primeira mensagem) como
+conversa nova e sorteia outro upstream — 17 no TP-01 da 18ª rodada, com o
+acerto de cache caindo. O Brabo agora manda a chave.
+
+1. **Formato.** `session_id` = `brabo:<sessionId>:<agentId>`, e `brabo:<sessionId>`
+   sem agente — por agente + sessão, nunca por projeto. É montada pelos dois
+   casos de uso de turno e viaja em `ChatOptions.sessionKey`.
+2. **Capability de provider, obrigatória.** `LLMProviderCapabilities.stickySession`
+   é `true` só no OpenRouter e `false` nos outros oito; declará-la sem o hook
+   `campoDeSessao` falha na construção. Desligada, ou sem chave, o corpo é byte a
+   byte o de antes.
+3. **Prova (ADRs 0041/0042).** Em 2026-10-21 o smoke rodou com credencial real em
+   `deepseek/deepseek-v4.1-flash`: com a chave, 6 de 6 chamadas no mesmo upstream
+   (Together); sem ela, 4 upstreams em 6. Ligar outro provider exige o smoke
+   equivalente.
+4. **Sem tabela.** A chave é derivável de `token_usage` (`session_id` + `actor_id`),
+   e o efeito se mede em `upstream_provider`, `cached_input_tokens` e `cost_micros`
+   (RN-665/666). `provider.order`/`allow_fallbacks` ficam fora (ADR 0221).
+
+- **Código:** `apps/api/src/infrastructure/llm/openrouter-provider.ts:217` (`campoDeSessaoOpenRouter`);
+  `apps/api/src/domain/llm/routing-preference.ts:88` (`chaveDeSessao`);
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:192` (`chaveDeSessao`)
+- **Teste:** `apps/api/test/infrastructure/llm/openrouter-provider.contract.spec.ts` ("chave de sessão (ADR 0221, RN-907)": com capability e chave leva `session_id`; sem chave ou desligada não leva; capability sem hook falha — caso de falha); `apps/api/test/application/use-cases/llm/stream-llm-turn.use-case.spec.ts`; `run-llm-turn.use-case.spec.ts`; smoke `openrouter-provider.sessao.smoke.spec.ts`
+- **Origem:** AT-580; ADR [0221](../adr/0221-upstream-preso-por-sessao.md)
