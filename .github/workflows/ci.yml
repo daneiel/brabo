@@ -1124,7 +1124,7 @@ jobs:
       # docker-bake.hcl da raiz, que também é o que se roda na mão.
       - name: Build das cinco imagens (em paralelo)
         if: steps.diff.outputs.rodar == 'true'
-        uses: docker/bake-action@018cb6412ab401ebaa809aa5f85966b74628600f  # v7.4.0
+        uses: docker/bake-action@59cb1203cd42bcefd40a1b6d73b589e48c86040e  # v7.5.0
         with:
           files: docker-bake.hcl
           targets: default
