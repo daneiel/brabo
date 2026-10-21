@@ -7307,6 +7307,11 @@ export interface components {
              */
             routingPreference: boolean;
             /**
+             * @description The provider pins a conversation to the upstream that served it when given a session key (ADR 0221). Only `true` after a smoke against the real API showed one upstream with the key and several without it.
+             * @example false
+             */
+            stickySession: boolean;
+            /**
              * @description The provider accepts explicit PROMPT-CACHE breakpoints (`cache_control`) on the stable prefix of a call (RN-892). Only `true` after a smoke against the real API showed cached input tokens on a repeated call.
              * @example false
              */
