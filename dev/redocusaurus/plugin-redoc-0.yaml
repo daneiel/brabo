@@ -14862,6 +14862,14 @@ components:
             o mesmo modelo (ADR 0166). Só `true` depois que um smoke contra a
             API real devolveu o upstream escolhido — ler a documentação não
             conta.
+        stickySession:
+          type: boolean
+          example: false
+          description: >-
+            The provider pins a conversation to the upstream that served it when
+            given a session key (ADR 0221). Only `true` after a smoke against
+            the real API showed one upstream with the key and several without
+            it.
         promptCaching:
           type: boolean
           example: false
@@ -14876,6 +14884,7 @@ components:
         - listModels
         - embeddings
         - routingPreference
+        - stickySession
         - promptCaching
     LlmTurnResponseDto:
       type: object

@@ -13811,6 +13811,14 @@ components:
           description: >-
             提供商接受路由偏好（`price`、`throughput`、`latency`），用于在服务同一模型的多个上游之间进行选择（ADR
             0166）。只有在针对真实 API 的冒烟测试返回了所选上游之后才为 `true`——阅读文档不算数。
+        stickySession:
+          type: boolean
+          example: false
+          description: >-
+            The provider pins a conversation to the upstream that served it when
+            given a session key (ADR 0221). Only `true` after a smoke against
+            the real API showed one upstream with the key and several without
+            it.
         promptCaching:
           type: boolean
           example: false
@@ -13823,6 +13831,7 @@ components:
         - listModels
         - embeddings
         - routingPreference
+        - stickySession
         - promptCaching
     LlmTurnResponseDto:
       type: object
