@@ -230,14 +230,33 @@ defmodule Engine.Harness.ArgumentosDeFerramentaTest do
       refute_received {:story_created, _}
     end
 
-    test "epic_id fora dos épicos conhecidos lista os conhecidos" do
-      id = "11111111-1111-4111-8111-111111111111"
-      ctx = %{project_id: "p1", session_id: "s1", epicos_conhecidos: %{id => "Cadastro"}}
-      outro = "22222222-2222-4222-8222-222222222222"
+    @outro "22222222-2222-4222-8222-222222222222"
 
-      assert {:error, msg} = CreateStory.run(%{"epic_id" => outro, "title" => "x"}, ctx)
-      assert msg =~ "#{id}=Cadastro"
+    defp com_conhecidos do
+      %{
+        project_id: "p1",
+        session_id: "s1",
+        epicos_conhecidos: %{"11111111-1111-4111-8111-111111111111" => "Cadastro"}
+      }
+    end
+
+    test "épico fora do mapa mas no backlog é aceito" do
+      Process.put(:fake_backlog, [%{"id" => @outro, "title" => "Antigo", "stories" => []}])
+      assert {:ok, _} = CreateStory.run(%{"epic_id" => @outro, "title" => "x"}, com_conhecidos())
+    end
+
+    test "id fora do mapa e do backlog é recusado listando o backlog" do
+      Process.put(:fake_backlog, [%{"id" => @outro, "title" => "Antigo", "stories" => []}])
+      id = "33333333-3333-4333-8333-333333333333"
+
+      assert {:error, msg} = CreateStory.run(%{"epic_id" => id, "title" => "x"}, com_conhecidos())
+      assert msg =~ "#{@outro}=Antigo"
       refute_received {:story_created, _}
+    end
+
+    test "backlog que falha não recusa" do
+      Process.put(:fake_backlog, {:error, :boom})
+      assert {:ok, _} = CreateStory.run(%{"epic_id" => @outro, "title" => "x"}, com_conhecidos())
     end
   end
 end

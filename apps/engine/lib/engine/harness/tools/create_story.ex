@@ -39,7 +39,7 @@ defmodule Engine.Harness.Tools.CreateStory do
 
   @impl true
   def run(%{"epic_id" => epic_id, "title" => title} = args, ctx) do
-    with :ok <- epico_valido(epic_id, Map.get(ctx, :epicos_conhecidos, %{})) do
+    with :ok <- epico_valido(epic_id, Map.get(ctx, :epicos_conhecidos, %{}), ctx.project_id) do
       criar(epic_id, title, args, ctx)
     end
   end
@@ -48,28 +48,45 @@ defmodule Engine.Harness.Tools.CreateStory do
     do: {:error, "create_story exige `epic_id`, `title` e `business_rule_ids`"}
 
   # RN-896 (AT-584): recusa ANTES da api, que responderia "epicId must be a
-  # UUID" (nome do DTO). Pertencimento só é checado contra os épicos que o PO
-  # criou neste processo (`epicos_conhecidos`); mapa vazio = não sabe, não recusa.
+  # UUID" (nome do DTO). Pertencimento: fora de `epicos_conhecidos` (os que o PO
+  # criou neste processo) relê o backlog UMA vez; só recusa se o id também não
+  # está lá. Mapa vazio ou leitura que falha = "não sei", a api decide.
   @uuid ~r/\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/i
+  @teto_de_epicos 20
 
-  defp epico_valido(epic_id, conhecidos) do
+  defp epico_valido(epic_id, conhecidos, project_id) do
     cond do
       not (is_binary(epic_id) and Regex.match?(@uuid, epic_id)) ->
-        {:error, "epic_id inválido; #{lista_de_epicos(conhecidos)}"}
+        {:error, "epic_id inválido; use o id (UUID) devolvido por create_epic"}
 
-      map_size(conhecidos) > 0 and not Map.has_key?(conhecidos, epic_id) ->
-        {:error, "epic_id desconhecido; #{lista_de_epicos(conhecidos)}"}
+      map_size(conhecidos) == 0 or Map.has_key?(conhecidos, epic_id) ->
+        :ok
 
       true ->
-        :ok
+        case EngineApiClient.list_backlog(project_id) do
+          {:ok, epicos} when is_list(epicos) ->
+            if Enum.any?(epicos, &(Map.get(&1, "id") == epic_id)),
+              do: :ok,
+              else: {:error, "epic_id desconhecido; " <> lista_de_epicos(epicos)}
+
+          _ ->
+            :ok
+        end
     end
   end
 
-  defp lista_de_epicos(conhecidos) when map_size(conhecidos) == 0,
-    do: "use o id (UUID) devolvido por create_epic"
+  defp lista_de_epicos(epicos) do
+    linhas =
+      epicos
+      |> Enum.take(@teto_de_epicos)
+      |> Enum.map_join(", ", &"#{Map.get(&1, "id")}=#{Map.get(&1, "title")}")
 
-  defp lista_de_epicos(conhecidos),
-    do: "épicos deste turno: " <> Enum.map_join(conhecidos, ", ", fn {id, t} -> "#{id}=#{t}" end)
+    "épicos do projeto: #{linhas}" <>
+      if(length(epicos) > @teto_de_epicos,
+        do: " (mostrando #{@teto_de_epicos} de #{length(epicos)})",
+        else: ""
+      )
+  end
 
   defp criar(epic_id, title, args, ctx) do
     fields = %{

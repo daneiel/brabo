@@ -24832,8 +24832,8 @@ without saying which.
 
 ### RN-896 — The `epic_id` is validated before the api {#rn-896}
 
-- **Rule:** `create_story` refuses an `epic_id` that is not a UUID ("epic_id inválido; …") and, when the PO already created epics in this process (`epicos_conhecidos`), one that is not among them, listing `id=title`. An empty map means "unknown" and does not refuse membership (epic from an earlier turn), only the format.
-- **Where:** `apps/engine/lib/engine/harness/tools/create_story.ex:55` (`epico_valido`)
+- **Rule:** `create_story` refuses an `epic_id` that is not a UUID ("epic_id inválido; …"). When the PO already created epics in this process (`epicos_conhecidos`) and the id is not among them, it rereads the backlog ONCE (`list_backlog`): if the id is there, it accepts; otherwise it refuses listing the backlog's `id=title` (cap of 20 lines, stating the total if truncated, ADR 0060). An empty map or a failing backlog read means "unknown" and does not refuse — the api decides.
+- **Where:** `apps/engine/lib/engine/harness/tools/create_story.ex:57` (`epico_valido`)
 - **Test:** `apps/engine/test/engine/harness/argumentos_de_ferramenta_test.exs:224` and `:233`
 - **Origin:** AT-584 (qwen sent `EPIC_ID_PLACEHOLDER_NAO_USAR_AQUI` and the api answered with the DTO name)
 

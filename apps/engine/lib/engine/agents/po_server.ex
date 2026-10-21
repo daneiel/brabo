@@ -421,9 +421,13 @@ defmodule Engine.Agents.PoServer do
   end
 
   defp anotar_obrigacao(state, "create_story", args, {:ok, _texto}) do
+    id = Map.get(args, "epic_id")
+
     %{
       state
-      | epicos_sem_historia: Map.delete(state.epicos_sem_historia, Map.get(args, "epic_id"))
+      | epicos_sem_historia: Map.delete(state.epicos_sem_historia, id),
+        epicos_conhecidos:
+          Map.put_new(Map.get(state, :epicos_conhecidos, %{}), id, "(do backlog)")
     }
   end
 

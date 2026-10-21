@@ -20557,8 +20557,8 @@ origem `infra`. Regra descoberta, ou backlog sem regra/história, não é julgad
 A instrução do PO passa a exigir tarefa por história. Quem cria as tarefas é o
 PO (decisão do agente principal na AT-364: ele já tem `create_task`).
 
-- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:482` (`fechar_handoff`);
-  `:509` (`oferecer_handoff`)
+- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:486` (`fechar_handoff`);
+  `:513` (`oferecer_handoff`)
 - **Teste:** `apps/engine/test/engine/agents/po_server_test.exs:592` (oferece e
   não repete), `:610` (história sem tarefa: não oferece, nomeia)
 - **Origem:** AT-364
@@ -22904,7 +22904,7 @@ sem dizer qual.
   outra variante — o dev agent atualizar o README em toda tarefa que mexe em
   configuração/entrada — NÃO foi feita: exigiria classificar a tarefa no
   `AmbienteDoAgente` ou no `report_done`, regra nova de código — declarado.
-- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:567` (`kickoff_instruction`)
+- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:571` (`kickoff_instruction`)
 - **Teste:** `apps/engine/test/engine/agents/po_server_test.exs:438` (a
   instrução de kickoff traz o critério do README)
 - **Origem:** AT-466 (TP-01 de 09/10: o `encurtador-api` saiu com um README só
@@ -24829,7 +24829,7 @@ sem dizer qual.
   sugestão, nunca inventa nem omite. Régua de PROMPT, no molde da
   [RN-790](#rn-790): nenhuma ferramenta recusa história sem borda. O PO NÃO
   passa a reescrever `business_rule`; Criativo, QA, schema e gate não mudam.
-- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:656` (`obrigacoes`)
+- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:660` (`obrigacoes`)
 - **Teste:** `apps/engine/test/engine/agents/po_server_test.exs:438` (a
   instrução de kickoff traz a obrigação da borda) e `:460` (sem event log, o
   kickoff ainda a carrega)
@@ -24846,8 +24846,8 @@ sem dizer qual.
 
 ### RN-896 — O `epic_id` é validado antes da api {#rn-896}
 
-- **Regra:** `create_story` recusa `epic_id` que não é UUID ("epic_id inválido; …") e, quando o PO já criou épicos neste processo (`epicos_conhecidos`), o que não é um deles, listando `id=título`. Mapa vazio significa "não sei" e não recusa pertencimento (épico de turno anterior), só o formato.
-- **Onde:** `apps/engine/lib/engine/harness/tools/create_story.ex:55` (`epico_valido`)
+- **Regra:** `create_story` recusa `epic_id` que não é UUID ("epic_id inválido; …"). Quando o PO já criou épicos neste processo (`epicos_conhecidos`) e o id não é um deles, relê o backlog UMA vez (`list_backlog`): se o id está lá, aceita; senão recusa listando `id=título` do backlog (teto de 20 linhas, dizendo o total se truncar, ADR 0060). Mapa vazio ou leitura do backlog que falha é "não sei" e não recusa — a api decide.
+- **Onde:** `apps/engine/lib/engine/harness/tools/create_story.ex:57` (`epico_valido`)
 - **Teste:** `apps/engine/test/engine/harness/argumentos_de_ferramenta_test.exs:224` e `:233`
 - **Origem:** AT-584 (o qwen mandou `EPIC_ID_PLACEHOLDER_NAO_USAR_AQUI` e a api respondeu com o nome do DTO)
 

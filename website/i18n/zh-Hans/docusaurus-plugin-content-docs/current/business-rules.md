@@ -12259,8 +12259,8 @@ PO 的 kickoff 说明这三件事。
 
 ### RN-896 — `epic_id` 在到达 api 之前被校验 {#rn-896}
 
-- **规则：** `create_story` 拒绝不是 UUID 的 `epic_id`（"epic_id inválido; …"）；当 PO 已在本进程中创建史诗（`epicos_conhecidos`）时，也拒绝不在其中的值，并列出 `id=标题`。空映射表示"未知"，不拒绝归属（前一轮的史诗），只检查格式。
-- **位置：** `apps/engine/lib/engine/harness/tools/create_story.ex:55`（`epico_valido`）
+- **规则：** `create_story` 拒绝不是 UUID 的 `epic_id`（"epic_id inválido; …"）。当 PO 已在本进程中创建史诗（`epicos_conhecidos`）且该 id 不在其中时，只重读一次 backlog（`list_backlog`）：id 在其中则接受；否则拒绝并列出 backlog 的 `id=标题`（最多 20 行，截断时说明总数，ADR 0060）。空映射或 backlog 读取失败表示“未知”，不拒绝——由 api 决定。
+- **位置：** `apps/engine/lib/engine/harness/tools/create_story.ex:57`（`epico_valido`）
 - **测试：** `apps/engine/test/engine/harness/argumentos_de_ferramenta_test.exs:224` 与 `:233`
 - **来源：** AT-584（qwen 发送了 `EPIC_ID_PLACEHOLDER_NAO_USAR_AQUI`，api 以 DTO 名称回应）
 

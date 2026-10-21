@@ -25549,8 +25549,8 @@ Kickoff PO говорит все три вещи.
 
 ### RN-896 — `epic_id` проверяется до api {#rn-896}
 
-- **Правило:** `create_story` отклоняет `epic_id`, не являющийся UUID («epic_id inválido; …»), а когда PO уже создал эпики в этом процессе (`epicos_conhecidos`), и не входящий в них, перечисляя `id=название`. Пустая карта значит «не знаю» и не отклоняет принадлежность (эпик прошлого хода), только формат.
-- **Где:** `apps/engine/lib/engine/harness/tools/create_story.ex:55` (`epico_valido`)
+- **Правило:** `create_story` отклоняет `epic_id`, не являющийся UUID («epic_id inválido; …»). Когда PO уже создал эпики в этом процессе (`epicos_conhecidos`), а id среди них нет, бэклог перечитывается ОДИН раз (`list_backlog`): если id там есть — принимается; иначе отказ с перечислением `id=название` из бэклога (не более 20 строк, с указанием общего числа при усечении, ADR 0060). Пустая карта или сбой чтения бэклога означает «не знаю» и не отклоняет — решает api.
+- **Где:** `apps/engine/lib/engine/harness/tools/create_story.ex:57` (`epico_valido`)
 - **Тест:** `apps/engine/test/engine/harness/argumentos_de_ferramenta_test.exs:224` и `:233`
 - **Происхождение:** AT-584 (qwen отправил `EPIC_ID_PLACEHOLDER_NAO_USAR_AQUI`, а api ответила именем DTO)
 
