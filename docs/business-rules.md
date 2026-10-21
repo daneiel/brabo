@@ -24836,3 +24836,17 @@ sem dizer qual.
 - **Origem:** AT-541 (TP-01 de 14/10: o entregável aceitou `expiresAt` no
   passado e o link nasceu expirado, 410; o RF da história só dizia que a
   expiração é opcional), decisão do dono de 15/10
+
+### RN-894 — Épico com o mesmo título de outro do projeto é recusado {#rn-894}
+
+- **Regra:** `create_epic` recusa (400) o épico cujo título, normalizado,
+  é igual ao de outro épico do MESMO projeto, e a recusa devolve ao modelo o
+  id do existente: "Já existe o épico «título» (id …) neste projeto — use
+  este id em epic_id". A régua é a MESMA da história (achado R,
+  `tituloDuplicado`), sem segunda cópia. A duplicata SEMÂNTICA
+  ([RN-681](business-rules/custo.md#rn-681)) não vale para épico: só título
+  igual. Nada é criado nem gravado no event log quando recusa.
+- **Onde:** `apps/api/src/application/use-cases/backlog/create-epic.use-case.ts:25` (`tituloDuplicado`)
+- **Teste:** `apps/api/test/application/use-cases/backlog/create-epic.use-case.spec.ts:41`
+  (cria sem título igual) e `:49` (recusa o título igual com o id do existente)
+- **Origem:** AT-581

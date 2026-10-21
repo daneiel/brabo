@@ -6,6 +6,9 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- O PO não cria mais um épico com o mesmo título de outro do projeto
+  (AT-581, RN-894): `create_epic` recusa e devolve o id do existente para ser
+  usado em `epic_id`, com a mesma régua de título igual da história.
 - A página da API tem o texto-fonte todo em inglês (AT-566): os textos de
   PAT, chave de dispositivo, tickets do runner, binário, pull do Hugging Face,
   conversão de modo e `container-exec` saíram do português, a tag `projetos`

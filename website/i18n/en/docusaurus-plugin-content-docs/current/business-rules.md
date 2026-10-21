@@ -24822,3 +24822,17 @@ without saying which.
 - **Origin:** AT-541 (TP-01 of 10/14: the deliverable accepted `expiresAt` in
   the past and the link was born expired, 410; the story's RF only said the
   expiration is optional), owner's decision of 10/15
+
+### RN-894 — An epic with the same title as another in the project is refused {#rn-894}
+
+- **Rule:** `create_epic` refuses (400) an epic whose normalized title equals
+  that of another epic in the SAME project, and the refusal returns the
+  existing id to the model: "Já existe o épico «título» (id …) neste projeto —
+  use este id em epic_id". The rule is the SAME as the story's (finding R,
+  `tituloDuplicado`), with no second copy. The SEMANTIC duplicate check
+  (RN-681) does not apply to epics: only an equal title. Nothing is created or
+  written to the event log when it refuses.
+- **Where:** `apps/api/src/application/use-cases/backlog/create-epic.use-case.ts:25` (`tituloDuplicado`)
+- **Test:** `apps/api/test/application/use-cases/backlog/create-epic.use-case.spec.ts:41`
+  (creates without an equal title) and `:49` (refuses the equal title with the existing id)
+- **Origin:** AT-581

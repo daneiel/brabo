@@ -12249,3 +12249,15 @@ PO 的 kickoff 说明这三件事。
 - **位置：** `apps/engine/lib/engine/agents/po_server.ex:649` (`obrigacoes`)
 - **测试：** `apps/engine/test/engine/agents/po_server_test.exs:438`（kickoff 指令带有边界义务）和 `:460`（没有事件日志时，kickoff 仍带有它）
 - **来源：** AT-541（10/14 的 TP-01：交付物接受了过去的 `expiresAt`，链接一创建就已过期，410；故事的 RF 只说过期时间是可选的），所有者 10/15 的决定
+
+### RN-894 — 与项目中另一史诗同名的史诗会被拒绝 {#rn-894}
+
+- **规则：** `create_epic` 拒绝（400）规范化标题与同一项目中另一史诗相同的史诗，
+  拒绝时把已有史诗的 id 返回给模型："Já existe o épico «título» (id …) neste
+  projeto — use este id em epic_id"。规则与用户故事相同（发现 R，
+  `tituloDuplicado`），没有第二份副本。语义重复（RN-681）不适用于史诗：只看标题相同。
+  拒绝时不创建任何内容，也不写入事件日志。
+- **位置：** `apps/api/src/application/use-cases/backlog/create-epic.use-case.ts:25` (`tituloDuplicado`)
+- **测试：** `apps/api/test/application/use-cases/backlog/create-epic.use-case.spec.ts:41`
+  （无同名时创建）和 `:49`（同名时拒绝并返回已有 id）
+- **来源：** AT-581
