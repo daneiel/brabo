@@ -202,6 +202,19 @@ defmodule Engine.Agents.PoServerTest do
                      }}
   end
 
+  # AT-572 (RN-899): fecho sem texto, sem corte e sem ferramenta não é calado.
+  test "resposta vazia sem corte grava agent.error de origem modelo, não agent.response",
+       %{state: state, session_id: session_id} do
+    Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("", "m")])
+
+    assert {:reply, :ok, _} = sync_call(PoServer, {:user_message, "oi"}, state)
+
+    assert_received {:event_appended, _, ^session_id,
+                     %{type: "agent.error", payload: %{origem: "modelo"}}}
+
+    refute_received {:event_appended, _, _, %{type: "agent.response"}}
+  end
+
   describe "revise/2 — devolução de história recusada (Fase 12c, RN-048)" do
     test "injeta a recusa como mensagem FIXADA e roda um turno", %{state: state} do
       Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("vou revisar")])
