@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render } from '@testing-library/react';
+import { fireEvent, render } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import type { SessionEvent } from '../lib/api-types';
 import i18n from '../lib/i18n';
@@ -27,7 +27,7 @@ function falha(payload: Record<string, unknown>): SessionEvent {
   } as SessionEvent;
 }
 
-function montar(eventos: SessionEvent[]) {
+function montar(eventos: SessionEvent[], extra: Record<string, unknown> = {}) {
   const nada = vi.fn();
   const ctx = {
     events: eventos,
@@ -57,6 +57,7 @@ function montar(eventos: SessionEvent[]) {
     iniciarTurnoDoAgente: nada,
     acompanharTurnoPeloLog: nada,
     finalizarTurnoDoAgente: nada,
+    ...extra,
   } as unknown as ContextoDaTimeline;
   const { container } = render(<>{montarTimeline(ctx).map((e) => e.node)}</>);
   return container;
@@ -93,7 +94,75 @@ describe('montarTimeline — o teto de iterações vira linha no fio (RN-698, AT
     ]);
     const bolha = container.querySelector('[data-testid="falha-de-turno"]');
     expect(bolha?.getAttribute('data-origem')).toBe('modelo');
-    expect(bolha?.textContent).toContain('teto de 12 passos');
+    expect(bolha?.textContent).toContain('o limite de um turno é 12');
+  });
+
+  it('AT-590: leva o gravado, as regras sem história e o botão que continua o MESMO agente', () => {
+    const continuar = vi.fn();
+    const container = montar(
+      [
+        {
+          ...falha({
+            max_iterations: 12,
+            gravado: 'Gravado neste turno: 3 épicos.',
+            regrasSemHistoria: 2,
+          }),
+          type: 'toolloop.limit_reached',
+          actor: { kind: 'agent', id: 'po' },
+        } as SessionEvent,
+      ],
+      { continuarRespostaCortada: continuar },
+    );
+    expect(container.querySelector('[data-testid="teto-gravado"]')?.textContent).toContain(
+      '3 épicos',
+    );
+    expect(container.querySelector('[data-testid="teto-regras-sem-historia"]')?.textContent).toBe(
+      '2 regras de negócio ainda estão sem história.',
+    );
+    fireEvent.click(container.querySelector('[data-testid="continuar-resposta-cortada"]')!);
+    expect(continuar).toHaveBeenCalledWith('po');
+  });
+
+  it('AT-590 (falha): sem botão para dev-*, com a sessão inativa; sem extras, sem linhas', () => {
+    const teto = (id: string) =>
+      ({
+        ...falha({ max_iterations: 12 }),
+        type: 'toolloop.limit_reached',
+        actor: { kind: 'agent', id },
+      }) as SessionEvent;
+    const continuar = vi.fn();
+    const sel = '[data-testid="continuar-resposta-cortada"]';
+    expect(
+      montar([teto('dev-api')], { continuarRespostaCortada: continuar }).querySelector(sel),
+    ).toBeNull();
+    expect(
+      montar([teto('po')], { continuarRespostaCortada: continuar, isActive: false }).querySelector(
+        sel,
+      ),
+    ).toBeNull();
+    const c = montar([teto('po')], { continuarRespostaCortada: continuar });
+    expect(c.querySelector('[data-testid="teto-gravado"]')).toBeNull();
+    expect(c.querySelector('[data-testid="teto-regras-sem-historia"]')).toBeNull();
+  });
+
+  it('AT-590: o agent.error limite_de_iteracoes do Criativo usa a mesma bolha, com botão', () => {
+    const continuar = vi.fn();
+    const container = montar(
+      [
+        falha({
+          origem: 'modelo',
+          reason: 'limite_de_iteracoes',
+          max_iterations: 12,
+          mensagem: 'frase-fixa-antiga',
+          gravado: 'Gravado neste turno: 1 nota.',
+        }),
+      ],
+      { continuarRespostaCortada: continuar },
+    );
+    expect(container.textContent).toContain('o limite de um turno é 12');
+    expect(container.textContent).not.toContain('frase-fixa-antiga');
+    fireEvent.click(container.querySelector('[data-testid="continuar-resposta-cortada"]')!);
+    expect(continuar).toHaveBeenCalledWith('criativo');
   });
 
   it('sem o número no payload, a linha existe e não inventa um teto', () => {
@@ -101,7 +170,7 @@ describe('montarTimeline — o teto de iterações vira linha no fio (RN-698, AT
       { ...falha({}), type: 'toolloop.limit_reached' } as SessionEvent,
     ]);
     const bolha = container.querySelector('[data-testid="falha-de-turno"]');
-    expect(bolha?.textContent).toContain('teto de ? passos');
+    expect(bolha?.textContent).toContain('o limite de um turno é ?');
   });
 });
 

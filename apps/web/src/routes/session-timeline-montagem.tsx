@@ -3,7 +3,7 @@ import { Link } from '@tanstack/react-router';
 import type { QueryClient } from '@tanstack/react-query';
 import type { TFunction } from 'i18next';
 import { approveAction, approveAlwaysAction, denyAction } from '../lib/api-client';
-import { corDoAgente, nomeDoAgente } from '../lib/agents';
+import { SOLO_CONVERSATIONAL_AGENTS, corDoAgente, nomeDoAgente } from '../lib/agents';
 import { classifyEvent, origemDoEvento } from '../lib/activity';
 import type {
   Epic,
@@ -22,7 +22,7 @@ import { MarkdownMessage } from '../components/ui/MarkdownMessage';
 import { AvatarDoAgente } from '../components/ui/AvatarDoAgente';
 import { Button } from '../components/ui/Button';
 import { Carousel, type CarouselSlide } from '../components/ui/Carousel';
-import { lerFalhaDeTurno } from '../lib/session-falha';
+import { ehTetoDoCriativo, lerFalhaDeTurno } from '../lib/session-falha';
 import { respostaCortada } from '../lib/resposta-cortada';
 import {
   AlertCircleIcon,
@@ -916,7 +916,7 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
         agentResponse: true,
         node: bolha(text, event.id),
       });
-    } else if (event.type === 'agent.error') {
+    } else if (event.type === 'agent.error' && !ehTetoDoCriativo(event.payload)) {
       // O agente FALA a falha, no mesmo fio. Antes o motivo ia só por
       // broadcast (efêmero) e o log guardava uma resposta vazia — quem
       // abrisse a sessão depois via um balão em branco e nada mais.
@@ -961,12 +961,21 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
           </div>
         ),
       });
-    } else if (event.type === 'toolloop.limit_reached') {
+    } else if (event.type === 'toolloop.limit_reached' || event.type === 'agent.error') {
       // RN-698 (AT-354): o teto de iterações era invisível no fio — o PO
       // parava em 12/12 e a última coisa à mostra era um pedaço de resposta.
       // Mesma bolha de falha do `agent.error`, origem `modelo` (o teto só se
       // esgota quando o modelo segue pedindo ferramenta sem convergir, RN-166).
-      const max = (event.payload as { max_iterations?: unknown } | null)?.max_iterations;
+      // AT-590: o mesmo texto para o `agent.error` `limite_de_iteracoes` do Criativo.
+      const p = (event.payload ?? {}) as {
+        max_iterations?: unknown;
+        gravado?: unknown;
+        regrasSemHistoria?: unknown;
+      };
+      const max = p.max_iterations;
+      const conversacional =
+        event.actor.kind === 'agent' &&
+        [...SOLO_CONVERSATIONAL_AGENTS, 'dev-lead', 'infra-lead'].includes(event.actor.id);
       empurrar({
         agentId: event.actor.kind === 'agent' ? event.actor.id : undefined,
         node: (
@@ -989,7 +998,27 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
               </div>
               <div className={[styles.bubble, styles.bubbleFalha].join(' ')}>
                 {t('mensagens.tetoDeIteracoes', { max: typeof max === 'number' ? max : '?' })}
+                {typeof p.gravado === 'string' && p.gravado !== '' && (
+                  <div data-testid="teto-gravado">{p.gravado}</div>
+                )}
+                {typeof p.regrasSemHistoria === 'number' && (
+                  <div data-testid="teto-regras-sem-historia">
+                    {t('mensagens.regrasSemHistoria', { count: p.regrasSemHistoria })}
+                  </div>
+                )}
               </div>
+              {/* AT-590: o botão da RN-749, só para os sete conversacionais e só com a sessão ativa. */}
+              {isActive && continuarRespostaCortada && conversacional && (
+                <div>
+                  <Button
+                    variant="ghost"
+                    data-testid="continuar-resposta-cortada"
+                    onClick={() => continuarRespostaCortada(event.actor.id)}
+                  >
+                    {t('mensagens.continuarCortada')}
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         ),

@@ -25680,3 +25680,21 @@ Kickoff PO говорит все три вещи.
 - **Где:** `apps/engine/lib/engine/harness/roteamento_de_ferramenta.ex:126` (`repetir_com_catalogo_inteiro?`)
 - **Тест:** `apps/engine/test/engine/harness/roteamento_de_ferramenta_test.exs:274` (обрезанный пустой ответ не повторяется на обоих путях; без обрезки повторяется)
 - **Происхождение:** AT-578 (EP-026, обследование 21.10): первый ход PO в 18-м раунде потратил два вывода по 8192 токена.
+### RN-905 — Предел шагов говорит, что записано и чего не хватает, и предлагает продолжить {#rn-905}
+
+- **Правило:** когда разговорный агент останавливается на пределе шагов, событие
+  предела (`toolloop.limit_reached`; у Креатива — `agent.error` с
+  `reason: "limite_de_iteracoes"`) несёт `gravado` — строку RN-731, прочитанную ДО
+  записи текста хода (она выводится здесь, а не в `agent.response`, никогда в
+  обоих). PO несёт также `regrasSemHistoria` — `uncoveredCount`, который уже читает
+  `fechar_handoff`; неудачное чтение оставляет ключ отсутствующим, не ошибкой.
+  Лента показывает причину без жаргона, записанную строку, правила без истории и
+  кнопку «Продолжить с того места» (RN-749, сообщение пользователя, которое очередь
+  RN-673 принимает при идущем ходе) только для семи разговорных агентов при
+  активной сессии; `dev-*`/`qa-*` получают текст без кнопки. Кнопка никогда не
+  продолжает сама.
+- **Где:** `apps/engine/lib/engine/agents/po_server.ex:257` (`run_turn`);
+  `apps/web/src/routes/session-timeline-montagem.tsx:976` (`conversacional`)
+- **Тест:** `apps/engine/test/engine/agents/po_server_test.exs:548`;
+  `apps/web/src/routes/session-timeline-montagem.falha-de-turno.test.tsx:108`
+- **Источник:** AT-590 (EP-031).

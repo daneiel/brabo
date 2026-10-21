@@ -638,10 +638,12 @@ defmodule Engine.Agents.CriativoServerTest do
                          origem: "modelo",
                          reason: "limite_de_iteracoes",
                          max_iterations: 12,
+                         gravado: gravado,
                          mensagem: mensagem
                        }
                      }}
 
+    assert gravado =~ ~r/refused|recusada/
     assert mensagem =~ "limite de 12 idas ao modelo"
 
     assert_received %Phoenix.Socket.Broadcast{event: "agent.error"}

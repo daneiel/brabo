@@ -544,6 +544,46 @@ defmodule Engine.Agents.PoServerTest do
                      %{type: "toolloop.limit_reached", payload: %{max_iterations: 12}}}
   end
 
+  # AT-590: o teto diz o que foi gravado (RN-731) e quantas regras faltam.
+  test "teto: toolloop.limit_reached leva gravado e regrasSemHistoria", %{
+    state: state,
+    session_id: session_id
+  } do
+    Process.put(:fake_business_rules, %{"rules" => [%{"id" => "r"}], "uncoveredCount" => 2})
+
+    Process.put(
+      :fake_llm_always,
+      tool_turn("create_task", %{"story_id" => "st-1", "title" => "t"})
+    )
+
+    assert {:reply, :ok, _} = sync_call(PoServer, {:user_message, "vai"}, state)
+
+    assert_received {:event_appended, _, ^session_id,
+                     %{type: "toolloop.limit_reached", payload: payload}}
+
+    assert payload.gravado =~ "12 tasks"
+    assert payload.regrasSemHistoria == 2
+  end
+
+  test "CASO DE FALHA: teto sem leitura de regras sai sem regrasSemHistoria", %{
+    state: state,
+    session_id: session_id
+  } do
+    Process.put(:fake_business_rules, {:error, :boom})
+
+    Process.put(
+      :fake_llm_always,
+      tool_turn("create_task", %{"story_id" => "st-1", "title" => "t"})
+    )
+
+    assert {:reply, :ok, _} = sync_call(PoServer, {:user_message, "vai"}, state)
+
+    assert_received {:event_appended, _, ^session_id,
+                     %{type: "toolloop.limit_reached", payload: payload}}
+
+    refute Map.has_key?(payload, :regrasSemHistoria)
+  end
+
   test "rehydration: reconstrói o histórico do event log no init", %{} do
     Process.put(:fake_events, [
       %{"type" => "chat.message", "payload" => %{"text" => "quero um app"}},

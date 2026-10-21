@@ -12331,3 +12331,17 @@ PO 的 kickoff 说明这三件事。
 - **位置：** `apps/engine/lib/engine/harness/roteamento_de_ferramenta.ex:126`（`repetir_com_catalogo_inteiro?`）
 - **测试：** `apps/engine/test/engine/harness/roteamento_de_ferramenta_test.exs:274`（被截断的空响应两条路径都不重试；无截断则重试）
 - **来源：** AT-578（EP-026，10/21 调研）：PO 在第 18 轮的第一回合花费了两次 8192 输出 token。
+### RN-905 — 步数上限会说明已记录什么、还缺什么，并提供继续 {#rn-905}
+
+- **规则：** 对话式代理停在步数上限时，上限事件（`toolloop.limit_reached`；创意代理为带
+  `reason: "limite_de_iteracoes"` 的 `agent.error`）携带 `gravado`，即在写入本轮文本之前读取的
+  RN-731 那一行（它出现在这里，而不在 `agent.response` 里，绝不两处都有）。PO 还携带
+  `regrasSemHistoria`，即 `fechar_handoff` 已在读取的 `uncoveredCount`；读取失败则该键缺失，不报错。
+  时间线用不带行话的话说明原因，显示已记录的那一行、没有用户故事的规则，以及“从中断处继续”按钮
+  （RN-749，用户消息，轮次进行时由 RN-673 的队列接收），仅对会话处于活动状态的七个对话式代理显示；
+  `dev-*`/`qa-*` 只有文本，没有按钮。按钮绝不会自行继续。
+- **位置：** `apps/engine/lib/engine/agents/po_server.ex:257`（`run_turn`）；
+  `apps/web/src/routes/session-timeline-montagem.tsx:976`（`conversacional`）
+- **测试：** `apps/engine/test/engine/agents/po_server_test.exs:548`；
+  `apps/web/src/routes/session-timeline-montagem.falha-de-turno.test.tsx:108`
+- **来源：** AT-590（EP-031）。

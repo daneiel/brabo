@@ -255,12 +255,19 @@ defmodule Engine.Agents.PoServer do
   # fora. Mesmo tipo de evento e mesmo payload: quem lê o log não precisa
   # aprender um segundo nome para o mesmo fato.
   defp run_turn(state, remaining) when remaining <= 0 do
+    # AT-590: lê a linha ANTES de gravar o texto (que a esvaziaria) e a põe no evento.
+    gravado = Engine.Agents.GravadoNoTurno.descarregar()
     gravar_texto_do_turno(state, "", nil)
 
-    emit(state, "toolloop.limit_reached", %{
-      iteration: @max_iterations,
-      max_iterations: @max_iterations
-    })
+    payload =
+      %{
+        iteration: @max_iterations,
+        max_iterations: @max_iterations,
+        gravado: gravado
+      }
+      |> Map.merge(regras_sem_historia(state))
+
+    emit(state, "toolloop.limit_reached", payload)
 
     encerrar_turno(state)
   end
@@ -323,6 +330,15 @@ defmodule Engine.Agents.PoServer do
         gravar_texto_do_turno(state, "", nil)
         emit_falha(state, reason)
         state
+    end
+  end
+
+  # AT-590: o que falta no teto — a MESMA leitura de `fechar_handoff/1`. Falha da
+  # leitura = chave ausente, nunca erro.
+  defp regras_sem_historia(state) do
+    case EngineApiClient.list_business_rules(state.project_id) do
+      {:ok, %{"uncoveredCount" => n}} when is_integer(n) -> %{regrasSemHistoria: n}
+      _ -> %{}
     end
   end
 
