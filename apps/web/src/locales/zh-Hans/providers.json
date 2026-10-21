@@ -1,0 +1,13 @@
+{
+  "title": "提供商",
+  "subtitle": "LLM 提供商的密钥、能力、模型和支出，对所有项目生效。",
+  "capabilities": {
+    "title": "每个提供商能做什么",
+    "note": "只有对真实 API 做过 smoke 测试才会为 true；“未证实”表示没有证据，而非证明不存在。",
+    "provider": "提供商",
+    "proven": "已证实",
+    "notProven": "未证实",
+    "loadError": "无法加载提供商能力。"
+  },
+  "routing": "OpenRouter 的路由标准在项目设置中的智能体或区域模型上选择；此处没有控件。"
+}

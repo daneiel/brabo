@@ -13,11 +13,26 @@ A fonte é o pt-BR em `docs/` (ADR 0216), inclusive `docs/reference/**` (ADR 021
 
 | locale | páginas traduzidas | caracteres traduzidos | em dia | defasadas | sem procedência | ausentes | órfãs |
 |---|---|---|---|---|---|---|---|
-| `en` | 270 de 270 (100.0%) | 100.0% de 5.754.780 | 269 | 0 | 1 | 0 | 0 |
-| `ru` | 270 de 270 (100.0%) | 100.0% de 5.754.780 | 269 | 0 | 1 | 0 | 0 |
-| `zh-Hans` | 270 de 270 (100.0%) | 100.0% de 5.754.780 | 269 | 0 | 1 | 0 | 0 |
+| `en` | 270 de 270 (100.0%) | 100.0% de 5.755.332 | 267 | 2 | 1 | 0 | 0 |
+| `ru` | 270 de 270 (100.0%) | 100.0% de 5.755.332 | 267 | 2 | 1 | 0 | 0 |
+| `zh-Hans` | 270 de 270 (100.0%) | 100.0% de 5.755.332 | 267 | 2 | 1 | 0 | 0 |
 
 > **TODO(humano):** revisão nativa por idioma — quem revisou e quando. Ainda não há revisão nativa registrada.
+
+### Defasadas em `en`
+
+- `business-rules/autenticacao.md` (tradução de 2026-10-11)
+- `reference/llm-providers.md` (tradução de 2026-10-16)
+
+### Defasadas em `ru`
+
+- `business-rules/autenticacao.md` (tradução de 2026-10-11)
+- `reference/llm-providers.md` (tradução de 2026-10-16)
+
+### Defasadas em `zh-Hans`
+
+- `business-rules/autenticacao.md` (tradução de 2026-10-11)
+- `reference/llm-providers.md` (tradução de 2026-10-16)
 
 ## Interface
 
@@ -25,9 +40,9 @@ Chaves de `apps/web/src/locales/<locale>/` contra o pt-BR. Chave plural conta um
 
 | locale | formas de plural | chaves presentes | plurais incompletos |
 |---|---|---|---|
-| `en` | one, other | 2316 de 2316 (100.0%) | 0 |
-| `ru` | one, few, many, other | 2520 de 2520 (100.0%) | 0 |
-| `zh-Hans` | other | 2214 de 2214 (100.0%) | 0 |
+| `en` | one, other | 2326 de 2326 (100.0%) | 0 |
+| `ru` | one, few, many, other | 2530 de 2530 (100.0%) | 0 |
+| `zh-Hans` | other | 2224 de 2224 (100.0%) | 0 |
 
 ## API (Redoc)
 

@@ -6,6 +6,9 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- Os providers ganham uma página própria, `/providers`, no rodapé do menu
+  (AT-577): chaves, capacidades de cada provider, catálogo de modelos e, só para
+  `owner`, o gasto por chave. Sem rota nem escrita novas na api.
 - A página da API tem o texto-fonte todo em inglês (AT-566): os textos de
   PAT, chave de dispositivo, tickets do runner, binário, pull do Hugging Face,
   conversão de modo e `container-exec` saíram do português, a tag `projetos`

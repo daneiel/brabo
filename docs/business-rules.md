@@ -17746,7 +17746,7 @@ fica. Ativação recusada não navega e mostra a frase da api. Quem navega é a
 ROTA (`irParaSessao`, o `navigate` do router): a tela não depende do router.
 
 - **Onde:** `apps/web/src/lib/session-acoes-de-handoff.ts:147`
-  (`handleActivateExecution`); `apps/web/src/router.tsx:339` (`irParaSessao`)
+  (`handleActivateExecution`); `apps/web/src/router.tsx:349` (`irParaSessao`)
 - **Teste:** `apps/web/src/routes/SessionPage.handoff-obsoleto.test.tsx`
   (navega para o `sessionId` devolvido, com aviso; recusa não navega — caso de
   falha; sem quem navegue, só avisa)
@@ -18220,8 +18220,8 @@ genérico, que ao lado de um brief ou de uma regra da mesma sessão parecia nega
 que eles existissem — o escopo da seção (PR e backlog, [RN-159](business-rules/autenticacao.md#rn-159)) não
 muda.
 
-- **Código:** `apps/web/src/routes/Shell.tsx:579` (`execucao`), `:587`
-  (`origemDaAtividade`), `:594` (`estadoDaAtividade`);
+- **Código:** `apps/web/src/routes/Shell.tsx:591` (`execucao`), `:599`
+  (`origemDaAtividade`), `:606` (`estadoDaAtividade`);
   `apps/web/src/lib/hooks.ts:127` (`useProjectSessions`, `frescorMs`);
   `apps/web/src/routes/Dashboard.tsx:75` (`lastActivityText`);
   `apps/web/src/routes/ContextAside.tsx:46` (`quantos`), `:340`
@@ -18338,8 +18338,8 @@ os achados X1–X3 da auditoria. A duplicação de navegação por abas (gaveta 
 barra) fechou no ADR 0211.
 
 - **Código:** `apps/web/src/lib/layout-movel.ts:18` (`CONSULTA_MOVEL`),
-  `:39` (`useLayoutMovel`); `apps/web/src/routes/Shell.tsx:422`
-  (`movel`), `:443` (`prenderFoco`), `:462` (`fecharAoSeguirLink`);
+  `:39` (`useLayoutMovel`); `apps/web/src/routes/Shell.tsx:414`
+  (`movel`), `:454` (`prenderFoco`), `:473` (`fecharAoSeguirLink`);
   `apps/web/src/routes/ProjectPage.tsx:49` (`movel`);
   `apps/web/src/routes/ProjectOverviewTab.tsx:68` (`movel`)
 - **Teste:** `apps/web/src/routes/Shell.test.tsx` ("Shell — layout móvel
@@ -21650,7 +21650,7 @@ sem dizer qual.
 - **Onde:** `apps/api/src/application/use-cases/actions/execute-infra-pr.use-case.ts:71`
   (`ExecuteInfraPrUseCase`),
   `apps/web/src/routes/ProjectApprovalsTab.tsx:106` (`ProjectApprovalsTab`),
-  `apps/web/src/routes/Shell.tsx:545` (`idDoProjetoAtual`),
+  `apps/web/src/routes/Shell.tsx:557` (`idDoProjetoAtual`),
   `apps/web/src/routes/NewProjectWizard.tsx:155` (`NewProjectWizard`),
   `apps/web/src/routes/ProjectPrsTab.tsx:141` (`invalidateMergeActions`),
   `apps/web/src/lib/agent-status.ts:222` (`gateStatus`)
@@ -22199,7 +22199,7 @@ sem dizer qual.
   reproduzida no navegador; a correção cobre a classe (conteúdo que encolhe e
   volta).
 - **Onde:** `apps/web/src/routes/project-tabs.ts:383` (`abaDaRota`),
-  `apps/web/src/routes/Shell.tsx:510` (`abaDaRota`),
+  `apps/web/src/routes/Shell.tsx:522` (`abaDaRota`),
   `apps/web/src/lib/session-rolagem.ts:16` (`estaPertoDoFim`), `:82`
   (`estavaNoFimRef`), `:120` (`aoRolarOFio`),
   `apps/web/src/components/ModelCatalogSection.module.css` (`.barraDeLote`),
