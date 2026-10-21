@@ -6,6 +6,9 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- Os providers ganham uma página própria, `/providers`, no rodapé do menu
+  (AT-577): chaves, capacidades de cada provider, catálogo de modelos e, só para
+  `owner`, o gasto por chave. Sem rota nem escrita novas na api.
 - O PO não cria mais um épico com o mesmo título de outro do projeto
   (AT-581, RN-894): `create_epic` recusa e devolve o id do existente para ser
   usado em `epic_id`, com a mesma régua de título igual da história.

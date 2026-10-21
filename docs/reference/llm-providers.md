@@ -151,6 +151,16 @@ default `false` faz o binding ser recusado, inclusive quando o modelo é
 apontado por `DEMO_QA_MODEL` nos scripts de demonstração de gate.
 :::
 
+## Onde a pessoa vê e edita os providers
+
+Os providers têm página própria, `/providers`, no rodapé do menu ao lado de
+Containers (AT-577). Ela só compõe o que já existe em Configurações do projeto,
+com os mesmos endpoints e `queryKey`s: chaves, a tabela do que cada provider
+sabe fazer (lida de `GET /llm/provider-capabilities`, uma coluna por chave da
+resposta), o catálogo de modelos e, só para `owner`, o gasto por chave. O
+critério de roteamento do OpenRouter continua sendo do modelo do agente ou da
+área, escolhido nas Configurações do projeto.
+
 ## Catálogo de modelos: descoberta e ciclo de vida
 
 Quem declara `listModels` sabe listar o próprio catálogo. A base compatível
