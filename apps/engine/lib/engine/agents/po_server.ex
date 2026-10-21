@@ -155,6 +155,7 @@ defmodule Engine.Agents.PoServer do
        # reconstruído do event log reabriria cobrança de épico antigo que o
        # usuário já resolveu de outro jeito.
        epicos_sem_historia: %{},
+       epicos_conhecidos: %{},
        # RN-700: o handoff ao Arquiteto já foi oferecido (pelo modelo ou pelo
        # servidor) NESTE processo. Não reidratado: depois de um restart a api
        # deduplica a oferta pendente e recusa com 409 nomeado o destino já
@@ -406,10 +407,12 @@ defmodule Engine.Agents.PoServer do
     # mudou seria trocar um defeito silencioso por outro.
     chave = CreateEpic.id_no_resultado(texto) || "titulo:#{Map.get(args, "title")}"
 
+    titulo = Map.get(args, "title", "(sem título)")
+
     %{
       state
-      | epicos_sem_historia:
-          Map.put(state.epicos_sem_historia, chave, Map.get(args, "title", "(sem título)"))
+      | epicos_sem_historia: Map.put(state.epicos_sem_historia, chave, titulo),
+        epicos_conhecidos: Map.put(Map.get(state, :epicos_conhecidos, %{}), chave, titulo)
     }
   end
 

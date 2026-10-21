@@ -39,6 +39,39 @@ defmodule Engine.Harness.Tools.CreateStory do
 
   @impl true
   def run(%{"epic_id" => epic_id, "title" => title} = args, ctx) do
+    with :ok <- epico_valido(epic_id, Map.get(ctx, :epicos_conhecidos, %{})) do
+      criar(epic_id, title, args, ctx)
+    end
+  end
+
+  def run(_args, _ctx),
+    do: {:error, "create_story exige `epic_id`, `title` e `business_rule_ids`"}
+
+  # RN-896 (AT-584): recusa ANTES da api, que responderia "epicId must be a
+  # UUID" (nome do DTO). Pertencimento só é checado contra os épicos que o PO
+  # criou neste processo (`epicos_conhecidos`); mapa vazio = não sabe, não recusa.
+  @uuid ~r/\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/i
+
+  defp epico_valido(epic_id, conhecidos) do
+    cond do
+      not (is_binary(epic_id) and Regex.match?(@uuid, epic_id)) ->
+        {:error, "epic_id inválido; #{lista_de_epicos(conhecidos)}"}
+
+      map_size(conhecidos) > 0 and not Map.has_key?(conhecidos, epic_id) ->
+        {:error, "epic_id desconhecido; #{lista_de_epicos(conhecidos)}"}
+
+      true ->
+        :ok
+    end
+  end
+
+  defp lista_de_epicos(conhecidos) when map_size(conhecidos) == 0,
+    do: "use o id (UUID) devolvido por create_epic"
+
+  defp lista_de_epicos(conhecidos),
+    do: "épicos deste turno: " <> Enum.map_join(conhecidos, ", ", fn {id, t} -> "#{id}=#{t}" end)
+
+  defp criar(epic_id, title, args, ctx) do
     fields = %{
       epicId: epic_id,
       title: title,
@@ -58,9 +91,6 @@ defmodule Engine.Harness.Tools.CreateStory do
         {:error, "falha ao criar história: #{inspect(reason)}"}
     end
   end
-
-  def run(_args, _ctx),
-    do: {:error, "create_story exige `epic_id`, `title` e `business_rule_ids`"}
 
   # O que dizer ao modelo sobre o que aconteceu com a história (Fase 12c).
   #
