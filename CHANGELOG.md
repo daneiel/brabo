@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- O OpenRouter passa a receber `session_id` = `brabo:<sessão>:<agente>` e prende cada agente ao upstream que o atendeu (AT-580, RN-907, ADR 0221): capability nova `stickySession`, provada por smoke (6 de 6 no mesmo upstream com a chave, 4 upstreams em 6 sem ela) e exposta em `/llm/provider-capabilities`.
 - A api recusa a rede `none` da imagem do projeto quando a stack de um módulo do
   `module_map` baixa dependências (node, python, elixir, go, rust...), pedindo
   `egress`; vale para o Arquiteto e para a eleição da Infra (AT-593, RN-906).

@@ -17205,8 +17205,8 @@ endpoint é ALPHA e o smoke manual
   (`recortarEstado`), `:268` (`menuP3`);
   `apps/api/src/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.ts:118`
   (`preparar`), `:143` (`executar`), `:305` (`registrarGasto`);
-  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:152`
-  (`decisaoDoJev`); `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:167`
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:156`
+  (`decisaoDoJev`); `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:173`
   (`preparar`); `apps/api/src/infrastructure/llm/jev-tool-router.ts:32`
   (`decidir`); `apps/api/src/db/schema/iam.ts:169` (`toolRouterEnabled`);
   `apps/api/src/db/schema/llm.ts:356` (`priceImplicit`);
@@ -21611,9 +21611,9 @@ sem dizer qual.
   ao campo, e caminho que só leva a mensagem.
 - **Onde:** `apps/api/src/domain/llm/llm-provider-errors.ts:38`
   (`LLMInsufficientCreditError`), `:81` (`normalizeHttpStatus`),
-  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:207`
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:213`
   (`streamErrorCode`),
-  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:219`
+  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:226`
   (`streamErrorCode`),
   `apps/engine/lib/engine/agents/falha_de_turno.ex:87` (`credito_esgotado?`),
   `:71` (`origem`), `apps/engine/lib/engine/harness/tool_loop.ex:148`
@@ -21829,12 +21829,12 @@ sem dizer qual.
   cortada pelo limite de tamanho.", qualquer outro — ou nenhum — "Response cut
   off by the length limit.". O Ollama não lê o motivo de parada (fora do
   escopo, declarado).
-- **Onde:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:257`
+- **Onde:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:268`
   (`cortadaPeloTeto`),
   `apps/api/src/infrastructure/llm/anthropic-provider.ts:198` (`finalMessage`),
-  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:204`
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:209`
   (`truncated`),
-  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:217`
+  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:222`
   (`truncated`),
   `apps/engine/lib/engine/harness/resposta_cortada.ex:43` (`registrar`),
   `:89` (`descarregar`),
@@ -21888,7 +21888,7 @@ sem dizer qual.
   ITERAÇÕES, não o de tokens). Hipótese NÃO medida com chave real: que a
   reserva explica o 402 do TP-01.
 - **Onde:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:38`
-  (`MAX_TOKENS_PADRAO`), `:484` (`flags`)
+  (`MAX_TOKENS_PADRAO`), `:495` (`flags`)
 - **Teste:** `apps/api/test/infrastructure/llm/openai-compatible-provider.contract.spec.ts`
   (sem `maxTokens` o corpo leva `max_tokens: 4096`; com `maxTokens: 123` leva
   123; com `maxTokensField: 'max_completion_tokens'` o campo muda e
@@ -21958,7 +21958,7 @@ sem dizer qual.
   com credencial de 10/10 mostrou que o Haiku 5.5 IGNORA `reasoning.max_tokens`;
   o campo deixou de ser enviado e a folga no `max_tokens` ficou.
 - **Onde:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:48`
-  (`ORCAMENTO_DE_RACIOCINIO`), `:490` (`controla`)
+  (`ORCAMENTO_DE_RACIOCINIO`), `:501` (`controla`)
 - **Teste:** `apps/api/test/infrastructure/llm/openai-compatible-provider.contract.spec.ts`
   (`raciocínio com orçamento próprio (RN-741)`: orçamento e teto somado; sem
   raciocínio o corpo não muda; provider sem campo não inventa orçamento)
@@ -22655,8 +22655,8 @@ sem dizer qual.
   chamado pelos três casos de uso de turno. O TODO(humano) da RN-741 fecha com
   essa medição.
 - **Onde:** `apps/api/src/domain/llm/raciocinio-do-agente.ts:18`
-  (`opcoesDeRaciocinio`), `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:490`
-  (`controla`), `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:189`
+  (`opcoesDeRaciocinio`), `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:501`
+  (`controla`), `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:193`
   (`opcoesDeRaciocinio`)
 - **Teste:** `apps/api/test/infrastructure/llm/openai-compatible-provider.contract.spec.ts`
   (`modelo que raciocina: folga no teto e NENHUM campo de raciocínio (RN-782)`,
@@ -22675,7 +22675,7 @@ sem dizer qual.
   faceta "thinking" do catálogo de modelos diz que nos dev agents de execução e,
   desde a RN-838, no QA de Automação o raciocínio vai desligado (o mínimo escolhido; o seletor e a bolha não mudam).
 - **Onde:** `apps/api/src/domain/llm/raciocinio-do-agente.ts:23`
-  (`raciocinioDesligadoParaOAgente`), `apps/api/src/infrastructure/llm/openrouter-provider.ts:224`
+  (`raciocinioDesligadoParaOAgente`), `apps/api/src/infrastructure/llm/openrouter-provider.ts:232`
   (`campoDeRaciocinioDesligadoOpenRouter`)
 - **Teste:** `apps/api/test/infrastructure/llm/openai-compatible-provider.contract.spec.ts`
   (`dev agent: raciocínio desligado explícito, com a folga (RN-783)`),

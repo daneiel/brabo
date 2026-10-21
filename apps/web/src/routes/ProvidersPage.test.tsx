@@ -33,6 +33,7 @@ const caps = (extra: Record<string, boolean>) => ({
   listModels: false,
   embeddings: false,
   routingPreference: false,
+  stickySession: false,
   promptCaching: false,
   ...extra,
 });

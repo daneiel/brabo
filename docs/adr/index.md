@@ -3,7 +3,7 @@ id: adr-index
 title: Decisões arquiteturais (ADR)
 sidebar_label: Índice de ADRs
 sidebar_position: 0
-description: Os 216 registros de decisão arquitetural do Brabo, agrupados por tema, com o que cada um decidiu.
+description: Os 217 registros de decisão arquitetural do Brabo, agrupados por tema, com o que cada um decidiu.
 keywords: [ADR, decisão arquitetural, arquitetura, histórico]
 ---
 
@@ -250,6 +250,7 @@ O contrato de provider, o catálogo de modelos e a curadoria, os bindings de mod
 | [0166](0166-preferencia-de-roteamento-no-binding-de-modelo.md) | A **preferência de roteamento** do hub mora no binding de modelo, viaja com ele e é congelada no metering. Medido numa instalação da v6.1.0 (AT-090): 23 de 24 chamadas de um modelo pelo OpenRouter foram servidas por um upstream umas quatro vezes mais lento, porque o corpo da requisição nunca dizia como escolher (`provider.sort`). Decidido pelo mantenedor: `model_bindings.routing_preference` (`price | throughput | latency`, nulável, `null` = o comportamento de hoje) é **configurável por binding**, e **não** cascateia sozinha — o binding vencedor traz modelo E preferência, e um nível pulado leva a preferência dele junto, então nunca se produz uma combinação que ninguém escolheu. A escrita a aceita nos cinco escopos: ausente preserva (se o provider do modelo novo a aceitar), `null` limpa, um valor para provider sem a capability é 422 — nenhum binding jamais guarda uma preferência que o provider dele não declara. `token_usage.routing_preference` congela o que **foi para o fio**, ao lado de `upstream_provider` (RN-042), pela mesma regra do preço congelado (ADR 0042). A capability é do PROVIDER, obrigatória nos nove e `false` nos nove: o mapeamento para o fio do OpenRouter está pronto como gancho de configuração, mas nenhum smoke contra a API real rodou, então a feature sai **dormente** — a rota recusa, a tela diz por quê em texto, nada muda no fio. `GET /llm/provider-capabilities` é rota nova porque nenhuma resposta existente é sobre um provider. Recusa: uma coluna de capability no nível do modelo (o catálogo não a publica), uma cascata independente, e os outros campos de `provider` (`order`, `only`, `ignore`, `allow_fallbacks`, `max_price`) |
 | [0188](0188-o-custo-real-do-provider-vira-o-numero-do-metering.md) | O custo REAL que o provider devolve vira o número do metering (AT-270, decisão do dono de 30/09): quando a resposta o traz (o `usage.cost` do OpenRouter), ele é o `token_usage.cost_micros`, o que o turno devolve ao engine, o que os orçamentos somam e o que a aba Gasto mostra; o preço congelado do catálogo (ADR 0042) continua sendo o número só onde a resposta não diz nada. O preço da linha passa a ser IMPLÍCITO (`cost ÷ tokens`, marcado `price_implicit`, a mesma coluna e função do Jev do ADR 0179), o que o catálogo teria cobrado vai ao lado em `catalog_cost_micros`, e o modelo resolvido e o id `gen-…` são gravados. `estimated` continua significando os TOKENS; BYOK cai no catálogo. A mesma rodada grava as PARTES que o dialeto informa — `cached_input_tokens` e `reasoning_tokens` (AT-272), nunca somadas aos totais, `null` significando "não disse" —, e `medir-execucao.ts` informa quanto da entrada foi leitura de cache |
 | [0198](0198-duplicata-semantica-por-embedding-com-limiar-que-so-avisa.md) | A duplicata SEMÂNTICA de uma história ou regra de negócio é AVISADA por embedding com limiar, nunca recusada (AT-171, decisão do dono de 01/10): depois que o item é gravado, o título dele é comparado com os títulos do projeto do mesmo tipo pelo `RagEmbeddingService` do RAG, e um cosseno igual ou acima de 0,80 — um PONTO DE PARTIDA, não calibrado, porque o ambiente não conseguiu gravar vetores reais — devolve um aviso ao agente no resultado da ferramenta e `backlog.semantic_duplicate_warned` no log. Sem provider de embedding a checagem é PULADA e diz por quê. O gasto dela é medido como linha própria de `token_usage` (ator `system`/`duplicata-semantica`) — UMA exceção ao corte do ADR 0075, que continua valendo para a indexação e a busca. A duplicata exata continua recusada (RN-080/081) |
+| [0221](0221-upstream-preso-por-sessao.md) | O hub prende a conversa de cada agente ao upstream que a atendeu: o Brabo manda `session_id` = `brabo:<sessão>:<agente>` ao OpenRouter (capability `stickySession`, provada por smoke), e `provider.order`/`allow_fallbacks` seguem fora. Referencia o 0166. |
 
 ## RAG, grafo de conhecimento e artefatos {#tema-conhecimento}
 
@@ -357,7 +358,7 @@ Como a documentação é gerada, verificada e publicada.
 - **Um arquivo por decisão**, em `docs/adr/NNNN-short-title.md`, com
   numeração sequencial de 4 dígitos, e título `# ADR NNNN — <título>`
   ([0218](0218-titulo-de-adr-com-prefixo.md)). **Sem reuso de número**, nem quando um ADR
-  é substituído — o próximo é **0221**.
+  é substituído — o próximo é **0222**.
 - **Um tema por decisão**, escolhido por quem escreve o ADR, no mesmo
   PR: uma linha em `docs/adr/temas.yml` e a linha do índice sob a seção desse
   tema, em ordem numérica. Quem revisa confirma. Um tema novo é uma

@@ -108,6 +108,7 @@ function capacidades(hubAceita: boolean): ProviderCapabilities[] {
     listModels: true,
     embeddings: false,
     routingPreference: false,
+    stickySession: false,
     promptCaching: false,
   };
   return [
