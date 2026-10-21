@@ -1346,7 +1346,7 @@ defmodule Engine.Infra.InfraLeadServer do
     do:
       "Proponha os artefatos de infra que sobem o APP na máquina do usuário " <>
         "(Dockerfile por módulo, docker-compose.yml com porta ${APP_PORT:-8080}, " <>
-        ".env.example e a seção \"Rodar na sua máquina\" no README) e chame " <>
+        ".env.example e a seção \"#{Engine.Harness.Tools.WriteFile.titulo_secao_de_uso()}\" no README) e chame " <>
         "`propose_infra_pr` com `run`."
 
   # Os passos 5 e 6 do kickoff — o que o modelo precisa saber da subida. Com
@@ -1452,7 +1452,7 @@ defmodule Engine.Infra.InfraLeadServer do
        porta `${APP_PORT:-8080}:<porta interna>`, volume para dados persistentes e
        `env_file: .env`, com um `.env.example` commitado listando as variáveis
        obrigatórias (nunca um `.env`).
-    3. No README, a seção "Rodar na sua máquina": o comando e as URLs. Módulo
+    3. No README, a seção "#{Engine.Harness.Tools.WriteFile.titulo_secao_de_uso()}": o comando e as URLs. Módulo
        HTTP declara SEMPRE `/docs` (a UI Swagger, `kind: "api_docs"`) mesmo antes
        de existir, e módulo web a página inicial — nunca rota de negócio.
     4. Valide CADA arquivo com `validate_infra_file` (path + content) antes de propor.
