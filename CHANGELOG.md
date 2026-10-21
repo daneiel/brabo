@@ -6,6 +6,9 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- Quando o agente para no limite de passos, o fio diz por que parou, o que foi
+  gravado no turno e, no PO, quantas regras de negócio ainda estão sem história,
+  e oferece "Continuar de onde parou" (AT-590, RN-905).
 - A recusa de argumento de ferramenta diz o que chegou e o formato esperado
   (AT-583, RN-895); `create_story` valida o `epic_id` antes da api (AT-584,
   RN-896); e o corte do provider por `max_tokens` nos gates de QA e AppSec é

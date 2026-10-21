@@ -24974,3 +24974,25 @@ without saying which.
 - **Origin:** AT-571 (TP-01 18th run of 10/19: the dev agent rewrote the README
   while fixing a QA finding and the usage section the Infra had written was
   lost; no gate noticed)
+
+### RN-905 — The step ceiling says what was recorded and what is missing, and offers to continue {#rn-905}
+
+- **Rule:** when a conversational agent stops at the step limit, the ceiling
+  event (`toolloop.limit_reached`; for the Creative, the `agent.error` with
+  `reason: "limite_de_iteracoes"`) carries `gravado`, the RN-731 line read
+  BEFORE the turn text is written (it goes there and not in the
+  `agent.response`, never in both). The PO also carries `regrasSemHistoria`, the
+  `uncoveredCount` that `fechar_handoff` already reads; a failed read leaves the
+  key absent, never an error. The thread shows the reason without jargon, the
+  recorded line, the rules without a story and the "Continue where you left
+  off" button (RN-749, a user message that the RN-673 queue absorbs while a turn
+  runs) only for the seven conversational agents with the session active;
+  `dev-*`/`qa-*` get the text, with no button. The button never continues on its
+  own.
+- **Where:** `apps/engine/lib/engine/agents/po_server.ex:257` (`run_turn`);
+  `apps/web/src/routes/session-timeline-montagem.tsx:976` (`conversacional`)
+- **Test:** `apps/engine/test/engine/agents/po_server_test.exs:548` (gravado and
+  regrasSemHistoria; without the read, no key);
+  `apps/web/src/routes/session-timeline-montagem.falha-de-turno.test.tsx:108`
+  (bubble, button to the same agent; no button for `dev-*` and inactive session)
+- **Origin:** AT-590 (EP-031).

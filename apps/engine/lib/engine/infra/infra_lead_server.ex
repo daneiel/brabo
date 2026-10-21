@@ -418,11 +418,14 @@ defmodule Engine.Infra.InfraLeadServer do
   # correção da RN-166/RN-459 nos outros seis: esgotá-lo terminava o turno sem
   # evento nenhum, indistinguível de um turno que simplesmente acabou.
   defp run_turn(state, remaining) when remaining <= 0 do
+    # AT-590: lê a linha ANTES de gravar o texto (que a esvaziaria) e a põe no evento.
+    gravado = Engine.Agents.GravadoNoTurno.descarregar()
     gravar_texto_do_turno(state, "")
 
     emit(state, "toolloop.limit_reached", %{
       iteration: @max_iterations,
-      max_iterations: @max_iterations
+      max_iterations: @max_iterations,
+      gravado: gravado
     })
 
     {:done, state}

@@ -89,7 +89,8 @@
     "continuarCortadaTexto": "请从中断处继续。",
     "falhaOrigem": "失败 · 来源 {{origem}}",
     "falhaProximoPasso": "{{agente}} 的轮次因该失败而停止（来源 {{origem}}）。给 {{agente}} 发一条消息即可继续。",
-    "tetoDeIteracoes": "已达到 {{max}} 步上限，轮次未完成。目前记录的内容见上方；请告诉我你希望如何继续。",
+    "regrasSemHistoria_other": "还有 {{count}} 条业务规则没有用户故事。",
+    "tetoDeIteracoes": "未完成就停下了：每次调用模型算一步，一轮的上限是 {{max}} 步。",
     "naoEnviada": "未发送",
     "tentarDeNovo": "重试"
   },
