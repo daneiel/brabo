@@ -12249,3 +12249,10 @@ PO 的 kickoff 说明这三件事。
 - **位置：** `apps/engine/lib/engine/agents/po_server.ex:649` (`obrigacoes`)
 - **测试：** `apps/engine/test/engine/agents/po_server_test.exs:438`（kickoff 指令带有边界义务）和 `:460`（没有事件日志时，kickoff 仍带有它）
 - **来源：** AT-541（10/14 的 TP-01：交付物接受了过去的 `expiresAt`，链接一创建就已过期，410；故事的 RF 只说过期时间是可选的），所有者 10/15 的决定
+
+### RN-904 — 输出上限截断的响应不以完整目录重试 {#rn-904}
+
+- **规则：** 当 Jev 限制菜单且模型未调用工具作答时，按 RN-625 以完整目录重试一次——但响应被输出上限截断（`truncated`）时除外。截断不是菜单错误：以完整目录重试只会加大提示并再次消耗输出上限。两个入口（`llm_turn` 与 `llm_turn_stream`，后者仅限尚未交付文本时）均适用。处理截断的是 `ToolLoop` 中的 RN-780 重试，保持不变。
+- **位置：** `apps/engine/lib/engine/harness/roteamento_de_ferramenta.ex:126`（`repetir_com_catalogo_inteiro?`）
+- **测试：** `apps/engine/test/engine/harness/roteamento_de_ferramenta_test.exs:274`（被截断的空响应两条路径都不重试；无截断则重试）
+- **来源：** AT-578（EP-026，10/21 调研）：PO 在第 18 轮的第一回合花费了两次 8192 输出 token。

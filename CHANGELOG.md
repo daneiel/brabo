@@ -6,6 +6,9 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- Resposta vazia cortada pelo teto de saída não é mais repetida com o catálogo
+  inteiro (AT-578, RN-904): o corte não é erro de menu, e a volta só gastava
+  outro teto de saída. A retentativa da RN-780 no `ToolLoop` segue igual.
 - A página da API tem o texto-fonte todo em inglês (AT-566): os textos de
   PAT, chave de dispositivo, tickets do runner, binário, pull do Hugging Face,
   conversão de modo e `container-exec` saíram do português, a tag `projetos`
