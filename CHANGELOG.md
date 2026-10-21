@@ -6,6 +6,9 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- A api recusa a rede `none` da imagem do projeto quando a stack de um módulo do
+  `module_map` baixa dependências (node, python, elixir, go, rust...), pedindo
+  `egress`; vale para o Arquiteto e para a eleição da Infra (AT-593, RN-906).
 - Quando o agente para no limite de passos, o fio diz por que parou, o que foi
   gravado no turno e, no PO, quantas regras de negócio ainda estão sem história,
   e oferece "Continuar de onde parou" (AT-590, RN-905).

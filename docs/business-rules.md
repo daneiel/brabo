@@ -21768,8 +21768,10 @@ sem dizer qual.
   que, com rede `none`, nenhum gerenciador de pacotes (npm, pnpm, pip, mix,
   cargo, go mod...) instala dependência no container, e que a Infra herda essa
   rede (RN-723). Com `none`, o resultado pede ao modelo que chame a ferramenta
-  de novo com `egress` se a stack instala dependências. É AVISO, nunca recusa:
-  a api não adivinha a stack, e a contenção do broker (ADR 0130) não muda.
+  de novo com `egress` se a stack instala dependências. É AVISO: a api não
+  adivinha a stack, e a contenção do broker (ADR 0130) não muda. (Desde a
+  RN-906 a api RECUSA `none` quando a stack declarada de um módulo baixa
+  dependências; fora desse caso, segue só o aviso.)
 - **Código:** `apps/engine/lib/engine/harness/tools/choose_project_image.ex:96`
   (`mensagem_de_fixada`), `apps/engine/lib/engine/harness/tools/choose_project_image.ex:23`
   (`spec`)
@@ -24962,7 +24964,7 @@ sem dizer qual.
   texto avisa que a decisão só vale ao recriar o container. "Recriar" numa só
   ação NÃO existe; nenhum teto de aprovação muda ([RN-495](#rn-495)).
 - **Onde:** `apps/api/src/application/use-cases/containers/registrar-transicao-de-container.use-case.ts:131`
-  (`recongelar`), `apps/api/src/domain/containers/project-container.ts:342`
+  (`recongelar`), `apps/api/src/domain/containers/project-container.ts:373`
   (`containerDivergeDaDecisao`),
   `apps/engine/lib/engine/harness/tools/choose_project_image.ex:99`
   (`mensagem_de_fixada`)
@@ -25033,3 +25035,24 @@ sem dizer qual.
   `apps/web/src/routes/session-timeline-montagem.falha-de-turno.test.tsx:108`
   (bolha, botão para o mesmo agente; sem botão em `dev-*` e sessão inativa)
 - **Origem:** AT-590 (EP-031).
+
+### RN-906 — A api recusa a rede `none` quando a stack de um módulo baixa dependências {#rn-906}
+
+- **Regra:** ao decidir a imagem do projeto, se a rede é `none` e algum módulo
+  do `module_map` vigente tem `stack` que casa, por PALAVRA inteira, com a lista
+  fechada de ecossistemas que baixam dependências (node, npm, pnpm, yarn, python,
+  pip, elixir, mix, go, rust, cargo, ruby, java, maven, gradle, php, dotnet...),
+  a api responde 400 nomeando o módulo, a stack e o termo, e pede `egress`. Nada
+  é gravado e a rede nunca é trocada sozinha: `egress` é autorização do usuário.
+  Vale para o Arquiteto (`choose_project_image`) e para a eleição da Infra, que
+  passam pelo mesmo caso de uso (na Infra, o `container_start` termina `failed`
+  com o motivo, sem chamar o broker). Sem `module_map` ou com stack que não casa,
+  segue só o aviso da RN-735. Sem exceção configurável. Revisa a RN-735 (aviso →
+  recusa nesse caso).
+- **Onde:** `apps/api/src/application/use-cases/containers/decidir-imagem-do-projeto.use-case.ts:80`
+  (`stackQueBaixaDependencias`)
+- **Teste:** `apps/api/test/application/use-cases/containers/container-do-projeto.use-case.spec.ts`
+  (recusa nos dois chamadores; `egress`, stack que não casa e sem mapa passam);
+  `apps/api/test/domain/containers/project-container.spec.ts` (casamento por palavra);
+  `apps/api/test/application/use-cases/actions/execute-container-start.use-case.spec.ts`
+- **Origem:** AT-593 (EP-031).
