@@ -25698,3 +25698,23 @@ Kickoff PO говорит все три вещи.
 - **Тест:** `apps/engine/test/engine/agents/po_server_test.exs:548`;
   `apps/web/src/routes/session-timeline-montagem.falha-de-turno.test.tsx:108`
 - **Источник:** AT-590 (EP-031).
+
+### RN-906 — API отклоняет сеть `none`, когда стек модуля скачивает зависимости {#rn-906}
+
+- **Правило:** при выборе образа проекта, если сеть `none`, а `stack` какого-либо
+  модуля текущего `module_map` совпадает как целое слово с закрытым списком
+  экосистем, скачивающих зависимости (node, npm, pnpm, yarn, python, pip, elixir,
+  mix, go, rust, cargo, ruby, java, maven, gradle, php, dotnet...), API отвечает
+  400 с именем модуля, стека и термина и просит `egress`. Ничего не записывается,
+  сеть никогда не меняется сама: `egress` — разрешение пользователя. Относится к
+  Архитектору (`choose_project_image`) и к выбору Infra, проходящим через один и
+  тот же сценарий (у Infra `container_start` завершается `failed` с причиной, без
+  вызова брокера). Без `module_map` или при несовпадении остаётся только
+  предупреждение RN-735. Без настраиваемых исключений. Пересматривает RN-735
+  (предупреждение → отказ в этом случае).
+- **Где:** `apps/api/src/application/use-cases/containers/decidir-imagem-do-projeto.use-case.ts:80`
+  (`stackQueBaixaDependencias`)
+- **Тест:** `apps/api/test/application/use-cases/containers/container-do-projeto.use-case.spec.ts`;
+  `apps/api/test/domain/containers/project-container.spec.ts`;
+  `apps/api/test/application/use-cases/actions/execute-container-start.use-case.spec.ts`
+- **Источник:** AT-593 (EP-031).
