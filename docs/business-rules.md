@@ -17882,7 +17882,7 @@ oferta a agente já ativo ficava acionável para sempre (AT-291,
   `apps/api/src/application/use-cases/agents/offer-infra-handoff.use-case.ts:96`
   (`jaAtendido`);
   `apps/engine/lib/engine/harness/tools/offer_handoff.ex:132`
-  (`agente_ja_ativo`); `apps/engine/lib/engine/agents/falha_de_turno.ex:63`
+  (`agente_ja_ativo`); `apps/engine/lib/engine/agents/falha_de_turno.ex:67`
   (`agente_ja_ativo`); `apps/api/src/db/migrations/0064_ciclo_de_vida_do_handoff.sql`
 - **Teste:** `apps/api/test/application/use-cases/agents/ciclo-de-vida-do-handoff.spec.ts`
   (contra Postgres: repetida na mesma sessão, duplo clique concorrente,
@@ -19094,7 +19094,7 @@ falando quando a subida do servidor foi recusada (ou NEGADA pela política, que
 desde então conta como recusa) e quando ela não cabia ao servidor (sem
 roteamento, `runner`) e o modelo não a propôs.
 
-- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:464`
+- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:470`
   (`dispatch_calls`), `:560` (`recusa_pr_repetida_no_lote`), `:1173`
   (`registrar_subida`), `:1183` (`fechar_subida`), `:1155`
 
@@ -20524,8 +20524,8 @@ reidratação (RN-580) devolve `passos` ANTES do `content`, no mesmo
 sete conversacionais (o Infra Lead também, sem `modelName`). Sem teto próprio
 para `passos`: o acúmulo já era gravado inteiro antes da revisão.
 
-- **Onde:** `apps/engine/lib/engine/agents/texto_do_turno.ex:83` (`descarregar`);
-  `:111` (`juntar`); `:51` (`descarregar_com_modelo`); `:65` (`payload_do_turno`);
+- **Onde:** `apps/engine/lib/engine/agents/texto_do_turno.ex:88` (`descarregar`);
+  `:116` (`juntar`); `:51` (`descarregar_com_modelo`); `:65` (`payload_do_turno`);
   `apps/engine/lib/engine/agents/reidratacao.ex:177` (`acumular`);
   `apps/web/src/routes/session-timeline-montagem.tsx:809` (`passos`)
 - **Teste:** `apps/engine/test/engine/agents/texto_do_turno_test.exs:43` (três
@@ -21283,7 +21283,7 @@ turno continua.
   (`executar`), `:73` (`coagir`), `:52` (`falha_interna?`);
   `apps/engine/lib/engine/agents/resultado_de_ferramenta.ex:29` (`payload`);
   `apps/engine/lib/engine/harness/tool_loop.ex:348` (`run_direct`);
-  `apps/engine/lib/engine/agents/arquiteto_server.ex:331`
+  `apps/engine/lib/engine/agents/arquiteto_server.ex:337`
   (`executar_ferramenta`, o mesmo helper nos outros seis servidores)
 - **Teste:** `apps/engine/test/engine/harness/argumentos_de_ferramenta_test.exs`
   (`create_story` com ids em string JSON grava os ids; `create_c4_diagram` com
@@ -21580,7 +21580,7 @@ sem dizer qual.
   `dev.credit_exhausted` como trabalho pendente, como `dev.idle_tripped`.
   Desde a RN-730 o 402 chega com `code` próprio (`insufficient_credit`) e é
   ele que decide; o reconhecimento pelo texto ficou só como rede.
-- **Onde:** `apps/engine/lib/engine/agents/falha_de_turno.ex:134`
+- **Onde:** `apps/engine/lib/engine/agents/falha_de_turno.ex:138`
   (`credito_esgotado?`),
   `apps/engine/lib/engine/dev/dev_agent_server.ex:906` (`handle_outcome`),
   `apps/engine/lib/engine/dev/agent_io.ex:271` (`pausar_por_credito`),
@@ -21615,7 +21615,7 @@ sem dizer qual.
   (`streamErrorCode`),
   `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:219`
   (`streamErrorCode`),
-  `apps/engine/lib/engine/agents/falha_de_turno.ex:83` (`credito_esgotado?`),
+  `apps/engine/lib/engine/agents/falha_de_turno.ex:87` (`credito_esgotado?`),
   `:71` (`origem`), `apps/engine/lib/engine/harness/tool_loop.ex:148`
   (`last_error_code`), `apps/engine/lib/engine/dev/dev_agent_server.ex:906`
   (`handle_outcome`)
@@ -21860,8 +21860,8 @@ sem dizer qual.
   top up the key and try again."; sem idioma resolvido, pt-BR. O JSON do
   provider fica só no `reason` (diagnóstico). Os demais erros mantêm a frase
   de sempre.
-- **Onde:** `apps/engine/lib/engine/agents/falha_de_turno.ex:158` (`mensagem`),
-  `:181` (`diagnostico`)
+- **Onde:** `apps/engine/lib/engine/agents/falha_de_turno.ex:162` (`mensagem`),
+  `:185` (`diagnostico`)
 - **Teste:** `apps/engine/test/engine/agents/dev_lead_server_test.exs` (402
   em pt-BR e en: frase curta, `reason` sem `{:final`; erro `upstream`: frase
   de sempre), `apps/engine/test/engine/agents/falha_de_turno_test.exs`
@@ -21928,7 +21928,7 @@ sem dizer qual.
   texto narrado entra na bolha cortado em 300 caracteres com "…".
 - **Onde:** `apps/api/src/domain/llm/llm-provider-errors.ts:159`
   (`LIMITE_DO_DETALHE`), `apps/engine/lib/engine/agents/falha_de_turno.ex:284`
-  (`@teto_da_bolha`), `:286` (`curto`)
+  (`@teto_da_bolha`), `:282` (`curto`)
 - **Teste:** `apps/api/test/domain/llm/llm-provider-errors.spec.ts` (o 402
   leva `"metadata":{"reason":"insufficient_credits"` inteiro; corpo acima do
   teto corta), `apps/engine/test/engine/agents/falha_de_turno_test.exs`
@@ -22099,7 +22099,7 @@ sem dizer qual.
   suspende o turno, RN-284) e Infra Lead.
 - **Onde:** `apps/engine/lib/engine/agents/gravado_no_turno.ex:77` (`anotar`),
   `:96` (`descarregar`), `:141` (`classe`),
-  `apps/engine/lib/engine/agents/arquiteto_server.ex:323` (`dispatch_tool`)
+  `apps/engine/lib/engine/agents/arquiteto_server.ex:329` (`dispatch_tool`)
 - **Teste:** `apps/engine/test/engine/agents/gravado_no_turno_test.exs`
   ("Arquiteto com as cinco propose_adr recusadas fecha com nada gravado";
   "escritas do Arquiteto contadas, leitura e ferramenta desconhecida não")
@@ -22431,7 +22431,7 @@ sem dizer qual.
   `min-content` — com `max-content` ela ficava da largura do texto sem quebra
   (medido no Chromium: 2 236px num balão de 708px) e a última coluna sumia.
 - **Onde:** `apps/api/src/application/use-cases/actions/execute-adr-pr.use-case.ts:96`
-  (`openPullRequest`); `apps/engine/lib/engine/infra/infra_lead_server.ex:1521`
+  (`openPullRequest`); `apps/engine/lib/engine/infra/infra_lead_server.ex:1526`
   (`gravar_texto_do_turno`); `apps/engine/lib/engine/dev/dev_agent_server.ex:1188`
   (`propose_pr`); `apps/web/src/lib/session-destinatario.ts:228`
   (`agentesEmConversa`) e `apps/web/src/lib/session-kind.ts:69`
@@ -24837,6 +24837,35 @@ sem dizer qual.
   passado e o link nasceu expirado, 410; o RF da história só dizia que a
   expiração é opcional), decisão do dono de 15/10
 
+### RN-898 — Resposta cortada pelo teto, sem texto algum, fecha o turno dita {#rn-898}
+
+- **Regra:** o turno de agente conversacional cuja última resposta de LLM foi
+  cortada pelo teto de saída ([RN-737](#rn-737)) e que não escreveu texto em
+  volta nenhuma NÃO fecha calado: a linha "Resposta cortada pelo limite de
+  tamanho." (en: "Response cut off by the length limit.") vira o fecho de uma
+  `agent.response` com `modelName`, e a bolha mostra "Continuar de onde
+  parou" ([RN-749](#rn-749)). Vale para os sete conversacionais, que gravam o
+  fecho por `payload_do_turno/2`. Fere a [RN-059](business-rules/custo.md#rn-059) e a
+  [RN-163](business-rules/autenticacao.md#rn-163) quando falta.
+- **Onde:** `apps/engine/lib/engine/agents/texto_do_turno.ex:65`
+  (`payload_do_turno`)
+- **Teste:** `apps/engine/test/engine/harness/resposta_cortada_test.exs:104`
+- **Origem:** AT-570 (TP-01 18ª: a 3ª chamada do PO saiu 8192/8192 e o turno
+  fechou em `idle` sem `agent.response`)
+
+### RN-899 — Resposta vazia sem corte vira agent.error de origem modelo {#rn-899}
+
+- **Regra:** o fecho do laço conversacional sem texto, sem ferramenta e sem
+  corte grava `agent.error` com origem `modelo` e a frase "o modelo não
+  devolveu resposta" (`FalhaDeTurno`), nos sete servidores. É fala do agente
+  para o heartbeat ([RN-581](#rn-581)): a sessão com turno calado fechava por
+  `heartbeat_timeout` 26 s depois de o usuário sair da tela. Presença por aba
+  do projeto NÃO entra ([RN-064](business-rules/custo.md#rn-064)).
+- **Onde:** `apps/engine/lib/engine/agents/falha_de_turno.ex:63` (`origem`),
+  `apps/engine/lib/engine/agents/po_server.ex:303` (`gravar_texto_do_turno`)
+- **Teste:** `apps/engine/test/engine/agents/po_server_test.exs:194` e
+  `apps/engine/test/engine/agents/texto_do_turno_test.exs:96`
+- **Origem:** AT-572 (TP-01 18ª, achado 4)
 ### RN-902 — Recriar o container congela a decisão de imagem vigente, e a imagem desatualizada é avisada {#rn-902}
 
 - **Regra:** a transição `removed → provisioning` e `failed → provisioning`

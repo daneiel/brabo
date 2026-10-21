@@ -92,4 +92,13 @@ defmodule Engine.Agents.TextoDoTurnoTest do
       assert %{content: ^texto} = TextoDoTurno.payload_do_turno(texto, "m")
     end
   end
+
+  test "AT-572/RN-899: a origem do fecho vazio sem corte é modelo, com frase própria" do
+    assert Engine.Agents.FalhaDeTurno.origem(:resposta_vazia) == "modelo"
+
+    assert Engine.Agents.FalhaDeTurno.mensagem(:resposta_vazia) =~
+             "o modelo não devolveu resposta"
+
+    assert TextoDoTurno.payload_do_turno("", nil) == nil
+  end
 end

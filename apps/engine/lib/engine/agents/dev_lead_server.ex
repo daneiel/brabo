@@ -409,7 +409,10 @@ defmodule Engine.Agents.DevLeadServer do
 
         case tool_calls(message, state.tool_specs) do
           [] ->
-            gravar_texto_do_turno(state, content, model_name)
+            # AT-572: fecho sem texto nem corte é falha do modelo, dita no fio (agent.error).
+            if gravar_texto_do_turno(state, content, model_name) == :vazio,
+              do: emit_falha(state, :resposta_vazia)
+
             state
 
           calls ->
@@ -727,7 +730,7 @@ defmodule Engine.Agents.DevLeadServer do
   # RN-698: o texto do turno inteiro, numa `agent.response` só.
   defp gravar_texto_do_turno(state, ultimo, model_name) do
     case TextoDoTurno.payload_do_turno(ultimo, model_name) do
-      nil -> :ok
+      nil -> :vazio
       payload -> emit(state, "agent.response", payload)
     end
   end

@@ -12250,6 +12250,19 @@ PO 的 kickoff 说明这三件事。
 - **测试：** `apps/engine/test/engine/agents/po_server_test.exs:438`（kickoff 指令带有边界义务）和 `:460`（没有事件日志时，kickoff 仍带有它）
 - **来源：** AT-541（10/14 的 TP-01：交付物接受了过去的 `expiresAt`，链接一创建就已过期，410；故事的 RF 只说过期时间是可选的），所有者 10/15 的决定
 
+### RN-898 — A response cut by the cap with no text closes the turn, stated {#rn-898}
+
+- **Rule:** a conversational agent turn whose last LLM response was cut by the output cap ([RN-737](#rn-737)) and wrote no text in any round does NOT close silently: the line "Response cut off by the length limit." becomes the closing `agent.response` with `modelName`, and the bubble shows "Continue where it left off" ([RN-749](#rn-749)). It covers the seven conversational agents.
+- **Where:** `apps/engine/lib/engine/agents/texto_do_turno.ex:65` (`payload_do_turno`)
+- **Test:** `apps/engine/test/engine/harness/resposta_cortada_test.exs:104`
+- **Origin:** AT-570 (TP-01 18th)
+
+### RN-899 — An empty response without a cut becomes an agent.error of origin model {#rn-899}
+
+- **Rule:** a conversational loop closing with no text, no tool and no cut records `agent.error` with origin `modelo` and "the model returned no response" (`FalhaDeTurno`), in the seven servers. It is an agent utterance for the heartbeat ([RN-581](#rn-581)); per-tab project presence does NOT enter ([RN-064](business-rules/custo.md#rn-064)).
+- **Where:** `apps/engine/lib/engine/agents/falha_de_turno.ex:63` (`origem`), `apps/engine/lib/engine/agents/po_server.ex:303` (`gravar_texto_do_turno`)
+- **Test:** `apps/engine/test/engine/agents/po_server_test.exs:194` and `apps/engine/test/engine/agents/texto_do_turno_test.exs:96`
+- **Origin:** AT-572 (TP-01 18th, finding 4)
 ### RN-902 — 重建容器会冻结当前的镜像决策，过期镜像会被提示 {#rn-902}
 
 - **规则：** `removed → provisioning` 和 `failed → provisioning` 转换会重新读取当前镜像决策，并重写 `project_containers` 行的 `imageVersion` 和 `resources`。没有当前决策时返回 409（[RN-105](business-rules/autenticacao.md#rn-105)）。`stopped → running` 不改变版本。`/containers` 页面新增 `decisaoVigente` 和 `imagemDesatualizada`；差异比较的是内容（镜像、网络、资源），而不是版本号，并以文字提示"停止 → 移除 → 再次启动"。`choose_project_image` 的结果带有 `containerDePe`，并提醒该决策只有在重建容器后才生效。不存在一步"重建"；审批上限不变（[RN-495](#rn-495)）。

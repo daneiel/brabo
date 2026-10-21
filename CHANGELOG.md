@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- O turno de agente cortado pelo teto de saída sem texto algum deixa de fechar calado (AT-570, RN-898): vira a linha "Resposta cortada pelo limite de tamanho." com o botão de continuar. A resposta vazia sem corte grava `agent.error` de origem `modelo` (AT-572, RN-899), e a sessão não fecha por heartbeat com turno calado.
 - Mudar a imagem do projeto avisa que o container de pé ficou desatualizado
   (AT-595, RN-902): Remover → Subir de novo passa a regravar a versão e os
   recursos da decisão vigente (a coluna Imagem deixa de mentir), `/containers`

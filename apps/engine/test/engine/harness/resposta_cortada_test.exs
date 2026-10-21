@@ -100,4 +100,15 @@ defmodule Engine.Harness.RespostaCortadaTest do
     assert RespostaCortada.linha("en") == "Response cut off by the length limit."
     assert RespostaCortada.linha(nil) == "Response cut off by the length limit."
   end
+
+  test "AT-570/RN-898: resposta cortada SEM texto grava a linha como fecho; sem corte segue nil" do
+    TextoDoTurno.payload_do_turno("", nil)
+    RespostaCortada.registrar(resposta(%{"truncated" => true}), nil)
+
+    assert %{content: linha, modelName: "m"} = TextoDoTurno.payload_do_turno("", "m")
+    assert linha == RespostaCortada.linha(nil)
+    refute RespostaCortada.cortada?()
+
+    assert TextoDoTurno.payload_do_turno("", "m") == nil
+  end
 end
