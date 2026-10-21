@@ -877,7 +877,7 @@
       "data": "2026-10-15"
     },
     "business-rules/autenticacao.md": {
-      "defasada": false,
+      "defasada": true,
       "data": "2026-10-11"
     },
     "business-rules/custo.md": {
@@ -1053,7 +1053,7 @@
       "data": "2026-10-15"
     },
     "reference/llm-providers.md": {
-      "defasada": false,
+      "defasada": true,
       "data": "2026-10-16"
     },
     "reference/permissions.md": {
@@ -1959,7 +1959,7 @@
       "data": "2026-10-15"
     },
     "business-rules/autenticacao.md": {
-      "defasada": false,
+      "defasada": true,
       "data": "2026-10-11"
     },
     "business-rules/custo.md": {
@@ -2135,7 +2135,7 @@
       "data": "2026-10-15"
     },
     "reference/llm-providers.md": {
-      "defasada": false,
+      "defasada": true,
       "data": "2026-10-16"
     },
     "reference/permissions.md": {
@@ -3041,7 +3041,7 @@
       "data": "2026-10-15"
     },
     "business-rules/autenticacao.md": {
-      "defasada": false,
+      "defasada": true,
       "data": "2026-10-11"
     },
     "business-rules/custo.md": {
@@ -3217,7 +3217,7 @@
       "data": "2026-10-15"
     },
     "reference/llm-providers.md": {
-      "defasada": false,
+      "defasada": true,
       "data": "2026-10-16"
     },
     "reference/permissions.md": {

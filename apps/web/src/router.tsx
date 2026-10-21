@@ -24,7 +24,7 @@ import {
 /**
  * Code-splitting por rota (AT-300).
  *
- * Até aqui as catorze telas eram importadas ESTATICAMENTE, e o bundle inicial
+ * Até aqui as quinze telas eram importadas ESTATICAMENTE, e o bundle inicial
  * carregava todas elas — inclusive a Sessão inteira para quem só abriu o login.
  * Cada tela agora é um chunk próprio, por `lazyRouteComponent` (do TanStack, e
  * não `React.lazy`) por dois motivos medidos no código do router:
@@ -66,6 +66,10 @@ const VerifyEmailPageLazy = lazyRouteComponent(
   'VerifyEmailPage',
 );
 const AccountPageLazy = lazyRouteComponent(() => import('./routes/AccountPage'), 'AccountPage');
+const ProvidersPageLazy = lazyRouteComponent(
+  () => import('./routes/ProvidersPage'),
+  'ProvidersPage',
+);
 const ContainersPageLazy = lazyRouteComponent(
   () => import('./routes/ContainersPage'),
   'ContainersPage',
@@ -259,6 +263,12 @@ const containersRoute = createRoute({
   component: ContainersPageLazy,
 });
 
+const providersRoute = createRoute({
+  getParentRoute: () => appLayout,
+  path: '/providers',
+  component: ProvidersPageLazy,
+});
+
 // A lista de abas mora em `routes/project-tabs.ts` — aqui só se pergunta se a
 // chave existe. Enquanto a lista era copiada neste arquivo, aceitar `?tab=x`
 // e ter painel para `x` eram duas decisões independentes.
@@ -426,6 +436,7 @@ const routeTree = rootRoute.addChildren([
     indexRoute,
     accountRoute,
     containersRoute,
+    providersRoute,
     projectRoute,
     sessionRoute,
     provisioningRoute,

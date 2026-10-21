@@ -11,6 +11,24 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
   `activatedAgents`, que nunca tem `dev-*`, e "Ligar para sugeridos" deixava
   o dev de fora. Agora os `dev-<módulo>` do `module_map` entram pela mesma
   derivação da aba Executores.
+- Os providers ganham uma página própria, `/providers`, no rodapé do menu
+  (AT-577): chaves, capacidades de cada provider, catálogo de modelos e, só para
+  `owner`, o gasto por chave. Sem rota nem escrita novas na api.
+- O PO não cria mais um épico com o mesmo título de outro do projeto
+  (AT-581, RN-894): `create_epic` recusa e devolve o id do existente para ser
+  usado em `epic_id`, com a mesma régua de título igual da história.
+- O bloqueio de task do dev agent por 429 do provider diz "limite de uso do
+  modelo atingido (429)" e manda trocar o modelo, em vez de "falha passageira
+  de rede" (AT-594, RN-903). A origem `infra` e a retomada automática (RN-864)
+  não mudam.
+- Resposta vazia cortada pelo teto de saída não é mais repetida com o catálogo
+  inteiro (AT-578, RN-904): o corte não é erro de menu, e a volta só gastava
+  outro teto de saída. A retentativa da RN-780 no `ToolLoop` segue igual.
+- A ferramenta `write_file` do dev agent recusa reescrever um README que tem a
+  seção "Rodar na sua máquina" sem essa seção: ela substitui o arquivo inteiro,
+  e o erro diz para reescrever o README completo mantendo a seção (AT-571,
+  RN-900). O título é uma constante usada também pelos prompts da Infra e do dev.
+
 - A página da API tem o texto-fonte todo em inglês (AT-566): os textos de
   PAT, chave de dispositivo, tickets do runner, binário, pull do Hugging Face,
   conversão de modo e `container-exec` saíram do português, a tag `projetos`
