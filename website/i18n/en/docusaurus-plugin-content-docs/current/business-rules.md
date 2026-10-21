@@ -24822,3 +24822,24 @@ without saying which.
 - **Origin:** AT-541 (TP-01 of 10/14: the deliverable accepted `expiresAt` in
   the past and the link was born expired, 410; the story's RF only said the
   expiration is optional), owner's decision of 10/15
+
+### RN-895 — The argument refusal says what arrived and the expected format {#rn-895}
+
+- **Rule:** revises [RN-719](#rn-719) and [RN-725](#rn-725). A field declared `array`/`object` that arrives as non-JSON text, or as a number/boolean/wrong type, is refused before the tool with "the field X arrived as <type>; send <format>", with an example (`["item 1","item 2"]`, `{"chave":"valor"}`), never with the value. The `emit_plano_de_teste` sentence now puts the keys in backticks, so the refusal carries the received keys.
+- **Where:** `apps/engine/lib/engine/harness/argumentos_de_ferramenta.ex:80` (`coagir`); `apps/engine/lib/engine/gates/tools/emit_plano_de_teste.ex:73` (`run`)
+- **Test:** `apps/engine/test/engine/harness/argumentos_de_ferramenta_test.exs:193` and `:201` (the format and the received type) and `:210` (the received keys)
+- **Origin:** AT-583 (TP-01 18th and 19th: `dod` arrived as a markdown checklist and the test plan was refused 4 times without saying what came)
+
+### RN-896 — The `epic_id` is validated before the api {#rn-896}
+
+- **Rule:** `create_story` refuses an `epic_id` that is not a UUID ("epic_id inválido; …") and, when the PO already created epics in this process (`epicos_conhecidos`), one that is not among them, listing `id=title`. An empty map means "unknown" and does not refuse membership (epic from an earlier turn), only the format.
+- **Where:** `apps/engine/lib/engine/harness/tools/create_story.ex:55` (`epico_valido`)
+- **Test:** `apps/engine/test/engine/harness/argumentos_de_ferramenta_test.exs:224` and `:233`
+- **Origin:** AT-584 (qwen sent `EPIC_ID_PLACEHOLDER_NAO_USAR_AQUI` and the api answered with the DTO name)
+
+### RN-897 — A provider cut by `max_tokens` in a gate is origin `modelo` {#rn-897}
+
+- **Rule:** the `agent.error` of the `qa-estrategia`, `qa-automacao`, `qa-performance-seguranca` and `appsec` gates classifies "Tool calls cutoff by max_tokens" as `modelo` (the reasoning ate the cap, RN-059); any other LLM error stays `infra`.
+- **Where:** `apps/engine/lib/engine/gates/origem_do_erro.ex:10` (`de_llm`)
+- **Test:** `apps/engine/test/engine/gates/origem_do_erro_test.exs:7`
+- **Origin:** AT-586 (BaseTen 502 recorded as `infra`)

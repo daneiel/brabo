@@ -21549,8 +21549,8 @@ sem dizer qual.
 4. `complete_story` nomeia exatamente o que falta (`falta: business_rule_ids`),
    pela mesma régua de `missingForReady` da api, lida da história devolvida.
 
-- **Onde:** `apps/engine/lib/engine/harness/argumentos_de_ferramenta.ex:88`
-  (`decodificar_escapes`), `:135` (`chaves_recebidas`), `:152`
+- **Onde:** `apps/engine/lib/engine/harness/argumentos_de_ferramenta.ex:98`
+  (`decodificar_escapes`), `:148` (`chaves_recebidas`), `:162`
   (`com_chaves_recebidas`); `apps/engine/lib/engine/harness/tools/complete_story.ex:80`
   (`faltam`); `apps/api/src/domain/backlog/story-overlap.ts:39`
   (`decodificarEscapesLiterais`), `:25` (`normalizarTitulo`);
@@ -21755,7 +21755,7 @@ sem dizer qual.
   não cláusula da RN-725, porque a superfície é outra (resposta do modelo, não
   argumento de ferramenta) e a decisão sobre o delta é desta.
 - **Onde:** `apps/engine/lib/engine/agents/texto_do_turno.ex:65` (`payload_do_turno`),
-  `apps/engine/lib/engine/harness/argumentos_de_ferramenta.ex:88` (`decodificar_escapes`)
+  `apps/engine/lib/engine/harness/argumentos_de_ferramenta.ex:98` (`decodificar_escapes`)
 - **Teste:** `apps/engine/test/engine/agents/texto_do_turno_test.exs` (feliz:
   os cinco escapes medidos, no fecho e num passo; intacto: texto sem escape e
   bloco de código com `\n` literal)
@@ -24836,3 +24836,24 @@ sem dizer qual.
 - **Origem:** AT-541 (TP-01 de 14/10: o entregável aceitou `expiresAt` no
   passado e o link nasceu expirado, 410; o RF da história só dizia que a
   expiração é opcional), decisão do dono de 15/10
+
+### RN-895 — A recusa de argumento diz o que chegou e o formato esperado {#rn-895}
+
+- **Regra:** revisa a [RN-719](#rn-719) e a [RN-725](#rn-725). Campo declarado `array`/`object` que chega como texto fora de JSON, ou como número/booleano/tipo trocado, é recusado antes da ferramenta com "o campo X chegou como <tipo>; envie <formato>", com exemplo (`["item 1","item 2"]`, `{"chave":"valor"}`), nunca com o valor. A frase do `emit_plano_de_teste` passou a pôr as chaves entre crases, e por isso a recusa leva as chaves recebidas.
+- **Onde:** `apps/engine/lib/engine/harness/argumentos_de_ferramenta.ex:80` (`coagir`); `apps/engine/lib/engine/gates/tools/emit_plano_de_teste.ex:73` (`run`)
+- **Teste:** `apps/engine/test/engine/harness/argumentos_de_ferramenta_test.exs:193` e `:201` (o formato e o tipo recebido) e `:210` (as chaves recebidas)
+- **Origem:** AT-583 (TP-01 18ª e 19ª: o `dod` chegou como checklist markdown e o plano de teste foi recusado 4 vezes sem dizer o que veio)
+
+### RN-896 — O `epic_id` é validado antes da api {#rn-896}
+
+- **Regra:** `create_story` recusa `epic_id` que não é UUID ("epic_id inválido; …") e, quando o PO já criou épicos neste processo (`epicos_conhecidos`), o que não é um deles, listando `id=título`. Mapa vazio significa "não sei" e não recusa pertencimento (épico de turno anterior), só o formato.
+- **Onde:** `apps/engine/lib/engine/harness/tools/create_story.ex:55` (`epico_valido`)
+- **Teste:** `apps/engine/test/engine/harness/argumentos_de_ferramenta_test.exs:224` e `:233`
+- **Origem:** AT-584 (o qwen mandou `EPIC_ID_PLACEHOLDER_NAO_USAR_AQUI` e a api respondeu com o nome do DTO)
+
+### RN-897 — O corte do provider por `max_tokens` num gate é origem `modelo` {#rn-897}
+
+- **Regra:** o `agent.error` dos gates `qa-estrategia`, `qa-automacao`, `qa-performance-seguranca` e `appsec` classifica "Tool calls cutoff by max_tokens" como `modelo` (o raciocínio comeu o teto, RN-059); qualquer outro erro de LLM segue `infra`.
+- **Onde:** `apps/engine/lib/engine/gates/origem_do_erro.ex:10` (`de_llm`)
+- **Teste:** `apps/engine/test/engine/gates/origem_do_erro_test.exs:7`
+- **Origem:** AT-586 (BaseTen 502 gravado como `infra`)

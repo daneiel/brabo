@@ -6,6 +6,10 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- A recusa de argumento de ferramenta diz o que chegou e o formato esperado
+  (AT-583, RN-895); `create_story` valida o `epic_id` antes da api (AT-584,
+  RN-896); e o corte do provider por `max_tokens` nos gates de QA e AppSec é
+  origem `modelo`, não `infra` (AT-586, RN-897).
 - A página da API tem o texto-fonte todo em inglês (AT-566): os textos de
   PAT, chave de dispositivo, tickets do runner, binário, pull do Hugging Face,
   conversão de modo e `container-exec` saíram do português, a tag `projetos`
