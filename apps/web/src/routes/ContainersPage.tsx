@@ -23,6 +23,7 @@ import type {
   Role,
 } from '../lib/api-types';
 import {
+  avisoDeImagemDesatualizada,
   decidirSubida,
   podeDecidirCicloDeVida,
   semBrokerParaCicloDeVida,
@@ -267,8 +268,11 @@ function AcoesDoContainer({
   // elemento `disabled` não abre no Chromium. `ja_esta_de_pe` é a exceção:
   // a coluna Registrado já mostra `rodando`, e repetir isso numa linha de
   // texto em toda linha saudável é ruído, não explicação.
+  // RN-902: com a imagem desatualizada ele deixa de ser ruído — é o que
+  // explica por que "Subir de novo" não faz nada.
+  const aviso = avisoDeImagemDesatualizada(item);
   const motivoDaSubida =
-    !subida.pode && subida.motivo !== 'ja_esta_de_pe' ? subida.motivo : null;
+    !subida.pode && (subida.motivo !== 'ja_esta_de_pe' || aviso) ? subida.motivo : null;
   const semBrokerNaSubida = motivoDaSubida === 'sem_broker_na_instalacao';
   // A falta de broker é UM fato, mesmo quando trava subir E parar/remover:
   // uma linha curta só, com o detalhe (o nome da variável, para o operador)
@@ -318,6 +322,7 @@ function AcoesDoContainer({
           {item.registrado ? t('actions.startAgain') : t('actions.start')}
         </Button>
       </div>
+      {aviso && <p className={styles.motivo}>{t('actions.desatualizada', aviso)}</p>}
       {semContainer && (
         <p className={styles.motivo}>{t(`actions.semContainer.${semContainer}`)}</p>
       )}

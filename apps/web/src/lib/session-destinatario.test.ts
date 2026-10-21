@@ -3,6 +3,7 @@ import {
   agentesEmConversa,
   agentesParaChamar,
   ativadosSemJanela,
+  execucaoDoRoster,
   resolverDestinatario,
 } from './session-destinatario';
 import type { Handoff, SessionEvent } from './api-types';
@@ -145,5 +146,26 @@ describe('agentesParaChamar (RN-682)', () => {
       'ux-designer',
       'infra',
     ]);
+  });
+});
+
+describe('execucaoDoRoster (RN-901, AT-573)', () => {
+  it('CAMINHO FELIZ: execução ativa soma o dev-<modulo> do module_map aos ativados', () => {
+    const execucao = execucaoDoRoster({
+      executionActivated: true,
+      moduleNames: ['encurtador-api'],
+      activatedAgents: ['criativo', 'qa'],
+    });
+    expect(execucao.ativa).toBe(true);
+    expect(execucao.ativados).toEqual(['criativo', 'qa', 'dev-encurtador-api']);
+  });
+
+  it('CASO DE FALHA: sem execução ativa, o módulo do plano NÃO vira dev agent', () => {
+    const execucao = execucaoDoRoster({
+      executionActivated: false,
+      moduleNames: ['encurtador-api'],
+      activatedAgents: [],
+    });
+    expect(execucao).toEqual({ ativa: false, ativados: [] });
   });
 });

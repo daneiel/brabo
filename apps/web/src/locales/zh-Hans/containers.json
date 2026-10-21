@@ -50,7 +50,7 @@
     "startNoDecisionMessage": "Arquiteto（或 Infra）尚未为此项目决定镜像——没有可用于启动的镜像。",
     "startRationale": "由用户在容器页面请求启动。",
     "bloqueio": {
-      "ja_esta_de_pe": "容器已在运行——请先停止再重新启动。",
+      "ja_esta_de_pe": "容器已在运行——再次启动不会应用新镜像。",
       "sem_broker_na_instalacao": "此安装无法为“容器”或“挂载文件夹”项目启动容器：它没有容器 broker（BROKER_URL 为空），而启动它们的正是 broker。批准启动只会以失败告终。“本地 Runner”项目不依赖它——它们的容器由本地智能体启动。",
       "sem_broker_para_parar": "此安装没有容器 broker（BROKER_URL 为空），而停止和删除“容器”或“挂载文件夹”项目容器的正是它：停止或删除只会以失败告终。",
       "sem_imagem_decidida": "尚未决定镜像：在启动任何容器之前，Arquiteto（或 Infra）需要先决定一个。",
@@ -58,6 +58,7 @@
       "sem_papel": "启动容器需要此工作区的 maintainer 角色。",
       "sem_sessao": "此项目还没有会话——提议该操作需要一个会话。"
     },
+    "desatualizada": "镜像决策已变更（镜像 {{imagem}}，网络 {{rede}}，v{{para}}）；容器仍在使用 v{{de}}。要应用：停止 → 移除 → 再次启动。",
     "ressalva": {
       "runner_pode_estar_desconectado": "该文件夹曾被本地智能体确认过；如果它现在没有运行，操作在批准时会失败。",
       "registrado_rodando_observado_parado": "登记显示运行中，但容器已停止（Docker 重启了？）。重新启动会唤起同一个容器，无需先停止。"

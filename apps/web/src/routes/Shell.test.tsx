@@ -367,6 +367,11 @@ describe('Shell — marca', () => {
   // atalho de volta ao dashboard raiz — destino diferente do botão de
   // `SessionPage.tsx` (aria-label="Voltar ao projeto"), que volta ao
   // PROJETO da sessão, não ao dashboard.
+  it('o rodapé leva à página global de providers (AT-577)', () => {
+    renderShell();
+    expect(screen.getByLabelText('Providers')).toHaveAttribute('href', '/providers');
+  });
+
   it('é um link para o dashboard raiz, mesmo dentro de um projeto aberto', () => {
     estado.pathname = '/projects/project-1';
 

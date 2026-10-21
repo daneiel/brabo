@@ -25560,3 +25560,103 @@ Kickoff PO говорит все три вещи.
 - **Где:** `apps/engine/lib/engine/gates/origem_do_erro.ex:10` (`de_llm`)
 - **Тест:** `apps/engine/test/engine/gates/origem_do_erro_test.exs:7`
 - **Происхождение:** AT-586 (BaseTen 502 записан как `infra`)
+### RN-902 — Пересоздание контейнера замораживает текущее решение об образе, а устаревший образ помечается {#rn-902}
+
+- **Правило:** переходы `removed → provisioning` и `failed → provisioning`
+  ЗАНОВО читают текущее решение об образе и перезаписывают `imageVersion` и
+  `resources` строки `project_containers`. Без текущего решения — 409
+  ([RN-105](business-rules/autenticacao.md#rn-105)). `stopped → running` версию НЕ меняет. Страница
+  `/containers` получает `decisaoVigente` и `imagemDesatualizada`; расхождение
+  сравнивает СОДЕРЖИМОЕ (образ, сеть, ресурсы), а не номер версии, и строка
+  текстом говорит «Остановить → Удалить → Запустить снова». Результат
+  `choose_project_image` содержит `containerDePe` и предупреждает, что решение
+  действует только после пересоздания контейнера. Пересоздания одним действием
+  нет; потолки одобрения не меняются ([RN-495](#rn-495)).
+- **Где:** `apps/api/src/application/use-cases/containers/registrar-transicao-de-container.use-case.ts:131`
+  (`recongelar`), `apps/api/src/domain/containers/project-container.ts:342`
+  (`containerDivergeDaDecisao`),
+  `apps/engine/lib/engine/harness/tools/choose_project_image.ex:99`
+  (`mensagem_de_fixada`)
+- **Тест:** `apps/api/test/application/use-cases/containers/ciclo-de-vida-do-container.use-case.spec.ts`;
+  `apps/api/test/domain/containers/project-container.spec.ts`;
+  `apps/web/src/routes/ContainersPage.test.tsx`
+- **Источник:** AT-595
+### RN-901 — Пакетное предложение автоматического режима в чате включает dev-агентов утверждённого плана {#rn-901}
+
+- **Правило:** дополняет RN-889. `roster.activatedAgents` сводки проектов
+  НИКОГДА не содержит dev-агента: dev не записывает `agent.activated`, только
+  `dev.started`. Пакетное предложение в чате (RN-883/889) читало только этот
+  список и не показывало `dev-<модуль>` активного выполнения, который
+  пользователь должен был включить на вкладке Исполнители. Выполнение проекта
+  (`execucaoDoRoster`) теперь добавляет, только при `roster.executionActivated`,
+  `dev-<модуль>` из `roster.moduleNames` (текущий `module_map`), тем же
+  `devAgentId`, что и вкладка Исполнители (RN-661, `rosterFromFacts`), без новой
+  выборки. Без активного выполнения dev-агенты не добавляются. Объявленный
+  пробел: список берётся из ТЕКУЩЕГО `module_map`; если в утверждённом плане
+  использовано подмножество модулей, предложение наследует это расхождение.
+  Ни один лимит не меняется, и ничего не записывается без клика.
+- **Где:** `apps/web/src/lib/session-destinatario.ts:194` (`execucaoDoRoster`),
+  вызывается из `useExecucaoNoProjeto` (`apps/web/src/lib/session-destinatario.ts:175`)
+- **Тест:** `apps/web/src/lib/session-destinatario.test.ts` («CAMINHO FELIZ:
+  execução ativa soma o dev-<modulo> do module_map aos ativados»; отказ: «sem
+  execução ativa, o módulo do plano NÃO vira dev agent»), и
+  `apps/web/src/components/ModoAutomaticoNoChat.test.tsx` (фикстура из реальной
+  сводки, «caminho feliz»)
+- **Происхождение:** AT-573 (TP-01 18-й, 19/10: первая задача остановилась в
+  `dev.awaiting_approval`, потому что dev не был в автоматическом режиме)
+### RN-894 — Эпик с тем же заголовком, что и другой в проекте, отклоняется {#rn-894}
+
+- **Правило:** `create_epic` отклоняет (400) эпик, нормализованный заголовок
+  которого совпадает с заголовком другого эпика ТОГО ЖЕ проекта, и отказ
+  возвращает модели id существующего: "Já existe o épico «título» (id …) neste
+  projeto — use este id em epic_id". Правило то же, что и для истории (находка
+  R, `tituloDuplicado`), без второй копии. СЕМАНТИЧЕСКИЙ дубликат (RN-681) к
+  эпику не применяется: только одинаковый заголовок. При отказе ничего не
+  создаётся и не пишется в журнал событий.
+- **Где:** `apps/api/src/application/use-cases/backlog/create-epic.use-case.ts:25` (`tituloDuplicado`)
+- **Тест:** `apps/api/test/application/use-cases/backlog/create-epic.use-case.spec.ts:41`
+  (создаёт без совпадения) и `:49` (отклоняет совпадение с id существующего)
+- **Происхождение:** AT-581
+### RN-903 — 429 провайдера — это лимит использования модели, а не сбой сети {#rn-903}
+
+- **Правило:** задача, которую dev-агент блокирует из-за ответа модели 429
+  (код `rate_limit` или текст с `(429)` / «limite de uso»), в причине пишет
+  «limite de uso do modelo atingido (429)», а автоматический повтор сообщает,
+  что при повторе нужно сменить модель dev-агента. Никогда не пишет «falha
+  passageira de rede». Origem остаётся `infra`, повтор RN-864 не меняется (до
+  3, через 1, 3 и 10 мин; пауза 60 с, которую `dev.idle` называет «depois de
+  limite de uso do modelo»). Сетевой сбой сохраняет свой обычный текст.
+- **Где:** `apps/engine/lib/engine/dev/dev_agent_server.ex:1136`
+  (`limite_de_uso?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:1127`
+  (`motivo_da_parada`), `apps/engine/lib/engine/dev/dev_agent_server.ex:997`
+  (`bloquear_passageira`), `apps/engine/lib/engine/dev/agent_io.ex:293`
+  (`pausar_por_rede`)
+- **Тест:** `apps/engine/test/engine/dev/dev_agent_server_test.exs` («429 do
+  provider: o motivo diz limite de uso do modelo, não rede»; отказ: «falha de
+  rede continua com o texto de rede, não de limite»)
+- **Источник:** AT-594 (TP-01 20-й, 19.10: 429 у `laguna-s-2.1:free` блокировал
+  задачи как «falha passageira de rede», а диагноз говорил о лимите использования)
+### RN-904 — Ответ, обрезанный лимитом вывода, не повторяется с полным каталогом {#rn-904}
+
+- **Правило:** если Jev ограничивает меню и модель отвечает БЕЗ инструмента, шаг повторяется ОДИН раз с полным каталогом (RN-625), кроме случая, когда ответ обрезан лимитом вывода (`truncated`). Обрезка не является ошибкой меню: повтор с полным каталогом лишь увеличит промпт и потратит ещё один лимит вывода. Действует в обоих входах (`llm_turn` и `llm_turn_stream`, последний — только без уже доставленного текста). Обрезку обрабатывает повтор RN-780 в `ToolLoop`, он не меняется.
+- **Где:** `apps/engine/lib/engine/harness/roteamento_de_ferramenta.ex:126` (`repetir_com_catalogo_inteiro?`)
+- **Тест:** `apps/engine/test/engine/harness/roteamento_de_ferramenta_test.exs:274` (обрезанный пустой ответ не повторяется на обоих путях; без обрезки повторяется)
+- **Происхождение:** AT-578 (EP-026, обследование 21.10): первый ход PO в 18-м раунде потратил два вывода по 8192 токена.
+### RN-900 — `write_file` не перезаписывает README с потерей секции использования Infra {#rn-900}
+
+- **Правило:** `write_file` заменяет файл целиком. Если `path` — README
+  (`README*`), в текущем файле есть секция `## Rodar na sua máquina`, а в новом
+  содержимом её нет, инструмент отказывает с именованной ошибкой и ничего не
+  пишет. Чтобы изменить фрагмент, нужно переписать README целиком, сохранив
+  секцию. Заголовок — одна константа (`titulo_secao_de_uso/0`), которую также
+  используют промпты Infra и dev, чтобы отказ и инструкция не расходились. Это не
+  gate: отказ принадлежит самому инструменту и не покрывает запись через
+  `terminal` (`cat >`, `sed -i`).
+- **Где:** `apps/engine/lib/engine/harness/tools/write_file.ex:62`
+  (`recusa_de_secao_perdida`)
+- **Тест:** `apps/engine/test/engine/harness/tools/write_file_test.exs:41`
+  (перезапись без секции отклоняется, файл остаётся неизменным); счастливый путь
+  покрыт первыми двумя тестами того же файла
+- **Источник:** AT-571 (TP-01 от 19.10, 18-й прогон: dev-агент переписал README,
+  исправляя замечание QA, и секция использования, которую написала Infra, пропала;
+  ни один gate этого не заметил)
