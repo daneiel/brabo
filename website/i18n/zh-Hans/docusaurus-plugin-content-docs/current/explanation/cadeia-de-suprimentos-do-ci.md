@@ -125,7 +125,7 @@ image: neo4j:5.26-community@sha256:d9cfe82983d27f5a75b3aaae8f316d04f9a698a3b7f61
 ```
 
 ```dockerfile
-FROM node:26.11.1-alpine3.24@sha256:143494b1da2945f061539253adc65e4f1569ddf07da2d384c022c791a9d90a4a AS deps
+FROM node:26.12.0-alpine3.24@sha256:6f08a523443ddedf52941874c203475b0ad503e859ad70cb26ab8be9a517dbd5 AS deps
 ```
 
 两者都存在时，Docker 按 digest 拉取：tag 是给读这一行的人的信息，digest 决定字节。
