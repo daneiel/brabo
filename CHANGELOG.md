@@ -6,6 +6,11 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- A ferramenta `write_file` do dev agent recusa reescrever um README que tem a
+  seção "Rodar na sua máquina" sem essa seção: ela substitui o arquivo inteiro,
+  e o erro diz para reescrever o README completo mantendo a seção (AT-571,
+  RN-900). O título é uma constante usada também pelos prompts da Infra e do dev.
+
 - A página da API tem o texto-fonte todo em inglês (AT-566): os textos de
   PAT, chave de dispositivo, tickets do runner, binário, pull do Hugging Face,
   conversão de modo e `container-exec` saíram do português, a tag `projetos`

@@ -24822,3 +24822,22 @@ without saying which.
 - **Origin:** AT-541 (TP-01 of 10/14: the deliverable accepted `expiresAt` in
   the past and the link was born expired, 410; the story's RF only said the
   expiration is optional), owner's decision of 10/15
+
+### RN-900 — `write_file` refuses to rewrite the README and drop the Infra's usage section {#rn-900}
+
+- **Rule:** `write_file` replaces the whole file. When the `path` is a README
+  (`README*`), the current file has the `## Rodar na sua máquina` section and
+  the new content does not, the tool refuses with a named error and writes
+  nothing. Changing a fragment requires rewriting the full README, keeping the
+  section. The title is one constant (`titulo_secao_de_uso/0`), also used by the
+  Infra and dev prompts, so the refusal and the instruction do not diverge. It
+  is not a gate: the refusal belongs to the tool itself and does not cover
+  writes by `terminal` (`cat >`, `sed -i`).
+- **Where:** `apps/engine/lib/engine/harness/tools/write_file.ex:62`
+  (`recusa_de_secao_perdida`)
+- **Test:** `apps/engine/test/engine/harness/tools/write_file_test.exs:41`
+  (a rewrite without the section is refused and the file stays intact); the
+  happy path is covered by the first two tests in the same file
+- **Origin:** AT-571 (TP-01 18th run of 10/19: the dev agent rewrote the README
+  while fixing a QA finding and the usage section the Infra had written was
+  lost; no gate noticed)

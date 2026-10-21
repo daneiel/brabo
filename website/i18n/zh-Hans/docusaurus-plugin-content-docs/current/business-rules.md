@@ -12249,3 +12249,10 @@ PO 的 kickoff 说明这三件事。
 - **位置：** `apps/engine/lib/engine/agents/po_server.ex:649` (`obrigacoes`)
 - **测试：** `apps/engine/test/engine/agents/po_server_test.exs:438`（kickoff 指令带有边界义务）和 `:460`（没有事件日志时，kickoff 仍带有它）
 - **来源：** AT-541（10/14 的 TP-01：交付物接受了过去的 `expiresAt`，链接一创建就已过期，410；故事的 RF 只说过期时间是可选的），所有者 10/15 的决定
+
+### RN-900 — `write_file` 拒绝重写 README 而丢失 Infra 的使用章节 {#rn-900}
+
+- **规则：** `write_file` 整体替换文件。当 `path` 是 README（`README*`），当前文件有 `## Rodar na sua máquina` 章节而新内容没有时，该工具以具名错误拒绝，且不写入任何内容。要修改某一段，必须整体重写 README 并保留该章节。标题只有一个常量（`titulo_secao_de_uso/0`），Infra 和 dev 的提示词也使用它，使拒绝与指令不至于分歧。这不是 gate：拒绝属于工具本身，且不覆盖通过 `terminal`（`cat >`、`sed -i`）的写入。
+- **位置：** `apps/engine/lib/engine/harness/tools/write_file.ex:62`（`recusa_de_secao_perdida`）
+- **测试：** `apps/engine/test/engine/harness/tools/write_file_test.exs:41`（不带该章节的重写被拒绝且文件保持不变）；正常路径由同一文件的前两个测试覆盖
+- **来源：** AT-571（10/19 的 TP-01 第 18 轮：dev 代理在修正 QA 意见时重写了 README，Infra 写的使用章节丢失；没有任何 gate 发现）
