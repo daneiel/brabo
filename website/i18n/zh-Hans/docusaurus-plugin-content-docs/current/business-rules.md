@@ -12250,6 +12250,12 @@ PO 的 kickoff 说明这三件事。
 - **测试：** `apps/engine/test/engine/agents/po_server_test.exs:438`（kickoff 指令带有边界义务）和 `:460`（没有事件日志时，kickoff 仍带有它）
 - **来源：** AT-541（10/14 的 TP-01：交付物接受了过去的 `expiresAt`，链接一创建就已过期，410；故事的 RF 只说过期时间是可选的），所有者 10/15 的决定
 
+### RN-901 — 聊天中的自动模式批量提议包含已批准计划的 dev 代理 {#rn-901}
+
+- **规则：** 扩展 RN-889。项目摘要的 `roster.activatedAgents` 从不包含 dev 代理：dev 不记录 `agent.activated`，只记录 `dev.started`。聊天的批量提议（RN-883/889）只读取该列表，不显示正在执行的 `dev-<模块>`，用户必须在执行者标签页中手动开启。项目执行（`execucaoDoRoster`）现在仅在 `roster.executionActivated` 为真时，把 `roster.moduleNames`（当前 `module_map`）的 `dev-<模块>` 加入列表，使用与执行者标签页相同的 `devAgentId`（RN-661，`rosterFromFacts`），不做新的推导。没有活动执行时不加入任何 dev。已声明的缺口：列表来自当前 `module_map`；若已批准计划只用了部分模块，提议会沿用这一差异。没有任何上限改变，未经点击不写入任何内容。
+- **位置：** `apps/web/src/lib/session-destinatario.ts:194`（`execucaoDoRoster`），由 `useExecucaoNoProjeto`（`apps/web/src/lib/session-destinatario.ts:175`）调用
+- **测试：** `apps/web/src/lib/session-destinatario.test.ts`（"CAMINHO FELIZ：执行活动时把 module_map 的 dev-<模块> 加入已激活项"；失败："无活动执行时，计划的模块不成为 dev 代理"），以及 `apps/web/src/components/ModoAutomaticoNoChat.test.tsx`（由真实 roster 推导的夹具，"caminho feliz"）
+- **来源：** AT-573（TP-01 第 18 轮，19/10：第一个任务因 dev 未处于自动模式而停在 `dev.awaiting_approval`）
 ### RN-894 — 与项目中另一史诗同名的史诗会被拒绝 {#rn-894}
 
 - **规则：** `create_epic` 拒绝（400）规范化标题与同一项目中另一史诗相同的史诗，

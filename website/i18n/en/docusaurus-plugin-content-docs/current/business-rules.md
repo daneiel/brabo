@@ -24823,6 +24823,29 @@ without saying which.
   the past and the link was born expired, 410; the story's RF only said the
   expiration is optional), owner's decision of 10/15
 
+### RN-901 — The auto mode batch offer in the chat includes the dev agents of the approved plan {#rn-901}
+
+- **Rule:** extends RN-889. `roster.activatedAgents` of the project summary
+  NEVER carries a dev agent: the dev does not record `agent.activated`, only
+  `dev.started`. The chat's batch offer (RN-883/889) read only that list and
+  did not list the `dev-<module>` of the active execution, which the user had
+  to turn on from the Executors tab. The project execution (`execucaoDoRoster`)
+  now adds, only with `roster.executionActivated`, the `dev-<module>` of
+  `roster.moduleNames` (the current `module_map`), through the SAME `devAgentId`
+  the Executors tab uses (RN-661, `rosterFromFacts`), with no new derivation.
+  Without an active execution no dev enters. Declared gap: the list comes from
+  the CURRENT `module_map`; if the approved plan used a subset of the modules,
+  the offer inherits that divergence. No ceiling moves and nothing is written
+  without the click.
+- **Where:** `apps/web/src/lib/session-destinatario.ts:194` (`execucaoDoRoster`),
+  called by `useExecucaoNoProjeto` (`apps/web/src/lib/session-destinatario.ts:175`)
+- **Test:** `apps/web/src/lib/session-destinatario.test.ts` ("CAMINHO FELIZ:
+  execução ativa soma o dev-<modulo> do module_map aos ativados"; failure: "sem
+  execução ativa, o módulo do plano NÃO vira dev agent"), and
+  `apps/web/src/components/ModoAutomaticoNoChat.test.tsx` (fixture derived from
+  the real roster, "caminho feliz")
+- **Origin:** AT-573 (TP-01 18th, 19/10: the 1st task stopped at `dev.awaiting_approval`
+  because the dev was not in auto mode)
 ### RN-894 — An epic with the same title as another in the project is refused {#rn-894}
 
 - **Rule:** `create_epic` refuses (400) an epic whose normalized title equals

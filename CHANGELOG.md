@@ -6,6 +6,11 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- A oferta de modo automático do chat da Sessão inclui os dev agents da
+  execução ativa (AT-573, RN-901): antes, a lista vinha só de
+  `activatedAgents`, que nunca tem `dev-*`, e "Ligar para sugeridos" deixava
+  o dev de fora. Agora os `dev-<módulo>` do `module_map` entram pela mesma
+  derivação da aba Executores.
 - Os providers ganham uma página própria, `/providers`, no rodapé do menu
   (AT-577): chaves, capacidades de cada provider, catálogo de modelos e, só para
   `owner`, o gasto por chave. Sem rota nem escrita novas na api.
