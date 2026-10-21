@@ -12331,13 +12331,6 @@ PO 的 kickoff 说明这三件事。
 - **位置：** `apps/engine/lib/engine/harness/roteamento_de_ferramenta.ex:126`（`repetir_com_catalogo_inteiro?`）
 - **测试：** `apps/engine/test/engine/harness/roteamento_de_ferramenta_test.exs:274`（被截断的空响应两条路径都不重试；无截断则重试）
 - **来源：** AT-578（EP-026，10/21 调研）：PO 在第 18 轮的第一回合花费了两次 8192 输出 token。
-### RN-900 — `write_file` 拒绝重写 README 而丢失 Infra 的使用章节 {#rn-900}
-
-- **规则：** `write_file` 整体替换文件。当 `path` 是 README（`README*`），当前文件有 `## Rodar na sua máquina` 章节而新内容没有时，该工具以具名错误拒绝，且不写入任何内容。要修改某一段，必须整体重写 README 并保留该章节。标题只有一个常量（`titulo_secao_de_uso/0`），Infra 和 dev 的提示词也使用它，使拒绝与指令不至于分歧。这不是 gate：拒绝属于工具本身，且不覆盖通过 `terminal`（`cat >`、`sed -i`）的写入。
-- **位置：** `apps/engine/lib/engine/harness/tools/write_file.ex:62`（`recusa_de_secao_perdida`）
-- **测试：** `apps/engine/test/engine/harness/tools/write_file_test.exs:41`（不带该章节的重写被拒绝且文件保持不变）；正常路径由同一文件的前两个测试覆盖
-- **来源：** AT-571（10/19 的 TP-01 第 18 轮：dev 代理在修正 QA 意见时重写了 README，Infra 写的使用章节丢失；没有任何 gate 发现）
-
 ### RN-905 — 步数上限会说明已记录什么、还缺什么，并提供继续 {#rn-905}
 
 - **规则：** 对话式代理停在步数上限时，上限事件（`toolloop.limit_reached`；创意代理为带
