@@ -275,7 +275,7 @@ one.
 > follows that recipient. What survives from this rule is the half about the
 > model: the binding route receives the agent, never falls back silently.
 
-- **Where:** `apps/web/src/lib/session-destinatario.ts:272`
+- **Where:** `apps/web/src/lib/session-destinatario.ts:290`
   (`useDestinatarioDoChat`, since RN-631),
   `apps/web/src/lib/api-client.ts:1124` (`getSessionModelBinding`, the
   `agentId`), `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:166`
@@ -17663,8 +17663,8 @@ passa a ler `DESTINATARIO_DA_SESSAO_CRIATIVA` em vez do literal de
 `SessionPage.tsx`: todo destino que o composer pode dar continua tendo
 cláusula própria no engine. Nenhuma mudança de api nem de engine.
 
-- **Onde:** `apps/web/src/lib/session-destinatario.ts:210` (`agentesEmConversa`),
-  `:237` (`resolverDestinatario`), `:272` (`useDestinatarioDoChat`), `:116`
+- **Onde:** `apps/web/src/lib/session-destinatario.ts:228` (`agentesEmConversa`),
+  `:255` (`resolverDestinatario`), `:290` (`useDestinatarioDoChat`), `:116`
   (`useAtivadosNaSessaoInteira`), `:141` (`ativadosSemJanela`);
   `apps/web/src/routes/SessionComposer.tsx:287` (`destinatarioRow`), `:193`
   (`ofertasForaDaJanela`); `apps/web/src/routes/SessionPage.tsx:350`
@@ -17746,7 +17746,7 @@ fica. Ativação recusada não navega e mostra a frase da api. Quem navega é a
 ROTA (`irParaSessao`, o `navigate` do router): a tela não depende do router.
 
 - **Onde:** `apps/web/src/lib/session-acoes-de-handoff.ts:147`
-  (`handleActivateExecution`); `apps/web/src/router.tsx:339` (`irParaSessao`)
+  (`handleActivateExecution`); `apps/web/src/router.tsx:349` (`irParaSessao`)
 - **Teste:** `apps/web/src/routes/SessionPage.handoff-obsoleto.test.tsx`
   (navega para o `sessionId` devolvido, com aviso; recusa não navega — caso de
   falha; sem quem navegue, só avisa)
@@ -18220,8 +18220,8 @@ genérico, que ao lado de um brief ou de uma regra da mesma sessão parecia nega
 que eles existissem — o escopo da seção (PR e backlog, [RN-159](business-rules/autenticacao.md#rn-159)) não
 muda.
 
-- **Código:** `apps/web/src/routes/Shell.tsx:579` (`execucao`), `:587`
-  (`origemDaAtividade`), `:594` (`estadoDaAtividade`);
+- **Código:** `apps/web/src/routes/Shell.tsx:591` (`execucao`), `:599`
+  (`origemDaAtividade`), `:606` (`estadoDaAtividade`);
   `apps/web/src/lib/hooks.ts:127` (`useProjectSessions`, `frescorMs`);
   `apps/web/src/routes/Dashboard.tsx:75` (`lastActivityText`);
   `apps/web/src/routes/ContextAside.tsx:46` (`quantos`), `:340`
@@ -18338,8 +18338,8 @@ os achados X1–X3 da auditoria. A duplicação de navegação por abas (gaveta 
 barra) fechou no ADR 0211.
 
 - **Código:** `apps/web/src/lib/layout-movel.ts:18` (`CONSULTA_MOVEL`),
-  `:39` (`useLayoutMovel`); `apps/web/src/routes/Shell.tsx:422`
-  (`movel`), `:443` (`prenderFoco`), `:462` (`fecharAoSeguirLink`);
+  `:39` (`useLayoutMovel`); `apps/web/src/routes/Shell.tsx:414`
+  (`movel`), `:454` (`prenderFoco`), `:473` (`fecharAoSeguirLink`);
   `apps/web/src/routes/ProjectPage.tsx:49` (`movel`);
   `apps/web/src/routes/ProjectOverviewTab.tsx:68` (`movel`)
 - **Teste:** `apps/web/src/routes/Shell.test.tsx` ("Shell — layout móvel
@@ -19962,7 +19962,7 @@ isso a recusa da api mora na ROTA, e o caso de uso não muda.
   `apps/api/src/application/use-cases/llm/garantir-destinatario-do-chat.use-case.ts:27`
   (`GarantirDestinatarioDoChatUseCase`);
   `apps/api/src/interfaces/http/llm/chat.controller.ts:82` (`chat`);
-  `apps/web/src/lib/session-destinatario.ts:329` (`agentesParaChamar`);
+  `apps/web/src/lib/session-destinatario.ts:347` (`agentesParaChamar`);
   `apps/web/src/routes/SessionPage.tsx:678` (`handleSend`);
   `apps/web/src/routes/SessionComposer.tsx:276`
 - **Teste:** `apps/api/test/application/use-cases/llm/garantir-destinatario-do-chat.use-case.spec.ts:82`
@@ -21081,7 +21081,7 @@ quando o turno termina entregando um formulário (`gravar_texto_do_turno(state,
 
 - **Onde:** `apps/web/src/lib/texto-plano.ts:7` (`textoPlanoDoMarkdown`),
   `apps/web/src/lib/eco-de-formulario.ts:17` (`ecosDeRespostaEstruturada`),
-  `apps/web/src/lib/session-destinatario.ts:237` (`resolverDestinatario`),
+  `apps/web/src/lib/session-destinatario.ts:255` (`resolverDestinatario`),
   `apps/web/src/components/ui/MarkdownMessage.tsx:74` (`CodeFence`)
 - **Teste:** `apps/web/src/lib/texto-plano.test.ts`,
   `apps/web/src/lib/eco-de-formulario.test.ts`,
@@ -21650,7 +21650,7 @@ sem dizer qual.
 - **Onde:** `apps/api/src/application/use-cases/actions/execute-infra-pr.use-case.ts:71`
   (`ExecuteInfraPrUseCase`),
   `apps/web/src/routes/ProjectApprovalsTab.tsx:106` (`ProjectApprovalsTab`),
-  `apps/web/src/routes/Shell.tsx:545` (`idDoProjetoAtual`),
+  `apps/web/src/routes/Shell.tsx:557` (`idDoProjetoAtual`),
   `apps/web/src/routes/NewProjectWizard.tsx:155` (`NewProjectWizard`),
   `apps/web/src/routes/ProjectPrsTab.tsx:141` (`invalidateMergeActions`),
   `apps/web/src/lib/agent-status.ts:222` (`gateStatus`)
@@ -22199,7 +22199,7 @@ sem dizer qual.
   reproduzida no navegador; a correção cobre a classe (conteúdo que encolhe e
   volta).
 - **Onde:** `apps/web/src/routes/project-tabs.ts:383` (`abaDaRota`),
-  `apps/web/src/routes/Shell.tsx:510` (`abaDaRota`),
+  `apps/web/src/routes/Shell.tsx:522` (`abaDaRota`),
   `apps/web/src/lib/session-rolagem.ts:16` (`estaPertoDoFim`), `:82`
   (`estavaNoFimRef`), `:120` (`aoRolarOFio`),
   `apps/web/src/components/ModelCatalogSection.module.css` (`.barraDeLote`),
@@ -22432,8 +22432,8 @@ sem dizer qual.
   (medido no Chromium: 2 236px num balão de 708px) e a última coluna sumia.
 - **Onde:** `apps/api/src/application/use-cases/actions/execute-adr-pr.use-case.ts:96`
   (`openPullRequest`); `apps/engine/lib/engine/infra/infra_lead_server.ex:1521`
-  (`gravar_texto_do_turno`); `apps/engine/lib/engine/dev/dev_agent_server.ex:1164`
-  (`propose_pr`); `apps/web/src/lib/session-destinatario.ts:210`
+  (`gravar_texto_do_turno`); `apps/engine/lib/engine/dev/dev_agent_server.ex:1188`
+  (`propose_pr`); `apps/web/src/lib/session-destinatario.ts:228`
   (`agentesEmConversa`) e `apps/web/src/lib/session-kind.ts:69`
   (`tipoDaSessao`); `apps/web/src/routes/NewProjectWizard.tsx:1122`
   (`quebraPorSegmento`); `apps/web/src/components/ui/MarkdownMessage.tsx:139`
@@ -22737,8 +22737,8 @@ sem dizer qual.
   `reasoningTokens` (ficam só em `token_usage`), então a resposta vazia que
   bate no teto sem `finish_reason: length` não é reconhecida.
 - **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:219`
-  (`parada_sem_chamada`), `apps/engine/lib/engine/dev/dev_agent_server.ex:1116`
-  (`motivo_da_parada`), `:1119` (`stop_diagnosis`)
+  (`parada_sem_chamada`), `apps/engine/lib/engine/dev/dev_agent_server.ex:1124`
+  (`motivo_da_parada`), `:1143` (`stop_diagnosis`)
 - **Teste:** `apps/engine/test/engine/harness/tool_loop_test.exs` (`corte só
   de raciocínio`: retentada uma vez e segue; repetido para com
   `corte_pelo_teto`), `apps/engine/test/engine/dev/dev_agent_server_test.exs`
@@ -23020,7 +23020,7 @@ sem dizer qual.
   cobre também o merge por squash que a [RN-760](#rn-760) declara não ver.
   Declarado: a PR antiga da branch, se existir, não é fechada no provider.
 - **Onde:** `apps/engine/lib/engine/dev/worktree_manager.ex:246`
-  (`sem_diff_contra_a_dev?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:1048`
+  (`sem_diff_contra_a_dev?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:1056`
   (`ja_na_dev`)
 - **Teste:** `apps/engine/test/engine/dev/tarefa_ja_na_dev_test.exs`
 - **Origem:** AT-474
@@ -24868,3 +24868,92 @@ sem dizer qual.
   `apps/engine/test/engine/harness/tools/choose_project_image_test.exs`
 - **Origem:** AT-595 (TP-01 20ª: a decisão v3 `egress` não alcançou o container
   v2 `none` e a coluna Imagem seguiu em v2)
+### RN-901 — A oferta de modo automático do chat inclui os dev agents do plano aprovado {#rn-901}
+
+- **Regra:** estende a RN-889. `roster.activatedAgents` do resumo de projetos
+  NUNCA traz dev agent: o dev não grava `agent.activated`, só `dev.started`. A
+  oferta em lote do chat (RN-883/889) lia só essa lista e não listava o
+  `dev-<modulo>` da execução ativa, que o usuário precisava ligar pela aba
+  Executores. A execução do projeto (`execucaoDoRoster`) passa a somar, só com
+  `roster.executionActivated`, os `dev-<modulo>` dos `roster.moduleNames` (o
+  `module_map` vigente), pela MESMA `devAgentId` que a aba Executores usa
+  (RN-661, `rosterFromFacts`), sem derivação nova. Sem execução ativa, nenhum
+  dev entra. Lacuna declarada: a lista sai do `module_map` VIGENTE; se o plano
+  aprovado usou um subconjunto dos módulos, a oferta herda essa divergência.
+  Nenhum teto se move e nada é gravado sem o clique.
+- **Onde:** `apps/web/src/lib/session-destinatario.ts:194` (`execucaoDoRoster`),
+  chamado por `useExecucaoNoProjeto` (`apps/web/src/lib/session-destinatario.ts:175`)
+- **Teste:** `apps/web/src/lib/session-destinatario.test.ts` ("CAMINHO FELIZ:
+  execução ativa soma o dev-<modulo> do module_map aos ativados"; falha: "sem
+  execução ativa, o módulo do plano NÃO vira dev agent"), e
+  `apps/web/src/components/ModoAutomaticoNoChat.test.tsx` (fixture derivada do
+  roster real, "caminho feliz")
+- **Origem:** AT-573 (TP-01 18ª, 19/10: a 1ª tarefa parou em `dev.awaiting_approval`
+  porque o dev não estava no modo automático)
+### RN-894 — Épico com o mesmo título de outro do projeto é recusado {#rn-894}
+
+- **Regra:** `create_epic` recusa (400) o épico cujo título, normalizado,
+  é igual ao de outro épico do MESMO projeto, e a recusa devolve ao modelo o
+  id do existente: "Já existe o épico «título» (id …) neste projeto — use
+  este id em epic_id". A régua é a MESMA da história (achado R,
+  `tituloDuplicado`), sem segunda cópia. A duplicata SEMÂNTICA
+  ([RN-681](business-rules/custo.md#rn-681)) não vale para épico: só título
+  igual. Nada é criado nem gravado no event log quando recusa.
+- **Onde:** `apps/api/src/application/use-cases/backlog/create-epic.use-case.ts:25` (`tituloDuplicado`)
+- **Teste:** `apps/api/test/application/use-cases/backlog/create-epic.use-case.spec.ts:41`
+  (cria sem título igual) e `:49` (recusa o título igual com o id do existente)
+- **Origem:** AT-581
+### RN-903 — O 429 do provider é limite de uso do modelo, não falha de rede {#rn-903}
+
+- **Regra:** a task que o dev agent bloqueia porque o modelo respondeu 429
+  (código `rate_limit`, ou texto com `(429)` ou "limite de uso") diz no motivo
+  "limite de uso do modelo atingido (429)", e a retomada automática diz que,
+  se repetir, é para trocar o modelo do dev agent. Nunca diz "falha
+  passageira de rede". A origem segue `infra` e a retomada da RN-864 não muda
+  (até 3, depois de 1, 3 e 10 min; pausa de 60 s, que o `dev.idle` nomeia como
+  "depois de limite de uso do modelo"). A falha de rede segue com o texto de
+  sempre.
+- **Onde:** `apps/engine/lib/engine/dev/dev_agent_server.ex:1136`
+  (`limite_de_uso?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:1127`
+  (`motivo_da_parada`), `apps/engine/lib/engine/dev/dev_agent_server.ex:997`
+  (`bloquear_passageira`), `apps/engine/lib/engine/dev/agent_io.ex:293`
+  (`pausar_por_rede`)
+- **Teste:** `apps/engine/test/engine/dev/dev_agent_server_test.exs` ("429 do
+  provider: o motivo diz limite de uso do modelo, não rede"; falha: "falha de
+  rede continua com o texto de rede, não de limite")
+- **Origem:** AT-594 (TP-01 20ª, 19/10: o 429 do `laguna-s-2.1:free` bloqueou
+  as tarefas com "falha passageira de rede", e o diagnóstico dizia limite de
+  uso)
+### RN-904 — O corte do teto de saída não repete a chamada com o catálogo inteiro {#rn-904}
+
+- **Regra:** quando o Jev restringe o menu e o modelo responde SEM ferramenta,
+  o passo é repetido UMA vez com o catálogo inteiro (RN-625) — exceto quando a
+  resposta veio CORTADA pelo teto de saída (`truncated`). O corte não é erro de
+  menu: a volta com o catálogo inteiro só aumentaria o prompt e gastaria outro
+  teto de saída. Vale nas duas fachadas (`llm_turn` e `llm_turn_stream`, esta
+  só sem texto já entregue). Quem trata o corte é a retentativa da RN-780 no
+  `ToolLoop`, que não muda.
+- **Onde:** `apps/engine/lib/engine/harness/roteamento_de_ferramenta.ex:126` (`repetir_com_catalogo_inteiro?`)
+- **Teste:** `apps/engine/test/engine/harness/roteamento_de_ferramenta_test.exs:274`
+  (resposta vazia cortada não repete, nos dois caminhos; sem corte, repete)
+- **Origem:** AT-578 (EP-026, levantamento de 21/10): o 1º turno do PO na 18ª
+  rodada gastou duas voltas de 8192 tokens de saída.
+### RN-900 — `write_file` recusa reescrever o README e apagar a seção de uso da Infra {#rn-900}
+
+- **Regra:** `write_file` substitui o arquivo inteiro. Quando o `path` é um
+  README (`README*`), o arquivo atual tem a seção `## Rodar na sua máquina` e o
+  conteúdo novo não a traz, a ferramenta recusa com erro nomeado e não escreve
+  nada. Trocar um trecho exige reescrever o README completo, com a seção. O
+  título é uma constante só (`titulo_secao_de_uso/0`), usada também pelos
+  prompts da Infra e do dev, para que a recusa e a instrução não divirjam. Não
+  é gate: a recusa é da própria ferramenta, e não cobre escrita pelo `terminal`
+  (`cat >`, `sed -i`).
+- **Onde:** `apps/engine/lib/engine/harness/tools/write_file.ex:62`
+  (`recusa_de_secao_perdida`)
+- **Teste:** `apps/engine/test/engine/harness/tools/write_file_test.exs:41`
+  (a reescrita sem a seção é recusada e o arquivo fica intacto); o caminho
+  feliz (README com a seção reescrito com a seção, e arquivo que não é README)
+  está nas primeiras duas provas do mesmo arquivo
+- **Origem:** AT-571 (TP-01 18ª de 19/10: o dev agent reescreveu o README ao
+  corrigir um parecer do QA e a seção de uso que a Infra escrevera sumiu; nenhum
+  gate notou)

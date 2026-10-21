@@ -1,11 +1,12 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getProjectsSummary, getSessionTokenUsage } from './api-client';
-import type { AgentTokenUsage, Handoff, SessionEvent } from './api-types';
+import type { AgentTokenUsage, Handoff, ProjectCardSummary, SessionEvent } from './api-types';
 import { intervaloDaSessao, useCanalDaSessaoVivo } from './canal-vivo';
 import { pollQueParaNoErro } from './query-policy';
 import { AGENTES_DE_CHAT } from './session-readiness';
 import { addressableAgents } from './agents';
+import { devAgentId } from './agent-status';
 import { sessaoTemExecucao } from './sessao-de-execucao';
 
 /**
@@ -180,8 +181,25 @@ export function useExecucaoNoProjeto(
     queryFn: () => getProjectsSummary(workspaceId!),
     enabled: !!workspaceId,
   });
-  const roster = resumo?.find((c) => c.projectId === projectId)?.roster;
-  return { ativa: roster?.executionActivated === true, ativados: roster?.activatedAgents ?? [] };
+  return execucaoDoRoster(resumo?.find((c) => c.projectId === projectId)?.roster);
+}
+
+/**
+ * RN-901 (AT-573): a execução do roster, com os `dev-<modulo>` que a aba
+ * Executores já deriva (RN-661, `rosterFromFacts`). `activatedAgents` nunca
+ * traz dev agent — o dev não grava `agent.activated` —, então a oferta do chat
+ * o perdia. Os dev agents vêm dos `moduleNames` do `module_map` vigente, e só
+ * com a execução ativa, pela MESMA `devAgentId`.
+ */
+export function execucaoDoRoster(
+  roster?: Pick<
+    ProjectCardSummary['roster'],
+    'executionActivated' | 'moduleNames' | 'activatedAgents'
+  >,
+): { ativa: boolean; ativados: string[] } {
+  const ativa = roster?.executionActivated === true;
+  const devs = ativa ? (roster?.moduleNames ?? []).map(devAgentId) : [];
+  return { ativa, ativados: [...(roster?.activatedAgents ?? []), ...devs] };
 }
 
 /** A cadência da terceira fonte de `useAtivadosNaSessaoInteira`. */
