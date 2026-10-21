@@ -4,7 +4,8 @@
   },
   "sidebar": {
     "account": "Аккаунт",
-    "containers": "Контейнеры"
+    "containers": "Контейнеры",
+    "providers": "Провайдеры"
   },
   "account": {
     "title": "Аккаунт",

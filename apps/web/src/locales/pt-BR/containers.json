@@ -50,7 +50,7 @@
     "startNoDecisionMessage": "O Arquiteto (ou a Infra) ainda não decidiu uma imagem para este projeto — não há com o que subir.",
     "startRationale": "Subida pedida por um humano na página de containers.",
     "bloqueio": {
-      "ja_esta_de_pe": "O container já está de pé — pare-o antes de subir de novo.",
+      "ja_esta_de_pe": "O container já está de pé — subir de novo não aplica uma imagem nova.",
       "sem_broker_na_instalacao": "Esta instalação não sobe container para projetos Container ou Pasta montada: ela não tem o broker de container (BROKER_URL vazia), que é quem os sobe. Aprovar a subida só terminaria em falha. Projetos Runner local não dependem dele — quem sobe o container deles é o agente local.",
       "sem_broker_para_parar": "Esta instalação não tem o broker de container (BROKER_URL vazia), que é quem para e remove os containers de projetos Container ou Pasta montada: parar ou remover só terminaria em falha.",
       "sem_imagem_decidida": "Sem imagem decidida: o Arquiteto (ou a Infra) precisa decidir uma antes de qualquer container subir.",
@@ -58,6 +58,7 @@
       "sem_papel": "Subir container exige o papel maintainer neste workspace.",
       "sem_sessao": "Este projeto ainda não tem sessão — a ação precisa de uma para ser proposta."
     },
+    "desatualizada": "A decisão de imagem mudou (imagem {{imagem}}, rede {{rede}}, v{{para}}); o container ainda usa a v{{de}}. Para aplicar: Parar → Remover → Subir de novo.",
     "ressalva": {
       "runner_pode_estar_desconectado": "A pasta foi confirmada um dia por um agente local; se ele não estiver rodando agora, a ação falha ao ser aprovada.",
       "registrado_rodando_observado_parado": "O registro diz rodando, mas o container está parado (o Docker reiniciou?). Subir de novo religa o mesmo container, sem precisar parar antes."

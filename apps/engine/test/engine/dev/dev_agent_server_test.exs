@@ -784,6 +784,41 @@ defmodule Engine.Dev.DevAgentServerTest do
                DevAgentServer.handle_info({:wake, :became_claimable}, new_state)
     end
 
+    # AT-594: 429 do provider é limite de uso do modelo, não rede. A origem e
+    # a retomada seguem como na RN-864.
+    test "429 do provider: o motivo diz limite de uso do modelo, não rede", %{state: state} do
+      Process.put(:fake_tasks, [%{"id" => "task-l1", "title" => "T1"}])
+      Process.put(:fake_dev_context, contexto_minimo())
+
+      Process.put(:fake_llm_always, %{
+        "message" => %{"content" => ""},
+        "error" => "limite de uso atingido em openrouter (429)",
+        "errorCode" => "rate_limit"
+      })
+
+      assert {:noreply, new_state} = DevAgentServer.handle_cast(:work, state)
+
+      assert_received {:task_blocked, "task-l1", motivo, _, "dev-api"}
+      assert motivo =~ "limite de uso do modelo"
+      assert motivo =~ "troque o modelo"
+      refute motivo =~ "rede"
+      assert_received {:task_blocked_origin, "task-l1", "infra"}
+      assert new_state.pausa_de_rede
+      assert [_] = all_enqueued(worker: Engine.Workers.RetomadaDeTarefaWorker)
+    end
+
+    test "falha de rede continua com o texto de rede, não de limite", %{state: state} do
+      Process.put(:fake_tasks, [%{"id" => "task-l2", "title" => "T1"}])
+      Process.put(:fake_dev_context, contexto_minimo())
+      Process.put(:fake_llm_turn_error, "getaddrinfo EAI_AGAIN openrouter.ai")
+
+      assert {:noreply, _} = DevAgentServer.handle_cast(:work, state)
+
+      assert_received {:task_blocked, "task-l2", motivo, _, "dev-api"}
+      assert motivo =~ "falha passageira de rede"
+      refute motivo =~ "limite de uso"
+    end
+
     test "falha passageira depois de 3 retomadas fica bloqueada pedindo o clique",
          %{state: state} do
       state = Map.put(state, :retomadas_automaticas, %{"task-p3" => 3})

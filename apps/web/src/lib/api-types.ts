@@ -1545,6 +1545,10 @@ export interface ContainerOverviewItem {
    * a tela recusa a subida ANTES do clique dizendo por quê.
    */
   brokerConfigurado: boolean;
+  /** Decisão de imagem vigente (maior versão), ou null (RN-902). */
+  decisaoVigente: { version: number; image: string; network: "none" | "egress" } | null;
+  /** Conteúdo do container registrado difere da decisão vigente (RN-902). */
+  imagemDesatualizada: boolean;
 }
 
 // --- Aba Code, só leitura (FASE 26) — espelha

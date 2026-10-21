@@ -76,8 +76,8 @@ defmodule Engine.Harness.Tools.ChooseProjectImage do
     }
 
     case EngineApiClient.decide_project_image(ctx.project_id, ctx.session_id, payload) do
-      {:ok, %{"version" => version, "decisao" => decisao}} ->
-        {:ok, mensagem_de_fixada(version, decisao)}
+      {:ok, %{"version" => version, "decisao" => decisao} = resposta} ->
+        {:ok, mensagem_de_fixada(version, decisao, Map.get(resposta, "containerDePe"))}
 
       {:ok, _outro} ->
         {:ok, "imagem do projeto fixada."}
@@ -96,12 +96,14 @@ defmodule Engine.Harness.Tools.ChooseProjectImage do
   — para o modelo corrigir para `egress` no mesmo turno se a stack instala
   dependências. Aviso, nunca recusa: a api não adivinha a stack.
   """
-  def mensagem_de_fixada(version, decisao) do
+  def mensagem_de_fixada(version, decisao, container_de_pe \\ nil) do
     rede = Map.get(decisao, "network")
 
     base =
       "imagem do projeto fixada (version #{version}): #{Map.get(decisao, "image")}, " <>
         "rede #{rede}. A aba Code está liberada."
+
+    base = base <> aviso_de_container(container_de_pe)
 
     if rede == "none" do
       base <>
@@ -113,4 +115,14 @@ defmodule Engine.Harness.Tools.ChooseProjectImage do
       base
     end
   end
+
+  # RN-902: a decisão nova NÃO muda o container de pé; o modelo não pode
+  # afirmar que ele já tem a rede/imagem nova.
+  defp aviso_de_container(%{"imageVersion" => v}) do
+    " O container do projeto (v#{v}) NÃO muda com esta decisão: ela só passa a valer " <>
+      "ao recriá-lo (Parar → Remover → Subir de novo em Containers); não afirme que " <>
+      "o container já tem a nova rede/imagem."
+  end
+
+  defp aviso_de_container(_), do: ""
 end
