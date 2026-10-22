@@ -422,11 +422,13 @@ defmodule Engine.Infra.InfraLeadServer do
     gravado = Engine.Agents.GravadoNoTurno.descarregar()
     gravar_texto_do_turno(state, "")
 
-    emit(state, "toolloop.limit_reached", %{
-      iteration: @max_iterations,
-      max_iterations: @max_iterations,
-      gravado: gravado
-    })
+    Engine.Harness.FalhaRepetida.narrar_ou(state.project_id, state.session_id, @agent, fn ->
+      emit(state, "toolloop.limit_reached", %{
+        iteration: @max_iterations,
+        max_iterations: @max_iterations,
+        gravado: gravado
+      })
+    end)
 
     {:done, state}
   end
@@ -545,7 +547,7 @@ defmodule Engine.Infra.InfraLeadServer do
         {:proposed, title, files, state}
 
       {nil, state} ->
-        run_turn(state, remaining - 1)
+        run_turn(state, Engine.Harness.FalhaRepetida.restante(remaining - 1))
     end
   end
 

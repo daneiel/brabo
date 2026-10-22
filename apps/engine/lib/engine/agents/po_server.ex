@@ -267,7 +267,9 @@ defmodule Engine.Agents.PoServer do
       }
       |> Map.merge(regras_sem_historia(state))
 
-    emit(state, "toolloop.limit_reached", payload)
+    Engine.Harness.FalhaRepetida.narrar_ou(state.project_id, state.session_id, @agent, fn ->
+      emit(state, "toolloop.limit_reached", payload)
+    end)
 
     encerrar_turno(state)
   end
@@ -319,7 +321,7 @@ defmodule Engine.Agents.PoServer do
             # `agent.response` no fim do turno, nunca um fragmento por volta.
             TextoDoTurno.acumular(content, model_name)
             state = Enum.reduce(calls, state, &dispatch_tool/2)
-            run_turn(state, remaining - 1)
+            run_turn(state, Engine.Harness.FalhaRepetida.restante(remaining - 1))
         end
 
       {:error, reason} ->

@@ -367,11 +367,13 @@ defmodule Engine.Agents.DevLeadServer do
     gravado = Engine.Agents.GravadoNoTurno.descarregar()
     gravar_texto_do_turno(state, "", nil)
 
-    emit(state, "toolloop.limit_reached", %{
-      iteration: @max_iterations,
-      max_iterations: @max_iterations,
-      gravado: gravado
-    })
+    Engine.Harness.FalhaRepetida.narrar_ou(state.project_id, state.session_id, @agent, fn ->
+      emit(state, "toolloop.limit_reached", %{
+        iteration: @max_iterations,
+        max_iterations: @max_iterations,
+        gravado: gravado
+      })
+    end)
 
     state
   end
@@ -477,7 +479,7 @@ defmodule Engine.Agents.DevLeadServer do
                 st2
 
               {st2, false} ->
-                run_turn(st2, remaining - 1)
+                run_turn(st2, Engine.Harness.FalhaRepetida.restante(remaining - 1))
             end
         end
 

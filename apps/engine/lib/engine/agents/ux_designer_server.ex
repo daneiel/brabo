@@ -202,11 +202,13 @@ defmodule Engine.Agents.UxDesignerServer do
     gravado = Engine.Agents.GravadoNoTurno.descarregar()
     gravar_texto_do_turno(state, "", nil)
 
-    emit(state, "toolloop.limit_reached", %{
-      iteration: @max_iterations,
-      max_iterations: @max_iterations,
-      gravado: gravado
-    })
+    Engine.Harness.FalhaRepetida.narrar_ou(state.project_id, state.session_id, @agent, fn ->
+      emit(state, "toolloop.limit_reached", %{
+        iteration: @max_iterations,
+        max_iterations: @max_iterations,
+        gravado: gravado
+      })
+    end)
 
     state
   end
@@ -266,7 +268,7 @@ defmodule Engine.Agents.UxDesignerServer do
             if sucesso? do
               state
             else
-              run_turn(state, remaining - 1)
+              run_turn(state, Engine.Harness.FalhaRepetida.restante(remaining - 1))
             end
         end
 

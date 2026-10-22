@@ -19094,7 +19094,7 @@ falando quando a subida do servidor foi recusada (ou NEGADA pela política, que
 desde então conta como recusa) e quando ela não cabia ao servidor (sem
 roteamento, `runner`) e o modelo não a propôs.
 
-- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:470`
+- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:475`
   (`dispatch_calls`), `:566` (`recusa_pr_repetida_no_lote`), `:1179`
   (`registrar_subida`), `:1189` (`fechar_subida`), `:1155`
 
@@ -21279,10 +21279,10 @@ levantada dentro da ferramenta vira `tool.result` `ok: false` com
 turno continua.
 
 - **Onde:** `apps/engine/lib/engine/harness/argumentos_de_ferramenta.ex:26`
-  (`executar`), `:73` (`coagir`), `:52` (`falha_interna?`);
+  (`executar`), `:73` (`coagir`), `:56` (`falha_interna?`);
   `apps/engine/lib/engine/agents/resultado_de_ferramenta.ex:29` (`payload`);
-  `apps/engine/lib/engine/harness/tool_loop.ex:348` (`run_direct`);
-  `apps/engine/lib/engine/agents/arquiteto_server.ex:337`
+  `apps/engine/lib/engine/harness/tool_loop.ex:363` (`run_direct`);
+  `apps/engine/lib/engine/agents/arquiteto_server.ex:342`
   (`executar_ferramenta`, o mesmo helper nos outros seis servidores)
 - **Teste:** `apps/engine/test/engine/harness/argumentos_de_ferramenta_test.exs`
   (`create_story` com ids em string JSON grava os ids; `create_c4_diagram` com
@@ -21548,8 +21548,8 @@ sem dizer qual.
 4. `complete_story` nomeia exatamente o que falta (`falta: business_rule_ids`),
    pela mesma régua de `missingForReady` da api, lida da história devolvida.
 
-- **Onde:** `apps/engine/lib/engine/harness/argumentos_de_ferramenta.ex:98`
-  (`decodificar_escapes`), `:148` (`chaves_recebidas`), `:162`
+- **Onde:** `apps/engine/lib/engine/harness/argumentos_de_ferramenta.ex:102`
+  (`decodificar_escapes`), `:152` (`chaves_recebidas`), `:166`
   (`com_chaves_recebidas`); `apps/engine/lib/engine/harness/tools/complete_story.ex:80`
   (`faltam`); `apps/api/src/domain/backlog/story-overlap.ts:39`
   (`decodificarEscapesLiterais`), `:25` (`normalizarTitulo`);
@@ -21615,7 +21615,7 @@ sem dizer qual.
   `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:226`
   (`streamErrorCode`),
   `apps/engine/lib/engine/agents/falha_de_turno.ex:87` (`credito_esgotado?`),
-  `:71` (`origem`), `apps/engine/lib/engine/harness/tool_loop.ex:148`
+  `:71` (`origem`), `apps/engine/lib/engine/harness/tool_loop.ex:163`
   (`last_error_code`), `apps/engine/lib/engine/dev/dev_agent_server.ex:906`
   (`handle_outcome`)
 - **Teste:** `apps/api/test/contract/llm-provider.contract.ts` (`erro_402 vira
@@ -21754,7 +21754,7 @@ sem dizer qual.
   não cláusula da RN-725, porque a superfície é outra (resposta do modelo, não
   argumento de ferramenta) e a decisão sobre o delta é desta.
 - **Onde:** `apps/engine/lib/engine/agents/texto_do_turno.ex:65` (`payload_do_turno`),
-  `apps/engine/lib/engine/harness/argumentos_de_ferramenta.ex:98` (`decodificar_escapes`)
+  `apps/engine/lib/engine/harness/argumentos_de_ferramenta.ex:102` (`decodificar_escapes`)
 - **Teste:** `apps/engine/test/engine/agents/texto_do_turno_test.exs` (feliz:
   os cinco escapes medidos, no fecho e num passo; intacto: texto sem escape e
   bloco de código com `\n` literal)
@@ -22100,7 +22100,7 @@ sem dizer qual.
   suspende o turno, RN-284) e Infra Lead.
 - **Onde:** `apps/engine/lib/engine/agents/gravado_no_turno.ex:77` (`anotar`),
   `:96` (`descarregar`), `:141` (`classe`),
-  `apps/engine/lib/engine/agents/arquiteto_server.ex:329` (`dispatch_tool`)
+  `apps/engine/lib/engine/agents/arquiteto_server.ex:334` (`dispatch_tool`)
 - **Teste:** `apps/engine/test/engine/agents/gravado_no_turno_test.exs`
   ("Arquiteto com as cinco propose_adr recusadas fecha com nada gravado";
   "escritas do Arquiteto contadas, leitura e ferramenta desconhecida não")
@@ -22432,7 +22432,7 @@ sem dizer qual.
   `min-content` — com `max-content` ela ficava da largura do texto sem quebra
   (medido no Chromium: 2 236px num balão de 708px) e a última coluna sumia.
 - **Onde:** `apps/api/src/application/use-cases/actions/execute-adr-pr.use-case.ts:96`
-  (`openPullRequest`); `apps/engine/lib/engine/infra/infra_lead_server.ex:1526`
+  (`openPullRequest`); `apps/engine/lib/engine/infra/infra_lead_server.ex:1531`
   (`gravar_texto_do_turno`); `apps/engine/lib/engine/dev/dev_agent_server.ex:1188`
   (`propose_pr`); `apps/web/src/lib/session-destinatario.ts:228`
   (`agentesEmConversa`) e `apps/web/src/lib/session-kind.ts:69`
@@ -22737,7 +22737,7 @@ sem dizer qual.
   o engine recebe da api `truncated` e `usage.outputTokens`, mas NÃO os
   `reasoningTokens` (ficam só em `token_usage`), então a resposta vazia que
   bate no teto sem `finish_reason: length` não é reconhecida.
-- **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:219`
+- **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:234`
   (`parada_sem_chamada`), `apps/engine/lib/engine/dev/dev_agent_server.ex:1124`
   (`motivo_da_parada`), `:1143` (`stop_diagnosis`)
 - **Teste:** `apps/engine/test/engine/harness/tool_loop_test.exs` (`corte só
@@ -23172,7 +23172,7 @@ sem dizer qual.
   ([RN-047](business-rules/custo.md#rn-047)): o agente segue reivindicando. No uso real um
   `getaddrinfo EAI_AGAIN openrouter.ai` de 17 s bloqueou duas tarefas como
   `codigo` e desarmou o dev.
-- **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:246`
+- **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:261`
   (`llm_turn_com_retentativa`), `apps/engine/lib/engine/agents/falha_de_turno.ex:112`
   (`falha_de_rede?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:952`
   (`bloquear_parada`), `apps/engine/lib/engine/dev/agent_io.ex:228`
@@ -24855,7 +24855,7 @@ sem dizer qual.
 ### RN-895 — A recusa de argumento diz o que chegou e o formato esperado {#rn-895}
 
 - **Regra:** revisa a [RN-719](#rn-719) e a [RN-725](#rn-725). Campo declarado `array`/`object` que chega como texto fora de JSON, ou como número/booleano/tipo trocado, é recusado antes da ferramenta com "o campo X chegou como <tipo>; envie <formato>", com exemplo (`["item 1","item 2"]`, `{"chave":"valor"}`), nunca com o valor. A frase do `emit_plano_de_teste` passou a pôr as chaves entre crases, e por isso a recusa leva as chaves recebidas.
-- **Onde:** `apps/engine/lib/engine/harness/argumentos_de_ferramenta.ex:80` (`coagir`); `apps/engine/lib/engine/gates/tools/emit_plano_de_teste.ex:73` (`run`)
+- **Onde:** `apps/engine/lib/engine/harness/argumentos_de_ferramenta.ex:84` (`coagir`); `apps/engine/lib/engine/gates/tools/emit_plano_de_teste.ex:73` (`run`)
 - **Teste:** `apps/engine/test/engine/harness/argumentos_de_ferramenta_test.exs:193` e `:201` (o formato e o tipo recebido) e `:210` (as chaves recebidas)
 - **Origem:** AT-583 (TP-01 18ª e 19ª: o `dod` chegou como checklist markdown e o plano de teste foi recusado 4 vezes sem dizer o que veio)
 
@@ -25083,3 +25083,10 @@ sem dizer qual.
 - **Onde:** `apps/web/src/routes/settings/ModelsSection.tsx:94` (`podeEditarArea`), `:428` (`areaDoLead`), `:446` (`handleMarcarArea`), `:486` (`handleDesmarcarArea`)
 - **Teste:** `apps/web/src/routes/settings/ModelsSection.caixa-da-area.test.tsx` (AT-601: motivo sem vigente no lead); `apps/web/src/routes/ProjectSettingsTab.test.tsx` (marcar, a área recusando, FALHA PARCIAL, desmarcar com e sem 404, seletor do lead na área, não-seguidores, `developer` inerte); `apps/web/src/routes/settings/papel-na-tabela-de-agentes.test.tsx` (os dois mínimos); `bindings-em-lote.test.tsx` (lote único); `cascata.test.tsx`; `heranca.test.tsx`; `filtro-de-aptos.test.tsx` (RN-040); `preferencia-de-roteamento.test.tsx` (ADR 0166)
 - **Origem:** AT-600 (EP-031), pedido do dono de 22/10.
+
+### RN-913 — Falha igual repetida de ferramenta no turno corrige na 2ª e para na 3ª {#rn-913}
+
+- **Regra:** em cada turno, o harness conta as falhas IGUAIS de ferramenta (mesma ferramenta e mesmos argumentos, `tool.result` `ok: false`). Na 2ª, o resultado devolvido ao modelo ganha a correção "esta chamada já falhou igual… mude os argumentos ou use outra abordagem". Na 3ª, o laço PARA e grava `agent.error` com origem `modelo` (`reason: falha_repetida_de_ferramenta`), nunca em silêncio (RN-059, RN-163). Falhas diferentes não somam, e o contador zera a cada turno. Vale para os sete conversacionais e para o `ToolLoop`, pelo despacho único da RN-719; cada laço para pelo desfecho que já tinha (os conversacionais pelo caminho do teto de iterações, com o `agent.error` no lugar do `toolloop.limit_reached`; o `ToolLoop` devolvendo `{:ok, ctx}` com `last_error`).
+- **Onde:** `apps/engine/lib/engine/harness/argumentos_de_ferramenta.ex:26` (`executar`), `apps/engine/lib/engine/harness/falha_repetida.ex:24` (`registrar`), `:45` (`parou?`), `:56` (`narrar`), `apps/engine/lib/engine/harness/tool_loop.ex:118` (`parou_ou_loop`)
+- **Teste:** `apps/engine/test/engine/harness/falha_repetida_test.exs` (2ª corrige, 3ª para no `ToolLoop`, falhas diferentes não somam, zera entre turnos)
+- **Origem:** AT-588 (EP-026), decisão do dono de 22/10 (K=2 corrige, K=3 para).

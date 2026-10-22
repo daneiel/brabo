@@ -84,7 +84,12 @@ defmodule Engine.Harness.ToolLoop.Default do
       },
       # RN-706: o ambiente (pasta, imagem, rede, módulo) chega ao modelo pela
       # fachada como mensagem efêmera — ver `Engine.Harness.AmbienteDoAgente`.
-      fn -> AmbienteDoAgente.com_ambiente(ctx, fn -> ctx |> init() |> loop() end) end
+      fn ->
+        AmbienteDoAgente.com_ambiente(ctx, fn ->
+          Engine.Harness.FalhaRepetida.zerar()
+          ctx |> init() |> loop()
+        end)
+      end
     )
   end
 
@@ -107,6 +112,16 @@ defmodule Engine.Harness.ToolLoop.Default do
     ctx
     |> Map.put(:messages, [system_msg | Map.get(ctx, :messages, [])])
     |> Map.put(:tool_specs, Tools.specs(ctx.tools))
+  end
+
+  # RN-913: a 3ª falha igual para o laço pelo desfecho de erro que ele já tem.
+  defp parou_ou_loop(ctx) do
+    if Engine.Harness.FalhaRepetida.parou?() do
+      Engine.Harness.FalhaRepetida.narrar(ctx.project_id, ctx.session_id, ctx.agent)
+      {:ok, Map.put(ctx, :last_error, "falha repetida de ferramenta")}
+    else
+      loop(%{ctx | iteration: ctx.iteration + 1})
+    end
   end
 
   defp loop(%{iteration: iteration, max_iterations: max} = ctx) when iteration >= max do
@@ -191,7 +206,7 @@ defmodule Engine.Harness.ToolLoop.Default do
 
             case Enum.reduce_while(tool_calls, {:cont, ctx}, &dispatch_or_halt/2) do
               {:halted, reason, ctx} -> {:halted, reason, ctx}
-              {:cont, ctx} -> loop(%{ctx | iteration: ctx.iteration + 1})
+              {:cont, ctx} -> parou_ou_loop(ctx)
             end
         end
 

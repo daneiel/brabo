@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- A mesma chamada de ferramenta que falha igual no turno recebe uma correção na 2ª vez, e na 3ª o agente para com `agent.error` de origem `modelo` (AT-588, RN-913); o contador zera a cada turno.
 - A caixa "Valer para a área" diz em texto por que está inerte quando o lead não tem modelo vigente (AT-601, RN-912).
 - O modelo da área vira uma caixa na linha do lead em "Modelos por agente" (AT-600, RN-912): a seção "Modelo por área" deixou de existir. Marcar "Valer para a área X inteira" no Dev Lead, QA ou Infra grava o padrão da área e tira o modelo próprio do lead; desmarcar volta a herdar. A tela lista os subagentes com modelo próprio, que não seguem a área, e a caixa exige `maintainer`.
 - Os providers saem das Configurações do projeto (AT-597, RN-911): credencial, catálogo de modelos e gasto por chave moram só em `/providers` (o gasto também na aba Gastos, para `owner`). O projeto guarda só a escolha de modelo; o vazio de "Modelos por agente", "melhores modelos" e os Primeiros passos apontam para Providers. O atalho "Ativar e aplicar aos N agentes" foi retirado (RN-694 item 3). A matriz "Quem pode aprovar o quê" passou das Configurações para a Conta (AT-598).

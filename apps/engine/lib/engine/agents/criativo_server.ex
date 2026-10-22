@@ -343,6 +343,7 @@ defmodule Engine.Agents.CriativoServer do
   # dentro de `dispatch_tool/2`, como antes, era prometer no escuro — não havia
   # laço nenhum para cumprir a promessa.
   defp continuar(state, acc, desfechos, remaining) do
+    remaining = Engine.Harness.FalhaRepetida.restante(remaining)
     falhas = erros(desfechos)
     vai_tentar? = falhas != [] and remaining > 0
     acc = %{acc | falhas: acc.falhas ++ falhas}
@@ -659,6 +660,15 @@ defmodule Engine.Agents.CriativoServer do
   # dentro do `ToolLoop`: reusar o nome faria o evento mentir sobre quem o
   # produziu, e `agent.error` é o que a tela do fio já sabe mostrar.
   defp emit_falha_limite(state, acc, gravado) do
+    if Engine.Harness.FalhaRepetida.parou?() do
+      Engine.Harness.FalhaRepetida.narrar(state.project_id, state.session_id, @agent)
+      state
+    else
+      emit_falha_limite_do_teto(state, acc, gravado)
+    end
+  end
+
+  defp emit_falha_limite_do_teto(state, acc, gravado) do
     origem = "modelo"
 
     mensagem =
