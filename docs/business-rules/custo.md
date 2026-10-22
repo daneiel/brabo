@@ -224,10 +224,10 @@ foram raciocínio).
    `null`, declarado; o Ollama não informa.
 
 - **Onde:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:334` (`cachedInputTokens`),
-  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:667` (`contagem`),
+  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:671` (`contagem`),
   `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:179` (`cachedInputTokens`),
   `apps/api/src/application/use-cases/llm/record-llm-usage.use-case.ts:113` (`cachedInputTokens`),
-  `apps/api/src/db/schema/llm.ts:374` (`cachedInputTokens`),
+  `apps/api/src/db/schema/llm.ts:380` (`cachedInputTokens`),
   `apps/api/scripts/medir-execucao.ts:89` (`formatarParteMedida`)
 - **Teste:** `test/infrastructure/llm/openrouter-provider.contract.spec.ts`
   (resposta gravada com as duas partes; sem os detalhes; valor inválido e
@@ -271,12 +271,12 @@ gasto somam. Sem ele, o preço congelado do catálogo produz o número, como no
    cobrada por fora — a linha cai no catálogo.
 
 - **Onde:** `apps/api/src/domain/llm/custo-da-chamada.ts:43` (`custoDaChamada`),
-  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:231` (`custoDaChamada`),
-  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:244` (`custoDaChamada`),
-  `apps/api/src/application/use-cases/llm/send-chat-message.use-case.ts:227` (`custoDaChamada`),
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:235` (`custoDaChamada`),
+  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:248` (`custoDaChamada`),
+  `apps/api/src/application/use-cases/llm/send-chat-message.use-case.ts:234` (`custoDaChamada`),
   `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:330` (`extrairCustoReal`),
   `apps/api/src/infrastructure/llm/openrouter-provider.ts:253` (`extrairCustoRealOpenRouter`),
-  `apps/api/src/db/schema/llm.ts:357` (`priceImplicit`)
+  `apps/api/src/db/schema/llm.ts:363` (`priceImplicit`)
 - **Teste:** `test/domain/llm/custo-da-chamada.spec.ts`,
   `test/infrastructure/llm/openrouter-provider.contract.spec.ts` (resposta
   gravada: custo, modelo resolvido, id; BYOK; sem `cost`; provider sem o
@@ -3185,7 +3185,7 @@ quatro pontos, TTL de 5 min — https://openrouter.ai/docs/features/prompt-cachi
    metering pela [RN-666](#rn-666).
 
 - **Código:** `apps/api/src/infrastructure/llm/openrouter-provider.ts:283` (`marcarCacheDePromptOpenRouter`);
-  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:512` (`mensagens`)
+  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:516` (`mensagens`)
 - **Teste:** `apps/api/test/infrastructure/llm/openrouter-provider.contract.spec.ts` ("pontos de cache de prompt (RN-892)": ligada marca os dois pontos; desligada é byte a byte; capability sem hook falha — caso de falha)
 - **Origem:** AT-543
 
