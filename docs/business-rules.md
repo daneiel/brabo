@@ -17209,7 +17209,7 @@ endpoint é ALPHA e o smoke manual
   (`decisaoDoJev`); `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:173`
   (`preparar`); `apps/api/src/infrastructure/llm/jev-tool-router.ts:32`
   (`decidir`); `apps/api/src/db/schema/iam.ts:169` (`toolRouterEnabled`);
-  `apps/api/src/db/schema/llm.ts:356` (`priceImplicit`);
+  `apps/api/src/db/schema/llm.ts:363` (`priceImplicit`);
   `apps/engine/lib/engine/harness/roteamento_de_ferramenta.ex:60` (`registrar`),
   `:112` (`custo_micros`), `:123` (`repetir_com_catalogo_inteiro?`), `:146`
   (`mesclar_repeticao`); `apps/engine/lib/engine/sessions/engine_api_client.ex:700`
@@ -21610,9 +21610,9 @@ sem dizer qual.
   ao campo, e caminho que só leva a mensagem.
 - **Onde:** `apps/api/src/domain/llm/llm-provider-errors.ts:38`
   (`LLMInsufficientCreditError`), `:81` (`normalizeHttpStatus`),
-  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:213`
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:217`
   (`streamErrorCode`),
-  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:226`
+  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:230`
   (`streamErrorCode`),
   `apps/engine/lib/engine/agents/falha_de_turno.ex:87` (`credito_esgotado?`),
   `:71` (`origem`), `apps/engine/lib/engine/harness/tool_loop.ex:148`
@@ -21831,9 +21831,9 @@ sem dizer qual.
 - **Onde:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:268`
   (`cortadaPeloTeto`),
   `apps/api/src/infrastructure/llm/anthropic-provider.ts:198` (`finalMessage`),
-  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:209`
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:213`
   (`truncated`),
-  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:222`
+  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:226`
   (`truncated`),
   `apps/engine/lib/engine/harness/resposta_cortada.ex:43` (`registrar`),
   `:89` (`descarregar`),
@@ -23794,7 +23794,7 @@ sem dizer qual.
   [RN-782](#rn-782). O QA-estratégia (`qa-estrategia`) e os demais gates não
   mudam. Medição que motivou: o raciocínio dos gates subiu de 44 mil para 211
   mil tokens por rodada, e o custo deles de US$ 0,15 para US$ 0,55.
-- **Onde:** `apps/api/src/domain/llm/raciocinio-do-agente.ts:34`
+- **Onde:** `apps/api/src/domain/llm/raciocinio-do-agente.ts:39`
   (`raciocinioDesligadoParaOAgente`)
 - **Teste:** `apps/api/test/domain/llm/raciocinio-do-agente.spec.ts`
   (`QA de Automação desliga; QA-estratégia e outros gates não (RN-838)`;
@@ -25085,3 +25085,10 @@ sem dizer qual.
 - **Onde:** `apps/web/src/routes/settings/ModelsSection.tsx:94` (`podeEditarArea`), `:428` (`areaDoLead`), `:446` (`handleMarcarArea`), `:486` (`handleDesmarcarArea`)
 - **Teste:** `apps/web/src/routes/settings/ModelsSection.caixa-da-area.test.tsx` (AT-601: motivo sem vigente no lead); `apps/web/src/routes/ProjectSettingsTab.test.tsx` (marcar, a área recusando, FALHA PARCIAL, desmarcar com e sem 404, seletor do lead na área, não-seguidores, `developer` inerte); `apps/web/src/routes/settings/papel-na-tabela-de-agentes.test.tsx` (os dois mínimos); `bindings-em-lote.test.tsx` (lote único); `cascata.test.tsx`; `heranca.test.tsx`; `filtro-de-aptos.test.tsx` (RN-040); `preferencia-de-roteamento.test.tsx` (ADR 0166)
 - **Origem:** AT-600 (EP-031), pedido do dono de 22/10.
+
+### RN-913 — O orçamento de raciocínio é por modelo, só para quem o respeita {#rn-913}
+
+- **Regra:** revisa a [RN-782](#rn-782) ([ADR 0223](adr/0223-orcamento-de-raciocinio-por-modelo.md)). Modelo com `models.reasoning_budget` preenchido (curado à mão, nunca pelo sync) e `supportsReasoning` manda `reasoning: { max_tokens: N }` e `max_tokens` = saída visível + N ([RN-741](#rn-741)); só no provider que sabe controlar o raciocínio (hoje o OpenRouter) e nunca no agente com raciocínio desligado ([RN-783](#rn-783)). Hoje só `qwen/qwen3.7-flash` (N = 2048), provado em 22/10: 1024 pedidos, 1024 gastos. Modelo sem orçamento segue a RN-782, corpo byte a byte. `deepseek/deepseek-v4.1-flash` fica sem orçamento: `reasoning.max_tokens`, `effort` e `reasoning_effort` foram ignorados (8192 de raciocínio). `effort` nunca é enviado. O limite contém o raciocínio mas não garante a tool call.
+- **Onde:** `apps/api/src/domain/llm/raciocinio-do-agente.ts:18` (`opcoesDeRaciocinio`), `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:501` (`controla`), `apps/api/src/db/schema/llm.ts:149` (`reasoningBudget`), `apps/api/src/db/migrations/0074_orcamento_de_raciocinio.sql`
+- **Teste:** `apps/api/test/infrastructure/llm/openai-compatible-provider.contract.spec.ts` (`modelo com orçamento de raciocínio (RN-913)`), `apps/api/test/domain/llm/raciocinio-do-agente.spec.ts`
+- **Origem:** AT-569 (medição paga de 22/10, `~/brabo-gravacoes/raciocinio-smoke-2026-10-22/resultados.jsonl`)

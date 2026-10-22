@@ -7622,6 +7622,11 @@ export interface components {
              */
             generatesImage: boolean;
             /**
+             * @description Reasoning budget (tokens) the model is PROVEN to respect, curated by hand (ADR 0223). Null = not proven; the field is not sent.
+             * @example 2048
+             */
+            reasoningBudget: number | null;
+            /**
              * @description Price typed in from the provider's docs, not synced. The price sync does not overwrite a row marked without an explicit decision.
              * @example true
              */
@@ -7796,6 +7801,11 @@ export interface components {
              * @example false
              */
             generatesImage: boolean;
+            /**
+             * @description Reasoning budget (tokens) the model is PROVEN to respect, curated by hand (ADR 0223). Null = not proven; the field is not sent.
+             * @example 2048
+             */
+            reasoningBudget: number | null;
             /**
              * @description Price typed in from the provider's docs, not synced. The price sync does not overwrite a row marked without an explicit decision.
              * @example true

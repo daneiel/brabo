@@ -312,6 +312,12 @@ export interface ChatOptions {
    * sabe dizer "desligado"; os outros ignoram.
    */
   reasoningOff?: boolean;
+  /**
+   * Orçamento de raciocínio PROVADO do modelo (`models.reasoning_budget`, ADR
+   * 0223): vira `reasoning: {max_tokens: N}` e o teto de saída passa a ser a
+   * saída visível + N. Só vale com `reasoning: true`, sem `reasoningOff`.
+   */
+  reasoningBudget?: number;
 }
 
 export interface ChatTextDeltaChunk {

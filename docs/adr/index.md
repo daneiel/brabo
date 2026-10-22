@@ -3,7 +3,7 @@ id: adr-index
 title: Decisões arquiteturais (ADR)
 sidebar_label: Índice de ADRs
 sidebar_position: 0
-description: Os 218 registros de decisão arquitetural do Brabo, agrupados por tema, com o que cada um decidiu.
+description: Os 219 registros de decisão arquitetural do Brabo, agrupados por tema, com o que cada um decidiu.
 keywords: [ADR, decisão arquitetural, arquitetura, histórico]
 ---
 
@@ -252,6 +252,7 @@ O contrato de provider, o catálogo de modelos e a curadoria, os bindings de mod
 | [0198](0198-duplicata-semantica-por-embedding-com-limiar-que-so-avisa.md) | A duplicata SEMÂNTICA de uma história ou regra de negócio é AVISADA por embedding com limiar, nunca recusada (AT-171, decisão do dono de 01/10): depois que o item é gravado, o título dele é comparado com os títulos do projeto do mesmo tipo pelo `RagEmbeddingService` do RAG, e um cosseno igual ou acima de 0,80 — um PONTO DE PARTIDA, não calibrado, porque o ambiente não conseguiu gravar vetores reais — devolve um aviso ao agente no resultado da ferramenta e `backlog.semantic_duplicate_warned` no log. Sem provider de embedding a checagem é PULADA e diz por quê. O gasto dela é medido como linha própria de `token_usage` (ator `system`/`duplicata-semantica`) — UMA exceção ao corte do ADR 0075, que continua valendo para a indexação e a busca. A duplicata exata continua recusada (RN-080/081) |
 | [0221](0221-upstream-preso-por-sessao.md) | O hub prende a conversa de cada agente ao upstream que a atendeu: o Brabo manda `session_id` = `brabo:<sessão>:<agente>` ao OpenRouter (capability `stickySession`, provada por smoke), e `provider.order`/`allow_fallbacks` seguem fora. Referencia o 0166. |
 | [0222](0222-provider-9router-de-llm.md) | O **9Router** (gateway local do dono, fora do compose) entra como o 10º provider: URL por instalação (`NINE_ROUTER_BASE_URL`, `extra_hosts` nos composes de instalação e produção), credencial obrigatória, preço de CURADORIA com o preço público da API equivalente (decisão do dono de 22/10), capabilities `false` até o smoke e Token Saver desligado. Referencia o 0043. |
+| [0223](0223-orcamento-de-raciocinio-por-modelo.md) | O **orçamento de raciocínio** é capability por modelo, curada à mão: `reasoning.max_tokens` só para o `qwen/qwen3.7-flash` (provado, N = 2048); o deepseek fica de fora por medição e `effort` nunca é usado. |
 
 ## RAG, grafo de conhecimento e artefatos {#tema-conhecimento}
 
@@ -359,7 +360,7 @@ Como a documentação é gerada, verificada e publicada.
 - **Um arquivo por decisão**, em `docs/adr/NNNN-short-title.md`, com
   numeração sequencial de 4 dígitos, e título `# ADR NNNN — <título>`
   ([0218](0218-titulo-de-adr-com-prefixo.md)). **Sem reuso de número**, nem quando um ADR
-  é substituído — o próximo é **0223**.
+  é substituído — o próximo é **0224**.
 - **Um tema por decisão**, escolhido por quem escreve o ADR, no mesmo
   PR: uma linha em `docs/adr/temas.yml` e a linha do índice sob a seção desse
   tema, em ordem numérica. Quem revisa confirma. Um tema novo é uma
