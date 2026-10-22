@@ -42,7 +42,7 @@ OLLAMA_SISTEMA_TARDIO_SMOKE=1 pnpm --filter api exec vitest run test/infrastruct
 | Anthropic | ❌ não provado | falta `ANTHROPIC_TEST_KEY` — e o corpo que ele envia não tem `system` tardio de qualquer forma (içado) |
 | OpenAI | ❌ não provado | falta `OPENAI_TEST_KEY` |
 | OpenRouter | ❌ não provado | falta `OPENROUTER_TEST_KEY` neste ambiente; num hub a resposta é por upstream, então uma rodada prova o upstream que a serviu |
-| NVIDIA NIM | ❌ não provado | falta `NVIDIA_NIM_TEST_KEY` |
+| NVIDIA NIM | ✅ **sim** (só `user`, via o turno do smoke) | 22/10/2026, `nvidia/nemotron-3.5-lightning-30b-a3b`; o turno terminou com texto e sem chunk de erro |
 | Together AI | ❌ não provado | falta `TOGETHER_TEST_KEY` |
 | DeepInfra | ❌ não provado | falta `DEEPINFRA_TEST_KEY` |
 | Bitdeer | ❌ não provado | falta `BITDEER_TEST_KEY` |
@@ -112,7 +112,7 @@ execução do hello-limpo).
 | OpenRouter | ✅ **sim** | roteiro completo verde, uma chamada paga |
 | Together AI | ❌ pulado | `TOGETHER_TEST_KEY` ausente |
 | DeepInfra | ❌ pulado | `DEEPINFRA_TEST_KEY` ausente |
-| NVIDIA NIM | ❌ pulado | `NVIDIA_NIM_TEST_KEY` ausente |
+| NVIDIA NIM | ✅ passou | chat em streaming + tool calling, 22/10/2026 (embedding segue `false`, sem prova) |
 | Bitdeer | ❌ pulado | `BITDEER_TEST_KEY` ausente |
 | Vultr | ❌ pulado | `VULTR_TEST_KEY` ausente |
 | 9Router | ❌ pulado | `NINE_ROUTER_TEST_KEY` ausente |
@@ -165,7 +165,7 @@ desta rodada é **US$ 0,00**.
 | OpenRouter | `openrouter-provider.smoke.spec.ts` | `OPENROUTER_TEST_KEY` | `openai/gpt-4o-mini` | ❌ pulado | chave ausente no ambiente | — |
 | Together AI | `together-provider.smoke.spec.ts` | `TOGETHER_TEST_KEY` | `meta-llama/Llama-3.3-70B-Instruct-Turbo` | ❌ pulado | chave ausente no ambiente | — |
 | DeepInfra | `deepinfra-provider.smoke.spec.ts` | `DEEPINFRA_TEST_KEY` | `deepseek-ai/DeepSeek-V3` | ❌ pulado | chave ausente no ambiente | — |
-| NVIDIA NIM | `nvidia-nim-provider.smoke.spec.ts` | `NVIDIA_NIM_TEST_KEY` | `meta/llama-3.2-3b-instruct` | ❌ pulado | chave ausente no ambiente | — |
+| NVIDIA NIM | `nvidia-nim-provider.smoke.spec.ts` | `NVIDIA_NIM_TEST_KEY` | `nvidia/nemotron-3.5-lightning-30b-a3b` | ✅ passou (22/10/2026) | chat em streaming, custo congelado e `tool_calls` provados | 1 teste, ~5 s |
 | Bitdeer | `bitdeer-provider.smoke.spec.ts` | `BITDEER_TEST_KEY` | `moonshotai/Kimi-K2.5` | ❌ pulado | chave ausente no ambiente | — |
 | Vultr | `vultr-provider.smoke.spec.ts` | `VULTR_TEST_KEY` | `kimi-k2-instruct` | ❌ pulado | chave ausente no ambiente | — |
 | 9Router | `nine-router-provider.smoke.spec.ts` | `NINE_ROUTER_TEST_KEY` + `NINE_ROUTER_TEST_MODEL` | sem default (só `free`/`auto:free`) | ❌ pulado | chave ausente no ambiente | — |
