@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- O teto de paralelismo padrão por área vira dev 5, qa 4 e infra 2, nos projetos novos e nos existentes (AT-599, RN-910, migração 0073, que sobrescreve o que estava decidido). Hoje só o teto do `dev` é aplicado na execução; `qa` e `infra` ficam gravados e exibidos.
 - O 9Router entra como o 10º provider de LLM (AT-576a, RN-909, ADR 0222): URL por instalação em `NINE_ROUTER_BASE_URL` (os composes de instalação e de produção mapeiam `host.docker.internal` na api), credencial obrigatória, `listModels` com as `capabilities` do `/v1/models`, preço por curadoria com o preço público da API equivalente, Token Saver desligado e capabilities `false` até o smoke com chave.
 - O kickoff do PO pede o backlog em lote, depois de ler, em camadas — épicos, histórias e tarefas, cada uma numa resposta só, sem recriar épico existente (AT-596, RN-908). Medido na sonda da AT-591: o nemotron passa de 1 para 9 ferramentas por resposta e o qwen de 3 para 9.
 - O OpenRouter passa a receber `session_id` = `brabo:<sessão>:<agente>` e prende cada agente ao upstream que o atendeu (AT-580, RN-907, ADR 0221): capability nova `stickySession`, provada por smoke (6 de 6 no mesmo upstream com a chave, 4 upstreams em 6 sem ela) e exposta em `/llm/provider-capabilities`.
