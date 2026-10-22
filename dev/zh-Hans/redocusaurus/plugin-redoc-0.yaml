@@ -14264,6 +14264,13 @@ components:
           type: boolean
           example: false
           description: 生成图像——与接受图像输入是不同的维度。具备的模型很少，把两者混淆会让用户选错模型。
+        reasoningBudget:
+          type: number
+          nullable: true
+          example: 2048
+          description: >-
+            Reasoning budget (tokens) the model is PROVEN to respect, curated by
+            hand (ADR 0223). Null = not proven; the field is not sent.
         manualPricing:
           type: boolean
           example: true
@@ -14332,6 +14339,7 @@ components:
         - supportsVision
         - supportsReasoning
         - generatesImage
+        - reasoningBudget
         - manualPricing
         - availability
         - lastSeenAt
@@ -14503,6 +14511,13 @@ components:
           type: boolean
           example: false
           description: 生成图像——与接受图像输入是不同的维度。具备的模型很少，把两者混淆会让用户选错模型。
+        reasoningBudget:
+          type: number
+          nullable: true
+          example: 2048
+          description: >-
+            Reasoning budget (tokens) the model is PROVEN to respect, curated by
+            hand (ADR 0223). Null = not proven; the field is not sent.
         manualPricing:
           type: boolean
           example: true
@@ -14543,6 +14558,7 @@ components:
         - supportsVision
         - supportsReasoning
         - generatesImage
+        - reasoningBudget
         - manualPricing
         - availability
         - lastSeenAt

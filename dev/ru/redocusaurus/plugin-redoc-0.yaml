@@ -15574,6 +15574,13 @@ components:
             ПРОИЗВОДИТ изображение — ось, отличная от приёма на вход. Это есть у
             немногих моделей, и смешение двух отправляет пользователя к неверной
             модели.
+        reasoningBudget:
+          type: number
+          nullable: true
+          example: 2048
+          description: >-
+            Reasoning budget (tokens) the model is PROVEN to respect, curated by
+            hand (ADR 0223). Null = not proven; the field is not sent.
         manualPricing:
           type: boolean
           example: true
@@ -15657,6 +15664,7 @@ components:
         - supportsVision
         - supportsReasoning
         - generatesImage
+        - reasoningBudget
         - manualPricing
         - availability
         - lastSeenAt
@@ -15844,6 +15852,13 @@ components:
             ПРОИЗВОДИТ изображение — ось, отличная от приёма на вход. Это есть у
             немногих моделей, и смешение двух отправляет пользователя к неверной
             модели.
+        reasoningBudget:
+          type: number
+          nullable: true
+          example: 2048
+          description: >-
+            Reasoning budget (tokens) the model is PROVEN to respect, curated by
+            hand (ADR 0223). Null = not proven; the field is not sent.
         manualPricing:
           type: boolean
           example: true
@@ -15891,6 +15906,7 @@ components:
         - supportsVision
         - supportsReasoning
         - generatesImage
+        - reasoningBudget
         - manualPricing
         - availability
         - lastSeenAt

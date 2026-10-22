@@ -15387,6 +15387,13 @@ components:
           description: >-
             PRODUZ imagem — eixo diferente de aceitá-la como entrada. Poucos
             modelos têm, e confundir os dois manda o usuário ao modelo errado.
+        reasoningBudget:
+          type: number
+          nullable: true
+          example: 2048
+          description: >-
+            Reasoning budget (tokens) the model is PROVEN to respect, curated by
+            hand (ADR 0223). Null = not proven; the field is not sent.
         manualPricing:
           type: boolean
           example: true
@@ -15465,6 +15472,7 @@ components:
         - supportsVision
         - supportsReasoning
         - generatesImage
+        - reasoningBudget
         - manualPricing
         - availability
         - lastSeenAt
@@ -15651,6 +15659,13 @@ components:
           description: >-
             PRODUZ imagem — eixo diferente de aceitá-la como entrada. Poucos
             modelos têm, e confundir os dois manda o usuário ao modelo errado.
+        reasoningBudget:
+          type: number
+          nullable: true
+          example: 2048
+          description: >-
+            Reasoning budget (tokens) the model is PROVEN to respect, curated by
+            hand (ADR 0223). Null = not proven; the field is not sent.
         manualPricing:
           type: boolean
           example: true
@@ -15696,6 +15711,7 @@ components:
         - supportsVision
         - supportsReasoning
         - generatesImage
+        - reasoningBudget
         - manualPricing
         - availability
         - lastSeenAt
