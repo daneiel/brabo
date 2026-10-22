@@ -25718,3 +25718,10 @@ Kickoff PO говорит все три вещи.
   `apps/api/test/domain/containers/project-container.spec.ts`;
   `apps/api/test/application/use-cases/actions/execute-container-start.use-case.spec.ts`
 - **Источник:** AT-593 (EP-031).
+
+### RN-908 — Кикофф PO запрашивает бэклог пакетами, после чтения, по слоям {#rn-908}
+
+- **Правило:** кикофф PO велит модели в таком порядке: прочитать `listar_regras_de_negocio` и `listar_backlog` в одном ответе, без записи вместе с ними; затем все эпики одним ответом; затем все истории с полученным `epic_id`; затем все задачи с полученным `story_id`. Существующий эпик никогда не пересоздаётся, а на один ответ — не более примерно 10 вызовов инструментов. Измеренная причина: без просьбы о пакете nemotron делает 1 инструмент за ответ, qwen — 3; с ней — по 9 у каждого (`parallel_tool_calls` ничего не изменил). Чтение первым не даёт qwen создавать эпики без чтения бэклога. Потолок `@max_iterations` не меняется (RN-166).
+- **Где:** `apps/engine/lib/engine/agents/po_server.ex:614` (`build_kickoff`)
+- **Тест:** `apps/engine/test/engine/agents/po_server_test.exs:518` (чтение до записи; пакет по слоям: эпики → истории → задачи)
+- **Источник:** проба AT-591 (21/10), реализовано в AT-596 (EP-026).

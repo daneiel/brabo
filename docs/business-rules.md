@@ -25056,3 +25056,10 @@ sem dizer qual.
   `apps/api/test/domain/containers/project-container.spec.ts` (casamento por palavra);
   `apps/api/test/application/use-cases/actions/execute-container-start.use-case.spec.ts`
 - **Origem:** AT-593 (EP-031).
+
+### RN-908 — O kickoff do PO pede o backlog em lote, depois de ler, em camadas {#rn-908}
+
+- **Regra:** o kickoff do PO manda, nesta ordem: ler `listar_regras_de_negocio` e `listar_backlog` na mesma resposta, sem escrita junto; depois todos os épicos numa resposta só; depois todas as histórias, com o `epic_id` devolvido; depois todas as tarefas, com o `story_id` devolvido. Nunca recria épico que já existe, e no máximo cerca de 10 chamadas de ferramenta por resposta. Motivo medido: sem o pedido de lote, o nemotron faz 1 ferramenta por resposta e o qwen faz 3; com ele, 9 em cada (`parallel_tool_calls` não mudou nada). Ler primeiro é o que impede o qwen de criar épicos sem ler o backlog. Não altera o teto `@max_iterations` (RN-166).
+- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:614` (`build_kickoff`)
+- **Teste:** `apps/engine/test/engine/agents/po_server_test.exs:518` (leitura antes da escrita; lote em camadas épicos → histórias → tarefas)
+- **Origem:** sonda da AT-591 (21/10), implementada na AT-596 (EP-026).
