@@ -2121,6 +2121,33 @@ CONFLICT DO NOTHING` в обеих таблицах. Без неё дефект 
 - **Источник:** ФАЗА 18, дефект, найденный при исследовании программы 16–26;
   таблица — из [ADR 0053](../adr/0053-dev-lead-e-paralelismo-autorizado.md)
 
+### RN-910 — Потолок по умолчанию для области — 5 в dev, 4 в qa и 2 в infra {#rn-910}
+
+Каждая область агентов рождается с потолком параллелизма, который берётся из каталога:
+`dev` 5, `qa` 4, `infra` 2 (AT-599, просьба владельца от 22/10). Миграция `0073`
+применила те же значения ко **всем** существующим проектам, перезаписав то, что уже было
+решено — решение владельца, принятое с пониманием того, что потолок, заданный намеренно, теряется.
+
+- **Сейчас при выполнении применяется только потолок `dev`.** `RequestParallelizationUseCase`
+  читает область `dev` при решении о параллелизме. У `qa` и `infra` значение записано, показано
+  и редактируется, но ни один код его не читает: повышение их потолка не меняет выполнение вообще.
+- **Потолок `dev` действует только при 3 модулях и более.** Максимум dev-агентов — один на модуль
+  плюс один дополнительный (`dev-<modulo>-2`), то есть 2 × модули (RN-083). При 2 модулях
+  максимум равен 4, что меньше 5.
+- **Только INSERT использует значение из каталога.** Повторный посев не трогает строку
+  (RN-094). Колонка остаётся `default(2)`: это значение появляется только в сыром INSERT,
+  вне сценария использования.
+- **Где:** `apps/api/src/domain/agents/agent-areas.ts:73` (`maxParallelPadrao`);
+  `apps/api/src/application/use-cases/agents/seed-agent-areas.use-case.ts:53`
+  (`maxParallelAoNascer`); `apps/api/src/infrastructure/persistence/drizzle/agent-area.repository.ts:62`
+  (`nascer`); `apps/api/src/application/use-cases/execution/request-parallelization.use-case.ts:13`
+  (`MAX_PARALLEL_PADRAO`); миграция `apps/api/src/db/migrations/0073_paralelismo_padrao_por_area.sql`.
+- **Тест:** `test/application/use-cases/iam/create-project-semeia-areas.spec.ts`
+  (новый проект рождается с 5/4/2), `test/infrastructure/persistence/drizzle/agent-area.repository.spec.ts`
+  (повторный посев не отменяет изменённый потолок), `test/db/paralelismo-padrao-migration.spec.ts`
+  (строки с 2, 3 и 7 заканчиваются на 5/4/2) и `test/application/use-cases/execution/request-parallelization.use-case.spec.ts`
+  (значение по умолчанию 5 решает параллелизм dev).
+
 ### RN-084 — Отображаемый конвейер выводится из реестра gates {#rn-084}
 
 Панель команды показывает этап, на котором находится PR, **выводя его из

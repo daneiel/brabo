@@ -2103,34 +2103,32 @@ para quem começasse do zero.
 - **Origem:** FASE 18, defeito achado na investigação do programa 16–26;
   a tabela vem do [ADR 0053](../adr/0053-dev-lead-e-paralelismo-autorizado.md)
 
-### RN-910 — O teto padrão por área é 5 no dev, 4 no qa e 2 na infra {#rn-910}
+### RN-910 — The default ceiling per area is 5 in dev, 4 in qa and 2 in infra {#rn-910}
 
-Cada área de agentes nasce com um teto de paralelismo que vem do catálogo:
-`dev` 5, `qa` 4, `infra` 2 (AT-599, pedido do dono de 22/10). A migração `0073`
-aplicou os mesmos valores a **todos** os projetos existentes, sobrescrevendo o
-que já estava decidido — decisão do dono, tomada sabendo que um teto posto de
-propósito se perde.
+Each agent area is born with a parallelism ceiling that comes from the catalog:
+`dev` 5, `qa` 4, `infra` 2 (AT-599, owner's request of 22/10). Migration `0073`
+applied the same values to **all** existing projects, overwriting what had already
+been decided — the owner's decision, taken knowing that a ceiling set on purpose is lost.
 
-- **Hoje só o teto de `dev` é aplicado na execução.** `RequestParallelizationUseCase`
-  lê a área `dev` ao decidir o paralelismo. `qa` e `infra` têm o valor gravado,
-  exibido e editável, mas nenhum código o consulta: subir o teto deles não muda
-  execução nenhuma.
-- **O teto de `dev` só morde com 3 módulos ou mais.** O máximo de dev agents é um
-  por módulo mais um extra (`dev-<modulo>-2`), ou seja, 2 × módulos (RN-083). Com
-  2 módulos o máximo é 4, abaixo de 5.
-- **Só o INSERT usa o valor de catálogo.** Semear de novo não toca a linha
-  (RN-094). A coluna continua `default(2)`: esse valor só aparece num INSERT cru,
-  fora do caso de uso.
-- **Onde:** `apps/api/src/domain/agents/agent-areas.ts:73` (`maxParallelPadrao`);
+- **Today only the `dev` ceiling is applied at execution.** `RequestParallelizationUseCase`
+  reads the `dev` area when deciding parallelism. `qa` and `infra` have the value stored,
+  shown and editable, but no code consults it: raising their ceiling changes no execution at all.
+- **The `dev` ceiling only bites with 3 modules or more.** The maximum number of dev agents
+  is one per module plus one extra (`dev-<modulo>-2`), that is, 2 × modules (RN-083).
+  With 2 modules the maximum is 4, below 5.
+- **Only the INSERT uses the catalog value.** Seeding again does not touch the row
+  (RN-094). The column stays `default(2)`: that value only appears in a raw INSERT,
+  outside the use case.
+- **Where:** `apps/api/src/domain/agents/agent-areas.ts:73` (`maxParallelPadrao`);
   `apps/api/src/application/use-cases/agents/seed-agent-areas.use-case.ts:53`
   (`maxParallelAoNascer`); `apps/api/src/infrastructure/persistence/drizzle/agent-area.repository.ts:62`
   (`nascer`); `apps/api/src/application/use-cases/execution/request-parallelization.use-case.ts:13`
-  (`MAX_PARALLEL_PADRAO`); migração `apps/api/src/db/migrations/0073_paralelismo_padrao_por_area.sql`.
-- **Teste:** `test/application/use-cases/iam/create-project-semeia-areas.spec.ts`
-  (projeto novo nasce com 5/4/2), `test/infrastructure/persistence/drizzle/agent-area.repository.spec.ts`
-  (semear de novo não desfaz o teto alterado), `test/db/paralelismo-padrao-migration.spec.ts`
-  (linhas com 2, 3 e 7 terminam em 5/4/2) e `test/application/use-cases/execution/request-parallelization.use-case.spec.ts`
-  (o padrão de 5 decide o paralelismo do dev).
+  (`MAX_PARALLEL_PADRAO`); migration `apps/api/src/db/migrations/0073_paralelismo_padrao_por_area.sql`.
+- **Test:** `test/application/use-cases/iam/create-project-semeia-areas.spec.ts`
+  (a new project is born with 5/4/2), `test/infrastructure/persistence/drizzle/agent-area.repository.spec.ts`
+  (seeding again does not undo the altered ceiling), `test/db/paralelismo-padrao-migration.spec.ts`
+  (rows with 2, 3 and 7 end at 5/4/2) and `test/application/use-cases/execution/request-parallelization.use-case.spec.ts`
+  (the default of 5 decides the dev's parallelism).
 
 ### RN-084 — A esteira exibida deriva do registro de gates {#rn-084}
 
