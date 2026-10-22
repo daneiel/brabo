@@ -834,7 +834,7 @@ had cut. It came back because the **dev** area isn't enumerable in code:
 `qa` and `infra` fit in a fixed list, but dev's members are one per
 `module_map` module, decided by the Architect and different in each
 project. The unique `(project_id, key)` is what makes seeding idempotent,
-and `max_parallel` (default 2) is the ceiling the lead uses without asking
+and `max_parallel` (starts at 5 for dev, 4 for qa and 2 for infra) is the ceiling the lead uses without asking
 — above it, `proposed_action`
 (see [RN-083](business-rules/custo.md#rn-083)). `budget_micros`/`spent_micros`
 (ADR 0110) mirror `max_parallel` on the same row — a spend ceiling that is

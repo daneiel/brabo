@@ -1939,7 +1939,7 @@ reimplementado.
 
 Quantos agentes sobem deixa de ser um número no código: quem avalia é o **lead
 da área**. Mas a decisão dele não é soberana sobre GASTO — até
-`agent_areas.max_parallel` (default **2**) ele sobe e segue; **acima disso vira
+`agent_areas.max_parallel` (nasce com **5** no `dev`, [RN-910](#rn-910)) ele sobe e segue; **acima disso vira
 `proposed_action` do tipo `parallelize`**, pelo mesmo pipeline de toda ação com
 efeito externo.
 
@@ -2018,10 +2018,12 @@ que nunca executou. A ativação da execução diz quem são os MEMBROS da área
 projeto nasceu. Enquanto não há membros gravados, quem sustenta a regra de
 endereçamento (RN-087) é o predicado `ehDevDeModulo`, que não consulta o banco.
 
-**O seeding nunca manda `max_parallel`.** A ativação é repetível, e mandar o
-default faria um teto que você subiu para 5 voltar para 2 em silêncio — o
-produto desfazendo a sua decisão. O mesmo vale para a migração de backfill: ela
-faz a área existir e para aí.
+**O seeding manda o teto de NASCENÇA, e só no INSERT.** Desde a
+[RN-910](#rn-910) a área nasce com o valor do catálogo (dev 5, qa 4, infra 2),
+mas o `upsert` o grava só quando a linha ainda não existe: a ativação é
+repetível, e um teto que você subiu não volta ao valor de nascença em silêncio
+— o produto desfazendo a sua decisão. A migração de backfill `0038` faz a área
+existir e para aí; quem alinha os projetos existentes é a `0073` (RN-910).
 
 Projetos criados antes disto são cobertos pela migração `0038`, com `ON
 CONFLICT DO NOTHING` nas duas tabelas. Sem ela, o defeito ficaria corrigido só
@@ -2041,6 +2043,35 @@ para quem começasse do zero.
   (os membros de dev, e o teto nunca enviado)
 - **Origem:** FASE 18, defeito achado na investigação do programa 16–26;
   a tabela vem do [ADR 0053](../adr/0053-dev-lead-e-paralelismo-autorizado.md)
+
+### RN-910 — O teto padrão por área é 5 no dev, 4 no qa e 2 na infra {#rn-910}
+
+Cada área de agentes nasce com um teto de paralelismo que vem do catálogo:
+`dev` 5, `qa` 4, `infra` 2 (AT-599, pedido do dono de 22/10). A migração `0073`
+aplicou os mesmos valores a **todos** os projetos existentes, sobrescrevendo o
+que já estava decidido — decisão do dono, tomada sabendo que um teto posto de
+propósito se perde.
+
+- **Hoje só o teto de `dev` é aplicado na execução.** `RequestParallelizationUseCase`
+  lê a área `dev` ao decidir o paralelismo. `qa` e `infra` têm o valor gravado,
+  exibido e editável, mas nenhum código o consulta: subir o teto deles não muda
+  execução nenhuma.
+- **O teto de `dev` só morde com 3 módulos ou mais.** O máximo de dev agents é um
+  por módulo mais um extra (`dev-<modulo>-2`), ou seja, 2 × módulos (RN-083). Com
+  2 módulos o máximo é 4, abaixo de 5.
+- **Só o INSERT usa o valor de catálogo.** Semear de novo não toca a linha
+  (RN-094). A coluna continua `default(2)`: esse valor só aparece num INSERT cru,
+  fora do caso de uso.
+- **Onde:** `apps/api/src/domain/agents/agent-areas.ts:73` (`maxParallelPadrao`);
+  `apps/api/src/application/use-cases/agents/seed-agent-areas.use-case.ts:53`
+  (`maxParallelAoNascer`); `apps/api/src/infrastructure/persistence/drizzle/agent-area.repository.ts:62`
+  (`nascer`); `apps/api/src/application/use-cases/execution/request-parallelization.use-case.ts:13`
+  (`MAX_PARALLEL_PADRAO`); migração `apps/api/src/db/migrations/0073_paralelismo_padrao_por_area.sql`.
+- **Teste:** `test/application/use-cases/iam/create-project-semeia-areas.spec.ts`
+  (projeto novo nasce com 5/4/2), `test/infrastructure/persistence/drizzle/agent-area.repository.spec.ts`
+  (semear de novo não desfaz o teto alterado), `test/db/paralelismo-padrao-migration.spec.ts`
+  (linhas com 2, 3 e 7 terminam em 5/4/2) e `test/application/use-cases/execution/request-parallelization.use-case.spec.ts`
+  (o padrão de 5 decide o paralelismo do dev).
 
 ### RN-084 — A esteira exibida deriva do registro de gates {#rn-084}
 
@@ -3060,7 +3091,7 @@ lead como na do subagente. Se ainda assim não há modelo, a mensagem de falha
 diz onde configurar.
 
 - **Onde:** `apps/api/src/application/use-cases/llm/resolve-model-binding.use-case.ts:76`
-  (`leadDoSubagente`); `apps/api/src/domain/agents/agent-areas.ts:123` (`leadDoSubagente`);
+  (`leadDoSubagente`); `apps/api/src/domain/agents/agent-areas.ts:139` (`leadDoSubagente`);
   `apps/api/src/domain/llm/binding-resolver.ts:66` (`MENSAGEM_SEM_MODELO`)
 - **Teste:** `apps/api/test/application/use-cases/llm/resolve-model-binding.use-case.spec.ts`
   (`appsec` herda do `secops` e `dev-api` do `dev-lead`; lead também sem modelo

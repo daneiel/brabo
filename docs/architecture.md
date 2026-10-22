@@ -832,7 +832,7 @@ tinha cortado. Voltou porque a área de **dev** não é enumerável no código:
 `qa` e `infra` cabem numa lista fixa, mas os membros de dev são um por
 módulo do `module_map`, decididos pelo Arquiteto e diferentes em cada
 projeto. O unique `(project_id, key)` é o que torna a semeadura idempotente,
-e `max_parallel` (padrão 2) é o teto que o lead usa sem perguntar
+e `max_parallel` (nasce com 5 no `dev`, 4 no `qa` e 2 na `infra`, [RN-910](business-rules/custo.md#rn-910)) é o teto que o lead usa sem perguntar
 — acima dele, `proposed_action`
 (ver [RN-083](business-rules/custo.md#rn-083)). `budget_micros`/`spent_micros`
 (ADR 0110) espelham `max_parallel` na mesma linha — um teto de gasto que é
