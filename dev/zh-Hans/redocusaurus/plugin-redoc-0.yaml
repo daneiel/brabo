@@ -16310,6 +16310,7 @@ components:
             - deepinfra
             - bitdeer
             - vultr
+            - 9router
           example: openrouter
         capabilities:
           $ref: '#/components/schemas/LLMProviderCapabilitiesResponseDto'
@@ -17291,6 +17292,7 @@ components:
             - deepinfra
             - bitdeer
             - vultr
+            - 9router
           example: openai
         descobertos:
           type: number
@@ -19191,6 +19193,7 @@ components:
             - deepinfra
             - bitdeer
             - vultr
+            - 9router
           example: anthropic
         apiKey:
           type: string
