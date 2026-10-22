@@ -46,6 +46,14 @@ defmodule Engine.Harness.FalhaRepetidaTest do
     refute FalhaRepetida.parou?()
   end
 
+  test "turno novo no MESMO processo não herda as falhas do anterior" do
+    falhar(%{"a" => 1})
+    assert {:error, _} = falhar(%{"a" => 1})
+    assert 9 = FalhaRepetida.inicio_de_turno(9)
+    assert {:error, "ruim"} = falhar(%{"a" => 1})
+    refute FalhaRepetida.parou?()
+  end
+
   test "falhas diferentes não somam" do
     for i <- 1..5, do: assert({:error, "ruim"} = falhar(%{"a" => i}))
     refute FalhaRepetida.parou?()

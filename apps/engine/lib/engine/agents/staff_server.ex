@@ -172,7 +172,7 @@ defmodule Engine.Agents.StaffServer do
   # também para o turno que lê a FILA (várias falas num texto só).
   defp turno_de_mensagem(state, text) do
     work = state |> append(user_msg(text)) |> compact()
-    fn -> run_turn(work, @max_iterations) end
+    fn -> run_turn(work, Engine.Harness.FalhaRepetida.inicio_de_turno(@max_iterations)) end
   end
 
   @impl true

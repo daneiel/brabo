@@ -144,7 +144,10 @@ defmodule Engine.Agents.ArquitetoServer do
   @impl true
   def handle_cast(:kickoff, state) do
     work = state |> append(user_msg(kickoff_instruction(state))) |> compact()
-    TurnoAssincrono.iniciar(state, nil, fn -> run_turn(work, @max_iterations) end)
+
+    TurnoAssincrono.iniciar(state, nil, fn ->
+      run_turn(work, Engine.Harness.FalhaRepetida.inicio_de_turno(@max_iterations))
+    end)
   end
 
   @impl true
@@ -202,7 +205,7 @@ defmodule Engine.Agents.ArquitetoServer do
   # também para o turno que lê a FILA (várias falas num texto só).
   defp turno_de_mensagem(state, text) do
     work = state |> append(user_msg(text)) |> compact()
-    fn -> run_turn(work, @max_iterations) end
+    fn -> run_turn(work, Engine.Harness.FalhaRepetida.inicio_de_turno(@max_iterations)) end
   end
 
   @impl true
@@ -231,7 +234,7 @@ defmodule Engine.Agents.ArquitetoServer do
       state
       |> append(instruction)
       |> compact()
-      |> run_turn(@max_iterations)
+      |> run_turn(Engine.Harness.FalhaRepetida.inicio_de_turno(@max_iterations))
 
     # Era `{:ok, _handoff} = ...`: um `MatchError` no `{:error, _}` derrubava
     # o GenServer inteiro (`restart: :temporary`, sem reinício automático),

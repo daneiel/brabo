@@ -179,7 +179,10 @@ defmodule Engine.Agents.PoServer do
   @impl true
   def handle_cast(:kickoff, state) do
     work = state |> append(user_msg(kickoff_instruction(state))) |> compact()
-    TurnoAssincrono.iniciar(state, nil, fn -> run_turn(work, @max_iterations) end)
+
+    TurnoAssincrono.iniciar(state, nil, fn ->
+      run_turn(work, Engine.Harness.FalhaRepetida.inicio_de_turno(@max_iterations))
+    end)
   end
 
   @impl true
@@ -226,7 +229,10 @@ defmodule Engine.Agents.PoServer do
   @impl true
   def handle_call({:revise, story}, from, state) do
     work = state |> append(revision_message(story)) |> compact()
-    TurnoAssincrono.iniciar(state, from, fn -> run_turn(work, @max_iterations) end)
+
+    TurnoAssincrono.iniciar(state, from, fn ->
+      run_turn(work, Engine.Harness.FalhaRepetida.inicio_de_turno(@max_iterations))
+    end)
   end
 
   # RN-673: como UMA fala do usuário vira turno — a mesma montagem que o
@@ -234,7 +240,7 @@ defmodule Engine.Agents.PoServer do
   # também para o turno que lê a FILA (várias falas num texto só).
   defp turno_de_mensagem(state, text) do
     work = state |> append(user_msg(text)) |> compact()
-    fn -> run_turn(work, @max_iterations) end
+    fn -> run_turn(work, Engine.Harness.FalhaRepetida.inicio_de_turno(@max_iterations)) end
   end
 
   @impl true

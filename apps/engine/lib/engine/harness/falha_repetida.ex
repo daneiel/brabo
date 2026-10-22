@@ -20,6 +20,12 @@ defmodule Engine.Harness.FalhaRepetida do
   @doc "Zera o contador (início de turno)."
   def zerar, do: Process.delete(@chave)
 
+  @doc "Zera o contador e devolve `voltas`: entra no lugar do teto na 1ª volta de cada turno."
+  def inicio_de_turno(voltas) do
+    zerar()
+    voltas
+  end
+
   @doc "Registra o resultado de uma chamada; devolve o resultado, com a correção da 2ª falha igual em diante."
   def registrar({:error, motivo}, name, args) do
     estado = Process.get(@chave, %{contagens: %{}, parou: false})

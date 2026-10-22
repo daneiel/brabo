@@ -270,7 +270,11 @@ defmodule Engine.Agents.CriativoServer do
   end
 
   defp run_turn_capturing(state),
-    do: run_turn_capturing(state, @max_iterations, %{falhas: [], conteudo: ""})
+    do:
+      run_turn_capturing(state, Engine.Harness.FalhaRepetida.inicio_de_turno(@max_iterations), %{
+        falhas: [],
+        conteudo: ""
+      })
 
   # `acc` guarda o que só o TURNO INTEIRO sabe, e que não cabe no `state` (que
   # é o histórico do modelo e sobrevive ao turno):
