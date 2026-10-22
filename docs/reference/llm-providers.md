@@ -475,7 +475,7 @@ execução (`dev-<modulo>`, não o `dev-lead`) recebem `reasoning: { enabled: fa
 5.5. A ajuda da faceta "pensamento" do catálogo de modelos diz isso. O provider
 Anthropic direto não envia `thinking`, então ali o modelo não raciocina.
 
-Exceção por modelo (RN-913, ADR 0223): com `models.reasoning_budget` preenchido
+Exceção por modelo (RN-914, ADR 0223): com `models.reasoning_budget` preenchido
 (curado à mão; hoje só `qwen/qwen3.7-flash`, 2048, provado em 22/10) o corpo
 leva `reasoning: { max_tokens: N }` e o teto vira saída visível + N. O
 `deepseek/deepseek-v4.1-flash` ignorou `max_tokens` e `effort` na medição e fica

@@ -6,7 +6,7 @@
 [0041](0041-base-openai-compativel-e-contrato-de-llm-providers.md) e o
 [0042](0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md) (capability
 só é afirmada quando provada; curadoria manual) e revisa, sem editá-la, a
-[RN-782](../business-rules.md#rn-782) pela [RN-913](../business-rules.md#rn-913).
+[RN-782](../business-rules.md#rn-782) pela [RN-914](../business-rules.md#rn-914).
 
 ## Contexto
 
@@ -46,4 +46,4 @@ conferidos em `GET /api/v1/generation`) separou os modelos.
 
 - [0041](0041-base-openai-compativel-e-contrato-de-llm-providers.md),
   [0042](0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md).
-- [RN-782](../business-rules.md#rn-782), [RN-913](../business-rules.md#rn-913).
+- [RN-782](../business-rules.md#rn-782), [RN-914](../business-rules.md#rn-914).
