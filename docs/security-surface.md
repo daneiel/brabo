@@ -1214,6 +1214,13 @@ detalhar o motivo na URL.
   nomes dos arquivos em conflito — caminhos do repositório que o mesmo papel já lê
   no diff.
 
+- **A resposta do catálogo de modelos ganhou `reasoningBudget`** — nenhuma rota,
+  papel ou guard mudou ([RN-914](business-rules.md#rn-914), ADR 0223). O campo
+  (inteiro ou `null`) sai no DTO de modelo das leituras do catálogo que já
+  existiam, com os mesmos papéis. É curadoria do produto (o orçamento de
+  raciocínio provado por smoke), não dado do usuário nem segredo; a escrita é só
+  por migration, sem rota nova.
+
 ## Tabela {#table}
 
 <!-- INÍCIO DA TABELA — o teste parseia daqui até o fim do documento. -->
