@@ -105,10 +105,7 @@
       "markAs": "标记为",
       "applyUsesTitle": "替换所标记模型的用途 —— 不会叠加到原有用途上",
       "applyUses": "应用用途",
-      "clearUses": "清除用途",
-      "activateForTeam_other": "启用并应用到 {{count}} 个智能体",
-      "activateForTeamDetail": "覆盖每个智能体自己的模型，每个智能体一次调用。",
-      "activateForTeamOwnerOnly": "只有工作区所有者可以启用模型。"
+      "clearUses": "清除用途"
     },
     "syncReport": {
       "skippedNoCapability": "不支持列出目录",

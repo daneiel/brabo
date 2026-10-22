@@ -716,7 +716,11 @@ export function ModelsSection({ projectId }: { projectId: string }) {
         emptyMessage={t('modelsSection.emptyMessage')}
       />
       {allModels.length === 0 && (
-        <div className={styles.subtitle}>{t('modelsSection.noModelsAvailable')}</div>
+        <div className={styles.subtitle}>
+          {t('modelsSection.noModelsAvailable')}{' '}
+          {/* shortcut: <a> recarrega a SPA; as seções são montadas sem Router nos testes, trocar por Link se a navegação virar gargalo */}
+          <a href="/providers">{t('modelsSection.noModelsAvailableLink')}</a>
+        </div>
       )}
     </SecaoDeConfiguracoes>
   );

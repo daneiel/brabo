@@ -4601,7 +4601,7 @@ gravado, e `false` apagaria dado curado à mão
 ### 6. Verifique com uma credencial real {#6-verify-with-a-real-credential}
 
 ```bash
-# na tela de configurações do projeto: cadastre a credencial, depois
+# na página Providers (rodapé do menu): cadastre a credencial, depois
 # "Atualizar catálogo" e confira o relatório por provider.
 ```
 

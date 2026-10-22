@@ -1,11 +1,9 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   listCredentials,
   listModelCatalog,
-  mensagemDaApi,
-  setAgentModelBinding,
   setModelUses,
   setModelsActive,
   syncModelCatalog,
@@ -21,7 +19,6 @@ import {
   ROTULO_DO_USO,
   USOS_DE_MODELO,
   agruparModelos,
-  algumModeloAtivo,
   providersSemCatalogo,
   formatarJanela,
   formatarPreco,
@@ -35,11 +32,6 @@ import { useToast } from './ui/ToastProvider';
 import { HuggingFaceModelBrowser } from './HuggingFaceModelBrowser';
 import styles from './ModelCatalogSection.module.css';
 import { FRESCOR_DA_CONFIGURACAO_MS } from '../lib/query-policy';
-import { AGENT_LIST } from '../lib/agents';
-import { useCurrentWorkspaceWithRole } from '../lib/hooks';
-import { roleAtLeast } from '../lib/roles';
-import { invalidarBindingsResolvidos } from '../lib/bindings-resolvidos';
-import { useAplicacaoEmLote } from '../routes/settings/aplicar-a-todos';
 
 /**
  * Curadoria do catálogo (Fase 9c, RN-043).
@@ -52,16 +44,8 @@ import { useAplicacaoEmLote } from '../routes/settings/aplicar-a-todos';
  * e `model_bindings` apontam para ele, e some-lo da tela deixaria o binding
  * afetado sem explicação.
  */
-export function ModelCatalogSection({
-  workspaceId,
-  projectId,
-}: {
-  workspaceId: string;
-  /** Com projeto, o catálogo oferece "ativar e aplicar ao time" (RN-694). */
-  projectId?: string;
-}) {
+export function ModelCatalogSection({ workspaceId }: { workspaceId: string }) {
   const { t } = useTranslation('models');
-  const { t: tSettings } = useTranslation('settings');
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const [marcados, setMarcados] = useState<Set<string>>(new Set());
@@ -296,66 +280,6 @@ export function ModelCatalogSection({
       showToast({ title: t('catalog.toasts.saveError'), tone: 'danger' }),
   });
 
-  /**
-   * "Ativar e aplicar ao time" (RN-694): só quando NENHUM modelo está ativo e
-   * há UM marcado. São as MESMAS chamadas dos dois caminhos que já existem —
-   * `POST .../models/activate` (`owner`) e um `PUT .../agent-bindings/:slug`
-   * por agente (`developer`, RN-476) — em sequência, e só com o clique. O
-   * gate é o MAIOR dos dois mínimos, `owner` (RN-102): oferecer a quem a
-   * ativação recusa terminaria num toast no primeiro passo.
-   */
-  const { data: comPapel } = useCurrentWorkspaceWithRole();
-  const podeAtivarParaOTime = roleAtLeast(comPapel?.role, 'owner');
-  const nenhumAtivo = catalogo ? !algumModeloAtivo(catalogo) : false;
-  const modeloParaOTime = useRef<ModelComCuradoria | null>(null);
-  const [ativandoParaOTime, setAtivandoParaOTime] = useState(false);
-  const loteDoTime = useAplicacaoEmLote({
-    alvos: AGENT_LIST.map((a) => ({ chave: a.key, nome: a.name })),
-    aplicar: (agentKey) =>
-      setAgentModelBinding(projectId!, agentKey, modeloParaOTime.current!.id),
-    aoConcluir: () => {
-      if (projectId) void invalidarBindingsResolvidos(queryClient, projectId);
-    },
-    sucessoDeTodos: (total) =>
-      tSettings('modelsSection.bulk.toast.applied', {
-        model: modeloParaOTime.current?.displayName ?? '',
-        count: total,
-      }),
-    erroGenerico: tSettings('modelsSection.bulk.toast.error'),
-  });
-  const marcadoUnico =
-    marcados.size === 1 && catalogo
-      ? Object.values(catalogo)
-          .flatMap((porGrupo) => Object.values(porGrupo ?? {}).flat())
-          .find((m) => marcados.has(m.id)) ?? null
-      : null;
-
-  async function ativarEAplicarAoTime() {
-    if (!projectId || !marcadoUnico) return;
-    setAtivandoParaOTime(true);
-    try {
-      try {
-        await setModelsActive(workspaceId, {
-          modelIds: [marcadoUnico.id],
-          isActive: true,
-        });
-      } catch (erro) {
-        showToast({
-          title: t('catalog.toasts.saveError'),
-          message: recusaDeAliasLivre(erro) ?? mensagemDaApi(erro),
-          tone: 'danger',
-        });
-        return;
-      }
-      invalidar();
-      setMarcados(new Set());
-      modeloParaOTime.current = marcadoUnico;
-      await loteDoTime.aplicarATodos();
-    } finally {
-      setAtivandoParaOTime(false);
-    }
-  }
-
   function alternar(id: string) {
     setMarcados((atual) => {
       const proximo = new Set(atual);
@@ -489,19 +413,6 @@ export function ModelCatalogSection({
           >
             {t('catalog.batchBar.deactivate')}
           </Button>
-          {projectId && nenhumAtivo && marcadoUnico && (
-            <>
-              <Button
-                variant="secondary"
-                onClick={() => void ativarEAplicarAoTime()}
-                disabled={
-                  !podeAtivarParaOTime || ativandoParaOTime || loteDoTime.aplicando
-                }
-              >
-                {t('catalog.batchBar.activateForTeam', { count: AGENT_LIST.length })}
-              </Button>
-            </>
-          )}
           <span className={styles.divisorDeFiltro} aria-hidden="true" />
           {/* Marcar uso é operação SEPARADA de ativar: os dois eixos não se
               misturam num botão só, para ninguém ligar um modelo achando que
@@ -537,13 +448,6 @@ export function ModelCatalogSection({
           {/* A explicação do lote mora numa LINHA PRÓPRIA (AT-373): ao lado
               dos botões ela virava coluna estreita e empurrava a barra além
               da largura da página. */}
-          {projectId && nenhumAtivo && marcadoUnico && (
-            <span className={styles.explicacaoDoLote}>
-              {podeAtivarParaOTime
-                ? t('catalog.batchBar.activateForTeamDetail')
-                : t('catalog.batchBar.activateForTeamOwnerOnly')}
-            </span>
-          )}
         </div>
       )}
 

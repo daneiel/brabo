@@ -11,7 +11,6 @@ import { ModelCatalogSection } from './ModelCatalogSection';
 import { CredentialsSection } from '../routes/settings/CredentialsSection';
 import { ToastProvider } from './ui/ToastProvider';
 import i18n from '../lib/i18n';
-import { AGENT_LIST } from '../lib/agents';
 import type { CatalogoPorCategoria, ModelComCuradoria } from '../lib/api-types';
 
 const listModelCatalog = vi.fn();
@@ -116,7 +115,7 @@ afterAll(() => {
 
 describe('busca no catálogo (RN-694)', () => {
   it('acha pelo id sem diferenciar maiúsculas e abre o subgrupo do hub sozinho', async () => {
-    montar(<ModelCatalogSection workspaceId="ws-1" projectId="p-1" />);
+    montar(<ModelCatalogSection workspaceId="ws-1" />);
     await screen.findByLabelText('Buscar modelo no catálogo');
     // Sem busca, o subgrupo do hub nasce fechado: a linha não está na tela.
     expect(screen.queryByText('Anthropic: Claude Haiku 4.5')).toBeNull();
@@ -130,7 +129,7 @@ describe('busca no catálogo (RN-694)', () => {
   });
 
   it('busca sem resultado DIZ que nada casou, com o termo', async () => {
-    montar(<ModelCatalogSection workspaceId="ws-1" projectId="p-1" />);
+    montar(<ModelCatalogSection workspaceId="ws-1" />);
     fireEvent.change(await screen.findByLabelText('Buscar modelo no catálogo'), {
       target: { value: 'gemini' },
     });
@@ -139,84 +138,17 @@ describe('busca no catálogo (RN-694)', () => {
   });
 });
 
-describe('ativar e aplicar ao time (RN-694)', () => {
-  async function marcarHaiku() {
+describe('catálogo sem atalho para o time (RN-911)', () => {
+  it('nenhum modelo ativo e um marcado: só ativar/desativar, sem "Ativar e aplicar"', async () => {
+    listModelCatalog.mockResolvedValue(catalogo({ openrouter: [HAIKU, LLAMA] }));
+    montar(<ModelCatalogSection workspaceId="ws-1" />);
     fireEvent.change(await screen.findByLabelText('Buscar modelo no catálogo'), {
       target: { value: 'haiku' },
     });
     await screen.findByText('Anthropic: Claude Haiku 4.5');
     fireEvent.click(screen.getByRole('checkbox', { name: /Claude Haiku 4.5/ }));
-  }
 
-  it('ativa e aplica a todos os agentes pelos MESMOS endpoints, só com o clique', async () => {
-    montar(<ModelCatalogSection workspaceId="ws-1" projectId="p-1" />);
-    await marcarHaiku();
-
-    const botao = await screen.findByRole('button', { name: /Ativar e aplicar aos/ });
-    // O aviso de sobrescrita da RN-476 vem junto.
-    const explicacao = screen.getByText(/obrescreve o modelo próprio de cada agente/);
-    // AT-373: a explicação é linha própria e não começa com o "·" solto.
-    expect(explicacao.textContent?.startsWith('Sobrescreve')).toBe(true);
-    expect(setModelsActive).not.toHaveBeenCalled();
-    await waitFor(() => expect(botao).not.toBeDisabled());
-    fireEvent.click(botao);
-
-    await waitFor(() =>
-      expect(setAgentModelBinding).toHaveBeenCalledTimes(AGENT_LIST.length),
-    );
-    expect(setModelsActive).toHaveBeenCalledWith('ws-1', {
-      modelIds: ['m-haiku'],
-      isActive: true,
-    });
-    expect(setAgentModelBinding).toHaveBeenCalledWith('p-1', AGENT_LIST[0].key, 'm-haiku');
-  });
-
-  it('aplicação parcial diz quantas de quantas e nomeia as que ficaram (RN-469)', async () => {
-    setAgentModelBinding.mockImplementation((_p: string, chave: string) =>
-      chave === AGENT_LIST[1].key ? Promise.reject(new Error('x')) : Promise.resolve({}),
-    );
-    montar(<ModelCatalogSection workspaceId="ws-1" projectId="p-1" />);
-    await marcarHaiku();
-    const botao = await screen.findByRole('button', { name: /Ativar e aplicar aos/ });
-    await waitFor(() => expect(botao).not.toBeDisabled());
-    fireEvent.click(botao);
-
-    expect(
-      await screen.findByText(
-        new RegExp(`${AGENT_LIST.length - 1} de ${AGENT_LIST.length}`),
-      ),
-    ).toBeTruthy();
-    expect(screen.getByText((t) => t.includes(AGENT_LIST[1].name))).toBeTruthy();
-  });
-
-  it('ativação recusada não aplica nada aos agentes', async () => {
-    setModelsActive.mockRejectedValue(new Error('recusado'));
-    montar(<ModelCatalogSection workspaceId="ws-1" projectId="p-1" />);
-    await marcarHaiku();
-    const botao = await screen.findByRole('button', { name: /Ativar e aplicar aos/ });
-    await waitFor(() => expect(botao).not.toBeDisabled());
-    fireEvent.click(botao);
-
-    expect(await screen.findByText('Não foi possível salvar')).toBeTruthy();
-    expect(setAgentModelBinding).not.toHaveBeenCalled();
-  });
-
-  it('abaixo de owner o caminho fica inerte e diz por quê (RN-102)', async () => {
-    papel('maintainer');
-    montar(<ModelCatalogSection workspaceId="ws-1" projectId="p-1" />);
-    await marcarHaiku();
-
-    expect(await screen.findByText('Só o dono do workspace ativa modelos.')).toBeTruthy();
-    expect(screen.getByRole('button', { name: /Ativar e aplicar aos/ })).toBeDisabled();
-  });
-
-  it('com algum modelo já ativo, o caminho não é oferecido', async () => {
-    listModelCatalog.mockResolvedValue(
-      catalogo({ openrouter: [HAIKU, { ...LLAMA, isActive: true }] }),
-    );
-    montar(<ModelCatalogSection workspaceId="ws-1" projectId="p-1" />);
-    await marcarHaiku();
-
+    expect(screen.getByRole('button', { name: /^Ativar$/ })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Ativar e aplicar aos/ })).toBeNull();
   });
 });
