@@ -20034,6 +20034,12 @@
             "example": false,
             "description": "PRODUCES image — an axis different from accepting it as input. Few models have it, and confusing the two sends the user to the wrong model."
           },
+          "reasoningBudget": {
+            "type": "number",
+            "nullable": true,
+            "example": 2048,
+            "description": "Reasoning budget (tokens) the model is PROVEN to respect, curated by hand (ADR 0223). Null = not proven; the field is not sent."
+          },
           "manualPricing": {
             "type": "boolean",
             "example": true,
@@ -20106,6 +20112,7 @@
           "supportsVision",
           "supportsReasoning",
           "generatesImage",
+          "reasoningBudget",
           "manualPricing",
           "availability",
           "lastSeenAt",
@@ -20317,6 +20324,12 @@
             "example": false,
             "description": "PRODUCES image — an axis different from accepting it as input. Few models have it, and confusing the two sends the user to the wrong model."
           },
+          "reasoningBudget": {
+            "type": "number",
+            "nullable": true,
+            "example": 2048,
+            "description": "Reasoning budget (tokens) the model is PROVEN to respect, curated by hand (ADR 0223). Null = not proven; the field is not sent."
+          },
           "manualPricing": {
             "type": "boolean",
             "example": true,
@@ -20362,6 +20375,7 @@
           "supportsVision",
           "supportsReasoning",
           "generatesImage",
+          "reasoningBudget",
           "manualPricing",
           "availability",
           "lastSeenAt",
