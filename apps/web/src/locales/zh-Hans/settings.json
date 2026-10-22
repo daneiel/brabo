@@ -135,6 +135,7 @@
       "label": "适用于整个{{area}}领域（lead + 子智能体）",
       "notFollowing_other": "该领域有 {{count}} 个智能体拥有自己的模型，不跟随：{{list}}",
       "dynamic": "此处不列出按模块、且拥有自己模型的子智能体。",
+      "needsModel": "请先为 lead 选择一个模型：没有生效的模型时，该领域的勾选框不起作用。",
       "toast": {
         "saveError": "无法保存领域模型",
         "applied": "{{area}}领域：lead 的模型适用于整个领域",
