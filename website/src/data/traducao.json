@@ -1069,7 +1069,7 @@
       "data": null
     },
     "runbook.md": {
-      "defasada": false,
+      "defasada": true,
       "data": "2026-10-15"
     },
     "security-surface.md": {
@@ -2151,7 +2151,7 @@
       "data": null
     },
     "runbook.md": {
-      "defasada": false,
+      "defasada": true,
       "data": "2026-10-15"
     },
     "security-surface.md": {
@@ -3233,7 +3233,7 @@
       "data": null
     },
     "runbook.md": {
-      "defasada": false,
+      "defasada": true,
       "data": "2026-10-15"
     },
     "security-surface.md": {
