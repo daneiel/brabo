@@ -264,7 +264,7 @@ defmodule Engine.Infra.InfraLeadServer do
       state
       |> append(user_msg(kickoff_instruction(ctx, subida)))
       |> compact()
-      |> run_turn(@max_iterations)
+      |> run_turn(Engine.Harness.FalhaRepetida.inicio_de_turno(@max_iterations))
       |> concluir()
     end)
   end
@@ -333,7 +333,9 @@ defmodule Engine.Infra.InfraLeadServer do
     work = state |> append(user_msg(text)) |> compact()
 
     fn ->
-      work |> run_turn(@max_iterations) |> concluir()
+      work
+      |> run_turn(Engine.Harness.FalhaRepetida.inicio_de_turno(@max_iterations))
+      |> concluir()
     end
   end
 
@@ -401,7 +403,7 @@ defmodule Engine.Infra.InfraLeadServer do
         state
         |> append(instruction)
         |> compact()
-        |> run_turn(@max_iterations)
+        |> run_turn(Engine.Harness.FalhaRepetida.inicio_de_turno(@max_iterations))
         |> concluir()
       end)
 
@@ -422,11 +424,13 @@ defmodule Engine.Infra.InfraLeadServer do
     gravado = Engine.Agents.GravadoNoTurno.descarregar()
     gravar_texto_do_turno(state, "")
 
-    emit(state, "toolloop.limit_reached", %{
-      iteration: @max_iterations,
-      max_iterations: @max_iterations,
-      gravado: gravado
-    })
+    Engine.Harness.FalhaRepetida.narrar_ou(state.project_id, state.session_id, @agent, fn ->
+      emit(state, "toolloop.limit_reached", %{
+        iteration: @max_iterations,
+        max_iterations: @max_iterations,
+        gravado: gravado
+      })
+    end)
 
     {:done, state}
   end
@@ -545,7 +549,7 @@ defmodule Engine.Infra.InfraLeadServer do
         {:proposed, title, files, state}
 
       {nil, state} ->
-        run_turn(state, remaining - 1)
+        run_turn(state, Engine.Harness.FalhaRepetida.restante(remaining - 1))
     end
   end
 

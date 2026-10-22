@@ -144,7 +144,10 @@ defmodule Engine.Agents.ArquitetoServer do
   @impl true
   def handle_cast(:kickoff, state) do
     work = state |> append(user_msg(kickoff_instruction(state))) |> compact()
-    TurnoAssincrono.iniciar(state, nil, fn -> run_turn(work, @max_iterations) end)
+
+    TurnoAssincrono.iniciar(state, nil, fn ->
+      run_turn(work, Engine.Harness.FalhaRepetida.inicio_de_turno(@max_iterations))
+    end)
   end
 
   @impl true
@@ -202,7 +205,7 @@ defmodule Engine.Agents.ArquitetoServer do
   # também para o turno que lê a FILA (várias falas num texto só).
   defp turno_de_mensagem(state, text) do
     work = state |> append(user_msg(text)) |> compact()
-    fn -> run_turn(work, @max_iterations) end
+    fn -> run_turn(work, Engine.Harness.FalhaRepetida.inicio_de_turno(@max_iterations)) end
   end
 
   @impl true
@@ -231,7 +234,7 @@ defmodule Engine.Agents.ArquitetoServer do
       state
       |> append(instruction)
       |> compact()
-      |> run_turn(@max_iterations)
+      |> run_turn(Engine.Harness.FalhaRepetida.inicio_de_turno(@max_iterations))
 
     # Era `{:ok, _handoff} = ...`: um `MatchError` no `{:error, _}` derrubava
     # o GenServer inteiro (`restart: :temporary`, sem reinício automático),
@@ -260,11 +263,13 @@ defmodule Engine.Agents.ArquitetoServer do
     gravado = Engine.Agents.GravadoNoTurno.descarregar()
     gravar_texto_do_turno(state, "", nil)
 
-    emit(state, "toolloop.limit_reached", %{
-      iteration: @max_iterations,
-      max_iterations: @max_iterations,
-      gravado: gravado
-    })
+    Engine.Harness.FalhaRepetida.narrar_ou(state.project_id, state.session_id, @agent, fn ->
+      emit(state, "toolloop.limit_reached", %{
+        iteration: @max_iterations,
+        max_iterations: @max_iterations,
+        gravado: gravado
+      })
+    end)
 
     state
   end
@@ -315,7 +320,7 @@ defmodule Engine.Agents.ArquitetoServer do
             # RN-698: o texto desta volta continua na próxima.
             TextoDoTurno.acumular(content, model_name)
             state = Enum.reduce(calls, state, &dispatch_tool/2)
-            run_turn(state, remaining - 1)
+            run_turn(state, Engine.Harness.FalhaRepetida.restante(remaining - 1))
         end
 
       {:error, reason} ->

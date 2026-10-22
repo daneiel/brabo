@@ -25,9 +25,13 @@ defmodule Engine.Harness.ArgumentosDeFerramenta do
           {:ok, term()} | {:error, term()}
   def executar(name, args, specs, fun) do
     # RN-737/RN-745: só a chamada incompleta (a última) da resposta cortada é recusada.
-    if Engine.Harness.RespostaCortada.incompleta?(name, args),
-      do: {:error, Engine.Harness.RespostaCortada.recusa(name)},
-      else: executar_inteira(name, args, specs, fun)
+    resultado =
+      if Engine.Harness.RespostaCortada.incompleta?(name, args),
+        do: {:error, Engine.Harness.RespostaCortada.recusa(name)},
+        else: executar_inteira(name, args, specs, fun)
+
+    # RN-913 (AT-588): conta a falha igual no turno; a 2ª corrige, a 3ª para o laço.
+    Engine.Harness.FalhaRepetida.registrar(resultado, name, args)
   end
 
   defp executar_inteira(name, args, specs, fun) do

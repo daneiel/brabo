@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- A mesma chamada de ferramenta que falha igual no turno recebe uma correção na 2ª vez, e na 3ª o agente para com `agent.error` de origem `modelo` (AT-588, RN-913); o contador zera a cada turno.
 - O orçamento de raciocínio vira capability por modelo (AT-569, RN-914, ADR 0223, migração 0074): o `qwen/qwen3.7-flash` recebe `reasoning: { max_tokens: 2048 }`, provado em medição paga; o deepseek ignorou todos os campos e fica de fora, e `effort` nunca é enviado. Pendência: a tela do catálogo não mostra o orçamento.
 - O composer da Sessão deixa de perder teclas em rajada: o campo vira não controlado e o re-render da página não reescreve mais o que já está digitado (AT-539, RN-882 revisada).
 - A caixa "Valer para a área" diz em texto por que está inerte quando o lead não tem modelo vigente (AT-601, RN-912).
