@@ -13,9 +13,9 @@ A fonte é o pt-BR em `docs/` (ADR 0216), inclusive `docs/reference/**` (ADR 021
 
 | locale | páginas traduzidas | caracteres traduzidos | em dia | defasadas | sem procedência | ausentes | órfãs |
 |---|---|---|---|---|---|---|---|
-| `en` | 270 de 273 (98.9%) | 99.9% de 5.798.127 | 258 | 11 | 1 | 3 | 0 |
-| `ru` | 270 de 273 (98.9%) | 99.9% de 5.798.127 | 258 | 11 | 1 | 3 | 0 |
-| `zh-Hans` | 270 de 273 (98.9%) | 99.9% de 5.798.127 | 258 | 11 | 1 | 3 | 0 |
+| `en` | 270 de 273 (98.9%) | 99.9% de 5.798.127 | 257 | 12 | 1 | 3 | 0 |
+| `ru` | 270 de 273 (98.9%) | 99.9% de 5.798.127 | 257 | 12 | 1 | 3 | 0 |
+| `zh-Hans` | 270 de 273 (98.9%) | 99.9% de 5.798.127 | 257 | 12 | 1 | 3 | 0 |
 
 > **TODO(humano):** revisão nativa por idioma — quem revisou e quando. Ainda não há revisão nativa registrada.
 
@@ -32,6 +32,7 @@ A fonte é o pt-BR em `docs/` (ADR 0216), inclusive `docs/reference/**` (ADR 021
 - `reference/configuration.md` (tradução de 2026-10-16)
 - `reference/llm-providers.md` (tradução de 2026-10-16)
 - `runbook.md` (tradução de 2026-10-15)
+- `security-surface.md` (tradução de 2026-10-15)
 
 ### Defasadas em `ru`
 
@@ -46,6 +47,7 @@ A fonte é o pt-BR em `docs/` (ADR 0216), inclusive `docs/reference/**` (ADR 021
 - `reference/configuration.md` (tradução de 2026-10-16)
 - `reference/llm-providers.md` (tradução de 2026-10-16)
 - `runbook.md` (tradução de 2026-10-15)
+- `security-surface.md` (tradução de 2026-10-15)
 
 ### Defasadas em `zh-Hans`
 
@@ -60,6 +62,7 @@ A fonte é o pt-BR em `docs/` (ADR 0216), inclusive `docs/reference/**` (ADR 021
 - `reference/configuration.md` (tradução de 2026-10-16)
 - `reference/llm-providers.md` (tradução de 2026-10-16)
 - `runbook.md` (tradução de 2026-10-15)
+- `security-surface.md` (tradução de 2026-10-15)
 
 ## Interface
 
