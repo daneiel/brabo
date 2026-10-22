@@ -1186,6 +1186,16 @@ CONFLICT DO NOTHING`。没有它，缺陷只会对从零开始的人得到修正
 - **来源：** FASE 18，在 16–26 计划的调查中发现的缺陷；
   表来自 [ADR 0053](../adr/0053-dev-lead-e-paralelismo-autorizado.md)
 
+### RN-910 — 每个区域的默认上限：dev 为 5，qa 为 4，infra 为 2 {#rn-910}
+
+每个 agent 区域诞生时都带有一个来自目录的并行上限：`dev` 5、`qa` 4、`infra` 2（AT-599，所有者于 22/10 提出）。迁移 `0073` 把相同的值应用到**所有**已有项目，覆盖了已经做出的决定——这是所有者的决定，明知蓄意设定的上限会因此丢失。
+
+- **目前执行时只应用 `dev` 的上限。** `RequestParallelizationUseCase` 在决定并行度时读取 `dev` 区域。`qa` 和 `infra` 的值已记录、可显示且可编辑，但没有任何代码查询它：提高它们的上限不会改变任何执行。
+- **`dev` 的上限只有在 3 个或以上模块时才起作用。** dev agent 的最大数量是每个模块一个加一个额外的（`dev-<modulo>-2`），即 2 × 模块数（RN-083）。有 2 个模块时最大为 4，低于 5。
+- **只有 INSERT 使用目录值。** 再次播种不会改动该行（RN-094）。列仍为 `default(2)`：该值只会出现在用例之外的原始 INSERT 中。
+- **位置：** `apps/api/src/domain/agents/agent-areas.ts:73`（`maxParallelPadrao`）；`apps/api/src/application/use-cases/agents/seed-agent-areas.use-case.ts:53`（`maxParallelAoNascer`）；`apps/api/src/infrastructure/persistence/drizzle/agent-area.repository.ts:62`（`nascer`）；`apps/api/src/application/use-cases/execution/request-parallelization.use-case.ts:13`（`MAX_PARALLEL_PADRAO`）；迁移 `apps/api/src/db/migrations/0073_paralelismo_padrao_por_area.sql`。
+- **测试：** `test/application/use-cases/iam/create-project-semeia-areas.spec.ts`（新项目以 5/4/2 诞生）、`test/infrastructure/persistence/drizzle/agent-area.repository.spec.ts`（再次播种不会撤销已修改的上限）、`test/db/paralelismo-padrao-migration.spec.ts`（值为 2、3 和 7 的行最终为 5/4/2）以及 `test/application/use-cases/execution/request-parallelization.use-case.spec.ts`（默认值 5 决定 dev 的并行度）。
+
 ### RN-084 — 显示的流水线来自 gate 注册表 {#rn-084}
 
 团队面板显示 PR 所处的阶段，方法是**从

@@ -12376,3 +12376,17 @@ PO 的 kickoff 说明这三件事。
 - **位置：** `apps/api/src/infrastructure/llm/nine-router-provider.ts:83`（`nineRouterConfig`）
 - **测试：** `apps/api/test/infrastructure/llm/nine-router-provider.contract.spec.ts:109`（能力、环境中的 URL、请求头、连接测试、合成固件解析）；手动 smoke 位于 `nine-router-provider.smoke.spec.ts`。
 - **来源：** AT-576a（EP-026），ADR 0222，所有者 22/10 的决定。
+
+### RN-911 — 提供商是全局的；项目设置只选择模型；矩阵位于账户中 {#rn-911}
+
+- **规则：** LLM 凭据、模型目录（策展、价格、同步以及 Hugging Face 浏览器）和按密钥的支出报告已离开项目设置。它们位于 `/providers`（三个部分），按密钥的支出也在“支出”选项卡中，仅对 `owner` 开放（RN-060）。项目只保存选择：按 agent 和按区域的模型、“应用到全部”（RN-476）、路由标准和“最佳模型”。“谁可以批准什么”矩阵已离开设置，成为账户（`/account`）中的一个部分，对任何已登录的人可见。“启用并应用到 N 个 agent”快捷方式（RN-694 第 3 项）已不存在。旧链接 `?section=credentials`、`model-catalog`、`key-spend` 或 `approval-matrix` 会在顶部打开该选项卡，不报错。“按 agent 的模型”的空状态、“最佳模型”的副标题以及“入门步骤”（RN-708）都指向 `/providers`。修订 RN-694（第 3 项）和 RN-708（目的地）。无 ADR：这是屏幕边界。
+- **位置：** `apps/web/src/routes/settings/sumario.ts:48`（`SECOES_DE_CONFIGURACOES`）、`apps/web/src/routes/ProjectSettingsTab.tsx:62`（`ProjectSettingsTab`）、`apps/web/src/routes/AccountPage.tsx:36`（`AccountPage`）
+- **测试：** `apps/web/src/routes/settings/sumario.test.ts`（四个键不存在）；`apps/web/src/routes/settings/SumarioDeConfiguracoes.test.tsx`（该选项卡不挂载四个部分，即使对 `owner` 也是如此）；`apps/web/src/routes/AccountPage.test.tsx`（矩阵，以及语言中的失败情况）；`apps/web/src/routes/configuracoes.orcamento.test.tsx`（返回该选项卡时不获取凭据）；`apps/web/src/components/catalogo-com-busca.test.tsx`（无快捷方式）
+- **来源：** AT-597 和 AT-598（EP-031），所有者于 22/10 的请求。
+
+### RN-912 — 区域模型是 lead 行上的一个框，位于“按 agent 的模型”中 {#rn-912}
+
+- **规则：** “按区域的模型”部分已不存在。区域的默认值（RN-102，RN-470 的 `area` 作用域）通过每个区域（`dev-lead`、`qa`、`infra`）**仅位于 lead 行**上的一个框来关联：“应用到整个 X 区域（lead + 子 agent）”。区域绑定是每个区域一个值，且不保存来源 agent，因此在每一行都放一个框会让两个框争夺同一个值。勾选 ⇔ lead 的生效值来自区域（`origin: 'area'`），从 RN-654 的批量数据中读取，无需新的查询。**勾选**会以 lead 的生效值和 lead 的路由标准写入区域（`PUT .../area-bindings/:area`），然后才删除 lead 自己的绑定（`DELETE .../agent-bindings/:lead`；复制它会把它留下，RN-102）。这是两次调用，结果按步骤报告（RN-469）：如果区域拒绝（包括 RN-040 的 422），什么都不会改变，提示会带上 API 的文字；如果区域已写入而 DELETE 失败，屏幕会说明区域的默认值已写入，但 lead 自己的模型未被移除（DELETE 的 404 视为已移除）。**取消勾选**会删除区域（`DELETE .../area-bindings/:area`），且不向 lead 写入任何内容；404 变为“已经在继承”。框被勾选时，lead 的选择器和路由标准写入的是区域。拥有自己绑定的 agent 会覆盖区域（RN-470），并且**不**跟随：屏幕以复数形式列出在这种情况下已知的子 agent（声明的范围，RN-180；动态的 `dev-<modulo>` 不包括在内，屏幕会说明这一点），且不删除它们的决定。“应用到全部”（RN-476）会为 17 个 agent 写入各自的绑定，因此会让子 agent 脱离区域默认值；其提示会说明这一点。**角色：** 框以及在勾选期间的 lead 选择器需要 `maintainer`（区域端点的最低要求，RN-102），通过 `roleAtLeast` 比较；低于此角色时它们保持不可用，原因在该部分的图例中以文字说明**一次**（ADR 0064）。其他行仍为 `developer`。若 lead 没有可复制的生效值，该框出生时即为禁用状态，并在框旁以文字说明原因（AT-601，键 `modelsSection.areaBox.needsModel`）。修订 RN-040、RN-102 和 RN-470 的 UI；级联、作用域和端点不变（无 ADR）。
+- **位置：** `apps/web/src/routes/settings/ModelsSection.tsx:94`（`podeEditarArea`）、`:428`（`areaDoLead`）、`:446`（`handleMarcarArea`）、`:486`（`handleDesmarcarArea`）
+- **测试：** `apps/web/src/routes/settings/ModelsSection.caixa-da-area.test.tsx`（AT-601：lead 没有生效值时的原因）；`apps/web/src/routes/ProjectSettingsTab.test.tsx`（勾选、区域拒绝、部分失败、带或不带 404 的取消勾选、lead 在区域上的选择器、非跟随者、`developer` 不可用）；`apps/web/src/routes/settings/papel-na-tabela-de-agentes.test.tsx`（两个最低角色）；`bindings-em-lote.test.tsx`（单一批量）；`cascata.test.tsx`；`heranca.test.tsx`；`filtro-de-aptos.test.tsx`（RN-040）；`preferencia-de-roteamento.test.tsx`（ADR 0166）
+- **来源：** AT-600（EP-031），所有者于 22/10 的请求。
