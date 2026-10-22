@@ -8871,7 +8871,7 @@ export interface components {
              * @example openrouter
              * @enum {string}
              */
-            provider: "ollama" | "anthropic" | "openai" | "openrouter" | "nvidia-nim" | "together" | "deepinfra" | "bitdeer" | "vultr";
+            provider: "ollama" | "anthropic" | "openai" | "openrouter" | "nvidia-nim" | "together" | "deepinfra" | "bitdeer" | "vultr" | "9router";
             capabilities: components["schemas"]["LLMProviderCapabilitiesResponseDto"];
         };
         ProvisionedRepositoryResponseDto: {
@@ -9489,7 +9489,7 @@ export interface components {
              * @example openai
              * @enum {string}
              */
-            provider: "ollama" | "anthropic" | "openai" | "openrouter" | "nvidia-nim" | "together" | "deepinfra" | "bitdeer" | "vultr";
+            provider: "ollama" | "anthropic" | "openai" | "openrouter" | "nvidia-nim" | "together" | "deepinfra" | "bitdeer" | "vultr" | "9router";
             /**
              * @description Models that did not exist in the database. They enter INACTIVE — activating is the owner's curation (RN-043).
              * @example 3
@@ -10768,7 +10768,7 @@ export interface components {
              * @example anthropic
              * @enum {string}
              */
-            provider: "anthropic" | "openai" | "openrouter" | "nvidia-nim" | "together" | "deepinfra" | "bitdeer" | "vultr";
+            provider: "anthropic" | "openai" | "openrouter" | "nvidia-nim" | "together" | "deepinfra" | "bitdeer" | "vultr" | "9router";
             /**
              * @description The key in plain text. It is encrypted via envelope encryption before touching the database and NEVER comes back in any response — not even encrypted. The 512-character cap is protection against an absurd payload, not format validation: whether the key is any good is answered by the provider, at `POST /users/me/credentials/{provider}/test`.
              * @example sk-ant-api03-…

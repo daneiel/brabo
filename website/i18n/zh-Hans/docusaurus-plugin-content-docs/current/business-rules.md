@@ -12369,3 +12369,10 @@ PO 的 kickoff 说明这三件事。
 - **位置：** `apps/engine/lib/engine/agents/po_server.ex:614`（`build_kickoff`）
 - **测试：** `apps/engine/test/engine/agents/po_server_test.exs:518`（先读后写；按层分批：史诗 → 用户故事 → 任务）
 - **来源：** AT-591 的探测（21/10），在 AT-596（EP-026）中实现。
+
+### RN-909 — 9Router 是第 10 个提供商：按安装配置 URL、凭据必填、按公开价格策展 {#rn-909}
+
+- **规则：** 提供商 `9router` 与所有者机器上的网关通信。基础 URL 为 `NINE_ROUTER_BASE_URL`（默认 `http://host.docker.internal:20128/v1`），提供商和连接测试（带密钥的 `GET /models`）每次使用时读取。凭据必填。提供商能力为 `false`（仅 `listModels` 和合约要求的 `streaming` 为 `true`），直到带密钥的 smoke 证明其余能力（ADR 0041）。模型价格不自动发现：通过人工策展录入，并按所有者的决定，订阅模型记录等价 API 的公开价格，而不是零。提供商在每次调用中发送 `x-9router-token-saver: off`，避免 9Router 压缩 `tool_result`。
+- **位置：** `apps/api/src/infrastructure/llm/nine-router-provider.ts:83`（`nineRouterConfig`）
+- **测试：** `apps/api/test/infrastructure/llm/nine-router-provider.contract.spec.ts:109`（能力、环境中的 URL、请求头、连接测试、合成固件解析）；手动 smoke 位于 `nine-router-provider.smoke.spec.ts`。
+- **来源：** AT-576a（EP-026），ADR 0222，所有者 22/10 的决定。

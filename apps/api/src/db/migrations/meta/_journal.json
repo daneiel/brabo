@@ -505,6 +505,13 @@
       "when": 1792037508615,
       "tag": "0071_idiomas_ru_zh",
       "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "7",
+      "when": 1792640100755,
+      "tag": "0072_provider_9router",
+      "breakpoints": true
     }
   ]
 }

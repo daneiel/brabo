@@ -57,6 +57,7 @@ const COR_DO_CONECTOR: Record<LlmCredentialProvider, string> = {
   deepinfra: 'var(--violet)',
   bitdeer: 'var(--accent)',
   vultr: 'var(--warning)',
+  '9router': 'var(--success)',
 };
 
 /**

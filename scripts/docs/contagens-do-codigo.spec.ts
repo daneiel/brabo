@@ -95,7 +95,7 @@ describe('contagens derivadas do código (AT-123)', () => {
   });
 
   it('as contagens externas (schemas, providers) comparam contra o número que generate.mjs passa', () => {
-    const outro = { ...contexto(), externas: { schemas: 13, providers: 10 } };
+    const outro = { ...contexto(), externas: { schemas: 13, providers: 11 } };
     const resultados = aferirContagens(outro);
     const externas = resultados.filter((_, i) => FONTES_EXTERNAS.has(AFERICOES[i]!.fonte));
     expect(new Set(externas.map((r) => r.estado))).toEqual(new Set(['DESATUAL']));

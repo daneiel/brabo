@@ -87,7 +87,7 @@
   preço congelado no metering (ADR 0042) — que desde o ADR 0188 só é o
   número quando a resposta NÃO traz o custo real: o `usage.cost` do
   OpenRouter vence, com `price_implicit` marcando a linha (a MESMA coluna
-  do Jev) e o do catálogo ao lado em `catalog_cost_micros`, RN-665; 9 providers (ADR 0043); o Jev
+  do Jev) e o do catálogo ao lado em `catalog_cost_micros`, RN-665; 10 providers (ADR 0043); o 10º é o 9Router (ADR 0222); o Jev
   (`typesafe/jev-1.13`, Decisions API do OpenRouter) escolhe o menu de
   ferramentas de cada passo por uma porta PRÓPRIA, `ToolRouter`, fora do
   `LLMProviderRegistry` e do catálogo `models` (ADR 0179, RN-625): só com

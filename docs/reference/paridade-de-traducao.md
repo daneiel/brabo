@@ -13,9 +13,9 @@ A fonte é o pt-BR em `docs/` (ADR 0216), inclusive `docs/reference/**` (ADR 021
 
 | locale | páginas traduzidas | caracteres traduzidos | em dia | defasadas | sem procedência | ausentes | órfãs |
 |---|---|---|---|---|---|---|---|
-| `en` | 270 de 271 (99.6%) | 99.9% de 5.777.128 | 261 | 8 | 1 | 1 | 0 |
-| `ru` | 270 de 271 (99.6%) | 99.9% de 5.777.128 | 261 | 8 | 1 | 1 | 0 |
-| `zh-Hans` | 270 de 271 (99.6%) | 99.9% de 5.777.128 | 261 | 8 | 1 | 1 | 0 |
+| `en` | 270 de 272 (99.3%) | 99.9% de 5.785.262 | 260 | 9 | 1 | 2 | 0 |
+| `ru` | 270 de 272 (99.3%) | 99.9% de 5.785.262 | 260 | 9 | 1 | 2 | 0 |
+| `zh-Hans` | 270 de 272 (99.3%) | 99.9% de 5.785.262 | 260 | 9 | 1 | 2 | 0 |
 
 > **TODO(humano):** revisão nativa por idioma — quem revisou e quando. Ainda não há revisão nativa registrada.
 
@@ -26,6 +26,7 @@ A fonte é o pt-BR em `docs/` (ADR 0216), inclusive `docs/reference/**` (ADR 021
 - `business-rules.md` (tradução de 2026-10-15)
 - `business-rules/autenticacao.md` (tradução de 2026-10-11)
 - `business-rules/custo.md` (tradução de 2026-10-15)
+- `explanation/aceite-providers.md` (tradução de 2026-10-15)
 - `explanation/cadeia-de-suprimentos-do-ci.md` (tradução de 2026-10-15)
 - `reference/configuration.md` (tradução de 2026-10-16)
 - `reference/llm-providers.md` (tradução de 2026-10-16)
@@ -37,6 +38,7 @@ A fonte é o pt-BR em `docs/` (ADR 0216), inclusive `docs/reference/**` (ADR 021
 - `business-rules.md` (tradução de 2026-10-15)
 - `business-rules/autenticacao.md` (tradução de 2026-10-11)
 - `business-rules/custo.md` (tradução de 2026-10-15)
+- `explanation/aceite-providers.md` (tradução de 2026-10-15)
 - `explanation/cadeia-de-suprimentos-do-ci.md` (tradução de 2026-10-15)
 - `reference/configuration.md` (tradução de 2026-10-16)
 - `reference/llm-providers.md` (tradução de 2026-10-16)
@@ -48,6 +50,7 @@ A fonte é o pt-BR em `docs/` (ADR 0216), inclusive `docs/reference/**` (ADR 021
 - `business-rules.md` (tradução de 2026-10-15)
 - `business-rules/autenticacao.md` (tradução de 2026-10-11)
 - `business-rules/custo.md` (tradução de 2026-10-15)
+- `explanation/aceite-providers.md` (tradução de 2026-10-15)
 - `explanation/cadeia-de-suprimentos-do-ci.md` (tradução de 2026-10-15)
 - `reference/configuration.md` (tradução de 2026-10-16)
 - `reference/llm-providers.md` (tradução de 2026-10-16)
@@ -58,9 +61,9 @@ Chaves de `apps/web/src/locales/<locale>/` contra o pt-BR. Chave plural conta um
 
 | locale | formas de plural | chaves presentes | plurais incompletos |
 |---|---|---|---|
-| `en` | one, other | 2329 de 2329 (100.0%) | 0 |
-| `ru` | one, few, many, other | 2535 de 2535 (100.0%) | 0 |
-| `zh-Hans` | other | 2226 de 2226 (100.0%) | 0 |
+| `en` | one, other | 2330 de 2330 (100.0%) | 0 |
+| `ru` | one, few, many, other | 2536 de 2536 (100.0%) | 0 |
+| `zh-Hans` | other | 2227 de 2227 (100.0%) | 0 |
 
 ## API (Redoc)
 

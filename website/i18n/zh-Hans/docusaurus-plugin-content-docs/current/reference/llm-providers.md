@@ -87,10 +87,11 @@ tool calling 和 token 计数都没有单独的方法：工具放在 `options.to
 
 > ⚠️ 此区块由 `pnpm docs:generate` 生成。请勿手动编辑——下次构建会覆盖它。
 
-读取自 `apps/api/src/infrastructure/llm/` 中的 `capabilities` 字面量——**9 个 provider**。
+读取自 `apps/api/src/infrastructure/llm/` 中的 `capabilities` 字面量——**10 个 provider**。
 
 | provider | streaming | tool calling | list_models | embeddings | 路由偏好 | 凭据 | 模型来源 | 特性摘要 | 来源 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `9router` | ? | ? | ? | ? | ? | API 密钥 | seed | URL por instalação; Credencial obrigatória; Preço = curadoria manual; Capabilities `false`; Token Saver desligado; Qual upstream serviu | `apps/api/src/infrastructure/llm/nine-router-provider.ts` |
 | `anthropic` | 是 | 是 | 是 | 否 | 否 | API 密钥 | sync + seed | — | `apps/api/src/infrastructure/llm/anthropic-provider.ts` |
 | `bitdeer` | 是 | 是 | 否 | 否 | 否 | API 密钥 | seed | `Authorization: Bearer <chave>` CONFIRMADO; `GET /v1/models` existe e é autenticado; Três ids REAIS de modelo confirmados; Nenhuma peculiaridade de stream/erro confirmada | `apps/api/src/infrastructure/llm/bitdeer-provider.ts` |
 | `deepinfra` | 是 | 是 | 是 | 否 | 否 | API 密钥 | sync + seed | O catálogo é PÚBLICO — sem autenticação nenhuma; `stream_options.include_usage` confirmado como suportado; Erro no formato padrão | `apps/api/src/infrastructure/llm/deepinfra-provider.ts` |
