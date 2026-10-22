@@ -89,10 +89,9 @@
       "intro": "来源表示值在哪里解析：",
       "mostSpecificWins": "最具体的优先。",
       "areaWord": "领域",
-      "areaExplain": "是 lead 与子智能体共享的默认值——请在",
-      "areaLink": "按领域的模型",
-      "below": "中配置（见下方）。",
-      "needsDeveloper": " 更换模型、将某个模型应用到所有智能体或恢复继承需要 developer 角色。"
+      "areaExplain": "是 lead 与子智能体共享的默认值：在 lead 的那一行（Dev Lead、QA 或 Infra）勾选复选框，其模型即适用于整个领域。",
+      "needsDeveloper": " 更换模型、将某个模型应用到所有智能体或恢复继承需要 developer 角色。",
+      "needsMaintainerArea": " 勾选领域复选框或更改其模型需要 maintainer 角色。"
     },
     "costCard": {
       "label": "团队每月预估成本",
@@ -123,7 +122,7 @@
     "noEstimateTitle": "此智能体在过去 30 天内未在本项目中记录任何消耗。这与花费为零不同，后者显示为 US$ 0,00。",
     "bulk": {
       "label": "将一个模型应用到所有智能体",
-      "detail": "· 覆盖每个智能体的自有模型，每个智能体一次调用",
+      "detail": "· 覆盖每个智能体自己的模型，每个智能体调用一次，并使子智能体脱离领域默认值",
       "apply_other": "应用到 {{count}} 个智能体",
       "applying": "正在应用…",
       "toast": {
@@ -131,27 +130,19 @@
         "error": "无法将该模型应用到智能体"
       }
     },
-    "noModelsAvailableLink": "在 Providers 中启用 →"
-  },
-  "areaModels": {
-    "title": "按领域的模型",
-    "eyebrow": "可继承的默认值 · lead + 子智能体",
-    "subtitle": {
-      "main": "该模型适用于 lead 以及领域中所有未偏离的子智能体——偏离是指在上方智能体的那一行选择其他模型。“恢复继承”会删除领域默认值，不会改变各智能体已有的偏离。",
-      "needsMaintainer": " 修改需要 maintainer 角色。"
-    },
-    "card": {
-      "title": "领域 {{area}}",
-      "lead": "Lead：{{lead}}",
-      "subagents": " — 子智能体：{{list}}",
-      "subagentsDynamic": " — 动态子智能体（按模块）"
-    },
-    "toast": {
-      "saveError": "无法保存",
-      "reverted": "领域 {{area}} 已恢复继承"
-    },
-    "originChainNoModel": "所有层级均无默认值",
-    "originChainNoModelTitle": "此领域、项目和工作区都没有选择模型——此领域的 lead 和子智能体没有可继承的默认值。"
+    "noModelsAvailableLink": "在 Providers 中启用 →",
+    "areaBox": {
+      "label": "适用于整个{{area}}领域（lead + 子智能体）",
+      "notFollowing_other": "该领域有 {{count}} 个智能体拥有自己的模型，不跟随：{{list}}",
+      "dynamic": "此处不列出按模块、且拥有自己模型的子智能体。",
+      "toast": {
+        "saveError": "无法保存领域模型",
+        "applied": "{{area}}领域：lead 的模型适用于整个领域",
+        "reverted": "{{area}}领域已恢复继承",
+        "alreadyInherits": "{{area}}领域本来就是继承",
+        "partial": "领域默认值已保存，但 {{agent}} 自己的模型未被移除（{{reason}}）"
+      }
+    }
   },
   "members": {
     "title": "成员与角色",

@@ -46,7 +46,7 @@ interface ModelPickerProps {
    * uma fonte só do outro lado: `assertModelFitsBindingScope`
    * (`domain/llm/model-capabilities.ts`) exige tool calling em `agent` e em
    * `area`, e em mais nenhum. Então ligam o filtro as duas telas que gravam
-   * nesses escopos — `ModelsSection` (agente) e `AreaModelsSection` (área) —,
+   * nesses escopos — `ModelsSection` (agente e caixa da área) —,
    * e o seletor de SESSÃO não liga: ali a api aceita modelo chat-only de
    * propósito (uma sessão sem ferramenta na mão é conversa), e marcar o filtro
    * esconderia o que o domínio permite. O filtro segue o que a api RECUSA;

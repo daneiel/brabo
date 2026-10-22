@@ -50,7 +50,7 @@ engine 的 `ToolCallRecovery` 会挽回模型以散文写出的调用，但它�
 只有 `agent` 做校验。`workspace` 和 `project` 是人工聊天的回退，`session` 是对话——它们都不运行 ToolLoop，锁住它们会禁止产品中只能聊天的模型。`context-manager` agent 在构造上已被覆盖：它是 `agent` 范围*之内*的一个 slug，而不是一个独立的范围。
 
 **附加说明——过滤器改为默认*勾选*，而打开它的是*范围*。** 上面一段说拒绝指向"适用于 agent"过滤器，"否则规则就成了死胡同"——而很长一段时间里它确实是：让选择器在打开时勾选过滤器的 prop 从 Fase 9c 起就存在，却**没有任何生产界面传递它**。agent 的选择器打开时提供只能聊天的模型，点击它们只是为了被拒绝。写入经校验范围的两个界面改为打开时即过滤——`ModelsSection`（agent）和
-`AreaModelsSection`（区域）——，而决定谁打开它的尺子不是界面，而是
+`ModelsSection`（区域）——，而决定谁打开它的尺子不是界面，而是
 `assertModelFitsBindingScope`：api *拒绝*的地方，过滤器默认勾选；api 不拒绝的地方，由人来选择。因此*会话*选择器仍然没有过滤——在那里勾选会隐藏 api 接受的模型。**这并不消除 422**：过滤器只覆盖三个原因之一，另外两个（[RN-043](#rn-043)——在 workspace 中被停用、从提供方消失）仍然可能出现，不可用的模型仍会被*列出*并标记；[RN-470](#rn-470) 的拒绝结果仍然是说明发生了什么的东西。而且它是复选框的*初始*状态，不是锁：取消勾选就会重新列出全部。
 
 **后果：被过滤器隐藏的现行模型会被*说出来*。** `workspace` 和
@@ -62,7 +62,7 @@ engine 的 `ToolCallRecovery` 会挽回模型以散文写出的调用，但它�
 
 - **位置：** `apps/api/src/domain/llm/model-capabilities.ts:38`；
   `apps/web/src/components/ModelPicker.tsx`（过滤器和隐藏现行模型的提示），`apps/web/src/routes/settings/ModelsSection.tsx`、
-  `apps/web/src/routes/settings/AreaModelsSection.tsx`（打开它的界面）
+  `apps/web/src/routes/settings/ModelsSection.tsx`（打开它的界面）
 - **测试：** `test/domain/llm/model-capabilities.spec.ts`、
   `test/application/use-cases/llm/set-model-binding.use-case.spec.ts`；
   `apps/web/src/routes/settings/filtro-de-aptos.test.tsx` 和
@@ -1499,7 +1499,7 @@ workspace`。`area` 位于 agent 和项目*之间*——它是一个区域的 le
 
 **消失的是*控件*，绝不是*信息***（ADR 0064）。不能编辑的人仍然在触发器中看到现行模型以及完整的来源链（[RN-470](#rn-470)），"恢复继承"仍留在该行中，处于非活动状态——正是它*说明*那个 agent 发生了偏离，隐藏它会抹去一个可以读取却不能更改的状态。它们变灰的原因在该部分的说明文字中以文字说*一次*，而不是在每一行用 `title` 说明：在 Chromium 中，`disabled` 元素上的 tooltip 不会打开（浏览器不在禁用控件上派发鼠标事件），一个不会出现的解释就是多了些代码的同一种缺失。
 
-**这些都不是安全边界，限制是声明过的。** 拒绝的仍然是 `RolesGuard`。界面读取的角色是 *WORKSPACE* 的（`useCurrentWorkspaceWithRole`），而另一侧授权的是*项目*的有效角色（`ResolveEffectiveRoleUseCase.forProject`），`project_members` 中的一行会在两个方向上*覆盖*它——因此在项目中拥有自己角色的人，可能在这里看到一个 api 本会接受的禁用控件。关闭这一点需要一个 web 还没有的*按项目*角色查询，这与 `AreaModelsSection` 已经带着的缺口相同；只在一个部分中发明第二个角色来源，会比这个缺口更糟。
+**这些都不是安全边界，限制是声明过的。** 拒绝的仍然是 `RolesGuard`。界面读取的角色是 *WORKSPACE* 的（`useCurrentWorkspaceWithRole`），而另一侧授权的是*项目*的有效角色（`ResolveEffectiveRoleUseCase.forProject`），`project_members` 中的一行会在两个方向上*覆盖*它——因此在项目中拥有自己角色的人，可能在这里看到一个 api 本会接受的禁用控件。关闭这一点需要一个 web 还没有的*按项目*角色查询，这与 `ModelsSection` 已经带着的缺口相同；只在一个部分中发明第二个角色来源，会比这个缺口更糟。
 
 > **附加说明（[RN-471](../business-rules.md#rn-471)）：** 上一段的缺口是*一个*，而不是每个部分一个，在界面*已经*按项目查询角色的地方，它被关闭而不是被声明。**成员**部分获取
 > `listProjectMembers`，它一次性为所有人执行 `findMemberRole`，并组合出 `projectRole ?? workspaceRole`——正是 `forProject` 所做的。这不是本段所拒绝的第二个角色来源：而是*同一*组合，来自该部分手头已有的数据。两个模型部分因为没有这些数据，继续使用近似。阅读上面的"在两个方向上*覆盖*"时要小心：它是字面意思，而有三处 OpenAPI 描述声称相反——见 RN-471。
@@ -1510,7 +1510,7 @@ workspace`。`area` 位于 agent 和项目*之间*——它是一个区域的 le
   （agent 的区域来自 `agent-areas.ts` 目录，无需往返数据库），`apps/api/src/application/use-cases/llm/clear-model-binding.use-case.ts`,
   `apps/api/src/interfaces/http/llm/model-bindings.controller.ts`
   （`area-bindings`，`agent-bindings` 和 `area-bindings` 上的 `DELETE`），
-  `apps/web/src/routes/settings/AreaModelsSection.tsx`（带"恢复继承"的来源列，以及基于 `roleAtLeast` 重写、最低要求不变的 `maintainer` 闸门），
+  `apps/web/src/routes/settings/ModelsSection.tsx`（带"恢复继承"的来源列，以及基于 `roleAtLeast` 重写、最低要求不变的 `maintainer` 闸门），
   `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:273` 和 `:301`
   （两个 agent 端点上的 `developer`——这些行*没有*改变），
   `apps/web/src/lib/roles.ts:49`（`roleAtLeast`——缺失的比较），
@@ -1572,7 +1572,7 @@ agente`，每个节点四种状态，四种都存在是因为它们说的是不�
   （这个端点的两个 404 原因——这个文件*没有*改变），
   `apps/api/src/interfaces/http/shared/llm-binding-error.filter.ts:39`
   （策展拒绝的 400/422——这个文件*没有*改变），
-  `apps/web/src/routes/settings/AreaModelsSection.tsx:142`（区域的链），
+  `apps/web/src/routes/settings/ModelsSection.tsx`（区域的链），
   `apps/api/src/application/use-cases/llm/clear-model-binding.use-case.ts:25`
   （api 抛出的 404——这个文件*没有*改变），
   `apps/api/src/domain/llm/binding-resolver.ts:140`（api 返回的 `origin: 'agent'`，以及解释它为何正确的注释——这个文件*没有*改变）

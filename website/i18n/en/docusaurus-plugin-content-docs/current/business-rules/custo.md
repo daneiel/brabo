@@ -74,7 +74,7 @@ abre o seletor com o filtro marcado existia desde a Fase 9c e **nenhuma tela de
 produção o passava**. O seletor de um agente abria oferecendo modelo chat-only
 cujo clique só existia para ser recusado. As duas telas que gravam num escopo
 validado passam a abrir filtradas — `ModelsSection` (agente) e
-`AreaModelsSection` (área) —, e a régua de quem liga não é a tela e sim
+`ModelsSection` (área) —, e a régua de quem liga não é a tela e sim
 `assertModelFitsBindingScope`: onde a api RECUSA, o filtro vem marcado; onde ela
 não recusa, quem escolhe é a pessoa. Por isso o seletor de SESSÃO continua sem
 filtro — marcar ali esconderia modelo que a api aceita. **Isto não elimina o
@@ -104,7 +104,7 @@ são DUAS as telas que ligam o filtro.
 - **Where:** `apps/api/src/domain/llm/model-capabilities.ts:38`;
   `apps/web/src/components/ModelPicker.tsx` (o filtro e o aviso de vigente
   escondido), `apps/web/src/routes/settings/ModelsSection.tsx`,
-  `apps/web/src/routes/settings/AreaModelsSection.tsx` (quem o liga)
+  `apps/web/src/routes/settings/ModelsSection.tsx` (quem o liga)
 - **Test:** `test/domain/llm/model-capabilities.spec.ts`,
   `test/application/use-cases/llm/set-model-binding.use-case.spec.ts`;
   `apps/web/src/routes/settings/filtro-de-aptos.test.tsx` e
@@ -2708,7 +2708,7 @@ do PROJETO (`ResolveEffectiveRoleUseCase.forProject`), que uma linha de
 `project_members` SOBREPÕE nos dois sentidos — então quem tem papel próprio no
 projeto pode ver aqui um controle desabilitado que a api aceitaria. Fechar isso
 exigiria uma consulta de papel POR PROJETO que o web ainda não tem, e é a mesma
-lacuna que `AreaModelsSection` já carregava; inventar uma segunda fonte de papel
+lacuna que `ModelsSection` já carregava; inventar uma segunda fonte de papel
 só numa seção seria pior que a lacuna.
 
 > **Nota aditiva ([RN-471](../business-rules.md#rn-471)):** a lacuna do parágrafo
@@ -2729,7 +2729,7 @@ só numa seção seria pior que a lacuna.
   banco), `apps/api/src/application/use-cases/llm/clear-model-binding.use-case.ts`,
   `apps/api/src/interfaces/http/llm/model-bindings.controller.ts`
   (`area-bindings`, `DELETE` em `agent-bindings` e `area-bindings`),
-  `apps/web/src/routes/settings/AreaModelsSection.tsx` (coluna Origem com
+  `apps/web/src/routes/settings/ModelsSection.tsx` (coluna Origem com
   "voltar a herdar", e o gate de `maintainer` reescrito sobre `roleAtLeast` sem
   mudar de mínimo),
   `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:273` e `:301`
@@ -2887,7 +2887,7 @@ consegue nomear.
   (as duas causas de 404 deste endpoint — este arquivo NÃO mudou),
   `apps/api/src/interfaces/http/shared/llm-binding-error.filter.ts:39`
   (400/422 das recusas de curadoria — este arquivo NÃO mudou),
-  `apps/web/src/routes/settings/AreaModelsSection.tsx:142` (a cadeia da área),
+  `apps/web/src/routes/settings/ModelsSection.tsx` (a cadeia da área),
   `apps/api/src/application/use-cases/llm/clear-model-binding.use-case.ts:25`
   (o 404 que a api levanta — este arquivo NÃO mudou),
   `apps/api/src/domain/llm/binding-resolver.ts:140` (o `origin: 'agent'` que a
