@@ -179,7 +179,10 @@ defmodule Engine.Agents.PoServer do
   @impl true
   def handle_cast(:kickoff, state) do
     work = state |> append(user_msg(kickoff_instruction(state))) |> compact()
-    TurnoAssincrono.iniciar(state, nil, fn -> run_turn(work, @max_iterations) end)
+
+    TurnoAssincrono.iniciar(state, nil, fn ->
+      run_turn(work, Engine.Harness.FalhaRepetida.inicio_de_turno(@max_iterations))
+    end)
   end
 
   @impl true
@@ -226,7 +229,10 @@ defmodule Engine.Agents.PoServer do
   @impl true
   def handle_call({:revise, story}, from, state) do
     work = state |> append(revision_message(story)) |> compact()
-    TurnoAssincrono.iniciar(state, from, fn -> run_turn(work, @max_iterations) end)
+
+    TurnoAssincrono.iniciar(state, from, fn ->
+      run_turn(work, Engine.Harness.FalhaRepetida.inicio_de_turno(@max_iterations))
+    end)
   end
 
   # RN-673: como UMA fala do usuário vira turno — a mesma montagem que o
@@ -234,7 +240,7 @@ defmodule Engine.Agents.PoServer do
   # também para o turno que lê a FILA (várias falas num texto só).
   defp turno_de_mensagem(state, text) do
     work = state |> append(user_msg(text)) |> compact()
-    fn -> run_turn(work, @max_iterations) end
+    fn -> run_turn(work, Engine.Harness.FalhaRepetida.inicio_de_turno(@max_iterations)) end
   end
 
   @impl true
@@ -267,7 +273,9 @@ defmodule Engine.Agents.PoServer do
       }
       |> Map.merge(regras_sem_historia(state))
 
-    emit(state, "toolloop.limit_reached", payload)
+    Engine.Harness.FalhaRepetida.narrar_ou(state.project_id, state.session_id, @agent, fn ->
+      emit(state, "toolloop.limit_reached", payload)
+    end)
 
     encerrar_turno(state)
   end
@@ -319,7 +327,7 @@ defmodule Engine.Agents.PoServer do
             # `agent.response` no fim do turno, nunca um fragmento por volta.
             TextoDoTurno.acumular(content, model_name)
             state = Enum.reduce(calls, state, &dispatch_tool/2)
-            run_turn(state, remaining - 1)
+            run_turn(state, Engine.Harness.FalhaRepetida.restante(remaining - 1))
         end
 
       {:error, reason} ->

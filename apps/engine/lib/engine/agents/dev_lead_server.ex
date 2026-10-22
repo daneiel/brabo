@@ -204,7 +204,10 @@ defmodule Engine.Agents.DevLeadServer do
   @impl true
   def handle_cast(:kickoff, state) do
     work = state |> append(user_msg(kickoff_instruction(state))) |> compact()
-    TurnoAssincrono.iniciar(state, nil, fn -> run_turn(work, @max_iterations) end)
+
+    TurnoAssincrono.iniciar(state, nil, fn ->
+      run_turn(work, Engine.Harness.FalhaRepetida.inicio_de_turno(@max_iterations))
+    end)
   end
 
   @impl true
@@ -307,7 +310,7 @@ defmodule Engine.Agents.DevLeadServer do
   # também para o turno que lê a FILA (várias falas num texto só).
   defp turno_de_mensagem(state, text) do
     work = state |> append(user_msg(text)) |> compact()
-    fn -> run_turn(work, @max_iterations) end
+    fn -> run_turn(work, Engine.Harness.FalhaRepetida.inicio_de_turno(@max_iterations)) end
   end
 
   @impl true
@@ -367,11 +370,13 @@ defmodule Engine.Agents.DevLeadServer do
     gravado = Engine.Agents.GravadoNoTurno.descarregar()
     gravar_texto_do_turno(state, "", nil)
 
-    emit(state, "toolloop.limit_reached", %{
-      iteration: @max_iterations,
-      max_iterations: @max_iterations,
-      gravado: gravado
-    })
+    Engine.Harness.FalhaRepetida.narrar_ou(state.project_id, state.session_id, @agent, fn ->
+      emit(state, "toolloop.limit_reached", %{
+        iteration: @max_iterations,
+        max_iterations: @max_iterations,
+        gravado: gravado
+      })
+    end)
 
     state
   end
@@ -477,7 +482,7 @@ defmodule Engine.Agents.DevLeadServer do
                 st2
 
               {st2, false} ->
-                run_turn(st2, remaining - 1)
+                run_turn(st2, Engine.Harness.FalhaRepetida.restante(remaining - 1))
             end
         end
 

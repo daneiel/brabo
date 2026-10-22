@@ -61,3 +61,6 @@ config :phoenix, :plug_init_mode, :runtime
 # Sort query params output of verified routes for robust url comparisons
 config :phoenix,
   sort_verified_routes_query_params: true
+
+# AT-588/RN-913: os testes do teto de iterações repetem a mesma falha; só o teste da regra volta a 3.
+config :engine, falha_repetida_parar_em: 1_000
