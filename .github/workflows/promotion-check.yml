@@ -22,7 +22,7 @@ jobs:
   conferir:
     name: Check de promoção
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 15
     steps:
       # Sem `if:` no JOB — check required indexado por sha que não roda deixa
       # veredito velho colado. O filtro de "é promoção?" acontece DENTRO, com

@@ -589,6 +589,12 @@ apontando para um commit que não existe mais |
 Uma verificação que **não pôde ser feita** conta como reprovada, nunca como
 aprovada — uma ref que não resolve é ignorância, não permissão.
 
+Os três checks que leem a história inteira (`pr-police`, `promotion-check` e
+`backmerge-gate`) fazem `actions/checkout` com `fetch-depth: 0` e têm teto de
+15 minutos no job. Com 5, o download do repositório, que cresce a cada PR,
+estourava antes de o script rodar (AT-603). A profundidade do fetch não muda:
+os scripts comparam a história inteira.
+
 As duas primeiras verificações são exercitadas por
 `scripts/ci/promotion-check.spec.ts`, no mesmo espírito dos specs do
 `pr-police` e do `approval-ladder`. O que ele fixa não é a implementação mas

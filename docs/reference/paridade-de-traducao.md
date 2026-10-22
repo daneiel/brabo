@@ -13,9 +13,9 @@ A fonte é o pt-BR em `docs/` (ADR 0216), inclusive `docs/reference/**` (ADR 021
 
 | locale | páginas traduzidas | caracteres traduzidos | em dia | defasadas | sem procedência | ausentes | órfãs |
 |---|---|---|---|---|---|---|---|
-| `en` | 270 de 274 (98.5%) | 99.8% de 5.805.274 | 257 | 12 | 1 | 4 | 0 |
-| `ru` | 270 de 274 (98.5%) | 99.8% de 5.805.274 | 257 | 12 | 1 | 4 | 0 |
-| `zh-Hans` | 270 de 274 (98.5%) | 99.8% de 5.805.274 | 257 | 12 | 1 | 4 | 0 |
+| `en` | 270 de 273 (98.9%) | 99.9% de 5.800.065 | 256 | 13 | 1 | 3 | 0 |
+| `ru` | 270 de 273 (98.9%) | 99.9% de 5.800.065 | 256 | 13 | 1 | 3 | 0 |
+| `zh-Hans` | 270 de 273 (98.9%) | 99.9% de 5.800.065 | 256 | 13 | 1 | 3 | 0 |
 
 > **TODO(humano):** revisão nativa por idioma — quem revisou e quando. Ainda não há revisão nativa registrada.
 
@@ -27,6 +27,7 @@ A fonte é o pt-BR em `docs/` (ADR 0216), inclusive `docs/reference/**` (ADR 021
 - `business-rules/autenticacao.md` (tradução de 2026-10-11)
 - `business-rules/custo.md` (tradução de 2026-10-15)
 - `explanation/aceite-providers.md` (tradução de 2026-10-15)
+- `explanation/branching-policy.md` (tradução de 2026-10-15)
 - `explanation/cadeia-de-suprimentos-do-ci.md` (tradução de 2026-10-15)
 - `getting-started.md` (tradução de 2026-10-15)
 - `reference/configuration.md` (tradução de 2026-10-16)
@@ -42,6 +43,7 @@ A fonte é o pt-BR em `docs/` (ADR 0216), inclusive `docs/reference/**` (ADR 021
 - `business-rules/autenticacao.md` (tradução de 2026-10-11)
 - `business-rules/custo.md` (tradução de 2026-10-15)
 - `explanation/aceite-providers.md` (tradução de 2026-10-15)
+- `explanation/branching-policy.md` (tradução de 2026-10-15)
 - `explanation/cadeia-de-suprimentos-do-ci.md` (tradução de 2026-10-15)
 - `getting-started.md` (tradução de 2026-10-15)
 - `reference/configuration.md` (tradução de 2026-10-16)
@@ -57,6 +59,7 @@ A fonte é o pt-BR em `docs/` (ADR 0216), inclusive `docs/reference/**` (ADR 021
 - `business-rules/autenticacao.md` (tradução de 2026-10-11)
 - `business-rules/custo.md` (tradução de 2026-10-15)
 - `explanation/aceite-providers.md` (tradução de 2026-10-15)
+- `explanation/branching-policy.md` (tradução de 2026-10-15)
 - `explanation/cadeia-de-suprimentos-do-ci.md` (tradução de 2026-10-15)
 - `getting-started.md` (tradução de 2026-10-15)
 - `reference/configuration.md` (tradução de 2026-10-16)
