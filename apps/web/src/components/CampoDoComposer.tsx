@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type TextareaHTMLAttributes } from 'react';
+import { useEffect, useRef, type TextareaHTMLAttributes } from 'react';
 
 /**
  * RN-882 (AT-533): o campo do composer da Sessão é dono do PRÓPRIO valor
@@ -12,11 +12,12 @@ import { useEffect, useRef, useState, type TextareaHTMLAttributes } from 'react'
  * a tecla do meio sumia ("agncia", "eqipe" — 991 de 1 010 caracteres no
  * TP-01, com um textarea comum na mesma página recebendo 249/249).
  *
- * Agora o valor desenhado é o estado LOCAL, atualizado no próprio `onChange`;
- * o `draft` da página recebe cada valor (envio, rascunho, botões seguem
- * lendo dele), mas um `draft` atrasado que volta como prop NUNCA reescreve o
- * campo: só é adotado o valor que este campo não emitiu — o esvaziar depois
- * do envio, o texto devolvido quando o envio falha, o exemplo do convite.
+ * AT-539 (revisão): o controlado por estado local ainda era reescrito por um
+ * commit com `local` sem a tecla que o DOM já tinha (perda a cada 53 teclas
+ * numa rajada de CDP). Agora o campo é NÃO controlado: `defaultValue` + `ref`,
+ * `onChange` só emite, e a prop só vira atribuição no nó (esvaziar no envio,
+ * texto devolvido na falha, exemplo do convite) quando difere do DOM e não é
+ * eco do que o campo emitiu. Re-render da página nunca toca o valor do DOM.
  */
 export function CampoDoComposer({
   valor,
@@ -26,32 +27,32 @@ export function CampoDoComposer({
   valor: string;
   aoMudar: (valor: string) => void;
 } & Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'value' | 'onChange'>) {
-  const [local, setLocal] = useState(valor);
+  const no = useRef<HTMLTextAreaElement>(null);
   // Os valores que ESTE campo emitiu e a página ainda pode devolver como prop.
   const emitidos = useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    if (valor === local) {
+    const el = no.current;
+    if (!el) return;
+    if (valor === el.value) {
       emitidos.current.clear();
       return;
     }
     // Eco atrasado do que o próprio campo digitou: nunca reescreve.
     if (emitidos.current.has(valor)) return;
-    // Escrita de fora (envio, falha, convite): o campo a adota.
+    // Escrita de fora (envio, falha, convite): atribuição imperativa no nó.
     emitidos.current.clear();
-    setLocal(valor);
-    // `local` fica de fora de propósito: só a PROP decide adotar.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    el.value = valor;
   }, [valor]);
 
   return (
     <textarea
       {...resto}
-      value={local}
+      ref={no}
+      defaultValue={valor}
       onChange={(e) => {
         const novo = e.target.value;
         emitidos.current.add(novo);
-        setLocal(novo);
         aoMudar(novo);
       }}
     />
