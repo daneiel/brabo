@@ -24678,22 +24678,24 @@ sem dizer qual.
 
 ### RN-882 — O composer da Sessão não perde tecla na digitação rápida {#rn-882}
 
-- **Regra:** o campo do composer é dono do PRÓPRIO valor enquanto se digita:
-  o valor desenhado é o estado local, atualizado no `onChange`, e o `draft`
-  da página recebe cada valor (envio, fila e botões seguem lendo dele). Um
-  `draft` atrasado que volta como prop NUNCA reescreve o campo — só é adotado
-  o valor que o campo não emitiu (esvaziar depois do envio, o texto devolvido
-  na falha, o exemplo do convite). Antes o `<textarea>` era controlado direto
-  pelo `draft` do `SessionPage`, e a re-renderização atrasada da página
-  reescrevia o campo com um valor mais velho: 991 de 1 010 caracteres no
-  TP-01, com um textarea comum na mesma página recebendo 249/249. Enter,
-  Shift+Enter e a composição de acento (RN-830) não mudam.
-- **Onde:** `apps/web/src/components/CampoDoComposer.tsx:21` (`CampoDoComposer`);
+- **Regra:** o campo do composer é NÃO controlado (AT-539, revisão): `defaultValue`
+  + `ref`, e o `onChange` só emite o valor ao `draft` da página (envio, fila e
+  botões seguem lendo dele). Re-render da página nunca reescreve o DOM do campo;
+  a prop só vira atribuição imperativa no nó (esvaziar depois do envio, o texto
+  devolvido na falha, o exemplo do convite) quando difere do DOM E não é eco de
+  um valor que o campo emitiu. Antes o `<textarea>` era controlado (primeiro pelo
+  `draft`, depois por um estado local) e um commit com valor mais velho que o do
+  DOM o reescrevia: 991 de 1 010 caracteres no TP-01 (AT-533) e 1 tecla a cada
+  53 numa rajada de CDP (AT-539, causa não isolada; aceite no Chrome real).
+  Enter, Shift+Enter e a composição de acento (RN-830) não mudam.
+- **Onde:** `apps/web/src/components/CampoDoComposer.tsx:22` (`CampoDoComposer`);
   `apps/web/src/routes/SessionComposer.tsx`
 - **Teste:** `apps/web/src/components/CampoDoComposer.test.tsx` ("digitação
   rápida com a página atrasada não perde tecla nenhuma"; falha/borda: "a
-  escrita de fora (esvaziar depois do envio) é adotada pelo campo")
-- **Origem:** AT-533
+  escrita de fora (esvaziar depois do envio) é adotada pelo campo"; "um re-render
+  da página nunca reescreve o que já está no DOM do campo"; "rajada de 300
+  teclas com a página atrasada chega inteira")
+- **Origem:** AT-533, AT-539
 
 ### RN-883 — A oferta em lote do modo automático também no chat da Sessão {#rn-883}
 
