@@ -17,7 +17,6 @@ import newProjectPtBR from '../locales/pt-BR/newProject.json';
 import {
   AreaModelsSection,
   BudgetSection,
-  CredentialsSection,
   ExecutionModeSection,
   ExecutionSection,
   MelhoresModelosPorCapacidadeSection,
@@ -27,6 +26,7 @@ import {
   ProficiencySection,
   PromotionSection,
 } from './ProjectSettingsTab';
+import { CredentialsSection } from './settings/CredentialsSection';
 import { ToastProvider } from '../components/ui/ToastProvider';
 import { ApiError } from '../lib/api-client';
 import { CREDENCIAIS_DE_LLM } from '../lib/models';

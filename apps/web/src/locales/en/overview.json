@@ -131,8 +131,8 @@
     },
     "modelo": {
       "titulo": "Activate a model and apply it to the team",
-      "pendente": "No agent has a model yet: activate one in the catalog and apply it to everyone.",
-      "link": "Open the catalog →"
+      "pendente": "No agent has a model yet: activate one in Providers and pick it here.",
+      "link": "Pick the model →"
     },
     "ideacao": {
       "titulo": "Start the first ideation",

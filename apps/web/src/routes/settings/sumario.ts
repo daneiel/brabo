@@ -49,8 +49,6 @@ export const SECOES_DE_CONFIGURACOES = [
   // AT-372: o que um projeto novo precisa PRIMEIRO — a chave do provedor e o
   // modelo — abre a aba. A credencial deixou o grupo "avançado" para o de
   // modelos: sem ela nenhum modelo de nuvem conversa.
-  { chave: 'credentials', grupo: 'modelos', ns: 'settings', titulo: 'credentials.title' },
-  { chave: 'model-catalog', grupo: 'modelos', ns: 'models', titulo: 'catalog.title' },
   { chave: 'models', grupo: 'modelos', ns: 'settings', titulo: 'modelsSection.title' },
   { chave: 'area-models', grupo: 'modelos', ns: 'settings', titulo: 'areaModels.title' },
   { chave: 'best-models', grupo: 'modelos', ns: 'settings', titulo: 'bestModels.title' },
@@ -66,8 +64,6 @@ export const SECOES_DE_CONFIGURACOES = [
   { chave: 'device-keys', grupo: 'pessoas', ns: 'settings', titulo: 'runnerDeviceKeys.title' },
   { chave: 'proficiency', grupo: 'pessoas', ns: 'settings', titulo: 'proficiency.title' },
   { chave: 'instructions', grupo: 'avancado', ns: 'settings', titulo: 'instructionVersions.title' },
-  { chave: 'approval-matrix', grupo: 'avancado', ns: 'settings', titulo: 'matrix.title' },
-  { chave: 'key-spend', grupo: 'avancado', ns: 'models', titulo: 'spend.title' },
 ] as const satisfies readonly DescricaoDeSecao[];
 
 export type ChaveDeSecao = (typeof SECOES_DE_CONFIGURACOES)[number]['chave'];

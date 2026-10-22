@@ -49,9 +49,10 @@ export function PrimeirosPassos({
   });
   if (!passos) return null;
 
-  const destino: Record<ChaveDoPasso, { tab: 'settings' | 'criativo'; section?: 'credentials' | 'model-catalog' }> = {
-    credencial: { tab: 'settings', section: 'credentials' },
-    modelo: { tab: 'settings', section: 'model-catalog' },
+  // A credencial é do usuário e mora em /providers (RN-911); só o modelo é do projeto.
+  const destino: Record<ChaveDoPasso, 'providers' | { tab: 'settings' | 'criativo'; section?: 'models' }> = {
+    credencial: 'providers',
+    modelo: { tab: 'settings', section: 'models' },
     ideacao: { tab: 'criativo' },
   };
   const feitos = passos.filter((p) => p.feito).length;
@@ -82,14 +83,19 @@ export function PrimeirosPassos({
               </span>
             </span>
             {!passo.feito && (
-              <Link
-                to="/projects/$projectId"
-                params={{ projectId }}
-                search={destino[passo.chave]}
-                className={styles.link}
-              >
-                {t(`primeirosPassos.${passo.chave}.link`)}
-              </Link>
+              (() => {
+                const alvo = destino[passo.chave];
+                const rotulo = t(`primeirosPassos.${passo.chave}.link`);
+                return alvo === 'providers' ? (
+                  <Link to="/providers" className={styles.link}>
+                    {rotulo}
+                  </Link>
+                ) : (
+                  <Link to="/projects/$projectId" params={{ projectId }} search={alvo} className={styles.link}>
+                    {rotulo}
+                  </Link>
+                );
+              })()
             )}
           </li>
         ))}

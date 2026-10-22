@@ -9,6 +9,7 @@ import { Select } from '../components/ui/Select';
 import styles from './AccountPage.module.css';
 import { MachineDeviceKeysSection } from './MachineDeviceKeysSection';
 import { ResponseLanguageSection } from './ResponseLanguageSection';
+import { MatrixSection } from './settings/MatrixSection';
 
 
 /**
@@ -109,6 +110,8 @@ export function AccountPage() {
       <ResponseLanguageSection />
 
       <MachineDeviceKeysSection />
+
+      <MatrixSection />
     </div>
   );
 }

@@ -138,8 +138,8 @@
     },
     "modelo": {
       "titulo": "Ativar um modelo e aplicá-lo ao time",
-      "pendente": "Nenhum agente tem modelo ainda: ative um no catálogo e aplique a todos.",
-      "link": "Abrir o catálogo →"
+      "pendente": "Nenhum agente tem modelo ainda: ative um modelo em Providers e escolha-o aqui.",
+      "link": "Escolher o modelo →"
     },
     "ideacao": {
       "titulo": "Começar a primeira ideação",

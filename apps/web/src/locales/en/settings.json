@@ -50,8 +50,8 @@
     "eyebrow": "curation · real usage · cost",
     "subtitle": {
       "before": "\"Recommended\" is the model most agents in this project already use, among the ones this workspace's curation marked for the capability — cost breaks ties. No quality score is calculated (curation is always manual); mark the uses in the ",
-      "link": "Model catalog",
-      "after": ", further below."
+      "link": "Providers",
+      "after": ", in Providers."
     },
     "columns": {
       "capability": "Capability",
@@ -136,7 +136,8 @@
         "applied_other": "{{model}} applied to all {{count}} agents",
         "error": "Could not apply the model to the agents"
       }
-    }
+    },
+    "noModelsAvailableLink": "Activate one in Providers →"
   },
   "areaModels": {
     "title": "Model by area",

@@ -1,5 +1,5 @@
 /**
- * A aba Configurações — ENTRADA e BARREL das 19 seções (ADR 0125).
+ * A aba Configurações — ENTRADA e BARREL das 15 seções (ADR 0125).
  *
  * As seções moram uma por arquivo em `./settings/`. Este arquivo continua
  * existindo neste CAMINHO, com os mesmos 11 nomes exportados, porque o caminho
@@ -18,7 +18,7 @@
  * O que ele passou a guardar é NAVEGAÇÃO, e só ela: `ProvedorDoSumario` mantém
  * quais seções estão montadas, qual está vigente na rolagem e como chegar a
  * uma delas. É o oposto do caso acima — a pergunta "que seções existem agora?"
- * não é respondível de dentro de nenhuma seção, e oito das 19 renderizam
+ * não é respondível de dentro de nenhuma seção, e oito das 15 renderizam
  * `null` em condição normal. A ordem de render abaixo é a MESMA de
  * `settings/sumario.ts`, e as duas não podem divergir: é ela que decide qual
  * entrada o sumário marca enquanto o leitor rola.
@@ -33,15 +33,11 @@ import { ProjectLanguageSection } from './settings/ProjectLanguageSection';
 import { MelhoresModelosPorCapacidadeSection } from './settings/MelhoresModelosPorCapacidadeSection';
 import { ModelsSection } from './settings/ModelsSection';
 import { AreaModelsSection } from './settings/AreaModelsSection';
-import { CatalogoDeModelos } from './settings/CatalogoDeModelos';
 import { MembersSection } from './settings/MembersSection';
 import { PersonalAccessTokensSection } from './settings/PersonalAccessTokensSection';
 import { RunnerDeviceKeysSection } from './settings/RunnerDeviceKeysSection';
 import { ProficiencySection } from './settings/ProficiencySection';
 import { InstructionVersionsSection } from './settings/InstructionVersionsSection';
-import { MatrixSection } from './settings/MatrixSection';
-import { CredentialsSection } from './settings/CredentialsSection';
-import { GastoDasChaves } from './settings/GastoDasChaves';
 import { ProvedorDoSumario } from './settings/SecaoDeConfiguracoes';
 import { SumarioDeConfiguracoes } from './settings/SumarioDeConfiguracoes';
 import styles from './settings/sumario.module.css';
@@ -59,7 +55,6 @@ export { ModelsSection } from './settings/ModelsSection';
 export { AreaModelsSection } from './settings/AreaModelsSection';
 export { PersonalAccessTokensSection } from './settings/PersonalAccessTokensSection';
 export { ProficiencySection } from './settings/ProficiencySection';
-export { CredentialsSection } from './settings/CredentialsSection';
 
 interface ProjectSettingsTabProps {
   projectId: string;
@@ -72,8 +67,6 @@ export function ProjectSettingsTab({ projectId }: ProjectSettingsTabProps) {
         <SumarioDeConfiguracoes />
 
         <div className={styles.secoes}>
-          <CredentialsSection />
-          <CatalogoDeModelos projectId={projectId} />
           <ModelsSection projectId={projectId} />
           <AreaModelsSection projectId={projectId} />
           <MelhoresModelosPorCapacidadeSection projectId={projectId} />
@@ -89,8 +82,6 @@ export function ProjectSettingsTab({ projectId }: ProjectSettingsTabProps) {
           <RunnerDeviceKeysSection projectId={projectId} />
           <ProficiencySection projectId={projectId} />
           <InstructionVersionsSection projectId={projectId} />
-          <MatrixSection />
-          <GastoDasChaves projectId={projectId} />
         </div>
       </div>
     </ProvedorDoSumario>

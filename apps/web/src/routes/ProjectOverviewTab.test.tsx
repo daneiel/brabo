@@ -521,7 +521,7 @@ describe('primeiros passos (RN-708, AT-372)', () => {
     const cartao = await screen.findByTestId('primeiros-passos');
     expect(within(cartao).getByText('0 de 3 feitos')).toBeInTheDocument();
     expect(within(cartao).getByText('Cadastrar a chave →')).toBeInTheDocument();
-    expect(within(cartao).getByText('Abrir o catálogo →')).toBeInTheDocument();
+    expect(within(cartao).getByText('Escolher o modelo →')).toBeInTheDocument();
     expect(within(cartao).getByText('Abrir o Criativo →')).toBeInTheDocument();
     // Sem sessão, a coluna de atividade é um vazio de verdade, não um esqueleto parado.
     expect(

@@ -53,8 +53,8 @@
     "eyebrow": "curadoria · uso real · custo",
     "subtitle": {
       "before": "\"Recomendado\" é o modelo que mais agentes deste projeto já usam, entre os que a curadoria deste workspace marcou para a capacidade — custo desempata. Nenhuma nota de qualidade é calculada (a curadoria é sempre manual); marque os usos no ",
-      "link": "Catálogo de modelos",
-      "after": ", mais abaixo."
+      "link": "Providers",
+      "after": ", em Providers."
     },
     "columns": {
       "capability": "Capacidade",
@@ -142,7 +142,8 @@
         "applied_other": "{{model}} aplicado aos {{count}} agentes",
         "error": "Não foi possível aplicar o modelo aos agentes"
       }
-    }
+    },
+    "noModelsAvailableLink": "Ative um em Providers →"
   },
   "areaModels": {
     "title": "Modelo por área",

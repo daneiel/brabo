@@ -187,7 +187,7 @@ Ele é pequeno demais para trabalho de verdade, então quando quiser mais:
 docker compose -f docker/docker-compose.yml exec ollama ollama pull qwen2.5:7b
 ```
 
-**API de provedor** — na UI, em **Projeto → Configurações → Credenciais**. A
+**API de provedor** — na UI, em **Providers** (rodapé do menu). A
 chave é cifrada com envelope encryption antes de tocar o banco.
 
 O modelo é resolvido em cascata — **sessão > agente > projeto > workspace**, o

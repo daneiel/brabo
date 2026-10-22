@@ -207,13 +207,13 @@ describe('sumário ancorado de Configurações', () => {
   });
 
   it('o deep-link `?section=` rola para a seção pedida ao abrir', async () => {
-    montar('credentials');
+    montar('models');
 
     await waitFor(() => expect(scrollIntoView).toHaveBeenCalled());
     expect(scrollIntoView.mock.instances[0]).toBe(
-      document.getElementById(idDaSecao('credentials')),
+      document.getElementById(idDaSecao('models')),
     );
-    expect(entradaDoSumario('Credenciais de provider').getAttribute('aria-current')).toBe(
+    expect(entradaDoSumario('Modelos por agente').getAttribute('aria-current')).toBe(
       'location',
     );
   });
@@ -269,14 +269,14 @@ describe('sumário ancorado de Configurações', () => {
     );
   });
 
-  it('seção que não monta NÃO vira entrada do sumário', async () => {
-    // `GastoDasChaves` é só do owner (RN-060). Sem o papel, a seção não monta,
-    // não se registra — e o sumário não oferece uma sala fechada.
-    papel.mockReturnValue({ data: { role: 'developer' } });
+  it('a aba NÃO tem o gasto por chave nem para o owner, nem a matriz (RN-911)', async () => {
+    papel.mockReturnValue({ data: { role: 'owner' } });
     montar();
 
     await waitFor(() => entradaDoSumario('Membros e papéis'));
-    expect(document.getElementById(idDaSecao('key-spend'))).toBeNull();
+    expect(document.getElementById('secao-key-spend')).toBeNull();
+    for (const saiu of ['approval-matrix', 'credentials', 'model-catalog'])
+      expect(document.getElementById(`secao-${saiu}`)).toBeNull();
     expect(() => entradaDoSumario('Gasto das suas chaves')).toThrow();
   });
 });

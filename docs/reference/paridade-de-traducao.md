@@ -13,9 +13,9 @@ A fonte é o pt-BR em `docs/` (ADR 0216), inclusive `docs/reference/**` (ADR 021
 
 | locale | páginas traduzidas | caracteres traduzidos | em dia | defasadas | sem procedência | ausentes | órfãs |
 |---|---|---|---|---|---|---|---|
-| `en` | 270 de 272 (99.3%) | 99.9% de 5.785.788 | 259 | 10 | 1 | 2 | 0 |
-| `ru` | 270 de 272 (99.3%) | 99.9% de 5.785.788 | 259 | 10 | 1 | 2 | 0 |
-| `zh-Hans` | 270 de 272 (99.3%) | 99.9% de 5.785.788 | 259 | 10 | 1 | 2 | 0 |
+| `en` | 270 de 272 (99.3%) | 99.9% de 5.787.507 | 258 | 11 | 1 | 2 | 0 |
+| `ru` | 270 de 272 (99.3%) | 99.9% de 5.787.507 | 258 | 11 | 1 | 2 | 0 |
+| `zh-Hans` | 270 de 272 (99.3%) | 99.9% de 5.787.507 | 258 | 11 | 1 | 2 | 0 |
 
 > **TODO(humano):** revisão nativa por idioma — quem revisou e quando. Ainda não há revisão nativa registrada.
 
@@ -28,6 +28,7 @@ A fonte é o pt-BR em `docs/` (ADR 0216), inclusive `docs/reference/**` (ADR 021
 - `business-rules/custo.md` (tradução de 2026-10-15)
 - `explanation/aceite-providers.md` (tradução de 2026-10-15)
 - `explanation/cadeia-de-suprimentos-do-ci.md` (tradução de 2026-10-15)
+- `getting-started.md` (tradução de 2026-10-15)
 - `reference/configuration.md` (tradução de 2026-10-16)
 - `reference/llm-providers.md` (tradução de 2026-10-16)
 - `runbook.md` (tradução de 2026-10-15)
@@ -41,6 +42,7 @@ A fonte é o pt-BR em `docs/` (ADR 0216), inclusive `docs/reference/**` (ADR 021
 - `business-rules/custo.md` (tradução de 2026-10-15)
 - `explanation/aceite-providers.md` (tradução de 2026-10-15)
 - `explanation/cadeia-de-suprimentos-do-ci.md` (tradução de 2026-10-15)
+- `getting-started.md` (tradução de 2026-10-15)
 - `reference/configuration.md` (tradução de 2026-10-16)
 - `reference/llm-providers.md` (tradução de 2026-10-16)
 - `runbook.md` (tradução de 2026-10-15)
@@ -54,6 +56,7 @@ A fonte é o pt-BR em `docs/` (ADR 0216), inclusive `docs/reference/**` (ADR 021
 - `business-rules/custo.md` (tradução de 2026-10-15)
 - `explanation/aceite-providers.md` (tradução de 2026-10-15)
 - `explanation/cadeia-de-suprimentos-do-ci.md` (tradução de 2026-10-15)
+- `getting-started.md` (tradução de 2026-10-15)
 - `reference/configuration.md` (tradução de 2026-10-16)
 - `reference/llm-providers.md` (tradução de 2026-10-16)
 - `runbook.md` (tradução de 2026-10-15)
@@ -64,9 +67,9 @@ Chaves de `apps/web/src/locales/<locale>/` contra o pt-BR. Chave plural conta um
 
 | locale | formas de plural | chaves presentes | plurais incompletos |
 |---|---|---|---|
-| `en` | one, other | 2330 de 2330 (100.0%) | 0 |
-| `ru` | one, few, many, other | 2536 de 2536 (100.0%) | 0 |
-| `zh-Hans` | other | 2227 de 2227 (100.0%) | 0 |
+| `en` | one, other | 2327 de 2327 (100.0%) | 0 |
+| `ru` | one, few, many, other | 2531 de 2531 (100.0%) | 0 |
+| `zh-Hans` | other | 2225 de 2225 (100.0%) | 0 |
 
 ## API (Redoc)
 

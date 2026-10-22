@@ -185,7 +185,7 @@ export function MelhoresModelosPorCapacidadeSection({
       </div>
       <p className={styles.subtitle}>
         {t('bestModels.subtitle.before')}
-        <em>{t('bestModels.subtitle.link')}</em>
+        <a href="/providers">{t('bestModels.subtitle.link')}</a>
         {t('bestModels.subtitle.after')}
       </p>
       <Table

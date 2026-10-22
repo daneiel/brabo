@@ -20448,24 +20448,18 @@ Três atalhos sobre ações que já existiam, nenhum endpoint novo (AT-357):
    `owner` (o mínimo do endpoint, RN-102); ler o catálogo pede `maintainer`.
    O predicado é UM só, `providersSemCatalogo`, também usado pelo aviso do
    catálogo.
-3. **Ativar e aplicar ao time.** Quando NENHUM modelo está ativo e há UM
-   marcado, a barra do lote oferece "Ativar e aplicar aos N agentes": ativa
-   (`POST .../models/activate`) e, se a ativação passou, aplica a cada agente
-   pelo mesmo caminho da RN-476, com o aviso de sobrescrita dela e o relatório
-   parcial da RN-469. Ativação recusada não aplica nada. Só com o clique, nunca
-   sozinho, e só para `owner` (o maior dos dois mínimos); abaixo disso o
-   controle fica inerte e o motivo é dito em texto. A curadoria segue manual
-   (ADR 0042).
+3. ~~Ativar e aplicar ao time.~~ **Retirado pela RN-911** (AT-597): o catálogo
+   saiu das Configurações do projeto e mora em `/providers`, onde não há projeto
+   para receber o binding. Ativar é curadoria de provider; a escolha por
+   projeto segue pelo "aplicar a todos" da RN-476.
 
 - **Onde:** `apps/web/src/lib/models.ts:244` (`casaComBusca`),
   `apps/web/src/lib/models.ts:425` (`providersSemCatalogo`),
   `apps/web/src/lib/models.ts:441` (`algumModeloAtivo`),
-  `apps/web/src/components/ModelCatalogSection.tsx:333` (`ativarEAplicarAoTime`),
   `apps/web/src/routes/settings/CredentialsSection.tsx:128` (`handleSync`)
 - **Teste:** `apps/web/src/components/catalogo-com-busca.test.tsx`
-  (busca por id e sem resultado; ativar e aplicar, parcial, ativação recusada,
-  abaixo de owner, com modelo já ativo; sync no card, com e sem catálogo, e a
-  falha)
+  (busca por id e sem resultado; sem atalho "ativar e aplicar"; sync no card,
+  com e sem catálogo, e a falha)
 - **Origem:** AT-357
 ### RN-697 — O turno da prontidão do Criativo só sintetiza: sem ferramentas {#rn-697}
 
@@ -20999,6 +20993,11 @@ o cartão NÃO aparece enquanto houver um — afirmar "falta credencial" sem ter
 lido seria a tela mentindo. Com os três feitos, ele some. Junto, a aba
 Configurações passou a abrir pelo grupo de modelos, com a credencial à frente,
 e o sumário acompanha a ordem.
+
+**Destinos (revisão da RN-911, AT-597):** o passo da credencial leva a `/providers`
+(a chave é do usuário e deixou as Configurações do projeto) e o do modelo leva a
+`?tab=settings&section=models`; o catálogo, que o passo antigo abria, também é
+de `/providers`.
 
 - **Onde:** `apps/web/src/lib/primeiros-passos.ts:37` (`derivarPrimeirosPassos`),
   `apps/web/src/components/PrimeirosPassos.tsx:22` (`PrimeirosPassos`)
@@ -25070,3 +25069,10 @@ sem dizer qual.
 - **Onde:** `apps/api/src/infrastructure/llm/nine-router-provider.ts:83` (`nineRouterConfig`)
 - **Teste:** `apps/api/test/infrastructure/llm/nine-router-provider.contract.spec.ts:109` (capabilities, URL do ambiente, cabeçalho, teste de conexão, parse da fixture sintética); smoke manual em `nine-router-provider.smoke.spec.ts`.
 - **Origem:** AT-576a (EP-026), ADR 0222, decisão do dono de 22/10.
+
+### RN-911 — Provider é global; Configurações do projeto só escolhem modelo; a matriz mora na Conta {#rn-911}
+
+- **Regra:** credencial de LLM, catálogo de modelos (curadoria, preços, sync e o navegador do Hugging Face) e o relatório de gasto por chave saíram das Configurações do projeto. Moram em `/providers` (as três peças) e o gasto por chave também na aba Gastos, só para `owner` (RN-060). O projeto guarda só a ESCOLHA: modelo por agente e por área, o "aplicar a todos" (RN-476), o critério de roteamento e "melhores modelos". A matriz "Quem pode aprovar o quê" saiu das Configurações e é uma seção da Conta (`/account`), para qualquer pessoa logada. O atalho "Ativar e aplicar aos N agentes" (RN-694 item 3) deixou de existir. Link antigo `?section=credentials`, `model-catalog`, `key-spend` ou `approval-matrix` abre a aba no topo, sem erro. O vazio de "Modelos por agente", o subtítulo de "melhores modelos" e os Primeiros passos (RN-708) apontam para `/providers`. Revisa a RN-694 (item 3) e a RN-708 (destinos). Sem ADR: é fronteira de tela.
+- **Onde:** `apps/web/src/routes/settings/sumario.ts:48` (`SECOES_DE_CONFIGURACOES`), `apps/web/src/routes/ProjectSettingsTab.tsx:62` (`ProjectSettingsTab`), `apps/web/src/routes/AccountPage.tsx:36` (`AccountPage`)
+- **Teste:** `apps/web/src/routes/settings/sumario.test.ts` (as quatro chaves não existem); `apps/web/src/routes/settings/SumarioDeConfiguracoes.test.tsx` (a aba não monta as quatro seções, nem para `owner`); `apps/web/src/routes/AccountPage.test.tsx` (a matriz, e o caso de falha no idioma); `apps/web/src/routes/configuracoes.orcamento.test.tsx` (a volta à aba não busca credencial); `apps/web/src/components/catalogo-com-busca.test.tsx` (sem atalho)
+- **Origem:** AT-597 e AT-598 (EP-031), pedidos do dono de 22/10.
