@@ -75,7 +75,7 @@ prop, открывающий селектор с отмеченным фильт
 предлагая модель только для чата, клик по которой существовал лишь для того,
 чтобы быть отклонённым. Оба экрана, записывающие в проверяемую область,
 начинают открываться отфильтрованными — `ModelsSection` (агент) и
-`AreaModelsSection` (область), — и правило того, кто включает, — не экран, а
+`ModelsSection` (область), — и правило того, кто включает, — не экран, а
 `assertModelFitsBindingScope`: там, где api ОТКЛОНЯЕТ, фильтр приходит
 отмеченным; там, где не отклоняет, выбирает человек. Поэтому селектор СЕССИИ
 остаётся без фильтра — отметка там скрыла бы модель, которую api принимает.
@@ -107,7 +107,7 @@ prop, открывающий селектор с отмеченным фильт
 - **Где:** `apps/api/src/domain/llm/model-capabilities.ts:38`;
   `apps/web/src/components/ModelPicker.tsx` (фильтр и предупреждение о
   скрытом действующем), `apps/web/src/routes/settings/ModelsSection.tsx`,
-  `apps/web/src/routes/settings/AreaModelsSection.tsx` (кто его включает)
+  `apps/web/src/routes/settings/ModelsSection.tsx` (кто его включает)
 - **Тест:** `test/domain/llm/model-capabilities.spec.ts`,
   `test/application/use-cases/llm/set-model-binding.use-case.spec.ts`;
   `apps/web/src/routes/settings/filtro-de-aptos.test.tsx` и
@@ -2724,7 +2724,7 @@ WORKSPACE (`useCurrentWorkspaceWithRole`), а с другой стороны а�
 кого есть собственная роль в проекте, может видеть здесь отключённый элемент,
 который api приняла бы. Закрытие этого потребовало бы запроса роли НА КАЖДЫЙ
 ПРОЕКТ, которого у web ещё нет, и это тот же пробел, который уже нёс
-`AreaModelsSection`; выдумать второй источник роли только в одном разделе
+`ModelsSection`; выдумать второй источник роли только в одном разделе
 было бы хуже пробела.
 
 > **Дополнительная заметка ([RN-471](../business-rules.md#rn-471)):** пробел из
@@ -2746,7 +2746,7 @@ WORKSPACE (`useCurrentWorkspaceWithRole`), а с другой стороны а�
   `apps/api/src/application/use-cases/llm/clear-model-binding.use-case.ts`,
   `apps/api/src/interfaces/http/llm/model-bindings.controller.ts`
   (`area-bindings`, `DELETE` в `agent-bindings` и `area-bindings`),
-  `apps/web/src/routes/settings/AreaModelsSection.tsx` (колонка Origem с
+  `apps/web/src/routes/settings/ModelsSection.tsx` (колонка Origem с
   «вернуться к наследованию» и gate `maintainer`, переписанный на
   `roleAtLeast` без смены минимума),
   `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:273` и `:301`
@@ -2909,7 +2909,7 @@ gasto ainda` (агент не зарегистрировал потреблен�
   (две причины 404 этого endpoint — этот файл НЕ изменился),
   `apps/api/src/interfaces/http/shared/llm-binding-error.filter.ts:39`
   (400/422 отказов курирования — этот файл НЕ изменился),
-  `apps/web/src/routes/settings/AreaModelsSection.tsx:142` (цепочка области),
+  `apps/web/src/routes/settings/ModelsSection.tsx` (цепочка области),
   `apps/api/src/application/use-cases/llm/clear-model-binding.use-case.ts:25`
   (404, который выбрасывает api, — этот файл НЕ изменился),
   `apps/api/src/domain/llm/binding-resolver.ts:140` (`origin: 'agent'`,

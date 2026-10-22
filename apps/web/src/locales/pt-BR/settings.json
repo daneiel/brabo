@@ -97,10 +97,9 @@
       "intro": "A origem indica onde o valor é resolvido:",
       "mostSpecificWins": "O mais específico vence.",
       "areaWord": "área",
-      "areaExplain": "é o padrão que o lead e os subagentes compartilham — configure em",
-      "areaLink": "Modelo por área",
-      "below": ", logo abaixo.",
-      "needsDeveloper": " Exige papel developer para trocar o modelo, aplicar um a todos os agentes ou voltar a herdar."
+      "areaExplain": "é o padrão que o lead e os subagentes compartilham: marque a caixa na linha do lead (Dev Lead, QA ou Infra) para o modelo dele valer para a área inteira.",
+      "needsDeveloper": " Exige papel developer para trocar o modelo, aplicar um a todos os agentes ou voltar a herdar.",
+      "needsMaintainerArea": " Exige papel maintainer para marcar a caixa da área ou trocar o modelo dela."
     },
     "costCard": {
       "label": "Custo estimado mensal do time",
@@ -131,7 +130,7 @@
     "noEstimateTitle": "Este agente não registrou consumo neste projeto nos últimos 30 dias. Diferente de ter gastado zero, que aparece como US$ 0,00.",
     "bulk": {
       "label": "Aplicar um modelo a todos os agentes",
-      "detail": "· sobrescreve o modelo próprio de cada agente, uma chamada por agente",
+      "detail": "· sobrescreve o modelo próprio de cada agente, uma chamada por agente, e tira os subagentes do padrão da área",
       "apply_zero": "Aplicar aos {{count}} agentes",
       "apply_one": "Aplicar a {{count}} agente",
       "apply_other": "Aplicar aos {{count}} agentes",
@@ -143,27 +142,21 @@
         "error": "Não foi possível aplicar o modelo aos agentes"
       }
     },
-    "noModelsAvailableLink": "Ative um em Providers →"
-  },
-  "areaModels": {
-    "title": "Modelo por área",
-    "eyebrow": "padrão herdável · lead + subagentes",
-    "subtitle": {
-      "main": "O modelo que vale para o lead e para todo subagente da área que não tenha divergido — divergir é escolher outro modelo NA LINHA do agente, acima. \"Voltar a herdar\" apaga o padrão da área; não muda o que cada agente já divergiu.",
-      "needsMaintainer": " Exige papel maintainer para alterar."
-    },
-    "card": {
-      "title": "Área {{area}}",
-      "lead": "Lead: {{lead}}",
-      "subagents": " — subagentes: {{list}}",
-      "subagentsDynamic": " — subagentes dinâmicos (por módulo)"
-    },
-    "toast": {
-      "saveError": "Não foi possível salvar",
-      "reverted": "Área {{area}} voltou a herdar"
-    },
-    "originChainNoModel": "sem padrão em nenhum nível",
-    "originChainNoModelTitle": "Nem esta área, nem o projeto, nem o workspace têm modelo escolhido — o lead e os subagentes desta área não têm padrão para herdar."
+    "noModelsAvailableLink": "Ative um em Providers →",
+    "areaBox": {
+      "label": "Valer para a área {{area}} inteira (lead + subagentes)",
+      "notFollowing_zero": "Nenhum agente desta área tem modelo próprio.",
+      "notFollowing_one": "{{count}} agente desta área tem modelo próprio e não segue: {{list}}",
+      "notFollowing_other": "{{count}} agentes desta área têm modelo próprio e não seguem: {{list}}",
+      "dynamic": "Subagentes por módulo com modelo próprio não são listados aqui.",
+      "toast": {
+        "saveError": "Não foi possível salvar o modelo da área",
+        "applied": "Área {{area}}: o modelo do lead vale para a área inteira",
+        "reverted": "Área {{area}} voltou a herdar",
+        "alreadyInherits": "Área {{area}} já herdava",
+        "partial": "O padrão da área foi gravado, mas o modelo próprio de {{agent}} não foi removido ({{reason}})"
+      }
+    }
   },
   "members": {
     "title": "Membros e papéis",

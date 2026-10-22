@@ -50,7 +50,6 @@ export const SECOES_DE_CONFIGURACOES = [
   // modelo — abre a aba. A credencial deixou o grupo "avançado" para o de
   // modelos: sem ela nenhum modelo de nuvem conversa.
   { chave: 'models', grupo: 'modelos', ns: 'settings', titulo: 'modelsSection.title' },
-  { chave: 'area-models', grupo: 'modelos', ns: 'settings', titulo: 'areaModels.title' },
   { chave: 'best-models', grupo: 'modelos', ns: 'settings', titulo: 'bestModels.title' },
   { chave: 'repository', grupo: 'projeto', ns: 'settings', titulo: 'repository.title' },
   { chave: 'execution', grupo: 'projeto', ns: 'settings', titulo: 'execution.title' },

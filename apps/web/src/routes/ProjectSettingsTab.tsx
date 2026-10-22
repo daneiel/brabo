@@ -32,7 +32,6 @@ import { PromotionSection } from './settings/PromotionSection';
 import { ProjectLanguageSection } from './settings/ProjectLanguageSection';
 import { MelhoresModelosPorCapacidadeSection } from './settings/MelhoresModelosPorCapacidadeSection';
 import { ModelsSection } from './settings/ModelsSection';
-import { AreaModelsSection } from './settings/AreaModelsSection';
 import { MembersSection } from './settings/MembersSection';
 import { PersonalAccessTokensSection } from './settings/PersonalAccessTokensSection';
 import { RunnerDeviceKeysSection } from './settings/RunnerDeviceKeysSection';
@@ -52,7 +51,6 @@ export { BudgetSection } from './settings/BudgetSection';
 export { PromotionSection } from './settings/PromotionSection';
 export { MelhoresModelosPorCapacidadeSection } from './settings/MelhoresModelosPorCapacidadeSection';
 export { ModelsSection } from './settings/ModelsSection';
-export { AreaModelsSection } from './settings/AreaModelsSection';
 export { PersonalAccessTokensSection } from './settings/PersonalAccessTokensSection';
 export { ProficiencySection } from './settings/ProficiencySection';
 
@@ -68,7 +66,6 @@ export function ProjectSettingsTab({ projectId }: ProjectSettingsTabProps) {
 
         <div className={styles.secoes}>
           <ModelsSection projectId={projectId} />
-          <AreaModelsSection projectId={projectId} />
           <MelhoresModelosPorCapacidadeSection projectId={projectId} />
           <RepositorySection projectId={projectId} />
           <ExecutionSection projectId={projectId} />

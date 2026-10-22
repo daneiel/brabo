@@ -18,7 +18,6 @@ import type {
   ResolvedBinding,
 } from '../../lib/api-types';
 import { ModelsSection } from './ModelsSection';
-import { AreaModelsSection } from './AreaModelsSection';
 import { loteSobreLeiturasPorChave } from '../../test/lote-de-bindings';
 
 /**
@@ -296,20 +295,24 @@ describe('critério de roteamento — quando NÃO há o que escolher', () => {
   });
 });
 
-describe('critério de roteamento — padrão da ÁREA', () => {
-  const ROTULO_DA_AREA = /Preferência de roteamento de Área Dev/;
+describe('critério de roteamento — padrão da ÁREA (lead com a caixa marcada)', () => {
+  const ROTULO_DA_AREA = /Preferência de roteamento de Dev Lead/;
 
   beforeEach(() => {
+    // O lead do Dev segue a área: o vigente dele vem do binding de área.
+    getAgentModelBinding.mockImplementation((_p: string, slug: string) =>
+      Promise.resolve(slug === 'dev-lead' ? binding({ origin: 'area' }) : null),
+    );
     getAreaModelBinding.mockImplementation((_p: string, area: string) =>
       Promise.resolve(area === 'dev' ? binding({ origin: 'area' }) : null),
     );
   });
 
-  it('caminho feliz: regrava o padrão da área com o critério', async () => {
+  it('caminho feliz: regrava o padrão da área com o critério, não o do agente', async () => {
     useCurrentWorkspaceWithRole.mockReturnValue({
       data: { workspace: { id: 'ws-1' }, role: 'maintainer' },
     });
-    montar(<AreaModelsSection projectId="proj-1" />);
+    montar(<ModelsSection projectId="proj-1" />);
 
     fireEvent.change(
       await screen.findByRole('combobox', { name: ROTULO_DA_AREA }),
@@ -321,10 +324,14 @@ describe('critério de roteamento — padrão da ÁREA', () => {
         routingPreference: 'throughput',
       }),
     );
+    expect(setAgentModelBinding).not.toHaveBeenCalled();
   });
 
   it('o mínimo é o do ENDPOINT da área (`maintainer`): `developer` vê o seletor inerte', async () => {
-    montar(<AreaModelsSection projectId="proj-1" />);
+    useCurrentWorkspaceWithRole.mockReturnValue({
+      data: { workspace: { id: 'ws-1' }, role: 'developer' },
+    });
+    montar(<ModelsSection projectId="proj-1" />);
 
     expect(
       await screen.findByRole('combobox', { name: ROTULO_DA_AREA }),

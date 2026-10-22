@@ -71,8 +71,8 @@ parágrafo acima diz que a recusa aponta para o filtro "aptos para agentes",
 abre o seletor com o filtro marcado existia desde a Fase 9c e **nenhuma tela de
 produção o passava**. O seletor de um agente abria oferecendo modelo chat-only
 cujo clique só existia para ser recusado. As duas telas que gravam num escopo
-validado passam a abrir filtradas — `ModelsSection` (agente) e
-`AreaModelsSection` (área) —, e a régua de quem liga não é a tela e sim
+validado passam a abrir filtradas — `ModelsSection` (agente e a caixa
+da área na linha do lead, RN-912) —, e a régua de quem liga não é a tela e sim
 `assertModelFitsBindingScope`: onde a api RECUSA, o filtro vem marcado; onde ela
 não recusa, quem escolhe é a pessoa. Por isso o seletor de SESSÃO continua sem
 filtro — marcar ali esconderia modelo que a api aceita. **Isto não elimina o
@@ -101,8 +101,8 @@ são DUAS as telas que ligam o filtro.
 
 - **Onde:** `apps/api/src/domain/llm/model-capabilities.ts:38`;
   `apps/web/src/components/ModelPicker.tsx` (o filtro e o aviso de vigente
-  escondido), `apps/web/src/routes/settings/ModelsSection.tsx`,
-  `apps/web/src/routes/settings/AreaModelsSection.tsx` (quem o liga)
+  escondido), `apps/web/src/routes/settings/ModelsSection.tsx` (quem o liga,
+  no seletor do agente e no do lead que segue a área)
 - **Teste:** `test/domain/llm/model-capabilities.spec.ts`,
   `test/application/use-cases/llm/set-model-binding.use-case.spec.ts`;
   `apps/web/src/routes/settings/filtro-de-aptos.test.tsx` e
@@ -2618,7 +2618,7 @@ do PROJETO (`ResolveEffectiveRoleUseCase.forProject`), que uma linha de
 `project_members` SOBREPÕE nos dois sentidos — então quem tem papel próprio no
 projeto pode ver aqui um controle desabilitado que a api aceitaria. Fechar isso
 exigiria uma consulta de papel POR PROJETO que o web ainda não tem, e é a mesma
-lacuna que `AreaModelsSection` já carregava; inventar uma segunda fonte de papel
+lacuna que a caixa da área (RN-912) também carrega; inventar uma segunda fonte de papel
 só numa seção seria pior que a lacuna.
 
 > **Nota aditiva ([RN-471](../business-rules.md#rn-471)):** a lacuna do parágrafo
@@ -2639,9 +2639,10 @@ só numa seção seria pior que a lacuna.
   banco), `apps/api/src/application/use-cases/llm/clear-model-binding.use-case.ts`,
   `apps/api/src/interfaces/http/llm/model-bindings.controller.ts`
   (`area-bindings`, `DELETE` em `agent-bindings` e `area-bindings`),
-  `apps/web/src/routes/settings/AreaModelsSection.tsx` (coluna Origem com
-  "voltar a herdar", e o gate de `maintainer` reescrito sobre `roleAtLeast` sem
-  mudar de mínimo),
+  `apps/web/src/routes/settings/ModelsSection.tsx` (coluna Origem com
+  "voltar a herdar"; desde a RN-912 o apagar da área é desmarcar a caixa do
+  lead, e o gate de `maintainer` segue sobre `roleAtLeast` sem mudar de
+  mínimo),
   `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:273` e `:301`
   (`developer` nos dois endpoints de agente — estas linhas NÃO mudaram),
   `apps/web/src/lib/roles.ts:49` (`roleAtLeast` — a comparação que faltava),
@@ -2785,9 +2786,9 @@ consegue nomear.
 - **Onde:** `apps/web/src/routes/settings/cascata.tsx:119` (`montarCadeia` — os
   quatro estados e o nó do Criativo), `:178` (`herdouDoCriativo` — a dedução e
   seu limite), `:287` (`CadeiaDeCascata`),
-  `apps/web/src/routes/settings/ModelsSection.tsx:149` (`cadeiaDoAgente`),
-  `:329` (`handleModelChange` — por que aqui o 404 NÃO tem desfecho próprio, e
-  por que a linha só relê no sucesso), `:385` (`handleClearAgentBinding` — os
+  `apps/web/src/routes/settings/ModelsSection.tsx:154` (`cadeiaDoAgente`),
+  `:321` (`handleModelChange` — por que aqui o 404 NÃO tem desfecho próprio, e
+  por que a linha só relê no sucesso), `:403` (`handleClearAgentBinding` — os
   três desfechos, e por que o 404 tem o dele), `:359` (coluna Origem), `:429`
   (`não há nível abaixo`), `:448` (`sem gasto ainda`),
   `apps/web/src/components/ModelPicker.tsx:95` (`selected` sai do prop — o
@@ -2797,7 +2798,8 @@ consegue nomear.
   (as duas causas de 404 deste endpoint — este arquivo NÃO mudou),
   `apps/api/src/interfaces/http/shared/llm-binding-error.filter.ts:39`
   (400/422 das recusas de curadoria — este arquivo NÃO mudou),
-  `apps/web/src/routes/settings/AreaModelsSection.tsx:142` (a cadeia da área),
+  `apps/web/src/routes/settings/ModelsSection.tsx` (a cadeia do agente, que já
+  desenha o nó da área),
   `apps/api/src/application/use-cases/llm/clear-model-binding.use-case.ts:25`
   (o 404 que a api levanta — este arquivo NÃO mudou),
   `apps/api/src/domain/llm/binding-resolver.ts:140` (o `origin: 'agent'` que a
