@@ -25023,3 +25023,10 @@ without saying which.
   `apps/api/test/domain/containers/project-container.spec.ts`;
   `apps/api/test/application/use-cases/actions/execute-container-start.use-case.spec.ts`
 - **Origin:** AT-593 (EP-031).
+
+### RN-908 — The PO kickoff asks for the backlog in batches, after reading, by layer {#rn-908}
+
+- **Rule:** the PO kickoff tells the model, in this order: read `listar_regras_de_negocio` and `listar_backlog` in the same response, with no write alongside; then all epics in one response; then all stories, using the `epic_id` returned; then all tasks, using the `story_id` returned. Never recreate an epic that already exists, and at most about 10 tool calls per response. Measured reason: without the batch request, nemotron makes 1 tool per response and qwen makes 3; with it, 9 each (`parallel_tool_calls` changed nothing). Reading first is what stops qwen from creating epics without reading the backlog. It does not change the `@max_iterations` ceiling (RN-166).
+- **Where:** `apps/engine/lib/engine/agents/po_server.ex:614` (`build_kickoff`)
+- **Test:** `apps/engine/test/engine/agents/po_server_test.exs:518` (read before write; batch by layer: epics → stories → tasks)
+- **Origin:** probe of AT-591 (21/10), implemented in AT-596 (EP-026).

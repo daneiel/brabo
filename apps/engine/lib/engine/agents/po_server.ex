@@ -665,6 +665,13 @@ defmodule Engine.Agents.PoServer do
 
     A lista acima é a desta sessão. `listar_regras_de_negocio` traz as do PROJETO
     inteiro, com quais já estão cobertas — use-a se desconfiar que falta alguma.
+
+    ESCREVA EM LOTE, EM CAMADAS: (1) leia primeiro — `listar_regras_de_negocio`
+    e `listar_backlog` na MESMA resposta, sem nenhuma escrita junto; (2) depois, TODOS os
+    épicos numa resposta só com create_epic; (3) depois, TODAS as histórias numa resposta
+    só com create_story, usando o `epic_id` que voltou em cada épico; (4) depois, TODAS as
+    tarefas numa resposta só com create_task, usando o `story_id` que voltou em cada história. Nunca recrie um épico que
+    já existe. No máximo cerca de 10 chamadas de ferramenta por resposta.
     """
   end
 

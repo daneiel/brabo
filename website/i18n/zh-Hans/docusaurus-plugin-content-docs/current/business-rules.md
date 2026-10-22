@@ -12362,3 +12362,10 @@ PO 的 kickoff 说明这三件事。
   `apps/api/test/domain/containers/project-container.spec.ts`；
   `apps/api/test/application/use-cases/actions/execute-container-start.use-case.spec.ts`
 - **来源：** AT-593（EP-031）。
+
+### RN-908 — PO 的 kickoff 在读取之后按层分批索要 backlog {#rn-908}
+
+- **规则：** PO 的 kickoff 按以下顺序告诉模型：在同一个响应中读取 `listar_regras_de_negocio` 和 `listar_backlog`，且不与任何写入同时进行；然后在一个响应中提交全部史诗；然后用返回的 `epic_id` 提交全部用户故事；然后用返回的 `story_id` 提交全部任务。绝不重建已存在的史诗，每个响应最多约 10 次工具调用。实测依据：不要求分批时，nemotron 每个响应 1 个工具、qwen 为 3 个；要求后两者都是 9 个（`parallel_tool_calls` 没有任何影响）。先读取，是为了防止 qwen 在未读 backlog 时就创建史诗。不改变 `@max_iterations` 上限（RN-166）。
+- **位置：** `apps/engine/lib/engine/agents/po_server.ex:614`（`build_kickoff`）
+- **测试：** `apps/engine/test/engine/agents/po_server_test.exs:518`（先读后写；按层分批：史诗 → 用户故事 → 任务）
+- **来源：** AT-591 的探测（21/10），在 AT-596（EP-026）中实现。

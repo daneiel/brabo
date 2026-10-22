@@ -513,6 +513,35 @@ defmodule Engine.Agents.PoServerTest do
       assert instrucao["content"] =~ "declare_open_question"
     end
 
+    # RN-908 (AT-596): com pedido de lote, o modelo tende a escrever antes de ler e
+    # a misturar camadas; a ordem leitura → épicos → histórias → tarefas é o contrato.
+    test "o kickoff manda ler antes de escrever e escrever em lote por camada (RN-908)", %{
+      state: state
+    } do
+      Process.put(:fake_events, brief_and_rules())
+      Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("ok")])
+
+      assert {:noreply, new_state} = sync_cast(PoServer, :kickoff, state)
+
+      instrucao =
+        Enum.find(new_state.messages, fn m ->
+          m["role"] == "user" and String.contains?(m["content"], "PRODUCT BRIEF")
+        end)
+
+      [_, lote] = String.split(instrucao["content"], "ESCREVA EM LOTE, EM CAMADAS", parts: 2)
+      pos = fn trecho -> elem(:binary.match(lote, trecho), 0) end
+
+      # Leitura primeiro, na mesma resposta e sem escrita junto.
+      assert lote =~ "sem nenhuma escrita junto"
+      assert pos.("listar_regras_de_negocio") < pos.("create_epic")
+      assert pos.("listar_backlog") < pos.("create_epic")
+      # Lote em camadas: épicos → histórias → tarefas.
+      assert pos.("create_epic") < pos.("create_story")
+      assert pos.("create_story") < pos.("create_task")
+      assert lote =~ "cerca de 10 chamadas"
+      assert lote =~ "Nunca recrie um épico"
+    end
+
     test "sem event log, o kickoff ainda carrega a obrigação da borda (RN-893)", %{state: state} do
       Process.put(:fake_events_error, :boom)
       Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("ok")])
