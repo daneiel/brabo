@@ -124,7 +124,20 @@ describe('caixa da área diz por que está inerte (AT-601)', () => {
     const caixas = await screen.findAllByRole('checkbox', { name: /Valer para a área/ });
     expect(caixas.length).toBeGreaterThan(0);
     for (const caixa of caixas) expect(caixa).toBeDisabled();
-    expect(screen.getAllByText(new RegExp(TEXTO_SEM_MODELO)).length).toBeGreaterThan(0);
+    await waitFor(() =>
+      expect(screen.getAllByText(new RegExp(TEXTO_SEM_MODELO)).length).toBeGreaterThan(0),
+    );
+  });
+
+  it('lote ainda carregando: o texto não aparece (não sei não vira "sem modelo")', async () => {
+    // Nenhuma resposta do lote: a tela não sabe, e não pode afirmar falta de modelo.
+    getAgentModelBinding.mockImplementation(() => new Promise(() => {}));
+    montar(<ModelsSection projectId="proj-1" />);
+
+    const caixas = await screen.findAllByRole('checkbox', { name: /Valer para a área/ });
+    for (const caixa of caixas) expect(caixa).toBeDisabled();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(screen.queryByText(new RegExp(TEXTO_SEM_MODELO))).toBeNull();
   });
 
   it('lead com modelo vigente: o texto não aparece e a caixa está habilitada', async () => {
