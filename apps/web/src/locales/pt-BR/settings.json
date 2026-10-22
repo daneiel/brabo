@@ -149,6 +149,7 @@
       "notFollowing_one": "{{count}} agente desta área tem modelo próprio e não segue: {{list}}",
       "notFollowing_other": "{{count}} agentes desta área têm modelo próprio e não seguem: {{list}}",
       "dynamic": "Subagentes por módulo com modelo próprio não são listados aqui.",
+      "needsModel": "Escolha um modelo para o lead antes: sem modelo vigente, a caixa da área não tem efeito.",
       "toast": {
         "saveError": "Não foi possível salvar o modelo da área",
         "applied": "Área {{area}}: o modelo do lead vale para a área inteira",

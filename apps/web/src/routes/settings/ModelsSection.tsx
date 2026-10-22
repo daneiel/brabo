@@ -612,6 +612,10 @@ export function ModelsSection({ projectId }: { projectId: string }) {
                 />{' '}
                 {t('modelsSection.areaBox.label', { area: areaLead.label })}
               </label>
+              {/* Sem modelo vigente no lead a caixa está inerte: o motivo vai em
+                  texto (`title` em `disabled` não abre no Chromium). O motivo de
+                  `maintainer` já está no subtítulo (`needsMaintainerArea`). */}
+              {!resolved && <div>{t('modelsSection.areaBox.needsModel')}</div>}
               {segueArea && naoSeguem.length > 0 && (
                 <div>
                   {t('modelsSection.areaBox.notFollowing', {

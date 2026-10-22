@@ -142,6 +142,7 @@
       "notFollowing_one": "{{count}} agent in this area has its own model and does not follow: {{list}}",
       "notFollowing_other": "{{count}} agents in this area have their own model and do not follow: {{list}}",
       "dynamic": "Per-module subagents with their own model are not listed here.",
+      "needsModel": "Choose a model for the lead first: without a current model, the area box has no effect.",
       "toast": {
         "saveError": "Could not save the area model",
         "applied": "{{area}} area: the lead's model applies to the whole area",
