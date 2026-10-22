@@ -377,6 +377,7 @@ comparar com `process.cwd()` (`/workspace` dentro do próprio container). Veja o
 | `NEO4J_USER` | `neo4j` (dev) | chega ao container com o mesmo default que o serviço `neo4j` usa para `NEO4J_AUTH`, então defina-a só para TROCAR o usuário — trocar ali troca os dois lados de uma vez. Dois defaults independentes deixariam a api autenticando com uma credencial que o servidor não tem mais |
 | `NEO4J_PASSWORD` 🔒 | `dev-neo4j-password-change-me` (só dev) | mesma regra de pareamento de `NEO4J_USER`. **Sem default público em produção** de propósito — não há "valor de exemplo" plausível para senha de banco, e o `docker-compose.prod.yml` mantém `NEO4J_AUTH` vazio para que o próprio entrypoint da imagem oficial recuse subir em vez de subir com uma senha adivinhável |
 | `GRAPH_PROJECTOR_INTERVAL_MS` | `2000` | período do poller que esvazia a fila `graph_projection` da outbox e escreve handoffs/hipóteses/perfis/interações no grafo (RN-416) |
+| `CUSTO_RECONCILIACAO_INTERVAL_MS` | `300000` | período do job da api que troca a ESTIMATIVA de custo de uma chamada abortada pelo orçamento de raciocínio pelo custo real do `GET /generation` do OpenRouter ([RN-915](../business-rules/custo.md#rn-915)); `0` desliga |
 | `ARTIFACT_PROJECTOR_INTERVAL_MS` | `2000` | período do poller que esvazia a fila `artifact_projection` da outbox e escreve os artefatos de cada agente como Markdown sob a pasta `docs/` do projeto ([RN-523](../business-rules.md#rn-523)). Projeção DERIVADA: o event log continua sendo a fonte, e a pasta pode ser apagada e reconstruída |
 
 ### Observabilidade
@@ -858,11 +859,11 @@ ninguém perceba.
 
 > ⚠️ Bloco gerado por `pnpm docs:generate`. Não edite à mão — o próximo build o sobrescreve.
 
-Inventário extraído do código: **181 variáveis** lidas em tempo de execução. Todas têm descrição nas tabelas acima.
+Inventário extraído do código: **182 variáveis** lidas em tempo de execução. Todas têm descrição nas tabelas acima.
 
 Cada fonte é marcada **produto** — o que quem opera a instalação configura no `.env` do deploy — ou **ferramenta**, lida só pelo CI e por quem desenvolve o produto. Variável de ferramenta nunca pertence ao `.env` de um operador.
 
-**api** — 66 variáveis · produto
+**api** — 67 variáveis · produto
 
 - `API_JSON_BODY_LIMIT` <sub>(apps/api/src/main.ts)</sub>
 - `API_PUBLIC_URL` <sub>(apps/api/src/application/use-cases/auth/start-social-login.use-case.ts)</sub>
@@ -892,6 +893,7 @@ Cada fonte é marcada **produto** — o que quem opera a instalação configura 
 - `BROKER_URL` <sub>(apps/api/src/infrastructure/http-clients/container-broker.client.ts)</sub>
 - `CREDENTIALS_MASTER_KEY` <sub>(apps/api/src/infrastructure/security/envelope-encryption.service.ts)</sub>
 - `CREDENTIALS_MASTER_KEY_PREVIOUS` <sub>(apps/api/src/infrastructure/security/envelope-encryption.service.ts)</sub>
+- `CUSTO_RECONCILIACAO_INTERVAL_MS` <sub>(apps/api/src/application/use-cases/llm/reconciliar-custo-estimado.use-case.ts)</sub>
 - `DATABASE_URL` <sub>(apps/api/src/db/migrate.ts)</sub>
 - `ENGINE_PUBLIC_URL` <sub>(apps/api/src/application/use-cases/runner/request-runner-ticket.use-case.ts)</sub>
 - `ENGINE_URL` <sub>(apps/api/src/application/use-cases/runner/request-runner-ticket.use-case.ts)</sub>

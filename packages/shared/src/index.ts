@@ -331,6 +331,12 @@ export interface ChatUsageChunk {
   outputTokens: number;
   estimated: boolean;
   /**
+   * `true` quando o stream foi ABORTADO pelo orçamento de raciocínio: a
+   * resposta abortada não traz `usage`, então os tokens são caracteres/4 e o
+   * custo real só sai depois, em `GET /generation` (ADR 0224, RN-915).
+   */
+  abortadoPeloRaciocinio?: true;
+  /**
    * Quem REALMENTE serviu a chamada, quando o provider é um hub e informa isso
    * (Fase 9b). Num hub, "openrouter" é a porta de entrada, não o custo real —
    * sem este campo o metering não distingue qual provedor subjacente atendeu.
@@ -391,6 +397,12 @@ export interface ChatToolCallsChunk {
 // segue como antes; o texto e as `tool_calls` que chegaram vêm truncados.
 export interface ChatTruncatedChunk {
   type: "truncated";
+  /**
+   * Por que cortou (ADR 0224, RN-915). Ausente = o teto de saída
+   * (`max_tokens`); `"raciocinio"` = o provider ABORTOU o stream porque o
+   * raciocínio passou do `reasoningBudget` do modelo.
+   */
+  motivo?: "raciocinio";
 }
 
 export type ChatStreamChunk =

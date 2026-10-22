@@ -223,8 +223,8 @@ foram raciocínio).
    no protocolo dele (`cache_read_input_tokens`) e isso NÃO é lido aqui — fica
    `null`, declarado; o Ollama não informa.
 
-- **Onde:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:334` (`cachedInputTokens`),
-  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:671` (`contagem`),
+- **Onde:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:352` (`cachedInputTokens`),
+  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:711` (`contagem`),
   `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:179` (`cachedInputTokens`),
   `apps/api/src/application/use-cases/llm/record-llm-usage.use-case.ts:113` (`cachedInputTokens`),
   `apps/api/src/db/schema/llm.ts:380` (`cachedInputTokens`),
@@ -274,7 +274,7 @@ gasto somam. Sem ele, o preço congelado do catálogo produz o número, como no
   `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:235` (`custoDaChamada`),
   `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:248` (`custoDaChamada`),
   `apps/api/src/application/use-cases/llm/send-chat-message.use-case.ts:234` (`custoDaChamada`),
-  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:330` (`extrairCustoReal`),
+  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:348` (`extrairCustoReal`),
   `apps/api/src/infrastructure/llm/openrouter-provider.ts:253` (`extrairCustoRealOpenRouter`),
   `apps/api/src/db/schema/llm.ts:363` (`priceImplicit`)
 - **Teste:** `test/domain/llm/custo-da-chamada.spec.ts`,
@@ -2512,7 +2512,7 @@ continuam numa linha só. Quem quer a quebra por credencial tem a lista própria
 e cruzar as duas dimensões multiplicaria as linhas do ranking sem responder
 pergunta que as duas listas separadas já não respondam.
 
-- **Onde:** `apps/api/src/application/ports/token-usage-repository.port.ts:137`
+- **Onde:** `apps/api/src/application/ports/token-usage-repository.port.ts:150`
   (`SpendDimension`),
   `apps/api/src/infrastructure/persistence/drizzle/token-usage.repository.ts:255`
   (o `GROUP BY`), `apps/api/src/application/use-cases/llm/get-workspace-spend-report.use-case.ts:112`,
@@ -3185,7 +3185,7 @@ quatro pontos, TTL de 5 min — https://openrouter.ai/docs/features/prompt-cachi
    metering pela [RN-666](#rn-666).
 
 - **Código:** `apps/api/src/infrastructure/llm/openrouter-provider.ts:283` (`marcarCacheDePromptOpenRouter`);
-  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:516` (`mensagens`)
+  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:555` (`mensagens`)
 - **Teste:** `apps/api/test/infrastructure/llm/openrouter-provider.contract.spec.ts` ("pontos de cache de prompt (RN-892)": ligada marca os dois pontos; desligada é byte a byte; capability sem hook falha — caso de falha)
 - **Origem:** AT-543
 
@@ -3215,3 +3215,26 @@ acerto de cache caindo. O Brabo agora manda a chave.
   `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:192` (`chaveDeSessao`)
 - **Teste:** `apps/api/test/infrastructure/llm/openrouter-provider.contract.spec.ts` ("chave de sessão (ADR 0221, RN-907)": com capability e chave leva `session_id`; sem chave ou desligada não leva; capability sem hook falha — caso de falha); `apps/api/test/application/use-cases/llm/stream-llm-turn.use-case.spec.ts`; `run-llm-turn.use-case.spec.ts`; smoke `openrouter-provider.sessao.smoke.spec.ts`
 - **Origem:** AT-580; ADR [0221](../adr/0221-upstream-preso-por-sessao.md)
+
+### RN-915 — O raciocínio é contado no stream e abortado no limite; o custo abortado é estimado e depois reconciliado {#rn-915}
+
+Complementa a [RN-914](../business-rules.md#rn-914) ([ADR 0224](../adr/0224-raciocinio-abortado-no-stream.md)).
+
+1. **Aborto.** Com `reasoning_budget` e raciocínio ligado, o provider soma os
+   caracteres de `delta.reasoning`; passando de `caracteres/4 > N` ele destrói a conexão
+   e emite `truncated` com `motivo: "raciocinio"` (o corte por `max_tokens` não tem
+   motivo). Sem orçamento (ou com raciocínio desligado), nada é contado.
+2. **Estimativa na hora.** A resposta abortada não traz `usage`: saída = caracteres/4,
+   entrada pelo estimador, ao preço do catálogo, `estimated`, `price_implicit` e
+   `custo_a_reconciliar` (só se há id de geração).
+3. **Reconciliação.** Periódica (`CUSTO_RECONCILIACAO_INTERVAL_MS`), idempotente: troca
+   pelo `total_cost` de `GET /generation?id=` só com 200, só linha marcada e das últimas
+   24 h; 404 ou erro deixam a linha como está. A estimativa vai para `catalog_cost_micros`.
+   O `spentMicros` de budget/área não é corrigido.
+
+- **Código:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:331` (`limiteDeRaciocinio`);
+  `apps/api/src/application/use-cases/llm/reconciliar-custo-estimado.use-case.ts:57` (`execute`)
+- **Teste:** `apps/api/test/infrastructure/llm/raciocinio-abortado.spec.ts` (aborta e estima; sem orçamento não conta);
+  `apps/api/test/application/use-cases/llm/reconciliar-custo-estimado.use-case.spec.ts` (200 troca, 404 mantém);
+  `apps/api/test/infrastructure/persistence/token-usage.repository.spec.ts` (troca uma única vez)
+- **Origem:** AT-589; ADR [0224](../adr/0224-raciocinio-abortado-no-stream.md)

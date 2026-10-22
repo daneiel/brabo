@@ -478,8 +478,11 @@ Anthropic direto não envia `thinking`, então ali o modelo não raciocina.
 Exceção por modelo (RN-914, ADR 0223): com `models.reasoning_budget` preenchido
 (curado à mão; hoje só `qwen/qwen3.7-flash`, 2048, provado em 22/10) o corpo
 leva `reasoning: { max_tokens: N }` e o teto vira saída visível + N. O
-`deepseek/deepseek-v4.1-flash` ignorou `max_tokens` e `effort` na medição e fica
-sem orçamento; `effort` nunca é enviado, e o limite não garante a tool call.
+`deepseek/deepseek-v4.1-flash` ignorou `max_tokens` e `effort` na medição: o
+limite dele (2048, migração 0075) é imposto ABORTANDO o stream quando o
+`delta.reasoning` passa de caracteres/4 > N, com custo estimado e reconciliado
+depois (RN-915, ADR 0224). `effort` nunca é enviado, e o limite não garante a
+tool call.
 
 Cada flag existe porque um provider real diverge. Não acrescente flag sem um
 provider que precise dela.
