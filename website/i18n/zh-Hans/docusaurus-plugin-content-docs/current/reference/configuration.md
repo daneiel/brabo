@@ -550,11 +550,11 @@ bootstrap（`make deploy-local`）以及 `.github/workflows/propriedades.yml` �
 
 > ⚠️ 此区块由 `pnpm docs:generate` 生成。请勿手动编辑——下次构建会覆盖它。
 
-从代码中提取的清单：运行时读取 **181 个变量**。全部都在上方表格中有描述。
+从代码中提取的清单：运行时读取 **182 个变量**。全部都在上方表格中有描述。
 
 每个来源都标记为 **产品**——运维安装的人在部署 `.env` 中设置的内容——或 **工具**，仅由 CI 和开发产品的人读取。工具变量绝不应出现在运维人员的 `.env` 中。
 
-**api** — 66 个变量 · 产品
+**api** — 67 个变量 · 产品
 
 - `API_JSON_BODY_LIMIT` <sub>(apps/api/src/main.ts)</sub>
 - `API_PUBLIC_URL` <sub>(apps/api/src/application/use-cases/auth/start-social-login.use-case.ts)</sub>
@@ -584,6 +584,7 @@ bootstrap（`make deploy-local`）以及 `.github/workflows/propriedades.yml` �
 - `BROKER_URL` <sub>(apps/api/src/infrastructure/http-clients/container-broker.client.ts)</sub>
 - `CREDENTIALS_MASTER_KEY` <sub>(apps/api/src/infrastructure/security/envelope-encryption.service.ts)</sub>
 - `CREDENTIALS_MASTER_KEY_PREVIOUS` <sub>(apps/api/src/infrastructure/security/envelope-encryption.service.ts)</sub>
+- `CUSTO_RECONCILIACAO_INTERVAL_MS` <sub>(apps/api/src/application/use-cases/llm/reconciliar-custo-estimado.use-case.ts)</sub>
 - `DATABASE_URL` <sub>(apps/api/src/db/migrate.ts)</sub>
 - `ENGINE_PUBLIC_URL` <sub>(apps/api/src/application/use-cases/runner/request-runner-ticket.use-case.ts)</sub>
 - `ENGINE_URL` <sub>(apps/api/src/application/use-cases/runner/request-runner-ticket.use-case.ts)</sub>

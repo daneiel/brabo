@@ -13,7 +13,7 @@ Este documento é o mapa para quem vai **trabalhar** no código. Ele diz por
 onde começar a ler, o que cada fronteira promete e o que já se sabe que está
 torto.
 
-As decisões e suas justificativas moram nos [ADRs](adr/index.md) — 219
+As decisões e suas justificativas moram nos [ADRs](adr/index.md) — 220
 deles, vários registrando um defeito real encontrado em execução. Aqui não
 repetimos o argumento: apontamos para ele.
 
