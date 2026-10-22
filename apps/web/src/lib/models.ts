@@ -328,6 +328,9 @@ export const ROTULO_DO_PROVIDER: Record<LLMProviderName, string> = {
   get vultr() {
     return i18n.t('providerLabel.vultr', { ns: 'models' });
   },
+  get '9router'() {
+    return i18n.t('providerLabel.9router', { ns: 'models' });
+  },
 };
 
 /** Provider que exige chave: todos menos os locais, que rodam na máquina. */

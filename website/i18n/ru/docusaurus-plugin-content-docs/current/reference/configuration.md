@@ -856,11 +856,11 @@ Bootstrap (`make deploy-local`) и проверки свойств, которы
 
 > ⚠️ Блок сгенерирован `pnpm docs:generate`. Не редактируйте вручную — следующая сборка его перезапишет.
 
-Инвентарь, извлечённый из кода: переменных, читаемых во время выполнения, — **180**. У всех есть описание в таблицах выше.
+Инвентарь, извлечённый из кода: переменных, читаемых во время выполнения, — **181**. У всех есть описание в таблицах выше.
 
 Каждый источник помечен как **продукт** — то, что оператор установки задаёт в `.env` развёртывания, — или **инструменты**: их читают только CI и разработчики продукта. Переменной инструментов не место в `.env` оператора.
 
-**api** — переменных: 65 · продукт
+**api** — переменных: 66 · продукт
 
 - `API_JSON_BODY_LIMIT` <sub>(apps/api/src/main.ts)</sub>
 - `API_PUBLIC_URL` <sub>(apps/api/src/application/use-cases/auth/start-social-login.use-case.ts)</sub>
@@ -909,6 +909,7 @@ Bootstrap (`make deploy-local`) и проверки свойств, которы
 - `NEO4J_PASSWORD` <sub>(apps/api/src/infrastructure/graph/neo4j-config.ts)</sub>
 - `NEO4J_URI` <sub>(apps/api/src/infrastructure/graph/neo4j-config.ts)</sub>
 - `NEO4J_USER` <sub>(apps/api/src/infrastructure/graph/neo4j-config.ts)</sub>
+- `NINE_ROUTER_BASE_URL` <sub>(apps/api/src/infrastructure/llm/nine-router-provider.ts)</sub>
 - `NODE_ENV` <sub>(apps/api/src/infrastructure/graph/neo4j-config.ts)</sub>
 - `OLLAMA_HOST` <sub>(apps/api/src/infrastructure/llm/ollama-provider.ts)</sub>
 - `OTEL_DIAG_LOG` <sub>(apps/api/src/tracing.ts)</sub>

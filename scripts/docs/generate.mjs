@@ -357,6 +357,7 @@ const CABECALHO_DA_SECAO_DO_PROVIDER = {
   deepinfra: 'DeepInfra',
   bitdeer: 'Bitdeer',
   vultr: 'Vultr Serverless Inference',
+  '9router': '9Router',
 };
 
 /** Rótulos em negrito (`- **Rótulo**: ...`) da seção de prosa de um provider. */
@@ -416,7 +417,7 @@ function descobrirProviders() {
     // Casa tanto `readonly capabilities: X = { ... }` (Ollama, Anthropic)
     // quanto `capabilities: { ... }` dentro da config (base compatível).
     // Slug pode ter hífen (`nvidia-nim`, Fase 11b).
-    const nome = /name:\s*LLMProviderName\s*=\s*'([a-z-]+)'|name:\s*'([a-z-]+)'/.exec(conteudo);
+    const nome = /name:\s*LLMProviderName\s*=\s*'([a-z0-9-]+)'|name:\s*'([a-z0-9-]+)'/.exec(conteudo);
     // Ancorado em `capabilities:` de verdade (com o dois-pontos colado) —
     // um comentário citando "capabilities.toolCalling" ou "capabilities em
     // duas camadas" não tem dois-pontos ali, então não confunde o match.

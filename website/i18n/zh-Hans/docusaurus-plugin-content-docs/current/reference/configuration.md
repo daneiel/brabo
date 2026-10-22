@@ -550,11 +550,11 @@ bootstrap（`make deploy-local`）以及 `.github/workflows/propriedades.yml` �
 
 > ⚠️ 此区块由 `pnpm docs:generate` 生成。请勿手动编辑——下次构建会覆盖它。
 
-从代码中提取的清单：运行时读取 **180 个变量**。全部都在上方表格中有描述。
+从代码中提取的清单：运行时读取 **181 个变量**。全部都在上方表格中有描述。
 
 每个来源都标记为 **产品**——运维安装的人在部署 `.env` 中设置的内容——或 **工具**，仅由 CI 和开发产品的人读取。工具变量绝不应出现在运维人员的 `.env` 中。
 
-**api** — 65 个变量 · 产品
+**api** — 66 个变量 · 产品
 
 - `API_JSON_BODY_LIMIT` <sub>(apps/api/src/main.ts)</sub>
 - `API_PUBLIC_URL` <sub>(apps/api/src/application/use-cases/auth/start-social-login.use-case.ts)</sub>
@@ -603,6 +603,7 @@ bootstrap（`make deploy-local`）以及 `.github/workflows/propriedades.yml` �
 - `NEO4J_PASSWORD` <sub>(apps/api/src/infrastructure/graph/neo4j-config.ts)</sub>
 - `NEO4J_URI` <sub>(apps/api/src/infrastructure/graph/neo4j-config.ts)</sub>
 - `NEO4J_USER` <sub>(apps/api/src/infrastructure/graph/neo4j-config.ts)</sub>
+- `NINE_ROUTER_BASE_URL` <sub>(apps/api/src/infrastructure/llm/nine-router-provider.ts)</sub>
 - `NODE_ENV` <sub>(apps/api/src/infrastructure/graph/neo4j-config.ts)</sub>
 - `OLLAMA_HOST` <sub>(apps/api/src/infrastructure/llm/ollama-provider.ts)</sub>
 - `OTEL_DIAG_LOG` <sub>(apps/api/src/tracing.ts)</sub>

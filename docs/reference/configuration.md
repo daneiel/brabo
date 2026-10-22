@@ -360,6 +360,7 @@ comparar com `process.cwd()` (`/workspace` dentro do próprio container). Veja o
 | variável | default | nota |
 |---|---|---|
 | `OLLAMA_HOST` | `http://localhost:11434` | — |
+| `NINE_ROUTER_BASE_URL` | `http://host.docker.internal:20128/v1` | URL base do 9Router (provider `9router`, ADR 0222), que roda na máquina do dono, fora do compose. É da INSTALAÇÃO, não do workspace: o padrão só alcança o host porque os composes de instalação e de produção mapeiam `host.docker.internal:host-gateway` na api. Vale para as chamadas de chat, o catálogo e o teste de conexão da credencial |
 | `OLLAMA_REQUEST_TIMEOUT_MS` | `300000` | teto de **inatividade** do socket do Ollama, não de duração total. Um modelo local tem latência até o primeiro token de outra ordem de grandeza, daí a variável própria; veja o [ambiente de inferência](../runbook.md#ambiente-de-inferencia) |
 | `LLM_REQUEST_TIMEOUT_MS` | `300000` | o mesmo teto de inatividade para os providers de API (OpenAI e compatíveis, Anthropic). Vale para "nem mandou os cabeçalhos" e para "parou de mandar pedaços no meio do stream" — veja [providers de LLM](llm-providers.md#inactivity-ceiling) |
 | `HUGGINGFACE_API_TOKEN` | *(não definida)* | token **opcional** do Hugging Face Hub para a busca de modelos (`GET /workspaces/:workspaceId/huggingface/models`). Presente, vai como `Authorization: Bearer …` e sobe o rate limit do Hub; ausente, o cabeçalho simplesmente não é enviado — o Hub aceita busca pública sem credencial, e token ausente nunca é erro |
@@ -857,11 +858,11 @@ ninguém perceba.
 
 > ⚠️ Bloco gerado por `pnpm docs:generate`. Não edite à mão — o próximo build o sobrescreve.
 
-Inventário extraído do código: **180 variáveis** lidas em tempo de execução. Todas têm descrição nas tabelas acima.
+Inventário extraído do código: **181 variáveis** lidas em tempo de execução. Todas têm descrição nas tabelas acima.
 
 Cada fonte é marcada **produto** — o que quem opera a instalação configura no `.env` do deploy — ou **ferramenta**, lida só pelo CI e por quem desenvolve o produto. Variável de ferramenta nunca pertence ao `.env` de um operador.
 
-**api** — 65 variáveis · produto
+**api** — 66 variáveis · produto
 
 - `API_JSON_BODY_LIMIT` <sub>(apps/api/src/main.ts)</sub>
 - `API_PUBLIC_URL` <sub>(apps/api/src/application/use-cases/auth/start-social-login.use-case.ts)</sub>
@@ -910,6 +911,7 @@ Cada fonte é marcada **produto** — o que quem opera a instalação configura 
 - `NEO4J_PASSWORD` <sub>(apps/api/src/infrastructure/graph/neo4j-config.ts)</sub>
 - `NEO4J_URI` <sub>(apps/api/src/infrastructure/graph/neo4j-config.ts)</sub>
 - `NEO4J_USER` <sub>(apps/api/src/infrastructure/graph/neo4j-config.ts)</sub>
+- `NINE_ROUTER_BASE_URL` <sub>(apps/api/src/infrastructure/llm/nine-router-provider.ts)</sub>
 - `NODE_ENV` <sub>(apps/api/src/infrastructure/graph/neo4j-config.ts)</sub>
 - `OLLAMA_HOST` <sub>(apps/api/src/infrastructure/llm/ollama-provider.ts)</sub>
 - `OTEL_DIAG_LOG` <sub>(apps/api/src/tracing.ts)</sub>

@@ -33,7 +33,8 @@ export type LLMProviderName =
   | "together"
   | "deepinfra"
   | "bitdeer"
-  | "vultr";
+  | "vultr"
+  | "9router";
 
 /**
  * Taxonomia normalizada de falha de provider (Fase 9a — ADR 0041). Espelha o

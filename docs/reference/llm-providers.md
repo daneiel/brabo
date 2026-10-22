@@ -110,10 +110,11 @@ do nome do modelo seria um palpite vestido de dado.
 
 > ⚠️ Bloco gerado por `pnpm docs:generate`. Não edite à mão — o próximo build o sobrescreve.
 
-Lido dos literais `capabilities` em `apps/api/src/infrastructure/llm/` — **9 providers**.
+Lido dos literais `capabilities` em `apps/api/src/infrastructure/llm/` — **10 providers**.
 
 | provider | streaming | tool calling | list_models | embeddings | preferência de roteamento | credencial | origem dos modelos | quirks resumidos | fonte |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `9router` | ? | ? | ? | ? | ? | chave de API | seed | URL por instalação; Credencial obrigatória; Preço = curadoria manual; Capabilities `false`; Token Saver desligado; Qual upstream serviu | `apps/api/src/infrastructure/llm/nine-router-provider.ts` |
 | `anthropic` | sim | sim | sim | não | não | chave de API | sync + seed | — | `apps/api/src/infrastructure/llm/anthropic-provider.ts` |
 | `bitdeer` | sim | sim | não | não | não | chave de API | seed | `Authorization: Bearer <chave>` CONFIRMADO; `GET /v1/models` existe e é autenticado; Três ids REAIS de modelo confirmados; Nenhuma peculiaridade de stream/erro confirmada | `apps/api/src/infrastructure/llm/bitdeer-provider.ts` |
 | `deepinfra` | sim | sim | sim | não | não | chave de API | sync + seed | O catálogo é PÚBLICO — sem autenticação nenhuma; `stream_options.include_usage` confirmado como suportado; Erro no formato padrão | `apps/api/src/infrastructure/llm/deepinfra-provider.ts` |
@@ -501,7 +502,7 @@ agrupadas.
 A linha do `system` tardio existe porque a orientação de idioma da AT-081
 prevê enviar **uma** mensagem efêmera `role: "system"` no FIM da lista, em toda
 chamada de um turno — depois de `user` na primeira chamada, depois de `tool`
-nas seguintes. A suite de contrato responde, para cada um dos nove providers,
+nas seguintes. A suite de contrato responde, para cada um dos dez providers,
 onde essa mensagem pousa no **corpo serializado**: cada harness declara
 `posicaoDoSistemaTardio` e o contrato a confere nas duas posições, além de o
 texto aparecer exatamente uma vez e o resto da conversa manter a ordem
@@ -509,7 +510,7 @@ texto aparecer exatamente uma vez e o resto da conversa manter a ordem
 
 | provider | adaptador | onde o `system` tardio pousa |
 | --- | --- | --- |
-| OpenAI, OpenRouter, NVIDIA NIM, Together, DeepInfra, Bitdeer, Vultr | base compatível (`toWireMessage`) | fim de `messages`, `role: "system"` |
+| OpenAI, OpenRouter, NVIDIA NIM, Together, DeepInfra, Bitdeer, Vultr, 9Router | base compatível (`toWireMessage`) | fim de `messages`, `role: "system"` |
 | Ollama | próprio (`messages` enviado como está) | fim de `messages`, `role: "system"` |
 | Anthropic | próprio (SDK oficial) | fim do `system` de topo; posição perdida |
 
@@ -795,6 +796,48 @@ provider, não uma comparação de mercado.
 O teste de aceite com credencial real mora em
 `test/infrastructure/llm/vultr-provider.smoke.spec.ts`, condicionado a
 `VULTR_TEST_KEY`.
+
+## 9Router (AT-576a, ADR 0222)
+
+`NineRouterProvider` é `OpenAICompatibleProvider` com `nineRouterConfig()`
+(`apps/api/src/infrastructure/llm/nine-router-provider.ts`) — o décimo
+provider (ADR 0043 era o dos nove). O 9Router é um gateway local do dono
+(`github.com/decolua/9router`), com endpoint OpenAI-compatível e painel na
+mesma porta, e roteia por **combos** (nome estável → lista de modelos/contas com
+fallback).
+
+- **URL por instalação**: `NINE_ROUTER_BASE_URL`, padrão
+  `http://host.docker.internal:20128/v1`, lida a cada uso (molde do
+  `OLLAMA_HOST`). Os composes de instalação e de produção ganham
+  `extra_hosts: host.docker.internal:host-gateway` na api; sem ele o padrão não
+  resolve no Docker Engine nativo do Linux;
+- **Credencial obrigatória**: a chave de API é criada no painel do 9Router. O
+  teste de conexão é `GET /models` com a chave, na URL do ambiente;
+- **`listModels: true`**, com `parseCatalogo9Router`: lê `capabilities` do
+  `GET /v1/models` (tools, reasoning, janela de contexto). A fixture de teste
+  (`apps/api/test/fixtures/nine-router/models.sintetica.json`) é **SINTÉTICA**,
+  montada do formato descrito no levantamento, não capturada do 9Router real;
+- **Preço = curadoria manual** (ADR 0042): a resposta não traz preço nem
+  `usage.cost` (não achado no build v0.5.104). Por decisão do dono (22/10), o
+  modelo de assinatura registra o **preço público da API equivalente**, não zero:
+  o orçamento conta o custo de oportunidade;
+- **Capabilities `false`** (além de `listModels` e de `streaming`, que a suite
+  de contrato exige de todo provider) até o smoke com chave: `toolCalling`,
+  `routingPreference` (combo não é `provider.sort`), `embeddings`,
+  `promptCaching`, `stickySession`;
+- **Token Saver desligado**: o "RTK Token Saver" do 9Router comprime
+  `tool_result`, e o modelo leria algo diferente do que o log gravou. O provider
+  manda `x-9router-token-saver: off` em toda chamada.
+  > **TODO(humano):** o NOME do cabeçalho vem do build do 9Router v0.5.104; o
+  > VALOR aceito (`off`) não foi achado na fonte. O smoke confere se o
+  > `tool_result` chega intacto.
+- **Qual upstream serviu**: o único cabeçalho com a conexão
+  (`x-9router-connection-id`) aparece só no caminho de vídeo no build lido; no
+  chat, não medido. O smoke imprime os cabeçalhos `x-*` da resposta.
+
+O aceite com chave real mora em
+`test/infrastructure/llm/nine-router-provider.smoke.spec.ts`, condicionado a
+`NINE_ROUTER_TEST_KEY` e `NINE_ROUTER_TEST_MODEL` (só modelo `free`/`auto:free`).
 
 ## Hubs e custo real
 

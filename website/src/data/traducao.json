@@ -885,7 +885,7 @@
       "data": "2026-10-15"
     },
     "explanation/aceite-providers.md": {
-      "defasada": false,
+      "defasada": true,
       "data": "2026-10-15"
     },
     "explanation/achados-execucao-real.md": {
@@ -1069,7 +1069,7 @@
       "data": null
     },
     "runbook.md": {
-      "defasada": false,
+      "defasada": true,
       "data": "2026-10-15"
     },
     "security-surface.md": {
@@ -1967,7 +1967,7 @@
       "data": "2026-10-15"
     },
     "explanation/aceite-providers.md": {
-      "defasada": false,
+      "defasada": true,
       "data": "2026-10-15"
     },
     "explanation/achados-execucao-real.md": {
@@ -2151,7 +2151,7 @@
       "data": null
     },
     "runbook.md": {
-      "defasada": false,
+      "defasada": true,
       "data": "2026-10-15"
     },
     "security-surface.md": {
@@ -3049,7 +3049,7 @@
       "data": "2026-10-15"
     },
     "explanation/aceite-providers.md": {
-      "defasada": false,
+      "defasada": true,
       "data": "2026-10-15"
     },
     "explanation/achados-execucao-real.md": {
@@ -3233,7 +3233,7 @@
       "data": null
     },
     "runbook.md": {
-      "defasada": false,
+      "defasada": true,
       "data": "2026-10-15"
     },
     "security-surface.md": {

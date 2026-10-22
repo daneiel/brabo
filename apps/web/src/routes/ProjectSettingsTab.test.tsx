@@ -804,7 +804,7 @@ describe('CredentialsSection (ADR 0050)', () => {
     expect(screen.getByText('AN')).toBeInTheDocument();
 
     const siglas = screen
-      .getAllByText(/^[A-Z]{2}$/)
+      .getAllByText(/^[A-Z0-9]{2}$/)
       .map((el) => el.textContent);
     expect(siglas).toHaveLength(CREDENCIAIS_DE_LLM.length);
     expect(new Set(siglas).size).toBe(siglas.length);

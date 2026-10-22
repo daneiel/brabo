@@ -109,10 +109,11 @@ workspace ([RN-057](../business-rules/custo.md#rn-057)) — это не capabili
 
 > ⚠️ Блок сгенерирован `pnpm docs:generate`. Не редактируйте вручную — следующая сборка его перезапишет.
 
-Прочитано из литералов `capabilities` в `apps/api/src/infrastructure/llm/` — провайдеров: **9**.
+Прочитано из литералов `capabilities` в `apps/api/src/infrastructure/llm/` — провайдеров: **10**.
 
 | провайдер | streaming | tool calling | list_models | embeddings | предпочтение маршрутизации | учётные данные | происхождение моделей | особенности кратко | источник |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `9router` | ? | ? | ? | ? | ? | API-ключ | seed | URL por instalação; Credencial obrigatória; Preço = curadoria manual; Capabilities `false`; Token Saver desligado; Qual upstream serviu | `apps/api/src/infrastructure/llm/nine-router-provider.ts` |
 | `anthropic` | да | да | да | нет | нет | API-ключ | sync + seed | — | `apps/api/src/infrastructure/llm/anthropic-provider.ts` |
 | `bitdeer` | да | да | нет | нет | нет | API-ключ | seed | `Authorization: Bearer <chave>` CONFIRMADO; `GET /v1/models` existe e é autenticado; Três ids REAIS de modelo confirmados; Nenhuma peculiaridade de stream/erro confirmada | `apps/api/src/infrastructure/llm/bitdeer-provider.ts` |
 | `deepinfra` | да | да | да | нет | нет | API-ключ | sync + seed | O catálogo é PÚBLICO — sem autenticação nenhuma; `stream_options.include_usage` confirmado como suportado; Erro no formato padrão | `apps/api/src/infrastructure/llm/deepinfra-provider.ts` |

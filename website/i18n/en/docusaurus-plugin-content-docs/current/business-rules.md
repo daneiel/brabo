@@ -25030,3 +25030,10 @@ without saying which.
 - **Where:** `apps/engine/lib/engine/agents/po_server.ex:614` (`build_kickoff`)
 - **Test:** `apps/engine/test/engine/agents/po_server_test.exs:518` (read before write; batch by layer: epics → stories → tasks)
 - **Origin:** probe of AT-591 (21/10), implemented in AT-596 (EP-026).
+
+### RN-909 — 9Router is the 10th provider: per-installation URL, mandatory credential, public price curated {#rn-909}
+
+- **Rule:** the `9router` provider talks to a gateway on the owner's machine. The base URL is `NINE_ROUTER_BASE_URL` (default `http://host.docker.internal:20128/v1`), read on each use by the provider and by the connection test (`GET /models` with the key). The credential is mandatory. The provider capabilities are `false` (only `listModels` and `streaming`, required by the contract, are `true`) until a smoke with a key proves the rest (ADR 0041). Model prices are not discovered: they enter by manual curation and, by the owner's decision, a subscription model records the equivalent API's public price, not zero. The provider sends `x-9router-token-saver: off` on every call, so 9Router does not compress the `tool_result`.
+- **Where:** `apps/api/src/infrastructure/llm/nine-router-provider.ts:83` (`nineRouterConfig`)
+- **Test:** `apps/api/test/infrastructure/llm/nine-router-provider.contract.spec.ts:109` (capabilities, URL from the environment, header, connection test, synthetic fixture parse); manual smoke in `nine-router-provider.smoke.spec.ts`.
+- **Origin:** AT-576a (EP-026), ADR 0222, owner's decision of 22/10.

@@ -22549,7 +22549,8 @@
               "together",
               "deepinfra",
               "bitdeer",
-              "vultr"
+              "vultr",
+              "9router"
             ],
             "example": "openrouter"
           },
@@ -23811,7 +23812,8 @@
               "together",
               "deepinfra",
               "bitdeer",
-              "vultr"
+              "vultr",
+              "9router"
             ],
             "example": "openai"
           },
@@ -26161,7 +26163,8 @@
               "together",
               "deepinfra",
               "bitdeer",
-              "vultr"
+              "vultr",
+              "9router"
             ],
             "example": "anthropic"
           },

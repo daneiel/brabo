@@ -25063,3 +25063,10 @@ sem dizer qual.
 - **Onde:** `apps/engine/lib/engine/agents/po_server.ex:614` (`build_kickoff`)
 - **Teste:** `apps/engine/test/engine/agents/po_server_test.exs:518` (leitura antes da escrita; lote em camadas épicos → histórias → tarefas)
 - **Origem:** sonda da AT-591 (21/10), implementada na AT-596 (EP-026).
+
+### RN-909 — O 9Router é o 10º provider: URL por instalação, credencial obrigatória, preço público de curadoria {#rn-909}
+
+- **Regra:** o provider `9router` fala com um gateway na máquina do dono. A URL base é `NINE_ROUTER_BASE_URL` (padrão `http://host.docker.internal:20128/v1`), lida a cada uso pelo provider e pelo teste de conexão (`GET /models` com a chave). A credencial é obrigatória. As capabilities de provider são `false` (só `listModels` e `streaming`, exigido pelo contrato, são `true`) até um smoke com chave provar o resto (ADR 0041). O preço dos modelos não é descoberto: entra por curadoria manual e, por decisão do dono, modelo de assinatura registra o preço público da API equivalente, não zero. O provider manda `x-9router-token-saver: off` em toda chamada, para o 9Router não comprimir o `tool_result`.
+- **Onde:** `apps/api/src/infrastructure/llm/nine-router-provider.ts:83` (`nineRouterConfig`)
+- **Teste:** `apps/api/test/infrastructure/llm/nine-router-provider.contract.spec.ts:109` (capabilities, URL do ambiente, cabeçalho, teste de conexão, parse da fixture sintética); smoke manual em `nine-router-provider.smoke.spec.ts`.
+- **Origem:** AT-576a (EP-026), ADR 0222, decisão do dono de 22/10.
