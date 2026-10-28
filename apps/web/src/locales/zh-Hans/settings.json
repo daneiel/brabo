@@ -369,7 +369,8 @@
       "remove": "移除",
       "updateCatalog": "更新目录",
       "updateCatalogAria": "更新 {{label}} 的模型目录",
-      "noModels": "目录中暂无此 provider 的模型——登记密钥不会发现模型。"
+      "noModels": "目录中暂无此 provider 的模型——登记密钥不会发现模型。",
+      "noCatalogSource": "此 provider 不提供模型列表，因此无需同步——其模型通过 seed 导入。"
     },
     "toast": {
       "saved": "凭据已保存",
