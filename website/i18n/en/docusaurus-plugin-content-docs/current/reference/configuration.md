@@ -749,7 +749,7 @@ release with a `musllinux` wheel on PyPI and changing both Dockerfiles in the
 same PR.
 
 The engine images run **Elixir 1.20.4 / OTP 29.1.1** on Alpine 3.24 (builder
-`hexpm/elixir:1.20.4-erlang-29.1.1-alpine-3.24.2`, runtime `alpine:3.24.2`,
+`hexpm/elixir:1.20.4-erlang-29.1.1-alpine-3.24.2`, runtime `alpine:3.24.3`,
 both by digest — [ADR 0209](../adr/0209-engine-em-otp-29.md)). OTP below 29.1
 aborts at boot under Alpine 3.24's musl 1.2.6 on hosts whose CPU has AMX
 (`sys_sigaltstack(): Internal error`); do not lower the OTP without lowering the
