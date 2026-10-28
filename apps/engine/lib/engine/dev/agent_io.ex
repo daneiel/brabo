@@ -529,8 +529,9 @@ defmodule Engine.Dev.AgentIo do
   # A branch fica em `base_preservada` e a próxima task deste agente (mesmo
   # módulo) nasce dela (`run_task/2`). Só em memória: restart do engine perde
   # o ponteiro, não o commit. O diagnóstico DIZ onde ficou o trabalho.
-  defp preservar_trabalho(%{worktree: path, branch: branch} = state, diagnosis)
-       when is_binary(path) and is_binary(branch) do
+  @doc false
+  def preservar_trabalho(%{worktree: path, branch: branch} = state, diagnosis)
+      when is_binary(path) and is_binary(branch) do
     case worktree_manager().preservar(state.project_id, path, state.agent_id, state.task_id) do
       {:ok, sha} ->
         {Map.put(state, :base_preservada, branch), %{branch: branch, commit: sha},
@@ -547,7 +548,7 @@ defmodule Engine.Dev.AgentIo do
     end
   end
 
-  defp preservar_trabalho(state, diagnosis), do: {state, nil, diagnosis}
+  def preservar_trabalho(state, diagnosis), do: {state, nil, diagnosis}
 
   # --- Estado durável / event log ---
 

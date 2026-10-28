@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- O dev agent interrompido por queda recente do engine retoma sozinho, 1×, do commit do worktree (`dev.working` com `cause: "retomada"`) em vez de bloquear a tarefa; a 2ª queda, queda fora da janela e `awaiting_approval` seguem bloqueando (AT-582, L3).
 - Fundação do diário vivo dos agentes (AT-582, ADR 0226 e RNs entram na L8 da mesma AT): a ferramenta `registrar_plano` grava o plano do próprio agente (`agent.plan`, até 12 passos, recusa nomeando o limite), o `Engine.Agents.Diario` projeta do event log onde o agente parou, a mensagem `system` efêmera `RetomadaDoTurno` entra na fachada do LLM, e o engine retoma UMA vez, no boot, o turno que o reinício matou há menos de 15 minutos (`agent.turn_resumed`). Turno velho ou já retomado continua só fechado. A `Reidratacao` mostra só o último plano de cada agente.
 - O raciocínio passa a ser contado no stream e abortado ao passar do orçamento do modelo (AT-589, RN-915, ADR 0224, migração 0075): `truncated` ganha o motivo `raciocinio`, o gasto abortado é estimado na hora (`price_implicit`) e reconciliado depois pelo `/generation` do OpenRouter; o `deepseek/deepseek-v4.1-flash` ganha orçamento 2048.
 - A mesma chamada de ferramenta que falha igual no turno recebe uma correção na 2ª vez, e na 3ª o agente para com `agent.error` de origem `modelo` (AT-588, RN-913); o contador zera a cada turno.
