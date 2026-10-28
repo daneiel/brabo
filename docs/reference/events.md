@@ -412,17 +412,18 @@ ele.
 
 > ⚠️ Bloco gerado por `pnpm docs:generate`. Não edite à mão — o próximo build o sobrescreve.
 
-Extraídos dos pontos de emissão: **111 identificadores**, dos quais **4** não estão descritos acima.
+Extraídos dos pontos de emissão: **114 identificadores**, dos quais **7** não estão descritos acima.
 
 - `action.failed` <sub>(apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts)</sub>
 - `agent.activated` <sub>(apps/api/src/application/use-cases/agents/activate-agent.use-case.ts)</sub>
 - `agent.delta` <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub>
 - `agent.done` <sub>(apps/engine/lib/engine/agents/turno_assincrono.ex)</sub>
 - `agent.error` <sub>(apps/api/src/application/use-cases/agents/aceite-implicito-do-po.use-case.ts)</sub>
-- `agent.plan` — ⚠️ **não descrito acima** <sub>(apps/engine/lib/engine/agents/reidratacao.ex)</sub>
+- `agent.plan` — ⚠️ **não descrito acima** <sub>(apps/engine/lib/engine/agents/diario.ex)</sub>
 - `agent.response` <sub>(apps/api/src/application/use-cases/llm/send-chat-message.use-case.ts)</sub>
-- `agent.status` <sub>(apps/engine/lib/engine/agents/turno_assincrono.ex)</sub>
+- `agent.status` <sub>(apps/engine/lib/engine/agents/diario.ex)</sub>
 - `agent.turn` <sub>(apps/engine/lib/engine/harness/tool_loop.ex)</sub>
+- `agent.turn_resumed` — ⚠️ **não descrito acima** <sub>(apps/engine/lib/engine/agents/diario.ex)</sub>
 - `anamnese.agent_deviation` <sub>(apps/engine/lib/engine/anamnese/tools/report_agent_deviation.ex)</sub>
 - `anamnese.analysis` <sub>(apps/engine/lib/engine/workers/anamnese_worker.ex)</sub>
 - `anamnese.profile_updated` <sub>(apps/api/src/application/use-cases/anamnese/record-proficiency.use-case.ts)</sub>
@@ -494,6 +495,8 @@ Extraídos dos pontos de emissão: **111 identificadores**, dos quais **4** não
 - `handoff.offered` <sub>(apps/api/src/application/use-cases/agents/create-handoff.use-case.ts)</sub>
 - `handoff.superseded` <sub>(apps/api/src/application/use-cases/agents/ciclo-de-vida-do-handoff.service.ts)</sub>
 - `infra.artifact_blocked` <sub>(apps/api/src/application/use-cases/execution/mark-infra-artifact-blocked.use-case.ts)</sub>
+- `infra.correction_delivered` — ⚠️ **não descrito acima** <sub>(apps/engine/lib/engine/infra/infra_lead_server.ex)</sub>
+- `infra.correction_queued` — ⚠️ **não descrito acima** <sub>(apps/engine/lib/engine/infra/infra_lead_server.ex)</sub>
 - `infra.gate_changed` <sub>(apps/api/src/application/use-cases/execution/record-infra-gate-verdict.use-case.ts)</sub>
 - `instruction.rolled_back` <sub>(apps/api/src/application/use-cases/instructions/rollback-instruction.use-case.ts)</sub>
 - `llm.turn` <sub>(apps/engine/lib/engine/sessions/engine_api_client.ex)</sub>

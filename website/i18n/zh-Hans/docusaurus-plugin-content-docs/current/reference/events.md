@@ -321,17 +321,18 @@ sequenceDiagram
 
 > ⚠️ 此区块由 `pnpm docs:generate` 生成。请勿手动编辑——下次构建会覆盖它。
 
-从发出点提取：**111 个标识符**，其中 **4** 个未在上文描述。
+从发出点提取：**114 个标识符**，其中 **7** 个未在上文描述。
 
 - `action.failed` <sub>(apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts)</sub>
 - `agent.activated` <sub>(apps/api/src/application/use-cases/agents/activate-agent.use-case.ts)</sub>
 - `agent.delta` <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub>
 - `agent.done` <sub>(apps/engine/lib/engine/agents/turno_assincrono.ex)</sub>
 - `agent.error` <sub>(apps/api/src/application/use-cases/agents/aceite-implicito-do-po.use-case.ts)</sub>
-- `agent.plan` — ⚠️ **上文未描述** <sub>(apps/engine/lib/engine/agents/reidratacao.ex)</sub>
+- `agent.plan` — ⚠️ **上文未描述** <sub>(apps/engine/lib/engine/agents/diario.ex)</sub>
 - `agent.response` <sub>(apps/api/src/application/use-cases/llm/send-chat-message.use-case.ts)</sub>
-- `agent.status` <sub>(apps/engine/lib/engine/agents/turno_assincrono.ex)</sub>
+- `agent.status` <sub>(apps/engine/lib/engine/agents/diario.ex)</sub>
 - `agent.turn` <sub>(apps/engine/lib/engine/harness/tool_loop.ex)</sub>
+- `agent.turn_resumed` — ⚠️ **上文未描述** <sub>(apps/engine/lib/engine/agents/diario.ex)</sub>
 - `anamnese.agent_deviation` <sub>(apps/engine/lib/engine/anamnese/tools/report_agent_deviation.ex)</sub>
 - `anamnese.analysis` <sub>(apps/engine/lib/engine/workers/anamnese_worker.ex)</sub>
 - `anamnese.profile_updated` <sub>(apps/api/src/application/use-cases/anamnese/record-proficiency.use-case.ts)</sub>
@@ -403,6 +404,8 @@ sequenceDiagram
 - `handoff.offered` <sub>(apps/api/src/application/use-cases/agents/create-handoff.use-case.ts)</sub>
 - `handoff.superseded` <sub>(apps/api/src/application/use-cases/agents/ciclo-de-vida-do-handoff.service.ts)</sub>
 - `infra.artifact_blocked` <sub>(apps/api/src/application/use-cases/execution/mark-infra-artifact-blocked.use-case.ts)</sub>
+- `infra.correction_delivered` — ⚠️ **上文未描述** <sub>(apps/engine/lib/engine/infra/infra_lead_server.ex)</sub>
+- `infra.correction_queued` — ⚠️ **上文未描述** <sub>(apps/engine/lib/engine/infra/infra_lead_server.ex)</sub>
 - `infra.gate_changed` <sub>(apps/api/src/application/use-cases/execution/record-infra-gate-verdict.use-case.ts)</sub>
 - `instruction.rolled_back` <sub>(apps/api/src/application/use-cases/instructions/rollback-instruction.use-case.ts)</sub>
 - `llm.turn` <sub>(apps/engine/lib/engine/sessions/engine_api_client.ex)</sub>

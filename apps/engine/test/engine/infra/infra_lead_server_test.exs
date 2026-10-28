@@ -1964,4 +1964,92 @@ defmodule Engine.Infra.InfraLeadServerTest do
       end
     end
   end
+
+  describe "AT-582: correções duráveis e retomada" do
+    defp queued(id, seq) do
+      %{
+        "type" => "infra.correction_queued",
+        "seq" => seq,
+        "payload" => %{"id" => id, "gate" => "qa", "reason" => "lint", "diagnosis" => "DL3006"}
+      }
+    end
+
+    defp delivered(id, seq),
+      do: %{"type" => "infra.correction_delivered", "seq" => seq, "payload" => %{"id" => id}}
+
+    test "correct/3 grava infra.correction_queued antes do cast, com o id" do
+      sid = Ecto.UUID.generate()
+      {:ok, _} = Registry.register(Engine.Sessions.Registry, "infra:" <> sid, nil)
+
+      assert :ok = InfraLeadServer.correct("p1", sid, %{gate: "qa", reason: "x", diagnosis: "y"})
+
+      assert_received {:event_appended, "p1", ^sid,
+                       %{type: "infra.correction_queued", payload: %{id: id, gate: "qa"}}}
+
+      assert_received {:"$gen_cast", {:correct, %{id: ^id}}}
+    end
+
+    test "a correção enfileirada sobrevive ao reinício e é entregue (grava _delivered)" do
+      sid = Ecto.UUID.generate()
+      Process.put(:fake_events, [queued("c1", 1)])
+      Process.put(:fake_infra_context, %{"moduleMap" => nil, "adrs" => []})
+      Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("corrigido")])
+
+      {:ok, state} = InfraLeadServer.init({sid, Ecto.UUID.generate()})
+      assert [%{id: "c1", gate: "qa"}] = state.correcoes_pendentes
+      assert_received :entregar_correcoes
+
+      assert {:noreply, depois} = InfraLeadServer.handle_info(:entregar_correcoes, state)
+      assert depois.correcoes_pendentes == []
+      assert %{turno_assincrono: %{task: %Task{}}} = depois
+
+      assert_received {:event_appended, _, _,
+                       %{type: "infra.correction_delivered", payload: %{id: "c1"}}}
+
+      _ = InfraLeadServer.handle_cast(:cancel, depois)
+    end
+
+    test "a correção já entregue não é reentregue" do
+      Process.put(:fake_events, [queued("c1", 1), delivered("c1", 2), queued("c2", 3)])
+      {:ok, state} = InfraLeadServer.init({Ecto.UUID.generate(), Ecto.UUID.generate()})
+      assert [%{id: "c2"}] = state.correcoes_pendentes
+
+      Process.put(:fake_events, [queued("c1", 1), delivered("c1", 2)])
+      {:ok, vazio} = InfraLeadServer.init({Ecto.UUID.generate(), Ecto.UUID.generate()})
+      assert vazio.correcoes_pendentes == []
+      refute_received {:event_appended, _, _, %{type: "infra.correction_delivered"}}
+    end
+
+    test "turno órfão recente: o init agenda a retomada e ela sobe um turno" do
+      agora = DateTime.utc_now() |> DateTime.add(-10, :second) |> DateTime.to_iso8601()
+
+      Process.put(:fake_events, [
+        %{
+          "type" => "agent.status",
+          "actor" => %{"kind" => "agent", "id" => "infra"},
+          "payload" => %{"status" => "working"},
+          "createdAt" => agora
+        },
+        %{
+          "type" => "agent.turn_resumed",
+          "actor" => %{"kind" => "agent", "id" => "infra"},
+          "payload" => %{},
+          "createdAt" => agora
+        }
+      ])
+
+      Process.put(:fake_infra_context, %{"moduleMap" => nil, "adrs" => []})
+      Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("retomei")])
+
+      {:ok, state} = InfraLeadServer.init({Ecto.UUID.generate(), Ecto.UUID.generate()})
+      assert is_function(state.montar_turno_de_retomada, 1)
+      assert_received :retomar_turno_interrompido
+
+      assert {:noreply, retomado} =
+               InfraLeadServer.handle_info(:retomar_turno_interrompido, state)
+
+      assert %{turno_assincrono: %{task: %Task{}}} = retomado
+      _ = InfraLeadServer.handle_cast(:cancel, retomado)
+    end
+  end
 end
