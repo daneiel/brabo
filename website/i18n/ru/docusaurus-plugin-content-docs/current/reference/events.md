@@ -413,17 +413,18 @@ sequenceDiagram
 
 > ⚠️ Блок сгенерирован `pnpm docs:generate`. Не редактируйте вручную — следующая сборка его перезапишет.
 
-Извлечено из точек генерации идентификаторов: **111**, из них не описаны выше: **4**.
+Извлечено из точек генерации идентификаторов: **112**, из них не описаны выше: **5**.
 
 - `action.failed` <sub>(apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts)</sub>
 - `agent.activated` <sub>(apps/api/src/application/use-cases/agents/activate-agent.use-case.ts)</sub>
 - `agent.delta` <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub>
 - `agent.done` <sub>(apps/engine/lib/engine/agents/turno_assincrono.ex)</sub>
 - `agent.error` <sub>(apps/api/src/application/use-cases/agents/aceite-implicito-do-po.use-case.ts)</sub>
-- `agent.plan` — ⚠️ **не описан выше** <sub>(apps/engine/lib/engine/agents/reidratacao.ex)</sub>
+- `agent.plan` — ⚠️ **не описан выше** <sub>(apps/engine/lib/engine/agents/diario.ex)</sub>
 - `agent.response` <sub>(apps/api/src/application/use-cases/llm/send-chat-message.use-case.ts)</sub>
-- `agent.status` <sub>(apps/engine/lib/engine/agents/turno_assincrono.ex)</sub>
+- `agent.status` <sub>(apps/engine/lib/engine/agents/diario.ex)</sub>
 - `agent.turn` <sub>(apps/engine/lib/engine/harness/tool_loop.ex)</sub>
+- `agent.turn_resumed` — ⚠️ **не описан выше** <sub>(apps/engine/lib/engine/agents/diario.ex)</sub>
 - `anamnese.agent_deviation` <sub>(apps/engine/lib/engine/anamnese/tools/report_agent_deviation.ex)</sub>
 - `anamnese.analysis` <sub>(apps/engine/lib/engine/workers/anamnese_worker.ex)</sub>
 - `anamnese.profile_updated` <sub>(apps/api/src/application/use-cases/anamnese/record-proficiency.use-case.ts)</sub>

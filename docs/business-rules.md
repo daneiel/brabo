@@ -277,7 +277,7 @@ one.
 
 - **Where:** `apps/web/src/lib/session-destinatario.ts:290`
   (`useDestinatarioDoChat`, since RN-631),
-  `apps/web/src/lib/api-client.ts:1124` (`getSessionModelBinding`, the
+  `apps/web/src/lib/api-client.ts:1134` (`getSessionModelBinding`, the
   `agentId`), `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:166`
   (`getSessionBinding`, `@Query('agentId')`)
 - **Test:** `apps/web/src/routes/SessionPage.destinatario-do-chat.test.tsx`
@@ -17668,8 +17668,8 @@ cláusula própria no engine. Nenhuma mudança de api nem de engine.
   (`useAtivadosNaSessaoInteira`), `:141` (`ativadosSemJanela`);
   `apps/web/src/routes/SessionComposer.tsx:287` (`destinatarioRow`), `:193`
   (`ofertasForaDaJanela`); `apps/web/src/routes/SessionPage.tsx:350`
-  (`aceitarHandoff`); `apps/web/src/routes/session-timeline-montagem.tsx:547`
-  (`handoffIdDoEvento`), `:555` (`origem`); `apps/web/src/lib/session-handoffs.ts:68`
+  (`aceitarHandoff`); `apps/web/src/routes/session-timeline-montagem.tsx:555`
+  (`handoffIdDoEvento`), `:563` (`origem`); `apps/web/src/lib/session-handoffs.ts:68`
   (`activeFor`), `:120` (`ofertasAcionaveis`), `:142` (`ofertasForaDaJanela`)
 - **Teste:** `apps/web/src/routes/SessionPage.destinatario-do-chat.test.tsx`
   (escolha → envio ao escolhido; dois agentes sem escolha não enviam e dizem
@@ -18495,7 +18495,7 @@ não medido em projeto real, e declarado.
   (`TETO_DE_CHAVES_NO_LOTE`), `:37` (`lerListaDeChaves`), `:77`
   (`ResolveModelBindingsEmLoteUseCase`);
   `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:233`
-  (`getResolvedBindings`); `apps/web/src/lib/api-client.ts:1149`
+  (`getResolvedBindings`); `apps/web/src/lib/api-client.ts:1159`
   (`getResolvedModelBindings`); `apps/web/src/lib/bindings-resolvidos.ts:43`
   (`invalidarBindingsResolvidos`), `:69` (`useBindingsResolvidos`), `:111`
   (`useBindingsDosAgentes`); `apps/web/src/routes/ProjectOverviewTab.tsx:144`
@@ -18641,7 +18641,7 @@ sempre dele.
 - **Código:** `apps/web/src/lib/autor-da-mensagem.ts:52` (`autorDaMensagem`);
   `apps/web/src/lib/autoria-da-sessao.ts:45` (`useAutoriaDaSessao`), `:18`
   (`comporMembros`);
-  `apps/web/src/routes/session-timeline-montagem.tsx:154` (`rotuloDoAutor`),
+  `apps/web/src/routes/session-timeline-montagem.tsx:162` (`rotuloDoAutor`),
   `:405` (o `chat.message`), `:687` (a devolução de história);
   `apps/web/src/routes/SessionPage.tsx:133` (`autoria`)
 - **Teste:** `apps/web/src/routes/SessionPage.autor-da-mensagem.test.tsx:147`
@@ -19300,13 +19300,13 @@ segundo `executed` para o mesmo merge.
   `apps/api/src/infrastructure/git/local-git-provider.ts:339` (`GitPullRequestAlreadyMergedError`);
   `apps/web/src/lib/gate-do-merge.ts:19` (`gatePendenteNoMerge`);
   `apps/web/src/routes/ProjectPrsTab.tsx:232` (`gatePendenteNoMerge`);
-  `apps/web/src/routes/session-timeline-montagem.tsx:1129` (`gatePendenteNoMerge`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:1154` (`gatePendenteNoMerge`)
   `apps/web/src/routes/ProjectPrsTab.tsx:232` (`gatePendenteNoMerge`);
-  `apps/web/src/routes/session-timeline-montagem.tsx:1129` (`gatePendenteNoMerge`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:1154` (`gatePendenteNoMerge`)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:664`
   (`merge_ja_proposto`), `:687` (`pr_ja_mergeado` — caso de falha), `:696`
 
-  `apps/web/src/routes/session-timeline-montagem.tsx:1129` (`gatePendenteNoMerge`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:1154` (`gatePendenteNoMerge`)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:664`
   (`merge_ja_proposto`), `:687` (`pr_ja_mergeado` — caso de falha), `:696`
   (negada não bloqueia, outra PR não colide — caminho feliz);
@@ -20340,7 +20340,7 @@ no fio: fica de fora até alguém pedir.
 
 - **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:128` (`loop`);
   `apps/engine/lib/engine/workers/anamnese_worker.ex:157` (`build_ctx`);
-  `apps/web/src/routes/session-timeline-montagem.tsx:115` (`ehDaAnamnese`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:123` (`ehDaAnamnese`)
 - **Teste:** `apps/engine/test/engine/workers/anamnese_worker_test.exs:253`
   (o texto sai `anamnese.analysis`; `agent.response` nunca é gravado — caso de
   falha); `apps/web/src/routes/session-timeline-montagem.falha-de-turno.test.tsx:86`
@@ -20521,7 +20521,7 @@ para `passos`: o acúmulo já era gravado inteiro antes da revisão.
 - **Onde:** `apps/engine/lib/engine/agents/texto_do_turno.ex:88` (`descarregar`);
   `:116` (`juntar`); `:51` (`descarregar_com_modelo`); `:65` (`payload_do_turno`);
   `apps/engine/lib/engine/agents/reidratacao.ex:187` (`acumular`);
-  `apps/web/src/routes/session-timeline-montagem.tsx:809` (`passos`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:817` (`passos`)
 - **Teste:** `apps/engine/test/engine/agents/texto_do_turno_test.exs:43` (três
   voltas: fecho e dois passos), `:56` (uma volta, sem `passos`), `:60` (termina
   em formulário); `apps/engine/test/engine/agents/reidratacao_test.exs`
@@ -21509,7 +21509,7 @@ O kickoff do PO diz as três coisas.
 - **Onde:** `apps/web/src/lib/mensagem-otimista.ts:14` (`otimistaJaNoLog`),
   `apps/web/src/lib/mensagem-otimista.ts:22` (`nomeDaMensagemOtimista`),
   `apps/web/src/routes/SessionPage.tsx:790` (`otimistaJaNoLog`),
-  `apps/web/src/routes/session-timeline-montagem.tsx:609`
+  `apps/web/src/routes/session-timeline-montagem.tsx:617`
   (`handleActivateExecution`)
 - **Teste:** `apps/web/src/lib/mensagem-otimista.test.ts` (feliz: o id no log
   tira a otimista; falha: id ausente ou de outro tipo a mantém; o nome é o da
@@ -22158,7 +22158,7 @@ sem dizer qual.
   fecho tem o botão; os passos do turno não. A tela reconhece a linha pelo
   texto, e as duas frases são o contrato com `Engine.Harness.RespostaCortada`.
 - **Onde:** `apps/web/src/lib/resposta-cortada.ts:14` (`respostaCortada`),
-  `apps/web/src/routes/session-timeline-montagem.tsx:889` (`respostaCortada`),
+  `apps/web/src/routes/session-timeline-montagem.tsx:896` (`respostaCortada`),
   `apps/web/src/routes/SessionPage.tsx:447` (`continuarRespostaCortada`),
   `:686` (`enviarMensagem`)
 - **Teste:** `apps/web/src/lib/resposta-cortada.test.ts` (`respostaCortada
@@ -23576,7 +23576,7 @@ sem dizer qual.
   genérico, nunca para caixa vazia.
 - **Onde:** `apps/web/src/components/ui/AvatarDoAgente.tsx:22` (`AvatarDoAgente`),
   `apps/web/src/routes/SessionFio.tsx:284` (`BolhaDoStreaming`),
-  `apps/web/src/routes/session-timeline-montagem.tsx:120` (`montarTimeline`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:127` (`montarTimeline`)
 - **Teste:** `apps/web/src/routes/SessionFio.at503.test.tsx` ("a bolha
   persistida usa o avatar do agente, não o do modelo; o modelo segue no chip",
   "a bolha em streaming usa o MESMO avatar"; degradação: "sem agente
@@ -23903,7 +23903,7 @@ sem dizer qual.
 - **Onde:** `apps/web/src/lib/acoes-no-bloco.ts:48` (`useAcaoEstaNoBloco`),
   `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:460` (`useRegistrarAcoesNoBloco`),
   `apps/web/src/components/CartaoOuReferenciaNoFio.tsx:11` (`CartaoOuReferenciaNoFio`),
-  `apps/web/src/routes/session-timeline-montagem.tsx:1166` (`CartaoOuReferenciaNoFio`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:1191` (`CartaoOuReferenciaNoFio`)
 - **Teste:** `apps/web/src/components/CartaoOuReferenciaNoFio.test.tsx`,
   `apps/web/src/components/PendenciasDeOutrasSessoes.test.tsx` ("a PR com os
   gates aprovados aparece…")
@@ -24097,7 +24097,7 @@ sem dizer qual.
 - **Onde:** `apps/web/src/components/RodarNaSuaMaquina.tsx:32` (`RodarNaSuaMaquina`), `:20` (`urlLocalSegura`),
   `:13` (`releSeInfraAbriuPr`),
   `apps/web/src/routes/ProjectOverviewTab.tsx:202` (`releSeInfraAbriuPr`),
-  `apps/web/src/lib/api-client.ts:832` (`getRunInstructions`)
+  `apps/web/src/lib/api-client.ts:842` (`getRunInstructions`)
 - **Teste:** `apps/web/src/components/RodarNaSuaMaquina.test.tsx` ("mostra
   comando, copiar, link local e a nota de não verificado"; "sem declaração
   (null) o cartão não aparece"; "só localhost/127.0.0.1 com porta vira link";
@@ -25030,7 +25030,7 @@ sem dizer qual.
   sessão ativa; `dev-*`/`qa-*` ganham o texto, sem botão. O botão nunca continua
   sozinho.
 - **Onde:** `apps/engine/lib/engine/agents/po_server.ex:263` (`run_turn`);
-  `apps/web/src/routes/session-timeline-montagem.tsx:976` (`conversacional`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:1001` (`conversacional`)
 - **Teste:** `apps/engine/test/engine/agents/po_server_test.exs:548` (gravado e
   regrasSemHistoria; sem a leitura, sem a chave);
   `apps/web/src/routes/session-timeline-montagem.falha-de-turno.test.tsx:108`
