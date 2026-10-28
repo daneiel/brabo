@@ -115,7 +115,8 @@ defmodule Engine.Agents.CriativoServer do
        tool_specs: [
          EmitArtifact.spec(),
          AskStructuredQuestions.spec(),
-         DeclareOpenQuestion.spec()
+         DeclareOpenQuestion.spec(),
+         Engine.Harness.Tools.RegistrarPlano.spec()
        ],
        # Guardado enquanto o turno roda numa Task supervisionada, fora do
        # `handle_call` que bloqueava o processo inteiro — é o que permite um
@@ -123,6 +124,9 @@ defmodule Engine.Agents.CriativoServer do
        # RN-673: a fila de mensagens que chegaram com turno em curso,
        # reconstruída do log (sobrevive a restart), e como montar o turno
        # que a lê. Ver `TurnoAssincrono.receber_mensagem/4`.
+       # AT-582: a retomada do turno interrompido, ANTES da fila (a fila espera o fim dela).
+       retomada_agendada: TurnoAssincrono.retomada_ao_subir(project_id, session_id, @agent),
+       montar_turno_de_retomada: &turno_de_retomada/1,
        fila_de_mensagens: TurnoAssincrono.fila_ao_subir(project_id, session_id, @agent),
        montar_turno_de_mensagem: &turno_de_mensagem/2,
        turno_assincrono: nil
@@ -199,6 +203,12 @@ defmodule Engine.Agents.CriativoServer do
   defp turno_de_mensagem(state, text) do
     work = state |> append(user_msg(text)) |> compact()
     fn -> run_turn(work) end
+  end
+
+  # AT-582: o turno de retomada não tem fala nova do usuário; o histórico
+  # reidratado já termina nela e a orientação vai efêmera (`RetomadaDoTurno`).
+  defp turno_de_retomada(state) do
+    fn -> run_turn(compact(state)) end
   end
 
   @impl true
@@ -452,6 +462,12 @@ defmodule Engine.Agents.CriativoServer do
   # ADR 0214 (RN-862): a dúvida deixada para o usuário vira pendência.
   defp dispatch_tool(%{"name" => "declare_open_question", "arguments" => _} = call, state) do
     executar(call, state, "declare_open_question", fn a -> DeclareOpenQuestion.run(a, state) end)
+  end
+
+  defp dispatch_tool(%{"name" => "registrar_plano", "arguments" => _} = call, state) do
+    executar(call, state, "registrar_plano", fn a ->
+      Engine.Harness.Tools.RegistrarPlano.run(a, state)
+    end)
   end
 
   # Nome que não é nenhuma das duas: o modelo inventou a ferramenta. Volta como

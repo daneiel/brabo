@@ -15615,8 +15615,8 @@ amostrado nesta mudança (o item (c) da [RN-589](#rn-589)); a saída do
 PRÓPRIO agente escreveu, e o corte é a única contenção — é o item (d) da
 [RN-589](#rn-589) com o primeiro caso concreto.
 
-- **Código:** `apps/engine/lib/engine/agents/dev_lead_server.ex:317`
-  (`handle_info/2` do `action_settled`, o `tool.result` em `:271`), `:730`
+- **Código:** `apps/engine/lib/engine/agents/dev_lead_server.ex:330`
+  (`handle_info/2` do `action_settled`, o `tool.result` em `:271`), `:746`
   (`sentido_do_desfecho/1`);
   `apps/engine/lib/engine/infra/infra_lead_server.ex:1052`
   (`registrar_resultado/4`), `:317` (a recusa de `propose_infra_pr`)
@@ -19671,7 +19671,7 @@ história do PO, prontidão do Criativo, oferta de handoff do Arquiteto.
   (`fora_do_historico`), `:143` (`texto_do_turno`), `:164`
   (`acordar_pendentes`);
   `apps/engine/lib/engine/agents/reidratacao.ex:160` (`fora_do_historico`);
-  `apps/engine/lib/engine/agents/dev_lead_server.ex:249` (`_mensagem_id`);
+  `apps/engine/lib/engine/agents/dev_lead_server.ex:254` (`_mensagem_id`);
   `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:393`
   (`cancel_queued_message`), `:461` (`responder_ao_aceite`);
   `apps/api/src/application/use-cases/agents/cancel-queued-agent-message.use-case.ts:35`
@@ -20472,8 +20472,8 @@ nem a que o modelo copie do histórico. O catálogo volta intacto no turno
 seguinte; o turno normal continua com `emit_artifact` e
 `ask_structured_questions`.
 
-- **Onde:** `apps/engine/lib/engine/agents/criativo_server.ex:218` (`executar_confirm_readiness`);
-  `:263` (`ferramentas_da_prontidao`)
+- **Onde:** `apps/engine/lib/engine/agents/criativo_server.ex:228` (`executar_confirm_readiness`);
+  `:273` (`ferramentas_da_prontidao`)
 - **Teste:** `apps/engine/test/engine/agents/criativo_server_test.exs:172` (o turno
   vai com `tools: []` e não grava regra nem pergunta) e `:192` (regressão: o turno
   normal mantém as duas ferramentas)
@@ -20551,8 +20551,8 @@ origem `infra`. Regra descoberta, ou backlog sem regra/história, não é julgad
 A instrução do PO passa a exigir tarefa por história. Quem cria as tarefas é o
 PO (decisão do agente principal na AT-364: ele já tem `create_task`).
 
-- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:513` (`fechar_handoff`);
-  `:540` (`oferecer_handoff`)
+- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:528` (`fechar_handoff`);
+  `:555` (`oferecer_handoff`)
 - **Teste:** `apps/engine/test/engine/agents/po_server_test.exs:592` (oferece e
   não repete), `:610` (história sem tarefa: não oferece, nomeia)
 - **Origem:** AT-364
@@ -20579,12 +20579,12 @@ histórias em que chamou `assess_implementability`.
 
 - **Onde:** `apps/engine/lib/engine/agents/dev_lead_tools.ex:339` (`module_map_vigente`);
   `:324` (`spec_read_backlog`); `:340` (`tarefas_do_backlog`);
-  `apps/engine/lib/engine/agents/dev_lead_server.ex:568` (`kickoff_instruction`);
+  `apps/engine/lib/engine/agents/dev_lead_server.ex:584` (`kickoff_instruction`);
 
 - **Onde:** `apps/engine/lib/engine/agents/dev_lead_tools.ex:339` (`module_map_vigente`);
   `:324` (`spec_read_backlog`); `:372` (`tarefas_do_backlog`);
-  `apps/engine/lib/engine/agents/dev_lead_server.ex:568` (`kickoff_instruction`);
-  `:402` (`run_turn`)
+  `apps/engine/lib/engine/agents/dev_lead_server.ex:584` (`kickoff_instruction`);
+  `:397` (`run_turn`)
 - **Teste:** `apps/engine/test/engine/agents/dev_lead_server_test.exs:164` (o
   mapa vigente chega ao kickoff e o tipo antigo não é lido), o teste seguinte
   (sem mapa, diz que não há — caso de falha) e `:202` (plano recusado pela api →
@@ -20680,7 +20680,7 @@ Junto, o fechamento deixa de dizer que parear uma pasta pela tela do projeto
 
   `:97` (`anexar`), `apps/engine/lib/engine/sessions/engine_api_client.ex:700`
   (`llm_turn`), `apps/engine/lib/engine/harness/agents.ex:23` (`identity`),
-  `apps/engine/lib/engine/agents/arquiteto_server.ex:399` (`build_kickoff`)
+  `apps/engine/lib/engine/agents/arquiteto_server.ex:415` (`build_kickoff`)
 - **Teste:** `apps/engine/test/engine/harness/fluxo_do_time_test.exs`
   ("todo papel citado existe no fluxo.yml como ativo"; caso de falha: "nenhum
   texto cita etapa/agente fora do fluxo"),
@@ -21282,7 +21282,7 @@ turno continua.
   (`executar`), `:73` (`coagir`), `:56` (`falha_interna?`);
   `apps/engine/lib/engine/agents/resultado_de_ferramenta.ex:29` (`payload`);
   `apps/engine/lib/engine/harness/tool_loop.ex:368` (`run_direct`);
-  `apps/engine/lib/engine/agents/arquiteto_server.ex:342`
+  `apps/engine/lib/engine/agents/arquiteto_server.ex:357`
   (`executar_ferramenta`, o mesmo helper nos outros seis servidores)
 - **Teste:** `apps/engine/test/engine/harness/argumentos_de_ferramenta_test.exs`
   (`create_story` com ids em string JSON grava os ids; `create_c4_diagram` com
@@ -22905,7 +22905,7 @@ sem dizer qual.
   outra variante — o dev agent atualizar o README em toda tarefa que mexe em
   configuração/entrada — NÃO foi feita: exigiria classificar a tarefa no
   `AmbienteDoAgente` ou no `report_done`, regra nova de código — declarado.
-- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:598` (`kickoff_instruction`)
+- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:613` (`kickoff_instruction`)
 - **Teste:** `apps/engine/test/engine/agents/po_server_test.exs:438` (a
   instrução de kickoff traz o critério do README)
 - **Origem:** AT-466 (TP-01 de 09/10: o `encurtador-api` saiu com um README só
@@ -23883,7 +23883,7 @@ sem dizer qual.
   não afirmar estado de ADR diferente. Leitura que falha diz "NÃO CONSEGUI LER"
   e manda dizer que não sabe — nunca "pendente".
 - **Onde:** `apps/engine/lib/engine/harness/tools/listar_adrs_propostas.ex:50`
-  (`contexto_de_prontidao`), `apps/engine/lib/engine/agents/arquiteto_server.ex:230`
+  (`contexto_de_prontidao`), `apps/engine/lib/engine/agents/arquiteto_server.ex:242`
   (`contexto_de_prontidao`).
 - **Teste:** `apps/engine/test/engine/harness/tools/listar_adrs_propostas_test.exs`
   ("contexto_de_prontidao/2 (RN-849)").
@@ -24832,7 +24832,7 @@ sem dizer qual.
   sugestão, nunca inventa nem omite. Régua de PROMPT, no molde da
   [RN-790](#rn-790): nenhuma ferramenta recusa história sem borda. O PO NÃO
   passa a reescrever `business_rule`; Criativo, QA, schema e gate não mudam.
-- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:666` (`obrigacoes`)
+- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:681` (`obrigacoes`)
 - **Teste:** `apps/engine/test/engine/agents/po_server_test.exs:438` (a
   instrução de kickoff traz a obrigação da borda) e `:460` (sem event log, o
   kickoff ainda a carrega)
@@ -24900,7 +24900,7 @@ sem dizer qual.
   `heartbeat_timeout` 26 s depois de o usuário sair da tela. Presença por aba
   do projeto NÃO entra ([RN-064](business-rules/custo.md#rn-064)).
 - **Onde:** `apps/engine/lib/engine/agents/falha_de_turno.ex:63` (`origem`),
-  `apps/engine/lib/engine/agents/po_server.ex:308` (`gravar_texto_do_turno`)
+  `apps/engine/lib/engine/agents/po_server.ex:320` (`gravar_texto_do_turno`)
 - **Teste:** `apps/engine/test/engine/agents/po_server_test.exs:194` e
   `apps/engine/test/engine/agents/texto_do_turno_test.exs:96`
 - **Origem:** AT-572 (TP-01 18ª, achado 4)
@@ -25029,7 +25029,7 @@ sem dizer qual.
   RN-673 absorve com turno em curso) só para os sete conversacionais com a
   sessão ativa; `dev-*`/`qa-*` ganham o texto, sem botão. O botão nunca continua
   sozinho.
-- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:263` (`run_turn`);
+- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:254` (`run_turn`);
   `apps/web/src/routes/session-timeline-montagem.tsx:976` (`conversacional`)
 - **Teste:** `apps/engine/test/engine/agents/po_server_test.exs:548` (gravado e
   regrasSemHistoria; sem a leitura, sem a chave);
@@ -25061,7 +25061,7 @@ sem dizer qual.
 ### RN-908 — O kickoff do PO pede o backlog em lote, depois de ler, em camadas {#rn-908}
 
 - **Regra:** o kickoff do PO manda, nesta ordem: ler `listar_regras_de_negocio` e `listar_backlog` na mesma resposta, sem escrita junto; depois todos os épicos numa resposta só; depois todas as histórias, com o `epic_id` devolvido; depois todas as tarefas, com o `story_id` devolvido. Nunca recria épico que já existe, e no máximo cerca de 10 chamadas de ferramenta por resposta. Motivo medido: sem o pedido de lote, o nemotron faz 1 ferramenta por resposta e o qwen faz 3; com ele, 9 em cada (`parallel_tool_calls` não mudou nada). Ler primeiro é o que impede o qwen de criar épicos sem ler o backlog. Não altera o teto `@max_iterations` (RN-166).
-- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:610` (`build_kickoff`)
+- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:625` (`build_kickoff`)
 - **Teste:** `apps/engine/test/engine/agents/po_server_test.exs:518` (leitura antes da escrita; lote em camadas épicos → histórias → tarefas)
 - **Origem:** sonda da AT-591 (21/10), implementada na AT-596 (EP-026).
 

@@ -357,7 +357,8 @@ defmodule Engine.Agents.DiarioVivoTest do
         ev("agent.turn_resumed", "criativo", %{}, agora(5))
       ])
 
-      state = %{state | session_id: sid}
+      # o init dos servidores já guarda a função: aqui ela é tirada para provar o no-op
+      state = %{state | session_id: sid} |> Map.delete(:montar_turno_de_retomada)
       assert {:ok, ^state} = TurnoAssincrono.tratar_resultado(:retomar_turno_interrompido, state)
     end
   end
