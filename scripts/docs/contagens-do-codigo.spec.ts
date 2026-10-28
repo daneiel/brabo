@@ -129,7 +129,7 @@ describe('contagens derivadas do código (AT-123)', () => {
 
   it('mudar a PROSA sem mudar o artefato reprova como DESATUAL', () => {
     const ctx = contexto([
-      { arquivo: '.claude/contexto/stack.md', de: /já são (\S+) na raiz/, para: 'já são treze na raiz' },
+      { arquivo: '.claude/contexto/stack.md', de: /já são (\S+(?: e \S+)?) na raiz/, para: 'já são treze na raiz' },
     ]);
     expect(estadosDa('overridesRaiz', ctx)).toEqual(['DESATUAL']);
   });

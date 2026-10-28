@@ -18,7 +18,7 @@
   MESMO `ArtifactEventTranslator` do `ArtifactProjector`, sem backup, sem tocar
   a outbox e sem apagar nada
 - `apps/engine`: Elixir/OTP + Phoenix (canais) + Oban (filas no Postgres) —
-  Elixir 1.20.4 / OTP 29.1.1 sobre Alpine 3.24.2 em dev, produção e CI (ADR
+  Elixir 1.20.4 / OTP 29.1.1 sobre Alpine 3.24 (builder 3.24.2, runtime 3.24.3, a mesma musl 1.2.6) em dev, produção e CI (ADR
   0209): OTP abaixo de 29.1 aborta no boot sob musl ≥ 1.2.6 em host com AMX
   (`sys_sigaltstack`, erlang/otp#11349) — não desça o OTP sem descer a musl
 - `apps/web`: React 19 + Vite + TanStack Query/Router; `react-i18next`+
@@ -65,7 +65,7 @@
   produto da árvore do Docusaurus, que nunca chega a imagem nenhuma.
   Dependência vulnerável TRANSITIVA se fecha por `overrides` — e eles moram em
   `pnpm-workspace.yaml` (raiz) e `website/pnpm-workspace.yaml`, NUNCA em
-  `package.json`: já são vinte na raiz e dezessete no website, cada um com o
+  `package.json`: já são vinte e cinco na raiz e dezenove no website, cada um com o
   advisory e o caminho do `pnpm why` no comentário ao lado. Duas disciplinas,
   escritas no topo do arquivo: a chave é a FAIXA VULNERÁVEL do aviso (nunca a
   versão instalada hoje) e a faixa é presa à LINHA MAIOR afetada. Faixa que já

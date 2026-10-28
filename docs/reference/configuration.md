@@ -749,7 +749,7 @@ no mesmo PR.
 
 As imagens do engine rodam **Elixir 1.20.4 / OTP 29.1.1** sobre Alpine 3.24
 (builder `hexpm/elixir:1.20.4-erlang-29.1.1-alpine-3.24.2`, runtime
-`alpine:3.24.2`, as duas por digest — [ADR 0209](../adr/0209-engine-em-otp-29.md)).
+`alpine:3.24.3`, as duas por digest — [ADR 0209](../adr/0209-engine-em-otp-29.md)).
 OTP abaixo de 29.1 aborta no boot sob a musl 1.2.6 do Alpine 3.24 em hosts
 cuja CPU tem AMX (`sys_sigaltstack(): Internal error`); não desça o OTP sem
 descer a musl. Nada vai no `.env`.

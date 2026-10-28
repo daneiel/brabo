@@ -223,9 +223,9 @@ foram raciocínio).
    no protocolo dele (`cache_read_input_tokens`) e isso NÃO é lido aqui — fica
    `null`, declarado; o Ollama não informa.
 
-- **Onde:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:352` (`cachedInputTokens`),
-  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:711` (`contagem`),
-  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:179` (`cachedInputTokens`),
+- **Onde:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:356` (`cachedInputTokens`),
+  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:715` (`contagem`),
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:192` (`cachedInputTokens`),
   `apps/api/src/application/use-cases/llm/record-llm-usage.use-case.ts:113` (`cachedInputTokens`),
   `apps/api/src/db/schema/llm.ts:380` (`cachedInputTokens`),
   `apps/api/scripts/medir-execucao.ts:89` (`formatarParteMedida`)
@@ -271,10 +271,10 @@ gasto somam. Sem ele, o preço congelado do catálogo produz o número, como no
    cobrada por fora — a linha cai no catálogo.
 
 - **Onde:** `apps/api/src/domain/llm/custo-da-chamada.ts:43` (`custoDaChamada`),
-  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:235` (`custoDaChamada`),
-  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:248` (`custoDaChamada`),
-  `apps/api/src/application/use-cases/llm/send-chat-message.use-case.ts:234` (`custoDaChamada`),
-  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:348` (`extrairCustoReal`),
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:246` (`custoDaChamada`),
+  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:259` (`custoDaChamada`),
+  `apps/api/src/application/use-cases/llm/send-chat-message.use-case.ts:264` (`custoDaChamada`),
+  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:352` (`extrairCustoReal`),
   `apps/api/src/infrastructure/llm/openrouter-provider.ts:253` (`extrairCustoRealOpenRouter`),
   `apps/api/src/db/schema/llm.ts:363` (`priceImplicit`)
 - **Teste:** `test/domain/llm/custo-da-chamada.spec.ts`,
@@ -3185,7 +3185,7 @@ quatro pontos, TTL de 5 min — https://openrouter.ai/docs/features/prompt-cachi
    metering pela [RN-666](#rn-666).
 
 - **Código:** `apps/api/src/infrastructure/llm/openrouter-provider.ts:283` (`marcarCacheDePromptOpenRouter`);
-  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:555` (`mensagens`)
+  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:559` (`mensagens`)
 - **Teste:** `apps/api/test/infrastructure/llm/openrouter-provider.contract.spec.ts` ("pontos de cache de prompt (RN-892)": ligada marca os dois pontos; desligada é byte a byte; capability sem hook falha — caso de falha)
 - **Origem:** AT-543
 
@@ -3212,7 +3212,7 @@ acerto de cache caindo. O Brabo agora manda a chave.
 
 - **Código:** `apps/api/src/infrastructure/llm/openrouter-provider.ts:217` (`campoDeSessaoOpenRouter`);
   `apps/api/src/domain/llm/routing-preference.ts:88` (`chaveDeSessao`);
-  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:192` (`chaveDeSessao`)
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:205` (`chaveDeSessao`)
 - **Teste:** `apps/api/test/infrastructure/llm/openrouter-provider.contract.spec.ts` ("chave de sessão (ADR 0221, RN-907)": com capability e chave leva `session_id`; sem chave ou desligada não leva; capability sem hook falha — caso de falha); `apps/api/test/application/use-cases/llm/stream-llm-turn.use-case.spec.ts`; `run-llm-turn.use-case.spec.ts`; smoke `openrouter-provider.sessao.smoke.spec.ts`
 - **Origem:** AT-580; ADR [0221](../adr/0221-upstream-preso-por-sessao.md)
 
@@ -3232,9 +3232,23 @@ Complementa a [RN-914](../business-rules.md#rn-914) ([ADR 0224](../adr/0224-raci
    24 h; 404 ou erro deixam a linha como está. A estimativa vai para `catalog_cost_micros`.
    O `spentMicros` de budget/área não é corrigido.
 
-- **Código:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:331` (`limiteDeRaciocinio`);
+- **Código:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:335` (`limiteDeRaciocinio`);
   `apps/api/src/application/use-cases/llm/reconciliar-custo-estimado.use-case.ts:57` (`execute`)
 - **Teste:** `apps/api/test/infrastructure/llm/raciocinio-abortado.spec.ts` (aborta e estima; sem orçamento não conta);
   `apps/api/test/application/use-cases/llm/reconciliar-custo-estimado.use-case.spec.ts` (200 troca, 404 mantém);
   `apps/api/test/infrastructure/persistence/token-usage.repository.spec.ts` (troca uma única vez)
 - **Origem:** AT-589; ADR [0224](../adr/0224-raciocinio-abortado-no-stream.md)
+
+### RN-916 — Resposta cortada pelo raciocínio é retentada UMA vez com o raciocínio desligado {#rn-916}
+
+Revisa a [RN-782](../business-rules.md#rn-782) e a [RN-783](../business-rules.md#rn-783) (o desligado deixa de ser só dos dev agents) e convive com a [RN-915](#rn-915).
+
+1. **Gatilho.** A resposta veio `truncated`, sem texto e sem tool call, e o raciocínio comeu o orçamento: `reasoningTokens >= (reasoningBudget do modelo ?? 4096) − 256` (folga `FOLGA_DO_ORCAMENTO_DE_RACIOCINIO`, a mesma ordem de grandeza do erro do `usage` e da contagem caracteres/4), ou o stream foi abortado pela RN-915 (sem `usage`, o aborto já é a prova do estouro).
+2. **Uma vez.** A api repete a chamada com `reasoningOff`, nos três caminhos (`run-llm-turn`, `stream-llm-turn`, `send-chat-message`). Se a segunda também trunca, o desfecho é o de hoje (`truncated`); nunca há terceira. Nada foi emitido ao cliente na primeira, então a retentativa é invisível.
+3. **Metering.** As DUAS chamadas gravam linha em `token_usage`; a primeira, ao preço/custo que o provider informou (ou a estimativa abortada da RN-915, com reconciliação).
+4. **Não retenta** sem raciocínio pedido, com o raciocínio já desligado (dev agents, RN-783) ou com provider que não sabe desligá-lo (`aceitaRaciocinioDesligado`, hoje só o OpenRouter): ali o desfecho segue o de antes.
+
+- **Código:** `apps/api/src/domain/llm/raciocinio-do-agente.ts:66` (`devoRetentarSemRaciocinio`);
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:290` (`devoRetentarSemRaciocinio`)
+- **Teste:** `apps/api/test/domain/llm/raciocinio-do-agente.spec.ts` (folga, aborto e as recusas); `apps/api/test/application/use-cases/llm/run-llm-turn.use-case.spec.ts` (retenta e grava duas linhas; segunda truncada não tem terceira; truncada com texto não retenta); `apps/api/test/application/use-cases/llm/stream-llm-turn.use-case.spec.ts` (idem no stream)
+- **Origem:** AT-587
