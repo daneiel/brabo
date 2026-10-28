@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- Resposta cortada pelo raciocínio (`truncated`, sem texto nem tool call, raciocínio no orçamento ou abortado pela RN-915) é retentada UMA vez com o raciocínio desligado, nos três caminhos de turno, com as duas chamadas no metering (AT-587, RN-916); provider que não sabe desligar o raciocínio segue como antes.
 - O raciocínio passa a ser contado no stream e abortado ao passar do orçamento do modelo (AT-589, RN-915, ADR 0224, migração 0075): `truncated` ganha o motivo `raciocinio`, o gasto abortado é estimado na hora (`price_implicit`) e reconciliado depois pelo `/generation` do OpenRouter; o `deepseek/deepseek-v4.1-flash` ganha orçamento 2048.
 - A mesma chamada de ferramenta que falha igual no turno recebe uma correção na 2ª vez, e na 3ª o agente para com `agent.error` de origem `modelo` (AT-588, RN-913); o contador zera a cada turno.
 - O orçamento de raciocínio vira capability por modelo (AT-569, RN-914, ADR 0223, migração 0074): o `qwen/qwen3.7-flash` recebe `reasoning: { max_tokens: 2048 }`, provado em medição paga; o deepseek ignorou todos os campos e fica de fora, e `effort` nunca é enviado. Pendência: a tela do catálogo não mostra o orçamento.
