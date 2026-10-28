@@ -3,7 +3,7 @@ id: adr-index
 title: Decisões arquiteturais (ADR)
 sidebar_label: Índice de ADRs
 sidebar_position: 0
-description: Os 220 registros de decisão arquitetural do Brabo, agrupados por tema, com o que cada um decidiu.
+description: Os 221 registros de decisão arquitetural do Brabo, agrupados por tema, com o que cada um decidiu.
 keywords: [ADR, decisão arquitetural, arquitetura, histórico]
 ---
 
@@ -60,6 +60,7 @@ Como um agente roda — contexto, o laço de ferramentas, o turno conversacional
 | [0183](0183-reabrir-sessao-encerrada.md) | Uma sessão ENCERRADA pode ser REABERTA (AT-071): uma saída dos estados terminais, só para `active`, por rota própria (`POST .../sessions/:id/reopen`) e checagem própria da máquina de estados (`canReopen`) — a transição genérica continua recusando `closed → active`, e `closing → active` segue proibido. A linha volta a `active` com `closed_at`/`termination_reason` limpos, e um evento NOVO `session.reopened`, no mesmo `seq`, guarda o fechamento anterior; nenhum evento é editado, `kind` não é tocado. Três padrões PROVISÓRIOS aguardam o dono: mínimo `maintainer`, sem prazo, e sessão com `execution.activated` recusada com `409 sessao_com_execucao` para que `findActiveExecutionSession` não seja desviado. O `SessionLifecycleWorker` do engine ignora um fechamento que a reabertura já desfez; a segunda análise automática do Psicólogo continua bloqueada por `alreadyAnalyzed` |
 | [0184](0184-reabrir-sessao-decisoes-do-dono.md) | O dono responde aos três padrões PROVISÓRIOS do [ADR 0183](0183-reabrir-sessao-encerrada.md) (AT-337): reabrir uma sessão encerrada exige `developer` — o mesmo papel que a encerra pela transição genérica — em vez de `maintainer`, com `viewer` continuando 403; o sem prazo e a recusa `409 sessao_com_execucao` para sessão com `execution.activated` são CONFIRMADOS. O ADR 0183 não é editado |
 | [0191](0191-a-mensagem-com-turno-em-curso-entra-numa-fila.md) | Uma mensagem que chega enquanto um agente conversacional está no meio de um turno deixa de ser recusada com 409 `turno_em_andamento` (AT-267, decisão do dono de 01/10, revisando o ADR 0163 só para MENSAGENS): ela entra na FILA do agente em `TurnoAssincrono` — uma fila para os sete, os servidores só dizem como uma mensagem vira turno —, e quando o turno termina as mensagens pendentes são lidas JUNTAS, em ordem, em UM turno. O estado mora no event log (`chat.message_queued`/`_delivered`/`_cancelled`, todos levando o id do `chat.message`), nunca numa tabela: o `init/1` reconstrói a fila e o boot acorda quem tem pendente. Teto de 10 por agente e sessão (409 `fila_de_mensagens_cheia`); quem ENVIOU uma mensagem pendente pode cancelá-la. O Dev Lead suspenso para aprovação continua recusando; comandos que não são mensagem mantêm `turno_em_andamento` |
+| [0226](0226-diario-vivo-e-retomada-dos-agentes.md) | O agente escreve o plano (`registrar_plano`, `agent.plan`) e o diário o projeta do log; o turno que o reinício matou é retomado UMA vez, no boot, se recente (900 s), e depois só pelo botão "Retomar". Revisa o "nunca refeito" da RN-586/RN-778; dev retoma do commit, gate tem teto 1× no boot e no tick, correção do Infra Lead é durável. Referencia 0163, 0191, 0207 e 0221. |
 
 ## O time de agentes — papéis, áreas e handoffs {#tema-time}
 
@@ -361,7 +362,7 @@ Como a documentação é gerada, verificada e publicada.
 - **Um arquivo por decisão**, em `docs/adr/NNNN-short-title.md`, com
   numeração sequencial de 4 dígitos, e título `# ADR NNNN — <título>`
   ([0218](0218-titulo-de-adr-com-prefixo.md)). **Sem reuso de número**, nem quando um ADR
-  é substituído — o próximo é **0225**.
+  é substituído — o próximo é **0227**.
 - **Um tema por decisão**, escolhido por quem escreve o ADR, no mesmo
   PR: uma linha em `docs/adr/temas.yml` e a linha do índice sob a seção desse
   tema, em ordem numérica. Quem revisa confirma. Um tema novo é uma

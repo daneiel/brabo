@@ -284,8 +284,13 @@
   O turno que o REINÍCIO do engine matou no meio (o `working` fica gravado, o
   processo e a Task somem) fecha por evento NOVO — `agent.error` origem `infra`
   + `agent.status: idle` — no boot (`Rehydrator`) e no `init/1` dos sete
-  (`Engine.Agents.TurnoOrfao`, RN-586; o Infra Lead desde a RN-617); NUNCA
-  reexecuta o turno, e só fecha o que não tem processo vivo em nenhum nó. Sem
+  (`Engine.Agents.TurnoOrfao`, RN-586; o Infra Lead desde a RN-617), e só
+  fecha o que não tem processo vivo em nenhum nó. Desde o ADR 0226 (RN-920) o
+  turno RECENTE (≤ 900 s da última atividade) é retomado UMA vez no boot, com
+  a mensagem `system` efêmera do `Diario`/`RetomadaDoTurno` e o `agent.plan`
+  que o modelo escreveu (`registrar_plano`), nunca com mensagem falsa do
+  usuário; o velho ou já retomado só fecha, e o botão "Retomar" (RN-921) é sem
+  teto. Dev e gate seguem o mesmo teto 1× (RN-922/923); merge nunca. Sem
   isso a faixa da tela e o sinal de trabalho pendente da RN-064 ficavam presos
   para sempre.
 - O turno de um agente conversacional pode SUSPENDER esperando aprovação

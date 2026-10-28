@@ -15281,6 +15281,8 @@ fechamento não recupera o que o turno já tinha gravado antes da queda.
   varredura)
 - **Origem:** AT-156, herdada da AT-089 (RN-578) — reproduzida em 2026-09-19
 
+**Revisada pela [RN-920](#rn-920) ([ADR 0226](adr/0226-diario-vivo-e-retomada-dos-agentes.md)).** O item 2 ("o turno NUNCA é reexecutado") deixou de valer para o turno recente: a varredura de boot o retoma UMA vez, se a última atividade do agente tem até 900 s, com a mensagem efêmera do diário; o turno velho ou já retomado continua só fechado, e o botão "Retomar" ([RN-921](#rn-921)) é o caminho humano. Os itens 1, 3, 4 e 5 seguem.
+
 ### RN-587 — A mensagem que nenhum agente leu fica no fio dizendo isso: o engine grava o `agent.error` da recusa {#rn-587}
 
 A api grava o `chat.message` ANTES de perguntar ao engine (o engine reconstrói a
@@ -16512,6 +16514,8 @@ deu e com as quatro ferramentas.
   `scripts/ci/destinos-do-composer.spec.ts:174` (a guarda: `infra` é destino,
   com UMA cláusula que conversa)
 - **Origem:** AT-141 (decisão do mantenedor), aberta pela AT-098
+
+**Revisada pela [RN-924](#rn-924) ([ADR 0226](adr/0226-diario-vivo-e-retomada-dos-agentes.md)).** A fila `correcoes_pendentes`, só em memória, passou a ser durável (`infra.correction_queued`/`_delivered`), no molde da fila de mensagens; o turno órfão do Infra Lead segue a retomada da [RN-920](#rn-920).
 
 ### RN-621 — O resumo da compactação mantém o idioma original de cada turno, e não traduz citação nem código {#rn-621}
 
@@ -19697,6 +19701,8 @@ história do PO, prontidão do Criativo, oferta de handoff do Arquiteto.
 - **Origem:** AT-267 (item A21 da análise do uso real de 2026-09-29), decisão do
   dono de 01/10; [ADR 0191](adr/0191-a-mensagem-com-turno-em-curso-entra-numa-fila.md)
 
+**Complementada pela [RN-924](#rn-924).** A mesma ideia (estado da fila no log, reconstruído no `init/1`) vale para a correção de gate do Infra Lead, e a fila de mensagens espera o fim do turno retomado ([RN-920](#rn-920)).
+
 ### RN-677 — Aceitar o Dev Lead só o traz para planejar; APROVAR o plano dele é o que ativa a execução {#rn-677}
 
 > **Revisa a [RN-161](business-rules/autenticacao.md#rn-161)** (decisão do
@@ -21463,6 +21469,8 @@ O kickoff do PO diz as três coisas.
   ninguém pedir; ciclo de gate reiniciado com ação pendente e outro 8 h sem
   resgate), decisões do dono de 02/10
 
+**Revisada pela [RN-923](#rn-923) ([ADR 0226](adr/0226-diario-vivo-e-retomada-dos-agentes.md)).** O resgate AUTOMÁTICO (tick) de um ciclo vale uma vez: o segundo estaciona com `motivo: "retomada_automatica_ja_usada"` e espera o "Retomar gate", que zera o contador. O estacionamento de 2 h segue como está.
+
 ### RN-724 — O ciclo de gate estacionado volta por um botão no fio, não só pelo terminal do operador {#rn-724}
 
 - **Regra:** o ciclo de gate ESTACIONADO pelo resgate
@@ -22014,6 +22022,8 @@ sem dizer qual.
   infra e religa; `:normal` apaga a linha; sem linha não religa)
 - **Origem:** AT-428 (08/10: `CaseClauseError` em
   `Finch.HTTP1.Conn.receive_response/8` depois do timeout do `npm install`)
+
+**Revisada pela [RN-922](#rn-922) ([ADR 0226](adr/0226-diario-vivo-e-retomada-dos-agentes.md)).** O dev que cai com `working` recente e sem retomada anterior na tarefa deixa de ser bloqueado: preserva o worktree como commit e retoma a mesma tarefa uma vez. Fora disso o bloqueio descrito acima segue.
 
 ### RN-743 — Bloquear a task preserva o trabalho do worktree, e a próxima parte dele {#rn-743}
 
@@ -22893,6 +22903,9 @@ sem dizer qual.
   `idle` não; leitura que falha não fecha nada)
 - **Origem:** AT-465 (TP-01 de 09/10: a sessão `63a4e1aa` reagendada pelo
   heartbeat a cada 30 s por um `dev.working` sem processo)
+
+**Citada pela [RN-922](#rn-922) ([ADR 0226](adr/0226-diario-vivo-e-retomada-dos-agentes.md)), sem mudar:** o dev sem linha durável em `dev_agent_states` continua só fechado, porque não há tarefa a retomar.
+
 ### RN-790 — O README de como subir o entregável é critério do DoD que o PO escreve {#rn-790}
 
 - **Regra:** a instrução de kickoff do PO manda incluir, no DoD da história que
@@ -23456,6 +23469,9 @@ sem dizer qual.
   (RN-823)")
 - **Origem:** AT-495 (TP-01 de 10/10: o reinício das 18:51 matou o ciclo de QA
   da tarefa 10, e o dev ficou `awaiting_gate` 15 min sem tela nenhuma dizer)
+
+**Revisada pela [RN-923](#rn-923) ([ADR 0226](adr/0226-diario-vivo-e-retomada-dos-agentes.md)).** A retomada do boot conta como a automática do ciclo (`auto_resumes`): se o ciclo já usou a sua, o boot o estaciona em vez de redespachá-lo, e o subagente retomado leva o plano do último `agent.turn_resumed`.
+
 ### RN-820 — O container de projeto volta sozinho quando o daemon reinicia {#rn-820}
 
 - **Regra:** o `docker run` composto pelo `DockerViaCli` leva
@@ -25098,3 +25114,52 @@ sem dizer qual.
 - **Onde:** `apps/api/src/domain/llm/raciocinio-do-agente.ts:18` (`opcoesDeRaciocinio`), `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:540` (`controla`), `apps/api/src/db/schema/llm.ts:149` (`reasoningBudget`), `apps/api/src/db/migrations/0074_orcamento_de_raciocinio.sql`
 - **Teste:** `apps/api/test/infrastructure/llm/openai-compatible-provider.contract.spec.ts` (`modelo com orçamento de raciocínio (RN-914)`), `apps/api/test/domain/llm/raciocinio-do-agente.spec.ts`
 - **Origem:** AT-569 (medição paga de 22/10, `~/brabo-gravacoes/raciocinio-smoke-2026-10-22/resultados.jsonl`)
+
+### RN-918 — O agente escreve o próprio plano com `registrar_plano`, e o último `agent.plan` é o vigente {#rn-918}
+
+- **Regra:** `registrar_plano` grava `agent.plan` com o objetivo (até 200 caracteres) e de 1 a 12 passos de até 160 caracteres, cada um `pendente`, `em_curso`, `feito` ou `descartado`. Cada chamada manda o plano INTEIRO e substitui o anterior (o vigente é o último `agent.plan` do ator). Acima do teto a ferramenta RECUSA nomeando o limite, nunca corta. Não é `proposed_action` (escrever o plano não é efeito externo) nem artefato (fora de `ferramentas_de_artefato/0`) e a descrição não nomeia idioma (RN-667). Têm a ferramenta os seis conversacionais com o Infra Lead, o dev e os subagentes de QA e AppSec; ficam fora o subagente de validação de arquivo da Infra e o `context-manager`. A `Reidratacao` mostra só o último plano de cada ator, como uma nota, e pula o `tool.call`/`tool.result` da ferramenta.
+- **Onde:** `apps/engine/lib/engine/harness/tools/registrar_plano.ex:84` (`run`), `apps/engine/lib/engine/agents/reidratacao.ex:172` (`so_o_ultimo_plano_de_cada_ator`)
+- **Teste:** `apps/engine/test/engine/agents/diario_vivo_test.exs` (`registrar_plano`: grava, substitui, recusa acima do teto; `Reidratacao`: só o último plano)
+- **Origem:** AT-582 (EP-031), decisão do dono de 27/10; [ADR 0226](adr/0226-diario-vivo-e-retomada-dos-agentes.md).
+
+### RN-919 — O diário é a projeção do log mais o plano, sem tabela, e diz o que está confirmado e o que ficou sem desfecho {#rn-919}
+
+- **Regra:** `Engine.Agents.Diario` lê a cauda do log do agente, a partir do marco do turno (`agent.status: working`, o `dev.working` da tarefa ou o `agent.turn_resumed` do subagente de gate), e devolve o plano vigente, os efeitos confirmados (`tool.result` ok, `proposed_action.executed`, artefatos, commit preservado), as chamadas sem desfecho, as ações pendentes (`proposed_action.created` sem decisão), a última atividade e se a retomada automática já foi usada. A fonte de verdade continua o event log. `RetomadaDoTurno` transforma o diário numa mensagem `system` EFÊMERA (teto de 2 000 caracteres, depois de `DecisoesDoProjeto` e antes de `PerfilDoAutor`; no `ToolLoop`, por `ctx[:retomada]`): onde parou, o plano, o que não repetir, o que conferir antes e as ações pendentes que não se propõem de novo. Nunca é mensagem falsa do usuário. Push e PR são repetíveis (a PR aberta é reaproveitada, RN-812); merge NUNCA na retomada (RN-418); o engine não reexecuta chamada sem desfecho, quem decide é o modelo, depois de conferir o estado.
+- **Onde:** `apps/engine/lib/engine/agents/diario.ex:85` (`de_eventos`), `:255` (`retomada_usada?`), `apps/engine/lib/engine/harness/retomada_do_turno.ex:69` (`texto`)
+- **Teste:** `apps/engine/test/engine/agents/diario_vivo_test.exs` (`Diario.de_eventos/2`, `RetomadaDoTurno`, marco por opção e retomada usada)
+- **Origem:** AT-582 (EP-031); [ADR 0226](adr/0226-diario-vivo-e-retomada-dos-agentes.md).
+
+### RN-920 — O turno conversacional que o reinício matou é retomado UMA vez no boot, se recente {#rn-920}
+
+- **Regra:** revisa a [RN-586](#rn-586). A varredura de boot (`TurnoOrfao.varrer/2`) retoma o turno órfão cujo agente teve atividade há no máximo 900 s (`:retomada_automatica_janela_segundos`, a mesma régua da [RN-823](#rn-823), medida pela última atividade do agente e não pelo `working`) e que ainda não foi retomado: grava `agent.error` (`turno_interrompido_por_reinicio`, `retomada: "automatica"`), `agent.status: idle` e `agent.turn_resumed` (`automatica: true`) e acorda o agente, cujo `init/1` agenda `:retomar_turno_interrompido` ANTES da entrega da fila (RN-673). O teto é durável no log: um `agent.turn_resumed` do agente entre o último status não-`working` e o `working` órfão. Turno velho ou já retomado é só fechado, com a frase apontando o botão (RN-921). O `fechar_ao_subir/3` do `init/1` continua só fechando, e nó mudo conta como vivo (na dúvida nem fecha nem retoma). Resíduo declarado: dois nós subindo juntos, sem se enxergarem, podem retomar o mesmo turno duas vezes.
+- **Onde:** `apps/engine/lib/engine/agents/turno_orfao.ex:90` (`varrer`), `:181` (`retomar`), `apps/engine/lib/engine/agents/turno_assincrono.ex:418` (`retomada_ao_subir`), `:253` (`tratar_resultado`)
+- **Teste:** `apps/engine/test/engine/agents/diario_vivo_test.exs` (`TurnoOrfao.varrer/2: retomada automática 1× no boot`, `TurnoAssincrono: retomada no init`); `apps/engine/test/engine/agents/reidratacao_dos_seis_test.exs`
+- **Origem:** AT-582 (EP-031), decisão do dono de 27/10; [ADR 0226](adr/0226-diario-vivo-e-retomada-dos-agentes.md).
+
+### RN-921 — O botão "Retomar" do fio é gesto humano, sem teto, e só vale para o turno interrompido {#rn-921}
+
+- **Regra:** o `agent.error` com `reason: turno_interrompido_por_reinicio` ganha no fio o cartão `RetomarTurnoInterrompido` (objetivo e passos do último plano, "Parou em", botão). O clique chama `POST /projects/:projectId/sessions/:sessionId/agents/:agent/resume` (`developer`; 200 `{ok:true}`; 404 sessão alheia; 409 `turno_nao_interrompido` quando o último desfecho do agente não é a interrupção ou há turno em curso; 409 `agente_sem_retomada`), que pede ao engine `POST /internal/sessions/:sessionId/agent/resume`: ele grava `agent.turn_resumed` com `automatica: false` e manda `:retomar_turno_interrompido` à MESMA `TurnoAssincrono`. Sem teto: cada clique é uma retomada. O cartão some quando algo segue o erro, e a retomada automática vira uma linha discreta. O "sem desfecho" do diário NÃO aparece na tela (o evento não o traz).
+- **Onde:** `apps/api/src/interfaces/http/sessions/agent-resume.controller.ts:23` (`AgentResumeController`), `apps/api/src/application/use-cases/sessions/resume-agent-turn.use-case.ts:29` (`execute`), `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:612` (`resume`), `apps/web/src/routes/RetomarTurnoInterrompido.tsx:23` (`ehTurnoInterrompido`)
+- **Teste:** `apps/api/test/interfaces/http/sessions/agent-resume.controller.spec.ts` (feliz, duas recusas 409, 404, papel); `apps/web/src/routes/RetomarTurnoInterrompido.test.tsx`; ExUnit do `agent_command_controller`
+- **Origem:** AT-582 (EP-031); [ADR 0226](adr/0226-diario-vivo-e-retomada-dos-agentes.md).
+
+### RN-922 — O dev agent que cai dentro da janela retoma do commit da MESMA tarefa, uma vez {#rn-922}
+
+- **Regra:** revisa a [RN-742](#rn-742) (e cita a [RN-778](#rn-778), que continua só fechando o dev sem linha durável). O dev `working` reidratado, com a última atividade há no máximo 900 s e sem `dev.working` `cause: "retomada"` nesta tarefa, preserva o worktree como commit (RN-743), readota a MESMA tarefa (a branch dela, RN-779), grava `dev.working` com `cause: "retomada"` e o commit, e roda o laço com a mensagem do diário. A tarefa nunca sai de `in_progress`. A 2ª queda, a queda fora da janela, o `awaiting_approval` e qualquer falha da retomada bloqueiam como antes, e o "desbloquear" manual vira o "retomar do commit". Merge nunca ocorre aqui (RN-418). O contador de falha passageira da RN-864 é outra régua e não muda.
+- **Onde:** `apps/engine/lib/engine/dev/dev_agent_server.ex:1224` (`retomada_do_commit`), `:1250` (`retomar_do_commit`)
+- **Teste:** `apps/engine/test/engine/dev/retomada_do_commit_test.exs` (queda recente retoma; 2ª queda, fora da janela e `awaiting_approval` bloqueiam)
+- **Origem:** AT-582 (EP-031), decisão do dono de 27/10; [ADR 0226](adr/0226-diario-vivo-e-retomada-dos-agentes.md).
+
+### RN-923 — O resgate automático de gate vale uma vez por ciclo, no boot e no tick, e o "Retomar gate" zera o contador {#rn-923}
+
+- **Regra:** revisa a [RN-823](#rn-823) e a [RN-722](#rn-722). `engine.gate_states.auto_resumes` conta os redespachos automáticos do ciclo (no boot e no tick); com 1 já usada, o segundo resgate ESTACIONA (`gate.rescue_parked`, `motivo: "retomada_automatica_ja_usada"`) e espera o "Retomar gate" ([RN-724](#rn-724)), que não tem teto e ZERA o contador. O contador fica fora do `on_conflict` do upsert (sobrevive aos passos do ciclo) e some com a linha quando o ciclo termina. O estacionamento de 2 h não muda. Os subagentes de gate ganham `registrar_plano`; no redespacho o `ToolLoop` recebe `ctx[:retomada]` com o plano do último `agent.turn_resumed` do subagente, e a área continua sendo redespachada inteira. Resíduo declarado: um ciclo novo pode pegar um marco pendente com menos de 15 min, e o subagente de gate não abre `working`, então a retomada dele leva só o plano.
+- **Onde:** `apps/engine/lib/engine/gates/gate_rescuer.ex:183` (`retomar_ou_estacionar`), `:330` (`retomar_estacionado`), `apps/engine/lib/engine/gates/gate_state.ex:37` (`auto_resumes`)
+- **Teste:** `apps/engine/test/engine/gates/gate_rescuer_test.exs:501` (`teto de 1 retomada automática` no tick e no boot, e o manual zerando)
+- **Origem:** AT-582 (EP-031), decisões do dono de 27 e 28/10; [ADR 0226](adr/0226-diario-vivo-e-retomada-dos-agentes.md).
+
+### RN-924 — A correção de gate que chega ao Infra Lead com turno em curso é durável {#rn-924}
+
+- **Regra:** revisa a [RN-617](#rn-617), no molde da fila da [RN-673](#rn-673). `InfraLeadServer.correct/3` grava `infra.correction_queued` (`id`, `gate`, `reason`, diagnóstico até 2 000 caracteres) ANTES do cast e, sem processo, acorda o agente; `iniciar_correcao/2` grava `infra.correction_delivered` (`id`). O `init/1` reconstrói as pendentes (queued menos delivered) e as entrega depois do turno retomado e da fila de mensagens, e o `Rehydrator` acorda o Infra Lead que tem correção pendente no boot. Entregue não é reentregue. O Infra Lead também tem `registrar_plano` e a retomada da RN-920.
+- **Onde:** `apps/engine/lib/engine/infra/infra_lead_server.ex:1621` (`correct`), `:414` (`iniciar_correcao`), `:200` (`init`)
+- **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs:1980` (`correct/3 grava infra.correction_queued antes do cast`; a pendente sobrevive ao reinício e a entregue não é reentregue)
+- **Origem:** AT-582 (EP-031); [ADR 0226](adr/0226-diario-vivo-e-retomada-dos-agentes.md).
