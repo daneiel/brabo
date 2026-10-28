@@ -1049,7 +1049,7 @@
       "data": "2026-10-15"
     },
     "reference/internal-api.md": {
-      "defasada": false,
+      "defasada": true,
       "data": "2026-10-15"
     },
     "reference/llm-providers.md": {
@@ -2131,7 +2131,7 @@
       "data": "2026-10-15"
     },
     "reference/internal-api.md": {
-      "defasada": false,
+      "defasada": true,
       "data": "2026-10-15"
     },
     "reference/llm-providers.md": {
@@ -3213,7 +3213,7 @@
       "data": "2026-10-15"
     },
     "reference/internal-api.md": {
-      "defasada": false,
+      "defasada": true,
       "data": "2026-10-15"
     },
     "reference/llm-providers.md": {
