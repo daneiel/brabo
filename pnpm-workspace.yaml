@@ -56,7 +56,7 @@ overrides:
   #
   # Entrou primeiro no #70 como `js-yaml@5.2.1: 5.2.2`; virou faixa aqui pelo
   # motivo explicado na disciplina 1 acima.
-  js-yaml@>=5.0.0 <5.2.2: 5.2.2
+  js-yaml@>=5.0.0 <5.4.1: 5.4.1
   # MISTA (ADR 0117) — duplicada em `website/package.json`. `pnpm why -r`
   # mostra que esta faixa TAMBÉM entra por `apps/api`, via `eslint@9` →
   # `@eslint/eslintrc` (`js-yaml: ^4.1.0`) — não só pelo subárvore do
@@ -130,7 +130,7 @@ overrides:
   # O alvo é a 3.1.8 e não a 3.1.7 porque a moderada da mesma linha fecha no
   # mesmo passo, sem major nova. `pnpm why fast-uri -r`: `@nestjs/cli` →
   # `@angular-devkit/core` → `ajv`/`ajv-formats` (DEV-ONLY, igual acima).
-  fast-uri@>=3.0.0 <3.1.8: 3.1.8
+  fast-uri@>=3.0.0 <3.1.9: 3.1.9
   # MISTA — já era o exemplo canônico de override que serve aos dois lados
   # (ADR 0117 mantém a duplicação em `website/package.json`).
   #
@@ -146,7 +146,7 @@ overrides:
   # este override fixava virou a vulnerável. `pnpm why undici -r`: `jsdom` ←
   # `vitest` em `apps/api`, `apps/broker` e `apps/web` — DEV-ONLY no produto
   # (`pnpm why undici --prod -r` devolve VAZIO).
-  undici@>=7.0.0 <7.29.1: 7.29.1
+  undici@>=7.0.0 <7.30.1: 7.30.1
   # MISTA (ADR 0117) — duplicada em `website/package.json`. `@docusaurus/core`
   # declara `lodash` DIRETO, então o `website` também precisa da correção, não
   # só a api via `@nestjs/swagger` que o comentário original citava.
@@ -225,7 +225,7 @@ overrides:
   # Faixa presa à LINHA MAIOR (disciplina 2): o aviso começa em 2.2.5, mas só
   # a 6.x existe nesta árvore, e `>=2.x` arrastaria uma major inteira que
   # ninguém pede.
-  qs@>=6.0.0 <6.16.0: 6.16.0
+  qs@>=6.0.0 <6.16.1: 6.16.1
   # MISTA (ADR 0117) — duplicada em `website/package.json`. O `nanoid` chega
   # SÓ pelo `postcss@8.5.23` acima, e esse `postcss` agora tem pai dos dois
   # lados (`web` via `vite`, `website` via `postcss-preset-env`) — então os
@@ -248,7 +248,27 @@ overrides:
   # subárvore destacada executável, o que reabre XSS. Entra por
   # `mermaid@11.16.1` (ele próprio um override acima), que pede
   # `dompurify: ^3.3.3`; a 3.4.13 é a correção e cabe na faixa.
-  dompurify@>=3.0.0 <3.4.13: 3.4.13
+  dompurify@>=3.0.0 <3.4.17: 3.4.17
+  # AT-604 (27/10) — cinco faixas novas, todas TRANSITIVAS e sem bump de pai que
+  # resolva; cada uma é patch/minor da mesma linha.
+  #   body-parser   HIGH CVE-2026-111181 (`>=2.0.0 <2.4.0`, 2.4.0). `pnpm why
+  #                 body-parser -r`: `@nestjs/platform-express` → `express`. Chega
+  #                 na imagem da api (o Trivy acusa).
+  #   deepmerge     LOW (`<=4.3.1`) NÃO entra: a 4.3.2 que o aviso cita não está
+  #                 publicada (a última é a 4.3.1). DEV-ONLY (`@nestjs/cli` →
+  #                 `fork-ts-checker-webpack-plugin`); declarado no CHANGELOG.
+  #   fast-copy     MODERATE (`>=4.0.0 <4.1.0`, 4.1.0). `pnpm why fast-copy -r`:
+  #                 `pino-pretty` (api).
+  #   katex         LOW (`<0.18.2`, 0.18.2). `pnpm why katex -r`: `mermaid`.
+  #   source-map-js HIGH (`>=1.0.0 <1.2.2`, 1.2.2). `pnpm why source-map-js -r`:
+  #                 `postcss` ← `vite` e `magicast` ← `@vitest/coverage-v8`.
+  #   @vitest/mocker MODERATE (`<4.1.12`, 4.1.12). `pnpm why @vitest/mocker -r`:
+  #                 `vitest` fixa a versão exata; vite e vitest sobem direto.
+  body-parser@>=2.0.0 <2.4.0: 2.4.0
+  fast-copy@>=4.0.0 <4.1.0: 4.1.0
+  katex@<0.18.2: 0.18.2
+  source-map-js@>=1.0.0 <1.2.2: 1.2.2
+  '@vitest/mocker@<4.1.12': 4.1.12
   # PRODUTO-EXCLUSIVA — `pnpm why multer` mostra UM pai só, e ele é da árvore
   # do produto: `@nestjs/platform-express@11.1.28`, que é a última publicada,
   # então não há bump de upstream que resolva.
@@ -261,7 +281,7 @@ overrides:
   # A faixa cobre a linha 2 inteira, pela disciplina 1 acima: fixar
   # `multer@2.2.0` fecharia o buraco de hoje e o reabriria em silêncio no dia
   # em que o Nest pedisse 2.1.x.
-  multer@>=2.0.0 <2.3.0: 2.3.0
+  multer@>=2.0.0 <2.5.0: 2.5.0
   # PRODUTO — três linhas maiores do MESMO pacote, disjuntas, cada uma presa à
   # própria (disciplina 2); a 3.x não aparece na árvore e não entra. Nenhuma
   # existe no `website/` além da 1.x, que tem entrada própria lá.
