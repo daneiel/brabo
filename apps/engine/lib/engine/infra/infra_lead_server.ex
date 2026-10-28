@@ -191,8 +191,8 @@ defmodule Engine.Infra.InfraLeadServer do
   def cancelar_mensagem(session_id, mensagem_id, user_id),
     do: GenServer.call(via(session_id), {:cancelar_mensagem, mensagem_id, user_id}, 15_000)
 
-  @doc "Gate (QA/SecOps) pediu mudanças — mesma branch/PR, sem PR nova."
-  def correct(session_id, findings), do: GenServer.cast(via(session_id), {:correct, findings})
+  @correcao_enfileirada "infra.correction_queued"
+  @correcao_entregue "infra.correction_delivered"
 
   # --- Callbacks ---
 
@@ -217,6 +217,12 @@ defmodule Engine.Infra.InfraLeadServer do
 
     history = Reidratacao.historico(project_id, session_id, @agent)
 
+    # AT-582: a retomada (antes da fila) e as correções pendentes do log.
+    TurnoAssincrono.retomada_ao_subir(project_id, session_id, @agent)
+    fila = TurnoAssincrono.fila_ao_subir(project_id, session_id, @agent)
+    correcoes = ler_correcoes_pendentes(project_id, session_id)
+    if correcoes != [], do: send(self(), :entregar_correcoes)
+
     {:ok,
      %{
        session_id: session_id,
@@ -227,7 +233,8 @@ defmodule Engine.Infra.InfraLeadServer do
          ValidateInfraFile.spec(),
          ProposeInfraPr.spec(),
          ProposeContainerStart.spec(),
-         ProposeContainerStartViaRunner.spec()
+         ProposeContainerStartViaRunner.spec(),
+         Engine.Harness.Tools.RegistrarPlano.spec()
        ],
        # O turno em curso, numa Task supervisionada (RN-122, ADR 0163). Fora
        # do handler: é o que deixa um `:cancel` ("Parar") ser atendido no meio
@@ -236,15 +243,16 @@ defmodule Engine.Infra.InfraLeadServer do
        # RN-673: a fila de mensagens que chegaram com turno em curso,
        # reconstruída do log (sobrevive a restart), e como montar o turno
        # que a lê. Ver `TurnoAssincrono.receber_mensagem/4`.
-       fila_de_mensagens: TurnoAssincrono.fila_ao_subir(project_id, session_id, @agent),
+       fila_de_mensagens: fila,
        montar_turno_de_mensagem: &turno_de_mensagem/2,
+       montar_turno_de_retomada: &turno_de_retomada/1,
        turno_assincrono: nil,
        # Correção de gate (`{:correct, _}`) que chegou com um turno em curso:
        # guardada e rodada no fecho, na ordem de chegada. Antes da RN-617 o
        # turno bloqueava o processo e o cast esperava na caixa de mensagens;
        # sem esta fila o `TurnoAssincrono` a DESCARTARIA (sem `from`, com turno
        # em curso, ele só loga) — e o gate pediria mudança a ninguém.
-       correcoes_pendentes: []
+       correcoes_pendentes: correcoes
      }}
   end
 
@@ -339,6 +347,18 @@ defmodule Engine.Infra.InfraLeadServer do
     end
   end
 
+  # AT-582: o turno retomado não tem fala nova — o histórico e a mensagem
+  # efêmera da retomada dizem onde parou.
+  defp turno_de_retomada(state) do
+    work = compact(state)
+
+    fn ->
+      work
+      |> run_turn(Engine.Harness.FalhaRepetida.inicio_de_turno(@max_iterations))
+      |> concluir()
+    end
+  end
+
   # RN-672: o container do projeto chegou em `running` (o `container.running`
   # do outbox, entregue por `Engine.Workers.InfraOfereceDevLeadWorker`). Com
   # turno em curso não se faz nada aqui: o fecho dele (`concluir/1`) faz a
@@ -353,6 +373,10 @@ defmodule Engine.Infra.InfraLeadServer do
   end
 
   def handle_info({:container_running, _outro_projeto}, state), do: {:noreply, state}
+
+  # AT-582: entrega das correções reconstruídas do log no `init/1`; com turno
+  # de pé (retomada ou fila) elas esperam o fim dele (`handle_info` genérico).
+  def handle_info(:entregar_correcoes, state), do: {:noreply, drenar_correcao_pendente(state)}
 
   @impl true
   def handle_info(msg, state) do
@@ -388,6 +412,16 @@ defmodule Engine.Infra.InfraLeadServer do
   defp drenar_correcao_pendente(state), do: state
 
   defp iniciar_correcao(state, findings) do
+    if id = Map.get(findings, :id) do
+      _ =
+        EngineApiClient.append_event(state.project_id, state.session_id, %{
+          type: @correcao_entregue,
+          actorKind: "agent",
+          actorId: @agent,
+          payload: %{id: id}
+        })
+    end
+
     instruction =
       user_msg(
         "O gate #{findings.gate} pediu mudanças: #{findings.reason}\n" <>
@@ -1082,6 +1116,10 @@ defmodule Engine.Infra.InfraLeadServer do
   end
 
   defp run_tool("validate_infra_file", args, state), do: ValidateInfraFile.run(args, state)
+
+  defp run_tool("registrar_plano", args, state),
+    do: Engine.Harness.Tools.RegistrarPlano.run(args, state)
+
   defp run_tool(name, _args, _state), do: {:error, "ferramenta desconhecida: #{name}"}
 
   # --- Conclusão do turno: consolida com o Workflows e propõe (ou bloqueia) ---
@@ -1568,5 +1606,77 @@ defmodule Engine.Infra.InfraLeadServer do
   # grava é `TurnoAssincrono`, no aceite (`working`) e no fecho (`idle`).
   defp broadcast(state, event, payload) do
     EngineWeb.Endpoint.broadcast("session:" <> state.session_id, event, payload)
+  end
+
+  # --- AT-582: correções de gate duráveis ---
+
+  @doc """
+  Gate (QA/SecOps) pediu mudanças — mesma branch/PR, sem PR nova.
+
+  AT-582 (molde da RN-673): a correção é gravada em `infra.correction_queued`
+  ANTES de ir ao processo. Sem processo vivo ele é acordado e o `init/1` lê a
+  pendente do log; com processo, o cast leva o `id` para o fecho gravar
+  `infra.correction_delivered`.
+  """
+  def correct(project_id, session_id, findings) do
+    id = Ecto.UUID.generate()
+
+    _ =
+      EngineApiClient.append_event(project_id, session_id, %{
+        type: @correcao_enfileirada,
+        actorKind: "agent",
+        actorId: @agent,
+        payload: %{
+          id: id,
+          gate: findings.gate,
+          reason: findings.reason,
+          diagnosis: String.slice(to_string(findings.diagnosis), 0, 2_000)
+        }
+      })
+
+    case Registry.lookup(Engine.Sessions.Registry, "infra:" <> session_id) do
+      [] -> acordar(project_id, session_id)
+      _ -> GenServer.cast(via(session_id), {:correct, Map.put(findings, :id, id)})
+    end
+
+    :ok
+  end
+
+  @doc "Acorda o Infra Lead pelo supervisor (o `init/1` reconstrói o que estava pendente). Nunca lança."
+  def acordar(project_id, session_id),
+    do: Engine.Agents.FilaDeMensagens.acordar(@agent, session_id, project_id)
+
+  @doc "As correções de gate gravadas e ainda não entregues, na ordem do `seq`. Puro."
+  def correcoes_pendentes(eventos) do
+    ordenados = Enum.sort_by(eventos, &(&1["seq"] || 0))
+
+    entregues =
+      for %{"type" => @correcao_entregue, "payload" => %{"id" => id}} <- ordenados, do: id
+
+    for %{"type" => @correcao_enfileirada, "payload" => %{"id" => id} = p} <- ordenados,
+        id not in entregues do
+      %{id: id, gate: p["gate"], reason: p["reason"], diagnosis: p["diagnosis"]}
+    end
+  end
+
+  @doc "Lê do log as correções pendentes. Nunca lança: leitura que falha vira lista vazia."
+  def ler_correcoes_pendentes(project_id, session_id) do
+    case Reidratacao.eventos_do_tipo(project_id, session_id, [
+           @correcao_enfileirada,
+           @correcao_entregue
+         ]) do
+      {:ok, eventos, _} -> correcoes_pendentes(eventos)
+      _ -> []
+    end
+  rescue
+    _ -> []
+  end
+
+  @doc "Boot (Rehydrator): acorda o Infra Lead que tem correção pendente na sessão."
+  def acordar_se_ha_correcao(project_id, session_id) do
+    if ler_correcoes_pendentes(project_id, session_id) != [],
+      do: acordar(project_id, session_id)
+
+    :ok
   end
 end
