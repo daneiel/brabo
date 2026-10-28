@@ -53,14 +53,14 @@ overrides:
   # GHSA-qw65-cvwx-89v3 e GHSA-58mr-gqgx-xq4g (`=3.1.6`, a versão fixada aqui),
   # mais a MODERATE GHSA-hrr3-gc8f-f4qj (`<3.1.8`). Aqui o caminho é
   # `@docusaurus/types` → `webpack` → `schema-utils` → `ajv` → `fast-uri`.
-  fast-uri@>=3.0.0 <3.1.8: 3.1.8
+  fast-uri@>=3.0.0 <3.1.9: 3.1.9
   # Ver `../pnpm-workspace.yaml` — lá a origem é de PRODUÇÃO (`express` ←
   # `@nestjs/platform-express` e `@gitbeaker/rest`); aqui é `body-parser` ←
   # `express@4.22.2` ← `webpack-dev-server`, que só roda em `docusaurus start`
   # e nunca no `build`.
   #
   # 2 MODERATE · GHSA-4mjr-xmp4-gh2g e GHSA-x5fp-wj9c-mxmx (alertas #44/#45).
-  qs@>=6.0.0 <6.16.0: 6.16.0
+  qs@>=6.0.0 <6.16.1: 6.16.1
   # Ver `../pnpm-workspace.yaml` — já era o caso canônico de origem dupla:
   # `jsdom` em `apps/web`, `cheerio` aqui
   # (`@easyops-cn/docusaurus-search-local`).
@@ -68,7 +68,7 @@ overrides:
   # Teto subiu, 7.29.0 → 7.29.1 (30/09), junto com o da raiz: 2 HIGH ·
   # GHSA-rfgv-xxqx-mfg5 e GHSA-w293-vg96-wgc3, mais as moderadas/baixas da
   # mesma linha.
-  undici@>=7.0.0 <7.29.1: 7.29.1
+  undici@>=7.0.0 <7.30.1: 7.30.1
   # Ver `../pnpm-workspace.yaml` — mesma origem em `apps/api`, via
   # `@nestjs/swagger`, e aqui direto via `@docusaurus/core`.
   lodash@<4.18.0: 4.18.1
@@ -88,7 +88,12 @@ overrides:
   nanoid@>=3.0.0 <3.3.18: 3.3.18
   # Ver `../pnpm-workspace.yaml` — mesma origem em `apps/web` (o `dompurify`
   # só chega pelo `mermaid` acima, dos dois lados).
-  dompurify@>=3.0.0 <3.4.13: 3.4.13
+  dompurify@>=3.0.0 <3.4.17: 3.4.17
+  # AT-604 (27/10) — mesmas faixas da raiz (o body-parser do website é 1.x, fora da faixa) (ver `../pnpm-workspace.yaml`):
+  # katex (`@docusaurus/theme-mermaid` → `mermaid`) e source-map-js
+  # (`postcss`).
+  katex@<0.18.2: 0.18.2
+  source-map-js@>=1.0.0 <1.2.2: 1.2.2
   # WEBSITE-EXCLUSIVA — a raiz também tem a 1.x, com entrada própria lá (e
   # outras duas linhas maiores que aqui não existem).
   # `pnpm why brace-expansion`: `minimatch@3.1.5` ← `serve-handler` ← `@docusaurus/core`.
