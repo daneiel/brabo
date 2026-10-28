@@ -216,8 +216,8 @@ export const FONTES = {
 
 export const AFERICOES = [
   // overrides — "já são catorze na raiz e treze no website"
-  { arquivo: '.claude/contexto/stack.md', padrao: /já são (\S+) na raiz e \S+ no website/, fonte: 'overridesRaiz', forma: 'pt_m' },
-  { arquivo: '.claude/contexto/stack.md', padrao: /já são \S+ na raiz e (\S+) no website/, fonte: 'overridesWebsite', forma: 'pt_m' },
+  { arquivo: '.claude/contexto/stack.md', padrao: /já são (\S+(?: e \S+)?) na raiz e \S+(?: e \S+)? no website/, fonte: 'overridesRaiz', forma: 'pt_m' },
+  { arquivo: '.claude/contexto/stack.md', padrao: /já são \S+(?: e \S+)? na raiz e (\S+(?: e \S+)?) no website/, fonte: 'overridesWebsite', forma: 'pt_m' },
 
   // golden-set do RAG
   { arquivo: '.claude/contexto/estado-atual.md', padrao: /um corpo de (\S+) perguntas medindo/, fonte: 'goldenSetRagCasos', forma: 'digito' },
