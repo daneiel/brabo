@@ -27,6 +27,7 @@ defmodule Engine.Dev.Tools do
   # `ListarContratosDeModulos` (RN-684, ADR 0200): a interface de OUTRO módulo
   # vem do contrato que o Arquiteto declarou, nunca do worktree de outro dev.
   # LEITURA, `:direct`, sem parâmetro — o módulo do dev vem de `ctx.module`.
+  # AT-582: `RegistrarPlano` é o plano que o diário lê para retomar do passo seguinte.
   @registry [
     ReadFile,
     SearchWorkspace,
@@ -35,7 +36,6 @@ defmodule Engine.Dev.Tools do
     RagSearch,
     RagFeedback,
     ListarContratosDeModulos,
-    # AT-582: o plano do dev é o que o diário lê para retomar do passo seguinte.
     RegistrarPlano,
     ReportDone,
     ReportBlocked

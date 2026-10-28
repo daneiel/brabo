@@ -1228,31 +1228,15 @@ defmodule Engine.Dev.DevAgentServer do
            limit: Engine.Agents.Reidratacao.teto()
          ) do
       {:ok, eventos} ->
-        usada =
-          eventos
-          |> Enum.filter(&(&1["type"] == "dev.working" and ator(&1) == state.agent_id))
-          |> List.last()
-          |> case do
-            %{"payload" => %{"cause" => "retomada", "taskId" => ^tid}} -> true
-            _ -> false
-          end
+        opts = [marco: {:dev_working, tid}]
+        diario = Diario.de_eventos(eventos, state.agent_id, opts)
 
-        # O diário escopa por `agent.status: working`; o dev marca o turno com
-        # `dev.working`, então o espelhamos para o diário.
-        espelhado =
-          Enum.map(eventos, fn
-            %{"type" => "dev.working"} = e ->
-              e |> Map.put("type", "agent.status") |> Map.put("payload", %{"status" => "working"})
-
-            e ->
-              e
-          end)
-
-        diario = Diario.de_eventos(espelhado, state.agent_id)
-
-        if Diario.retomavel_no_boot?(%{diario | retomada_usada: usada}, DateTime.utc_now()),
-          do: {:ok, diario},
-          else: :bloquear
+        if Diario.retomavel_no_boot?(
+             %{diario | retomada_usada: Diario.retomada_usada?(eventos, state.agent_id, opts)},
+             DateTime.utc_now()
+           ),
+           do: {:ok, diario},
+           else: :bloquear
 
       _ ->
         :bloquear
@@ -1260,8 +1244,6 @@ defmodule Engine.Dev.DevAgentServer do
   end
 
   defp retomada_do_commit(_), do: :bloquear
-
-  defp ator(e), do: get_in(e, ["actor", "id"]) || e["actorId"]
 
   # Merge NUNCA aqui: o laço retomado é o de implementação, e merge em branch
   # protegida é sempre do usuário (RN-418). Qualquer falha bloqueia como antes.

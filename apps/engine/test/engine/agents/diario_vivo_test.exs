@@ -384,4 +384,38 @@ defmodule Engine.Agents.DiarioVivoTest do
       assert Enum.any?(textos, &(&1 =~ "create_story"))
     end
   end
+
+  describe "marco por opção e retomada usada (integração)" do
+    test "dev: escopo pelo dev.working da tarefa; retomada via cause" do
+      evs =
+        com_seq([
+          ev("dev.working", "dev-a", %{"taskId" => "t1"}),
+          ev("tool.call", "dev-a", %{"tool" => "write_file"})
+        ])
+
+      opts = [marco: {:dev_working, "t1"}]
+      assert Diario.de_eventos(evs, "dev-a", opts).retomar_de == 1
+      assert Diario.de_eventos(evs, "dev-a").retomar_de == nil
+      refute Diario.retomada_usada?(evs, "dev-a", opts)
+
+      usados =
+        evs ++ com_seq([ev("dev.working", "dev-a", %{"taskId" => "t1", "cause" => "retomada"})])
+
+      assert Diario.retomada_usada?(usados, "dev-a", opts)
+      refute Diario.retomada_usada?(usados, "dev-a", marco: {:dev_working, "t2"})
+    end
+
+    test "gate: só o turn_resumed marca o escopo" do
+      evs =
+        com_seq([
+          ev("agent.plan", "appsec", %{"objetivo" => "x", "passos" => [@passo]}),
+          ev("agent.turn_resumed", "appsec", %{}, agora())
+        ])
+
+      d = Diario.de_eventos(evs, "appsec", marco: :turn_resumed)
+      assert d.retomada_pendente
+      assert d.plano["objetivo"] == "x"
+      refute Diario.de_eventos(evs, "appsec").plano
+    end
+  end
 end

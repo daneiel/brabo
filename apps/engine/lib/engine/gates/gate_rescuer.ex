@@ -81,7 +81,7 @@ defmodule Engine.Gates.GateRescuer do
   import Ecto.Query, only: [from: 2]
 
   alias Engine.Dev.{DevAgentServer, DevAgentState}
-  alias Engine.Gates.{Dispatcher, GateState}
+  alias Engine.Gates.{Dispatcher, GateState, RetomadaDoGate}
   alias Engine.Sessions.EngineApiClient
 
   def run do
@@ -183,8 +183,9 @@ defmodule Engine.Gates.GateRescuer do
   defp retomar_ou_estacionar(%{auto_resumes: gastas} = linha) when gastas >= 1,
     do: estacionar(linha, "retomada_automatica_ja_usada")
 
-  defp retomar_ou_estacionar(%{project_id: project_id, task_id: task_id, gate: gate}) do
+  defp retomar_ou_estacionar(%{project_id: project_id, task_id: task_id, gate: gate} = linha) do
     :ok = GateState.gastar_retomada!(project_id, task_id, gate)
+    RetomadaDoGate.marcar(project_id, Map.get(linha, :session_id), gate)
     dispatch_fresh(gate, project_id, task_id)
   end
 
@@ -328,7 +329,7 @@ defmodule Engine.Gates.GateRescuer do
   """
   def retomar_estacionado(project_id, task_id, gate) do
     case GateState.get(project_id, task_id, gate) do
-      %{parked_at: %DateTime{}} ->
+      %{parked_at: %DateTime{}} = linha ->
         Logger.warning(
           "GateRescuer: retomando por gesto humano o ciclo #{gate} estacionado " <>
             "(task #{task_id}, projeto #{project_id})"
@@ -337,6 +338,7 @@ defmodule Engine.Gates.GateRescuer do
         # Gesto humano devolve o orçamento: sem isso, uma queda logo depois do
         # "Retomar" estacionaria o ciclo de novo sem ninguém olhar.
         :ok = GateState.zerar_retomadas!(project_id, task_id, gate)
+        RetomadaDoGate.marcar(project_id, Map.get(linha, :session_id), gate)
         dispatch_fresh(gate, project_id, task_id)
 
       _ ->
