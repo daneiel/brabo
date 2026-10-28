@@ -223,11 +223,11 @@ foram raciocínio).
    no protocolo dele (`cache_read_input_tokens`) e isso NÃO é lido aqui — fica
    `null`, declarado; o Ollama não informa.
 
-- **Onde:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:356` (`cachedInputTokens`),
-  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:715` (`contagem`),
-  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:192` (`cachedInputTokens`),
-  `apps/api/src/application/use-cases/llm/record-llm-usage.use-case.ts:113` (`cachedInputTokens`),
-  `apps/api/src/db/schema/llm.ts:380` (`cachedInputTokens`),
+- **Onde:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:381` (`cachedInputTokens`),
+  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:764` (`contagem`),
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:201` (`cachedInputTokens`),
+  `apps/api/src/application/use-cases/llm/record-llm-usage.use-case.ts:121` (`cachedInputTokens`),
+  `apps/api/src/db/schema/llm.ts:384` (`cachedInputTokens`),
   `apps/api/scripts/medir-execucao.ts:89` (`formatarParteMedida`)
 - **Teste:** `test/infrastructure/llm/openrouter-provider.contract.spec.ts`
   (resposta gravada com as duas partes; sem os detalhes; valor inválido e
@@ -271,11 +271,11 @@ gasto somam. Sem ele, o preço congelado do catálogo produz o número, como no
    cobrada por fora — a linha cai no catálogo.
 
 - **Onde:** `apps/api/src/domain/llm/custo-da-chamada.ts:43` (`custoDaChamada`),
-  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:246` (`custoDaChamada`),
-  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:259` (`custoDaChamada`),
-  `apps/api/src/application/use-cases/llm/send-chat-message.use-case.ts:264` (`custoDaChamada`),
-  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:352` (`extrairCustoReal`),
-  `apps/api/src/infrastructure/llm/openrouter-provider.ts:253` (`extrairCustoRealOpenRouter`),
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:256` (`custoDaChamada`),
+  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:269` (`custoDaChamada`),
+  `apps/api/src/application/use-cases/llm/send-chat-message.use-case.ts:286` (`custoDaChamada`),
+  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:377` (`extrairCustoReal`),
+  `apps/api/src/infrastructure/llm/openrouter-provider.ts:272` (`extrairCustoRealOpenRouter`),
   `apps/api/src/db/schema/llm.ts:363` (`priceImplicit`)
 - **Teste:** `test/domain/llm/custo-da-chamada.spec.ts`,
   `test/infrastructure/llm/openrouter-provider.contract.spec.ts` (resposta
@@ -380,7 +380,7 @@ comportamento de sempre, nada vai ao fio e o hub decide sozinho.
   `apps/api/src/domain/llm/binding-resolver.ts:100` (viaja com o binding),
   `apps/api/src/application/use-cases/llm/record-llm-usage.use-case.ts:118`
   (congela no metering),
-  `apps/api/src/infrastructure/llm/openrouter-provider.ts:334` (`openrouterConfig`,
+  `apps/api/src/infrastructure/llm/openrouter-provider.ts:353` (`openrouterConfig`,
   a capability provada)
 - **Teste:** `test/domain/llm/routing-preference.spec.ts`,
   `test/application/use-cases/llm/set-model-binding.use-case.spec.ts`,
@@ -3184,8 +3184,8 @@ quatro pontos, TTL de 5 min — https://openrouter.ai/docs/features/prompt-cachi
    `true`. Ligar outro provider exige o smoke equivalente. O ganho aparece no
    metering pela [RN-666](#rn-666).
 
-- **Código:** `apps/api/src/infrastructure/llm/openrouter-provider.ts:283` (`marcarCacheDePromptOpenRouter`);
-  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:559` (`mensagens`)
+- **Código:** `apps/api/src/infrastructure/llm/openrouter-provider.ts:302` (`marcarCacheDePromptOpenRouter`);
+  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:620` (`mensagens`)
 - **Teste:** `apps/api/test/infrastructure/llm/openrouter-provider.contract.spec.ts` ("pontos de cache de prompt (RN-892)": ligada marca os dois pontos; desligada é byte a byte; capability sem hook falha — caso de falha)
 - **Origem:** AT-543
 
@@ -3210,9 +3210,9 @@ acerto de cache caindo. O Brabo agora manda a chave.
    e o efeito se mede em `upstream_provider`, `cached_input_tokens` e `cost_micros`
    (RN-665/666). `provider.order`/`allow_fallbacks` ficam fora (ADR 0221).
 
-- **Código:** `apps/api/src/infrastructure/llm/openrouter-provider.ts:217` (`campoDeSessaoOpenRouter`);
+- **Código:** `apps/api/src/infrastructure/llm/openrouter-provider.ts:236` (`campoDeSessaoOpenRouter`);
   `apps/api/src/domain/llm/routing-preference.ts:88` (`chaveDeSessao`);
-  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:205` (`chaveDeSessao`)
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:214` (`chaveDeSessao`)
 - **Teste:** `apps/api/test/infrastructure/llm/openrouter-provider.contract.spec.ts` ("chave de sessão (ADR 0221, RN-907)": com capability e chave leva `session_id`; sem chave ou desligada não leva; capability sem hook falha — caso de falha); `apps/api/test/application/use-cases/llm/stream-llm-turn.use-case.spec.ts`; `run-llm-turn.use-case.spec.ts`; smoke `openrouter-provider.sessao.smoke.spec.ts`
 - **Origem:** AT-580; ADR [0221](../adr/0221-upstream-preso-por-sessao.md)
 
@@ -3232,7 +3232,7 @@ Complementa a [RN-914](../business-rules.md#rn-914) ([ADR 0224](../adr/0224-raci
    24 h; 404 ou erro deixam a linha como está. A estimativa vai para `catalog_cost_micros`.
    O `spentMicros` de budget/área não é corrigido.
 
-- **Código:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:335` (`limiteDeRaciocinio`);
+- **Código:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:360` (`limiteDeRaciocinio`);
   `apps/api/src/application/use-cases/llm/reconciliar-custo-estimado.use-case.ts:57` (`execute`)
 - **Teste:** `apps/api/test/infrastructure/llm/raciocinio-abortado.spec.ts` (aborta e estima; sem orçamento não conta);
   `apps/api/test/application/use-cases/llm/reconciliar-custo-estimado.use-case.spec.ts` (200 troca, 404 mantém);
@@ -3249,6 +3249,19 @@ Revisa a [RN-782](../business-rules.md#rn-782) e a [RN-783](../business-rules.md
 4. **Não retenta** sem raciocínio pedido, com o raciocínio já desligado (dev agents, RN-783) ou com provider que não sabe desligá-lo (`aceitaRaciocinioDesligado`, hoje só o OpenRouter): ali o desfecho segue o de antes.
 
 - **Código:** `apps/api/src/domain/llm/raciocinio-do-agente.ts:66` (`devoRetentarSemRaciocinio`);
-  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:290` (`devoRetentarSemRaciocinio`)
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:310` (`devoRetentarSemRaciocinio`)
 - **Teste:** `apps/api/test/domain/llm/raciocinio-do-agente.spec.ts` (folga, aborto e as recusas); `apps/api/test/application/use-cases/llm/run-llm-turn.use-case.spec.ts` (retenta e grava duas linhas; segunda truncada não tem terceira; truncada com texto não retenta); `apps/api/test/application/use-cases/llm/stream-llm-turn.use-case.spec.ts` (idem no stream)
 - **Origem:** AT-587
+
+### RN-917 — O OpenRouter recebe um teto de preço por chamada, e sem upstream no teto a chamada repete UMA vez sem ele {#rn-917}
+
+Revisa a [RN-583](#rn-583) (o `sort` deixa de ser o único campo de `provider` que vai ao fio) e convive com a [RN-907](#rn-907) (o `session_id`) e a [RN-916](#rn-916) (a mesma volta de retentativa).
+
+1. **Teto.** `provider.max_price = { prompt, completion }` = preço de catálogo do modelo (`inputPricePerMillionMicros`/`outputPricePerMillionMicros`) × `FATOR_DO_TETO_DE_PRECO` (1,5, decisão do dono de 27/10), em US$ por milhão. Fixo no código e ligado por padrão no provider que declara `priceCeiling` (só o OpenRouter, provado por smoke); preço 0 em qualquer ponta, ou provider sem a capability, não manda teto. Mudar o fator é ADR novo (0225).
+2. **Mescla.** O objeto `provider` do teto é mesclado com o do `sort` do binding (RN-583): os dois vão juntos no mesmo corpo, nunca um apaga o outro.
+3. **Sem upstream no teto.** O 404 de uma chamada que levava teto é o erro `LLMPriceCeilingError` (`code: price_ceiling`), nunca `LLMModelNotFoundError`. Os três caminhos de turno (`run-llm-turn`, `stream-llm-turn`, `send-chat-message`) repetem a chamada UMA vez sem teto, avisam no log e não falham o turno; nunca há terceira por este motivo.
+4. **Metering.** `token_usage.price_ceiling_factor` congela o fator que FOI AO FIO (`null` = nada enviado, inclusive na repetição sem teto), no molde do `routing_preference`.
+
+- **Código:** `apps/api/src/domain/llm/routing-preference.ts:108` (`tetoDePreco`); `apps/api/src/domain/llm/routing-preference.ts:132` (`devoRetentarSemTeto`); `apps/api/src/infrastructure/llm/openrouter-provider.ts:221` (`campoDeTetoDePrecoOpenRouter`); `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:569` (`camposDoHub`); `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:311` (`devoRetentarSemTeto`); `apps/api/src/db/schema/llm.ts:403` (`priceCeilingFactor`)
+- **Teste:** `apps/api/test/domain/llm/routing-preference.spec.ts` (fator, preço 0, só o OpenRouter declara); `apps/api/test/infrastructure/llm/openrouter-provider.contract.spec.ts` (`sort` e teto mesclados no corpo, sem capability nada vai, 404 com teto é `price_ceiling` e sem teto segue `model_not_found`); `apps/api/test/application/use-cases/llm/stream-llm-turn.use-case.spec.ts` (repete uma vez sem teto, fator `[1.5, null]` no metering); `apps/api/test/infrastructure/llm/openrouter-provider.teto.smoke.spec.ts` (manual, API real)
+- **Origem:** AT-606; ADR [0225](../adr/0225-teto-de-preco-do-upstream-no-openrouter.md)

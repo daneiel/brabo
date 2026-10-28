@@ -72,6 +72,7 @@ que o provider, nunca mais rico.
 | `embeddings` | provider + `supportsEmbeddings` na linha do catálogo | permitir/recusar a chamada de embedding ([RN-190](../business-rules/custo.md#rn-190)) |
 | `promptCaching` | provider + o filtro de modelo no hook de configuração (`anthropic/*` no OpenRouter) | marcar `cache_control` no prefixo estável ([RN-892](../business-rules/custo.md#rn-892)); `true` só no OpenRouter, provado por smoke em 2026-10-15 |
 | `stickySession` | só provider | mandar `session_id` e prender a conversa ao upstream que a atendeu ([RN-907](../business-rules/custo.md#rn-907)); `true` só no OpenRouter, provado por smoke em 2026-10-21 |
+| `priceCeiling` | só provider | mandar `provider.max_price` = catálogo × 1,5 e repetir uma vez sem teto no 404 ([RN-917](../business-rules/custo.md#rn-917)); `true` só no OpenRouter, provado por smoke em 2026-10-28 |
 | `context_length` | `models.context_window` | orçamento de contexto |
 | `vision` | `models.supports_vision` | filtrar o catálogo ([RN-056](../business-rules/custo.md#rn-056)) |
 | `reasoning` | `models.supports_reasoning` | idem |
@@ -834,7 +835,7 @@ fallback).
 - **Capabilities `false`** (além de `listModels` e de `streaming`, que a suite
   de contrato exige de todo provider) até o smoke com chave: `toolCalling`,
   `routingPreference` (combo não é `provider.sort`), `embeddings`,
-  `promptCaching`, `stickySession`;
+  `promptCaching`, `stickySession`, `priceCeiling`;
 - **Token Saver desligado**: o "RTK Token Saver" do 9Router comprime
   `tool_result`, e o modelo leria algo diferente do que o log gravou. O provider
   manda `x-9router-token-saver: off` em toda chamada.

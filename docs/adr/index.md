@@ -3,7 +3,7 @@ id: adr-index
 title: Decisões arquiteturais (ADR)
 sidebar_label: Índice de ADRs
 sidebar_position: 0
-description: Os 220 registros de decisão arquitetural do Brabo, agrupados por tema, com o que cada um decidiu.
+description: Os 221 registros de decisão arquitetural do Brabo, agrupados por tema, com o que cada um decidiu.
 keywords: [ADR, decisão arquitetural, arquitetura, histórico]
 ---
 
@@ -254,6 +254,7 @@ O contrato de provider, o catálogo de modelos e a curadoria, os bindings de mod
 | [0222](0222-provider-9router-de-llm.md) | O **9Router** (gateway local do dono, fora do compose) entra como o 10º provider: URL por instalação (`NINE_ROUTER_BASE_URL`, `extra_hosts` nos composes de instalação e produção), credencial obrigatória, preço de CURADORIA com o preço público da API equivalente (decisão do dono de 22/10), capabilities `false` até o smoke e Token Saver desligado. Referencia o 0043. |
 | [0223](0223-orcamento-de-raciocinio-por-modelo.md) | O **orçamento de raciocínio** é capability por modelo, curada à mão: `reasoning.max_tokens` só para o `qwen/qwen3.7-flash` (provado, N = 2048); o deepseek fica de fora por medição e `effort` nunca é usado. |
 | [0224](0224-raciocinio-abortado-no-stream.md) | O raciocínio é **contado no stream e abortado no limite** do `reasoning_budget` (`truncated` com motivo); o gasto abortado é estimado na hora (`price_implicit`) e **reconciliado** depois pelo `/generation`; o deepseek ganha orçamento 2048. |
+| [0225](0225-teto-de-preco-do-upstream-no-openrouter.md) | O OpenRouter recebe um **teto de preço** por chamada: `provider.max_price` = preço de catálogo × 1,5, fixo no código e ligado por padrão (capability `priceCeiling`, provada por smoke), mesclado com o `sort`; o 404 por nenhum upstream no teto vira erro nomeado e a chamada repete UMA vez sem teto (fator nulo no metering). Referencia o 0166 e o 0221. |
 
 ## RAG, grafo de conhecimento e artefatos {#tema-conhecimento}
 
@@ -361,7 +362,7 @@ Como a documentação é gerada, verificada e publicada.
 - **Um arquivo por decisão**, em `docs/adr/NNNN-short-title.md`, com
   numeração sequencial de 4 dígitos, e título `# ADR NNNN — <título>`
   ([0218](0218-titulo-de-adr-com-prefixo.md)). **Sem reuso de número**, nem quando um ADR
-  é substituído — o próximo é **0225**.
+  é substituído — o próximo é **0226**.
 - **Um tema por decisão**, escolhido por quem escreve o ADR, no mesmo
   PR: uma linha em `docs/adr/temas.yml` e a linha do índice sob a seção desse
   tema, em ordem numérica. Quem revisa confirma. Um tema novo é uma
