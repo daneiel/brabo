@@ -14825,7 +14825,7 @@ fechada seguem mostrando a mensagem da api.
   (`narrar_recusa_de_sessao_encerrada`), `:1464` (`pendencia_da_resposta`);
   `apps/engine/lib/engine/agents/conversacionais.ex:49` (`parar_da_sessao`),
   `:69` (`parar_da_sessao_no_cluster`);
-  `apps/engine/lib/engine/agents/turno_assincrono.ex:411` (`abandonar`);
+  `apps/engine/lib/engine/agents/turno_assincrono.ex:459` (`abandonar`);
   `apps/engine/lib/engine/workers/session_lifecycle_worker.ex:88`
   (`parar_conversacionais`); `apps/engine/config/runtime.exs:79`
 - **Teste:** `apps/api/test/application/use-cases/sessions/conversa-em-sessao-encerrada.spec.ts:144`
@@ -15204,7 +15204,7 @@ nenhum dos dois sinais saiu, sem timeout — e a correção do teste do PO, que
 passa a esperar o `idle` persistido em vez do `agent.error`.
 
 - **Código:** `apps/engine/lib/engine/agents/turno_assincrono.ex:158` (zera o
-  turno no `handle_info`), `:442` (`finalizar/1`, único emissor dos dois
+  turno no `handle_info`), `:482` (`finalizar/1`, único emissor dos dois
   sinais); `apps/web/src/lib/session-turno.ts:30` (`turnoTerminouNoLog`)
 - **Teste:** `apps/engine/test/engine/agents/turno_assincrono_test.exs:434`
   (os seis conversacionais: com o GenServer suspenso e a Task terminada, o
@@ -15267,8 +15267,8 @@ das 200 mais recentes `agent.status` da sessão; se a api estiver fora no boot E
 ninguém acordar o agente, o `working` fica até a próxima subida dele; e o
 fechamento não recupera o que o turno já tinha gravado antes da queda.
 
-- **Código:** `apps/engine/lib/engine/agents/turno_orfao.ex:71` (`varrer/2`),
-  `:81` (`fechar_ao_subir/3`), `:134` (`encerrar/3`);
+- **Código:** `apps/engine/lib/engine/agents/turno_orfao.ex:89` (`varrer/2`),
+  `:99` (`fechar_ao_subir/3`), `:122` (`encerrar/3`);
   `apps/engine/lib/engine/sessions/rehydrator.ex:75` (varredura no boot); o
   `init/1` dos seis `*_server.ex` chama `TurnoOrfao.fechar_ao_subir/3`
 - **Teste:** `apps/engine/test/engine/agents/turno_orfao_test.exs:72` (nos seis:
@@ -17213,10 +17213,10 @@ endpoint é ALPHA e o smoke manual
   `apps/engine/lib/engine/harness/roteamento_de_ferramenta.ex:60` (`registrar`),
   `:112` (`custo_micros`), `:123` (`repetir_com_catalogo_inteiro?`), `:146`
   (`mesclar_repeticao`); `apps/engine/lib/engine/sessions/engine_api_client.ex:700`
-  (`llm_turn`), `:773` (`llm_turn_stream`);
+  (`llm_turn`), `:778` (`llm_turn_stream`);
 
   (`mesclar_repeticao`); `apps/engine/lib/engine/sessions/engine_api_client.ex:700`
-  (`llm_turn`), `:773` (`llm_turn_stream`);
+  (`llm_turn`), `:778` (`llm_turn_stream`);
   `apps/engine/lib/engine/harness/tool_loop.ex:132` (o custo do Jev no orçamento
   local)
 - **Teste:** `apps/api/test/domain/llm/tool-router.spec.ts:25` (`questions` é
@@ -19663,9 +19663,9 @@ para os SETE conversacionais pelo mesmo caminho:
 A recusa `turno_em_andamento` continua para o que não é fala: revisão de
 história do PO, prontidão do Criativo, oferta de handoff do Arquiteto.
 
-- **Código:** `apps/engine/lib/engine/agents/turno_assincrono.ex:301`
-  (`receber_mensagem`), `:245` (`tratar_resultado`), `:461` (`entregar_fila`),
-  `:346` (`cancelar_mensagem`), `:392` (`fila_ao_subir`), `:497`
+- **Código:** `apps/engine/lib/engine/agents/turno_assincrono.ex:322`
+  (`receber_mensagem`), `:245` (`tratar_resultado`), `:506` (`entregar_fila`),
+  `:367` (`cancelar_mensagem`), `:412` (`fila_ao_subir`), `:542`
   (`emitir_recusa_por_fila_cheia`);
   `apps/engine/lib/engine/agents/fila_de_mensagens.ex:71` (`pendentes`), `:97`
   (`fora_do_historico`), `:143` (`texto_do_turno`), `:164`
@@ -20338,7 +20338,7 @@ sessão continua mostrando os eventos dela; o resultado mora em Configurações 
 Perfil de proficiência, sem id cru. Nenhum marcador "perfil atualizado" entra
 no fio: fica de fora até alguém pedir.
 
-- **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:124` (`loop`);
+- **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:128` (`loop`);
   `apps/engine/lib/engine/workers/anamnese_worker.ex:157` (`build_ctx`);
   `apps/web/src/routes/session-timeline-montagem.tsx:115` (`ehDaAnamnese`)
 - **Teste:** `apps/engine/test/engine/workers/anamnese_worker_test.exs:253`
@@ -20520,7 +20520,7 @@ para `passos`: o acúmulo já era gravado inteiro antes da revisão.
 
 - **Onde:** `apps/engine/lib/engine/agents/texto_do_turno.ex:88` (`descarregar`);
   `:116` (`juntar`); `:51` (`descarregar_com_modelo`); `:65` (`payload_do_turno`);
-  `apps/engine/lib/engine/agents/reidratacao.ex:177` (`acumular`);
+  `apps/engine/lib/engine/agents/reidratacao.ex:187` (`acumular`);
   `apps/web/src/routes/session-timeline-montagem.tsx:809` (`passos`)
 - **Teste:** `apps/engine/test/engine/agents/texto_do_turno_test.exs:43` (três
   voltas: fecho e dois passos), `:56` (uma volta, sem `passos`), `:60` (termina
@@ -21281,7 +21281,7 @@ turno continua.
 - **Onde:** `apps/engine/lib/engine/harness/argumentos_de_ferramenta.ex:26`
   (`executar`), `:73` (`coagir`), `:56` (`falha_interna?`);
   `apps/engine/lib/engine/agents/resultado_de_ferramenta.ex:29` (`payload`);
-  `apps/engine/lib/engine/harness/tool_loop.ex:363` (`run_direct`);
+  `apps/engine/lib/engine/harness/tool_loop.ex:368` (`run_direct`);
   `apps/engine/lib/engine/agents/arquiteto_server.ex:342`
   (`executar_ferramenta`, o mesmo helper nos outros seis servidores)
 - **Teste:** `apps/engine/test/engine/harness/argumentos_de_ferramenta_test.exs`
@@ -21615,7 +21615,7 @@ sem dizer qual.
   `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:230`
   (`streamErrorCode`),
   `apps/engine/lib/engine/agents/falha_de_turno.ex:87` (`credito_esgotado?`),
-  `:71` (`origem`), `apps/engine/lib/engine/harness/tool_loop.ex:163`
+  `:71` (`origem`), `apps/engine/lib/engine/harness/tool_loop.ex:168`
   (`last_error_code`), `apps/engine/lib/engine/dev/dev_agent_server.ex:906`
   (`handle_outcome`)
 - **Teste:** `apps/api/test/contract/llm-provider.contract.ts` (`erro_402 vira
@@ -22737,7 +22737,7 @@ sem dizer qual.
   o engine recebe da api `truncated` e `usage.outputTokens`, mas NÃO os
   `reasoningTokens` (ficam só em `token_usage`), então a resposta vazia que
   bate no teto sem `finish_reason: length` não é reconhecida.
-- **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:234`
+- **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:239`
   (`parada_sem_chamada`), `apps/engine/lib/engine/dev/dev_agent_server.ex:1124`
   (`motivo_da_parada`), `:1143` (`stop_diagnosis`)
 - **Teste:** `apps/engine/test/engine/harness/tool_loop_test.exs` (`corte só
@@ -23172,7 +23172,7 @@ sem dizer qual.
   ([RN-047](business-rules/custo.md#rn-047)): o agente segue reivindicando. No uso real um
   `getaddrinfo EAI_AGAIN openrouter.ai` de 17 s bloqueou duas tarefas como
   `codigo` e desarmou o dev.
-- **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:261`
+- **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:266`
   (`llm_turn_com_retentativa`), `apps/engine/lib/engine/agents/falha_de_turno.ex:112`
   (`falha_de_rede?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:952`
   (`bloquear_parada`), `apps/engine/lib/engine/dev/agent_io.ex:228`
@@ -25089,7 +25089,7 @@ sem dizer qual.
 ### RN-913 — Falha igual repetida de ferramenta no turno corrige na 2ª e para na 3ª {#rn-913}
 
 - **Regra:** em cada turno, o harness conta as falhas IGUAIS de ferramenta (mesma ferramenta e mesmos argumentos, `tool.result` `ok: false`). Na 2ª, o resultado devolvido ao modelo ganha a correção "esta chamada já falhou igual… mude os argumentos ou use outra abordagem". Na 3ª, o laço PARA e grava `agent.error` com origem `modelo` (`reason: falha_repetida_de_ferramenta`), nunca em silêncio (RN-059, RN-163). Falhas diferentes não somam, e o contador zera a cada turno. Vale para os sete conversacionais e para o `ToolLoop`, pelo despacho único da RN-719; cada laço para pelo desfecho que já tinha (os conversacionais pelo caminho do teto de iterações, com o `agent.error` no lugar do `toolloop.limit_reached`; o `ToolLoop` devolvendo `{:ok, ctx}` com `last_error`).
-- **Onde:** `apps/engine/lib/engine/harness/argumentos_de_ferramenta.ex:26` (`executar`), `apps/engine/lib/engine/harness/falha_repetida.ex:30` (`registrar`), `:51` (`parou?`), `:56` (`narrar`), `apps/engine/lib/engine/harness/tool_loop.ex:118` (`parou_ou_loop`)
+- **Onde:** `apps/engine/lib/engine/harness/argumentos_de_ferramenta.ex:26` (`executar`), `apps/engine/lib/engine/harness/falha_repetida.ex:30` (`registrar`), `:51` (`parou?`), `:56` (`narrar`), `apps/engine/lib/engine/harness/tool_loop.ex:123` (`parou_ou_loop`)
 - **Teste:** `apps/engine/test/engine/harness/falha_repetida_test.exs` (2ª corrige, 3ª para no `ToolLoop`, falhas diferentes não somam, zera entre turnos)
 - **Origem:** AT-588 (EP-026), decisão do dono de 22/10 (K=2 corrige, K=3 para).
 ### RN-914 — O orçamento de raciocínio é por modelo, só para quem o respeita {#rn-914}

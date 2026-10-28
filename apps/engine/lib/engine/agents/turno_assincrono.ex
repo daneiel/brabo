@@ -68,8 +68,8 @@ defmodule Engine.Agents.TurnoAssincrono do
 
   require Logger
 
-  alias Engine.Agents.{FalhaDeTurno, FilaDeMensagens}
-  alias Engine.Harness.IdiomaDaResposta
+  alias Engine.Agents.{Diario, FalhaDeTurno, FilaDeMensagens}
+  alias Engine.Harness.{IdiomaDaResposta, RetomadaDoTurno}
   alias Engine.Sessions.{EngineApiClient, LiveBroadcast}
 
   @typedoc "O que fica guardado no state do agente enquanto o turno roda."
@@ -246,6 +246,29 @@ defmodule Engine.Agents.TurnoAssincrono do
     {:ok, entregar_fila(state)}
   end
 
+  # AT-582: a retomada do turno interrompido (ver `retomada_ao_subir/3`). Sem
+  # turno de pé, sem suspensão e com a função `:montar_turno_de_retomada` (arity
+  # 1, devolve a função de turno) no state; senão é no-op. A mensagem `system`
+  # EFÊMERA vai pelo dicionário do processo, que `iniciar/3` herda na Task.
+  def tratar_resultado(:retomar_turno_interrompido, state) do
+    montar = Map.get(state, :montar_turno_de_retomada)
+
+    with true <- is_function(montar, 1),
+         nil <- Map.get(state, :turno_assincrono),
+         nil <- Map.get(state, :aguardando_aprovacao),
+         {:ok, diario} <- Diario.ler(state.project_id, state.session_id, state.agent),
+         true <- Diario.retomada_pendente?(diario, DateTime.utc_now()) do
+      {:noreply, novo_state} =
+        RetomadaDoTurno.com_retomada(RetomadaDoTurno.texto(diario), fn ->
+          iniciar(state, nil, montar.(state))
+        end)
+
+      {:ok, novo_state}
+    else
+      _ -> {:ok, state}
+    end
+  end
+
   def tratar_resultado(_msg, _state), do: :ignorado
 
   @doc """
@@ -380,6 +403,28 @@ defmodule Engine.Agents.TurnoAssincrono do
       mensagemId: mensagem_id,
       agente: agent
     })
+  end
+
+  @doc """
+  A retomada gravada e ainda não aberta, conferida no `init/1` do servidor
+  (AT-582). Se o último marco do agente é um `agent.turn_resumed` dentro da
+  janela, agenda `:retomar_turno_interrompido` para si. Chame ANTES de
+  `fila_ao_subir/3`: com a retomada de pé, a fila espera o fim dela
+  (`entregar_fila/1`). O servidor precisa de `:montar_turno_de_retomada` no
+  state (arity 1: `fn state -> (fn -> state_final end) end`, como
+  `:montar_turno_de_mensagem`). Nunca lança; devolve `true` se agendou.
+  """
+  @spec retomada_ao_subir(String.t(), String.t(), String.t()) :: boolean()
+  def retomada_ao_subir(project_id, session_id, agent) do
+    with {:ok, diario} <- Diario.ler(project_id, session_id, agent),
+         true <- Diario.retomada_pendente?(diario, DateTime.utc_now()) do
+      send(self(), :retomar_turno_interrompido)
+      true
+    else
+      _ -> false
+    end
+  rescue
+    _ -> false
   end
 
   @doc """

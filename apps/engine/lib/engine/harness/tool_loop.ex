@@ -64,6 +64,7 @@ defmodule Engine.Harness.ToolLoop.Default do
   alias Engine.Harness.Hooks.{ActionPipeline, EventLog}
   alias Engine.Harness.AmbienteDoAgente
   alias Engine.Harness.Iteracoes
+  alias Engine.Harness.RetomadaDoTurno
   alias Engine.Harness.RoteamentoDeFerramenta
   alias Engine.Sessions.EngineApiClient
   alias Engine.Telemetry.Span
@@ -86,8 +87,12 @@ defmodule Engine.Harness.ToolLoop.Default do
       # fachada como mensagem efêmera — ver `Engine.Harness.AmbienteDoAgente`.
       fn ->
         AmbienteDoAgente.com_ambiente(ctx, fn ->
-          Engine.Harness.FalhaRepetida.zerar()
-          ctx |> init() |> loop()
+          # AT-582: `ctx[:retomada]` (montado pelo diário) vira a mensagem de
+          # retomada deste laço — ver `Engine.Harness.RetomadaDoTurno`.
+          RetomadaDoTurno.com_retomada(ctx, fn ->
+            Engine.Harness.FalhaRepetida.zerar()
+            ctx |> init() |> loop()
+          end)
         end)
       end
     )

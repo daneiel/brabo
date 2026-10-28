@@ -179,7 +179,11 @@ defmodule Engine.Agents.FilaDeMensagens do
       []
   end
 
-  defp acordar(agente, session_id, project_id) do
+  @doc """
+  Acorda `agente` pelo supervisor dele (o `init/1` reconstrói a fila e, desde a
+  AT-582, a retomada). Devolve `true`/`false`; nunca lança.
+  """
+  def acordar(agente, session_id, project_id) do
     supervisor = Map.fetch!(supervisores(), agente)
 
     # Os supervisores devolvem só `{:ok, _}`: a falha de subir o processo
