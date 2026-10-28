@@ -53,6 +53,9 @@ defmodule EngineWeb.Router do
          AgentCommandController,
          :cancel_queued_message
 
+    # AT-582: o botão "Retomar" do turno interrompido (agente e projeto no corpo).
+    post "/sessions/:sessionId/agent/resume", AgentCommandController, :resume
+
     post "/sessions/:sessionId/agent/offer-infra-handoff",
          AgentCommandController,
          :offer_infra_handoff

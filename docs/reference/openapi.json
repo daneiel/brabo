@@ -9215,6 +9215,74 @@
         ]
       }
     },
+    "/projects/{projectId}/sessions/{sessionId}/agents/{agent}/resume": {
+      "post": {
+        "description": "Human gesture, with no cap: the automatic resume happens once at boot (ADR 0226) and this is the button for the rest. The reply is the ACCEPT (the turn goes up in the engine); progress arrives on the session channel. Requires `developer`.",
+        "operationId": "AgentResumeController_resume",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "agent",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, expired token, or invalid signature."
+          },
+          "403": {
+            "description": "Role below `developer` on the project."
+          },
+          "404": {
+            "description": "Session does not exist."
+          },
+          "409": {
+            "description": "Nothing to resume — `reason: turno_nao_interrompido` (the agent has no interrupted turn, or one is already running) or `agente_sem_retomada` (the agent cannot resume)."
+          },
+          "429": {
+            "description": "Rate limit per user or per IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Resumes the turn an engine restart interrupted",
+        "tags": [
+          "sessions"
+        ]
+      }
+    },
     "/projects/{projectId}/sessions/{sessionId}/agents/{agent}/start": {
       "post": {
         "description": "Only the Criativo can be started by a direct command. Every other agent requires an ACCEPTED handoff pointing to it — the rule lives in the domain, not here, and trying to bypass it returns 409.",
