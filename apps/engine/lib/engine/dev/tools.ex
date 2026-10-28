@@ -14,7 +14,8 @@ defmodule Engine.Dev.Tools do
     Terminal,
     RagSearch,
     RagFeedback,
-    ListarContratosDeModulos
+    ListarContratosDeModulos,
+    RegistrarPlano
   }
 
   alias Engine.Dev.Tools.{ReportDone, ReportBlocked}
@@ -34,6 +35,8 @@ defmodule Engine.Dev.Tools do
     RagSearch,
     RagFeedback,
     ListarContratosDeModulos,
+    # AT-582: o plano do dev é o que o diário lê para retomar do passo seguinte.
+    RegistrarPlano,
     ReportDone,
     ReportBlocked
   ]
