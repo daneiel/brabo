@@ -118,7 +118,7 @@ Lido dos literais `capabilities` em `apps/api/src/infrastructure/llm/` — **10 
 | `anthropic` | sim | sim | sim | não | não | chave de API | sync + seed | — | `apps/api/src/infrastructure/llm/anthropic-provider.ts` |
 | `bitdeer` | sim | sim | não | não | não | chave de API | seed | `Authorization: Bearer <chave>` CONFIRMADO; `GET /v1/models` existe e é autenticado; Três ids REAIS de modelo confirmados; Nenhuma peculiaridade de stream/erro confirmada | `apps/api/src/infrastructure/llm/bitdeer-provider.ts` |
 | `deepinfra` | sim | sim | sim | não | não | chave de API | sync + seed | O catálogo é PÚBLICO — sem autenticação nenhuma; `stream_options.include_usage` confirmado como suportado; Erro no formato padrão | `apps/api/src/infrastructure/llm/deepinfra-provider.ts` |
-| `nvidia-nim` | sim | sim | não | não | não | chave de API | seed | Sem cabeçalho dedicado; Tool calling é POR MODELO, não por API; `stream_options.include_usage` não confirmado | `apps/api/src/infrastructure/llm/nvidia-nim-provider.ts` |
+| `nvidia-nim` | sim | sim | sim | não | não | chave de API | sync + seed | Sem cabeçalho dedicado; Tool calling é POR MODELO, não por API; `stream_options.include_usage` não confirmado | `apps/api/src/infrastructure/llm/nvidia-nim-provider.ts` |
 | `ollama` | sim | sim | sim | sim | não | nenhuma (local) | sync + seed | — | `apps/api/src/infrastructure/llm/ollama-provider.ts` |
 | `openai` | sim | sim | sim | não | não | chave de API | sync + seed | — | `apps/api/src/infrastructure/llm/openai-provider.ts` |
 | `openrouter` | sim | sim | sim | não | sim | chave de API | sync | Cabeçalhos próprios; Id de modelo prefixado pelo upstream; Catálogo com preço na própria linha; Erro NO MEIO do stream; Custo real em `usage.cost`; Alias de roteamento livre (`~…`) é sincronizado mas não pode ser curado | `apps/api/src/infrastructure/llm/openrouter-provider.ts` |
@@ -610,12 +610,12 @@ um aviso. Mesmo molde dos smokes de git contra API real
 endpoint **hospedado** (`integrate.api.nvidia.com`) — não o container
 auto-hospedado, que é outro produto com outro endereço.
 
-- **`listModels: false`**: `GET /v1/models` existe (doc oficial conferida
-  nesta sessão) e devolve `id`/`object`/`created`/`owned_by`, mas nenhuma doc
-  encontrada traz preço por token — um catálogo real, mas inútil para o custo
-  por modelo que o metering exige (capabilities em duas camadas, ADR 0041). O
-  provider vive de **seed manual** (`apps/api/src/db/seed.ts`) até alguém
-  confirmar um endpoint de preço, se existir;
+- **`listModels: true`** (AT-575, provado em 28/10/2026): `GET /v1/models` devolve
+  `id`/`object`/`created`/`owned_by` (84 modelos no smoke real, entre eles
+  `nemotron-3.5-lightning-30b-a3b`, `nemotron-3-ultra-550b-a55b` e
+  `nemotron-3-nano-omni-30b-a3b-reasoning`), sem preço: o parser padrão basta e
+  o sync grava preço 0 com `manual_pricing`. Sem a capability o sync pulava o
+  provider e a curadoria (ADR 0042) não tinha modelo para ativar;
 - **Sem cabeçalho dedicado**: `Authorization: Bearer nvapi-...` — bearer
   padrão, a chave só tem o prefixo `nvapi-` por convenção da NVIDIA;
 - **Tool calling é POR MODELO, não por API**: só modelos específicos (Llama
@@ -650,10 +650,8 @@ token.
 
 O teste de aceite com credencial real mora em
 `test/infrastructure/llm/nvidia-nim-provider.smoke.spec.ts`, condicionado a
-`NVIDIA_NIM_TEST_KEY`. Ao contrário do OpenRouter, o passo de "sincronização"
-não descobre nada (a capability é `false` de propósito) — o smoke confirma que
-o provider sai `pulado: 'sem_capability'` no relatório e cura um modelo
-inserido à mão, exatamente como um owner faria em produção.
+`NVIDIA_NIM_TEST_KEY`. O passo de sincronização lista o catálogo de verdade e
+confere que o modelo curado veio do `/v1/models`.
 
 ## Together AI (Fase 11b)
 

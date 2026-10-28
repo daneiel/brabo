@@ -377,7 +377,8 @@
       "remove": "Remove",
       "updateCatalog": "Refresh catalog",
       "updateCatalogAria": "Refresh the {{label}} model catalog",
-      "noModels": "No model from this provider in the catalog yet — saving the key does not discover models."
+      "noModels": "No model from this provider in the catalog yet — saving the key does not discover models.",
+      "noCatalogSource": "This provider does not publish a model list, so there is nothing to sync — its models come from the seed."
     },
     "toast": {
       "saved": "Credential saved",

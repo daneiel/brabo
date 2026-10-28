@@ -20,6 +20,7 @@ import { Button } from '../../components/ui/Button';
 import { useToast } from '../../components/ui/ToastProvider';
 import styles from '../ProjectSettingsTab.module.css';
 import { FRESCOR_DA_CONFIGURACAO_MS } from '../../lib/query-policy';
+import { listProviderCapabilities } from '../../lib/api-client';
 import { useCurrentWorkspaceWithRole } from '../../lib/hooks';
 import { roleAtLeast } from '../../lib/roles';
 
@@ -123,6 +124,16 @@ export function CredentialsSection() {
         : new Set<string>(),
     [credentials, catalogo],
   );
+  // Provider sem `listModels` não tem o que sincronizar: o botão não é
+  // oferecido e a nota diz por quê. Capability ainda desconhecida (carregando
+  // ou falhada) NÃO vira "sem catálogo" — fica o comportamento anterior.
+  const { data: capacidades } = useQuery({
+    queryKey: ['provider-capabilities'],
+    queryFn: listProviderCapabilities,
+    staleTime: FRESCOR_DA_CONFIGURACAO_MS,
+  });
+  const semListModels = (id: string) =>
+    capacidades?.find((c) => c.provider === id)?.capabilities.listModels === false;
   const [sincronizando, setSincronizando] = useState(false);
 
   async function handleSync() {
@@ -291,7 +302,9 @@ export function CredentialsSection() {
               </div>
               {existing && semCatalogo.has(id) && (
                 <div className={styles.conectorNota}>
-                  {t('credentials.connector.noModels')}
+                  {semListModels(id)
+                    ? t('credentials.connector.noCatalogSource')
+                    : t('credentials.connector.noModels')}
                 </div>
               )}
 
@@ -346,7 +359,7 @@ export function CredentialsSection() {
                     >
                       {t('credentials.connector.remove')}
                     </Button>
-                    {semCatalogo.has(id) && podeSincronizar && (
+                    {semCatalogo.has(id) && podeSincronizar && !semListModels(id) && (
                       <Button
                         variant="secondary"
                         aria-label={t('credentials.connector.updateCatalogAria', { label })}

@@ -95,7 +95,7 @@ tool calling 和 token 计数都没有单独的方法：工具放在 `options.to
 | `anthropic` | 是 | 是 | 是 | 否 | 否 | API 密钥 | sync + seed | — | `apps/api/src/infrastructure/llm/anthropic-provider.ts` |
 | `bitdeer` | 是 | 是 | 否 | 否 | 否 | API 密钥 | seed | `Authorization: Bearer <chave>` CONFIRMADO; `GET /v1/models` existe e é autenticado; Três ids REAIS de modelo confirmados; Nenhuma peculiaridade de stream/erro confirmada | `apps/api/src/infrastructure/llm/bitdeer-provider.ts` |
 | `deepinfra` | 是 | 是 | 是 | 否 | 否 | API 密钥 | sync + seed | O catálogo é PÚBLICO — sem autenticação nenhuma; `stream_options.include_usage` confirmado como suportado; Erro no formato padrão | `apps/api/src/infrastructure/llm/deepinfra-provider.ts` |
-| `nvidia-nim` | 是 | 是 | 否 | 否 | 否 | API 密钥 | seed | Sem cabeçalho dedicado; Tool calling é POR MODELO, não por API; `stream_options.include_usage` não confirmado | `apps/api/src/infrastructure/llm/nvidia-nim-provider.ts` |
+| `nvidia-nim` | 是 | 是 | 是 | 否 | 否 | API 密钥 | sync + seed | Sem cabeçalho dedicado; Tool calling é POR MODELO, não por API; `stream_options.include_usage` não confirmado | `apps/api/src/infrastructure/llm/nvidia-nim-provider.ts` |
 | `ollama` | 是 | 是 | 是 | 是 | 否 | 无（本地） | sync + seed | — | `apps/api/src/infrastructure/llm/ollama-provider.ts` |
 | `openai` | 是 | 是 | 是 | 否 | 否 | API 密钥 | sync + seed | — | `apps/api/src/infrastructure/llm/openai-provider.ts` |
 | `openrouter` | 是 | 是 | 是 | 否 | 是 | API 密钥 | sync | Cabeçalhos próprios; Id de modelo prefixado pelo upstream; Catálogo com preço na própria linha; Erro NO MEIO do stream; Custo real em `usage.cost`; Alias de roteamento livre (`~…`) é sincronizado mas não pode ser curado | `apps/api/src/infrastructure/llm/openrouter-provider.ts` |
