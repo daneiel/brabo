@@ -9700,7 +9700,7 @@ chave.
 
 - **Onde:** `apps/api/src/application/use-cases/auth/revoke-runner-device-key.use-case.ts:63`
   (a ordem, o projeto da linha e o `try/catch` que só loga);
-  `apps/api/src/application/ports/api-to-engine-client.port.ts:411`
+  `apps/api/src/application/ports/api-to-engine-client.port.ts:421`
   (`disconnectRunnerOfUser`, `DesfechoDeDesconexaoDeRunner`);
   `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:477`;
   `apps/engine/lib/engine/runners/revogacao.ex:92` (`derrubar/3`);
@@ -16858,7 +16858,7 @@ especificação da AT-081 e o mecanismo verificado por provider na AT-161).
   (`copiar_dicionario`);
   `apps/api/src/application/use-cases/agents/send-agent-message.use-case.ts:168`
   (`resolverIdioma`), `:74` (`idiomaAlvo`);
-  `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:203`
+  `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:207`
   (`idiomaDaResposta`)
 - **Teste:** `apps/engine/test/engine/harness/idioma_da_resposta_test.exs:78`
   (sem autor: o idioma do projeto, no fim), `:123` (com autor: o do autor
@@ -19676,7 +19676,7 @@ história do PO, prontidão do Criativo, oferta de handoff do Arquiteto.
   (`cancel_queued_message`), `:461` (`responder_ao_aceite`);
   `apps/api/src/application/use-cases/agents/cancel-queued-agent-message.use-case.ts:35`
   (`CancelQueuedAgentMessageUseCase`);
-  `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:65`
+  `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:69`
   (`entregaDaResposta`);
   `apps/api/src/domain/sessions/conversa-em-sessao-encerrada.ts:72`;
   `apps/web/src/lib/fila-de-mensagens.ts:27` (`estadosNaFila`);
@@ -20109,7 +20109,7 @@ rótulo, não o comportamento.
   (`execute`), `:109` (`derrubarConexoesDaChave`);
   `apps/api/src/application/use-cases/auth/derrubar-conexoes-do-pat.ts:21`
   (`derrubarConexoesDoPat`);
-  `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:633`
+  `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:666`
   (`disconnectRunnerCredential`);
   `apps/engine/lib/engine/runners/socket_ticket.ex:107` (`emitir`), `:207`
   (`anular_pendentes_da_credencial`);
