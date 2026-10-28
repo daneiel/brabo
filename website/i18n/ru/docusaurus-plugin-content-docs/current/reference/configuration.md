@@ -748,7 +748,7 @@ SecOps) пишет туда `~/.semgrep`; созданный от root, скан
 
 Образы engine работают на **Elixir 1.20.4 / OTP 29.1.1** поверх Alpine 3.24
 (builder `hexpm/elixir:1.20.4-erlang-29.1.1-alpine-3.24.2`, runtime
-`alpine:3.24.2`, оба по digest — [ADR 0209](../adr/0209-engine-em-otp-29.md)).
+`alpine:3.24.3`, оба по digest — [ADR 0209](../adr/0209-engine-em-otp-29.md)).
 OTP ниже 29.1 аварийно завершается при загрузке под musl 1.2.6 из Alpine 3.24
 на хостах, чей CPU имеет AMX (`sys_sigaltstack(): Internal error`); не
 понижайте OTP, не понизив musl. Ничего не идёт в `.env`.
