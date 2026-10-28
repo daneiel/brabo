@@ -21433,10 +21433,10 @@ O kickoff do PO diz as três coisas.
   `apps/engine/lib/engine/anamnese/elegibilidade.ex:67`
   (`min_interacoes_proprias`),
   `apps/api/src/application/use-cases/anamnese/record-proficiency.use-case.ts:160`
-  (`fecharJanelaSemPerfil`), `apps/engine/lib/engine/gates/gate_rescuer.ex:336`
-  (`task_em_voo?`), `apps/engine/lib/engine/gates/gate_rescuer.ex:360`
-  (`aguardando_humano?`), `apps/engine/lib/engine/gates/gate_rescuer.ex:283`
-  (`estacionar`), `apps/engine/lib/engine/gates/gate_rescuer.ex:320`
+  (`fecharJanelaSemPerfil`), `apps/engine/lib/engine/gates/gate_rescuer.ex:348`
+  (`task_em_voo?`), `apps/engine/lib/engine/gates/gate_rescuer.ex:372`
+  (`aguardando_humano?`), `apps/engine/lib/engine/gates/gate_rescuer.ex:291`
+  (`estacionar`), `apps/engine/lib/engine/gates/gate_rescuer.ex:329`
   (`retomar_estacionado`), `apps/engine/lib/engine/gates/qa_lead_server.ex:95`
   (`handle_call`)
 - **Teste:** `apps/engine/test/engine/workers/anamnese_worker_test.exs`
@@ -23445,7 +23445,7 @@ sem dizer qual.
   em voo. Resíduo declarado: nó que ainda não entrou no cluster no instante do
   boot não é perguntado, e o pior desfecho é o de sempre (trabalho duplicado e
   barato; o segundo veredito é recusado pela api).
-- **Onde:** `apps/engine/lib/engine/gates/gate_rescuer.ex:191` (`run_boot`),
+- **Onde:** `apps/engine/lib/engine/gates/gate_rescuer.ex:201` (`run_boot`),
   `:209` (`interrompido_no_boot`),
   `apps/web/src/routes/RetomarGateEstacionado.tsx:33` (`cicloInterrompido`)
 - **Teste:** `apps/engine/test/engine/gates/gate_rescuer_test.exs` ("boot com

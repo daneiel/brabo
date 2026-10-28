@@ -32,6 +32,9 @@ defmodule Engine.Gates.GateState do
     field :correction_diagnosis, :string
     # ADR 0207: estacionada pelo resgate; só gesto humano a retoma.
     field :parked_at, :utc_datetime_usec
+    # AT-582: retomadas AUTOMATICAS ja gastas neste ciclo (teto 1). Fora do
+    # `on_conflict` do upsert: o contador sobrevive aos passos do ciclo.
+    field :auto_resumes, :integer, default: 0
 
     timestamps(type: :utc_datetime_usec)
   end
@@ -105,6 +108,30 @@ defmodule Engine.Gates.GateState do
         where: s.project_id == ^project_id and s.task_id == ^task_id and s.gate == ^gate
       ),
       set: [parked_at: DateTime.utc_now()]
+    )
+
+    :ok
+  end
+
+  @doc "Gasta a retomada automática do ciclo (AT-582)."
+  def gastar_retomada!(project_id, task_id, gate) do
+    Repo.update_all(
+      from(s in __MODULE__,
+        where: s.project_id == ^project_id and s.task_id == ^task_id and s.gate == ^gate
+      ),
+      inc: [auto_resumes: 1]
+    )
+
+    :ok
+  end
+
+  @doc "Devolve o orçamento de retomada automática (gesto humano, AT-582)."
+  def zerar_retomadas!(project_id, task_id, gate) do
+    Repo.update_all(
+      from(s in __MODULE__,
+        where: s.project_id == ^project_id and s.task_id == ^task_id and s.gate == ^gate
+      ),
+      set: [auto_resumes: 0]
     )
 
     :ok

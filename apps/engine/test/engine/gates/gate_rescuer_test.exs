@@ -498,6 +498,55 @@ defmodule Engine.Gates.GateRescuerTest do
       wait_gate_state_gone(project_id, task_id, "qa")
     end
 
+    test "teto de 1 retomada automática: a 1ª no tick passa, a 2ª estaciona, o manual segue valendo (AT-582)",
+         %{project_id: project_id, session_id: session_id} do
+      Application.put_env(:engine, :gate_dispatcher, FakeGateDispatcher)
+      task_id = "task-#{Ecto.UUID.generate()}"
+      dev_na_task!(project_id, session_id, task_id)
+      linha_velha!(project_id, task_id, session_id, 1200)
+      Application.put_env(:engine, :gate_rescue_stale_after_seconds, -1)
+
+      assert :ok = GateRescuer.run()
+      assert_received {:gate_dispatch, :qa, ^project_id, ^task_id}
+      assert %{auto_resumes: 1} = GateState.get(project_id, task_id, "qa")
+
+      assert :ok = GateRescuer.run()
+      refute_received {:gate_dispatch, :qa, _, _}
+
+      assert_received {:event_appended, ^project_id, ^session_id,
+                       %{
+                         type: "gate.rescue_parked",
+                         payload: %{motivo: "retomada_automatica_ja_usada"}
+                       }}
+
+      assert %{parked_at: %DateTime{}} = GateState.get(project_id, task_id, "qa")
+
+      assert :ok = GateRescuer.retomar_estacionado(project_id, task_id, "qa")
+      assert_received {:gate_dispatch, :qa, ^project_id, ^task_id}
+      assert %{auto_resumes: 0} = GateState.get(project_id, task_id, "qa")
+    end
+
+    test "teto de 1 retomada automática vale no boot: a 2ª retomada do ciclo recente estaciona (AT-582)",
+         %{project_id: project_id} do
+      Application.put_env(:engine, :gate_dispatcher, FakeGateDispatcher)
+      session_id = sessao_real!(project_id)
+      task_id = "task-#{Ecto.UUID.generate()}"
+      dev_na_task!(project_id, session_id, task_id)
+      linha_velha!(project_id, task_id, session_id, 60)
+
+      assert :ok = GateRescuer.run_boot()
+      assert_received {:gate_dispatch, :qa, ^project_id, ^task_id}
+
+      assert :ok = GateRescuer.run_boot()
+      refute_received {:gate_dispatch, :qa, _, _}
+
+      assert_received {:event_appended, ^project_id, ^session_id,
+                       %{
+                         type: "gate.rescue_parked",
+                         payload: %{motivo: "retomada_automatica_ja_usada"}
+                       }}
+    end
+
     test "correct perdido: religa o DevAgentServer real em awaiting_gate, sem intervenção manual",
          %{project_id: project_id, session_id: session_id} do
       task_id = "task-#{Ecto.UUID.generate()}"
