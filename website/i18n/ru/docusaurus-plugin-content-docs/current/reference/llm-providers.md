@@ -109,7 +109,7 @@ workspace ([RN-057](../business-rules/custo.md#rn-057)) — это не capabili
 
 > ⚠️ Блок сгенерирован `pnpm docs:generate`. Не редактируйте вручную — следующая сборка его перезапишет.
 
-Прочитано из литералов `capabilities` в `apps/api/src/infrastructure/llm/` — провайдеров: **10**.
+Прочитано из литералов `capabilities` в `apps/api/src/infrastructure/llm/` — провайдеров: **11**.
 
 | провайдер | streaming | tool calling | list_models | embeddings | предпочтение маршрутизации | учётные данные | происхождение моделей | особенности кратко | источник |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -120,6 +120,7 @@ workspace ([RN-057](../business-rules/custo.md#rn-057)) — это не capabili
 | `nvidia-nim` | да | да | да | нет | нет | API-ключ | sync + seed | Sem cabeçalho dedicado; Tool calling é POR MODELO, não por API; `stream_options.include_usage` não confirmado | `apps/api/src/infrastructure/llm/nvidia-nim-provider.ts` |
 | `ollama` | да | да | да | да | нет | нет (локально) | sync + seed | — | `apps/api/src/infrastructure/llm/ollama-provider.ts` |
 | `openai` | да | да | да | нет | нет | API-ключ | sync + seed | — | `apps/api/src/infrastructure/llm/openai-provider.ts` |
+| `opencode-zen` | да | нет | нет | нет | нет | API-ключ | seed | Sem teste de conexão da credencial; Capabilities `false` | `apps/api/src/infrastructure/llm/opencode-zen-provider.ts` |
 | `openrouter` | да | да | да | нет | да | API-ключ | sync | Cabeçalhos próprios; Id de modelo prefixado pelo upstream; Catálogo com preço na própria linha; Erro NO MEIO do stream; Custo real em `usage.cost`; Alias de roteamento livre (`~…`) é sincronizado mas não pode ser curado | `apps/api/src/infrastructure/llm/openrouter-provider.ts` |
 | `together` | да | да | да | нет | нет | API-ключ | sync + seed | Unidade de preço NÃO documentada explicitamente pela Together; Ids com namespace; `stream_options.include_usage` não confirmado; 429 leva `error_type: dynamic_request_limited \| dynamic_token_limited` | `apps/api/src/infrastructure/llm/together-provider.ts` |
 | `vultr` | да | да | нет | нет | нет | API-ключ | seed | Tool calling CONFIRMADO com exemplo real; Sufixo `-normalize` | `apps/api/src/infrastructure/llm/vultr-provider.ts` |

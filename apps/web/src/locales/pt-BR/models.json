@@ -42,7 +42,8 @@
     "deepinfra": "DeepInfra",
     "bitdeer": "Bitdeer",
     "vultr": "Vultr",
-    "9router": "9Router"
+    "9router": "9Router",
+    "opencode-zen": "OpenCode Zen"
   },
   "price": {
     "free": "grátis",
