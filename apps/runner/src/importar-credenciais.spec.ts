@@ -87,6 +87,23 @@ describe('credentials import', () => {
     expect(m.saida.join('\n')).toContain('substituída.');
   });
 
+  it('nenhum segredo na saída em 409 (mantida e substituída) nem em erro de rede', async () => {
+    const mantida = montar(['s', 'n'], [409]);
+    await importarCredenciais(mantida.deps);
+    const subst = montar(['s', 's'], [409, 200]);
+    await importarCredenciais(subst.deps);
+    const rede = montar(['s'], [], {
+      fetchImpl: (async () => {
+        throw new Error(`falha com ${SEGREDO}`);
+      }) as unknown as typeof fetch,
+    });
+    expect(await importarCredenciais(rede.deps)).toBe(1);
+    const tudo = [...mantida.saida, ...subst.saida, ...rede.saida].join('\n');
+    expect(tudo).toContain('mantida a existente.');
+    expect(tudo).toContain('erro de rede');
+    expect(tudo).not.toContain(SEGREDO);
+  });
+
   it('403 explica a regra da chave de máquina e sai 1, sem vazar o segredo', async () => {
     const m = montar(['s'], [403]);
     expect(await importarCredenciais(m.deps)).toBe(1);

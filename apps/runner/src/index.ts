@@ -220,6 +220,10 @@ function uso(): never {
       'porque o "kid" É o id do servidor, e uma privada gravada antes dele nasce inútil.',
   );
   console.error(
+    'chaves de API locais: "brabo-runner credentials import" (interativo, exige TTY) lista as ' +
+      'chaves de LLM de outras ferramentas desta máquina e importa as que você confirmar.',
+  );
+  console.error(
     'serviço de usuário: "brabo-runner service install|uninstall|status" instala o runner ' +
       'como systemd --user (Linux) ou LaunchAgent (macOS) — nunca serviço de sistema, nunca ' +
       'root; Windows fora de escopo (ADR 0147 ponto 5). São DUAS espécies de unit e elas ' +
