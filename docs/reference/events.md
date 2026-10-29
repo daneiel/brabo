@@ -178,6 +178,10 @@ mensagem de sistema dizendo quantos eventos anteriores ficaram de fora, o
 | `infra.gate_changed` | o gate da Infra |
 | `gate.rescue_parked` | o `GateRescuer` ESTACIONOU um ciclo de QA/SecOps parado há mais de 2 h em vez de reiniciá-lo ([RN-722](../business-rules.md#rn-722), ADR 0207); o fio mostra um botão "Retomar gate" ([RN-724](../business-rules.md#rn-724)). Payload: `taskId`, `gate`, `idadeSegundos`, `motivo`. Ator `system`/`gate-rescuer` |
 | `gate.interrupted` | no BOOT do engine, um ciclo de gate `in_progress` recente não tinha processo vivo em nenhum nó do cluster: o reinício o matou, e o resgatador o reinicia na hora em vez de esperar o limiar de 15 minutos ([RN-823](../business-rules.md#rn-823)). Payload: `taskId`, `gate`, `ultimaAtividadeEm`, `retomadoEm`. Ator `system`/`gate-rescuer`; o fio o mostra como aviso. Não é projetado no grafo |
+| `agent.plan` | o agente registrou o plano do turno ou da tarefa com `registrar_plano` ([RN-918](../business-rules.md#rn-918)): `objetivo` e `passos` (`texto`, `estado` `pendente`/`em_curso`/`feito`/`descartado`). Cada evento substitui o anterior; o último é o vigente e alimenta o diário e o cartão do fio |
+| `agent.turn_resumed` | o turno interrompido pelo reinício foi retomado ([RN-920](../business-rules.md#rn-920), [RN-921](../business-rules.md#rn-921)). Payload: `retomaDe`, `ultimaAtividadeEm`, `automatica` (`true` no boot, `false` no botão "Retomar"). É o marco do teto de 1 retomada automática; o subagente de gate o grava ao ser retomado |
+| `infra.correction_queued` | uma correção de gate chegou ao Infra Lead e ficou pendente, durável ([RN-924](../business-rules.md#rn-924)). Payload: `id`, `gate`, `reason`, `diagnosis` |
+| `infra.correction_delivered` | a correção `id` foi entregue ao Infra Lead; a que tem `queued` sem `delivered` é reentregue no boot |
 | `infra.artifact_blocked` | o artefato da Infra foi rejeitado |
 
 ### Delegação (Fase 8b, ADR 0038)
@@ -412,16 +416,18 @@ ele.
 
 > ⚠️ Bloco gerado por `pnpm docs:generate`. Não edite à mão — o próximo build o sobrescreve.
 
-Extraídos dos pontos de emissão: **110 identificadores**, dos quais **3** não estão descritos acima.
+Extraídos dos pontos de emissão: **114 identificadores**, dos quais **3** não estão descritos acima.
 
 - `action.failed` <sub>(apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts)</sub>
 - `agent.activated` <sub>(apps/api/src/application/use-cases/agents/activate-agent.use-case.ts)</sub>
 - `agent.delta` <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub>
 - `agent.done` <sub>(apps/engine/lib/engine/agents/turno_assincrono.ex)</sub>
 - `agent.error` <sub>(apps/api/src/application/use-cases/agents/aceite-implicito-do-po.use-case.ts)</sub>
+- `agent.plan` <sub>(apps/engine/lib/engine/agents/diario.ex)</sub>
 - `agent.response` <sub>(apps/api/src/application/use-cases/llm/send-chat-message.use-case.ts)</sub>
-- `agent.status` <sub>(apps/engine/lib/engine/agents/turno_assincrono.ex)</sub>
+- `agent.status` <sub>(apps/engine/lib/engine/agents/diario.ex)</sub>
 - `agent.turn` <sub>(apps/engine/lib/engine/harness/tool_loop.ex)</sub>
+- `agent.turn_resumed` <sub>(apps/engine/lib/engine/agents/diario.ex)</sub>
 - `anamnese.agent_deviation` <sub>(apps/engine/lib/engine/anamnese/tools/report_agent_deviation.ex)</sub>
 - `anamnese.analysis` <sub>(apps/engine/lib/engine/workers/anamnese_worker.ex)</sub>
 - `anamnese.profile_updated` <sub>(apps/api/src/application/use-cases/anamnese/record-proficiency.use-case.ts)</sub>
@@ -493,6 +499,8 @@ Extraídos dos pontos de emissão: **110 identificadores**, dos quais **3** não
 - `handoff.offered` <sub>(apps/api/src/application/use-cases/agents/create-handoff.use-case.ts)</sub>
 - `handoff.superseded` <sub>(apps/api/src/application/use-cases/agents/ciclo-de-vida-do-handoff.service.ts)</sub>
 - `infra.artifact_blocked` <sub>(apps/api/src/application/use-cases/execution/mark-infra-artifact-blocked.use-case.ts)</sub>
+- `infra.correction_delivered` <sub>(apps/engine/lib/engine/infra/infra_lead_server.ex)</sub>
+- `infra.correction_queued` <sub>(apps/engine/lib/engine/infra/infra_lead_server.ex)</sub>
 - `infra.gate_changed` <sub>(apps/api/src/application/use-cases/execution/record-infra-gate-verdict.use-case.ts)</sub>
 - `instruction.rolled_back` <sub>(apps/api/src/application/use-cases/instructions/rollback-instruction.use-case.ts)</sub>
 - `llm.turn` <sub>(apps/engine/lib/engine/sessions/engine_api_client.ex)</sub>

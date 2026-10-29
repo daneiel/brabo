@@ -313,5 +313,21 @@
     "semReabrir": "含执行的会话之后无法重新打开。",
     "cancelar": "继续运行",
     "confirmar": "结束会话"
+  },
+  "turnoInterrompido": {
+    "botao": "继续",
+    "nota": "从停下的地方继续该轮次，每次点击一次。",
+    "semPapel": "继续该轮次需要项目中的 developer 角色。",
+    "retomado": "已请求继续——进展会显示在此对话中。",
+    "erroTitulo": "无法继续该轮次",
+    "automatica": "{{agente}} 在重启后已自动继续。",
+    "objetivo": "目标：{{objetivo}}",
+    "pareiEm": "停在：{{passo}}",
+    "estado": {
+      "pendente": "待办",
+      "em_curso": "进行中",
+      "feito": "完成",
+      "descartado": "已放弃"
+    }
   }
 }

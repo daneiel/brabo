@@ -9,6 +9,7 @@ defmodule Engine.Sessions.EngineApiClient do
   alias Engine.Harness.PerfilDoAutor
   alias Engine.Harness.FluxoDoTime
   alias Engine.Harness.DecisoesDoProjeto
+  alias Engine.Harness.RetomadaDoTurno
   alias Engine.Harness.RoteamentoDeFerramenta
 
   @callback report_termination(
@@ -705,6 +706,7 @@ defmodule Engine.Sessions.EngineApiClient do
       |> AmbienteDoAgente.anexar(agent)
       |> FluxoDoTime.anexar(agent)
       |> DecisoesDoProjeto.anexar(project_id, agent)
+      |> RetomadaDoTurno.anexar(agent)
       |> PerfilDoAutor.anexar(agent)
       |> IdiomaDaResposta.anexar(project_id, agent, tools)
 
@@ -779,6 +781,7 @@ defmodule Engine.Sessions.EngineApiClient do
       |> AmbienteDoAgente.anexar(agent)
       |> FluxoDoTime.anexar(agent)
       |> DecisoesDoProjeto.anexar(project_id, agent)
+      |> RetomadaDoTurno.anexar(agent)
       |> PerfilDoAutor.anexar(agent)
       |> IdiomaDaResposta.anexar(project_id, agent, tools)
 

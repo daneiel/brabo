@@ -81,7 +81,7 @@ defmodule Engine.Gates.GateRescuer do
   import Ecto.Query, only: [from: 2]
 
   alias Engine.Dev.{DevAgentServer, DevAgentState}
-  alias Engine.Gates.{Dispatcher, GateState}
+  alias Engine.Gates.{Dispatcher, GateState, RetomadaDoGate}
   alias Engine.Sessions.EngineApiClient
 
   def run do
@@ -114,14 +114,14 @@ defmodule Engine.Gates.GateRescuer do
         GateState.delete(project_id, task_id, gate)
 
       velho_demais?(linha) ->
-        estacionar(linha)
+        estacionar(linha, nil)
 
       true ->
         Logger.warning(
           "GateRescuer: reiniciando ciclo #{gate} órfão (task #{task_id}, projeto #{project_id})"
         )
 
-        dispatch_fresh(gate, project_id, task_id)
+        retomar_ou_estacionar(linha)
     end
   end
 
@@ -176,6 +176,17 @@ defmodule Engine.Gates.GateRescuer do
   # resweeping pra sempre.
   defp rescue_one(%{project_id: project_id, task_id: task_id, gate: gate}) do
     GateState.delete(project_id, task_id, gate)
+  end
+
+  # AT-582: teto de 1 retomada automatica por ciclo, no boot e no tick. A
+  # segunda estaciona (mesmo caminho do ADR 0207) e espera o "Retomar gate".
+  defp retomar_ou_estacionar(%{auto_resumes: gastas} = linha) when gastas >= 1,
+    do: estacionar(linha, "retomada_automatica_ja_usada")
+
+  defp retomar_ou_estacionar(%{project_id: project_id, task_id: task_id, gate: gate} = linha) do
+    :ok = GateState.gastar_retomada!(project_id, task_id, gate)
+    RetomadaDoGate.marcar(project_id, Map.get(linha, :session_id), gate)
+    dispatch_fresh(gate, project_id, task_id)
   end
 
   defp dispatch_fresh("qa", project_id, task_id), do: :ok = Dispatcher.run_qa(project_id, task_id)
@@ -237,7 +248,7 @@ defmodule Engine.Gates.GateRescuer do
           })
         end
 
-        dispatch_fresh(gate, project_id, task_id)
+        retomar_ou_estacionar(linha)
     end
   end
 
@@ -278,7 +289,7 @@ defmodule Engine.Gates.GateRescuer do
 
   defp velho_demais?(_linha), do: false
 
-  defp estacionar(%{project_id: project_id, task_id: task_id, gate: gate} = linha) do
+  defp estacionar(%{project_id: project_id, task_id: task_id, gate: gate} = linha, causa) do
     idade = DateTime.diff(DateTime.utc_now(), linha.updated_at, :second)
 
     Logger.warning(
@@ -298,8 +309,9 @@ defmodule Engine.Gates.GateRescuer do
           gate: gate,
           idadeSegundos: idade,
           motivo:
-            "ciclo parado há mais de #{div(park_after_seconds(), 60)} min sem atividade; " <>
-              "o resgate automático não o reinicia — retomar exige gesto humano"
+            causa ||
+              "ciclo parado há mais de #{div(park_after_seconds(), 60)} min sem atividade; " <>
+                "o resgate automático não o reinicia — retomar exige gesto humano"
         }
       })
     end
@@ -317,12 +329,16 @@ defmodule Engine.Gates.GateRescuer do
   """
   def retomar_estacionado(project_id, task_id, gate) do
     case GateState.get(project_id, task_id, gate) do
-      %{parked_at: %DateTime{}} ->
+      %{parked_at: %DateTime{}} = linha ->
         Logger.warning(
           "GateRescuer: retomando por gesto humano o ciclo #{gate} estacionado " <>
             "(task #{task_id}, projeto #{project_id})"
         )
 
+        # Gesto humano devolve o orçamento: sem isso, uma queda logo depois do
+        # "Retomar" estacionaria o ciclo de novo sem ninguém olhar.
+        :ok = GateState.zerar_retomadas!(project_id, task_id, gate)
+        RetomadaDoGate.marcar(project_id, Map.get(linha, :session_id), gate)
         dispatch_fresh(gate, project_id, task_id)
 
       _ ->

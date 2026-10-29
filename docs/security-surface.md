@@ -1438,6 +1438,7 @@ detalhar o motivo na URL.
 | GET | `/projects/:projectId/sessions/:sessionId/token-usage` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/transition` | role:developer |
 | POST | `/projects/:projectId/sessions/:sessionId/reopen` | role:developer |
+| POST | `/projects/:projectId/sessions/:sessionId/agents/:agent/resume` | role:developer |
 | POST | `/projects/:projectId/tasks/:taskId/gates/:gate/resume` | role:developer |
 | GET | `/projects/:projectId/spend/me` | role:viewer |
 | POST | `/projects/:projectId/stories/:storyId/return` | role:developer |

@@ -161,12 +161,31 @@ defmodule Engine.Agents.Reidratacao do
 
     eventos
     |> Enum.reject(&(&1["type"] == "chat.message" and MapSet.member?(fora, &1["id"])))
+    |> so_o_ultimo_plano_de_cada_ator()
     |> Enum.reduce([], &acumular(&1, &2, agent))
     |> Enum.reverse()
     |> Enum.map(&renderizar/1)
   end
 
+  # AT-582: só o ÚLTIMO `agent.plan` de cada ator entra no histórico —
+  # renderizar cada versão encheria a cauda de ruído.
+  defp so_o_ultimo_plano_de_cada_ator(eventos) do
+    indexados = Enum.with_index(eventos)
+
+    ultimos =
+      for {%{"type" => "agent.plan"} = e, i} <- indexados,
+          into: %{},
+          do: {ator(e), i}
+
+    for {e, i} <- indexados,
+        e["type"] != "agent.plan" or Map.get(ultimos, ator(e)) == i,
+        do: e
+  end
+
   # --- Conversão ---
+
+  defp acumular(%{"type" => "agent.plan", "payload" => payload} = evento, acc, agent),
+    do: [assistente(plano(payload, evento, agent)) | acc]
 
   defp acumular(%{"type" => "chat.message", "payload" => payload}, acc, _agent),
     do: [usuario(texto(payload, "text")) | acc]
@@ -188,6 +207,11 @@ defmodule Engine.Agents.Reidratacao do
 
   defp acumular(%{"type" => "chat.structured_question"} = evento, acc, agent),
     do: [assistente(perguntas(evento, agent)) | acc]
+
+  # As notas de `registrar_plano` ficam de fora: o plano vigente entra uma vez só.
+  defp acumular(%{"type" => t, "payload" => %{"tool" => "registrar_plano"}}, acc, _agent)
+       when t in ["tool.call", "tool.result"],
+       do: acc
 
   defp acumular(%{"type" => "tool.call", "payload" => payload} = evento, acc, agent) do
     if do_agente?(evento, agent) and is_binary(payload["tool"]) do
@@ -265,6 +289,20 @@ defmodule Engine.Agents.Reidratacao do
       end
 
     cortar(texto, @corte_dos_argumentos)
+  end
+
+  defp plano(payload, evento, agent) do
+    quem =
+      if do_agente?(evento, agent),
+        do: "Meu plano",
+        else: "Plano de #{ator(evento) || "outro agente"}"
+
+    passos =
+      (payload["passos"] || [])
+      |> Enum.with_index(1)
+      |> Enum.map_join("; ", fn {p, i} -> "#{i}. [#{p["estado"]}] #{p["texto"]}" end)
+
+    "[registro da sessão] #{quem}: #{payload["objetivo"]} — #{passos}."
   end
 
   defp perguntas(%{"payload" => payload} = evento, agent) do

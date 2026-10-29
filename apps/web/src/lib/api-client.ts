@@ -634,6 +634,16 @@ export const resumeParkedGate = (projectId: string, taskId: string, gate: string
     `/projects/${projectId}/tasks/${encodeURIComponent(taskId)}/gates/${encodeURIComponent(gate)}/resume`,
     {},
   );
+/**
+ * Retoma o turno que o reinício do engine interrompeu: `developer`; 200 é o
+ * ACEITE, o avanço chega pelo canal. 409 `turno_nao_interrompido` /
+ * `agente_sem_retomada`.
+ */
+export const resumeInterruptedTurn = (projectId: string, sessionId: string, agent: string) =>
+  post<{ ok: true }>(
+    `/projects/${projectId}/sessions/${sessionId}/agents/${encodeURIComponent(agent)}/resume`,
+    {},
+  );
 export const listSessionEvents = (
   projectId: string,
   sessionId: string,

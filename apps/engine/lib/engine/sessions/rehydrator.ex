@@ -82,6 +82,8 @@ defmodule Engine.Sessions.Rehydrator do
           # RN-673: depois de fechar o turno órfão, acorda quem tem mensagem
           # esperando na fila — ela é lida, o turno interrompido não é refeito.
           Engine.Agents.FilaDeMensagens.acordar_pendentes(s.project_id, s.session_id)
+          # AT-582: o Infra Lead com correção de gate gravada e não entregue.
+          Engine.Infra.InfraLeadServer.acordar_se_ha_correcao(s.project_id, s.session_id)
         rescue
           erro -> Logger.warning("rehydrator: varredura de turno órfão falhou: #{inspect(erro)}")
         end

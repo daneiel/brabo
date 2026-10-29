@@ -13,9 +13,9 @@ A fonte é o pt-BR em `docs/` (ADR 0216), inclusive `docs/reference/**` (ADR 021
 
 | locale | páginas traduzidas | caracteres traduzidos | em dia | defasadas | sem procedência | ausentes | órfãs |
 |---|---|---|---|---|---|---|---|
-| `en` | 270 de 275 (98.2%) | 99.7% de 5.814.233 | 256 | 13 | 1 | 5 | 0 |
-| `ru` | 270 de 275 (98.2%) | 99.7% de 5.814.233 | 256 | 13 | 1 | 5 | 0 |
-| `zh-Hans` | 270 de 275 (98.2%) | 99.7% de 5.814.233 | 256 | 13 | 1 | 5 | 0 |
+| `en` | 270 de 276 (97.8%) | 99.7% de 5.833.345 | 254 | 15 | 1 | 6 | 0 |
+| `ru` | 270 de 276 (97.8%) | 99.7% de 5.833.345 | 254 | 15 | 1 | 6 | 0 |
+| `zh-Hans` | 270 de 276 (97.8%) | 99.7% de 5.833.345 | 254 | 15 | 1 | 6 | 0 |
 
 > **TODO(humano):** revisão nativa por idioma — quem revisou e quando. Ainda não há revisão nativa registrada.
 
@@ -31,6 +31,8 @@ A fonte é o pt-BR em `docs/` (ADR 0216), inclusive `docs/reference/**` (ADR 021
 - `explanation/cadeia-de-suprimentos-do-ci.md` (tradução de 2026-10-15)
 - `getting-started.md` (tradução de 2026-10-15)
 - `reference/configuration.md` (tradução de 2026-10-16)
+- `reference/events.md` (tradução de 2026-10-16)
+- `reference/internal-api.md` (tradução de 2026-10-15)
 - `reference/llm-providers.md` (tradução de 2026-10-16)
 - `runbook.md` (tradução de 2026-10-15)
 - `security-surface.md` (tradução de 2026-10-15)
@@ -47,6 +49,8 @@ A fonte é o pt-BR em `docs/` (ADR 0216), inclusive `docs/reference/**` (ADR 021
 - `explanation/cadeia-de-suprimentos-do-ci.md` (tradução de 2026-10-15)
 - `getting-started.md` (tradução de 2026-10-15)
 - `reference/configuration.md` (tradução de 2026-10-16)
+- `reference/events.md` (tradução de 2026-10-16)
+- `reference/internal-api.md` (tradução de 2026-10-15)
 - `reference/llm-providers.md` (tradução de 2026-10-16)
 - `runbook.md` (tradução de 2026-10-15)
 - `security-surface.md` (tradução de 2026-10-15)
@@ -63,6 +67,8 @@ A fonte é o pt-BR em `docs/` (ADR 0216), inclusive `docs/reference/**` (ADR 021
 - `explanation/cadeia-de-suprimentos-do-ci.md` (tradução de 2026-10-15)
 - `getting-started.md` (tradução de 2026-10-15)
 - `reference/configuration.md` (tradução de 2026-10-16)
+- `reference/events.md` (tradução de 2026-10-16)
+- `reference/internal-api.md` (tradução de 2026-10-15)
 - `reference/llm-providers.md` (tradução de 2026-10-16)
 - `runbook.md` (tradução de 2026-10-15)
 - `security-surface.md` (tradução de 2026-10-15)
@@ -73,9 +79,9 @@ Chaves de `apps/web/src/locales/<locale>/` contra o pt-BR. Chave plural conta um
 
 | locale | formas de plural | chaves presentes | plurais incompletos |
 |---|---|---|---|
-| `en` | one, other | 2325 de 2325 (100.0%) | 0 |
-| `ru` | one, few, many, other | 2531 de 2531 (100.0%) | 0 |
-| `zh-Hans` | other | 2222 de 2222 (100.0%) | 0 |
+| `en` | one, other | 2337 de 2337 (100.0%) | 0 |
+| `ru` | one, few, many, other | 2543 de 2543 (100.0%) | 0 |
+| `zh-Hans` | other | 2234 de 2234 (100.0%) | 0 |
 
 ## API (Redoc)
 
@@ -83,8 +89,8 @@ Textos distintos da referência da API (`/reference/api/`) contra o catálogo `w
 
 | locale | textos traduzidos |
 |---|---|
-| `pt-BR` | 1325 de 1331 (99.5%) |
+| `pt-BR` | 1325 de 1335 (99.3%) |
 | `en` | 1 de 1 (100.0%) |
-| `ru` | 1325 de 1331 (99.5%) |
-| `zh-Hans` | 1325 de 1331 (99.5%) |
+| `ru` | 1325 de 1335 (99.3%) |
+| `zh-Hans` | 1325 de 1335 (99.3%) |
 

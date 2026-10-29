@@ -3081,6 +3081,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{projectId}/sessions/{sessionId}/agents/{agent}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resumes the turn an engine restart interrupted
+         * @description Human gesture, with no cap: the automatic resume happens once at boot (ADR 0226) and this is the button for the rest. The reply is the ACCEPT (the turn goes up in the engine); progress arrives on the session channel. Requires `developer`.
+         */
+        post: operations["AgentResumeController_resume"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects/{projectId}/sessions/{sessionId}/agents/{agent}/start": {
         parameters: {
             query?: never;
@@ -19163,6 +19183,64 @@ export interface operations {
                 content?: never;
             };
             /** @description The message is no longer queued — the agent already read it, or it was already cancelled; or the session is closed (RN-581). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AgentResumeController_resume: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+                sessionId: string;
+                agent: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OkResponseDto"];
+                };
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Role below `developer` on the project. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Session does not exist. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Nothing to resume — `reason: turno_nao_interrompido` (the agent has no interrupted turn, or one is already running) or `agente_sem_retomada` (the agent cannot resume). */
             409: {
                 headers: {
                     [name: string]: unknown;

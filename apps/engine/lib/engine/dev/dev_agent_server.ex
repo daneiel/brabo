@@ -73,7 +73,7 @@ defmodule Engine.Dev.DevAgentServer do
 
   use GenServer, restart: :temporary
 
-  alias Engine.Agents.FalhaDeTurno
+  alias Engine.Agents.{Diario, FalhaDeTurno}
   alias Engine.Dev.{AgentIo, ContextBuilder, TetoDaTarefa, Tools, Wake}
   alias Engine.Dev.Hooks.Termination
   alias Engine.Gates.Dispatcher
@@ -189,15 +189,15 @@ defmodule Engine.Dev.DevAgentServer do
   end
 
   def handle_continue({:restart_recovery, _}, state) do
-    {:noreply,
-     state
-     |> AgentIo.block_task(
-       "engine reiniciou durante a task",
-       "o ToolLoop não pôde ser retomado após o restart — turno, mensagens " <>
-         "e edições do worktree só existiam em memória",
-       "infra"
-     )
-     |> finish_restart_recovery()}
+    # AT-582 (ADR 0226): queda RECENTE (janela do diário) e ainda sem retomada
+    # nesta tarefa → o worktree vira commit, o agente readota a MESMA tarefa e
+    # o laço roda de novo com o diário; a tarefa nunca sai de `in_progress`.
+    # Senão (2a queda, fora da janela, falha de leitura) o bloqueio de sempre.
+    # As funções moram no FIM do módulo (as refs das RNs apontam para cá).
+    case retomada_do_commit(state) do
+      {:ok, diario} -> {:noreply, retomar_do_commit(state, diario)}
+      :bloquear -> {:noreply, bloquear_por_reinicio(state)}
+    end
   end
 
   # Fecha o `working` reidratado: task já bloqueada por `AgentIo.block_task`
@@ -1203,5 +1203,91 @@ defmodule Engine.Dev.DevAgentServer do
       end
 
     "Task: #{task["title"]}\n#{task["description"]}\n\n## Definition of Done\n#{checklist}"
+  end
+
+  # --- AT-582 (ADR 0226): retomada do commit ---
+
+  defp bloquear_por_reinicio(state) do
+    state
+    |> AgentIo.block_task(
+      "engine reiniciou durante a task",
+      "o ToolLoop não pôde ser retomado após o restart — turno, mensagens " <>
+        "e edições do worktree só existiam em memória",
+      "infra"
+    )
+    |> finish_restart_recovery()
+  end
+
+  # Queda RECENTE (janela do diário) e ainda sem retomada nesta tarefa. O teto
+  # 1x é durável no log: o último `dev.working` do agente com `cause:
+  # "retomada"` para a MESMA tarefa. Falha de leitura = bloqueio.
+  defp retomada_do_commit(%{session_id: sid, task_id: tid} = state)
+       when is_binary(sid) and not is_nil(tid) do
+    case EngineApiClient.list_events(state.project_id, sid,
+           latest: true,
+           limit: Engine.Agents.Reidratacao.teto()
+         ) do
+      {:ok, eventos} ->
+        opts = [marco: {:dev_working, tid}]
+        diario = Diario.de_eventos(eventos, state.agent_id, opts)
+
+        if Diario.retomavel_no_boot?(
+             %{diario | retomada_usada: Diario.retomada_usada?(eventos, state.agent_id, opts)},
+             DateTime.utc_now()
+           ),
+           do: {:ok, diario},
+           else: :bloquear
+
+      _ ->
+        :bloquear
+    end
+  end
+
+  defp retomada_do_commit(_), do: :bloquear
+
+  # Merge NUNCA aqui: o laço retomado é o de implementação, e merge em branch
+  # protegida é sempre do usuário (RN-418). Qualquer falha bloqueia como antes.
+  defp retomar_do_commit(state, diario) do
+    {state, preservado, aviso} = AgentIo.preservar_trabalho(state, "")
+    slug = "task-" <> String.slice(to_string(state.task_id), 0, 8)
+
+    # `:nada` (worktree limpo) devolve aviso vazio; falha de `preservar` devolve
+    # aviso SEM `preservado`. Só o segundo bloqueia.
+    with true <- preservado != nil or aviso == "",
+         {:ok, %{path: path, branch: branch}} <-
+           AgentIo.worktree_manager().adopt(state.project_id, state.agent_id, slug) do
+      state = %{state | worktree: path, branch: branch, status: :working}
+      AgentIo.persist(state)
+
+      AgentIo.emit(state, "dev.working", %{
+        agentId: state.agent_id,
+        taskId: state.task_id,
+        branch: branch,
+        cause: "retomada",
+        commit: preservado && preservado.commit
+      })
+
+      onde =
+        if preservado,
+          do:
+            "Seu trabalho está no commit #{String.slice(preservado.commit, 0, 12)} da branch #{branch}.\n",
+          else: "Seu trabalho está na branch #{branch}.\n"
+
+      case ContextBuilder.fetch(state.project_id, state.session_id, state.task_id, state.module) do
+        {:ok, dev_context} ->
+          # A mensagem efêmera vale para as chamadas do laço (mesmo processo).
+          Engine.Harness.RetomadaDoTurno.com_retomada(
+            onde <> Engine.Harness.RetomadaDoTurno.texto(diario),
+            fn -> implement(state, dev_context) end
+          )
+
+        {:error, reason} ->
+          state
+          |> AgentIo.block_task("falha ao montar contexto da retomada", inspect(reason), "infra")
+          |> finish_task(:blocked)
+      end
+    else
+      _ -> bloquear_por_reinicio(state)
+    end
   end
 end

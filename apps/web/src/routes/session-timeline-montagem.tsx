@@ -54,6 +54,12 @@ import {
   cicloEstacionado,
   cicloInterrompido,
 } from './RetomarGateEstacionado';
+import {
+  RetomarTurnoInterrompido,
+  ehRetomadaAutomatica,
+  planoVigente,
+  turnoInterrompidoPendente,
+} from './RetomarTurnoInterrompido';
 
 type Turno = ReturnType<typeof useTurnoDoAgente>;
 
@@ -916,6 +922,15 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
         agentResponse: true,
         node: bolha(text, event.id),
       });
+    } else if (ehRetomadaAutomatica(event)) {
+      // AT-582: a retomada automática do boot é só uma linha discreta.
+      empurrar({
+        node: (
+          <div className={styles.messageMeta} key={event.id} data-testid="retomada-automatica">
+            {t('turnoInterrompido.automatica', { agente: nomeDoAgente(event.actor.id) })}
+          </div>
+        ),
+      });
     } else if (event.type === 'agent.error' && !ehTetoDoCriativo(event.payload)) {
       // O agente FALA a falha, no mesmo fio. Antes o motivo ia só por
       // broadcast (efêmero) e o log guardava uma resposta vazia — quem
@@ -949,6 +964,16 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
               </div>
               {/* AT-393: o próximo gesto, só com o que o evento traz (ator e
                   origem) — o turno parou e uma mensagem nova o retoma. */}
+              {event.actor.kind === 'agent' && turnoInterrompidoPendente(events, event) && (
+                <RetomarTurnoInterrompido
+                  projectId={projectId}
+                  sessionId={sessionId}
+                  agent={event.actor.id}
+                  plano={planoVigente(events, event)}
+                  podeDecidir={podeDecidir}
+                  acompanhar={acompanharTurnoPeloLog}
+                />
+              )}
               {event.actor.kind === 'agent' && (
                 <div className={styles.messageMeta} data-testid="falha-proximo-passo">
                   {t('mensagens.falhaProximoPasso', {
