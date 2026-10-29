@@ -8977,6 +8977,35 @@ paths:
       summary: A segunda confirmação — roda o pull de fato
       tags:
         - llm
+  /workspaces/{workspaceId}/llm-providers/credentialed:
+    get:
+      description: >-
+        The owner of record (`workspaces.created_by`) is whose key the agents
+        spend (RN-058). Only provider NAMES — never a secret, id or date.
+        `ollama` (local, no key) never appears.
+      operationId: ModelsController_credentialed
+      parameters:
+        - name: workspaceId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CredentialedProvidersResponseDto'
+        '401':
+          description: Sem token, token expirado ou assinatura inválida.
+        '429':
+          description: Rate limit por usuário ou por IP.
+      security:
+        - bearer: []
+      summary: Lists the LLM providers the workspace owner has a key for
+      tags:
+        - llm
   /workspaces/{workspaceId}/members:
     get:
       description: >-
@@ -13009,6 +13038,33 @@ components:
       required:
         - name
         - slug
+    CredentialedProvidersResponseDto:
+      type: object
+      properties:
+        providers:
+          type: array
+          example:
+            - anthropic
+            - openrouter
+          description: >-
+            LLM providers the workspace owner of record has a key for. Names
+            only; `ollama` never appears.
+          items:
+            type: string
+            enum:
+              - ollama
+              - anthropic
+              - openai
+              - openrouter
+              - nvidia-nim
+              - together
+              - deepinfra
+              - bitdeer
+              - vultr
+              - 9router
+              - opencode-zen
+      required:
+        - providers
     CredentialSpendPorMesResponseDto:
       type: object
       properties:
