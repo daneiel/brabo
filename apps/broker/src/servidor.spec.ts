@@ -400,3 +400,37 @@ describe('classificação de falha', () => {
     expect(r.status).toBe(422);
   });
 });
+
+describe('rotas da instância de QA (ADR 0229)', () => {
+  it('o roteador fechado só casa /containers/:id/qa/:chave/<start|remove|exec>', () => {
+    expect(rotaDeContainer('/containers/p1/qa/abcd1234/start')).toEqual({
+      projectId: 'p1',
+      operacao: 'start',
+      qaChave: 'abcd1234',
+    });
+    expect(rotaDeContainer('/containers/p1/qa/abcd1234/exec')?.qaChave).toBe('abcd1234');
+    expect(rotaDeContainer('/containers/p1/qa/abcd1234/stop')).toBeNull();
+    expect(rotaDeContainer('/containers/p1/qa/ABCD1234/start')).toBeNull();
+    expect(rotaDeContainer('/containers/p1/qa/abcd1234')).toBeNull();
+    expect(rotaDeContainer('/containers/p1/outro/abcd1234/start')).toBeNull();
+    expect(rotaDeContainer('/containers/p1/qa/abcd1234/start/x')).toBeNull();
+  });
+
+  it('sem token a rota de QA é 401; GET nela é 404', async () => {
+    const { deps } = montar();
+    const sem = await tratar(deps, {
+      metodo: 'POST',
+      caminho: '/containers/p1/qa/abcd1234/start',
+      token: null,
+      corpo: {},
+    });
+    expect(sem.status).toBe(401);
+    const get = await tratar(deps, {
+      metodo: 'GET',
+      caminho: '/containers/p1/qa/abcd1234',
+      token: TOKEN,
+      corpo: undefined,
+    });
+    expect(get.status).toBe(404);
+  });
+});

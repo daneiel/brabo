@@ -6289,7 +6289,7 @@ export interface components {
              *       "openrouter"
              *     ]
              */
-            providers: ("ollama" | "anthropic" | "openai" | "openrouter" | "nvidia-nim" | "together" | "deepinfra" | "bitdeer" | "vultr" | "9router")[];
+            providers: ("ollama" | "anthropic" | "openai" | "openrouter" | "nvidia-nim" | "together" | "deepinfra" | "bitdeer" | "vultr" | "9router" | "opencode-zen")[];
         };
         CredentialSpendPorMesResponseDto: {
             /**
