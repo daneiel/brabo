@@ -87,7 +87,7 @@ tool calling 和 token 计数都没有单独的方法：工具放在 `options.to
 
 > ⚠️ 此区块由 `pnpm docs:generate` 生成。请勿手动编辑——下次构建会覆盖它。
 
-读取自 `apps/api/src/infrastructure/llm/` 中的 `capabilities` 字面量——**10 个 provider**。
+读取自 `apps/api/src/infrastructure/llm/` 中的 `capabilities` 字面量——**11 个 provider**。
 
 | provider | streaming | tool calling | list_models | embeddings | 路由偏好 | 凭据 | 模型来源 | 特性摘要 | 来源 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -98,6 +98,7 @@ tool calling 和 token 计数都没有单独的方法：工具放在 `options.to
 | `nvidia-nim` | 是 | 是 | 是 | 否 | 否 | API 密钥 | sync + seed | Sem cabeçalho dedicado; Tool calling é POR MODELO, não por API; `stream_options.include_usage` não confirmado | `apps/api/src/infrastructure/llm/nvidia-nim-provider.ts` |
 | `ollama` | 是 | 是 | 是 | 是 | 否 | 无（本地） | sync + seed | — | `apps/api/src/infrastructure/llm/ollama-provider.ts` |
 | `openai` | 是 | 是 | 是 | 否 | 否 | API 密钥 | sync + seed | — | `apps/api/src/infrastructure/llm/openai-provider.ts` |
+| `opencode-zen` | 是 | 否 | 否 | 否 | 否 | API 密钥 | seed | Sem teste de conexão da credencial; Capabilities `false` | `apps/api/src/infrastructure/llm/opencode-zen-provider.ts` |
 | `openrouter` | 是 | 是 | 是 | 否 | 是 | API 密钥 | sync | Cabeçalhos próprios; Id de modelo prefixado pelo upstream; Catálogo com preço na própria linha; Erro NO MEIO do stream; Custo real em `usage.cost`; Alias de roteamento livre (`~…`) é sincronizado mas não pode ser curado | `apps/api/src/infrastructure/llm/openrouter-provider.ts` |
 | `together` | 是 | 是 | 是 | 否 | 否 | API 密钥 | sync + seed | Unidade de preço NÃO documentada explicitamente pela Together; Ids com namespace; `stream_options.include_usage` não confirmado; 429 leva `error_type: dynamic_request_limited \| dynamic_token_limited` | `apps/api/src/infrastructure/llm/together-provider.ts` |
 | `vultr` | 是 | 是 | 否 | 否 | 否 | API 密钥 | seed | Tool calling CONFIRMADO com exemplo real; Sufixo `-normalize` | `apps/api/src/infrastructure/llm/vultr-provider.ts` |

@@ -358,6 +358,7 @@ const CABECALHO_DA_SECAO_DO_PROVIDER = {
   bitdeer: 'Bitdeer',
   vultr: 'Vultr Serverless Inference',
   '9router': '9Router',
+  'opencode-zen': 'OpenCode Zen',
 };
 
 /** Rótulos em negrito (`- **Rótulo**: ...`) da seção de prosa de um provider. */

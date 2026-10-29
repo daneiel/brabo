@@ -71,12 +71,22 @@
  */
 
 import { execFile } from 'node:child_process';
+import { TETO_DE_SERVICO_DE_QA } from './spec-de-container.ts';
 import {
   ContainerAusenteError,
   ContainerNaoGerenciadoError,
   DockerIndisponivelError,
   DockerPort,
   nomeDoContainer,
+  nomeDoContainerDeQa,
+  ROTULO_PAPEL,
+  ROTULO_QA_INSTANCIA,
+  ROTULO_QA_DONO,
+  ROTULO_QA_COMPARTILHADO,
+  PREFIXO_DO_NOME_DE_QA,
+  type AlvoDeQa,
+  type ServicoDeQa,
+  type PortaPublicada,
   PONTO_DE_MONTAGEM,
   ROTULO_GERENCIADO,
 } from './docker-port.ts';
@@ -339,7 +349,37 @@ interface InspecaoDeContainer {
   Config?: { Image?: string; Labels?: { [rotulo: string]: string } };
   Image?: string;
   State?: { Status?: string; StartedAt?: string };
+  NetworkSettings?: {
+    Ports?: { [chave: string]: Array<{ HostIp?: string; HostPort?: string }> | null };
+  };
 }
+
+/** `NetworkSettings.Ports` -> o que o daemon REPORTA publicado (AT-608). */
+function portasPublicadasDe(detalhe: InspecaoDeContainer): PortaPublicada[] {
+  const saida: PortaPublicada[] = [];
+  for (const [chave, ligacoes] of Object.entries(detalhe.NetworkSettings?.Ports ?? {})) {
+    const [portaTxt, protocolo = 'tcp'] = chave.split('/');
+    const container = Number(portaTxt);
+    for (const l of ligacoes ?? []) {
+      const host = Number(l.HostPort);
+      if (Number.isInteger(host) && Number.isInteger(container)) {
+        saida.push({ ip: l.HostIp ?? '', host, container, protocolo });
+      }
+    }
+  }
+  return saida;
+}
+
+/**
+ * AT-610 (ADR 0228): o supervisor do comando do app. CONSTANTE - o comando do
+ * usuario entra so como `$1` (argumento posicional, molde RN-807), nunca
+ * concatenado. O app sobe em background (`setsid` quando existe), com log e
+ * codigo de saida em /tmp (efemeros, fora do bind-mount); o PID 1 segue sendo
+ * o `sleep infinity` de sempre, entao app que morre fica morto.
+ */
+export const SUPERVISOR_DO_APP =
+  's=$(command -v setsid); ($s /bin/sh -c "$1" >/tmp/brabo-app.log 2>&1; ' +
+  'echo $? >/tmp/brabo-app.exit) & exec sleep infinity';
 
 export class DockerViaCli extends DockerPort {
   private readonly rodar: RodarDocker;
@@ -371,6 +411,7 @@ export class DockerViaCli extends DockerPort {
   }
 
   async start(spec: EspecificacaoDeContainer): Promise<ContainerIniciado> {
+    if (spec.qa !== undefined && spec.qa !== null) return this.iniciarQa(spec, spec.qa);
     const nome = nomeDoContainer(spec.workspaceDirName);
     const existente = await this.resolver(nome);
 
@@ -392,8 +433,8 @@ export class DockerViaCli extends DockerPort {
     return { containerId: criado.stdout.trim(), nome, jaEstavaDePe: false };
   }
 
-  async stop(workspaceDirName: string): Promise<void> {
-    const existente = await this.resolver(nomeDoContainer(workspaceDirName));
+  async stop(workspaceDirName: string, alvo?: AlvoDeQa): Promise<void> {
+    const existente = await this.resolver(nomeDe(workspaceDirName, alvo), alvo);
     // Ausente é no-op: parar o que já não está lá É o estado desejado, e um
     // erro aqui faria toda limpeza precisar de um `try` do lado de fora.
     if (existente === null || existente.estado !== 'running') return;
@@ -403,8 +444,10 @@ export class DockerViaCli extends DockerPort {
     );
   }
 
-  async remove(workspaceDirName: string): Promise<void> {
-    const existente = await this.resolver(nomeDoContainer(workspaceDirName));
+  async remove(workspaceDirName: string, alvo?: AlvoDeQa): Promise<void> {
+    const nome = nomeDe(workspaceDirName, alvo);
+    if (alvo !== undefined) await this.removerServicosDeQa(nome);
+    const existente = await this.resolver(nome, alvo);
     if (existente === null) return;
     // `--force` para o daemon parar antes de remover — evita a corrida entre
     // um `stop` nosso e um container que voltou a subir. O rótulo já foi
@@ -413,9 +456,12 @@ export class DockerViaCli extends DockerPort {
     await this.executar(['rm', '--force', existente.id], TIMEOUT_DE_CONTROLE_MS);
   }
 
-  async inspect(workspaceDirName: string): Promise<EstadoObservadoDoContainer | null> {
-    const nome = nomeDoContainer(workspaceDirName);
-    const existente = await this.resolver(nome);
+  async inspect(
+    workspaceDirName: string,
+    alvo?: AlvoDeQa,
+  ): Promise<EstadoObservadoDoContainer | null> {
+    const nome = nomeDe(workspaceDirName, alvo);
+    const existente = await this.resolver(nome, alvo);
     if (existente === null) return null;
 
     const saida = await this.executar(
@@ -431,6 +477,7 @@ export class DockerViaCli extends DockerPort {
     }
 
     const iniciadoEm = detalhe.State?.StartedAt;
+    const portasPublicadas = portasPublicadasDe(detalhe);
     return {
       containerId: detalhe.Id ?? existente.id,
       nome,
@@ -443,6 +490,7 @@ export class DockerViaCli extends DockerPort {
         iniciadoEm === undefined || iniciadoEm === '' || iniciadoEm.startsWith('0001-01-01')
           ? null
           : iniciadoEm,
+      ...(portasPublicadas.length === 0 ? {} : { portasPublicadas }),
     };
   }
 
@@ -464,9 +512,13 @@ export class DockerViaCli extends DockerPort {
     }
   }
 
-  async exec(workspaceDirName: string, pedido: PedidoDeExec): Promise<ResultadoDeExec> {
-    const nome = nomeDoContainer(workspaceDirName);
-    const existente = await this.resolver(nome);
+  async exec(
+    workspaceDirName: string,
+    pedido: PedidoDeExec,
+    alvo?: AlvoDeQa,
+  ): Promise<ResultadoDeExec> {
+    const nome = nomeDe(workspaceDirName, alvo);
+    const existente = await this.resolver(nome, alvo);
     if (existente === null || existente.estado !== 'running') {
       throw new ContainerAusenteError(nome);
     }
@@ -509,6 +561,92 @@ export class DockerViaCli extends DockerPort {
   }
 
   /**
+   * AT-612 (ADR 0229): a instancia de QA efemera. Existente de pe = idempotente;
+   * existente parada e DESCARTADA e recriada (efemera: nao ha o que preservar).
+   * Falha no meio desfaz o que subiu - nunca deixa servico orfao.
+   */
+  private async iniciarQa(
+    spec: EspecificacaoDeContainer,
+    qa: NonNullable<EspecificacaoDeContainer['qa']>,
+  ): Promise<ContainerIniciado> {
+    const alvo: AlvoDeQa = { papel: 'qa', chave: qa.chave };
+    const nome = nomeDoContainerDeQa(spec.workspaceDirName, qa.chave);
+    const existente = await this.resolver(nome, alvo);
+    if (existente !== null) {
+      if (existente.estado === 'running') {
+        return { containerId: existente.id, nome, jaEstavaDePe: true };
+      }
+      await this.remove(spec.workspaceDirName, alvo);
+    }
+
+    await this.garantirImagem(spec.imagem);
+    for (const servico of qa.servicos) await this.garantirImagem(servico.imagem);
+
+    const criado = await this.executar(this.argsDeCriacao(spec, nome), TIMEOUT_DE_CONTROLE_MS);
+    try {
+      const rede = redeDeQaDoProjeto(spec.workspaceDirName);
+      const temCompartilhado = qa.servicos.some((x) => x.compartilhado === true);
+      if (temCompartilhado) await this.garantirRedeDeQa(rede);
+      for (const servico of qa.servicos) {
+        if (servico.compartilhado === true) {
+          await this.subirCompartilhado(spec, servico, rede);
+        } else {
+          await this.executar(
+            argsDeServicoDeQa(spec, servico, nome, `container:${nome}`, nome),
+            TIMEOUT_DE_CONTROLE_MS,
+          );
+        }
+      }
+      if (temCompartilhado) {
+        await this.executar(['network', 'connect', rede, nome], TIMEOUT_DE_CONTROLE_MS);
+      }
+    } catch (erro) {
+      await this.remove(spec.workspaceDirName, alvo).catch(() => undefined);
+      throw erro;
+    }
+    return { containerId: criado.stdout.trim(), nome, jaEstavaDePe: false };
+  }
+
+  /** Rede privada (`--internal`) do projeto, so para os servicos compartilhados. */
+  private async garantirRedeDeQa(rede: string): Promise<void> {
+    const ja = await this.rodar(['network', 'inspect', rede], TIMEOUT_DE_CONTROLE_MS);
+    if (ja.exitCode === 0) return;
+    await this.executar(
+      ['network', 'create', '--internal', '--label', `${ROTULO_GERENCIADO}=true`, rede],
+      TIMEOUT_DE_CONTROLE_MS,
+    );
+  }
+
+  /** Um por projeto: existente de pe e reaproveitado; parado, religado. Nunca recriado com outra imagem. */
+  private async subirCompartilhado(
+    spec: EspecificacaoDeContainer,
+    servico: ServicoDeQa,
+    rede: string,
+  ): Promise<void> {
+    const nome = nomeDoServicoCompartilhado(spec.workspaceDirName, servico.nome);
+    const existente = await this.resolver(nome, { papel: 'qa', chave: '' });
+    if (existente !== null) {
+      if (existente.estado !== 'running') {
+        await this.executar(['start', existente.id], TIMEOUT_DE_CONTROLE_MS);
+      }
+      return;
+    }
+    await this.executar(argsDeServicoDeQa(spec, servico, nome, rede, null), TIMEOUT_DE_CONTROLE_MS);
+  }
+
+  /** Remove os servicos PROPRIOS da instancia (rotulo `brabo.qa.dono`); compartilhados nunca. */
+  private async removerServicosDeQa(nomeDoQa: string): Promise<void> {
+    const servicos = await this.listar([
+      `label=${ROTULO_GERENCIADO}=true`,
+      `label=${ROTULO_PAPEL}=qa`,
+      `label=${ROTULO_QA_DONO}=${nomeDoQa}`,
+    ]);
+    for (const s of servicos) {
+      if (s.ID) await this.executar(['rm', '--force', s.ID], TIMEOUT_DE_CONTROLE_MS);
+    }
+  }
+
+  /**
    * O ÚNICO caminho de resolução de container, e a razão de nenhuma operação
    * receber id: a busca é `docker ps` FILTRADO por nome + rótulo
    * `brabo.managed=true`, então um container homônimo sem o rótulo nunca é
@@ -519,10 +657,16 @@ export class DockerViaCli extends DockerPort {
    * tentar criar por cima e falhar com "name already in use", uma mensagem que
    * não diz nada sobre a única coisa que de fato aconteceu.
    */
-  private async resolver(nome: string): Promise<{ id: string; estado: EstadoDeContainer } | null> {
+  private async resolver(
+    nome: string,
+    alvo?: AlvoDeQa,
+  ): Promise<{ id: string; estado: EstadoDeContainer } | null> {
+    // ADR 0229: alvo de QA so alcanca o que tem `brabo.papel=qa`; homonimo sem
+    // o papel e "nao gerenciado" e nunca e tocado.
     const gerenciados = await this.listar([
       `name=^/${nome}$`,
       `label=${ROTULO_GERENCIADO}=true`,
+      ...(alvo === undefined ? [] : [`label=${ROTULO_PAPEL}=qa`]),
     ]);
     const gerenciado = gerenciados.find((linha) => nomesDaLinha(linha).includes(nome));
     if (gerenciado !== undefined) {
@@ -635,6 +779,7 @@ export class DockerViaCli extends DockerPort {
    * lista e a resposta.
    */
   private argsDeCriacao(spec: EspecificacaoDeContainer, nome: string): string[] {
+    const qa = spec.qa ?? null;
     return [
       'run',
       '--detach',
@@ -649,12 +794,15 @@ export class DockerViaCli extends DockerPort {
       // `unless-stopped` religa depois de o daemon voltar e NÃO religa o que
       // `docker stop` parou — o `stop` explícito do ciclo de vida continua
       // valendo. CONSTANTE como o `--init`: a spec não ganha campo.
-      '--restart',
-      'unless-stopped',
+      // ADR 0229: a instancia de QA e efemera e NAO religa sozinha.
+      ...(qa === null ? ['--restart', 'unless-stopped'] : []),
       '--name',
       nome,
       '--label',
       `${ROTULO_GERENCIADO}=true`,
+      ...(qa === null
+        ? []
+        : ['--label', `${ROTULO_PAPEL}=qa`, '--label', `${ROTULO_QA_INSTANCIA}=${qa.chave}`]),
       '--label',
       `brabo.project.id=${spec.projectId}`,
       '--label',
@@ -687,14 +835,81 @@ export class DockerViaCli extends DockerPort {
       // a api mediu. `HOME` constante junto, porque uid sem entrada em
       // `/etc/passwd` recebe `HOME=/` e `npm` morre em `//.npm`.
       ...argsDeUsuario(spec.usuario),
+      // ADR 0228: portas SEMPRE no loopback (constante, sem opcao de interface).
+      ...(spec.portas ?? []).flatMap((p) => ['-p', `127.0.0.1:${p.host}:${p.container}`]),
+      ...(spec.dns ?? []).flatMap((ip) => ['--dns', ip]),
+      ...(spec.hostsExtras ?? []).flatMap((h) => ['--add-host', `${h.nome}:${h.ip}`]),
       spec.imagem,
       // Mantém o container vivo sem processo próprio: quem trabalha aqui são
       // os `exec`, e um container que sai assim que o `Cmd` termina não teria
-      // onde recebê-los.
-      'sleep',
-      'infinity',
+      // onde recebê-los. Com `comandoDoApp` (AT-610) o supervisor CONSTANTE
+      // sobe o app em background e o PID 1 segue sendo o `sleep infinity`.
+      ...(spec.comandoDoApp === undefined || spec.comandoDoApp === null
+        ? ['sleep', 'infinity']
+        : ['/bin/sh', '-c', SUPERVISOR_DO_APP, 'brabo-app', spec.comandoDoApp]),
     ];
   }
+}
+
+function nomeDe(workspaceDirName: string, alvo?: AlvoDeQa): string {
+  return alvo === undefined
+    ? nomeDoContainer(workspaceDirName)
+    : nomeDoContainerDeQa(workspaceDirName, alvo.chave);
+}
+
+/** Rede privada do projeto para servicos de QA compartilhados. */
+export function redeDeQaDoProjeto(workspaceDirName: string): string {
+  return `${PREFIXO_DO_NOME_DE_QA}${workspaceDirName}`;
+}
+
+export function nomeDoServicoCompartilhado(workspaceDirName: string, servico: string): string {
+  return `${PREFIXO_DO_NOME_DE_QA}${workspaceDirName}-svc-${servico}`;
+}
+
+/**
+ * ADR 0229: `docker run` de um servico de QA. Contencao CONSTANTE: sem
+ * privilegio, sem `--cap-add`, sem porta publicada, tetos fixos, dados em
+ * tmpfs. Proprio da instancia (`dono` = nome do container de QA) =
+ * `--network container:<qa>`; compartilhado (`dono` null) = rede privada do
+ * projeto, com o nome do servico como alias.
+ */
+export function argsDeServicoDeQa(
+  spec: EspecificacaoDeContainer,
+  servico: ServicoDeQa,
+  nome: string,
+  rede: string,
+  dono: string | null,
+): string[] {
+  return [
+    'run',
+    '--detach',
+    '--name',
+    nome,
+    '--label',
+    `${ROTULO_GERENCIADO}=true`,
+    '--label',
+    `${ROTULO_PAPEL}=qa`,
+    '--label',
+    `brabo.project.id=${spec.projectId}`,
+    ...(dono === null
+      ? ['--label', `${ROTULO_QA_COMPARTILHADO}=1`, '--network-alias', servico.nome]
+      : ['--label', `${ROTULO_QA_DONO}=${dono}`]),
+    '--network',
+    rede,
+    '--cpus',
+    String(TETO_DE_SERVICO_DE_QA.cpus),
+    '--memory',
+    `${TETO_DE_SERVICO_DE_QA.memoriaMb}m`,
+    '--pids-limit',
+    String(TETO_DE_SERVICO_DE_QA.pidsLimit),
+    '--cap-drop',
+    'ALL',
+    '--tmpfs',
+    '/tmp',
+    ...(servico.dados ?? []).flatMap((c) => ['--tmpfs', c]),
+    ...Object.entries(servico.env ?? {}).flatMap(([k, v]) => ['--env', `${k}=${v}`]),
+    servico.imagem,
+  ];
 }
 
 function argsDeUsuario(usuario: EspecificacaoDeContainer['usuario']): string[] {

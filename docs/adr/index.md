@@ -3,7 +3,7 @@ id: adr-index
 title: Decisões arquiteturais (ADR)
 sidebar_label: Índice de ADRs
 sidebar_position: 0
-description: Os 223 registros de decisão arquitetural do Brabo, agrupados por tema, com o que cada um decidiu.
+description: Os 226 registros de decisão arquitetural do Brabo, agrupados por tema, com o que cada um decidiu.
 keywords: [ADR, decisão arquitetural, arquitetura, histórico]
 ---
 
@@ -186,6 +186,8 @@ O ciclo de vida do container do projeto, a decisão de imagem, a porta de Docker
 | [0190](0190-a-infra-sobe-o-container-no-aceite.md) | A Infra sobe o container SOZINHA quando o handoff a ela é aceito (AT-260, decisão do dono de 01/10), revisando o "nunca semeado" do ADR 0133 sem editá-lo: o aceite semeia `container_start: auto_approve` para o agente de Infra, e o SERVIDOR do Infra Lead — não o modelo, não uma ferramenta nova — elege a candidata do roteamento que cobre mais módulos (a primeira no empate) e propõe `container_start` antes da primeira chamada ao modelo, pelo MESMO caminho da ferramenta, com as recusas por modo/estado (RN-566/610) e o 409 sem broker intactos. `runner` mantém `container_start_via_runner` com aprovação, `container_remove` continua no teto absoluto, e o fechamento da RN-668 continua verdadeiro. Mesma decisão do dono (AT-262): o Dev Lead é oferecido PELA INFRA, só com o container do projeto `running` — o handoff duplo do Arquiteto sai, e o "o Dev Lead vem do Arquiteto" dos ADRs 0053/0085 muda sem ser editado |
 | [0199](0199-recurso-minimo-derivado-do-module-map.md) | Os recursos MÍNIMOS do container são DERIVADOS do `module_map` (AT-261, decisão do dono de 01/10): cada módulo pode declarar `resources` (cpus, memoryMb, pidsLimit — os três ou nenhum), e o `container_start` com recursos omitidos — sempre o caso da subida pelo servidor no aceite do handoff (ADR 0190) — sobe com a SOMA dos módulos, porque todos compartilham UM container. Módulo sem declaração põe o piso do container no padrão de hoje em vez de inventar um número; mapa sem declaração nenhuma dá exatamente o padrão de hoje. Soma acima do teto é 400 para o Arquiteto quando o mapa é criado; pedido abaixo do mínimo é um `failed` nomeado |
 | [0208](0208-a-infra-herda-a-rede-do-arquiteto.md) | A Infra HERDA a rede que o Arquiteto declarou em `artifact.project_image` (AT-392, decisão do dono de 02/10): a subida pelo servidor no aceite do handoff e a ferramenta `propose_container_start` sem `network` usam o `egress`/`none` do Arquiteto em vez de um `none` literal, e continuam subindo sem clique; revisa o ponto 3 do ADR 0190, se afasta do §4 do ADR 0065 e declara o preço (o egress alcança as portas publicadas do host, ADR 0189). |
+| [0228](0228-comando-do-app-e-rede-do-container.md) | O container do projeto sobe o app pelo comando declarado pela Infra (supervisor constante, comando como argumento) e publica porta SÓ no loopback, com DNS e `extra_hosts` validados; revisa o 0130 e o 0213 sem editá-los |
+| [0229](0229-instancia-de-qa-efemera-com-servicos-declarados-pela-infra.md) | O QA testa numa instância efêmera (`brabo-qa-<workspace>-<chave>`, sem `--restart`, rótulo `brabo.papel=qa`) com os serviços que a Infra declarou, por digest, no mesmo namespace de rede; compartilhado vive em rede privada do projeto |
 
 ## O runner local {#tema-runner}
 
@@ -257,6 +259,7 @@ O contrato de provider, o catálogo de modelos e a curadoria, os bindings de mod
 | [0223](0223-orcamento-de-raciocinio-por-modelo.md) | O **orçamento de raciocínio** é capability por modelo, curada à mão: `reasoning.max_tokens` só para o `qwen/qwen3.7-flash` (provado, N = 2048); o deepseek fica de fora por medição e `effort` nunca é usado. |
 | [0224](0224-raciocinio-abortado-no-stream.md) | O raciocínio é **contado no stream e abortado no limite** do `reasoning_budget` (`truncated` com motivo); o gasto abortado é estimado na hora (`price_implicit`) e **reconciliado** depois pelo `/generation`; o deepseek ganha orçamento 2048. |
 | [0225](0225-teto-de-preco-do-upstream-no-openrouter.md) | O OpenRouter recebe um **teto de preço** por chamada: `provider.max_price` = preço de catálogo × 1,5, fixo no código e ligado por padrão (capability `priceCeiling`, provada por smoke), mesclado com o `sort`; o 404 por nenhum upstream no teto vira erro nomeado e a chamada repete UMA vez sem teto (fator nulo no metering). Referencia o 0166 e o 0221. |
+| [0227](0227-provider-opencode-zen-de-llm.md) | O **OpenCode Zen** entra como o 11º provider, só no dialeto OpenAI (`/chat/completions`): `listModels: false` (a rota de modelos é outra e pública), sem teste de conexão da credencial, seed só com os dois grátis de retenção zero (`deepseek-v4.1-flash-free`, `glm-5.3-flash-free`) e capabilities `false` até o smoke. Referencia o 0043 e o 0222. |
 
 ## RAG, grafo de conhecimento e artefatos {#tema-conhecimento}
 

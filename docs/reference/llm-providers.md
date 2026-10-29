@@ -111,7 +111,7 @@ do nome do modelo seria um palpite vestido de dado.
 
 > ⚠️ Bloco gerado por `pnpm docs:generate`. Não edite à mão — o próximo build o sobrescreve.
 
-Lido dos literais `capabilities` em `apps/api/src/infrastructure/llm/` — **10 providers**.
+Lido dos literais `capabilities` em `apps/api/src/infrastructure/llm/` — **11 providers**.
 
 | provider | streaming | tool calling | list_models | embeddings | preferência de roteamento | credencial | origem dos modelos | quirks resumidos | fonte |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -122,6 +122,7 @@ Lido dos literais `capabilities` em `apps/api/src/infrastructure/llm/` — **10 
 | `nvidia-nim` | sim | sim | sim | não | não | chave de API | sync + seed | Sem cabeçalho dedicado; Tool calling é POR MODELO, não por API; `stream_options.include_usage` não confirmado | `apps/api/src/infrastructure/llm/nvidia-nim-provider.ts` |
 | `ollama` | sim | sim | sim | sim | não | nenhuma (local) | sync + seed | — | `apps/api/src/infrastructure/llm/ollama-provider.ts` |
 | `openai` | sim | sim | sim | não | não | chave de API | sync + seed | — | `apps/api/src/infrastructure/llm/openai-provider.ts` |
+| `opencode-zen` | sim | não | não | não | não | chave de API | seed | Sem teste de conexão da credencial; Capabilities `false` | `apps/api/src/infrastructure/llm/opencode-zen-provider.ts` |
 | `openrouter` | sim | sim | sim | não | sim | chave de API | sync | Cabeçalhos próprios; Id de modelo prefixado pelo upstream; Catálogo com preço na própria linha; Erro NO MEIO do stream; Custo real em `usage.cost`; Alias de roteamento livre (`~…`) é sincronizado mas não pode ser curado | `apps/api/src/infrastructure/llm/openrouter-provider.ts` |
 | `together` | sim | sim | sim | não | não | chave de API | sync + seed | Unidade de preço NÃO documentada explicitamente pela Together; Ids com namespace; `stream_options.include_usage` não confirmado; 429 leva `error_type: dynamic_request_limited \| dynamic_token_limited` | `apps/api/src/infrastructure/llm/together-provider.ts` |
 | `vultr` | sim | sim | não | não | não | chave de API | seed | Tool calling CONFIRMADO com exemplo real; Sufixo `-normalize` | `apps/api/src/infrastructure/llm/vultr-provider.ts` |
@@ -513,7 +514,7 @@ agrupadas.
 A linha do `system` tardio existe porque a orientação de idioma da AT-081
 prevê enviar **uma** mensagem efêmera `role: "system"` no FIM da lista, em toda
 chamada de um turno — depois de `user` na primeira chamada, depois de `tool`
-nas seguintes. A suite de contrato responde, para cada um dos dez providers,
+nas seguintes. A suite de contrato responde, para cada um dos onze providers,
 onde essa mensagem pousa no **corpo serializado**: cada harness declara
 `posicaoDoSistemaTardio` e o contrato a confere nas duas posições, além de o
 texto aparecer exatamente uma vez e o resto da conversa manter a ordem
@@ -521,7 +522,7 @@ texto aparecer exatamente uma vez e o resto da conversa manter a ordem
 
 | provider | adaptador | onde o `system` tardio pousa |
 | --- | --- | --- |
-| OpenAI, OpenRouter, NVIDIA NIM, Together, DeepInfra, Bitdeer, Vultr, 9Router | base compatível (`toWireMessage`) | fim de `messages`, `role: "system"` |
+| OpenAI, OpenRouter, NVIDIA NIM, Together, DeepInfra, Bitdeer, Vultr, 9Router, OpenCode Zen | base compatível (`toWireMessage`) | fim de `messages`, `role: "system"` |
 | Ollama | próprio (`messages` enviado como está) | fim de `messages`, `role: "system"` |
 | Anthropic | próprio (SDK oficial) | fim do `system` de topo; posição perdida |
 
@@ -847,6 +848,35 @@ fallback).
 O aceite com chave real mora em
 `test/infrastructure/llm/nine-router-provider.smoke.spec.ts`, condicionado a
 `NINE_ROUTER_TEST_KEY` e `NINE_ROUTER_TEST_MODEL` (só modelo `free`/`auto:free`).
+
+## OpenCode Zen (AT-568, ADR 0227)
+
+`OpenCodeZenProvider` é `OpenAICompatibleProvider` com `openCodeZenConfig()`
+(`apps/api/src/infrastructure/llm/opencode-zen-provider.ts`) — o décimo primeiro
+provider. A doc pública do Zen mostra três dialetos; só o `/chat/completions`
+(`https://opencode.ai/inference/openai/v1`) cabe na base. Os modelos de
+`/responses`, `/v1/messages` e Google, e o Jev do Zen, ficam fora.
+
+**Medido em 29/10/2026 (smoke com chave real):** `deepseek-v4.1-flash-free` e
+`glm-5.3-flash-free` respondem `429 FreeUsageLimitError` por API de terceiro
+("Free models work in OpenCode ... subscribe to OpenCode Go"). Os grátis só valem
+dentro do cliente OpenCode. Os modelos pagos do Zen exigem saldo na conta ou o
+OpenCode Go; essa via não foi provada.
+
+- **`listModels: false`**: a lista de modelos mora em `/inference/v1/models`, e
+  não em `{baseUrl}/models`, que a base chama. O catálogo vem do seed curado
+  (ADR 0042). O seed NÃO traz modelo: os grátis saíram em 29/10/2026, porque o
+  fornecedor os recusa por API. Modelo pago entra por curadoria na tela;
+- **Sem teste de conexão da credencial**: a lista de modelos é pública, e um
+  teste por ela passaria com chave inválida;
+- **Capabilities `false`** além de `streaming` (exigido pela suite de contrato)
+  e `streamOptionsIncludeUsage: false` até o smoke com chave provar.
+
+O aceite com chave real mora em
+`test/infrastructure/llm/opencode-zen-provider.smoke.spec.ts`, condicionado a
+`OPENCODE_ZEN_TEST_KEY` (modelos `-free`, custo US$ 0). Ele prova stream, tool
+call e `usage` com `stream_options`. Rodou em 29/10/2026: **reprova** com 429
+`FreeUsageLimitError`, a recusa do fornecedor para o grátis por API.
 
 ## Hubs e custo real
 

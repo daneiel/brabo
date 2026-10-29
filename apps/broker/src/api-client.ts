@@ -64,6 +64,16 @@ export interface UsuarioDaPasta {
   gid: number;
 }
 
+/** Serviço de infra de QA declarado pela Infra (AT-612). Dado não confiável: o parse é de `especificacaoValidada`. */
+export interface ServicoDeQaDaApi {
+  name: string;
+  image: string;
+  env?: Record<string, string>;
+  /** Caminhos montados em tmpfs (dados efêmeros). */
+  tmpfs?: string[];
+  shared?: boolean;
+}
+
 export interface ContextoDoProjeto {
   projectId: string;
   projectSlug: string;
@@ -78,6 +88,21 @@ export interface ContextoDoProjeto {
   imagem: DecisaoDeImagemDaApi | null;
   /** Versão do artefato vigente — 0 quando não há decisão. */
   imagemVersao: number;
+  /** AT-610 (ADR 0228): comando do app declarado pela Infra, ou ausente/`null`. */
+  comandoDoApp?: string | null;
+  /** AT-608: portas publicadas (só 127.0.0.1 — o broker não aceita interface). */
+  ports?: Array<{ host: number; container: number; protocol: string }> | null;
+  dns?: string[] | null;
+  extraHosts?: Array<{ name: string; ip: string }> | null;
+  /** AT-612: presente SÓ na leitura com `papel=qa`. `chave` = os 8 do taskId. */
+  qa?: { chave: string; services: ServicoDeQaDaApi[] } | null;
+}
+
+/** Leitura da spec de uma instância de QA: `?papel=qa&task=<chave>`. */
+export interface OpcoesDeContexto {
+  papel: 'qa';
+  /** Os 8 primeiros caracteres do taskId (a chave da instância). */
+  task: string;
 }
 
 /**
@@ -116,7 +141,10 @@ export class ProjetoDesconhecidoError extends Error {
  * porque o teste substitui isto por uma função — nenhum teste deste pacote
  * fala com uma api de verdade.
  */
-export type BuscarContexto = (projectId: string) => Promise<ContextoDoProjeto>;
+export type BuscarContexto = (
+  projectId: string,
+  opcoes?: OpcoesDeContexto,
+) => Promise<ContextoDoProjeto>;
 
 /**
  * `projectId` vira SEGMENTO DE URL sem DTO nem framework no meio — mesma
@@ -145,9 +173,13 @@ export function criarBuscadorDeContexto(
   config: ConfiguracaoDoBroker,
   buscar: typeof fetch = fetch,
 ): BuscarContexto {
-  return async (projectId: string): Promise<ContextoDoProjeto> => {
+  return async (projectId: string, opcoes?: OpcoesDeContexto): Promise<ContextoDoProjeto> => {
     const id = garantirIdDeProjeto(projectId);
-    const url = `${config.apiUrl}/internal/projects/${id}/container-spec`;
+    const consulta =
+      opcoes === undefined
+        ? ''
+        : `?papel=qa&task=${encodeURIComponent(garantirIdDeProjeto(opcoes.task))}`;
+    const url = `${config.apiUrl}/internal/projects/${id}/container-spec${consulta}`;
 
     let resposta: Response;
     try {

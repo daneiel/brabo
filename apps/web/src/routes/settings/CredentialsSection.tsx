@@ -58,6 +58,7 @@ const COR_DO_CONECTOR: Record<LlmCredentialProvider, string> = {
   bitdeer: 'var(--accent)',
   vultr: 'var(--warning)',
   '9router': 'var(--success)',
+  'opencode-zen': 'var(--accent)',
 };
 
 /**
