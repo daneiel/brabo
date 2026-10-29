@@ -315,7 +315,7 @@ describe('spec ampliada lida da api (ADR 0228/0229)', () => {
 
   const DIGEST = `pg@sha256:${'c'.repeat(64)}`;
   const qaCtx = (chave = 'abcd1234') => ({
-    qa: { chave, services: [{ name: 'db', image: DIGEST, env: { A: '1' }, tmpfs: ['/data'], shared: false }] },
+    qa: { chave, services: [{ name: 'db', image: DIGEST, env: { A: '1' }, tmpfs: ['/data'], shared: false, user: '70:70', command: ['httpd', '-f'] }] },
   });
 
   it('QA: a lista de serviços vem da api; a chave da rota tem de ser a da api', async () => {
@@ -323,7 +323,9 @@ describe('spec ampliada lida da api (ADR 0228/0229)', () => {
     await startQa(deps, 'p1', 'abcd1234');
     expect(docker.ultimaSpec?.qa).toEqual({
       chave: 'abcd1234',
-      servicos: [{ nome: 'db', imagem: DIGEST, env: { A: '1' }, dados: ['/data'] }],
+      servicos: [
+        { nome: 'db', imagem: DIGEST, env: { A: '1' }, dados: ['/data'], usuario: '70:70', comando: ['httpd', '-f'] },
+      ],
     });
     expect(docker.ultimaSpec).not.toHaveProperty('comandoDoApp');
     const outra = montar(qaCtx('zzzz9999'));

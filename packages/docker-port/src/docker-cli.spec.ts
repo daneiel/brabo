@@ -753,6 +753,37 @@ describe('DockerViaCli — spec ampliada (ADR 0228/0229)', () => {
     expect(svc).not.toMatch(/--privileged|--cap-add|--publish| -p /);
   });
 
+  it('QA: serviço PRÓPRIO tem nome <instância>-<serviço> (nunca o da instância), --user, dono do tmpfs e comando depois da imagem', async () => {
+    const { rodar, chamadas } = duplo([
+      { quando: ['ps'], entao: comSaida('') },
+      { quando: ['run'], entao: comSaida('id\n') },
+    ]);
+    const spec: EspecificacaoDeContainer = {
+      ...QA,
+      qa: {
+        chave: 'abcd1234',
+        servicos: [
+          { nome: 'db', imagem: DIGEST, usuario: '70:70', dados: ['/var/lib/postgresql/data'] },
+          { nome: 'web', imagem: DIGEST, comando: ['httpd', '-f', '-p', '9000'] },
+        ],
+      },
+    };
+    await new DockerViaCli(rodar).start(spec);
+    const runs = chamadas.filter((c) => c[0] === 'run') as string[][];
+    const nomeDe = (a: string[]) => a[a.indexOf('--name') + 1];
+    expect(nomeDe(runs[0] as string[])).toBe(NOME_QA);
+    expect(nomeDe(runs[1] as string[])).toBe(`${NOME_QA}-db`);
+    expect(nomeDe(runs[1] as string[])).not.toBe(NOME_QA);
+    const db = (runs[1] as string[]).join(' ');
+    expect(db).toContain('--user 70:70');
+    expect(db).toContain('--tmpfs /var/lib/postgresql/data:uid=70,gid=70,mode=0700');
+    const web = runs[2] as string[];
+    expect(web.slice(-5)).toEqual([DIGEST, 'httpd', '-f', '-p', '9000']);
+    expect(web.join(' ')).not.toContain('--user');
+    expect(db).toContain('--cap-drop ALL');
+    expect(db).not.toMatch(/--privileged|--cap-add|--publish| -p /);
+  });
+
   it('QA: remove só alcança brabo.papel=qa; homônimo sem o papel é não gerenciado e nada é removido', async () => {
     const chamadas: string[][] = [];
     const rodar: RodarDocker = async (args) => {

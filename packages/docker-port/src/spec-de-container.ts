@@ -449,6 +449,16 @@ export function instanciaDeQaValidada(valor: unknown): InstanciaDeQa | null {
   return { chave: q.chave, servicos };
 }
 
+/** `"<uid>:<gid>"`, inteiros >= 1 (sem zero a esquerda): nunca root, nem por `0:1000`. */
+function usuarioDeServicoValidado(valor: unknown, campo: string): string | null {
+  if (valor === undefined || valor === null) return null;
+  const m = typeof valor === 'string' ? /^([1-9][0-9]{0,9}):([1-9][0-9]{0,9})$/.exec(valor) : null;
+  if (m === null || Number(m[1]) > 4294967294 || Number(m[2]) > 4294967294) {
+    throw new EspecificacaoInvalidaError(campo, `esperava "<uid>:<gid>" inteiros diferentes de 0, recebi ${descrever(valor)}`);
+  }
+  return valor as string;
+}
+
 function servicoDeQaValidado(item: unknown, i: number, nomes: Set<string>): ServicoDeQa {
   const campo = `qa.servicos[${i}]`;
   const s = (item ?? {}) as Record<string, unknown>;
@@ -477,6 +487,13 @@ function servicoDeQaValidado(item: unknown, i: number, nomes: Set<string>): Serv
     }
     return c;
   });
+  const usuario = usuarioDeServicoValidado(s.usuario, `${campo}.usuario`);
+  const comando = listaOuVazia(s.comando, `${campo}.comando`, 16).map((a) => {
+    if (typeof a !== 'string' || a.length === 0 || a.length > 200 || temQuebraOuNul(a)) {
+      throw new EspecificacaoInvalidaError(`${campo}.comando`, `argumento inválido: ${descrever(a)}`);
+    }
+    return a;
+  });
   if (s.compartilhado !== undefined && typeof s.compartilhado !== 'boolean') {
     throw new EspecificacaoInvalidaError(`${campo}.compartilhado`, 'esperava booleano');
   }
@@ -485,6 +502,8 @@ function servicoDeQaValidado(item: unknown, i: number, nomes: Set<string>): Serv
     imagem: s.imagem,
     ...(Object.keys(env).length > 0 ? { env } : {}),
     ...(dados.length > 0 ? { dados: dados as string[] } : {}),
+    ...(usuario !== null ? { usuario } : {}),
+    ...(comando.length > 0 ? { comando: comando as string[] } : {}),
     ...(s.compartilhado === true ? { compartilhado: true } : {}),
   };
 }

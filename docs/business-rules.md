@@ -23433,7 +23433,7 @@ sem dizer qual.
   `http://127.0.0.1:`; `envExample` booleano), validado no engine ANTES do HALT
   com recusa nomeada que entra no laço (RN-163) e repassado no
   payload de `open_infra_pr`. Decisão no [ADR 0213](adr/0213-o-entregavel-roda-na-maquina-pelo-compose-da-infra.md).
-- **Onde:** `apps/engine/lib/engine/infra/instrucoes_de_execucao.ex:20`
+- **Onde:** `apps/engine/lib/engine/infra/instrucoes_de_execucao.ex:27`
   (`validar`), `apps/engine/lib/engine/infra/infra_lead_server.ex:1391`
   (`build_kickoff`) e `:1292` (`abrir_pr`), e
   `apps/engine/lib/engine/infra/tools/propose_infra_pr.ex:24` (`spec`)
@@ -24073,7 +24073,7 @@ sem dizer qual.
   Infra, nunca verificado na máquina de quem lê (RN-468). E o contexto da
   Infra (`/internal/.../infra-context`) passa a levar `projectImage`, a
   decisão vigente de imagem, rede e recursos, `null` sem decisão.
-- **Onde:** `apps/api/src/domain/infra/run-instructions.ts:72` (`recusaDoRun`),
+- **Onde:** `apps/api/src/domain/infra/run-instructions.ts:77` (`recusaDoRun`),
   `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:155`
   (`recusaDoRun`),
   `apps/api/src/application/use-cases/actions/execute-infra-pr.use-case.ts:111`
@@ -24327,8 +24327,8 @@ sem dizer qual.
   RN-853). No recorte do QA, cada rota da seção "Rotas HTTP" do README precisa
   estar em `paths` do `/openapi.json` servido; rota faltando é item que
   reprova, nunca observação (estende a RN-854).
-- **Onde:** `apps/engine/lib/engine/infra/instrucoes_de_execucao.ex:52` (`url`),
-  `apps/api/src/domain/infra/run-instructions.ts:72` (`recusaDoRun`),
+- **Onde:** `apps/engine/lib/engine/infra/instrucoes_de_execucao.ex:60` (`url`),
+  `apps/api/src/domain/infra/run-instructions.ts:77` (`recusaDoRun`),
   `apps/engine/lib/engine/infra/infra_lead_server.ex:1391` (`build_kickoff`),
   `apps/engine/lib/engine/dev/dev_agent_server.ex:636` (`clausula_de_openapi`),
   `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:20` (`texto`)
@@ -25220,7 +25220,7 @@ sem dizer qual.
 ### RN-933 — `run.app` declara o comando do app e só o piloto automático dispensa a aprovação da PR de infra {#rn-933}
 
 - **Regra:** `run` de `open_infra_pr` aceita `app: { command, port }` opcional (comando de até 300 code points, uma linha, sem NUL; porta 1024-65535; `null` equivale a ausente, como no engine) validado na proposta e na execução; sem `app`, tudo é byte a byte o de antes. Com `run.app`, a regra ESPECÍFICA `open_infra_pr: auto_approve` (a semente do aceite) NÃO basta e a decisão vira `require_approval`; só a CURINGA `auto_approve` do agente (piloto automático, RN-603/RN-670) auto-aprova. A `container-spec` devolve `comandoDoApp` do `run.app.command` vigente, ou `null`.
-- **Onde:** `apps/api/src/domain/infra/run-instructions.ts:72` (`recusaDoRun`), `apps/api/src/domain/actions/decide.ts:614` (`comAppDeclarado`), `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:208` (`comAppDeclarado`), `apps/api/src/application/use-cases/containers/obter-spec-de-container.use-case.ts:171` (`comandoDoApp`).
+- **Onde:** `apps/api/src/domain/infra/run-instructions.ts:77` (`recusaDoRun`), `apps/api/src/domain/actions/decide.ts:614` (`comAppDeclarado`), `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:208` (`comAppDeclarado`), `apps/api/src/application/use-cases/containers/obter-spec-de-container.use-case.ts:171` (`comandoDoApp`).
 - **Teste:** `apps/api/test/domain/infra/run-app.spec.ts`, `apps/api/test/domain/actions/decide.spec.ts` (sem app + específica = auto; com app + específica = aprovação; com app + curinga = auto).
 - **Origem:** AT-610 (EP-030), ADR 0228.
 
@@ -25234,7 +25234,7 @@ sem dizer qual.
 ### RN-935 — A Infra declara os serviços da instância de QA (`run.qa`), e a api guarda uma instância por tarefa com teto de 1 por projeto {#rn-935}
 
 - **Regra:** `open_infra_pr` aceita `run.qa = { services: [...] }` (opcional, `null` = ausente; até 6 serviços de nome único `[a-z][a-z0-9-]{0,31}`; `image` COM digest `@sha256:<64 hex>`; `env` até 20 variáveis `[A-Z_][A-Z0-9_]*` de uma linha; `tmpfs` até 3 caminhos absolutos; `shared` booleano). A mesma régua vale na proposta (400 `run_invalido`) e na execução, e quem declara é a Infra, não um catálogo do produto (decisão do dono, 29/10). A instância de uma tarefa é uma linha de `project_qa_environments` (`provisioning|running|failed|removed`, único `(projeto, tarefa)`), e um índice parcial único garante no banco UMA ativa por projeto: subir a de outra tarefa com uma ativa é 409 `instancia_de_qa_ocupada`. `runner` é recusado (409 `qa_nao_suporta_runner`, "runner depois"). A chave do container é o `chaveDeQa(taskId)` (8 primeiros `[a-z0-9]` do id, sem hífen), calculada só pela api.
-- **Onde:** `apps/api/src/domain/infra/run-instructions.ts:155` (`recusaDoQa`), `apps/api/src/domain/containers/instancia-de-qa.ts:15` (`chaveDeQa`), `apps/api/src/db/schema/containers.ts:87` (`projectQaEnvironments`), `apps/api/src/application/use-cases/containers/instancia-de-qa.use-case.ts:80` (`start`).
+- **Onde:** `apps/api/src/domain/infra/run-instructions.ts:160` (`recusaDoQa`), `apps/api/src/domain/containers/instancia-de-qa.ts:15` (`chaveDeQa`), `apps/api/src/db/schema/containers.ts:87` (`projectQaEnvironments`), `apps/api/src/application/use-cases/containers/instancia-de-qa.use-case.ts:80` (`start`).
 - **Teste:** `apps/api/test/domain/infra/run-qa.spec.ts`, `apps/api/test/application/use-cases/containers/instancia-de-qa.use-case.spec.ts`.
 - **Origem:** AT-612 (EP-030), ADR 0229.
 
@@ -25270,3 +25270,10 @@ sem dizer qual.
 - **Onde:** `apps/engine/lib/engine/gates/qa_automacao_agent.ex:78` (`subir_instancia`), `apps/engine/lib/engine/gates/qa_automacao_agent.ex:120` (`com_remocao`), `apps/engine/lib/engine/harness/hooks/action_pipeline.ex:46` (`maybe_put_alvo`), `apps/engine/lib/engine/gates/gate_rescuer.ex:102` (`varrer_instancias_de_qa`), `apps/engine/lib/engine/infra/instrucoes_de_execucao.ex:133` (`qa`).
 - **Teste:** `apps/engine/test/engine/gates/qa_automacao_agent_instancia_test.exs`, `apps/engine/test/engine/infra/instrucoes_de_execucao_qa_test.exs`.
 - **Origem:** AT-612 (EP-030), ADR 0229; depende da api (#1146).
+
+### RN-941 — O serviço de QA roda com usuário e comando declarados, nunca como root, e leva o nome da instância mais o do serviço {#rn-941}
+
+- **Regra:** revisa a RN-930 e a RN-935 depois da prova com Docker real de 29/10/2026 (AT-612), que achou três defeitos. (1) O serviço PRÓPRIO era criado com o nome da própria instância (`Conflict`): agora é `<instância>-<serviço>`, o que `removerServicosDeQa` e o rótulo `brabo.qa.dono` já esperavam. (2) Postgres sob `--cap-drop ALL` sai com `chown`/`chmod` negados: o serviço ganha `user` (`"<uid>:<gid>"`, inteiros diferentes de 0, sem zero à esquerda, nunca root) que vira `--user`, e os caminhos `tmpfs` montam com `uid=`, `gid=` e `mode=0700` do mesmo dono. (3) Imagens que não sobem sozinhas: o serviço ganha `command` (1 a 16 argumentos de até 200 caracteres, sem `\0`, `\n` ou `\r`), passado como argumentos DEPOIS da imagem, nunca por shell. `null` equivale a ausente. A contenção não muda (`--cap-drop ALL`, sem `--privileged`/`--cap-add`, sem porta publicada, tetos constantes). A régua mora nos três lugares (docker-port, api, engine) e nenhum deles aceita `0`.
+- **Onde:** `packages/docker-port/src/spec-de-container.ts:453` (`usuarioDeServicoValidado`), `packages/docker-port/src/docker-cli.ts:876` (`argsDeServicoDeQa`), `apps/api/src/domain/infra/run-instructions.ts:160` (`recusaDoQa`), `apps/engine/lib/engine/infra/instrucoes_de_execucao.ex:133` (`qa`).
+- **Teste:** `packages/docker-port/src/docker-cli.spec.ts` (nome, `--user`, dono do tmpfs, comando), `packages/docker-port/src/spec-de-container.spec.ts` (recusa de `0:0`, `70:0`, `70`, comando grande/com quebra), `apps/broker/src/operacoes.spec.ts`, `apps/api/test/domain/infra/run-qa.spec.ts`, `apps/engine/test/engine/infra/instrucoes_de_execucao_test.exs`; prova com Docker real: `postgres:17-alpine` com `70:70` aceita conexão em `localhost:5432` e `busybox httpd` responde em `localhost:9000` de dentro da instância.
+- **Origem:** AT-612 (EP-030), ADR 0229.

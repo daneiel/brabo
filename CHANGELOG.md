@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- O serviço da instância de QA sobe de verdade (AT-612, RN-941, prova com Docker real): ganha o nome `<instância>-<serviço>` (antes colidia com a própria instância), `user` (`<uid>:<gid>`, nunca root, também dono do `tmpfs`) e `command` (argumentos depois da imagem), validados igual no docker-port, na api (`run.qa`) e no engine (`propose_infra_pr`).
 - O gate de QA-automação testa numa instância de QA efêmera (AT-612, RN-940): o engine propõe `qa_environment_start` antes do laço, o `terminal` do QA roda nela, ela é removida no fim (mesmo com exceção ou teto) e o `GateRescuer` varre as órfãs no boot e no tick. O Infra Lead pode declarar `run.qa` (serviços de apoio por digest). Depende da PR da api.
 
 - A api entrega a instância de QA efêmera (AT-612, ADR 0229, RN-935 a RN-937, migração 0078): `run.qa` opcional na PR de infra (serviços por digest declarados pela Infra), tabela `project_qa_environments` com teto de 1 instância ativa por projeto (409 `instancia_de_qa_ocupada`), `container-spec?papel=qa&task=`, rotas internas `qa-environments/:taskId/{start,remove}` e `qa-environments/sweep`, `container-exec` com `alvo` de QA e a ação `qa_environment_start` semeada `auto_approve` para o QA de automação. O `terminal` do `qa-automacao` com `alvo` de QA no payload é repassado ao engine só para tarefa do projeto (RN-938). O engine ainda não chama as rotas de ciclo de vida; `runner` fica para depois.

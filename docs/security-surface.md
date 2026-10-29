@@ -506,7 +506,11 @@ detalhar o motivo na URL.
   pelo engine (`engine-service`, `BRABO_SERVICE_TOKEN`). A api chama o broker e
   grava `project_qa_environments`; o corpo do `sweep` é só a lista de ids de
   tarefa em voo, e a remoção só alcança o que o broker rotula `brabo.papel=qa`.
-  O `alvo` de QA do `container-exec` vem do engine, nunca do modelo.
+  O `alvo` de QA do `container-exec` vem do engine, nunca do modelo. Desde a
+  [RN-941](business-rules.md#rn-941) o serviço de QA leva `user` (`<uid>:<gid>`,
+  nunca 0) e `command` (argumentos depois da imagem, sem quebra de linha) no
+  `qa` do `container-spec`, os dois validados pela api e de novo pelo broker
+  antes de virar `docker run`.
 - **`GET /internal/projects/:projectId/container-spec`** ([ADR 0130](adr/0130-broker-de-container.md),
   [RN-485](business-rules.md#rn-485)) é a única rota `engine-service` cujo
   chamador NÃO é o engine — é o **broker** de containers, o único processo do

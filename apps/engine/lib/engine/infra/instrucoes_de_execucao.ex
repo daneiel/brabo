@@ -13,7 +13,12 @@ defmodule Engine.Infra.InstrucoesDeExecucao do
   - `envExample`: booleano;
   - `app` (opcional, AT-610): `%{command, port}` — o comando que sobe o app
     DENTRO do container de trabalho, até 300 caracteres sem quebra de linha
-    nem `\0`, e a porta INTERNA (inteiro de 1024 a 65535).
+    nem `\0`, e a porta INTERNA (inteiro de 1024 a 65535);
+  - `qa` (opcional, AT-612, RN-941): `%{services: [...]}`, até 6 serviços
+    `%{name, image, env?, tmpfs?, user?, command?, shared?}` — a régua de
+    `recusaDoQa` na api. `user` é `"<uid>:<gid>"` com inteiros diferentes de 0
+    (nunca root); `command` são até 16 argumentos (200 caracteres, uma linha)
+    passados depois da imagem. `nil` vale como ausente.
   """
 
   @kinds ~w(api_docs web)
@@ -126,6 +131,7 @@ defmodule Engine.Infra.InstrucoesDeExecucao do
   @nome_de_servico ~r/^[a-z][a-z0-9-]{0,31}$/
   @imagem_com_digest ~r/^[^\s@]+@sha256:[0-9a-f]{64}$/
   @nome_de_env ~r/^[A-Z_][A-Z0-9_]*$/
+  @usuario_nao_root ~r/^[1-9][0-9]{0,9}:[1-9][0-9]{0,9}$/
 
   # AT-612: a MESMA régua de `recusaDoQa` (api); `qa: null` = ausente.
   defp qa(nil), do: :ok
@@ -156,6 +162,14 @@ defmodule Engine.Infra.InstrucoesDeExecucao do
       not tmpfs_ok?(s["tmpfs"]) ->
         {:halt, recusa("`#{ref}.tmpfs` deve ter até 3 caminhos absolutos")}
 
+      not (is_nil(s["user"]) or
+               (is_binary(s["user"]) and Regex.match?(@usuario_nao_root, s["user"]))) ->
+        {:halt, recusa("`#{ref}.user` deve ser \"<uid>:<gid>\" com inteiros diferentes de 0")}
+
+      not comando_ok?(s["command"]) ->
+        {:halt,
+         recusa("`#{ref}.command` deve ter de 1 a 16 argumentos (texto de 1 a 200, uma linha)")}
+
       not (is_nil(s["shared"]) or is_boolean(s["shared"])) ->
         {:halt, recusa("`#{ref}.shared` deve ser booleano")}
 
@@ -165,7 +179,11 @@ defmodule Engine.Infra.InstrucoesDeExecucao do
   end
 
   defp servico(_, i),
-    do: {:halt, recusa("`run.qa.services[#{i}]` deve ser {name, image, env?, tmpfs?, shared?}")}
+    do:
+      {:halt,
+       recusa(
+         "`run.qa.services[#{i}]` deve ser {name, image, env?, tmpfs?, user?, command?, shared?}"
+       )}
 
   defp env_ok?(nil), do: true
 
@@ -190,6 +208,18 @@ defmodule Engine.Infra.InstrucoesDeExecucao do
   end
 
   defp tmpfs_ok?(_), do: false
+
+  defp comando_ok?(nil), do: true
+
+  defp comando_ok?(c) when is_list(c) and length(c) in 1..16 do
+    Enum.all?(
+      c,
+      &(is_binary(&1) and &1 != "" and String.length(&1) <= 200 and
+          not String.contains?(&1, ["\n", "\r", "\0"]))
+    )
+  end
+
+  defp comando_ok?(_), do: false
 
   defp recusa(motivo), do: {:error, "propose_infra_pr recusada: " <> motivo <> "."}
 end

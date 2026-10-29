@@ -412,6 +412,10 @@ export interface ServicoDeQa {
   readonly env?: Readonly<Record<string, string>>;
   /** Caminhos absolutos montados em `--tmpfs` (dados efêmeros). */
   readonly dados?: readonly string[];
+  /** `"<uid>:<gid>"` inteiros, nunca 0 (nunca root) -> `--user`; os `dados` passam a ser do mesmo dono. */
+  readonly usuario?: string;
+  /** Argumentos DEPOIS da imagem (nunca num shell): imagens que nao sobem sozinhas. */
+  readonly comando?: readonly string[];
   /** Um por PROJETO, reaproveitado entre instâncias, numa rede privada. */
   readonly compartilhado?: boolean;
 }

@@ -949,7 +949,11 @@ forma normal de broker recusando); 404 para projeto ou tarefa de outro projeto;
 `qa_nao_suporta_runner` ou `tarefa_ambigua`. O `sweep` recebe
 `{ taskIdsEmVoo: uuid[], projectId?: uuid }` e responde `{ removidas, falhas }`.
 O `container-exec` aceita `alvo: { qa: true, taskId }` e a `container-spec`
-aceita `?papel=qa&task=<id ou chave>` (acrescenta `qa: { chave, services }`).
+aceita `?papel=qa&task=<id ou chave>` (acrescenta `qa: { chave, services }`). Cada serviço é `{ name, image, env?,
+tmpfs?, user?, command?, shared? }`: `user` é `"<uid>:<gid>"` com inteiros
+diferentes de 0 ([RN-941](../business-rules.md#rn-941)), vira `--user` e dá o
+dono (`uid=`, `gid=`, `mode=0700`) aos `tmpfs`; `command` são até 16
+argumentos passados depois da imagem; `null` equivale a ausente.
 
 ### Execução de comando de terminal dentro do container real — rota nova ([RN-492](../business-rules.md#rn-492), [ADR 0134](../adr/0134-dev-agents-executam-dentro-do-container.md))
 

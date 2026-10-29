@@ -495,6 +495,8 @@ function qaDoContexto(contexto: ContextoDoProjeto, chaveDaRota: string): unknown
       imagem: s.image,
       env: s.env,
       dados: s.tmpfs,
+      usuario: s.user ?? undefined,
+      comando: s.command ?? undefined,
       compartilhado: s.shared,
     })),
   };
