@@ -7312,6 +7312,11 @@ export interface components {
              */
             stickySession: boolean;
             /**
+             * @description The provider accepts a per-call PRICE CEILING (`provider.max_price` = catalog price x 1.5, ADR 0225): only an upstream within it serves the call. Only `true` after a smoke against the real API showed the served upstream within the ceiling.
+             * @example false
+             */
+            priceCeiling: boolean;
+            /**
              * @description The provider accepts explicit PROMPT-CACHE breakpoints (`cache_control`) on the stable prefix of a call (RN-892). Only `true` after a smoke against the real API showed cached input tokens on a repeated call.
              * @example false
              */

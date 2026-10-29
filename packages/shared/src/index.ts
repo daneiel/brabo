@@ -54,6 +54,11 @@ export type LLMErrorCode =
   | "insufficient_credit"
   /** O modelo pedido não existe nesse provider (404). */
   | "model_not_found"
+  /**
+   * O hub não achou upstream que caiba no TETO DE PREÇO enviado (404 com
+   * `priceCeiling`, ADR 0225). Distinto de `model_not_found`: o modelo existe.
+   */
+  | "price_ceiling"
   /** O prompt não cabe na janela do modelo (413, ou 400 com o marcador). */
   | "context_length"
   /** O provider ficou MUDO além do teto de inatividade. */
@@ -107,6 +112,13 @@ export interface LLMProviderCapabilities {
    * chamadas com a chave e mais de um sem ela — nunca por leitura de doc.
    */
   readonly stickySession: boolean;
+  /**
+   * O hub aceita um TETO DE PREÇO por chamada (`ChatOptions.priceCeiling`,
+   * ADR 0225): só serve a chamada um upstream cujo preço cabe nele. Obrigatório
+   * e `true` só depois de um smoke contra a API real mostrar o upstream servido
+   * dentro do teto — nunca por leitura de documentação.
+   */
+  readonly priceCeiling: boolean;
   /**
    * O provider sabe receber PONTOS DE CACHE DE PROMPT explícitos
    * (`cache_control: { type: "ephemeral" }` em blocos de conteúdo, RN-892) —
@@ -298,6 +310,11 @@ export interface ChatOptions {
    * Provider que não declara `capabilities.stickySession` IGNORA.
    */
   sessionKey?: string;
+  /**
+   * Teto de preço por chamada, em micro-USD por milhão de tokens (ADR 0225).
+   * Provider que não declara `capabilities.priceCeiling` IGNORA.
+   */
+  priceCeiling?: { inputPerMillionMicros: number; outputPerMillionMicros: number };
   /**
    * O modelo RACIOCINA (`models.supports_reasoning`, do catálogo). Provider que
    * sabe controlar o raciocínio soma uma FOLGA ao teto de saída, para o
