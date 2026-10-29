@@ -229,7 +229,7 @@ detalhar o motivo na URL.
   teto de `decide.ts` é tocado: os dois tipos de subida exigem `maintainer`, e
   `container_remove` fica no teto absoluto da família de comando privilegiado
   ([RN-418](business-rules.md#rn-418)) — nunca auto-aprovável, "sempre
-  permitir" recusado na fonte. A tela ramifica a ação de subida por
+  permitir" recusado na fonte. `container_recreate` (remove + sobe de novo, [RN-934](business-rules.md#rn-934)) entra no mesmo teto. A rede declarada (`PUT .../container/network`, `maintainer`, [RN-932](business-rules.md#rn-932)) só grava artefato — nada muda no Docker até a recriação aprovada. A tela ramifica a ação de subida por
   `execution_mode` exatamente como o backend
   ([RN-497](business-rules.md#rn-497)/[RN-503](business-rules.md#rn-503)):
   `container`/`mounted` propõem `container_start` (broker) e `runner` propõe
@@ -1335,6 +1335,7 @@ detalhar o motivo na URL.
 | PATCH | `/projects/:projectId` | role:maintainer |
 | PUT | `/projects/:projectId/execution-mode` | role:maintainer |
 | PUT | `/projects/:projectId/mirror-path` | role:maintainer |
+| PUT | `/projects/:projectId/container/network` | role:maintainer |
 | GET | `/projects/:projectId/mirror-state` | role:viewer |
 | GET | `/projects/:projectId/models` | role:viewer |
 | GET | `/projects/:projectId/actions` | role:developer |
@@ -1371,6 +1372,7 @@ detalhar o motivo na URL.
 | GET | `/projects/:projectId/rag/coverage` | role:viewer |
 | GET | `/projects/:projectId/container` | role:viewer |
 | GET | `/projects/:projectId/container/lifecycle` | role:viewer |
+| GET | `/projects/:projectId/container/network` | role:viewer |
 | GET | `/projects/:projectId/coverage` | role:viewer |
 | GET | `/projects/:projectId/events/:eventId` | role:viewer |
 | POST | `/projects/:projectId/execution/activate` | role:maintainer |

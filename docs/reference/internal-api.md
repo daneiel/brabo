@@ -1364,7 +1364,16 @@ de cinco operações e vem aqui ler:
 3. `localizacao`, o localizador discriminado da pasta do projeto — ver abaixo;
 4. a decisão de imagem vigente do Arquiteto, ou `null` enquanto não há nenhuma
    ([RN-105](../business-rules/autenticacao.md#rn-105)), caso em que só `start` é recusado
-   e as outras quatro operações continuam funcionando.
+   e as outras quatro operações continuam funcionando;
+5. desde o [ADR 0228](../adr/0228-comando-do-app-e-rede-do-container.md), quatro
+   campos opcionais, cada um `null` quando não há declaração (e sempre `null`
+   em projeto `runner`): `comandoDoApp`, o `run.app.command` vigente em
+   `artifact.run_instructions` ([RN-933](../business-rules.md#rn-933)); e
+   `ports` (`[{host, container, protocol: 'tcp'}]`), `dns` (IPs) e `extraHosts`
+   (`[{name, ip}]`), do `artifact.container_network` vigente
+   ([RN-932](../business-rules.md#rn-932)). O broker revalida os quatro com as
+   regras do `docker-port` antes do daemon, e eles só valem num container
+   recriado (`container_recreate`, [RN-934](../business-rules.md#rn-934)).
 
 A partir disso o broker COMPÕE imagem, rede, recursos e o único mount, e
 revalida tudo antes de entregar qualquer coisa ao daemon. Não há campo em
