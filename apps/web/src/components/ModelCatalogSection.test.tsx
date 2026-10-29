@@ -16,6 +16,7 @@ const setModelsActive = vi.fn();
 const syncModelCatalog = vi.fn();
 const listCredentials = vi.fn();
 const setModelUses = vi.fn();
+const listCredentialedProviders = vi.fn();
 
 vi.mock('../lib/api-client', () => ({
   listModelCatalog: (...args: unknown[]) => listModelCatalog(...args),
@@ -23,6 +24,7 @@ vi.mock('../lib/api-client', () => ({
   syncModelCatalog: (...args: unknown[]) => syncModelCatalog(...args),
   listCredentials: (...args: unknown[]) => listCredentials(...args),
   setModelUses: (...args: unknown[]) => setModelUses(...args),
+  listCredentialedProviders: (...args: unknown[]) => listCredentialedProviders(...args),
   setAgentModelBinding: vi.fn(),
   listWorkspaces: () => Promise.resolve([]),
   mensagemDaApi: (_e: unknown, f?: string) => f ?? 'erro',
@@ -79,6 +81,8 @@ beforeEach(async () => {
   setModelUses.mockResolvedValue([]);
   syncModelCatalog.mockResolvedValue({ porProvider: [] });
   listCredentials.mockResolvedValue([]);
+  // Sem resposta do titular = "não sei": todos os providers aparecem.
+  listCredentialedProviders.mockRejectedValue(new Error('indisponível'));
 });
 
 afterAll(() => {
@@ -355,73 +359,84 @@ describe('subgrupos colapsáveis', () => {
   });
 });
 
-describe('colapso de grupo e "minimizar tudo"', () => {
+describe('abas por provider com chave do titular (AT-607)', () => {
   function catalogoMisto() {
     return {
       local: { ollama: [model({ id: 'l-1', provider: 'ollama', name: 'llama3.2:1b', displayName: 'Llama 3.2 1B' })] },
       cloud: {
         openai: [model({ id: 'd-1', provider: 'openai', name: 'gpt-4o', displayName: 'GPT-4o direto' })],
+        anthropic: [model({ id: 'a-1', provider: 'anthropic', name: 'claude-x', displayName: 'Claude direto', isActive: false })],
         openrouter: [model({ id: 'h-1', provider: 'openrouter', name: 'openai/gpt-4o', displayName: 'GPT-4o via hub' })],
       },
     } as CatalogoPorCategoria;
   }
 
-  it('grupos nascem ABERTOS — fechá-los de saída esconderia até o que é pequeno', async () => {
+  it('sem resposta do titular mostra uma aba por provider e só o modelo da aba ativa', async () => {
     listModelCatalog.mockResolvedValue(catalogoMisto());
     montar();
 
     expect(await screen.findByText('Llama 3.2 1B')).toBeTruthy();
-    expect(screen.getByText('GPT-4o direto')).toBeTruthy();
-  });
-
-  it('fechar "Local" some com os modelos dele e não toca nos outros', async () => {
-    listModelCatalog.mockResolvedValue(catalogoMisto());
-    montar();
-    await screen.findByText('Llama 3.2 1B');
-
-    fireEvent.click(screen.getByRole('button', { name: /^Local/ }));
-
-    expect(screen.queryByText('Llama 3.2 1B')).toBeNull();
-    expect(screen.getByText('GPT-4o direto')).toBeTruthy();
-  });
-
-  /**
-   * "Hubs" sozinho não diz de QUEM é o catálogo — e preço, disponibilidade e
-   * credencial pertencem ao hub, não ao fabricante do modelo.
-   */
-  it('o grupo de hub nomeia o provedor que o serve', async () => {
-    listModelCatalog.mockResolvedValue(catalogoMisto());
-    montar();
-
-    const hub = await screen.findByRole('button', { name: /Hubs/ });
-    expect(hub.textContent).toContain('OpenRouter');
-  });
-
-  it('APIs diretas não repetem o provider no cabeçalho — a linha já diz', async () => {
-    listModelCatalog.mockResolvedValue(catalogoMisto());
-    montar();
-
-    const direto = await screen.findByRole('button', { name: /APIs diretas/ });
-    expect(direto.textContent).not.toContain('OpenAI');
-  });
-
-  it('minimizar tudo fecha grupos e subgrupos; expandir tudo reabre os dois', async () => {
-    listModelCatalog.mockResolvedValue(catalogoMisto());
-    montar();
-    await screen.findByText('Llama 3.2 1B');
-
-    fireEvent.click(screen.getByRole('button', { name: 'Minimizar tudo' }));
-    expect(screen.queryByText('Llama 3.2 1B')).toBeNull();
+    expect(screen.getAllByRole('tab')).toHaveLength(4);
     expect(screen.queryByText('GPT-4o direto')).toBeNull();
 
-    // O botão oferece a AÇÃO, não o estado: agora ele reabre.
+    fireEvent.click(screen.getByRole('tab', { name: /OpenAI/ }));
+    expect(screen.getByText('GPT-4o direto')).toBeTruthy();
+    expect(screen.queryByText('Llama 3.2 1B')).toBeNull();
+  });
+
+  it('só os providers com chave do titular viram aba; o resto entra na linha "de fora"', async () => {
+    listModelCatalog.mockResolvedValue(catalogoMisto());
+    listCredentialedProviders.mockResolvedValue({ providers: ['openai'] });
+    montar();
+
+    await screen.findByText('Llama 3.2 1B');
+    await waitFor(() => expect(screen.getAllByRole('tab')).toHaveLength(2));
+    expect(screen.getByRole('tab', { name: /Ollama/ })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: /OpenAI/ })).toBeTruthy();
+    expect(screen.getByText(/2 de fora, sem chave do titular: Anthropic, OpenRouter/)).toBeTruthy();
+  });
+
+  it('provider sem chave com modelo ATIVO vira aba marcada, para dar para desativar (RN-043)', async () => {
+    const cat = catalogoMisto();
+    cat.cloud.anthropic = [model({ id: 'a-1', provider: 'anthropic', name: 'claude-x', displayName: 'Claude direto', isActive: true })];
+    listModelCatalog.mockResolvedValue(cat);
+    listCredentialedProviders.mockResolvedValue({ providers: ['openai'] });
+    montar();
+
+    const aba = await screen.findByRole('tab', { name: /Anthropic · sem chave do titular/ });
+    fireEvent.click(aba);
+    expect(screen.getByText('Claude direto')).toBeTruthy();
+    expect(screen.getByText(/ainda tem modelo ativo/)).toBeTruthy();
+  });
+
+  it('a seleção sobrevive à troca de aba e a busca sem resultado na aba nomeia as que casam', async () => {
+    listModelCatalog.mockResolvedValue(catalogoMisto());
+    montar();
+    await screen.findByText('Llama 3.2 1B');
+
+    fireEvent.click(screen.getAllByRole('checkbox')[0]);
+    fireEvent.click(screen.getByRole('tab', { name: /OpenAI/ }));
+    expect(screen.getByText(/1 selecionado/)).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText('Buscar modelo no catálogo'), {
+      target: { value: 'llama' },
+    });
+    expect(await screen.findByText(/Nenhum modelo de OpenAI casa com a busca.*Casam em: Ollama/)).toBeTruthy();
+  });
+
+  it('o hub continua repartido por fabricante; "expandir tudo" abre os subgrupos da aba', async () => {
+    listModelCatalog.mockResolvedValue(catalogoMisto());
+    montar();
+    await screen.findByText('Llama 3.2 1B');
+
+    fireEvent.click(screen.getByRole('tab', { name: /OpenRouter/ }));
+    expect(screen.getByRole('button', { name: /OpenAI/ })).toBeTruthy();
+    expect(screen.queryByText('GPT-4o via hub')).toBeNull();
+
     fireEvent.click(screen.getByRole('button', { name: 'Expandir tudo' }));
-    expect(screen.getByText('Llama 3.2 1B')).toBeTruthy();
-    // E "expandir tudo" abre também os subgrupos, que nascem fechados.
     expect(screen.getByText('GPT-4o via hub')).toBeTruthy();
   });
 });
-
 
 /**
  * Facetas de capability (ADR 0051).
