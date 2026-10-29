@@ -17,7 +17,9 @@
     "resourcesNone": "—",
     "since": "起始",
     "sinceNone": "—",
-    "actions": "操作"
+    "actions": "操作",
+    "detail": "详情",
+    "openDetail": "打开"
   },
   "status": {
     "provisioning": "正在创建",
@@ -73,5 +75,21 @@
       "sem_broker_ambos": "此安装没有容器 broker：启动、停止和删除都只会以失败告终。"
     },
     "bloqueioDetalhe": "为什么？"
+  },
+  "detail": {
+    "title": "容器",
+    "back": "返回容器列表",
+    "notFound": "此项目不在该工作区的列表中。",
+    "network": "网络",
+    "mode": "执行模式",
+    "networkNone": "尚无网络决定",
+    "urls": "声明的 URL",
+    "urlsNone": "Infra 未为此项目声明 URL。",
+    "urlsNote": "由 Infra 在其 PR 中声明，未经验证。",
+    "urlRecusada": "（不在你的机器上的地址，不生成链接）",
+    "networkValue": {
+      "none": "无网络",
+      "egress": "可出站访问互联网"
+    }
   }
 }

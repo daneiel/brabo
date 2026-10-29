@@ -17,7 +17,9 @@
     "resourcesNone": "—",
     "since": "Since",
     "sinceNone": "—",
-    "actions": "Actions"
+    "actions": "Actions",
+    "detail": "Detail",
+    "openDetail": "Open"
   },
   "status": {
     "provisioning": "provisioning",
@@ -73,5 +75,21 @@
       "sem_broker_ambos": "No container broker in this installation: starting, stopping and removing could only fail."
     },
     "bloqueioDetalhe": "Why?"
+  },
+  "detail": {
+    "title": "Container",
+    "back": "Back to containers",
+    "notFound": "This project is not in this workspace's list.",
+    "network": "Network",
+    "mode": "Execution mode",
+    "networkNone": "No network decision yet",
+    "urls": "Declared URLs",
+    "urlsNone": "No URL declared by Infra for this project.",
+    "urlsNote": "Declared by Infra in its PR, not verified.",
+    "urlRecusada": "(address outside your machine, not a link)",
+    "networkValue": {
+      "none": "No network",
+      "egress": "Outbound internet access"
+    }
   }
 }
