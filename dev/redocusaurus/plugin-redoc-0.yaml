@@ -671,6 +671,18 @@ paths:
           in: path
           schema:
             type: string
+        - name: papel
+          required: false
+          in: query
+          schema:
+            enum:
+              - qa
+            type: string
+        - name: task
+          required: false
+          in: query
+          schema:
+            type: string
       responses:
         '200':
           description: ''
@@ -832,6 +844,76 @@ paths:
       summary: O funil de entrega do projeto e métricas DORA parciais, para o PO ler
       tags:
         - internal
+  /internal/projects/{projectId}/qa-environments/{taskId}/remove:
+    post:
+      description: >-
+        Automatic, no proposal: it only reaches what carries the QA label (the
+        broker guarantees it). Idempotent.
+      operationId: InternalQaEnvironmentsController_remove
+      parameters:
+        - name: projectId
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: taskId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QaEnvironmentResponseDto'
+        '403':
+          description: Service token ausente ou diferente do compartilhado.
+        '404':
+          description: Project or task not found.
+      security:
+        - service-token: []
+      summary: Removes the QA instance of a task (RN-936)
+      tags:
+        - internal
+  /internal/projects/{projectId}/qa-environments/{taskId}/start:
+    post:
+      description: >-
+        Records the row, then asks the broker. `sucesso: false` is the NORMAL
+        shape of a refused broker. At most ONE active instance per project:
+        another task active -> 409 `instancia_de_qa_ocupada`. `runner` projects
+        -> 409 `qa_nao_suporta_runner`.
+      operationId: InternalQaEnvironmentsController_start
+      parameters:
+        - name: projectId
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: taskId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QaEnvironmentResponseDto'
+        '403':
+          description: Service token ausente ou diferente do compartilhado.
+        '404':
+          description: Project or task (of that project) not found.
+        '409':
+          description: Busy instance, runner project or ambiguous task key.
+      security:
+        - service-token: []
+      summary: Brings up the ephemeral QA instance of a task (RN-935)
+      tags:
+        - internal
   /internal/projects/{projectId}/workspace-verification:
     post:
       description: >-
@@ -872,6 +954,38 @@ paths:
       security:
         - service-token: []
       summary: O runner confirma o caminho de um projeto "runner" (RN-423)
+      tags:
+        - internal
+  /internal/qa-environments/sweep:
+    post:
+      description: >-
+        The engine sends the task ids it still has in flight; every other active
+        or failed instance is removed. Shared services and the QA network have
+        no broker operation yet (declared gap).
+      operationId: InternalQaEnvironmentsController_sweep
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SweepQaEnvironmentsInternalDto'
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SweepQaEnvironmentsResponseDto'
+        '400':
+          description: >-
+            Corpo inválido. O `ValidationPipe` roda com `whitelist` e
+            `forbidNonWhitelisted`, então campo desconhecido também reprova.
+        '403':
+          description: Service token ausente ou diferente do compartilhado.
+      security:
+        - service-token: []
+      summary: Removes QA instances whose gate is no longer in flight (RN-937)
       tags:
         - internal
   /internal/rag/feedback:
@@ -10508,6 +10622,18 @@ components:
       required:
         - toAgent
         - motivo
+    AlvoQaInternalDto:
+      type: object
+      properties:
+        qa:
+          type: boolean
+          example: true
+        taskId:
+          type: string
+          format: uuid
+      required:
+        - qa
+        - taskId
     AnaliseDeTerminoResponseDto:
       type: object
       properties:
@@ -10858,6 +10984,7 @@ components:
             - container_remove
             - container_recreate
             - container_start_via_runner
+            - qa_environment_start
           example: terminal
           description: O que a ação faria. `git_push` e `git_merge` exigem `maintainer`.
         payload:
@@ -12272,6 +12399,12 @@ components:
           type: number
           example: 300000
           description: Timeout em milissegundos. Omitido usa o padrão do broker.
+        alvo:
+          description: >-
+            AT-612: run in the task QA instance instead of the work container.
+            Set by the engine from the gate context, never by the model.
+          allOf:
+            - $ref: '#/components/schemas/AlvoQaInternalDto'
       required:
         - comando
     ContainerExecInternalResponseDto:
@@ -12567,6 +12700,20 @@ components:
                 type: string
                 example: 10.0.0.5
           description: 'AT-608: `--add-host` entries (IPv4), or `null`.'
+        qa:
+          type: object
+          properties:
+            chave:
+              type: string
+              example: a1b2c3d4
+            services:
+              type: array
+              items:
+                type: object
+          description: >-
+            AT-612 (ADR 0229): ONLY with `papel=qa`. `chave` = 8 first [a-z0-9]
+            of the task id; `services` = `run.qa.services` declared by the Infra
+            (image with digest, env, tmpfs, shared).
       required:
         - projectId
         - projectSlug
@@ -12749,6 +12896,7 @@ components:
             - container_remove
             - container_recreate
             - container_start_via_runner
+            - qa_environment_start
           example: terminal
         actor:
           description: Sempre um agente nesta rota.
@@ -17721,6 +17869,7 @@ components:
             - container_remove
             - container_recreate
             - container_start_via_runner
+            - qa_environment_start
           example: terminal
           description: >-
             Tipo da ação. Cada tipo tem papel mínimo próprio: `git_push`,
@@ -17782,6 +17931,7 @@ components:
             - container_remove
             - container_recreate
             - container_start_via_runner
+            - qa_environment_start
           example: terminal
           description: O que a ação faria. `git_push` e `git_merge` exigem `maintainer`.
         payload:
@@ -18248,6 +18398,31 @@ components:
             passadas ficam intactas e visíveis.
       required:
         - enabled
+    QaEnvironmentResponseDto:
+      type: object
+      properties:
+        sucesso:
+          type: boolean
+          description: '`false` when the broker refused; `motivo` explains.'
+        status:
+          type: string
+          enum:
+            - provisioning
+            - running
+            - failed
+            - removed
+        chave:
+          type: string
+          example: a1b2c3d4
+          description: Instance key (8 chars of the task id).
+        motivo:
+          type: string
+          nullable: true
+      required:
+        - sucesso
+        - status
+        - chave
+        - motivo
     RagCoverageResponseDto:
       type: object
       properties:
@@ -19369,6 +19544,11 @@ components:
             it.
           allOf:
             - $ref: '#/components/schemas/AppDeExecucaoResponseDto'
+        qa:
+          type: object
+          description: >-
+            AT-612 (ADR 0229): the infra services of the ephemeral QA instance
+            declared by the Infra (`run.qa`). Absent when none.
         prUrl:
           type: string
           example: http://localhost:3000/git/acme/pulls/3
@@ -20070,6 +20250,7 @@ components:
             - container_remove
             - container_recreate
             - container_start_via_runner
+            - qa_environment_start
             - '*'
           example: terminal
           description: >-
@@ -20701,6 +20882,41 @@ components:
       required:
         - projectId
         - messages
+    SweepQaEnvironmentsInternalDto:
+      type: object
+      properties:
+        taskIdsEmVoo:
+          description: >-
+            Task ids that still have a gate in flight; every other active
+            instance is removed.
+          type: array
+          items:
+            type: string
+        projectId:
+          type: string
+          format: uuid
+          description: Limit the sweep to one project.
+      required:
+        - taskIdsEmVoo
+    SweepQaEnvironmentsResponseDto:
+      type: object
+      properties:
+        removidas:
+          type: array
+          items:
+            type: string
+        falhas:
+          type: array
+          items:
+            type: object
+            properties:
+              taskId:
+                type: string
+              motivo:
+                type: string
+      required:
+        - removidas
+        - falhas
     SyncModelCatalogResponseDto:
       type: object
       properties:
