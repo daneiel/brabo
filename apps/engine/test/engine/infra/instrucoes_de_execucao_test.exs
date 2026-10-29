@@ -77,4 +77,36 @@ defmodule Engine.Infra.InstrucoesDeExecucaoTest do
       assert motivo =~ "`run.app`"
     end
   end
+
+  describe "run.qa (AT-612, RN-941)" do
+    @dig "postgres@sha256:" <> String.duplicate("a", 64)
+
+    defp com_qa(extra),
+      do:
+        Map.put(@base, "qa", %{
+          "services" => [Map.merge(%{"name" => "db", "image" => @dig}, extra)]
+        })
+
+    test "user e command válidos passam e são preservados; nil vale como ausente" do
+      s = %{"user" => "70:70", "command" => ["httpd", "-f"]}
+      assert {:ok, %{"qa" => %{"services" => [serv]}}} = InstrucoesDeExecucao.validar(com_qa(s))
+      assert serv["user"] == "70:70"
+      assert {:ok, _} = InstrucoesDeExecucao.validar(com_qa(%{"user" => nil, "command" => nil}))
+    end
+
+    test "recusa root, uid sem gid, comando vazio, grande, com quebra ou longo" do
+      for extra <- [
+            %{"user" => "0:0"},
+            %{"user" => "70:0"},
+            %{"user" => "70"},
+            %{"command" => []},
+            %{"command" => List.duplicate("a", 17)},
+            %{"command" => ["a\nb"]},
+            %{"command" => [String.duplicate("a", 201)]}
+          ] do
+        assert {:error, motivo} = InstrucoesDeExecucao.validar(com_qa(extra))
+        assert motivo =~ "run.qa.services[0]"
+      end
+    end
+  end
 end

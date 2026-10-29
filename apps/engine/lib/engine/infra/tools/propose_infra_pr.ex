@@ -82,6 +82,37 @@ defmodule Engine.Infra.Tools.ProposeInfraPr do
                   "port" => %{"type" => "integer", "minimum" => 1024, "maximum" => 65535}
                 },
                 "required" => ["command", "port"]
+              },
+              "qa" => %{
+                "type" => "object",
+                "description" =>
+                  "opcional: serviços de infra (banco, S3...) da instância efêmera de QA, até 6, " <>
+                    "imagem SEMPRE por digest; `user` (\"<uid>:<gid>\", nunca 0) é o usuário do " <>
+                    "serviço e dono do `tmpfs`; `command` são os argumentos passados depois da imagem",
+                "properties" => %{
+                  "services" => %{
+                    "type" => "array",
+                    "maxItems" => 6,
+                    "items" => %{
+                      "type" => "object",
+                      "properties" => %{
+                        "name" => %{"type" => "string"},
+                        "image" => %{"type" => "string"},
+                        "env" => %{"type" => "object"},
+                        "tmpfs" => %{"type" => "array", "items" => %{"type" => "string"}},
+                        "user" => %{"type" => "string"},
+                        "command" => %{
+                          "type" => "array",
+                          "maxItems" => 16,
+                          "items" => %{"type" => "string", "maxLength" => 200}
+                        },
+                        "shared" => %{"type" => "boolean"}
+                      },
+                      "required" => ["name", "image"]
+                    }
+                  }
+                },
+                "required" => ["services"]
               }
             },
             "required" => ["command", "urls", "envExample"]

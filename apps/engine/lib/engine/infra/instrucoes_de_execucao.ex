@@ -13,7 +13,12 @@ defmodule Engine.Infra.InstrucoesDeExecucao do
   - `envExample`: booleano;
   - `app` (opcional, AT-610): `%{command, port}` — o comando que sobe o app
     DENTRO do container de trabalho, até 300 caracteres sem quebra de linha
-    nem `\0`, e a porta INTERNA (inteiro de 1024 a 65535).
+    nem `\0`, e a porta INTERNA (inteiro de 1024 a 65535);
+  - `qa` (opcional, AT-612, RN-941): `%{services: [...]}`, até 6 serviços
+    `%{name, image, env?, tmpfs?, user?, command?, shared?}` — a régua de
+    `recusaDoQa` na api. `user` é `"<uid>:<gid>"` com inteiros diferentes de 0
+    (nunca root); `command` são até 16 argumentos (200 caracteres, uma linha)
+    passados depois da imagem. `nil` vale como ausente.
   """
 
   @kinds ~w(api_docs web)
@@ -24,10 +29,11 @@ defmodule Engine.Infra.InstrucoesDeExecucao do
     with :ok <- comando(Map.get(run, "command")),
          :ok <- urls(Map.get(run, "urls")),
          :ok <- env_example(Map.get(run, "envExample")),
-         :ok <- app(Map.get(run, "app")) do
+         :ok <- app(Map.get(run, "app")),
+         :ok <- qa(Map.get(run, "qa")) do
       {:ok,
        run
-       |> Map.take(["command", "urls", "envExample", "app"])
+       |> Map.take(["command", "urls", "envExample", "app", "qa"])
        |> Map.reject(fn {_, v} -> is_nil(v) end)}
     end
   end
@@ -121,6 +127,84 @@ defmodule Engine.Infra.InstrucoesDeExecucao do
 
   defp app_porta(_),
     do: recusa("`run.app.port` precisa ser um inteiro de 1024 a 65535 (porta INTERNA)")
+
+  defp qa(nil), do: :ok
+
+  defp qa(%{"services" => servicos}) when is_list(servicos) and length(servicos) <= 6 do
+    servicos
+    |> Enum.with_index()
+    |> Enum.reduce_while(MapSet.new(), fn {s, i}, nomes ->
+      case servico_de_qa(s, "run.qa.services[#{i}]", nomes) do
+        {:ok, nomes} -> {:cont, nomes}
+        erro -> {:halt, erro}
+      end
+    end)
+    |> case do
+      %MapSet{} -> :ok
+      erro -> erro
+    end
+  end
+
+  defp qa(_), do: recusa("`run.qa` precisa ser {services: lista de até 6 serviços}")
+
+  defp servico_de_qa(%{} = s, ref, nomes) do
+    nome = Map.get(s, "name")
+
+    with :ok <- qa_nome(nome, ref, nomes),
+         :ok <- qa_imagem(Map.get(s, "image"), ref),
+         :ok <- qa_usuario(Map.get(s, "user"), ref),
+         :ok <- qa_comando(Map.get(s, "command"), ref) do
+      {:ok, MapSet.put(nomes, nome)}
+    end
+  end
+
+  defp servico_de_qa(_, ref, _), do: recusa("`#{ref}` precisa ser {name, image, ...}")
+
+  defp qa_nome(n, ref, nomes) when is_binary(n) do
+    cond do
+      not Regex.match?(~r/^[a-z][a-z0-9-]{0,31}$/, n) ->
+        recusa("`#{ref}.name` precisa casar [a-z][a-z0-9-]{0,31}")
+
+      MapSet.member?(nomes, n) ->
+        recusa("`#{ref}.name` repetido: #{n}")
+
+      true ->
+        :ok
+    end
+  end
+
+  defp qa_nome(_, ref, _), do: recusa("`#{ref}.name` precisa ser texto")
+
+  defp qa_imagem(i, ref) do
+    if is_binary(i) and Regex.match?(~r/@sha256:[0-9a-f]{64}$/, i),
+      do: :ok,
+      else: recusa("`#{ref}.image` precisa trazer digest (@sha256:<64 hex>)")
+  end
+
+  defp qa_usuario(nil, _), do: :ok
+
+  defp qa_usuario(u, ref) do
+    if is_binary(u) and Regex.match?(~r/^[1-9][0-9]{0,9}:[1-9][0-9]{0,9}$/, u),
+      do: :ok,
+      else: recusa("`#{ref}.user` precisa ser \"<uid>:<gid>\" com inteiros diferentes de 0")
+  end
+
+  defp qa_comando(nil, _), do: :ok
+
+  defp qa_comando(c, ref) when is_list(c) and length(c) in 1..16 do
+    if Enum.all?(c, &argumento_valido?/1),
+      do: :ok,
+      else:
+        recusa("`#{ref}.command` tem argumento inválido (texto de 1 a 200 caracteres, uma linha)")
+  end
+
+  defp qa_comando(_, ref),
+    do: recusa("`#{ref}.command` precisa ser uma lista de 1 a 16 argumentos")
+
+  defp argumento_valido?(a),
+    do:
+      is_binary(a) and a != "" and String.length(a) <= 200 and
+        not String.contains?(a, ["\n", "\r", "\0"])
 
   defp recusa(motivo), do: {:error, "propose_infra_pr recusada: " <> motivo <> "."}
 end
