@@ -3951,6 +3951,79 @@ paths:
       summary: Жизненный цикл контейнера проекта (записанное состояние)
       tags:
         - projects
+  /projects/{projectId}/container/network:
+    get:
+      description: >-
+        The current declaration (ports on 127.0.0.1, DNS, extra hosts), or
+        `null`. It is what was DECLARED; it only takes effect when the container
+        is recreated (`container_recreate`).
+      operationId: ContainersController_rede
+      parameters:
+        - name: projectId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Or `null`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RedeDoContainerResponseDto'
+        '401':
+          description: Нет токена, токен истёк или подпись недействительна.
+        '403':
+          description: Недостаточная роль в проекте.
+        '429':
+          description: Ограничение частоты запросов на пользователя или на IP.
+      security:
+        - bearer: []
+      summary: Declared network of the container (artifact.container_network)
+      tags:
+        - projects
+    put:
+      description: >-
+        Emits a new version of `artifact.container_network` (the current one
+        replaces the previous). Not an external effect: nothing changes in
+        Docker until a `container_recreate` is approved (AT-608, RN-932). 400
+        `rede_invalida` names the field.
+      operationId: ContainersController_declarar
+      parameters:
+        - name: projectId
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeclararRedeDto'
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RedeDoContainerResponseDto'
+        '400':
+          description: >-
+            Некорректное тело. `ValidationPipe` работает с `whitelist` и
+            `forbidNonWhitelisted`, поэтому неизвестное поле тоже приводит к
+            ошибке.
+        '401':
+          description: Нет токена, токен истёк или подпись недействительна.
+        '403':
+          description: Недостаточная роль в проекте.
+        '429':
+          description: Ограничение частоты запросов на пользователя или на IP.
+      security:
+        - bearer: []
+      summary: Declares the container network (human only)
+      tags:
+        - projects
   /projects/{projectId}/coverage:
     get:
       description: >-
@@ -10829,6 +10902,18 @@ components:
             `chat.structured_question`.
       required:
         - answers
+    AppDeExecucaoResponseDto:
+      type: object
+      properties:
+        command:
+          type: string
+          example: npm start
+        port:
+          type: number
+          example: 3000
+      required:
+        - command
+        - port
     AppendSessionEventDto:
       type: object
       properties:
@@ -10922,6 +11007,7 @@ components:
             - container_start
             - container_stop
             - container_remove
+            - container_recreate
             - container_start_via_runner
           example: terminal
           description: >-
@@ -12607,6 +12693,50 @@ components:
           description: >-
             Версия текущего артефакта; 0, когда решения нет. Попадает в
             контейнер как метка `brabo.image.version`.
+        comandoDoApp:
+          type: string
+          nullable: true
+          description: >-
+            AT-610 (ADR 0228): the app command declared by the Infra in
+            `run.app` (`artifact.run_instructions`), or `null`. Always `null`
+            for `runner`.
+        ports:
+          type: array
+          nullable: true
+          items:
+            type: object
+            properties:
+              host:
+                type: integer
+                example: 8080
+              container:
+                type: integer
+                example: 3000
+              protocol:
+                type: string
+                example: tcp
+          description: >-
+            AT-608: ports declared in `artifact.container_network`, published on
+            127.0.0.1 only. `null` when undeclared or `runner`.
+        dns:
+          nullable: true
+          description: 'AT-608: DNS servers (literal IPs), or `null`.'
+          type: array
+          items:
+            type: string
+        extraHosts:
+          type: array
+          nullable: true
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+                example: api.local
+              ip:
+                type: string
+                example: 10.0.0.5
+          description: 'AT-608: `--add-host` entries (IPv4), or `null`.'
       required:
         - projectId
         - projectSlug
@@ -12617,6 +12747,10 @@ components:
         - usuarioDaPasta
         - imagem
         - imagemVersao
+        - comandoDoApp
+        - ports
+        - dns
+        - extraHosts
     ContratoDeModuloInternalDto:
       type: object
       properties:
@@ -12784,6 +12918,7 @@ components:
             - container_start
             - container_stop
             - container_remove
+            - container_recreate
             - container_start_via_runner
           example: terminal
         actor:
@@ -13525,6 +13660,28 @@ components:
         - rationale
         - network
         - resources
+    DeclararRedeDto:
+      type: object
+      properties:
+        ports:
+          description: >-
+            Up to 10 TCP ports published on 127.0.0.1 only. `host` 1024-65535,
+            never an installation port, no duplicates.
+          type: array
+          items:
+            $ref: '#/components/schemas/PortaDto'
+        dns:
+          description: Up to 3 literal IPs.
+          type: array
+          items:
+            type: string
+        extraHosts:
+          description: >-
+            Up to 10 `--add-host` entries: name in [a-z0-9.-], never localhost
+            or an installation service, IPv4 literal.
+          type: array
+          items:
+            $ref: '#/components/schemas/HostExtraDto'
     DeclareModuleContractsInternalDto:
       type: object
       properties:
@@ -14363,6 +14520,18 @@ components:
         - service
         - status
         - timestamp
+    HostExtraDto:
+      type: object
+      properties:
+        name:
+          type: string
+          example: api.local
+        ip:
+          type: string
+          example: 10.0.0.5
+      required:
+        - name
+        - ip
     HuggingFaceModelResponseDto:
       type: object
       properties:
@@ -16779,6 +16948,22 @@ components:
         - expiresAt
         - revokedAt
         - lastUsedAt
+    PortaDto:
+      type: object
+      properties:
+        host:
+          type: number
+          example: 8080
+        container:
+          type: number
+          example: 3000
+        protocol:
+          type: string
+          example: tcp
+      required:
+        - host
+        - container
+        - protocol
     PriorHypothesisResponseDto:
       type: object
       properties:
@@ -17739,6 +17924,7 @@ components:
             - container_start
             - container_stop
             - container_remove
+            - container_recreate
             - container_start_via_runner
           example: terminal
           description: >-
@@ -17799,6 +17985,7 @@ components:
             - container_start
             - container_stop
             - container_remove
+            - container_recreate
             - container_start_via_runner
           example: terminal
           description: >-
@@ -18777,6 +18964,29 @@ components:
         - cpus
         - memoryMb
         - pidsLimit
+    RedeDoContainerResponseDto:
+      type: object
+      properties:
+        ports:
+          type: array
+          items:
+            $ref: '#/components/schemas/PortaDto'
+        dns:
+          type: array
+          items:
+            type: string
+        extraHosts:
+          type: array
+          items:
+            $ref: '#/components/schemas/HostExtraDto'
+        version:
+          type: number
+          example: 1
+      required:
+        - ports
+        - dns
+        - extraHosts
+        - version
     RegisterDto:
       type: object
       properties:
@@ -19370,6 +19580,13 @@ components:
           description: >-
             PR коммитит `.env.example`, который нужно скопировать перед
             запуском.
+        app:
+          description: >-
+            AT-610 (ADR 0228): the command the container runs to start the app
+            and the port it listens on. Absent when the Infra did not declare
+            it.
+          allOf:
+            - $ref: '#/components/schemas/AppDeExecucaoResponseDto'
         prUrl:
           type: string
           example: http://localhost:3000/git/acme/pulls/3
@@ -20070,6 +20287,7 @@ components:
             - container_start
             - container_stop
             - container_remove
+            - container_recreate
             - container_start_via_runner
             - '*'
           example: terminal
