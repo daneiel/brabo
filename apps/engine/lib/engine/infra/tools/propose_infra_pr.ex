@@ -70,6 +70,18 @@ defmodule Engine.Infra.Tools.ProposeInfraPr do
               "envExample" => %{
                 "type" => "boolean",
                 "description" => "true quando o .env.example está entre os files"
+              },
+              "app" => %{
+                "type" => "object",
+                "description" =>
+                  "opcional: comando que sobe o app DENTRO do container de trabalho, em /work, " <>
+                    "em background, e a porta INTERNA onde ele escuta; NÃO é o comando da máquina " <>
+                    "do usuário (`run.command`, que usa docker compose)",
+                "properties" => %{
+                  "command" => %{"type" => "string", "maxLength" => 300},
+                  "port" => %{"type" => "integer", "minimum" => 1024, "maximum" => 65535}
+                },
+                "required" => ["command", "port"]
               }
             },
             "required" => ["command", "urls", "envExample"]
