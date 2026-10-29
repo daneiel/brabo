@@ -535,7 +535,8 @@ export type LLMProviderName =
   | 'deepinfra'
   | 'bitdeer'
   | 'vultr'
-  | '9router';
+  | '9router'
+  | 'opencode-zen';
 export type ModelCategory = 'local' | 'cloud';
 
 /** Realidade REMOTA observada pelo sync de catálogo (Fase 9c). */
