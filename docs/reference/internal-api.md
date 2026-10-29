@@ -934,6 +934,23 @@ um runner conectado agora; faltando qualquer um dos dois, recusa
 explicitamente — nunca caindo no `System.cmd`/bind-mount do `mounted`, que não
 existe para um projeto `runner`.
 
+### Instância de QA efêmera — rotas novas ([RN-935](../business-rules.md#rn-935) a [RN-937](../business-rules.md#rn-937), [ADR 0229](../adr/0229-instancia-de-qa-efemera-com-servicos-declarados-pela-infra.md))
+
+| método | caminho |
+|---|---|
+| POST | `/internal/projects/:projectId/qa-environments/:taskId/start` |
+| POST | `/internal/projects/:projectId/qa-environments/:taskId/remove` |
+| POST | `/internal/qa-environments/sweep` |
+
+`:taskId` é o id completo ou a chave de 8 caracteres. As duas primeiras
+respondem 200 com `{ sucesso, status, chave, motivo }` (`sucesso: false` é a
+forma normal de broker recusando); 404 para projeto ou tarefa de outro projeto;
+409 `instancia_de_qa_ocupada` (teto de 1 ativa por projeto),
+`qa_nao_suporta_runner` ou `tarefa_ambigua`. O `sweep` recebe
+`{ taskIdsEmVoo: uuid[], projectId?: uuid }` e responde `{ removidas, falhas }`.
+O `container-exec` aceita `alvo: { qa: true, taskId }` e a `container-spec`
+aceita `?papel=qa&task=<id ou chave>` (acrescenta `qa: { chave, services }`).
+
 ### Execução de comando de terminal dentro do container real — rota nova ([RN-492](../business-rules.md#rn-492), [ADR 0134](../adr/0134-dev-agents-executam-dentro-do-container.md))
 
 | método | caminho |

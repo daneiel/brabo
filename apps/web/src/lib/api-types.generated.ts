@@ -541,6 +541,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/internal/projects/{projectId}/qa-environments/{taskId}/remove": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Removes the QA instance of a task (RN-936)
+         * @description Automatic, no proposal: it only reaches what carries the QA label (the broker guarantees it). Idempotent.
+         */
+        post: operations["InternalQaEnvironmentsController_remove"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/projects/{projectId}/qa-environments/{taskId}/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Brings up the ephemeral QA instance of a task (RN-935)
+         * @description Records the row, then asks the broker. `sucesso: false` is the NORMAL shape of a refused broker. At most ONE active instance per project: another task active -> 409 `instancia_de_qa_ocupada`. `runner` projects -> 409 `qa_nao_suporta_runner`.
+         */
+        post: operations["InternalQaEnvironmentsController_start"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/internal/projects/{projectId}/workspace-verification": {
         parameters: {
             query?: never;
@@ -555,6 +595,26 @@ export interface paths {
          * @description Called only by the engine, after a runner connects and sends `workspace_confirm` over the channel. The runner is the SOURCE OF TRUTH for the path — the api overwrites `workspacePath` with what it reported, after re-validating it lexically (system root/overlap with Brabo are still forbidden even coming from the runner). Idempotent: reconnecting with the SAME path writes nothing again.
          */
         post: operations["InternalProjectsController_confirmWorkspaceVerification"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/qa-environments/sweep": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Removes QA instances whose gate is no longer in flight (RN-937)
+         * @description The engine sends the task ids it still has in flight; every other active or failed instance is removed. Shared services and the QA network have no broker operation yet (declared gap).
+         */
+        post: operations["InternalQaEnvironmentsController_sweep"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4728,6 +4788,12 @@ export interface components {
             /** @enum {string} */
             motivo: "oferta_pendente" | "agente_ativo";
         };
+        AlvoQaInternalDto: {
+            /** @example true */
+            qa: boolean;
+            /** Format: uuid */
+            taskId: string;
+        };
         AnaliseDeTerminoResponseDto: {
             /**
              * @description The ORIGIN of the failure, never deduced by elimination (lesson from ADR 0020).
@@ -4933,7 +4999,7 @@ export interface components {
              * @example terminal
              * @enum {string}
              */
-            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability" | "container_start" | "container_stop" | "container_remove" | "container_recreate" | "container_start_via_runner";
+            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability" | "container_start" | "container_stop" | "container_remove" | "container_recreate" | "container_start_via_runner" | "qa_environment_start";
             /**
              * @description Parameters of the action, specific to the `actionType`.
              * @example {
@@ -5817,6 +5883,8 @@ export interface components {
              * @example 300000
              */
             timeoutMs?: number;
+            /** @description AT-612: run in the task QA instance instead of the work container. Set by the engine from the gate context, never by the model. */
+            alvo?: components["schemas"]["AlvoQaInternalDto"];
         };
         ContainerExecInternalResponseDto: {
             /**
@@ -5958,6 +6026,12 @@ export interface components {
                 /** @example 10.0.0.5 */
                 ip?: string;
             }[] | null;
+            /** @description AT-612 (ADR 0229): ONLY with `papel=qa`. `chave` = 8 first [a-z0-9] of the task id; `services` = `run.qa.services` declared by the Infra (image with digest, env, tmpfs, shared). */
+            qa?: {
+                /** @example a1b2c3d4 */
+                chave?: string;
+                services?: Record<string, never>[];
+            };
         };
         ContratoDeModuloInternalDto: {
             /**
@@ -6039,7 +6113,7 @@ export interface components {
              * @example terminal
              * @enum {string}
              */
-            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability" | "container_start" | "container_stop" | "container_remove" | "container_recreate" | "container_start_via_runner";
+            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability" | "container_start" | "container_stop" | "container_remove" | "container_recreate" | "container_start_via_runner" | "qa_environment_start";
             /** @description Always an agent on this route. */
             actor: components["schemas"]["ActorDto"];
             /**
@@ -8874,7 +8948,7 @@ export interface components {
              * @example terminal
              * @enum {string}
              */
-            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability" | "container_start" | "container_stop" | "container_remove" | "container_recreate" | "container_start_via_runner";
+            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability" | "container_start" | "container_stop" | "container_remove" | "container_recreate" | "container_start_via_runner" | "qa_environment_start";
             /** @description Who is proposing it. */
             actor: components["schemas"]["ActorDto"];
             /**
@@ -8907,7 +8981,7 @@ export interface components {
              * @example terminal
              * @enum {string}
              */
-            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability" | "container_start" | "container_stop" | "container_remove" | "container_recreate" | "container_start_via_runner";
+            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability" | "container_start" | "container_stop" | "container_remove" | "container_recreate" | "container_start_via_runner" | "qa_environment_start";
             /**
              * @description Parameters of the action, specific to the `actionType`.
              * @example {
@@ -9202,6 +9276,18 @@ export interface components {
              * @example false
              */
             enabled: boolean;
+        };
+        QaEnvironmentResponseDto: {
+            /** @description `false` when the broker refused; `motivo` explains. */
+            sucesso: boolean;
+            /** @enum {string} */
+            status: "provisioning" | "running" | "failed" | "removed";
+            /**
+             * @description Instance key (8 chars of the task id).
+             * @example a1b2c3d4
+             */
+            chave: string;
+            motivo: string | null;
         };
         RagCoverageResponseDto: {
             docs: components["schemas"]["RagFileCoverageResponseDto"];
@@ -9841,6 +9927,8 @@ export interface components {
             envExample: boolean;
             /** @description AT-610 (ADR 0228): the command the container runs to start the app and the port it listens on. Absent when the Infra did not declare it. */
             app?: components["schemas"]["AppDeExecucaoResponseDto"];
+            /** @description AT-612 (ADR 0229): the infra services of the ephemeral QA instance declared by the Infra (`run.qa`). Absent when none. */
+            qa?: Record<string, never>;
             /** @example http://localhost:3000/git/acme/pulls/3 */
             prUrl: string;
             /** @example 1 */
@@ -10274,7 +10362,7 @@ export interface components {
              * @example terminal
              * @enum {string}
              */
-            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability" | "container_start" | "container_stop" | "container_remove" | "container_recreate" | "container_start_via_runner" | "*";
+            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability" | "container_start" | "container_stop" | "container_remove" | "container_recreate" | "container_start_via_runner" | "qa_environment_start" | "*";
             /**
              * @description This agent's autonomy for this type. Does NOT override `permissions.json`: a pattern in `deny` stays blocked no matter how much autonomy the agent has.
              * @example auto_approve
@@ -10669,6 +10757,22 @@ export interface components {
              * @example true
              */
             catalogoCompleto?: boolean;
+        };
+        SweepQaEnvironmentsInternalDto: {
+            /** @description Task ids that still have a gate in flight; every other active instance is removed. */
+            taskIdsEmVoo: string[];
+            /**
+             * Format: uuid
+             * @description Limit the sweep to one project.
+             */
+            projectId?: string;
+        };
+        SweepQaEnvironmentsResponseDto: {
+            removidas: string[];
+            falhas: {
+                taskId?: string;
+                motivo?: string;
+            }[];
         };
         SyncModelCatalogResponseDto: {
             porProvider: components["schemas"]["ResultadoPorProviderResponseDto"][];
@@ -11872,7 +11976,10 @@ export interface operations {
     };
     InternalContainersController_containerSpec: {
         parameters: {
-            query?: never;
+            query?: {
+                papel?: "qa";
+                task?: string;
+            };
             header?: never;
             path: {
                 projectId: string;
@@ -12049,6 +12156,85 @@ export interface operations {
             };
         };
     };
+    InternalQaEnvironmentsController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+                taskId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QaEnvironmentResponseDto"];
+                };
+            };
+            /** @description Service token missing or different from the shared one. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Project or task not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    InternalQaEnvironmentsController_start: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+                taskId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QaEnvironmentResponseDto"];
+                };
+            };
+            /** @description Service token missing or different from the shared one. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Project or task (of that project) not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Busy instance, runner project or ambiguous task key. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     InternalProjectsController_confirmWorkspaceVerification: {
         parameters: {
             query?: never;
@@ -12088,6 +12274,43 @@ export interface operations {
             };
             /** @description Project does not exist. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    InternalQaEnvironmentsController_sweep: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SweepQaEnvironmentsInternalDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SweepQaEnvironmentsResponseDto"];
+                };
+            };
+            /** @description Invalid body. The `ValidationPipe` runs with `whitelist` and `forbidNonWhitelisted`, so an unknown field also fails. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Service token missing or different from the shared one. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

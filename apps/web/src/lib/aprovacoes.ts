@@ -116,6 +116,7 @@ export const VERBO_DA_ACAO: Record<ActionType, string> = {
   container_remove: 'quer remover o container do projeto',
   container_recreate: 'quer recriar o container do projeto',
   container_start_via_runner: 'quer subir o container do projeto na sua máquina',
+  qa_environment_start: 'quer subir a instância de QA da tarefa',
 };
 
 /**
@@ -433,6 +434,11 @@ const FRASE_DA_ACAO: Record<ActionType, (payload: Payload) => string> = {
   // exclusivo do modo Runner: sobe pelo `brabo-runner`, na máquina do
   // usuário, com o Docker DELE — nunca elege imagem candidata nenhuma (a
   // que já estiver decidida é a que sobe), diferente de `container_start`.
+  // AT-612 (ADR 0229): instância efêmera do QA, removida sozinha no fim do gate.
+  qa_environment_start: () =>
+    `Sobe a instância de QA ${codigo('efêmera')} da tarefa, com a infra que o app declarou — ` +
+    'ela some sozinha quando o gate termina.',
+
   container_start_via_runner: (p) => {
     const rationale = texto(p, 'rationale');
     const porque = rationale ? `: "${curto(rationale)}"` : '';
