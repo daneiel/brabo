@@ -1859,6 +1859,9 @@ defmodule Engine.Infra.InfraLeadServerTest do
       assert texto =~ "`node:22-bookworm-slim`"
       assert texto =~ "Rodar na sua máquina"
       assert texto =~ "run"
+      # AT-610: o app de servidor HTTP é declarado em `run.app`, dentro do container
+      assert texto =~ "`run.app` (`{command, port}`)"
+      assert texto =~ "porta INTERNA"
       # RN-863: `/docs` sempre, nunca rota de negócio
       assert texto =~ "declara SEMPRE `/docs`"
       assert texto =~ "nunca rota de negócio"
