@@ -9,7 +9,13 @@ defmodule EngineWeb.ActionCommandController do
   # PsychologistWorker: atom snake_case vira string snake_case no JSON,
   # não camelCase, e o DTO da api espera camelCase).
   def execute(conn, %{"projectId" => project_id, "command" => command} = params) do
-    result = TerminalExecutor.run(project_id, command, cwd: Map.get(params, "cwd"))
+    # AT-612: `alvo` é posto pelo engine no payload da ação (do ctx do agente
+    # de QA, nunca do modelo) e a api o repassa; sem ele, comportamento de sempre.
+    result =
+      TerminalExecutor.run(project_id, command,
+        cwd: Map.get(params, "cwd"),
+        qa_task_id: qa_task_id(Map.get(params, "alvo"))
+      )
 
     json(conn, %{
       stdout: result.stdout,
@@ -22,6 +28,9 @@ defmodule EngineWeb.ActionCommandController do
       estimatedTokensCompressed: result.estimated_tokens_compressed
     })
   end
+
+  defp qa_task_id(%{"qa" => true, "taskId" => id}) when is_binary(id) and id != "", do: id
+  defp qa_task_id(_), do: nil
 
   # Fase 4a: git_commit/git_push no worktree do dev agent (a api roteia pra cá).
   #

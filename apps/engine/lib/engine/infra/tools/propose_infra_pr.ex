@@ -82,6 +82,32 @@ defmodule Engine.Infra.Tools.ProposeInfraPr do
                   "port" => %{"type" => "integer", "minimum" => 1024, "maximum" => 65535}
                 },
                 "required" => ["command", "port"]
+              },
+              "qa" => %{
+                "type" => "object",
+                "description" =>
+                  "opcional: serviços de apoio dos testes do QA (banco, S3 e afins), que sobem " <>
+                    "junto da instância efêmera de QA e ficam no localhost dela; até 6, imagem " <>
+                    "fixada por digest (@sha256:…), `env` com as variáveis de conexão, `tmpfs` " <>
+                    "(até 3 caminhos absolutos) e `shared` quando o serviço pode ser compartilhado",
+                "properties" => %{
+                  "services" => %{
+                    "type" => "array",
+                    "maxItems" => 6,
+                    "items" => %{
+                      "type" => "object",
+                      "properties" => %{
+                        "name" => %{"type" => "string"},
+                        "image" => %{"type" => "string"},
+                        "env" => %{"type" => "object"},
+                        "tmpfs" => %{"type" => "array", "items" => %{"type" => "string"}},
+                        "shared" => %{"type" => "boolean"}
+                      },
+                      "required" => ["name", "image"]
+                    }
+                  }
+                },
+                "required" => ["services"]
               }
             },
             "required" => ["command", "urls", "envExample"]
