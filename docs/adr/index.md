@@ -3,7 +3,7 @@ id: adr-index
 title: Decisões arquiteturais (ADR)
 sidebar_label: Índice de ADRs
 sidebar_position: 0
-description: Os 224 registros de decisão arquitetural do Brabo, agrupados por tema, com o que cada um decidiu.
+description: Os 225 registros de decisão arquitetural do Brabo, agrupados por tema, com o que cada um decidiu.
 keywords: [ADR, decisão arquitetural, arquitetura, histórico]
 ---
 
@@ -258,6 +258,7 @@ O contrato de provider, o catálogo de modelos e a curadoria, os bindings de mod
 | [0223](0223-orcamento-de-raciocinio-por-modelo.md) | O **orçamento de raciocínio** é capability por modelo, curada à mão: `reasoning.max_tokens` só para o `qwen/qwen3.7-flash` (provado, N = 2048); o deepseek fica de fora por medição e `effort` nunca é usado. |
 | [0224](0224-raciocinio-abortado-no-stream.md) | O raciocínio é **contado no stream e abortado no limite** do `reasoning_budget` (`truncated` com motivo); o gasto abortado é estimado na hora (`price_implicit`) e **reconciliado** depois pelo `/generation`; o deepseek ganha orçamento 2048. |
 | [0225](0225-teto-de-preco-do-upstream-no-openrouter.md) | O OpenRouter recebe um **teto de preço** por chamada: `provider.max_price` = preço de catálogo × 1,5, fixo no código e ligado por padrão (capability `priceCeiling`, provada por smoke), mesclado com o `sort`; o 404 por nenhum upstream no teto vira erro nomeado e a chamada repete UMA vez sem teto (fator nulo no metering). Referencia o 0166 e o 0221. |
+| [0227](0227-provider-opencode-zen-de-llm.md) | O **OpenCode Zen** entra como o 11º provider, só no dialeto OpenAI (`/chat/completions`): `listModels: false` (a rota de modelos é outra e pública), sem teste de conexão da credencial, seed só com os dois grátis de retenção zero (`deepseek-v4.1-flash-free`, `glm-5.3-flash-free`) e capabilities `false` até o smoke. Referencia o 0043 e o 0222. |
 
 ## RAG, grafo de conhecimento e artefatos {#tema-conhecimento}
 

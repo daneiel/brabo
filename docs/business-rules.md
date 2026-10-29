@@ -20460,8 +20460,8 @@ Três atalhos sobre ações que já existiam, nenhum endpoint novo (AT-357):
    projeto segue pelo "aplicar a todos" da RN-476.
 
 - **Onde:** `apps/web/src/lib/models.ts:244` (`casaComBusca`),
-  `apps/web/src/lib/models.ts:425` (`providersSemCatalogo`),
-  `apps/web/src/lib/models.ts:441` (`algumModeloAtivo`),
+  `apps/web/src/lib/models.ts:431` (`providersSemCatalogo`),
+  `apps/web/src/lib/models.ts:447` (`algumModeloAtivo`),
   `apps/web/src/routes/settings/CredentialsSection.tsx:139` (`handleSync`)
 - **Teste:** `apps/web/src/components/catalogo-com-busca.test.tsx`
   (busca por id e sem resultado; sem atalho "ativar e aplicar"; sync no card,

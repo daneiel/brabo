@@ -331,6 +331,9 @@ export const ROTULO_DO_PROVIDER: Record<LLMProviderName, string> = {
   get '9router'() {
     return i18n.t('providerLabel.9router', { ns: 'models' });
   },
+  get 'opencode-zen'() {
+    return i18n.t('providerLabel.opencode-zen', { ns: 'models' });
+  },
 };
 
 /** Provider que exige chave: todos menos os locais, que rodam na máquina. */
