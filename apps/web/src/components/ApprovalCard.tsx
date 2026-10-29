@@ -75,6 +75,8 @@ const ACTION_ICON: Record<ActionType, typeof DiffIcon> = {
   // RN-508 (ADR 0145) — mesmo calibre visual de `container_start`: sobe
   // container real, só que na máquina do usuário, via runner.
   container_start_via_runner: AlertIcon,
+  // AT-612: instância de QA efêmera, mesmo calibre visual de `container_start`.
+  qa_environment_start: AlertIcon,
 };
 
 /**
