@@ -682,6 +682,33 @@ defmodule Engine.Sessions.EngineApiClient do
             ) ::
               {:ok, map()} | {:error, term()}
 
+  @doc """
+  AT-612: o mesmo `container-exec`, mas na instância de QA da tarefa
+  (`alvo: {qa: true, taskId}`). O `task_id` vem do ctx do agente, nunca do modelo.
+  """
+  @callback executar_comando_na_instancia_de_qa(
+              project_id :: String.t(),
+              task_id :: String.t(),
+              comando :: String.t(),
+              cwd :: String.t() | nil,
+              timeout_ms :: pos_integer() | nil
+            ) :: {:ok, map()} | {:error, term()}
+
+  @doc """
+  AT-612: remove a instância de QA efêmera da tarefa
+  (`POST internal/projects/:projectId/qa-environments/:taskId/remove`,
+  idempotente). `{:ok, %{"sucesso" => _, "motivo" => _}}` ou `{:error, _}`.
+  """
+  @callback remover_instancia_de_qa(project_id :: String.t(), task_id :: String.t()) ::
+              {:ok, map()} | {:error, term()}
+
+  @doc """
+  AT-612: limpeza de órfãs (`POST internal/qa-environments/sweep`): remove toda
+  instância de QA cuja tarefa NÃO está em `task_ids_em_voo`.
+  """
+  @callback varrer_instancias_de_qa(task_ids_em_voo :: [String.t()]) ::
+              {:ok, map()} | {:error, term()}
+
   # RN-622: a orientação de idioma entra AQUI, no fim da lista, e em nenhum
   # outro lugar — toda chamada de LLM do engine passa por esta fachada (ver
   # `Engine.Harness.IdiomaDaResposta`). Ela nunca volta para o `state` de quem
@@ -746,6 +773,15 @@ defmodule Engine.Sessions.EngineApiClient do
 
   def report_mirror_sync(project_id, resultado),
     do: impl().report_mirror_sync(project_id, resultado)
+
+  def executar_comando_na_instancia_de_qa(project_id, task_id, comando, cwd, timeout_ms),
+    do: impl().executar_comando_na_instancia_de_qa(project_id, task_id, comando, cwd, timeout_ms)
+
+  def remover_instancia_de_qa(project_id, task_id),
+    do: impl().remover_instancia_de_qa(project_id, task_id)
+
+  def varrer_instancias_de_qa(task_ids_em_voo),
+    do: impl().varrer_instancias_de_qa(task_ids_em_voo)
 
   def rag_search(project_id, query, top_k, opts \\ []),
     do: impl().rag_search(project_id, query, top_k, opts)
@@ -1894,6 +1930,7 @@ defmodule Engine.Sessions.EngineApiClient.Live do
     container_start
     container_start_via_runner
     container_stop
+    qa_environment_start
   )
 
   @doc false
@@ -1942,10 +1979,34 @@ defmodule Engine.Sessions.EngineApiClient.Live do
     post_returning("/internal/projects/#{project_id}/mirror-sync-result", resultado)
   end
 
+  # A remoção desmonta o QA e seus serviços: até seis `docker rm` de 30s.
   @impl true
-  def executar_comando_no_container(project_id, comando, cwd, timeout_ms) do
+  def remover_instancia_de_qa(project_id, task_id) do
+    post_returning("/internal/projects/#{project_id}/qa-environments/#{task_id}/remove", %{},
+      receive_timeout: 195_000
+    )
+  end
+
+  @impl true
+  def varrer_instancias_de_qa(task_ids_em_voo) do
+    post_returning("/internal/qa-environments/sweep", %{taskIdsEmVoo: task_ids_em_voo},
+      receive_timeout: 195_000
+    )
+  end
+
+  @impl true
+  def executar_comando_no_container(project_id, comando, cwd, timeout_ms),
+    do: container_exec(project_id, comando, cwd, timeout_ms, %{})
+
+  @impl true
+  def executar_comando_na_instancia_de_qa(project_id, task_id, comando, cwd, timeout_ms),
+    do:
+      container_exec(project_id, comando, cwd, timeout_ms, %{alvo: %{qa: true, taskId: task_id}})
+
+  defp container_exec(project_id, comando, cwd, timeout_ms, extra) do
     corpo =
       %{comando: comando}
+      |> Map.merge(extra)
       |> por_se_presente(:cwd, cwd)
       |> por_se_presente(:timeoutMs, timeout_ms)
 

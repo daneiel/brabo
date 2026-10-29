@@ -24,6 +24,7 @@ defmodule Engine.Harness.Hooks.ActionPipeline do
     payload =
       %{command: Map.get(args, "command", "")}
       |> maybe_put_cwd(ctx[:workspace_root])
+      |> maybe_put_alvo(ctx[:qa_task_id])
 
     propose(ctx, "terminal", payload, &terminal_result/1)
   end
@@ -40,6 +41,10 @@ defmodule Engine.Harness.Hooks.ActionPipeline do
   end
 
   def call(ctx), do: {:cont, ctx}
+
+  # AT-612: o alvo vem do ctx do agente de QA, nunca dos argumentos do modelo.
+  defp maybe_put_alvo(payload, nil), do: payload
+  defp maybe_put_alvo(payload, task_id), do: Map.put(payload, :alvo, %{qa: true, taskId: task_id})
 
   defp maybe_put_cwd(payload, nil), do: payload
   defp maybe_put_cwd(payload, cwd), do: Map.put(payload, :cwd, cwd)

@@ -24,10 +24,11 @@ defmodule Engine.Infra.InstrucoesDeExecucao do
     with :ok <- comando(Map.get(run, "command")),
          :ok <- urls(Map.get(run, "urls")),
          :ok <- env_example(Map.get(run, "envExample")),
-         :ok <- app(Map.get(run, "app")) do
+         :ok <- app(Map.get(run, "app")),
+         :ok <- qa(Map.get(run, "qa")) do
       {:ok,
        run
-       |> Map.take(["command", "urls", "envExample", "app"])
+       |> Map.take(["command", "urls", "envExample", "app", "qa"])
        |> Map.reject(fn {_, v} -> is_nil(v) end)}
     end
   end
@@ -121,6 +122,74 @@ defmodule Engine.Infra.InstrucoesDeExecucao do
 
   defp app_porta(_),
     do: recusa("`run.app.port` precisa ser um inteiro de 1024 a 65535 (porta INTERNA)")
+
+  @nome_de_servico ~r/^[a-z][a-z0-9-]{0,31}$/
+  @imagem_com_digest ~r/^[^\s@]+@sha256:[0-9a-f]{64}$/
+  @nome_de_env ~r/^[A-Z_][A-Z0-9_]*$/
+
+  # AT-612: a MESMA régua de `recusaDoQa` (api); `qa: null` = ausente.
+  defp qa(nil), do: :ok
+
+  defp qa(%{"services" => s}) when is_list(s) and length(s) <= 6 do
+    nomes = Enum.map(s, &(is_map(&1) && Map.get(&1, "name")))
+
+    if length(Enum.uniq(nomes)) != length(nomes),
+      do: recusa("`run.qa.services` tem nome repetido"),
+      else: s |> Enum.with_index() |> Enum.reduce_while(:ok, fn {x, i}, :ok -> servico(x, i) end)
+  end
+
+  defp qa(_), do: recusa("`run.qa` precisa ser {services}, com até 6 serviços")
+
+  defp servico(%{} = s, i) do
+    ref = "run.qa.services[#{i}]"
+
+    cond do
+      not (is_binary(s["name"]) and Regex.match?(@nome_de_servico, s["name"])) ->
+        {:halt, recusa("`#{ref}.name` deve casar [a-z][a-z0-9-]{0,31}")}
+
+      not (is_binary(s["image"]) and Regex.match?(@imagem_com_digest, s["image"])) ->
+        {:halt, recusa("`#{ref}.image` deve trazer digest (@sha256:<64 hex>)")}
+
+      not env_ok?(s["env"]) ->
+        {:halt, recusa("`#{ref}.env` inválido (até 20 variáveis NOME => texto de uma linha)")}
+
+      not tmpfs_ok?(s["tmpfs"]) ->
+        {:halt, recusa("`#{ref}.tmpfs` deve ter até 3 caminhos absolutos")}
+
+      not (is_nil(s["shared"]) or is_boolean(s["shared"])) ->
+        {:halt, recusa("`#{ref}.shared` deve ser booleano")}
+
+      true ->
+        {:cont, :ok}
+    end
+  end
+
+  defp servico(_, i),
+    do: {:halt, recusa("`run.qa.services[#{i}]` deve ser {name, image, env?, tmpfs?, shared?}")}
+
+  defp env_ok?(nil), do: true
+
+  defp env_ok?(%{} = env) do
+    map_size(env) <= 20 and
+      Enum.all?(env, fn {k, v} ->
+        Regex.match?(@nome_de_env, k) and is_binary(v) and
+          not String.contains?(v, ["\n", "\r", "\0"])
+      end)
+  end
+
+  defp env_ok?(_), do: false
+
+  defp tmpfs_ok?(nil), do: true
+
+  defp tmpfs_ok?(l) when is_list(l) do
+    length(l) <= 3 and
+      Enum.all?(
+        l,
+        &(is_binary(&1) and String.starts_with?(&1, "/") and not Regex.match?(~r/[\s,:]/, &1))
+      )
+  end
+
+  defp tmpfs_ok?(_), do: false
 
   defp recusa(motivo), do: {:error, "propose_infra_pr recusada: " <> motivo <> "."}
 end

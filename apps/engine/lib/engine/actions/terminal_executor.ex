@@ -96,8 +96,14 @@ defmodule Engine.Actions.TerminalExecutor do
         Application.fetch_env!(:engine, :terminal_action_timeout_ms)
 
     cwd = Keyword.get(opts, :cwd)
+    qa = Keyword.get(opts, :qa_task_id)
 
     case decisao_de_execucao(project_id) do
+      # AT-612 (RN-935): o QA roda na instância efêmera dele, não no container
+      # de trabalho — então o `running` registrado do projeto não é pré-condição.
+      decisao when qa != nil and decisao in [:executar_no_container, :recusar_container_ausente] ->
+        run_no_container(project_id, command, cwd, timeout, qa)
+
       :rotear_runner ->
         run_via_runner(project_id, command, cwd, timeout)
 
@@ -246,15 +252,28 @@ defmodule Engine.Actions.TerminalExecutor do
   # FALHA NORMAL do comando: `failed_result`, nunca crash, nunca fallback
   # silencioso pro `System.cmd` fora do container — isso reabriria o vetor
   # de isolamento que este PR existe para fechar.
-  defp run_no_container(project_id, command, cwd, timeout) do
+  defp run_no_container(project_id, command, cwd, timeout, qa_task_id \\ nil) do
     container_cwd = cwd_para_container(project_id, cwd)
 
-    case EngineApiClient.executar_comando_no_container(
-           project_id,
-           command,
-           container_cwd,
-           timeout
-         ) do
+    resposta =
+      if qa_task_id,
+        do:
+          EngineApiClient.executar_comando_na_instancia_de_qa(
+            project_id,
+            qa_task_id,
+            command,
+            container_cwd,
+            timeout
+          ),
+        else:
+          EngineApiClient.executar_comando_no_container(
+            project_id,
+            command,
+            container_cwd,
+            timeout
+          )
+
+    case resposta do
       {:ok, %{"sucesso" => false} = payload} ->
         motivo = Map.get(payload, "motivo") || "motivo não informado"
         failed_result("execução no container do projeto recusada: #{motivo}")

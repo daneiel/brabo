@@ -89,7 +89,36 @@ defmodule Engine.Gates.GateRescuer do
     |> GateState.list_stale()
     |> Enum.each(&rescue_one/1)
 
+    varrer_instancias_de_qa()
     :ok
+  end
+
+  @doc """
+  AT-612 (RN-937): limpeza das instâncias de QA órfãs, no boot e no tick. A
+  lista de "em voo" é a das linhas de `gate_states` do gate `qa` não
+  estacionadas — durável e do cluster inteiro (todo nó grava ali), o que dispensa
+  perguntar nó a nó. Falha só loga: a limpeza nunca derruba o resgate.
+  """
+  def varrer_instancias_de_qa do
+    em_voo =
+      GateState.list_all()
+      |> Enum.filter(&(&1.gate == "qa" and is_nil(&1.parked_at)))
+      |> Enum.map(& &1.task_id)
+      |> Enum.filter(&match?({:ok, _}, Ecto.UUID.cast(&1)))
+
+    case EngineApiClient.varrer_instancias_de_qa(em_voo) do
+      {:ok, %{"falhas" => [_ | _] = falhas}} ->
+        Logger.warning("GateRescuer: limpeza de instâncias de QA com falhas: #{inspect(falhas)}")
+
+      {:ok, _} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning("GateRescuer: limpeza de instâncias de QA falhou: #{inspect(reason)}")
+    end
+  rescue
+    e ->
+      Logger.warning("GateRescuer: limpeza de instâncias de QA falhou: #{Exception.message(e)}")
   end
 
   defp rescue_one(
