@@ -561,7 +561,8 @@
     "inheritedHint": "Para defini-lo aqui, escolha um modelo próprio para esta linha.",
     "toast": {
       "saveError": "Não foi possível salvar a preferência de roteamento"
-    }
+    },
+    "teto": "No OpenRouter, cada chamada também leva um teto de preço (1,5 × o preço do catálogo): só um upstream dentro dele atende; se nenhum atende, a chamada repete uma vez sem teto."
   },
   "resolvedBindings": {
     "readError": "Não foi possível ler os modelos vigentes: {{reason}}",

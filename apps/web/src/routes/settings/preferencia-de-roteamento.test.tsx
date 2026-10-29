@@ -100,7 +100,7 @@ const MODELOS = {
   cloud: { openrouter: [DO_HUB] },
 } as unknown as ModelsByCategory;
 
-function capacidades(hubAceita: boolean): ProviderCapabilities[] {
+function capacidades(hubAceita: boolean, teto = false): ProviderCapabilities[] {
   const base = {
     streaming: true,
     toolCalling: true,
@@ -115,7 +115,7 @@ function capacidades(hubAceita: boolean): ProviderCapabilities[] {
     { provider: 'ollama', capabilities: base },
     {
       provider: 'openrouter',
-      capabilities: { ...base, routingPreference: hubAceita },
+      capabilities: { ...base, routingPreference: hubAceita, priceCeiling: teto },
     },
   ];
 }
@@ -337,5 +337,22 @@ describe('critério de roteamento — padrão da ÁREA (lead com a caixa marcada
     expect(
       await screen.findByRole('combobox', { name: ROTULO_DA_AREA }),
     ).toBeDisabled();
+  });
+});
+
+describe('teto de preço (priceCeiling) junto do critério de roteamento', () => {
+  it('caminho feliz: com o provider declarando o teto, a frase aparece ao lado do seletor', async () => {
+    listProviderCapabilities.mockResolvedValue(capacidades(true, true));
+    montar(<ModelsSection projectId="proj-1" />);
+
+    expect(await screen.findByText(/teto de preço/)).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: ROTULO })).toBeInTheDocument();
+  });
+
+  it('caso de falha: sem a capability, a frase do teto não aparece', async () => {
+    montar(<ModelsSection projectId="proj-1" />);
+
+    await screen.findByRole('combobox', { name: ROTULO });
+    expect(screen.queryByText(/teto de preço/)).toBeNull();
   });
 });

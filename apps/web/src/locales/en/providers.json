@@ -9,5 +9,5 @@
     "notProven": "not proven",
     "loadError": "Could not load the provider capabilities."
   },
-  "routing": "OpenRouter's routing criterion is chosen on the agent's or area's model, in project Settings; there is no control here."
+  "routing": "OpenRouter's routing criterion is chosen on the agent's or area's model, in project Settings; there is no control here. On OpenRouter, each call also carries a price ceiling (1.5 × the catalog price): only an upstream within it serves; if none does, the call is retried once without a ceiling."
 }

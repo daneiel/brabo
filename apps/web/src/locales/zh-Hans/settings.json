@@ -545,7 +545,8 @@
     "inheritedHint": "若要在此定义，请为这一行选择自有模型。",
     "toast": {
       "saveError": "无法保存路由偏好"
-    }
+    },
+    "teto": "在 OpenRouter 上，每次调用还带有价格上限（目录价格的 1.5 倍）：只有上限内的上游会提供服务；若没有上游符合，则不带上限重试一次。"
   },
   "resolvedBindings": {
     "readError": "无法读取当前生效的模型：{{reason}}",
