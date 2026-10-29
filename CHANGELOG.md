@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- Avisos de dependência de 29/10 fechados por `overrides` (AT-613): `seroval` (raiz, teto 1.6.11) e, no `website/`, `joi`, `serialize-javascript`, `compression`, `follow-redirects`, `launch-editor`, `body-parser`, `postcss-selector-parser` e `tinypool` (major 1→2); `deepmerge` fica declarado sem override (a 4.3.2 não foi publicada).
 - `brabo-runner credentials import` (AT-611, RN-927): subcomando interativo que lista as chaves de API de LLM já guardadas por Claude Code, Codex, OpenCode, Kilo e Hermes e, com a confirmação item a item, as grava por `POST /runner/llm-credentials` com a chave de máquina (409 pergunta se substitui; assinatura é só listada; o valor nunca é impresso). O teste da credencial depois de gravar fica para outra fatia.
 - O Infra Lead declara o comando do app em `run.app` (`{command, port}`, opcional, AT-610): a PR de infra recusa, nomeando o campo, comando com quebra de linha ou byte nulo, acima de 300 caracteres ou vazio, e porta interna fora de 1024–65535; sem `app` a PR segue como antes.
 - A api entrega o comando do app e a rede do container (AT-610 e AT-608, ADR 0228, RN-932 a RN-934): `run.app` opcional na PR de infra (só o piloto automático dispensa a aprovação), `artifact.container_network` com `PUT`/`GET /projects/:projectId/container/network`, a `container-spec` com `comandoDoApp`, `ports`, `dns` e `extraHosts`, e a ação `container_recreate` (remove e sobe de novo) no teto absoluto de `container_remove`.
