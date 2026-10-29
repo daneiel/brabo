@@ -72,6 +72,19 @@ paths:
   ele não publica porta): sem ele, `up --wait` dava `Healthy` a um container
   que morria cinco segundos depois, e foi assim que a queda chegou a ser
   anunciada como "reset completo"
+- Spec ampliada (ADR 0228/0229, RN-928..930): o `sleep infinity` deixou de ser
+  incondicional. `comandoDoApp` (da `container-spec`, nunca do corpo) usa o
+  supervisor constante `SUPERVISOR_DO_APP` com o comando como argumento;
+  `portas` (só `-p 127.0.0.1:H:C`), `dns` e `hostsExtras` são validados em
+  `spec-de-container.ts`. O papel `qa` (`spec.qa`) é a instância efêmera
+  `brabo-qa-<workspace>-<chave>`, sem `--restart`, e `stop`/`remove`/`inspect`/
+  `exec` aceitam `alvo: { papel: 'qa', chave }` (a porta segue com CINCO
+  operações; só `brabo.papel=qa` é alcançado). Rotas novas do broker, no
+  roteador fechado: `/containers/:projectId/qa/:chave/{start,remove,exec}` —
+  tudo o mais segue 404. Contrato api -> broker: campos `comandoDoApp`, `ports`
+  (`host`, `container`, `protocol`), `dns`, `extraHosts` (`name`, `ip`) e, com
+  `?papel=qa&task=<chave>`, `qa: { chave, services: [{ name, image, env?, tmpfs?,
+  shared? }] }`.
 - `packages/docker-port`: a porta de Docker e o adaptador de CLI, consumidos
   por `apps/runner` e `apps/broker`. Runtime, e por isso NÃO cabe em
   `packages/shared` (100% tipo, invariante travado por teste). Sem passo de

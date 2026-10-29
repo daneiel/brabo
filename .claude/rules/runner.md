@@ -215,7 +215,7 @@ paths:
   TIPO: sem campo para `privileged`/`cap_add`, rede é a união
   `'none' | 'egress'`, e o bind é UMA pasta de tipo MARCADO com destino
   constante — não há lista de mounts. O `docker run` composto por `DockerViaCli` leva `--init` como CONSTANTE (RN-738):
-  o `sleep infinity` de espera é PID 1 e não recebe SIGTERM sem init, e `stop`
+  o `sleep infinity` de espera (ou, com `comandoDoApp`, o supervisor do ADR 0228 — o runner ainda NÃO liga esses campos, que ficam ausentes e byte a byte) é PID 1 e não recebe SIGTERM sem init, e `stop`
   levava 10 s até o kill (`Exited (137)`); e `--restart unless-stopped`, também
   CONSTANTE (RN-820): daemon reiniciado religa o container, `stop` explícito não —
   nunca `always`. `pidsLimit` entrou na spec no ADR 0130,
