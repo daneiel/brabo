@@ -3720,6 +3720,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/runner/llm-credentials": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Stores an LLM API key imported by the local runner
+         * @description Authenticated by a MACHINE device key (never a session JWT, never a project-bound credential). Same envelope encryption as `POST /users/me/credentials`. 409 `credencial_existente` when the user already has this provider and `substituir` is not `true`. The key is never logged nor returned.
+         */
+        post: operations["RunnerLlmCredentialsController_execute"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/runner/projects": {
         parameters: {
             query?: never;
@@ -4062,6 +4082,26 @@ export interface paths {
          * @description Moves `pending_confirmation` → `confirmed` → `pulling`, calls the Ollama daemon, and on success upserts the model into the catalog (`models`) and activates it for THIS workspace. On failure the request ends in `failed` with a reason declaring its origin (infra | model | code | policy) — never a silent failure. This call runs SYNCHRONOUSLY for the whole pull (see the use case for why); use the GET route below to poll instead of holding this connection open.
          */
         post: operations["HuggingFaceModelsController_confirm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{workspaceId}/llm-providers/credentialed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lists the LLM providers the workspace owner has a key for
+         * @description The owner of record (`workspaces.created_by`) is whose key the agents spend (RN-058). Only provider NAMES — never a secret, id or date. `ollama` (local, no key) never appears.
+         */
+        get: operations["ModelsController_credentialed"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -6261,6 +6301,16 @@ export interface components {
              */
             slug: string;
         };
+        CredentialedProvidersResponseDto: {
+            /**
+             * @description LLM providers the workspace owner of record has a key for. Names only; `ollama` never appears.
+             * @example [
+             *       "anthropic",
+             *       "openrouter"
+             *     ]
+             */
+            providers: ("ollama" | "anthropic" | "openai" | "openrouter" | "nvidia-nim" | "together" | "deepinfra" | "bitdeer" | "vultr" | "9router" | "opencode-zen")[];
+        };
         CredentialSpendPorMesResponseDto: {
             /**
              * Format: date-time
@@ -7061,6 +7111,28 @@ export interface components {
              */
             network: "none" | "egress";
             resources: components["schemas"]["RecursosDoContainerResponseDto"];
+        };
+        ImportLlmCredentialDto: {
+            /**
+             * @example anthropic
+             * @enum {string}
+             */
+            provider: "anthropic" | "openai" | "openrouter" | "nvidia-nim" | "together" | "deepinfra" | "bitdeer" | "vultr" | "9router" | "opencode-zen";
+            /** @description The API key in plain text. Encrypted before touching the database; NEVER logged and NEVER returned. */
+            apiKey: string;
+            /**
+             * @description Tool and path the key was read from. Audit log only; never a value.
+             * @example codex: ~/.codex/auth.json
+             */
+            origem: string;
+            /** @description Must be `true` to replace an existing credential of this provider. */
+            substituir?: boolean;
+        };
+        ImportLlmCredentialResponseDto: {
+            /** @enum {string} */
+            provider: "anthropic" | "openai" | "openrouter" | "nvidia-nim" | "together" | "deepinfra" | "bitdeer" | "vultr" | "9router" | "opencode-zen";
+            /** @description Whether an existing credential was replaced. */
+            substituida: boolean;
         };
         IndexDocsReportResponseDto: {
             filesScanned: number;
@@ -21256,6 +21328,64 @@ export interface operations {
             };
         };
     };
+    RunnerLlmCredentialsController_execute: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ImportLlmCredentialDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportLlmCredentialResponseDto"];
+                };
+            };
+            /** @description Invalid body. The `ValidationPipe` runs with `whitelist` and `forbidNonWhitelisted`, so an unknown field also fails. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Credential bound to a project. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Code `credencial_existente`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     RunnerProjectsController_listRunnerProjects: {
         parameters: {
             query?: never;
@@ -22257,6 +22387,41 @@ export interface operations {
             };
             /** @description Pull request not found. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ModelsController_credentialed: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CredentialedProvidersResponseDto"];
+                };
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -7,7 +7,8 @@
     "provider": "提供商",
     "proven": "已证实",
     "notProven": "未证实",
-    "loadError": "无法加载提供商能力。"
+    "loadError": "无法加载提供商能力。",
+    "outside_other": "{{count}} 个已隐藏，无所有者密钥：{{names}}"
   },
   "routing": "OpenRouter 的路由标准在项目设置中的智能体或区域模型上选择；此处没有控件。"
 }

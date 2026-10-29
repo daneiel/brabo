@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import styles from './Tabs.module.css';
 
 /**
@@ -18,6 +18,8 @@ export interface TabItem {
   key: string;
   label: string;
   count?: number;
+  /** Cor do sublinhado da aba ativa (ex.: `var(--violet)`); sem ela, `--accent`. */
+  cor?: string;
 }
 
 interface TabsProps {
@@ -37,6 +39,7 @@ export function Tabs({ items, active, onChange, trailing }: TabsProps) {
           role="tab"
           aria-selected={active === item.key}
           className={[styles.tab, active === item.key && styles.active].filter(Boolean).join(' ')}
+          style={item.cor ? ({ '--tab-cor': item.cor } as CSSProperties) : undefined}
           onClick={() => onChange(item.key)}
         >
           {item.label}

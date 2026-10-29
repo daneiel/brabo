@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { agruparModelos, rotuloDoUpstream, upstreamDoModelo } from './models';
+import {
+  agruparModelos,
+  catalogoDoProvider,
+  providerAtivo,
+  rotuloDoUpstream,
+  upstreamDoModelo,
+} from './models';
 import type { Model, ModelsByCategory } from './api-types';
 
 /**
@@ -114,5 +120,29 @@ describe('agruparModelos — subgrupos de hub', () => {
 
     const openai = hub.subgrupos!.find((s) => s.upstream === 'openai')!;
     expect(openai.modelos.map((m) => m.name)).not.toContain('openai/o1-preview');
+  });
+});
+
+describe('providerAtivo (AT-607)', () => {
+  it('local é sempre ativo; os demais, só com chave do titular; sem resposta vale todos', () => {
+    const chaves = new Set(['openai'] as const);
+    expect(providerAtivo('ollama', new Set())).toBe(true);
+    expect(providerAtivo('openai', chaves)).toBe(true);
+    expect(providerAtivo('anthropic', chaves)).toBe(false);
+    expect(providerAtivo('anthropic', undefined)).toBe(true);
+  });
+});
+
+describe('catalogoDoProvider (AT-607)', () => {
+  it('devolve só os modelos do provider e reparte o hub por fabricante', () => {
+    const m = (provider: string, name: string) =>
+      ({ id: name, provider, name, displayName: name, supportsToolCalling: true }) as never;
+    const grupos = agruparModelos({
+      local: {},
+      cloud: { openai: [m('openai', 'gpt')], openrouter: [m('openrouter', 'anthropic/c')] },
+    } as never);
+    expect(catalogoDoProvider(grupos, 'openai').modelos).toHaveLength(1);
+    expect(catalogoDoProvider(grupos, 'openai').subgrupos).toBeUndefined();
+    expect(catalogoDoProvider(grupos, 'openrouter').subgrupos?.[0]?.upstream).toBe('anthropic');
   });
 });
