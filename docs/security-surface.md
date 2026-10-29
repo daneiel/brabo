@@ -584,6 +584,20 @@ detalhar o motivo na URL.
     pública que o `PatAuthGuard` verifica vem de `runner_device_keys`, nunca do
     emissor de sessão.
 
+- **`POST /runner/llm-credentials` é classificada `jwt` e só aceita chave de
+  dispositivo de MÁQUINA** ([RN-927](business-rules.md#rn-927),
+  [ADR 0230](adr/0230-importar-chave-de-llm-pelo-runner.md)). É a PRIMEIRA rota
+  em que uma credencial de máquina ESCREVE segredo de usuário: o
+  `brabo-runner credentials import` grava a chave de API de LLM que a pessoa
+  escolheu importar, pelo mesmo upsert com envelope do cadastro pela tela. Como
+  `GET /runner/projects`, não tem `:projectId`, e o `PatAuthGuard` recusa com 403
+  toda credencial amarrada a projeto; todo PAT é de projeto, então na prática
+  PAT não chama esta rota (o guard não distingue "PAT de conta" porque ele não
+  existe). Credencial existente exige `substituir: true` (409
+  `credencial_existente`), e o valor nunca vai a log, evento nem resposta (o
+  pino já redige `*.apiKey`; a auditoria leva provider e `origem`). O teto é a
+  revogação da chave de máquina.
+
   Ela devolve o id do projeto, o nome, o `workspaceDirName` e o estado de
   verificação — nunca um caminho absoluto. O que atravessa o fio é o SEGMENTO,
   e a raiz é de quem executa, o mesmo invariante do broker (ADR 0144) e da base
@@ -1302,6 +1316,7 @@ detalhar o motivo na URL.
 | POST | `/internal/sessions/:sessionId/termination` | engine-service |
 | GET | `/` | jwt |
 | GET | `/runner/projects` | jwt |
+| POST | `/runner/llm-credentials` | jwt |
 | GET | `/llm/provider-capabilities` | jwt |
 | GET | `/users/me/credentials` | jwt |
 | POST | `/users/me/credentials` | jwt |
