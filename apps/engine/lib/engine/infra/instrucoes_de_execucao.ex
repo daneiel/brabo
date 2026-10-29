@@ -10,7 +10,10 @@ defmodule Engine.Infra.InstrucoesDeExecucao do
   - `urls`: 1 a 5 itens `%{label, url, kind}`, `label` até 60 caracteres,
     `kind` em `api_docs | web`, `url` começando com `http://localhost:` ou
     `http://127.0.0.1:`;
-  - `envExample`: booleano.
+  - `envExample`: booleano;
+  - `app` (opcional, AT-610): `%{command, port}` — o comando que sobe o app
+    DENTRO do container de trabalho, até 300 caracteres sem quebra de linha
+    nem `\0`, e a porta INTERNA (inteiro de 1024 a 65535).
   """
 
   @kinds ~w(api_docs web)
@@ -20,8 +23,12 @@ defmodule Engine.Infra.InstrucoesDeExecucao do
   def validar(%{} = run) do
     with :ok <- comando(Map.get(run, "command")),
          :ok <- urls(Map.get(run, "urls")),
-         :ok <- env_example(Map.get(run, "envExample")) do
-      {:ok, Map.take(run, ["command", "urls", "envExample"])}
+         :ok <- env_example(Map.get(run, "envExample")),
+         :ok <- app(Map.get(run, "app")) do
+      {:ok,
+       run
+       |> Map.take(["command", "urls", "envExample", "app"])
+       |> Map.reject(fn {_, v} -> is_nil(v) end)}
     end
   end
 
@@ -81,6 +88,39 @@ defmodule Engine.Infra.InstrucoesDeExecucao do
 
   defp env_example(b) when is_boolean(b), do: :ok
   defp env_example(_), do: recusa("`run.envExample` precisa ser booleano")
+
+  defp app(nil), do: :ok
+
+  defp app(%{} = app) do
+    with :ok <- app_comando(Map.get(app, "command")),
+         :ok <- app_porta(Map.get(app, "port")),
+         do: :ok
+  end
+
+  defp app(_), do: recusa("`run.app` precisa ser um objeto {command, port}")
+
+  defp app_comando(c) when is_binary(c) do
+    cond do
+      String.trim(c) == "" ->
+        recusa("`run.app.command` está vazio")
+
+      String.length(c) > 300 ->
+        recusa("`run.app.command` passa de 300 caracteres")
+
+      String.contains?(c, ["\n", "\r", "\0"]) ->
+        recusa("`run.app.command` não pode ter quebra de linha nem byte nulo")
+
+      true ->
+        :ok
+    end
+  end
+
+  defp app_comando(_), do: recusa("`run.app.command` precisa ser texto")
+
+  defp app_porta(p) when is_integer(p) and p in 1024..65_535, do: :ok
+
+  defp app_porta(_),
+    do: recusa("`run.app.port` precisa ser um inteiro de 1024 a 65535 (porta INTERNA)")
 
   defp recusa(motivo), do: {:error, "propose_infra_pr recusada: " <> motivo <> "."}
 end
