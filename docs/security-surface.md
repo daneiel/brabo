@@ -1476,6 +1476,7 @@ detalhar o motivo na URL.
 | POST | `/workspaces/:workspaceId/huggingface/pull-requests` | role:maintainer |
 | POST | `/workspaces/:workspaceId/huggingface/pull-requests/:id/confirm` | role:maintainer |
 | GET | `/workspaces/:workspaceId/huggingface/pull-requests/:id` | role:maintainer |
+| GET | `/workspaces/:workspaceId/llm-providers/credentialed` | role:viewer |
 | POST | `/workspaces/:workspaceId/models/activate` | role:owner |
 | GET | `/workspaces/:workspaceId/models/catalog` | role:maintainer |
 | POST | `/workspaces/:workspaceId/models/sync` | role:owner |

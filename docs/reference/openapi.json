@@ -12657,6 +12657,49 @@
         ]
       }
     },
+    "/workspaces/{workspaceId}/llm-providers/credentialed": {
+      "get": {
+        "description": "The owner of record (`workspaces.created_by`) is whose key the agents spend (RN-058). Only provider NAMES — never a secret, id or date. `ollama` (local, no key) never appears.",
+        "operationId": "ModelsController_credentialed",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CredentialedProvidersResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, expired token, or invalid signature."
+          },
+          "429": {
+            "description": "Rate limit per user or per IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Lists the LLM providers the workspace owner has a key for",
+        "tags": [
+          "llm"
+        ]
+      }
+    },
     "/workspaces/{workspaceId}/members": {
       "get": {
         "description": "Who is associated with the WORKSPACE, with the workspace role — the role every project inherits unless a project row overrides it. Completes `GET projects/:projectId/members`, which lists only project rows: whoever reaches a project through the workspace alone shows up here and not there. Only id, name, e-mail and role.",
@@ -17353,6 +17396,38 @@
         "required": [
           "name",
           "slug"
+        ]
+      },
+      "CredentialedProvidersResponseDto": {
+        "type": "object",
+        "properties": {
+          "providers": {
+            "type": "array",
+            "example": [
+              "anthropic",
+              "openrouter"
+            ],
+            "description": "LLM providers the workspace owner of record has a key for. Names only; `ollama` never appears.",
+            "items": {
+              "type": "string",
+              "enum": [
+                "ollama",
+                "anthropic",
+                "openai",
+                "openrouter",
+                "nvidia-nim",
+                "together",
+                "deepinfra",
+                "bitdeer",
+                "vultr",
+                "9router",
+                "opencode-zen"
+              ]
+            }
+          }
+        },
+        "required": [
+          "providers"
         ]
       },
       "CredentialSpendPorMesResponseDto": {
