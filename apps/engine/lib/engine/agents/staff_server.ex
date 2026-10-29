@@ -113,13 +113,20 @@ defmodule Engine.Agents.StaffServer do
        messages: [system_msg | history],
        # Frente 3 do plano de decision_record: `emit_artifact` entra como
        # SEGUNDA ferramenta, aditiva — `propose_rfc` continua a primeira.
-       tool_specs: [StaffTools.spec(), EmitArtifact.spec()],
+       tool_specs: [
+         StaffTools.spec(),
+         EmitArtifact.spec(),
+         Engine.Harness.Tools.RegistrarPlano.spec()
+       ],
        # Guardado enquanto o turno roda numa Task supervisionada, fora do
        # handler que bloqueava o processo inteiro — é o que permite um
        # `:cancel` chegar e ser atendido (RN-122). Ver `TurnoAssincrono`.
        # RN-673: a fila de mensagens que chegaram com turno em curso,
        # reconstruída do log (sobrevive a restart), e como montar o turno
        # que a lê. Ver `TurnoAssincrono.receber_mensagem/4`.
+       # AT-582: a retomada do turno interrompido, ANTES da fila (a fila espera o fim dela).
+       retomada_agendada: TurnoAssincrono.retomada_ao_subir(project_id, session_id, @agent),
+       montar_turno_de_retomada: &turno_de_retomada/1,
        fila_de_mensagens: TurnoAssincrono.fila_ao_subir(project_id, session_id, @agent),
        montar_turno_de_mensagem: &turno_de_mensagem/2,
        turno_assincrono: nil
@@ -173,6 +180,14 @@ defmodule Engine.Agents.StaffServer do
   defp turno_de_mensagem(state, text) do
     work = state |> append(user_msg(text)) |> compact()
     fn -> run_turn(work, Engine.Harness.FalhaRepetida.inicio_de_turno(@max_iterations)) end
+  end
+
+  # AT-582: o turno de retomada não tem fala nova do usuário; o histórico
+  # reidratado já termina nela e a orientação vai efêmera (`RetomadaDoTurno`).
+  defp turno_de_retomada(state) do
+    fn ->
+      run_turn(compact(state), Engine.Harness.FalhaRepetida.inicio_de_turno(@max_iterations))
+    end
   end
 
   @impl true
@@ -282,6 +297,10 @@ defmodule Engine.Agents.StaffServer do
 
   defp run_tool("propose_rfc", args, state), do: StaffTools.run(args, state)
   defp run_tool("emit_artifact", args, state), do: EmitArtifact.run(args, state)
+
+  defp run_tool("registrar_plano", args, state),
+    do: Engine.Harness.Tools.RegistrarPlano.run(args, state)
+
   defp run_tool(name, _args, _state), do: {:error, "ferramenta desconhecida: #{name}"}
 
   # --- Helpers ---

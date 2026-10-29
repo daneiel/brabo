@@ -50,7 +50,7 @@ defmodule Engine.Gates.QaEstrategiaAgent do
   alias Engine.Gates.Tools.EmitPlanoDeTeste
   alias Engine.Harness.Hooks.{ActionPipeline, EventLog}
   alias Engine.Gates.Hooks.TerminationPlanoDeTeste
-  alias Engine.Harness.Tools.{ReadFile, SearchWorkspace, RagSearch, RagFeedback}
+  alias Engine.Harness.Tools.{RegistrarPlano, ReadFile, SearchWorkspace, RagSearch, RagFeedback}
   alias Engine.Harness.{ArtifactEmitter, Hooks, ToolLoop}
   alias Engine.Sessions.EngineApiClient
 
@@ -60,7 +60,7 @@ defmodule Engine.Gates.QaEstrategiaAgent do
   # RagFeedback anda junto de RagSearch (RN-480): buscar sem poder dizer se o
   # trecho serviu deixa a calibração dos pesos sem sinal de verdade nenhum.
   # `:direct` como a busca — votar não é efeito externo.
-  @registry [ReadFile, SearchWorkspace, RagSearch, RagFeedback, EmitPlanoDeTeste]
+  @registry [ReadFile, SearchWorkspace, RagSearch, RagFeedback, RegistrarPlano, EmitPlanoDeTeste]
 
   @doc "Registro de ferramentas — sem Terminal, de propósito (ver moduledoc)."
   def tools, do: @registry
@@ -99,6 +99,7 @@ defmodule Engine.Gates.QaEstrategiaAgent do
       # O worktree do dev — é ali que a entrega mora (ADR 0192).
       workspace_root: dev_state.worktree_path,
       tools: @registry,
+      retomada: Engine.Gates.RetomadaDoGate.texto(project_id, session_id, "qa-estrategia"),
       hooks: hooks(),
       # O MESMO pool das subespecialidades (RN-036): o plano é trabalho da
       # área de QA sobre esta task. O teto de iterações NÃO muda (moduledoc).

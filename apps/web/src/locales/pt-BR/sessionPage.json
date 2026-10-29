@@ -349,5 +349,21 @@
     "semReabrir": "Sessão com execução não pode ser reaberta depois.",
     "cancelar": "Continuar rodando",
     "confirmar": "Encerrar sessão"
+  },
+  "turnoInterrompido": {
+    "botao": "Retomar",
+    "nota": "Continua o turno do ponto em que parou, uma vez por clique.",
+    "semPapel": "Retomar o turno exige o papel developer no projeto.",
+    "retomado": "Retomada pedida — o andamento aparece neste fio.",
+    "erroTitulo": "Não foi possível retomar o turno",
+    "automatica": "{{agente}} foi retomado automaticamente após o reinício.",
+    "objetivo": "Objetivo: {{objetivo}}",
+    "pareiEm": "Parou em: {{passo}}",
+    "estado": {
+      "pendente": "pendente",
+      "em_curso": "em curso",
+      "feito": "feito",
+      "descartado": "descartado"
+    }
   }
 }

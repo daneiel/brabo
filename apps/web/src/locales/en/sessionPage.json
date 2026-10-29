@@ -331,5 +331,21 @@
     "semReabrir": "A session with execution cannot be reopened afterwards.",
     "cancelar": "Keep running",
     "confirmar": "End session"
+  },
+  "turnoInterrompido": {
+    "botao": "Resume",
+    "nota": "Continues the turn from where it stopped, once per click.",
+    "semPapel": "Resuming the turn requires the developer role in the project.",
+    "retomado": "Resume requested — progress shows up in this thread.",
+    "erroTitulo": "Could not resume the turn",
+    "automatica": "{{agente}} was resumed automatically after the restart.",
+    "objetivo": "Goal: {{objetivo}}",
+    "pareiEm": "Stopped at: {{passo}}",
+    "estado": {
+      "pendente": "pending",
+      "em_curso": "in progress",
+      "feito": "done",
+      "descartado": "dropped"
+    }
   }
 }

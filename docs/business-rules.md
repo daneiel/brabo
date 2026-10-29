@@ -277,7 +277,7 @@ one.
 
 - **Where:** `apps/web/src/lib/session-destinatario.ts:290`
   (`useDestinatarioDoChat`, since RN-631),
-  `apps/web/src/lib/api-client.ts:1124` (`getSessionModelBinding`, the
+  `apps/web/src/lib/api-client.ts:1134` (`getSessionModelBinding`, the
   `agentId`), `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:166`
   (`getSessionBinding`, `@Query('agentId')`)
 - **Test:** `apps/web/src/routes/SessionPage.destinatario-do-chat.test.tsx`
@@ -9700,7 +9700,7 @@ chave.
 
 - **Onde:** `apps/api/src/application/use-cases/auth/revoke-runner-device-key.use-case.ts:63`
   (a ordem, o projeto da linha e o `try/catch` que só loga);
-  `apps/api/src/application/ports/api-to-engine-client.port.ts:411`
+  `apps/api/src/application/ports/api-to-engine-client.port.ts:421`
   (`disconnectRunnerOfUser`, `DesfechoDeDesconexaoDeRunner`);
   `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:477`;
   `apps/engine/lib/engine/runners/revogacao.ex:92` (`derrubar/3`);
@@ -13609,7 +13609,7 @@ semeia no aceite do handoff da Infra), e `container_remove` segue no
 teto absoluto de git push/comando privilegiado ([RN-418](#rn-418)).
 
 - **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:599` (o
-  dispatch de `container_start` consultando antes de propor), `:912`
+  dispatch de `container_start` consultando antes de propor), `:890`
   (`recusa_local_de_subida/2` — a leitura ÚNICA do projeto), `:474` (a
   cláusula de `container_start`: lista de permitidos), `:477` (a recusa
   nomeando `container_start_via_runner`), `:492` (a cláusula da irmã, com a
@@ -14333,7 +14333,7 @@ reordena os handoffs.
   duas tools); `apps/engine/lib/engine/harness/tools/propose_adr.ex:54` (a
   recusa antes de propor), `:61` (o `tool.result` com o motivo);
   `apps/engine/lib/engine/infra/infra_lead_server.ex:251` (a interceptação de
-  `propose_infra_pr` perguntando antes do HALT), `:604`
+  `propose_infra_pr` perguntando antes do HALT), `:638`
   (`recusa_de_infra_pr/4`), `:309` (o `tool.call` com os caminhos), `:314` (o
   `tool.result`)
 - **Teste:** `apps/engine/test/engine/agents/arquiteto_server_test.exs:107`
@@ -14825,7 +14825,7 @@ fechada seguem mostrando a mensagem da api.
   (`narrar_recusa_de_sessao_encerrada`), `:1464` (`pendencia_da_resposta`);
   `apps/engine/lib/engine/agents/conversacionais.ex:49` (`parar_da_sessao`),
   `:69` (`parar_da_sessao_no_cluster`);
-  `apps/engine/lib/engine/agents/turno_assincrono.ex:411` (`abandonar`);
+  `apps/engine/lib/engine/agents/turno_assincrono.ex:459` (`abandonar`);
   `apps/engine/lib/engine/workers/session_lifecycle_worker.ex:88`
   (`parar_conversacionais`); `apps/engine/config/runtime.exs:79`
 - **Teste:** `apps/api/test/application/use-cases/sessions/conversa-em-sessao-encerrada.spec.ts:144`
@@ -15204,7 +15204,7 @@ nenhum dos dois sinais saiu, sem timeout — e a correção do teste do PO, que
 passa a esperar o `idle` persistido em vez do `agent.error`.
 
 - **Código:** `apps/engine/lib/engine/agents/turno_assincrono.ex:158` (zera o
-  turno no `handle_info`), `:442` (`finalizar/1`, único emissor dos dois
+  turno no `handle_info`), `:482` (`finalizar/1`, único emissor dos dois
   sinais); `apps/web/src/lib/session-turno.ts:30` (`turnoTerminouNoLog`)
 - **Teste:** `apps/engine/test/engine/agents/turno_assincrono_test.exs:434`
   (os seis conversacionais: com o GenServer suspenso e a Task terminada, o
@@ -15267,8 +15267,8 @@ das 200 mais recentes `agent.status` da sessão; se a api estiver fora no boot E
 ninguém acordar o agente, o `working` fica até a próxima subida dele; e o
 fechamento não recupera o que o turno já tinha gravado antes da queda.
 
-- **Código:** `apps/engine/lib/engine/agents/turno_orfao.ex:71` (`varrer/2`),
-  `:81` (`fechar_ao_subir/3`), `:134` (`encerrar/3`);
+- **Código:** `apps/engine/lib/engine/agents/turno_orfao.ex:89` (`varrer/2`),
+  `:99` (`fechar_ao_subir/3`), `:122` (`encerrar/3`);
   `apps/engine/lib/engine/sessions/rehydrator.ex:75` (varredura no boot); o
   `init/1` dos seis `*_server.ex` chama `TurnoOrfao.fechar_ao_subir/3`
 - **Teste:** `apps/engine/test/engine/agents/turno_orfao_test.exs:72` (nos seis:
@@ -15280,6 +15280,8 @@ fechamento não recupera o que o turno já tinha gravado antes da queda.
   `apps/engine/test/engine/sessions/rehydration_test.exs:46` (o boot dispara a
   varredura)
 - **Origem:** AT-156, herdada da AT-089 (RN-578) — reproduzida em 2026-09-19
+
+**Revisada pela [RN-920](#rn-920) ([ADR 0226](adr/0226-diario-vivo-e-retomada-dos-agentes.md)).** O item 2 ("o turno NUNCA é reexecutado") deixou de valer para o turno recente: a varredura de boot o retoma UMA vez, se a última atividade do agente tem até 900 s, com a mensagem efêmera do diário; o turno velho ou já retomado continua só fechado, e o botão "Retomar" ([RN-921](#rn-921)) é o caminho humano. Os itens 1, 3, 4 e 5 seguem.
 
 ### RN-587 — A mensagem que nenhum agente leu fica no fio dizendo isso: o engine grava o `agent.error` da recusa {#rn-587}
 
@@ -15524,7 +15526,7 @@ direta.
   (recusa 409), `apps/web/src/routes/containers-subida.ts:181`
   (`semBrokerParaCicloDeVida`) e `:192` (`conversaoSemBroker`),
   `apps/web/src/routes/settings/ExecutionModeSection.tsx` (botão inerte),
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:827`
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:861`
   (`motivo_da_recusa_da_api`)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:207`
   (409 nas três ações, e `container_stop` segue `pending` com broker),
@@ -15615,10 +15617,10 @@ amostrado nesta mudança (o item (c) da [RN-589](#rn-589)); a saída do
 PRÓPRIO agente escreveu, e o corte é a única contenção — é o item (d) da
 [RN-589](#rn-589) com o primeiro caso concreto.
 
-- **Código:** `apps/engine/lib/engine/agents/dev_lead_server.ex:317`
-  (`handle_info/2` do `action_settled`, o `tool.result` em `:271`), `:730`
+- **Código:** `apps/engine/lib/engine/agents/dev_lead_server.ex:330`
+  (`handle_info/2` do `action_settled`, o `tool.result` em `:271`), `:746`
   (`sentido_do_desfecho/1`);
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:1052`
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:1086`
   (`registrar_resultado/4`), `:317` (a recusa de `propose_infra_pr`)
 - **Teste:** `apps/engine/test/engine/agents/dev_lead_server_test.exs:292` (a
   suspensão não grava), `:364` (a retomada grava o texto que o modelo leu),
@@ -16061,10 +16063,10 @@ não lê `BROKER_URL`; quem recusa é a api ao propor, com 409
 quem clica). A cláusula de pasta usa o carimbo, que não é batimento
 ([RN-468](#rn-468)) — por isso a de runner conectado continua depois dela.
 
-- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:912`
-  (`recusa_local_de_subida`), `:965` (`recusa_por_estado`), `:966`
-  (`recusa_ja_de_pe`), `:974` (`recusa_sem_imagem_decidida`), `:1024`
-  (`recusa_pasta_nunca_confirmada`), `:1035` (`recusa_runner_desconectado`);
+- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:890`
+  (`recusa_local_de_subida`), `:953` (`recusa_por_estado`), `:1000`
+  (`recusa_ja_de_pe`), `:1008` (`recusa_sem_imagem_decidida`), `:1009`
+  (`recusa_pasta_nunca_confirmada`), `:1010` (`recusa_runner_desconectado`);
   `apps/engine/lib/engine/containers/project_container_lifecycle.ex:83`
   (`status_registrado`);
   `apps/engine/lib/engine/session_events/event.ex:120` (`imagem_decidida?`)
@@ -16487,9 +16489,9 @@ deu e com as quatro ferramentas.
 - **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:187`
   (`user_message`), `:211` (`TurnoOrfao.fechar_ao_subir`), `:248`
   (`handle_cast(:kickoff`), `:270` (`handle_cast({:correct`, a fila), `:280`
-  (`handle_cast(:cancel`), `:296` (`handle_call({:user_message`), `:355`
-  (`handle_info`), `:373` (`drenar_correcao_pendente`), `:425`
-  (`toolloop.limit_reached`), `:1095` (`concluir`);
+  (`handle_cast(:cancel`), `:296` (`handle_call({:user_message`), `:368`
+  (`handle_info`), `:379` (`drenar_correcao_pendente`), `:462`
+  (`toolloop.limit_reached`), `:1133` (`concluir`);
 
   (`toolloop.limit_reached`), `:1057` (`concluir`);
   `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:44`
@@ -16512,6 +16514,8 @@ deu e com as quatro ferramentas.
   `scripts/ci/destinos-do-composer.spec.ts:174` (a guarda: `infra` é destino,
   com UMA cláusula que conversa)
 - **Origem:** AT-141 (decisão do mantenedor), aberta pela AT-098
+
+**Revisada pela [RN-924](#rn-924) ([ADR 0226](adr/0226-diario-vivo-e-retomada-dos-agentes.md)).** A fila `correcoes_pendentes`, só em memória, passou a ser durável (`infra.correction_queued`/`_delivered`), no molde da fila de mensagens; o turno órfão do Infra Lead segue a retomada da [RN-920](#rn-920).
 
 ### RN-621 — O resumo da compactação mantém o idioma original de cada turno, e não traduz citação nem código {#rn-621}
 
@@ -16858,7 +16862,7 @@ especificação da AT-081 e o mecanismo verificado por provider na AT-161).
   (`copiar_dicionario`);
   `apps/api/src/application/use-cases/agents/send-agent-message.use-case.ts:168`
   (`resolverIdioma`), `:74` (`idiomaAlvo`);
-  `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:203`
+  `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:207`
   (`idiomaDaResposta`)
 - **Teste:** `apps/engine/test/engine/harness/idioma_da_resposta_test.exs:78`
   (sem autor: o idioma do projeto, no fim), `:123` (com autor: o do autor
@@ -17213,10 +17217,10 @@ endpoint é ALPHA e o smoke manual
   `apps/engine/lib/engine/harness/roteamento_de_ferramenta.ex:60` (`registrar`),
   `:112` (`custo_micros`), `:123` (`repetir_com_catalogo_inteiro?`), `:146`
   (`mesclar_repeticao`); `apps/engine/lib/engine/sessions/engine_api_client.ex:700`
-  (`llm_turn`), `:773` (`llm_turn_stream`);
+  (`llm_turn`), `:778` (`llm_turn_stream`);
 
   (`mesclar_repeticao`); `apps/engine/lib/engine/sessions/engine_api_client.ex:700`
-  (`llm_turn`), `:773` (`llm_turn_stream`);
+  (`llm_turn`), `:778` (`llm_turn_stream`);
   `apps/engine/lib/engine/harness/tool_loop.ex:132` (o custo do Jev no orçamento
   local)
 - **Teste:** `apps/api/test/domain/llm/tool-router.spec.ts:25` (`questions` é
@@ -17668,8 +17672,8 @@ cláusula própria no engine. Nenhuma mudança de api nem de engine.
   (`useAtivadosNaSessaoInteira`), `:141` (`ativadosSemJanela`);
   `apps/web/src/routes/SessionComposer.tsx:287` (`destinatarioRow`), `:193`
   (`ofertasForaDaJanela`); `apps/web/src/routes/SessionPage.tsx:350`
-  (`aceitarHandoff`); `apps/web/src/routes/session-timeline-montagem.tsx:547`
-  (`handoffIdDoEvento`), `:555` (`origem`); `apps/web/src/lib/session-handoffs.ts:68`
+  (`aceitarHandoff`); `apps/web/src/routes/session-timeline-montagem.tsx:555`
+  (`handoffIdDoEvento`), `:563` (`origem`); `apps/web/src/lib/session-handoffs.ts:68`
   (`activeFor`), `:120` (`ofertasAcionaveis`), `:142` (`ofertasForaDaJanela`)
 - **Teste:** `apps/web/src/routes/SessionPage.destinatario-do-chat.test.tsx`
   (escolha → envio ao escolhido; dois agentes sem escolha não enviam e dizem
@@ -18495,7 +18499,7 @@ não medido em projeto real, e declarado.
   (`TETO_DE_CHAVES_NO_LOTE`), `:37` (`lerListaDeChaves`), `:77`
   (`ResolveModelBindingsEmLoteUseCase`);
   `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:233`
-  (`getResolvedBindings`); `apps/web/src/lib/api-client.ts:1149`
+  (`getResolvedBindings`); `apps/web/src/lib/api-client.ts:1159`
   (`getResolvedModelBindings`); `apps/web/src/lib/bindings-resolvidos.ts:43`
   (`invalidarBindingsResolvidos`), `:69` (`useBindingsResolvidos`), `:111`
   (`useBindingsDosAgentes`); `apps/web/src/routes/ProjectOverviewTab.tsx:144`
@@ -18641,7 +18645,7 @@ sempre dele.
 - **Código:** `apps/web/src/lib/autor-da-mensagem.ts:52` (`autorDaMensagem`);
   `apps/web/src/lib/autoria-da-sessao.ts:45` (`useAutoriaDaSessao`), `:18`
   (`comporMembros`);
-  `apps/web/src/routes/session-timeline-montagem.tsx:154` (`rotuloDoAutor`),
+  `apps/web/src/routes/session-timeline-montagem.tsx:162` (`rotuloDoAutor`),
   `:405` (o `chat.message`), `:687` (a devolução de história);
   `apps/web/src/routes/SessionPage.tsx:133` (`autoria`)
 - **Teste:** `apps/web/src/routes/SessionPage.autor-da-mensagem.test.tsx:147`
@@ -19094,9 +19098,9 @@ falando quando a subida do servidor foi recusada (ou NEGADA pela política, que
 desde então conta como recusa) e quando ela não cabia ao servidor (sem
 roteamento, `runner`) e o modelo não a propôs.
 
-- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:475`
-  (`dispatch_calls`), `:570` (`recusa_pr_repetida_no_lote`), `:1183`
-  (`registrar_subida`), `:1193` (`fechar_subida`), `:1155`
+- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:511`
+  (`dispatch_calls`), `:547` (`recusa_pr_repetida_no_lote`), `:1221`
+  (`registrar_subida`), `:1231` (`fechar_subida`), `:1155`
 
   (`dispatch_calls`), `:539` (`recusa_pr_repetida_no_lote`), `:1140`
   (`registrar_subida`), `:1150` (`fechar_subida`), `:1154`
@@ -19300,13 +19304,13 @@ segundo `executed` para o mesmo merge.
   `apps/api/src/infrastructure/git/local-git-provider.ts:339` (`GitPullRequestAlreadyMergedError`);
   `apps/web/src/lib/gate-do-merge.ts:19` (`gatePendenteNoMerge`);
   `apps/web/src/routes/ProjectPrsTab.tsx:232` (`gatePendenteNoMerge`);
-  `apps/web/src/routes/session-timeline-montagem.tsx:1129` (`gatePendenteNoMerge`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:1154` (`gatePendenteNoMerge`)
   `apps/web/src/routes/ProjectPrsTab.tsx:232` (`gatePendenteNoMerge`);
-  `apps/web/src/routes/session-timeline-montagem.tsx:1129` (`gatePendenteNoMerge`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:1154` (`gatePendenteNoMerge`)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:664`
   (`merge_ja_proposto`), `:687` (`pr_ja_mergeado` — caso de falha), `:696`
 
-  `apps/web/src/routes/session-timeline-montagem.tsx:1129` (`gatePendenteNoMerge`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:1154` (`gatePendenteNoMerge`)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:664`
   (`merge_ja_proposto`), `:687` (`pr_ja_mergeado` — caso de falha), `:696`
   (negada não bloqueia, outra PR não colide — caminho feliz);
@@ -19361,9 +19365,9 @@ vence — pôr a Infra em "manual" não desliga esta semente.
 
 - **Código:** `apps/api/src/application/use-cases/agents/accept-handoff.use-case.ts:38`
   (`INFRA_AUTONOMY_SEEDS`);
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:256` (`handle_cast`),
-  `:657` (`propor_container_start`), `:738` (`subir_no_aceite`), `:790`
-  (`eleger_candidata`), `:1366` (`passo_da_subida`)
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:265` (`handle_cast`),
+  `:691` (`propor_container_start`), `:772` (`subir_no_aceite`), `:775`
+  (`eleger_candidata`), `:1404` (`passo_da_subida`)
 
   `:626` (`propor_container_start`), `:707` (`subir_no_aceite`), `:759`
   (`eleger_candidata`), `:1319` (`passo_da_subida`)
@@ -19417,8 +19421,8 @@ instante, a oferta espera o fim do próximo turno dele.
 
 - **Código:** `apps/api/src/application/use-cases/agents/offer-infra-handoff.use-case.ts:15`
   (`ALVOS_DA_CONFIRMACAO`);
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:1100` (`oferecer_ao_dev_lead`),
-  `:1095` (`concluir`), `:345` (`handle_info`), `:1075`
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:1138` (`oferecer_ao_dev_lead`),
+  `:1133` (`concluir`), `:368` (`handle_info`), `:1075`
 
   `:1057` (`concluir`), `:345` (`handle_info`), `:1074`
   (`topico_do_container`);
@@ -19484,7 +19488,7 @@ mudam; a recusa abaixo do mínimo acontece na execução, não ao propor.
   `apps/api/src/application/use-cases/actions/execute-container-start.use-case.ts:175`
   (`resolverRecursosDaSubida`);
   `apps/engine/lib/engine/harness/tools/create_module_map.ex:103` (`normalize`);
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:813`
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:786`
   (`rationale_do_servidor`)
 - **Teste:** `apps/api/test/domain/containers/recursos-minimos.spec.ts:18`
   (soma — caminho feliz), `:35` (mapa antigo = padrão), `:41` (piso e nomeado),
@@ -19663,20 +19667,20 @@ para os SETE conversacionais pelo mesmo caminho:
 A recusa `turno_em_andamento` continua para o que não é fala: revisão de
 história do PO, prontidão do Criativo, oferta de handoff do Arquiteto.
 
-- **Código:** `apps/engine/lib/engine/agents/turno_assincrono.ex:301`
-  (`receber_mensagem`), `:245` (`tratar_resultado`), `:461` (`entregar_fila`),
-  `:346` (`cancelar_mensagem`), `:392` (`fila_ao_subir`), `:497`
+- **Código:** `apps/engine/lib/engine/agents/turno_assincrono.ex:322`
+  (`receber_mensagem`), `:245` (`tratar_resultado`), `:506` (`entregar_fila`),
+  `:367` (`cancelar_mensagem`), `:412` (`fila_ao_subir`), `:542`
   (`emitir_recusa_por_fila_cheia`);
   `apps/engine/lib/engine/agents/fila_de_mensagens.ex:71` (`pendentes`), `:97`
   (`fora_do_historico`), `:143` (`texto_do_turno`), `:164`
   (`acordar_pendentes`);
   `apps/engine/lib/engine/agents/reidratacao.ex:160` (`fora_do_historico`);
-  `apps/engine/lib/engine/agents/dev_lead_server.ex:249` (`_mensagem_id`);
+  `apps/engine/lib/engine/agents/dev_lead_server.ex:254` (`_mensagem_id`);
   `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:393`
   (`cancel_queued_message`), `:461` (`responder_ao_aceite`);
   `apps/api/src/application/use-cases/agents/cancel-queued-agent-message.use-case.ts:35`
   (`CancelQueuedAgentMessageUseCase`);
-  `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:65`
+  `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:69`
   (`entregaDaResposta`);
   `apps/api/src/domain/sessions/conversa-em-sessao-encerrada.ts:72`;
   `apps/web/src/lib/fila-de-mensagens.ts:27` (`estadosNaFila`);
@@ -19696,6 +19700,8 @@ história do PO, prontidão do Criativo, oferta de handoff do Arquiteto.
   (fila cheia), `:207`, `:233`; `apps/web/src/lib/fila-de-mensagens.test.ts:17`
 - **Origem:** AT-267 (item A21 da análise do uso real de 2026-09-29), decisão do
   dono de 01/10; [ADR 0191](adr/0191-a-mensagem-com-turno-em-curso-entra-numa-fila.md)
+
+**Complementada pela [RN-924](#rn-924).** A mesma ideia (estado da fila no log, reconstruído no `init/1`) vale para a correção de gate do Infra Lead, e a fila de mensagens espera o fim do turno retomado ([RN-920](#rn-920)).
 
 ### RN-677 — Aceitar o Dev Lead só o traz para planejar; APROVAR o plano dele é o que ativa a execução {#rn-677}
 
@@ -20109,7 +20115,7 @@ rótulo, não o comportamento.
   (`execute`), `:109` (`derrubarConexoesDaChave`);
   `apps/api/src/application/use-cases/auth/derrubar-conexoes-do-pat.ts:21`
   (`derrubarConexoesDoPat`);
-  `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:633`
+  `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:666`
   (`disconnectRunnerCredential`);
   `apps/engine/lib/engine/runners/socket_ticket.ex:107` (`emitir`), `:207`
   (`anular_pendentes_da_credencial`);
@@ -20338,9 +20344,9 @@ sessão continua mostrando os eventos dela; o resultado mora em Configurações 
 Perfil de proficiência, sem id cru. Nenhum marcador "perfil atualizado" entra
 no fio: fica de fora até alguém pedir.
 
-- **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:124` (`loop`);
+- **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:128` (`loop`);
   `apps/engine/lib/engine/workers/anamnese_worker.ex:157` (`build_ctx`);
-  `apps/web/src/routes/session-timeline-montagem.tsx:115` (`ehDaAnamnese`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:123` (`ehDaAnamnese`)
 - **Teste:** `apps/engine/test/engine/workers/anamnese_worker_test.exs:253`
   (o texto sai `anamnese.analysis`; `agent.response` nunca é gravado — caso de
   falha); `apps/web/src/routes/session-timeline-montagem.falha-de-turno.test.tsx:86`
@@ -20472,8 +20478,8 @@ nem a que o modelo copie do histórico. O catálogo volta intacto no turno
 seguinte; o turno normal continua com `emit_artifact` e
 `ask_structured_questions`.
 
-- **Onde:** `apps/engine/lib/engine/agents/criativo_server.ex:218` (`executar_confirm_readiness`);
-  `:263` (`ferramentas_da_prontidao`)
+- **Onde:** `apps/engine/lib/engine/agents/criativo_server.ex:228` (`executar_confirm_readiness`);
+  `:273` (`ferramentas_da_prontidao`)
 - **Teste:** `apps/engine/test/engine/agents/criativo_server_test.exs:172` (o turno
   vai com `tools: []` e não grava regra nem pergunta) e `:192` (regressão: o turno
   normal mantém as duas ferramentas)
@@ -20520,8 +20526,8 @@ para `passos`: o acúmulo já era gravado inteiro antes da revisão.
 
 - **Onde:** `apps/engine/lib/engine/agents/texto_do_turno.ex:88` (`descarregar`);
   `:116` (`juntar`); `:51` (`descarregar_com_modelo`); `:65` (`payload_do_turno`);
-  `apps/engine/lib/engine/agents/reidratacao.ex:177` (`acumular`);
-  `apps/web/src/routes/session-timeline-montagem.tsx:809` (`passos`)
+  `apps/engine/lib/engine/agents/reidratacao.ex:187` (`acumular`);
+  `apps/web/src/routes/session-timeline-montagem.tsx:817` (`passos`)
 - **Teste:** `apps/engine/test/engine/agents/texto_do_turno_test.exs:43` (três
   voltas: fecho e dois passos), `:56` (uma volta, sem `passos`), `:60` (termina
   em formulário); `apps/engine/test/engine/agents/reidratacao_test.exs`
@@ -20551,8 +20557,8 @@ origem `infra`. Regra descoberta, ou backlog sem regra/história, não é julgad
 A instrução do PO passa a exigir tarefa por história. Quem cria as tarefas é o
 PO (decisão do agente principal na AT-364: ele já tem `create_task`).
 
-- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:513` (`fechar_handoff`);
-  `:540` (`oferecer_handoff`)
+- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:528` (`fechar_handoff`);
+  `:555` (`oferecer_handoff`)
 - **Teste:** `apps/engine/test/engine/agents/po_server_test.exs:592` (oferece e
   não repete), `:610` (história sem tarefa: não oferece, nomeia)
 - **Origem:** AT-364
@@ -20579,12 +20585,12 @@ histórias em que chamou `assess_implementability`.
 
 - **Onde:** `apps/engine/lib/engine/agents/dev_lead_tools.ex:339` (`module_map_vigente`);
   `:324` (`spec_read_backlog`); `:340` (`tarefas_do_backlog`);
-  `apps/engine/lib/engine/agents/dev_lead_server.ex:568` (`kickoff_instruction`);
+  `apps/engine/lib/engine/agents/dev_lead_server.ex:584` (`kickoff_instruction`);
 
 - **Onde:** `apps/engine/lib/engine/agents/dev_lead_tools.ex:339` (`module_map_vigente`);
   `:324` (`spec_read_backlog`); `:372` (`tarefas_do_backlog`);
-  `apps/engine/lib/engine/agents/dev_lead_server.ex:568` (`kickoff_instruction`);
-  `:402` (`run_turn`)
+  `apps/engine/lib/engine/agents/dev_lead_server.ex:584` (`kickoff_instruction`);
+  `:397` (`run_turn`)
 - **Teste:** `apps/engine/test/engine/agents/dev_lead_server_test.exs:164` (o
   mapa vigente chega ao kickoff e o tipo antigo não é lido), o teste seguinte
   (sem mapa, diz que não há — caso de falha) e `:202` (plano recusado pela api →
@@ -20680,7 +20686,7 @@ Junto, o fechamento deixa de dizer que parear uma pasta pela tela do projeto
 
   `:97` (`anexar`), `apps/engine/lib/engine/sessions/engine_api_client.ex:700`
   (`llm_turn`), `apps/engine/lib/engine/harness/agents.ex:23` (`identity`),
-  `apps/engine/lib/engine/agents/arquiteto_server.ex:399` (`build_kickoff`)
+  `apps/engine/lib/engine/agents/arquiteto_server.ex:415` (`build_kickoff`)
 - **Teste:** `apps/engine/test/engine/harness/fluxo_do_time_test.exs`
   ("todo papel citado existe no fluxo.yml como ativo"; caso de falha: "nenhum
   texto cita etapa/agente fora do fluxo"),
@@ -21031,9 +21037,9 @@ conversa —, e a delegação terminava `failed` com origem `modelo` e um
 - **Onde:** `apps/engine/lib/engine/infra/workflows_agent.ex:61` (`dispensa`),
   `apps/engine/lib/engine/infra/infra_lead.ex:69` (`com_prefixo`),
   `apps/engine/lib/engine/infra/workflows_agent.ex:184` (`parada_sem_ferramenta`),
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:1227` (`finalize`)
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:1265` (`finalize`)
 
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:1227` (`finalize`)
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:1265` (`finalize`)
 - **Teste:** `apps/engine/test/engine/infra/workflows_agent_test.exs` ("RN-710: …")
   e `apps/engine/test/engine/infra/infra_lead_server_test.exs` ("RN-710:
   repositório local dispensa o Workflows …") e
@@ -21281,8 +21287,8 @@ turno continua.
 - **Onde:** `apps/engine/lib/engine/harness/argumentos_de_ferramenta.ex:26`
   (`executar`), `:73` (`coagir`), `:56` (`falha_interna?`);
   `apps/engine/lib/engine/agents/resultado_de_ferramenta.ex:29` (`payload`);
-  `apps/engine/lib/engine/harness/tool_loop.ex:363` (`run_direct`);
-  `apps/engine/lib/engine/agents/arquiteto_server.ex:342`
+  `apps/engine/lib/engine/harness/tool_loop.ex:368` (`run_direct`);
+  `apps/engine/lib/engine/agents/arquiteto_server.ex:357`
   (`executar_ferramenta`, o mesmo helper nos outros seis servidores)
 - **Teste:** `apps/engine/test/engine/harness/argumentos_de_ferramenta_test.exs`
   (`create_story` com ids em string JSON grava os ids; `create_c4_diagram` com
@@ -21329,7 +21335,7 @@ a tool `propose_container_start` sem `network`. A autonomia semeada não muda:
 publicadas da máquina, ADR 0189) está declarado no ADR.
 
 - **Código:** `apps/engine/lib/engine/session_events/event.ex:139` (`rede_do_arquiteto`),
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:750` (`rede_herdada`)
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:784` (`rede_herdada`)
 - **Testes:** `apps/engine/test/engine/infra/infra_lead_server_test.exs` —
   "RN-723: a subida herda a rede `egress` que o Arquiteto declarou" e
   "RN-723: rede do Arquiteto fora do vocabulário — a subida segue `none`"
@@ -21433,10 +21439,10 @@ O kickoff do PO diz as três coisas.
   `apps/engine/lib/engine/anamnese/elegibilidade.ex:67`
   (`min_interacoes_proprias`),
   `apps/api/src/application/use-cases/anamnese/record-proficiency.use-case.ts:160`
-  (`fecharJanelaSemPerfil`), `apps/engine/lib/engine/gates/gate_rescuer.ex:336`
-  (`task_em_voo?`), `apps/engine/lib/engine/gates/gate_rescuer.ex:360`
-  (`aguardando_humano?`), `apps/engine/lib/engine/gates/gate_rescuer.ex:283`
-  (`estacionar`), `apps/engine/lib/engine/gates/gate_rescuer.ex:320`
+  (`fecharJanelaSemPerfil`), `apps/engine/lib/engine/gates/gate_rescuer.ex:348`
+  (`task_em_voo?`), `apps/engine/lib/engine/gates/gate_rescuer.ex:372`
+  (`aguardando_humano?`), `apps/engine/lib/engine/gates/gate_rescuer.ex:291`
+  (`estacionar`), `apps/engine/lib/engine/gates/gate_rescuer.ex:329`
   (`retomar_estacionado`), `apps/engine/lib/engine/gates/qa_lead_server.ex:95`
   (`handle_call`)
 - **Teste:** `apps/engine/test/engine/workers/anamnese_worker_test.exs`
@@ -21462,6 +21468,8 @@ O kickoff do PO diz as três coisas.
 - **Origem:** AT-391 (uso real de 02/10: ~US$ 8,90 de Anamnese num dia sem
   ninguém pedir; ciclo de gate reiniciado com ação pendente e outro 8 h sem
   resgate), decisões do dono de 02/10
+
+**Revisada pela [RN-923](#rn-923) ([ADR 0226](adr/0226-diario-vivo-e-retomada-dos-agentes.md)).** O resgate AUTOMÁTICO (tick) de um ciclo vale uma vez: o segundo estaciona com `motivo: "retomada_automatica_ja_usada"` e espera o "Retomar gate", que zera o contador. O estacionamento de 2 h segue como está.
 
 ### RN-724 — O ciclo de gate estacionado volta por um botão no fio, não só pelo terminal do operador {#rn-724}
 
@@ -21509,7 +21517,7 @@ O kickoff do PO diz as três coisas.
 - **Onde:** `apps/web/src/lib/mensagem-otimista.ts:14` (`otimistaJaNoLog`),
   `apps/web/src/lib/mensagem-otimista.ts:22` (`nomeDaMensagemOtimista`),
   `apps/web/src/routes/SessionPage.tsx:790` (`otimistaJaNoLog`),
-  `apps/web/src/routes/session-timeline-montagem.tsx:609`
+  `apps/web/src/routes/session-timeline-montagem.tsx:617`
   (`handleActivateExecution`)
 - **Teste:** `apps/web/src/lib/mensagem-otimista.test.ts` (feliz: o id no log
   tira a otimista; falha: id ausente ou de outro tipo a mantém; o nome é o da
@@ -21615,7 +21623,7 @@ sem dizer qual.
   `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:251`
   (`streamErrorCode`),
   `apps/engine/lib/engine/agents/falha_de_turno.ex:87` (`credito_esgotado?`),
-  `:71` (`origem`), `apps/engine/lib/engine/harness/tool_loop.ex:163`
+  `:71` (`origem`), `apps/engine/lib/engine/harness/tool_loop.ex:168`
   (`last_error_code`), `apps/engine/lib/engine/dev/dev_agent_server.ex:906`
   (`handle_outcome`)
 - **Teste:** `apps/api/test/contract/llm-provider.contract.ts` (`erro_402 vira
@@ -22015,6 +22023,8 @@ sem dizer qual.
 - **Origem:** AT-428 (08/10: `CaseClauseError` em
   `Finch.HTTP1.Conn.receive_response/8` depois do timeout do `npm install`)
 
+**Revisada pela [RN-922](#rn-922) ([ADR 0226](adr/0226-diario-vivo-e-retomada-dos-agentes.md)).** O dev que cai com `working` recente e sem retomada anterior na tarefa deixa de ser bloqueado: preserva o worktree como commit e retoma a mesma tarefa uma vez. Fora disso o bloqueio descrito acima segue.
+
 ### RN-743 — Bloquear a task preserva o trabalho do worktree, e a próxima parte dele {#rn-743}
 
 - **Regra:** antes de bloquear uma task (qualquer origem, inclusive o teto de
@@ -22158,7 +22168,7 @@ sem dizer qual.
   fecho tem o botão; os passos do turno não. A tela reconhece a linha pelo
   texto, e as duas frases são o contrato com `Engine.Harness.RespostaCortada`.
 - **Onde:** `apps/web/src/lib/resposta-cortada.ts:14` (`respostaCortada`),
-  `apps/web/src/routes/session-timeline-montagem.tsx:889` (`respostaCortada`),
+  `apps/web/src/routes/session-timeline-montagem.tsx:896` (`respostaCortada`),
   `apps/web/src/routes/SessionPage.tsx:447` (`continuarRespostaCortada`),
   `:686` (`enviarMensagem`)
 - **Teste:** `apps/web/src/lib/resposta-cortada.test.ts` (`respostaCortada
@@ -22432,7 +22442,7 @@ sem dizer qual.
   `min-content` — com `max-content` ela ficava da largura do texto sem quebra
   (medido no Chromium: 2 236px num balão de 708px) e a última coluna sumia.
 - **Onde:** `apps/api/src/application/use-cases/actions/execute-adr-pr.use-case.ts:96`
-  (`openPullRequest`); `apps/engine/lib/engine/infra/infra_lead_server.ex:1531`
+  (`openPullRequest`); `apps/engine/lib/engine/infra/infra_lead_server.ex:1571`
   (`gravar_texto_do_turno`); `apps/engine/lib/engine/dev/dev_agent_server.ex:1188`
   (`propose_pr`); `apps/web/src/lib/session-destinatario.ts:228`
   (`agentesEmConversa`) e `apps/web/src/lib/session-kind.ts:69`
@@ -22737,7 +22747,7 @@ sem dizer qual.
   o engine recebe da api `truncated` e `usage.outputTokens`, mas NÃO os
   `reasoningTokens` (ficam só em `token_usage`), então a resposta vazia que
   bate no teto sem `finish_reason: length` não é reconhecida.
-- **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:234`
+- **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:239`
   (`parada_sem_chamada`), `apps/engine/lib/engine/dev/dev_agent_server.ex:1124`
   (`motivo_da_parada`), `:1143` (`stop_diagnosis`)
 - **Teste:** `apps/engine/test/engine/harness/tool_loop_test.exs` (`corte só
@@ -22893,6 +22903,9 @@ sem dizer qual.
   `idle` não; leitura que falha não fecha nada)
 - **Origem:** AT-465 (TP-01 de 09/10: a sessão `63a4e1aa` reagendada pelo
   heartbeat a cada 30 s por um `dev.working` sem processo)
+
+**Citada pela [RN-922](#rn-922) ([ADR 0226](adr/0226-diario-vivo-e-retomada-dos-agentes.md)), sem mudar:** o dev sem linha durável em `dev_agent_states` continua só fechado, porque não há tarefa a retomar.
+
 ### RN-790 — O README de como subir o entregável é critério do DoD que o PO escreve {#rn-790}
 
 - **Regra:** a instrução de kickoff do PO manda incluir, no DoD da história que
@@ -22905,7 +22918,7 @@ sem dizer qual.
   outra variante — o dev agent atualizar o README em toda tarefa que mexe em
   configuração/entrada — NÃO foi feita: exigiria classificar a tarefa no
   `AmbienteDoAgente` ou no `report_done`, regra nova de código — declarado.
-- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:598` (`kickoff_instruction`)
+- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:613` (`kickoff_instruction`)
 - **Teste:** `apps/engine/test/engine/agents/po_server_test.exs:438` (a
   instrução de kickoff traz o critério do README)
 - **Origem:** AT-466 (TP-01 de 09/10: o `encurtador-api` saiu com um README só
@@ -23172,7 +23185,7 @@ sem dizer qual.
   ([RN-047](business-rules/custo.md#rn-047)): o agente segue reivindicando. No uso real um
   `getaddrinfo EAI_AGAIN openrouter.ai` de 17 s bloqueou duas tarefas como
   `codigo` e desarmou o dev.
-- **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:261`
+- **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:266`
   (`llm_turn_com_retentativa`), `apps/engine/lib/engine/agents/falha_de_turno.ex:112`
   (`falha_de_rede?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:952`
   (`bloquear_parada`), `apps/engine/lib/engine/dev/agent_io.ex:228`
@@ -23421,8 +23434,8 @@ sem dizer qual.
   com recusa nomeada que entra no laço (RN-163) e repassado no
   payload de `open_infra_pr`. Decisão no [ADR 0213](adr/0213-o-entregavel-roda-na-maquina-pelo-compose-da-infra.md).
 - **Onde:** `apps/engine/lib/engine/infra/instrucoes_de_execucao.ex:20`
-  (`validar`), `apps/engine/lib/engine/infra/infra_lead_server.ex:1408`
-  (`build_kickoff`) e `:1266` (`abrir_pr`), e
+  (`validar`), `apps/engine/lib/engine/infra/infra_lead_server.ex:1391`
+  (`build_kickoff`) e `:1292` (`abrir_pr`), e
   `apps/engine/lib/engine/infra/tools/propose_infra_pr.ex:24` (`spec`)
 - **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs`
   (describe "o compose sobe o app e a PR leva `run` (RN-851)")
@@ -23445,7 +23458,7 @@ sem dizer qual.
   em voo. Resíduo declarado: nó que ainda não entrou no cluster no instante do
   boot não é perguntado, e o pior desfecho é o de sempre (trabalho duplicado e
   barato; o segundo veredito é recusado pela api).
-- **Onde:** `apps/engine/lib/engine/gates/gate_rescuer.ex:191` (`run_boot`),
+- **Onde:** `apps/engine/lib/engine/gates/gate_rescuer.ex:201` (`run_boot`),
   `:209` (`interrompido_no_boot`),
   `apps/web/src/routes/RetomarGateEstacionado.tsx:33` (`cicloInterrompido`)
 - **Teste:** `apps/engine/test/engine/gates/gate_rescuer_test.exs` ("boot com
@@ -23456,6 +23469,9 @@ sem dizer qual.
   (RN-823)")
 - **Origem:** AT-495 (TP-01 de 10/10: o reinício das 18:51 matou o ciclo de QA
   da tarefa 10, e o dev ficou `awaiting_gate` 15 min sem tela nenhuma dizer)
+
+**Revisada pela [RN-923](#rn-923) ([ADR 0226](adr/0226-diario-vivo-e-retomada-dos-agentes.md)).** A retomada do boot conta como a automática do ciclo (`auto_resumes`): se o ciclo já usou a sua, o boot o estaciona em vez de redespachá-lo, e o subagente retomado leva o plano do último `agent.turn_resumed`.
+
 ### RN-820 — O container de projeto volta sozinho quando o daemon reinicia {#rn-820}
 
 - **Regra:** o `docker run` composto pelo `DockerViaCli` leva
@@ -23576,7 +23592,7 @@ sem dizer qual.
   genérico, nunca para caixa vazia.
 - **Onde:** `apps/web/src/components/ui/AvatarDoAgente.tsx:22` (`AvatarDoAgente`),
   `apps/web/src/routes/SessionFio.tsx:284` (`BolhaDoStreaming`),
-  `apps/web/src/routes/session-timeline-montagem.tsx:120` (`montarTimeline`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:127` (`montarTimeline`)
 - **Teste:** `apps/web/src/routes/SessionFio.at503.test.tsx` ("a bolha
   persistida usa o avatar do agente, não o do modelo; o modelo segue no chip",
   "a bolha em streaming usa o MESMO avatar"; degradação: "sem agente
@@ -23883,7 +23899,7 @@ sem dizer qual.
   não afirmar estado de ADR diferente. Leitura que falha diz "NÃO CONSEGUI LER"
   e manda dizer que não sabe — nunca "pendente".
 - **Onde:** `apps/engine/lib/engine/harness/tools/listar_adrs_propostas.ex:50`
-  (`contexto_de_prontidao`), `apps/engine/lib/engine/agents/arquiteto_server.ex:230`
+  (`contexto_de_prontidao`), `apps/engine/lib/engine/agents/arquiteto_server.ex:242`
   (`contexto_de_prontidao`).
 - **Teste:** `apps/engine/test/engine/harness/tools/listar_adrs_propostas_test.exs`
   ("contexto_de_prontidao/2 (RN-849)").
@@ -23903,7 +23919,7 @@ sem dizer qual.
 - **Onde:** `apps/web/src/lib/acoes-no-bloco.ts:48` (`useAcaoEstaNoBloco`),
   `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:460` (`useRegistrarAcoesNoBloco`),
   `apps/web/src/components/CartaoOuReferenciaNoFio.tsx:11` (`CartaoOuReferenciaNoFio`),
-  `apps/web/src/routes/session-timeline-montagem.tsx:1166` (`CartaoOuReferenciaNoFio`)
+  `apps/web/src/routes/session-timeline-montagem.tsx:1191` (`CartaoOuReferenciaNoFio`)
 - **Teste:** `apps/web/src/components/CartaoOuReferenciaNoFio.test.tsx`,
   `apps/web/src/components/PendenciasDeOutrasSessoes.test.tsx` ("a PR com os
   gates aprovados aparece…")
@@ -24097,7 +24113,7 @@ sem dizer qual.
 - **Onde:** `apps/web/src/components/RodarNaSuaMaquina.tsx:32` (`RodarNaSuaMaquina`), `:20` (`urlLocalSegura`),
   `:13` (`releSeInfraAbriuPr`),
   `apps/web/src/routes/ProjectOverviewTab.tsx:202` (`releSeInfraAbriuPr`),
-  `apps/web/src/lib/api-client.ts:832` (`getRunInstructions`)
+  `apps/web/src/lib/api-client.ts:842` (`getRunInstructions`)
 - **Teste:** `apps/web/src/components/RodarNaSuaMaquina.test.tsx` ("mostra
   comando, copiar, link local e a nota de não verificado"; "sem declaração
   (null) o cartão não aparece"; "só localhost/127.0.0.1 com porta vira link";
@@ -24313,7 +24329,7 @@ sem dizer qual.
   reprova, nunca observação (estende a RN-854).
 - **Onde:** `apps/engine/lib/engine/infra/instrucoes_de_execucao.ex:52` (`url`),
   `apps/api/src/domain/infra/run-instructions.ts:44` (`recusaDoRun`),
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:1408` (`build_kickoff`),
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:1391` (`build_kickoff`),
   `apps/engine/lib/engine/dev/dev_agent_server.ex:636` (`clausula_de_openapi`),
   `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:20` (`texto`)
 - **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs`
@@ -24832,7 +24848,7 @@ sem dizer qual.
   sugestão, nunca inventa nem omite. Régua de PROMPT, no molde da
   [RN-790](#rn-790): nenhuma ferramenta recusa história sem borda. O PO NÃO
   passa a reescrever `business_rule`; Criativo, QA, schema e gate não mudam.
-- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:666` (`obrigacoes`)
+- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:681` (`obrigacoes`)
 - **Teste:** `apps/engine/test/engine/agents/po_server_test.exs:438` (a
   instrução de kickoff traz a obrigação da borda) e `:460` (sem event log, o
   kickoff ainda a carrega)
@@ -24900,7 +24916,7 @@ sem dizer qual.
   `heartbeat_timeout` 26 s depois de o usuário sair da tela. Presença por aba
   do projeto NÃO entra ([RN-064](business-rules/custo.md#rn-064)).
 - **Onde:** `apps/engine/lib/engine/agents/falha_de_turno.ex:63` (`origem`),
-  `apps/engine/lib/engine/agents/po_server.ex:308` (`gravar_texto_do_turno`)
+  `apps/engine/lib/engine/agents/po_server.ex:320` (`gravar_texto_do_turno`)
 - **Teste:** `apps/engine/test/engine/agents/po_server_test.exs:194` e
   `apps/engine/test/engine/agents/texto_do_turno_test.exs:96`
 - **Origem:** AT-572 (TP-01 18ª, achado 4)
@@ -25029,8 +25045,8 @@ sem dizer qual.
   RN-673 absorve com turno em curso) só para os sete conversacionais com a
   sessão ativa; `dev-*`/`qa-*` ganham o texto, sem botão. O botão nunca continua
   sozinho.
-- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:263` (`run_turn`);
-  `apps/web/src/routes/session-timeline-montagem.tsx:976` (`conversacional`)
+- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:254` (`run_turn`);
+  `apps/web/src/routes/session-timeline-montagem.tsx:1001` (`conversacional`)
 - **Teste:** `apps/engine/test/engine/agents/po_server_test.exs:548` (gravado e
   regrasSemHistoria; sem a leitura, sem a chave);
   `apps/web/src/routes/session-timeline-montagem.falha-de-turno.test.tsx:108`
@@ -25061,7 +25077,7 @@ sem dizer qual.
 ### RN-908 — O kickoff do PO pede o backlog em lote, depois de ler, em camadas {#rn-908}
 
 - **Regra:** o kickoff do PO manda, nesta ordem: ler `listar_regras_de_negocio` e `listar_backlog` na mesma resposta, sem escrita junto; depois todos os épicos numa resposta só; depois todas as histórias, com o `epic_id` devolvido; depois todas as tarefas, com o `story_id` devolvido. Nunca recria épico que já existe, e no máximo cerca de 10 chamadas de ferramenta por resposta. Motivo medido: sem o pedido de lote, o nemotron faz 1 ferramenta por resposta e o qwen faz 3; com ele, 9 em cada (`parallel_tool_calls` não mudou nada). Ler primeiro é o que impede o qwen de criar épicos sem ler o backlog. Não altera o teto `@max_iterations` (RN-166).
-- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:610` (`build_kickoff`)
+- **Onde:** `apps/engine/lib/engine/agents/po_server.ex:625` (`build_kickoff`)
 - **Teste:** `apps/engine/test/engine/agents/po_server_test.exs:518` (leitura antes da escrita; lote em camadas épicos → histórias → tarefas)
 - **Origem:** sonda da AT-591 (21/10), implementada na AT-596 (EP-026).
 
@@ -25089,7 +25105,7 @@ sem dizer qual.
 ### RN-913 — Falha igual repetida de ferramenta no turno corrige na 2ª e para na 3ª {#rn-913}
 
 - **Regra:** em cada turno, o harness conta as falhas IGUAIS de ferramenta (mesma ferramenta e mesmos argumentos, `tool.result` `ok: false`). Na 2ª, o resultado devolvido ao modelo ganha a correção "esta chamada já falhou igual… mude os argumentos ou use outra abordagem". Na 3ª, o laço PARA e grava `agent.error` com origem `modelo` (`reason: falha_repetida_de_ferramenta`), nunca em silêncio (RN-059, RN-163). Falhas diferentes não somam, e o contador zera a cada turno. Vale para os sete conversacionais e para o `ToolLoop`, pelo despacho único da RN-719; cada laço para pelo desfecho que já tinha (os conversacionais pelo caminho do teto de iterações, com o `agent.error` no lugar do `toolloop.limit_reached`; o `ToolLoop` devolvendo `{:ok, ctx}` com `last_error`).
-- **Onde:** `apps/engine/lib/engine/harness/argumentos_de_ferramenta.ex:26` (`executar`), `apps/engine/lib/engine/harness/falha_repetida.ex:30` (`registrar`), `:51` (`parou?`), `:56` (`narrar`), `apps/engine/lib/engine/harness/tool_loop.ex:118` (`parou_ou_loop`)
+- **Onde:** `apps/engine/lib/engine/harness/argumentos_de_ferramenta.ex:26` (`executar`), `apps/engine/lib/engine/harness/falha_repetida.ex:30` (`registrar`), `:51` (`parou?`), `:56` (`narrar`), `apps/engine/lib/engine/harness/tool_loop.ex:123` (`parou_ou_loop`)
 - **Teste:** `apps/engine/test/engine/harness/falha_repetida_test.exs` (2ª corrige, 3ª para no `ToolLoop`, falhas diferentes não somam, zera entre turnos)
 - **Origem:** AT-588 (EP-026), decisão do dono de 22/10 (K=2 corrige, K=3 para).
 ### RN-914 — O orçamento de raciocínio é por modelo, só para quem o respeita {#rn-914}
@@ -25098,3 +25114,52 @@ sem dizer qual.
 - **Onde:** `apps/api/src/domain/llm/raciocinio-do-agente.ts:18` (`opcoesDeRaciocinio`), `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:605` (`controla`), `apps/api/src/db/schema/llm.ts:149` (`reasoningBudget`), `apps/api/src/db/migrations/0074_orcamento_de_raciocinio.sql`
 - **Teste:** `apps/api/test/infrastructure/llm/openai-compatible-provider.contract.spec.ts` (`modelo com orçamento de raciocínio (RN-914)`), `apps/api/test/domain/llm/raciocinio-do-agente.spec.ts`
 - **Origem:** AT-569 (medição paga de 22/10, `~/brabo-gravacoes/raciocinio-smoke-2026-10-22/resultados.jsonl`)
+
+### RN-918 — O agente escreve o próprio plano com `registrar_plano`, e o último `agent.plan` é o vigente {#rn-918}
+
+- **Regra:** `registrar_plano` grava `agent.plan` com o objetivo (até 200 caracteres) e de 1 a 12 passos de até 160 caracteres, cada um `pendente`, `em_curso`, `feito` ou `descartado`. Cada chamada manda o plano INTEIRO e substitui o anterior (o vigente é o último `agent.plan` do ator). Acima do teto a ferramenta RECUSA nomeando o limite, nunca corta. Não é `proposed_action` (escrever o plano não é efeito externo) nem artefato (fora de `ferramentas_de_artefato/0`) e a descrição não nomeia idioma (RN-667). Têm a ferramenta os seis conversacionais com o Infra Lead, o dev e os subagentes de QA e AppSec; ficam fora o subagente de validação de arquivo da Infra e o `context-manager`. A `Reidratacao` mostra só o último plano de cada ator, como uma nota, e pula o `tool.call`/`tool.result` da ferramenta.
+- **Onde:** `apps/engine/lib/engine/harness/tools/registrar_plano.ex:84` (`run`), `apps/engine/lib/engine/agents/reidratacao.ex:172` (`so_o_ultimo_plano_de_cada_ator`)
+- **Teste:** `apps/engine/test/engine/agents/diario_vivo_test.exs` (`registrar_plano`: grava, substitui, recusa acima do teto; `Reidratacao`: só o último plano)
+- **Origem:** AT-582 (EP-031), decisão do dono de 27/10; [ADR 0226](adr/0226-diario-vivo-e-retomada-dos-agentes.md).
+
+### RN-919 — O diário é a projeção do log mais o plano, sem tabela, e diz o que está confirmado e o que ficou sem desfecho {#rn-919}
+
+- **Regra:** `Engine.Agents.Diario` lê a cauda do log do agente, a partir do marco do turno (`agent.status: working`, o `dev.working` da tarefa ou o `agent.turn_resumed` do subagente de gate), e devolve o plano vigente, os efeitos confirmados (`tool.result` ok, `proposed_action.executed`, artefatos, commit preservado), as chamadas sem desfecho, as ações pendentes (`proposed_action.created` sem decisão), a última atividade e se a retomada automática já foi usada. A fonte de verdade continua o event log. `RetomadaDoTurno` transforma o diário numa mensagem `system` EFÊMERA (teto de 2 000 caracteres, depois de `DecisoesDoProjeto` e antes de `PerfilDoAutor`; no `ToolLoop`, por `ctx[:retomada]`): onde parou, o plano, o que não repetir, o que conferir antes e as ações pendentes que não se propõem de novo. Nunca é mensagem falsa do usuário. Push e PR são repetíveis (a PR aberta é reaproveitada, RN-812); merge NUNCA na retomada (RN-418); o engine não reexecuta chamada sem desfecho, quem decide é o modelo, depois de conferir o estado.
+- **Onde:** `apps/engine/lib/engine/agents/diario.ex:85` (`de_eventos`), `:255` (`retomada_usada?`), `apps/engine/lib/engine/harness/retomada_do_turno.ex:69` (`texto`)
+- **Teste:** `apps/engine/test/engine/agents/diario_vivo_test.exs` (`Diario.de_eventos/2`, `RetomadaDoTurno`, marco por opção e retomada usada)
+- **Origem:** AT-582 (EP-031); [ADR 0226](adr/0226-diario-vivo-e-retomada-dos-agentes.md).
+
+### RN-920 — O turno conversacional que o reinício matou é retomado UMA vez no boot, se recente {#rn-920}
+
+- **Regra:** revisa a [RN-586](#rn-586). A varredura de boot (`TurnoOrfao.varrer/2`) retoma o turno órfão cujo agente teve atividade há no máximo 900 s (`:retomada_automatica_janela_segundos`, a mesma régua da [RN-823](#rn-823), medida pela última atividade do agente e não pelo `working`) e que ainda não foi retomado: grava `agent.error` (`turno_interrompido_por_reinicio`, `retomada: "automatica"`), `agent.status: idle` e `agent.turn_resumed` (`automatica: true`) e acorda o agente, cujo `init/1` agenda `:retomar_turno_interrompido` ANTES da entrega da fila (RN-673). O teto é durável no log: um `agent.turn_resumed` do agente entre o último status não-`working` e o `working` órfão. Turno velho ou já retomado é só fechado, com a frase apontando o botão (RN-921). O `fechar_ao_subir/3` do `init/1` continua só fechando, e nó mudo conta como vivo (na dúvida nem fecha nem retoma). Resíduo declarado: dois nós subindo juntos, sem se enxergarem, podem retomar o mesmo turno duas vezes.
+- **Onde:** `apps/engine/lib/engine/agents/turno_orfao.ex:90` (`varrer`), `:181` (`retomar`), `apps/engine/lib/engine/agents/turno_assincrono.ex:418` (`retomada_ao_subir`), `:253` (`tratar_resultado`)
+- **Teste:** `apps/engine/test/engine/agents/diario_vivo_test.exs` (`TurnoOrfao.varrer/2: retomada automática 1× no boot`, `TurnoAssincrono: retomada no init`); `apps/engine/test/engine/agents/reidratacao_dos_seis_test.exs`
+- **Origem:** AT-582 (EP-031), decisão do dono de 27/10; [ADR 0226](adr/0226-diario-vivo-e-retomada-dos-agentes.md).
+
+### RN-921 — O botão "Retomar" do fio é gesto humano, sem teto, e só vale para o turno interrompido {#rn-921}
+
+- **Regra:** o `agent.error` com `reason: turno_interrompido_por_reinicio` ganha no fio o cartão `RetomarTurnoInterrompido` (objetivo e passos do último plano, "Parou em", botão). O clique chama `POST /projects/:projectId/sessions/:sessionId/agents/:agent/resume` (`developer`; 200 `{ok:true}`; 404 sessão alheia; 409 `turno_nao_interrompido` quando o último desfecho do agente não é a interrupção ou há turno em curso; 409 `agente_sem_retomada`), que pede ao engine `POST /internal/sessions/:sessionId/agent/resume`: ele grava `agent.turn_resumed` com `automatica: false` e manda `:retomar_turno_interrompido` à MESMA `TurnoAssincrono`. Sem teto: cada clique é uma retomada. O cartão some quando algo segue o erro, e a retomada automática vira uma linha discreta. O "sem desfecho" do diário NÃO aparece na tela (o evento não o traz).
+- **Onde:** `apps/api/src/interfaces/http/sessions/agent-resume.controller.ts:23` (`AgentResumeController`), `apps/api/src/application/use-cases/sessions/resume-agent-turn.use-case.ts:29` (`execute`), `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:612` (`resume`), `apps/web/src/routes/RetomarTurnoInterrompido.tsx:23` (`ehTurnoInterrompido`)
+- **Teste:** `apps/api/test/interfaces/http/sessions/agent-resume.controller.spec.ts` (feliz, duas recusas 409, 404, papel); `apps/web/src/routes/RetomarTurnoInterrompido.test.tsx`; ExUnit do `agent_command_controller`
+- **Origem:** AT-582 (EP-031); [ADR 0226](adr/0226-diario-vivo-e-retomada-dos-agentes.md).
+
+### RN-922 — O dev agent que cai dentro da janela retoma do commit da MESMA tarefa, uma vez {#rn-922}
+
+- **Regra:** revisa a [RN-742](#rn-742) (e cita a [RN-778](#rn-778), que continua só fechando o dev sem linha durável). O dev `working` reidratado, com a última atividade há no máximo 900 s e sem `dev.working` `cause: "retomada"` nesta tarefa, preserva o worktree como commit (RN-743), readota a MESMA tarefa (a branch dela, RN-779), grava `dev.working` com `cause: "retomada"` e o commit, e roda o laço com a mensagem do diário. A tarefa nunca sai de `in_progress`. A 2ª queda, a queda fora da janela, o `awaiting_approval` e qualquer falha da retomada bloqueiam como antes, e o "desbloquear" manual vira o "retomar do commit". Merge nunca ocorre aqui (RN-418). O contador de falha passageira da RN-864 é outra régua e não muda.
+- **Onde:** `apps/engine/lib/engine/dev/dev_agent_server.ex:1224` (`retomada_do_commit`), `:1250` (`retomar_do_commit`)
+- **Teste:** `apps/engine/test/engine/dev/retomada_do_commit_test.exs` (queda recente retoma; 2ª queda, fora da janela e `awaiting_approval` bloqueiam)
+- **Origem:** AT-582 (EP-031), decisão do dono de 27/10; [ADR 0226](adr/0226-diario-vivo-e-retomada-dos-agentes.md).
+
+### RN-923 — O resgate automático de gate vale uma vez por ciclo, no boot e no tick, e o "Retomar gate" zera o contador {#rn-923}
+
+- **Regra:** revisa a [RN-823](#rn-823) e a [RN-722](#rn-722). `engine.gate_states.auto_resumes` conta os redespachos automáticos do ciclo (no boot e no tick); com 1 já usada, o segundo resgate ESTACIONA (`gate.rescue_parked`, `motivo: "retomada_automatica_ja_usada"`) e espera o "Retomar gate" ([RN-724](#rn-724)), que não tem teto e ZERA o contador. O contador fica fora do `on_conflict` do upsert (sobrevive aos passos do ciclo) e some com a linha quando o ciclo termina. O estacionamento de 2 h não muda. Os subagentes de gate ganham `registrar_plano`; no redespacho o `ToolLoop` recebe `ctx[:retomada]` com o plano do último `agent.turn_resumed` do subagente, e a área continua sendo redespachada inteira. Resíduo declarado: um ciclo novo pode pegar um marco pendente com menos de 15 min, e o subagente de gate não abre `working`, então a retomada dele leva só o plano.
+- **Onde:** `apps/engine/lib/engine/gates/gate_rescuer.ex:183` (`retomar_ou_estacionar`), `:330` (`retomar_estacionado`), `apps/engine/lib/engine/gates/gate_state.ex:37` (`auto_resumes`)
+- **Teste:** `apps/engine/test/engine/gates/gate_rescuer_test.exs:501` (`teto de 1 retomada automática` no tick e no boot, e o manual zerando)
+- **Origem:** AT-582 (EP-031), decisões do dono de 27 e 28/10; [ADR 0226](adr/0226-diario-vivo-e-retomada-dos-agentes.md).
+
+### RN-924 — A correção de gate que chega ao Infra Lead com turno em curso é durável {#rn-924}
+
+- **Regra:** revisa a [RN-617](#rn-617), no molde da fila da [RN-673](#rn-673). `InfraLeadServer.correct/3` grava `infra.correction_queued` (`id`, `gate`, `reason`, diagnóstico até 2 000 caracteres) ANTES do cast e, sem processo, acorda o agente; `iniciar_correcao/2` grava `infra.correction_delivered` (`id`). O `init/1` reconstrói as pendentes (queued menos delivered) e as entrega depois do turno retomado e da fila de mensagens, e o `Rehydrator` acorda o Infra Lead que tem correção pendente no boot. Entregue não é reentregue. O Infra Lead também tem `registrar_plano` e a retomada da RN-920.
+- **Onde:** `apps/engine/lib/engine/infra/infra_lead_server.ex:1621` (`correct`), `:414` (`iniciar_correcao`), `:200` (`init`)
+- **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs:1980` (`correct/3 grava infra.correction_queued antes do cast`; a pendente sobrevive ao reinício e a entregue não é reentregue)
+- **Origem:** AT-582 (EP-031); [ADR 0226](adr/0226-diario-vivo-e-retomada-dos-agentes.md).
