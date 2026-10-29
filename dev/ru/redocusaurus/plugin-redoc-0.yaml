@@ -17872,6 +17872,7 @@ components:
             - bitdeer
             - vultr
             - 9router
+            - opencode-zen
           example: openrouter
         capabilities:
           $ref: '#/components/schemas/LLMProviderCapabilitiesResponseDto'
@@ -18946,6 +18947,7 @@ components:
             - bitdeer
             - vultr
             - 9router
+            - opencode-zen
           example: openai
         descobertos:
           type: number
@@ -21043,6 +21045,7 @@ components:
             - bitdeer
             - vultr
             - 9router
+            - opencode-zen
           example: anthropic
         apiKey:
           type: string
