@@ -9,5 +9,5 @@
     "notProven": "não provado",
     "loadError": "Não foi possível carregar as capacidades dos providers."
   },
-  "routing": "O critério de roteamento do OpenRouter é escolhido no modelo do agente ou da área, em Configurações do projeto; não há controle aqui."
+  "routing": "O critério de roteamento do OpenRouter é escolhido no modelo do agente ou da área, em Configurações do projeto; não há controle aqui. No OpenRouter, cada chamada também leva um teto de preço (1,5 × o preço do catálogo): só um upstream dentro dele atende; se nenhum atende, a chamada repete uma vez sem teto."
 }

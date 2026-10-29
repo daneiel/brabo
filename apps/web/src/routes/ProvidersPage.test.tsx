@@ -34,6 +34,7 @@ const caps = (extra: Record<string, boolean>) => ({
   embeddings: false,
   routingPreference: false,
   stickySession: false,
+  priceCeiling: false,
   promptCaching: false,
   ...extra,
 });
@@ -66,6 +67,15 @@ describe('ProvidersPage', () => {
     expect(screen.getByText('credenciais')).toBeInTheDocument();
     expect(screen.getByText('catalogo-sem-projeto')).toBeInTheDocument();
     expect(screen.getByText('gasto')).toBeInTheDocument();
+  });
+
+  it('a capability do teto de preço aparece como coluna e a nota explica o teto', async () => {
+    listProviderCapabilities.mockResolvedValue([
+      { provider: 'openrouter', capabilities: caps({ priceCeiling: true }) },
+    ]);
+    montar();
+    expect(await screen.findByText('priceCeiling')).toBeInTheDocument();
+    expect(screen.getByText(/teto de preço|price ceiling/)).toBeInTheDocument();
   });
 
   it('quem não é owner não vê o gasto', async () => {
