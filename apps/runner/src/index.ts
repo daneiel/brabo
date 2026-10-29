@@ -79,6 +79,9 @@ import {
   lerConfigLocal,
   type ChaveDeDispositivo,
 } from './device-key.ts';
+import { createInterface } from 'node:readline/promises';
+import { acharCredenciaisLocais } from './credenciais-locais.ts';
+import { importarCredenciais } from './importar-credenciais.ts';
 // A porta de Docker MUDOU de casa no ADR 0130 — de `./docker-*.ts` para o
 // pacote `@brabo/docker-port`, quando o broker virou o segundo consumidor. Ela
 // é `devDependency` de propósito, na mesma prateleira que `phoenix`: o `tsup`
@@ -1492,6 +1495,33 @@ async function main(): Promise<void> {
     const escrever = resposta.fluxo === 'erro' ? console.error : console.log;
     for (const linha of resposta.linhas) escrever(linha);
     process.exit(resposta.codigo);
+  }
+
+  // AT-611 (RN-927): interativo; despachado antes de qualquer credencial de conexão.
+  if (process.argv[2] === 'credentials' && process.argv[3] === 'import') {
+    const cwd = process.env.INIT_CWD ?? process.cwd();
+    const configLocal = lerConfigLocal(cwd);
+    const rl = createInterface({ input: process.stdin, output: process.stderr });
+    const codigo = await importarCredenciais({
+      stdinTTY: process.stdin.isTTY === true,
+      stdoutTTY: process.stdout.isTTY === true,
+      apiUrl:
+        valorDeFlag(process.argv, '--api-url') ??
+        process.env.BRABO_API_URL ??
+        configLocal?.apiUrl ??
+        API_URL_PADRAO,
+      chave: lerChaveDeDispositivo(cwd),
+      achar: () =>
+        acharCredenciaisLocais({
+          home: homedir(),
+          env: process.env,
+          plataforma: process.platform,
+        }),
+      perguntar: (t) => rl.question(t),
+      saida: (l) => console.error(l),
+    });
+    rl.close();
+    process.exit(codigo);
   }
 
   // Mesmo lugar e mesmo motivo de `service` (RN-551): criar a credencial não
