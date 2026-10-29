@@ -25170,3 +25170,10 @@ sem dizer qual.
 - **Onde:** `apps/web/src/routes/ContainerDetalhePage.tsx:20` (`ContainerDetalhePage`), `apps/web/src/components/AcoesDoContainer.tsx:40` (`AcoesDoContainer`)
 - **Teste:** `apps/web/src/routes/ContainerDetalhePage.test.tsx:92` (caminho feliz com ritmo de 15 s, nunca provisionado com URLs vazias, projeto fora da lista); `apps/web/src/routes/ContainersPage.test.tsx` cobre as ações extraídas
 - **Origem:** AT-609 (EP-030), fatia da AT-608.
+
+### RN-927 — O runner grava a chave de API de LLM do usuário por `POST /runner/llm-credentials`, só com chave de máquina, sem sobrescrever sem confirmação {#rn-927}
+
+- **Regra:** `POST /runner/llm-credentials` (`@RequirePatAuth()`, `PatAuthGuard`) recebe `{ provider, apiKey, origem, substituir? }` e delega ao mesmo `UpsertUserCredentialUseCase` (envelope com `key_id`, ADR 0158) para o usuário dono da credencial. Rota sem `:projectId`: o guard recusa com 403 credencial amarrada a projeto, e todo PAT é de projeto, então só a chave de dispositivo de MÁQUINA entra (a primeira rota em que ela escreve segredo de usuário). Provider fora de `LLM_PROVIDER_NAMES_COM_CREDENCIAL` é 400; credencial existente do provider sem `substituir: true` é 409 `credencial_existente`, sem tocar a existente. A resposta é `{ provider, substituida }`. O valor nunca vai a log (a auditoria leva provider e `origem`), URL, evento, exceção nem resposta, e a rota não testa a conexão (ADR 0050). Só chave de API é importável; token de login por assinatura não (ADR 0230).
+- **Onde:** `apps/api/src/application/use-cases/llm/import-runner-llm-credential.use-case.ts:22` (`execute`), `apps/api/src/interfaces/http/runner/runner-llm-credentials.controller.ts:33` (`RunnerLlmCredentialsController`)
+- **Teste:** `apps/api/test/application/use-cases/llm/import-runner-llm-credential.use-case.spec.ts` (grava cifrado com `key_id` sem o valor em log/resposta; 409 sem substituir; substituir; provider inválido); 401/403 do guard em `apps/api/test/interfaces/pat-auth.guard.spec.ts`; `route-surface.spec.ts`
+- **Origem:** AT-611 (EP-026), ADR 0230.

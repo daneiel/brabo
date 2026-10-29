@@ -3,7 +3,7 @@ id: adr-index
 title: Decisões arquiteturais (ADR)
 sidebar_label: Índice de ADRs
 sidebar_position: 0
-description: Os 222 registros de decisão arquitetural do Brabo, agrupados por tema, com o que cada um decidiu.
+description: Os 223 registros de decisão arquitetural do Brabo, agrupados por tema, com o que cada um decidiu.
 keywords: [ADR, decisão arquitetural, arquitetura, histórico]
 ---
 
@@ -207,6 +207,7 @@ O CLI na máquina do usuário — o canal, as credenciais, as chaves de disposit
 | [0193](0193-git-credenciado-no-host-do-runner.md) | O git CREDENCIADO roda no HOST do runner, o código roda no container (AT-116, decisão do dono de 01/10): o `git fetch` autenticado do `RunnerGit` vai MARCADO (`gitCredenciado: true`, posto só por `RunnerRouter.exec_git_credenciado/5`) e o runner o executa no host mesmo com container ativo, onde o `env` chega ao processo filho — a mesma pasta, já que `estado.dir` é o bind-mount de `/work`. Nenhuma porta do ADR 0130 muda (`DockerPort.exec` continua sem `env`), `RunnerReadiness` fica byte a byte, e a recusa da RN-558 encolhe para `env` SEM a marca (na prática, um runner anterior a este ADR) |
 | [0201](0201-revogacao-por-chave.md) | A revogação mira a CHAVE, não o par `{project, user}` (AT-013, decisão do dono de 01/10, revisando a [RN-520](../business-rules.md#rn-520) sobre o [ADR 0154](0154-chave-de-dispositivo-de-maquina.md) e o [ADR 0155](0155-a-primeira-conta-nasce-no-terminal.md)). O ticket do socket do runner grava QUAL credencial o pediu (`credential_kind`/`credential_id`, nuláveis, migration Ecto no schema do próprio engine), o `PatAuthGuard` a repassa, o socket a guarda em `assigns` e no `id` dele, e `POST /internal/runner/disconnect-credential` anula os tickets pendentes da credencial e pergunta a TODO runner registrado se nasceu dela — então outro runner do mesmo usuário, com PAT ou outra chave, fica de pé, e uma chave de MÁQUINA é uma requisição em vez do par aplicado N vezes. A revogação de PAT (RN-426/427) agora derruba as conexões dele também. Duas peças de transição mantêm caindo o que caía: uma conexão LEGADA (ticket sem credencial) cai pelo par nos projetos que a api manda, e se o engine não conhece a rota a revogação de chave volta para `disconnectRunnerOfUser`. A rota do par fica para a remoção de membro (RN-615). Os diálogos de confirmação mudam só o texto (RN-561); o runner não muda |
 | [0203](0203-aposenta-o-fluxo-do-runner-pelo-navegador.md) | A configuração do runner pelo navegador do [ADR 0118](0118-configuracao-automatica-do-runner-pelo-navegador.md) é aposentada (AT-014, decisão do dono de 01/10, fecha o BRB-031): o navegador não gera mais a chave, não baixa o binário nem escreve a pasta, e o `RunnerOnboardingPanel` mostra no lugar o comando do `install.sh` — o instalador já baixa o binário verificado, o instala executável (`install -m 0755`, então sem `chmod +x` manual em lugar nenhum) e pareia a máquina pelo terminal. `apps/web/src/lib/runner-bootstrap.ts` e `POST /projects/:projectId/runner-device-keys` são removidos (sem outro chamador; BREAKING), enquanto `GET`/`DELETE` e a rota interna de chave de máquina ficam. Chaves de projeto registradas antes continuam funcionando e revogáveis. Declarado: instalações com time perdem o jeito sem PAT de parear uma segunda máquina, e `GET /runner-releases/binary` fica sem consumidor de produção, mantido por decisão à parte |
+| [0230](0230-importar-chave-de-llm-pelo-runner.md) | O `brabo-runner credentials import` lê, na máquina do usuário, chaves de API de LLM já configuradas em outras ferramentas e as grava por `POST /runner/llm-credentials` (só chave de dispositivo de MÁQUINA; todo PAT é de projeto e fica de fora), pelo MESMO upsert com envelope (`key_id`). Só chave de API — login por assinatura não é importado (termos dos fornecedores); a api nunca lê o disco; credencial existente exige `substituir: true` (409 `credencial_existente`); o valor nunca vai a log nem resposta. Referencia 0050, 0154 e 0158. |
 
 ## Autenticação, acesso e segredos {#tema-iam}
 
@@ -363,7 +364,7 @@ Como a documentação é gerada, verificada e publicada.
 - **Um arquivo por decisão**, em `docs/adr/NNNN-short-title.md`, com
   numeração sequencial de 4 dígitos, e título `# ADR NNNN — <título>`
   ([0218](0218-titulo-de-adr-com-prefixo.md)). **Sem reuso de número**, nem quando um ADR
-  é substituído — o próximo é **0227**.
+  é substituído — o próximo é **0231**.
 - **Um tema por decisão**, escolhido por quem escreve o ADR, no mesmo
   PR: uma linha em `docs/adr/temas.yml` e a linha do índice sob a seção desse
   tema, em ordem numérica. Quem revisa confirma. Um tema novo é uma
