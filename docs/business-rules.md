@@ -16862,7 +16862,7 @@ especificação da AT-081 e o mecanismo verificado por provider na AT-161).
   (`copiar_dicionario`);
   `apps/api/src/application/use-cases/agents/send-agent-message.use-case.ts:168`
   (`resolverIdioma`), `:74` (`idiomaAlvo`);
-  `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:207`
+  `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:215`
   (`idiomaDaResposta`)
 - **Teste:** `apps/engine/test/engine/harness/idioma_da_resposta_test.exs:78`
   (sem autor: o idioma do projeto, no fim), `:123` (com autor: o do autor
@@ -17310,7 +17310,7 @@ pendências de outras sessões tem o teto de 20 cards, e o resto continua na aba
 Aprovações; (d) as pendências de arquitetura e as hipóteses do Psicólogo
 continuam SEM decisão inline (não há `ApprovalCard` para elas).
 
-- **Código:** `apps/web/src/components/ApprovalCard.tsx:228` (`decidir`, a
+- **Código:** `apps/web/src/components/ApprovalCard.tsx:232` (`decidir`, a
   decisão em voo e a recusa no card); `apps/web/src/lib/session-turno.ts:59`
   (`turnoEmCursoNoLog`), `:532` (`useRetomarTurnoDoLog`);
   `apps/web/src/lib/pendencias-do-projeto.ts:24` (`usePendenciasDoProjeto`),
@@ -20115,7 +20115,7 @@ rótulo, não o comportamento.
   (`execute`), `:109` (`derrubarConexoesDaChave`);
   `apps/api/src/application/use-cases/auth/derrubar-conexoes-do-pat.ts:21`
   (`derrubarConexoesDoPat`);
-  `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:666`
+  `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:674`
   (`disconnectRunnerCredential`);
   `apps/engine/lib/engine/runners/socket_ticket.ex:107` (`emitir`), `:207`
   (`anular_pendentes_da_credencial`);
@@ -21488,7 +21488,7 @@ O kickoff do PO diz as três coisas.
   (`resume`),
   `apps/api/src/application/use-cases/gates/resume-parked-gate.use-case.ts:18`
   (`execute`),
-  `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:351`
+  `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:360`
   (`resumeParkedGate`),
   `apps/api/src/interfaces/http/gates/gate-resume.controller.ts:40`
   (`resume`), `apps/web/src/routes/RetomarGateEstacionado.tsx:59`
@@ -22248,7 +22248,7 @@ sem dizer qual.
   modo automático não aprova esta ação: ela continua esperando o seu
   Aprovar."). Aprovar o cartão junto com a ligação do modo seria decisão do
   dono e NÃO foi feito.
-- **Onde:** `apps/web/src/components/ApprovalCard.tsx:203` (`ApprovalCard`)
+- **Onde:** `apps/web/src/components/ApprovalCard.tsx:207` (`ApprovalCard`)
 - **Teste:** `apps/web/src/components/ApprovalCard.test.tsx` (`ligar o
   "Modo automático" não aprova o card, e o card diz isso`; sem o botão, a nota
   não sai)
