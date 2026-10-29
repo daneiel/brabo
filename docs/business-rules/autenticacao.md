@@ -1610,13 +1610,13 @@ e o card do agente mostra uma frase sob o toggle — só quando a CURINGA está
 ligada, porque o toggle sobre o tipo representativo grava regra específica,
 que não libera o escopo.
 
-- **Onde:** `apps/api/src/domain/actions/decide.ts:295` (`modoAutomaticoDoAgente`),
+- **Onde:** `apps/api/src/domain/actions/decide.ts:303` (`modoAutomaticoDoAgente`),
   `apps/api/src/domain/actions/decide.ts:370` (o veredito sintetizado do
   composto ignorado), `apps/api/src/domain/actions/decide.ts:455` (o teto de
   escopo pulado),
   `apps/api/src/infrastructure/persistence/drizzle/agent-autonomy.repository.ts:25`
   (`resolve`, com a origem),
-  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:216`
+  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:221`
   (`autonomyOrigin`), `apps/web/src/components/AgentTeamGrid.tsx:108`
   (`autonomyHint`), `apps/web/src/components/ApprovalCard.tsx:313` (a nota
   nas duas variantes)

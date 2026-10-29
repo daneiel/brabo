@@ -1942,6 +1942,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{projectId}/container/network": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Declared network of the container (artifact.container_network)
+         * @description The current declaration (ports on 127.0.0.1, DNS, extra hosts), or `null`. It is what was DECLARED; it only takes effect when the container is recreated (`container_recreate`).
+         */
+        get: operations["ContainersController_rede"];
+        /**
+         * Declares the container network (human only)
+         * @description Emits a new version of `artifact.container_network` (the current one replaces the previous). Not an external effect: nothing changes in Docker until a `container_recreate` is approved (AT-608, RN-931). 400 `rede_invalida` names the field.
+         */
+        put: operations["ContainersController_declarar"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects/{projectId}/coverage": {
         parameters: {
             query?: never;
@@ -4795,6 +4819,12 @@ export interface components {
                 [key: string]: string;
             };
         };
+        AppDeExecucaoResponseDto: {
+            /** @example npm start */
+            command: string;
+            /** @example 3000 */
+            port: number;
+        };
         AppendSessionEventDto: {
             /**
              * @description Event type. The full inventory is in `docs/reference/events.md`.
@@ -4863,7 +4893,7 @@ export interface components {
              * @example terminal
              * @enum {string}
              */
-            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability" | "container_start" | "container_stop" | "container_remove" | "container_start_via_runner";
+            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability" | "container_start" | "container_stop" | "container_remove" | "container_recreate" | "container_start_via_runner";
             /**
              * @description Parameters of the action, specific to the `actionType`.
              * @example {
@@ -5868,6 +5898,26 @@ export interface components {
              * @example 3
              */
             imagemVersao: number;
+            /** @description AT-610 (ADR 0228): the app command declared by the Infra in `run.app` (`artifact.run_instructions`), or `null`. Always `null` for `runner`. */
+            comandoDoApp: string | null;
+            /** @description AT-608: ports declared in `artifact.container_network`, published on 127.0.0.1 only. `null` when undeclared or `runner`. */
+            ports: {
+                /** @example 8080 */
+                host?: number;
+                /** @example 3000 */
+                container?: number;
+                /** @example tcp */
+                protocol?: string;
+            }[] | null;
+            /** @description AT-608: DNS servers (literal IPs), or `null`. */
+            dns: string[] | null;
+            /** @description AT-608: `--add-host` entries (IPv4), or `null`. */
+            extraHosts: {
+                /** @example api.local */
+                name?: string;
+                /** @example 10.0.0.5 */
+                ip?: string;
+            }[] | null;
         };
         ContratoDeModuloInternalDto: {
             /**
@@ -5949,7 +5999,7 @@ export interface components {
              * @example terminal
              * @enum {string}
              */
-            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability" | "container_start" | "container_stop" | "container_remove" | "container_start_via_runner";
+            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability" | "container_start" | "container_stop" | "container_remove" | "container_recreate" | "container_start_via_runner";
             /** @description Always an agent on this route. */
             actor: components["schemas"]["ActorDto"];
             /**
@@ -6412,6 +6462,14 @@ export interface components {
             network: "none" | "egress";
             resources: components["schemas"]["RecursosDoContainerResponseDto"];
         };
+        DeclararRedeDto: {
+            /** @description Up to 10 TCP ports published on 127.0.0.1 only. `host` 1024-65535, never an installation port, no duplicates. */
+            ports?: components["schemas"]["PortaDto"][];
+            /** @description Up to 3 literal IPs. */
+            dns?: string[];
+            /** @description Up to 10 `--add-host` entries: name in [a-z0-9.-], never localhost or an installation service, IPv4 literal. */
+            extraHosts?: components["schemas"]["HostExtraDto"][];
+        };
         DeclareModuleContractsInternalDto: {
             /** Format: uuid */
             projectId: string;
@@ -6871,6 +6929,12 @@ export interface components {
             details?: {
                 [key: string]: unknown;
             };
+        };
+        HostExtraDto: {
+            /** @example api.local */
+            name: string;
+            /** @example 10.0.0.5 */
+            ip: string;
         };
         HuggingFaceModelResponseDto: {
             /**
@@ -8233,6 +8297,14 @@ export interface components {
              */
             lastUsedAt: Record<string, never> | null;
         };
+        PortaDto: {
+            /** @example 8080 */
+            host: number;
+            /** @example 3000 */
+            container: number;
+            /** @example tcp */
+            protocol: string;
+        };
         PriorHypothesisResponseDto: {
             /** @example dev-api */
             agenteAlvo: string;
@@ -8730,7 +8802,7 @@ export interface components {
              * @example terminal
              * @enum {string}
              */
-            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability" | "container_start" | "container_stop" | "container_remove" | "container_start_via_runner";
+            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability" | "container_start" | "container_stop" | "container_remove" | "container_recreate" | "container_start_via_runner";
             /** @description Who is proposing it. */
             actor: components["schemas"]["ActorDto"];
             /**
@@ -8763,7 +8835,7 @@ export interface components {
              * @example terminal
              * @enum {string}
              */
-            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability" | "container_start" | "container_stop" | "container_remove" | "container_start_via_runner";
+            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability" | "container_start" | "container_stop" | "container_remove" | "container_recreate" | "container_start_via_runner";
             /**
              * @description Parameters of the action, specific to the `actionType`.
              * @example {
@@ -9358,6 +9430,13 @@ export interface components {
              */
             pidsLimit: number;
         };
+        RedeDoContainerResponseDto: {
+            ports: components["schemas"]["PortaDto"][];
+            dns: string[];
+            extraHosts: components["schemas"]["HostExtraDto"][];
+            /** @example 1 */
+            version: number;
+        };
         RegisterDto: {
             /**
              * @description The account's email.
@@ -9688,6 +9767,8 @@ export interface components {
              * @example true
              */
             envExample: boolean;
+            /** @description AT-610 (ADR 0228): the command the container runs to start the app and the port it listens on. Absent when the Infra did not declare it. */
+            app?: components["schemas"]["AppDeExecucaoResponseDto"];
             /** @example http://localhost:3000/git/acme/pulls/3 */
             prUrl: string;
             /** @example 1 */
@@ -10121,7 +10202,7 @@ export interface components {
              * @example terminal
              * @enum {string}
              */
-            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability" | "container_start" | "container_stop" | "container_remove" | "container_start_via_runner" | "*";
+            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability" | "container_start" | "container_stop" | "container_remove" | "container_recreate" | "container_start_via_runner" | "*";
             /**
              * @description This agent's autonomy for this type. Does NOT override `permissions.json`: a pattern in `deny` stays blocked no matter how much autonomy the agent has.
              * @example auto_approve
@@ -15728,6 +15809,102 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["CicloDeVidaDoContainerResponseDto"];
                 };
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient role on the project. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ContainersController_rede: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Or `null`. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RedeDoContainerResponseDto"];
+                };
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient role on the project. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ContainersController_declarar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeclararRedeDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RedeDoContainerResponseDto"];
+                };
+            };
+            /** @description Invalid body. The `ValidationPipe` runs with `whitelist` and `forbidNonWhitelisted`, so an unknown field also fails. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description No token, expired token, or invalid signature. */
             401: {
