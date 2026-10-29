@@ -48,7 +48,7 @@ OLLAMA_SISTEMA_TARDIO_SMOKE=1 pnpm --filter api exec vitest run test/infrastruct
 | Bitdeer | ❌ não provado | falta `BITDEER_TEST_KEY` |
 | Vultr | ❌ não provado | falta `VULTR_TEST_KEY` |
 | 9Router | ❌ não provado | falta `NINE_ROUTER_TEST_KEY`/`NINE_ROUTER_TEST_MODEL` (só `free`/`auto:free`) |
-| OpenCode Zen | ❌ não provado | smoke escrito (AT-568), ainda não rodou: `OPENCODE_ZEN_TEST_KEY` |
+| OpenCode Zen | ❌ não provado | smoke rodou em 29/10/2026 com chave real: grátis recusados (429 `FreeUsageLimitError`, política do fornecedor: grátis só no cliente OpenCode). Pago não provado |
 
 O smoke prova só o ACEITE (o turno termina com texto, sem chunk de erro). Se
 o modelo OBEDECE à orientação é pergunta de qualidade, e pertence à AT-082.
@@ -93,7 +93,7 @@ aceite desta página que dá para repetir à vontade.
 | Bitdeer | ❌ não | ❌ pulado | `BITDEER_TEST_KEY` ausente — irônico, já que a doc de embeddings deles é a única fonte autenticada que a Fase 11b encontrou |
 | Vultr | ❌ não | ❌ pulado | `VULTR_TEST_KEY` ausente |
 | 9Router | ❌ não | ❌ pulado | `NINE_ROUTER_TEST_KEY` ausente; capability `embeddings` fica `false` |
-| OpenCode Zen | ❌ não | ❌ não rodou | smoke ainda não rodou; capability `embeddings` fica `false` |
+| OpenCode Zen | ❌ não | ❌ recusado | smoke rodou 29/10/2026 (429); capability `embeddings` fica `false` |
 
 O que **está** provado sem credencial nenhuma é o DIALETO: a suite de contrato
 roda uma segunda vez sobre a base OpenAI-compatível com a capability ligada, e
@@ -118,7 +118,7 @@ execução do hello-limpo).
 | Bitdeer | ❌ pulado | `BITDEER_TEST_KEY` ausente |
 | Vultr | ❌ pulado | `VULTR_TEST_KEY` ausente |
 | 9Router | ❌ pulado | `NINE_ROUTER_TEST_KEY` ausente |
-| OpenCode Zen | ❌ não rodou | smoke ainda não rodou |
+| OpenCode Zen | ❌ recusado | smoke rodou 29/10/2026: 429 por política do fornecedor |
 
 **Custo real, lido do `token_usage` do banco de teste:**
 
@@ -172,7 +172,7 @@ desta rodada é **US$ 0,00**.
 | Bitdeer | `bitdeer-provider.smoke.spec.ts` | `BITDEER_TEST_KEY` | `moonshotai/Kimi-K2.5` | ❌ pulado | chave ausente no ambiente | — |
 | Vultr | `vultr-provider.smoke.spec.ts` | `VULTR_TEST_KEY` | `kimi-k2-instruct` | ❌ pulado | chave ausente no ambiente | — |
 | 9Router | `nine-router-provider.smoke.spec.ts` | `NINE_ROUTER_TEST_KEY` + `NINE_ROUTER_TEST_MODEL` | sem default (só `free`/`auto:free`) | ❌ pulado | chave ausente no ambiente | — |
-| OpenCode Zen | `opencode-zen-provider.smoke.spec.ts` | `OPENCODE_ZEN_TEST_KEY` | `deepseek-v4.1-flash-free`, `glm-5.3-flash-free` | ❌ não rodou | smoke escrito (AT-568), ainda não rodou | — |
+| OpenCode Zen | `opencode-zen-provider.smoke.spec.ts` | `OPENCODE_ZEN_TEST_KEY` | `deepseek-v4.1-flash-free`, `glm-5.3-flash-free` | ❌ recusado | rodou em 29/10/2026: 429 `FreeUsageLimitError` (grátis só no cliente OpenCode) | — |
 
 Os arquivos vivem em `apps/api/test/infrastructure/llm/`. O modelo default é
 sobrescrevível por `<PROVIDER>_TEST_MODEL` — útil quando a conta não tem acesso

@@ -17,7 +17,9 @@
     "resourcesNone": "—",
     "since": "Desde",
     "sinceNone": "—",
-    "actions": "Ações"
+    "actions": "Ações",
+    "detail": "Detalhe",
+    "openDetail": "Abrir"
   },
   "status": {
     "provisioning": "provisionando",
@@ -73,5 +75,21 @@
       "sem_broker_ambos": "Sem broker de container nesta instalação: subir, parar e remover só terminariam em falha."
     },
     "bloqueioDetalhe": "Por quê?"
+  },
+  "detail": {
+    "title": "Container",
+    "back": "Voltar para os containers",
+    "notFound": "Este projeto não está na lista deste workspace.",
+    "network": "Rede",
+    "mode": "Modo de execução",
+    "networkNone": "Nenhuma decisão de rede ainda",
+    "urls": "URLs declaradas",
+    "urlsNone": "Nenhuma URL declarada pela Infra para este projeto.",
+    "urlsNote": "Declaradas pela Infra na PR dela, não verificadas.",
+    "urlRecusada": "(endereço fora da sua máquina, não vira link)",
+    "networkValue": {
+      "none": "Sem rede",
+      "egress": "Com saída para a internet"
+    }
   }
 }

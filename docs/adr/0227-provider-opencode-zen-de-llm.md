@@ -21,6 +21,14 @@ pública mostra três dialetos: `/chat/completions` (OpenAI, em
 `deepseek-v4.1-flash-free` e `glm-5.3-flash-free` declaram retenção zero e sem
 treino com os dados.
 
+**Medido em 29/10/2026, com chave real (smoke):** os dois modelos grátis
+respondem por API de terceiro com `429 FreeUsageLimitError`: "Free usage limit
+reached. Free models work in OpenCode (https://opencode.ai); subscribe to
+OpenCode Go to keep going". Ou seja, o grátis só vale DENTRO do cliente OpenCode,
+não por API. O provider normalizou o erro certo (`rate_limit`, com a mensagem do
+upstream). Os modelos pagos do Zen exigem saldo na conta ou a assinatura OpenCode
+Go; essa via NÃO foi provada.
+
 ## Decisão
 
 1. **Só o dialeto OpenAI.** `opencode-zen` é uma `OpenAICompatibleProvider` com
@@ -30,9 +38,10 @@ treino com os dados.
 2. **`listModels: false`.** A rota de modelos é outra e pública; o catálogo vem
    do seed curado. Pelo mesmo motivo o teste de conexão da credencial não
    declara teste para ele: um GET público passaria com chave inválida.
-3. **Seed só com os dois de retenção zero**, preço 0 e `manualPricing: true`;
-   os outros grátis entram por curadoria manual na tela (ADR 0042), nunca no
-   seed. `supportsToolCalling` e as capabilities nascem `false`.
+3. **Seed sem modelo.** Os dois grátis de retenção zero saíram do seed em
+   29/10/2026: o fornecedor recusa o grátis por API (429 acima). Modelo pago
+   entra por curadoria manual na tela (ADR 0042), com preço real. As capabilities
+   nascem `false`.
 4. **Capabilities `false` além de `streaming`** (que a suite de contrato exige)
    e `streamOptionsIncludeUsage: false` até o smoke com `OPENCODE_ZEN_TEST_KEY`
    provar tool call e `usage` em `deepseek-v4.1-flash-free` e
@@ -44,8 +53,8 @@ treino com os dados.
   web e nos docs.
 - Modelo grátis é "por tempo limitado": o catálogo envelhece sozinho, sem
   sync; o modelo que sumir vira erro do upstream, normalizado.
-- Enquanto o smoke não rodar, o provider conversa por texto e não serve a agente
-  com ferramenta.
+- Enquanto o smoke não passar, o provider conversa por texto e não serve a agente
+  com ferramenta. O smoke rodou em 29/10/2026 e reprova pelo 429 do fornecedor.
 
 ## Referências
 

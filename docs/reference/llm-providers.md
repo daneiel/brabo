@@ -857,22 +857,26 @@ provider. A doc pública do Zen mostra três dialetos; só o `/chat/completions`
 (`https://opencode.ai/inference/openai/v1`) cabe na base. Os modelos de
 `/responses`, `/v1/messages` e Google, e o Jev do Zen, ficam fora.
 
+**Medido em 29/10/2026 (smoke com chave real):** `deepseek-v4.1-flash-free` e
+`glm-5.3-flash-free` respondem `429 FreeUsageLimitError` por API de terceiro
+("Free models work in OpenCode ... subscribe to OpenCode Go"). Os grátis só valem
+dentro do cliente OpenCode. Os modelos pagos do Zen exigem saldo na conta ou o
+OpenCode Go; essa via não foi provada.
+
 - **`listModels: false`**: a lista de modelos mora em `/inference/v1/models`, e
   não em `{baseUrl}/models`, que a base chama. O catálogo vem do seed curado
-  (ADR 0042), só com `deepseek-v4.1-flash-free` e `glm-5.3-flash-free` — os dois
-  grátis com retenção zero e sem treino. Preço 0 e `manualPricing: true`; os
-  outros grátis entram por curadoria na tela, nunca no seed;
+  (ADR 0042). O seed NÃO traz modelo: os grátis saíram em 29/10/2026, porque o
+  fornecedor os recusa por API. Modelo pago entra por curadoria na tela;
 - **Sem teste de conexão da credencial**: a lista de modelos é pública, e um
   teste por ela passaria com chave inválida;
 - **Capabilities `false`** além de `streaming` (exigido pela suite de contrato)
-  e `streamOptionsIncludeUsage: false` até o smoke com chave. Modelo grátis é
-  "por tempo limitado": o catálogo envelhece sozinho, e o modelo que sumir vira
-  erro do upstream, normalizado.
+  e `streamOptionsIncludeUsage: false` até o smoke com chave provar.
 
 O aceite com chave real mora em
 `test/infrastructure/llm/opencode-zen-provider.smoke.spec.ts`, condicionado a
 `OPENCODE_ZEN_TEST_KEY` (modelos `-free`, custo US$ 0). Ele prova stream, tool
-call e `usage` com `stream_options`; **ainda não rodou**.
+call e `usage` com `stream_options`. Rodou em 29/10/2026: **reprova** com 429
+`FreeUsageLimitError`, a recusa do fornecedor para o grátis por API.
 
 ## Hubs e custo real
 
