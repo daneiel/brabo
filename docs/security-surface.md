@@ -499,6 +499,14 @@ detalhar o motivo na URL.
   caminho sobre o qual a api aja, nada executado, nada concedido. Gravar
   nunca derruba o que mede: a cópia já terminou quando isto é chamado, e uma
   recusa aqui só é registrada em log pelo engine.
+- **`POST /internal/projects/:projectId/qa-environments/:taskId/start`**,
+  **`POST /internal/projects/:projectId/qa-environments/:taskId/remove`** e
+  **`POST /internal/qa-environments/sweep`** ([RN-935](business-rules.md#rn-935),
+  [ADR 0229](adr/0229-instancia-de-qa-efemera-com-servicos-declarados-pela-infra.md)) são chamadas só
+  pelo engine (`engine-service`, `BRABO_SERVICE_TOKEN`). A api chama o broker e
+  grava `project_qa_environments`; o corpo do `sweep` é só a lista de ids de
+  tarefa em voo, e a remoção só alcança o que o broker rotula `brabo.papel=qa`.
+  O `alvo` de QA do `container-exec` vem do engine, nunca do modelo.
 - **`GET /internal/projects/:projectId/container-spec`** ([ADR 0130](adr/0130-broker-de-container.md),
   [RN-485](business-rules.md#rn-485)) é a única rota `engine-service` cujo
   chamador NÃO é o engine — é o **broker** de containers, o único processo do
@@ -1297,6 +1305,9 @@ detalhar o motivo na URL.
 | POST | `/internal/projects/:projectId/container-exec` | engine-service |
 | POST | `/internal/projects/:projectId/mirror-sync-result` | engine-service |
 | GET | `/internal/projects/:projectId/container-spec` | engine-service |
+| POST | `/internal/projects/:projectId/qa-environments/:taskId/start` | engine-service |
+| POST | `/internal/projects/:projectId/qa-environments/:taskId/remove` | engine-service |
+| POST | `/internal/qa-environments/sweep` | engine-service |
 | POST | `/internal/first-account` | engine-service |
 | POST | `/internal/machine-device-keys` | engine-service |
 | GET | `/internal/sessions/:sessionId/psychologist-context` | engine-service |
