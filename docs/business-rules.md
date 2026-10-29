@@ -10245,7 +10245,7 @@ fila de aprovações rotineiras, corroendo o teto que dá sentido ao clique.
   a ordem guarda→disco→versionamento e os cinco motivos);
   `apps/runner/src/channel.ts:173` (`WorkspaceCreateMessage`), `:194`
   (`WorkspaceCreateResultMessage`), `:476` (`CAPACIDADE_DE_WORKSPACE` e
-  `capacidadesDoRunner`); `apps/runner/src/index.ts:1027`
+  `capacidadesDoRunner`); `apps/runner/src/index.ts:1034`
   (`tratarWorkspaceCreate` — a ordem `workspace_confirm` antes do resultado);
   `apps/engine/lib/engine/runners/pasta_do_projeto.ex:107` (`verificar/1`) e
   `:134` (`criar/3`); `apps/engine/lib/engine/runners/runner_router.ex:181`
@@ -19600,7 +19600,7 @@ recusa nomeada.
 5. **O log nunca traz nome nem valor de variável do `env`**: a recusa dá a
    contagem, e o log do caminho host acrescenta só `[git credenciado, no host]`.
 
-- **Código:** `apps/runner/src/index.ts:694` (`gitCredenciadoNoHost`), `:659`
+- **Código:** `apps/runner/src/index.ts:701` (`gitCredenciadoNoHost`), `:666`
   (`tratarExec`); `apps/runner/src/channel.ts:71` (`gitCredenciado`), `:627`
   (`gitCredenciado`); `apps/engine/lib/engine/runners/runner_router.ex:93`
   (`exec_git_credenciado`), `:98` (`despachar_exec`);
@@ -20194,8 +20194,8 @@ ganhar contorno.
 - **Onde:** `apps/runner/src/leitor-de-pty.ts:60` (`precisaDoLeitorProprio`),
   `:70` (`LeitorDeFdNaoBloqueante`), `:115` (`agendar`), `:152`
   (`comLeitorDePtyProprio`); `apps/runner/src/native-pty-loader.ts:114`
-  (`comLeitorDePtyProprio`); `apps/runner/src/index.ts:1268`
-  (`PAUSA_ENTRE_VOLTAS_MS`), `:1291` (`sondarPty`), `:1346`
+  (`comLeitorDePtyProprio`); `apps/runner/src/index.ts:1263`
+  (`PAUSA_ENTRE_VOLTAS_MS`), `:1298` (`sondarPty`), `:1353`
   (`rodarAutoTestePty`)
 - **Teste:** `apps/runner/src/leitor-de-pty.spec.ts:14` (só sob o Bun e fora do
   Windows), `:23` (fora dele, o MESMO módulo), `:28` (troca só durante o

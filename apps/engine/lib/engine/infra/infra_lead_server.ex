@@ -1506,7 +1506,9 @@ defmodule Engine.Infra.InfraLeadServer do
     4. Valide CADA arquivo com `validate_infra_file` (path + content) antes de propor.
     #{String.trim_trailing(passo_da_subida(subida))}
     7. Por último, chame `propose_infra_pr` (title + files + run: o mesmo comando e
-       URLs do README) com o que é seu. Ela ENCERRA o seu turno: uma subida do
+       URLs do README) com o que é seu. Se o app é um servidor HTTP, declare também
+       `run.app` (`{command, port}`): o comando que o sobe DENTRO do container de
+       trabalho, em /work, e a porta INTERNA onde ele escuta. Ela ENCERRA o seu turno: uma subida do
        container que caiba a você só acontece se for chamada ANTES dela ou na
        MESMA resposta — o que não foi chamado não acontece.
 
