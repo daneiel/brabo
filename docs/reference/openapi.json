@@ -22638,7 +22638,8 @@
               "deepinfra",
               "bitdeer",
               "vultr",
-              "9router"
+              "9router",
+              "opencode-zen"
             ],
             "example": "openrouter"
           },
@@ -23901,7 +23902,8 @@
               "deepinfra",
               "bitdeer",
               "vultr",
-              "9router"
+              "9router",
+              "opencode-zen"
             ],
             "example": "openai"
           },
@@ -26252,7 +26254,8 @@
               "deepinfra",
               "bitdeer",
               "vultr",
-              "9router"
+              "9router",
+              "opencode-zen"
             ],
             "example": "anthropic"
           },
