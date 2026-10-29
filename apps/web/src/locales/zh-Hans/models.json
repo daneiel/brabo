@@ -120,6 +120,13 @@
       "aria": "在目录中搜索模型",
       "placeholder": "按名称或 id 搜索（例如：claude-haiku）",
       "noMatch": "目录中没有与“{{term}}”匹配的模型。搜索会查看名称和 id；请检查拼写或清除搜索。"
+    },
+    "tabs": {
+      "aria": "目录中的提供商",
+      "noKey": "无所有者密钥",
+      "noKeyNote": "该提供商没有工作区所有者的密钥，但仍有已启用的模型。不再使用时请停用；没有密钥就不会同步新内容。",
+      "noMatchHere": "没有 {{provider}} 的模型符合搜索或筛选。符合的有：{{tabs}}。",
+      "outside_other": "{{count}} 个已隐藏，无所有者密钥：{{names}}"
     }
   },
   "picker": {

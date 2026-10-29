@@ -20,6 +20,7 @@ const listCredentials = vi.fn();
 const setAgentModelBinding = vi.fn();
 const listWorkspaces = vi.fn();
 const listProviderCapabilities = vi.fn();
+const listCredentialedProviders = vi.fn();
 
 vi.mock('../lib/api-client', async () => {
   const real = await vi.importActual<typeof import('../lib/api-client')>(
@@ -36,6 +37,7 @@ vi.mock('../lib/api-client', async () => {
     setAgentModelBinding: (...a: unknown[]) => setAgentModelBinding(...a),
     listWorkspaces: (...a: unknown[]) => listWorkspaces(...a),
     listProviderCapabilities: (...a: unknown[]) => listProviderCapabilities(...a),
+    listCredentialedProviders: (...a: unknown[]) => listCredentialedProviders(...a),
     upsertCredential: vi.fn(),
     deleteCredential: vi.fn(),
     testCredential: vi.fn(),
@@ -104,6 +106,7 @@ beforeEach(async () => {
   vi.clearAllMocks();
   await i18n.changeLanguage('pt-BR');
   listProviderCapabilities.mockResolvedValue([]);
+  listCredentialedProviders.mockRejectedValue(new Error('indisponível'));
   listModelCatalog.mockResolvedValue(catalogo({ openrouter: [HAIKU, LLAMA] }));
   setModelsActive.mockResolvedValue([]);
   syncModelCatalog.mockResolvedValue({ porProvider: [] });

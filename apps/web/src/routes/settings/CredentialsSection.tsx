@@ -11,6 +11,7 @@ import {
   upsertCredential,
 } from '../../lib/api-client';
 import {
+  COR_DO_PROVIDER,
   CREDENCIAIS_DE_LLM,
   providersSemCatalogo,
   type LlmCredentialProvider,
@@ -38,28 +39,6 @@ function siglaDoConector(label: string): string {
     maiusculas.length >= 2 ? maiusculas.slice(0, 2).join('') : label.slice(0, 2);
   return letras.toUpperCase();
 }
-
-/**
- * A cor da borda esquerda de cada conector (handoff, seção 7 item 4). Só tokens
- * semânticos — o handoff nomeia terracota para a Anthropic e teal para a
- * OpenAI, e os demais seguem o mesmo repertório de quatro acentos.
- *
- * `Record<LlmCredentialProvider, …>` de propósito: provider novo entra na lista
- * derivando de `ROTULO_DO_PROVIDER`, e é o compilador que cobra a cor aqui em
- * vez de ele nascer sem borda nenhuma.
- */
-const COR_DO_CONECTOR: Record<LlmCredentialProvider, string> = {
-  anthropic: 'var(--accent)',
-  openai: 'var(--success)',
-  openrouter: 'var(--violet)',
-  'nvidia-nim': 'var(--success)',
-  together: 'var(--warning)',
-  deepinfra: 'var(--violet)',
-  bitdeer: 'var(--accent)',
-  vultr: 'var(--warning)',
-  '9router': 'var(--success)',
-  'opencode-zen': 'var(--accent)',
-};
 
 /**
  * Exportada para o teste, como ExecutionSection e PromotionSection.
@@ -260,7 +239,7 @@ export function CredentialsSection() {
           const existing = credentials?.find((c) => c.provider === id);
           const rascunho = drafts[id]?.trim() ?? '';
           const ocupado = emVoo === id;
-          const cor = COR_DO_CONECTOR[id];
+          const cor = COR_DO_PROVIDER[id];
           return (
             <div
               key={id}

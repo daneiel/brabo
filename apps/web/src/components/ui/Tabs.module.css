@@ -42,7 +42,7 @@
   color: var(--text-primary);
 }
 
-/* Handoff: `box-shadow: inset 0 -2px 0 var(--accent)` — não `border-bottom`.
+/* Handoff: `box-shadow: inset 0 -2px 0 var(--tab-cor, var(--accent))` — não `border-bottom`.
    A diferença importa na barra compacta que a aba de Código já tem por conta
    própria (`CodeEditor.module.css`, abas de arquivo aberto): ali a aba ativa
    usa `border-top` de 2px, e a régua do PROJETO (esta) nunca ficou embutida
@@ -51,7 +51,7 @@
 .tab.active {
   color: var(--text-primary);
   font-weight: 600;
-  box-shadow: inset 0 -2px 0 var(--accent);
+  box-shadow: inset 0 -2px 0 var(--tab-cor, var(--accent));
 }
 
 /*
@@ -74,7 +74,7 @@
 
 .tab.active:focus-visible {
   box-shadow:
-    inset 0 -2px 0 var(--accent),
+    inset 0 -2px 0 var(--tab-cor, var(--accent)),
     inset 0 0 0 2px var(--focus-ring-inset);
 }
 

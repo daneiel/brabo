@@ -4092,6 +4092,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/workspaces/{workspaceId}/llm-providers/credentialed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lists the LLM providers the workspace owner has a key for
+         * @description The owner of record (`workspaces.created_by`) is whose key the agents spend (RN-058). Only provider NAMES — never a secret, id or date. `ollama` (local, no key) never appears.
+         */
+        get: operations["ModelsController_credentialed"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/workspaces/{workspaceId}/members": {
         parameters: {
             query?: never;
@@ -6310,6 +6330,16 @@ export interface components {
              * @example acme-corp
              */
             slug: string;
+        };
+        CredentialedProvidersResponseDto: {
+            /**
+             * @description LLM providers the workspace owner of record has a key for. Names only; `ollama` never appears.
+             * @example [
+             *       "anthropic",
+             *       "openrouter"
+             *     ]
+             */
+            providers: ("ollama" | "anthropic" | "openai" | "openrouter" | "nvidia-nim" | "together" | "deepinfra" | "bitdeer" | "vultr" | "9router" | "opencode-zen")[];
         };
         CredentialSpendPorMesResponseDto: {
             /**
@@ -22434,6 +22464,41 @@ export interface operations {
             };
             /** @description Pull request not found. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ModelsController_credentialed: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CredentialedProvidersResponseDto"];
+                };
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
