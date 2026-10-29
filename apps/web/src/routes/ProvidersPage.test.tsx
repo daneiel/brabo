@@ -5,9 +5,11 @@ import { ProvidersPage } from './ProvidersPage';
 import '../lib/i18n';
 
 const listProviderCapabilities = vi.fn();
+const listCredentialedProviders = vi.fn();
 vi.mock('../lib/api-client', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../lib/api-client')>()),
   listProviderCapabilities: () => listProviderCapabilities(),
+  listCredentialedProviders: (...a: unknown[]) => listCredentialedProviders(...a),
 }));
 
 const useCurrentWorkspaceWithRole = vi.fn();
@@ -51,6 +53,7 @@ function montar() {
 describe('ProvidersPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    listCredentialedProviders.mockRejectedValue(new Error('indisponível'));
     useCurrentWorkspaceWithRole.mockReturnValue({
       data: { workspace: { id: 'w1' }, role: 'owner' },
     });
@@ -94,5 +97,31 @@ describe('ProvidersPage', () => {
     expect(
       await screen.findByText(/Não foi possível carregar as capacidades|Could not load the provider capabilities/),
     ).toBeInTheDocument();
+  });
+
+  it('só os providers com chave do titular entram na tabela, com rótulo e a linha "de fora"', async () => {
+    listCredentialedProviders.mockResolvedValue({ providers: ['openrouter'] });
+    listProviderCapabilities.mockResolvedValue([
+      { provider: 'openrouter', capabilities: caps({ stickySession: true }) },
+      { provider: 'anthropic', capabilities: caps({}) },
+      { provider: 'ollama', capabilities: caps({}) },
+    ]);
+    montar();
+    expect(await screen.findByText(/(1 de fora, sem chave do titular|1 left out, no key from the owner of record): Anthropic/)).toBeInTheDocument();
+    const tabela = screen.getByRole('table');
+    expect(tabela).toHaveTextContent('OpenRouter');
+    expect(tabela).toHaveTextContent('Ollama');
+    expect(tabela).not.toHaveTextContent('Anthropic');
+  });
+
+  it('chave do titular que falha mostra TODOS os providers ("não sei" não é "não tem")', async () => {
+    listProviderCapabilities.mockResolvedValue([
+      { provider: 'openrouter', capabilities: caps({}) },
+      { provider: 'anthropic', capabilities: caps({}) },
+    ]);
+    montar();
+    expect(await screen.findByText('Anthropic')).toBeInTheDocument();
+    expect(screen.getByText('OpenRouter')).toBeInTheDocument();
+    expect(screen.queryByText(/de fora|left out/)).toBeNull();
   });
 });

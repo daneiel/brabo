@@ -7,3 +7,6 @@
 .sectionTitle { font-family: var(--font-heading); font-size: 16px; color: var(--text-primary); margin: 0; }
 .table { border-collapse: collapse; font-size: 13px; color: var(--text-primary); display: block; overflow-x: auto; }
 .table th, .table td { border-bottom: 1px solid var(--border); padding: 6px 12px; text-align: left; }
+
+.provider { display: inline-flex; align-items: center; gap: 8px; }
+.provider::before { content: ''; width: 3px; height: 14px; border-radius: 2px; background: var(--cor-do-provider, var(--border)); }
