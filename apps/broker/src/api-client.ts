@@ -71,6 +71,10 @@ export interface ServicoDeQaDaApi {
   env?: Record<string, string>;
   /** Caminhos montados em tmpfs (dados efêmeros). */
   tmpfs?: string[];
+  /** `"<uid>:<gid>"`, nunca root. */
+  user?: string;
+  /** Argumentos depois da imagem. */
+  command?: string[];
   shared?: boolean;
 }
 

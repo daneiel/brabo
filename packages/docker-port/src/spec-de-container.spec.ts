@@ -262,6 +262,18 @@ describe('especificacaoValidada — app, rede e QA (ADR 0228/0229)', () => {
     recusa(qa({ imagem: 'pg:16' }), 'imagem');
     recusa(qa({ env: { 'a b': '1' } }), 'env');
     recusa(qa({ dados: ['/a/../b'] }), 'dados');
+    expect(
+      especificacaoValidada({ ...EGRESS, ...qa({ usuario: '70:70', comando: ['httpd', '-f'] }) })
+        .qa?.servicos[0],
+    ).toMatchObject({ usuario: '70:70', comando: ['httpd', '-f'] });
+    for (const u of ['0:0', '0:70', '70:0', 'root', '70', '070:70', '70:70:1', 1, '4294967295:1']) {
+      recusa(qa({ usuario: u }), 'usuario');
+    }
+    recusa(qa({ comando: Array(17).fill('a') }), 'comando');
+    recusa(qa({ comando: ['a'.repeat(201)] }), 'comando');
+    recusa(qa({ comando: ['a\nb'] }), 'comando');
+    recusa(qa({ comando: ['a\0b'] }), 'comando');
+    recusa(qa({ comando: [1] }), 'comando');
     recusa({ qa: { chave: 'curta', servicos: [] } }, 'qa.chave');
     recusa({ ...qa({}), comandoDoApp: 'x' }, 'qa');
     expect(() => especificacaoValidada({ ...VALIDA, ...qa({ compartilhado: true }) })).toThrow(

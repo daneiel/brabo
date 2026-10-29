@@ -592,7 +592,7 @@ export class DockerViaCli extends DockerPort {
           await this.subirCompartilhado(spec, servico, rede);
         } else {
           await this.executar(
-            argsDeServicoDeQa(spec, servico, nome, `container:${nome}`, nome),
+            argsDeServicoDeQa(spec, servico, `${nome}-${servico.nome}`, `container:${nome}`, nome),
             TIMEOUT_DE_CONTROLE_MS,
           );
         }
@@ -906,10 +906,20 @@ export function argsDeServicoDeQa(
     'ALL',
     '--tmpfs',
     '/tmp',
-    ...(servico.dados ?? []).flatMap((c) => ['--tmpfs', c]),
+    ...(servico.usuario === undefined ? [] : ['--user', servico.usuario]),
+    ...(servico.dados ?? []).flatMap((c) => [
+      '--tmpfs',
+      servico.usuario === undefined ? c : `${c}:${donoDoTmpfs(servico.usuario)}`,
+    ]),
     ...Object.entries(servico.env ?? {}).flatMap(([k, v]) => ['--env', `${k}=${v}`]),
     servico.imagem,
+    ...(servico.comando ?? []),
   ];
+}
+
+function donoDoTmpfs(usuario: string): string {
+  const [uid, gid] = usuario.split(':');
+  return `uid=${uid},gid=${gid},mode=0700`;
 }
 
 function argsDeUsuario(usuario: EspecificacaoDeContainer['usuario']): string[] {
