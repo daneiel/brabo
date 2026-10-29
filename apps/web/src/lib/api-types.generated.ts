@@ -6026,7 +6026,7 @@ export interface components {
                 /** @example 10.0.0.5 */
                 ip?: string;
             }[] | null;
-            /** @description AT-612 (ADR 0229): ONLY with `papel=qa`. `chave` = 8 first [a-z0-9] of the task id; `services` = `run.qa.services` declared by the Infra (image with digest, env, tmpfs, shared). */
+            /** @description AT-612 (ADR 0229): ONLY with `papel=qa`. `chave` = 8 first [a-z0-9] of the task id; `services` = `run.qa.services` declared by the Infra (image with digest, env, tmpfs, user `<uid>:<gid>` never 0, command argv after the image, shared). */
             qa?: {
                 /** @example a1b2c3d4 */
                 chave?: string;

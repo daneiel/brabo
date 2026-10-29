@@ -84,7 +84,8 @@ paths:
   tudo o mais segue 404. Contrato api -> broker: campos `comandoDoApp`, `ports`
   (`host`, `container`, `protocol`), `dns`, `extraHosts` (`name`, `ip`) e, com
   `?papel=qa&task=<chave>`, `qa: { chave, services: [{ name, image, env?, tmpfs?,
-  shared? }] }`.
+  user?, command?, shared? }] }` (`user` = `<uid>:<gid>` nunca 0, `command` = argv
+  depois da imagem, RN-941; o serviço próprio se chama `<instância>-<serviço>`).
 - `packages/docker-port`: a porta de Docker e o adaptador de CLI, consumidos
   por `apps/runner` e `apps/broker`. Runtime, e por isso NÃO cabe em
   `packages/shared` (100% tipo, invariante travado por teste). Sem passo de
