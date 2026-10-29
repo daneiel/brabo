@@ -277,7 +277,7 @@ one.
 
 - **Where:** `apps/web/src/lib/session-destinatario.ts:290`
   (`useDestinatarioDoChat`, since RN-631),
-  `apps/web/src/lib/api-client.ts:1139` (`getSessionModelBinding`, the
+  `apps/web/src/lib/api-client.ts:1146` (`getSessionModelBinding`, the
   `agentId`), `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:166`
   (`getSessionBinding`, `@Query('agentId')`)
 - **Test:** `apps/web/src/routes/SessionPage.destinatario-do-chat.test.tsx`
@@ -8190,7 +8190,7 @@ nunca `startsWith` cru — `/base-outra` não está dentro de `/base` —, espel
   `:333` (`caminhoForaDaBase`), `:360` (a sugestão);
   `apps/web/src/lib/wizard.ts:143` (`caminhoSugeridoNaBase`) e `:171`
   (`caminhoDentroDaBase`) — as funções puras;
-  `apps/web/src/lib/api-client.ts:296` (`getProjectsBase`)
+  `apps/web/src/lib/api-client.ts:300` (`getProjectsBase`)
 - **Teste:** `apps/web/src/routes/NewProjectWizard.test.tsx`
   (`describe('NewProjectWizard — a base de projetos decide o que é
   oferecido')` — base presente, base `null`, consulta recusada com 403, a
@@ -18499,7 +18499,7 @@ não medido em projeto real, e declarado.
   (`TETO_DE_CHAVES_NO_LOTE`), `:37` (`lerListaDeChaves`), `:77`
   (`ResolveModelBindingsEmLoteUseCase`);
   `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:233`
-  (`getResolvedBindings`); `apps/web/src/lib/api-client.ts:1164`
+  (`getResolvedBindings`); `apps/web/src/lib/api-client.ts:1171`
   (`getResolvedModelBindings`); `apps/web/src/lib/bindings-resolvidos.ts:43`
   (`invalidarBindingsResolvidos`), `:69` (`useBindingsResolvidos`), `:111`
   (`useBindingsDosAgentes`); `apps/web/src/routes/ProjectOverviewTab.tsx:144`
@@ -25258,3 +25258,9 @@ sem dizer qual.
 - **Onde:** `apps/api/src/application/use-cases/actions/execute-terminal-action.use-case.ts:40` (`alvoDeQa`), `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:166` (`executeTerminalAction`).
 - **Teste:** `apps/api/test/application/use-cases/actions/alvo-de-qa-no-terminal.spec.ts`.
 - **Origem:** AT-612 (EP-030), ADR 0229.
+### RN-939 — A página do container edita a rede só para `maintainer`, valida antes e recria por `container_recreate` {#rn-939}
+
+- **Regra:** a seção "Rede" da página de detalhe lê `GET projects/:projectId/container/network` (sem poll, `staleTime` de configuração; `null` tem texto próprio) e salva num PUT só, por botão. O controle fica inerte abaixo de `maintainer` (papel efetivo, `roleAtLeast`) com o motivo dito uma vez em texto. O cliente espelha a régua da api (RN-932) só para poupar a ida e volta; a recusa `400 rede_invalida` aparece com o campo e a mensagem da api e `409 sem_sessao` tem texto próprio. A tela diz que a porta é publicada só em `127.0.0.1` e que a configuração só vale com o container recriado. "Aplicar e subir de novo" PROPÕE `container_recreate` (RN-934: teto absoluto, sempre pede aprovação humana) e fica inerte em `runner` ("runner depois"), sem container registrado, sem sessão e com rede editada e não salva. As portas publicadas que o daemon observa (`portasPublicadas`) saem como `http://127.0.0.1:<porta>` com a ressalva de que nada garante que algo escute (RN-468): sem sonda e nunca verde.
+- **Onde:** `apps/web/src/components/RedeDoContainer.tsx:25` (`RedeDoContainer`), `apps/web/src/lib/rede-do-container.ts:30` (`validarRedeEmTexto`).
+- **Teste:** `apps/web/src/components/RedeDoContainer.test.tsx` (rede nula, salvar, recusa no cliente, 400 com campo, 409, papel, `container_recreate`, `runner`, portas observadas).
+- **Origem:** AT-608 (EP-030), ADR 0228.

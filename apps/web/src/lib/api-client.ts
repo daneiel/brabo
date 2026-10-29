@@ -18,6 +18,8 @@ import type {
   ParallelizationRequest,
   InfraArtifact,
   RunInstructions,
+  RedeDoContainer,
+  RedeVigenteDoContainer,
   PsychologistHypothesis,
   PsychologistAnalysis,
   PsychologistStatus,
@@ -842,6 +844,11 @@ export const listInfraArtifacts = (projectId: string) =>
 /** RN-855: o vigente de `artifact.run_instructions`, ou `null`. */
 export const getRunInstructions = (projectId: string) =>
   get<RunInstructions | null>(`/projects/${projectId}/run-instructions`);
+
+export const getRedeDoContainer = (projectId: string) =>
+  get<RedeVigenteDoContainer | null>(`/projects/${projectId}/container/network`);
+export const putRedeDoContainer = (projectId: string, rede: RedeDoContainer) =>
+  put<RedeVigenteDoContainer>(`/projects/${projectId}/container/network`, rede);
 
 // --- Psicólogo (Fase 4b) ---
 

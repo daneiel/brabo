@@ -1463,12 +1463,22 @@ export type EstadoObservadoDeContainer =
   | 'exited'
   | 'dead';
 
+/** `GET/PUT projects/:id/container/network` (RN-932); o GET devolve `null` sem declaração. */
+export interface RedeDoContainer {
+  ports: Array<{ host: number; container: number; protocol: string }>;
+  dns: string[];
+  extraHosts: Array<{ name: string; ip: string }>;
+}
+export type RedeVigenteDoContainer = RedeDoContainer & { version: number };
+
 export interface ObservacaoDeContainer {
   containerId: string;
   nome: string;
   estado: EstadoObservadoDeContainer;
   imagem: string;
   iniciadoEm: string | null;
+  /** ADR 0228: o que o daemon diz publicado; pode faltar. */
+  portasPublicadas?: Array<{ ip: string; host: number; container: number; protocolo?: string }>;
 }
 
 export type MotivoDeNaoObservacao =
