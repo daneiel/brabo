@@ -21,7 +21,11 @@ defmodule Engine.Gates.QaAutomacaoAgent do
   só roda o `ToolLoop` e DEVOLVE o resultado; nunca chama `EngineApiClient`.
   """
 
+  require Logger
+
   alias Engine.Gates.{Hooks.Termination, QaTools, RecorteDaTarefa}
+  alias Engine.Projects.Project
+  alias Engine.Sessions.EngineApiClient
   alias Engine.Harness.{Hooks, ToolLoop}
   alias Engine.Harness.Hooks.{ActionPipeline, EventLog}
 
@@ -38,10 +42,116 @@ defmodule Engine.Gates.QaAutomacaoAgent do
   falha e a ORIGEM (ADR 0020).
   """
   def run(project_id, session_id, task_id, dev_state, dev_context) do
+    case subir_instancia(project_id, session_id, task_id) do
+      :sem_instancia ->
+        rodar(project_id, session_id, task_id, dev_state, dev_context, nil)
+
+      :ok ->
+        com_remocao(project_id, task_id, fn ->
+          rodar(project_id, session_id, task_id, dev_state, dev_context, task_id)
+        end)
+
+      {:error, motivo} ->
+        # RN-059: a subida que falha termina o gate com desfecho nomeado
+        # (infra), nunca testa no container de trabalho nem cala.
+        {:blocked,
+         %{
+           reason: "QA de Automação não subiu a instância de QA",
+           diagnosis: motivo,
+           origin: "infra"
+         }}
+    end
+  end
+
+  defp rodar(project_id, session_id, task_id, dev_state, dev_context, qa_task_id) do
     project_id
     |> build_ctx(session_id, dev_state, dev_context)
+    |> Map.put(:qa_task_id, qa_task_id)
     |> ToolLoop.run()
     |> handle_outcome(task_id)
+  end
+
+  # AT-612 (RN-935): uma instância de QA efêmera em todo gate de Automação, em
+  # `container`/`mounted`; `runner` segue como antes ("runner depois"). A subida
+  # é `proposed_action` (semeada `auto_approve` para este agente), não chamada
+  # direta: o efeito fica registrado e respeita a autonomia.
+  defp subir_instancia(project_id, session_id, task_id) do
+    if modo_com_instancia?(project_id) do
+      ator = %{kind: "agent", id: "qa-automacao"}
+
+      case EngineApiClient.propose_action(
+             project_id,
+             session_id,
+             "qa_environment_start",
+             ator,
+             %{taskId: task_id}
+           ) do
+        {:ok, %{"status" => status}} when status in ["executed", "auto_approved"] ->
+          :ok
+
+        {:ok, %{"status" => "failed"} = a} ->
+          {:error, motivo_da_subida(a)}
+
+        {:ok, %{"status" => status}} ->
+          {:error, "a ação qa_environment_start ficou #{status}; não foi auto-aprovada"}
+
+        {:error, reason} ->
+          {:error, "a api recusou a subida da instância de QA: #{inspect(reason)}"}
+      end
+    else
+      :sem_instancia
+    end
+  end
+
+  defp motivo_da_subida(action) do
+    exec = Map.get(action, "executionResult") || %{}
+    Map.get(exec, "motivo") || Map.get(exec, "stderr") || "motivo não informado"
+  end
+
+  defp modo_com_instancia?(project_id) do
+    match?(%{execution_mode: m} when m in ["container", "mounted"], Project.get(project_id))
+  rescue
+    _ -> false
+  end
+
+  # Remove a instância em sucesso, falha, exceção e teto esgotado. Só NÃO a
+  # remove quando o laço está PARADO esperando decisão (ou devolução da api):
+  # ele volta a usá-la em `retomar/3`/`devolver/3`.
+  defp com_remocao(project_id, task_id, fun) do
+    resultado = fun.()
+    unless segue_usando?(resultado), do: remover_instancia(project_id, task_id)
+    resultado
+  catch
+    kind, reason ->
+      remover_instancia(project_id, task_id)
+      :erlang.raise(kind, reason, __STACKTRACE__)
+  end
+
+  defp segue_usando?({:awaiting, _}), do: true
+  defp segue_usando?({:ok, %{retomada: _}}), do: true
+  defp segue_usando?(_), do: false
+
+  defp remover_instancia(project_id, task_id) do
+    case EngineApiClient.remover_instancia_de_qa(project_id, task_id) do
+      {:ok, %{"sucesso" => false} = r} ->
+        Logger.warning("QA: instância de QA da task #{task_id} não removida: #{inspect(r)}")
+
+      {:ok, _} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning("QA: remoção da instância da task #{task_id} falhou: #{inspect(reason)}")
+    end
+  end
+
+  defp continuar(ctx, task_id) do
+    case ctx do
+      %{qa_task_id: qa} when is_binary(qa) ->
+        com_remocao(ctx.project_id, qa, fn -> ctx |> ToolLoop.run() |> handle_outcome(task_id) end)
+
+      _ ->
+        ctx |> ToolLoop.run() |> handle_outcome(task_id)
+    end
   end
 
   @doc """
@@ -65,8 +175,7 @@ defmodule Engine.Gates.QaAutomacaoAgent do
           }
         ]
     end)
-    |> ToolLoop.run()
-    |> handle_outcome(task_id)
+    |> continuar(task_id)
   end
 
   @doc """
@@ -81,8 +190,7 @@ defmodule Engine.Gates.QaAutomacaoAgent do
         [%{"role" => "user", "content" => texto_da_recusa, :pinned => false}]
     end)
     |> Map.update(:iteration, 1, &(&1 + 1))
-    |> ToolLoop.run()
-    |> handle_outcome(task_id)
+    |> continuar(task_id)
   end
 
   defp build_ctx(

@@ -937,6 +937,26 @@ defmodule Engine.Sessions.FakeEngineApiClient do
     end
   end
 
+  @impl true
+  def executar_comando_na_instancia_de_qa(project_id, task_id, comando, cwd, timeout_ms) do
+    notify({:container_exec_qa, project_id, task_id, comando, cwd, timeout_ms})
+
+    Process.get(:fake_container_exec) ||
+      {:ok, %{"sucesso" => true, "exitCode" => 0, "output" => "", "timedOut" => false}}
+  end
+
+  @impl true
+  def remover_instancia_de_qa(project_id, task_id) do
+    notify({:qa_remove, project_id, task_id})
+    Process.get(:fake_qa_remove, {:ok, %{"sucesso" => true, "motivo" => nil}})
+  end
+
+  @impl true
+  def varrer_instancias_de_qa(task_ids) do
+    notify({:qa_sweep, task_ids})
+    Application.get_env(:engine, :fake_qa_sweep, {:ok, %{"removidas" => [], "falhas" => []}})
+  end
+
   @doc """
   Resposta que só devolve texto final, sem tool calls (encerra o loop).
 

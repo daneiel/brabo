@@ -139,7 +139,8 @@ defmodule Engine.Gates.RecorteDaTarefa do
       segundo tipo NUNCA vai para `itens`: cite-a no `resumo` como observação.
 
       OpenAPI e Swagger (RN-854, ADR 0213): suba o app pelo comando do README
-      em background DENTRO do container, bata em
+      em background DENTRO da instância de QA (não o app de trabalho, que fica
+      como está; os serviços de `run.qa.services` estão no `localhost` dela), bata em
       `localhost:<porta interna>/openapi.json` e `/docs` (`curl`, `wget` ou
       `node -e "fetch(...)"`) e encerre o GRUPO de processos ao fim. Rota que
       não responde, ou JSON que não é OpenAPI 3, vai a `itens`. Cada rota da
@@ -178,10 +179,15 @@ defmodule Engine.Gates.RecorteDaTarefa do
   defp secao_do_ambiente_limpo do
     """
 
-    Ambiente limpo: antes de rodar a suíte, encerre o que o PRÓPRIO projeto
-    deixou de pé em rodadas anteriores (servidor do `start` ainda escutando
-    numa porta do projeto) — só processos desta pasta, ex.: `pkill -f` com o
-    caminho do projeto; nunca processo de fora dele. Teste que sobe processo
+    Ambiente limpo (AT-612): seu `terminal` roda numa INSTÂNCIA DE QA própria
+    do projeto, que sobe para este gate e some depois. Antes de rodar a suíte,
+    encerre o que o PRÓPRIO QA deixou de pé nela (servidor do `start` ainda
+    escutando numa porta) — só processos desta pasta, ex.: `pkill -f` com o
+    caminho do projeto, e só lá. O app de trabalho do projeto (o app declarado
+    pela Infra, em outro container) nunca é tocado. Os serviços que a Infra
+    declarou (`run.qa.services`: banco, S3 e afins) já estão de pé no
+    `localhost` da instância, com as variáveis `env` que ela declarou; use-os
+    em vez de simulá-los. Teste que sobe processo
     deve encerrar o GRUPO (ou subir `node` direto, não via `npm`, que deixa o
     neto vivo); se não encerra, a suíte trava num clone limpo — é lacuna em
     `itens`. Teste que se PULOU por ambiente (porta ocupada, ferramenta

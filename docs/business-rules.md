@@ -14426,7 +14426,7 @@ contexto vivo tinha (a cauda inteira, mesmo o que já tinha sido compactado); o
   abertura); `apps/engine/lib/engine/harness/context_manager.ex:138` (o resumo
   gravado); `apps/engine/lib/engine/sessions/engine_api_client.ex:1066`
 
-  gravado); `apps/engine/lib/engine/sessions/engine_api_client.ex:1146`
+  gravado); `apps/engine/lib/engine/sessions/engine_api_client.ex:1185`
   (`list_events/3`); os seis `init/1` —
   `apps/engine/lib/engine/agents/criativo_server.ex:89`, `po_server.ex:93`,
   `arquiteto_server.ex:87`, `dev_lead_server.ex:132`, `ux_designer_server.ex:85`,
@@ -14635,7 +14635,7 @@ fonte continua sendo o GET, o canal continua sendo só gatilho — como já era
 desde a Fase 4a —, e o que muda é a latência máxima das escritas sem aviso.
 
 - **Código:** `apps/engine/lib/engine/sessions/engine_api_client.ex:581`,
-  `:607`, `:630`, `:1034` (`avisar_canal`);
+  `:607`, `:630`, `:1073` (`avisar_canal`);
 
   `:607`, `:630`, `:953` (`avisar_canal`);
   `apps/engine/lib/engine/sessions/live_broadcast.ex` (`event_appended/3`);
@@ -14818,11 +14818,11 @@ fechada seguem mostrando a mensagem da api.
   (`conversa_ociosa`), `:193` (`encerrar`), `:222`
   (`conversation_idle_timeout_ms`); `apps/engine/lib/engine/sessions/monitor.ex:185`
   (`classify`); `apps/engine/lib/engine/psychologist/termination_classifier.ex:46`;
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1112`
-  (`narrar_recusa_de_sessao_encerrada`), `:1464` (`pendencia_da_resposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1151`
+  (`narrar_recusa_de_sessao_encerrada`), `:1503` (`pendencia_da_resposta`);
 
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1112`
-  (`narrar_recusa_de_sessao_encerrada`), `:1464` (`pendencia_da_resposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1151`
+  (`narrar_recusa_de_sessao_encerrada`), `:1503` (`pendencia_da_resposta`);
   `apps/engine/lib/engine/agents/conversacionais.ex:49` (`parar_da_sessao`),
   `:69` (`parar_da_sessao_no_cluster`);
   `apps/engine/lib/engine/agents/turno_assincrono.ex:459` (`abandonar`);
@@ -15813,9 +15813,9 @@ pacote da porta de Docker. Nada muda na contenção do broker ([ADR
   `:241` (`TETO_DE_MUTACAO_MS`), `:253` (`FOLGA_DO_EXEC_NO_ENGINE_MS`),
   `:306` (`erroDeTransporte`);
   `apps/api/src/application/ports/container-broker.port.ts:96` (`MotivoDeBrokerIndisponivel`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1950` (`teto_do_container_exec_ms`)
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:2034` (`teto_do_container_exec_ms`)
 
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1950` (`teto_do_container_exec_ms`)
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:2034` (`teto_do_container_exec_ms`)
 - **Teste:** `apps/api/test/infrastructure/http-clients/container-broker.client.spec.ts:286`
   (a reprodução, contra um broker `node:http` que demora 6 s), `:182` (o
   teto de cada operação no `AbortSignal`), `:204` e `:229` (`teto-excedido`
@@ -15899,9 +15899,9 @@ continua vindo da decisão do Arquiteto, e `pull` não é operação nova do bro
   `apps/api/src/infrastructure/http-clients/container-broker.client.ts:241` (`TETO_DE_MUTACAO_MS`),
   `:205` (`CHAMADAS_DE_CONTROLE_NO_START`),
   `:264` (`TETO_DO_PROPOSE_ACTION_DE_CONTAINER_NO_ENGINE_MS`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1872` (`opcoes_do_propose_action`),
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1911` (`opcoes_do_propose_action`),
 
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1872` (`opcoes_do_propose_action`),
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1911` (`opcoes_do_propose_action`),
   `:1649` (`@teto_do_propose_action_de_container_ms`);
   `apps/engine/lib/engine/runners/runner_router.ex:52` (`@timeout_do_start_ms`)
 - **Teste:** `packages/docker-port/src/docker-cli.spec.ts:425` (describe da
@@ -16848,11 +16848,11 @@ especificação da AT-081 e o mecanismo verificado por provider na AT-161).
   (`anexar`), `:253` (`com_idioma_do_autor`), `:161` (`orientacao`), `:94`
   (`@sem_orientacao`), `:301` (`texto_do_turno`), `:326`
   (`idioma_do_projeto`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:685`
-  (`IdiomaDaResposta`), `:783` (`IdiomaDaResposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:714`
+  (`IdiomaDaResposta`), `:822` (`IdiomaDaResposta`);
 
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:685`
-  (`IdiomaDaResposta`), `:783` (`IdiomaDaResposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:714`
+  (`IdiomaDaResposta`), `:822` (`IdiomaDaResposta`);
   `apps/engine/lib/engine/projects/project.ex:64` (`idioma`);
   `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:515`
   (`idioma_da_resposta`);
@@ -16949,11 +16949,11 @@ AT-167 mede; os tokenizadores do DeepSeek e da Anthropic seguem não medidos.
   (`orientacao`), `:127` (`@ferramentas_de_artefato`), `:118`
   (`@forma_curta`), `:301` (`texto_do_turno`), `:319` (`grava_artefato?`),
   `:320` (`idioma_do_projeto_para_o_artefato`);
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:685`
-  (`IdiomaDaResposta`), `:783` (`IdiomaDaResposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:714`
+  (`IdiomaDaResposta`), `:822` (`IdiomaDaResposta`);
 
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:685`
-  (`IdiomaDaResposta`), `:783` (`IdiomaDaResposta`);
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:714`
+  (`IdiomaDaResposta`), `:822` (`IdiomaDaResposta`);
   `apps/web/src/routes/settings/ProjectLanguageSection.tsx`
 - **Teste:** `apps/engine/test/engine/harness/idioma_da_resposta_test.exs:157`
   (idiomas diferentes: a orientação diz os dois), `:168` (iguais: só um),
@@ -17216,11 +17216,11 @@ endpoint é ALPHA e o smoke manual
   `apps/api/src/db/schema/llm.ts:363` (`priceImplicit`);
   `apps/engine/lib/engine/harness/roteamento_de_ferramenta.ex:60` (`registrar`),
   `:112` (`custo_micros`), `:123` (`repetir_com_catalogo_inteiro?`), `:146`
-  (`mesclar_repeticao`); `apps/engine/lib/engine/sessions/engine_api_client.ex:700`
-  (`llm_turn`), `:778` (`llm_turn_stream`);
+  (`mesclar_repeticao`); `apps/engine/lib/engine/sessions/engine_api_client.ex:730`
+  (`llm_turn`), `:814` (`llm_turn_stream`);
 
-  (`mesclar_repeticao`); `apps/engine/lib/engine/sessions/engine_api_client.ex:700`
-  (`llm_turn`), `:778` (`llm_turn_stream`);
+  (`mesclar_repeticao`); `apps/engine/lib/engine/sessions/engine_api_client.ex:730`
+  (`llm_turn`), `:814` (`llm_turn_stream`);
   `apps/engine/lib/engine/harness/tool_loop.ex:132` (o custo do Jev no orçamento
   local)
 - **Teste:** `apps/api/test/domain/llm/tool-router.spec.ts:25` (`questions` é
@@ -17926,7 +17926,7 @@ vault por decisão do dono; [ADR 0182](adr/0182-ciclo-de-vida-do-handoff.md)).
   (`criar_handoffs_appsec/3`);
   `apps/engine/lib/engine/sessions/engine_api_client.ex:1131`
 
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:1211`
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:1250`
   (`create_handoff_if_absent`);
   `apps/api/src/domain/sessions/ciclo-de-vida-do-handoff.ts:71`
   (`decidirOferta`)
@@ -19548,7 +19548,7 @@ OBRIGATÓRIAS da `coverageMatrix` (e portanto reprovar entrega).
   `:721` (`arquivos_alterados`);
   `apps/engine/lib/engine/gates/qa_estrategia_agent.ex:86` (`run`),
   `:104` (`token_budget_micros`), `:188` (`descrever_arquivos`);
-  `apps/engine/lib/engine/gates/qa_automacao_agent.ex:207` (`com_o_plano`);
+  `apps/engine/lib/engine/gates/qa_automacao_agent.ex:226` (`com_o_plano`);
   `apps/engine/lib/engine/agents/dev_lead_tools.ex:457` (`run_assessment`),
   `:538` (`propor_parecer`);
   `apps/engine/lib/engine/harness/artifact_schemas.ex:59` (`taskId`);
@@ -20684,7 +20684,7 @@ Junto, o fechamento deixa de dizer que parear uma pasta pela tela do projeto
 - **Onde:** `apps/engine/lib/engine/harness/fluxo_do_time.ex:107` (`texto`),
   `:97` (`anexar`), `apps/engine/lib/engine/sessions/engine_api_client.ex:647`
 
-  `:97` (`anexar`), `apps/engine/lib/engine/sessions/engine_api_client.ex:700`
+  `:97` (`anexar`), `apps/engine/lib/engine/sessions/engine_api_client.ex:730`
   (`llm_turn`), `apps/engine/lib/engine/harness/agents.ex:23` (`identity`),
   `apps/engine/lib/engine/agents/arquiteto_server.ex:415` (`build_kickoff`)
 - **Teste:** `apps/engine/test/engine/harness/fluxo_do_time_test.exs`
@@ -21439,10 +21439,10 @@ O kickoff do PO diz as três coisas.
   `apps/engine/lib/engine/anamnese/elegibilidade.ex:67`
   (`min_interacoes_proprias`),
   `apps/api/src/application/use-cases/anamnese/record-proficiency.use-case.ts:160`
-  (`fecharJanelaSemPerfil`), `apps/engine/lib/engine/gates/gate_rescuer.ex:348`
-  (`task_em_voo?`), `apps/engine/lib/engine/gates/gate_rescuer.ex:372`
-  (`aguardando_humano?`), `apps/engine/lib/engine/gates/gate_rescuer.ex:291`
-  (`estacionar`), `apps/engine/lib/engine/gates/gate_rescuer.ex:329`
+  (`fecharJanelaSemPerfil`), `apps/engine/lib/engine/gates/gate_rescuer.ex:379`
+  (`task_em_voo?`), `apps/engine/lib/engine/gates/gate_rescuer.ex:403`
+  (`aguardando_humano?`), `apps/engine/lib/engine/gates/gate_rescuer.ex:321`
+  (`estacionar`), `apps/engine/lib/engine/gates/gate_rescuer.ex:359`
   (`retomar_estacionado`), `apps/engine/lib/engine/gates/qa_lead_server.ex:95`
   (`handle_call`)
 - **Teste:** `apps/engine/test/engine/workers/anamnese_worker_test.exs`
@@ -22013,7 +22013,7 @@ sem dizer qual.
   da Task do turno (`TurnoAssincrono`), então o padrão "HTTP dentro do
   GenServer" não os alcança — declarado. A web não mudou: a aba Executores
   passa a ver o `agent.error` e o `dev.blocked` da recuperação.
-- **Onde:** `apps/engine/lib/engine/sessions/engine_api_client.ex:2073`
+- **Onde:** `apps/engine/lib/engine/sessions/engine_api_client.ex:2137`
   (`isolado`), `apps/engine/lib/engine/dev/monitor.ex:69` (`ao_terminar`),
   `:107` (`registrar_e_religar`)
 - **Teste:** `apps/engine/test/engine/sessions/engine_api_client_isolado_test.exs`
@@ -22270,9 +22270,9 @@ sem dizer qual.
   `nohup … &` com log —, nunca `%Req.TransportError{reason: :timeout}` cru.
   Exec assíncrono/streaming foi considerado e não feito: a menor mudança que
   faz `npm install` comum caber é o teto.
-- **Onde:** `apps/engine/lib/engine/sessions/engine_api_client.ex:1919`
+- **Onde:** `apps/engine/lib/engine/sessions/engine_api_client.ex:1911`
   (`opcoes_do_propose_action`) e
-  `apps/engine/lib/engine/harness/hooks/action_pipeline.ex:80`
+  `apps/engine/lib/engine/harness/hooks/action_pipeline.ex:85`
   (`resultado_de_teto_do_terminal`)
 - **Teste:** `apps/engine/test/engine/sessions/engine_api_client_propose_terminal_test.exs`
   (api falsa que demora 16 s ainda é esperada; ordem dos tetos abaixo de
@@ -22372,7 +22372,7 @@ sem dizer qual.
 
   `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:82` (`secao_da_forma`),
   `apps/api/src/application/use-cases/execution/get-dev-task-context.use-case.ts:195`
-  (`tarefasIrmas`) e `apps/engine/lib/engine/gates/qa_automacao_agent.ex:204`
+  (`tarefasIrmas`) e `apps/engine/lib/engine/gates/qa_automacao_agent.ex:225`
   (`com_o_recorte`)
 - **Teste:** `apps/engine/test/engine/gates/recorte_da_tarefa_test.exs` (desde
   a AT-479 também "regra que quantifica por item pede a conferência da forma da
@@ -22442,7 +22442,7 @@ sem dizer qual.
   `min-content` — com `max-content` ela ficava da largura do texto sem quebra
   (medido no Chromium: 2 236px num balão de 708px) e a última coluna sumia.
 - **Onde:** `apps/api/src/application/use-cases/actions/execute-adr-pr.use-case.ts:96`
-  (`openPullRequest`); `apps/engine/lib/engine/infra/infra_lead_server.ex:1571`
+  (`openPullRequest`); `apps/engine/lib/engine/infra/infra_lead_server.ex:1575`
   (`gravar_texto_do_turno`); `apps/engine/lib/engine/dev/dev_agent_server.ex:1188`
   (`propose_pr`); `apps/web/src/lib/session-destinatario.ts:228`
   (`agentesEmConversa`) e `apps/web/src/lib/session-kind.ts:69`
@@ -23458,8 +23458,8 @@ sem dizer qual.
   em voo. Resíduo declarado: nó que ainda não entrou no cluster no instante do
   boot não é perguntado, e o pior desfecho é o de sempre (trabalho duplicado e
   barato; o segundo veredito é recusado pela api).
-- **Onde:** `apps/engine/lib/engine/gates/gate_rescuer.ex:201` (`run_boot`),
-  `:209` (`interrompido_no_boot`),
+- **Onde:** `apps/engine/lib/engine/gates/gate_rescuer.ex:231` (`run_boot`),
+  `:240` (`interrompido_no_boot`),
   `apps/web/src/routes/RetomarGateEstacionado.tsx:33` (`cicloInterrompido`)
 - **Teste:** `apps/engine/test/engine/gates/gate_rescuer_test.exs` ("boot com
   ciclo RECENTE órfão do reinício: grava gate.interrupted e retoma já
@@ -24527,7 +24527,7 @@ sem dizer qual.
   (`anexar`), `:49` (`texto`),
   `apps/engine/lib/engine/session_events/event.ex:224`
   (`list_types_for_project`),
-  `apps/engine/lib/engine/sessions/engine_api_client.ex:707`
+  `apps/engine/lib/engine/sessions/engine_api_client.ex:729`
   (`DecisoesDoProjeto`)
 - **Teste:** `apps/engine/test/engine/harness/decisoes_do_projeto_test.exs`
   ("o turno do PO leva a decisão e só a pergunta AINDA aberta", "custo de
@@ -24551,7 +24551,7 @@ sem dizer qual.
 - **Onde:** `apps/engine/lib/engine/gates/qa_lead_server.ex:575`
   (`devolver_ao_qa`), `apps/engine/lib/engine/gates/qa_lead_server.ex:308`
   (`devolver_ao_qa`), `apps/engine/lib/engine/gates/qa_lead_server.ex:671`
-  (`texto_da_recusa`), `apps/engine/lib/engine/gates/qa_automacao_agent.ex:77`
+  (`texto_da_recusa`), `apps/engine/lib/engine/gates/qa_automacao_agent.ex:186`
   (`devolver`), `apps/engine/lib/engine/gates/tools/emit_qa_verdict.ex:75`
   (`uuid`)
 - **Teste:** `apps/engine/test/engine/gates/qa_lead_server_test.exs` ("400:
@@ -24805,7 +24805,7 @@ sem dizer qual.
   para `itens`. A instrução da QA-estratégia pede, em `criteriosExecutaveis`,
   esses dois critérios para todo comando que recusa entrada. É instrução de
   agente: nenhum gate novo, nenhuma mudança de veredito ou de estrutura.
-- **Onde:** `apps/engine/lib/engine/gates/qa_automacao_agent.ex:142`
+- **Onde:** `apps/engine/lib/engine/gates/qa_automacao_agent.ex:250`
   (`instrucao_de_codigo_de_saida`),
   `apps/engine/lib/engine/gates/qa_estrategia_agent.ex:129`
   (`instrucao_de_codigo_de_saida`)
@@ -25153,14 +25153,14 @@ sem dizer qual.
 ### RN-923 — O resgate automático de gate vale uma vez por ciclo, no boot e no tick, e o "Retomar gate" zera o contador {#rn-923}
 
 - **Regra:** revisa a [RN-823](#rn-823) e a [RN-722](#rn-722). `engine.gate_states.auto_resumes` conta os redespachos automáticos do ciclo (no boot e no tick); com 1 já usada, o segundo resgate ESTACIONA (`gate.rescue_parked`, `motivo: "retomada_automatica_ja_usada"`) e espera o "Retomar gate" ([RN-724](#rn-724)), que não tem teto e ZERA o contador. O contador fica fora do `on_conflict` do upsert (sobrevive aos passos do ciclo) e some com a linha quando o ciclo termina. O estacionamento de 2 h não muda. Os subagentes de gate ganham `registrar_plano`; no redespacho o `ToolLoop` recebe `ctx[:retomada]` com o plano do último `agent.turn_resumed` do subagente, e a área continua sendo redespachada inteira. Resíduo declarado: um ciclo novo pode pegar um marco pendente com menos de 15 min, e o subagente de gate não abre `working`, então a retomada dele leva só o plano.
-- **Onde:** `apps/engine/lib/engine/gates/gate_rescuer.ex:183` (`retomar_ou_estacionar`), `:330` (`retomar_estacionado`), `apps/engine/lib/engine/gates/gate_state.ex:37` (`auto_resumes`)
+- **Onde:** `apps/engine/lib/engine/gates/gate_rescuer.ex:212` (`retomar_ou_estacionar`), `:359` (`retomar_estacionado`), `apps/engine/lib/engine/gates/gate_state.ex:37` (`auto_resumes`)
 - **Teste:** `apps/engine/test/engine/gates/gate_rescuer_test.exs:501` (`teto de 1 retomada automática` no tick e no boot, e o manual zerando)
 - **Origem:** AT-582 (EP-031), decisões do dono de 27 e 28/10; [ADR 0226](adr/0226-diario-vivo-e-retomada-dos-agentes.md).
 
 ### RN-924 — A correção de gate que chega ao Infra Lead com turno em curso é durável {#rn-924}
 
 - **Regra:** revisa a [RN-617](#rn-617), no molde da fila da [RN-673](#rn-673). `InfraLeadServer.correct/3` grava `infra.correction_queued` (`id`, `gate`, `reason`, diagnóstico até 2 000 caracteres) ANTES do cast e, sem processo, acorda o agente; `iniciar_correcao/2` grava `infra.correction_delivered` (`id`). O `init/1` reconstrói as pendentes (queued menos delivered) e as entrega depois do turno retomado e da fila de mensagens, e o `Rehydrator` acorda o Infra Lead que tem correção pendente no boot. Entregue não é reentregue. O Infra Lead também tem `registrar_plano` e a retomada da RN-920.
-- **Onde:** `apps/engine/lib/engine/infra/infra_lead_server.ex:1621` (`correct`), `:414` (`iniciar_correcao`), `:200` (`init`)
+- **Onde:** `apps/engine/lib/engine/infra/infra_lead_server.ex:1625` (`correct`), `:414` (`iniciar_correcao`), `:200` (`init`)
 - **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs:1980` (`correct/3 grava infra.correction_queued antes do cast`; a pendente sobrevive ao reinício e a entregue não é reentregue)
 - **Origem:** AT-582 (EP-031); [ADR 0226](adr/0226-diario-vivo-e-retomada-dos-agentes.md).
 
@@ -25264,6 +25264,12 @@ sem dizer qual.
 - **Onde:** `apps/web/src/components/RedeDoContainer.tsx:25` (`RedeDoContainer`), `apps/web/src/lib/rede-do-container.ts:30` (`validarRedeEmTexto`).
 - **Teste:** `apps/web/src/components/RedeDoContainer.test.tsx` (rede nula, salvar, recusa no cliente, 400 com campo, 409, papel, `container_recreate`, `runner`, portas observadas).
 - **Origem:** AT-608 (EP-030), ADR 0228.
+### RN-940 — O gate de QA-automação sobe uma instância de QA efêmera, testa nela e a remove {#rn-940}
+
+- **Regra:** em `container`/`mounted`, antes do laço o `QaAutomacaoAgent` propõe `qa_environment_start` (semeada `auto_approve`); a subida que falha termina o gate com desfecho nomeado de origem `infra` (RN-059). O `terminal` do QA leva `alvo: {qa: true, taskId}` vindo do ctx do agente, nunca do modelo, e roda na instância; os demais agentes não mudam. A instância é removida em sucesso, falha, exceção e teto esgotado, salvo laço parado esperando decisão. `runner` segue sem instância. O boot e o tick do `GateRescuer` chamam o `sweep` com as tarefas de `gate_states` `qa` não estacionadas; falha só loga. `run.qa` é validado no engine com a mesma régua da api (RN-935).
+- **Onde:** `apps/engine/lib/engine/gates/qa_automacao_agent.ex:78` (`subir_instancia`), `apps/engine/lib/engine/gates/qa_automacao_agent.ex:120` (`com_remocao`), `apps/engine/lib/engine/harness/hooks/action_pipeline.ex:46` (`maybe_put_alvo`), `apps/engine/lib/engine/gates/gate_rescuer.ex:102` (`varrer_instancias_de_qa`), `apps/engine/lib/engine/infra/instrucoes_de_execucao.ex:133` (`qa`).
+- **Teste:** `apps/engine/test/engine/gates/qa_automacao_agent_instancia_test.exs`, `apps/engine/test/engine/infra/instrucoes_de_execucao_qa_test.exs`.
+- **Origem:** AT-612 (EP-030), ADR 0229; depende da api (#1146).
 
 ### RN-941 — O serviço de QA roda com usuário e comando declarados, nunca como root, e leva o nome da instância mais o do serviço {#rn-941}
 
