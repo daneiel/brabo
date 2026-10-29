@@ -385,7 +385,8 @@
       "remove": "Remover",
       "updateCatalog": "Atualizar catálogo",
       "updateCatalogAria": "Atualizar o catálogo de modelos de {{label}}",
-      "noModels": "Nenhum modelo deste provider no catálogo ainda — cadastrar a chave não descobre modelo."
+      "noModels": "Nenhum modelo deste provider no catálogo ainda — cadastrar a chave não descobre modelo.",
+      "noCatalogSource": "Este provider não publica lista de modelos, então não há o que sincronizar — os modelos dele entram por seed."
     },
     "toast": {
       "saved": "Credencial salva",

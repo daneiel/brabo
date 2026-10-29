@@ -19,6 +19,7 @@ const syncModelCatalog = vi.fn();
 const listCredentials = vi.fn();
 const setAgentModelBinding = vi.fn();
 const listWorkspaces = vi.fn();
+const listProviderCapabilities = vi.fn();
 
 vi.mock('../lib/api-client', async () => {
   const real = await vi.importActual<typeof import('../lib/api-client')>(
@@ -34,6 +35,7 @@ vi.mock('../lib/api-client', async () => {
     setModelUses: vi.fn(),
     setAgentModelBinding: (...a: unknown[]) => setAgentModelBinding(...a),
     listWorkspaces: (...a: unknown[]) => listWorkspaces(...a),
+    listProviderCapabilities: (...a: unknown[]) => listProviderCapabilities(...a),
     upsertCredential: vi.fn(),
     deleteCredential: vi.fn(),
     testCredential: vi.fn(),
@@ -101,6 +103,7 @@ function montar(no: ReactNode) {
 beforeEach(async () => {
   vi.clearAllMocks();
   await i18n.changeLanguage('pt-BR');
+  listProviderCapabilities.mockResolvedValue([]);
   listModelCatalog.mockResolvedValue(catalogo({ openrouter: [HAIKU, LLAMA] }));
   setModelsActive.mockResolvedValue([]);
   syncModelCatalog.mockResolvedValue({ porProvider: [] });
@@ -174,6 +177,17 @@ describe('"Atualizar catálogo" ao lado da credencial (RN-694)', () => {
 
     await waitFor(() => expect(syncModelCatalog).toHaveBeenCalledWith('ws-1'));
     expect(await screen.findByText('Catálogo sincronizado')).toBeTruthy();
+  });
+
+  it('provider sem listModels não ganha o botão e a nota diz por quê', async () => {
+    listCredentials.mockResolvedValue([credencial('vultr')]);
+    listProviderCapabilities.mockResolvedValue([
+      { provider: 'vultr', capabilities: { listModels: false } },
+    ]);
+    montar(<CredentialsSection />);
+
+    expect(await screen.findByText(/não publica lista de modelos/)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Atualizar o catálogo/ })).toBeNull();
   });
 
   it('credencial cujo provider já tem modelo no catálogo não ganha o botão', async () => {

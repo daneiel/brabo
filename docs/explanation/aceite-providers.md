@@ -194,7 +194,7 @@ execução. O que custa não é o token: é ter a chave.
 
 A divisão segue a capability, exatamente como o ADR 0041 desenhou:
 
-**Com `listModels: true` — OpenRouter, Together, DeepInfra.** O sync bate na
+**Com `listModels: true` — OpenRouter, Together, DeepInfra, NVIDIA NIM.** O sync bate na
 API de verdade e popula o catálogo. É aqui que o **preço real** encontra o
 parser. O caso mais importante é a Together: o ADR 0043 registra que a unidade
 do preço (USD por milhão de tokens vs. por token) foi **inferida** por
@@ -204,11 +204,12 @@ o smoke tem uma faixa de sanidade justamente para isso
 diagnóstico é "unidade errada", não "modelo caro"). Se algum dia der errado, é
 achado a corrigir no parser e aqui, nunca a silenciar. O smoke também confirma
 o RN-043: o modelo descoberto entra **desativado**, e a ativação é curadoria
-manual.
+manual. A NIM é a exceção sem preço: o `GET /v1/models` real (84 modelos em
+28/10/2026, AT-575) traz só `id`, então o modelo entra com preço 0 e
+`manual_pricing` — o endpoint hospedado é gratuito de prototipação.
 
-**Com `listModels: false` — NVIDIA NIM, Bitdeer, Vultr.** Nenhum dos três
-publica preço por token em documentação acessível (a NIM sequer cobra por
-token: a unidade comercial é GPU/hora). O sync, portanto, **tem de pular** com
+**Com `listModels: false` — Bitdeer, Vultr.** Nenhum dos dois
+publica preço por token em documentação acessível. O sync, portanto, **tem de pular** com
 `pulado: 'sem_capability'` — e o smoke afirma exatamente isso, o que torna a
 capability declarada verificável em vez de confiada. O modelo entra por seed /
 curadoria manual com `manual_pricing = true`, e o que o smoke valida de fato é
