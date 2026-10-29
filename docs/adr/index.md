@@ -3,7 +3,7 @@ id: adr-index
 title: Decisões arquiteturais (ADR)
 sidebar_label: Índice de ADRs
 sidebar_position: 0
-description: Os 223 registros de decisão arquitetural do Brabo, agrupados por tema, com o que cada um decidiu.
+description: Os 225 registros de decisão arquitetural do Brabo, agrupados por tema, com o que cada um decidiu.
 keywords: [ADR, decisão arquitetural, arquitetura, histórico]
 ---
 
@@ -186,6 +186,8 @@ O ciclo de vida do container do projeto, a decisão de imagem, a porta de Docker
 | [0190](0190-a-infra-sobe-o-container-no-aceite.md) | A Infra sobe o container SOZINHA quando o handoff a ela é aceito (AT-260, decisão do dono de 01/10), revisando o "nunca semeado" do ADR 0133 sem editá-lo: o aceite semeia `container_start: auto_approve` para o agente de Infra, e o SERVIDOR do Infra Lead — não o modelo, não uma ferramenta nova — elege a candidata do roteamento que cobre mais módulos (a primeira no empate) e propõe `container_start` antes da primeira chamada ao modelo, pelo MESMO caminho da ferramenta, com as recusas por modo/estado (RN-566/610) e o 409 sem broker intactos. `runner` mantém `container_start_via_runner` com aprovação, `container_remove` continua no teto absoluto, e o fechamento da RN-668 continua verdadeiro. Mesma decisão do dono (AT-262): o Dev Lead é oferecido PELA INFRA, só com o container do projeto `running` — o handoff duplo do Arquiteto sai, e o "o Dev Lead vem do Arquiteto" dos ADRs 0053/0085 muda sem ser editado |
 | [0199](0199-recurso-minimo-derivado-do-module-map.md) | Os recursos MÍNIMOS do container são DERIVADOS do `module_map` (AT-261, decisão do dono de 01/10): cada módulo pode declarar `resources` (cpus, memoryMb, pidsLimit — os três ou nenhum), e o `container_start` com recursos omitidos — sempre o caso da subida pelo servidor no aceite do handoff (ADR 0190) — sobe com a SOMA dos módulos, porque todos compartilham UM container. Módulo sem declaração põe o piso do container no padrão de hoje em vez de inventar um número; mapa sem declaração nenhuma dá exatamente o padrão de hoje. Soma acima do teto é 400 para o Arquiteto quando o mapa é criado; pedido abaixo do mínimo é um `failed` nomeado |
 | [0208](0208-a-infra-herda-a-rede-do-arquiteto.md) | A Infra HERDA a rede que o Arquiteto declarou em `artifact.project_image` (AT-392, decisão do dono de 02/10): a subida pelo servidor no aceite do handoff e a ferramenta `propose_container_start` sem `network` usam o `egress`/`none` do Arquiteto em vez de um `none` literal, e continuam subindo sem clique; revisa o ponto 3 do ADR 0190, se afasta do §4 do ADR 0065 e declara o preço (o egress alcança as portas publicadas do host, ADR 0189). |
+| [0228](0228-comando-do-app-e-rede-do-container.md) | O container do projeto sobe o app pelo comando declarado pela Infra (supervisor constante, comando como argumento) e publica porta SÓ no loopback, com DNS e `extra_hosts` validados; revisa o 0130 e o 0213 sem editá-los |
+| [0229](0229-instancia-de-qa-efemera-com-servicos-declarados-pela-infra.md) | O QA testa numa instância efêmera (`brabo-qa-<workspace>-<chave>`, sem `--restart`, rótulo `brabo.papel=qa`) com os serviços que a Infra declarou, por digest, no mesmo namespace de rede; compartilhado vive em rede privada do projeto |
 
 ## O runner local {#tema-runner}
 
@@ -364,7 +366,7 @@ Como a documentação é gerada, verificada e publicada.
 - **Um arquivo por decisão**, em `docs/adr/NNNN-short-title.md`, com
   numeração sequencial de 4 dígitos, e título `# ADR NNNN — <título>`
   ([0218](0218-titulo-de-adr-com-prefixo.md)). **Sem reuso de número**, nem quando um ADR
-  é substituído — o próximo é **0228**.
+  é substituído — o próximo é **0230**.
 - **Um tema por decisão**, escolhido por quem escreve o ADR, no mesmo
   PR: uma linha em `docs/adr/temas.yml` e a linha do índice sob a seção desse
   tema, em ordem numérica. Quem revisa confirma. Um tema novo é uma

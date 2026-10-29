@@ -92,6 +92,18 @@ export const ROTULO_GERENCIADO = 'brabo.managed';
 /** Prefixo do nome do container gerenciado: `brabo-<workspace_dir_name>`. */
 export const PREFIXO_DO_NOME = 'brabo-';
 
+/** Prefixo do nome da instância de QA efêmera (ADR 0229): `brabo-qa-<workspace_dir_name>-<chave>`. */
+export const PREFIXO_DO_NOME_DE_QA = 'brabo-qa-';
+
+/** Rótulo do PAPEL do container; só `qa` existe. Ausente = container de trabalho (como sempre). */
+export const ROTULO_PAPEL = 'brabo.papel';
+/** A chave (8 do taskId) da instância de QA, no rótulo do container de QA. */
+export const ROTULO_QA_INSTANCIA = 'brabo.qa.instancia';
+/** Em serviço de QA: o NOME do container de QA ao qual ele pertence. */
+export const ROTULO_QA_DONO = 'brabo.qa.dono';
+/** `1` em serviço de QA compartilhado entre instâncias do mesmo projeto. */
+export const ROTULO_QA_COMPARTILHADO = 'brabo.qa.compartilhado';
+
 /**
  * A rede do container, como o ADR 0065 já decidiu para o produto: ou não há
  * rede, ou há saída para a internet. `host` — que daria ao container a pilha de
@@ -361,6 +373,59 @@ export interface EspecificacaoDeContainer {
    * usuário do container, então não há campo equivalente no `PedidoDeExec`.
    */
   readonly usuario?: UsuarioDoContainer | null;
+  /**
+   * AT-610 (ADR 0228): comando do app, declarado pela Infra. Ausente/`null` =
+   * `sleep infinity` como sempre. Viaja como ARGUMENTO posicional de um
+   * supervisor CONSTANTE (molde RN-807), nunca concatenado a shell.
+   */
+  readonly comandoDoApp?: string | null;
+  /** AT-608 (ADR 0228): portas publicadas, sempre em 127.0.0.1. */
+  readonly portas?: readonly PortaDoContainer[];
+  /** AT-608: `--dns`, IP literal. */
+  readonly dns?: readonly string[];
+  /** AT-608: `--add-host`, IPv4 literal. */
+  readonly hostsExtras?: readonly HostExtra[];
+  /**
+   * AT-612 (ADR 0229): presente = esta spec é uma INSTÂNCIA DE QA efêmera
+   * (`brabo-qa-<workspace>-<chave>`, sem `--restart`, rótulo `brabo.papel=qa`).
+   */
+  readonly qa?: InstanciaDeQa | null;
+}
+
+export interface PortaDoContainer {
+  readonly host: number;
+  readonly container: number;
+  readonly protocolo: 'tcp';
+}
+
+export interface HostExtra {
+  readonly nome: string;
+  readonly ip: string;
+}
+
+/** Serviço de infra que a INFRA declarou para a instância de QA (banco, S3...). */
+export interface ServicoDeQa {
+  /** `[a-z][a-z0-9-]{0,31}` — vira parte do nome do container. */
+  readonly nome: string;
+  /** Referência com digest `@sha256:` OBRIGATÓRIO. */
+  readonly imagem: string;
+  readonly env?: Readonly<Record<string, string>>;
+  /** Caminhos absolutos montados em `--tmpfs` (dados efêmeros). */
+  readonly dados?: readonly string[];
+  /** Um por PROJETO, reaproveitado entre instâncias, numa rede privada. */
+  readonly compartilhado?: boolean;
+}
+
+export interface InstanciaDeQa {
+  /** `[a-z0-9]{8}` — os 8 primeiros do taskId. */
+  readonly chave: string;
+  readonly servicos: readonly ServicoDeQa[];
+}
+
+/** Endereça a instância de QA nas operações que não recebem spec. */
+export interface AlvoDeQa {
+  readonly papel: 'qa';
+  readonly chave: string;
 }
 
 export interface ContainerIniciado {
@@ -395,6 +460,15 @@ export interface EstadoObservadoDoContainer {
   readonly imagem: string;
   /** ISO-8601 como o daemon devolve, ou `null` quando ele nunca subiu. */
   readonly iniciadoEm: string | null;
+  /** O que o daemon REPORTA publicado (`NetworkSettings.Ports`), nunca o declarado. */
+  readonly portasPublicadas?: readonly PortaPublicada[];
+}
+
+export interface PortaPublicada {
+  readonly ip: string;
+  readonly host: number;
+  readonly container: number;
+  readonly protocolo: string;
 }
 
 export interface PedidoDeExec {
@@ -486,6 +560,9 @@ export class ContainerAusenteError extends Error {
 /**
  * As CINCO operações. Não seis.
  *
+ * O `alvo` opcional (ADR 0229) é o papel `qa`: a instância efêmera é endereçada
+ * por `{papel: 'qa', chave}` e só alcança container com `brabo.papel=qa`.
+ *
  * Nenhuma delas recebe id de container: todas partem do `workspaceDirName` e
  * derivam o nome, e o adaptador confirma o rótulo `brabo.managed=true` antes de
  * agir. "Pare o container X", com X arbitrário, não é uma frase que esta porta
@@ -500,27 +577,39 @@ export abstract class DockerPort {
   abstract start(spec: EspecificacaoDeContainer): Promise<ContainerIniciado>;
 
   /** Para o container do projeto. Container ausente é no-op, não erro. */
-  abstract stop(workspaceDirName: string): Promise<void>;
+  abstract stop(workspaceDirName: string, alvo?: AlvoDeQa): Promise<void>;
 
   /** Remove o container do projeto (parando antes, se preciso). Ausente é no-op. */
-  abstract remove(workspaceDirName: string): Promise<void>;
+  abstract remove(workspaceDirName: string, alvo?: AlvoDeQa): Promise<void>;
 
   /**
    * O estado OBSERVADO, ou `null` quando não há container. Nunca inventa
    * estado a partir do que foi registrado — é justamente a diferença entre as
    * duas colunas que a tela de containers (PR 1.8) vai mostrar separadas.
    */
-  abstract inspect(workspaceDirName: string): Promise<EstadoObservadoDoContainer | null>;
+  abstract inspect(
+    workspaceDirName: string,
+    alvo?: AlvoDeQa,
+  ): Promise<EstadoObservadoDoContainer | null>;
 
   /**
    * Um comando dentro do container em execução. `exec`, nunca `attach`: cada
    * chamada é independente e não deixa handle de longa duração, que é o que
    * torna um restart do engine sobrevivível sem tabela de estado nova.
    */
-  abstract exec(workspaceDirName: string, pedido: PedidoDeExec): Promise<ResultadoDeExec>;
+  abstract exec(
+    workspaceDirName: string,
+    pedido: PedidoDeExec,
+    alvo?: AlvoDeQa,
+  ): Promise<ResultadoDeExec>;
 }
 
 /** `brabo-<workspace_dir_name>` — a única derivação do nome (ver RN-109). */
 export function nomeDoContainer(workspaceDirName: string): string {
   return `${PREFIXO_DO_NOME}${workspaceDirName}`;
+}
+
+/** `brabo-qa-<workspace_dir_name>-<chave>` — fonte única do nome da instância de QA (ADR 0229). */
+export function nomeDoContainerDeQa(workspaceDirName: string, chave: string): string {
+  return `${PREFIXO_DO_NOME_DE_QA}${workspaceDirName}-${chave}`;
 }

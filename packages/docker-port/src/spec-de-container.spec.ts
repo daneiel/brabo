@@ -196,3 +196,76 @@ function pegar(f: () => unknown): Error | undefined {
     return erro as Error;
   }
 }
+
+describe('especificacaoValidada — app, rede e QA (ADR 0228/0229)', () => {
+  const EGRESS = { ...VALIDA, rede: 'egress' };
+  const DIG = `pg@sha256:${'b'.repeat(64)}`;
+  const recusa = (e: object, campo: string) => {
+    try {
+      especificacaoValidada({ ...EGRESS, ...e });
+    } catch (x) {
+      expect((x as { campo: string }).campo).toContain(campo);
+      return;
+    }
+    throw new Error(`devia recusar ${campo}`);
+  };
+
+  it('campos novos ausentes: spec idêntica à de antes', () => {
+    const s = especificacaoValidada(VALIDA);
+    for (const k of ['comandoDoApp', 'portas', 'dns', 'hostsExtras', 'qa']) {
+      expect(s).not.toHaveProperty(k);
+    }
+  });
+
+  it('aceita o caminho feliz', () => {
+    const s = especificacaoValidada({
+      ...EGRESS,
+      comandoDoApp: 'npm start',
+      portas: [{ host: 8080, container: 3000, protocolo: 'tcp' }],
+      dns: ['1.1.1.1', '2001:db8::1'],
+      hostsExtras: [{ nome: 'x.example', ip: '10.0.0.1' }],
+    });
+    expect(s.portas).toHaveLength(1);
+    expect(s.comandoDoApp).toBe('npm start');
+  });
+
+  it('recusa comando com quebra de linha ou longo demais', () => {
+    recusa({ comandoDoApp: 'a\nb' }, 'comandoDoApp');
+    recusa({ comandoDoApp: 'a'.repeat(301) }, 'comandoDoApp');
+  });
+
+  it('recusa portas: da instalação, baixas, duplicadas, udp, em excesso e com rede none', () => {
+    const p = (host: number) => ({ host, container: 80, protocolo: 'tcp' });
+    recusa({ portas: [p(5432)] }, 'portas[0].host');
+    recusa({ portas: [p(80)] }, 'portas[0].host');
+    recusa({ portas: [p(9000), p(9000)] }, 'portas[1].host');
+    recusa({ portas: [{ ...p(9000), protocolo: 'udp' }] }, 'protocolo');
+    recusa({ portas: Array.from({ length: 11 }, (_, i) => p(9000 + i)) }, 'portas');
+    expect(() => especificacaoValidada({ ...VALIDA, portas: [p(9000)] })).toThrow(/egress/);
+  });
+
+  it('recusa dns/hosts: não-IP, localhost, nome da instalação, caracteres fora da lista', () => {
+    recusa({ dns: ['dns.example'] }, 'dns[0]');
+    recusa({ dns: ['1.1.1.1', '1.1.1.2', '1.1.1.3', '1.1.1.4'] }, 'dns');
+    recusa({ hostsExtras: [{ nome: 'localhost', ip: '10.0.0.1' }] }, 'nome');
+    recusa({ hostsExtras: [{ nome: 'api', ip: '10.0.0.1' }] }, 'nome');
+    recusa({ hostsExtras: [{ nome: 'A_b', ip: '10.0.0.1' }] }, 'nome');
+    recusa({ hostsExtras: [{ nome: 'ok.com', ip: '::1' }] }, 'ip');
+  });
+
+  it('QA: exige digest, chave de 8, env em maiúsculas, sem app nem porta', () => {
+    const svc = { nome: 'db', imagem: DIG };
+    const qa = (o: object) => ({ qa: { chave: 'abcd1234', servicos: [{ ...svc, ...o }] } });
+    expect(
+      especificacaoValidada({ ...EGRESS, ...qa({ env: { A_B: '1' } }) }).qa?.servicos[0]?.nome,
+    ).toBe('db');
+    recusa(qa({ imagem: 'pg:16' }), 'imagem');
+    recusa(qa({ env: { 'a b': '1' } }), 'env');
+    recusa(qa({ dados: ['/a/../b'] }), 'dados');
+    recusa({ qa: { chave: 'curta', servicos: [] } }, 'qa.chave');
+    recusa({ ...qa({}), comandoDoApp: 'x' }, 'qa');
+    expect(() => especificacaoValidada({ ...VALIDA, ...qa({ compartilhado: true }) })).toThrow(
+      /egress/,
+    );
+  });
+});
