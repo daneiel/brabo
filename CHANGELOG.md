@@ -6,7 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
-- O gate de QA-automação testa numa instância de QA efêmera (AT-612, RN-938): o engine propõe `qa_environment_start` antes do laço, o `terminal` do QA roda nela, ela é removida no fim (mesmo com exceção ou teto) e o `GateRescuer` varre as órfãs no boot e no tick. O Infra Lead pode declarar `run.qa` (serviços de apoio por digest). Depende da PR da api.
+- O gate de QA-automação testa numa instância de QA efêmera (AT-612, RN-940): o engine propõe `qa_environment_start` antes do laço, o `terminal` do QA roda nela, ela é removida no fim (mesmo com exceção ou teto) e o `GateRescuer` varre as órfãs no boot e no tick. O Infra Lead pode declarar `run.qa` (serviços de apoio por digest). Depende da PR da api.
 
 - `brabo-runner credentials import` (AT-611, RN-927): subcomando interativo que lista as chaves de API de LLM já guardadas por Claude Code, Codex, OpenCode, Kilo e Hermes e, com a confirmação item a item, as grava por `POST /runner/llm-credentials` com a chave de máquina (409 pergunta se substitui; assinatura é só listada; o valor nunca é impresso). O teste da credencial depois de gravar fica para outra fatia.
 - O Infra Lead declara o comando do app em `run.app` (`{command, port}`, opcional, AT-610): a PR de infra recusa, nomeando o campo, comando com quebra de linha ou byte nulo, acima de 300 caracteres ou vazio, e porta interna fora de 1024–65535; sem `app` a PR segue como antes.
