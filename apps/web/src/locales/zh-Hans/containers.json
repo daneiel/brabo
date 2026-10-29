@@ -91,5 +91,40 @@
       "none": "无网络",
       "egress": "可出站访问互联网"
     }
+  },
+  "rede": {
+    "titulo": "端口、DNS 和主机",
+    "nenhuma": "此容器未声明网络。",
+    "versao": "已声明版本：{{version}}",
+    "portas": "已发布端口（TCP）",
+    "portasDica": "每行一个，格式为 本机端口:容器端口。本机端口 1024 至 65535，最多 10 个。",
+    "dns": "DNS",
+    "hosts": "额外主机",
+    "hostsDica": "每行一个：名称和 IPv4，以空格分隔。最多 10 个。",
+    "loopback": "端口只发布在本机的 127.0.0.1 上，绝不对外网开放。",
+    "soVale": "新配置只有在重新创建容器后才生效。",
+    "semPapel": "修改网络需要项目的 maintainer 角色。",
+    "semSessao": "项目没有可记录网络的会话。",
+    "salvar": "保存网络",
+    "recriar": "应用并重新启动",
+    "recriarAviso": "重新创建属于绝对上限操作：始终需要人工批准。它会销毁容器并启动新的；/work 文件夹会保留。",
+    "recriarBloqueio": {
+      "runner": "项目处于 runner 模式：重新创建稍后提供。",
+      "semContainer": "没有可重新创建的已登记容器。",
+      "semSessao": "项目没有可提出该操作的会话。",
+      "naoSalva": "重新创建前请先保存网络。"
+    },
+    "observadas": "观察到的地址",
+    "observadasNota": "端口已发布；不保证有程序在监听。",
+    "erro": {
+      "teto": "超出条目上限",
+      "formatoPorta": "请使用 本机端口:容器端口",
+      "faixaPorta": "端口超出允许范围",
+      "portaDaInstalacao": "端口已被安装占用",
+      "portaRepetida": "端口重复",
+      "ipInvalido": "IP 无效",
+      "formatoHost": "请使用以空格分隔的名称和 IPv4",
+      "nomeReservado": "保留名称"
+    }
   }
 }
