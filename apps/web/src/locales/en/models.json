@@ -126,6 +126,14 @@
       "aria": "Search the model catalog",
       "placeholder": "Search by name or id (e.g. claude-haiku)",
       "noMatch": "No catalog model matches “{{term}}”. Search looks at the name and the id; check the spelling or clear the search."
+    },
+    "tabs": {
+      "aria": "Catalog providers",
+      "noKey": "no owner key",
+      "noKeyNote": "This provider has no key from the workspace owner of record, but still has an active model. Deactivate it if you will not use it; without a key nothing new is synced.",
+      "noMatchHere": "No {{provider}} model matches the search or filters. Matches in: {{tabs}}.",
+      "outside_one": "{{count}} left out, no key from the owner of record: {{names}}",
+      "outside_other": "{{count}} left out, no key from the owner of record: {{names}}"
     }
   },
   "picker": {

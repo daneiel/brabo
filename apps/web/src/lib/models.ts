@@ -336,6 +336,48 @@ export const ROTULO_DO_PROVIDER: Record<LLMProviderName, string> = {
   },
 };
 
+/**
+ * A cor de cada provider — FONTE ÚNICA do card de credencial e da tabela de
+ * capacidades (AT-607). Só tokens `var(--…)` existentes; `Record` exaustivo para
+ * provider novo não nascer sem cor.
+ */
+export const COR_DO_PROVIDER: Record<LLMProviderName, string> = {
+  ollama: 'var(--text-secondary)',
+  anthropic: 'var(--accent)',
+  openai: 'var(--success)',
+  openrouter: 'var(--violet)',
+  'nvidia-nim': 'var(--success)',
+  together: 'var(--warning)',
+  deepinfra: 'var(--violet)',
+  bitdeer: 'var(--accent)',
+  vultr: 'var(--warning)',
+  '9router': 'var(--success)',
+  'opencode-zen': 'var(--accent)',
+};
+
+/**
+ * Ativo = local OU com chave do TITULAR do workspace (RN-058). `comChave`
+ * `undefined` é "não sei" (carregando ou falhou) e vale TODOS: "não sei" não é
+ * "não tem".
+ */
+export function providerAtivo(
+  provider: LLMProviderName,
+  comChave: ReadonlySet<LLMProviderName> | undefined,
+): boolean {
+  return providerKind(provider) === 'local' || !comChave || comChave.has(provider);
+}
+
+/** Os modelos de UM provider, saídos de `agruparModelos`; hub vem repartido por upstream. */
+export function catalogoDoProvider<M extends Model>(
+  grupos: GrupoDeModelos<M>[],
+  provider: LLMProviderName,
+): { modelos: M[]; subgrupos?: SubgrupoDeModelos<M>[] } {
+  const modelos = grupos.flatMap((g) => g.modelos).filter((m) => m.provider === provider);
+  return providerKind(provider) === 'hub'
+    ? { modelos, subgrupos: repartirPorUpstream(modelos) }
+    : { modelos };
+}
+
 /** Provider que exige chave: todos menos os locais, que rodam na máquina. */
 export type LlmCredentialProvider = Exclude<LLMProviderName, 'ollama'>;
 

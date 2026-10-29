@@ -132,6 +132,15 @@
       "aria": "Buscar modelo no catálogo",
       "placeholder": "Buscar por nome ou id (ex.: claude-haiku)",
       "noMatch": "Nenhum modelo do catálogo casa com “{{term}}”. A busca olha o nome e o id; confira a grafia ou limpe a busca."
+    },
+    "tabs": {
+      "aria": "Providers do catálogo",
+      "noKey": "sem chave do titular",
+      "noKeyNote": "Este provider não tem chave do titular do workspace, mas ainda tem modelo ativo. Desative-o se não for usá-lo; sem chave, nada novo é sincronizado.",
+      "noMatchHere": "Nenhum modelo de {{provider}} casa com a busca ou os filtros. Casam em: {{tabs}}.",
+      "outside_zero": "Nenhum provider de fora.",
+      "outside_one": "{{count}} de fora, sem chave do titular: {{names}}",
+      "outside_other": "{{count}} de fora, sem chave do titular: {{names}}"
     }
   },
   "picker": {

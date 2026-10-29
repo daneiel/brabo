@@ -94,6 +94,7 @@ import type {
   WorkspaceWithRole,
   RegistroDeGates,
   ExecutionMode,
+  LLMProviderName,
 } from './api-types';
 
 export const API_URL = runtimeConfig.apiUrl;
@@ -1056,6 +1057,10 @@ export const listModels = (projectId: string) =>
 
 export const listModelCatalog = (workspaceId: string) =>
   get<CatalogoPorCategoria>(`/workspaces/${workspaceId}/models/catalog`);
+
+/** Providers com chave do TITULAR do workspace (RN-058): só nomes, nunca segredo. */
+export const listCredentialedProviders = (workspaceId: string) =>
+  get<{ providers: LLMProviderName[] }>(`/workspaces/${workspaceId}/llm-providers/credentialed`);
 
 export const setModelsActive = (
   workspaceId: string,

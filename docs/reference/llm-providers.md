@@ -169,7 +169,12 @@ critério de roteamento do OpenRouter continua sendo do modelo do agente ou da
 A api já expõe quais providers têm chave do TITULAR do workspace (a pessoa cuja
 chave os agentes gastam, RN-058): `GET workspaces/:workspaceId/llm-providers/credentialed`,
 `viewer`, resposta `{ providers: [...] }` só com nomes e sem `ollama` (RN-926, AT-607).
-A tela que a consome (só providers com chave) vem em seguida.
+Desde a RN-931 a tela a consome: a tabela do que cada provider sabe fazer lista só
+os providers ATIVOS (local ou com chave do titular), cada um com o nome e a cor do
+card de credencial, e uma linha diz quantos ficaram de fora e quais. O catálogo de
+modelos é um painel com uma aba por provider ativo; o provider sem chave que ainda
+tem modelo ativo aparece como aba marcada "sem chave do titular", para dar para
+desativá-lo. Se a rota não responde, as telas mostram todos os providers.
 
 ## Catálogo de modelos: descoberta e ciclo de vida
 
