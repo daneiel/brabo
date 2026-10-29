@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- A página de detalhe do container ganha a seção "Rede" (AT-608, RN-939): portas (só em `127.0.0.1`), DNS e hosts extras editáveis por `maintainer`, com a recusa da api mostrada por campo, e o botão "Aplicar e subir de novo" que propõe `container_recreate` (sempre com aprovação humana; inerte em `runner`).
 - Avisos de dependência de 29/10 fechados por `overrides` (AT-613): `seroval` (raiz, teto 1.6.11) e, no `website/`, `joi`, `serialize-javascript`, `compression`, `follow-redirects`, `launch-editor`, `body-parser`, `postcss-selector-parser` e `tinypool` (major 1→2); `deepmerge` fica declarado sem override (a 4.3.2 não foi publicada).
 - `brabo-runner credentials import` (AT-611, RN-927): subcomando interativo que lista as chaves de API de LLM já guardadas por Claude Code, Codex, OpenCode, Kilo e Hermes e, com a confirmação item a item, as grava por `POST /runner/llm-credentials` com a chave de máquina (409 pergunta se substitui; assinatura é só listada; o valor nunca é impresso). O teste da credencial depois de gravar fica para outra fatia.
 - O Infra Lead declara o comando do app em `run.app` (`{command, port}`, opcional, AT-610): a PR de infra recusa, nomeando o campo, comando com quebra de linha ou byte nulo, acima de 300 caracteres ou vazio, e porta interna fora de 1024–65535; sem `app` a PR segue como antes.
