@@ -25251,3 +25251,10 @@ sem dizer qual.
 - **Onde:** `apps/api/src/application/use-cases/containers/obter-spec-de-container.use-case.ts:135` (`execute`), `apps/api/src/application/use-cases/containers/instancia-de-qa.use-case.ts:140` (`limparOrfas`), `apps/api/src/interfaces/http/internal/internal-qa-environments.controller.ts:90` (`sweep`).
 - **Teste:** `apps/api/test/application/use-cases/containers/instancia-de-qa.use-case.spec.ts`.
 - **Origem:** AT-612 (EP-030), ADR 0229.
+
+### RN-938 — O `terminal` só vai para a instância de QA quando o ator é o `qa-automacao` e a tarefa é do projeto {#rn-938}
+
+- **Regra:** a api repassa `payload.alvo = { qa: true, taskId }` de uma `proposed_action` `terminal` ao `/internal/actions/execute` do engine SOMENTE se o ator da ação é `qa-automacao` e o `taskId` pertence ao projeto da ação. Em qualquer outro caso (outro agente, `alvo` malformado, tarefa de outro projeto) o `alvo` é descartado com o aviso `terminal.alvo_de_qa_descartado` no log e o comando segue pelo caminho de sempre: nenhum outro agente desvia comando para a instância de QA.
+- **Onde:** `apps/api/src/application/use-cases/actions/execute-terminal-action.use-case.ts:40` (`alvoDeQa`), `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:166` (`executeTerminalAction`).
+- **Teste:** `apps/api/test/application/use-cases/actions/alvo-de-qa-no-terminal.spec.ts`.
+- **Origem:** AT-612 (EP-030), ADR 0229.
