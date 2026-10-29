@@ -8214,6 +8214,46 @@ paths:
       summary: Baixa o binário standalone do runner local pra plataforma pedida
       tags:
         - infrastructure
+  /runner/llm-credentials:
+    post:
+      description: >-
+        Authenticated by a MACHINE device key (never a session JWT, never a
+        project-bound credential). Same envelope encryption as `POST
+        /users/me/credentials`. 409 `credencial_existente` when the user already
+        has this provider and `substituir` is not `true`. The key is never
+        logged nor returned.
+      operationId: RunnerLlmCredentialsController_execute
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImportLlmCredentialDto'
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportLlmCredentialResponseDto'
+        '400':
+          description: >-
+            Corpo inválido. O `ValidationPipe` roda com `whitelist` e
+            `forbidNonWhitelisted`, então campo desconhecido também reprova.
+        '401':
+          description: Sem token, token expirado ou assinatura inválida.
+        '403':
+          description: Credential bound to a project.
+        '409':
+          description: Code `credencial_existente`.
+        '429':
+          description: Rate limit por usuário ou por IP.
+      security:
+        - bearer: []
+      summary: Stores an LLM API key imported by the local runner
+      tags:
+        - credentials
   /runner/projects:
     get:
       description: >-
@@ -14491,6 +14531,63 @@ components:
         - image
         - network
         - resources
+    ImportLlmCredentialDto:
+      type: object
+      properties:
+        provider:
+          type: string
+          enum:
+            - anthropic
+            - openai
+            - openrouter
+            - nvidia-nim
+            - together
+            - deepinfra
+            - bitdeer
+            - vultr
+            - 9router
+            - opencode-zen
+          example: anthropic
+        apiKey:
+          type: string
+          maxLength: 512
+          description: >-
+            The API key in plain text. Encrypted before touching the database;
+            NEVER logged and NEVER returned.
+        origem:
+          type: string
+          example: 'codex: ~/.codex/auth.json'
+          maxLength: 200
+          description: Tool and path the key was read from. Audit log only; never a value.
+        substituir:
+          type: boolean
+          description: Must be `true` to replace an existing credential of this provider.
+      required:
+        - provider
+        - apiKey
+        - origem
+    ImportLlmCredentialResponseDto:
+      type: object
+      properties:
+        provider:
+          type: string
+          enum:
+            - anthropic
+            - openai
+            - openrouter
+            - nvidia-nim
+            - together
+            - deepinfra
+            - bitdeer
+            - vultr
+            - 9router
+            - opencode-zen
+        substituida:
+          type: boolean
+          description: Whether an existing credential was replaced.
+      required:
+        - provider
+        - substituida
     IndexDocsReportResponseDto:
       type: object
       properties:
