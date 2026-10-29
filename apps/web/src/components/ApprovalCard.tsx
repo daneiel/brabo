@@ -71,6 +71,7 @@ const ACTION_ICON: Record<ActionType, typeof DiffIcon> = {
   // ADR 0136 (RN-495) — a página global de containers.
   container_stop: StopSquareIcon,
   container_remove: TrashIcon,
+  container_recreate: TrashIcon,
   // RN-508 (ADR 0145) — mesmo calibre visual de `container_start`: sobe
   // container real, só que na máquina do usuário, via runner.
   container_start_via_runner: AlertIcon,

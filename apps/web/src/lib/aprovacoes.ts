@@ -114,6 +114,7 @@ export const VERBO_DA_ACAO: Record<ActionType, string> = {
   container_start: 'quer subir o container do projeto',
   container_stop: 'quer parar o container do projeto',
   container_remove: 'quer remover o container do projeto',
+  container_recreate: 'quer recriar o container do projeto',
   container_start_via_runner: 'quer subir o container do projeto na sua máquina',
 };
 
@@ -274,7 +275,16 @@ const FRASE_DA_ACAO: Record<ActionType, (payload: Payload) => string> = {
     const arquivos = quantidade(p, 'files');
     const nome = titulo ? ` "${curto(titulo)}"` : '';
     const quantos = arquivos ? ` com ${plural(arquivos, 'arquivo', 'arquivos')}` : '';
-    return `Abre uma pull request de infraestrutura${nome}${quantos}.`;
+    // AT-610 (ADR 0228): com `run.app` a PR põe um comando para rodar no container.
+    const run = p.run as { app?: { command?: unknown; port?: unknown } } | undefined;
+    const app = run?.app;
+    const comando =
+      app && typeof app.command === 'string'
+        ? ` O container passa a rodar ${codigo(app.command)}` +
+          (typeof app.port === 'number' ? ` na porta ${app.port}` : '') +
+          '.'
+        : '';
+    return `Abre uma pull request de infraestrutura${nome}${quantos}.${comando}`;
   },
 
   git_merge: (p) => {
@@ -412,6 +422,12 @@ const FRASE_DA_ACAO: Record<ActionType, (payload: Payload) => string> = {
   container_remove: () =>
     'Remove o container do projeto de vez — descarta o que existe. Para ' +
     'voltar a ter um, é preciso subir de novo do zero.',
+
+  // AT-608 (ADR 0228): remove + sobe de novo, para valer o comando do app e a
+  // rede declarados. O que está dentro do container se perde.
+  container_recreate: () =>
+    `Recria o container do projeto: ${codigo('remove')} o atual e ${codigo('sobe')} ` +
+    'outro com o comando do app e a rede declarados — o que está só dentro do container se perde.',
 
   // RN-508 (ADR 0145) — segundo tipo pra subir o container real do projeto,
   // exclusivo do modo Runner: sobe pelo `brabo-runner`, na máquina do
