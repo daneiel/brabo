@@ -15,7 +15,11 @@ beforeAll(async () => {
 const getRunInstructions = vi.fn();
 vi.mock('../lib/api-client', async (importOriginal) => {
   const original = await importOriginal<typeof import('../lib/api-client')>();
-  return { ...original, getRunInstructions: (...a: unknown[]) => getRunInstructions(...a) };
+  return {
+    ...original,
+    getRunInstructions: (...a: unknown[]) => getRunInstructions(...a),
+    getRedeDoContainer: async () => null,
+  };
 });
 
 const useContainersOverview = vi.fn();

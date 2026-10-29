@@ -91,5 +91,40 @@
       "none": "No network",
       "egress": "Outbound internet access"
     }
+  },
+  "rede": {
+    "titulo": "Ports, DNS and hosts",
+    "nenhuma": "No network declared for this container.",
+    "versao": "Declared version: {{version}}",
+    "portas": "Published ports (TCP)",
+    "portasDica": "One per line, as machine-port:container-port. Machine 1024 to 65535, up to 10.",
+    "dns": "DNS",
+    "hosts": "Extra hosts",
+    "hostsDica": "One per line: name and IPv4 separated by a space. Up to 10.",
+    "loopback": "The port is published only on 127.0.0.1 of this machine, never to the network.",
+    "soVale": "The new configuration only takes effect after the container is recreated.",
+    "semPapel": "Changing the network requires the maintainer role on the project.",
+    "semSessao": "The project has no session to record the network in.",
+    "salvar": "Save network",
+    "recriar": "Apply and start again",
+    "recriarAviso": "Recreating is an absolute-ceiling action: it always asks for human approval. It destroys the container and starts another; the /work folder survives.",
+    "recriarBloqueio": {
+      "runner": "Project in runner mode: recreating comes later.",
+      "semContainer": "There is no registered container to recreate.",
+      "semSessao": "The project has no session to propose the action in.",
+      "naoSalva": "Save the network before recreating."
+    },
+    "observadas": "Observed addresses",
+    "observadasNota": "Published port; nothing guarantees something is listening on it.",
+    "erro": {
+      "teto": "over the item limit",
+      "formatoPorta": "use machine-port:container-port",
+      "faixaPorta": "port outside the allowed range",
+      "portaDaInstalacao": "port used by the installation",
+      "portaRepetida": "repeated port",
+      "ipInvalido": "invalid IP",
+      "formatoHost": "use a name and an IPv4 separated by a space",
+      "nomeReservado": "reserved name"
+    }
   }
 }
