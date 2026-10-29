@@ -469,7 +469,7 @@ previous one. `deny` at any stage returns immediately.
 Before any policy, IAM: each `ActionType` requires a minimum effective
 role. Without it, `deny` with an explicit reason.
 
-- **Where:** `apps/api/src/domain/actions/decide.ts:110` (`MIN_ROLE_FOR_ACTION_TYPE`)
+- **Where:** `apps/api/src/domain/actions/decide.ts:115` (`MIN_ROLE_FOR_ACTION_TYPE`)
 - **Test:** `test/domain/actions/decide.spec.ts`
 
 ### RN-006 — Ceiling: merge into a protected branch is never auto-approvable {#rn-006}
@@ -486,7 +486,7 @@ stopped creating it ([RN-029](#rn-029)). This list decides what the lock
 the branch: protecting one that doesn't exist costs nothing; unprotecting
 one that exists costs dearly.
 
-- **Where:** `apps/api/src/domain/actions/decide.ts:498` (`isProtectedBranch`, o teto da trava de merge) + `protected-branches.ts:4`
+- **Where:** `apps/api/src/domain/actions/decide.ts:505` (`isProtectedBranch`, o teto da trava de merge) + `protected-branches.ts:4`
 - **Test:** `test/domain/actions/decide.spec.ts`
 - **Origin:** [ADR 0011](adr/0011-infra-dev-agents-worktrees-merge-lock.md) §1
 - **Note:** the equivalent protection **on the platform** (GitHub/GitLab)
@@ -10245,7 +10245,7 @@ fila de aprovações rotineiras, corroendo o teto que dá sentido ao clique.
   a ordem guarda→disco→versionamento e os cinco motivos);
   `apps/runner/src/channel.ts:173` (`WorkspaceCreateMessage`), `:194`
   (`WorkspaceCreateResultMessage`), `:476` (`CAPACIDADE_DE_WORKSPACE` e
-  `capacidadesDoRunner`); `apps/runner/src/index.ts:1027`
+  `capacidadesDoRunner`); `apps/runner/src/index.ts:1034`
   (`tratarWorkspaceCreate` — a ordem `workspace_confirm` antes do resultado);
   `apps/engine/lib/engine/runners/pasta_do_projeto.ex:107` (`verificar/1`) e
   `:134` (`criar/3`); `apps/engine/lib/engine/runners/runner_router.ex:181`
@@ -13763,11 +13763,11 @@ do `permissions.json` repetem os TOKENS do comando no texto (o `label` de
 `matchAgainstFile`) — o mesmo comando que já mora em
 `proposed_actions.payload` e no card de aprovação.
 
-- **Código:** `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:259`
+- **Código:** `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:264`
   (`reason` no payload do evento de sessão), `:223` (o comentário do outbox
   sem o campo), `:227` (o payload do outbox, intacto), `:356` (o
   `rejectionReason`, que continua só no `deny`);
-  `apps/api/src/domain/actions/decide.ts:278` (`Decision`, a fonte da string)
+  `apps/api/src/domain/actions/decide.ts:286` (`Decision`, a fonte da string)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:902`
   (caminho feliz: auto-aprovação grava `agent_autonomy: auto_approve`),
   `:948` (`require_approval` pelo default e pelo teto da trava de merge),
@@ -15812,7 +15812,7 @@ pacote da porta de Docker. Nada muda na contenção do broker ([ADR
   `apps/api/src/infrastructure/http-clients/container-broker.client.ts:240` (`tetoDaOperacao`),
   `:205` (`TETO_DE_MUTACAO_MS`), `:217` (`FOLGA_DO_EXEC_NO_ENGINE_MS`),
   `:270` (`erroDeTransporte`);
-  `apps/api/src/application/ports/container-broker.port.ts:89` (`MotivoDeBrokerIndisponivel`);
+  `apps/api/src/application/ports/container-broker.port.ts:96` (`MotivoDeBrokerIndisponivel`);
   `apps/engine/lib/engine/sessions/engine_api_client.ex:1950` (`teto_do_container_exec_ms`)
 
   `apps/engine/lib/engine/sessions/engine_api_client.ex:1950` (`teto_do_container_exec_ms`)
@@ -15974,9 +15974,9 @@ raiz do ESCOPO, nunca onde o arquivo de política mora.
 - **Código:** `apps/api/src/infrastructure/filesystem/project-workspaces-root.ts:907`
   (`raizDoEscopoNoEvento`), `:901` (`RaizDoEscopoNoEvento`), `:117`
   (`segmentoSobABaseDeProjetos`, reusada);
-  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:297`
+  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:302`
   (`scopeRoot` só em `terminal`);
-  `apps/api/src/domain/actions/decide.ts:604` (`terminalNoEscopo`, o único
+  `apps/api/src/domain/actions/decide.ts:630` (`terminalNoEscopo`, o único
   consumidor do escopo)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:1143`
   (`container`), `:1123` (`mounted`), `:1123` (`runner`), `:1123` (o caminho
@@ -17438,7 +17438,7 @@ escreve na pasta do projeto, que é do uid do operador: `npm install` dava
 - **Onde:** `packages/docker-port/src/docker-cli.ts:781` (`argsDeCriacao`),
   `packages/docker-port/src/spec-de-container.ts:136` (`usuarioValidado`),
   `apps/broker/src/operacoes.ts:427` (`especificacaoDoProjeto`),
-  `apps/api/src/application/use-cases/containers/obter-spec-de-container.use-case.ts:110`
+  `apps/api/src/application/use-cases/containers/obter-spec-de-container.use-case.ts:119`
   (`ObterSpecDeContainerUseCase`)
 - **Teste:** `packages/docker-port/src/docker-cli.spec.ts` (o `run` leva
   `--user` e continua sem campo livre), `packages/docker-port/src/spec-de-container.spec.ts`
@@ -17568,7 +17568,7 @@ lançava 409 com o padrão JÁ gravado e SEM o evento `permission.granted`.
 
 - **Onde:** `apps/api/src/application/use-cases/actions/approve-always-action.use-case.ts:109`
   (`execute`), `:190` (`cliqueSobreAcaoJaDecidida`), `:240`
-  (`gravarPadraoSeFaltar`), `apps/api/src/application/use-cases/actions/approve-action.use-case.ts:255`
+  (`gravarPadraoSeFaltar`), `apps/api/src/application/use-cases/actions/approve-action.use-case.ts:269`
   (`approve`), `apps/api/src/domain/actions/sempre-permitir.ts:30`
   (`TIPOS_SEM_SEMPRE_PERMITIR`), `:65` (`motivoDeRecusaDoSempreAprovar`),
   `apps/web/src/lib/sempre-permitir.ts:15` (`TIPOS_SEM_SEMPRE_PERMITIR`)
@@ -19144,7 +19144,7 @@ existe.
 - **Código:** `apps/api/src/domain/actions/path-scope.ts:153` (`cwdNoContainer`),
   `:174` (`comandoNoEscopoDoContainer`), `:112` (`comandoNoEscopo`, agora com
   várias raízes), `:137` (`PONTO_DE_MONTAGEM_DO_CONTAINER`);
-  `apps/api/src/domain/actions/decide.ts:275` (`execucaoNoContainer`), `:616`
+  `apps/api/src/domain/actions/decide.ts:283` (`execucaoNoContainer`), `:642`
   (`execucaoNoContainer`, em `terminalNoEscopo`);
   `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:174`
   (`containerExecutionActive`, separado de `execucaoNoContainer`)
@@ -19194,7 +19194,7 @@ lugares onde o modo é ligado: o cartão de lote dos Executores
   `apps/api/src/application/ports/agent-autonomy-repository.port.ts:5`
   (`AutonomiaResolvida`, com `especifica`);
   `apps/api/src/application/use-cases/actions/approve-always-action.use-case.ts:263`
-  (`especifica`); `apps/api/src/domain/actions/decide.ts:295`
+  (`especifica`); `apps/api/src/domain/actions/decide.ts:303`
   (`modoAutomaticoDoAgente`); `apps/web/src/components/OQueOPilotoLibera.tsx:16`
   (`OQueOPilotoLibera`); `apps/web/src/components/ApprovalCard.tsx:434`,
   `apps/web/src/components/AgentCard.tsx:164`,
@@ -19300,7 +19300,7 @@ segundo `executed` para o mesmo merge.
 - **Código:** `apps/api/src/domain/actions/merge-de-pr.ts:56` (`recusaDeMerge`),
   `:40` (`mergeouAPr`);
   `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:120` (`recusaDeMerge`);
-  `apps/api/src/application/use-cases/actions/approve-action.use-case.ts:282` (`recusaDeMerge`);
+  `apps/api/src/application/use-cases/actions/approve-action.use-case.ts:296` (`recusaDeMerge`);
   `apps/api/src/infrastructure/git/local-git-provider.ts:339` (`GitPullRequestAlreadyMergedError`);
   `apps/web/src/lib/gate-do-merge.ts:19` (`gatePendenteNoMerge`);
   `apps/web/src/routes/ProjectPrsTab.tsx:232` (`gatePendenteNoMerge`);
@@ -19600,7 +19600,7 @@ recusa nomeada.
 5. **O log nunca traz nome nem valor de variável do `env`**: a recusa dá a
    contagem, e o log do caminho host acrescenta só `[git credenciado, no host]`.
 
-- **Código:** `apps/runner/src/index.ts:694` (`gitCredenciadoNoHost`), `:659`
+- **Código:** `apps/runner/src/index.ts:701` (`gitCredenciadoNoHost`), `:666`
   (`tratarExec`); `apps/runner/src/channel.ts:71` (`gitCredenciado`), `:627`
   (`gitCredenciado`); `apps/engine/lib/engine/runners/runner_router.ex:93`
   (`exec_git_credenciado`), `:98` (`despachar_exec`);
@@ -19752,12 +19752,12 @@ handoff às 06:45:01 — o web encadeava a ativação para `maintainer`/`owner`
    aprovação: a decisão do humano já está gravada.
 
 - **Onde:** `apps/api/src/application/use-cases/execution/execute-execution-plan.use-case.ts:89`
-  (`execute`); `apps/api/src/application/use-cases/actions/approve-action.use-case.ts:192`
-  (`executeExecutionPlan`); `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:390`
+  (`execute`); `apps/api/src/application/use-cases/actions/approve-action.use-case.ts:206`
+  (`executeExecutionPlan`); `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:395`
   (`executeExecutionPlan`); `apps/web/src/lib/session-acoes-de-handoff.ts:91`
   (`handleAcceptHandoff`); `apps/engine/lib/engine/agents/dev_lead_tools.ex:220`
   (`classificar`); `apps/engine/lib/engine/agents/dev_lead_server.ex:699`
-  (`texto_do_desfecho`); `apps/web/src/lib/aprovacoes.ts:317`
+  (`texto_do_desfecho`); `apps/web/src/lib/aprovacoes.ts:327`
   (`propose_execution_plan`)
 - **Teste:** `apps/api/test/application/use-cases/execution/execute-execution-plan.use-case.spec.ts:106`
   (aprovado ativa como quem aprovou — caminho feliz), `:129` (auto-aprovado:
@@ -20194,8 +20194,8 @@ ganhar contorno.
 - **Onde:** `apps/runner/src/leitor-de-pty.ts:60` (`precisaDoLeitorProprio`),
   `:70` (`LeitorDeFdNaoBloqueante`), `:115` (`agendar`), `:152`
   (`comLeitorDePtyProprio`); `apps/runner/src/native-pty-loader.ts:114`
-  (`comLeitorDePtyProprio`); `apps/runner/src/index.ts:1268`
-  (`PAUSA_ENTRE_VOLTAS_MS`), `:1291` (`sondarPty`), `:1346`
+  (`comLeitorDePtyProprio`); `apps/runner/src/index.ts:1263`
+  (`PAUSA_ENTRE_VOLTAS_MS`), `:1298` (`sondarPty`), `:1353`
   (`rodarAutoTestePty`)
 - **Teste:** `apps/runner/src/leitor-de-pty.spec.ts:14` (só sob o Bun e fora do
   Windows), `:23` (fora dele, o MESMO módulo), `:28` (troca só durante o
@@ -20309,7 +20309,7 @@ bootstrap (`git_repo_create`/`git_branch_create`/`git_branch_protect`, que não
 passam por `decide()`); e `deploy`, que não é tipo de `proposed_action` — só
 existe como destino da mensagem do comando de terminal.
 
-- **Onde:** `apps/api/src/domain/actions/decide.ts:414` (`ehAcaoTipadaComEfeitoExterno`);
+- **Onde:** `apps/api/src/domain/actions/decide.ts:421` (`ehAcaoTipadaComEfeitoExterno`);
   `apps/api/src/domain/actions/external-effect.ts:258`
   (`ACOES_TIPADAS_COM_EFEITO_EXTERNO`), `:266` (`ehAcaoTipadaComEfeitoExterno`),
   `:280` (`mensagemDoTetoDaAcaoTipada`);
@@ -21123,7 +21123,7 @@ decisão, fechados juntos:
   Dev Lead no texto do resultado da ferramenta (`resumo_do_plano/1`), para ele
   citar os números em vez de recontar.
 
-- **Onde:** `apps/web/src/lib/aprovacoes.ts:428` (`verboDaAcao`),
+- **Onde:** `apps/web/src/lib/aprovacoes.ts:444` (`verboDaAcao`),
   `apps/api/src/domain/actions/sempre-permitir.ts:33` (`TIPOS_SEM_SEMPRE_PERMITIR`),
   `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:84` (`execute`),
   `apps/api/src/application/use-cases/execution/execute-execution-plan.use-case.ts:89` (`execute`),
@@ -21212,8 +21212,8 @@ protegida, e `git merge`/`gh pr merge` pelo terminal), deploy, `sudo`/`doas`,
 `container_remove`, `instruction_patch` e paralelismo. O toggle em manual
 restaura a aprovação.
 
-- **Onde:** `apps/api/src/domain/actions/decide.ts:296` (`modoAutomaticoDoAgente`),
-  `:311` (`decide`); `apps/api/src/domain/actions/external-effect.ts:294`
+- **Onde:** `apps/api/src/domain/actions/decide.ts:303` (`modoAutomaticoDoAgente`),
+  `:318` (`decide`); `apps/api/src/domain/actions/external-effect.ts:294`
   (`mensagemDoModoAutomaticoNoEfeitoExterno`);
   `apps/web/src/components/OQueOPilotoLibera.tsx`
 - **Teste:** `apps/api/test/domain/actions/decide.spec.ts` (o piloto libera
@@ -22127,7 +22127,7 @@ sem dizer qual.
   ferramenta que volta ao Dev Lead diz o mesmo, e a descrição de `agentes`
   pede para não prometer ganho de paralelismo. A aspa do modelo nas pontas do
   resumo é removida antes de a frase citá-lo, para não sobrar `coberto."`.
-- **Onde:** `apps/web/src/lib/aprovacoes.ts:317` (`propose_execution_plan`),
+- **Onde:** `apps/web/src/lib/aprovacoes.ts:327` (`propose_execution_plan`),
   `apps/engine/lib/engine/agents/dev_lead_tools.ex:254` (`sobem`), `:245`
   (`classificar`), `:97` (`spec`)
 - **Teste:** `apps/web/src/lib/aprovacoes.test.ts` ("plano com 2 agentes num
@@ -24011,7 +24011,7 @@ sem dizer qual.
   marca. O evento que o engine pediu (inclusive o `proposed_action.created`)
   continua sem aviso da api, para não sair em dobro.
 - **Onde:** `apps/api/src/application/efeito-de-acao.ts:18` (`ehEfeitoDeAcao`),
-  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:314`
+  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:319`
   (`runComoEfeitoDeAcao`),
   `apps/api/src/infrastructure/http-clients/session-channel-notifier.ts:73`
   (`ehEfeitoDeAcao`)
@@ -24073,7 +24073,7 @@ sem dizer qual.
   Infra, nunca verificado na máquina de quem lê (RN-468). E o contexto da
   Infra (`/internal/.../infra-context`) passa a levar `projectImage`, a
   decisão vigente de imagem, rede e recursos, `null` sem decisão.
-- **Onde:** `apps/api/src/domain/infra/run-instructions.ts:44` (`recusaDoRun`),
+- **Onde:** `apps/api/src/domain/infra/run-instructions.ts:52` (`recusaDoRun`),
   `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:155`
   (`recusaDoRun`),
   `apps/api/src/application/use-cases/actions/execute-infra-pr.use-case.ts:111`
@@ -24328,7 +24328,7 @@ sem dizer qual.
   estar em `paths` do `/openapi.json` servido; rota faltando é item que
   reprova, nunca observação (estende a RN-854).
 - **Onde:** `apps/engine/lib/engine/infra/instrucoes_de_execucao.ex:52` (`url`),
-  `apps/api/src/domain/infra/run-instructions.ts:44` (`recusaDoRun`),
+  `apps/api/src/domain/infra/run-instructions.ts:52` (`recusaDoRun`),
   `apps/engine/lib/engine/infra/infra_lead_server.ex:1391` (`build_kickoff`),
   `apps/engine/lib/engine/dev/dev_agent_server.ex:636` (`clausula_de_openapi`),
   `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:20` (`texto`)
@@ -25210,3 +25210,23 @@ sem dizer qual.
 - **Onde:** `apps/web/src/lib/models.ts:363` (`providerAtivo`), `apps/web/src/lib/models.ts:371` (`catalogoDoProvider`), `apps/web/src/components/ModelCatalogSection.tsx:141` (`useMemo`), `apps/web/src/routes/ProvidersPage.tsx:37` (`deFora`)
 - **Teste:** `apps/web/src/routes/ProvidersPage.test.tsx:102` (só os com chave do titular, e a falha que mostra todos), `apps/web/src/components/ModelCatalogSection.test.tsx:399` (aba "sem chave" com modelo ativo; seleção entre abas; busca nomeia a aba que casa), `apps/web/src/lib/models.test.ts:126` (`providerAtivo`)
 - **Origem:** AT-607 (EP-026), tela; a rota é a RN-926.
+### RN-932 — A rede do container é artefato declarado por humano e só vale no container recriado {#rn-932}
+
+- **Regra:** `artifact.container_network` (`{ ports[{host,container,protocol:'tcp'}], dns[], extraHosts[{name,ip}] }`) é versionado, sem tabela, e o vigente é o de maior `version`. Só um humano `maintainer` o escreve (`PUT /projects/:projectId/container/network`; `GET` é `viewer`), com a MESMA régua do docker-port (host 1024-65535 fora das portas da instalação, até 10 portas sem duplicata, até 3 DNS por IP literal, até 10 hosts com IPv4 e nome fora dos reservados); recusa é 400 `rede_invalida` nomeando o campo. Escrever NÃO é efeito externo. A `container-spec` devolve `ports`, `dns` e `extraHosts` (ou `null`; `runner` sempre `null`, runner depois) e a mudança só vale em container recriado (RN-934). A api não importa o docker-port, então a régua é espelhada e a paridade é provada por teste.
+- **Onde:** `apps/api/src/domain/containers/rede-do-container.ts:86` (`validarRedeDoContainer`), `apps/api/src/interfaces/http/containers/containers.controller.ts:91` (`declarar`), `apps/api/src/application/use-cases/containers/obter-spec-de-container.use-case.ts:129` (`execute`).
+- **Teste:** `apps/api/test/contract/rede-do-container-paridade.spec.ts` (paridade com o docker-port), `apps/api/test/application/use-cases/containers/spec-e-observacao-de-container.use-case.spec.ts` (spec devolve a rede; `runner` tudo `null`).
+- **Origem:** AT-608 (EP-030), ADR 0228.
+
+### RN-933 — `run.app` declara o comando do app e só o piloto automático dispensa a aprovação da PR de infra {#rn-933}
+
+- **Regra:** `run` de `open_infra_pr` aceita `app: { command, port }` opcional (comando de até 300 code points, uma linha, sem NUL; porta 1024-65535; `null` equivale a ausente, como no engine) validado na proposta e na execução; sem `app`, tudo é byte a byte o de antes. Com `run.app`, a regra ESPECÍFICA `open_infra_pr: auto_approve` (a semente do aceite) NÃO basta e a decisão vira `require_approval`; só a CURINGA `auto_approve` do agente (piloto automático, RN-603/RN-670) auto-aprova. A `container-spec` devolve `comandoDoApp` do `run.app.command` vigente, ou `null`.
+- **Onde:** `apps/api/src/domain/infra/run-instructions.ts:52` (`recusaDoRun`), `apps/api/src/domain/actions/decide.ts:608` (`comAppDeclarado`), `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:208` (`comAppDeclarado`), `apps/api/src/application/use-cases/containers/obter-spec-de-container.use-case.ts:159` (`comandoDoApp`).
+- **Teste:** `apps/api/test/domain/infra/run-app.spec.ts`, `apps/api/test/domain/actions/decide.spec.ts` (sem app + específica = auto; com app + específica = aprovação; com app + curinga = auto).
+- **Origem:** AT-610 (EP-030), ADR 0228.
+
+### RN-934 — `container_recreate` remove e sobe de novo, no teto absoluto de `container_remove` {#rn-934}
+
+- **Regra:** `container_recreate` (`maintainer`) é `proposed_action` nunca auto-aprovável, nem com a curinga, e "sempre permitir" é recusado na fonte (mesma lista de `container_remove`). A execução faz `remove` e `start` pelo broker passando por `running -> stopped -> removed -> provisioning -> running`; recusa ou indisponibilidade do broker vira `failed` nomeado (se a subida falha, o motivo diz que o container já foi removido). `runner` é recusado nomeando "runner depois". A frase em `aprovacoes.ts` existe e o teste do web reprova tipo sem frase.
+- **Onde:** `apps/api/src/domain/actions/decide.ts:591` (`container_recreate`), `apps/api/src/application/use-cases/actions/execute-container-recreate.use-case.ts:44` (`execute`), `apps/web/src/lib/aprovacoes.ts:117` (`container_recreate`).
+- **Teste:** `apps/api/test/application/use-cases/actions/execute-container-recreate.use-case.spec.ts`, `apps/api/test/domain/actions/decide.spec.ts` (teto), `apps/web/src/lib/aprovacoes.test.ts`.
+- **Origem:** AT-608 (EP-030), ADR 0228.
