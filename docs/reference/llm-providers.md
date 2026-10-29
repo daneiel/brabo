@@ -165,6 +165,11 @@ resposta), o catálogo de modelos e, só para `owner`, o gasto por chave. O
 critério de roteamento do OpenRouter continua sendo do modelo do agente ou da
 área, escolhido nas Configurações do projeto.
 
+A api já expõe quais providers têm chave do TITULAR do workspace (a pessoa cuja
+chave os agentes gastam, RN-058): `GET workspaces/:workspaceId/llm-providers/credentialed`,
+`viewer`, resposta `{ providers: [...] }` só com nomes e sem `ollama` (RN-925, AT-607).
+A tela que a consome (só providers com chave) vem em seguida.
+
 ## Catálogo de modelos: descoberta e ciclo de vida
 
 Quem declara `listModels` sabe listar o próprio catálogo. A base compatível

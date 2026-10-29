@@ -25163,3 +25163,10 @@ sem dizer qual.
 - **Onde:** `apps/engine/lib/engine/infra/infra_lead_server.ex:1621` (`correct`), `:414` (`iniciar_correcao`), `:200` (`init`)
 - **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs:1980` (`correct/3 grava infra.correction_queued antes do cast`; a pendente sobrevive ao reinício e a entregue não é reentregue)
 - **Origem:** AT-582 (EP-031); [ADR 0226](adr/0226-diario-vivo-e-retomada-dos-agentes.md).
+
+### RN-925 — A rota de providers com chave devolve só os nomes, e a chave é a do TITULAR {#rn-925}
+
+- **Regra:** `GET workspaces/:workspaceId/llm-providers/credentialed` (`viewer`, o mínimo da leitura de membros, [RN-655](#rn-655)) devolve `{ providers: LLMProviderName[] }` com os providers de LLM em que o TITULAR do workspace (`workspaces.created_by`, a pessoa cuja credencial os agentes gastam, [RN-058](#rn-058)) tem credencial cadastrada. Só nomes, na ordem da lista canônica: nunca segredo, id, data nem `key_id`. `ollama` não tem credencial e nunca aparece; token de git (`github`/`gitlab`) também não. Credencial de outro membro não conta. É a fonte de "tem chave" das telas de providers e do catálogo (AT-607); a tela vem depois.
+- **Onde:** `apps/api/src/application/use-cases/llm/list-credentialed-providers.use-case.ts:20` (`execute`), `apps/api/src/interfaces/http/llm/models.controller.ts:76` (`credentialed`)
+- **Teste:** `apps/api/test/application/use-cases/llm/list-credentialed-providers.use-case.spec.ts:44` (`titular com duas chaves: só os dois nomes`; a chave de outro membro não conta)
+- **Origem:** AT-607 (EP-026).
