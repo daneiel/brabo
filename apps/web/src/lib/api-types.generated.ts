@@ -3744,6 +3744,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/runner/llm-credentials": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Stores an LLM API key imported by the local runner
+         * @description Authenticated by a MACHINE device key (never a session JWT, never a project-bound credential). Same envelope encryption as `POST /users/me/credentials`. 409 `credencial_existente` when the user already has this provider and `substituir` is not `true`. The key is never logged nor returned.
+         */
+        post: operations["RunnerLlmCredentialsController_execute"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/runner/projects": {
         parameters: {
             query?: never;
@@ -7155,6 +7175,28 @@ export interface components {
              */
             network: "none" | "egress";
             resources: components["schemas"]["RecursosDoContainerResponseDto"];
+        };
+        ImportLlmCredentialDto: {
+            /**
+             * @example anthropic
+             * @enum {string}
+             */
+            provider: "anthropic" | "openai" | "openrouter" | "nvidia-nim" | "together" | "deepinfra" | "bitdeer" | "vultr" | "9router" | "opencode-zen";
+            /** @description The API key in plain text. Encrypted before touching the database; NEVER logged and NEVER returned. */
+            apiKey: string;
+            /**
+             * @description Tool and path the key was read from. Audit log only; never a value.
+             * @example codex: ~/.codex/auth.json
+             */
+            origem: string;
+            /** @description Must be `true` to replace an existing credential of this provider. */
+            substituir?: boolean;
+        };
+        ImportLlmCredentialResponseDto: {
+            /** @enum {string} */
+            provider: "anthropic" | "openai" | "openrouter" | "nvidia-nim" | "together" | "deepinfra" | "bitdeer" | "vultr" | "9router" | "opencode-zen";
+            /** @description Whether an existing credential was replaced. */
+            substituida: boolean;
         };
         IndexDocsReportResponseDto: {
             filesScanned: number;
@@ -21456,6 +21498,64 @@ export interface operations {
             };
             /** @description Named refusal — never bytes with a warning. The body carries `motivo`: `plataforma_nao_publicada`, `release_sem_manifesto`, `manifesto_nao_cobre_a_plataforma`, `manifesto_ilegivel`, `download_falhou` or `hash_divergente`. */
             502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RunnerLlmCredentialsController_execute: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ImportLlmCredentialDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportLlmCredentialResponseDto"];
+                };
+            };
+            /** @description Invalid body. The `ValidationPipe` runs with `whitelist` and `forbidNonWhitelisted`, so an unknown field also fails. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Credential bound to a project. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Code `credencial_existente`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
