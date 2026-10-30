@@ -224,6 +224,7 @@ defmodule Engine.Gates.QaAutomacaoAgent do
         |> initial_message(story)
         |> com_o_recorte(dev_context)
         |> com_o_plano(Map.get(dev_context, :plano_de_teste))
+        |> com_o_pedido_anterior(Map.get(dev_context, :pedido_anterior))
       ],
       context_window: 128_000
     }
@@ -311,6 +312,25 @@ defmodule Engine.Gates.QaAutomacaoAgent do
   # inteira e reprovava por RF de tarefa irmã.
   defp com_o_recorte(mensagem, dev_context),
     do: Map.update!(mensagem, "content", &(&1 <> RecorteDaTarefa.texto(dev_context)))
+
+  # RN-944: o pedido da volta anterior é INSUMO, nunca régua nova de veredito.
+  defp com_o_pedido_anterior(mensagem, %{itens: [_ | _] = itens}) do
+    lista = Enum.map_join(itens, "\n", &("- " <> to_string(&1)))
+
+    secao = """
+
+    Pedido de correção da volta anterior (itens que você mesmo pediu):
+    #{lista}
+
+    Para cada item anterior diga no `resumo` se foi atendido (onde) ou não; item
+    não atendido volta em `itens` com o mesmo sentido; item novo só se for
+    lacuna que a correção criou ou que você prova estar no diff desta volta.
+    """
+
+    Map.update!(mensagem, "content", &(&1 <> secao))
+  end
+
+  defp com_o_pedido_anterior(mensagem, _), do: mensagem
 
   defp com_o_plano(mensagem, nil), do: mensagem
 
@@ -400,6 +420,9 @@ defmodule Engine.Gates.QaAutomacaoAgent do
   # que só parou de chamar ferramenta é `modelo`.
   defp diagnostico_de_parada(ctx) do
     case Map.get(ctx, :last_error) do
+      nil when is_map_key(ctx, :corte_pelo_teto) ->
+        {Engine.Gates.MotivoDoCorte.texto(), "modelo"}
+
       nil ->
         {"o modelo parou sem chamar emit_qa_verdict", "modelo"}
 

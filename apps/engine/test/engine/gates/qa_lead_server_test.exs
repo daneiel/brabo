@@ -660,6 +660,68 @@ defmodule Engine.Gates.QaLeadServerTest do
              )
     end
 
+    test "plano FORA dos 200 mais recentes é reencontrado — nenhum laço novo (RN-944)", %{
+      state: state
+    } do
+      ruido = for i <- 1..250, do: %{"type" => "chat.message", "payload" => %{"n" => i}}
+      Process.put(:fake_events, [plano_emitido("task-abc12345") | ruido])
+      Process.put(:fake_dev_context, dev_context([]))
+      Process.put(:fake_propose_action, terminal_ok())
+      Process.put(:fake_llm_turns, aprovar_automacao())
+      Process.put(:fake_gate_verdict_response, %{"nextAction" => "run_secops"})
+
+      assert {:noreply, _} = QaLeadServer.handle_cast({:run, "task-abc12345"}, state)
+
+      refute_received {:llm_turn, "qa-estrategia", _messages, _tools}
+    end
+
+    defp verdict(task_id, veredito, itens) do
+      %{
+        "type" => "artifact.qa_verdict",
+        "actorId" => "qa",
+        "payload" => %{"taskId" => task_id, "veredito" => veredito, "itens" => itens}
+      }
+    end
+
+    test "pedido anterior: só o changes_requested do qa da MESMA task chega ao QA (RN-944)", %{
+      state: state
+    } do
+      Process.put(:fake_events, [
+        plano_emitido("task-abc12345"),
+        verdict("task-outra", "changes_requested", ["de outra task"]),
+        verdict("task-abc12345", "changes_requested", ["falta o teste RF2"])
+      ])
+
+      Process.put(:fake_dev_context, dev_context([]))
+      Process.put(:fake_propose_action, terminal_ok())
+      Process.put(:fake_llm_turns, aprovar_automacao())
+      Process.put(:fake_gate_verdict_response, %{"nextAction" => "run_secops"})
+
+      assert {:noreply, _} = QaLeadServer.handle_cast({:run, "task-abc12345"}, state)
+
+      assert_received {:llm_turn, "qa-automacao", msgs, _tools}
+      texto = Enum.join(conteudos(msgs), "\n")
+      assert texto =~ "falta o teste RF2"
+      refute texto =~ "de outra task"
+    end
+
+    test "veredito approved anterior não vira pedido (RN-944)", %{state: state} do
+      Process.put(:fake_events, [
+        plano_emitido("task-abc12345"),
+        verdict("task-abc12345", "approved", ["nada"])
+      ])
+
+      Process.put(:fake_dev_context, dev_context([]))
+      Process.put(:fake_propose_action, terminal_ok())
+      Process.put(:fake_llm_turns, aprovar_automacao())
+      Process.put(:fake_gate_verdict_response, %{"nextAction" => "run_secops"})
+
+      assert {:noreply, _} = QaLeadServer.handle_cast({:run, "task-abc12345"}, state)
+
+      assert_received {:llm_turn, "qa-automacao", msgs, _tools}
+      refute Enum.join(conteudos(msgs), "\n") =~ "volta anterior"
+    end
+
     test "plano de OUTRA task não conta: a entrega ganha o próprio", %{state: state} do
       Process.put(:fake_events, [plano_emitido("task-outra")])
       Process.put(:fake_dev_context, dev_context([]))

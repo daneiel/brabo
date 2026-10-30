@@ -17365,7 +17365,7 @@ inteira (ADR 0067), não retoma o `ctx`. Esta regra não muda o ADR 0090 (o
 momento do QA-estratégia) nem o teto de iterações do subagente.
 
 - **Código:** `apps/engine/lib/engine/gates/qa_lead_server.ex:127`
-  (`handle_info`), `:233` (`tratar_resultado`), `:230` (resultado desconhecido)
+  (`handle_info`), `:237` (`tratar_resultado`), `:230` (resultado desconhecido)
 - **Testes:** `apps/engine/test/engine/gates/qa_lead_server_test.exs:325`
   (segunda suspensão na retomada: fica suspenso, não decide nada, e a segunda
   decisão conclui a área); `:278` (uma suspensão, o caminho feliz)
@@ -19544,8 +19544,8 @@ decidido aqui: se os critérios executáveis do plano devem virar linhas
 OBRIGATÓRIAS da `coverageMatrix` (e portanto reprovar entrega).
 
 - **Onde:** `apps/engine/lib/engine/gates/qa_lead_server.ex:190` (`plano_de_teste_da_entrega`),
-  `:715` (`plano_de_teste_da_entrega`), `:716` (`plano_ja_emitido`),
-  `:721` (`arquivos_alterados`);
+  `:719` (`plano_de_teste_da_entrega`), `:720` (`plano_ja_emitido`),
+  `:725` (`arquivos_alterados`);
   `apps/engine/lib/engine/gates/qa_estrategia_agent.ex:86` (`run`),
   `:104` (`token_budget_micros`), `:188` (`descrever_arquivos`);
   `apps/engine/lib/engine/gates/qa_automacao_agent.ex:226` (`com_o_plano`);
@@ -23052,7 +23052,7 @@ sem dizer qual.
   com flag antes do script (`pnpm --filter x test`), flags de CLI do próprio
   projeto e comando que não é de Node.
 - **Onde:** `apps/engine/lib/engine/gates/conferencia_do_readme.ex:28`
-  (`conferir`), `apps/engine/lib/engine/gates/qa_lead_server.ex:776`
+  (`conferir`), `apps/engine/lib/engine/gates/qa_lead_server.ex:796`
   (`conferencia_do_readme`)
 - **Teste:** `apps/engine/test/engine/gates/conferencia_do_readme_test.exs`
 - **Origem:** AT-475
@@ -24306,7 +24306,7 @@ sem dizer qual.
   `apps/engine/lib/engine/harness/fluxo_do_time.ex:113` (`frase_da_pergunta`),
   `apps/engine/lib/engine/gates/tools/emit_qa_verdict.ex:77` (`run`),
   `apps/engine/lib/engine/gates/qa_lead.ex:89` (`consolidar_decisao`),
-  `apps/engine/lib/engine/gates/qa_lead_server.ex:569` (`estacionar_por_decisao`),
+  `apps/engine/lib/engine/gates/qa_lead_server.ex:573` (`estacionar_por_decisao`),
   `apps/engine/lib/engine/dev/context_builder.ex:121` (`secao_de_decisoes`)
 - **Teste:** `apps/engine/test/engine/harness/perguntas_em_aberto_test.exs`
   ("válida grava artifact.open_question…"; "inválida é recusa nomeada…";
@@ -24548,9 +24548,9 @@ sem dizer qual.
   gate estacionava sem pergunta no fio (medido: `openQuestionId: "1"`, 400 do
   `@IsUUID`). A ferramenta `emit_qa_verdict` recusa, DENTRO do laço e antes da
   api, `openQuestionId` que não é uuid.
-- **Onde:** `apps/engine/lib/engine/gates/qa_lead_server.ex:575`
-  (`devolver_ao_qa`), `apps/engine/lib/engine/gates/qa_lead_server.ex:308`
-  (`devolver_ao_qa`), `apps/engine/lib/engine/gates/qa_lead_server.ex:671`
+- **Onde:** `apps/engine/lib/engine/gates/qa_lead_server.ex:579`
+  (`devolver_ao_qa`), `apps/engine/lib/engine/gates/qa_lead_server.ex:312`
+  (`devolver_ao_qa`), `apps/engine/lib/engine/gates/qa_lead_server.ex:675`
   (`texto_da_recusa`), `apps/engine/lib/engine/gates/qa_automacao_agent.ex:186`
   (`devolver`), `apps/engine/lib/engine/gates/tools/emit_qa_verdict.ex:75`
   (`uuid`)
@@ -25290,3 +25290,16 @@ sem dizer qual.
 - **Onde:** `apps/web/src/components/PendenciasDeOutrasSessoes.tsx:316` (`tituloDoProjeto`).
 - **Teste:** `apps/web/src/components/PendenciasDeOutrasSessoes.test.tsx` (pergunta da própria sessão: cabeçalho "Pendências deste projeto", sem "outras sessões"; `filasDoChat={false}` mantém o título antigo).
 - **Origem:** AT-619 (EP-031).
+### RN-944 — O QA de automação recebe o pedido da volta anterior, o plano é lido por tipo e o dev sabe onde o `write_file` escreve {#rn-944}
+
+- **Regra:** (a) o `changes_requested` mais recente do ator `qa` para a MESMA task entra no `dev_context` como `:pedido_anterior`, e o `QaAutomacaoAgent` acrescenta à mensagem a lista de itens e a instrução de dizer no `resumo` se cada um foi atendido; sem pedido anterior (primeira volta, `approved`, outra task, lista vazia) a mensagem é a de sempre. É insumo, nunca régua nova de veredito (molde do ADR 0192): o teto de correções (RN-015) e o `qa_verdict` único por ciclo não mudam. (b) `plano_ja_emitido/3` lê por tipo (`Reidratacao.eventos_do_tipo/3`), não a janela dos 200 mais recentes: o plano da task não sai da janela nem é pago de novo (cumpre a RN-674). (c) O ambiente de `dev-*`/`qa-*` diz que `write_file`/`read_file` usam caminho relativo à raiz do repositório e que `cd` no `terminal` não persiste (cada chamada é `sh -c` novo em `System.cmd ... cd: dir`, `terminal_executor.ex`).
+- **Onde:** `apps/engine/lib/engine/gates/qa_lead_server.ex:762` (`pedido_anterior`), `apps/engine/lib/engine/gates/qa_lead_server.ex:743` (`plano_ja_emitido`), `apps/engine/lib/engine/gates/qa_automacao_agent.ex:317` (`com_o_pedido_anterior`), `apps/engine/lib/engine/harness/ambiente_do_agente.ex:102` (`montar`).
+- **Teste:** `apps/engine/test/engine/gates/qa_automacao_agent_test.exs`, `apps/engine/test/engine/gates/qa_lead_server_test.exs`, `apps/engine/test/engine/harness/ambiente_do_agente_test.exs`.
+- **Origem:** AT-616 (EP-030), TP-01 (21ª) de 30/10/2026.
+
+### RN-945 — Os agentes de QA nomeiam o corte pelo teto de saída em vez de "o modelo parou" {#rn-945}
+
+- **Regra:** estende a RN-780 aos dois agentes de QA: quando o `ToolLoop` devolve `corte_pelo_teto: true`, `QaEstrategiaAgent` e `QaAutomacaoAgent` narram, com origem `modelo`, que a resposta foi só raciocínio e o teto de saída a cortou duas vezes (texto único em `Engine.Gates.MotivoDoCorte`). Sem o marcador, o diagnóstico antigo ("parou sem chamar ...") continua. A falha do plano segue sem segurar a revisão (RN-674) e o teto de iterações não muda.
+- **Onde:** `apps/engine/lib/engine/gates/qa_estrategia_agent.ex:265` (`diagnostico_de_parada`), `apps/engine/lib/engine/gates/qa_automacao_agent.ex:421` (`diagnostico_de_parada`), `apps/engine/lib/engine/gates/motivo_do_corte.ex:8` (`texto`).
+- **Teste:** `apps/engine/test/engine/gates/qa_estrategia_agent_test.exs`, `apps/engine/test/engine/gates/qa_automacao_agent_test.exs`.
+- **Origem:** AT-618 parte 1 (EP-030), TP-01 (21ª) de 30/10/2026.

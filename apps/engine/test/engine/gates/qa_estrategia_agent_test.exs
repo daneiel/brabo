@@ -258,4 +258,29 @@ defmodule Engine.Gates.QaEstrategiaAgentTest do
     assert_received {:event_appended, ^project_id, ^session_id,
                      %{type: "agent.error", payload: %{origem: "modelo"}}}
   end
+
+  test "corte pelo teto de saída (RN-780): o motivo nomeia o corte, não 'parou sem chamar'", %{
+    project_id: project_id,
+    session_id: session_id,
+    dev_state: dev_state
+  } do
+    cortada = FakeEngineApiClient.final_response("") |> Map.put("truncated", true)
+    Process.put(:fake_llm_turns, [cortada, cortada])
+
+    assert {:error, motivo} =
+             QaEstrategiaAgent.run(
+               project_id,
+               session_id,
+               "task-1",
+               dev_state,
+               dev_context(),
+               {:ok, []}
+             )
+
+    assert motivo =~ "cortou duas vezes"
+    refute motivo =~ "parou sem chamar"
+
+    assert_received {:event_appended, ^project_id, ^session_id,
+                     %{type: "agent.error", payload: %{origem: "modelo"}}}
+  end
 end

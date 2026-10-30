@@ -30,7 +30,7 @@ defmodule Engine.Harness.AmbienteDoAgente do
   alias Engine.Repo
 
   @chave :brabo_ambiente_do_agente
-  @teto 1200
+  @teto 1500
   @ponto_de_montagem "/work"
 
   @doc "O teto em caracteres do texto acrescentado."
@@ -108,6 +108,9 @@ defmodule Engine.Harness.AmbienteDoAgente do
         "Git: NÃO rode `git` no terminal (a imagem pode não ter git). Commit, push " <>
           "e PR são feitos pelo sistema quando o dev chama `report_done`: não procure " <>
           "`git_commit`/`git_push`/`pr_open` e não use `report_blocked` por falta delas.",
+        "Caminhos: `write_file`/`read_file` usam caminho relativo à RAIZ do repositório; " <>
+          "cada `terminal` é um shell novo na pasta de trabalho — `cd` não vale para a " <>
+          "chamada seguinte nem para o `write_file`.",
         "Testes: se o script `test` do `package.json` lista arquivos um a um, inclua " <>
           "nele todo arquivo de teste novo.",
         "Segredos: senha, token ou chave de teste são gerados em tempo de execução " <>
