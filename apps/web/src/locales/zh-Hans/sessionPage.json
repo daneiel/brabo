@@ -223,6 +223,7 @@
   "pendencias": {
     "referenciaNoFio": "已提议合并 — 请在上方“可合并的 PR”队列中决定。",
     "titulo": "本项目其他会话的待处理事项",
+    "tituloDoProjeto": "本项目的待处理事项",
     "nota": "决策捷径：与审批标签页相同的卡片和接口。所有上限不变 — 受保护分支的合并仍需手动。",
     "filas": {
       "aprovacoes": "审批",

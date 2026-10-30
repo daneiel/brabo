@@ -313,7 +313,7 @@ export function PendenciasDeOutrasSessoes({
   return (
     <div className={styles.wrapper} data-testid="pendencias-de-outras-sessoes">
       <Disclosure
-        titulo={t('pendencias.titulo')}
+        titulo={t(filasDoChat ? 'pendencias.tituloDoProjeto' : 'pendencias.titulo')}
         trailing={<span className={styles.presenca}>{presenca}</span>}
         padraoAberto
         className={styles.disclosure}

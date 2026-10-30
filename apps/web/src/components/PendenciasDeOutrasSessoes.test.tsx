@@ -15,6 +15,7 @@ const getCodePullRequests = vi.fn();
 const listBacklog = vi.fn();
 const proposeAction = vi.fn();
 const unblockTask = vi.fn();
+const getOpenQuestions = vi.fn();
 
 vi.mock('../lib/api-client', async (importOriginal) => {
   const original = await importOriginal<typeof import('../lib/api-client')>();
@@ -29,6 +30,7 @@ vi.mock('../lib/api-client', async (importOriginal) => {
     listBacklog: (...a: unknown[]) => listBacklog(...a),
     proposeAction: (...a: unknown[]) => proposeAction(...a),
     unblockTask: (...a: unknown[]) => unblockTask(...a),
+    getOpenQuestions: (...a: unknown[]) => getOpenQuestions(...a),
   };
 });
 
@@ -69,10 +71,11 @@ function acao(id: string, over: Partial<ProposedAction> = {}): ProposedAction {
 function montar(
   podeDecidir = true,
   client = new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+  filasDoChat = true,
 ) {
   return render(
     <QueryClientProvider client={client}>
-      <PendenciasDeOutrasSessoes projectId="proj-1" sessionId={AQUI} podeDecidir={podeDecidir} />
+      <PendenciasDeOutrasSessoes projectId="proj-1" sessionId={AQUI} podeDecidir={podeDecidir} filasDoChat={filasDoChat} />
     </QueryClientProvider>,
   );
 }
@@ -84,9 +87,30 @@ beforeEach(() => {
   listSessionEvents.mockResolvedValue({ items: [], nextCursor: null });
   getCodePullRequests.mockResolvedValue({ items: [] });
   listBacklog.mockResolvedValue([]);
+  getOpenQuestions.mockResolvedValue({ itens: [], total: 0 });
 });
 
 describe('PendenciasDeOutrasSessoes (AT-265)', () => {
+  it('RN-943: no chat, com pergunta da PRÓPRIA sessão, o título é do projeto', async () => {
+    getOpenQuestions.mockResolvedValue({
+      itens: [{
+        questionId: 'q1', eventId: 'ev-q1', sessionId: AQUI, pergunta: 'Qual banco?', sugestao: 'Postgres',
+        afeta: { regras: [], historias: [], tarefas: [] }, autor: 'criativo',
+        criadaEm: new Date().toISOString(), status: 'open', autorDaSessao: 'u', resposta: null,
+      }],
+      total: 1,
+    });
+    montar();
+    const topo = await screen.findByRole('button', { name: /Pendências deste projeto/ });
+    expect(topo).not.toHaveTextContent(/outras sessões/);
+  });
+
+  it('RN-943 (falha): sem as filas do chat (Executores) o título antigo continua', async () => {
+    getProjectPendingActions.mockResolvedValue([acao('a1')]);
+    montar(true, undefined, false);
+    expect(await screen.findByRole('button', { name: /Pendências de outras sessões deste projeto/ })).toBeInTheDocument();
+  });
+
   it('mostra as pendências da outra sessão, com filas separadas e decide pelo endpoint com o sessionId DA AÇÃO', async () => {
     getProjectPendingActions.mockResolvedValue([
       acao('a1'),
@@ -173,7 +197,7 @@ describe('PendenciasDeOutrasSessoes — cabe na coluna e mostra todos (AT-318)',
     expect(within(aprovacoes).queryAllByRole('button', { expanded: true })).toHaveLength(0);
     expect(within(aprovacoes).getAllByRole('button', { expanded: false }).length).toBeGreaterThanOrEqual(3);
     // Presença por fila, cada uma com o próprio número — nunca "4".
-    const topo = screen.getByRole('button', { name: /Pendências de outras sessões/ });
+    const topo = screen.getByRole('button', { name: /Pendências deste projeto/ });
     expect(topo).toHaveTextContent('Aprovações 3 · Merges de PR 1');
     expect(topo).not.toHaveTextContent(/\b4\b/);
   });
@@ -182,7 +206,7 @@ describe('PendenciasDeOutrasSessoes — cabe na coluna e mostra todos (AT-318)',
     getProjectPendingActions.mockResolvedValue([acao('a1')]);
     montar();
 
-    const topo = await screen.findByRole('button', { name: /Pendências de outras sessões/ });
+    const topo = await screen.findByRole('button', { name: /Pendências deste projeto/ });
     fireEvent.click(topo);
 
     expect(topo).toHaveAttribute('aria-expanded', 'false');
