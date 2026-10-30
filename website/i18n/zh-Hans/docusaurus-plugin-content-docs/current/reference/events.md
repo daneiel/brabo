@@ -321,7 +321,7 @@ sequenceDiagram
 
 > ⚠️ 此区块由 `pnpm docs:generate` 生成。请勿手动编辑——下次构建会覆盖它。
 
-从发出点提取：**114 个标识符**，其中 **3** 个未在上文描述。
+从发出点提取：**115 个标识符**，其中 **3** 个未在上文描述。
 
 - `action.failed` <sub>(apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts)</sub>
 - `agent.activated` <sub>(apps/api/src/application/use-cases/agents/activate-agent.use-case.ts)</sub>
@@ -349,6 +349,7 @@ sequenceDiagram
 - `artifact.product_brief` <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub>
 - `artifact.project_image` <sub>(apps/engine/lib/engine/harness/ambiente_do_agente.ex)</sub>
 - `artifact.prototipo_navegavel` <sub>(apps/engine/lib/engine/agents/ux_designer_tools.ex)</sub>
+- `artifact.qa_verdict` <sub>(apps/engine/lib/engine/gates/qa_lead_server.ex)</sub>
 - `artifact.rfc_staff` <sub>(apps/engine/lib/engine/agents/staff_tools.ex)</sub>
 - `artifact.secops_verdict` — ⚠️ **上文未描述** <sub>(apps/engine/lib/engine/gates/secops_agent_server.ex)</sub>
 - `artifact.threat_model` <sub>(apps/engine/lib/engine/agents/dev_lead_tools.ex)</sub>

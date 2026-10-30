@@ -29,6 +29,9 @@ defmodule Engine.Harness.AmbienteDoAgenteTest do
     assert texto =~ "rede `none`"
     assert texto =~ "git_commit"
     assert texto =~ "Seu módulo: `api`"
+    # RN-944: o caminho do write_file e o `cd` que não persiste.
+    assert texto =~ "relativo à RAIZ do repositório"
+    assert texto =~ "`cd` não vale"
     assert texto =~ "package.json"
     # RN-796: segredo de teste nasce em tempo de execução, nunca literal.
     assert texto =~ "gerados em tempo de execução"
@@ -47,6 +50,8 @@ defmodule Engine.Harness.AmbienteDoAgenteTest do
 
     refute texto =~ "/work"
     assert texto =~ "NÃO tem container `running`"
+    # o QA (`qa-*`) também lê com `read_file`
+    assert texto =~ "`cd` não vale"
   end
 
   test "anexar: efêmera no fim só para dev-*/qa-*, e o dicionário é restaurado" do

@@ -188,7 +188,11 @@ defmodule Engine.Gates.QaLeadServer do
         # ADR 0192: o plano de teste da ENTREGA vem primeiro, e entra no
         # contexto que as subespecialidades recebem (ver o moduledoc).
         plano = plano_de_teste_da_entrega(project_id, session_id, task_id, dev_state, dev_context)
-        dev_context = Map.put(dev_context, :plano_de_teste, plano)
+
+        dev_context =
+          dev_context
+          |> Map.put(:plano_de_teste, plano)
+          |> Map.put(:pedido_anterior, pedido_anterior(project_id, session_id, task_id))
 
         delegacoes = decidir_delegacoes(dev_context.story)
         registrar_dispensas(project_id, session_id, task_id, delegacoes)
@@ -737,11 +741,9 @@ defmodule Engine.Gates.QaLeadServer do
   end
 
   defp plano_ja_emitido(project_id, session_id, task_id) do
-    case EngineApiClient.list_events(project_id, session_id,
-           latest: true,
-           limit: Reidratacao.teto()
-         ) do
-      {:ok, eventos} ->
+    # RN-944: leitura POR TIPO — o plano não sai da janela dos 200 mais recentes.
+    case Reidratacao.eventos_do_tipo(project_id, session_id, ["artifact.plano_de_teste"]) do
+      {:ok, eventos, _bateu_no_teto} ->
         eventos
         |> Enum.filter(&plano_da_task?(&1, task_id))
         |> List.last()
@@ -752,6 +754,24 @@ defmodule Engine.Gates.QaLeadServer do
 
       {:error, _reason} ->
         :nenhum
+    end
+  end
+
+  # RN-944: os itens do último `qa_verdict` do `qa` desta task, só se pediu
+  # correção; falha de leitura = sem insumo (primeira volta).
+  defp pedido_anterior(project_id, session_id, task_id) do
+    with {:ok, eventos, _} <-
+           Reidratacao.eventos_do_tipo(project_id, session_id, ["artifact.qa_verdict"]),
+         %{"payload" => %{"veredito" => "changes_requested"} = payload} <-
+           eventos
+           |> Enum.filter(
+             &(Map.get(&1, "actorId") == "qa" and
+                 get_in(&1, ["payload", "taskId"]) == task_id)
+           )
+           |> List.last() do
+      %{itens: Engine.Gates.Hooks.Termination.lista(Map.get(payload, "itens"))}
+    else
+      _ -> nil
     end
   end
 

@@ -219,4 +219,43 @@ defmodule Engine.Gates.QaAutomacaoAgentTest do
 
     assert {:blocked, %{origin: "modelo"}} = run(dev_state, dev_context)
   end
+
+  test "corte pelo teto de saída (RN-780): bloqueia nomeando o corte", %{
+    dev_state: dev_state,
+    dev_context: dev_context
+  } do
+    cortada = FakeEngineApiClient.final_response("") |> Map.put("truncated", true)
+    Process.put(:fake_llm_turns, [cortada, cortada])
+
+    assert {:blocked, %{diagnosis: diag, origin: "modelo"}} = run(dev_state, dev_context)
+    assert diag =~ "cortou duas vezes"
+  end
+
+  describe "pedido anterior (RN-944)" do
+    defp primeira_mensagem(dev_state, dev_context) do
+      Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("x")])
+      run(dev_state, dev_context)
+      assert_received {:llm_turn, "qa-automacao", msgs, _tools}
+      msgs |> Enum.map(&to_string(Map.get(&1, "content"))) |> Enum.join("\n")
+    end
+
+    test "itens da volta anterior entram com a instrução; sem pedido, nada muda", %{
+      dev_state: dev_state,
+      dev_context: dev_context
+    } do
+      base = primeira_mensagem(dev_state, dev_context)
+      refute base =~ "volta anterior"
+
+      com =
+        primeira_mensagem(dev_state, Map.put(dev_context, :pedido_anterior, %{itens: ["A", "B"]}))
+
+      assert com =~ "- A" and com =~ "- B"
+      assert com =~ "foi atendido (onde) ou não"
+    end
+
+    test "itens vazios não acrescentam seção", %{dev_state: dev_state, dev_context: dev_context} do
+      msg = primeira_mensagem(dev_state, Map.put(dev_context, :pedido_anterior, %{itens: []}))
+      refute msg =~ "volta anterior"
+    end
+  end
 end

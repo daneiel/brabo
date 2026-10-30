@@ -413,7 +413,7 @@ sequenceDiagram
 
 > ⚠️ Блок сгенерирован `pnpm docs:generate`. Не редактируйте вручную — следующая сборка его перезапишет.
 
-Извлечено из точек генерации идентификаторов: **114**, из них не описаны выше: **3**.
+Извлечено из точек генерации идентификаторов: **115**, из них не описаны выше: **3**.
 
 - `action.failed` <sub>(apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts)</sub>
 - `agent.activated` <sub>(apps/api/src/application/use-cases/agents/activate-agent.use-case.ts)</sub>
@@ -441,6 +441,7 @@ sequenceDiagram
 - `artifact.product_brief` <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub>
 - `artifact.project_image` <sub>(apps/engine/lib/engine/harness/ambiente_do_agente.ex)</sub>
 - `artifact.prototipo_navegavel` <sub>(apps/engine/lib/engine/agents/ux_designer_tools.ex)</sub>
+- `artifact.qa_verdict` <sub>(apps/engine/lib/engine/gates/qa_lead_server.ex)</sub>
 - `artifact.rfc_staff` <sub>(apps/engine/lib/engine/agents/staff_tools.ex)</sub>
 - `artifact.secops_verdict` — ⚠️ **не описан выше** <sub>(apps/engine/lib/engine/gates/secops_agent_server.ex)</sub>
 - `artifact.threat_model` <sub>(apps/engine/lib/engine/agents/dev_lead_tools.ex)</sub>
