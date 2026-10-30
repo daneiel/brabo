@@ -22286,8 +22286,8 @@ sem dizer qual.
 ### RN-758 — O recorte do Jev nunca tira a ferramenta de obrigação do agente {#rn-758}
 
 - **Regra:** quando o Jev recorta o menu do passo ([RN-625](#rn-625), P3), o
-  menu recebe de volta o PISO do agente: para o PO, `create_story` e
-  `create_task`; para o Arquiteto, `create_module_map`,
+  menu recebe de volta o PISO do agente: para o PO, `create_story`,
+  `create_task` e, desde a [RN-942](#rn-942), `declare_open_question`; para o Arquiteto, `create_module_map`,
   `route_modules_to_infra`, `declare_module_contracts`, `propose_adr` e
   `create_c4_diagram`. Só entra o que está no catálogo daquele passo — o piso
   nunca acrescenta ferramenta que o agente não tinha, e em toda queda o
@@ -25278,6 +25278,12 @@ sem dizer qual.
 - **Teste:** `packages/docker-port/src/docker-cli.spec.ts` (nome, `--user`, dono do tmpfs, comando), `packages/docker-port/src/spec-de-container.spec.ts` (recusa de `0:0`, `70:0`, `70`, comando grande/com quebra), `apps/broker/src/operacoes.spec.ts`, `apps/api/test/domain/infra/run-qa.spec.ts`, `apps/engine/test/engine/infra/instrucoes_de_execucao_test.exs`; prova com Docker real: `postgres:17-alpine` com `70:70` aceita conexão em `localhost:5432` e `busybox httpd` responde em `localhost:9000` de dentro da instância.
 - **Origem:** AT-612 (EP-030), ADR 0229.
 
+### RN-942 — O recorte do Jev nunca tira do PO a ferramenta de declarar dúvida {#rn-942}
+
+- **Regra:** estende a [RN-758](#rn-758). O piso do PO ganha `declare_open_question`, porque a regra 3 das obrigações do PO manda declarar a dúvida em vez de inventar ou omitir, e o recorte do Jev ([RN-625](#rn-625)) a tirava de todo passo depois do primeiro: o PO punha a lacuna na borda da história e nenhuma `artifact.open_question` nascia. Continua valendo que o piso só devolve o que está no catálogo do passo.
+- **Onde:** `apps/api/src/domain/llm/tool-router.ts:311` (`PISO_DO_MENU`).
+- **Teste:** `apps/api/test/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.spec.ts` (PO recortado mantém `declare_open_question`; catálogo sem ela não a ganha).
+- **Origem:** AT-615 (EP-030).
 ### RN-943 — O bloco de pendências do chat se chama "Pendências deste projeto"; só a aba Executores diz "de outras sessões" {#rn-943}
 
 - **Regra:** refina a RN-626, a RN-825, a RN-826 e a RN-861. Dentro do bloco do chat moram cinco filas, e só aprovações e merges são filtradas por "outra sessão"; perguntas em aberto, PRs prontas e tarefas bloqueadas são do projeto inteiro (a pergunta da PRÓPRIA sessão aparece ali de propósito, porque o aviso do composer lê a mesma query). Por isso, com `filasDoChat` (o chat) o título é "Pendências deste projeto" (`pendencias.tituloDoProjeto`, nos quatro locales); com `filasDoChat={false}` (aba Executores, só aprovações e merges) o título segue "Pendências de outras sessões deste projeto". Nenhuma fila é filtrada, nenhum teto muda e o `data-testid` não muda.

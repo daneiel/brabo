@@ -8,6 +8,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 - O bloco de pendências do chat passa a se chamar "Pendências deste projeto" (AT-619, RN-943): ele inclui perguntas, PRs prontas e tarefas bloqueadas do projeto inteiro, inclusive da própria sessão; a aba Executores mantém "de outras sessões".
 
+- O recorte do Jev não tira mais `declare_open_question` do PO (AT-615, RN-942): entra no piso do menu ao lado de `create_story`/`create_task`, para a dúvida virar `artifact.open_question` em vez de ficar só no texto da história.
 - O serviço da instância de QA sobe de verdade (AT-612, RN-941, prova com Docker real): ganha o nome `<instância>-<serviço>` (antes colidia com a própria instância), `user` (`<uid>:<gid>`, nunca root, também dono do `tmpfs`) e `command` (argumentos depois da imagem), validados igual no docker-port, na api (`run.qa`) e no engine (`propose_infra_pr`).
 - O gate de QA-automação testa numa instância de QA efêmera (AT-612, RN-940): o engine propõe `qa_environment_start` antes do laço, o `terminal` do QA roda nela, ela é removida no fim (mesmo com exceção ou teto) e o `GateRescuer` varre as órfãs no boot e no tick. O Infra Lead pode declarar `run.qa` (serviços de apoio por digest). Depende da PR da api.
 
