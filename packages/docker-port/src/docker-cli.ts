@@ -291,12 +291,15 @@ export function estourouOTeto(
  * (medido: pid = pgid = sid) — num arquivo de /tmp do container, roda o
  * comando e apaga o arquivo. No estouro, `matarExecEstourado` mata o GRUPO
  * inteiro por esse PID. O comando segue viajando como UM argumento (`$2`),
- * intacto; o embrulho não interpreta nada dele. `/tmp` sem escrita só perde a
+ * intacto e não interpretado. RN-947: ele viaja por `-e BRABO_EXEC_CMD` e o
+ * embrulho o `eval`a em subshell, para não aparecer no argv de processo
+ * algum (um `pkill -f` do próprio comando não se mata). `/tmp` sem escrita só perde a
  * morte, nunca a execução.
  */
 export const EMBRULHO_DO_EXEC =
-  'echo $$ > "/tmp/.brabo-exec-$1" 2>/dev/null; /bin/sh -c "$2"; rc=$?; ' +
-  'rm -f "/tmp/.brabo-exec-$1"; exit $rc';
+  'm="$1"; echo $$ > "/tmp/.brabo-exec-$m" 2>/dev/null; c="$BRABO_EXEC_CMD"; ' +
+  'unset BRABO_EXEC_CMD; set --; (eval "$c"); rc=$?; ' +
+  'rm -f "/tmp/.brabo-exec-$m"; exit $rc';
 
 const MATAR_EXEC =
   'f="/tmp/.brabo-exec-$1"; [ -f "$f" ] || exit 3; p="$(cat "$f")"; ' +
@@ -531,6 +534,8 @@ export class DockerViaCli extends DockerPort {
         'exec',
         '--workdir',
         pedido.cwd ?? PONTO_DE_MONTAGEM,
+        '-e',
+        `BRABO_EXEC_CMD=${pedido.comando}`,
         existente.id,
         // `sh -c` e o comando como UM argumento: o contrato do produto é um
         // comando de SHELL (pipe, redirecionamento, `&&`), o mesmo que
@@ -541,7 +546,6 @@ export class DockerViaCli extends DockerPort {
         EMBRULHO_DO_EXEC,
         'brabo-exec',
         marcador,
-        pedido.comando,
       ],
       timeoutMs,
     );
