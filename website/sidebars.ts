@@ -53,7 +53,7 @@ const sidebars: SidebarsConfig = {
       type: 'category',
       label: '🚀 Comece aqui',
       collapsed: false,
-      items: ['intro', 'getting-started', 'tutorials/from-zero-to-deliverable'],
+      items: ['intro', 'getting-started', 'tutorials/from-zero-to-deliverable', 'tutorials/interface-antes-e-depois-shadcn'],
     },
     {
       type: 'category',
