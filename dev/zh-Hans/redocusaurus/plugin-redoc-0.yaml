@@ -7558,6 +7558,43 @@ paths:
       summary: 我自己在此项目中的消耗，按会话和按天
       tags:
         - llm
+  /projects/{projectId}/spend/team:
+    get:
+      description: >-
+        The MEMBER's view of the PROJECT (RN-953, ADR 0233, revising 0063):
+        total and cost per agent/area, NEVER provider or credential — the route
+        has no dimension parameter and never asks for `provider`.
+      operationId: SpendController_getProjectSpendTeam
+      parameters:
+        - name: projectId
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: dias
+          required: false
+          in: query
+          description: 滑动窗口。默认 30，最大 180。
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectSpendTeamResponseDto'
+        '401':
+          description: 没有令牌、令牌已过期或签名无效。
+        '403':
+          description: 角色不足。
+        '429':
+          description: 按用户或按 IP 的速率限制。
+      security:
+        - bearer: []
+      summary: The project's total spend and cost by agent and area
+      tags:
+        - llm
   /projects/{projectId}/stories/{storyId}/archive:
     post:
       description: >-
@@ -8811,6 +8848,49 @@ paths:
       summary: 设置 workspace 的默认模型
       tags:
         - llm
+  /workspaces/{workspaceId}/models/{modelId}/billing:
+    patch:
+      description: >-
+        Same curation level as the pricing route. `subscription` makes the spend
+        report show the cost apart from the US$ paid (RN-954). Never re-prices
+        the past.
+      operationId: ModelsController_updateBilling
+      parameters:
+        - name: modelId
+          required: true
+          in: path
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateModelBillingDto'
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelResponseDto'
+        '400':
+          description: >-
+            请求体无效。`ValidationPipe` 以 `whitelist` 和 `forbidNonWhitelisted`
+            运行，因此未知字段也会失败。
+        '401':
+          description: 没有令牌、令牌已过期或签名无效。
+        '403':
+          description: 需要在 workspace 上拥有 `owner`。
+        '404':
+          description: 未找到模型。
+        '429':
+          description: 按用户或按 IP 的速率限制。
+      security:
+        - bearer: []
+      summary: Sets a model's curated billing mark (api | subscription | free)
+      tags:
+        - llm
   /workspaces/{workspaceId}/models/{modelId}/price-changes:
     get:
       description: 最新的在前。这是不可变的日志：绝不执行 UPDATE，每条记录都携带前/后值对，因此审计不依赖于从上一条记录重建“之前”的值。
@@ -9334,6 +9414,14 @@ paths:
           description: 滑动窗口。默认 30，最大 180。
           schema:
             type: string
+        - name: projectId
+          required: false
+          in: query
+          description: >-
+            Slice to ONE project of this workspace (RN-952). A project from
+            another workspace answers 404.
+          schema:
+            type: string
       responses:
         '200':
           description: ''
@@ -9345,11 +9433,49 @@ paths:
           description: 没有令牌、令牌已过期或签名无效。
         '403':
           description: 需要在 workspace 上拥有 `owner`。
+        '404':
+          description: Project not in this workspace.
         '429':
           description: 按用户或按 IP 的速率限制。
       security:
         - bearer: []
       summary: 按模型、提供商、项目、参与者和天细分 workspace 的花费
+      tags:
+        - llm
+  /workspaces/{workspaceId}/spend/me:
+    get:
+      description: >-
+        The non-owner's global page (RN-953). Only the caller's rows, by PROJECT
+        and by day, without provider or credential.
+      operationId: SpendController_getMyWorkspaceSpend
+      parameters:
+        - name: workspaceId
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: dias
+          required: false
+          in: query
+          description: 滑动窗口。默认 30，最大 180。
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MyWorkspaceSpendResponseDto'
+        '401':
+          description: 没有令牌、令牌已过期或签名无效。
+        '403':
+          description: 角色不足。
+        '429':
+          description: 按用户或按 IP 的速率限制。
+      security:
+        - bearer: []
+      summary: My own consumption in this workspace, summed by project
       tags:
         - llm
   /workspaces/{workspaceId}/summary:
@@ -14812,6 +14938,16 @@ components:
           description: >-
             同步观测到的远程现实，与策展相互独立的维度。`unavailable` 是从提供商目录中消失的模型——它绝不会被删除，因为
             binding 和成本历史都指向它。
+        billing:
+          type: string
+          enum:
+            - api
+            - subscription
+            - free
+          example: api
+          description: >-
+            CURATED billing mark (AT-632, RN-954): `subscription` is a seat —
+            its cost is shown apart from the US$ paid. Never set by sync.
         lastSeenAt:
           type: object
           example: '2026-07-30T03:00:00.000Z'
@@ -14870,6 +15006,7 @@ components:
         - reasoningBudget
         - manualPricing
         - availability
+        - billing
         - lastSeenAt
         - createdAt
         - updatedAt
@@ -15059,6 +15196,16 @@ components:
           description: >-
             同步观测到的远程现实，与策展相互独立的维度。`unavailable` 是从提供商目录中消失的模型——它绝不会被删除，因为
             binding 和成本历史都指向它。
+        billing:
+          type: string
+          enum:
+            - api
+            - subscription
+            - free
+          example: api
+          description: >-
+            CURATED billing mark (AT-632, RN-954): `subscription` is a seat —
+            its cost is shown apart from the US$ paid. Never set by sync.
         lastSeenAt:
           type: object
           example: '2026-07-30T03:00:00.000Z'
@@ -15089,6 +15236,7 @@ components:
         - reasoningBudget
         - manualPricing
         - availability
+        - billing
         - lastSeenAt
         - createdAt
         - updatedAt
@@ -15171,6 +15319,12 @@ components:
         totalMicros:
           type: number
           example: 1250000
+        assinaturaMicros:
+          type: number
+          example: 0
+          description: >-
+            Part of the cost from models curated as `subscription` (RN-954): a
+            seat, shown apart from the US$ paid (`cost - subscription`).
         inputTokens:
           type: number
           example: 120000
@@ -15193,10 +15347,60 @@ components:
         - dias
         - actorId
         - totalMicros
+        - assinaturaMicros
         - inputTokens
         - outputTokens
         - chamadas
         - porSessao
+        - porDia
+    MyWorkspaceSpendResponseDto:
+      type: object
+      properties:
+        workspaceId:
+          type: string
+          format: uuid
+        dias:
+          type: number
+          example: 30
+        actorId:
+          type: string
+          format: uuid
+          description: Always whoever called.
+        totalMicros:
+          type: number
+          example: 1250000
+        assinaturaMicros:
+          type: number
+          example: 0
+          description: Seat part of the total (RN-954).
+        inputTokens:
+          type: number
+          example: 120000
+        outputTokens:
+          type: number
+          example: 35000
+        chamadas:
+          type: number
+          example: 42
+        porProjeto:
+          description: By PROJECT.
+          type: array
+          items:
+            $ref: '#/components/schemas/SpendLinhaResponseDto'
+        porDia:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpendPorDiaResponseDto'
+      required:
+        - workspaceId
+        - dias
+        - actorId
+        - totalMicros
+        - assinaturaMicros
+        - inputTokens
+        - outputTokens
+        - chamadas
+        - porProjeto
         - porDia
     ObservacaoDeContainerResponseDto:
       type: object
@@ -16464,6 +16668,51 @@ components:
       required:
         - projectsBase
         - brokerConfigurado
+    ProjectSpendTeamResponseDto:
+      type: object
+      properties:
+        projectId:
+          type: string
+          format: uuid
+        dias:
+          type: number
+          example: 30
+        totalMicros:
+          type: number
+          example: 1250000
+        assinaturaMicros:
+          type: number
+          example: 0
+          description: Seat part of the total (RN-954).
+        inputTokens:
+          type: number
+          example: 120000
+        outputTokens:
+          type: number
+          example: 35000
+        chamadas:
+          type: number
+          example: 42
+        porAgente:
+          description: By AGENT.
+          type: array
+          items:
+            $ref: '#/components/schemas/SpendLinhaResponseDto'
+        porArea:
+          description: By catalog AREA of the agent; `sem-area` when none.
+          type: array
+          items:
+            $ref: '#/components/schemas/SpendLinhaResponseDto'
+      required:
+        - projectId
+        - dias
+        - totalMicros
+        - assinaturaMicros
+        - inputTokens
+        - outputTokens
+        - chamadas
+        - porAgente
+        - porArea
     ProjectUnreadEventsResponseDto:
       type: object
       properties:
@@ -19041,6 +19290,12 @@ components:
         costMicros:
           type: number
           example: 1250000
+        assinaturaMicros:
+          type: number
+          example: 0
+          description: >-
+            Part of the cost from models curated as `subscription` (RN-954): a
+            seat, shown apart from the US$ paid (`cost - subscription`).
         inputTokens:
           type: number
           example: 120000
@@ -19055,6 +19310,7 @@ components:
         - rotulo
         - actorKind
         - costMicros
+        - assinaturaMicros
         - inputTokens
         - outputTokens
         - chamadas
@@ -19715,6 +19971,18 @@ components:
             $ref: '#/components/schemas/UnreadCursorDto'
       required:
         - cursors
+    UpdateModelBillingDto:
+      type: object
+      properties:
+        billing:
+          type: string
+          enum:
+            - api
+            - subscription
+            - free
+          example: subscription
+      required:
+        - billing
     UpdateModelPricingDto:
       type: object
       properties:
@@ -20100,9 +20368,22 @@ components:
           type: number
           example: 30
           description: 滑动窗口，以天计。
+        projectId:
+          type: object
+          format: uuid
+          nullable: true
+          description: >-
+            The `?projectId=` slice asked for (RN-952); `null` = whole
+            workspace.
         totalMicros:
           type: number
           example: 1250000
+        assinaturaMicros:
+          type: number
+          example: 0
+          description: >-
+            Part of the cost from models curated as `subscription` (RN-954): a
+            seat, shown apart from the US$ paid (`cost - subscription`).
         inputTokens:
           type: number
           example: 120000
@@ -20126,6 +20407,11 @@ components:
             $ref: '#/components/schemas/SpendLinhaResponseDto'
         porProjeto:
           description: 按 workspace 内的项目。
+          type: array
+          items:
+            $ref: '#/components/schemas/SpendLinhaResponseDto'
+        porSessao:
+          description: By SESSION (RN-952).
           type: array
           items:
             $ref: '#/components/schemas/SpendLinhaResponseDto'
@@ -20155,13 +20441,16 @@ components:
         - workspaceId
         - ownerId
         - dias
+        - projectId
         - totalMicros
+        - assinaturaMicros
         - inputTokens
         - outputTokens
         - chamadas
         - porModelo
         - porProvider
         - porProjeto
+        - porSessao
         - porAtor
         - porOwner
         - porAgente
