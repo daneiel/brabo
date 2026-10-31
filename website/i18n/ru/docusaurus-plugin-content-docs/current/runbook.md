@@ -1262,7 +1262,7 @@ docker exec brabo-dev-engine-1 sh -c 'semgrep --config p/security-audit --json -
 
 Semgrep 1.179.0 перестал публиковать wheels `musllinux`, поэтому в образе Alpine engine
 pip собирает его из sdist, и бинарника core нет. Оба Dockerfile engine
-фиксируют `SEMGREP_VERSION=1.171.0` (dev — начиная с 02.10, синхронизировано
+фиксируют `SEMGREP_VERSION=1.183.0` (dev — начиная с 02.10, синхронизировано
 с production через `scripts/ci/semgrep-do-engine.spec.ts`); образ dev, собранный
 до этого, пересобирается через `docker compose -p brabo-dev up -d --build engine`.
 Повышение версии требует релиза с wheel `musllinux` в PyPI.

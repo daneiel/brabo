@@ -58,7 +58,7 @@ ARG HADOLINT_SHA256=56de6d5e5ec427e17b74fa48d51271c7fc0d61244bf5c90e828aab8362d5
 # publicado no release, e por download+sha256sum independente do tarball.
 ARG ACTIONLINT_VERSION=1.7.12
 ARG ACTIONLINT_SHA256=8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
-ARG SEMGREP_VERSION=1.171.0
+ARG SEMGREP_VERSION=1.183.0
 ARG YAMLLINT_VERSION=1.38.0
 # PyJWT acima do que o semgrep declara. O semgrep prende `pyjwt~=2.13.0` até o
 # último release publicado (1.178.0, medido em 2026-09-30), e a 2.13.0 tem seis
@@ -120,13 +120,9 @@ RUN apk add --no-cache --virtual .fetch curl tar \
 # semgrep e yamllint com versão FIXA (em dev são `pip install` sem versão, o que
 # significa que dois builds do mesmo commit podem trazer scanners diferentes).
 #
-# O semgrep arrasta `mcp==1.23.3` (fixo, não é range), versão com 3 CVEs HIGH,
-# e o semgrep já está no último release publicado — não há para onde subir.
-# Tentamos remover o `mcp`, já que os gates só rodam `semgrep scan` e nunca o
-# subcomando `semgrep mcp`: NÃO FUNCIONA. O `semgrep/cli.py` importa
-# `semgrep.commands.mcp` no topo, incondicionalmente, e sem o módulo o binário
-# inteiro morre em ModuleNotFoundError. Os 3 CVEs estão aceitos e datados em
-# .trivyignore, com o critério de reavaliação escrito lá.
+# O semgrep 1.183.0 exige `mcp==1.29.0` (fixo), que já corrige os 3 CVEs HIGH do
+# 1.23.3 (AT-625). O `semgrep/cli.py` importa `semgrep.commands.mcp` no topo,
+# então o pacote não pode ser removido.
 # hadolint ignore=DL3013
 RUN pip install --no-cache-dir --break-system-packages \
       "semgrep==${SEMGREP_VERSION}" "yamllint==${YAMLLINT_VERSION}" \

@@ -738,7 +738,7 @@ SecOps) пишет туда `~/.semgrep`; созданный от root, скан
 [Gate SecOps застрял на «SAST не запускался»](../runbook.md#semgrep-do-gate)).
 
 Оба образа engine закрепляют semgrep аргументом сборки `SEMGREP_VERSION`
-(`1.171.0`, одинаковым в `docker/engine/Dockerfile` и `Dockerfile.prod`,
+(`1.183.0`, одинаковым в `docker/engine/Dockerfile` и `Dockerfile.prod`,
 поддерживаемым одинаковым `scripts/ci/semgrep-do-engine.spec.ts`). Это аргумент
 сборки, а не переменная runtime — ничего не идёт в `.env`. Без закрепления pip
 взял 1.179.0, которая не публикует wheel `musllinux`: в образе Alpine пакет
