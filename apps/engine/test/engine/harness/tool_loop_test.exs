@@ -134,6 +134,21 @@ defmodule Engine.Harness.ToolLoopTest do
     assert out.last_error_code == "connection"
   end
 
+  test "RN-949: tool_call_as_text chega em last_error_code, sem agent.response", %{ctx: ctx} do
+    Process.put(:fake_llm_turns, [
+      FakeEngineApiClient.final_response("")
+      |> Map.put("error", "chamada em XML (modelo x)")
+      |> Map.put("errorCode", "tool_call_as_text")
+    ])
+
+    assert {:ok, out} = ToolLoop.run(ctx)
+    assert out.last_error =~ "XML"
+    assert out.last_error_code == "tool_call_as_text"
+
+    assert Engine.Agents.FalhaDeTurno.origem({:final, out.last_error, out.last_error_code}) ==
+             "modelo"
+  end
+
   test "caminho feliz: resposta final imediata, sem tool calls", %{ctx: ctx} do
     Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("tudo pronto")])
 

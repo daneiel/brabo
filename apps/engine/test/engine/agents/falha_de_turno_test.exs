@@ -212,4 +212,16 @@ defmodule Engine.Agents.FalhaDeTurnoTest do
       assert FalhaDeTurno.mensagem({:final, "x (402)", "insufficient_credit"}) =~ "recarregue"
     end
   end
+
+  describe "RN-949: chamada de ferramenta escrita como texto" do
+    test "origem modelo e frase legível" do
+      f = {:final, "chamada em XML (modelo x)", "tool_call_as_text"}
+      assert FalhaDeTurno.origem(f) == "modelo"
+      assert FalhaDeTurno.mensagem(f) =~ "escreveu a chamada de ferramenta como texto"
+    end
+
+    test "falha: outro errorCode não vira modelo por engano" do
+      assert FalhaDeTurno.origem({:final, "xyz inesperado", "outro"}) == "codigo"
+    end
+  end
 end
