@@ -21,6 +21,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- O `Modal` agora fecha com Esc e prende o foco dentro, devolvendo-o a quem o abriu; as `Tabs` ganham navegação pelas setas. `Modal`, `Disclosure`, `SegmentedControl`, `Tabs` e `Chip` viram adaptadores do shadcn (Base UI) com o mesmo visual e as mesmas props, e os testes passam a aferir `data-*` em vez de classe (AT-646).
 - Gastos global e por projeto na api (AT-632, RN-952..954, ADR 0233): `spend-report` aceita `?projectId=` (404 entre workspaces) e traz `porSessao`; o membro vê o total do projeto e o custo por agente/área (`GET projects/:id/spend/team`) e o próprio consumo por projeto (`GET workspaces/:id/spend/me`), sem provider; a marca curada `billing` (`api|subscription|free`, `PATCH …/models/:id/billing`, migration 0079) separa `assinaturaMicros` do US$ pago.
 
 - Higiene do entregável (AT-623, RN-948): banco SQLite (`*.db`, `*.sqlite*`) fica fora do `.gitignore` base, do `git add` do dev agent e vira achado do SecOps; o dev sabe rodar `npm` na pasta do módulo; o kickoff nomeia o README da raiz e `write_file` recusa README que perde cabeçalho de rota.

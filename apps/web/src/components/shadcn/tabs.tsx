@@ -1,3 +1,5 @@
+/* oxlint-disable react/only-export-components -- exporta o cva (registry shadcn) */
+import * as React from "react"
 import { Tabs as TabsPrimitive } from "@base-ui/react/tabs"
 import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
@@ -27,6 +29,8 @@ const tabsListVariants = cva(
       variant: {
         default: "bg-muted",
         line: "gap-1 bg-transparent",
+        // A régua de abas da casa (ADR 0078): sublinhado, rola em vez de quebrar.
+        casa: "min-h-[var(--tabs-h,42px)] w-full items-stretch justify-start gap-0.5 overflow-x-auto rounded-none border-b border-[var(--border)] bg-transparent p-0 group-data-horizontal/tabs:h-auto",
       },
     },
     defaultVariants: {
@@ -50,17 +54,41 @@ function TabsList({
   )
 }
 
-function TabsTrigger({ className, ...props }: TabsPrimitive.Tab.Props) {
-  return (
-    <TabsPrimitive.Tab
-      data-slot="tabs-trigger"
-      className={cn(
+const tabsTriggerVariants = cva("", {
+  variants: {
+    variant: {
+      default: [
         "relative inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-1.5 py-0.5 text-sm font-medium whitespace-nowrap text-foreground/60 transition-all group-data-vertical/tabs:w-full group-data-vertical/tabs:justify-start hover:text-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-50 has-data-[icon=inline-end]:pr-1 has-data-[icon=inline-start]:pl-1 aria-disabled:pointer-events-none aria-disabled:opacity-50 dark:text-muted-foreground dark:hover:text-foreground group-data-[variant=default]/tabs-list:data-active:shadow-sm group-data-[variant=line]/tabs-list:data-active:shadow-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         "group-data-[variant=line]/tabs-list:bg-transparent group-data-[variant=line]/tabs-list:data-active:bg-transparent dark:group-data-[variant=line]/tabs-list:data-active:border-transparent dark:group-data-[variant=line]/tabs-list:data-active:bg-transparent",
         "data-active:bg-background data-active:text-foreground dark:data-active:border-input dark:data-active:bg-input/30 dark:data-active:text-foreground",
-        "after:absolute after:bg-foreground after:opacity-0 after:transition-opacity group-data-horizontal/tabs:after:inset-x-0 group-data-horizontal/tabs:after:bottom-[-5px] group-data-horizontal/tabs:after:h-0.5 group-data-vertical/tabs:after:inset-y-0 group-data-vertical/tabs:after:-right-1 group-data-vertical/tabs:after:w-0.5 group-data-[variant=line]/tabs-list:data-active:after:opacity-100",
-        className
-      )}
+        "after:absolute after:bg-foreground after:opacity-0 after:transition-opacity group-data-horizontal/tabs:after:inset-x-0 group-data-horizontal/tabs:after:bottom-[-5px] group-data-horizontal/tabs:after:h-0.5 group-data-vertical/tabs:after:inset-y-0 group-data-vertical/tabs:after:-right-1 group-data-vertical/tabs:after:w-0.5 group-data-[variant=line]/tabs-list:data-active:after:opacity-100"
+      ],
+      casa: "relative inline-flex shrink-0 items-center gap-2 border-0 bg-transparent px-[13px] py-[11px] font-[family-name:var(--font-body)] text-[13px] font-medium whitespace-nowrap text-[var(--text-muted)] transition-[color,box-shadow] duration-120 outline-2 -outline-offset-2 outline-transparent hover:text-foreground focus-visible:shadow-[inset_0_0_0_2px_var(--focus-ring-inset)] forced-colors:focus-visible:outline-[Highlight] data-active:font-semibold data-active:text-foreground data-active:shadow-[inset_0_-2px_0_var(--tab-cor,var(--accent))] data-active:focus-visible:shadow-[inset_0_-2px_0_var(--tab-cor,var(--accent)),inset_0_0_0_2px_var(--focus-ring-inset)]",
+    },
+  },
+  defaultVariants: { variant: "default" },
+})
+
+function TabsTrigger({
+  className,
+  variant = "default",
+  ...props
+}: TabsPrimitive.Tab.Props & VariantProps<typeof tabsTriggerVariants>) {
+  return (
+    <TabsPrimitive.Tab
+      data-slot="tabs-trigger"
+      data-variant={variant}
+      className={cn(tabsTriggerVariants({ variant }), className)}
+      {...props}
+    />
+  )
+}
+
+function TabsCount({ className, ...props }: React.ComponentProps<"span">) {
+  return (
+    <span
+      data-slot="tabs-count"
+      className={cn("inline-flex items-center rounded-[var(--radius-full)] bg-[var(--accent)] px-[7px] py-px font-[family-name:var(--font-mono)] text-[10px] font-medium text-[var(--on-accent)]", className)}
       {...props}
     />
   )
@@ -76,4 +104,4 @@ function TabsContent({ className, ...props }: TabsPrimitive.Panel.Props) {
   )
 }
 
-export { Tabs, TabsList, TabsTrigger, TabsContent, tabsListVariants }
+export { Tabs, TabsList, TabsTrigger, TabsCount, TabsContent, tabsListVariants }

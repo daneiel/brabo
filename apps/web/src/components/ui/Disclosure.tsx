@@ -1,6 +1,13 @@
 import { useId, useState, type ReactNode } from 'react';
 import { ChevronDownIcon, ChevronRightIcon } from './icons';
-import styles from './Disclosure.module.css';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleIcon,
+  CollapsibleTitle,
+  CollapsibleTrailing,
+  CollapsibleTrigger,
+} from '@/components/shadcn/collapsible';
 
 interface DisclosureProps {
   /** O que o cabeçalho diz. É o nome acessível do botão. */
@@ -95,34 +102,29 @@ export function Disclosure({
   }
 
   return (
-    <div className={[styles.bloco, className].filter(Boolean).join(' ')}>
-      <button
-        type="button"
+    <Collapsible
+      open={estaAberto}
+      onOpenChange={() => alternar()}
+      className={className}
+    >
+      <CollapsibleTrigger
         id={idBotao}
-        className={[styles.cabecalho, classNameCabecalho].filter(Boolean).join(' ')}
-        aria-expanded={estaAberto}
         aria-controls={idRegiao}
+        className={classNameCabecalho}
         data-testid={testId}
-        onClick={alternar}
       >
         {/* Decorativo: o estado já é anunciado pelo `aria-expanded`. Repeti-lo
             no nome acessível seria ouvir "expandido" duas vezes. */}
-        <span className={styles.chevron} aria-hidden="true">
+        <CollapsibleIcon>
           {estaAberto ? <ChevronDownIcon size={12} /> : <ChevronRightIcon size={12} />}
-        </span>
-        <span className={styles.titulo}>{titulo}</span>
-        {trailing !== undefined && <span className={styles.trailing}>{trailing}</span>}
-      </button>
+        </CollapsibleIcon>
+        <CollapsibleTitle>{titulo}</CollapsibleTitle>
+        {trailing !== undefined && <CollapsibleTrailing>{trailing}</CollapsibleTrailing>}
+      </CollapsibleTrigger>
 
-      <div
-        id={idRegiao}
-        role="region"
-        aria-labelledby={idBotao}
-        hidden={!estaAberto}
-        className={styles.regiao}
-      >
+      <CollapsibleContent id={idRegiao} role="region" aria-labelledby={idBotao} keepMounted>
         {estaAberto ? children : null}
-      </div>
-    </div>
+      </CollapsibleContent>
+    </Collapsible>
   );
 }

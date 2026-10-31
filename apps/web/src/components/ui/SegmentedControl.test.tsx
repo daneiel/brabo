@@ -28,4 +28,12 @@ describe('SegmentedControl (AT-327)', () => {
     expect(screen.queryByRole('tablist')).toBeNull();
     expect(screen.queryAllByRole('tab')).toHaveLength(0);
   });
+
+  it('caso de falha: clicar no único ligado não o desmarca', () => {
+    const onChange = vi.fn();
+    render(<SegmentedControl opcoes={OPCOES} valor="open" onChange={onChange} rotulo="Filtro" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Abertas' }));
+    expect(onChange).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Abertas' }).getAttribute('aria-pressed')).toBe('true');
+  });
 });
