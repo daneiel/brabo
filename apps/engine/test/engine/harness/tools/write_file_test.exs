@@ -52,4 +52,25 @@ defmodule Engine.Harness.Tools.WriteFileTest do
     assert msg =~ "substitui o arquivo inteiro"
     assert File.read!(Path.join(dir, "README.md")) == original
   end
+
+  test "RN-948: README que perde cabeçalho de rota é recusado; o que acrescenta rota passa", %{
+    ctx: ctx,
+    dir: dir
+  } do
+    original = "# App\n\n### GET /links\n\nx\n\n### POST /links\n\ny\n"
+    File.write!(Path.join(dir, "README.md"), original)
+
+    assert {:error, msg} =
+             WriteFile.run(
+               %{"path" => "README.md", "content" => "# App\n\n### POST /links\n"},
+               ctx
+             )
+
+    assert msg =~ "GET /links"
+    assert File.read!(Path.join(dir, "README.md")) == original
+
+    novo = original <> "\n### DELETE /links/:id\n"
+    assert {:ok, _} = WriteFile.run(%{"path" => "README.md", "content" => novo}, ctx)
+    assert File.read!(Path.join(dir, "README.md")) == novo
+  end
 end

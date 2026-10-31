@@ -2992,7 +2992,7 @@ criados:** o destino que já tem oferta pendente ou já está ativo no projeto n
 recebe outra, e isso não é falha.
 
 - **Onde:** `apps/engine/lib/engine/gates/secops_agent_server.ex:55`
-  (`@appsec_handoff_targets`), `:362` (`criar_handoffs_appsec/3`)
+  (`@appsec_handoff_targets`), `:377` (`criar_handoffs_appsec/3`)
 - **Teste:** `apps/engine/test/engine/gates/secops_agent_server_test.exs`
   ("run_design: threat model concluído emite artifact.threat_model e cria
   os TRÊS handoffs")
@@ -17922,7 +17922,7 @@ vault por decisão do dono; [ADR 0182](adr/0182-ciclo-de-vida-do-handoff.md)).
 3. **O artefato fica.** O `artifact.threat_model` é gravado ANTES e de qualquer
    jeito; o que deixa de nascer é a oferta repetida.
 
-- **Onde:** `apps/engine/lib/engine/gates/secops_agent_server.ex:362`
+- **Onde:** `apps/engine/lib/engine/gates/secops_agent_server.ex:377`
   (`criar_handoffs_appsec/3`);
   `apps/engine/lib/engine/sessions/engine_api_client.ex:1131`
 
@@ -20906,7 +20906,7 @@ Junto, o fechamento deixa de dizer que parear uma pasta pela tela do projeto
   `agent.error` passa a levar `taskId`.
 - **Onde:** `apps/engine/lib/engine/gates/secops_agent_server.ex:116`
   (`run_secops`), `apps/engine/lib/engine/gates/secops_agent_server.ex:144`
-  (`sast_nao_rodou`), `apps/engine/lib/engine/gates/secops_agent_server.ex:194`
+  (`sast_nao_rodou`), `apps/engine/lib/engine/gates/secops_agent_server.ex:209`
   (`erro_ja_registrado?`)
 - **Teste:** `apps/engine/test/engine/gates/secops_agent_server_test.exs`
   ("sem achados (gitleaks e semgrep limpos): approved"; casos de falha:
@@ -22507,10 +22507,10 @@ sem dizer qual.
   commit (a exclusão não estagia remoção); o projeto já bootstrapado só ganha
   o `.gitignore` se o bootstrap rodar de novo; no modo `runner` o commit roda
   pelo mesmo `GitExecutor` e a mesma exclusão vale onde o engine executa git.
-- **Onde:** `apps/api/src/application/use-cases/git/bootstrap-templates.ts:28`
+- **Onde:** `apps/api/src/application/use-cases/git/bootstrap-templates.ts:38`
   (`gitignoreContent`), `apps/api/src/application/use-cases/git/bootstrap-steps.ts:164`
-  (`soSeAusente`), `apps/engine/lib/engine/actions/diretorios_de_dependencia.ex:20`
-  (`argumentos_do_add`), `:28` (`commitados`),
+  (`soSeAusente`), `apps/engine/lib/engine/actions/diretorios_de_dependencia.ex:37`
+  (`argumentos_do_add`), `:47` (`commitados`),
   `apps/engine/lib/engine/gates/secops_agent_server.ex:162`
   (`dependencias_commitadas`)
 - **Teste:** `apps/api/test/application/use-cases/git/bootstrap-plan.spec.ts`
@@ -25324,3 +25324,10 @@ sem dizer qual.
 - **Onde:** `packages/docker-port/src/docker-cli.ts:299` (`EMBRULHO_DO_EXEC`).
 - **Teste:** `packages/docker-port/src/docker-cli.spec.ts` ("o comando que estoura volta timedOut e MORRE dentro do container", contra Docker real: auto-`pkill -f` sobrevive, `exit 3` volta 3, o comando não aparece no `ps`).
 - **Origem:** AT-622 (EP-030).
+
+### RN-948 — Higiene do entregável: banco SQLite fora do commit, pasta dos comandos dita, rotas do README preservadas {#rn-948}
+
+- **Regra:** estende a [RN-761](#rn-761), a [RN-900](#rn-900) e as [RN-706](#rn-706)/[RN-850](#rn-850). Três partes, sem gate novo. (1) Segunda lista, `ARQUIVOS_DE_DADOS` (`*.db`, `*.db-*`, `*.sqlite`, `*.sqlite-*`, `*.sqlite3`, `*.sqlite3-*`), nas MESMAS três camadas da RN-761: o `.gitignore` base do bootstrap, a exclusão `:(exclude,glob)**/<padrão>` no `git add` do dev agent e um achado próprio do SecOps ("arquivo de dados em tempo de execução commitado", que nomeia o caminho). O teste que cruza as listas da api e do engine cruza as duas. (2) A mensagem de ambiente do agente com módulo diz que `npm`/`pip`/`mix` rodam na pasta do módulo na MESMA chamada, nunca `cd … 2>/dev/null;` (o `cd` falho caía na raiz e deixou um `package-lock.json` vazio), dentro do teto de 1.500 caracteres. (3) O kickoff do dev nomeia o `README.md` da RAIZ, sem repetir a seção em README de pasta, e `write_file` recusa reescrever um README que perde cabeçalho de rota (`### GET /links`) presente no antigo, no molde da RN-900. Declarado: repositório já bootstrapado não ganha o `.gitignore` novo; fixture `.db` intencional fica fora do commit (renomeie para versioná-la); a guarda não cobre escrita pelo `terminal`. Fora desta RN: `expires_at` × `expiresAt`.
+- **Onde:** `apps/api/src/application/use-cases/git/bootstrap-templates.ts:29` (`ARQUIVOS_DE_DADOS`), `apps/engine/lib/engine/actions/diretorios_de_dependencia.ex:37` (`argumentos_do_add`), `apps/engine/lib/engine/gates/secops_agent_server.ex:162` (`dependencias_commitadas`), `apps/engine/lib/engine/harness/ambiente_do_agente.ex:178` (`modulo`), `apps/engine/lib/engine/harness/tools/write_file.ex:62` (`recusa_de_secao_perdida`), `apps/engine/lib/engine/dev/dev_agent_server.ex:604` (`initial_message`).
+- **Teste:** `apps/engine/test/engine/actions/diretorios_de_dependencia_test.exs` (lista cruzada com a api, add real que estagia só `src/a.js`, SecOps nomeia o `.db`), `apps/api/test/application/use-cases/git/bootstrap-plan.spec.ts` (os seis padrões no `.gitignore`), `apps/engine/test/engine/harness/ambiente_do_agente_test.exs`, `apps/engine/test/engine/harness/tools/write_file_test.exs`, `apps/engine/test/engine/dev/report_done_instrucao_test.exs`.
+- **Origem:** AT-623 (EP-031), entregável `entregavel3` (commits 956fa5c, 8e593b0).

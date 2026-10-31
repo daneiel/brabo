@@ -10,6 +10,8 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- Higiene do entregável (AT-623, RN-948): banco SQLite (`*.db`, `*.sqlite*`) fica fora do `.gitignore` base, do `git add` do dev agent e vira achado do SecOps; o dev sabe rodar `npm` na pasta do módulo; o kickoff nomeia o README da raiz e `write_file` recusa README que perde cabeçalho de rota.
+
 - O 503 do provider numa correção pós-gate deixa de bloquear a tarefa sem nova tentativa (AT-621, RN-864): a correção segue o caminho do laço principal (crédito e retomada automática), com origem `infra`, motivo marcado "(correção)" e sem contar no disjuntor.
 - O comando do `exec` no container não viaja mais no argv (AT-622, RN-947): `pkill -f` do agente de QA deixa de matar o próprio comando (143). Passa por `BRABO_EXEC_CMD`.
 

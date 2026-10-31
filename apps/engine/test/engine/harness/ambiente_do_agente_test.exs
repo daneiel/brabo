@@ -33,6 +33,8 @@ defmodule Engine.Harness.AmbienteDoAgenteTest do
     assert texto =~ "relativo à RAIZ do repositório"
     assert texto =~ "`cd` não vale"
     assert texto =~ "package.json"
+    # RN-948: o terminal começa na raiz; gerenciador de pacotes na pasta do módulo.
+    assert texto =~ "npm --prefix api"
     # RN-796: segredo de teste nasce em tempo de execução, nunca literal.
     assert texto =~ "gerados em tempo de execução"
     refute String.ends_with?(texto, "…")

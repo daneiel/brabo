@@ -37,7 +37,7 @@ defmodule Engine.Dev.ReportDoneInstrucaoTest do
     kickoff =
       DevAgentServer.initial_message(%{"title" => "T"}, %{"title" => "S"})["content"]
 
-    assert kickoff =~ "Rota HTTP criada ou mudada entra no README"
+    assert kickoff =~ "Rota HTTP criada ou mudada entra no `README.md` da RAIZ"
     assert kickoff =~ "nunca a mensagem crua da biblioteca"
 
     refute AmbienteDoAgente.montar(%{cwd: nil, raiz: nil, container_running: false}) =~

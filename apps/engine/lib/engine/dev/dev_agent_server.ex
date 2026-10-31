@@ -620,7 +620,7 @@ defmodule Engine.Dev.DevAgentServer do
           "`git_commit`/`git_push`/`pr_open`, e falta de ferramenta de git não é " <>
           "motivo de `report_blocked`. Se o script `test` do `package.json` lista os " <>
           "arquivos um a um, inclua nele todo arquivo de teste novo.\n\n" <>
-          "Rota HTTP criada ou mudada entra no README: método, caminho, corpo, " <>
+          "Rota HTTP criada ou mudada entra no `README.md` da RAIZ do repositório (sem repetir a seção em README de pasta): método, caminho, corpo, " <>
           "respostas e códigos, DENTRO da seção \"Rotas HTTP\" (crie-a antes de " <>
           "\"Testes\" se faltar), nunca no fim do arquivo. O README é do usuário: " <>
           "sem nota de processo nem instrução para agentes. Erro de entrada (JSON malformado, campo inválido) " <>

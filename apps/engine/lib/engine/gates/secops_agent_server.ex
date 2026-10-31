@@ -160,20 +160,35 @@ defmodule Engine.Gates.SecOpsAgentServer do
   # `node_modules/`, passou aprovada.
   @doc false
   def dependencias_commitadas(paths) do
-    paths
-    |> Engine.Actions.DiretoriosDeDependencia.commitados()
-    |> Enum.map(fn dir ->
-      n = Enum.count(paths, &(dir in Path.split(&1)))
+    dados =
+      for p <- Engine.Actions.DiretoriosDeDependencia.dados_commitados(paths) do
+        %{
+          tool: "brabo",
+          path: p,
+          line: 0,
+          message:
+            "arquivo de dados em tempo de execução commitado (#{p}); " <>
+              "tire-o do commit e do repositório e ponha no .gitignore"
+        }
+      end
 
-      %{
-        tool: "brabo",
-        path: dir,
-        line: 0,
-        message:
-          "diretório de dependência/build commitado (#{n} arquivo(s)); " <>
-            "tire-o do commit e do repositório e ponha no .gitignore"
-      }
-    end)
+    deps =
+      paths
+      |> Engine.Actions.DiretoriosDeDependencia.commitados()
+      |> Enum.map(fn dir ->
+        n = Enum.count(paths, &(dir in Path.split(&1)))
+
+        %{
+          tool: "brabo",
+          path: dir,
+          line: 0,
+          message:
+            "diretório de dependência/build commitado (#{n} arquivo(s)); " <>
+              "tire-o do commit e do repositório e ponha no .gitignore"
+        }
+      end)
+
+    deps ++ dados
   end
 
   # RN-714 (AT-380): a análise estática (semgrep) que NÃO rodou — binário
