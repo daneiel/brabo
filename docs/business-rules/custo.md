@@ -224,7 +224,7 @@ foram raciocínio).
    `null`, declarado; o Ollama não informa.
 
 - **Onde:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:381` (`cachedInputTokens`),
-  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:764` (`contagem`),
+  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:769` (`contagem`),
   `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:207` (`cachedInputTokens`),
   `apps/api/src/application/use-cases/llm/record-llm-usage.use-case.ts:121` (`cachedInputTokens`),
   `apps/api/src/db/schema/llm.ts:384` (`cachedInputTokens`),
@@ -3185,7 +3185,7 @@ quatro pontos, TTL de 5 min — https://openrouter.ai/docs/features/prompt-cachi
    metering pela [RN-666](#rn-666).
 
 - **Código:** `apps/api/src/infrastructure/llm/openrouter-provider.ts:302` (`marcarCacheDePromptOpenRouter`);
-  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:620` (`mensagens`)
+  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:626` (`mensagens`)
 - **Teste:** `apps/api/test/infrastructure/llm/openrouter-provider.contract.spec.ts` ("pontos de cache de prompt (RN-892)": ligada marca os dois pontos; desligada é byte a byte; capability sem hook falha — caso de falha)
 - **Origem:** AT-543
 
