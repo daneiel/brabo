@@ -7,6 +7,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/shadcn/collapsible"
 import { ChevronRightIcon } from "lucide-react"
+import { Shimmer } from "@/components/ui/Shimmer"
 
 function Trace({ className, ...props }: React.ComponentProps<"div">) {
   return (
@@ -33,7 +34,7 @@ function TraceLine({
       data-slot="trace-line"
       data-status={status}
       className={cn(
-        "flex w-fit max-w-full min-w-0 items-center gap-2 text-sm text-muted-foreground transition-colors in-[a,button]:cursor-pointer in-[a:hover,button:hover]:text-foreground data-[status=error]:text-destructive data-[status=error]:in-[a:hover,button:hover]:text-destructive data-[status=pending]:opacity-60 data-[status=running]:*:data-[slot=trace-title]:shimmer",
+        "flex w-fit max-w-full min-w-0 items-center gap-2 text-sm text-muted-foreground transition-colors in-[a,button]:cursor-pointer in-[a:hover,button:hover]:text-foreground data-[status=error]:text-destructive data-[status=error]:in-[a:hover,button:hover]:text-destructive data-[status=pending]:opacity-60",
         className
       )}
       {...props}
@@ -55,13 +56,24 @@ function TraceIcon({ className, ...props }: React.ComponentProps<"span">) {
   )
 }
 
-function TraceTitle({ className, ...props }: React.ComponentProps<"span">) {
+function TraceTitle({
+  className,
+  running,
+  children,
+  ...props
+}: React.ComponentProps<"span"> & { running?: boolean }) {
   return (
     <span
       data-slot="trace-title"
-      className={cn("min-w-0 truncate motion-reduce:shimmer-none", className)}
+      className={cn("min-w-0 truncate", className)}
       {...props}
-    />
+    >
+      {running && typeof children === "string" ? (
+        <Shimmer>{children}</Shimmer>
+      ) : (
+        children
+      )}
+    </span>
   )
 }
 
