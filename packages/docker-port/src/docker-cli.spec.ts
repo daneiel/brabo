@@ -294,8 +294,9 @@ describe('DockerViaCli.exec', () => {
 
     expect(resultado).toEqual({ exitCode: 0, output: 'ola brabo', timedOut: false });
     const exec = chamadas.find((c) => c[0] === 'exec') as string[];
-    expect(exec.slice(-6, -2)).toEqual(['/bin/sh', '-c', EMBRULHO_DO_EXEC, 'brabo-exec']);
-    expect(exec.at(-1)).toBe('echo -n "ola brabo" && exit 0');
+    expect(exec.slice(-5, -1)).toEqual(['/bin/sh', '-c', EMBRULHO_DO_EXEC, 'brabo-exec']);
+    expect(exec).toContain('BRABO_EXEC_CMD=echo -n "ola brabo" && exit 0');
+    expect(exec.slice(exec.indexOf('/bin/sh')).join(' ')).not.toContain('ola brabo');
     expect(exec.join(' ')).toContain('--workdir /work');
   });
 
@@ -354,7 +355,7 @@ describe('DockerViaCli.exec', () => {
 
     const [execDoComando, kill] = chamadas.filter((c) => c[0] === 'exec');
     expect(kill?.at(-2)).toBe('brabo-kill');
-    expect(kill?.at(-1)).toBe(execDoComando?.at(-2));
+    expect(kill?.at(-1)).toBe(execDoComando?.at(-1));
     expect(resultado.exitCode).toBe(-1);
     expect(resultado.output).toContain('foi encerrado DENTRO do container');
   });
@@ -638,6 +639,30 @@ describe.skipIf(!temDocker)('DockerViaCli.exec contra Docker real (sem daemon: p
       const ps = await rodarDockerDeVerdade(['exec', nome, 'ps', '-o', 'stat,args'], 10_000);
       const vivos = ps.stdout.split('\n').filter((l) => l.includes('sleep 30') && !/^\s*Z/.test(l));
       expect(vivos).toEqual([]);
+
+      // RN-947: o comando não está no argv de processo nenhum.
+      const auto = await docker.exec('at482', {
+        comando: 'pkill -f "trecho-unico-947"; echo VIVO',
+        cwd: '/',
+      });
+      expect(auto).toEqual({ exitCode: 0, output: 'VIVO\n', timedOut: false });
+
+      const filho = await docker.exec('at482', {
+        comando: 'sleep 300 & echo $! >/tmp/p947; pkill -f "sleep 300"; sleep 1; echo OK',
+        cwd: '/',
+      });
+      expect(filho.exitCode).toBe(0);
+      expect(filho.output).toContain('OK');
+      const vivo = await rodarDockerDeVerdade(['exec', nome, 'ps', '-o', 'stat,args'], 10_000);
+      expect(vivo.stdout.split('\n').filter((l) => l.includes('sleep 300') && !/^\s*Z/.test(l))).toEqual([]);
+
+      expect((await docker.exec('at482', { comando: 'exit 3', cwd: '/' })).exitCode).toBe(3);
+
+      const seguro = docker.exec('at482', { comando: 'sleep 20; echo marca-947-visivel', cwd: '/', timeoutMs: 8_000 });
+      await new Promise((r) => setTimeout(r, 1_500));
+      const ps947 = await rodarDockerDeVerdade(['exec', nome, 'ps', '-eo', 'args'], 10_000);
+      expect(ps947.stdout).not.toContain('marca-947-visivel');
+      await seguro;
     } finally {
       await rodarDockerDeVerdade(['rm', '-f', nome], 30_000);
     }

@@ -207,11 +207,12 @@ export function estadoDoIrAoFim(e: {
   foraDoFim: boolean;
   mensagensAgora: number;
   mensagensAoSair: number;
-  aprovacoesAgora: number;
-  aprovacoesAoSair: number;
+  /** Ids das ações PENDENTES no fio (agora / ao sair do fim). */
+  aprovacoesAgora: string[];
+  aprovacoesAoSair: string[];
 }): { visivel: boolean; novas: number; aprovacao: boolean } {
   const novas = Math.max(0, e.mensagensAgora - e.mensagensAoSair);
-  const aprovacao = e.aprovacoesAgora > e.aprovacoesAoSair;
+  const aprovacao = e.aprovacoesAgora.some((id) => !e.aprovacoesAoSair.includes(id));
   return { visivel: e.foraDoFim && (novas > 0 || aprovacao), novas, aprovacao };
 }
 
@@ -227,8 +228,8 @@ export const SELETOR_DE_APROVACAO_NO_FIO = '[data-aprovacao-no-fio]';
 export function useIrAoFimDoFio(totalDeMensagens: number) {
   const ancoraRef = useRef<HTMLDivElement | null>(null);
   const [foraDoFim, setForaDoFim] = useState(false);
-  const aoSairRef = useRef({ mensagens: 0, aprovacoes: 0 });
-  const [aprovacoesAgora, setAprovacoesAgora] = useState(0);
+  const aoSairRef = useRef({ mensagens: 0, aprovacoes: [] as string[] });
+  const [aprovacoesAgora, setAprovacoesAgora] = useState<string[]>([]);
   const totalRef = useRef(totalDeMensagens);
   totalRef.current = totalDeMensagens;
 
@@ -237,12 +238,17 @@ export function useIrAoFimDoFio(totalDeMensagens: number) {
     [],
   );
   const contarAprovacoes = useCallback(
-    () => container()?.querySelectorAll(SELETOR_DE_APROVACAO_NO_FIO).length ?? 0,
+    () =>
+      Array.from(container()?.querySelectorAll(SELETOR_DE_APROVACAO_NO_FIO) ?? [])
+        .map((n) => n.getAttribute('data-aprovacao-no-fio') ?? '')
+        .filter(Boolean),
     [container],
   );
 
   useEffect(() => {
-    setAprovacoesAgora(contarAprovacoes());
+    const ids = contarAprovacoes();
+    // Só troca o estado se o conjunto mudou; senão o efeito sem deps re-renderiza sem fim.
+    setAprovacoesAgora((antes) => (antes.join('|') === ids.join('|') ? antes : ids));
   });
 
   useEffect(() => {
