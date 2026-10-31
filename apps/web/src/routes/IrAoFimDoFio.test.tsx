@@ -14,11 +14,11 @@ beforeAll(async () => {
 });
 
 /** Um fio mínimo: o container que rola (`role="log"`) com o botão dentro. */
-function Fio({ total, aprovacoes = 0 }: { total: number; aprovacoes?: number }) {
+function Fio({ total, aprovacoes = [] }: { total: number; aprovacoes?: string[] }) {
   return (
     <div role="log" data-testid="fio">
-      {Array.from({ length: aprovacoes }, (_, i) => (
-        <div key={i} data-aprovacao-no-fio="" />
+      {aprovacoes.map((id) => (
+        <div key={id} data-aprovacao-no-fio={id} />
       ))}
       <IrAoFimDoFio totalDeMensagens={total} />
     </div>
@@ -50,10 +50,34 @@ describe('IrAoFimDoFio (RN-836, AT-506)', () => {
   it('aprovação nova realça o botão', () => {
     const { rerender } = render(<Fio total={5} />);
     act(() => rolar(screen.getByTestId('fio'), 0));
-    rerender(<Fio total={5} aprovacoes={1} />);
+    rerender(<Fio total={5} aprovacoes={['a1']} />);
     const botao = screen.getByTestId('ir-ao-fim-do-fio');
     expect(botao).toHaveAttribute('data-aprovacao', 'sim');
     expect(botao).toHaveTextContent('Há uma aprovação esperando');
+  });
+
+  it('ação já decidida (sem marca no fio) não realça', () => {
+    const { rerender } = render(<Fio total={5} />);
+    act(() => rolar(screen.getByTestId('fio'), 0));
+    rerender(<Fio total={5} aprovacoes={[]} />);
+    expect(screen.queryByTestId('ir-ao-fim-do-fio')).toBeNull();
+  });
+
+  it('pendente decidida apaga o realce', () => {
+    const { rerender } = render(<Fio total={5} />);
+    act(() => rolar(screen.getByTestId('fio'), 0));
+    rerender(<Fio total={5} aprovacoes={['a1']} />);
+    expect(screen.getByTestId('ir-ao-fim-do-fio')).toHaveAttribute('data-aprovacao', 'sim');
+    rerender(<Fio total={5} />);
+    expect(screen.queryByTestId('ir-ao-fim-do-fio')).toBeNull();
+  });
+
+  it('troca de uma pendente por outra realça', () => {
+    const { rerender } = render(<Fio total={5} aprovacoes={['a1']} />);
+    act(() => rolar(screen.getByTestId('fio'), 0));
+    expect(screen.queryByTestId('ir-ao-fim-do-fio')).toBeNull();
+    rerender(<Fio total={5} aprovacoes={['a2']} />);
+    expect(screen.getByTestId('ir-ao-fim-do-fio')).toHaveAttribute('data-aprovacao', 'sim');
   });
 
   it('CASO DE FALHA evitado: no fim, conteúdo novo não mostra botão', () => {
@@ -65,7 +89,7 @@ describe('IrAoFimDoFio (RN-836, AT-506)', () => {
 
   it('estadoDoIrAoFim: fora do fim sem nada novo não aparece', () => {
     expect(
-      estadoDoIrAoFim({ foraDoFim: true, mensagensAgora: 4, mensagensAoSair: 4, aprovacoesAgora: 0, aprovacoesAoSair: 0 }),
+      estadoDoIrAoFim({ foraDoFim: true, mensagensAgora: 4, mensagensAoSair: 4, aprovacoesAgora: [], aprovacoesAoSair: [] }),
     ).toEqual({ visivel: false, novas: 0, aprovacao: false });
   });
 });

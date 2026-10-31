@@ -23763,12 +23763,12 @@ sem dizer qual.
 ### RN-836 — O fio oferece "ir ao fim" quando chega conteúdo para quem subiu {#rn-836}
 
 - **Regra:** com a pessoa longe do fim do fio (a guarda dos 120px da
-  [RN-173](business-rules/autenticacao.md#rn-173)) e o fio tendo ganho mensagem ou cartão de aprovação
+  [RN-173](business-rules/autenticacao.md#rn-173)) e o fio tendo ganho mensagem ou cartão de aprovação PENDENTE
   desde que ela saiu do fim, um botão flutuante no rodapé da área que rola
   oferece o salto ao fim, contando as mensagens novas ("3 mensagens novas",
-  plural do i18next com `_zero`/`_one`/`_other`). Cartão de aprovação novo
+  plural do i18next com `_zero`/`_one`/`_other`). Cartão de aprovação PENDENTE novo
   não soma ao número: REALÇA o botão e troca o rótulo por "Há uma aprovação
-  esperando". O botão tem rótulo acessível próprio, some ao chegar ao fim e
+  esperando" (só o fio marca ação `pending`, comparada por CONJUNTO de ids ao sair do fim; ação já decidida não realça e a pendente decidida apaga o realce). O botão tem rótulo acessível próprio, some ao chegar ao fim e
   nunca aparece para quem está no fim — ali a rolagem automática da RN-173
   continua mandando, e o botão só observa.
 - **Onde:** `apps/web/src/lib/session-rolagem.ts:206` (`estadoDoIrAoFim`),
@@ -23776,7 +23776,7 @@ sem dizer qual.
   `apps/web/src/routes/IrAoFimDoFio.tsx:10` (`IrAoFimDoFio`)
 - **Teste:** `apps/web/src/routes/IrAoFimDoFio.test.tsx` ("caminho feliz: fora
   do fim e com mensagens novas, mostra o contador…", "aprovação nova realça o
-  botão"; falha: "no fim, conteúdo novo não mostra botão")
+  botão", "pendente decidida apaga o realce", "troca de uma pendente por outra realça"; falha: "no fim, conteúdo novo não mostra botão")
 - **Origem:** AT-506 (Melhorias de UX do Chat, item 1.3)
 ### RN-837 — Markdown do fio: blocos novos e prefixo de stream sem marcador cru {#rn-837}
 

@@ -4,6 +4,10 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ## Unreleased
 
+### Correções
+
+- O aviso "Há uma aprovação esperando" do botão "ir ao fim" só realça com ação PENDENTE nova no fio, comparada por ids; ação auto-aprovada ou já decidida não acende mais (AT-624, RN-836).
+
 ### Mudanças
 
 - O bloco de pendências do chat passa a se chamar "Pendências deste projeto" (AT-619, RN-943): ele inclui perguntas, PRs prontas e tarefas bloqueadas do projeto inteiro, inclusive da própria sessão; a aba Executores mantém "de outras sessões".
