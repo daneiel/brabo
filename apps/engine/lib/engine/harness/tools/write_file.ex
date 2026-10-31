@@ -61,14 +61,40 @@ defmodule Engine.Harness.Tools.WriteFile do
   # shortcut: só cobre README*; escrita pelo terminal (cat >, sed -i) não passa por aqui.
   defp recusa_de_secao_perdida(root, path, content) do
     with true <- Regex.match?(~r/^readme/i, Path.basename(path)),
-         {:ok, antigo} <- WorkspaceFiles.read_file(root, path),
-         true <- tem_secao?(antigo) and not tem_secao?(content) do
-      "write_file substitui o arquivo inteiro, e #{path} tem a seção \"#{@titulo_secao_de_uso}\" " <>
-        "que o conteúdo novo não traz. Arquivo intacto. Para mudar um trecho, reescreva o " <>
-        "README completo mantendo essa seção."
+         {:ok, antigo} <- WorkspaceFiles.read_file(root, path) do
+      cond do
+        tem_secao?(antigo) and not tem_secao?(content) ->
+          "write_file substitui o arquivo inteiro, e #{path} tem a seção \"#{@titulo_secao_de_uso}\" " <>
+            "que o conteúdo novo não traz. Arquivo intacto. Para mudar um trecho, reescreva o " <>
+            "README completo mantendo essa seção."
+
+        perdidas = rotas_perdidas(antigo, content) ->
+          recusa_de_rota(path, perdidas)
+
+        true ->
+          nil
+      end
     else
       _ -> nil
     end
+  end
+
+  # RN-948 (AT-623): cabeçalho de rota (`### GET /links`) do README antigo que
+  # o novo não traz.
+  @rota ~r/^#+\s*(?:GET|POST|PUT|PATCH|DELETE)\s+\/\S*/m
+
+  defp rotas_perdidas(antigo, novo) do
+    perdidas = cabecalhos_de_rota(antigo) -- cabecalhos_de_rota(novo)
+    if perdidas == [], do: nil, else: perdidas
+  end
+
+  defp cabecalhos_de_rota(texto),
+    do: @rota |> Regex.scan(texto) |> Enum.map(fn [h] -> h |> String.replace(~r/^#+\s*/, "") end)
+
+  defp recusa_de_rota(path, perdidas) do
+    "write_file substitui o arquivo inteiro, e #{path} documenta rotas que o conteúdo novo " <>
+      "não traz (#{Enum.join(perdidas, ", ")}). Arquivo intacto. Reescreva o README completo " <>
+      "mantendo todas as rotas."
   end
 
   defp tem_secao?(texto),
