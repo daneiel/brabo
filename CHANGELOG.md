@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- O usage do 9Router deixa de gravar os 2 000 tokens inventados pela 0.5.112 (versão lida de `/api/version`; outra versão grava como veio e avisa) e passa a ler o `cached_tokens` do topo; o cache de `cc/*` segue perdido pelo 9Router (AT-638, RN-958).
 - A sessão ativa não é mais encerrada por uma resposta fora de ordem na checagem de trabalho pendente (AT-642, RN-955): o GET interno é repetido uma vez. "Confirmar arquitetura pronta" e a oferta ao Infra funcionam depois de reabrir a sessão (RN-956); "aborted" é falha de infra (RN-957); o grafo volta sozinho se o Neo4j subiu depois da api, e o aviso diz a causa (RN-960).
 - O Infra Lead pede volume nomeado para dados persistentes e `propose_infra_pr` recusa compose com bind-mount relativo (`./pasta:`), que nascia root e não gravava na primeira subida (AT-644, RN-962).
 - O aviso de recorte do Jev deixa de dizer que as ferramentas fora do recorte voltam no passo seguinte: elas podem ser pedidas neste mesmo passo, e o passo é refeito com o catálogo completo se o modelo responder sem ferramenta (AT-643, RN-961).
