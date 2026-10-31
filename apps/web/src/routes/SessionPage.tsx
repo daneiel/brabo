@@ -291,7 +291,7 @@ export function SessionPage({
   // A rolagem do fio (achado 10, Fase 4b, RN-173) mora em
   // `../lib/session-rolagem` desde o PR 7 do ADR 0176 — os mesmos refs e
   // efeitos, chamados neste mesmo ponto.
-  const { messagesEndRef, scrollContainerRef, messagesInnerRef, aoRolarOFio } = useRolagemDoFio({
+  const { messagesEndRef, scrollContainerRef, messagesInnerRef } = useRolagemDoFio({
     highlightEvent,
     logOpen,
     events,
@@ -777,7 +777,7 @@ export function SessionPage({
             sessaoAtiva={isActive}
             podeLigar={roleAtLeast(workspaceComPapel?.role, 'maintainer')}
           />
-          <div className={styles.messages} ref={scrollContainerRef} onScroll={aoRolarOFio} role="log" aria-label={t('fio.rotuloDoFio')}>
+          <div className={styles.messages} ref={scrollContainerRef} role="log" aria-label={t('fio.rotuloDoFio')}>
             <div className={styles.messagesInner} ref={messagesInnerRef}>
               <SessionFio
                 conviteVisivel={conviteVisivel}

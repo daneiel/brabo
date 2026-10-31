@@ -740,7 +740,7 @@ describe('RN-173 — o fio acompanha o que cresce', () => {
     await waitFor(() => expect(rolou).toHaveBeenCalled());
   });
 
-  it('não arrasta quem rolou pra cima — a guarda dos 120px do fim continua valendo', async () => {
+  it('RN-951: quem rolou pra cima também é levado ao fim quando chega conteúdo novo', async () => {
     eventos.mockReturnValue({
       items: [
         {
@@ -773,7 +773,6 @@ describe('RN-173 — o fio acompanha o que cresce', () => {
     Object.defineProperty(rolavel, 'scrollHeight', { value: 5000, configurable: true });
     Object.defineProperty(rolavel, 'clientHeight', { value: 500, configurable: true });
     Object.defineProperty(rolavel, 'scrollTop', { value: 0, configurable: true });
-    // AT-442: a intenção é medida no GESTO de rolar, antes de a altura mudar.
     fireEvent.scroll(rolavel);
 
     rolou.mockClear();
@@ -781,7 +780,7 @@ describe('RN-173 — o fio acompanha o que cresce', () => {
     rerender(arvore);
 
     await screen.findByText('propõe alteração');
-    expect(rolou).not.toHaveBeenCalled();
+    expect(rolou).toHaveBeenCalled();
   });
 });
 
