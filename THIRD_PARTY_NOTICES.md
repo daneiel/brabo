@@ -39,7 +39,7 @@ faltar, em vez de degradar em silêncio.
 | ferramenta | versão | licença | como entra |
 |---|---|---|---|
 | **yamllint** | 1.38.0 | **GPL-3.0-or-later** | `pip install` |
-| **semgrep** | 1.171.0 | **LGPL-2.1-or-later** | `pip install` |
+| **semgrep** | 1.183.0 | **LGPL-2.1-or-later** | `pip install` |
 | **readline** | 8.2.10-r0 | **GPL-3.0-or-later** | apk (transitiva) |
 | **gdbm** | 1.23-r1 | **GPL-3.0-or-later** | apk (transitiva) |
 | hadolint | 2.12.0 | **GPL-3.0** | binário do release, sha256 conferido |
