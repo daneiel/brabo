@@ -3310,6 +3310,19 @@ Revisa a [RN-212](autenticacao.md#rn-212) no destino do botão "Definir orçamen
 - **Código:** `apps/web/src/components/SpendPaineis.tsx:144` (`GastoDoWorkspace`); `apps/web/src/components/SpendPaineis.tsx:342` (`GastoDoTimeNoProjeto`); `apps/web/src/routes/ProjectSpendTab.tsx:170` (`EditorDoOrcamento`); `apps/web/src/routes/Dashboard.tsx:98` (`onDefineBudget`)
 - **Teste:** `apps/web/src/routes/SpendPage.test.tsx` (owner × não-owner, sem provider para quem não é owner); `apps/web/src/routes/ProjectSpendTab.test.tsx` (owner só do projeto, membro por agente e área, editor grava, teto inválido e papel baixo recusados)
 - **Origem:** AT-632
+### RN-964 — O preço e a cobrança são curados na tela de Providers, e a edição manual protege o número do sync {#rn-964}
+
+Completa a [RN-044](#rn-044) (o caminho manual passa a marcar `manual_pricing`), a [RN-954](#rn-954) (a marca ganha tela) e a [RN-963](#rn-963) (a mesma frase para a assinatura sem preço).
+
+1. **Edição manual marca.** Mudar o preço com origem `manual` grava `manual_pricing = true` na mesma escrita do preço. Origem `sync` não mexe na marca.
+2. **O sync respeita a marca.** Linha `manual_pricing` mantém o preço gravado mesmo quando o catálogo remoto traz outro; só o catálogo sem preço e a linha não-manual seguem o remoto.
+3. **Preço igual ao vigente segue no-op** (RN-044): não grava marca nova nem linha de auditoria.
+4. **Escopo.** `models` é GLOBAL da instalação: o preço vale para todos os workspaces. A tela diz isso em texto.
+
+- **Código:** `apps/api/src/application/use-cases/llm/update-model-pricing.use-case.ts:51` (`manualPricing`); `apps/api/src/application/use-cases/llm/sync-model-catalog.use-case.ts:286` (`resolverPreco`)
+- **Teste:** `apps/api/test/application/use-cases/llm/update-model-pricing.use-case.spec.ts` (edição manual marca `manualPricing`; origem sync não marca)
+- **Origem:** AT-634
+
 ### RN-958 — O usage do 9Router é corrigido no provider: −2 000 só na 0.5.112, e o cache do topo conta {#rn-958}
 
 Completa a [RN-666](#rn-666) (item 4) para o 9Router. A 0.5.112 SOMA 2 000 a `prompt_tokens` no frame final, inclusive sobre o usage que ele mesmo estima; gravar como veio inflava o `input_tokens` e, pela [RN-665](#rn-665), o custo.
