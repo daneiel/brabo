@@ -84,6 +84,17 @@ em várias formas tem UMA agora, em `apps/web/src/components/ui/`:
 Aba do projeto começa no topo, sem margem de seção antes do título: `.arch`
 (`ProjectOverviewTab.module.css`) é de seção que vem DEPOIS de outra.
 
+## shadcn/ui lê os tokens (ADR 0232)
+
+O `apps/web` tem shadcn/ui (Base UI + Tailwind 4) em `components/shadcn/`. O
+`src/shadcn.css` (importado depois do `index.css`, sem preflight) mapeia as
+cores semânticas do shadcn aos tokens deste diretório em `@theme inline`
+(`primary`→`--accent`, `accent`→`--surface-2`, `destructive`→`--danger`...) e
+liga o `dark:` a `[data-theme='dark']`. As variáveis cruas do shadcn
+(`--accent`, `--radius-*`, `--font-mono`) NÃO são declaradas: os tokens daqui
+continuam a única fonte, e os pares de contraste seguem medidos pelo
+`design-contraste.test.ts`.
+
 ## `design_handoff_brabo/` — o handoff, versionado
 
 Desde 2026-08-08 (FASE 16) o handoff de design vive **no repositório**, na

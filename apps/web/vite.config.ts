@@ -1,10 +1,14 @@
 /// <reference types="vitest/config" />
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
+import { fileURLToPath } from 'node:url'
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
+  // Alias `@/` do shadcn (AT-645); espelhado no tsconfig.app.json.
+  resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
   build: {
     rolldownOptions: {
       output: {
@@ -45,6 +49,11 @@ export default defineConfig({
               // mesmo motivo dos três acima (hash estável entre deploys).
               name: 'vendor-motion',
               test: /[\\/]node_modules[\\/](motion|motion-dom|motion-utils|framer-motion)[\\/]/,
+            },
+            {
+              // ADR 0232: shadcn/Base UI. Lista de PERMITIDOS, como as acima.
+              name: 'vendor-ui',
+              test: /[\\/]node_modules[\\/](@base-ui|class-variance-authority|clsx|tailwind-merge|lucide-react)[\\/]/,
             },
           ],
         },
