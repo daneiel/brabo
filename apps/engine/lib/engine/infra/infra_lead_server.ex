@@ -636,7 +636,11 @@ defmodule Engine.Infra.InfraLeadServer do
   # ela existe). No caminho que propõe nada muda: a `proposed_action` continua
   # sendo o rastro dele, como sempre foi.
   defp recusa_de_infra_pr(call, title, files, state) do
-    case ProjectRepository.recusa_de_pr_sem_repositorio(state.project_id, "open_infra_pr") do
+    motivo =
+      ProjectRepository.recusa_de_pr_sem_repositorio(state.project_id, "open_infra_pr") ||
+        recusa_de_bind_mount_relativo(files)
+
+    case motivo do
       nil ->
         nil
 
@@ -663,6 +667,27 @@ defmodule Engine.Infra.InfraLeadServer do
         })
     end
   end
+
+  # RN-962: bind-mount relativo em compose nasce root na primeira subida e o
+  # app non-root não grava nele. Volume NOMEADO é o que o prompt pede.
+  @bind_relativo ~r/^\s*(-\s*["']?\.{1,2}\/[^\s"':]*:|source:\s*["']?\.)/m
+
+  defp recusa_de_bind_mount_relativo(files) when is_list(files) do
+    achado =
+      Enum.find(files, fn
+        %{"path" => path, "content" => c} when is_binary(path) and is_binary(c) ->
+          Regex.match?(~r/compose[^\/]*\.ya?ml$/, path) and Regex.match?(@bind_relativo, c)
+
+        _ ->
+          false
+      end)
+
+    if achado,
+      do:
+        "#{achado["path"]} usa bind-mount relativo (./pasta:/destino ou source: ./pasta): a pasta nasce root e o app não grava nela. Use VOLUME NOMEADO (volumes: dados: no topo) para dados persistentes."
+  end
+
+  defp recusa_de_bind_mount_relativo(_), do: nil
 
   # `propose_container_start` NÃO halts como `propose_infra_pr` — é ação
   # independente (elege candidata do roteamento do Arquiteto, ADR 0131), sem
@@ -1497,9 +1522,10 @@ defmodule Engine.Infra.InfraLeadServer do
     1. Para cada módulo do module_map abaixo, um Dockerfile com `FROM` = a imagem
        decidida: #{imagem_text}.
     2. Um docker-compose.yml que SOBE O APP: `build` do Dockerfile de cada módulo,
-       porta `${APP_PORT:-8080}:<porta interna>`, volume para dados persistentes e
-       `env_file: .env`, com um `.env.example` commitado listando as variáveis
-       obrigatórias (nunca um `.env`).
+       porta `${APP_PORT:-8080}:<porta interna>`, VOLUME NOMEADO para dados persistentes
+       (nunca bind-mount relativo `./pasta`: nasce root e o app não grava) e
+       `env_file: .env`, com um `.env.example` commitado só com as variáveis
+       obrigatórias, sem valor (nunca um `.env`).
     3. No README, a seção "#{Engine.Harness.Tools.WriteFile.titulo_secao_de_uso()}": o comando e as URLs. Módulo
        HTTP declara SEMPRE `/docs` (a UI Swagger, `kind: "api_docs"`) mesmo antes
        de existir, e módulo web a página inicial — nunca rota de negócio.
