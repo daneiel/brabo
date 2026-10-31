@@ -1,6 +1,6 @@
 import type { HTMLAttributes } from 'react';
+import { Badge as BadgeBase, BadgeDot } from '@/components/shadcn/badge';
 import { Shimmer } from './Shimmer';
-import styles from './Badge.module.css';
 
 /**
  * `neutral` é o `muted` com texto `--text-secondary`: para badge cujo texto é
@@ -30,6 +30,7 @@ interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
   emCurso?: boolean;
 }
 
+/** Adaptador do `badge` do shadcn (AT-646): o visual mora em `shadcn/badge.tsx`. */
 export function Badge({
   tone = 'muted',
   dot,
@@ -37,25 +38,22 @@ export function Badge({
   square,
   size = 'sm',
   emCurso,
-  className,
   children,
   ...rest
 }: BadgeProps) {
-  const classes = [
-    styles.badge,
-    styles[tone],
-    pulse && styles.pulse,
-    square && styles.pill,
-    size === 'md' && styles.md,
-    className,
-  ]
-    .filter(Boolean)
-    .join(' ');
-
   return (
-    <span className={classes} {...rest}>
-      {dot && <span className={styles.dot} />}
+    <BadgeBase
+      variant={tone}
+      size={size}
+      square={!!square}
+      data-tone={tone}
+      data-size={size}
+      data-square={square ? 'true' : undefined}
+      data-pulse={pulse ? 'true' : undefined}
+      {...rest}
+    >
+      {dot && <BadgeDot pulse={pulse} />}
       {emCurso && typeof children === 'string' ? <Shimmer>{children}</Shimmer> : children}
-    </span>
+    </BadgeBase>
   );
 }

@@ -223,8 +223,8 @@ foram raciocínio).
    no protocolo dele (`cache_read_input_tokens`) e isso NÃO é lido aqui — fica
    `null`, declarado; o Ollama não informa.
 
-- **Onde:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:381` (`cachedInputTokens`),
-  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:769` (`contagem`),
+- **Onde:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:391` (`cachedInputTokens`),
+  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:779` (`contagem`),
   `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:207` (`cachedInputTokens`),
   `apps/api/src/application/use-cases/llm/record-llm-usage.use-case.ts:121` (`cachedInputTokens`),
   `apps/api/src/db/schema/llm.ts:395` (`cachedInputTokens`),
@@ -274,7 +274,7 @@ gasto somam. Sem ele, o preço congelado do catálogo produz o número, como no
   `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:262` (`custoDaChamada`),
   `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:295` (`custoDaChamada`),
   `apps/api/src/application/use-cases/llm/send-chat-message.use-case.ts:286` (`custoDaChamada`),
-  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:377` (`extrairCustoReal`),
+  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:387` (`extrairCustoReal`),
   `apps/api/src/infrastructure/llm/openrouter-provider.ts:272` (`extrairCustoRealOpenRouter`),
   `apps/api/src/db/schema/llm.ts:375` (`priceImplicit`)
 - **Teste:** `test/domain/llm/custo-da-chamada.spec.ts`,
@@ -3185,7 +3185,7 @@ quatro pontos, TTL de 5 min — https://openrouter.ai/docs/features/prompt-cachi
    metering pela [RN-666](#rn-666).
 
 - **Código:** `apps/api/src/infrastructure/llm/openrouter-provider.ts:302` (`marcarCacheDePromptOpenRouter`);
-  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:626` (`mensagens`)
+  `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:636` (`mensagens`)
 - **Teste:** `apps/api/test/infrastructure/llm/openrouter-provider.contract.spec.ts` ("pontos de cache de prompt (RN-892)": ligada marca os dois pontos; desligada é byte a byte; capability sem hook falha — caso de falha)
 - **Origem:** AT-543
 
@@ -3232,7 +3232,7 @@ Complementa a [RN-914](../business-rules.md#rn-914) ([ADR 0224](../adr/0224-raci
    24 h; 404 ou erro deixam a linha como está. A estimativa vai para `catalog_cost_micros`.
    O `spentMicros` de budget/área não é corrigido.
 
-- **Código:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:360` (`limiteDeRaciocinio`);
+- **Código:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:368` (`limiteDeRaciocinio`);
   `apps/api/src/application/use-cases/llm/reconciliar-custo-estimado.use-case.ts:57` (`execute`)
 - **Teste:** `apps/api/test/infrastructure/llm/raciocinio-abortado.spec.ts` (aborta e estima; sem orçamento não conta);
   `apps/api/test/application/use-cases/llm/reconciliar-custo-estimado.use-case.spec.ts` (200 troca, 404 mantém);
@@ -3262,7 +3262,7 @@ Revisa a [RN-583](#rn-583) (o `sort` deixa de ser o único campo de `provider` q
 3. **Sem upstream no teto.** O 404 de uma chamada que levava teto é o erro `LLMPriceCeilingError` (`code: price_ceiling`), nunca `LLMModelNotFoundError`. Os três caminhos de turno (`run-llm-turn`, `stream-llm-turn`, `send-chat-message`) repetem a chamada UMA vez sem teto, avisam no log e não falham o turno; nunca há terceira por este motivo.
 4. **Metering.** `token_usage.price_ceiling_factor` congela o fator que FOI AO FIO (`null` = nada enviado, inclusive na repetição sem teto), no molde do `routing_preference`.
 
-- **Código:** `apps/api/src/domain/llm/routing-preference.ts:108` (`tetoDePreco`); `apps/api/src/domain/llm/routing-preference.ts:132` (`devoRetentarSemTeto`); `apps/api/src/infrastructure/llm/openrouter-provider.ts:221` (`campoDeTetoDePrecoOpenRouter`); `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:569` (`camposDoHub`); `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:340` (`devoRetentarSemTeto`); `apps/api/src/db/schema/llm.ts:414` (`priceCeilingFactor`)
+- **Código:** `apps/api/src/domain/llm/routing-preference.ts:108` (`tetoDePreco`); `apps/api/src/domain/llm/routing-preference.ts:132` (`devoRetentarSemTeto`); `apps/api/src/infrastructure/llm/openrouter-provider.ts:221` (`campoDeTetoDePrecoOpenRouter`); `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:579` (`camposDoHub`); `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:340` (`devoRetentarSemTeto`); `apps/api/src/db/schema/llm.ts:414` (`priceCeilingFactor`)
 - **Teste:** `apps/api/test/domain/llm/routing-preference.spec.ts` (fator, preço 0, só o OpenRouter declara); `apps/api/test/infrastructure/llm/openrouter-provider.contract.spec.ts` (`sort` e teto mesclados no corpo, sem capability nada vai, 404 com teto é `price_ceiling` e sem teto segue `model_not_found`); `apps/api/test/application/use-cases/llm/stream-llm-turn.use-case.spec.ts` (repete uma vez sem teto, fator `[1.5, null]` no metering); `apps/api/test/infrastructure/llm/openrouter-provider.teto.smoke.spec.ts` (manual, API real)
 - **Origem:** AT-606; ADR [0225](../adr/0225-teto-de-preco-do-upstream-no-openrouter.md)
 
@@ -3297,3 +3297,29 @@ Convive com a [RN-665](#rn-665) (custo real do OpenRouter) e o preço congelado 
 - **Código:** `apps/api/src/db/schema/llm.ts:175` (`modelBillingEnum`); `apps/api/src/infrastructure/persistence/drizzle/token-usage.repository.ts:357` (`assinaturaMicros`); `apps/api/src/interfaces/http/llm/models.controller.ts:302` (`updateBilling`)
 - **Teste:** `apps/api/test/application/use-cases/llm/spend-audiencias.use-case.spec.ts` (assinatura separada do pago)
 - **Origem:** AT-632
+
+### RN-963 — O gasto tem página GLOBAL e aba do PROJETO, e o orçamento tem editor {#rn-963}
+
+Revisa a [RN-212](autenticacao.md#rn-212) no destino do botão "Definir orçamento" e convive com a [RN-060](#rn-060), a [RN-952](#rn-952), a [RN-953](#rn-953) e a [RN-954](#rn-954).
+
+1. **Página global.** `/spend`, no menu global ao lado de Containers e Providers, serve todo papel: o `owner` vê o workspace inteiro (janela 30/90/180, por modelo, provider, projeto e ator), os orçamentos de todos os projetos e a fatura por chave (`CredentialSpendSection`, que saiu de Providers); quem não é `owner` vê só o PRÓPRIO consumo por projeto (`spend/me` do workspace) e nunca provider nem credencial.
+2. **Aba do projeto.** A aba Gastos é SÓ do projeto: o `owner` lê `spend-report?projectId=` (com a quebra por sessão), o membro lê o total e o custo por agente e por área (`spend/team`) e, abaixo, o próprio consumo. O consumo do Criativo (`CriativoKpis`) passou a mostrar o total do projeto.
+3. **Orçamento.** A aba traz o editor do teto (`PUT projects/:projectId/budget`, `maintainer` pela `roleAtLeast`); abaixo do papel o controle fica inerte e o motivo é dito em texto. O botão "Definir orçamento" do card do projeto abre `?tab=spend` (antes `?tab=settings`, onde nenhuma tela gravava o orçamento).
+4. **Assinatura.** `assinaturaMicros` aparece num destaque separado; linha de modelo marcado `subscription` com custo zero mostra "assinatura — sem preço registrado", nunca "US$ 0".
+
+- **Código:** `apps/web/src/components/SpendPaineis.tsx:144` (`GastoDoWorkspace`); `apps/web/src/components/SpendPaineis.tsx:342` (`GastoDoTimeNoProjeto`); `apps/web/src/routes/ProjectSpendTab.tsx:170` (`EditorDoOrcamento`); `apps/web/src/routes/Dashboard.tsx:98` (`onDefineBudget`)
+- **Teste:** `apps/web/src/routes/SpendPage.test.tsx` (owner × não-owner, sem provider para quem não é owner); `apps/web/src/routes/ProjectSpendTab.test.tsx` (owner só do projeto, membro por agente e área, editor grava, teto inválido e papel baixo recusados)
+- **Origem:** AT-632
+### RN-958 — O usage do 9Router é corrigido no provider: −2 000 só na 0.5.112, e o cache do topo conta {#rn-958}
+
+Completa a [RN-666](#rn-666) (item 4) para o 9Router. A 0.5.112 SOMA 2 000 a `prompt_tokens` no frame final, inclusive sobre o usage que ele mesmo estima; gravar como veio inflava o `input_tokens` e, pela [RN-665](#rn-665), o custo.
+
+1. **Só na versão conhecida.** O provider lê `currentVersion` de `GET <origem>/api/version` (público, teto de 2 s, cache de 5 min no sucesso e 1 min na falha) antes do stream. Só a versão da tabela (`0.5.112`) tem `prompt_tokens` reduzido em 2 000, com piso em 0; subtrair numa versão que consertou o bug gravaria MENOS do que foi cobrado.
+2. **Versão outra ou ilegível** (404, lento, corpo inválido): grava como veio e loga UM aviso por versão. O turno nunca falha por causa da leitura.
+3. **Cache.** `cached_tokens` do TOPO do usage vira `prompt_tokens_details.cached_tokens` (e então `cachedInputTokens`) quando este não veio; ausente continua "não disse" ([RN-666](#rn-666) item 2).
+4. **Declarado, não remendado.** Em `cc/*` o 9Router descarta `cache_read_input_tokens` ao filtrar o usage no stream, então o cache desse upstream NÃO chega ao Brabo; `cache_creation` não tem coluna; o caminho sem stream não existe na base.
+5. **Hook opcional** `normalizarUsage` em `OpenAICompatibleConfig`: só o 9Router o configura; os demais providers leem o usage como sempre.
+
+- **Código:** `apps/api/src/infrastructure/llm/nine-router-provider.ts:118` (`normalizarUsage9Router`); `:99` (`versaoDo9Router`); `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:188` (`normalizarUsage`)
+- **Teste:** `apps/api/test/infrastructure/llm/nine-router-provider.contract.spec.ts` (versão 0.5.112, outra, 404, lenta, corpo inválido, piso, cache do topo, outros providers sem o hook)
+- **Origem:** AT-638

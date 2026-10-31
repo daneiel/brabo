@@ -211,6 +211,17 @@ function LinkDeContainers({ colapsado }: { colapsado: boolean }) {
   );
 }
 
+function LinkDeGastos({ colapsado }: { colapsado: boolean }) {
+  const { t } = useTranslation();
+  const rotulo = t('sidebar.spend');
+  return (
+    <Link to="/spend" className={styles.footerButton} title={rotulo} aria-label={rotulo}>
+      <ActivityIcon size={15} />
+      {!colapsado && <span>{rotulo}</span>}
+    </Link>
+  );
+}
+
 function LinkDeProviders({ colapsado }: { colapsado: boolean }) {
   const { t } = useTranslation();
   const rotulo = t('sidebar.providers');
@@ -925,6 +936,7 @@ export function Shell() {
           <BotaoDeTema colapsado={colapsado} />
           <LinkDeContainers colapsado={colapsado} />
           <LinkDeProviders colapsado={colapsado} />
+          <LinkDeGastos colapsado={colapsado} />
           <LinkDeConta colapsado={colapsado} />
           {/* Na gaveta não há o que recolher — ela já some inteira. */}
           {!movel && (

@@ -2,7 +2,6 @@ import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { listProviderCapabilities } from '../lib/api-client';
 import { useCurrentWorkspaceWithRole } from '../lib/hooks';
-import { roleAtLeast } from '../lib/roles';
 import { FRESCOR_DA_CONFIGURACAO_MS } from '../lib/query-policy';
 import { Badge } from '../components/ui/Badge';
 import { COR_DO_PROVIDER, ROTULO_DO_PROVIDER, providerAtivo } from '../lib/models';
@@ -10,7 +9,6 @@ import { useProvidersComChave } from '../lib/providers-com-chave';
 import type { LLMProviderName } from '../lib/api-types';
 import { CredentialsSection } from './settings/CredentialsSection';
 import { ModelCatalogSection } from '../components/ModelCatalogSection';
-import { CredentialSpendSection } from '../components/CredentialSpendSection';
 import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
 import type { CSSProperties } from 'react';
 import styles from './ProvidersPage.module.css';
@@ -28,8 +26,6 @@ export function ProvidersPage() {
     staleTime: FRESCOR_DA_CONFIGURACAO_MS,
   });
   const workspaceId = comPapel?.workspace.id;
-  // Mesma régua de `GastoDasChaves`: a rota do relatório exige `owner` (RN-060).
-  const ehOwner = roleAtLeast(comPapel?.role, 'owner');
   // Itera as CHAVES da resposta: capability nova aparece sem tocar aqui.
   const comChave = useProvidersComChave(workspaceId);
   const todos = capacidades.data ?? [];
@@ -109,7 +105,6 @@ export function ProvidersPage() {
       </section>
 
       {workspaceId && <ModelCatalogSection workspaceId={workspaceId} />}
-      {workspaceId && ehOwner && <CredentialSpendSection workspaceId={workspaceId} />}
     </div>
   );
 }

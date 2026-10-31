@@ -146,7 +146,38 @@ function InputGroupTextarea({
   )
 }
 
+/* Anatomia do campo da casa com ícone à esquerda e botão de revelar à direita. */
+function InputFieldWrapper({ className, ...props }: React.ComponentProps<"div">) {
+  return <div data-slot="input-field-wrapper" className={cn("relative", className)} {...props} />
+}
+
+function InputFieldIcon({ className, ...props }: React.ComponentProps<"span">) {
+  return (
+    <span
+      data-slot="input-field-icon"
+      className={cn("pointer-events-none absolute top-1/2 left-[11px] flex -translate-y-1/2 text-[color:var(--text-muted)]", className)}
+      {...props}
+    />
+  )
+}
+
+function InputFieldToggle({ className, ...props }: React.ComponentProps<"button">) {
+  return (
+    <button
+      data-slot="input-field-toggle"
+      className={cn(
+        "absolute top-1/2 right-[5px] grid size-8 -translate-y-1/2 cursor-pointer place-items-center rounded-[var(--radius-sm)] border-0 bg-transparent text-[color:var(--text-muted)] transition-[color,background] duration-[120ms] hover:bg-[var(--surface-2)] hover:text-[color:var(--text-secondary)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--accent)]",
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
 export {
+  InputFieldWrapper,
+  InputFieldIcon,
+  InputFieldToggle,
   InputGroup,
   InputGroupAddon,
   InputGroupButton,

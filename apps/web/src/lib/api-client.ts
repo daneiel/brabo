@@ -2,7 +2,12 @@ import { renovarSessao, tokenAtual } from './auth';
 import { runtimeConfig } from './runtime-config';
 import { childSpan, logger, newTraceContext } from './logger';
 import type { LlmCredentialProvider } from './models';
-import type { MySpend, WorkspaceSpendReport } from './spend';
+import type {
+  MySpend,
+  MyWorkspaceSpend,
+  ProjectSpendTeam,
+  WorkspaceSpendReport,
+} from './spend';
 import type {
   ResumoDoContextoDaSessao,
   AgentAutonomyRule,
@@ -1313,9 +1318,30 @@ export type { ModelBindingScope };
  * basta ser membro. A tela nunca dispara a primeira sem o papel — pedir um 403
  * de propósito é ruído no log de segurança.
  */
-export const getWorkspaceSpendReport = (workspaceId: string, dias?: number) =>
-  get<WorkspaceSpendReport>(
-    `/workspaces/${workspaceId}/spend-report${dias ? `?dias=${dias}` : ''}`,
+export const getWorkspaceSpendReport = (
+  workspaceId: string,
+  dias?: number,
+  projectId?: string,
+) => {
+  const q = new URLSearchParams();
+  if (dias) q.set('dias', String(dias));
+  if (projectId) q.set('projectId', projectId);
+  const qs = q.toString();
+  return get<WorkspaceSpendReport>(
+    `/workspaces/${workspaceId}/spend-report${qs ? `?${qs}` : ''}`,
+  );
+};
+
+/** O projeto para o MEMBRO: total, agente e área — sem provider (ADR 0233). */
+export const getProjectSpendTeam = (projectId: string, dias?: number) =>
+  get<ProjectSpendTeam>(
+    `/projects/${projectId}/spend/team${dias ? `?dias=${dias}` : ''}`,
+  );
+
+/** O PRÓPRIO consumo no workspace, por projeto (RN-953). */
+export const getMyWorkspaceSpend = (workspaceId: string, dias?: number) =>
+  get<MyWorkspaceSpend>(
+    `/workspaces/${workspaceId}/spend/me${dias ? `?dias=${dias}` : ''}`,
   );
 
 export const getMySpend = (projectId: string, dias?: number) =>
