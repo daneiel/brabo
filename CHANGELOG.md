@@ -20,6 +20,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - O recorte do Jev não tira mais `declare_open_question` do PO (AT-615, RN-942): entra no piso do menu ao lado de `create_story`/`create_task`, para a dúvida virar `artifact.open_question` em vez de ficar só no texto da história.
 - O QA de automação recebe o pedido da volta anterior da mesma task, o plano de teste é lido por tipo (não repaga fora da janela de 200 eventos) e o ambiente do dev diz que o `write_file` é relativo à raiz e que `cd` não persiste (AT-616, RN-944).
 - Os agentes de QA nomeiam o corte pelo teto de saída em vez de "o modelo parou sem chamar" (AT-618 parte 1, RN-945).
+- Os agentes de QA também nomeiam o corte pelo teto de saída que acontece no meio do texto da resposta (AT-620, RN-946).
 - O serviço da instância de QA sobe de verdade (AT-612, RN-941, prova com Docker real): ganha o nome `<instância>-<serviço>` (antes colidia com a própria instância), `user` (`<uid>:<gid>`, nunca root, também dono do `tmpfs`) e `command` (argumentos depois da imagem), validados igual no docker-port, na api (`run.qa`) e no engine (`propose_infra_pr`).
 - O gate de QA-automação testa numa instância de QA efêmera (AT-612, RN-940): o engine propõe `qa_environment_start` antes do laço, o `terminal` do QA roda nela, ela é removida no fim (mesmo com exceção ou teto) e o `GateRescuer` varre as órfãs no boot e no tick. O Infra Lead pode declarar `run.qa` (serviços de apoio por digest). Depende da PR da api.
 
