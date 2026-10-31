@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- O fio da Sessão acompanha sempre a última mensagem (AT-635, RN-951): cada evento ou ação nova o leva ao fim, mesmo para quem rolou para cima; o container que encolhe e `?highlightEvent` também seguem; o botão "ir ao fim" saiu.
 - O aviso "Há uma aprovação esperando" do botão "ir ao fim" só realça com ação PENDENTE nova no fio, comparada por ids; ação auto-aprovada ou já decidida não acende mais (AT-624, RN-836).
 
 ### Mudanças

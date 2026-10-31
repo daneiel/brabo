@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import type { ProposedAction, SessionEvent } from './api-types';
 import type { StoreDoStreaming } from './streaming-do-turno';
 
@@ -12,42 +12,26 @@ function rolarParaOFim(el: HTMLElement | null) {
   el?.scrollIntoView?.({ block: 'end' });
 }
 
-/** A guarda dos 120px da RN-173: o container está perto do fim? */
-export function estaPertoDoFim(container: {
-  scrollHeight: number;
-  scrollTop: number;
-  clientHeight: number;
-}): boolean {
-  return container.scrollHeight - container.scrollTop - container.clientHeight < 120;
-}
-
 /**
- * O `seq` da espera por aprovação mais recente no log (RN-748, AT-432): o
- * maior `seq` de `agent.status` com `awaiting_approval`, ou `null`. Quando ele
- * MUDA, o turno acabou de suspender e o cartão de aprovação acabou de entrar
- * no fio — a tela o leva à vista mesmo para quem não estava perto do fim.
+ * A identidade do que há no fio (RN-951): o `seq` do último evento e os ids
+ * das ações. Muda quando chega conteúdo novo mesmo que o TAMANHO das listas
+ * não mude (teto de 200 eventos, ação decidida e outra chegando).
  */
-export function seqDaEsperaPorAprovacao(events: readonly SessionEvent[]): number | null {
-  let maior: number | null = null;
-  for (const e of events) {
-    if (e.type !== 'agent.status') continue;
-    if ((e.payload as { status?: unknown } | null)?.status !== 'awaiting_approval') continue;
-    if (maior === null || e.seq > maior) maior = e.seq;
-  }
-  return maior;
+export function identidadeDoFio(
+  events: readonly SessionEvent[],
+  actions: readonly ProposedAction[],
+): string {
+  const ultimo = events.reduce((m, e) => (e.seq > m ? e.seq : m), 0);
+  return `${events.length === 0 ? 'vazio' : ultimo}|${actions.map((a) => a.id).join(',')}`;
 }
 
 /**
- * A rolagem do fio da tela de Sessão: os refs da sentinela, do container que
- * rola e do conteúdo que cresce, a navegação até o evento citado pelo
- * Psicólogo (Fase 4b), a abertura no fim (achado 10) e o "acompanha o fim"
- * com a guarda dos 120px (RN-173) — pelas dependências de estado E pelo
- * `ResizeObserver` do conteúdo.
- *
- * Morou em `SessionPage.tsx` até o PR 7 do programa do ADR 0176, que moveu os
- * refs e os quatro efeitos sem mudar uma linha: as listas de dependências são
- * as mesmas, e o hook é chamado no MESMO ponto do componente em que os
- * efeitos estavam, então a ordem em que o React os roda também não muda.
+ * A rolagem do fio da tela de Sessão (RN-951, AT-635): o fio acompanha SEMPRE
+ * a última mensagem — a cada evento/ação nova, a cada mudança de altura do
+ * conteúdo ou do container, mesmo que a pessoa tenha rolado para cima (revoga
+ * a guarda dos 120px da RN-173 e o item 4 da RN-751). Instantâneo
+ * (`block: 'end'`) e sem mexer no foco. Com `?highlightEvent` a abertura vai
+ * ao evento citado (Fase 4b); o acompanhamento começa na primeira mudança.
  */
 export function useRolagemDoFio({
   highlightEvent,
@@ -60,30 +44,18 @@ export function useRolagemDoFio({
   logOpen: boolean;
   events: SessionEvent[];
   actions: ProposedAction[];
-  /**
-   * O texto em curso vem como STORE desde a AT-301 — a página não re-renderiza
-   * por token, então ele não pode mais ser dependência de efeito aqui.
-   */
+  /** O texto em curso vem como STORE (AT-301): não é dependência de efeito. */
   streamingStore: StoreDoStreaming;
 }) {
-  // Achado 10: sentinela no fim da lista de mensagens — a sessão abre nela,
-  // em vez de abrir no TOPO (mais antigas primeiro), que era o comportamento
-  // sem NENHUM scroll automático.
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
-  // O CONTEÚDO do fio (RN-173) — o que muda de altura. O container rola, mas
-  // não é ele que cresce; observar o container não veria nada.
   const messagesInnerRef = useRef<HTMLDivElement | null>(null);
-  const abriuNoFimRef = useRef(false);
-  // AT-442: se a pessoa estava no fim ANTES de a altura mudar. Medir só
-  // depois falha quando o conteúdo encolhe e cresce de novo (aceitar o
-  // handoff da Infra): o navegador grampeia o scroll no topo e a guarda dos
-  // 120px, medida já com o conteúdo de volta, dizia "longe do fim".
-  const estavaNoFimRef = useRef(true);
+  // Só acompanha depois de a abertura acontecer (no fim, ou no evento citado
+  // e então na primeira mudança).
+  const seguindoRef = useRef(false);
+  const vistoRef = useRef<string | null>(null);
 
-  // Navegação de evidência (Fase 4b): rola até o evento assim que ele
-  // existir no DOM — depende do log estar aberto E dos eventos já terem
-  // chegado pelo poll, daí a dependência em `events.length`.
+  // Navegação de evidência (Fase 4b): rola até o evento assim que ele existir.
   useEffect(() => {
     if (!highlightEvent || !logOpen) return;
     document
@@ -91,71 +63,24 @@ export function useRolagemDoFio({
       ?.scrollIntoView({ block: 'center', behavior: 'smooth' });
   }, [highlightEvent, logOpen, events.length]);
 
-  // Achado 10: a sessão abre sempre na ÚLTIMA mensagem. Roda uma vez, assim
-  // que a primeira leva de eventos chega — a navegação de evidência do
-  // Psicólogo (efeito acima) tem prioridade quando existe `highlightEvent`,
-  // e por isso este nem tenta rolar nesse caso.
-  useEffect(() => {
-    if (highlightEvent || abriuNoFimRef.current || events.length === 0) return;
-    rolarParaOFim(messagesEndRef.current);
-    abriuNoFimRef.current = true;
-  }, [highlightEvent, events.length]);
-
-  // Conteúdo novo acompanha o fim SE o usuário já estava lá — não arranca o
-  // scroll de quem subiu pra reler o histórico. A guarda dos 120px é
-  // DELIBERADA e continua intacta: ela é a diferença entre "o chat me segue"
-  // e "o chat me arrasta".
   const acompanharOFim = useCallback(() => {
-    if (!abriuNoFimRef.current) return;
-    const container = scrollContainerRef.current;
-    if (!container) return;
-    if (estaPertoDoFim(container) || estavaNoFimRef.current) {
-      rolarParaOFim(messagesEndRef.current);
-    }
+    if (seguindoRef.current) rolarParaOFim(messagesEndRef.current);
   }, []);
 
-  // Ligado como `onScroll` do container (ele pode não existir no primeiro
-  // render). Rolagem com o conteúdo menor que a janela (grampeada) não muda a
-  // intenção de quem estava no fim.
-  const aoRolarOFio = useCallback(() => {
-    const container = scrollContainerRef.current;
-    if (container && container.scrollHeight > container.clientHeight) {
-      estavaNoFimRef.current = estaPertoDoFim(container);
-    }
-  }, []);
-
-  // RN-173: as dependências eram só `[events.length, streamingText]`, e por
-  // isso TUDO que cresce o fio sem um evento novo passava despercebido — um
-  // `ApprovalCard` chegando pelo poll de `usePendingActions` (que é uma query
-  // SEPARADA) empurrava a conversa para fora da tela sem rolar nada. `actions`
-  // entra aqui pelo mesmo motivo que `events`: é uma das duas fontes da
-  // timeline.
+  // Por IDENTIDADE, não por `length`: a primeira leva abre no fim (achado 10;
+  // com `highlightEvent` fica no evento citado); toda mudança depois vai ao fim.
+  const identidade = identidadeDoFio(events, actions);
   useEffect(() => {
-    acompanharOFim();
-  }, [events.length, actions.length, acompanharOFim]);
+    if (events.length === 0 && actions.length === 0) return;
+    const primeira = vistoRef.current === null;
+    vistoRef.current = identidade;
+    if (primeira && highlightEvent) return;
+    seguindoRef.current = true;
+    rolarParaOFim(messagesEndRef.current);
+  }, [identidade]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // RN-748 (AT-432): o turno suspendeu esperando aprovação — o cartão é a
-  // próxima coisa que a pessoa precisa ver, então vai à vista SEM a guarda
-  // dos 120px. Só na MUDANÇA depois da abertura: reabrir a sessão com uma
-  // espera antiga no log não arranca ninguém do lugar.
-  const esperaPorAprovacao = seqDaEsperaPorAprovacao(events);
-  const esperaVistaRef = useRef<number | null | undefined>(undefined);
-  useEffect(() => {
-    const anterior = esperaVistaRef.current;
-    esperaVistaRef.current = esperaPorAprovacao;
-    if (anterior === undefined || esperaPorAprovacao === null) return;
-    if (esperaPorAprovacao !== anterior) {
-      // O cartão chega por outra query (as ações): espera a volta seguinte.
-      setTimeout(() => rolarParaOFim(messagesEndRef.current), 0);
-    }
-  }, [esperaPorAprovacao]);
-
-  // O texto do streaming (AT-301): em vez de dependência de efeito — que
-  // exigiria a página re-renderizar a cada token —, uma assinatura direta do
-  // store. O aviso chega ANTES de a bolha pintar o texto novo, então o
-  // acompanhamento vai para a volta seguinte do laço de eventos, depois do
-  // commit; só o TEXTO dispara (a faixa de atividade mora fora da área que
-  // rola), como a dependência antiga.
+  // O texto do streaming (AT-301): assinatura direta do store; o aviso chega
+  // ANTES de a bolha pintar, então a rolagem vai à volta seguinte.
   useEffect(() => {
     let textoAnterior = streamingStore.ler().texto;
     let pendente: ReturnType<typeof setTimeout> | null = null;
@@ -176,116 +101,16 @@ export function useRolagemDoFio({
     };
   }, [streamingStore, acompanharOFim]);
 
-  // A outra metade do mesmo problema, e a que NENHUMA lista de dependências
-  // resolve: altura que muda sem estado novo no `SessionPage` — abrir/fechar
-  // um `Disclosure` (o colapso por agente da RN-138, os "Detalhes" do próprio
-  // card de aprovação), o Markdown reflowando, um diagrama renderizando
-  // depois. Quem sabe disso é o LAYOUT, não o React, então quem pergunta é um
-  // `ResizeObserver` — sobre o CONTEÚDO, com a MESMA guarda dos 120px.
-  //
-  // A guarda de existência é a mesma razão de `rolarParaOFim`: jsdom não
-  // implementa `ResizeObserver`, e num navegador de verdade ele sempre existe
-  // — a guarda nunca muda o comportamento visível.
+  // Altura que muda sem estado novo: o CONTEÚDO (Disclosure, Markdown,
+  // Mermaid) e o CONTAINER (faixa de atividade, composer, pendências acima).
+  // Guarda de existência: jsdom não tem `ResizeObserver`.
   useEffect(() => {
-    const alvo = messagesInnerRef.current;
-    if (!alvo || typeof ResizeObserver === 'undefined') return;
+    if (typeof ResizeObserver === 'undefined') return;
     const observador = new ResizeObserver(() => acompanharOFim());
-    observador.observe(alvo);
+    if (messagesInnerRef.current) observador.observe(messagesInnerRef.current);
+    if (scrollContainerRef.current) observador.observe(scrollContainerRef.current);
     return () => observador.disconnect();
   }, [acompanharOFim]);
 
-  return { messagesEndRef, scrollContainerRef, messagesInnerRef, aoRolarOFio };
-}
-
-/**
- * O botão "ir ao fim" do fio (RN-836, AT-506): aparece só quando a pessoa
- * saiu do fim (a mesma guarda dos 120px da RN-173) E o fio ganhou conteúdo
- * desde então. O contador é de MENSAGENS novas; uma aprovação nova não soma
- * ao número, ela REALÇA o botão — é decisão esperando a pessoa.
- */
-export function estadoDoIrAoFim(e: {
-  foraDoFim: boolean;
-  mensagensAgora: number;
-  mensagensAoSair: number;
-  /** Ids das ações PENDENTES no fio (agora / ao sair do fim). */
-  aprovacoesAgora: string[];
-  aprovacoesAoSair: string[];
-}): { visivel: boolean; novas: number; aprovacao: boolean } {
-  const novas = Math.max(0, e.mensagensAgora - e.mensagensAoSair);
-  const aprovacao = e.aprovacoesAgora.some((id) => !e.aprovacoesAoSair.includes(id));
-  return { visivel: e.foraDoFim && (novas > 0 || aprovacao), novas, aprovacao };
-}
-
-/** O seletor dos cartões de aprovação dentro do fio (marcados na montagem). */
-export const SELETOR_DE_APROVACAO_NO_FIO = '[data-aprovacao-no-fio]';
-
-/**
- * A metade de estado do botão "ir ao fim". Ele é montado DENTRO do conteúdo
- * do fio, então acha o container que rola pelo próprio DOM (o `role="log"`
- * do fio) em vez de receber o ref da página — o hook da página continua
- * dono da rolagem automática, este só OBSERVA e oferece o salto.
- */
-export function useIrAoFimDoFio(totalDeMensagens: number) {
-  const ancoraRef = useRef<HTMLDivElement | null>(null);
-  const [foraDoFim, setForaDoFim] = useState(false);
-  const aoSairRef = useRef({ mensagens: 0, aprovacoes: [] as string[] });
-  const [aprovacoesAgora, setAprovacoesAgora] = useState<string[]>([]);
-  const totalRef = useRef(totalDeMensagens);
-  totalRef.current = totalDeMensagens;
-
-  const container = useCallback(
-    () => ancoraRef.current?.closest<HTMLElement>('[role="log"]') ?? null,
-    [],
-  );
-  const contarAprovacoes = useCallback(
-    () =>
-      Array.from(container()?.querySelectorAll(SELETOR_DE_APROVACAO_NO_FIO) ?? [])
-        .map((n) => n.getAttribute('data-aprovacao-no-fio') ?? '')
-        .filter(Boolean),
-    [container],
-  );
-
-  useEffect(() => {
-    const ids = contarAprovacoes();
-    // Só troca o estado se o conjunto mudou; senão o efeito sem deps re-renderiza sem fim.
-    setAprovacoesAgora((antes) => (antes.join('|') === ids.join('|') ? antes : ids));
-  });
-
-  useEffect(() => {
-    const el = container();
-    if (!el) return;
-    const aoRolar = () => {
-      if (estaPertoDoFim(el)) {
-        setForaDoFim(false);
-        return;
-      }
-      setForaDoFim((antes) => {
-        if (!antes) {
-          aoSairRef.current = { mensagens: totalRef.current, aprovacoes: contarAprovacoes() };
-        }
-        return true;
-      });
-    };
-    el.addEventListener('scroll', aoRolar);
-    return () => el.removeEventListener('scroll', aoRolar);
-  }, [container, contarAprovacoes]);
-
-  const irAoFim = useCallback(() => {
-    const el = container();
-    if (el) {
-      if (typeof el.scrollTo === 'function') el.scrollTo({ top: el.scrollHeight });
-      else el.scrollTop = el.scrollHeight;
-    }
-    rolarParaOFim(ancoraRef.current);
-    setForaDoFim(false);
-  }, [container]);
-
-  const estado = estadoDoIrAoFim({
-    foraDoFim,
-    mensagensAgora: totalDeMensagens,
-    mensagensAoSair: aoSairRef.current.mensagens,
-    aprovacoesAgora,
-    aprovacoesAoSair: aoSairRef.current.aprovacoes,
-  });
-  return { ancoraRef, irAoFim, ...estado };
+  return { messagesEndRef, scrollContainerRef, messagesInnerRef };
 }

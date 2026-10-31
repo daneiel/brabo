@@ -331,15 +331,7 @@
       "outrasCount_other": "{{count}} другой записи",
       "conteudoComOutras": "{{mensagens}} · {{outras}}"
     },
-    "rotuloDoFio": "Разговор сессии",
-    "irAoFim": {
-      "rotulo": "Перейти в конец разговора: {{detalhe}}",
-      "novas_one": "{{count}} новое сообщение",
-      "novas_few": "{{count}} новых сообщения",
-      "novas_many": "{{count}} новых сообщений",
-      "novas_other": "{{count}} нового сообщения",
-      "aprovacao": "Есть одобрение, которое ждёт"
-    }
+    "rotuloDoFio": "Разговор сессии"
   },
   "fila": {
     "naFila": "в очереди {{agente}} — будет прочитано, когда текущий ход закончится",
