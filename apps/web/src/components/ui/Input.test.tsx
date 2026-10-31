@@ -5,7 +5,6 @@ import i18next from 'i18next';
 import { initReactI18next, I18nextProvider } from 'react-i18next';
 import uiPtBR from '../../locales/pt-BR/ui.json';
 import { Input } from './Input';
-import styles from './Input.module.css';
 
 /**
  * Instância própria de i18next (mesmo padrão de `AccountPage.test.tsx`), só
@@ -51,16 +50,14 @@ function renderComI18n(node: ReactElement) {
  */
 describe('Input', () => {
   describe('preenchido', () => {
-    it('aplica a classe quando pedido', () => {
+    it('marca data-preenchido quando pedido', () => {
       renderComI18n(<Input label="E-mail" preenchido />);
-      expect(screen.getByLabelText('E-mail')).toHaveClass(styles.preenchido);
+      expect(screen.getByLabelText('E-mail')).toHaveAttribute('data-preenchido');
     });
 
     it('não aplica por default — as telas fora de auth não mudam', () => {
       renderComI18n(<Input label="E-mail" />);
-      expect(screen.getByLabelText('E-mail')).not.toHaveClass(
-        styles.preenchido,
-      );
+      expect(screen.getByLabelText('E-mail')).not.toHaveAttribute('data-preenchido');
     });
   });
 

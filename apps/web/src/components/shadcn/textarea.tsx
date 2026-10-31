@@ -6,7 +6,7 @@ function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {
     <textarea
       data-slot="textarea"
       className={cn(
-        "flex field-sizing-content min-h-16 w-full rounded-lg border border-input bg-transparent px-2.5 py-2 text-base transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-sm dark:bg-input/30 dark:disabled:bg-input/80 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40",
+        "min-h-[88px] w-full resize-y rounded-[var(--radius-md)] border border-[color:var(--border)] bg-[var(--surface-1)] px-3 py-[9px] font-[family-name:var(--font-body)] text-[length:13px] leading-normal text-[color:var(--text-primary)] transition-[border-color,box-shadow] duration-[120ms] outline-none placeholder:text-[color:var(--text-muted)] focus-visible:border-[color:var(--accent)] focus-visible:outline-2 focus-visible:outline-transparent focus-visible:shadow-[0_0_0_3px_var(--focus-ring)] forced-colors:focus-visible:outline-[Highlight] aria-invalid:border-[color:var(--danger)] aria-invalid:focus:border-[color:var(--danger)] aria-invalid:focus:shadow-[0_0_0_3px_var(--danger-ring)]",
         className
       )}
       {...props}
