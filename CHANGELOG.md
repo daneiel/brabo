@@ -7,6 +7,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 ### Correções
 
 - O Infra Lead pede volume nomeado para dados persistentes e `propose_infra_pr` recusa compose com bind-mount relativo (`./pasta:`), que nascia root e não gravava na primeira subida (AT-644, RN-962).
+- O aviso de recorte do Jev deixa de dizer que as ferramentas fora do recorte voltam no passo seguinte: elas podem ser pedidas neste mesmo passo, e o passo é refeito com o catálogo completo se o modelo responder sem ferramenta (AT-643, RN-961).
 - O 9Router passa a receber as ferramentas (`toolCalling: true`, provado por smoke), o vínculo de agente/área confere a capability do provider (422) e `buildBody` lança em vez de descartar `tools` calado (AT-637, RN-950).
 - O fio da Sessão acompanha sempre a última mensagem (AT-635, RN-951): cada evento ou ação nova o leva ao fim, mesmo para quem rolou para cima; o container que encolhe e `?highlightEvent` também seguem; o botão "ir ao fim" saiu.
 - Chamada de ferramenta escrita como texto (`<invoke ...>`) deixa de aparecer como resposta no fio: a api repete a chamada uma vez e, se repetir, devolve falha nomeada `tool_call_as_text` sem texto cru (AT-633, RN-949).
