@@ -21587,7 +21587,7 @@ sem dizer qual.
   `dev.credit_exhausted` como trabalho pendente, como `dev.idle_tripped`.
   Desde a RN-730 o 402 chega com `code` próprio (`insufficient_credit`) e é
   ele que decide; o reconhecimento pelo texto ficou só como rede.
-- **Onde:** `apps/engine/lib/engine/agents/falha_de_turno.ex:138`
+- **Onde:** `apps/engine/lib/engine/agents/falha_de_turno.ex:142`
   (`credito_esgotado?`),
   `apps/engine/lib/engine/dev/dev_agent_server.ex:902` (`handle_outcome`),
   `apps/engine/lib/engine/dev/agent_io.ex:271` (`pausar_por_credito`),
@@ -21622,7 +21622,7 @@ sem dizer qual.
   (`streamErrorCode`),
   `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:273`
   (`streamErrorCode`),
-  `apps/engine/lib/engine/agents/falha_de_turno.ex:87` (`credito_esgotado?`),
+  `apps/engine/lib/engine/agents/falha_de_turno.ex:91` (`credito_esgotado?`),
   `:71` (`origem`), `apps/engine/lib/engine/harness/tool_loop.ex:168`
   (`last_error_code`), `apps/engine/lib/engine/dev/dev_agent_server.ex:902`
   (`handle_outcome`)
@@ -21869,8 +21869,8 @@ sem dizer qual.
   top up the key and try again."; sem idioma resolvido, pt-BR. O JSON do
   provider fica só no `reason` (diagnóstico). Os demais erros mantêm a frase
   de sempre.
-- **Onde:** `apps/engine/lib/engine/agents/falha_de_turno.ex:162` (`mensagem`),
-  `:185` (`diagnostico`)
+- **Onde:** `apps/engine/lib/engine/agents/falha_de_turno.ex:166` (`mensagem`),
+  `:189` (`diagnostico`)
 - **Teste:** `apps/engine/test/engine/agents/dev_lead_server_test.exs` (402
   em pt-BR e en: frase curta, `reason` sem `{:final`; erro `upstream`: frase
   de sempre), `apps/engine/test/engine/agents/falha_de_turno_test.exs`
@@ -21937,7 +21937,7 @@ sem dizer qual.
   texto narrado entra na bolha cortado em 300 caracteres com "…".
 - **Onde:** `apps/api/src/domain/llm/llm-provider-errors.ts:164`
   (`LIMITE_DO_DETALHE`), `apps/engine/lib/engine/agents/falha_de_turno.ex:284`
-  (`@teto_da_bolha`), `:282` (`curto`)
+  (`@teto_da_bolha`), `:289` (`curto`)
 - **Teste:** `apps/api/test/domain/llm/llm-provider-errors.spec.ts` (o 402
   leva `"metadata":{"reason":"insufficient_credits"` inteiro; corpo acima do
   teto corta), `apps/engine/test/engine/agents/falha_de_turno_test.exs`
@@ -22150,8 +22150,8 @@ sem dizer qual.
   sempre.
 - **Onde:** `apps/web/src/lib/session-channel.ts:232` (`awaiting_approval`),
   `apps/web/src/lib/session-turno.ts:418` (`awaiting_approval`),
-  `apps/web/src/lib/session-rolagem.ts:30` (`seqDaEsperaPorAprovacao`),
-  `:141` (`esperaPorAprovacao`)
+  `seqDaEsperaPorAprovacao` (removido na RN-951, `apps/web/src/lib/session-rolagem.ts`),
+  `esperaPorAprovacao` (removido)
 - **Teste:** `apps/web/src/lib/session-channel.test.ts` (`onAgentStatus repassa
   awaiting_approval (RN-748)`), `apps/web/src/lib/session-rolagem.test.ts`
   (`seqDaEsperaPorAprovacao (RN-748)`: espera mais recente; sem espera, `null`)
@@ -22211,8 +22211,8 @@ sem dizer qual.
   volta).
 - **Onde:** `apps/web/src/routes/project-tabs.ts:383` (`abaDaRota`),
   `apps/web/src/routes/Shell.tsx:522` (`abaDaRota`),
-  `apps/web/src/lib/session-rolagem.ts:16` (`estaPertoDoFim`), `:82`
-  (`estavaNoFimRef`), `:120` (`aoRolarOFio`),
+  `estaPertoDoFim` (removido na RN-951, `apps/web/src/lib/session-rolagem.ts`),
+  `estavaNoFimRef`, `aoRolarOFio` (removidos),
   `apps/web/src/components/ModelCatalogSection.module.css` (`.barraDeLote`),
   `apps/web/src/routes/SessionPage.module.css` (`.composer`)
 - **Teste:** `apps/web/src/lib/session-rolagem-fim.test.ts` (`estaPertoDoFim`
@@ -23216,7 +23216,7 @@ sem dizer qual.
   `codigo` e desarmou o dev. A correção pós-gate segue a mesma régua
   (AT-621, [RN-864](#rn-864)).
 - **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:266`
-  (`llm_turn_com_retentativa`), `apps/engine/lib/engine/agents/falha_de_turno.ex:112`
+  (`llm_turn_com_retentativa`), `apps/engine/lib/engine/agents/falha_de_turno.ex:119`
   (`falha_de_rede?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:952`
   (`bloquear_parada`), `apps/engine/lib/engine/dev/agent_io.ex:228`
   (`finish_task`)
@@ -23621,7 +23621,7 @@ sem dizer qual.
   Agente fora do roster (ou sem id) degrada para o ícone
   genérico, nunca para caixa vazia.
 - **Onde:** `apps/web/src/components/ui/AvatarDoAgente.tsx:22` (`AvatarDoAgente`),
-  `apps/web/src/routes/SessionFio.tsx:284` (`BolhaDoStreaming`),
+  `apps/web/src/routes/SessionFio.tsx:278` (`BolhaDoStreaming`),
   `apps/web/src/routes/session-timeline-montagem.tsx:127` (`montarTimeline`)
 - **Teste:** `apps/web/src/routes/SessionFio.at503.test.tsx` ("a bolha
   persistida usa o avatar do agente, não o do modelo; o modelo segue no chip",
@@ -23801,9 +23801,9 @@ sem dizer qual.
   esperando" (só o fio marca ação `pending`, comparada por CONJUNTO de ids ao sair do fim; ação já decidida não realça e a pendente decidida apaga o realce). O botão tem rótulo acessível próprio, some ao chegar ao fim e
   nunca aparece para quem está no fim — ali a rolagem automática da RN-173
   continua mandando, e o botão só observa.
-- **Onde:** `apps/web/src/lib/session-rolagem.ts:206` (`estadoDoIrAoFim`),
-  `apps/web/src/lib/session-rolagem.ts:227` (`useIrAoFimDoFio`),
-  `apps/web/src/routes/IrAoFimDoFio.tsx:10` (`IrAoFimDoFio`)
+- **Onde:** `estadoDoIrAoFim` (removido na RN-951, `apps/web/src/lib/session-rolagem.ts`),
+  `useIrAoFimDoFio` (removido),
+  `IrAoFimDoFio` (componente removido)
 - **Teste:** `apps/web/src/routes/IrAoFimDoFio.test.tsx` ("caminho feliz: fora
   do fim e com mensagens novas, mostra o contador…", "aprovação nova realça o
   botão", "pendente decidida apaga o realce", "troca de uma pendente por outra realça"; falha: "no fim, conteúdo novo não mostra botão")
@@ -24416,7 +24416,7 @@ sem dizer qual.
   provider numa correção segue o mesmo caminho do laço principal (crédito
   RN-726 + retomada), com o motivo marcado "(correção)".
 - **Onde:** `apps/engine/lib/engine/dev/dev_agent_server.ex:822`
-  (`handle_correction_outcome`), `apps/engine/lib/engine/agents/falha_de_turno.ex:133`
+  (`handle_correction_outcome`), `apps/engine/lib/engine/agents/falha_de_turno.ex:140`
   (`passageira?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:978`
   (`bloquear_passageira`), `apps/engine/lib/engine/dev/agent_io.ex:293`
   (`pausar_por_rede`), `apps/engine/lib/engine/workers/retomada_de_tarefa_worker.ex:33`
@@ -24694,8 +24694,8 @@ sem dizer qual.
   "parou sem concluir nem reportar bloqueio" com origem `codigo`. 403 sem o
   marcador segue `auth`.
 - **Onde:** `apps/api/src/domain/llm/llm-provider-errors.ts:86` (`normalizeHttpStatus`),
-  `:140` (`pareceOrcamento`); `apps/engine/lib/engine/agents/falha_de_turno.ex:205`
-  (`orcamento_esgotado`), `:219` (`frase_de_orcamento`), `:163`
+  `:140` (`pareceOrcamento`); `apps/engine/lib/engine/agents/falha_de_turno.ex:212`
+  (`orcamento_esgotado`), `:226` (`frase_de_orcamento`), `:163`
   (`credito_esgotado?`); `apps/engine/lib/engine/dev/dev_agent_server.ex:957`
   (`motivo_de_credito`)
 - **Teste:** `apps/api/test/domain/llm/llm-provider-errors.spec.ts` ("o 403 de
@@ -25367,3 +25367,10 @@ sem dizer qual.
 - **Onde:** `apps/api/src/infrastructure/llm/nine-router-provider.ts:87` (`nineRouterConfig`), `apps/api/src/domain/llm/model-capabilities.ts:95` (`assertModelFitsBindingScope`), `apps/api/src/application/use-cases/llm/set-model-binding.use-case.ts:56` (`toolCalling`), `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:598` (`buildBody`)
 - **Teste:** `apps/api/test/domain/llm/model-capabilities.spec.ts` (recusa por provider em `agent`/`area`; escopos livres), `apps/api/test/infrastructure/llm/nine-router-provider.contract.spec.ts` (capability `true`), `apps/api/test/contract/llm-provider.contract.ts` (provider sem capability lança nomeado); smoke manual em `nine-router-provider.smoke.spec.ts`.
 - **Origem:** AT-637 (EP-026), TP-01 de 31/10 e medição da AT-631.
+
+### RN-951 — O fio da Sessão acompanha SEMPRE a última mensagem {#rn-951}
+
+- **Regra:** revê a [RN-173](./business-rules/autenticacao.md#rn-173), o item 4 da [RN-751](#rn-751) e a [RN-836](#rn-836) (decisão do dono de 31/10). Cada evento ou ação nova no fio o leva à última mensagem, mesmo que a pessoa tenha rolado para cima: a guarda dos 120 px e a "intenção de estar no fim" saíram, e o botão "↓ N novas" (com o realce de aprovação) foi aposentado. O acompanhamento dispara por IDENTIDADE (`seq` do último evento e ids das ações, não pelo tamanho das listas, que não muda no teto de 200), pelo texto do streaming e por `ResizeObserver` no CONTEÚDO e no CONTAINER (faixa de atividade, composer e pendências mudam a altura). `?highlightEvent` segue levando ao evento citado na abertura, mas não desliga o acompanhamento: a primeira mudança depois o devolve ao fim. A rolagem é instantânea (`block: 'end'`) e o foco não se move. Entre duas mensagens a pessoa pode rolar e ler; a próxima a traz de volta.
+- **Onde:** `apps/web/src/lib/session-rolagem.ts:20` (`identidadeDoFio`), `apps/web/src/lib/session-rolagem.ts:36` (`useRolagemDoFio`).
+- **Teste:** `apps/web/src/lib/session-rolagem.test.tsx` (mensagem nova com a pessoa acima, `length` igual com `seq` novo, ação nova, container que encolhe, `highlightEvent`, rajada, streaming, sem conteúdo).
+- **Origem:** AT-635 (EP-031).

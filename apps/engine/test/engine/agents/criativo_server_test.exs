@@ -404,6 +404,23 @@ defmodule Engine.Agents.CriativoServerTest do
     assert payload.mensagem =~ "credencial"
   end
 
+  # RN-949: a api devolve frame final com content vazio e este errorCode.
+  test "tool_call_as_text vira agent.error origem modelo, sem agent.response", %{
+    state: state,
+    session_id: session_id
+  } do
+    Process.put(:fake_llm_turns, [
+      %{"error" => "chamada em XML (modelo x)", "errorCode" => "tool_call_as_text"}
+    ])
+
+    assert {:reply, :ok, _} = sync_call(CriativoServer, {:user_message, "oi"}, state)
+
+    assert_received {:event_appended, _, ^session_id, %{type: "agent.error", payload: payload}}
+    assert payload.origem == "modelo"
+    assert payload.mensagem =~ "como texto"
+    refute_received {:event_appended, _, ^session_id, %{type: "agent.response"}}
+  end
+
   # O payload recusado pelo schema sumia: o resultado da ferramenta era
   # DESCARTADO (`_ =`), o Criativo dizia "registrei as regras", e quatro regras
   # de negócio iam para o lixo com o painel vazio.

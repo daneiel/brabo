@@ -1185,7 +1185,7 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
       node: (
         // AT-322: o card é o mesmo das outras superfícies; quem o centraliza
         // com teto de 560px no fio é este contêiner (RN-173).
-        <div key={action.id} className={styles.acaoNoFio} data-aprovacao-no-fio={action.status === 'pending' ? action.id : undefined}>
+        <div key={action.id} className={styles.acaoNoFio}>
         {/* RN-843 (AT-512): pendente e desenhada no bloco de pendências, a
             ação vira só uma referência aqui — um cartão de decisão por ação. */}
         <CartaoOuReferenciaNoFio action={action}>

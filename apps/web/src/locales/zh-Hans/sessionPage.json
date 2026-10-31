@@ -280,12 +280,7 @@
       "outrasCount_other": "{{count}} 条其他记录",
       "conteudoComOutras": "{{mensagens}} · {{outras}}"
     },
-    "rotuloDoFio": "会话对话",
-    "irAoFim": {
-      "rotulo": "跳到对话末尾：{{detalhe}}",
-      "novas_other": "{{count}} 条新消息",
-      "aprovacao": "有一个审批在等待"
-    }
+    "rotuloDoFio": "会话对话"
   },
   "fila": {
     "naFila": "在 {{agente}} 的队列中 — 当前轮次结束后会被读取",
