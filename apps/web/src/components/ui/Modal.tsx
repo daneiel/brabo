@@ -1,7 +1,14 @@
-import type { MouseEvent, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import {
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogHeader,
+  DialogIconClose,
+  DialogTitle,
+} from '@/components/shadcn/dialog';
 import { XIcon } from './icons';
-import styles from './Modal.module.css';
 
 interface ModalProps {
   title: ReactNode;
@@ -18,26 +25,33 @@ interface ModalProps {
   size?: 'default' | 'full';
 }
 
+/**
+ * Adaptador do `Dialog` do shadcn (AT-646). Quem monta o `Modal` já o quer
+ * aberto, então `open` é fixo e o Base UI só AVISA o fechamento (Esc, clique
+ * no overlay, botão X) por `onClose`. Esc e a prisão/devolução do foco vêm
+ * dele. O tamanho sai em `data-size`.
+ */
 export function Modal({ title, icon, onClose, children, size = 'default' }: ModalProps) {
   const { t } = useTranslation('ui');
-  function handleOverlayClick(event: MouseEvent<HTMLDivElement>) {
-    if (event.target === event.currentTarget) onClose();
-  }
-
   return (
-    <div className={styles.overlay} onClick={handleOverlayClick}>
-      <div className={[styles.card, size === 'full' && styles.cardFull].filter(Boolean).join(' ')}>
-        <div className={styles.header}>
-          <div className={styles.title}>
+    <Dialog
+      open
+      onOpenChange={(aberto) => {
+        if (!aberto) onClose();
+      }}
+    >
+      <DialogContent data-size={size} showCloseButton={false}>
+        <DialogHeader>
+          <DialogTitle>
             {icon}
             {title}
-          </div>
-          <button type="button" className={styles.close} onClick={onClose} aria-label={t('modal.closeLabel')}>
+          </DialogTitle>
+          <DialogIconClose aria-label={t('modal.closeLabel')}>
             <XIcon size={16} />
-          </button>
-        </div>
-        <div className={styles.body}>{children}</div>
-      </div>
-    </div>
+          </DialogIconClose>
+        </DialogHeader>
+        <DialogBody>{children}</DialogBody>
+      </DialogContent>
+    </Dialog>
   );
 }

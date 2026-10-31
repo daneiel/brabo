@@ -29,7 +29,7 @@ function DialogOverlay({
     <DialogPrimitive.Backdrop
       data-slot="dialog-overlay"
       className={cn(
-        "fixed inset-0 isolate z-50 bg-black/10 duration-100 supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
+        "fixed inset-0 isolate z-100 bg-[var(--overlay)] backdrop-blur-[2.5px] animate-[bfade_0.15s_ease-out]",
         className
       )}
       {...props}
@@ -51,7 +51,7 @@ function DialogContent({
       <DialogPrimitive.Popup
         data-slot="dialog-content"
         className={cn(
-          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          "fixed top-1/2 left-1/2 z-100 w-[calc(100%-40px)] max-w-[520px] max-h-[88vh] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-[var(--radius-lg,14px)] border border-[var(--border-strong)] bg-popover text-popover-foreground shadow-[var(--shadow)] outline-none animate-[bpop_0.16s_ease-out] data-[size=full]:max-w-[min(1400px,96vw)] data-[size=full]:max-h-[94vh]",
           className
         )}
         {...props}
@@ -81,7 +81,7 @@ function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="dialog-header"
-      className={cn("flex flex-col gap-2", className)}
+      className={cn("flex items-center justify-between gap-3 border-b border-[var(--border)] px-5 py-[18px]", className)}
       {...props}
     />
   )
@@ -89,7 +89,7 @@ function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
 
 function DialogFooter({
   className,
-  showCloseButton = false,
+  showCloseButton = true,
   children,
   ...props
 }: React.ComponentProps<"div"> & {
@@ -119,7 +119,7 @@ function DialogTitle({ className, ...props }: DialogPrimitive.Title.Props) {
     <DialogPrimitive.Title
       data-slot="dialog-title"
       className={cn(
-        " text-base leading-none font-medium",
+        "flex items-center gap-2.5 font-[family-name:var(--font-heading)] text-[15px] font-semibold text-foreground",
         className
       )}
       {...props}
@@ -143,8 +143,28 @@ function DialogDescription({
   )
 }
 
+function DialogBody({ className, ...props }: React.ComponentProps<"div">) {
+  return <div data-slot="dialog-body" className={cn("p-5", className)} {...props} />
+}
+
+/** O fechar em ícone da casa (32px, foco em anel; ADR 0036). O ícone vem de fora. */
+function DialogIconClose({ className, ...props }: DialogPrimitive.Close.Props) {
+  return (
+    <DialogPrimitive.Close
+      data-slot="dialog-close"
+      className={cn(
+        "inline-flex size-8 cursor-pointer items-center justify-center rounded-[var(--radius-md)] border-0 bg-transparent text-[var(--text-secondary)] transition-[background,color] duration-100 outline-2 outline-transparent hover:bg-[var(--surface-2)] hover:text-foreground focus-visible:shadow-[0_0_0_3px_var(--focus-ring)] forced-colors:focus-visible:outline-[Highlight]",
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
 export {
   Dialog,
+  DialogBody,
+  DialogIconClose,
   DialogClose,
   DialogContent,
   DialogDescription,

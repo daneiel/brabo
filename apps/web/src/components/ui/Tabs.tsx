@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react';
-import styles from './Tabs.module.css';
+import { Tabs as ShadcnTabs, TabsCount, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
 
 /**
  * Régua de abas do design system — `components/primitivas/Tabs` no bundle
@@ -31,22 +31,21 @@ interface TabsProps {
 
 export function Tabs({ items, active, onChange, trailing }: TabsProps) {
   return (
-    <div className={styles.list} role="tablist">
-      {items.map((item) => (
-        <button
-          key={item.key}
-          type="button"
-          role="tab"
-          aria-selected={active === item.key}
-          className={[styles.tab, active === item.key && styles.active].filter(Boolean).join(' ')}
-          style={item.cor ? ({ '--tab-cor': item.cor } as CSSProperties) : undefined}
-          onClick={() => onChange(item.key)}
-        >
-          {item.label}
-          {item.count !== undefined && <span className={styles.count}>{item.count}</span>}
-        </button>
-      ))}
-      {trailing}
-    </div>
+    <ShadcnTabs value={active} onValueChange={(v) => onChange(String(v))}>
+      <TabsList variant="casa">
+        {items.map((item) => (
+          <TabsTrigger
+            key={item.key}
+            value={item.key}
+            variant="casa"
+            style={item.cor ? ({ '--tab-cor': item.cor } as CSSProperties) : undefined}
+          >
+            {item.label}
+            {item.count !== undefined && <TabsCount>{item.count}</TabsCount>}
+          </TabsTrigger>
+        ))}
+        {trailing}
+      </TabsList>
+    </ShadcnTabs>
   );
 }
