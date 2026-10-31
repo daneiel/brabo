@@ -40,7 +40,7 @@ const createSession = vi.fn();
 const transitionSession = vi.fn();
 const renameSession = vi.fn();
 const getActiveExecutionSession = vi.fn();
-const getMySpend = vi.fn();
+const getProjectSpendTeam = vi.fn();
 
 // Um SÓ mock de navegação, compartilhado entre chamadas de `useNavigate` —
 // é o que permite os testes de "não navega ao editar" / "navega fora do
@@ -66,7 +66,7 @@ vi.mock('../lib/api-client', async () => {
     transitionSession: (...args: unknown[]) => transitionSession(...args),
     renameSession: (...args: unknown[]) => renameSession(...args),
     getActiveExecutionSession: (...args: unknown[]) => getActiveExecutionSession(...args),
-    getMySpend: (...args: unknown[]) => getMySpend(...args),
+    getProjectSpendTeam: (...args: unknown[]) => getProjectSpendTeam(...args),
   };
 });
 
@@ -150,10 +150,10 @@ beforeEach(() => {
   // Default: nenhuma execução vigente. Os testes de RN-144 sobrescrevem isto
   // quando precisam de uma sessão de execução de verdade.
   getActiveExecutionSession.mockResolvedValue(null);
-  // Default: os KPIs da aba Criativo (RN-227/229/230) buscam `getMySpend`
+  // Default: os KPIs da aba Criativo (RN-227/229/230) buscam `getProjectSpendTeam`
   // assim que montam — sem isto, todo teste que abre `ProjectCriativoTab`
   // dispararia a chamada REAL não mockada.
-  getMySpend.mockResolvedValue({
+  getProjectSpendTeam.mockResolvedValue({
     projectId: 'proj-1',
     dias: 30,
     actorId: 'user-1',
@@ -857,7 +857,7 @@ describe('ProjectSessionsTab — KPIs da aba Criativo', () => {
         status: 'closed',
       }),
     ]);
-    getMySpend.mockResolvedValue({
+    getProjectSpendTeam.mockResolvedValue({
       projectId: 'proj-1',
       dias: 30,
       actorId: 'user-1',
@@ -875,9 +875,9 @@ describe('ProjectSessionsTab — KPIs da aba Criativo', () => {
     expect(screen.getByText('2')).toBeTruthy();
     expect(screen.getByText('Ativas agora')).toBeTruthy();
     expect(screen.getByText('1')).toBeTruthy();
-    // `getMySpend(projectId, 30)` é a MESMA chamada que a aba Gastos faz
+    // `getProjectSpendTeam(projectId, 30)` é a MESMA chamada que a aba Gastos faz
     // para a visão do membro — nenhuma agregação nova.
-    expect(getMySpend).toHaveBeenCalledWith('proj-1', 30);
+    expect(getProjectSpendTeam).toHaveBeenCalledWith('proj-1', 30);
     expect(await screen.findByText('US$ 5,00')).toBeTruthy();
   });
 
@@ -885,7 +885,7 @@ describe('ProjectSessionsTab — KPIs da aba Criativo', () => {
     listSessions.mockResolvedValue([
       sessao('11111111-aaaa', '2026-08-01T00:00:00.000Z', { kind: 'criativa' }),
     ]);
-    getMySpend.mockRejectedValue(new Error('falhou'));
+    getProjectSpendTeam.mockRejectedValue(new Error('falhou'));
 
     montarAba(ProjectCriativoTab);
 
@@ -906,7 +906,7 @@ describe('ProjectSessionsTab — KPIs da aba Criativo', () => {
     ).toBeTruthy();
   });
 
-  it('a aba Chat não busca KPI nenhum — sem `getMySpend`', async () => {
+  it('a aba Chat não busca KPI nenhum — sem `getProjectSpendTeam`', async () => {
     listSessions.mockResolvedValue([
       sessao('11111111-aaaa', '2026-08-01T00:00:00.000Z', {
         kind: 'consultiva',
@@ -918,7 +918,7 @@ describe('ProjectSessionsTab — KPIs da aba Criativo', () => {
 
     await screen.findByText('Dúvidas de billing · #11111111');
     expect(screen.queryByText('Sessões no projeto')).toBeNull();
-    expect(getMySpend).not.toHaveBeenCalled();
+    expect(getProjectSpendTeam).not.toHaveBeenCalled();
   });
 });
 

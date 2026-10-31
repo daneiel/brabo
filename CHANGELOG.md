@@ -4,8 +4,15 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ## Unreleased
 
+### Funcionalidades
+
+- Gastos em duas páginas (AT-632, RN-963): `/spend` no menu global (o owner vê o workspace e a fatura por chave; os demais veem o próprio consumo por projeto) e a aba Gastos do projeto só do projeto (o membro vê o total e o custo por agente e por área, nunca provider). O orçamento do projeto ganhou editor, o botão "Definir orçamento" abre a aba Gastos, e assinatura aparece separada, sem "US$ 0".
+
 ### Correções
 
+- O usage do 9Router deixa de gravar os 2 000 tokens inventados pela 0.5.112 (versão lida de `/api/version`; outra versão grava como veio e avisa) e passa a ler o `cached_tokens` do topo; o cache de `cc/*` segue perdido pelo 9Router (AT-638, RN-958).
+- A sessão ativa não é mais encerrada por uma resposta fora de ordem na checagem de trabalho pendente (AT-642, RN-955): o GET interno é repetido uma vez. "Confirmar arquitetura pronta" e a oferta ao Infra funcionam depois de reabrir a sessão (RN-956); "aborted" é falha de infra (RN-957); o grafo volta sozinho se o Neo4j subiu depois da api, e o aviso diz a causa (RN-960).
+- O Infra Lead pede volume nomeado para dados persistentes e `propose_infra_pr` recusa compose com bind-mount relativo (`./pasta:`), que nascia root e não gravava na primeira subida (AT-644, RN-962).
 - O aviso de recorte do Jev deixa de dizer que as ferramentas fora do recorte voltam no passo seguinte: elas podem ser pedidas neste mesmo passo, e o passo é refeito com o catálogo completo se o modelo responder sem ferramenta (AT-643, RN-961).
 - O 9Router passa a receber as ferramentas (`toolCalling: true`, provado por smoke), o vínculo de agente/área confere a capability do provider (422) e `buildBody` lança em vez de descartar `tools` calado (AT-637, RN-950).
 - O fio da Sessão acompanha sempre a última mensagem (AT-635, RN-951): cada evento ou ação nova o leva ao fim, mesmo para quem rolou para cima; o container que encolhe e `?highlightEvent` também seguem; o botão "ir ao fim" saiu.

@@ -566,6 +566,8 @@ export interface Model {
   generatesImage: boolean;
   /** Preço digitado da doc do provider, não sincronizado (Fase 9b). */
   manualPricing: boolean;
+  /** Marca curada de cobrança (RN-954): `subscription` é assento, não US$. */
+  billing?: 'api' | 'subscription' | 'free';
   /**
    * Eixo INDEPENDENTE da curadoria: um modelo pode estar ativo num workspace
    * e indisponível no provider ao mesmo tempo. `unavailable` nunca é deletado
