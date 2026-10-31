@@ -67,7 +67,12 @@ export type LLMErrorCode =
   /** Nem chegou a falar com o provider (DNS, recusa de conexão, TLS). */
   | "connection"
   /** Falhou do lado de lá por motivo que não se encaixa nos anteriores. */
-  | "upstream";
+  | "upstream"
+  /**
+   * O modelo escreveu a chamada de ferramenta COMO TEXTO (`<invoke ...>`), duas
+   * vezes seguidas (AT-633, RN-949). Erro do MODELO, não do provider.
+   */
+  | "tool_call_as_text";
 
 /**
  * O que o provider sabe fazer, independente do modelo escolhido — o TETO.
