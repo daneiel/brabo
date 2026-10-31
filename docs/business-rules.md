@@ -277,7 +277,7 @@ one.
 
 - **Where:** `apps/web/src/lib/session-destinatario.ts:290`
   (`useDestinatarioDoChat`, since RN-631),
-  `apps/web/src/lib/api-client.ts:1146` (`getSessionModelBinding`, the
+  `apps/web/src/lib/api-client.ts:1151` (`getSessionModelBinding`, the
   `agentId`), `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:166`
   (`getSessionBinding`, `@Query('agentId')`)
 - **Test:** `apps/web/src/routes/SessionPage.destinatario-do-chat.test.tsx`
@@ -8190,7 +8190,7 @@ nunca `startsWith` cru — `/base-outra` não está dentro de `/base` —, espel
   `:333` (`caminhoForaDaBase`), `:360` (a sugestão);
   `apps/web/src/lib/wizard.ts:143` (`caminhoSugeridoNaBase`) e `:171`
   (`caminhoDentroDaBase`) — as funções puras;
-  `apps/web/src/lib/api-client.ts:300` (`getProjectsBase`)
+  `apps/web/src/lib/api-client.ts:305` (`getProjectsBase`)
 - **Teste:** `apps/web/src/routes/NewProjectWizard.test.tsx`
   (`describe('NewProjectWizard — a base de projetos decide o que é
   oferecido')` — base presente, base `null`, consulta recusada com 403, a
@@ -12464,8 +12464,8 @@ diferença não é escolha de desenho: é a forma do endpoint.
   `maquinaJaPareada`), `apps/web/src/components/RunnerOnboardingPanel.tsx:173`
   (as duas consultas e o `ReconhecimentoDeMaquina`),
   `apps/web/src/components/RunnerOnboardingPanel.module.css`
-  (`.reconhecimento`, `.gesto`), `apps/web/src/lib/api-client.ts:434`
-  (`listRunnerDeviceKeys`), `apps/web/src/lib/api-types.ts:773`
+  (`.reconhecimento`, `.gesto`), `apps/web/src/lib/api-client.ts:442`
+  (`listRunnerDeviceKeys`), `apps/web/src/lib/api-types.ts:777`
   (`RunnerDeviceKeyListItem`, `RunnerDeviceKeyEspecie`),
   `apps/web/src/locales/{en,pt-BR}/terminal.json` (`agenteDeMaquina.*`)
 - **Teste:** `apps/web/src/lib/agente-de-maquina.test.ts` — o caminho feliz
@@ -14930,7 +14930,7 @@ toast com a frase dela. O fio narra `session.reopened` como "sessão reaberta",
 com a causa do fechamento anterior quando ela foi gravada.
 
 - **Onde:** `apps/api/src/interfaces/http/sessions/sessions.controller.ts:210`
-  (`reopen`); `apps/web/src/lib/api-client.ts:627` (`reopenSession`);
+  (`reopen`); `apps/web/src/lib/api-client.ts:634` (`reopenSession`);
   `apps/web/src/routes/SessionPage.tsx:153` (`podeReabrir`);
   `apps/web/src/lib/session-acoes-da-sessao.ts:77` (`handleReopen`); `apps/web/src/routes/SessionComposer.tsx:383` (o botão);
   `apps/web/src/lib/activity.ts:633` (a frase do fio)
@@ -16169,7 +16169,7 @@ projeto aberto, e as outras listas seguiam anunciando a revogada.
   (`MachineDeviceKeysSection`);
   `apps/web/src/lib/chaves-de-dispositivo-queries.ts:31`
   (`invalidarChavesDeDispositivo`);
-  `apps/web/src/lib/api-client.ts:447` (`listMachineDeviceKeys`);
+  `apps/web/src/lib/api-client.ts:455` (`listMachineDeviceKeys`);
   `apps/web/src/locales/{en,pt-BR}/machineKeys.json`
 - **Teste:** `apps/api/test/application/use-cases/auth/machine-device-keys.use-case.spec.ts`
   (a lista só pelo usuário, a revogada incluída; a revogação REAL derrubando
@@ -17750,7 +17750,7 @@ fica. Ativação recusada não navega e mostra a frase da api. Quem navega é a
 ROTA (`irParaSessao`, o `navigate` do router): a tela não depende do router.
 
 - **Onde:** `apps/web/src/lib/session-acoes-de-handoff.ts:147`
-  (`handleActivateExecution`); `apps/web/src/router.tsx:359` (`irParaSessao`)
+  (`handleActivateExecution`); `apps/web/src/router.tsx:366` (`irParaSessao`)
 - **Teste:** `apps/web/src/routes/SessionPage.handoff-obsoleto.test.tsx`
   (navega para o `sessionId` devolvido, com aviso; recusa não navega — caso de
   falha; sem quem navegue, só avisa)
@@ -18224,8 +18224,8 @@ genérico, que ao lado de um brief ou de uma regra da mesma sessão parecia nega
 que eles existissem — o escopo da seção (PR e backlog, [RN-159](business-rules/autenticacao.md#rn-159)) não
 muda.
 
-- **Código:** `apps/web/src/routes/Shell.tsx:591` (`execucao`), `:599`
-  (`origemDaAtividade`), `:606` (`estadoDaAtividade`);
+- **Código:** `apps/web/src/routes/Shell.tsx:602` (`execucao`), `:610`
+  (`origemDaAtividade`), `:617` (`estadoDaAtividade`);
   `apps/web/src/lib/hooks.ts:127` (`useProjectSessions`, `frescorMs`);
   `apps/web/src/routes/Dashboard.tsx:75` (`lastActivityText`);
   `apps/web/src/routes/ContextAside.tsx:46` (`quantos`), `:340`
@@ -18342,8 +18342,8 @@ os achados X1–X3 da auditoria. A duplicação de navegação por abas (gaveta 
 barra) fechou no ADR 0211.
 
 - **Código:** `apps/web/src/lib/layout-movel.ts:18` (`CONSULTA_MOVEL`),
-  `:39` (`useLayoutMovel`); `apps/web/src/routes/Shell.tsx:414`
-  (`movel`), `:454` (`prenderFoco`), `:473` (`fecharAoSeguirLink`);
+  `:39` (`useLayoutMovel`); `apps/web/src/routes/Shell.tsx:424`
+  (`movel`), `:465` (`prenderFoco`), `:484` (`fecharAoSeguirLink`);
   `apps/web/src/routes/ProjectPage.tsx:49` (`movel`);
   `apps/web/src/routes/ProjectOverviewTab.tsx:68` (`movel`)
 - **Teste:** `apps/web/src/routes/Shell.test.tsx` ("Shell — layout móvel
@@ -18499,7 +18499,7 @@ não medido em projeto real, e declarado.
   (`TETO_DE_CHAVES_NO_LOTE`), `:37` (`lerListaDeChaves`), `:77`
   (`ResolveModelBindingsEmLoteUseCase`);
   `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:233`
-  (`getResolvedBindings`); `apps/web/src/lib/api-client.ts:1171`
+  (`getResolvedBindings`); `apps/web/src/lib/api-client.ts:1176`
   (`getResolvedModelBindings`); `apps/web/src/lib/bindings-resolvidos.ts:43`
   (`invalidarBindingsResolvidos`), `:69` (`useBindingsResolvidos`), `:111`
   (`useBindingsDosAgentes`); `apps/web/src/routes/ProjectOverviewTab.tsx:144`
@@ -21657,7 +21657,7 @@ sem dizer qual.
 - **Onde:** `apps/api/src/application/use-cases/actions/execute-infra-pr.use-case.ts:71`
   (`ExecuteInfraPrUseCase`),
   `apps/web/src/routes/ProjectApprovalsTab.tsx:106` (`ProjectApprovalsTab`),
-  `apps/web/src/routes/Shell.tsx:557` (`idDoProjetoAtual`),
+  `apps/web/src/routes/Shell.tsx:568` (`idDoProjetoAtual`),
   `apps/web/src/routes/NewProjectWizard.tsx:155` (`NewProjectWizard`),
   `apps/web/src/routes/ProjectPrsTab.tsx:141` (`invalidateMergeActions`),
   `apps/web/src/lib/agent-status.ts:222` (`gateStatus`)
@@ -22210,7 +22210,7 @@ sem dizer qual.
   reproduzida no navegador; a correção cobre a classe (conteúdo que encolhe e
   volta).
 - **Onde:** `apps/web/src/routes/project-tabs.ts:383` (`abaDaRota`),
-  `apps/web/src/routes/Shell.tsx:522` (`abaDaRota`),
+  `apps/web/src/routes/Shell.tsx:533` (`abaDaRota`),
   `estaPertoDoFim` (removido na RN-951, `apps/web/src/lib/session-rolagem.ts`),
   `estavaNoFimRef`, `aoRolarOFio` (removidos),
   `apps/web/src/components/ModelCatalogSection.module.css` (`.barraDeLote`),
@@ -24143,7 +24143,7 @@ sem dizer qual.
 - **Onde:** `apps/web/src/components/RodarNaSuaMaquina.tsx:32` (`RodarNaSuaMaquina`), `:20` (`urlLocalSegura`),
   `:13` (`releSeInfraAbriuPr`),
   `apps/web/src/routes/ProjectOverviewTab.tsx:202` (`releSeInfraAbriuPr`),
-  `apps/web/src/lib/api-client.ts:842` (`getRunInstructions`)
+  `apps/web/src/lib/api-client.ts:850` (`getRunInstructions`)
 - **Teste:** `apps/web/src/components/RodarNaSuaMaquina.test.tsx` ("mostra
   comando, copiar, link local e a nota de não verificado"; "sem declaração
   (null) o cartão não aparece"; "só localhost/127.0.0.1 com porta vira link";
@@ -25243,7 +25243,7 @@ sem dizer qual.
 ### RN-931 — As telas de providers e do catálogo mostram só o que tem chave do TITULAR, com a cor do provider {#rn-931}
 
 - **Regra:** "ativo" é o provider LOCAL ou o que tem chave do titular do workspace (RN-058), lida da rota da [RN-926](#rn-926). A tabela "O que cada provider sabe fazer" lista só os ativos, com o nome humano e a mesma cor do card de credencial (`COR_DO_PROVIDER`, fonte única) e uma linha dizendo quantos ficaram de fora e quais. O catálogo de modelos vira um painel com UMA ABA por provider ativo (o hub continua repartido por fabricante); busca, facetas e a barra de lote são globais e a seleção sobrevive à troca de aba. Provider SEM chave que ainda tem modelo ATIVO aparece como aba marcada "sem chave do titular", para dar para desativar o modelo (RN-043); os demais sem chave entram na linha "de fora" (RN-180). Carregando ou falhando a rota, mostra TODOS: "não sei" não é "não tem". Revisa o item 1 da [RN-694](#rn-694): o catálogo não tem mais os grupos Local, APIs diretas e Hubs, e a busca que não casa na aba nomeia as abas que casam. O relatório do sync segue com todos os providers.
-- **Onde:** `apps/web/src/lib/models.ts:363` (`providerAtivo`), `apps/web/src/lib/models.ts:371` (`catalogoDoProvider`), `apps/web/src/components/ModelCatalogSection.tsx:141` (`useMemo`), `apps/web/src/routes/ProvidersPage.tsx:37` (`deFora`)
+- **Onde:** `apps/web/src/lib/models.ts:363` (`providerAtivo`), `apps/web/src/lib/models.ts:371` (`catalogoDoProvider`), `apps/web/src/components/ModelCatalogSection.tsx:141` (`useMemo`), `apps/web/src/routes/ProvidersPage.tsx:33` (`deFora`)
 - **Teste:** `apps/web/src/routes/ProvidersPage.test.tsx:102` (só os com chave do titular, e a falha que mostra todos), `apps/web/src/components/ModelCatalogSection.test.tsx:399` (aba "sem chave" com modelo ativo; seleção entre abas; busca nomeia a aba que casa), `apps/web/src/lib/models.test.ts:126` (`providerAtivo`)
 - **Origem:** AT-607 (EP-026), tela; a rota é a RN-926.
 ### RN-932 — A rede do container é artefato declarado por humano e só vale no container recriado {#rn-932}

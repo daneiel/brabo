@@ -5,7 +5,8 @@
   "sidebar": {
     "account": "Аккаунт",
     "containers": "Контейнеры",
-    "providers": "Провайдеры"
+    "providers": "Провайдеры",
+    "spend": "Расходы"
   },
   "account": {
     "title": "Аккаунт",

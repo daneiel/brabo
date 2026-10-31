@@ -4,6 +4,10 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ## Unreleased
 
+### Funcionalidades
+
+- Gastos em duas páginas (AT-632, RN-963): `/spend` no menu global (o owner vê o workspace e a fatura por chave; os demais veem o próprio consumo por projeto) e a aba Gastos do projeto só do projeto (o membro vê o total e o custo por agente e por área, nunca provider). O orçamento do projeto ganhou editor, o botão "Definir orçamento" abre a aba Gastos, e assinatura aparece separada, sem "US$ 0".
+
 ### Correções
 
 - O usage do 9Router deixa de gravar os 2 000 tokens inventados pela 0.5.112 (versão lida de `/api/version`; outra versão grava como veio e avisa) e passa a ler o `cached_tokens` do topo; o cache de `cc/*` segue perdido pelo 9Router (AT-638, RN-958).
