@@ -231,6 +231,18 @@ defmodule Engine.Gates.QaAutomacaoAgentTest do
     assert diag =~ "cortou duas vezes"
   end
 
+  test "corte no meio do texto (RN-946): bloqueia nomeando o corte", %{
+    dev_state: dev_state,
+    dev_context: dev_context
+  } do
+    Process.put(:fake_llm_turns, [
+      FakeEngineApiClient.final_response("Vou registrá-lo") |> Map.put("truncated", true)
+    ])
+
+    assert {:blocked, %{diagnosis: diag, origin: "modelo"}} = run(dev_state, dev_context)
+    assert diag =~ "no meio do texto"
+  end
+
   describe "pedido anterior (RN-944)" do
     defp primeira_mensagem(dev_state, dev_context) do
       Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("x")])

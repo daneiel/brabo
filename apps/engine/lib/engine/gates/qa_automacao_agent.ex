@@ -423,6 +423,9 @@ defmodule Engine.Gates.QaAutomacaoAgent do
       nil when is_map_key(ctx, :corte_pelo_teto) ->
         {Engine.Gates.MotivoDoCorte.texto(), "modelo"}
 
+      nil when is_map_key(ctx, :corte_com_texto) ->
+        {Engine.Gates.MotivoDoCorte.texto_com_texto(), "modelo"}
+
       nil ->
         {"o modelo parou sem chamar emit_qa_verdict", "modelo"}
 

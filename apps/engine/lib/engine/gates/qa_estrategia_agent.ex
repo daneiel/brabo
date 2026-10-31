@@ -265,9 +265,16 @@ defmodule Engine.Gates.QaEstrategiaAgent do
   defp diagnostico_de_parada(ctx) do
     case Map.get(ctx, :last_error) do
       nil ->
-        if Map.get(ctx, :corte_pelo_teto) == true,
-          do: {"modelo", Engine.Gates.MotivoDoCorte.texto()},
-          else: {"modelo", "o modelo parou sem chamar emit_plano_de_teste"}
+        cond do
+          Map.get(ctx, :corte_pelo_teto) == true ->
+            {"modelo", Engine.Gates.MotivoDoCorte.texto()}
+
+          Map.get(ctx, :corte_com_texto) == true ->
+            {"modelo", Engine.Gates.MotivoDoCorte.texto_com_texto()}
+
+          true ->
+            {"modelo", "o modelo parou sem chamar emit_plano_de_teste"}
+        end
 
       error ->
         {Engine.Gates.OrigemDoErro.de_llm(error), "falha no turno de LLM: #{inspect(error)}"}

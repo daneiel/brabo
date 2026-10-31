@@ -25303,3 +25303,10 @@ sem dizer qual.
 - **Onde:** `apps/engine/lib/engine/gates/qa_estrategia_agent.ex:265` (`diagnostico_de_parada`), `apps/engine/lib/engine/gates/qa_automacao_agent.ex:421` (`diagnostico_de_parada`), `apps/engine/lib/engine/gates/motivo_do_corte.ex:8` (`texto`).
 - **Teste:** `apps/engine/test/engine/gates/qa_estrategia_agent_test.exs`, `apps/engine/test/engine/gates/qa_automacao_agent_test.exs`.
 - **Origem:** AT-618 parte 1 (EP-030), TP-01 (21ª) de 30/10/2026.
+
+### RN-946 — O corte pelo teto no meio do texto também é nomeado pelos agentes de QA {#rn-946}
+
+- **Regra:** estende a RN-945/RN-780: resposta `truncated` COM texto e sem chamada (o raciocínio comeu o teto e o texto saiu cortado) não é "o modelo parou": o `ToolLoop` devolve `corte_com_texto: true`, chave PRÓPRIA (não `corte_pelo_teto`, que o dev agent e a RN-780 casam), e `QaEstrategiaAgent` e `QaAutomacaoAgent` narram, com origem `modelo`, que o teto cortou a resposta no meio do texto antes da ferramenta de término (`MotivoDoCorte.texto_com_texto`). Não há retentativa nova (mudaria laço e custo); resposta não cortada com texto segue "parou sem chamar ...". A mesma lacuna no dev agent fica fora.
+- **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:239` (`parada_sem_chamada`), `apps/engine/lib/engine/gates/qa_estrategia_agent.ex:265` (`diagnostico_de_parada`), `apps/engine/lib/engine/gates/qa_automacao_agent.ex:421` (`diagnostico_de_parada`), `apps/engine/lib/engine/gates/motivo_do_corte.ex:9` (`texto_com_texto`).
+- **Teste:** `apps/engine/test/engine/harness/tool_loop_test.exs`, `apps/engine/test/engine/gates/qa_estrategia_agent_test.exs`, `apps/engine/test/engine/gates/qa_automacao_agent_test.exs`.
+- **Origem:** AT-620 (EP-030), TP-01 (21ª) de 31/10/2026.
