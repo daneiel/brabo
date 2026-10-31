@@ -1,5 +1,5 @@
 import type { HTMLAttributes } from 'react';
-import styles from './Card.module.css';
+import { Card as CardBase } from '@/components/shadcn/card';
 
 /**
  * Espaço interno do card, na escala `--space-*`. `none` é o card que RECORTA e
@@ -20,43 +20,20 @@ interface CardProps extends HTMLAttributes<HTMLDivElement> {
   recorta?: boolean;
 }
 
-const PADDING: Record<CardPadding, string> = {
-  none: styles.padNone,
-  sm: styles.padSm,
-  md: styles.padMd,
-  lg: styles.padLg,
-};
-
 /**
  * O contêiner de superfície do design system (AT-286): `--surface-1`, borda
- * `--border`, raio da família `--r-*`. Antes cada módulo escrevia o mesmo trio
- * de declarações com raio e padding próprios (8, 12 e 14px de raio; 12, 16 e
- * 24px de padding), e a mesma "caixa" saía diferente de tela para tela.
+ * `--border`, raio da família `--r-*`. Adaptador do `card` do shadcn (AT-646):
+ * o visual mora em `shadcn/card.tsx` e o adaptador expõe `data-padding`,
+ * `data-radius` e `data-recorta`.
  *
  * Só apresentação: o card não decide layout de fora (margem, largura, grade) —
  * quem o posiciona passa `className`, e o `style` passa adiante (é por ele que
  * `--msg-color` chega à pergunta estruturada).
  */
-export function Card({
-  padding = 'md',
-  radius = 'lg',
-  recorta,
-  className,
-  children,
-  ...rest
-}: CardProps) {
-  const classes = [
-    styles.card,
-    PADDING[padding],
-    radius === 'md' && styles.radiusMd,
-    recorta && styles.recorta,
-    className,
-  ]
-    .filter(Boolean)
-    .join(' ');
+export function Card({ padding = 'md', radius = 'lg', recorta, children, ...rest }: CardProps) {
   return (
-    <div className={classes} {...rest}>
+    <CardBase padding={padding} radius={radius} recorta={!!recorta} {...rest}>
       {children}
-    </div>
+    </CardBase>
   );
 }
