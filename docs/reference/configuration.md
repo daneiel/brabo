@@ -739,7 +739,7 @@ nada e o gate aprova sem análise estática
 [O gate de SecOps está preso em "SAST não rodou"](../runbook.md#semgrep-do-gate)).
 
 As duas imagens do engine pinam o semgrep com o argumento de build
-`SEMGREP_VERSION` (`1.171.0`, o mesmo em `docker/engine/Dockerfile` e
+`SEMGREP_VERSION` (`1.183.0`, o mesmo em `docker/engine/Dockerfile` e
 `Dockerfile.prod`, mantidos iguais por `scripts/ci/semgrep-do-engine.spec.ts`).
 É argumento de build, não variável de runtime — nada vai no `.env`. Sem pin, o
 pip pegou a 1.179.0, que não publica wheel `musllinux`: na imagem Alpine o

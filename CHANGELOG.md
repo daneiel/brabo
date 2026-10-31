@@ -389,6 +389,8 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - **ações**: com o modo automático do agente ligado (a curinga em `auto_approve`), `git_push` e `pr_open` — tipados ou pelo comando de terminal — passam a ser auto-aprovados, com o motivo "modo automático (RN-713)" no evento; regra específica, "Sempre permitir" e `permissions.json` continuam sem liberar, e merge em branch protegida, deploy e `sudo`/`doas` seguem com o usuário. As telas do modo automático dizem isso (AT-385, RN-713, ADR 0204).
 ### Correções
 
+- **segurança**: `ssl_verify_fun` do engine sobe de 1.1.7 para 1.1.8 (EEF-CVE-2026-117666) e o semgrep das imagens do engine de 1.171.0 para 1.183.0, que traz `mcp==1.29.0` e dispensa as três exceções do Trivy do `mcp` 1.23.3; as exceções do gitleaks 8.30.1 e do actionlint 1.7.12, ainda o último release, foram renovadas até 2026-11-30 (AT-625).
+
 - Interface em inglês: sete contagens (seleção de aprovações, novos/sumidos
   na sincronização de modelos, arquivos pulados, chunks sem vetor e as
   contagens de decisões da aba Sessões) ganharam as formas `one`/`other` que

@@ -94,7 +94,7 @@ RUN apk add --no-cache --virtual .binaries-build curl tar \
 # pacote do sdist, SEM o `semgrep-core`, e todo scan sai com exit 2 ("Failed to
 # find semgrep-core") — o gate SecOps de dev ficava pendente para sempre.
 # Subir a versão exige wheel musllinux publicada no PyPI.
-ARG SEMGREP_VERSION=1.171.0
+ARG SEMGREP_VERSION=1.183.0
 RUN apk add --no-cache python3 py3-pip \
   && (pip install --no-cache-dir --break-system-packages "semgrep==${SEMGREP_VERSION}" \
       || echo "[build] semgrep nao instalado -- SecOpsAgent detecta a ausencia em runtime")

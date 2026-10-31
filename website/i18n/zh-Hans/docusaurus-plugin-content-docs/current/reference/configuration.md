@@ -470,7 +470,7 @@ docker compose -f docker/docker-compose.prod.yml \
 
 生产和安装用的 compose 不同：engine 从生产镜像以固定用户 `engine`（uid/gid `1000`，没有 `DEV_UID`）运行，带有 `read_only: true` 和挂载在 `/home/engine` 的 tmpfs。这个 tmpfs 声明为 `uid=1000,gid=1000,mode=0700`——不是变量——因为 semgrep（SecOps 的 gate）会在那里写 `~/.semgrep`；如果以 root 创建，扫描不返回任何结果，gate 会在没有静态分析的情况下通过（[RN-707](../business-rules.md#rn-707)，runbook [O gate de SecOps está preso em "SAST não rodou"](../runbook.md#semgrep-do-gate)）。
 
-两个 engine 镜像都用构建参数 `SEMGREP_VERSION` 固定 semgrep（`1.171.0`，在 `docker/engine/Dockerfile` 和 `Dockerfile.prod` 中相同，由 `scripts/ci/semgrep-do-engine.spec.ts` 保持一致）。它是构建参数，不是运行时变量——`.env` 中什么都不用写。没有固定时，pip 取到了 1.179.0，而它不发布 `musllinux` wheel：在 Alpine 镜像中，包来自不含 `semgrep-core` 的 sdist，所有扫描都失败了。升级版本就是选择一个在 PyPI 上有 `musllinux` wheel 的 release，并在同一个 PR 中修改两个 Dockerfile。
+两个 engine 镜像都用构建参数 `SEMGREP_VERSION` 固定 semgrep（`1.183.0`，在 `docker/engine/Dockerfile` 和 `Dockerfile.prod` 中相同，由 `scripts/ci/semgrep-do-engine.spec.ts` 保持一致）。它是构建参数，不是运行时变量——`.env` 中什么都不用写。没有固定时，pip 取到了 1.179.0，而它不发布 `musllinux` wheel：在 Alpine 镜像中，包来自不含 `semgrep-core` 的 sdist，所有扫描都失败了。升级版本就是选择一个在 PyPI 上有 `musllinux` wheel 的 release，并在同一个 PR 中修改两个 Dockerfile。
 
 engine 镜像运行于 Alpine 3.24 上的 **Elixir 1.20.4 / OTP 29.1.1**（builder `hexpm/elixir:1.20.4-erlang-29.1.1-alpine-3.24.2`，runtime `alpine:3.24.2`，两者都按 digest——[ADR 0209](../adr/0209-engine-em-otp-29.md)）。低于 29.1 的 OTP 在 CPU 带有 AMX 的宿主机上、在 Alpine 3.24 的 musl 1.2.6 下启动时会中止（`sys_sigaltstack(): Internal error`）；不要在不降级 musl 的情况下降级 OTP。`.env` 中什么都不用写。
 
