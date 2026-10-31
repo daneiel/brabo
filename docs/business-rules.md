@@ -17209,8 +17209,8 @@ endpoint é ALPHA e o smoke manual
   (`recortarEstado`), `:268` (`menuP3`);
   `apps/api/src/application/use-cases/llm/decidir-ferramenta-do-passo.use-case.ts:118`
   (`preparar`), `:143` (`executar`), `:305` (`registrarGasto`);
-  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:166`
-  (`decisaoDoJev`); `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:183`
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:170`
+  (`decisaoDoJev`); `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:187`
   (`preparar`); `apps/api/src/infrastructure/llm/jev-tool-router.ts:32`
   (`decidir`); `apps/api/src/db/schema/iam.ts:169` (`toolRouterEnabled`);
   `apps/api/src/db/schema/llm.ts:363` (`priceImplicit`);
@@ -21618,9 +21618,9 @@ sem dizer qual.
   ao campo, e caminho que só leva a mensagem.
 - **Onde:** `apps/api/src/domain/llm/llm-provider-errors.ts:38`
   (`LLMInsufficientCreditError`), `:86` (`normalizeHttpStatus`),
-  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:238`
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:244`
   (`streamErrorCode`),
-  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:251`
+  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:273`
   (`streamErrorCode`),
   `apps/engine/lib/engine/agents/falha_de_turno.ex:87` (`credito_esgotado?`),
   `:71` (`origem`), `apps/engine/lib/engine/harness/tool_loop.ex:168`
@@ -21839,9 +21839,9 @@ sem dizer qual.
 - **Onde:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:297`
   (`cortadaPeloTeto`),
   `apps/api/src/infrastructure/llm/anthropic-provider.ts:198` (`finalMessage`),
-  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:234`
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:240`
   (`truncated`),
-  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:247`
+  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:269`
   (`truncated`),
   `apps/engine/lib/engine/harness/resposta_cortada.ex:43` (`registrar`),
   `:89` (`descarregar`),
@@ -22665,7 +22665,7 @@ sem dizer qual.
   essa medição.
 - **Onde:** `apps/api/src/domain/llm/raciocinio-do-agente.ts:18`
   (`opcoesDeRaciocinio`), `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:605`
-  (`controla`), `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:176`
+  (`controla`), `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:180`
   (`opcoesDeRaciocinio`)
 - **Teste:** `apps/api/test/infrastructure/llm/openai-compatible-provider.contract.spec.ts`
   (`modelo que raciocina: folga no teto e NENHUM campo de raciocínio (RN-782)`,
@@ -22756,6 +22756,35 @@ sem dizer qual.
   (`resposta só de raciocínio cortada pelo teto bloqueia com motivo nomeado`)
 - **Origem:** AT-459 (TP-01 de 09/10: a tarefa `c80daf6c` bloqueou em 40 s
   com 8.192 tokens de saída, todos de raciocínio)
+### RN-949 — Chamada de ferramenta escrita como texto não vira resposta no fio {#rn-949}
+
+- **Regra:** quando a chamada ao LLM leva `tools`, vem sem `toolCalls` e o
+  texto traz a chamada escrita como marcação (`<function_calls>`, `<invoke
+  name="X">` com X ferramenta do passo, `<tool_call>{json}` com `name` de
+  ferramenta; com ou sem prefixo `antml:`), a api repete a MESMA chamada UMA
+  vez (flag própria, independente das RN-916/917; as duas chamadas entram no
+  metering). Se repetir, o desfecho é falha NOMEADA: `final` com
+  `content: ''`, `error` nomeando o formato e o modelo e `errorCode:
+  'tool_call_as_text'` (erro do MODELO, RN-059/163), nunca resposta. No stream,
+  a api para de repassar deltas a partir do primeiro marcador e retém a cauda
+  que pode ser início dele: o texto cru não sai da api. Bloco cercado, código
+  inline, prosa, nome que não é ferramenta e chamada sem `tools` não contam; o
+  JSON solto segue com o `ToolCallRecovery` (ADR 0020). Decisão do dono: NÃO
+  se parseia nem se executa o XML (RN-040: resgate não é licença). Limite
+  declarado: o prefixo legítimo da 1ª tentativa fica na bolha em curso até o
+  turno fechar.
+- **Onde:** `apps/api/src/domain/llm/chamada-em-texto.ts:10`
+  (`marcacaoDeChamadaEmTexto`),
+  `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:321`
+  (`semChamadaEmTexto`),
+  `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:354`
+  (`semChamadaEmTexto`)
+- **Teste:** `apps/api/test/domain/llm/chamada-em-texto.spec.ts`,
+  `apps/api/test/application/use-cases/llm/run-llm-turn.use-case.spec.ts` e
+  `stream-llm-turn.use-case.spec.ts` (`chamada escrita como texto`: duas vezes
+  falha nomeada com 2 linhas de uso; segunda limpa responde)
+- **Origem:** AT-633 (sessão `2b5161d0`, seq 4: `<invoke name="emit_artifact">`
+  apareceu como resposta no fio)
 ### RN-781 — A mensagem de commit do dev não grava pendência que é do sistema {#rn-781}
 
 - **Regra:** o resumo do `report_done` é a mensagem de commit do dev agent, e
