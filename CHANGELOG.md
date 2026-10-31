@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- Chamada de ferramenta escrita como texto (`<invoke ...>`) deixa de aparecer como resposta no fio: a api repete a chamada uma vez e, se repetir, devolve falha nomeada `tool_call_as_text` sem texto cru (AT-633, RN-949).
 - O aviso "Há uma aprovação esperando" do botão "ir ao fim" só realça com ação PENDENTE nova no fio, comparada por ids; ação auto-aprovada ou já decidida não acende mais (AT-624, RN-836).
 
 ### Mudanças
