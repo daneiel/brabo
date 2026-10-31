@@ -10,6 +10,8 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Mudanças
 
+- O comando do `exec` no container não viaja mais no argv (AT-622, RN-947): `pkill -f` do agente de QA deixa de matar o próprio comando (143). Passa por `BRABO_EXEC_CMD`.
+
 - O bloco de pendências do chat passa a se chamar "Pendências deste projeto" (AT-619, RN-943): ele inclui perguntas, PRs prontas e tarefas bloqueadas do projeto inteiro, inclusive da própria sessão; a aba Executores mantém "de outras sessões".
 
 - O recorte do Jev não tira mais `declare_open_question` do PO (AT-615, RN-942): entra no piso do menu ao lado de `create_story`/`create_task`, para a dúvida virar `artifact.open_question` em vez de ficar só no texto da história.
