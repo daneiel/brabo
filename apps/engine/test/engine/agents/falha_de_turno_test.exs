@@ -198,6 +198,14 @@ defmodule Engine.Agents.FalhaDeTurnoTest do
       refute FalhaDeTurno.passageira?(%{"errorCode" => "insufficient_credit", "error" => @corpo})
     end
 
+    test "model_not_found vindo do 503 do 9Router não é passageira (AT-639)" do
+      refute FalhaDeTurno.passageira?(%{
+               "errorCode" => "model_not_found",
+               "error" =>
+                 "modelo não encontrado em 9router (404): {\"error\":{\"message\":\"[cc/x] [404]: model: x (reset after 2m)\"}}"
+             })
+    end
+
     test "a frase diz limite, gasto e reset" do
       frase = FalhaDeTurno.mensagem({:final, @corpo, "insufficient_credit"})
       assert frase =~ "limite US$ 30"
