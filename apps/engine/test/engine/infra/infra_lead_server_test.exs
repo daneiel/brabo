@@ -2055,4 +2055,58 @@ defmodule Engine.Infra.InfraLeadServerTest do
       _ = InfraLeadServer.handle_cast(:cancel, retomado)
     end
   end
+
+  describe "compose sem bind-mount relativo (RN-962)" do
+    defp compose_files(content),
+      do: [%{"path" => "docker-compose.yml", "content" => content}]
+
+    test "volume nomeado passa e a PR é proposta", %{state: state} do
+      contexto_sem_modulos()
+
+      Process.put(:fake_llm_turns, [
+        tool_turn("propose_infra_pr", %{
+          "title" => "ok",
+          "files" =>
+            compose_files(
+              "services:\n  app:\n    volumes:\n      - dados:/data\nvolumes:\n  dados:\n"
+            ),
+          "run" => run_valido()
+        })
+      ])
+
+      sync_cast(InfraLeadServer, :kickoff, state)
+      refute_received {:event_appended, _, _, %{type: "tool.result", payload: %{ok: false}}}
+    end
+
+    for {nome, yml} <- [
+          {"curta com ponto", "services:\n  app:\n    volumes:\n      - ./data:/data\n"},
+          {"curta com aspas", "services:\n  app:\n    volumes:\n      - \"./x:/y\"\n"},
+          {"longa",
+           "services:\n  app:\n    volumes:\n      - type: bind\n        source: ./x\n        target: /y\n"}
+        ] do
+      test "bind-mount relativo (#{nome}) é recusado antes da PR", %{state: state} do
+        contexto_sem_modulos()
+
+        Process.put(:fake_llm_turns, [
+          tool_turn("propose_infra_pr", %{
+            "title" => "ruim",
+            "files" => compose_files(unquote(yml)),
+            "run" => run_valido()
+          })
+        ])
+
+        assert {:noreply, new_state} = sync_cast(InfraLeadServer, :kickoff, state)
+
+        assert_received {:event_appended, _, _,
+                         %{
+                           type: "tool.result",
+                           payload: %{tool: "propose_infra_pr", ok: false} = r
+                         }}
+
+        assert r.erro =~ "VOLUME NOMEADO"
+        assert Enum.find(new_state.messages, &(&1["name"] == "propose_infra_pr"))
+        refute_received {:propose_action, "open_infra_pr", _, _}
+      end
+    end
+  end
 end
