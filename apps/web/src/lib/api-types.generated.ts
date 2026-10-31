@@ -3664,6 +3664,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{projectId}/spend/team": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The project's total spend and cost by agent and area
+         * @description The MEMBER's view of the PROJECT (RN-953, ADR 0233, revising 0063): total and cost per agent/area, NEVER provider or credential — the route has no dimension parameter and never asks for `provider`.
+         */
+        get: operations["SpendController_getProjectSpendTeam"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects/{projectId}/stories/{storyId}/archive": {
         parameters: {
             query?: never;
@@ -4262,6 +4282,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/workspaces/{workspaceId}/models/{modelId}/billing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Sets a model's curated billing mark (api | subscription | free)
+         * @description Same curation level as the pricing route. `subscription` makes the spend report show the cost apart from the US$ paid (RN-954). Never re-prices the past.
+         */
+        patch: operations["ModelsController_updateBilling"];
+        trace?: never;
+    };
     "/workspaces/{workspaceId}/models/{modelId}/price-changes": {
         parameters: {
             query?: never;
@@ -4520,6 +4560,26 @@ export interface paths {
          * @description The OWNER's audience. The PROVIDER axis came back (ADR 0076, RN-186) and is here, not on the member's route, because breaking down by provider is breaking down by CREDENTIAL — and credential is whoever pays's business (RN-060). Complements `credential-spend`, which keeps answering the INVOICE question (per month, with the tie to the key that exists today). Person and agent also come in separate blocks, by `actor_kind`. Sliding window in days, and the daily series comes DENSE — a day with no spend comes in as zero, otherwise the sparkline lies about the pace.
          */
         get: operations["SpendController_getWorkspaceSpendReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{workspaceId}/spend/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My own consumption in this workspace, summed by project
+         * @description The non-owner's global page (RN-953). Only the caller's rows, by PROJECT and by day, without provider or credential.
+         */
+        get: operations["SpendController_getMyWorkspaceSpend"];
         put?: never;
         post?: never;
         delete?: never;
@@ -7873,6 +7933,12 @@ export interface components {
              */
             availability: "available" | "unavailable";
             /**
+             * @description CURATED billing mark (AT-632, RN-954): `subscription` is a seat — its cost is shown apart from the US$ paid. Never set by sync.
+             * @example api
+             * @enum {string}
+             */
+            billing: "api" | "subscription" | "free";
+            /**
              * Format: date-time
              * @description Last time sync saw the model in the provider catalog.
              * @example 2026-07-30T03:00:00.000Z
@@ -8053,6 +8119,12 @@ export interface components {
              */
             availability: "available" | "unavailable";
             /**
+             * @description CURATED billing mark (AT-632, RN-954): `subscription` is a seat — its cost is shown apart from the US$ paid. Never set by sync.
+             * @example api
+             * @enum {string}
+             */
+            billing: "api" | "subscription" | "free";
+            /**
              * Format: date-time
              * @description Last time sync saw the model in the provider catalog.
              * @example 2026-07-30T03:00:00.000Z
@@ -8121,6 +8193,11 @@ export interface components {
             actorId: string;
             /** @example 1250000 */
             totalMicros: number;
+            /**
+             * @description Part of the cost from models curated as `subscription` (RN-954): a seat, shown apart from the US$ paid (`cost - subscription`).
+             * @example 0
+             */
+            assinaturaMicros: number;
             /** @example 120000 */
             inputTokens: number;
             /** @example 35000 */
@@ -8128,6 +8205,33 @@ export interface components {
             /** @example 42 */
             chamadas: number;
             porSessao: components["schemas"]["SpendLinhaResponseDto"][];
+            porDia: components["schemas"]["SpendPorDiaResponseDto"][];
+        };
+        MyWorkspaceSpendResponseDto: {
+            /** Format: uuid */
+            workspaceId: string;
+            /** @example 30 */
+            dias: number;
+            /**
+             * Format: uuid
+             * @description Always whoever called.
+             */
+            actorId: string;
+            /** @example 1250000 */
+            totalMicros: number;
+            /**
+             * @description Seat part of the total (RN-954).
+             * @example 0
+             */
+            assinaturaMicros: number;
+            /** @example 120000 */
+            inputTokens: number;
+            /** @example 35000 */
+            outputTokens: number;
+            /** @example 42 */
+            chamadas: number;
+            /** @description By PROJECT. */
+            porProjeto: components["schemas"]["SpendLinhaResponseDto"][];
             porDia: components["schemas"]["SpendPorDiaResponseDto"][];
         };
         ObservacaoDeContainerResponseDto: {
@@ -8883,6 +8987,29 @@ export interface components {
              * @example false
              */
             brokerConfigurado: boolean;
+        };
+        ProjectSpendTeamResponseDto: {
+            /** Format: uuid */
+            projectId: string;
+            /** @example 30 */
+            dias: number;
+            /** @example 1250000 */
+            totalMicros: number;
+            /**
+             * @description Seat part of the total (RN-954).
+             * @example 0
+             */
+            assinaturaMicros: number;
+            /** @example 120000 */
+            inputTokens: number;
+            /** @example 35000 */
+            outputTokens: number;
+            /** @example 42 */
+            chamadas: number;
+            /** @description By AGENT. */
+            porAgente: components["schemas"]["SpendLinhaResponseDto"][];
+            /** @description By catalog AREA of the agent; `sem-area` when none. */
+            porArea: components["schemas"]["SpendLinhaResponseDto"][];
         };
         ProjectUnreadEventsResponseDto: {
             /** @example 01JC4Z0000PROJETO0000000001 */
@@ -10517,6 +10644,11 @@ export interface components {
             actorKind: Record<string, never> | null;
             /** @example 1250000 */
             costMicros: number;
+            /**
+             * @description Part of the cost from models curated as `subscription` (RN-954): a seat, shown apart from the US$ paid (`cost - subscription`).
+             * @example 0
+             */
+            assinaturaMicros: number;
             /** @example 120000 */
             inputTokens: number;
             /** @example 35000 */
@@ -10960,6 +11092,13 @@ export interface components {
             /** @description One cursor per project to query. An EMPTY list returns an empty list — "I asked for nothing" is not "give me everything". A project from another workspace is silently ignored, because the cursor comes from the caller's local storage and may carry leftovers from an old workspace. */
             cursors: components["schemas"]["UnreadCursorDto"][];
         };
+        UpdateModelBillingDto: {
+            /**
+             * @example subscription
+             * @enum {string}
+             */
+            billing: "api" | "subscription" | "free";
+        };
         UpdateModelPricingDto: {
             /**
              * @description Price per million INPUT tokens, in micro-USD.
@@ -11217,8 +11356,18 @@ export interface components {
              * @example 30
              */
             dias: number;
+            /**
+             * Format: uuid
+             * @description The `?projectId=` slice asked for (RN-952); `null` = whole workspace.
+             */
+            projectId: Record<string, never> | null;
             /** @example 1250000 */
             totalMicros: number;
+            /**
+             * @description Part of the cost from models curated as `subscription` (RN-954): a seat, shown apart from the US$ paid (`cost - subscription`).
+             * @example 0
+             */
+            assinaturaMicros: number;
             /** @example 120000 */
             inputTokens: number;
             /** @example 35000 */
@@ -11231,6 +11380,8 @@ export interface components {
             porProvider: components["schemas"]["SpendLinhaResponseDto"][];
             /** @description By PROJECT within the workspace. */
             porProjeto: components["schemas"]["SpendLinhaResponseDto"][];
+            /** @description By SESSION (RN-952). */
+            porSessao: components["schemas"]["SpendLinhaResponseDto"][];
             /** @description By ACTOR — agent and person in the same list, distinguished by `actorKind`. */
             porAtor: components["schemas"]["SpendLinhaResponseDto"][];
             /** @description The PERSON rows (`actor_kind = "user"`) — the block the handoff calls "By owner", because under RN-058 it is the owner's key that all of them spend. Who the owner is sits in `ownerId`. A partition of `porAtor`, with no extra query (RN-188). */
@@ -21344,6 +21495,51 @@ export interface operations {
             };
         };
     };
+    SpendController_getProjectSpendTeam: {
+        parameters: {
+            query?: {
+                /** @description Sliding window. Default 30, max 180. */
+                dias?: string;
+            };
+            header?: never;
+            path: {
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectSpendTeamResponseDto"];
+                };
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient role. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     BacklogController_archive: {
         parameters: {
             query?: never;
@@ -23110,6 +23306,66 @@ export interface operations {
             };
         };
     };
+    ModelsController_updateBilling: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                modelId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateModelBillingDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelResponseDto"];
+                };
+            };
+            /** @description Invalid body. The `ValidationPipe` runs with `whitelist` and `forbidNonWhitelisted`, so an unknown field also fails. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Requires `owner` on the workspace. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Model not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     ModelsController_priceChanges: {
         parameters: {
             query?: never;
@@ -23818,6 +24074,8 @@ export interface operations {
             query?: {
                 /** @description Sliding window. Default 30, max 180. */
                 dias?: string;
+                /** @description Slice to ONE project of this workspace (RN-952). A project from another workspace answers 404. */
+                projectId?: string;
             };
             header?: never;
             path: {
@@ -23843,6 +24101,58 @@ export interface operations {
                 content?: never;
             };
             /** @description Requires `owner` on the workspace. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Project not in this workspace. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SpendController_getMyWorkspaceSpend: {
+        parameters: {
+            query?: {
+                /** @description Sliding window. Default 30, max 180. */
+                dias?: string;
+            };
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyWorkspaceSpendResponseDto"];
+                };
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient role. */
             403: {
                 headers: {
                     [name: string]: unknown;

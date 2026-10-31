@@ -8,6 +8,7 @@
 @import 'tailwindcss/utilities' layer(utilities) source(none);
 /* Só o shadcn gera utilitário; varrer o src inteiro emitiria .absolute, .container... soltos. */
 @source './components/shadcn';
+@source './components/ai-elements';
 
 /* O tema é escrito por `public/theme-boot.js` em `[data-theme]`, nunca `.dark`. */
 @custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));

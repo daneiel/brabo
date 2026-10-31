@@ -11398,6 +11398,61 @@
         ]
       }
     },
+    "/projects/{projectId}/spend/team": {
+      "get": {
+        "description": "The MEMBER's view of the PROJECT (RN-953, ADR 0233, revising 0063): total and cost per agent/area, NEVER provider or credential — the route has no dimension parameter and never asks for `provider`.",
+        "operationId": "SpendController_getProjectSpendTeam",
+        "parameters": [
+          {
+            "name": "projectId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "dias",
+            "required": false,
+            "in": "query",
+            "description": "Sliding window. Default 30, max 180.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectSpendTeamResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, expired token, or invalid signature."
+          },
+          "403": {
+            "description": "Insufficient role."
+          },
+          "429": {
+            "description": "Rate limit per user or per IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The project's total spend and cost by agent and area",
+        "tags": [
+          "llm"
+        ]
+      }
+    },
     "/projects/{projectId}/stories/{storyId}/archive": {
       "post": {
         "description": "The story leaves the backlog, the coverage, the promotion queue, the Dev Lead's plan and the claim — and so do its tasks. Nothing is deleted: the row stays with `archivedAt`, and `backlog.story_archived` records who, why and which tasks. Only a `draft` story with no task in execution.",
@@ -13245,6 +13300,68 @@
         ]
       }
     },
+    "/workspaces/{workspaceId}/models/{modelId}/billing": {
+      "patch": {
+        "description": "Same curation level as the pricing route. `subscription` makes the spend report show the cost apart from the US$ paid (RN-954). Never re-prices the past.",
+        "operationId": "ModelsController_updateBilling",
+        "parameters": [
+          {
+            "name": "modelId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateModelBillingDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid body. The `ValidationPipe` runs with `whitelist` and `forbidNonWhitelisted`, so an unknown field also fails."
+          },
+          "401": {
+            "description": "No token, expired token, or invalid signature."
+          },
+          "403": {
+            "description": "Requires `owner` on the workspace."
+          },
+          "404": {
+            "description": "Model not found."
+          },
+          "429": {
+            "description": "Rate limit per user or per IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Sets a model's curated billing mark (api | subscription | free)",
+        "tags": [
+          "llm"
+        ]
+      }
+    },
     "/workspaces/{workspaceId}/models/{modelId}/price-changes": {
       "get": {
         "description": "Most recent first. It is an immutable log: never gets an UPDATE, and the row carries the before/after pair so the audit does not depend on reconstructing the \"before\" from the previous row.",
@@ -13997,6 +14114,15 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "projectId",
+            "required": false,
+            "in": "query",
+            "description": "Slice to ONE project of this workspace (RN-952). A project from another workspace answers 404.",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -14016,6 +14142,9 @@
           "403": {
             "description": "Requires `owner` on the workspace."
           },
+          "404": {
+            "description": "Project not in this workspace."
+          },
           "429": {
             "description": "Rate limit per user or per IP."
           }
@@ -14026,6 +14155,61 @@
           }
         ],
         "summary": "Breaks down the workspace's spend by model, provider, project, actor, and day",
+        "tags": [
+          "llm"
+        ]
+      }
+    },
+    "/workspaces/{workspaceId}/spend/me": {
+      "get": {
+        "description": "The non-owner's global page (RN-953). Only the caller's rows, by PROJECT and by day, without provider or credential.",
+        "operationId": "SpendController_getMyWorkspaceSpend",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "dias",
+            "required": false,
+            "in": "query",
+            "description": "Sliding window. Default 30, max 180.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyWorkspaceSpendResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token, expired token, or invalid signature."
+          },
+          "403": {
+            "description": "Insufficient role."
+          },
+          "429": {
+            "description": "Rate limit per user or per IP."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "My own consumption in this workspace, summed by project",
         "tags": [
           "llm"
         ]
@@ -20758,6 +20942,16 @@
             "example": "available",
             "description": "REMOTE reality observed by sync, an axis independent from curation. `unavailable` is a model that vanished from the provider catalog — it is never deleted, because bindings and cost history point to it."
           },
+          "billing": {
+            "type": "string",
+            "enum": [
+              "api",
+              "subscription",
+              "free"
+            ],
+            "example": "api",
+            "description": "CURATED billing mark (AT-632, RN-954): `subscription` is a seat — its cost is shown apart from the US$ paid. Never set by sync."
+          },
           "lastSeenAt": {
             "type": "object",
             "example": "2026-07-30T03:00:00.000Z",
@@ -20819,6 +21013,7 @@
           "reasoningBudget",
           "manualPricing",
           "availability",
+          "billing",
           "lastSeenAt",
           "createdAt",
           "updatedAt",
@@ -21048,6 +21243,16 @@
             "example": "available",
             "description": "REMOTE reality observed by sync, an axis independent from curation. `unavailable` is a model that vanished from the provider catalog — it is never deleted, because bindings and cost history point to it."
           },
+          "billing": {
+            "type": "string",
+            "enum": [
+              "api",
+              "subscription",
+              "free"
+            ],
+            "example": "api",
+            "description": "CURATED billing mark (AT-632, RN-954): `subscription` is a seat — its cost is shown apart from the US$ paid. Never set by sync."
+          },
           "lastSeenAt": {
             "type": "object",
             "example": "2026-07-30T03:00:00.000Z",
@@ -21082,6 +21287,7 @@
           "reasoningBudget",
           "manualPricing",
           "availability",
+          "billing",
           "lastSeenAt",
           "createdAt",
           "updatedAt"
@@ -21191,6 +21397,11 @@
             "type": "number",
             "example": 1250000
           },
+          "assinaturaMicros": {
+            "type": "number",
+            "example": 0,
+            "description": "Part of the cost from models curated as `subscription` (RN-954): a seat, shown apart from the US$ paid (`cost - subscription`)."
+          },
           "inputTokens": {
             "type": "number",
             "example": 120000
@@ -21221,10 +21432,75 @@
           "dias",
           "actorId",
           "totalMicros",
+          "assinaturaMicros",
           "inputTokens",
           "outputTokens",
           "chamadas",
           "porSessao",
+          "porDia"
+        ]
+      },
+      "MyWorkspaceSpendResponseDto": {
+        "type": "object",
+        "properties": {
+          "workspaceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "dias": {
+            "type": "number",
+            "example": 30
+          },
+          "actorId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Always whoever called."
+          },
+          "totalMicros": {
+            "type": "number",
+            "example": 1250000
+          },
+          "assinaturaMicros": {
+            "type": "number",
+            "example": 0,
+            "description": "Seat part of the total (RN-954)."
+          },
+          "inputTokens": {
+            "type": "number",
+            "example": 120000
+          },
+          "outputTokens": {
+            "type": "number",
+            "example": 35000
+          },
+          "chamadas": {
+            "type": "number",
+            "example": 42
+          },
+          "porProjeto": {
+            "description": "By PROJECT.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SpendLinhaResponseDto"
+            }
+          },
+          "porDia": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SpendPorDiaResponseDto"
+            }
+          }
+        },
+        "required": [
+          "workspaceId",
+          "dias",
+          "actorId",
+          "totalMicros",
+          "assinaturaMicros",
+          "inputTokens",
+          "outputTokens",
+          "chamadas",
+          "porProjeto",
           "porDia"
         ]
       },
@@ -22788,6 +23064,65 @@
         "required": [
           "projectsBase",
           "brokerConfigurado"
+        ]
+      },
+      "ProjectSpendTeamResponseDto": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "dias": {
+            "type": "number",
+            "example": 30
+          },
+          "totalMicros": {
+            "type": "number",
+            "example": 1250000
+          },
+          "assinaturaMicros": {
+            "type": "number",
+            "example": 0,
+            "description": "Seat part of the total (RN-954)."
+          },
+          "inputTokens": {
+            "type": "number",
+            "example": 120000
+          },
+          "outputTokens": {
+            "type": "number",
+            "example": 35000
+          },
+          "chamadas": {
+            "type": "number",
+            "example": 42
+          },
+          "porAgente": {
+            "description": "By AGENT.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SpendLinhaResponseDto"
+            }
+          },
+          "porArea": {
+            "description": "By catalog AREA of the agent; `sem-area` when none.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SpendLinhaResponseDto"
+            }
+          }
+        },
+        "required": [
+          "projectId",
+          "dias",
+          "totalMicros",
+          "assinaturaMicros",
+          "inputTokens",
+          "outputTokens",
+          "chamadas",
+          "porAgente",
+          "porArea"
         ]
       },
       "ProjectUnreadEventsResponseDto": {
@@ -26006,6 +26341,11 @@
             "type": "number",
             "example": 1250000
           },
+          "assinaturaMicros": {
+            "type": "number",
+            "example": 0,
+            "description": "Part of the cost from models curated as `subscription` (RN-954): a seat, shown apart from the US$ paid (`cost - subscription`)."
+          },
           "inputTokens": {
             "type": "number",
             "example": 120000
@@ -26024,6 +26364,7 @@
           "rotulo",
           "actorKind",
           "costMicros",
+          "assinaturaMicros",
           "inputTokens",
           "outputTokens",
           "chamadas"
@@ -26869,6 +27210,23 @@
           "cursors"
         ]
       },
+      "UpdateModelBillingDto": {
+        "type": "object",
+        "properties": {
+          "billing": {
+            "type": "string",
+            "enum": [
+              "api",
+              "subscription",
+              "free"
+            ],
+            "example": "subscription"
+          }
+        },
+        "required": [
+          "billing"
+        ]
+      },
       "UpdateModelPricingDto": {
         "type": "object",
         "properties": {
@@ -27356,9 +27714,20 @@
             "example": 30,
             "description": "Sliding window, in days."
           },
+          "projectId": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true,
+            "description": "The `?projectId=` slice asked for (RN-952); `null` = whole workspace."
+          },
           "totalMicros": {
             "type": "number",
             "example": 1250000
+          },
+          "assinaturaMicros": {
+            "type": "number",
+            "example": 0,
+            "description": "Part of the cost from models curated as `subscription` (RN-954): a seat, shown apart from the US$ paid (`cost - subscription`)."
           },
           "inputTokens": {
             "type": "number",
@@ -27388,6 +27757,13 @@
           },
           "porProjeto": {
             "description": "By PROJECT within the workspace.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SpendLinhaResponseDto"
+            }
+          },
+          "porSessao": {
+            "description": "By SESSION (RN-952).",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/SpendLinhaResponseDto"
@@ -27425,13 +27801,16 @@
           "workspaceId",
           "ownerId",
           "dias",
+          "projectId",
           "totalMicros",
+          "assinaturaMicros",
           "inputTokens",
           "outputTokens",
           "chamadas",
           "porModelo",
           "porProvider",
           "porProjeto",
+          "porSessao",
           "porAtor",
           "porOwner",
           "porAgente",

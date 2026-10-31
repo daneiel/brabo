@@ -7,12 +7,15 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 ### Correções
 
 - A sessão ativa não é mais encerrada por uma resposta fora de ordem na checagem de trabalho pendente (AT-642, RN-955): o GET interno é repetido uma vez. "Confirmar arquitetura pronta" e a oferta ao Infra funcionam depois de reabrir a sessão (RN-956); "aborted" é falha de infra (RN-957); o grafo volta sozinho se o Neo4j subiu depois da api, e o aviso diz a causa (RN-960).
+- O aviso de recorte do Jev deixa de dizer que as ferramentas fora do recorte voltam no passo seguinte: elas podem ser pedidas neste mesmo passo, e o passo é refeito com o catálogo completo se o modelo responder sem ferramenta (AT-643, RN-961).
 - O 9Router passa a receber as ferramentas (`toolCalling: true`, provado por smoke), o vínculo de agente/área confere a capability do provider (422) e `buildBody` lança em vez de descartar `tools` calado (AT-637, RN-950).
 - O fio da Sessão acompanha sempre a última mensagem (AT-635, RN-951): cada evento ou ação nova o leva ao fim, mesmo para quem rolou para cima; o container que encolhe e `?highlightEvent` também seguem; o botão "ir ao fim" saiu.
 - Chamada de ferramenta escrita como texto (`<invoke ...>`) deixa de aparecer como resposta no fio: a api repete a chamada uma vez e, se repetir, devolve falha nomeada `tool_call_as_text` sem texto cru (AT-633, RN-949).
 - O aviso "Há uma aprovação esperando" do botão "ir ao fim" só realça com ação PENDENTE nova no fio, comparada por ids; ação auto-aprovada ou já decidida não acende mais (AT-624, RN-836).
 
 ### Mudanças
+
+- Gastos global e por projeto na api (AT-632, RN-952..954, ADR 0233): `spend-report` aceita `?projectId=` (404 entre workspaces) e traz `porSessao`; o membro vê o total do projeto e o custo por agente/área (`GET projects/:id/spend/team`) e o próprio consumo por projeto (`GET workspaces/:id/spend/me`), sem provider; a marca curada `billing` (`api|subscription|free`, `PATCH …/models/:id/billing`, migration 0079) separa `assinaturaMicros` do US$ pago.
 
 - Higiene do entregável (AT-623, RN-948): banco SQLite (`*.db`, `*.sqlite*`) fica fora do `.gitignore` base, do `git add` do dev agent e vira achado do SecOps; o dev sabe rodar `npm` na pasta do módulo; o kickoff nomeia o README da raiz e `write_file` recusa README que perde cabeçalho de rota.
 
