@@ -101,7 +101,151 @@ function TableCaption({
   )
 }
 
+// Grade de divs da casa (antigo Table.module.css, RN-651): colunas em fração não existem em <table>.
+const BORDA = "border-[color:var(--border)]"
+const CELULA_MONO =
+  "font-mono text-[10px] font-semibold tracking-[0.05em] text-[color:var(--text-secondary)] uppercase"
+
+function Grade({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="grade"
+      className={cn(
+        `w-full overflow-hidden rounded-[var(--radius-lg)] border ${BORDA}`,
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
+function GradeCabecalho({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="grade-cabecalho"
+      className={cn("bg-[var(--surface-2)]", className)}
+      {...props}
+    />
+  )
+}
+
+function GradeCorpo(props: React.ComponentProps<"div">) {
+  return <div data-slot="grade-corpo" {...props} />
+}
+
+function GradeLinha({
+  className,
+  corpo,
+  ...props
+}: React.ComponentProps<"div"> & { corpo?: boolean }) {
+  return (
+    <div
+      data-slot="grade-linha"
+      className={cn(
+        "grid items-center",
+        corpo &&
+          `border-t ${BORDA} transition-[background] duration-100 ease-[ease] hover:bg-[var(--surface-1)]`,
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
+function GradeCelula({
+  className,
+  cabecalho,
+  ...props
+}: React.ComponentProps<"div"> & { cabecalho?: boolean }) {
+  return (
+    <div
+      data-slot="grade-celula"
+      className={cn(
+        `min-w-0 border-l px-3.5 py-[11px] font-sans text-[13px] text-[color:var(--text-primary)] first:border-l-0 ${BORDA}`,
+        cabecalho && CELULA_MONO,
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
+function GradeVazia({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="grade-vazia"
+      className={cn(
+        "px-3.5 py-8 text-center text-[13px] text-[color:var(--text-muted)]",
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
+// Layout móvel (AT-330, RN-643): a linha vira cartão empilhado.
+function GradeCartao({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="grade-cartao"
+      className={cn(
+        `flex min-w-0 flex-col gap-2 px-3.5 py-3 not-first:border-t not-first:border-t-[color:var(--border)]`,
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
+function GradeCampo({
+  className,
+  largo,
+  ...props
+}: React.ComponentProps<"div"> & { largo?: boolean }) {
+  return (
+    <div
+      data-slot="grade-campo"
+      data-largo={largo ? "" : undefined}
+      className={cn(
+        "grid min-w-0 grid-cols-[minmax(72px,32%)_minmax(0,1fr)] items-baseline gap-2.5 font-sans text-[13px] text-[color:var(--text-primary)] data-[largo]:grid-cols-[minmax(0,1fr)] data-[largo]:gap-1",
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
+function GradeRotulo({ className, ...props }: React.ComponentProps<"span">) {
+  return (
+    <span
+      data-slot="grade-rotulo"
+      className={cn(CELULA_MONO, "[overflow-wrap:anywhere]", className)}
+      {...props}
+    />
+  )
+}
+
+function GradeValor({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="grade-valor"
+      className={cn("min-w-0 [overflow-wrap:anywhere]", className)}
+      {...props}
+    />
+  )
+}
+
 export {
+  Grade,
+  GradeCabecalho,
+  GradeCorpo,
+  GradeLinha,
+  GradeCelula,
+  GradeVazia,
+  GradeCartao,
+  GradeCampo,
+  GradeRotulo,
+  GradeValor,
   Table,
   TableHeader,
   TableBody,

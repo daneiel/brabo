@@ -22,4 +22,14 @@ describe('EmptyState (AT-327)', () => {
     expect(screen.queryByRole('button')).toBeNull();
     expect(raiz.querySelector('[aria-hidden="true"]')).toBeNull();
   });
+
+  it('o tom sai por data-tone na raiz e no ícone', () => {
+    const { container } = render(
+      <EmptyState tom="sucesso" icone={<svg />}>
+        Tudo em dia.
+      </EmptyState>,
+    );
+    expect(container.querySelector('[data-empty-state]')).toHaveAttribute('data-tone', 'sucesso');
+    expect(container.querySelector('[data-slot="empty-icon"]')).toHaveAttribute('data-tone', 'sucesso');
+  });
 });

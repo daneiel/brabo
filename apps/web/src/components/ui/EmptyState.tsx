@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import styles from './EmptyState.module.css';
+import { Empty, EmptyContent, EmptyDescription, EmptyMedia } from '@/components/shadcn/empty';
 
 interface EmptyStateProps {
   /** A frase do vazio — o que É verdade para este vazio (RN-088/RN-454). */
@@ -15,7 +15,8 @@ interface EmptyStateProps {
 
 /**
  * O estado vazio do design system (AT-327): caixa tracejada, centralizada,
- * frase em corpo secundário, ícone e CTA opcionais.
+ * frase em corpo secundário, ícone e CTA opcionais. Adaptador do `empty` do
+ * shadcn (AT-646): o visual mora em `shadcn/empty.tsx`.
  *
  * A auditoria de 30/09 contou quatro formas para a mesma coisa — centralizado
  * sem caixa (Chat), texto solto à esquerda (Executores, Insights), caixa
@@ -30,14 +31,14 @@ interface EmptyStateProps {
  */
 export function EmptyState({ children, icone, tom = 'neutro', acao, className }: EmptyStateProps) {
   return (
-    <div className={[styles.vazio, className].filter(Boolean).join(' ')} data-empty-state="">
+    <Empty className={className} data-empty-state="" data-tone={tom}>
       {icone && (
-        <span className={[styles.icone, tom === 'sucesso' && styles.sucesso].filter(Boolean).join(' ')} aria-hidden="true">
+        <EmptyMedia variant="icon" tone={tom} aria-hidden="true">
           {icone}
-        </span>
+        </EmptyMedia>
       )}
-      <div className={styles.texto}>{children}</div>
-      {acao && <div className={styles.acao}>{acao}</div>}
-    </div>
+      <EmptyDescription>{children}</EmptyDescription>
+      {acao && <EmptyContent>{acao}</EmptyContent>}
+    </Empty>
   );
 }

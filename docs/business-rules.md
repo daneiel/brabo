@@ -18585,8 +18585,8 @@ verificador ainda relata nas Configurações e em Aprovações são ícones deco
 - **Código:** `apps/web/src/lib/painel-de-contexto.ts:16`
   (`usePainelDeContexto`); `apps/web/src/routes/GavetaDoContexto.tsx:14`
   (`GavetaDoContexto`); `apps/web/src/routes/SessionTopbar.tsx:126`
-  (`movel`); `apps/web/src/components/ui/Table.tsx:13` (`largaNoMovel`),
-  `:28` (`movel`); `apps/web/src/routes/Dashboard.tsx:165` (`movel`);
+  (`movel`); `apps/web/src/components/ui/Table.tsx:24` (`largaNoMovel`),
+  `:39` (`movel`); `apps/web/src/routes/Dashboard.tsx:165` (`movel`);
   `apps/web/src/routes/ProjectSessionsTab.tsx:149` (`movel`)
 - **Teste:** `apps/web/src/routes/SessionPage.layout-movel.test.tsx` (a gaveta
   nasce fechada, abre com o foco no X e o Esc fecha devolvendo o foco; X e

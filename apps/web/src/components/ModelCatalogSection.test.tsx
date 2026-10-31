@@ -257,7 +257,7 @@ describe('ModelCatalogSection', () => {
       montar();
 
       const aviso = (await screen.findByText(/OpenRouter/)).closest(
-        'div[class*="alerta"]',
+        '[data-slot="alert"]',
       );
       expect(aviso).toBeTruthy();
       // O aviso precisa dizer o que fazer, não só que algo falta.

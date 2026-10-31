@@ -1,5 +1,4 @@
-import { Chip } from './Chip';
-import styles from './SegmentedControl.module.css';
+import { ToggleGroup, ToggleGroupItem } from '@/components/shadcn/toggle-group';
 
 export interface OpcaoSegmentada<V extends string> {
   valor: V;
@@ -16,7 +15,7 @@ interface SegmentedControlProps<V extends string> {
 }
 
 /**
- * O controle segmentado do design system (AT-327): um grupo de `Chip`s em que
+ * O controle segmentado do design system (AT-327): um grupo de chips (`ToggleGroup`) em que
  * UM está ligado por vez. Serve tanto a filtro de lista (Criativo, PRs) quanto
  * a troca de painel (Chat: Conversar/Buscar) — nos dois casos a pergunta é a
  * mesma, "qual destes", e a resposta visual passa a ser uma só.
@@ -35,17 +34,23 @@ export function SegmentedControl<V extends string>({
   className,
 }: SegmentedControlProps<V>) {
   return (
-    <div
-      className={[styles.grupo, className].filter(Boolean).join(' ')}
-      role="group"
+    <ToggleGroup
+      variant="chip"
+      size="chip"
+      value={[valor]}
+      // O grupo aceita `[]` (desmarcar o ligado); aqui sempre há UM ligado.
+      onValueChange={(v) => {
+        if (v.length > 0) onChange(v[0] as V);
+      }}
+      className={className}
       aria-label={rotulo}
       data-segmented-control=""
     >
       {opcoes.map((opcao) => (
-        <Chip key={opcao.valor} pressed={opcao.valor === valor} onClick={() => onChange(opcao.valor)}>
+        <ToggleGroupItem key={opcao.valor} value={opcao.valor}>
           {opcao.rotulo}
-        </Chip>
+        </ToggleGroupItem>
       ))}
-    </div>
+    </ToggleGroup>
   );
 }
