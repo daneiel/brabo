@@ -492,6 +492,61 @@ defmodule Engine.Dev.DevAgentServerTest do
                        }}
     end
 
+    # AT-621: o 503 na correção pós-gate segue a RN-864, como no laço principal.
+    test "correção com 503: infra, retomada agendada, pausa e disjuntor intacto", %{state: state} do
+      Process.put(:fake_tasks, [%{"id" => "task-next", "title" => "T2"}])
+      Process.put(:fake_llm_turn_error, "openrouter respondeu com status 503")
+      findings = %{gate: "qa", reason: "falhou", diagnosis: "x"}
+
+      assert {:noreply, new_state} = DevAgentServer.handle_cast({:correct, findings}, state)
+
+      assert_received {:task_blocked, "task-abc12345", motivo, _, "dev-api"}
+      assert motivo =~ "(correção)"
+      assert motivo =~ "retomada automática 1 de 3 em 1 min"
+      assert_received {:task_blocked_origin, "task-abc12345", "infra"}
+      refute_received {:task_blocked, "task-next", _, _, _}
+      assert new_state.pausa_de_rede
+      assert new_state.consecutive_blocked == state.consecutive_blocked
+
+      assert [job] = all_enqueued(worker: Engine.Workers.RetomadaDeTarefaWorker)
+      assert job.args["taskId"] == "task-abc12345"
+      assert DateTime.diff(job.scheduled_at, DateTime.utc_now()) in 50..61
+    end
+
+    test "correção sem crédito: pausa por crédito, sem retomada", %{state: state} do
+      Process.put(:fake_llm_always, %{
+        "message" => %{"content" => ""},
+        "error" => "créditos insuficientes",
+        "errorCode" => "insufficient_credit"
+      })
+
+      findings = %{gate: "qa", reason: "falhou", diagnosis: "x"}
+
+      assert {:noreply, new_state} = DevAgentServer.handle_cast({:correct, findings}, state)
+
+      assert_received {:task_blocked_origin, "task-abc12345", "infra"}
+      assert [] = all_enqueued(worker: Engine.Workers.RetomadaDeTarefaWorker)
+      assert new_state.status == :idle_tripped
+      refute Map.get(new_state, :pausa_de_rede)
+    end
+
+    test "correção com erro não passageiro: bloqueia na hora, sem retomada", %{state: state} do
+      Process.put(:fake_llm_always, %{
+        "message" => %{"content" => ""},
+        "error" => "requisição inválida (400)",
+        "errorCode" => "invalid_request"
+      })
+
+      findings = %{gate: "qa", reason: "falhou", diagnosis: "x"}
+
+      assert {:noreply, _} = DevAgentServer.handle_cast({:correct, findings}, state)
+
+      assert_received {:task_blocked, "task-abc12345", motivo, _, "dev-api"}
+      assert motivo =~ "(correção)"
+      refute motivo =~ "retomada automática"
+      assert [] = all_enqueued(worker: Engine.Workers.RetomadaDeTarefaWorker)
+    end
+
     test "report_blocked na correção: bloqueia igual ao fluxo original", %{state: state} do
       Process.put(:fake_llm_turns, [
         FakeEngineApiClient.tool_call_response("report_blocked", %{

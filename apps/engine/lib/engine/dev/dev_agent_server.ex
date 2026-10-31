@@ -819,15 +819,10 @@ defmodule Engine.Dev.DevAgentServer do
     |> finish_task(:blocked)
   end
 
-  defp handle_correction_outcome({:ok, ctx}, state, _findings) do
-    state
-    |> AgentIo.block_task(
-      motivo_da_parada(ctx, " (correção)"),
-      stop_diagnosis(ctx),
-      origem_da_parada(ctx)
-    )
-    |> finish_task(:blocked)
-  end
+  # AT-621: a correção pós-gate segue o MESMO caminho do laço principal
+  # (crédito RN-726 + falha passageira RN-864), só com o sufixo no motivo.
+  defp handle_correction_outcome({:ok, ctx}, state, _findings),
+    do: parada_sem_conclusao(ctx, state, " (correção)")
 
   # Devolve o gate que vai julgar agora.
   defp trigger_gate_recheck(state, "qa") do
@@ -941,8 +936,9 @@ defmodule Engine.Dev.DevAgentServer do
   # motivo é nomeado, e a task NÃO conta para a parada automática (não é
   # defeito de código): o agente PAUSA sem reivindicar a próxima, e o Rearmar
   # do painel é a retomada depois de recarregar.
-  defp handle_outcome({:ok, %{last_error: erro} = ctx}, state, _task, _story)
-       when is_binary(erro) do
+  defp handle_outcome({:ok, ctx}, state, _task, _story), do: parada_sem_conclusao(ctx, state, "")
+
+  defp parada_sem_conclusao(%{last_error: erro} = ctx, state, sufixo) when is_binary(erro) do
     if FalhaDeTurno.credito_esgotado?(%{
          "errorCode" => Map.get(ctx, :last_error_code),
          "error" => erro
@@ -951,11 +947,11 @@ defmodule Engine.Dev.DevAgentServer do
       |> AgentIo.block_task(motivo_de_credito(erro), stop_diagnosis(ctx), "infra")
       |> AgentIo.pausar_por_credito()
     else
-      bloquear_parada(ctx, state)
+      bloquear_parada(ctx, state, sufixo)
     end
   end
 
-  defp handle_outcome({:ok, ctx}, state, _task, _story), do: bloquear_parada(ctx, state)
+  defp parada_sem_conclusao(ctx, state, sufixo), do: bloquear_parada(ctx, state, sufixo)
 
   # RN-886 (AT-534): o 403 de orçamento do OpenRouter diz limite, gasto e reset.
   defp motivo_de_credito(erro) do
@@ -975,14 +971,14 @@ defmodule Engine.Dev.DevAgentServer do
   # (`Engine.Workers.RetomadaDeTarefaWorker`). Esgotadas, fica bloqueada
   # pedindo o clique, e o motivo diz quantas houve. E o agente PAUSA
   # (`AgentIo.pausar_por_rede/1`) em vez de pegar a próxima e falhar de novo.
-  defp bloquear_parada(ctx, state) do
+  defp bloquear_parada(ctx, state, sufixo) do
     origem = origem_da_parada(ctx)
 
     if origem == "infra" and passageira?(ctx) do
-      bloquear_passageira(ctx, state)
+      bloquear_passageira(ctx, state, sufixo)
     else
       state
-      |> AgentIo.block_task(motivo_da_parada(ctx, ""), stop_diagnosis(ctx), origem)
+      |> AgentIo.block_task(motivo_da_parada(ctx, sufixo), stop_diagnosis(ctx), origem)
       |> finish_task(if origem == "infra", do: :blocked_infra, else: :blocked)
     end
   end
@@ -994,7 +990,7 @@ defmodule Engine.Dev.DevAgentServer do
     })
   end
 
-  defp bloquear_passageira(ctx, state) do
+  defp bloquear_passageira(ctx, state, base) do
     task_id = state.task_id
     retomadas = Map.get(state, :retomadas_automaticas, %{})
     feitas = Map.get(retomadas, task_id, 0)
@@ -1010,12 +1006,13 @@ defmodule Engine.Dev.DevAgentServer do
     {sufixo, state} =
       case RetomadaDeTarefaWorker.agendar(state, task_id, feitas) do
         {:ok, minutos} ->
-          {" — retomada automática #{feitas + 1} de #{RetomadaDeTarefaWorker.teto()} " <>
+          {base <>
+             " — retomada automática #{feitas + 1} de #{RetomadaDeTarefaWorker.teto()} " <>
              "em #{minutos} min (#{causa}#{if limite?, do: "; se repetir, troque o modelo do dev agent"})",
            Map.put(state, :retomadas_automaticas, Map.put(retomadas, task_id, feitas + 1))}
 
         :esgotado ->
-          {" — #{feitas} retomadas automáticas já tentadas; #{dica_esgotada}",
+          {base <> " — #{feitas} retomadas automáticas já tentadas; #{dica_esgotada}",
            Map.put(state, :retomadas_automaticas, Map.delete(retomadas, task_id))}
       end
 
