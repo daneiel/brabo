@@ -96,7 +96,22 @@ function AvatarGroupCount({
   )
 }
 
+// A caixa colorida do agente (antigo .avatar de ChatBubble.module.css); a cor vem de `--msg-color` do ancestral.
+function AvatarAgente({ className, ...props }: React.ComponentProps<"span">) {
+  return (
+    <span
+      data-slot="avatar-agente"
+      className={cn(
+        "flex size-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[color:color-mix(in_srgb,var(--msg-color)_var(--tint-line),transparent)] bg-[color-mix(in_srgb,var(--msg-color)_var(--tint-avatar),var(--surface-2))] text-[color:var(--msg-color)]",
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
 export {
+  AvatarAgente,
   Avatar,
   AvatarImage,
   AvatarFallback,

@@ -62,9 +62,15 @@ describe('Alert', () => {
   });
 
   it.each(['danger', 'warning', 'success', 'accent'] as const)(
-    'aceita o tom %s sem levantar',
+    'expõe o tom %s em data-tone',
     (tone) => {
-      expect(() => render(<Alert tone={tone}>x</Alert>)).not.toThrow();
+      const { container } = render(<Alert tone={tone}>x</Alert>);
+      expect(container.firstElementChild).toHaveAttribute('data-tone', tone);
     },
   );
+
+  it('o tom default é warning', () => {
+    const { container } = render(<Alert>x</Alert>);
+    expect(container.firstElementChild).toHaveAttribute('data-tone', 'warning');
+  });
 });
