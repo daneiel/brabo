@@ -306,8 +306,8 @@ describe('SessionPage — problema 2: "Ativar execução" inline no card do Dev 
 
     const ativar = await screen.findByRole('button', { name: 'Ativar execução' });
     const aceitar = screen.getByRole('button', { name: /Aceitar handoff e iniciar/ });
-    expect(ativar.className).toMatch(/secondary/);
-    expect(aceitar.className).not.toMatch(/secondary/);
+    expect(ativar).toHaveAttribute('data-variant', 'secondary');
+    expect(aceitar).not.toHaveAttribute('data-variant', 'secondary');
     expect(screen.getByTestId('aviso-ativar-sem-plano')).toHaveTextContent(
       'Sem plano: os devs pegam as tarefas como estão.',
     );

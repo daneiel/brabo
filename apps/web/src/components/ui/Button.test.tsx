@@ -1,7 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { Button } from './Button';
-import styles from './Button.module.css';
 
 /**
  * O botão, nas duas coisas que o ADR 0036 mexeu.
@@ -20,19 +19,12 @@ describe('Button', () => {
   describe('fullWidth', () => {
     it('aplica a classe de largura total', () => {
       render(<Button fullWidth>Entrar</Button>);
-      expect(screen.getByRole('button')).toHaveClass(styles.fullWidth);
-    });
-
-    it('a classe usa width, não flex', () => {
-      // Asserção sobre o CSS Module cru, porque jsdom não resolve a folha: é o
-      // único jeito de provar a correção que motivou a mudança. `flex: 1` voltar
-      // aqui reintroduz um requisito de design que não se cumpre.
-      expect(styles.fullWidth).toBeTruthy();
+      expect(screen.getByRole('button')).toHaveAttribute('data-full-width', 'true');
     });
 
     it('não aplica quando não pedido', () => {
       render(<Button>Entrar</Button>);
-      expect(screen.getByRole('button')).not.toHaveClass(styles.fullWidth);
+      expect(screen.getByRole('button')).not.toHaveAttribute('data-full-width', 'true');
     });
   });
 
@@ -45,12 +37,12 @@ describe('Button', () => {
       render(
         <Button size="lg">Entrar</Button>,
       );
-      expect(screen.getByRole('button')).toHaveClass(styles.lg);
+      expect(screen.getByRole('button')).toHaveAttribute('data-size', 'lg');
     });
 
     it('o default é denso — nenhum botão do produto muda de altura sozinho', () => {
       render(<Button>Salvar</Button>);
-      expect(screen.getByRole('button')).not.toHaveClass(styles.lg);
+      expect(screen.getByRole('button')).not.toHaveAttribute('data-size', 'lg');
     });
 
     it('size é independente de fullWidth', () => {
@@ -59,16 +51,16 @@ describe('Button', () => {
       // largo fora de auth herdar uma altura que ninguém pediu.
       render(<Button fullWidth>Entrar</Button>);
       const botao = screen.getByRole('button');
-      expect(botao).toHaveClass(styles.fullWidth);
-      expect(botao).not.toHaveClass(styles.lg);
+      expect(botao).toHaveAttribute('data-full-width', 'true');
+      expect(botao).not.toHaveAttribute('data-size', 'lg');
     });
 
     it('sm aplica o botão denso de 28px, e só ele (AT-287)', () => {
       render(<Button size="sm">Fixar</Button>);
       const botao = screen.getByRole('button');
-      expect(botao).toHaveClass(styles.sm);
-      expect(botao).not.toHaveClass(styles.lg);
-      expect(botao).not.toHaveClass(styles.icon);
+      expect(botao).toHaveAttribute('data-size', 'sm');
+      expect(botao).not.toHaveAttribute('data-size', 'lg');
+      expect(botao).not.toHaveAttribute('data-icon');
     });
 
     it('icon é o quadrado só de ícone, e o nome acessível vem de quem chama', () => {
@@ -78,14 +70,16 @@ describe('Button', () => {
         </Button>,
       );
       const botao = screen.getByRole('button', { name: 'Próxima página' });
-      expect(botao).toHaveClass(styles.icon, styles.sm, styles.ghost);
+      expect(botao).toHaveAttribute('data-icon', 'true');
+      expect(botao).toHaveAttribute('data-size', 'sm');
+      expect(botao).toHaveAttribute('data-variant', 'ghost');
     });
 
     it('o default não é quadrado nem denso', () => {
       render(<Button>Salvar</Button>);
       const botao = screen.getByRole('button');
-      expect(botao).not.toHaveClass(styles.icon);
-      expect(botao).not.toHaveClass(styles.sm);
+      expect(botao).not.toHaveAttribute('data-icon');
+      expect(botao).not.toHaveAttribute('data-size', 'sm');
     });
   });
 

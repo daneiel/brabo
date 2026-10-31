@@ -70,6 +70,7 @@ const ProvidersPageLazy = lazyRouteComponent(
   () => import('./routes/ProvidersPage'),
   'ProvidersPage',
 );
+const SpendPageLazy = lazyRouteComponent(() => import('./routes/SpendPage'), 'SpendPage');
 const ContainersPageLazy = lazyRouteComponent(
   () => import('./routes/ContainersPage'),
   'ContainersPage',
@@ -279,6 +280,12 @@ const providersRoute = createRoute({
   component: ProvidersPageLazy,
 });
 
+const spendRoute = createRoute({
+  getParentRoute: () => appLayout,
+  path: '/spend',
+  component: SpendPageLazy,
+});
+
 // A lista de abas mora em `routes/project-tabs.ts` — aqui só se pergunta se a
 // chave existe. Enquanto a lista era copiada neste arquivo, aceitar `?tab=x`
 // e ter painel para `x` eram duas decisões independentes.
@@ -448,6 +455,7 @@ const routeTree = rootRoute.addChildren([
     containersRoute,
 containerDetalheRoute,
     providersRoute,
+    spendRoute,
     projectRoute,
     sessionRoute,
     provisioningRoute,

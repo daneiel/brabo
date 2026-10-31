@@ -343,12 +343,24 @@ defmodule EngineWeb.AgentCommandController do
     end
   end
 
-  def readiness(conn, %{"sessionId" => session_id}) do
+  # RN-956: como `message/2`, sobe o agente antes — sessão reaberta não os tem
+  # de pé, e o `:noproc` virava 500 mascarado por "Stale conn".
+  def readiness(conn, %{"sessionId" => session_id, "projectId" => project_id}) do
+    {:ok, _pid} = CriativoSupervisor.start_agent(session_id, project_id)
     responder_ao_aceite(conn, CriativoServer.confirm_readiness(session_id))
   end
 
-  def offer_infra_handoff(conn, %{"sessionId" => session_id}) do
+  def readiness(conn, _params), do: projeto_ausente(conn)
+
+  def offer_infra_handoff(conn, %{"sessionId" => session_id, "projectId" => project_id}) do
+    {:ok, _pid, _origin} = ArquitetoSupervisor.start_agent(session_id, project_id)
     responder_ao_aceite(conn, ArquitetoServer.offer_infra_handoff(session_id))
+  end
+
+  def offer_infra_handoff(conn, _params), do: projeto_ausente(conn)
+
+  defp projeto_ausente(conn) do
+    conn |> put_status(400) |> json(%{error: "projectId é obrigatório"})
   end
 
   @doc """

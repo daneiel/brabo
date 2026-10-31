@@ -25,9 +25,6 @@ vi.mock('../components/ModelCatalogSection', () => ({
     <div>{p.projectId === undefined ? 'catalogo-sem-projeto' : 'catalogo-com-projeto'}</div>
   ),
 }));
-vi.mock('../components/CredentialSpendSection', () => ({
-  CredentialSpendSection: () => <div>gasto</div>,
-}));
 
 const caps = (extra: Record<string, boolean>) => ({
   streaming: true,
@@ -69,7 +66,8 @@ describe('ProvidersPage', () => {
     expect(screen.getByText('stickySession')).toBeInTheDocument();
     expect(screen.getByText('credenciais')).toBeInTheDocument();
     expect(screen.getByText('catalogo-sem-projeto')).toBeInTheDocument();
-    expect(screen.getByText('gasto')).toBeInTheDocument();
+    // O gasto das chaves mudou para a página global Gastos (AT-632).
+    expect(screen.queryByText('Gasto das suas chaves')).toBeNull();
   });
 
   it('a capability do teto de preço aparece como coluna e a nota explica o teto', async () => {
@@ -79,16 +77,6 @@ describe('ProvidersPage', () => {
     montar();
     expect(await screen.findByText('priceCeiling')).toBeInTheDocument();
     expect(screen.getByText(/teto de preço|price ceiling/)).toBeInTheDocument();
-  });
-
-  it('quem não é owner não vê o gasto', async () => {
-    useCurrentWorkspaceWithRole.mockReturnValue({
-      data: { workspace: { id: 'w1' }, role: 'maintainer' },
-    });
-    listProviderCapabilities.mockResolvedValue([]);
-    montar();
-    expect(await screen.findByText('catalogo-sem-projeto')).toBeInTheDocument();
-    expect(screen.queryByText('gasto')).toBeNull();
   });
 
   it('capabilities falhando mostram erro nomeado', async () => {

@@ -1,34 +1,25 @@
 import { Shimmer } from '../components/ui/Shimmer';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import {
   getMySpend,
   getProject,
   getProjectBudget,
-  getWorkspaceSpendReport,
+  setProjectBudget,
 } from '../lib/api-client';
 import { useCurrentWorkspaceWithRole } from '../lib/hooks';
+import { roleAtLeast } from '../lib/roles';
+import { FRESCOR_DA_CONFIGURACAO_MS } from '../lib/query-policy';
 import { hashtagDaSessao } from '../lib/session-label';
 import { numberFmt } from '../lib/currency';
-import { ROTULO_DO_PROVIDER } from '../lib/models';
-import type { LLMProviderName } from '../lib/api-types';
-import {
-  alertaDeOrcamento,
-  rotuloDoAtor,
-  tokensDe,
-  type SpendLinha,
-} from '../lib/spend';
-import {
-  BarrasPorDia,
-  Destaque,
-  Ranking,
-  type LinhaDeRanking,
-} from '../components/SpendCharts';
+import type { BudgetPolicy } from '../lib/api-types';
+import { alertaDeOrcamento } from '../lib/spend';
+import { BarrasPorDia, Destaque, Ranking } from '../components/SpendCharts';
 import { TokenMeter } from '../components/TokenMeter';
-import {
-  CredentialSpendSection,
-  formatarUsd,
-} from '../components/CredentialSpendSection';
+import { formatarUsd } from '../components/CredentialSpendSection';
+import { GastoDoTimeNoProjeto, GastoDoWorkspace } from '../components/SpendPaineis';
+import { comoRanking } from '../lib/spend-ranking';
 import styles from './ProjectSpendTab.module.css';
 
 /** Janela do relatório. Um mês é o ciclo em que uma fatura de LLM fecha. */
@@ -81,13 +72,21 @@ export function ProjectSpendTab({ projectId }: { projectId: string }) {
           (403 de quem não é maintainer no projeto): pedir 403 de propósito
           é o mesmo ruído que a RN-060 já evita para a fatura do owner, e é o
           mesmo padrão do `TokenMeter` compacto em `ProjectPage.tsx`. */}
-      {papel.data && <OrcamentoDoProjeto projectId={projectId} />}
+      {papel.data && (
+        <OrcamentoDoProjeto
+          projectId={projectId}
+          podeEditar={roleAtLeast(papel.data.role, 'maintainer')}
+        />
+      )}
 
       {papel.data &&
         (papel.data.role === 'owner' ? (
-          <GastoDoWorkspace projectId={projectId} />
+          <GastoDoProjetoDoOwner projectId={projectId} />
         ) : (
-          <MeuConsumo projectId={projectId} />
+          <>
+            <GastoDoTimeNoProjeto projectId={projectId} />
+            <MeuConsumo projectId={projectId} />
+          </>
         ))}
     </div>
   );
@@ -105,16 +104,40 @@ export function ProjectSpendTab({ projectId }: { projectId: string }) {
  * `maintainer` no PROJETO (papel de WORKSPACE não implica papel de projeto),
  * e por isso não vira banner: seria alarme falso pra maioria dos membros.
  */
-function OrcamentoDoProjeto({ projectId }: { projectId: string }) {
+function OrcamentoDoProjeto({
+  projectId,
+  podeEditar,
+}: {
+  projectId: string;
+  podeEditar: boolean;
+}) {
   const { t } = useTranslation('spend');
   const budget = useQuery({
     queryKey: ['budget', projectId],
     queryFn: () => getProjectBudget(projectId),
+    staleTime: FRESCOR_DA_CONFIGURACAO_MS,
   });
 
-  if (budget.isLoading || budget.isError) return null;
+  // O editor aparece mesmo sem orçamento (é onde ele nasce) e mesmo sem papel
+  // (inerte, com o motivo em texto — o papel lido é o do WORKSPACE, a lacuna
+  // declarada de RN-471; quem recusa de verdade é a api).
+  const editor = (
+    <EditorDoOrcamento
+      projectId={projectId}
+      podeEditar={podeEditar}
+      atual={budget.data ?? null}
+    />
+  );
+
+  if (budget.isLoading) return null;
+  if (budget.isError) return podeEditar ? editor : null;
   if (!budget.data) {
-    return <p className={styles.nota}>{t('budget.notSet')}</p>;
+    return (
+      <div className={styles.orcamentoProjeto}>
+        <p className={styles.nota}>{t('budget.notSet')}</p>
+        {editor}
+      </div>
+    );
   }
 
   const alerta = alertaDeOrcamento(budget.data);
@@ -138,129 +161,87 @@ function OrcamentoDoProjeto({ projectId }: { projectId: string }) {
           {alerta.mensagem}
         </div>
       )}
+      {editor}
     </div>
   );
 }
 
-/** A audiência do owner. */
-function GastoDoWorkspace({ projectId }: { projectId: string }) {
+/** Grava o teto do projeto (`PUT projects/:pid/budget`, `maintainer`). */
+function EditorDoOrcamento({
+  projectId,
+  podeEditar,
+  atual,
+}: {
+  projectId: string;
+  podeEditar: boolean;
+  atual: { limitMicros: number; policy: BudgetPolicy } | null;
+}) {
   const { t } = useTranslation('spend');
+  const qc = useQueryClient();
+  const [limite, setLimite] = useState(atual ? String(atual.limitMicros / 1_000_000) : '');
+  const [politica, setPolitica] = useState<BudgetPolicy>(atual?.policy ?? 'block');
+  const [invalido, setInvalido] = useState(false);
+  const salvar = useMutation({
+    mutationFn: (limitUsd: number) => setProjectBudget(projectId, { limitUsd, policy: politica }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['budget', projectId] });
+      void qc.invalidateQueries({ queryKey: ['projects-summary'] });
+    },
+  });
+
+  return (
+    <form
+      className={styles.orcamentoProjeto}
+      aria-label={t('budgetEditor.title')}
+      onSubmit={(e) => {
+        e.preventDefault();
+        const valor = Number(limite.replace(',', '.'));
+        if (!Number.isFinite(valor) || valor <= 0) {
+          setInvalido(true);
+          return;
+        }
+        setInvalido(false);
+        salvar.mutate(valor);
+      }}
+    >
+      <label className={styles.nota}>
+        {t('budgetEditor.limitLabel')}{' '}
+        <input
+          inputMode="decimal"
+          value={limite}
+          disabled={!podeEditar}
+          onChange={(e) => setLimite(e.target.value)}
+        />
+      </label>
+      <label className={styles.nota}>
+        {t('budgetEditor.policyLabel')}{' '}
+        <select
+          value={politica}
+          disabled={!podeEditar}
+          onChange={(e) => setPolitica(e.target.value as BudgetPolicy)}
+        >
+          <option value="block">{t('budgetEditor.block')}</option>
+          <option value="allow">{t('budgetEditor.allow')}</option>
+        </select>
+      </label>
+      <button type="submit" className={styles.botao} disabled={!podeEditar || salvar.isPending}>
+        {salvar.isPending ? t('budgetEditor.saving') : t('budgetEditor.save')}
+      </button>
+      {!podeEditar && <p className={styles.nota}>{t('budgetEditor.noRole')}</p>}
+      {invalido && <p className={styles.estadoErro} role="alert">{t('budgetEditor.invalid')}</p>}
+      {salvar.isError && <p className={styles.estadoErro} role="alert">{t('budgetEditor.error')}</p>}
+      {salvar.isSuccess && <p className={styles.nota} role="status">{t('budgetEditor.saved')}</p>}
+    </form>
+  );
+}
+
+/** O owner na aba do projeto: SÓ este projeto (`?projectId=`, RN-952). */
+function GastoDoProjetoDoOwner({ projectId }: { projectId: string }) {
   const { data: project } = useQuery({
     queryKey: ['project', projectId],
     queryFn: () => getProject(projectId),
   });
-  const workspaceId = project?.workspaceId;
-
-  const relatorio = useQuery({
-    queryKey: ['workspace-spend', workspaceId, DIAS],
-    queryFn: () => getWorkspaceSpendReport(workspaceId!, DIAS),
-    enabled: Boolean(workspaceId),
-  });
-
-  return (
-    <>
-      <header className={styles.cabecalho}>
-        <h2 className={styles.titulo}>{t('workspace.title')}</h2>
-        <p className={styles.subtitulo}>
-          <Trans
-            i18nKey="workspace.subtitle"
-            ns="spend"
-            values={{ dias: DIAS }}
-            components={{ strong: <strong /> }}
-          />
-        </p>
-      </header>
-
-      {/* Os três estados, e o erro ANTES do vazio (RN-088). */}
-      {relatorio.isLoading && (
-        <div className={styles.estado}><Shimmer>{t('shared.summing')}</Shimmer></div>
-      )}
-
-      {relatorio.isError && (
-        <div className={styles.estadoErro} role="alert">
-          <span>{t('workspace.error')}</span>
-          <button
-            type="button"
-            className={styles.botao}
-            onClick={() => relatorio.refetch()}
-          >
-            {t('shared.retry')}
-          </button>
-        </div>
-      )}
-
-      {relatorio.data && (
-        <>
-          <div className={styles.destaques}>
-            <Destaque
-              rotulo={t('workspace.totalLabel', { dias: DIAS })}
-              valor={formatarUsd(relatorio.data.totalMicros)}
-              detalhe={t('workspace.callsDetail', {
-                count: relatorio.data.chamadas,
-                n: numberFmt.format(relatorio.data.chamadas),
-              })}
-            />
-            <Destaque
-              rotulo={t('workspace.tokensLabel')}
-              valor={numberFmt.format(
-                relatorio.data.inputTokens + relatorio.data.outputTokens,
-              )}
-              detalhe={t('shared.tokensDetail', {
-                input: numberFmt.format(relatorio.data.inputTokens),
-                output: numberFmt.format(relatorio.data.outputTokens),
-              })}
-            />
-          </div>
-
-          <div className={styles.faixa}>
-            <BarrasPorDia
-              serie={relatorio.data.porDia}
-              titulo={t('workspace.dailySpendTitle')}
-            />
-          </div>
-
-          <div className={styles.grade}>
-            <Ranking
-              titulo={t('workspace.byModelTitle')}
-              linhas={comoRanking(relatorio.data.porModelo, (l) => l.chave, t)}
-              vazio={t('workspace.byModelEmpty')}
-            />
-            {/* O eixo que o ADR 0076 reabriu (RN-186/RN-211) — mesma peça das
-                outras três, sem cor por provider (ver `lib/spend.ts` sobre por
-                que uma paleta categórica de 9 cores não passa na validação da
-                skill de dataviz). */}
-            <Ranking
-              titulo={t('workspace.byProviderTitle')}
-              linhas={comoRanking(
-                relatorio.data.porProvider,
-                rotuloDoProvider,
-                t,
-              )}
-              vazio={t('workspace.byProviderEmpty')}
-            />
-            <Ranking
-              titulo={t('workspace.byProjectTitle')}
-              linhas={comoRanking(
-                relatorio.data.porProjeto,
-                (l) => l.rotulo ?? l.chave,
-                t,
-              )}
-              vazio={t('workspace.byProjectEmpty')}
-            />
-            <Ranking
-              titulo={t('workspace.byActorTitle')}
-              linhas={comoRanking(relatorio.data.porAtor, rotuloDoAtor, t)}
-              vazio={t('workspace.byActorEmpty')}
-            />
-          </div>
-        </>
-      )}
-
-      {/* A pergunta da FATURA, que é outra: por credencial, e só do owner
-          (RN-060). Reaproveitada inteira em vez de reescrita aqui. */}
-      {project && <CredentialSpendSection workspaceId={project.workspaceId} />}
-    </>
-  );
+  return <GastoDoWorkspace workspaceId={project?.workspaceId} projectId={projectId} />;
 }
 
 /** A audiência do membro. */
@@ -348,37 +329,6 @@ function MeuConsumo({ projectId }: { projectId: string }) {
     </>
   );
 }
-
-/**
- * `t` entra por parâmetro porque esta função é chamada durante o render de
- * `GastoDoWorkspace`/`MeuConsumo`, mas não é ela própria um componente — não
- * pode chamar `useTranslation` diretamente (regra dos hooks).
- */
-function comoRanking(
-  linhas: SpendLinha[],
-  rotulo: (linha: SpendLinha) => string,
-  t: (chave: string, opcoes?: Record<string, unknown>) => string,
-): LinhaDeRanking[] {
-  return linhas.map((linha) => ({
-    chave: linha.chave,
-    rotulo: rotulo(linha),
-    costMicros: linha.costMicros,
-    detalhe: t('shared.rankingDetail', {
-      tokens: numberFmt.format(tokensDe(linha)),
-      calls: linha.chamadas,
-    }),
-  }));
-}
-
-/**
- * O rótulo humano do provider — a MESMA tabela que `CredentialSpendSection`
- * já usa, nunca uma segunda cópia. `chave` na dimensão `provider` é o slug
- * puro (`token-usage-repository.port.ts`: `rotulo` só existe pra `project`).
- */
-function rotuloDoProvider(linha: SpendLinha): string {
-  return ROTULO_DO_PROVIDER[linha.chave as LLMProviderName] ?? linha.chave;
-}
-
 // ---------------------------------------------------------------------------
 // KPI de economia com modelos locais — CORTE DECLARADO (RN-214).
 //

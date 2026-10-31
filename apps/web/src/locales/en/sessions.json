@@ -214,7 +214,7 @@
         "errorValue": "—",
         "loadingValue": "…",
         "errorDetail": "could not load",
-        "detail": "your spend on this project, 30 days"
+        "detail": "project total, 30 days"
       }
     }
   }
