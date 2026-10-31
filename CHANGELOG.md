@@ -4,6 +4,10 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ## Unreleased
 
+### Correções
+
+- O aviso "Há uma aprovação esperando" do botão "ir ao fim" só realça com ação PENDENTE nova no fio, comparada por ids; ação auto-aprovada ou já decidida não acende mais (AT-624, RN-836).
+
 ### Mudanças
 
 - O comando do `exec` no container não viaja mais no argv (AT-622, RN-947): `pkill -f` do agente de QA deixa de matar o próprio comando (143). Passa por `BRABO_EXEC_CMD`.
