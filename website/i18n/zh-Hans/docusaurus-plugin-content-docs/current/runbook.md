@@ -799,7 +799,7 @@ docker exec brabo-dev-engine-1 sh -c 'semgrep --config p/security-audit --json -
 # "Failed to find semgrep-core in PATH or in the semgrep package." (exit 2)
 ```
 
-Semgrep 1.179.0 停止发布 `musllinux` wheel，因此在 engine 的 Alpine 镜像中，pip 会从 sdist 构建它，而 core 二进制文件缺失。engine 的两个 Dockerfile 都固定了 `SEMGREP_VERSION=1.171.0`（dev 的自 10月2日起，并由 `scripts/ci/semgrep-do-engine.spec.ts` 保持与生产一致）；在此之前构建的 dev 镜像用 `docker compose -p brabo-dev up -d --build engine` 重建。升级版本需要一个在 PyPI 上有 `musllinux` wheel 的 release。
+Semgrep 1.179.0 停止发布 `musllinux` wheel，因此在 engine 的 Alpine 镜像中，pip 会从 sdist 构建它，而 core 二进制文件缺失。engine 的两个 Dockerfile 都固定了 `SEMGREP_VERSION=1.183.0`（dev 的自 10月2日起，并由 `scripts/ci/semgrep-do-engine.spec.ts` 保持与生产一致）；在此之前构建的 dev 镜像用 `docker compose -p brabo-dev up -d --build engine` 重建。升级版本需要一个在 PyPI 上有 `musllinux` wheel 的 release。
 
 ### engine 以 `sys_sigaltstack(): Internal error` 中止 {#engine-sigaltstack}
 
