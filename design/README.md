@@ -95,6 +95,13 @@ liga o `dark:` a `[data-theme='dark']`. As variáveis cruas do shadcn
 continuam a única fonte, e os pares de contraste seguem medidos pelo
 `design-contraste.test.ts`.
 
+Hoje existem em `components/shadcn/` (baixados do registry `base-nova`, ainda
+sem uso em tela salvo o Button): button, badge, card, alert, label, field,
+separator, input, input-group, textarea, native-select, dialog, collapsible,
+toggle, toggle-group, tabs, table, empty, skeleton, avatar, trace, message,
+bubble, item, tooltip, hover-card, progress e spinner. `components/ai-elements/`
+é a pasta (vazia) dos padrões de IA da AT-647; o `shadcn.css` já a varre.
+
 ## `design_handoff_brabo/` — o handoff, versionado
 
 Desde 2026-08-08 (FASE 16) o handoff de design vive **no repositório**, na

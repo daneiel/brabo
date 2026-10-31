@@ -3,7 +3,7 @@ id: adr-index
 title: Decisões arquiteturais (ADR)
 sidebar_label: Índice de ADRs
 sidebar_position: 0
-description: Os 227 registros de decisão arquitetural do Brabo, agrupados por tema, com o que cada um decidiu.
+description: Os 228 registros de decisão arquitetural do Brabo, agrupados por tema, com o que cada um decidiu.
 keywords: [ADR, decisão arquitetural, arquitetura, histórico]
 ---
 
@@ -260,6 +260,7 @@ O contrato de provider, o catálogo de modelos e a curadoria, os bindings de mod
 | [0224](0224-raciocinio-abortado-no-stream.md) | O raciocínio é **contado no stream e abortado no limite** do `reasoning_budget` (`truncated` com motivo); o gasto abortado é estimado na hora (`price_implicit`) e **reconciliado** depois pelo `/generation`; o deepseek ganha orçamento 2048. |
 | [0225](0225-teto-de-preco-do-upstream-no-openrouter.md) | O OpenRouter recebe um **teto de preço** por chamada: `provider.max_price` = preço de catálogo × 1,5, fixo no código e ligado por padrão (capability `priceCeiling`, provada por smoke), mesclado com o `sort`; o 404 por nenhum upstream no teto vira erro nomeado e a chamada repete UMA vez sem teto (fator nulo no metering). Referencia o 0166 e o 0221. |
 | [0227](0227-provider-opencode-zen-de-llm.md) | O **OpenCode Zen** entra como o 11º provider, só no dialeto OpenAI (`/chat/completions`): `listModels: false` (a rota de modelos é outra e pública), sem teste de conexão da credencial, seed só com os dois grátis de retenção zero (`deepseek-v4.1-flash-free`, `glm-5.3-flash-free`) e capabilities `false` até o smoke. Referencia o 0043 e o 0222. |
+| [0233](0233-membro-ve-o-gasto-do-projeto-sem-credencial.md) | O **membro** vê o gasto do PROJETO (total e custo por agente/área, `GET /projects/:projectId/spend/team`) e o próprio consumo por projeto (`GET /workspaces/:workspaceId/spend/me`), nunca provider nem credencial. Revisa o [0063](0063-duas-audiencias-para-o-mesmo-gasto.md); o relatório do owner ganha `?projectId=` (404 entre workspaces) e a dimensão `session`, e a marca curada `billing` separa assinatura do US$ pago. |
 
 ## RAG, grafo de conhecimento e artefatos {#tema-conhecimento}
 
@@ -368,7 +369,7 @@ Como a documentação é gerada, verificada e publicada.
 - **Um arquivo por decisão**, em `docs/adr/NNNN-short-title.md`, com
   numeração sequencial de 4 dígitos, e título `# ADR NNNN — <título>`
   ([0218](0218-titulo-de-adr-com-prefixo.md)). **Sem reuso de número**, nem quando um ADR
-  é substituído — o próximo é **0233**.
+  é substituído — o próximo é **0234**.
 - **Um tema por decisão**, escolhido por quem escreve o ADR, no mesmo
   PR: uma linha em `docs/adr/temas.yml` e a linha do índice sob a seção desse
   tema, em ordem numérica. Quem revisa confirma. Um tema novo é uma
