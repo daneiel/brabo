@@ -2145,7 +2145,22 @@ defmodule Engine.Sessions.EngineApiClient.Live do
     |> Task.await(:infinity)
   end
 
-  defp req_get(url, opts), do: isolado(fn -> Req.get(url, opts) end)
+  # RN-955: resposta atrasada que ficou no socket de uma conexão do pool
+  # (Finch devolve a conexão após `receive_timeout`) chega ao GET seguinte como
+  # `CaseClauseError {:status, ref_antigo, _}`. O Finch fecha essa conexão ao
+  # lançar, então repetir UMA vez pega conexão nova. Só GET: POST pode ter tido efeito.
+  defp req_get(url, opts), do: get_repetindo(fn -> Req.get(url, opts) end)
+
+  @doc false
+  def get_repetindo(fun) do
+    case isolado(fun) do
+      {:error, %CaseClauseError{term: {_, ref, _}}} when is_reference(ref) ->
+        isolado(fun)
+
+      outro ->
+        outro
+    end
+  end
 
   defp post(path, body) do
     case post_returning(path, body) do

@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- A sessão ativa não é mais encerrada por uma resposta fora de ordem na checagem de trabalho pendente (AT-642, RN-955): o GET interno é repetido uma vez. "Confirmar arquitetura pronta" e a oferta ao Infra funcionam depois de reabrir a sessão (RN-956); "aborted" é falha de infra (RN-957); o grafo volta sozinho se o Neo4j subiu depois da api, e o aviso diz a causa (RN-960).
 - O 9Router passa a receber as ferramentas (`toolCalling: true`, provado por smoke), o vínculo de agente/área confere a capability do provider (422) e `buildBody` lança em vez de descartar `tools` calado (AT-637, RN-950).
 - O fio da Sessão acompanha sempre a última mensagem (AT-635, RN-951): cada evento ou ação nova o leva ao fim, mesmo para quem rolou para cima; o container que encolhe e `?highlightEvent` também seguem; o botão "ir ao fim" saiu.
 - Chamada de ferramenta escrita como texto (`<invoke ...>`) deixa de aparecer como resposta no fio: a api repete a chamada uma vez e, se repetir, devolve falha nomeada `tool_call_as_text` sem texto cru (AT-633, RN-949).
