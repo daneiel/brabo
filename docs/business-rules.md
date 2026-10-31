@@ -21589,7 +21589,7 @@ sem dizer qual.
   ele que decide; o reconhecimento pelo texto ficou só como rede.
 - **Onde:** `apps/engine/lib/engine/agents/falha_de_turno.ex:138`
   (`credito_esgotado?`),
-  `apps/engine/lib/engine/dev/dev_agent_server.ex:906` (`handle_outcome`),
+  `apps/engine/lib/engine/dev/dev_agent_server.ex:902` (`handle_outcome`),
   `apps/engine/lib/engine/dev/agent_io.ex:271` (`pausar_por_credito`),
   `apps/web/src/lib/agent-status.ts:198` (`breakerReasonFor`),
   `apps/api/src/application/use-cases/sessions/get-session-pending-work.use-case.ts`
@@ -21624,7 +21624,7 @@ sem dizer qual.
   (`streamErrorCode`),
   `apps/engine/lib/engine/agents/falha_de_turno.ex:87` (`credito_esgotado?`),
   `:71` (`origem`), `apps/engine/lib/engine/harness/tool_loop.ex:168`
-  (`last_error_code`), `apps/engine/lib/engine/dev/dev_agent_server.ex:906`
+  (`last_error_code`), `apps/engine/lib/engine/dev/dev_agent_server.ex:902`
   (`handle_outcome`)
 - **Teste:** `apps/api/test/contract/llm-provider.contract.ts` (`erro_402 vira
   chunk de erro com code "insufficient_credit"`; falha: `erro_500` segue
@@ -23184,7 +23184,8 @@ sem dizer qual.
   do dev agent por essa causa NÃO incrementa o contador de bloqueios seguidos
   ([RN-047](business-rules/custo.md#rn-047)): o agente segue reivindicando. No uso real um
   `getaddrinfo EAI_AGAIN openrouter.ai` de 17 s bloqueou duas tarefas como
-  `codigo` e desarmou o dev.
+  `codigo` e desarmou o dev. A correção pós-gate segue a mesma régua
+  (AT-621, [RN-864](#rn-864)).
 - **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:266`
   (`llm_turn_com_retentativa`), `apps/engine/lib/engine/agents/falha_de_turno.ex:112`
   (`falha_de_rede?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:952`
@@ -24382,9 +24383,12 @@ sem dizer qual.
   PAUSA 1 min em vez de pegar a próxima task (o wake é ignorado durante a
   pausa). Crédito esgotado (402, RN-726/730) e erro de código NÃO entram:
   bloqueiam na hora. O contador de retomadas é só em memória: reiniciar o
-  engine o zera.
-- **Onde:** `apps/engine/lib/engine/agents/falha_de_turno.ex:133`
-  (`passageira?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:982`
+  engine o zera. Vale também para a correção pós-gate (AT-621): o 503 do
+  provider numa correção segue o mesmo caminho do laço principal (crédito
+  RN-726 + retomada), com o motivo marcado "(correção)".
+- **Onde:** `apps/engine/lib/engine/dev/dev_agent_server.ex:822`
+  (`handle_correction_outcome`), `apps/engine/lib/engine/agents/falha_de_turno.ex:133`
+  (`passageira?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:978`
   (`bloquear_passageira`), `apps/engine/lib/engine/dev/agent_io.ex:293`
   (`pausar_por_rede`), `apps/engine/lib/engine/workers/retomada_de_tarefa_worker.ex:33`
   (`agendar`), `apps/api/src/application/use-cases/execution/unblock-task.use-case.ts:33`
@@ -24392,7 +24396,10 @@ sem dizer qual.
 - **Teste:** `apps/engine/test/engine/dev/dev_agent_server_test.exs` ("falha
   passageira: agenda a retomada, pausa e não queima a fila", "fim da pausa
   volta a reivindicar"; falha: "falha passageira depois de 3 retomadas fica
-  bloqueada pedindo o clique", "402 não agenda retomada"),
+  bloqueada pedindo o clique", "402 não agenda retomada"; correção: "correção
+  com 503: infra, retomada agendada, pausa e disjuntor intacto", "correção sem
+  crédito: pausa por crédito, sem retomada", "correção com erro não
+  passageiro: bloqueia na hora, sem retomada"),
   `apps/engine/test/engine/workers/retomada_de_tarefa_worker_test.exs`
 - **Origem:** AT-525
 
@@ -24660,7 +24667,7 @@ sem dizer qual.
 - **Onde:** `apps/api/src/domain/llm/llm-provider-errors.ts:86` (`normalizeHttpStatus`),
   `:140` (`pareceOrcamento`); `apps/engine/lib/engine/agents/falha_de_turno.ex:205`
   (`orcamento_esgotado`), `:219` (`frase_de_orcamento`), `:163`
-  (`credito_esgotado?`); `apps/engine/lib/engine/dev/dev_agent_server.ex:961`
+  (`credito_esgotado?`); `apps/engine/lib/engine/dev/dev_agent_server.ex:957`
   (`motivo_de_credito`)
 - **Teste:** `apps/api/test/domain/llm/llm-provider-errors.spec.ts` ("o 403 de
   orçamento vira insufficient_credit com o corpo inteiro"; falha: "403 sem
@@ -25008,7 +25015,7 @@ sem dizer qual.
   sempre.
 - **Onde:** `apps/engine/lib/engine/dev/dev_agent_server.ex:1136`
   (`limite_de_uso?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:1127`
-  (`motivo_da_parada`), `apps/engine/lib/engine/dev/dev_agent_server.ex:997`
+  (`motivo_da_parada`), `apps/engine/lib/engine/dev/dev_agent_server.ex:993`
   (`bloquear_passageira`), `apps/engine/lib/engine/dev/agent_io.ex:293`
   (`pausar_por_rede`)
 - **Teste:** `apps/engine/test/engine/dev/dev_agent_server_test.exs` ("429 do
