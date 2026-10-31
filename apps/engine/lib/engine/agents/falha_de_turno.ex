@@ -77,6 +77,10 @@ defmodule Engine.Agents.FalhaDeTurno do
   def origem({:final, texto, code}) when is_binary(texto) and code in ["connection", "timeout"],
     do: "infra"
 
+  # RN-949: o modelo escreveu a chamada de ferramenta como texto, mesmo após a
+  # retentativa da api. Defeito do modelo (ADR 0020), nunca do nosso código.
+  def origem({:final, texto, "tool_call_as_text"}) when is_binary(texto), do: "modelo"
+
   def origem({:final, texto, _code}) when is_binary(texto), do: origem({:final, texto})
 
   # Erro que a própria api narrou no frame final — texto normalizado por ela.
@@ -278,6 +282,10 @@ defmodule Engine.Agents.FalhaDeTurno do
   defp motivo(:no_final_event), do: "a resposta do modelo foi interrompida antes do fim"
   defp motivo(:resposta_vazia), do: "o modelo não devolveu resposta"
   defp motivo(:aborted), do: "a conexão com a api foi abortada no meio do turno"
+
+  defp motivo({:final, _texto, "tool_call_as_text"}),
+    do: "o modelo escreveu a chamada de ferramenta como texto em vez de chamá-la"
+
   defp motivo({:final, texto}) when is_binary(texto), do: curto(texto)
   defp motivo({:final, texto, _code}) when is_binary(texto), do: curto(texto)
   defp motivo({status, _}) when is_integer(status), do: "a api respondeu #{status}"
