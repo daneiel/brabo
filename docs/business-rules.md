@@ -21587,7 +21587,7 @@ sem dizer qual.
   `dev.credit_exhausted` como trabalho pendente, como `dev.idle_tripped`.
   Desde a RN-730 o 402 chega com `code` próprio (`insufficient_credit`) e é
   ele que decide; o reconhecimento pelo texto ficou só como rede.
-- **Onde:** `apps/engine/lib/engine/agents/falha_de_turno.ex:138`
+- **Onde:** `apps/engine/lib/engine/agents/falha_de_turno.ex:142`
   (`credito_esgotado?`),
   `apps/engine/lib/engine/dev/dev_agent_server.ex:902` (`handle_outcome`),
   `apps/engine/lib/engine/dev/agent_io.ex:271` (`pausar_por_credito`),
@@ -21622,7 +21622,7 @@ sem dizer qual.
   (`streamErrorCode`),
   `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:251`
   (`streamErrorCode`),
-  `apps/engine/lib/engine/agents/falha_de_turno.ex:87` (`credito_esgotado?`),
+  `apps/engine/lib/engine/agents/falha_de_turno.ex:91` (`credito_esgotado?`),
   `:71` (`origem`), `apps/engine/lib/engine/harness/tool_loop.ex:168`
   (`last_error_code`), `apps/engine/lib/engine/dev/dev_agent_server.ex:902`
   (`handle_outcome`)
@@ -21869,8 +21869,8 @@ sem dizer qual.
   top up the key and try again."; sem idioma resolvido, pt-BR. O JSON do
   provider fica só no `reason` (diagnóstico). Os demais erros mantêm a frase
   de sempre.
-- **Onde:** `apps/engine/lib/engine/agents/falha_de_turno.ex:162` (`mensagem`),
-  `:185` (`diagnostico`)
+- **Onde:** `apps/engine/lib/engine/agents/falha_de_turno.ex:166` (`mensagem`),
+  `:189` (`diagnostico`)
 - **Teste:** `apps/engine/test/engine/agents/dev_lead_server_test.exs` (402
   em pt-BR e en: frase curta, `reason` sem `{:final`; erro `upstream`: frase
   de sempre), `apps/engine/test/engine/agents/falha_de_turno_test.exs`
@@ -21937,7 +21937,7 @@ sem dizer qual.
   texto narrado entra na bolha cortado em 300 caracteres com "…".
 - **Onde:** `apps/api/src/domain/llm/llm-provider-errors.ts:164`
   (`LIMITE_DO_DETALHE`), `apps/engine/lib/engine/agents/falha_de_turno.ex:284`
-  (`@teto_da_bolha`), `:282` (`curto`)
+  (`@teto_da_bolha`), `:289` (`curto`)
 - **Teste:** `apps/api/test/domain/llm/llm-provider-errors.spec.ts` (o 402
   leva `"metadata":{"reason":"insufficient_credits"` inteiro; corpo acima do
   teto corta), `apps/engine/test/engine/agents/falha_de_turno_test.exs`
@@ -23187,7 +23187,7 @@ sem dizer qual.
   `codigo` e desarmou o dev. A correção pós-gate segue a mesma régua
   (AT-621, [RN-864](#rn-864)).
 - **Onde:** `apps/engine/lib/engine/harness/tool_loop.ex:266`
-  (`llm_turn_com_retentativa`), `apps/engine/lib/engine/agents/falha_de_turno.ex:112`
+  (`llm_turn_com_retentativa`), `apps/engine/lib/engine/agents/falha_de_turno.ex:119`
   (`falha_de_rede?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:952`
   (`bloquear_parada`), `apps/engine/lib/engine/dev/agent_io.ex:228`
   (`finish_task`)
@@ -24387,7 +24387,7 @@ sem dizer qual.
   provider numa correção segue o mesmo caminho do laço principal (crédito
   RN-726 + retomada), com o motivo marcado "(correção)".
 - **Onde:** `apps/engine/lib/engine/dev/dev_agent_server.ex:822`
-  (`handle_correction_outcome`), `apps/engine/lib/engine/agents/falha_de_turno.ex:133`
+  (`handle_correction_outcome`), `apps/engine/lib/engine/agents/falha_de_turno.ex:140`
   (`passageira?`), `apps/engine/lib/engine/dev/dev_agent_server.ex:978`
   (`bloquear_passageira`), `apps/engine/lib/engine/dev/agent_io.ex:293`
   (`pausar_por_rede`), `apps/engine/lib/engine/workers/retomada_de_tarefa_worker.ex:33`
@@ -24665,8 +24665,8 @@ sem dizer qual.
   "parou sem concluir nem reportar bloqueio" com origem `codigo`. 403 sem o
   marcador segue `auth`.
 - **Onde:** `apps/api/src/domain/llm/llm-provider-errors.ts:86` (`normalizeHttpStatus`),
-  `:140` (`pareceOrcamento`); `apps/engine/lib/engine/agents/falha_de_turno.ex:205`
-  (`orcamento_esgotado`), `:219` (`frase_de_orcamento`), `:163`
+  `:140` (`pareceOrcamento`); `apps/engine/lib/engine/agents/falha_de_turno.ex:212`
+  (`orcamento_esgotado`), `:226` (`frase_de_orcamento`), `:163`
   (`credito_esgotado?`); `apps/engine/lib/engine/dev/dev_agent_server.ex:957`
   (`motivo_de_credito`)
 - **Teste:** `apps/api/test/domain/llm/llm-provider-errors.spec.ts` ("o 403 de
