@@ -17,6 +17,7 @@
     "autorDesconhecido": "Unknown author"
   },
   "topbar": {
+    "iniciadaAs": "started at {{hora}}",
     "voltarAoProjeto": "Back to project",
     "nomeDaSessao": "Session name",
     "semNomeFicaHashtag": "No name — the session stays {{hashtag}}",
@@ -58,12 +59,17 @@
     "prontoParaProduzirDesabilitado": "Capture at least one business rule with the Creative before confirming readiness",
     "confirmarArquitetura": "Confirm architecture ready",
     "confirmarArquiteturaDesabilitado": "Promote at least one story in the Backlog before confirming the architecture",
+    "confirmarArquiteturaExplica": "Declares the architecture ready and offers the handoff to the Infra, which brings up the project's container.",
+    "confirmarArquiteturaProximoPasso": "Is the architecture ready? Confirm it so the system offers the Infra, which brings up the project's container.",
     "destinatarioLabel": "To",
     "destinatarioPlaceholder": "Choose the agent…",
     "destinatarioPrecisaEscolher": "There is more than one agent in this session: choose who the message goes to.",
     "semAgente": "This session has no agent yet: choose one and click Call. The offer shows up in the conversation, and the message can only be sent after you accept it.",
     "chamarAgente": "Call",
-    "enfileirar": "Queue"
+    "enfileirar": "Queue",
+    "perguntasEmAberto_one": "{{count}} open question",
+    "perguntasEmAberto_other": "{{count}} open questions",
+    "responderPerguntas": "Answer them"
   },
   "ativacao": {
     "mensagemNaoEnviada": "Your unsent message",
@@ -80,7 +86,15 @@
     "modeloGerador": "Model that generated this response: {{modelName}}",
     "modeloNaoGravado": "This response was recorded without the model's name",
     "modeloNaoRegistrado": "model not recorded",
-    "falhaOrigem": "failure · origin {{origem}}"
+    "continuarCortada": "Continue where it stopped",
+    "continuarCortadaTexto": "Continue where you stopped.",
+    "falhaOrigem": "failure · origin {{origem}}",
+    "falhaProximoPasso": "The {{agente}} turn stopped because of this failure (origin {{origem}}). Send {{agente}} a message to continue.",
+    "regrasSemHistoria_one": "{{count}} business rule is still without a story.",
+    "regrasSemHistoria_other": "{{count}} business rules are still without a story.",
+    "tetoDeIteracoes": "Stopped before finishing: each trip to the model counts as a step, and the limit for one turn is {{max}}.",
+    "naoEnviada": "not sent",
+    "tentarDeNovo": "Try again"
   },
   "historia": {
     "pendente": "story \"{{titulo}}\" ready, awaiting your promotion",
@@ -100,11 +114,13 @@
     "passouOBastaoAo": "handed off to",
     "aceitarEIniciar": "Accept handoff and start {{agente}}",
     "ativarExecucao": "Activate execution",
+    "ativarSemPlanoAviso": "No plan: the devs take the tasks as they are.",
     "semRepositorio": "No repository yet: accepting this handoff provisions it, and only then can execution be activated.",
     "acompanheExecucao": "Follow the execution in Executors",
     "infraTitulo": "{{de}} handed off to Infra",
     "infraDetalhe": "Accepting activates the Infra Lead and already authorizes starting the container: in a Container or Mounted folder project with the Architect's routing ready, it picks the image and starts the container without another click. Starting it in a Local runner project and merging the infra PR still wait for your decision.",
     "infraBotao": "Accept the Infra handoff",
+    "manualAbrir": "Address handoff to another agent…",
     "manualLabel": "Address handoff to another agent",
     "manualPlaceholder": "Choose agent...",
     "manualBotao": "Address handoff",
@@ -180,6 +196,9 @@
     "teto": "This panel reads the <b>{{lidos}}</b> events already loaded for this session. There are <b>{{anteriores}}</b> older ones — “Load older”, in the Event log, brings more, and the other sections grow along with it.",
     "regrasDeNegocio": "Business rules",
     "nadaAinda": "Nothing yet.",
+    "nadaNaJanela": "None in the loaded events — there may be some in the earlier ones.",
+    "contagemNaJanela_one": "{{count}} in view · more before",
+    "contagemNaJanela_other": "{{count}} in view · more before",
     "origemRefs_one": "origin: {{count}} ref",
     "origemRefs_other": "origin: {{count}} refs",
     "paginaAnterior": "Previous page of business rules",
@@ -191,7 +210,18 @@
     "logDeEventos": "Event log",
     "eventoCitado": "Cited event",
     "eventoCitadoNaoEncontrado": "The cited event wasn't found in this session.",
-    "erroCarregarLog": "Could not load the event log."
+    "erroCarregarLog": "Could not load the event log.",
+    "decisoes": "Recorded decisions",
+    "decisoesNadaNaJanela": "None in the loaded events — there may be decisions in earlier ones.",
+    "decisoesVazio": "No decision recorded in this session.",
+    "decisaoSemEscolha": "Decision with no recorded choice",
+    "todasAntesDaJanela": "There are {{total}} in this session, all before the loaded events — “Load older”, in the Event log, brings the detail.",
+    "recorte": "Showing {{mostradas}} of {{total}} — the rest are before what was loaded.",
+    "arquivosNaoLidos": "I haven't read the whole session's files yet.",
+    "recorteMaisRecentes": "Showing the {{mostradas}} most recent of {{total}}.",
+    "arquivosVazio": "No files in the PRs or commits of this session or of the execution session linked to it.",
+    "prsNaoLidas_one": "{{count}} PR was left out of this list (past the read limit, or its diff could not be read) — the PRs tab shows them all.",
+    "prsNaoLidas_other": "{{count}} PRs were left out of this list (past the read limit, or their diff could not be read) — the PRs tab shows them all."
   },
   "turno": {
     "pensando": "Thinking…",
@@ -200,11 +230,16 @@
     "passosCount_other": "{{count}} steps"
   },
   "pendencias": {
+    "referenciaNoFio": "Merge proposed — decide it in the \"PRs ready to merge\" queue above.",
     "titulo": "Pending decisions from other sessions in this project",
+    "tituloDoProjeto": "Pending decisions in this project",
     "nota": "A shortcut to the decision: the same cards and endpoints as the Approvals tab. No ceiling changes — merging into a protected branch stays manual.",
     "filas": {
       "aprovacoes": "Approvals",
-      "merges": "PR merges"
+      "merges": "PR merges",
+      "prontas": "PRs ready to merge",
+      "bloqueadas": "Blocked tasks",
+      "perguntas": "Open questions"
     },
     "origem_one": "Proposed in session {{hashtag}} · {{tempo}}",
     "origem_other": "{{count}} proposed in session {{hashtag}} · oldest {{tempo}}",
@@ -215,6 +250,35 @@
       "todas_other": "The policy reason for these {{count}} cards could not be read: reading the log of the session that proposed the actions failed.",
       "algumas_one": "The policy reason for {{count}} of the {{total}} cards below could not be read: reading the log of the session that proposed the action failed.",
       "algumas_other": "The policy reason for {{count}} of the {{total}} cards below could not be read: reading the log of the session that proposed the actions failed."
+    },
+    "bloqueadas": {
+      "botao": "Unblock",
+      "ok": "Task unblocked: it goes back to the module's dev agent queue.",
+      "erro": "Could not unblock the task.",
+      "semMotivo": "No reason recorded.",
+      "semPapel": "Unblocking requires the developer role on the project."
+    },
+    "perguntas": {
+      "origem": "{{agente}} asked · {{tempo}}",
+      "afeta": "Affects:",
+      "afetaRegras_one": "{{count}} rule",
+      "afetaRegras_other": "{{count}} rules",
+      "afetaHistorias_one": "{{count}} story",
+      "afetaHistorias_other": "{{count}} stories",
+      "afetaTarefas_one": "{{count}} task",
+      "afetaTarefas_other": "{{count}} tasks",
+      "esperando": "The task \"{{tarefa}}\" is waiting for your answer.",
+      "sugestao": "Suggestion:",
+      "aceitar": "Accept suggestion",
+      "campo": "Your answer",
+      "responder": "Answer",
+      "soOAutor": "Only the person who created the session where the question was asked can answer it.",
+      "erro": "The answer could not be saved.",
+      "recorte": "Showing {{mostradas}} of {{total}} questions.",
+      "respondida": "Answered. The answer was saved as a decision.",
+      "corrigir": "Fix the story",
+      "corrigirHistoria": "Affected story: {{titulo}}",
+      "dispensar": "Dismiss"
     }
   },
   "mergearNoChat": {
@@ -232,7 +296,8 @@
       "outrasCount_one": "{{count}} other entry",
       "outrasCount_other": "{{count}} other entries",
       "conteudoComOutras": "{{mensagens}} · {{outras}}"
-    }
+    },
+    "rotuloDoFio": "Session conversation"
   },
   "fila": {
     "naFila": "queued for {{agente}} — read when the current turn ends",
@@ -241,5 +306,41 @@
     "cancelarSoAutor": "Only the person who sent the message can cancel it.",
     "erroCancelar": "Could not cancel the message.",
     "enfileirada": "{{agente}} is mid-turn: the message joined its queue (position {{posicao}}) and will be read when the turn ends."
+  },
+  "gateInterrompido": {
+    "aviso": "The engine restart interrupted the {{gate}} gate cycle for task {{taskId}}; it was restarted from the beginning at {{hora}}."
+  },
+  "gateEstacionado": {
+    "aviso": "The {{gate}} gate cycle for task {{taskId}} stalled for more than 2 h and was parked: it does not restart on its own.",
+    "avisoPergunta": "The {{gate}} gate cycle for task {{taskId}} is parked waiting for your answer to an open question: answer it in the \"Open questions\" card and the gate restarts.",
+    "botao": "Resume gate",
+    "nota": "Dispatches the {{gate}} gate again for this task.",
+    "semPapel": "Resuming the gate requires the developer role on the project.",
+    "retomado": "Gate resumed — progress shows up in this thread.",
+    "erroTitulo": "Could not resume the gate"
+  },
+  "encerrar": {
+    "titulo": "End the execution session?",
+    "oQuePara": "Ending stops the agents of this session right away: a command in progress (an npm install, a test run) is cut off, and the turn in progress is not saved.",
+    "agentes": "Working here: {{agentes}}.",
+    "semReabrir": "A session with execution cannot be reopened afterwards.",
+    "cancelar": "Keep running",
+    "confirmar": "End session"
+  },
+  "turnoInterrompido": {
+    "botao": "Resume",
+    "nota": "Continues the turn from where it stopped, once per click.",
+    "semPapel": "Resuming the turn requires the developer role in the project.",
+    "retomado": "Resume requested — progress shows up in this thread.",
+    "erroTitulo": "Could not resume the turn",
+    "automatica": "{{agente}} was resumed automatically after the restart.",
+    "objetivo": "Goal: {{objetivo}}",
+    "pareiEm": "Stopped at: {{passo}}",
+    "estado": {
+      "pendente": "pending",
+      "em_curso": "in progress",
+      "feito": "done",
+      "descartado": "dropped"
+    }
   }
 }

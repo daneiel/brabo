@@ -21,6 +21,7 @@
     "stepLabel": {
       "commitPrTemplate": "Commit do template de PR",
       "commitBranchingPolicy": "Commit da política de branches",
+      "commitGitignore": "Commit do .gitignore base",
       "createDevBranch": "Criar branch dev",
       "createQaBranch": "Criar branch qa",
       "protectBranches": "Proteger branches"

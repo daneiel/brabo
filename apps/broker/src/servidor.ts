@@ -48,13 +48,16 @@ import {
   ComandoInvalidoError,
   DiretorioForaDoEscopoError,
   exec,
+  execQa,
   inspect,
   LocalizacaoIndisponivelError,
   ModoDeExecucaoNaoSuportadoError,
   RaizDeWorkspacesNaoConfiguradaError,
   remove,
+  removeQa,
   SemDecisaoDeImagemError,
   start,
+  startQa,
   stop,
   type DependenciasDoBroker,
 } from './operacoes.ts';
@@ -120,6 +123,8 @@ interface RotaDeContainer {
   projectId: string;
   /** `''` para `/containers/:id`, ou `start`/`stop`/`remove`/`exec`. */
   operacao: string;
+  /** Presente nas rotas da instância de QA (`/containers/:id/qa/:chave/<op>`, ADR 0229). */
+  qaChave?: string;
 }
 
 /**
@@ -136,6 +141,18 @@ export function rotaDeContainer(caminho: string): RotaDeContainer | null {
   if (partes.length === 3 && partes[2] !== undefined) {
     return { projectId, operacao: partes[2] };
   }
+  // ADR 0229: `/containers/:id/qa/:chave/<start|remove|exec>` — fechado, chave de 8.
+  const chave = partes[3];
+  const op = partes[4];
+  if (
+    partes.length === 5 &&
+    partes[2] === 'qa' &&
+    chave !== undefined &&
+    /^[a-z0-9]{8}$/.test(chave) &&
+    (op === 'start' || op === 'remove' || op === 'exec')
+  ) {
+    return { projectId, operacao: op, qaChave: chave };
+  }
   return null;
 }
 
@@ -144,7 +161,7 @@ async function despachar(
   pedido: PedidoNormalizado,
   rota: RotaDeContainer,
 ): Promise<RespostaDoBroker> {
-  const { projectId, operacao } = rota;
+  const { projectId, operacao, qaChave } = rota;
 
   if (operacao === '' && pedido.metodo === 'GET') {
     // A leitura devolve `{ observado }` e nunca o objeto cru: `null` é resposta
@@ -155,6 +172,21 @@ async function despachar(
 
   if (pedido.metodo !== 'POST') {
     return { status: 405, corpo: { erro: 'método não permitido', origem: 'politica' } };
+  }
+
+  if (qaChave !== undefined) {
+    switch (operacao) {
+      case 'start':
+        return { status: 200, corpo: await startQa(deps, projectId, qaChave) };
+      case 'remove':
+        await removeQa(deps, projectId, qaChave);
+        return { status: 200, corpo: { removido: true } };
+      default:
+        return {
+          status: 200,
+          corpo: await execQa(deps, projectId, qaChave, pedido.corpo),
+        };
+    }
   }
 
   switch (operacao) {

@@ -4,6 +4,7 @@ import { TokenEstimator } from '../../application/ports/token-estimator.port';
 import {
   OpenAICompatibleProvider,
   type OpenAICompatibleConfig,
+  type WireMessage,
 } from './openai-compatible-provider';
 import {
   LLMAuthError,
@@ -213,6 +214,48 @@ export function campoDeRoteamentoOpenRouter(
 }
 
 /**
+ * O teto de preço no formato do OpenRouter: `provider.max_price` em US$ por
+ * MILHÃO de tokens (`{ prompt, completion }`), a unidade da doc. Entra no mesmo
+ * objeto `provider` do `sort` — a mescla é do provider base (ADR 0225).
+ */
+export function campoDeTetoDePrecoOpenRouter(teto: {
+  inputPerMillionMicros: number;
+  outputPerMillionMicros: number;
+}): Record<string, unknown> {
+  return {
+    provider: {
+      max_price: {
+        prompt: teto.inputPerMillionMicros / 1e6,
+        completion: teto.outputPerMillionMicros / 1e6,
+      },
+    },
+  };
+}
+
+/** A chave de sessão no formato do OpenRouter: `session_id` (ADR 0221). */
+export function campoDeSessaoOpenRouter(
+  chave: string,
+): Record<string, unknown> {
+  return { session_id: chave };
+}
+
+/**
+ * O raciocínio DESLIGADO no formato do OpenRouter: `reasoning: { enabled:
+ * false }` (RN-783). Medido em 10/10 (AT-467): `reasoning: { max_tokens }` é
+ * IGNORADO pelo `anthropic/claude-haiku-5.5` (pedido 1024, gastou 8192 só de
+ * raciocínio) e LIGA raciocínio no `anthropic/claude-haiku-4.5`, que sem o campo
+ * não raciocina (74% das chamadas, 2,8× o custo). Só `enabled: false` segurou:
+ * 0 de 8 respostas cortadas e −42% de custo no Haiku 5.5. Por isso o teto não
+ * é mandado nunca (RN-782) e o "desligado" só vai para os dev agents.
+ */
+export function campoDeRaciocinioDesligadoOpenRouter(): Record<
+  string,
+  unknown
+> {
+  return { reasoning: { enabled: false } };
+}
+
+/**
  * O custo REAL da chamada, que o OpenRouter devolve em `usage.cost` (USD, número
  * decimal) no frame final do stream (ADR 0188, RN-665). Vira micro-USD inteiro
  * pelo mesmo arredondamento do resto do metering.
@@ -235,6 +278,71 @@ export function extrairCustoRealOpenRouter(
     return undefined;
   }
   return Math.round(custo * 1_000_000);
+}
+
+/**
+ * Os PONTOS DE CACHE de prompt no formato do OpenRouter (RN-892): o conteúdo
+ * da mensagem vira `[{ type: 'text', text, cache_control: { type: 'ephemeral' } }]`.
+ * Fonte pública: https://openrouter.ai/docs/features/prompt-caching (seção
+ * Anthropic Claude: `cache_control` em blocos de conteúdo de texto, no máximo
+ * QUATRO pontos por chamada, TTL de 5 min; OpenAI, DeepSeek e Gemini 2.5
+ * cacheiam sozinhos, sem ponto).
+ *
+ * Camada de MODELO: só `anthropic/*` recebe ponto; os demais voltam intactos.
+ *
+ * DOIS pontos, sobre o que é ESTÁVEL entre chamadas do mesmo agente:
+ *  1. a última mensagem `system` do PREFIXO (as instruções — e, por ordem de
+ *     prefixo da Anthropic, as ferramentas antes delas);
+ *  2. a última mensagem `user`/`tool` ANTES da cauda de `system` do fim — o
+ *     histórico inteiro até ali.
+ * A cauda de `system` do FIM (idioma RN-622, ambiente RN-706, fluxo RN-711,
+ * perfil RN-680) fica DEPOIS do último ponto, de propósito: muda por chamada e
+ * não pode invalidar o prefixo. A ordem das mensagens NUNCA muda.
+ */
+export function marcarCacheDePromptOpenRouter(
+  mensagens: WireMessage[],
+  modelo: string,
+): WireMessage[] {
+  if (!modelo.startsWith('anthropic/')) return mensagens;
+
+  let inicioDaCauda = mensagens.length;
+  while (inicioDaCauda > 0 && mensagens[inicioDaCauda - 1].role === 'system') {
+    inicioDaCauda -= 1;
+  }
+
+  const pontos = new Set<number>();
+  let fimDoPrefixo = -1;
+  while (
+    fimDoPrefixo + 1 < inicioDaCauda &&
+    mensagens[fimDoPrefixo + 1].role === 'system'
+  ) {
+    fimDoPrefixo += 1;
+  }
+  if (fimDoPrefixo >= 0) pontos.add(fimDoPrefixo);
+
+  for (let i = inicioDaCauda - 1; i > fimDoPrefixo; i -= 1) {
+    const { role } = mensagens[i];
+    if (role === 'user' || role === 'tool') {
+      pontos.add(i);
+      break;
+    }
+  }
+
+  return mensagens.map((m, i) => {
+    if (!pontos.has(i) || typeof m.content !== 'string' || !m.content) {
+      return m;
+    }
+    return {
+      ...m,
+      content: [
+        {
+          type: 'text',
+          text: m.content,
+          cache_control: { type: 'ephemeral' },
+        },
+      ],
+    };
+  });
 }
 
 /**
@@ -266,6 +374,21 @@ export function openrouterConfig(
       // A prova vale para o fio `provider.sort` e o `provider` do frame;
       // qual upstream cada critério escolhe é decisão do hub e muda com o tempo.
       routingPreference: true,
+      // PROVADO em 2026-10-21 (ADR 0221, RN-907, AT-580):
+      // `openrouter-provider.sessao.smoke.spec.ts` rodou contra a API real em
+      // `deepseek/deepseek-v4.1-flash`: com `session_id`, 6 de 6 chamadas no
+      // MESMO upstream (Together); sem ele, 4 upstreams em 6.
+      stickySession: true,
+      // PROVADO em 2026-10-28 (ADR 0225, RN-917, AT-606):
+      // `openrouter-provider.teto.smoke.spec.ts` rodou contra a API real em
+      // `deepseek/deepseek-v4.1-flash`: com `max_price`, o upstream servido
+      // respeitou o teto; sem upstream no teto, o 404 virou o erro nomeado.
+      priceCeiling: true,
+      // PROVADO em 2026-10-15 (RN-892, AT-543):
+      // `openrouter-provider.cache.smoke.spec.ts` rodou contra a API real e a
+      // segunda chamada a `anthropic/claude-haiku-5.5` voltou com
+      // `cached_input_tokens=8011`. O hook segue limitando o ponto a `anthropic/*`.
+      promptCaching: true,
     },
     authHeaders: (apiKey) => ({
       Authorization: `Bearer ${apiKey ?? ''}`,
@@ -284,11 +407,20 @@ export function openrouterConfig(
     parseErrorFrame: parseErrorFrameOpenRouter,
     parseCatalogo: parseCatalogoOpenRouter,
     campoDeRoteamento: campoDeRoteamentoOpenRouter,
+    campoDeSessao: campoDeSessaoOpenRouter,
+    campoDeTetoDePreco: campoDeTetoDePrecoOpenRouter,
+    // Raciocínio desligado para os dev agents (RN-783) e folga no teto para
+    // modelo com `supports_reasoning` (RN-741/782). Provado com credencial na
+    // medição paga de 10/10 (AT-467).
+    campoDeRaciocinioDesligado: campoDeRaciocinioDesligadoOpenRouter,
     // O custo que o hub cobrou vira o número do metering (ADR 0188, RN-665).
     // Provado pela resposta GRAVADA na suíte de contrato (a forma de
     // `usage.cost` medida nas chamadas reais da medição de idioma, AT-163);
     // a prova com credencial, em stream, é o smoke `openrouter-provider.smoke`.
     extrairCustoReal: extrairCustoRealOpenRouter,
+    // Pontos de cache de prompt (RN-892) — inerte enquanto a capability for
+    // `false`.
+    marcarCacheDePrompt: marcarCacheDePromptOpenRouter,
   };
 }
 

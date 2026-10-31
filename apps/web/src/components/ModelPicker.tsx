@@ -46,7 +46,7 @@ interface ModelPickerProps {
    * uma fonte só do outro lado: `assertModelFitsBindingScope`
    * (`domain/llm/model-capabilities.ts`) exige tool calling em `agent` e em
    * `area`, e em mais nenhum. Então ligam o filtro as duas telas que gravam
-   * nesses escopos — `ModelsSection` (agente) e `AreaModelsSection` (área) —,
+   * nesses escopos — `ModelsSection` (agente e caixa da área) —,
    * e o seletor de SESSÃO não liga: ali a api aceita modelo chat-only de
    * propósito (uma sessão sem ferramenta na mão é conversa), e marcar o filtro
    * esconderia o que o domínio permite. O filtro segue o que a api RECUSA;
@@ -318,6 +318,9 @@ function ModelOption({ model, selected, onClick }: { model: Model; selected: boo
           {model.supportsToolCalling && (
             <Badge tone="accent">{t('badges.toolCalling')}</Badge>
           )}
+          {/* AT-443: o selo do catálogo (`ModelCatalogSection`) — quem escolhe
+              o modelo aqui também precisa saber se ele raciocina. */}
+          {model.supportsReasoning && <Badge tone="accent">{t('badges.thinking')}</Badge>}
           {/* Indisponível aparece MARCADO, nunca some: um modelo ausente da
               lista deixaria o binding que aponta pra ele sem explicação. */}
           {indisponivel && <Badge tone="warning">{t('badges.unavailable')}</Badge>}

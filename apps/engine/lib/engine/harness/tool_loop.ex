@@ -62,7 +62,9 @@ defmodule Engine.Harness.ToolLoop.Default do
   }
 
   alias Engine.Harness.Hooks.{ActionPipeline, EventLog}
+  alias Engine.Harness.AmbienteDoAgente
   alias Engine.Harness.Iteracoes
+  alias Engine.Harness.RetomadaDoTurno
   alias Engine.Harness.RoteamentoDeFerramenta
   alias Engine.Sessions.EngineApiClient
   alias Engine.Telemetry.Span
@@ -81,7 +83,18 @@ defmodule Engine.Harness.ToolLoop.Default do
         "brabo.session_id" => Map.get(ctx, :session_id),
         "brabo.project_id" => Map.get(ctx, :project_id)
       },
-      fn -> ctx |> init() |> loop() end
+      # RN-706: o ambiente (pasta, imagem, rede, módulo) chega ao modelo pela
+      # fachada como mensagem efêmera — ver `Engine.Harness.AmbienteDoAgente`.
+      fn ->
+        AmbienteDoAgente.com_ambiente(ctx, fn ->
+          # AT-582: `ctx[:retomada]` (montado pelo diário) vira a mensagem de
+          # retomada deste laço — ver `Engine.Harness.RetomadaDoTurno`.
+          RetomadaDoTurno.com_retomada(ctx, fn ->
+            Engine.Harness.FalhaRepetida.zerar()
+            ctx |> init() |> loop()
+          end)
+        end)
+      end
     )
   end
 
@@ -106,6 +119,16 @@ defmodule Engine.Harness.ToolLoop.Default do
     |> Map.put(:tool_specs, Tools.specs(ctx.tools))
   end
 
+  # RN-913: a 3ª falha igual para o laço pelo desfecho de erro que ele já tem.
+  defp parou_ou_loop(ctx) do
+    if Engine.Harness.FalhaRepetida.parou?() do
+      Engine.Harness.FalhaRepetida.narrar(ctx.project_id, ctx.session_id, ctx.agent)
+      {:ok, Map.put(ctx, :last_error, "falha repetida de ferramenta")}
+    else
+      loop(%{ctx | iteration: ctx.iteration + 1})
+    end
+  end
+
   defp loop(%{iteration: iteration, max_iterations: max} = ctx) when iteration >= max do
     emit(ctx, "toolloop.limit_reached", %{iteration: iteration, max_iterations: max})
     {:limit_reached, ctx}
@@ -125,7 +148,7 @@ defmodule Engine.Harness.ToolLoop.Default do
     {:ok, ctx} = ContextManager.maybe_compact(ctx)
     wire = Enum.map(ctx.messages, &to_wire/1)
 
-    case EngineApiClient.llm_turn(ctx.project_id, ctx.session_id, ctx.agent, wire, ctx.tool_specs) do
+    case llm_turn_com_retentativa(ctx, wire) do
       {:ok, %{"message" => message} = resp} ->
         # O custo do chat MAIS o do Jev (ADR 0179): o orçamento local do laço
         # gasta o que a api também registrou em `token_usage`.
@@ -140,6 +163,9 @@ defmodule Engine.Harness.ToolLoop.Default do
         # diagnostica "o modelo parou sem sinalizar" para uma falha de
         # infraestrutura. Mesma armadilha do ADR 0019, outro caminho.
         ctx = registra_erro(ctx, Map.get(resp, "error"))
+        # RN-730: o `code` do provider viaja ao lado do texto, para quem decide
+        # crédito esgotado não depender da frase.
+        ctx = Map.put(ctx, :last_error_code, Map.get(resp, "errorCode"))
         content = Map.get(message, "content", "")
 
         # Mesmo guard-rail da RN-059 (Fase 14a), aplicado aqui — o ToolLoop é
@@ -153,8 +179,10 @@ defmodule Engine.Harness.ToolLoop.Default do
         # `tool.call`/`tool.result`, e quem terminou sem tool call nem texto
         # decide o desfecho (e o evento durável correspondente) a partir de
         # `ctx.last_error`/`{:ok, ctx}` — ver `DevAgentServer.handle_outcome/4`.
+        # RN-695 (AT-355): quem não conversa com ninguém (a Anamnese) grava o
+        # texto com outro tipo, que o fio da sessão não desenha.
         if content != "" do
-          emit(ctx, "agent.response", %{
+          emit(ctx, Map.get(ctx, :response_event, "agent.response"), %{
             content: content,
             error: Map.get(resp, "error"),
             iteration: ctx.iteration,
@@ -176,12 +204,14 @@ defmodule Engine.Harness.ToolLoop.Default do
         # usar o protocolo nativo. Recupera antes de desistir (ADR 0020).
         case tool_calls(message, ctx) do
           [] ->
-            {:ok, ctx}
+            parada_sem_chamada(ctx, resp, content)
 
           tool_calls ->
+            ctx = Map.delete(ctx, :corte_retentado)
+
             case Enum.reduce_while(tool_calls, {:cont, ctx}, &dispatch_or_halt/2) do
               {:halted, reason, ctx} -> {:halted, reason, ctx}
-              {:cont, ctx} -> loop(%{ctx | iteration: ctx.iteration + 1})
+              {:cont, ctx} -> parou_ou_loop(ctx)
             end
         end
 
@@ -200,11 +230,73 @@ defmodule Engine.Harness.ToolLoop.Default do
     end
   end
 
+  # RN-780 (AT-459): resposta sem texto e sem chamada, cortada pelo teto de
+  # saída (`truncated`, o `finish_reason: length` que a api devolve — RN-737),
+  # é o raciocínio que comeu o teto, não o modelo desistindo. A volta é
+  # retentada UMA vez, sem a resposta vazia no histórico e contando iteração
+  # (o teto de iterações e o orçamento da tarefa continuam valendo); repetida,
+  # o laço para marcando `corte_pelo_teto`, que o consumidor narra.
+  defp parada_sem_chamada(ctx, %{"truncated" => true}, content) do
+    cond do
+      # RN-946 (AT-620): cortada NO MEIO do texto não se retenta (muda laço e
+      # custo); marca chave própria, pois `corte_pelo_teto` é da RN-780.
+      String.trim(to_string(content)) != "" ->
+        {:ok, Map.put(ctx, :corte_com_texto, true)}
+
+      Map.get(ctx, :corte_retentado) ->
+        {:ok, Map.put(ctx, :corte_pelo_teto, true)}
+
+      true ->
+        ctx
+        |> Map.update!(:messages, &Enum.drop(&1, -1))
+        |> Map.put(:corte_retentado, true)
+        |> Map.update!(:iteration, &(&1 + 1))
+        |> loop()
+    end
+  end
+
+  defp parada_sem_chamada(ctx, _resp, _content), do: {:ok, ctx}
+
+  # RN-810 (AT-484): falha de REDE passageira do provider (DNS `EAI_AGAIN`,
+  # conexão recusada/derrubada, timeout) é retentada com espera curta e teto
+  # pequeno ANTES de virar desfecho. A api normaliza o erro por `code`
+  # (`connection`/`timeout`, ADR 0041) e o devolve no corpo 200; o texto fica
+  # como rede para o erro que chegou sem código. Vale para todo consumidor do
+  # `ToolLoop` (dev agents e subagentes de gate), porque o caminho é este.
+  @esperas_de_rede_ms [1_000, 3_000]
+
+  defp llm_turn_com_retentativa(ctx, wire, esperas \\ nil) do
+    esperas = esperas || Application.get_env(:engine, :esperas_de_rede_ms, @esperas_de_rede_ms)
+
+    resultado =
+      EngineApiClient.llm_turn(ctx.project_id, ctx.session_id, ctx.agent, wire, ctx.tool_specs)
+
+    case {resultado, esperas} do
+      {{:ok, resp}, [espera | resto]} when is_map(resp) ->
+        if FalhaDeTurno.falha_de_rede?(resp) do
+          emit(ctx, "toolloop.network_retry", %{
+            erro: Map.get(resp, "error"),
+            errorCode: Map.get(resp, "errorCode"),
+            esperaMs: espera,
+            tentativasRestantes: length(resto)
+          })
+
+          Process.sleep(espera)
+          llm_turn_com_retentativa(ctx, wire, resto)
+        else
+          resultado
+        end
+
+      _ ->
+        resultado
+    end
+  end
+
   defp emit_falha(ctx, reason) do
     emit(ctx, "agent.error", %{
       origem: FalhaDeTurno.origem(reason),
-      mensagem: FalhaDeTurno.mensagem(reason),
-      reason: inspect(reason)
+      mensagem: FalhaDeTurno.mensagem(reason, ctx[:project_id]),
+      reason: FalhaDeTurno.diagnostico(reason)
     })
   end
 
@@ -308,7 +400,10 @@ defmodule Engine.Harness.ToolLoop.Default do
         {"ferramenta desconhecida: #{name}", false}
 
       mod ->
-        case mod.run(args, ctx) do
+        # RN-719: normaliza argumentos e transforma exceção em erro do laço.
+        case Engine.Harness.ArgumentosDeFerramenta.executar(name, args, mod.spec(), fn a ->
+               mod.run(a, ctx)
+             end) do
           {:ok, result} -> {result, true}
           {:error, reason} -> {stringify(reason), false}
         end

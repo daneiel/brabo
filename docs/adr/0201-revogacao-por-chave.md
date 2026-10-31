@@ -1,4 +1,4 @@
-# 0201 — A revogação mira a CHAVE, e não o par `{projeto, usuário}`
+# ADR 0201 — A revogação mira a CHAVE, e não o par `{projeto, usuário}`
 
 ## Status
 

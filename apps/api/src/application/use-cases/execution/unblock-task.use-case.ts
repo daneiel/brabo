@@ -26,16 +26,28 @@ export class UnblockTaskUseCase {
     sessionId: string,
     taskId: string,
     userId: string,
+    // RN-864 (AT-525): a retomada automática do engine depois de falha
+    // passageira de rede usa ESTE caminho, com ator `system` — sem régua nova.
+    // Só desbloqueia o que ainda está bloqueado: se uma pessoa já desbloqueou
+    // (e a task foi reivindicada), a retomada não emite evento nem wake.
+    ator: { kind: 'user' | 'system' } = { kind: 'user' },
   ) {
     // Desbloqueio e wake na MESMA transação (D7): destravar a task e perder o
     // wake devolve o problema que o usuário acabou de resolver — a task fica
     // pegável e o agente idle não fica sabendo.
     return this.unitOfWork.runInTransaction(async () => {
+      if (ator.kind === 'system') {
+        const atual = await this.tasks.findById(taskId);
+        if (!atual?.blocked) return atual;
+      }
       const task = await this.tasks.unblock(taskId);
       await this.appendEvent.execute(projectId, sessionId, {
         type: 'backlog.task_unblocked',
-        actor: { kind: 'user', id: userId },
-        payload: { taskId },
+        actor: { kind: ator.kind, id: userId },
+        payload:
+          ator.kind === 'system'
+            ? { taskId, retomadaAutomatica: true }
+            : { taskId },
       });
 
       // Fase 12b (RN-047, ADR 0045): só emite se a story já estiver `ready` —
@@ -51,7 +63,9 @@ export class UnblockTaskUseCase {
             projectId,
             sessionId,
             taskId: task.id,
-            modules: story.moduleIds,
+            // RN-777 (AT-457): o claim é pelo módulo da TAREFA (RN-678), então
+            // é o dev desse módulo que acorda; sem módulo, os da história.
+            modules: task.module ? [task.module] : story.moduleIds,
             cause: 'task_unblocked',
           },
         });

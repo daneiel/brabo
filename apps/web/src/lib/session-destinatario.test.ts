@@ -3,6 +3,7 @@ import {
   agentesEmConversa,
   agentesParaChamar,
   ativadosSemJanela,
+  execucaoDoRoster,
   resolverDestinatario,
 } from './session-destinatario';
 import type { Handoff, SessionEvent } from './api-types';
@@ -51,6 +52,13 @@ describe('agentesEmConversa (RN-631)', () => {
   it('a sessão criativa oferece o Criativo antes de qualquer ativação', () => {
     expect(agentesEmConversa([], [], 'criativa')).toEqual(['criativo']);
   });
+
+  it('AT-455: a sessão de EXECUÇÃO (criativa no kind) não oferece o Criativo', () => {
+    const ativacao = { type: 'execution.activated' } as SessionEvent;
+    expect(agentesEmConversa([ativacao], [], 'criativa')).toEqual([]);
+    // Fora da janela: um dev agent ativado na sessão inteira basta.
+    expect(agentesEmConversa([], [], 'criativa', ['dev-api'])).not.toContain('criativo');
+  });
 });
 
 describe('resolverDestinatario (RN-631)', () => {
@@ -68,6 +76,35 @@ describe('resolverDestinatario (RN-631)', () => {
 
   it('escolha que deixou de ser opção não vale', () => {
     expect(resolverDestinatario(['po', 'arquiteto'], 'staff')).toBeNull();
+  });
+
+  const handoff = (fromAgent: string, toAgent: string, updatedAt: string) =>
+    ({
+      id: `${fromAgent}-${toAgent}`,
+      sessionId: 's',
+      projectId: 'p',
+      fromAgent,
+      toAgent,
+      artifactId: null,
+      status: 'accepted',
+      createdAt: updatedAt,
+      updatedAt,
+    }) as const;
+  const handoffs = [
+    handoff('criativo', 'po', '2026-10-02T10:00:00.000Z'),
+    handoff('po', 'arquiteto', '2026-10-02T11:00:00.000Z'),
+  ];
+
+  it('RN-712: escolha vinda de gesto segue o último handoff aceito', () => {
+    expect(
+      resolverDestinatario(['po', 'arquiteto'], 'po', { manual: false, handoffs: [...handoffs] }),
+    ).toBe('arquiteto');
+  });
+
+  it('RN-712, CASO DE FALHA: escolha MANUAL não é sobrescrita pelo handoff', () => {
+    expect(
+      resolverDestinatario(['po', 'arquiteto'], 'po', { manual: true, handoffs: [...handoffs] }),
+    ).toBe('po');
   });
 });
 
@@ -109,5 +146,26 @@ describe('agentesParaChamar (RN-682)', () => {
       'ux-designer',
       'infra',
     ]);
+  });
+});
+
+describe('execucaoDoRoster (RN-901, AT-573)', () => {
+  it('CAMINHO FELIZ: execução ativa soma o dev-<modulo> do module_map aos ativados', () => {
+    const execucao = execucaoDoRoster({
+      executionActivated: true,
+      moduleNames: ['encurtador-api'],
+      activatedAgents: ['criativo', 'qa'],
+    });
+    expect(execucao.ativa).toBe(true);
+    expect(execucao.ativados).toEqual(['criativo', 'qa', 'dev-encurtador-api']);
+  });
+
+  it('CASO DE FALHA: sem execução ativa, o módulo do plano NÃO vira dev agent', () => {
+    const execucao = execucaoDoRoster({
+      executionActivated: false,
+      moduleNames: ['encurtador-api'],
+      activatedAgents: [],
+    });
+    expect(execucao).toEqual({ ativa: false, ativados: [] });
   });
 });

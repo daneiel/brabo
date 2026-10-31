@@ -1,136 +1,129 @@
 ---
 id: intro
-title: What Brabo Is
-sidebar_label: Introduction
+title: O que é o Brabo
+sidebar_label: Introdução
 sidebar_position: 1
 slug: /
-description: A platform that orchestrates AI agents to run the full lifecycle of an application, keeping final authority with the human.
-keywords: [brabo, AI agents, engineering, orchestration, approval]
+description: Plataforma que orquestra agentes de IA para conduzir o ciclo completo de uma aplicação, mantendo a autoridade final com o humano.
+keywords: [brabo, agentes de IA, engenharia, orquestração, aprovação]
 ---
 
-# What Brabo Is
+# O que é o Brabo
 
-Brabo runs the full lifecycle of an application — from brief to deploy — with
-a team of AI agents working over a real git repository. Creative, PO,
-Architect, devs per module, Infra, QA, SecOps, Psychologist and Anamnesis.
+O Brabo conduz o ciclo completo de uma aplicação — do brief ao deploy — com um
+time de agentes de IA trabalhando sobre um repositório git real. Criativo, PO,
+Arquiteto, devs por módulo, Infra, QA, SecOps, Psicólogo e Anamnese.
 
-**Final authority is yours**, and that's not a slogan: it's a property of
-the architecture.
+A **autoridade final é sua**, e isso não é um slogan: é uma propriedade da
+arquitetura.
 
-## What sets it apart from a code assistant
+## O que o separa de um assistente de código
 
-**No action with external effect happens on its own.** Terminal command,
-commit, push, PR, merge, token spend — everything is born as a
-`proposed_action`, passes through the project's policy (where `deny` always
-beats `allow`) and only then executes. Two cases even policy can't unlock:
-**merge into a protected branch** and **changing an agent's instruction**.
-Those are ceilings, not defaults.
+**Nenhuma ação com efeito externo acontece sozinha.** Comando de terminal,
+commit, push, PR, merge, gasto de token — tudo nasce como `proposed_action`,
+passa pela política do projeto (onde `deny` sempre vence `allow`) e só então
+executa. Dois casos nem a política consegue liberar: **merge em branch
+protegida** e **mudança na instrução de um agente**. Esses são tetos, não
+defaults.
 
-**The agent is not trustworthy by construction, and the system assumes
-that.** It's a language model: it can hallucinate, loop, or ask for
-something destructive. The limits are structural — an iteration ceiling, a
-ceiling on fixes per task, a budget that refuses the call, a closed catalog
-of what Anamnesis is allowed to profile. A prompt is not a guarantee; code
-is.
+**O agente não é confiável por construção, e o sistema assume isso.** Ele é um
+modelo de linguagem: pode alucinar, entrar em laço, ou pedir algo destrutivo. Os
+limites são estruturais — teto de iterações, teto de correções por task,
+orçamento que recusa a chamada, catálogo fechado do que a Anamnese pode
+perfilar. Prompt não é garantia; código é.
 
-**Everything that happened is recorded and immutable.** The event log is
-append-only, with dense numbering per session. That's what makes the
-Psychologist's evidence traceable, cost auditable, and backups verifiable.
+**Tudo que aconteceu está registrado e é imutável.** O event log é append-only,
+com numeração densa por sessão. É o que torna a evidência do Psicólogo
+rastreável, o custo auditável e o backup verificável.
 
-**The team improves on its own, with you in the loop.** The Psychologist
-analyzes sessions and proposes hypotheses anchored in real events; Anamnesis
-derives your proficiency profile and proposes versioned instruction patches.
-Every patch needs your approval, and reverting creates a new version instead
-of erasing history.
+**O time melhora sozinho, com você no circuito.** O Psicólogo analisa sessões e
+propõe hipóteses ancoradas em eventos reais; a Anamnese deriva seu perfil de
+proficiência e propõe patches de instrução versionados. Cada patch precisa do
+seu aval, e reverter cria uma versão nova em vez de apagar histórico.
 
-## One turn, start to finish
+## Um turno, do começo ao fim
 
 ```mermaid
 sequenceDiagram
-  participant U as You
+  participant U as Você
   participant W as web
   participant A as api
   participant E as engine
   participant L as LLM
 
-  U->>W: opens a session
+  U->>W: abre uma sessão
   W->>A: POST /sessions
-  A->>A: records session.created (event log + outbox)
-  A-->>E: Oban consumes the outbox
-  E->>E: spins up the SessionServer, builds the context (Harness)
-  E->>L: turn
-  L-->>E: "I want to run this tool"
-  E->>A: becomes proposed_action
-  A->>A: policy: IAM → autonomy → permissions.json
-  A-->>U: asks for approval (or applies a ceiling)
-  U->>A: approves
-  A-->>E: executes
-  E->>A: immutable event
-  A-->>W: broadcast — the panel updates
+  A->>A: grava session.created (event log + outbox)
+  A-->>E: Oban consome a outbox
+  E->>E: sobe o SessionServer, monta o contexto (Harness)
+  E->>L: turno
+  L-->>E: "quero rodar esta ferramenta"
+  E->>A: vira proposed_action
+  A->>A: política: IAM → autonomy → permissions.json
+  A-->>U: pede aprovação (ou aplica um teto)
+  U->>A: aprova
+  A-->>E: executa
+  E->>A: evento imutável
+  A-->>W: broadcast — o painel atualiza
 ```
 
-## Where to start
+## Por onde começar
 
-| you want | go to |
+| você quer | vá para |
 |---|---|
-| to get up and running with the first agent | [Getting started](getting-started.md) |
-| to understand how it's put together | [Architecture](architecture.md) |
-| to know what the system guarantees, and where that lives in code | [Business rules](business-rules.md) |
-| to operate: stand up, restore, rotate a key, put out fires | [Runbook](runbook.md) |
-| to decode a term | [Glossary](glossary.md) |
-| to know **why** something was decided that way | [ADRs](adr/index.md) |
-| to configure | [Configuration](reference/configuration.md) |
-| to tune the approval policy | [Permissions](reference/permissions.md) |
-| to understand the api ↔ engine contract | [Internal API](reference/internal-api.md) |
+| subir e rodar o primeiro agente | [Primeiros passos](getting-started.md) |
+| entender como está montado | [Arquitetura](architecture.md) |
+| saber o que o sistema garante, e onde isso vive no código | [Regras de negócio](business-rules.md) |
+| operar: subir, restaurar, rotacionar chave, apagar incêndio | [Runbook](runbook.md) |
+| decifrar um termo | [Glossário](glossary.md) |
+| saber **por que** algo foi decidido assim | [ADRs](adr/index.md) |
+| configurar | [Configuração](reference/configuration.md) |
+| ajustar a política de aprovação | [Permissões](reference/permissions.md) |
+| entender o contrato api ↔ engine | [API interna](reference/internal-api.md) |
 
-## Status
+## Estado
 
-**Phases 1 through 26 complete**, version **v6.1.0**. What exists:
+**Fases 1 a 26 concluídas**, versão **v7.0.0**. O que existe:
 
-- IAM/RBAC, sessions with an immutable event log, LLM router, metering and
-  budget, an approval pipeline with `permissions.json`
-- GitProvider for Local, GitHub, GitLab, Bitbucket, and generic under a
-  single contract, with capability declared only when proven; idempotent
-  Gitflow bootstrap and adoption of an existing repository with the plan as
-  a gate
-- Full Harness and an agent hierarchy by area — lead as external contact,
-  private internal delegation, consolidated verdict; conversational
-  Creative, PO, Architect and Dev Lead, devs per module in isolated
-  worktrees, QA and SecOps as PR gates, proactive Infra, Psychologist and
-  Anamnesis with a closed loop
-- First-party auth (argon2id, Ed25519 access, refresh rotation with family
-  revocation) — Keycloak is gone entirely; OpenAPI locked by type across
-  controllers, with the [reference](reference/api/brabo-api.info.mdx)
-  generated
-- Nine LLM providers over a single OpenAI-compatible base, catalog with
-  manual curation and price frozen at metering time
-- Non-root production images, Kustomize deploy with HPA per Oban queue,
-  graceful shutdown, OpenTelemetry, backup with **tested** restore
-- Mechanized release pipeline: version computed from the branch's function,
-  approval-ladder, promote/tag-release and backmerge with automatic
-  back-propagation
-- The app: the eight design-handoff screens, a read-only Code tab (tree,
-  file with its own syntax highlighting, search, PR diff, blame and PRs in
-  the API), a Spend tab with two audiences, a tree-shaped timeline,
-  per-project container decided by the Architect, and its C4 diagram in the
-  Overview
+- IAM/RBAC, sessões com event log imutável, roteador de LLM, metering e
+  orçamento, pipeline de aprovação com `permissions.json`
+- GitProvider para Local, GitHub, GitLab, Bitbucket e genérico sob contrato
+  único, com capability declarada só quando provada; bootstrap de Gitflow
+  idempotente e adoção de repositório existente com o plano como portão
+- Harness completo e hierarquia de agentes por área — lead como contato
+  externo, delegação interna privada, veredito consolidado; Criativo, PO,
+  Arquiteto e Dev Lead conversacionais, devs por módulo em worktrees isolados,
+  QA e SecOps como gates de PR, Infra propositivo, Psicólogo e Anamnese com
+  loop fechado
+- Auth first-party (argon2id, access Ed25519, rotação de refresh com revogação
+  de família) — o Keycloak saiu inteiro; OpenAPI travada por tipo nos
+  controllers, com a [referência](/reference/api/) gerada
+- Nove providers de LLM sobre uma base OpenAI-compatível única, catálogo com
+  curadoria manual e preço congelado no metering
+- Imagens de produção non-root, deploy Kustomize com HPA por fila do Oban,
+  graceful shutdown, OpenTelemetry, backup com restore **testado**
+- Esteira de release mecanizada: versão calculada pela função da branch,
+  approval-ladder, promote/tag-release e backmerge com retropropagação
+- A app: as oito telas do handoff de design, aba Code só-leitura (árvore,
+  arquivo com realce próprio, busca, diff de PR, blame e PRs na API), aba
+  Gastos com duas audiências, linha do tempo em árvore, container por projeto
+  decidido pelo Arquiteto e o diagrama C4 dele na Visão Geral
 
-What came after Phase 15 didn't come from a roadmap — it came from **using
-the product**. Program 16–26 was born from the first real navigation of the
-app, and every finding from live testing sessions became a rule with
-`file:line` and a test. The whole chain was proven against a real GitHub —
-repository adoption, story promotion, a dev agent writing code, a PR opened,
-a gate judging and the verdict coming back.
+O que veio depois da Fase 15 não saiu de roteiro: saiu de **usar o produto**. O
+programa 16–26 nasceu da primeira navegação real na app, e cada achado das
+sessões de teste ao vivo virou regra com `arquivo:linha` e teste. A cadeia
+inteira foi provada contra um GitHub real — adoção do repositório, promoção de
+história, dev agent escrevendo código, PR aberta, gate julgando e o veredito
+voltando.
 
-What doesn't exist yet is stated where it matters, and is meant to be read:
+O que ainda não existe está dito onde importa, e é para ser lido:
 
-- the [known technical debt](architecture.md#divida-tecnica) is a section,
-  not an omission;
-- the [real-execution findings](explanation/achados-execucao-real.md)
-  record what remains open **by decision** — including the two cases where
-  the conclusion was that the path to autonomy doesn't run through loosening
-  policy;
-- the per-project container lifecycle is a **declared cut** from Phase 25,
-  not an oversight: until it goes live, the terminal policy in
-  [ADR 0055](adr/0055-escopo-de-caminho-na-politica-de-terminal.md) keeps
-  holding as-is.
+- a [dívida técnica conhecida](architecture.md#divida-tecnica) é uma seção, não
+  uma omissão;
+- os [achados da execução real](explanation/achados-execucao-real.md) registram
+  o que segue aberto **por decisão** — incluindo os dois casos em que a
+  conclusão foi que o caminho para autonomia não passa por afrouxar política;
+- o ciclo de vida do container por projeto é **corte declarado** da Fase 25, não
+  esquecimento: enquanto ele não sobe, a política de terminal do
+  [ADR 0055](adr/0055-escopo-de-caminho-na-politica-de-terminal.md) segue
+  valendo como está.

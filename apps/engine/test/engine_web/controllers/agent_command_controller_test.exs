@@ -458,7 +458,9 @@ defmodule EngineWeb.AgentCommandControllerTest do
 
       assert conn.status == 202
       assert_receive {:llm_turn_stream, "criativo", enviado, _tools}, 2_000
-      assert %{"role" => "user"} = List.last(enviado)
+      # RN-711: sem idioma, a última é o fluxo do time, logo depois da fala.
+      assert %{"role" => "system", "content" => "Fluxo de entrega" <> _} = List.last(enviado)
+      assert %{"role" => "user"} = Enum.at(enviado, -2)
     end
 
     # RN-680 (ADR 0196): os fatos do perfil do autor viajam no mesmo comando e
@@ -495,7 +497,8 @@ defmodule EngineWeb.AgentCommandControllerTest do
       assert conn.status == 202
       assert_receive {:llm_turn_stream, "criativo", enviado, _tools}, 2_000
       assert %{"role" => "system", "content" => "Respond in English" <> _} = List.last(enviado)
-      assert %{"role" => "user"} = Enum.at(enviado, -2)
+      assert %{"role" => "system", "content" => "Fluxo de entrega" <> _} = Enum.at(enviado, -2)
+      assert %{"role" => "user"} = Enum.at(enviado, -3)
     end
   end
 
@@ -553,6 +556,88 @@ defmodule EngineWeb.AgentCommandControllerTest do
       assert conn.status == 404
       assert %{"error" => mensagem} = json_response(conn, 404)
       assert mensagem =~ "não está de pé"
+    end
+  end
+
+  # AT-582 (ADR 0226): o botão "Retomar" do turno interrompido.
+  describe "resume/2" do
+    defp ev_agente(tipo, payload, seq),
+      do: %{
+        "type" => tipo,
+        "seq" => seq,
+        "actor" => %{"kind" => "agent", "id" => "criativo"},
+        "payload" => payload,
+        "createdAt" => DateTime.utc_now() |> DateTime.to_iso8601()
+      }
+
+    defp log_interrompido,
+      do: [
+        ev_agente("agent.status", %{"status" => "working"}, 1),
+        ev_agente(
+          "agent.error",
+          %{"reason" => "turno_interrompido_por_reinicio"},
+          2
+        ),
+        ev_agente("agent.status", %{"status" => "idle"}, 3)
+      ]
+
+    defp pedido(project_id, session_id, agent),
+      do: %{"sessionId" => session_id, "projectId" => project_id, "agent" => agent}
+
+    test "caminho feliz: grava agent.turn_resumed (automatica: false), acorda o turno e responde 202",
+         %{conn: conn, project_id: project_id, session_id: session_id} do
+      Process.put(:fake_events, log_interrompido())
+      {:ok, pid} = CriativoSupervisor.start_agent(session_id, project_id)
+      drenar_kickoff(pid)
+      me = self()
+
+      :sys.replace_state(pid, fn s ->
+        Map.put(s, :montar_turno_de_retomada, fn st ->
+          fn ->
+            send(me, :turno_retomado)
+            st
+          end
+        end)
+      end)
+
+      conn = AgentCommandController.resume(conn, pedido(project_id, session_id, "criativo"))
+
+      assert conn.status == 202
+
+      assert_received {:event_appended, ^project_id, ^session_id,
+                       %{type: "agent.turn_resumed", payload: %{automatica: false, retomaDe: 1}}}
+    end
+
+    test "sem turno interrompido (agente ocioso, desfecho normal): 409 turno_nao_interrompido",
+         %{conn: conn, project_id: project_id, session_id: session_id} do
+      Process.put(:fake_events, [
+        ev_agente("agent.status", %{"status" => "working"}, 1),
+        ev_agente("agent.status", %{"status" => "idle"}, 2)
+      ])
+
+      conn = AgentCommandController.resume(conn, pedido(project_id, session_id, "criativo"))
+
+      assert json_response(conn, 409)["motivo"] == "turno_nao_interrompido"
+      refute_received {:event_appended, _, _, %{type: "agent.turn_resumed"}}
+    end
+
+    test "agente cujo servidor não sabe retomar: 409 agente_sem_retomada, sem gravar nada",
+         %{conn: conn, project_id: project_id, session_id: session_id} do
+      Process.put(:fake_events, log_interrompido())
+      {:ok, pid} = CriativoSupervisor.start_agent(session_id, project_id)
+      drenar_kickoff(pid)
+      :sys.replace_state(pid, &Map.delete(&1, :montar_turno_de_retomada))
+
+      conn = AgentCommandController.resume(conn, pedido(project_id, session_id, "criativo"))
+
+      assert json_response(conn, 409)["motivo"] == "agente_sem_retomada"
+      refute_received {:event_appended, _, _, %{type: "agent.turn_resumed"}}
+    end
+
+    test "agente que não conversa (dev-x): 409 agente_sem_retomada",
+         %{conn: conn, project_id: project_id, session_id: session_id} do
+      conn = AgentCommandController.resume(conn, pedido(project_id, session_id, "dev-x"))
+      assert json_response(conn, 409)["motivo"] == "agente_sem_retomada"
     end
   end
 end

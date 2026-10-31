@@ -1,27 +1,21 @@
-import { useCallback, useMemo, useState, type KeyboardEvent } from 'react';
+import { useCallback, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
   cancelAgentTurn,
-  confirmArchitectureReadiness,
-  confirmReadiness,
   getProject,
   getRepository,
   getSession,
   getSessionBudget,
   getSessionModelBinding,
   listModels,
-  mensagemDaApi,
-  renameSession,
   sendAgentMessage,
   startAgent,
-  transitionSession,
-  reopenSession,
 } from '../lib/api-client';
 import { PendenciasDeOutrasSessoes } from '../components/PendenciasDeOutrasSessoes';
 import { roleAtLeast } from '../lib/roles';
 import { useRetomarTurnoDoLog, useTurnoDoAgente } from '../lib/session-turno';
-import { useEnfileirarMensagem } from '../lib/enfileirar-mensagem';
+import { useEnfileirarMensagem } from '../lib/enfileirar-mensagem'; import { marcarMensagemNaoEnviada } from '../lib/mensagem-nao-enviada';
 import { mensagemDaRecusaDoAgente } from '../lib/recusa-do-agente';
 import {
   useBacklog,
@@ -39,12 +33,14 @@ import {
 } from '../lib/canal-vivo';
 import { emailDaSessao } from '../lib/auth';
 import { useAutoriaDaSessao } from '../lib/autoria-da-sessao';
+import { nomeDaMensagemOtimista, otimistaJaNoLog } from '../lib/mensagem-otimista';
 import { AGENTS } from '../lib/agents';
 import { useToast } from '../components/ui/ToastProvider';
 import { TurnActivityStripDoStore } from '../components/TurnActivityStrip';
 import { hashtagDaSessao, rotuloDaSessao } from '../lib/session-label';
-import { TIPOS_DE_SESSAO } from '../lib/session-kind';
+import { tipoDaSessao, usePublicarAbaDaSessao } from '../lib/session-kind';
 import styles from './SessionPage.module.css';
+import { conversaComecou as conversaJaComecou } from '../lib/conversa-comecou';
 import {
   aberturasDeTurno,
   afundarDesfechos,
@@ -52,8 +48,10 @@ import {
   turnoDoSeq,
   type TimelineEntry,
 } from '../lib/session-timeline';
-import { ehRecusaDeSessaoEncerrada } from '../lib/sessao-encerrada';
 import { ContextAside } from './ContextAside';
+import { useEncerrarComConfirmacao } from './ConfirmarEncerramento';
+import { sessaoTemExecucao } from '../lib/sessao-de-execucao';
+import { ModoAutomaticoNoChat } from '../components/ModoAutomaticoNoChat';
 import { useSessionReadiness } from '../lib/session-readiness';
 import { agruparNarracoesDoTurno, agruparTimelinePorAgente, dividirFio } from './session-fio';
 import { montarTimeline } from './session-timeline-montagem';
@@ -65,12 +63,14 @@ import {
   DESTINATARIO_DA_SESSAO_CRIATIVA,
   useAtivadosNaSessaoInteira,
   useAtivosNoProjeto,
+  useExecucaoNoProjeto,
   useDestinatarioDoChat,
 } from '../lib/session-destinatario';
 import { derivarHandoffsDaSessao } from '../lib/session-handoffs';
 import { useRolagemDoFio } from '../lib/session-rolagem';
 import { usePromocaoDeHistorias } from '../lib/session-promocao';
 import { useAcoesDeHandoff } from '../lib/session-acoes-de-handoff';
+import { useAcoesDaSessao } from '../lib/session-acoes-da-sessao';
 import { DevolverHistoriaModal } from './DevolverHistoriaModal';
 import { GavetaDoContexto } from './GavetaDoContexto';
 import { usePainelDeContexto } from '../lib/painel-de-contexto';
@@ -123,17 +123,22 @@ export function SessionPage({
   highlightEvent,
   irParaSessao,
 }: SessionPageProps) {
-  const { t } = useTranslation('sessionPage');
+  const { t, i18n } = useTranslation('sessionPage');
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   // O access token carrega o e-mail; o nome não vem mais em claim nenhuma
   // (Fase 7a). Para o rótulo de autoria da própria mensagem, o e-mail serve —
   // e o fallback cobre o instante entre o boot e a primeira renovação.
-  const user = { name: emailDaSessao() };
   // RN-652: o autor de cada fala do fio sai do ATOR do evento, resolvido
   // contra quem vê e os membros do projeto — `user` acima é só o rótulo da
   // mensagem OTIMISTA, que é sempre de quem vê.
   const autoria = useAutoriaDaSessao(projectId);
+  // RN-728 (AT-409): o nome da bolha otimista sai do MESMO caminho da bolha
+  // do log; o e-mail do token é só o fallback antes da autoria chegar.
+  const user = { name: nomeDaMensagemOtimista(autoria) ?? emailDaSessao() };
+  // O `mensagemId` que a api devolveu no aceite: a otimista sai quando o
+  // `chat.message` dele chega ao log (casamento por id, nunca por texto).
+  const [idDaOtimista, setIdDaOtimista] = useState<string | null>(null);
 
   // "Auto mode" (RN-153) exige `maintainer` no endpoint que grava a curinga —
   // mesma aproximação de `ProjectApprovalsTab.tsx`/`ProjectSettingsTab.tsx`
@@ -148,7 +153,6 @@ export function SessionPage({
   // ADR 0184 (RN-650): reabrir pede `developer` no endpoint, o de encerrar.
   // Mesmo papel de WORKSPACE (a lacuna da RN-471 já declarada acima).
   const podeReabrir = roleAtLeast(workspaceComPapel?.role, 'developer');
-  const [reabrindo, setReabrindo] = useState(false);
   // AT-328: no móvel o painel nasce fechado e abre como gaveta sobre o fio.
   const movel = useLayoutMovel();
   const [asideOpen, setAsideOpen] = usePainelDeContexto(movel, !!highlightEvent);
@@ -156,10 +160,6 @@ export function SessionPage({
   // a navegação traz um `highlightEvent` (chip de evidência do Psicólogo).
   const [logOpen, setLogOpen] = useState(!!highlightEvent);
   const [draft, setDraft] = useState('');
-  // Renomear (RN-098). `null` fora de edição — e não string vazia — porque
-  // vazio é um nome que se está digitando, e nenhum campo aberto é outro
-  // estado.
-  const [rascunhoDoNome, setRascunhoDoNome] = useState<string | null>(null);
   const { data: project } = useQuery({ queryKey: ['project', projectId], queryFn: () => getProject(projectId) });
   // RN-579: com o canal da sessão VIVO, os polls desta tela viram fallback
   // longo e quem diz quando buscar é o aviso do canal (`canal-vivo.ts`). A
@@ -314,18 +314,18 @@ export function SessionPage({
   // RN-633 (AT-294): quem já roda na sessão MAIS RECENTE do projeto (a de
   // execução, depois de ativada) — a oferta a ele não é acionável aqui.
   const ativosNoProjeto = useAtivosNoProjeto(workspaceComPapel?.workspace.id, projectId);
+  // RN-889 (AT-540): a execução noutra sessão do projeto também traz a oferta.
+  const execucaoNoProjeto = useExecucaoNoProjeto(workspaceComPapel?.workspace.id, projectId);
 
-  // As derivações de "prontidão" (RN-160/RN-161) — `criativoActive`,
-  // `arquitetoActive`, `hasBusinessRule` e `hasPromotedStory` — moraram aqui até a extração do hook
-  // `useSessionReadiness` (PR 5/5 da decomposição de `SessionPage.tsx`, ADR
-  // 0122): mesma lógica, mesmas dependências, só re-hospedadas atrás de um
-  // contrato de parâmetros explícito (`../lib/session-readiness.ts`).
+  // As derivações de "prontidão" (RN-160/RN-161/RN-824) moram em
+  // `../lib/session-readiness.ts` desde o PR 5/5 do ADR 0122.
   const backlogQuery = useBacklog(projectId, undefined, sessionId);
   const {
     criativoActive,
     arquitetoActive,
     hasBusinessRule,
     hasPromotedStory,
+    hasModuleMap,
   } = useSessionReadiness(events, backlogQuery.data);
 
   // O destinatário da mensagem do composer é ESCOLHIDO, nunca derivado do log
@@ -432,11 +432,22 @@ export function SessionPage({
   // cobria o histórico de execução inteiro. A pergunta certa não é "existe
   // MENSAGEM", é "esta sessão tem QUALQUER evento" — sessão nova é a única
   // que não tem nenhum.
-  const conversaComecou = events.length > 0;
+  // RN-693: ativar o agente (`agent.activated`/`agent.status`) não é conversa.
+  const conversaComecou = conversaJaComecou(events);
 
   const invalidateActions = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['session-actions', projectId, sessionId] });
   }, [queryClient, projectId, sessionId]);
+
+  // RN-749: estável por ref — a montagem é memoizada e não pode depender de
+  // uma função recriada a cada render.
+  const enviarMensagemRef = useRef<(texto: string, agente: string | null) => Promise<void>>(
+    async () => {},
+  );
+  const continuarRespostaCortada = useCallback(
+    (agente: string) => void enviarMensagemRef.current(t('mensagens.continuarCortadaTexto'), agente),
+    [t],
+  );
 
   // A montagem mora em `./session-timeline-montagem` desde o PR 2 do ADR
   // 0176. A lista de dependências abaixo é a MESMA de antes, byte a byte.
@@ -470,6 +481,7 @@ export function SessionPage({
         iniciarTurnoDoAgente,
         acompanharTurnoPeloLog,
         finalizarTurnoDoAgente,
+        continuarRespostaCortada,
       }),
     [
       events,
@@ -489,6 +501,7 @@ export function SessionPage({
       iniciarTurnoDoAgente,
       finalizarTurnoDoAgente,
       acompanharTurnoPeloLog,
+      continuarRespostaCortada,
       backlogQuery.data,
     ],
   );
@@ -503,150 +516,49 @@ export function SessionPage({
 
   const fio = useMemo(() => dividirFio(timelineAgrupada), [timelineAgrupada]);
 
-  // "Ativar sessão" chama o engine por baixo (a api cria a sessão
-  // supervisionada), e por isso falha por motivo que não é do domínio: engine
-  // fora do ar, url errada, 500. Sem o `catch`, o clique não mudava NADA na
-  // tela — mesmo desfecho de `handleActivateExecution` antes dele ganhar toast.
-  async function handleActivate() {
-    try {
-      await transitionSession(projectId, sessionId, 'active');
-      await queryClient.invalidateQueries({ queryKey: ['session', projectId, sessionId] });
-      queryClient.invalidateQueries({ queryKey: ['sessions', projectId] });
-    } catch (erro) {
-      showToast({
-        title: mensagemDaApi(erro, t('toasts.erroAtivarSessao')),
-        tone: 'danger',
-      });
-    }
-  }
+  // As ações da própria sessão (ativar, reabrir, encerrar, renomear, prontidões)
+  // moram em `../lib/session-acoes-da-sessao` desde a AT-505.
+  const {
+    reabrindo,
+    rascunhoDoNome,
+    setRascunhoDoNome,
+    handleActivate,
+    handleReopen,
+    handleClose,
+    handleRename,
+    handleStartIdeation,
+    avisarSessaoEncerrada,
+    handleReadiness,
+    handleArchitectureReadiness,
+  } = useAcoesDaSessao({
+    projectId,
+    sessionId,
+    queryClient,
+    showToast,
+    t,
+    iniciarTurnoDoAgente,
+    acompanharTurnoPeloLog,
+    cancelarTurnoOtimista,
+    escolherDestinatario,
+  });
 
-  // A recusa da api (409 de sessão com execução, 403) vira toast com a frase
-  // dela; a tela não repete a régua de execução, que só a api sabe inteira.
-  async function handleReopen() {
-    setReabrindo(true);
-    try {
-      await reopenSession(projectId, sessionId);
-      await queryClient.invalidateQueries({ queryKey: ['session', projectId, sessionId] });
-      queryClient.invalidateQueries({ queryKey: ['sessions', projectId] });
-      queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
-    } catch (erro) {
-      showToast({ title: mensagemDaApi(erro, t('toasts.erroReabrirSessao')), tone: 'danger' });
-    } finally {
-      setReabrindo(false);
-    }
-  }
-
-  async function handleClose() {
-    await transitionSession(projectId, sessionId, 'closing');
-    await transitionSession(projectId, sessionId, 'closed');
-    queryClient.invalidateQueries({ queryKey: ['session', projectId, sessionId] });
-    queryClient.invalidateQueries({ queryKey: ['sessions', projectId] });
-  }
-
-  async function handleRename() {
-    if (rascunhoDoNome === null) return;
-    // Em branco APAGA o nome: `null` no corpo é o caminho de desfazer, e a
-    // sessão volta a se identificar só pela hashtag.
-    const nome = rascunhoDoNome.trim() || null;
-    setRascunhoDoNome(null);
-    try {
-      await renameSession(projectId, sessionId, nome);
-      await queryClient.invalidateQueries({ queryKey: ['session', projectId, sessionId] });
-      // A lista da aba Sessões mostra o mesmo rótulo — sem isto, o nome novo
-      // só apareceria lá no próximo carregamento da tela.
-      queryClient.invalidateQueries({ queryKey: ['sessions', projectId] });
-    } catch {
-      showToast({ title: t('toasts.erro'), message: t('toasts.erroRenomear'), tone: 'danger' });
-    }
-  }
-
-  async function handleStartIdeation() {
-    try {
-      await startAgent(projectId, sessionId, 'criativo');
-      await queryClient.invalidateQueries({ queryKey: ['session-events', projectId, sessionId] });
-    } catch {
-      showToast({ title: t('toasts.erro'), message: t('toasts.erroIniciarIdeacao'), tone: 'danger' });
-    }
-  }
-
-  /**
-   * AT-154 (RN-581): a api recusou conversa porque a sessão já é terminal. A
-   * tela diz isso e refaz a leitura da sessão — é o `status` novo que faz o
-   * composer sumir, como já some em `closed`. Não promete "Reabrir": a ação
-   * não existe ainda (AT-071). Devolve `true` quando era essa recusa.
-   */
-  function avisarSessaoEncerrada(erro: unknown): boolean {
-    if (!ehRecusaDeSessaoEncerrada(erro)) return false;
-    showToast({
-      title: t('toasts.erro'),
-      message: t('toasts.sessaoEncerrada'),
-      tone: 'danger',
-    });
-    queryClient.invalidateQueries({ queryKey: ['session', projectId, sessionId] });
-    queryClient.invalidateQueries({ queryKey: ['sessions', projectId] });
-    return true;
-  }
-
-  async function handleReadiness() {
-    try {
-      iniciarTurnoDoAgente('criativo');
-      await confirmReadiness(projectId, sessionId);
-      // ADR 0163 (RN-578): resolver é o ACEITE, não o fim do turno — o
-      // product_brief + handoff chegam depois, pelo canal (`agent.done`) e
-      // pelo log. Até lá esta linha era `finalizarTurnoDoAgente()` (a rede de
-      // segurança da RN-131), e a chamada só resolvia com o turno pronto.
-      acompanharTurnoPeloLog('criativo');
-      // ADR 0185: o clique fechou a necessidade (RN-657) e aceita, em nome
-      // de quem clicou, o handoff ao PO que o turno oferecer (RN-658). É o
-      // gesto de chamar o PO — o mesmo que aceitar pelo card (RN-631) —, então
-      // o destinatário passa a ser ele; enquanto o PO não entra, a escolha
-      // não vale e o Criativo, opção única, segue recebendo.
-      escolherDestinatario('po');
-      showToast({ title: t('toasts.prontoRegistrado'), tone: 'success' });
-    } catch (erro) {
-      cancelarTurnoOtimista();
-      if (avisarSessaoEncerrada(erro)) return;
-      // A recusa do agente (409 turno em curso, 422 sem regra de negócio) traz
-      // a frase dele; a mensagem genérica fica para o que não tem frase.
-      showToast({
-        title: t('toasts.erro'),
-        message: mensagemDaRecusaDoAgente(erro, t('toasts.erroConfirmarProntidao')),
-        tone: 'danger',
-      });
-    }
-  }
-
-  /**
-   * Mirror de `handleReadiness`, para o Arquiteto (achado do problema 1):
-   * dispara `OfferInfraHandoffUseCase`, que oferece o handoff ao Infra — o
-   * Arquiteto narra a arquitetura pronta no fio, e o handoff nasce em seguida;
-   * o do Dev Lead sai da Infra, com o container `running` (RN-672). Desde o ADR 0163 a
-   * chamada resolve no ACEITE, e o fim do turno de fechamento chega pelo
-   * canal e pelo log (`acompanharTurnoPeloLog`).
-   */
-  async function handleArchitectureReadiness() {
-    try {
-      iniciarTurnoDoAgente('arquiteto');
-      await confirmArchitectureReadiness(projectId, sessionId);
-      acompanharTurnoPeloLog('arquiteto');
-    } catch (erro) {
-      cancelarTurnoOtimista();
-      if (avisarSessaoEncerrada(erro)) return;
-      showToast({
-        title: t('toasts.erro'),
-        message: mensagemDaRecusaDoAgente(erro, t('toasts.erroConfirmarArquitetura')),
-        tone: 'danger',
-      });
-    }
-  }
+  const { pedirEncerramento, modalDeEncerrar } = useEncerrarComConfirmacao(handleClose, events, ativadosNaSessaoInteira);
 
   async function handleSend() {
-    const text = draft.trim();
+    await enviarMensagem(draft.trim(), null);
+  }
+
+  // RN-749 (AT-434): o MESMO envio do composer, com texto e agente dados por
+  // quem chama ("Continuar de onde parou" na bolha cortada) — sem tocar no
+  // rascunho que a pessoa está escrevendo.
+  async function enviarMensagem(text: string, agenteForcado: string | null) {
     if (!text || session?.status !== 'active') return;
     // RN-673: com turno em curso a mensagem a um agente ENTRA NA FILA dele —
     // sem armar um turno novo na tela (o em curso segue sendo o acompanhado).
     if (streaming) {
-      if (destinatario && !precisaEscolherDestinatario) await enfileirar(text, destinatario);
+      const alvo =
+        agenteForcado ?? (destinatario && !precisaEscolherDestinatario ? destinatario : null);
+      if (alvo) await enfileirar(text, alvo);
       return;
     }
     // RN-631: duas ou mais opções e nenhuma escolhida — não há a quem mandar.
@@ -654,9 +566,11 @@ export function SessionPage({
     // PEDE um agente, e a mensagem nunca mais vai ao modelo cru (o SSE de
     // `POST .../chat`, sem histórico nem prompt de sistema). O botão já está
     // travado nos dois casos; isto cobre o Enter.
-    if (!destinatario) return;
+    const destino = agenteForcado ?? destinatario;
+    if (!destino) return;
 
-    setDraft('');
+    if (!agenteForcado) setDraft('');
+    setIdDaOtimista(null);
     setOptimisticUser(text);
     setStreaming(true);
     setStreamingText('');
@@ -676,7 +590,7 @@ export function SessionPage({
     // agente entrou (o Criativo é a opção única, vinda só do `kind`) —, e não
     // só `!criativoActive`, que lê a janela: numa sessão longa a ativação dele
     // sai dos 200 eventos e a mensagem o reativaria com outros já em cena.
-    const agentParaEnviar = destinatario;
+    const agentParaEnviar = destino;
     if (
       agentParaEnviar === DESTINATARIO_DA_SESSAO_CRIATIVA &&
       !criativoActive &&
@@ -705,7 +619,8 @@ export function SessionPage({
     // sem efeito observável.
     iniciarTurnoDoAgente(agentParaEnviar);
     try {
-      await sendAgentMessage(projectId, sessionId, agentParaEnviar, text);
+      const resposta = await sendAgentMessage(projectId, sessionId, agentParaEnviar, text);
+      setIdDaOtimista(resposta?.mensagemId ?? null);
       // ADR 0163 (RN-578): resolver é o ACEITE — o turno segue no engine e
       // o fim chega pelo canal (`agent.done`) ou, se o canal perdeu o
       // broadcast (join ainda não concluído, RN-108), pela leitura da cauda
@@ -721,9 +636,10 @@ export function SessionPage({
       // AT-154: a sessão fechou por baixo — devolve o texto, que já saiu do
       // campo, e diz por quê em vez do erro genérico.
       if (avisarSessaoEncerrada(erro)) {
-        setDraft((atual) => atual || text);
+        if (!agenteForcado) setDraft((atual) => atual || text);
         return;
       }
+      marcarMensagemNaoEnviada({ texto: text, reenviar: () => void enviarMensagem(text, agentParaEnviar) }); // RN-831
       // 409 com o agente ainda no meio de um turno traz a frase do engine
       // ("ficou registrada, mas não foi lida") — antes era aceita e sumia.
       showToast({
@@ -767,6 +683,8 @@ export function SessionPage({
     finalizarTurnoDoAgente();
   }
 
+  enviarMensagemRef.current = enviarMensagem;
+
   function handleComposerKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -778,10 +696,11 @@ export function SessionPage({
   // quando a sessão não tem nome (RN-098). A hashtag nunca sai.
   const rotulo = rotuloDaSessao(sessionId, session?.name);
   const hashtag = hashtagDaSessao(sessionId);
-  const tipo = session ? TIPOS_DE_SESSAO[session.kind] : undefined;
+  const tipo = session ? tipoDaSessao(session.kind, sessaoTemExecucao(events, ativadosNaSessaoInteira)) : undefined;
   // Enquanto a sessão não carregou, NÃO é consultiva: é desconhecida. Tratar a
   // ausência como "consultiva" faria o botão de ideação piscar fora e dentro.
   const sessaoCriativa = session?.kind === 'criativa';
+  usePublicarAbaDaSessao(projectId, session?.kind); // AT-463: a aba da sidebar segue o tipo
   // `isActive` mora lá em cima, junto de `session` — ver o comentário lá.
   // O convite ocupa o fio inteiro enquanto a conversa não começou. Vira
   // variável na FASE 24 porque a topbar passou a DEPENDER dele: as duas
@@ -799,7 +718,12 @@ export function SessionPage({
   const metaDaSessao = [
     project?.name ?? '…',
     hashtag,
-    session ? new Date(session.createdAt).toLocaleTimeString('pt-BR') : '',
+    // RN-712: o horário sozinho ("01:46:01") não dizia de quê; o rótulo diz.
+    session
+      ? t('topbar.iniciadaAs', {
+          hora: new Date(session.createdAt).toLocaleTimeString(i18n.language),
+        })
+      : '',
   ]
     .filter(Boolean)
     .join(' · ');
@@ -825,15 +749,35 @@ export function SessionPage({
         sessaoCriativa={sessaoCriativa}
         criativoActive={criativoActive}
         conviteVisivel={conviteVisivel}
+        ideacaoComecou={handoffs.length > 0 || events.some((e) => e.actor.kind === 'agent')}
         handleStartIdeation={handleStartIdeation}
-        handleClose={handleClose}
+        handleClose={pedirEncerramento}
         asideOpen={asideOpen}
         setAsideOpen={setAsideOpen}
       />
 
       <div className={styles.body}>
         <div className={styles.chatColumn}>
-          <div className={styles.messages} ref={scrollContainerRef}>
+          {/* AT-265: as pendências que os agentes propuseram em OUTRAS sessões do
+              projeto (a de execução), decididas aqui — atalho, RN-467. AT-298:
+              em QUALQUER estado da sessão — encerrada e técnica inclusive. A
+              decisão é sobre a ação da OUTRA sessão, não conversa nesta, e
+              quem abre uma sessão encerrada para ver o histórico era
+              justamente quem não via que havia algo esperando por ele. RN-816: acima do fio. */}
+          <PendenciasDeOutrasSessoes
+            projectId={projectId}
+            sessionId={sessionId}
+            podeDecidir={podeDecidir}
+          />
+          <ModoAutomaticoNoChat
+            projectId={projectId}
+            comExecucao={isActive && sessaoTemExecucao(events, ativadosNaSessaoInteira)}
+            ativados={ativadosNaSessaoInteira}
+            execucaoNoProjeto={execucaoNoProjeto}
+            sessaoAtiva={isActive}
+            podeLigar={roleAtLeast(workspaceComPapel?.role, 'maintainer')}
+          />
+          <div className={styles.messages} ref={scrollContainerRef} role="log" aria-label={t('fio.rotuloDoFio')}>
             <div className={styles.messagesInner} ref={messagesInnerRef}>
               <SessionFio
                 conviteVisivel={conviteVisivel}
@@ -843,7 +787,7 @@ export function SessionPage({
                 handleStartIdeation={handleStartIdeation}
                 setDraft={setDraft}
                 fio={fio}
-                optimisticUser={optimisticUser}
+                optimisticUser={otimistaJaNoLog(events, idDaOtimista) ? null : optimisticUser}
                 user={user}
                 turnoViaCanal={turnoViaCanal}
                 streamingStore={streamingStore}
@@ -864,17 +808,6 @@ export function SessionPage({
               invalidação que `finalizarTurnoDoAgente` dispara). Só existe
               turno de agente via `turnoViaCanal`: o chat consultivo sem
               agente ativo continua na bolha antiga, dentro do fio. */}
-          {/* AT-265: as pendências que os agentes propuseram em OUTRAS sessões do
-              projeto (a de execução), decididas aqui — atalho, RN-467. AT-298:
-              em QUALQUER estado da sessão — encerrada e técnica inclusive. A
-              decisão é sobre a ação da OUTRA sessão, não conversa nesta, e
-              quem abre uma sessão encerrada para ver o histórico era
-              justamente quem não via que havia algo esperando por ele. */}
-          <PendenciasDeOutrasSessoes
-            projectId={projectId}
-            sessionId={sessionId}
-            podeDecidir={podeDecidir}
-          />
 
           {turnoViaCanal && (
             <TurnActivityStripDoStore
@@ -914,6 +847,7 @@ export function SessionPage({
             arquiteturaJaDeclarada={arquiteturaJaDeclarada}
             handleArchitectureReadiness={handleArchitectureReadiness}
             hasPromotedStory={hasPromotedStory}
+            hasModuleMap={hasModuleMap}
             handleActivate={handleActivate}
             podeReabrir={podeReabrir}
             reabrindo={reabrindo}
@@ -949,6 +883,7 @@ export function SessionPage({
         enviandoRecusa={enviandoRecusa}
         handleReturnStory={handleReturnStory}
       />
+      {modalDeEncerrar}
     </div>
   );
 }

@@ -17,7 +17,8 @@ interface ForgotPasswordPageProps {
  * É também o caminho do usuário MIGRADO do Keycloak: a senha antiga não veio
  * junto, e o `set_initial_password` é emitido por aqui. Por isso o texto fala
  * em "definir" e não só em "redefinir" — quem nunca teve senha nesta api
- * também está no lugar certo.
+ * também está no lugar certo. O aviso fixo sobre a senha não migrada saiu na
+ * AT-374 (decisão do dono, 02/10/2026): a migração já passou.
  *
  * A resposta é 202 para endereço conhecido e desconhecido, então a tela mostra
  * o mesmo aviso nos dois casos. Confirmar a existência aqui reabriria a
@@ -84,13 +85,6 @@ export function ForgotPasswordPage({
             {t('forgotPasswordPage.form.backToLogin')}
           </button>
         </>
-      }
-      abaixoDoCartao={
-        <Alert tone="warning">
-          {t('forgotPasswordPage.form.migrationNoticePrefix')}
-          <strong>{t('forgotPasswordPage.form.migrationNoticeStrong')}</strong>
-          {t('forgotPasswordPage.form.migrationNoticeSuffix')}
-        </Alert>
       }
     >
       {erro && (

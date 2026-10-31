@@ -119,6 +119,7 @@ export type ChaveDeRotulo =
   | 'devBlockedByContainer'
   | 'devError'
   | 'devIdleTripped'
+  | 'devCreditExhausted'
   | 'prGateChanged';
 
 interface Traducao {
@@ -231,6 +232,7 @@ const TRADUCAO: Record<string, Traducao> = {
     detalhe: (p) => texto(p.reason),
   },
   'dev.idle_tripped': { tipo: 'trabalho', rotulo: 'devIdleTripped' },
+  'dev.credit_exhausted': { tipo: 'falha', rotulo: 'devCreditExhausted' },
   'pr.gate_changed': {
     tipo: 'gate',
     rotulo: 'prGateChanged',
@@ -240,11 +242,15 @@ const TRADUCAO: Record<string, Traducao> = {
 
 /**
  * Tipo `dev.*` que o engine emite e que a árvore decidiu NÃO mostrar, com o
- * motivo — a mesma válvula de `DEV_STATUS_EVENTS_FORA` no painel. Vazio hoje:
- * os tipos que o engine emite têm todos um marco honesto. Declarar aqui é
+ * motivo — a mesma válvula de `DEV_STATUS_EVENTS_FORA` no painel. Hoje só o
+ * desfecho de task da RN-797; os demais têm todos um marco honesto. Declarar aqui é
  * decisão registrada, nunca esquecimento.
  */
-export const TRADUCAO_FORA: Record<string, string> = {};
+export const TRADUCAO_FORA: Record<string, string> = {
+  // RN-797: a task fechada como "já na dev" aparece pela marcação `done` da
+  // task; um marco a mais na árvore repetiria o mesmo desfecho.
+  'dev.task_already_in_dev': 'o fechamento da task já aparece pela marcação done',
+};
 
 /** As chaves de rótulo que a tabela USA — o teste as cobra nos dois locales. */
 export const CHAVES_DE_ROTULO_USADAS: readonly ChaveDeRotulo[] = Object.values(TRADUCAO).map(
@@ -483,4 +489,38 @@ export function agruparPorInstancia(ramos: RamoDeAgente[]): GrupoDeAgente[] {
   }
 
   return grupos;
+}
+
+/**
+ * Compacta as ferramentas de cada ramo (AT-394): um `tool.result` deixa de
+ * ser marco próprio — ele só repete a chamada que acabou de aparecer — e
+ * chamadas CONSECUTIVAS da mesma ferramenta viram UM marco, com a contagem no
+ * detalhe (`create_story ×24`). É uma LEITURA da Visão geral: a aba
+ * Executores continua com a árvore inteira, onde cada chamada se expande.
+ * "Consecutiva" ignora o `tool.result` no meio, e qualquer outro marco
+ * (resposta, artefato…) quebra a sequência.
+ */
+export function compactarFerramentas(ramos: RamoDeAgente[]): RamoDeAgente[] {
+  return ramos.map((ramo) => {
+    const marcos: Marco[] = [];
+    let contagem = 0;
+    let base = '';
+    for (const m of ramo.marcos) {
+      if (m.eventType === 'tool.result') continue;
+      const anterior = marcos[marcos.length - 1];
+      if (
+        m.eventType === 'tool.call' &&
+        anterior?.eventType === 'tool.call' &&
+        anterior.payload.tool === m.payload.tool
+      ) {
+        contagem += 1;
+        marcos[marcos.length - 1] = { ...m, detalhe: `${base} ×${contagem}`.trim() };
+        continue;
+      }
+      contagem = 1;
+      base = m.detalhe ?? '';
+      marcos.push(m);
+    }
+    return { ...ramo, marcos };
+  });
 }

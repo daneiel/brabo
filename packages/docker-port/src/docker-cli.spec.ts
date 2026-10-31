@@ -4,6 +4,9 @@ import {
   ComandoDeDockerFalhouError,
   DockerCliAusenteError,
   DockerViaCli,
+  SUPERVISOR_DO_APP,
+  EMBRULHO_DO_EXEC,
+  estourouOTeto,
   PullExcedeuTetoError,
   TIMEOUT_DE_CONTROLE_MS,
   rodarDockerDeVerdade,
@@ -98,6 +101,13 @@ describe('DockerViaCli.start', () => {
     expect(run).toBeDefined();
     const args = run as string[];
     expect(args).toContain('--detach');
+    // AT-422 (RN-738): init que repassa o SIGTERM — sem ele, `stop` leva 10 s.
+    expect(args).toContain('--init');
+    expect(args.indexOf('--init')).toBeLessThan(args.indexOf('sleep'));
+    // AT-494 (RN-820): volta sozinho depois de o daemon reiniciar, e o `stop`
+    // explícito não é desfeito (`unless-stopped`, nunca `always`).
+    expect(args.join(' ')).toContain('--restart unless-stopped');
+    expect(args).not.toContain('always');
     expect(args.join(' ')).toContain(`--label ${ROTULO_GERENCIADO}=true`);
     // UM volume, destino constante. Se um dia aparecer um segundo `--volume`,
     // este número é o que reprova.
@@ -284,7 +294,9 @@ describe('DockerViaCli.exec', () => {
 
     expect(resultado).toEqual({ exitCode: 0, output: 'ola brabo', timedOut: false });
     const exec = chamadas.find((c) => c[0] === 'exec') as string[];
-    expect(exec.slice(-3)).toEqual(['/bin/sh', '-c', 'echo -n "ola brabo" && exit 0']);
+    expect(exec.slice(-5, -1)).toEqual(['/bin/sh', '-c', EMBRULHO_DO_EXEC, 'brabo-exec']);
+    expect(exec).toContain('BRABO_EXEC_CMD=echo -n "ola brabo" && exit 0');
+    expect(exec.slice(exec.indexOf('/bin/sh')).join(' ')).not.toContain('ola brabo');
     expect(exec.join(' ')).toContain('--workdir /work');
   });
 
@@ -328,6 +340,24 @@ describe('DockerViaCli.exec', () => {
     expect(resultado.timedOut).toBe(true);
     expect(resultado.exitCode).toBe(-1);
     expect(resultado.output).toContain('pode continuar rodando DENTRO do container');
+  });
+
+  it('no estouro mata o grupo do comando DENTRO do container, pelo mesmo marcador (RN-807)', async () => {
+    const { rodar, chamadas } = duplo([
+      { quando: ['ps'], entao: comSaida(linhaDePs('brabo-exp002-f52be111', 'running')) },
+      { quando: ['exec', '--workdir'], entao: { exitCode: -1, stdout: '', stderr: '', timedOut: true } },
+    ]);
+
+    const resultado = await new DockerViaCli(rodar).exec('exp002-f52be111', {
+      comando: 'sleep 60',
+      timeoutMs: 200,
+    });
+
+    const [execDoComando, kill] = chamadas.filter((c) => c[0] === 'exec');
+    expect(kill?.at(-2)).toBe('brabo-kill');
+    expect(kill?.at(-1)).toBe(execDoComando?.at(-1));
+    expect(resultado.exitCode).toBe(-1);
+    expect(resultado.output).toContain('foi encerrado DENTRO do container');
   });
 
   it('sem container de pé não há onde executar — lança em vez de devolver saída vazia', async () => {
@@ -549,5 +579,279 @@ describe('DockerViaCli.start — imagem ausente cujo pull passa do teto de contr
     // número de que a api (`TETO_DE_MUTACAO_MS`) e o engine derivam os tetos
     // deles (RN-605); mudou aqui, muda lá.
     expect(CHAMADAS_DE_CONTROLE_NO_START).toBe(6);
+  });
+});
+
+describe('estourouOTeto (RN-807)', () => {
+  it('erro nulo depois do teto É estouro — o `docker exec` sai 0 ao receber SIGTERM', () => {
+    expect(estourouOTeto(3_010, 3_000, null)).toBe(true);
+  });
+
+  it('comando que termina antes do teto não é estouro, com ou sem erro', () => {
+    expect(estourouOTeto(120, 3_000, null)).toBe(false);
+    expect(estourouOTeto(120, 3_000, Object.assign(new Error('x'), { killed: false }))).toBe(false);
+  });
+});
+
+/**
+ * O defeito só existe com o CLIENTE `docker exec` de verdade — processo local
+ * morre do SIGTERM e marca `killed`. Sem Docker na máquina, pula NOMEANDO.
+ */
+const temDocker = await (async () => {
+  try {
+    const r = await rodarDockerDeVerdade(['version', '--format', '{{.Server.Version}}'], 5_000);
+    return r.exitCode === 0 && !r.timedOut;
+  } catch {
+    return false;
+  }
+})();
+
+describe.skipIf(!temDocker)('DockerViaCli.exec contra Docker real (sem daemon: pulado)', () => {
+  it('o comando que estoura volta timedOut e MORRE dentro do container', async () => {
+    const nome = `brabo-at482-${process.pid}`;
+    const criado = await rodarDockerDeVerdade(
+      ['run', '-d', '--rm', '--name', nome, 'alpine:3.20', 'sleep', '120'],
+      60_000,
+    );
+    expect(criado.exitCode).toBe(0);
+    try {
+      // `ps` responde pelo duplo (o container de teste não leva o rótulo
+      // gerenciado); o id devolvido é o nome do container REAL, e todo o
+      // resto vai ao CLI de verdade.
+      const docker = new DockerViaCli((args, t) =>
+        args[0] === 'ps'
+          ? Promise.resolve(comSaida(linhaDePs('brabo-at482', 'running', nome)))
+          : rodarDockerDeVerdade(args, t),
+      );
+
+      const ok = await docker.exec('at482', { comando: 'echo -n oi', cwd: '/' });
+      expect(ok).toEqual({ exitCode: 0, output: 'oi', timedOut: false });
+
+      const estouro = await docker.exec('at482', {
+        comando: 'sleep 30; echo FIM',
+        cwd: '/',
+        timeoutMs: 2_000,
+      });
+      expect(estouro.timedOut).toBe(true);
+      expect(estouro.exitCode).toBe(-1);
+      expect(estouro.output).toContain('foi encerrado DENTRO do container');
+
+      const ps = await rodarDockerDeVerdade(['exec', nome, 'ps', '-o', 'stat,args'], 10_000);
+      const vivos = ps.stdout.split('\n').filter((l) => l.includes('sleep 30') && !/^\s*Z/.test(l));
+      expect(vivos).toEqual([]);
+
+      // RN-947: o comando não está no argv de processo nenhum.
+      const auto = await docker.exec('at482', {
+        comando: 'pkill -f "trecho-unico-947"; echo VIVO',
+        cwd: '/',
+      });
+      expect(auto).toEqual({ exitCode: 0, output: 'VIVO\n', timedOut: false });
+
+      const filho = await docker.exec('at482', {
+        comando: 'sleep 300 & echo $! >/tmp/p947; pkill -f "sleep 300"; sleep 1; echo OK',
+        cwd: '/',
+      });
+      expect(filho.exitCode).toBe(0);
+      expect(filho.output).toContain('OK');
+      const vivo = await rodarDockerDeVerdade(['exec', nome, 'ps', '-o', 'stat,args'], 10_000);
+      expect(vivo.stdout.split('\n').filter((l) => l.includes('sleep 300') && !/^\s*Z/.test(l))).toEqual([]);
+
+      expect((await docker.exec('at482', { comando: 'exit 3', cwd: '/' })).exitCode).toBe(3);
+
+      const seguro = docker.exec('at482', { comando: 'sleep 20; echo marca-947-visivel', cwd: '/', timeoutMs: 8_000 });
+      await new Promise((r) => setTimeout(r, 1_500));
+      const ps947 = await rodarDockerDeVerdade(['exec', nome, 'ps', '-eo', 'args'], 10_000);
+      expect(ps947.stdout).not.toContain('marca-947-visivel');
+      await seguro;
+    } finally {
+      await rodarDockerDeVerdade(['rm', '-f', nome], 30_000);
+    }
+  }, 90_000);
+});
+
+describe('DockerViaCli — spec ampliada (ADR 0228/0229)', () => {
+  const rodarStart = async (spec: EspecificacaoDeContainer) => {
+    const { rodar, chamadas } = duplo([
+      { quando: ['ps'], entao: comSaida('') },
+      { quando: ['run'], entao: comSaida('c0ffeebabe\n') },
+    ]);
+    await new DockerViaCli(rodar).start(spec);
+    return chamadas.find((c) => c[0] === 'run') as string[];
+  };
+
+  it('NÃO-REGRESSÃO: campos novos ausentes = run byte a byte o de sempre', async () => {
+    const args = await rodarStart(SPEC);
+    expect(args).toEqual([
+      'run', '--detach', '--init', '--restart', 'unless-stopped',
+      '--name', 'brabo-exp002-f52be111',
+      '--label', 'brabo.managed=true',
+      '--label', `brabo.project.id=${SPEC.projectId}`,
+      '--label', 'brabo.project.slug=exp002',
+      '--label', `brabo.workspace.id=${SPEC.workspaceId}`,
+      '--label', 'brabo.image.version=3',
+      '--volume', '/home/alguem/dev/exp002:/work:rw',
+      '--workdir', '/work',
+      '--network', 'bridge',
+      '--cpus', '2', '--memory', '2048m', '--pids-limit', '512',
+      '--cap-drop', 'ALL',
+      'node:24-bookworm', 'sleep', 'infinity',
+    ]);
+  });
+
+  it('comandoDoApp vai como ARGUMENTO do supervisor constante; aspas, ; e $() não escapam', async () => {
+    const comando = `echo "a'b"; $(rm -rf /) \`x\``;
+    const args = await rodarStart({ ...SPEC, comandoDoApp: comando });
+    const i = args.indexOf('node:24-bookworm');
+    expect(args.slice(i + 1, i + 4)).toEqual(['/bin/sh', '-c', SUPERVISOR_DO_APP]);
+    expect(args.slice(i + 4)).toEqual(['brabo-app', comando]);
+    expect(SUPERVISOR_DO_APP).not.toContain(comando);
+    expect(args).not.toContain('infinity');
+  });
+
+  it('portas só em 127.0.0.1, dns e add-host', async () => {
+    const args = await rodarStart({
+      ...SPEC,
+      portas: [{ host: 8080, container: 3000, protocolo: 'tcp' }],
+      dns: ['1.1.1.1'],
+      hostsExtras: [{ nome: 'meu.host', ip: '10.0.0.5' }],
+    });
+    expect(args.join(' ')).toContain('-p 127.0.0.1:8080:3000 --dns 1.1.1.1 --add-host meu.host:10.0.0.5');
+    expect(args.join(' ')).not.toContain('0.0.0.0');
+  });
+
+  it('inspect lê NetworkSettings.Ports como portasPublicadas', async () => {
+    const { rodar } = duplo([
+      { quando: ['ps'], entao: comSaida(linhaDePs('brabo-exp002-f52be111', 'running')) },
+      {
+        quando: ['inspect'],
+        entao: comSaida(
+          JSON.stringify({
+            Id: 'abc',
+            State: { Status: 'running', StartedAt: '2026-10-29T10:00:00Z' },
+            Config: { Image: 'x:1' },
+            NetworkSettings: {
+              Ports: { '3000/tcp': [{ HostIp: '127.0.0.1', HostPort: '8080' }], '9/tcp': null },
+            },
+          }),
+        ),
+      },
+    ]);
+    const e = await new DockerViaCli(rodar).inspect('exp002-f52be111');
+    expect(e?.portasPublicadas).toEqual([
+      { ip: '127.0.0.1', host: 8080, container: 3000, protocolo: 'tcp' },
+    ]);
+  });
+
+  const DIGEST = `postgres@sha256:${'a'.repeat(64)}`;
+  const NOME_QA = 'brabo-qa-exp002-f52be111-abcd1234';
+  const QA: EspecificacaoDeContainer = {
+    ...SPEC,
+    qa: {
+      chave: 'abcd1234',
+      servicos: [
+        {
+          nome: 'db',
+          imagem: DIGEST,
+          env: { POSTGRES_PASSWORD: 'x' },
+          dados: ['/var/lib/postgresql/data'],
+        },
+      ],
+    },
+  };
+
+  it('QA: sem --restart, rótulos de QA, serviço em container:<qa> com cap-drop e sem porta', async () => {
+    const { rodar, chamadas } = duplo([
+      { quando: ['ps'], entao: comSaida('') },
+      { quando: ['run'], entao: comSaida('id\n') },
+    ]);
+    const r = await new DockerViaCli(rodar).start(QA);
+    expect(r.nome).toBe(NOME_QA);
+    const runs = chamadas.filter((c) => c[0] === 'run');
+    const qa = runs[0] as string[];
+    expect(qa).not.toContain('--restart');
+    expect(qa.join(' ')).toContain('--label brabo.papel=qa --label brabo.qa.instancia=abcd1234');
+    const svc = (runs[1] as string[]).join(' ');
+    expect(svc).toContain(`--network container:${NOME_QA}`);
+    expect(svc).toContain('--cap-drop ALL');
+    expect(svc).toContain('--tmpfs /var/lib/postgresql/data');
+    expect(svc).toContain('--label brabo.papel=qa');
+    expect(svc).not.toMatch(/--privileged|--cap-add|--publish| -p /);
+  });
+
+  it('QA: serviço PRÓPRIO tem nome <instância>-<serviço> (nunca o da instância), --user, dono do tmpfs e comando depois da imagem', async () => {
+    const { rodar, chamadas } = duplo([
+      { quando: ['ps'], entao: comSaida('') },
+      { quando: ['run'], entao: comSaida('id\n') },
+    ]);
+    const spec: EspecificacaoDeContainer = {
+      ...QA,
+      qa: {
+        chave: 'abcd1234',
+        servicos: [
+          { nome: 'db', imagem: DIGEST, usuario: '70:70', dados: ['/var/lib/postgresql/data'] },
+          { nome: 'web', imagem: DIGEST, comando: ['httpd', '-f', '-p', '9000'] },
+        ],
+      },
+    };
+    await new DockerViaCli(rodar).start(spec);
+    const runs = chamadas.filter((c) => c[0] === 'run') as string[][];
+    const nomeDe = (a: string[]) => a[a.indexOf('--name') + 1];
+    expect(nomeDe(runs[0] as string[])).toBe(NOME_QA);
+    expect(nomeDe(runs[1] as string[])).toBe(`${NOME_QA}-db`);
+    expect(nomeDe(runs[1] as string[])).not.toBe(NOME_QA);
+    const db = (runs[1] as string[]).join(' ');
+    expect(db).toContain('--user 70:70');
+    expect(db).toContain('--tmpfs /var/lib/postgresql/data:uid=70,gid=70,mode=0700');
+    const web = runs[2] as string[];
+    expect(web.slice(-5)).toEqual([DIGEST, 'httpd', '-f', '-p', '9000']);
+    expect(web.join(' ')).not.toContain('--user');
+    expect(db).toContain('--cap-drop ALL');
+    expect(db).not.toMatch(/--privileged|--cap-add|--publish| -p /);
+  });
+
+  it('QA: remove só alcança brabo.papel=qa; homônimo sem o papel é não gerenciado e nada é removido', async () => {
+    const chamadas: string[][] = [];
+    const rodar: RodarDocker = async (args) => {
+      chamadas.push([...args]);
+      if (args[0] !== 'ps') return OK;
+      // O container existe, mas SEM o rótulo de QA: só o `ps` sem filtro de papel o vê.
+      return args.includes('label=brabo.papel=qa') || args.some((a) => a.startsWith('label=brabo.qa.dono'))
+        ? comSaida('')
+        : args.includes('label=brabo.managed=true')
+          ? comSaida('')
+          : comSaida(linhaDePs(NOME_QA, 'running'));
+    };
+    await expect(
+      new DockerViaCli(rodar).remove('exp002-f52be111', { papel: 'qa', chave: 'abcd1234' }),
+    ).rejects.toBeInstanceOf(ContainerNaoGerenciadoError);
+    expect(chamadas.flat()).toContain('label=brabo.papel=qa');
+    expect(chamadas.some((c) => c[0] === 'rm')).toBe(false);
+  });
+
+  it('QA: remove apaga os serviços da instância por rótulo e depois a instância', async () => {
+    const { rodar, chamadas } = duplo([
+      { quando: ['ps'], entao: comSaida(linhaDePs(NOME_QA, 'running', 'qaid')) },
+    ]);
+    await new DockerViaCli(rodar).remove('exp002-f52be111', { papel: 'qa', chave: 'abcd1234' });
+    expect(chamadas.flat()).toContain(`label=brabo.qa.dono=${NOME_QA}`);
+    expect(chamadas.filter((c) => c[0] === 'rm').every((c) => c[1] === '--force')).toBe(true);
+  });
+
+  it('QA: serviço compartilhado vive em rede privada --internal e a instância se liga a ela', async () => {
+    const { rodar, chamadas } = duplo([
+      { quando: ['ps'], entao: comSaida('') },
+      { quando: ['network', 'inspect'], entao: { ...OK, exitCode: 1 } },
+      { quando: ['run'], entao: comSaida('id\n') },
+    ]);
+    await new DockerViaCli(rodar).start({
+      ...SPEC,
+      qa: { chave: 'abcd1234', servicos: [{ nome: 'db', imagem: DIGEST, compartilhado: true }] },
+    });
+    const j = chamadas.map((c) => c.join(' '));
+    expect(j.some((c) => c.startsWith('network create --internal'))).toBe(true);
+    expect(
+      j.some((c) => c.includes('--label brabo.qa.compartilhado=1') && c.includes('--network-alias db')),
+    ).toBe(true);
+    expect(j).toContain(`network connect brabo-qa-exp002-f52be111 ${NOME_QA}`);
   });
 });

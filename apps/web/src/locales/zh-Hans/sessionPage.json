@@ -1,0 +1,329 @@
+{
+  "status": {
+    "created": "尚未激活",
+    "active": "进行中",
+    "closing": "正在结束",
+    "closed": "已结束",
+    "closedAbnormally": "异常结束",
+    "loading": "加载中",
+    "ariaLabel": "会话 {{status}}"
+  },
+  "compartilhado": {
+    "semTitulo": "（无标题）",
+    "verNoBacklog": "在用户故事中查看",
+    "voce": "你",
+    "agenteGenerico": "智能体",
+    "outroMembro": "其他成员",
+    "autorDesconhecido": "未知作者"
+  },
+  "topbar": {
+    "iniciadaAs": "开始于 {{hora}}",
+    "voltarAoProjeto": "返回项目",
+    "nomeDaSessao": "会话名称",
+    "semNomeFicaHashtag": "不命名时会话显示为 {{hashtag}}",
+    "tituloRenomear": "会话 {{rotulo}} — 点击重命名",
+    "tituloSessao": "会话 {{rotulo}}",
+    "trazCriativo": "让 Criativo 加入对话",
+    "iniciarIdeacao": "开始构思",
+    "iniciarIdeacaoTitulo": "让 Criativo 主持本会话的构思 — 他还没有加入",
+    "encerrar": "结束",
+    "alternarPainel": "切换上下文面板",
+    "fecharPainel": "关闭上下文面板",
+    "ajustes": "模型与语言",
+    "ajustesAria": "本会话的模型、回复语言与预算",
+    "perguntaDeIdiomaPendente": "有一个关于回复语言的问题",
+    "encerrarSessao": "结束会话"
+  },
+  "convite": {
+    "criativa": {
+      "titulo": "轮到你了",
+      "texto": "这是一个<b>创意</b>会话。<b>Criativo</b> 主持构思：他会询问产品相关的问题，并记录对话中得出的<b>业务规则</b>。他不决定技术，也不写代码 — 那是后面 Arquiteto 和开发者的工作。",
+      "iniciarIdeacao": "开始构思",
+      "iniciarIdeacaoNota": "他还没有加入 — 点击这里才会让他进来。",
+      "exemploIntro": "先说说你想构建什么、为谁构建。例如：",
+      "exemplo": "我想要一个 API，对调用者返回一句问候。我用它来验证端到端流程。",
+      "rodape": "规则完整后，使用<b>我已准备好开始生产</b> — 它会生成简报并把接力棒交给 PO。"
+    },
+    "consultiva": {
+      "titulo": "咨询会话",
+      "texto": "在这里你和自己选择的智能体对话：提问、获取上下文、解答疑惑。<b>不会有智能体自行加入</b> — 请在对话下方的字段中选择由谁回答。Criativo 不会加入，本会话也不会进入执行。",
+      "rodape": "需要<b>生产</b>时，请在项目的会话标签页中新建一个<b>创意</b>会话 — 类型在创建时选定，之后不可更改。"
+    }
+  },
+  "composer": {
+    "placeholder": "输入消息…（Enter 发送，Shift+Enter 换行）",
+    "enviar": "发送",
+    "parar": "停止",
+    "prontoParaProduzir": "我已准备好 — 需求已验证",
+    "prontoParaProduzirExplica": "完成就绪确认与需求验证，并呼叫 PO：Criativo 完成产品摘要后，PO 会自动加入",
+    "prontoParaProduzirDesabilitado": "确认就绪前，请先与 Criativo 记录至少一条业务规则",
+    "confirmarArquitetura": "确认架构已就绪",
+    "confirmarArquiteturaDesabilitado": "确认架构前，请先在用户故事标签页中提升至少一个用户故事",
+    "confirmarArquiteturaExplica": "声明架构已就绪，并向 Infra 发起 handoff，由它启动项目容器。",
+    "confirmarArquiteturaProximoPasso": "架构已就绪？确认后系统会请 Infra 启动项目容器。",
+    "destinatarioLabel": "发给",
+    "destinatarioPlaceholder": "选择智能体…",
+    "destinatarioPrecisaEscolher": "本会话中有多个智能体：请选择消息的接收者。",
+    "semAgente": "本会话还没有智能体：选择一个并点击呼叫。邀请会出现在对话中，你接受之后才能发送消息。",
+    "chamarAgente": "呼叫",
+    "enfileirar": "加入队列",
+    "perguntasEmAberto_other": "{{count}} 个未回答的问题",
+    "responderPerguntas": "回答"
+  },
+  "ativacao": {
+    "mensagemNaoEnviada": "你的消息未发送",
+    "naoAtivada": "会话尚未激活。",
+    "ativarSessao": "激活会话",
+    "statusGenerico": "会话{{status}} — 无法发送消息。",
+    "reabrir": "重新打开会话",
+    "reabrirExplicacao": "重新打开会让会话恢复为进行中，并保留它已有的一切：对话、业务规则、已回答的问题以及智能体之间的邀请。之前的结束记录会被保留。",
+    "reabrirExigeDeveloper": "重新打开会话需要此工作区的 developer 角色。"
+  },
+  "mensagens": {
+    "reunindoInformacoes": "正在收集信息...",
+    "respostaVazia": "空回复 — 这是旧版本的事件，当时轮次失败会被记录为空白回复。真实原因未被记录。",
+    "modeloGerador": "生成此回复的模型：{{modelName}}",
+    "modeloNaoGravado": "此回复记录时未包含模型名称",
+    "modeloNaoRegistrado": "模型未记录",
+    "continuarCortada": "从中断处继续",
+    "continuarCortadaTexto": "请从中断处继续。",
+    "falhaOrigem": "失败 · 来源 {{origem}}",
+    "falhaProximoPasso": "{{agente}} 的轮次因该失败而停止（来源 {{origem}}）。给 {{agente}} 发一条消息即可继续。",
+    "regrasSemHistoria_other": "还有 {{count}} 条业务规则没有用户故事。",
+    "tetoDeIteracoes": "未完成就停下了：每次调用模型算一步，一轮的上限是 {{max}} 步。",
+    "naoEnviada": "未发送",
+    "tentarDeNovo": "重试"
+  },
+  "historia": {
+    "pendente": "用户故事“{{titulo}}”已就绪，等待你提升",
+    "estevePendente": "用户故事“{{titulo}}”曾等待你提升",
+    "promover": "提升",
+    "devolver": "退回",
+    "aprovarTodas": "全部批准",
+    "aguardandoPromocao_other": "{{count}} 个用户故事等待提升",
+    "devolveuAoPo": "退回给了 PO",
+    "tituloFallback": "一个用户故事",
+    "semMotivo": "无原因"
+  },
+  "handoff": {
+    "aceiteAutomatico": "已自动接受：待办列表覆盖了 {{regras}} 条业务规则且仓库为本地仓库，因此 {{agente}} 无需点击即已加入。",
+    "aceiteAutomaticoFalhou": "向 {{agente}} 的 handoff 自动接受失败：{{erro}}。请通过邀请卡片接受。",
+    "passouOBastaoAo": "把接力棒交给了",
+    "aceitarEIniciar": "接受 handoff 并启动 {{agente}}",
+    "ativarExecucao": "激活执行",
+    "ativarSemPlanoAviso": "没有计划：开发者将按现状领取任务。",
+    "semRepositorio": "尚无仓库：接受此 handoff 会创建仓库，之后才能激活执行。",
+    "acompanheExecucao": "在执行者中跟踪执行",
+    "infraTitulo": "{{de}} 把接力棒交给了 Infra",
+    "infraDetalhe": "接受后会激活 Infra Lead 并授权启动容器：在容器或挂载文件夹项目中，若 Arquiteto 的路由已就绪，他会选定镜像并启动容器，无需再次点击。本地 Runner 项目的启动以及 infra PR 的合并仍需要你的决定。",
+    "infraBotao": "接受 Infra 的 handoff",
+    "manualAbrir": "将 handoff 指派给其他智能体…",
+    "manualLabel": "将 handoff 指派给其他智能体",
+    "manualPlaceholder": "选择智能体...",
+    "manualBotao": "指派 handoff",
+    "manualOrigem": "手动 handoff",
+    "foraDaJanelaTitulo": "{{de}} 把接力棒交给了 {{para}}",
+    "foraDaJanelaDetalhe": "此邀请的事件已不在对话最近的 200 条之内，因此按钮放在这里。"
+  },
+  "backlog": {
+    "criouEpico": "创建了史诗",
+    "criouHistoria": "创建了用户故事"
+  },
+  "perguntas": {
+    "respondidas": "{{agente}} 的问题 — 已回答",
+    "titulo": "{{agente}} 的问题",
+    "selecione": "请选择",
+    "outraEscrever": "其他（自行填写）",
+    "suaResposta": "你的回答 — {{pergunta}}",
+    "enviarRespostas": "提交回答",
+    "respostasEnviadas": "回答已提交",
+    "erroEnviar": "无法提交回答"
+  },
+  "toasts": {
+    "sessaoEncerrada": "此会话已结束，不再接受消息。请新建会话以继续。",
+    "erro": "错误",
+    "erroAtivarSessao": "无法激活会话",
+    "erroRenomear": "无法重命名会话",
+    "erroIniciarIdeacao": "无法开始构思",
+    "erroConfirmarProntidao": "无法确认就绪",
+    "erroConfirmarArquitetura": "无法确认架构",
+    "prontoRegistrado": "需求已验证。产品摘要就绪后 PO 会加入",
+    "erroAceitarHandoff": "无法接受 handoff",
+    "handoffManualEnviado": "handoff 已发送",
+    "erroHandoffManual": "无法发送 handoff",
+    "execucaoAtivada": "执行已激活",
+    "erroAtivarExecucao": "无法激活执行",
+    "modoAutomaticoLigado": "自动模式已开启",
+    "erroModoAutomatico": "无法开启自动模式",
+    "erroPromover": "无法提升",
+    "historiaPromovida": "用户故事已提升",
+    "historiasPromovidas_other": "{{count}} 个用户故事已提升",
+    "promovidasParcial": "已提升 {{promovidas}} / {{total}}",
+    "erroPromoverHistoria": "无法提升该用户故事",
+    "erroPromoverHistorias": "无法提升这些用户故事",
+    "historiaDevolvida": "用户故事已退回给 PO",
+    "erroDevolverHistoria": "无法退回该用户故事",
+    "erroEnviarMensagem": "无法发送消息",
+    "erroCancelarTurno": "无法取消轮次",
+    "erroNoChat": "聊天出错",
+    "aviso": "提示",
+    "levandoAExecucao": "正在带你前往执行会话。",
+    "erroReabrirSessao": "无法重新打开会话"
+  },
+  "modal": {
+    "devolverTitulo": "将“{{titulo}}”退回给 PO？",
+    "motivo": "原因",
+    "motivoDica": "将作为置顶消息发送到 PO 的会话。说明缺少什么 — 他会据此重写用户故事。",
+    "motivoPlaceholder": "例如：验收标准没有覆盖支付被拒的情况。",
+    "devolverAoPo": "退回给 PO",
+    "cancelar": "取消"
+  },
+  "artefatos": {
+    "pullRequest": "Pull request",
+    "adr": "ADR",
+    "historias": "用户故事",
+    "tarefas": "任务",
+    "itens": "条目",
+    "mensagensCount_other": "{{count}} 条消息"
+  },
+  "aside": {
+    "titulo": "会话上下文",
+    "teto": "此面板读取本会话已加载的 <b>{{lidos}}</b> 个事件。之前还有 <b>{{anteriores}}</b> 个 — 事件日志中的“加载更早的”可加载更多，其他部分也会随之增加。",
+    "regrasDeNegocio": "业务规则",
+    "nadaAinda": "暂无。",
+    "nadaNaJanela": "已加载的事件中没有 — 更早的事件中可能有。",
+    "contagemNaJanela_other": "窗口内 {{count}} 条 · 之前还有更多",
+    "origemRefs_other": "来源：{{count}} 处引用",
+    "paginaAnterior": "业务规则上一页",
+    "proximaPagina": "业务规则下一页",
+    "paginaDe": "{{atual}} / {{total}}",
+    "artefatosGerados": "生成的产物",
+    "artefatosVazio": "本会话还没有 PR 或待办条目。",
+    "arquivosTocados": "涉及的文件",
+    "logDeEventos": "事件日志",
+    "eventoCitado": "引用的事件",
+    "eventoCitadoNaoEncontrado": "在本会话中未找到引用的事件。",
+    "erroCarregarLog": "无法加载事件日志。",
+    "decisoes": "已记录的决定",
+    "decisoesNadaNaJanela": "已加载的事件中没有 — 更早的事件中可能有决定。",
+    "decisoesVazio": "本会话没有记录任何决定。",
+    "decisaoSemEscolha": "决定未记录所选项",
+    "todasAntesDaJanela": "本会话共有 {{total}} 条，全部早于已加载的事件 — 事件日志中的“加载更早的”可查看详情。",
+    "recorte": "显示 {{mostradas}} / {{total}} — 其余的早于已加载内容。",
+    "arquivosNaoLidos": "尚未读取整个会话的文件。",
+    "recorteMaisRecentes": "显示 {{total}} 条中最近的 {{mostradas}} 条。",
+    "arquivosVazio": "本会话及其关联执行的 PR 和提交中没有任何文件。",
+    "prsNaoLidas_other": "{{count}} 个 PR 未列入此列表（超出读取上限，或无法读取 diff）— PR 标签页显示全部。"
+  },
+  "turno": {
+    "pensando": "思考中…",
+    "passosDoTurno": "轮次步骤",
+    "passosCount_other": "{{count}} 步"
+  },
+  "pendencias": {
+    "referenciaNoFio": "已提议合并 — 请在上方“可合并的 PR”队列中决定。",
+    "titulo": "本项目其他会话的待处理事项",
+    "tituloDoProjeto": "本项目的待处理事项",
+    "nota": "决策捷径：与审批标签页相同的卡片和接口。所有上限不变 — 受保护分支的合并仍需手动。",
+    "filas": {
+      "aprovacoes": "审批",
+      "merges": "PR 合并",
+      "prontas": "可合并的 PR",
+      "bloqueadas": "被阻塞的任务",
+      "perguntas": "未回答的问题"
+    },
+    "origem_other": "会话 {{hashtag}} 中的 {{count}} 个提议 · 最早的 {{tempo}}",
+    "recorte": "显示 {{mostradas}} / {{total}} — 其余在审批标签页中。",
+    "semPapel": "在此决定需要项目中的 developer 角色。你可以看到待处理事项，但由其他人决定。",
+    "motivoNaoLido": {
+      "todas_other": "无法读取这 {{count}} 张卡片的策略原因：读取提议这些操作的会话日志失败。",
+      "algumas_other": "无法读取下方 {{total}} 张卡片中 {{count}} 张的策略原因：读取提议这些操作的会话日志失败。"
+    },
+    "bloqueadas": {
+      "botao": "解除阻塞",
+      "ok": "任务已解除阻塞：它回到该模块 dev agent 的队列。",
+      "erro": "无法解除任务阻塞。",
+      "semMotivo": "未记录原因。",
+      "semPapel": "解除阻塞需要项目中的 developer 角色。"
+    },
+    "perguntas": {
+      "origem": "{{agente}} 提问 · {{tempo}}",
+      "afeta": "影响：",
+      "afetaRegras_other": "{{count}} 条规则",
+      "afetaHistorias_other": "{{count}} 个用户故事",
+      "afetaTarefas_other": "{{count}} 个任务",
+      "esperando": "任务“{{tarefa}}”正在等待你的回答。",
+      "sugestao": "建议：",
+      "aceitar": "接受建议",
+      "campo": "你的回答",
+      "responder": "回答",
+      "soOAutor": "只有创建该问题所在会话的人才能回答。",
+      "erro": "无法保存回答。",
+      "recorte": "显示 {{mostradas}} / {{total}} 个问题。",
+      "respondida": "已回答。回答已记录为决定。",
+      "corrigir": "修正用户故事",
+      "corrigirHistoria": "受影响的用户故事：{{titulo}}",
+      "dispensar": "忽略"
+    }
+  },
+  "mergearNoChat": {
+    "botao": "合并",
+    "propondo": "正在提议…",
+    "semPapel": "在此合并需要项目中的 developer 角色。",
+    "nota": "在本会话中提议合并；由你在出现的卡片中确认 — 合并仍需手动。",
+    "erroTitulo": "无法提议合并",
+    "gatePendente": "此 PR 的 gate {{gate}} 仍待定。合并仍然可用 — 由你决定。"
+  },
+  "fio": {
+    "historico": {
+      "titulo_other": "最近 {{count}} 条消息之前",
+      "outrasCount_other": "{{count}} 条其他记录",
+      "conteudoComOutras": "{{mensagens}} · {{outras}}"
+    },
+    "rotuloDoFio": "会话对话"
+  },
+  "fila": {
+    "naFila": "在 {{agente}} 的队列中 — 当前轮次结束后会被读取",
+    "cancelar": "取消",
+    "cancelada": "已在队列中取消 — 没有智能体读取过它",
+    "cancelarSoAutor": "只有发送者可以取消该消息。",
+    "erroCancelar": "无法取消该消息。",
+    "enfileirada": "{{agente}} 正在进行一个轮次：消息已加入队列（第 {{posicao}} 位），他结束后会读取。"
+  },
+  "gateInterrompido": {
+    "aviso": "engine 重启中断了任务 {{taskId}} 的 gate {{gate}} 周期；它已于 {{hora}} 从头重新开始。"
+  },
+  "gateEstacionado": {
+    "aviso": "任务 {{taskId}} 的 gate {{gate}} 周期停滞超过 2 小时，已被搁置：它不会自动重新开始。",
+    "avisoPergunta": "任务 {{taskId}} 的 gate {{gate}} 周期已搁置，正在等待你回答一个未回答的问题：在“未回答的问题”卡片中回答后 gate 会重新开始。",
+    "botao": "恢复 gate",
+    "nota": "为此任务重新分派 gate {{gate}}。",
+    "semPapel": "恢复 gate 需要项目中的 developer 角色。",
+    "retomado": "gate 已恢复 — 进展会显示在此对话中。",
+    "erroTitulo": "无法恢复 gate"
+  },
+  "encerrar": {
+    "titulo": "结束执行会话？",
+    "oQuePara": "结束会立即停止本会话的智能体：正在进行的命令（如 npm install、一轮测试）会被中断，当前轮次不会被保存。",
+    "agentes": "正在此处工作：{{agentes}}。",
+    "semReabrir": "含执行的会话之后无法重新打开。",
+    "cancelar": "继续运行",
+    "confirmar": "结束会话"
+  },
+  "turnoInterrompido": {
+    "botao": "继续",
+    "nota": "从停下的地方继续该轮次，每次点击一次。",
+    "semPapel": "继续该轮次需要项目中的 developer 角色。",
+    "retomado": "已请求继续——进展会显示在此对话中。",
+    "erroTitulo": "无法继续该轮次",
+    "automatica": "{{agente}} 在重启后已自动继续。",
+    "objetivo": "目标：{{objetivo}}",
+    "pareiEm": "停在：{{passo}}",
+    "estado": {
+      "pendente": "待办",
+      "em_curso": "进行中",
+      "feito": "完成",
+      "descartado": "已放弃"
+    }
+  }
+}

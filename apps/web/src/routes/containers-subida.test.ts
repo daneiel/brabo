@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   acaoDeSubidaDoModo,
+  avisoDeImagemDesatualizada,
   conversaoSemBroker,
   semBrokerParaCicloDeVida,
   decidirSubida,
@@ -38,6 +39,8 @@ function item(overrides: Partial<ContainerOverviewItem> = {}): ContainerOverview
     naoVerificado: 'sem_container_registrado',
     acaoPendente: null,
     brokerConfigurado: true,
+    decisaoVigente: null,
+    imagemDesatualizada: false,
     ...overrides,
   };
 }
@@ -90,6 +93,30 @@ describe('decidirSubida', () => {
     const decisao = decidirSubida({ item: semCampo, papel: 'maintainer', temSessao: true });
 
     expect(decisao).toEqual({ pode: false, motivo: 'sem_broker_na_instalacao' });
+  });
+
+  it('AT-494: registrado running e observado exited oferece subir de novo, com a ressalva', () => {
+    const observado = { containerId: 'c1', nome: 'brabo-core', estado: 'exited' as const, imagem: 'node', iniciadoEm: null };
+    const decisao = decidirSubida({
+      item: item({ registrado: registro(), observado }),
+      papel: 'maintainer',
+      temSessao: true,
+    });
+
+    expect(decisao).toEqual({
+      pode: true,
+      acao: 'container_start',
+      ressalva: 'registrado_rodando_observado_parado',
+    });
+  });
+
+  it('AT-494: registrado running e observado running (ou não observado) continua já de pé', () => {
+    const observado = { containerId: 'c1', nome: 'brabo-core', estado: 'running' as const, imagem: 'node', iniciadoEm: null };
+    for (const o of [observado, null]) {
+      expect(
+        decidirSubida({ item: item({ registrado: registro(), observado: o }), papel: 'maintainer', temSessao: true }),
+      ).toEqual({ pode: false, motivo: 'ja_esta_de_pe' });
+    }
   });
 
   it('container já de pé continua dizendo isso, mesmo sem broker', () => {
@@ -283,5 +310,31 @@ describe('sem broker: parar/remover e conversão (AT-105, RN-591)', () => {
     expect(conversaoSemBroker({ ...base, brokerConfigurado: undefined })).toBe(false);
     expect(conversaoSemBroker({ atual: 'container', alvo: 'runner', brokerConfigurado: false })).toBe(false);
     expect(conversaoSemBroker({ atual: 'container', alvo: 'container', brokerConfigurado: false })).toBe(false);
+  });
+});
+
+describe('avisoDeImagemDesatualizada (RN-902)', () => {
+  it('desatualizada: diz de qual versão para qual, com imagem e rede da vigente', () => {
+    expect(
+      avisoDeImagemDesatualizada(
+        item({
+          registrado: registro({ imageVersion: 2 }),
+          imagemDesatualizada: true,
+          decisaoVigente: { version: 3, image: 'node:22', network: 'egress' },
+        }),
+      ),
+    ).toEqual({ de: 2, para: 3, imagem: 'node:22', rede: 'egress' });
+  });
+
+  it('sem divergência (ou sem container/decisão): nenhum aviso', () => {
+    const vigente = { version: 3, image: 'node:22', network: 'none' as const };
+    expect(
+      avisoDeImagemDesatualizada(
+        item({ registrado: registro(), imagemDesatualizada: false, decisaoVigente: vigente }),
+      ),
+    ).toBeNull();
+    expect(
+      avisoDeImagemDesatualizada(item({ imagemDesatualizada: true, decisaoVigente: vigente })),
+    ).toBeNull();
   });
 });

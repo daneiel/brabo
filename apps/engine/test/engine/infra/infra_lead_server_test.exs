@@ -82,6 +82,15 @@ defmodule Engine.Infra.InfraLeadServerTest do
     }
   end
 
+  defp run_valido,
+    do: %{
+      "command" => "cp .env.example .env && docker compose up --build",
+      "urls" => [
+        %{"label" => "Swagger", "url" => "http://localhost:8080/docs", "kind" => "api_docs"}
+      ],
+      "envExample" => true
+    }
+
   defp dockerfile_files, do: [%{"path" => "Dockerfile", "content" => "FROM node:20"}]
 
   defp ci_files(path \\ ".github/workflows/ci.yml"),
@@ -106,7 +115,11 @@ defmodule Engine.Infra.InfraLeadServerTest do
 
     Process.put(:fake_llm_turns, [
       tool_turn("validate_infra_file", %{"path" => "Dockerfile", "content" => "FROM node:20"}),
-      tool_turn("propose_infra_pr", %{"title" => "infra setup", "files" => dockerfile_files()}),
+      tool_turn("propose_infra_pr", %{
+        "title" => "infra setup",
+        "files" => dockerfile_files(),
+        "run" => run_valido()
+      }),
       tool_turn("validate_infra_file", %{
         "path" => ".github/workflows/ci.yml",
         "content" => "on: pull_request"
@@ -146,7 +159,11 @@ defmodule Engine.Infra.InfraLeadServerTest do
     Process.put(:fake_propose_action, %{"id" => "pa-infra-2", "status" => "executed"})
 
     Process.put(:fake_llm_turns, [
-      tool_turn("propose_infra_pr", %{"title" => "infra setup", "files" => dockerfile_files()}),
+      tool_turn("propose_infra_pr", %{
+        "title" => "infra setup",
+        "files" => dockerfile_files(),
+        "run" => run_valido()
+      }),
       tool_turn("validate_infra_file", %{
         "path" => ".gitlab-ci.yml",
         "content" => "stages: [build]"
@@ -175,7 +192,11 @@ defmodule Engine.Infra.InfraLeadServerTest do
     })
 
     Process.put(:fake_llm_turns, [
-      tool_turn("propose_infra_pr", %{"title" => "infra setup", "files" => dockerfile_files()})
+      tool_turn("propose_infra_pr", %{
+        "title" => "infra setup",
+        "files" => dockerfile_files(),
+        "run" => run_valido()
+      })
       # fila esgota aqui — o Workflows não recebe tool call nenhuma, o
       # ToolLoop encerra com {:ok, ctx} (sem emit_infra_delegation_result).
     ])
@@ -210,7 +231,7 @@ defmodule Engine.Infra.InfraLeadServerTest do
 
     texto = """
     ```json
-    {"name": "propose_infra_pr", "arguments": {"title": "infra setup", "files": [{"path": "Dockerfile", "content": "FROM node:24-alpine"}]}}
+    {"name": "propose_infra_pr", "arguments": {"title": "infra setup", "files": [{"path": "Dockerfile", "content": "FROM node:24-alpine"}], "run": {"command": "docker compose up --build", "urls": [{"label": "App", "url": "http://localhost:8080/", "kind": "web"}], "envExample": false}}}
     ```
     """
 
@@ -264,7 +285,11 @@ defmodule Engine.Infra.InfraLeadServerTest do
 
     Process.put(:fake_llm_turns, [
       tool_turn("validate_infra_file", %{"path" => "Dockerfile", "content" => "FROM node:20"}),
-      tool_turn("propose_infra_pr", %{"title" => "infra setup", "files" => dockerfile_files()}),
+      tool_turn("propose_infra_pr", %{
+        "title" => "infra setup",
+        "files" => dockerfile_files(),
+        "run" => run_valido()
+      }),
       tool_turn("emit_infra_delegation_result", %{
         "summary" => "pipeline de CI",
         "files" => ci_files()
@@ -302,7 +327,8 @@ defmodule Engine.Infra.InfraLeadServerTest do
     Process.put(:fake_llm_turns, [
       tool_turn("propose_infra_pr", %{
         "title" => "infra setup",
-        "files" => [%{"path" => "Dockerfile", "content" => "FROM node:20-fixed"}]
+        "files" => [%{"path" => "Dockerfile", "content" => "FROM node:20-fixed"}],
+        "run" => run_valido()
       }),
       tool_turn("validate_infra_file", %{
         "path" => ".github/workflows/ci.yml",
@@ -345,6 +371,23 @@ defmodule Engine.Infra.InfraLeadServerTest do
 
     assert_received %Phoenix.Socket.Broadcast{event: "agent.done"}
     assert_received %Phoenix.Socket.Broadcast{event: "agent.status", payload: %{status: "idle"}}
+  end
+
+  # AT-455: a bolha da Infra dizia "modelo não registrado" — o servidor
+  # apagava o `modelName` do payload.
+  test "agent.response carrega o nome do modelo", %{state: state, session_id: session_id} do
+    Process.put(:fake_llm_turns, [
+      FakeEngineApiClient.final_response("Infra pronta.", "llama3.2:3b")
+    ])
+
+    assert {:reply, :ok, _} =
+             sync_call(InfraLeadServer, {:user_message, "gere os artefatos"}, state)
+
+    assert_received {:event_appended, _, ^session_id,
+                     %{
+                       type: "agent.response",
+                       payload: %{content: "Infra pronta.", modelName: "llama3.2:3b"}
+                     }}
   end
 
   test "rehydration: reconstrói o histórico do event log no init", %{} do
@@ -583,7 +626,11 @@ defmodule Engine.Infra.InfraLeadServerTest do
     Process.put(:fake_propose_action, %{"id" => "pa-nunca", "status" => "executed"})
 
     Process.put(:fake_llm_turns, [
-      tool_turn("propose_infra_pr", %{"title" => "infra setup", "files" => dockerfile_files()}),
+      tool_turn("propose_infra_pr", %{
+        "title" => "infra setup",
+        "files" => dockerfile_files(),
+        "run" => run_valido()
+      }),
       FakeEngineApiClient.final_response("depois-de-recusar-pr")
     ])
 
@@ -659,7 +706,7 @@ defmodule Engine.Infra.InfraLeadServerTest do
     ])
   end
 
-  defp decidir_imagem!(project_id) do
+  defp decidir_imagem!(project_id, extra \\ %{}) do
     # Numa sessão DIFERENTE da do Infra Lead, de propósito: o artefato do
     # Arquiteto vive na sessão dele, e a leitura é por projeto.
     sessao = Ecto.UUID.generate()
@@ -675,7 +722,7 @@ defmodule Engine.Infra.InfraLeadServerTest do
       [
         "evt-img-#{System.unique_integer([:positive])}",
         Ecto.UUID.dump!(sessao),
-        %{"image" => "node:22-bookworm-slim", "version" => 1}
+        Map.merge(%{"image" => "node:22-bookworm-slim", "version" => 1}, extra)
       ]
     )
   end
@@ -1080,7 +1127,8 @@ defmodule Engine.Infra.InfraLeadServerTest do
       Process.put(:fake_llm_turns, [
         lote(
           [
-            {"propose_infra_pr", %{"title" => "infra", "files" => dockerfile_files()}},
+            {"propose_infra_pr",
+             %{"title" => "infra", "files" => dockerfile_files(), "run" => run_valido()}},
             {"propose_container_start",
              %{"imagem" => "node:22-bookworm-slim", "rationale" => "candidata do Arquiteto"}}
           ],
@@ -1110,7 +1158,10 @@ defmodule Engine.Infra.InfraLeadServerTest do
 
       Process.put(:fake_llm_turns, [
         lote(
-          [{"propose_infra_pr", %{"title" => "infra", "files" => dockerfile_files()}}],
+          [
+            {"propose_infra_pr",
+             %{"title" => "infra", "files" => dockerfile_files(), "run" => run_valido()}}
+          ],
           "Proponho a PR; a subida do container vai em paralelo."
         )
       ])
@@ -1135,7 +1186,10 @@ defmodule Engine.Infra.InfraLeadServerTest do
       contexto_sem_modulos()
 
       Process.put(:fake_llm_turns, [
-        lote([{"propose_infra_pr", %{"title" => "infra", "files" => dockerfile_files()}}])
+        lote([
+          {"propose_infra_pr",
+           %{"title" => "infra", "files" => dockerfile_files(), "run" => run_valido()}}
+        ])
       ])
 
       assert {:noreply, _} = sync_cast(InfraLeadServer, :kickoff, state)
@@ -1201,8 +1255,10 @@ defmodule Engine.Infra.InfraLeadServerTest do
 
       Process.put(:fake_llm_turns, [
         lote([
-          {"propose_infra_pr", %{"title" => "primeira", "files" => dockerfile_files()}},
-          {"propose_infra_pr", %{"title" => "segunda", "files" => dockerfile_files()}}
+          {"propose_infra_pr",
+           %{"title" => "primeira", "files" => dockerfile_files(), "run" => run_valido()}},
+          {"propose_infra_pr",
+           %{"title" => "segunda", "files" => dockerfile_files(), "run" => run_valido()}}
         ])
       ])
 
@@ -1260,6 +1316,46 @@ defmodule Engine.Infra.InfraLeadServerTest do
   end
 
   describe "a subida no aceite é passo do servidor (RN-671)" do
+    test "RN-723: a subida herda a rede `egress` que o Arquiteto declarou",
+         %{state: state} do
+      insert_project!(state.project_id, "container")
+      decidir_imagem!(state.project_id, %{"network" => "egress"})
+      contexto_roteado([{"api", "node:22-bookworm-slim"}])
+
+      Process.put(:fake_propose_action_by_type, %{
+        "container_start" => %{"id" => "pa-auto", "status" => "executed"}
+      })
+
+      Process.put(:fake_llm_turns, [lote([], "Pronto.")])
+
+      assert {:noreply, _} = sync_cast(InfraLeadServer, :kickoff, state)
+
+      assert {:propose_action, "container_start", _, payload} =
+               Enum.find(caixa(), &match?({:propose_action, "container_start", _, _}, &1))
+
+      assert payload.network == "egress"
+    end
+
+    test "RN-723: rede do Arquiteto fora do vocabulário — a subida segue `none`",
+         %{state: state} do
+      insert_project!(state.project_id, "container")
+      decidir_imagem!(state.project_id, %{"network" => "host"})
+      contexto_roteado([{"api", "node:22-bookworm-slim"}])
+
+      Process.put(:fake_propose_action_by_type, %{
+        "container_start" => %{"id" => "pa-auto", "status" => "executed"}
+      })
+
+      Process.put(:fake_llm_turns, [lote([], "Pronto.")])
+
+      assert {:noreply, _} = sync_cast(InfraLeadServer, :kickoff, state)
+
+      assert {:propose_action, "container_start", _, payload} =
+               Enum.find(caixa(), &match?({:propose_action, "container_start", _, _}, &1))
+
+      assert payload.network == "none"
+    end
+
     test "projeto `container` com roteamento: o servidor elege e propõe ANTES de o modelo falar",
          %{state: state} do
       insert_project!(state.project_id, "container")
@@ -1278,7 +1374,10 @@ defmodule Engine.Infra.InfraLeadServerTest do
       # de 29/09 era exatamente aqui que o container não subia.
       Process.put(:fake_llm_turns, [
         lote(
-          [{"propose_infra_pr", %{"title" => "infra", "files" => dockerfile_files()}}],
+          [
+            {"propose_infra_pr",
+             %{"title" => "infra", "files" => dockerfile_files(), "run" => run_valido()}}
+          ],
           "Proponho a PR."
         )
       ])
@@ -1372,7 +1471,7 @@ defmodule Engine.Infra.InfraLeadServerTest do
 
       mensagens = caixa()
       refute Enum.any?(mensagens, &match?({:propose_action, _, _, _}, &1))
-      assert kickoff_lido(mensagens) =~ "5. Se o projeto estiver no modo `runner`"
+      assert kickoff_lido(mensagens) =~ "6. Se o projeto estiver no modo `runner`"
       refute kickoff_lido(mensagens) =~ "SERVIDOR"
     end
 
@@ -1401,7 +1500,10 @@ defmodule Engine.Infra.InfraLeadServerTest do
       )
 
       Process.put(:fake_llm_turns, [
-        lote([{"propose_infra_pr", %{"title" => "infra", "files" => dockerfile_files()}}])
+        lote([
+          {"propose_infra_pr",
+           %{"title" => "infra", "files" => dockerfile_files(), "run" => run_valido()}}
+        ])
       ])
 
       assert {:noreply, _} = sync_cast(InfraLeadServer, :kickoff, state)
@@ -1452,7 +1554,10 @@ defmodule Engine.Infra.InfraLeadServerTest do
       })
 
       Process.put(:fake_llm_turns, [
-        lote([{"propose_infra_pr", %{"title" => "infra", "files" => dockerfile_files()}}])
+        lote([
+          {"propose_infra_pr",
+           %{"title" => "infra", "files" => dockerfile_files(), "run" => run_valido()}}
+        ])
       ])
 
       assert {:noreply, _} = sync_cast(InfraLeadServer, :kickoff, state)
@@ -1705,6 +1810,249 @@ defmodule Engine.Infra.InfraLeadServerTest do
         status_gravados(acc)
     after
       0 -> Enum.reverse(acc)
+    end
+  end
+
+  test "RN-710: repositório local dispensa o Workflows com motivo e a PR sai só com o do Lead", %{
+    state: state
+  } do
+    Process.put(:fake_infra_context, %{"moduleMap" => nil, "adrs" => [], "gitProvider" => "local"})
+
+    Process.put(:fake_propose_action, %{"id" => "pa-infra-710", "status" => "executed"})
+
+    Process.put(:fake_llm_turns, [
+      tool_turn("propose_infra_pr", %{
+        "title" => "infra setup",
+        "files" => dockerfile_files(),
+        "run" => run_valido()
+      })
+    ])
+
+    assert {:noreply, _} = sync_cast(InfraLeadServer, :kickoff, state)
+
+    assert_received {:propose_action, "open_infra_pr", _actor, payload}
+    assert Enum.map(payload.files, & &1["path"]) == ["Dockerfile"]
+    refute_received {:llm_turn, "infra-workflows", _, _}
+
+    assert_received {:delegation_recorded,
+                     %{subagent: "infra-workflows", status: "dispensed", justification: motivo}}
+
+    assert motivo =~ "repositório local"
+  end
+
+  describe "o compose sobe o app e a PR leva `run` (RN-851)" do
+    test "o kickoff pede porta por variável, .env.example, a imagem e a seção do README",
+         %{state: state} do
+      Process.put(:fake_infra_context, %{
+        "moduleMap" => nil,
+        "adrs" => [],
+        "gitProvider" => "github",
+        "projectImage" => %{"imagem" => "node:22-bookworm-slim"}
+      })
+
+      Process.put(:fake_llm_turns, [lote([], "Pronto.")])
+      assert {:noreply, _} = sync_cast(InfraLeadServer, :kickoff, state)
+
+      texto = kickoff_lido(caixa())
+      assert texto =~ "${APP_PORT:-8080}:<porta interna>"
+      assert texto =~ ".env.example"
+      assert texto =~ "`node:22-bookworm-slim`"
+      assert texto =~ "Rodar na sua máquina"
+      assert texto =~ "run"
+      # AT-610: o app de servidor HTTP é declarado em `run.app`, dentro do container
+      assert texto =~ "`run.app` (`{command, port}`)"
+      assert texto =~ "porta INTERNA"
+      # RN-863: `/docs` sempre, nunca rota de negócio
+      assert texto =~ "declara SEMPRE `/docs`"
+      assert texto =~ "nunca rota de negócio"
+      refute texto =~ "não por esse compose"
+    end
+
+    test "o payload exato da api (`image`) chega ao kickoff, com a rede", %{state: state} do
+      Process.put(:fake_infra_context, %{
+        "moduleMap" => nil,
+        "adrs" => [],
+        "projectImage" => %{
+          "image" => "node:22-bookworm-slim",
+          "network" => "egress",
+          "rationale" => "LTS",
+          "resources" => %{"cpus" => 1, "memoryMb" => 512, "pidsLimit" => 256}
+        }
+      })
+
+      Process.put(:fake_llm_turns, [lote([], "Pronto.")])
+      assert {:noreply, _} = sync_cast(InfraLeadServer, :kickoff, state)
+      texto = kickoff_lido(caixa())
+      assert texto =~ "`node:22-bookworm-slim` (rede `egress`)"
+      refute texto =~ "não decidida"
+    end
+
+    test "sem imagem decidida, o kickoff diz o que fazer", %{state: state} do
+      Process.put(:fake_infra_context, %{"moduleMap" => nil, "adrs" => []})
+      Process.put(:fake_llm_turns, [lote([], "Pronto.")])
+      assert {:noreply, _} = sync_cast(InfraLeadServer, :kickoff, state)
+      assert kickoff_lido(caixa()) =~ "não decidida"
+    end
+
+    test "run válido vai no payload do open_infra_pr", %{state: state} do
+      Process.put(:fake_infra_context, %{
+        "moduleMap" => nil,
+        "adrs" => [],
+        "gitProvider" => "github"
+      })
+
+      Process.put(:fake_propose_action, %{"id" => "pa-run", "status" => "pending"})
+
+      Process.put(:fake_llm_turns, [
+        tool_turn("propose_infra_pr", %{
+          "title" => "infra",
+          "files" => dockerfile_files(),
+          "run" => run_valido()
+        }),
+        tool_turn("validate_infra_file", %{
+          "path" => ".github/workflows/ci.yml",
+          "content" => "on: pull_request"
+        }),
+        tool_turn("emit_infra_delegation_result", %{"summary" => "ci", "files" => ci_files()})
+      ])
+
+      assert {:noreply, _} = sync_cast(InfraLeadServer, :kickoff, state)
+      assert_received {:propose_action, "open_infra_pr", _, payload}
+      assert payload.run == run_valido()
+    end
+
+    for {nome, run, trecho} <- [
+          {"ausente", nil, "falta o campo obrigatório `run`"},
+          {"URL fora de localhost",
+           %{
+             "command" => "docker compose up",
+             "urls" => [%{"label" => "App", "url" => "http://exemplo.com:8080", "kind" => "web"}],
+             "envExample" => false
+           }, "http://localhost:"},
+          {"kind inválido",
+           %{
+             "command" => "docker compose up",
+             "urls" => [%{"label" => "App", "url" => "http://localhost:8080", "kind" => "grpc"}],
+             "envExample" => false
+           }, "aceitos: api_docs, web"},
+          {"api_docs em rota de negócio",
+           %{
+             "command" => "docker compose up",
+             "urls" => [
+               %{"label" => "API", "url" => "http://localhost:8080/links", "kind" => "api_docs"}
+             ],
+             "envExample" => false
+           }, "`api_docs` aponta para `/docs`"}
+        ] do
+      test "run #{nome} é recusado com motivo, sem propor", %{state: state} do
+        Process.put(:fake_infra_context, %{"moduleMap" => nil, "adrs" => []})
+
+        args =
+          %{"title" => "infra", "files" => dockerfile_files()}
+          |> then(fn a ->
+            if unquote(Macro.escape(run)),
+              do: Map.put(a, "run", unquote(Macro.escape(run))),
+              else: a
+          end)
+
+        Process.put(:fake_llm_turns, [tool_turn("propose_infra_pr", args), lote([], "Ok.")])
+
+        assert {:noreply, new_state} = sync_cast(InfraLeadServer, :kickoff, state)
+        refute_received {:propose_action, "open_infra_pr", _, _}
+
+        assert Enum.any?(
+                 new_state.messages,
+                 &(&1["role"] == "tool" and &1["content"] =~ unquote(trecho))
+               )
+      end
+    end
+  end
+
+  describe "AT-582: correções duráveis e retomada" do
+    defp queued(id, seq) do
+      %{
+        "type" => "infra.correction_queued",
+        "seq" => seq,
+        "payload" => %{"id" => id, "gate" => "qa", "reason" => "lint", "diagnosis" => "DL3006"}
+      }
+    end
+
+    defp delivered(id, seq),
+      do: %{"type" => "infra.correction_delivered", "seq" => seq, "payload" => %{"id" => id}}
+
+    test "correct/3 grava infra.correction_queued antes do cast, com o id" do
+      sid = Ecto.UUID.generate()
+      {:ok, _} = Registry.register(Engine.Sessions.Registry, "infra:" <> sid, nil)
+
+      assert :ok = InfraLeadServer.correct("p1", sid, %{gate: "qa", reason: "x", diagnosis: "y"})
+
+      assert_received {:event_appended, "p1", ^sid,
+                       %{type: "infra.correction_queued", payload: %{id: id, gate: "qa"}}}
+
+      assert_received {:"$gen_cast", {:correct, %{id: ^id}}}
+    end
+
+    test "a correção enfileirada sobrevive ao reinício e é entregue (grava _delivered)" do
+      sid = Ecto.UUID.generate()
+      Process.put(:fake_events, [queued("c1", 1)])
+      Process.put(:fake_infra_context, %{"moduleMap" => nil, "adrs" => []})
+      Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("corrigido")])
+
+      {:ok, state} = InfraLeadServer.init({sid, Ecto.UUID.generate()})
+      assert [%{id: "c1", gate: "qa"}] = state.correcoes_pendentes
+      assert_received :entregar_correcoes
+
+      assert {:noreply, depois} = InfraLeadServer.handle_info(:entregar_correcoes, state)
+      assert depois.correcoes_pendentes == []
+      assert %{turno_assincrono: %{task: %Task{}}} = depois
+
+      assert_received {:event_appended, _, _,
+                       %{type: "infra.correction_delivered", payload: %{id: "c1"}}}
+
+      _ = InfraLeadServer.handle_cast(:cancel, depois)
+    end
+
+    test "a correção já entregue não é reentregue" do
+      Process.put(:fake_events, [queued("c1", 1), delivered("c1", 2), queued("c2", 3)])
+      {:ok, state} = InfraLeadServer.init({Ecto.UUID.generate(), Ecto.UUID.generate()})
+      assert [%{id: "c2"}] = state.correcoes_pendentes
+
+      Process.put(:fake_events, [queued("c1", 1), delivered("c1", 2)])
+      {:ok, vazio} = InfraLeadServer.init({Ecto.UUID.generate(), Ecto.UUID.generate()})
+      assert vazio.correcoes_pendentes == []
+      refute_received {:event_appended, _, _, %{type: "infra.correction_delivered"}}
+    end
+
+    test "turno órfão recente: o init agenda a retomada e ela sobe um turno" do
+      agora = DateTime.utc_now() |> DateTime.add(-10, :second) |> DateTime.to_iso8601()
+
+      Process.put(:fake_events, [
+        %{
+          "type" => "agent.status",
+          "actor" => %{"kind" => "agent", "id" => "infra"},
+          "payload" => %{"status" => "working"},
+          "createdAt" => agora
+        },
+        %{
+          "type" => "agent.turn_resumed",
+          "actor" => %{"kind" => "agent", "id" => "infra"},
+          "payload" => %{},
+          "createdAt" => agora
+        }
+      ])
+
+      Process.put(:fake_infra_context, %{"moduleMap" => nil, "adrs" => []})
+      Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("retomei")])
+
+      {:ok, state} = InfraLeadServer.init({Ecto.UUID.generate(), Ecto.UUID.generate()})
+      assert is_function(state.montar_turno_de_retomada, 1)
+      assert_received :retomar_turno_interrompido
+
+      assert {:noreply, retomado} =
+               InfraLeadServer.handle_info(:retomar_turno_interrompido, state)
+
+      assert %{turno_assincrono: %{task: %Task{}}} = retomado
+      _ = InfraLeadServer.handle_cast(:cancel, retomado)
     end
   end
 end

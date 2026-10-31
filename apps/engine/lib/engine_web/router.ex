@@ -53,6 +53,9 @@ defmodule EngineWeb.Router do
          AgentCommandController,
          :cancel_queued_message
 
+    # AT-582: o botão "Retomar" do turno interrompido (agente e projeto no corpo).
+    post "/sessions/:sessionId/agent/resume", AgentCommandController, :resume
+
     post "/sessions/:sessionId/agent/offer-infra-handoff",
          AgentCommandController,
          :offer_infra_handoff
@@ -96,6 +99,11 @@ defmodule EngineWeb.Router do
     post "/runner/disconnect-credential",
          RunnerConnectionCommandController,
          :disconnect_credential
+
+    # ADR 0207, RN-724: retoma por gesto humano o ciclo de gate estacionado.
+    post "/projects/:projectId/tasks/:taskId/gates/:gate/resume",
+         GateCommandController,
+         :resume
 
     post "/projects/:projectId/containers/start", ContainerCommandController, :start
     post "/projects/:projectId/containers/stop", ContainerCommandController, :stop

@@ -18,7 +18,7 @@
     },
     "reasoning": {
       "label": "thinking",
-      "help": "Expõe raciocínio explícito antes da resposta."
+      "help": "Expõe raciocínio explícito antes da resposta. Nos dev agents de execução e no QA de automação o raciocínio vai desligado; nos demais agentes ele segue como o modelo decide."
     },
     "imagem": {
       "label": "gera imagem",
@@ -41,7 +41,9 @@
     "together": "Together AI",
     "deepinfra": "DeepInfra",
     "bitdeer": "Bitdeer",
-    "vultr": "Vultr"
+    "vultr": "Vultr",
+    "9router": "9Router",
+    "opencode-zen": "OpenCode Zen"
   },
   "price": {
     "free": "grátis",
@@ -92,7 +94,11 @@
       "deactivated": "Modelos desativados",
       "saveError": "Não foi possível salvar",
       "usesUpdated": "Usos atualizados",
-      "aliasRefused": "Alias de roteamento livre não entra na curadoria"
+      "aliasRefused": "Alias de roteamento livre não entra na curadoria",
+      "syncCount_zero": "Nenhum modelo veio dos provedores.",
+      "syncCount_one": "{{count}} modelo veio dos provedores.",
+      "syncCount_other": "{{count}} modelos vieram dos provedores.",
+      "syncActivateLink": "Ativar um modelo →"
     },
     "empty": "Nenhum modelo no catálogo. Cadastre uma credencial de provider e atualize.",
     "freeRoutingAliasReason": "Preço de vitrine: quem cobra é o upstream que atender cada chamada. Alias com \"~\" não pode ser ativado — escolha um modelo com upstream fixo.",
@@ -121,6 +127,20 @@
       "sumidos_zero": "{{count}} sumidos",
       "sumidos_one": "{{count}} sumido",
       "sumidos_other": "{{count}} sumidos"
+    },
+    "search": {
+      "aria": "Buscar modelo no catálogo",
+      "placeholder": "Buscar por nome ou id (ex.: claude-haiku)",
+      "noMatch": "Nenhum modelo do catálogo casa com “{{term}}”. A busca olha o nome e o id; confira a grafia ou limpe a busca."
+    },
+    "tabs": {
+      "aria": "Providers do catálogo",
+      "noKey": "sem chave do titular",
+      "noKeyNote": "Este provider não tem chave do titular do workspace, mas ainda tem modelo ativo. Desative-o se não for usá-lo; sem chave, nada novo é sincronizado.",
+      "noMatchHere": "Nenhum modelo de {{provider}} casa com a busca ou os filtros. Casam em: {{tabs}}.",
+      "outside_zero": "Nenhum provider de fora.",
+      "outside_one": "{{count}} de fora, sem chave do titular: {{names}}",
+      "outside_other": "{{count}} de fora, sem chave do titular: {{names}}"
     }
   },
   "picker": {

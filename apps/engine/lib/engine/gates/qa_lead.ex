@@ -74,6 +74,31 @@ defmodule Engine.Gates.QaLead do
   defp consolidar_aprovados(resultados) do
     pareceres = Enum.map(resultados, fn {label, {:ok, verdict}} -> {label, verdict} end)
 
+    # ADR 0214 (RN-862): uma subespecialidade pedindo decisão do usuário vence
+    # `approved` (e `changes_requested`): o requisito em dúvida não se corrige
+    # no código antes de o usuário decidir.
+    pedem_decisao = Enum.filter(pareceres, fn {_l, v} -> v.veredito == "needs_user_decision" end)
+
+    if pedem_decisao != [] do
+      consolidar_decisao(pareceres, pedem_decisao)
+    else
+      consolidar_sem_decisao(pareceres)
+    end
+  end
+
+  defp consolidar_decisao(pareceres, [{label, verdict} | _]) do
+    {:ok,
+     %{
+       veredito: "needs_user_decision",
+       resumo: "#{label} pede decisão do usuário: #{verdict.resumo}",
+       itens: itens_prefixados(pareceres),
+       coverage_matrix: coverage_matrix_de(pareceres),
+       decisao_do_usuario: Map.get(verdict, :decisao_do_usuario, %{}),
+       retomada: Map.get(verdict, :retomada)
+     }}
+  end
+
+  defp consolidar_sem_decisao(pareceres) do
     todos_aprovados? =
       Enum.all?(pareceres, fn {_label, verdict} -> verdict.veredito == "approved" end)
 

@@ -90,6 +90,7 @@ defmodule Engine.Agents.DevLeadTools do
 
   alias Engine.Agents.Reidratacao
   alias Engine.Gates.Dispatcher
+  alias Engine.Harness.IdDoBacklog
   alias Engine.Sessions.EngineApiClient
 
   @spec spec() :: map()
@@ -116,7 +117,10 @@ defmodule Engine.Agents.DevLeadTools do
                 "agentes" => %{
                   "type" => "integer",
                   "minimum" => 1,
-                  "description" => "quantos agentes neste módulo"
+                  "description" =>
+                    "quantos agentes você recomenda neste módulo. A aprovação sobe UM " <>
+                      "dev agent por módulo; agente a mais é paralelização, que só o " <>
+                      "usuário libera depois — não prometa ganho de paralelismo"
                 },
                 "porque" => %{
                   "type" => "string",
@@ -160,33 +164,11 @@ defmodule Engine.Agents.DevLeadTools do
         {:error, motivo}
 
       {:ok, normalizados} ->
-        total = Enum.reduce(normalizados, 0, &(&1.agentes + &2))
-        actor = %{kind: "agent", id: "dev-lead"}
-
-        # `tarefas` vai como veio: quem a confere é a API, contra o
-        # `module_map` vigente (RN-678) — uma régua só, e a frase da recusa
-        # dela volta ao modelo (`erro_da_proposta/1`).
-        tarefas = Map.get(args, "tarefas", [])
-
-        payload = %{
-          modulos: normalizados,
-          resumo: resumo,
-          totalAgentes: total,
-          tarefas: tarefas
-        }
-
-        case EngineApiClient.propose_action(
-               state.project_id,
-               state.session_id,
-               "propose_execution_plan",
-               actor,
-               payload
-             ) do
-          {:ok, action} ->
-            classificar(Map.get(action, "status"), action, total, normalizados)
-
-          {:error, reason} ->
-            {:error, erro_da_proposta(reason)}
+        # RN-721: o `taskId` encurtado (prefixo >= 8 hex) vira o UUID antes
+        # de ir à api; o resto de `tarefas` vai como veio.
+        case resolver_tarefas(state.project_id, Map.get(args, "tarefas", [])) do
+          {:error, motivo} -> {:error, motivo}
+          {:ok, tarefas} -> propor_plano(state, normalizados, resumo, tarefas)
         end
     end
   end
@@ -194,11 +176,61 @@ defmodule Engine.Agents.DevLeadTools do
   def run(_args, _state),
     do: {:error, "propose_execution_plan exige `modulos` (lista) e `resumo`"}
 
+  defp resolver_tarefas(project_id, tarefas) when is_list(tarefas) do
+    Enum.reduce_while(tarefas, {:ok, []}, fn
+      %{"taskId" => id} = t, {:ok, acc} ->
+        case IdDoBacklog.resolver(project_id, :tarefa, id) do
+          {:ok, uuid} -> {:cont, {:ok, [Map.put(t, "taskId", uuid) | acc]}}
+          {:error, motivo} -> {:halt, {:error, motivo}}
+        end
+
+      t, {:ok, acc} ->
+        {:cont, {:ok, [t | acc]}}
+    end)
+    |> case do
+      {:ok, acc} -> {:ok, Enum.reverse(acc)}
+      erro -> erro
+    end
+  end
+
+  defp resolver_tarefas(_project_id, tarefas), do: {:ok, tarefas}
+
+  defp propor_plano(state, normalizados, resumo, tarefas) do
+    total = Enum.reduce(normalizados, 0, &(&1.agentes + &2))
+    actor = %{kind: "agent", id: "dev-lead"}
+
+    # `tarefas` é conferida pela API, contra o `module_map` vigente
+    # (RN-678) — uma régua só, e a frase da recusa dela volta ao modelo
+    # (`erro_da_proposta/1`).
+    payload = %{
+      modulos: normalizados,
+      resumo: resumo,
+      totalAgentes: total,
+      tarefas: tarefas
+    }
+
+    case EngineApiClient.propose_action(
+           state.project_id,
+           state.session_id,
+           "propose_execution_plan",
+           actor,
+           payload
+         ) do
+      {:ok, action} ->
+        classificar(Map.get(action, "status"), action, total, normalizados)
+
+      {:error, reason} ->
+        {:error, erro_da_proposta(reason)}
+    end
+  end
+
   # A recusa NOMEADA da api (RN-678): tarefa sem módulo, módulo fora do
   # `module_map`, tarefa que não é do projeto. A frase vai ao modelo como está,
   # com o que fazer — é entrada do laço (RN-163), e ele corrige o plano.
   defp erro_da_proposta({400, %{"code" => "plano_de_execucao_invalido", "message" => motivo}}),
-    do: "plano recusado: #{motivo} Corrija `tarefas` e proponha o plano de novo."
+    do:
+      "plano recusado: #{motivo} Chame `read_backlog` para reler as tarefas e o " <>
+        "module_map, corrija `tarefas` e proponha o plano de novo."
 
   defp erro_da_proposta(reason),
     do: "não consegui propor o plano de execução: #{inspect(reason)}"
@@ -210,17 +242,16 @@ defmodule Engine.Agents.DevLeadTools do
   # executa na proposta e devolve o desfecho aqui; `"auto_approved"`/
   # `"approved"` seguem contando como sucesso para não chamar de erro uma ação
   # cujo desfecho ainda não chegou.
-  defp classificar("executed", _action, total, normalizados) do
+  defp classificar("executed", action, total, normalizados) do
     {:ok,
-     "plano aprovado e execução ATIVADA: #{total} agente(s) em " <>
-       "#{length(normalizados)} módulo(s); cada tarefa vai para o dev do módulo atribuído."}
+     "plano aprovado e execução ATIVADA: #{sobem(total, normalizados)}; cada tarefa " <>
+       "vai para o dev do módulo atribuído." <>
+       resumo_do_plano(Map.get(action, "executionResult") || %{})}
   end
 
   defp classificar(status, _action, total, normalizados)
        when status in ["auto_approved", "approved"] do
-    {:ok,
-     "plano aprovado: #{total} agente(s) em #{length(normalizados)} módulo(s). " <>
-       "A aprovação ativa a execução."}
+    {:ok, "plano aprovado: #{sobem(total, normalizados)}. A aprovação ativa a execução."}
   end
 
   defp classificar("failed", action, _total, _normalizados) do
@@ -238,6 +269,20 @@ defmodule Engine.Agents.DevLeadTools do
 
   defp classificar(status, _action, _total, _normalizados) do
     {:error, "o plano não foi registrado (status inesperado: #{inspect(status)})"}
+  end
+
+  # RN-747 (AT-437): a ativação sobe UM dev agent por módulo; o número que o
+  # plano pede além disso é paralelização (teto RN-154), decisão do usuário.
+  defp sobem(total, normalizados) do
+    n = length(normalizados)
+    base = "#{n} dev agent(s) sobem, um por módulo"
+
+    if total > n,
+      do:
+        base <>
+          " (o plano pedia #{total}; os #{total - n} a mais NÃO sobem com a aprovação — " <>
+          "paralelizar é decisão do usuário, não diga que há paralelismo)",
+      else: base
   end
 
   # Plano vazio, ou com zero agente num módulo, não é plano — e chegaria ao
@@ -268,6 +313,117 @@ defmodule Engine.Agents.DevLeadTools do
   # --- assess_implementability (ADR 0090) --------------------------------
 
   @spec spec_assess_implementability() :: map()
+  # --- RN-699 (AT-362/AT-363): o que o Dev Lead LÊ ---
+
+  @doc """
+  Spec de `read_backlog`: leitura CONTIDA do backlog e do module_map vigente
+  do PROJETO (ADR 0060, RN-164/165). Sem parâmetro — não há onde o modelo
+  escreva o que quiser —, custo constante (duas leituras por chamada) e teto
+  de linhas que diz o total real quando corta.
+  """
+  def spec_read_backlog do
+    %{
+      name: "read_backlog",
+      description:
+        "Lê as tarefas pendentes do backlog do projeto (task_id, título, história, " <>
+          "módulos da história, módulo atual) e o module_map vigente. Use antes de " <>
+          "propor o plano e sempre que o plano for recusado: só os task_id daqui são válidos.",
+      parameters: %{"type" => "object", "properties" => %{}}
+    }
+  end
+
+  @spec run_read_backlog(map()) :: {:ok, String.t()}
+  def run_read_backlog(state) do
+    {:ok,
+     "MÓDULOS (module_map vigente):\n" <>
+       module_map_vigente(state.project_id, state.session_id) <>
+       tarefas_do_backlog(state.project_id)}
+  end
+
+  @doc """
+  O module_map VIGENTE do projeto, em texto. Lido pela MESMA rota que o
+  AppSec usa (`get_infra_context`, `findCurrent` na api) — e não por evento
+  da sessão: o kickoff procurava `architecture.module_map_created`, tipo que
+  nenhum código emite (AT-362).
+  """
+  @spec module_map_vigente(String.t(), String.t()) :: String.t()
+  def module_map_vigente(project_id, session_id) do
+    case EngineApiClient.get_infra_context(project_id, session_id) do
+      {:ok, %{"moduleMap" => %{"modules" => mods}}} when is_list(mods) and mods != [] ->
+        Enum.map_join(mods, "\n", fn m ->
+          "- #{Map.get(m, "name")} (#{Map.get(m, "stack", "?")}): #{Map.get(m, "responsibility", "")}"
+        end)
+
+      {:ok, _} ->
+        "(sem module_map vigente — o Arquiteto ainda não gravou um)"
+
+      {:error, _} ->
+        "(não consegui ler o module_map agora — tente `read_backlog` de novo)"
+    end
+  end
+
+  # AT-274 (RN-678): o plano atribui o MÓDULO de cada tarefa, então o Dev Lead
+  # precisa dos `task_id`s — e do backlog do PROJETO, não só do que nasceu
+  # nesta sessão. Pela MESMA rota da `listar_backlog` do PO; tarefa `done` fica
+  # de fora. Falha vira uma linha dita, nunca kickoff perdido.
+  @max_tarefas 200
+
+  @doc false
+  @spec tarefas_do_backlog(String.t()) :: String.t()
+  def tarefas_do_backlog(project_id) do
+    case EngineApiClient.list_backlog(project_id) do
+      {:ok, epicos} when is_list(epicos) ->
+        linhas =
+          for epico <- epicos,
+              historia <- Map.get(epico, "stories", []),
+              tarefa <- Map.get(historia, "tasks", []),
+              Map.get(tarefa, "status") != "done" do
+            "- task_id=#{Map.get(tarefa, "id")} | #{Map.get(tarefa, "title")} " <>
+              "| história: #{Map.get(historia, "title")} " <>
+              "(módulos da história: #{Enum.join(Map.get(historia, "moduleIds", []), ", ")})" <>
+              modulo_atual(tarefa) <> bloqueio(tarefa)
+          end
+
+        mostradas = Enum.take(linhas, @max_tarefas)
+
+        corte =
+          case length(linhas) - length(mostradas) do
+            0 -> ""
+            n -> "\n(+ #{n} tarefa(s) não listada(s) — o total real é #{length(linhas)})"
+          end
+
+        """
+
+        TAREFAS PENDENTES (atribua CADA UMA a um módulo do module_map em `tarefas`
+        — só o dev agent daquele módulo vai pegá-la):
+        #{if mostradas == [], do: "(nenhuma tarefa pendente)", else: Enum.join(mostradas, "\n")}#{corte}
+        """
+
+      _ ->
+        "\n\n(não consegui listar as tarefas do backlog agora — chame `read_backlog` de novo; " <>
+          "não invente task_id.)"
+    end
+  end
+
+  # RN-887 (AT-536): o bloqueio é ortogonal ao `status` — a bloqueada segue
+  # `todo`, então a linha diz que está BLOQUEADA, e por quê.
+  defp bloqueio(%{"blocked" => true} = tarefa) do
+    motivo =
+      case Map.get(tarefa, "blockedReason") do
+        m when is_binary(m) and m != "" -> String.slice(m, 0, 120)
+        _ -> "sem motivo registrado"
+      end
+
+    " | BLOQUEADA: #{motivo}"
+  end
+
+  defp bloqueio(_), do: ""
+
+  defp modulo_atual(%{"module" => m}) when is_binary(m) and m != "",
+    do: " [módulo atual: #{m}]"
+
+  defp modulo_atual(_tarefa), do: ""
+
   def spec_assess_implementability do
     %{
       name: "assess_implementability",
@@ -305,6 +461,19 @@ defmodule Engine.Agents.DevLeadTools do
         state
       )
       when parecer in ["implementavel", "inviavel"] do
+    # RN-721: aceita o prefixo (>= 8 hex) que o modelo copia encurtado.
+    case IdDoBacklog.resolver(state.project_id, :historia, story_id) do
+      {:ok, uuid} -> avaliar(uuid, parecer, justificativa, state)
+      erro -> erro
+    end
+  end
+
+  def run_assessment(_args, _state),
+    do:
+      {:error,
+       "assess_implementability exige storyId, parecer (implementavel|inviavel) e justificativa"}
+
+  defp avaliar(story_id, parecer, justificativa, state) do
     # A CAUDA, com o mesmo teto da reidratação (RN-580, ADR 0060): sem
     # `latest`, a api devolve os PRIMEIROS 200 e numa sessão longa o threat
     # model recém-emitido ficava de fora.
@@ -324,11 +493,6 @@ defmodule Engine.Agents.DevLeadTools do
         {:error, "não consegui ler o histórico da sessão: #{inspect(reason)}"}
     end
   end
-
-  def run_assessment(_args, _state),
-    do:
-      {:error,
-       "assess_implementability exige storyId, parecer (implementavel|inviavel) e justificativa"}
 
   # A leitura do histórico é UMA por chamada de `run_assessment/2` (ADR 0060:
   # nada de duas leituras na mesma invocação), e serve só à guarda do appsec.
@@ -413,4 +577,28 @@ defmodule Engine.Agents.DevLeadTools do
   defp classificar_parecer(status, _action_id, _parecer, _story_id) do
     {:error, "o parecer não foi registrado (status inesperado: #{inspect(status)})"}
   end
+
+  @doc """
+  O resumo CALCULADO pela api do plano aplicado (AT-381, RN-709): tarefas por
+  módulo e os módulos sem tarefa, que não ganharam agente. É o que o Dev Lead
+  cita ao narrar, em vez de recontar de memória. Vazio quando a api não o
+  mandou (plano sem `tarefas`).
+  """
+  def resumo_do_plano(%{"tarefasPorModulo" => por_modulo} = exec)
+      when is_map(por_modulo) and map_size(por_modulo) > 0 do
+    contagem =
+      por_modulo
+      |> Enum.sort()
+      |> Enum.map_join(" · ", fn {m, n} -> "#{m} #{n}" end)
+
+    sem =
+      case Map.get(exec, "modulosSemTarefa") do
+        [_ | _] = lista -> " Sem tarefa, sem agente: #{Enum.join(lista, ", ")}."
+        _ -> ""
+      end
+
+    " Tarefas por módulo (cite estes números): #{contagem}." <> sem
+  end
+
+  def resumo_do_plano(_), do: ""
 end

@@ -36,6 +36,8 @@ export interface RecordLlmUsageInput {
    * (`custo ÷ tokens`), não veio do catálogo — ADR 0188 (e 0179, no Jev).
    */
   priceImplicit?: boolean;
+  /** `costMicros` é estimativa de stream abortado; o reconciliador a troca (ADR 0224). */
+  custoAReconciliar?: boolean;
   /** O que o catálogo teria cobrado, quando `costMicros` é o real (RN-665). */
   catalogCostMicros?: number | null;
   /** O modelo que a RESPOSTA disse ter servido — num hub, o alias resolvido (RN-665). */
@@ -58,6 +60,11 @@ export interface RecordLlmUsageInput {
    * binding guarda sem ter sido enviado. Congelado como o preço.
    */
   routingPreference?: RoutingPreference | null;
+  /**
+   * O fator do teto de preço que FOI AO FIO (ADR 0225, RN-917) — `null` quando
+   * nada foi enviado (inclusive na repetição sem teto). Congelado na linha.
+   */
+  priceCeilingFactor?: number | null;
 }
 
 /**
@@ -107,6 +114,7 @@ export class RecordLlmUsageUseCase {
       inputPricePerMillionMicros: input.inputPricePerMillionMicros,
       outputPricePerMillionMicros: input.outputPricePerMillionMicros,
       priceImplicit: input.priceImplicit ?? false,
+      custoAReconciliar: input.custoAReconciliar ?? false,
       catalogCostMicros: input.catalogCostMicros ?? null,
       resolvedModelName: input.resolvedModelName ?? null,
       generationId: input.generationId ?? null,
@@ -116,6 +124,7 @@ export class RecordLlmUsageUseCase {
       bindingOrigin: input.bindingOrigin,
       upstreamProvider: input.upstreamProvider ?? null,
       routingPreference: input.routingPreference ?? null,
+      priceCeilingFactor: input.priceCeilingFactor ?? null,
     });
 
     const [projectBudget, sessionBudget] = await Promise.all([

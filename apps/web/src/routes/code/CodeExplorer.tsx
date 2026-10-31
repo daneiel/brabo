@@ -1,3 +1,4 @@
+import { Shimmer } from '../../components/ui/Shimmer';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -40,7 +41,7 @@ export function CodeExplorer({ projectId, gitRef, activePath, onOpenFile }: Code
       <div className={styles.arvore}>
         {!gitRef && <div className={styles.estado}>{t('explorer.noRef')}</div>}
 
-        {gitRef && raizQuery.isLoading && <div className={styles.estado}>{t('explorer.loading')}</div>}
+        {gitRef && raizQuery.isLoading && <div className={styles.estado}><Shimmer>{t('explorer.loading')}</Shimmer></div>}
 
         {gitRef && raizQuery.isError && (
           <div className={styles.estadoErro} role="alert">
@@ -148,7 +149,7 @@ function TreeEntry({ entrada, projectId, gitRef, depth, activePath, onOpenFile }
         <ul className={styles.lista}>
           {filhosQuery.isLoading && (
             <li className={styles.estadoFilho} style={{ paddingLeft: indentacao + 18 }}>
-              {t('explorer.loading')}
+              <Shimmer>{t('explorer.loading')}</Shimmer>
             </li>
           )}
           {filhosQuery.isError && (

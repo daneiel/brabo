@@ -199,7 +199,12 @@ defmodule Engine.Dev.AgentIo do
         # eliminar. `:idle` é o único estado do qual um wake ainda resgata.
         state = %{state | status: :idle}
         persist(state)
-        emit(state, "dev.error", %{agentId: state.agent_id, reason: inspect(reason)})
+
+        emit(state, "dev.error", %{
+          agentId: state.agent_id,
+          reason: Engine.Agents.FalhaDeTurno.diagnostico(reason)
+        })
+
         state
     end
   end
@@ -213,7 +218,17 @@ defmodule Engine.Dev.AgentIo do
   """
   def finish_task(state, :approved, run_task) do
     state
+    |> levar_branch_para_a_proxima()
     |> Map.merge(%{task_id: nil, worktree: nil, branch: nil, consecutive_blocked: 0})
+    |> try_claim(run_task)
+  end
+
+  # RN-810: bloqueio de origem `infra` zera como `:blocked`, mas NÃO
+  # incrementa o contador do disjuntor e segue reivindicando.
+  def finish_task(state, :blocked_infra, run_task) do
+    state
+    |> levar_branch_para_a_proxima()
+    |> Map.merge(%{task_id: nil, worktree: nil, branch: nil})
     |> try_claim(run_task)
   end
 
@@ -221,7 +236,9 @@ defmodule Engine.Dev.AgentIo do
     counter = state.consecutive_blocked + 1
 
     state =
-      Map.merge(state, %{
+      state
+      |> levar_branch_para_a_proxima()
+      |> Map.merge(%{
         task_id: nil,
         worktree: nil,
         branch: nil,
@@ -243,6 +260,106 @@ defmodule Engine.Dev.AgentIo do
     end
   end
 
+  @doc """
+  RN-726: o provider recusou por falta de crédito. Zera task/worktree/branch
+  como `finish_task/3`, mas NÃO incrementa o contador do disjuntor (não é
+  defeito de código) e NÃO reivindica a próxima task — reivindicar queimaria
+  as seguintes enquanto o provider seguir sem saldo. Fica em `:idle_tripped`
+  (o Rearmar do painel é a retomada) e emite `dev.credit_exhausted`, nunca
+  `dev.idle_tripped`.
+  """
+  def pausar_por_credito(state) do
+    state =
+      Map.merge(state, %{task_id: nil, worktree: nil, branch: nil, status: :idle_tripped})
+
+    persist(state)
+
+    emit(state, "dev.credit_exhausted", %{
+      agentId: state.agent_id,
+      motivo: "credito_esgotado",
+      origem: "infra"
+    })
+
+    state
+  end
+
+  @doc """
+  RN-864 (AT-525): falha PASSAGEIRA de rede/provedor. Zera task/worktree/branch
+  como `finish_task/3`, NÃO conta no disjuntor, e NÃO reivindica a próxima:
+  fica `:idle` com `pausa_de_rede: true` por `pausa_de_rede_ms/0` (1 min) —
+  pegar a próxima com a rede fora só bloquearia a fila inteira, que foi o
+  medido no TP-01. Quem retoma é `:fim_da_pausa_de_rede`.
+  """
+  def pausar_por_rede(state, causa \\ "falha passageira de rede") do
+    state =
+      state
+      |> levar_branch_para_a_proxima()
+      |> Map.merge(%{
+        task_id: nil,
+        worktree: nil,
+        branch: nil,
+        status: :idle,
+        pausa_de_rede: true
+      })
+
+    persist(state)
+
+    emit(state, "dev.idle", %{
+      agentId: state.agent_id,
+      reason: "pausa de #{div(pausa_de_rede_ms(), 1000)} s depois de #{causa}"
+    })
+
+    Process.send_after(self(), :fim_da_pausa_de_rede, pausa_de_rede_ms())
+    state
+  end
+
+  @doc false
+  def pausa_de_rede_ms, do: Application.get_env(:engine, :pausa_de_rede_ms, 60_000)
+
+  @doc """
+  Cria o worktree da task: da branch deixada pela task anterior deste agente
+  (`base_preservada`, RN-743/RN-760) quando há, senão da `dev`. Consome o
+  ponteiro. Devolve `{resultado_do_worktree_manager, state}`.
+  """
+  def criar_worktree(state, slug) do
+    {base, state} = Map.pop(state, :base_preservada)
+
+    criado =
+      if base,
+        do: worktree_manager().create_from(state.project_id, state.agent_id, slug, base),
+        else: worktree_manager().create(state.project_id, state.agent_id, slug)
+
+    {criado, state}
+  end
+
+  # RN-760 (AT-447), generaliza a RN-743: a task seguinte deste agente parte
+  # da branch da anterior — aprovada nos gates (o merge é do usuário e pode
+  # não ter acontecido) ou bloqueada por QUALQUER motivo, inclusive o ciclo de
+  # correção esgotado que a api decide e chega aqui só como `gate_resolved`.
+  # O que sobrou sem commit no worktree é preservado antes (quem passou por
+  # `block_task/4` já preservou). Se a branch já foi mergeada,
+  # `WorktreeManager` parte da `dev`. Não muda QUANDO a fila anda.
+  @doc false
+  def levar_branch_para_a_proxima(%{branch: branch} = state) when is_binary(branch) do
+    if Map.has_key?(state, :base_preservada) do
+      state
+    else
+      _ =
+        if is_binary(state.worktree),
+          do:
+            worktree_manager().preservar(
+              state.project_id,
+              state.worktree,
+              state.agent_id,
+              state.task_id
+            )
+
+      Map.put(state, :base_preservada, branch)
+    end
+  end
+
+  def levar_branch_para_a_proxima(state), do: state
+
   defp tripped?(counter, max) when is_integer(max), do: counter >= max
   defp tripped?(counter, _), do: counter >= @default_max_consecutive_blocked
 
@@ -254,6 +371,7 @@ defmodule Engine.Dev.AgentIo do
   pelo `Engine.Actions.GitExecutor`).
   """
   def propose_commit(state, message) do
+    message = mensagem_de_commit(message)
     message = if message == "", do: "#{state.agent_id}: #{state.task_id}", else: message
 
     propose(state, "git_commit", %{
@@ -265,6 +383,38 @@ defmodule Engine.Dev.AgentIo do
       coAuthor: "Brabo User <user@brabo.dev>"
     })
   end
+
+  # RN-781 (AT-464): o resumo do `report_done` vira a mensagem de commit, e o
+  # modelo costuma fechá-lo narrando o que o SISTEMA faz depois ("Pendente:
+  # commit… e PR… as ações git_commit, git_push e pr_open não estavam
+  # disponíveis") — pendência falsa gravada no histórico. Corta do marcador de
+  # pendência ao fim quando o resto fala de commit/push/PR, e o parêntese
+  # "(ainda sem commit…)". O resto do resumo fica intacto.
+  @marcador_de_pendencia ~r/\s*(?:PEND[ÊE]NCIAS?|Pend[êe]ncias?|Pendente|Pending)\b.*$/us
+  @fala_do_sistema ~r/commit|\bPR\b|git_push|git_commit|pr_open|push/iu
+  @parentese_sem_commit ~r/\s*\((?:ainda\s+)?(?:sem|n[ãa]o)\s+commit[^)]*\)/iu
+
+  @doc false
+  def mensagem_de_commit(message) when is_binary(message) do
+    message = Regex.replace(@parentese_sem_commit, message, "")
+
+    message =
+      case Regex.run(@marcador_de_pendencia, message, return: :index) do
+        [{inicio, tamanho} | _] ->
+          resto = binary_part(message, inicio, tamanho)
+
+          if Regex.match?(@fala_do_sistema, resto),
+            do: binary_part(message, 0, inicio),
+            else: message
+
+        _ ->
+          message
+      end
+
+    String.trim(message)
+  end
+
+  def mensagem_de_commit(_), do: ""
 
   def propose_push(state) do
     propose(state, "git_push", %{worktree: state.worktree, branch: state.branch})
@@ -338,12 +488,15 @@ defmodule Engine.Dev.AgentIo do
   deriva a origem de um erro; use-a em vez de decidir no olho.
   """
   def block_task(state, reason, diagnosis, origem) do
+    {state, preservado, diagnosis} = preservar_trabalho(state, diagnosis)
+
     emit(state, "dev.blocked", %{
       agentId: state.agent_id,
       taskId: state.task_id,
       reason: reason,
       diagnosis: diagnosis,
-      origem: origem
+      origem: origem,
+      trabalhoPreservado: preservado
     })
 
     # Artefato do desfecho, além do evento de narrativa acima: é o registro
@@ -370,6 +523,32 @@ defmodule Engine.Dev.AgentIo do
 
     state
   end
+
+  # RN-743 (AT-429). Antes de bloquear, o que está no worktree vira commit na
+  # branch da task — o próximo `create/3` removeria o worktree com `--force`.
+  # A branch fica em `base_preservada` e a próxima task deste agente (mesmo
+  # módulo) nasce dela (`run_task/2`). Só em memória: restart do engine perde
+  # o ponteiro, não o commit. O diagnóstico DIZ onde ficou o trabalho.
+  @doc false
+  def preservar_trabalho(%{worktree: path, branch: branch} = state, diagnosis)
+      when is_binary(path) and is_binary(branch) do
+    case worktree_manager().preservar(state.project_id, path, state.agent_id, state.task_id) do
+      {:ok, sha} ->
+        {Map.put(state, :base_preservada, branch), %{branch: branch, commit: sha},
+         "#{diagnosis}\n\nO trabalho não commitado foi preservado em #{branch} (commit " <>
+           "#{String.slice(sha, 0, 12)}); a próxima task deste agente parte dele."}
+
+      :nada ->
+        {state, nil, diagnosis}
+
+      {:error, motivo} ->
+        {state, nil,
+         "#{diagnosis}\n\nNão foi possível preservar o trabalho do worktree (#{branch}): " <>
+           String.slice(to_string(motivo), 0, 300)}
+    end
+  end
+
+  def preservar_trabalho(state, diagnosis), do: {state, nil, diagnosis}
 
   # --- Estado durável / event log ---
 

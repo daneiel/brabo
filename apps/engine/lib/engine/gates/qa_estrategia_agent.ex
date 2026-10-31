@@ -46,10 +46,11 @@ defmodule Engine.Gates.QaEstrategiaAgent do
   contenção que o ADR 0090 não tinha como dar.
   """
 
+  alias Engine.Gates.RecorteDaTarefa
   alias Engine.Gates.Tools.EmitPlanoDeTeste
   alias Engine.Harness.Hooks.{ActionPipeline, EventLog}
   alias Engine.Gates.Hooks.TerminationPlanoDeTeste
-  alias Engine.Harness.Tools.{ReadFile, SearchWorkspace, RagSearch, RagFeedback}
+  alias Engine.Harness.Tools.{RegistrarPlano, ReadFile, SearchWorkspace, RagSearch, RagFeedback}
   alias Engine.Harness.{ArtifactEmitter, Hooks, ToolLoop}
   alias Engine.Sessions.EngineApiClient
 
@@ -59,7 +60,7 @@ defmodule Engine.Gates.QaEstrategiaAgent do
   # RagFeedback anda junto de RagSearch (RN-480): buscar sem poder dizer se o
   # trecho serviu deixa a calibração dos pesos sem sinal de verdade nenhum.
   # `:direct` como a busca — votar não é efeito externo.
-  @registry [ReadFile, SearchWorkspace, RagSearch, RagFeedback, EmitPlanoDeTeste]
+  @registry [ReadFile, SearchWorkspace, RagSearch, RagFeedback, RegistrarPlano, EmitPlanoDeTeste]
 
   @doc "Registro de ferramentas — sem Terminal, de propósito (ver moduledoc)."
   def tools, do: @registry
@@ -98,13 +99,18 @@ defmodule Engine.Gates.QaEstrategiaAgent do
       # O worktree do dev — é ali que a entrega mora (ADR 0192).
       workspace_root: dev_state.worktree_path,
       tools: @registry,
+      retomada: Engine.Gates.RetomadaDoGate.texto(project_id, session_id, "qa-estrategia"),
       hooks: hooks(),
       # O MESMO pool das subespecialidades (RN-036): o plano é trabalho da
       # área de QA sobre esta task. O teto de iterações NÃO muda (moduledoc).
       token_budget_micros: Map.get(dev_state, :task_budget_micros),
       business_rules_units: Map.get(dev_context, :business_rules_units, []),
       task_state_units: Map.get(dev_context, :task_state_units, []),
-      messages: [initial_message(dev_context.task, dev_context.story, arquivos_alterados)],
+      messages: [
+        dev_context.task
+        |> initial_message(dev_context.story, arquivos_alterados)
+        |> Map.update!("content", &(&1 <> RecorteDaTarefa.texto(dev_context)))
+      ],
       context_window: 128_000
     }
   end
@@ -114,6 +120,19 @@ defmodule Engine.Gates.QaEstrategiaAgent do
     |> Hooks.register(:pre_tool_use, ActionPipeline)
     |> Hooks.register(:post_tool_use, EventLog)
     |> Hooks.register(:post_tool_use, TerminationPlanoDeTeste)
+  end
+
+  @doc """
+  RN-890 (AT-542): o plano pede, para todo comando de linha da entrega que
+  recusa entrada, critério de código de saída no caminho feliz e na recusa.
+  """
+  @spec instrucao_de_codigo_de_saida() :: String.t()
+  def instrucao_de_codigo_de_saida do
+    """
+    Todo comando de linha da entrega (CLI, script do `package.json`) que
+    RECUSA entrada ganha em `criteriosExecutaveis` dois critérios de CÓDIGO
+    DE SAÍDA: 0 no caminho feliz e DIFERENTE de 0 na recusa.
+    """
   end
 
   defp initial_message(task, story, arquivos_alterados) do
@@ -144,12 +163,15 @@ defmodule Engine.Gates.QaEstrategiaAgent do
       Leia com `read_file` os arquivos acima que importam para a story (e os
       testes que já existem ao lado deles) — comece por eles, não vasculhe o
       repositório. Então chame `emit_plano_de_teste` com:
-      - `planoDeTeste`: síntese do que precisa ser verificado NESTA entrega;
+      - `planoDeTeste`: síntese do que precisa ser verificado NESTA entrega
+        (só o recorte desta tarefa, abaixo — não o que é de tarefa irmã);
       - `criteriosExecutaveis`: os critérios de aceite reescritos de forma
         VERIFICÁVEL contra o código entregue (ex.: "dado X, quando Y, então
         Z" em vez de prosa vaga);
       - `estrategiaDeAutomacao`: GENÉRICA e curta — que NÍVEL de teste
         (unidade/integração/e2e) e ONDE, sem escolher framework específico.
+
+      #{instrucao_de_codigo_de_saida()}
 
       Você tem poucas iterações: duas ou três leituras e então
       `emit_plano_de_teste`. Responda SEMPRE chamando uma ferramenta.
@@ -193,7 +215,7 @@ defmodule Engine.Gates.QaEstrategiaAgent do
     # schema registrado em `Engine.Harness.ArtifactSchemas` (mesmo caminho de
     # `qa_verdict`/`task_blocked`) — payload inválido vira `qa-estrategia.error`
     # em vez de gravar um artefato que ninguém sabe ler.
-    ArtifactEmitter.emit(project_id, session_id, "qa-estrategia", "plano_de_teste", %{
+    payload = %{
       storyId: Map.get(story, "id"),
       # ADR 0192: o plano é da ENTREGA — é por `taskId` que o `QaLeadServer`
       # o reencontra na rodada de correção seguinte em vez de pagar outro.
@@ -201,9 +223,27 @@ defmodule Engine.Gates.QaEstrategiaAgent do
       planoDeTeste: plano.plano_de_teste,
       criteriosExecutaveis: plano.criterios_executaveis,
       estrategiaDeAutomacao: plano.estrategia_de_automacao
-    })
+    }
 
-    {:ok, plano}
+    # RN-805 (AT-478): artefato recusado NÃO é plano — devolver `{:ok, plano}`
+    # aqui entregava à Automação um plano que nunca foi gravado (e, no uso
+    # real, de tipo errado), derrubando o QA Lead e deixando o gate parado até
+    # o resgate. A recusa vira falha nomeada, e a revisão segue sem plano.
+    case ArtifactEmitter.emit_returning(
+           project_id,
+           session_id,
+           "qa-estrategia",
+           "plano_de_teste",
+           payload
+         ) do
+      {:error, motivo} ->
+        motivo = "artefato plano_de_teste recusado: #{inspect(motivo)}"
+        emit_falha(project_id, session_id, story, "codigo", motivo)
+        {:error, motivo}
+
+      _ ->
+        {:ok, plano}
+    end
   end
 
   defp handle_outcome(outcome, project_id, session_id, _task_id, story) do
@@ -224,8 +264,20 @@ defmodule Engine.Gates.QaEstrategiaAgent do
 
   defp diagnostico_de_parada(ctx) do
     case Map.get(ctx, :last_error) do
-      nil -> {"modelo", "o modelo parou sem chamar emit_plano_de_teste"}
-      error -> {"infra", "falha no turno de LLM: #{inspect(error)}"}
+      nil ->
+        cond do
+          Map.get(ctx, :corte_pelo_teto) == true ->
+            {"modelo", Engine.Gates.MotivoDoCorte.texto()}
+
+          Map.get(ctx, :corte_com_texto) == true ->
+            {"modelo", Engine.Gates.MotivoDoCorte.texto_com_texto()}
+
+          true ->
+            {"modelo", "o modelo parou sem chamar emit_plano_de_teste"}
+        end
+
+      error ->
+        {Engine.Gates.OrigemDoErro.de_llm(error), "falha no turno de LLM: #{inspect(error)}"}
     end
   end
 

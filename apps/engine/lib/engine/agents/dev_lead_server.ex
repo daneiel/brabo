@@ -2,8 +2,9 @@ defmodule Engine.Agents.DevLeadServer do
   @moduledoc """
   Dev Lead conversacional (FASE 14d item 5, [ADR 0053]).
 
-  Ativado pelo handoff aceito do Arquiteto, consome o `module_map` e o backlog
-  e propõe o PLANO de execução: quantos agentes por módulo e por quê. Ele **não
+  Ativado pelo handoff aceito do Arquiteto, lê o `module_map` VIGENTE do
+  projeto (a leitura de `get_infra_context`, RN-699 — nunca um evento da
+  sessão) e o backlog, relê os dois quando quiser por `read_backlog`, e propõe o PLANO de execução: quantos agentes por módulo e por quê. Ele **não
   escreve código** — distribui trabalho e responde por ele.
 
   Desde o ADR 0090 ele também é dono do gate `implementavel`
@@ -86,13 +87,14 @@ defmodule Engine.Agents.DevLeadServer do
   use GenServer, restart: :temporary
 
   alias Engine.Harness.{ContextBuilder, PromptAssembler, ContextManager, ToolCallRecovery}
-  alias Engine.Harness.Tools.EmitArtifact
+  alias Engine.Harness.Tools.{DeclareOpenQuestion, EmitArtifact}
 
   alias Engine.Agents.{
     DevLeadTools,
     FalhaDeTurno,
     Reidratacao,
     ResultadoDeFerramenta,
+    TextoDoTurno,
     TurnoAssincrono,
     TurnoOrfao
   }
@@ -175,7 +177,12 @@ defmodule Engine.Agents.DevLeadServer do
        tool_specs: [
          DevLeadTools.spec(),
          DevLeadTools.spec_assess_implementability(),
-         EmitArtifact.spec()
+         EmitArtifact.spec(),
+         DeclareOpenQuestion.spec(),
+         # RN-699 (AT-363): leitura do backlog e do module_map vigente.
+         DevLeadTools.spec_read_backlog(),
+         # AT-582: o plano do próprio agente, lido pelo diário na retomada.
+         Engine.Harness.Tools.RegistrarPlano.spec()
        ],
        # Guardado enquanto o turno roda numa Task supervisionada, fora do
        # handler que bloqueava o processo inteiro — é o que permite um
@@ -183,6 +190,9 @@ defmodule Engine.Agents.DevLeadServer do
        # RN-673: a fila de mensagens que chegaram com turno em curso,
        # reconstruída do log (sobrevive a restart), e como montar o turno
        # que a lê. Ver `TurnoAssincrono.receber_mensagem/4`.
+       # AT-582: a retomada do turno interrompido, ANTES da fila (a fila espera o fim dela).
+       retomada_agendada: TurnoAssincrono.retomada_ao_subir(project_id, session_id, @agent),
+       montar_turno_de_retomada: &turno_de_retomada/1,
        fila_de_mensagens: TurnoAssincrono.fila_ao_subir(project_id, session_id, @agent),
        montar_turno_de_mensagem: &turno_de_mensagem/2,
        turno_assincrono: nil,
@@ -199,7 +209,10 @@ defmodule Engine.Agents.DevLeadServer do
   @impl true
   def handle_cast(:kickoff, state) do
     work = state |> append(user_msg(kickoff_instruction(state))) |> compact()
-    TurnoAssincrono.iniciar(state, nil, fn -> run_turn(work, @max_iterations) end)
+
+    TurnoAssincrono.iniciar(state, nil, fn ->
+      run_turn(work, Engine.Harness.FalhaRepetida.inicio_de_turno(@max_iterations))
+    end)
   end
 
   @impl true
@@ -302,7 +315,15 @@ defmodule Engine.Agents.DevLeadServer do
   # também para o turno que lê a FILA (várias falas num texto só).
   defp turno_de_mensagem(state, text) do
     work = state |> append(user_msg(text)) |> compact()
-    fn -> run_turn(work, @max_iterations) end
+    fn -> run_turn(work, Engine.Harness.FalhaRepetida.inicio_de_turno(@max_iterations)) end
+  end
+
+  # AT-582: o turno de retomada não tem fala nova do usuário; o histórico
+  # reidratado já termina nela e a orientação vai efêmera (`RetomadaDoTurno`).
+  defp turno_de_retomada(state) do
+    fn ->
+      run_turn(compact(state), Engine.Harness.FalhaRepetida.inicio_de_turno(@max_iterations))
+    end
   end
 
   @impl true
@@ -358,10 +379,17 @@ defmodule Engine.Agents.DevLeadServer do
   # já aplicada ao PO: um Dev Lead que esgotasse as 14 iterações terminava
   # sem evento nenhum, indistinguível de um turno que simplesmente acabou.
   defp run_turn(state, remaining) when remaining <= 0 do
-    emit(state, "toolloop.limit_reached", %{
-      iteration: @max_iterations,
-      max_iterations: @max_iterations
-    })
+    # AT-590: lê a linha ANTES de gravar o texto (que a esvaziaria) e a põe no evento.
+    gravado = Engine.Agents.GravadoNoTurno.descarregar()
+    gravar_texto_do_turno(state, "", nil)
+
+    Engine.Harness.FalhaRepetida.narrar_ou(state.project_id, state.session_id, @agent, fn ->
+      emit(state, "toolloop.limit_reached", %{
+        iteration: @max_iterations,
+        max_iterations: @max_iterations,
+        gravado: gravado
+      })
+    end)
 
     state
   end
@@ -390,21 +418,27 @@ defmodule Engine.Agents.DevLeadServer do
       # servidor é `restart: :temporary`, ele morria e não voltava — a correção
       # de uma falha silenciosa tinha virado uma QUEDA, com o gatilho mais
       # corriqueiro que existe (acabar o orçamento).
-      {:ok, %{"error" => erro}} when is_binary(erro) and erro != "" ->
-        emit_falha(state, {:final, erro})
+      {:ok, %{"error" => erro} = frame} when is_binary(erro) and erro != "" ->
+        gravar_texto_do_turno(state, "", nil)
+        emit_falha(state, {:final, erro, Map.get(frame, "errorCode")})
         state
 
       {:ok, %{"message" => message} = frame} ->
         content = Map.get(message, "content", "")
         model_name = Map.get(frame, "modelName")
-        state = append(state, assistant_msg(content))
-        if content != "", do: emit_response(state, content, model_name)
+        state = append(state, Engine.Agents.MensagemDoAssistente.de(content, message))
 
         case tool_calls(message, state.tool_specs) do
           [] ->
+            # AT-572: fecho sem texto nem corte é falha do modelo, dita no fio (agent.error).
+            if gravar_texto_do_turno(state, content, model_name) == :vazio,
+              do: emit_falha(state, :resposta_vazia)
+
             state
 
           calls ->
+            # RN-698: o texto desta volta continua na próxima.
+            TextoDoTurno.acumular(content, model_name)
             # `reduce_while` — não `reduce` — porque `:pending` precisa PARAR
             # o laço no meio da lista, sem processar as chamadas seguintes
             # nem recursar para a próxima iteração. Antes de ADR 0086 as três
@@ -412,13 +446,17 @@ defmodule Engine.Agents.DevLeadServer do
             # desfechos distintos, e só um deles (suspensão) precisa
             # interromper o `Enum.reduce`.
             resultado =
-              Enum.reduce_while(calls, {state, false}, fn call, {st, _planou} ->
+              Enum.reduce_while(calls, {state, false}, fn call, {st, planou} ->
                 case dispatch_tool(call, st) do
+                  # RN-699: só o PLANO bem-sucedido encerra o turno. Antes,
+                  # qualquer `:ok` da última chamada (uma leitura, um
+                  # `emit_artifact`) encerrava, e um `:error` depois de um
+                  # plano aceito apagava o encerramento.
                   {st2, :ok} ->
-                    {:cont, {st2, true}}
+                    {:cont, {st2, planou or Map.get(call, "name") == "propose_execution_plan"}}
 
                   {st2, :error} ->
-                    {:cont, {st2, false}}
+                    {:cont, {st2, planou}}
 
                   {st2, {:pending, action_id, tool_call_id, tool_name}} ->
                     {:halt, {:suspenso, st2, action_id, tool_call_id, tool_name}}
@@ -427,6 +465,8 @@ defmodule Engine.Agents.DevLeadServer do
 
             case resultado do
               {:suspenso, st2, action_id, tool_call_id, tool_name} ->
+                gravar_texto_do_turno(st2, "", model_name)
+
                 # O `-1` documenta que a iteração suspensa CONTA contra o teto
                 # quando retomada — mesma vizinhança de raciocínio do
                 # comentário logo abaixo, sobre por que "bem-sucedido" encerra
@@ -451,10 +491,11 @@ defmodule Engine.Agents.DevLeadServer do
               # e o modelo nunca chega a corrigir. A primeira versão desta
               # guarda olhava só o nome da ferramenta e tinha esse defeito.
               {st2, true} ->
+                gravar_texto_do_turno(st2, "", model_name)
                 st2
 
               {st2, false} ->
-                run_turn(st2, remaining - 1)
+                run_turn(st2, Engine.Harness.FalhaRepetida.restante(remaining - 1))
             end
         end
 
@@ -463,6 +504,7 @@ defmodule Engine.Agents.DevLeadServer do
         # indistinguível de sucesso, e o motivo real ia só por broadcast, que
         # é efêmero. A falha vira evento durável COM origem, e o agente diz o
         # que houve no próprio fio.
+        gravar_texto_do_turno(state, "", nil)
         emit_falha(state, reason)
         state
     end
@@ -479,7 +521,7 @@ defmodule Engine.Agents.DevLeadServer do
     emit(state, "tool.call", %{tool: name, args: args})
     broadcast(state, "tool.call", %{tool: name, agent: @agent})
 
-    case run_tool(name, args, state) do
+    case executar_ferramenta(name, args, state) do
       {:ok, texto} ->
         emit(state, "tool.result", ResultadoDeFerramenta.payload(name, {:ok, texto}))
         {append_tool_message(state, id, name, texto), :ok}
@@ -509,6 +551,13 @@ defmodule Engine.Agents.DevLeadServer do
     })
   end
 
+  # RN-719: argumentos normalizados contra a spec e exceção vira erro do laço.
+  defp executar_ferramenta(name, args, state) do
+    Engine.Harness.ArgumentosDeFerramenta.executar(name, args, state.tool_specs, fn a ->
+      run_tool(name, a, state)
+    end)
+  end
+
   defp run_tool("propose_execution_plan", args, state), do: DevLeadTools.run(args, state)
 
   # ADR 0090 — aditivo, sem tocar o clause acima. Devolve o MESMO contrato
@@ -517,7 +566,17 @@ defmodule Engine.Agents.DevLeadServer do
   defp run_tool("assess_implementability", args, state),
     do: DevLeadTools.run_assessment(args, state)
 
+  # RN-699 (AT-363): leitura contida do backlog e do module_map do PROJETO.
+  defp run_tool("read_backlog", _args, state), do: DevLeadTools.run_read_backlog(state)
+
   defp run_tool("emit_artifact", args, state), do: EmitArtifact.run(args, state)
+
+  defp run_tool("declare_open_question", args, state),
+    do: DeclareOpenQuestion.run(args, state)
+
+  defp run_tool("registrar_plano", args, state),
+    do: Engine.Harness.Tools.RegistrarPlano.run(args, state)
+
   defp run_tool(name, _args, _state), do: {:error, "ferramenta desconhecida: #{name}"}
 
   # --- Kickoff ---
@@ -525,82 +584,29 @@ defmodule Engine.Agents.DevLeadServer do
   defp kickoff_instruction(state) do
     # Leitura POR TIPO, pela cauda (RN-580) — não os PRIMEIROS 200 eventos de
     # todos os tipos, que numa sessão longa deixavam de fora o que nasceu depois.
+    #
+    # RN-699 (AT-362): o module_map NÃO vem do log da sessão. Esta leitura
+    # procurava `architecture.module_map_created`, tipo que NENHUM código emite
+    # — o kickoff dizia sempre "(sem module_map)". O mapa vigente vem da MESMA
+    # leitura de projeto que o AppSec usa (`get_infra_context`, `findCurrent`
+    # na api), que não depende da sessão em que o Arquiteto o gravou.
+    modulos = DevLeadTools.module_map_vigente(state.project_id, state.session_id)
+
     case Reidratacao.eventos_do_tipo(state.project_id, state.session_id, [
-           "architecture.module_map_created",
            "backlog.story_created"
          ]) do
       {:ok, events, truncado?} ->
-        build_kickoff(events) <>
-          Reidratacao.aviso_de_recorte(truncado?) <> tarefas_do_backlog(state.project_id)
+        build_kickoff(modulos, events) <>
+          Reidratacao.aviso_de_recorte(truncado?) <>
+          DevLeadTools.tarefas_do_backlog(state.project_id)
 
       _ ->
-        "Proponha o plano de execução (propose_execution_plan)." <>
-          tarefas_do_backlog(state.project_id)
+        "Proponha o plano de execução (propose_execution_plan).\n\nMÓDULOS:\n" <>
+          modulos <> DevLeadTools.tarefas_do_backlog(state.project_id)
     end
   end
 
-  # AT-274 (RN-678): o plano atribui o MÓDULO de cada tarefa, então o Dev Lead
-  # precisa dos `task_id`s — e do backlog do PROJETO, não só do que nasceu
-  # nesta sessão (o PO pode ter escrito as tarefas noutra). Uma leitura por
-  # kickoff, pela MESMA rota da `listar_backlog` do PO; tarefa `done` fica de
-  # fora (não há o que distribuir). Falha vira uma linha dita, nunca kickoff
-  # perdido: o plano sem `tarefas` é recusado pela api com motivo nomeado.
-  @max_tarefas_no_kickoff 200
-
-  defp tarefas_do_backlog(project_id) do
-    case EngineApiClient.list_backlog(project_id) do
-      {:ok, epicos} when is_list(epicos) ->
-        linhas =
-          for epico <- epicos,
-              historia <- Map.get(epico, "stories", []),
-              tarefa <- Map.get(historia, "tasks", []),
-              Map.get(tarefa, "status") != "done" do
-            "- task_id=#{Map.get(tarefa, "id")} | #{Map.get(tarefa, "title")} " <>
-              "| história: #{Map.get(historia, "title")} " <>
-              "(módulos da história: #{Enum.join(Map.get(historia, "moduleIds", []), ", ")})" <>
-              modulo_atual(tarefa)
-          end
-
-        mostradas = Enum.take(linhas, @max_tarefas_no_kickoff)
-
-        corte =
-          case length(linhas) - length(mostradas) do
-            0 -> ""
-            n -> "\n(+ #{n} tarefa(s) não listada(s) — o total real é #{length(linhas)})"
-          end
-
-        """
-
-        TAREFAS PENDENTES (atribua CADA UMA a um módulo do module_map em `tarefas`
-        — só o dev agent daquele módulo vai pegá-la):
-        #{if mostradas == [], do: "(nenhuma tarefa pendente)", else: Enum.join(mostradas, "\n")}#{corte}
-        """
-
-      _ ->
-        "\n\n(não consegui listar as tarefas do backlog agora — use os task_id que conhecer.)"
-    end
-  end
-
-  defp modulo_atual(%{"module" => m}) when is_binary(m) and m != "",
-    do: " [módulo atual: #{m}]"
-
-  defp modulo_atual(_tarefa), do: ""
-
-  defp build_kickoff(events) do
-    modulos =
-      events
-      |> Enum.filter(&(Map.get(&1, "type") == "architecture.module_map_created"))
-      |> List.last()
-      |> case do
-        %{"payload" => %{"modules" => mods}} when is_list(mods) ->
-          Enum.map_join(mods, "\n", fn m ->
-            "- #{Map.get(m, "name")} (#{Map.get(m, "stack", "?")}): #{Map.get(m, "responsibility", "")}"
-          end)
-
-        _ ->
-          "(sem module_map)"
-      end
-
+  defp build_kickoff(modulos, events) do
     stories =
       events
       |> Enum.filter(&(Map.get(&1, "type") == "backlog.story_created"))
@@ -629,6 +635,12 @@ defmodule Engine.Agents.DevLeadServer do
     IMPLEMENTABILIDADE de uma story com `assess_implementability` — é
     OPCIONAL, use o julgamento: se uma história parece arriscada ou mal
     especificada, vale registrar o parecer antes de contar com ela no plano.
+    Só diga que avaliou as histórias em que você de fato chamou a ferramenta.
+
+    Use SÓ os task_id listados abaixo — nunca invente um. A lista é deste
+    momento: se o plano for recusado, ou se o backlog pode ter mudado, chame
+    `read_backlog` para reler as tarefas pendentes e o module_map vigente, e
+    proponha o plano corrigido.
 
     MÓDULOS:
     #{modulos}
@@ -656,9 +668,6 @@ defmodule Engine.Agents.DevLeadServer do
   end
 
   defp user_msg(text), do: %{"role" => "user", "content" => text, :pinned => false}
-
-  defp assistant_msg(content),
-    do: %{"role" => "assistant", "content" => content, :pinned => false}
 
   defp append(state, message), do: %{state | messages: state.messages ++ [message]}
 
@@ -695,7 +704,8 @@ defmodule Engine.Agents.DevLeadServer do
        }) do
     "plano aprovado e execução ATIVADA na sessão #{sessao}: " <>
       "#{Enum.join(Map.get(exec, "modulos", []), ", ")}; " <>
-      "#{Map.get(exec, "tarefasAtribuidas", 0)} tarefa(s) com módulo atribuído."
+      "#{Map.get(exec, "tarefasAtribuidas", 0)} tarefa(s) com módulo atribuído." <>
+      Engine.Agents.DevLeadTools.resumo_do_plano(exec)
   end
 
   defp texto_do_desfecho(%{
@@ -741,19 +751,24 @@ defmodule Engine.Agents.DevLeadServer do
 
   # `model_name` viaja do frame `final` da api (achado do problema 2). Sem
   # default: o único call site aqui sempre passa os 3 argumentos.
-  defp emit_response(state, content, model_name),
-    do: emit(state, "agent.response", %{content: content, modelName: model_name})
+  # RN-698: o texto do turno inteiro, numa `agent.response` só.
+  defp gravar_texto_do_turno(state, ultimo, model_name) do
+    case TextoDoTurno.payload_do_turno(ultimo, model_name) do
+      nil -> :vazio
+      payload -> emit(state, "agent.response", payload)
+    end
+  end
 
   # A falha, gravada e DITA. O `broadcast` continua, para quem está com a aba
   # aberta ver na hora — mas ele deixou de ser a única fonte.
   defp emit_falha(state, reason) do
     origem = FalhaDeTurno.origem(reason)
-    mensagem = FalhaDeTurno.mensagem(reason)
+    mensagem = FalhaDeTurno.mensagem(reason, state.project_id)
 
     emit(state, "agent.error", %{
       origem: origem,
       mensagem: mensagem,
-      reason: inspect(reason)
+      reason: FalhaDeTurno.diagnostico(reason)
     })
 
     broadcast(state, "agent.error", %{origem: origem, mensagem: mensagem})

@@ -136,8 +136,11 @@
     },
     "notes": {
       "alwaysAllow": "Always allow: records, in the project's .brabo/permissions.json, one rule per command segment, by verb + subcommand (e.g. \"npm test\", \"git status\") — the next command with the same verb and subcommand runs without asking.",
+      "alwaysAllowTyped": "Always allow: records, in the project's .brabo/permissions.json, one rule for this action type — the next one of the same type runs without asking.",
       "alwaysAllowScoped": "Always allow: releases this action type only for {{agent}}, not for the project's other agents.",
-      "autoMode": "Auto mode: {{actor}} runs any command without asking, even outside the project folder. git push, PR, deploy, sudo/doas, merges into a protected branch, instruction patches, parallelism and removing the container keep asking for your decision; anything in deny stays denied. Turn it off from the agent's card.",
+      "autoMode": "Auto mode: {{actor}} runs any command without asking, even outside the project folder, including git push and opening a PR. Deploy, sudo/doas, merges into a protected branch, instruction patches, parallelism and removing the container keep asking for your decision; anything in deny stays denied. Turn it off from the agent's card.",
+      "autoModeTyped": "Auto mode: {{actor}}'s next actions are approved without asking, including git push and opening a PR. Deploy, merges into a protected branch, instruction patches, parallelism and removing the container keep asking for your decision; anything in deny stays denied. Turn it off from the agent's card.",
+      "autoModeNotThis": "Turning on auto mode does not approve this action: it still waits for your Approve.",
       "obsolete": "The action was already decided another way; this card refreshes on its own."
     },
     "decided": {
@@ -176,7 +179,9 @@
         "noDetails": "No additional details."
       },
       "empty": "This action carries no payload."
-    }
+    },
+    "actorYou": "You",
+    "actorOtherMember": "Another member"
   },
   "prGateTimeline": {
     "steps": {
@@ -205,7 +210,8 @@
     "pending": {
       "title": "Pending",
       "eyebrow": "sorted by urgency",
-      "selectedCount": "{{count}} selected",
+      "selectedCount_one": "{{count}} selected",
+      "selectedCount_other": "{{count}} selected",
       "approveSelected": "Approve selected",
       "clear": "Clear",
       "findingSession": "Looking for the project's session…",
@@ -233,7 +239,8 @@
       "eyebrow": "{{count}} from infra in QA/SecOps gates",
       "loading": "Loading infra PRs…",
       "error": "Couldn't load infra PRs.",
-      "empty": "No infra PR in review yet."
+      "empty": "No infra PR in review yet.",
+      "mergeLink": "Merge it in the PRs tab"
     },
     "permissions": {
       "title": "Project permissions",
@@ -265,7 +272,14 @@
     "mergeButton": "Merge",
     "mergeBlockedFallback": "Gate blocked — fix it before proposing the merge.",
     "mergeNoSession": "No session in the project to propose the action.",
-    "gatePendente": "The {{gate}} gate is still pending for this PR. Merging stays available — the decision is yours."
+    "gatePendenteBloqueada": "The {{gate}} gate is still pending for this PR, and its task is blocked: merging is unavailable until it is unblocked.",
+    "mergeIndisponivelBloqueada": "Merging is unavailable: the task behind this PR is blocked — {{reason}}",
+    "mergeIndisponivelSemSessao": "Merging is unavailable: no session in the project to propose the action.",
+    "gatePendente": "The {{gate}} gate is still pending for this PR. Merging stays available — the decision is yours.",
+    "mergeRecusado": "The last merge attempt was refused: {{reason}}",
+    "mergeRecusadoArquivos_one": "Conflicting file: {{files}}",
+    "mergeRecusadoArquivos_other": "Conflicting files: {{files}}",
+    "mergeResolverAntes": "Resolve the conflict first (rebase the PR branch on dev), then merge again."
   },
   "politica": {
     "motivo": "Policy decided by: {{motivo}}",

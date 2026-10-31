@@ -278,7 +278,7 @@ describe('SessionPage — turno preso quando o canal perde o agent.done', () => 
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Parar' })).toBeNull());
   });
 
-  it('CASO DE FALHA: erro no envio limpa o estado otimista e avisa o usuário', async () => {
+  it('CASO DE FALHA: erro no envio desarma o turno e a mensagem fica "não enviada" (RN-831)', async () => {
     sendAgentMessage.mockRejectedValue(new Error('rede caiu'));
 
     montar();
@@ -290,6 +290,11 @@ describe('SessionPage — turno preso quando o canal perde o agent.done', () => 
     fireEvent.keyDown(campo, { key: 'Enter' });
 
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Parar' })).toBeNull());
-    expect(screen.queryByText('oi')).toBeNull();
+    // Até a RN-831 a bolha sumia; agora ela fica, com o selo e o reenvio.
+    expect(await screen.findByTestId('mensagem-nao-enviada')).toHaveTextContent('oi');
+    expect(screen.getByText('não enviada')).toBeInTheDocument();
+    sendAgentMessage.mockResolvedValue({ mensagemId: 'm1' });
+    fireEvent.click(screen.getByRole('button', { name: 'Tentar de novo' }));
+    await waitFor(() => expect(sendAgentMessage).toHaveBeenLastCalledWith('proj-1', expect.any(String), expect.any(String), 'oi'));
   });
 });

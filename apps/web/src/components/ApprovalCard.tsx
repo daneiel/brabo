@@ -1,4 +1,7 @@
-import { useRef, useState, type CSSProperties } from 'react';
+import { useContext, useRef, useState, type CSSProperties } from 'react';
+import { QueryClientContext } from '@tanstack/react-query';
+import { useAutoriaDaSessao } from '../lib/autoria-da-sessao';
+import { autorDaMensagem } from '../lib/autor-da-mensagem';
 import { useTranslation } from 'react-i18next';
 import type { ActionType, ProposedAction } from '../lib/api-types';
 import { AGENTS } from '../lib/agents';
@@ -24,6 +27,7 @@ import {
 } from './ui/icons';
 import { podeOferecerSemprePermitir } from '../lib/sempre-permitir';
 import { OQueOPilotoLibera } from './OQueOPilotoLibera';
+import { ModoAutomaticoDoPlano } from './ModoAutomaticoDoPlano';
 import styles from './ApprovalCard.module.css';
 
 export type ApprovalUrgency = 'critico' | 'alta' | 'normal';
@@ -67,9 +71,12 @@ const ACTION_ICON: Record<ActionType, typeof DiffIcon> = {
   // ADR 0136 (RN-495) — a página global de containers.
   container_stop: StopSquareIcon,
   container_remove: TrashIcon,
+  container_recreate: TrashIcon,
   // RN-508 (ADR 0145) — mesmo calibre visual de `container_start`: sobe
   // container real, só que na máquina do usuário, via runner.
   container_start_via_runner: AlertIcon,
+  // AT-612: instância de QA efêmera, mesmo calibre visual de `container_start`.
+  qa_environment_start: AlertIcon,
 };
 
 /**
@@ -241,6 +248,9 @@ export function ApprovalCard({
 
   const actor = AGENTS[action.actor.id as keyof typeof AGENTS];
   const actorLabel = actor?.name ?? action.actor.id;
+  // RN-705: ator humano é nomeado pela leitura de membros (RN-655), nunca
+  // pelo UUID. Sem `QueryClient` (teste isolado do card) fica o id.
+  const temQueryClient = useContext(QueryClientContext) !== undefined;
   // Tipo que o web ainda não conhece não pode devolver `undefined` aqui: o
   // React trata isso como componente inválido e derruba a ÁRVORE, não o card.
   const Icon = ACTION_ICON[action.actionType] ?? AlertIcon;
@@ -263,7 +273,7 @@ export function ApprovalCard({
   const isCritical = urgency === 'critico';
 
   const payload = action.payload;
-  const { verbo, trechos } = descreverAcao(action.actionType, payload);
+  const { verbo, trechos } = descreverAcao(action.actionType, payload, action.status);
   const temCorpoProprio = COM_CORPO_PROPRIO.has(action.actionType);
 
   /*
@@ -298,7 +308,13 @@ export function ApprovalCard({
               apagado. O verbo vem de `lib/aprovacoes.ts` — mesma fonte que a
               frase logo abaixo e que a aba Insights. */}
           <div className={styles.title}>
-            <span className={styles.actorName}>{actorLabel}</span>
+            <span className={styles.actorName}>
+              {temQueryClient && action.actor.kind === 'user' ? (
+                <NomeDoMembroAtor action={action} />
+              ) : (
+                actorLabel
+              )}
+            </span>
             <span className={styles.verb}>{verbo}</span>
           </div>
         </div>
@@ -363,6 +379,15 @@ export function ApprovalCard({
 
       {isPending ? (
         <>
+          {/* AT-476 (RN-804): no plano do Dev Lead, a oferta em lote do modo
+              automático vem ANTES de aprovar — aprovar ativa a execução. Só
+              com o callback (quem chama já confirmou maintainer) e com
+              QueryClient (a oferta lê `agent_autonomy`). */}
+          {action.actionType === 'propose_execution_plan' &&
+            onActivateAutoMode &&
+            temQueryClient && (
+              <ModoAutomaticoDoPlano projectId={action.projectId} payload={payload} />
+            )}
           <div className={styles.actions}>
             <Button variant="success" disabled={inerte} onClick={() => void decidir(() => onApprove())}>
               {t('approvalCard.actions.approve')}
@@ -382,7 +407,7 @@ export function ApprovalCard({
                 maintainer e passou o callback; ausente some o botão em vez de
                 desabilitar sem explicar (action.actor.kind === 'user' também
                 cai aqui: não há AGENTE pra confiar). */}
-            {onActivateAutoMode && (
+            {onActivateAutoMode && podeSemprePermitir && (
               <Button variant="ghost" disabled={inerte} onClick={onActivateAutoMode}>
                 {t('approvalCard.actions.autoMode')}
               </Button>
@@ -416,7 +441,9 @@ export function ApprovalCard({
               <span>
                 {ehAgenteDeModulo
                   ? t('approvalCard.notes.alwaysAllowScoped', { agent: actorLabel })
-                  : t('approvalCard.notes.alwaysAllow')}
+                  : action.actionType === 'terminal'
+                    ? t('approvalCard.notes.alwaysAllow')
+                    : t('approvalCard.notes.alwaysAllowTyped')}
               </span>
             </p>
           )}
@@ -425,11 +452,22 @@ export function ApprovalCard({
               a RN-670 (ADR 0189) a lista inteira — o que o piloto libera e o
               que não libera — vem junto, a MESMA dos Executores e do card do
               agente. */}
-          {onActivateAutoMode && (
+          {onActivateAutoMode && podeSemprePermitir && (
             <>
               <p className={styles.note} data-testid="nota-modo-automatico">
                 <AlertIcon size={14} className={styles.noteIcon} />
-                <span>{t('approvalCard.notes.autoMode', { actor: actorLabel })}</span>
+                <span>
+                  {action.actionType === 'terminal'
+                    ? t('approvalCard.notes.autoMode', { actor: actorLabel })
+                    : t('approvalCard.notes.autoModeTyped', { actor: actorLabel })}
+                </span>
+              </p>
+              {/* AT-443: ligar o modo NÃO decide este card — ele segue
+                  pendente, com "Aprovar" como a ação principal. Aprovar junto
+                  seria decisão do dono, não feita aqui. */}
+              <p className={styles.note} data-testid="nota-modo-automatico-nao-aprova">
+                <AlertIcon size={14} className={styles.noteIcon} />
+                <span>{t('approvalCard.notes.autoModeNotThis')}</span>
               </p>
               <OQueOPilotoLibera recolhido />
             </>
@@ -792,4 +830,19 @@ function ApprovalBody({ actionType, payload, executionResult, expandedFile, onTo
       <pre className={styles.payloadCru}>{JSON.stringify(payload, null, 2)}</pre>
     </div>
   );
+}
+
+/**
+ * O nome de quem propôs, quando é uma PESSOA (RN-705): a mesma leitura de
+ * membros do fio da sessão (RN-652/655). Quem a tela não sabe nomear vira
+ * "outro membro", nunca o UUID cru.
+ */
+function NomeDoMembroAtor({ action }: { action: ProposedAction }) {
+  const { t } = useTranslation('approvals');
+  const autoria = useAutoriaDaSessao(action.projectId);
+  const autor = autorDaMensagem(action.actor, autoria);
+  if (autor.tipo === 'voce') return <>{autor.nome ?? t('approvalCard.actorYou')}</>;
+  if (autor.tipo === 'membro') return <>{autor.nome}</>;
+  if (autor.tipo === 'outroMembro') return <>{t('approvalCard.actorOtherMember')}</>;
+  return <>{action.actor.id}</>;
 }

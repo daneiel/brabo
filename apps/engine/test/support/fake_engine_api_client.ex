@@ -190,6 +190,38 @@ defmodule Engine.Sessions.FakeEngineApiClient do
     end
   end
 
+  @impl true
+  def complete_story(_project_id, _session_id, story_id, fields) do
+    notify({:story_completed, story_id, fields})
+
+    case Process.get(:fake_complete_story_error) do
+      nil -> reply(:fake_complete_story, %{"id" => story_id, "status" => "ready"})
+      reason -> {:error, reason}
+    end
+  end
+
+  # RN-727: corrigir/arquivar história. Scriptáveis por `:fake_update_story`/
+  # `:fake_archive_story` (corpo) e `..._error` (motivo do `{:error, _}`).
+  @impl true
+  def update_story(_project_id, _session_id, story_id, fields) do
+    notify({:story_updated, story_id, fields})
+
+    case Process.get(:fake_update_story_error) do
+      nil -> reply(:fake_update_story, %{"id" => story_id, "title" => Map.get(fields, :title)})
+      reason -> {:error, reason}
+    end
+  end
+
+  @impl true
+  def archive_story(_project_id, _session_id, story_id, fields) do
+    notify({:story_archived, story_id, fields})
+
+    case Process.get(:fake_archive_story_error) do
+      nil -> reply(:fake_archive_story, %{"id" => story_id, "title" => "s"})
+      reason -> {:error, reason}
+    end
+  end
+
   # RN-681: a duplicata semântica de regra. Scriptável por
   # `:fake_semantic_duplicate` (o corpo de `{:ok, corpo}` ou `{:error, motivo}`);
   # sem script, "nada a comparar", que é o que a api responde a projeto vazio.
@@ -422,6 +454,17 @@ defmodule Engine.Sessions.FakeEngineApiClient do
   end
 
   @impl true
+  def unblock_task(_project_id, _session_id, task_id, agent_id) do
+    notify({:task_unblocked, task_id, agent_id})
+    Process.get(:fake_unblock_result, {:ok, %{"id" => task_id, "blocked" => false}})
+  end
+
+  @impl true
+  def list_tarefas_em_curso_de_dev(_session_id) do
+    {:ok, Application.get_env(:engine, :fake_tarefas_em_curso_de_dev, [])}
+  end
+
+  @impl true
   def open_gate(_project_id, _session_id, task_id, agent_id) do
     notify({:gate_opened, task_id, agent_id})
     {:ok, %{"id" => task_id, "gateStatus" => "awaiting_qa"}}
@@ -436,9 +479,28 @@ defmodule Engine.Sessions.FakeEngineApiClient do
         veredito,
         resumo,
         itens,
-        max_corrections
+        max_corrections,
+        extras \\ %{}
       ) do
     notify({:gate_verdict_recorded, task_id, gate, veredito, resumo, itens, max_corrections})
+    if extras != %{}, do: notify({:gate_verdict_extras, task_id, gate, extras})
+
+    # AT-526: fila opcional de respostas (recusa e depois aceite).
+    case Process.get(:fake_gate_verdict_responses, []) do
+      [resposta | resto] ->
+        Process.put(:fake_gate_verdict_responses, resto)
+
+        case resposta do
+          {:error, _} = erro -> erro
+          valor -> {:ok, valor}
+        end
+
+      [] ->
+        record_gate_verdict_padrao(task_id)
+    end
+  end
+
+  defp record_gate_verdict_padrao(task_id) do
     reply(:fake_gate_verdict_response, %{"nextAction" => "done", "task" => %{"id" => task_id}})
   end
 
@@ -571,6 +633,16 @@ defmodule Engine.Sessions.FakeEngineApiClient do
 
     case Process.get(:fake_record_proficiency_error) do
       nil -> reply(:fake_proficiency_result, %{"runId" => "run-1", "profiles" => []})
+      reason -> {:error, reason}
+    end
+  end
+
+  @impl true
+  def close_anamnese_window(_project_id, _session_id, payload) do
+    notify({:anamnese_window_closed, payload})
+
+    case Process.get(:fake_close_anamnese_window_error) do
+      nil -> {:ok, %{"runId" => "run-vazia", "profiles" => []}}
       reason -> {:error, reason}
     end
   end
@@ -863,6 +935,26 @@ defmodule Engine.Sessions.FakeEngineApiClient do
       resultado ->
         resultado
     end
+  end
+
+  @impl true
+  def executar_comando_na_instancia_de_qa(project_id, task_id, comando, cwd, timeout_ms) do
+    notify({:container_exec_qa, project_id, task_id, comando, cwd, timeout_ms})
+
+    Process.get(:fake_container_exec) ||
+      {:ok, %{"sucesso" => true, "exitCode" => 0, "output" => "", "timedOut" => false}}
+  end
+
+  @impl true
+  def remover_instancia_de_qa(project_id, task_id) do
+    notify({:qa_remove, project_id, task_id})
+    Process.get(:fake_qa_remove, {:ok, %{"sucesso" => true, "motivo" => nil}})
+  end
+
+  @impl true
+  def varrer_instancias_de_qa(task_ids) do
+    notify({:qa_sweep, task_ids})
+    Application.get_env(:engine, :fake_qa_sweep, {:ok, %{"removidas" => [], "falhas" => []}})
   end
 
   @doc """

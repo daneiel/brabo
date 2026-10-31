@@ -1,0 +1,1740 @@
+---
+id: internal-api
+title: Internal API (api ↔ engine)
+sidebar_label: Internal API
+sidebar_position: 6
+description: The two directions of communication between api and engine — HTTP for synchronous commands, outbox and Oban for events.
+traducao_de: 1298c53b46d1828fcd8068dd77614879d3606fd9
+keywords: [internal api, engine, outbox, oban, engine-service, contract]
+---
+
+# Internal API (api ↔ engine)
+
+The api and the engine talk in **two** ways, and the choice between them is not
+stylistic:
+
+| direction | mechanism | when |
+|---|---|---|
+| api → engine | **outbox + Oban** | events: something happened, the engine reacts when it can |
+| api → engine | **HTTP** | synchronous commands: I need the response now |
+| engine → api | **HTTP** (`/internal/*`) | the engine requests data or records a result |
+
+The criterion: if the operation needs to be atomic with a database write, it goes
+through the outbox — the api writes the event and the intent to publish it in the same
+transaction, and there is no window where one exists without the other. If it needs an
+immediate response, it goes through HTTP.
+
+**Out of scope for this page**: HTTP routes authenticated by the user's normal JWT
+(role-based RBAC, `@RequireRole`) — such as
+`/projects/:projectId/agent-autonomy`, `/projects/:projectId/container/lifecycle`
+([RN-267](../business-rules.md#rn-267)),
+`.../agents/criativo/validate-necessity` (gate `necessidade-validada`,
+[RN-406](../business-rules.md#rn-406), ADR 0095) or the CRUD of
+`/projects/:projectId/personal-access-tokens` ([RN-426](../business-rules.md#rn-426),
+ADR 0105) — including the two `maintainer` routes
+(`GET .../personal-access-tokens/all`,
+`DELETE .../personal-access-tokens/:tokenId/admin`,
+[RN-427](../business-rules.md#rn-427)) — are not "internal" in the sense of this document, even when an
+agent is who effectively calls through them. The same is true of the four
+`HuggingFaceModelsController` routes under
+`/workspaces/:workspaceId/huggingface/*`
+([RN-462](../business-rules.md#rn-462), [RN-463](../business-rules.md#rn-463),
+ADR 0115): `role:maintainer`, a human's own direct action from Project/Workspace
+Settings, never called by the engine. The same goes for the two membership
+routes, `POST`/`DELETE /projects/:projectId/members`
+([RN-471](../business-rules.md#rn-471),
+[RN-472](../business-rules.md#rn-472), ADR 0127) — and there the fact is
+load-bearing rather than merely true: the two downgrade caps that route now
+enforces (nobody downgrades a workspace `owner`, nobody downgrades themselves)
+live INSIDE `AddProjectMemberUseCase`, so they would be bypassable by any
+second door into `project_members`. There is none — no `/internal/*` route
+writes that table, and the use case has exactly one caller, the RBAC route
+itself. The
+shared service token NEVER serves as credential on these routes, and the user's JWT
+never works on `/internal/*` — the two mechanisms don't overlap
+([RN-035](../business-rules/autenticacao.md#rn-035)).
+
+**A third credential, neither service token nor user JWT**:
+`POST /projects/:projectId/runner-ticket` is `role:developer` like any
+RBAC route, but does not accept the normal session JWT — only one of TWO
+device-scoped credentials, both handled by the same `PatAuthGuard`/
+`@RequirePatAuth()`, scoped by construction to this single route: a
+Personal Access Token (`brb_…`, [RN-424](../business-rules.md#rn-424), ADR
+0105), or a short-lived (≤60s), self-signed EdDSA JWT proving possession of
+an Ed25519 device key in `runner_device_keys` — a machine key created in
+the terminal and registered by the installer
+([RN-552](../business-rules.md#rn-552)), or a project key the browser
+registered before [ADR 0203](../adr/0203-aposenta-o-fluxo-do-runner-pelo-navegador.md)
+retired that flow ([RN-465](../business-rules.md#rn-465), ADR 0118) — additive to the PAT,
+never a replacement. Worth noting here because it's the distinction this
+page exists to explain: "it's not `/internal/*`" doesn't mean "so it's a
+user JWT" — both device credentials are a third mechanism, with no overlap
+with the other two.
+
+Also out of scope: the
+`@Public()` routes that are the actual ENTRY POINT before any session
+exists — `POST /auth/login`, `POST /auth/register`,
+`GET /auth/oauth/:provider/start`/`callback` (social login, ADR 0084) and the
+rest of `auth.controller.ts`. None of them use the service token or the user's
+JWT (it's what THEY issue, not what they require), so the
+service-token-vs-JWT distinction this page exists to explain doesn't apply —
+they simply have no credential at all on entry. The exposure classification of
+every HTTP route, internal or not, is in
+[docs/security-surface.md](../security-surface.md).
+
+## Authentication
+
+No end trusts the private network. All of them present the **same
+service token** — a secret shared via env, rotatable, in the
+`X-Brabo-Service-Token` header:
+
+| caller | verified by | comparison |
+|---|---|---|
+| engine → api | `EngineServiceGuard` | `comparaEmTempoConstante` |
+| api → engine | `EngineWeb.Plugs.VerifyServiceToken` | `Plug.Crypto.secure_compare/2` |
+| broker → api | `EngineServiceGuard` | `comparaEmTempoConstante` |
+| api → broker | `tokenConfere` (`apps/broker/src/config.ts`) | `timingSafeEqual` |
+| `install.sh` → api | `EngineServiceGuard` | `comparaEmTempoConstante` |
+
+The broker ([ADR 0130](../adr/0130-broker-de-container.md)) joined this table
+without changing it: same header, same secret, same rotation. It answers `401`
+where the api answers `403`, matching the engine — what is missing is
+authentication of the caller, and the api's `403` is a documented compatibility
+constraint rather than a disagreement.
+
+> **This traffic does not go through the JWT.** The `/internal/*` routes are annotated with
+> `@ServiceRoute()`, which takes them out of the `JwtAuthGuard` and exempts them from the
+> `RateLimitGuard` (which runs before the controller guard, so the exemption
+> needs to come from the metadata). A user access token, even from an `owner`,
+> does not open any of them; and the service token does not open any other route. See
+> [RN-035](../business-rules/autenticacao.md#rn-035).
+
+> **Rotation without downtime.** `BRABO_SERVICE_TOKEN` is the value sent;
+> `BRABO_SERVICE_TOKEN_PREVIOUS` is accepted **only during verification**. Since both
+> sides send the current one and accept both, rotation is the same three-step dance
+> as `AUTH_JWT_SECRET`, described in the
+> [runbook](../runbook.md#rotacao-das-chaves-do-auth).
+
+## Correlation
+
+Every call between the two services also carries the `traceparent` header (W3C),
+and this holds in **both directions and all methods** — GET, POST and the LLM turn
+SSE stream. Each side has a single funnel that assembles the headers:
+
+| caller | funnel |
+|---|---|
+| api → engine | `HttpApiToEngineClient.buildHeaders()` |
+| engine → api | `EngineApiClient.headers/0` |
+
+Until [ADR 0035](../adr/0035-observabilidade-legivel-e-trace-sem-coletor.md) the
+engine side's `traceparent` was injected only into POSTs, so reads
+(`list_events`, the agent's context) and `llm_turn_stream` arrived at the api without
+correlation — they showed up in Tempo as orphan traces. If you add a
+new call to this contract, use the funnel: it's what guarantees it won't be born orphaned.
+
+> The rejection of a service token is logged on both sides, with route and origin
+> — and **without** the token presented. A 401 here is indistinguishable, without logs,
+> from "engine is down", which was exactly the symptom before.
+
+> The `/internal/*` routes **are not internal by naming convention.** The prefix is
+> for readability; what protects them is the guard verifying the service token. The
+> full classification is at
+> [`docs/security-surface.md`](../security-surface.md), and a table test
+> fails a new route without a classification.
+
+## engine → api
+
+Twenty-eight routes, all under `/internal/sessions/:sessionId/` unless noted otherwise.
+Grouped by what they do.
+
+One route in this family has a caller that is **not** the engine — see
+[broker → api](#broker--api), below. The classification names the mechanism, not
+the sender.
+
+### Event log and actions
+
+| method | path |
+|---|---|
+| GET · POST | `/events` |
+| POST | `/actions` |
+| POST | `/termination` |
+| POST | `/handoffs` |
+
+The engine never writes directly to the events table — it **asks** the api, which
+controls the `seq` and the atomicity with the outbox.
+
+`POST /handoffs` keeps **at most one `offered` handoff per (project, target)**
+([RN-635](../business-rules.md#rn-635),
+[ADR 0182](../adr/0182-ciclo-de-vida-do-handoff.md)). The answer is the CURRENT
+offer plus `desfecho`: `criado`, `substituiu_oferta` (the pending one became
+`superseded`, with a `handoff.superseded` event) or `ja_oferecido` (no new row —
+same session and no new artifact). A target already active in a non-closed
+session of the project is refused with **409** `reason: "agente_ja_ativo"`, and
+the `message` is the sentence the agent reads as its tool result
+(`Engine.Harness.Tools.OfferHandoff` passes it through verbatim;
+`FalhaDeTurno.origem/1` classifies it as `politica`). The optional body field
+`seAusente: true` — sent by AppSec through `create_handoff_if_absent/5`
+([RN-636](../business-rules.md#rn-636)) — returns ANY pending offer to the
+target instead of replacing it.
+
+The Creative→PO offer that an "I'm ready — the need is validated" click asked
+for is ACCEPTED in the same call, on behalf of the person who clicked
+([RN-658](../business-rules.md#rn-658),
+[ADR 0185](../adr/0185-estou-pronto-fecha-os-dois-gates.md)): the offer is
+`criativo` → `po`, from this session, carrying the `product_brief` born after
+the latest marked `readiness.confirmed`. The acceptance goes through the same
+`AcceptHandoffUseCase` as the card (same events, the person as actor, an
+`implicito` mark), and the response then carries `status: "accepted"`. The
+engine only matches `{:ok, _}`, so nothing changes on its side; a failed
+implicit acceptance never turns into an error for the engine — it becomes a
+durable `agent.error` and the offer is still returned.
+
+`GET /events` is what the seven conversational agents read when their process
+comes up over a session that already has a conversation, and what their
+kickoffs read to find the brief, the rules, the module map and the stories
+([RN-580](../business-rules.md#rn-580)). Until then the route only understood
+`afterSeq` and `limit`, and the engine only sent `limit=200` — so it got the
+**first** 200 events, and an agent woken on a 201-event conversation came up
+without the message it was answering. Two query parameters were added, both
+**additive** (without them the response is byte for byte the old one):
+
+| parameter | effect |
+|---|---|
+| `latest=true` | returns the **tail** — the last `limit` events, still in ascending `seq` — and ignores `afterSeq`; same semantics as the human route (ADR 0021) |
+| `types=a.b,c.d` | only events of these types, and `limit` counts only them; at most 20 types, each matching `^[a-z][a-z0-9_]*(\.[a-z0-9_]+)*$`, otherwise **400** |
+
+The page stays capped at **200** ([ADR 0060](../adr/0060-superficie-de-leitura-de-codigo.md)):
+neither parameter makes the read unbounded. On the engine side the new reads go
+through `EngineApiClient.list_events/3`; `list_events/2` still exists, unchanged,
+for the callers that did not migrate (`InfraLeadServer`, `DevLeadTools`).
+
+And that's why the session-type guard lives in the append use case, and not
+in `ActivateExecutionUseCase`: `POST /events` here and the user's route fall into the
+same funnel. Since FASE 20, `execution.activated` in a `consultiva` session
+returns **409** through this path too — the type is creation intent and the
+event does not promote it ([RN-097](../business-rules.md#rn-097)). No other
+contract change: the other event types remain identical, and the rejection
+happens **before** `incrementSeq`, so a rejected attempt does not open a gap
+in `seq`.
+
+Since [RN-581](../business-rules.md#rn-581) the same funnel also refuses
+**conversation** in a session that is already `closed`/`closed_abnormally`:
+**409** with a named body — `{ message, reason: "sessao_encerrada", status,
+type }`. "Conversation" is a type that only exists as conversation
+(`chat.message`, `chat.structured_question[_answered]`, `agent.status`,
+`agent.activated`, `handoff.offered`/`accepted`, the readiness events) **or**
+any event whose actor is a conversational agent (the six plus `dev-lead` and
+`infra`). What the close itself produces keeps coming in — the Psychologist's
+`ToolLoop`, the Anamnesis outcomes, the human deciding a pending action. The
+status comes from the **same** `UPDATE` that reserves the `seq`, and the
+refusal rolls that increment back: no gap either. The engine's
+`append_event/3` logs the refusal as a warning instead of dropping it, since
+most of its callers discard the return value.
+
+`ActivateExecutionUseCase` gained a second side effect that does **not** go
+through any route in this document ([RN-135](../business-rules/custo.md#rn-135)): at the
+end of activation, if the user's route provides `originSessionId` (the CHAT
+session the click came from), it closes that session via
+`TransitionSessionUseCase` — the same path that `POST /termination` on this
+page uses for the engine to report termination, but triggered by the api, with no trip
+at all to the engine. No new route, no change to the existing `engine → api`
+contract.
+
+`GET /projects/:projectId/execution/session` ([RN-139](../business-rules/autenticacao.md#rn-139))
+is the same story in reverse: it exposes via external HTTP a read
+(`findActiveExecutionSession`) that previously existed only inside
+`ActivateExecutionUseCase`. No new `engine → api` path, no side
+effect — it's a `SELECT`, and the criterion (an `active` session with `execution.activated`
+recorded) doesn't change anything about what the engine already did.
+
+Since [RN-579](../business-rules.md#rn-579) (AT-093) the `EngineApiClient`
+facade has one side effect on top of these routes, and it is on the engine's
+OWN channel, not on the api: when the api **confirms** a write to a session —
+`POST /events` (both `append_event` and `append_event_returning`),
+`POST /actions` (`proposed_action.created`), `POST /handoffs`
+(`handoff.offered`) and the PO's `create_epic`/`create_story`/`create_task`
+(`backlog.*_created`) — the facade broadcasts `event.appended` on
+`session:<id>` with only `type` and `actorId`. A refused write broadcasts
+nothing. No route and no request body changed; before this, only
+`ArtifactEmitter` and the Infra Lead broadcast, by hand, and even for writes
+the api had refused. It is what lets the browser drop its 3s poll while the
+channel is alive.
+
+Writes the api makes on its own — a human deciding an action, a session
+transition, a chat message answered by the api's own LLM turn — do not go
+through that facade, and since AT-157 they reach the channel the other way
+round: after the write **commits**, the api calls
+`POST /internal/sessions/:id/event-appended` (see *api → engine*) and the
+engine broadcasts the same `event.appended`. Writes that arrived from the
+engine itself (`/internal/*`) are not announced a second time — except the
+events the api records on its OWN as the effect of an action it auto-approved
+and executed inside that internal request (`infra.pr_opened`,
+`adr.pr_opened`, `action.*`): the engine's facade only announces the write it
+asked for, so these are announced once by the api
+([RN-848](../business-rules.md#rn-848)). The call is
+best effort and never awaited; if it is lost, the browser's 15s fallback poll
+covers it, as before. The `:id` is sent only when the session id is a
+UUID (the column type): the api checks it where it builds the URL, encodes the
+segment and confirms the result keeps the `ENGINE_URL` origin and the expected
+path — anything else is dropped without a call (AT-344).
+
+### LLM
+
+| method | path |
+|---|---|
+| POST | `/llm-turn` |
+| POST | `/llm-turn-stream` |
+
+Every model call goes through the api. It's not gratuitous indirection: it's where
+metering happens and where the budget can **reject** the call. An engine that
+talked directly to the provider would make the spending cap unenforceable.
+
+**Both** paths use the same time cap, `LLM_TURN_TIMEOUT_MS` (default
+300,000 ms). An LLM turn is not an ordinary API call: with a local model the
+first turn still loads several GB of weights before the first token, and with an
+API provider a large context takes a while. In `/llm-turn-stream` the value applies
+PER CHUNK received — i.e. it's the INACTIVITY cap that
+[ADR 0041](../adr/0041-base-openai-compativel-e-contrato-de-llm-providers.md)
+calls for — not the
+whole response.
+
+The cap needs to be explicit on both: without passing it, `Req` uses its
+default, 15 seconds. While only the non-streamed path passed it, the four
+conversational agents — which use only the streamed one — would fail at 15s with
+`%Req.TransportError{reason: :timeout}`, classified as origin `infra`. With
+a local model the turn fit within 15s and the defect didn't show up.
+
+#### Every non-streamed call runs in its own process ([RN-742](../business-rules.md#rn-742))
+
+`post_returning/3` and every GET of `EngineApiClient.Live` run the `Req` call
+inside a throwaway `Task` (`isolado/1`); the headers are built before, in the
+caller. A response that arrives after the `receive_timeout` lands in a process
+that has already ended, never in the caller's mailbox — on 08/10 that stray
+message crashed the dev agent on its NEXT call. The streamed path stays in the
+caller (its `into:` writes the caller's process dictionary, and the
+conversational agents already call it from the turn's `Task`).
+
+#### The last message may be the language guidance ([RN-622](../business-rules.md#rn-622))
+
+The `messages` the engine sends to both paths may end with ONE extra
+`role: "system"` message — the response-language guidance, appended by the
+`EngineApiClient` facade on every call of an agent turn (the author's language
+for a turn someone typed, the project's language otherwise; never for the
+`context-manager` summarizer). It is ephemeral: it never enters the agent's
+history. The api does nothing special with it — it is a system message like any
+other, and its input tokens are metered like the rest (18–29 per call measured
+with cl100k/o200k, under a 50-token ceiling).
+
+Since [RN-623](../business-rules.md#rn-623) the facade also reads the `tools`
+of the SAME call: in a turn with an author, when those tools include one that
+writes a shared project artifact and the project's language differs from the
+author's, the same message gains a second sentence ("Write project artifacts
+in X." / "Artefatos do projeto: em X."). Still one message, still ephemeral,
+up to 42 tokens in the worst real pair measured. The request body does not
+change.
+
+Since [RN-706](../business-rules.md#rn-706) the calls of `dev-*` agents and
+QA subagents (the `ToolLoop`) may carry ONE more ephemeral `role: "system"`
+message BEFORE the author profile and the language guidance (the language one
+stays last): the agent's environment, built by `Engine.Harness.AmbienteDoAgente`
+— its real working folder (`/work/...` when a container is `running`), the
+image and network from the latest `artifact.project_image`, that git goes
+through the typed actions, and its module and the contracts it consumes.
+Capped at 1 200 characters; a failed read leaves it out. The api treats it as
+any other system message and meters its tokens like the rest. The request
+body does not change.
+
+Since [RN-711](../business-rules.md#rn-711) the calls of the seven
+conversational agents carry ONE more ephemeral `role: "system"` message, after
+the environment one and BEFORE the author profile and the language guidance:
+the delivery flow, built by `Engine.Harness.FluxoDoTime` — the seven steps in
+order, where the agent is, the real next step and who triggers it (human or
+system). Same text for every turn of the same agent; never stored in the
+agent's history. The request body does not change. Since
+[RN-862](../business-rules.md#rn-862) the same message ends, for the Creative,
+PO, Architect and Dev Lead only (the agents with `declare_open_question`), with
+one central sentence: every doubt left for the user becomes
+`declare_open_question`, with the agent's suggestion and what it affects — never
+a question only in the turn text.
+
+Since [RN-874](../business-rules.md#rn-874) the PO's calls carry one more
+ephemeral `role: "system"` message right after the flow one, built by
+`Engine.Harness.DecisoesDoProjeto`: the user's decisions (`decision_record`)
+and the questions still open in the project, read locally from the event log,
+capped at 10 + 10 items and 3 000 characters. Omitted when there is nothing to
+say or the read fails.
+
+#### The final frame carries the model name ([RN-146](../business-rules/autenticacao.md#rn-146))
+
+`RunLlmTurnResult` and the `final` frame of `LlmTurnStreamEvent` gain
+`modelName: string | null` — the name of the model the api resolved
+(`resolveModelBinding` → `models.findById`) before calling the provider.
+`null` only when the turn failed BEFORE resolving any model at all (no
+binding, or a binding to a model that no longer exists); in all other cases —
+including budget exceeded — the binding had already resolved and the name travels
+even in the error frame. The four engine conversational agents
+extract the field from the frame and include it in the `agent.response` payload
+(`modelName`), which is what `SessionPage.tsx` reads to show the model next
+to the agent's name.
+
+#### The Jev may narrow the tool menu ([RN-625](../business-rules.md#rn-625))
+
+Since [ADR 0179](../adr/0179-o-laco-pergunta-ao-jev-qual-ferramenta.md) both
+paths may ask the Jev tool router which tool fits the step before calling the
+chat model, and then offer the model only the menu that is left. The contract
+changes are additive:
+
+- **Request:** both bodies accept an optional `catalogoCompleto: boolean`.
+  `true` skips the router for that call and offers the whole `tools` list. The
+  engine sets it when it repeats a step whose restricted menu made the model
+  answer without calling a tool (once per step).
+- **Response:** `RunLlmTurnResult` and the `final` frame of
+  `LlmTurnStreamEvent` gain an optional `toolRouting` — the menu before and
+  after, the pick, its confidence, the previous tool of the run, latency, the
+  Jev's real cost, and, on any fall to the whole catalog, `motivoDaQueda` and
+  `origemDaQueda` (`infra`/`modelo`/`codigo`). It is ABSENT when the router was
+  not consulted: a provider other than OpenRouter, fewer than two tools, or the
+  workspace switch (`tool_router_enabled`) off. The engine records it as the
+  `tool_router.decided` event.
+- **Stream:** `/llm-turn-stream` may emit a `tool_routing_started` frame
+  BEFORE any `delta`. Engines that do not know it ignore it as an unknown frame
+  type.
+
+The turn never fails because of the router: every error falls to the whole
+catalog, with the reason in `toolRouting`. No route was added or removed.
+
+#### `usage.costMicros` is the real cost when the provider says it ([RN-665](../business-rules/custo.md#rn-665))
+
+Since [ADR 0188](../adr/0188-o-custo-real-do-provider-vira-o-numero-do-metering.md) the `usage.costMicros`
+that both paths return — and that the engine sums into the area budget — is
+the REAL cost the provider returned, when it returned one (today only
+OpenRouter's `usage.cost`, and never on a BYOK call). Otherwise it is the
+frozen catalog price, as before ([ADR 0042](../adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md)).
+The field name and shape do not change; what changes is the number the engine
+receives for the same call, which can be higher than the catalog one.
+
+#### Provider error code: `errorCode`
+
+Next to `error`, the `/llm-turn` body and the `final` frame of
+`/llm-turn-stream` carry an additive `errorCode` — the normalized `code` of the
+provider error ([ADR 0041](../adr/0041-base-openai-compativel-e-contrato-de-llm-providers.md)),
+`null` when there is no error or when the error isn't the provider's (budget,
+missing model binding). A provider 402 is `insufficient_credit`
+([RN-730](../business-rules.md#rn-730)): the engine decides "credit exhausted"
+by this code first (`FalhaDeTurno.credito_esgotado?/1`) and keeps the text match
+only as a fallback for an api older than the field ([RN-726](../business-rules.md#rn-726)).
+
+#### Response cut at the output cap: `truncated`
+
+When the provider closed the response at the output cap (`finish_reason:
+"length"` in the OpenAI-compatible dialect, `stop_reason: "max_tokens"` in
+Anthropic), the `/llm-turn` body and the `final` frame of `/llm-turn-stream`
+carry `truncated: true` ([RN-737](../business-rules.md#rn-737)). The field is
+additive and absent otherwise. The text and the `toolCalls` arguments are cut:
+the engine does not run a tool call from a truncated response (it returns a
+named tool error to the loop) and appends a short "cut off" line to a
+truncated closing text.
+
+#### Spend reports do NOT go through here
+
+Metering is written on **this** path: each `/llm-turn` writes a row to
+`token_usage` before the response returns to the engine. READING that data — the
+owner's invoice (`/workspaces/:id/credential-spend` and
+`/workspaces/:id/spend-report`) and the member's consumption
+(`/projects/:id/spend/me`) — is an **external** surface, authenticated by JWT and
+classified in [security-surface.md](../security-surface.md).
+
+This is not an organizational detail: these three routes branch by **person's
+role** — `owner` for the invoice, `viewer` for one's own consumption
+([RN-101](../business-rules/custo.md#rn-101)). The `X-Brabo-Service-Token` doesn't carry
+a person at all, so an internal counterpart would have to choose between not
+distinguishing the audiences or receiving the actor's id as a parameter — which is
+exactly what [ADR 0063](../adr/0063-duas-audiencias-para-o-mesmo-gasto.md)
+rejects. The engine writes the spend; people are the ones who read it.
+
+[ADR 0076](../adr/0076-provider-volta-a-ser-dimensao-de-gasto.md) revised
+0063 and reopened the breakdown by **provider**, which is a breakdown by CREDENTIAL. Neither the
+route nor the role changed — both remain classified as above —
+but what the owner's route RETURNS did change, and that's why the boundary is worth stating
+here: `porProvider` exists only in the workspace report (`owner`), and the member's
+consumption remains without provider and without credential. What really changed is the
+guarantee mechanism: the dimension requested with an actor scope **does not compile**
+([RN-187](../business-rules/custo.md#rn-187)), instead of relying on the route not
+offering the parameter. The argument in the paragraph above still stands — it's what
+explains why this read never comes down here.
+
+### Session lifecycle
+
+| method | path |
+|---|---|
+| GET | `/internal/sessions/:id/pending-work` (**not** session-scoped in the sense of the others: it's about the session, not within it) |
+
+The `SessionServer` asks before closing on heartbeat. The timeout measures
+TAB inactivity — 30 seconds — and closing a session is about WORK having
+finished, not about who's still watching. In a real execution this held on to
+an `offered` handoff for the Architect inside a closed session
+([RN-064](../business-rules/custo.md#rn-064)).
+
+Response: `{ pending, motivo, aguardandoUsuarioDesde }`. `motivo` goes to the engine log — a session that
+refuses to close without saying why is undiagnosable. And the api being down
+does **not** prevent closing: trading an orphan session for an immortal session would be
+trading one defect for another.
+
+`aguardandoUsuarioDesde` is the fifth signal
+([RN-581](../business-rules.md#rn-581)), and the only one with a **ceiling**:
+when the most recent turn-ending event of the conversation (`agent.response`,
+`chat.structured_question`, `agent.error` on the agent side; `chat.message`,
+`chat.structured_question_answered` on the user side) came from a
+conversational agent, the conversation is waiting for the user, and the api
+returns the ISO instant that turn ended. The api says *since when*; the engine
+decides *for how long* (`SESSION_CONVERSATION_IDLE_TIMEOUT_MS`, 8h) and, past
+it, closes the session as `closed` with cause `conversation_idle_timeout`. It
+is `null` whenever any of the four uncapped signals is present — those win,
+as they always did. A present value the engine cannot parse is treated as an
+error (the heartbeat close), never as "no ceiling".
+
+### Gate registry
+
+| method | path |
+|---|---|
+| GET | `/internal/gates` (**not** session-scoped) |
+
+Read of the declarative registry in `docs/gates.yml`
+([ADR 0054](../adr/0054-gates-como-registro-declarativo.md)). It's not
+session-scoped for the same reason as the model catalog: the registry is global —
+which gates exist is a fact about the product, the same for every project.
+
+Read-only, and with no write route **on purpose**: the registry changes via a PR
+review, not at runtime. A write route would turn an engineering decision into
+production configuration, which is what the ADR rejected by choosing
+YAML instead of a table.
+
+The file travels inside the image (`COPY docs/gates.yml` in
+`docker/api/Dockerfile.prod`), like the migrations: the loader climbs from
+`__dirname` until it finds it, and in production finds it at `/app/docs/gates.yml`. The
+loading is lazy — an unreadable file returns an error on this route, instead of
+preventing the api from starting.
+
+The whole mechanism is documented in
+[docs/explanation/gates.md](../explanation/gates.md).
+
+**There is a second route for the same registry, and it is NOT internal.** The team
+panel (FASE 15b) reads `GET /gates`, authenticated by user JWT like any
+product route. It's not duplication by oversight: `/internal/*` is authenticated by
+**service token**, which the browser doesn't have and can't have — handing it to the front end
+would give it the entire internal surface, not just the gates. The two also differ
+in what they return: the internal one delivers the registry as it is in the YAML, the
+public one returns **only the `active` gates**, because a `planned` gate is
+engineering planning and has no reason to appear on the screen of someone waiting for
+a PR. The classification of both is in
+[docs/security-surface.md](../security-surface.md).
+
+### Model catalog
+
+| method | path |
+|---|---|
+| POST | `/internal/models/sync` (**not** session-scoped) |
+
+One of the two `engine → api` routes outside `/internal/sessions/:sessionId/` (the
+other is the [project working remote](#project-working-remote)), because the
+catalog sync doesn't belong to any session or workspace: the catalog is
+GLOBAL — name, price, window and capabilities are a fact about the provider, the same for
+everyone. Since [ADR 0051](../adr/0051-facetas-de-capability-e-curadoria-por-uso.md)
+this includes the modality facets (reads image, generates image, thinking), which the
+same call reconciles from the remote catalog — modality the
+provider doesn't declare is preserved, not zeroed out. What is per-workspace is the **curation**, and the sync doesn't reach it
+([ADR 0049](../adr/0049-curadoria-de-modelo-por-workspace.md)). The one who
+**schedules** is the engine (`ModelSyncSchedulerWorker`, Oban, with the same self-rescheduling
+worker idiom as `AnamneseSchedulerWorker`); the one with the credentials and
+the provider registry is the api. Duplicating the registry in Elixir would mean maintaining two
+catalogs — see [ADR 0042](../adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel.md).
+
+It responds with **200** with a report per provider (`porProvider[]`), never 5xx because of
+one provider: each row carries `descobertos`, `reencontrados`,
+`indisponibilizados` and — when the provider was not synced — `pulado`
+(`sem_capability` | `sem_credencial` | `falha`) with `origemDaFalha`
+(`infra` | `modelo`) and `detalhe`. A skipped provider **does not deactivate anything**:
+"I don't know what's there" is not "there's nothing there"
+([RN-043](../business-rules/custo.md#rn-043)). The full body is in the
+[generated OpenAPI](/reference/api/) under the `internal` tag.
+
+Two things this route does **not** do, and that used to be different:
+
+- **It does not turn a model on or off in any workspace.** `descobertos` counts
+  new rows in `models`; none of them gain curation. A discovered model
+  has no row in `workspace_models`, and the absence of a row is the off state
+  ([RN-052](../business-rules/custo.md#rn-052)).
+- **It does not change price silently.** A price marked `manual_pricing` is preserved
+  as is, and every change the sync makes writes a row to
+  `model_price_changes` with origin `sync` — within the same transaction as the write
+  ([RN-044](../business-rules/custo.md#rn-044), [RN-051](../business-rules/custo.md#rn-051)).
+
+### Project working remote {#project-working-remote}
+
+| method | path |
+|---|---|
+| GET | `/internal/projects/:projectId/git-remote` (**not** session-scoped) |
+
+The second `engine → api` route outside `/internal/sessions/:sessionId/` to
+exist — the two PO reads, in the following section, came later — and the
+**only one in the product that returns a decrypted secret**
+([ADR 0056](../adr/0056-o-engine-trabalha-em-repositorio-remoto.md)).
+
+It exists for the same split as the catalog sync, applied to another resource:
+the one who works on the file system is the engine, the one with the master key is the
+api. Without it, a project on a remote provider did the conversational half and stopped
+at the construction one — `get_local_repo_path/1` rejected anything that wasn't `local`,
+and worktree, terminal, gate diff and context stopped along with it.
+
+It responds with the **clean** origin (`origin`), the default branch and, for a
+remote provider, `token` and `username` separately. The separation is not cosmetic:
+
+> **The `origin` never carries a credential.** This is the value stored in
+> the workspace's `.git/config`, **inside the folder where the dev agent has
+> auto-approved read access** ([RN-075](../business-rules/custo.md#rn-075)). A URL like
+> `https://x-access-token:TOKEN@…` there would be a `cat .git/config` away
+> from becoming LLM context.
+
+Whoever consumes it has the symmetric obligation: inject the token **per invocation**, into
+the environment of each git call's child process, and never in argv or in a
+file ([RN-076](../business-rules/custo.md#rn-076), `Engine.Actions.GitAuth`).
+
+The credential is the **workspace owner's**, via the same resolver as
+[RN-058](../business-rules/custo.md#rn-058). The `local` provider **does not reach here**: it
+is resolved directly from the database by the engine, has no token and does not depend on the api
+being up — it's the path `pnpm dev` and the entire test suite exercise.
+
+#### The Code tab does NOT go through here, and the asymmetry is the point
+
+The FASE 26b code-reading surface (`/projects/:projectId/code/*`)
+**has no internal counterpart**, and it's worth explaining why — the route above exists
+for the opposite case, and the two together show the split.
+
+The engine needs `git-remote` because it works on the **file system**:
+clones, creates a worktree, runs a command. The Code tab doesn't work anywhere —
+it asks the **provider** for the content of a ref, through the api, with the
+credential the api already has. Nothing on this path needs a decrypted secret
+crossing a process, and that's why nothing on this path opens an internal route.
+
+The practical consequence is the one that matters: the only route in the product that returns
+a decrypted secret remains just ONE. Reading code did not multiply it.
+
+#### Chat RAG indexing (Wave 4/G2) also does not open an internal route
+
+`docs`/`adr` are indexed via `ReadProjectCodeUseCase` — the SAME
+surface as the Code tab, same owner credential, same container gate
+(RN-105) — for the reason above: nothing on this path decrypts a
+secret in a separate process. `session` reads `chat.message`/`agent.response`
+directly from the event log, without leaving the api. The embedding (`RagEmbeddingService`)
+never goes through the RN-058 credential resolver: it requests the
+FIXED provider `ollama` directly from the `LLMProviderRegistry`, the same path that
+RN-058 already describes as "the search is skipped" for that provider — there is no
+user secret to decrypt here, and that's why there is also no
+internal route to open ([RN-232](../business-rules.md#rn-232),
+[ADR 0080](../adr/0080-busca-hibrida-pesos-limiar-e-citacao.md)).
+
+### What the PO re-reads: business rules and backlog
+
+| method | path |
+|---|---|
+| GET | `/internal/projects/:projectId/business-rules` (**not** session-scoped) |
+| GET | `/internal/projects/:projectId/backlog` (**not** session-scoped) |
+
+The other two routes outside `/internal/sessions/:sessionId/`, and by the
+same criterion as the previous ones: the resource belongs to the **project**, and a
+session segment here would be decorative — worse, it would be misleading, because it's
+exactly the session scope that caused the defect these routes fix
+([RN-164](../business-rules/autenticacao.md#rn-164)).
+
+The PO had **four tools and all of them writes** (`create_epic`,
+`create_story`, `create_task`, `offer_handoff`). Its context was assembled
+once, at kickoff, from the **first** 200 events of the **current session** (this
+page used to say "last"; it was the first, which is what
+[RN-580](../business-rules.md#rn-580) measured and fixed) —
+and after that it never re-read anything again. In a long session, or in a resumed
+one, it didn't know which rules existed, which it had already covered, nor what it
+had already created itself. The symptom that appeared in real use was a backlog with
+an epic and **no stories at all**: without a story there's no task, and without a task
+execution stalls with no error at all.
+
+`/business-rules` returns every `artifact.business_rule` from the project's sessions
+— with the full `description`, which stories already cite each rule
+(`coveredByStoryIds`) and the `uncoveredCount`. It's not `GetCoverageUseCase`
+again: that one answers "how much of the product has already become a story" for the
+SCREEN and so only carries the title; this one answers "what I need to turn into
+a story" for the MODEL, and without the description the PO would have the rule's statement and
+not its content. The CALCULATION of coverage is the same (`computeCoverage`,
+pure) — two calculations of the same fact would diverge on the first tweak.
+
+`/backlog` returns the SAME epic → story → task tree as the Backlog tab,
+via the same `ListBacklogUseCase` (three reads per project, never N+1).
+
+Neither of the two returns a secret, and **neither of the two accepts a parameter beyond
+the project id**: no search term, no pagination, no filter. It's
+deliberate, and it's what keeps them on the right side of
+[ADR 0060](../adr/0060-superficie-de-leitura-de-codigo.md): reading is not
+an external effect and doesn't become a `proposed_action`, but an agent's read needs to be
+CONTAINED — and a route without a parameter has nowhere for the model to write whatever it
+wants. The cost per call is constant, and the text delivered to the model has a
+line cap, always declaring the real total when it truncates.
+
+### What the PO re-reads: product metrics
+
+| method | path |
+|---|---|
+| GET | `/internal/projects/:projectId/product-metrics` (**not** session-scoped) |
+
+The THIRD PO read route, same design as the two above
+([RN-407](../business-rules.md#rn-407)) — closes the last pending item from the
+`fluxo.yml` × code audit
+([item B4](../explanation/auditoria-fluxo-vs-codigo.md#b-gaps-in-active-roles-already-implementable-work)):
+`docs/fluxo.yml` (role `po`, entry `metricas-de-produto`) declared
+`status: lacuna` since ADR 0089 — the DATA already existed (the
+`analise:funil` script measures the session → commit → PR → merge funnel, real lead time
+and real deployment frequency), only the reading MECHANISM within the
+turn was missing.
+
+The report is assembled by the SAME pure functions and the SAME query as the script —
+`calcularFunil`/`calcularLeadTimes`/`leadTimeMedioMs`/
+`deploymentFrequencyPorDia`/`buscarAcoesGitDoFunil`, extracted to
+`apps/api/src/application/services/funil-metrics.ts` (`scripts/` can't
+import `src/` in the reverse direction, and a use case can't import from
+`scripts/`), so that the PO's read and the human report never diverge from
+the same fact. `apps/api/scripts/analise-funil.ts` now REEXPORTS from there
+instead of defining locally — with no change in signature or behavior.
+
+The JSON body has no field at all for the three permanent absences the
+script declares ("Not measured, on purpose": full product funnel
+ideation → commit, evidence of adoption per feature, MTTR/change failure
+rate) — the PO's tool (`listar_metricas_de_produto`) names the three
+by name in the TEXT it returns to the model, never letting it conclude by
+omission that there is no gap.
+
+### What the dev agent reads: the contracts between modules
+
+| method | path |
+|---|---|
+| GET | `/internal/projects/:projectId/module-contracts` (**not** session-scoped) |
+
+The dev agent's read of the Architect's contracts
+([RN-684](../business-rules.md#rn-684),
+[ADR 0200](../adr/0200-contrato-entre-modulos-artefato-do-arquiteto.md)), so
+that it stops reading another module's worktree to discover an interface.
+Same design as the PO's reads: no parameter beyond the project, constant cost
+(the current `module_map` and one read by event type). The response has one
+entry per module of the CURRENT `module_map` — `modulo`, `dependeDe` (the
+map's `dependsOn`: what it consumes) and `expoe` (the current contract's
+items, or `null` when the Architect declared none) — plus
+`contratosForaDoMapa`, the contracts of modules the map no longer has, said
+and never attached to anything. `status: sem_contratos` with `version: 0` is a
+legitimate answer, not an error. The engine tool (`listar_contratos_de_modulos`)
+renders in full only the dev's own module and the ones it consumes, with a
+120-item cap that states what was cut.
+
+### Where the project's workspace lives — and why READING still isn't a route
+
+The project's `execution_mode` ([ADR 0072](../adr/0072-projeto-local-ou-container.md)/
+[ADR 0104](../adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md),
+[RN-169](../business-rules/autenticacao.md#rn-169)/[RN-421](../business-rules.md#rn-421))
+follows the same split. From it a project can be `container` (the
+managed folder in `PROJECT_WORKSPACES_ROOT`, the default), `mounted` (an
+absolute path of the user's, mounted via bind-mount) or `runner` (an absolute
+path of the user's, WITHOUT bind-mount, confirmed by a connected `brabo-runner`) — and the
+engine needs to know which one, because it's the one that creates the worktree and runs commands
+inside it.
+
+**READING remains without an internal route.** The engine resolves the locator by reading
+the SAME columns of the SAME database (`projects.execution_mode` and
+`projects.workspace_path`), as it already did with `workspace_dir_name` since
+[ADR 0066](../adr/0066-nome-de-pasta-legivel-do-workspace.md). It's the same
+argument as always: the two derivations — api and engine — need to agree, and
+agreeing by reading the same row is cheaper and harder to diverge from
+than agreeing via an HTTP contract. There is no secret involved, so there's no reason
+for a read route.
+
+The engine distinguishes `container` from the other two by the **leading slash** of
+the locator: folder name in `container`, absolute path in
+`mounted`/`runner` — the two share the SAME root derivation; what
+changes between them is WHEN/WHO confirms that the path actually exists (see the
+next section).
+
+**The projects base changes where `mounted` folders live, and deliberately
+changes nothing here** ([ADR 0141](../adr/0141-base-unica-dos-projetos-montados.md),
+[RN-500](../business-rules.md#rn-500)). Since that ADR, `mounted` projects live
+under a single operator-configured base — `BRABO_PROJECTS_BASE` — instead of
+each one needing a hand-written bind-mount line in both services. The base is
+mounted by **identity** (`$X:$X`) into `api` and `engine`, and that is exactly
+why this contract is untouched: the absolute path stored in
+`projects.workspace_path` means the same thing in both containers and on the
+host, so the leading-slash discriminator above keeps working, `projectScopeRoot`
+(api) and `Engine.Actions.Workspace.workspace_dir/2` (engine) keep agreeing, and
+**no route was added in either direction**. A fixed mountpoint would have
+forced a translation into this contract; identity is what buys its absence.
+
+**Nor does deferring the disk check change anything here**
+([ADR 0142](../adr/0142-validacao-de-workspace-montado-adiada.md),
+[RN-501](../business-rules.md#rn-501)). Creating a `mounted` project stopped
+requiring the folder to exist — creation validates the lexical form plus the
+base, and the folder is created when Infra starts the container — so between
+those two moments the engine can read a `workspace_path` pointing at a folder
+that isn't there yet. That is not a contract change and needs no route: the
+engine already had to survive it, because `runner` has had the same window
+since ADR 0104 (the path is written at creation and only confirmed later), and
+`Engine.Actions.Workspace.ensure!/4` already creates what it needs. What the
+window costs is stated in the ADR and belongs to the SCREEN, not to this
+contract: a project in that state has `workspace_verified_at = null`, and the
+UI has to say the folder isn't there yet rather than show a path as if it were.
+
+#### Browsing that base is NOT an internal route either
+
+The folder picker that helps a human choose where a `mounted` project will
+live is `GET /workspaces/:workspaceId/project-folders`
+([RN-504](../business-rules.md#rn-504)) — a **public** route on the
+`workspaces` controller, behind `@RequireRole('maintainer')` and documented in
+[the security surface](../security-surface.md), not an `internal/` one.
+
+The distinction is the same one this page draws everywhere: `internal/` exists
+for what the ENGINE needs and cannot read from the database — never for what a
+BROWSER needs. Nobody in the engine browses folders; the caller here is a person
+clicking through a picker in the project wizard, authenticated as themselves and
+authorized by their role in the workspace. Routing it through the service token
+would replace a per-user authorization with a shared secret, on a route whose
+entire job is to expose part of the operator's filesystem topology.
+
+The two mechanisms that used to do this job both lived OUTSIDE this contract:
+`FolderBrowserModal` navigated through the runner's own websocket
+(`fs_list_dir`/`fs_home_dir`, the `terminal:<projectId>` channel — so the
+listing came from the user's machine, never from the server), and
+`RunnerOnboardingPanel` used `showDirectoryPicker`, which hands back a browser
+handle and never an absolute path.
+
+This route replaced the first one for the `mounted` mode, and only for it. RN-504
+had pointed BOTH modes here on the premise that the `runner` mode would leave
+project creation; it didn't, and
+[RN-533](../business-rules.md#rn-533) ([ADR 0151](../adr/0151-base-consentida-no-runner.md)
+point 7) sent the `runner` picker back to the channel. The two are not
+redundant — they read different disks, and neither can answer for the other: this
+route answers about the ONE folder the api can see, the base above; the channel
+answers about the machine the server cannot see at all. Nothing about this
+route's contract changed with that.
+
+#### And neither is declaring the mirror destination
+
+`PUT /projects/:projectId/mirror-path` ([RN-515](../business-rules.md#rn-515),
+[ADR 0147](../adr/0147-agente-local-com-capacidades.md) point 4) stores the
+folder the `espelho` capability copies a project's work to — a folder OUTSIDE
+the mounted base. It is a **public** route on the `projects` controller,
+`@RequireRole('maintainer')`, documented in
+[the security surface](../security-surface.md), for the same reason as the
+picker above: the caller is a PERSON configuring their project, not the engine
+reading something it cannot get from the database.
+
+This route only decides **where the destination lives and what counts as a
+valid one**. The protocol that carries it to the runner and the copy itself
+are the engine's and the runner's, and they exist since
+[RN-516](../business-rules.md#rn-516) — **with no new internal route**, which
+is the point worth writing down here. The engine reads the column directly —
+`mirror_path` on `projects`, `null` when the project has no mirror, which is
+the normal state — through the same `Engine.Projects.Project` reads it already
+uses for `workspace_path` and `execution_mode`, and the value also rides along
+every project response (`ProjectResponseDto.mirrorPath`), so the web needs
+none either.
+
+Where the destination reaches the runner is the **`join` reply of the
+`terminal:<projectId>` channel**, and nowhere else: when the project has a
+destination and the `espelho` capability was granted, the reply carries
+`%{espelho: %{destino: "<path>"}}`. The runner refuses `mirror_sync` for any
+destination that was not granted on that connection — never a global setting
+on its side, never an environment variable, because a global destination would
+land project B's artifact in project A's folder and the user would find out
+from the content, not from an error. Two consequences follow, both deliberate:
+a declared destination makes `espelho` a **required** capability, so a
+`brabo-runner` older than that version stops connecting to that project (named
+refusal, fatal, no retry — see [RN-514](../business-rules.md#rn-514)); and
+changing the destination while a runner is connected requires reconnecting it,
+because the grant belongs to the join.
+
+One asymmetry worth writing down: the api validates this path **lexically
+only**, and says so. It has no disk to ask — the destination lives on the
+user's machine, exactly as in `runner` mode. The `realpath` half of the guard
+(a symlink in some segment of the destination pointing back into the source)
+is the runner's (`apps/runner/src/espelho-guard.ts`, RN-516), and nothing in
+this contract should be read as the api having already established it.
+
+### What the mirror round DID — the report, which IS a new route ([RN-517](../business-rules.md#rn-517))
+
+| method | path |
+|---|---|
+| POST | `/internal/projects/:projectId/mirror-sync-result` (**not** session-scoped) |
+
+The same exception, one step later, and for the same reason: the only party
+that knows what happened on the user's machine is the `brabo-runner`. It
+pushes `mirror_sync_result` over the `terminal:<projectId>` channel after the
+round FINISHES — never an optimistic "ok" before it — and the engine forwards
+it here (`Engine.Sessions.EngineApiClient.report_mirror_sync/2`). The channel
+handler is modelled on `workspace_confirm` below, deliberately: it is the only
+precedent of the runner telling the server something about itself, and a
+second mechanism would be a second source of the same truth.
+
+The engine does NOT write the table. It translates the protocol's pt-BR
+vocabulary (`sucesso`/`erro`/`destino`/`copiados`, the same shape as
+`container_start_result`) into this route's body (`ok`/`error`/`destination`/
+`filesCopied`) and posts it. `ok` is never inferred from a count being present:
+a round that copied 0 files is normal, and inferring would make it
+indistinguishable from a round that never ran.
+
+The api writes `project_mirror_states` — a TABLE, never the event log, because
+a mirror round has no session and `session_events.session_id` is `NOT NULL`
+(the same reasoning that made `rag_searches` a table,
+[RN-479](../business-rules.md#rn-479)) — and never a `proposed_action`, because
+the mirror write is configuration the user declared, not an agent asking to
+act.
+
+**Recording never breaks what it measures.** The copy has already happened when
+this route is called; a `404`, a timeout or any other refusal is only LOGGED by
+the channel handler, and the runner's connection is untouched. That is also why
+a project whose destination was cleared meanwhile still records: the round
+happened, and its error is usually what explains what went wrong.
+
+What the screen reads is a **public** route, not this one:
+`GET /projects/:projectId/mirror-state` (`viewer`), which resolves the three
+states of [RN-088](../business-rules.md#rn-088) — `never` (absent row), `synced`
+(possibly with `filesCopied: 0`) and `failed` — on the api side, so the rule
+that decides which of the two timestamps is current has a single source.
+
+### Workspace confirmation by the runner — the WRITE, which is a new route ([RN-423](../business-rules.md#rn-423))
+
+| method | path |
+|---|---|
+| POST | `/internal/projects/:projectId/workspace-verification` (**not** session-scoped) |
+
+The exception to the previous section's rule: WRITING the path for a
+`runner` project cannot be a direct column read, because the one with authority
+over the path is neither the api nor the engine — it's the `brabo-runner`, running on
+the real HOST. The `terminal:<projectId>` channel receives `workspace_confirm`
+from the runner right after the `join`; the engine forwards it to this route
+(`Engine.Sessions.EngineApiClient.confirm_workspace/4`), which:
+
+1. Rejects with `400` if the project is not in `execution_mode: "runner"`;
+2. Revalidates the path with the SAME lexical predicate as creation
+   (`caminhoDeWorkspaceLocalValido`) — system root and overlap with the
+   Brabo checkout remain forbidden even coming from the runner;
+3. **Overwrites** `workspacePath` and writes `workspaceVerifiedAt = now()` — the
+   runner is the source of truth, without requiring equality with what was typed
+   in the wizard;
+4. Is idempotent: reconnecting with the SAME path rewrites nothing
+   (`changed: false`);
+5. Attempts to write `project.workspace_verified` to the event log of the project's
+   most recent session — without a session yet, the `UPDATE` happens the same way
+   and only the event is skipped, the same degradation `pty_open`/`pty_close`
+   already accept.
+
+`Engine.Actions.TerminalExecutor.decisao_de_execucao/1` is the one that CONSUMES the
+result: routes to the runner only with `workspaceVerifiedAt` non-null **and**
+a runner connected right now; missing either of the two, it rejects
+explicitly — never falling back to `mounted`'s `System.cmd`/bind-mount, which does not
+exist for a `runner` project.
+
+### Terminal command execution inside the real container — a new route ([RN-492](../business-rules.md#rn-492), [ADR 0134](../adr/0134-dev-agents-executam-dentro-do-container.md))
+
+| method | path |
+|---|---|
+| POST | `/internal/projects/:projectId/container-exec` |
+
+The fifth outcome of `decisao_de_execucao/1`, `:executar_no_container`: when
+the project is `execution_mode: container` AND has a container REGISTERED
+`running` in `project_containers` (read directly,
+`Engine.Containers.ProjectContainerLifecycle.running?/1` — same pattern as
+the workspace-locator read above, no route needed for that check either),
+the command no longer runs via `System.cmd` inside the engine process. It
+crosses this route (`Engine.Sessions.EngineApiClient.executar_comando_no_container/4`),
+which proxies to `ContainerBrokerPort.exec` (`ExecutarComandoNoContainerUseCase`)
+and runs it inside the real container via `docker exec`.
+
+This route lives in `InternalProjectsController`, not
+`InternalContainersController` (the one the BROKER reads to compose a
+spec) — the direction is the opposite: here it's the ENGINE calling the
+api, and the call doesn't write `project_containers` at all, so it doesn't
+fall under that controller's "no `@Post` here" rule (that rule is about who
+has authority to WRITE the lifecycle state, which this route never
+touches).
+
+`cwd`, when present, arrives ALREADY translated from the HOST path (inside
+`PROJECT_WORKSPACES_ROOT`) to inside `/work` — the engine does that
+translation (`cwd_para_container/2`) before calling this route; the api
+never sees a host path here.
+
+The response body never throws for a broker refusal or a dead/removed
+container (`RN-486`: registered and observed never merge — a `running`
+row doesn't guarantee the container is up right now). `{ sucesso: false,
+motivo }` is the NORMAL shape for that; the engine turns it into an
+ordinary `failed_result`, same as any other failed command — never a
+crash, never a silent fallback back to `System.cmd` outside the container.
+
+**Each hop waits longer than the one below it**
+([RN-604](../business-rules.md#rn-604)). The broker cuts the command at
+`timeoutMs` and answers `timedOut: true`; the api's call to the broker waits
+`timeoutMs` plus the broker's own overhead (`tetoDaOperacao` in
+`container-broker.client.ts` — at most `timeoutMs` + 45s, 5s for the screen's
+`inspect`, 195s for `start`/`stop`/`remove` — [RN-605](../business-rules.md#rn-605)); and the engine's call to this
+route passes `receive_timeout: timeoutMs + 90s`
+(`teto_do_container_exec_ms/1`). Before AT-233 the engine fell back to Req's
+15s default — the same number as `TERMINAL_ACTION_TIMEOUT_MS` — and the api
+used 5s for everything, so any command over 5s came back as "the broker did
+not respond". A ceiling that runs out now says so: `motivo` names the
+operation and the number (`teto-excedido`), distinct from an unreachable
+broker.
+
+The OUTER hop has a ceiling too ([RN-757](../business-rules.md#rn-757)): a
+`terminal` action the api auto-approves is executed inside the same
+`POST /internal/sessions/:sessionId/actions` request (api →
+`/internal/actions/execute` → this route), so the engine calls it with
+`receive_timeout: TERMINAL_ACTION_TIMEOUT_MS + 120s`
+(`teto_do_propose_action_de_terminal_ms/0`). Before AT-440 it used Req's 15s
+default and an `npm install` reached the agent as a raw
+`%Req.TransportError{reason: :timeout}`; that outcome now reaches the model
+naming the ceiling and suggesting `nohup … &`.
+
+### Per-agent context
+
+| method | path |
+|---|---|
+| GET | `/dev-context` |
+| GET | `/infra-context` |
+| GET | `/psychologist-context` |
+| GET | `/anamnese-context` |
+| GET | `/infra-artifacts/:prActionId/files` |
+
+One endpoint per agent, instead of a generic one: each one assembles exactly what
+that role needs, and the Harness doesn't end up filtering in the engine what
+the api could have simply not sent.
+
+`/dev-context` gained `siblingTasks` in AT-448 ([RN-765](../business-rules.md#rn-765))
+— the OTHER tasks of the same story, `{id, title, status}` each, without the
+task itself (`tarefasIrmas` in `get-dev-task-context.use-case.ts`), an empty
+list when the story has one task. It is what `Engine.Gates.RecorteDaTarefa`
+puts in front of the QA test plan and the `qa-automacao` review, so the
+verdict is about what THIS task delivers and a requirement owned by a sibling
+becomes an observation instead of a rejection. Read-only, same route, same
+`engine-service` guard: the HTTP surface does not change.
+
+`/dev-context` also gained `task.primeiraDoModulo` in AT-433
+([RN-774](../business-rules/custo.md#rn-774)) — `true` when the oldest
+`backlog.task_claimed` of the project for that module is this task
+(`ehPrimeiraTarefaDoModulo` in `get-dev-task-context.use-case.ts`), `false`
+without a module or without any claim. `Engine.Dev.TetoDaTarefa.efetivo/2`
+reads it to give the first task of each module twice the per-task budget.
+Read-only, same route, same `engine-service` guard: the HTTP surface does not
+change.
+
+`/dev-context` also gained `moduleOpenTasks` and `moduleOpenTasksTotal` in
+AT-461 ([RN-785](../business-rules.md#rn-785)) — the tasks not yet done of the
+OTHER stories of the same module, each with its story title, at most 20, with
+the real total beside them (`tarefasAbertasDoModulo` in
+`get-dev-task-context.use-case.ts`); archived stories are left out.
+`Engine.Gates.RecorteDaTarefa` lists them to the QA so that a requirement that
+depends on another story not delivered yet becomes an observation instead of a
+rejection. Read-only, same route, same `engine-service` guard: the HTTP surface
+does not change.
+
+`/dev-context` also gained `moduleContract` in AT-462
+([RN-786](../business-rules.md#rn-786)) — the current contract
+(`artifact.module_contracts`) of the task's module, `null` when the story has
+more than one module and the task has none. The QA cut presents it as the
+source of the interface: when the story and the contract diverge, the verdict
+names the divergence instead of rejecting the dev that followed the contract.
+Read-only, same route, same `engine-service` guard: the HTTP surface does not
+change.
+
+`/dev-context` also gained `decisoes` in AT-521
+([RN-859](../business-rules.md#rn-859)) — the user's `decision_record`s whose
+`afeta` touches the task, its story or one of the story's rules, newest first,
+at most 10, each text cut at 1,500 characters. They win over RF/DoR on
+conflict. Read-only, same route: the HTTP surface does not change.
+
+Since AT-526 ([RN-872](../business-rules.md#rn-872),
+[ADR 0215](../adr/0215-decisao-do-projeto-chega-ao-dev-e-ao-qa.md)) it also
+returns `decisoesDoProjeto`: the project's other decisions, those whose `afeta`
+does not touch the task, in a separate list inside the SAME cap of 10 (task
+decisions take it first). `decisoes` also matches legacy decisions whose
+`afeta.regras` holds the rule TITLE instead of the id. Additive field: an
+engine that does not know it ignores it.
+
+`/infra-context` gained `gitProvider` in FASE 8c (`null` with no repository
+provisioned) — it's how the Workflows subagent decides `.github/workflows/
+ci.yml` vs `.gitlab-ci.yml`, with no new route (same "one GET per
+agent" pattern — see [RN-037](../business-rules.md#rn-037)). It is **not**
+`capabilities` of the `GitProvider`: GitHub and GitLab have the SAME capabilities
+(`{protectBranch: true, pullRequests: true}`) — only `provider.name` distinguishes them.
+
+`/infra-context` also gained `moduleRouting` (ADR 0131/0133, [RN-491](../business-rules.md#rn-491))
+— the Architect's routed candidates (`artifact.module_routing`,
+`GetModuleRoutingUseCase`'s first HTTP consumer), `{status, roteamento,
+version, eventId, createdAt}`, `SEM_ROTEAMENTO` when the Architect hasn't
+run `route_modules_to_infra` yet. It's what `InfraLeadServer.build_kickoff/1`
+lists so the model can elect one candidate via `propose_container_start`
+instead of inventing an image outside it.
+
+`/infra-context` also gained `projectImage` ([RN-852](../business-rules.md#rn-852),
+ADR 0213) — the CURRENT `artifact.project_image` decision (`{image,
+rationale, network, resources}`), `null` when none was decided. It is the
+`FROM` of the Dockerfile and the network the Infra compose respects.
+
+### Backlog and architecture
+
+| method | path |
+|---|---|
+| POST | `/epics` · `/stories` · `/tasks` |
+| POST | `/stories/:storyId/complete` (RN-720) |
+| POST | `/stories/:storyId/update` · `/stories/:storyId/archive` (RN-727) |
+| POST | `/story-modules` |
+| POST | `/module-map` |
+| POST | `/c4-diagram` |
+| POST | `/module-routing` |
+| POST | `/module-contracts` |
+| POST | `/project-image` |
+| POST | `/tasks/claim` |
+| POST | `/tasks/:taskId/status` |
+| POST | `/tasks/:taskId/block` |
+| POST | `/tasks/:taskId/unblock` (RN-864) |
+| GET | `/tasks/in-progress-by-dev` (RN-856) |
+
+`tasks/claim` is atomic on the api side — it's what prevents two dev agents from
+claiming the same task. Since RN-856 it returns the agent's OWN `in_progress`
+task (outside the gates, not blocked) before the `todo` queue.
+`tasks/:taskId/unblock` is the engine's automatic retry after a transient
+network/provider failure ([RN-864](../business-rules.md#rn-864)): the same use
+case as the human unblock, with a `system` actor, and a no-op when the task is
+no longer blocked.
+`tasks/in-progress-by-dev` lists the project's `in_progress` tasks held by a
+`dev-*` agent (empty unless the session is an execution session); the engine
+blocks the ones no live dev agent holds when it stops an execution.
+
+`/stories/:storyId/update` (title and/or description) and
+`/stories/:storyId/archive` (optional `reason`) are the PO's `update_story` and
+`archive_story` ([RN-727](../business-rules.md#rn-727),
+[ADR 0212](../adr/0212-historia-arquivada.md)). Both go through the same rule
+as the user's routes — only a `draft` story with no task `in_progress` or
+`in_review` — and refuse with a named 409 (`historia_arquivada`,
+`historia_nao_draft`, `historia_com_tarefa_em_execucao`) that reaches the model
+as the tool result. An archived story leaves the backlog, coverage, the
+promotion queue, the Dev Lead's plan and the claim; `/stories/:storyId/complete`
+and `/tasks` refuse it. Body: `projectId` plus `title` (≤ 200) and/or
+`description` for update (`UpdateStoryInternalDto`), `projectId` plus an optional
+`reason` for archive — both in `create-story-internal.dto.ts`.
+
+`/module-map` takes, per module, an optional `resources` object (`cpus`,
+`memoryMb`, `pidsLimit` — all three or none): what THAT module needs alone in
+the project container ([RN-683](../business-rules.md#rn-683),
+[ADR 0199](../adr/0199-recurso-minimo-derivado-do-module-map.md)). A partial
+declaration, a value above the container ceiling, or a SUM over modules above
+it returns `400` with the reason — modules share ONE container, so the sum is
+the minimum the Infra starts it with.
+
+`/project-image` is the Architect's `choose_project_image` tool (FASE 25a,
+[ADR 0065](../adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica.md)):
+fixes the project's container image. Same caliber as `/module-map` — the
+artifact IS the `artifact.project_image` event, with no table of its own, versioned
+(the current one is the one with the highest `version`). An image with no explicit tag
+(`latest` rejected), a short `rationale`, or a resource above the cap return `400`, with
+the full reason in the body — that's what lets the model correct itself via the
+tool-result instead of re-emitting the same thing ([RN-061](../business-rules/custo.md#rn-061)).
+While no version exists, `GET /projects/:projectId/container` (public route,
+`role:viewer`) returns `status: "sem_decisao"`, and it's the same state that
+makes the Code tab return `409` ([RN-105](../business-rules/autenticacao.md#rn-105)).
+
+`/c4-diagram` is the Architect's `create_c4_diagram` tool
+([RN-149](../business-rules/autenticacao.md#rn-149),
+[ADR 0068](../adr/0068-diagrama-c4-do-arquiteto.md)): generates the Mermaid
+syntax for the Context and Container levels of the C4 diagram (Simon
+Brown's model). Same caliber as `/module-map`/`/project-image` — the artifact IS the
+`artifact.c4_diagram` event, with no table, versioned (the current one is the
+highest `version`; revising means generating again). The body carries only
+`system_name`/`system_description`/`actors` — the Container level's modules
+do NOT come in the body: the use case fetches the project's CURRENT `module_map`
+and derives it from there, never from what the model rewrites. With no current
+module_map, `400` (there is no Container level without modules). `GET
+/projects/:projectId/architecture` (public route, `role:viewer`) returns the
+current diagram in `c4Diagram`, in the same object that already carries `moduleMap`
+and `adrs`.
+
+`/module-routing` is the Architect's `route_modules_to_infra` tool
+([RN-487](../business-rules.md#rn-487),
+[ADR 0131](../adr/0131-roteamento-de-modulos-para-infra.md)): one candidate
+image per module of the CURRENT `module_map`, each with a `porque`. Same
+caliber as `/module-map`/`/c4-diagram`/`/project-image` — the artifact IS the
+`artifact.module_routing` event, with no table, versioned. The body carries
+`roteamento: [{modulo, imagemCandidata, porque}, ...]`; each item's image is
+validated by the SAME rule `/project-image` uses (explicit tag/digest,
+`latest` rejected, non-trivial `rationale`), and `modulo` must name a module
+that exists in the current `module_map` — an unknown name, an empty list, or
+a repeated module all return `400` naming what's wrong. The Architect only
+CANDIDATES: electing among the candidates (or refusing all of them) is a
+later step, owned by Infra.
+
+`/module-contracts` is the Architect's `declare_module_contracts` tool
+([RN-684](../business-rules.md#rn-684),
+[ADR 0200](../adr/0200-contrato-entre-modulos-artefato-do-arquiteto.md)): per
+module of the CURRENT `module_map`, what it EXPOSES to whoever depends on it.
+Same caliber as `/module-routing` — the artifact IS the
+`artifact.module_contracts` event, with no table, versioned, and each call
+carries the WHOLE list and replaces the previous version. The body carries
+`contratos: [{modulo, expoe: [{tipo, assinatura, descricao}]}]`, `tipo` in
+`funcao | rota | evento | dado`. What a module CONSUMES is not in the body: it
+is the current `module_map`'s `dependsOn`, derived when read. An empty list, a
+repeated module, a module outside the current `module_map` (or none), an
+empty or oversized `expoe` (1 to 40 items), an unknown `tipo`, or a missing
+or oversized `assinatura` (300 characters) all return `400` naming the module
+and the item. It is a SEPARATE artifact from the `module_map`, never a field
+of it.
+
+**With no claimable task, the response is `201` with an EMPTY body**, not `null` in the
+body: the use case returns `null` and NestJS serializes that as `content-length: 0`.
+Whoever consumes it needs to treat an empty body as "nothing to claim" — and that's
+exactly what `EngineApiClient.claim_task/4` does, normalizing to `nil`
+before delivering it to `AgentIo`.
+
+Worth writing down because the opposite assumption was costly: the client assumed
+decoded `null`, received `""`, and the dev agent treated the empty string as if
+it were a task — dying at the most common moment there is, the module's queue
+emptying out (finding W, in
+[achados-execucao-real.md](../explanation/achados-execucao-real.md)).
+
+### Gates
+
+| method | path |
+|---|---|
+| POST | `/tasks/:taskId/gate/open` |
+| POST | `/gates/verdict` |
+| POST | `/infra-gates/verdict` |
+| POST | `/delegations` |
+
+The **gate state machine lives in the api**, not in the engine. The engine reports the
+verdict; who decides whether the transition is legal — and rejects QA trying to jump to
+`awaiting_user` — is the domain ([RN-014](../business-rules.md#rn-014)).
+
+Since AT-521 `/gates/verdict` also accepts `veredito: "needs_user_decision"`
+(QA only — [RN-860](../business-rules.md#rn-860), ADR 0214), with `pergunta`
+and `sugestao` or an existing `openQuestionId`. It keeps the same gate WITHOUT
+counting a correction, writes an `artifact.open_question` (author `qa-agent`,
+affecting the task) when no `openQuestionId` is given, marks `pr.gate_changed`
+with `esperandoUsuario: true`, and answers `nextAction: "await_user"` plus the
+`openQuestionId` — the engine parks the cycle (ADR 0207) and answering the
+question resumes it. The engine records `artifact.open_question` through
+`POST /events` like any other artifact; the api validates its payload there
+([RN-858](../business-rules.md#rn-858)). `stories/:storyId/update` and
+`stories/:storyId/complete` accept an optional `questionId`: a `ready` story is
+corrected only when it cites a question the user already answered
+([RN-859](../business-rules.md#rn-859)).
+
+Since AT-526 an `openQuestionId` on the verdict must exist in the project and
+be OPEN, checked before any write ([RN-870](../business-rules.md#rn-870)):
+unknown (or from another project) is **404** `reason: "pergunta_nao_encontrada"`;
+already answered is **409** `reason: "pergunta_ja_respondida"` with the user's
+decision in `decisao` — nothing is written and no `pr.gate_changed` is emitted.
+On `POST /events`, an `artifact.open_question` whose `afeta.regras` holds the
+exact TITLE of a project `artifact.business_rule` has it converted to the id;
+anything that is neither id nor exact title is **400**
+([RN-871](../business-rules.md#rn-871)).
+
+On the engine side ([RN-862](../business-rules.md#rn-862),
+[ADR 0214](../adr/0214-pergunta-em-aberto-vira-pendencia.md)) the body of a
+`needs_user_decision` verdict carries `pergunta`, `sugestao` and/or
+`openQuestionId` next to the usual fields (absent keys are omitted; the other
+verdicts send the same body as always). After sending it the `QaLeadServer`
+parks the cycle itself — `gate_states` row with step `awaiting_user_decision`,
+`parked_at` set, `gate.rescue_parked` in the log — so the periodic rescue never
+restarts it; it does not depend on reading `await_user` back. The api resumes it
+through the existing `POST /internal/projects/:p/tasks/:t/gates/qa/resume`
+([RN-724](../business-rules.md#rn-724)).
+
+`/delegations` is DIFFERENT from the other three: it doesn't move the gate's
+state machine — it only records the outcome of an area delegate (QA, FASE 8b; Infra,
+FASE 8c — [ADR 0038](../adr/0038-hierarquia-de-agentes.md)). The area lead
+calls this route once per delegate (`completed`/`failed`/`dispensed`),
+SEPARATE from the call the area uses to report the consolidated result to the
+outside (`/gates/verdict` for QA, `open_infra_pr` for Infra) — see
+[RN-036](../business-rules.md#rn-036)/[RN-037](../business-rules.md#rn-037).
+Session-scoped, not task-scoped: `taskId` goes in the BODY, optional — QA always
+sends it, Infra never sends it (the delegation is about the session, with no backlog task
+behind an infra PR).
+
+### Psychologist and Anamnese
+
+| method | path |
+|---|---|
+| POST | `/hypotheses` |
+| POST | `/proficiency` |
+| POST | `/anamnese-window` |
+| POST | `/instruction-patches` |
+| POST | `/max-parallel-proposals` |
+
+Evidence validation ([RN-021](../business-rules.md#rn-021)) and the closed
+catalog of competencies ([RN-024](../business-rules.md#rn-024)) are enforced
+**here**, in the api. The engine cannot write a hypothesis without valid
+evidence nor profile a competency outside the catalog, even if the model asks for it.
+
+`/anamnese-window` ([RN-722](../business-rules.md#rn-722)) closes the analyzed
+window when a round ends WITHOUT a profile (`skip_proficiency`): it records an
+`anamnese_runs` row with zero profiles, so the next round starts at its
+`window_to` instead of re-reading — and paying for — the same window forever.
+`/proficiency` keeps requiring a non-empty list; a failure here is only a
+warning in the engine log, never a failed round. The engine side is
+`EngineApiClient` in `engine_api_client.ex`.
+
+`/max-parallel-proposals` (FASE 14d) follows the same split: the Anamnese proposes
+raising an area's parallelism cap, and it's the **api** that rejects a proposal
+that doesn't raise anything — the Anamnese runs periodically, and without this
+rejection it would re-propose the same thing on every round. The action born from this
+is **never auto-approvable** ([RN-086](../business-rules/custo.md#rn-086)): automating the adjustment
+would be the product raising its own spending limit.
+
+This route **responded with `400` on every project** until FASE 18, and nothing in the contract
+gave it away: the validation `área "<key>" não existe neste projeto` is the
+first thing it does, and `agent_areas` was never written — the repository's `upsert`
+had no caller at all. Now the area is created with the project
+([RN-094](../business-rules/custo.md#rn-094)) and the rejection once again means what it
+says: nonexistent area key. Projects predating the fix are covered
+by the backfill migration.
+
+### Knowledge graph and RAG ([ADR 0099](../adr/0099-neo4j-grafo-de-conhecimento-e-templates.md)/[0100](../adr/0100-rag-search-e-modelos-garantidos-no-boot.md)/[0101](../adr/0101-memoria-relacional-como-projecao-do-event-log.md))
+
+| method | path |
+|---|---|
+| GET | `/internal/graph/prompt-templates/:name` |
+| POST | `/internal/graph/prompt-templates` |
+| POST | `/internal/rag/search` |
+| POST | `/internal/rag/feedback` |
+
+The two template routes write/read prompt versions in Neo4j, idempotent
+by hash — `Engine.Harness.InstructionFiles` (source `:graph`) and the
+Psychologist/Anamnese workers resolve kickoff/identity through here, always with a fallback
+to inline text on any failure ([RN-413](../business-rules.md#rn-413)/[RN-417](../business-rules.md#rn-417)).
+`scripts/dev/seed-prompts.ts` populates the graph from `prompts/*.md`.
+`/internal/rag/search` is a thin PROJECTION over `HybridSearchUseCase` (the
+same vector+lexical hybrid search the "Chat RAG" tab already uses) — service
+token instead of user JWT, same response format with explicit `degraded`
+when embedding was not available
+([RN-414](../business-rules.md#rn-414)). Since [RN-479](../business-rules.md#rn-479)
+its body also carries the OPTIONAL `sessionId`/`agent`: the api cannot deduce
+either, and they are what let it record the telemetry actor and — only when
+there is a session — narrate `rag.search` on the timeline. Its response gained
+`searchId` plus a `chunkId` per hit, which together form the reference the
+agent's vote needs.
+
+`/internal/rag/feedback` is that vote ([RN-480](../business-rules.md#rn-480)),
+the tool `rag_feedback` on the engine side. It reuses the SAME use case as the
+human route — there is no second judgement path — and an unknown
+`searchId`/`chunkId` comes back as a **400 that the tool turns into an error
+tool-result** for the model to correct ([RN-061](../business-rules/custo.md#rn-061)),
+never a crash. **None of the four is the relational
+memory's WRITE path** — handoff, hypothesis, profile and session close
+reach the graph via `GraphProjector`, on the api side, draining a
+second line of the transactional outbox; the engine never writes to the graph directly
+([RN-416](../business-rules.md#rn-416)).
+
+## broker → api {#broker--api}
+
+Since [ADR 0130](../adr/0130-broker-de-container.md) there is a THIRD service,
+and it speaks the same internal protocol: the container **broker**
+(`apps/broker`), the only process in the product with access to a Docker daemon
+on the server.
+
+| method | path |
+|---|---|
+| GET | `/internal/projects/:projectId/container-spec` (**not** session-scoped) |
+
+Same authentication as everything above (`X-Brabo-Service-Token`, constant-time
+comparison, `BRABO_SERVICE_TOKEN_PREVIOUS` accepted during rotation) and the
+same shared secret. A second secret was considered and refused: the three
+services run in the same cluster and read the same Secret, so it would give the
+impression of compartmentalising without compartmentalising anything, at the
+cost of doubling what has to be rotated in lockstep — the full reasoning lives
+in `apps/api/src/infrastructure/security/service-token.ts`.
+
+**The direction of this call is the whole point** ([RN-485](../business-rules.md#rn-485)).
+The broker does not RECEIVE a container spec — it receives a `projectId` plus one
+of five operations and comes here to read:
+
+1. project identity (`projectId`, `projectSlug`, `workspaceId`) and
+   `workspaceDirName`, the folder name frozen at creation ([RN-109](../business-rules/autenticacao.md#rn-109));
+2. `executionMode`. The broker serves `container` **and** `mounted`, and refuses
+   `runner` with `409` — a runner project's folder is on the user's machine and
+   this host cannot see it ([RN-503](../business-rules.md#rn-503));
+3. `localizacao`, the discriminated locator of the project folder — see below;
+4. the Architect's current image decision, or `null` while there is none
+   ([RN-105](../business-rules/autenticacao.md#rn-105)), in which case only `start` is refused
+   and the other four operations still work.
+
+From that the broker COMPOSES image, network, resources and the single mount, and
+revalidates all of it before handing anything to the daemon. There is no field in
+which a caller writes `privileged`, `cap_add`, `network: host` or a free `-v`,
+because there is no field.
+
+**Two things this route deliberately does not return.** `rationale`, which exists
+so a human can review the decision and has no consumer in a `docker run`; and
+**any absolute path at all** — the bind source is resolved by the daemon against
+the HOST filesystem, so `/data/project-workspaces/<x>` (a path inside the api
+container) would make the daemon create and mount an EMPTY folder.
+
+**`localizacao`: which root, plus the piece that root does not cover**
+([RN-503](../business-rules.md#rn-503),
+[ADR 0144](../adr/0144-a-segunda-raiz-do-broker.md)). The broker has TWO roots
+of its own, and the spec says which one a segment belongs to instead of the
+broker guessing:
+
+| `localizacao.tipo` | `segmento` | root it resolves against |
+|---|---|---|
+| `gerenciada` | `workspaceDirName` ([RN-109](../business-rules/autenticacao.md#rn-109)) | `PROJECT_WORKSPACES_HOST_ROOT` |
+| `montada` | the RELATIVE path under the base (may contain `/`) | `BRABO_PROJECTS_HOST_BASE` |
+| `indisponivel` | absent — there is a `motivo` instead | none |
+
+`BRABO_PROJECTS_HOST_BASE` is derived in the composes from
+`BRABO_PROJECTS_BASE` ([ADR 0141](../adr/0141-base-unica-dos-projetos-montados.md)),
+and the broker refuses `start` NAMING whichever of the two is missing, without
+touching a container. It never falls back to the other one: the managed root is
+named by `workspace_dir_name` and the base is named by the user, so the same
+name points at different folders and the container would come up with someone
+else's code inside it.
+
+**Three variants, not two.** `indisponivel` is not a disguised `null`: it is
+"no root on this server reaches that folder", and it has two different fixes —
+a `runner` project (fix: the runner, on the other side) and a LEGACY `mounted`
+project created outside the base (fix: move the folder). Collapsing them would
+send whoever operates to the wrong place half the time. A folder that IS the
+base itself lands here too rather than becoming an empty segment: `<root>/`
+would mount the whole base — every mounted project — inside one project's
+container.
+
+`usuarioDaPasta` (`{ uid, gid }` or `null`) is the folder's OWNER as the api
+measured it ([ADR 0180](../adr/0180-container-com-o-dono-da-pasta.md),
+[RN-627](../business-rules.md#rn-627)): the broker starts the container with
+`--user uid:gid` so the dev agent can write to `/work` under `--cap-drop ALL`.
+`null` when the folder cannot be measured, the owner is root or the project is
+`runner`. It never travels in a request to the broker.
+
+There is no write route in this direction. Whoever WRITES the container lifecycle
+is still `RegistrarTransicaoDeContainerUseCase`, through the route that already
+exists; giving the broker authority over the state it produces would move the
+authority out of the api.
+
+### api → broker
+
+The other direction is not `/internal/*` on this side — it is the broker's own
+surface, five operations plus `/health`, reachable only from the api (an
+`internal: true` Compose network, no published port). The api's port is
+`ContainerBrokerPort`, and today all **five** have callers. `inspect` is the
+only read: `GET /projects/:projectId/container/lifecycle` uses it to return the
+OBSERVED state beside the RECORDED one ([RN-486](../business-rules.md#rn-486)).
+The other four are external effect and do not happen without a
+`proposed_action` — `start`/`stop`/`remove` behind the three lifecycle action
+types ([ADR 0133](../adr/0133-infra-elege-imagem-do-roteamento.md),
+[ADR 0136](../adr/0136-pagina-global-de-containers.md)) and `exec` behind a
+dev agent's terminal command inside a running container
+([ADR 0134](../adr/0134-dev-agents-executam-dentro-do-container.md)). Since
+[RN-503](../business-rules.md#rn-503) those callers reach the broker for
+`container` **and** `mounted` projects; only `runner` goes to the runner
+instead.
+
+## install.sh → api
+
+Since [RN-546](../business-rules.md#rn-546) /
+[ADR 0155](../adr/0155-a-primeira-conta-nasce-no-terminal.md) there is a FOURTH
+caller, and it is not a long-lived service: the **one-line installer**, once,
+at the end of an installation.
+
+| method | path |
+|---|---|
+| POST | `/internal/first-account` (**not** session-scoped, **not** project-scoped) |
+| POST | `/internal/machine-device-keys` (idem — [RN-552](../business-rules.md#rn-552)) |
+
+Same authentication as everything above — and here the choice of mechanism is
+doing more work than usual. `BRABO_SERVICE_TOKEN` is generated by `install.sh`
+itself and written into the `.env` at mode `600`, so presenting it proves
+control of the **machine**, which is exactly the credential this step wants.
+
+**Why the route exists at all.** A fresh installation lets nobody in. The
+generated `.env` carries no mail variable, `MAIL_TRANSPORT` falls to `log`, and
+normal registration waits on a verification e-mail that is never sent — the
+only way through is fishing the link out of `docker compose logs api`. So the
+installer creates the first account itself, with the password typed at the TTY,
+and the account is born **already verified**.
+
+**Why being born verified is not a loosening.** What e-mail verification proves
+is *"this person controls this mailbox"*. Whoever is running the installer has
+already proved something stronger — the machine, the `.env` with all five
+secrets, and the Docker daemon. Demanding the weaker proof, over a channel the
+installation knows is switched off, is theatre. Normal registration is
+untouched.
+
+**It refuses when the installation has ANY user** (`409`). The condition is
+about the INSTALLATION, not about the e-mail asked for — an e-mail nobody has
+ever used is refused just the same. That is what separates this from an account
+creator: there is no way to keep calling it with different addresses. A
+migration restore ([RN-530](../business-rules.md#rn-530)) silences the step by
+the same test.
+
+**No public route was born.** A public "create the first owner" route is a race
+between whoever installed and whoever scanned the port, and losing that race
+loses the installation — `owner` of the first workspace is not a role you
+recover over HTTP.
+
+**What travels, and what never does.** The body is `{ email, senha, nome? }`;
+the response is `{ userId, email, workspaceId }`. The password is used and
+discarded — never in the `.env`, never in the installer's marker, never in a
+log — and it is never generated by any code, so no installation is born with a
+password someone else knows. The personal workspace
+([RN-410](../business-rules.md#rn-410)) is created in the SAME transaction: an
+account without one would log in to a dashboard where "New project" has nowhere
+to create.
+
+There is no `GET` asking "does this installation have a user?". The `POST`
+already answers it with `201` or `409`, and a read route would publish the same
+fact with one more surface — one whose answer is precisely the signal a scanner
+wants.
+
+### The step after it: the MACHINE device key
+
+The installer does not stop at the account. Its next step
+([ADR 0155](../adr/0155-a-primeira-conta-nasce-no-terminal.md) point 4) is to
+pair the local agent, and pairing needs a credential — the only one that
+existed was bound to a PROJECT
+([ADR 0118](../adr/0118-configuracao-automatica-do-runner-pelo-navegador.md)), in an
+installation that has no project yet. Since
+[RN-543](../business-rules.md#rn-543) a machine key is just a device key with
+`project_id NULL`; what was missing was a route that creates one, and
+[RN-552](../business-rules.md#rn-552) is it.
+
+**The credential is the same service token, and the alternative was refused for
+a written reason.** Requiring the freshly created user's own credential would
+force a login with the password typed at the TTY — a password that is *used and
+discarded* by decision, on a route whose own ADR says the installer *"does not
+log in for anybody"*, which is why the first-account response carries no session
+token. Proving control of the machine is what this step is actually about, and
+the service token proves exactly that.
+
+**What travels.** The body is `{ name, publicKeyJwk }` and the response is
+`{ id, userId, name, createdAt, replacedKeyIds }`. The pair is generated ON THE
+MACHINE and only the public half is sent; a JWK carrying `d` is refused with
+`400` that says so, never stored. The `id` is the field that matters: it goes
+INSIDE the private JWK as `kid` ([RN-475](../business-rules.md#rn-475)), the
+only link between the file on disk and the public half on the server — every
+step downstream only passes it along.
+
+**There is no `userId` in the body, and that absence is the containment.** The
+owner is the installation's SOLE user, resolved by the api; with none or more
+than one it answers `409` and writes nothing. Same shape as the first account's
+condition — about the INSTALLATION, never about the argument asked for — so
+holding the token never buys the choice of whose credential to mint, and the
+route goes quiet for good once the installation has a team.
+
+**Registering REPLACES.** The owner's active MACHINE keys are revoked in the
+same transaction and their ids come back in `replacedKeyIds`. A reinstalled
+machine is a legitimate case and keeps working; a thousand machine keys become
+impossible, bounded by a clause rather than by a number that would age. Project
+keys are never touched — they came from the browser flow this route knows
+nothing about.
+
+There is no `GET` and no `DELETE` here either. Listing would publish a person's
+credential inventory to whoever holds only the machine secret, and revoking
+already exists where it has a human owner
+(`DELETE /projects/:projectId/runner-device-keys/:deviceKeyId`, which matches by
+`{id, user}` and never by project).
+
+## api → engine
+
+Twenty-one command routes, plus the health ones. Under `/internal` with `VerifyServiceToken`:
+
+| method | path | what it triggers |
+|---|---|---|
+| POST | `/sessions` | starts the `SessionServer` |
+| POST | `/sessions/:id/event-appended` | body `{type, actorId}` — the api wrote an event on its own (AT-157, [RN-579](../business-rules.md#rn-579)); the engine broadcasts `event.appended` on `session:<id>` with only those two fields. `204`; `400` without `type`. No session process is needed: with no subscriber the broadcast is a no-op |
+| POST | `/sessions/:id/agent/start` | starts an agent turn |
+| POST | `/sessions/:id/agent/message` | user message in the thread — body `{projectId, agent, text, idiomaDaResposta?, mensagemId?, perfilDoAutor?}`. **`202` on ACCEPTANCE**, before the turn ends: empty body when the turn started (`lida`), `{entrega: "enfileirada", posicao}` when the agent was mid-turn and the message joined its QUEUE — read with any others in one turn when the current one ends ([RN-673](../business-rules.md#rn-673), [ADR 0191](../adr/0191-a-mensagem-com-turno-em-curso-entra-numa-fila.md)). **`409`** `{error, motivo}` when the agent refuses before starting: `aguardando_aprovacao` (Dev Lead suspended) or `fila_de_mensagens_cheia` (10 already queued) — a message no longer gets `turno_em_andamento` ([RN-578](../business-rules.md#rn-578), [ADR 0163](../adr/0163-o-clique-responde-ao-aceitar.md)). `mensagemId` is the id of the `chat.message` the api recorded; it is what cancels the queued message. `idiomaDaResposta` is OPTIONAL: the language the api resolved for the message's AUTHOR in that session; the engine appends it as an ephemeral system message at the end of every LLM call of that turn ([RN-622](../business-rules.md#rn-622)). Absent (older api, or resolution failed) means no guidance — never a refusal |
+| POST | `/sessions/:id/agent/queued-message/cancel` | body `{projectId, agent, mensagemId, userId}` — cancels ONE message waiting in the agent's queue ([RN-673](../business-rules.md#rn-673)); the api already checked that `userId` sent it. With the agent up, its process decides: `204`, or **`409`** `mensagem_fora_da_fila` (already read or cancelled). With the agent down, `chat.message_cancelled` is recorded directly — the queue is the log. **`422`** for an agent with no conversation or an incomplete body |
+| POST | `/sessions/:id/agent/cancel` | cancels the active agent's ongoing turn ([RN-122](../business-rules.md#rn-122)) — kills the Task holding the LLM call (`Task.shutdown/2`, `:brutal_kill`); idempotent, NO-OP with no turn in progress |
+| POST | `/sessions/:id/agent/readiness` | readiness confirmation — `202` on acceptance; `409` turn in progress, **`422`** `sem_regra_de_negocio` ([RN-578](../business-rules.md#rn-578)) |
+| POST | `/sessions/:id/agent/revise` | returns to the PO a story the user declined to promote (FASE 12c — RN-048); **404 if the PO is not up**, and that is not an error for the api; `202` on acceptance, `409` turn in progress ([RN-578](../business-rules.md#rn-578)) |
+| POST | `/sessions/:id/agent/offer-infra-handoff` | handoff offer to Infra — `202` on acceptance, with the closing turn still running; `409` turn in progress ([RN-578](../business-rules.md#rn-578)). It is the ONLY offer the architecture confirmation makes: the `offer-dev-handoff` route is gone, and the Dev Lead is offered by the Infra Lead once the project container is `running` ([RN-672](../business-rules.md#rn-672)) |
+| POST | `/sessions/:id/execution/start` | activates the execution phase |
+| POST | `/sessions/:id/execution/parallelize` | creates subagents — **executes, does not decide** (see below) |
+| POST | `/sessions/:id/dev-agents/:agentId/rearm` | rearms a stuck dev agent (FASE 12b — RN-047); 404 if it doesn't exist, **409 if it isn't `idle_tripped`** |
+| POST | `/sessions/:id/psychologist/reanalyze` | on-demand reanalysis |
+| GET | `/psychologist/status` | reads the global `PSYCHOLOGIST_ENABLED` flag ([RN-454](../business-rules.md#rn-454)) — no side effect, global (not scoped to a session) |
+| POST | `/projects/:id/anamnese/run` | Anamnese run, enqueued with `origem: "manual"`: a round with no eligible subject makes no LLM call and records `anamnese.run_skipped` with `causa: "sem_sujeito_elegivel"` ([RN-680](../business-rules.md#rn-680)) |
+| POST | `/projects/:id/tasks/:taskId/gates/:gate/resume` | resumes, by human gesture, a PARKED gate cycle ([RN-724](../business-rules.md#rn-724), [ADR 0207](../adr/0207-ciclo-de-gate-velho-estaciona.md)) — `202` and the gate is dispatched again; `409` `gate_nao_estacionado` when the cycle is not parked (or the gate is not `qa`/`secops`) |
+| POST | `/projects/:id/agents/:agent/instructions/invalidate` | invalidates the instruction cache |
+| POST | `/actions/execute` · `/actions/execute-git` | executes an **already approved** action |
+| POST | `/projects/:id/containers/start` · `/containers/stop` · `/containers/remove` | asks the RUNNER connected to the project to start/stop/remove its container ([RN-497](../business-rules.md#rn-497), [ADR 0137](../adr/0137-o-runner-sobe-o-container-do-projeto.md)) — only for `mounted`/`runner` projects; `container` still goes through the broker, never here |
+| POST | `/projects/:id/runner/disconnect` | drops the LIVE connection of that user's runner in the project, whatever credential it used ([RN-520](../business-rules.md#rn-520), [ADR 0147](../adr/0147-agente-local-com-capacidades.md)) — since [ADR 0201](../adr/0201-revogacao-por-chave.md) called by member removal ([RN-615](../business-rules.md#rn-615)) and as the fallback of a key revocation; always `200`, with `desfecho` = `derrubado` \| `sem_runner` \| `de_outro_dono` \| `timeout` |
+| POST | `/runner/disconnect-credential` | drops every runner connection opened WITH one credential, in any project, and voids its pending tickets ([RN-685](../business-rules.md#rn-685), [ADR 0201](../adr/0201-revogacao-por-chave.md)) — called when a device key or a PAT is revoked. Body: `credentialKind` (`device_key` \| `pat`), `credentialId`, and, only for a LEGACY connection (ticket without a credential), `userId` + `projectIds`. `200` with the tally `derrubados`/`legados`/`intocados`/`semResposta`/`ticketsAnulados`; `400` only for a malformed credential |
+
+**`runner/disconnect` is the other half of a revocation, and it is the api that
+owns the decision.** `RevokeRunnerDeviceKeyUseCase` writes the revocation
+first, then asks here — the opposite order would leave a window in which the
+runner falls and reconnects with the key still valid. The engine does NOT read
+the device-key table: it only reaches the channel pid
+(`Engine.Runners.Registry.whereis/1`), compares the `user_id` of that
+connection, drops the transport and stops. And the api does NOT talk to the
+channel. Every outcome is a `200`: from the caller's side the `DELETE` is 204
+and idempotent, and a revocation cannot fail because nobody happened to be
+connected.
+
+**Since [ADR 0201](../adr/0201-revogacao-por-chave.md) the revocation's target
+is the CREDENTIAL, and `runner/disconnect-credential` is its route.**
+`runner_socket_tickets` records which credential asked for each ticket
+(`credential_kind`/`credential_id`, sent by the api as
+`credentialKind`/`credentialId` on `runner-tickets`), the socket keeps it in
+`assigns` and in its `id`, and the engine asks EVERY registered runner whether
+it was born from the revoked credential — a machine key has no project to
+address. Another runner of the same user, on a PAT or another key, stays up.
+The `{project, user}` route stays for member removal, and as the api's fallback
+when the engine answers the credential route with a 404.
+
+**The three `containers/*` routes are the mirror of `container-exec` below, in
+the opposite direction.** `container-exec` is the ENGINE asking the api to run
+a command inside the SERVER's container (via the broker); `containers/*` is
+the API asking the ENGINE to run an operation on the container that lives on
+the USER's machine (via the runner, over the `terminal:<projectId>` channel).
+The response is always `200`, `{ sucesso: false, motivoCodigo, motivo }` for
+"no runner connected"/"timeout", `{ sucesso: false, motivo }` for "the runner
+tried and refused" — never an HTTP error status for either, same discipline
+as `container-exec`.
+
+**The `spec` of `containers/start` is opaque to the engine and exact for the
+runner.** `ContainerCommandController.start/2` forwards the map without
+reading a single field of it, so the contract is between the two ends: the api
+composes the ten fields of `EspecificacaoDeContainerParaRunner`
+(`workspaceDirName`, `projectId`, `projectSlug`, `workspaceId`, `imagem`,
+`imagemVersao`, `rede`, `cpus`, `memoriaMb`, `pidsLimit`) and the runner hands
+that map, plus the `raizDoProjeto` only it knows, to `especificacaoValidada`
+(`packages/docker-port`), which refuses the whole specification if any of them
+is missing. It refused every time until [RN-508](../business-rules.md#rn-508)
+was made true in code: `projectId` was never copied, so this path never
+started a container. Since nothing in the middle validates the map, a missing
+field would be invisible to all three suites — the chain is what
+`apps/api/test/contract/especificacao-de-container-para-runner.contract.spec.ts`
+proves, running the api's payload through the real validator, and it also pins
+`raizDoProjeto` as the one field the server never sends (no absolute host path
+crosses the wire, [ADR 0130](../adr/0130-broker-de-container.md)).
+
+`containers/stop` and `containers/remove` do NOT carry a spec: they send
+`workspaceDirName` and nothing else, because on the other side they only need
+`nomeDeWorkspaceValidado` to derive the container name. One field asked, one
+field sent — they were checked against the same validator and are correct.
+
+#### Who ASKS for `containers/start` changed, and it is still not an internal route
+
+Until [RN-521](../business-rules.md#rn-521) there was exactly ONE way to reach
+these three routes: the Infra Lead, inside a session, calling its own tool. When
+that path failed on a real `exp004` run there was no way to retry a machine
+operation except opening a new session and talking to an agent — five dev agents
+sat for hours emitting `dev.blocked_by_container`.
+
+The human path added by RN-521 lives on the global containers page
+(`/containers`) and does **not** add an internal route, nor bypass one. The
+click proposes a `proposed_action` through the PUBLIC api
+(`POST /projects/:id/sessions/:sessionId/actions`, `maintainer`), branching by
+`execution_mode` exactly as the backend already did:
+`container`/`mounted` propose `container_start` (broker) and `runner` proposes
+`container_start_via_runner`. Only the APPROVAL of that action reaches here —
+`ExecuteContainerStartViaRunnerUseCase` composing the ten-field spec above and
+calling `POST /projects/:id/containers/start`. The order is the invariant, not a
+detail: the api decides, the engine executes, and a screen that could ask the
+engine directly would be a back door around the approval pipeline, the same
+reason `/actions/execute` exists as it does.
+
+The two handoff offers come from the **same** confirmation of architecture
+ready, and they are separate routes on purpose: Infra and Dev are areas with independent
+outcomes, and a single call would make one's failure bring down the other. The order
+matters — Infra first, because the event log is immutable and a handoff already
+offered would have no way to be retracted.
+
+`/actions/execute` deserves attention: it executes, it doesn't decide. The decision has
+already happened in the api. If the engine could decide, the approval pipeline would have
+a back door.
+
+**`execution/parallelize` is the same case, and since FASE 14d this is visible.**
+The PUBLIC route with the same name (`POST /projects/:projectId/sessions/:sessionId/execution/parallelize`)
+first goes through the area cap ([RN-083](../business-rules/custo.md#rn-083)): within
+it the agent comes up right away; above it the api creates a `proposed_action` and does **not
+call the engine**. By the time the engine receives this command, the decision has already been made
+— by cap or by you.
+
+Worth noting that the name repeated on both sides hides the asymmetry: the public
+route is the GATE, the internal one is the EXECUTOR. It's the same split as
+`/actions/execute`, and the reason it exists is identical.
+
+**The Criativo's structured questions (RN-162) do not open a new internal route.** The
+public route `POST /projects/:projectId/sessions/:sessionId/agents/:agent/structured-question/:questionSetId/answer`
+(`AnswerStructuredQuestionUseCase`) writes `chat.structured_question_answered`
+and then calls this SAME `/sessions/:id/agent/message` above — the form's answers
+become a concatenated message ("1. {label}: {resposta}"), as if
+the user had typed it in the thread. On the engine side there is no separate channel
+for "read structured answer": the Criativo reads the next `chat.message`
+normally, in the following turn.
+
+### Health and metrics
+
+| path | responds |
+|---|---|
+| `/health` | Postgres connection |
+| `/live` | **without touching the database** — a liveness check tied to Postgres would restart all replicas at once on a slow database |
+| `/ready` | only opens traffic after session rehydration has finished; becomes 503 during drain |
+| `/metrics` | Prometheus, including `oban_queue_depth{queue,state}` |
+
+Three probes because the questions are different
+([ADR 0025](../adr/0025-fase5-deploy-kubernetes-kustomize.md)).
+
+## The event's path
+
+```mermaid
+sequenceDiagram
+  participant A as api
+  participant P as postgres
+  participant E as engine
+
+  Note over A,P: a single transaction
+  A->>P: insert session_events
+  A->>P: insert outbox
+  A->>P: COMMIT
+
+  E->>P: Oban consumes
+  E->>E: processes
+  E->>A: HTTP /internal/... (result)
+  A->>P: new event
+```
+
+There is no broker. The queue is Postgres, via Oban — and that's why its
+depth is a database metric, queryable via SQL, and serves as a signal for the HPA.
+
+The diagram above is the path for `aggregate_type = "session"` — every domain
+event writes a `session_events` row within the same outbox transaction. FASE 12b
+added `aggregate_type = "task"` (`task.gate_resolved`,
+`task.became_claimable`, the dev agent's rescheduling): with no corresponding
+`session_events`, only the outbox row — the Drain routes it to the
+`Engine.Workers.DevAgentWakeWorker`, which delivers via PubSub to ONE
+specific agent or to all `idle` agents in a module. See
+[ADR 0045](../adr/0045-reagendamento-por-evento-do-dev-agent.md).
+
+## Where the contract lives
+
+Since FASE 7b there is **OpenAPI** for the engine → api direction: the 32 routes
+below are in the [generated reference](/reference/api/), under the `internal` tag, with
+request body, response body and error codes. The document is generated
+from the code by `pnpm docs:generate` and `docs:check` fails when it
+goes out of date.
+
+| side | source |
+|---|---|
+| api routes | the [generated OpenAPI](/reference/api/) (contract) and [`security-surface.md`](../security-surface.md) (exposure) |
+| engine routes | `apps/engine/lib/engine_web/router.ex` |
+| shared types | `packages/shared/src/index.ts` (api ↔ web only) |
+| engine client | `apps/engine/lib/engine/sessions/engine_api_client.ex` |
+
+> **TODO(human):** the generated reference gives both ends the same source to
+> check against, but it **does not close the gap**: there still isn't automatic
+> checking that `engine_api_client.ex` matches the api's routes. It's the
+> file most frequently changed in the engine, and a signature change still only shows up
+> in runtime. What would truly close it is generating the Elixir client from the
+> `openapi.json`, or a contract test between the two ends.

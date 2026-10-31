@@ -51,6 +51,14 @@ defmodule Engine.Anamnese.Triage do
   def max_payload_chars,
     do: Application.get_env(:engine, :anamnese_max_payload_chars, 600)
 
+  @doc """
+  Teto de rodadas PAGAS por projeto por dia (UTC), RN-722 — decisão do dono
+  de 02/10. Conta o desfecho de toda rodada que chegou ao LLM: concluída,
+  encerrada sem perfil pelo modelo, ou falha.
+  """
+  def max_rounds_per_day,
+    do: Application.get_env(:engine, :anamnese_max_rounds_per_day, 4)
+
   @doc "Janela da primeira rodada de um projeto (sem rodada anterior)."
   def initial_window_days,
     do: Application.get_env(:engine, :anamnese_initial_window_days, 30)

@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import styles from './Tabs.module.css';
 
 /**
@@ -8,7 +8,8 @@ import styles from './Tabs.module.css';
  *
  * Desde o ADR 0126 ela não tem consumidor dentro de `apps/web`: o único era
  * `GroupedTabs`, e `GroupedTabs` era do `ProjectPage`, que passou a navegar
- * por um trilho vertical (`routes/ProjectRail.tsx`). Ela FICA — primitiva
+ * por um trilho vertical (que o ADR 0211 trocou pela lista da sidebar,
+ * `routes/AbasDoProjeto.tsx`). Ela FICA — primitiva
  * genérica sem chamador é peça do sistema de design em estoque, não código
  * morto, e apagá-la mudaria o inventário do DS por um efeito colateral de
  * uma tela.
@@ -17,6 +18,8 @@ export interface TabItem {
   key: string;
   label: string;
   count?: number;
+  /** Cor do sublinhado da aba ativa (ex.: `var(--violet)`); sem ela, `--accent`. */
+  cor?: string;
 }
 
 interface TabsProps {
@@ -36,6 +39,7 @@ export function Tabs({ items, active, onChange, trailing }: TabsProps) {
           role="tab"
           aria-selected={active === item.key}
           className={[styles.tab, active === item.key && styles.active].filter(Boolean).join(' ')}
+          style={item.cor ? ({ '--tab-cor': item.cor } as CSSProperties) : undefined}
           onClick={() => onChange(item.key)}
         >
           {item.label}

@@ -35,8 +35,82 @@ defmodule Engine.Harness.Tools.OfferHandoff do
 
   @impl true
   def run(%{"to_agent" => to_agent} = args, ctx) do
-    artifact_id = Map.get(args, "artifact_id")
+    case recusa_por_cobertura(ctx, to_agent) do
+      nil -> oferecer(to_agent, Map.get(args, "artifact_id"), ctx)
+      recusa -> {:error, recusa}
+    end
+  end
 
+  def run(_args, _ctx), do: {:error, "offer_handoff exige `to_agent`"}
+
+  # RN-720: o PO não oferece o handoff ao Arquiteto com backlog descoberto.
+  # A cobertura é a da api (`computeCoverage`, a MESMA régua do aceite
+  # automático da RN-660, via `uncoveredCount`), nunca uma segunda conta aqui;
+  # e história `draft` que ainda não está completa (sem `proposedReady`) também
+  # segura a oferta — ela é trabalho do PO, não do Arquiteto. Falha de leitura
+  # NÃO vira recusa: a oferta segue e a api decide.
+  defp recusa_por_cobertura(%{agent: "po"} = ctx, "arquiteto") do
+    with {:ok, %{"rules" => regras}} when is_list(regras) <-
+           EngineApiClient.list_business_rules(ctx.project_id),
+         {:ok, epicos} when is_list(epicos) <- EngineApiClient.list_backlog(ctx.project_id) do
+      sem_historia = Enum.reject(regras, &(Map.get(&1, "covered") == true))
+
+      incompletas =
+        epicos
+        |> Enum.flat_map(&Map.get(&1, "stories", []))
+        |> Enum.filter(
+          &(Map.get(&1, "status") == "draft" and Map.get(&1, "proposedReady") != true)
+        )
+
+      frase_de_recusa(sem_historia, incompletas)
+    else
+      _ -> nil
+    end
+  end
+
+  defp recusa_por_cobertura(_ctx, _to_agent), do: nil
+
+  defp frase_de_recusa([], []), do: nil
+
+  defp frase_de_recusa(sem_historia, incompletas) do
+    regras =
+      case sem_historia do
+        [] ->
+          ""
+
+        _ ->
+          "\nRegras SEM história (#{length(sem_historia)}):\n" <>
+            Enum.map_join(
+              sem_historia,
+              "\n",
+              &"- id=#{Map.get(&1, "id")} | #{Map.get(&1, "title")}"
+            )
+      end
+
+    historias =
+      case incompletas do
+        [] ->
+          ""
+
+        _ ->
+          "\nHistórias `draft` INCOMPLETAS (#{length(incompletas)}):\n" <>
+            Enum.map_join(
+              incompletas,
+              "\n",
+              &"- id=#{Map.get(&1, "id")} | #{Map.get(&1, "title")}"
+            )
+      end
+
+    "handoff ao arquiteto RECUSADO: o backlog ainda não cobre as regras de negócio " <>
+      "— nada foi oferecido, e o aceite automático não acontece assim." <>
+      regras <>
+      historias <>
+      "\nComplete as histórias existentes com `complete_story` (ligue `business_rule_ids` " <>
+      "e preencha RF, DoD e DoR) — não as recrie — e só então ofereça de novo. " <>
+      "Não diga ao usuário que a cobertura está completa."
+  end
+
+  defp oferecer(to_agent, artifact_id, ctx) do
     case EngineApiClient.create_handoff(
            ctx.project_id,
            ctx.session_id,
@@ -74,6 +148,4 @@ defmodule Engine.Harness.Tools.OfferHandoff do
         {:error, "falha ao oferecer handoff: #{inspect(reason)}"}
     end
   end
-
-  def run(_args, _ctx), do: {:error, "offer_handoff exige `to_agent`"}
 end

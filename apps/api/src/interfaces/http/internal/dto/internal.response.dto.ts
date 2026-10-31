@@ -1,3 +1,6 @@
+import { DecisaoDeImagemResponseDto } from '../../containers/dto/containers.response.dto';
+import { ContratoDeModuloResponseDto } from './module-contracts.response.dto';
+import type { LLMErrorCode } from '@brabo/shared';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import type { GitProviderName } from '@brabo/shared';
 import type { MesmasChaves, Wire } from '../../shared/dto/wire';
@@ -24,6 +27,9 @@ import type {
   DevContextAdr,
   DevContextBusinessRule,
   DevTaskContext,
+  DevContextDecisao,
+  DevContextSiblingTask,
+  DevContextModuleOpenTask,
 } from '../../../../application/use-cases/execution/get-dev-task-context.use-case';
 import type {
   InfraContext,
@@ -76,6 +82,8 @@ import type {
  */
 
 const GATE_NEXT_ACTIONS = ['correct', 'run_secops', 'done', 'blocked'] as const;
+// RN-860: só o gate de PR de tarefa espera o usuário.
+const TASK_GATE_NEXT_ACTIONS = [...GATE_NEXT_ACTIONS, 'await_user'] as const;
 
 // ---------------------------------------------------------------- dev context
 
@@ -112,6 +120,39 @@ export const _chavesAdrDev: MesmasChaves<
   DevContextAdr
 > = true;
 
+export class DevContextSiblingTaskResponseDto implements Wire<DevContextSiblingTask> {
+  @ApiProperty({ example: '01J0000000000000000000000' })
+  id!: string;
+
+  @ApiProperty({ example: 'Expose POST /login returning a JWT' })
+  title!: string;
+
+  @ApiProperty({ example: 'todo' })
+  status!: string;
+}
+export const _chavesIrmaDev: MesmasChaves<
+  DevContextSiblingTaskResponseDto,
+  DevContextSiblingTask
+> = true;
+
+export class DevContextModuleOpenTaskResponseDto implements Wire<DevContextModuleOpenTask> {
+  @ApiProperty({ example: '01J0000000000000000000000' })
+  id!: string;
+
+  @ApiProperty({ example: 'Expose POST /links' })
+  title!: string;
+
+  @ApiProperty({ example: 'todo' })
+  status!: string;
+
+  @ApiProperty({ example: 'Members create short links' })
+  storyTitle!: string;
+}
+export const _chavesTarefaAbertaDoModulo: MesmasChaves<
+  DevContextModuleOpenTaskResponseDto,
+  DevContextModuleOpenTask
+> = true;
+
 export class DevTaskContextResponseDto implements Wire<DevTaskContext> {
   @ApiProperty({ type: TaskResponseDto })
   task!: TaskResponseDto;
@@ -129,6 +170,80 @@ export class DevTaskContextResponseDto implements Wire<DevTaskContext> {
       "ones that cite this agent's module.",
   })
   adrs!: DevContextAdrResponseDto[];
+
+  @ApiProperty({
+    type: [DevContextSiblingTaskResponseDto],
+    description:
+      'The other tasks of the same story, with their status. The QA gate ' +
+      'judges the delivery by what belongs to THIS task; a requirement of a ' +
+      'sibling task is an observation, never a rejection (RN-765).',
+  })
+  siblingTasks!: DevContextSiblingTaskResponseDto[];
+
+  @ApiProperty({
+    type: [DevContextModuleOpenTaskResponseDto],
+    description:
+      'Tasks of OTHER stories of the same module that are not done yet, ' +
+      'with the story title (at most 20). A requirement that depends on ' +
+      'what another story will deliver is an observation for the QA gate, ' +
+      'never a rejection (RN-785).',
+  })
+  moduleOpenTasks!: DevContextModuleOpenTaskResponseDto[];
+
+  @ApiProperty({
+    description:
+      'Real number of open tasks of the module in other stories — larger ' +
+      'than `moduleOpenTasks.length` when the list was cut.',
+  })
+  moduleOpenTasksTotal!: number;
+
+  @ApiProperty({
+    type: ContratoDeModuloResponseDto,
+    nullable: true,
+    description:
+      'The current contract of the task module (`artifact.module_contracts`) ' +
+      '— the source of the INTERFACE for the QA gate. When the story and the ' +
+      'contract diverge, the verdict names the divergence instead of ' +
+      'rejecting the dev that followed the contract (RN-786). `null` without ' +
+      'a resolvable module or contract.',
+  })
+  moduleContract!: ContratoDeModuloResponseDto | null;
+
+  @ApiProperty({
+    description:
+      'Whether this is the FIRST task of the module: the oldest ' +
+      '`backlog.task_claimed` of the project for `module` is this task. The ' +
+      'engine gives it twice the per-task budget (RN-774). `false` without ' +
+      '`module`.',
+  })
+  primeiraDoModulo!: boolean;
+
+  @ApiProperty({
+    type: () => [DevContextDecisaoResponseDto],
+    description:
+      "RN-859: the user's decisions tied to this task, its story or its rules " +
+      'by `afeta` — they win over RF/DoR on conflict. Newest first, at most 10, ' +
+      'each text cut at 1,500 characters.',
+  })
+  decisoes!: DevContextDecisaoResponseDto[];
+
+  @ApiProperty({
+    type: () => [DevContextDecisaoResponseDto],
+    description:
+      "RN-872 (ADR 0215): the project's OTHER decisions — those whose " +
+      '`afeta` does not touch this task. Separate section, inside the SAME ' +
+      'cap of 10 as `decisoes` (task decisions take the cap first), newest first.',
+  })
+  decisoesDoProjeto!: DevContextDecisaoResponseDto[];
+}
+
+export class DevContextDecisaoResponseDto implements Wire<DevContextDecisao> {
+  @ApiProperty() id!: string;
+  @ApiProperty({ type: String, nullable: true }) questionId!: string | null;
+  @ApiProperty({ description: 'The question that was decided.' })
+  pergunta!: string;
+  @ApiProperty({ description: "The user's decision." }) decisao!: string;
+  @ApiProperty({ format: 'date-time' }) decididaEm!: string;
 }
 export const _chavesCtxDev: MesmasChaves<
   DevTaskContextResponseDto,
@@ -205,6 +320,16 @@ export class InfraContextResponseDto implements Wire<InfraContext> {
       'anything yet.',
   })
   moduleRouting!: EstadoDoRoteamentoResponseDto;
+
+  @ApiProperty({
+    type: DecisaoDeImagemResponseDto,
+    nullable: true,
+    description:
+      'RN-852: the CURRENT artifact.project_image decision (image, network, ' +
+      'resources) — the FROM of the Dockerfile and the network the Infra ' +
+      'compose respects. null when no image has been decided.',
+  })
+  projectImage!: DecisaoDeImagemResponseDto | null;
 }
 export const _chavesCtxInfra: MesmasChaves<
   InfraContextResponseDto,
@@ -596,14 +721,37 @@ export class LlmTurnResponseDto implements Wire<RunLlmTurnResult> {
   error!: string | null;
 
   @ApiProperty({
+    example: null,
+    nullable: true,
+    description:
+      "The provider failure's normalized `code` (ADR 0041) — `auth`, " +
+      '`rate_limit`, `insufficient_credit` (HTTP 402, RN-730), ' +
+      '`model_not_found`, `context_length`, `timeout`, `connection` or ' +
+      '`upstream`. `null` with no error, or when the error is not the ' +
+      "provider's (budget, missing binding). Decide by this, never by " +
+      'the text of `error`.',
+  })
+  errorCode!: LLMErrorCode | null;
+
+  @ApiProperty({
     example: 'llama3.2:3b',
     nullable: true,
     description:
       'Name of the model that generated the response (finding from problem 2) ' +
       '— `null` when the turn failed before resolving a model (no binding, ' +
-      'or binding to a non-existent model).',
+      'or binding to a nonexistent model).',
   })
   modelName!: string | null;
+
+  @ApiPropertyOptional({
+    enum: [true],
+    description:
+      'Present (always `true`) only when the provider cut the response at the ' +
+      'output cap (`finish_reason: "length"` / `stop_reason: "max_tokens"`, ' +
+      'RN-737): the text and the `toolCalls` arguments are truncated. The ' +
+      'engine refuses to run a truncated tool call and narrates the cut.',
+  })
+  truncated?: true;
 
   @ApiPropertyOptional({
     type: ToolRoutingResponseDto,
@@ -647,23 +795,38 @@ export class LlmTurnStreamEventResponseDto {
       'before resolving a model.',
   })
   modelName?: string | null;
+
+  @ApiPropertyOptional({
+    enum: [true],
+    description:
+      'Only on the `final` frame, and only when the provider cut the response ' +
+      'at the output cap (RN-737).',
+  })
+  truncated?: true;
 }
 
 // ------------------------------------------------------------------------- gates
 
 export class GateVerdictResponseDto implements Wire<RecordGateVerdictResult> {
   @ApiProperty({
-    enum: GATE_NEXT_ACTIONS,
+    enum: TASK_GATE_NEXT_ACTIONS,
     example: 'run_secops',
     description:
       'What happens next. `correct` returns to dev; `run_secops` advances ' +
-      'the gate; `done` releases it to the user; `blocked` means the ' +
+      'the gate; `done` releases it to the user; `await_user` parks the ' +
+      'cycle until the open question is answered (RN-860); `blocked` means the ' +
       'correction cap ran out and only a human can unblock it.',
   })
   nextAction!: Wire<RecordGateVerdictResult>['nextAction'];
 
   @ApiProperty({ type: TaskResponseDto })
   task!: TaskResponseDto;
+
+  @ApiPropertyOptional({
+    format: 'uuid',
+    description: 'With `await_user`: the open question the cycle waits on.',
+  })
+  openQuestionId?: string;
 }
 export const _chavesGate: MesmasChaves<
   GateVerdictResponseDto,

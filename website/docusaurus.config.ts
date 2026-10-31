@@ -1,7 +1,39 @@
 import type * as Preset from '@docusaurus/preset-classic';
 import type { Config } from '@docusaurus/types';
-import { themes as prismThemes } from 'prism-react-renderer';
+import type { PrismTheme } from 'prism-react-renderer';
+
+const TEMA_DO_CODIGO: PrismTheme = {
+  plain: { color: 'var(--syntax-text)', backgroundColor: 'var(--code-bg)' },
+  styles: [
+    { types: ['comment', 'prolog', 'doctype', 'cdata'], style: { color: 'var(--syntax-comment)', fontStyle: 'italic' } },
+    { types: ['keyword', 'tag', 'selector', 'important', 'atrule'], style: { color: 'var(--syntax-keyword)' } },
+    { types: ['function', 'attr-name'], style: { color: 'var(--syntax-function)' } },
+    { types: ['string', 'char', 'attr-value', 'regex', 'url'], style: { color: 'var(--syntax-string)' } },
+    { types: ['number', 'boolean', 'constant', 'symbol'], style: { color: 'var(--syntax-number)' } },
+    { types: ['class-name', 'builtin', 'property'], style: { color: 'var(--syntax-type)' } },
+    { types: ['operator', 'punctuation'], style: { color: 'var(--syntax-operator)' } },
+  ],
+};
 import { reescreverLinkDeGap } from '../scripts/docs/links-do-locale.mjs';
+import { aplicar, lerCatalogo, ROTULOS_DO_REDOC } from '../scripts/docs/openapi-por-locale.mjs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+
+// ADR 0220: a spec da API sai traduzida por locale. O Docusaurus carrega o
+// config uma vez por locale com `DOCUSAURUS_CURRENT_LOCALE` definido (`start`
+// sem `--locale` cai no pt-BR). O derivado vai para `website/.openapi/`,
+// ignorado pelo git, porque o plugin só aceita caminho de arquivo.
+const LOCALE_ATUAL = process.env.DOCUSAURUS_CURRENT_LOCALE || 'pt-BR';
+const RAIZ_DO_REPO = resolve(__dirname, '..');
+const SPEC_DO_LOCALE = (() => {
+  const fonte = JSON.parse(readFileSync(join(RAIZ_DO_REPO, 'docs/reference/openapi.json'), 'utf8'));
+  const { spec } = aplicar(fonte, lerCatalogo(RAIZ_DO_REPO, LOCALE_ATUAL));
+  const dir = join(__dirname, '.openapi');
+  mkdirSync(dir, { recursive: true });
+  const saida = join(dir, `openapi.${LOCALE_ATUAL}.json`);
+  writeFileSync(saida, JSON.stringify(spec));
+  return saida;
+})();
 
 // A branch que o botão "editar esta página" aponta. PRs de doc miram `dev`;
 // o site publicado sai de `main` (ver CLAUDE.md).
@@ -59,6 +91,12 @@ const DEGRAUS = [
 // próprio valor em vez de exibir `undefined`.
 const CAMINHO_ATUAL = DEGRAUS.find((d) => d.branch === DOCS_BRANCH)?.caminho ?? DOCS_BRANCH;
 
+// Fase de teste da QA (ADR 0217): enquanto a `qa` é promovida sozinha a cada
+// merge na `dev`, o site do degrau `qa` avisa que ele não é ambiente validado.
+// O texto é o MESMO de `AVISO_DA_FASE_DE_TESTE` em `scripts/ci/promote.ts`.
+const AVISO_DA_QA =
+  'Fase de teste: a QA é promovida automaticamente a cada merge na dev e ainda não é considerada ambiente validado.';
+
 const config: Config = {
   title: 'Brabo',
   tagline:
@@ -96,22 +134,17 @@ const config: Config = {
     faster: true,
   },
 
-  // Onda 6a do PROGRAMA (i18n): `docs/` na raiz passa a ser a árvore em
-  // INGLÊS (é o `path` do plugin de docs, e o Docusaurus trata o conteúdo
-  // nesse path como pertencendo ao `defaultLocale`). O snapshot pt-BR
-  // ORIGINAL foi preservado em
-  // `website/i18n/pt-BR/docusaurus-plugin-content-docs/current/` antes de
-  // qualquer tradução acontecer — é essa cópia que o Docusaurus serve para
-  // `pt-BR`, pela convenção padrão do plugin `@docusaurus/plugin-content-docs`
-  // (id `default`, o mesmo id declarado no preset abaixo). Nenhuma UI de
-  // troca de locale nova foi construída: o tema clássico já gera o seletor
-  // de idioma no navbar sozinho quando `locales` tem mais de um item.
+  // ADR 0216: `docs/` é a árvore pt-BR, a FONTE e o padrão. `en`, `ru` e
+  // `zh-Hans` moram em `website/i18n/<locale>/`; página sem tradução num
+  // locale cai na fonte pt-BR, no mesmo slug.
   i18n: {
-    defaultLocale: 'en',
-    locales: ['en', 'pt-BR'],
+    defaultLocale: 'pt-BR',
+    locales: ['pt-BR', 'en', 'ru', 'zh-Hans'],
     localeConfigs: {
-      en: { label: 'English' },
       'pt-BR': { label: 'Português (Brasil)' },
+      en: { label: 'English' },
+      ru: { label: 'Русский' },
+      'zh-Hans': { label: '简体中文' },
     },
   },
 
@@ -123,17 +156,24 @@ const config: Config = {
     // nenhuma página aqui usa componente React, CommonMark é o formato certo;
     // o dia que uma precisar, ela vira `.mdx`.
     format: 'detect',
+    // O `sidebar_label` que o gerador escreve em `docs/reference/` venceria o
+    // `label` de `sidebars.ts`, que é o que tem chave de tradução (AT-563).
+    // Vale também para as cópias traduzidas (`.../current/reference/`).
+    parseFrontMatter: async (params) => {
+      const resultado = await params.defaultParseFrontMatter(params);
+      if (/\/(docs|current)\/reference\//.test(params.filePath)) delete resultado.frontMatter.sidebar_label;
+      return resultado;
+    },
     hooks: {
-      // Onda 6a (i18n): `docs/reference/**` é GERADO e continua fora da
-      // tradução por ora (mesma exclusão do `docs/.docmap.yml`, regra
-      // `traducao-pt-br` — localizar o gerador é gap maior, fora desta
-      // entrega). Isso abre um vão de link nos DOIS sentidos só quando o
-      // Docusaurus compila o locale `pt-BR`: os arquivos de `reference/`
-      // (sem override em `website/i18n/pt-BR/...`, compilados por
+      // Onda 6a (i18n): `docs/reference/**` nasceu fora da tradução e passa a
+      // ser traduzida (ADR 0219), em lotes — a página ainda sem cópia num
+      // locale cai no fallback pt-BR. Isso abre um vão de link nos DOIS sentidos só quando o
+      // Docusaurus compila um locale traduzido (`en`, `ru`, `zh-Hans`): os arquivos de `reference/`
+      // (sem override em `website/i18n/<locale>/...`, compilados por
       // FALLBACK do locale default) apontam para páginas que TÊM versão
-      // pt-BR (`adr/`, `business-rules.md`, `explanation/`), e o inverso —
+      // traduzida (`adr/`, `business-rules.md`, `explanation/`), e o inverso —
       // páginas traduzidas apontam para `reference/`, que só existe na
-      // árvore em inglês. Nos dois casos o arquivo alvo EXISTE no
+      // árvore fonte. Nos dois casos o arquivo alvo EXISTE no
       // repositório — só não existe DENTRO do locale que está compilando
       // agora, então o link markdown relativo (resolvido por caminho de
       // ARQUIVO) não bate com a árvore de rota do locale certo.
@@ -166,48 +206,8 @@ const config: Config = {
     },
   },
 
-  plugins: [
-    [
-      // Referência da API gerada do OpenAPI (Fase 7b, itens 7 e 8).
-      //
-      // `outputDir` aponta para `../docs`, e não para `website/docs`: a fonte
-      // única de verdade do Markdown é `docs/` na raiz, e `website/docs/`
-      // NUNCA existe.
-      //
-      // A spec fica um nível ACIMA do `outputDir`: o `clean-api-docs` apaga o
-      // diretório inteiro antes de regerar, e deixar a entrada lá dentro faria
-      // a segunda execução falhar com ENOENT.
-      //
-      // Quem escreve os `.mdx` é `pnpm docs:generate`, nunca a mão. O
-      // `docs:check` compara o hash de cada arquivo com o manifesto.
-      'docusaurus-plugin-openapi-docs',
-      {
-        id: 'api',
-        docsPluginId: 'default',
-        config: {
-          brabo: {
-            specPath: '../docs/reference/openapi.json',
-            outputDir: '../docs/reference/api',
-            // Uma página por rota, agrupadas por tag — é o que dá a "seção por
-            // domínio" que o escopo pede.
-            sidebarOptions: {
-              groupPathsBy: 'tag',
-              categoryLinkSource: 'tag',
-            },
-            downloadUrl:
-              'https://github.com/daneiel/brabo/blob/main/docs/reference/openapi.json',
-          },
-        },
-      },
-    ],
-  ],
-
   themes: [
     '@docusaurus/theme-mermaid',
-    // O tema é o que renderiza os `.mdx` gerados: sem ele os componentes
-    // `<ApiTabs>`/`<SchemaTabs>` que o plugin emite não existem e o build
-    // quebra.
-    'docusaurus-theme-openapi-docs',
     [
       // Busca local: sem Algolia, sem chamada externa, sem conta em serviço de
       // terceiro. `hashed` põe o hash do índice no nome do arquivo pra não
@@ -215,7 +215,7 @@ const config: Config = {
       require.resolve('@easyops-cn/docusaurus-search-local'),
       {
         hashed: true,
-        language: ['pt', 'en'],
+        language: ['pt', 'en', 'ru', 'zh'],
         indexBlog: false,
         docsRouteBasePath: '/',
         highlightSearchTermsOnTargetPage: true,
@@ -248,25 +248,6 @@ const config: Config = {
           // conteúdo que diverge.
           path: '../docs',
           routeBasePath: '/',
-          // O QUE LIGA O TEMA OPENAPI ÀS PÁGINAS GERADAS. Sem esta linha o
-          // Docusaurus aplica o default `@theme/DocItem`, e o `@theme/ApiItem`
-          // — o único lugar do tema que monta o `<Provider>` do redux
-          // (`createStoreWithState`) — nunca é montado. Os `.api.mdx` importam
-          // `@theme/ApiExplorer/MethodEndpoint`, que lê esse store com
-          // `useSelector`, então cada página de operação achava contexto nulo e
-          // morria na HIDRATAÇÃO com "Cannot destructure property 'store'".
-          //
-          // O modo de falha é traiçoeiro e é o motivo de isto ter passado por
-          // duas releases (v1.0.0 e v1.0.1) sem ninguém ver: o SSR renderiza
-          // certo, o HTML servido tem o conteúdo da rota, `docs:build` fica
-          // VERDE — e o error boundary só apaga a página no navegador. Build
-          // verde nunca provou que a página renderiza; quem prova agora é o
-          // `scripts/docs/api-render-check.mjs`.
-          //
-          // Vale para TODA página de doc, não só as de API: o `ApiItem` delega
-          // ao `DocItem` quando o front-matter não tem `api:`. É por isso que a
-          // verificação desta mudança inclui páginas não-API.
-          docItemComponent: '@theme/ApiItem',
           sidebarPath: './sidebars.ts',
           // Função, não string: com `path: '../docs'` o Docusaurus concatena
           // o caminho relativo ao siteDir e produziria `.../docs/../docs/x.md`,
@@ -291,9 +272,32 @@ const config: Config = {
         },
       } satisfies Preset.Options,
     ],
+    [
+      // Referência da API: UMA página Redoc, com SSR, em /reference/api/
+      // (ADR 0206). A spec é a mesma que `pnpm docs:generate` exporta.
+      'redocusaurus',
+      {
+        specs: [{ spec: SPEC_DO_LOCALE, route: '/reference/api/' }],
+        theme: {
+          primaryColor: '#a4502c',
+          primaryColorDark: '#c8744f',
+          options: { labels: ROTULOS_DO_REDOC[LOCALE_ATUAL] ?? ROTULOS_DO_REDOC['pt-BR'] },
+        },
+      },
+    ],
   ],
 
   themeConfig: {
+    ...(DOCS_BRANCH === 'qa'
+      ? {
+          announcementBar: {
+            id: 'qa-fase-de-teste',
+            content: AVISO_DA_QA,
+            isCloseable: false,
+          },
+        }
+      : {}),
+    mermaid: { theme: { light: 'neutral', dark: 'dark' } },
     colorMode: {
       defaultMode: 'dark',
       respectPrefersColorScheme: true,
@@ -311,8 +315,11 @@ const config: Config = {
           position: 'left',
           label: 'Documentação',
         },
-        { to: '/runbook', label: 'Runbook', position: 'left' },
-        { to: '/adr/', label: 'ADRs', position: 'left' },
+        { to: '/runbook', label: 'Manual de operação', position: 'left' },
+        { to: '/adr/', label: 'Decisões (ADRs)', position: 'left' },
+        // O idioma, pelos rótulos nativos de `localeConfigs`; leva à MESMA
+        // página no outro locale (página sem tradução cai na fonte pt-BR).
+        { type: 'localeDropdown', position: 'right' },
         // O degrau que você está lendo, e como trocar. Fica à esquerda do
         // GitHub porque é navegação do próprio site, não link externo.
         {
@@ -347,7 +354,7 @@ const config: Config = {
             { label: 'Primeiros passos', to: '/getting-started' },
             { label: 'Arquitetura', to: '/architecture' },
             { label: 'Regras de negócio', to: '/business-rules' },
-            { label: 'Runbook', to: '/runbook' },
+            { label: 'Manual de operação', to: '/runbook' },
           ],
         },
         {
@@ -391,8 +398,9 @@ const config: Config = {
         'Ferramentas de terceiros mantêm as próprias licenças — ver Avisos de terceiros.',
     },
     prism: {
-      theme: prismThemes.github,
-      darkTheme: prismThemes.dracula,
+      // Um tema só, sobre os tokens: os dois modos trocam pelas variáveis.
+      theme: TEMA_DO_CODIGO,
+      darkTheme: TEMA_DO_CODIGO,
       additionalLanguages: ['bash', 'json', 'sql', 'elixir', 'yaml'],
     },
   } satisfies Preset.ThemeConfig,

@@ -499,6 +499,37 @@ describe('RN-172 — a sequência REAL do engine, renderizada', () => {
     expect(posHandoff).toBeGreaterThan(posUltima);
   });
 
+  it('AT-395: a bolha mostra só o fecho; `passos` recolhidos em "Passos do turno"', async () => {
+    eventos.mockReturnValue({
+      items: [
+        TURNO_DO_PO[0],
+        {
+          id: 'ev-9',
+          seq: 2,
+          type: 'agent.response',
+          actor: { kind: 'agent', id: 'po' },
+          payload: { content: 'Resumo final', passos: ['Vou criar', 'Criei duas'] },
+          createdAt: '2026-08-10T12:00:01.000Z',
+        },
+      ],
+    });
+    montar();
+    await screen.findByText('Resumo final');
+    expect(screen.queryByText('Vou criar')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /Passos do turno/ }));
+    await screen.findByText('Vou criar');
+    await screen.findByText('Criei duas');
+  });
+
+  it('AT-395: sem `passos`, nada de "Passos do turno"', async () => {
+    eventos.mockReturnValue({
+      items: [TURNO_DO_PO[0], { ...TURNO_DO_PO[1], payload: { content: 'Só isto' } }],
+    });
+    montar();
+    await screen.findByText('Só isto');
+    expect(screen.queryByRole('button', { name: /Passos do turno/ })).toBeNull();
+  });
+
   it('o handoff do turno N NÃO pula para dentro do turno N+1 (fronteira visível)', async () => {
     eventos.mockReturnValue({
       items: [
@@ -709,7 +740,7 @@ describe('RN-173 — o fio acompanha o que cresce', () => {
     await waitFor(() => expect(rolou).toHaveBeenCalled());
   });
 
-  it('não arrasta quem rolou pra cima — a guarda dos 120px do fim continua valendo', async () => {
+  it('RN-951: quem rolou pra cima também é levado ao fim quando chega conteúdo novo', async () => {
     eventos.mockReturnValue({
       items: [
         {
@@ -742,13 +773,14 @@ describe('RN-173 — o fio acompanha o que cresce', () => {
     Object.defineProperty(rolavel, 'scrollHeight', { value: 5000, configurable: true });
     Object.defineProperty(rolavel, 'clientHeight', { value: 500, configurable: true });
     Object.defineProperty(rolavel, 'scrollTop', { value: 0, configurable: true });
+    fireEvent.scroll(rolavel);
 
     rolou.mockClear();
     acoes.mockReturnValue([acao({ id: 'acao-1', seq: 999_999 })]);
     rerender(arvore);
 
     await screen.findByText('propõe alteração');
-    expect(rolou).not.toHaveBeenCalled();
+    expect(rolou).toHaveBeenCalled();
   });
 });
 

@@ -1,4 +1,5 @@
 import type { HTMLAttributes } from 'react';
+import { Shimmer } from './Shimmer';
 import styles from './Badge.module.css';
 
 /**
@@ -22,6 +23,11 @@ interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
    * branch, repositório, economia de token — e não só um estado.
    */
   size?: 'sm' | 'md';
+  /**
+   * O rótulo diz que algo está EM CURSO (provisionando, encerrando): o texto
+   * ganha o `Shimmer` (ADR 0210). Só vale com rótulo em texto puro.
+   */
+  emCurso?: boolean;
 }
 
 export function Badge({
@@ -30,6 +36,7 @@ export function Badge({
   pulse,
   square,
   size = 'sm',
+  emCurso,
   className,
   children,
   ...rest
@@ -48,7 +55,7 @@ export function Badge({
   return (
     <span className={classes} {...rest}>
       {dot && <span className={styles.dot} />}
-      {children}
+      {emCurso && typeof children === 'string' ? <Shimmer>{children}</Shimmer> : children}
     </span>
   );
 }

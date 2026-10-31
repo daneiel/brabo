@@ -41,6 +41,13 @@ export interface ObservacaoDeContainer {
   imagem: string;
   /** ISO-8601, ou `null` quando o container nunca subiu. */
   iniciadoEm: string | null;
+  /** ADR 0228: o que o daemon diz estar publicado (o OBSERVADO; o declarado é outra coluna). */
+  portasPublicadas?: Array<{
+    ip: string;
+    host: number;
+    container: number;
+    protocolo?: string;
+  }>;
 }
 
 export interface ContainerIniciadoPeloBroker {
@@ -110,6 +117,20 @@ export abstract class ContainerBrokerPort {
   abstract inspect(projectId: string): Promise<ObservacaoDeContainer | null>;
   abstract exec(
     projectId: string,
+    comando: string,
+    cwd?: string,
+    timeoutMs?: number,
+  ): Promise<ResultadoDeExecNoContainer>;
+
+  /** AT-612 (ADR 0229): a instância de QA efêmera. `chave` = `chaveDeQa(taskId)`. */
+  abstract startQa(
+    projectId: string,
+    chave: string,
+  ): Promise<ContainerIniciadoPeloBroker>;
+  abstract removeQa(projectId: string, chave: string): Promise<void>;
+  abstract execQa(
+    projectId: string,
+    chave: string,
     comando: string,
     cwd?: string,
     timeoutMs?: number,

@@ -14,6 +14,7 @@ import { ClearModelBindingUseCase } from './clear-model-binding.use-case';
 import { ResolveModelBindingUseCase } from './resolve-model-binding.use-case';
 import { ResolveModelBindingsEmLoteUseCase } from './resolve-model-bindings-em-lote.use-case';
 import { UpsertUserCredentialUseCase } from './upsert-user-credential.use-case';
+import { ImportRunnerLlmCredentialUseCase } from './import-runner-llm-credential.use-case';
 import { ListUserCredentialsUseCase } from './list-user-credentials.use-case';
 import { DeleteUserCredentialUseCase } from './delete-user-credential.use-case';
 import { UpsertBudgetUseCase } from './upsert-budget.use-case';
@@ -25,9 +26,11 @@ import { GetWorkspaceSpendReportUseCase } from './get-workspace-spend-report.use
 import { GetMySpendUseCase } from './get-my-spend.use-case';
 import { CheckBudgetGateUseCase } from './check-budget-gate.use-case';
 import { RecordLlmUsageUseCase } from './record-llm-usage.use-case';
+import { ReconciliarCustoEstimadoUseCase } from './reconciliar-custo-estimado.use-case';
 import { SendChatMessageUseCase } from './send-chat-message.use-case';
 import { GarantirDestinatarioDoChatUseCase } from './garantir-destinatario-do-chat.use-case';
 import { RunLlmTurnUseCase } from './run-llm-turn.use-case';
+import { ListCredentialedProvidersUseCase } from './list-credentialed-providers.use-case';
 import { ResolveCredentialOwnerUseCase } from './resolve-credential-owner.use-case';
 import { StreamLlmTurnUseCase } from './stream-llm-turn.use-case';
 import { DecidirFerramentaDoPassoUseCase } from './decidir-ferramenta-do-passo.use-case';
@@ -51,7 +54,9 @@ const USE_CASES = [
   ResolveModelBindingUseCase,
   ResolveModelBindingsEmLoteUseCase,
   UpsertUserCredentialUseCase,
+  ImportRunnerLlmCredentialUseCase,
   ListUserCredentialsUseCase,
+  ListCredentialedProvidersUseCase,
   DeleteUserCredentialUseCase,
   UpsertBudgetUseCase,
   GetBudgetUseCase,
@@ -62,6 +67,7 @@ const USE_CASES = [
   GetMySpendUseCase,
   CheckBudgetGateUseCase,
   RecordLlmUsageUseCase,
+  ReconciliarCustoEstimadoUseCase,
   SendChatMessageUseCase,
   GarantirDestinatarioDoChatUseCase,
   RunLlmTurnUseCase,

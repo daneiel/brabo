@@ -18,7 +18,6 @@ import type {
   ResolvedBinding,
 } from '../../lib/api-types';
 import { ModelsSection } from './ModelsSection';
-import { AreaModelsSection } from './AreaModelsSection';
 import { loteSobreLeiturasPorChave } from '../../test/lote-de-bindings';
 
 /**
@@ -101,19 +100,22 @@ const MODELOS = {
   cloud: { openrouter: [DO_HUB] },
 } as unknown as ModelsByCategory;
 
-function capacidades(hubAceita: boolean): ProviderCapabilities[] {
+function capacidades(hubAceita: boolean, teto = false): ProviderCapabilities[] {
   const base = {
     streaming: true,
     toolCalling: true,
     listModels: true,
     embeddings: false,
     routingPreference: false,
+    stickySession: false,
+    priceCeiling: false,
+    promptCaching: false,
   };
   return [
     { provider: 'ollama', capabilities: base },
     {
       provider: 'openrouter',
-      capabilities: { ...base, routingPreference: hubAceita },
+      capabilities: { ...base, routingPreference: hubAceita, priceCeiling: teto },
     },
   ];
 }
@@ -294,20 +296,24 @@ describe('critério de roteamento — quando NÃO há o que escolher', () => {
   });
 });
 
-describe('critério de roteamento — padrão da ÁREA', () => {
-  const ROTULO_DA_AREA = /Preferência de roteamento de Área Dev/;
+describe('critério de roteamento — padrão da ÁREA (lead com a caixa marcada)', () => {
+  const ROTULO_DA_AREA = /Preferência de roteamento de Dev Lead/;
 
   beforeEach(() => {
+    // O lead do Dev segue a área: o vigente dele vem do binding de área.
+    getAgentModelBinding.mockImplementation((_p: string, slug: string) =>
+      Promise.resolve(slug === 'dev-lead' ? binding({ origin: 'area' }) : null),
+    );
     getAreaModelBinding.mockImplementation((_p: string, area: string) =>
       Promise.resolve(area === 'dev' ? binding({ origin: 'area' }) : null),
     );
   });
 
-  it('caminho feliz: regrava o padrão da área com o critério', async () => {
+  it('caminho feliz: regrava o padrão da área com o critério, não o do agente', async () => {
     useCurrentWorkspaceWithRole.mockReturnValue({
       data: { workspace: { id: 'ws-1' }, role: 'maintainer' },
     });
-    montar(<AreaModelsSection projectId="proj-1" />);
+    montar(<ModelsSection projectId="proj-1" />);
 
     fireEvent.change(
       await screen.findByRole('combobox', { name: ROTULO_DA_AREA }),
@@ -319,13 +325,34 @@ describe('critério de roteamento — padrão da ÁREA', () => {
         routingPreference: 'throughput',
       }),
     );
+    expect(setAgentModelBinding).not.toHaveBeenCalled();
   });
 
   it('o mínimo é o do ENDPOINT da área (`maintainer`): `developer` vê o seletor inerte', async () => {
-    montar(<AreaModelsSection projectId="proj-1" />);
+    useCurrentWorkspaceWithRole.mockReturnValue({
+      data: { workspace: { id: 'ws-1' }, role: 'developer' },
+    });
+    montar(<ModelsSection projectId="proj-1" />);
 
     expect(
       await screen.findByRole('combobox', { name: ROTULO_DA_AREA }),
     ).toBeDisabled();
+  });
+});
+
+describe('teto de preço (priceCeiling) junto do critério de roteamento', () => {
+  it('caminho feliz: com o provider declarando o teto, a frase aparece ao lado do seletor', async () => {
+    listProviderCapabilities.mockResolvedValue(capacidades(true, true));
+    montar(<ModelsSection projectId="proj-1" />);
+
+    expect(await screen.findByText(/teto de preço/)).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: ROTULO })).toBeInTheDocument();
+  });
+
+  it('caso de falha: sem a capability, a frase do teto não aparece', async () => {
+    montar(<ModelsSection projectId="proj-1" />);
+
+    await screen.findByRole('combobox', { name: ROTULO });
+    expect(screen.queryByText(/teto de preço/)).toBeNull();
   });
 });

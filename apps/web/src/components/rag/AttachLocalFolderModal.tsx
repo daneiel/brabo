@@ -1,3 +1,4 @@
+import { Shimmer } from '../ui/Shimmer';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation } from '@tanstack/react-query';
@@ -161,7 +162,7 @@ export function AttachLocalFolderModal({
           </Button>
         )}
 
-        {lendo && <div className={styles.estado}>{t('rag.attachLocalFolder.reading')}</div>}
+        {lendo && <div className={styles.estado}><Shimmer>{t('rag.attachLocalFolder.reading')}</Shimmer></div>}
 
         {preview && preview.overCap && (
           <div className={styles.aviso} role="alert">

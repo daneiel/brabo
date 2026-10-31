@@ -5,6 +5,7 @@ defmodule Engine.Dev.DevAgentServerTest do
   # síncrono no mesmo processo, e o acesso ao banco fica no sandbox do
   # próprio processo.
   use Engine.DataCase, async: false
+  use Oban.Testing, repo: Engine.Repo, prefix: "engine"
 
   alias Engine.Dev.{DevAgentServer, DevAgentState, FakeWorktreeManager}
   alias Engine.Gates.FakeGateDispatcher
@@ -107,7 +108,8 @@ defmodule Engine.Dev.DevAgentServerTest do
     assert commit_payload.message == "cadastro implementado"
     assert_received {:propose_action, "git_push", _, _}
     assert_received {:propose_action, "pr_open", _, pr_payload}
-    assert pr_payload.title =~ "Cadastro"
+    # AT-455: o título abre pela TAREFA, depois a história.
+    assert pr_payload.title == "Cadastro — Cadastro de usuários"
     assert pr_payload.body =~ "Definition of Done"
     # RN-664 (AT-250): a PR mira `dev` explicitamente — sem o campo, a api
     # completava com a branch default (`main`).
@@ -322,6 +324,82 @@ defmodule Engine.Dev.DevAgentServerTest do
     refute_received {:propose_action, "pr_open", _, _}
   end
 
+  describe "RN-774: teto 2x na primeira tarefa do módulo" do
+    # Cada chamada custa US$ 0,53, o gasto da tarefa 1 do TP-01 de 08/10.
+    defp chamada_de_53_centavos do
+      %{
+        "message" => %{
+          "role" => "assistant",
+          "content" => "",
+          "toolCalls" => [
+            %{"id" => "tc-1", "name" => "search_workspace", "arguments" => %{"query" => "x"}}
+          ]
+        },
+        "usage" => %{"costMicros" => 530_000, "estimated" => false},
+        "error" => nil
+      }
+    end
+
+    defp contexto_da_tarefa(task_id, primeira) do
+      %{
+        "task" => %{
+          "id" => task_id,
+          "title" => "t",
+          "description" => "",
+          "primeiraDoModulo" => primeira
+        },
+        "story" => %{"id" => "st-1", "title" => "s", "description" => ""},
+        "businessRules" => [],
+        "adrs" => []
+      }
+    end
+
+    setup %{state: state} do
+      Process.put(:fake_llm_always, chamada_de_53_centavos())
+      %{state: %{state | task_budget_micros: 500_000}}
+    end
+
+    test "a primeira tarefa do módulo com US$ 0,53 NÃO bloqueia; o teto que vale é US$ 1,00",
+         %{state: state} do
+      Process.put(:fake_tasks, [%{"id" => "task-1a", "title" => "Esqueleto"}])
+      Process.put(:fake_dev_context, contexto_da_tarefa("task-1a", true))
+
+      assert {:noreply, _} = DevAgentServer.handle_cast(:work, state)
+
+      # A primeira chamada (US$ 0,53) passou; só a segunda (US$ 1,06 no total)
+      # estourou, e o diagnóstico diz o teto que valeu para ESTA tarefa.
+      assert_received {:task_blocked, "task-1a", "orçamento de tokens excedido", diagnosis,
+                       "dev-api"}
+
+      assert diagnosis =~ "gasto: 1060000 micro-USD"
+      assert diagnosis =~ "teto da primeira tarefa do módulo: 1000000 micro-USD, US$ 1.00"
+    end
+
+    test "a segunda tarefa do mesmo módulo com US$ 0,53 BLOQUEIA, com o teto normal",
+         %{state: state} do
+      Process.put(:fake_tasks, [%{"id" => "task-2a", "title" => "Segunda"}])
+      Process.put(:fake_dev_context, contexto_da_tarefa("task-2a", false))
+
+      assert {:noreply, _} = DevAgentServer.handle_cast(:work, state)
+
+      assert_received {:task_blocked, "task-2a", "orçamento de tokens excedido", diagnosis,
+                       "dev-api"}
+
+      assert diagnosis =~ "gasto: 530000 micro-USD (teto: 500000 micro-USD, US$ 0.50)"
+    end
+
+    test "a primeira tarefa de OUTRO módulo também ganha 2x", %{state: state} do
+      state = %{state | module: "web", agent_id: "dev-web"}
+      Process.put(:fake_tasks, [%{"id" => "task-1w", "title" => "Esqueleto web"}])
+      Process.put(:fake_dev_context, contexto_da_tarefa("task-1w", true))
+
+      assert {:noreply, _} = DevAgentServer.handle_cast(:work, state)
+
+      assert_received {:task_blocked, "task-1w", "orçamento de tokens excedido", diagnosis, _}
+      assert diagnosis =~ "gasto: 1060000 micro-USD"
+    end
+  end
+
   test "report_done sem terminal exit 0 prévio: recusado, loop conclui sem PR", %{state: state} do
     Process.put(:fake_tasks, [%{"id" => "task-apressada", "title" => "Tarefa apressada"}])
 
@@ -412,6 +490,61 @@ defmodule Engine.Dev.DevAgentServerTest do
                          type: "dev.awaiting_gate",
                          payload: %{taskId: "task-abc12345", gate: "qa"}
                        }}
+    end
+
+    # AT-621: o 503 na correção pós-gate segue a RN-864, como no laço principal.
+    test "correção com 503: infra, retomada agendada, pausa e disjuntor intacto", %{state: state} do
+      Process.put(:fake_tasks, [%{"id" => "task-next", "title" => "T2"}])
+      Process.put(:fake_llm_turn_error, "openrouter respondeu com status 503")
+      findings = %{gate: "qa", reason: "falhou", diagnosis: "x"}
+
+      assert {:noreply, new_state} = DevAgentServer.handle_cast({:correct, findings}, state)
+
+      assert_received {:task_blocked, "task-abc12345", motivo, _, "dev-api"}
+      assert motivo =~ "(correção)"
+      assert motivo =~ "retomada automática 1 de 3 em 1 min"
+      assert_received {:task_blocked_origin, "task-abc12345", "infra"}
+      refute_received {:task_blocked, "task-next", _, _, _}
+      assert new_state.pausa_de_rede
+      assert new_state.consecutive_blocked == state.consecutive_blocked
+
+      assert [job] = all_enqueued(worker: Engine.Workers.RetomadaDeTarefaWorker)
+      assert job.args["taskId"] == "task-abc12345"
+      assert DateTime.diff(job.scheduled_at, DateTime.utc_now()) in 50..61
+    end
+
+    test "correção sem crédito: pausa por crédito, sem retomada", %{state: state} do
+      Process.put(:fake_llm_always, %{
+        "message" => %{"content" => ""},
+        "error" => "créditos insuficientes",
+        "errorCode" => "insufficient_credit"
+      })
+
+      findings = %{gate: "qa", reason: "falhou", diagnosis: "x"}
+
+      assert {:noreply, new_state} = DevAgentServer.handle_cast({:correct, findings}, state)
+
+      assert_received {:task_blocked_origin, "task-abc12345", "infra"}
+      assert [] = all_enqueued(worker: Engine.Workers.RetomadaDeTarefaWorker)
+      assert new_state.status == :idle_tripped
+      refute Map.get(new_state, :pausa_de_rede)
+    end
+
+    test "correção com erro não passageiro: bloqueia na hora, sem retomada", %{state: state} do
+      Process.put(:fake_llm_always, %{
+        "message" => %{"content" => ""},
+        "error" => "requisição inválida (400)",
+        "errorCode" => "invalid_request"
+      })
+
+      findings = %{gate: "qa", reason: "falhou", diagnosis: "x"}
+
+      assert {:noreply, _} = DevAgentServer.handle_cast({:correct, findings}, state)
+
+      assert_received {:task_blocked, "task-abc12345", motivo, _, "dev-api"}
+      assert motivo =~ "(correção)"
+      refute motivo =~ "retomada automática"
+      assert [] = all_enqueued(worker: Engine.Workers.RetomadaDeTarefaWorker)
     end
 
     test "report_blocked na correção: bloqueia igual ao fluxo original", %{state: state} do
@@ -611,6 +744,195 @@ defmodule Engine.Dev.DevAgentServerTest do
                        %{type: "dev.idle", payload: %{reason: "sem task pegável"}}}
     end
 
+    # RN-726 (AT-407): o 402 do provider não é defeito de código. Origem
+    # `infra`, motivo nomeado, contador intacto, e a próxima task NÃO é
+    # reivindicada — senão cada uma queimaria em 1 s até a parada automática.
+    test "402 do provider: origem infra, pausa sem idle_tripped e sem queimar a próxima task",
+         %{state: state} do
+      state = %{state | max_consecutive_blocked: 3}
+
+      Process.put(:fake_tasks, [
+        %{"id" => "task-c1", "title" => "T1"},
+        %{"id" => "task-c2", "title" => "T2"}
+      ])
+
+      Process.put(:fake_dev_context, contexto_minimo())
+
+      Process.put(
+        :fake_llm_turn_error,
+        "openrouter respondeu com status 402: This request would exceed your available credits"
+      )
+
+      assert {:noreply, new_state} = DevAgentServer.handle_cast(:work, state)
+
+      assert_received {:task_blocked, "task-c1", "crédito do provider esgotado", _, "dev-api"}
+      assert_received {:task_blocked_origin, "task-c1", "infra"}
+
+      assert_received {:event_appended, _, _,
+                       %{type: "dev.credit_exhausted", payload: %{motivo: "credito_esgotado"}}}
+
+      refute_received {:event_appended, _, _, %{type: "dev.idle_tripped"}}
+      refute_received {:task_blocked, "task-c2", _, _, _}
+      assert new_state.consecutive_blocked == 0
+      assert new_state.status == :idle_tripped
+      assert new_state.task_id == nil
+    end
+
+    test "erro que não é de crédito segue como antes: parou sem concluir, conta no disjuntor",
+         %{state: state} do
+      state = %{state | max_consecutive_blocked: 3}
+      Process.put(:fake_tasks, [%{"id" => "task-d1", "title" => "T1"}])
+      Process.put(:fake_dev_context, contexto_minimo())
+      Process.put(:fake_llm_turn_error, "algo inesperado")
+
+      assert {:noreply, new_state} = DevAgentServer.handle_cast(:work, state)
+
+      assert_received {:task_blocked, "task-d1", "parou sem concluir nem reportar bloqueio", _,
+                       "dev-api"}
+
+      assert_received {:task_blocked_origin, "task-d1", "codigo"}
+      refute_received {:event_appended, _, _, %{type: "dev.credit_exhausted"}}
+      assert new_state.consecutive_blocked == 1
+    end
+
+    # RN-810 (AT-484): rede do provider fora é INFRA e não conta no disjuntor.
+    test "erro de rede do provider: origem infra e o disjuntor não conta",
+         %{state: state} do
+      state = %{state | max_consecutive_blocked: 3, consecutive_blocked: 2}
+      Process.put(:fake_tasks, [%{"id" => "task-n1", "title" => "T1"}])
+      Process.put(:fake_dev_context, contexto_minimo())
+      Process.put(:fake_llm_turn_error, "getaddrinfo EAI_AGAIN openrouter.ai")
+
+      assert {:noreply, new_state} = DevAgentServer.handle_cast(:work, state)
+
+      assert_received {:task_blocked_origin, "task-n1", "infra"}
+      refute_received {:event_appended, _, _, %{type: "dev.idle_tripped"}}
+      assert new_state.consecutive_blocked == 2
+    end
+
+    # RN-864 (AT-525): falha passageira agenda a retomada (1 min) e PAUSA o
+    # agente, que não pega a próxima task.
+    test "falha passageira: agenda a retomada, pausa e não queima a fila", %{state: state} do
+      Process.put(:fake_tasks, [
+        %{"id" => "task-p1", "title" => "T1"},
+        %{"id" => "task-p2", "title" => "T2"}
+      ])
+
+      Process.put(:fake_dev_context, contexto_minimo())
+      Process.put(:fake_llm_turn_error, "getaddrinfo EAI_AGAIN openrouter.ai")
+
+      assert {:noreply, new_state} = DevAgentServer.handle_cast(:work, state)
+
+      assert_received {:task_blocked, "task-p1", motivo, _, "dev-api"}
+      assert motivo =~ "retomada automática 1 de 3 em 1 min"
+      refute_received {:task_blocked, "task-p2", _, _, _}
+      assert new_state.status == :idle
+      assert new_state.pausa_de_rede
+      assert new_state.retomadas_automaticas == %{"task-p1" => 1}
+
+      assert [job] = all_enqueued(worker: Engine.Workers.RetomadaDeTarefaWorker)
+      assert job.args["taskId"] == "task-p1"
+      assert DateTime.diff(job.scheduled_at, DateTime.utc_now()) in 50..61
+
+      # Wake durante a pausa não reivindica.
+      assert {:noreply, ^new_state} =
+               DevAgentServer.handle_info({:wake, :became_claimable}, new_state)
+    end
+
+    # AT-594: 429 do provider é limite de uso do modelo, não rede. A origem e
+    # a retomada seguem como na RN-864.
+    test "429 do provider: o motivo diz limite de uso do modelo, não rede", %{state: state} do
+      Process.put(:fake_tasks, [%{"id" => "task-l1", "title" => "T1"}])
+      Process.put(:fake_dev_context, contexto_minimo())
+
+      Process.put(:fake_llm_always, %{
+        "message" => %{"content" => ""},
+        "error" => "limite de uso atingido em openrouter (429)",
+        "errorCode" => "rate_limit"
+      })
+
+      assert {:noreply, new_state} = DevAgentServer.handle_cast(:work, state)
+
+      assert_received {:task_blocked, "task-l1", motivo, _, "dev-api"}
+      assert motivo =~ "limite de uso do modelo"
+      assert motivo =~ "troque o modelo"
+      refute motivo =~ "rede"
+      assert_received {:task_blocked_origin, "task-l1", "infra"}
+      assert new_state.pausa_de_rede
+      assert [_] = all_enqueued(worker: Engine.Workers.RetomadaDeTarefaWorker)
+    end
+
+    test "falha de rede continua com o texto de rede, não de limite", %{state: state} do
+      Process.put(:fake_tasks, [%{"id" => "task-l2", "title" => "T1"}])
+      Process.put(:fake_dev_context, contexto_minimo())
+      Process.put(:fake_llm_turn_error, "getaddrinfo EAI_AGAIN openrouter.ai")
+
+      assert {:noreply, _} = DevAgentServer.handle_cast(:work, state)
+
+      assert_received {:task_blocked, "task-l2", motivo, _, "dev-api"}
+      assert motivo =~ "falha passageira de rede"
+      refute motivo =~ "limite de uso"
+    end
+
+    test "falha passageira depois de 3 retomadas fica bloqueada pedindo o clique",
+         %{state: state} do
+      state = Map.put(state, :retomadas_automaticas, %{"task-p3" => 3})
+      Process.put(:fake_tasks, [%{"id" => "task-p3", "title" => "T1"}])
+      Process.put(:fake_dev_context, contexto_minimo())
+      Process.put(:fake_llm_turn_error, "openrouter respondeu com status 503")
+
+      assert {:noreply, _} = DevAgentServer.handle_cast(:work, state)
+
+      assert_received {:task_blocked, "task-p3", motivo, _, "dev-api"}
+      assert motivo =~ "3 retomadas automáticas já tentadas; desbloqueie à mão"
+      assert_received {:task_blocked_origin, "task-p3", "infra"}
+      assert [] == all_enqueued(worker: Engine.Workers.RetomadaDeTarefaWorker)
+    end
+
+    test "402 não agenda retomada", %{state: state} do
+      Process.put(:fake_tasks, [%{"id" => "task-c1", "title" => "T1"}])
+      Process.put(:fake_dev_context, contexto_minimo())
+
+      Process.put(
+        :fake_llm_turn_error,
+        "openrouter respondeu com status 402: This request would exceed your available credits"
+      )
+
+      assert {:noreply, _} = DevAgentServer.handle_cast(:work, state)
+      assert [] == all_enqueued(worker: Engine.Workers.RetomadaDeTarefaWorker)
+    end
+
+    test "fim da pausa volta a reivindicar", %{state: state} do
+      Process.put(:fake_tasks, [])
+      paused = Map.merge(state, %{status: :idle, pausa_de_rede: true})
+
+      assert {:noreply, new_state} = DevAgentServer.handle_info(:fim_da_pausa_de_rede, paused)
+      refute new_state.pausa_de_rede
+
+      assert_received {:event_appended, _, _,
+                       %{type: "dev.idle", payload: %{reason: "sem task pegável"}}}
+    end
+
+    # RN-780 (AT-459): só raciocínio, cortado pelo teto, duas vezes seguidas.
+    test "resposta só de raciocínio cortada pelo teto bloqueia com motivo nomeado, origem modelo",
+         %{state: state} do
+      Process.put(:fake_tasks, [%{"id" => "task-r1", "title" => "T1"}])
+      Process.put(:fake_dev_context, contexto_minimo())
+
+      cortada =
+        FakeEngineApiClient.final_response("") |> Map.put("truncated", true)
+
+      Process.put(:fake_llm_always, cortada)
+
+      assert {:noreply, _} = DevAgentServer.handle_cast(:work, state)
+
+      assert_received {:task_blocked, "task-r1", "resposta só de raciocínio, cortada pelo teto",
+                       diagnostico, "dev-api"}
+
+      assert diagnostico =~ "teto de saída"
+      assert_received {:task_blocked_origin, "task-r1", "modelo"}
+    end
+
     test "orçamento por task não vaza entre reivindicações da mesma sequência", %{
       state: state
     } do
@@ -785,5 +1107,96 @@ defmodule Engine.Dev.DevAgentServerTest do
       assert unchanged == state
       refute_received {:task_claimed, _, _}
     end
+  end
+
+  describe "conflito de merge (RN-715)" do
+    @conflito %{
+      task_id: "task-abc12345",
+      pull_request_id: "pr-6",
+      conflicting_files: ["package.json"]
+    }
+
+    test "livre: readota a branch da PR, recebe o motivo, reenvia e o gate reabre do QA", %{
+      state: state
+    } do
+      Process.put(:fake_propose_action, terminal_ok())
+
+      Process.put(:fake_dev_context, %{
+        "task" => %{"id" => "task-abc12345", "title" => "Cadastro", "description" => ""},
+        "story" => %{
+          "id" => "st-1",
+          "title" => "Cadastro",
+          "description" => "",
+          "rf" => [],
+          "rnf" => [],
+          "dod" => [],
+          "dor" => []
+        },
+        "businessRules" => [],
+        "adrs" => []
+      })
+
+      Process.put(:fake_llm_turns, [
+        FakeEngineApiClient.tool_call_response("terminal", %{"command" => "npm test"}),
+        FakeEngineApiClient.tool_call_response("report_done", %{"summary" => "dev integrada"})
+      ])
+
+      state = %{state | status: :idle}
+
+      assert {:noreply, new_state} =
+               DevAgentServer.handle_info({:merge_conflict, @conflito}, state)
+
+      assert_received {:worktree_adopted, _, "dev-api", "task-task-abc"}
+      refute_received {:worktree_created, _, _, _}
+      assert_received {:llm_turn, _, mensagens, _}
+      assert Enum.any?(mensagens, &(to_string(Map.get(&1, "content", "")) =~ "package.json"))
+      assert_received {:propose_action, "git_commit", _, _}
+      assert_received {:propose_action, "git_push", _, _}
+      refute_received {:propose_action, "pr_open", _, _}
+      assert_received {:gate_opened, "task-abc12345", "dev-api"}
+      assert_received {:gate_dispatch, :qa, _, "task-abc12345"}
+      assert new_state.status == :awaiting_gate
+      assert new_state.task_id == "task-abc12345"
+    end
+
+    test "falha ao readotar a branch: bloqueia nomeado, origem infra", %{state: state} do
+      Process.put(:fake_worktree_error, "branch sumiu")
+      Process.put(:fake_tasks, [])
+
+      assert {:noreply, _} =
+               DevAgentServer.handle_info({:merge_conflict, @conflito}, %{state | status: :idle})
+
+      assert_received {:task_blocked, "task-abc12345", motivo, _, "dev-api"}
+      assert motivo =~ "conflito"
+      assert_received {:task_blocked_origin, "task-abc12345", "infra"}
+    end
+
+    test "disjuntor aberto: bloqueia a task com motivo, sem trabalhar", %{state: state} do
+      state = %{state | status: :idle_tripped}
+
+      assert {:noreply, ^state} =
+               DevAgentServer.handle_info({:merge_conflict, @conflito}, state)
+
+      assert_received {:task_blocked, "task-abc12345", _, diagnostico, "dev-api"}
+      assert diagnostico =~ "package.json"
+      refute_received {:worktree_adopted, _, _, _}
+    end
+  end
+
+  defp contexto_minimo do
+    %{
+      "task" => %{"id" => "x", "title" => "x", "description" => ""},
+      "story" => %{
+        "id" => "st-1",
+        "title" => "x",
+        "description" => "",
+        "rf" => [],
+        "rnf" => [],
+        "dod" => [],
+        "dor" => []
+      },
+      "businessRules" => [],
+      "adrs" => []
+    }
   end
 end

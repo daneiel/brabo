@@ -1,3 +1,4 @@
+import { Shimmer } from '../components/ui/Shimmer';
 import { useQuery } from '@tanstack/react-query';
 import { Trans, useTranslation } from 'react-i18next';
 import {
@@ -59,7 +60,7 @@ export function ProjectSpendTab({ projectId }: { projectId: string }) {
   return (
     <div className={styles.pagina}>
       {papel.isLoading && (
-        <div className={styles.estado}>{t('shared.loading')}</div>
+        <div className={styles.estado}><Shimmer>{t('shared.loading')}</Shimmer></div>
       )}
 
       {papel.isError && (
@@ -172,7 +173,7 @@ function GastoDoWorkspace({ projectId }: { projectId: string }) {
 
       {/* Os três estados, e o erro ANTES do vazio (RN-088). */}
       {relatorio.isLoading && (
-        <div className={styles.estado}>{t('shared.summing')}</div>
+        <div className={styles.estado}><Shimmer>{t('shared.summing')}</Shimmer></div>
       )}
 
       {relatorio.isError && (
@@ -285,7 +286,7 @@ function MeuConsumo({ projectId }: { projectId: string }) {
       </header>
 
       {meu.isLoading && (
-        <div className={styles.estado}>{t('shared.summing')}</div>
+        <div className={styles.estado}><Shimmer>{t('shared.summing')}</Shimmer></div>
       )}
 
       {meu.isError && (

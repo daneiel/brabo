@@ -109,6 +109,9 @@ describe('frases derivadas do payload', () => {
 
   it('a frase do merge cita a PR, e a do teto cita o salto', () => {
     expect(fraseDaAcao('git_merge', { pullRequestId: '42' })).toContain('#42');
+    // RN-705: o id `pr-N` do provider local vira o NÚMERO.
+    expect(fraseDaAcao('git_merge', { pullRequestId: 'pr-3' })).toContain('#3');
+    expect(fraseDaAcao('git_merge', { pullRequestId: 'pr-3' })).not.toContain('#pr-3');
     expect(fraseDaAcao('raise_max_parallel', { area: 'dev', atual: 2, proposto: 4 })).toContain(
       'de 2 para 4',
     );
@@ -125,6 +128,28 @@ describe('frases derivadas do payload', () => {
     expect(frase).toContain('ATIVA a execução');
     expect(frase).toContain('2 tarefas');
     expect(frase).not.toContain('ainda decide');
+  });
+
+  // RN-747 (AT-437): o card diz quantos dev agents SOBEM, não quantos o plano pede.
+  it('plano com 2 agentes num módulo único diz que sobe 1 e que o outro depende de paralelizar', () => {
+    const frase = fraseDaAcao('propose_execution_plan', {
+      totalAgentes: 2,
+      modulos: [{ modulo: 'app', agentes: 2 }],
+      resumo: '"2 agentes no módulo único; backlog coberto."',
+    })!;
+    expect(frase).toContain('sobe 1 dev agent, um por módulo');
+    expect(frase).toContain('o 1 a mais só sobe se você aceitar paralelizar');
+    expect(frase).toContain(': "2 agentes no módulo único; backlog coberto." e ATIVA');
+    expect(frase).not.toContain('coberto.""');
+  });
+
+  it('plano sem agente a mais não fala de paralelizar', () => {
+    const frase = fraseDaAcao('propose_execution_plan', {
+      totalAgentes: 2,
+      modulos: [{ modulo: 'api' }, { modulo: 'web' }],
+    })!;
+    expect(frase).toContain('sobe 2 dev agents, um por módulo');
+    expect(frase).not.toContain('paralelizar');
   });
 
   it('plano sem `tarefas` (payload antigo) não inventa contagem', () => {
@@ -244,5 +269,51 @@ describe('a hipótese do Psicólogo fala a mesma língua', () => {
 
   it('descartada: diz explicitamente que nada mudou', () => {
     expect(descreverHipotese(hipotese('dismissed')).frase).toContain('nada mudou');
+  });
+});
+
+describe('AT-371 — o verbo segue o estado da ação', () => {
+  it.each(['pr_open', 'open_adr_pr', 'open_infra_pr'])('%s pendente propõe; executada abriu', (tipo) => {
+    expect(verboDaAcao(tipo)).toMatch(/^quer abrir/);
+    expect(descreverAcao(tipo, {}, 'pending').verbo).toMatch(/^quer abrir/);
+    expect(descreverAcao(tipo, {}, 'executed').verbo).toMatch(/^abriu/);
+  });
+
+  it('tipo sem verbo executado mantém o da proposta', () => {
+    expect(verboDaAcao('terminal', 'executed')).toBe(verboDaAcao('terminal'));
+  });
+});
+
+describe('AT-381 — o plano mostra a estimativa de gasto', () => {
+  it('tarefas × orçamento por tarefa, dito como teto', () => {
+    const frase = fraseDaAcao('propose_execution_plan', {
+      tarefas: Array.from({ length: 18 }, (_, i) => ({ taskId: `t${i}`, modulo: 'api' })),
+      orcamentoPorTarefaMicros: 500_000,
+    });
+    expect(frase).toContain('até US$ 9,00 (18 tarefas × US$ 0,50)');
+    expect(frase).toContain('teto por tarefa, não o preço');
+  });
+
+  it('RN-802 (AT-473): a primeira de cada módulo vale o dobro', () => {
+    const umModulo = fraseDaAcao('propose_execution_plan', {
+      tarefas: Array.from({ length: 8 }, (_, i) => ({ taskId: `t${i}`, modulo: 'api' })),
+      orcamentoPorTarefaMicros: 500_000,
+      multiplicadorDaPrimeiraDoModulo: 2,
+    });
+    expect(umModulo).toContain('até US$ 4,50 (8 tarefas × US$ 0,50; a primeira de cada módulo vale o dobro)');
+    const doisModulos = fraseDaAcao('propose_execution_plan', {
+      tarefas: [
+        { taskId: 'a', modulo: 'api' },
+        { taskId: 'b', modulo: 'web' },
+        { taskId: 'c', modulo: 'web' },
+      ],
+      orcamentoPorTarefaMicros: 500_000,
+      multiplicadorDaPrimeiraDoModulo: 2,
+    });
+    expect(doisModulos).toContain('até US$ 2,50');
+  });
+
+  it('sem orçamento no payload, não inventa número', () => {
+    expect(fraseDaAcao('propose_execution_plan', { tarefas: [{ taskId: 't', modulo: 'api' }] })).not.toContain('US$');
   });
 });

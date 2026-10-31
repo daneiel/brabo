@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { deriveExecutionProgress, formatMicros } from './execution';
+import { deriveExecutionProgress, estadoDaTarefa, formatMicros } from './execution';
 import type { SessionEvent } from './api-types';
 
 let seq = 0;
@@ -214,5 +214,14 @@ describe('formatMicros', () => {
     expect(formatMicros(0)).toBe('US$ 0.0000');
     expect(formatMicros(1_000_000)).toBe('US$ 1.0000');
     expect(formatMicros(12_345)).toBe('US$ 0.0123');
+  });
+});
+
+describe('estadoDaTarefa (RN-887)', () => {
+  it('blocked vence o status', () => {
+    expect(estadoDaTarefa({ status: 'todo', blocked: true })).toBe('blocked');
+  });
+  it('sem bloqueio, o status', () => {
+    expect(estadoDaTarefa({ status: 'todo', blocked: false })).toBe('todo');
   });
 });

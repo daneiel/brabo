@@ -2,7 +2,8 @@
 
 Design system do Brabo — fidelidade estrita exigida na UI (ver `CLAUDE.md`).
 
-- **`tokens.css`** — cores (paleta + tokens semânticos dark/light),
+- **`tokens.css`** — também consumido pelo site de documentação
+  (`website/src/css/custom.css` o importa; AT-561) — cores (paleta + tokens semânticos dark/light),
   tipografia (Space Grotesk/Archivo/IBM Plex Mono, mais a escala `--fs-*`),
   espaçamento, radius e as métricas do shell (`--sidebar-w`, `--header-h`,
   `--tabs-h`). Extraído do projeto claude.ai/design ["Brabo Design
@@ -83,6 +84,17 @@ em várias formas tem UMA agora, em `apps/web/src/components/ui/`:
 Aba do projeto começa no topo, sem margem de seção antes do título: `.arch`
 (`ProjectOverviewTab.module.css`) é de seção que vem DEPOIS de outra.
 
+## shadcn/ui lê os tokens (ADR 0232)
+
+O `apps/web` tem shadcn/ui (Base UI + Tailwind 4) em `components/shadcn/`. O
+`src/shadcn.css` (importado depois do `index.css`, sem preflight) mapeia as
+cores semânticas do shadcn aos tokens deste diretório em `@theme inline`
+(`primary`→`--accent`, `accent`→`--surface-2`, `destructive`→`--danger`...) e
+liga o `dark:` a `[data-theme='dark']`. As variáveis cruas do shadcn
+(`--accent`, `--radius-*`, `--font-mono`) NÃO são declaradas: os tokens daqui
+continuam a única fonte, e os pares de contraste seguem medidos pelo
+`design-contraste.test.ts`.
+
 ## `design_handoff_brabo/` — o handoff, versionado
 
 Desde 2026-08-08 (FASE 16) o handoff de design vive **no repositório**, na
@@ -125,7 +137,9 @@ escreveu já sabe onde olhar, e o monitor de quem escreveu é sempre o melhor.
 **Contraste** é aritmética e virou teste:
 `apps/web/src/lib/contraste.test.ts` lê ESTE `tokens.css`, resolve os `var()`
 até a cor literal e mede a razão WCAG dos pares que a interface usa — **nos
-dois temas** desde o ADR 0074 (RN-184).
+dois temas** desde o ADR 0074 (RN-184). O Shimmer (ADR 0210) entra pelo pior
+ponto do brilho, a cor-base `--text-secondary` sobre `--surface-0/1/2`: no
+escuro 7,58/7,17/6,62:1, no claro 7,73/7,41/7,03:1.
 
 **A paleta é neutra desde o ADR 0181 (RN-640).** O escuro deixou de ser
 azul-petróleo e é preto neutro (`--surface-0/1/2` `#0d0d0f/#141417/#1c1c21`)

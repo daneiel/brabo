@@ -1,3 +1,4 @@
+import { Shimmer } from './ui/Shimmer';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal } from './ui/Modal';
@@ -353,7 +354,7 @@ export function FolderBrowserModal({
               </div>
 
               <div className={styles.lista} role="listbox" aria-label={t('folderBrowserModal.entriesLabel')}>
-                {carregando && <div className={styles.estado}>{t('folderBrowserModal.loading')}</div>}
+                {carregando && <div className={styles.estado}><Shimmer>{t('folderBrowserModal.loading')}</Shimmer></div>}
 
                 {!carregando && (
                   <button
@@ -445,7 +446,7 @@ export function FolderBrowserModal({
                   )}
                 </>
               ) : (
-                <div className={styles.estado}>{t('folderBrowserModal.loading')}</div>
+                <div className={styles.estado}><Shimmer>{t('folderBrowserModal.loading')}</Shimmer></div>
               )}
             </aside>
           </div>

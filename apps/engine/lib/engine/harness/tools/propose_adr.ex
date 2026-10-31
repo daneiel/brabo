@@ -33,7 +33,8 @@ defmodule Engine.Harness.Tools.ProposeAdr do
           "feature/adr-<slug>. `content` é o markdown do ADR. `modules` lista os módulos do " <>
           "module_map a que a decisão se aplica — os dev agents desses módulos recebem o ADR " <>
           "no contexto. Omita (ou deixe vazio) quando a decisão for transversal ao projeto: " <>
-          "aí ela vale pra todos os módulos.",
+          "aí ela vale pra todos os módulos. Proponha UM ADR por resposta: vários ADRs " <>
+          "inteiros numa resposta só estouram o limite de saída e o último chega cortado.",
       parameters: %{
         "type" => "object",
         "properties" => %{
@@ -85,7 +86,9 @@ defmodule Engine.Harness.Tools.ProposeAdr do
            payload
          ) do
       {:ok, %{"id" => id, "status" => status}} ->
-        {:ok, "ADR proposta (ação #{id}, status=#{status}) — aguardando aprovação do usuário."}
+        {:ok,
+         "ADR proposta (ação #{id}, status=#{status}) — aguardando aprovação do usuário. " <>
+           "O status muda fora desta conversa: consulte `listar_adrs_propostas` antes de afirmá-lo."}
 
       {:error, reason} ->
         {:error, "falha ao propor ADR: #{inspect(reason)}"}

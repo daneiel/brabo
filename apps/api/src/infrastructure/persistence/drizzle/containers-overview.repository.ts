@@ -6,7 +6,9 @@ import {
 } from '../../../application/ports/containers-overview-repository.port';
 import {
   EVENTO_IMAGEM_DO_PROJETO,
+  containerDivergeDaDecisao,
   decisaoNaVersao,
+  decisaoVigenteDosEventos,
 } from '../../../domain/containers/project-container';
 import type { ProjectContainerLifecycle } from '../../../domain/containers/container-lifecycle';
 import type { ProposedAction } from '../../../domain/actions/proposed-action.entity';
@@ -24,6 +26,7 @@ const TIPOS_DE_ACAO_DE_CONTAINER = [
   'container_start',
   'container_stop',
   'container_remove',
+  'container_recreate',
   // RN-521: a tela passou a propor este tipo para projeto `runner`, então ele
   // entra aqui pelo mesmo motivo que os outros três — sem isto, a proposta
   // feita pela própria página não voltaria como `acaoPendente` e a linha
@@ -179,6 +182,10 @@ export class DrizzleContainersOverviewRepository implements ContainersOverviewRe
       const decisao = lifecycle
         ? decisaoNaVersao(eventos, lifecycle.imageVersion)
         : null;
+      const vigente = decisaoVigenteDosEventos(eventos);
+      const registradoDePe =
+        lifecycle !== null &&
+        ['running', 'stopped', 'provisioning'].includes(lifecycle.status);
       const acaoPendente = acaoPendenteDe.get(linha.projectId);
       return {
         projectId: linha.projectId,
@@ -194,6 +201,20 @@ export class DrizzleContainersOverviewRepository implements ContainersOverviewRe
         temImagemDecidida: eventos.length > 0,
         workspaceVerifiedAt: linha.workspaceVerifiedAt,
         acaoPendente: acaoPendente ? toProposedAction(acaoPendente) : null,
+        decisaoVigente: vigente
+          ? {
+              version: vigente.version,
+              image: vigente.decisao.image,
+              network: vigente.decisao.network,
+            }
+          : null,
+        imagemDesatualizada:
+          registradoDePe &&
+          containerDivergeDaDecisao(
+            decisao,
+            lifecycle.resources,
+            vigente?.decisao ?? null,
+          ),
       };
     });
   }

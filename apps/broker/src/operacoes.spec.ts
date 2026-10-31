@@ -15,6 +15,9 @@ import {
   ModoDeExecucaoNaoSuportadoError,
   RaizDeWorkspacesNaoConfiguradaError,
   pedidoDeExecValidado,
+  removeQa,
+  execQa,
+  startQa,
   start,
   type DependenciasDoBroker,
 } from './operacoes.ts';
@@ -279,5 +282,76 @@ describe('as duas raízes do broker (RN-503)', () => {
       ModoDeExecucaoNaoSuportadoError,
     );
     expect(docker.chamadas).toBe(0);
+  });
+});
+
+describe('spec ampliada lida da api (ADR 0228/0229)', () => {
+  it('comando, portas, dns e extra_hosts vêm do contexto da api e viram a spec', async () => {
+    const { deps, docker } = montar({
+      comandoDoApp: 'npm start',
+      ports: [{ host: 8080, container: 3000, protocol: 'tcp' }],
+      dns: ['1.1.1.1'],
+      extraHosts: [{ name: 'x.example', ip: '10.0.0.1' }],
+    });
+    await start(deps, 'p1');
+    expect(docker.ultimaSpec?.comandoDoApp).toBe('npm start');
+    expect(docker.ultimaSpec?.portas).toEqual([{ host: 8080, container: 3000, protocolo: 'tcp' }]);
+    expect(docker.ultimaSpec?.dns).toEqual(['1.1.1.1']);
+    expect(docker.ultimaSpec?.hostsExtras).toEqual([{ nome: 'x.example', ip: '10.0.0.1' }]);
+  });
+
+  it('sem os campos novos a spec não os tem (como sempre)', async () => {
+    const { deps, docker } = montar();
+    await start(deps, 'p1');
+    for (const k of ['comandoDoApp', 'portas', 'dns', 'hostsExtras', 'qa']) {
+      expect(docker.ultimaSpec).not.toHaveProperty(k);
+    }
+  });
+
+  it('porta da instalação vinda da api é recusada (422 na borda)', async () => {
+    const { deps } = montar({ ports: [{ host: 5432, container: 5432, protocol: 'tcp' }] });
+    await expect(start(deps, 'p1')).rejects.toThrow(/porta da instalação/);
+  });
+
+  const DIGEST = `pg@sha256:${'c'.repeat(64)}`;
+  const qaCtx = (chave = 'abcd1234') => ({
+    qa: { chave, services: [{ name: 'db', image: DIGEST, env: { A: '1' }, tmpfs: ['/data'], shared: false, user: '70:70', command: ['httpd', '-f'] }] },
+  });
+
+  it('QA: a lista de serviços vem da api; a chave da rota tem de ser a da api', async () => {
+    const { deps, docker } = montar(qaCtx());
+    await startQa(deps, 'p1', 'abcd1234');
+    expect(docker.ultimaSpec?.qa).toEqual({
+      chave: 'abcd1234',
+      servicos: [
+        { nome: 'db', imagem: DIGEST, env: { A: '1' }, dados: ['/data'], usuario: '70:70', comando: ['httpd', '-f'] },
+      ],
+    });
+    expect(docker.ultimaSpec).not.toHaveProperty('comandoDoApp');
+    const outra = montar(qaCtx('zzzz9999'));
+    await expect(startQa(outra.deps, 'p1', 'abcd1234')).rejects.toThrow(/chave/);
+  });
+
+  it('QA: serviço sem digest vindo da api é recusado', async () => {
+    const { deps } = montar({ qa: { chave: 'abcd1234', services: [{ name: 'db', image: 'pg:16' }] } });
+    await expect(startQa(deps, 'p1', 'abcd1234')).rejects.toThrow(/digest/);
+  });
+
+  it('QA: remove e exec endereçam o alvo de QA, com cwd contido em /work', async () => {
+    const alvos: unknown[] = [];
+    const { deps } = montar();
+    deps.docker.remove = async (_n, alvo) => void alvos.push(alvo);
+    deps.docker.exec = async (_n, _p, alvo) => {
+      alvos.push(alvo);
+      return { exitCode: 0, output: '', timedOut: false };
+    };
+    await removeQa(deps, 'p1', 'abcd1234');
+    await execQa(deps, 'p1', 'abcd1234', { comando: 'ls' });
+    expect(alvos).toEqual([
+      { papel: 'qa', chave: 'abcd1234' },
+      { papel: 'qa', chave: 'abcd1234' },
+    ]);
+    await expect(execQa(deps, 'p1', 'abcd1234', { comando: 'ls', cwd: '/etc' })).rejects.toThrow();
+    await expect(removeQa(deps, 'p1', 'ABC')).rejects.toThrow(/qa.chave/);
   });
 });

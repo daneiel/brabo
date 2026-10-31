@@ -15,8 +15,11 @@
 export const TIPOS_SEM_SEMPRE_PERMITIR: readonly string[] = [
   'git_push',
   'pr_open',
+  'open_adr_pr',
+  'open_infra_pr',
   'git_merge',
   'container_remove',
+  'container_recreate',
   'instruction_patch',
   'parallelize',
   'raise_max_parallel',

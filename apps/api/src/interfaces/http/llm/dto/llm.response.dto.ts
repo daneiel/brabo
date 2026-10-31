@@ -1,6 +1,7 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import type { LLMProviderCapabilities } from '@brabo/shared';
 import type { CapabilitiesDoProvider } from '../../../../application/use-cases/llm/list-provider-capabilities.use-case';
+import type { LLMProviderName } from '@brabo/shared';
 import { LLM_PROVIDER_NAMES } from '../../../../domain/llm/llm-provider-names';
 import type { MesmasChaves, Wire } from '../../shared/dto/wire';
 import { BUDGET_POLICIES } from '../../../../domain/llm/budget-threshold';
@@ -123,6 +124,16 @@ export class ModelResponseDto implements Wire<Model> {
   generatesImage!: boolean;
 
   @ApiProperty({
+    type: Number,
+    nullable: true,
+    example: 2048,
+    description:
+      'Reasoning budget (tokens) the model is PROVEN to respect, curated by ' +
+      'hand (ADR 0223). Null = not proven; the field is not sent.',
+  })
+  reasoningBudget!: number | null;
+
+  @ApiProperty({
     example: true,
     description:
       "Price typed in from the provider's docs, not synced. The price sync " +
@@ -226,6 +237,17 @@ export class UserCredentialResponseDto implements Wire<UserCredentialMetadata> {
   @ApiProperty({ example: '2026-07-10T10:00:00.000Z', format: 'date-time' })
   updatedAt!: string;
 }
+export class CredentialedProvidersResponseDto {
+  @ApiProperty({
+    enum: LLM_PROVIDER_NAMES,
+    isArray: true,
+    example: ['anthropic', 'openrouter'],
+    description:
+      'LLM providers the workspace owner of record has a key for. Names only; `ollama` never appears.',
+  })
+  providers!: LLMProviderName[];
+}
+
 export const _chavesCredencial: MesmasChaves<
   UserCredentialResponseDto,
   UserCredentialMetadata
@@ -362,6 +384,15 @@ export class ResolvedBindingResponseDto implements Wire<ResolvedBinding> {
       'Empty on the normal path.',
   })
   skipped!: SkippedBindingResponseDto[];
+
+  @ApiPropertyOptional({
+    example: 'secops',
+    description:
+      'Present when the agent asked about had no model of its own (nor of its ' +
+      'area or project) and inherited the RESOLVED binding of its area lead ' +
+      '(RN-703). `origin` is then the origin of the lead binding.',
+  })
+  herdadoDoLead?: string;
 }
 export const _chavesBindingResolvido: MesmasChaves<
   ResolvedBindingResponseDto,
@@ -912,6 +943,35 @@ export class LLMProviderCapabilitiesResponseDto implements Wire<LLMProviderCapab
       'the chosen upstream — reading the docs does not count.',
   })
   routingPreference!: boolean;
+
+  @ApiProperty({
+    example: false,
+    description:
+      'The provider pins a conversation to the upstream that served it when ' +
+      'given a session key (ADR 0221). Only `true` after a smoke against the ' +
+      'real API showed one upstream with the key and several without it.',
+  })
+  stickySession!: boolean;
+
+  @ApiProperty({
+    example: false,
+    description:
+      'The provider accepts a per-call PRICE CEILING (`provider.max_price` = ' +
+      'catalog price x 1.5, ADR 0225): only an upstream within it serves the ' +
+      'call. Only `true` after a smoke against the real API showed the served ' +
+      'upstream within the ceiling.',
+  })
+  priceCeiling!: boolean;
+
+  @ApiProperty({
+    example: false,
+    description:
+      'The provider accepts explicit PROMPT-CACHE breakpoints ' +
+      '(`cache_control`) on the stable prefix of a call (RN-892). Only ' +
+      '`true` after a smoke against the real API showed cached input ' +
+      'tokens on a repeated call.',
+  })
+  promptCaching!: boolean;
 }
 export const _chavesCapabilitiesDoProvider: MesmasChaves<
   LLMProviderCapabilitiesResponseDto,

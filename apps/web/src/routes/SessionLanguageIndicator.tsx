@@ -1,3 +1,4 @@
+import { Shimmer } from '../components/ui/Shimmer';
 import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -147,7 +148,7 @@ export function SessionLanguageIndicator({
   const idiomaDaInterface = i18n.language || 'en';
 
   if (isPending) {
-    return <div className={styles.indicador}>{t('session.loading')}</div>;
+    return <div className={styles.indicador}><Shimmer>{t('session.loading')}</Shimmer></div>;
   }
   if (isError || !data) {
     return <div className={styles.indicador}>{t('session.loadError')}</div>;

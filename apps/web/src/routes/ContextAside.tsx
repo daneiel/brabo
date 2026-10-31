@@ -2,6 +2,11 @@ import { useState, type ReactNode } from 'react';
 import { Link } from '@tanstack/react-router';
 import { Trans, useTranslation } from 'react-i18next';
 import { useSessionEventHistory } from '../lib/hooks';
+import {
+  artefatosDoAgenteNoAgregado,
+  totalDaSessao,
+  useContextoDaSessaoInteira,
+} from '../lib/contexto-da-sessao';
 import { AGENTS, corDoAgente, nomeDoAgente } from '../lib/agents';
 import { ordemDaAcaoNaTimeline } from '../lib/session-timeline';
 import {
@@ -148,12 +153,86 @@ export function ContextAside({
   // (RN-100).
   const eventosAnteriores = Math.max(0, (events[0]?.seq ?? 1) - 1);
 
+  // RN-827 (AT-498): o agregado da sessão INTEIRA, contado no servidor. Os
+  // NÚMEROS das seções vêm dele, somados à janela (`totalDaSessao`); o
+  // DETALHE continua sendo o que a janela carregou. Ausente (carregando ou
+  // falhou) = "não li", e a tela cai no comportamento da RN-180/701.
+  const TIPOS_DE_ARTEFATO = new Set([
+    'artifact.business_rule',
+    'artifact.decision_record',
+    'backlog.epic_created',
+    'backlog.story_created',
+    'backlog.task_created',
+  ]);
+  const ultimoArtefato = events.reduce(
+    (maior, e) => (TIPOS_DE_ARTEFATO.has(e.type) && e.seq > maior ? e.seq : maior),
+    0,
+  );
+  const acoesQueContam = actions.filter((a) =>
+    ['pr_open', 'open_adr_pr', 'git_commit', 'git_push'].includes(a.actionType),
+  ).length;
+  const resumo = useContextoDaSessaoInteira(
+    projectId,
+    sessionId,
+    `${ultimoArtefato}:${acoesQueContam}`,
+  ).data;
+
   // RN-178: do último para o primeiro, nas quatro seções. Cópia antes do
   // `sort`: `baixados` é derivado do cache da query, e ordená-lo no lugar
   // reordenaria o que os outros consumidores leem.
-  const businessRules = events
+  const regrasDaJanela = events
     .filter((e) => e.type === 'artifact.business_rule')
-    .sort((a, b) => b.seq - a.seq);
+    .sort((a, b) => b.seq - a.seq)
+    .map((e) => {
+      const rule = e.payload as BusinessRulePayload;
+      return {
+        chave: e.id,
+        titulo: rule.title,
+        descricao: rule.description,
+        origens: Array.isArray(rule.origin) ? rule.origin.length : 0,
+      };
+    });
+  // RN-844 (AT-513): com o agregado, a LISTA também vem do servidor — as
+  // regras que ficaram antes da janela continuam aparecendo.
+  const businessRules = resumo
+    ? resumo.itensDeRegras.map((r) => ({
+        chave: r.eventId,
+        titulo: r.titulo ?? '',
+        descricao: r.descricao ?? '',
+        origens: r.origens,
+      }))
+    : regrasDaJanela;
+
+  // AT-393: as decisões registradas (`artifact.decision_record`, RN-505) têm
+  // seção própria — não são PR nem backlog, e sem ela o painel dizia
+  // "nenhum artefato" numa sessão que decidiu coisas.
+  const decisoesDaJanela = events
+    .filter((e) => e.type === 'artifact.decision_record')
+    .sort((a, b) => b.seq - a.seq)
+    .map((e) => {
+      const p = (e.payload ?? {}) as { choice?: unknown; context?: unknown };
+      return {
+        chave: e.id,
+        actorId: e.actor.id,
+        escolha: typeof p.choice === 'string' ? p.choice : '',
+        contexto: typeof p.context === 'string' ? p.context : '',
+      };
+    });
+
+  const decisoes = resumo
+    ? resumo.itensDeDecisoes.map((d) => ({
+        chave: d.eventId,
+        actorId: d.actorId,
+        escolha: d.escolha ?? '',
+        contexto: d.contexto ?? '',
+      }))
+    : decisoesDaJanela;
+
+  const totalDeRegras = totalDaSessao(resumo?.regras, regrasDaJanela.length);
+  const totalDeDecisoes = totalDaSessao(resumo?.decisoes, decisoesDaJanela.length);
+  // Com o agregado, o que falta da lista é o que passou do teto do servidor
+  // (as mais recentes vêm), não o que ficou antes da janela.
+  const chaveDoRecorte = resumo ? 'aside.recorteMaisRecentes' : 'aside.recorte';
 
   // RN-178: acima de 5 regras a lista pagina em vez de crescer sem fim — o
   // painel tem a altura de uma coluna, e uma sessão de ideação passa
@@ -234,7 +313,7 @@ export function ContextAside({
   // o painel dizia "Artefatos gerados 3" sobre um único grupo "PO 1" (um
   // épico com a história e a tarefa dentro). Agora a soma dos grupos É o
   // cabeçalho, por construção.
-  const totalDeArtefatos = artefatos.reduce((soma, a) => soma + a.quantos, 0);
+  const totalNaJanela = artefatos.reduce((soma, a) => soma + a.quantos, 0);
 
   // Agrupado por `actorId` — o mesmo padrão de colapso do fio principal
   // (RN-138, `timelineAgrupada`), num `Disclosure` por agente, com a ORDEM
@@ -245,6 +324,22 @@ export function ContextAside({
     if (grupo) grupo.itens.push(item);
     else gruposDeArtefatos.push({ actorId: item.actorId, itens: [item] });
   }
+  // RN-827: o agente cujos artefatos ficaram TODOS antes da janela ganha o
+  // grupo também — sem detalhe, mas com o número da sessão inteira.
+  for (const { actorId } of resumo?.artefatosPorAgente ?? []) {
+    if (!gruposDeArtefatos.some((g) => g.actorId === actorId)) {
+      gruposDeArtefatos.push({ actorId, itens: [] });
+    }
+  }
+  const gruposComTotal = gruposDeArtefatos.map((g) => {
+    const naJanela = g.itens.reduce((soma, item) => soma + item.quantos, 0);
+    const total =
+      totalDaSessao(artefatosDoAgenteNoAgregado(resumo, g.actorId), naJanela) ?? naJanela;
+    return { ...g, naJanela, total };
+  });
+  const totalDeArtefatos = resumo
+    ? gruposComTotal.reduce((soma, g) => soma + g.total, 0)
+    : totalNaJanela;
 
   // Opções do filtro "por agente" do feed (Fase 8d — a prop existia desde
   // sempre em ActivityFeed, mas nenhum dos dois call sites a passava, então
@@ -259,13 +354,17 @@ export function ContextAside({
   // RN-178: a ação mais recente primeiro, e a chave carrega o id da AÇÃO —
   // o mesmo arquivo tocado por dois commits são duas linhas legítimas, e
   // `key={file.path}` fazia delas uma chave duplicada.
-  const filesTouched = [...actions]
+  const filesTouchedNaJanela = [...actions]
     .filter((a) => a.actionType === 'git_commit' || a.actionType === 'git_push')
     .sort((a, b) => ordemDaAcaoNaTimeline(b, events) - ordemDaAcaoNaTimeline(a, events))
     .flatMap((a) => {
       const files = (a.payload as { files?: { path: string; additions: number; deletions: number }[] }).files;
       return (files ?? []).map((file) => ({ ...file, actionId: a.id }));
     });
+  // RN-828: com o agregado, a lista vem do servidor — a sessão inteira E a
+  // sessão de execução ligada a ela, com teto e total real.
+  const filesTouched = resumo ? resumo.arquivosTocados.itens : filesTouchedNaJanela;
+  const totalDeArquivos = resumo ? resumo.arquivosTocados.total : filesTouched.length;
 
   return (
     <aside className={styles.aside}>
@@ -278,7 +377,7 @@ export function ContextAside({
       {/* RN-180 — o teto que existia em silêncio passa a estar escrito. Uma
           nota só, no topo, porque o teto é UM: as quatro seções leem os mesmos
           eventos baixados, e é o mesmo botão que traz mais para todas. */}
-      {eventosAnteriores > 0 && (
+      {eventosAnteriores > 0 && !resumo && (
         <p className={styles.asideTeto}>
           <Trans
             i18nKey="aside.teto"
@@ -297,28 +396,41 @@ export function ContextAside({
             é mostrar o número real, não decidir por um mínimo. */}
         <Disclosure
           titulo={t('aside.regrasDeNegocio')}
-          trailing={businessRules.length}
+          // RN-701 (AT-365): com eventos ANTES da janela, o número é do
+          // recorte — "0" sozinho afirmaria que a sessão não tem regra.
+          trailing={
+            totalDeRegras ??
+            (eventosAnteriores > 0
+              ? t('aside.contagemNaJanela', { count: businessRules.length })
+              : businessRules.length)
+          }
           padraoAberto
           classNameCabecalho={styles.asideHeader}
         >
           {businessRules.length === 0 ? (
-            <div className={styles.asideEmpty}>{t('aside.nadaAinda')}</div>
+            <div className={styles.asideEmpty}>
+              {totalDeRegras !== null && totalDeRegras > 0
+                ? t('aside.todasAntesDaJanela', { total: totalDeRegras })
+                : eventosAnteriores > 0 && totalDeRegras === null
+                  ? t('aside.nadaNaJanela')
+                  : t('aside.nadaAinda')}
+            </div>
           ) : (
             <>
-              {regrasDaPagina.map((e) => {
-                const rule = e.payload as BusinessRulePayload;
-                return (
-                  <Card key={e.id} radius="md" padding="sm" className={styles.ruleCard}>
-                    <div className={styles.ruleTitle}>{rule.title}</div>
-                    <div className={styles.ruleDescription}>{rule.description}</div>
-                    <div className={styles.ruleOrigin}>
-                      {t('aside.origemRefs', {
-                        count: Array.isArray(rule.origin) ? rule.origin.length : 0,
-                      })}
-                    </div>
-                  </Card>
-                );
-              })}
+              {totalDeRegras !== null && totalDeRegras > businessRules.length && (
+                <div className={styles.asideEmpty}>
+                  {t(chaveDoRecorte, { mostradas: businessRules.length, total: totalDeRegras })}
+                </div>
+              )}
+              {regrasDaPagina.map((rule) => (
+                <Card key={rule.chave} radius="md" padding="sm" className={styles.ruleCard}>
+                  <div className={styles.ruleTitle}>{rule.titulo}</div>
+                  <div className={styles.ruleDescription}>{rule.descricao}</div>
+                  <div className={styles.ruleOrigin}>
+                    {t('aside.origemRefs', { count: rule.origens })}
+                  </div>
+                </Card>
+              ))}
               {/* O paginador só existe quando há o que paginar: com 5 ou menos
                   ele seria um controle permanentemente inútil ocupando altura
                   na coluna mais estreita da tela. */}
@@ -357,6 +469,49 @@ export function ContextAside({
       </div>
 
       <div className={styles.asideSection}>
+        <Disclosure
+          titulo={t('aside.decisoes')}
+          // AT-463: o mesmo recorte declarado das regras (RN-701) — o
+          // `decision_record` fora da janela não pode virar "0".
+          trailing={
+            totalDeDecisoes ??
+            (eventosAnteriores > 0
+              ? t('aside.contagemNaJanela', { count: decisoes.length })
+              : decisoes.length)
+          }
+          padraoAberto
+          classNameCabecalho={styles.asideHeader}
+        >
+          {decisoes.length === 0 ? (
+            <div className={styles.asideEmpty}>
+              {totalDeDecisoes !== null && totalDeDecisoes > 0
+                ? t('aside.todasAntesDaJanela', { total: totalDeDecisoes })
+                : eventosAnteriores > 0 && totalDeDecisoes === null
+                  ? t('aside.decisoesNadaNaJanela')
+                  : t('aside.decisoesVazio')}
+            </div>
+          ) : (
+            [
+              totalDeDecisoes !== null && totalDeDecisoes > decisoes.length && (
+                <div key="recorte" className={styles.asideEmpty}>
+                  {t(chaveDoRecorte, { mostradas: decisoes.length, total: totalDeDecisoes })}
+                </div>
+              ),
+              ...decisoes.map((d) => (
+              <div key={d.chave} className={styles.asideItem} style={corDoAgente(d.actorId)}>
+                <AvatarDoAgente id={d.actorId} />
+                <span>
+                  <strong>{d.escolha || t('aside.decisaoSemEscolha')}</strong>
+                  {d.contexto && <span className={styles.asideEmpty}> — {d.contexto}</span>}
+                </span>
+              </div>
+              )),
+            ]
+          )}
+        </Disclosure>
+      </div>
+
+      <div className={styles.asideSection}>
         {/* RN-159: agrupado por agente (mesmo `Disclosure` do colapso do fio,
             RN-138) — antes era uma lista PLANA só de `pr_open`, sem dizer
             QUEM abriu cada PR nem incluir épico/história do PO. RN-179: e as
@@ -373,7 +528,7 @@ export function ContextAside({
             // mesma sessão parecia negar que eles existissem.
             <div className={styles.asideEmpty}>{t('aside.artefatosVazio')}</div>
           ) : (
-            gruposDeArtefatos.map(({ actorId, itens }) => (
+            gruposComTotal.map(({ actorId, itens, naJanela, total }) => (
               <div key={actorId} style={corDoAgente(actorId)}>
                 <Disclosure
                   titulo={
@@ -382,11 +537,16 @@ export function ContextAside({
                       {nomeDoAgente(actorId)}
                     </span>
                   }
-                  trailing={itens.reduce((soma, item) => soma + item.quantos, 0)}
+                  trailing={total}
                   classNameCabecalho={styles.agentGroupCabecalho}
                   className={styles.agentGroup}
                 >
                   <div className={styles.artefatoGrupoRegiao}>
+                    {total > naJanela && (
+                      <div className={styles.asideEmpty}>
+                        {t('aside.recorte', { mostradas: naJanela, total })}
+                      </div>
+                    )}
                     {itens.map((item) => item.node)}
                   </div>
                 </Disclosure>
@@ -399,16 +559,33 @@ export function ContextAside({
       <div className={styles.asideSection}>
         <div className={styles.asideHeader}>{t('aside.arquivosTocados')}</div>
         {filesTouched.length === 0 ? (
-          <div className={styles.asideEmpty}>{t('aside.nadaAinda')}</div>
+          <div className={styles.asideEmpty}>
+            {resumo ? t('aside.arquivosVazio') : t('aside.arquivosNaoLidos')}
+          </div>
         ) : (
-          filesTouched.map((file) => (
+          [
+            resumo && resumo.arquivosTocados.prsNaoLidas > 0 && (
+              <div key="prs-nao-lidas" className={styles.asideEmpty}>
+                {t('aside.prsNaoLidas', { count: resumo.arquivosTocados.prsNaoLidas })}
+              </div>
+            ),
+            totalDeArquivos > filesTouched.length && (
+              <div key="recorte" className={styles.asideEmpty}>
+                {t(resumo ? 'aside.recorteMaisRecentes' : 'aside.recorte', {
+                  mostradas: filesTouched.length,
+                  total: totalDeArquivos,
+                })}
+              </div>
+            ),
+            ...filesTouched.map((file) => (
             <div key={`${file.actionId}-${file.path}`} className={styles.asideItem}>
               <span className={styles.fileLetter}>M</span>
               <span className={styles.filePath}>{file.path}</span>
               <span className={styles.fileAdd}>+{file.additions}</span>
               <span className={styles.fileDel}>−{file.deletions}</span>
             </div>
-          ))
+            )),
+          ]
         )}
       </div>
 

@@ -51,6 +51,7 @@ import {
   GitNotSupportedError,
   GitPermissionDeniedError,
   GitPullRequestAlreadyMergedError,
+  GitMergeConflictError,
   GitRepoAlreadyExistsError,
   GitRepoNotFoundError,
 } from '../../domain/git/git-errors';
@@ -310,6 +311,7 @@ export class LocalGitProvider implements GitProviderContract {
       sourceBranch: input.sourceBranch,
       targetBranch: input.targetBranch,
       state: 'open',
+      ...(input.author ? { author: input.author } : {}),
     };
     store.push(record);
     await writePrStore(repoDir, store);
@@ -344,15 +346,33 @@ export class LocalGitProvider implements GitProviderContract {
       if (sourceSha === null) {
         throw new GitBranchNotFoundError(repoDir, record.sourceBranch);
       }
-      // Merge local simplista: avança o target pro commit da branch da PR
-      // (fast-forward). Suficiente pro fluxo self-contained dos dev agents;
-      // divergência real do target não é exercitada aqui.
-      await execGit(repoDir, [
-        'update-ref',
-        `refs/heads/${record.targetBranch}`,
-        sourceSha,
-      ]);
+      const targetSha = await resolveRef(repoDir, record.targetBranch);
+      if (targetSha === null) {
+        throw new GitBranchNotFoundError(repoDir, record.targetBranch);
+      }
+      // AT-377 (RN-704): merge DE VERDADE no repositório bare. Antes era
+      // `update-ref` puro, que com o alvo divergido descartava o que já
+      // estava nele (o merge anterior sumia, sem erro).
+      const baseSha = (
+        await execGit(repoDir, ['merge-base', targetSha, sourceSha])
+      ).stdout.trim();
+      const newSha = await mergeShas(repoDir, record, targetSha, sourceSha);
+      // `update-ref` com o valor antigo esperado: se outro merge moveu o
+      // alvo no meio, falha em vez de sobrescrever.
+      if (newSha !== targetSha) {
+        await execGit(repoDir, [
+          'update-ref',
+          `refs/heads/${record.targetBranch}`,
+          newSha,
+          targetSha,
+        ]);
+      }
       record.state = 'merged';
+      // AT-518 (RN-847): depois do merge, `target...source` é vazio (a merge
+      // base passa a ser a própria ponta da branch). Os dois SHAs gravados
+      // aqui são o que o diff da PR mergeada passa a ler.
+      record.mergedBaseSha = baseSha;
+      record.mergedHeadSha = sourceSha;
       await writePrStore(repoDir, store);
     }
 
@@ -443,7 +463,7 @@ export class LocalGitProvider implements GitProviderContract {
     // `a...b` é o diff contra a MERGE BASE, não contra a ponta do target —
     // é o que a plataforma mostra numa PR. Contra a ponta, commits que
     // entraram no target depois da branch apareceriam invertidos no diff.
-    const range = `${record.targetBranch}...${record.sourceBranch}`;
+    const range = await rangeDoDiff(repoDir, record);
 
     const numstat = await execGit(repoDir, [
       'diff',
@@ -533,9 +553,10 @@ export class LocalGitProvider implements GitProviderContract {
         number: pr.number,
         title: pr.title,
         url: `local://${basename(repoDir)}/pull/${pr.number}`,
-        // O store local não tem conceito de autor — não há usuário
-        // autenticado por trás de um bare repo em disco.
-        author: null,
+        // Não há usuário autenticado por trás de um bare repo em disco: o
+        // autor é o que o executor gravou ao abrir (RN-705, `<agente>[bot]`).
+        // PR aberta antes disso segue sem autor.
+        author: pr.author ?? null,
         state: pr.state,
         sourceBranch: pr.sourceBranch,
         targetBranch: pr.targetBranch,
@@ -699,7 +720,11 @@ interface StoredPr {
   sourceBranch: string;
   targetBranch: string;
   state: 'open' | 'merged' | 'closed';
+  /** Merge base e ponta da origem no instante do merge (AT-518, RN-847). */
+  mergedBaseSha?: string;
+  mergedHeadSha?: string;
   comments?: string[];
+  author?: string;
 }
 
 function prStorePath(repoDir: string): string {
@@ -742,6 +767,118 @@ async function initBareRepo(path: string): Promise<void> {
     'HEAD',
     'refs/heads/main',
   ]);
+}
+
+const IDENTIDADE_DO_BOT = {
+  GIT_AUTHOR_NAME: 'Brabo Bot',
+  GIT_AUTHOR_EMAIL: 'bot@brabo.dev',
+  GIT_COMMITTER_NAME: 'Brabo Bot',
+  GIT_COMMITTER_EMAIL: 'bot@brabo.dev',
+};
+
+// Devolve o sha que o alvo deve passar a ter. Alvo ancestral da fonte (ou
+// igual) → fast-forward; fonte já contida no alvo → nada muda; divergiram →
+// commit de merge com os dois pais, montado por `merge-tree --write-tree`
+// (git >= 2.38), sem worktree. Conflito → `GitMergeConflictError`.
+async function mergeShas(
+  repoDir: string,
+  record: StoredPr,
+  targetSha: string,
+  sourceSha: string,
+): Promise<string> {
+  if (await isAncestor(repoDir, targetSha, sourceSha)) return sourceSha;
+  if (await isAncestor(repoDir, sourceSha, targetSha)) return targetSha;
+
+  let treeSha: string;
+  try {
+    const { stdout } = await execGit(repoDir, [
+      'merge-tree',
+      '--write-tree',
+      '--name-only',
+      '--no-messages',
+      targetSha,
+      sourceSha,
+    ]);
+    treeSha = stdout.split('\n')[0].trim();
+  } catch (error) {
+    const e = error as { code?: number; stdout?: string };
+    if (e.code === 1 && typeof e.stdout === 'string') {
+      // Saída 1 = conflito: 1ª linha é a árvore, depois os arquivos.
+      const files = e.stdout
+        .split('\n')
+        .slice(1)
+        .map((l) => l.trim())
+        .filter((l) => l.length > 0);
+      throw new GitMergeConflictError(repoDir, record.id, [...new Set(files)]);
+    }
+    throw error;
+  }
+
+  const { stdout } = await execFileAsync(
+    'git',
+    [
+      '--git-dir',
+      repoDir,
+      'commit-tree',
+      treeSha,
+      '-p',
+      targetSha,
+      '-p',
+      sourceSha,
+      '-m',
+      `Merge pull request #${record.number} from ${record.sourceBranch}\n\n${record.title}`,
+    ],
+    { env: { ...process.env, ...IDENTIDADE_DO_BOT } },
+  );
+  return stdout.trim();
+}
+
+async function isAncestor(
+  repoDir: string,
+  ancestor: string,
+  descendant: string,
+): Promise<boolean> {
+  try {
+    await execGit(repoDir, [
+      'merge-base',
+      '--is-ancestor',
+      ancestor,
+      descendant,
+    ]);
+    return true;
+  } catch (error) {
+    if ((error as { code?: number }).code === 1) return false;
+    throw error;
+  }
+}
+
+/**
+ * RN-847 (AT-518) — o intervalo do diff de uma PR. Aberta: `target...source`.
+ * Mergeada: os SHAs gravados no merge; PR mergeada antes deles existirem cai
+ * no commit de merge do alvo cujo 2º pai é a ponta da origem (`p1...source`).
+ * Mergeada por fast-forward sem SHAs gravados não tem como ser reconstruída e
+ * segue com o intervalo de sempre (vazio).
+ */
+async function rangeDoDiff(repoDir: string, record: StoredPr): Promise<string> {
+  const aberto = `${record.targetBranch}...${record.sourceBranch}`;
+  if (record.state !== 'merged') return aberto;
+  if (record.mergedBaseSha && record.mergedHeadSha) {
+    return `${record.mergedBaseSha}...${record.mergedHeadSha}`;
+  }
+  const ponta = await resolveRef(repoDir, record.sourceBranch);
+  if (ponta === null) return aberto;
+  const { stdout } = await execGit(repoDir, [
+    'log',
+    '--first-parent',
+    '--merges',
+    '--format=%P',
+    record.targetBranch,
+  ]);
+  for (const linha of stdout.split('\n')) {
+    const [p1, p2] = linha.trim().split(' ');
+    if (p2 === ponta) return `${p1}...${ponta}`;
+  }
+  return aberto;
 }
 
 async function execGit(repoDir: string, args: string[]) {

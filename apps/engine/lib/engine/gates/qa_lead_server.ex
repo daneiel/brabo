@@ -47,6 +47,8 @@ defmodule Engine.Gates.QaLeadServer do
 
   use GenServer, restart: :temporary
 
+  require Logger
+
   # DERIVADO da lista canônica da api (FASE 18) — era a terceira cópia escrita
   # à mão, e a única que nenhum teste travava: subagente novo lá dentro passava
   # a existir sem que este `Wake.subscribe` soubesse.
@@ -57,6 +59,7 @@ defmodule Engine.Gates.QaLeadServer do
   alias Engine.Agents.Reidratacao
 
   alias Engine.Gates.{
+    ConferenciaDoReadme,
     Diff,
     Dispatcher,
     GateState,
@@ -88,11 +91,31 @@ defmodule Engine.Gates.QaLeadServer do
     {:ok, %{project_id: project_id, pendente: nil}}
   end
 
+  # RN-722: o `GateRescuer` pergunta por TASK. Em voo aqui = suspensa
+  # esperando decisão; a que está RODANDO não responde (o servidor está dentro
+  # do `handle_cast`), e o resgate trata o silêncio como "vivo".
   @impl true
+  def handle_call({:em_voo?, task_id}, _from, state) do
+    {:reply, match?(%{task_id: ^task_id}, state.pendente), state}
+  end
+
+  # RN-806 (AT-478): UM ciclo por task+gate. Pedido para a task cujo ciclo
+  # está SUSPENSO aqui (esperando decisão) não abre um segundo por cima — o
+  # `pendente` seria sobrescrito e dois laços disputariam o mesmo gate.
+  @impl true
+  def handle_cast({:run, task_id}, %{pendente: %{task_id: task_id}} = state) do
+    Logger.info("QaLead: ciclo qa da task #{task_id} já em voo — pedido repetido ignorado")
+    {:noreply, state}
+  end
+
   def handle_cast({:run, task_id}, state) do
     case DevAgentState.find_by_task_id(state.project_id, task_id) do
-      nil -> {:noreply, state}
-      dev_state -> {:noreply, run_area(state, dev_state, task_id)}
+      nil ->
+        {:noreply, state}
+
+      dev_state ->
+        state = run_area(state, dev_state, task_id)
+        {:noreply, descartar_pedidos_obsoletos(state, task_id)}
     end
   end
 
@@ -113,13 +136,36 @@ defmodule Engine.Gates.QaLeadServer do
     # roda vários comandos e cada um pede aprovação. O resultado da retomada
     # passa pelo MESMO tratamento do resultado de `run/5`; antes o
     # `{:awaiting, _}` entrava em `colhidos` como se fosse parecer.
-    {:noreply, tratar_resultado(state, p.em_voo, p.delegacao, resultado, p.colhidos, p.restantes)}
+    state = tratar_resultado(state, p.em_voo, p.delegacao, resultado, p.colhidos, p.restantes)
+    {:noreply, descartar_pedidos_obsoletos(state, p.task_id)}
   end
 
   # Desfecho de OUTRA ação, ou o lead já não está esperando: ignora em vez de
   # derrubar. A entrega é por agente, e nada garante que só chegue o esperado.
   def handle_info({:action_settled, _}, state), do: {:noreply, state}
   def handle_info(_msg, state), do: {:noreply, state}
+
+  # RN-806 (AT-478): terminado o ciclo de `task_id` (veredito registrado, ou
+  # bloqueio), todo `{:run, task_id}` que ESPERAVA na caixa foi pedido ANTES
+  # desse veredito existir — no uso real, o resgate disparou duas vezes no
+  # mesmo instante, e o segundo ciclo rodou depois do primeiro e gravou um
+  # parecer contrário ao que já tinha valido. Um pedido legítimo novo (a
+  # correção do dev) só nasce DEPOIS do veredito, então chega depois desta
+  # varredura. Ciclo ainda suspenso não descarta nada: ele não terminou.
+  defp descartar_pedidos_obsoletos(%{pendente: %{task_id: task_id}} = state, task_id), do: state
+
+  defp descartar_pedidos_obsoletos(state, task_id) do
+    receive do
+      {:"$gen_cast", {:run, ^task_id}} ->
+        Logger.info(
+          "QaLead: pedido de ciclo qa da task #{task_id} anterior ao veredito descartado (RN-806)"
+        )
+
+        descartar_pedidos_obsoletos(state, task_id)
+    after
+      0 -> state
+    end
+  end
 
   defp run_area(state, dev_state, task_id) do
     project_id = state.project_id
@@ -142,7 +188,11 @@ defmodule Engine.Gates.QaLeadServer do
         # ADR 0192: o plano de teste da ENTREGA vem primeiro, e entra no
         # contexto que as subespecialidades recebem (ver o moduledoc).
         plano = plano_de_teste_da_entrega(project_id, session_id, task_id, dev_state, dev_context)
-        dev_context = Map.put(dev_context, :plano_de_teste, plano)
+
+        dev_context =
+          dev_context
+          |> Map.put(:plano_de_teste, plano)
+          |> Map.put(:pedido_anterior, pedido_anterior(project_id, session_id, task_id))
 
         delegacoes = decidir_delegacoes(dev_context.story)
         registrar_dispensas(project_id, session_id, task_id, delegacoes)
@@ -244,8 +294,43 @@ defmodule Engine.Gates.QaLeadServer do
 
     resultados
     |> Enum.map(fn {d, resultado} -> {d.label, resultado} end)
+    |> Kernel.++(conferencia_do_readme(emVoo))
     |> QaLead.consolidar()
     |> aplicar(emVoo.project_id, emVoo.dev_state, emVoo.task_id)
+    |> case do
+      {:devolver_ao_qa, ctx, texto} -> devolver_ao_qa(state, emVoo, resultados, ctx, texto)
+      _ -> state
+    end
+  end
+
+  # AT-526 (RN-876): a api recusou o `needs_user_decision`. O laço da
+  # Automação RETOMA do contexto em que emitiu, com a recusa como entrada, e o
+  # resultado novo passa pelo MESMO `tratar_resultado/6` (awaiting, ok,
+  # blocked). As outras delegações não rodam de novo: o resultado delas fica.
+  # A volta conta no teto de iterações do próprio laço; esgotado, vira
+  # `{:blocked, ...}` com origem `modelo`, narrado — nunca estacionamento.
+  defp devolver_ao_qa(state, emVoo, resultados, ctx, texto) when is_map(ctx) do
+    {[{d, _} | _], outros} =
+      Enum.split_with(resultados, fn {d, _} -> d.subagent == "qa-automacao" end)
+
+    novo = QaAutomacaoAgent.devolver(ctx, texto, emVoo.task_id)
+    tratar_resultado(state, emVoo, d, novo, Enum.reverse(outros), [])
+  end
+
+  # Sem o contexto do laço (não deveria acontecer: só a Automação emite
+  # `needs_user_decision`), a recusa vira bloqueio NOMEADO, nunca silêncio.
+  defp devolver_ao_qa(state, emVoo, _resultados, _ctx, texto) do
+    aplicar(
+      {:blocked,
+       %{
+         reason: "QA pediu decisão do usuário e a api recusou",
+         diagnosis: texto,
+         origin: "codigo"
+       }},
+      emVoo.project_id,
+      emVoo.dev_state,
+      emVoo.task_id
+    )
 
     state
   end
@@ -406,7 +491,7 @@ defmodule Engine.Gates.QaLeadServer do
       coverageMatrix: Map.get(verdict, :coverage_matrix, [])
     })
 
-    apply_gate_result(project_id, dev_state, task_id, veredito, resumo, itens)
+    apply_gate_result(project_id, dev_state, task_id, veredito, resumo, itens, verdict)
   end
 
   defp aplicar(
@@ -444,6 +529,80 @@ defmodule Engine.Gates.QaLeadServer do
   # Mesma chamada, byte a byte, que o QAAgent da Fase 4a fazia — é o que
   # garante que `RecordGateVerdictUseCase`/`nextGateStatus` não precisam saber
   # que existe um Lead.
+  # ADR 0214 (RN-862): requisito que só o usuário decide. A api grava a
+  # pergunta e NÃO conta correção; o ciclo fica ESTACIONADO pelo mecanismo do
+  # ADR 0207 (sem resgate automático) até a resposta, que pede a retomada por
+  # `GateRescuer.retomar_estacionado/3` (a rota da RN-724).
+  defp apply_gate_result(
+         project_id,
+         dev_state,
+         task_id,
+         "needs_user_decision" = veredito,
+         resumo,
+         itens,
+         verdict
+       ) do
+    decisao = Map.get(verdict, :decisao_do_usuario, %{})
+
+    extras =
+      %{
+        pergunta: Map.get(decisao, :pergunta),
+        sugestao: Map.get(decisao, :sugestao),
+        openQuestionId: Map.get(decisao, :open_question_id)
+      }
+      |> Map.reject(fn {_k, v} -> is_nil(v) end)
+
+    result =
+      EngineApiClient.record_gate_verdict(
+        project_id,
+        dev_state.session_id,
+        task_id,
+        "qa",
+        veredito,
+        resumo,
+        itens,
+        dev_state.max_gate_corrections,
+        extras
+      )
+
+    # AT-526 (RN-876): só se estaciona quando a api ACEITOU a pergunta
+    # (`await_user`). A recusa (400/404/409) volta ao QA como entrada do laço
+    # (RN-163) — estacionar sobre ela deixava o gate parado sem pergunta no fio.
+    case result do
+      {:ok, %{"nextAction" => "await_user"}} ->
+        estacionar_por_decisao(project_id, dev_state.session_id, task_id)
+
+      {:ok, _} ->
+        seguir_proxima_acao(result, project_id, dev_state, task_id, resumo, itens)
+
+      {:error, motivo} ->
+        {:devolver_ao_qa, Map.get(verdict, :retomada), texto_da_recusa(motivo)}
+    end
+  end
+
+  defp apply_gate_result(project_id, dev_state, task_id, veredito, resumo, itens, _verdict),
+    do: apply_gate_result(project_id, dev_state, task_id, veredito, resumo, itens)
+
+  defp estacionar_por_decisao(project_id, session_id, task_id) do
+    GateState.upsert!(%{
+      project_id: project_id,
+      task_id: task_id,
+      gate: "qa",
+      session_id: session_id,
+      step: "awaiting_user_decision"
+    })
+
+    :ok = GateState.park!(project_id, task_id, "qa")
+
+    emit(project_id, session_id, "gate.rescue_parked", %{
+      taskId: task_id,
+      gate: "qa",
+      motivo: "esperando a decisão do usuário numa pergunta em aberto; a resposta retoma o gate"
+    })
+
+    :ok
+  end
+
   defp apply_gate_result(project_id, dev_state, task_id, veredito, resumo, itens) do
     result =
       EngineApiClient.record_gate_verdict(
@@ -457,6 +616,10 @@ defmodule Engine.Gates.QaLeadServer do
         dev_state.max_gate_corrections
       )
 
+    seguir_proxima_acao(result, project_id, dev_state, task_id, resumo, itens)
+  end
+
+  defp seguir_proxima_acao(result, project_id, dev_state, task_id, resumo, itens) do
     case result do
       {:ok, %{"nextAction" => "correct"}} ->
         # ADR 0067: o veredito JÁ está gravado (durável, na api) — o que falta
@@ -506,6 +669,42 @@ defmodule Engine.Gates.QaLeadServer do
     end
   end
 
+  @doc false
+  # O texto que o QA lê na volta seguinte. No 409 `pergunta_ja_respondida` a
+  # api manda a decisão já tomada: o QA a aplica em vez de perguntar de novo.
+  def texto_da_recusa({409, %{"reason" => "pergunta_ja_respondida"} = corpo}) do
+    """
+    A api recusou o veredito `needs_user_decision`: a pergunta já foi respondida pelo usuário.
+    Decisão já tomada: #{decisao_do_corpo(corpo)}
+    Aplique essa decisão e emita o parecer por ela (`approved` ou `changes_requested`); não pergunte de novo.
+    """
+  end
+
+  def texto_da_recusa({status, corpo}) when is_integer(status) do
+    """
+    A api recusou o veredito `needs_user_decision` (HTTP #{status}): #{mensagem_do_corpo(corpo)}
+    Corrija e chame `emit_qa_verdict` de novo: `openQuestionId` só com o uuid de uma pergunta ABERTA; sem ele, mande a pergunta nova em `pergunta`/`sugestao`.
+    """
+  end
+
+  def texto_da_recusa(motivo),
+    do: "A api não registrou o veredito `needs_user_decision`: #{inspect(motivo)}. Tente de novo."
+
+  defp decisao_do_corpo(corpo) when is_map(corpo) do
+    Enum.find_value(["decisao", "decision", "resposta", "answer", "message"], fn k ->
+      case Map.get(corpo, k) do
+        v when is_binary(v) and v != "" -> v
+        v when is_map(v) -> Jason.encode!(v)
+        _ -> nil
+      end
+    end) || Jason.encode!(corpo)
+  end
+
+  defp mensagem_do_corpo(%{"message" => m}) when is_binary(m), do: m
+  defp mensagem_do_corpo(%{"message" => m}) when is_list(m), do: Enum.join(m, "; ")
+  defp mensagem_do_corpo(corpo) when is_map(corpo), do: Jason.encode!(corpo)
+  defp mensagem_do_corpo(corpo), do: inspect(corpo)
+
   defp emit(project_id, session_id, type, payload) do
     ArtifactEmitter.append(project_id, session_id, "qa-lead", type, payload)
   end
@@ -542,11 +741,9 @@ defmodule Engine.Gates.QaLeadServer do
   end
 
   defp plano_ja_emitido(project_id, session_id, task_id) do
-    case EngineApiClient.list_events(project_id, session_id,
-           latest: true,
-           limit: Reidratacao.teto()
-         ) do
-      {:ok, eventos} ->
+    # RN-944: leitura POR TIPO — o plano não sai da janela dos 200 mais recentes.
+    case Reidratacao.eventos_do_tipo(project_id, session_id, ["artifact.plano_de_teste"]) do
+      {:ok, eventos, _bateu_no_teto} ->
         eventos
         |> Enum.filter(&plano_da_task?(&1, task_id))
         |> List.last()
@@ -557,6 +754,24 @@ defmodule Engine.Gates.QaLeadServer do
 
       {:error, _reason} ->
         :nenhum
+    end
+  end
+
+  # RN-944: os itens do último `qa_verdict` do `qa` desta task, só se pediu
+  # correção; falha de leitura = sem insumo (primeira volta).
+  defp pedido_anterior(project_id, session_id, task_id) do
+    with {:ok, eventos, _} <-
+           Reidratacao.eventos_do_tipo(project_id, session_id, ["artifact.qa_verdict"]),
+         %{"payload" => %{"veredito" => "changes_requested"} = payload} <-
+           eventos
+           |> Enum.filter(
+             &(Map.get(&1, "actorId") == "qa" and
+                 get_in(&1, ["payload", "taskId"]) == task_id)
+           )
+           |> List.last() do
+      %{itens: Engine.Gates.Hooks.Termination.lista(Map.get(payload, "itens"))}
+    else
+      _ -> nil
     end
   end
 
@@ -574,6 +789,33 @@ defmodule Engine.Gates.QaLeadServer do
       criterios_executaveis: Map.get(payload, "criteriosExecutaveis", []),
       estrategia_de_automacao: Map.get(payload, "estrategiaDeAutomacao", "")
     }
+  end
+
+  # RN-798 (AT-475): README tocado pela entrega é conferido contra os scripts
+  # do package.json, sem LLM; divergência entra como parecer próprio.
+  defp conferencia_do_readme(%{project_id: project_id, dev_state: dev_state}) do
+    worktree = Map.get(dev_state, :worktree_path)
+
+    case ConferenciaDoReadme.conferir(worktree, arquivos_alterados(project_id, worktree)) do
+      nil ->
+        []
+
+      [] ->
+        [{"Conferência do README", {:ok, %{veredito: "approved", resumo: "", itens: []}}}]
+
+      divergencias ->
+        [
+          {"Conferência do README",
+           {:ok,
+            %{
+              veredito: "changes_requested",
+              resumo: "README cita comando que o código não tem",
+              itens: divergencias
+            }}}
+        ]
+    end
+  rescue
+    _ -> []
   end
 
   defp arquivos_alterados(project_id, worktree_path) do

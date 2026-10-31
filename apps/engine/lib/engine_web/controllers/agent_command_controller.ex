@@ -33,7 +33,7 @@ defmodule EngineWeb.AgentCommandController do
     StaffServer
   }
 
-  alias Engine.Agents.{FilaDeMensagens, TurnoAssincrono}
+  alias Engine.Agents.{Diario, FilaDeMensagens, Reidratacao, TurnoAssincrono}
   alias Engine.Infra.{InfraLeadSupervisor, InfraLeadServer}
   alias Engine.Sessions.EngineApiClient
 
@@ -597,4 +597,104 @@ defmodule EngineWeb.AgentCommandController do
   defp via_for("staff", session_id), do: {:ok, StaffServer.via(session_id)}
   defp via_for("infra", session_id), do: {:ok, InfraLeadServer.via(session_id)}
   defp via_for(_agent, _session_id), do: :error
+
+  @doc """
+  O botão "Retomar" (AT-582, ADR 0226): retoma, por gesto humano e SEM teto, o
+  turno que o reinício do engine interrompeu e que a retomada automática não
+  refez (ou já usou). Responde ao ACEITAR (202, RN-578); o avanço vai pelo canal.
+
+  Recusas 409 nomeadas: `turno_nao_interrompido` (o último desfecho do agente
+  não é `turno_interrompido_por_reinicio`, ou já há turno/retomada em curso) e
+  `agente_sem_retomada` (agente que não conversa, ou cujo servidor ainda não
+  sabe montar o turno de retomada). Grava `agent.turn_resumed` com `automatica:
+  false` e sobe o turno pela MESMA `TurnoAssincrono` (`:retomar_turno_interrompido`).
+  """
+  def resume(conn, %{"sessionId" => session_id, "projectId" => project_id, "agent" => agent}) do
+    with {:ok, via} <- via_for(agent, session_id) |> ou(:agente_sem_retomada),
+         {:ok, diario} <- interrompido(project_id, session_id, agent),
+         true <-
+           FilaDeMensagens.acordar(agent, session_id, project_id) |> ou(:agente_sem_retomada),
+         pid when is_pid(pid) <- GenServer.whereis(via),
+         true <- sabe_retomar?(pid) do
+      EngineApiClient.append_event(project_id, session_id, %{
+        type: Diario.tipo_retomada(),
+        actorKind: "agent",
+        actorId: agent,
+        payload: %{
+          retomaDe: diario.retomar_de,
+          ultimaAtividadeEm:
+            diario.ultima_atividade && DateTime.to_iso8601(diario.ultima_atividade),
+          automatica: false
+        }
+      })
+
+      send(pid, :retomar_turno_interrompido)
+      send_resp(conn, 202, "")
+    else
+      {:error, :turno_nao_interrompido} ->
+        recusar(
+          conn,
+          409,
+          "turno_nao_interrompido",
+          "Não há turno interrompido deste agente para retomar."
+        )
+
+      _ ->
+        recusar(
+          conn,
+          409,
+          "agente_sem_retomada",
+          "Este agente não sabe retomar um turno interrompido."
+        )
+    end
+  end
+
+  def resume(conn, _params) do
+    recusar(conn, 422, "retomada_incompleta", "O pedido de retomar chegou sem projeto ou agente.")
+  end
+
+  defp ou(:error, motivo), do: {:error, motivo}
+  defp ou(false, motivo), do: {:error, motivo}
+  defp ou(valor, _motivo), do: valor
+
+  # O turno é "interrompido" quando o MARCO mais recente do agente é o
+  # `agent.error` do reinício: um `working` depois dele é turno em curso, e um
+  # `agent.turn_resumed` depois é retomada já em andamento.
+  defp interrompido(project_id, session_id, agent) do
+    with {:ok, eventos} <-
+           EngineApiClient.list_events(project_id, session_id,
+             latest: true,
+             limit: Reidratacao.teto()
+           ) do
+      diario = Diario.de_eventos(eventos, agent)
+
+      ultimo =
+        eventos
+        |> Enum.filter(fn e ->
+          (get_in(e, ["actor", "id"]) || e["actorId"]) == agent and
+            (e["type"] == "agent.error" or e["type"] == Diario.tipo_retomada() or
+               get_in(e, ["payload", "status"]) == "working")
+        end)
+        |> Enum.max_by(&(&1["seq"] || 0), fn -> nil end)
+
+      if diario.retomar_de != nil and
+           match?(
+             %{
+               "type" => "agent.error",
+               "payload" => %{"reason" => "turno_interrompido_por_reinicio"}
+             },
+             ultimo
+           ),
+         do: {:ok, diario},
+         else: {:error, :turno_nao_interrompido}
+    else
+      _ -> {:error, :turno_nao_interrompido}
+    end
+  end
+
+  defp sabe_retomar?(pid) do
+    is_function(Map.get(:sys.get_state(pid, 5_000), :montar_turno_de_retomada), 1)
+  catch
+    :exit, _ -> false
+  end
 end

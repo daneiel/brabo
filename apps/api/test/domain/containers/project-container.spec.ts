@@ -1,11 +1,36 @@
 import { describe, expect, it } from 'vitest';
 import {
+  containerDivergeDaDecisao,
+  decisaoVigenteDosEventos,
   ImagemInvalidaError,
   RECURSOS_MAXIMOS,
   RECURSOS_PADRAO,
   referenciaDeImagemValida,
+  stackQueBaixaDependencias,
+  TERMOS_DE_STACK_QUE_BAIXA_DEPENDENCIA,
   validarDecisaoDeImagem,
 } from '../../../src/domain/containers/project-container';
+
+describe('stackQueBaixaDependencias (RN-906)', () => {
+  const ach = (stack: string) =>
+    stackQueBaixaDependencias([{ name: 'm', stack }])?.termo ?? null;
+
+  it('casa node/python/elixir por palavra inteira', () => {
+    expect(ach('Node.js 22 + Express')).toBe('node');
+    expect(ach('Python 3.12 (pip)')).toBe('python');
+    expect(ach('Elixir/Phoenix')).toBe('elixir');
+  });
+
+  it('não casa estático nem por substring', () => {
+    expect(ach('HTML estático')).toBeNull();
+    expect(ach('MongoDB')).toBeNull();
+  });
+
+  it('a lista fechada tem os ecossistemas esperados', () => {
+    for (const t of ['npm', 'pip', 'mix', 'cargo', 'go', 'maven', 'composer'])
+      expect(TERMOS_DE_STACK_QUE_BAIXA_DEPENDENCIA).toContain(t);
+  });
+});
 
 const RATIONALE = 'stack TypeScript sobre Node 22, e a slim basta';
 
@@ -104,5 +129,55 @@ describe('validarDecisaoDeImagem', () => {
         resources: { cpus: valor },
       }),
     ).toThrow(ImagemInvalidaError);
+  });
+});
+
+describe('containerDivergeDaDecisao (RN-902)', () => {
+  const vigente = {
+    image: 'node:22',
+    rationale: RATIONALE,
+    network: 'none' as const,
+    resources: RECURSOS_PADRAO,
+  };
+
+  it('mesmo conteúdo em versões diferentes não diverge', () => {
+    expect(
+      containerDivergeDaDecisao(
+        { image: 'node:22', network: 'none' },
+        RECURSOS_PADRAO,
+        vigente,
+      ),
+    ).toBe(false);
+  });
+
+  it('rede diferente ou recursos diferentes divergem', () => {
+    expect(
+      containerDivergeDaDecisao(
+        { image: 'node:22', network: 'egress' },
+        RECURSOS_PADRAO,
+        vigente,
+      ),
+    ).toBe(true);
+    expect(
+      containerDivergeDaDecisao(
+        { image: 'node:22', network: 'none' },
+        { ...RECURSOS_PADRAO, cpus: 1 },
+        vigente,
+      ),
+    ).toBe(true);
+  });
+
+  it('sem decisão congelada ou vigente não acusa', () => {
+    expect(containerDivergeDaDecisao(null, RECURSOS_PADRAO, vigente)).toBe(
+      false,
+    );
+    expect(
+      containerDivergeDaDecisao(
+        { image: 'x:1', network: 'none' },
+        RECURSOS_PADRAO,
+        null,
+      ),
+    ).toBe(false);
+    expect(decisaoVigenteDosEventos([])).toBeNull();
   });
 });

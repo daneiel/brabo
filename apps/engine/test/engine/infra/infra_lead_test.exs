@@ -3,6 +3,17 @@ defmodule Engine.Infra.InfraLeadTest do
 
   alias Engine.Infra.InfraLead
 
+  describe "com_prefixo/1 (AT-396)" do
+    test "prefixa quando o resumo não começa com infra:" do
+      assert InfraLead.com_prefixo("Dockerfile") == "infra: Dockerfile"
+    end
+
+    test "não repete o prefixo que o modelo já escreveu, sem diferenciar maiúsculas" do
+      assert InfraLead.com_prefixo("Infra: Dockerfile") == "Infra: Dockerfile"
+      assert InfraLead.com_prefixo("infra: Dockerfile") == "infra: Dockerfile"
+    end
+  end
+
   describe "consolidar/2" do
     test "os dois completos: mescla arquivos (lead primeiro, workflows depois) e título" do
       lead =

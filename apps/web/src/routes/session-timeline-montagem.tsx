@@ -3,7 +3,7 @@ import { Link } from '@tanstack/react-router';
 import type { QueryClient } from '@tanstack/react-query';
 import type { TFunction } from 'i18next';
 import { approveAction, approveAlwaysAction, denyAction } from '../lib/api-client';
-import { corDoAgente, nomeDoAgente } from '../lib/agents';
+import { SOLO_CONVERSATIONAL_AGENTS, corDoAgente, nomeDoAgente } from '../lib/agents';
 import { classifyEvent, origemDoEvento } from '../lib/activity';
 import type {
   Epic,
@@ -17,10 +17,13 @@ import type {
 } from '../lib/api-types';
 import type { useTurnoDoAgente } from '../lib/session-turno';
 import { ApprovalCard } from '../components/ApprovalCard';
+import { CartaoOuReferenciaNoFio } from '../components/CartaoOuReferenciaNoFio';
 import { MarkdownMessage } from '../components/ui/MarkdownMessage';
+import { AvatarDoAgente } from '../components/ui/AvatarDoAgente';
 import { Button } from '../components/ui/Button';
 import { Carousel, type CarouselSlide } from '../components/ui/Carousel';
-import { lerFalhaDeTurno } from '../lib/session-falha';
+import { ehTetoDoCriativo, lerFalhaDeTurno } from '../lib/session-falha';
+import { respostaCortada } from '../lib/resposta-cortada';
 import {
   AlertCircleIcon,
   ChevronRightIcon,
@@ -41,10 +44,22 @@ import { StorySlide } from './StorySlide';
 import { MergearNoChat, jaHaMergeDaPr, prAbertaDaAcao } from './MergearNoChat';
 import { gatePendenteNoMerge } from '../lib/gate-do-merge';
 import { StructuredQuestionCard } from './StructuredQuestionCard';
+import { ecosDeRespostaEstruturada } from '../lib/eco-de-formulario';
 import { agruparNarracoesDoTurno } from './session-fio';
 import { autorDaMensagem, type ContextoDeAutoria } from '../lib/autor-da-mensagem';
 import { estadosNaFila } from '../lib/fila-de-mensagens';
 import { SeloDaFila } from './SeloDaFila';
+import {
+  RetomarGateEstacionado,
+  cicloEstacionado,
+  cicloInterrompido,
+} from './RetomarGateEstacionado';
+import {
+  RetomarTurnoInterrompido,
+  ehRetomadaAutomatica,
+  planoVigente,
+  turnoInterrompidoPendente,
+} from './RetomarTurnoInterrompido';
 
 type Turno = ReturnType<typeof useTurnoDoAgente>;
 
@@ -91,6 +106,11 @@ export interface ContextoDaTimeline {
   iniciarTurnoDoAgente: Turno['iniciarTurnoDoAgente'];
   acompanharTurnoPeloLog: Turno['acompanharTurnoPeloLog'];
   finalizarTurnoDoAgente: Turno['finalizarTurnoDoAgente'];
+  /**
+   * RN-749 (AT-434): manda ao agente "continue de onde parou", pelo MESMO
+   * caminho do composer. Estável (não entra nas dependências da montagem).
+   */
+  continuarRespostaCortada?: (agente: string) => void;
 }
 
 /**
@@ -99,6 +119,11 @@ export interface ContextoDaTimeline {
  * promoção (RN-126/RN-148), os cards de aprovação no eixo da RN-155 e as duas
  * passadas de apresentação (RN-172 e o colapso de "Passos do turno").
  */
+/** RN-695: o evento é da Anamnese, e por isso fica fora do fio da sessão. */
+export function ehDaAnamnese(event: SessionEvent): boolean {
+  return event.actor.kind === 'agent' && event.actor.id === 'anamnese';
+}
+
 export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
   const {
     events,
@@ -128,6 +153,7 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
     iniciarTurnoDoAgente,
     acompanharTurnoPeloLog,
     finalizarTurnoDoAgente,
+    continuarRespostaCortada,
   } = ctx;
   const items: TimelineEntry[] = [];
   // O rótulo de cada desfecho de `autorDaMensagem` (RN-652). "Você" só quando
@@ -384,8 +410,18 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
   // RN-673: o estado de cada mensagem na fila de um agente — derivado do log
   // UMA vez por montagem, como o engine o deriva.
   const filaDasMensagens = estadosNaFila(events);
+  // RN-712: a resposta de um formulário estruturado chega ao agente também
+  // como `chat.message` do usuário (a api reenvia as respostas como texto).
+  // O card respondido já as mostra — a bolha repetida sai do fio.
+  const ecosDeFormulario = ecosDeRespostaEstruturada(events);
 
   for (const event of events) {
+    // RN-695 (AT-355): a Anamnese NÃO fala no fio. A análise dela é sobre a
+    // PESSOA (e citava o id cru do usuário); mora em Configurações › Perfil de
+    // proficiência, e o painel de log continua mostrando os eventos dela.
+    // Evento antigo, gravado como `agent.response` antes da correção do engine,
+    // também sai daqui.
+    if (ehDaAnamnese(event)) continue;
     // Todo item nascido deste evento herda o eixo (`seq`), o AUTOR e o
     // TURNO dele — os três campos que `afundarDesfechos` lê. Passam por
     // aqui em vez de serem repetidos em cada `items.push`: um `push` que
@@ -406,7 +442,9 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
         ...entry,
       });
 
-    if (event.type === 'chat.message') {
+    if (event.type === 'chat.message' && ecosDeFormulario.has(event.id)) {
+      continue;
+    } else if (event.type === 'chat.message') {
       const text = typeof (event.payload as { text?: unknown })?.text === 'string' ? (event.payload as { text: string }).text : '';
       // RN-652 (AT-329): o autor é o ATOR do evento — pessoa, agente ou
       // desconhecido —, nunca quem está vendo a tela.
@@ -570,13 +608,21 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
                     {t('handoff.semRepositorio')}
                   </span>
                 ) : (
-                  <Button
-                    variant="primary"
-                    loading={ativandoExecucao}
-                    onClick={handleActivateExecution}
-                  >
-                    {t('handoff.ativarExecucao')}
-                  </Button>
+                  // RN-728 (AT-410): o aceite é o primário; ativar daqui é
+                  // SECUNDÁRIO e diz o que pula — o plano do Dev Lead.
+                  <>
+                    <Button
+                      variant="secondary"
+                      loading={ativandoExecucao}
+                      onClick={handleActivateExecution}
+                      data-testid="ativar-execucao-no-handoff"
+                    >
+                      {t('handoff.ativarExecucao')}
+                    </Button>
+                    <span className={styles.timelineLink} data-testid="aviso-ativar-sem-plano">
+                      {t('handoff.ativarSemPlanoAviso')}
+                    </span>
+                  </>
                 )}
                 <Link
                   to="/projects/$projectId"
@@ -768,7 +814,16 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
         content?: unknown;
         text?: unknown;
         modelName?: unknown;
+        passos?: unknown;
       };
+      // AT-395 (RN-698, decisão do dono de 03/10): o `content` é só o FECHO do
+      // turno; o texto das voltas anteriores vem em `passos` e entra como
+      // narrações do MESMO turno+autor ANTES do fecho — é o colapso de
+      // "Passos do turno" que já existe que as recolhe, sem segundo controle.
+      // Os passos não contam no corte do fio (RN-644): a mensagem é o fecho.
+      const passos = Array.isArray(payload?.passos)
+        ? payload.passos.filter((p): p is string => typeof p === 'string' && p !== '')
+        : [];
       const text =
         typeof payload?.content === 'string'
           ? payload.content
@@ -784,17 +839,10 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
         typeof payload?.modelName === 'string' && payload.modelName !== ''
           ? payload.modelName
           : undefined;
-      empurrar({
-        mensagem: true, // RN-644: conta no corte do fio
-        agentId: event.actor.kind === 'agent' ? event.actor.id : undefined,
-        // `agruparNarracoesDoTurno` lê este marcador pra saber que ESTA
-        // entrada, e só ela, participa do colapso de "Passos do turno".
-        agentResponse: true,
-        node: (
-          <div className={styles.message} key={event.id} style={corDoAgente(event.actor.id)}>
-            <span className={styles.avatar}>
-              <ModelIcon size={15} />
-            </span>
+      const bolha = (text: string, key: string) => (
+          <div className={styles.message} key={key} style={corDoAgente(event.actor.id)}>
+            {/* RN-829: quem fala é o AGENTE — o modelo fica só no chip. */}
+            <AvatarDoAgente id={event.actor.id} />
             <div className={styles.messageBody}>
               <div className={styles.messageHeader}>
                 <span className={styles.messageName}>{nomeDoAgente(event.actor.id)}</span>
@@ -839,11 +887,51 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
                   <MarkdownMessage text={text} />
                 </div>
               )}
+              {/* RN-749: a resposta cortada pelo teto oferece a continuação
+                  num clique — antes a pessoa tinha de adivinhar "continue". */}
+              {key === event.id &&
+                isActive &&
+                continuarRespostaCortada &&
+                event.actor.kind === 'agent' &&
+                respostaCortada(text) && (
+                  <div>
+                    <Button
+                      variant="ghost"
+                      data-testid="continuar-resposta-cortada"
+                      onClick={() => continuarRespostaCortada(event.actor.id)}
+                    >
+                      {t('mensagens.continuarCortada')}
+                    </Button>
+                  </div>
+                )}
             </div>
+          </div>
+      );
+      passos.forEach((passo, i) =>
+        empurrar({
+          agentId: event.actor.kind === 'agent' ? event.actor.id : undefined,
+          agentResponse: true,
+          node: bolha(passo, `${event.id}-passo-${i}`),
+        }),
+      );
+      empurrar({
+        mensagem: true, // RN-644: conta no corte do fio
+        agentId: event.actor.kind === 'agent' ? event.actor.id : undefined,
+        // `agruparNarracoesDoTurno` lê este marcador pra saber que ESTA
+        // entrada, e só ela, participa do colapso de "Passos do turno".
+        agentResponse: true,
+        node: bolha(text, event.id),
+      });
+    } else if (ehRetomadaAutomatica(event)) {
+      // AT-582: a retomada automática do boot é só uma linha discreta.
+      empurrar({
+        node: (
+          <div className={styles.messageMeta} key={event.id} data-testid="retomada-automatica">
+            {t('turnoInterrompido.automatica', { agente: nomeDoAgente(event.actor.id) })}
           </div>
         ),
       });
-    } else if (event.type === 'agent.error') {
+    } else if (event.type === 'agent.error' && !ehTetoDoCriativo(event.payload)) {
       // O agente FALA a falha, no mesmo fio. Antes o motivo ia só por
       // broadcast (efêmero) e o log guardava uma resposta vazia — quem
       // abrisse a sessão depois via um balão em branco e nada mais.
@@ -874,6 +962,139 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
               <div className={[styles.bubble, styles.bubbleFalha].join(' ')}>
                 {mensagem}
               </div>
+              {/* AT-393: o próximo gesto, só com o que o evento traz (ator e
+                  origem) — o turno parou e uma mensagem nova o retoma. */}
+              {event.actor.kind === 'agent' && turnoInterrompidoPendente(events, event) && (
+                <RetomarTurnoInterrompido
+                  projectId={projectId}
+                  sessionId={sessionId}
+                  agent={event.actor.id}
+                  plano={planoVigente(events, event)}
+                  podeDecidir={podeDecidir}
+                  acompanhar={acompanharTurnoPeloLog}
+                />
+              )}
+              {event.actor.kind === 'agent' && (
+                <div className={styles.messageMeta} data-testid="falha-proximo-passo">
+                  {t('mensagens.falhaProximoPasso', {
+                    agente: nomeDoAgente(event.actor.id),
+                    origem,
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        ),
+      });
+    } else if (event.type === 'toolloop.limit_reached' || event.type === 'agent.error') {
+      // RN-698 (AT-354): o teto de iterações era invisível no fio — o PO
+      // parava em 12/12 e a última coisa à mostra era um pedaço de resposta.
+      // Mesma bolha de falha do `agent.error`, origem `modelo` (o teto só se
+      // esgota quando o modelo segue pedindo ferramenta sem convergir, RN-166).
+      // AT-590: o mesmo texto para o `agent.error` `limite_de_iteracoes` do Criativo.
+      const p = (event.payload ?? {}) as {
+        max_iterations?: unknown;
+        gravado?: unknown;
+        regrasSemHistoria?: unknown;
+      };
+      const max = p.max_iterations;
+      const conversacional =
+        event.actor.kind === 'agent' &&
+        [...SOLO_CONVERSATIONAL_AGENTS, 'dev-lead', 'infra-lead'].includes(event.actor.id);
+      empurrar({
+        agentId: event.actor.kind === 'agent' ? event.actor.id : undefined,
+        node: (
+          <div
+            className={styles.message}
+            key={event.id}
+            style={{ ['--msg-color' as string]: 'var(--danger)' } as CSSProperties}
+            data-testid="falha-de-turno"
+            data-origem="modelo"
+          >
+            <span className={styles.avatar}>
+              <AlertCircleIcon size={15} />
+            </span>
+            <div className={styles.messageBody}>
+              <div className={styles.messageHeader}>
+                <span className={styles.messageName}>{nomeDoAgente(event.actor.id)}</span>
+                <span className={styles.messageMeta}>
+                  {t('mensagens.falhaOrigem', { origem: 'modelo' })}
+                </span>
+              </div>
+              <div className={[styles.bubble, styles.bubbleFalha].join(' ')}>
+                {t('mensagens.tetoDeIteracoes', { max: typeof max === 'number' ? max : '?' })}
+                {typeof p.gravado === 'string' && p.gravado !== '' && (
+                  <div data-testid="teto-gravado">{p.gravado}</div>
+                )}
+                {typeof p.regrasSemHistoria === 'number' && (
+                  <div data-testid="teto-regras-sem-historia">
+                    {t('mensagens.regrasSemHistoria', { count: p.regrasSemHistoria })}
+                  </div>
+                )}
+              </div>
+              {/* AT-590: o botão da RN-749, só para os sete conversacionais e só com a sessão ativa. */}
+              {isActive && continuarRespostaCortada && conversacional && (
+                <div>
+                  <Button
+                    variant="ghost"
+                    data-testid="continuar-resposta-cortada"
+                    onClick={() => continuarRespostaCortada(event.actor.id)}
+                  >
+                    {t('mensagens.continuarCortada')}
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        ),
+      });
+    } else if (cicloInterrompido(event)) {
+      // RN-823 (AT-495): o reinício do engine matou o ciclo no meio e o boot
+      // o retomou do começo — o fio diz isso em vez de ficar calado.
+      const ciclo = cicloInterrompido(event)!;
+      const hora = new Date(ciclo.retomadoEm ?? event.createdAt).toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+      empurrar({
+        node: (
+          <div className={styles.message} key={event.id} data-testid="gate-interrompido">
+            <span className={styles.avatar}>
+              <AlertCircleIcon size={15} />
+            </span>
+            <div className={styles.messageBody}>
+              <div className={styles.bubble}>
+                {t('gateInterrompido.aviso', { gate: ciclo.gate, taskId: ciclo.taskId, hora })}
+              </div>
+            </div>
+          </div>
+        ),
+      });
+    } else if (cicloEstacionado(event)) {
+      // RN-724 (ADR 0207): o ciclo de gate estacionou; o gesto humano que o
+      // retoma mora aqui, sob o aviso. RN-867: o texto segue o motivo gravado.
+      const ciclo = cicloEstacionado(event)!;
+      empurrar({
+        node: (
+          <div className={styles.message} key={event.id} data-testid="gate-estacionado">
+            <span className={styles.avatar}>
+              <AlertCircleIcon size={15} />
+            </span>
+            <div className={styles.messageBody}>
+              <div className={styles.bubble}>
+                {t(
+                  ciclo.motivo === 'tempo'
+                    ? 'gateEstacionado.aviso'
+                    : 'gateEstacionado.avisoPergunta',
+                  { gate: ciclo.gate, taskId: ciclo.taskId },
+                )}
+              </div>
+              <RetomarGateEstacionado
+                projectId={projectId}
+                taskId={ciclo.taskId}
+                gate={ciclo.gate}
+                podeDecidir={podeDecidir}
+              />
             </div>
           </div>
         ),
@@ -965,6 +1186,9 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
         // AT-322: o card é o mesmo das outras superfícies; quem o centraliza
         // com teto de 560px no fio é este contêiner (RN-173).
         <div key={action.id} className={styles.acaoNoFio}>
+        {/* RN-843 (AT-512): pendente e desenhada no bloco de pendências, a
+            ação vira só uma referência aqui — um cartão de decisão por ação. */}
+        <CartaoOuReferenciaNoFio action={action}>
         <ApprovalCard
           action={action}
           decisaoDaPolitica={decisaoDaPoliticaDaAcao(action.id, events)}
@@ -989,6 +1213,7 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
               : undefined
           }
         />
+        </CartaoOuReferenciaNoFio>
         {mergear}
         </div>
       ),

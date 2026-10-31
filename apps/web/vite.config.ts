@@ -1,10 +1,14 @@
 /// <reference types="vitest/config" />
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
+import { fileURLToPath } from 'node:url'
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
+  // Alias `@/` do shadcn (AT-645); espelhado no tsconfig.app.json.
+  resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
   build: {
     rolldownOptions: {
       output: {
@@ -39,6 +43,18 @@ export default defineConfig({
               name: 'vendor-i18n',
               test: /[\\/]node_modules[\\/](i18next|react-i18next)[\\/]/,
             },
+            {
+              // ADR 0210: `motion` só entra por `components/ui/Shimmer.tsx`, que
+              // o turno do agente e o AgentCard usam — chunk próprio pelo
+              // mesmo motivo dos três acima (hash estável entre deploys).
+              name: 'vendor-motion',
+              test: /[\\/]node_modules[\\/](motion|motion-dom|motion-utils|framer-motion)[\\/]/,
+            },
+            {
+              // ADR 0232: shadcn/Base UI. Lista de PERMITIDOS, como as acima.
+              name: 'vendor-ui',
+              test: /[\\/]node_modules[\\/](@base-ui|class-variance-authority|clsx|tailwind-merge|lucide-react)[\\/]/,
+            },
           ],
         },
       },
@@ -68,6 +84,11 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
+    // Node 25+ liga a Web Storage nativa: `globalThis.localStorage` passa a ser
+    // o do Node (sem `--localstorage-file`, inutilizável) e sombreia o do jsdom.
+    // A flag nos WORKERS desliga isso — mesmo efeito de
+    // `NODE_OPTIONS=--no-experimental-webstorage`, e inerte no Node 24 (AT-360).
+    execArgv: ['--no-experimental-webstorage'],
     coverage: {
       provider: 'v8',
       // Piso (ratchet), não meta: o valor medido em 2026-08-27 foi statements

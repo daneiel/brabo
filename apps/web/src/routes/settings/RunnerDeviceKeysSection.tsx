@@ -1,3 +1,4 @@
+import { Shimmer } from '../../components/ui/Shimmer';
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -301,7 +302,7 @@ export function RunnerDeviceKeysSection({ projectId }: { projectId: string }) {
       </p>
 
       {(!papelConhecido || (podeVerAsChaves && isPending)) && (
-        <p className={styles.subtitle}>{t('runnerDeviceKeys.verificando')}</p>
+        <p className={styles.subtitle}><Shimmer>{t('runnerDeviceKeys.verificando')}</Shimmer></p>
       )}
       {podeVerAsChaves && isError && (
         <p className={styles.subtitle}>{t('runnerDeviceKeys.naoSei')}</p>

@@ -157,7 +157,7 @@ config :engine,
   project_workspaces_root:
     System.get_env("PROJECT_WORKSPACES_ROOT", "/tmp/brabo-project-workspaces"),
   terminal_action_timeout_ms:
-    String.to_integer(System.get_env("TERMINAL_ACTION_TIMEOUT_MS", "15000")),
+    String.to_integer(System.get_env("TERMINAL_ACTION_TIMEOUT_MS", "120000")),
   # Teto de BYTES da saída de um comando (achado S). A saída fica no histórico
   # do laço e viaja em todo turno seguinte; sem teto, um `find` numa árvore
   # grande derruba a execução inteira com 413 — a api do Brabo (não o
@@ -211,7 +211,7 @@ config :engine,
   context_compaction_threshold:
     String.to_float(System.get_env("CONTEXT_COMPACTION_THRESHOLD", "0.7")),
   # Janela de contexto assumida quando o modelo não informa uma.
-  default_context_window: String.to_integer(System.get_env("DEFAULT_CONTEXT_WINDOW", "8192")),
+  default_context_window: String.to_integer(System.get_env("DEFAULT_CONTEXT_WINDOW", "128000")),
   # Teto de TRANSPORTE (bytes do corpo HTTP de `POST .../llm-turn`), distinto
   # da janela do MODELO. A compactação deve disparar ANTES do corpo estourar
   # o limite HTTP da api — usar só `context_window` (128k tokens nos gates)

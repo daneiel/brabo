@@ -233,6 +233,20 @@ export interface AgruparOpcoes {
    * workspace, e o seletor (que recebe `Model`) não a carrega.
    */
   usos?: readonly UsoDeModelo[];
+  /**
+   * Busca livre por nome de exibição ou id/nome do modelo, sem diferenciar
+   * maiúsculas (RN-694). Vazia ou só espaços não filtra.
+   */
+  busca?: string;
+}
+
+/** O modelo casa com a busca pelo nome de exibição, pelo `name` ou pelo `id`. */
+export function casaComBusca(modelo: Model, busca: string | undefined): boolean {
+  const termo = (busca ?? '').trim().toLowerCase();
+  if (termo === '') return true;
+  return [modelo.displayName, modelo.name, modelo.id].some((campo) =>
+    (campo ?? '').toLowerCase().includes(termo),
+  );
 }
 
 /** Uso é curadoria: só o catálogo com curadoria anexada pode ser filtrado por ele. */
@@ -266,7 +280,8 @@ export function agruparModelos<M extends Model>(
         (id) => FACETAS.find((f) => f.id === id)?.aceita(m) ?? true,
       ),
     )
-    .filter((m) => (opcoes.usos ?? []).every((u) => usosDe(m).includes(u)));
+    .filter((m) => (opcoes.usos ?? []).every((u) => usosDe(m).includes(u)))
+    .filter((m) => casaComBusca(m, opcoes.busca));
 
   return ORDEM_DOS_GRUPOS.map((kind) => {
     const modelos = todos.filter((m) => providerKind(m.provider) === kind);
@@ -313,7 +328,55 @@ export const ROTULO_DO_PROVIDER: Record<LLMProviderName, string> = {
   get vultr() {
     return i18n.t('providerLabel.vultr', { ns: 'models' });
   },
+  get '9router'() {
+    return i18n.t('providerLabel.9router', { ns: 'models' });
+  },
+  get 'opencode-zen'() {
+    return i18n.t('providerLabel.opencode-zen', { ns: 'models' });
+  },
 };
+
+/**
+ * A cor de cada provider — FONTE ÚNICA do card de credencial e da tabela de
+ * capacidades (AT-607). Só tokens `var(--…)` existentes; `Record` exaustivo para
+ * provider novo não nascer sem cor.
+ */
+export const COR_DO_PROVIDER: Record<LLMProviderName, string> = {
+  ollama: 'var(--text-secondary)',
+  anthropic: 'var(--accent)',
+  openai: 'var(--success)',
+  openrouter: 'var(--violet)',
+  'nvidia-nim': 'var(--success)',
+  together: 'var(--warning)',
+  deepinfra: 'var(--violet)',
+  bitdeer: 'var(--accent)',
+  vultr: 'var(--warning)',
+  '9router': 'var(--success)',
+  'opencode-zen': 'var(--accent)',
+};
+
+/**
+ * Ativo = local OU com chave do TITULAR do workspace (RN-058). `comChave`
+ * `undefined` é "não sei" (carregando ou falhou) e vale TODOS: "não sei" não é
+ * "não tem".
+ */
+export function providerAtivo(
+  provider: LLMProviderName,
+  comChave: ReadonlySet<LLMProviderName> | undefined,
+): boolean {
+  return providerKind(provider) === 'local' || !comChave || comChave.has(provider);
+}
+
+/** Os modelos de UM provider, saídos de `agruparModelos`; hub vem repartido por upstream. */
+export function catalogoDoProvider<M extends Model>(
+  grupos: GrupoDeModelos<M>[],
+  provider: LLMProviderName,
+): { modelos: M[]; subgrupos?: SubgrupoDeModelos<M>[] } {
+  const modelos = grupos.flatMap((g) => g.modelos).filter((m) => m.provider === provider);
+  return providerKind(provider) === 'hub'
+    ? { modelos, subgrupos: repartirPorUpstream(modelos) }
+    : { modelos };
+}
 
 /** Provider que exige chave: todos menos os locais, que rodam na máquina. */
 export type LlmCredentialProvider = Exclude<LLMProviderName, 'ollama'>;
@@ -399,4 +462,34 @@ function provedoresDe(modelos: Model[]): LLMProviderName[] {
   return [...contagem.entries()]
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
     .map(([provider]) => provider);
+}
+
+/**
+ * Providers com credencial cadastrada e NENHUM modelo no catálogo (inteiro:
+ * ativos e inativos). Cadastrar a chave não descobre modelo — quem descobre é
+ * o sync. Uma fonte para o aviso do catálogo e para o botão ao lado do card da
+ * credencial (RN-694). `github`/`gitlab` são token de git e ficam de fora.
+ */
+export function providersSemCatalogo(
+  credenciais: readonly { provider: string }[],
+  catalogo: Record<ModelCategory, Record<string, Model[]>>,
+): LLMProviderName[] {
+  const comModelo = new Set(
+    Object.values(catalogo)
+      .flatMap((porGrupo) => Object.values(porGrupo ?? {}).flat())
+      .map((m) => m.provider),
+  );
+  return credenciais
+    .map((c) => c.provider)
+    .filter((p): p is LLMProviderName => p in ROTULO_DO_PROVIDER)
+    .filter((p) => !comModelo.has(p));
+}
+
+/** Há algum modelo ATIVO no catálogo com curadoria? */
+export function algumModeloAtivo(
+  catalogo: Record<ModelCategory, Record<string, ModelComCuradoria[]>>,
+): boolean {
+  return Object.values(catalogo)
+    .flatMap((porGrupo) => Object.values(porGrupo ?? {}).flat())
+    .some((m) => m.isActive);
 }

@@ -1,0 +1,82 @@
+/**
+ * Faixa de tradução (AT-550, ADR 0216 item 6) — swizzle em modo WRAP.
+ *
+ * Num locale que não é o pt-BR, `metadata.source` diz de onde a página veio: fora de
+ * `@site/i18n/<locale>/...` é o FALLBACK (a fonte em português, sem tradução neste
+ * locale); `@site/i18n/<locale>/...` é a tradução. Para a tradução, o
+ * `traducao.json` (gerado por `pnpm docs:generate`) diz se a fonte mudou
+ * depois do `traducao_de`. Página em dia não ganha faixa.
+ *
+ * Página cuja fonte ainda está em inglês declara `idioma_original: en` no
+ * frontmatter (AT-564): em todo locale menos o `en` — o pt-BR incluído — a
+ * faixa diz que ela está em inglês, em vez de afirmar um original em português.
+ */
+import React, { type ReactNode } from 'react';
+import Content from '@theme-original/DocItem/Content';
+import type ContentType from '@theme/DocItem/Content';
+import type { WrapperProps } from '@docusaurus/types';
+import { useDoc } from '@docusaurus/plugin-content-docs/client';
+import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
+import Translate from '@docusaurus/Translate';
+import traducao from '@site/src/data/traducao.json';
+
+type Props = WrapperProps<typeof ContentType>;
+type Estado = { defasada: boolean; data: string | null };
+
+function Faixa({ children }: { children: ReactNode }) {
+  return (
+    <div className="alert alert--warning margin-bottom--md" role="note" data-faixa-de-traducao="">
+      {children}
+    </div>
+  );
+}
+
+export default function ContentWrapper(props: Props): ReactNode {
+  const { metadata, frontMatter } = useDoc();
+  const idiomaOriginal = (frontMatter as { idioma_original?: string }).idioma_original;
+  const {
+    i18n: { currentLocale, defaultLocale },
+  } = useDocusaurusContext();
+  let faixa: ReactNode = null;
+  if (idiomaOriginal === 'en') {
+    if (currentLocale !== 'en') {
+      faixa = (
+        <Faixa>
+          <Translate id="traducao.faixa.originalEmIngles">Esta página ainda está em inglês.</Translate>
+        </Faixa>
+      );
+    }
+  } else if (currentLocale !== defaultLocale) {
+    const source = metadata.source;
+    const prefixo = `@site/i18n/${currentLocale}/docusaurus-plugin-content-docs/current/`;
+    // A fonte mora fora do site (`path: '../docs'`), e o `source` dela é
+    // `@site/../docs/...`: o que NÃO vem da árvore do locale é o fallback.
+    if (!source.startsWith(prefixo)) {
+      faixa = (
+        <Faixa>
+          <Translate id="traducao.faixa.naoTraduzida">
+            Esta página ainda não foi traduzida; você está lendo o original em português.
+          </Translate>
+        </Faixa>
+      );
+    } else if (source.startsWith(prefixo)) {
+      const rel = source.slice(prefixo.length);
+      const estado = (traducao as Record<string, Record<string, Estado>>)[currentLocale]?.[rel];
+      if (estado?.defasada) {
+        faixa = (
+          <Faixa>
+            <Translate id="traducao.faixa.defasada" values={{ data: estado.data ?? '?' }}>
+              {'Tradução de {data}; o original mudou depois.'}
+            </Translate>
+          </Faixa>
+        );
+      }
+    }
+  }
+  return (
+    <>
+      {faixa}
+      <Content {...props} />
+    </>
+  );
+}

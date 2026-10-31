@@ -1,4 +1,5 @@
-import type { Dispatch, KeyboardEvent, SetStateAction } from 'react';
+import { useState, type Dispatch, type KeyboardEvent, type SetStateAction } from 'react';
+import { SEM_AUTOFILL } from '../lib/conversa-comecou';
 import { useTranslation } from 'react-i18next';
 import { getSession } from '../lib/api-client';
 import { addressableAgents, nomeDoAgente } from '../lib/agents';
@@ -6,7 +7,10 @@ import type { Handoff } from '../lib/api-types';
 import { Button } from '../components/ui/Button';
 import { Select } from '../components/ui/Select';
 import { sessaoEhTerminal } from '../lib/sessao-encerrada';
+import { pontoDaSessao } from '../lib/session-timeline';
 import { agentesParaChamar } from '../lib/session-destinatario';
+import { AvisoDePerguntasEmAberto } from '../components/PerguntasEmAberto';
+import { CampoDoComposer } from '../components/CampoDoComposer';
 import styles from './SessionPage.module.css';
 
 /**
@@ -30,7 +34,7 @@ export interface SessionComposerProps {
   opcoesDeDestinatario: string[];
   destinatario: string | null;
   precisaEscolherDestinatario: boolean;
-  escolherDestinatario: (agente: string) => void;
+  escolherDestinatario: (agente: string, manual?: boolean) => void;
   manualHandoffTarget: string;
   setManualHandoffTarget: Dispatch<SetStateAction<string>>;
   enviandoHandoffManual: boolean;
@@ -57,6 +61,8 @@ export interface SessionComposerProps {
   arquiteturaJaDeclarada: boolean;
   handleArchitectureReadiness: () => Promise<void>;
   hasPromotedStory: boolean;
+  /** RN-824: a sessão gravou `artifact.module_map` — há arquitetura a confirmar. */
+  hasModuleMap?: boolean;
   handleActivate: () => Promise<void>;
   /**
    * ADR 0183 (RN-650): reabrir sessão encerrada. `podeReabrir` é o papel
@@ -66,6 +72,21 @@ export interface SessionComposerProps {
   podeReabrir?: boolean;
   reabrindo?: boolean;
   handleReopen?: () => Promise<void>;
+}
+
+/**
+ * RN-830 (AT-503): Enter no meio da composição de acento (IME, tecla morta)
+ * confirma o caractere, nunca envia — o handler da página só vê a tecla
+ * quando não há composição em curso. Mora aqui, e não no `SessionPage.tsx`,
+ * porque a página está no teto de linhas.
+ */
+export function ignorarComposicaoIme(
+  handler: (e: KeyboardEvent<HTMLTextAreaElement>) => void,
+): (e: KeyboardEvent<HTMLTextAreaElement>) => void {
+  return (e) => {
+    if (e.nativeEvent.isComposing) return;
+    handler(e);
+  };
 }
 
 export function SessionComposer({
@@ -98,12 +119,14 @@ export function SessionComposer({
   arquiteturaJaDeclarada,
   handleArchitectureReadiness,
   hasPromotedStory,
+  hasModuleMap = false,
   handleActivate,
   podeReabrir = false,
   reabrindo = false,
   handleReopen,
 }: SessionComposerProps) {
   const { t } = useTranslation('sessionPage');
+  const [handoffManualAberto, setHandoffManualAberto] = useState(false);
   return (
     <>
       {/*
@@ -214,7 +237,17 @@ export function SessionComposer({
         mensagem ter destinatário. Dois seletores iguais na mesma tela
         seria a mesma escolha em dois lugares.
       */}
-      {isActive && opcoesDeDestinatario.length > 0 && (
+      {/* RN-712: o seletor nasce RECOLHIDO — ele é o caso que a cadeia não
+          cobre, e aberto desde o primeiro minuto oferecia Dev Lead, QA e
+          Infra no meio da ideação. Um clique o abre. */}
+      {isActive && opcoesDeDestinatario.length > 0 && !handoffManualAberto && (
+        <div className={styles.manualHandoffRow}>
+          <Button variant="ghost" onClick={() => setHandoffManualAberto(true)}>
+            {t('handoff.manualAbrir')}
+          </Button>
+        </div>
+      )}
+      {isActive && opcoesDeDestinatario.length > 0 && handoffManualAberto && (
         <div className={styles.manualHandoffRow}>
           <Select
             aria-label={t('handoff.manualLabel')}
@@ -303,7 +336,7 @@ export function SessionComposer({
                 value={destinatario ?? ''}
                 disabled={streaming}
                 onChange={(e) => {
-                  if (e.target.value) escolherDestinatario(e.target.value);
+                  if (e.target.value) escolherDestinatario(e.target.value, true);
                 }}
               >
                 {destinatario === null && (
@@ -325,12 +358,37 @@ export function SessionComposer({
             </>
           )}
         </div>
+        {/*
+          RN-824 (AT-491): o próximo passo depois do mapa de módulos é um
+          clique HUMANO — o sistema não oferece a Infra sozinho. A tela DIZ
+          isso em texto visível, e sem história promovida diz o motivo uma
+          vez em texto (o `title` de botão desabilitado não abre, RN-102).
+        */}
+        {arquitetoActive && !arquiteturaJaDeclarada && !streaming && hasModuleMap && (
+          <div className={styles.manualHandoffRow} data-testid="proximo-passo-arquitetura">
+            <span className={styles.destinatarioAviso}>
+              {hasPromotedStory
+                ? t('composer.confirmarArquiteturaProximoPasso')
+                : t('composer.confirmarArquiteturaDesabilitado')}
+            </span>
+          </div>
+        )}
+        {((criativoActive && !prontidaoJaDeclarada) ||
+          (arquitetoActive && !arquiteturaJaDeclarada)) && (
+          <AvisoDePerguntasEmAberto
+            projectId={session?.projectId}
+            classeDaLinha={styles.manualHandoffRow}
+            classeDoTexto={styles.destinatarioAviso}
+          />
+        )}
         <div className={`${styles.composer} ${styles.composerComDestinatario}`}>
-          <textarea
+          {/* RN-882: o campo é dono do valor durante a digitação. */}
+          <CampoDoComposer
             className={styles.textarea}
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={handleComposerKeyDown}
+            valor={draft}
+            aoMudar={setDraft}
+            onKeyDown={ignorarComposicaoIme(handleComposerKeyDown)}
+            {...SEM_AUTOFILL}
             placeholder={t('composer.placeholder')}
             disabled={streaming && !podeEnfileirar}
           />
@@ -389,7 +447,7 @@ export function SessionComposer({
               title={
                 !hasPromotedStory
                   ? t('composer.confirmarArquiteturaDesabilitado')
-                  : undefined
+                  : t('composer.confirmarArquiteturaExplica')
               }
             >
               {t('composer.confirmarArquitetura')}
@@ -414,7 +472,7 @@ export function SessionComposer({
             </>
           ) : sessaoEhTerminal(session?.status) && handleReopen ? (
             <>
-              <span>{t('ativacao.statusGenerico', { status: session?.status })}</span>
+              <span>{t('ativacao.statusGenerico', { status: t(pontoDaSessao(session?.status).rotuloKey) })}</span>
               <span>{t('ativacao.reabrirExplicacao')}</span>
               <Button
                 onClick={handleReopen}
@@ -426,7 +484,7 @@ export function SessionComposer({
               {!podeReabrir && <span>{t('ativacao.reabrirExigeDeveloper')}</span>}
             </>
           ) : (
-            <span>{t('ativacao.statusGenerico', { status: session?.status })}</span>
+            <span>{t('ativacao.statusGenerico', { status: t(pontoDaSessao(session?.status).rotuloKey) })}</span>
           )}
         </div>
       )}

@@ -12,6 +12,7 @@ import {
 import { DrizzleModelRepository } from '../../../src/infrastructure/persistence/drizzle/model.repository';
 import { DrizzleModelBindingRepository } from '../../../src/infrastructure/persistence/drizzle/model-binding.repository';
 import { DrizzleUserCredentialRepository } from '../../../src/infrastructure/persistence/drizzle/user-credential.repository';
+import { DrizzleWorkspaceModelRepository } from '../../../src/infrastructure/persistence/drizzle/workspace-model.repository';
 import { DrizzleProjectRepository } from '../../../src/infrastructure/persistence/drizzle/project.repository';
 import { DrizzleBudgetRepository } from '../../../src/infrastructure/persistence/drizzle/budget.repository';
 import { DrizzleAgentAreaRepository } from '../../../src/infrastructure/persistence/drizzle/agent-area.repository';
@@ -44,21 +45,17 @@ import type { LLMProviderRegistry } from '../../../src/application/ports/llm-pro
  * Smoke test MANUAL, opcional, contra a API real da NVIDIA NIM (hospedada) —
  * nunca roda em CI por padrão (sem `NVIDIA_NIM_TEST_KEY`, o describe inteiro
  * é pulado com um aviso). Mesmo molde do smoke do OpenRouter (Fase 11a),
- * ADAPTADO: NIM declara `listModels: false` (sem catálogo confirmado com
- * preço), então não há "sync populando o catálogo" de verdade — a curadoria
- * parte de um modelo inserido manualmente, exatamente como um owner faria em
- * produção rodando o seed (`apps/api/src/db/seed.ts`) e depois curando na
- * tela. O passo de sync AINDA roda, mas só pra confirmar que a capability
- * declarada é respeitada (`pulado: 'sem_capability'`), não pra descobrir
- * modelo nenhum.
+ * `listModels: true` é PROVADO aqui (AT-575): o sync lista o
+ * `GET /v1/models` real e os modelos entram no catálogo (sem preço; o NIM
+ * hospedado é gratuito), e a curadoria ativa um deles.
  *
- * `NVIDIA_NIM_TEST_MODEL` (default `meta/llama-3.2-3b-instruct`, o menor dos
- * três semeados) escolhe o modelo curado e usado no turno de chat. O turno
+ * `NVIDIA_NIM_TEST_MODEL` (default `nvidia/nemotron-3.5-lightning-30b-a3b`,
+ * gratuito e com tool calling provado em 22/10) escolhe o modelo curado e usado no turno de chat. O turno
  * gasta uma fração de centavo de verdade na chave informada.
  */
 const apiKey = process.env.NVIDIA_NIM_TEST_KEY;
 const modeloAlvo =
-  process.env.NVIDIA_NIM_TEST_MODEL ?? 'meta/llama-3.2-3b-instruct';
+  process.env.NVIDIA_NIM_TEST_MODEL ?? 'nvidia/nemotron-3.5-lightning-30b-a3b';
 
 if (!apiKey) {
   console.warn(
@@ -67,7 +64,7 @@ if (!apiKey) {
       'NVIDIA_NIM_TEST_KEY (chave `nvapi-...`, com algum crédito) para ' +
       'habilitar esta suite manualmente — é o aceite que a Fase 11b exige ' +
       'antes de fechar (CLAUDE.md). Opcionalmente, NVIDIA_NIM_TEST_MODEL ' +
-      'escolhe o modelo curado (default: meta/llama-3.2-3b-instruct).',
+      'escolhe o modelo curado (default: nvidia/nemotron-3.5-lightning-30b-a3b).',
   );
 }
 
@@ -79,6 +76,7 @@ describe.skipIf(!apiKey)(
     const modelRepo = new DrizzleModelRepository(db);
     const bindingRepo = new DrizzleModelBindingRepository(db);
     const credentialRepo = new DrizzleUserCredentialRepository(db);
+    const workspaceModelRepo = new DrizzleWorkspaceModelRepository(db);
     const projectRepo = new DrizzleProjectRepository(db);
     const budgetRepo = new DrizzleBudgetRepository(db);
     const areaRepo = new DrizzleAgentAreaRepository(db);
@@ -99,6 +97,9 @@ describe.skipIf(!apiKey)(
         listModels: false,
         embeddings: false,
         routingPreference: false,
+        stickySession: false,
+        priceCeiling: false,
+        promptCaching: false,
       },
       // eslint-disable-next-line @typescript-eslint/require-await
       chat: async function* () {
@@ -131,8 +132,17 @@ describe.skipIf(!apiKey)(
       encryption,
       registry,
     );
-    const setModelsActive = new SetModelsActiveUseCase(modelRepo);
-    const setModelBinding = new SetModelBindingUseCase(bindingRepo, modelRepo);
+    const setModelsActive = new SetModelsActiveUseCase(
+      modelRepo,
+      workspaceModelRepo,
+    );
+    const setModelBinding = new SetModelBindingUseCase(
+      bindingRepo,
+      modelRepo,
+      workspaceModelRepo,
+      projectRepo,
+      registry,
+    );
     const resolveModelBinding = new ResolveModelBindingUseCase(
       bindingRepo,
       projectRepo,
@@ -207,9 +217,7 @@ describe.skipIf(!apiKey)(
           await testStoredCredential.execute(owner.id, 'nvidia-nim'),
         ).toEqual({ resultado: 'ok' });
 
-        // 2) Sync — confirma que a capability declarada é respeitada: NIM é
-        //    PULADO por `sem_capability`, nunca tenta um catálogo que a doc
-        //    não confirma ter preço.
+        // 2) Sync — PROVA de `listModels`: lista o catálogo REAL, sem preço.
         const syncResult = await syncCatalog.execute();
         const relatorioNim = syncResult.porProvider.find(
           (p) => p.provider === 'nvidia-nim',
@@ -218,33 +226,32 @@ describe.skipIf(!apiKey)(
           relatorioNim,
           `relatório do sync não trouxe 'nvidia-nim': ${JSON.stringify(syncResult.porProvider)}`,
         ).toBeDefined();
-        expect(relatorioNim?.pulado).toBe('sem_capability');
+        expect(relatorioNim?.pulado).toBeUndefined();
+        expect(relatorioNim?.descobertos).toBeGreaterThan(0);
+        const doCatalogo = await modelRepo.listByProvider('nvidia-nim');
+        console.info(
+          `[smoke] nvidia-nim listModels: ${doCatalogo.length} modelos; ` +
+            `${modeloAlvo} presente: ${doCatalogo.some((m) => m.name === modeloAlvo)}`,
+        );
+        const inserido = doCatalogo.find((m) => m.name === modeloAlvo);
+        expect(inserido, `${modeloAlvo} não veio do /v1/models`).toBeDefined();
+        expect(
+          await workspaceModelRepo.isActive(workspace.id, inserido!.id),
+        ).toBe(false);
 
-        // 3) Curadoria manual — sem sync, o modelo entra igual a um owner
-        //    rodando o seed (`db/seed.ts`) e depois ativando na tela: insere
-        //    INATIVO (mesma regra da RN-043), então ativa explicitamente.
-        const inserido = await modelRepo.upsertByProviderAndName({
-          provider: 'nvidia-nim',
-          name: modeloAlvo,
-          displayName: modeloAlvo,
-          inputPricePerMillionMicros: 50_000,
-          outputPricePerMillionMicros: 50_000,
-          supportsToolCalling: false,
-          manualPricing: true,
-          isActive: false,
-        });
-        expect(inserido.isActive).toBe(false);
-
+        // 3) Curadoria — ativa o modelo descoberto, explicitamente (RN-043).
         const [ativado] = await setModelsActive.execute({
-          modelIds: [inserido.id],
+          workspaceId: workspace.id,
+          modelIds: [inserido!.id],
           isActive: true,
+          curatedBy: owner.id,
         });
         expect(ativado.isActive).toBe(true);
 
         await setModelBinding.execute(
           'workspace',
           workspace.id,
-          inserido.id,
+          inserido!.id,
           owner.id,
         );
 
@@ -294,6 +301,48 @@ describe.skipIf(!apiKey)(
         // NIM não é hub — sem `extrairUpstreamProvider` na config, o campo
         // fica nulo (diferente do OpenRouter).
         expect(uso.upstreamProvider).toBeNull();
+
+        // 5) Streaming e tool calling PROVADOS direto no provider (AT-575):
+        //    as capabilities declaradas só valem com prova (ADRs 0041/0042).
+        const chunks: {
+          type: string;
+          text?: string;
+          toolCalls?: { name: string }[];
+        }[] = [];
+        for await (const c of nvidiaNim.chat(
+          [
+            {
+              role: 'user',
+              content: 'What is the weather in Paris? Use the tool.',
+            },
+          ],
+          {
+            model: modeloAlvo,
+            apiKey: apiKey!,
+            maxTokens: 200,
+            tools: [
+              {
+                name: 'get_weather',
+                description: 'Get weather',
+                parameters: {
+                  type: 'object',
+                  properties: { city: { type: 'string' } },
+                  required: ['city'],
+                },
+              },
+            ],
+          },
+        )) {
+          chunks.push(c);
+        }
+        expect(
+          chunks.find((c) => c.type === 'error'),
+          JSON.stringify(chunks),
+        ).toBeUndefined();
+        expect(
+          chunks.some((c) => c.type === 'tool_calls'),
+          `sem tool_calls: ${JSON.stringify(chunks)}`,
+        ).toBe(true);
       },
     );
   },

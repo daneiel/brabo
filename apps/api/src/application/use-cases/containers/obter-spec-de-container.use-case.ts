@@ -15,6 +15,12 @@ import {
   LeitorDeDonoDePasta,
   type DonoDePasta,
 } from '../../../infrastructure/filesystem/dono-de-pasta';
+import { GetRunInstructionsUseCase } from '../execution/get-run-instructions.use-case';
+import { ObterRedeDoContainerUseCase } from './obter-rede-do-container.use-case';
+import type { RedeDoContainer } from '../../../domain/containers/rede-do-container';
+import { InstanciaDeQaUseCase } from './instancia-de-qa.use-case';
+import { chaveDeQa } from '../../../domain/containers/instancia-de-qa';
+import type { ServicoDeQa } from '../../../domain/infra/run-instructions';
 import { Traced } from '../../../infrastructure/observability/traced.decorator';
 
 /**
@@ -70,6 +76,14 @@ export interface SpecDeContainer {
   } | null;
   /** Versão do artefato vigente; 0 quando não há decisão. */
   imagemVersao: number;
+  /** AT-610: `run.app.command` vigente, ou `null`. */
+  comandoDoApp: string | null;
+  /** AT-608: do `artifact.container_network` vigente, ou `null`. */
+  ports: RedeDoContainer['ports'] | null;
+  dns: string[] | null;
+  extraHosts: RedeDoContainer['extraHosts'] | null;
+  /** AT-612: presente SÓ com `papel=qa`. */
+  qa?: { chave: string; services: ServicoDeQa[] };
 }
 
 /**
@@ -111,11 +125,14 @@ export class ObterSpecDeContainerUseCase {
   constructor(
     private readonly projects: ProjectRepository,
     private readonly obterImagem: ObterContainerDoProjetoUseCase,
+    private readonly runInstructions: GetRunInstructionsUseCase,
+    private readonly redeDoContainer: ObterRedeDoContainerUseCase,
     private readonly donoDePasta: LeitorDeDonoDePasta = new LeitorDeDonoDePasta(),
+    private readonly instanciaDeQa?: InstanciaDeQaUseCase,
   ) {}
 
   @Traced('application')
-  async execute(projectId: string): Promise<SpecDeContainer> {
+  async execute(projectId: string, qaTask?: string): Promise<SpecDeContainer> {
     const project = await this.projects.findById(projectId);
     if (!project) throw new NotFoundException('Projeto não encontrado');
 
@@ -125,6 +142,21 @@ export class ObterSpecDeContainerUseCase {
       project.workspaceDirName,
       project.workspacePath,
     );
+
+    // `runner` fica de fora (ADR 0228: o runner vem depois).
+    const doServidor = project.executionMode !== 'runner';
+    const rede = doServidor
+      ? await this.redeDoContainer.execute(projectId)
+      : null;
+    const run = doServidor
+      ? await this.runInstructions.execute(projectId)
+      : null;
+
+    // AT-612: a tarefa é validada DENTRO do projeto (404 de outro projeto).
+    const taskId =
+      qaTask === undefined || !this.instanciaDeQa
+        ? undefined
+        : await this.instanciaDeQa.resolverTarefa(projectId, qaTask);
 
     return {
       projectId: project.id,
@@ -136,6 +168,18 @@ export class ObterSpecDeContainerUseCase {
       usuarioDaPasta: await this.medirDono(project, localizacao),
       imagem: recorteDaDecisao(estado.decisao),
       imagemVersao: estado.version,
+      comandoDoApp: taskId ? null : (run?.app?.command ?? null),
+      ports: taskId ? null : (rede?.ports ?? null),
+      dns: rede?.dns ?? null,
+      extraHosts: rede?.extraHosts ?? null,
+      ...(taskId
+        ? {
+            qa: {
+              chave: chaveDeQa(taskId),
+              services: run?.qa?.services ?? [],
+            },
+          }
+        : {}),
     };
   }
 

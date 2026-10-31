@@ -94,6 +94,9 @@ class FakeApiToEngineClient implements ApiToEngineClient {
   getPsychologistStatus(): Promise<{ enabled: boolean }> {
     return Promise.resolve({ enabled: true });
   }
+  resumeParkedGate(): Promise<void> {
+    return Promise.resolve();
+  }
   async runAnamnese(): Promise<void> {}
   async invalidateInstructions(): Promise<void> {}
   requestRunnerTicket(): Promise<{ ticket: string; expiresAt: Date }> {
@@ -320,6 +323,17 @@ describe('ProposeActionUseCase', () => {
         payload: { resumo: 'r', modulos: [], tarefas: [] },
       });
       expect(action.status).toBe('pending');
+      // AT-381 (RN-709): o orçamento por tarefa vigente viaja no payload,
+      // para o cartão mostrar a estimativa (default US$ 0,50).
+      expect(
+        (action.payload as { orcamentoPorTarefaMicros?: number })
+          .orcamentoPorTarefaMicros,
+      ).toBe(500_000);
+      // RN-802 (AT-473): e o multiplicador da primeira de cada módulo.
+      expect(
+        (action.payload as { multiplicadorDaPrimeiraDoModulo?: number })
+          .multiplicadorDaPrimeiraDoModulo,
+      ).toBe(2);
     });
   });
 
@@ -561,11 +575,20 @@ describe('ProposeActionUseCase', () => {
     expect(action.status).toBe('pending');
   });
 
+  // Desde a RN-713 o push saiu desta lista (o modo automático o libera);
+  // o nome guarda a origem.
   it('auto mode NÃO auto-aprova `sudo` nem push, mesmo liberando o escopo (RN-418/RN-603)', async () => {
     const { project, session } = await setupSession();
     await agentAutonomyRepo.upsert(project.id, 'dev-api', '*', 'auto_approve');
 
-    for (const command of ['sudo ls /root', 'cd /work && git push']) {
+    const push = await proposeAction.execute(project.id, session.id, {
+      actionType: 'terminal',
+      actor: { kind: 'agent', id: 'dev-api' },
+      payload: { command: 'cd /work && git push' },
+    });
+    expect(push.resolvedPolicy).toBe('auto_approve');
+
+    for (const command of ['sudo ls /root', 'git merge dev']) {
       const action = await proposeAction.execute(project.id, session.id, {
         actionType: 'terminal',
         actor: { kind: 'agent', id: 'dev-api' },
@@ -950,20 +973,17 @@ describe('ProposeActionUseCase — o motivo da política no event log (RN-567)',
     });
   });
 
-  it('`git_push`/`pr_open` tipados nascem pendentes mesmo com autonomia curinga E específica — teto da RN-418 (RN-689)', async () => {
+  // RN-713 (ADR 0204): a curinga (modo automático) passou a liberar push/PR;
+  // o nome guarda a origem (RN-689) e o teste segue fixando a ESPECÍFICA.
+  it('`git_push`/`pr_open` tipados nascem pendentes mesmo com autonomia curinga E específica — teto da RN-418 (RN-689); só a específica, desde a RN-713', async () => {
     const { project, session } = await setupSession('maintainer');
-    // As duas fontes de autonomia que o dev agent pode ter: o curinga do
-    // piloto (RN-670) e a linha específica que a ativação semeava até a
-    // RN-689. Nenhuma promove a ação tipada.
-    await agentAutonomyRepo.upsert(project.id, 'dev-api', '*', 'auto_approve');
-    await agentAutonomyRepo.upsert(
-      project.id,
-      'dev-api',
-      'git_push',
-      'auto_approve',
-    );
-
     for (const actionType of ['git_push', 'pr_open'] as const) {
+      await agentAutonomyRepo.upsert(
+        project.id,
+        'dev-api',
+        actionType,
+        'auto_approve',
+      );
       const action = await proposeAction.execute(project.id, session.id, {
         actionType,
         actor: { kind: 'agent', id: 'dev-api' },
@@ -974,6 +994,52 @@ describe('ProposeActionUseCase — o motivo da política no event log (RN-567)',
         status: 'pending',
         resolvedPolicy: 'require_approval',
         reason: expect.stringContaining('RN-418') as unknown,
+      });
+    }
+  });
+
+  it('`git_push`/`pr_open` tipados são auto-aprovados no modo automático, com o motivo no evento (RN-713)', async () => {
+    const { project, session } = await setupSession('maintainer');
+    await agentAutonomyRepo.upsert(project.id, 'dev-api', '*', 'auto_approve');
+
+    const executados: string[] = [];
+    const comGit = new ProposeActionUseCase(
+      unitOfWork,
+      sessionRepo,
+      projectRepo,
+      proposedActionRepo,
+      agentAutonomyRepo,
+      permissionsFileStore,
+      outboxRepo,
+      resolveEffectiveRole,
+      executeTerminalAction,
+      {
+        execute: (_p: string, _s: string, a: { id: string }) => {
+          executados.push(a.id);
+          return Promise.resolve(a);
+        },
+      } as never,
+      undefined as never,
+      undefined as never,
+      undefined as never,
+      undefined as never,
+      appendSessionEvent,
+      obterCicloDeVidaDoContainer,
+      { configurado: () => true } as never,
+      undefined as never,
+    );
+
+    for (const actionType of ['git_push', 'pr_open'] as const) {
+      const action = await comGit.execute(project.id, session.id, {
+        actionType,
+        actor: { kind: 'agent', id: 'dev-api' },
+        payload: { branch: 'dev-api/t1' },
+      });
+      expect(action.status).toBe('auto_approved');
+      expect(executados).toContain(action.id);
+      expect(await eventoCriado(session.id, action.id)).toMatchObject({
+        resolvedPolicy: 'auto_approve',
+        reason: expect.stringContaining('modo automático') as unknown,
       });
     }
   });
@@ -1272,5 +1338,56 @@ describe('ProposeActionUseCase — escopo na pasta real de execução (RN-669)',
       payload: { command: 'npm test' },
     });
     expect(action.resolvedPolicy).toBe('require_approval');
+  });
+});
+
+describe('run da PR de infra (RN-852)', () => {
+  const run = {
+    command: 'cp .env.example .env && docker compose up --build',
+    urls: [
+      {
+        label: 'Swagger',
+        url: 'http://localhost:8080/docs',
+        kind: 'api_docs',
+      },
+    ],
+    envExample: true,
+  };
+  const propor = (projectId: string, sessionId: string, r: unknown) =>
+    proposeAction.execute(projectId, sessionId, {
+      actionType: 'open_infra_pr',
+      actor: { kind: 'agent', id: 'infra-lead' },
+      payload: { title: 't', files: [], ...(r ? { run: r } : {}) },
+    });
+
+  it('sem `run`: 400 `run_invalido`, sem proposta', async () => {
+    const { project, session } = await setupSession('maintainer');
+    await expect(propor(project.id, session.id, null)).rejects.toMatchObject({
+      response: { code: 'run_invalido' },
+    });
+    expect(
+      await proposedActionRepo.listByProjectAndType(
+        project.id,
+        'open_infra_pr',
+      ),
+    ).toHaveLength(0);
+  });
+
+  it('URL fora de localhost: 400 nomeando o campo', async () => {
+    const { project, session } = await setupSession('maintainer');
+    const proposta = propor(project.id, session.id, {
+      ...run,
+      urls: [{ label: 'x', url: 'https://example.com', kind: 'web' }],
+    });
+    await expect(proposta).rejects.toBeInstanceOf(BadRequestException);
+    await expect(proposta).rejects.toMatchObject({
+      response: { code: 'run_invalido', message: /run\.urls\[0\]\.url/ },
+    });
+  });
+
+  it('`run` válido: a proposta nasce', async () => {
+    const { project, session } = await setupSession('maintainer');
+    const action = await propor(project.id, session.id, run);
+    expect((action.payload as { run: unknown }).run).toEqual(run);
   });
 });

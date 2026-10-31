@@ -17,6 +17,7 @@
     "autorDesconhecido": "Autor desconhecido"
   },
   "topbar": {
+    "iniciadaAs": "iniciada às {{hora}}",
     "voltarAoProjeto": "Voltar ao projeto",
     "nomeDaSessao": "Nome da sessão",
     "semNomeFicaHashtag": "Sem nome — a sessão fica {{hashtag}}",
@@ -58,12 +59,18 @@
     "prontoParaProduzirDesabilitado": "Registre pelo menos uma regra de negócio com o Criativo antes de confirmar prontidão",
     "confirmarArquitetura": "Confirmar arquitetura pronta",
     "confirmarArquiteturaDesabilitado": "Promova pelo menos uma história na aba Histórias antes de confirmar a arquitetura",
+    "confirmarArquiteturaExplica": "Declara a arquitetura pronta e oferece o handoff à Infra, que sobe o container do projeto.",
+    "confirmarArquiteturaProximoPasso": "A arquitetura está pronta? Confirme para o sistema oferecer a Infra, que sobe o container do projeto.",
     "destinatarioLabel": "Para",
     "destinatarioPlaceholder": "Escolha o agente…",
     "destinatarioPrecisaEscolher": "Há mais de um agente nesta sessão: escolha a quem vai a mensagem.",
     "semAgente": "Esta sessão ainda não tem agente: escolha um e clique em Chamar. A oferta aparece na conversa, e a mensagem só pode ser enviada depois que você aceitá-la.",
     "chamarAgente": "Chamar",
-    "enfileirar": "Pôr na fila"
+    "enfileirar": "Pôr na fila",
+    "perguntasEmAberto_zero": "{{count}} perguntas em aberto",
+    "perguntasEmAberto_one": "{{count}} pergunta em aberto",
+    "perguntasEmAberto_other": "{{count}} perguntas em aberto",
+    "responderPerguntas": "Responder"
   },
   "ativacao": {
     "mensagemNaoEnviada": "Sua mensagem não enviada",
@@ -80,7 +87,16 @@
     "modeloGerador": "Modelo que gerou esta resposta: {{modelName}}",
     "modeloNaoGravado": "Esta resposta foi gravada sem o nome do modelo",
     "modeloNaoRegistrado": "modelo não registrado",
-    "falhaOrigem": "falha · origem {{origem}}"
+    "continuarCortada": "Continuar de onde parou",
+    "continuarCortadaTexto": "Continue de onde parou.",
+    "falhaOrigem": "falha · origem {{origem}}",
+    "falhaProximoPasso": "O turno de {{agente}} parou por esta falha (origem {{origem}}). Mande uma mensagem para {{agente}} continuar.",
+    "regrasSemHistoria_zero": "Nenhuma regra de negócio está sem história.",
+    "regrasSemHistoria_one": "{{count}} regra de negócio ainda está sem história.",
+    "regrasSemHistoria_other": "{{count}} regras de negócio ainda estão sem história.",
+    "tetoDeIteracoes": "Parei antes de terminar: cada ida ao modelo conta um passo, e o limite de um turno é {{max}}.",
+    "naoEnviada": "não enviada",
+    "tentarDeNovo": "Tentar de novo"
   },
   "historia": {
     "pendente": "história \"{{titulo}}\" pronta, aguardando sua promoção",
@@ -101,11 +117,13 @@
     "passouOBastaoAo": "passou o bastão ao",
     "aceitarEIniciar": "Aceitar handoff e iniciar {{agente}}",
     "ativarExecucao": "Ativar execução",
+    "ativarSemPlanoAviso": "Sem plano: os devs pegam as tarefas como estão.",
     "semRepositorio": "Sem repositório ainda: aceitar este handoff o provisiona, e só então a execução pode ser ativada.",
     "acompanheExecucao": "Acompanhe a execução em Executores",
     "infraTitulo": "{{de}} passou o bastão à Infra",
     "infraDetalhe": "Aceitar ativa o Infra Lead e já autoriza a subida do container: num projeto Container ou Pasta montada com o roteamento do Arquiteto pronto, ele elege a imagem e sobe o container sem outro clique. Continuam pedindo sua decisão a subida num projeto Runner local e o merge da PR de infra.",
     "infraBotao": "Aceitar handoff da Infra",
+    "manualAbrir": "Endereçar handoff a outro agente…",
     "manualLabel": "Endereçar handoff a outro agente",
     "manualPlaceholder": "Escolher agente...",
     "manualBotao": "Endereçar handoff",
@@ -183,6 +201,10 @@
     "teto": "Este painel lê os <b>{{lidos}}</b> eventos já carregados desta sessão. Há <b>{{anteriores}}</b> anteriores — “Carregar mais antigos”, no Log de eventos, traz mais, e as outras seções crescem junto.",
     "regrasDeNegocio": "Regras de negócio",
     "nadaAinda": "Nada ainda.",
+    "nadaNaJanela": "Nenhuma nos eventos carregados — pode haver nos anteriores.",
+    "contagemNaJanela_zero": "0 na janela · há mais antes",
+    "contagemNaJanela_one": "{{count}} na janela · há mais antes",
+    "contagemNaJanela_other": "{{count}} na janela · há mais antes",
     "origemRefs_zero": "origem: {{count}} referências",
     "origemRefs_one": "origem: {{count}} referência",
     "origemRefs_other": "origem: {{count}} referências",
@@ -195,7 +217,19 @@
     "logDeEventos": "Log de eventos",
     "eventoCitado": "Evento citado",
     "eventoCitadoNaoEncontrado": "O evento citado não foi encontrado nesta sessão.",
-    "erroCarregarLog": "Não foi possível carregar o log de eventos."
+    "erroCarregarLog": "Não foi possível carregar o log de eventos.",
+    "decisoes": "Decisões registradas",
+    "decisoesNadaNaJanela": "Nenhuma nos eventos carregados — pode haver decisões nos anteriores.",
+    "decisoesVazio": "Nenhuma decisão registrada nesta sessão.",
+    "decisaoSemEscolha": "Decisão sem escolha registrada",
+    "todasAntesDaJanela": "Há {{total}} nesta sessão, todas antes dos eventos carregados — “Carregar mais antigos”, no Log de eventos, traz o detalhe.",
+    "recorte": "Mostrando {{mostradas}} de {{total}} — as demais estão antes do que foi carregado.",
+    "arquivosNaoLidos": "Ainda não li os arquivos da sessão inteira.",
+    "recorteMaisRecentes": "Mostrando as {{mostradas}} mais recentes de {{total}}.",
+    "arquivosVazio": "Nenhum arquivo nas PRs nem nos commits desta sessão ou da execução ligada a ela.",
+    "prsNaoLidas_zero": "Todas as PRs foram lidas.",
+    "prsNaoLidas_one": "{{count}} PR ficou de fora desta lista (além do limite de leitura, ou o diff não pôde ser lido) — a aba PRs mostra todas.",
+    "prsNaoLidas_other": "{{count}} PRs ficaram de fora desta lista (além do limite de leitura, ou o diff não pôde ser lido) — a aba PRs mostra todas."
   },
   "turno": {
     "pensando": "Pensando…",
@@ -205,11 +239,16 @@
     "passosCount_other": "{{count}} passos"
   },
   "pendencias": {
+    "referenciaNoFio": "Merge proposto — decida na fila \"PRs prontas para merge\" acima.",
     "titulo": "Pendências de outras sessões deste projeto",
+    "tituloDoProjeto": "Pendências deste projeto",
     "nota": "Atalho para a decisão: os mesmos cards e os mesmos endpoints da aba Aprovações. Nenhum teto muda — merge em branch protegida segue manual.",
     "filas": {
       "aprovacoes": "Aprovações",
-      "merges": "Merges de PR"
+      "merges": "Merges de PR",
+      "prontas": "PRs prontas para merge",
+      "bloqueadas": "Tarefas bloqueadas",
+      "perguntas": "Perguntas em aberto"
     },
     "origem_zero": "{{count}} propostas na sessão {{hashtag}} · a mais antiga {{tempo}}",
     "origem_one": "Proposta na sessão {{hashtag}} · {{tempo}}",
@@ -223,6 +262,38 @@
       "algumas_zero": "Não foi possível ler o motivo da política de {{count}} dos {{total}} cards abaixo: a leitura do log da sessão que propôs as ações falhou.",
       "algumas_one": "Não foi possível ler o motivo da política de {{count}} dos {{total}} cards abaixo: a leitura do log da sessão que propôs a ação falhou.",
       "algumas_other": "Não foi possível ler o motivo da política de {{count}} dos {{total}} cards abaixo: a leitura do log da sessão que propôs as ações falhou."
+    },
+    "bloqueadas": {
+      "botao": "Desbloquear",
+      "ok": "Tarefa desbloqueada: ela volta para a fila do dev agent do módulo.",
+      "erro": "Não foi possível desbloquear a tarefa.",
+      "semMotivo": "Sem motivo registrado.",
+      "semPapel": "Desbloquear exige o papel developer no projeto."
+    },
+    "perguntas": {
+      "origem": "{{agente}} perguntou · {{tempo}}",
+      "afeta": "Afeta:",
+      "afetaRegras_zero": "{{count}} regras",
+      "afetaRegras_one": "{{count}} regra",
+      "afetaRegras_other": "{{count}} regras",
+      "afetaHistorias_zero": "{{count}} histórias",
+      "afetaHistorias_one": "{{count}} história",
+      "afetaHistorias_other": "{{count}} histórias",
+      "afetaTarefas_zero": "{{count}} tarefas",
+      "afetaTarefas_one": "{{count}} tarefa",
+      "afetaTarefas_other": "{{count}} tarefas",
+      "esperando": "A tarefa \"{{tarefa}}\" está esperando sua resposta.",
+      "sugestao": "Sugestão:",
+      "aceitar": "Aceitar sugestão",
+      "campo": "Sua resposta",
+      "responder": "Responder",
+      "soOAutor": "Só quem criou a sessão em que a pergunta nasceu pode respondê-la.",
+      "erro": "Não foi possível gravar a resposta.",
+      "recorte": "Mostrando {{mostradas}} de {{total}} perguntas.",
+      "respondida": "Respondida. A resposta foi gravada como decisão.",
+      "corrigir": "Corrigir a história",
+      "corrigirHistoria": "História afetada: {{titulo}}",
+      "dispensar": "Dispensar"
     }
   },
   "mergearNoChat": {
@@ -242,7 +313,8 @@
       "outrasCount_one": "{{count}} outra entrada",
       "outrasCount_other": "{{count}} outras entradas",
       "conteudoComOutras": "{{mensagens}} · {{outras}}"
-    }
+    },
+    "rotuloDoFio": "Conversa da sessão"
   },
   "fila": {
     "naFila": "na fila de {{agente}} — será lida quando o turno atual terminar",
@@ -251,5 +323,41 @@
     "cancelarSoAutor": "Só quem enviou a mensagem pode cancelá-la.",
     "erroCancelar": "Não foi possível cancelar a mensagem.",
     "enfileirada": "{{agente}} está no meio de um turno: a mensagem entrou na fila (posição {{posicao}}) e será lida quando ele terminar."
+  },
+  "gateInterrompido": {
+    "aviso": "O reinício do engine interrompeu o ciclo do gate {{gate}} da tarefa {{taskId}}; ele foi retomado do começo às {{hora}}."
+  },
+  "gateEstacionado": {
+    "aviso": "O ciclo do gate {{gate}} da tarefa {{taskId}} ficou parado mais de 2 h e foi estacionado: ele não recomeça sozinho.",
+    "avisoPergunta": "O ciclo do gate {{gate}} da tarefa {{taskId}} está estacionado esperando a sua resposta a uma pergunta em aberto: responda no cartão \"Perguntas em aberto\" e o gate recomeça.",
+    "botao": "Retomar gate",
+    "nota": "Despacha o gate {{gate}} de novo para esta tarefa.",
+    "semPapel": "Retomar o gate exige o papel developer no projeto.",
+    "retomado": "Gate retomado — o andamento aparece neste fio.",
+    "erroTitulo": "Não foi possível retomar o gate"
+  },
+  "encerrar": {
+    "titulo": "Encerrar a sessão de execução?",
+    "oQuePara": "Encerrar para os agentes desta sessão na hora: um comando em andamento (um npm install, uma rodada de testes) é cortado, e o turno em curso não é gravado.",
+    "agentes": "Trabalhando aqui: {{agentes}}.",
+    "semReabrir": "Sessão com execução não pode ser reaberta depois.",
+    "cancelar": "Continuar rodando",
+    "confirmar": "Encerrar sessão"
+  },
+  "turnoInterrompido": {
+    "botao": "Retomar",
+    "nota": "Continua o turno do ponto em que parou, uma vez por clique.",
+    "semPapel": "Retomar o turno exige o papel developer no projeto.",
+    "retomado": "Retomada pedida — o andamento aparece neste fio.",
+    "erroTitulo": "Não foi possível retomar o turno",
+    "automatica": "{{agente}} foi retomado automaticamente após o reinício.",
+    "objetivo": "Objetivo: {{objetivo}}",
+    "pareiEm": "Parou em: {{passo}}",
+    "estado": {
+      "pendente": "pendente",
+      "em_curso": "em curso",
+      "feito": "feito",
+      "descartado": "descartado"
+    }
   }
 }

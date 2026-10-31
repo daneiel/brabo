@@ -4,6 +4,7 @@ import { childSpan, logger, newTraceContext } from './logger';
 import type { LlmCredentialProvider } from './models';
 import type { MySpend, WorkspaceSpendReport } from './spend';
 import type {
+  ResumoDoContextoDaSessao,
   AgentAutonomyRule,
   AgentAutonomyActionType,
   CredentialSpend,
@@ -12,9 +13,13 @@ import type {
   ActionType,
   Architecture,
   StoryPromotionMode,
+  Story,
   AgentArea,
   ParallelizationRequest,
   InfraArtifact,
+  RunInstructions,
+  RedeDoContainer,
+  RedeVigenteDoContainer,
   PsychologistHypothesis,
   PsychologistAnalysis,
   PsychologistStatus,
@@ -91,6 +96,7 @@ import type {
   WorkspaceWithRole,
   RegistroDeGates,
   ExecutionMode,
+  LLMProviderName,
 } from './api-types';
 
 export const API_URL = runtimeConfig.apiUrl;
@@ -622,6 +628,25 @@ export const transitionSession = (
  */
 export const reopenSession = (projectId: string, sessionId: string) =>
   post<Session>(`/projects/${projectId}/sessions/${sessionId}/reopen`, {});
+/**
+ * Retoma o ciclo de gate ESTACIONADO (ADR 0207, RN-724): `developer`, 409
+ * `gate_nao_estacionado` quando não há o que retomar.
+ */
+export const resumeParkedGate = (projectId: string, taskId: string, gate: string) =>
+  post<{ ok: true }>(
+    `/projects/${projectId}/tasks/${encodeURIComponent(taskId)}/gates/${encodeURIComponent(gate)}/resume`,
+    {},
+  );
+/**
+ * Retoma o turno que o reinício do engine interrompeu: `developer`; 200 é o
+ * ACEITE, o avanço chega pelo canal. 409 `turno_nao_interrompido` /
+ * `agente_sem_retomada`.
+ */
+export const resumeInterruptedTurn = (projectId: string, sessionId: string, agent: string) =>
+  post<{ ok: true }>(
+    `/projects/${projectId}/sessions/${sessionId}/agents/${encodeURIComponent(agent)}/resume`,
+    {},
+  );
 export const listSessionEvents = (
   projectId: string,
   sessionId: string,
@@ -631,6 +656,11 @@ export const listSessionEvents = (
 ) =>
   get<Page<SessionEvent>>(
     `/projects/${projectId}/sessions/${sessionId}/events${qs(opts)}`,
+  );
+// RN-827 (AT-498): o agregado da sessão inteira do painel de contexto.
+export const getSessionContextSummary = (projectId: string, sessionId: string) =>
+  get<ResumoDoContextoDaSessao>(
+    `/projects/${projectId}/sessions/${sessionId}/context-summary`,
   );
 // Um evento pelo id — a listagem é paginada (últimos N) e o feed esconde
 // ruído de máquina, então evidência de hipótese precisa deste caminho pra
@@ -789,12 +819,36 @@ export const returnStory = (
   post<{ ok: true }>(`/projects/${projectId}/stories/${storyId}/return`, {
     reason,
   });
+// RN-727: corrigir o título e arquivar uma história `draft` sem tarefa em
+// execução. A recusa (409) traz `reason` nomeado e `message` para o toast.
+export const updateStoryTitle = (
+  projectId: string,
+  storyId: string,
+  title: string,
+) =>
+  patch<Omit<Story, 'tasks'>>(`/projects/${projectId}/stories/${storyId}/title`, { title });
+export const archiveStory = (
+  projectId: string,
+  storyId: string,
+  reason?: string,
+) =>
+  post<Omit<Story, 'tasks'>>(`/projects/${projectId}/stories/${storyId}/archive`, {
+    ...(reason ? { reason } : {}),
+  });
 export const getCoverage = (projectId: string) =>
   get<CoverageReport>(`/projects/${projectId}/coverage`);
 export const getArchitecture = (projectId: string) =>
   get<Architecture>(`/projects/${projectId}/architecture`);
 export const listInfraArtifacts = (projectId: string) =>
   get<InfraArtifact[]>(`/projects/${projectId}/infra-artifacts`);
+/** RN-855: o vigente de `artifact.run_instructions`, ou `null`. */
+export const getRunInstructions = (projectId: string) =>
+  get<RunInstructions | null>(`/projects/${projectId}/run-instructions`);
+
+export const getRedeDoContainer = (projectId: string) =>
+  get<RedeVigenteDoContainer | null>(`/projects/${projectId}/container/network`);
+export const putRedeDoContainer = (projectId: string, rede: RedeDoContainer) =>
+  put<RedeVigenteDoContainer>(`/projects/${projectId}/container/network`, rede);
 
 // --- Psicólogo (Fase 4b) ---
 
@@ -988,10 +1042,10 @@ export const denyAction = (
 // `status=pending` é suportado hoje.
 export const getProjectPendingActions = (
   projectId: string,
-  opts: { actionType?: ActionType } = {},
+  opts: { actionType?: ActionType; status?: 'pending' | 'failed' } = {},
 ) =>
   get<ProposedAction[]>(
-    `/projects/${projectId}/actions${qs({ status: 'pending', actionType: opts.actionType })}`,
+    `/projects/${projectId}/actions${qs({ status: opts.status ?? 'pending', actionType: opts.actionType })}`,
   );
 
 // --- LLM: modelos, bindings, credenciais, budgets ---
@@ -1010,6 +1064,10 @@ export const listModels = (projectId: string) =>
 
 export const listModelCatalog = (workspaceId: string) =>
   get<CatalogoPorCategoria>(`/workspaces/${workspaceId}/models/catalog`);
+
+/** Providers com chave do TITULAR do workspace (RN-058): só nomes, nunca segredo. */
+export const listCredentialedProviders = (workspaceId: string) =>
+  get<{ providers: LLMProviderName[] }>(`/workspaces/${workspaceId}/llm-providers/credentialed`);
 
 export const setModelsActive = (
   workspaceId: string,
@@ -1383,4 +1441,23 @@ export const confirmModelPull = (workspaceId: string, id: string) =>
 export const getModelPullRequest = (workspaceId: string, id: string) =>
   get<import('./api-types').ModelPullRequest>(
     `/workspaces/${workspaceId}/huggingface/pull-requests/${id}`,
+  );
+
+// RN-858/861 (AT-521): as perguntas em aberto do projeto e a resposta do autor
+// da sessão de origem.
+export const getOpenQuestions = (
+  projectId: string,
+  status: 'open' | 'answered' | 'all' = 'open',
+) =>
+  get<import('./api-types').OpenQuestionsList>(
+    `/projects/${projectId}/open-questions${qs({ status })}`,
+  );
+export const answerOpenQuestion = (
+  projectId: string,
+  questionId: string,
+  corpo: { resposta: string } | { aceitarSugestao: true },
+) =>
+  post<import('./api-types').OpenQuestion>(
+    `/projects/${projectId}/open-questions/${questionId}/answer`,
+    corpo,
   );

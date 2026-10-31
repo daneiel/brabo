@@ -1,4 +1,4 @@
-# 0167 — O modo automático libera o escopo de caminho, e só ele
+# ADR 0167 — O modo automático libera o escopo de caminho, e só ele
 
 ## Status
 

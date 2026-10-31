@@ -47,12 +47,19 @@
 
 
 
+/* RN-712: a origem quebra em até DUAS linhas antes de elipsar — numa linha só
+   ela cortava no meio do motivo ("…porque nada fo…"). O `title` segue com o
+   texto inteiro. */
 .origem {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   font-size: var(--fs-meta);
+  line-height: 1.25;
   color: var(--text-muted);
-  white-space: nowrap;
+  white-space: normal;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .link {

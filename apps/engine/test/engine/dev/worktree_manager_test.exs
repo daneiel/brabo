@@ -45,6 +45,31 @@ defmodule Engine.Dev.WorktreeManagerTest do
     {_, 0} = System.cmd("git", args, cd: cd, stderr_to_stdout: true)
   end
 
+  # RN-715: `adopt/3` é `add_worktree/4` com a própria branch da PR como base —
+  # o agente volta a ela com os commits que a PR já tem, mesmo depois de ter
+  # recriado o worktree para OUTRA task.
+  test "readotar a branch da PR preserva os commits dela", %{work_dir: work_dir} do
+    assert {:ok, wt} = WorktreeManager.add_worktree(work_dir, "dev-api", "task-a")
+    File.write!(Path.join(wt.path, "a.txt"), "trabalho da PR")
+    git(wt.path, ["add", "-A"])
+    git(wt.path, ["commit", "-m", "pr"])
+
+    assert {:ok, _} = WorktreeManager.add_worktree(work_dir, "dev-api", "task-b")
+
+    assert {:ok, de_volta} =
+             WorktreeManager.add_worktree(work_dir, "dev-api", "task-a", "feature/task-a")
+
+    assert de_volta.branch == "feature/task-a"
+    assert File.read!(Path.join(de_volta.path, "a.txt")) == "trabalho da PR"
+  end
+
+  test "readotar branch que não existe: recusa nomeada", %{work_dir: work_dir} do
+    assert {:error, motivo} =
+             WorktreeManager.add_worktree(work_dir, "dev-api", "task-z", "feature/task-z")
+
+    assert motivo =~ "feature/task-z"
+  end
+
   @doc false
   # A regressão que isto pega: `remove_worktree/2` limpava o DIRETÓRIO e deixava
   # a BRANCH para trás. Como o nome dela vem do slug da task, retentar a mesma
@@ -275,5 +300,188 @@ defmodule Engine.Dev.WorktreeManagerTest do
 
       assert WorktreeManager.list(project_id) == []
     end
+  end
+
+  # RN-743 (AT-429): o trabalho não commitado sobrevive ao bloqueio.
+  describe "preservar_em/3 e create_from/4" do
+    test "commita o worktree sujo na branch da task e a próxima nasce dela", %{
+      work_dir: work_dir
+    } do
+      {:ok, %{path: path, branch: branch}} =
+        WorktreeManager.add_worktree(work_dir, "dev-api", "task-aaaa1111")
+
+      File.write!(Path.join(path, "package.json"), "{}")
+
+      assert {:ok, sha} = WorktreeManager.preservar_em(path, "dev-api", "t1")
+      {autor, 0} = System.cmd("git", ["log", "-1", "--format=%an", branch], cd: work_dir)
+      assert String.trim(autor) == "dev-api[bot]"
+
+      {:ok, %{path: novo}} =
+        WorktreeManager.add_worktree(work_dir, "dev-api", "task-bbbb2222", branch)
+
+      assert File.exists?(Path.join(novo, "package.json"))
+      {head, 0} = System.cmd("git", ["rev-parse", "HEAD~0"], cd: novo)
+      assert String.trim(head) == sha
+    end
+
+    test "worktree limpo é :nada, e pasta que não é repositório é erro nomeado", %{
+      work_dir: work_dir,
+      root: root
+    } do
+      {:ok, %{path: path}} = WorktreeManager.add_worktree(work_dir, "dev-web", "task-cccc3333")
+      assert :nada == WorktreeManager.preservar_em(path, "dev-web", "t2")
+
+      solta = Path.join(root, "nao-e-repo")
+      File.mkdir_p!(solta)
+      assert {:error, _} = WorktreeManager.preservar_em(solta, "dev-web", "t3")
+    end
+  end
+
+  # RN-760 (AT-447): branch anterior já mergeada na `dev` não é ponto de partida.
+  describe "add_worktree/4 com a branch da task anterior" do
+    test "não mergeada: parte dela; mergeada na dev: parte da dev", %{work_dir: work_dir} do
+      {:ok, %{path: path, branch: branch}} =
+        WorktreeManager.add_worktree(work_dir, "dev-api", "task-eeee5555")
+
+      File.write!(Path.join(path, "login.ts"), "rota")
+      {:ok, _} = WorktreeManager.preservar_em(path, "dev-api", "t5")
+
+      {:ok, %{path: p2}} =
+        WorktreeManager.add_worktree(work_dir, "dev-api", "task-ffff6666", branch)
+
+      assert File.exists?(Path.join(p2, "login.ts"))
+
+      {_, 0} = System.cmd("git", ["branch", "-f", "dev", branch], cd: work_dir)
+      {_, 0} = System.cmd("git", ["branch", "-f", branch, "dev~1"], cd: work_dir)
+
+      {:ok, %{path: p3}} =
+        WorktreeManager.add_worktree(work_dir, "dev-api", "task-abab7777", branch)
+
+      assert File.exists?(Path.join(p3, "login.ts"))
+    end
+  end
+
+  # RN-779 (AT-458): o merge das PRs acontece no remoto; o worktree da task
+  # (re)pegada parte da ponta ATUAL da `dev` e integra-a quando parte de outra
+  # branch.
+  describe "integração da dev atual (RN-779)" do
+    # Um remoto com `dev`; o work_dir fica com a `dev` local PARADA e um outro
+    # clone faz o papel do merge das PRs, que anda o remoto.
+    defp remoto_com_dev!(root, work_dir) do
+      bare = Path.join(root, "origem.git")
+      git(root, ["init", "--bare", "origem.git"])
+      git(work_dir, ["remote", "add", "origin", bare])
+      git(work_dir, ["checkout", "-b", "dev"])
+      git(work_dir, ["push", "origin", "dev"])
+      git(work_dir, ["fetch", "origin"])
+
+      outro = Path.join(root, "outro")
+      git(root, ["clone", "-b", "dev", bare, "outro"])
+      git(outro, ["config", "user.email", "t@brabo.dev"])
+      git(outro, ["config", "user.name", "t"])
+      outro
+    end
+
+    defp anda_o_remoto!(outro, work_dir, arquivo, conteudo) do
+      File.write!(Path.join(outro, arquivo), conteudo)
+      git(outro, ["add", "-A"])
+      git(outro, ["commit", "-m", "merge de outra PR"])
+      git(outro, ["push", "origin", "dev"])
+      git(work_dir, ["fetch", "origin"])
+    end
+
+    defp branch_com_trabalho!(work_dir, slug, arquivo, conteudo) do
+      {:ok, %{path: path, branch: branch}} =
+        WorktreeManager.add_worktree(work_dir, "dev-api", slug, "dev")
+
+      File.write!(Path.join(path, arquivo), conteudo)
+      {:ok, _} = WorktreeManager.preservar_em(path, "dev-api", slug)
+      branch
+    end
+
+    test "a task retomada com branch antiga já mergeada parte da dev ATUAL do remoto",
+         %{root: root, work_dir: work_dir} do
+      outro = remoto_com_dev!(root, work_dir)
+      _ = branch_com_trabalho!(work_dir, "task-c80daf6c", "velho.txt", "x")
+      # A branch velha entrou na dev pelo merge de outra PR, e a dev andou.
+      git(work_dir, ["push", "origin", "feature/task-c80daf6c"])
+      git(outro, ["fetch", "origin"])
+      git(outro, ["merge", "--no-edit", "origin/feature/task-c80daf6c"])
+      anda_o_remoto!(outro, work_dir, "doze_tarefas.txt", "y")
+
+      {:ok, %{path: p}} =
+        WorktreeManager.add_worktree(work_dir, "dev-api", "task-c80daf6c", "dev")
+
+      assert File.exists?(Path.join(p, "doze_tarefas.txt"))
+      assert File.exists?(Path.join(p, "velho.txt"))
+    end
+
+    test "a task retomada com trabalho preservado parte dele e integra a dev nova (RN-743)",
+         %{root: root, work_dir: work_dir} do
+      outro = remoto_com_dev!(root, work_dir)
+      _ = branch_com_trabalho!(work_dir, "task-aaaa1111", "meu.txt", "x")
+      anda_o_remoto!(outro, work_dir, "novo_na_dev.txt", "y")
+
+      {:ok, %{path: p}} =
+        WorktreeManager.add_worktree(work_dir, "dev-api", "task-aaaa1111", "dev")
+
+      assert File.exists?(Path.join(p, "meu.txt"))
+      assert File.exists?(Path.join(p, "novo_na_dev.txt"))
+    end
+
+    test "a anterior aprovada e não mergeada (awaiting_user) é a base, com a dev atual integrada",
+         %{root: root, work_dir: work_dir} do
+      outro = remoto_com_dev!(root, work_dir)
+      anterior = branch_com_trabalho!(work_dir, "task-bbbb2222", "login.ts", "rota")
+      anda_o_remoto!(outro, work_dir, "infra.txt", "y")
+
+      {:ok, %{path: p}} =
+        WorktreeManager.add_worktree(work_dir, "dev-api", "task-cccc3333", anterior)
+
+      assert File.exists?(Path.join(p, "login.ts"))
+      assert File.exists?(Path.join(p, "infra.txt"))
+    end
+
+    test "conflito ao integrar é recusa NOMEADA, com os arquivos, e o trabalho fica",
+         %{root: root, work_dir: work_dir} do
+      outro = remoto_com_dev!(root, work_dir)
+      anterior = branch_com_trabalho!(work_dir, "task-dddd4444", "README.md", "da task")
+      anda_o_remoto!(outro, work_dir, "README.md", "da dev")
+
+      assert {:error, motivo} =
+               WorktreeManager.add_worktree(work_dir, "dev-api", "task-eeee5555", anterior)
+
+      assert WorktreeManager.conflito_de_integracao?(motivo)
+      assert motivo =~ "README.md"
+      {log, 0} = System.cmd("git", ["log", "-1", "--format=%an", anterior], cd: work_dir)
+      assert String.trim(log) == "dev-api[bot]"
+    end
+  end
+
+  # RN-744 (AT-444): o kickoff do dev diz a branch e o que já existe.
+  describe "retrato/2" do
+    test "lista a branch e os arquivos, rastreados e novos", %{work_dir: work_dir} do
+      {:ok, %{path: path, branch: branch}} =
+        WorktreeManager.add_worktree(work_dir, "dev-api", "task-dddd4444")
+
+      File.write!(Path.join(path, "package.json"), "{}")
+      texto = WorktreeManager.retrato(path, branch)
+
+      assert texto =~ "branch `feature/task-dddd4444`"
+      assert texto =~ "README.md"
+      assert texto =~ "package.json"
+      assert texto =~ "2 arquivo(s)"
+    end
+
+    test "pasta que o engine não alcança diz que está indisponível" do
+      texto = WorktreeManager.retrato("/nao/existe/#{System.unique_integer()}", "feature/x")
+      assert texto =~ "indisponível"
+    end
+  end
+
+  test "a descrição do terminal diz que o shell é sh, sem brace expansion" do
+    %{description: d} = Engine.Harness.Tools.Terminal.spec()
+    assert d =~ "`sh`"
+    assert d =~ "brace expansion"
   end
 end

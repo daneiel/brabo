@@ -129,6 +129,31 @@ defmodule Engine.SessionEvents.Event do
   end
 
   @doc """
+  A rede que o ARQUITETO declarou para o projeto (RN-723, ADR 0208): o
+  `network` da `artifact.project_image` mais recente emitida por ele
+  (`actor_id: "arquiteto"`), em qualquer sessão do projeto. A eleição da
+  Infra herda esse valor em vez de rebaixá-lo para `none`. `nil` quando o
+  Arquiteto nunca decidiu ou o valor não é um dos dois que a api aceita —
+  quem chama cai no `none` de sempre.
+  """
+  def rede_do_arquiteto(project_id) do
+    from(e in __MODULE__,
+      join: s in Engine.Sessions.ProjectSession,
+      on: e.session_id == s.id,
+      where: s.project_id == type(^project_id, :binary_id),
+      where: e.type == "artifact.project_image" and e.actor_id == "arquiteto",
+      order_by: [desc: e.created_at],
+      limit: 1,
+      select: e.payload
+    )
+    |> Repo.one()
+    |> case do
+      %{"network" => rede} when rede in ~w(none egress) -> rede
+      _ -> nil
+    end
+  end
+
+  @doc """
   Os `limit` eventos mais recentes da sessão, devolvidos em ordem de seq
   CRESCENTE (a query desce por seq pra pegar a cauda, o resultado volta
   cronológico pra ser lido como log).
@@ -168,13 +193,61 @@ defmodule Engine.SessionEvents.Event do
     Repo.aggregate(project_window_query(project_id, from_time, to_time), :count, :id)
   end
 
+  @doc """
+  Quantas rodadas PAGAS da Anamnese o projeto teve desde `since` (RN-722): o
+  desfecho que toda rodada que chegou ao LLM grava — `anamnese.run_completed`,
+  `anamnese.run_failed` e o `anamnese.run_skipped` escrito pelo MODELO (o da
+  rodada sem sujeito leva `causa` e não gastou nada).
+  """
+  def count_anamnese_rounds_since(project_id, since) do
+    Repo.aggregate(
+      from(e in __MODULE__,
+        join: s in Engine.Sessions.ProjectSession,
+        on: e.session_id == s.id,
+        where:
+          s.project_id == type(^project_id, :binary_id) and e.created_at >= ^since and
+            e.actor_id == "anamnese" and
+            (e.type in ["anamnese.run_completed", "anamnese.run_failed"] or
+               (e.type == "anamnese.run_skipped" and
+                  is_nil(fragment("?->>'causa'", e.payload))))
+      ),
+      :count,
+      :id
+    )
+  end
+
+  @doc """
+  Os eventos de certos TIPOS no PROJETO inteiro (todas as sessões), os
+  `limit` mais recentes, em ordem cronológica. Leitura local, sem HTTP — é o
+  que `Engine.Harness.DecisoesDoProjeto` (RN-874) usa no turno do PO.
+  """
+  def list_types_for_project(project_id, types, limit) when is_list(types) do
+    from(e in __MODULE__,
+      join: s in Engine.Sessions.ProjectSession,
+      on: e.session_id == s.id,
+      where: s.project_id == type(^project_id, :binary_id) and e.type in ^types,
+      order_by: [desc: e.created_at, desc: e.seq],
+      limit: ^limit
+    )
+    |> Repo.all()
+    |> Enum.reverse()
+  end
+
   defp project_window_query(project_id, from_time, to_time) do
     from(e in __MODULE__,
       join: s in Engine.Sessions.ProjectSession,
       on: e.session_id == s.id,
       where:
         s.project_id == type(^project_id, :binary_id) and
-          e.created_at >= ^from_time and e.created_at < ^to_time
+          e.created_at >= ^from_time and e.created_at < ^to_time,
+      # RN-722: a janela é sobre a PESSOA. O que a própria Anamnese escreve
+      # (`anamnese.*`, e o `tool.call`/`tool.result`/`agent.*` do ator
+      # `anamnese`) e os eventos de sistema não são interação de ninguém —
+      # contá-los fazia cada rodada fabricar material para a seguinte.
+      where:
+        e.actor_kind != "system" and
+          not (e.actor_kind == "agent" and e.actor_id == "anamnese") and
+          not like(e.type, "anamnese.%")
     )
   end
 end

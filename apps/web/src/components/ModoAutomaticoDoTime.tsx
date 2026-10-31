@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { mensagemDaApi, setAgentAutonomy } from '../lib/api-client';
 import { AGENT_AUTONOMY_ALL_ACTIONS, type AgentAutonomyRule } from '../lib/api-types';
 import { nomeDoAgente } from '../lib/agents';
+import { AREAS } from '../lib/agent-areas.generated';
 import { Button } from './ui/Button';
 import { OQueOPilotoLibera } from './OQueOPilotoLibera';
 import styles from './ModoAutomaticoDoTime.module.css';
@@ -33,6 +34,11 @@ export interface ModoAutomaticoDoTimeProps {
   autonomyRules: readonly AgentAutonomyRule[] | undefined;
   /** `maintainer` no endpoint (RN-102); sem ele o controle fica inerte. */
   podeLigar: boolean;
+  /**
+   * RN-816 (AT-488): no cartão do plano a execução ainda NÃO começou —
+   * começa ao aprovar (RN-677) —, e o texto de abertura é outro.
+   */
+  noPlano?: boolean;
 }
 
 export function agentesEmModoAutomatico(
@@ -47,6 +53,18 @@ export function agentesEmModoAutomatico(
   );
 }
 
+/**
+ * AT-449 (RN-766): a oferta cobre os subagentes de GATE desde a ativação, e
+ * não só depois que eles aparecem no roster — o `qa-automacao` só entra na
+ * lista quando o primeiro evento dele chega, e aí a primeira ação dele já
+ * está esperando clique. São os agentes da área de QA (`AREAS.qa`), que
+ * rodam o `terminal`; a ordem é a do time e depois a dos gates, sem repetir.
+ */
+export function agentesDaOfertaEmLote(time: readonly string[]): string[] {
+  const gates = [AREAS.qa.lead, ...AREAS.qa.members];
+  return [...new Set([...time, ...gates])];
+}
+
 type Desfecho =
   | { tipo: 'todos'; total: number }
   | { tipo: 'nenhum'; mensagem: string }
@@ -57,6 +75,7 @@ export function ModoAutomaticoDoTime({
   agentes,
   autonomyRules,
   podeLigar,
+  noPlano = false,
 }: ModoAutomaticoDoTimeProps) {
   const { t } = useTranslation('executors');
   const queryClient = useQueryClient();
@@ -71,6 +90,12 @@ export function ModoAutomaticoDoTime({
   if (candidatos.length === 0 && !desfecho) return null;
 
   const escolhidos = candidatos.filter((a) => !desmarcados.has(a));
+  // AT-477 (RN-803): enquanto a leitura de `agent_autonomy` não chegou, a
+  // lista de candidatos é PALPITE (todos) e encolhe quando ela chega — o
+  // botão e as caixas mudam de lugar sob o cursor, e o primeiro clique caía
+  // em outro elemento sem gravar nada nem dizer nada. Inerte, com o motivo
+  // em texto, até a leitura chegar.
+  const carregando = autonomyRules === undefined;
 
   function alternar(agente: string) {
     setDesmarcados((atual) => {
@@ -82,6 +107,7 @@ export function ModoAutomaticoDoTime({
   }
 
   async function ligar() {
+    if (carregando || ligando || escolhidos.length === 0) return;
     setLigando(true);
     setDesfecho(null);
     const falharam: string[] = [];
@@ -98,7 +124,10 @@ export function ModoAutomaticoDoTime({
         ultimaMensagem = mensagemDaApi(erro, t('autoModeTeam.erroGenerico'));
       }
     }
-    await queryClient.invalidateQueries({ queryKey: ['agent-autonomy', projectId] });
+    // O desfecho é dito mesmo que a releitura falhe: ela não decide nada.
+    await queryClient
+      .invalidateQueries({ queryKey: ['agent-autonomy', projectId] })
+      .catch(() => undefined);
     const total = escolhidos.length;
     if (falharam.length === 0) setDesfecho({ tipo: 'todos', total });
     else if (falharam.length === total) setDesfecho({ tipo: 'nenhum', mensagem: ultimaMensagem });
@@ -111,7 +140,7 @@ export function ModoAutomaticoDoTime({
       <h3 id="modo-automatico-do-time-titulo" className={styles.titulo}>
         {t('autoModeTeam.title')}
       </h3>
-      <p className={styles.texto}>{t('autoModeTeam.subtitle')}</p>
+      <p className={styles.texto}>{t(noPlano ? 'autoModeTeam.planSubtitle' : 'autoModeTeam.subtitle')}</p>
 
       {candidatos.length > 0 && (
         <ul className={styles.lista}>
@@ -121,7 +150,7 @@ export function ModoAutomaticoDoTime({
                 <input
                   type="checkbox"
                   checked={!desmarcados.has(agente)}
-                  disabled={!podeLigar || ligando}
+                  disabled={!podeLigar || ligando || carregando}
                   onChange={() => alternar(agente)}
                 />
                 {nomeDoAgente(agente)}
@@ -139,11 +168,17 @@ export function ModoAutomaticoDoTime({
         </p>
       )}
 
+      {carregando && podeLigar && (
+        <p className={styles.texto} data-testid="modo-automatico-carregando">
+          {t('autoModeTeam.loading')}
+        </p>
+      )}
+
       {candidatos.length > 0 && (
         <Button
           variant="primary"
           loading={ligando}
-          disabled={!podeLigar || escolhidos.length === 0}
+          disabled={!podeLigar || carregando || escolhidos.length === 0}
           onClick={() => void ligar()}
         >
           {t('autoModeTeam.button', { count: escolhidos.length })}

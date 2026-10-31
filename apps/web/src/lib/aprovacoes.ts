@@ -97,14 +97,14 @@ export const VERBO_DA_ACAO: Record<ActionType, string> = {
   terminal: 'quer executar comando',
   git_commit: 'propõe alteração',
   git_push: 'quer enviar alterações',
-  pr_open: 'abriu pull request',
+  pr_open: 'quer abrir pull request',
   spend: 'solicita gasto extra',
   git_repo_create: 'quer criar o repositório',
   git_branch_create: 'quer criar uma branch',
   git_branch_protect: 'quer proteger uma branch',
   write_file: 'propõe escrever um arquivo',
-  open_adr_pr: 'abriu pull request de ADR',
-  open_infra_pr: 'abriu pull request de infra',
+  open_adr_pr: 'quer abrir pull request de ADR',
+  open_infra_pr: 'quer abrir pull request de infra',
   git_merge: 'quer fazer merge',
   instruction_patch: 'propõe ajustar a instrução de um agente',
   parallelize: 'quer mais um agente em paralelo',
@@ -114,7 +114,20 @@ export const VERBO_DA_ACAO: Record<ActionType, string> = {
   container_start: 'quer subir o container do projeto',
   container_stop: 'quer parar o container do projeto',
   container_remove: 'quer remover o container do projeto',
+  container_recreate: 'quer recriar o container do projeto',
   container_start_via_runner: 'quer subir o container do projeto na sua máquina',
+  qa_environment_start: 'quer subir a instância de QA da tarefa',
+};
+
+/**
+ * O verbo do que JÁ aconteceu (AT-371, RN-709). `VERBO_DA_ACAO` fala da
+ * proposta — o card pendente dizia "abriu pull request" antes de abrir. Só
+ * os tipos cujo verbo muda de tempo entram aqui; o resto mantém o da proposta.
+ */
+export const VERBO_DA_ACAO_EXECUTADA: Partial<Record<ActionType, string>> = {
+  pr_open: 'abriu pull request',
+  open_adr_pr: 'abriu pull request de ADR',
+  open_infra_pr: 'abriu pull request de infra',
 };
 
 type Payload = Record<string, unknown>;
@@ -154,6 +167,10 @@ function curto(valor: string, limite = 120): string {
 function nomeDoAgente(id: string | undefined): string {
   if (!id) return 'um agente';
   return AGENTS[id as keyof typeof AGENTS]?.name ?? id;
+}
+
+function dolares(micros: number): string {
+  return `US$ ${(micros / 1_000_000).toFixed(2).replace('.', ',')}`;
 }
 
 function plural(n: number, singular: string, pluralForma: string): string {
@@ -259,13 +276,23 @@ const FRASE_DA_ACAO: Record<ActionType, (payload: Payload) => string> = {
     const arquivos = quantidade(p, 'files');
     const nome = titulo ? ` "${curto(titulo)}"` : '';
     const quantos = arquivos ? ` com ${plural(arquivos, 'arquivo', 'arquivos')}` : '';
-    return `Abre uma pull request de infraestrutura${nome}${quantos}.`;
+    // AT-610 (ADR 0228): com `run.app` a PR põe um comando para rodar no container.
+    const run = p.run as { app?: { command?: unknown; port?: unknown } } | undefined;
+    const app = run?.app;
+    const comando =
+      app && typeof app.command === 'string'
+        ? ` O container passa a rodar ${codigo(app.command)}` +
+          (typeof app.port === 'number' ? ` na porta ${app.port}` : '') +
+          '.'
+        : '';
+    return `Abre uma pull request de infraestrutura${nome}${quantos}.${comando}`;
   },
 
   git_merge: (p) => {
     const pr = primeiro(p, 'pullRequestId');
     const destino = texto(p, 'targetBranch');
-    const qual = pr ? ` #${pr}` : '';
+    // RN-705: o provider local tem id `pr-N` — o que se mostra é o NÚMERO.
+    const qual = pr ? ` #${String(pr).replace(/^pr-/, '')}` : '';
     const onde = destino ? ` em ${codigo(destino)}` : '';
     return `Faz o merge da pull request${qual}${onde} no repositório do projeto.`;
   },
@@ -302,19 +329,51 @@ const FRASE_DA_ACAO: Record<ActionType, (payload: Payload) => string> = {
     const total = numero(p, 'totalAgentes');
     const modulos = quantidade(p, 'modulos');
     const resumo = texto(p, 'resumo');
+    // RN-747 (AT-437): a ativação sobe UM dev agent por módulo; o que o plano
+    // pede além disso é paralelização (teto RN-154), decisão do usuário depois.
+    const aMais = total !== undefined && modulos !== undefined ? total - modulos : 0;
     const quantos =
-      total !== undefined && modulos !== undefined
-        ? ` — ${plural(total, 'agente', 'agentes')} em ${plural(modulos, 'módulo', 'módulos')}`
+      modulos !== undefined
+        ? ` — sobe ${plural(modulos, 'dev agent', 'dev agents')}, um por módulo` +
+          (aMais > 0
+            ? ` (o plano pede ${plural(total!, 'agente', 'agentes')}; ${aMais === 1 ? 'o 1 a mais só sobe' : `os ${aMais} a mais só sobem`} se você aceitar paralelizar depois)`
+            : '')
         : '';
-    const porque = resumo ? `: "${curto(resumo)}"` : '';
+    // A aspa do modelo dentro do resumo não pode sobrar ao lado da nossa.
+    const resumoLimpo = resumo ? curto(resumo).replace(/^["“”']+|["“”']+$/g, '').trim() : '';
+    const porque = resumoLimpo ? `: "${resumoLimpo}"` : '';
     const tarefas = quantidade(p, 'tarefas');
     const comTarefas =
       tarefas !== undefined && tarefas > 0
         ? ` Cada uma das ${plural(tarefas, 'tarefa', 'tarefas')} vai para o dev do módulo que o Dev Lead escolheu.`
         : '';
+    // AT-381 (RN-709): a api põe no payload o orçamento por tarefa VIGENTE (o
+    // mesmo que a ativação usa). RN-802 (AT-473): e o multiplicador da
+    // primeira tarefa de cada módulo (RN-774) — a estimativa soma o teto
+    // EFETIVO: (tarefas − módulos) × teto + módulos × multiplicador × teto. O
+    // número vem do payload, nunca de uma constante daqui; sem ele, a conta
+    // antiga.
+    const orcamento = numero(p, 'orcamentoPorTarefaMicros');
+    const multiplicador = numero(p, 'multiplicadorDaPrimeiraDoModulo');
+    const listaDeTarefas = Array.isArray(p.tarefas) ? (p.tarefas as unknown[]) : [];
+    const modulosComTarefa = new Set(
+      listaDeTarefas
+        .map((t) => (t && typeof t === 'object' ? (t as { modulo?: unknown }).modulo : undefined))
+        .filter((m): m is string => typeof m === 'string' && m.length > 0),
+    ).size;
+    let estimativa = '';
+    if (orcamento !== undefined && tarefas !== undefined && tarefas > 0) {
+      if (multiplicador !== undefined && multiplicador > 1 && modulosComTarefa > 0) {
+        const primeiras = Math.min(modulosComTarefa, tarefas);
+        const total = (tarefas - primeiras) * orcamento + primeiras * multiplicador * orcamento;
+        estimativa = ` Estimativa: até ${dolares(total)} (${plural(tarefas, 'tarefa', 'tarefas')} × ${dolares(orcamento)}; a primeira de cada módulo vale ${multiplicador === 2 ? 'o dobro' : `${multiplicador}×`}) — é o teto por tarefa, não o preço.`;
+      } else {
+        estimativa = ` Estimativa: até ${dolares(orcamento * tarefas)} (${plural(tarefas, 'tarefa', 'tarefas')} × ${dolares(orcamento)}) — é o teto por tarefa, não o preço.`;
+      }
+    }
     // RN-677 (AT-263, ADR 0194): aprovar o plano É ativar a execução — sobe
     // os dev agents e começa o gasto. A frase diz isso antes do clique.
-    return `Aprova o plano de execução do Dev Lead${quantos}${porque} e ATIVA a execução: os dev agents sobem e começam a gastar.${comTarefas}`;
+    return `Aprova o plano de execução do Dev Lead${quantos}${porque} e ATIVA a execução: os dev agents sobem e começam a gastar.${comTarefas}${estimativa}`;
   },
 
   assess_implementability: (p) => {
@@ -365,10 +424,21 @@ const FRASE_DA_ACAO: Record<ActionType, (payload: Payload) => string> = {
     'Remove o container do projeto de vez — descarta o que existe. Para ' +
     'voltar a ter um, é preciso subir de novo do zero.',
 
+  // AT-608 (ADR 0228): remove + sobe de novo, para valer o comando do app e a
+  // rede declarados. O que está dentro do container se perde.
+  container_recreate: () =>
+    `Recria o container do projeto: ${codigo('remove')} o atual e ${codigo('sobe')} ` +
+    'outro com o comando do app e a rede declarados — o que está só dentro do container se perde.',
+
   // RN-508 (ADR 0145) — segundo tipo pra subir o container real do projeto,
   // exclusivo do modo Runner: sobe pelo `brabo-runner`, na máquina do
   // usuário, com o Docker DELE — nunca elege imagem candidata nenhuma (a
   // que já estiver decidida é a que sobe), diferente de `container_start`.
+  // AT-612 (ADR 0229): instância efêmera do QA, removida sozinha no fim do gate.
+  qa_environment_start: () =>
+    `Sobe a instância de QA ${codigo('efêmera')} da tarefa, com a infra que o app declarou — ` +
+    'ela some sozinha quando o gate termina.',
+
   container_start_via_runner: (p) => {
     const rationale = texto(p, 'rationale');
     const porque = rationale ? `: "${curto(rationale)}"` : '';
@@ -377,7 +447,11 @@ const FRASE_DA_ACAO: Record<ActionType, (payload: Payload) => string> = {
 };
 
 /** O verbo do tipo, ou um verbo neutro quando o web ainda não o conhece. */
-export function verboDaAcao(actionType: string): string {
+export function verboDaAcao(actionType: string, status?: string): string {
+  if (status === 'executed') {
+    const feito = VERBO_DA_ACAO_EXECUTADA[actionType as ActionType];
+    if (feito) return feito;
+  }
   return VERBO_DA_ACAO[actionType as ActionType] ?? VERBO_DESCONHECIDO;
 }
 
@@ -398,10 +472,14 @@ export function trechosDaFraseDaAcao(actionType: string, payload: Payload = {}):
   return marcada === null ? null : emTrechos(marcada);
 }
 
-export function descreverAcao(actionType: string, payload: Payload = {}): AcaoLegivelEmTrechos {
+export function descreverAcao(
+  actionType: string,
+  payload: Payload = {},
+  status?: string,
+): AcaoLegivelEmTrechos {
   const marcada = fraseMarcada(actionType, payload);
   return {
-    verbo: verboDaAcao(actionType),
+    verbo: verboDaAcao(actionType, status),
     frase: marcada === null ? null : semMarcas(marcada),
     trechos: marcada === null ? null : emTrechos(marcada),
   };

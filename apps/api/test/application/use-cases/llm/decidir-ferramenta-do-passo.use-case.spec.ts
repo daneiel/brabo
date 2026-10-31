@@ -279,12 +279,17 @@ describe('DecidirFerramentaDoPassoUseCase — a política P3', () => {
     const roteador = new RoteadorFalso(() => decidiu('write_file'));
     const r = await montar(roteador).decidir(base(s));
 
-    expect(r.tools?.map((t) => t.name)).toEqual(['read_file', 'write_file']);
+    // `report_done` é piso do dev agent (RN-839): o recorte nunca o tira.
+    expect(r.tools?.map((t) => t.name)).toEqual([
+      'read_file',
+      'write_file',
+      'report_done',
+    ]);
     expect(r.toolRouting).toMatchObject({
       modelo: 'typesafe/jev-1.13',
       ofertadas: 4,
       menuAntes: ['read_file', 'write_file', 'terminal', 'report_done'],
-      menuDepois: ['read_file', 'write_file'],
+      menuDepois: ['read_file', 'write_file', 'report_done'],
       escolha: 'write_file',
       confianca: 0.9,
       anterior: 'read_file',
@@ -341,12 +346,12 @@ describe('DecidirFerramentaDoPassoUseCase — a política P3', () => {
     });
   });
 
-  it('escolha = anterior: menu de UMA ferramenta', async () => {
+  it('escolha = anterior: menu de UMA ferramenta, mais o piso do dev agent (RN-839)', async () => {
     const s = await setup();
     const r = await montar(
       new RoteadorFalso(() => decidiu('read_file')),
     ).decidir(base(s));
-    expect(r.tools?.map((t) => t.name)).toEqual(['read_file']);
+    expect(r.tools?.map((t) => t.name)).toEqual(['read_file', 'report_done']);
   });
 
   it('a política não muda: o Jev só devolve um SUBCONJUNTO de ToolDef do catálogo, sem tocar em aprovação', async () => {
@@ -443,7 +448,12 @@ describe('DecidirFerramentaDoPassoUseCase — o turno nunca falha por causa do J
       new RoteadorFalso(() => decidiu('write_file')),
       unitQueFalha,
     ).decidir(base(s));
-    expect(r.tools?.map((t) => t.name)).toEqual(['read_file', 'write_file']);
+    // `report_done` é piso do dev agent (RN-839): o recorte nunca o tira.
+    expect(r.tools?.map((t) => t.name)).toEqual([
+      'read_file',
+      'write_file',
+      'report_done',
+    ]);
     expect(r.toolRouting).toMatchObject({
       aplicado: true,
       gastoNaoRegistrado: true,
@@ -527,5 +537,173 @@ describe('DecidirFerramentaDoPassoUseCase — o gasto do Jev (metering)', () => 
       new RoteadorFalso(() => decidiu('write_file', { custoUsd: null })),
     ).decidir(base(s));
     expect(await db.select().from(tokenUsage)).toHaveLength(0);
+  });
+});
+
+/** Uma execução do agente com UMA ferramenta anterior, para o recorte P3 morder. */
+const execucaoCom = (agente: string, anterior: string): ChatMessage[] => [
+  { role: 'system', content: `Você é o ${agente}.` },
+  { role: 'user', content: 'siga' },
+  {
+    role: 'assistant',
+    content: '',
+    toolCalls: [{ id: 'c1', name: anterior, arguments: {} }],
+  },
+  { role: 'tool', content: 'ok', toolCallId: 'c1' },
+];
+
+describe('DecidirFerramentaDoPassoUseCase — o recorte não vira incapacidade (AT-445)', () => {
+  const PO = [
+    'listar_backlog',
+    'listar_regras',
+    'create_story',
+    'create_task',
+    'emit_artifact',
+    'offer_handoff',
+  ].map(tool);
+  const ARQUITETO = [
+    'create_module_map',
+    'assign_story_modules',
+    'choose_project_image',
+    'create_c4_diagram',
+    'route_modules_to_infra',
+    'declare_module_contracts',
+    'propose_adr',
+    'emit_insight',
+    'emit_artifact',
+  ].map(tool);
+
+  it('PO com o menu do Jev ["listar_backlog","create_story"]: `create_task` continua no menu e o aviso chega', async () => {
+    const s = await setup();
+    const msgs = execucaoCom('po', 'listar_backlog');
+    const r = await montar(
+      new RoteadorFalso(() => decidiu('create_story')),
+    ).decidir(base(s, { agentId: 'po', tools: PO, messages: msgs }));
+
+    expect(r.tools?.map((t) => t.name)).toEqual([
+      'listar_backlog',
+      'create_story',
+      'create_task',
+    ]);
+    expect(r.toolRouting?.aplicado).toBe(true);
+    const aviso = r.messages.at(-1)!;
+    expect(aviso.role).toBe('system');
+    expect(aviso.content).toContain('recorte');
+    expect(aviso.content).toContain('seguem disponíveis');
+    // Efêmero: o array do pedido (o histórico do agente) não é tocado.
+    expect(r.messages).toHaveLength(5);
+    expect(msgs).toHaveLength(4);
+  });
+
+  it('PO recortado pelo Jev mantém `declare_open_question` (AT-615, RN-942)', async () => {
+    const s = await setup();
+    const r = await montar(
+      new RoteadorFalso(() => decidiu('create_story')),
+    ).decidir(
+      base(s, {
+        agentId: 'po',
+        tools: [...PO, tool('declare_open_question')],
+        messages: execucaoCom('po', 'listar_backlog'),
+      }),
+    );
+    expect(r.tools?.map((t) => t.name)).toContain('declare_open_question');
+  });
+
+  it('o piso do PO não acrescenta `declare_open_question` que o catálogo não tinha (AT-615)', async () => {
+    const s = await setup();
+    const r = await montar(
+      new RoteadorFalso(() => decidiu('create_story')),
+    ).decidir(
+      base(s, {
+        agentId: 'po',
+        tools: PO,
+        messages: execucaoCom('po', 'listar_backlog'),
+      }),
+    );
+    expect(r.tools?.map((t) => t.name)).not.toContain('declare_open_question');
+  });
+
+  it('Arquiteto com 2 de 9 pelo Jev: as cinco de artefato (mapa, roteamento, contratos, ADR, C4) nunca saem', async () => {
+    const s = await setup();
+    const r = await montar(
+      new RoteadorFalso(() => decidiu('assign_story_modules')),
+    ).decidir(
+      base(s, {
+        agentId: 'arquiteto',
+        tools: ARQUITETO,
+        messages: execucaoCom('arquiteto', 'choose_project_image'),
+      }),
+    );
+    expect(r.tools?.map((t) => t.name)).toEqual([
+      'create_module_map',
+      'assign_story_modules',
+      'choose_project_image',
+      'create_c4_diagram',
+      'route_modules_to_infra',
+      'declare_module_contracts',
+      'propose_adr',
+    ]);
+    expect(r.messages.at(-1)!.content).toContain('as outras 2 seguem');
+  });
+
+  it('Arquiteto recortado pelo Jev: as leituras de estado (ADRs propostas, backlog) continuam no menu (RN-784)', async () => {
+    const s = await setup();
+    const r = await montar(
+      new RoteadorFalso(() => decidiu('assign_story_modules')),
+    ).decidir(
+      base(s, {
+        agentId: 'arquiteto',
+        tools: [
+          ...ARQUITETO,
+          tool('listar_adrs_propostas'),
+          tool('listar_backlog'),
+        ],
+        messages: execucaoCom('arquiteto', 'choose_project_image'),
+      }),
+    );
+    const nomes = r.tools?.map((t) => t.name) ?? [];
+    expect(r.toolRouting?.aplicado).toBe(true);
+    expect(nomes).toContain('listar_adrs_propostas');
+    expect(nomes).toContain('listar_backlog');
+    // Ainda é recorte: o que não é piso nem escolhido sai.
+    expect(nomes).not.toContain('emit_insight');
+  });
+
+  it('Arquiteto recortado pelo Jev sem `assign_story_modules`/`choose_project_image`: as duas continuam no menu (RN-809)', async () => {
+    const s = await setup();
+    const r = await montar(
+      new RoteadorFalso(() => decidiu('create_c4_diagram')),
+    ).decidir(
+      base(s, {
+        agentId: 'arquiteto',
+        tools: ARQUITETO,
+        messages: execucaoCom('arquiteto', 'create_module_map'),
+      }),
+    );
+    const nomes = r.tools?.map((t) => t.name) ?? [];
+    expect(r.toolRouting?.aplicado).toBe(true);
+    expect(nomes).toContain('assign_story_modules');
+    expect(nomes).toContain('choose_project_image');
+    expect(nomes).not.toContain('emit_insight');
+  });
+
+  it('o Jev diz responder (sem recorte): nenhum aviso, mensagens intactas', async () => {
+    const s = await setup();
+    const msgs = execucaoCom('po', 'listar_backlog');
+    const r = await montar(
+      new RoteadorFalso(() => decidiu(RESPONDER_SEM_FERRAMENTA)),
+    ).decidir(base(s, { agentId: 'po', tools: PO, messages: msgs }));
+    expect(r.toolRouting?.aplicado).toBe(false);
+    expect(r.messages).toBe(msgs);
+  });
+
+  it('queda do Jev: catálogo inteiro e nenhum aviso', async () => {
+    const s = await setup();
+    const msgs = execucaoCom('po', 'listar_backlog');
+    const r = await montar(new RoteadorFalso(() => cai('timeout'))).decidir(
+      base(s, { agentId: 'po', tools: PO, messages: msgs }),
+    );
+    expect(r.tools).toHaveLength(PO.length);
+    expect(r.messages).toBe(msgs);
   });
 });

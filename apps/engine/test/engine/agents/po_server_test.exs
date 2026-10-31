@@ -63,10 +63,15 @@ defmodule Engine.Agents.PoServerTest do
   test "kickoff: encadeia create_epic → create_story e injeta o resultado", %{state: state} do
     Process.put(:fake_events, brief_and_rules())
 
+    Process.put(:fake_epic, %{
+      "id" => "11111111-1111-4111-8111-111111111111",
+      "title" => "Cadastro"
+    })
+
     Process.put(:fake_llm_turns, [
       tool_turn("create_epic", %{"title" => "Cadastro"}),
       tool_turn("create_story", %{
-        "epic_id" => "ep-1",
+        "epic_id" => "11111111-1111-4111-8111-111111111111",
         "title" => "Cadastrar usuário",
         "rf" => ["formulário de cadastro"],
         "dod" => ["testes passando"],
@@ -87,15 +92,49 @@ defmodule Engine.Agents.PoServerTest do
     assert Enum.any?(tool_msgs, &String.contains?(&1["content"], "épico criado"))
   end
 
+  # AT-350: sem os `toolCalls` na mensagem do assistente, o `tool` seguinte ia
+  # ao provider respondendo a NADA — o resultado era descartado e o modelo
+  # repetia a mesma chamada até o teto.
+  test "a chamada seguinte leva o assistant COM toolCalls antes do tool que o responde",
+       %{state: state} do
+    Process.put(:fake_events, brief_and_rules())
+
+    Process.put(:fake_llm_turns, [
+      tool_turn("create_epic", %{"title" => "Cadastro"}),
+      FakeEngineApiClient.final_response("ok")
+    ])
+
+    assert {:noreply, new_state} = sync_cast(PoServer, :kickoff, state)
+
+    assert_received {:llm_turn_stream, _, _primeira, _}
+    assert_received {:llm_turn_stream, _, segunda, _}
+
+    idx = Enum.find_index(segunda, &(&1["role"] == "tool"))
+    assistente = Enum.at(segunda, idx - 1)
+    assert assistente["role"] == "assistant"
+    assert [%{"id" => "tc-create_epic"}] = assistente["toolCalls"]
+    assert Enum.at(segunda, idx)["toolCallId"] == "tc-create_epic"
+
+    # Resposta final sem ferramenta: o assistant NÃO ganha a chave.
+    final = List.last(Enum.filter(new_state.messages, &(&1["role"] == "assistant")))
+    refute Map.has_key?(final, "toolCalls")
+  end
+
   test "create_story com regra inválida vira tool-result de erro (não derruba o loop)", %{
     state: state
   } do
     Process.put(:fake_events, brief_and_rules())
+
+    Process.put(:fake_epic, %{
+      "id" => "11111111-1111-4111-8111-111111111111",
+      "title" => "Cadastro"
+    })
+
     Process.put(:fake_story_error, {422, %{"message" => "business_rule_id inexistente"}})
 
     Process.put(:fake_llm_turns, [
       tool_turn("create_story", %{
-        "epic_id" => "ep-1",
+        "epic_id" => "11111111-1111-4111-8111-111111111111",
         "title" => "x",
         "business_rule_ids" => ["nao-existe"]
       }),
@@ -163,6 +202,19 @@ defmodule Engine.Agents.PoServerTest do
                      }}
   end
 
+  # AT-572 (RN-899): fecho sem texto, sem corte e sem ferramenta não é calado.
+  test "resposta vazia sem corte grava agent.error de origem modelo, não agent.response",
+       %{state: state, session_id: session_id} do
+    Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("", "m")])
+
+    assert {:reply, :ok, _} = sync_call(PoServer, {:user_message, "oi"}, state)
+
+    assert_received {:event_appended, _, ^session_id,
+                     %{type: "agent.error", payload: %{origem: "modelo"}}}
+
+    refute_received {:event_appended, _, _, %{type: "agent.response"}}
+  end
+
   describe "revise/2 — devolução de história recusada (Fase 12c, RN-048)" do
     test "injeta a recusa como mensagem FIXADA e roda um turno", %{state: state} do
       Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("vou revisar")])
@@ -194,8 +246,10 @@ defmodule Engine.Agents.PoServerTest do
       assert String.contains?(devolucao["content"], "Falta o caso de recusa do pagamento")
       # A frase de precedência (lição do ADR 0020).
       assert String.contains?(devolucao["content"], "PREVALECE")
-      # O modelo precisa saber o que PODE fazer: não existe editar história.
-      assert String.contains?(devolucao["content"], "create_story")
+      # O modelo precisa saber o que PODE fazer: desde a RN-727, corrigir a
+      # MESMA história ou arquivá-la — não recriá-la.
+      assert String.contains?(devolucao["content"], "update_story")
+      assert String.contains?(devolucao["content"], "archive_story")
     end
 
     test "vivo?/1 é falso quando não há PO registrado para a sessão" do
@@ -215,6 +269,10 @@ defmodule Engine.Agents.PoServerTest do
       assert "listar_metricas_de_produto" in nomes
       # RN-165: perguntar é uma saída, e só existe se estiver na lista.
       assert "ask_structured_questions" in nomes
+      # RN-727: o PO corrige e arquiva a própria história (TP-01: chamou
+      # `delete_story` e recebeu "ferramenta desconhecida").
+      assert "update_story" in nomes
+      assert "archive_story" in nomes
 
       indice = fn nome -> Enum.find_index(nomes, &(&1 == nome)) end
       assert indice.("listar_regras_de_negocio") < indice.("create_epic")
@@ -363,14 +421,38 @@ defmodule Engine.Agents.PoServerTest do
       assert new_state.epicos_sem_historia == %{}
     end
 
-    test "épico COM história não gera cobrança nenhuma", %{state: state} do
+    test "create_epic sem id no resultado não faz o create_story recusar UUID legítimo", %{
+      state: state
+    } do
       Process.put(:fake_events, brief_and_rules())
-      Process.put(:fake_epic, %{"id" => "ep-42", "title" => "Cadastro"})
+      Process.put(:fake_epic, %{"id" => "", "title" => "Cadastro"})
 
       Process.put(:fake_llm_turns, [
         tool_turn("create_epic", %{"title" => "Cadastro"}),
         tool_turn("create_story", %{
-          "epic_id" => "ep-42",
+          "epic_id" => "11111111-1111-4111-8111-111111111111",
+          "title" => "x",
+          "business_rule_ids" => ["evt-r1"]
+        }),
+        FakeEngineApiClient.final_response("ok")
+      ])
+
+      assert {:noreply, _} = sync_cast(PoServer, :kickoff, state)
+      assert_received {:story_created, _}
+    end
+
+    test "épico COM história não gera cobrança nenhuma", %{state: state} do
+      Process.put(:fake_events, brief_and_rules())
+
+      Process.put(:fake_epic, %{
+        "id" => "11111111-1111-4111-8111-111111111111",
+        "title" => "Cadastro"
+      })
+
+      Process.put(:fake_llm_turns, [
+        tool_turn("create_epic", %{"title" => "Cadastro"}),
+        tool_turn("create_story", %{
+          "epic_id" => "11111111-1111-4111-8111-111111111111",
           "title" => "Cadastrar usuário",
           "business_rule_ids" => ["evt-r1"]
         }),
@@ -387,12 +469,20 @@ defmodule Engine.Agents.PoServerTest do
       # O caminho que mais engana: o modelo "criou" a história, a api recusou
       # (regra inexistente), e sem esta distinção o épico sairia como coberto.
       Process.put(:fake_events, brief_and_rules())
-      Process.put(:fake_epic, %{"id" => "ep-42", "title" => "Cadastro"})
+
+      Process.put(:fake_epic, %{
+        "id" => "11111111-1111-4111-8111-111111111111",
+        "title" => "Cadastro"
+      })
+
       Process.put(:fake_story_error, {422, %{"message" => "business_rule_id inexistente"}})
 
       Process.put(:fake_llm_turns, [
         tool_turn("create_epic", %{"title" => "Cadastro"}),
-        tool_turn("create_story", %{"epic_id" => "ep-42", "title" => "x"}),
+        tool_turn("create_story", %{
+          "epic_id" => "11111111-1111-4111-8111-111111111111",
+          "title" => "x"
+        }),
         FakeEngineApiClient.final_response("desisti")
       ])
 
@@ -415,6 +505,56 @@ defmodule Engine.Agents.PoServerTest do
       assert instrucao["content"] =~ "ÉPICO SEM HISTÓRIA NÃO SERVE PARA NADA"
       assert instrucao["content"] =~ "PERGUNTE"
       assert instrucao["content"] =~ "ask_structured_questions"
+      # AT-466 (RN-790): o README de como subir é critério do DoD.
+      assert instrucao["content"] =~ "README diz como instalar"
+      assert instrucao["content"] =~ "variáveis de ambiente obrigatórias"
+      # AT-541 (RN-893): a borda do valor informado vai no RF e no DoD.
+      assert instrucao["content"] =~ "TODO VALOR INFORMADO TEM BORDA DECLARADA"
+      assert instrucao["content"] =~ "declare_open_question"
+    end
+
+    # RN-908 (AT-596): com pedido de lote, o modelo tende a escrever antes de ler e
+    # a misturar camadas; a ordem leitura → épicos → histórias → tarefas é o contrato.
+    test "o kickoff manda ler antes de escrever e escrever em lote por camada (RN-908)", %{
+      state: state
+    } do
+      Process.put(:fake_events, brief_and_rules())
+      Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("ok")])
+
+      assert {:noreply, new_state} = sync_cast(PoServer, :kickoff, state)
+
+      instrucao =
+        Enum.find(new_state.messages, fn m ->
+          m["role"] == "user" and String.contains?(m["content"], "PRODUCT BRIEF")
+        end)
+
+      [_, lote] = String.split(instrucao["content"], "ESCREVA EM LOTE, EM CAMADAS", parts: 2)
+      pos = fn trecho -> elem(:binary.match(lote, trecho), 0) end
+
+      # Leitura primeiro, na mesma resposta e sem escrita junto.
+      assert lote =~ "sem nenhuma escrita junto"
+      assert pos.("listar_regras_de_negocio") < pos.("create_epic")
+      assert pos.("listar_backlog") < pos.("create_epic")
+      # Lote em camadas: épicos → histórias → tarefas.
+      assert pos.("create_epic") < pos.("create_story")
+      assert pos.("create_story") < pos.("create_task")
+      assert lote =~ "cerca de 10 chamadas"
+      assert lote =~ "Nunca recrie um épico"
+    end
+
+    test "sem event log, o kickoff ainda carrega a obrigação da borda (RN-893)", %{state: state} do
+      Process.put(:fake_events_error, :boom)
+      Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("ok")])
+
+      assert {:noreply, new_state} = sync_cast(PoServer, :kickoff, state)
+
+      instrucao =
+        Enum.find(new_state.messages, fn m ->
+          m["role"] == "user" and String.contains?(m["content"], "Gere o backlog do produto")
+        end)
+
+      assert instrucao["content"] =~ "TODO VALOR INFORMADO TEM BORDA DECLARADA"
+      assert instrucao["content"] =~ "declare_open_question"
     end
   end
 
@@ -431,6 +571,46 @@ defmodule Engine.Agents.PoServerTest do
 
     assert_received {:event_appended, _, ^session_id,
                      %{type: "toolloop.limit_reached", payload: %{max_iterations: 12}}}
+  end
+
+  # AT-590: o teto diz o que foi gravado (RN-731) e quantas regras faltam.
+  test "teto: toolloop.limit_reached leva gravado e regrasSemHistoria", %{
+    state: state,
+    session_id: session_id
+  } do
+    Process.put(:fake_business_rules, %{"rules" => [%{"id" => "r"}], "uncoveredCount" => 2})
+
+    Process.put(
+      :fake_llm_always,
+      tool_turn("create_task", %{"story_id" => "st-1", "title" => "t"})
+    )
+
+    assert {:reply, :ok, _} = sync_call(PoServer, {:user_message, "vai"}, state)
+
+    assert_received {:event_appended, _, ^session_id,
+                     %{type: "toolloop.limit_reached", payload: payload}}
+
+    assert payload.gravado =~ "12 tasks"
+    assert payload.regrasSemHistoria == 2
+  end
+
+  test "CASO DE FALHA: teto sem leitura de regras sai sem regrasSemHistoria", %{
+    state: state,
+    session_id: session_id
+  } do
+    Process.put(:fake_business_rules, {:error, :boom})
+
+    Process.put(
+      :fake_llm_always,
+      tool_turn("create_task", %{"story_id" => "st-1", "title" => "t"})
+    )
+
+    assert {:reply, :ok, _} = sync_call(PoServer, {:user_message, "vai"}, state)
+
+    assert_received {:event_appended, _, ^session_id,
+                     %{type: "toolloop.limit_reached", payload: payload}}
+
+    refute Map.has_key?(payload, :regrasSemHistoria)
   end
 
   test "rehydration: reconstrói o histórico do event log no init", %{} do
@@ -545,6 +725,68 @@ defmodule Engine.Agents.PoServerTest do
                        %{type: "artifact.decision_record", payload: payload}}
 
       assert payload["choice"] == "validar domínio"
+    end
+  end
+
+  describe "RN-700: o handoff ao Arquiteto no fim do turno" do
+    defp regras_cobertas,
+      do: %{"rules" => [%{"id" => "evt-r1", "covered" => true}], "uncoveredCount" => 0}
+
+    defp backlog(tarefas),
+      do: [
+        %{
+          "id" => "ep-1",
+          "title" => "Cadastro",
+          "stories" => [%{"id" => "st-1", "title" => "Cadastrar usuário", "tasks" => tarefas}]
+        }
+      ]
+
+    test "coberto e com tarefas: o servidor oferece o handoff que o modelo só anunciou",
+         %{state: state} do
+      Process.put(:fake_business_rules, regras_cobertas())
+      Process.put(:fake_backlog, backlog([%{"id" => "tk-1"}]))
+      Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("Handoff ao Arquiteto")])
+
+      assert {:reply, :ok, new_state} = sync_call(PoServer, {:user_message, "pronto?"}, state)
+
+      assert_received {:handoff_created, _, _, "po", "arquiteto", nil}
+      refute_received {:event_appended, _, _, %{type: "backlog.handoff_not_offered"}}
+      assert new_state.handoff_ao_arquiteto
+
+      # Turno seguinte não oferece de novo.
+      Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("ok")])
+      assert {:reply, :ok, _} = sync_call(PoServer, {:user_message, "e agora?"}, new_state)
+      refute_received {:handoff_created, _, _, _, _, _}
+    end
+
+    test "história sem tarefa: não oferece e nomeia as histórias", %{state: state} do
+      Process.put(:fake_business_rules, regras_cobertas())
+      Process.put(:fake_backlog, backlog([]))
+      Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("Handoff ao Arquiteto")])
+
+      assert {:reply, :ok, new_state} = sync_call(PoServer, {:user_message, "pronto?"}, state)
+
+      refute_received {:handoff_created, _, _, _, _, _}
+
+      assert_received {:event_appended, _, _,
+                       %{
+                         type: "backlog.handoff_not_offered",
+                         payload: %{origem: "modelo", storyIds: ["st-1"], mensagem: mensagem}
+                       }}
+
+      assert mensagem =~ "Cadastrar usuário"
+      refute new_state.handoff_ao_arquiteto
+    end
+
+    test "regra descoberta: nem oferece nem acusa", %{state: state} do
+      Process.put(:fake_business_rules, %{"rules" => [%{"id" => "r"}], "uncoveredCount" => 1})
+      Process.put(:fake_backlog, backlog([]))
+      Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("ok")])
+
+      assert {:reply, :ok, _} = sync_call(PoServer, {:user_message, "x"}, state)
+
+      refute_received {:handoff_created, _, _, _, _, _}
+      refute_received {:event_appended, _, _, %{type: "backlog.handoff_not_offered"}}
     end
   end
 end

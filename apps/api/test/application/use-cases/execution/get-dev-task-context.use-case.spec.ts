@@ -1,5 +1,14 @@
 import { describe, it, expect } from 'vitest';
-import { GetDevTaskContextUseCase } from '../../../../src/application/use-cases/execution/get-dev-task-context.use-case';
+import {
+  GetDevTaskContextUseCase,
+  ehPrimeiraTarefaDoModulo,
+  tarefasIrmas,
+  tarefasAbertasDoModulo,
+  moduloDoContrato,
+  decisoesDaTarefa,
+  decisoesDoContexto,
+  TETO_DE_DECISOES_NO_CONTEXTO,
+} from '../../../../src/application/use-cases/execution/get-dev-task-context.use-case';
 import type {
   StoryRepository,
   TaskRepository,
@@ -105,6 +114,11 @@ function buildUseCase(overrides?: {
   task?: Task | null;
   story?: Story | null;
   adrs?: ProposedAction[];
+  claims?: Array<{ payload: unknown }>;
+  historias?: Story[];
+  tarefasDeOutras?: Task[];
+  contratos?: SessionEvent[];
+  decisoes?: Array<{ id: string; payload: unknown; createdAt: Date }>;
 }) {
   const tasks = {
     findById: (id: string) =>
@@ -114,6 +128,15 @@ function buildUseCase(overrides?: {
           : id === task.id
             ? task
             : null,
+      ),
+    findByStoryIds: (ids: string[]) =>
+      Promise.resolve(
+        ids.includes(story.id)
+          ? [
+              task,
+              { ...task, id: 'task-2', title: 'Login com JWT', status: 'todo' },
+            ]
+          : (overrides?.tarefasDeOutras ?? []),
       ),
   } as unknown as TaskRepository;
 
@@ -126,11 +149,21 @@ function buildUseCase(overrides?: {
             ? story
             : null,
       ),
+    findByProject: () =>
+      Promise.resolve([story, ...(overrides?.historias ?? [])]),
   } as unknown as StoryRepository;
 
   const sessionEvents = {
     findById: (id: string) =>
       Promise.resolve(id === ruleEvent.id ? ruleEvent : null),
+    listByTypeForProject: (_p: string, tipo: string) =>
+      Promise.resolve(
+        tipo === 'artifact.module_contracts'
+          ? (overrides?.contratos ?? [])
+          : tipo === 'artifact.decision_record'
+            ? (overrides?.decisoes ?? [])
+            : (overrides?.claims ?? []),
+      ),
   } as unknown as SessionEventRepository;
 
   const proposedActions = {
@@ -146,6 +179,151 @@ function buildUseCase(overrides?: {
 }
 
 describe('GetDevTaskContextUseCase', () => {
+  describe('RN-774: primeira tarefa do módulo', () => {
+    const claim = (taskId: string, module: string) => ({
+      payload: { taskId, module, title: 't' },
+    });
+
+    it('é a primeira quando o claim mais antigo do módulo é dela', async () => {
+      const ctx = await buildUseCase({
+        claims: [claim('task-x', 'web'), claim('task-1', 'api')],
+      }).execute('proj-1', 'task-1', 'api');
+      expect(ctx.primeiraDoModulo).toBe(true);
+    });
+
+    it('não é a primeira quando outra tarefa do módulo foi reivindicada antes', async () => {
+      const ctx = await buildUseCase({
+        claims: [claim('task-0', 'api'), claim('task-1', 'api')],
+      }).execute('proj-1', 'task-1', 'api');
+      expect(ctx.primeiraDoModulo).toBe(false);
+    });
+
+    it('reivindicada de novo depois de bloqueada, continua a primeira', () => {
+      expect(
+        ehPrimeiraTarefaDoModulo(
+          [
+            claim('task-1', 'api'),
+            claim('task-2', 'api'),
+            claim('task-1', 'api'),
+          ],
+          'task-1',
+          'api',
+        ),
+      ).toBe(true);
+    });
+
+    it('sem módulo ou sem claim nenhum, falso (teto normal)', async () => {
+      expect(ehPrimeiraTarefaDoModulo([claim('task-1', 'api')], 'task-1')).toBe(
+        false,
+      );
+      const ctx = await buildUseCase().execute('proj-1', 'task-1', 'api');
+      expect(ctx.primeiraDoModulo).toBe(false);
+    });
+  });
+
+  it('RN-765: traz as tarefas irmãs da história, sem a própria', async () => {
+    const ctx = await buildUseCase().execute('proj-1', 'task-1');
+    expect(ctx.siblingTasks).toEqual([
+      { id: 'task-2', title: 'Login com JWT', status: 'todo' },
+    ]);
+  });
+
+  describe('RN-786: o contrato do módulo vai ao gate de QA', () => {
+    const contratos: SessionEvent = {
+      ...ruleEvent,
+      id: 'contratos-1',
+      seq: 9,
+      type: 'artifact.module_contracts',
+      payload: {
+        version: 1,
+        contratos: [
+          {
+            modulo: 'api',
+            expoe: [{ tipo: 'rota', assinatura: 'GET /panel', descricao: 'p' }],
+          },
+          { modulo: 'web', expoe: [] },
+        ],
+      },
+    };
+
+    it('traz o contrato do módulo da história', async () => {
+      const ctx = await buildUseCase({ contratos: [contratos] }).execute(
+        'proj-1',
+        'task-1',
+      );
+      expect(ctx.moduleContract).toEqual({
+        modulo: 'api',
+        expoe: [{ tipo: 'rota', assinatura: 'GET /panel', descricao: 'p' }],
+      });
+    });
+
+    it('sem contrato declarado, ou módulo ambíguo, null', async () => {
+      const ctx = await buildUseCase().execute('proj-1', 'task-1');
+      expect(ctx.moduleContract).toBeNull();
+      expect(
+        moduloDoContrato({ module: null }, { moduleIds: ['api', 'web'] }),
+      ).toBeNull();
+      expect(
+        moduloDoContrato({ module: 'web' }, { moduleIds: ['api'] }, 'api'),
+      ).toBe('web');
+    });
+  });
+
+  describe('RN-785: tarefas abertas de outras histórias do módulo', () => {
+    const rotas: Story = {
+      ...story,
+      id: 'story-2',
+      title: 'Criar links',
+      moduleIds: ['api'],
+      archivedAt: null,
+    };
+    const web: Story = { ...rotas, id: 'story-3', moduleIds: ['web'] };
+    const t = (id: string, storyId: string, status: Task['status']): Task => ({
+      ...task,
+      id,
+      storyId,
+      title: `Tarefa ${id}`,
+      status,
+    });
+
+    it('traz a tarefa não concluída da outra história do mesmo módulo', async () => {
+      const ctx = await buildUseCase({
+        historias: [rotas, web],
+        tarefasDeOutras: [
+          t('t-rota', 'story-2', 'todo'),
+          t('t-feita', 'story-2', 'done'),
+          t('t-web', 'story-3', 'todo'),
+        ],
+      }).execute('proj-1', 'task-1', 'api');
+      expect(ctx.moduleOpenTasks).toEqual([
+        {
+          id: 't-rota',
+          title: 'Tarefa t-rota',
+          status: 'todo',
+          storyTitle: 'Criar links',
+        },
+      ]);
+      expect(ctx.moduleOpenTasksTotal).toBe(1);
+    });
+
+    it('história arquivada fica fora, e o teto diz o total real', () => {
+      const muitas = Array.from({ length: 25 }, (_, i) =>
+        t(`t${i}`, 'story-2', 'todo'),
+      );
+      const r = tarefasAbertasDoModulo(task, story, 'api', [rotas], muitas);
+      expect(r.itens).toHaveLength(20);
+      expect(r.total).toBe(25);
+      const arquivada = { ...rotas, archivedAt: new Date() };
+      expect(
+        tarefasAbertasDoModulo(task, story, 'api', [arquivada], muitas).total,
+      ).toBe(0);
+    });
+  });
+
+  it('RN-765: história de uma tarefa só não tem irmã', () => {
+    expect(tarefasIrmas(task, [task])).toEqual([]);
+  });
+
   it('monta o contexto: story completa, regras resolvidas (ignora id inválido), e ADRs do projeto', async () => {
     const useCase = buildUseCase();
 
@@ -242,5 +420,93 @@ describe('GetDevTaskContextUseCase', () => {
     await expect(useCase.execute('proj-1', 'task-1')).rejects.toThrow(
       /não encontrada/,
     );
+  });
+
+  // RN-859 (AT-521): a decisão do usuário chega ao dev e ao QA.
+  describe('RN-859: decisões ligadas por afeta', () => {
+    const decisao = (
+      id: string,
+      afeta: Record<string, string[]>,
+      quando: number,
+      choice = '404',
+    ) => ({
+      id,
+      payload: {
+        context: 'Código inexistente?',
+        choice,
+        questionId: `q-${id}`,
+        afeta,
+      },
+      createdAt: new Date(quando),
+    });
+
+    it('devolve só as que afetam a tarefa, a história ou uma regra dela, mais recentes primeiro', async () => {
+      const ctx = await buildUseCase({
+        decisoes: [
+          decisao('d1', { tarefas: ['task-1'] }, 1),
+          decisao('d2', { historias: ['outra'] }, 2),
+          decisao('d3', { regras: ['rule-1'] }, 3),
+        ],
+      }).execute('proj-1', 'task-1');
+      expect(ctx.decisoes.map((d) => d.id)).toEqual(['d3', 'd1']);
+      expect(ctx.decisoes[0]).toMatchObject({
+        questionId: 'q-d3',
+        pergunta: 'Código inexistente?',
+        decisao: '404',
+      });
+    });
+
+    it('decisão sem afeta não entra; teto de 10 e texto cortado em 1 500', () => {
+      const muitas = Array.from({ length: 12 }, (_, i) =>
+        decisao(`d${i}`, { tarefas: ['t'] }, i, 'x'.repeat(2000)),
+      );
+      const r = decisoesDaTarefa(
+        [
+          ...muitas,
+          { id: 'sem', payload: { choice: 'y' }, createdAt: new Date(99) },
+        ],
+        { regras: [], historias: [], tarefas: ['t'] },
+      );
+      expect(r).toHaveLength(TETO_DE_DECISOES_NO_CONTEXTO);
+      expect(r[0].decisao).toHaveLength(1500);
+      expect(r.some((d) => d.id === 'sem')).toBe(false);
+    });
+  });
+
+  // RN-872 (ADR 0215): as outras decisões do projeto, em seção separada.
+  describe('decisões do projeto (RN-872)', () => {
+    const decisao = (id: string, afeta: unknown, quando: number) => ({
+      id,
+      payload: { context: 'q', choice: 'c', afeta },
+      createdAt: new Date(quando),
+    });
+
+    it('as que não tocam a tarefa vêm em decisoesDoProjeto; teto de 10 somado, as da tarefa primeiro', () => {
+      const daTarefa = Array.from({ length: 4 }, (_, i) =>
+        decisao(`t${i}`, { tarefas: ['t'] }, i),
+      );
+      const outras = Array.from({ length: 9 }, (_, i) =>
+        decisao(`o${i}`, { historias: ['outra'] }, 100 + i),
+      );
+      const r = decisoesDoContexto([...outras, ...daTarefa], {
+        regras: [],
+        historias: [],
+        tarefas: ['t'],
+      });
+      expect(r.decisoes.map((d) => d.id)).toEqual(['t3', 't2', 't1', 't0']);
+      expect(r.decisoesDoProjeto).toHaveLength(6);
+      expect(r.decisoesDoProjeto[0].id).toBe('o8');
+    });
+
+    it('decisão legada com TÍTULO de regra em afeta.regras casa pelo título', async () => {
+      const ctx = await buildUseCase({
+        decisoes: [
+          decisao('leg', { regras: ['E-mail único'] }, 1),
+          decisao('fora', { regras: ['Outra regra'] }, 2),
+        ],
+      }).execute('proj-1', 'task-1');
+      expect(ctx.decisoes.map((d) => d.id)).toEqual(['leg']);
+      expect(ctx.decisoesDoProjeto.map((d) => d.id)).toEqual(['fora']);
+    });
   });
 });

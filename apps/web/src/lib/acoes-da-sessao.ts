@@ -33,8 +33,14 @@ export function juntarCaudaEPendentes(
 ): ProposedAction[] {
   const porId = new Map<string, ProposedAction>();
   for (const acao of pendentes) porId.set(acao.id, acao);
-  // A cauda vence: se a mesma ação veio nas duas, a leitura mais completa é
-  // a da cauda (a de pendentes pode ter sido feita um instante antes).
+  // A cauda vence o empate, e NÃO por ser a leitura mais nova: ela é feita
+  // ANTES (`buscarAcoesDaSessao` só pergunta pelas pendentes depois de ver a
+  // cauda cheia). Vencer é inócuo porque o status só SAI de `pending`, nunca
+  // volta (AT-365): uma ação que aparece nas duas leituras estava `pending`
+  // na de pendentes, e portanto também estava `pending` na cauda, lida um
+  // instante antes — as duas cópias dizem o mesmo. Se a ação foi decidida
+  // entre as duas leituras, ela não vem nas pendentes e não há empate; a cauda
+  // a mostra ainda pendente, e o próximo poll corrige.
   for (const acao of cauda) porId.set(acao.id, acao);
   return [...porId.values()].sort((a, b) => a.seq - b.seq);
 }
@@ -54,4 +60,26 @@ export async function buscarAcoesDaSessao(
     status: 'pending',
   });
   return { items: juntarCaudaEPendentes(cauda.items, pendentes.items), nextCursor: null };
+}
+
+/**
+ * A chave E a função da leitura de ações de UMA sessão, juntas (AT-365).
+ *
+ * `['session-actions', projectId, sessionId]` é UMA entrada de cache, e quem
+ * a escreve tem de escrever a MESMA pergunta. A aba Sessões lia por ela a
+ * PRIMEIRA página crescente (`listActions({ limit: 200 })`, sem `latest`)
+ * enquanto o fio lia a cauda + pendentes: as duas telas trocavam o recorte
+ * uma da outra, e o fio podia passar a mostrar as 200 mais ANTIGAS — o
+ * defeito que a RN-637 fechou, reaberto pela porta do cache. Com o par num
+ * lugar só, não há como gravar a chave com outra consulta.
+ */
+export function chaveDasAcoesDaSessao(projectId: string | undefined, sessionId: string | undefined) {
+  return ['session-actions', projectId, sessionId] as const;
+}
+
+export function consultaDasAcoesDaSessao(projectId: string, sessionId: string) {
+  return {
+    queryKey: chaveDasAcoesDaSessao(projectId, sessionId),
+    queryFn: () => buscarAcoesDaSessao(projectId, sessionId),
+  };
 }

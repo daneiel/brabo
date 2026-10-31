@@ -1,16 +1,17 @@
 import { useState, type KeyboardEvent, type MouseEvent } from 'react';
+import { SEM_AUTOFILL } from '../lib/conversa-comecou';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from '@tanstack/react-router';
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   createSession,
   getMySpend,
-  listActions,
   mensagemDaApi,
   renameSession,
   transitionSession,
 } from '../lib/api-client';
 import { useActiveExecutionSession, useProjectSessions } from '../lib/hooks';
+import { consultaDasAcoesDaSessao } from '../lib/acoes-da-sessao';
 import {
   resumirAcoes,
   somarResumos,
@@ -48,11 +49,11 @@ import styles from './ProjectSessionsTab.module.css';
  */
 const SELO_DO_STATUS: Record<
   SessionStatus,
-  { chave: string; tone: BadgeTone; pulse?: boolean }
+  { chave: string; tone: BadgeTone; pulse?: boolean; emCurso?: boolean }
 > = {
   created: { chave: 'sessionsTab.status.created', tone: 'warning' },
   active: { chave: 'sessionsTab.status.active', tone: 'success', pulse: true },
-  closing: { chave: 'sessionsTab.status.closing', tone: 'accent', pulse: true },
+  closing: { chave: 'sessionsTab.status.closing', tone: 'accent', pulse: true, emCurso: true },
   closed: { chave: 'sessionsTab.status.closed', tone: 'muted' },
   closed_abnormally: { chave: 'sessionsTab.status.closedAbnormally', tone: 'danger' },
 };
@@ -256,15 +257,19 @@ export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps)
   // aqui, uma consulta por linha já listada. Sessões de um projeto são poucas,
   // e o TanStack Query as cacheia junto com as da aba de aprovações.
   //
+  // A leitura é a MESMA do fio (`consultaDasAcoesDaSessao` — cauda das 200 mais
+  // novas + pendentes que a cauda deixou de fora, RN-637), na MESMA chave
+  // (AT-365). Era `listActions({ limit: 200 })`, a primeira página crescente,
+  // gravada na chave do fio: abrir esta aba trocava o recorte do fio pelas 200
+  // ações mais ANTIGAS. O resumo também ganha — a pendente nova de uma sessão
+  // longa passa a contar em "aguardando".
+  //
   // O hook roda SEMPRE, mesmo em erro ou carregamento: com a lista vazia ele
   // não dispara consulta nenhuma, e é o que permite os três estados abaixo
   // serem render condicional em vez de `return` antecipado — `return` antes de
   // um hook muda a ordem dos hooks entre renders.
   const acoesPorSessao = useQueries({
-    queries: sorted.map((session) => ({
-      queryKey: ['session-actions', projectId, session.id],
-      queryFn: () => listActions(projectId, session.id, { limit: 200 }),
-    })),
+    queries: sorted.map((session) => consultaDasAcoesDaSessao(projectId, session.id)),
   });
   const resumoDe = (indice: number): ResumoDeAprovacoes =>
     resumirAcoes(acoesPorSessao[indice]?.data?.items);
@@ -309,6 +314,9 @@ export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps)
             maxLength={LIMITE_DO_NOME}
             placeholder={t('sessionsTab.newSessionForm.namePlaceholder')}
             hint={t('sessionsTab.newSessionForm.nameHint')}
+            // AT-472: o gerenciador de senhas se anexava ao campo e tomava o
+            // foco — a mesma régua do composer e do assistente (RN-736/740).
+            {...SEM_AUTOFILL}
           />
 
           <div className={styles.novaSessaoAcoes}>
@@ -433,6 +441,7 @@ export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps)
                   tone={SELO_DO_STATUS[session.status].tone}
                   dot
                   pulse={SELO_DO_STATUS[session.status].pulse}
+                  emCurso={SELO_DO_STATUS[session.status].emCurso}
                 >
                   {t(SELO_DO_STATUS[session.status].chave)}
                 </Badge>

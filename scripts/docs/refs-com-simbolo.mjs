@@ -57,10 +57,14 @@ function itens(texto) {
   const blocos = [];
   let atual = [];
   let inicio = 1;
-  texto.split('\n').forEach((linha, i) => {
+  const linhas = texto.split('\n');
+  const offsetDaLinha = [0];
+  for (const l of linhas) offsetDaLinha.push(offsetDaLinha.at(-1) + l.length + 1);
+  const bloco = () => ({ inicio, offset: offsetDaLinha[inicio - 1], texto: atual.join('\n') });
+  linhas.forEach((linha, i) => {
     const novoItem = /^\s*[-*]\s/.test(linha);
     if (linha.trim() === '' || novoItem) {
-      if (atual.length > 0) blocos.push({ inicio, texto: atual.join('\n') });
+      if (atual.length > 0) blocos.push(bloco());
       atual = [];
       inicio = i + 1;
       if (linha.trim() === '') {
@@ -70,7 +74,7 @@ function itens(texto) {
     }
     atual.push(linha);
   });
-  if (atual.length > 0) blocos.push({ inicio, texto: atual.join('\n') });
+  if (atual.length > 0) blocos.push(bloco());
   return blocos;
 }
 
@@ -110,7 +114,9 @@ export function extrairRefs(texto) {
       if (!SIMBOLO.test(simbolo)) continue;
 
       const linhaNoDoc = bloco.inicio + bloco.texto.slice(0, inicioDaRef).split('\n').length - 1;
-      refs.push({ caminho, linha: Number(numero), simbolo, linhaNoDoc });
+      // Posição dos DÍGITOS no texto inteiro — é o que a reescrita troca.
+      const posNumero = bloco.offset + fimDaRef - 1 - numero.length;
+      refs.push({ caminho, linha: Number(numero), simbolo, linhaNoDoc, posNumero, tamNumero: numero.length });
     }
   }
   return refs;
@@ -206,8 +212,59 @@ export function aferir(raiz, versionados, arquivos = ARQUIVOS_DE_RN) {
       resultado.total++;
       const { bate, achadoEm } = conferir(linhasDe(resolvido), ref.linha, ref.simbolo);
       if (bate) resultado.batem++;
-      else resultado.naoBatem.push({ ...onde, resolvido, achadoEm });
+      else
+        resultado.naoBatem.push({
+          ...onde,
+          resolvido,
+          achadoEm,
+          novaLinha: novaLinha(linhasDe(resolvido), ref.linha, ref.simbolo),
+        });
     }
   }
   return resultado;
+}
+
+/**
+ * Até quantas linhas do número antigo a reancoragem automática vai (AT-399).
+ * O dono aprovou reancorar quando o símbolo está a POUCAS linhas: um PR
+ * típico desloca dezenas. Mais longe que isso a ocorrência mais próxima pode
+ * ser uma CHAMADA longe da definição, e a ref "moveu longe" volta a pedir
+ * um humano que a releia pelo símbolo.
+ */
+export const DISTANCIA_MAXIMA_DE_REANCORA = 40;
+
+/**
+ * A linha para onde a ref que NÃO bate pode ser reancorada pelo
+ * `pnpm docs:generate` (AT-399): a ocorrência do símbolo mais próxima de `N`
+ * no arquivo, desde que seja ÚNICA a essa distância. `null` — continua pedindo
+ * um humano — quando o símbolo sumiu do arquivo ou há empate (duas ocorrências
+ * à mesma distância: qual é a citada não é decidível) ou a ocorrência está a
+ * mais de `DISTANCIA_MAXIMA_DE_REANCORA` linhas (moveu longe).
+ */
+export function novaLinha(linhasDoArquivo, linha, simbolo) {
+  const padroes = candidatos(simbolo).map(comoPalavra);
+  const ocorrencias = [];
+  linhasDoArquivo.forEach((l, i) => {
+    if (padroes.some((p) => p.test(l))) ocorrencias.push(i + 1);
+  });
+  if (ocorrencias.length === 0) return null;
+  const dist = (i) => Math.abs(i - linha);
+  const menor = Math.min(...ocorrencias.map(dist));
+  const maisPerto = ocorrencias.filter((i) => dist(i) === menor);
+  if (menor > DISTANCIA_MAXIMA_DE_REANCORA) return null;
+  return maisPerto.length === 1 ? maisPerto[0] : null;
+}
+
+/**
+ * Reescreve, no texto de um doc, o número de cada ref com `novaLinha`.
+ * @param {string} texto
+ * @param {{posNumero: number, tamNumero: number, novaLinha: number|null}[]} refs
+ */
+export function reancorar(texto, refs) {
+  let saida = texto;
+  const reancoraveis = refs.filter((x) => x.novaLinha !== null).sort((a, b) => b.posNumero - a.posNumero);
+  for (const r of reancoraveis) {
+    saida = saida.slice(0, r.posNumero) + String(r.novaLinha) + saida.slice(r.posNumero + r.tamNumero);
+  }
+  return saida;
 }

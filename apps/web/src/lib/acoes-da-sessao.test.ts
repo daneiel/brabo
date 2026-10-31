@@ -97,6 +97,17 @@ describe('o canal avisa a fila do PROJETO (AT-299)', () => {
     expect(alvosDoEvento('tool.call')).not.toContain('pendenciasDoProjeto');
   });
 
+  it('RN-705: o merge executado ou recusado invalida a lista de PRs; outra ação não', () => {
+    expect(alvosDoEvento('action.git_merge')).toContain('prs');
+    expect(alvosDoEvento('action.failed')).toContain('prs');
+    expect(alvosDoEvento('action.git_commit')).not.toContain('prs');
+    // RN-841 (AT-510): a PR que nasce também relê a lista.
+    expect(alvosDoEvento('adr.pr_opened')).toContain('prs');
+    expect(alvosDoEvento('infra.pr_opened')).toContain('prs');
+    expect(alvosDoEvento('action.pr_open')).toContain('prs');
+    expect(alvosDoEvento('adr.pr_failed')).not.toContain('prs');
+  });
+
   it('o invalidador bate na chave do projeto por PREFIXO, na hora, e com janela', () => {
     vi.useFakeTimers();
     try {

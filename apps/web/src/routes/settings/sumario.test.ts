@@ -32,8 +32,16 @@ describe('registro de seções de Configurações', () => {
   });
 
   it('`ordemDaSecao` devolve a posição na ordem de render', () => {
-    expect(ordemDaSecao('repository')).toBe(0);
-    expect(ordemDaSecao('key-spend')).toBe(SECOES_DE_CONFIGURACOES.length - 1);
+    expect(ordemDaSecao('models')).toBe(0);
+    expect(ordemDaSecao('instructions')).toBe(SECOES_DE_CONFIGURACOES.length - 1);
+  });
+
+  it('provider, gasto por chave e matriz saíram do projeto (RN-911)', () => {
+    const chaves = SECOES_DE_CONFIGURACOES.map((s) => s.chave) as string[];
+    for (const saiu of ['credentials', 'model-catalog', 'key-spend', 'approval-matrix']) {
+      expect(chaves).not.toContain(saiu);
+      expect(resolverChaveDeSecao(saiu)).toBeUndefined();
+    }
   });
 
   it('`chaveDoId` é a volta de `idDaSecao`', () => {

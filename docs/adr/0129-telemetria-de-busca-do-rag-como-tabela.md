@@ -1,4 +1,4 @@
-# 0129 — A telemetria de busca do RAG é TABELA, com os pesos congelados na linha
+# ADR 0129 — A telemetria de busca do RAG é TABELA, com os pesos congelados na linha
 
 ## Context
 

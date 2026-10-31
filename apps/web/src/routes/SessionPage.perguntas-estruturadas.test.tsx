@@ -198,6 +198,19 @@ describe('SessionPage — perguntas estruturadas do Criativo (RN-162)', () => {
     expect(screen.getByRole('button', { name: 'Enviar respostas' })).toBeDisabled();
   });
 
+  it('RN-693: os campos de texto não convidam o autofill nem o gerenciador de senhas', async () => {
+    eventos.mockReturnValue({ items: [PERGUNTA] });
+    montar();
+    for (const rotulo of ['Qual o nome do produto?', 'Quem são os usuários?']) {
+      const campo = await screen.findByLabelText(rotulo);
+      expect(campo.getAttribute('autocomplete')).toBe('off');
+      expect(campo.getAttribute('data-1p-ignore')).not.toBeNull();
+      expect(campo.getAttribute('data-lpignore')).toBe('true');
+      expect(campo.getAttribute('data-bwignore')).not.toBeNull();
+      expect(campo.getAttribute('data-form-type')).toBe('other');
+    }
+  });
+
   it('Enviar respostas fica desabilitado até todos os campos estarem preenchidos', async () => {
     eventos.mockReturnValue({ items: [PERGUNTA] });
 

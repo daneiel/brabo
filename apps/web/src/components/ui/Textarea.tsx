@@ -1,10 +1,11 @@
+import type React from 'react';
 import type { TextareaHTMLAttributes } from 'react';
 import { useId } from 'react';
 import styles from './Textarea.module.css';
 
 interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
   /** Rótulo visível, associado ao campo por id. */
-  label?: string;
+  label?: React.ReactNode;
   /** Mensagem de erro sob o campo. Também marca o campo como inválido. */
   error?: string | null;
   /** Texto de apoio, mostrado quando não há erro. */

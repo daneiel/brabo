@@ -1,11 +1,13 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getProjectsSummary, getSessionTokenUsage } from './api-client';
-import type { AgentTokenUsage, Handoff, SessionEvent } from './api-types';
+import type { AgentTokenUsage, Handoff, ProjectCardSummary, SessionEvent } from './api-types';
 import { intervaloDaSessao, useCanalDaSessaoVivo } from './canal-vivo';
 import { pollQueParaNoErro } from './query-policy';
 import { AGENTES_DE_CHAT } from './session-readiness';
 import { addressableAgents } from './agents';
+import { devAgentId } from './agent-status';
+import { sessaoTemExecucao } from './sessao-de-execucao';
 
 /**
  * O DESTINATÁRIO da mensagem do composer (RN-631, AT-251).
@@ -60,9 +62,24 @@ function lerEscolha(sessionId: string): string | null {
   }
 }
 
-function gravarEscolha(sessionId: string, agente: string): void {
+/** RN-712: a escolha feita no SELETOR do composer é manual e nunca é
+ *  sobrescrita; a que veio de um gesto (aceite, "Estou pronto") segue o
+ *  último handoff aceito. */
+const CHAVE_MANUAL = (sessionId: string) => `brabo.destinatario.${sessionId}.manual`;
+
+function lerManual(sessionId: string): boolean {
+  try {
+    return window.localStorage.getItem(CHAVE_MANUAL(sessionId)) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function gravarEscolha(sessionId: string, agente: string, manual = false): void {
   try {
     window.localStorage.setItem(CHAVE(sessionId), agente);
+    if (manual) window.localStorage.setItem(CHAVE_MANUAL(sessionId), '1');
+    else window.localStorage.removeItem(CHAVE_MANUAL(sessionId));
   } catch {
     // Sem armazenamento a escolha vale só enquanto a tela está aberta.
   }
@@ -150,6 +167,41 @@ export function useAtivosNoProjeto(
   return resumo?.find((c) => c.projectId === projectId)?.roster.activatedAgents;
 }
 
+/**
+ * RN-889 (AT-540): a execução do PROJETO, lida do MESMO resumo (mesma
+ * `queryKey` de `useAtivosNoProjeto`, nenhuma leitura nova): o roster é o da
+ * sessão mais recente, que é a de execução depois de aprovado o plano.
+ */
+export function useExecucaoNoProjeto(
+  workspaceId: string | undefined,
+  projectId: string,
+): { ativa: boolean; ativados: string[] } {
+  const { data: resumo } = useQuery({
+    queryKey: ['projects-summary', workspaceId],
+    queryFn: () => getProjectsSummary(workspaceId!),
+    enabled: !!workspaceId,
+  });
+  return execucaoDoRoster(resumo?.find((c) => c.projectId === projectId)?.roster);
+}
+
+/**
+ * RN-901 (AT-573): a execução do roster, com os `dev-<modulo>` que a aba
+ * Executores já deriva (RN-661, `rosterFromFacts`). `activatedAgents` nunca
+ * traz dev agent — o dev não grava `agent.activated` —, então a oferta do chat
+ * o perdia. Os dev agents vêm dos `moduleNames` do `module_map` vigente, e só
+ * com a execução ativa, pela MESMA `devAgentId`.
+ */
+export function execucaoDoRoster(
+  roster?: Pick<
+    ProjectCardSummary['roster'],
+    'executionActivated' | 'moduleNames' | 'activatedAgents'
+  >,
+): { ativa: boolean; ativados: string[] } {
+  const ativa = roster?.executionActivated === true;
+  const devs = ativa ? (roster?.moduleNames ?? []).map(devAgentId) : [];
+  return { ativa, ativados: [...(roster?.activatedAgents ?? []), ...devs] };
+}
+
 /** A cadência da terceira fonte de `useAtivadosNaSessaoInteira`. */
 export const INTERVALO_DO_GASTO_COMO_PRESENCA_MS = 60_000;
 
@@ -188,7 +240,11 @@ export function agentesEmConversa(
   for (const h of handoffs) {
     if (h.status === 'accepted') presentes.add(h.toAgent);
   }
-  if (kind === 'criativa') presentes.add(DESTINATARIO_DA_SESSAO_CRIATIVA);
+  // AT-455: a sessão de EXECUÇÃO nasce `criativa` (RN-097), mas não oferece o
+  // Criativo antes de ativado — ali a conversa é com o time de execução.
+  if (kind === 'criativa' && !sessaoTemExecucao(events, ativadosNaSessaoInteira)) {
+    presentes.add(DESTINATARIO_DA_SESSAO_CRIATIVA);
+  }
   return AGENTES_DE_CHAT.filter((agente) => presentes.has(agente));
 }
 
@@ -199,10 +255,27 @@ export function agentesEmConversa(
 export function resolverDestinatario(
   opcoes: readonly string[],
   escolhido: string | null,
+  seguir?: { manual: boolean; handoffs: readonly Handoff[] },
 ): string | null {
+  // RN-712: escolha que NÃO veio do seletor segue o agente do último handoff
+  // aceito (o PO que passou ao Arquiteto deixa de ser o "Para").
+  if (seguir && !seguir.manual && escolhido) {
+    const ultimo = ultimoHandoffAceito(seguir.handoffs);
+    if (ultimo && opcoes.includes(ultimo)) return ultimo;
+  }
   if (escolhido && opcoes.includes(escolhido)) return escolhido;
   if (opcoes.length === 1) return opcoes[0]!;
   return null;
+}
+
+/** O destino do handoff aceito mais recente (por `updatedAt`). */
+export function ultimoHandoffAceito(handoffs: readonly Handoff[]): string | null {
+  let ultimo: Handoff | null = null;
+  for (const h of handoffs) {
+    if (h.status !== 'accepted') continue;
+    if (!ultimo || h.updatedAt > ultimo.updatedAt) ultimo = h;
+  }
+  return ultimo?.toAgent ?? null;
 }
 
 export interface DestinatarioDoChat {
@@ -210,7 +283,8 @@ export interface DestinatarioDoChat {
   destinatario: string | null;
   /** Há mais de uma opção e ninguém foi escolhido: o envio fica travado. */
   precisaEscolher: boolean;
-  escolher: (agente: string) => void;
+  /** `manual` = escolhido no seletor do composer (RN-712). */
+  escolher: (agente: string, manual?: boolean) => void;
 }
 
 export function useDestinatarioDoChat({
@@ -232,21 +306,24 @@ export function useDestinatarioDoChat({
   );
   // Guardado junto com a sessão a que pertence: trocar de sessão sem
   // desmontar a tela não pode herdar a escolha da anterior.
-  const [escolha, setEscolha] = useState<{ sessionId: string; agente: string | null }>(
-    () => ({ sessionId, agente: lerEscolha(sessionId) }),
-  );
+  const [escolha, setEscolha] = useState<{
+    sessionId: string;
+    agente: string | null;
+    manual: boolean;
+  }>(() => ({ sessionId, agente: lerEscolha(sessionId), manual: lerManual(sessionId) }));
   const escolhido =
     escolha.sessionId === sessionId ? escolha.agente : lerEscolha(sessionId);
+  const manual = escolha.sessionId === sessionId ? escolha.manual : lerManual(sessionId);
 
   const escolher = useCallback(
-    (agente: string) => {
-      setEscolha({ sessionId, agente });
-      gravarEscolha(sessionId, agente);
+    (agente: string, manualmente = false) => {
+      setEscolha({ sessionId, agente, manual: manualmente });
+      gravarEscolha(sessionId, agente, manualmente);
     },
     [sessionId],
   );
 
-  const destinatario = resolverDestinatario(opcoes, escolhido);
+  const destinatario = resolverDestinatario(opcoes, escolhido, { manual, handoffs });
   return {
     opcoes,
     destinatario,

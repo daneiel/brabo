@@ -18,7 +18,7 @@
     },
     "reasoning": {
       "label": "thinking",
-      "help": "Exposes explicit reasoning before the response."
+      "help": "Exposes explicit reasoning before the response. Execution dev agents and the automation QA run with reasoning turned off; the other agents leave it to the model."
     },
     "imagem": {
       "label": "generates image",
@@ -41,7 +41,9 @@
     "together": "Together AI",
     "deepinfra": "DeepInfra",
     "bitdeer": "Bitdeer",
-    "vultr": "Vultr"
+    "vultr": "Vultr",
+    "9router": "9Router",
+    "opencode-zen": "OpenCode Zen"
   },
   "price": {
     "free": "free",
@@ -91,7 +93,10 @@
       "deactivated": "Models deactivated",
       "saveError": "Could not save",
       "usesUpdated": "Uses updated",
-      "aliasRefused": "Free-routing aliases cannot be curated"
+      "aliasRefused": "Free-routing aliases cannot be curated",
+      "syncCount_one": "{{count}} model came from the providers.",
+      "syncCount_other": "{{count}} models came from the providers.",
+      "syncActivateLink": "Activate a model →"
     },
     "empty": "No model in the catalog. Register a provider credential and update.",
     "freeRoutingAliasReason": "Showcase price: the bill comes from whichever upstream serves each call. A \"~\" alias cannot be activated — pick a model with a fixed upstream.",
@@ -111,9 +116,24 @@
       "skippedNoCapability": "no catalog listing",
       "skippedNoCredential": "no credential registered",
       "failed": "failed · origin {{origin}}",
-      "novos": "{{count}} new",
+      "novos_one": "{{count}} new",
+      "novos_other": "{{count}} new",
       "deVolta": "{{count}} back",
-      "sumidos": "{{count}} gone"
+      "sumidos_one": "{{count}} gone",
+      "sumidos_other": "{{count}} gone"
+    },
+    "search": {
+      "aria": "Search the model catalog",
+      "placeholder": "Search by name or id (e.g. claude-haiku)",
+      "noMatch": "No catalog model matches “{{term}}”. Search looks at the name and the id; check the spelling or clear the search."
+    },
+    "tabs": {
+      "aria": "Catalog providers",
+      "noKey": "no owner key",
+      "noKeyNote": "This provider has no key from the workspace owner of record, but still has an active model. Deactivate it if you will not use it; without a key nothing new is synced.",
+      "noMatchHere": "No {{provider}} model matches the search or filters. Matches in: {{tabs}}.",
+      "outside_one": "{{count}} left out, no key from the owner of record: {{names}}",
+      "outside_other": "{{count}} left out, no key from the owner of record: {{names}}"
     }
   },
   "picker": {

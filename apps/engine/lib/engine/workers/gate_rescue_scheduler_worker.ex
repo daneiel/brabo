@@ -30,8 +30,16 @@ defmodule Engine.Workers.GateRescueSchedulerWorker do
     # Reagenda ANTES de trabalhar: mesmo raciocínio do ModelSyncSchedulerWorker
     # — se o resgate falhar (ex.: banco fora do ar) e o job for para retry, a
     # corrente periódica já está garantida e não depende do desfecho.
+    #
+    # RN-868 (AT-529): o sucessor também é ÚNICO entre os não-executando. Sem
+    # isso, toda vez que o job em voo coexistia com outro agendado (o
+    # `kickoff/0` do boot com o job anterior `:executing`, um retry que
+    # re-roda o `perform/1`), nascia uma SEGUNDA corrente, e as correntes
+    # nunca se fundiam: medido 11 jobs agendados e a mesma linha de log 11
+    # vezes por tick. Com o `unique:` aqui, correntes duplicadas colapsam
+    # numa só no tick seguinte.
     %{}
-    |> new(schedule_in: interval_seconds())
+    |> new(schedule_in: interval_seconds(), unique: unicidade())
     |> Oban.insert()
 
     Engine.Gates.GateRescuer.run()
@@ -40,7 +48,11 @@ defmodule Engine.Workers.GateRescueSchedulerWorker do
   @doc "Chamado uma vez no boot (ver Engine.Application)."
   def kickoff do
     %{}
-    |> new(unique: [period: interval_seconds() * 2, states: [:available, :scheduled, :retryable]])
+    |> new(unique: unicidade())
     |> Oban.insert()
   end
+
+  # Sem `:executing`: o job em voo não pode barrar o próprio sucessor.
+  defp unicidade,
+    do: [period: interval_seconds() * 2, states: [:available, :scheduled, :retryable]]
 end
