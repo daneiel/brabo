@@ -5,7 +5,8 @@
   "sidebar": {
     "account": "账户",
     "containers": "容器",
-    "providers": "提供商"
+    "providers": "提供商",
+    "spend": "支出"
   },
   "account": {
     "title": "账户",

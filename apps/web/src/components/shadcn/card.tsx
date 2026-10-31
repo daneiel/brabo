@@ -1,17 +1,36 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
 
+// Retematizado com o Card da casa (AT-646): superfície, borda e raio pelos tokens.
+const PADDING = {
+  none: "p-0 [--card-spacing:0px]",
+  sm: "p-[calc(var(--space-2)+var(--space-1))] [--card-spacing:calc(var(--space-2)+var(--space-1))]",
+  md: "p-[var(--space-3)] [--card-spacing:var(--space-3)]",
+  lg: "p-[var(--space-4)] [--card-spacing:var(--space-4)]",
+} as const
+
 function Card({
   className,
-  size = "default",
+  padding = "md",
+  radius = "lg",
+  recorta = false,
   ...props
-}: React.ComponentProps<"div"> & { size?: "default" | "sm" }) {
+}: React.ComponentProps<"div"> & {
+  padding?: keyof typeof PADDING
+  radius?: "md" | "lg"
+  recorta?: boolean
+}) {
   return (
     <div
       data-slot="card"
-      data-size={size}
+      data-padding={padding}
+      data-radius={radius}
+      data-recorta={recorta ? "true" : undefined}
       className={cn(
-        "group/card flex flex-col gap-(--card-spacing) overflow-hidden rounded-xl bg-card py-(--card-spacing) text-sm text-card-foreground ring-1 ring-foreground/10 [--card-spacing:--spacing(4)] has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(3)] data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl",
+        "group/card border border-[color:var(--border)] bg-card text-card-foreground",
+        radius === "md" ? "rounded-[var(--r-md)]" : "rounded-[var(--r-lg)]",
+        PADDING[padding],
+        recorta && "overflow-hidden",
         className
       )}
       {...props}

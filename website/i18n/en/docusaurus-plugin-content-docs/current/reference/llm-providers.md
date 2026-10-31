@@ -113,7 +113,7 @@ Read from the `capabilities` literals in `apps/api/src/infrastructure/llm/` — 
 
 | provider | streaming | tool calling | list_models | embeddings | routing preference | credential | model origin | summarized quirks | source |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `9router` | ? | ? | ? | ? | ? | API key | seed | URL por instalação; Credencial obrigatória; Preço = curadoria manual; Capabilities `false`; Token Saver desligado; Qual upstream serviu | `apps/api/src/infrastructure/llm/nine-router-provider.ts` |
+| `9router` | ? | ? | ? | ? | ? | API key | seed | URL por instalação; Credencial obrigatória; Preço = curadoria manual; Capabilities `false`; Usage corrigido; Token Saver desligado; Qual upstream serviu | `apps/api/src/infrastructure/llm/nine-router-provider.ts` |
 | `anthropic` | yes | yes | yes | no | no | API key | sync + seed | — | `apps/api/src/infrastructure/llm/anthropic-provider.ts` |
 | `bitdeer` | yes | yes | no | no | no | API key | seed | `Authorization: Bearer <chave>` CONFIRMADO; `GET /v1/models` existe e é autenticado; Três ids REAIS de modelo confirmados; Nenhuma peculiaridade de stream/erro confirmada | `apps/api/src/infrastructure/llm/bitdeer-provider.ts` |
 | `deepinfra` | yes | yes | yes | no | no | API key | sync + seed | O catálogo é PÚBLICO — sem autenticação nenhuma; `stream_options.include_usage` confirmado como suportado; Erro no formato padrão | `apps/api/src/infrastructure/llm/deepinfra-provider.ts` |

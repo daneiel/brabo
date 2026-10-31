@@ -100,7 +100,9 @@ sem uso em tela salvo o Button): button, badge, card, alert, label, field,
 separator, input, input-group, textarea, native-select, dialog, collapsible,
 toggle, toggle-group, tabs, table, empty, skeleton, avatar, trace, message,
 bubble, item, tooltip, hover-card, progress e spinner. `components/ai-elements/`
-é a pasta (vazia) dos padrões de IA da AT-647; o `shadcn.css` já a varre.
+guarda os padrões de IA da AT-647 (só apresentação, texto por prop, nada em tela
+ainda); o `shadcn.css` já a varre. Conversa: mensagem, sugestão, campo de prompt
+e confirmação.
 
 ## `design_handoff_brabo/` — o handoff, versionado
 

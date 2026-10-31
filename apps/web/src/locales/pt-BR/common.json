@@ -5,7 +5,8 @@
   "sidebar": {
     "account": "Conta",
     "containers": "Containers",
-    "providers": "Providers"
+    "providers": "Providers",
+    "spend": "Gastos"
   },
   "account": {
     "title": "Conta",

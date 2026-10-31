@@ -5,7 +5,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   createSession,
-  getMySpend,
+  getProjectSpendTeam,
   mensagemDaApi,
   renameSession,
   transitionSession,
@@ -482,13 +482,9 @@ export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps)
  * requisição própria). Os outros dois são onde o handoff pede um dado que o
  * produto não tem hoje, e cada um resolveu diferente:
  *
- * - "Custo do mês" REAPROVEITA `getMySpend` — a MESMA `queryKey` que a aba
- *   Gastos usa para a visão do membro (RN-101/ADR 0063), nunca uma
- *   agregação nova. É o consumo do ATOR autenticado NESTE projeto, não o
- *   total do projeto somando todo mundo: esse total é dado do OWNER
- *   (`porProjeto` em `getWorkspaceSpendReport`), e a aba Criativo é vista
- *   por qualquer membro — mostrar aqui o total geral vazaria gasto alheio
- *   para quem a RN-060/101 não autoriza a ver.
+ * - "Custo do mês" é o total do PROJETO (`getProjectSpendTeam`, ADR 0233 — o
+ *   membro passou a vê-lo, sem provider nem credencial); a mesma
+ *   `queryKey` da aba Gastos, nenhuma agregação nova.
  * - "Taxa ideação → commit" é DECLARADA ausente (RN-230): não existe, em
  *   lugar nenhum do produto, vínculo entre uma sessão criativa e o commit
  *   que ela produziu. Inventar o cálculo aqui seria a mesma classe de erro
@@ -505,13 +501,11 @@ function CriativoKpis({
   const { t } = useTranslation('sessions');
   const ativasAgora = sessoes.filter((session) => session.status === 'active').length;
 
-  // Mesma `queryKey` de `ProjectSpendTab.tsx#MeuConsumo` (`['my-spend',
-  // projectId, DIAS]`, `DIAS = 30`): o TanStack Query dedupe se as duas
-  // telas estiverem montadas, e uma delas nunca refaz a consulta que a
-  // outra já fez.
+  // O total do PROJETO, que o membro passou a ver (ADR 0233, RN-953); a
+  // mesma `queryKey` da aba Gastos dedupe as duas telas.
   const custo = useQuery({
-    queryKey: ['my-spend', projectId, 30],
-    queryFn: () => getMySpend(projectId, 30),
+    queryKey: ['project-spend-team', projectId, 30],
+    queryFn: () => getProjectSpendTeam(projectId, 30),
   });
 
   return (
