@@ -36,6 +36,11 @@
   de `components/ui/Shimmer.tsx` (`LazyMotion` + `domAnimation`, nenhum
   outro arquivo o importa) e em grupo de vendor próprio `vendor-motion` em
   `codeSplitting.groups`, fora da carga inicial.
+  shadcn/ui com Base UI (`base-nova`) + Tailwind 4 (ADR 0232): componentes em
+  `components/shadcn/` (alias `@/`), `src/shadcn.css` DEPOIS do `index.css`, sem
+  preflight até a limpeza final, `dark` sobre `[data-theme]`, cores mapeadas aos
+  tokens do Brabo sem declarar variáveis cruas do shadcn; grupo `vendor-ui` em
+  `codeSplitting.groups`.
   Toda TELA é chunk próprio (`lazyRouteComponent` no `router.tsx`, com o
   `.preload` que o router espera), e os painéis das abas do projeto também
   (`React.lazy` em `project-tabs.ts`) — o `Shell` fica estático. Vendors de

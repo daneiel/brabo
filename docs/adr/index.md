@@ -3,7 +3,7 @@ id: adr-index
 title: Decisões arquiteturais (ADR)
 sidebar_label: Índice de ADRs
 sidebar_position: 0
-description: Os 226 registros de decisão arquitetural do Brabo, agrupados por tema, com o que cada um decidiu.
+description: Os 227 registros de decisão arquitetural do Brabo, agrupados por tema, com o que cada um decidiu.
 keywords: [ADR, decisão arquitetural, arquitetura, histórico]
 ---
 
@@ -302,6 +302,7 @@ Telas, navegação, temas e a estrutura dos maiores arquivos do app web.
 | [0181](0181-tema-preto-neutro.md) | O tema escuro vira PRETO NEUTRO com acento terracota SUAVE, e o claro vira o neutro da mesma família (AT-283/AT-284). Os VALORES semânticos mudam, os nomes não; entra uma escala crua `--neutro-*`. Os números finais vieram de MEDIÇÃO, não do rascunho (`--text-muted` `#86868f` no escuro / `#696972` no claro, o `--on-accent` do escuro vira preto neutro), e os cinco pares de dívida do tema escuro que o [0074](0074-tema-alcancavel-e-o-boot-sob-csp.md) travou por número agora passam 4,5:1 e são afirmados como PISOS; a exceção do botão primário saiu sem mover a matiz da marca. Cor fora dos tokens vai para os tokens: uma cópia conferida dos fallbacks para Mermaid/xterm/minimapa, três tokens de agente por tema, `--overlay`, e um teste que reprova qualquer `var(--x)` que ninguém declara |
 | [0210](0210-animacao-de-texto-com-motion.md) | Animação de texto com `motion` (AT-401): o Shimmer do AI Elements, adaptado a CSS Modules e tokens (base `--text-secondary`, varredura `--text-primary`), mora em `components/ui/Shimmer.tsx` — o único importador de `motion`, carregado por `LazyMotion` + `domAnimation` num chunk próprio `vendor-motion` (26,5 kB gzip, fora da carga inicial); movimento reduzido mantém o texto estático. |
 | [0211](0211-uma-navegacao-so-a-sidebar-absorve-o-trilho.md) | Uma navegação só (AT-404): o trilho vertical do projeto (ADR 0126, `ProjectRail.tsx`) é removido e a lista por projeto da sidebar (`AbasDoProjeto`) absorve tudo o que ele tinha — grupos, aba ativa, os cinco contadores SEPARADOS (o mesmo hook `useContagensDoProjeto` da moldura, sem requisição nova), teclado, um flyout quando recolhida e a gaveta no celular. A moldura da aba Código cai de 492px para 312px (110px recolhida). |
+| [0232](0232-shadcn-com-base-ui-no-apps-web.md) | shadcn/ui com Base UI (`base-nova`) e Tailwind 4 no `apps/web` (AT-645): tema = tokens do Brabo, sem preflight até a limpeza, alias `@/`, `components/shadcn/`, grupo `vendor-ui`; nenhuma tela muda. |
 
 ## Operação, deploy e instalação {#tema-operacao}
 
@@ -367,7 +368,7 @@ Como a documentação é gerada, verificada e publicada.
 - **Um arquivo por decisão**, em `docs/adr/NNNN-short-title.md`, com
   numeração sequencial de 4 dígitos, e título `# ADR NNNN — <título>`
   ([0218](0218-titulo-de-adr-com-prefixo.md)). **Sem reuso de número**, nem quando um ADR
-  é substituído — o próximo é **0231**.
+  é substituído — o próximo é **0233**.
 - **Um tema por decisão**, escolhido por quem escreve o ADR, no mesmo
   PR: uma linha em `docs/adr/temas.yml` e a linha do índice sob a seção desse
   tema, em ordem numérica. Quem revisa confirma. Um tema novo é uma
