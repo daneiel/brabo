@@ -115,7 +115,7 @@ Lido dos literais `capabilities` em `apps/api/src/infrastructure/llm/` — **11 
 
 | provider | streaming | tool calling | list_models | embeddings | preferência de roteamento | credencial | origem dos modelos | quirks resumidos | fonte |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `9router` | ? | ? | ? | ? | ? | chave de API | seed | URL por instalação; Credencial obrigatória; Preço = curadoria manual; Capabilities `false`; Token Saver desligado; Qual upstream serviu | `apps/api/src/infrastructure/llm/nine-router-provider.ts` |
+| `9router` | ? | ? | ? | ? | ? | chave de API | seed | URL por instalação; Credencial obrigatória; Preço = curadoria manual; Capabilities `false`; Usage corrigido; Token Saver desligado; Qual upstream serviu | `apps/api/src/infrastructure/llm/nine-router-provider.ts` |
 | `anthropic` | sim | sim | sim | não | não | chave de API | sync + seed | — | `apps/api/src/infrastructure/llm/anthropic-provider.ts` |
 | `bitdeer` | sim | sim | não | não | não | chave de API | seed | `Authorization: Bearer <chave>` CONFIRMADO; `GET /v1/models` existe e é autenticado; Três ids REAIS de modelo confirmados; Nenhuma peculiaridade de stream/erro confirmada | `apps/api/src/infrastructure/llm/bitdeer-provider.ts` |
 | `deepinfra` | sim | sim | sim | não | não | chave de API | sync + seed | O catálogo é PÚBLICO — sem autenticação nenhuma; `stream_options.include_usage` confirmado como suportado; Erro no formato padrão | `apps/api/src/infrastructure/llm/deepinfra-provider.ts` |
@@ -845,6 +845,7 @@ fallback).
   de contrato exige de todo provider) até o smoke com chave: `toolCalling`,
   `routingPreference` (combo não é `provider.sort`), `embeddings`,
   `promptCaching`, `stickySession`, `priceCeiling`;
+- **Usage corrigido** (AT-638, RN-958): a 0.5.112 soma 2 000 a `prompt_tokens`; o provider lê a versão em `/api/version` e subtrai só nela, grava como veio nas outras (com aviso) e lê o `cached_tokens` do topo. O cache de `cc/*` o 9Router descarta no stream;
 - **Token Saver desligado**: o "RTK Token Saver" do 9Router comprime
   `tool_result`, e o modelo leria algo diferente do que o log gravou. O provider
   manda `x-9router-token-saver: off` em toda chamada.

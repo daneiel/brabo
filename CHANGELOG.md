@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- O usage do 9Router deixa de gravar os 2 000 tokens inventados pela 0.5.112 (versão lida de `/api/version`; outra versão grava como veio e avisa) e passa a ler o `cached_tokens` do topo; o cache de `cc/*` segue perdido pelo 9Router (AT-638, RN-958).
 - O 9Router passa a receber as ferramentas (`toolCalling: true`, provado por smoke), o vínculo de agente/área confere a capability do provider (422) e `buildBody` lança em vez de descartar `tools` calado (AT-637, RN-950).
 - O fio da Sessão acompanha sempre a última mensagem (AT-635, RN-951): cada evento ou ação nova o leva ao fim, mesmo para quem rolou para cima; o container que encolhe e `?highlightEvent` também seguem; o botão "ir ao fim" saiu.
 - Chamada de ferramenta escrita como texto (`<invoke ...>`) deixa de aparecer como resposta no fio: a api repete a chamada uma vez e, se repetir, devolve falha nomeada `tool_call_as_text` sem texto cru (AT-633, RN-949).
