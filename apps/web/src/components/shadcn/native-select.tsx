@@ -5,18 +5,21 @@ import { ChevronDownIcon } from "lucide-react"
 
 type NativeSelectProps = Omit<React.ComponentProps<"select">, "size"> & {
   size?: "sm" | "default"
+  /** `className` vai no `<select>` (como no Select da casa); o invólucro tem o seu. */
+  wrapperClassName?: string
 }
 
 function NativeSelect({
   className,
+  wrapperClassName,
   size = "default",
   ...props
 }: NativeSelectProps) {
   return (
     <div
       className={cn(
-        "group/native-select relative w-fit has-[select:disabled]:opacity-50",
-        className
+        "group/native-select relative inline-block w-full has-[select:disabled]:opacity-50",
+        wrapperClassName
       )}
       data-slot="native-select-wrapper"
       data-size={size}
@@ -24,10 +27,13 @@ function NativeSelect({
       <select
         data-slot="native-select"
         data-size={size}
-        className="h-8 w-full min-w-0 appearance-none rounded-lg border border-input bg-transparent py-1 pr-8 pl-2.5 text-sm transition-colors outline-none select-none selection:bg-primary selection:text-primary-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 data-[size=sm]:h-7 data-[size=sm]:rounded-[min(var(--radius-md),10px)] data-[size=sm]:py-0.5 dark:bg-input/30 dark:hover:bg-input/50 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40"
+        className={cn(
+          "w-full min-w-0 cursor-pointer appearance-none rounded-[var(--radius-md)] border border-[color:var(--border)] bg-[var(--surface-1)] py-[9px] pr-8 pl-3 font-[family-name:var(--font-body)] text-[length:13px] text-[color:var(--text-primary)] transition-[border-color,box-shadow] duration-[120ms] outline-none focus-visible:border-[color:var(--accent)] focus-visible:outline-2 focus-visible:outline-transparent focus-visible:shadow-[0_0_0_3px_var(--focus-ring)] forced-colors:focus-visible:outline-[Highlight] disabled:cursor-not-allowed aria-invalid:border-[color:var(--danger)]",
+          className
+        )}
         {...props}
       />
-      <ChevronDownIcon className="pointer-events-none absolute top-1/2 right-2.5 size-4 -translate-y-1/2 text-muted-foreground select-none" aria-hidden="true" data-slot="native-select-icon" />
+      <ChevronDownIcon className="pointer-events-none absolute top-1/2 right-2.5 size-3.5 -translate-y-1/2 text-[color:var(--text-muted)] select-none" strokeWidth={1.6} aria-hidden="true" data-slot="native-select-icon" />
     </div>
   )
 }

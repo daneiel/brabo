@@ -1,7 +1,8 @@
 import type React from 'react';
 import type { TextareaHTMLAttributes } from 'react';
 import { useId } from 'react';
-import styles from './Textarea.module.css';
+import { Textarea as CampoTextarea } from '@/components/shadcn/textarea';
+import { Field, FieldDescription, FieldError, FieldLabel } from '@/components/shadcn/field';
 
 interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
   /** Rótulo visível, associado ao campo por id. */
@@ -13,39 +14,18 @@ interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
 }
 
 /**
- * Campo de texto multilinha — o primeiro do produto (Fase 12c), nascido do
- * motivo da recusa de promoção de história.
- *
- * Espelha o `Input` de propósito: mesma API (`label`/`error`/`hint`), mesmo
- * `useId()` para o `htmlFor` (o chamador não inventa id), mesmo envelope
- * opcional, mesma composição de classe. Quem já sabe usar um sabe usar o
- * outro, e a folha de estilo é literalmente a mesma via `composes`.
- *
- * Até aqui o único `<textarea>` do app era cru, dentro do `SessionPage` — sem
- * rótulo associado e sem estado de erro. Este componente não o substitui (o
- * campo de chat tem anatomia própria, com envio por Enter), mas é o que
- * qualquer campo multilinha de formulário deve usar.
+ * Campo de texto multilinha. Espelha o `Input`: mesma API (`label`/`error`/
+ * `hint`), mesmo `useId()` para o `htmlFor`. O visual mora em
+ * `shadcn/textarea.tsx` e `shadcn/field.tsx`.
  */
-export function Textarea({
-  label,
-  error,
-  hint,
-  className,
-  id,
-  ...rest
-}: TextareaProps) {
+export function Textarea({ label, error, hint, id, ...rest }: TextareaProps) {
   const gerado = useId();
   const campoId = id ?? gerado;
   const descricaoId = `${campoId}-desc`;
 
-  const classes = [styles.textarea, error && styles.invalid, className]
-    .filter(Boolean)
-    .join(' ');
-
   const campo = (
-    <textarea
+    <CampoTextarea
       id={campoId}
-      className={classes}
       aria-invalid={error ? true : undefined}
       aria-describedby={error || hint ? descricaoId : undefined}
       {...rest}
@@ -55,24 +35,14 @@ export function Textarea({
   if (!label && !error && !hint) return campo;
 
   return (
-    <div className={styles.campo}>
-      {label && (
-        <label className={styles.label} htmlFor={campoId}>
-          {label}
-        </label>
-      )}
+    <Field>
+      {label && <FieldLabel htmlFor={campoId}>{label}</FieldLabel>}
       {campo}
       {error ? (
-        <span id={descricaoId} className={styles.erro} role="alert">
-          {error}
-        </span>
+        <FieldError id={descricaoId}>{error}</FieldError>
       ) : (
-        hint && (
-          <span id={descricaoId} className={styles.hint}>
-            {hint}
-          </span>
-        )
+        hint && <FieldDescription id={descricaoId}>{hint}</FieldDescription>
       )}
-    </div>
+    </Field>
   );
 }
