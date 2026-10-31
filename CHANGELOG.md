@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- O 9Router passa a receber as ferramentas (`toolCalling: true`, provado por smoke), o vínculo de agente/área confere a capability do provider (422) e `buildBody` lança em vez de descartar `tools` calado (AT-637, RN-950).
 - O aviso "Há uma aprovação esperando" do botão "ir ao fim" só realça com ação PENDENTE nova no fio, comparada por ids; ação auto-aprovada ou já decidida não acende mais (AT-624, RN-836).
 
 ### Mudanças
