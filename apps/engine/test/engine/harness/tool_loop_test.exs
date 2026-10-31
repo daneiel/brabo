@@ -94,6 +94,23 @@ defmodule Engine.Harness.ToolLoopTest do
     assert out.corte_pelo_teto == true
   end
 
+  # RN-946 (AT-620): cortada com texto marca chave própria e não retenta.
+  test "corte no meio do texto: marca corte_com_texto, sem corte_pelo_teto", %{ctx: ctx} do
+    Process.put(:fake_llm_turns, [
+      FakeEngineApiClient.final_response("Vou registrá-lo") |> Map.put("truncated", true)
+    ])
+
+    assert {:ok, out} = ToolLoop.run(ctx)
+    assert out.corte_com_texto == true
+    refute Map.has_key?(out, :corte_pelo_teto)
+  end
+
+  test "não cortada com texto: não marca corte_com_texto", %{ctx: ctx} do
+    Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("pronto")])
+    assert {:ok, out} = ToolLoop.run(ctx)
+    refute Map.has_key?(out, :corte_com_texto)
+  end
+
   # RN-810 (AT-484): falha de rede passageira do provider é retentada.
   defp falha_de_rede,
     do:

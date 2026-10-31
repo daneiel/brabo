@@ -238,8 +238,10 @@ defmodule Engine.Harness.ToolLoop.Default do
   # o laço para marcando `corte_pelo_teto`, que o consumidor narra.
   defp parada_sem_chamada(ctx, %{"truncated" => true}, content) do
     cond do
+      # RN-946 (AT-620): cortada NO MEIO do texto não se retenta (muda laço e
+      # custo); marca chave própria, pois `corte_pelo_teto` é da RN-780.
       String.trim(to_string(content)) != "" ->
-        {:ok, ctx}
+        {:ok, Map.put(ctx, :corte_com_texto, true)}
 
       Map.get(ctx, :corte_retentado) ->
         {:ok, Map.put(ctx, :corte_pelo_teto, true)}

@@ -283,4 +283,27 @@ defmodule Engine.Gates.QaEstrategiaAgentTest do
     assert_received {:event_appended, ^project_id, ^session_id,
                      %{type: "agent.error", payload: %{origem: "modelo"}}}
   end
+
+  test "corte no meio do texto (RN-946): o motivo nomeia o corte", %{
+    project_id: project_id,
+    session_id: session_id,
+    dev_state: dev_state
+  } do
+    Process.put(:fake_llm_turns, [
+      FakeEngineApiClient.final_response("Vou registrá-lo") |> Map.put("truncated", true)
+    ])
+
+    assert {:error, motivo} =
+             QaEstrategiaAgent.run(
+               project_id,
+               session_id,
+               "task-1",
+               dev_state,
+               dev_context(),
+               {:ok, []}
+             )
+
+    assert motivo =~ "no meio do texto"
+    refute motivo =~ "parou sem chamar"
+  end
 end
