@@ -227,7 +227,7 @@ foram raciocínio).
   `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:769` (`contagem`),
   `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:207` (`cachedInputTokens`),
   `apps/api/src/application/use-cases/llm/record-llm-usage.use-case.ts:121` (`cachedInputTokens`),
-  `apps/api/src/db/schema/llm.ts:384` (`cachedInputTokens`),
+  `apps/api/src/db/schema/llm.ts:395` (`cachedInputTokens`),
   `apps/api/scripts/medir-execucao.ts:89` (`formatarParteMedida`)
 - **Teste:** `test/infrastructure/llm/openrouter-provider.contract.spec.ts`
   (resposta gravada com as duas partes; sem os detalhes; valor inválido e
@@ -276,7 +276,7 @@ gasto somam. Sem ele, o preço congelado do catálogo produz o número, como no
   `apps/api/src/application/use-cases/llm/send-chat-message.use-case.ts:286` (`custoDaChamada`),
   `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:377` (`extrairCustoReal`),
   `apps/api/src/infrastructure/llm/openrouter-provider.ts:272` (`extrairCustoRealOpenRouter`),
-  `apps/api/src/db/schema/llm.ts:363` (`priceImplicit`)
+  `apps/api/src/db/schema/llm.ts:375` (`priceImplicit`)
 - **Teste:** `test/domain/llm/custo-da-chamada.spec.ts`,
   `test/infrastructure/llm/openrouter-provider.contract.spec.ts` (resposta
   gravada: custo, modelo resolvido, id; BYOK; sem `cost`; provider sem o
@@ -3262,6 +3262,38 @@ Revisa a [RN-583](#rn-583) (o `sort` deixa de ser o único campo de `provider` q
 3. **Sem upstream no teto.** O 404 de uma chamada que levava teto é o erro `LLMPriceCeilingError` (`code: price_ceiling`), nunca `LLMModelNotFoundError`. Os três caminhos de turno (`run-llm-turn`, `stream-llm-turn`, `send-chat-message`) repetem a chamada UMA vez sem teto, avisam no log e não falham o turno; nunca há terceira por este motivo.
 4. **Metering.** `token_usage.price_ceiling_factor` congela o fator que FOI AO FIO (`null` = nada enviado, inclusive na repetição sem teto), no molde do `routing_preference`.
 
-- **Código:** `apps/api/src/domain/llm/routing-preference.ts:108` (`tetoDePreco`); `apps/api/src/domain/llm/routing-preference.ts:132` (`devoRetentarSemTeto`); `apps/api/src/infrastructure/llm/openrouter-provider.ts:221` (`campoDeTetoDePrecoOpenRouter`); `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:569` (`camposDoHub`); `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:340` (`devoRetentarSemTeto`); `apps/api/src/db/schema/llm.ts:403` (`priceCeilingFactor`)
+- **Código:** `apps/api/src/domain/llm/routing-preference.ts:108` (`tetoDePreco`); `apps/api/src/domain/llm/routing-preference.ts:132` (`devoRetentarSemTeto`); `apps/api/src/infrastructure/llm/openrouter-provider.ts:221` (`campoDeTetoDePrecoOpenRouter`); `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:569` (`camposDoHub`); `apps/api/src/application/use-cases/llm/stream-llm-turn.use-case.ts:340` (`devoRetentarSemTeto`); `apps/api/src/db/schema/llm.ts:414` (`priceCeilingFactor`)
 - **Teste:** `apps/api/test/domain/llm/routing-preference.spec.ts` (fator, preço 0, só o OpenRouter declara); `apps/api/test/infrastructure/llm/openrouter-provider.contract.spec.ts` (`sort` e teto mesclados no corpo, sem capability nada vai, 404 com teto é `price_ceiling` e sem teto segue `model_not_found`); `apps/api/test/application/use-cases/llm/stream-llm-turn.use-case.spec.ts` (repete uma vez sem teto, fator `[1.5, null]` no metering); `apps/api/test/infrastructure/llm/openrouter-provider.teto.smoke.spec.ts` (manual, API real)
 - **Origem:** AT-606; ADR [0225](../adr/0225-teto-de-preco-do-upstream-no-openrouter.md)
+
+### RN-952 — O relatório do owner recorta por projeto e por sessão, e o membro vê o total do projeto sem credencial {#rn-952}
+
+Revisa a [RN-101](#rn-101) (o membro deixa de ver SÓ o próprio consumo) e convive com a [RN-060](#rn-060), a [RN-186](#rn-186) e a [RN-187](#rn-187).
+
+1. **Recorte.** `GET workspaces/:workspaceId/spend-report?projectId=` (`owner`) limita o relatório a UM projeto e devolve também `porSessao`. Projeto de outro workspace é 404, igual a inexistente: o filtro nunca vira leitura entre workspaces.
+2. **Membro.** `GET projects/:projectId/spend/team` (`viewer`) devolve o total do projeto e o custo por agente (`porAgente`) e por área do catálogo (`porArea`, `sem-area` quando não há). Nunca provider nem credencial: a rota não tem parâmetro de dimensão e o caso de uso só pede `actor` (ADR [0233](../adr/0233-membro-ve-o-gasto-do-projeto-sem-credencial.md), que revisa o [0063](../adr/0063-duas-audiencias-para-o-mesmo-gasto.md)).
+
+- **Código:** `apps/api/src/application/use-cases/llm/get-workspace-spend-report.use-case.ts:98` (`NotFoundException`); `apps/api/src/application/use-cases/llm/get-project-spend-team.use-case.ts:29` (`GetProjectSpendTeamUseCase`); `apps/api/src/interfaces/http/llm/spend.controller.ts:147` (`getProjectSpendTeam`)
+- **Teste:** `apps/api/test/application/use-cases/llm/spend-audiencias.use-case.spec.ts` (recorte por projeto com sessão, 404 entre workspaces, membro sem provider); `apps/api/test/interfaces/spend.controller.spec.ts` (papéis das rotas)
+- **Origem:** AT-632
+
+### RN-953 — O não-owner vê o PRÓPRIO consumo no workspace, somado por projeto {#rn-953}
+
+Convive com a [RN-101](#rn-101): o ator vem do token, nunca da rota.
+
+`GET workspaces/:workspaceId/spend/me` (`viewer`) devolve só as linhas do chamador, por projeto e por dia. Escopo de ator: a dimensão `provider` não compila (RN-187), e a rota não tem parâmetro de dimensão.
+
+- **Código:** `apps/api/src/application/use-cases/llm/get-my-workspace-spend.use-case.ts:32` (`GetMyWorkspaceSpendUseCase`); `apps/api/src/interfaces/http/llm/spend.controller.ts:120` (`getMyWorkspaceSpend`)
+- **Teste:** `apps/api/test/application/use-cases/llm/spend-audiencias.use-case.spec.ts` (soma por projeto, nunca a linha de outro ator)
+- **Origem:** AT-632
+
+### RN-954 — A cobrança do modelo é uma marca CURADA, e a assinatura é separada do US$ pago {#rn-954}
+
+Convive com a [RN-665](#rn-665) (custo real do OpenRouter) e o preço congelado do ADR 0042.
+
+1. **Marca.** `models.billing` é `api` (padrão), `subscription` ou `free`, gravada pela curadoria em `PATCH workspaces/:workspaceId/models/:modelId/billing` (`owner`, o nível de `…/pricing`). O sync nunca a toca e a linha de `token_usage` não muda.
+2. **Relatório.** Todo bucket e o total ganham `assinaturaMicros` = soma do custo dos modelos `subscription`, contida em `costMicros`; o pago em US$ é `costMicros − assinaturaMicros`.
+
+- **Código:** `apps/api/src/db/schema/llm.ts:175` (`modelBillingEnum`); `apps/api/src/infrastructure/persistence/drizzle/token-usage.repository.ts:357` (`assinaturaMicros`); `apps/api/src/interfaces/http/llm/models.controller.ts:302` (`updateBilling`)
+- **Teste:** `apps/api/test/application/use-cases/llm/spend-audiencias.use-case.spec.ts` (assinatura separada do pago)
+- **Origem:** AT-632
