@@ -915,6 +915,18 @@ detalhar o motivo na URL.
     como na escrita. Ler custa o rate limit do provider, e é por isso que a
     busca tem orçamento: sem teto, um `viewer` poderia inflar a conta do owner
     à vontade.
+- **Três rotas de gasto/curadoria nasceram na AT-632
+  ([RN-952](business-rules/custo.md#rn-952)..[RN-954](business-rules/custo.md#rn-954),
+  [ADR 0233](adr/0233-membro-ve-o-gasto-do-projeto-sem-credencial.md)).**
+  `GET /projects/:projectId/spend/team` (`role:viewer`) devolve o total do
+  projeto e o custo por agente/área a QUALQUER membro, e nunca provider nem
+  credencial: a rota não tem parâmetro de dimensão e o caso de uso só pede
+  `actor`. `GET /workspaces/:workspaceId/spend/me` (`role:viewer`) é o consumo
+  PRÓPRIO somado por projeto: o ator vem do token e o escopo de ator impede
+  `provider` por tipo (RN-187). `PATCH /workspaces/:workspaceId/models/:modelId/billing`
+  (`role:owner`, o nível de `…/pricing`) grava a marca curada. O
+  `?projectId=` do `spend-report` segue `owner` e responde 404 para projeto de
+  outro workspace.
 - **`GET /workspaces/:workspaceId/spend-report` passou a devolver o recorte
   por provider, que é um recorte por CREDENCIAL**
   ([ADR 0076](adr/0076-provider-volta-a-ser-dimensao-de-gasto.md),
@@ -1473,6 +1485,7 @@ detalhar o motivo na URL.
 | POST | `/projects/:projectId/sessions/:sessionId/agents/:agent/resume` | role:developer |
 | POST | `/projects/:projectId/tasks/:taskId/gates/:gate/resume` | role:developer |
 | GET | `/projects/:projectId/spend/me` | role:viewer |
+| GET | `/projects/:projectId/spend/team` | role:viewer |
 | POST | `/projects/:projectId/stories/:storyId/return` | role:developer |
 | PATCH | `/projects/:projectId/stories/:storyId/title` | role:developer |
 | POST | `/projects/:projectId/stories/:storyId/archive` | role:developer |
@@ -1489,6 +1502,7 @@ detalhar o motivo na URL.
 | PUT | `/workspaces/:workspaceId/model-binding` | role:maintainer |
 | GET | `/workspaces/:workspaceId/credential-spend` | role:owner |
 | GET | `/workspaces/:workspaceId/spend-report` | role:owner |
+| GET | `/workspaces/:workspaceId/spend/me` | role:viewer |
 | GET | `/workspaces/:workspaceId/huggingface/models` | role:maintainer |
 | POST | `/workspaces/:workspaceId/huggingface/pull-requests` | role:maintainer |
 | POST | `/workspaces/:workspaceId/huggingface/pull-requests/:id/confirm` | role:maintainer |
@@ -1500,6 +1514,7 @@ detalhar o motivo na URL.
 | POST | `/workspaces/:workspaceId/models/uses` | role:owner |
 | GET | `/workspaces/:workspaceId/models/:modelId/price-changes` | role:maintainer |
 | PATCH | `/workspaces/:workspaceId/models/:modelId/pricing` | role:owner |
+| PATCH | `/workspaces/:workspaceId/models/:modelId/billing` | role:owner |
 | GET | `/workspaces/:workspaceId/projects` | role:viewer |
 | POST | `/workspaces/:workspaceId/projects` | role:maintainer |
 | GET | `/workspaces/:workspaceId/projects-base` | role:maintainer |
