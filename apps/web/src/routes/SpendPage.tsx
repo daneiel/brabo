@@ -8,6 +8,7 @@ import {
   OrcamentosDosProjetos,
 } from '../components/SpendPaineis';
 import styles from './ProjectSpendTab.module.css';
+import pagina from './SpendPage.module.css';
 
 /**
  * A página GLOBAL de gastos (AT-632, ADR 0233): o owner vê o workspace inteiro
@@ -20,8 +21,10 @@ export function SpendPage() {
   const workspaceId = papel.data?.workspace.id;
 
   return (
-    <div className={styles.pagina}>
-      <h1 className={styles.titulo}>{t('global.title')}</h1>
+    <div className={pagina.page}>
+      <header className={pagina.header}>
+        <h1 className={pagina.title}>{t('global.title')}</h1>
+      </header>
       {papel.isLoading && (
         <div className={styles.estado}>
           <Shimmer>{t('shared.loading')}</Shimmer>

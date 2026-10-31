@@ -10,6 +10,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- A página global de Gastos (`/spend`) ganha a moldura das outras páginas globais (padding, cabeçalho e título de página de 22px) e o seletor "Janela" passa a ser o da casa, também na aba Gastos do projeto (AT-648).
 - O 503 do 9Router que embrulha um 4xx do upstream (`[404]: … (reset after 2m)`) passa a ser classificado pelo status de dentro: modelo inexistente vira `model_not_found` em vez de `upstream` passageiro e retomado (AT-639, RN-959).
 - O usage do 9Router deixa de gravar os 2 000 tokens inventados pela 0.5.112 (versão lida de `/api/version`; outra versão grava como veio e avisa) e passa a ler o `cached_tokens` do topo; o cache de `cc/*` segue perdido pelo 9Router (AT-638, RN-958).
 - A sessão ativa não é mais encerrada por uma resposta fora de ordem na checagem de trabalho pendente (AT-642, RN-955): o GET interno é repetido uma vez. "Confirmar arquitetura pronta" e a oferta ao Infra funcionam depois de reabrir a sessão (RN-956); "aborted" é falha de infra (RN-957); o grafo volta sozinho se o Neo4j subiu depois da api, e o aviso diz a causa (RN-960).
