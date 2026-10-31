@@ -140,9 +140,52 @@ defmodule EngineWeb.AgentCommandControllerTest do
     } do
       {:ok, _pid} = CriativoSupervisor.start_agent(session_id, project_id)
 
-      conn = AgentCommandController.readiness(conn, %{"sessionId" => session_id})
+      conn =
+        AgentCommandController.readiness(conn, %{
+          "sessionId" => session_id,
+          "projectId" => project_id
+        })
 
       assert %{"motivo" => "sem_regra_de_negocio"} = json_response(conn, 422)
+    end
+  end
+
+  describe "RN-956: readiness e offer-infra-handoff sobem o agente" do
+    test "com o agente parado, responde pelo aceite (não :noproc)", %{
+      conn: conn,
+      project_id: project_id,
+      session_id: session_id
+    } do
+      conn =
+        AgentCommandController.readiness(conn, %{
+          "sessionId" => session_id,
+          "projectId" => project_id
+        })
+
+      assert conn.status in [202, 422]
+      assert GenServer.whereis(CriativoServer.via(session_id))
+    end
+
+    test "offer-infra-handoff com o Arquiteto parado também sobe o agente", %{
+      conn: conn,
+      project_id: project_id,
+      session_id: session_id
+    } do
+      conn =
+        AgentCommandController.offer_infra_handoff(conn, %{
+          "sessionId" => session_id,
+          "projectId" => project_id
+        })
+
+      assert conn.status in [202, 409, 422]
+      assert GenServer.whereis(Engine.Agents.ArquitetoServer.via(session_id))
+    end
+
+    test "sem projectId: 400 nomeado", %{conn: conn, session_id: session_id} do
+      for acao <- [:readiness, :offer_infra_handoff] do
+        c = apply(AgentCommandController, acao, [conn, %{"sessionId" => session_id}])
+        assert %{"error" => "projectId" <> _} = json_response(c, 400)
+      end
     end
   end
 

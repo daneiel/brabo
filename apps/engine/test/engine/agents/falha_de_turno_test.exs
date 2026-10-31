@@ -224,4 +224,16 @@ defmodule Engine.Agents.FalhaDeTurnoTest do
       assert FalhaDeTurno.origem({:final, "xyz inesperado", "outro"}) == "codigo"
     end
   end
+
+  describe "RN-957: aborted é infra" do
+    test "frame final e texto solto" do
+      assert FalhaDeTurno.origem({:final, "aborted"}) == "infra"
+      assert FalhaDeTurno.origem("aborted") == "infra"
+    end
+
+    test "falha: texto sem a palavra segue como antes, e a rede não muda" do
+      assert FalhaDeTurno.origem("abortado pelo usuário") == "codigo"
+      refute FalhaDeTurno.falha_de_rede?("aborted")
+    end
+  end
 end

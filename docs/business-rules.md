@@ -351,7 +351,7 @@ is already running) never spawn a second task:
 
 - **Where:** `apps/engine/lib/engine/agents/turno_assincrono.ex` (the
   mechanism), `apps/engine/lib/engine/agents/{criativo,po,arquiteto,dev_lead}_server.ex`
-  (the four turn `handle_call`/`handle_cast`), `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:361`
+  (the four turn `handle_call`/`handle_cast`), `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:373`
   (`cancel/2`), `apps/engine/lib/engine_web/router.ex` (`POST
   /internal/sessions/:sessionId/agent/cancel`),
   `apps/api/src/application/use-cases/agents/cancel-agent-turn.use-case.ts`,
@@ -13609,7 +13609,7 @@ semeia no aceite do handoff da Infra), e `container_remove` segue no
 teto absoluto de git push/comando privilegiado ([RN-418](#rn-418)).
 
 - **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:599` (o
-  dispatch de `container_start` consultando antes de propor), `:890`
+  dispatch de `container_start` consultando antes de propor), `:895`
   (`recusa_local_de_subida/2` — a leitura ÚNICA do projeto), `:474` (a
   cláusula de `container_start`: lista de permitidos), `:477` (a recusa
   nomeando `container_start_via_runner`), `:492` (a cláusula da irmã, com a
@@ -15324,9 +15324,9 @@ do lado TypeScript seria a segunda cópia que diverge no primeiro agente novo, e
 uma lista GERADA a partir das cláusulas exigiria parsear Elixir — sem ganho
 para o usuário, que já vê a mensagem e a explicação no fio.
 
-- **Código:** `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:547`
-  (`recusar_mensagem/5`) e `:552` (`registrar_recusa_de_mensagem/3`)
-- **Teste:** `apps/engine/test/engine_web/controllers/agent_command_controller_test.exs:164`
+- **Código:** `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:559`
+  (`recusar_mensagem/5`) e `:560` (`registrar_recusa_de_mensagem/3`)
+- **Teste:** `apps/engine/test/engine_web/controllers/agent_command_controller_test.exs:207`
   (`qa`, o agente do roster que segue sem conversa — até a RN-617 o caso era o
   `infra`, que passou a conversar: o `agent.error` com a frase e o motivo), `:178` (nome desconhecido
   não vira ator), `:194`, `:209`, `:224` (sem sessão: nada gravado — caso de
@@ -15526,7 +15526,7 @@ direta.
   (recusa 409), `apps/web/src/routes/containers-subida.ts:181`
   (`semBrokerParaCicloDeVida`) e `:192` (`conversaoSemBroker`),
   `apps/web/src/routes/settings/ExecutionModeSection.tsx` (botão inerte),
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:861`
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:886`
   (`motivo_da_recusa_da_api`)
 - **Teste:** `apps/api/test/application/use-cases/actions/propose-action.use-case.spec.ts:207`
   (409 nas três ações, e `container_stop` segue `pending` com broker),
@@ -15620,7 +15620,7 @@ PRÓPRIO agente escreveu, e o corte é a única contenção — é o item (d) da
 - **Código:** `apps/engine/lib/engine/agents/dev_lead_server.ex:330`
   (`handle_info/2` do `action_settled`, o `tool.result` em `:271`), `:746`
   (`sentido_do_desfecho/1`);
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:1086`
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:1111`
   (`registrar_resultado/4`), `:317` (a recusa de `propose_infra_pr`)
 - **Teste:** `apps/engine/test/engine/agents/dev_lead_server_test.exs:292` (a
   suspensão não grava), `:364` (a retomada grava o texto que o modelo leu),
@@ -16063,10 +16063,10 @@ não lê `BROKER_URL`; quem recusa é a api ao propor, com 409
 quem clica). A cláusula de pasta usa o carimbo, que não é batimento
 ([RN-468](#rn-468)) — por isso a de runner conectado continua depois dela.
 
-- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:890`
-  (`recusa_local_de_subida`), `:953` (`recusa_por_estado`), `:1000`
-  (`recusa_ja_de_pe`), `:1008` (`recusa_sem_imagem_decidida`), `:1009`
-  (`recusa_pasta_nunca_confirmada`), `:1010` (`recusa_runner_desconectado`);
+- **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:895`
+  (`recusa_local_de_subida`), `:953` (`recusa_por_estado`), `:1025`
+  (`recusa_ja_de_pe`), `:1033` (`recusa_sem_imagem_decidida`), `:1034`
+  (`recusa_pasta_nunca_confirmada`), `:1035` (`recusa_runner_desconectado`);
   `apps/engine/lib/engine/containers/project_container_lifecycle.ex:83`
   (`status_registrado`);
   `apps/engine/lib/engine/session_events/event.ex:120` (`imagem_decidida?`)
@@ -16491,11 +16491,11 @@ deu e com as quatro ferramentas.
   (`handle_cast(:kickoff`), `:270` (`handle_cast({:correct`, a fila), `:280`
   (`handle_cast(:cancel`), `:296` (`handle_call({:user_message`), `:368`
   (`handle_info`), `:379` (`drenar_correcao_pendente`), `:462`
-  (`toolloop.limit_reached`), `:1133` (`concluir`);
+  (`toolloop.limit_reached`), `:1158` (`concluir`);
 
   (`toolloop.limit_reached`), `:1057` (`concluir`);
   `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:44`
-  (`@agentes_de_conversa`), `:192` (a cláusula do `infra`), `:592`
+  (`@agentes_de_conversa`), `:192` (a cláusula do `infra`), `:604`
   (`via_for`); `apps/engine/lib/engine/agents/turno_orfao.ex:57` (`@agentes`);
   `apps/web/src/lib/session-readiness.ts:37` (`AGENTES_DE_CHAT`);
   `apps/web/src/lib/session-handoffs.ts:120` (`ofertasAcionaveis`)
@@ -16854,7 +16854,7 @@ especificação da AT-081 e o mecanismo verificado por provider na AT-161).
   `apps/engine/lib/engine/sessions/engine_api_client.ex:714`
   (`IdiomaDaResposta`), `:822` (`IdiomaDaResposta`);
   `apps/engine/lib/engine/projects/project.ex:64` (`idioma`);
-  `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:515`
+  `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:527`
   (`idioma_da_resposta`);
   `apps/engine/lib/engine/agents/criativo_server.ex:136` (`handle_call`, e a
   MESMA cláusula nos outros seis);
@@ -19099,8 +19099,8 @@ desde então conta como recusa) e quando ela não cabia ao servidor (sem
 roteamento, `runner`) e o modelo não a propôs.
 
 - **Código:** `apps/engine/lib/engine/infra/infra_lead_server.ex:511`
-  (`dispatch_calls`), `:547` (`recusa_pr_repetida_no_lote`), `:1221`
-  (`registrar_subida`), `:1231` (`fechar_subida`), `:1155`
+  (`dispatch_calls`), `:547` (`recusa_pr_repetida_no_lote`), `:1246`
+  (`registrar_subida`), `:1256` (`fechar_subida`), `:1155`
 
   (`dispatch_calls`), `:539` (`recusa_pr_repetida_no_lote`), `:1140`
   (`registrar_subida`), `:1150` (`fechar_subida`), `:1154`
@@ -19366,8 +19366,8 @@ vence — pôr a Infra em "manual" não desliga esta semente.
 - **Código:** `apps/api/src/application/use-cases/agents/accept-handoff.use-case.ts:38`
   (`INFRA_AUTONOMY_SEEDS`);
   `apps/engine/lib/engine/infra/infra_lead_server.ex:265` (`handle_cast`),
-  `:691` (`propor_container_start`), `:772` (`subir_no_aceite`), `:775`
-  (`eleger_candidata`), `:1404` (`passo_da_subida`)
+  `:716` (`propor_container_start`), `:797` (`subir_no_aceite`), `:800`
+  (`eleger_candidata`), `:1429` (`passo_da_subida`)
 
   `:626` (`propor_container_start`), `:707` (`subir_no_aceite`), `:759`
   (`eleger_candidata`), `:1319` (`passo_da_subida`)
@@ -19421,8 +19421,8 @@ instante, a oferta espera o fim do próximo turno dele.
 
 - **Código:** `apps/api/src/application/use-cases/agents/offer-infra-handoff.use-case.ts:15`
   (`ALVOS_DA_CONFIRMACAO`);
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:1138` (`oferecer_ao_dev_lead`),
-  `:1133` (`concluir`), `:368` (`handle_info`), `:1075`
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:1163` (`oferecer_ao_dev_lead`),
+  `:1158` (`concluir`), `:368` (`handle_info`), `:1075`
 
   `:1057` (`concluir`), `:345` (`handle_info`), `:1074`
   (`topico_do_container`);
@@ -19488,7 +19488,7 @@ mudam; a recusa abaixo do mínimo acontece na execução, não ao propor.
   `apps/api/src/application/use-cases/actions/execute-container-start.use-case.ts:175`
   (`resolverRecursosDaSubida`);
   `apps/engine/lib/engine/harness/tools/create_module_map.ex:103` (`normalize`);
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:786`
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:811`
   (`rationale_do_servidor`)
 - **Teste:** `apps/api/test/domain/containers/recursos-minimos.spec.ts:18`
   (soma — caminho feliz), `:35` (mapa antigo = padrão), `:41` (piso e nomeado),
@@ -19676,8 +19676,8 @@ história do PO, prontidão do Criativo, oferta de handoff do Arquiteto.
   (`acordar_pendentes`);
   `apps/engine/lib/engine/agents/reidratacao.ex:160` (`fora_do_historico`);
   `apps/engine/lib/engine/agents/dev_lead_server.ex:254` (`_mensagem_id`);
-  `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:393`
-  (`cancel_queued_message`), `:461` (`responder_ao_aceite`);
+  `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:405`
+  (`cancel_queued_message`), `:468` (`responder_ao_aceite`);
   `apps/api/src/application/use-cases/agents/cancel-queued-agent-message.use-case.ts:35`
   (`CancelQueuedAgentMessageUseCase`);
   `apps/api/src/infrastructure/http-clients/api-to-engine-client.ts:69`
@@ -21037,9 +21037,9 @@ conversa —, e a delegação terminava `failed` com origem `modelo` e um
 - **Onde:** `apps/engine/lib/engine/infra/workflows_agent.ex:61` (`dispensa`),
   `apps/engine/lib/engine/infra/infra_lead.ex:69` (`com_prefixo`),
   `apps/engine/lib/engine/infra/workflows_agent.ex:184` (`parada_sem_ferramenta`),
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:1265` (`finalize`)
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:1290` (`finalize`)
 
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:1265` (`finalize`)
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:1290` (`finalize`)
 - **Teste:** `apps/engine/test/engine/infra/workflows_agent_test.exs` ("RN-710: …")
   e `apps/engine/test/engine/infra/infra_lead_server_test.exs` ("RN-710:
   repositório local dispensa o Workflows …") e
@@ -21335,7 +21335,7 @@ a tool `propose_container_start` sem `network`. A autonomia semeada não muda:
 publicadas da máquina, ADR 0189) está declarado no ADR.
 
 - **Código:** `apps/engine/lib/engine/session_events/event.ex:139` (`rede_do_arquiteto`),
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:784` (`rede_herdada`)
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:809` (`rede_herdada`)
 - **Testes:** `apps/engine/test/engine/infra/infra_lead_server_test.exs` —
   "RN-723: a subida herda a rede `egress` que o Arquiteto declarou" e
   "RN-723: rede do Arquiteto fora do vocabulário — a subida segue `none`"
@@ -21836,7 +21836,7 @@ sem dizer qual.
   cortada pelo limite de tamanho.", qualquer outro — ou nenhum — "Response cut
   off by the length limit.". O Ollama não lê o motivo de parada (fora do
   escopo, declarado).
-- **Onde:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:297`
+- **Onde:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:305`
   (`cortadaPeloTeto`),
   `apps/api/src/infrastructure/llm/anthropic-provider.ts:198` (`finalMessage`),
   `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:240`
@@ -21895,7 +21895,7 @@ sem dizer qual.
   ITERAÇÕES, não o de tokens). Hipótese NÃO medida com chave real: que a
   reserva explica o 402 do TP-01.
 - **Onde:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:38`
-  (`MAX_TOKENS_PADRAO`), `:599` (`flags`)
+  (`MAX_TOKENS_PADRAO`), `:609` (`flags`)
 - **Teste:** `apps/api/test/infrastructure/llm/openai-compatible-provider.contract.spec.ts`
   (sem `maxTokens` o corpo leva `max_tokens: 4096`; com `maxTokens: 123` leva
   123; com `maxTokensField: 'max_completion_tokens'` o campo muda e
@@ -21965,7 +21965,7 @@ sem dizer qual.
   com credencial de 10/10 mostrou que o Haiku 5.5 IGNORA `reasoning.max_tokens`;
   o campo deixou de ser enviado e a folga no `max_tokens` ficou.
 - **Onde:** `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:48`
-  (`ORCAMENTO_DE_RACIOCINIO`), `:605` (`controla`)
+  (`ORCAMENTO_DE_RACIOCINIO`), `:615` (`controla`)
 - **Teste:** `apps/api/test/infrastructure/llm/openai-compatible-provider.contract.spec.ts`
   (`raciocínio com orçamento próprio (RN-741)`: orçamento e teto somado; sem
   raciocínio o corpo não muda; provider sem campo não inventa orçamento)
@@ -22442,7 +22442,7 @@ sem dizer qual.
   `min-content` — com `max-content` ela ficava da largura do texto sem quebra
   (medido no Chromium: 2 236px num balão de 708px) e a última coluna sumia.
 - **Onde:** `apps/api/src/application/use-cases/actions/execute-adr-pr.use-case.ts:96`
-  (`openPullRequest`); `apps/engine/lib/engine/infra/infra_lead_server.ex:1575`
+  (`openPullRequest`); `apps/engine/lib/engine/infra/infra_lead_server.ex:1601`
   (`gravar_texto_do_turno`); `apps/engine/lib/engine/dev/dev_agent_server.ex:1188`
   (`propose_pr`); `apps/web/src/lib/session-destinatario.ts:228`
   (`agentesEmConversa`) e `apps/web/src/lib/session-kind.ts:69`
@@ -22664,7 +22664,7 @@ sem dizer qual.
   chamado pelos três casos de uso de turno. O TODO(humano) da RN-741 fecha com
   essa medição.
 - **Onde:** `apps/api/src/domain/llm/raciocinio-do-agente.ts:18`
-  (`opcoesDeRaciocinio`), `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:605`
+  (`opcoesDeRaciocinio`), `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:615`
   (`controla`), `apps/api/src/application/use-cases/llm/run-llm-turn.use-case.ts:180`
   (`opcoesDeRaciocinio`)
 - **Teste:** `apps/api/test/infrastructure/llm/openai-compatible-provider.contract.spec.ts`
@@ -23464,8 +23464,8 @@ sem dizer qual.
   com recusa nomeada que entra no laço (RN-163) e repassado no
   payload de `open_infra_pr`. Decisão no [ADR 0213](adr/0213-o-entregavel-roda-na-maquina-pelo-compose-da-infra.md).
 - **Onde:** `apps/engine/lib/engine/infra/instrucoes_de_execucao.ex:27`
-  (`validar`), `apps/engine/lib/engine/infra/infra_lead_server.ex:1391`
-  (`build_kickoff`) e `:1292` (`abrir_pr`), e
+  (`validar`), `apps/engine/lib/engine/infra/infra_lead_server.ex:1416`
+  (`build_kickoff`) e `:1317` (`abrir_pr`), e
   `apps/engine/lib/engine/infra/tools/propose_infra_pr.ex:24` (`spec`)
 - **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs`
   (describe "o compose sobe o app e a PR leva `run` (RN-851)")
@@ -24359,7 +24359,7 @@ sem dizer qual.
   reprova, nunca observação (estende a RN-854).
 - **Onde:** `apps/engine/lib/engine/infra/instrucoes_de_execucao.ex:60` (`url`),
   `apps/api/src/domain/infra/run-instructions.ts:77` (`recusaDoRun`),
-  `apps/engine/lib/engine/infra/infra_lead_server.ex:1391` (`build_kickoff`),
+  `apps/engine/lib/engine/infra/infra_lead_server.ex:1416` (`build_kickoff`),
   `apps/engine/lib/engine/dev/dev_agent_server.ex:636` (`clausula_de_openapi`),
   `apps/engine/lib/engine/gates/recorte_da_tarefa.ex:20` (`texto`)
 - **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs`
@@ -25120,7 +25120,7 @@ sem dizer qual.
 ### RN-909 — O 9Router é o 10º provider: URL por instalação, credencial obrigatória, preço público de curadoria {#rn-909}
 
 - **Regra:** o provider `9router` fala com um gateway na máquina do dono. A URL base é `NINE_ROUTER_BASE_URL` (padrão `http://host.docker.internal:20128/v1`), lida a cada uso pelo provider e pelo teste de conexão (`GET /models` com a chave). A credencial é obrigatória. As capabilities de provider são `false` (só `listModels`, `streaming` e, desde a [RN-950](#rn-950), `toolCalling`, provado por smoke com chave) até um smoke com chave provar o resto (ADR 0041). O preço dos modelos não é descoberto: entra por curadoria manual e, por decisão do dono, modelo de assinatura registra o preço público da API equivalente, não zero. O provider manda `x-9router-token-saver: off` em toda chamada, para o 9Router não comprimir o `tool_result`.
-- **Onde:** `apps/api/src/infrastructure/llm/nine-router-provider.ts:87` (`nineRouterConfig`)
+- **Onde:** `apps/api/src/infrastructure/llm/nine-router-provider.ts:156` (`nineRouterConfig`)
 - **Teste:** `apps/api/test/infrastructure/llm/nine-router-provider.contract.spec.ts:109` (capabilities, URL do ambiente, cabeçalho, teste de conexão, parse da fixture sintética); smoke manual em `nine-router-provider.smoke.spec.ts`.
 - **Origem:** AT-576a (EP-026), ADR 0222, decisão do dono de 22/10.
 
@@ -25147,7 +25147,7 @@ sem dizer qual.
 ### RN-914 — O orçamento de raciocínio é por modelo, só para quem o respeita {#rn-914}
 
 - **Regra:** revisa a [RN-782](#rn-782) ([ADR 0223](adr/0223-orcamento-de-raciocinio-por-modelo.md)). Modelo com `models.reasoning_budget` preenchido (curado à mão, nunca pelo sync) e `supportsReasoning` manda `reasoning: { max_tokens: N }` e `max_tokens` = saída visível + N ([RN-741](#rn-741)); só no provider que sabe controlar o raciocínio (hoje o OpenRouter) e nunca no agente com raciocínio desligado ([RN-783](#rn-783)). Hoje só `qwen/qwen3.7-flash` (N = 2048), provado em 22/10: 1024 pedidos, 1024 gastos. Modelo sem orçamento segue a RN-782, corpo byte a byte. `deepseek/deepseek-v4.1-flash` fica sem orçamento: `reasoning.max_tokens`, `effort` e `reasoning_effort` foram ignorados (8192 de raciocínio). `effort` nunca é enviado. O limite contém o raciocínio mas não garante a tool call.
-- **Onde:** `apps/api/src/domain/llm/raciocinio-do-agente.ts:18` (`opcoesDeRaciocinio`), `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:605` (`controla`), `apps/api/src/db/schema/llm.ts:159` (`reasoningBudget`), `apps/api/src/db/migrations/0074_orcamento_de_raciocinio.sql`
+- **Onde:** `apps/api/src/domain/llm/raciocinio-do-agente.ts:18` (`opcoesDeRaciocinio`), `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:615` (`controla`), `apps/api/src/db/schema/llm.ts:159` (`reasoningBudget`), `apps/api/src/db/migrations/0074_orcamento_de_raciocinio.sql`
 - **Teste:** `apps/api/test/infrastructure/llm/openai-compatible-provider.contract.spec.ts` (`modelo com orçamento de raciocínio (RN-914)`), `apps/api/test/domain/llm/raciocinio-do-agente.spec.ts`
 - **Origem:** AT-569 (medição paga de 22/10, `~/brabo-gravacoes/raciocinio-smoke-2026-10-22/resultados.jsonl`)
 
@@ -25175,7 +25175,7 @@ sem dizer qual.
 ### RN-921 — O botão "Retomar" do fio é gesto humano, sem teto, e só vale para o turno interrompido {#rn-921}
 
 - **Regra:** o `agent.error` com `reason: turno_interrompido_por_reinicio` ganha no fio o cartão `RetomarTurnoInterrompido` (objetivo e passos do último plano, "Parou em", botão). O clique chama `POST /projects/:projectId/sessions/:sessionId/agents/:agent/resume` (`developer`; 200 `{ok:true}`; 404 sessão alheia; 409 `turno_nao_interrompido` quando o último desfecho do agente não é a interrupção ou há turno em curso; 409 `agente_sem_retomada`), que pede ao engine `POST /internal/sessions/:sessionId/agent/resume`: ele grava `agent.turn_resumed` com `automatica: false` e manda `:retomar_turno_interrompido` à MESMA `TurnoAssincrono`. Sem teto: cada clique é uma retomada. O cartão some quando algo segue o erro, e a retomada automática vira uma linha discreta. O "sem desfecho" do diário NÃO aparece na tela (o evento não o traz).
-- **Onde:** `apps/api/src/interfaces/http/sessions/agent-resume.controller.ts:23` (`AgentResumeController`), `apps/api/src/application/use-cases/sessions/resume-agent-turn.use-case.ts:29` (`execute`), `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:612` (`resume`), `apps/web/src/routes/RetomarTurnoInterrompido.tsx:23` (`ehTurnoInterrompido`)
+- **Onde:** `apps/api/src/interfaces/http/sessions/agent-resume.controller.ts:23` (`AgentResumeController`), `apps/api/src/application/use-cases/sessions/resume-agent-turn.use-case.ts:29` (`execute`), `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:624` (`resume`), `apps/web/src/routes/RetomarTurnoInterrompido.tsx:23` (`ehTurnoInterrompido`)
 - **Teste:** `apps/api/test/interfaces/http/sessions/agent-resume.controller.spec.ts` (feliz, duas recusas 409, 404, papel); `apps/web/src/routes/RetomarTurnoInterrompido.test.tsx`; ExUnit do `agent_command_controller`
 - **Origem:** AT-582 (EP-031); [ADR 0226](adr/0226-diario-vivo-e-retomada-dos-agentes.md).
 
@@ -25196,7 +25196,7 @@ sem dizer qual.
 ### RN-924 — A correção de gate que chega ao Infra Lead com turno em curso é durável {#rn-924}
 
 - **Regra:** revisa a [RN-617](#rn-617), no molde da fila da [RN-673](#rn-673). `InfraLeadServer.correct/3` grava `infra.correction_queued` (`id`, `gate`, `reason`, diagnóstico até 2 000 caracteres) ANTES do cast e, sem processo, acorda o agente; `iniciar_correcao/2` grava `infra.correction_delivered` (`id`). O `init/1` reconstrói as pendentes (queued menos delivered) e as entrega depois do turno retomado e da fila de mensagens, e o `Rehydrator` acorda o Infra Lead que tem correção pendente no boot. Entregue não é reentregue. O Infra Lead também tem `registrar_plano` e a retomada da RN-920.
-- **Onde:** `apps/engine/lib/engine/infra/infra_lead_server.ex:1625` (`correct`), `:414` (`iniciar_correcao`), `:200` (`init`)
+- **Onde:** `apps/engine/lib/engine/infra/infra_lead_server.ex:1651` (`correct`), `:414` (`iniciar_correcao`), `:200` (`init`)
 - **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs:1980` (`correct/3 grava infra.correction_queued antes do cast`; a pendente sobrevive ao reinício e a entregue não é reentregue)
 - **Origem:** AT-582 (EP-031); [ADR 0226](adr/0226-diario-vivo-e-retomada-dos-agentes.md).
 
@@ -25364,7 +25364,7 @@ sem dizer qual.
 ### RN-950 — O 9Router recebe as ferramentas, o vínculo confere a capability do provider e ferramenta sem capability lança {#rn-950}
 
 - **Regra:** revisa a [RN-909](#rn-909) e completa a [RN-040](business-rules/custo.md#rn-040) com a SEGUNDA camada do ADR 0041. (1) `nineRouterConfig` declara `toolCalling: true`, provado por smoke com chave real em 31/10: 3/3 chamadas em `cc/claude-haiku-5-5` voltaram com `tool_calls` estruturado, 10/10 consistente a temperatura 0 e laço de 3 voltas íntegro. Antes, a capability `false` fazia o `buildBody` descartar `tools` em silêncio e o Criativo escrevia a chamada como XML no fio (AT-637). (2) `assertModelFitsBindingScope` confere também o PROVIDER nos escopos `agent` e `area`: vínculo cujo provider declara `toolCalling: false` é recusado com 422 (`ModelNotFitForAgentScopeError`, causa `provider`), com frase própria. `workspace`, `project` e `session` seguem livres. (3) `buildBody` com ferramentas pedidas e capability `false` LANÇA erro nomeado em vez de descartar. Providers afetados: só o `opencode-zen` tem `toolCalling: false` além do 9Router de antes; vínculos novos de agente/área a ele passam a ser 422 e o chat sem ferramenta segue igual. Vínculo antigo a ele continua gravado e o turno do agente falha nomeado.
-- **Onde:** `apps/api/src/infrastructure/llm/nine-router-provider.ts:87` (`nineRouterConfig`), `apps/api/src/domain/llm/model-capabilities.ts:95` (`assertModelFitsBindingScope`), `apps/api/src/application/use-cases/llm/set-model-binding.use-case.ts:56` (`toolCalling`), `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:598` (`buildBody`)
+- **Onde:** `apps/api/src/infrastructure/llm/nine-router-provider.ts:156` (`nineRouterConfig`), `apps/api/src/domain/llm/model-capabilities.ts:95` (`assertModelFitsBindingScope`), `apps/api/src/application/use-cases/llm/set-model-binding.use-case.ts:56` (`toolCalling`), `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:608` (`buildBody`)
 - **Teste:** `apps/api/test/domain/llm/model-capabilities.spec.ts` (recusa por provider em `agent`/`area`; escopos livres), `apps/api/test/infrastructure/llm/nine-router-provider.contract.spec.ts` (capability `true`), `apps/api/test/contract/llm-provider.contract.ts` (provider sem capability lança nomeado); smoke manual em `nine-router-provider.smoke.spec.ts`.
 - **Origem:** AT-637 (EP-026), TP-01 de 31/10 e medição da AT-631.
 
@@ -25374,3 +25374,44 @@ sem dizer qual.
 - **Onde:** `apps/web/src/lib/session-rolagem.ts:20` (`identidadeDoFio`), `apps/web/src/lib/session-rolagem.ts:36` (`useRolagemDoFio`).
 - **Teste:** `apps/web/src/lib/session-rolagem.test.tsx` (mensagem nova com a pessoa acima, `length` igual com `seq` novo, ação nova, container que encolhe, `highlightEvent`, rajada, streaming, sem conteúdo).
 - **Origem:** AT-635 (EP-031).
+
+### RN-955 — GET interno com conexão envenenada do pool é repetido UMA vez {#rn-955}
+
+- **Regra:** complementa a [RN-742](#rn-742) (AT-428). A resposta atrasada de um pedido que estourou o `receive_timeout` fica no socket de uma conexão do pool do Finch; o GET seguinte que a pega lê a resposta ANTIGA e lança `CaseClauseError {:status, ref, _}`, que a checagem de trabalho pendente da [RN-064](business-rules/custo.md#rn-064) lia como "api fora do ar" e encerrava a sessão ativa. O `req_get` repete o MESMO GET uma vez quando o erro é esse (o Finch já descartou a conexão); só GET, porque POST pode ter tido efeito. Erro de transporte verdadeiro NÃO é repetido, e a RN-064 não muda.
+- **Onde:** `apps/engine/lib/engine/sessions/engine_api_client.ex:2155` (`get_repetindo`).
+- **Teste:** `apps/engine/test/engine/sessions/engine_api_client_isolado_test.exs` (repete e devolve; falha na segunda não tem terceira; timeout verdadeiro não repete).
+- **Origem:** AT-642 (EP-030).
+
+### RN-956 — `readiness` e `offer-infra-handoff` sobem o agente antes de chamar, como `message` {#rn-956}
+
+- **Regra:** depois do fechamento e da reabertura ([RN-649](#rn-649)) os conversacionais não estão de pé, e as duas rotas chamavam o servidor sem `start_agent`: o `:noproc` virava 500 mascarado por "Stale conn". Agora recebem `projectId` e sobem o Criativo/Arquiteto antes (idempotente); sem `projectId`, 400 nomeado.
+- **Onde:** `apps/engine/lib/engine_web/controllers/agent_command_controller.ex:348` (`readiness`), `:355` (`offer_infra_handoff`).
+- **Teste:** `apps/engine/test/engine_web/controllers/agent_command_controller_test.exs` (agente parado sobe; sem `projectId` é 400).
+- **Origem:** AT-642 (EP-030).
+
+### RN-957 — "aborted" é falha de origem `infra` {#rn-957}
+
+- **Regra:** complementa a [RN-059](business-rules/custo.md#rn-059) e a [RN-810](#rn-810). "aborted" é o socket da resposta do provider morrendo no meio do stream; o frame final sem `errorCode` caía em `codigo`. `FalhaDeTurno.origem/1` o classifica `infra` (sem tocar `falha_de_rede?`; a retentativa segue pela [RN-864](#rn-864)).
+- **Onde:** `apps/engine/lib/engine/agents/falha_de_turno.ex:87` (`origem`), `:110`.
+- **Teste:** `apps/engine/test/engine/agents/falha_de_turno_test.exs` ("RN-957").
+- **Origem:** AT-642 (EP-030).
+
+### RN-960 — O `GraphStore` reconecta depois de boot sem Neo4j, e o aviso diz a causa {#rn-960}
+
+- **Regra:** refina o ADR 0099. Boot em que o Neo4j ainda não respondia deixava o driver `null` para a vida do processo. Agora, com config presente, a operação seguinte tenta conectar de novo, no máximo uma vez a cada 30 s; sem config nunca tenta, e `onModuleInit` segue sem lançar. O aviso do `GraphProjector` inclui a causa do erro do driver.
+- **Onde:** `apps/api/src/infrastructure/graph/graph-store.ts:105` (`reconectarSeNecessario`), `apps/api/src/application/graph-projection/graph-projector.ts:106` (`drainOnce`).
+- **Teste:** `apps/api/test/infrastructure/graph/graph-store.spec.ts` ("RN-960"), `apps/api/test/application/graph-projection/graph-projector.spec.ts` ("RN-960").
+- **Origem:** AT-642 (EP-030).
+
+### RN-962 — O compose do entregável usa volume nomeado, nunca bind-mount relativo {#rn-962}
+
+- **Regra:** o Infra Lead pede VOLUME NOMEADO para dados persistentes e `.env.example` só com as variáveis obrigatórias, sem valor. `propose_infra_pr` recusa, ANTES de abrir a PR, arquivo de compose com bind-mount relativo (`- ./pasta:/destino` ou `source: ./pasta`): a pasta nasce `root` na primeira subida e o app non-root não grava nela. A recusa é resultado de ferramenta (entra no laço, RN-163) e registra `tool.result` com `ok: false`.
+- **Onde:** `apps/engine/lib/engine/infra/infra_lead_server.ex:675` (`recusa_de_bind_mount_relativo`).
+- **Teste:** `apps/engine/test/engine/infra/infra_lead_server_test.exs` (volume nomeado passa; formas curta, com aspas e longa são recusadas).
+- **Origem:** AT-644 (EP-031).
+### RN-961 — O aviso de recorte diz que as ferramentas fora dele podem ser pedidas neste passo {#rn-961}
+
+- **Regra:** revisa a [RN-759](#rn-759) (decisão do dono de 31/10, AT-643). O aviso `system` efêmero do passo recortado não diz mais que as ferramentas fora do recorte "voltam nas próximas voltas" nem que ela "volta no seguinte": o recorte é do PASSO, e a RN-759 mandava o agente esperar por um passo que, para o modelo, pode não vir. O texto novo diz a verdade do ADR 0179: as demais seguem disponíveis e podem ser pedidas neste mesmo passo, e o agente não deve concluir que não tem a ferramenta nem encerrar o turno esperando por ela; se precisar de uma delas e responder sem ferramenta, o passo é refeito com o catálogo completo (a repetição da regra 10 do ADR 0179, pelo mecanismo que a fachada já tem). Não muda o piso, a política do Jev nem a montagem do menu: só o texto do aviso.
+- **Onde:** `apps/api/src/domain/llm/tool-router.ts:412` (`avisoDeRecorte`).
+- **Teste:** `apps/api/test/domain/llm/aviso-de-recorte.spec.ts` (fixa o texto novo e reprova o antigo, "voltam nas próximas voltas" e "volta no seguinte").
+- **Origem:** AT-643 (EP-030): o `write_file` e o `terminal` saíam do menu do dev no Jev, e o aviso mandava esperar por uma volta que o modelo não tinha como pedir.

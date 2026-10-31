@@ -34,3 +34,32 @@ defmodule Engine.Sessions.EngineApiClientIsoladoTest do
              EngineApiClient.Live.isolado(fn -> raise "caiu" end)
   end
 end
+
+defmodule Engine.Sessions.EngineApiClientGetRepetidoTest do
+  # RN-955: conexão envenenada do pool → o GET é repetido UMA vez.
+  use ExUnit.Case, async: true
+
+  alias Engine.Sessions.EngineApiClient.Live
+
+  defp envenenada, do: {:error, %CaseClauseError{term: {:status, make_ref(), 200}}}
+
+  defp sequencia(respostas) do
+    {:ok, agente} = Agent.start_link(fn -> respostas end)
+
+    fn -> Agent.get_and_update(agente, fn [h | t] -> {h, t} end) end
+  end
+
+  test "repete uma vez e devolve a segunda resposta" do
+    assert {:ok, 200} = Live.get_repetindo(sequencia([envenenada(), {:ok, 200}]))
+  end
+
+  test "falha na segunda tentativa devolve o erro, sem terceira" do
+    assert {:error, %CaseClauseError{}} =
+             Live.get_repetindo(sequencia([envenenada(), envenenada(), {:ok, 200}]))
+  end
+
+  test "erro de transporte verdadeiro não é repetido" do
+    erro = {:error, %Req.TransportError{reason: :timeout}}
+    assert ^erro = Live.get_repetindo(sequencia([erro, {:ok, 200}]))
+  end
+end

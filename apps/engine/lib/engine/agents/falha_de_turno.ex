@@ -91,6 +91,8 @@ defmodule Engine.Agents.FalhaDeTurno do
       credito_esgotado?(texto) -> "infra"
       # RN-810: erro de rede/DNS do provider é INFRA.
       texto_de_rede?(texto) -> "infra"
+      # RN-957: socket da resposta do provider morreu no meio do stream.
+      texto =~ ~r/\baborted\b/ -> "infra"
       texto =~ ~r/budget|orçamento/iu -> "politica"
       texto =~ ~r/credencial/iu -> "politica"
       texto =~ ~r/modelo vinculado|binding/iu -> "politica"
@@ -105,7 +107,7 @@ defmodule Engine.Agents.FalhaDeTurno do
   # Forma que este módulo não conhece. Mesma leitura: quem não soube classificar
   # foi o nosso código, e é aqui que a cláusula que falta deve nascer.
   def origem(texto) when is_binary(texto) do
-    if texto_de_rede?(texto), do: "infra", else: "codigo"
+    if texto_de_rede?(texto) or texto =~ ~r/\baborted\b/, do: "infra", else: "codigo"
   end
 
   def origem(_qualquer), do: "codigo"

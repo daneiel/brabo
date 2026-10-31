@@ -53,7 +53,7 @@ export default defineConfig({
             {
               // ADR 0232: shadcn/Base UI. Lista de PERMITIDOS, como as acima.
               name: 'vendor-ui',
-              test: /[\\/]node_modules[\\/](@base-ui|class-variance-authority|clsx|tailwind-merge|lucide-react)[\\/]/,
+              test: /[\\/]node_modules[\\/](@base-ui|@floating-ui|use-sync-external-store|class-variance-authority|clsx|tailwind-merge|lucide-react)[\\/]/,
             },
           ],
         },
