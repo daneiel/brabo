@@ -14,6 +14,8 @@ import { TogetherProvider } from './together-provider';
 import { DeepInfraProvider } from './deepinfra-provider';
 import { BitdeerProvider } from './bitdeer-provider';
 import { VultrProvider } from './vultr-provider';
+import { NineRouterProvider } from './nine-router-provider';
+import { OpenCodeZenProvider } from './opencode-zen-provider';
 import { LLMProviderRegistryImpl } from './llm-provider-registry';
 import { LLMCredentialConnectionTesterImpl } from './llm-credential-connection-tester';
 import { ToolRouter } from '../../application/ports/tool-router.port';
@@ -30,6 +32,8 @@ import { JevToolRouter } from './jev-tool-router';
     DeepInfraProvider,
     BitdeerProvider,
     VultrProvider,
+    NineRouterProvider,
+    OpenCodeZenProvider,
     { provide: LLMProviderRegistry, useClass: LLMProviderRegistryImpl },
     { provide: EncryptionService, useClass: EnvelopeEncryptionService },
     { provide: TokenEstimator, useClass: GptTokenizerEstimator },
@@ -51,7 +55,7 @@ import { JevToolRouter } from './jev-tool-router';
     // `LLMProviderRegistry` só sabe devolver o tipo genérico). Exportar a
     // classe concreta é o jeito de `ConfirmModelPullUseCase` chegar nela sem
     // forçar o contrato compartilhado a carregar um método que só um dos
-    // nove providers implementa.
+    // onze providers implementa.
     OllamaProvider,
   ],
 })

@@ -24,6 +24,7 @@ export function OQueOPilotoLibera({ recolhido = false }: { recolhido?: boolean }
           <li>{t('autoModeTeam.released.commands')}</li>
           <li>{t('autoModeTeam.released.compound')}</li>
           <li>{t('autoModeTeam.released.commitBranch')}</li>
+          <li>{t('autoModeTeam.released.pushPr')}</li>
           <li>{t('autoModeTeam.released.alwaysAllow')}</li>
         </ul>
       </div>

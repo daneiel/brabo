@@ -233,7 +233,7 @@ describe('voltar a herdar — a api recusa', () => {
   /**
    * Qualquer outro status continua sendo falha de verdade, e aí a frase da api
    * é a informação mais útil que existe — mesma gramática de
-   * `AreaModelsSection`.
+   * a caixa da área.
    */
   it('outro status: a frase da api vai para a tela, e a linha NÃO é relida', async () => {
     clearAgentModelBinding.mockRejectedValue(

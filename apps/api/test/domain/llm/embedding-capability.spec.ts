@@ -13,11 +13,17 @@ const QUE_EMBEDA: LLMProviderCapabilities = {
   listModels: true,
   embeddings: true,
   routingPreference: false,
+  stickySession: false,
+  priceCeiling: false,
+  promptCaching: false,
 };
 const QUE_NAO_EMBEDA: LLMProviderCapabilities = {
   ...QUE_EMBEDA,
   embeddings: false,
   routingPreference: false,
+  stickySession: false,
+  priceCeiling: false,
+  promptCaching: false,
 };
 
 describe('capability de embedding em duas camadas (ADR 0075)', () => {

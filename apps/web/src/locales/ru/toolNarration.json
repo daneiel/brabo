@@ -1,0 +1,30 @@
+{
+  "tools": {
+    "listar_regras_de_negocio": "Перечитывает бизнес-правила проекта",
+    "listar_backlog": "Проверяет, что уже есть в бэклоге",
+    "listar_metricas_de_produto": "Смотрит метрики продукта",
+    "create_epic": "Создаёт эпик",
+    "create_story": "Пишет историю",
+    "create_task": "Добавляет задачу",
+    "ask_structured_questions": "Готовит вопросы для вас",
+    "offer_handoff": "Готовит передачу эстафеты",
+    "emit_artifact": "Записывает то, что узнал",
+    "create_module_map": "Рисует карту модулей",
+    "assign_story_modules": "Связывает истории с модулями",
+    "choose_project_image": "Выбирает образ проекта",
+    "create_c4_diagram": "Рисует диаграмму C4",
+    "route_modules_to_infra": "Сопоставляет модули с образами-кандидатами",
+    "declare_module_contracts": "Объявляет контракты между модулями",
+    "propose_adr": "Составляет ADR",
+    "emit_insight": "Записывает инсайт",
+    "propose_execution_plan": "Составляет план выполнения",
+    "assess_implementability": "Оценивает, реализуема ли история",
+    "propose_prototype": "Рисует прототип",
+    "propose_rfc": "Составляет RFC",
+    "validate_infra_file": "Проверяет файл инфраструктуры",
+    "propose_infra_pr": "Готовит PR инфраструктуры",
+    "propose_container_start": "Предлагает запустить контейнер",
+    "container_start_via_runner": "Предлагает запустить контейнер на вашей машине"
+  },
+  "fallback": "Использует {{tool}}…"
+}

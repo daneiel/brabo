@@ -25,6 +25,7 @@ const proposeAction = vi.fn();
 const approveAction = vi.fn();
 const denyAction = vi.fn();
 const approveAlwaysAction = vi.fn();
+const getProjectPendingActions = vi.fn();
 
 vi.mock('../lib/api-client', async (importOriginal) => {
   const original = await importOriginal<typeof import('../lib/api-client')>();
@@ -36,6 +37,7 @@ vi.mock('../lib/api-client', async (importOriginal) => {
     approveAction: (...args: unknown[]) => approveAction(...args),
     denyAction: (...args: unknown[]) => denyAction(...args),
     approveAlwaysAction: (...args: unknown[]) => approveAlwaysAction(...args),
+    getProjectPendingActions: (...args: unknown[]) => getProjectPendingActions(...args),
   };
 });
 
@@ -168,6 +170,7 @@ beforeEach(() => {
   useLatestSession.mockReturnValue({ latest: sessaoRecente() });
   useProjectPendingActions.mockReturnValue({ data: [] });
   getCodeDiff.mockResolvedValue({ pullRequestId: '', files: [], truncated: false });
+  getProjectPendingActions.mockResolvedValue([]);
 });
 
 describe('ProjectPrsTab — o bug de visibilidade não existe por desenho', () => {
@@ -247,6 +250,44 @@ describe('ProjectPrsTab — botão Merge', () => {
     );
   });
 
+  it('RN-822 (AT-493): o 1º clique em Merge abre o cartão sem esperar a fila do projeto voltar', async () => {
+    getCodePullRequests.mockResolvedValue({ items: [prAberta()], truncated: false });
+    // A fila do projeto segue com o retrato ANTERIOR ao clique (o refetch
+    // ainda não voltou, ou voltou com uma leitura que já estava no ar).
+    useProjectPendingActions.mockReturnValue({ data: [], dataUpdatedAt: 1 });
+    proposeAction.mockResolvedValue(acaoDeMerge());
+
+    montar();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Merge' }));
+
+    expect(await screen.findByRole('button', { name: 'Aprovar' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Merge' })).not.toBeInTheDocument();
+  });
+
+  it('RN-822: a fila lida DEPOIS da proposta, sem ela, vence o cartão local', async () => {
+    getCodePullRequests.mockResolvedValue({ items: [prAberta()], truncated: false });
+    useProjectPendingActions.mockReturnValue({ data: [], dataUpdatedAt: 1 });
+    proposeAction.mockResolvedValue(acaoDeMerge());
+
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const arvore = () => (
+      <QueryClientProvider client={client}>
+        <ToastProvider>
+          <ProjectPrsTab projectId="proj-1" />
+        </ToastProvider>
+      </QueryClientProvider>
+    );
+    const { rerender } = render(arvore());
+    fireEvent.click(await screen.findByRole('button', { name: 'Merge' }));
+    await screen.findByRole('button', { name: 'Aprovar' });
+
+    // Alguém decidiu noutra aba: a leitura nova da fila já não a traz.
+    useProjectPendingActions.mockReturnValue({ data: [], dataUpdatedAt: Date.now() + 60_000 });
+    rerender(arvore());
+    expect(await screen.findByRole('button', { name: 'Merge' })).toBeInTheDocument();
+  });
+
   it('gate bloqueado desabilita o Merge com o motivo em tooltip', async () => {
     getCodePullRequests.mockResolvedValue({ items: [prAberta()], truncated: false });
     useBacklog.mockReturnValue({
@@ -261,6 +302,25 @@ describe('ProjectPrsTab — botão Merge', () => {
     const botaoMerge = await screen.findByRole('button', { name: 'Merge' });
     expect(botaoMerge).toBeDisabled();
     expect(botaoMerge.getAttribute('title')).toBe('QA pediu mudanças');
+  });
+
+  it('AT-451: tarefa bloqueada com gate pendente NÃO diz que o merge segue disponível', async () => {
+    getCodePullRequests.mockResolvedValue({ items: [prAberta()], truncated: false });
+    useBacklog.mockReturnValue({
+      data: epicComTask({ blocked: true, blockedReason: 'QA pediu mudanças', gateStatus: null }),
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+
+    montar();
+
+    const botaoMerge = await screen.findByRole('button', { name: 'Merge' });
+    expect(botaoMerge).toBeDisabled();
+    expect(screen.queryByTestId('aviso-gate-pendente')).toBeNull();
+    const aviso = screen.getByTestId('aviso-merge-indisponivel');
+    expect(aviso).toHaveTextContent('qa-verificada');
+    expect(aviso.textContent).not.toMatch(/segue disponível|stays available/);
   });
 
   it('gate de QA pendente AVISA em texto, nomeando o gate, e o Merge segue ativo (AT-249, RN-663)', async () => {
@@ -404,5 +464,89 @@ describe('ProjectPrsTab — o gate do container não é erro genérico (achado d
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     expect(screen.getByText('Tentar de novo')).toBeInTheDocument();
     expect(screen.queryByText('A lista de PRs ainda não está liberada')).not.toBeInTheDocument();
+  });
+});
+
+describe('ProjectPrsTab — a recusa de merge aparece (RN-705)', () => {
+  it('conflito de merge: mostra motivo e arquivos, diz que é preciso resolver, e o Merge segue ativo', async () => {
+    getCodePullRequests.mockResolvedValue({ items: [prAberta()], truncated: false });
+    getProjectPendingActions.mockResolvedValue([
+      acaoDeMerge({
+        status: 'failed',
+        executionResult: {
+          kind: 'git_merge',
+          failed: true,
+          error: 'conflito de merge na PR pr-a: package.json',
+          pullRequestId: 'pr-a',
+          conflictingFiles: ['package.json'],
+        } as unknown as ProposedAction['executionResult'],
+      }),
+    ]);
+
+    montar();
+
+    const aviso = await screen.findByTestId('aviso-merge-recusado');
+    expect(aviso.textContent).toContain('conflito de merge na PR pr-a');
+    expect(aviso.textContent).toContain('Arquivo em conflito: package.json');
+    expect(aviso.textContent).toContain('Resolva o conflito antes');
+    expect(screen.getByRole('button', { name: 'Merge' })).not.toBeDisabled();
+    expect(getProjectPendingActions).toHaveBeenCalledWith('proj-1', {
+      actionType: 'git_merge',
+      status: 'failed',
+    });
+  });
+
+  it('recusa de OUTRA PR não aparece nesta', async () => {
+    getCodePullRequests.mockResolvedValue({ items: [prAberta()], truncated: false });
+    getProjectPendingActions.mockResolvedValue([
+      acaoDeMerge({
+        status: 'failed',
+        payload: { pullRequestId: 'pr-outra' },
+        executionResult: { kind: 'git_merge', failed: true, error: 'x' } as unknown as ProposedAction['executionResult'],
+      }),
+    ]);
+
+    montar();
+
+    await screen.findByRole('button', { name: 'Merge' });
+    expect(screen.queryByTestId('aviso-merge-recusado')).toBeNull();
+  });
+
+  it('aprovar o merge invalida a lista de PRs (a mergeada sai de Abertas sem recarregar)', async () => {
+    getCodePullRequests.mockResolvedValue({ items: [prAberta()], truncated: false });
+    useProjectPendingActions.mockReturnValue({ data: [acaoDeMerge()] });
+    approveAction.mockResolvedValue({});
+
+    montar();
+    await waitFor(() => expect(getCodePullRequests).toHaveBeenCalledTimes(1));
+    fireEvent.click(await screen.findByRole('button', { name: /Aprovar/ }));
+
+    await waitFor(() => expect(getCodePullRequests).toHaveBeenCalledTimes(2));
+  });
+
+  describe('RN-816 (AT-480): o Merge não muda de lugar quando o backlog chega', () => {
+    it('com o backlog carregando, o Merge vem primeiro e a esteira tem o lugar reservado', async () => {
+      getCodePullRequests.mockResolvedValue({ items: [prAberta()], truncated: false });
+      useBacklog.mockReturnValue({ data: undefined, isPending: true, isError: false, error: null, refetch: vi.fn() });
+
+      montar();
+
+      const botaoMerge = await screen.findByRole('button', { name: 'Merge' });
+      const reserva = screen.getByTestId('reserva-da-esteira');
+      // O botão vem ANTES da reserva no DOM: o que chega depois fica abaixo dele.
+      expect(botaoMerge.compareDocumentPosition(reserva) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it('com o backlog lido, a reserva sai e a esteira entra no MESMO lugar, abaixo do botão', async () => {
+      getCodePullRequests.mockResolvedValue({ items: [prAberta()], truncated: false });
+      useBacklog.mockReturnValue({ data: epicComTask(), isPending: false, isError: false, error: null, refetch: vi.fn() });
+
+      montar();
+
+      const botaoMerge = await screen.findByRole('button', { name: 'Merge' });
+      expect(screen.queryByTestId('reserva-da-esteira')).not.toBeInTheDocument();
+      const esteira = screen.getByText('Implementar A');
+      expect(botaoMerge.compareDocumentPosition(esteira) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
   });
 });

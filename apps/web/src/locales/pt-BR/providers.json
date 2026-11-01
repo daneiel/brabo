@@ -1,0 +1,16 @@
+{
+  "title": "Providers",
+  "subtitle": "Chaves, capacidades, modelos e gasto dos providers de LLM. Vale para todos os projetos.",
+  "capabilities": {
+    "title": "O que cada provider sabe fazer",
+    "note": "Verdadeiro só existe com smoke contra a api real; \"não provado\" é a ausência de prova, não prova de ausência.",
+    "provider": "Provider",
+    "proven": "provado",
+    "notProven": "não provado",
+    "loadError": "Não foi possível carregar as capacidades dos providers.",
+    "outside_zero": "Nenhum provider de fora.",
+    "outside_one": "{{count}} de fora, sem chave do titular: {{names}}",
+    "outside_other": "{{count}} de fora, sem chave do titular: {{names}}"
+  },
+  "routing": "O critério de roteamento do OpenRouter é escolhido no modelo do agente ou da área, em Configurações do projeto; não há controle aqui. No OpenRouter, cada chamada também leva um teto de preço (1,5 × o preço do catálogo): só um upstream dentro dele atende; se nenhum atende, a chamada repete uma vez sem teto."
+}

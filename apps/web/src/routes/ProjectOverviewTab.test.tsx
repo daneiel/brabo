@@ -6,6 +6,7 @@ import type { ReactNode } from 'react';
 import i18next from 'i18next';
 import { initReactI18next, I18nextProvider } from 'react-i18next';
 import overviewPtBR from '../locales/pt-BR/overview.json';
+import executorsPtBR from '../locales/pt-BR/executors.json';
 import { ProjectOverviewTab } from './ProjectOverviewTab';
 import { ApiError } from '../lib/api-client';
 import { ToastProvider } from '../components/ui/ToastProvider';
@@ -16,7 +17,7 @@ import { ToastProvider } from '../components/ui/ToastProvider';
 function novaInstanciaI18n() {
   const instancia = i18next.createInstance();
   void instancia.use(initReactI18next).init({
-    resources: { 'pt-BR': { overview: overviewPtBR } },
+    resources: { 'pt-BR': { overview: overviewPtBR, executors: executorsPtBR } },
     lng: 'pt-BR',
     fallbackLng: 'pt-BR',
     defaultNS: 'overview',
@@ -47,6 +48,7 @@ const listSessionEvents = vi.fn();
 const listHandoffs = vi.fn();
 const listActions = vi.fn();
 const listBacklog = vi.fn();
+const unblockTaskMock = vi.fn();
 const getArchitecture = vi.fn();
 const getSessionTokenUsage = vi.fn();
 const listModels = vi.fn();
@@ -57,6 +59,8 @@ const listWorkspaces = vi.fn();
 const getProjectsSummary = vi.fn();
 const activateExecutionMock = vi.fn();
 const getRepository = vi.fn();
+const listCredentials = vi.fn();
+const getActiveExecutionSession = vi.fn();
 
 vi.mock('../lib/api-client', async () => {
   const real = await vi.importActual<typeof import('../lib/api-client')>('../lib/api-client');
@@ -80,10 +84,12 @@ vi.mock('../lib/api-client', async () => {
     getProjectsSummary: (...args: unknown[]) => getProjectsSummary(...args),
     activateExecution: (...args: unknown[]) => activateExecutionMock(...args),
     getRepository: (...args: unknown[]) => getRepository(...args),
+    listCredentials: (...args: unknown[]) => listCredentials(...args),
+    getActiveExecutionSession: (...args: unknown[]) => getActiveExecutionSession(...args),
     requestParallelization: vi.fn(),
     rearmDevAgent: vi.fn(),
     setAgentAutonomy: vi.fn(),
-    unblockTask: vi.fn(),
+    unblockTask: (...args: unknown[]) => unblockTaskMock(...args),
   };
 });
 
@@ -225,6 +231,8 @@ function montar() {
 beforeEach(() => {
   vi.clearAllMocks();
   listSessions.mockResolvedValue([SESSAO]);
+  getActiveExecutionSession.mockResolvedValue(null);
+  listCredentials.mockResolvedValue([{ id: 'c-1', provider: 'openrouter', createdAt: '', updatedAt: '' }]);
   listSessionEvents.mockResolvedValue({ items: EVENTOS, nextCursor: null });
   listHandoffs.mockResolvedValue([HANDOFF_INFRA]);
   listActions.mockResolvedValue({ items: [], nextCursor: null });
@@ -500,5 +508,192 @@ describe('ProjectOverviewTab — bindings em lote (AT-339)', () => {
     await vi.waitFor(() => expect(getResolvedModelBindings).toHaveBeenCalled());
     expect(grid.queryByText(/Modelo Um/)).not.toBeInTheDocument();
     expect(getAgentModelBinding).not.toHaveBeenCalled();
+  });
+});
+
+describe('primeiros passos (RN-708, AT-372)', () => {
+  it('projeto novo: os três passos pendentes, com o link de cada um', async () => {
+    listSessions.mockResolvedValue([]);
+    listCredentials.mockResolvedValue([]);
+    getResolvedModelBindings.mockResolvedValue({ agents: [{ key: 'criativo', binding: null }], areas: [] });
+    montar();
+
+    const cartao = await screen.findByTestId('primeiros-passos');
+    expect(within(cartao).getByText('0 de 3 feitos')).toBeInTheDocument();
+    expect(within(cartao).getByText('Cadastrar a chave →')).toBeInTheDocument();
+    expect(within(cartao).getByText('Escolher o modelo →')).toBeInTheDocument();
+    expect(within(cartao).getByText('Abrir o Criativo →')).toBeInTheDocument();
+    // Sem sessão, a coluna de atividade é um vazio de verdade, não um esqueleto parado.
+    expect(
+      await screen.findByText('Nenhuma atividade ainda: ela começa com a primeira sessão do projeto.'),
+    ).toBeInTheDocument();
+  });
+
+  it('tudo feito: o cartão não aparece', async () => {
+    getResolvedModelBindings.mockResolvedValue({
+      agents: [
+        {
+          key: 'criativo',
+          binding: { modelId: 'm-1', origin: 'project', routingPreference: null, skipped: [] },
+        },
+      ],
+      areas: [],
+    });
+    montar();
+
+    await screen.findAllByText(/Execução/);
+    expect(screen.queryByTestId('primeiros-passos')).toBeNull();
+  });
+
+  it('leitura de credenciais que falhou não vira "pendente": o cartão espera', async () => {
+    listSessions.mockResolvedValue([]);
+    listCredentials.mockRejectedValue(new Error('rede'));
+    montar();
+
+    await screen.findAllByText(/Execução/);
+    expect(screen.queryByTestId('primeiros-passos')).toBeNull();
+  });
+});
+
+describe('linha do tempo do time lê a sessão de execução (AT-463)', () => {
+  it('com execução ativa noutra sessão, a árvore lê a de execução e diz isso', async () => {
+    getActiveExecutionSession.mockResolvedValue({ ...SESSAO, id: 'sess-exec' });
+    montar();
+
+    expect(await screen.findByText(/Lendo a sessão de execução, não a mais recente\./)).toBeInTheDocument();
+    expect(listSessionEvents.mock.calls.some((c) => c[1] === 'sess-exec')).toBe(true);
+  });
+
+  it('AT-471: agente que só agiu na execução aparece na árvore, sem "nenhum agente"', async () => {
+    // O handoff da Infra foi aceito na sessão de EXECUÇÃO; a mais recente
+    // (ideação) não tem nenhum, então a roster dela não traz o Infra Lead.
+    listHandoffs.mockResolvedValue([]);
+    getActiveExecutionSession.mockResolvedValue({ ...SESSAO, id: 'sess-exec' });
+    listSessionEvents.mockImplementation(async (_p: string, sessionId: string) =>
+      sessionId === 'sess-exec'
+        ? {
+            items: [
+              evento({ id: 'x1', seq: 1, type: 'agent.activated', actor: { kind: 'agent', id: 'infra' }, payload: {} }),
+              evento({ id: 'x2', seq: 2, type: 'agent.activated', actor: { kind: 'agent', id: 'dev-backend' }, payload: {} }),
+            ],
+            nextCursor: null,
+          }
+        : { items: [evento({ id: 'c1', seq: 1, type: 'chat.message', actor: { kind: 'user', id: 'u1' }, payload: { text: 'oi' } })], nextCursor: null },
+    );
+    montar();
+
+    expect(await screen.findByText(/Lendo a sessão de execução/)).toBeInTheDocument();
+    // A árvore ganha o ramo do Infra Lead (o do dev segue na aba Executores).
+    await vi.waitFor(() =>
+      expect(screen.queryByText('Nenhum agente entrou em ação nesta sessão ainda.')).not.toBeInTheDocument(),
+    );
+    expect(listSessionEvents.mock.calls.some((c) => c[1] === 'sess-exec')).toBe(true);
+  });
+
+  it('CASO DE FALHA evitado: sem execução, lê a mais recente e não anuncia outra', async () => {
+    montar();
+
+    expect(await screen.findByText('Criativo')).toBeInTheDocument();
+    expect(screen.queryByText(/Lendo a sessão de execução/)).not.toBeInTheDocument();
+    expect(listSessionEvents.mock.calls.every((c) => c[1] === 'sess-1')).toBe(true);
+  });
+});
+
+// RN-794 (AT-469): execução já ativada antes, nenhuma vigente agora, tarefa
+// bloqueada no backlog — a seção diz quantas pendem, oferece religar e o
+// "Desbloquear" avisa que nada volta a rodar até religar.
+describe('religar a execução encerrada (RN-794)', () => {
+  const backlog = [
+    {
+      id: 'ep-1',
+      projectId: 'proj-1',
+      sessionId: 'sess-1',
+      title: 'E',
+      description: '',
+      createdAt: '',
+      updatedAt: '',
+      stories: [
+        {
+          id: 'st-1',
+          title: 'H',
+          tasks: [
+            {
+              id: 't1',
+              storyId: 'st-1',
+              title: 'Tarefa travada',
+              description: '',
+              status: 'todo',
+              assignedTo: null,
+              blocked: true,
+              blockedReason: 'motivo',
+              gateStatus: null,
+              gateCorrectionCount: 0,
+              createdAt: '',
+              updatedAt: '',
+            },
+          ],
+        },
+      ],
+    },
+  ];
+
+  it('oferece religar pelo execution/activate e o desbloqueio avisa', async () => {
+    getProjectsSummary.mockResolvedValue([resumo({ executionActivated: true })]);
+    listBacklog.mockResolvedValue(backlog);
+    unblockTaskMock.mockResolvedValue(undefined);
+    activateExecutionMock.mockResolvedValue({ sessionId: 'sess-2' });
+
+    montar();
+
+    expect(await screen.findByText(/1 tarefa segue pendente/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Desbloquear' }));
+    expect(await screen.findByText(/a tarefa só roda quando você religar/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Religar execução' }));
+    expect(activateExecutionMock).toHaveBeenCalledWith('proj-1');
+  });
+
+  it('RN-835 (AT-502): o desbloqueio chama uma vez, fica em voo e diz quando terminou', async () => {
+    getProjectsSummary.mockResolvedValue([resumo({ executionActivated: true })]);
+    listBacklog.mockResolvedValue(backlog);
+    let resolver: () => void = () => {};
+    unblockTaskMock.mockReset();
+    unblockTaskMock.mockReturnValue(new Promise<void>((r) => (resolver = r)));
+
+    montar();
+
+    const botao = await screen.findByRole('button', { name: 'Desbloquear' });
+    await userEvent.click(botao);
+    const emVoo = await screen.findByRole('button', { name: 'Desbloqueando…' });
+    expect(emVoo).toBeDisabled();
+    await userEvent.click(emVoo);
+    expect(unblockTaskMock).toHaveBeenCalledTimes(1);
+    resolver();
+    expect(await screen.findByTestId('desbloqueada')).toHaveTextContent('Tarefa desbloqueada');
+  });
+
+  it('RN-835: a recusa do desbloqueio mostra a frase da api na linha', async () => {
+    getProjectsSummary.mockResolvedValue([resumo({ executionActivated: true })]);
+    listBacklog.mockResolvedValue(backlog);
+    unblockTaskMock.mockReset();
+    unblockTaskMock.mockRejectedValue(new ApiError(409, { message: 'A tarefa já está em curso.' }));
+
+    montar();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Desbloquear' }));
+    expect((await screen.findAllByText('A tarefa já está em curso.')).length).toBeGreaterThan(0);
+    expect(screen.getByRole('button', { name: 'Desbloquear' })).toBeEnabled();
+  });
+
+  it('a recusa (409) de religar mostra a frase da api', async () => {
+    getProjectsSummary.mockResolvedValue([resumo({ executionActivated: true })]);
+    listBacklog.mockResolvedValue(backlog);
+    activateExecutionMock.mockRejectedValue(
+      new ApiError(409, { message: 'A sessão é consultiva.' }),
+    );
+
+    montar();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Religar execução' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('A sessão é consultiva.');
   });
 });

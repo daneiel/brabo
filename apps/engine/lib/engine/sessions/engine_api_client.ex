@@ -5,7 +5,11 @@ defmodule Engine.Sessions.EngineApiClient do
   """
 
   alias Engine.Harness.IdiomaDaResposta
+  alias Engine.Harness.AmbienteDoAgente
   alias Engine.Harness.PerfilDoAutor
+  alias Engine.Harness.FluxoDoTime
+  alias Engine.Harness.DecisoesDoProjeto
+  alias Engine.Harness.RetomadaDoTurno
   alias Engine.Harness.RoteamentoDeFerramenta
 
   @callback report_termination(
@@ -152,6 +156,35 @@ defmodule Engine.Sessions.EngineApiClient do
               {:ok, map()} | {:error, term()}
   @callback create_task(project_id :: String.t(), session_id :: String.t(), fields :: map()) ::
               {:ok, map()} | {:error, term()}
+
+  @doc """
+  Ferramenta `complete_story` do PO (RN-720): completa uma história `draft`
+  existente em vez de recriá-la. Devolve a história atualizada.
+  """
+  @callback complete_story(
+              project_id :: String.t(),
+              session_id :: String.t(),
+              story_id :: String.t(),
+              fields :: map()
+            ) :: {:ok, map()} | {:error, term()}
+
+  @doc """
+  Ferramentas `update_story`/`archive_story` do PO (RN-727): corrigem o
+  título/descrição ou arquivam uma história `draft` sem tarefa em execução.
+  A recusa da api volta como `{:error, {409, %{"reason" => ..., "message" => ...}}}`.
+  """
+  @callback update_story(
+              project_id :: String.t(),
+              session_id :: String.t(),
+              story_id :: String.t(),
+              fields :: map()
+            ) :: {:ok, map()} | {:error, term()}
+  @callback archive_story(
+              project_id :: String.t(),
+              session_id :: String.t(),
+              story_id :: String.t(),
+              fields :: map()
+            ) :: {:ok, map()} | {:error, term()}
 
   @doc """
   A duplicata SEMÂNTICA de regra de negócio (RN-681, ADR 0198): chamada por
@@ -307,6 +340,28 @@ defmodule Engine.Sessions.EngineApiClient do
               {:ok, map()} | {:error, term()}
 
   @doc """
+  RN-864 (AT-525): desbloqueia a task pela retomada automática depois de falha
+  passageira de rede — o MESMO caso de uso do "Desbloquear" humano, ator
+  `system`, no-op se a task já não está bloqueada.
+  """
+  @callback unblock_task(
+              project_id :: String.t(),
+              session_id :: String.t(),
+              task_id :: String.t(),
+              agent_id :: String.t()
+            ) :: {:ok, map() | nil} | {:error, term()}
+
+  @doc """
+  RN-856 (AT-522): tarefas `in_progress` do projeto da sessão de EXECUÇÃO
+  (vazio em outra) com dono `dev-*`, fora de
+  gate e não bloqueadas — `[%{"taskId" => _, "assignedTo" => _}]`. O
+  encerramento da execução bloqueia as que nenhuma linha de
+  `dev_agent_states` segura.
+  """
+  @callback list_tarefas_em_curso_de_dev(session_id :: String.t()) ::
+              {:ok, [map()]} | {:error, term()}
+
+  @doc """
   Abre o fluxo de gates de uma PR (Fase 4a) — o `DevAgentServer` chama logo
   depois de `pr_open` executar com sucesso.
   """
@@ -332,7 +387,8 @@ defmodule Engine.Sessions.EngineApiClient do
               veredito :: String.t(),
               resumo :: String.t(),
               itens :: [String.t()],
-              max_corrections :: integer() | nil
+              max_corrections :: integer() | nil,
+              extras :: map()
             ) ::
               {:ok, map()} | {:error, term()}
 
@@ -428,6 +484,18 @@ defmodule Engine.Sessions.EngineApiClient do
   contra evidência real; rejeição volta como tool-result pro modelo.
   """
   @callback record_proficiency(
+              project_id :: String.t(),
+              session_id :: String.t(),
+              payload :: map()
+            ) ::
+              {:ok, map()} | {:error, term()}
+
+  @doc """
+  Fecha a janela de uma rodada da Anamnese que encerrou SEM perfil
+  (`skip_proficiency`): grava `anamnese_runs` com zero perfis, para a próxima
+  rodada começar em `windowTo` (RN-722).
+  """
+  @callback close_anamnese_window(
               project_id :: String.t(),
               session_id :: String.t(),
               payload :: map()
@@ -614,6 +682,33 @@ defmodule Engine.Sessions.EngineApiClient do
             ) ::
               {:ok, map()} | {:error, term()}
 
+  @doc """
+  AT-612: o mesmo `container-exec`, mas na instância de QA da tarefa
+  (`alvo: {qa: true, taskId}`). O `task_id` vem do ctx do agente, nunca do modelo.
+  """
+  @callback executar_comando_na_instancia_de_qa(
+              project_id :: String.t(),
+              task_id :: String.t(),
+              comando :: String.t(),
+              cwd :: String.t() | nil,
+              timeout_ms :: pos_integer() | nil
+            ) :: {:ok, map()} | {:error, term()}
+
+  @doc """
+  AT-612: remove a instância de QA efêmera da tarefa
+  (`POST internal/projects/:projectId/qa-environments/:taskId/remove`,
+  idempotente). `{:ok, %{"sucesso" => _, "motivo" => _}}` ou `{:error, _}`.
+  """
+  @callback remover_instancia_de_qa(project_id :: String.t(), task_id :: String.t()) ::
+              {:ok, map()} | {:error, term()}
+
+  @doc """
+  AT-612: limpeza de órfãs (`POST internal/qa-environments/sweep`): remove toda
+  instância de QA cuja tarefa NÃO está em `task_ids_em_voo`.
+  """
+  @callback varrer_instancias_de_qa(task_ids_em_voo :: [String.t()]) ::
+              {:ok, map()} | {:error, term()}
+
   # RN-622: a orientação de idioma entra AQUI, no fim da lista, e em nenhum
   # outro lugar — toda chamada de LLM do engine passa por esta fachada (ver
   # `Engine.Harness.IdiomaDaResposta`). Ela nunca volta para o `state` de quem
@@ -627,9 +722,18 @@ defmodule Engine.Sessions.EngineApiClient do
   #
   # RN-680 (ADR 0196): os fatos do perfil do AUTOR do turno entram pelo mesmo
   # lugar, ANTES do idioma — que continua sendo a última mensagem.
+  #
+  # RN-711: o fluxo do time (onde o conversacional está, o próximo passo e
+  # quem o dispara, `Engine.Harness.FluxoDoTime`) entra depois do ambiente e
+  # antes do perfil. RN-874 (AT-526): logo depois do fluxo, o PO recebe as
+  # decisões do usuário e as perguntas ABERTAS (`Engine.Harness.DecisoesDoProjeto`).
   def llm_turn(project_id, session_id, agent, messages, tools) do
     enviadas =
       messages
+      |> AmbienteDoAgente.anexar(agent)
+      |> FluxoDoTime.anexar(agent)
+      |> DecisoesDoProjeto.anexar(project_id, agent)
+      |> RetomadaDoTurno.anexar(agent)
       |> PerfilDoAutor.anexar(agent)
       |> IdiomaDaResposta.anexar(project_id, agent, tools)
 
@@ -638,6 +742,7 @@ defmodule Engine.Sessions.EngineApiClient do
       impl().llm_turn(project_id, session_id, agent, enviadas, tools, catalogo_completo: true)
     end)
     |> RoteamentoDeFerramenta.registrar(project_id, session_id, agent, &append_event/3)
+    |> Engine.Harness.RespostaCortada.registrar(project_id)
   end
 
   # O menu restrito errou (o modelo não chamou ferramenta nenhuma)? Uma volta
@@ -668,6 +773,15 @@ defmodule Engine.Sessions.EngineApiClient do
 
   def report_mirror_sync(project_id, resultado),
     do: impl().report_mirror_sync(project_id, resultado)
+
+  def executar_comando_na_instancia_de_qa(project_id, task_id, comando, cwd, timeout_ms),
+    do: impl().executar_comando_na_instancia_de_qa(project_id, task_id, comando, cwd, timeout_ms)
+
+  def remover_instancia_de_qa(project_id, task_id),
+    do: impl().remover_instancia_de_qa(project_id, task_id)
+
+  def varrer_instancias_de_qa(task_ids_em_voo),
+    do: impl().varrer_instancias_de_qa(task_ids_em_voo)
 
   def rag_search(project_id, query, top_k, opts \\ []),
     do: impl().rag_search(project_id, query, top_k, opts)
@@ -700,6 +814,10 @@ defmodule Engine.Sessions.EngineApiClient do
   def llm_turn_stream(project_id, session_id, agent, messages, tools, on_delta) do
     enviadas =
       messages
+      |> AmbienteDoAgente.anexar(agent)
+      |> FluxoDoTime.anexar(agent)
+      |> DecisoesDoProjeto.anexar(project_id, agent)
+      |> RetomadaDoTurno.anexar(agent)
       |> PerfilDoAutor.anexar(agent)
       |> IdiomaDaResposta.anexar(project_id, agent, tools)
 
@@ -710,6 +828,7 @@ defmodule Engine.Sessions.EngineApiClient do
       )
     end)
     |> RoteamentoDeFerramenta.registrar(project_id, session_id, agent, &append_event/3)
+    |> Engine.Harness.RespostaCortada.registrar(project_id)
   end
 
   # No stream só se repete quando NADA foi escrito para a pessoa: um delta já
@@ -742,6 +861,21 @@ defmodule Engine.Sessions.EngineApiClient do
     do:
       impl().create_epic(project_id, session_id, fields)
       |> avisar_canal(session_id, "backlog.epic_created", nil)
+
+  def complete_story(project_id, session_id, story_id, fields),
+    do:
+      impl().complete_story(project_id, session_id, story_id, fields)
+      |> avisar_canal(session_id, "backlog.story_completed", nil)
+
+  def update_story(project_id, session_id, story_id, fields),
+    do:
+      impl().update_story(project_id, session_id, story_id, fields)
+      |> avisar_canal(session_id, "backlog.story_updated", nil)
+
+  def archive_story(project_id, session_id, story_id, fields),
+    do:
+      impl().archive_story(project_id, session_id, story_id, fields)
+      |> avisar_canal(session_id, "backlog.story_archived", nil)
 
   def create_story(project_id, session_id, fields),
     do:
@@ -796,6 +930,9 @@ defmodule Engine.Sessions.EngineApiClient do
   def mark_task(project_id, session_id, task_id, status, agent_id),
     do: impl().mark_task(project_id, session_id, task_id, status, agent_id)
 
+  def unblock_task(project_id, session_id, task_id, agent_id),
+    do: impl().unblock_task(project_id, session_id, task_id, agent_id)
+
   def get_dev_context(project_id, session_id, task_id, module \\ nil),
     do: impl().get_dev_context(project_id, session_id, task_id, module)
 
@@ -819,6 +956,9 @@ defmodule Engine.Sessions.EngineApiClient do
           origin
         )
 
+  def list_tarefas_em_curso_de_dev(session_id),
+    do: impl().list_tarefas_em_curso_de_dev(session_id)
+
   def open_gate(project_id, session_id, task_id, agent_id),
     do: impl().open_gate(project_id, session_id, task_id, agent_id)
 
@@ -830,7 +970,8 @@ defmodule Engine.Sessions.EngineApiClient do
         veredito,
         resumo,
         itens,
-        max_corrections \\ nil
+        max_corrections \\ nil,
+        extras \\ %{}
       ),
       do:
         impl().record_gate_verdict(
@@ -841,7 +982,8 @@ defmodule Engine.Sessions.EngineApiClient do
           veredito,
           resumo,
           itens,
-          max_corrections
+          max_corrections,
+          extras
         )
 
   def record_delegation(payload), do: impl().record_delegation(payload)
@@ -860,6 +1002,9 @@ defmodule Engine.Sessions.EngineApiClient do
 
   def record_proficiency(project_id, session_id, payload),
     do: impl().record_proficiency(project_id, session_id, payload)
+
+  def close_anamnese_window(project_id, session_id, payload),
+    do: impl().close_anamnese_window(project_id, session_id, payload)
 
   def propose_instruction_patch(project_id, session_id, payload),
     do: impl().propose_instruction_patch(project_id, session_id, payload)
@@ -1042,7 +1187,7 @@ defmodule Engine.Sessions.EngineApiClient.Live do
       api_url() <>
         "/internal/sessions/#{session_id}/events?projectId=#{project_id}&limit=200"
 
-    case Req.get(url, headers: headers()) do
+    case req_get(url, headers: headers()) do
       {:ok, %Req.Response{status: status, body: %{"items" => items}}}
       when status in 200..299 ->
         {:ok, items}
@@ -1073,7 +1218,7 @@ defmodule Engine.Sessions.EngineApiClient.Live do
 
     url = api_url() <> "/internal/sessions/#{session_id}/events"
 
-    case Req.get(url, headers: headers(), params: params) do
+    case req_get(url, headers: headers(), params: params) do
       {:ok, %Req.Response{status: status, body: %{"items" => items}}}
       when status in 200..299 ->
         {:ok, items}
@@ -1124,6 +1269,30 @@ defmodule Engine.Sessions.EngineApiClient.Live do
   def create_story(project_id, session_id, fields) do
     post_returning(
       "/internal/sessions/#{session_id}/stories",
+      Map.put(fields, :projectId, project_id)
+    )
+  end
+
+  @impl true
+  def complete_story(project_id, session_id, story_id, fields) do
+    post_returning(
+      "/internal/sessions/#{session_id}/stories/#{story_id}/complete",
+      Map.put(fields, :projectId, project_id)
+    )
+  end
+
+  @impl true
+  def update_story(project_id, session_id, story_id, fields) do
+    post_returning(
+      "/internal/sessions/#{session_id}/stories/#{story_id}/update",
+      Map.put(fields, :projectId, project_id)
+    )
+  end
+
+  @impl true
+  def archive_story(project_id, session_id, story_id, fields) do
+    post_returning(
+      "/internal/sessions/#{session_id}/stories/#{story_id}/archive",
       Map.put(fields, :projectId, project_id)
     )
   end
@@ -1223,6 +1392,14 @@ defmodule Engine.Sessions.EngineApiClient.Live do
   end
 
   @impl true
+  def unblock_task(project_id, session_id, task_id, agent_id) do
+    post_returning("/internal/sessions/#{session_id}/tasks/#{task_id}/unblock", %{
+      projectId: project_id,
+      agentId: agent_id
+    })
+  end
+
+  @impl true
   def mark_task_blocked(project_id, session_id, task_id, reason, diagnosis, agent_id, origin) do
     post_returning("/internal/sessions/#{session_id}/tasks/#{task_id}/block", %{
       projectId: project_id,
@@ -1231,6 +1408,15 @@ defmodule Engine.Sessions.EngineApiClient.Live do
       diagnosis: diagnosis,
       origin: origin
     })
+  end
+
+  @impl true
+  def list_tarefas_em_curso_de_dev(session_id) do
+    case get_json("/internal/sessions/#{session_id}/tasks/in-progress-by-dev") do
+      {:ok, lista} when is_list(lista) -> {:ok, lista}
+      {:ok, outro} -> {:error, {:resposta_inesperada, outro}}
+      erro -> erro
+    end
   end
 
   @impl true
@@ -1250,17 +1436,26 @@ defmodule Engine.Sessions.EngineApiClient.Live do
         veredito,
         resumo,
         itens,
-        max_corrections
+        max_corrections,
+        extras
       ) do
-    post_returning("/internal/sessions/#{session_id}/gates/verdict", %{
-      projectId: project_id,
-      taskId: task_id,
-      gate: gate,
-      veredito: veredito,
-      resumo: resumo,
-      itens: itens,
-      maxCorrections: max_corrections
-    })
+    # ADR 0214 (RN-862): `extras` leva `pergunta`/`sugestao`/`openQuestionId`
+    # do veredito `needs_user_decision`; vazio nos outros, corpo de sempre.
+    post_returning(
+      "/internal/sessions/#{session_id}/gates/verdict",
+      Map.merge(
+        %{
+          projectId: project_id,
+          taskId: task_id,
+          gate: gate,
+          veredito: veredito,
+          resumo: resumo,
+          itens: itens,
+          maxCorrections: max_corrections
+        },
+        extras
+      )
+    )
   end
 
   @impl true
@@ -1291,7 +1486,7 @@ defmodule Engine.Sessions.EngineApiClient.Live do
         "/internal/sessions/#{session_id}/dev-context?projectId=#{project_id}&taskId=#{task_id}" <>
         module_query
 
-    case Req.get(url, headers: headers()) do
+    case req_get(url, headers: headers()) do
       {:ok, %Req.Response{status: status, body: body}} when status in 200..299 ->
         {:ok, body}
 
@@ -1336,7 +1531,7 @@ defmodule Engine.Sessions.EngineApiClient.Live do
   def session_pending_work(session_id) do
     url = api_url() <> "/internal/sessions/#{session_id}/pending-work"
 
-    case Req.get(url, headers: headers()) do
+    case req_get(url, headers: headers()) do
       {:ok, %Req.Response{status: status, body: body}} when status in 200..299 ->
         pendencia_da_resposta(body)
 
@@ -1352,7 +1547,7 @@ defmodule Engine.Sessions.EngineApiClient.Live do
   def get_git_remote(project_id) do
     url = api_url() <> "/internal/projects/#{project_id}/git-remote"
 
-    case Req.get(url, headers: headers()) do
+    case req_get(url, headers: headers()) do
       {:ok, %Req.Response{status: status, body: body}} when status in 200..299 ->
         {:ok,
          %{
@@ -1392,7 +1587,7 @@ defmodule Engine.Sessions.EngineApiClient.Live do
   # chave por chave, o `session_pending_work` extrai dois campos), e trocar
   # isso por um helper comum seria refatorar caminho que já está provado.
   defp get_json(path) do
-    case Req.get(api_url() <> path, headers: headers()) do
+    case req_get(api_url() <> path, headers: headers()) do
       {:ok, %Req.Response{status: status, body: body}} when status in 200..299 ->
         {:ok, body}
 
@@ -1410,7 +1605,7 @@ defmodule Engine.Sessions.EngineApiClient.Live do
       api_url() <>
         "/internal/sessions/#{session_id}/infra-context?projectId=#{project_id}"
 
-    case Req.get(url, headers: headers()) do
+    case req_get(url, headers: headers()) do
       {:ok, %Req.Response{status: status, body: body}} when status in 200..299 ->
         {:ok, body}
 
@@ -1428,7 +1623,7 @@ defmodule Engine.Sessions.EngineApiClient.Live do
       api_url() <>
         "/internal/sessions/#{session_id}/infra-artifacts/#{pr_action_id}/files?projectId=#{project_id}"
 
-    case Req.get(url, headers: headers()) do
+    case req_get(url, headers: headers()) do
       {:ok, %Req.Response{status: status, body: body}} when status in 200..299 ->
         {:ok, body}
 
@@ -1446,7 +1641,7 @@ defmodule Engine.Sessions.EngineApiClient.Live do
       api_url() <>
         "/internal/sessions/#{session_id}/psychologist-context?projectId=#{project_id}"
 
-    case Req.get(url, headers: headers()) do
+    case req_get(url, headers: headers()) do
       {:ok, %Req.Response{status: status, body: body}} when status in 200..299 ->
         {:ok, body}
 
@@ -1465,7 +1660,7 @@ defmodule Engine.Sessions.EngineApiClient.Live do
     # sessão é irrelevante aqui.
     url = api_url() <> "/internal/sessions/_/anamnese-context?projectId=#{project_id}"
 
-    case Req.get(url, headers: headers()) do
+    case req_get(url, headers: headers()) do
       {:ok, %Req.Response{status: status, body: body}} when status in 200..299 ->
         {:ok, body}
 
@@ -1481,6 +1676,14 @@ defmodule Engine.Sessions.EngineApiClient.Live do
   def record_proficiency(project_id, session_id, payload) do
     post_returning(
       "/internal/sessions/#{session_id}/proficiency",
+      Map.put(payload, :projectId, project_id)
+    )
+  end
+
+  @impl true
+  def close_anamnese_window(project_id, session_id, payload) do
+    post_returning(
+      "/internal/sessions/#{session_id}/anamnese-window",
       Map.put(payload, :projectId, project_id)
     )
   end
@@ -1727,15 +1930,38 @@ defmodule Engine.Sessions.EngineApiClient.Live do
     container_start
     container_start_via_runner
     container_stop
+    qa_environment_start
   )
 
   @doc false
   def teto_do_propose_action_de_container_ms, do: @teto_do_propose_action_de_container_ms
 
+  # AT-440 (RN-757). Uma ação `terminal` auto-aprovada também é EXECUTADA na
+  # mesma requisição: a api chama `/internal/actions/execute` neste engine,
+  # que roda o comando (no container, pelo `container-exec`, até
+  # `TERMINAL_ACTION_TIMEOUT_MS` + 90s). No default de 15s do Req — o MESMO
+  # número do teto antigo do comando — todo comando que passasse de ~15s
+  # (`npm install`, o primeiro de toda tarefa Node) voltava
+  # `%Req.TransportError{reason: :timeout}` ao agente, sem dizer qual teto nem
+  # quanto. A cadeia fica: broker (T) < api->broker (T + ~45s) <
+  # engine->api `container-exec` (T + 90s) < este (T + 120s); com o T padrão
+  # de 120s, este (240s) segue abaixo dos 300s de cabeçalhos do `fetch` do
+  # Node com que a api chama `/internal/actions/execute`.
+  @folga_do_propose_action_de_terminal_ms 120_000
+
+  @doc false
+  def teto_do_propose_action_de_terminal_ms,
+    do:
+      Application.fetch_env!(:engine, :terminal_action_timeout_ms) +
+        @folga_do_propose_action_de_terminal_ms
+
   @doc false
   def opcoes_do_propose_action(action_type)
       when action_type in @acoes_de_container_executadas_no_propose,
       do: [receive_timeout: @teto_do_propose_action_de_container_ms]
+
+  def opcoes_do_propose_action("terminal"),
+    do: [receive_timeout: teto_do_propose_action_de_terminal_ms()]
 
   def opcoes_do_propose_action(_action_type), do: []
 
@@ -1753,10 +1979,34 @@ defmodule Engine.Sessions.EngineApiClient.Live do
     post_returning("/internal/projects/#{project_id}/mirror-sync-result", resultado)
   end
 
+  # A remoção desmonta o QA e seus serviços: até seis `docker rm` de 30s.
   @impl true
-  def executar_comando_no_container(project_id, comando, cwd, timeout_ms) do
+  def remover_instancia_de_qa(project_id, task_id) do
+    post_returning("/internal/projects/#{project_id}/qa-environments/#{task_id}/remove", %{},
+      receive_timeout: 195_000
+    )
+  end
+
+  @impl true
+  def varrer_instancias_de_qa(task_ids_em_voo) do
+    post_returning("/internal/qa-environments/sweep", %{taskIdsEmVoo: task_ids_em_voo},
+      receive_timeout: 195_000
+    )
+  end
+
+  @impl true
+  def executar_comando_no_container(project_id, comando, cwd, timeout_ms),
+    do: container_exec(project_id, comando, cwd, timeout_ms, %{})
+
+  @impl true
+  def executar_comando_na_instancia_de_qa(project_id, task_id, comando, cwd, timeout_ms),
+    do:
+      container_exec(project_id, comando, cwd, timeout_ms, %{alvo: %{qa: true, taskId: task_id}})
+
+  defp container_exec(project_id, comando, cwd, timeout_ms, extra) do
     corpo =
       %{comando: comando}
+      |> Map.merge(extra)
       |> por_se_presente(:cwd, cwd)
       |> por_se_presente(:timeoutMs, timeout_ms)
 
@@ -1829,7 +2079,7 @@ defmodule Engine.Sessions.EngineApiClient.Live do
       api_url() <>
         "/internal/graph/prompt-templates/#{URI.encode_www_form(name)}" <> query_part
 
-    case Req.get(url, headers: headers()) do
+    case req_get(url, headers: headers()) do
       {:ok, %Req.Response{status: 404}} ->
         {:error, :not_found}
 
@@ -1871,6 +2121,47 @@ defmodule Engine.Sessions.EngineApiClient.Live do
     end
   end
 
+  # AT-428 (RN-742). A chamada HTTP roda num processo PRÓPRIO e descartável,
+  # nunca na caixa de mensagens de quem chama. Em 08/10 o `npm install` do dev
+  # estourou o `receive_timeout` (`Req.TransportError{reason: :timeout}`), a
+  # resposta atrasada da conexão ficou na caixa do `DevAgentServer`, e a
+  # chamada SEGUINTE morreu com `CaseClauseError` em
+  # `Finch.HTTP1.Conn.receive_response/8` — o GenServer caiu calado. Com o
+  # pedido numa Task, a mensagem tardia chega a um processo que já acabou.
+  # Os cabeçalhos (o `traceparent` vem do contexto do processo) são montados
+  # ANTES, no chamador. Exceção dentro da Task volta como `{:error, _}`, nunca
+  # como `EXIT` ligado. O `llm_turn_stream/6` fica FORA: o `into:` dele grava
+  # no dicionário do chamador, e os conversacionais já o chamam de dentro da
+  # Task do turno (`TurnoAssincrono`).
+  @doc false
+  def isolado(fun) do
+    Task.async(fn ->
+      try do
+        fun.()
+      rescue
+        e -> {:error, e}
+      end
+    end)
+    |> Task.await(:infinity)
+  end
+
+  # RN-955: resposta atrasada que ficou no socket de uma conexão do pool
+  # (Finch devolve a conexão após `receive_timeout`) chega ao GET seguinte como
+  # `CaseClauseError {:status, ref_antigo, _}`. O Finch fecha essa conexão ao
+  # lançar, então repetir UMA vez pega conexão nova. Só GET: POST pode ter tido efeito.
+  defp req_get(url, opts), do: get_repetindo(fn -> Req.get(url, opts) end)
+
+  @doc false
+  def get_repetindo(fun) do
+    case isolado(fun) do
+      {:error, %CaseClauseError{term: {_, ref, _}}} when is_reference(ref) ->
+        isolado(fun)
+
+      outro ->
+        outro
+    end
+  end
+
   defp post(path, body) do
     case post_returning(path, body) do
       {:ok, _body} -> :ok
@@ -1881,13 +2172,9 @@ defmodule Engine.Sessions.EngineApiClient.Live do
   # Igual `post/2` mas devolve o corpo da resposta (llm_turn/propose_action
   # precisam do JSON de volta, não só do :ok).
   defp post_returning(path, body, opts \\ []) do
-    case Req.post(
-           [
-             url: api_url() <> path,
-             json: body,
-             headers: headers()
-           ] ++ opts
-         ) do
+    req_opts = [url: api_url() <> path, json: body, headers: headers()] ++ opts
+
+    case isolado(fn -> Req.post(req_opts) end) do
       {:ok, %Req.Response{status: status, body: resp}} when status in 200..299 ->
         {:ok, resp}
 

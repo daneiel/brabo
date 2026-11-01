@@ -8,6 +8,7 @@ import {
   useBacklog,
   useCurrentWorkspace,
   useHandoffs,
+  useActiveExecutionSession,
   useLatestSession,
   usePendingActions,
   useProjectPendingActions,
@@ -30,9 +31,11 @@ import {
 import {
   deriveAgentRoster,
   groupRosterByArea,
+  isExecutorAgentId,
   isExecutorGroup,
 } from '../lib/agent-status';
-import { deriveExecutionProgress, formatMicros } from '../lib/execution';
+import { contarTarefasPendentes, deriveExecutionProgress, formatMicros } from '../lib/execution';
+import { ReligarExecucao } from '../components/ReligarExecucao';
 import { connectSessionHeartbeat } from '../lib/session-channel';
 import { INTERVALO_DO_PROJETO_MS, criarInvalidadorDoCanal } from '../lib/canal-vivo';
 import type { AutonomyMode } from '../components/AgentCard';
@@ -41,6 +44,9 @@ import { AgentTimelineTree } from '../components/AgentTimelineTree';
 import { ActivityFeed } from '../components/ActivityFeed';
 import { useLayoutMovel } from '../lib/layout-movel';
 import { AmbienteDoProjeto } from '../components/AmbienteDoProjeto';
+import { PrimeirosPassos } from '../components/PrimeirosPassos';
+import { RodarNaSuaMaquina, releSeInfraAbriuPr } from '../components/RodarNaSuaMaquina';
+import { EmptyState } from '../components/ui/EmptyState';
 import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
 import { Skeleton } from '../components/ui/Skeleton';
 import { Badge } from '../components/ui/Badge';
@@ -62,7 +68,8 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
   const movel = useLayoutMovel();
   const queryClient = useQueryClient();
   const { showToast } = useToast();
-  const { latest: latestSession } = useLatestSession(projectId);
+  const sessoesQuery = useLatestSession(projectId);
+  const latestSession = sessoesQuery.latest;
   const sessionId = latestSession?.id;
   // ESTADO ATUAL — a cauda em poll, que alimenta a roster, a árvore e a
   // seção de execução. Continua `latest` de propósito: as três perguntam
@@ -72,6 +79,17 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
   // HISTÓRICO — o que a coluna de Atividade mostra, em páginas (RN-099).
   // Mesma `queryKey` da cauda por dentro: nenhuma requisição a mais por ciclo.
   const historico = useSessionEventHistory(projectId, sessionId);
+  // AT-463: a linha do tempo do time lê a sessão de EXECUÇÃO quando ela
+  // existe — a mais recente pode ser uma ideação aberta depois, e a árvore
+  // dizia "nenhum agente" sobre um time que já tinha entregado. As duas
+  // queries são as MESMAS chaves que a sidebar já assina (Shell, RN-632):
+  // nenhuma requisição a mais por ciclo.
+  const execucao = useActiveExecutionSession(projectId);
+  const sessaoDaLinhaDoTempo = execucao.session?.id ?? sessionId;
+  const linhaDoTempoNaExecucao = !!execucao.session && execucao.session.id !== sessionId;
+  const eventosDaExecucao = useSessionEvents(projectId, sessaoDaLinhaDoTempo);
+  const eventosDaLinhaDoTempo =
+    sessaoDaLinhaDoTempo === sessionId ? events : (eventosDaExecucao.data?.items ?? []);
   const actionsQuery = usePendingActions(projectId, sessionId);
   const actions = actionsQuery.data?.items ?? [];
   const { data: architecture } = useArchitecture(projectId);
@@ -179,7 +197,10 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
     // vêm dele, não do event log), só que também com janela.
     const invalidador = criarInvalidadorDoCanal(queryClient, projectId, sessionId);
     const disconnect = connectSessionHeartbeat(projectId, sessionId, {
-      onEvent: ({ type }) => invalidador.aoEvento(type, false, ['backlog']),
+      onEvent: ({ type }) => {
+        invalidador.aoEvento(type, false, ['backlog']);
+        releSeInfraAbriuPr(queryClient, projectId, type);
+      },
       onAgentStatus: () => invalidador.aoEvento('agent.status', false),
     });
     return () => {
@@ -239,8 +260,12 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
     ),
   );
   const overviewRoster = roster.filter((r) => overviewRosterIds.has(r.id));
-  const overviewEvents = events.filter(
-    (e) => e.actor.kind !== 'agent' || overviewRosterIds.has(e.actor.id),
+  // AT-471: o filtro da árvore é por FAMÍLIA (sem dev/QA, RN-121), nunca pela
+  // roster — a roster é da sessão mais recente, e a árvore lê a de execução:
+  // filtrar por ela apagava o Infra Lead (e todo agente que só agiu na
+  // execução) e a árvore dizia "nenhum agente" sobre um time trabalhando.
+  const overviewEvents = eventosDaLinhaDoTempo.filter(
+    (e) => e.actor.kind !== 'agent' || !isExecutorAgentId(e.actor.id),
   );
   const workingCount = overviewRoster.filter((r) => r.status === 'trabalhando').length;
   const waitingCount = overviewRoster.filter((r) => r.status === 'aguardando').length;
@@ -248,6 +273,13 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
   return (
     <div className={[styles.layout, movel && styles.layoutMovel].filter(Boolean).join(' ')}>
       <div className={styles.main}>
+        {/* RN-708: o próximo passo de um projeto novo, enquanto faltar. */}
+        <PrimeirosPassos
+          projectId={projectId}
+          temSessao={sessoesQuery.data ? !!latestSession : undefined}
+        />
+        {/* RN-855: como rodar o entregável, declarado pela Infra. */}
+        <RodarNaSuaMaquina projectId={projectId} />
         <div className={styles.sectionRow}>
           <h2 className={styles.sectionHeader}>{t('team.title')}</h2>
           <span className={styles.sectionCount}>
@@ -282,8 +314,11 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
             tem a própria árvore, e mostrar os mesmos ramos nas duas telas
             era duplicar a mesma pergunta sem ganhar nada. */}
         <h2 className={styles.sectionHeader}>{t('timeline.title')}</h2>
-        <div className={styles.sectionSub}>{t('timeline.description')}</div>
-        <AgentTimelineTree events={overviewEvents} projectId={projectId} />
+        <div className={styles.sectionSub}>
+          {t('timeline.description')}
+          {linhaDoTempoNaExecucao && ` ${t('timeline.lendoExecucao')}`}
+        </div>
+        <AgentTimelineTree events={overviewEvents} projectId={projectId} compactarChamadas />
 
         <ExecutionSection
           projectId={projectId}
@@ -295,6 +330,7 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
           executionActivatedPending={summaryQuery.isPending}
           executionActivatedError={summaryQuery.isError ? summaryQuery.error : null}
           onRetryExecutionActivated={() => void summaryQuery.refetch()}
+          semExecucaoVigente={execucao.isSuccess && !execucao.session}
         />
 
         <ArchitectureSummary projectId={projectId} architecture={architecture} />
@@ -324,6 +360,11 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
             erro={historico.error}
             onTentarDeNovo={historico.refetch}
           />
+        ) : sessoesQuery.data && !sessionId ? (
+          // Sem sessão a consulta do histórico nem roda (`enabled: false`), e
+          // o `isPending` dela é eterno: o esqueleto ficava parado ao lado de
+          // "0 eventos". Sem sessão o vazio é um fato, e se diz (AT-372).
+          <EmptyState>{t('activity.emptyNoSession')}</EmptyState>
         ) : historico.isPending ? (
           <Skeleton height={180} />
         ) : (
@@ -350,6 +391,7 @@ function ExecutionSection({
   executionActivatedPending,
   executionActivatedError,
   onRetryExecutionActivated,
+  semExecucaoVigente,
 }: {
   projectId: string;
   sessionId?: string;
@@ -361,6 +403,12 @@ function ExecutionSection({
   executionActivatedPending: boolean;
   executionActivatedError: unknown;
   onRetryExecutionActivated: () => void;
+  /**
+   * RN-794 (AT-469): a leitura da sessão de execução VIGENTE (RN-139, a
+   * mesma chave que a sidebar assina) CONFIRMOU que não há nenhuma. Só a
+   * ausência confirmada conta — carregando ou com erro, nada muda.
+   */
+  semExecucaoVigente: boolean;
 }) {
   const { t } = useTranslation('overview');
   const queryClient = useQueryClient();
@@ -368,6 +416,7 @@ function ExecutionSection({
   const { data: epics } = useBacklog(projectId);
 
   const activated = executionActivated;
+  const tarefasPendentes = contarTarefasPendentes(epics);
 
   // RN-582 (ADR 0165): sem repositório, `POST .../execution/activate` responde
   // 409 — os dev agents trabalham em worktrees dele. A tela tira o CONTROLE e
@@ -434,15 +483,39 @@ function ExecutionSection({
     }
   }
 
+  // RN-835 (AT-502): o desbloqueio tem retorno visível POR TAREFA — em voo o
+  // botão fica inerte e diz "Desbloqueando…" (um clique, uma chamada), o
+  // sucesso diz "desbloqueada" até o backlog relido tirar a linha, e a recusa
+  // mostra a frase da api na própria linha. Sem sessão lida o botão fica
+  // inerte com o motivo, em vez de um clique que não fazia nada calado.
+  const [desbloqueio, setDesbloqueio] = useState<
+    Record<string, { estado: 'em_voo' | 'ok' } | { estado: 'erro'; mensagem: string }>
+  >({});
+
   async function handleUnblock(taskId: string) {
     if (!sessionId) return;
+    if (desbloqueio[taskId]?.estado === 'em_voo') return;
+    setDesbloqueio((d) => ({ ...d, [taskId]: { estado: 'em_voo' } }));
     try {
       await unblockTask(projectId, sessionId, taskId);
+      setDesbloqueio((d) => ({ ...d, [taskId]: { estado: 'ok' } }));
       await queryClient.invalidateQueries({ queryKey: ['backlog', projectId] });
-    } catch {
+      // RN-794 (AT-469): desbloquear acorda o dev do módulo só se houver
+      // execução vigente (RN-777). Sem ela, a tela diz que nada volta a
+      // rodar até religar — o botão está nesta mesma seção.
+      if (semExecucaoVigente) {
+        showToast({
+          title: t('executionSection.unblockedTitle'),
+          message: t('executionSection.unblockedWithoutExecution'),
+          tone: 'warning',
+        });
+      }
+    } catch (erro) {
+      const mensagem = mensagemDaApi(erro, t('executionSection.unblockError'));
+      setDesbloqueio((d) => ({ ...d, [taskId]: { estado: 'erro', mensagem } }));
       showToast({
         title: t('executionSection.errorTitle'),
-        message: t('executionSection.unblockError'),
+        message: mensagem,
         tone: 'danger',
       });
     }
@@ -519,16 +592,75 @@ function ExecutionSection({
               {t('executionSection.provisionNow')}
             </Link>
           )}
-          <Button
-            variant="primary"
-            onClick={handleActivate}
-            disabled={!hasModuleMap || semRepositorio}
-          >
-            {t('executionSection.activate')}
-          </Button>
+          {/* AT-372: sem mapa de módulos não há o que ativar — o botão some e
+              fica o motivo em texto, acima. Com o mapa e sem repositório ele
+              segue inerte ao lado do link que resolve. */}
+          {hasModuleMap && (
+            <Button variant="primary" onClick={handleActivate} disabled={semRepositorio}>
+              {t('executionSection.activate')}
+            </Button>
+          )}
         </div>
       ) : (
         <>
+          {/* RN-835 (AT-502): as tarefas bloqueadas vêm PRIMEIRO na seção,
+              antes do "Religar execução" (depende da leitura da execução
+              vigente) e do grid dos dev agents (depende dos eventos) — blocos
+              que chegam depois do primeiro paint e empurravam o
+              "Desbloquear" sob o cursor (mesmo molde da RN-816). */}
+          {blockedTasks.length > 0 && (
+            <>
+              <div className={styles.archLabel}>
+                {t('executionSection.blockedTasksLabel')}
+                <Badge tone="danger">{blockedTasks.length}</Badge>
+              </div>
+              <ul className={styles.pendList}>
+                {blockedTasks.map((t2) => (
+                  <li key={t2.id} className={styles.pendItem}>
+                    <span className={styles.pendTitle}>
+                      {t2.title} <span className={styles.moduleStack}>({t2.storyTitle})</span>
+                    </span>
+                    <span className={styles.pendReason}>
+                      {t2.blockedReason ?? t('executionSection.noDiagnosis')}
+                    </span>
+                    {desbloqueio[t2.id]?.estado === 'ok' ? (
+                      <span role="status" data-testid="desbloqueada">
+                        {t('executionSection.unblockedTitle')}
+                      </span>
+                    ) : (
+                      <Button
+                        variant="secondary"
+                        onClick={() => handleUnblock(t2.id)}
+                        disabled={!sessionId || desbloqueio[t2.id]?.estado === 'em_voo'}
+                        aria-busy={desbloqueio[t2.id]?.estado === 'em_voo'}
+                      >
+                        {desbloqueio[t2.id]?.estado === 'em_voo'
+                          ? t('executionSection.unblocking')
+                          : t('executionSection.unblock')}
+                      </Button>
+                    )}
+                    {!sessionId && (
+                      <span className={styles.pendReason}>
+                        {t('executionSection.unblockNeedsSession')}
+                      </span>
+                    )}
+                    {(() => {
+                      const d = desbloqueio[t2.id];
+                      return d?.estado === 'erro' ? (
+                        <span role="alert" className={styles.pendReason}>
+                          {d.mensagem}
+                        </span>
+                      ) : null;
+                    })()}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+
+          {semExecucaoVigente && tarefasPendentes > 0 && (
+            <ReligarExecucao projectId={projectId} tarefasPendentes={tarefasPendentes} />
+          )}
           <div className={styles.archLabel}>{t('executionSection.devAgentsLabel')}</div>
           {agents.size === 0 ? (
             <div className={styles.sectionSub}>{t('executionSection.spinningUp')}</div>
@@ -557,30 +689,6 @@ function ExecutionSection({
                 </Card>
               ))}
             </div>
-          )}
-
-          {blockedTasks.length > 0 && (
-            <>
-              <div className={styles.archLabel}>
-                {t('executionSection.blockedTasksLabel')}
-                <Badge tone="danger">{blockedTasks.length}</Badge>
-              </div>
-              <ul className={styles.pendList}>
-                {blockedTasks.map((t2) => (
-                  <li key={t2.id} className={styles.pendItem}>
-                    <span className={styles.pendTitle}>
-                      {t2.title} <span className={styles.moduleStack}>({t2.storyTitle})</span>
-                    </span>
-                    <span className={styles.pendReason}>
-                      {t2.blockedReason ?? t('executionSection.noDiagnosis')}
-                    </span>
-                    <Button variant="secondary" onClick={() => handleUnblock(t2.id)}>
-                      {t('executionSection.unblock')}
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            </>
           )}
 
           {suggestions.map((module) => (

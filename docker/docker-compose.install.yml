@@ -52,7 +52,7 @@ x-app-hardening: &app-hardening
 
 services:
   postgres:
-    image: pgvector/pgvector:pg16@sha256:ccc6e83d6e35e931dc7c5def2022729d5a6c370318d099181995567ff1fb4d6b
+    image: pgvector/pgvector:pg16@sha256:7b822b0aac60967beb1ea5e576b8602c94c300a157d187f385ae3e0da199b90a
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-brabo}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-brabo}
@@ -79,7 +79,7 @@ services:
   # (senha precisa ter >= 8 caracteres) — a validação não é nossa, mas o
   # efeito é o mesmo, "sem fallback silencioso para um valor público".
   neo4j:
-    image: neo4j:5.26-community@sha256:22ec5cd05a8cbb372fc4bed5e384c30bc75fd92504c72be4462039761b105f61
+    image: neo4j:5.26-community@sha256:adaa077a3ab023015143b8f73f7076a7d053f12985f5b06f4c6a128c3a2f7240
     restart: unless-stopped
     environment:
       NEO4J_AUTH: ${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD:-}
@@ -141,7 +141,10 @@ services:
     restart: "no"
     tmpfs:
       - /tmp
-      - /home/engine
+      # uid/gid 1000 (o usuário `engine` da imagem): sem eles o tmpfs nasce
+      #   root 0755 sob read_only, o semgrep não cria ~/.semgrep e sai 1 com
+      #   stdout vazio, o `:invalid_output` da AT-380 (RN-707).
+      - /home/engine:uid=1000,gid=1000,mode=0700
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgres://brabo:brabo@postgres:5432/brabo}
       # SEM default: o `runtime.exs` já derruba o boot sem ela (bloco :prod,
@@ -169,6 +172,10 @@ services:
     # arquivos intermediários). O resto do rootfs é read-only.
     tmpfs:
       - /tmp
+    # `host.docker.internal` não resolve no Docker Engine nativo do Linux sem
+    # este mapeamento: é por ele que a api alcança o 9Router no host (ADR 0222).
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       NODE_ENV: production
       PORT: 3000
@@ -178,6 +185,9 @@ services:
       # publicada e quebrar o CORS em silêncio (ADR 0037 — a porta é contrato).
       WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:${WEB_PORT:-8088}}
       OLLAMA_HOST: ${OLLAMA_HOST:-http://ollama:11434}
+      # O 9Router roda no HOST, fora do compose (AT-576a, ADR 0222): a URL é da
+      # instalação e o padrão atravessa o `extra_hosts` do serviço.
+      NINE_ROUTER_BASE_URL: ${NINE_ROUTER_BASE_URL:-http://host.docker.internal:20128/v1}
       OLLAMA_REQUEST_TIMEOUT_MS: ${OLLAMA_REQUEST_TIMEOUT_MS:-300000}
       # Os quatro segredos abaixo (mais o GIT_OAUTH_STATE_SECRET, logo em
       # seguida) NÃO têm default de desenvolvimento aqui, de propósito. Este
@@ -294,7 +304,10 @@ services:
       # /home/engine: o semgrep baixa e cacheia as regras do registry no $HOME
       #   na primeira execução — sem isto os scans do gate de SecOps falham.
       - /tmp
-      - /home/engine
+      # uid/gid 1000 (o usuário `engine` da imagem): sem eles o tmpfs nasce
+      #   root 0755 sob read_only, o semgrep não cria ~/.semgrep e sai 1 com
+      #   stdout vazio, o `:invalid_output` da AT-380 (RN-707).
+      - /home/engine:uid=1000,gid=1000,mode=0700
     environment:
       # MESMA variável do lado da api, sem default (ver o comentário grande no
       # serviço `api`, acima) — se as duas pontas divergissem, o engine
@@ -330,7 +343,7 @@ services:
       # host, então `SESSION_CONVERSATION_IDLE_TIMEOUT_MS` no `.env` de uma
       # instalação era inerte, e o teto ficava preso nas 8h do código.
       SESSION_CONVERSATION_IDLE_TIMEOUT_MS: ${SESSION_CONVERSATION_IDLE_TIMEOUT_MS:-28800000}
-      TERMINAL_ACTION_TIMEOUT_MS: ${TERMINAL_ACTION_TIMEOUT_MS:-15000}
+      TERMINAL_ACTION_TIMEOUT_MS: ${TERMINAL_ACTION_TIMEOUT_MS:-120000}
       SECOPS_SCAN_TIMEOUT_MS: ${SECOPS_SCAN_TIMEOUT_MS:-180000}
       # As quatro `START_*` são CHAVES DE BOOT (decidem se o tick é agendado);
       # as `*_ENABLED` são as flags de PRODUTO (RN-115/RN-117), que decidem se
@@ -487,7 +500,7 @@ services:
     # sem aviso, e um upgrade silencioso de Ollama já quebrou build antes
     # (mudança de rota da API). Atualizar é decisão manual — subir o número
     # aqui, não seguir `latest`.
-    image: ollama/ollama:0.33.1@sha256:075246f72d4109385b4a01c3ac8e9cbd26a0bcb21cd7aa30edbccd24e1b3180c
+    image: ollama/ollama:0.40.10@sha256:4c5b27871a3239a717048f9b93057680a51b60c8119a7016aebb57f938e25e35
     profiles: ["llm"]
     entrypoint: ["sh", "-c", "ollama serve & sleep 5 && ollama pull llama3.2:1b; wait"]
     volumes:
@@ -508,7 +521,7 @@ services:
     # MESMA tag do serviço `ollama` acima, de propósito: os dois falam o
     # mesmo protocolo HTTP, e divergir a versão entre daemon e CLI é o tipo
     # de coisa que só aparece em produção.
-    image: ollama/ollama:0.33.1@sha256:075246f72d4109385b4a01c3ac8e9cbd26a0bcb21cd7aa30edbccd24e1b3180c
+    image: ollama/ollama:0.40.10@sha256:4c5b27871a3239a717048f9b93057680a51b60c8119a7016aebb57f938e25e35
     profiles: ["llm"]
     depends_on:
       ollama:

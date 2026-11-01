@@ -21,7 +21,7 @@ jobs:
   conferir:
     name: Backmerge gate
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 15
     steps:
       # Sem `if:` no job — check required indexado por sha que não roda deixa
       # veredito velho colado, e aqui isso liberaria merge durante trava.

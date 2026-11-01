@@ -14,6 +14,14 @@
  */
 import type { ChatMessage, ToolDef } from '@brabo/shared';
 
+/**
+ * Id do Dev Lead. Fonte: `DEV_LEAD` em `../agents/agent-areas`. Cópia local de
+ * propósito: importar `agent-areas.ts` aqui puxa parameter properties para o
+ * typecheck dos scripts (`erasableSyntaxOnly`), que importa este arquivo.
+ * `test/domain/llm/tool-router-dev-lead.spec.ts` reprova a divergência.
+ */
+export const ID_DO_DEV_LEAD = 'dev-lead';
+
 export const ENDPOINT_DO_JEV = 'https://openrouter.ai/api/alpha/decisions';
 /** Pin (AT-236 resposta 5): o bump é por PR, nunca por alias. */
 export const MODELO_DO_JEV = 'typesafe/jev-1.13';
@@ -288,4 +296,130 @@ export function precoImplicitoPorMilhao(
   tokens: number,
 ): number {
   return tokens > 0 ? Math.round((costMicros / tokens) * 1_000_000) : 0;
+}
+
+/**
+ * O PISO do menu (AT-445, RN-758): ferramentas de OBRIGAÇÃO do agente que o
+ * recorte do Jev nunca tira. Sem elas o agente lia a ausência como
+ * incapacidade — o PO sem `create_task` fechava com histórias sem tarefa, o
+ * Arquiteto sem as de artefato fechava sem roteamento, contratos, ADR nem C4.
+ * É uma lista ESTÁTICA por agente: a api não tem sinal barato de qual
+ * obrigação está pendente neste passo, então o piso vale sempre que o menu é
+ * recortado. Só entra o que está no catálogo do passo — o piso nunca
+ * acrescenta ferramenta que o agente não tinha (P3 intacto).
+ */
+export const PISO_DO_MENU: Readonly<Record<string, readonly string[]>> = {
+  // AT-615 (RN-942): a regra 3 do PO manda declarar a dúvida, e o recorte a tirava.
+  po: ['create_story', 'create_task', 'declare_open_question'],
+  arquiteto: [
+    'create_module_map',
+    // Obrigações do kickoff do Arquiteto que faltavam (AT-481, RN-809): sem
+    // elas ele encerrava dizendo que a ferramenta "não está disponível nesta
+    // etapa", com histórias sem módulo e imagem nunca decidida.
+    'assign_story_modules',
+    'choose_project_image',
+    'route_modules_to_infra',
+    'declare_module_contracts',
+    'propose_adr',
+    'create_c4_diagram',
+    // Leituras de ESTADO (AT-460, RN-784, decisão do dono): sem elas o
+    // Arquiteto afirmava ADR "pendente" e backlog "sem tarefas" de memória.
+    'listar_adrs_propostas',
+    'listar_backlog',
+  ],
+  // Agentes de GATE (AT-509, RN-840): a ferramenta de PARECER de cada um, e
+  // só a dele. Sem ela o passo recortado deixava o gate sem veredito — o QA
+  // de Automação rodou a suíte e parou sem `emit_qa_verdict`, com a tarefa
+  // pronta bloqueada por origem `modelo`. Ids e nomes literais, conferidos
+  // contra o engine por teste (`tool-router-piso-dos-gates.spec.ts`).
+  'qa-automacao': ['emit_qa_verdict'],
+  'qa-performance-seguranca': ['emit_perf_seguranca_verdict'],
+  'qa-estrategia': ['emit_plano_de_teste'],
+  appsec: ['emit_threat_model'],
+};
+/**
+ * O piso dos dev agents de EXECUÇÃO (`dev-<modulo>`, nunca o `dev-lead`):
+ * só as duas ferramentas de DESFECHO da task (AT-499, RN-839, decisão do dono
+ * de 10/10). O resto do passo deles (ler, editar, testar) muda a cada volta e
+ * segue SEM piso — um piso maior desfaria o recorte; para isso vale o aviso de
+ * recorte (RN-759).
+ */
+export const PISO_DOS_DEV_AGENTS: readonly string[] = [
+  'report_done',
+  'report_blocked',
+];
+
+export function pisoDoMenu(agentId: string): readonly string[] {
+  const proprio = PISO_DO_MENU[agentId];
+  if (proprio) return proprio;
+  if (agentId.startsWith('dev-') && agentId !== ID_DO_DEV_LEAD) {
+    return PISO_DOS_DEV_AGENTS;
+  }
+  return [];
+}
+
+/**
+ * O piso do passo de CORREÇÃO do dev agent (AT-523, RN-857): quando o turno é
+ * a correção pedida por um gate (ou o conflito de merge, RN-715), o passo
+ * precisa de ESCRITA e de `terminal` — o recorte só de leitura levava o dev a
+ * `report_blocked` dizendo que não tinha como editar. Não é piso fixo de todo
+ * passo (RN-759): vale só quando a última mensagem `user` do pedido é a do
+ * parecer que o engine monta (`correction_message/1` em `dev_agent_server.ex`).
+ */
+export const PISO_DA_CORRECAO_DO_DEV: readonly string[] = [
+  'write_file',
+  'terminal',
+];
+/** Os trechos fixos das duas mensagens de correção do engine. */
+export const MARCAS_DA_CORRECAO: readonly string[] = [
+  'pediu correção nesta PR',
+  'foi recusado por conflito com a',
+];
+
+/** Se a última mensagem `user` do passo é o parecer de correção de um gate. */
+export function ehPassoDeCorrecao(
+  mensagens: readonly { role: string; content?: unknown }[],
+): boolean {
+  for (let i = mensagens.length - 1; i >= 0; i--) {
+    const m = mensagens[i];
+    if (m.role !== 'user') continue;
+    const texto = typeof m.content === 'string' ? m.content : '';
+    return MARCAS_DA_CORRECAO.some((marca) => texto.includes(marca));
+  }
+  return false;
+}
+
+/** O menu P3 com o piso do agente somado, na ordem do catálogo. */
+export function menuComPiso(
+  catalogo: readonly string[],
+  menu: readonly string[],
+  agentId: string,
+  mensagens: readonly { role: string; content?: unknown }[] = [],
+): string[] {
+  const correcao =
+    pisoDoMenu(agentId) === PISO_DOS_DEV_AGENTS && ehPassoDeCorrecao(mensagens)
+      ? PISO_DA_CORRECAO_DO_DEV
+      : [];
+  const dentro = new Set([...menu, ...pisoDoMenu(agentId), ...correcao]);
+  return catalogo.filter((n) => dentro.has(n));
+}
+
+/**
+ * A mensagem `system` EFÊMERA do passo recortado (AT-445, RN-759): vai só na
+ * chamada ao provider deste passo, nunca no histórico. Diz que o menu é um
+ * RECORTE do passo, e não o que o agente sabe fazer.
+ */
+export function avisoDeRecorte(
+  menuDepois: readonly string[],
+  ocultas: number,
+): ChatMessage {
+  return {
+    role: 'system',
+    content:
+      `Neste passo você recebeu um recorte de ${menuDepois.length} das suas ferramentas ` +
+      `(${menuDepois.join(', ')}); as outras ${ocultas} seguem disponíveis e podem ser ` +
+      'pedidas neste mesmo passo. Não conclua que não tem uma ferramenta por ela não ' +
+      'estar neste recorte, nem encerre o turno esperando por ela: se precisar de uma ' +
+      'delas, responda sem ferramenta e este passo é refeito com o catálogo completo.',
+  };
 }

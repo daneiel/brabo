@@ -34,6 +34,8 @@ import { ModuleMapRepository } from '../../../application/ports/module-map-repos
 import { ChunkRepository } from '../../../application/ports/chunk-repository.port';
 import { RagTelemetryRepository } from '../../../application/ports/rag-telemetry-repository.port';
 import { ContainersOverviewRepository } from '../../../application/ports/containers-overview-repository.port';
+import { QaEnvironmentRepository } from '../../../application/ports/qa-environment-repository.port';
+import { DrizzleQaEnvironmentRepository } from './qa-environment.repository';
 import { ContainerRepository } from '../../../application/ports/container-repository.port';
 import { MirrorStateRepository } from '../../../application/ports/mirror-state-repository.port';
 import { ProjectsSummaryRepository } from '../../../application/ports/projects-summary-repository.port';
@@ -106,6 +108,8 @@ import { DrizzleChunkRepository } from './chunk.repository';
 import { DrizzleRagTelemetryRepository } from './rag-telemetry.repository';
 import { DrizzleContainerRepository } from './container.repository';
 import { DrizzleMirrorStateRepository } from './mirror-state.repository';
+import { SessionContextSummaryRepository } from '../../../application/ports/session-context-summary-repository.port';
+import { DrizzleSessionContextSummaryRepository } from './session-context-summary.repository';
 import { DrizzleContainersOverviewRepository } from './containers-overview.repository';
 import { DrizzleAgentAreaRepository } from './agent-area.repository';
 import { DrizzleInfraArtifactRepository } from './infra-artifact.repository';
@@ -244,10 +248,18 @@ const { db, pool } = createDrizzleClient();
       useClass: DrizzleRagTelemetryRepository,
     },
     { provide: ContainerRepository, useClass: DrizzleContainerRepository },
+    {
+      provide: QaEnvironmentRepository,
+      useClass: DrizzleQaEnvironmentRepository,
+    },
     { provide: MirrorStateRepository, useClass: DrizzleMirrorStateRepository },
     {
       provide: ContainersOverviewRepository,
       useClass: DrizzleContainersOverviewRepository,
+    },
+    {
+      provide: SessionContextSummaryRepository,
+      useClass: DrizzleSessionContextSummaryRepository,
     },
     { provide: AgentAreaRepository, useClass: DrizzleAgentAreaRepository },
     {
@@ -326,8 +338,10 @@ const { db, pool } = createDrizzleClient();
     ChunkRepository,
     RagTelemetryRepository,
     ContainerRepository,
+    QaEnvironmentRepository,
     MirrorStateRepository,
     ContainersOverviewRepository,
+    SessionContextSummaryRepository,
     InfraArtifactRepository,
     PsychologistAnalysisRepository,
     PsychologistHypothesisRepository,

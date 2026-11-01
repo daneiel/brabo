@@ -21,7 +21,11 @@ defmodule Engine.Gates.QaAutomacaoAgent do
   só roda o `ToolLoop` e DEVOLVE o resultado; nunca chama `EngineApiClient`.
   """
 
-  alias Engine.Gates.{Hooks.Termination, QaTools}
+  require Logger
+
+  alias Engine.Gates.{Hooks.Termination, QaTools, RecorteDaTarefa}
+  alias Engine.Projects.Project
+  alias Engine.Sessions.EngineApiClient
   alias Engine.Harness.{Hooks, ToolLoop}
   alias Engine.Harness.Hooks.{ActionPipeline, EventLog}
 
@@ -38,10 +42,116 @@ defmodule Engine.Gates.QaAutomacaoAgent do
   falha e a ORIGEM (ADR 0020).
   """
   def run(project_id, session_id, task_id, dev_state, dev_context) do
+    case subir_instancia(project_id, session_id, task_id) do
+      :sem_instancia ->
+        rodar(project_id, session_id, task_id, dev_state, dev_context, nil)
+
+      :ok ->
+        com_remocao(project_id, task_id, fn ->
+          rodar(project_id, session_id, task_id, dev_state, dev_context, task_id)
+        end)
+
+      {:error, motivo} ->
+        # RN-059: a subida que falha termina o gate com desfecho nomeado
+        # (infra), nunca testa no container de trabalho nem cala.
+        {:blocked,
+         %{
+           reason: "QA de Automação não subiu a instância de QA",
+           diagnosis: motivo,
+           origin: "infra"
+         }}
+    end
+  end
+
+  defp rodar(project_id, session_id, task_id, dev_state, dev_context, qa_task_id) do
     project_id
     |> build_ctx(session_id, dev_state, dev_context)
+    |> Map.put(:qa_task_id, qa_task_id)
     |> ToolLoop.run()
     |> handle_outcome(task_id)
+  end
+
+  # AT-612 (RN-935): uma instância de QA efêmera em todo gate de Automação, em
+  # `container`/`mounted`; `runner` segue como antes ("runner depois"). A subida
+  # é `proposed_action` (semeada `auto_approve` para este agente), não chamada
+  # direta: o efeito fica registrado e respeita a autonomia.
+  defp subir_instancia(project_id, session_id, task_id) do
+    if modo_com_instancia?(project_id) do
+      ator = %{kind: "agent", id: "qa-automacao"}
+
+      case EngineApiClient.propose_action(
+             project_id,
+             session_id,
+             "qa_environment_start",
+             ator,
+             %{taskId: task_id}
+           ) do
+        {:ok, %{"status" => status}} when status in ["executed", "auto_approved"] ->
+          :ok
+
+        {:ok, %{"status" => "failed"} = a} ->
+          {:error, motivo_da_subida(a)}
+
+        {:ok, %{"status" => status}} ->
+          {:error, "a ação qa_environment_start ficou #{status}; não foi auto-aprovada"}
+
+        {:error, reason} ->
+          {:error, "a api recusou a subida da instância de QA: #{inspect(reason)}"}
+      end
+    else
+      :sem_instancia
+    end
+  end
+
+  defp motivo_da_subida(action) do
+    exec = Map.get(action, "executionResult") || %{}
+    Map.get(exec, "motivo") || Map.get(exec, "stderr") || "motivo não informado"
+  end
+
+  defp modo_com_instancia?(project_id) do
+    match?(%{execution_mode: m} when m in ["container", "mounted"], Project.get(project_id))
+  rescue
+    _ -> false
+  end
+
+  # Remove a instância em sucesso, falha, exceção e teto esgotado. Só NÃO a
+  # remove quando o laço está PARADO esperando decisão (ou devolução da api):
+  # ele volta a usá-la em `retomar/3`/`devolver/3`.
+  defp com_remocao(project_id, task_id, fun) do
+    resultado = fun.()
+    unless segue_usando?(resultado), do: remover_instancia(project_id, task_id)
+    resultado
+  catch
+    kind, reason ->
+      remover_instancia(project_id, task_id)
+      :erlang.raise(kind, reason, __STACKTRACE__)
+  end
+
+  defp segue_usando?({:awaiting, _}), do: true
+  defp segue_usando?({:ok, %{retomada: _}}), do: true
+  defp segue_usando?(_), do: false
+
+  defp remover_instancia(project_id, task_id) do
+    case EngineApiClient.remover_instancia_de_qa(project_id, task_id) do
+      {:ok, %{"sucesso" => false} = r} ->
+        Logger.warning("QA: instância de QA da task #{task_id} não removida: #{inspect(r)}")
+
+      {:ok, _} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning("QA: remoção da instância da task #{task_id} falhou: #{inspect(reason)}")
+    end
+  end
+
+  defp continuar(ctx, task_id) do
+    case ctx do
+      %{qa_task_id: qa} when is_binary(qa) ->
+        com_remocao(ctx.project_id, qa, fn -> ctx |> ToolLoop.run() |> handle_outcome(task_id) end)
+
+      _ ->
+        ctx |> ToolLoop.run() |> handle_outcome(task_id)
+    end
   end
 
   @doc """
@@ -65,8 +175,22 @@ defmodule Engine.Gates.QaAutomacaoAgent do
           }
         ]
     end)
-    |> ToolLoop.run()
-    |> handle_outcome(task_id)
+    |> continuar(task_id)
+  end
+
+  @doc """
+  AT-526 (RN-876): a api recusou o veredito `needs_user_decision`. Retoma o
+  laço de onde ele parou, com a recusa como mensagem nova (RN-163: erro é
+  entrada do laço). A volta CONTA no teto de iterações do mesmo `ctx`.
+  """
+  def devolver(ctx, texto_da_recusa, task_id) do
+    ctx
+    |> Map.update!(:messages, fn messages ->
+      Enum.reject(messages, &(Map.get(&1, "role") == "system")) ++
+        [%{"role" => "user", "content" => texto_da_recusa, :pinned => false}]
+    end)
+    |> Map.update(:iteration, 1, &(&1 + 1))
+    |> continuar(task_id)
   end
 
   defp build_ctx(
@@ -98,7 +222,9 @@ defmodule Engine.Gates.QaAutomacaoAgent do
       messages: [
         task
         |> initial_message(story)
+        |> com_o_recorte(dev_context)
         |> com_o_plano(Map.get(dev_context, :plano_de_teste))
+        |> com_o_pedido_anterior(Map.get(dev_context, :pedido_anterior))
       ],
       context_window: 128_000
     }
@@ -116,6 +242,22 @@ defmodule Engine.Gates.QaAutomacaoAgent do
   # NEGÓCIO sob revisão (`enviar(payload)`) em vez de usar uma ferramenta — o
   # loop encerrava sem parecer. O DevAgent tem o AGENTS.md do repositório
   # guiando cada passo; o QA não tinha nada equivalente.
+  @doc """
+  RN-890 (AT-542): ao provar um comando de linha do entregável (CLI, script
+  do `package.json`), o QA confere o código de saída no caminho feliz (0) E
+  na recusa de entrada (diferente de 0). Instrução, não gate novo.
+  """
+  @spec instrucao_de_codigo_de_saida() :: String.t()
+  def instrucao_de_codigo_de_saida do
+    """
+    Comando de linha da entrega (CLI, script do `package.json`): o teste que
+    o prova confere o CÓDIGO DE SAÍDA — 0 no caminho feliz e DIFERENTE de 0
+    quando o comando recusa a entrada. Recusa que sai com 0 engana quem o
+    chama (script, CI); teste que não confere o código de saída na recusa é
+    regra sem cobertura e entra em `itens`.
+    """
+  end
+
   defp initial_message(task, story) do
     regras = Enum.concat(story["rf"] || [], story["rnf"] || [])
 
@@ -143,9 +285,14 @@ defmodule Engine.Gates.QaAutomacaoAgent do
          `rule` (o texto da regra), `tests` (os arquivos que a cobrem, lista
          vazia se nenhum) e `covered` (true/false).
 
+      #{instrucao_de_codigo_de_saida()}
+
       Veredito: `approved` só se a suite saiu com exit 0 E toda regra tem pelo
       menos um teste. Se alguma regra ficou sem teste, use
       `changes_requested` e liste em `itens` exatamente quais regras faltam.
+      Regra que é de OUTRA tarefa da história (ver o recorte abaixo) não
+      reprova: marque-a na matriz com `covered: false` e cite-a no `resumo`
+      como observação — ela não entra em `itens` nem impede `approved`.
 
       Responda SEMPRE chamando uma das ferramentas acima. Nunca chame as
       funções do código que está revisando — elas não são ferramentas.
@@ -161,6 +308,30 @@ defmodule Engine.Gates.QaAutomacaoAgent do
   # do plano obrigatórios mudaria o que o gate `qa-verificada` reprova, e isso
   # não foi decidido. Sem plano (a QA-estratégia falhou e já narrou a origem),
   # a mensagem é a de sempre, byte a byte.
+  # AT-448 (RN-765): o recorte da tarefa — sem ele o QA julgava a história
+  # inteira e reprovava por RF de tarefa irmã.
+  defp com_o_recorte(mensagem, dev_context),
+    do: Map.update!(mensagem, "content", &(&1 <> RecorteDaTarefa.texto(dev_context)))
+
+  # RN-944: o pedido da volta anterior é INSUMO, nunca régua nova de veredito.
+  defp com_o_pedido_anterior(mensagem, %{itens: [_ | _] = itens}) do
+    lista = Enum.map_join(itens, "\n", &("- " <> to_string(&1)))
+
+    secao = """
+
+    Pedido de correção da volta anterior (itens que você mesmo pediu):
+    #{lista}
+
+    Para cada item anterior diga no `resumo` se foi atendido (onde) ou não; item
+    não atendido volta em `itens` com o mesmo sentido; item novo só se for
+    lacuna que a correção criou ou que você prova estar no diff desta volta.
+    """
+
+    Map.update!(mensagem, "content", &(&1 <> secao))
+  end
+
+  defp com_o_pedido_anterior(mensagem, _), do: mensagem
+
   defp com_o_plano(mensagem, nil), do: mensagem
 
   defp com_o_plano(mensagem, plano),
@@ -169,7 +340,8 @@ defmodule Engine.Gates.QaAutomacaoAgent do
   defp secao_do_plano(plano) do
     criterios =
       plano
-      |> Map.get(:criterios_executaveis, [])
+      |> Map.get(:criterios_executaveis)
+      |> Engine.Gates.Hooks.Termination.lista()
       |> Enum.map_join("\n", &("- " <> to_string(&1)))
 
     """
@@ -184,6 +356,16 @@ defmodule Engine.Gates.QaAutomacaoAgent do
 
     Estratégia de automação: #{Map.get(plano, :estrategia_de_automacao, "")}
     """
+  end
+
+  # AT-526 (RN-876): o `needs_user_decision` leva o `ctx` do laço, para a
+  # recusa da api voltar a ele (`devolver/3`). Nunca entra em artefato: quem
+  # emite lê os campos nomeados.
+  defp handle_outcome(
+         {:halted, {"emit_qa_verdict", %{veredito: "needs_user_decision"} = verdict}, ctx},
+         _task_id
+       ) do
+    {:ok, Map.put(verdict, :retomada, ctx)}
   end
 
   defp handle_outcome({:halted, {"emit_qa_verdict", verdict}, _ctx}, _task_id) do
@@ -238,8 +420,17 @@ defmodule Engine.Gates.QaAutomacaoAgent do
   # que só parou de chamar ferramenta é `modelo`.
   defp diagnostico_de_parada(ctx) do
     case Map.get(ctx, :last_error) do
-      nil -> {"o modelo parou sem chamar emit_qa_verdict", "modelo"}
-      error -> {"falha no turno de LLM: #{inspect(error)}", "infra"}
+      nil when is_map_key(ctx, :corte_pelo_teto) ->
+        {Engine.Gates.MotivoDoCorte.texto(), "modelo"}
+
+      nil when is_map_key(ctx, :corte_com_texto) ->
+        {Engine.Gates.MotivoDoCorte.texto_com_texto(), "modelo"}
+
+      nil ->
+        {"o modelo parou sem chamar emit_qa_verdict", "modelo"}
+
+      error ->
+        {"falha no turno de LLM: #{inspect(error)}", Engine.Gates.OrigemDoErro.de_llm(error)}
     end
   end
 end

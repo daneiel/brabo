@@ -93,7 +93,8 @@ defmodule Engine.Actions.GitleaksDetector.Live do
     end
   end
 
-  defp parse_content(content, worktree_path) do
+  @doc false
+  def parse_content(content, worktree_path) do
     case Jason.decode(content) do
       {:ok, findings} when is_list(findings) ->
         {:ok, Enum.map(findings, &format(&1, worktree_path))}
@@ -111,9 +112,28 @@ defmodule Engine.Actions.GitleaksDetector.Live do
       tool: "gitleaks",
       path: relative_path(finding["File"], worktree_path),
       line: finding["StartLine"],
-      message: finding["Description"] || finding["RuleID"] || "segredo detectado"
+      message: mensagem(finding)
     }
   end
+
+  # RN-796 (AT-470): o item leva a REGRA e o trecho acusado com o segredo
+  # MASCARADO, para o dev achar o que corrigir sem o parecer repetir o segredo.
+  defp mensagem(finding) do
+    base = finding["Description"] || finding["RuleID"] || "segredo detectado"
+    regra = finding["RuleID"]
+
+    [base, regra && "regra `#{regra}`", trecho_mascarado(finding["Match"], finding["Secret"])]
+    |> Enum.reject(&(&1 in [nil, false]))
+    |> Enum.join(" — ")
+  end
+
+  # Sem o segredo para mascarar, o trecho NÃO entra: na dúvida, nada em claro.
+  defp trecho_mascarado(match, secret)
+       when is_binary(match) and match != "" and is_binary(secret) and secret != "" do
+    "trecho: `#{String.replace(match, secret, "***")}`"
+  end
+
+  defp trecho_mascarado(_, _), do: nil
 
   # `gitleaks dir` reporta caminho ABSOLUTO (o `detect` reportava relativo).
   # O parecer vai pro usuário e pro prompt de correção do dev: o caminho

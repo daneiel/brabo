@@ -7,6 +7,7 @@ defmodule Engine.Harness.Tools.AssignStoryModules do
 
   @behaviour Engine.Harness.Tool
 
+  alias Engine.Harness.IdDoBacklog
   alias Engine.Sessions.EngineApiClient
 
   @impl true
@@ -33,11 +34,14 @@ defmodule Engine.Harness.Tools.AssignStoryModules do
   @impl true
   def run(%{"story_id" => story_id, "module_ids" => module_ids}, ctx)
       when is_list(module_ids) do
-    fields = %{storyId: story_id, moduleIds: module_ids}
+    # RN-721: aceita o prefixo (>= 8 hex) que o modelo copia encurtado.
+    with {:ok, story_id} <- IdDoBacklog.resolver(ctx.project_id, :historia, story_id) do
+      fields = %{storyId: story_id, moduleIds: module_ids}
 
-    case EngineApiClient.assign_story_modules(ctx.project_id, ctx.session_id, fields) do
-      {:ok, _story} -> {:ok, "módulos vinculados à história #{story_id}."}
-      {:error, reason} -> {:error, "falha ao vincular módulos: #{inspect(reason)}"}
+      case EngineApiClient.assign_story_modules(ctx.project_id, ctx.session_id, fields) do
+        {:ok, _story} -> {:ok, "módulos vinculados à história #{story_id}."}
+        {:error, reason} -> {:error, "falha ao vincular módulos: #{inspect(reason)}"}
+      end
     end
   end
 

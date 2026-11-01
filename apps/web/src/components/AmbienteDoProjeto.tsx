@@ -111,9 +111,14 @@ export function AmbienteDoProjeto({ projectId }: { projectId: string }) {
     enabled: temEspelho,
   });
 
-  const modelosLocais = modelsQuery.data
-    ? Object.values(modelsQuery.data.local).flat().length
-    : null;
+  // AT-372: modelo de EMBEDDING (o `nomic-embed` do profile llm) não conversa,
+  // e contá-lo como "modelo do Ollama ativo" deixava a linha dizer o
+  // contrário do que a pessoa vê. O `Model` não tem flag de embedding, então
+  // o critério é o NOME (heurística declarada: um modelo de embedding sem
+  // "embed" no nome conta como de conversa).
+  const locais = modelsQuery.data ? Object.values(modelsQuery.data.local).flat() : null;
+  const embeddingsLocais = locais ? locais.filter((m) => ehModeloDeEmbedding(m.name)).length : 0;
+  const modelosLocais = locais ? locais.length - embeddingsLocais : null;
 
   return (
     <div className={sinais.bloco}>
@@ -181,15 +186,26 @@ export function AmbienteDoProjeto({ projectId }: { projectId: string }) {
               : // Zero tem frase PRÓPRIA e não sai do plural: o pt-BR põe 0 na
                 // categoria `one` do CLDR, e "0 do Ollama, ativo" é uma frase
                 // que ninguém escreveria de propósito.
-                modelosLocais === 0
-                ? t('ambiente.modelosLocaisNenhum')
-                : t('ambiente.modelosLocaisValor', { count: modelosLocais })
+                [
+                  modelosLocais === 0
+                    ? t('ambiente.modelosLocaisNenhum')
+                    : t('ambiente.modelosLocaisValor', { count: modelosLocais }),
+                  embeddingsLocais > 0 &&
+                    t('ambiente.modelosLocaisEmbedding', { count: embeddingsLocais }),
+                ]
+                  .filter(Boolean)
+                  .join(' · ')
           }
           tom={modelosLocais === null ? 'aguardando' : 'neutro'}
         />
       </ul>
     </div>
   );
+}
+
+/** Modelo de embedding pelo nome (`nomic-embed-text`, `mxbai-embed-large`…). */
+export function ehModeloDeEmbedding(nome: string): boolean {
+  return /embed/i.test(nome);
 }
 
 type Traducao = ReturnType<typeof useTranslation<'overview'>>['t'];

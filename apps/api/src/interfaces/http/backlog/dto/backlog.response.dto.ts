@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import type { ServicoDeQa } from '../../../../domain/infra/run-instructions';
 import type { MesmasChaves, Wire } from '../../shared/dto/wire';
 import { STORY_STATUSES } from '../../../../domain/backlog/story-state-machine';
 import { PR_GATE_STATUSES } from '../../../../domain/execution/pr-gate-state-machine';
@@ -16,6 +17,7 @@ import type {
 } from '../../../../domain/backlog/coverage';
 import type { ModuleMap } from '../../../../domain/architecture/module-map.entity';
 import type { ModuleNode } from '../../../../domain/architecture/module-graph';
+import type { InstrucoesVigentes } from '../../../../application/use-cases/execution/get-run-instructions.use-case';
 import { RecursosDoContainerResponseDto } from '../../containers/dto/containers.response.dto';
 import type {
   AdrRef,
@@ -182,7 +184,7 @@ export class StoryResponseDto implements Wire<Story> {
     example: ['api'],
     description:
       'Modules from the `module_map` that the story touches. A story with ' +
-      'no module, or with a non-existent module, becomes an architecture ' +
+      'no module, or with a nonexistent module, becomes an architecture ' +
       'pending item.',
   })
   moduleIds!: string[];
@@ -214,6 +216,25 @@ export class StoryResponseDto implements Wire<Story> {
     nullable: true,
   })
   returnedAt!: string | null;
+
+  @ApiProperty({
+    example: null,
+    format: 'date-time',
+    description:
+      'When the story was ARCHIVED (RN-727). Archived stories leave the backlog, ' +
+      'the coverage, the plan and the claim; `null` is a story in play.',
+    nullable: true,
+    type: String,
+  })
+  archivedAt!: string | null;
+
+  @ApiProperty({
+    example: null,
+    description: 'Why it was archived, when someone said (RN-727).',
+    nullable: true,
+    type: String,
+  })
+  archivedReason!: string | null;
 
   @ApiProperty({ example: '2026-07-25T09:00:00.000Z', format: 'date-time' })
   createdAt!: string;
@@ -618,4 +639,76 @@ export class InfraArtifactResponseDto implements Wire<InfraArtifact> {
 export const _chavesInfraArtifact: MesmasChaves<
   InfraArtifactResponseDto,
   InfraArtifact
+> = true;
+
+// ------------------------------------------------------- run instructions
+
+/** RN-852: uma URL que o compose da Infra abre na máquina do usuário. */
+export class UrlDeExecucaoResponseDto {
+  @ApiProperty({ example: 'Swagger', maxLength: 60 })
+  label!: string;
+
+  @ApiProperty({ example: 'http://localhost:8080/docs' })
+  url!: string;
+
+  @ApiProperty({ enum: ['api_docs', 'web'], example: 'api_docs' })
+  kind!: 'api_docs' | 'web';
+}
+
+/**
+ * RN-852 (ADR 0213): o `artifact.run_instructions` vigente. DECLARADO pela
+ * Infra na PR dela, nunca verificado na máquina de quem lê (RN-468).
+ */
+export class AppDeExecucaoResponseDto {
+  @ApiProperty({ example: 'npm start' })
+  command!: string;
+
+  @ApiProperty({ example: 3000 })
+  port!: number;
+}
+
+export class RunInstructionsResponseDto implements Wire<InstrucoesVigentes> {
+  @ApiProperty({ example: 'cp .env.example .env && docker compose up --build' })
+  command!: string;
+
+  @ApiProperty({ type: [UrlDeExecucaoResponseDto] })
+  urls!: UrlDeExecucaoResponseDto[];
+
+  @ApiProperty({
+    example: true,
+    description: 'The PR commits a `.env.example` to copy before running.',
+  })
+  envExample!: boolean;
+
+  @ApiProperty({
+    required: false,
+    type: AppDeExecucaoResponseDto,
+    description:
+      'AT-610 (ADR 0228): the command the container runs to start the app and the port it listens on. Absent when the Infra did not declare it.',
+  })
+  app?: AppDeExecucaoResponseDto;
+
+  @ApiProperty({
+    required: false,
+    type: Object,
+    description:
+      'AT-612 (ADR 0229): the infra services of the ephemeral QA instance declared by the Infra (`run.qa`). Absent when none.',
+  })
+  qa?: { services: ServicoDeQa[] };
+
+  @ApiProperty({ example: 'http://localhost:3000/git/acme/pulls/3' })
+  prUrl!: string;
+
+  @ApiProperty({ example: 1 })
+  version!: number;
+
+  @ApiProperty({ example: '01JC4Z0000EVENTORUNINSTRUC01' })
+  eventId!: string;
+
+  @ApiProperty({ example: '2026-10-11T12:00:00.000Z' })
+  declaredAt!: string;
+}
+export const _chavesRunInstructions: MesmasChaves<
+  RunInstructionsResponseDto,
+  InstrucoesVigentes
 > = true;

@@ -1,0 +1,62 @@
+{
+  "link.title.Documentação": {
+    "message": "Документация",
+    "description": "The title of the footer links column with title=Documentação in the footer"
+  },
+  "link.title.Comunidade": {
+    "message": "Сообщество",
+    "description": "The title of the footer links column with title=Comunidade in the footer"
+  },
+  "link.title.Mais": {
+    "message": "Ещё",
+    "description": "The title of the footer links column with title=Mais in the footer"
+  },
+  "link.item.label.Primeiros passos": {
+    "message": "Первые шаги",
+    "description": "The label of footer link with label=Primeiros passos linking to /getting-started"
+  },
+  "link.item.label.Arquitetura": {
+    "message": "Архитектура",
+    "description": "The label of footer link with label=Arquitetura linking to /architecture"
+  },
+  "link.item.label.Regras de negócio": {
+    "message": "Бизнес-правила",
+    "description": "The label of footer link with label=Regras de negócio linking to /business-rules"
+  },
+  "link.item.label.Como contribuir": {
+    "message": "Как внести вклад",
+    "description": "The label of footer link with label=Como contribuir linking to https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md"
+  },
+  "link.item.label.Onde pedir ajuda": {
+    "message": "Где попросить помощи",
+    "description": "The label of footer link with label=Onde pedir ajuda linking to https://github.com/daneiel/brabo/blob/dev/SUPPORT.md"
+  },
+  "link.item.label.Segurança": {
+    "message": "Безопасность",
+    "description": "The label of footer link with label=Segurança linking to https://github.com/daneiel/brabo/blob/dev/SECURITY.md"
+  },
+  "link.item.label.GitHub": {
+    "message": "GitHub",
+    "description": "The label of footer link with label=GitHub linking to https://github.com/daneiel/brabo"
+  },
+  "link.item.label.CHANGELOG": {
+    "message": "CHANGELOG",
+    "description": "The label of footer link with label=CHANGELOG linking to https://github.com/daneiel/brabo/blob/dev/CHANGELOG.md"
+  },
+  "link.item.label.Licença MIT": {
+    "message": "Лицензия MIT",
+    "description": "The label of footer link with label=Licença MIT linking to https://github.com/daneiel/brabo/blob/dev/LICENSE"
+  },
+  "link.item.label.Avisos de terceiros": {
+    "message": "Уведомления о сторонних компонентах",
+    "description": "The label of footer link with label=Avisos de terceiros linking to https://github.com/daneiel/brabo/blob/dev/THIRD_PARTY_NOTICES.md"
+  },
+  "copyright": {
+    "message": "Copyright © 2026 Daniel Souza. Распространяется по лицензии MIT. Сторонние инструменты сохраняют собственные лицензии — см. Уведомления о сторонних компонентах.",
+    "description": "The footer copyright"
+  },
+  "link.item.label.Manual de operação": {
+    "message": "Руководство по эксплуатации",
+    "description": "The label of footer link with label=Manual de operação linking to /runbook"
+  }
+}

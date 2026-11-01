@@ -1,472 +1,519 @@
 ---
 id: cadeia-de-suprimentos-do-ci
-title: The CI supply chain
-sidebar_label: CI supply chain
-description: What runs inside our CI runners that we didn't write, how it's pinned, and what's still trusted on faith.
+title: A cadeia de suprimentos do CI
+sidebar_label: Cadeia de suprimentos do CI
+description: O que roda dentro dos nossos runners de CI que não fomos nós que escrevemos, como isso é pinado, e o que ainda é aceito na confiança.
 ---
 
-# The CI supply chain
+# A cadeia de suprimentos do CI
 
-Every job in this repository runs third-party code on a machine that has
-a checkout of the source and, in the release workflows, credentials for
-the GHCR registry, the npm registry and the repository's own git refs.
-That code arrives two ways: **GitHub Actions** (`uses:`) and **binaries
-downloaded with `curl`** (the scanners). Neither is written here, and
-neither is reviewed by a PR.
+Todo job deste repositório roda código de terceiros numa máquina que tem
+um checkout do código-fonte e, nos workflows de release, credenciais do
+registry GHCR, do registry npm e das próprias refs de git do repositório.
+Esse código chega por dois caminhos: **GitHub Actions** (`uses:`) e
+**binários baixados com `curl`** (os scanners). Nenhum dos dois é escrito
+aqui, e nenhum dos dois é revisado por uma PR.
 
-This page is about the part of that we control. It exists because the
-mechanism lived only in workflow comments — a place where a rule can be
-read but not audited, and where the two halves drifted for exactly that
-reason.
+Esta página trata da parte disso que controlamos. Ela existe porque o
+mecanismo morava só em comentários de workflow — um lugar onde a regra
+pode ser lida mas não auditada, e onde as duas metades divergiram
+exatamente por esse motivo.
 
-## The threat, stated plainly
+## A ameaça, dita sem rodeios {#the-threat-stated-plainly}
 
-A tag is a pointer. `actions/checkout@v4` is not a version, it's a name
-that the action's owner can delete and recreate pointing at a different
-commit, at any moment, with no signal in this repository. Whoever moves
-that tag runs their code in our runner, on our checkout, with whatever
-secrets that workflow was granted.
+Uma tag é um ponteiro. `actions/checkout@v4` não é uma versão, é um nome
+que o dono da action pode apagar e recriar apontando para outro commit, a
+qualquer momento, sem sinal nenhum neste repositório. Quem move essa tag
+roda o código dele no nosso runner, no nosso checkout, com os segredos
+que aquele workflow recebeu.
 
-The same holds for a `curl` of a GitHub Release asset: a compromised
-release, or a MITM between the runner and the CDN, hands us a different
-binary and nothing notices — until the scanner fails to start, or worse,
-until it "works."
+O mesmo vale para um `curl` de um asset de GitHub Release: uma release
+comprometida, ou um MITM entre o runner e a CDN, nos entrega outro binário
+e nada percebe — até o scanner não conseguir subir, ou pior, até ele
+"funcionar".
 
-Neither is a hypothesis about our repository specifically. They're the
-two documented ways CI gets compromised in the wild, and the defense for
-both is the same idea: **refer to content, not to a name**.
+Nenhuma das duas é hipótese sobre o nosso repositório especificamente. São
+as duas formas documentadas de o CI ser comprometido no mundo real, e a
+defesa para as duas é a mesma ideia: **referir-se ao conteúdo, não a um
+nome**.
 
-## The two mechanisms
+## Os dois mecanismos {#the-two-mechanisms}
 
-### Binaries: checksum after every download
+### Binários: checksum depois de todo download {#binaries-checksum-after-every-download}
 
-Every `curl` of a release asset in `ci.yml` and in both engine
-Dockerfiles is followed by `sha256sum -c` against a hash written in the
-workflow itself:
+Todo `curl` de asset de release no `ci.yml` e nos dois Dockerfiles do
+engine é seguido de `sha256sum -c` contra um hash escrito no próprio
+workflow:
 
 ```yaml
 GITLEAKS_SHA256: '551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb'
 ```
 
-The hashes come from the `checksums.txt` published with each release, on
-an independent download. A mismatch fails the job before the binary is
-ever executed.
+Os hashes vêm do `checksums.txt` publicado com cada release, num download
+independente. Uma divergência reprova o job antes de o binário ser sequer
+executado.
 
-`propriedades.yml` (the scheduled property proofs, BRB-009) follows the same
-rule for the three binaries it needs to bring up a cluster — `k3d`, `helm`
-and `kubectl`, each with its hash in the workflow's `env:`. It installs them
-**before** running `deploy/k8s/bootstrap.sh`, and that order is the point:
-the bootstrap's own `ensure_k3d` downloads k3d with **no** checksum, and
-finding the binary already on `PATH` is what keeps it from downloading. A
-step fails the job if the versions pinned there drift from the ones the
-bootstrap would install. What that workflow still takes on trust, stated:
-the Helm charts come from their repositories by **version**, not digest
-(`deploy/k8s/helm/charts.env`), with whatever images those charts reference;
-and `k3d` pulls the `rancher/k3s` node image and its load-balancer image by
-the **tag baked into the k3d binary** — pinned, then, only as far as the k3d
-checksum pins it.
+O `propriedades.yml` (as provas de propriedade agendadas, BRB-009) segue a
+mesma regra para os três binários de que precisa para subir um cluster —
+`k3d`, `helm` e `kubectl`, cada um com seu hash no `env:` do workflow. Ele
+os instala **antes** de rodar `deploy/k8s/bootstrap.sh`, e essa ordem é o
+ponto: o `ensure_k3d` do próprio bootstrap baixa o k3d **sem** checksum, e
+achar o binário já no `PATH` é o que o impede de baixar. Um passo reprova o
+job se as versões pinadas ali divergirem das que o bootstrap instalaria. O
+que esse workflow ainda aceita na confiança, declarado: os charts do Helm
+vêm dos repositórios deles por **versão**, não por digest
+(`deploy/k8s/helm/charts.env`), com as imagens que esses charts
+referenciam; e o `k3d` baixa a imagem de nó `rancher/k3s` e a imagem do
+load balancer dele pela **tag embutida no binário do k3d** — pinadas,
+então, só até onde o checksum do k3d as pina.
 
-The scanner versions have a second constraint: they must match
-`docker/engine/Dockerfile.prod`, because testing against a different
-scanner from the one that runs in production is a false green. The
-comment promising that was there since Phase 5; the step that *enforces*
-it (`Versões dos scanners batem com o Dockerfile.prod do engine`, in the
-`lint` job) arrived only with [#408](https://github.com/daneiel/brabo/pull/408).
+As versões dos scanners têm uma segunda restrição: precisam bater com o
+`docker/engine/Dockerfile.prod`, porque testar contra um scanner diferente
+do que roda em produção é verde falso. O comentário que prometia isso
+estava lá desde a Fase 5; o passo que o *cobra*
+(`Versões dos scanners batem com o Dockerfile.prod do engine`, no job
+`lint`) só chegou com a [#408](https://github.com/daneiel/brabo/pull/408).
 
-### Actions: commit SHA, with the version alongside
+### Actions: SHA de commit, com a versão ao lado {#actions-commit-sha-with-the-version-alongside}
 
-Every `uses:` is pinned to a 40-character commit SHA, with the tag it
-came from preserved in a trailing comment:
+Todo `uses:` é pinado num SHA de commit de 40 caracteres, com a tag de
+onde ele veio preservada num comentário ao fim da linha:
 
 ```yaml
 - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
 ```
 
-The comment is **required**, and not as decoration. It's the only thing
-that tells a human — and Dependabot, which reads exactly that comment —
-which version a hash is. A SHA with no version beside it is a pin nobody
-can audit and nobody can update.
+O comentário é **obrigatório**, e não como enfeite. É a única coisa que diz
+a um humano — e ao Dependabot, que lê exatamente esse comentário — qual
+versão um hash é. Um SHA sem versão ao lado é um pin que ninguém consegue
+auditar e ninguém consegue atualizar.
 
-To resolve a tag into the SHA to write down:
+Para resolver uma tag no SHA a anotar:
 
 ```bash
 gh api repos/actions/checkout/commits/v4 --jq .sha
 ```
 
-## Why there's a check and not just a rule
+## Por que há uma checagem e não só uma regra {#why-theres-a-check-and-not-just-a-rule}
 
-#408 pinned the actions in `ci.yml` and only there. The other fifteen
-workflows stayed on mutable tags for months — including `release.yml`
-(pushes images to GHCR), `publish-runner.yml` (publishes to npm),
-`tag-release.yml` (creates tags) and `docs-deploy.yml` (pushes to
-`gh-pages`). The half that was left unpinned was, precisely, the half
-that holds credentials.
+A #408 pinou as actions do `ci.yml` e só dele. Os outros quinze workflows
+ficaram em tags mutáveis por meses — inclusive `release.yml` (empurra
+imagens para o GHCR), `publish-runner.yml` (publica no npm),
+`tag-release.yml` (cria tags) e `docs-deploy.yml` (empurra para o
+`gh-pages`). A metade que ficou sem pin era, precisamente, a metade que
+tem credenciais.
 
-That isn't carelessness, it's the predictable shape of a rule with no
-mechanism: a new workflow is written by copying a neighbour, and the
-neighbour had a tag. So the rule now has a mechanism —
-`scripts/ci/actions-pinadas.ts`, run in the `lint` job, which fails on
-any `uses:` that isn't a commit SHA, and on any SHA without its version
-comment. It's the same reasoning as
-[the RN and ADR counts](documentation-workflow.md): a number kept correct
-by hand goes stale the moment someone forgets, so the artifact is read
-instead of trusted.
+Isso não é descuido, é a forma previsível de uma regra sem mecanismo: um
+workflow novo é escrito copiando um vizinho, e o vizinho tinha uma tag.
+Então a regra agora tem um mecanismo — `scripts/ci/actions-pinadas.ts`,
+rodado no job `lint`, que reprova qualquer `uses:` que não seja SHA de
+commit, e qualquer SHA sem o comentário de versão. É o mesmo raciocínio
+[das contagens de RN e ADR](documentation-workflow.md): um número mantido
+certo à mão fica velho no momento em que alguém esquece, então o artefato
+é lido em vez de confiado.
 
-A reference to an action **inside this repository** (`./.github/...`)
-passes: it's our own code, reviewed by the PR that changes it, with no
-third party able to move anything.
+Uma referência a uma action **dentro deste repositório** (`./.github/...`)
+passa: é código nosso, revisado pela PR que o muda, sem terceiro capaz de
+mover nada.
 
-## The Playwright browser
+## O navegador do Playwright {#the-playwright-browser}
 
-The browser E2E ([ADR 0120](../adr/0120-e2e-de-navegador-contra-o-compose-de-producao.md))
-downloads chromium at CI time from Playwright's CDN — a third download
-that isn't an action and isn't a GitHub Release asset, so neither of the
-two mechanisms above covers it.
+O E2E de navegador ([ADR 0120](../adr/0120-e2e-de-navegador-contra-o-compose-de-producao.md))
+baixa o chromium na hora do CI, da CDN do Playwright — um terceiro
+download que não é action nem asset de GitHub Release, então nenhum dos
+dois mecanismos acima o cobre.
 
-What pins it is the **exact** `@playwright/test` version in `e2e/pnpm-lock.yaml`:
-each release of the package is bound to one browser build, and
-`playwright install` fetches that one. So the pin is the lockfile, and
-`--frozen-lockfile` in the job is what makes it a pin rather than a
-suggestion.
+O que o pina é a versão **exata** de `@playwright/test` em
+`e2e/pnpm-lock.yaml`: cada release do pacote está amarrada a um build do
+navegador, e `playwright install` busca esse. Então o pin é o lockfile, e
+o `--frozen-lockfile` no job é o que o torna um pin e não uma sugestão.
 
-There is no `sha256sum -c` here, and that's the honest description: the
-tool downloads and verifies on its own, and reproducing its checksum
-table by hand would be a copy that ages. Weaker than the scanner
-binaries, stated rather than implied.
+Não há `sha256sum -c` aqui, e essa é a descrição honesta: a ferramenta
+baixa e verifica por conta própria, e reproduzir a tabela de checksums
+dela à mão seria uma cópia que envelhece. Mais fraco que os binários dos
+scanners, dito em vez de subentendido.
 
-## What the images job caches, and what the cache cannot change {#images-job-caches}
+## O que o job de imagens guarda em cache, e o que o cache não pode mudar {#images-job-caches}
 
-Since AT-304 the `images` job of `ci.yml` keeps three things between runs
-with `actions/cache` (pinned by SHA like every other action), and each one
-was chosen so that the cache saves time without moving a verdict:
+Desde a AT-304 o job `images` do `ci.yml` guarda três coisas entre
+execuções com `actions/cache` (pinada por SHA como toda action), e cada
+uma foi escolhida para que o cache economize tempo sem mover um veredito:
 
-| cache | key | what decides the content |
+| cache | chave | o que decide o conteúdo |
 |---|---|---|
-| the Playwright browser (`~/.cache/ms-playwright`) | exact `@playwright/test` version + hash of `e2e/pnpm-lock.yaml` | the lockfile pin above — a new Playwright is a new key, never a stale hit |
-| the `e2e/` pnpm store (`setup-node`, `cache-dependency-path: e2e/pnpm-lock.yaml`) | hash of `e2e/pnpm-lock.yaml` | `pnpm install --frozen-lockfile`, which still checks every tarball's integrity against the lockfile |
-| the Trivy vulnerability database (`/tmp/trivy-cache/seed/db`) | Trivy version + UTC day, restoring the latest earlier day | **Trivy itself**: `--download-db-only` still runs, reads the database's own `NextUpdate`, and downloads again when it has passed |
+| o navegador do Playwright (`~/.cache/ms-playwright`) | versão exata de `@playwright/test` + hash de `e2e/pnpm-lock.yaml` | o pin do lockfile acima — Playwright novo é chave nova, nunca um acerto velho |
+| o store do pnpm de `e2e/` (`setup-node`, `cache-dependency-path: e2e/pnpm-lock.yaml`) | hash de `e2e/pnpm-lock.yaml` | `pnpm install --frozen-lockfile`, que continua conferindo a integridade de todo tarball contra o lockfile |
+| o banco de vulnerabilidades do Trivy (`/tmp/trivy-cache/seed/db`) | versão do Trivy + dia UTC, restaurando o dia anterior mais recente | **o próprio Trivy**: `--download-db-only` continua rodando, lê o `NextUpdate` do próprio banco e baixa de novo quando ele passou |
 
-The last row is the one that could have loosened a gate, and it doesn't:
-the cache only *seeds* the directory, and freshness is judged by the same
-rule Trivy applies on a laptop. What the cache removes is the ~110 MB
-download from the registry on every run — which was also the source of the
-occasional `TOOMANYREQUESTS` failure. `release.yml` does not use this cache:
-a tag scans with a database it downloads itself.
+A última linha é a que poderia ter afrouxado um gate, e não afrouxa: o
+cache só *semeia* o diretório, e o frescor é julgado pela mesma regra que
+o Trivy aplica num notebook. O que o cache tira é o download de ~110 MB do
+registry a cada execução — que era também a origem da falha ocasional
+`TOOMANYREQUESTS`. O `release.yml` não usa esse cache: uma tag escaneia
+com um banco que ela mesma baixa.
 
-The browser cache holds **only** the browser. The system libraries that
-`--with-deps` installs go into the runner's apt, which no directory cache
-can hold, so a warm run still installs them (`playwright install-deps`).
+O cache do navegador guarda **só** o navegador. As bibliotecas de sistema
+que o `--with-deps` instala vão para o apt do runner, que nenhum cache de
+diretório consegue guardar, então uma execução quente ainda as instala
+(`playwright install-deps`).
 
-Scope is GitHub's, not ours: `ci.yml` only runs on `pull_request`, so these
-caches are written in the PR's own scope and read back by that PR's later
-pushes (and from the base branch's scope, which this workflow never writes).
-A PR cannot seed another PR's cache.
+O escopo é do GitHub, não nosso: o `ci.yml` só roda em `pull_request`,
+então esses caches são gravados no escopo da própria PR e lidos de volta
+pelos pushes seguintes dessa PR (e do escopo da branch base, que este
+workflow nunca grava). Uma PR não consegue semear o cache de outra PR.
 
-## Container images: digest, with the tag inside the reference {#container-images-digest-with-the-tag-alongside}
+## Imagens de container: digest, com a tag dentro da referência {#container-images-digest-with-the-tag-alongside}
 
-Third-party images are pinned by **digest**, with the tag they came from
-written **inside the reference**, before the digest — `image:tag@sha256:<index>`
+Imagens de terceiros são pinadas por **digest**, com a tag de onde vieram
+escrita **dentro da referência**, antes do digest —
+`image:tag@sha256:<index>`
 ([ADR 0178](../adr/0178-tag-inline-na-imagem-de-terceiro.md)):
 
 ```yaml
-image: neo4j:5.26-community@sha256:22ec5cd05a8cbb372fc4bed5e384c30bc75fd92504c72be4462039761b105f61
+image: neo4j:5.26-community@sha256:d9cfe82983d27f5a75b3aaae8f316d04f9a698a3b7f6103a508f7caf8362f255
 ```
 
 ```dockerfile
-FROM node:24.21.0-alpine3.23@sha256:9ec4a2e289874ed0d722e1772ec2de45d2801541db8612f3638b26f128c69ac2 AS deps
+FROM node:26.12.1-alpine3.24@sha256:40cd011b55415bc894e45b02fdd5a5dfde056921b7d23a64c74f80497af48797 AS deps
 ```
 
-With both present, Docker pulls by the digest: the tag is information for
-whoever reads the line, and the digest decides the bytes.
+Com as duas presentes, o Docker baixa pelo digest: a tag é informação para
+quem lê a linha, e o digest decide os bytes.
 
-**Until ADR 0178 the tag lived in a comment** (`neo4j@sha256:…  # 5.26-community`,
-and in a Dockerfile on the line above), mirroring the actions. It moved because
-of a measurement (AT-139, 2026-09-27): Dependabot does not read that comment in
-any format, and a digest-only pin is "updated" to the digest of `latest` — which
-would have taken pgvector, neo4j and node to another major with the comment still
-claiming the old tag and the lint green. With the tag inline, Docker,
-Dependabot and a human all read the same tag. The CloudNativePG `imageName`
-already had this shape, for a different reason: its webhook refuses a
-digest-only reference, because it reads the Postgres version from the tag.
+**Até o ADR 0178 a tag morava num comentário** (`neo4j@sha256:…  # 5.26-community`,
+e num Dockerfile na linha de cima), espelhando as actions. Ela mudou de
+lugar por causa de uma medição (AT-139, 2026-09-27): o Dependabot não lê
+esse comentário em formato nenhum, e um pin só de digest é "atualizado"
+para o digest de `latest` — o que teria levado pgvector, neo4j e node a
+outro major com o comentário ainda afirmando a tag antiga e o lint verde.
+Com a tag inline, o Docker, o Dependabot e um humano leem todos a mesma
+tag. O `imageName` do CloudNativePG já tinha essa forma, por outro motivo:
+o webhook dele recusa referência só com digest, porque lê a versão do
+Postgres da tag.
 
-A comment is still **allowed**, but only if it says the same thing: a comment
-that states one tag (a single token with a digit) different from the inline
-one fails the check — it is exactly the leftover a version bump would leave
-lying. **In a Dockerfile a comment at the end of the `FROM` line still fails**:
-Docker's parser only recognizes `#` at the *start* of a line, so
-`FROM alpine:3.20@sha256:… # 3.20` is a `FROM` with three arguments, and the
-build dies with *"FROM requires either one or three arguments"*. This was found
-the right way under ADR 0159 — the `images` job's `bake` step failed on the first
-push, in 27 seconds — and `hadolint` had passed the same file: a linter agreeing
-is not the build agreeing.
+Um comentário continua **permitido**, mas só se disser a mesma coisa: um
+comentário que afirma uma tag (um único token com dígito) diferente da
+inline reprova a checagem — é exatamente a sobra que uma troca de versão
+deixaria largada. **Num Dockerfile, comentário no fim da linha `FROM`
+continua reprovando**: o parser do Docker só reconhece `#` no *início* da
+linha, então `FROM alpine:3.20@sha256:… # 3.20` é um `FROM` com três
+argumentos, e o build morre com *"FROM requires either one or three
+arguments"*. Isso foi achado do jeito certo sob o ADR 0159 — o passo
+`bake` do job `images` falhou no primeiro push, em 27 segundos — e o
+`hadolint` tinha passado o mesmo arquivo: linter concordar não é build
+concordar.
 
-This page used to say the opposite — tag pinning was "a deliberate stop,
-not an oversight," buying day-to-day reproducibility "without the
-maintenance cost of digests on images we don't publish." That reasoning
-is **revoked**, and the measurement is why: the 37 third-party references
-in the repository were on tags, and three of the places they run are
-worse than a `docker compose pull` going stale.
+Esta página já disse o contrário — pinar por tag era "uma parada
+deliberada, não um descuido", comprando reprodutibilidade do dia a dia
+"sem o custo de manutenção de digests em imagens que não publicamos". Esse
+raciocínio está **revogado**, e a medição é o porquê: as 37 referências de
+terceiros no repositório estavam em tags, e três dos lugares onde elas
+rodam são piores que um `docker compose pull` ficando velho.
 
-- The `FROM` lines are the base of the images we **publish** to
-  GHCR — five since [ADR 0162](../adr/0162-broker-publicado-e-oferecido-pelo-instalador.md). A moved tag becomes bytes inside an image we sign and hand to
-  other people.
-- `docker/docker-compose.install.yml` runs on the machine of whoever
-  installed the product, beside their Postgres. In that same file our
-  **own** images already arrive by digest, through a variable the
-  installer fills — the third-party ones arrived by tag, next to them.
-- `ci.yml`, `golden-set-rag.yml` and `golden-set-qa.yml` run third-party images as job
-  `services:`. That is literally the runner the action rule exists to
-  protect, reached by the other door. Since
-  [ADR 0197](../adr/0197-a-imagem-dos-workflows-vem-do-compose.md) they hold
-  no literal: see *The workflows read the compose* below.
+- As linhas `FROM` são a base das imagens que **publicamos** no GHCR —
+  cinco desde o [ADR 0162](../adr/0162-broker-publicado-e-oferecido-pelo-instalador.md).
+  Uma tag movida vira bytes dentro de uma imagem que assinamos e
+  entregamos a outras pessoas.
+- `docker/docker-compose.install.yml` roda na máquina de quem instalou o
+  produto, ao lado do Postgres dela. Nesse mesmo arquivo as nossas
+  **próprias** imagens já chegam por digest, por uma variável que o
+  instalador preenche — as de terceiros chegavam por tag, ao lado delas.
+- `ci.yml`, `golden-set-rag.yml` e `golden-set-qa.yml` rodam imagens de
+  terceiros como `services:` do job. É literalmente o runner que a regra
+  das actions existe para proteger, alcançado pela outra porta. Desde o
+  [ADR 0197](../adr/0197-a-imagem-dos-workflows-vem-do-compose.md) eles
+  não guardam literal nenhum: ver *Os workflows leem o compose* abaixo.
 
-To resolve a tag into the digest to write down — the **index** digest, so
-the pin keeps working on `linux/arm64` as well as `linux/amd64`:
+Para resolver uma tag no digest a anotar — o digest do **índice**, para o
+pin continuar funcionando em `linux/arm64` além de `linux/amd64`:
 
 ```bash
 docker manifest inspect neo4j:5.26-community | head -3   # confirms it is an index
 docker buildx imagetools inspect neo4j:5.26-community --format '{{.Manifest.Digest}}'
 ```
 
-The tag is **required**, for the same reason the version comment is on
-actions: `sha256:22ec5cd0…` does not tell anyone that it is Neo4j 5.26. And,
-as with the actions, the rule has a mechanism rather than goodwill —
-`scripts/ci/imagens-pinadas.ts`, run in the `lint` job, which fails on any
-`image:`/`imageName:`/`FROM` that is not a digest, on any digest with no
-inline tag (the old comment-only shape included), on a tag comment that
-disagrees with the inline tag, on a comment at the end of a `FROM`, and on
-the same inline tag carrying two different digests in two files. It is a **sibling** of `actions-pinadas.ts`, not an
-extension of it: `uses:` lives in workflow YAML with one syntax, images
-live in composes, kustomize manifests and Dockerfiles with three others,
-and one function answering both questions would answer both badly.
+A tag é **obrigatória**, pelo mesmo motivo de o comentário de versão ser
+obrigatório nas actions: `sha256:22ec5cd0…` não diz a ninguém que aquilo é
+o Neo4j 5.26. E, como nas actions, a regra tem um mecanismo em vez de boa
+vontade — `scripts/ci/imagens-pinadas.ts`, rodado no job `lint`, que
+reprova qualquer `image:`/`imageName:`/`FROM` que não seja digest, qualquer
+digest sem tag inline (a forma antiga só com comentário incluída), um
+comentário de tag que discorda da tag inline, um comentário no fim de um
+`FROM`, e a mesma tag inline carregando dois digests diferentes em dois
+arquivos. Ele é **irmão** do `actions-pinadas.ts`, não uma extensão dele:
+`uses:` mora em YAML de workflow com uma sintaxe, imagens moram em
+composes, manifestos kustomize e Dockerfiles com outras três, e uma função
+respondendo às duas perguntas responderia mal às duas.
 
-What the check deliberately does **not** cover:
+O que a checagem deliberadamente **não** cobre:
 
-- **The images we build ourselves** (`brabo-api`, `brabo-engine`,
-  `brabo-web`, `brabo-backup` and `brabo-broker` — the last one
-  published since [ADR 0162](../adr/0162-broker-publicado-e-oferecido-pelo-instalador.md)). There is no third party who could move anything, and
-  `brabo-api:prod` is a *local* tag whose digest does not exist before
-  the build. Where they do cross a registry they are **already** by
-  digest, through the mechanism that owns them: `.release/images.json`
-  written by `release.yml` and applied by `make imagens-do-release`
-  ([ADR 0119](../adr/0119-imagens-publicadas-no-ghcr-por-digest.md)). The
-  repository's overlay holds the *marker*, not a frozen release —
-  demanding a literal digest there would fight that mechanism instead of
-  reinforcing it.
-- **Interpolated references** (`${BRABO_API_IMAGE:?…}`), which is the
-  same case seen from the other side.
-- **Multi-stage build stages** (`FROM deps AS build`, `FROM scratch`),
-  which are not registry images.
+- **As imagens que nós mesmos construímos** (`brabo-api`, `brabo-engine`,
+  `brabo-web`, `brabo-backup` e `brabo-broker` — a última publicada desde o
+  [ADR 0162](../adr/0162-broker-publicado-e-oferecido-pelo-instalador.md)).
+  Não há terceiro que pudesse mover nada, e `brabo-api:prod` é uma tag
+  *local* cujo digest não existe antes do build. Onde elas atravessam um
+  registry, **já** vão por digest, pelo mecanismo que é dono delas:
+  `.release/images.json` escrito pelo `release.yml` e aplicado por
+  `make imagens-do-release`
+  ([ADR 0119](../adr/0119-imagens-publicadas-no-ghcr-por-digest.md)). O
+  overlay do repositório guarda o *marcador*, não uma release congelada —
+  exigir um digest literal ali brigaria com esse mecanismo em vez de
+  reforçá-lo.
+- **Referências interpoladas** (`${BRABO_API_IMAGE:?…}`), que são o mesmo
+  caso visto do outro lado.
+- **Estágios de build multi-stage** (`FROM deps AS build`, `FROM scratch`),
+  que não são imagens de registry.
 
-The exception list is by *name* and fails closed: a new third-party image
-never matches `brabo-`, so it is born under the rule.
+A lista de exceções é por *nome* e falha fechada: uma imagem de terceiro
+nova nunca casa com `brabo-`, então ela nasce sob a regra.
 
-### The workflows read the compose {#the-workflows-read-the-compose}
+### Os workflows leem o compose {#the-workflows-read-the-compose}
 
-Until [ADR 0197](../adr/0197-a-imagem-dos-workflows-vem-do-compose.md)
-`pgvector` and `ollama` lived twice: in the composes and, as literals, in the
-`services:` of `ci.yml` and the two golden-set workflows. No Dependabot
-ecosystem reads a workflow's `services:`, so every bot PR bumping one of them in
-the compose would have been born red by the "same tag, two digests" rule, and
-the step that would align the workflow on the bot's PR cannot push with the
-`GITHUB_TOKEN`, which is never allowed to change `.github/workflows/`.
+Até o [ADR 0197](../adr/0197-a-imagem-dos-workflows-vem-do-compose.md)
+`pgvector` e `ollama` moravam em dois lugares: nos composes e, como
+literais, nos `services:` do `ci.yml` e dos dois workflows de golden-set.
+Nenhum ecossistema do Dependabot lê os `services:` de um workflow, então
+toda PR do bot subindo uma delas no compose teria nascido vermelha pela
+regra "mesma tag, dois digests", e o passo que alinharia o workflow na PR
+do bot não consegue empurrar com o `GITHUB_TOKEN`, que nunca tem permissão
+de mudar `.github/workflows/`.
 
-The literal is gone. A reusable workflow, `.github/workflows/imagens-do-compose.yml`,
-runs `scripts/ci/imagens-do-compose.ts`, which reads each service's `image:` from
-`docker/docker-compose.yml` (and refuses one that is not
-`image:tag@sha256:<index>`), and the callers write
-`image: ${{ needs.imagens.outputs.pgvector }}`. A duplicate that does not exist
-cannot diverge: the bot's PR touches only the compose, and the CI of that very
-PR already runs against the new image. What `golden-set-rag.yml` used to
-*promise* in a comment — the same Ollama as dev, because the golden-set floor is
-keyed by model and not by environment — is now true by construction.
+O literal saiu. Um workflow reutilizável,
+`.github/workflows/imagens-do-compose.yml`, roda
+`scripts/ci/imagens-do-compose.ts`, que lê o `image:` de cada serviço de
+`docker/docker-compose.yml` (e recusa um que não seja
+`image:tag@sha256:<index>`), e os chamadores escrevem
+`image: ${{ needs.imagens.outputs.pgvector }}`. Uma duplicata que não
+existe não consegue divergir: a PR do bot toca só o compose, e o CI dessa
+mesma PR já roda contra a imagem nova. O que o `golden-set-rag.yml`
+*prometia* num comentário — o mesmo Ollama do dev, porque o piso do
+golden-set é chaveado por modelo e não por ambiente — agora é verdade por
+construção.
 
-`imagens-pinadas.ts` learned the new shape and closes the door it opens. In a
-workflow it fails any third-party **literal** (pinned or not); any expression
-that is not exactly `${{ needs.<job>.outputs.<name> }}` — a literal inside the
-expression, an `||` default, `env.`, `vars.`, `format()` are all places a
-mutable reference could hide, and the old pattern did not even match a line
-with spaces; and a `needs.<job>` whose job does not call the reusable workflow,
-or an output it does not declare. Each rule is proved by mutation in its spec.
+O `imagens-pinadas.ts` aprendeu a forma nova e fecha a porta que ela abre.
+Num workflow ele reprova qualquer **literal** de terceiro (pinado ou não);
+qualquer expressão que não seja exatamente
+`${{ needs.<job>.outputs.<name> }}` — um literal dentro da expressão, um
+default por `||`, `env.`, `vars.`, `format()` são todos lugares onde uma
+referência mutável poderia se esconder, e o padrão antigo nem casava com
+uma linha com espaços; e um `needs.<job>` cujo job não chama o workflow
+reutilizável, ou uma saída que ele não declara. Cada regra é provada por
+mutação no spec dela.
 
-**The price is real, and Dependabot now pays part of it.** An image pinned by
-digest receives no security update until someone changes the digest — the same
-debt the action SHAs carry. `.github/dependabot.yml` enables `github-actions`
-for that reason and, since ADR 0197, `docker-compose` (`/docker`) and `docker`
-(`/docker/*` and `/deploy/k8s/**`), each grouped into one weekly PR into `dev`.
-Still manual, and declared in ADR 0197: `neo4j` and `ollama` also live in
-`deploy/k8s/base/`, the two ecosystems never share a PR, and a same-tag digest
-re-roll makes both PRs fail until a human joins them; the CloudNativePG
-`imageName` and `IMAGEM_DO_GOLDEN_SET_QA` are read by no ecosystem. Those
-follow the [runbook procedure](../runbook.md#subindo-imagem-de-terceiro).
+**O preço é real, e o Dependabot agora paga parte dele.** Uma imagem
+pinada por digest não recebe atualização de segurança até alguém trocar o
+digest — a mesma dívida que os SHAs das actions carregam. O
+`.github/dependabot.yml` liga `github-actions` por esse motivo e, desde o
+ADR 0197, `docker-compose` (`/docker`) e `docker` (`/docker/*` e
+`/deploy/k8s/**`), cada um agrupado numa PR semanal para a `dev`. O ignore
+temporário do MAJOR do `node` (AT-360) saiu com a mudança para o Node 26
+(decisão do dono, 2026-10-02): os dois ecossistemas de imagem agora
+propõem majors do `node` como qualquer outra atualização.
+Ainda manual, e declarado no ADR 0197: `neo4j` e `ollama` moram também em
+`deploy/k8s/base/`, os dois ecossistemas nunca compartilham uma PR, e um
+re-roll de digest com a mesma tag faz as duas PRs falharem até um humano
+juntá-las; o `imageName` do CloudNativePG e o `IMAGEM_DO_GOLDEN_SET_QA` não
+são lidos por ecossistema nenhum. Esses seguem o
+[procedimento do runbook](../runbook.md#subindo-imagem-de-terceiro).
 
-**A digest guarantees immutability, not availability.** The pin protects
-against the owner of a tag moving it; it does not protect against the
-publisher deleting the repository. That happened with MinIO: the local
-overlay's S3 server was pinned by index digest on `quay.io/minio/minio`,
-MinIO stopped publishing its community image, and the same digest started
-answering 401 (Docker Hub: 404). The bootstrap died at `rollout status` and
-no property proof ran until the server was replaced by SeaweedFS
+**Um digest garante imutabilidade, não disponibilidade.** O pin protege
+contra o dono de uma tag movê-la; não protege contra o publicador apagar o
+repositório. Isso aconteceu com o MinIO: o servidor S3 do overlay local
+estava pinado por digest de índice em `quay.io/minio/minio`, o MinIO parou
+de publicar a imagem community, e o mesmo digest passou a responder 401
+(Docker Hub: 404). O bootstrap morria no `rollout status` e nenhuma prova
+de propriedade rodou até o servidor ser trocado pelo SeaweedFS
 ([ADR 0169](../adr/0169-seaweedfs-no-lugar-do-minio-no-overlay-local.md)).
-The symptom, if it happens again to any pinned image, is `ImagePullBackOff`
-on a digest that has not changed — the fix is a new image from a publisher
-that still serves one, never unpinning.
+O sintoma, se acontecer de novo com qualquer imagem pinada, é
+`ImagePullBackOff` num digest que não mudou — a correção é uma imagem nova
+de um publicador que ainda a serve, nunca tirar o pin.
 
-## The build cache cannot hide a stale package
+## O cache de build não pode esconder um pacote velho {#the-build-cache-cannot-hide-a-stale-package}
 
-The final stage (`runtime`) of every `Dockerfile.prod` runs `apk upgrade`.
-BuildKit keys a layer by instruction plus parent layer, never by time, so with
-`cache-from` on, a PR build reused an `apk upgrade` layer frozen at that PR's
-first build (measured: `CACHED` on 5 of 5 images), and Trivy scanned an old
-openssl that the tag, built cold, would not carry. `docker-bake.hcl` therefore
-sets `no-cache-filter = ["runtime"]` on the shared base target: the final stage
-and what follows it are rebuilt every time, the build stages keep their cache
-(that is where the time is), and the scan looks at what the tag would publish.
-It is not a Trivy allowlist. The cost is about 7–9 s per image, in parallel.
+O estágio final (`runtime`) de todo `Dockerfile.prod` roda `apk upgrade`.
+O BuildKit chaveia uma camada por instrução mais camada-mãe, nunca por
+tempo, então com `cache-from` ligado um build de PR reaproveitava uma
+camada de `apk upgrade` congelada no primeiro build daquela PR (medido:
+`CACHED` em 5 de 5 imagens), e o Trivy escaneava um openssl antigo que a
+tag, construída a frio, não levaria. Por isso o `docker-bake.hcl` define
+`no-cache-filter = ["runtime"]` no alvo base compartilhado: o estágio
+final e o que vem depois dele são reconstruídos toda vez, os estágios de
+build mantêm o cache deles (é onde está o tempo), e o scan olha o que a
+tag publicaria. Não é uma allowlist do Trivy. O custo é de cerca de 7–9 s
+por imagem, em paralelo.
 
-That fixed what the **PR** scans. It could not fix what the **tag** publishes:
-a tag builds cold, from a different run, and until
-[ADR 0172](../adr/0172-trivy-no-release-antes-de-assinar.md) nothing scanned it.
+Isso corrigiu o que a **PR** escaneia. Não podia corrigir o que a **tag**
+publica: uma tag constrói a frio, numa outra execução, e até o
+[ADR 0172](../adr/0172-trivy-no-release-antes-de-assinar.md) nada a
+escaneava.
 
-## The release scans what it publishes, before signing it
+## A release escaneia o que publica, antes de assinar {#the-release-scans-what-it-publishes-before-signing-it}
 
-`release.yml` runs Trivy on each image **by digest**, straight from the
-registry (`--image-src remote`), after the bake pushes and records
-`.release/images.json` and **before** `cosign sign`. The order is the
-mechanism: an image that fails is never signed, and `install.sh` does not
-install an unsigned image. The push has already happened by then (it is what
-creates the digest), so a failed tag leaves its tags in the GHCR unsigned and
-without a Release — the correct state, since nothing installs them.
+O `release.yml` roda o Trivy em cada imagem **por digest**, direto do
+registry (`--image-src remote`), depois de o bake empurrar e gravar
+`.release/images.json` e **antes** do `cosign sign`. A ordem é o
+mecanismo: uma imagem que reprova nunca é assinada, e o `install.sh` não
+instala imagem não assinada. O push já aconteceu a essa altura (é ele que
+cria o digest), então uma tag reprovada deixa as tags dela no GHCR sem
+assinatura e sem Release — o estado correto, já que nada as instala.
 
-The gate is the **same** rule as the `ci.yml` job, flag for flag:
-`--scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1` and
-the same `.trivyignore.yaml`, whose every entry carries an `expired_at`. A HIGH
-or CRITICAL **with a fix available** fails the release. What has **no** fix is
-reported, not blocking: a second scan without `--ignore-unfixed` and with
-`--exit-code 0` feeds `scripts/ci/trivy-do-release.ts`, which writes the job
-summary and the `trivy-sem-correcao.md` Release asset. That script never
-decides the verdict — Trivy's exit code does —, because a second rule for
-"has a fix" would drift from Trivy's own the first time it added a status.
-There is **no new allowlist**: the step accepts no ignore file but the one the
-PR already uses.
+O gate é a **mesma** regra do job do `ci.yml`, flag por flag:
+`--scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1` e
+o mesmo `.trivyignore.yaml`, em que toda entrada leva um `expired_at`. Um
+HIGH ou CRITICAL **com correção disponível** reprova a release. O que
+**não** tem correção é relatado, sem bloquear: um segundo scan sem
+`--ignore-unfixed` e com `--exit-code 0` alimenta
+`scripts/ci/trivy-do-release.ts`, que escreve o resumo do job e o asset de
+Release `trivy-sem-correcao.md`. Esse script nunca decide o veredito —
+quem decide é o código de saída do Trivy —, porque uma segunda regra para
+"tem correção" divergiria da do próprio Trivy na primeira vez que ele
+acrescentasse um status. **Não há allowlist nova**: o passo não aceita
+arquivo de ignore além do que a PR já usa.
 
-The binary is the same `v0.70.0` with the same `sha256` as `ci.yml`, declared
-twice because a workflow's `env:` cannot be imported. The duplication is
-guarded: `scripts/ci/trivy-do-release.spec.ts` fails when version, hash or the
-gate's flags diverge between the two workflows, when the gate moves after the
-signing, or when a second ignore file appears. Like `install-e2e.yml`, the
-release only runs on a final tag, so that spec is the proof a PR can give.
+O binário é o mesmo `v0.70.0` com o mesmo `sha256` do `ci.yml`, declarado
+duas vezes porque o `env:` de um workflow não pode ser importado. A
+duplicação é vigiada: `scripts/ci/trivy-do-release.spec.ts` reprova quando
+versão, hash ou as flags do gate divergem entre os dois workflows, quando
+o gate vai para depois da assinatura, ou quando aparece um segundo arquivo
+de ignore. Como o `install-e2e.yml`, a release só roda numa tag final,
+então esse spec é a prova que uma PR consegue dar.
 
-Measured on 2026-09-27 against the digests of the last release (`v6.1.0`,
-four images, published 2026-09-14), with the same flags: `api` and `web` would
-**fail** — `CVE-2026-45447` (HIGH, `libcrypto3`/`libssl3` `3.3.7-r0`, fixed in
-`3.3.7-r1`), a CVE published after that tag —, `engine` and `backup` pass, and
-nothing HIGH/CRITICAL without a fix appears once `.trivyignore.yaml` is
-applied. Without it, `engine` would carry 56 fixable findings in the
-third-party scanner binaries that file documents. The four scans plus the
-database download took about 30 s.
+Medido em 2026-09-27 contra os digests da última release (`v6.1.0`, quatro
+imagens, publicada em 2026-09-14), com as mesmas flags: `api` e `web`
+**reprovariam** — `CVE-2026-45447` (HIGH, `libcrypto3`/`libssl3`
+`3.3.7-r0`, corrigido em `3.3.7-r1`), uma CVE publicada depois daquela
+tag —, `engine` e `backup` passam, e nada HIGH/CRITICAL sem correção
+aparece depois de aplicado o `.trivyignore.yaml`. Sem ele, o `engine`
+carregaria 56 achados corrigíveis nos binários de scanner de terceiros que
+aquele arquivo documenta. Os quatro scans mais o download do banco levaram
+cerca de 30 s.
 
-## What is still trusted on faith
+## Uma dependência pinada num commit de git: `bandit`, temporária {#bandit-pinned-to-a-commit}
 
-Declared, not fixed:
+Toda dependência do engine vem do hex.pm, com uma exceção TEMPORÁRIA. O
+advisory EEF-CVE-2026-105659 (GHSA-69m6-wcv4-rwcf, HIGH, o HTTP/2 do
+Bandit) afeta todo Bandit `>= 1.4.0`, inclusive o 1.12.5, a última release
+no hex, e o `mix hex.audit` do CI reprova por ele em toda PR. A correção
+existe só como o commit `d88b21953c65061f21136ea76a89a4f95a2ac7a1` de
+`mtrudel/bandit` (mergeado em 2026-10-12), sem release. Desde 2026-10-14 o
+`apps/engine/mix.exs` aponta `bandit` para esse commit, por SHA completo e
+nunca por branch, com `override: true` porque `phoenix` e
+`opentelemetry_bandit` pedem o pacote do hex (medido: sem isso o
+`mix deps.get` para com "Dependencies have diverged"). O SHA faz o papel
+que o checksum faz para um pacote do hex: o lock o grava e ninguém
+consegue movê-lo. Os dois Dockerfiles do engine já instalam `git` no
+estágio de build.
 
-- ~~**No Dependabot.**~~ **Half closed, and the other half is not ours
-  to close.** The claim had also stopped being true: *security* updates
-  are switched on in the repository's **interface**, in no file, and were
-  running daily against `npm_and_yarn in /., /website` — and **failing**,
-  every day, with `Dependabot::DependabotError`. Measured cause: the
-  packages it chases (`multer`, `esbuild`, and the list beside them) are
-  the ones this repository fixes through **overrides** in
-  `pnpm-workspace.yaml`, a mechanism Dependabot cannot manipulate. The
-  alert it pursues is already closed; what is left is the error.
+O caminho de volta: voltar a `{:bandit, "~> 1.12"}` do hex assim que for
+publicada uma release que contenha esse commit, e apagar esta seção junto.
 
-  `.github/dependabot.yml` now exists and does the two things a file can
-  do: it **enables `github-actions`** — the debt named right here, since
-  the SHAs are moved by hand and *a pin nobody updates is a pin that ages
-  into a known-vulnerable version* — and declares both npm trees with
-  `open-pull-requests-limit: 0`, which turns off routine version updates
-  without touching security ones. **Turning security updates off is an
-  interface switch**, reachable only by the repository owner; until
-  someone decides, that job keeps failing on alerts that the overrides
-  already closed.
+## O que ainda é aceito na confiança {#what-is-still-trusted-on-faith}
 
-  Every Dependabot PR enters through `dev` (`target-branch: dev` on the
-  five entries — the two image ecosystems included, since ADR 0197). Security updates ignore that key and open against the
-  default branch, so `dependabot-para-dev.yml` closes the ones `dev`
-  already fixes and retargets the rest — see *Dependabot enters through
-  dev* in `branching-policy.md`.
-- **npm/pnpm dependencies aren't attested.** The lockfile pins versions
-  and integrity hashes, which is real, but there's no provenance check
-  (`npm audit signatures` or equivalent) in any job.
-- ~~**No signing or attestation of our own artifacts.**~~ **Closed by
-  [ADR 0149](../adr/0149-assinatura-dos-artefatos-publicados.md)**
-  (BRB-005). `release.yml` signs the images it publishes **by digest** with
-  `cosign` keyless — the OIDC identity of the workflow, no key in
-  custody anywhere — and `build-runner-binaries.yml` gained a
-  consolidating job that publishes **one signed `checksums.txt`**
-  covering the runner binaries (four targets since
-  [ADR 0174](../adr/0174-runner-sem-binario-darwin-x64.md), which dropped
-  `darwin-x64`), rather than one signature per binary.
-  Both workflows **verify what they just signed**, in the same run:
-  a signature nobody tries to verify is one more file in the release,
-  and the failure would otherwise surface on the machine of whoever
-  installs — the worst place to find it.
+Declarado, não corrigido:
 
-  Since [ADR 0160](../adr/0160-o-compose-do-instalador-viaja-assinado.md)
-  that manifest covers more than binaries: `install.sh` and the four files it
-  needs to bring an installation up — the install compose and the three files
-  it uses by relative path, published as `brabo-install-*` assets from the
-  tag's checkout — are lines in the **same** `checksums.txt`, and the job runs
-  `sha256sum -c --strict` on it before attaching anything. The installer
-  checks each of the four against that manifest before it asks or writes
-  anything ([RN-570](../business-rules.md#rn-570)). Until then the compose
-  was the one thing the installer used that nothing verified — nor even
-  downloaded. The list lives in `scripts/ci/assets-do-instalador.ts`, and its
-  spec fails when the installer's own copy of it diverges or when the compose
-  gains a relative bind-mount that is not on it.
+- ~~**Sem Dependabot.**~~ **Metade fechada, e a outra metade não cabe a
+  nós fechar.** A afirmação também tinha deixado de ser verdade: as
+  atualizações de *segurança* são ligadas na **interface** do
+  repositório, em arquivo nenhum, e estavam rodando diariamente contra
+  `npm_and_yarn in /., /website` — e **falhando**, todo dia, com
+  `Dependabot::DependabotError`. Causa medida: os pacotes que ele persegue
+  (`multer`, `esbuild`, e a lista ao lado deles) são os que este
+  repositório corrige por **overrides** no `pnpm-workspace.yaml`, um
+  mecanismo que o Dependabot não consegue manipular. O alerta que ele
+  persegue já está fechado; o que sobra é o erro.
 
-  **The broker image is the fifth, and it is the one that matters most**
+  O `.github/dependabot.yml` agora existe e faz as duas coisas que um
+  arquivo consegue fazer: **liga `github-actions`** — a dívida nomeada
+  aqui mesmo, já que os SHAs são movidos à mão e *um pin que ninguém
+  atualiza é um pin que envelhece até uma versão sabidamente vulnerável* —
+  e declara as duas árvores npm com `open-pull-requests-limit: 0`, o que
+  desliga as atualizações rotineiras de versão sem tocar nas de
+  segurança. **Desligar as atualizações de segurança é um interruptor da
+  interface**, alcançável só pelo dono do repositório; até alguém decidir,
+  esse job continua falhando em alertas que os overrides já fecharam.
+
+  Toda PR do Dependabot entra pela `dev` (`target-branch: dev` nas cinco
+  entradas — os dois ecossistemas de imagem incluídos, desde o ADR 0197).
+  As atualizações de segurança ignoram essa chave e abrem contra a branch
+  default, então o `dependabot-para-dev.yml` fecha as que a `dev` já
+  corrige e redireciona o resto — ver *Dependabot enters through dev* em
+  `branching-policy.md`.
+- **Dependências npm/pnpm não são atestadas.** O lockfile pina versões e
+  hashes de integridade, o que é real, mas não há checagem de proveniência
+  (`npm audit signatures` ou equivalente) em job nenhum.
+- ~~**Sem assinatura nem atestação dos nossos próprios artefatos.**~~
+  **Fechado pelo [ADR 0149](../adr/0149-assinatura-dos-artefatos-publicados.md)**
+  (BRB-005). O `release.yml` assina as imagens que publica **por digest**
+  com `cosign` keyless — a identidade OIDC do workflow, sem chave sob
+  custódia em lugar nenhum — e o `build-runner-binaries.yml` ganhou um job
+  consolidador que publica **um `checksums.txt` assinado** cobrindo os
+  binários do runner (quatro alvos desde o
+  [ADR 0174](../adr/0174-runner-sem-binario-darwin-x64.md), que tirou o
+  `darwin-x64`), em vez de uma assinatura por binário.
+  Os dois workflows **verificam o que acabaram de assinar**, na mesma
+  execução: uma assinatura que ninguém tenta verificar é mais um arquivo
+  na release, e a falha, do contrário, apareceria na máquina de quem
+  instala — o pior lugar para achá-la.
+
+  Desde o [ADR 0160](../adr/0160-o-compose-do-instalador-viaja-assinado.md)
+  esse manifesto cobre mais que binários: o `install.sh` e os quatro
+  arquivos de que ele precisa para subir uma instalação — o compose de
+  instalação e os três arquivos que ele usa por caminho relativo,
+  publicados como assets `brabo-install-*` a partir do checkout da tag —
+  são linhas do **mesmo** `checksums.txt`, e o job roda
+  `sha256sum -c --strict` sobre ele antes de anexar qualquer coisa. O
+  instalador confere cada um dos quatro contra esse manifesto antes de
+  perguntar ou gravar qualquer coisa ([RN-570](../business-rules.md#rn-570)).
+  Até então o compose era a única coisa que o instalador usava que nada
+  verificava — nem sequer baixava. A lista mora em
+  `scripts/ci/assets-do-instalador.ts`, e o spec dela reprova quando a
+  cópia do próprio instalador diverge ou quando o compose ganha um
+  bind-mount relativo que não está nela.
+
+  **A imagem do broker é a quinta, e é a que mais importa**
   ([ADR 0162](../adr/0162-broker-publicado-e-oferecido-pelo-instalador.md)).
-  It was built by nobody until then: the `Dockerfile.prod` existed and passed
-  `hadolint`, but no bake target built it, so it was never scanned and never
-  published, and the installation had no way to offer the service. It now
-  goes through every gate the other four do — the `ci.yml` builds it on every
-  PR, refuses it running as root, runs Trivy on it and brings it up healthy
-  with a read-only rootfs and no network; `release.yml` publishes, records,
-  signs and verifies it by digest with no extra line, because both loops read
-  `.release/images.json`. The reason it needs them more than any other: in an
-  installation that consents, it is the one service that receives the host's
-  Docker socket, so a vulnerability in it is a path to the whole machine.
-  Publishing it makes it a studiable public target; that price is declared
-  in the ADR, not hidden. The Kubernetes overlay does not know it
-  (`argumentosDeSetImage` emits only the four images the kustomize base
-  declares) — there is no broker Deployment, by decision.
+  Ninguém a construía até então: o `Dockerfile.prod` existia e passava no
+  `hadolint`, mas nenhum alvo do bake o construía, então ela nunca foi
+  escaneada nem publicada, e a instalação não tinha como oferecer o
+  serviço. Agora ela passa por todo gate que as outras quatro passam — o
+  `ci.yml` a constrói em toda PR, a recusa rodando como root, roda o Trivy
+  nela e a sobe saudável com rootfs somente leitura e sem rede; o
+  `release.yml` a publica, grava, assina e verifica por digest sem linha a
+  mais, porque os dois laços leem `.release/images.json`. O motivo de ela
+  precisar disso mais que qualquer outra: numa instalação que consente, é
+  o único serviço que recebe o socket do Docker do host, então uma
+  vulnerabilidade nela é um caminho para a máquina inteira. Publicá-la a
+  torna um alvo público estudável; esse preço está declarado no ADR, não
+  escondido. O overlay do Kubernetes não a conhece
+  (`argumentosDeSetImage` emite só as quatro imagens que a base do
+  kustomize declara) — não há Deployment do broker, por decisão.
 
-  What this does **not** cover, and is a different item: **code-signing
-  the runner binaries** for the OS (macOS notarization, Windows
-  Authenticode), which needs a paid signing identity and stays in
-  [the backlog](backlog.md).
-- ~~**Third-party images are tag-pinned, not digest-pinned.**~~ **Closed**
-  (above): all 33 third-party references — composes, kustomize manifests and
-  Dockerfile `FROM` lines — are pinned by digest with the tag inside the
-  reference (ADR 0178), the workflow `services:` read theirs from the compose
-  (ADR 0197), and `scripts/ci/imagens-pinadas.ts` fails the `lint` job on the
-  next regression. What is **not** closed, and is the price of the pin rather
-  than a leftover: a digest receives no security update until someone bumps
-  it. Dependabot's `docker`/`docker-compose` ecosystems propose those bumps
-  since ADR 0197; what they cannot reach is listed there.
-- **The workflows' own permissions** aren't covered here; that's the
-  `permissions:` block per workflow, and it's a separate audit.
-- **A repeated `pnpm audit` timeout is an ACCEPTED RISK, by decision.**
-  When the npm advisories endpoint fails to answer three times in a row,
-  the job goes green with a loud warning instead of red — see
-  [ADR 0140](../adr/0140-timeout-do-audit-como-risco-assumido.md). What
-  this costs is stated plainly: on those runs the dependency tree is
-  **not** audited, and the run says so rather than implying a clean
-  result. What it does not touch: a vulnerability that is actually
-  reported still fails on the first attempt, with no retry, and an
-  unrecognized failure fails too (fail closed). The alternative —
-  staying red on third-party downtime — was measured on the day it
-  happened (four PRs blocked by the same 503) and refused, because a
-  gate that cries wolf teaches people to re-run until green, and that
-  habit does not distinguish a real red from a fake one.
+  O que isso **não** cobre, e é outro item: **assinatura de código dos
+  binários do runner** para o sistema operacional (notarização do macOS,
+  Authenticode do Windows), que exige uma identidade de assinatura paga e
+  fica no [backlog](backlog.md).
+- ~~**Imagens de terceiros pinadas por tag, não por digest.**~~ **Fechado**
+  (acima): todas as 33 referências de terceiros — composes, manifestos
+  kustomize e linhas `FROM` de Dockerfile — estão pinadas por digest com a
+  tag dentro da referência (ADR 0178), os `services:` dos workflows leem as
+  deles do compose (ADR 0197), e o `scripts/ci/imagens-pinadas.ts` reprova
+  o job `lint` na próxima regressão. O que **não** está fechado, e é o
+  preço do pin e não uma sobra: um digest não recebe atualização de
+  segurança até alguém subi-lo. Os ecossistemas `docker`/`docker-compose`
+  do Dependabot propõem essas subidas desde o ADR 0197; o que eles não
+  alcançam está listado lá.
+- **As permissões dos próprios workflows** não são cobertas aqui; isso é o
+  bloco `permissions:` de cada workflow, e é uma auditoria à parte.
+- **Timeout repetido do `pnpm audit` é RISCO ASSUMIDO, por decisão.**
+  Quando o endpoint de advisories do npm deixa de responder três vezes
+  seguidas, o job fica verde com um aviso alto em vez de vermelho — ver o
+  [ADR 0140](../adr/0140-timeout-do-audit-como-risco-assumido.md). O que
+  isso custa é dito sem rodeios: nessas execuções a árvore de dependências
+  **não** é auditada, e a execução diz isso em vez de sugerir um
+  resultado limpo. O que isso não toca: uma vulnerabilidade de fato
+  relatada continua reprovando na primeira tentativa, sem retry, e uma
+  falha não reconhecida também reprova (falha fechada). A alternativa —
+  ficar vermelho com o terceiro fora do ar — foi medida no dia em que
+  aconteceu (quatro PRs bloqueadas pelo mesmo 503) e recusada, porque um
+  gate que grita lobo ensina as pessoas a rodar de novo até ficar verde, e
+  esse hábito não distingue um vermelho real de um falso.

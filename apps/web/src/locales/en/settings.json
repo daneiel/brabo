@@ -50,8 +50,8 @@
     "eyebrow": "curation · real usage · cost",
     "subtitle": {
       "before": "\"Recommended\" is the model most agents in this project already use, among the ones this workspace's curation marked for the capability — cost breaks ties. No quality score is calculated (curation is always manual); mark the uses in the ",
-      "link": "Model catalog",
-      "after": ", further below."
+      "link": "Providers",
+      "after": ", in Providers."
     },
     "columns": {
       "capability": "Capability",
@@ -93,10 +93,9 @@
       "intro": "Origin shows where the value is resolved:",
       "mostSpecificWins": "The most specific wins.",
       "areaWord": "area",
-      "areaExplain": "is the default that the lead and subagents share — set it in",
-      "areaLink": "Model by area",
-      "below": ", further below.",
-      "needsDeveloper": " Requires the developer role to change the model, apply one to every agent, or go back to inheriting."
+      "areaExplain": "is the default that the lead and subagents share: tick the box on the lead's row (Dev Lead, QA or Infra) so its model applies to the whole area.",
+      "needsDeveloper": " Requires the developer role to change the model, apply one to every agent, or go back to inheriting.",
+      "needsMaintainerArea": " Requires the maintainer role to tick the area box or change its model."
     },
     "costCard": {
       "label": "Team's estimated monthly cost",
@@ -127,7 +126,7 @@
     "noEstimateTitle": "This agent recorded no spend in this project over the last 30 days. Different from having spent zero, which shows as US$ 0.00.",
     "bulk": {
       "label": "Apply one model to every agent",
-      "detail": "· overwrites each agent’s own model, one call per agent",
+      "detail": "· overwrites each agent’s own model, one call per agent, and takes subagents out of the area default",
       "apply_one": "Apply to {{count}} agent",
       "apply_other": "Apply to {{count}} agents",
       "applying": "Applying…",
@@ -136,27 +135,22 @@
         "applied_other": "{{model}} applied to all {{count}} agents",
         "error": "Could not apply the model to the agents"
       }
+    },
+    "noModelsAvailableLink": "Activate one in Providers →",
+    "areaBox": {
+      "label": "Apply to the whole {{area}} area (lead + subagents)",
+      "notFollowing_one": "{{count}} agent in this area has its own model and does not follow: {{list}}",
+      "notFollowing_other": "{{count}} agents in this area have their own model and do not follow: {{list}}",
+      "dynamic": "Per-module subagents with their own model are not listed here.",
+      "needsModel": "Choose a model for the lead first: without a current model, the area box has no effect.",
+      "toast": {
+        "saveError": "Could not save the area model",
+        "applied": "{{area}} area: the lead's model applies to the whole area",
+        "reverted": "The {{area}} area went back to inheriting",
+        "alreadyInherits": "The {{area}} area already inherited",
+        "partial": "The area default was saved, but {{agent}}'s own model was not removed ({{reason}})"
+      }
     }
-  },
-  "areaModels": {
-    "title": "Model by area",
-    "eyebrow": "inheritable default · lead + subagents",
-    "subtitle": {
-      "main": "The model that applies to the lead and every subagent of the area that hasn't diverged — diverging means picking a different model ON THE AGENT'S ROW, above. \"Go back to inheriting\" clears the area's default; it doesn't change what each agent has already diverged to.",
-      "needsMaintainer": " Requires the maintainer role to change."
-    },
-    "card": {
-      "title": "{{area}} area",
-      "lead": "Lead: {{lead}}",
-      "subagents": " — subagents: {{list}}",
-      "subagentsDynamic": " — dynamic subagents (per module)"
-    },
-    "toast": {
-      "saveError": "Could not save",
-      "reverted": "The {{area}} area went back to inheriting"
-    },
-    "originChainNoModel": "no default at any level",
-    "originChainNoModelTitle": "Neither this area, nor the project, nor the workspace has a model set — the lead and the subagents of this area have no default to inherit."
   },
   "members": {
     "title": "Members and roles",
@@ -380,7 +374,11 @@
       "testKeyAria": "Test key for {{label}}",
       "test": "Test",
       "removeKeyAria": "Remove key for {{label}}",
-      "remove": "Remove"
+      "remove": "Remove",
+      "updateCatalog": "Refresh catalog",
+      "updateCatalogAria": "Refresh the {{label}} model catalog",
+      "noModels": "No model from this provider in the catalog yet — saving the key does not discover models.",
+      "noCatalogSource": "This provider does not publish a model list, so there is nothing to sync — its models come from the seed."
     },
     "toast": {
       "saved": "Credential saved",
@@ -555,7 +553,8 @@
     "inheritedHint": "To set it here, pick a model of its own for this row.",
     "toast": {
       "saveError": "Could not save the routing preference"
-    }
+    },
+    "teto": "On OpenRouter, each call also carries a price ceiling (1.5 × the catalog price): only an upstream within it serves; if none does, the call is retried once without a ceiling."
   },
   "resolvedBindings": {
     "readError": "Could not read the current models: {{reason}}",

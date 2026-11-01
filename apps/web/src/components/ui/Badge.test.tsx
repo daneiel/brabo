@@ -18,4 +18,37 @@ describe('Badge', () => {
     expect(badge).not.toHaveAttribute('tabindex');
     expect(badge).not.toHaveAttribute('role');
   });
+
+  it('emCurso põe o rótulo no Shimmer, e o texto continua no DOM', () => {
+    const { container } = render(<Badge emCurso>Provisionando</Badge>);
+    const texto = screen.getByText('Provisionando');
+    expect(texto.parentElement).toBe(container.firstChild);
+    expect(texto.className).toMatch(/shimmer|estatico/);
+  });
+
+  it('sem emCurso o rótulo fica cru, sem Shimmer', () => {
+    render(<Badge>Ativo</Badge>);
+    expect(screen.getByText('Ativo').className).not.toMatch(/shimmer|estatico/);
+  });
+
+  it('expõe tom, tamanho e forma por data-*, nunca por classe', () => {
+    render(
+      <Badge tone="success" size="md" square pulse dot>
+        ok
+      </Badge>,
+    );
+    const badge = screen.getByText('ok');
+    expect(badge).toHaveAttribute('data-tone', 'success');
+    expect(badge).toHaveAttribute('data-size', 'md');
+    expect(badge).toHaveAttribute('data-square', 'true');
+    expect(badge).toHaveAttribute('data-pulse', 'true');
+    expect(badge.querySelector('[data-slot="badge-dot"]')).not.toBeNull();
+  });
+
+  it('tom padrão é muted e sem dot não há bolinha', () => {
+    render(<Badge>x</Badge>);
+    const badge = screen.getByText('x');
+    expect(badge).toHaveAttribute('data-tone', 'muted');
+    expect(badge.querySelector('[data-slot="badge-dot"]')).toBeNull();
+  });
 });

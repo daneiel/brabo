@@ -53,6 +53,11 @@ export interface LLMProviderContractHarness {
    *   `message_start`, e um cenário "sem usage" ali seria protocolo inválido).
    */
   usageFallback: 'estimated' | 'nenhum' | 'sempre';
+  /**
+   * O dialeto deste harness sabe fechar a resposta pelo teto de saída
+   * (cenário `cortado`, RN-737). Ausente = o cenário não é exercitado.
+   */
+  sinalizaCorte?: boolean;
   /** Env var que regula o teto de INATIVIDADE deste provider. */
   timeoutEnv: string;
   /**
@@ -188,6 +193,21 @@ export function runLLMProviderContract(
       expect(chunks.some((c) => c.type === 'error')).toBe(false);
     });
 
+    it('resposta normal não traz o sinal de corte (RN-737)', async () => {
+      const chunks = await rodar('stream_ok');
+      expect(chunks.some((c) => c.type === 'truncated')).toBe(false);
+    });
+
+    it('resposta cortada pelo teto de saída emite o sinal truncated (RN-737)', async () => {
+      if (!harness.sinalizaCorte) return;
+      const chunks = await rodar('cortado');
+      expect(textoDe(chunks)).toBe(TEXTO_ESPERADO);
+      expect(chunks.filter((c) => c.type === 'truncated')).toEqual([
+        { type: 'truncated' },
+      ]);
+      expect(chunks.some((c) => c.type === 'error')).toBe(false);
+    });
+
     it('usage informado pelo provider vem com estimated: false', async () => {
       const chunks = await rodar('com_usage');
 
@@ -224,12 +244,11 @@ export function runLLMProviderContract(
 
     it('tool calling: respeita capabilities.toolCalling', async () => {
       if (!capabilities.toolCalling) {
-        // Provider chat-only: oferecer ferramentas não pode DERRUBAR o turno —
-        // o texto continua chegando (mesma degradação por capability que o
-        // contrato de git aplica em `capabilities.pullRequests`).
-        const chunks = await rodar('stream_ok', { tools: FERRAMENTAS });
-        expect(textoDe(chunks)).toBe(TEXTO_ESPERADO);
-        expect(chunks.some((c) => c.type === 'tool_calls')).toBe(false);
+        // Provider chat-only: pedir ferramentas LANÇA nomeado (RN-950), nunca
+        // descarta calado — foi o XML no fio da AT-637.
+        await expect(
+          rodar('stream_ok', { tools: FERRAMENTAS }),
+        ).rejects.toThrow(/não declara tool calling/);
         return;
       }
 
@@ -263,6 +282,10 @@ export function runLLMProviderContract(
       { cenario: 'erro_404', code: 'model_not_found' },
       { cenario: 'erro_429', code: 'rate_limit' },
       { cenario: 'erro_413', code: 'context_length' },
+      // RN-730: o 402 é crédito esgotado, com code próprio; os outros
+      // status sem nome continuam `upstream`.
+      { cenario: 'erro_402', code: 'insufficient_credit' },
+      { cenario: 'erro_500', code: 'upstream' },
     ];
 
     for (const { cenario, code } of ERROS) {

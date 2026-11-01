@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { RecursosDoContainerResponseDto } from '../../containers/dto/containers.response.dto';
 import type { PosturaDeRede } from '../../../../domain/containers/project-container';
 import type { ProjectExecutionMode } from '../../../../domain/iam/project.entity';
@@ -145,4 +145,62 @@ export class ContainerSpecInternalResponseDto {
       'up on the container as the `brabo.image.version` label.',
   })
   imagemVersao!: number;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description:
+      'AT-610 (ADR 0228): the app command declared by the Infra in `run.app` ' +
+      '(`artifact.run_instructions`), or `null`. Always `null` for `runner`.',
+  })
+  comandoDoApp!: string | null;
+
+  @ApiProperty({
+    type: 'array',
+    nullable: true,
+    items: {
+      type: 'object',
+      properties: {
+        host: { type: 'integer', example: 8080 },
+        container: { type: 'integer', example: 3000 },
+        protocol: { type: 'string', example: 'tcp' },
+      },
+    },
+    description:
+      'AT-608: ports declared in `artifact.container_network`, published on ' +
+      '127.0.0.1 only. `null` when undeclared or `runner`.',
+  })
+  ports!: Array<{ host: number; container: number; protocol: 'tcp' }> | null;
+
+  @ApiProperty({
+    type: [String],
+    nullable: true,
+    description: 'AT-608: DNS servers (literal IPs), or `null`.',
+  })
+  dns!: string[] | null;
+
+  @ApiProperty({
+    type: 'array',
+    nullable: true,
+    items: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', example: 'api.local' },
+        ip: { type: 'string', example: '10.0.0.5' },
+      },
+    },
+    description: 'AT-608: `--add-host` entries (IPv4), or `null`.',
+  })
+  extraHosts!: Array<{ name: string; ip: string }> | null;
+
+  @ApiPropertyOptional({
+    type: 'object',
+    properties: {
+      chave: { type: 'string', example: 'a1b2c3d4' },
+      services: { type: 'array', items: { type: 'object' } },
+    },
+    description:
+      'AT-612 (ADR 0229): ONLY with `papel=qa`. `chave` = 8 first [a-z0-9] of the task id; `services` = `run.qa.services` declared by the Infra (image with digest, env, tmpfs, user `<uid>:<gid>` never 0, command argv after the image, shared).',
+  })
+  qa?: { chave: string; services: unknown[] };
 }

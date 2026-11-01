@@ -16,7 +16,8 @@
       "loadError": "Could not load the projects.",
       "retry": "try again",
       "expand": "Expand {{name}}",
-      "collapse": "Collapse {{name}}"
+      "collapse": "Collapse {{name}}",
+      "tabsAriaLabel": "Tabs of {{name}}"
     },
     "activities": {
       "label": "Activity",
@@ -67,6 +68,28 @@
     "compactFooter": {
       "spent": "spent {{value}}",
       "balance": "balance {{value}}"
+    }
+  },
+  "palette": {
+    "title": "Command palette",
+    "placeholder": "Search projects, sessions and actions…",
+    "empty": "Nothing found.",
+    "open": "Search",
+    "groups": {
+      "projetos": "Go to project",
+      "abas": "Open project tabs",
+      "sessoes": "Sessions",
+      "acoes": "Actions"
+    },
+    "sessionsScope": "the latest of each project and the open project's already loaded ones",
+    "actions": {
+      "newProject": "New project",
+      "theme": "Toggle theme",
+      "spend": "Spend",
+      "containers": "Containers",
+      "providers": "Providers",
+      "account": "Account",
+      "logout": "Sign out"
     }
   }
 }

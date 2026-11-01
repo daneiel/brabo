@@ -8,8 +8,7 @@ import {
   type AbaDeDestino,
   type ChaveDeFila,
   type FilaPrecisaDeVoce,
-  type ItemDaFila,
-} from '../lib/precisa-de-voce';
+  type ItemDaFila, gateEsperandoClique } from '../lib/precisa-de-voce';
 import { formatRelativeTime } from '../lib/time';
 import { ApprovalCard } from './ApprovalCard';
 import { AlertCircleIcon, ChevronRightIcon, XIcon } from './ui/icons';
@@ -296,6 +295,13 @@ export function PainelPrecisaDeVoce({
                   {fila.itens.map((item) =>
                     FILAS_ACIONAVEIS.has(fila.chave) && item.acao ? (
                       <div key={item.id} className={styles.linhaDeCard}>
+                        {gateEsperandoClique(item.acao) && (
+                          <p className={styles.gateParado} role="status">
+                            {t('precisaDeVoce.gateParado', {
+                              gate: gateEsperandoClique(item.acao) === 'qa' ? 'QA' : 'SecOps',
+                            })}
+                          </p>
+                        )}
                         <ApprovalCard
                           action={item.acao}
                           detalheRecolhido

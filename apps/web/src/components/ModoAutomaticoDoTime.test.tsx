@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach, afterAll } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import i18n from '../lib/i18n';
+import { agentesDaOfertaEmLote } from './ModoAutomaticoDoTime';
 import type { AgentAutonomyRule } from '../lib/api-types';
 
 /**
@@ -23,8 +24,9 @@ const { ModoAutomaticoDoTime } = await import('./ModoAutomaticoDoTime');
 function montar(
   props: Partial<{
     agentes: string[];
-    autonomyRules: AgentAutonomyRule[];
+    autonomyRules: AgentAutonomyRule[] | undefined;
     podeLigar: boolean;
+    noPlano: boolean;
   }> = {},
 ) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -33,8 +35,9 @@ function montar(
       <ModoAutomaticoDoTime
         projectId="proj-1"
         agentes={props.agentes ?? ['dev-lead', 'dev-core', 'qa']}
-        autonomyRules={props.autonomyRules ?? []}
+        autonomyRules={'autonomyRules' in props ? props.autonomyRules : []}
         podeLigar={props.podeLigar ?? true}
+        noPlano={props.noPlano}
       />
     </QueryClientProvider>,
   );
@@ -75,7 +78,12 @@ describe('ModoAutomaticoDoTime (RN-661)', () => {
     montar();
     const nao = screen.getByTestId('modo-automatico-nao-libera');
     expect(nao).toHaveTextContent('merge em branch protegida');
-    expect(nao).toHaveTextContent('git push, abertura de PR e deploy');
+    // RN-713: push e PR passaram para o que o modo automático libera.
+    expect(nao).toHaveTextContent('deploy');
+    expect(nao).not.toHaveTextContent('git push');
+    expect(screen.getByTestId('piloto-libera')).toHaveTextContent(
+      'git push e abertura de PR',
+    );
     expect(nao).toHaveTextContent('sudo e doas');
     expect(nao).toHaveTextContent('container_remove');
     expect(nao).toHaveTextContent('instruction_patch');
@@ -111,6 +119,30 @@ describe('ModoAutomaticoDoTime (RN-661)', () => {
     expect(setAgentAutonomy).toHaveBeenCalledTimes(3);
   });
 
+  it('AT-477 (RN-803): antes de a leitura de agent_autonomy chegar, o botão fica inerte e diz por quê', async () => {
+    const { rerender } = montar({ autonomyRules: undefined });
+    const botao = screen.getByRole('button', { name: 'Ligar para 3 agentes' });
+    expect(botao).toBeDisabled();
+    expect(screen.getByTestId('modo-automatico-carregando')).toHaveTextContent('Lendo');
+    fireEvent.click(botao);
+    expect(setAgentAutonomy).not.toHaveBeenCalled();
+
+    // A leitura chega: o botão liga e o clique grava e diz o desfecho.
+    rerender(
+      <QueryClientProvider client={new QueryClient()}>
+        <ModoAutomaticoDoTime
+          projectId="proj-1"
+          agentes={['dev-lead', 'dev-core', 'qa']}
+          autonomyRules={[]}
+          podeLigar
+        />
+      </QueryClientProvider>,
+    );
+    expect(screen.queryByTestId('modo-automatico-carregando')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Ligar para 3 agentes' }));
+    expect(await screen.findByRole('status')).toHaveTextContent('Modo automático ligado');
+  });
+
   it('sem maintainer: o controle fica inerte e o motivo é dito em texto', () => {
     montar({ podeLigar: false });
     expect(screen.getByRole('button', { name: 'Ligar para 3 agentes' })).toBeDisabled();
@@ -123,5 +155,36 @@ describe('ModoAutomaticoDoTime (RN-661)', () => {
       autonomyRules: [{ agentId: 'dev-lead', actionType: '*', mode: 'auto_approve' }],
     });
     expect(container).toBeEmptyDOMElement();
+  });
+});
+
+describe('agentesDaOfertaEmLote (AT-449, RN-766)', () => {
+  it('cobre os subagentes de QA desde a ativação, antes de aparecerem no roster', () => {
+    expect(agentesDaOfertaEmLote(['dev-lead', 'dev-api'])).toEqual([
+      'dev-lead',
+      'dev-api',
+      'qa',
+      'qa-automacao',
+      'qa-performance-seguranca',
+    ]);
+  });
+
+  it('não repete quem já está no time', () => {
+    expect(agentesDaOfertaEmLote(['qa-automacao'])).toEqual([
+      'qa-automacao',
+      'qa',
+      'qa-performance-seguranca',
+    ]);
+  });
+
+  it('RN-816 (AT-488): no cartão do plano não afirma que a execução começou', () => {
+    montar({ noPlano: true });
+    expect(screen.getByText(/Ao aprovar o plano, a execução começa/)).toBeInTheDocument();
+    expect(screen.queryByText(/A execução começou/)).not.toBeInTheDocument();
+  });
+
+  it('na aba Executores segue dizendo que a execução começou', () => {
+    montar();
+    expect(screen.getByText(/A execução começou/)).toBeInTheDocument();
   });
 });

@@ -5,6 +5,7 @@ import {
   definirIdioma,
   idiomaInicial,
   idiomaSugeridoPeloNavegador,
+  resolverIdiomaDoNavegador,
   lerIdiomaCache,
   sincronizarIdiomaDaSessao,
 } from './idioma';
@@ -55,12 +56,23 @@ describe('preferência de idioma — leitura e sugestão', () => {
     expect(lerIdiomaCache()).toBeNull();
   });
 
-  it('sugestão do navegador: "pt*" vira pt-BR, o resto vira en', () => {
+  it('sugestão do navegador: pt*, zh-Hans, ru*, en* (ADR 0216, RN-891)', () => {
     vi.stubGlobal('navigator', { language: 'pt-PT' });
     expect(idiomaSugeridoPeloNavegador()).toBe('pt-BR');
 
+    for (const tag of ['zh', 'zh-CN', 'zh-SG', 'zh-Hans', 'zh-Hans-CN']) {
+      expect(resolverIdiomaDoNavegador(tag)).toBe('zh-Hans');
+    }
+    expect(resolverIdiomaDoNavegador('ru-RU')).toBe('ru');
+    expect(resolverIdiomaDoNavegador('en-GB')).toBe('en');
+  });
+
+  it('idioma sem catálogo cai no pt-BR, nunca no inglês (falha)', () => {
     vi.stubGlobal('navigator', { language: 'es-ES' });
-    expect(idiomaSugeridoPeloNavegador()).toBe('en');
+    expect(idiomaSugeridoPeloNavegador()).toBe('pt-BR');
+    for (const tag of ['de-DE', 'zh-TW', 'zh-Hant', 'zh-HK', '', 'xx']) {
+      expect(resolverIdiomaDoNavegador(tag)).toBe('pt-BR');
+    }
 
     vi.stubGlobal('navigator', { language: 'en-US' });
     expect(idiomaSugeridoPeloNavegador()).toBe('en');
@@ -137,7 +149,7 @@ describe('definir idioma (troca explícita na AccountPage)', () => {
 });
 
 describe('constantes', () => {
-  it('o default do app é en (Onda 6a)', () => {
-    expect(IDIOMA_PADRAO).toBe('en');
+  it('o default do app é pt-BR (ADR 0216, RN-891)', () => {
+    expect(IDIOMA_PADRAO).toBe('pt-BR');
   });
 });

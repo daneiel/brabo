@@ -60,11 +60,25 @@ defmodule Engine.Actions.SemgrepDetector.Live do
   ]
 
   defp run(worktree_path) do
-    case System.cmd("semgrep", @args ++ [worktree_path], stderr_to_stdout: false) do
-      {output, exit_code} when exit_code in [0, 1] -> parse(output)
-      {_output, _exit} -> {:error, :scan_failed}
+    {output, exit_code} = System.cmd("semgrep", @args ++ [worktree_path], stderr_to_stdout: false)
+    interpretar(output, exit_code)
+  end
+
+  @doc false
+  # Exit `1` é AMBÍGUO no semgrep: "achou findings" (com JSON no stdout) ou
+  # exceção do Python (traceback no stderr, stdout VAZIO). Medido na AT-380
+  # (RN-707): com `$HOME` não gravável o semgrep morre criando `~/.semgrep`,
+  # sai 1 sem saída, e isso chegava ao parecer como `:invalid_output`, que
+  # sugere um JSON mal formado. Stdout vazio é falha de EXECUÇÃO, nomeada.
+  def interpretar(output, exit_code) when exit_code in [0, 1] do
+    if String.trim(output) == "" do
+      {:error, {:sem_saida, exit_code}}
+    else
+      parse(output)
     end
   end
+
+  def interpretar(_output, _exit_code), do: {:error, :scan_failed}
 
   defp parse(output) do
     case Jason.decode(output) do

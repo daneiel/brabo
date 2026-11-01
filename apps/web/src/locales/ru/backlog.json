@@ -1,0 +1,124 @@
+{
+  "statusLabel": {
+    "draft": "черновик",
+    "ready": "готова",
+    "inProgress": "в работе",
+    "done": "завершена"
+  },
+  "sectionLabel": {
+    "backlog": "Истории",
+    "traceability": "Трассируемость",
+    "promotionQueue": "Ждут вашего продвижения"
+  },
+  "empty": {
+    "epics": "Эпиков пока нет. Примите handoff от Criativo в сессии, чтобы PO сформировал бэклог.",
+    "rules": "Бизнес-правил пока нет."
+  },
+  "coverage": {
+    "uncoveredBadge_one": "{{count}} не покрыта",
+    "uncoveredBadge_few": "{{count}} не покрыты",
+    "uncoveredBadge_many": "{{count}} не покрыто",
+    "uncoveredBadge_other": "{{count}} не покрыто",
+    "coveredBy_one": "покрыта {{count}} историей",
+    "coveredBy_few": "покрыта {{count}} историями",
+    "coveredBy_many": "покрыта {{count}} историями",
+    "coveredBy_other": "покрыта {{count}} историями",
+    "uncovered": "не покрыта — нет истории"
+  },
+  "ruleRefs_one": "{{count}} связанное бизнес-правило",
+  "ruleRefs_few": "{{count}} связанных бизнес-правила",
+  "ruleRefs_many": "{{count}} связанных бизнес-правил",
+  "ruleRefs_other": "{{count}} связанного бизнес-правила",
+  "promotionQueue": {
+    "hint": "PO закончил эти истории, и они полны. Пока вы их не продвинете, ни одну их задачу dev agent взять не может.",
+    "selectedCount_one": "Выбрана {{count}}",
+    "selectedCount_few": "Выбрано {{count}}",
+    "selectedCount_many": "Выбрано {{count}}",
+    "selectedCount_other": "Выбрано {{count}}",
+    "promoteSelected": "Продвинуть выбранные",
+    "selectAria": "Выбрать {{title}}",
+    "taskRefsSuffix_one": " · {{count}} задача станет доступной",
+    "taskRefsSuffix_few": " · {{count}} задачи станут доступными",
+    "taskRefsSuffix_many": " · {{count}} задач станут доступными",
+    "taskRefsSuffix_other": " · {{count}} задачи станут доступными",
+    "promote": "Продвинуть",
+    "reject": "Отклонить",
+    "returnModalTitle": "Вернуть «{{title}}» PO?",
+    "reasonLabel": "Причина",
+    "reasonHint": "Уйдёт закреплённым сообщением в сессию PO. Напишите, чего не хватает, — по этому он перепишет историю.",
+    "reasonPlaceholder": "Напр.: критерии приёмки не покрывают отказ в оплате.",
+    "returnConfirm": "Вернуть PO",
+    "cancel": "Отмена",
+    "toast": {
+      "promoted_one": "Продвинута {{count}} история",
+      "promoted_few": "Продвинуто {{count}} истории",
+      "promoted_many": "Продвинуто {{count}} историй",
+      "promoted_other": "Продвинуто {{count}} истории",
+      "partialPromoted_one": "{{count}} продвинута",
+      "partialPromoted_few": "{{count}} продвинуты",
+      "partialPromoted_many": "{{count}} продвинуто",
+      "partialPromoted_other": "{{count}} продвинуто",
+      "partialFailed_one": "{{count}} отклонена доменом",
+      "partialFailed_few": "{{count}} отклонены доменом",
+      "partialFailed_many": "{{count}} отклонено доменом",
+      "partialFailed_other": "{{count}} отклонено доменом",
+      "promoteError": "Не удалось продвинуть",
+      "returnedSuccess": "История возвращена PO",
+      "returnError": "Не удалось вернуть"
+    }
+  },
+  "epicNode": {
+    "storyCount_one": "{{count}} история",
+    "storyCount_few": "{{count}} истории",
+    "storyCount_many": "{{count}} историй",
+    "storyCount_other": "{{count}} истории"
+  },
+  "storyNode": {
+    "awaitingYou": "ждёт вас",
+    "returned": "возвращена",
+    "youReturned": "Вы вернули PO:",
+    "taskCount_one": "{{count}} задача",
+    "taskCount_few": "{{count}} задачи",
+    "taskCount_many": "{{count}} задач",
+    "taskCount_other": "{{count}} задачи",
+    "editTitle": "Изменить название",
+    "archive": "Архивировать",
+    "editModalTitle": "Изменить название истории",
+    "titleLabel": "Название",
+    "save": "Сохранить",
+    "cancel": "Отмена",
+    "archiveModalTitle": "Архивировать «{{title}}»?",
+    "archiveExplain_one": "История и её {{count}} задача уходят из бэклога, покрытия и плана. Ничего не удаляется: запись остаётся в истории сессии.",
+    "archiveExplain_few": "История и её {{count}} задачи уходят из бэклога, покрытия и плана. Ничего не удаляется: запись остаётся в истории сессии.",
+    "archiveExplain_many": "История и её {{count}} задач уходят из бэклога, покрытия и плана. Ничего не удаляется: запись остаётся в истории сессии.",
+    "archiveExplain_other": "История и её задачи ({{count}}) уходят из бэклога, покрытия и плана. Ничего не удаляется: запись остаётся в истории сессии.",
+    "archiveReasonLabel": "Причина (необязательно)",
+    "archiveReasonPlaceholder": "Напр.: дубликат другой истории.",
+    "archiveConfirm": "Архивировать",
+    "inertRole": "Для изменения и архивирования нужна роль developer или выше.",
+    "inertStatus": "Изменять и архивировать можно только историю в черновике.",
+    "inertRunning_one": "{{count}} задача выполняется — дождитесь завершения, чтобы изменить или архивировать.",
+    "inertRunning_few": "{{count}} задачи выполняются — дождитесь завершения, чтобы изменить или архивировать.",
+    "inertRunning_many": "{{count}} задач выполняются — дождитесь завершения, чтобы изменить или архивировать.",
+    "inertRunning_other": "{{count}} задачи выполняются — дождитесь завершения, чтобы изменить или архивировать.",
+    "toast": {
+      "updated": "Название исправлено",
+      "updateError": "Не удалось исправить название",
+      "archived": "История архивирована",
+      "archiveError": "Не удалось архивировать"
+    }
+  },
+  "fieldLabels": {
+    "rf": "ФТ",
+    "rnf": "НФТ",
+    "dor": "DoR",
+    "dod": "DoD"
+  },
+  "taskState": {
+    "blocked": "Заблокирована",
+    "todo": "к выполнению",
+    "inProgress": "в работе",
+    "inReview": "на ревью",
+    "done": "завершена"
+  }
+}

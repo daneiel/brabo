@@ -104,6 +104,41 @@ defmodule Engine.Agents.ArquitetoServerTest do
     assert_received {:event_appended, _, _, %{type: "artifact.insight"}}
   end
 
+  # RN-711 (AT-370): a restrição técnica que o Criativo registrou como
+  # decision_record chega ao kickoff do Arquiteto, com a ordem de justificar
+  # quem a contrariar.
+  test "kickoff lê os decision_record e manda respeitar \"um módulo só\"", %{state: state} do
+    Process.put(
+      :fake_events,
+      brief_rules_backlog() ++
+        [
+          %{
+            "type" => "artifact.decision_record",
+            "payload" => %{"context" => "pedido do usuário", "choice" => "um módulo só"}
+          }
+        ]
+    )
+
+    Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("ok")])
+    assert {:noreply, _} = sync_cast(ArquitetoServer, :kickoff, state)
+
+    assert_received {:llm_turn_stream, "arquiteto", messages, _}
+    kickoff = Enum.find(messages, &(&1["role"] == "user"))["content"]
+    assert kickoff =~ "RESTRIÇÕES E DECISÕES REGISTRADAS"
+    assert kickoff =~ "- um módulo só (contexto: pedido do usuário)"
+    assert kickoff =~ "POR QUÊ"
+  end
+
+  test "kickoff sem decision_record diz que não há nenhuma", %{state: state} do
+    Process.put(:fake_events, brief_rules_backlog())
+    Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("ok")])
+    assert {:noreply, _} = sync_cast(ArquitetoServer, :kickoff, state)
+    assert_received {:llm_turn_stream, "arquiteto", messages, _}
+    assert Enum.find(messages, &(&1["role"] == "user"))["content"] =~ "(nenhuma registrada)"
+    # O fluxo do time chega como system efêmera (RN-711).
+    assert Enum.any?(messages, &(&1["role"] == "system" and &1["content"] =~ "Fluxo de entrega"))
+  end
+
   test "propose_adr em projeto SEM repositório: recusa NOMEADA, NUNCA propõe, deixa rastro (RN-577)" do
     # Projeto sem repositório — o provisionamento do aceite ao Arquiteto
     # falhou, ou o projeto passou por ele antes da RN-582: nenhuma linha em
@@ -133,8 +168,14 @@ defmodule Engine.Agents.ArquitetoServerTest do
     assert recusa["content"] =~ "sem repositório provisionado"
     assert recusa["content"] =~ "handoff ao Arquiteto é aceito (RN-582)"
 
+    # RN-746: a recusa é dita no fecho, ao lado do texto do modelo.
     assert_received {:event_appended, _, _,
-                     %{type: "agent.response", payload: %{content: "depois-de-recusar-adr"}}}
+                     %{
+                       type: "agent.response",
+                       payload: %{content: "depois-de-recusar-adr" <> linha}
+                     }}
+
+    assert linha =~ "1 chamada de escrita recusada" or linha =~ "1 write call refused"
 
     # Rastro durável: a chamada e o porquê.
     assert_received {:event_appended, _, _, %{type: "tool.call", payload: %{tool: "propose_adr"}}}
@@ -322,6 +363,13 @@ defmodule Engine.Agents.ArquitetoServerTest do
     refute_received {:event_appended, _, _, %{type: "agent.error", payload: %{origem: "codigo"}}}
 
     assert final_state.turno_assincrono == nil
+  end
+
+  # RN-772/773 (AT-454): o estado que muda fora da conversa tem leitura.
+  test "as leituras de ADRs propostas e do backlog estão no catálogo", %{state: state} do
+    nomes = Enum.map(state.tool_specs, & &1.name)
+    assert "listar_adrs_propostas" in nomes
+    assert "listar_backlog" in nomes
   end
 
   describe "Frente 3 do plano de decision_record — emit_artifact" do

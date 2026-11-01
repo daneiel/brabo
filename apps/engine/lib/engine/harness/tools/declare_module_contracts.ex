@@ -97,7 +97,8 @@ defmodule Engine.Harness.Tools.DeclareModuleContracts do
 
         {:ok,
          "contratos declarados (version #{version}): #{length(declarados)} módulo(s) — " <>
-           "#{modulos}. Os dev agents leem esta versão com listar_contratos_de_modulos."}
+           "#{modulos}. Os dev agents leem esta versão com listar_contratos_de_modulos." <>
+           conferencia_com_historias(normalizado, ctx)}
 
       {:ok, _outro} ->
         {:ok, "contratos declarados."}
@@ -111,6 +112,16 @@ defmodule Engine.Harness.Tools.DeclareModuleContracts do
     do:
       {:error,
        "declare_module_contracts exige `contratos` (lista de {modulo, expoe: [{tipo, assinatura, descricao}]})"}
+
+  # RN-792 (AT-468): a conferência das rotas contra as histórias volta no
+  # resultado, como entrada do laço. Falhar a leitura do backlog não recusa a
+  # declaração (ela já foi gravada): o texto diz que não conferiu.
+  defp conferencia_com_historias(normalizado, ctx) do
+    case EngineApiClient.list_backlog(ctx.project_id) do
+      {:ok, backlog} -> Engine.Harness.RotasDoContrato.texto(normalizado, backlog)
+      _ -> "\n\n(Não conferi as rotas contra as histórias: a leitura do backlog falhou.)"
+    end
+  end
 
   # Explícito por campo, com default vazio, como `RouteModulesToInfra.normalize/1`
   # — a régua de verdade é a da api, que nomeia o item que faltou.

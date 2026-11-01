@@ -1,0 +1,25 @@
+{
+  "route": {
+    "loading": "正在加载页面…"
+  },
+  "sidebar": {
+    "account": "账户",
+    "containers": "容器",
+    "providers": "提供商",
+    "spend": "支出"
+  },
+  "account": {
+    "title": "账户",
+    "subtitle": "跟随您本人而非某个特定项目的设置。",
+    "emailLabel": "当前登录",
+    "language": {
+      "title": "语言",
+      "eyebrow": "界面",
+      "subtitle": "Brabo 界面的语言。来自服务器的消息（例如 api 的拒绝信息）可能仍保持其原始语言。",
+      "inProgress": "翻译进行中 —— 界面暂时保持葡萄牙语",
+      "saving": "正在保存…",
+      "saved": "语言已保存",
+      "error": "无法保存您的语言偏好"
+    }
+  }
+}

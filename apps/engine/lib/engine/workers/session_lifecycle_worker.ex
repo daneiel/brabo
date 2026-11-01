@@ -7,7 +7,8 @@ defmodule Engine.Workers.SessionLifecycleWorker do
   EngineWeb.SessionCommandController); este worker só para um processo
   ainda rodando quando a api já sabe do encerramento — e, desde a RN-581, os
   agentes CONVERSACIONAIS da sessão (`Engine.Agents.Conversacionais`), em
-  todos os nós.
+  todos os nós — e, desde a RN-763, os dev agents dela e os gates do projeto
+  (`Engine.Dev.EncerramentoDaSessao`).
 
   Desde o ADR 0183 (RN-649) uma sessão encerrada pode ser REABERTA. O job de
   um fechamento que chega DEPOIS da reabertura (retentativa do Oban, drain
@@ -86,6 +87,22 @@ defmodule Engine.Workers.SessionLifecycleWorker do
     end
 
     parar_conversacionais(session_id)
+    parar_execucao(session_id)
+  end
+
+  # RN-763 (AT-456): a mesma régua para os dev agents da sessão e os gates.
+  defp parar_execucao(session_id) do
+    case Engine.Dev.EncerramentoDaSessao.parar_da_sessao(session_id) do
+      [] ->
+        :ok
+
+      parados ->
+        Logger.info(
+          "sessão #{session_id} encerrada: dev agents parados (#{Enum.join(parados, ", ")})"
+        )
+    end
+
+    :ok
   end
 
   defp parar_conversacionais(session_id) do

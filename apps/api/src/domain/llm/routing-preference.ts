@@ -79,3 +79,59 @@ export function preferenciaEnviada(
   if (!capabilities.routingPreference) return null;
   return doBinding ?? null;
 }
+
+/**
+ * A chave que prende a conversa de UM agente numa SESSAO ao upstream que a
+ * atendeu (ADR 0221, RN-907): por agente + sessao, porque cada agente tem
+ * prefixo proprio (instrucoes + ferramentas).
+ */
+export function chaveDeSessao(sessionId: string, agentId?: string): string {
+  return agentId ? `brabo:${sessionId}:${agentId}` : `brabo:${sessionId}`;
+}
+
+/**
+ * O fator do TETO DE PREÇO (ADR 0225, RN-917): `max_price` = preço de catálogo
+ * × 1,5, por chamada. Fixo no código — decisão do dono de 27/10/2026.
+ */
+export const FATOR_DO_TETO_DE_PRECO = 1.5;
+
+export interface TetoDePreco {
+  inputPerMillionMicros: number;
+  outputPerMillionMicros: number;
+}
+
+/**
+ * O teto que vai ao fio, ou `null` (nada é enviado): provider sem a capability,
+ * ou preço de catálogo desconhecido (0) em qualquer das duas pontas — teto 0
+ * recusaria todo upstream.
+ */
+export function tetoDePreco(
+  model: {
+    inputPricePerMillionMicros: number;
+    outputPricePerMillionMicros: number;
+  },
+  capabilities: LLMProviderCapabilities,
+): TetoDePreco | null {
+  if (!capabilities.priceCeiling) return null;
+  if (
+    !(model.inputPricePerMillionMicros > 0) ||
+    !(model.outputPricePerMillionMicros > 0)
+  )
+    return null;
+  return {
+    inputPerMillionMicros: Math.round(
+      model.inputPricePerMillionMicros * FATOR_DO_TETO_DE_PRECO,
+    ),
+    outputPerMillionMicros: Math.round(
+      model.outputPricePerMillionMicros * FATOR_DO_TETO_DE_PRECO,
+    ),
+  };
+}
+
+/** A chamada COM teto recebeu "nenhum upstream cabe": repete UMA vez sem teto. */
+export function devoRetentarSemTeto(input: {
+  comTeto: boolean;
+  errorCode: string | null;
+}): boolean {
+  return input.comTeto && input.errorCode === 'price_ceiling';
+}

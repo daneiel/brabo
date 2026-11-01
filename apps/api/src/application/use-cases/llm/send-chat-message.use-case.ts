@@ -1,4 +1,11 @@
-import { Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { MENSAGEM_SEM_MODELO } from '../../../domain/llm/binding-resolver';
+import { LLMProviderError } from '../../../domain/llm/llm-provider-errors';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  Optional,
+} from '@nestjs/common';
 import { ulid } from 'ulid';
 import { UnitOfWork } from '../../ports/unit-of-work.port';
 import { SessionRepository } from '../../ports/session-repository.port';
@@ -13,8 +20,17 @@ import { TokenEstimator } from '../../ports/token-estimator.port';
 import { ResolveModelBindingUseCase } from './resolve-model-binding.use-case';
 import { CheckBudgetGateUseCase } from './check-budget-gate.use-case';
 import { RecordLlmUsageUseCase } from './record-llm-usage.use-case';
-import { preferenciaEnviada } from '../../../domain/llm/routing-preference';
+import {
+  preferenciaEnviada,
+  tetoDePreco,
+  devoRetentarSemTeto,
+  FATOR_DO_TETO_DE_PRECO,
+} from '../../../domain/llm/routing-preference';
 import { custoDaChamada } from '../../../domain/llm/custo-da-chamada';
+import {
+  devoRetentarSemRaciocinio,
+  opcoesDeRaciocinio,
+} from '../../../domain/llm/raciocinio-do-agente';
 import type { Actor } from '../../../domain/sessions/session-event.entity';
 import {
   ConversaEmSessaoEncerradaError,
@@ -41,6 +57,8 @@ export type ChatSseEvent =
     }
   | { type: 'error'; message: string }
   | { type: 'metering_failed'; message: string };
+
+const teto_logger = new Logger('TetoDePreco');
 
 @Injectable()
 export class SendChatMessageUseCase {
@@ -122,7 +140,7 @@ export class SendChatMessageUseCase {
     if (!binding) {
       yield {
         type: 'error',
-        message: 'Nenhum modelo vinculado para esta sessão',
+        message: MENSAGEM_SEM_MODELO,
       };
       return;
     }
@@ -168,6 +186,17 @@ export class SendChatMessageUseCase {
       binding.routingPreference,
       provider.capabilities,
     );
+    // ADR 0225 (RN-917): teto de preço por chamada, só no hub que o declara.
+    const teto = tetoDePreco(model, provider.capabilities);
+    const opcoes = opcoesDeRaciocinio(
+      model.supportsReasoning,
+      input.agentId,
+      model.reasoningBudget,
+    );
+    const assistantActor: Actor = { kind: 'agent', id: model.name };
+    let costMicros = 0;
+    let registrar: () => Promise<unknown> = () => Promise.resolve();
+    // AT-587 (RN-916): no máximo DUAS chamadas; a segunda com o raciocínio desligado.
     let fullText = '';
     let inputTokens = 0;
     let outputTokens = 0;
@@ -179,65 +208,93 @@ export class SendChatMessageUseCase {
     let custoRealMicros: number | null = null;
     let resolvedModelName: string | null = null;
     let generationId: string | null = null;
+    // Stream abortado pelo orçamento de raciocínio: custo é estimativa (ADR 0224).
+    let abortado = false;
     // Partes da entrada/saída que o provider informou (RN-666); `null` = não disse.
     let cachedInputTokens: number | null = null;
     let reasoningTokens: number | null = null;
     let streamError: string | null = null;
+    let streamErrorCode: string | null = null;
+    let truncated = false;
+    let semRaciocinio = false;
+    let semTeto = false;
+    for (;;) {
+      const comTeto = teto !== null && !semTeto;
+      fullText = '';
+      inputTokens = 0;
+      outputTokens = 0;
+      estimated = false;
+      upstreamProvider = null;
+      custoRealMicros = null;
+      resolvedModelName = null;
+      generationId = null;
+      abortado = false;
+      cachedInputTokens = null;
+      reasoningTokens = null;
+      streamError = null;
+      streamErrorCode = null;
+      truncated = false;
 
-    try {
-      for await (const chunk of provider.chat(
-        [{ role: 'user', content: input.text }],
-        {
-          model: model.name,
-          apiKey,
-          ...(routingPreference ? { routingPreference } : {}),
-        },
-      )) {
-        if (chunk.type === 'text_delta') {
-          fullText += chunk.text;
-          yield { type: 'delta', text: chunk.text };
-        } else if (chunk.type === 'usage') {
-          inputTokens = chunk.inputTokens;
-          outputTokens = chunk.outputTokens;
-          estimated = chunk.estimated;
-          upstreamProvider = chunk.upstreamProvider ?? null;
-          custoRealMicros = chunk.costMicros ?? null;
-          resolvedModelName = chunk.resolvedModel ?? null;
-          generationId = chunk.generationId ?? null;
-          cachedInputTokens = chunk.cachedInputTokens ?? null;
-          reasoningTokens = chunk.reasoningTokens ?? null;
-        } else if (chunk.type === 'error') {
-          streamError = chunk.message;
+      try {
+        for await (const chunk of provider.chat(
+          [{ role: 'user', content: input.text }],
+          {
+            model: model.name,
+            apiKey,
+            ...(routingPreference ? { routingPreference } : {}),
+            ...opcoes,
+            ...(semRaciocinio ? { reasoningOff: true as const } : {}),
+            ...(comTeto ? { priceCeiling: teto } : {}),
+          },
+        )) {
+          if (chunk.type === 'text_delta') {
+            fullText += chunk.text;
+            yield { type: 'delta', text: chunk.text };
+          } else if (chunk.type === 'usage') {
+            inputTokens = chunk.inputTokens;
+            outputTokens = chunk.outputTokens;
+            estimated = chunk.estimated;
+            upstreamProvider = chunk.upstreamProvider ?? null;
+            custoRealMicros = chunk.costMicros ?? null;
+            resolvedModelName = chunk.resolvedModel ?? null;
+            generationId = chunk.generationId ?? null;
+            abortado = chunk.abortadoPeloRaciocinio === true;
+            cachedInputTokens = chunk.cachedInputTokens ?? null;
+            reasoningTokens = chunk.reasoningTokens ?? null;
+          } else if (chunk.type === 'truncated') {
+            truncated = true;
+          } else if (chunk.type === 'error') {
+            streamError = chunk.message;
+            streamErrorCode = chunk.code;
+          }
         }
+      } catch (error) {
+        streamError = (error as Error).message;
+        if (error instanceof LLMProviderError) streamErrorCode = error.code;
       }
-    } catch (error) {
-      streamError = (error as Error).message;
-    }
 
-    // 6) Metering OBRIGATÓRIO — roda mesmo com erro do provider (o
-    //    generator chega aqui de qualquer forma, dado que o loop acima
-    //    não propaga exceção pra fora do try).
-    if (inputTokens === 0 && outputTokens === 0) {
-      inputTokens = this.tokenEstimator.count(input.text);
-      outputTokens = this.tokenEstimator.count(fullText);
-      estimated = true;
-    }
-    // O custo REAL, quando o provider o devolveu, é o número; senão, o preço do
-    // catálogo congelado (ADR 0042). Decisão do dono, ADR 0188 (RN-665).
-    const custo = custoDaChamada({
-      inputTokens,
-      outputTokens,
-      custoRealMicros,
-      inputPricePerMillionMicros: model.inputPricePerMillionMicros,
-      outputPricePerMillionMicros: model.outputPricePerMillionMicros,
-    });
-    const { costMicros } = custo;
-    const latencyMs = Date.now() - startedAt;
-    const assistantActor: Actor = { kind: 'agent', id: model.name };
+      // 6) Metering OBRIGATÓRIO — roda mesmo com erro do provider (o
+      //    generator chega aqui de qualquer forma, dado que o loop acima
+      //    não propaga exceção pra fora do try).
+      if (inputTokens === 0 && outputTokens === 0) {
+        inputTokens = this.tokenEstimator.count(input.text);
+        outputTokens = this.tokenEstimator.count(fullText);
+        estimated = true;
+      }
+      // O custo REAL, quando o provider o devolveu, é o número; senão, o preço do
+      // catálogo congelado (ADR 0042). Decisão do dono, ADR 0188 (RN-665).
+      const custo = custoDaChamada({
+        inputTokens,
+        outputTokens,
+        custoRealMicros,
+        inputPricePerMillionMicros: model.inputPricePerMillionMicros,
+        outputPricePerMillionMicros: model.outputPricePerMillionMicros,
+      });
+      costMicros = custo.costMicros;
+      const latencyMs = Date.now() - startedAt;
 
-    try {
-      await this.unitOfWork.runInTransaction(async () => {
-        await this.recordLlmUsage.execute({
+      registrar = () =>
+        this.recordLlmUsage.execute({
           projectId: input.projectId,
           sessionId: input.sessionId,
           actor: assistantActor,
@@ -253,7 +310,8 @@ export class SendChatMessageUseCase {
           // real, o preço é o IMPLÍCITO e o do catálogo vai ao lado (ADR 0188).
           inputPricePerMillionMicros: custo.inputPricePerMillionMicros,
           outputPricePerMillionMicros: custo.outputPricePerMillionMicros,
-          priceImplicit: custo.priceImplicit,
+          priceImplicit: custo.priceImplicit || abortado,
+          custoAReconciliar: abortado && generationId !== null,
           catalogCostMicros: custo.catalogCostMicros,
           resolvedModelName,
           generationId,
@@ -263,7 +321,40 @@ export class SendChatMessageUseCase {
           bindingOrigin: binding.origin,
           upstreamProvider,
           routingPreference,
+          priceCeilingFactor: comTeto ? FATOR_DO_TETO_DE_PRECO : null,
         });
+      // ADR 0225 (RN-917): nenhum upstream coube no teto — repete UMA vez sem
+      // teto (a linha desta chamada grava o fator nulo); o turno não falha.
+      if (devoRetentarSemTeto({ comTeto, errorCode: streamErrorCode })) {
+        await this.unitOfWork.runInTransaction(registrar);
+        teto_logger.warn(
+          `${model.provider}/${model.name}: nenhum upstream cabe no teto de preço; repetindo sem teto`,
+        );
+        semTeto = true;
+        continue;
+      }
+      if (
+        !semRaciocinio &&
+        devoRetentarSemRaciocinio({
+          opcoes,
+          aceitaRaciocinioDesligado: provider.aceitaRaciocinioDesligado,
+          truncated,
+          texto: fullText,
+          toolCalls: 0,
+          abortado,
+          reasoningTokens,
+        })
+      ) {
+        await this.unitOfWork.runInTransaction(registrar);
+        semRaciocinio = true;
+        continue;
+      }
+      break;
+    }
+
+    try {
+      await this.unitOfWork.runInTransaction(async () => {
+        await registrar();
 
         // A resposta de um turno que COMEÇOU com a sessão aberta entra mesmo
         // que ela tenha fechado no meio: o ator é o modelo, não um agente

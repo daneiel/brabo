@@ -46,7 +46,18 @@
     "note": "Aqui não há quebra por provider nem por credencial — é a conta de outra pessoa, e a pergunta desta tela é o seu consumo."
   },
   "charts": {
-    "noSpendInWindow": "Nenhum gasto nesta janela."
+    "noSpendInWindow": "Nenhum gasto nesta janela.",
+    "window_zero": "sem dias",
+    "window_one": "último dia",
+    "window_other": "últimos {{count}} dias",
+    "spend": "Gasto",
+    "calls_zero": "{{count}} chamadas",
+    "calls_one": "{{count}} chamada",
+    "calls_other": "{{count}} chamadas",
+    "viewAsTable": "Ver como tabela",
+    "colDay": "Dia",
+    "colSpend": "Gasto",
+    "colCalls": "Chamadas"
   },
   "libSpend": {
     "callTitle_zero": "{{dia}} · {{custo}} · {{count}} chamadas",
@@ -55,5 +66,61 @@
     "actorPerson": "{{id}} (pessoa)",
     "budgetBlocked": "Este projeto atingiu {{pct}}% do orçamento — novas chamadas de LLM estão BLOQUEADAS até o teto subir.",
     "budgetWarning": "Este projeto já passou de {{pct}}% do orçamento definido."
+  },
+  "window": {
+    "label": "Janela",
+    "option": "{{n}} dias"
+  },
+  "subscription": {
+    "label": "Assinatura",
+    "detail": "dentro do total — assento fixo, não é cobrança em US$",
+    "noPrice": "assinatura — sem preço registrado",
+    "inRow": "assinatura {{valor}}"
+  },
+  "global": {
+    "title": "Gastos",
+    "ownerSubtitle": "Todos os projetos do workspace. De qual chave o dinheiro saiu está na seção de baixo.",
+    "memberSubtitle": "O que você consumiu em cada projeto do workspace. O custo é estimado: quem paga é a chave do dono, e a fatura dela é dele.",
+    "memberTitle": "O meu consumo",
+    "memberError": "Não consegui carregar o seu consumo agora. O registro continua lá — isto é só a leitura.",
+    "memberByProject": "Por projeto",
+    "memberByProjectEmpty": "Você não gastou nada nesta janela.",
+    "memberTotal": "Seu gasto em {{dias}} dias",
+    "memberDaily": "Seu gasto por dia",
+    "budgetsTitle": "Orçamentos dos projetos",
+    "budgetsEmpty": "Nenhum projeto neste workspace.",
+    "budgetNone": "sem orçamento — definir",
+    "budgetOf": "{{gasto}} de {{limite}}",
+    "budgetsError": "Não consegui carregar os orçamentos agora."
+  },
+  "project": {
+    "ownerTitle": "Gastos do projeto",
+    "ownerSubtitle": "Últimos {{dias}} dias, só deste projeto — por modelo, por provider, por agente e pessoa e por sessão. O gasto de todos os projetos fica na página Gastos.",
+    "bySessionTitle": "Por sessão",
+    "bySessionEmpty": "Nenhuma sessão gastou nesta janela."
+  },
+  "team": {
+    "title": "Gastos do projeto",
+    "subtitle": "Últimos {{dias}} dias: o que os agentes gastaram neste projeto. Sem provider nem chave — a fatura é do dono do workspace.",
+    "error": "Não consegui carregar o gasto do projeto agora.",
+    "totalLabel": "Total do projeto em {{dias}} dias",
+    "byAgentTitle": "Por agente",
+    "byAgentEmpty": "Nenhum agente gastou nesta janela.",
+    "byAreaTitle": "Por área",
+    "byAreaEmpty": "Nenhuma área gastou nesta janela.",
+    "noArea": "sem área"
+  },
+  "budgetEditor": {
+    "title": "Orçamento do projeto",
+    "limitLabel": "Teto em US$",
+    "policyLabel": "Ao atingir o teto",
+    "block": "bloquear novas chamadas",
+    "allow": "só avisar",
+    "save": "Salvar orçamento",
+    "saving": "Salvando…",
+    "saved": "Orçamento salvo.",
+    "error": "Não consegui salvar o orçamento. Nada mudou.",
+    "invalid": "Informe um teto maior que zero.",
+    "noRole": "Definir o orçamento exige o papel de maintainer neste projeto."
   }
 }

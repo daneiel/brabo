@@ -19,6 +19,8 @@ import { TogetherProvider } from '../../../src/infrastructure/llm/together-provi
 import { DeepInfraProvider } from '../../../src/infrastructure/llm/deepinfra-provider';
 import { BitdeerProvider } from '../../../src/infrastructure/llm/bitdeer-provider';
 import { VultrProvider } from '../../../src/infrastructure/llm/vultr-provider';
+import { NineRouterProvider } from '../../../src/infrastructure/llm/nine-router-provider';
+import { OpenCodeZenProvider } from '../../../src/infrastructure/llm/opencode-zen-provider';
 
 /**
  * O decorator de tracing é o ÚNICO caminho até um provider: o registry envolve
@@ -42,6 +44,9 @@ class ProviderFalso extends LLMProvider {
     listModels: true,
     embeddings: true,
     routingPreference: false,
+    stickySession: false,
+    priceCeiling: false,
+    promptCaching: false,
   };
   chaveRecebida: string | undefined = undefined;
   entradasRecebidas: readonly string[] = [];
@@ -85,6 +90,9 @@ class ProviderSemCatalogo extends LLMProvider {
     listModels: false,
     embeddings: false,
     routingPreference: false,
+    stickySession: false,
+    priceCeiling: false,
+    promptCaching: false,
   };
 
   // eslint-disable-next-line @typescript-eslint/require-await
@@ -204,6 +212,8 @@ describe('TracedLLMProvider', () => {
       new DeepInfraProvider(),
       new BitdeerProvider(),
       new VultrProvider(),
+      new NineRouterProvider(),
+      new OpenCodeZenProvider(),
     ];
 
     for (const provider of reais) {

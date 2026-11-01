@@ -1,0 +1,242 @@
+{
+  "groupLabel": {
+    "local": "本地",
+    "direct": "直连 API",
+    "hub": "聚合平台"
+  },
+  "upstreamLabel": {
+    "outros": "未声明厂商"
+  },
+  "facets": {
+    "toolCalling": {
+      "label": "tool calling",
+      "help": "仅显示智能体能够使用的模型。"
+    },
+    "vision": {
+      "label": "读取图像",
+      "help": "接受图像作为输入 —— 截图、图表、渲染后的 PDF。"
+    },
+    "reasoning": {
+      "label": "thinking",
+      "help": "在回答前展示显式推理。执行用的 dev agent 和自动化 QA 会关闭推理；其他智能体由模型自行决定。"
+    },
+    "imagem": {
+      "label": "生成图像",
+      "help": "产出图像 —— 与能否读取图像是不同的维度。"
+    }
+  },
+  "uses": {
+    "codigo": "代码",
+    "documentacao": "文档",
+    "analise": "分析",
+    "imagem": "图像",
+    "conversa": "对话"
+  },
+  "providerLabel": {
+    "ollama": "Ollama（本地）",
+    "anthropic": "Anthropic",
+    "openai": "OpenAI",
+    "openrouter": "OpenRouter",
+    "nvidia-nim": "NVIDIA NIM",
+    "together": "Together AI",
+    "deepinfra": "DeepInfra",
+    "bitdeer": "Bitdeer",
+    "vultr": "Vultr",
+    "9router": "9Router",
+    "opencode-zen": "OpenCode Zen"
+  },
+  "price": {
+    "free": "免费",
+    "per1m": "每 1M",
+    "noPrice": "未记录价格",
+    "subscriptionNoPrice": "订阅 — 未记录价格",
+    "subscription": "订阅 · 相当于 {{preco}}"
+  },
+  "contextWindow": {
+    "thousands": "{{value}}k ctx",
+    "exact": "{{value}} ctx"
+  },
+  "badges": {
+    "active": "已启用",
+    "inactive": "已停用",
+    "unavailable": "提供商处不可用",
+    "toolCalling": "tool calling",
+    "readsImage": "读取图像",
+    "thinking": "thinking",
+    "generatesImage": "生成图像",
+    "manualPricing": "手动定价",
+    "freeRoutingAlias": "自由路由别名"
+  },
+  "catalog": {
+    "title": "模型目录",
+    "eyebrow": "按工作区精选",
+    "subtitle": "同步发现的模型默认停用。只有你启用的模型才会出现在模型选择器中。",
+    "expandAll": "全部展开",
+    "collapseAll": "全部折叠",
+    "syncing": "正在同步…",
+    "updateButton": "更新目录",
+    "usesFilterTitle": "此工作区标记为“{{use}}”的模型",
+    "countOfTotal": "{{visible}} / {{total}}",
+    "filteredEmpty": {
+      "prefix": "没有模型满足所有已勾选的条件。提供商未声明的能力视为不具备，用途则以",
+      "thisWorkspace": "此工作区",
+      "suffix": "的标记为准 —— 关闭某个筛选条件以查看其余模型。"
+    },
+    "missingCatalog": {
+      "prefix": "你有 ",
+      "middle_other": " 的凭据，但目录中没有它的任何模型。添加密钥不会自动发现模型 —— 请点击 ",
+      "suffix": " 从提供商处获取。"
+    },
+    "toasts": {
+      "syncSuccess": "目录已同步",
+      "syncErrorTitle": "同步失败",
+      "syncErrorMessage": "api 未响应。目录未作任何更改。",
+      "activated": "模型已启用",
+      "deactivated": "模型已停用",
+      "saveError": "无法保存",
+      "usesUpdated": "用途已更新",
+      "aliasRefused": "自由路由别名不能纳入精选",
+      "syncCount_other": "从提供商处获取了 {{count}} 个模型。",
+      "syncActivateLink": "启用一个模型 →"
+    },
+    "empty": "目录中没有模型。请添加提供商凭据后更新。",
+    "freeRoutingAliasReason": "展示价格：实际计费方是处理每次调用的上游。带“~”的别名无法启用 —— 请选择上游固定的模型。",
+    "markedHidden_other": "已标记 {{count}} 个",
+    "batchBar": {
+      "selectedCount_other": "已选择 {{count}} 个",
+      "activate": "启用",
+      "deactivate": "停用",
+      "markAs": "标记为",
+      "applyUsesTitle": "替换所标记模型的用途 —— 不会叠加到原有用途上",
+      "applyUses": "应用用途",
+      "clearUses": "清除用途"
+    },
+    "syncReport": {
+      "skippedNoCapability": "不支持列出目录",
+      "skippedNoCredential": "未添加凭据",
+      "failed": "失败 · 来源 {{origin}}",
+      "novos_other": "新增 {{count}} 个",
+      "deVolta": "恢复 {{count}} 个",
+      "sumidos_other": "消失 {{count}} 个"
+    },
+    "search": {
+      "aria": "在目录中搜索模型",
+      "placeholder": "按名称或 id 搜索（例如：claude-haiku）",
+      "noMatch": "目录中没有与“{{term}}”匹配的模型。搜索会查看名称和 id；请检查拼写或清除搜索。"
+    },
+    "tabs": {
+      "aria": "目录中的提供商",
+      "noKey": "无所有者密钥",
+      "noKeyNote": "该提供商没有工作区所有者的密钥，但仍有已启用的模型。不再使用时请停用；没有密钥就不会同步新内容。",
+      "noMatchHere": "没有 {{provider}} 的模型符合搜索或筛选。符合的有：{{tabs}}。",
+      "outside_other": "{{count}} 个已隐藏，无所有者密钥：{{names}}"
+    }
+  },
+  "picker": {
+    "filterFitForAgents": "适用于智能体",
+    "noModelsRegistered": "尚未添加模型",
+    "noToolCallingModels": "没有模型支持原生 tool calling。取消勾选筛选条件以查看其他模型。",
+    "currentHiddenByFilter": "当前模型（{{model}}）不支持原生 tool calling，未出现在此列表中。",
+    "selectModel": "选择模型"
+  },
+  "spend": {
+    "title": "你的密钥的花费",
+    "eyebrow": "仅你可见",
+    "subtitlePrefix": "此工作区所有项目的智能体都在消耗",
+    "subtitleYours": "你的",
+    "subtitleSuffix": "凭据。以下是每个凭据每月的支出。",
+    "loading": "正在汇总…",
+    "error": "暂时无法加载花费。消耗记录仍然保留 —— 这里只是读取。",
+    "empty": "过去 {{months}} 个月没有记录任何 LLM 调用。",
+    "totalLabel": "过去 {{months}} 个月合计",
+    "headers": {
+      "provider": "提供商",
+      "agents": "智能体",
+      "youInChat": "你在聊天中",
+      "calls": "调用",
+      "total": "合计"
+    },
+    "credentialNotRegistered": "未添加密钥",
+    "callsCount_other": "（{{count}} 次调用）",
+    "currency": {
+      "belowCent": "< {{value}}"
+    }
+  },
+  "huggingface": {
+    "title": "Hugging Face Hub",
+    "eyebrow": "将 GGUF 模型拉取到 Ollama",
+    "subtitle": "在 Hub 中搜索 GGUF 模型，并请求拉取到本地 Ollama。默认只显示官方发布者 —— 未经第二次明确确认不会下载任何内容。",
+    "searchLabel": "在 Hugging Face Hub 中搜索模型",
+    "searchPlaceholder": "例如：llama-3.1-8b",
+    "searchButton": "搜索",
+    "searching": "正在搜索…",
+    "searchError": "暂时无法搜索 Hugging Face Hub。",
+    "noResults": "未找到与“{{query}}”匹配的 GGUF 模型。",
+    "communityToggle": "显示社区模型（非官方）",
+    "communityWarning": "社区模型是第三方重新上传的，未经厂商审核。拉取前请核实发布者 —— 恶意仓库可能打包被篡改的权重。",
+    "downloads": "{{value}} 次下载",
+    "badgeOfficial": "官方",
+    "badgeCommunity": "社区",
+    "pullButton": "拉取",
+    "pullStatus": {
+      "pending_confirmation": "等待确认",
+      "confirmed": "已确认",
+      "pulling": "正在拉取…",
+      "active": "已启用",
+      "failed": "失败"
+    },
+    "confirmModal": {
+      "title": "确认拉取模型",
+      "explanation": "下载在服务器上进行，根据模型大小可能需要数分钟。完成后模型将在此工作区中直接启用。",
+      "preparing": "正在准备请求…",
+      "repoIdLabel": "仓库",
+      "sizeLabel": "预估大小",
+      "sizeUnknown": "Hub 未提供",
+      "cancel": "取消",
+      "confirm": "确认并拉取"
+    },
+    "toasts": {
+      "requestErrorTitle": "无法创建拉取请求",
+      "confirmConnectionLostTitle": "拉取过程中连接中断 —— 正在通过状态跟踪",
+      "pullSuccess": "{{repoId}} 已拉取并启用",
+      "pullFailedTitle": "{{repoId}} 拉取失败"
+    }
+  },
+  "credentialStep": {
+    "hint": "在 {{provider}} 上配置需要个人访问令牌（PAT）。选择已添加的令牌或添加新令牌 —— 令牌在保存时加密，且不会再次显示。验证位于项目设置中，针对已保存的令牌进行。",
+    "credLabel": "已连接 {{provider}}",
+    "credMeta": "自 {{time}} 起",
+    "fieldLabel": "新的 {{provider}} 令牌",
+    "placeholder": "ghp_… / glpat-…",
+    "cancel": "取消",
+    "save": "保存",
+    "saving": "正在保存…",
+    "addNewToken": "添加新令牌"
+  },
+  "priceEditor": {
+    "open": "价格与计费",
+    "input": "输入（每 1M 美元）",
+    "output": "输出（每 1M 美元）",
+    "billing": "计费方式",
+    "api": "按用量（API）",
+    "subscription": "订阅",
+    "free": "免费",
+    "save": "保存价格",
+    "invalid": "请输入大于或等于零的数字。",
+    "scope": "价格适用于整个安装，且仅向前生效；过去的用量不变。",
+    "ownerOnly": "只有 owner 可以修改价格和计费。",
+    "history": "价格历史",
+    "historyEmpty": "没有价格变更记录。",
+    "historyRow": "{{antes}} → {{depois}} · {{origem}} · {{quando}}",
+    "sourceManual": "手动",
+    "sourceSync": "同步",
+    "saved": "价格已保存。",
+    "suggestedBand": "建议计费方式：{{faixa}}",
+    "suggested": "建议：{{entrada}} / {{saida}} 每 1M — {{fabricante}}，核对于 {{data}}",
+    "source": "来源",
+    "apply": "应用建议",
+    "applied": "已应用建议的价格与计费方式。",
+    "appliedPartial": "已完成 {{total}} 步中的 {{feitos}} 步；其余失败：{{frase}}",
+    "alreadyApplied": "建议值已应用。"
+  }
+}

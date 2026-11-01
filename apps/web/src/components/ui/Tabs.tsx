@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react';
-import styles from './Tabs.module.css';
+import type { CSSProperties, ReactNode } from 'react';
+import { Tabs as ShadcnTabs, TabsCount, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
 
 /**
  * Régua de abas do design system — `components/primitivas/Tabs` no bundle
@@ -8,7 +8,8 @@ import styles from './Tabs.module.css';
  *
  * Desde o ADR 0126 ela não tem consumidor dentro de `apps/web`: o único era
  * `GroupedTabs`, e `GroupedTabs` era do `ProjectPage`, que passou a navegar
- * por um trilho vertical (`routes/ProjectRail.tsx`). Ela FICA — primitiva
+ * por um trilho vertical (que o ADR 0211 trocou pela lista da sidebar,
+ * `routes/AbasDoProjeto.tsx`). Ela FICA — primitiva
  * genérica sem chamador é peça do sistema de design em estoque, não código
  * morto, e apagá-la mudaria o inventário do DS por um efeito colateral de
  * uma tela.
@@ -17,6 +18,8 @@ export interface TabItem {
   key: string;
   label: string;
   count?: number;
+  /** Cor do sublinhado da aba ativa (ex.: `var(--violet)`); sem ela, `--accent`. */
+  cor?: string;
 }
 
 interface TabsProps {
@@ -28,21 +31,21 @@ interface TabsProps {
 
 export function Tabs({ items, active, onChange, trailing }: TabsProps) {
   return (
-    <div className={styles.list} role="tablist">
-      {items.map((item) => (
-        <button
-          key={item.key}
-          type="button"
-          role="tab"
-          aria-selected={active === item.key}
-          className={[styles.tab, active === item.key && styles.active].filter(Boolean).join(' ')}
-          onClick={() => onChange(item.key)}
-        >
-          {item.label}
-          {item.count !== undefined && <span className={styles.count}>{item.count}</span>}
-        </button>
-      ))}
-      {trailing}
-    </div>
+    <ShadcnTabs value={active} onValueChange={(v) => onChange(String(v))}>
+      <TabsList variant="casa">
+        {items.map((item) => (
+          <TabsTrigger
+            key={item.key}
+            value={item.key}
+            variant="casa"
+            style={item.cor ? ({ '--tab-cor': item.cor } as CSSProperties) : undefined}
+          >
+            {item.label}
+            {item.count !== undefined && <TabsCount>{item.count}</TabsCount>}
+          </TabsTrigger>
+        ))}
+        {trailing}
+      </TabsList>
+    </ShadcnTabs>
   );
 }

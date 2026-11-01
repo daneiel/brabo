@@ -8,7 +8,7 @@ import { Disclosure } from './Disclosure';
 // `import.meta.url` não é `file:` e o `fileURLToPath` levanta. Mesmo caminho
 // que `lib/contraste.test.ts` já usa para ler `design/tokens.css`.
 const FOLHA = readFileSync(
-  resolve(process.cwd(), 'src/components/ui/Disclosure.module.css'),
+  resolve(process.cwd(), 'src/components/shadcn/collapsible.tsx'),
   'utf8',
 );
 
@@ -162,22 +162,17 @@ describe('Disclosure', () => {
   });
 
   it('o cabeçalho declara alvo de no mínimo 24px (WCAG 2.2 AA 2.5.8)', () => {
-    // jsdom não resolve CSS Module nem faz layout — a folha crua é a única
+    // jsdom não resolve CSS nem faz layout — o fonte do shadcn é a única
     // evidência que um teste em Node consegue olhar. Sem esta asserção, o
     // requisito de alvo viveria só num comentário.
-    const regra = FOLHA.match(/\.cabecalho\s*\{([^}]*)\}/);
-    expect(regra).not.toBeNull();
-    const minHeight = regra![1].match(/min-height:\s*(\d+)px/);
-    expect(minHeight).not.toBeNull();
-    expect(Number(minHeight![1])).toBeGreaterThanOrEqual(24);
+    // `min-h-6` = 1.5rem = 24px.
+    expect(FOLHA).toMatch(/min-h-6\b/);
   });
 
   it('o chevron tira a cor de token, nunca de hex', () => {
     // Hex solto no componente é a dívida que o design system existe para não
     // ter: ele não acompanha o tema.
-    const regra = FOLHA.match(/\.chevron\s*\{([^}]*)\}/);
-    expect(regra).not.toBeNull();
-    expect(regra![1]).toMatch(/color:\s*var\(--/);
+    expect(FOLHA).toMatch(/text-\[var\(--text-muted\)\]/);
     expect(FOLHA).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
   });
 });

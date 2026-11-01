@@ -1,3 +1,4 @@
+import { Shimmer } from '../../components/ui/Shimmer';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -6,6 +7,7 @@ import { getCodeBlame, getCodeFile, mensagemDaApi } from '../../lib/api-client';
 import type { CodeBlameLine } from '../../lib/api-types';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { FileIcon, UserIcon, XIcon } from '../../components/ui/icons';
+import { carregarRealce } from '../../lib/realce-shiki';
 import { highlightFile, linguagemPorCaminho, type TokenKind } from './highlight';
 import {
   buildMinimapData,
@@ -123,10 +125,25 @@ export function CodeEditor({
     return mapa;
   }, [blameQuery.data]);
 
-  const linhas = useMemo(() => {
-    if (!fileQuery.data) return [];
-    return highlightFile(fileQuery.data.content, linguagemPorCaminho(activePath ?? ''));
-  }, [fileQuery.data, activePath]);
+  const conteudo = fileQuery.data?.content;
+  const linguagem = linguagemPorCaminho(activePath ?? '');
+  const porRegex = useMemo(
+    () => (conteudo === undefined ? [] : highlightFile(conteudo, linguagem)),
+    [conteudo, linguagem],
+  );
+  // Só o tokenizador troca (RN-972): regex enquanto o shiki carrega ou sem gramática.
+  const [doShiki, setDoShiki] = useState<{ conteudo: string; linhas: typeof porRegex } | null>(null);
+  useEffect(() => {
+    if (conteudo === undefined) return;
+    let vivo = true;
+    void carregarRealce(conteudo, linguagem).then((l) => {
+      if (vivo && l) setDoShiki({ conteudo, linhas: l });
+    });
+    return () => {
+      vivo = false;
+    };
+  }, [conteudo, linguagem]);
+  const linhas = doShiki && doShiki.conteudo === conteudo ? doShiki.linhas : porRegex;
 
   const minimapDados = useMemo(() => buildMinimapData(linhas), [linhas]);
 
@@ -271,7 +288,7 @@ export function CodeEditor({
               )}
 
               {blameOn && blameQuery.isLoading && (
-                <div className={styles.blameEstado}>{t('editor.blameLoading')}</div>
+                <div className={styles.blameEstado}><Shimmer>{t('editor.blameLoading')}</Shimmer></div>
               )}
 
               {blameOn && blameQuery.isError && (

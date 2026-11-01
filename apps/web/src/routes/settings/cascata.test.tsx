@@ -11,7 +11,6 @@ import modelsEn from '../../locales/en/models.json';
 import { ToastProvider } from '../../components/ui/ToastProvider';
 import { AGENT_LIST } from '../../lib/agents';
 import type { Project } from '../../lib/api-types';
-import { AreaModelsSection } from './AreaModelsSection';
 import { ModelsSection } from './ModelsSection';
 import { herdouDoCriativo, montarCadeia } from './cascata';
 import { loteSobreLeiturasPorChave } from '../../test/lote-de-bindings';
@@ -203,16 +202,17 @@ describe('cadeia da cascata — os DOIS sentidos de `agent`', () => {
    * A consulta de ÁREA não tem escopo de agente na cascata, então `agent` ali só
    * pode ser o passo pós-cascata — sem o caso ambíguo da tabela de agentes.
    */
-  it('na seção de ÁREA, `agent` só pode ser o Criativo, e a cadeia diz isso', async () => {
-    getAreaModelBinding.mockResolvedValue({
-      modelId: 'm-criativo',
-      origin: 'agent',
-      routingPreference: null, skipped: [],
-    });
+  it('na linha do LEAD, `agent` vindo do Criativo NÃO marca a caixa da área, e a cadeia diz isso', async () => {
+    const criativo = { modelId: 'm-criativo', origin: 'agent', routingPreference: null, skipped: [] };
+    getAreaModelBinding.mockResolvedValue(criativo);
+    getAgentModelBinding.mockImplementation((_p: string, slug: string) =>
+      Promise.resolve(slug === 'criativo' || slug === 'dev-lead' ? criativo : null),
+    );
     getWorkspaceModelBinding.mockResolvedValue({ modelId: 'm-workspace' });
-    montar(<AreaModelsSection projectId="proj-1" />);
+    montar(<ModelsSection projectId="proj-1" />);
 
-    expect(await screen.findAllByTitle(/herda o do Criativo/)).toHaveLength(3);
+    expect((await screen.findAllByTitle(/herda o do Criativo/)).length).toBeGreaterThan(0);
+    expect(screen.getByRole('checkbox', { name: /área Dev inteira/ })).not.toBeChecked();
     expect(screen.queryAllByText('agent')).toHaveLength(0);
   });
 
@@ -282,13 +282,13 @@ describe('cadeia da cascata — os três vazios que eram o mesmo traço', () => 
     expect(screen.queryByText(/US\$/)).toBeNull();
   });
 
-  it('área sem padrão em nível nenhum: texto PRÓPRIO, não o do agente', async () => {
-    montar(<AreaModelsSection projectId="proj-1" />);
+  it('área sem padrão em nenhum nível: as três caixas ficam desmarcadas e o vazio é o do agente', async () => {
+    montar(<ModelsSection projectId="proj-1" />);
 
-    expect(
-      await screen.findAllByText('sem padrão em nenhum nível'),
-    ).toHaveLength(3);
-    expect(screen.queryByText('sem modelo em nenhum nível')).toBeNull();
+    const caixas = await screen.findAllByRole('checkbox', { name: /Valer para a área/ });
+    expect(caixas).toHaveLength(3);
+    for (const caixa of caixas) expect(caixa).not.toBeChecked();
+    expect(screen.queryByText('sem padrão em nenhum nível')).toBeNull();
   });
 
   it('nenhum traço solto sobrou nas três células', async () => {

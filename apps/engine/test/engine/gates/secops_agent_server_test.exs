@@ -86,7 +86,8 @@ defmodule Engine.Gates.SecOpsAgentServerTest do
       {:ok, [%{tool: "gitleaks", path: "config.ex", line: 3, message: "AWS key hardcoded"}]}
     )
 
-    Application.put_env(:engine, :semgrep_fake_available, false)
+    Application.put_env(:engine, :semgrep_fake_available, true)
+    Application.put_env(:engine, :semgrep_fake_result, {:ok, []})
     Process.put(:fake_gate_verdict_response, %{"nextAction" => "correct"})
 
     assert {:noreply, _} = SecOpsAgentServer.handle_cast({:run, "task-abc12345"}, state)
@@ -119,12 +120,13 @@ defmodule Engine.Gates.SecOpsAgentServerTest do
     assert GateState.get(project_id, "task-abc12345", "secops") == nil
   end
 
-  test "scanner ausente: pula, registra no resumo, NUNCA quebra o gate", %{
+  test "gitleaks ausente: pula, registra no resumo, NUNCA quebra o gate", %{
     state: state,
     project_id: project_id
   } do
     Application.put_env(:engine, :gitleaks_fake_available, false)
-    Application.put_env(:engine, :semgrep_fake_available, false)
+    Application.put_env(:engine, :semgrep_fake_available, true)
+    Application.put_env(:engine, :semgrep_fake_result, {:ok, []})
     Process.put(:fake_gate_verdict_response, %{"nextAction" => "done"})
 
     assert {:noreply, _} = SecOpsAgentServer.handle_cast({:run, "task-abc12345"}, state)
@@ -132,6 +134,105 @@ defmodule Engine.Gates.SecOpsAgentServerTest do
     assert_received {:gate_verdict_recorded, "task-abc12345", "secops", "approved", resumo, [], _}
     assert resumo =~ "indisponível"
     assert GateState.get(project_id, "task-abc12345", "secops") == nil
+  end
+
+  # RN-714 (AT-380): SAST que não rodou não aprova — sem veredito, a PR segue
+  # em awaiting_secops, o motivo vai ao fio com origem infra e o ciclo fica
+  # em voo para o GateRescuer reexecutar.
+  for {nome, disponivel, resultado, trecho} <- [
+        {"saída inválida", true, {:error, :invalid_output}, ":invalid_output"},
+        {"binário ausente", false, nil, "indisponível"}
+      ] do
+    test "semgrep com #{nome}: gate pendente, sem veredito, motivo nomeado", %{
+      state: state,
+      project_id: project_id
+    } do
+      Application.put_env(:engine, :gitleaks_fake_available, true)
+      Application.put_env(:engine, :gitleaks_fake_result, {:ok, []})
+      Application.put_env(:engine, :semgrep_fake_available, unquote(disponivel))
+      Application.put_env(:engine, :semgrep_fake_result, unquote(Macro.escape(resultado)))
+
+      assert {:noreply, _} = SecOpsAgentServer.handle_cast({:run, "task-abc12345"}, state)
+
+      refute_received {:gate_verdict_recorded, _, _, _, _, _, _}
+      refute_received {:event_appended, _, _, %{type: "artifact.secops_verdict"}}
+
+      assert_received {:event_appended, _, _,
+                       %{
+                         type: "agent.error",
+                         actorId: "secops",
+                         payload: %{origem: "infra", mensagem: mensagem}
+                       }}
+
+      assert mensagem =~ "SAST não rodou"
+      assert mensagem =~ unquote(trecho)
+      assert mensagem =~ "reexecute o gate"
+
+      assert %{step: "in_progress"} = GateState.get(project_id, "task-abc12345", "secops")
+    end
+  end
+
+  # AT-386: o resgate não repete o mesmo erro no fio.
+  describe "resgate com o SAST ainda fora" do
+    setup do
+      Application.put_env(:engine, :gitleaks_fake_available, true)
+      Application.put_env(:engine, :gitleaks_fake_result, {:ok, []})
+      Application.put_env(:engine, :semgrep_fake_available, true)
+      Application.put_env(:engine, :semgrep_fake_result, {:error, :invalid_output})
+      :ok
+    end
+
+    defp erro_do_fio(task_id, reason),
+      do: %{
+        "type" => "agent.error",
+        "actorId" => "secops",
+        "payload" => %{"taskId" => task_id, "reason" => reason}
+      }
+
+    defp motivo_gravado(state) do
+      SecOpsAgentServer.handle_cast({:run, "task-abc12345"}, state)
+      assert_received {:event_appended, _, _, %{type: "agent.error", payload: %{reason: r}}}
+      r
+    end
+
+    test "primeiro resgate grava; o segundo, com o mesmo motivo, não", %{state: state} do
+      motivo = motivo_gravado(state)
+      Process.put(:fake_events, [erro_do_fio("task-abc12345", motivo)])
+
+      assert {:noreply, _} = SecOpsAgentServer.handle_cast({:run, "task-abc12345"}, state)
+      refute_received {:event_appended, _, _, %{type: "agent.error"}}
+
+      opts = List.last(Process.get(:fake_list_events_calls))
+      assert opts[:types] == ["agent.error", "artifact.secops_verdict"]
+      assert opts[:latest]
+    end
+
+    test "motivo diferente, ou veredito depois do erro, grava de novo", %{state: state} do
+      Process.put(:fake_events, [erro_do_fio("task-abc12345", "semgrep indisponível")])
+      SecOpsAgentServer.handle_cast({:run, "task-abc12345"}, state)
+      assert_received {:event_appended, _, _, %{type: "agent.error"}}
+
+      motivo = motivo_gravado(state)
+
+      Process.put(:fake_events, [
+        erro_do_fio("task-abc12345", motivo),
+        %{"type" => "artifact.secops_verdict", "payload" => %{"taskId" => "task-abc12345"}}
+      ])
+
+      SecOpsAgentServer.handle_cast({:run, "task-abc12345"}, state)
+      assert_received {:event_appended, _, _, %{type: "agent.error"}}
+    end
+
+    test "o SAST que volta a rodar aprova como sempre", %{state: state} do
+      motivo = motivo_gravado(state)
+      Process.put(:fake_events, [erro_do_fio("task-abc12345", motivo)])
+      Application.put_env(:engine, :semgrep_fake_result, {:ok, []})
+
+      SecOpsAgentServer.handle_cast({:run, "task-abc12345"}, state)
+
+      assert_received {:event_appended, _, _,
+                       %{type: "artifact.secops_verdict", payload: %{veredito: "approved"}}}
+    end
   end
 
   # --- run_design (appsec, RN-360) — segundo momento, sem worktree/task_id ---

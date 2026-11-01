@@ -1,13 +1,22 @@
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  parseInline,
   parseMarkdown,
+  fecharMarcadoresAbertos,
   normalizarLinguagemDoFence,
   type MdAlinhamento,
   type MdBlock,
   type MdInline,
 } from '../../lib/markdown';
 import { highlightFile, type TokenKind } from '../../routes/code/highlight';
+import { carregarRealce } from '../../lib/realce-shiki';
+import {
+  CodeBlock,
+  CodeBlockActions,
+  CodeBlockCopyButton,
+  CodeBlockHeader,
+} from '../shadcn/code-block';
 import { Table, type TableColumn } from './Table';
 import styles from './MarkdownMessage.module.css';
 
@@ -26,6 +35,12 @@ const CLASSE_POR_TOKEN: Record<TokenKind, string> = {
  *  estética de `$ comando` que `ApprovalCard` já usa pra ação `terminal`
  *  (RN-158): fundo `--code-bg`, prompt `$` por linha não vazia. */
 const LINGUAGENS_DE_TERMINAL = new Set(['sh', 'bash']);
+
+/** RN-712: bloco de código acima disto nasce RECOLHIDO — um docker-compose de
+ *  80 linhas despejado no fio empurrava a conversa para fora da tela. */
+const LIMITE_DE_LINHAS_DO_BLOCO = 20;
+/** Quantas linhas o bloco recolhido ainda mostra. */
+const LINHAS_DO_BLOCO_RECOLHIDO = 8;
 
 function renderInline(nodes: MdInline[]): ReactNode {
   return nodes.map((n, i) => {
@@ -70,16 +85,35 @@ function CodeFence({ lang, content }: { lang: string; content: string }) {
   const linguagem = normalizarLinguagemDoFence(lang);
   const terminal = LINGUAGENS_DE_TERMINAL.has(linguagem);
   const linhasFonte = content.split('\n');
-  const linhasRealcadas = highlightFile(content, linguagem);
+  const porRegex = highlightFile(content, linguagem);
+  // Regex enquanto o shiki carrega e para linguagem sem gramática (RN-972).
+  const [doShiki, setDoShiki] = useState<{ content: string; linhas: typeof porRegex } | null>(null);
+  useEffect(() => {
+    let vivo = true;
+    void carregarRealce(content, linguagem).then((linhas) => {
+      if (vivo && linhas) setDoShiki({ content, linhas });
+    });
+    return () => {
+      vivo = false;
+    };
+  }, [content, linguagem]);
+  const linhasRealcadas = doShiki?.content === content ? doShiki.linhas : porRegex;
+  const longo = linhasFonte.length > LIMITE_DE_LINHAS_DO_BLOCO;
+  const [aberto, setAberto] = useState(false);
+  const visiveis =
+    longo && !aberto ? linhasRealcadas.slice(0, LINHAS_DO_BLOCO_RECOLHIDO) : linhasRealcadas;
 
   return (
-    <div className={[styles.fence, terminal && styles.fenceTerminal].filter(Boolean).join(' ')}>
-      <div className={styles.fenceCabecalho}>
+    <CodeBlock className={[styles.fence, terminal && styles.fenceTerminal].filter(Boolean).join(' ')}>
+      <CodeBlockHeader className={styles.fenceCabecalho}>
         <span>{lang.trim() || t('markdownMessage.codeFence.defaultLanguage')}</span>
-      </div>
+        <CodeBlockActions>
+          <CodeBlockCopyButton code={content} />
+        </CodeBlockActions>
+      </CodeBlockHeader>
       <pre className={styles.fencePre}>
         <code>
-          {linhasRealcadas.map((tokens, i) => (
+          {visiveis.map((tokens, i) => (
             <div key={i} className={styles.fenceLinha}>
               {terminal && (
                 <span className={styles.fencePrompt} aria-hidden="true">
@@ -98,7 +132,19 @@ function CodeFence({ lang, content }: { lang: string; content: string }) {
           ))}
         </code>
       </pre>
-    </div>
+      {longo && (
+        <button
+          type="button"
+          className={styles.fenceAlternar}
+          aria-expanded={aberto}
+          onClick={() => setAberto((a) => !a)}
+        >
+          {aberto
+            ? t('markdownMessage.codeFence.recolher')
+            : t('markdownMessage.codeFence.mostrarLinhas', { count: linhasFonte.length })}
+        </button>
+      )}
+    </CodeBlock>
   );
 }
 
@@ -132,6 +178,10 @@ function TabelaMarkdown({
       // desenhado em mono/maiúsculas pelo design system, e negrito dentro
       // dele não teria efeito visível nenhum.
       label: textoSimples(celula),
+      // AT-455: piso POR COLUNA. Com `1fr` e o `max-content` no contêiner, cada
+      // coluna crescia até a célula mais longa SEM quebra (medido: 2 236px
+      // num balão de 708px) e a última coluna ficava fora da vista.
+      width: 'minmax(12rem, 1fr)',
       render: (row) => (
         <span className={styles.tabelaCelula} style={{ textAlign: aligns[c] }}>
           {renderInline(row.celulas[c] ?? [])}
@@ -169,10 +219,25 @@ function renderBlock(block: MdBlock, key: number): ReactNode {
           </h2>
         );
       }
+      if (block.level === 3) {
+        return (
+          <h3 key={key} className={styles.titulo3}>
+            {renderInline(block.inline)}
+          </h3>
+        );
+      }
       return (
-        <h3 key={key} className={styles.titulo3}>
+        <h4 key={key} className={styles.titulo4}>
           {renderInline(block.inline)}
-        </h3>
+        </h4>
+      );
+    case 'hr':
+      return <hr key={key} className={styles.regua} />;
+    case 'blockquote':
+      return (
+        <blockquote key={key} className={styles.citacao}>
+          {block.blocks.map((b, j) => renderBlock(b, j))}
+        </blockquote>
       );
     case 'paragraph':
       return (
@@ -180,20 +245,41 @@ function renderBlock(block: MdBlock, key: number): ReactNode {
           {renderInline(block.inline)}
         </p>
       );
-    case 'list':
-      return block.ordered ? (
-        <ol key={key} className={styles.lista}>
-          {block.items.map((item, j) => (
-            <li key={j}>{renderInline(item)}</li>
-          ))}
-        </ol>
-      ) : (
-        <ul key={key} className={styles.lista}>
-          {block.items.map((item, j) => (
-            <li key={j}>{renderInline(item)}</li>
-          ))}
-        </ul>
+    case 'list': {
+      const Lista = block.ordered ? 'ol' : 'ul';
+      return (
+        <Lista key={key} className={styles.lista}>
+          {block.items.map((item, j) => {
+            const tarefa = block.tarefas?.[j] ?? null;
+            const filho = block.filhos?.[j] ?? null;
+            const SubLista = filho?.ordered ? 'ol' : 'ul';
+            return (
+              <li key={j} className={tarefa !== null ? styles.itemTarefa : undefined}>
+                {tarefa !== null && (
+                  // Só visual (RN-837): a caixa não é controle, não muda nada.
+                  <input
+                    type="checkbox"
+                    className={styles.caixaTarefa}
+                    checked={tarefa}
+                    readOnly
+                    disabled
+                    tabIndex={-1}
+                  />
+                )}
+                {renderInline(item)}
+                {filho && (
+                  <SubLista className={styles.lista}>
+                    {filho.items.map((sub, k) => (
+                      <li key={k}>{renderInline(sub)}</li>
+                    ))}
+                  </SubLista>
+                )}
+              </li>
+            );
+          })}
+        </Lista>
       );
+    }
     case 'code':
       return <CodeFence key={key} lang={block.lang} content={block.content} />;
     case 'table':
@@ -220,7 +306,18 @@ function renderBlock(block: MdBlock, key: number): ReactNode {
  * Pensado pra ir DENTRO de `.bubble` (`ChatBubble.module.css`): não define
  * fundo, borda nem padding do balão — só a tipografia do conteúdo.
  */
-export function MarkdownMessage({ text }: { text: string }) {
-  const blocos = parseMarkdown(text);
+/**
+ * Markdown INLINE só (negrito, itálico, código, link) — para rótulos curtos,
+ * como os do formulário estruturado (AT-393), onde blocos não cabem. Reusa o
+ * MESMO `parseInline`/`renderInline` do fio, nunca um segundo renderizador.
+ */
+export function MarkdownInline({ text }: { text: string }) {
+  return <>{renderInline(parseInline(text))}</>;
+}
+
+/** `emCurso` (RN-837): o texto é um prefixo de stream — fecha os marcadores
+ *  abertos antes de parsear. O texto final passa sem isso. */
+export function MarkdownMessage({ text, emCurso = false }: { text: string; emCurso?: boolean }) {
+  const blocos = parseMarkdown(emCurso ? fecharMarcadoresAbertos(text) : text);
   return <div className={styles.markdown}>{blocos.map((b, i) => renderBlock(b, i))}</div>;
 }

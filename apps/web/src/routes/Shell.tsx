@@ -37,6 +37,8 @@ import { getAgentLastSeenSeq, setAgentLastSeenSeq } from '../lib/read-state';
 import { useLayoutMovel } from '../lib/layout-movel';
 import { INTERVALO_DO_PROJETO_MS } from '../lib/canal-vivo';
 import { alternarTema, observarTema, temaAtual, type Tema } from '../lib/tema';
+import { pedirAba, useAbaDaSessao, useAbaPublicada, useContagensDoProjeto } from '../lib/contagens-do-projeto';
+import { AbasDoProjeto, itensDasAbas } from './AbasDoProjeto';
 import { useTranslation } from 'react-i18next';
 import {
   corDoProjeto,
@@ -50,7 +52,9 @@ import {
   lerProjetosAbertos,
 } from '../lib/sidebar-state';
 import type { ProjectCardSummary } from '../lib/api-types';
-import { ABAS_DO_PROJETO, ABA_PADRAO, type ChaveDeAba, type ContagensDeAba } from './project-tabs';
+import { SearchIcon } from 'lucide-react';
+import { deveAbrirPaleta } from '../lib/paleta-de-comandos';
+import { ABA_PADRAO, abaDaRota, type ContagensDeAba } from './project-tabs';
 import { Badge } from '../components/ui/Badge';
 import {
   ActivityIcon,
@@ -71,6 +75,7 @@ import { AvatarDoAgente } from '../components/ui/AvatarDoAgente';
 import { Button } from '../components/ui/Button';
 // O assistente de novo projeto é um chunk próprio (AT-300): ele só abre por
 // clique, e trazia para o bundle inicial o navegador de pastas inteiro.
+const PaletaDeComandos = lazy(() => import('../components/PaletaDeComandos'));
 const NewProjectWizard = lazy(() =>
   import('./NewProjectWizard').then((m) => ({ default: m.NewProjectWizard })),
 );
@@ -209,37 +214,37 @@ function LinkDeContainers({ colapsado }: { colapsado: boolean }) {
   );
 }
 
-/** Uma aba do projeto, dentro da linha expandida (RN-196). */
-function LinhaDeAba({
-  projectId,
-  chave,
-  rotulo,
-  contagem,
-}: {
-  projectId: string;
-  chave: ChaveDeAba;
-  rotulo: string;
-  contagem: number | undefined;
-}) {
+function LinkDeGastos({ colapsado }: { colapsado: boolean }) {
+  const { t } = useTranslation();
+  const rotulo = t('sidebar.spend');
   return (
-    <Link
-      to="/projects/$projectId"
-      params={{ projectId }}
-      search={{ tab: chave }}
-      className={styles.abaItem}
-      onClick={() => {
-        gravarProjetoAtivo(projectId);
-        gravarAbaAtiva(chave);
-      }}
-    >
-      <span className={styles.abaRotulo}>{rotulo}</span>
-      {contagem !== undefined && contagem > 0 && (
-        <Badge tone="accent" square>
-          {contagem}
-        </Badge>
-      )}
+    <Link to="/spend" className={styles.footerButton} title={rotulo} aria-label={rotulo}>
+      <ActivityIcon size={15} />
+      {!colapsado && <span>{rotulo}</span>}
     </Link>
   );
+}
+
+function LinkDeProviders({ colapsado }: { colapsado: boolean }) {
+  const { t } = useTranslation();
+  const rotulo = t('sidebar.providers');
+  return (
+    <Link to="/providers" className={styles.footerButton} title={rotulo} aria-label={rotulo}>
+      <ServerIcon size={15} />
+      {!colapsado && <span>{rotulo}</span>}
+    </Link>
+  );
+}
+
+/** Projeto FECHADO: só Aprovações tem número, do resumo do dashboard. */
+function contagensDoResumo(aprovacoesPendentes: number): ContagensDeAba {
+  return {
+    promocoesPendentes: 0,
+    aprovacoesPendentes,
+    hipotesesPendentes: 0,
+    prsPendentes: 0,
+    arquiteturaPendente: 0,
+  };
 }
 
 /** As instâncias/eventos de UM grupo de agente, dentro de Atividades (RN-198). */
@@ -395,6 +400,17 @@ export function Shell() {
   // `pathname === '/'` trocaria uma redundância pequena por um botão que
   // muda de lugar conforme a rota.
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [paletaAberta, setPaletaAberta] = useState(false);
+  useEffect(() => {
+    // Ctrl+K / ⌘K abre a paleta (RN-971); fora do terminal, sem tomar o atalho do IME.
+    const ouvir = (e: globalThis.KeyboardEvent) => {
+      if (!deveAbrirPaleta(e)) return;
+      e.preventDefault();
+      setPaletaAberta(true);
+    };
+    document.addEventListener('keydown', ouvir);
+    return () => document.removeEventListener('keydown', ouvir);
+  }, []);
   const projectsQuery = useProjects(workspace?.id);
   const projects = projectsQuery.data;
   // MESMA queryKey do Dashboard: montados juntos, o React Query deduplica e o
@@ -509,6 +525,72 @@ export function Shell() {
   // fechado toda vez que a sidebar remonta, mesmo com você OLHANDO as abas
   // dele na tela principal. Só entra na persistência quando o CHEVRON é
   // clicado; abrir "de graça" pela rota não grava nada.
+  // --- Abas do projeto (RN-196, ADR 0211) ---------------------------------
+  // A sidebar é a ÚNICA navegação do projeto desde o ADR 0211: o trilho
+  // vertical (ADR 0126) saiu, e tudo o que só ele tinha mora aqui. Os cinco
+  // contadores do projeto ABERTO saem do MESMO hook da moldura (mesmas
+  // `queryKey`s, deduplicadas — nenhuma requisição nova); os projetos
+  // fechados mostram só o de Aprovações, que vem de graça no resumo do
+  // dashboard (buscar as cinco filas de cada um seria o N+1 da RN-090/091).
+  //
+  // Só enquanto a MOLDURA do projeto está montada (ela publica a aba que
+  // mostra): era só nela que o trilho existia, e é ela que já polla as cinco
+  // filas. Na tela de Sessão, por exemplo, a sidebar não liga poll nenhum e
+  // fica com o número do resumo, como num projeto fechado.
+  const abaPublicada = useAbaPublicada();
+  const abaDaSessao = useAbaDaSessao();
+  const { contagens: contagensDaMoldura } = useContagensDoProjeto(abaPublicada?.projectId);
+  const abaAtivaDoAtual =
+    currentProject && abaPublicada?.projectId === currentProject.id
+      ? abaPublicada.tab
+      : currentProject
+        ? (abaDaRota(pathname, currentProject.id, abaDaSessao) ?? ABA_PADRAO)
+        : undefined;
+  function irParaAba(projectId: string, chave: string) {
+    gravarProjetoAtivo(projectId);
+    gravarAbaAtiva(chave);
+    setFlyoutAberto(false);
+    // Pede ANTES de navegar: o clique na aba que a URL já tem (depois de um
+    // salto pelo painel "precisa de você") ainda troca a moldura.
+    pedirAba({ projectId, tab: chave });
+    void navigate({
+      to: '/projects/$projectId',
+      params: { projectId },
+      search: { tab: chave } as never,
+    });
+  }
+  // Recolhida, o projeto aberto abre um FLYOUT com as mesmas abas — sem ele,
+  // recolher a sidebar tiraria a navegação do projeto inteira.
+  const [flyoutAberto, setFlyoutAberto] = useState(false);
+  const [posicaoDoFlyout, setPosicaoDoFlyout] = useState({ top: 0, left: 0 });
+  useEffect(() => {
+    if (!colapsado) setFlyoutAberto(false);
+  }, [colapsado]);
+  useEffect(() => {
+    if (!flyoutAberto) return;
+    function aoTeclar(e: globalThis.KeyboardEvent) {
+      if (e.key === 'Escape') setFlyoutAberto(false);
+    }
+    document.addEventListener('keydown', aoTeclar);
+    return () => document.removeEventListener('keydown', aoTeclar);
+  }, [flyoutAberto]);
+
+  // RN-729: abrir um projeto RECOLHE os outros — só ele fica expandido, e a
+  // lista rola até ele; sem projeto aberto (Dashboard), nenhum fica forçado
+  // expandido. Antes, o projeto visitado antes seguia aberto no topo e as
+  // abas do atual ficavam abaixo da dobra. O chevron segue alternando à mão.
+  const idDoProjetoAtual = currentProject?.id;
+  const blocoDoProjetoAtual = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const proximo = idDoProjetoAtual ? new Set([idDoProjetoAtual]) : new Set<string>();
+    setProjetosAbertos(proximo);
+    gravarProjetosAbertos(proximo);
+  }, [idDoProjetoAtual]);
+  useEffect(() => {
+    if (!idDoProjetoAtual) return;
+    blocoDoProjetoAtual.current?.scrollIntoView?.({ block: 'nearest' });
+  }, [idDoProjetoAtual]);
+
   const projetosAbertosEfetivo = useMemo(() => {
     if (!currentProject) return projetosAbertos;
     if (projetosAbertos.has(currentProject.id)) return projetosAbertos;
@@ -642,6 +724,17 @@ export function Shell() {
           {!colapsado && <span className={styles.brandName}>Brabo</span>}
         </Link>
 
+        <button
+          type="button"
+          className={styles.footerButton}
+          title={t('palette.open')}
+          aria-label={t('palette.open')}
+          aria-keyshortcuts="Meta+K Control+K"
+          onClick={() => setPaletaAberta(true)}
+        >
+          <SearchIcon size={16} />
+        </button>
+
         {colapsado ? (
           <nav className={styles.trilha} aria-label={t('sidebar.nav.trilhaAriaLabel')}>
             {(projects ?? []).map((project) => (
@@ -652,7 +745,14 @@ export function Shell() {
                 style={{ ['--identidade' as string]: corDoProjeto(project.id) } as CSSProperties}
                 title={project.name}
                 aria-label={project.name}
-                onClick={() => {
+                aria-expanded={project.id === currentProject?.id ? flyoutAberto : undefined}
+                onClick={(e) => {
+                  if (project.id === currentProject?.id) {
+                    const caixa = e.currentTarget.getBoundingClientRect();
+                    setPosicaoDoFlyout({ top: caixa.top, left: caixa.right + 8 });
+                    setFlyoutAberto((aberto) => !aberto);
+                    return;
+                  }
                   setColapsadoManual(false);
                   gravarColapsado(false);
                   alternarProjeto(project.id);
@@ -663,6 +763,28 @@ export function Shell() {
                 {iniciaisDoProjeto(project.name)}
               </button>
             ))}
+            {flyoutAberto && currentProject && (
+              <div
+                className={styles.flyout}
+                data-testid="flyout-do-projeto"
+                style={{ top: posicaoDoFlyout.top, left: posicaoDoFlyout.left }}
+              >
+                <span className={styles.flyoutTitulo}>{currentProject.name}</span>
+                <AbasDoProjeto
+                  projectId={currentProject.id}
+                  nomeDoProjeto={currentProject.name}
+                  itens={itensDasAbas(
+                    currentProject.id === abaPublicada?.projectId
+                      ? contagensDaMoldura
+                      : contagensDoResumo(
+                          cardPorProjeto.get(currentProject.id)?.pendingApprovalsCount ?? 0,
+                        ),
+                  )}
+                  active={abaAtivaDoAtual}
+                  onChange={(chave) => irParaAba(currentProject.id, chave)}
+                />
+              </div>
+            )}
             <button
               type="button"
               className={styles.trilhaItemAtividades}
@@ -727,7 +849,11 @@ export function Shell() {
                 const pendingApprovalsCount = summary?.pendingApprovalsCount ?? 0;
                 const aberto = projetosAbertosEfetivo.has(project.id);
                 return (
-                  <div key={project.id} className={styles.projetoBloco}>
+                  <div
+                    key={project.id}
+                    className={styles.projetoBloco}
+                    ref={project.id === idDoProjetoAtual ? blocoDoProjetoAtual : undefined}
+                  >
                     <div
                       className={[styles.navItem, pathname.startsWith(`/projects/${project.id}`) && styles.active]
                         .filter(Boolean)
@@ -750,6 +876,7 @@ export function Shell() {
                         to="/projects/$projectId"
                         params={{ projectId: project.id }}
                         className={styles.navLink}
+                        title={project.name}
                         onClick={() => {
                           gravarProjetoAtivo(project.id);
                           gravarAbaAtiva(ABA_PADRAO);
@@ -777,37 +904,17 @@ export function Shell() {
                     </div>
 
                     {aberto && (
-                      <div className={styles.abasDoProjeto}>
-                        {ABAS_DO_PROJETO.map((aba) => {
-                          // Só a contagem de Aprovações vem de graça (já está
-                          // no resumo do dashboard). As outras duas
-                          // (promoções/hipóteses) exigiriam uma query NOVA
-                          // por projeto ABERTO na sidebar — o mesmo risco de
-                          // N+1 que a Atividades evitou de propósito (ver
-                          // comentário acima). Ficam de fora aqui; continuam
-                          // visíveis na régua de dentro do projeto.
-                          const contagens: ContagensDeAba = {
-                            promocoesPendentes: 0,
-                            aprovacoesPendentes: pendingApprovalsCount,
-                            hipotesesPendentes: 0,
-                            prsPendentes: 0,
-                            arquiteturaPendente: 0,
-                          };
-                          return (
-                            <LinhaDeAba
-                              key={aba.key}
-                              projectId={project.id}
-                              // `aba.key` sai de `ABAS_DO_PROJETO` (tipo
-                              // largo de propósito, ver project-tabs.ts) —
-                              // o cast é seguro porque o valor SEMPRE veio
-                              // do próprio registro que define `ChaveDeAba`.
-                              chave={aba.key as ChaveDeAba}
-                              rotulo={aba.label}
-                              contagem={aba.count?.(contagens)}
-                            />
-                          );
-                        })}
-                      </div>
+                      <AbasDoProjeto
+                        projectId={project.id}
+                        nomeDoProjeto={project.name}
+                        itens={itensDasAbas(
+                          project.id === abaPublicada?.projectId
+                            ? contagensDaMoldura
+                            : contagensDoResumo(pendingApprovalsCount),
+                        )}
+                        active={project.id === currentProject?.id ? abaAtivaDoAtual : undefined}
+                        onChange={(chave) => irParaAba(project.id, chave)}
+                      />
                     )}
                   </div>
                 );
@@ -853,6 +960,8 @@ export function Shell() {
         <div className={styles.footer}>
           <BotaoDeTema colapsado={colapsado} />
           <LinkDeContainers colapsado={colapsado} />
+          <LinkDeProviders colapsado={colapsado} />
+          <LinkDeGastos colapsado={colapsado} />
           <LinkDeConta colapsado={colapsado} />
           {/* Na gaveta não há o que recolher — ela já some inteira. */}
           {!movel && (
@@ -904,6 +1013,19 @@ export function Shell() {
       <main className={styles.main}>
         <Outlet />
       </main>
+
+      {paletaAberta && (
+        <Suspense fallback={null}>
+          <PaletaDeComandos
+            onClose={() => setPaletaAberta(false)}
+            projetos={projects ?? []}
+            resumo={cards ?? []}
+            projetoAbertoId={currentProject?.id}
+            irParaAba={irParaAba}
+            abrirNovoProjeto={() => setWizardOpen(true)}
+          />
+        </Suspense>
+      )}
 
       {wizardOpen && workspace && (
         // Fallback nulo: o assistente é um modal por cima da tela, e o clique

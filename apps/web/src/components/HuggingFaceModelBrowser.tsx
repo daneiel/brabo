@@ -1,3 +1,4 @@
+import { Shimmer } from './ui/Shimmer';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -211,7 +212,7 @@ export function HuggingFaceModelBrowser({ workspaceId }: { workspaceId: string }
         </div>
       )}
 
-      {busca.isFetching && <div className={styles.estado}>{t('huggingface.searching')}</div>}
+      {busca.isFetching && <div className={styles.estado}><Shimmer>{t('huggingface.searching')}</Shimmer></div>}
 
       {busca.isError && (
         <Alert tone="danger">{mensagemDaApi(busca.error, t('huggingface.searchError'))}</Alert>

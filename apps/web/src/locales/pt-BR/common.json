@@ -4,7 +4,9 @@
   },
   "sidebar": {
     "account": "Conta",
-    "containers": "Containers"
+    "containers": "Containers",
+    "providers": "Providers",
+    "spend": "Gastos"
   },
   "account": {
     "title": "Conta",
@@ -14,8 +16,7 @@
       "title": "Idioma",
       "eyebrow": "interface",
       "subtitle": "O idioma das telas do Brabo. Mensagens que vêm do servidor, como as recusas da api, podem continuar no idioma em que foram escritas.",
-      "ptBR": "Português (Brasil)",
-      "en": "Inglês",
+      "inProgress": "tradução em andamento — a tela segue em português",
       "saving": "Salvando…",
       "saved": "Idioma salvo",
       "error": "Não foi possível salvar sua preferência de idioma"

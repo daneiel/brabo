@@ -1,6 +1,7 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import type { LLMProviderCapabilities } from '@brabo/shared';
 import type { CapabilitiesDoProvider } from '../../../../application/use-cases/llm/list-provider-capabilities.use-case';
+import type { LLMProviderName } from '@brabo/shared';
 import { LLM_PROVIDER_NAMES } from '../../../../domain/llm/llm-provider-names';
 import type { MesmasChaves, Wire } from '../../shared/dto/wire';
 import { BUDGET_POLICIES } from '../../../../domain/llm/budget-threshold';
@@ -8,6 +9,7 @@ import { MODEL_BINDING_SCOPES } from '../../../../domain/llm/model-binding-scope
 import { PREFERENCIAS_DE_ROTEAMENTO } from '../../../../domain/llm/routing-preference';
 import {
   MODEL_AVAILABILITIES,
+  MODEL_BILLINGS,
   type Model,
   type ModelComCuradoria,
 } from '../../../../domain/llm/model.entity';
@@ -30,13 +32,18 @@ import type {
   BindingsResolvidosEmLote,
 } from '../../../../application/use-cases/llm/resolve-model-bindings-em-lote.use-case';
 import type { UserCredentialMetadata } from '../../../../domain/llm/user-credential.entity';
-import type { AgentTokenUsage } from '../../../../application/ports/token-usage-repository.port';
+import type {
+  AgentTokenUsage,
+  SessionAgentTokenUsage,
+} from '../../../../application/ports/token-usage-repository.port';
 import type {
   SpendLinha,
   SpendPorDia,
 } from '../../../../application/use-cases/llm/spend-report';
 import type { WorkspaceSpendReport } from '../../../../application/use-cases/llm/get-workspace-spend-report.use-case';
 import type { MySpend } from '../../../../application/use-cases/llm/get-my-spend.use-case';
+import type { MyWorkspaceSpend } from '../../../../application/use-cases/llm/get-my-workspace-spend.use-case';
+import type { ProjectSpendTeam } from '../../../../application/use-cases/llm/get-project-spend-team.use-case';
 
 /**
  * Respostas de modelos, credenciais, bindings e orçamento (Fase 7b, item 6).
@@ -123,6 +130,16 @@ export class ModelResponseDto implements Wire<Model> {
   generatesImage!: boolean;
 
   @ApiProperty({
+    type: Number,
+    nullable: true,
+    example: 2048,
+    description:
+      'Reasoning budget (tokens) the model is PROVEN to respect, curated by ' +
+      'hand (ADR 0223). Null = not proven; the field is not sent.',
+  })
+  reasoningBudget!: number | null;
+
+  @ApiProperty({
     example: true,
     description:
       "Price typed in from the provider's docs, not synced. The price sync " +
@@ -139,6 +156,15 @@ export class ModelResponseDto implements Wire<Model> {
       'is never deleted, because bindings and cost history point to it.',
   })
   availability!: Wire<Model>['availability'];
+
+  @ApiProperty({
+    enum: MODEL_BILLINGS,
+    example: 'api',
+    description:
+      'CURATED billing mark (AT-632, RN-954): `subscription` is a seat — its ' +
+      'cost is shown apart from the US$ paid. Never set by sync.',
+  })
+  billing!: Wire<Model>['billing'];
 
   @ApiProperty({
     example: '2026-07-30T03:00:00.000Z',
@@ -201,6 +227,54 @@ export class ModelComCuradoriaResponseDto
   })
   freeRoutingAlias!: boolean;
 }
+export class PrecoSugeridoResponseDto {
+  @ApiProperty({ example: 'Anthropic' }) fabricante!: string;
+  @ApiProperty({ example: 100000, description: 'micro-USD per 1M tokens.' })
+  entradaMicros!: number;
+  @ApiProperty({ example: 500000, description: 'micro-USD per 1M tokens.' })
+  saidaMicros!: number;
+  @ApiProperty({
+    example: 'https://docs.claude.com/en/docs/about-claude/pricing.md',
+  })
+  fonte!: string;
+  @ApiProperty({
+    example: '2026-11-01',
+    description: 'Date the row was checked.',
+  })
+  conferidoEm!: string;
+  @ApiPropertyOptional({ example: 'Prompt up to 100,000 tokens.' })
+  observacao?: string;
+}
+
+export class SugestaoDoCatalogoResponseDto {
+  @ApiProperty({
+    enum: MODEL_BILLINGS,
+    nullable: true,
+    description: 'Suggested billing band (9Router alias). Null: no suggestion.',
+  })
+  cobranca!: ModelComCuradoria['billing'] | null;
+
+  @ApiProperty({
+    type: PrecoSugeridoResponseDto,
+    nullable: true,
+    description: 'Manufacturer list price; null when the table has no row.',
+  })
+  preco!: PrecoSugeridoResponseDto | null;
+}
+
+/** Linha da curadoria: o modelo COM a sugestão de faixa e preço (AT-640, RN-965). */
+export class ModeloDoCatalogoResponseDto extends ModelComCuradoriaResponseDto {
+  @ApiProperty({
+    type: SugestaoDoCatalogoResponseDto,
+    nullable: true,
+    description:
+      'SUGGESTION only (derived on read, never stored): billing band from the ' +
+      '9Router alias and the manufacturer price from a curated table. Applying ' +
+      'it is a curation gesture. Null for OpenRouter and unlisted ids.',
+  })
+  sugestao!: SugestaoDoCatalogoResponseDto | null;
+}
+
 export const _chavesModelComCuradoria: MesmasChaves<
   ModelComCuradoriaResponseDto,
   ModelComCuradoria
@@ -226,6 +300,17 @@ export class UserCredentialResponseDto implements Wire<UserCredentialMetadata> {
   @ApiProperty({ example: '2026-07-10T10:00:00.000Z', format: 'date-time' })
   updatedAt!: string;
 }
+export class CredentialedProvidersResponseDto {
+  @ApiProperty({
+    enum: LLM_PROVIDER_NAMES,
+    isArray: true,
+    example: ['anthropic', 'openrouter'],
+    description:
+      'LLM providers the workspace owner of record has a key for. Names only; `ollama` never appears.',
+  })
+  providers!: LLMProviderName[];
+}
+
 export const _chavesCredencial: MesmasChaves<
   UserCredentialResponseDto,
   UserCredentialMetadata
@@ -362,6 +447,15 @@ export class ResolvedBindingResponseDto implements Wire<ResolvedBinding> {
       'Empty on the normal path.',
   })
   skipped!: SkippedBindingResponseDto[];
+
+  @ApiPropertyOptional({
+    example: 'secops',
+    description:
+      'Present when the agent asked about had no model of its own (nor of its ' +
+      'area or project) and inherited the RESOLVED binding of its area lead ' +
+      '(RN-703). `origin` is then the origin of the lead binding.',
+  })
+  herdadoDoLead?: string;
 }
 export const _chavesBindingResolvido: MesmasChaves<
   ResolvedBindingResponseDto,
@@ -533,6 +627,40 @@ export class AgentTokenUsageResponseDto implements Wire<AgentTokenUsage> {
 export const _chavesUsoPorAgente: MesmasChaves<
   AgentTokenUsageResponseDto,
   AgentTokenUsage
+> = true;
+
+export class LastCallResponseDto {
+  @ApiProperty({ example: 42000, description: 'Input tokens of that call.' })
+  inputTokens!: number;
+
+  @ApiProperty({ example: 'qwen2.5-coder:7b' })
+  modelName!: string;
+
+  @ApiProperty({
+    example: 128000,
+    type: Number,
+    nullable: true,
+    description: "The model's context window, or null when unknown.",
+  })
+  contextWindow!: number | null;
+}
+
+/** Consumo do agente na sessão + a última chamada dele (fora o Jev). */
+export class SessionAgentTokenUsageResponseDto
+  extends AgentTokenUsageResponseDto
+  implements Wire<SessionAgentTokenUsage>
+{
+  @ApiProperty({
+    type: LastCallResponseDto,
+    nullable: true,
+    description:
+      "The agent's latest call in the session (Jev excluded); null when none.",
+  })
+  lastCall!: LastCallResponseDto | null;
+}
+export const _chavesUsoPorAgenteDaSessao: MesmasChaves<
+  SessionAgentTokenUsageResponseDto,
+  SessionAgentTokenUsage
 > = true;
 
 /**
@@ -726,6 +854,14 @@ export class SpendLinhaResponseDto implements Wire<SpendLinha> {
   @ApiProperty({ example: 1_250_000 })
   costMicros!: number;
 
+  @ApiProperty({
+    example: 0,
+    description:
+      'Part of the cost from models curated as `subscription` (RN-954): a ' +
+      'seat, shown apart from the US$ paid (`cost - subscription`).',
+  })
+  assinaturaMicros!: number;
+
   @ApiProperty({ example: 120_000 })
   inputTokens!: number;
 
@@ -776,8 +912,24 @@ export class WorkspaceSpendReportResponseDto implements Wire<WorkspaceSpendRepor
   @ApiProperty({ example: 30, description: 'Sliding window, in days.' })
   dias!: number;
 
+  @ApiProperty({
+    format: 'uuid',
+    nullable: true,
+    description:
+      'The `?projectId=` slice asked for (RN-952); `null` = whole workspace.',
+  })
+  projectId!: string | null;
+
   @ApiProperty({ example: 1_250_000 })
   totalMicros!: number;
+
+  @ApiProperty({
+    example: 0,
+    description:
+      'Part of the cost from models curated as `subscription` (RN-954): a ' +
+      'seat, shown apart from the US$ paid (`cost - subscription`).',
+  })
+  assinaturaMicros!: number;
 
   @ApiProperty({ example: 120_000 })
   inputTokens!: number;
@@ -812,6 +964,12 @@ export class WorkspaceSpendReportResponseDto implements Wire<WorkspaceSpendRepor
     description: 'By PROJECT within the workspace.',
   })
   porProjeto!: SpendLinhaResponseDto[];
+
+  @ApiProperty({
+    type: [SpendLinhaResponseDto],
+    description: 'By SESSION (RN-952).',
+  })
+  porSessao!: SpendLinhaResponseDto[];
 
   @ApiProperty({
     type: [SpendLinhaResponseDto],
@@ -866,6 +1024,14 @@ export class MySpendResponseDto implements Wire<MySpend> {
   @ApiProperty({ example: 1_250_000 })
   totalMicros!: number;
 
+  @ApiProperty({
+    example: 0,
+    description:
+      'Part of the cost from models curated as `subscription` (RN-954): a ' +
+      'seat, shown apart from the US$ paid (`cost - subscription`).',
+  })
+  assinaturaMicros!: number;
+
   @ApiProperty({ example: 120_000 })
   inputTokens!: number;
 
@@ -882,6 +1048,80 @@ export class MySpendResponseDto implements Wire<MySpend> {
   porDia!: SpendPorDiaResponseDto[];
 }
 export const _chavesMySpend: MesmasChaves<MySpendResponseDto, MySpend> = true;
+
+/** O gasto do PROJETO para o membro: total e por agente/área, sem provider (RN-953). */
+export class ProjectSpendTeamResponseDto implements Wire<ProjectSpendTeam> {
+  @ApiProperty({ format: 'uuid' })
+  projectId!: string;
+
+  @ApiProperty({ example: 30 })
+  dias!: number;
+
+  @ApiProperty({ example: 1_250_000 })
+  totalMicros!: number;
+
+  @ApiProperty({ example: 0, description: 'Seat part of the total (RN-954).' })
+  assinaturaMicros!: number;
+
+  @ApiProperty({ example: 120_000 })
+  inputTokens!: number;
+
+  @ApiProperty({ example: 35_000 })
+  outputTokens!: number;
+
+  @ApiProperty({ example: 42 })
+  chamadas!: number;
+
+  @ApiProperty({ type: [SpendLinhaResponseDto], description: 'By AGENT.' })
+  porAgente!: SpendLinhaResponseDto[];
+
+  @ApiProperty({
+    type: [SpendLinhaResponseDto],
+    description: 'By catalog AREA of the agent; `sem-area` when none.',
+  })
+  porArea!: SpendLinhaResponseDto[];
+}
+export const _chavesProjectSpendTeam: MesmasChaves<
+  ProjectSpendTeamResponseDto,
+  ProjectSpendTeam
+> = true;
+
+/** O consumo PRÓPRIO no workspace, por projeto, sem provider (RN-953). */
+export class MyWorkspaceSpendResponseDto implements Wire<MyWorkspaceSpend> {
+  @ApiProperty({ format: 'uuid' })
+  workspaceId!: string;
+
+  @ApiProperty({ example: 30 })
+  dias!: number;
+
+  @ApiProperty({ format: 'uuid', description: 'Always whoever called.' })
+  actorId!: string;
+
+  @ApiProperty({ example: 1_250_000 })
+  totalMicros!: number;
+
+  @ApiProperty({ example: 0, description: 'Seat part of the total (RN-954).' })
+  assinaturaMicros!: number;
+
+  @ApiProperty({ example: 120_000 })
+  inputTokens!: number;
+
+  @ApiProperty({ example: 35_000 })
+  outputTokens!: number;
+
+  @ApiProperty({ example: 42 })
+  chamadas!: number;
+
+  @ApiProperty({ type: [SpendLinhaResponseDto], description: 'By PROJECT.' })
+  porProjeto!: SpendLinhaResponseDto[];
+
+  @ApiProperty({ type: [SpendPorDiaResponseDto] })
+  porDia!: SpendPorDiaResponseDto[];
+}
+export const _chavesMyWorkspaceSpend: MesmasChaves<
+  MyWorkspaceSpendResponseDto,
+  MyWorkspaceSpend
+> = true;
 
 /** A camada de PROVIDER das capabilities (ADR 0041), como o fio a mostra. */
 export class LLMProviderCapabilitiesResponseDto implements Wire<LLMProviderCapabilities> {
@@ -912,6 +1152,35 @@ export class LLMProviderCapabilitiesResponseDto implements Wire<LLMProviderCapab
       'the chosen upstream — reading the docs does not count.',
   })
   routingPreference!: boolean;
+
+  @ApiProperty({
+    example: false,
+    description:
+      'The provider pins a conversation to the upstream that served it when ' +
+      'given a session key (ADR 0221). Only `true` after a smoke against the ' +
+      'real API showed one upstream with the key and several without it.',
+  })
+  stickySession!: boolean;
+
+  @ApiProperty({
+    example: false,
+    description:
+      'The provider accepts a per-call PRICE CEILING (`provider.max_price` = ' +
+      'catalog price x 1.5, ADR 0225): only an upstream within it serves the ' +
+      'call. Only `true` after a smoke against the real API showed the served ' +
+      'upstream within the ceiling.',
+  })
+  priceCeiling!: boolean;
+
+  @ApiProperty({
+    example: false,
+    description:
+      'The provider accepts explicit PROMPT-CACHE breakpoints ' +
+      '(`cache_control`) on the stable prefix of a call (RN-892). Only ' +
+      '`true` after a smoke against the real API showed cached input ' +
+      'tokens on a repeated call.',
+  })
+  promptCaching!: boolean;
 }
 export const _chavesCapabilitiesDoProvider: MesmasChaves<
   LLMProviderCapabilitiesResponseDto,

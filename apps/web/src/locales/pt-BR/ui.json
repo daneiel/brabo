@@ -19,7 +19,11 @@
   },
   "markdownMessage": {
     "codeFence": {
-      "defaultLanguage": "texto"
+      "defaultLanguage": "texto",
+      "mostrarLinhas_zero": "Mostrar {{count}} linhas",
+      "mostrarLinhas_one": "Mostrar {{count}} linha",
+      "mostrarLinhas_other": "Mostrar as {{count}} linhas",
+      "recolher": "Recolher"
     },
     "table": {
       "emptyMessage": "Tabela sem linhas."
@@ -35,5 +39,10 @@
     "defaultMessage": "Não foi possível falar com a api.",
     "trace": "trace {{traceId}}",
     "retry": "Tentar de novo"
+  },
+  "codeBlock": {
+    "copiar": "Copiar",
+    "copiado": "Copiado",
+    "falhaAoCopiar": "Não foi possível copiar"
   }
 }

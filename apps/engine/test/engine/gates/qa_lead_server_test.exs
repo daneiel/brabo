@@ -141,6 +141,177 @@ defmodule Engine.Gates.QaLeadServerTest do
     end
   end
 
+  describe "needs_user_decision (ADR 0214, RN-862)" do
+    test "grava a pergunta na api, estaciona o ciclo e só o gesto humano o retoma", %{
+      state: state,
+      project_id: project_id
+    } do
+      Process.put(:fake_dev_context, dev_context([]))
+      Process.put(:fake_propose_action, terminal_ok())
+
+      Process.put(:fake_llm_turns, [
+        FakeEngineApiClient.tool_call_response("terminal", %{"command" => "npm test"}),
+        FakeEngineApiClient.tool_call_response("emit_qa_verdict", %{
+          "veredito" => "needs_user_decision",
+          "resumo" => "o limite de 5 não foi confirmado pelo usuário",
+          "itens" => [],
+          "coverageMatrix" => [],
+          "pergunta" => "O limite é 5 links por usuário?",
+          "sugestao" => "Sim, 5"
+        })
+      ])
+
+      Process.put(:fake_gate_verdict_response, %{"nextAction" => "await_user"})
+
+      assert {:noreply, _} = QaLeadServer.handle_cast({:run, "task-abc12345"}, state)
+
+      assert_received {:gate_verdict_recorded, "task-abc12345", "qa", "needs_user_decision", _r,
+                       _i, nil}
+
+      assert_received {:gate_verdict_extras, "task-abc12345", "qa",
+                       %{pergunta: "O limite é 5 links por usuário?", sugestao: "Sim, 5"}}
+
+      linha = GateState.get(project_id, "task-abc12345", "qa")
+      assert linha.step == "awaiting_user_decision"
+      assert %DateTime{} = linha.parked_at
+
+      assert_received {:event_appended, ^project_id, _, %{type: "gate.rescue_parked"}}
+
+      # O resgate periódico não o religa; a resposta do usuário (rota da RN-724) sim.
+      assert GateState.list_stale(-1) |> Enum.all?(&(&1.task_id != "task-abc12345"))
+
+      assert :ok =
+               Engine.Gates.GateRescuer.retomar_estacionado(project_id, "task-abc12345", "qa")
+
+      assert_received {:gate_dispatch, :qa, ^project_id, "task-abc12345"}
+    end
+  end
+
+  describe "needs_user_decision recusado pela api volta ao QA (AT-526, RN-876)" do
+    defp pede_decisao(extra) do
+      FakeEngineApiClient.tool_call_response(
+        "emit_qa_verdict",
+        Map.merge(
+          %{
+            "veredito" => "needs_user_decision",
+            "resumo" => "limite não confirmado",
+            "itens" => [],
+            "coverageMatrix" => []
+          },
+          extra
+        )
+      )
+    end
+
+    defp aprova do
+      FakeEngineApiClient.tool_call_response("emit_qa_verdict", %{
+        "veredito" => "approved",
+        "resumo" => "cobertura completa",
+        "itens" => [],
+        "coverageMatrix" => []
+      })
+    end
+
+    defp textos_vistos_pela_automacao(acc \\ []) do
+      receive do
+        {:llm_turn, "qa-automacao", messages, _} ->
+          textos_vistos_pela_automacao(acc ++ Enum.map(messages, &Map.get(&1, "content", "")))
+      after
+        0 -> Enum.join(acc, "\n")
+      end
+    end
+
+    test "400: nada estaciona, o QA recebe o motivo e uma nova volta acontece", %{
+      state: state,
+      project_id: project_id
+    } do
+      Process.put(:fake_dev_context, dev_context([]))
+      Process.put(:fake_propose_action, terminal_ok())
+
+      Process.put(:fake_llm_turns, [
+        FakeEngineApiClient.tool_call_response("terminal", %{"command" => "npm test"}),
+        pede_decisao(%{"pergunta" => "O limite é 5?", "sugestao" => "Sim"}),
+        aprova()
+      ])
+
+      Process.put(:fake_gate_verdict_responses, [
+        {:error, {400, %{"message" => ["openQuestionId must be a UUID"]}}},
+        %{"nextAction" => "done"}
+      ])
+
+      assert {:noreply, _} = QaLeadServer.handle_cast({:run, "task-abc12345"}, state)
+
+      assert_received {:gate_verdict_recorded, "task-abc12345", "qa", "needs_user_decision", _, _,
+                       _}
+
+      assert_received {:gate_verdict_recorded, "task-abc12345", "qa", "approved", _, _, _}
+      refute_received {:event_appended, ^project_id, _, %{type: "gate.rescue_parked"}}
+      assert GateState.get(project_id, "task-abc12345", "qa") == nil
+      assert textos_vistos_pela_automacao() =~ "openQuestionId must be a UUID"
+    end
+
+    test "409 pergunta_ja_respondida: o texto devolvido traz a decisão já tomada" do
+      texto =
+        QaLeadServer.texto_da_recusa(
+          {409, %{"reason" => "pergunta_ja_respondida", "resposta" => "Sim, 5 links"}}
+        )
+
+      assert texto =~ "já foi respondida"
+      assert texto =~ "Decisão já tomada: Sim, 5 links"
+      assert texto =~ "não pergunte de novo"
+    end
+
+    test "409 no laço: a volta seguinte do QA lê a decisão", %{
+      state: state,
+      project_id: project_id
+    } do
+      Process.put(:fake_dev_context, dev_context([]))
+      Process.put(:fake_propose_action, terminal_ok())
+
+      Process.put(:fake_llm_turns, [
+        FakeEngineApiClient.tool_call_response("terminal", %{"command" => "npm test"}),
+        pede_decisao(%{"pergunta" => "O limite é 5?"}),
+        aprova()
+      ])
+
+      Process.put(:fake_gate_verdict_responses, [
+        {:error, {409, %{"reason" => "pergunta_ja_respondida", "resposta" => "Sim, 5 links"}}},
+        %{"nextAction" => "done"}
+      ])
+
+      assert {:noreply, _} = QaLeadServer.handle_cast({:run, "task-abc12345"}, state)
+      assert_received {:gate_verdict_recorded, "task-abc12345", "qa", "approved", _, _, _}
+      refute_received {:event_appended, ^project_id, _, %{type: "gate.rescue_parked"}}
+      assert textos_vistos_pela_automacao() =~ "Decisão já tomada: Sim, 5 links"
+    end
+
+    test "teto esgotado depois da recusa: bloqueio narrado, nunca estacionamento", %{
+      state: state,
+      project_id: project_id
+    } do
+      Application.put_env(:engine, :tool_loop_max_iterations_gate, 2)
+      on_exit(fn -> Application.delete_env(:engine, :tool_loop_max_iterations_gate) end)
+
+      Process.put(:fake_dev_context, dev_context([]))
+      Process.put(:fake_propose_action, terminal_ok())
+
+      Process.put(:fake_llm_turns, [
+        FakeEngineApiClient.tool_call_response("terminal", %{"command" => "npm test"}),
+        pede_decisao(%{"pergunta" => "O limite é 5?"}),
+        FakeEngineApiClient.tool_call_response("terminal", %{"command" => "npm test"})
+      ])
+
+      Process.put(:fake_gate_verdict_responses, [{:error, {404, %{"message" => "não achei"}}}])
+
+      assert {:noreply, _} = QaLeadServer.handle_cast({:run, "task-abc12345"}, state)
+
+      assert_received {:task_blocked, "task-abc12345", _reason, diag, "qa-lead"}
+      assert diag =~ "limite de iterações"
+      assert_received {:task_blocked_origin, "task-abc12345", "modelo"}
+      refute_received {:event_appended, ^project_id, _, %{type: "gate.rescue_parked"}}
+    end
+  end
+
   describe "story com RNF de performance" do
     test "delega as duas; consolida com itens rastreados por subespecialidade", %{
       state: state,
@@ -489,6 +660,68 @@ defmodule Engine.Gates.QaLeadServerTest do
              )
     end
 
+    test "plano FORA dos 200 mais recentes é reencontrado — nenhum laço novo (RN-944)", %{
+      state: state
+    } do
+      ruido = for i <- 1..250, do: %{"type" => "chat.message", "payload" => %{"n" => i}}
+      Process.put(:fake_events, [plano_emitido("task-abc12345") | ruido])
+      Process.put(:fake_dev_context, dev_context([]))
+      Process.put(:fake_propose_action, terminal_ok())
+      Process.put(:fake_llm_turns, aprovar_automacao())
+      Process.put(:fake_gate_verdict_response, %{"nextAction" => "run_secops"})
+
+      assert {:noreply, _} = QaLeadServer.handle_cast({:run, "task-abc12345"}, state)
+
+      refute_received {:llm_turn, "qa-estrategia", _messages, _tools}
+    end
+
+    defp verdict(task_id, veredito, itens) do
+      %{
+        "type" => "artifact.qa_verdict",
+        "actorId" => "qa",
+        "payload" => %{"taskId" => task_id, "veredito" => veredito, "itens" => itens}
+      }
+    end
+
+    test "pedido anterior: só o changes_requested do qa da MESMA task chega ao QA (RN-944)", %{
+      state: state
+    } do
+      Process.put(:fake_events, [
+        plano_emitido("task-abc12345"),
+        verdict("task-outra", "changes_requested", ["de outra task"]),
+        verdict("task-abc12345", "changes_requested", ["falta o teste RF2"])
+      ])
+
+      Process.put(:fake_dev_context, dev_context([]))
+      Process.put(:fake_propose_action, terminal_ok())
+      Process.put(:fake_llm_turns, aprovar_automacao())
+      Process.put(:fake_gate_verdict_response, %{"nextAction" => "run_secops"})
+
+      assert {:noreply, _} = QaLeadServer.handle_cast({:run, "task-abc12345"}, state)
+
+      assert_received {:llm_turn, "qa-automacao", msgs, _tools}
+      texto = Enum.join(conteudos(msgs), "\n")
+      assert texto =~ "falta o teste RF2"
+      refute texto =~ "de outra task"
+    end
+
+    test "veredito approved anterior não vira pedido (RN-944)", %{state: state} do
+      Process.put(:fake_events, [
+        plano_emitido("task-abc12345"),
+        verdict("task-abc12345", "approved", ["nada"])
+      ])
+
+      Process.put(:fake_dev_context, dev_context([]))
+      Process.put(:fake_propose_action, terminal_ok())
+      Process.put(:fake_llm_turns, aprovar_automacao())
+      Process.put(:fake_gate_verdict_response, %{"nextAction" => "run_secops"})
+
+      assert {:noreply, _} = QaLeadServer.handle_cast({:run, "task-abc12345"}, state)
+
+      assert_received {:llm_turn, "qa-automacao", msgs, _tools}
+      refute Enum.join(conteudos(msgs), "\n") =~ "volta anterior"
+    end
+
     test "plano de OUTRA task não conta: a entrega ganha o próprio", %{state: state} do
       Process.put(:fake_events, [plano_emitido("task-outra")])
       Process.put(:fake_dev_context, dev_context([]))
@@ -533,6 +766,45 @@ defmodule Engine.Gates.QaLeadServerTest do
       refute Enum.any?(conteudos(msgs_da_automacao), &(&1 =~ "Plano de teste da QA-estratégia"))
 
       assert_received {:gate_verdict_recorded, "task-abc12345", "qa", "approved", _r, _i, nil}
+    end
+  end
+
+  # RN-806 (AT-478): no uso real o resgate pediu o ciclo DUAS vezes no mesmo
+  # instante; o segundo rodou depois do veredito do primeiro e gravou parecer
+  # contrário ao que já tinha valido.
+  describe "um ciclo por task+gate" do
+    test "pedido repetido que esperava na caixa é descartado ao fim do ciclo", %{state: state} do
+      Process.put(:fake_dev_context, dev_context([]))
+      Process.put(:fake_propose_action, terminal_ok())
+
+      Process.put(:fake_llm_turns, [
+        FakeEngineApiClient.tool_call_response("terminal", %{"command" => "npm test"}),
+        FakeEngineApiClient.tool_call_response("emit_qa_verdict", %{
+          "veredito" => "approved",
+          "resumo" => "ok",
+          "itens" => [],
+          "coverageMatrix" => []
+        })
+      ])
+
+      Process.put(:fake_gate_verdict_response, %{"nextAction" => "run_secops"})
+
+      # O pedido duplicado, já na caixa do processo do Lead.
+      send(self(), {:"$gen_cast", {:run, "task-abc12345"}})
+      # Pedido de OUTRA task não é tocado.
+      send(self(), {:"$gen_cast", {:run, "task-outra"}})
+
+      assert {:noreply, _} = QaLeadServer.handle_cast({:run, "task-abc12345"}, state)
+
+      refute_received {:"$gen_cast", {:run, "task-abc12345"}}
+      assert_received {:"$gen_cast", {:run, "task-outra"}}
+    end
+
+    test "pedido para a task com ciclo suspenso não abre um segundo", %{state: state} do
+      suspenso = %{state | pendente: %{task_id: "task-abc12345", action_id: "pa-9"}}
+
+      assert {:noreply, ^suspenso} = QaLeadServer.handle_cast({:run, "task-abc12345"}, suspenso)
+      refute_received {:llm_turn, _, _, _}
     end
   end
 end

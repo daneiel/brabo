@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterAll } from 'vitest';
+import { eq } from 'drizzle-orm';
 import { createTestDb, truncateAll } from '../../../support/test-db';
 import {
   epics,
@@ -9,7 +10,10 @@ import {
   users,
   workspaces,
 } from '../../../../src/db/schema';
-import { DrizzleTaskRepository } from '../../../../src/infrastructure/persistence/drizzle/backlog.repository';
+import {
+  DrizzleStoryRepository,
+  DrizzleTaskRepository,
+} from '../../../../src/infrastructure/persistence/drizzle/backlog.repository';
 import { ClaimNextTaskUseCase } from '../../../../src/application/use-cases/execution/claim-next-task.use-case';
 import type { AppendSessionEventUseCase } from '../../../../src/application/use-cases/sessions/append-session-event.use-case';
 
@@ -25,6 +29,7 @@ async function seed(opts: {
   moduleIds: string[];
   taskCount: number;
   taskModule?: string | null;
+  archived?: boolean;
 }) {
   const [owner] = await db
     .insert(users)
@@ -60,6 +65,7 @@ async function seed(opts: {
       title: 's',
       status: opts.storyStatus,
       moduleIds: opts.moduleIds,
+      archivedAt: opts.archived ? new Date() : null,
     })
     .returning();
   for (let i = 0; i < opts.taskCount; i++) {
@@ -69,7 +75,7 @@ async function seed(opts: {
       module: opts.taskModule ?? null,
     });
   }
-  return { projectId: project.id, sessionId: session.id };
+  return { projectId: project.id, sessionId: session.id, storyId: story.id };
 }
 
 beforeEach(async () => {
@@ -90,7 +96,8 @@ describe('ClaimNextTaskUseCase', () => {
 
     const t1 = await useCase.execute(projectId, sessionId, 'api', 'dev-api');
     const t2 = await useCase.execute(projectId, sessionId, 'api', 'dev-api-2');
-    const t3 = await useCase.execute(projectId, sessionId, 'api', 'dev-api');
+    // Um TERCEIRO dev: o `dev-api` retomaria a própria t1 (RN-856).
+    const t3 = await useCase.execute(projectId, sessionId, 'api', 'dev-api-3');
 
     expect(t1).not.toBeNull();
     expect(t2).not.toBeNull();
@@ -99,6 +106,55 @@ describe('ClaimNextTaskUseCase', () => {
     expect(t1!.assignedTo).toBe('dev-api');
     expect(t2!.assignedTo).toBe('dev-api-2');
     expect(t3).toBeNull(); // esgotado
+  });
+
+  // RN-856 (AT-522): o dev religado retoma a SUA tarefa `in_progress` órfã
+  // antes de procurar a fila `todo`.
+  it('retoma a in_progress que já é DELE antes da fila todo', async () => {
+    const { projectId, sessionId, storyId } = await seed({
+      storyStatus: 'ready',
+      moduleIds: ['api'],
+      taskCount: 2,
+    });
+    const [primeira, segunda] = await taskRepo.findByStoryIds([storyId]);
+    await db
+      .update(tasks)
+      .set({ status: 'in_progress', assignedTo: 'dev-api' })
+      .where(eq(tasks.id, segunda.id));
+
+    const pega = await useCase.execute(projectId, sessionId, 'api', 'dev-api');
+
+    expect(pega?.id).toBe(segunda.id);
+    expect(pega?.status).toBe('in_progress');
+    // A do OUTRO dev não é retomada por este; ele vai à fila.
+    const outro = await useCase.execute(
+      projectId,
+      sessionId,
+      'api',
+      'dev-api-2',
+    );
+    expect(outro?.id).toBe(primeira.id);
+  });
+
+  it('não retoma a in_progress dele que está em gate', async () => {
+    const { projectId, sessionId, storyId } = await seed({
+      storyStatus: 'ready',
+      moduleIds: ['api'],
+      taskCount: 1,
+    });
+    const [t] = await taskRepo.findByStoryIds([storyId]);
+    await db
+      .update(tasks)
+      .set({
+        status: 'in_progress',
+        assignedTo: 'dev-api',
+        gateStatus: 'awaiting_qa',
+      })
+      .where(eq(tasks.id, t.id));
+
+    expect(
+      await useCase.execute(projectId, sessionId, 'api', 'dev-api'),
+    ).toBeNull();
   });
 
   it('não pega task de story que não está ready', async () => {
@@ -110,6 +166,29 @@ describe('ClaimNextTaskUseCase', () => {
     expect(
       await useCase.execute(projectId, sessionId, 'api', 'dev-api'),
     ).toBeNull();
+  });
+
+  // RN-727: história arquivada sai do claim, da contagem, do plano e do
+  // backlog — e as tarefas dela junto.
+  it('não pega task de story ARQUIVADA, nem a conta, nem a lista', async () => {
+    const { projectId, sessionId, storyId } = await seed({
+      storyStatus: 'ready',
+      moduleIds: ['api'],
+      taskCount: 1,
+      archived: true,
+    });
+    expect(
+      await useCase.execute(projectId, sessionId, 'api', 'dev-api'),
+    ).toBeNull();
+    expect(await taskRepo.countClaimableByModule(projectId, 'api')).toBe(0);
+    const [task] = await taskRepo.findByStoryIds([storyId]);
+    expect(await taskRepo.findInProjectByIds(projectId, [task.id])).toEqual([]);
+    const storyRepo = new DrizzleStoryRepository(db);
+    expect(await storyRepo.findByProject(projectId)).toEqual([]);
+    // A linha continua lá: arquivar não apaga.
+    expect((await storyRepo.findById(storyId))?.archivedAt).toBeInstanceOf(
+      Date,
+    );
   });
 
   it('não pega task de módulo diferente', async () => {

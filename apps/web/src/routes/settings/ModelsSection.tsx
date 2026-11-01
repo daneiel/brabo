@@ -5,14 +5,16 @@ import {
   ApiError,
   getProject,
   clearAgentModelBinding,
+  clearAreaModelBinding,
   getProjectAgentCosts,
   getProjectModelBinding,
   getWorkspaceModelBinding,
   listModels,
   mensagemDaApi,
   setAgentModelBinding,
+  setAreaModelBinding,
 } from '../../lib/api-client';
-import { AGENT_LIST, areaFor } from '../../lib/agents';
+import { AGENT_LIST, areaFor, nomeDoAgente } from '../../lib/agents';
 import { useCurrentWorkspaceWithRole } from '../../lib/hooks';
 import { roleAtLeast } from '../../lib/roles';
 import type {
@@ -66,7 +68,7 @@ export function ModelsSection({ projectId }: { projectId: string }) {
 
   /**
    * `developer`, e NÃO `owner || maintainer` como na seção irmã de área
-   * (`AreaModelsSection`) — os dois endpoints desta tabela pedem `developer`
+   * (a caixa da área) — os dois endpoints desta tabela pedem `developer`
    * (`model-bindings.controller.ts`, `PUT`/`DELETE .../agent-bindings/:slug`),
    * e a diferença é a regra, não um descuido: o binding do agente alcança UM
    * agente, o da área alcança o lead e todos os subagentes de uma vez
@@ -87,6 +89,9 @@ export function ModelsSection({ projectId }: { projectId: string }) {
    */
   const { data: comPapel } = useCurrentWorkspaceWithRole();
   const podeEditar = roleAtLeast(comPapel?.role, 'developer');
+  // A caixa da área e o modelo do lead enquanto ela está marcada gravam o
+  // binding de ÁREA, que pede `maintainer` (RN-102): outro mínimo, outro gate.
+  const podeEditarArea = roleAtLeast(comPapel?.role, 'maintainer');
 
   const { data: project } = useQuery({
     queryKey: ['project', projectId],
@@ -102,7 +107,7 @@ export function ModelsSection({ projectId }: { projectId: string }) {
   });
 
   // O vigente de cada agente e o padrão de cada ÁREA (ADR 0064, RN-102) numa
-  // leitura só (RN-654): a mesma `queryKey` que `AreaModelsSection` e
+  // leitura só (RN-654): a mesma `queryKey` que a caixa da área e
   // `MelhoresModelosPorCapacidadeSection` leem, servida por UMA requisição.
   const bindings = useBindingsResolvidos(projectId);
 
@@ -302,7 +307,7 @@ export function ModelsSection({ projectId }: { projectId: string }) {
    * informação mais útil que existe: ela nomeia o modelo e diz o que fazer.
    *
    * Então tudo aqui é falha de verdade e segue a gramática normal —
-   * `mensagemDaApi` + tom `danger`, como em `AreaModelsSection.handleSet`.
+   * `mensagemDaApi` + tom `danger`, como em `handleMarcarArea`.
    * Sem o `try/catch` isto virava `unhandled promise rejection`: a pessoa
    * escolhia um modelo, a tela não se mexia e o erro só existia no console.
    *
@@ -315,7 +320,13 @@ export function ModelsSection({ projectId }: { projectId: string }) {
    */
   async function handleModelChange(agentKey: string, model: Model) {
     try {
-      await setAgentModelBinding(projectId, agentKey, model.id);
+      const area = areaDoLead(agentKey);
+      // Com a caixa marcada o modelo do lead É o da área.
+      if (area && leadSegueAArea(agentKey)) {
+        await setAreaModelBinding(projectId, area.key, model.id);
+      } else {
+        await setAgentModelBinding(projectId, agentKey, model.id);
+      }
       invalidarBindingDoAgente();
     } catch (erro) {
       showToast({
@@ -339,9 +350,16 @@ export function ModelsSection({ projectId }: { projectId: string }) {
     routingPreference: RoutingPreference | null,
   ) {
     try {
-      await setAgentModelBinding(projectId, agentKey, modelId, {
-        routingPreference,
-      });
+      const area = areaDoLead(agentKey);
+      if (area && leadSegueAArea(agentKey)) {
+        await setAreaModelBinding(projectId, area.key, modelId, {
+          routingPreference,
+        });
+      } else {
+        await setAgentModelBinding(projectId, agentKey, modelId, {
+          routingPreference,
+        });
+      }
       invalidarBindingDoAgente();
     } catch (erro) {
       showToast({
@@ -378,7 +396,7 @@ export function ModelsSection({ projectId }: { projectId: string }) {
    *    que este 404 significa e pode dizer na língua de quem está lendo.
    *
    * Qualquer outro status continua sendo falha de verdade e vai por
-   * `mensagemDaApi` + tom `danger`, como em `AreaModelsSection`. Nos DOIS
+   * `mensagemDaApi` + tom `danger`, como em a caixa da área. Nos DOIS
    * desfechos a query é invalidada: se a api diz que não havia linha, quem
    * está velha é a linha na tela, e reler é o que a conserta.
    */
@@ -401,6 +419,89 @@ export function ModelsSection({ projectId }: { projectId: string }) {
       }
       showToast({
         title: mensagemDaApi(erro, t('modelsSection.toast.clearError')),
+        tone: 'danger',
+      });
+    }
+  }
+
+  /** A área da qual esta linha é o LEAD (a caixa só existe nele, RN-927). */
+  function areaDoLead(agentKey: string) {
+    const area = areaFor(agentKey);
+    return area?.lead === agentKey ? area : undefined;
+  }
+  /** O lead SEGUE a área: o vigente dele vem do binding de área. */
+  function leadSegueAArea(agentKey: string) {
+    return (
+      areaDoLead(agentKey) !== undefined &&
+      bindings.doAgente(agentKey)?.origin === 'area'
+    );
+  }
+
+  /**
+   * Marcar a caixa: grava a ÁREA com o vigente do lead e depois APAGA o
+   * binding próprio dele (copiar deixaria o lead para trás na próxima mudança
+   * da área, RN-102). São duas chamadas, não uma transação (RN-469): se a
+   * segunda falha, a tela diz o que ficou gravado.
+   */
+  async function handleMarcarArea(areaKey: string, leadKey: string) {
+    const lead = bindings.doAgente(leadKey);
+    if (!lead) return;
+    try {
+      await setAreaModelBinding(projectId, areaKey, lead.modelId, {
+        routingPreference: lead.routingPreference,
+      });
+    } catch (erro) {
+      showToast({
+        title: mensagemDaApi(erro, t('modelsSection.areaBox.toast.saveError')),
+        tone: 'danger',
+      });
+      return;
+    }
+    if (lead.origin === 'agent') {
+      try {
+        await clearAgentModelBinding(projectId, leadKey);
+      } catch (erro) {
+        // 404: o binding próprio já não existia — o estado pedido é verdade.
+        if (!(erro instanceof ApiError && erro.status === 404)) {
+          invalidarBindingDoAgente();
+          showToast({
+            title: t('modelsSection.areaBox.toast.partial', {
+              agent: nomeDoAgente(leadKey),
+              reason: mensagemDaApi(erro, t('modelsSection.toast.clearError')),
+            }),
+            tone: 'danger',
+          });
+          return;
+        }
+      }
+    }
+    invalidarBindingDoAgente();
+    showToast({
+      title: t('modelsSection.areaBox.toast.applied', { area: areaKey }),
+      tone: 'success',
+    });
+  }
+
+  /** Desmarcar: APAGA o padrão da área; não grava nada no lead (RN-102). */
+  async function handleDesmarcarArea(areaKey: string) {
+    try {
+      await clearAreaModelBinding(projectId, areaKey);
+      invalidarBindingDoAgente();
+      showToast({
+        title: t('modelsSection.areaBox.toast.reverted', { area: areaKey }),
+        tone: 'success',
+      });
+    } catch (erro) {
+      if (erro instanceof ApiError && erro.status === 404) {
+        invalidarBindingDoAgente();
+        showToast({
+          title: t('modelsSection.areaBox.toast.alreadyInherits', { area: areaKey }),
+          tone: 'accent',
+        });
+        return;
+      }
+      showToast({
+        title: mensagemDaApi(erro, t('modelsSection.areaBox.toast.saveError')),
         tone: 'danger',
       });
     }
@@ -439,7 +540,16 @@ export function ModelsSection({ projectId }: { projectId: string }) {
       render: (agent) => {
         const resolved = bindings.doAgente(agent.key);
         const modeloVigente = allModels.find((m) => m.id === resolved?.modelId);
+        const areaLead = areaDoLead(agent.key);
+        const segueArea = leadSegueAArea(agent.key);
+        const editavel = segueArea ? podeEditarArea : podeEditar;
+        const naoSeguem = areaLead
+          ? areaLead.members.filter(
+              (m) => bindings.doAgente(m)?.origin === 'agent',
+            )
+          : [];
         return modelsByCategory ? (
+          <>
           <span className={styles.modeloComRoteamento}>
             <ModelPicker
               models={modelsByCategory}
@@ -451,7 +561,7 @@ export function ModelsSection({ projectId }: { projectId: string }) {
               // coluna ao lado —, só não consegue trocá-lo. O `disabled` mora no
               // picker, e não num overlay daqui, porque overlay não bloqueia o
               // teclado.
-              disabled={!podeEditar}
+              disabled={!editavel}
               // Abre com "aptos para agentes" MARCADO. Este picker grava no
               // escopo `agent`, o único que a RN-040 sempre exigiu — e a frase
               // com que a api recusa manda a pessoa exatamente para este filtro
@@ -475,10 +585,11 @@ export function ModelsSection({ projectId }: { projectId: string }) {
               resolvido={resolved}
               modelo={modeloVigente}
               proprio={
-                resolved?.origin === 'agent' &&
-                !herdadoDoStartDe(agent.key, resolved)
+                segueArea ||
+                (resolved?.origin === 'agent' &&
+                  !herdadoDoStartDe(agent.key, resolved))
               }
-              podeEditar={podeEditar}
+              podeEditar={editavel}
               alvo={agent.name}
               onChange={(preferencia) =>
                 resolved &&
@@ -486,6 +597,39 @@ export function ModelsSection({ projectId }: { projectId: string }) {
               }
             />
           </span>
+          {areaLead && (
+            <div className={styles.ajusteHint}>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={segueArea}
+                  disabled={!podeEditarArea || !resolved}
+                  onChange={(e) =>
+                    void (e.target.checked
+                      ? handleMarcarArea(areaLead.key, agent.key)
+                      : handleDesmarcarArea(areaLead.key))
+                  }
+                />{' '}
+                {t('modelsSection.areaBox.label', { area: areaLead.label })}
+              </label>
+              {/* Sem modelo vigente no lead a caixa está inerte: o motivo vai em
+                  texto (`title` em `disabled` não abre no Chromium). O motivo de
+                  `maintainer` já está no subtítulo (`needsMaintainerArea`). */}
+              {resolved === null && <div>{t('modelsSection.areaBox.needsModel')}</div>}
+              {segueArea && naoSeguem.length > 0 && (
+                <div>
+                  {t('modelsSection.areaBox.notFollowing', {
+                    count: naoSeguem.length,
+                    list: naoSeguem.map((m) => nomeDoAgente(m)).join(', '),
+                  })}
+                </div>
+              )}
+              {segueArea && areaLead.members.length === 0 && (
+                <div>{t('modelsSection.areaBox.dynamic')}</div>
+              )}
+            </div>
+          )}
+          </>
         ) : null;
       },
     },
@@ -637,15 +781,14 @@ export function ModelsSection({ projectId }: { projectId: string }) {
         </span>.{' '}
         {t('modelsSection.subtitle.mostSpecificWins')}{' '}
         <strong>{t('modelsSection.subtitle.areaWord')}</strong>{' '}
-        {t('modelsSection.subtitle.areaExplain')}{' '}
-        <em>{t('modelsSection.subtitle.areaLink')}</em>
-        {t('modelsSection.subtitle.below')}
+        {t('modelsSection.subtitle.areaExplain')}
         {/* O motivo dos controles apagados, dito uma vez e em TEXTO — mesma
-            forma de `AreaModelsSection`, e pelo mesmo motivo lá e aqui: o fato
+            forma de a caixa da área, e pelo mesmo motivo lá e aqui: o fato
             é sobre quem está lendo, não sobre uma linha da tabela, e tooltip em
             controle `disabled` não abre no Chromium. Nomeia as DUAS ações que
             ficaram inertes, porque são duas e ficam em colunas diferentes. */}
         {!podeEditar && t('modelsSection.subtitle.needsDeveloper')}
+        {!podeEditarArea && t('modelsSection.subtitle.needsMaintainerArea')}
       </p>
 
       <div className={styles.custoCard}>
@@ -716,7 +859,11 @@ export function ModelsSection({ projectId }: { projectId: string }) {
         emptyMessage={t('modelsSection.emptyMessage')}
       />
       {allModels.length === 0 && (
-        <div className={styles.subtitle}>{t('modelsSection.noModelsAvailable')}</div>
+        <div className={styles.subtitle}>
+          {t('modelsSection.noModelsAvailable')}{' '}
+          {/* shortcut: <a> recarrega a SPA; as seções são montadas sem Router nos testes, trocar por Link se a navegação virar gargalo */}
+          <a href="/providers">{t('modelsSection.noModelsAvailableLink')}</a>
+        </div>
       )}
     </SecaoDeConfiguracoes>
   );

@@ -1,5 +1,6 @@
 import type { HTMLAttributes } from 'react';
-import styles from './Badge.module.css';
+import { Badge as BadgeBase, BadgeDot } from '@/components/shadcn/badge';
+import { Shimmer } from './Shimmer';
 
 /**
  * `neutral` é o `muted` com texto `--text-secondary`: para badge cujo texto é
@@ -22,33 +23,37 @@ interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
    * branch, repositório, economia de token — e não só um estado.
    */
   size?: 'sm' | 'md';
+  /**
+   * O rótulo diz que algo está EM CURSO (provisionando, encerrando): o texto
+   * ganha o `Shimmer` (ADR 0210). Só vale com rótulo em texto puro.
+   */
+  emCurso?: boolean;
 }
 
+/** Adaptador do `badge` do shadcn (AT-646): o visual mora em `shadcn/badge.tsx`. */
 export function Badge({
   tone = 'muted',
   dot,
   pulse,
   square,
   size = 'sm',
-  className,
+  emCurso,
   children,
   ...rest
 }: BadgeProps) {
-  const classes = [
-    styles.badge,
-    styles[tone],
-    pulse && styles.pulse,
-    square && styles.pill,
-    size === 'md' && styles.md,
-    className,
-  ]
-    .filter(Boolean)
-    .join(' ');
-
   return (
-    <span className={classes} {...rest}>
-      {dot && <span className={styles.dot} />}
-      {children}
-    </span>
+    <BadgeBase
+      variant={tone}
+      size={size}
+      square={!!square}
+      data-tone={tone}
+      data-size={size}
+      data-square={square ? 'true' : undefined}
+      data-pulse={pulse ? 'true' : undefined}
+      {...rest}
+    >
+      {dot && <BadgeDot pulse={pulse} />}
+      {emCurso && typeof children === 'string' ? <Shimmer>{children}</Shimmer> : children}
+    </BadgeBase>
   );
 }

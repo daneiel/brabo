@@ -45,6 +45,14 @@ defmodule Engine.Agents.ReidratacaoTest do
   defp conteudos(mensagens), do: Enum.map(mensagens, & &1["content"])
 
   describe "o que entra (caminho feliz)" do
+    test "AT-395: os passos do turno voltam antes do fecho, no mesmo assistant" do
+      r = put_in(resp("Resumo.")["payload"]["passos"], ["Vou criar.", "Criei."])
+      Process.put(:fake_events, [msg("oi"), r])
+
+      assert [_, %{"role" => "assistant", "content" => "Vou criar.\n\nCriei.\n\nResumo."}] =
+               historico()
+    end
+
     test "mensagens do usuário e respostas continuam entrando, na ordem" do
       Process.put(:fake_events, [msg("minha ideia é X"), resp("legal, me conta mais")])
 

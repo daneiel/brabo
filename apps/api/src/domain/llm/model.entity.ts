@@ -4,6 +4,9 @@ import type { UsoDeModelo } from './model-uses';
 export const MODEL_AVAILABILITIES = ['available', 'unavailable'] as const;
 export type ModelAvailability = (typeof MODEL_AVAILABILITIES)[number];
 
+export const MODEL_BILLINGS = ['api', 'subscription', 'free'] as const;
+export type ModelBilling = (typeof MODEL_BILLINGS)[number];
+
 export interface Model {
   id: string;
   provider: LLMProviderName;
@@ -28,6 +31,11 @@ export interface Model {
   supportsReasoning: boolean;
   generatesImage: boolean;
   /**
+   * Orçamento de raciocínio (tokens), curado à mão e PROVADO por medição (ADR
+   * 0223); `null` = não provado. O sync nunca o escreve.
+   */
+  reasoningBudget: number | null;
+  /**
    * Preço digitado da doc do provider, não sincronizado (Fase 9b). O sync da
    * Fase 9c não sobrescreve linha marcada sem decisão explícita.
    */
@@ -39,6 +47,8 @@ export interface Model {
    * continua valendo.
    */
   availability: ModelAvailability;
+  /** Marca CURADA de cobrança (AT-632, RN-954); o sync não a toca. */
+  billing: ModelBilling;
   lastSeenAt: Date | null;
   createdAt: Date;
   updatedAt: Date;

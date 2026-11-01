@@ -3,15 +3,17 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
+  LOCALES_COM_PREFIXO,
   acharLocaleDuplicado,
   adrExisteNoRepositorio,
+  paginaExisteNaFonte,
   hrefsComLocaleDuplicado,
   reescreverLinkDeGap,
 } from './links-do-locale.mjs';
 
 // AT-221: a reescrita punha `/pt-BR` e o baseUrl do locale punha de novo —
 // `href=/brabo/prd/pt-BR/pt-BR/...`, 404 no site pt-BR inteiro, build verde.
-const FONTE_PT = 'i18n/pt-BR/docusaurus-plugin-content-docs/current/business-rules.md';
+const FONTE_PT = 'i18n/en/docusaurus-plugin-content-docs/current/business-rules.md';
 
 describe('reescreverLinkDeGap', () => {
   it('não põe prefixo de locale: quem põe é o baseUrl do build', () => {
@@ -70,6 +72,17 @@ describe('reescreverLinkDeGap', () => {
     expect(adrExisteNoRepositorio('0055-politica-de-terminal.md')).toBe(false);
   });
 
+  it('alvo que existe na fonte pt-BR é gap de tradução parcial, em qualquer pasta (ADR 0216)', () => {
+    expect(
+      reescreverLinkDeGap({
+        sourceFilePath: '../docs/business-rules/custo.md',
+        url: '../explanation/aceite-providers.md#x',
+      }),
+    ).toBe('pathname:///explanation/aceite-providers#x');
+    expect(paginaExisteNaFonte('explanation/aceite-providers.md')).toBe(true);
+    expect(paginaExisteNaFonte('explanation/nao-existe.md')).toBe(false);
+  });
+
   it('link quebrado fora das zonas de gap continua lançando', () => {
     expect(() =>
       reescreverLinkDeGap({ sourceFilePath: '../docs/intro.md', url: 'nao-existe.md' }),
@@ -80,29 +93,36 @@ describe('reescreverLinkDeGap', () => {
 describe('hrefsComLocaleDuplicado', () => {
   it('acha o href duplicado com e sem aspas (o HTML minificado não as tem)', () => {
     const html =
-      '<a href=/brabo/prd/pt-BR/pt-BR/adr/0001-x>a</a> <a href="/brabo/prd/pt-BR/pt-BR/b#c">b</a>';
+      '<a href=/brabo/prd/en/en/adr/0001-x>a</a> <a href="/brabo/prd/en/en/b#c">b</a>';
     expect(hrefsComLocaleDuplicado(html).sort()).toEqual([
-      '/brabo/prd/pt-BR/pt-BR/adr/0001-x',
-      '/brabo/prd/pt-BR/pt-BR/b#c',
+      '/brabo/prd/en/en/adr/0001-x',
+      '/brabo/prd/en/en/b#c',
+    ]);
+  });
+
+  it('conhece os três locales traduzidos e não o padrão pt-BR (ADR 0216)', () => {
+    expect(LOCALES_COM_PREFIXO).toEqual(['en', 'ru', 'zh-Hans']);
+    expect(hrefsComLocaleDuplicado('<a href=/brabo/prd/zh-Hans/zh-Hans/x>a</a>')).toEqual([
+      '/brabo/prd/zh-Hans/zh-Hans/x',
     ]);
   });
 
   it('não acusa o prefixo simples', () => {
-    expect(hrefsComLocaleDuplicado('<a href=/brabo/prd/pt-BR/adr/0001-x>a</a>')).toEqual([]);
+    expect(hrefsComLocaleDuplicado('<a href=/brabo/prd/en/adr/0001-x>a</a>')).toEqual([]);
   });
 });
 
 describe('acharLocaleDuplicado', () => {
   it('varre o build e devolve cada página ofensora', () => {
     const dir = mkdtempSync(path.join(tmpdir(), 'brabo-locale-'));
-    mkdirSync(path.join(dir, 'pt-BR/adr'), { recursive: true });
+    mkdirSync(path.join(dir, 'en/adr'), { recursive: true });
     writeFileSync(path.join(dir, 'index.html'), '<a href=/brabo/prd/adr/x>ok</a>');
     writeFileSync(
-      path.join(dir, 'pt-BR/adr/0001.html'),
-      '<a href=/brabo/prd/pt-BR/pt-BR/adr/0002>quebrado</a>',
+      path.join(dir, 'en/adr/0001.html'),
+      '<a href=/brabo/prd/en/en/adr/0002>quebrado</a>',
     );
     const { arquivos, ofensores } = acharLocaleDuplicado(dir);
     expect(arquivos).toBe(2);
-    expect([...ofensores.keys()]).toEqual([path.join('pt-BR', 'adr', '0001.html')]);
+    expect([...ofensores.keys()]).toEqual([path.join('en', 'adr', '0001.html')]);
   });
 });

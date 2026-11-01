@@ -1,8 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, desc, eq, gte, inArray, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, ne, sql } from 'drizzle-orm';
 import {
   TokenUsageRepository,
   type AgentTokenUsage,
+  type SessionAgentTokenUsage,
   type RecordTokenUsageInput,
   type WorkspaceTokenUsageSummary,
 } from '../../../application/ports/token-usage-repository.port';
@@ -13,13 +14,63 @@ import type {
   SpendDimension,
   SpendScope,
 } from '../../../application/ports/token-usage-repository.port';
-import { projects, sessions, tokenUsage } from '../../../db/schema';
+import { MODELO_DO_JEV } from '../../../domain/llm/tool-router';
+import { models, projects, sessions, tokenUsage } from '../../../db/schema';
 import { DRIZZLE, type DrizzleDb } from './drizzle-client';
 import { currentDb } from './drizzle-context';
 
 @Injectable()
 export class DrizzleTokenUsageRepository implements TokenUsageRepository {
   constructor(@Inject(DRIZZLE) private readonly rootDb: DrizzleDb) {}
+
+  async listarACorrigir(desde: Date, limite: number) {
+    const db = currentDb(this.rootDb);
+    const rows = await db
+      .select({
+        id: tokenUsage.id,
+        projectId: sessions.projectId,
+        provider: tokenUsage.provider,
+        generationId: tokenUsage.generationId,
+        costMicros: tokenUsage.costMicros,
+        inputTokens: tokenUsage.inputTokens,
+        outputTokens: tokenUsage.outputTokens,
+      })
+      .from(tokenUsage)
+      .innerJoin(sessions, eq(sessions.id, tokenUsage.sessionId))
+      .where(
+        and(
+          eq(tokenUsage.custoAReconciliar, true),
+          gte(tokenUsage.createdAt, desde),
+        ),
+      )
+      .orderBy(tokenUsage.createdAt)
+      .limit(limite);
+    return rows.flatMap((r) =>
+      r.generationId ? [{ ...r, generationId: r.generationId }] : [],
+    );
+  }
+
+  async aplicarCustoReal(
+    id: string,
+    custoRealMicros: number,
+    precoImplicitoPorMilhao: number,
+  ): Promise<boolean> {
+    const db = currentDb(this.rootDb);
+    const res = await db
+      .update(tokenUsage)
+      .set({
+        // O catálogo/estimativa de antes vira a referência, como no ADR 0188.
+        catalogCostMicros: tokenUsage.costMicros,
+        costMicros: custoRealMicros,
+        inputPricePerMillionMicros: precoImplicitoPorMilhao,
+        outputPricePerMillionMicros: precoImplicitoPorMilhao,
+        priceImplicit: true,
+        custoAReconciliar: false,
+      })
+      .where(and(eq(tokenUsage.id, id), eq(tokenUsage.custoAReconciliar, true)))
+      .returning({ id: tokenUsage.id });
+    return res.length > 0;
+  }
 
   async record(input: RecordTokenUsageInput): Promise<TokenUsage> {
     const db = currentDb(this.rootDb);
@@ -39,6 +90,7 @@ export class DrizzleTokenUsageRepository implements TokenUsageRepository {
         inputPricePerMillionMicros: input.inputPricePerMillionMicros,
         outputPricePerMillionMicros: input.outputPricePerMillionMicros,
         priceImplicit: input.priceImplicit ?? false,
+        custoAReconciliar: input.custoAReconciliar ?? false,
         catalogCostMicros: input.catalogCostMicros ?? null,
         resolvedModelName: input.resolvedModelName ?? null,
         generationId: input.generationId ?? null,
@@ -48,6 +100,7 @@ export class DrizzleTokenUsageRepository implements TokenUsageRepository {
         bindingOrigin: input.bindingOrigin,
         upstreamProvider: input.upstreamProvider,
         routingPreference: input.routingPreference,
+        priceCeilingFactor: input.priceCeilingFactor,
       })
       .returning();
 
@@ -74,6 +127,7 @@ export class DrizzleTokenUsageRepository implements TokenUsageRepository {
       bindingOrigin: row.bindingOrigin,
       upstreamProvider: row.upstreamProvider,
       routingPreference: row.routingPreference,
+      priceCeilingFactor: row.priceCeilingFactor,
       createdAt: row.createdAt,
     };
   }
@@ -100,7 +154,7 @@ export class DrizzleTokenUsageRepository implements TokenUsageRepository {
 
   async sumBySessionGroupedByActor(
     sessionId: string,
-  ): Promise<AgentTokenUsage[]> {
+  ): Promise<SessionAgentTokenUsage[]> {
     const db = currentDb(this.rootDb);
     const rows = await db
       .select({
@@ -113,12 +167,47 @@ export class DrizzleTokenUsageRepository implements TokenUsageRepository {
       .where(eq(tokenUsage.sessionId, sessionId))
       .groupBy(tokenUsage.actorId);
 
-    return rows.map((row) => ({
-      actorId: row.actorId,
-      costMicros: Number(row.costMicros),
-      inputTokens: Number(row.inputTokens),
-      outputTokens: Number(row.outputTokens),
-    }));
+    // Última chamada por ator (AT-654, RN-969): sem as linhas do Jev (ele grava
+    // em nome do agente) e com a janela do modelo DAQUELA chamada.
+    const ultimas = await db
+      .selectDistinctOn([tokenUsage.actorId], {
+        actorId: tokenUsage.actorId,
+        inputTokens: tokenUsage.inputTokens,
+        modelName: tokenUsage.modelName,
+        contextWindow: models.contextWindow,
+      })
+      .from(tokenUsage)
+      .leftJoin(models, eq(models.id, tokenUsage.modelId))
+      .where(
+        and(
+          eq(tokenUsage.sessionId, sessionId),
+          ne(tokenUsage.modelName, MODELO_DO_JEV),
+        ),
+      )
+      // `id` é uuid aleatório (sem coluna monotônica): desempata de forma estável, não "cronológica".
+      .orderBy(
+        tokenUsage.actorId,
+        desc(tokenUsage.createdAt),
+        desc(tokenUsage.id),
+      );
+    const porAtor = new Map(ultimas.map((u) => [u.actorId, u]));
+
+    return rows.map((row) => {
+      const u = porAtor.get(row.actorId);
+      return {
+        actorId: row.actorId,
+        costMicros: Number(row.costMicros),
+        inputTokens: Number(row.inputTokens),
+        outputTokens: Number(row.outputTokens),
+        lastCall: u
+          ? {
+              inputTokens: u.inputTokens,
+              modelName: u.modelName,
+              contextWindow: u.contextWindow,
+            }
+          : null,
+      };
+    });
   }
 
   async summarizeForWorkspaceThisMonth(
@@ -302,6 +391,7 @@ export class DrizzleTokenUsageRepository implements TokenUsageRepository {
         rotulo,
         actorKind,
         costMicros: custo,
+        assinaturaMicros: sql<string>`coalesce(sum(${tokenUsage.costMicros}) filter (where ${models.billing} = 'subscription'), 0)`,
         inputTokens: sql<string>`coalesce(sum(${tokenUsage.inputTokens}), 0)`,
         outputTokens: sql<string>`coalesce(sum(${tokenUsage.outputTokens}), 0)`,
         chamadas: sql<string>`count(*)`,
@@ -309,6 +399,7 @@ export class DrizzleTokenUsageRepository implements TokenUsageRepository {
       .from(tokenUsage)
       .innerJoin(sessions, eq(sessions.id, tokenUsage.sessionId))
       .innerJoin(projects, eq(projects.id, sessions.projectId))
+      .leftJoin(models, eq(models.id, tokenUsage.modelId))
       .where(and(...condicoes))
       .groupBy(chave, rotulo, actorKind)
       // Série temporal cresce da esquerda para a direita; ranking desce do
@@ -321,6 +412,7 @@ export class DrizzleTokenUsageRepository implements TokenUsageRepository {
       rotulo: row.rotulo,
       actorKind: row.actorKind,
       costMicros: Number(row.costMicros),
+      assinaturaMicros: Number(row.assinaturaMicros),
       inputTokens: Number(row.inputTokens),
       outputTokens: Number(row.outputTokens),
       chamadas: Number(row.chamadas),

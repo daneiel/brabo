@@ -1,4 +1,55 @@
-import type { SessionEvent } from './api-types';
+import type { Epic, SessionEvent, Task } from './api-types';
+
+export type EstadoDaTarefa = 'blocked' | 'todo' | 'in_progress' | 'in_review' | 'done';
+
+/**
+ * RN-887 (AT-536): o estado que a tela mostra de uma tarefa. O bloqueio é
+ * ORTOGONAL ao `status` (a bloqueada segue `todo`/`in_progress` com
+ * `blocked: true`), então quem mostra lê os dois — e `blocked` vence.
+ */
+export function estadoDaTarefa(task: Pick<Task, 'status' | 'blocked'>): EstadoDaTarefa {
+  return task.blocked ? 'blocked' : task.status;
+}
+
+/**
+ * RN-794 (AT-469): quantas tarefas do backlog ainda não terminaram — `todo`
+ * (inclusive a devolvida pelo gate), `in_progress`, `in_review` e as
+ * bloqueadas, que são `todo`/`in_progress` com `blocked`. É o número que a
+ * tela diz quando NÃO há execução vigente: trabalho que só volta a rodar
+ * religando a execução. Derivado do backlog que a tela já lê, sem rota nova.
+ */
+export function contarTarefasPendentes(epics: Epic[] | undefined): number {
+  return (epics ?? []).reduce(
+    (total, epic) =>
+      total +
+      epic.stories.reduce((n, story) => n + story.tasks.filter((t) => t.status !== 'done').length, 0),
+    0,
+  );
+}
+
+/**
+ * RN-815 (AT-488): o que o "Parar execução" afeta, lido do BACKLOG e não da
+ * janela de eventos — a tarefa `in_review` (gate de QA rodando) não tem dev
+ * agent com task em curso no roster, e a confirmação dizia "nenhuma tarefa
+ * está em curso" sobre ela. Conta `in_progress` e `in_review` separadas,
+ * porque o que acontece com cada uma é dito em frase própria.
+ */
+export function contarTarefasAfetadasAoParar(epics: Epic[] | undefined): {
+  emCurso: number;
+  emRevisao: number;
+} {
+  let emCurso = 0;
+  let emRevisao = 0;
+  for (const epic of epics ?? []) {
+    for (const story of epic.stories) {
+      for (const task of story.tasks) {
+        if (task.status === 'in_progress') emCurso += 1;
+        else if (task.status === 'in_review') emRevisao += 1;
+      }
+    }
+  }
+  return { emCurso, emRevisao };
+}
 
 /**
  * Progresso ao vivo de um dev agent, derivado do event log (Fase 4a).
@@ -65,7 +116,10 @@ export function deriveExecutionProgress(
     // ANTERIOR pra sempre — o card dizia "ocioso" ao lado de "Implementar
     // X", uma task que já não existe mais pra ele. `dev.awaiting_gate` NÃO
     // limpa: a mesma task segue em aberto, só esperando o gate.
-    if ((e.type === 'dev.idle' || e.type === 'dev.idle_tripped') && p.agentId) {
+    if ((e.type === 'dev.idle' ||
+        e.type === 'dev.idle_tripped' ||
+        e.type === 'dev.credit_exhausted') &&
+      p.agentId) {
       agents.set(p.agentId, {
         ...agents.get(p.agentId),
         module: agents.get(p.agentId)?.module ?? '',

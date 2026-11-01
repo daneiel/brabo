@@ -13,11 +13,13 @@ import type {
   ToolCall,
   ToolDef,
 } from '@brabo/shared';
+import { ORCAMENTO_DE_RACIOCINIO_PADRAO } from '../../domain/llm/raciocinio-do-agente';
 import { LLMProvider } from '../../application/ports/llm-provider.port';
 import type { TokenEstimator } from '../../application/ports/token-estimator.port';
 import {
   LLMProviderError,
   LLMUpstreamError,
+  LLMPriceCeilingError,
   normalizeHttpStatus,
 } from '../../domain/llm/llm-provider-errors';
 import { extrairVetoresOpenAI, montarEmbedding } from './embedding-result';
@@ -29,6 +31,23 @@ import {
   readBody,
   timeoutFromEnv,
 } from './http-stream';
+
+/**
+ * Teto de saída quando quem chama não define (RN-734) — o MESMO
+ * `DEFAULT_MAX_TOKENS` do `anthropic-provider.ts`, para os agentes terem o
+ * mesmo teto em qualquer dialeto.
+ */
+export const MAX_TOKENS_PADRAO = 4096;
+
+/**
+ * Orçamento EXPLÍCITO de raciocínio para modelo que raciocina (RN-741). Sem
+ * ele, o `anthropic/claude-haiku-5.5` via OpenRouter gastou os 4096 do teto
+ * inteiro em raciocínio (`reasoning_tokens = output_tokens = 4096`, TP-01 de
+ * 08/10) e a chamada de ferramenta nunca saiu. O raciocínio NÃO é desligado:
+ * ele ganha um teto próprio, e o `max_tokens` enviado passa a ser
+ * saída visível + este orçamento — a saída visível continua com o teto dela.
+ */
+export const ORCAMENTO_DE_RACIOCINIO = ORCAMENTO_DE_RACIOCINIO_PADRAO;
 
 /**
  * Teto de inatividade dos providers de API (o Ollama tem o seu, porque um
@@ -108,6 +127,19 @@ export type CampoDeRoteamento = (
   preferencia: RoutingPreference,
 ) => Record<string, unknown>;
 
+/** Como um hub recebe a chave de sessão (ADR 0221). Capability sem hook falha na construção. */
+export type CampoDeSessao = (chave: string) => Record<string, unknown>;
+
+/**
+ * Como um hub recebe o TETO DE PREÇO por chamada (ADR 0225). Capability sem
+ * hook falha na construção. O objeto `provider` que ele devolve é MESCLADO com
+ * o do `campoDeRoteamento`, nunca espalhado por cima (apagaria o `sort`).
+ */
+export type CampoDeTetoDePreco = (teto: {
+  inputPerMillionMicros: number;
+  outputPerMillionMicros: number;
+}) => Record<string, unknown>;
+
 /**
  * Como um provider informa o CUSTO REAL da chamada no `usage` (ADR 0188,
  * RN-665). O OpenRouter o põe em `usage.cost`, em USD; a OpenAI não informa.
@@ -138,9 +170,53 @@ export interface OpenAICompatibleConfig {
   readonly parseErrorFrame?: ParseErrorFrame;
   /** Só em hubs — ver `CampoDeRoteamento`. */
   readonly campoDeRoteamento?: CampoDeRoteamento;
+  /** Só em hubs — ver `CampoDeSessao`. */
+  readonly campoDeSessao?: CampoDeSessao;
+  /** Só em hubs — ver `CampoDeTetoDePreco`. */
+  readonly campoDeTetoDePreco?: CampoDeTetoDePreco;
   /** Só quem informa custo na resposta — ver `ExtrairCustoReal`. */
   readonly extrairCustoReal?: ExtrairCustoReal;
+  /** Só quem sabe controlar o raciocínio — ver `CampoDeRaciocinioDesligado`. */
+  readonly campoDeRaciocinioDesligado?: CampoDeRaciocinioDesligado;
+  /** Só quem aceita ponto de cache explícito — ver `MarcarCacheDePrompt`. */
+  readonly marcarCacheDePrompt?: MarcarCacheDePrompt;
+  /**
+   * Só quem devolve `usage` que o próprio gateway distorce (AT-638, RN-958):
+   * recebe o `usage` cru do frame e devolve o que vale gravar. Ausente = o
+   * `usage` é lido como veio, como sempre foi.
+   */
+  readonly normalizarUsage?: (
+    usage: Record<string, unknown>,
+  ) => Record<string, unknown>;
+  /**
+   * Só gateway que embrulha o erro do upstream noutro status (AT-639, RN-959):
+   * `undefined` = a classificação padrão por status.
+   */
+  readonly classificarErroHttp?: (
+    status: number,
+    corpo: string,
+  ) => LLMProviderError | undefined;
 }
+
+/**
+ * Como um provider recebe os PONTOS DE CACHE de prompt (RN-892). Recebe as
+ * mensagens já no formato do fio e o modelo, e devolve as mensagens com o
+ * ponto marcado — ou as MESMAS, quando o modelo não precisa de ponto explícito
+ * (a camada de modelo da capability). Só é chamado com
+ * `capabilities.promptCaching` `true`.
+ */
+export type MarcarCacheDePrompt = (
+  mensagens: WireMessage[],
+  modelo: string,
+) => WireMessage[];
+
+/**
+ * Como dizer ao provider que o raciocínio vai DESLIGADO (RN-783). A presença
+ * dele também é o que liga a folga de `ORCAMENTO_DE_RACIOCINIO` no `max_tokens`
+ * (RN-741/782). Ausente = o provider não controla raciocínio e o `max_tokens`
+ * fica como sempre foi.
+ */
+export type CampoDeRaciocinioDesligado = () => Record<string, unknown>;
 
 /**
  * Base configurável para todo provider que fala o dialeto `/chat/completions`
@@ -153,6 +229,8 @@ export interface OpenAICompatibleConfig {
 export class OpenAICompatibleProvider implements LLMProvider {
   readonly name: LLMProviderName;
   readonly capabilities: LLMProviderCapabilities;
+  /** Sabe mandar o raciocínio desligado (RN-783); a retentativa da RN-916 exige. */
+  readonly aceitaRaciocinioDesligado: boolean;
 
   constructor(
     protected readonly config: OpenAICompatibleConfig,
@@ -165,10 +243,29 @@ export class OpenAICompatibleProvider implements LLMProvider {
   ) {
     this.name = config.name;
     this.capabilities = config.capabilities;
+    this.aceitaRaciocinioDesligado = Boolean(config.campoDeRaciocinioDesligado);
     if (config.capabilities.routingPreference && !config.campoDeRoteamento) {
       throw new Error(
         `${config.name} declara \`routingPreference\` sem \`campoDeRoteamento\` ` +
           '— a capability afirmaria um campo que nunca iria ao fio (ADR 0166).',
+      );
+    }
+    if (config.capabilities.stickySession && !config.campoDeSessao) {
+      throw new Error(
+        `${config.name} declara \`stickySession\` sem \`campoDeSessao\` ` +
+          '— a capability afirmaria um campo que nunca iria ao fio (ADR 0221).',
+      );
+    }
+    if (config.capabilities.priceCeiling && !config.campoDeTetoDePreco) {
+      throw new Error(
+        `${config.name} declara \`priceCeiling\` sem \`campoDeTetoDePreco\` ` +
+          '— a capability afirmaria um campo que nunca iria ao fio (ADR 0225).',
+      );
+    }
+    if (config.capabilities.promptCaching && !config.marcarCacheDePrompt) {
+      throw new Error(
+        `${config.name} declara \`promptCaching\` sem \`marcarCacheDePrompt\` ` +
+          '— a capability afirmaria um ponto de cache que nunca iria ao fio (RN-892).',
       );
     }
   }
@@ -197,16 +294,35 @@ export class OpenAICompatibleProvider implements LLMProvider {
     const status = response.statusCode ?? 0;
     if (status < 200 || status >= 300) {
       const corpoDoErro = await readBody(response);
-      yield toErrorChunk(
-        normalizeHttpStatus(this.name, status, corpoDoErro),
-        this.name,
-      );
+      // 404 COM teto enviado não é "modelo não encontrado" (ADR 0225): o modelo
+      // existe, só nenhum upstream cabe no teto.
+      const erro =
+        status === 404 && this.capabilities.priceCeiling && options.priceCeiling
+          ? new LLMPriceCeilingError(
+              this.name,
+              `nenhum upstream de ${this.name} cabe no teto de preço (404)`,
+            )
+          : (this.config.classificarErroHttp?.(status, corpoDoErro) ??
+            normalizeHttpStatus(this.name, status, corpoDoErro));
+      yield toErrorChunk(erro, this.name);
       return;
     }
 
     const emAndamento = new Map<number, ToolCallEmMontagem>();
     let usageRecebido = false;
+    // `finish_reason: "length"` (RN-737): o teto de saída cortou a resposta.
+    let cortadaPeloTeto = false;
     let textoAcumulado = '';
+    // ADR 0224 (RN-915): o raciocínio é contado no stream (`delta.reasoning`,
+    // caracteres/4) e a conexão é abortada ao passar do orçamento do modelo.
+    const limiteDeRaciocinio =
+      options.reasoning &&
+      !options.reasoningOff &&
+      this.config.campoDeRaciocinioDesligado
+        ? options.reasoningBudget
+        : undefined;
+    let caracteresDeRaciocinio = 0;
+    let abortadoPeloRaciocinio = false;
     let upstreamProvider: string | undefined;
     // O que a RESPOSTA diz sobre si (RN-665): o modelo que serviu de fato e o
     // id que o provider deu a ela. Vêm em todo frame do dialeto; o último
@@ -247,11 +363,23 @@ export class OpenAICompatibleProvider implements LLMProvider {
         }
         if (typeof frame.id === 'string' && frame.id) generationId = frame.id;
 
+        if (frame.choices?.[0]?.finish_reason === 'length') {
+          cortadaPeloTeto = true;
+        }
+
         const delta = frame.choices?.[0]?.delta;
 
         if (delta?.content) {
           textoAcumulado += delta.content;
           yield { type: 'text_delta', text: delta.content };
+        }
+
+        if (limiteDeRaciocinio && typeof delta?.reasoning === 'string') {
+          caracteresDeRaciocinio += delta.reasoning.length;
+          if (caracteresDeRaciocinio / 4 > limiteDeRaciocinio) {
+            abortadoPeloRaciocinio = true;
+            break;
+          }
         }
 
         // `tool_calls` chega FATIADO: o primeiro frame traz id e nome, e os
@@ -263,20 +391,22 @@ export class OpenAICompatibleProvider implements LLMProvider {
 
         if (frame.usage) {
           usageRecebido = true;
-          const costMicros = this.config.extrairCustoReal?.(frame.usage);
+          const usage = (this.config.normalizarUsage?.(frame.usage) ??
+            frame.usage) as NonNullable<FrameDeChat['usage']>;
+          const costMicros = this.config.extrairCustoReal?.(usage);
           // PARTES da entrada e da saída que o dialeto informa (RN-666): campos
           // da própria OpenAI, lidos para todo provider — quem não os manda
           // fica sem, e "não disse" nunca vira 0.
           const cachedInputTokens = contagem(
-            frame.usage.prompt_tokens_details?.cached_tokens,
+            usage.prompt_tokens_details?.cached_tokens,
           );
           const reasoningTokens = contagem(
-            frame.usage.completion_tokens_details?.reasoning_tokens,
+            usage.completion_tokens_details?.reasoning_tokens,
           );
           yield {
             type: 'usage',
-            inputTokens: frame.usage.prompt_tokens ?? 0,
-            outputTokens: frame.usage.completion_tokens ?? 0,
+            inputTokens: usage.prompt_tokens ?? 0,
+            outputTokens: usage.completion_tokens ?? 0,
             estimated: false,
             ...(upstreamProvider ? { upstreamProvider } : {}),
             ...(costMicros !== undefined ? { costMicros } : {}),
@@ -292,8 +422,30 @@ export class OpenAICompatibleProvider implements LLMProvider {
       return;
     }
 
+    if (abortadoPeloRaciocinio) {
+      response.destroy(); // a cobrança para no que já foi gerado
+      yield { type: 'truncated', motivo: 'raciocinio' };
+      // Sem `usage` na resposta abortada: tokens = caracteres/4 (ADR 0224).
+      const entrada = messages.map((m) => m.content).join('\n');
+      yield {
+        type: 'usage',
+        inputTokens:
+          this.tokenEstimator?.count(entrada) ?? Math.ceil(entrada.length / 4),
+        outputTokens: Math.ceil(
+          (caracteresDeRaciocinio + textoAcumulado.length) / 4,
+        ),
+        estimated: true,
+        abortadoPeloRaciocinio: true,
+        ...(upstreamProvider ? { upstreamProvider } : {}),
+        ...(resolvedModel ? { resolvedModel } : {}),
+        ...(generationId ? { generationId } : {}),
+      };
+      return;
+    }
+
     const toolCalls = finalizar(emAndamento);
     if (toolCalls.length > 0) yield { type: 'tool_calls', toolCalls };
+    if (cortadaPeloTeto) yield { type: 'truncated' };
 
     if (!usageRecebido && this.tokenEstimator) {
       yield {
@@ -426,33 +578,95 @@ export class OpenAICompatibleProvider implements LLMProvider {
     });
   }
 
+  /**
+   * Os campos de HUB do corpo: roteamento (ADR 0166), sessão (ADR 0221) e teto
+   * de preço (ADR 0225). Cada um só com a capability PROVADA; provider que não
+   * a declara ignora o campo em vez de falhar por ele. O objeto `provider` de
+   * roteamento e o do teto são MESCLADOS: espalhá-los lado a lado deixaria o
+   * último apagar o `sort`.
+   */
+  private camposDoHub(options: ChatOptions): Record<string, unknown> {
+    const c = this.config;
+    const parte = [
+      this.capabilities.routingPreference &&
+      options.routingPreference &&
+      c.campoDeRoteamento
+        ? c.campoDeRoteamento(options.routingPreference)
+        : {},
+      this.capabilities.stickySession && options.sessionKey && c.campoDeSessao
+        ? c.campoDeSessao(options.sessionKey)
+        : {},
+      this.capabilities.priceCeiling &&
+      options.priceCeiling &&
+      c.campoDeTetoDePreco
+        ? c.campoDeTetoDePreco(options.priceCeiling)
+        : {},
+    ];
+    const corpo: Record<string, unknown> = {};
+    for (const p of parte) {
+      const { provider, ...resto } = p as {
+        provider?: Record<string, unknown>;
+      };
+      Object.assign(corpo, resto);
+      if (provider)
+        corpo.provider = { ...(corpo.provider as object), ...provider };
+    }
+    return corpo;
+  }
+
   private buildBody(messages: ChatMessage[], options: ChatOptions) {
     const { flags } = this.config;
+    const saidaVisivel = options.maxTokens ?? MAX_TOKENS_PADRAO;
+    // Modelo que raciocina ganha FOLGA no teto (RN-741): o raciocínio conta
+    // dentro do `max_tokens`, e sem isso ele pode gastá-lo inteiro antes do
+    // texto e da tool call. Campo de raciocínio NÃO vai por aceitar o
+    // parâmetro (RN-782): só o "desligado" explícito dos dev agents (RN-783).
+    const controla = Boolean(
+      options.reasoning && this.config.campoDeRaciocinioDesligado,
+    );
+    const orcamento =
+      controla && !options.reasoningOff ? options.reasoningBudget : undefined;
+    const raciocinio =
+      controla && options.reasoningOff
+        ? this.config.campoDeRaciocinioDesligado?.()
+        : orcamento
+          ? { reasoning: { max_tokens: orcamento } }
+          : undefined;
+
+    const noFio = messages.map(toWireMessage);
+    // Só com a capability PROVADA (RN-892): desligada, o corpo é byte a byte
+    // o de antes.
+    if ((options.tools?.length ?? 0) > 0 && !this.capabilities.toolCalling) {
+      throw new Error(
+        `O provider "${this.name}" não declara tool calling (RN-950): ` +
+          `as ferramentas pedidas não seriam enviadas.`,
+      );
+    }
+    const mensagens =
+      this.capabilities.promptCaching && this.config.marcarCacheDePrompt
+        ? this.config.marcarCacheDePrompt(noFio, options.model)
+        : noFio;
 
     return {
       model: options.model,
-      messages: messages.map(toWireMessage),
+      messages: mensagens,
       stream: true,
-      ...(options.maxTokens !== undefined
-        ? { [flags.maxTokensField]: options.maxTokens }
-        : {}),
+      // SEMPRE explícito (RN-734): sem o campo, o OpenRouter reserva o
+      // crédito da saída MÁXIMA do modelo por chamada e recusa com 402.
+      [flags.maxTokensField]: controla
+        ? saidaVisivel + (orcamento ?? ORCAMENTO_DE_RACIOCINIO)
+        : saidaVisivel,
+      ...(raciocinio ?? {}),
       ...(flags.streamOptionsIncludeUsage
         ? { stream_options: { include_usage: true } }
         : {}),
       // Mandar `tools: []` faz alguns compatíveis responderem 400 — só inclui
-      // quando há ferramenta, e só quando o provider declara saber usá-las.
-      ...(this.capabilities.toolCalling &&
-      options.tools &&
-      options.tools.length > 0
+      // quando há ferramenta. Ferramenta pedida a provider sem a capability
+      // LANÇA (RN-950): descartar calado foi o XML no fio da AT-637.
+      ...(options.tools && options.tools.length > 0
         ? { tools: options.tools.map(toWireTool) }
         : {}),
-      // Só com a capability PROVADA e com preferência no binding (ADR 0166):
-      // provider que não a declara ignora o campo em vez de falhar por ele.
-      ...(this.capabilities.routingPreference &&
-      options.routingPreference &&
-      this.config.campoDeRoteamento
-        ? this.config.campoDeRoteamento(options.routingPreference)
-        : {}),
+      ...this.camposDoHub(options),
     };
   }
 }
@@ -491,9 +705,16 @@ export function parseCatalogoPadrao(corpo: unknown): ModeloDoCatalogo[] {
 
 // --- Mapeamento para o formato de fio ---
 
-interface WireMessage {
+/** Bloco de conteúdo com ponto de cache (RN-892) — só a forma que marcamos. */
+export interface WireContentPart {
+  type: 'text';
+  text: string;
+  cache_control?: { type: 'ephemeral' };
+}
+
+export interface WireMessage {
   role: string;
-  content: string;
+  content: string | WireContentPart[];
   tool_call_id?: string;
   name?: string;
   tool_calls?: {
@@ -550,8 +771,10 @@ interface FrameDeChat {
   choices?: {
     delta?: {
       content?: string;
+      reasoning?: unknown;
       tool_calls?: ToolCallParcial[];
     };
+    finish_reason?: unknown;
   }[];
   usage?: {
     prompt_tokens?: number;

@@ -9,8 +9,17 @@ import { UserCredentialRepository } from '../../ports/user-credential-repository
 import { EncryptionService } from '../../ports/encryption.port';
 import { InfraArtifactRepository } from '../../ports/infra-artifact-repository.port';
 import { AppendSessionEventUseCase } from '../sessions/append-session-event.use-case';
+import { BRANCH_DE_TRABALHO } from '../../../domain/actions/protected-branches';
 import type { ProposedAction } from '../../../domain/actions/proposed-action.entity';
 import type { InfraPrExecutionResult } from '../../../domain/git/infra-pr-execution-result';
+import { SessionEventRepository } from '../../ports/session-event-repository.port';
+import { GetRunInstructionsUseCase } from '../execution/get-run-instructions.use-case';
+import {
+  EVENTO_INSTRUCOES_DE_EXECUCAO,
+  normalizarRun,
+  recusaDoRun,
+  type Run,
+} from '../../../domain/infra/run-instructions';
 
 interface InfraFilePayload {
   path: string;
@@ -20,6 +29,8 @@ interface InfraFilePayload {
 interface InfraPrPayload {
   title: string;
   files: InfraFilePayload[];
+  // RN-852 (AT-517): obrigatório desde o ADR 0213.
+  run?: unknown;
 }
 
 const INFRA_BRANCH = 'feature/infra-setup';
@@ -68,6 +79,7 @@ export class ExecuteInfraPrUseCase {
     private readonly userCredentials: UserCredentialRepository,
     private readonly encryption: EncryptionService,
     private readonly infraArtifacts: InfraArtifactRepository,
+    private readonly sessionEvents: SessionEventRepository,
   ) {}
 
   async execute(
@@ -93,6 +105,14 @@ export class ExecuteInfraPrUseCase {
       );
     }
     const paths = files.map((f) => f.path);
+
+    // RN-852: `run` é revalidado na EXECUÇÃO (a proposta já recusou com 400,
+    // mas a ação pode ter sido gravada antes da régua existir).
+    const recusaRun = recusaDoRun(payload.run);
+    if (recusaRun) {
+      return this.fail(projectId, sessionId, action.id, paths, recusaRun);
+    }
+    const run = normalizarRun(payload.run);
 
     try {
       const repo = await this.repositories.findByProjectId(projectId);
@@ -145,7 +165,11 @@ export class ExecuteInfraPrUseCase {
           await provider.createBranch({
             externalId: repo.externalId,
             branchName: branch,
-            fromRef: repo.defaultBranch,
+            // RN-729: a PR de infra segue a RN-664 — nasce de `dev` e mira
+            // `dev`, senão o Dockerfile mergeado nunca chega ao worktree do
+            // dev agent (que nasce de `dev`). Sem `dev`, o provider recusa
+            // nomeando a ref, sem queda para a default.
+            fromRef: BRANCH_DE_TRABALHO,
             accessToken,
           });
         } catch (error) {
@@ -166,20 +190,32 @@ export class ExecuteInfraPrUseCase {
           projectId,
           existing.prActionId,
         );
-        return this.record(projectId, sessionId, action.id, 'executed', {
-          pullRequestUrl: original?.pullRequestUrl ?? '',
-          pullRequestId: original?.pullRequestId ?? '',
-          branch,
-          paths,
-          title: payload.title,
-        });
+        return this.record(
+          projectId,
+          sessionId,
+          action.id,
+          'executed',
+          {
+            pullRequestUrl: original?.pullRequestUrl ?? '',
+            pullRequestId: original?.pullRequestId ?? '',
+            branch,
+            paths,
+            title: payload.title,
+          },
+          run,
+        );
       }
 
       const pr = await provider.openPullRequest({
         externalId: repo.externalId,
         sourceBranch: branch,
-        targetBranch: repo.defaultBranch,
+        targetBranch: BRANCH_DE_TRABALHO,
         title: payload.title,
+        // RN-729: a PR leva a identidade do agente (`<agente>[bot]`, RN-705).
+        author:
+          action.actor?.kind === 'agent' && action.actor.id
+            ? `${action.actor.id}[bot]`
+            : 'infra[bot]',
         body: `Artefatos de infra propostos pelo InfraAgent.\n\nArquivos:\n${paths.map((p) => `- \`${p}\``).join('\n')}`,
         accessToken,
       });
@@ -191,7 +227,14 @@ export class ExecuteInfraPrUseCase {
         paths,
         title: payload.title,
       };
-      return this.record(projectId, sessionId, action.id, 'executed', result);
+      return this.record(
+        projectId,
+        sessionId,
+        action.id,
+        'executed',
+        result,
+        run,
+      );
     } catch (error) {
       return this.fail(
         projectId,
@@ -234,13 +277,21 @@ export class ExecuteInfraPrUseCase {
     });
   }
 
-  private record(
+  private async record(
     projectId: string,
     sessionId: string,
     actionId: string,
     status: 'executed' | 'failed',
     executionResult: InfraPrExecutionResult,
+    run: Run | null = null,
   ) {
+    // RN-852: a versão é lida fora da transação (só leitura do log).
+    const version =
+      status === 'executed' && run
+        ? await new GetRunInstructionsUseCase(this.sessionEvents).proximaVersao(
+            projectId,
+          )
+        : 0;
     return this.unitOfWork.runInTransaction(async () => {
       const updated = await this.proposedActions.updateExecutionResult(
         actionId,
@@ -270,6 +321,20 @@ export class ExecuteInfraPrUseCase {
       // PR aberta com sucesso: nasce o artefato de infra já em
       // 'awaiting_qa' — diferente de Task (que existe ANTES da PR e abre o
       // gate depois via OpenGateUseCase), aqui a PR é o próprio nascimento.
+      // RN-852: PR aberta (ou corrigida) com `run` emite o vigente de
+      // `artifact.run_instructions` — o de maior `version` substitui.
+      if (status === 'executed' && run) {
+        await this.appendSessionEvent.execute(projectId, sessionId, {
+          type: EVENTO_INSTRUCOES_DE_EXECUCAO,
+          actor: { kind: 'agent', id: 'infra-lead' },
+          payload: {
+            ...run,
+            prUrl: executionResult.pullRequestUrl,
+            version,
+          },
+        });
+      }
+
       if (status === 'executed') {
         await this.infraArtifacts.create({
           projectId,

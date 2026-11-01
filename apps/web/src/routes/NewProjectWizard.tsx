@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { SEM_AUTOFILL } from '../lib/conversa-comecou';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Trans, useTranslation } from 'react-i18next';
@@ -24,7 +25,6 @@ import {
   type ModoDeRepositorio,
   type ModoDeWorkspace,
 } from '../lib/wizard';
-import { BOOTSTRAP_STEPS } from '../lib/bootstrap';
 import { CredentialStep } from '../components/wizard/CredentialStep';
 import { Modal } from '../components/ui/Modal';
 import { Button } from '../components/ui/Button';
@@ -694,13 +694,94 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
         />
       )}
 
-      {/* UM passo, com o DESTINO acima da identificação — é o destino que
-          decide se existe campo de caminho, e pedir o nome primeiro era
-          mostrar a consequência depois da escolha fácil. Os dois eram
-          passos separados; o gate deste é a CONJUNÇÃO dos dois que
-          existiam, e um `||` no lugar do `&&` deixaria avançar sem nome. */}
+      {/* UM passo, com a IDENTIFICAÇÃO acima do destino (AT-441): o
+          caminho sugerido em `mounted` é `<base>/<slug>` (RN-513), DERIVADO
+          do nome — pedir o caminho antes mostrava o derivado antes da
+          fonte. Os dois eram passos separados; o gate deste é a CONJUNÇÃO
+          dos dois que existiam, e um `||` no lugar do `&&` deixaria avançar
+          sem nome. */}
       {currentStep === 'details' && (
         <div>
+          {adotando ? (
+          <div>
+            <div className={styles.field}>
+              <label className={styles.fieldLabel} htmlFor="repo-external-id">
+                {t('details.adopt.repoLabel')}
+              </label>
+              <Input
+                id="repo-external-id"
+                {...SEM_AUTOFILL}
+                value={externalId}
+                onChange={(e) => setExternalId(e.target.value)}
+                placeholder={
+                  provider === 'local'
+                    ? t('details.adopt.placeholderLocal')
+                    : t('details.adopt.placeholderRemote')
+                }
+                autoFocus
+              />
+              <div className={styles.slugPreview}>
+                {provider === 'local'
+                  ? t('details.adopt.hintLocal')
+                  : t('details.adopt.hintRemote')}
+              </div>
+            </div>
+            <p className={styles.notaDaAdocao}>
+              <Trans i18nKey="details.adopt.note" ns="newProject" components={{ strong: <strong /> }} />
+            </p>
+          </div>
+          ) : (
+          <div>
+            <div className={styles.field}>
+              <label className={styles.fieldLabel} htmlFor="projeto-slug">
+                {t('details.create.nameLabel')}
+              </label>
+              {/* RN-736 (AT-418): sem `autoFocus` e sem "name" no id/name — o
+                  menu "Contact Info" de gerenciador de senha abre no FOCO de
+                  um campo que ele toma por nome de pessoa, e cobria o passo.
+                  RN-834 (AT-501): nem "title" — é token de pronome de
+                  tratamento (Sr./Sra.) no "Contact info" do NordPass, que não
+                  documenta atributo de ignore; heurística, não medida.
+                  RN-842 (AT-511): o rótulo visível deixa de dizer "Nome" —
+                  o classificador de contato lê o texto do <label>; segue
+                  heurística, sem atributo documentado. */}
+              <Input
+                id="projeto-slug"
+                name="projeto-slug"
+                {...SEM_AUTOFILL}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder={t('details.create.namePlaceholder')}
+              />
+              {/* Sem dono no rótulo: quem provisiona é o backend, com o dono da
+                  CREDENCIAL (`createForAuthenticatedUser`). Dizia `brabo/<slug>`,
+                  fixo no código — e o nome errado ia até a tela de confirmação,
+                  onde o usuário aprova. Melhor mostrar só o que se sabe. */}
+              {slug && (
+                <div className={styles.slugPreview}>
+                  {t('details.create.repoPreview', { slug })}
+                </div>
+              )}
+            </div>
+            <div className={styles.field}>
+              <span className={styles.fieldLabel}>{t('details.create.visibilityLabel')}</span>
+              <div className={styles.toggleRow}>
+                {(['private', 'public'] as Visibility[]).map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    className={[styles.toggleOption, visibility === v && styles.selected].filter(Boolean).join(' ')}
+                    onClick={() => setVisibility(v)}
+                  >
+                    {v === 'private'
+                      ? t('details.create.visibilityPrivate')
+                      : t('details.create.visibilityPublic')}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+          )}
         <div>
           <div className={styles.providerGrid}>
             {modosDeWorkspaceOferecidos.map((m) => (
@@ -745,10 +826,10 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
               <div className={styles.toggleRow}>
                 <Input
                   id="workspace-path"
+                  {...SEM_AUTOFILL}
                   value={caminhoLocal}
                   onChange={(e) => setCaminhoLocal(e.target.value)}
                   placeholder={t('workspace.pathPlaceholder')}
-                  autoFocus
                   style={{ flex: 1, minWidth: 0 }}
                 />
                 <Button
@@ -851,75 +932,6 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
             </div>
           )}
         </div>
-          {adotando ? (
-          <div>
-            <div className={styles.field}>
-              <label className={styles.fieldLabel} htmlFor="repo-external-id">
-                {t('details.adopt.repoLabel')}
-              </label>
-              <Input
-                id="repo-external-id"
-                value={externalId}
-                onChange={(e) => setExternalId(e.target.value)}
-                placeholder={
-                  provider === 'local'
-                    ? t('details.adopt.placeholderLocal')
-                    : t('details.adopt.placeholderRemote')
-                }
-                autoFocus
-              />
-              <div className={styles.slugPreview}>
-                {provider === 'local'
-                  ? t('details.adopt.hintLocal')
-                  : t('details.adopt.hintRemote')}
-              </div>
-            </div>
-            <p className={styles.notaDaAdocao}>
-              <Trans i18nKey="details.adopt.note" ns="newProject" components={{ strong: <strong /> }} />
-            </p>
-          </div>
-          ) : (
-          <div>
-            <div className={styles.field}>
-              <label className={styles.fieldLabel} htmlFor="project-name">
-                {t('details.create.nameLabel')}
-              </label>
-              <Input
-                id="project-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder={t('details.create.namePlaceholder')}
-                autoFocus
-              />
-              {/* Sem dono no rótulo: quem provisiona é o backend, com o dono da
-                  CREDENCIAL (`createForAuthenticatedUser`). Dizia `brabo/<slug>`,
-                  fixo no código — e o nome errado ia até a tela de confirmação,
-                  onde o usuário aprova. Melhor mostrar só o que se sabe. */}
-              {slug && (
-                <div className={styles.slugPreview}>
-                  {t('details.create.repoPreview', { slug })}
-                </div>
-              )}
-            </div>
-            <div className={styles.field}>
-              <span className={styles.fieldLabel}>{t('details.create.visibilityLabel')}</span>
-              <div className={styles.toggleRow}>
-                {(['private', 'public'] as Visibility[]).map((v) => (
-                  <button
-                    key={v}
-                    type="button"
-                    className={[styles.toggleOption, visibility === v && styles.selected].filter(Boolean).join(' ')}
-                    onClick={() => setVisibility(v)}
-                  >
-                    {v === 'private'
-                      ? t('details.create.visibilityPrivate')
-                      : t('details.create.visibilityPublic')}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-          )}
         </div>
       )}
 
@@ -934,8 +946,22 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
             value={
               PROVIDERS.find((p) => p.id === provider)
                 ? t(PROVIDERS.find((p) => p.id === provider)!.labelKey)
-                : t('confirm.unknownProvider')
+                : // Criar não pergunta provider (RN-541): o repositório nasce
+                  // `local` no aceite ao Arquiteto (RN-582). "—" parecia dado
+                  // faltando (AT-374).
+                  adotando
+                  ? t('confirm.unknownProvider')
+                  : t('confirm.localProvider')
             }
+          />
+          {/* AT-441: o MODO tem linha própria — só o caminho não dizia se a
+              pasta seria montada ou atendida pelo agente local. */}
+          <SummaryRow
+            label={t('confirm.workspaceModeLabel')}
+            value={t(
+              MODOS_DE_WORKSPACE.find((m) => m.id === modoDeWorkspace)?.labelKey ??
+                'workspaceMode.container.label',
+            )}
           />
           <SummaryRow
             label={t('confirm.codeAtLabel')}
@@ -945,6 +971,7 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
                 : t('confirm.managedFolder')
             }
             mono={modoDeWorkspace !== 'container'}
+            caminho={modoDeWorkspace !== 'container'}
           />
           {adotando ? (
             <>
@@ -967,7 +994,7 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
               />
               <SummaryRow
                 label={t('confirm.bootstrapLabel')}
-                value={t('confirm.bootstrapStepsValue', { count: BOOTSTRAP_STEPS.length })}
+                value={t('confirm.bootstrapCreateValue')}
               />
             </>
           )}
@@ -983,6 +1010,13 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
 
       {erroDeCriacao && (
         <Alert tone="danger">{erroDeCriacao}</Alert>
+      )}
+
+      {/* AT-374: "Continuar" desabilitado diz POR QUÊ, em texto. */}
+      {currentStep !== 'confirm' && !canAdvance() && (
+        <p className={styles.motivoBloqueio} data-testid="motivo-do-continuar">
+          {t(`footer.blocked.${currentStep}`)}
+        </p>
       )}
 
       <div className={styles.footer}>
@@ -1002,7 +1036,7 @@ export function NewProjectWizard({ workspaceId, onClose }: NewProjectWizardProps
               {t('footer.continue')}
             </Button>
           ) : (
-            <Button variant="success" onClick={handleConfirm} disabled={submitting}>
+            <Button variant="primary" onClick={handleConfirm} disabled={submitting}>
               {submitting
                 ? t('footer.submitting')
                 : adotando
@@ -1069,11 +1103,40 @@ function nomeDoExternalId(externalId: string): string {
   return ultimo.replace(/\.git$/, '') || externalId.trim();
 }
 
-function SummaryRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+function SummaryRow({
+  label,
+  value,
+  mono,
+  caminho,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+  /** AT-441: caminho quebra depois de cada `/`, nunca no meio de um segmento. */
+  caminho?: boolean;
+}) {
   return (
     <div className={styles.summaryRow}>
       <span className={styles.summaryLabel}>{label}</span>
-      <span className={mono ? styles.summaryValueMono : styles.summaryValue}>{value}</span>
+      <span className={mono ? styles.summaryValueMono : styles.summaryValue}>
+        {caminho ? quebraPorSegmento(value) : value}
+      </span>
     </div>
   );
+}
+
+/**
+ * Insere `<wbr>` depois de cada `/`, o único ponto de quebra do caminho. Cada
+ * segmento vai num `nowrap` (AT-455): sem ele o navegador também quebrava no
+ * hífen DENTRO do segmento (`…2026-10-` / `09`).
+ */
+function quebraPorSegmento(caminho: string): ReactNode[] {
+  return caminho.split('/').flatMap((segmento, i, todos) => {
+    const inteiro = (
+      <span key={`s${i}`} className={styles.segmentoDeCaminho}>
+        {segmento}
+      </span>
+    );
+    return i < todos.length - 1 ? [inteiro, '/', <wbr key={i} />] : [inteiro];
+  });
 }

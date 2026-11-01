@@ -1,5 +1,5 @@
 import type { ButtonHTMLAttributes } from 'react';
-import styles from './Button.module.css';
+import { Button as ShadcnButton } from '@/components/shadcn/button';
 
 export type ButtonVariant =
   | 'primary'
@@ -51,6 +51,15 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   loading?: boolean;
 }
 
+const VARIANTE = {
+  primary: 'default',
+  secondary: 'secondary',
+  ghost: 'ghost',
+  danger: 'destructive',
+  success: 'success',
+} as const;
+
+// Adaptador (AT-646): o visual mora em `components/shadcn/button.tsx`.
 export function Button({
   variant = 'primary',
   fullWidth,
@@ -58,33 +67,29 @@ export function Button({
   icon,
   loading,
   disabled,
-  className,
-  children,
   ...rest
 }: ButtonProps) {
-  const classes = [
-    styles.button,
-    styles[variant],
-    size === 'lg' && styles.lg,
-    size === 'sm' && styles.sm,
-    icon && styles.icon,
-    fullWidth && styles.fullWidth,
-    className,
-  ]
-    .filter(Boolean)
-    .join(' ');
-
+  const tamanho = icon
+    ? size === 'sm'
+      ? 'icon-sm'
+      : 'icon'
+    : size === 'md'
+      ? 'default'
+      : size;
   return (
-    <button
-      className={classes}
+    <ShadcnButton
+      variant={VARIANTE[variant]}
+      size={tamanho}
+      fullWidth={fullWidth}
+      loading={loading}
+      data-variant={variant}
+      data-size={size}
+      data-icon={icon ? 'true' : undefined}
+      data-full-width={fullWidth ? 'true' : undefined}
       // `loading` implica `disabled`: um botão que já disparou não pode disparar
       // de novo. `disabled` explícito continua valendo por si.
       disabled={disabled ?? loading}
-      aria-busy={loading ? true : undefined}
       {...rest}
-    >
-      {loading && <span className={styles.spinner} aria-hidden="true" />}
-      {children}
-    </button>
+    />
   );
 }

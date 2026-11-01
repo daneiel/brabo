@@ -142,8 +142,11 @@
     },
     "notes": {
       "alwaysAllow": "Sempre permitir: grava em .brabo/permissions.json do projeto uma regra por segmento do comando, por verbo + subcomando (ex.: \"npm test\", \"git status\") — o próximo comando com o mesmo verbo e subcomando roda sem perguntar.",
+      "alwaysAllowTyped": "Sempre permitir: grava em .brabo/permissions.json do projeto uma regra para este tipo de ação — a próxima do mesmo tipo roda sem perguntar.",
       "alwaysAllowScoped": "Sempre permitir: libera este tipo de ação só para {{agent}}, não para os outros agentes do projeto.",
-      "autoMode": "Modo automático: {{actor}} roda qualquer comando sem perguntar, inclusive fora da pasta do projeto. Continuam pedindo sua decisão git push, PR, deploy, sudo/doas, merge em branch protegida, patch de instrução, paralelismo e remover container; o que estiver em deny segue negado. Desliga no card do agente.",
+      "autoMode": "Modo automático: {{actor}} roda qualquer comando sem perguntar, inclusive fora da pasta do projeto, e isso inclui git push e abertura de PR. Continuam pedindo sua decisão deploy, sudo/doas, merge em branch protegida, patch de instrução, paralelismo e remover container; o que estiver em deny segue negado. Desliga no card do agente.",
+      "autoModeTyped": "Modo automático: {{actor}} passa a ter as próximas ações aprovadas sem perguntar, inclusive git push e abertura de PR. Continuam pedindo sua decisão deploy, merge em branch protegida, patch de instrução, paralelismo e remover container; o que estiver em deny segue negado. Desliga no card do agente.",
+      "autoModeNotThis": "Ligar o modo automático não aprova esta ação: ela continua esperando o seu Aprovar.",
       "obsolete": "A ação já foi decidida por outro caminho; este card se atualiza sozinho."
     },
     "decided": {
@@ -183,7 +186,9 @@
         "noDetails": "Sem detalhes adicionais."
       },
       "empty": "Esta ação não carrega payload."
-    }
+    },
+    "actorYou": "Você",
+    "actorOtherMember": "Outro membro"
   },
   "prGateTimeline": {
     "steps": {
@@ -244,7 +249,8 @@
       "eyebrow": "{{count}} de infra nos gates de QA/SecOps",
       "loading": "Carregando as PRs de infra…",
       "error": "Não foi possível carregar as PRs de infra.",
-      "empty": "Nenhuma PR de infra em revisão ainda."
+      "empty": "Nenhuma PR de infra em revisão ainda.",
+      "mergeLink": "Mergear na aba PRs"
     },
     "permissions": {
       "title": "Permissões do projeto",
@@ -276,7 +282,15 @@
     "mergeButton": "Merge",
     "mergeBlockedFallback": "Gate bloqueado — corrija antes de propor o merge.",
     "mergeNoSession": "Sem sessão no projeto para propor a ação.",
-    "gatePendente": "O gate {{gate}} ainda está pendente para esta PR. O merge segue disponível — a decisão é sua."
+    "gatePendenteBloqueada": "O gate {{gate}} ainda está pendente para esta PR, e a tarefa dela está bloqueada: o merge fica indisponível até ela ser desbloqueada.",
+    "mergeIndisponivelBloqueada": "Merge indisponível: a tarefa desta PR está bloqueada — {{reason}}",
+    "mergeIndisponivelSemSessao": "Merge indisponível: sem sessão no projeto para propor a ação.",
+    "gatePendente": "O gate {{gate}} ainda está pendente para esta PR. O merge segue disponível — a decisão é sua.",
+    "mergeRecusado": "A última tentativa de merge foi recusada: {{reason}}",
+    "mergeRecusadoArquivos_one": "Arquivo em conflito: {{files}}",
+    "mergeRecusadoArquivos_other": "Arquivos em conflito: {{files}}",
+    "mergeRecusadoArquivos_zero": "Nenhum arquivo em conflito identificado",
+    "mergeResolverAntes": "Resolva o conflito antes (rebase da branch da PR sobre a dev) e tente o merge de novo."
   },
   "politica": {
     "motivo": "A política decidiu por: {{motivo}}",

@@ -2,6 +2,7 @@ import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   marcoExpansivel,
+  compactarFerramentas,
   montarArvore,
   ramosAbertosPorPadrao,
   type Marco,
@@ -48,9 +49,12 @@ import styles from './AgentTimelineTree.module.css';
 export function AgentTimelineTree({
   events,
   projectId,
+  compactarChamadas = false,
 }: {
   events: SessionEvent[];
   projectId: string;
+  /** AT-394: funde chamadas seguidas da mesma ferramenta (Visão geral). */
+  compactarChamadas?: boolean;
 }) {
   const {
     t,
@@ -59,7 +63,10 @@ export function AgentTimelineTree({
   // O rótulo e a frase do presente saem de `montarArvore` já no idioma
   // corrente (AT-134): trocar o idioma tem de refazer a árvore, não só o resto
   // da tela.
-  const { ramos } = useMemo(() => montarArvore(events, language), [events, language]);
+  const { ramos } = useMemo(() => {
+    const arvore = montarArvore(events, language);
+    return compactarChamadas ? { ramos: compactarFerramentas(arvore.ramos) } : arvore;
+  }, [events, language, compactarChamadas]);
   const abertosPadrao = useMemo(() => ramosAbertosPorPadrao(ramos), [ramos]);
   const [fechados, setFechados] = useState<Set<string>>(new Set());
   const [expandidos, setExpandidos] = useState<Set<string>>(new Set());

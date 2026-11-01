@@ -16,7 +16,7 @@ import type { ChaveDeAba } from './project-tabs';
  * inteira do projeto virou "Limite de requisições excedido". O roteiro do
  * levantamento RECARREGAVA a página por seção (`page.goto(...?section=)`), e
  * uma carga custava 55 requisições. Navegar pelo sumário DENTRO da aba não
- * remonta nada e custa zero — o que remonta as 19 seções é trocar de aba e
+ * remonta nada e custa zero — o que remonta as 15 seções é trocar de aba e
  * voltar, e é esse o caminho de uso que este arquivo mede, junto com a carga.
  *
  * Mesmo molde de `duas-abas.orcamento.test.tsx` (AT-278, RN-632): as TELAS de
@@ -134,7 +134,6 @@ const ROTAS_DE_CONFIGURACAO = [
   /\/personal-access-tokens/,
   /\/proficiency$/,
   /\/instruction-versions$/,
-  /\/users\/me\/credentials$/,
   /\/projects-base$/,
 ];
 const ehDeConfiguracao = (chave: string) => ROTAS_DE_CONFIGURACAO.some((r) => r.test(chave));
@@ -272,7 +271,7 @@ describe('orçamento de requisições da aba Configurações (AT-321, RN-645)', 
     contagem.clear();
     await irPara('settings');
 
-    // `dev`: 31 — as 19 seções remontavam e refaziam a carga delas.
+    // `dev`: 31 — as 15 seções remontavam e refaziam a carga delas.
     expect(Object.fromEntries([...contagem].filter(([k]) => ehDeConfiguracao(k)))).toEqual({});
   }, 60_000);
 
@@ -306,6 +305,8 @@ describe('orçamento de requisições da aba Configurações (AT-321, RN-645)', 
     await irPara('settings');
     const volta = Object.fromEntries(contagem);
     expect(volta['GET /projects/:id/members']).toBeGreaterThanOrEqual(1);
-    expect(volta['GET /users/me/credentials']).toBe(1);
+    expect(volta['GET /projects/:id/models']).toBeGreaterThanOrEqual(1);
+    // Credencial é de provider e mora em /providers (RN-911): a volta não a busca.
+    expect(volta['GET /users/me/credentials']).toBeUndefined();
   }, 120_000);
 });

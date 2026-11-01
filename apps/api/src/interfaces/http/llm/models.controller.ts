@@ -25,16 +25,21 @@ import { SetModelUsesUseCase } from '../../../application/use-cases/llm/set-mode
 import { SyncModelCatalogUseCase } from '../../../application/use-cases/llm/sync-model-catalog.use-case';
 import { UpdateModelPricingUseCase } from '../../../application/use-cases/llm/update-model-pricing.use-case';
 import { ListModelPriceChangesUseCase } from '../../../application/use-cases/llm/list-model-price-changes.use-case';
+import { ListCredentialedProvidersUseCase } from '../../../application/use-cases/llm/list-credentialed-providers.use-case';
+import { CredentialedProvidersResponseDto } from './dto/llm.response.dto';
 import { RequireRole } from '../iam/require-role.decorator';
 import { BEARER } from '../../../infrastructure/openapi/documento';
 import {
   ModelComCuradoriaResponseDto,
+  ModeloDoCatalogoResponseDto,
   ModelPriceChangeResponseDto,
   ModelResponseDto,
 } from './dto/llm.response.dto';
 import { SetModelsActiveDto } from './dto/set-models-active.dto';
 import { SetModelUsesDto } from './dto/set-model-uses.dto';
 import { UpdateModelPricingDto } from './dto/update-model-pricing.dto';
+import { UpdateModelBillingDto } from './dto/update-model-billing.dto';
+import { UpdateModelBillingUseCase } from '../../../application/use-cases/llm/update-model-billing.use-case';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { User } from '../../../domain/iam/user.entity';
 import { SyncModelCatalogResponseDto } from '../internal/dto/model-sync.response.dto';
@@ -67,8 +72,24 @@ export class ModelsController {
     private readonly setModelUses: SetModelUsesUseCase,
     private readonly syncCatalog: SyncModelCatalogUseCase,
     private readonly updateModelPricing: UpdateModelPricingUseCase,
+    private readonly updateModelBilling: UpdateModelBillingUseCase,
     private readonly listPriceChanges: ListModelPriceChangesUseCase,
+    private readonly listCredentialed: ListCredentialedProvidersUseCase,
   ) {}
+
+  @Get('workspaces/:workspaceId/llm-providers/credentialed')
+  @RequireRole('viewer')
+  @ApiOperation({
+    summary: 'Lists the LLM providers the workspace owner has a key for',
+    description:
+      'The owner of record (`workspaces.created_by`) is whose key the agents ' +
+      'spend (RN-058). Only provider NAMES — never a secret, id or date. ' +
+      '`ollama` (local, no key) never appears.',
+  })
+  @ApiOkResponse({ type: CredentialedProvidersResponseDto })
+  credentialed(@Param('workspaceId') workspaceId: string) {
+    return this.listCredentialed.execute(workspaceId);
+  }
 
   /**
    * O schema é declarado à mão, e não por `type:`, porque a forma é
@@ -130,7 +151,7 @@ export class ModelsController {
       '0049); `availability` is global, because it is what the sync observed ' +
       'at the provider.',
   })
-  @ApiExtraModels(ModelComCuradoriaResponseDto)
+  @ApiExtraModels(ModeloDoCatalogoResponseDto)
   @ApiForbiddenResponse({ description: 'Insufficient role on the workspace.' })
   @ApiOkResponse({
     schema: {
@@ -140,14 +161,14 @@ export class ModelsController {
           type: 'object',
           additionalProperties: {
             type: 'array',
-            items: { $ref: getSchemaPath(ModelComCuradoriaResponseDto) },
+            items: { $ref: getSchemaPath(ModeloDoCatalogoResponseDto) },
           },
         },
         cloud: {
           type: 'object',
           additionalProperties: {
             type: 'array',
-            items: { $ref: getSchemaPath(ModelComCuradoriaResponseDto) },
+            items: { $ref: getSchemaPath(ModeloDoCatalogoResponseDto) },
           },
         },
       },
@@ -171,7 +192,7 @@ export class ModelsController {
       "Owner's curation, APPLYING ONLY TO THIS WORKSPACE (ADR 0049). Only " +
       'touches `isActive` — `availability` is what the sync observed at the ' +
       'provider, is global, and does not change here. Whole batch or nothing: ' +
-      'a non-existent id fails the call without applying any row.',
+      'a nonexistent id fails the call without applying any row.',
   })
   @ApiOkResponse({ type: [ModelComCuradoriaResponseDto] })
   @ApiForbiddenResponse({ description: 'Requires `owner` on the workspace.' })
@@ -265,6 +286,25 @@ export class ModelsController {
       source: 'manual',
       changedBy: user.id,
     });
+  }
+
+  @Patch('workspaces/:workspaceId/models/:modelId/billing')
+  @RequireRole('owner')
+  @ApiOperation({
+    summary: "Sets a model's curated billing mark (api | subscription | free)",
+    description:
+      'Same curation level as the pricing route. `subscription` makes the ' +
+      'spend report show the cost apart from the US$ paid (RN-954). Never ' +
+      're-prices the past.',
+  })
+  @ApiOkResponse({ type: ModelResponseDto })
+  @ApiForbiddenResponse({ description: 'Requires `owner` on the workspace.' })
+  @ApiNotFoundResponse({ description: 'Model not found.' })
+  updateBilling(
+    @Param('modelId') modelId: string,
+    @Body() dto: UpdateModelBillingDto,
+  ) {
+    return this.updateModelBilling.execute(modelId, dto.billing);
   }
 
   @Get('workspaces/:workspaceId/models/:modelId/price-changes')

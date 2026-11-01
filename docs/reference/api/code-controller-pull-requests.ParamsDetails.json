@@ -1,1 +1,0 @@
-{"parameters":[{"name":"projectId","required":true,"in":"path","schema":{"type":"string"}},{"name":"state","required":false,"in":"query","description":"Absent lists all states.","schema":{"enum":["open","merged","closed"],"type":"string"}}]}

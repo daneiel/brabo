@@ -144,7 +144,10 @@
 /* O piso de largura fica no FILHO (o `Table`), não no contêiner: é ele que
    precisa exceder para o `overflow-x` do pai ter o que rolar. */
 .tabelaScroll > * {
-  min-width: max-content;
+  /* AT-455: `min-content`, não `max-content` — o piso é o `minmax(12rem, 1fr)`
+     de cada coluna, e a célula quebra por palavra. Com `max-content` a tabela
+     ficava da largura do texto sem quebra (2 236px num balão de 708px). */
+  min-width: min-content;
 }
 
 .tabelaCelula {
@@ -154,4 +157,56 @@
   overflow-wrap: break-word;
   line-height: 1.45;
   white-space: normal;
+}
+
+/* RN-712: o alternador do bloco de código longo. */
+.fenceAlternar {
+  display: block;
+  width: 100%;
+  padding: 6px 12px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  color: var(--accent);
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--border);
+  cursor: pointer;
+}
+
+/* RN-837 */
+.titulo4 {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 13px;
+  margin: 10px 0 4px;
+}
+
+.regua {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 12px 0;
+}
+
+.citacao {
+  margin: 0 0 10px;
+  padding: 2px 0 2px 12px;
+  border-left: 3px solid var(--border);
+  color: var(--text-muted);
+}
+
+.lista .lista {
+  margin: 3px 0 0;
+}
+
+.itemTarefa {
+  list-style: none;
+  margin-left: -18px;
+}
+
+.caixaTarefa {
+  margin: 0 6px 0 0;
+  vertical-align: middle;
+  accent-color: var(--accent);
 }

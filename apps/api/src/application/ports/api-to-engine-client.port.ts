@@ -158,6 +158,7 @@ export abstract class ApiToEngineClient {
     actionId: string,
     command: string,
     cwd?: string,
+    alvo?: { qa: true; taskId: string },
   ): Promise<TerminalExecutionResult>;
 
   // --- Agentes conversacionais (Fase 3b) ---
@@ -330,6 +331,25 @@ export abstract class ApiToEngineClient {
    * docs/explanation/backlog.md); o chamador decide o que fazer com isso.
    */
   abstract runAnamnese(projectId: string): Promise<void>;
+  /**
+   * Retoma por gesto humano o ciclo de gate ESTACIONADO (ADR 0207, RN-724).
+   * Lança `GateNaoEstacionadoError` quando o engine recusa (409).
+   */
+  abstract resumeParkedGate(
+    projectId: string,
+    taskId: string,
+    gate: string,
+  ): Promise<void>;
+  /**
+   * Retoma por gesto humano o turno que o reinício do engine interrompeu
+   * (AT-582, ADR 0226). Lança `TurnoNaoRetomavelError` quando o engine recusa
+   * (409, com o `motivo` nomeado).
+   */
+  abstract resumeAgentTurn(
+    projectId: string,
+    sessionId: string,
+    agent: string,
+  ): Promise<void>;
   abstract invalidateInstructions(
     projectId: string,
     agent: string,

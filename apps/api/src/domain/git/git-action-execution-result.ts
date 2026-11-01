@@ -18,6 +18,8 @@ export interface PrOpenExecutionResult {
   pullRequestId: string;
   sourceBranch: string;
   targetBranch: string;
+  /** RN-812: a PR aberta da mesma branch foi reaproveitada, não aberta. */
+  reaproveitada?: boolean;
 }
 
 export interface GitMergeExecutionResult {
@@ -27,7 +29,22 @@ export interface GitMergeExecutionResult {
   targetBranch: string;
 }
 
+/**
+ * Resultado de uma ação git que FALHOU (RN-705). O `kind` é o tipo da AÇÃO —
+ * antes toda falha gravava `{kind: 'git_push', branch: ''}`, inclusive a de
+ * `git_merge`. `conflictingFiles` só existe no conflito de merge
+ * (`GitMergeConflictError`), e é o que a aba PRs mostra.
+ */
+export interface GitActionFailureResult {
+  kind: 'git_commit' | 'git_push' | 'pr_open' | 'git_merge';
+  failed: true;
+  error: string;
+  pullRequestId?: string;
+  conflictingFiles?: string[];
+}
+
 export type GitActionExecutionResult =
+  | GitActionFailureResult
   | GitCommitExecutionResult
   | GitPushExecutionResult
   | PrOpenExecutionResult

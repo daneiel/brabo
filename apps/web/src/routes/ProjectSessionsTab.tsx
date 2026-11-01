@@ -1,16 +1,17 @@
 import { useState, type KeyboardEvent, type MouseEvent } from 'react';
+import { SEM_AUTOFILL } from '../lib/conversa-comecou';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from '@tanstack/react-router';
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   createSession,
-  getMySpend,
-  listActions,
+  getProjectSpendTeam,
   mensagemDaApi,
   renameSession,
   transitionSession,
 } from '../lib/api-client';
 import { useActiveExecutionSession, useProjectSessions } from '../lib/hooks';
+import { consultaDasAcoesDaSessao } from '../lib/acoes-da-sessao';
 import {
   resumirAcoes,
   somarResumos,
@@ -48,11 +49,11 @@ import styles from './ProjectSessionsTab.module.css';
  */
 const SELO_DO_STATUS: Record<
   SessionStatus,
-  { chave: string; tone: BadgeTone; pulse?: boolean }
+  { chave: string; tone: BadgeTone; pulse?: boolean; emCurso?: boolean }
 > = {
   created: { chave: 'sessionsTab.status.created', tone: 'warning' },
   active: { chave: 'sessionsTab.status.active', tone: 'success', pulse: true },
-  closing: { chave: 'sessionsTab.status.closing', tone: 'accent', pulse: true },
+  closing: { chave: 'sessionsTab.status.closing', tone: 'accent', pulse: true, emCurso: true },
   closed: { chave: 'sessionsTab.status.closed', tone: 'muted' },
   closed_abnormally: { chave: 'sessionsTab.status.closedAbnormally', tone: 'danger' },
 };
@@ -256,15 +257,19 @@ export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps)
   // aqui, uma consulta por linha já listada. Sessões de um projeto são poucas,
   // e o TanStack Query as cacheia junto com as da aba de aprovações.
   //
+  // A leitura é a MESMA do fio (`consultaDasAcoesDaSessao` — cauda das 200 mais
+  // novas + pendentes que a cauda deixou de fora, RN-637), na MESMA chave
+  // (AT-365). Era `listActions({ limit: 200 })`, a primeira página crescente,
+  // gravada na chave do fio: abrir esta aba trocava o recorte do fio pelas 200
+  // ações mais ANTIGAS. O resumo também ganha — a pendente nova de uma sessão
+  // longa passa a contar em "aguardando".
+  //
   // O hook roda SEMPRE, mesmo em erro ou carregamento: com a lista vazia ele
   // não dispara consulta nenhuma, e é o que permite os três estados abaixo
   // serem render condicional em vez de `return` antecipado — `return` antes de
   // um hook muda a ordem dos hooks entre renders.
   const acoesPorSessao = useQueries({
-    queries: sorted.map((session) => ({
-      queryKey: ['session-actions', projectId, session.id],
-      queryFn: () => listActions(projectId, session.id, { limit: 200 }),
-    })),
+    queries: sorted.map((session) => consultaDasAcoesDaSessao(projectId, session.id)),
   });
   const resumoDe = (indice: number): ResumoDeAprovacoes =>
     resumirAcoes(acoesPorSessao[indice]?.data?.items);
@@ -309,6 +314,9 @@ export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps)
             maxLength={LIMITE_DO_NOME}
             placeholder={t('sessionsTab.newSessionForm.namePlaceholder')}
             hint={t('sessionsTab.newSessionForm.nameHint')}
+            // AT-472: o gerenciador de senhas se anexava ao campo e tomava o
+            // foco — a mesma régua do composer e do assistente (RN-736/740).
+            {...SEM_AUTOFILL}
           />
 
           <div className={styles.novaSessaoAcoes}>
@@ -433,6 +441,7 @@ export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps)
                   tone={SELO_DO_STATUS[session.status].tone}
                   dot
                   pulse={SELO_DO_STATUS[session.status].pulse}
+                  emCurso={SELO_DO_STATUS[session.status].emCurso}
                 >
                   {t(SELO_DO_STATUS[session.status].chave)}
                 </Badge>
@@ -473,13 +482,9 @@ export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps)
  * requisição própria). Os outros dois são onde o handoff pede um dado que o
  * produto não tem hoje, e cada um resolveu diferente:
  *
- * - "Custo do mês" REAPROVEITA `getMySpend` — a MESMA `queryKey` que a aba
- *   Gastos usa para a visão do membro (RN-101/ADR 0063), nunca uma
- *   agregação nova. É o consumo do ATOR autenticado NESTE projeto, não o
- *   total do projeto somando todo mundo: esse total é dado do OWNER
- *   (`porProjeto` em `getWorkspaceSpendReport`), e a aba Criativo é vista
- *   por qualquer membro — mostrar aqui o total geral vazaria gasto alheio
- *   para quem a RN-060/101 não autoriza a ver.
+ * - "Custo do mês" é o total do PROJETO (`getProjectSpendTeam`, ADR 0233 — o
+ *   membro passou a vê-lo, sem provider nem credencial); a mesma
+ *   `queryKey` da aba Gastos, nenhuma agregação nova.
  * - "Taxa ideação → commit" é DECLARADA ausente (RN-230): não existe, em
  *   lugar nenhum do produto, vínculo entre uma sessão criativa e o commit
  *   que ela produziu. Inventar o cálculo aqui seria a mesma classe de erro
@@ -496,13 +501,11 @@ function CriativoKpis({
   const { t } = useTranslation('sessions');
   const ativasAgora = sessoes.filter((session) => session.status === 'active').length;
 
-  // Mesma `queryKey` de `ProjectSpendTab.tsx#MeuConsumo` (`['my-spend',
-  // projectId, DIAS]`, `DIAS = 30`): o TanStack Query dedupe se as duas
-  // telas estiverem montadas, e uma delas nunca refaz a consulta que a
-  // outra já fez.
+  // O total do PROJETO, que o membro passou a ver (ADR 0233, RN-953); a
+  // mesma `queryKey` da aba Gastos dedupe as duas telas.
   const custo = useQuery({
-    queryKey: ['my-spend', projectId, 30],
-    queryFn: () => getMySpend(projectId, 30),
+    queryKey: ['project-spend-team', projectId, 30],
+    queryFn: () => getProjectSpendTeam(projectId, 30),
   });
 
   return (

@@ -1,1 +1,0 @@
-{"responses":{"204":{"description":"The agent went back to inheriting. No body."},"401":{"description":"No token, expired token, or invalid signature."},"403":{"description":"Insufficient role on the scope."},"404":{"description":"Scope not found."},"429":{"description":"Rate limit per user or per IP."}}}

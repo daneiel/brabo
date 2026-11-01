@@ -1,3 +1,4 @@
+import { Shimmer } from './ui/Shimmer';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
@@ -289,7 +290,7 @@ function ReconhecimentoDeMaquina({
   if (reconhecimento.estado === 'semChaveDeMaquina') return null;
 
   if (reconhecimento.estado === 'verificando') {
-    return <p className={styles.detalhe}>{t('agenteDeMaquina.verificando')}</p>;
+    return <p className={styles.detalhe}><Shimmer>{t('agenteDeMaquina.verificando')}</Shimmer></p>;
   }
 
   // Os dois textos de ignorância, e eles são DIFERENTES: num sabemos por que

@@ -317,3 +317,46 @@ describe('resumo legível', () => {
     expect(v.faltando.join(' ')).toContain('não é uma branch permanente');
   });
 });
+
+// ---------------------------------------- 7. promoção automática (ADR 0217)
+
+describe('promoção automática dev → qa em fase de teste', () => {
+  const BOT = 'brabo-bot';
+  const auto = (over: Partial<EntradaEscada> = {}): EntradaEscada =>
+    solo({
+      destino: 'qa',
+      origem: 'dev',
+      autorDoPr: BOT,
+      botLogin: BOT,
+      faseDeTesteQa: true,
+      ...over,
+    });
+
+  it('dispensa a aprovação do PR dev → qa aberto pelo bot, com a razão', () => {
+    const v = avaliarEscada(auto());
+    expect(v.ok).toBe(true);
+    expect(v.dispensadoPorFaseDeTeste).toBe(true);
+    expect(formatarEscada(auto(), v)).toContain('QA_FASE_DE_TESTE');
+  });
+
+  it('vale também no modo community', () => {
+    expect(avaliarEscada(auto({ modo: 'community', aprovadores: {} })).ok).toBe(true);
+  });
+
+  it('variável desligada: segue exigindo o owner', () => {
+    expect(avaliarEscada(auto({ faseDeTesteQa: false })).ok).toBe(false);
+  });
+
+  it('qa → main nunca é dispensado', () => {
+    expect(avaliarEscada(auto({ destino: 'main', origem: 'qa' })).ok).toBe(false);
+  });
+
+  it('autor que não é o bot, ou bot não resolvido, não é dispensado', () => {
+    expect(avaliarEscada(auto({ autorDoPr: 'contribuidor' })).ok).toBe(false);
+    expect(avaliarEscada(auto({ botLogin: '' })).ok).toBe(false);
+  });
+
+  it('origem que não é dev não é dispensada', () => {
+    expect(avaliarEscada(auto({ origem: 'feature/x' })).ok).toBe(false);
+  });
+});

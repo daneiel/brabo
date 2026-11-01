@@ -87,7 +87,7 @@ defmodule Engine.Sessions.EngineApiClientProposeActionTest do
 
     # `container_remove` nunca nasce auto-aprovado (teto absoluto de
     # `decide.ts`), e as demais seguem no default do Req.
-    for tipo <- ~w(container_remove terminal git_commit open_infra_pr) do
+    for tipo <- ~w(container_remove git_commit open_infra_pr) do
       assert Live.opcoes_do_propose_action(tipo) == []
     end
   end

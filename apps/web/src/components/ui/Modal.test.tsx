@@ -1,11 +1,11 @@
-import type { ReactElement } from 'react';
+import { useState, type ReactElement } from 'react';
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import i18next from 'i18next';
 import { initReactI18next, I18nextProvider } from 'react-i18next';
 import uiPtBR from '../../locales/pt-BR/ui.json';
 import { Modal } from './Modal';
-import styles from './Modal.module.css';
 
 /**
  * Instância própria de i18next (mesmo padrão de `AccountPage.test.tsx`), só
@@ -81,21 +81,53 @@ describe('Modal', () => {
         </Modal>,
       );
 
-      expect(screen.getByText('Conteúdo').closest(`.${styles.card}`)).not.toHaveClass(
-        styles.cardFull,
-      );
+      expect(screen.getByRole('dialog')).toHaveAttribute('data-size', 'default');
     });
 
-    it('`size="full"` acrescenta a classe do lightbox, sem perder a do card padrão', () => {
+    it('`size="full"` marca o lightbox em `data-size`', () => {
       renderComI18n(
         <Modal title="Título" onClose={vi.fn()} size="full">
           <p>Conteúdo</p>
         </Modal>,
       );
 
-      const card = screen.getByText('Conteúdo').closest(`.${styles.card}`);
-      expect(card).toHaveClass(styles.card);
-      expect(card).toHaveClass(styles.cardFull);
+      expect(screen.getByRole('dialog')).toHaveAttribute('data-size', 'full');
     });
+  });
+
+  it('Esc fecha', async () => {
+    const onClose = vi.fn();
+    renderComI18n(
+      <Modal title="Título" onClose={onClose}>
+        <p>Conteúdo</p>
+      </Modal>,
+    );
+    await userEvent.keyboard('{Escape}');
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('prende o foco dentro e o devolve a quem abriu', async () => {
+    function Harness() {
+      const [aberto, setAberto] = useState(false);
+      return (
+        <>
+          <button type="button" onClick={() => setAberto(true)}>
+            Abrir
+          </button>
+          {aberto && (
+            <Modal title="Título" onClose={() => setAberto(false)}>
+              <input aria-label="campo" />
+            </Modal>
+          )}
+        </>
+      );
+    }
+    renderComI18n(<Harness />);
+    const abrir = screen.getByRole('button', { name: 'Abrir' });
+    await userEvent.click(abrir);
+    await waitFor(() => expect(screen.getByRole('dialog').contains(document.activeElement)).toBe(true));
+    await userEvent.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    await waitFor(() => expect(abrir).toHaveFocus());
   });
 });

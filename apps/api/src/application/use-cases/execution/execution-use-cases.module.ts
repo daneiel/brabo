@@ -17,6 +17,7 @@ import { ExecuteMaxParallelRaiseUseCase } from './execute-max-parallel-raise.use
 import { ExecuteExecutionPlanUseCase } from './execute-execution-plan.use-case';
 import { ActionsUseCasesModule } from '../actions/actions-use-cases.module';
 import { ClaimNextTaskUseCase } from './claim-next-task.use-case';
+import { ListTarefasEmCursoDeDevUseCase } from './list-tarefas-em-curso-de-dev.use-case';
 import { MarkTaskUseCase } from './mark-task.use-case';
 import { GetDevTaskContextUseCase } from './get-dev-task-context.use-case';
 import { MarkTaskBlockedUseCase } from './mark-task-blocked.use-case';
@@ -28,6 +29,8 @@ import { OpenGateUseCase } from './open-gate.use-case';
 import { MarkInfraArtifactBlockedUseCase } from './mark-infra-artifact-blocked.use-case';
 import { RecordInfraGateVerdictUseCase } from './record-infra-gate-verdict.use-case';
 import { GetInfraContextUseCase } from './get-infra-context.use-case';
+import { GetRunInstructionsUseCase } from './get-run-instructions.use-case';
+import { ContainersUseCasesModule } from '../containers/containers-use-cases.module';
 import { GetInfraPrFilesUseCase } from './get-infra-pr-files.use-case';
 import { ListInfraArtifactsUseCase } from './list-infra-artifacts.use-case';
 import { GetPsychologistContextUseCase } from './get-psychologist-context.use-case';
@@ -61,6 +64,7 @@ const USE_CASES = [
   ExecuteMaxParallelRaiseUseCase,
   ExecuteExecutionPlanUseCase,
   ClaimNextTaskUseCase,
+  ListTarefasEmCursoDeDevUseCase,
   MarkTaskUseCase,
   GetDevTaskContextUseCase,
   MarkTaskBlockedUseCase,
@@ -72,6 +76,7 @@ const USE_CASES = [
   MarkInfraArtifactBlockedUseCase,
   RecordInfraGateVerdictUseCase,
   GetInfraContextUseCase,
+  GetRunInstructionsUseCase,
   GetInfraPrFilesUseCase,
   ListInfraArtifactsUseCase,
   GetPsychologistContextUseCase,
@@ -94,6 +99,8 @@ const USE_CASES = [
     FilesystemModule,
     AnamneseUseCasesModule,
     ArchitectureUseCasesModule,
+    // RN-852: o contexto da Infra lê a imagem vigente.
+    ContainersUseCasesModule,
     // FASE 14d: o pedido de paralelismo acima do teto vira proposed_action.
     forwardRef(() => ActionsUseCasesModule),
   ],

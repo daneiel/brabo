@@ -91,6 +91,49 @@ rules:
     severity: warn
     note: "Presença e status da roster, e o que a árvore do time afirma sobre cada agente, são regra de negócio fora de domain/ (RN-090, RN-118, RN-287, RN-411, RN-568, RN-572); mudança aqui costuma mover o arquivo:linha dessas RNs."
 
+  # O painel "Contexto da sessão" conta sobre a janela de eventos baixados, e
+  # o que ele afirma quando a janela não alcança o começo é regra (RN-180,
+  # RN-701).
+  - id: painel-de-contexto-da-sessao
+    watch:
+      - "apps/web/src/routes/ContextAside.tsx"
+      - "apps/web/src/lib/contexto-da-sessao.ts"
+      - "apps/api/src/infrastructure/persistence/drizzle/session-context-summary.repository.ts"
+    docs: ["docs/business-rules.md"]
+    severity: warn
+    note: "O recorte do painel de contexto (RN-178, RN-180, RN-701) e o agregado da sessão inteira (RN-827/828); mudança aqui costuma mover o arquivo:linha dessas RNs."
+
+  # O cartão de primeiros passos da Visão geral decide o que falta a um
+  # projeto novo a partir de leituras que já existem (RN-708).
+  - id: primeiros-passos-do-projeto
+    watch:
+      - "apps/web/src/lib/primeiros-passos.ts"
+      - "apps/web/src/components/PrimeirosPassos.tsx"
+    docs: ["docs/business-rules.md"]
+    severity: warn
+    note: "Os três passos, de onde cada um é derivado e quando o cartão some (RN-708); mudança aqui costuma mover o arquivo:linha dela."
+
+  # O ciclo de vida dos sockets Phoenix do web (RN-833, RN-579, RN-108).
+  - id: sockets-phoenix-do-web
+    watch:
+      - "apps/web/src/lib/socket-phoenix.ts"
+      - "apps/web/src/lib/session-channel.ts"
+      - "apps/web/src/lib/canal-vivo.ts"
+    docs: ["docs/business-rules.md"]
+    severity: warn
+    note: "Descarte do socket, gerações do canal da sessão e contagem do canal vivo (RN-833, RN-579); mudança aqui costuma mover o arquivo:linha delas."
+
+  # O que o fio da sessão mostra do que acabou de acontecer (RN-712).
+  - id: fio-da-sessao-legivel
+    watch:
+      - "apps/web/src/lib/texto-plano.ts"
+      - "apps/web/src/lib/eco-de-formulario.ts"
+      - "apps/web/src/lib/session-destinatario.ts"
+      - "apps/web/src/components/ui/MarkdownMessage.tsx"
+    docs: ["docs/business-rules.md"]
+    severity: warn
+    note: "Faixa sem Markdown, eco do formulário, destinatário que segue o handoff aceito e bloco de código recolhido (RN-712, RN-631); mudança aqui costuma mover o arquivo:linha delas."
+
   # ------------------------------------------------------------------ dados
 
   # O arquivo mais alterado do repositório até a v0.1.0 (23 mudanças) e o que
@@ -186,18 +229,18 @@ rules:
       - "apps/api/src/infrastructure/openapi/**"
     docs:
       - "docs/reference/openapi.json"
-      - "docs/reference/api/.openapi-manifest.json"
       - "apps/web/src/lib/api-types.generated.ts"
     generated: true
     severity: block
-    note: "Rode `pnpm docs:generate` e `pnpm --filter web run openapi:types`. O openapi.json, os MDX e os tipos do web saem do código, nunca da mão."
+    note: "Rode `pnpm docs:generate` e `pnpm --filter web run openapi:types`. O openapi.json e os tipos do web saem do código, nunca da mão."
 
   # O SITE era ponto cego do mapa: `website/**` não aparecia em nenhuma regra, e
   # mexer no config do Docusaurus não cobrava documentação nenhuma. Isso não é
   # hipótese — foi por aí que passou o defeito que deixou as 117 páginas de
   # operação da referência de API sem renderizar em duas releases: o config não
   # declarava `docItemComponent: '@theme/ApiItem'`, o build ficou verde, e nada
-  # no mapa ligava aquela mudança a doc alguma.
+  # no mapa ligava aquela mudança a doc alguma. (Desde o ADR 0206 a referência
+  # é uma página Redoc e o `ApiItem` não existe mais; a regra fica.)
   #
   # `warn`, não `block`: o `website/**` vai de ajuste de uma cor no
   # `custom.css` a trocar o mecanismo de publicação. Bloquear os dois pelo mesmo
@@ -280,6 +323,60 @@ rules:
   # `apps/engine/lib/engine/projects/` (onde mora o predicado de repositório
   # da RN-577) não era observado por regra nenhuma. Mudar uma recusa — ou o
   # predicado que ela lê — muda o que a RN afirma, com arquivo:linha.
+  # RN-706 — a mensagem efêmera de ambiente dos agentes de execução.
+  - id: ambiente-do-agente
+    watch:
+      - "apps/engine/lib/engine/harness/ambiente_do_agente.ex"
+    docs: ["docs/business-rules.md"]
+    severity: warn
+    note: "Mudou o que a mensagem de ambiente diz, para quem, ou de onde lê: atualizar a RN-706."
+
+  # RN-622/623/878 — a orientação de idioma que a fachada acrescenta no fim.
+  - id: idioma-da-resposta
+    watch:
+      - "apps/engine/lib/engine/harness/idioma_da_resposta.ex"
+    docs: ["docs/business-rules.md"]
+    severity: warn
+    note: "Mudou o texto, para quem vale ou o teto da orientação de idioma: atualizar a RN-622/623/878."
+
+  # RN-765/813/814/817..819 — o recorte da tarefa que o gate de QA julga.
+  - id: recorte-do-qa
+    watch:
+      - "apps/engine/lib/engine/gates/recorte_da_tarefa.ex"
+    docs: ["docs/business-rules.md"]
+    severity: warn
+    note: "Mudou o que o recorte pede ao QA: atualizar a RN-765 e as extensões (RN-813/814/817/818/819/863/865/879/880/881)."
+
+  # RN-810..812 — retentativa de rede do provider, a dev atualizada antes do
+  # "já na dev" e a PR aberta da branch reaproveitada.
+  - id: dev-rede-e-pr-repetida
+    watch:
+      - "apps/engine/lib/engine/harness/tool_loop.ex"
+      - "apps/engine/lib/engine/agents/falha_de_turno.ex"
+      - "apps/engine/lib/engine/dev/agent_io.ex"
+      - "apps/engine/lib/engine/dev/dev_agent_server.ex"
+      - "apps/engine/lib/engine/dev/worktree_manager.ex"
+      - "apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts"
+    docs: ["docs/business-rules.md"]
+    severity: warn
+    note: "Mudou a retentativa de rede, a origem do bloqueio por rede, a comparação com a dev ou o reaproveitamento da PR: atualizar as RN-810/811/812."
+
+  # RN-711 — o fluxo do time como mensagem efêmera dos conversacionais.
+  - id: fluxo-do-time
+    watch:
+      - "apps/engine/lib/engine/harness/fluxo_do_time.ex"
+    docs: ["docs/business-rules.md", "docs/reference/internal-api.md"]
+    severity: warn
+    note: "Mudou o fluxo que os conversacionais recebem: atualizar a RN-711 e a mensagem descrita na internal-api."
+
+  # RN-874 — decisões e perguntas abertas do projeto no turno do PO.
+  - id: decisoes-do-projeto
+    watch:
+      - "apps/engine/lib/engine/harness/decisoes_do_projeto.ex"
+    docs: ["docs/business-rules.md"]
+    severity: warn
+    note: "Mudou o que o PO recebe de decisões/perguntas, o teto ou a leitura: atualizar a RN-874."
+
   - id: recusas-locais-de-proposta
     watch:
       - "apps/engine/lib/engine/infra/infra_lead_server.ex"
@@ -292,6 +389,16 @@ rules:
       - "docs/business-rules/autenticacao.md"
     severity: warn
     note: "Recusa local de tool (RN-566, RN-577) mudou? A RN diz arquivo:linha e o teste; o predicado tem de continuar o MESMO do caso de uso de execução na api."
+
+  # RN-900 (AT-571) — a recusa de reescrever o README sem a seção de uso da
+  # Infra mora na própria write_file; o título é a constante que a Infra e o dev
+  # também usam.
+  - id: secao-de-uso-do-readme
+    watch:
+      - "apps/engine/lib/engine/harness/tools/write_file.ex"
+    docs: ["docs/business-rules.md"]
+    severity: warn
+    note: "Mudou a recusa de write_file sobre README ou o título da seção? A RN-900 diz arquivo:linha e o teste."
 
   # O registro de gates é índice do que barra o trabalho. Gate novo, ou
   # evidência que mudou de lugar, exige a linha no registro e a RN — senão o
@@ -501,6 +608,7 @@ rules:
       - ".github/workflows/pr-police.yml"
       - ".github/workflows/approval-ladder.yml"
       - ".github/workflows/promote.yml"
+      - ".github/workflows/promote-auto-qa.yml"
       - ".github/workflows/promotion-check.yml"
       - ".github/workflows/tag-release.yml"
       - ".github/workflows/release.yml"
@@ -525,7 +633,7 @@ rules:
       # `branching-policy.md` no docblock, mais o spec dele — e reprova se esta
       # lista divergir. Script de política novo declara a fonte no cabeçalho,
       # como os catorze, e o spec o cobra aqui.
-      - "scripts/ci/@(alarme-de-tag|approval-ladder|archive-branch|backmerge-gate|dependabot-justifica-pin|dependabot-para-dev|destravar-gate|gate|hotfix-gate|pr-police|promote|promotion-check|tag-release|version)?(.spec).ts"
+      - "scripts/ci/@(alarme-de-tag|approval-ladder|archive-branch|backmerge-gate|dependabot-justifica-pin|dependabot-para-dev|destravar-gate|gate|hotfix-gate|pr-police|promocao-automatica|promote|promotion-check|tag-release|version)?(.spec).ts"
       # `.release/gate.json` NÃO entra aqui: ele só existe depois do primeiro
       # hotfix, e glob que não casa com nada reprova o docs:check. O estado do
       # gate é dado, não fonte — a doc dele acompanha `scripts/ci/gate.ts`.
@@ -674,26 +782,49 @@ rules:
   #
   # O watch são os gatilhos que HISTORICAMENTE o desatualizam: dependência nova
   # (Stack), ADR novo (Convenções e proibições) e gate novo.
-  # Onda 6a (i18n): `docs/` na raiz virou a árvore em INGLÊS (fonte), e o
-  # snapshot pt-BR foi preservado em
-  # `website/i18n/pt-BR/docusaurus-plugin-content-docs/current/` no momento da
-  # migração. Ninguém garante que a tradução acompanha toda mudança de prosa
-  # depois disso — `warn`, não `block`, MESMO padrão não-bloqueante que a
-  # regra `governanca` acima usa: traduzir tudo de uma vez não significa que
-  # toda PR futura tenha que manter as duas árvores sincronizadas sob pena de
-  # vermelho no CI. `docs/reference/**` fica de fora do watch de propósito —
-  # é gerado (`pnpm docs:generate`) e nunca entrou na tradução (RN pendente:
-  # localizar o gerador é gap maior, fora desta entrega).
-  - id: traducao-pt-br
+  # ADR 0216: `docs/` na raiz é a árvore pt-BR (FONTE e padrão), e `en`, `ru`
+  # e `zh-Hans` moram em `website/i18n/<locale>/`. `warn` e NUNCA `block`:
+  # exigir tradução em todo PR de doc custaria quatro traduções por mudança, e
+  # quem segura a defasagem é o relatório de paridade e a faixa na página.
+  # `docs/reference/**` entra no watch desde o ADR 0219 (inclusive o bloco
+  # gerado); fica fora só a página de paridade, que é o próprio relatório — por isso as
+  # páginas são listadas uma a uma (o docmap não tem negação de glob).
+  - id: traducao
     watch:
       - "docs/*.md"
       - "docs/adr/**"
       - "docs/explanation/**"
       - "docs/missions/**"
+      - "docs/reference/artifacts.md"
+      - "docs/reference/brb.md"
+      - "docs/reference/configuration.md"
+      - "docs/reference/events.md"
+      - "docs/reference/git-providers.md"
+      - "docs/reference/internal-api.md"
+      - "docs/reference/llm-providers.md"
+      - "docs/reference/permissions.md"
+      - "docs/reference/rulesets.md"
+      - "docs/reference/scripts.md"
     docs:
-      - "website/i18n/pt-BR/docusaurus-plugin-content-docs/current/"
+      - "website/i18n/"
     severity: warn
-    note: "docs/ (inglês, fonte) mudou — confira se a tradução pt-BR em website/i18n/pt-BR/... precisa acompanhar."
+    note: "docs/ (pt-BR, fonte) mudou — confira se as traduções em website/i18n/<locale>/ (en, ru, zh-Hans) precisam acompanhar."
+
+  # AT-550 (ADR 0216 item 7): a paridade de tradução é MEDIDA e o relatório
+  # é GERADO. Mudou a fonte, uma tradução ou um catálogo da interface, o
+  # `pnpm docs:generate` reescreve os dois arquivos, e o `--check` reprova o
+  # commitado fora de dia.
+  - id: paridade-de-traducao
+    watch:
+      - "docs/**/*.md"
+      - "website/i18n/**/*.md"
+      - "apps/web/src/locales/**"
+      - "scripts/docs/paridade-de-traducao.mjs"
+    docs:
+      - "docs/reference/paridade-de-traducao.md"
+      - "website/src/data/traducao.json"
+    generated: true
+    severity: warn
 
   - id: claude-md
     watch:
@@ -703,6 +834,18 @@ rules:
       - "apps/engine/mix.exs"
       - "docs/adr/*.md"
       - "docs/gates.yml"
-    docs: ["CLAUDE.md"]
+    # O CLAUDE.md foi partido em `.claude/contexto/` (importadas por ele) e em
+    # `.claude/rules/` (regras de caminho, carregadas sob demanda): a
+    # regra vale para o conjunto, então tocar QUALQUER uma das partes satisfaz.
+    docs_alternativos:
+      - "CLAUDE.md"
+      - ".claude/contexto/historico.md"
+      - ".claude/contexto/estado-atual.md"
+      - ".claude/contexto/stack.md"
+      - ".claude/contexto/convencoes-repositorio-e-dominio.md"
+      - ".claude/contexto/convencoes-agentes-e-telas.md"
+      - ".claude/rules/runner.md"
+      - ".claude/rules/broker-e-containers.md"
+      - ".claude/rules/ci-e-cadeia-de-suprimentos.md"
     severity: warn
     note: "Stack, Convenções, 'O que NÃO fazer' e o estado das fases envelhecem em silêncio."

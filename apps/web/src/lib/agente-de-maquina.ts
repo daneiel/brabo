@@ -72,7 +72,7 @@ export function podeLerChavesDeDispositivo(papel: Role | null | undefined): bool
 export interface EntradaDoReconhecimento {
   /**
    * Papel efetivo de quem está olhando. **Limite declarado, e é o MESMO de
-   * `ModelsSection`/`AreaModelsSection`:** o web lê aqui o papel de
+   * `ModelsSection`:** o web lê aqui o papel de
    * WORKSPACE, e quem autoriza do outro lado é o papel EFETIVO do PROJETO
    * (`projectRole ?? workspaceRole`,
    * [RN-471](../../../../docs/business-rules.md#rn-471)) — uma SOBREPOSIÇÃO

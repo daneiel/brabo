@@ -1,0 +1,27 @@
+{
+  "loadErrorTitle": "无法打开此项目。",
+  "visibility": {
+    "public": "公开",
+    "private": "私有"
+  },
+  "adopted": "已接管",
+  "repositoryNotProvisioned": "仓库尚未创建",
+  "precisaDeVoce": {
+    "chip": "需要您处理",
+    "titulo": "需要您处理",
+    "subtitulo": "五个决策队列分开显示 —— 每个队列的总数仍在其各自的标签页中。",
+    "fechar": "关闭面板",
+    "vazio": "没有等待您决定的事项。",
+    "semData": "无日期",
+    "tempoEmprestado": "用户故事更新于 {{tempo}}",
+    "notaDeArquitetura": "架构待办是派生视图，没有自己的日期 —— 显示的日期是相关用户故事的最后更新时间。",
+    "filas": {
+      "aprovacoes": "操作审批",
+      "prs": "PR 合并",
+      "promocoes": "用户故事推进",
+      "arquitetura": "架构待办",
+      "hipoteses": "Psicólogo 的假设"
+    },
+    "gateParado": "{{gate}} 的 gate 已暂停，直到您对此操作做出决定。"
+  }
+}

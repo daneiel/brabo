@@ -1,12 +1,15 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, asc, eq, inArray, ne, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
 import {
   EpicRepository,
   StoryRepository,
   TaskRepository,
   type NewEpic,
   type NewStory,
+  type StoryContent,
   type NewTask,
+  type TarefaPendenteDaExecucao,
+  type TarefaEmCursoDeDev,
 } from '../../../application/ports/backlog-repository.port';
 import type {
   Epic,
@@ -98,9 +101,39 @@ export class DrizzleStoryRepository implements StoryRepository {
     const rows = await db
       .select()
       .from(stories)
-      .where(eq(stories.projectId, projectId))
+      // RN-727: arquivada sai do backlog e, por esta leitura, da cobertura.
+      .where(and(eq(stories.projectId, projectId), isNull(stories.archivedAt)))
       .orderBy(asc(stories.createdAt));
     return rows.map(storyToEntity);
+  }
+
+  async updateText(
+    id: string,
+    text: { title: string; description: string },
+  ): Promise<Story> {
+    const db = currentDb(this.rootDb);
+    const [row] = await db
+      .update(stories)
+      .set({ ...text, updatedAt: new Date() })
+      .where(eq(stories.id, id))
+      .returning();
+    return storyToEntity(row);
+  }
+
+  async archive(id: string, reason: string | null): Promise<Story> {
+    const db = currentDb(this.rootDb);
+    const [row] = await db
+      .update(stories)
+      .set({
+        // Sai também da fila de promoção na MESMA escrita (RN-048/RN-727).
+        proposedReady: false,
+        archivedAt: new Date(),
+        archivedReason: reason,
+        updatedAt: new Date(),
+      })
+      .where(eq(stories.id, id))
+      .returning();
+    return storyToEntity(row);
   }
 
   async updateStatus(id: string, status: StoryStatus): Promise<Story> {
@@ -118,6 +151,16 @@ export class DrizzleStoryRepository implements StoryRepository {
     const [row] = await db
       .update(stories)
       .set({ moduleIds, updatedAt: new Date() })
+      .where(eq(stories.id, id))
+      .returning();
+    return storyToEntity(row);
+  }
+
+  async updateContent(id: string, content: StoryContent): Promise<Story> {
+    const db = currentDb(this.rootDb);
+    const [row] = await db
+      .update(stories)
+      .set({ ...content, updatedAt: new Date() })
       .where(eq(stories.id, id))
       .returning();
     return storyToEntity(row);
@@ -157,7 +200,11 @@ export class DrizzleStoryRepository implements StoryRepository {
       .select()
       .from(stories)
       .where(
-        and(eq(stories.projectId, projectId), eq(stories.proposedReady, true)),
+        and(
+          eq(stories.projectId, projectId),
+          eq(stories.proposedReady, true),
+          isNull(stories.archivedAt),
+        ),
       )
       .orderBy(asc(stories.createdAt));
     return rows.map(storyToEntity);
@@ -167,6 +214,108 @@ export class DrizzleStoryRepository implements StoryRepository {
 @Injectable()
 export class DrizzleTaskRepository implements TaskRepository {
   constructor(@Inject(DRIZZLE) private readonly rootDb: DrizzleDb) {}
+
+  // RN-776: a sessão só responde se for a de execução VIGENTE do projeto — a
+  // `active` mais recente com `execution.activated`, a mesma régua de
+  // `DrizzleSessionRepository.findActiveExecutionSession`.
+  async listEmCursoDeDev(sessionId: string): Promise<TarefaEmCursoDeDev[]> {
+    const db = currentDb(this.rootDb);
+    // Só de sessão de EXECUÇÃO: encerrar uma consultiva do mesmo projeto não
+    // pode bloquear o trabalho dos dev agents.
+    const result = await db.execute(sql`
+      SELECT s.project_id, t.id AS task_id, t.assigned_to
+        FROM tasks t
+        JOIN stories s ON s.id = t.story_id AND s.archived_at IS NULL
+        JOIN sessions se ON se.id = ${sessionId} AND se.project_id = s.project_id
+       WHERE EXISTS (SELECT 1 FROM session_events e
+                      WHERE e.session_id = se.id
+                        AND e.type = 'execution.activated')
+         AND t.status = 'in_progress'
+         AND t.blocked = false
+         AND t.gate_status IS NULL
+         AND t.assigned_to LIKE 'dev-%'
+       ORDER BY t.created_at
+    `);
+    return (
+      result.rows as {
+        project_id: string;
+        task_id: string;
+        assigned_to: string;
+      }[]
+    ).map((r) => ({
+      projectId: r.project_id,
+      taskId: r.task_id,
+      assignedTo: r.assigned_to,
+    }));
+  }
+
+  async findPendenteDaExecucao(
+    sessionId: string,
+  ): Promise<TarefaPendenteDaExecucao | null> {
+    const db = currentDb(this.rootDb);
+    const result = await db.execute(sql`
+      WITH vigente AS (
+        SELECT s.id, s.project_id
+          FROM sessions s
+          JOIN sessions alvo ON alvo.id = ${sessionId}
+                            AND alvo.project_id = s.project_id
+         WHERE s.status = 'active'
+           AND EXISTS (SELECT 1 FROM session_events e
+                        WHERE e.session_id = s.id
+                          AND e.type = 'execution.activated')
+         ORDER BY s.created_at DESC, s.id DESC
+         LIMIT 1
+      ),
+      -- RN-856 (AT-522): os dev agents DESTA execução são os atores de
+      -- evento dev.* da sessão vigente — a mesma fonte que o quarto sinal
+      -- lê. É deles a tarefa in_progress e é dos módulos deles a todo
+      -- que, recém-desbloqueada, ainda não foi pega.
+      devs AS (
+        SELECT DISTINCT e.actor_id
+          FROM session_events e
+          JOIN vigente v ON v.id = e.session_id
+         WHERE e.actor_kind = 'agent'
+           AND e.type LIKE 'dev.%'
+      )
+      SELECT t.id AS task_id,
+             CASE
+               WHEN t.blocked THEN 'bloqueada'
+               WHEN t.gate_status = 'awaiting_user' THEN 'aguardando_merge'
+               WHEN t.status = 'in_progress' AND EXISTS (
+                      SELECT 1 FROM session_events e
+                       WHERE e.session_id = v.id
+                         AND e.type = 'backlog.task_merge_conflict'
+                         AND e.payload->>'taskId' = t.id::text)
+                 THEN 'conflito_de_merge'
+               WHEN t.status = 'in_progress' THEN 'em_curso_de_dev'
+               ELSE 'a_fazer_de_modulo_com_dev'
+             END AS motivo
+        FROM tasks t
+        JOIN stories st ON st.id = t.story_id AND st.archived_at IS NULL
+        JOIN vigente v ON v.project_id = st.project_id AND v.id = ${sessionId}
+       WHERE t.status <> 'done'
+         AND (
+           t.blocked
+           OR t.gate_status = 'awaiting_user'
+           OR (t.status = 'in_progress' AND EXISTS (
+                SELECT 1 FROM session_events e
+                 WHERE e.session_id = v.id
+                   AND e.type = 'backlog.task_merge_conflict'
+                   AND e.payload->>'taskId' = t.id::text))
+           OR (t.status = 'in_progress'
+               AND t.assigned_to IN (SELECT actor_id FROM devs))
+           OR (t.status = 'todo' AND st.status = 'ready'
+               AND t.module IS NOT NULL
+               AND 'dev-' || t.module IN (SELECT actor_id FROM devs))
+         )
+       ORDER BY t.blocked DESC, t.created_at ASC
+       LIMIT 1
+    `);
+    const row = result.rows[0] as
+      | { task_id: string; motivo: TarefaPendenteDaExecucao['motivo'] }
+      | undefined;
+    return row ? { taskId: row.task_id, motivo: row.motivo } : null;
+  }
 
   async create(input: NewTask): Promise<Task> {
     const db = currentDb(this.rootDb);
@@ -228,7 +377,14 @@ export class DrizzleTaskRepository implements TaskRepository {
       .select({ task: tasks })
       .from(tasks)
       .innerJoin(stories, eq(stories.id, tasks.storyId))
-      .where(and(eq(stories.projectId, projectId), inArray(tasks.id, ids)));
+      .where(
+        and(
+          eq(stories.projectId, projectId),
+          inArray(tasks.id, ids),
+          // RN-727: tarefa de história arquivada não entra no plano.
+          isNull(stories.archivedAt),
+        ),
+      );
     return rows.map((r) => taskToEntity(r.task));
   }
 
@@ -261,6 +417,13 @@ export class DrizzleTaskRepository implements TaskRepository {
     // concorrência).
     // `db.execute` retorna as colunas cruas (snake_case), não o mapeamento
     // camelCase do Drizzle — daí o mapeamento manual abaixo.
+    //
+    // RN-856 (AT-522): ANTES da fila `todo`, a tarefa `in_progress` que já é
+    // DESTE agente (mesmo `assigned_to`), fora de gate e não bloqueada — a
+    // que ficou órfã quando a execução anterior parou o processo sem
+    // devolvê-la. Sem isso o dev religado gravava "sem tarefa disponível" e
+    // a tarefa ficava presa com um dono que não existe. A branch dela, se
+    // existir e não estiver mergeada, é retomada pelo `WorktreeManager`.
     const result = await db.execute(sql`
       UPDATE tasks
       SET status = 'in_progress', assigned_to = ${agentId}, updated_at = now()
@@ -268,11 +431,17 @@ export class DrizzleTaskRepository implements TaskRepository {
         SELECT t.id FROM tasks t
         JOIN stories s ON s.id = t.story_id
         WHERE s.project_id = ${projectId}
-          AND s.status = 'ready'
-          AND ${daTarefaDoModulo(module)}
-          AND t.status = 'todo'
+          AND s.archived_at IS NULL
           AND t.blocked = false
-        ORDER BY t.created_at
+          AND (
+            (t.status = 'in_progress'
+              AND t.assigned_to = ${agentId}
+              AND t.gate_status IS NULL)
+            OR (s.status = 'ready'
+              AND ${daTarefaDoModulo(module)}
+              AND t.status = 'todo')
+          )
+        ORDER BY (t.status = 'in_progress') DESC, t.created_at
         FOR UPDATE OF t SKIP LOCKED
         LIMIT 1
       )
@@ -318,6 +487,21 @@ export class DrizzleTaskRepository implements TaskRepository {
     return row ? taskToEntity(row) : null;
   }
 
+  async reabrirPorConflitoDeMerge(id: string): Promise<Task | null> {
+    const db = currentDb(this.rootDb);
+    const [row] = await db
+      .update(tasks)
+      .set({
+        status: 'in_progress',
+        gateStatus: null,
+        gateCorrectionCount: 0,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(tasks.id, id), eq(tasks.status, 'in_review')))
+      .returning();
+    return row ? taskToEntity(row) : null;
+  }
+
   async countClaimableByModule(
     projectId: string,
     module: string,
@@ -328,6 +512,7 @@ export class DrizzleTaskRepository implements TaskRepository {
       JOIN stories s ON s.id = t.story_id
       WHERE s.project_id = ${projectId}
         AND s.status = 'ready'
+        AND s.archived_at IS NULL
         AND ${daTarefaDoModulo(module)}
         AND t.status = 'todo'
         AND t.blocked = false
@@ -454,6 +639,8 @@ function storyToEntity(row: typeof stories.$inferSelect): Story {
     proposedReady: row.proposedReady,
     returnedReason: row.returnedReason,
     returnedAt: row.returnedAt,
+    archivedAt: row.archivedAt,
+    archivedReason: row.archivedReason,
     status: row.status,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,

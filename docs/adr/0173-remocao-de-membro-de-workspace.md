@@ -1,4 +1,4 @@
-# 0173 — A remoção de membro de workspace nasce, protegida pela mesma cláusula
+# ADR 0173 — A remoção de membro de workspace nasce, protegida pela mesma cláusula
 
 ## Status
 
