@@ -37,5 +37,10 @@
     "defaultMessage": "无法连接到 api。",
     "trace": "trace {{traceId}}",
     "retry": "重试"
+  },
+  "codeBlock": {
+    "copiar": "复制",
+    "copiado": "已复制",
+    "falhaAoCopiar": "无法复制"
   }
 }
