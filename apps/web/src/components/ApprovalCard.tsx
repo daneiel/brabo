@@ -358,7 +358,7 @@ export function ApprovalCard({
             temQueryClient && (
               <ModoAutomaticoDoPlano projectId={action.projectId} payload={payload} />
             )}
-          <div className={styles.acoesDoCard}>
+          <div className={styles.acoesDoCard} data-acoes-do-card="">
             <Button variant="success" disabled={inerte} onClick={() => void decidir(() => onApprove())}>
               {t('approvalCard.actions.approve')}
             </Button>
