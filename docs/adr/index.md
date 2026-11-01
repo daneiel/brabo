@@ -3,7 +3,7 @@ id: adr-index
 title: Decisões arquiteturais (ADR)
 sidebar_label: Índice de ADRs
 sidebar_position: 0
-description: Os 228 registros de decisão arquitetural do Brabo, agrupados por tema, com o que cada um decidiu.
+description: Os 229 registros de decisão arquitetural do Brabo, agrupados por tema, com o que cada um decidiu.
 keywords: [ADR, decisão arquitetural, arquitetura, histórico]
 ---
 
@@ -304,6 +304,7 @@ Telas, navegação, temas e a estrutura dos maiores arquivos do app web.
 | [0210](0210-animacao-de-texto-com-motion.md) | Animação de texto com `motion` (AT-401): o Shimmer do AI Elements, adaptado a CSS Modules e tokens (base `--text-secondary`, varredura `--text-primary`), mora em `components/ui/Shimmer.tsx` — o único importador de `motion`, carregado por `LazyMotion` + `domAnimation` num chunk próprio `vendor-motion` (26,5 kB gzip, fora da carga inicial); movimento reduzido mantém o texto estático. |
 | [0211](0211-uma-navegacao-so-a-sidebar-absorve-o-trilho.md) | Uma navegação só (AT-404): o trilho vertical do projeto (ADR 0126, `ProjectRail.tsx`) é removido e a lista por projeto da sidebar (`AbasDoProjeto`) absorve tudo o que ele tinha — grupos, aba ativa, os cinco contadores SEPARADOS (o mesmo hook `useContagensDoProjeto` da moldura, sem requisição nova), teclado, um flyout quando recolhida e a gaveta no celular. A moldura da aba Código cai de 492px para 312px (110px recolhida). |
 | [0232](0232-shadcn-com-base-ui-no-apps-web.md) | shadcn/ui com Base UI (`base-nova`) e Tailwind 4 no `apps/web` (AT-645): tema = tokens do Brabo, sem preflight até a limpeza, alias `@/`, `components/shadcn/`, grupo `vendor-ui`; nenhuma tela muda. |
+| [0234](0234-shiki-e-recharts-por-carga-dinamica.md) | `shiki` no Code Block e `recharts` no Chart dos Gastos (AT-657, AT-658), liberados pelo dono em 31/10: versão exata, sempre por `import()`/lazy, fora do JS inicial e de `codeSplitting.groups`; cor por token; o realce por regex e o SVG de hoje ficam como queda. |
 
 ## Operação, deploy e instalação {#tema-operacao}
 
@@ -369,7 +370,7 @@ Como a documentação é gerada, verificada e publicada.
 - **Um arquivo por decisão**, em `docs/adr/NNNN-short-title.md`, com
   numeração sequencial de 4 dígitos, e título `# ADR NNNN — <título>`
   ([0218](0218-titulo-de-adr-com-prefixo.md)). **Sem reuso de número**, nem quando um ADR
-  é substituído — o próximo é **0234**.
+  é substituído — o próximo é **0235**.
 - **Um tema por decisão**, escolhido por quem escreve o ADR, no mesmo
   PR: uma linha em `docs/adr/temas.yml` e a linha do índice sob a seção desse
   tema, em ordem numérica. Quem revisa confirma. Um tema novo é uma
