@@ -689,6 +689,13 @@ function LinhaDoCatalogo({
           <Badge tone="accent">{t('badges.generatesImage')}</Badge>
         )}
         {model.manualPricing && <Badge tone="muted">{t('badges.manualPricing')}</Badge>}
+        {model.sugestao?.cobranca && (
+          <Badge tone="muted">
+            {t('priceEditor.suggestedBand', {
+              faixa: t(`priceEditor.${model.sugestao.cobranca}`),
+            })}
+          </Badge>
+        )}
         {/* Uso vem depois das capabilities e com tom próprio: uma é o que o
             provider prova, a outra é o que este workspace decidiu. */}
         {model.uses.map((u) => (
@@ -770,6 +777,49 @@ function EditorDePreco({
     onError: falha,
   });
 
+  const sug = model.sugestao;
+  const preco = sug?.preco ?? null;
+  const jaAplicado =
+    (!preco ||
+      (preco.entradaMicros === model.inputPricePerMillionMicros &&
+        preco.saidaMicros === model.outputPricePerMillionMicros)) &&
+    (!sug?.cobranca || sug.cobranca === (model.billing ?? 'api'));
+  const [aplicando, setAplicando] = useState(false);
+  // Duas rotas em série, desfecho POR PASSO (RN-469): nenhuma / algumas / todas.
+  async function aplicarSugerido() {
+    if (!sug) return;
+    setAplicando(true);
+    setErro(null);
+    let feitos = 0;
+    const total = (preco ? 1 : 0) + (sug.cobranca ? 1 : 0);
+    try {
+      if (preco) {
+        await updateModelPricing(workspaceId, model.id, {
+          inputPricePerMillionMicros: preco.entradaMicros,
+          outputPricePerMillionMicros: preco.saidaMicros,
+        });
+        feitos++;
+        setEntrada(emUsd(preco.entradaMicros));
+        setSaida(emUsd(preco.saidaMicros));
+      }
+      if (sug.cobranca) {
+        await updateModelBilling(workspaceId, model.id, sug.cobranca);
+        feitos++;
+      }
+      showToast({ title: t('priceEditor.applied') });
+    } catch (e) {
+      const frase = mensagemDaApi(e, t('priceEditor.invalid'));
+      setErro(
+        feitos === 0
+          ? frase
+          : t('priceEditor.appliedPartial', { feitos, total, frase }),
+      );
+    } finally {
+      setAplicando(false);
+      if (feitos > 0) aposSalvar();
+    }
+  }
+
   function salvar() {
     const i = microsDoCampo(entrada);
     const o = microsDoCampo(saida);
@@ -786,6 +836,32 @@ function EditorDePreco({
     >
       <p>{t('priceEditor.scope')}</p>
       {!podeEditar && <p>{t('priceEditor.ownerOnly')}</p>}
+      {preco && (
+        <p>
+          {t('priceEditor.suggested', {
+            entrada: micros(preco.entradaMicros),
+            saida: micros(preco.saidaMicros),
+            fabricante: preco.fabricante,
+            data: preco.conferidoEm,
+          })}{' '}
+          <a href={preco.fonte} target="_blank" rel="noreferrer">
+            {t('priceEditor.source')}
+          </a>
+          {preco.observacao && ` — ${preco.observacao}`}
+        </p>
+      )}
+      {sug &&
+        (preco || sug.cobranca) &&
+        (jaAplicado ? (
+          <p>{t('priceEditor.alreadyApplied')}</p>
+        ) : (
+          <Button
+            onClick={() => void aplicarSugerido()}
+            disabled={!podeEditar || aplicando}
+          >
+            {t('priceEditor.apply')}
+          </Button>
+        ))}
       <Input
         label={t('priceEditor.input')}
         inputMode="decimal"

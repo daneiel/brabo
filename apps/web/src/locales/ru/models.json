@@ -254,6 +254,13 @@
     "historyRow": "{{antes}} → {{depois}} · {{origem}} · {{quando}}",
     "sourceManual": "вручную",
     "sourceSync": "синхронизация",
-    "saved": "Цена сохранена."
+    "saved": "Цена сохранена.",
+    "suggestedBand": "рекомендуемый тариф: {{faixa}}",
+    "suggested": "рекомендуется: {{entrada}} / {{saida}} за 1M — {{fabricante}}, проверено {{data}}",
+    "source": "источник",
+    "apply": "Применить рекомендуемое",
+    "applied": "Рекомендуемые цена и тариф применены.",
+    "appliedPartial": "Применено шагов: {{feitos}} из {{total}}; остальное не удалось: {{frase}}",
+    "alreadyApplied": "Рекомендуемое значение уже применено."
   }
 }

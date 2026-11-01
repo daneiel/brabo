@@ -238,6 +238,13 @@
     "historyRow": "{{antes}} → {{depois}} · {{origem}} · {{quando}}",
     "sourceManual": "manual",
     "sourceSync": "sync",
-    "saved": "Price saved."
+    "saved": "Price saved.",
+    "suggestedBand": "suggested band: {{faixa}}",
+    "suggested": "suggested: {{entrada}} / {{saida}} per 1M — {{fabricante}}, checked on {{data}}",
+    "source": "source",
+    "apply": "Apply suggested",
+    "applied": "Suggested price and billing applied.",
+    "appliedPartial": "Applied {{feitos}} of {{total}} steps; the rest failed: {{frase}}",
+    "alreadyApplied": "The suggested value is already applied."
   }
 }

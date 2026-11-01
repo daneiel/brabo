@@ -230,6 +230,13 @@
     "historyRow": "{{antes}} → {{depois}} · {{origem}} · {{quando}}",
     "sourceManual": "手动",
     "sourceSync": "同步",
-    "saved": "价格已保存。"
+    "saved": "价格已保存。",
+    "suggestedBand": "建议计费方式：{{faixa}}",
+    "suggested": "建议：{{entrada}} / {{saida}} 每 1M — {{fabricante}}，核对于 {{data}}",
+    "source": "来源",
+    "apply": "应用建议",
+    "applied": "已应用建议的价格与计费方式。",
+    "appliedPartial": "已完成 {{total}} 步中的 {{feitos}} 步；其余失败：{{frase}}",
+    "alreadyApplied": "建议值已应用。"
   }
 }

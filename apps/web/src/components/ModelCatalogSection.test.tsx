@@ -645,6 +645,64 @@ describe('curadoria por uso', () => {
       );
     });
 
+    const sugestao = {
+      cobranca: 'api' as const,
+      preco: {
+        fabricante: 'Anthropic',
+        entradaMicros: 100_000,
+        saidaMicros: 500_000,
+        fonte: 'https://docs.claude.com/pricing.md',
+        conferidoEm: '2026-11-01',
+        observacao: 'Prompt até 100 000 tokens.',
+      },
+    };
+    const abrirComSugestao = async (role: string, over = {}) => {
+      comPapel(role);
+      listModelCatalog.mockResolvedValue(catalogo([model({ sugestao, ...over })]));
+      montar();
+      await screen.findByText('GPT-4o mini');
+      fireEvent.click(screen.getByRole('button', { name: /Preço e cobrança/ }));
+    };
+
+    it('owner aplica o sugerido: preço e cobrança em série', async () => {
+      await abrirComSugestao('owner', { billing: 'subscription' });
+      expect(await screen.findByText(/Anthropic, conferido em 2026-11-01/)).toBeTruthy();
+      expect(screen.getByText(/Prompt até 100 000 tokens/)).toBeTruthy();
+      fireEvent.click(await screen.findByRole('button', { name: 'Aplicar sugerido' }));
+      await waitFor(() =>
+        expect(updateModelBilling).toHaveBeenCalledWith('ws-1', 'm-1', 'api'),
+      );
+      expect(updateModelPricing).toHaveBeenCalledWith('ws-1', 'm-1', {
+        inputPricePerMillionMicros: 100_000,
+        outputPricePerMillionMicros: 500_000,
+      });
+    });
+
+    it('falha no 2º passo diz quantos passaram', async () => {
+      updateModelBilling.mockRejectedValueOnce(new Error('x'));
+      await abrirComSugestao('owner', { billing: 'subscription' });
+      fireEvent.click(await screen.findByRole('button', { name: 'Aplicar sugerido' }));
+      expect(await screen.findByText(/Aplicou 1 de 2 passos/)).toBeTruthy();
+    });
+
+    it('maintainer vê a sugestão com o botão inerte; igual ao vigente some o botão', async () => {
+      await abrirComSugestao('maintainer');
+      expect(
+        (screen.getByRole('button', { name: 'Aplicar sugerido' }) as HTMLButtonElement)
+          .disabled,
+      ).toBe(true);
+    });
+
+    it('sugestão igual ao vigente mostra "já aplicado"', async () => {
+      await abrirComSugestao('owner', {
+        billing: 'api',
+        inputPricePerMillionMicros: 100_000,
+        outputPricePerMillionMicros: 500_000,
+      });
+      expect(await screen.findByText(/já está aplicado/)).toBeTruthy();
+      expect(screen.queryByRole('button', { name: 'Aplicar sugerido' })).toBeNull();
+    });
+
     it('negativo é recusado no cliente', async () => {
       comPapel('owner');
       montar();
