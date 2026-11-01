@@ -25443,3 +25443,10 @@ sem dizer qual.
 - **Onde:** `apps/web/src/routes/StructuredQuestionCard.tsx:73` (`StructuredQuestionCard`), `apps/web/src/components/shadcn/questionnaire.tsx:8` (`Questionnaire`).
 - **Teste:** `apps/web/src/routes/SessionPage.perguntas-estruturadas.test.tsx`, `apps/web/src/components/shadcn/registro.test.tsx`.
 - **Origem:** AT-653 (EP-031).
+
+### RN-971 — A paleta de comandos Ctrl+K/⌘K busca projetos, sessões e ações só do que já está em memória {#rn-971}
+
+- **Regra:** Ctrl+K (⌘K no macOS) abre a paleta de qualquer tela autenticada, menos com o foco no terminal xterm, durante composição de IME (RN-830) ou com o evento já tratado. Ela lista projetos, abas do projeto aberto, a sessão mais recente de cada projeto, as sessões do projeto aberto que já estão no cache e as ações da sidebar (novo projeto, tema, gastos, containers, providers, conta, sair), lendo SÓ o que o Shell já tem e o cache do TanStack Query: abrir, filtrar e fechar a paleta não faz requisição (RN-632). O grupo de sessões diz que é recorte (RN-180). Sem dependência nova: `Autocomplete` do Base UI dentro do `Dialog`, carregada por `React.lazy`.
+- **Onde:** `apps/web/src/lib/paleta-de-comandos.ts:33` (`itensDaPaleta`), `apps/web/src/lib/paleta-de-comandos.ts:70` (`deveAbrirPaleta`), `apps/web/src/components/PaletaDeComandos.tsx:38` (`PaletaDeComandos`).
+- **Teste:** `apps/web/src/lib/paleta-de-comandos.test.ts`, `apps/web/src/components/PaletaDeComandos.test.tsx` (zero `fetch`).
+- **Origem:** AT-656 (EP-031).
