@@ -598,6 +598,20 @@ export interface ModelComCuradoria extends Model {
    * marcado por isto.
    */
   freeRoutingAlias: boolean;
+  /** Sugestão do catálogo (RN-965): nunca gravada sozinha; aplicar é curadoria. */
+  sugestao?: SugestaoDoCatalogo | null;
+}
+
+export interface SugestaoDoCatalogo {
+  cobranca: 'api' | 'subscription' | 'free' | null;
+  preco: {
+    fabricante: string;
+    entradaMicros: number;
+    saidaMicros: number;
+    fonte: string;
+    conferidoEm: string;
+    observacao?: string;
+  } | null;
 }
 
 export type ModelsByCategory = Record<ModelCategory, Record<string, Model[]>>;

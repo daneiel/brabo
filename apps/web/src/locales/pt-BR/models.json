@@ -246,6 +246,13 @@
     "historyRow": "{{antes}} → {{depois}} · {{origem}} · {{quando}}",
     "sourceManual": "manual",
     "sourceSync": "sincronização",
-    "saved": "Preço salvo."
+    "saved": "Preço salvo.",
+    "suggestedBand": "faixa sugerida: {{faixa}}",
+    "suggested": "sugerido: {{entrada}} / {{saida}} por 1M — {{fabricante}}, conferido em {{data}}",
+    "source": "fonte",
+    "apply": "Aplicar sugerido",
+    "applied": "Preço e cobrança sugeridos aplicados.",
+    "appliedPartial": "Aplicou {{feitos}} de {{total}} passos; o restante falhou: {{frase}}",
+    "alreadyApplied": "O valor sugerido já está aplicado."
   }
 }

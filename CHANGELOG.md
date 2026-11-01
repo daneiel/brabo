@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Funcionalidades
 
+- A tela de Providers mostra, em cada modelo do catálogo, a faixa de cobrança sugerida e o preço do fabricante com a fonte e a data da conferência, e o `owner` aplica com "Aplicar sugerido" (preço e cobrança em série, com o resultado de cada passo); o `maintainer` vê a sugestão sem o botão ativo (AT-640, RN-965).
 - O catálogo de modelos sugere o preço publicado pelo FABRICANTE do modelo (primeira entrega: Anthropic, conferida em 01/11) e, no 9Router, a faixa de cobrança pelo nome — assinatura (`cc/`, `cx/`), grátis ou API —, sem guardar a senha do painel; nada é aplicado sozinho (AT-640, RN-965).
 - As perguntas estruturadas dos agentes viram um formulário passo a passo, uma pergunta por vez com progresso, sobre o Questionnaire do shadcn; o que a api recebe não muda (AT-653, RN-968).
 - O consumo por agente da sessão traz a última chamada de cada agente (tokens de entrada, modelo e janela), sem contar o Jev — o dado para mostrar quanto da janela o agente ocupa (AT-654, RN-969).
