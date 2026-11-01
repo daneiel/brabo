@@ -3362,3 +3362,15 @@ Completa a [RN-964](#rn-964) (curadoria de preço na tela) e a [RN-954](#rn-954)
 - **Código:** `apps/api/src/domain/llm/sugestao-do-catalogo.ts:18` (`sugestaoDoModelo`); `apps/api/src/domain/llm/precos-do-fabricante.ts:89` (`precoDoFabricante`)
 - **Teste:** `apps/api/test/domain/llm/sugestao-do-catalogo.spec.ts` (alias, grátis, assinatura, openrouter sem sugestão, igualdade exata); `apps/api/test/domain/llm/precos-do-fabricante.spec.ts` (id repetido, data futura, preço inválido, link fora do domínio)
 - **Origem:** AT-640
+
+### RN-973 — A série diária do gasto é desenhada pelo Chart, carregado sob demanda, e também existe como tabela {#rn-973}
+
+Por decisão do dono (31/10, AT-636 decisão 4), a página de Gastos ganha o Chart do shadcn (`recharts@3.8.0`, ADR 0234), sem mexer em quem vê o quê ([RN-952](#rn-952), [RN-953](#rn-953), [RN-963](#rn-963)).
+
+1. **Só as três séries diárias** (owner, não-owner e membro) viram gráfico: barras (soma por dia), eixo em US$, tooltip com dia, US$ e chamadas, cor `var(--accent)` pelo `ChartConfig` (nenhuma variável nova). Os rankings seguem barras com o número ao lado, e o empilhado por provider segue fora ([RN-211](#rn-211)).
+2. **Carga sob demanda.** O gráfico mora em `GraficoDeGastoPorDia.tsx`, carregado por `React.lazy` em `GastoPorDia.tsx`, com o SVG de `BarrasPorDia` como fallback. `SpendCharts.tsx` não importa o recharts, porque a aba Sessões importa o `Destaque` dali.
+3. **Recorte dito e alternativa em texto** ([RN-180](#rn-180)): o título diz a janela, a figura tem `aria-label` igual a ele, e `<details>` "Ver como tabela" traz dia, gasto e chamadas. Zero requisição nova ([RN-632](#rn-632)).
+
+- **Código:** `apps/web/src/components/GraficoDeGastoPorDia.tsx:13` (`GraficoDeGastoPorDia`); `apps/web/src/components/GastoPorDia.tsx:8` (`GastoPorDia`)
+- **Teste:** `apps/web/src/components/GraficoDeGastoPorDia.test.tsx` (figura com janela, tabela com os dias, série vazia)
+- **Origem:** AT-658

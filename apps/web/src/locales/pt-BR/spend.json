@@ -46,7 +46,18 @@
     "note": "Aqui não há quebra por provider nem por credencial — é a conta de outra pessoa, e a pergunta desta tela é o seu consumo."
   },
   "charts": {
-    "noSpendInWindow": "Nenhum gasto nesta janela."
+    "noSpendInWindow": "Nenhum gasto nesta janela.",
+    "window_zero": "sem dias",
+    "window_one": "último dia",
+    "window_other": "últimos {{count}} dias",
+    "spend": "Gasto",
+    "calls_zero": "{{count}} chamadas",
+    "calls_one": "{{count}} chamada",
+    "calls_other": "{{count}} chamadas",
+    "viewAsTable": "Ver como tabela",
+    "colDay": "Dia",
+    "colSpend": "Gasto",
+    "colCalls": "Chamadas"
   },
   "libSpend": {
     "callTitle_zero": "{{dia}} · {{custo}} · {{count}} chamadas",

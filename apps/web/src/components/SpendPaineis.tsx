@@ -17,7 +17,8 @@ import { rotuloDoAtor } from '../lib/spend';
 import { JANELAS, comoRanking, rotuloDoProvider } from '../lib/spend-ranking';
 import { Select } from './ui/Select';
 import { Shimmer } from './ui/Shimmer';
-import { BarrasPorDia, Destaque, Ranking } from './SpendCharts';
+import { GastoPorDia } from './GastoPorDia';
+import { Destaque, Ranking } from './SpendCharts';
 import { CredentialSpendSection, formatarUsd } from './CredentialSpendSection';
 import styles from '../routes/ProjectSpendTab.module.css';
 
@@ -199,7 +200,7 @@ export function GastoDoWorkspace({
             rotuloTotal={t('workspace.totalLabel', { dias })}
           />
           <div className={styles.faixa}>
-            <BarrasPorDia serie={r.porDia} titulo={t('workspace.dailySpendTitle')} />
+            <GastoPorDia serie={r.porDia} titulo={t('workspace.dailySpendTitle')} />
           </div>
           <div className={styles.grade}>
             <Ranking
@@ -322,7 +323,7 @@ export function MeuConsumoNoWorkspace({ workspaceId }: { workspaceId: string }) 
             rotuloTotal={t('global.memberTotal', { dias })}
           />
           <div className={styles.faixa}>
-            <BarrasPorDia serie={d.porDia} titulo={t('global.memberDaily')} />
+            <GastoPorDia serie={d.porDia} titulo={t('global.memberDaily')} />
           </div>
           <Ranking
             titulo={t('global.memberByProject')}
