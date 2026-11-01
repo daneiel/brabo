@@ -27,8 +27,8 @@ import {
  *
  * Asserção sobre as REQUISIÇÕES observadas; o card é só onde se clica. O
  * seletor é estrutural: o card do chat é o único lugar da sessão com
- * `data-testid="motivo-da-politica"`, e o botão de recusar é o SEGUNDO do grupo
- * de ações dele (aprovar, recusar, sempre permitir) — se a ordem mudar, o
+ * `data-testid="motivo-da-politica"`, e o botão de recusar é o SEGUNDO do
+ * `[data-acoes-do-card]` do mesmo `[data-confirmacao]` (aprovar, recusar, sempre permitir) — se a ordem mudar, o
  * clique cai noutro botão e o spec reprova esperando o `/deny`, nunca passa
  * decidindo outra coisa.
  *
@@ -76,7 +76,10 @@ test('a decisão sai do chat em origem cruzada e a fila deixa de ter a pendênci
 
   const card = page.locator('[data-testid="motivo-da-politica"]');
   await expect(card).toHaveCount(1, { timeout: 30_000 });
-  const recusar = card.locator('xpath=following-sibling::div[count(button)>=2][1]/button[2]');
+  const recusar = card
+    .locator('xpath=ancestor::*[@data-confirmacao][1]')
+    .locator('[data-acoes-do-card] button')
+    .nth(1);
 
   const decisao = page.waitForRequest(
     (r) => r.url().endsWith(`/sessions/${semeada.sessionId}/actions/${acaoId}/deny`) && r.method() === 'POST',
