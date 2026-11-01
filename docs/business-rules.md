@@ -277,7 +277,7 @@ one.
 
 - **Where:** `apps/web/src/lib/session-destinatario.ts:290`
   (`useDestinatarioDoChat`, since RN-631),
-  `apps/web/src/lib/api-client.ts:1151` (`getSessionModelBinding`, the
+  `apps/web/src/lib/api-client.ts:1160` (`getSessionModelBinding`, the
   `agentId`), `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:166`
   (`getSessionBinding`, `@Query('agentId')`)
 - **Test:** `apps/web/src/routes/SessionPage.destinatario-do-chat.test.tsx`
@@ -18499,7 +18499,7 @@ não medido em projeto real, e declarado.
   (`TETO_DE_CHAVES_NO_LOTE`), `:37` (`lerListaDeChaves`), `:77`
   (`ResolveModelBindingsEmLoteUseCase`);
   `apps/api/src/interfaces/http/llm/model-bindings.controller.ts:233`
-  (`getResolvedBindings`); `apps/web/src/lib/api-client.ts:1176`
+  (`getResolvedBindings`); `apps/web/src/lib/api-client.ts:1185`
   (`getResolvedModelBindings`); `apps/web/src/lib/bindings-resolvidos.ts:43`
   (`invalidarBindingsResolvidos`), `:69` (`useBindingsResolvidos`), `:111`
   (`useBindingsDosAgentes`); `apps/web/src/routes/ProjectOverviewTab.tsx:144`
@@ -20460,8 +20460,8 @@ Três atalhos sobre ações que já existiam, nenhum endpoint novo (AT-357):
    projeto segue pelo "aplicar a todos" da RN-476.
 
 - **Onde:** `apps/web/src/lib/models.ts:244` (`casaComBusca`),
-  `apps/web/src/lib/models.ts:473` (`providersSemCatalogo`),
-  `apps/web/src/lib/models.ts:489` (`algumModeloAtivo`),
+  `apps/web/src/lib/models.ts:491` (`providersSemCatalogo`),
+  `apps/web/src/lib/models.ts:507` (`algumModeloAtivo`),
   `apps/web/src/routes/settings/CredentialsSection.tsx:119` (`handleSync`)
 - **Teste:** `apps/web/src/components/catalogo-com-busca.test.tsx`
   (busca por id e sem resultado; sem atalho "ativar e aplicar"; sync no card,
@@ -25243,7 +25243,7 @@ sem dizer qual.
 ### RN-931 — As telas de providers e do catálogo mostram só o que tem chave do TITULAR, com a cor do provider {#rn-931}
 
 - **Regra:** "ativo" é o provider LOCAL ou o que tem chave do titular do workspace (RN-058), lida da rota da [RN-926](#rn-926). A tabela "O que cada provider sabe fazer" lista só os ativos, com o nome humano e a mesma cor do card de credencial (`COR_DO_PROVIDER`, fonte única) e uma linha dizendo quantos ficaram de fora e quais. O catálogo de modelos vira um painel com UMA ABA por provider ativo (o hub continua repartido por fabricante); busca, facetas e a barra de lote são globais e a seleção sobrevive à troca de aba. Provider SEM chave que ainda tem modelo ATIVO aparece como aba marcada "sem chave do titular", para dar para desativar o modelo (RN-043); os demais sem chave entram na linha "de fora" (RN-180). Carregando ou falhando a rota, mostra TODOS: "não sei" não é "não tem". Revisa o item 1 da [RN-694](#rn-694): o catálogo não tem mais os grupos Local, APIs diretas e Hubs, e a busca que não casa na aba nomeia as abas que casam. O relatório do sync segue com todos os providers.
-- **Onde:** `apps/web/src/lib/models.ts:363` (`providerAtivo`), `apps/web/src/lib/models.ts:371` (`catalogoDoProvider`), `apps/web/src/components/ModelCatalogSection.tsx:141` (`useMemo`), `apps/web/src/routes/ProvidersPage.tsx:33` (`deFora`)
+- **Onde:** `apps/web/src/lib/models.ts:363` (`providerAtivo`), `apps/web/src/lib/models.ts:371` (`catalogoDoProvider`), `apps/web/src/components/ModelCatalogSection.tsx:132` (`useMemo`), `apps/web/src/routes/ProvidersPage.tsx:33` (`deFora`)
 - **Teste:** `apps/web/src/routes/ProvidersPage.test.tsx:102` (só os com chave do titular, e a falha que mostra todos), `apps/web/src/components/ModelCatalogSection.test.tsx:399` (aba "sem chave" com modelo ativo; seleção entre abas; busca nomeia a aba que casa), `apps/web/src/lib/models.test.ts:126` (`providerAtivo`)
 - **Origem:** AT-607 (EP-026), tela; a rota é a RN-926.
 ### RN-932 — A rede do container é artefato declarado por humano e só vale no container recriado {#rn-932}
@@ -25367,6 +25367,13 @@ sem dizer qual.
 - **Onde:** `apps/api/src/infrastructure/llm/nine-router-provider.ts:171` (`nineRouterConfig`), `apps/api/src/domain/llm/model-capabilities.ts:95` (`assertModelFitsBindingScope`), `apps/api/src/application/use-cases/llm/set-model-binding.use-case.ts:56` (`toolCalling`), `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:617` (`buildBody`)
 - **Teste:** `apps/api/test/domain/llm/model-capabilities.spec.ts` (recusa por provider em `agent`/`area`; escopos livres), `apps/api/test/infrastructure/llm/nine-router-provider.contract.spec.ts` (capability `true`), `apps/api/test/contract/llm-provider.contract.ts` (provider sem capability lança nomeado); smoke manual em `nine-router-provider.smoke.spec.ts`.
 - **Origem:** AT-637 (EP-026), TP-01 de 31/10 e medição da AT-631.
+
+### RN-966 — O 9Router 0.5.112 faz três coisas por trás: `off` desliga RTK/Headroom/Caveman/Ponytail e não o Custom Prompt; o OAuth do Claude redige o raciocínio; e camufla as ferramentas {#rn-966}
+
+- **Regra:** completa a [RN-909](#rn-909) com o que o build 0.5.112 do 9Router faz por trás do gateway, medido no bundle e declarado sem código novo. (1) O cabeçalho `x-9router-token-saver` com valor `off` (sem caixa) desliga, juntos, o RTK, o Headroom, o Caveman e o Ponytail; o Custom Prompt NÃO passa por ele e segue como o painel o deixou. O provider manda o cabeçalho em toda chamada, e o efeito é confirmado pela medição da AT-631 (`ok` sem ele = 1 262 tokens). (2) Para a conta OAuth do Claude (`cc/*`) o 9Router manda `redact-thinking-2026-02-12` em `Anthropic-Beta`: o pensamento volta redigido e sem `reasoning_tokens`, então a contagem de raciocínio do stream ([RN-915](business-rules/custo.md#rn-915)) e a retentativa sem raciocínio ([RN-916](business-rules/custo.md#rn-916)) ficam cegas nesse caminho, e `reasoning_tokens` grava ausente ("não disse", [RN-666](business-rules/custo.md#rn-666)). (3) Com token `sk-ant-oat` o 9Router renomeia as ferramentas, acrescenta cerca de 20 ferramentas falsas do Claude Code e envia cabeçalhos de Claude Code; não há configuração que desligue isso. O Brabo não corrige nem desliga a camuflagem: o risco é o modelo chamar uma ferramenta falsa e os termos de uso, e por isso o TP-01 voltou ao OpenRouter.
+- **Onde:** `apps/api/src/infrastructure/llm/nine-router-provider.ts:38` (`NINE_ROUTER_TOKEN_SAVER_HEADER`), `apps/api/src/infrastructure/llm/nine-router-provider.ts:172` (`nineRouterConfig`)
+- **Teste:** `apps/api/test/infrastructure/llm/nine-router-provider.contract.spec.ts:140` (cabeçalho `off` fixado no contrato). Os efeitos (2) e (3) vivem no bundle do 9Router, não no repositório: não há teste deles, e o smoke com chave é o único que os exercitaria.
+- **Origem:** AT-641 (EP-026), levantamento de 31/10 sobre o 9Router 0.5.112 (`chunks/8895.js`, `chunks/8499.js`, `chunks/2380.js`, `chunks/2598.js`), derivado da AT-631.
 
 ### RN-951 — O fio da Sessão acompanha SEMPRE a última mensagem {#rn-951}
 
