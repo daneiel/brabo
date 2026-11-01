@@ -10,6 +10,8 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- A página global de Gastos (`/spend`) ganha a moldura das outras páginas globais (padding, cabeçalho e título de página de 22px) e o seletor "Janela" passa a ser o da casa, também na aba Gastos do projeto (AT-648).
+- O preço e a cobrança dos modelos são curados na tela de Providers; a edição manual deixa de ser desfeita pelo sync, que passa a respeitar a marca `manual_pricing` (AT-634, RN-964).
 - O 503 do 9Router que embrulha um 4xx do upstream (`[404]: … (reset after 2m)`) passa a ser classificado pelo status de dentro: modelo inexistente vira `model_not_found` em vez de `upstream` passageiro e retomado (AT-639, RN-959).
 - O usage do 9Router deixa de gravar os 2 000 tokens inventados pela 0.5.112 (versão lida de `/api/version`; outra versão grava como veio e avisa) e passa a ler o `cached_tokens` do topo; o cache de `cc/*` segue perdido pelo 9Router (AT-638, RN-958).
 - A sessão ativa não é mais encerrada por uma resposta fora de ordem na checagem de trabalho pendente (AT-642, RN-955): o GET interno é repetido uma vez. "Confirmar arquitetura pronta" e a oferta ao Infra funcionam depois de reabrir a sessão (RN-956); "aborted" é falha de infra (RN-957); o grafo volta sozinho se o Neo4j subiu depois da api, e o aviso diz a causa (RN-960).
@@ -506,6 +508,10 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - **install:** o compose de dev (`brabo-dev`) deixa de ser detectado como instalação anterior; a migração ganha a resposta `z`, reinstalar do zero depois do backup provado, sem restaurar os dados antigos; e o fechamento não promete mais o pareamento pela tela do projeto, aposentado no ADR 0203 (RN-692, AT-358).
 - **ci:** o `install-e2e.yml` espera os assets do instalador (`install.sh`, `checksums.txt` e `checksums.txt.bundle`), e não só a Release. Na `v7.0.0` a Release ficou visível 26 s antes de o `install.sh` subir, e o download deu 404 antes de o E2E começar.
 - **ci:** o `install-e2e.yml` lê o id do workspace pessoal em `.[0].workspace.id`, a forma que `GET /workspaces` devolve (`[{ workspace, role }]`). Antes ele lia `.[0].id`, recebia `null` e acusava "a conta nasceu sem workspace pessoal" sobre uma conta que tinha workspace.
+
+### Documentação
+
+- Documentação do 9Router 0.5.112 (AT-641, RN-966): o cabeçalho `off` desliga RTK, Headroom, Caveman e Ponytail, mas não o Custom Prompt; o OAuth do Claude redige o raciocínio e camufla as ferramentas, sem configuração que desligue. Capability `toolCalling` sai da lista de `false`, e a tabela gerada passa a mostrar as capabilities do `9router`.
 
 ## v7.0.0 — 2026-10-01
 

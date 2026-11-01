@@ -3916,6 +3916,8 @@ expostas no `docker-compose.yml`.
 | `TERMINAL_OUTPUT_MAX_BYTES` | subi-lo demais traz de volta o modo de falha que o teto existe para evitar: a saída de cada comando fica no histórico do laço e viaja em TODO turno seguinte. Não é questão de janela de contexto: a maior chamada bem-sucedida da execução que revelou isto primeiro tinha só 28.993 tokens de entrada ([RN-074](business-rules/custo.md#rn-074)) |
 | `API_JSON_BODY_LIMIT` (api) / `TRANSPORT_MAX_BODY_BYTES` (engine) | o `413 request entity too large` no gate de QA/SecOps tinha a causa na própria api do Brabo, nunca no provider — o Express nunca teve limite de corpo configurado e valia o default de 100 KB, contra os 8 MB que o Phoenix aceita na perna engine→api mais pesada (`POST .../llm-turn`, que reenvia o histórico inteiro a cada iteração). `API_JSON_BODY_LIMIT` (default 10 MB) fecha essa ponta; `TRANSPORT_MAX_BODY_BYTES` (default 8 MiB) é o teto que a compactação de contexto do engine respeita POR CIMA da janela do modelo, para disparar antes de o corpo estourar o limite do HTTP ([RN-412](business-rules.md#rn-412), [ADR 0098](adr/0098-limites-de-transporte-e-janela-efetiva-de-compactacao.md)) |
 
+Se o modelo do `9router` chama `Read` ou `Bash` (ferramentas que o Brabo não tem) na conta OAuth do Claude, a causa é a **camuflagem do OAuth** do 9Router ([RN-966](business-rules.md#rn-966)), não o agente: o 9Router renomeia as ferramentas e acrescenta falsas do Claude Code, e nenhuma configuração a desliga. Use API key do Claude ou outro provider.
+
 > **Cuidado — a guarda não limpa a fila.** `START_ANAMNESE=false`
 > bloqueia enfileiramentos **novos**, não os antigos. Já houve 20
 > `AnamneseWorker`s acumulados em `executing` de execuções anteriores, que rodam

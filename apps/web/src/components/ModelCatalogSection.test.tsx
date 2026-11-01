@@ -17,6 +17,10 @@ const syncModelCatalog = vi.fn();
 const listCredentials = vi.fn();
 const setModelUses = vi.fn();
 const listCredentialedProviders = vi.fn();
+const listWorkspaces = vi.fn();
+const updateModelPricing = vi.fn();
+const updateModelBilling = vi.fn();
+const listModelPriceChanges = vi.fn();
 
 vi.mock('../lib/api-client', () => ({
   listModelCatalog: (...args: unknown[]) => listModelCatalog(...args),
@@ -26,7 +30,10 @@ vi.mock('../lib/api-client', () => ({
   setModelUses: (...args: unknown[]) => setModelUses(...args),
   listCredentialedProviders: (...args: unknown[]) => listCredentialedProviders(...args),
   setAgentModelBinding: vi.fn(),
-  listWorkspaces: () => Promise.resolve([]),
+  listWorkspaces: (...a: unknown[]) => listWorkspaces(...a),
+  updateModelPricing: (...a: unknown[]) => updateModelPricing(...a),
+  updateModelBilling: (...a: unknown[]) => updateModelBilling(...a),
+  listModelPriceChanges: (...a: unknown[]) => listModelPriceChanges(...a),
   mensagemDaApi: (_e: unknown, f?: string) => f ?? 'erro',
 }));
 
@@ -81,6 +88,10 @@ beforeEach(async () => {
   setModelUses.mockResolvedValue([]);
   syncModelCatalog.mockResolvedValue({ porProvider: [] });
   listCredentials.mockResolvedValue([]);
+  listWorkspaces.mockResolvedValue([]);
+  updateModelPricing.mockResolvedValue({});
+  updateModelBilling.mockResolvedValue({});
+  listModelPriceChanges.mockResolvedValue([]);
   // Sem resposta do titular = "não sei": todos os providers aparecem.
   listCredentialedProviders.mockRejectedValue(new Error('indisponível'));
 });
@@ -582,5 +593,107 @@ describe('curadoria por uso', () => {
 
     expect(screen.getByText('O de código')).toBeTruthy();
     expect(screen.queryByText('Sem opinião')).toBeNull();
+  });
+
+  describe('preço e cobrança', () => {
+    const comPapel = (role: string) =>
+      listWorkspaces.mockResolvedValue([{ id: 'ws-1', role }]);
+
+    it('owner edita preço em micros e troca a cobrança; histórico listado', async () => {
+      comPapel('owner');
+      listModelPriceChanges.mockResolvedValue([
+        {
+          id: 'h1',
+          modelId: 'm-1',
+          inputBeforeMicros: 0,
+          inputAfterMicros: 1_000_000,
+          outputBeforeMicros: 0,
+          outputAfterMicros: 5_000_000,
+          source: 'manual',
+          changedBy: 'u',
+          createdAt: '2026-10-31T10:00:00.000Z',
+        },
+      ]);
+      montar();
+      await screen.findByText('GPT-4o mini');
+      fireEvent.click(screen.getByRole('button', { name: /Preço e cobrança/ }));
+      expect(await screen.findByText(/manual ·/)).toBeTruthy();
+      fireEvent.change(screen.getByLabelText('Entrada (US$ por 1M)'), {
+        target: { value: '1' },
+      });
+      fireEvent.change(screen.getByLabelText('Saída (US$ por 1M)'), {
+        target: { value: '5' },
+      });
+      await waitFor(() =>
+        expect(
+          (screen.getByRole('button', { name: 'Salvar preço' }) as HTMLButtonElement)
+            .disabled,
+        ).toBe(false),
+      );
+      fireEvent.click(screen.getByRole('button', { name: 'Salvar preço' }));
+      await waitFor(() =>
+        expect(updateModelPricing).toHaveBeenCalledWith('ws-1', 'm-1', {
+          inputPricePerMillionMicros: 1_000_000,
+          outputPricePerMillionMicros: 5_000_000,
+        }),
+      );
+      fireEvent.change(screen.getByLabelText('Cobrança'), {
+        target: { value: 'subscription' },
+      });
+      await waitFor(() =>
+        expect(updateModelBilling).toHaveBeenCalledWith('ws-1', 'm-1', 'subscription'),
+      );
+    });
+
+    it('negativo é recusado no cliente', async () => {
+      comPapel('owner');
+      montar();
+      await screen.findByText('GPT-4o mini');
+      fireEvent.click(screen.getByRole('button', { name: /Preço e cobrança/ }));
+      fireEvent.change(screen.getByLabelText('Entrada (US$ por 1M)'), {
+        target: { value: '-1' },
+      });
+      await waitFor(() =>
+        expect(
+          (screen.getByRole('button', { name: 'Salvar preço' }) as HTMLButtonElement)
+            .disabled,
+        ).toBe(false),
+      );
+      fireEvent.click(screen.getByRole('button', { name: 'Salvar preço' }));
+      expect(await screen.findByText(/zero ou maiores/)).toBeTruthy();
+      expect(updateModelPricing).not.toHaveBeenCalled();
+    });
+
+    it('maintainer vê tudo inerte, com o motivo em texto', async () => {
+      comPapel('maintainer');
+      montar();
+      await screen.findByText('GPT-4o mini');
+      fireEvent.click(screen.getByRole('button', { name: /Preço e cobrança/ }));
+      expect(await screen.findByText(/Só o owner edita/)).toBeTruthy();
+      expect(
+        (screen.getByRole('button', { name: 'Salvar preço' }) as HTMLButtonElement)
+          .disabled,
+      ).toBe(true);
+      expect((screen.getByLabelText('Cobrança') as HTMLSelectElement).disabled).toBe(
+        true,
+      );
+    });
+
+    it('preço zero nunca aparece como $0.00 nas três cobranças', async () => {
+      const zero = { inputPricePerMillionMicros: 0, outputPricePerMillionMicros: 0 };
+      listModelCatalog.mockResolvedValue(
+        catalogo([
+          model({ id: 'a', displayName: 'A', billing: 'api', ...zero }),
+          model({ id: 'b', displayName: 'B', billing: 'subscription', ...zero }),
+          model({ id: 'c', displayName: 'C', billing: 'free', ...zero }),
+        ]),
+      );
+      montar();
+      await screen.findByText('A');
+      expect(screen.getByText('sem preço registrado')).toBeTruthy();
+      expect(screen.getByText('assinatura — sem preço registrado')).toBeTruthy();
+      expect(screen.getByText('grátis')).toBeTruthy();
+      expect(screen.queryByText(/\$0\.00/)).toBeNull();
+    });
   });
 });

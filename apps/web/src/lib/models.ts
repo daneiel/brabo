@@ -412,11 +412,29 @@ const usd = new Intl.NumberFormat('en-US', {
  * que consome muito mais entrada que saída, não sai desse número.
  */
 export function formatarPreco(model: Model): string {
-  if (model.provider === 'ollama') return i18n.t('price.free', { ns: 'models' });
+  if (model.provider === 'ollama' || model.billing === 'free')
+    return i18n.t('price.free', { ns: 'models' });
+  const zero =
+    model.inputPricePerMillionMicros === 0 &&
+    model.outputPricePerMillionMicros === 0;
+  if (model.billing === 'subscription' && zero)
+    return i18n.t('price.subscriptionNoPrice', { ns: 'models' });
+  // Preço zero nunca é "$0.00": vazio tem texto próprio (RN-470).
+  if (zero) return i18n.t('price.noPrice', { ns: 'models' });
   const entrada = usd.format(model.inputPricePerMillionMicros / 1_000_000);
   const saida = usd.format(model.outputPricePerMillionMicros / 1_000_000);
   const per1m = i18n.t('price.per1m', { ns: 'models' });
-  return `${entrada} / ${saida} ${per1m}`;
+  const preco = `${entrada} / ${saida} ${per1m}`;
+  return model.billing === 'subscription'
+    ? i18n.t('price.subscription', { ns: 'models', preco })
+    : preco;
+}
+
+/** US$ por 1M digitado -> micros inteiros; `null` para vazio, NaN ou negativo. */
+export function microsDoCampo(texto: string): number | null {
+  const v = Number(texto.replace(',', '.'));
+  if (texto.trim() === '' || !Number.isFinite(v) || v < 0) return null;
+  return Math.round(v * 1_000_000);
 }
 
 export function formatarJanela(model: Model): string | null {
