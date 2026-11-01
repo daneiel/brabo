@@ -1,3 +1,4 @@
+import type * as React from 'react';
 import type { ReactNode } from 'react';
 import { Avatar, AvatarFallback } from '@/components/shadcn/avatar';
 import { Bubble, BubbleContent } from '@/components/shadcn/bubble';
@@ -8,11 +9,12 @@ import {
   MessageHeader,
 } from '@/components/shadcn/message';
 
-type Props = {
+type Props = Omit<React.ComponentProps<'div'>, 'children'> & {
   /** `end` = fala do usuário; `start` = do agente. */
   align?: 'start' | 'end';
-  autor?: string;
-  /** Iniciais ou ícone do avatar; omitido = sem avatar. */
+  /** Texto ou nó (nome + modelo + meta). */
+  autor?: ReactNode;
+  /** Texto vira iniciais no `AvatarFallback`; um nó (já é avatar) entra cru. */
   avatar?: ReactNode;
   rodape?: ReactNode;
   variant?: 'default' | 'secondary' | 'muted' | 'tinted' | 'outline' | 'ghost' | 'destructive';
@@ -27,19 +29,25 @@ export function MensagemDeConversa({
   rodape,
   variant = 'muted',
   children,
+  ...props
 }: Props) {
   return (
-    <MessageBase align={align}>
-      {avatar != null && (
-        <Avatar>
-          <AvatarFallback>{avatar}</AvatarFallback>
-        </Avatar>
-      )}
+    <MessageBase align={align} {...props}>
+      {avatar != null &&
+        (typeof avatar === 'string' ? (
+          <Avatar>
+            <AvatarFallback>{avatar}</AvatarFallback>
+          </Avatar>
+        ) : (
+          avatar
+        ))}
       <MessageContent>
         {autor && <MessageHeader>{autor}</MessageHeader>}
-        <Bubble align={align} variant={variant}>
-          <BubbleContent>{children}</BubbleContent>
-        </Bubble>
+        {children && (
+          <Bubble align={align} variant={variant}>
+            <BubbleContent>{children}</BubbleContent>
+          </Bubble>
+        )}
         {rodape && <MessageFooter>{rodape}</MessageFooter>}
       </MessageContent>
     </MessageBase>

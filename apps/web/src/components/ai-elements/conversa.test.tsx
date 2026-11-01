@@ -17,6 +17,24 @@ describe('ai-elements/conversa (AT-647 A1)', () => {
     expect(screen.getByText('10:00')).toBeTruthy();
   });
 
+  it('autor em nó, avatar cru e props repassadas ao Message; sem filho, sem balão', () => {
+    const { container } = render(
+      <MensagemDeConversa
+        id="event-1"
+        data-testid="m"
+        autor={<b>Ana</b>}
+        avatar={<i data-testid="av" />}
+        variant="destructive"
+      >
+        {''}
+      </MensagemDeConversa>,
+    );
+    expect(container.querySelector('[data-slot="message-header"] b')?.textContent).toBe('Ana');
+    expect(screen.getByTestId('m').id).toBe('event-1');
+    expect(container.querySelector('[data-slot="avatar-fallback"]')).toBeNull();
+    expect(container.querySelector('[data-slot="bubble"]')).toBeNull();
+  });
+
   it('sugestão devolve o texto; lista vazia não renderiza nada', () => {
     const onEscolher = vi.fn();
     const { container, rerender } = render(<Sugestoes sugestoes={['a', 'b']} onEscolher={onEscolher} />);

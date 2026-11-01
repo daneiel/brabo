@@ -21,6 +21,7 @@ import { CartaoOuReferenciaNoFio } from '../components/CartaoOuReferenciaNoFio';
 import { MarkdownMessage } from '../components/ui/MarkdownMessage';
 import { AvatarDoAgente } from '../components/ui/AvatarDoAgente';
 import { Button } from '../components/ui/Button';
+import { MensagemDeConversa } from '../components/ai-elements/message';
 import { Carousel, type CarouselSlide } from '../components/ui/Carousel';
 import { ehTetoDoCriativo, lerFalhaDeTurno } from '../lib/session-falha';
 import { respostaCortada } from '../lib/resposta-cortada';
@@ -454,47 +455,47 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
       empurrar({
         mensagem: true, // RN-644: conta no corte do fio
         node: (
-          <div
-            className={styles.message}
+          <MensagemDeConversa
             key={event.id}
+            align={autor.tipo === 'voce' ? 'end' : 'start'}
             data-autor={autor.tipo}
             style={
               deAgente
                 ? corDoAgente(autor.id)
                 : ({ ['--msg-color' as string]: 'var(--accent)' } as CSSProperties)
             }
+            avatar={
+              deAgente ? (
+                <span className={styles.avatar}>
+                  <ModelIcon size={15} />
+                </span>
+              ) : (
+                <span
+                  className={[styles.avatar, autor.tipo !== 'desconhecido' && styles.user]
+                    .filter(Boolean)
+                    .join(' ')}
+                >
+                  <UserIcon size={15} />
+                </span>
+              )
+            }
+            autor={rotuloDoAutor(autor)}
+            rodape={
+              naFila && (
+                <SeloDaFila
+                  projectId={projectId}
+                  sessionId={sessionId}
+                  mensagemId={event.id}
+                  estado={naFila}
+                  // Só quem ENVIOU cancela (a api recusa os outros com 403),
+                  // e só com a sessão aberta.
+                  podeCancelar={isActive && autor.tipo === 'voce'}
+                />
+              )
+            }
           >
-            {deAgente ? (
-              <span className={styles.avatar}>
-                <ModelIcon size={15} />
-              </span>
-            ) : (
-              <span
-                className={[styles.avatar, autor.tipo !== 'desconhecido' && styles.user]
-                  .filter(Boolean)
-                  .join(' ')}
-              >
-                <UserIcon size={15} />
-              </span>
-            )}
-            <div className={styles.messageBody}>
-              <div className={styles.messageHeader}>
-                <span className={styles.messageName}>{rotuloDoAutor(autor)}</span>
-                {naFila && (
-                  <SeloDaFila
-                    projectId={projectId}
-                    sessionId={sessionId}
-                    mensagemId={event.id}
-                    estado={naFila}
-                    // Só quem ENVIOU cancela (a api recusa os outros com 403),
-                    // e só com a sessão aberta.
-                    podeCancelar={isActive && autor.tipo === 'voce'}
-                  />
-                )}
-              </div>
-              <div className={styles.bubble}>{text}</div>
-            </div>
-          </div>
+            {text}
+          </MensagemDeConversa>
         ),
       });
     } else if (event.type === 'chat.structured_question') {
@@ -787,26 +788,25 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
       const motivo = typeof payload?.reason === 'string' ? payload.reason : t('historia.semMotivo');
       empurrar({
         node: (
-          <div
-            className={styles.message}
+          <MensagemDeConversa
             key={event.id}
             style={{ ['--msg-color' as string]: 'var(--danger)' } as CSSProperties}
-          >
-            <span className={styles.avatar}>
-              <StackIcon size={15} />
-            </span>
-            <div className={styles.messageBody}>
-              <div className={styles.messageHeader}>
+            avatar={
+              <span className={styles.avatar}>
+                <StackIcon size={15} />
+              </span>
+            }
+            autor={
+              <>
                 <span className={styles.messageName}>
                   {rotuloDoAutor(autorDaMensagem(event.actor, autoria))}
                 </span>
                 <span className={styles.messageMeta}>{t('historia.devolveuAoPo')}</span>
-              </div>
-              <div className={styles.bubble}>
-                &quot;{titulo}&quot;: {motivo}
-              </div>
-            </div>
-          </div>
+              </>
+            }
+          >
+            &quot;{titulo}&quot;: {motivo}
+          </MensagemDeConversa>
         ),
       });
     } else if (event.type === 'agent.response') {
@@ -840,21 +840,20 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
           ? payload.modelName
           : undefined;
       const bolha = (text: string, key: string) => (
-          <div className={styles.message} key={key} style={corDoAgente(event.actor.id)}>
-            {/* RN-829: quem fala é o AGENTE — o modelo fica só no chip. */}
-            <AvatarDoAgente id={event.actor.id} />
-            <div className={styles.messageBody}>
-              <div className={styles.messageHeader}>
+          <MensagemDeConversa
+            key={key}
+            style={corDoAgente(event.actor.id)}
+            /* RN-829: quem fala é o AGENTE — o modelo fica só no chip. */
+            avatar={<AvatarDoAgente id={event.actor.id} />}
+            variant={text === '' ? 'ghost' : 'muted'}
+            autor={
+              <>
                 <span className={styles.messageName}>{nomeDoAgente(event.actor.id)}</span>
-                {/* RN-175: o modelo ao lado do nome, como CHIP legível e não
-                    como a palavra solta "modelo" em 10px cinza — que era o
-                    que o relato viu e que se lê como se o modelo se chamasse
-                    "modelo". Sem o dado (evento anterior à RN-146/175, ou
-                    turno que falhou antes de resolver o binding) o chip diz
-                    que ele não foi REGISTRADO, que é a verdade: adivinhá-lo
-                    pelo binding atual do agente seria atribuir a uma resposta
-                    antiga um modelo que talvez nem existisse quando ela foi
-                    gerada. */}
+                {/* RN-175: o modelo ao lado do nome, como CHIP legível; sem o
+                    dado (evento anterior à RN-146/175, ou turno que falhou
+                    antes de resolver o binding) o chip diz que ele não foi
+                    REGISTRADO — adivinhá-lo pelo binding atual seria atribuir
+                    a uma resposta antiga um modelo que talvez nem existisse. */}
                 <span
                   className={[styles.messageModelo, !modelName && styles.messageModeloAusente]
                     .filter(Boolean)
@@ -868,44 +867,31 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
                   <ModelIcon size={11} />
                   {modelName ?? t('mensagens.modeloNaoRegistrado')}
                 </span>
-              </div>
-              {/* Resposta vazia é evento ANTIGO: até a RN-059, falha de
-                  turno era gravada como `agent.response` com conteúdo "" —
-                  e a tela mostrava um balão em branco, indistinguível de um
-                  agente que não teve o que dizer. Os eventos já gravados não
-                  se apagam, então a tela os NOMEIA. */}
-              {text === '' ? (
-                <div className={[styles.bubble, styles.bubbleVazio].join(' ')}>
-                  {t('mensagens.respostaVazia')}
-                </div>
-              ) : (
-                // RN-158: Markdown leve (negrito, cabeçalho, lista, fence de
-                // código com realce) — antes `#`/`**`/```` ``` ```` apareciam
-                // literais no balão. Só `agent.response`: `chat.message` é
-                // texto DIGITADO pelo usuário, não saída de LLM.
-                <div className={styles.bubble}>
-                  <MarkdownMessage text={text} />
-                </div>
-              )}
-              {/* RN-749: a resposta cortada pelo teto oferece a continuação
-                  num clique — antes a pessoa tinha de adivinhar "continue". */}
-              {key === event.id &&
-                isActive &&
-                continuarRespostaCortada &&
-                event.actor.kind === 'agent' &&
-                respostaCortada(text) && (
-                  <div>
-                    <Button
-                      variant="ghost"
-                      data-testid="continuar-resposta-cortada"
-                      onClick={() => continuarRespostaCortada(event.actor.id)}
-                    >
-                      {t('mensagens.continuarCortada')}
-                    </Button>
-                  </div>
-                )}
-            </div>
-          </div>
+              </>
+            }
+            rodape={
+              /* RN-749: a resposta cortada pelo teto oferece a continuação
+                 num clique — antes a pessoa tinha de adivinhar "continue". */
+              key === event.id &&
+              isActive &&
+              continuarRespostaCortada &&
+              event.actor.kind === 'agent' &&
+              respostaCortada(text) && (
+                <Button
+                  variant="ghost"
+                  data-testid="continuar-resposta-cortada"
+                  onClick={() => continuarRespostaCortada(event.actor.id)}
+                >
+                  {t('mensagens.continuarCortada')}
+                </Button>
+              )
+            }
+          >
+            {/* Resposta vazia é evento ANTIGO (até a RN-059): a tela o NOMEIA.
+                RN-158: Markdown leve só em `agent.response`; `chat.message` é
+                texto DIGITADO. */}
+            {text === '' ? t('mensagens.respostaVazia') : <MarkdownMessage text={text} />}
+          </MensagemDeConversa>
       );
       passos.forEach((passo, i) =>
         empurrar({
@@ -939,51 +925,55 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
       empurrar({
         agentId: event.actor.kind === 'agent' ? event.actor.id : undefined,
         node: (
-          <div
-            className={styles.message}
+          <MensagemDeConversa
             key={event.id}
+            variant="destructive"
             style={{ ['--msg-color' as string]: 'var(--danger)' } as CSSProperties}
             // Seletor ESTRUTURAL do E2E (`e2e/testes/turno-pelo-canal.spec.ts`,
             // AT-338): a bolha de falha e a origem dela, sem ler o texto, que
             // muda com o idioma da conta.
             data-testid="falha-de-turno"
             data-origem={origem}
-          >
-            <span className={styles.avatar}>
-              <AlertCircleIcon size={15} />
-            </span>
-            <div className={styles.messageBody}>
-              <div className={styles.messageHeader}>
+            avatar={
+              <span className={styles.avatar}>
+                <AlertCircleIcon size={15} />
+              </span>
+            }
+            autor={
+              <>
                 <span className={styles.messageName}>{nomeDoAgente(event.actor.id)}</span>
                 {/* A ORIGEM fica visível: é ela que diz se o próximo passo é
                     trocar a chave, esperar o provider ou abrir um bug. */}
                 <span className={styles.messageMeta}>{t('mensagens.falhaOrigem', { origem })}</span>
-              </div>
-              <div className={[styles.bubble, styles.bubbleFalha].join(' ')}>
-                {mensagem}
-              </div>
-              {/* AT-393: o próximo gesto, só com o que o evento traz (ator e
-                  origem) — o turno parou e uma mensagem nova o retoma. */}
-              {event.actor.kind === 'agent' && turnoInterrompidoPendente(events, event) && (
-                <RetomarTurnoInterrompido
-                  projectId={projectId}
-                  sessionId={sessionId}
-                  agent={event.actor.id}
-                  plano={planoVigente(events, event)}
-                  podeDecidir={podeDecidir}
-                  acompanhar={acompanharTurnoPeloLog}
-                />
-              )}
-              {event.actor.kind === 'agent' && (
-                <div className={styles.messageMeta} data-testid="falha-proximo-passo">
-                  {t('mensagens.falhaProximoPasso', {
-                    agente: nomeDoAgente(event.actor.id),
-                    origem,
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
+              </>
+            }
+            rodape={
+              <>
+                {/* AT-393: o próximo gesto, só com o que o evento traz (ator e
+                    origem) — o turno parou e uma mensagem nova o retoma. */}
+                {event.actor.kind === 'agent' && turnoInterrompidoPendente(events, event) && (
+                  <RetomarTurnoInterrompido
+                    projectId={projectId}
+                    sessionId={sessionId}
+                    agent={event.actor.id}
+                    plano={planoVigente(events, event)}
+                    podeDecidir={podeDecidir}
+                    acompanhar={acompanharTurnoPeloLog}
+                  />
+                )}
+                {event.actor.kind === 'agent' && (
+                  <div className={styles.messageMeta} data-testid="falha-proximo-passo">
+                    {t('mensagens.falhaProximoPasso', {
+                      agente: nomeDoAgente(event.actor.id),
+                      origem,
+                    })}
+                  </div>
+                )}
+              </>
+            }
+          >
+            {mensagem}
+          </MensagemDeConversa>
         ),
       });
     } else if (event.type === 'toolloop.limit_reached' || event.type === 'agent.error') {
@@ -1004,48 +994,50 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
       empurrar({
         agentId: event.actor.kind === 'agent' ? event.actor.id : undefined,
         node: (
-          <div
-            className={styles.message}
+          <MensagemDeConversa
             key={event.id}
+            variant="destructive"
             style={{ ['--msg-color' as string]: 'var(--danger)' } as CSSProperties}
             data-testid="falha-de-turno"
             data-origem="modelo"
-          >
-            <span className={styles.avatar}>
-              <AlertCircleIcon size={15} />
-            </span>
-            <div className={styles.messageBody}>
-              <div className={styles.messageHeader}>
+            avatar={
+              <span className={styles.avatar}>
+                <AlertCircleIcon size={15} />
+              </span>
+            }
+            autor={
+              <>
                 <span className={styles.messageName}>{nomeDoAgente(event.actor.id)}</span>
                 <span className={styles.messageMeta}>
                   {t('mensagens.falhaOrigem', { origem: 'modelo' })}
                 </span>
+              </>
+            }
+            rodape={
+              /* AT-590: o botão da RN-749, só para os sete conversacionais e só com a sessão ativa. */
+              isActive &&
+              continuarRespostaCortada &&
+              conversacional && (
+                <Button
+                  variant="ghost"
+                  data-testid="continuar-resposta-cortada"
+                  onClick={() => continuarRespostaCortada(event.actor.id)}
+                >
+                  {t('mensagens.continuarCortada')}
+                </Button>
+              )
+            }
+          >
+            {t('mensagens.tetoDeIteracoes', { max: typeof max === 'number' ? max : '?' })}
+            {typeof p.gravado === 'string' && p.gravado !== '' && (
+              <div data-testid="teto-gravado">{p.gravado}</div>
+            )}
+            {typeof p.regrasSemHistoria === 'number' && (
+              <div data-testid="teto-regras-sem-historia">
+                {t('mensagens.regrasSemHistoria', { count: p.regrasSemHistoria })}
               </div>
-              <div className={[styles.bubble, styles.bubbleFalha].join(' ')}>
-                {t('mensagens.tetoDeIteracoes', { max: typeof max === 'number' ? max : '?' })}
-                {typeof p.gravado === 'string' && p.gravado !== '' && (
-                  <div data-testid="teto-gravado">{p.gravado}</div>
-                )}
-                {typeof p.regrasSemHistoria === 'number' && (
-                  <div data-testid="teto-regras-sem-historia">
-                    {t('mensagens.regrasSemHistoria', { count: p.regrasSemHistoria })}
-                  </div>
-                )}
-              </div>
-              {/* AT-590: o botão da RN-749, só para os sete conversacionais e só com a sessão ativa. */}
-              {isActive && continuarRespostaCortada && conversacional && (
-                <div>
-                  <Button
-                    variant="ghost"
-                    data-testid="continuar-resposta-cortada"
-                    onClick={() => continuarRespostaCortada(event.actor.id)}
-                  >
-                    {t('mensagens.continuarCortada')}
-                  </Button>
-                </div>
-              )}
-            </div>
-          </div>
+            )}
+          </MensagemDeConversa>
         ),
       });
     } else if (cicloInterrompido(event)) {
@@ -1058,16 +1050,17 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
       });
       empurrar({
         node: (
-          <div className={styles.message} key={event.id} data-testid="gate-interrompido">
-            <span className={styles.avatar}>
-              <AlertCircleIcon size={15} />
-            </span>
-            <div className={styles.messageBody}>
-              <div className={styles.bubble}>
-                {t('gateInterrompido.aviso', { gate: ciclo.gate, taskId: ciclo.taskId, hora })}
-              </div>
-            </div>
-          </div>
+          <MensagemDeConversa
+            key={event.id}
+            data-testid="gate-interrompido"
+            avatar={
+              <span className={styles.avatar}>
+                <AlertCircleIcon size={15} />
+              </span>
+            }
+          >
+            {t('gateInterrompido.aviso', { gate: ciclo.gate, taskId: ciclo.taskId, hora })}
+          </MensagemDeConversa>
         ),
       });
     } else if (cicloEstacionado(event)) {
@@ -1076,27 +1069,28 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
       const ciclo = cicloEstacionado(event)!;
       empurrar({
         node: (
-          <div className={styles.message} key={event.id} data-testid="gate-estacionado">
-            <span className={styles.avatar}>
-              <AlertCircleIcon size={15} />
-            </span>
-            <div className={styles.messageBody}>
-              <div className={styles.bubble}>
-                {t(
-                  ciclo.motivo === 'tempo'
-                    ? 'gateEstacionado.aviso'
-                    : 'gateEstacionado.avisoPergunta',
-                  { gate: ciclo.gate, taskId: ciclo.taskId },
-                )}
-              </div>
+          <MensagemDeConversa
+            key={event.id}
+            data-testid="gate-estacionado"
+            avatar={
+              <span className={styles.avatar}>
+                <AlertCircleIcon size={15} />
+              </span>
+            }
+            rodape={
               <RetomarGateEstacionado
                 projectId={projectId}
                 taskId={ciclo.taskId}
                 gate={ciclo.gate}
                 podeDecidir={podeDecidir}
               />
-            </div>
-          </div>
+            }
+          >
+            {t(
+              ciclo.motivo === 'tempo' ? 'gateEstacionado.aviso' : 'gateEstacionado.avisoPergunta',
+              { gate: ciclo.gate, taskId: ciclo.taskId },
+            )}
+          </MensagemDeConversa>
         ),
       });
     } else if (event.type.startsWith('delegation.')) {
