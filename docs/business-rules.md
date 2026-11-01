@@ -22414,7 +22414,7 @@ sem dizer qual.
   vocabulário lê os JSON, e o enum entrava pela interpolação em runtime;
   `i18n-enum-cru.test.ts` reprova `t(…, { status: x.status })`.
 - **Onde:** `apps/web/src/routes/ConfirmarEncerramento.tsx:13`
-  (`useEncerrarComConfirmacao`) e `apps/web/src/routes/SessionComposer.tsx:473`
+  (`useEncerrarComConfirmacao`) e `apps/web/src/routes/SessionComposer.tsx:479`
   (`statusGenerico`)
 - **Teste:** `apps/web/src/routes/ConfirmarEncerramento.test.tsx` (sem
   execução encerra direto; com execução só encerra ao confirmar; cancelar não
