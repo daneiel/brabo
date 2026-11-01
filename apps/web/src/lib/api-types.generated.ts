@@ -7566,6 +7566,20 @@ export interface components {
             /** @description Active public Ed25519 keys. Two during a rotation. */
             keys: Record<string, never>[];
         };
+        LastCallResponseDto: {
+            /**
+             * @description Input tokens of that call.
+             * @example 42000
+             */
+            inputTokens: number;
+            /** @example qwen2.5-coder:7b */
+            modelName: string;
+            /**
+             * @description The model's context window, or null when unknown.
+             * @example 128000
+             */
+            contextWindow: number | null;
+        };
         LlmMessageResponseDto: {
             /**
              * @example assistant
@@ -10243,6 +10257,24 @@ export interface components {
              * @enum {string}
              */
             locale: "pt-BR" | "en" | "ru" | "zh-Hans";
+        };
+        SessionAgentTokenUsageResponseDto: {
+            /**
+             * @description The agent's slug, or the user's id.
+             * @example dev-api
+             */
+            actorId: string;
+            /**
+             * @description Cost in micro-USD.
+             * @example 3400000
+             */
+            costMicros: number;
+            /** @example 128000 */
+            inputTokens: number;
+            /** @example 14200 */
+            outputTokens: number;
+            /** @description The agent's latest call in the session (Jev excluded); null when none. */
+            lastCall: components["schemas"]["LastCallResponseDto"] | null;
         };
         SessionContextSummaryResponseDto: {
             /** @description The requested session plus the execution session(s) its approved Dev Lead plan activated (RN-828). */
@@ -21348,7 +21380,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AgentTokenUsageResponseDto"][];
+                    "application/json": components["schemas"]["SessionAgentTokenUsageResponseDto"][];
                 };
             };
             /** @description No token, expired token, or invalid signature. */

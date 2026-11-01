@@ -11240,7 +11240,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/AgentTokenUsageResponseDto"
+                    "$ref": "#/components/schemas/SessionAgentTokenUsageResponseDto"
                   }
                 }
               }
@@ -20343,6 +20343,31 @@
           "keys"
         ]
       },
+      "LastCallResponseDto": {
+        "type": "object",
+        "properties": {
+          "inputTokens": {
+            "type": "number",
+            "example": 42000,
+            "description": "Input tokens of that call."
+          },
+          "modelName": {
+            "type": "string",
+            "example": "qwen2.5-coder:7b"
+          },
+          "contextWindow": {
+            "type": "number",
+            "example": 128000,
+            "nullable": true,
+            "description": "The model's context window, or null when unknown."
+          }
+        },
+        "required": [
+          "inputTokens",
+          "modelName",
+          "contextWindow"
+        ]
+      },
       "LlmMessageResponseDto": {
         "type": "object",
         "properties": {
@@ -25615,6 +25640,46 @@
           "accessToken",
           "expiresIn",
           "locale"
+        ]
+      },
+      "SessionAgentTokenUsageResponseDto": {
+        "type": "object",
+        "properties": {
+          "actorId": {
+            "type": "string",
+            "example": "dev-api",
+            "description": "The agent's slug, or the user's id."
+          },
+          "costMicros": {
+            "type": "number",
+            "example": 3400000,
+            "description": "Cost in micro-USD."
+          },
+          "inputTokens": {
+            "type": "number",
+            "example": 128000
+          },
+          "outputTokens": {
+            "type": "number",
+            "example": 14200
+          },
+          "lastCall": {
+            "nullable": true,
+            "description": "The agent's latest call in the session (Jev excluded); null when none.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/LastCallResponseDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "actorId",
+          "costMicros",
+          "inputTokens",
+          "outputTokens",
+          "lastCall"
         ]
       },
       "SessionContextSummaryResponseDto": {
