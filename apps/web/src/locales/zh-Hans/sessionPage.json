@@ -132,8 +132,10 @@
   "perguntas": {
     "respondidas": "{{agente}} 的问题 — 已回答",
     "titulo": "{{agente}} 的问题",
-    "selecione": "请选择",
-    "outraEscrever": "其他（自行填写）",
+    "anterior": "上一题",
+    "proxima": "下一题",
+    "progresso": "第 {{atual}} 题，共 {{total}} 题",
+    "progressoRotulo": "问题进度",
     "suaResposta": "你的回答 — {{pergunta}}",
     "enviarRespostas": "提交回答",
     "respostasEnviadas": "回答已提交",
