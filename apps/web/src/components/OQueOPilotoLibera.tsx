@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { Disclosure } from './ui/Disclosure';
 import styles from './OQueOPilotoLibera.module.css';
 
 /**
@@ -10,7 +11,7 @@ import styles from './OQueOPilotoLibera.module.css';
  * metade do "não libera" é o texto que a RN-661 já tinha
  * (`autoModeTeam.notReleased.*`), reusado; a do "libera" nasceu com o piloto.
  *
- * `recolhido` põe a lista atrás de um `<details>`: no card do agente e no
+ * `recolhido` põe a lista atrás de um `Disclosure` (Collapsible do shadcn): no card do agente e no
  * `ApprovalCard` a frase curta já está à vista, e a lista inteira é o detalhe.
  */
 export function OQueOPilotoLibera({ recolhido = false }: { recolhido?: boolean }) {
@@ -46,9 +47,12 @@ export function OQueOPilotoLibera({ recolhido = false }: { recolhido?: boolean }
 
   if (!recolhido) return <div className={styles.caixa}>{conteudo}</div>;
   return (
-    <details className={styles.caixa} data-testid="piloto-detalhe">
-      <summary>{t('autoModeTeam.released.summary')}</summary>
+    <Disclosure
+      className={styles.caixa}
+      testId="piloto-detalhe"
+      titulo={t('autoModeTeam.released.summary')}
+    >
       {conteudo}
-    </details>
+    </Disclosure>
   );
 }

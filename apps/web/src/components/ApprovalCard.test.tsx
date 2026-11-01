@@ -192,7 +192,7 @@ describe('ApprovalCard', () => {
         onActivateAutoMode={vi.fn()}
       />,
     );
-    expect(screen.getByTestId('piloto-detalhe')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('piloto-detalhe'));
     expect(screen.getByTestId('piloto-libera')).toHaveTextContent('git commit e criar branch LOCAL');
     expect(screen.getByTestId('modo-automatico-nao-libera')).toHaveTextContent('container_remove');
   });

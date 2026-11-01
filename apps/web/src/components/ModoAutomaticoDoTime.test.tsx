@@ -59,7 +59,8 @@ describe('ModoAutomaticoDoTime (RN-661)', () => {
     expect(setAgentAutonomy).not.toHaveBeenCalled();
 
     // Desmarcar um agente o tira do lote.
-    fireEvent.click(screen.getByLabelText('QA'));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'QA' }));
+    expect(screen.getByRole('checkbox', { name: 'QA' })).toHaveAttribute('aria-checked', 'false');
     fireEvent.click(screen.getByRole('button', { name: 'Ligar para 2 agentes' }));
 
     await waitFor(() => expect(setAgentAutonomy).toHaveBeenCalledTimes(2));
