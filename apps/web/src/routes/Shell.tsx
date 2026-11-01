@@ -52,6 +52,8 @@ import {
   lerProjetosAbertos,
 } from '../lib/sidebar-state';
 import type { ProjectCardSummary } from '../lib/api-types';
+import { SearchIcon } from 'lucide-react';
+import { deveAbrirPaleta } from '../lib/paleta-de-comandos';
 import { ABA_PADRAO, abaDaRota, type ContagensDeAba } from './project-tabs';
 import { Badge } from '../components/ui/Badge';
 import {
@@ -73,6 +75,7 @@ import { AvatarDoAgente } from '../components/ui/AvatarDoAgente';
 import { Button } from '../components/ui/Button';
 // O assistente de novo projeto é um chunk próprio (AT-300): ele só abre por
 // clique, e trazia para o bundle inicial o navegador de pastas inteiro.
+const PaletaDeComandos = lazy(() => import('../components/PaletaDeComandos'));
 const NewProjectWizard = lazy(() =>
   import('./NewProjectWizard').then((m) => ({ default: m.NewProjectWizard })),
 );
@@ -397,6 +400,17 @@ export function Shell() {
   // `pathname === '/'` trocaria uma redundância pequena por um botão que
   // muda de lugar conforme a rota.
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [paletaAberta, setPaletaAberta] = useState(false);
+  useEffect(() => {
+    // Ctrl+K / ⌘K abre a paleta (RN-971); fora do terminal, sem tomar o atalho do IME.
+    const ouvir = (e: globalThis.KeyboardEvent) => {
+      if (!deveAbrirPaleta(e)) return;
+      e.preventDefault();
+      setPaletaAberta(true);
+    };
+    document.addEventListener('keydown', ouvir);
+    return () => document.removeEventListener('keydown', ouvir);
+  }, []);
   const projectsQuery = useProjects(workspace?.id);
   const projects = projectsQuery.data;
   // MESMA queryKey do Dashboard: montados juntos, o React Query deduplica e o
@@ -710,6 +724,17 @@ export function Shell() {
           {!colapsado && <span className={styles.brandName}>Brabo</span>}
         </Link>
 
+        <button
+          type="button"
+          className={styles.footerButton}
+          title={t('palette.open')}
+          aria-label={t('palette.open')}
+          aria-keyshortcuts="Meta+K Control+K"
+          onClick={() => setPaletaAberta(true)}
+        >
+          <SearchIcon size={16} />
+        </button>
+
         {colapsado ? (
           <nav className={styles.trilha} aria-label={t('sidebar.nav.trilhaAriaLabel')}>
             {(projects ?? []).map((project) => (
@@ -988,6 +1013,19 @@ export function Shell() {
       <main className={styles.main}>
         <Outlet />
       </main>
+
+      {paletaAberta && (
+        <Suspense fallback={null}>
+          <PaletaDeComandos
+            onClose={() => setPaletaAberta(false)}
+            projetos={projects ?? []}
+            resumo={cards ?? []}
+            projetoAbertoId={currentProject?.id}
+            irParaAba={irParaAba}
+            abrirNovoProjeto={() => setWizardOpen(true)}
+          />
+        </Suspense>
+      )}
 
       {wizardOpen && workspace && (
         // Fallback nulo: o assistente é um modal por cima da tela, e o clique

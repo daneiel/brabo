@@ -66,5 +66,27 @@
       "spent": "已花费 {{value}}",
       "balance": "余额 {{value}}"
     }
+  },
+  "palette": {
+    "title": "命令面板",
+    "placeholder": "搜索项目、会话和操作…",
+    "empty": "未找到结果。",
+    "open": "搜索",
+    "groups": {
+      "projetos": "前往项目",
+      "abas": "已打开项目的标签页",
+      "sessoes": "会话",
+      "acoes": "操作"
+    },
+    "sessionsScope": "每个项目的最新会话以及已加载的当前项目会话",
+    "actions": {
+      "newProject": "新建项目",
+      "theme": "切换主题",
+      "spend": "支出",
+      "containers": "容器",
+      "providers": "提供方",
+      "account": "账户",
+      "logout": "退出"
+    }
   }
 }
