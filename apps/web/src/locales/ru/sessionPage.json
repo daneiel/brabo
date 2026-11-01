@@ -141,8 +141,10 @@
   "perguntas": {
     "respondidas": "вопросы от {{agente}} — отвечены",
     "titulo": "вопросы от {{agente}}",
-    "selecione": "Выберите",
-    "outraEscrever": "Другое (написать)",
+    "anterior": "Назад",
+    "proxima": "Далее",
+    "progresso": "Вопрос {{atual}} из {{total}}",
+    "progressoRotulo": "Ход ответов на вопросы",
     "suaResposta": "Ваш ответ — {{pergunta}}",
     "enviarRespostas": "Отправить ответы",
     "respostasEnviadas": "Ответы отправлены",

@@ -135,8 +135,10 @@
   "perguntas": {
     "respondidas": "questions from {{agente}} — answered",
     "titulo": "questions from {{agente}}",
-    "selecione": "Select",
-    "outraEscrever": "Other (write in)",
+    "anterior": "Previous",
+    "proxima": "Next",
+    "progresso": "Question {{atual}} of {{total}}",
+    "progressoRotulo": "Questions progress",
     "suaResposta": "Your answer — {{pergunta}}",
     "enviarRespostas": "Send answers",
     "respostasEnviadas": "Answers sent",

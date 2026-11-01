@@ -138,8 +138,10 @@
   "perguntas": {
     "respondidas": "perguntas do {{agente}} — respondidas",
     "titulo": "perguntas do {{agente}}",
-    "selecione": "Selecione",
-    "outraEscrever": "Outra (escrever)",
+    "anterior": "Anterior",
+    "proxima": "Próxima",
+    "progresso": "Pergunta {{atual}} de {{total}}",
+    "progressoRotulo": "Progresso das perguntas",
     "suaResposta": "Sua resposta — {{pergunta}}",
     "enviarRespostas": "Enviar respostas",
     "respostasEnviadas": "Respostas enviadas",
