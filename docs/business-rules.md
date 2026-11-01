@@ -23116,7 +23116,7 @@ sem dizer qual.
   ([RN-755](#rn-755)). Só aparece onde quem chama passou o callback do modo
   automático (papel `maintainer`) e há `QueryClient`. O cartão segue único
   (AT-322): é um bloco a mais do tipo, não variante de aparência.
-- **Onde:** `apps/web/src/components/ApprovalCard.tsx:386`
+- **Onde:** `apps/web/src/components/ApprovalCard.tsx:359`
   (`ModoAutomaticoDoPlano`), `apps/web/src/components/ModoAutomaticoDoPlano.tsx:17`
   (`agentesDoPlano`)
 - **Teste:** `apps/web/src/components/ApprovalCard.modo-automatico-do-plano.test.tsx`
