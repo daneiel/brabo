@@ -517,3 +517,9 @@
   color: var(--danger);
   padding: 0 16px 12px;
 }
+
+.acoesDoCard {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}

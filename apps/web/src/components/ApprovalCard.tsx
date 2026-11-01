@@ -14,7 +14,7 @@ import {
 } from '../lib/decisao-da-politica';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
-import { Card } from './ui/Card';
+import { Confirmacao } from './ai-elements/confirmation';
 import { Disclosure } from './ui/Disclosure';
 import {
   AlertIcon,
@@ -285,12 +285,11 @@ export function ApprovalCard({
   const detalheAberto = temCorpoProprio && isPending && !detalheRecolhido;
 
   return (
-    <Card
-      padding="none"
-      recorta
+    <Confirmacao
       className={[styles.card, isCritical && styles.critical].filter(Boolean).join(' ')}
-    >
-      <div className={styles.header}>
+      titulo={
+        <>
+        <div className={styles.header}>
         {selectable && (
           <input
             type="checkbox"
@@ -324,7 +323,7 @@ export function ApprovalCard({
             {urgency}
           </span>
         )}
-      </div>
+        </div>
 
       {/* A FRASE é a linha que responde "o que acontece se eu aprovar" — sempre
           visível, sempre antes de qualquer detalhe. Tipo que o web ainda não
@@ -346,7 +345,47 @@ export function ApprovalCard({
             )
           : `${verbo} — ${SEM_FRASE}.`}
       </p>
-
+        </>
+      }
+      acoes={isPending ? (
+        <>
+          {/* AT-476 (RN-804): no plano do Dev Lead, a oferta em lote do modo
+              automático vem ANTES de aprovar — aprovar ativa a execução. Só
+              com o callback (quem chama já confirmou maintainer) e com
+              QueryClient (a oferta lê `agent_autonomy`). */}
+          {action.actionType === 'propose_execution_plan' &&
+            onActivateAutoMode &&
+            temQueryClient && (
+              <ModoAutomaticoDoPlano projectId={action.projectId} payload={payload} />
+            )}
+          <div className={styles.acoesDoCard}>
+            <Button variant="success" disabled={inerte} onClick={() => void decidir(() => onApprove())}>
+              {t('approvalCard.actions.approve')}
+            </Button>
+            <Button variant="danger" disabled={inerte} onClick={() => void decidir(() => onDeny())}>
+              {t('approvalCard.actions.deny')}
+            </Button>
+            {/* Patch de instrução NUNCA é auto-aprovável (teto em decide.ts):
+                gravar a regra em permissions.json não muda nada, então o botão
+                prometia um efeito que não existe. */}
+            {podeSemprePermitir && (
+              <Button variant="secondary" disabled={inerte} onClick={() => void decidir(() => onAlwaysAllow())}>
+                {t('approvalCard.actions.alwaysAllow')}
+              </Button>
+            )}
+            {/* "Auto mode" (RN-153) — só quando quem chama já confirmou papel
+                maintainer e passou o callback; ausente some o botão em vez de
+                desabilitar sem explicar (action.actor.kind === 'user' também
+                cai aqui: não há AGENTE pra confiar). */}
+            {onActivateAutoMode && podeSemprePermitir && (
+              <Button variant="ghost" disabled={inerte} onClick={onActivateAutoMode}>
+                {t('approvalCard.actions.autoMode')}
+              </Button>
+            )}
+          </div>
+        </>
+      ) : null}
+    >
       {/* AT-148 (RN-614): QUAL regra decidiu e, em `terminal`, contra qual
           raiz relativa — a MESMA frase da linha do evento no painel de log. */}
       {decisaoDaPolitica !== undefined && (
@@ -379,40 +418,6 @@ export function ApprovalCard({
 
       {isPending ? (
         <>
-          {/* AT-476 (RN-804): no plano do Dev Lead, a oferta em lote do modo
-              automático vem ANTES de aprovar — aprovar ativa a execução. Só
-              com o callback (quem chama já confirmou maintainer) e com
-              QueryClient (a oferta lê `agent_autonomy`). */}
-          {action.actionType === 'propose_execution_plan' &&
-            onActivateAutoMode &&
-            temQueryClient && (
-              <ModoAutomaticoDoPlano projectId={action.projectId} payload={payload} />
-            )}
-          <div className={styles.actions}>
-            <Button variant="success" disabled={inerte} onClick={() => void decidir(() => onApprove())}>
-              {t('approvalCard.actions.approve')}
-            </Button>
-            <Button variant="danger" disabled={inerte} onClick={() => void decidir(() => onDeny())}>
-              {t('approvalCard.actions.deny')}
-            </Button>
-            {/* Patch de instrução NUNCA é auto-aprovável (teto em decide.ts):
-                gravar a regra em permissions.json não muda nada, então o botão
-                prometia um efeito que não existe. */}
-            {podeSemprePermitir && (
-              <Button variant="secondary" disabled={inerte} onClick={() => void decidir(() => onAlwaysAllow())}>
-                {t('approvalCard.actions.alwaysAllow')}
-              </Button>
-            )}
-            {/* "Auto mode" (RN-153) — só quando quem chama já confirmou papel
-                maintainer e passou o callback; ausente some o botão em vez de
-                desabilitar sem explicar (action.actor.kind === 'user' também
-                cai aqui: não há AGENTE pra confiar). */}
-            {onActivateAutoMode && podeSemprePermitir && (
-              <Button variant="ghost" disabled={inerte} onClick={onActivateAutoMode}>
-                {t('approvalCard.actions.autoMode')}
-              </Button>
-            )}
-          </div>
           {/* AT-256: a frase da api, no card — nunca um toast genérico. Vale em
               toda superfície; `obsoleta` diz o porquê de os botões estarem
               inertes (o `title` de botão desabilitado não abre no Chromium). */}
@@ -476,7 +481,7 @@ export function ApprovalCard({
       ) : (
         <DecidedLine action={action} />
       )}
-    </Card>
+    </Confirmacao>
   );
 }
 

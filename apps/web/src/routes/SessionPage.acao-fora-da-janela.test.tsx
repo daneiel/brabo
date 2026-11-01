@@ -201,7 +201,7 @@ function janelaSemA() {
 function cartoes(): HTMLElement[] {
   return screen
     .queryAllByTestId('motivo-da-politica')
-    .map((motivo) => motivo.parentElement as HTMLElement);
+    .map((motivo) => motivo.closest('[data-confirmacao]') as HTMLElement);
 }
 
 function cartaoCom(texto: string): HTMLElement {
