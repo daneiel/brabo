@@ -17,6 +17,7 @@ import { roleAtLeast } from '../lib/roles';
 import { estadoDaTarefa, type EstadoDaTarefa } from '../lib/execution';
 import { motivoDeCorrecaoInerte } from '../lib/correcao-de-historia';
 import { useHistoriaInicial } from '../lib/historia-inicial';
+import { Checkbox } from '../components/shadcn/checkbox';
 import { Input } from '../components/ui/Input';
 import type { Epic, Story, StoryStatus } from '../lib/api-types';
 import { Badge, type BadgeTone } from '../components/ui/Badge';
@@ -259,10 +260,9 @@ function PromotionQueue({
         {stories.map((story) => (
           <div key={story.id} className={styles.proposal}>
             <label className={styles.proposalPick}>
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={selected.has(story.id)}
-                onChange={() => toggleSelect(story.id)}
+                onCheckedChange={() => toggleSelect(story.id)}
                 aria-label={t('promotionQueue.selectAria', { title: story.title })}
               />
             </label>
