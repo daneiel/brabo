@@ -36,6 +36,7 @@ import { useAutoriaDaSessao } from '../lib/autoria-da-sessao';
 import { nomeDaMensagemOtimista, otimistaJaNoLog } from '../lib/mensagem-otimista';
 import { AGENTS } from '../lib/agents';
 import { useToast } from '../components/ui/ToastProvider';
+import { planoDoTurno } from '../lib/plano-do-turno';
 import { TurnActivityStripDoStore } from '../components/TurnActivityStrip';
 import { hashtagDaSessao, rotuloDaSessao } from '../lib/session-label';
 import { tipoDaSessao, usePublicarAbaDaSessao } from '../lib/session-kind';
@@ -814,6 +815,7 @@ export function SessionPage({
               store={streamingStore}
               agente={streamingAgent ?? statusAgent}
               pensandoVisivel={pensandoVisivel}
+              plano={planoDoTurno(events, streamingAgent ?? statusAgent)}
             />
           )}
 
