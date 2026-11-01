@@ -5,6 +5,7 @@ import {
   marcoExpansivel,
   montarArvore,
   ramosAbertosPorPadrao,
+  subagenteDoMarco,
 } from './timeline-tree';
 import type { SessionEvent } from './api-types';
 import i18n from './i18n';
@@ -438,5 +439,44 @@ describe('rótulos da árvore no i18n (AT-134)', () => {
         'stopped: the project has no running container — no container',
       );
     });
+  });
+});
+
+describe('subagenteDoMarco (RN-970)', () => {
+  it('delegação efetivada vira subagente executando quando o ramo dele está ativo', () => {
+    const { ramos } = montarArvore(
+      [
+        evento('delegation.completed', agente('dev-lead'), { subagent: 'dev-api', area: 'api' }),
+        evento('dev.working', agente('dev-api'), { taskTitle: 't' }),
+      ],
+      'pt-BR',
+    );
+    const marco = ramos.find((r) => r.agente === 'dev-lead')!.marcos[0];
+    expect(subagenteDoMarco(marco, ramos)).toMatchObject({
+      subagente: 'dev-api',
+      executando: true,
+      corpo: ['api'],
+    });
+  });
+
+  it('falha leva o motivo; marco que não é delegação ou sem subagente dá null', () => {
+    const { ramos } = montarArvore(
+      [
+        evento('delegation.failed', agente('qa-lead'), {
+          subagent: 'qa-x',
+          failureOrigin: 'modelo',
+          failureReason: 'estourou',
+        }),
+        evento('agent.response', agente('qa-lead'), {}),
+        evento('delegation.dispensed', agente('qa-lead'), {}),
+      ],
+      'pt-BR',
+    );
+    const [falha, resposta, semSub] = ramos[0].marcos;
+    const s = subagenteDoMarco(falha, ramos)!;
+    expect(s.executando).toBe(false);
+    expect(s.corpo).toContain('estourou');
+    expect(subagenteDoMarco(resposta, ramos)).toBeNull();
+    expect(subagenteDoMarco(semSub, ramos)).toBeNull();
   });
 });

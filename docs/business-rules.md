@@ -25457,3 +25457,10 @@ sem dizer qual.
 - **Onde:** `apps/web/src/lib/realce-shiki.ts:61` (`carregarRealce`), `apps/web/src/lib/tema-shiki-brabo.ts:19` (`temaShikiBrabo`).
 - **Teste:** `apps/web/src/lib/realce-shiki.test.ts`.
 - **Origem:** AT-657 (EP-031).
+
+### RN-970 — Na árvore do time, cada delegação de um lead aparece como subagente {#rn-970}
+
+- **Regra:** na árvore do time (Visão geral/Executores), cada delegação gravada por um lead (`delegation.*`) aparece no ramo dele como subagente — nome, desfecho (efetivada/falhou/dispensada, falha com a origem) e se o subagente está trabalhando agora —, derivada dos eventos já carregados, sem requisição nova; delegação fora da janela não aparece. O ramo próprio do subagente continua.
+- **Onde:** `apps/web/src/lib/timeline-tree.ts:287` (`subagenteDoMarco`), `apps/web/src/components/AgentTimelineTree.tsx:51` (`AgentTimelineTree`).
+- **Teste:** `apps/web/src/lib/timeline-tree.test.ts`, `apps/web/src/components/ai-elements/passos.test.tsx`.
+- **Origem:** AT-655 (EP-031).

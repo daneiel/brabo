@@ -5,6 +5,7 @@ import {
   compactarFerramentas,
   montarArvore,
   ramosAbertosPorPadrao,
+  subagenteDoMarco,
   type Marco,
   type RamoDeAgente,
 } from '../lib/timeline-tree';
@@ -18,6 +19,7 @@ import { getAgentLastSeenSeq, setAgentLastSeenSeq } from '../lib/read-state';
 import i18n from '../lib/i18n';
 import { AvatarDoAgente } from './ui/AvatarDoAgente';
 import { Disclosure } from './ui/Disclosure';
+import { Subagent } from './ai-elements/subagent';
 import styles from './AgentTimelineTree.module.css';
 
 /**
@@ -166,6 +168,7 @@ export function AgentTimelineTree({
                   const novaIteracao = m.iteracao !== undefined && m.iteracao !== anterior?.iteracao;
                   const expansivel = marcoExpansivel(m);
                   const expandido = expandidos.has(m.eventId);
+                  const sub = subagenteDoMarco(m, ramos);
                   return (
                     <Fragment key={m.eventId}>
                       {novaIteracao && (
@@ -178,7 +181,17 @@ export function AgentTimelineTree({
                           .filter(Boolean)
                           .join(' ')}
                       >
-                        {expansivel ? (
+                        {sub ? (
+                          <Subagent
+                            nome={rotuloDo(sub.subagente)}
+                            etiqueta={sub.etiqueta}
+                            executando={sub.executando}
+                          >
+                            {sub.corpo.map((linha) => (
+                              <p key={linha}>{linha}</p>
+                            ))}
+                          </Subagent>
+                        ) : expansivel ? (
                           // `className={styles.marcoBloco}` restaura o `gap`
                           // de 6px que antes vinha do `<li>` flex-column com
                           // DOIS filhos diretos (botão + região) — agora os
