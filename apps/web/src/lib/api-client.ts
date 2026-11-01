@@ -1114,6 +1114,15 @@ export const updateModelPricing = (
 ) =>
   patch<Model>(`/workspaces/${workspaceId}/models/${modelId}/pricing`, input);
 
+export const updateModelBilling = (
+  workspaceId: string,
+  modelId: string,
+  billing: 'api' | 'subscription' | 'free',
+) =>
+  patch<Model>(`/workspaces/${workspaceId}/models/${modelId}/billing`, {
+    billing,
+  });
+
 export const listModelPriceChanges = (workspaceId: string, modelId: string) =>
   get<ModelPriceChange[]>(
     `/workspaces/${workspaceId}/models/${modelId}/price-changes`,

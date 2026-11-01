@@ -47,7 +47,10 @@
   },
   "price": {
     "free": "免费",
-    "per1m": "每 1M"
+    "per1m": "每 1M",
+    "noPrice": "未记录价格",
+    "subscriptionNoPrice": "订阅 — 未记录价格",
+    "subscription": "订阅 · 相当于 {{preco}}"
   },
   "contextWindow": {
     "thousands": "{{value}}k ctx",
@@ -209,5 +212,24 @@
     "save": "保存",
     "saving": "正在保存…",
     "addNewToken": "添加新令牌"
+  },
+  "priceEditor": {
+    "open": "价格与计费",
+    "input": "输入（每 1M 美元）",
+    "output": "输出（每 1M 美元）",
+    "billing": "计费方式",
+    "api": "按用量（API）",
+    "subscription": "订阅",
+    "free": "免费",
+    "save": "保存价格",
+    "invalid": "请输入大于或等于零的数字。",
+    "scope": "价格适用于整个安装，且仅向前生效；过去的用量不变。",
+    "ownerOnly": "只有 owner 可以修改价格和计费。",
+    "history": "价格历史",
+    "historyEmpty": "没有价格变更记录。",
+    "historyRow": "{{antes}} → {{depois}} · {{origem}} · {{quando}}",
+    "sourceManual": "手动",
+    "sourceSync": "同步",
+    "saved": "价格已保存。"
   }
 }

@@ -115,7 +115,7 @@ Lido dos literais `capabilities` em `apps/api/src/infrastructure/llm/` — **11 
 
 | provider | streaming | tool calling | list_models | embeddings | preferência de roteamento | credencial | origem dos modelos | quirks resumidos | fonte |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `9router` | ? | ? | ? | ? | ? | chave de API | seed | URL por instalação; Credencial obrigatória; Preço = curadoria manual; Capabilities `false`; Usage corrigido; Token Saver desligado; Qual upstream serviu | `apps/api/src/infrastructure/llm/nine-router-provider.ts` |
+| `9router` | sim | sim | sim | não | não | chave de API | sync | URL por instalação; Credencial obrigatória; Preço = curadoria manual; Capabilities `false`; Usage corrigido; Token Saver desligado; Raciocínio redigido no OAuth do Claude; Camuflagem das ferramentas no OAuth do Claude; Qual upstream serviu | `apps/api/src/infrastructure/llm/nine-router-provider.ts` |
 | `anthropic` | sim | sim | sim | não | não | chave de API | sync + seed | — | `apps/api/src/infrastructure/llm/anthropic-provider.ts` |
 | `bitdeer` | sim | sim | não | não | não | chave de API | seed | `Authorization: Bearer <chave>` CONFIRMADO; `GET /v1/models` existe e é autenticado; Três ids REAIS de modelo confirmados; Nenhuma peculiaridade de stream/erro confirmada | `apps/api/src/infrastructure/llm/bitdeer-provider.ts` |
 | `deepinfra` | sim | sim | sim | não | não | chave de API | sync + seed | O catálogo é PÚBLICO — sem autenticação nenhuma; `stream_options.include_usage` confirmado como suportado; Erro no formato padrão | `apps/api/src/infrastructure/llm/deepinfra-provider.ts` |
@@ -841,17 +841,15 @@ fallback).
   `usage.cost` (não achado no build v0.5.104). Por decisão do dono (22/10), o
   modelo de assinatura registra o **preço público da API equivalente**, não zero:
   o orçamento conta o custo de oportunidade;
-- **Capabilities `false`** (além de `listModels` e de `streaming`, que a suite
-  de contrato exige de todo provider) até o smoke com chave: `toolCalling`,
+- **Capabilities `false`** (além de `listModels`, `streaming` e `toolCalling`, esta última desde a RN-950; `streaming` é exigida por todo provider na suite de contrato) até o smoke com chave:
   `routingPreference` (combo não é `provider.sort`), `embeddings`,
   `promptCaching`, `stickySession`, `priceCeiling`;
 - **Usage corrigido** (AT-638, RN-958): a 0.5.112 soma 2 000 a `prompt_tokens`; o provider lê a versão em `/api/version` e subtrai só nela, grava como veio nas outras (com aviso) e lê o `cached_tokens` do topo. O cache de `cc/*` o 9Router descarta no stream;
 - **Token Saver desligado**: o "RTK Token Saver" do 9Router comprime
   `tool_result`, e o modelo leria algo diferente do que o log gravou. O provider
-  manda `x-9router-token-saver: off` em toda chamada.
-  > **TODO(humano):** o NOME do cabeçalho vem do build do 9Router v0.5.104; o
-  > VALOR aceito (`off`) não foi achado na fonte. O smoke confere se o
-  > `tool_result` chega intacto.
+  manda `x-9router-token-saver: off` em toda chamada. **Achado no 9Router 0.5.112** (RN-966): o bundle (`chunks/8895.js`) lê esse cabeçalho e o valor `off`, sem caixa, desliga RTK, Headroom, Caveman e Ponytail juntos. O Custom Prompt NÃO passa por ele: o cabeçalho não o desliga (desligado no painel desde 22/10);
+- **Raciocínio redigido no OAuth do Claude** (RN-966): para a conta OAuth do Claude (`cc/*`) o 9Router manda `Anthropic-Beta` com `redact-thinking-2026-02-12`. O pensamento volta redigido e sem `reasoning_tokens`. Por isso a contagem de raciocínio do stream (RN-915) e a retentativa sem raciocínio (RN-916) ficam cegas nesse caminho, e `reasoning_tokens` grava ausente ("não disse", RN-666);
+- **Camuflagem das ferramentas no OAuth do Claude** (RN-966): com o token `sk-ant-oat` o 9Router renomeia as ferramentas (sufixo, desfeito na volta), acrescenta cerca de 20 ferramentas falsas do Claude Code e envia `User-Agent: claude-cli/…`, `X-App: cli` e o `Anthropic-Beta` de Claude Code. Não há configuração que desligue. Riscos: o modelo chamar uma ferramenta falsa (ex.: `Read`/`Bash` que o Brabo não tem) e termos de uso — por isso o TP-01 voltou ao OpenRouter (AT-631). Usar API key ou outro provider.
 - **Qual upstream serviu**: o único cabeçalho com a conexão
   (`x-9router-connection-id`) aparece só no caminho de vídeo no build lido; no
   chat, não medido. O smoke imprime os cabeçalhos `x-*` da resposta.
