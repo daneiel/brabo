@@ -44,7 +44,16 @@
     "note": "There's no breakdown by provider or credential here — it's someone else's bill, and this screen's question is your own consumption."
   },
   "charts": {
-    "noSpendInWindow": "No spend in this window."
+    "noSpendInWindow": "No spend in this window.",
+    "window_one": "last day",
+    "window_other": "last {{count}} days",
+    "spend": "Spend",
+    "calls_one": "{{count}} call",
+    "calls_other": "{{count}} calls",
+    "viewAsTable": "View as table",
+    "colDay": "Day",
+    "colSpend": "Spend",
+    "colCalls": "Calls"
   },
   "libSpend": {
     "callTitle_one": "{{dia}} · {{custo}} · {{count}} call",
