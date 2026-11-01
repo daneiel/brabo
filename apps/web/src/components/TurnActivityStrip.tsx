@@ -6,7 +6,11 @@ import { useAtividadeDoStreaming, type StoreDoStreaming } from '../lib/streaming
 import { AvatarDoAgente } from './ui/AvatarDoAgente';
 import { Disclosure } from './ui/Disclosure';
 import { Shimmer } from './ui/Shimmer';
-import { ChatIcon, TerminalIcon } from './ui/icons';
+import { ChatIcon } from './ui/icons';
+import { Tool } from './ai-elements/tool';
+import { Plan, type EstadoDoPasso } from './ai-elements/plan';
+import { TraceIcon, TraceLine, TraceTitle } from './shadcn/trace';
+import type { PlanoDoAgente } from '../routes/RetomarTurnoInterrompido';
 import styles from './TurnActivityStrip.module.css';
 
 interface TurnActivityStripProps {
@@ -19,6 +23,8 @@ interface TurnActivityStripProps {
   /** Indicador de "pensando" (RN-131/156) — o MESMO timer de 5s que
    *  `SessionPage.tsx` já mantém; este componente nunca arma um próprio. */
   pensandoVisivel: boolean;
+  /** Plano do turno em curso (RN-967), derivado dos eventos já carregados. */
+  plano?: PlanoDoAgente | null;
 }
 
 /**
@@ -38,7 +44,7 @@ interface TurnActivityStripProps {
  * (turno começou agora mesmo, antes dos 5s), o componente não renderiza
  * NADA, o mesmo silêncio que a bolha antiga tinha antes do timer.
  */
-export function TurnActivityStrip({ estado, agente, pensandoVisivel }: TurnActivityStripProps) {
+export function TurnActivityStrip({ estado, agente, pensandoVisivel, plano }: TurnActivityStripProps) {
   const { t } = useTranslation('sessionPage');
 
   const ultimaLinha = estado.linhas[estado.linhas.length - 1];
@@ -72,6 +78,12 @@ export function TurnActivityStrip({ estado, agente, pensandoVisivel }: TurnActiv
         <div className={styles.previa} title={previa ?? undefined}>
           {previa ?? <Shimmer>{t('turno.pensando')}</Shimmer>}
         </div>
+        {plano && plano.passos.length > 0 && (
+          <Plan
+            objetivo={plano.objetivo}
+            passos={plano.passos.map((p) => ({ texto: p.texto, estado: p.estado as EstadoDoPasso }))}
+          />
+        )}
         {linhasParaExpandir.length > 0 && (
           <Disclosure
             titulo={t('turno.passosDoTurno')}
@@ -79,18 +91,22 @@ export function TurnActivityStrip({ estado, agente, pensandoVisivel }: TurnActiv
             classNameCabecalho={styles.disclosureCabecalho}
           >
             <div className={styles.linhas}>
-              {linhasParaExpandir.map((linha, indice) => (
+              {linhasParaExpandir.map((linha, indice) =>
                 // Índice como key: as linhas não têm id próprio (narração
                 // efêmera, nunca persistida) e a lista só cresce ao FIM.
-                <div key={indice} className={styles.linha}>
-                  {linha.tipo === 'ferramenta' ? (
-                    <TerminalIcon size={12} className={styles.linhaIconeFerramenta} />
-                  ) : (
-                    <ChatIcon size={12} className={styles.linhaIconeNarracao} />
-                  )}
-                  <span>{linha.texto}</span>
-                </div>
-              ))}
+                linha.tipo === 'ferramenta' ? (
+                  <Tool
+                    key={indice}
+                    titulo={linha.texto}
+                    estado={indice === linhasParaExpandir.length - 1 ? 'running' : undefined}
+                  />
+                ) : (
+                  <TraceLine key={indice}>
+                    <TraceIcon><ChatIcon size={12} /></TraceIcon>
+                    <TraceTitle>{linha.texto}</TraceTitle>
+                  </TraceLine>
+                ),
+              )}
             </div>
           </Disclosure>
         )}

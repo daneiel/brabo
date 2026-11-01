@@ -43,3 +43,16 @@ describe('ai-elements: passos do agente', () => {
     expect(document.body.textContent).not.toContain('0%');
   });
 });
+
+describe('ai-elements: faixa do turno', () => {
+  it('Tool sem conteúdo é linha simples, sem colapsável', () => {
+    const { container } = render(<Tool titulo="Lendo" estado="running" />);
+    expect(container.querySelector('[data-slot="trace-collapsible-trigger"]')).toBeNull();
+    expect(screen.getByText('Lendo')).toBeTruthy();
+  });
+
+  it('Queue com desabilitado deixa o cancelar inerte', () => {
+    render(<Queue rotuloCancelar="cancelar" onCancelar={() => {}} desabilitado itens={[{ id: '1', texto: 'm', podeCancelar: true }]} />);
+    expect((screen.getByRole('button', { name: 'cancelar' }) as HTMLButtonElement).disabled).toBe(true);
+  });
+});

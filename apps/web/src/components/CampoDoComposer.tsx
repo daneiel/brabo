@@ -1,3 +1,4 @@
+import { InputGroupTextarea } from './shadcn/input-group';
 import { useEffect, useRef, type TextareaHTMLAttributes } from 'react';
 
 /**
@@ -46,7 +47,7 @@ export function CampoDoComposer({
   }, [valor]);
 
   return (
-    <textarea
+    <InputGroupTextarea
       {...resto}
       ref={no}
       defaultValue={valor}
