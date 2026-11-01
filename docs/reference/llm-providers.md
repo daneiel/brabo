@@ -197,6 +197,14 @@ de escrever uma linha de código:
   `client.models.list` do SDK oficial, que já pagina sozinho — refazer o laço
   do cursor à mão seria reescrever código mantido pelo fornecedor. Preço **não
   vem** na resposta, então o modelo entra sem preço em vez de com um inventado.
+  Desde a [RN-965](../business-rules/custo.md#rn-965) a tela de curadoria
+  SUGERE o preço que o fabricante publica (tabela curada
+  `apps/api/src/domain/llm/precos-do-fabricante.ts`, cada linha com link e
+  data da fonte), e quem aplica é o `owner`; a mesma tabela vale para o
+  modelo da Anthropic servido por outro provider (o `cc/` do 9Router, por
+  exemplo), por igualdade exata do id. No 9Router a sugestão traz também a
+  faixa de cobrança pelo alias (`cc`/`cx` assinatura, `:free`/`ollama`
+  grátis, o resto API).
 - **Ollama** — `GET /api/tags` devolve `{ models: [{ name, model, size, ... }] }`
   no host local (`OLLAMA_HOST`, default `http://localhost:11434`). Sem preço,
   como cabe a um runtime local.

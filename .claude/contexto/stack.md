@@ -41,6 +41,9 @@
   preflight até a limpeza final, `dark` sobre `[data-theme]`, cores mapeadas aos
   tokens do Brabo sem declarar variáveis cruas do shadcn; grupo `vendor-ui` em
   `codeSplitting.groups`.
+  `@shadcn/react` (AT-653, decisão do dono de 31/10) só para o Questionnaire
+  das perguntas estruturadas, no chunk da Sessão e FORA de
+  `codeSplitting.groups` (zero dependências transitivas).
   Toda TELA é chunk próprio (`lazyRouteComponent` no `router.tsx`, com o
   `.preload` que o router espera), e os painéis das abas do projeto também
   (`React.lazy` em `project-tabs.ts`) — o `Shell` fica estático. Vendors de
