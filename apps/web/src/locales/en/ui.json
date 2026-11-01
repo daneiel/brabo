@@ -38,5 +38,10 @@
     "defaultMessage": "Could not reach the api.",
     "trace": "trace {{traceId}}",
     "retry": "Try again"
+  },
+  "codeBlock": {
+    "copiar": "Copy",
+    "copiado": "Copied",
+    "falhaAoCopiar": "Could not copy"
   }
 }

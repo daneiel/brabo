@@ -40,5 +40,10 @@
     "defaultMessage": "Не удалось связаться с api.",
     "trace": "trace {{traceId}}",
     "retry": "Попробовать снова"
+  },
+  "codeBlock": {
+    "copiar": "Копировать",
+    "copiado": "Скопировано",
+    "falhaAoCopiar": "Не удалось скопировать"
   }
 }

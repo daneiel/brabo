@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   parseInline,
@@ -10,6 +10,13 @@ import {
   type MdInline,
 } from '../../lib/markdown';
 import { highlightFile, type TokenKind } from '../../routes/code/highlight';
+import { carregarRealce } from '../../lib/realce-shiki';
+import {
+  CodeBlock,
+  CodeBlockActions,
+  CodeBlockCopyButton,
+  CodeBlockHeader,
+} from '../shadcn/code-block';
 import { Table, type TableColumn } from './Table';
 import styles from './MarkdownMessage.module.css';
 
@@ -78,17 +85,32 @@ function CodeFence({ lang, content }: { lang: string; content: string }) {
   const linguagem = normalizarLinguagemDoFence(lang);
   const terminal = LINGUAGENS_DE_TERMINAL.has(linguagem);
   const linhasFonte = content.split('\n');
-  const linhasRealcadas = highlightFile(content, linguagem);
+  const porRegex = highlightFile(content, linguagem);
+  // Regex enquanto o shiki carrega e para linguagem sem gramática (RN-972).
+  const [doShiki, setDoShiki] = useState<{ content: string; linhas: typeof porRegex } | null>(null);
+  useEffect(() => {
+    let vivo = true;
+    void carregarRealce(content, linguagem).then((linhas) => {
+      if (vivo && linhas) setDoShiki({ content, linhas });
+    });
+    return () => {
+      vivo = false;
+    };
+  }, [content, linguagem]);
+  const linhasRealcadas = doShiki?.content === content ? doShiki.linhas : porRegex;
   const longo = linhasFonte.length > LIMITE_DE_LINHAS_DO_BLOCO;
   const [aberto, setAberto] = useState(false);
   const visiveis =
     longo && !aberto ? linhasRealcadas.slice(0, LINHAS_DO_BLOCO_RECOLHIDO) : linhasRealcadas;
 
   return (
-    <div className={[styles.fence, terminal && styles.fenceTerminal].filter(Boolean).join(' ')}>
-      <div className={styles.fenceCabecalho}>
+    <CodeBlock className={[styles.fence, terminal && styles.fenceTerminal].filter(Boolean).join(' ')}>
+      <CodeBlockHeader className={styles.fenceCabecalho}>
         <span>{lang.trim() || t('markdownMessage.codeFence.defaultLanguage')}</span>
-      </div>
+        <CodeBlockActions>
+          <CodeBlockCopyButton code={content} />
+        </CodeBlockActions>
+      </CodeBlockHeader>
       <pre className={styles.fencePre}>
         <code>
           {visiveis.map((tokens, i) => (
@@ -122,7 +144,7 @@ function CodeFence({ lang, content }: { lang: string; content: string }) {
             : t('markdownMessage.codeFence.mostrarLinhas', { count: linhasFonte.length })}
         </button>
       )}
-    </div>
+    </CodeBlock>
   );
 }
 

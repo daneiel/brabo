@@ -25443,3 +25443,10 @@ sem dizer qual.
 - **Onde:** `apps/web/src/routes/StructuredQuestionCard.tsx:73` (`StructuredQuestionCard`), `apps/web/src/components/shadcn/questionnaire.tsx:8` (`Questionnaire`).
 - **Teste:** `apps/web/src/routes/SessionPage.perguntas-estruturadas.test.tsx`, `apps/web/src/components/shadcn/registro.test.tsx`.
 - **Origem:** AT-653 (EP-031).
+
+### RN-972 — O código no chat e na aba Código é realçado pelo shiki {#rn-972}
+
+- **Regra:** o bloco de código do chat (`CodeFence`, agora o Code Block do shadcn com botão Copiar) e o arquivo da aba Código são realçados pelo shiki com o tema próprio dos `--syntax-*` (sem hex; os dois temas saem do `data-theme` e o contraste dos oito papéis segue medido, RN-185). O shiki é carregado sob demanda (`import()` dinâmico, motor de regex em JS, gramática por linguagem) e fica fora do JS inicial; enquanto carrega, e para linguagem sem gramática, vale o realce por regex da RN-158. Só o tokenizador troca: o recolher de 20/8 linhas (RN-712), a virtualização e o minimapa da aba Código (RN-239..242) não mudam. Copiar diz "Copiado" por 2 s e a falha da área de transferência vira texto, nunca silêncio.
+- **Onde:** `apps/web/src/lib/realce-shiki.ts:61` (`carregarRealce`), `apps/web/src/lib/tema-shiki-brabo.ts:19` (`temaShikiBrabo`).
+- **Teste:** `apps/web/src/lib/realce-shiki.test.ts`.
+- **Origem:** AT-657 (EP-031).
