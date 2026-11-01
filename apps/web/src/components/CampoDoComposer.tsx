@@ -1,5 +1,5 @@
-import { InputGroupTextarea } from "./shadcn/input-group";
-import { useEffect, useRef, type TextareaHTMLAttributes } from "react";
+import { InputGroupTextarea } from './shadcn/input-group';
+import { useEffect, useRef, type TextareaHTMLAttributes } from 'react';
 
 /**
  * RN-882 (AT-533): o campo do composer da Sessão é dono do PRÓPRIO valor
@@ -27,7 +27,7 @@ export function CampoDoComposer({
 }: {
   valor: string;
   aoMudar: (valor: string) => void;
-} & Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "value" | "onChange">) {
+} & Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'value' | 'onChange'>) {
   const no = useRef<HTMLTextAreaElement>(null);
   // Os valores que ESTE campo emitiu e a página ainda pode devolver como prop.
   const emitidos = useRef<Set<string>>(new Set());

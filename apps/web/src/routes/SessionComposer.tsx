@@ -1,23 +1,18 @@
-import {
-  useState,
-  type Dispatch,
-  type KeyboardEvent,
-  type SetStateAction,
-} from "react";
-import { SEM_AUTOFILL } from "../lib/conversa-comecou";
-import { useTranslation } from "react-i18next";
-import { getSession } from "../lib/api-client";
-import { addressableAgents, nomeDoAgente } from "../lib/agents";
-import type { Handoff } from "../lib/api-types";
-import { Button } from "../components/ui/Button";
-import { Select } from "../components/ui/Select";
-import { sessaoEhTerminal } from "../lib/sessao-encerrada";
-import { pontoDaSessao } from "../lib/session-timeline";
-import { agentesParaChamar } from "../lib/session-destinatario";
-import { AvisoDePerguntasEmAberto } from "../components/PerguntasEmAberto";
-import { InputGroup, InputGroupAddon } from "../components/shadcn/input-group";
-import { CampoDoComposer } from "../components/CampoDoComposer";
-import styles from "./SessionPage.module.css";
+import { useState, type Dispatch, type KeyboardEvent, type SetStateAction } from 'react';
+import { SEM_AUTOFILL } from '../lib/conversa-comecou';
+import { useTranslation } from 'react-i18next';
+import { getSession } from '../lib/api-client';
+import { addressableAgents, nomeDoAgente } from '../lib/agents';
+import type { Handoff } from '../lib/api-types';
+import { Button } from '../components/ui/Button';
+import { Select } from '../components/ui/Select';
+import { sessaoEhTerminal } from '../lib/sessao-encerrada';
+import { pontoDaSessao } from '../lib/session-timeline';
+import { agentesParaChamar } from '../lib/session-destinatario';
+import { AvisoDePerguntasEmAberto } from '../components/PerguntasEmAberto';
+import { InputGroup, InputGroupAddon } from '../components/shadcn/input-group';
+import { CampoDoComposer } from '../components/CampoDoComposer';
+import styles from './SessionPage.module.css';
 
 /**
  * A faixa de baixo da coluna de chat da Sessão, que não rola: o card do
@@ -131,7 +126,7 @@ export function SessionComposer({
   reabrindo = false,
   handleReopen,
 }: SessionComposerProps) {
-  const { t } = useTranslation("sessionPage");
+  const { t } = useTranslation('sessionPage');
   const [handoffManualAberto, setHandoffManualAberto] = useState(false);
   return (
     <>
@@ -167,12 +162,12 @@ export function SessionComposer({
         <div className={styles.infraHandoffRow}>
           <div className={styles.infraHandoffTexto}>
             <span className={styles.infraHandoffTitulo}>
-              {t("handoff.infraTitulo", {
+              {t('handoff.infraTitulo', {
                 de: nomeDoAgente(handoffDaInfraOferecido.fromAgent),
               })}
             </span>
             <span className={styles.infraHandoffDetalhe}>
-              {t("handoff.infraDetalhe")}
+              {t('handoff.infraDetalhe')}
             </span>
           </div>
           <Button
@@ -184,7 +179,7 @@ export function SessionComposer({
               )
             }
           >
-            {t("handoff.infraBotao")}
+            {t('handoff.infraBotao')}
           </Button>
         </div>
       )}
@@ -206,22 +201,20 @@ export function SessionComposer({
           >
             <div className={styles.infraHandoffTexto}>
               <span className={styles.infraHandoffTitulo}>
-                {t("handoff.foraDaJanelaTitulo", {
+                {t('handoff.foraDaJanelaTitulo', {
                   de: nomeDoAgente(oferta.fromAgent),
                   para: nomeDoAgente(oferta.toAgent),
                 })}
               </span>
               <span className={styles.infraHandoffDetalhe}>
-                {t("handoff.foraDaJanelaDetalhe")}
+                {t('handoff.foraDaJanelaDetalhe')}
               </span>
             </div>
             <Button
               variant="success"
               onClick={() => handleAcceptHandoff(oferta.id, oferta.toAgent)}
             >
-              {t("handoff.aceitarEIniciar", {
-                agente: nomeDoAgente(oferta.toAgent),
-              })}
+              {t('handoff.aceitarEIniciar', { agente: nomeDoAgente(oferta.toAgent) })}
             </Button>
           </div>
         ))}
@@ -251,19 +244,19 @@ export function SessionComposer({
       {isActive && opcoesDeDestinatario.length > 0 && !handoffManualAberto && (
         <div className={styles.manualHandoffRow}>
           <Button variant="ghost" onClick={() => setHandoffManualAberto(true)}>
-            {t("handoff.manualAbrir")}
+            {t('handoff.manualAbrir')}
           </Button>
         </div>
       )}
       {isActive && opcoesDeDestinatario.length > 0 && handoffManualAberto && (
         <div className={styles.manualHandoffRow}>
           <Select
-            aria-label={t("handoff.manualLabel")}
+            aria-label={t('handoff.manualLabel')}
             value={manualHandoffTarget}
             disabled={enviandoHandoffManual}
             onChange={(e) => setManualHandoffTarget(e.target.value)}
           >
-            <option value="">{t("handoff.manualPlaceholder")}</option>
+            <option value="">{t('handoff.manualPlaceholder')}</option>
             {addressableAgents()
               .filter((agente) => !activeFor(agente))
               .map((agente) => (
@@ -278,14 +271,14 @@ export function SessionComposer({
             disabled={!manualHandoffTarget}
             onClick={handleRequestManualHandoff}
           >
-            {t("handoff.manualBotao")}
+            {t('handoff.manualBotao')}
           </Button>
         </div>
       )}
 
-      {session?.status === "active" ? (
+      {session?.status === 'active' ? (
         <>
-          {/*
+        {/*
           O destinatário da mensagem, VISÍVEL e escolhido (RN-631, AT-251).
           Antes ele não aparecia em lugar nenhum: era "o último agente
           ativado na janela de 200 eventos", e um handoff aceito por outro
@@ -294,12 +287,9 @@ export function SessionComposer({
           opções e nenhuma escolha, o envio trava e o motivo é dito em TEXTO
           (tooltip em botão desabilitado não abre).
         */}
-          <div
-            className={styles.destinatarioRow}
-            data-testid="destinatario-do-chat"
-          >
-            {opcoesDeDestinatario.length === 0 ? (
-              /*
+        <div className={styles.destinatarioRow} data-testid="destinatario-do-chat">
+          {opcoesDeDestinatario.length === 0 ? (
+            /*
               RN-682 (AT-254): sem agente, a mensagem NÃO vai a lugar
               nenhum. Até aqui ela ia ao modelo cru (o SSE de
               `POST .../chat`), sem histórico nem prompt de sistema, e a
@@ -310,139 +300,118 @@ export function SessionComposer({
               manual de sempre (ADR 0109/RN-440): a oferta aparece no fio,
               e aceitá-la faz do agente o destinatário (RN-631).
             */
-              <>
-                <label
-                  className={styles.destinatarioLabel}
-                  htmlFor="destinatario-do-chat"
-                >
-                  {t("composer.destinatarioLabel")}
-                </label>
-                <Select
-                  id="destinatario-do-chat"
-                  value={manualHandoffTarget}
-                  disabled={enviandoHandoffManual || !isActive}
-                  onChange={(e) => setManualHandoffTarget(e.target.value)}
-                >
-                  <option value="">
-                    {t("composer.destinatarioPlaceholder")}
+            <>
+              <label className={styles.destinatarioLabel} htmlFor="destinatario-do-chat">
+                {t('composer.destinatarioLabel')}
+              </label>
+              <Select
+                id="destinatario-do-chat"
+                value={manualHandoffTarget}
+                disabled={enviandoHandoffManual || !isActive}
+                onChange={(e) => setManualHandoffTarget(e.target.value)}
+              >
+                <option value="">{t('composer.destinatarioPlaceholder')}</option>
+                {agentesParaChamar(activeFor).map((agente) => (
+                  <option key={agente} value={agente}>
+                    {nomeDoAgente(agente)}
                   </option>
-                  {agentesParaChamar(activeFor).map((agente) => (
-                    <option key={agente} value={agente}>
-                      {nomeDoAgente(agente)}
-                    </option>
-                  ))}
-                </Select>
-                <Button
-                  variant="secondary"
-                  loading={enviandoHandoffManual}
-                  disabled={!manualHandoffTarget}
-                  onClick={handleRequestManualHandoff}
-                >
-                  {t("composer.chamarAgente")}
-                </Button>
-                <span className={styles.destinatarioAviso}>
-                  {t("composer.semAgente")}
-                </span>
-              </>
-            ) : (
-              <>
-                <label
-                  className={styles.destinatarioLabel}
-                  htmlFor="destinatario-do-chat"
-                >
-                  {t("composer.destinatarioLabel")}
-                </label>
-                <Select
-                  id="destinatario-do-chat"
-                  value={destinatario ?? ""}
-                  disabled={streaming}
-                  onChange={(e) => {
-                    if (e.target.value)
-                      escolherDestinatario(e.target.value, true);
-                  }}
-                >
-                  {destinatario === null && (
-                    <option value="" disabled>
-                      {t("composer.destinatarioPlaceholder")}
-                    </option>
-                  )}
-                  {opcoesDeDestinatario.map((agente) => (
-                    <option key={agente} value={agente}>
-                      {nomeDoAgente(agente)}
-                    </option>
-                  ))}
-                </Select>
-                {precisaEscolherDestinatario && (
-                  <span className={styles.destinatarioAviso}>
-                    {t("composer.destinatarioPrecisaEscolher")}
-                  </span>
+                ))}
+              </Select>
+              <Button
+                variant="secondary"
+                loading={enviandoHandoffManual}
+                disabled={!manualHandoffTarget}
+                onClick={handleRequestManualHandoff}
+              >
+                {t('composer.chamarAgente')}
+              </Button>
+              <span className={styles.destinatarioAviso}>{t('composer.semAgente')}</span>
+            </>
+          ) : (
+            <>
+              <label className={styles.destinatarioLabel} htmlFor="destinatario-do-chat">
+                {t('composer.destinatarioLabel')}
+              </label>
+              <Select
+                id="destinatario-do-chat"
+                value={destinatario ?? ''}
+                disabled={streaming}
+                onChange={(e) => {
+                  if (e.target.value) escolherDestinatario(e.target.value, true);
+                }}
+              >
+                {destinatario === null && (
+                  <option value="" disabled>
+                    {t('composer.destinatarioPlaceholder')}
+                  </option>
                 )}
-              </>
-            )}
-          </div>
-          {/*
+                {opcoesDeDestinatario.map((agente) => (
+                  <option key={agente} value={agente}>
+                    {nomeDoAgente(agente)}
+                  </option>
+                ))}
+              </Select>
+              {precisaEscolherDestinatario && (
+                <span className={styles.destinatarioAviso}>
+                  {t('composer.destinatarioPrecisaEscolher')}
+                </span>
+              )}
+            </>
+          )}
+        </div>
+        {/*
           RN-824 (AT-491): o próximo passo depois do mapa de módulos é um
           clique HUMANO — o sistema não oferece a Infra sozinho. A tela DIZ
           isso em texto visível, e sem história promovida diz o motivo uma
           vez em texto (o `title` de botão desabilitado não abre, RN-102).
         */}
-          {arquitetoActive &&
-            !arquiteturaJaDeclarada &&
-            !streaming &&
-            hasModuleMap && (
-              <div
-                className={styles.manualHandoffRow}
-                data-testid="proximo-passo-arquitetura"
-              >
-                <span className={styles.destinatarioAviso}>
-                  {hasPromotedStory
-                    ? t("composer.confirmarArquiteturaProximoPasso")
-                    : t("composer.confirmarArquiteturaDesabilitado")}
-                </span>
-              </div>
-            )}
-          {((criativoActive && !prontidaoJaDeclarada) ||
-            (arquitetoActive && !arquiteturaJaDeclarada)) && (
-            <AvisoDePerguntasEmAberto
-              projectId={session?.projectId}
-              classeDaLinha={styles.manualHandoffRow}
-              classeDoTexto={styles.destinatarioAviso}
-            />
-          )}
-          <div
-            className={`${styles.composer} ${styles.composerComDestinatario}`}
+        {arquitetoActive && !arquiteturaJaDeclarada && !streaming && hasModuleMap && (
+          <div className={styles.manualHandoffRow} data-testid="proximo-passo-arquitetura">
+            <span className={styles.destinatarioAviso}>
+              {hasPromotedStory
+                ? t('composer.confirmarArquiteturaProximoPasso')
+                : t('composer.confirmarArquiteturaDesabilitado')}
+            </span>
+          </div>
+        )}
+        {((criativoActive && !prontidaoJaDeclarada) ||
+          (arquitetoActive && !arquiteturaJaDeclarada)) && (
+          <AvisoDePerguntasEmAberto
+            projectId={session?.projectId}
+            classeDaLinha={styles.manualHandoffRow}
+            classeDoTexto={styles.destinatarioAviso}
+          />
+        )}
+        <div className={`${styles.composer} ${styles.composerComDestinatario}`}>
+        <InputGroup className={styles.textarea}>
+          {/* RN-882: o campo é dono do valor durante a digitação. */}
+          <CampoDoComposer
+            valor={draft}
+            aoMudar={setDraft}
+            onKeyDown={ignorarComposicaoIme(handleComposerKeyDown)}
+            {...SEM_AUTOFILL}
+            placeholder={t('composer.placeholder')}
+            disabled={streaming && !podeEnfileirar}
+          />
+          <InputGroupAddon align="inline-end">
+          <Button
+            onClick={handleSend}
+            disabled={
+              (streaming && !podeEnfileirar) || !draft.trim() || destinatario === null
+            }
           >
-            <InputGroup className="min-w-[min(100%,240px)] flex-[1_1_320px]">
-              {/* RN-882: o campo é dono do valor durante a digitação. */}
-              <CampoDoComposer
-                valor={draft}
-                aoMudar={setDraft}
-                onKeyDown={ignorarComposicaoIme(handleComposerKeyDown)}
-                {...SEM_AUTOFILL}
-                placeholder={t("composer.placeholder")}
-                disabled={streaming && !podeEnfileirar}
-              />
-              <InputGroupAddon align="inline-end">
-                <Button
-                  onClick={handleSend}
-                  disabled={
-                    (streaming && !podeEnfileirar) ||
-                    !draft.trim() ||
-                    destinatario === null
-                  }
-                >
-                  {streaming ? t("composer.enfileirar") : t("composer.enviar")}
-                </Button>
-                {/* RN-122: só existe (habilitado) enquanto há turno em curso —
+            {streaming ? t('composer.enfileirar') : t('composer.enviar')}
+          </Button>
+          {/* RN-122: só existe (habilitado) enquanto há turno em curso —
               fora disso não há o que parar. */}
-                {streaming && (
-                  <Button variant="danger" onClick={handleCancel}>
-                    {t("composer.parar")}
-                  </Button>
-                )}
-              </InputGroupAddon>
-            </InputGroup>
-            {/*
+          {streaming && (
+            <Button variant="danger" onClick={handleCancel}>
+              {t('composer.parar')}
+            </Button>
+          )}
+          </InputGroupAddon>
+        </InputGroup>
+          {/*
             Some depois que o Criativo passou a bola (achado L). O botão
             dependia só de o Criativo estar ativo, e continuava oferecendo
             "Estou pronto para produzir" DEPOIS do handoff — convidando a
@@ -455,83 +424,71 @@ export function SessionComposer({
             rótulo diz isso: é ele que faz do clique um julgamento de
             mérito, e não só o piso "≥1 regra" da RN-142.
           */}
-            {criativoActive && !prontidaoJaDeclarada && (
-              <Button
-                variant="success"
-                onClick={handleReadiness}
-                disabled={streaming || !hasBusinessRule}
-                title={
-                  !hasBusinessRule
-                    ? t("composer.prontoParaProduzirDesabilitado")
-                    : t("composer.prontoParaProduzirExplica")
-                }
-              >
-                {t("composer.prontoParaProduzir")}
-              </Button>
-            )}
-            {/*
+          {criativoActive && !prontidaoJaDeclarada && (
+            <Button
+              variant="success"
+              onClick={handleReadiness}
+              disabled={streaming || !hasBusinessRule}
+              title={
+                !hasBusinessRule
+                  ? t('composer.prontoParaProduzirDesabilitado')
+                  : t('composer.prontoParaProduzirExplica')
+              }
+            >
+              {t('composer.prontoParaProduzir')}
+            </Button>
+          )}
+          {/*
             Mirror do botão acima, para o Arquiteto (achado do problema 1)
             — some depois que ele já ofereceu o handoff, pelo mesmo motivo
             que o do Criativo some depois de `prontidaoJaDeclarada`.
           */}
-            {arquitetoActive && !arquiteturaJaDeclarada && (
-              <Button
-                variant="success"
-                onClick={handleArchitectureReadiness}
-                disabled={streaming || !hasPromotedStory}
-                title={
-                  !hasPromotedStory
-                    ? t("composer.confirmarArquiteturaDesabilitado")
-                    : t("composer.confirmarArquiteturaExplica")
-                }
-              >
-                {t("composer.confirmarArquitetura")}
-              </Button>
-            )}
-          </div>
+          {arquitetoActive && !arquiteturaJaDeclarada && (
+            <Button
+              variant="success"
+              onClick={handleArchitectureReadiness}
+              disabled={streaming || !hasPromotedStory}
+              title={
+                !hasPromotedStory
+                  ? t('composer.confirmarArquiteturaDesabilitado')
+                  : t('composer.confirmarArquiteturaExplica')
+              }
+            >
+              {t('composer.confirmarArquitetura')}
+            </Button>
+          )}
+        </div>
         </>
       ) : (
         <div className={styles.activatePrompt}>
-          {sessaoEhTerminal(session?.status) && draft.trim() !== "" && (
+          {sessaoEhTerminal(session?.status) && draft.trim() !== '' && (
             <textarea
               className={styles.textarea}
               value={draft}
               readOnly
-              aria-label={t("ativacao.mensagemNaoEnviada")}
+              aria-label={t('ativacao.mensagemNaoEnviada')}
             />
           )}
-          {session?.status === "created" ? (
+          {session?.status === 'created' ? (
             <>
-              {t("ativacao.naoAtivada")}
-              <Button onClick={handleActivate}>
-                {t("ativacao.ativarSessao")}
-              </Button>
+              {t('ativacao.naoAtivada')}
+              <Button onClick={handleActivate}>{t('ativacao.ativarSessao')}</Button>
             </>
           ) : sessaoEhTerminal(session?.status) && handleReopen ? (
             <>
-              <span>
-                {t("ativacao.statusGenerico", {
-                  status: t(pontoDaSessao(session?.status).rotuloKey),
-                })}
-              </span>
-              <span>{t("ativacao.reabrirExplicacao")}</span>
+              <span>{t('ativacao.statusGenerico', { status: t(pontoDaSessao(session?.status).rotuloKey) })}</span>
+              <span>{t('ativacao.reabrirExplicacao')}</span>
               <Button
                 onClick={handleReopen}
                 disabled={!podeReabrir}
                 loading={reabrindo}
               >
-                {t("ativacao.reabrir")}
+                {t('ativacao.reabrir')}
               </Button>
-              {!podeReabrir && (
-                <span>{t("ativacao.reabrirExigeDeveloper")}</span>
-              )}
+              {!podeReabrir && <span>{t('ativacao.reabrirExigeDeveloper')}</span>}
             </>
           ) : (
-            <span>
-              {t("ativacao.statusGenerico", {
-                status: t(pontoDaSessao(session?.status).rotuloKey),
-              })}
-            </span>
+            <span>{t('ativacao.statusGenerico', { status: t(pontoDaSessao(session?.status).rotuloKey) })}</span>
           )}
         </div>
       )}
