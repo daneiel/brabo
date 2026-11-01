@@ -15,7 +15,8 @@ import { hashtagDaSessao } from '../lib/session-label';
 import { numberFmt } from '../lib/currency';
 import type { BudgetPolicy } from '../lib/api-types';
 import { alertaDeOrcamento } from '../lib/spend';
-import { BarrasPorDia, Destaque, Ranking } from '../components/SpendCharts';
+import { GastoPorDia } from '../components/GastoPorDia';
+import { Destaque, Ranking } from '../components/SpendCharts';
 import { TokenMeter } from '../components/TokenMeter';
 import { formatarUsd } from '../components/CredentialSpendSection';
 import { GastoDoTimeNoProjeto, GastoDoWorkspace } from '../components/SpendPaineis';
@@ -307,7 +308,7 @@ function MeuConsumo({ projectId }: { projectId: string }) {
           </div>
 
           <div className={styles.faixa}>
-            <BarrasPorDia
+            <GastoPorDia
               serie={meu.data.porDia}
               titulo={t('member.dailySpendTitle')}
             />

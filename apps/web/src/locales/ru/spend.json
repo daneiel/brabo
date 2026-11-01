@@ -48,7 +48,20 @@
     "note": "Здесь нет разбивки по провайдеру или учётным данным — это счёт другого человека, а вопрос этого экрана — ваше потребление."
   },
   "charts": {
-    "noSpendInWindow": "В этом окне расходов нет."
+    "noSpendInWindow": "В этом окне расходов нет.",
+    "window_one": "последний день",
+    "window_few": "последние {{count}} дня",
+    "window_many": "последние {{count}} дней",
+    "window_other": "последние {{count}} дня",
+    "spend": "Расход",
+    "calls_one": "{{count}} вызов",
+    "calls_few": "{{count}} вызова",
+    "calls_many": "{{count}} вызовов",
+    "calls_other": "{{count}} вызова",
+    "viewAsTable": "Показать таблицей",
+    "colDay": "День",
+    "colSpend": "Расход",
+    "colCalls": "Вызовы"
   },
   "libSpend": {
     "callTitle_one": "{{dia}} · {{custo}} · {{count}} вызов",

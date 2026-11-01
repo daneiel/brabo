@@ -42,7 +42,14 @@
     "note": "这里不按 provider 或凭据细分——那是别人的账户，本页面关心的是你的消耗。"
   },
   "charts": {
-    "noSpendInWindow": "此时间窗口内没有花费。"
+    "noSpendInWindow": "此时间窗口内没有花费。",
+    "window_other": "最近 {{count}} 天",
+    "spend": "花费",
+    "calls_other": "{{count}} 次调用",
+    "viewAsTable": "以表格查看",
+    "colDay": "日期",
+    "colSpend": "花费",
+    "colCalls": "调用次数"
   },
   "libSpend": {
     "callTitle_other": "{{dia}} · {{custo}} · {{count}} 次调用",

@@ -72,5 +72,27 @@
       "spent": "gasto {{value}}",
       "balance": "saldo {{value}}"
     }
+  },
+  "palette": {
+    "title": "Paleta de comandos",
+    "placeholder": "Buscar projetos, sessões e ações…",
+    "empty": "Nada encontrado.",
+    "open": "Buscar",
+    "groups": {
+      "projetos": "Ir para o projeto",
+      "abas": "Abas do projeto aberto",
+      "sessoes": "Sessões",
+      "acoes": "Ações"
+    },
+    "sessionsScope": "a mais recente de cada projeto e as do projeto aberto já carregadas",
+    "actions": {
+      "newProject": "Novo projeto",
+      "theme": "Alternar tema",
+      "spend": "Gastos",
+      "containers": "Containers",
+      "providers": "Providers",
+      "account": "Conta",
+      "logout": "Sair"
+    }
   }
 }

@@ -161,6 +161,7 @@ describe('MarkdownMessage', () => {
 
   it('RN-712: bloco curto não ganha o alternador', () => {
     renderComI18n(<MarkdownMessage text={'```sh\nls\n```'} />);
-    expect(screen.queryByRole('button')).toBeNull();
+    expect(screen.queryByRole('button', { name: /mostrar/i })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Copiar' })).toBeTruthy();
   });
 });
