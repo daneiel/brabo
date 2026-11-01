@@ -1,3 +1,4 @@
+import { Item } from '../components/shadcn/item';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -231,9 +232,9 @@ export function ProjectPrsTab({ projectId }: { projectId: string }) {
           // card seguem ativos, e o texto diz qual gate falta.
           const gatePendente = gatePendenteNoMerge(task);
           const aviso = gatePendente ? (
-            <p className={styles.avisoDeGate} data-testid="aviso-gate-pendente">
+            <Item variant="outline" size="sm" className={styles.avisoDeGate} data-testid="aviso-gate-pendente">
               {t('prsTab.gatePendente', { gate: gatePendente })}
-            </p>
+            </Item>
           ) : null;
 
           const acaoPendente = acaoDaPr(pr);
@@ -274,17 +275,17 @@ export function ProjectPrsTab({ projectId }: { projectId: string }) {
           // (RN-663), mas tarefa BLOQUEADA desabilita o merge — e o motivo
           // vai em texto, porque `title` em botão `disabled` não abre.
           const avisoDaLinha = bloqueado ? (
-            <p className={styles.avisoDeGate} data-testid="aviso-merge-indisponivel">
+            <Item variant="outline" size="sm" className={styles.avisoDeGate} data-testid="aviso-merge-indisponivel">
               {gatePendente
                 ? t('prsTab.gatePendenteBloqueada', { gate: gatePendente })
                 : t('prsTab.mergeIndisponivelBloqueada', {
                     reason: task?.blockedReason ?? t('prsTab.mergeBlockedFallback'),
                   })}
-            </p>
+            </Item>
           ) : !latestSession ? (
-            <p className={styles.avisoDeGate} data-testid="aviso-merge-indisponivel">
+            <Item variant="outline" size="sm" className={styles.avisoDeGate} data-testid="aviso-merge-indisponivel">
               {t('prsTab.mergeIndisponivelSemSessao')}
-            </p>
+            </Item>
           ) : (
             aviso
           );

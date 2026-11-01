@@ -356,7 +356,7 @@ describe('ProjectBacklogTab — estado da tarefa (RN-887, AT-536)', () => {
 
   async function linhaDa(titulo: string): Promise<HTMLElement> {
     fireEvent.click(await screen.findByText('Cadastrar usuário'));
-    return (await screen.findByText(titulo)).closest('li')!;
+    return (await screen.findByText(titulo)).closest('[data-slot="item"]')!;
   }
 
   it('a bloqueada mostra "Bloqueada" e o motivo, sem o selo "a fazer"', async () => {
