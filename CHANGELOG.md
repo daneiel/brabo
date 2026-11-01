@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Funcionalidades
 
+- O chat da Sessão passa a usar os padrões do AI Elements sobre o shadcn (AT-636, onda 3): as mensagens viram `Message` com autor, avatar e rodapé, e o exemplo do convite vira sugestão (AT-649); o composer vira `InputGroup` com Enviar/Enfileirar e Parar, sem perder tecla nem IME (AT-650); o card de aprovação usa o `Confirmation`, com as ações ao lado do título, nas quatro telas (AT-651); a faixa do turno mostra as ferramentas, o plano que o agente registrou no turno e a fila pelos padrões `Tool`, `Plan` e `Queue` (AT-652, RN-967).
 - Gastos em duas páginas (AT-632, RN-963): `/spend` no menu global (o owner vê o workspace e a fatura por chave; os demais veem o próprio consumo por projeto) e a aba Gastos do projeto só do projeto (o membro vê o total e o custo por agente e por área, nunca provider). O orçamento do projeto ganhou editor, o botão "Definir orçamento" abre a aba Gastos, e assinatura aparece separada, sem "US$ 0".
 
 ### Correções
