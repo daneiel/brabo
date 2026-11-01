@@ -18224,8 +18224,8 @@ genérico, que ao lado de um brief ou de uma regra da mesma sessão parecia nega
 que eles existissem — o escopo da seção (PR e backlog, [RN-159](business-rules/autenticacao.md#rn-159)) não
 muda.
 
-- **Código:** `apps/web/src/routes/Shell.tsx:602` (`execucao`), `:610`
-  (`origemDaAtividade`), `:617` (`estadoDaAtividade`);
+- **Código:** `apps/web/src/routes/Shell.tsx:616` (`execucao`), `:624`
+  (`origemDaAtividade`), `:631` (`estadoDaAtividade`);
   `apps/web/src/lib/hooks.ts:127` (`useProjectSessions`, `frescorMs`);
   `apps/web/src/routes/Dashboard.tsx:75` (`lastActivityText`);
   `apps/web/src/routes/ContextAside.tsx:46` (`quantos`), `:340`
@@ -18342,8 +18342,8 @@ os achados X1–X3 da auditoria. A duplicação de navegação por abas (gaveta 
 barra) fechou no ADR 0211.
 
 - **Código:** `apps/web/src/lib/layout-movel.ts:18` (`CONSULTA_MOVEL`),
-  `:39` (`useLayoutMovel`); `apps/web/src/routes/Shell.tsx:424`
-  (`movel`), `:465` (`prenderFoco`), `:484` (`fecharAoSeguirLink`);
+  `:39` (`useLayoutMovel`); `apps/web/src/routes/Shell.tsx:438`
+  (`movel`), `:479` (`prenderFoco`), `:498` (`fecharAoSeguirLink`);
   `apps/web/src/routes/ProjectPage.tsx:49` (`movel`);
   `apps/web/src/routes/ProjectOverviewTab.tsx:68` (`movel`)
 - **Teste:** `apps/web/src/routes/Shell.test.tsx` ("Shell — layout móvel
@@ -21087,7 +21087,7 @@ quando o turno termina entregando um formulário (`gravar_texto_do_turno(state,
 - **Onde:** `apps/web/src/lib/texto-plano.ts:7` (`textoPlanoDoMarkdown`),
   `apps/web/src/lib/eco-de-formulario.ts:17` (`ecosDeRespostaEstruturada`),
   `apps/web/src/lib/session-destinatario.ts:255` (`resolverDestinatario`),
-  `apps/web/src/components/ui/MarkdownMessage.tsx:74` (`CodeFence`)
+  `apps/web/src/components/ui/MarkdownMessage.tsx:83` (`CodeFence`)
 - **Teste:** `apps/web/src/lib/texto-plano.test.ts`,
   `apps/web/src/lib/eco-de-formulario.test.ts`,
   `apps/web/src/lib/session-destinatario.test.ts` ("RN-712"),
@@ -21657,7 +21657,7 @@ sem dizer qual.
 - **Onde:** `apps/api/src/application/use-cases/actions/execute-infra-pr.use-case.ts:71`
   (`ExecuteInfraPrUseCase`),
   `apps/web/src/routes/ProjectApprovalsTab.tsx:106` (`ProjectApprovalsTab`),
-  `apps/web/src/routes/Shell.tsx:568` (`idDoProjetoAtual`),
+  `apps/web/src/routes/Shell.tsx:582` (`idDoProjetoAtual`),
   `apps/web/src/routes/NewProjectWizard.tsx:155` (`NewProjectWizard`),
   `apps/web/src/routes/ProjectPrsTab.tsx:141` (`invalidateMergeActions`),
   `apps/web/src/lib/agent-status.ts:222` (`gateStatus`)
@@ -22210,7 +22210,7 @@ sem dizer qual.
   reproduzida no navegador; a correção cobre a classe (conteúdo que encolhe e
   volta).
 - **Onde:** `apps/web/src/routes/project-tabs.ts:383` (`abaDaRota`),
-  `apps/web/src/routes/Shell.tsx:533` (`abaDaRota`),
+  `apps/web/src/routes/Shell.tsx:547` (`abaDaRota`),
   `estaPertoDoFim` (removido na RN-951, `apps/web/src/lib/session-rolagem.ts`),
   `estavaNoFimRef`, `aoRolarOFio` (removidos),
   `apps/web/src/components/ModelCatalogSection.module.css` (`.barraDeLote`),
@@ -22447,7 +22447,7 @@ sem dizer qual.
   (`propose_pr`); `apps/web/src/lib/session-destinatario.ts:228`
   (`agentesEmConversa`) e `apps/web/src/lib/session-kind.ts:69`
   (`tipoDaSessao`); `apps/web/src/routes/NewProjectWizard.tsx:1122`
-  (`quebraPorSegmento`); `apps/web/src/components/ui/MarkdownMessage.tsx:139`
+  (`quebraPorSegmento`); `apps/web/src/components/ui/MarkdownMessage.tsx:162`
   (`TabelaMarkdown`)
 - **Teste:** `apps/api/test/application/use-cases/actions/execute-adr-pr.use-case.spec.ts`,
   `apps/engine/test/engine/infra/infra_lead_server_test.exs` ("agent.response
@@ -23824,7 +23824,7 @@ sem dizer qual.
   `apps/web/src/lib/markdown.ts:123` (`CITACAO_RE`),
   `apps/web/src/lib/markdown.ts:124` (`TAREFA_RE`),
   `apps/web/src/lib/markdown.ts:374` (`fecharMarcadoresAbertos`),
-  `apps/web/src/components/ui/MarkdownMessage.tsx:298` (`MarkdownMessage`)
+  `apps/web/src/components/ui/MarkdownMessage.tsx:320` (`MarkdownMessage`)
 - **Teste:** `apps/web/src/lib/markdown.blocos-e-stream.test.ts` ("checklist
   marca cada item…"; falha: "`---` logo depois de texto continua texto"),
   `apps/web/src/components/ui/MarkdownMessage.stream.test.tsx` ("nenhum

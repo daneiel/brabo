@@ -2748,8 +2748,8 @@ montada, os cinco números saem do MESMO hook que ela usa
 (`useContagensDoProjeto`), sem requisição nova. Recolhida, o quadrado do
 projeto aberto abre um flyout com as mesmas abas.
 
-- **Onde:** `apps/web/src/routes/Shell.tsx:580` (`projetosAbertosEfetivo`),
-  `:528` (`useContagensDoProjeto`), `:535` (`irParaAba`), `:550`
+- **Onde:** `apps/web/src/routes/Shell.tsx:594` (`projetosAbertosEfetivo`),
+  `:542` (`useContagensDoProjeto`), `:549` (`irParaAba`), `:564`
   (`flyoutAberto`), `:237` (`contagensDoResumo`);
   `apps/web/src/routes/AbasDoProjeto.tsx:78` (`AbasDoProjeto`), `:34`
   (`itensDasAbas`), `:95` (`aoTeclar`);

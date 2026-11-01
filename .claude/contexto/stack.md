@@ -44,6 +44,9 @@
   `@shadcn/react` (AT-653, decisão do dono de 31/10) só para o Questionnaire
   das perguntas estruturadas, no chunk da Sessão e FORA de
   `codeSplitting.groups` (zero dependências transitivas).
+  `shiki` (Code Block, atrás de `lib/realce-shiki.ts`) e `recharts` (Chart dos
+  Gastos, atrás de `GraficoDeGastoPorDia.tsx`) só por `import()`/lazy, fora do
+  JS inicial e de `codeSplitting.groups` (ADR 0234, AT-657/658).
   Toda TELA é chunk próprio (`lazyRouteComponent` no `router.tsx`, com o
   `.preload` que o router espera), e os painéis das abas do projeto também
   (`React.lazy` em `project-tabs.ts`) — o `Shell` fica estático. Vendors de

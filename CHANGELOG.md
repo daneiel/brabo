@@ -6,6 +6,9 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Funcionalidades
 
+- Paleta de comandos Ctrl+K (⌘K no macOS): busca projetos, abas do projeto aberto, a sessão mais recente de cada projeto e as ações da barra lateral, só com o que já está em memória (abrir a paleta não faz requisição); não abre com o foco no terminal (AT-656, RN-971).
+- O código no chat e na aba Código é realçado pelo shiki, carregado sob demanda por linguagem, com tema pelos tokens da casa nos dois temas; o bloco do chat ganha o botão Copiar (AT-657, RN-972, ADR 0234).
+- A página de Gastos e a aba Gastos do projeto desenham o gasto diário com o Chart (recharts carregado só nessa tela), com o gráfico de antes como reserva e "Ver como tabela" (AT-658, RN-973, ADR 0234).
 - A tela de Providers mostra, em cada modelo do catálogo, a faixa de cobrança sugerida e o preço do fabricante com a fonte e a data da conferência, e o `owner` aplica com "Aplicar sugerido" (preço e cobrança em série, com o resultado de cada passo); o `maintainer` vê a sugestão sem o botão ativo (AT-640, RN-965).
 - O catálogo de modelos sugere o preço publicado pelo FABRICANTE do modelo (primeira entrega: Anthropic, conferida em 01/11) e, no 9Router, a faixa de cobrança pelo nome — assinatura (`cc/`, `cx/`), grátis ou API —, sem guardar a senha do painel; nada é aplicado sozinho (AT-640, RN-965).
 - As perguntas estruturadas dos agentes viram um formulário passo a passo, uma pergunta por vez com progresso, sobre o Questionnaire do shadcn; o que a api recebe não muda (AT-653, RN-968).
