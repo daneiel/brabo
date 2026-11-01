@@ -23639,7 +23639,7 @@ sem dizer qual.
   agente está fazendo sem interromper quem está lendo. A checagem mora no
   composer, não na página, que está no teto de linhas ([ADR 0176](adr/0176-sessionpage-abaixo-de-mil-linhas.md)).
 - **Onde:** `apps/web/src/routes/SessionComposer.tsx:81` (`ignorarComposicaoIme`),
-  `apps/web/src/components/TurnActivityStrip.tsx:41` (`TurnActivityStrip`)
+  `apps/web/src/components/TurnActivityStrip.tsx:47` (`TurnActivityStrip`)
 - **Teste:** `apps/web/src/routes/SessionFio.at503.test.tsx` ("Enter sem
   composição chega ao handler de envio", "a faixa do turno é uma região de
   status educada"; falha: "Enter no meio da composição de acento NÃO envia")
