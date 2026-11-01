@@ -509,6 +509,10 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - **ci:** o `install-e2e.yml` espera os assets do instalador (`install.sh`, `checksums.txt` e `checksums.txt.bundle`), e não só a Release. Na `v7.0.0` a Release ficou visível 26 s antes de o `install.sh` subir, e o download deu 404 antes de o E2E começar.
 - **ci:** o `install-e2e.yml` lê o id do workspace pessoal em `.[0].workspace.id`, a forma que `GET /workspaces` devolve (`[{ workspace, role }]`). Antes ele lia `.[0].id`, recebia `null` e acusava "a conta nasceu sem workspace pessoal" sobre uma conta que tinha workspace.
 
+### Documentação
+
+- Documentação do 9Router 0.5.112 (AT-641, RN-966): o cabeçalho `off` desliga RTK, Headroom, Caveman e Ponytail, mas não o Custom Prompt; o OAuth do Claude redige o raciocínio e camufla as ferramentas, sem configuração que desligue. Capability `toolCalling` sai da lista de `false`, e a tabela gerada passa a mostrar as capabilities do `9router`.
+
 ## v7.0.0 — 2026-10-01
 
 ### ⚠ Mudanças incompatíveis
