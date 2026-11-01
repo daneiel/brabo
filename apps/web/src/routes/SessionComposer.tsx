@@ -10,6 +10,7 @@ import { sessaoEhTerminal } from '../lib/sessao-encerrada';
 import { pontoDaSessao } from '../lib/session-timeline';
 import { agentesParaChamar } from '../lib/session-destinatario';
 import { AvisoDePerguntasEmAberto } from '../components/PerguntasEmAberto';
+import { InputGroup, InputGroupAddon } from '../components/shadcn/input-group';
 import { CampoDoComposer } from '../components/CampoDoComposer';
 import styles from './SessionPage.module.css';
 
@@ -382,9 +383,9 @@ export function SessionComposer({
           />
         )}
         <div className={`${styles.composer} ${styles.composerComDestinatario}`}>
+        <InputGroup className={styles.textarea}>
           {/* RN-882: o campo é dono do valor durante a digitação. */}
           <CampoDoComposer
-            className={styles.textarea}
             valor={draft}
             aoMudar={setDraft}
             onKeyDown={ignorarComposicaoIme(handleComposerKeyDown)}
@@ -392,6 +393,7 @@ export function SessionComposer({
             placeholder={t('composer.placeholder')}
             disabled={streaming && !podeEnfileirar}
           />
+          <InputGroupAddon align="inline-end">
           <Button
             onClick={handleSend}
             disabled={
@@ -407,6 +409,8 @@ export function SessionComposer({
               {t('composer.parar')}
             </Button>
           )}
+          </InputGroupAddon>
+        </InputGroup>
           {/*
             Some depois que o Criativo passou a bola (achado L). O botão
             dependia só de o Criativo estar ativo, e continuava oferecendo

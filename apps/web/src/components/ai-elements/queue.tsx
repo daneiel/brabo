@@ -9,9 +9,11 @@ type Props = {
   itens: ItemDaFila[];
   rotuloCancelar: string;
   onCancelar?: (id: string) => void;
+  /** Cancelamento em voo (RN-673: não otimista): o botão fica inerte. */
+  desabilitado?: boolean;
 };
 
-export function Queue({ itens, rotuloCancelar, onCancelar }: Props) {
+export function Queue({ itens, rotuloCancelar, onCancelar, desabilitado }: Props) {
   return (
     <Trace data-slot="ai-queue">
       {itens.map((it) => (
@@ -21,7 +23,7 @@ export function Queue({ itens, rotuloCancelar, onCancelar }: Props) {
             <TraceTitle>{it.texto}</TraceTitle>
           </TraceLine>
           {it.podeCancelar && onCancelar && (
-            <Button type="button" variant="ghost" size="icon-sm" aria-label={rotuloCancelar} onClick={() => onCancelar(it.id)}>
+            <Button type="button" variant="ghost" size="icon-sm" aria-label={rotuloCancelar} disabled={desabilitado} onClick={() => onCancelar(it.id)}>
               <XIcon />
             </Button>
           )}

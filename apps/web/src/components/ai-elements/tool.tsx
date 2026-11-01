@@ -30,6 +30,15 @@ type ToolProps = {
 const pre = 'overflow-x-auto rounded-md bg-muted p-2 text-xs whitespace-pre-wrap';
 
 export function Tool({ titulo, estado, entrada, saida, erro, avisoDeTruncada, icone }: ToolProps) {
+  // Sem conteúdo (a faixa do turno, RN-460, nunca leva args) não há o que abrir.
+  if (entrada === undefined && saida === undefined && erro === undefined && !avisoDeTruncada) {
+    return (
+      <TraceLine data-slot="ai-tool" status={estado}>
+        <TraceIcon>{icone ?? <WrenchIcon />}</TraceIcon>
+        <TraceTitle running={estado === 'running'}>{titulo}</TraceTitle>
+      </TraceLine>
+    );
+  }
   return (
     <TraceCollapsible data-slot="ai-tool">
       <TraceCollapsibleTrigger>
