@@ -25422,3 +25422,10 @@ sem dizer qual.
 - **Onde:** `apps/api/src/infrastructure/llm/nine-router-provider.ts:153` (`classificarErro9Router`), aplicado por `apps/api/src/infrastructure/llm/openai-compatible-provider.ts:305` (`classificarErroHttp`).
 - **Teste:** `apps/api/test/infrastructure/llm/nine-router-provider.contract.spec.ts` (503 com cada status interno e os três casos que seguem `upstream`); `apps/engine/test/engine/agents/falha_de_turno_test.exs` (`model_not_found` não é passageira).
 - **Origem:** AT-639 (EP-026).
+
+### RN-967 — A faixa do turno mostra o plano que o agente registrou no turno em curso {#rn-967}
+
+- **Regra:** a faixa de atividade do turno (RN-460) mostra, acima dos passos, o último `agent.plan` do agente do turno com `seq` posterior à abertura dele (o último `agent.status: working`), derivado dos eventos JÁ carregados: nenhuma requisição nova (RN-632) e nenhum estado por token (RN-639). Ferramentas e plano seguem os padrões Tool e Plan; a fila de uma mensagem segue o Queue, com o cancelar inerte enquanto cancela (RN-673, não otimista).
+- **Onde:** `apps/web/src/lib/plano-do-turno.ts:9` (`planoDoTurno`), `apps/web/src/components/TurnActivityStrip.tsx:47` (`TurnActivityStrip`).
+- **Teste:** `apps/web/src/lib/plano-do-turno.test.ts`, `apps/web/src/components/ai-elements/passos.test.tsx`.
+- **Origem:** AT-652 (EP-031).
