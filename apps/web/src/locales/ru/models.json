@@ -47,7 +47,10 @@
   },
   "price": {
     "free": "бесплатно",
-    "per1m": "за 1M"
+    "per1m": "за 1M",
+    "noPrice": "цена не указана",
+    "subscriptionNoPrice": "подписка — цена не указана",
+    "subscription": "подписка · эквивалент {{preco}}"
   },
   "contextWindow": {
     "thousands": "{{value}}k ctx",
@@ -233,5 +236,24 @@
     "save": "Сохранить",
     "saving": "Сохранение…",
     "addNewToken": "Добавить новый токен"
+  },
+  "priceEditor": {
+    "open": "Цена и тариф",
+    "input": "Вход (US$ за 1M)",
+    "output": "Выход (US$ за 1M)",
+    "billing": "Тариф",
+    "api": "по использованию (API)",
+    "subscription": "подписка",
+    "free": "бесплатно",
+    "save": "Сохранить цену",
+    "invalid": "Введите числа, ноль или больше.",
+    "scope": "Цена действует для всей установки и только вперёд; прошлое потребление не меняется.",
+    "ownerOnly": "Цену и тариф меняет только owner.",
+    "history": "История цены",
+    "historyEmpty": "Изменений цены нет.",
+    "historyRow": "{{antes}} → {{depois}} · {{origem}} · {{quando}}",
+    "sourceManual": "вручную",
+    "sourceSync": "синхронизация",
+    "saved": "Цена сохранена."
   }
 }
