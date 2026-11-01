@@ -7455,7 +7455,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/AgentTokenUsageResponseDto'
+                  $ref: '#/components/schemas/SessionAgentTokenUsageResponseDto'
         '401':
           description: 没有令牌、令牌已过期或签名无效。
         '403':
@@ -9038,13 +9038,13 @@ paths:
                     additionalProperties:
                       type: array
                       items:
-                        $ref: '#/components/schemas/ModelComCuradoriaResponseDto'
+                        $ref: '#/components/schemas/ModeloDoCatalogoResponseDto'
                   cloud:
                     type: object
                     additionalProperties:
                       type: array
                       items:
-                        $ref: '#/components/schemas/ModelComCuradoriaResponseDto'
+                        $ref: '#/components/schemas/ModeloDoCatalogoResponseDto'
                 example:
                   local:
                     ollama: []
@@ -14414,6 +14414,25 @@ components:
             type: object
       required:
         - keys
+    LastCallResponseDto:
+      type: object
+      properties:
+        inputTokens:
+          type: number
+          example: 42000
+          description: Input tokens of that call.
+        modelName:
+          type: string
+          example: qwen2.5-coder:7b
+        contextWindow:
+          type: number
+          example: 128000
+          nullable: true
+          description: The model's context window, or null when unknown.
+      required:
+        - inputTokens
+        - modelName
+        - contextWindow
     LlmMessageResponseDto:
       type: object
       properties:
@@ -15013,6 +15032,164 @@ components:
         - isActive
         - uses
         - freeRoutingAlias
+    ModeloDoCatalogoResponseDto:
+      type: object
+      properties:
+        id:
+          type: string
+          example: 01JC4Z0000MODELO00000000001
+        provider:
+          type: string
+          enum:
+            - ollama
+            - anthropic
+            - openai
+          example: anthropic
+        name:
+          type: string
+          example: claude-opus-4-8
+          description: 在提供商处的标识符。
+        displayName:
+          type: string
+          example: Claude Opus 4.8
+        inputPricePerMillionMicros:
+          type: number
+          example: 15000000
+          description: 每百万输入 token 的价格，以微美元计。
+        outputPricePerMillionMicros:
+          type: number
+          example: 75000000
+          description: 每百万输出 token 的价格，以微美元计。
+        contextWindow:
+          type: object
+          example: 200000
+          nullable: true
+          description: 同时也是模型的 `context_length` 能力。
+        supportsToolCalling:
+          type: boolean
+          example: true
+          description: 原生工具调用。没有它，模型只能聊天，不能绑定到代理（RN-040）。
+        supportsStreaming:
+          type: boolean
+          example: true
+        supportsVision:
+          type: boolean
+          example: false
+          description: 接受图像输入。`false` 表示提供商没有声明该模态——而不是模型做不到（ADR 0041）。
+        supportsReasoning:
+          type: boolean
+          example: true
+          description: '接受显式推理（thinking）。在 OpenRouter 上来自 `supported_parameters: reasoning`。'
+        generatesImage:
+          type: boolean
+          example: false
+          description: 生成图像——与接受图像输入是不同的维度。具备的模型很少，把两者混淆会让用户选错模型。
+        reasoningBudget:
+          type: number
+          nullable: true
+          example: 2048
+          description: >-
+            Reasoning budget (tokens) the model is PROVEN to respect, curated by
+            hand (ADR 0223). Null = not proven; the field is not sent.
+        manualPricing:
+          type: boolean
+          example: true
+          description: 根据提供商文档手动输入的价格，而不是同步而来。价格同步在没有明确决定的情况下不会覆盖被标记的记录。
+        availability:
+          type: string
+          enum:
+            - available
+            - unavailable
+          example: available
+          description: >-
+            同步观测到的远程现实，与策展相互独立的维度。`unavailable` 是从提供商目录中消失的模型——它绝不会被删除，因为
+            binding 和成本历史都指向它。
+        billing:
+          type: string
+          enum:
+            - api
+            - subscription
+            - free
+          example: api
+          description: >-
+            CURATED billing mark (AT-632, RN-954): `subscription` is a seat —
+            its cost is shown apart from the US$ paid. Never set by sync.
+        lastSeenAt:
+          type: object
+          example: '2026-07-30T03:00:00.000Z'
+          format: date-time
+          nullable: true
+          description: 同步最后一次在提供商目录中看到该模型的时间。
+        createdAt:
+          type: string
+          example: '2026-07-01T00:00:00.000Z'
+          format: date-time
+        updatedAt:
+          type: string
+          example: '2026-07-01T00:00:00.000Z'
+          format: date-time
+        isActive:
+          type: boolean
+          example: true
+          description: >-
+            **此 workspace**
+            所有者的策展：被停用的模型会从选择器中消失，但保留在历史成本中。同步发现的模型没有策展记录，没有记录即表示 `false`。
+        uses:
+          type: array
+          example:
+            - codigo
+          description: >-
+            此 workspace
+            将该模型用于什么。是运营者的意见，而不是提供商的能力——没有任何目录会公布“适合写代码”。空列表表示“没有人有意见”，而不是“不适合”。
+          items:
+            type: string
+            enum:
+              - codigo
+              - documentacao
+              - analise
+              - imagem
+              - conversa
+        freeRoutingAlias:
+          type: boolean
+          example: false
+          description: >-
+            OpenRouter 免费路由别名（以 `~` 开头的
+            id）：目录价格只是展示价，账单来自实际处理调用的那个上游。策展拒绝激活它（422
+            `alias_de_roteamento_livre`）；在该规则之前激活的保持激活，并以此标志标记，一旦停用就无法再恢复。读取时根据提供商和名称推导，从不存储。
+        sugestao:
+          nullable: true
+          description: >-
+            SUGGESTION only (derived on read, never stored): billing band from
+            the 9Router alias and the manufacturer price from a curated table.
+            Applying it is a curation gesture. Null for OpenRouter and unlisted
+            ids.
+          type: object
+          allOf:
+            - $ref: '#/components/schemas/SugestaoDoCatalogoResponseDto'
+      required:
+        - id
+        - provider
+        - name
+        - displayName
+        - inputPricePerMillionMicros
+        - outputPricePerMillionMicros
+        - contextWindow
+        - supportsToolCalling
+        - supportsStreaming
+        - supportsVision
+        - supportsReasoning
+        - generatesImage
+        - reasoningBudget
+        - manualPricing
+        - availability
+        - billing
+        - lastSeenAt
+        - createdAt
+        - updatedAt
+        - isActive
+        - uses
+        - freeRoutingAlias
+        - sugestao
     ModelPriceChangeResponseDto:
       type: object
       properties:
@@ -15939,6 +16116,36 @@ components:
         - host
         - container
         - protocol
+    PrecoSugeridoResponseDto:
+      type: object
+      properties:
+        fabricante:
+          type: string
+          example: Anthropic
+        entradaMicros:
+          type: number
+          example: 100000
+          description: micro-USD per 1M tokens.
+        saidaMicros:
+          type: number
+          example: 500000
+          description: micro-USD per 1M tokens.
+        fonte:
+          type: string
+          example: https://docs.claude.com/en/docs/about-claude/pricing.md
+        conferidoEm:
+          type: string
+          example: '2026-11-01'
+          description: Date the row was checked.
+        observacao:
+          type: string
+          example: Prompt up to 100,000 tokens.
+      required:
+        - fabricante
+        - entradaMicros
+        - saidaMicros
+        - fonte
+        - conferidoEm
     PriorHypothesisResponseDto:
       type: object
       properties:
@@ -18675,6 +18882,37 @@ components:
         - accessToken
         - expiresIn
         - locale
+    SessionAgentTokenUsageResponseDto:
+      type: object
+      properties:
+        actorId:
+          type: string
+          example: dev-api
+          description: 代理的 slug，或用户的 id。
+        costMicros:
+          type: number
+          example: 3400000
+          description: 成本，以微美元计。
+        inputTokens:
+          type: number
+          example: 128000
+        outputTokens:
+          type: number
+          example: 14200
+        lastCall:
+          nullable: true
+          description: >-
+            The agent's latest call in the session (Jev excluded); null when
+            none.
+          type: object
+          allOf:
+            - $ref: '#/components/schemas/LastCallResponseDto'
+      required:
+        - actorId
+        - costMicros
+        - inputTokens
+        - outputTokens
+        - lastCall
     SessionContextSummaryResponseDto:
       type: object
       properties:
@@ -19626,6 +19864,26 @@ components:
       required:
         - projectId
         - messages
+    SugestaoDoCatalogoResponseDto:
+      type: object
+      properties:
+        cobranca:
+          type: string
+          enum:
+            - api
+            - subscription
+            - free
+          nullable: true
+          description: 'Suggested billing band (9Router alias). Null: no suggestion.'
+        preco:
+          nullable: true
+          description: Manufacturer list price; null when the table has no row.
+          type: object
+          allOf:
+            - $ref: '#/components/schemas/PrecoSugeridoResponseDto'
+      required:
+        - cobranca
+        - preco
     SweepQaEnvironmentsInternalDto:
       type: object
       properties:

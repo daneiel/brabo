@@ -8024,7 +8024,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/AgentTokenUsageResponseDto'
+                  $ref: '#/components/schemas/SessionAgentTokenUsageResponseDto'
         '401':
           description: No token, expired token, or invalid signature.
         '403':
@@ -9722,13 +9722,13 @@ paths:
                     additionalProperties:
                       type: array
                       items:
-                        $ref: '#/components/schemas/ModelComCuradoriaResponseDto'
+                        $ref: '#/components/schemas/ModeloDoCatalogoResponseDto'
                   cloud:
                     type: object
                     additionalProperties:
                       type: array
                       items:
-                        $ref: '#/components/schemas/ModelComCuradoriaResponseDto'
+                        $ref: '#/components/schemas/ModeloDoCatalogoResponseDto'
                 example:
                   local:
                     ollama: []
@@ -15530,6 +15530,25 @@ components:
             type: object
       required:
         - keys
+    LastCallResponseDto:
+      type: object
+      properties:
+        inputTokens:
+          type: number
+          example: 42000
+          description: Input tokens of that call.
+        modelName:
+          type: string
+          example: qwen2.5-coder:7b
+        contextWindow:
+          type: number
+          example: 128000
+          nullable: true
+          description: The model's context window, or null when unknown.
+      required:
+        - inputTokens
+        - modelName
+        - contextWindow
     LlmMessageResponseDto:
       type: object
       properties:
@@ -16207,6 +16226,181 @@ components:
         - isActive
         - uses
         - freeRoutingAlias
+    ModeloDoCatalogoResponseDto:
+      type: object
+      properties:
+        id:
+          type: string
+          example: 01JC4Z0000MODELO00000000001
+        provider:
+          type: string
+          enum:
+            - ollama
+            - anthropic
+            - openai
+          example: anthropic
+        name:
+          type: string
+          example: claude-opus-4-8
+          description: Identifier at the provider.
+        displayName:
+          type: string
+          example: Claude Opus 4.8
+        inputPricePerMillionMicros:
+          type: number
+          example: 15000000
+          description: Price per million INPUT tokens, in micro-USD.
+        outputPricePerMillionMicros:
+          type: number
+          example: 75000000
+          description: Price per million OUTPUT tokens, in micro-USD.
+        contextWindow:
+          type: object
+          example: 200000
+          nullable: true
+          description: Also the model's `context_length` capability.
+        supportsToolCalling:
+          type: boolean
+          example: true
+          description: >-
+            NATIVE tool calling. Without this the model is chat-only and cannot
+            be bound to an agent (RN-040).
+        supportsStreaming:
+          type: boolean
+          example: true
+        supportsVision:
+          type: boolean
+          example: false
+          description: >-
+            Accepts IMAGE input. `false` means the provider did not declare the
+            modality — not that the model can't do it (ADR 0041).
+        supportsReasoning:
+          type: boolean
+          example: true
+          description: >-
+            Accepts explicit reasoning (thinking). On OpenRouter it comes from
+            `supported_parameters: reasoning`.
+        generatesImage:
+          type: boolean
+          example: false
+          description: >-
+            PRODUCES image — an axis different from accepting it as input. Few
+            models have it, and confusing the two sends the user to the wrong
+            model.
+        reasoningBudget:
+          type: number
+          nullable: true
+          example: 2048
+          description: >-
+            Reasoning budget (tokens) the model is PROVEN to respect, curated by
+            hand (ADR 0223). Null = not proven; the field is not sent.
+        manualPricing:
+          type: boolean
+          example: true
+          description: >-
+            Price typed in from the provider's docs, not synced. The price sync
+            does not overwrite a row marked without an explicit decision.
+        availability:
+          type: string
+          enum:
+            - available
+            - unavailable
+          example: available
+          description: >-
+            REMOTE reality observed by sync, an axis independent from curation.
+            `unavailable` is a model that vanished from the provider catalog —
+            it is never deleted, because bindings and cost history point to it.
+        billing:
+          type: string
+          enum:
+            - api
+            - subscription
+            - free
+          example: api
+          description: >-
+            CURATED billing mark (AT-632, RN-954): `subscription` is a seat —
+            its cost is shown apart from the US$ paid. Never set by sync.
+        lastSeenAt:
+          type: object
+          example: '2026-07-30T03:00:00.000Z'
+          format: date-time
+          nullable: true
+          description: Last time sync saw the model in the provider catalog.
+        createdAt:
+          type: string
+          example: '2026-07-01T00:00:00.000Z'
+          format: date-time
+        updatedAt:
+          type: string
+          example: '2026-07-01T00:00:00.000Z'
+          format: date-time
+        isActive:
+          type: boolean
+          example: true
+          description: >-
+            Curation by the OWNER **of this workspace**: a deactivated model
+            disappears from the selector but stays in historical costs. A model
+            discovered by sync has no curation row, and no row means `false`.
+        uses:
+          type: array
+          example:
+            - codigo
+          description: >-
+            What THIS workspace uses the model for. The operator's opinion, not
+            a provider capability — no catalog publishes "good for code". An
+            empty list means "nobody has an opinion", not "not fit for it".
+          items:
+            type: string
+            enum:
+              - codigo
+              - documentacao
+              - analise
+              - imagem
+              - conversa
+        freeRoutingAlias:
+          type: boolean
+          example: false
+          description: >-
+            OpenRouter free-routing alias (an id starting with `~`): the catalog
+            price is a showcase price and the bill comes from whichever upstream
+            served the call. Curation refuses to ACTIVATE it (422
+            `alias_de_roteamento_livre`); one activated before the rule stays
+            active, marked by this flag, and once deactivated it cannot come
+            back. Derived from provider and name on read, never stored.
+        sugestao:
+          nullable: true
+          description: >-
+            SUGGESTION only (derived on read, never stored): billing band from
+            the 9Router alias and the manufacturer price from a curated table.
+            Applying it is a curation gesture. Null for OpenRouter and unlisted
+            ids.
+          type: object
+          allOf:
+            - $ref: '#/components/schemas/SugestaoDoCatalogoResponseDto'
+      required:
+        - id
+        - provider
+        - name
+        - displayName
+        - inputPricePerMillionMicros
+        - outputPricePerMillionMicros
+        - contextWindow
+        - supportsToolCalling
+        - supportsStreaming
+        - supportsVision
+        - supportsReasoning
+        - generatesImage
+        - reasoningBudget
+        - manualPricing
+        - availability
+        - billing
+        - lastSeenAt
+        - createdAt
+        - updatedAt
+        - isActive
+        - uses
+        - freeRoutingAlias
+        - sugestao
     ModelPriceChangeResponseDto:
       type: object
       properties:
@@ -17173,6 +17367,36 @@ components:
         - host
         - container
         - protocol
+    PrecoSugeridoResponseDto:
+      type: object
+      properties:
+        fabricante:
+          type: string
+          example: Anthropic
+        entradaMicros:
+          type: number
+          example: 100000
+          description: micro-USD per 1M tokens.
+        saidaMicros:
+          type: number
+          example: 500000
+          description: micro-USD per 1M tokens.
+        fonte:
+          type: string
+          example: https://docs.claude.com/en/docs/about-claude/pricing.md
+        conferidoEm:
+          type: string
+          example: '2026-11-01'
+          description: Date the row was checked.
+        observacao:
+          type: string
+          example: Prompt up to 100,000 tokens.
+      required:
+        - fabricante
+        - entradaMicros
+        - saidaMicros
+        - fonte
+        - conferidoEm
     PriorHypothesisResponseDto:
       type: object
       properties:
@@ -20166,6 +20390,37 @@ components:
         - accessToken
         - expiresIn
         - locale
+    SessionAgentTokenUsageResponseDto:
+      type: object
+      properties:
+        actorId:
+          type: string
+          example: dev-api
+          description: The agent's slug, or the user's id.
+        costMicros:
+          type: number
+          example: 3400000
+          description: Cost in micro-USD.
+        inputTokens:
+          type: number
+          example: 128000
+        outputTokens:
+          type: number
+          example: 14200
+        lastCall:
+          nullable: true
+          description: >-
+            The agent's latest call in the session (Jev excluded); null when
+            none.
+          type: object
+          allOf:
+            - $ref: '#/components/schemas/LastCallResponseDto'
+      required:
+        - actorId
+        - costMicros
+        - inputTokens
+        - outputTokens
+        - lastCall
     SessionContextSummaryResponseDto:
       type: object
       properties:
@@ -21214,6 +21469,26 @@ components:
       required:
         - projectId
         - messages
+    SugestaoDoCatalogoResponseDto:
+      type: object
+      properties:
+        cobranca:
+          type: string
+          enum:
+            - api
+            - subscription
+            - free
+          nullable: true
+          description: 'Suggested billing band (9Router alias). Null: no suggestion.'
+        preco:
+          nullable: true
+          description: Manufacturer list price; null when the table has no row.
+          type: object
+          allOf:
+            - $ref: '#/components/schemas/PrecoSugeridoResponseDto'
+      required:
+        - cobranca
+        - preco
     SweepQaEnvironmentsInternalDto:
       type: object
       properties:
