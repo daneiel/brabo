@@ -8,27 +8,26 @@ import { chaveDoIdiomaDaSessao } from '../lib/idioma-da-resposta';
 import type { StructuredQuestion } from '../lib/api-types';
 import { useToast } from '../components/ui/ToastProvider';
 import { AvatarDoAgente } from '../components/ui/AvatarDoAgente';
-import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
-import { Input } from '../components/ui/Input';
-import { Select } from '../components/ui/Select';
-import { Textarea } from '../components/ui/Textarea';
+import { Textarea } from '../components/shadcn/textarea';
+import {
+  Questionnaire,
+  QuestionnaireActions,
+  QuestionnaireChoice,
+  QuestionnaireChoices,
+  QuestionnaireInput,
+  QuestionnaireItem,
+  QuestionnaireNext,
+  QuestionnairePrevious,
+  QuestionnaireProgress,
+  QuestionnaireSubmit,
+  QuestionnaireTitle,
+} from '../components/shadcn/questionnaire';
 import { MarkdownInline } from '../components/ui/MarkdownMessage';
 import { textoPlanoDoMarkdown } from '../lib/texto-plano';
 import { corDoAgente, nomeDoAgente } from '../lib/agents';
 import { ChatIcon } from '../components/ui/icons';
 import styles from './SessionPage.module.css';
-
-/**
- * O valor que marca "quero escrever a minha própria resposta" no `Select`
- * (RN-171). É um SENTINELA de interface, nunca uma resposta: quem escolhe
- * troca o campo por um de texto, e o que viaja pro backend é o texto digitado.
- *
- * O prefixo `__` e o nome em português existem para nunca colidir com uma
- * `option` de verdade vinda do modelo — e, se colidisse, o efeito seria
- * abrir o campo de texto, não gravar o sentinela.
- */
-const OUTRA_RESPOSTA = '__outra__';
 
 /** RN-171: `select` aceita resposta fora da lista, e ausente vale `true` —
  *  evento gravado antes da regra não tem a chave, e a leitura permissiva é a
@@ -111,13 +110,6 @@ export function StructuredQuestionCard({
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const [respostas, setRespostas] = useState<Record<string, string>>({});
-  /**
-   * Quais `select` estão em modo "texto livre" (RN-171). Estado SEPARADO de
-   * `respostas` de propósito: `respostas` é o que vai pro backend, e o
-   * sentinela nunca deve chegar lá — misturar os dois seria a única forma de
-   * ele vazar.
-   */
-  const [modoOutra, setModoOutra] = useState<Record<string, boolean>>({});
   const [enviando, setEnviando] = useState(false);
 
   if (respondida) {
@@ -192,106 +184,90 @@ export function StructuredQuestionCard({
           {t('perguntas.titulo', { agente: nomeDoAgente(agent) })}
         </span>
       </span>
-      <div className={styles.structuredQuestionForm}>
+      {/* AT-653 (RN-968): um passo por pergunta. O estado segue controlado aqui
+          (`respostas`), nunca por FormData: é ele que mantém as respostas na
+          tela no 409 `sessao_encerrada` e garante o mesmo payload. */}
+      <Questionnaire
+        onSubmit={(e) => {
+          e.preventDefault();
+          void handleSubmit();
+        }}
+        onKeyDown={(e) => {
+          // RN-830: Enter que confirma a composição do IME não avança nem envia.
+          if (e.key === 'Enter' && e.nativeEvent.isComposing) e.preventDefault();
+        }}
+      >
+        <QuestionnaireProgress
+          aria-label={t('perguntas.progressoRotulo')}
+          render={(props, state) => (
+            <div
+              {...props}
+              aria-valuetext={t('perguntas.progresso', { atual: state.current, total: state.total })}
+            >
+              {t('perguntas.progresso', { atual: state.current, total: state.total })}
+            </div>
+          )}
+        />
         {questions.map((q) => {
           const value = respostas[q.id] ?? '';
-          const atualizar = (v: string) =>
-            setRespostas((atual) => ({ ...atual, [q.id]: v }));
-
-          if (q.type === 'textarea') {
-            return (
-              <Textarea
-                key={q.id}
-                label={<MarkdownInline text={q.label} />}
-                value={value}
-                disabled={enviando}
-                {...SEM_AUTOFILL}
-                onChange={(e) => atualizar(e.target.value)}
-              />
-            );
-          }
+          const atualizar = (v: string) => setRespostas((atual) => ({ ...atual, [q.id]: v }));
+          const titulo = (
+            <QuestionnaireTitle>
+              <MarkdownInline text={q.label} />
+            </QuestionnaireTitle>
+          );
 
           if (q.type === 'select') {
-            // `htmlFor`/`id` explícitos: `Select` (design system) não tem a
-            // prop `label` que `Input`/`Textarea` têm — sem a associação, um
-            // leitor de tela não liga a pergunta ao campo.
-            const selectId = `sq-${questionSetId}-${q.id}`;
-            const emOutra = modoOutra[q.id] === true;
-            // O que o `Select` MOSTRA. No modo "Outra" ele mostra o sentinela;
-            // fora dele, a resposta — que só é uma das `options`, porque
-            // qualquer outro caminho de escrita passa pelo modo "Outra".
-            const selecionado = emOutra ? OUTRA_RESPOSTA : value;
+            const daLista = q.options.includes(value);
             return (
-              <div key={q.id} className={styles.structuredQuestionField}>
-                <label className={styles.structuredQuestionFieldLabel} htmlFor={selectId}>
-                  <MarkdownInline text={q.label} />
-                </label>
-                <Select
-                  id={selectId}
-                  value={selecionado}
-                  disabled={enviando}
-                  onChange={(e) => {
-                    const escolha = e.target.value;
-                    const outra = escolha === OUTRA_RESPOSTA;
-                    setModoOutra((atual) => ({ ...atual, [q.id]: outra }));
-                    // Entrar em "Outra" ZERA a resposta: o sentinela não é uma
-                    // resposta, e deixar a opção anterior gravada faria o botão
-                    // habilitar sem nada digitado.
-                    atualizar(outra ? '' : escolha);
-                  }}
-                >
-                  <option value="" disabled>
-                    {t('perguntas.selecione')}
-                  </option>
+              <QuestionnaireItem key={q.id} name={q.id} required disabled={enviando}>
+                {titulo}
+                <QuestionnaireChoices>
                   {q.options.map((opcao) => (
-                    <option key={opcao} value={opcao}>
+                    <QuestionnaireChoice
+                      key={opcao}
+                      value={opcao}
+                      checked={value === opcao}
+                      onChange={() => atualizar(opcao)}
+                    >
                       {opcao}
-                    </option>
+                    </QuestionnaireChoice>
                   ))}
-                  {/* RN-171: a saída por texto livre. Fica no FIM da lista, e
-                      só existe quando a pergunta a permite (default do
-                      engine: sim, para `select`). */}
+                  {/* RN-171: a saída por texto livre é um campo ao lado das
+                      opções; escrever nele é a resposta. */}
                   {permiteOutra(q) && (
-                    <option value={OUTRA_RESPOSTA}>{t('perguntas.outraEscrever')}</option>
+                    <QuestionnaireInput
+                      aria-label={t('perguntas.suaResposta', { pergunta: textoPlanoDoMarkdown(q.label) })}
+                      value={daLista ? '' : value}
+                      {...SEM_AUTOFILL}
+                      onChange={(e) => atualizar(e.target.value)}
+                    />
                   )}
-                </Select>
-                {emOutra && (
-                  // O rótulo repete a pergunta porque um formulário com dois
-                  // `select` abertos teria dois campos chamados "Sua
-                  // resposta" — indistinguíveis para quem usa leitor de tela.
-                  <Input
-                    label={t('perguntas.suaResposta', { pergunta: textoPlanoDoMarkdown(q.label) })}
-                    value={value}
-                    disabled={enviando}
-                    autoFocus
-                    {...SEM_AUTOFILL}
-                onChange={(e) => atualizar(e.target.value)}
-                  />
-                )}
-              </div>
+                </QuestionnaireChoices>
+              </QuestionnaireItem>
             );
           }
 
           return (
-            <Input
-              key={q.id}
-              label={<MarkdownInline text={q.label} />}
-              value={value}
-              disabled={enviando}
-              {...SEM_AUTOFILL}
+            <QuestionnaireItem key={q.id} name={q.id} required disabled={enviando}>
+              {titulo}
+              <QuestionnaireInput
+                value={value}
+                {...SEM_AUTOFILL}
                 onChange={(e) => atualizar(e.target.value)}
-            />
+                {...(q.type === 'textarea' ? { render: <Textarea /> } : {})}
+              />
+            </QuestionnaireItem>
           );
         })}
-      </div>
-      <Button
-        variant="success"
-        loading={enviando}
-        disabled={!completo || enviando}
-        onClick={handleSubmit}
-      >
-        {t('perguntas.enviarRespostas')}
-      </Button>
+        <QuestionnaireActions>
+          <QuestionnairePrevious>{t('perguntas.anterior')}</QuestionnairePrevious>
+          <QuestionnaireNext>{t('perguntas.proxima')}</QuestionnaireNext>
+          <QuestionnaireSubmit variant="success" disabled={!completo || enviando}>
+            {t('perguntas.enviarRespostas')}
+          </QuestionnaireSubmit>
+        </QuestionnaireActions>
+      </Questionnaire>
     </Card>
   );
 }

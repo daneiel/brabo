@@ -9,6 +9,7 @@ import { Input } from './input';
 import { Label } from './label';
 import { NativeSelect } from './native-select';
 import { Progress } from './progress';
+import { Questionnaire, QuestionnaireItem } from './questionnaire';
 import { Separator } from './separator';
 import { Skeleton } from './skeleton';
 import { Spinner } from './spinner';
@@ -28,6 +29,11 @@ const simples = {
   label: <Label>x</Label>,
   'native-select': <NativeSelect />,
   progress: <Progress value={30} />,
+  questionnaire: (
+    <Questionnaire>
+      <QuestionnaireItem name="q" />
+    </Questionnaire>
+  ),
   separator: <Separator />,
   skeleton: <Skeleton />,
   spinner: <Spinner />,

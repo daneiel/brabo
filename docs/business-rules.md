@@ -20408,7 +20408,7 @@ E o composer e os campos de texto das perguntas estruturadas levam
 - **Onde:** `apps/web/src/lib/conversa-comecou.ts:15` (`conversaComecou`),
   `:29` (`SEM_AUTOFILL`); `apps/web/src/routes/SessionPage.tsx:436`
   (`conversaComecou`); `apps/web/src/routes/SessionComposer.tsx:389`
-  (`SEM_AUTOFILL`); `apps/web/src/routes/StructuredQuestionCard.tsx:206`
+  (`SEM_AUTOFILL`); `apps/web/src/routes/StructuredQuestionCard.tsx:242`
   (`SEM_AUTOFILL`)
 - **Teste:** `apps/web/src/routes/SessionPage.sessao.test.tsx:316` (Criativo
   ativado sem mensagem mantém a dica; com mensagem ela some — caso de falha;
@@ -25209,7 +25209,7 @@ sem dizer qual.
 ### RN-926 — A rota de providers com chave devolve só os nomes, e a chave é a do TITULAR {#rn-926}
 
 - **Regra:** `GET workspaces/:workspaceId/llm-providers/credentialed` (`viewer`, o mínimo da leitura de membros, [RN-655](#rn-655)) devolve `{ providers: LLMProviderName[] }` com os providers de LLM em que o TITULAR do workspace (`workspaces.created_by`, a pessoa cuja credencial os agentes gastam, [RN-058](business-rules/custo.md#rn-058)) tem credencial cadastrada. Só nomes, na ordem da lista canônica: nunca segredo, id, data nem `key_id`. `ollama` não tem credencial e nunca aparece; token de git (`github`/`gitlab`) também não. Credencial de outro membro não conta. É a fonte de "tem chave" das telas de providers e do catálogo (AT-607); a tela vem depois.
-- **Onde:** `apps/api/src/application/use-cases/llm/list-credentialed-providers.use-case.ts:20` (`execute`), `apps/api/src/interfaces/http/llm/models.controller.ts:76` (`credentialed`)
+- **Onde:** `apps/api/src/application/use-cases/llm/list-credentialed-providers.use-case.ts:20` (`execute`), `apps/api/src/interfaces/http/llm/models.controller.ts:80` (`credentialed`)
 - **Teste:** `apps/api/test/application/use-cases/llm/list-credentialed-providers.use-case.spec.ts:44` (`titular com duas chaves: só os dois nomes`; a chave de outro membro não conta)
 - **Origem:** AT-607 (EP-026).
 
@@ -25436,3 +25436,10 @@ sem dizer qual.
 - **Onde:** `apps/web/src/lib/plano-do-turno.ts:9` (`planoDoTurno`), `apps/web/src/components/TurnActivityStrip.tsx:47` (`TurnActivityStrip`).
 - **Teste:** `apps/web/src/lib/plano-do-turno.test.ts`, `apps/web/src/components/ai-elements/passos.test.tsx`.
 - **Origem:** AT-652 (EP-031).
+
+### RN-968 — O formulário de perguntas estruturadas é um questionário passo a passo {#rn-968}
+
+- **Regra:** o formulário aberto de `chat.structured_question` (RN-162) é o Questionnaire do shadcn: uma pergunta por vez, com "Pergunta N de T", Anterior/Próxima e "Enviar respostas" no último passo (desabilitado até TODAS estarem respondidas, a régua da api). A lista (`select`) vira escolhas (radio) e a saída por texto livre (RN-171) é um campo AO LADO delas, sem sentinela: escrever no campo é a resposta e escolher uma opção descarta o texto; `allowOther: false` não tem o campo. `textarea` usa o `QuestionnaireInput` com `render` de textarea. O estado segue controlado pelo card, então o que viaja para a api é o mesmo `Record<id, texto>` (RN-712), a ordem do envio é a de sempre (RN-174, RN-578) e as respostas ficam na tela no 409 `sessao_encerrada` (RN-581). Enter que confirma o IME não avança nem envia (RN-830). O cartão `respondida` e o painel de pendências (`artifact.open_question`) não mudam. Revisa a apresentação da RN-162/RN-171, não a regra.
+- **Onde:** `apps/web/src/routes/StructuredQuestionCard.tsx:73` (`StructuredQuestionCard`), `apps/web/src/components/shadcn/questionnaire.tsx:8` (`Questionnaire`).
+- **Teste:** `apps/web/src/routes/SessionPage.perguntas-estruturadas.test.tsx`, `apps/web/src/components/shadcn/registro.test.tsx`.
+- **Origem:** AT-653 (EP-031).

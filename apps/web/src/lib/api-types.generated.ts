@@ -7566,6 +7566,20 @@ export interface components {
             /** @description Active public Ed25519 keys. Two during a rotation. */
             keys: Record<string, never>[];
         };
+        LastCallResponseDto: {
+            /**
+             * @description Input tokens of that call.
+             * @example 42000
+             */
+            inputTokens: number;
+            /** @example qwen2.5-coder:7b */
+            modelName: string;
+            /**
+             * @description The model's context window, or null when unknown.
+             * @example 128000
+             */
+            contextWindow: number | null;
+        };
         LlmMessageResponseDto: {
             /**
              * @example assistant
@@ -7971,6 +7985,116 @@ export interface components {
              * @example false
              */
             freeRoutingAlias: boolean;
+        };
+        ModeloDoCatalogoResponseDto: {
+            /** @example 01JC4Z0000MODELO00000000001 */
+            id: string;
+            /**
+             * @example anthropic
+             * @enum {string}
+             */
+            provider: "ollama" | "anthropic" | "openai";
+            /**
+             * @description Identifier at the provider.
+             * @example claude-opus-4-8
+             */
+            name: string;
+            /** @example Claude Opus 4.8 */
+            displayName: string;
+            /**
+             * @description Price per million INPUT tokens, in micro-USD.
+             * @example 15000000
+             */
+            inputPricePerMillionMicros: number;
+            /**
+             * @description Price per million OUTPUT tokens, in micro-USD.
+             * @example 75000000
+             */
+            outputPricePerMillionMicros: number;
+            /**
+             * @description Also the model's `context_length` capability.
+             * @example 200000
+             */
+            contextWindow: Record<string, never> | null;
+            /**
+             * @description NATIVE tool calling. Without this the model is chat-only and cannot be bound to an agent (RN-040).
+             * @example true
+             */
+            supportsToolCalling: boolean;
+            /** @example true */
+            supportsStreaming: boolean;
+            /**
+             * @description Accepts IMAGE input. `false` means the provider did not declare the modality — not that the model can't do it (ADR 0041).
+             * @example false
+             */
+            supportsVision: boolean;
+            /**
+             * @description Accepts explicit reasoning (thinking). On OpenRouter it comes from `supported_parameters: reasoning`.
+             * @example true
+             */
+            supportsReasoning: boolean;
+            /**
+             * @description PRODUCES image — an axis different from accepting it as input. Few models have it, and confusing the two sends the user to the wrong model.
+             * @example false
+             */
+            generatesImage: boolean;
+            /**
+             * @description Reasoning budget (tokens) the model is PROVEN to respect, curated by hand (ADR 0223). Null = not proven; the field is not sent.
+             * @example 2048
+             */
+            reasoningBudget: number | null;
+            /**
+             * @description Price typed in from the provider's docs, not synced. The price sync does not overwrite a row marked without an explicit decision.
+             * @example true
+             */
+            manualPricing: boolean;
+            /**
+             * @description REMOTE reality observed by sync, an axis independent from curation. `unavailable` is a model that vanished from the provider catalog — it is never deleted, because bindings and cost history point to it.
+             * @example available
+             * @enum {string}
+             */
+            availability: "available" | "unavailable";
+            /**
+             * @description CURATED billing mark (AT-632, RN-954): `subscription` is a seat — its cost is shown apart from the US$ paid. Never set by sync.
+             * @example api
+             * @enum {string}
+             */
+            billing: "api" | "subscription" | "free";
+            /**
+             * Format: date-time
+             * @description Last time sync saw the model in the provider catalog.
+             * @example 2026-07-30T03:00:00.000Z
+             */
+            lastSeenAt: Record<string, never> | null;
+            /**
+             * Format: date-time
+             * @example 2026-07-01T00:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @example 2026-07-01T00:00:00.000Z
+             */
+            updatedAt: string;
+            /**
+             * @description Curation by the OWNER **of this workspace**: a deactivated model disappears from the selector but stays in historical costs. A model discovered by sync has no curation row, and no row means `false`.
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description What THIS workspace uses the model for. The operator's opinion, not a provider capability — no catalog publishes "good for code". An empty list means "nobody has an opinion", not "not fit for it".
+             * @example [
+             *       "codigo"
+             *     ]
+             */
+            uses: ("codigo" | "documentacao" | "analise" | "imagem" | "conversa")[];
+            /**
+             * @description OpenRouter free-routing alias (an id starting with `~`): the catalog price is a showcase price and the bill comes from whichever upstream served the call. Curation refuses to ACTIVATE it (422 `alias_de_roteamento_livre`); one activated before the rule stays active, marked by this flag, and once deactivated it cannot come back. Derived from provider and name on read, never stored.
+             * @example false
+             */
+            freeRoutingAlias: boolean;
+            /** @description SUGGESTION only (derived on read, never stored): billing band from the 9Router alias and the manufacturer price from a curated table. Applying it is a curation gesture. Null for OpenRouter and unlisted ids. */
+            sugestao: components["schemas"]["SugestaoDoCatalogoResponseDto"] | null;
         };
         ModelPriceChangeResponseDto: {
             /** @example 01JC4Z0000PRECO000000000001 */
@@ -8554,6 +8678,29 @@ export interface components {
             container: number;
             /** @example tcp */
             protocol: string;
+        };
+        PrecoSugeridoResponseDto: {
+            /** @example Anthropic */
+            fabricante: string;
+            /**
+             * @description micro-USD per 1M tokens.
+             * @example 100000
+             */
+            entradaMicros: number;
+            /**
+             * @description micro-USD per 1M tokens.
+             * @example 500000
+             */
+            saidaMicros: number;
+            /** @example https://docs.claude.com/en/docs/about-claude/pricing.md */
+            fonte: string;
+            /**
+             * @description Date the row was checked.
+             * @example 2026-11-01
+             */
+            conferidoEm: string;
+            /** @example Prompt up to 100,000 tokens. */
+            observacao?: string;
         };
         PriorHypothesisResponseDto: {
             /** @example dev-api */
@@ -10244,6 +10391,24 @@ export interface components {
              */
             locale: "pt-BR" | "en" | "ru" | "zh-Hans";
         };
+        SessionAgentTokenUsageResponseDto: {
+            /**
+             * @description The agent's slug, or the user's id.
+             * @example dev-api
+             */
+            actorId: string;
+            /**
+             * @description Cost in micro-USD.
+             * @example 3400000
+             */
+            costMicros: number;
+            /** @example 128000 */
+            inputTokens: number;
+            /** @example 14200 */
+            outputTokens: number;
+            /** @description The agent's latest call in the session (Jev excluded); null when none. */
+            lastCall: components["schemas"]["LastCallResponseDto"] | null;
+        };
         SessionContextSummaryResponseDto: {
             /** @description The requested session plus the execution session(s) its approved Dev Lead plan activated (RN-828). */
             sessoesLidas: string[];
@@ -10889,6 +11054,15 @@ export interface components {
              * @example true
              */
             catalogoCompleto?: boolean;
+        };
+        SugestaoDoCatalogoResponseDto: {
+            /**
+             * @description Suggested billing band (9Router alias). Null: no suggestion.
+             * @enum {string|null}
+             */
+            cobranca: "api" | "subscription" | "free" | null;
+            /** @description Manufacturer list price; null when the table has no row. */
+            preco: components["schemas"]["PrecoSugeridoResponseDto"] | null;
         };
         SweepQaEnvironmentsInternalDto: {
             /** @description Task ids that still have a gate in flight; every other active instance is removed. */
@@ -21348,7 +21522,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AgentTokenUsageResponseDto"][];
+                    "application/json": components["schemas"]["SessionAgentTokenUsageResponseDto"][];
                 };
             };
             /** @description No token, expired token, or invalid signature. */
@@ -23553,10 +23727,10 @@ export interface operations {
                 content: {
                     "application/json": {
                         local?: {
-                            [key: string]: components["schemas"]["ModelComCuradoriaResponseDto"][];
+                            [key: string]: components["schemas"]["ModeloDoCatalogoResponseDto"][];
                         };
                         cloud?: {
-                            [key: string]: components["schemas"]["ModelComCuradoriaResponseDto"][];
+                            [key: string]: components["schemas"]["ModeloDoCatalogoResponseDto"][];
                         };
                     };
                 };

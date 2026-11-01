@@ -1252,6 +1252,17 @@ detalhar o motivo na URL.
   nomes dos arquivos em conflito — caminhos do repositório que o mesmo papel já lê
   no diff.
 
+- **Duas respostas ganharam campos na Rodada 135** — nenhuma rota, papel ou
+  guard mudou. `GET /workspaces/:workspaceId/models/catalog` (`role:maintainer`)
+  devolve `sugestao` por modelo ([RN-965](business-rules/custo.md#rn-965)): a
+  faixa de cobrança e o preço publicado pelo fabricante, com link e data da
+  fonte — dado curado no repositório, não dado do usuário nem segredo, e nada
+  é gravado pela leitura (quem aplica é o `owner`, pelas rotas de curadoria de
+  sempre). `GET /projects/:projectId/sessions/:sessionId/token-usage`
+  (`role:developer`) devolve `lastCall` por agente
+  ([RN-969](business-rules/custo.md#rn-969)): tokens de entrada, nome do modelo
+  e janela da última chamada, do mesmo escopo de sessão que a soma já expunha,
+  sem provider nem credencial.
 - **A resposta do catálogo de modelos ganhou `reasoningBudget`** — nenhuma rota,
   papel ou guard mudou ([RN-914](business-rules.md#rn-914), ADR 0223). O campo
   (inteiro ou `null`) sai no DTO de modelo das leituras do catálogo que já
