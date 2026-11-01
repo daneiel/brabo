@@ -4,6 +4,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   listCredentials,
   listModelCatalog,
+  listModelPriceChanges,
+  updateModelBilling,
+  updateModelPricing,
+  mensagemDaApi,
   setModelUses,
   setModelsActive,
   syncModelCatalog,
@@ -26,12 +30,17 @@ import {
   providersSemCatalogo,
   formatarJanela,
   formatarPreco,
+  microsDoCampo,
   type Faceta,
 } from '../lib/models';
 import { Alert } from './ui/Alert';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { Disclosure } from './ui/Disclosure';
+import { Input } from './ui/Input';
+import { Select } from './ui/Select';
+import { useCurrentWorkspaceWithRole } from '../lib/hooks';
+import { roleAtLeast } from '../lib/roles';
 import { Tabs } from './ui/Tabs';
 import { useProvidersComChave } from '../lib/providers-com-chave';
 import { useToast } from './ui/ToastProvider';
@@ -54,6 +63,8 @@ export function ModelCatalogSection({ workspaceId }: { workspaceId: string }) {
   const { t } = useTranslation('models');
   const queryClient = useQueryClient();
   const { showToast } = useToast();
+  const { data: comPapel } = useCurrentWorkspaceWithRole();
+  const podeEditarPreco = roleAtLeast(comPapel?.role, 'owner');
   const [marcados, setMarcados] = useState<Set<string>>(new Set());
   /**
    * Subgrupos de fabricante (OpenRouter) nascem FECHADOS: são 58, e abri-los
@@ -543,6 +554,9 @@ export function ModelCatalogSection({ workspaceId }: { workspaceId: string }) {
                           model={model}
                           marcado={marcados.has(model.id)}
                           onToggle={() => alternar(model.id)}
+ workspaceId={workspaceId}
+ podeEditar={podeEditarPreco}
+ aoSalvar={invalidar}
                         />
                       ))}
                     </Disclosure>
@@ -554,6 +568,9 @@ export function ModelCatalogSection({ workspaceId }: { workspaceId: string }) {
                     model={model}
                     marcado={marcados.has(model.id)}
                     onToggle={() => alternar(model.id)}
+ workspaceId={workspaceId}
+ podeEditar={podeEditarPreco}
+ aoSalvar={invalidar}
                   />
                 ))}
           </div>
@@ -616,16 +633,23 @@ function LinhaDoCatalogo({
   model,
   marcado,
   onToggle,
+  workspaceId,
+  podeEditar,
+  aoSalvar,
 }: {
   model: ModelComCuradoria;
   marcado: boolean;
   onToggle: () => void;
+  workspaceId: string;
+  podeEditar: boolean;
+  aoSalvar: () => void;
 }) {
   const { t } = useTranslation('models');
   const janela = formatarJanela(model);
   const indisponivel = model.availability === 'unavailable';
 
   return (
+    <>
     <label
       className={[styles.linha, indisponivel && styles.linhaIndisponivel]
         .filter(Boolean)
@@ -674,5 +698,151 @@ function LinhaDoCatalogo({
         ))}
       </span>
     </label>
+    <EditorDePreco
+      model={model}
+      workspaceId={workspaceId}
+      podeEditar={podeEditar}
+      aoSalvar={aoSalvar}
+    />
+    </>
   );
 }
+
+type Cobranca = 'api' | 'subscription' | 'free';
+
+/**
+ * Editor inline de preço e cobrança. Mora FORA do `<label>` da linha (o
+ * checkbox do lote não pode herdar o clique). Só o owner edita; quem vê
+ * recebe o motivo em texto (ADR 0064). O preço é da instalação (ADR 0049).
+ */
+function EditorDePreco({
+  model,
+  workspaceId,
+  podeEditar,
+  aoSalvar,
+}: {
+  model: ModelComCuradoria;
+  workspaceId: string;
+  podeEditar: boolean;
+  aoSalvar: () => void;
+}) {
+  const { t, i18n } = useTranslation('models');
+  const { showToast } = useToast();
+  const [aberto, setAberto] = useState(false);
+  const emUsd = (m: number) => String(m / 1_000_000);
+  const [entrada, setEntrada] = useState(emUsd(model.inputPricePerMillionMicros));
+  const [saida, setSaida] = useState(emUsd(model.outputPricePerMillionMicros));
+  const [erro, setErro] = useState<string | null>(null);
+  const { data: historico } = useQuery({
+    queryKey: ['model-price-changes', workspaceId, model.id],
+    queryFn: () => listModelPriceChanges(workspaceId, model.id),
+    enabled: aberto,
+    staleTime: FRESCOR_DA_CONFIGURACAO_MS,
+  });
+  const queryClient = useQueryClient();
+  const aposSalvar = () => {
+    aoSalvar();
+    void queryClient.invalidateQueries({
+      queryKey: ['model-price-changes', workspaceId, model.id],
+    });
+  };
+  const falha = (e: unknown) => setErro(mensagemDaApi(e, t('priceEditor.invalid')));
+
+  const salvarPreco = useMutation({
+    mutationFn: (v: { i: number; o: number }) =>
+      updateModelPricing(workspaceId, model.id, {
+        inputPricePerMillionMicros: v.i,
+        outputPricePerMillionMicros: v.o,
+      }),
+    onSuccess: () => {
+      setErro(null);
+      aposSalvar();
+      showToast({ title: t('priceEditor.saved') });
+    },
+    onError: falha,
+  });
+  const trocarCobranca = useMutation({
+    mutationFn: (b: Cobranca) => updateModelBilling(workspaceId, model.id, b),
+    onSuccess: () => {
+      setErro(null);
+      aposSalvar();
+    },
+    onError: falha,
+  });
+
+  function salvar() {
+    const i = microsDoCampo(entrada);
+    const o = microsDoCampo(saida);
+    if (i === null || o === null) return setErro(t('priceEditor.invalid'));
+    salvarPreco.mutate({ i, o });
+  }
+  const micros = (m: number) => usd1m.format(m / 1_000_000);
+
+  return (
+    <Disclosure
+      titulo={t('priceEditor.open')}
+      aberto={aberto}
+      onAlternar={setAberto}
+    >
+      <p>{t('priceEditor.scope')}</p>
+      {!podeEditar && <p>{t('priceEditor.ownerOnly')}</p>}
+      <Input
+        label={t('priceEditor.input')}
+        inputMode="decimal"
+        value={entrada}
+        disabled={!podeEditar}
+        onChange={(e) => setEntrada(e.target.value)}
+      />
+      <Input
+        label={t('priceEditor.output')}
+        inputMode="decimal"
+        value={saida}
+        disabled={!podeEditar}
+        onChange={(e) => setSaida(e.target.value)}
+      />
+      <label>
+        {t('priceEditor.billing')}
+        <Select
+          value={model.billing ?? 'api'}
+          disabled={!podeEditar || trocarCobranca.isPending}
+          onChange={(e) => trocarCobranca.mutate(e.target.value as Cobranca)}
+        >
+          <option value="api">{t('priceEditor.api')}</option>
+          <option value="subscription">{t('priceEditor.subscription')}</option>
+          <option value="free">{t('priceEditor.free')}</option>
+        </Select>
+      </label>
+      {erro && <Alert tone="danger">{erro}</Alert>}
+      <Button
+        onClick={salvar}
+        disabled={!podeEditar || salvarPreco.isPending}
+      >
+        {t('priceEditor.save')}
+      </Button>
+      <h4>{t('priceEditor.history')}</h4>
+      {historico && historico.length === 0 && <p>{t('priceEditor.historyEmpty')}</p>}
+      <ul>
+        {(historico ?? []).map((h) => (
+          <li key={h.id}>
+            {t('priceEditor.historyRow', {
+              antes: `${micros(h.inputBeforeMicros)} / ${micros(h.outputBeforeMicros)}`,
+              depois: `${micros(h.inputAfterMicros)} / ${micros(h.outputAfterMicros)}`,
+              origem: t(
+                h.source === 'manual'
+                  ? 'priceEditor.sourceManual'
+                  : 'priceEditor.sourceSync',
+              ),
+              quando: new Date(h.createdAt).toLocaleString(i18n.language),
+            })}
+          </li>
+        ))}
+      </ul>
+    </Disclosure>
+  );
+}
+
+const usd1m = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+  maximumFractionDigits: 6,
+});
