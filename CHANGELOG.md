@@ -6,6 +6,9 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Funcionalidades
 
+- O catálogo de modelos sugere o preço publicado pelo FABRICANTE do modelo (primeira entrega: Anthropic, conferida em 01/11) e, no 9Router, a faixa de cobrança pelo nome — assinatura (`cc/`, `cx/`), grátis ou API —, sem guardar a senha do painel; nada é aplicado sozinho (AT-640, RN-965).
+- As perguntas estruturadas dos agentes viram um formulário passo a passo, uma pergunta por vez com progresso, sobre o Questionnaire do shadcn; o que a api recebe não muda (AT-653, RN-968).
+- O consumo por agente da sessão traz a última chamada de cada agente (tokens de entrada, modelo e janela), sem contar o Jev — o dado para mostrar quanto da janela o agente ocupa (AT-654, RN-969).
 - O chat da Sessão passa a usar os padrões do AI Elements sobre o shadcn (AT-636, onda 3): as mensagens viram `Message` com autor, avatar e rodapé, e o exemplo do convite vira sugestão (AT-649); o composer vira `InputGroup` com Enviar/Enfileirar e Parar, sem perder tecla nem IME (AT-650); o card de aprovação usa o `Confirmation`, com as ações ao lado do título, nas quatro telas (AT-651); a faixa do turno mostra as ferramentas, o plano que o agente registrou no turno e a fila pelos padrões `Tool`, `Plan` e `Queue` (AT-652, RN-967).
 - Gastos em duas páginas (AT-632, RN-963): `/spend` no menu global (o owner vê o workspace e a fatura por chave; os demais veem o próprio consumo por projeto) e a aba Gastos do projeto só do projeto (o membro vê o total e o custo por agente e por área, nunca provider). O orçamento do projeto ganhou editor, o botão "Definir orçamento" abre a aba Gastos, e assinatura aparece separada, sem "US$ 0".
 

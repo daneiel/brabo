@@ -3294,7 +3294,7 @@ Convive com a [RN-665](#rn-665) (custo real do OpenRouter) e o preço congelado 
 1. **Marca.** `models.billing` é `api` (padrão), `subscription` ou `free`, gravada pela curadoria em `PATCH workspaces/:workspaceId/models/:modelId/billing` (`owner`, o nível de `…/pricing`). O sync nunca a toca e a linha de `token_usage` não muda.
 2. **Relatório.** Todo bucket e o total ganham `assinaturaMicros` = soma do custo dos modelos `subscription`, contida em `costMicros`; o pago em US$ é `costMicros − assinaturaMicros`.
 
-- **Código:** `apps/api/src/db/schema/llm.ts:175` (`modelBillingEnum`); `apps/api/src/infrastructure/persistence/drizzle/token-usage.repository.ts:357` (`assinaturaMicros`); `apps/api/src/interfaces/http/llm/models.controller.ts:302` (`updateBilling`)
+- **Código:** `apps/api/src/db/schema/llm.ts:175` (`modelBillingEnum`); `apps/api/src/infrastructure/persistence/drizzle/token-usage.repository.ts:394` (`assinaturaMicros`); `apps/api/src/interfaces/http/llm/models.controller.ts:302` (`updateBilling`)
 - **Teste:** `apps/api/test/application/use-cases/llm/spend-audiencias.use-case.spec.ts` (assinatura separada do pago)
 - **Origem:** AT-632
 
@@ -3349,3 +3349,16 @@ Completa a [RN-101](#rn-101) (consumo por agente) sem rota nova: `GET projects/:
 - **Código:** `apps/api/src/infrastructure/persistence/drizzle/token-usage.repository.ts:155` (`sumBySessionGroupedByActor`)
 - **Teste:** `apps/api/test/infrastructure/persistence/token-usage.repository.spec.ts` (lastCall: última chamada, Jev ignorado, janela nula, ator só com Jev)
 - **Origem:** AT-654
+
+### RN-965 — O catálogo sugere o preço do FABRICANTE do modelo e a faixa de cobrança do 9Router, e quem aplica é o humano {#rn-965}
+
+Completa a [RN-964](#rn-964) (curadoria de preço na tela) e a [RN-954](#rn-954) (marca `billing`), por decisão do dono de 01/11 (AT-640): o preço de um modelo é o que o fabricante dele publica, qualquer que seja o provider que o serve.
+
+1. **Tabela curada no domínio, sem raspar página.** Cada linha de `PRECOS_DO_FABRICANTE` cobre ids exatos e guarda o preço em micros, o link da fonte (domínio do fabricante, conferido por teste) e a data em que foi conferida. A primeira entrega traz só a Anthropic; fabricante novo entra por PR, com a fonte conferida.
+2. **Casamento por igualdade exata.** No `9router` sai só o primeiro segmento (o alias) antes de casar; nos demais providers o nome fica como está. Variante que não casa fica "sem sugestão", nunca adivinhada. O `openrouter` fica fora de propósito: o preço dele vem do sync e o custo real do `usage.cost` ([RN-665](#rn-665)).
+3. **Faixa pelo alias do 9Router 0.5.112**, calculada na leitura e sem gravar: `cc`/`cx` → `subscription`; alias `ollama` ou id terminado em `:free`, `/free` ou `-free` → `free`; o resto → `api`. Sem credencial do painel.
+4. **Sugestão, não escrita.** A rota de curadoria devolve `sugestao` por modelo; nada é gravado sozinho (ADR 0042). Quem aplica é o `owner`, pela tela da [RN-964](#rn-964).
+
+- **Código:** `apps/api/src/domain/llm/sugestao-do-catalogo.ts:18` (`sugestaoDoModelo`); `apps/api/src/domain/llm/precos-do-fabricante.ts:89` (`precoDoFabricante`)
+- **Teste:** `apps/api/test/domain/llm/sugestao-do-catalogo.spec.ts` (alias, grátis, assinatura, openrouter sem sugestão, igualdade exata); `apps/api/test/domain/llm/precos-do-fabricante.spec.ts` (id repetido, data futura, preço inválido, link fora do domínio)
+- **Origem:** AT-640
