@@ -47,7 +47,10 @@
   },
   "price": {
     "free": "free",
-    "per1m": "per 1M"
+    "per1m": "per 1M",
+    "noPrice": "no price recorded",
+    "subscriptionNoPrice": "subscription — no price recorded",
+    "subscription": "subscription · equals {{preco}}"
   },
   "contextWindow": {
     "thousands": "{{value}}k ctx",
@@ -217,5 +220,24 @@
     "save": "Save",
     "saving": "Saving…",
     "addNewToken": "Add new token"
+  },
+  "priceEditor": {
+    "open": "Price and billing",
+    "input": "Input (US$ per 1M)",
+    "output": "Output (US$ per 1M)",
+    "billing": "Billing",
+    "api": "per use (API)",
+    "subscription": "subscription",
+    "free": "free",
+    "save": "Save price",
+    "invalid": "Enter numeric values, zero or greater.",
+    "scope": "The price applies to the whole installation and going forward; past usage does not change.",
+    "ownerOnly": "Only the owner edits price and billing.",
+    "history": "Price history",
+    "historyEmpty": "No price change recorded.",
+    "historyRow": "{{antes}} → {{depois}} · {{origem}} · {{quando}}",
+    "sourceManual": "manual",
+    "sourceSync": "sync",
+    "saved": "Price saved."
   }
 }

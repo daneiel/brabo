@@ -47,7 +47,10 @@
   },
   "price": {
     "free": "grátis",
-    "per1m": "por 1M"
+    "per1m": "por 1M",
+    "noPrice": "sem preço registrado",
+    "subscriptionNoPrice": "assinatura — sem preço registrado",
+    "subscription": "assinatura · equivale a {{preco}}"
   },
   "contextWindow": {
     "thousands": "{{value}}k ctx",
@@ -225,5 +228,24 @@
     "save": "Salvar",
     "saving": "Salvando…",
     "addNewToken": "Adicionar novo token"
+  },
+  "priceEditor": {
+    "open": "Preço e cobrança",
+    "input": "Entrada (US$ por 1M)",
+    "output": "Saída (US$ por 1M)",
+    "billing": "Cobrança",
+    "api": "por uso (API)",
+    "subscription": "assinatura",
+    "free": "grátis",
+    "save": "Salvar preço",
+    "invalid": "Informe valores numéricos, zero ou maiores.",
+    "scope": "O preço vale para a instalação inteira e daqui para a frente; o consumo passado não muda.",
+    "ownerOnly": "Só o owner edita preço e cobrança.",
+    "history": "Histórico de preço",
+    "historyEmpty": "Nenhuma alteração de preço registrada.",
+    "historyRow": "{{antes}} → {{depois}} · {{origem}} · {{quando}}",
+    "sourceManual": "manual",
+    "sourceSync": "sincronização",
+    "saved": "Preço salvo."
   }
 }

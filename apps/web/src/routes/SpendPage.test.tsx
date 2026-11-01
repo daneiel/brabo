@@ -116,6 +116,25 @@ describe('SpendPage — owner', () => {
   });
 });
 
+describe('SpendPage — moldura e seletor (AT-648)', () => {
+  beforeEach(() => {
+    listWorkspaces.mockResolvedValue([{ workspace: { id: 'ws-1' }, role: 'owner' }]);
+    getWorkspaceSpendReport.mockResolvedValue({
+      workspaceId: 'ws-1', dias: 30, totalMicros: 0, assinaturaMicros: 0, inputTokens: 0,
+      outputTokens: 0, chamadas: 0, porModelo: [], porProvider: [], porProjeto: [],
+      porAtor: [], porOwner: [], porAgente: [], porDia: [],
+    });
+  });
+
+  it('o título de página está no cabeçalho e a janela é o Select da casa', async () => {
+    montar();
+
+    const h1 = await screen.findByRole('heading', { level: 1, name: 'Gastos' });
+    expect(h1.closest('header')).not.toBeNull();
+    expect(await screen.findByLabelText(/Janela/)).toHaveAttribute('data-slot', 'native-select');
+  });
+});
+
 describe('SpendPage — não-owner', () => {
   it('vê só o PRÓPRIO consumo por projeto: nunca provider, chave nem a rota do owner', async () => {
     listWorkspaces.mockResolvedValue([{ workspace: { id: 'ws-1' }, role: 'developer' }]);

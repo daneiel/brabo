@@ -15,6 +15,7 @@ import { numberFmt } from '../lib/currency';
 import { hashtagDaSessao } from '../lib/session-label';
 import { rotuloDoAtor } from '../lib/spend';
 import { JANELAS, comoRanking, rotuloDoProvider } from '../lib/spend-ranking';
+import { Select } from './ui/Select';
 import { Shimmer } from './ui/Shimmer';
 import { BarrasPorDia, Destaque, Ranking } from './SpendCharts';
 import { CredentialSpendSection, formatarUsd } from './CredentialSpendSection';
@@ -31,13 +32,13 @@ export function SeletorDeJanela({
   return (
     <label className={styles.nota}>
       {t('window.label')}{' '}
-      <select value={dias} onChange={(e) => onChange(Number(e.target.value))}>
+      <Select value={dias} onChange={(e) => onChange(Number(e.target.value))}>
         {JANELAS.map((n) => (
           <option key={n} value={n}>
             {t('window.option', { n })}
           </option>
         ))}
-      </select>
+      </Select>
     </label>
   );
 }
