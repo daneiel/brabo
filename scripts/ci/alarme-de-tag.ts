@@ -108,14 +108,25 @@ export function montarAlarme(falha: FalhaDeCarimbo): Alarme {
     '---',
     '',
     'Aberta automaticamente pelo `tag-release`. Falha repetida nesta mesma branch vira',
-    'comentário aqui, nunca uma issue nova. Feche quando o carimbo voltar a passar.',
+    'comentário aqui, nunca uma issue nova. O primeiro carimbo verde nesta branch fecha esta issue sozinho.',
   ].join('\n');
 
   return { titulo: tituloDoAlarme(branch), corpo };
 }
 
+/** O comentário com que o primeiro carimbo verde fecha a issue (AT-664). */
+export function textoDeFechamento(f: FalhaDeCarimbo): string {
+  return `O carimbo passou na rodada ${f.urlDoRun} (\`${f.sha}\`, ${f.branch}). Fechada pelo próprio \`tag-release\`; uma nova falha abre outra.`;
+}
+
 async function principal(): Promise<void> {
   const { appendFileSync, writeFileSync } = await import('node:fs');
+  const falha = {
+    branch: process.env.BRANCH ?? '',
+    sha: process.env.SHA ?? '',
+    urlDoRun: process.env.URL_DO_RUN ?? '',
+  };
+  writeFileSync(process.env.FECHAMENTO ?? 'fechamento.md', textoDeFechamento(falha), 'utf8');
 
   const alarme = montarAlarme({
     branch: process.env.BRANCH ?? '',

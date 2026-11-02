@@ -23,6 +23,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- O alarme do `tag-release` fecha a issue da branch no primeiro carimbo verde, com o run e o SHA no comentário, em vez de pedir fechamento manual; falha repetida segue virando comentário (AT-664).
 - O check de promoção espera, por até 10 min, o `tag-release` que ainda está carimbando o commit, em vez de reprovar por corrida logo depois do merge no degrau de baixo (AT-663).
 - O JS da carga inicial do web cai de 1,36 MB para 1,24 MB: o Base UI deixou de ir no grupo de vendor pré-carregado pela entrada (AT-654).
 - A página global de Gastos (`/spend`) ganha a moldura das outras páginas globais (padding, cabeçalho e título de página de 22px) e o seletor "Janela" passa a ser o da casa, também na aba Gastos do projeto (AT-648).
