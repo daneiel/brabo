@@ -37,6 +37,7 @@ import { Alert } from './ui/Alert';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { Disclosure } from './ui/Disclosure';
+import { Chip } from './ui/Chip';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { useCurrentWorkspaceWithRole } from '../lib/hooks';
@@ -334,7 +335,7 @@ export function ModelCatalogSection({ workspaceId }: { workspaceId: string }) {
       </div>
 
       {totalSemFiltro > 0 && (
-        <input
+        <Input
           type="search"
           className={styles.busca}
           aria-label={t('catalog.search.aria')}
@@ -351,43 +352,29 @@ export function ModelCatalogSection({ workspaceId }: { workspaceId: string }) {
       {totalSemFiltro > 0 && (
         <div className={styles.facetas}>
           {FACETAS.map((f) => (
-            <button
+            <Chip
               key={f.id}
-              type="button"
               title={f.ajuda}
-              aria-pressed={facetas.has(f.id)}
-              className={[
-                styles.faceta,
-                facetas.has(f.id) && styles.facetaLigada,
-              ]
-                .filter(Boolean)
-                .join(' ')}
+              pressed={facetas.has(f.id)}
               onClick={() => alternarFaceta(f.id)}
             >
               {f.rotulo}
-            </button>
+            </Chip>
           ))}
           {/* O outro eixo: capability é o que o provider PROVA, uso é o que
               este workspace decidiu. Separados por um divisor porque
               confundi-los é justamente o erro que o ADR 0051 evita. */}
           <span className={styles.divisorDeFiltro} aria-hidden="true" />
           {USOS_DE_MODELO.map((u) => (
-            <button
+            <Chip
               key={u}
-              type="button"
               title={t('catalog.usesFilterTitle', { use: ROTULO_DO_USO[u] })}
-              aria-pressed={usosFiltrados.has(u)}
-              className={[
-                styles.faceta,
-                styles.facetaDeUso,
-                usosFiltrados.has(u) && styles.facetaLigada,
-              ]
-                .filter(Boolean)
-                .join(' ')}
+              pressed={usosFiltrados.has(u)}
+              className={styles.facetaDeUso}
               onClick={() => alternarNoSet(setUsosFiltrados, u)}
             >
               {ROTULO_DO_USO[u]}
-            </button>
+            </Chip>
           ))}
           {/* Sem esta contagem, um filtro que zera a lista é indistinguível de
               um catálogo vazio — e a saída (desligar a faceta) fica escondida. */}
@@ -442,21 +429,14 @@ export function ModelCatalogSection({ workspaceId }: { workspaceId: string }) {
               só estava opinando sobre ele. */}
           <span className={styles.rotuloDoLote}>{t('catalog.batchBar.markAs')}</span>
           {USOS_DE_MODELO.map((u) => (
-            <button
+            <Chip
               key={u}
-              type="button"
-              aria-pressed={usosDoLote.has(u)}
-              className={[
-                styles.faceta,
-                styles.facetaDeUso,
-                usosDoLote.has(u) && styles.facetaLigada,
-              ]
-                .filter(Boolean)
-                .join(' ')}
+              pressed={usosDoLote.has(u)}
+              className={styles.facetaDeUso}
               onClick={() => alternarNoSet(setUsosDoLote, u)}
             >
               {ROTULO_DO_USO[u]}
-            </button>
+            </Chip>
           ))}
           <Button
             variant="ghost"

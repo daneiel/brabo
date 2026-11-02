@@ -71,23 +71,14 @@
   flex-shrink: 0;
 }
 
+/* Posição, largura e teto de altura vêm do Popover (kit) e do style do componente. */
 .dropdown {
-  /* `fixed`, não `absolute`: o picker vive dentro de uma Table com
-     `overflow: hidden`, que recortava o dropdown — nas últimas linhas ele
-     desaparecia por completo. `top`/`left`/`max-height` vêm do componente,
-     calculados a partir do retângulo do gatilho. */
-  position: fixed;
-  width: 320px;
-  overflow-y: auto;
-  /* Chegar ao fim da lista não continua rolando a página atrás — sem isto, o
-     encadeamento da rolagem dispara o listener de `scroll` da janela e fecha o
-     dropdown justamente quando o usuário chegou nos últimos modelos. */
+  /* Chegar ao fim da lista não continua rolando a página atrás. */
   overscroll-behavior: contain;
   background: var(--surface-1);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow);
-  z-index: 50;
 }
 
 .groupHeader {

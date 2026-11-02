@@ -677,8 +677,9 @@ export function ModelsSection({ projectId }: { projectId: string }) {
               tituloSemModelo={t('modelsSection.originChainNoModelTitle')}
             />
             {divergiu && (
-              <button
-                type="button"
+              <Button
+                variant="ghost"
+                size="sm"
                 className={styles.voltarHerdar}
                 // O botão CONTINUA aparecendo sem `developer`, inerte: ele é o
                 // que diz que esta linha divergiu, e escondê-lo apagaria da tela
@@ -701,7 +702,7 @@ export function ModelsSection({ projectId }: { projectId: string }) {
                 }
               >
                 {voltarAHerdar}
-              </button>
+              </Button>
             )}
           </span>
         );
