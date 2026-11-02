@@ -21,11 +21,11 @@
  * tudo entra primeiro, `main` é o que está no ar. O índice nesta lista é o que
  * define tanto a adjacência da promoção quanto o que conta como contaminação.
  *
- * Três degraus, não quatro: `rc` foi removida da escada. Quem corrige o que
+ * Dois degraus: `rc` e `qa` foram removidas da escada. Quem corrige o que
  * aparece em homologação abre `bugfix/` a partir de `dev` e sobe pela escada
  * como qualquer trabalho — não há mais correção que nasce no meio.
  */
-export const ESCADA = ['dev', 'qa', 'main'] as const;
+export const ESCADA = ['dev', 'main'] as const;
 export type Permanente = (typeof ESCADA)[number];
 
 /** Funções que nascem de `dev` e voltam para `dev`. */
@@ -166,7 +166,7 @@ function funcaoDe(branch: string): string {
   return branch.slice(0, branch.indexOf('/'));
 }
 
-/** `dev`→`qa` é +1 (promoção); `qa`→`dev` é −1 (retropropagação). */
+/** `dev`→`main` é +1 (promoção); `main`→`dev` é −1 (retropropagação). */
 function degraus(de: Permanente, para: Permanente): number {
   return ESCADA.indexOf(para) - ESCADA.indexOf(de);
 }
@@ -334,7 +334,7 @@ export function avaliarPr(entrada: EntradaPr): Veredito {
       violacoes.push({
         codigo: 'PROMOCAO-NAO-ADJACENTE',
         observado: `\`${head}\` → \`${base}\` pula ${pulados.map((p) => `\`${p}\``).join(' e ')}`,
-        regra: 'Promoção e retropropagação só entre par ADJACENTE: dev → qa → main.',
+        regra: 'Promoção e retropropagação só entre par ADJACENTE: dev → main.',
         porque:
           'Cada degrau é um ambiente com sua verificação. Pular promove para ' +
           'um ambiente código que nunca rodou no anterior, e a tag do degrau ' +

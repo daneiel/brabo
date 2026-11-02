@@ -92,9 +92,9 @@ function redirecionoDe(erro: string, url: string): string | null {
 
 describe('landing — a página que escolhe o degrau', () => {
   it('oferece os três quando os três estão na árvore', () => {
-    const { indice } = gerar(['prd', 'qa', 'dev']);
+    const { indice } = gerar(['prd', 'dev']);
     expect(indice).toContain('href="./prd/"');
-    expect(indice).toContain('href="./qa/"');
+    expect(indice).toContain('href="./dev/"');
     expect(indice).toContain('href="./dev/"');
   });
 
@@ -103,7 +103,6 @@ describe('landing — a página que escolhe o degrau', () => {
     // um 404 no primeiro deploy, antes de a esteira ter rodado nos três.
     const { indice } = gerar(['prd']);
     expect(indice).toContain('href="./prd/"');
-    expect(indice).not.toContain('href="./qa/"');
     expect(indice).not.toContain('href="./dev/"');
   });
 
@@ -116,13 +115,13 @@ describe('landing — a página que escolhe o degrau', () => {
   });
 
   it('mostra a versão carimbada de cada degrau', () => {
-    const { indice } = gerar(['prd', 'qa'], ['v9.9.9', 'v9.9.9-qa.7', 'v9.9.9-dev.3']);
-    expect(indice).toContain('v9.9.9-qa.7');
+    const { indice } = gerar(['prd', 'dev'], ['v9.9.9', 'v9.9.9-qa.7', 'v9.9.9-dev.3']);
+    expect(indice).toContain('v9.9.9-dev.3');
     // O `/prd/` lê a tag da `main` — o caminho mudou, a branch que carimba não.
     // E pega a última FINAL, nunca uma pré-release: o glob dela casa o prefixo
     // de `v9.9.9-qa.7` também, e é o filtro que separa as duas.
     expect(indice).toContain('>v9.9.9<');
-    expect(indice).not.toContain('>v9.9.9-dev.3<');
+    expect(indice).not.toContain('>v9.9.9-qa.7<');
   });
 
   it('diz que não há versão quando o degrau existe mas não há tag', () => {
@@ -212,7 +211,7 @@ describe('landing — o 404 que segura os links antigos', () => {
     const { erro } = gerar(['prd']);
     expect(redirecionoDe(erro, '/brabo/prd/pt-BR/architecture')).toBe('/brabo/prd/architecture');
     expect(redirecionoDe(erro, '/brabo/dev/pt-BR/adr/0001-x#d')).toBe('/brabo/dev/adr/0001-x#d');
-    expect(redirecionoDe(erro, '/brabo/qa/pt-BR')).toBe('/brabo/qa/');
+    expect(redirecionoDe(erro, '/brabo/dev/pt-BR')).toBe('/brabo/dev/');
     // O inglês ganhou prefixo, e não é reescrito: é caminho que existe.
     expect(redirecionoDe(erro, '/brabo/prd/en/pagina-que-nao-existe')).toBeNull();
   });
@@ -223,7 +222,7 @@ describe('landing — o 404 que segura os links antigos', () => {
     // caminhos que EXISTEM — e `main` saiu dela junto com o diretório.
     const { erro } = gerar(['prd']);
     expect(redirecionoDe(erro, '/brabo/prd/pagina-que-nao-existe')).toBeNull();
-    expect(redirecionoDe(erro, '/brabo/qa/pagina-que-nao-existe')).toBeNull();
+    expect(redirecionoDe(erro, '/brabo/dev/pagina-que-nao-existe')).toBeNull();
     expect(redirecionoDe(erro, '/brabo/dev/pagina-que-nao-existe')).toBeNull();
   });
 

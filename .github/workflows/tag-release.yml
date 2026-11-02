@@ -21,7 +21,6 @@ on:
   push:
     branches:
       - dev
-      - qa
       - main
 
 permissions:
@@ -162,7 +161,7 @@ jobs:
             echo "::notice::gate já estava neste estado — nada a commitar."
             exit 0
           fi
-          git commit -m "chore(gate): trava qa e dev aguardando a retropropagação de ${TAG}"
+          git commit -m "chore(gate): trava dev aguardando a retropropagação de ${TAG}"
           git push origin HEAD:main
           echo "::notice::gate travado em main"
 
@@ -241,7 +240,8 @@ jobs:
   avisar:
     name: Avisar que o carimbo falhou
     needs: carimbar
-    if: failure()
+    # `!cancelled()`: o verde também passa por aqui, para FECHAR a issue (AT-664).
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -267,6 +267,7 @@ jobs:
           SHA: ${{ github.sha }}
           URL_DO_RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           ARQUIVO_DO_CORPO: ${{ runner.temp }}/alarme.md
+          FECHAMENTO: ${{ runner.temp }}/fechamento.md
         run: node scripts/ci/alarme-de-tag.ts
 
       # Uma issue POR BRANCH, reaproveitada: a segunda falha na mesma
@@ -282,15 +283,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TITULO: ${{ steps.alarme.outputs.titulo }}
           CORPO: ${{ runner.temp }}/alarme.md
+          FECHAMENTO: ${{ runner.temp }}/fechamento.md
+          DESFECHO: ${{ needs.carimbar.result }}
         run: |
           set -euo pipefail
-          existente="$(gh issue list --state open --limit 100 --json number,title \
-            --jq '.[] | select(.title == $ENV.TITULO) | .number' | head -1)"
-
-          if [ -n "${existente}" ]; then
-            gh issue comment "${existente}" --body-file "${CORPO}"
-            echo "::notice::comentei na issue #${existente}"
-          else
-            url="$(gh issue create --title "${TITULO}" --body-file "${CORPO}")"
-            echo "::notice::issue aberta: ${url}"
-          fi
+          source scripts/ci/alarmar-tag.sh
+          alarmar_tag "${DESFECHO}"

@@ -14,10 +14,8 @@ on:
         required: true
         type: choice
         options:
-          - dev->qa
-          - qa->main
-          # `dev->main` NÃO está aqui de propósito, mas o script valida o par
-          # mesmo assim: um dispatch pela API não passa pelo `choice`.
+          - dev->main
+          # O script valida o par mesmo assim: um dispatch pela API não passa pelo `choice`.
 
 permissions:
   contents: read

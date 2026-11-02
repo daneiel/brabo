@@ -112,8 +112,8 @@ jobs:
             exit 1
           }
 
-      # O drift NÃO se aplica a PR entre permanentes — promoção (dev→qa,
-      # qa→main) e retropropagação (main→qa, qa→dev). Não é conveniência: um PR
+      # O drift NÃO se aplica a PR entre permanentes — promoção (dev→main)
+      # e retropropagação (main→dev). Não é conveniência: um PR
       # desses não tem AUTORIA. Ele carrega commits que já passaram por um PR
       # para `dev`, onde este mesmo drift já rodou sobre exatamente aqueles
       # arquivos. Cobrar de novo é cobrar a mesma dívida em cada degrau.
@@ -214,7 +214,7 @@ jobs:
           entre_permanentes=false
           if [ "$MESMO_REPO" = 'true' ]; then
             case "$HEAD_REF" in
-              dev | qa | main) entre_permanentes=true ;;
+              dev | main) entre_permanentes=true ;;
             esac
           fi
 

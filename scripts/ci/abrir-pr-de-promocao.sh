@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # Abre ou atualiza o PR de promoção DE → PARA com o corpo que `promote.ts`
-# escreveu em `corpo-da-promocao.md`. Compartilhado por `promote.yml` (manual)
-# e `promote-auto-qa.yml` (fase de teste, ADR 0217) — um caminho só.
+# (o `promote-auto-qa.yml` saiu com a qa, AT-660).
 #
 # Entrada: GH_TOKEN, DE, PARA, VERSAO. Saída: `numero=<n>` em $GITHUB_OUTPUT.
 set -euo pipefail
