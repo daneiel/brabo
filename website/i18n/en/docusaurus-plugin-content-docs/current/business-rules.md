@@ -19671,7 +19671,7 @@ review, the Criativo's readiness, the Arquiteto's handoff offer.
   `apps/api/src/domain/sessions/conversa-em-sessao-encerrada.ts:72`;
   `apps/web/src/lib/fila-de-mensagens.ts:27` (`estadosNaFila`);
   `apps/web/src/lib/enfileirar-mensagem.ts:25` (`useEnfileirarMensagem`);
-  `apps/web/src/routes/SeloDaFila.tsx:22` (`SeloDaFila`)
+  `apps/web/src/routes/PainelDaFila.tsx:20` (`PainelDaFila`, que substituiu o selo — RN-978)
 - **Test:** `apps/engine/test/engine/agents/fila_de_mensagens_test.exs:156`
   (enters the queue — happy path), `:181` (N messages = 1 turn), `:223` (the
   one arriving in the window goes to the end), `:246` (ceiling of 10 — failure case), `:276`

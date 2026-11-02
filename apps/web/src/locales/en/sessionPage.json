@@ -229,7 +229,7 @@
     "prsNaoLidas_other": "{{count}} PRs were left out of this list (past the read limit, or their diff could not be read) — the PRs tab shows them all."
   },
   "turno": {
-    "artefato": { "epico": "Epic created", "historia": "Story created" },
+    "artefato": { "epico": "Epic created", "historia": "Story created", "decisao": "Decision recorded", "mapaDeModulos": "Module map", "c4": "C4 diagram", "imagem": "Project image", "parecerQa": "QA verdict", "parecerSecops": "SecOps verdict", "ver": "View in tab", "veredito": {"approved": "approved", "changes_requested": "changes requested"} },
     "pensando": "Thinking…",
     "ferramentaFalhou": "The tool failed.",
     "resultadoCortado": "Result cut at the 2,000-character limit.",
@@ -310,12 +310,12 @@
       "outrasCount_other": "{{count}} other entries",
       "conteudoComOutras": "{{mensagens}} · {{outras}}"
     },
-    "rotuloDoFio": "Session conversation"
+    "rotuloDoFio": "Session conversation",
+    "irAoFim": "Go to end"
   },
   "fila": {
-    "naFila": "queued for {{agente}} — read when the current turn ends",
+    "painel": "Queued messages",
     "cancelar": "Cancel",
-    "cancelada": "cancelled in the queue — no agent read it",
     "cancelarSoAutor": "Only the person who sent the message can cancel it.",
     "erroCancelar": "Could not cancel the message.",
     "enfileirada": "{{agente}} is mid-turn: the message joined its queue (position {{posicao}}) and will be read when the turn ends."

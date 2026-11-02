@@ -51,6 +51,7 @@ import { gatePendenteNoMerge } from '../lib/gate-do-merge';
 import { StructuredQuestionCard } from './StructuredQuestionCard';
 import { ecosDeRespostaEstruturada } from '../lib/eco-de-formulario';
 import { agruparNarracoesDoTurno } from './session-fio';
+import { camposDoArtefato } from '../lib/artefato-do-fio';
 import { autorDaMensagem, type ContextoDeAutoria } from '../lib/autor-da-mensagem';
 import {
   RetomarGateEstacionado,
@@ -748,10 +749,7 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
       // AT-683 (v5): decisão, mapa de módulos, C4, imagem e parecer de gate
       // ganham o MESMO cartão do épico/história, com link para a aba.
       const a = ARTEFATOS_DO_FIO[event.type];
-      const p = (event.payload ?? {}) as Record<string, unknown>;
-      const txt = (v: unknown) => (typeof v === 'string' && v !== '' ? v : undefined);
-      const veredito = txt(p.veredito);
-      const resumo = txt(p.resumo) ?? txt(p.context) ?? txt(p.choice) ?? txt(p.description) ?? txt(p.image);
+      const { titulo, descricao, veredito } = camposDoArtefato(event.type, event.payload);
       empurrar({
         agentId: event.actor.kind === 'agent' ? event.actor.id : undefined,
         node: (
@@ -759,10 +757,10 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
             key={event.id}
             tipo={t(`turno.artefato.${a.chave}`)}
             titulo={
-              txt(p.title) ?? txt(p.choice) ?? txt(p.name) ??
+              titulo ??
               (veredito ? t(`turno.artefato.veredito.${veredito}`, { defaultValue: veredito }) : t(`turno.artefato.${a.chave}`))
             }
-            descricao={resumo && resumo.length > 200 ? `${resumo.slice(0, 200)}…` : resumo}
+            descricao={descricao}
             acao={
               <Link
                 to="/projects/$projectId"

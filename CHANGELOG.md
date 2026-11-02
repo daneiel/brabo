@@ -4,6 +4,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ## Unreleased
 
+- O fio da Sessão para de seguir quando a pessoa sobe e mostra "Ir ao fim" (revisa a RN-951), as mensagens na fila de um agente viram um painel acima da caixa (a cancelada some) e decisão, mapa de módulos, C4, imagem e parecer de QA/SecOps ganham cartão no fio, nos quatro idiomas (AT-683, RN-977 a RN-979).
 - O painel "Pendências deste projeto" do chat vira uma faixa de abas (uma por fila com item, nenhuma aberta ao nascer, contagem por fila) e cada fila pagina de 3 em 3 com "anterior / x–y de N / próxima", no lugar do teto de 20 (RN-975, AT-680).
 ### Funcionalidades
 
