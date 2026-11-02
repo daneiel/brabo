@@ -83,6 +83,8 @@
     "reabrirExigeDeveloper": "Для повторного открытия сессии нужна роль developer в этом workspace."
   },
   "mensagens": {
+    "copiar": "Копировать ответ",
+    "copiado": "Скопировано",
     "reunindoInformacoes": "Собираю информацию...",
     "respostaVazia": "Пустой ответ — событие из старой версии, где сбой хода записывался как пустой ответ. Настоящая причина не была записана.",
     "modeloGerador": "Модель, создавшая этот ответ: {{modelName}}",
@@ -242,7 +244,10 @@
     "prsNaoLidas_other": "{{count}} PR не попали в этот список (сверх лимита чтения или diff не удалось прочитать) — вкладка PR показывает все."
   },
   "turno": {
+    "artefato": { "epico": "Эпик создан", "historia": "История создана" },
     "pensando": "Думаю…",
+    "ferramentaFalhou": "Инструмент завершился ошибкой.",
+    "resultadoCortado": "Результат обрезан по лимиту в 2000 символов.",
     "passosDoTurno": "Шаги хода",
     "passosCount_one": "{{count}} шаг",
     "passosCount_few": "{{count}} шага",

@@ -203,22 +203,24 @@
   --space-5: 32px;
   --space-6: 48px;
 
-  /* Radius — 8px padrão, 12px contêineres, full para pílulas */
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
+  /* Radius — escala do shadcn (ADR 0237): base 0,625rem (10px), derivados
+     6/8/10px; full para pílulas */
+  --radius: 0.625rem;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
   --radius-full: 9999px;
 
   /* A família `--r-*` do handoff. `--r-xs` e `--r-sm` são NOVOS (o repo não
      tinha 5px nem 7px); os três de baixo são alias dos que já existem, para
      que a família do handoff esteja inteira e ninguém escreva `var(--r-md)`
-     esperando 8px e receba nada. Os `--radius-*` FICAM: são o que dezenas de
+     esperando o degrau e receba nada. Os `--radius-*` FICAM: são o que dezenas de
      módulos CSS consomem hoje.
-     Atenção ao degrau: `--r-sm` é 7px e `--radius-sm` é 4px — não são
-     sinônimos. O 4px do repo corresponde ao `--r-xs` (5px) do handoff em
+     Atenção ao degrau: `--r-sm` (8px) e `--radius-sm` (6px) — não são
+     sinônimos. O `--radius-sm` do repo corresponde ao `--r-xs` do handoff em
      PAPEL, não em valor, e nenhum call site foi migrado nesta mudança. */
-  --r-xs: 5px; /* badge mono */
-  --r-sm: 7px; /* botão de ícone, item de sub-nav */
+  --r-xs: calc(var(--radius) - 4px); /* badge mono */
+  --r-sm: calc(var(--radius) - 2px); /* botão de ícone, item de sub-nav */
   --r-md: var(--radius-md); /* botão, input, item de menu */
   --r-lg: var(--radius-lg); /* card, tabela */
   --r-pill: var(--radius-full);

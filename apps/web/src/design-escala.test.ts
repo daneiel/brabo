@@ -15,8 +15,8 @@ import { lerTokens } from './lib/contraste';
  *    a tela se lê primeiro, e é ali que o número solto derivava.
  * 3. Raio que coincide com um degrau da família `--r-*`/`--radius-*` é escrito
  *    pelo token. Os DOIS nomes convivem como ALIAS declarado (ver o
- *    `tokens.css`), com um degrau que NÃO coincide: `--r-sm` é 7px e
- *    `--radius-sm` é 4px — o teste fixa isso para ninguém "unificar" os dois.
+ *    `tokens.css`), com um degrau que NÃO coincide: `--r-sm` é 8px e
+ *    `--radius-sm` é 6px — o teste fixa isso para ninguém "unificar" os dois.
  */
 
 const raiz = process.cwd();
@@ -94,8 +94,9 @@ describe('escala tipográfica, de espaço e de raio (AT-288)', () => {
   });
 
   it('--r-sm e --radius-sm são degraus DIFERENTES, e os alias apontam para os --radius-*', () => {
-    expect(TOKENS['--r-sm']).toBe('7px');
-    expect(TOKENS['--radius-sm']).toBe('4px');
+    expect(TOKENS['--radius']).toBe('0.625rem');
+    expect(TOKENS['--r-sm']).toBe('calc(var(--radius) - 2px)');
+    expect(TOKENS['--radius-sm']).toBe('calc(var(--radius) - 4px)');
     expect(TOKENS['--r-md']).toBe('var(--radius-md)');
     expect(TOKENS['--r-lg']).toBe('var(--radius-lg)');
     expect(TOKENS['--r-pill']).toBe('var(--radius-full)');

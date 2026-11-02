@@ -362,6 +362,7 @@ const config: Config = {
           title: 'Mais',
           items: [
             { label: 'GitHub', href: 'https://github.com/daneiel/brabo' },
+            { label: 'Me pague um café (Ko-fi)', href: 'https://ko-fi.com/daneiel' },
             {
               label: 'CHANGELOG',
               href: `https://github.com/daneiel/brabo/blob/${EDIT_BRANCH}/CHANGELOG.md`,

@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import { ChainOfThought } from './chain-of-thought';
 import { Context } from './context';
 import { Plan } from './plan';
 import { Queue } from './queue';
@@ -54,5 +55,30 @@ describe('ai-elements: faixa do turno', () => {
   it('Queue com desabilitado deixa o cancelar inerte', () => {
     render(<Queue rotuloCancelar="cancelar" onCancelar={() => {}} desabilitado itens={[{ id: '1', texto: 'm', podeCancelar: true }]} />);
     expect((screen.getByRole('button', { name: 'cancelar' }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('ChainOfThought: título e contagem do turno, passos em ordem ao abrir pelo teclado-botão', () => {
+    render(
+      <ChainOfThought titulo="Passos do turno" contagem="2 passos" emCurso>
+        <Tool titulo="primeiro" />
+        <Tool titulo="segundo" estado="error" erro="falhou" />
+      </ChainOfThought>,
+    );
+    const gatilho = screen.getByRole('button', { name: /Passos do turno/ });
+    expect(screen.getByText('2 passos')).toBeTruthy();
+    expect(screen.queryByText('primeiro')).toBeNull();
+    fireEvent.click(gatilho);
+    const textos = screen.getAllByText(/primeiro|segundo/).map((n) => n.textContent);
+    expect(textos).toEqual(['primeiro', 'segundo']);
+  });
+
+  it('ChainOfThought: passo com erro aparece como falha', () => {
+    render(
+      <ChainOfThought titulo="Passos">
+        <Tool titulo="ruim" estado="error" erro="falhou" />
+      </ChainOfThought>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Passos/ }));
+    expect(screen.getByText('ruim')).toBeTruthy();
   });
 });

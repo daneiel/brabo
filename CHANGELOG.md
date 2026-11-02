@@ -2,6 +2,18 @@
 
 Gerado dos conventional commits por `scripts/changelog.mjs`.
 
+## Unreleased
+
+### Funcionalidades
+
+- O projeto ganha o link de apoio no Ko-fi (`ko-fi.com/daneiel`): botão "Sponsor" do GitHub (`.github/FUNDING.yml`), selo nos quatro READMEs e item no rodapé do site de documentação (AT-678).
+- O fio da Sessão passa a mostrar, antes de cada resposta do agente, os passos do turno encerrado num bloco recolhido: cada ferramenta com nome, ok ou falha e o resultado (com aviso de corte), nunca os argumentos (RN-974, AT-675).
+- A faixa do turno em curso da Sessão passa a ser uma cadeia de passos recolhível (`ChainOfThought` do AI Elements), operável por teclado, no lugar do bloco "Passos do turno" antigo (AT-674).
+- **Composer da Sessão com a barra do `PromptInput` (AT-674, L4).** Os botões Enviar/Enfileirar e Parar ficam numa barra abaixo do campo (`PromptInputToolbar`, mais o `PromptInputFooter`, só layout). Ordem no DOM, Enter/Shift+Enter, fila (RN-673) e campo não controlado (RN-882) não mudam.
+- O visual v3 (meio-termo aprovado pelo dono): liga o preflight do Tailwind e sobe os raios para a escala do shadcn (`--radius` 0,625rem), mantendo o terracota, a tipografia e as superfícies do Brabo (ADR 0237, revisa o 0232 no preflight).
+- O chat da Sessão ganha o botão Copiar sob cada resposta do agente (o markdown cru, com o estado "Copiado" e rótulo acessível; sem clipboard disponível, não faz nada) e o épico ou a história criada no turno passa a aparecer num cartão `Artifact` com o link para a aba Histórias (AT-674, lane L1).
+- O convite do fio vazio da Sessão (consultiva e criativa) passa a usar o estado vazio de conversa dos componentes de IA (`ConversationEmptyState`), com o mesmo texto e as mesmas ações; o fio com mensagens não o mostra e a rolagem segue acompanhando a última mensagem (AT-674, L2).
+
 ## v7.2.0 — 2026-11-02
 
 ### Funcionalidades
