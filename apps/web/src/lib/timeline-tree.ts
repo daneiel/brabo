@@ -272,6 +272,34 @@ export function marcoExpansivel(m: Marco): boolean {
   return EVENTOS_EXPANSIVEIS.has(m.eventType);
 }
 
+export interface SubagenteDoMarco {
+  /** Id do subagente (`dev-<modulo>`, `qa-…`). */
+  subagente: string;
+  /** Desfecho da delegação, no rótulo traduzido do marco. */
+  etiqueta: string;
+  /** O ramo próprio do subagente está trabalhando agora. */
+  executando: boolean;
+  /** Área, origem/motivo da falha ou justificativa — só o que o evento gravou. */
+  corpo: string[];
+}
+
+/** RN-970: a delegação gravada por um lead vista como subagente, só do que já está em `ramos`. */
+export function subagenteDoMarco(m: Marco, ramos: RamoDeAgente[]): SubagenteDoMarco | null {
+  if (!m.eventType.startsWith('delegation.')) return null;
+  const p = m.payload;
+  const subagente = texto(p.subagent);
+  if (!subagente) return null;
+  const corpo = [m.detalhe, texto(p.failureReason), texto(p.justification)].filter(
+    (v): v is string => !!v,
+  );
+  return {
+    subagente,
+    etiqueta: m.rotulo,
+    executando: ramos.find((r) => r.agente === subagente)?.ativo ?? false,
+    corpo,
+  };
+}
+
 /**
  * A frase de "agora". Fala do ÚLTIMO marco, porque é ele que descreve o
  * presente — e diz explicitamente quando o agente está parado, em vez de

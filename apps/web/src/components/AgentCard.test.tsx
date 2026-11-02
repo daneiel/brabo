@@ -84,7 +84,7 @@ describe('AgentCard', () => {
       onAutonomyChange: vi.fn(),
       autonomyHint: 'frase do modo automático',
     });
-    expect(screen.getByTestId('piloto-detalhe')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('piloto-detalhe'));
     expect(screen.getByTestId('piloto-libera')).toHaveTextContent('git commit e criar branch LOCAL');
     // RN-713: push e PR passaram para o lado do que o piloto libera.
     expect(screen.getByTestId('piloto-libera')).toHaveTextContent('git push e abertura de PR');

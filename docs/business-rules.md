@@ -16253,7 +16253,7 @@ tela não reconstrói caminho nenhum. As frases estão em `en` e `pt-BR`
   `apps/web/src/lib/activity.ts:721` (o ramo de `proposed_action.created`);
   `apps/web/src/components/ApprovalCard.tsx:272` (a linha do card);
   `apps/web/src/routes/session-timeline-montagem.tsx:825` e
-  `apps/web/src/routes/ProjectApprovalsTab.tsx:307` (`decisoesDaPolitica`, desde a
+  `apps/web/src/routes/ProjectApprovalsTab.tsx:311` (`decisoesDaPolitica`, desde a
   AT-336 por `useDecisoesDaPolitica`) e `:499` (quem passa o dado)
 - **Teste:** `apps/web/src/lib/decisao-da-politica.test.ts:43` (as âncoras,
   `:43`/`:54`/`:65`/`:76`), `:87` (evento antigo), `:102` (âncora desconhecida
@@ -18090,8 +18090,8 @@ o do chat.
 
 - **Código:** `apps/web/src/routes/ProjectPage.tsx:82` (o contador),
   `:121` (os merges da mesma leitura);
-  `apps/web/src/routes/ProjectApprovalsTab.tsx:111` (`pendentesQuery`), `:115`
-  (`sessaoDeTrabalho`), `:322` (`handleApprove`);
+  `apps/web/src/routes/ProjectApprovalsTab.tsx:115` (`pendentesQuery`), `:119`
+  (`sessaoDeTrabalho`), `:326` (`handleApprove`);
   `apps/web/src/routes/ProjectOverviewTab.tsx:114` (`pendentesDoProjeto`);
   `apps/web/src/routes/ProjectExecutorsTab.tsx:107` (`pendentesQuery`), `:290`
   (o bloco); `apps/web/src/routes/code/CodeShell.tsx:101` (`pendentesQuery`);
@@ -25457,3 +25457,10 @@ sem dizer qual.
 - **Onde:** `apps/web/src/lib/realce-shiki.ts:61` (`carregarRealce`), `apps/web/src/lib/tema-shiki-brabo.ts:19` (`temaShikiBrabo`).
 - **Teste:** `apps/web/src/lib/realce-shiki.test.ts`.
 - **Origem:** AT-657 (EP-031).
+
+### RN-970 — Na árvore do time, cada delegação de um lead aparece como subagente {#rn-970}
+
+- **Regra:** na árvore do time (Visão geral/Executores), cada delegação gravada por um lead (`delegation.*`) aparece no ramo dele como subagente — nome, desfecho (efetivada/falhou/dispensada, falha com a origem) e se o subagente está trabalhando agora —, derivada dos eventos já carregados, sem requisição nova; delegação fora da janela não aparece. O ramo próprio do subagente continua.
+- **Onde:** `apps/web/src/lib/timeline-tree.ts:287` (`subagenteDoMarco`), `apps/web/src/components/AgentTimelineTree.tsx:51` (`AgentTimelineTree`).
+- **Teste:** `apps/web/src/lib/timeline-tree.test.ts`, `apps/web/src/components/ai-elements/passos.test.tsx`.
+- **Origem:** AT-655 (EP-031).

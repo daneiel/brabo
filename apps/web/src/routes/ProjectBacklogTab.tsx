@@ -17,6 +17,8 @@ import { roleAtLeast } from '../lib/roles';
 import { estadoDaTarefa, type EstadoDaTarefa } from '../lib/execution';
 import { motivoDeCorrecaoInerte } from '../lib/correcao-de-historia';
 import { useHistoriaInicial } from '../lib/historia-inicial';
+import { Checkbox } from '../components/shadcn/checkbox';
+import { Item, ItemGroup } from '../components/shadcn/item';
 import { Input } from '../components/ui/Input';
 import type { Epic, Story, StoryStatus } from '../lib/api-types';
 import { Badge, type BadgeTone } from '../components/ui/Badge';
@@ -259,10 +261,9 @@ function PromotionQueue({
         {stories.map((story) => (
           <div key={story.id} className={styles.proposal}>
             <label className={styles.proposalPick}>
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={selected.has(story.id)}
-                onChange={() => toggleSelect(story.id)}
+                onCheckedChange={() => toggleSelect(story.id)}
                 aria-label={t('promotionQueue.selectAria', { title: story.title })}
               />
             </label>
@@ -502,9 +503,9 @@ function StoryNode({
             {t('ruleRefs', { count: story.businessRuleIds.length })}
           </div>
           {story.tasks.length > 0 && (
-            <ul className={styles.tasks}>
+            <ItemGroup className={styles.tasks}>
               {story.tasks.map((task) => (
-                <li key={task.id} className={styles.task} data-task-state={estadoDaTarefa(task)}>
+                <Item key={task.id} size="sm" className={styles.task} data-task-state={estadoDaTarefa(task)}>
                   <Badge tone={TASK_STATE_TONE[estadoDaTarefa(task)]}>
                     {t(TASK_STATE_LABEL_KEY[estadoDaTarefa(task)])}
                   </Badge>{' '}
@@ -512,9 +513,9 @@ function StoryNode({
                   {task.blocked && task.blockedReason && (
                     <div className={styles.taskBlockedReason}>{task.blockedReason}</div>
                   )}
-                </li>
+                </Item>
               ))}
-            </ul>
+            </ItemGroup>
           )}
           <div className={styles.storyActions}>
             <Button

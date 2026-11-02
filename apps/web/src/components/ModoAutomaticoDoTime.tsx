@@ -6,6 +6,7 @@ import { AGENT_AUTONOMY_ALL_ACTIONS, type AgentAutonomyRule } from '../lib/api-t
 import { nomeDoAgente } from '../lib/agents';
 import { AREAS } from '../lib/agent-areas.generated';
 import { Button } from './ui/Button';
+import { Checkbox } from './shadcn/checkbox';
 import { OQueOPilotoLibera } from './OQueOPilotoLibera';
 import styles from './ModoAutomaticoDoTime.module.css';
 
@@ -147,11 +148,10 @@ export function ModoAutomaticoDoTime({
           {candidatos.map((agente) => (
             <li key={agente}>
               <label className={styles.opcao}>
-                <input
-                  type="checkbox"
+                <Checkbox
                   checked={!desmarcados.has(agente)}
                   disabled={!podeLigar || ligando || carregando}
-                  onChange={() => alternar(agente)}
+                  onCheckedChange={() => alternar(agente)}
                 />
                 {nomeDoAgente(agente)}
               </label>

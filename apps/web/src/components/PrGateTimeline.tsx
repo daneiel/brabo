@@ -1,3 +1,5 @@
+import { Item, ItemGroup } from './shadcn/item';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './shadcn/collapsible';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type {
@@ -271,21 +273,22 @@ function VerdictCard({
 
   return (
     <div className={styles.verdictCard}>
-      <button type="button" className={styles.verdictHeader} onClick={onToggle}>
+      <Collapsible open={expanded} onOpenChange={() => onToggle()}>
+      <CollapsibleTrigger className={styles.verdictHeader}>
         <Badge tone={approved ? 'success' : 'danger'}>
           {gateLabel}:{' '}
           {approved ? t('prGateTimeline.verdict.approved') : t('prGateTimeline.verdict.changesRequested')}
         </Badge>
         <span className={styles.verdictSummary}>{verdict.resumo}</span>
-      </button>
-      {expanded && (
+      </CollapsibleTrigger>
+      <CollapsibleContent>
         <div className={styles.verdictBody}>
           {verdict.itens.length > 0 && (
-            <ul className={styles.itemList}>
+            <ItemGroup className={styles.itemList}>
               {verdict.itens.map((item, i) => (
-                <li key={i}>{item}</li>
+                <Item key={i} size="xs">{item}</Item>
               ))}
-            </ul>
+            </ItemGroup>
           )}
           {verdict.coverageMatrix && verdict.coverageMatrix.length > 0 && (
             <Table
@@ -308,11 +311,11 @@ function VerdictCard({
                     <span className={styles.verdictSummary}>{sv.resumo}</span>
                   </div>
                   {sv.itens.length > 0 && (
-                    <ul className={styles.itemList}>
+                    <ItemGroup className={styles.itemList}>
                       {sv.itens.map((item, i) => (
-                        <li key={i}>{item}</li>
+                        <Item key={i} size="xs">{item}</Item>
                       ))}
-                    </ul>
+                    </ItemGroup>
                   )}
                 </div>
               ))}
@@ -333,7 +336,8 @@ function VerdictCard({
             </div>
           )}
         </div>
-      )}
+      </CollapsibleContent>
+      </Collapsible>
     </div>
   );
 }
