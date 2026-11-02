@@ -240,7 +240,12 @@
       "perguntas": "未回答的问题"
     },
     "origem_other": "会话 {{hashtag}} 中的 {{count}} 个提议 · 最早的 {{tempo}}",
-    "recorte": "显示 {{mostradas}} / {{total}} — 其余在审批标签页中。",
+    "abas": "待处理队列",
+    "paginacao": {
+      "anterior": "{{fila}}：上一页",
+      "proxima": "{{fila}}：下一页",
+      "faixa": "第 {{inicio}}–{{fim}} 项，共 {{total}} 项"
+    },
     "semPapel": "在此决定需要项目中的 developer 角色。你可以看到待处理事项，但由其他人决定。",
     "motivoNaoLido": {
       "todas_other": "无法读取这 {{count}} 张卡片的策略原因：读取提议这些操作的会话日志失败。",

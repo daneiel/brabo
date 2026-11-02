@@ -4,6 +4,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ## Unreleased
 
+- O painel "Pendências deste projeto" do chat vira uma faixa de abas (uma por fila com item, nenhuma aberta ao nascer, contagem por fila) e cada fila pagina de 3 em 3 com "anterior / x–y de N / próxima", no lugar do teto de 20 (RN-975, AT-680).
 ### Funcionalidades
 - O fio da Sessão passa a mostrar, antes de cada resposta do agente, os passos do turno encerrado num bloco recolhido: cada ferramenta com nome, ok ou falha e o resultado (com aviso de corte), nunca os argumentos (RN-974, AT-675).
 - A faixa do turno em curso da Sessão passa a ser uma cadeia de passos recolhível (`ChainOfThought` do AI Elements), operável por teclado, no lugar do bloco "Passos do turno" antigo (AT-674).

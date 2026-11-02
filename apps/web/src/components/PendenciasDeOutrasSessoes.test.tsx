@@ -80,6 +80,10 @@ function montar(
   );
 }
 
+async function abrir(nome: string) {
+  fireEvent.click(await screen.findByRole('button', { name: new RegExp(`^${nome} \\d`) }));
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   // O motivo da política de cada card é lido pela ação (AT-340); por padrão
@@ -126,8 +130,10 @@ describe('PendenciasDeOutrasSessoes (AT-265)', () => {
 
     montar();
 
+    await abrir('Merges de PR');
+    const merges = await screen.findByRole('region', { name: 'Merges de PR' });
+    await abrir('Aprovações');
     const aprovacoes = await screen.findByRole('region', { name: 'Aprovações' });
-    const merges = screen.getByRole('region', { name: 'Merges de PR' });
     // Contagens por fila, nunca somadas.
     expect(within(aprovacoes).getByText('2')).toBeInTheDocument();
     expect(within(merges).getByText('1')).toBeInTheDocument();
@@ -146,6 +152,8 @@ describe('PendenciasDeOutrasSessoes (AT-265)', () => {
 
     montar(false);
 
+    await abrir('Aprovações');
+
     expect((await screen.findAllByText(/npm test a1/)).length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: 'Aprovar' })).toBeDisabled();
     expect(screen.getByTestId('bloqueio-da-decisao')).toHaveTextContent('papel developer');
@@ -156,6 +164,8 @@ describe('PendenciasDeOutrasSessoes (AT-265)', () => {
     approveAction.mockRejectedValue(new ApiError(409, { message: 'A ação já foi decidida.' }));
 
     montar();
+
+    await abrir('Aprovações');
 
     fireEvent.click(await screen.findByRole('button', { name: 'Aprovar' }));
     expect(await screen.findByTestId('recusa-da-decisao')).toHaveTextContent('A ação já foi decidida.');
@@ -168,12 +178,58 @@ describe('PendenciasDeOutrasSessoes (AT-265)', () => {
     expect(container.querySelector('[data-testid="pendencias-de-outras-sessoes"]')).toBeNull();
   });
 
-  it('acima do teto de cards, diz que é recorte', async () => {
-    getProjectPendingActions.mockResolvedValue(
-      Array.from({ length: 23 }, (_, i) => acao(`t${i}`)),
-    );
+  it('AT-680 (RN-975): 23 aprovações dão "1–3 de 23" e a fila diz que é recorte', async () => {
+    getProjectPendingActions.mockResolvedValue(Array.from({ length: 23 }, (_, i) => acao(`t${i}`)));
     montar();
-    expect(await screen.findByText(/Mostrando 20 de 23/)).toBeInTheDocument();
+    expect(await screen.findByText('1–3 de 23')).toBeInTheDocument();
+  });
+});
+
+describe('PendenciasDeOutrasSessoes — paginação por fila (AT-680, RN-975)', () => {
+  const sete = () => Array.from({ length: 7 }, (_, i) => acao(`p${i}`));
+
+  it('3 por página, navega com o teclado, anuncia a faixa e mantém o total da fila', async () => {
+    getProjectPendingActions.mockResolvedValue(sete());
+    montar();
+    await abrir('Aprovações');
+    const fila = await screen.findByRole('region', { name: 'Aprovações' });
+    expect(within(fila).getAllByRole('button', { name: 'Aprovar' })).toHaveLength(3);
+    expect(within(fila).getByRole('status')).toHaveTextContent('1–3 de 7');
+    // O total da fila e o cabeçalho seguem 7, nunca a página nem a soma.
+    expect(within(fila).getByText('7')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Pendências deste projeto/ })).toHaveTextContent('Aprovações 7');
+
+    const proxima = within(fila).getByRole('button', { name: 'Próxima página de Aprovações' });
+    proxima.focus();
+    expect(proxima).toHaveFocus();
+    fireEvent.click(proxima);
+    expect(within(fila).getByRole('status')).toHaveTextContent('4–6 de 7');
+    fireEvent.click(within(fila).getByRole('button', { name: 'Próxima página de Aprovações' }));
+    expect(within(fila).getByRole('status')).toHaveTextContent('7–7 de 7');
+    expect(within(fila).getByRole('button', { name: 'Próxima página de Aprovações' })).toBeDisabled();
+  });
+
+  it('decidir o último item da última página faz a página voltar', async () => {
+    getProjectPendingActions.mockResolvedValue(sete());
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    montar(true, client);
+    await abrir('Aprovações');
+    const fila = await screen.findByRole('region', { name: 'Aprovações' });
+    fireEvent.click(within(fila).getByRole('button', { name: 'Próxima página de Aprovações' }));
+    fireEvent.click(within(fila).getByRole('button', { name: 'Próxima página de Aprovações' }));
+    expect(within(fila).getByRole('status')).toHaveTextContent('7–7 de 7');
+    getProjectPendingActions.mockResolvedValue(sete().slice(0, 6));
+    await client.invalidateQueries({ queryKey: ['project-pending-actions'] });
+    await waitFor(() => expect(within(fila).getByRole('status')).toHaveTextContent('4–6 de 6'));
+  });
+
+  it('CASO DE FALHA: com 3 itens não há paginador', async () => {
+    getProjectPendingActions.mockResolvedValue(sete().slice(0, 3));
+    montar();
+    await abrir('Aprovações');
+    const fila = await screen.findByRole('region', { name: 'Aprovações' });
+    expect(within(fila).queryByRole('status')).toBeNull();
+    expect(within(fila).queryByRole('button', { name: /Próxima página/ })).toBeNull();
   });
 });
 
@@ -190,6 +246,8 @@ describe('PendenciasDeOutrasSessoes — cabe na coluna e mostra todos (AT-318)',
     ]);
 
     montar();
+
+    await abrir('Aprovações');
 
     const aprovacoes = await screen.findByRole('region', { name: 'Aprovações' });
     expect(within(aprovacoes).getAllByRole('button', { name: 'Aprovar' })).toHaveLength(3);
@@ -348,6 +406,7 @@ describe('PendenciasDeOutrasSessoes — PRs prontas e tarefas bloqueadas (AT-497
     );
 
     montar();
+    await abrir('PRs prontas para merge');
 
     const fila = await screen.findByTestId('fila-prs-prontas');
     expect(within(fila).getByText(/PR 1/)).toBeInTheDocument();
@@ -447,6 +506,8 @@ describe('PendenciasDeOutrasSessoes — PRs prontas e tarefas bloqueadas (AT-497
 
     montar();
 
+    await abrir('Tarefas bloqueadas');
+
     const fila = await screen.findByTestId('fila-tarefas-bloqueadas');
     expect(within(fila).getByText('ciclo de correção esgotado')).toBeInTheDocument();
     fireEvent.click(within(fila).getByRole('button', { name: 'Desbloquear' }));
@@ -454,5 +515,32 @@ describe('PendenciasDeOutrasSessoes — PRs prontas e tarefas bloqueadas (AT-497
     expect(await within(fila).findByTestId('retorno-desbloqueio')).toHaveTextContent(
       'a tarefa não está bloqueada',
     );
+  });
+});
+
+describe('PendenciasDeOutrasSessoes — faixa de abas (AT-680, RN-975)', () => {
+  it('a aba só existe com fila > 0, nenhuma nasce aberta e o conteúdo fechado fica montado', async () => {
+    getProjectPendingActions.mockResolvedValue([acao('a1'), acao('a2')]);
+    montar();
+    const aba = await screen.findByRole('button', { name: /^Aprovações 2/ });
+    expect(screen.queryByRole('button', { name: /^Merges de PR \d/ })).toBeNull();
+    expect(aba).toHaveAttribute('aria-pressed', 'false');
+    // montado, só escondido
+    expect(screen.getByTestId('pendencias-de-outras-sessoes').querySelectorAll('[hidden]').length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/npm test a1/, { ignore: 'script' }).length).toBeGreaterThan(0);
+    expect(screen.queryByRole('button', { name: 'Aprovar' })).toBeNull();
+    fireEvent.click(aba);
+    expect(aba).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getAllByRole('button', { name: 'Aprovar' })).toHaveLength(2);
+    fireEvent.click(aba);
+    expect(aba).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.queryByRole('button', { name: 'Aprovar' })).toBeNull();
+  });
+
+  it('CASO DE FALHA: sem pendência nenhuma não há faixa', async () => {
+    getProjectPendingActions.mockResolvedValue([]);
+    montar();
+    await waitFor(() => expect(getProjectPendingActions).toHaveBeenCalled());
+    expect(screen.queryByRole('group', { name: 'Filas de pendências' })).toBeNull();
   });
 });

@@ -16,10 +16,9 @@ import { useBacklog } from '../lib/hooks';
 import { assinaturaDoBacklog, prsProntasParaMerge, tarefasBloqueadas } from '../lib/prontas-e-bloqueadas';
 import { Button } from './ui/Button';
 import { PerguntasEmAberto } from './PerguntasEmAberto';
-import { usePerguntasEmAberto } from '../lib/perguntas-em-aberto';
+import { EVENTO_ABRIR_PERGUNTAS, usePerguntasEmAberto } from '../lib/perguntas-em-aberto';
 import {
   CHAVE_DAS_PENDENCIAS_DO_PROJETO,
-  TETO_DE_PENDENCIAS_NO_CHAT,
   separarPendenciasDeOutrasSessoes,
   usePendenciasDoProjeto,
 } from '../lib/pendencias-do-projeto';
@@ -29,7 +28,11 @@ import { useDecisoesDaPolitica } from '../lib/decisao-da-politica-queries';
 import { ApprovalCard } from './ApprovalCard';
 import { useRegistrarAcoesNoBloco } from '../lib/acoes-no-bloco';
 import { Disclosure } from './ui/Disclosure';
+import { PaginadorDaFila } from './PaginadorDaFila';
+import { paginar } from '../lib/paginacao-de-fila';
 import styles from './PendenciasDeOutrasSessoes.module.css';
+
+type ChaveDeFila = 'perguntas' | 'aprovacoes' | 'merges' | 'prontas' | 'bloqueadas';
 
 /** Nenhum evento local: estas ações são sempre de OUTRA sessão (AT-340). */
 const SEM_EVENTOS_LOCAIS: readonly never[] = [];
@@ -125,15 +128,30 @@ export function PendenciasDeOutrasSessoes({
   const totalDePerguntas = perguntasQuery.data?.total ?? 0;
   const total = aprovacoes.length + merges.length;
 
-  // Recorte declarado (RN-180): o teto vale para as DUAS filas juntas em
-  // desenho, mas cada fila diz o seu próprio total no cabeçalho.
-  const aprovacoesVisiveis = aprovacoes.slice(0, TETO_DE_PENDENCIAS_NO_CHAT);
-  const mergesVisiveis = merges.slice(
-    0,
-    TETO_DE_PENDENCIAS_NO_CHAT - aprovacoesVisiveis.length,
+  // AT-680 (RN-975): cada fila pagina por si, de 3 em 3, no cliente e sobre a
+  // lista que já foi lida (nenhuma query nova). A página é ajustada em render:
+  // decidir o último item da última página a faz voltar.
+  // Faixa de abas (AT-680): nenhuma nasce aberta; o conteúdo das fechadas
+  // continua MONTADO (só `hidden`), para o "Responder perguntas" ter alvo e o
+  // cartão de merge seguir registrado no fio (RN-843).
+  const [aberta, setAberta] = useState<ChaveDeFila | null>(null);
+  useEffect(() => {
+    const abrir = () => setAberta('perguntas');
+    window.addEventListener(EVENTO_ABRIR_PERGUNTAS, abrir);
+    return () => window.removeEventListener(EVENTO_ABRIR_PERGUNTAS, abrir);
+  }, []);
+  const painel = (chave: ChaveDeFila, conteudo: React.ReactNode) => (
+    <div hidden={aberta !== chave}>{conteudo}</div>
   );
-  const cortadas = total - aprovacoesVisiveis.length - mergesVisiveis.length;
-  const desenhadas = total - cortadas;
+  const [paginas, setPaginas] = useState<Record<string, number>>({});
+  const paginaDe = (chave: string) => paginas[chave] ?? 0;
+  const irParaPagina = (chave: string) => (nova: number) =>
+    setPaginas((atual) => ({ ...atual, [chave]: nova }));
+  const pAprovacoes = paginar(aprovacoes, paginaDe('aprovacoes'));
+  const pMerges = paginar(merges, paginaDe('merges'));
+  const pProntas = paginar(prontas, paginaDe('prontas'));
+  const pBloqueadas = paginar(bloqueadas, paginaDe('bloqueadas'));
+  const desenhadas = pAprovacoes.itens.length + pMerges.itens.length;
 
   // AT-340 (RN-656): o motivo da política de CADA card desenhado, lido pela
   // ação (`?actionId=`) na sessão que a própria ação carrega — a MESMA leitura
@@ -144,7 +162,7 @@ export function PendenciasDeOutrasSessoes({
   // cards DESENHADOS pedem — o recorte segura o número de leituras no teto.
   const { decisoes, falhas } = useDecisoesDaPolitica(
     projectId,
-    [...aprovacoesVisiveis, ...mergesVisiveis],
+    [...pAprovacoes.itens, ...pMerges.itens],
     SEM_EVENTOS_LOCAIS,
   );
 
@@ -250,17 +268,16 @@ export function PendenciasDeOutrasSessoes({
 
   const fila = (
     chave: 'aprovacoes' | 'merges',
-    lista: ProposedAction[],
-    visiveis: ProposedAction[],
+    pagina: ReturnType<typeof paginar<ProposedAction>>,
   ) =>
-    lista.length === 0 ? null : (
+    pagina.total === 0 ? null : (
       <section className={styles.fila} aria-label={t(`pendencias.filas.${chave}`)}>
         <h4 className={styles.filaTitulo}>
           {t(`pendencias.filas.${chave}`)}
           {/* A contagem é DESTA fila e só dela. */}
-          <span className={styles.contagem}>{lista.length}</span>
+          <span className={styles.contagem}>{pagina.total}</span>
         </h4>
-        {porSessao(visiveis).map(([origem, acoes]) => (
+        {porSessao(pagina.itens).map(([origem, acoes]) => (
           <div key={origem} className={styles.grupo}>
             <div className={styles.origem}>
               {t('pendencias.origem', {
@@ -292,6 +309,11 @@ export function PendenciasDeOutrasSessoes({
             ))}
           </div>
         ))}
+        <PaginadorDaFila
+          fila={t(`pendencias.filas.${chave}`)}
+          pagina={pagina}
+          aoMudar={irParaPagina(chave)}
+        />
       </section>
     );
 
@@ -330,8 +352,24 @@ export function PendenciasDeOutrasSessoes({
             )}
           </p>
         )}
+        <div className={styles.abas} role="group" aria-label={t('pendencias.abas')}>
+          {(['perguntas', 'aprovacoes', 'merges', 'prontas', 'bloqueadas'] as const)
+            .filter((chave) => contagens[chave] > 0 || (chave === 'perguntas' && respondidas.length > 0))
+            .map((chave) => (
+              <Button
+                key={chave}
+                type="button"
+                size="sm"
+                variant={aberta === chave ? 'primary' : 'secondary'}
+                aria-pressed={aberta === chave}
+                onClick={() => setAberta(aberta === chave ? null : chave)}
+              >
+                {t(`pendencias.filas.${chave}`)} {contagens[chave]}
+              </Button>
+            ))}
+        </div>
         <div className={styles.lista}>
-          <PerguntasEmAberto
+          {painel('perguntas', <PerguntasEmAberto
             projectId={projectId}
             perguntas={perguntas}
             total={totalDePerguntas}
@@ -345,10 +383,10 @@ export function PendenciasDeOutrasSessoes({
               setRespondidas((atual) => atual.filter((p) => p.questionId !== id))
             }
             podeCorrigir={podeDecidir}
-          />
-          {fila('aprovacoes', aprovacoes, aprovacoesVisiveis)}
-          {fila('merges', merges, mergesVisiveis)}
-          {prontas.length > 0 && (
+          />)}
+          {painel('aprovacoes', fila('aprovacoes', pAprovacoes))}
+          {painel('merges', fila('merges', pMerges))}
+          {painel('prontas', prontas.length > 0 && (
             <section
               className={styles.fila}
               aria-label={t('pendencias.filas.prontas')}
@@ -358,7 +396,7 @@ export function PendenciasDeOutrasSessoes({
                 {t('pendencias.filas.prontas')}
                 <span className={styles.contagem}>{prontas.length}</span>
               </h4>
-              {prontas.map(({ pr, mergeDaSessao }) => {
+              {pProntas.itens.map(({ pr, mergeDaSessao }) => {
                 // RN-822: a proposta que ESTE clique criou aparece na hora; a
                 // fila do projeto, quando volta, diz se ela segue pendente.
                 const acao = mergeDaSessao ?? propostas[pr.id];
@@ -397,9 +435,14 @@ export function PendenciasDeOutrasSessoes({
                   </div>
                 );
               })}
+              <PaginadorDaFila
+                fila={t('pendencias.filas.prontas')}
+                pagina={pProntas}
+                aoMudar={irParaPagina('prontas')}
+              />
             </section>
-          )}
-          {bloqueadas.length > 0 && (
+          ))}
+          {painel('bloqueadas', bloqueadas.length > 0 && (
             <section
               className={styles.fila}
               aria-label={t('pendencias.filas.bloqueadas')}
@@ -409,7 +452,7 @@ export function PendenciasDeOutrasSessoes({
                 {t('pendencias.filas.bloqueadas')}
                 <span className={styles.contagem}>{bloqueadas.length}</span>
               </h4>
-              {bloqueadas.map((task) => {
+              {pBloqueadas.itens.map((task) => {
                 const estado = desbloqueio[task.id];
                 return (
                   <div key={task.id} className={styles.grupo} data-testid="tarefa-bloqueada">
@@ -442,13 +485,13 @@ export function PendenciasDeOutrasSessoes({
                   </div>
                 );
               })}
+              <PaginadorDaFila
+                fila={t('pendencias.filas.bloqueadas')}
+                pagina={pBloqueadas}
+                aoMudar={irParaPagina('bloqueadas')}
+              />
             </section>
-          )}
-          {cortadas > 0 && (
-            <p className={styles.recorte}>
-              {t('pendencias.recorte', { mostradas: total - cortadas, total })}
-            </p>
-          )}
+          ))}
         </div>
       </Disclosure>
     </div>
