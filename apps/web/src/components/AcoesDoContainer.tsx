@@ -286,24 +286,25 @@ export function AcoesDoContainer({
       <div className={styles.acoes}>
         <Button
           variant="secondary"
+          legenda={t('actions.stop')}
           disabled={!podeParar}
           loading={emAndamento === 'parar'}
           onClick={() => void parar()}
         >
           <Square aria-hidden="true" />
-          {t('actions.stop')}
         </Button>
         <Button
           variant="danger"
+          legenda={t('actions.remove')}
           disabled={!podeRemover}
           loading={emAndamento === 'remover'}
           onClick={() => void remover()}
         >
           <Trash2 aria-hidden="true" />
-          {t('actions.remove')}
         </Button>
         <Button
           variant="primary"
+          legenda={item.registrado ? t('actions.startAgain') : t('actions.start')}
           disabled={!subida.pode}
           loading={emAndamento === 'subir'}
           onClick={() => {
@@ -311,7 +312,6 @@ export function AcoesDoContainer({
           }}
         >
           <Play aria-hidden="true" />
-          {item.registrado ? t('actions.startAgain') : t('actions.start')}
         </Button>
       </div>
       {aviso && <p className={styles.motivo}>{t('actions.desatualizada', aviso)}</p>}

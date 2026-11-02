@@ -483,5 +483,8 @@ Link de texto sobre `--surface-1` usa `var(--accent-hover)` em repouso —
 - Ícone novo vem do Lucide, via `lucide-react`. Os ícones da casa (`components/ui/icons.tsx`) não migram.
 - Tamanho 16px e traço 1,6: o `Button` já força `size-4` em `svg` sem `size-*` e o `index.css` fixa `svg.lucide` em 1,6.
 - Ação destrutiva mantém o texto; o ícone só acompanha.
+- Botão SÓ ícone é a regra (AT-682): `<Button legenda="…">` põe o nome acessível (`aria-label`) e a legenda num Tooltip que abre no hover E no foco por teclado. Vale para todo botão do sistema, inclusive destrutivo de ícone inequívoco (lixeira, quadrado); a CONFIRMAÇÃO da ação não muda.
+- Fica com texto só quando nenhum ícone cobre o sentido inteiro (Estou pronto, Sempre permitir, Modo automático, Aprovar plano, Salvar com mais de um Salvar na tela).
+- Controle inerte diz o motivo em TEXTO visível: tooltip em botão `disabled` não abre.
 - Ícone sozinho tem `aria-label` e `title` traduzidos.
 - Controle inerte explica o motivo em TEXTO (ADR 0064), nunca só por tooltip.

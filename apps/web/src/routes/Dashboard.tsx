@@ -186,8 +186,12 @@ export function Dashboard() {
             }
           }}
         />
-        <Button className={styles.novoProjeto} onClick={() => setWizardOpen(true)}>
-          <PlusIcon size={14} /> {t('topbar.newProject')}
+        <Button
+          className={styles.novoProjeto}
+          legenda={t('topbar.newProject')}
+          onClick={() => setWizardOpen(true)}
+        >
+          <PlusIcon size={14} aria-hidden="true" />
         </Button>
       </div>
 

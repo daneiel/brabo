@@ -1,7 +1,7 @@
 import type React from 'react';
 import { describe, expect, it, vi, beforeEach, beforeAll, afterAll, afterEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
+import { act, render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { ContainersPage } from './ContainersPage';
 import { ToastProvider } from '../components/ui/ToastProvider';
 import type {
@@ -864,10 +864,13 @@ describe('ContainersPage — layout estreito (AT-330)', () => {
   });
 });
 
-it('AT-682: o ícone do botão é decorativo (aria-hidden) e o nome vem do texto', () => {
+it('AT-682: Parar/Remover/Subir são só ícone, com nome e legenda no hover e no foco', async () => {
   useContainersOverview.mockReturnValue({ isPending: false, isError: false, data: [item()], refetch: vi.fn() });
   montar();
-  const botao = document.body.querySelector('button svg')!.closest('button')!;
+  const botao = screen.getAllByRole('button', { name: /^(Parar|Remover|Subir)/ })[0];
   expect(botao.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
-  expect(botao.textContent?.trim().length).toBeGreaterThan(0);
+  expect(botao.textContent?.trim()).toBe('');
+  const nome = botao.getAttribute('aria-label')!;
+  act(() => botao.focus());
+  expect(await screen.findByText(nome, { selector: '[data-slot="tooltip-content"]' })).toBeTruthy();
 });

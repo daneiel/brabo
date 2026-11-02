@@ -1,5 +1,6 @@
 import type { ButtonHTMLAttributes } from 'react';
 import { Button as ShadcnButton } from '@/components/shadcn/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/shadcn/tooltip';
 
 export type ButtonVariant =
   | 'primary'
@@ -49,6 +50,12 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
    * que sabe qual verbo cabe.
    */
   loading?: boolean;
+  /**
+   * Botão SÓ de ícone (AT-682): a legenda é o nome acessível (`aria-label`) e
+   * aparece num Tooltip no hover E no foco por teclado. Implica `icon`.
+   * Controle inerte continua explicando o motivo em TEXTO (ADR 0064).
+   */
+  legenda?: string;
 }
 
 const VARIANTE = {
@@ -65,18 +72,19 @@ export function Button({
   fullWidth,
   size = 'md',
   icon,
+  legenda,
   loading,
   disabled,
   ...rest
 }: ButtonProps) {
-  const tamanho = icon
+  const tamanho = icon || legenda
     ? size === 'sm'
       ? 'icon-sm'
       : 'icon'
     : size === 'md'
       ? 'default'
       : size;
-  return (
+  const botao = (
     <ShadcnButton
       variant={VARIANTE[variant]}
       size={tamanho}
@@ -84,12 +92,20 @@ export function Button({
       loading={loading}
       data-variant={variant}
       data-size={size}
-      data-icon={icon ? 'true' : undefined}
+      data-icon={icon || legenda ? 'true' : undefined}
+      aria-label={legenda ?? rest['aria-label']}
       data-full-width={fullWidth ? 'true' : undefined}
       // `loading` implica `disabled`: um botão que já disparou não pode disparar
       // de novo. `disabled` explícito continua valendo por si.
       disabled={disabled ?? loading}
       {...rest}
     />
+  );
+  if (!legenda) return botao;
+  return (
+    <Tooltip>
+      <TooltipTrigger render={botao} />
+      <TooltipContent>{legenda}</TooltipContent>
+    </Tooltip>
   );
 }
