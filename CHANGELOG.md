@@ -5,6 +5,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 ## Unreleased
 
 ### Funcionalidades
+- A faixa do turno em curso da Sessão passa a ser uma cadeia de passos recolhível (`ChainOfThought` do AI Elements), operável por teclado, no lugar do bloco "Passos do turno" antigo (AT-674).
 
 - O visual v3 (meio-termo aprovado pelo dono): liga o preflight do Tailwind e sobe os raios para a escala do shadcn (`--radius` 0,625rem), mantendo o terracota, a tipografia e as superfícies do Brabo (ADR 0237, revisa o 0232 no preflight).
 - O chat da Sessão ganha o botão Copiar sob cada resposta do agente (o markdown cru, com o estado "Copiado" e rótulo acessível; sem clipboard disponível, não faz nada) e o épico ou a história criada no turno passa a aparecer num cartão `Artifact` com o link para a aba Histórias (AT-674, lane L1).
