@@ -163,6 +163,12 @@
       "approved": "Одобрено"
     },
     "body": {
+      "commit": {
+        "files_one": "{{count}} файл",
+        "files_few": "{{count}} файла",
+        "files_many": "{{count}} файлов",
+        "files_other": "{{count}} файла"
+      },
       "terminal": {
         "invalidCommand": "Модель не сформировала корректную команду для этого действия.",
         "outputHeader": "терминал · вывод",

@@ -76,7 +76,7 @@
   produto da árvore do Docusaurus, que nunca chega a imagem nenhuma.
   Dependência vulnerável TRANSITIVA se fecha por `overrides` — e eles moram em
   `pnpm-workspace.yaml` (raiz) e `website/pnpm-workspace.yaml`, NUNCA em
-  `package.json`: já são vinte e sete na raiz e vinte e sete no website, cada um com o
+  `package.json`: já são vinte e oito na raiz e vinte e sete no website, cada um com o
   advisory e o caminho do `pnpm why` no comentário ao lado. Duas disciplinas,
   escritas no topo do arquivo: a chave é a FAIXA VULNERÁVEL do aviso (nunca a
   versão instalada hoje) e a faixa é presa à LINHA MAIOR afetada. Faixa que já

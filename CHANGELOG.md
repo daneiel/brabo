@@ -9,6 +9,8 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - O painel "Pendências deste projeto" do chat vira uma faixa de abas (uma por fila com item, nenhuma aberta ao nascer, contagem por fila) e cada fila pagina de 3 em 3 com "anterior / x–y de N / próxima", no lugar do teto de 20 (RN-975, AT-680).
 ### Funcionalidades
 
+- A aprovação de comando de terminal passa a mostrar a saída com as cores ANSI e o `exit` (vermelho quando diferente de 0), a de commit ganha a mensagem, o autor e o total de arquivos (com plural nos quatro idiomas), e os marcos estáticos da linha do tempo dos Executores viram linhas de Trace. A lib `ansi-to-react` entra só no chunk do `ApprovalCard`, com override de `linkify-it` para fechar o advisory GHSA-22p9-wv53-3rq4/GHSA-v245-v573-v5vm (AT-683).
+
 - Base dos ícones do shadcn (AT-682): ícone dentro de `Button` passa a 16px, `svg.lucide` usa traço 1,6 como os da casa, o `lucide-react` sai do grupo `vendor-ui` da carga inicial e `design/COMPONENTS.md` ganha a seção "Iconografia".
 
 - O projeto ganha o link de apoio no Ko-fi (`ko-fi.com/daneiel`): botão "Sponsor" do GitHub (`.github/FUNDING.yml`), selo nos quatro READMEs e item no rodapé do site de documentação (AT-678).

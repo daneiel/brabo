@@ -37,6 +37,12 @@ packages:
 # `pnpm audit` reprovando é o sinal de que ainda são necessárias, e o
 # `pnpm why` mostra se ainda há quem peça a antiga.
 overrides:
+  # HIGH · GHSA-22p9-wv53-3rq4 e GHSA-v245-v573-v5vm (DoS quadrático no
+  # `LinkifyIt`). Entra por `apps/web` > `ansi-to-react` (`linkify-it: ^3.0.3`),
+  # lib do Terminal (AT-683). O web não liga o `linkify` do componente, então a
+  # API não é chamada; o override fecha o advisory da mesma forma. Só `apps/web`
+  # usa a faixa, por isso não há par em `website/`.
+  linkify-it@<5.0.2: 5.0.2
   # MISTA (ADR 0117) — duplicada em `website/package.json` (`pnpm.overrides`).
   # `pnpm why js-yaml -r` mostra DOIS pais reais, não só o `@nestjs/swagger`
   # que o comentário original citava: o `website`, via `@redocly/openapi-core`

@@ -145,6 +145,9 @@
       "approved": "已批准"
     },
     "body": {
+      "commit": {
+        "files_other": "{{count}} 个文件"
+      },
       "terminal": {
         "invalidCommand": "模型没有为此操作生成有效的命令。",
         "outputHeader": "terminal · output",

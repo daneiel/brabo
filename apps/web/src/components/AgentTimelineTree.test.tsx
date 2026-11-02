@@ -152,6 +152,10 @@ describe('AgentTimelineTree', () => {
 
     expect(screen.queryByTestId(`marco-cabecalho-${handoffEv.id}`)).not.toBeInTheDocument();
     expect(screen.getByText('ofereceu o trabalho')).toBeInTheDocument();
+    // Marco estático é uma linha de Trace (shadcn), com título e descrição.
+    const linha = screen.getByText('ofereceu o trabalho').closest('[data-slot="trace-line"]');
+    expect(linha).not.toBeNull();
+    expect(linha!.querySelector('[data-slot="trace-icon"]')).not.toBeNull();
   });
 
   it('contador de novidade aparece quando o ramo está colapsado com marco novo, e some ao abrir', () => {

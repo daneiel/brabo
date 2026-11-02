@@ -1,4 +1,6 @@
 import { useContext, useRef, useState, type CSSProperties } from 'react';
+import { Terminal } from './ai-elements/terminal';
+import { Commit } from './ai-elements/commit';
 import { QueryClientContext } from '@tanstack/react-query';
 import { useAutoriaDaSessao } from '../lib/autoria-da-sessao';
 import { autorDaMensagem } from '../lib/autor-da-mensagem';
@@ -579,32 +581,25 @@ function ApprovalBody({ actionType, payload, executionResult, expandedFile, onTo
 
     return (
       <div className={`${styles.body} ${styles.bodyCode}`}>
-        <div className={styles.commandLine}>
-          {comandoValido ? (
-            <>
-              <span className={styles.prompt}>$</span> {command}
-            </>
-          ) : (
-            // Payload malformado de verdade (o modelo produziu uma tool-call
-            // sem `command`) — um prompt "$ " em branco lia como bug de
-            // renderização, não como o que era: a ferramenta não recebeu
-            // argumento nenhum.
-            <span className={styles.vazio}>{t('approvalCard.body.terminal.invalidCommand')}</span>
-          )}
-        </div>
-        {executionResult && (
-          <div className={styles.outputBlock}>
-            <div className={styles.outputHeader}>
-              <span>{t('approvalCard.body.terminal.outputHeader')}</span>
-              {compressionPct !== null && compressionPct > 0 && (
-                <span>{t('approvalCard.body.terminal.compression', { percent: compressionPct })}</span>
-              )}
-            </div>
-            <div className={styles.outputBody}>
-              {executionResult.stdout || executionResult.stderr || t('approvalCard.body.terminal.emptyOutput')}
-            </div>
-          </div>
-        )}
+        <Terminal
+          comando={comandoValido ? command : undefined}
+          semComando={t('approvalCard.body.terminal.invalidCommand')}
+          saida={executionResult ? executionResult.stdout || executionResult.stderr : undefined}
+          semSaida={t('approvalCard.body.terminal.emptyOutput')}
+          exitCode={executionResult?.exitCode}
+          cabecalho={
+            executionResult
+              ? [
+                  t('approvalCard.body.terminal.outputHeader'),
+                  compressionPct !== null && compressionPct > 0
+                    ? t('approvalCard.body.terminal.compression', { percent: compressionPct })
+                    : null,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')
+              : undefined
+          }
+        />
       </div>
     );
   }
@@ -752,6 +747,11 @@ function ApprovalBody({ actionType, payload, executionResult, expandedFile, onTo
     if (files && files.length > 0) {
       return (
         <div className={styles.body}>
+          <Commit
+            mensagem={readString(payload, 'message')}
+            autor={readString(payload, 'author')}
+            arquivos={files}
+          />
           {files.map((file) => {
             const open = expandedFile === file.path;
             // Não migrado para o `Disclosure` do design system, de propósito
