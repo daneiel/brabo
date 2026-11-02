@@ -121,4 +121,11 @@ describe('AgentCard', () => {
       expect(onRearm).toHaveBeenCalledTimes(1);
     });
   });
+
+  it('ícones de Manual/Automático são aria-hidden e o texto fica (AT-682)', () => {
+    renderCard({ autonomy: 'manual', onAutonomyChange: vi.fn() });
+    const manual = screen.getByRole('button', { name: /manual/i });
+    expect(manual.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    expect(manual).toHaveAttribute('aria-pressed', 'true');
+  });
 });
