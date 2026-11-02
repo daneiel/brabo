@@ -746,6 +746,7 @@ export function SessionPage({
         resolvedBinding={resolvedBinding}
         budget={budget}
         queryClient={queryClient}
+        destinatario={destinatario}
         isActive={isActive}
         sessaoCriativa={sessaoCriativa}
         criativoActive={criativoActive}

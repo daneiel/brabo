@@ -53,6 +53,10 @@
     "empty": "这里还没有通知。",
     "older_other": "+ {{count}} 条较早的"
   },
+  "contexto": {
+    "rotulo": "上次调用 {{usados}} / {{janela}} 个令牌 · {{modelo}}",
+    "semJanela": "模型 {{modelo}} 的上下文窗口未知：无法得知占用情况。"
+  },
   "tokenMeter": {
     "unitTokens": "tokens",
     "live": {

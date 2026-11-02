@@ -62,6 +62,10 @@
     "older_many": "+ {{count}} более старых",
     "older_other": "+ {{count}} более старых"
   },
+  "contexto": {
+    "rotulo": "{{usados}} из {{janela}} токенов в последнем вызове · {{modelo}}",
+    "semJanela": "Окно контекста модели {{modelo}} неизвестно: заполненность неизвестна."
+  },
   "tokenMeter": {
     "unitTokens": "токенов",
     "live": {
