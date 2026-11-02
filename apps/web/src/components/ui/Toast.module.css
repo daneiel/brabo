@@ -44,6 +44,17 @@
   color: var(--text-primary);
 }
 
+.acao {
+  margin-top: 6px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  cursor: pointer;
+}
+
 .message {
   font-family: var(--font-mono);
   font-size: 11px;

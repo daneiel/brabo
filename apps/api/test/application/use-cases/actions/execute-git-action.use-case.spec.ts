@@ -11,6 +11,7 @@ import type { EncryptionService } from '../../../../src/application/ports/encryp
 import type { TaskRepository } from '../../../../src/application/ports/backlog-repository.port';
 import type { AppendSessionEventUseCase } from '../../../../src/application/use-cases/sessions/append-session-event.use-case';
 import type { ProposedAction } from '../../../../src/domain/actions/proposed-action.entity';
+import { GitMergeConflictError } from '../../../../src/domain/git/git-errors';
 
 const PROJECT = 'p1';
 const SESSION = 's1';
@@ -41,8 +42,12 @@ function action(
 const unitOfWork = {
   runInTransaction: <T>(fn: () => Promise<T>) => fn(),
 } as never;
+let outboxRows: Array<{ eventType: string; payload: unknown }> = [];
 const outbox = {
-  append: () => Promise.resolve(),
+  append: (row: { eventType: string; payload: unknown }) => {
+    outboxRows.push(row);
+    return Promise.resolve();
+  },
 } as unknown as OutboxRepository;
 let eventos: Array<{ type: string; payload: unknown }> = [];
 const append = {
@@ -61,6 +66,11 @@ class FakeTasks {
     if (this.feitas.has(id)) return Promise.resolve(null);
     this.feitas.add(id);
     return Promise.resolve({ id, status: 'done' });
+  }
+  emRevisao = new Set<string>(['t1']);
+  reabrirPorConflitoDeMerge(id: string) {
+    if (!this.emRevisao.delete(id)) return Promise.resolve(null);
+    return Promise.resolve({ id, status: 'in_progress' });
   }
 }
 let tasks: FakeTasks;
@@ -104,6 +114,7 @@ function build(overrides: {
   proposedActions = new FakeProposedActions();
   tasks = new FakeTasks();
   eventos = [];
+  outboxRows = [];
   return new ExecuteGitActionUseCase(
     unitOfWork,
     proposedActions as unknown as ProposedActionRepository,
@@ -177,6 +188,71 @@ describe('ExecuteGitActionUseCase', () => {
       kind: 'pr_open',
       pullRequestUrl: 'local://repo/pull/1',
     });
+  });
+
+  // RN-812 (AT-485): a tarefa reaberta não abre uma segunda PR da branch.
+  it('pr_open com PR aberta da mesma branch → reaproveita, sem abrir outra', async () => {
+    let abriu = false;
+    const uc = build({
+      provider: {
+        listPullRequests: () =>
+          Promise.resolve({
+            items: [
+              {
+                id: 'pr-8',
+                number: 8,
+                url: 'local://repo/pull/8',
+                state: 'open',
+                sourceBranch: 'feature/x',
+                targetBranch: 'dev',
+              },
+            ],
+            truncated: false,
+          }),
+        openPullRequest: () => {
+          abriu = true;
+          return Promise.reject(new Error('não devia abrir'));
+        },
+      },
+    });
+    await uc.execute(
+      PROJECT,
+      SESSION,
+      action('pr_open', { sourceBranch: 'feature/x', targetBranch: 'dev' }),
+    );
+    expect(abriu).toBe(false);
+    expect(proposedActions.saved?.status).toBe('executed');
+    expect(proposedActions.saved?.result).toMatchObject({
+      kind: 'pr_open',
+      pullRequestId: 'pr-8',
+      reaproveitada: true,
+    });
+  });
+
+  it('pr_open: listar PRs falha → abre a PR como sempre', async () => {
+    const uc = build({
+      provider: {
+        listPullRequests: () => Promise.reject(new Error('rede')),
+        openPullRequest: () =>
+          Promise.resolve({
+            id: 'pr-9',
+            number: 9,
+            url: 'local://repo/pull/9',
+            sourceBranch: 'feature/x',
+            targetBranch: 'dev',
+            state: 'open',
+          }),
+      },
+    });
+    await uc.execute(
+      PROJECT,
+      SESSION,
+      action('pr_open', { sourceBranch: 'feature/x', targetBranch: 'dev' }),
+    );
+    expect(proposedActions.saved?.result).toMatchObject({
+      pullRequestId: 'pr-9',
+    });
+    expect(proposedActions.saved?.result).not.toHaveProperty('reaproveitada');
   });
 
   // RN-664 (AT-250): `pr_open` sem `targetBranch` (proposto antes de o dev
@@ -382,6 +458,117 @@ describe('ExecuteGitActionUseCase', () => {
       );
       expect(proposedActions.saved?.status).toBe('executed');
       expect(tasks.chamadas).toEqual([]);
+    });
+  });
+
+  describe('RN-705: a falha grava o kind da AÇÃO e o conflito vira evento', () => {
+    it('conflito de merge → kind git_merge, arquivos no resultado e evento na tarefa', async () => {
+      const uc = build({
+        provider: {
+          mergePullRequest: () =>
+            Promise.reject(
+              new GitMergeConflictError('/tmp/repo', 'pr-6', ['package.json']),
+            ),
+        },
+      });
+      const pr = action('pr_open', { storyTaskId: 't1' });
+      pr.executionResult = {
+        kind: 'pr_open',
+        pullRequestUrl: 'local://x',
+        pullRequestId: 'pr-6',
+        sourceBranch: 'feature/x',
+        targetBranch: 'dev',
+      };
+      proposedActions.prOpens = [pr];
+      await uc.execute(
+        PROJECT,
+        SESSION,
+        action('git_merge', { pullRequestId: 'pr-6' }),
+      );
+      expect(proposedActions.saved?.status).toBe('failed');
+      expect(proposedActions.saved?.result).toMatchObject({
+        kind: 'git_merge',
+        failed: true,
+        pullRequestId: 'pr-6',
+        conflictingFiles: ['package.json'],
+      });
+      const evs = eventos.filter(
+        (e) => e.type === 'backlog.task_merge_conflict',
+      );
+      expect(evs).toHaveLength(1);
+      expect(evs[0].payload).toMatchObject({
+        taskId: 't1',
+        conflictingFiles: ['package.json'],
+      });
+      // RN-715: a tarefa volta ao dono, e a outbox o acorda com o motivo.
+      expect(
+        eventos.find((e) => e.type === 'backlog.task_status_changed')?.payload,
+      ).toMatchObject({
+        taskId: 't1',
+        status: 'in_progress',
+        cause: 'merge_conflict',
+      });
+      expect(outboxRows).toHaveLength(1);
+      expect(outboxRows[0].eventType).toBe('task.merge_conflict');
+      expect(outboxRows[0].payload).toMatchObject({
+        taskId: 't1',
+        agentId: 'dev-api',
+        pullRequestId: 'pr-6',
+        conflictingFiles: ['package.json'],
+      });
+    });
+
+    it('RN-715: tarefa que já não está em revisão não é reaberta nem acorda ninguém', async () => {
+      const uc = build({
+        provider: {
+          mergePullRequest: () =>
+            Promise.reject(
+              new GitMergeConflictError('/tmp/repo', 'pr-6', ['package.json']),
+            ),
+        },
+      });
+      tasks.emRevisao.clear();
+      const pr = action('pr_open', { storyTaskId: 't1' });
+      pr.executionResult = {
+        kind: 'pr_open',
+        pullRequestUrl: 'local://x',
+        pullRequestId: 'pr-6',
+        sourceBranch: 'feature/x',
+        targetBranch: 'dev',
+      };
+      proposedActions.prOpens = [pr];
+      await uc.execute(
+        PROJECT,
+        SESSION,
+        action('git_merge', { pullRequestId: 'pr-6' }),
+      );
+      expect(proposedActions.saved?.status).toBe('failed');
+      expect(
+        eventos.some((e) => e.type === 'backlog.task_status_changed'),
+      ).toBe(false);
+      expect(outboxRows).toEqual([]);
+    });
+
+    it('falha que não é conflito não grava arquivos nem evento de conflito', async () => {
+      const uc = build({
+        provider: {
+          mergePullRequest: () => Promise.reject(new Error('rede fora')),
+        },
+      });
+      await uc.execute(
+        PROJECT,
+        SESSION,
+        action('git_merge', { pullRequestId: 'pr-6' }),
+      );
+      expect(proposedActions.saved?.result).toEqual({
+        kind: 'git_merge',
+        failed: true,
+        error: 'rede fora',
+        pullRequestId: 'pr-6',
+      });
+      expect(
+        eventos.some((e) => e.type === 'backlog.task_merge_conflict'),
+      ).toBe(false);
     });
   });
 });

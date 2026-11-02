@@ -17,7 +17,9 @@
     "resourcesNone": "—",
     "since": "Desde",
     "sinceNone": "—",
-    "actions": "Ações"
+    "actions": "Ações",
+    "detail": "Detalhe",
+    "openDetail": "Abrir"
   },
   "status": {
     "provisioning": "provisionando",
@@ -50,7 +52,7 @@
     "startNoDecisionMessage": "O Arquiteto (ou a Infra) ainda não decidiu uma imagem para este projeto — não há com o que subir.",
     "startRationale": "Subida pedida por um humano na página de containers.",
     "bloqueio": {
-      "ja_esta_de_pe": "O container já está de pé — pare-o antes de subir de novo.",
+      "ja_esta_de_pe": "O container já está de pé — subir de novo não aplica uma imagem nova.",
       "sem_broker_na_instalacao": "Esta instalação não sobe container para projetos Container ou Pasta montada: ela não tem o broker de container (BROKER_URL vazia), que é quem os sobe. Aprovar a subida só terminaria em falha. Projetos Runner local não dependem dele — quem sobe o container deles é o agente local.",
       "sem_broker_para_parar": "Esta instalação não tem o broker de container (BROKER_URL vazia), que é quem para e remove os containers de projetos Container ou Pasta montada: parar ou remover só terminaria em falha.",
       "sem_imagem_decidida": "Sem imagem decidida: o Arquiteto (ou a Infra) precisa decidir uma antes de qualquer container subir.",
@@ -58,8 +60,10 @@
       "sem_papel": "Subir container exige o papel maintainer neste workspace.",
       "sem_sessao": "Este projeto ainda não tem sessão — a ação precisa de uma para ser proposta."
     },
+    "desatualizada": "A decisão de imagem mudou (imagem {{imagem}}, rede {{rede}}, v{{para}}); o container ainda usa a v{{de}}. Para aplicar: Parar → Remover → Subir de novo.",
     "ressalva": {
-      "runner_pode_estar_desconectado": "A pasta foi confirmada um dia por um agente local; se ele não estiver rodando agora, a ação falha ao ser aprovada."
+      "runner_pode_estar_desconectado": "A pasta foi confirmada um dia por um agente local; se ele não estiver rodando agora, a ação falha ao ser aprovada.",
+      "registrado_rodando_observado_parado": "O registro diz rodando, mas o container está parado (o Docker reiniciou?). Subir de novo religa o mesmo container, sem precisar parar antes."
     },
     "semContainer": {
       "nuncaProvisionado": "Nunca provisionado: não há container para parar nem remover.",
@@ -71,5 +75,56 @@
       "sem_broker_ambos": "Sem broker de container nesta instalação: subir, parar e remover só terminariam em falha."
     },
     "bloqueioDetalhe": "Por quê?"
+  },
+  "detail": {
+    "title": "Container",
+    "back": "Voltar para os containers",
+    "notFound": "Este projeto não está na lista deste workspace.",
+    "network": "Rede",
+    "mode": "Modo de execução",
+    "networkNone": "Nenhuma decisão de rede ainda",
+    "urls": "URLs declaradas",
+    "urlsNone": "Nenhuma URL declarada pela Infra para este projeto.",
+    "urlsNote": "Declaradas pela Infra na PR dela, não verificadas.",
+    "urlRecusada": "(endereço fora da sua máquina, não vira link)",
+    "networkValue": {
+      "none": "Sem rede",
+      "egress": "Com saída para a internet"
+    }
+  },
+  "rede": {
+    "titulo": "Portas, DNS e hosts",
+    "nenhuma": "Nenhuma rede declarada para este container.",
+    "versao": "Versão declarada: {{version}}",
+    "portas": "Portas publicadas (TCP)",
+    "portasDica": "Uma por linha, no formato porta-da-máquina:porta-do-container. Máquina de 1024 a 65535, até 10.",
+    "dns": "DNS",
+    "hosts": "Hosts extras",
+    "hostsDica": "Uma por linha: nome e IPv4 separados por espaço. Até 10.",
+    "loopback": "A porta é publicada só em 127.0.0.1 desta máquina, nunca para a rede.",
+    "soVale": "A configuração nova só vale depois de recriar o container.",
+    "semPapel": "Alterar a rede exige o papel de mantenedor no projeto.",
+    "semSessao": "O projeto não tem sessão onde registrar a rede.",
+    "salvar": "Salvar rede",
+    "recriar": "Aplicar e subir de novo",
+    "recriarAviso": "Recriar é ação no teto absoluto: sempre pede aprovação humana. Destrói o container e sobe outro; a pasta /work sobrevive.",
+    "recriarBloqueio": {
+      "runner": "Projeto em modo runner: recriar fica para depois.",
+      "semContainer": "Não há container registrado para recriar.",
+      "semSessao": "O projeto não tem sessão onde propor a ação.",
+      "naoSalva": "Salve a rede antes de recriar."
+    },
+    "observadas": "Endereços observados",
+    "observadasNota": "Porta publicada; nada garante que algo escute nela.",
+    "erro": {
+      "teto": "passou do teto de itens",
+      "formatoPorta": "use porta-da-máquina:porta-do-container",
+      "faixaPorta": "porta fora da faixa permitida",
+      "portaDaInstalacao": "porta usada pela instalação",
+      "portaRepetida": "porta repetida",
+      "ipInvalido": "IP inválido",
+      "formatoHost": "use nome e IPv4 separados por espaço",
+      "nomeReservado": "nome reservado"
+    }
   }
 }

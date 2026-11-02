@@ -11,6 +11,11 @@ config :engine,
   ecto_repos: [Engine.Repo],
   generators: [timestamp_type: :utc_datetime]
 
+# AT-582 (ADR 0226): janela de "recente" da retomada automática 1× no boot, em
+# segundos, medida da última atividade do agente. 900 s é o mesmo
+# `gate_rescue_stale_after_seconds`; não é variável de ambiente.
+config :engine, retomada_automatica_janela_segundos: 900
+
 # O engine roda no MESMO Postgres que a api (apps/api, via Drizzle), mas
 # as tabelas de domínio do engine (e as do Oban) vivem no schema "engine"
 # — nunca em "public" — para nunca colidir com as tabelas de domínio da

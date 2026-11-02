@@ -1,0 +1,21 @@
+{
+  "feed": {
+    "kindLabel": {
+      "commit": "提交",
+      "pr": "Pull request",
+      "hypothesis": "假设",
+      "session": "会话",
+      "permission": "权限",
+      "terminal": "命令",
+      "delegation": "委派",
+      "generic": "其他"
+    },
+    "allAgents": "所有智能体",
+    "machineEvents": "机器事件",
+    "machineEventsTitle": "tool.call、tool.result、agent.response/delta、agent.status 和 context.compacted —— 智能体与 harness 之间交换的内容",
+    "empty": "这里还没有任何活动。",
+    "pagerCount": "已加载 {{shown}} / {{total}}",
+    "loadingOlder": "加载中…",
+    "loadOlder": "加载更早的内容"
+  }
+}

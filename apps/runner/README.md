@@ -325,6 +325,22 @@ passava porque a primeira leitura trazia o eco e a resposta juntos. No Windows
 o self-test usa `cmd.exe` (não há `/bin/cat`) e conta o marcador sem as
 sequências de controle do ConPTY.
 
+## Importar chaves de API locais (`credentials import`)
+
+AT-611, RN-927. Subcomando INTERATIVO (recusa sem TTY, saindo 2 sem ler nada;
+a unit de serviço nunca o roda). Acha as chaves de API de LLM que Claude Code,
+Codex, OpenCode, Kilo e Hermes já guardam, lista cada uma (ferramenta, origem,
+provider do Brabo, últimos 4 dígitos) e, item a item, pergunta se importa. Cada
+sim vira `POST /runner/llm-credentials` com a chave de dispositivo de MÁQUINA da
+pasta (PAT e chave de projeto recebem 403); em 409 pergunta se substitui. Login
+por assinatura é só listado, nunca importável. O valor da chave nunca é
+impresso. A credencial é da CONTA de quem roda; os agentes gastam a do titular
+do workspace (RN-058). API: `--api-url`, `BRABO_API_URL` ou o config local.
+
+```bash
+brabo-runner credentials import
+```
+
 ## Chave de dispositivo pelo terminal (`device-key create | finish`)
 
 O par Ed25519 pode nascer **nesta máquina**, sem passar pelo navegador (ADR

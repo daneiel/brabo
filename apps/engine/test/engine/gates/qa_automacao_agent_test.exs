@@ -86,6 +86,23 @@ defmodule Engine.Gates.QaAutomacaoAgentTest do
     refute_received {:task_blocked, _, _, _, _}
   end
 
+  # RN-890 (AT-542): o código de saída da RECUSA de um comando de linha.
+  test "a instrução cobra código de saída 0 no feliz e diferente de 0 na recusa", %{
+    dev_state: dev_state,
+    dev_context: dev_context
+  } do
+    instrucao = Engine.Gates.QaAutomacaoAgent.instrucao_de_codigo_de_saida()
+    assert instrucao =~ "CÓDIGO DE SAÍDA"
+    assert instrucao =~ "0 no caminho feliz"
+    assert instrucao =~ "DIFERENTE de 0"
+    assert instrucao =~ "recusa a entrada"
+
+    Process.put(:fake_llm_turns, [])
+    run(dev_state, dev_context)
+    assert_received {:llm_turn, _, messages, _tools}
+    assert Enum.any?(messages, &(is_binary(&1["content"]) and &1["content"] =~ instrucao))
+  end
+
   test "recusa aprovar sem terminal exit 0 prévio — nunca aprova sem prova", %{
     dev_state: dev_state,
     dev_context: dev_context
@@ -201,5 +218,56 @@ defmodule Engine.Gates.QaAutomacaoAgentTest do
     ])
 
     assert {:blocked, %{origin: "modelo"}} = run(dev_state, dev_context)
+  end
+
+  test "corte pelo teto de saída (RN-780): bloqueia nomeando o corte", %{
+    dev_state: dev_state,
+    dev_context: dev_context
+  } do
+    cortada = FakeEngineApiClient.final_response("") |> Map.put("truncated", true)
+    Process.put(:fake_llm_turns, [cortada, cortada])
+
+    assert {:blocked, %{diagnosis: diag, origin: "modelo"}} = run(dev_state, dev_context)
+    assert diag =~ "cortou duas vezes"
+  end
+
+  test "corte no meio do texto (RN-946): bloqueia nomeando o corte", %{
+    dev_state: dev_state,
+    dev_context: dev_context
+  } do
+    Process.put(:fake_llm_turns, [
+      FakeEngineApiClient.final_response("Vou registrá-lo") |> Map.put("truncated", true)
+    ])
+
+    assert {:blocked, %{diagnosis: diag, origin: "modelo"}} = run(dev_state, dev_context)
+    assert diag =~ "no meio do texto"
+  end
+
+  describe "pedido anterior (RN-944)" do
+    defp primeira_mensagem(dev_state, dev_context) do
+      Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("x")])
+      run(dev_state, dev_context)
+      assert_received {:llm_turn, "qa-automacao", msgs, _tools}
+      msgs |> Enum.map(&to_string(Map.get(&1, "content"))) |> Enum.join("\n")
+    end
+
+    test "itens da volta anterior entram com a instrução; sem pedido, nada muda", %{
+      dev_state: dev_state,
+      dev_context: dev_context
+    } do
+      base = primeira_mensagem(dev_state, dev_context)
+      refute base =~ "volta anterior"
+
+      com =
+        primeira_mensagem(dev_state, Map.put(dev_context, :pedido_anterior, %{itens: ["A", "B"]}))
+
+      assert com =~ "- A" and com =~ "- B"
+      assert com =~ "foi atendido (onde) ou não"
+    end
+
+    test "itens vazios não acrescentam seção", %{dev_state: dev_state, dev_context: dev_context} do
+      msg = primeira_mensagem(dev_state, Map.put(dev_context, :pedido_anterior, %{itens: []}))
+      refute msg =~ "volta anterior"
+    end
   end
 end

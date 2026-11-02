@@ -84,6 +84,35 @@ defmodule Engine.Gates.DiffTest do
     assert motivo =~ "dev"
   end
 
+  # RN-787 (AT-464): a tarefa B nasce da A (RN-760); a A é mergeada na `dev` da
+  # ORIGEM e a `dev` local do clone fica para trás. O diff da PR de B é só B.
+  test "RN-787: o diff é contra a `dev` da origem, não a `dev` local parada", %{root: root} do
+    project_id = Ecto.UUID.generate()
+    insert_repo!(project_id)
+    origem = Path.join(root, "origem.git")
+    git!(root, ["init", "--bare", "--initial-branch=dev", origem])
+    seed = Path.join(root, "seed")
+    git!(root, ["clone", "-q", origem, seed])
+    commit!(seed, "README.md", "base")
+    git!(seed, ["push", "-q", "origin", "HEAD:dev"])
+
+    wt = Path.join(root, "wt")
+    git!(root, ["clone", "-q", origem, wt])
+    git!(wt, ["checkout", "-q", "-b", "feature/a"])
+    commit!(wt, "A.md", "a")
+    git!(wt, ["push", "-q", "origin", "feature/a"])
+
+    git!(seed, ["fetch", "-q", "origin"])
+    git!(seed, ["merge", "-q", "origin/feature/a"])
+    git!(seed, ["push", "-q", "origin", "HEAD:dev"])
+
+    git!(wt, ["checkout", "-q", "-b", "feature/b"])
+    commit!(wt, "B.md", "b")
+
+    assert {:ok, diff} = Diff.compute(project_id, wt)
+    assert Diff.changed_paths(diff) == ["B.md"]
+  end
+
   test "projeto sem repositório continua `{:error, :not_found}`", %{root: root} do
     assert {:error, :not_found} = Diff.compute(Ecto.UUID.generate(), root)
   end

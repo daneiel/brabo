@@ -196,6 +196,37 @@ export function validarDecisaoDeImagem(
 }
 
 /**
+ * Ecossistemas que BAIXAM dependências na instalação (RN-906). Lista FECHADA,
+ * comparada por PALAVRA inteira ("mongo" não casa "go"). Sem exceção
+ * configurável; termo novo entra aqui, com teste.
+ */
+// prettier-ignore
+export const TERMOS_DE_STACK_QUE_BAIXA_DEPENDENCIA: readonly string[] = [
+  'node', 'nodejs', 'npm', 'pnpm', 'yarn', 'bun', 'deno',
+  'python', 'pip', 'poetry', 'uv',
+  'elixir', 'mix', 'phoenix', 'erlang',
+  'go', 'golang', 'rust', 'cargo',
+  'ruby', 'bundler', 'rails',
+  'java', 'maven', 'gradle', 'kotlin',
+  'php', 'composer', 'dotnet', 'nuget',
+];
+
+/** Primeiro módulo cuja `stack` casa um termo da lista, ou `null`. */
+export function stackQueBaixaDependencias(
+  modules: ReadonlyArray<{ name: string; stack: string }>,
+): { modulo: string; stack: string; termo: string } | null {
+  for (const m of modules) {
+    // Palavras = corridas de letras/dígitos: "Node.js" -> node, js.
+    const palavras = new Set(m.stack.toLowerCase().split(/[^a-z0-9]+/));
+    const termo = TERMOS_DE_STACK_QUE_BAIXA_DEPENDENCIA.find((t) =>
+      palavras.has(t),
+    );
+    if (termo) return { modulo: m.name, stack: m.stack, termo };
+  }
+  return null;
+}
+
+/**
  * Descreve um valor `unknown` para MENSAGEM de erro, sem o `no-base-to-string`
  * do `String(objeto)` — que produziria `[object Object]` e esconderia
  * justamente o que o modelo mandou de errado.
@@ -321,4 +352,35 @@ export function decisaoNaVersao(
       resources: RECURSOS_PADRAO,
     };
   }
+}
+
+/** A decisão de maior versão entre os eventos (a vigente), com a versão. */
+export function decisaoVigenteDosEventos(
+  eventos: { payload: unknown }[],
+): { version: number; decisao: DecisaoDeImagem } | null {
+  if (eventos.length === 0) return null;
+  const version = Math.max(...eventos.map((e) => versaoDoPayload(e.payload)));
+  const decisao = decisaoNaVersao(eventos, version);
+  return decisao ? { version, decisao } : null;
+}
+
+/**
+ * O container de pé (RN-902) está desatualizado em relação à decisão
+ * vigente? Compara CONTEÚDO (imagem, rede, recursos) e não o número da
+ * versão: a eleição da Infra a cada subida grava v+1 com o mesmo conteúdo, e
+ * comparar números acusaria todo `stopped → running`.
+ */
+export function containerDivergeDaDecisao(
+  congelada: { image: string; network: PosturaDeRede } | null,
+  recursosCongelados: RecursosDoContainer,
+  vigente: DecisaoDeImagem | null,
+): boolean {
+  if (!congelada || !vigente) return false;
+  return (
+    congelada.image !== vigente.image ||
+    congelada.network !== vigente.network ||
+    recursosCongelados.cpus !== vigente.resources.cpus ||
+    recursosCongelados.memoryMb !== vigente.resources.memoryMb ||
+    recursosCongelados.pidsLimit !== vigente.resources.pidsLimit
+  );
 }

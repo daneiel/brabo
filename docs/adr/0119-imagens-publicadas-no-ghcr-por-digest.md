@@ -1,129 +1,132 @@
-# ADR 0119 — Images published to GHCR on every final tag, and the production overlay pinned by digest
+# ADR 0119 — Imagens publicadas no GHCR a cada tag final, e o overlay de produção preso por digest
 
-- **Status:** accepted
-- **Date:** 2026-08-29
-- **References (without editing):** [ADR 0025](0025-fase5-deploy-kubernetes-kustomize.md) and
-  [ADR 0027](0027-fase5-backup-hardening-release.md) (both recorded
-  "publishing the image to a registry" as out of scope — this ADR is what
-  closes it), [ADR 0030](0030-politica-de-branches-mecanizada.md) (the push
-  exceptions this decision deliberately does not extend),
-  [ADR 0036](0036-telas-de-auth-fieis-ao-design-e-fontes-auto-hospedadas.md) (the version baked into the
-  artifact, which is why `VERSION` stays separate from `TAG`).
+- **Status:** aceito
+- **Data:** 2026-08-29
+- **Referências (sem editar):** [ADR 0025](0025-fase5-deploy-kubernetes-kustomize.md) e
+  [ADR 0027](0027-fase5-backup-hardening-release.md) (os dois registraram
+  "publicar a imagem num registry" como fora de escopo — este ADR é o que
+  fecha isso), [ADR 0030](0030-politica-de-branches-mecanizada.md) (as
+  exceções de push que esta decisão deliberadamente não amplia),
+  [ADR 0036](0036-telas-de-auth-fieis-ao-design-e-fontes-auto-hospedadas.md) (a versão gravada no
+  artefato, que é por que `VERSION` fica separada de `TAG`).
 
-## Context
+## Contexto
 
-`release.yml` built the four production images on every final tag with
-`load: true` and `push: false`, and said so in a comment: the build existed
-to prove the tag was **buildable**, and publishing would "come in when the
-registry is decided". Meanwhile the production overlay pointed at
-`ghcr.io/OWNER/brabo-*` with `newTag: REPLACE_WITH_DIGEST` — an owner
-placeholder and a marker no step ever substituted.
+O `release.yml` construía as quatro imagens de produção a cada tag final com
+`load: true` e `push: false`, e dizia isso num comentário: o build existia
+para provar que a tag era **construível**, e a publicação "entraria quando o
+registry fosse decidido". Enquanto isso, o overlay de produção apontava para
+`ghcr.io/OWNER/brabo-*` com `newTag: REPLACE_WITH_DIGEST` — um marcador de
+dono e um marcador que passo nenhum jamais substituía.
 
-The consequence was not cosmetic. As long as it held, **"production deploy
-executable end to end" was false**, and everything behind it stayed behind
-it: a real rollout, a restore rehearsed against production images, and the
-runner binary's code-signing story (which needs a published artifact to
-sign). An external review of the repository ranked it the most expensive
-declared debt, and this ADR is that item.
+A consequência não era cosmética. Enquanto isso valeu, **"deploy de produção
+executável de ponta a ponta" era falso**, e tudo o que estava atrás disso
+continuou atrás: um rollout real, uma restauração ensaiada contra imagens de
+produção e a história de assinatura de código do binário do runner (que
+precisa de um artefato publicado para assinar). Uma revisão externa do
+repositório a classificou como a dívida declarada mais cara, e este ADR é
+esse item.
 
-A second defect surfaced while doing it: the overlay's `images:` block
-listed **three** images, not four. `brabo-backup` was never remapped, so the
-backup CronJob inherited `brabo-backup:prod` from the base — a name that
-resolves in no registry. The environment that most needs its backup would
-have been the one whose backup pod never started. The CI never caught it
-because the overlay check validates that the overlay **builds**, and a
-locally-named image builds fine.
+Um segundo defeito apareceu no caminho: o bloco `images:` do overlay listava
+**três** imagens, não quatro. `brabo-backup` nunca era remapeada, então o
+CronJob de backup herdava `brabo-backup:prod` da base — um nome que não
+resolve em registry nenhum. O ambiente que mais precisa do seu backup teria
+sido aquele cujo pod de backup nunca subia. A CI nunca pegou isso porque a
+checagem do overlay valida que o overlay **constrói**, e uma imagem com nome
+local constrói sem problema.
 
-## Decision
+## Decisão
 
-**1. `release.yml` publishes the four images to GHCR on every final tag.**
-Login uses the job's own `GITHUB_TOKEN` with `packages: write` — no new
-secret to rotate, and the scope dies with the job. Packages are **public**:
-the code is already public in the same repository, secrets are never baked
-into an image (the four sibling keys refuse to boot with an example value,
-RN-114), and public packages keep the production overlay pull-and-go, with
-no `imagePullSecret` to create, reference and rotate in every namespace.
+**1. O `release.yml` publica as quatro imagens no GHCR a cada tag final.**
+O login usa o próprio `GITHUB_TOKEN` do job com `packages: write` — nenhum
+segredo novo para rotacionar, e o escopo morre com o job. Os pacotes são
+**públicos**: o código já é público no mesmo repositório, segredos nunca são
+gravados numa imagem (as quatro chaves irmãs recusam subir com valor de
+exemplo, RN-114), e pacotes públicos mantêm o overlay de produção em
+"puxa e roda", sem `imagePullSecret` para criar, referenciar e rotacionar em
+cada namespace.
 
-**2. The registry prefix is a bake variable, not a second bakefile.**
-`REGISTRY` defaults to `""`, so `ci.yml` keeps building the short local
-names (`brabo-api:prod`) it scans and smoke-tests; `release.yml` sets
-`ghcr.io/<owner>/`. The trailing slash lives **in the value** — an empty
-prefix has to produce exactly the old name, and any fixed separator in the
-interpolation would have broken `ci.yml`. `OUTPUT` follows the same shape:
-`type=docker` (load locally) by default, `type=registry` (push) for the
-release. `type=registry` is not an optimization — it is the only mode in
-which bake returns `containerimage.digest`, because **the digest is born
-from the push**.
+**2. O prefixo do registry é uma variável do bake, não um segundo bakefile.**
+`REGISTRY` tem default `""`, então o `ci.yml` continua construindo os nomes
+locais curtos (`brabo-api:prod`) que ele varre e testa no smoke; o
+`release.yml` define `ghcr.io/<owner>/`. A barra final mora **no valor** — um
+prefixo vazio tem de produzir exatamente o nome antigo, e qualquer separador
+fixo na interpolação teria quebrado o `ci.yml`. `OUTPUT` segue a mesma
+forma: `type=docker` (carrega local) por padrão, `type=registry` (push) para
+a release. `type=registry` não é otimização — é o único modo em que o bake
+devolve `containerimage.digest`, porque **o digest nasce do push**.
 
-**3. What each tag published is recorded by DIGEST in
-`.release/images.json`.** Tags (`3.2.0`, the commit sha) are still
-published: they are for human conversation and manual `docker pull`. They
-are never what a manifest references — a mutable tag pointing at different
-content over time destroys deterministic rollback and lets two pods of the
-same ReplicaSet run different binaries, which is what the overlay's own
-comment had said since Phase 5.
+**3. O que cada tag publicou fica registrado por DIGEST em
+`.release/images.json`.** As tags (`3.2.0`, o sha do commit) continuam sendo
+publicadas: servem para conversa humana e `docker pull` manual. Elas nunca
+são o que um manifesto referencia — uma tag mutável apontando para conteúdos
+diferentes ao longo do tempo destrói o rollback determinístico e deixa dois
+pods do mesmo ReplicaSet rodarem binários diferentes, que é o que o próprio
+comentário do overlay dizia desde a Fase 5.
 
-**4. The file is an asset of the GitHub Release, and rides the CHANGELOG PR
-into the repository.** It does **not** get a third push exception. The
-branch policy has exactly two (tags by the release bot, `.release/gate.json`
-by the gate bot), and a mechanism that needs a new exception every time it
-grows is a mechanism that stops being a policy. The release asset is the
-authoritative copy, available the instant the tag exists; the versioned copy
-arrives through the PR `release.yml` already opens against `dev`.
+**4. O arquivo é asset da GitHub Release, e entra no repositório pela PR do
+CHANGELOG.** Ele **não** ganha uma terceira exceção de push. A política de
+branches tem exatamente duas (tags pelo bot de release, `.release/gate.json`
+pelo bot do gate), e um mecanismo que precisa de exceção nova cada vez que
+cresce é um mecanismo que deixa de ser política. O asset da release é a cópia
+autoritativa, disponível no instante em que a tag existe; a cópia versionada
+chega pela PR que o `release.yml` já abre contra a `dev`.
 
-**5. The overlay keeps the marker; `make imagens-do-release` applies the
-digest.** The repository does not declare which release is in production —
-whoever deploys decides that, when they deploy. What the repository holds is
-the record of what each tag published and the tool that applies it. The tool
-is `kustomize edit set image`, not `sed`: kustomize knows that
-`name=repo@sha256:…` means `newName` + `digest` and that `newTag` must go
-away, while a `sed` would get the text right and the schema wrong.
+**5. O overlay mantém o marcador; `make imagens-do-release` aplica o
+digest.** O repositório não declara qual release está em produção — quem faz
+o deploy decide isso, quando faz o deploy. O que o repositório guarda é o
+registro do que cada tag publicou e a ferramenta que o aplica. A ferramenta é
+`kustomize edit set image`, não `sed`: o kustomize sabe que
+`name=repo@sha256:…` significa `newName` + `digest` e que `newTag` tem de
+sair, enquanto um `sed` acertaria o texto e erraria o schema.
 
-**6. `brabo-backup` joins the overlays' `images:` block**, in both prod and
+**6. `brabo-backup` entra no bloco `images:` dos overlays**, em prod e em
 staging.
 
-## Consequences
+## Consequências
 
-- The production overlay names a real owner (`ghcr.io/daneiel/*`) instead of
-  a placeholder, and its four images resolve to something that exists.
-- **Applying digests rewrites the overlay file wholesale.** `kustomize edit`
-  round-trips the YAML: it reorders keys and detaches comments. That is
-  acceptable for a deploy-time operation and is why the result is explicitly
-  **not** meant to be committed — recorded in the file's own comment and in
-  the runbook, so the next person doesn't discover it in a diff.
-- A release now fails if any of the four targets comes back without a
-  digest. That is deliberate: three new images and one stale one in
-  production is worse than no release, and nothing in a partial file would
-  say an image was missing. Same discipline as batch `embed` (ADR 0075) —
-  a partial answer is undetectable afterwards.
-- **Still not done, and not claimed:** nothing deploys automatically. There
-  is no environment to deploy to, `DEPLOY_ENABLED` still does not exist, and
-  the `platform` gate stays `planned` (ADR 0091/0092). This ADR makes the
-  production overlay *executable*; it does not execute it.
-- **Not done either: signing or attesting the images.** No cosign signature,
-  no SLSA provenance. It belongs with the runner binaries' code-signing item
-  (ADR 0112), which is blocked on the same operator action — obtaining a
-  signing identity.
-- The first real execution of this path is the **next final tag**. Like
-  `build-runner-binaries.yml` (ADR 0112), the workflow is tag-triggered, so
-  it cannot be proven by a PR. The pure logic (`images-manifest.ts`,
-  `aplicar-imagens.ts`) is covered by tests; the bake rendering was verified
-  with `docker buildx bake --print` in both modes; the `kustomize edit` path
-  was executed for real against the prod overlay with a synthetic manifest.
-  What no test gives is GHCR accepting the push, and that waits for the tag.
+- O overlay de produção nomeia um dono real (`ghcr.io/daneiel/*`) em vez de
+  um marcador, e as suas quatro imagens resolvem para algo que existe.
+- **Aplicar os digests reescreve o arquivo do overlay inteiro.** O
+  `kustomize edit` faz ida e volta no YAML: reordena chaves e solta
+  comentários. Isso é aceitável numa operação de hora de deploy e é por isso
+  que o resultado explicitamente **não** é para ser commitado — registrado no
+  próprio comentário do arquivo e no runbook, para a próxima pessoa não
+  descobrir isso num diff.
+- Uma release agora falha se qualquer um dos quatro alvos voltar sem digest.
+  É deliberado: três imagens novas e uma velha em produção é pior que release
+  nenhuma, e nada num arquivo parcial diria que faltou uma imagem. A mesma
+  disciplina do `embed` em lote (ADR 0075) — uma resposta parcial é
+  indetectável depois.
+- **Ainda não feito, e não alegado:** nada faz deploy sozinho. Não há
+  ambiente para onde fazer deploy, `DEPLOY_ENABLED` continua não existindo, e
+  o gate `platform` fica `planned` (ADR 0091/0092). Este ADR torna o overlay
+  de produção *executável*; ele não o executa.
+- **Também não feito: assinar ou atestar as imagens.** Nenhuma assinatura
+  cosign, nenhuma proveniência SLSA. Isso pertence ao item de assinatura de
+  código dos binários do runner (ADR 0112), bloqueado na mesma ação do
+  operador — obter uma identidade de assinatura.
+- A primeira execução real deste caminho é a **próxima tag final**. Como o
+  `build-runner-binaries.yml` (ADR 0112), o workflow é disparado por tag,
+  então não pode ser provado por uma PR. A lógica pura (`images-manifest.ts`,
+  `aplicar-imagens.ts`) é coberta por testes; a renderização do bake foi
+  conferida com `docker buildx bake --print` nos dois modos; o caminho do
+  `kustomize edit` foi executado de verdade contra o overlay de prod com um
+  manifesto sintético. O que teste nenhum dá é o GHCR aceitando o push, e
+  isso espera a tag.
 
-## Alternatives considered
+## Alternativas consideradas
 
-**The release bot rewriting `kustomization.yaml` and pushing.** Rejected
-twice over: it would open a third push exception in a policy that has two,
-and it would let a tag decide by itself what is in production.
+**O bot de release reescrever o `kustomization.yaml` e fazer push.**
+Recusada por dois motivos: abriria uma terceira exceção de push numa política
+que tem duas, e deixaria uma tag decidir sozinha o que está em produção.
 
-**Private packages with an `imagePullSecret`.** Rejected: it adds a secret
-to create, reference in every namespace and rotate, to hide an image built
-from public code that carries no secret. The cost is real and continuous;
-the benefit, here, is not.
+**Pacotes privados com um `imagePullSecret`.** Recusada: acrescenta um
+segredo para criar, referenciar em cada namespace e rotacionar, para
+esconder uma imagem construída de código público que não carrega segredo. O
+custo é real e contínuo; o benefício, aqui, não é.
 
-**Pinning by the version tag instead of the digest.** Rejected for the
-reason the overlay had already written down before this ADR existed, and
-which the test now enforces: no argument emitted by `argumentosDeSetImage`
-may carry a `:tag`.
+**Prender pela tag de versão em vez do digest.** Recusada pelo motivo que o
+overlay já tinha escrito antes de este ADR existir, e que o teste agora
+impõe: nenhum argumento emitido por `argumentosDeSetImage` pode carregar uma
+`:tag`.

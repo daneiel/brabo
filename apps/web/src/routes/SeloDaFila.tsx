@@ -5,7 +5,7 @@ import { cancelQueuedAgentMessage } from '../lib/api-client';
 import { mensagemDaRecusaDoAgente } from '../lib/recusa-do-agente';
 import type { EstadoNaFila } from '../lib/fila-de-mensagens';
 import { useToast } from '../components/ui/ToastProvider';
-import { Button } from '../components/ui/Button';
+import { Queue } from '../components/ai-elements/queue';
 import { nomeDoAgente } from '../lib/agents';
 import styles from './SessionPage.module.css';
 
@@ -67,13 +67,17 @@ export function SeloDaFila({
   }
 
   return (
-    <span className={styles.seloDaFila} data-estado="naFila">
-      {t('fila.naFila', { agente: nomeDoAgente(estado.agente) })}
-      {podeCancelar && (
-        <Button size="sm" variant="ghost" loading={cancelando} onClick={cancelar}>
-          {t('fila.cancelar')}
-        </Button>
-      )}
-    </span>
+    <Queue
+      itens={[
+        {
+          id: mensagemId,
+          texto: t('fila.naFila', { agente: nomeDoAgente(estado.agente) }),
+          podeCancelar,
+        },
+      ]}
+      rotuloCancelar={t('fila.cancelar')}
+      onCancelar={() => void cancelar()}
+      desabilitado={cancelando}
+    />
   );
 }

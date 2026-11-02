@@ -4,29 +4,45 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   listCredentials,
   listModelCatalog,
+  listModelPriceChanges,
+  updateModelBilling,
+  updateModelPricing,
+  mensagemDaApi,
   setModelUses,
   setModelsActive,
   syncModelCatalog,
 } from '../lib/api-client';
 import type {
+  LLMProviderName,
   ModelComCuradoria,
   ResultadoDoSync,
   UsoDeModelo,
 } from '../lib/api-types';
 import {
+  COR_DO_PROVIDER,
   FACETAS,
   ROTULO_DO_PROVIDER,
   ROTULO_DO_USO,
   USOS_DE_MODELO,
   agruparModelos,
+  catalogoDoProvider,
+  providerAtivo,
+  providersSemCatalogo,
   formatarJanela,
   formatarPreco,
+  microsDoCampo,
   type Faceta,
 } from '../lib/models';
 import { Alert } from './ui/Alert';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { Disclosure } from './ui/Disclosure';
+import { Input } from './ui/Input';
+import { Select } from './ui/Select';
+import { useCurrentWorkspaceWithRole } from '../lib/hooks';
+import { roleAtLeast } from '../lib/roles';
+import { Tabs } from './ui/Tabs';
+import { useProvidersComChave } from '../lib/providers-com-chave';
 import { useToast } from './ui/ToastProvider';
 import { HuggingFaceModelBrowser } from './HuggingFaceModelBrowser';
 import styles from './ModelCatalogSection.module.css';
@@ -47,18 +63,14 @@ export function ModelCatalogSection({ workspaceId }: { workspaceId: string }) {
   const { t } = useTranslation('models');
   const queryClient = useQueryClient();
   const { showToast } = useToast();
+  const { data: comPapel } = useCurrentWorkspaceWithRole();
+  const podeEditarPreco = roleAtLeast(comPapel?.role, 'owner');
   const [marcados, setMarcados] = useState<Set<string>>(new Set());
   /**
-   * Dois conjuntos com POLARIDADE oposta, e é de propósito: cada um carrega o
-   * seu default no próprio nome.
-   *
-   * Grupos nascem ABERTOS (são três, e fechá-los de saída esconderia até o que
-   * é pequeno); subgrupos de fabricante nascem FECHADOS (são 58 no OpenRouter,
-   * e abri-los devolve a lista de 338 linhas que o agrupamento existe para
-   * evitar). Um único Set com "aberto" ou "fechado" para os dois exigiria semear
-   * um deles com dados que só chegam depois da query.
+   * Subgrupos de fabricante (OpenRouter) nascem FECHADOS: são 58, e abri-los
+   * devolve a lista de 338 linhas que o agrupamento existe para evitar.
    */
-  const [gruposFechados, setGruposFechados] = useState<Set<string>>(new Set());
+  const [abaEscolhida, setAbaEscolhida] = useState<string | null>(null);
   const [subgruposAbertos, setSubgruposAbertos] = useState<Set<string>>(
     new Set(),
   );
@@ -74,6 +86,14 @@ export function ModelCatalogSection({ workspaceId }: { workspaceId: string }) {
   );
   /** Os usos que a barra de lote vai APLICAR (substituindo) nos marcados. */
   const [usosDoLote, setUsosDoLote] = useState<Set<UsoDeModelo>>(new Set());
+  /**
+   * Busca por nome/id (RN-694). Com termo, todo grupo e subgrupo com resultado
+   * abre sozinho — achar um modelo entre 464 não pode exigir abrir o grupo
+   * certo antes. Os `Set`s de aberto/fechado ficam intactos e voltam a valer
+   * quando a busca é limpa.
+   */
+  const [busca, setBusca] = useState('');
+  const buscando = busca.trim() !== '';
 
   function alternarNoSet<T>(
     set: React.Dispatch<React.SetStateAction<Set<T>>>,
@@ -94,14 +114,6 @@ export function ModelCatalogSection({ workspaceId }: { workspaceId: string }) {
     });
   }
 
-  function alternarGrupo(kind: string) {
-    setGruposFechados((atual) => {
-      const proximo = new Set(atual);
-      if (!proximo.delete(kind)) proximo.add(kind);
-      return proximo;
-    });
-  }
-
   function alternarSubgrupo(upstream: string) {
     setSubgruposAbertos((atual) => {
       const proximo = new Set(atual);
@@ -116,46 +128,66 @@ export function ModelCatalogSection({ workspaceId }: { workspaceId: string }) {
     staleTime: FRESCOR_DA_CONFIGURACAO_MS,
   });
 
+  // Só `grupos` (já filtrado) importa aqui: o total sem filtro sai das abas.
   const grupos = useMemo(
     () =>
       catalogo
         ? agruparModelos(catalogo, {
             facetas: [...facetas],
             usos: [...usosFiltrados],
+            busca,
           })
         : [],
-    [catalogo, facetas, usosFiltrados],
+    [catalogo, facetas, usosFiltrados, busca],
   );
 
-  /** O total sem filtro, para dizer quanto o filtro escondeu em vez de só sumir. */
-  const totalSemFiltro = useMemo(
-    () =>
-      catalogo
-        ? agruparModelos(catalogo).reduce((n, g) => n + g.modelos.length, 0)
-        : 0,
-    [catalogo],
-  );
-  const totalVisivel = grupos.reduce((n, g) => n + g.modelos.length, 0);
-  const filtrando = facetas.size > 0 || usosFiltrados.size > 0;
+  const comChave = useProvidersComChave(workspaceId);
 
-  const todosOsUpstreams = grupos.flatMap((g) =>
-    (g.subgrupos ?? []).map((s) => s.upstream),
+  /**
+   * Uma aba por provider ATIVO (local ou com chave do titular, RN-058). Sem
+   * chave mas com modelo ATIVO continua como aba marcada, para dar para
+   * desativá-lo (RN-043); os demais sem chave não aparecem e entram na linha
+   * "de fora" (RN-180). Chave desconhecida mostra todos.
+   */
+  const { abas, deFora } = useMemo(() => {
+    if (!catalogo) return { abas: [], deFora: [] as LLMProviderName[] };
+    const todos = agruparModelos(catalogo).flatMap((g) => g.modelos);
+    const ordem = Object.keys(ROTULO_DO_PROVIDER);
+    const nomes = [...new Set(todos.map((m) => m.provider))].sort(
+      (a, b) => ordem.indexOf(a) - ordem.indexOf(b),
+    );
+    const abas: { provider: LLMProviderName; semChave: boolean; total: number }[] = [];
+    const deFora: LLMProviderName[] = [];
+    for (const provider of nomes) {
+      const meus = todos.filter((m) => m.provider === provider);
+      const semChave = !providerAtivo(provider, comChave);
+      if (!semChave || meus.some((m) => m.isActive)) {
+        abas.push({ provider, semChave, total: meus.length });
+      } else {
+        deFora.push(provider);
+      }
+    }
+    return { abas, deFora };
+  }, [catalogo, comChave]);
+
+  const naAba = (provider: LLMProviderName) => catalogoDoProvider(grupos, provider);
+  const totalSemFiltro = abas.reduce((n, a) => n + a.total, 0);
+  const totalVisivel = abas.reduce((n, a) => n + naAba(a.provider).modelos.length, 0);
+  const filtrando = facetas.size > 0 || usosFiltrados.size > 0 || buscando;
+  const abaAtiva =
+    abas.find((a) => a.provider === abaEscolhida) ?? abas[0] ?? null;
+  const atual = abaAtiva ? naAba(abaAtiva.provider) : null;
+  const comMatch = abas.filter(
+    (a) => a.provider !== abaAtiva?.provider && naAba(a.provider).modelos.length > 0,
   );
-  // "Tudo minimizado" é o que decide o que o botão OFERECE — ele mostra a ação,
-  // não o estado, para não fazer o usuário adivinhar o que vai acontecer.
-  const tudoMinimizado =
-    gruposFechados.size === grupos.length && subgruposAbertos.size === 0;
+
+  const todosOsUpstreams = (atual?.subgrupos ?? []).map((s) => s.upstream);
+  // O botão mostra a AÇÃO, não o estado, para não fazer ninguém adivinhar.
+  const tudoMinimizado = subgruposAbertos.size === 0;
 
   function alternarTudo() {
-    if (tudoMinimizado) {
-      setGruposFechados(new Set());
-      setSubgruposAbertos(new Set(todosOsUpstreams));
-    } else {
-      setGruposFechados(new Set(grupos.map((g) => g.kind)));
-      setSubgruposAbertos(new Set());
-    }
+    setSubgruposAbertos(tudoMinimizado ? new Set(todosOsUpstreams) : new Set());
   }
-
 
   const { data: credenciais } = useQuery({
     queryKey: ['credentials'],
@@ -174,19 +206,11 @@ export function ModelCatalogSection({ workspaceId }: { workspaceId: string }) {
    * Compara com o catálogo INTEIRO (ativos e inativos): o que interessa aqui é
    * "o sync já trouxe algo deste provider?", não a curadoria.
    */
-  const semCatalogo = useMemo(() => {
-    if (!credenciais || !catalogo) return [];
-    const comModelo = new Set(
-      Object.values(catalogo)
-        .flatMap((porGrupo) => Object.values(porGrupo).flat())
-        .map((m) => m.provider),
-    );
-    return credenciais
-      .map((c) => c.provider)
-      // `github`/`gitlab` são token de git, não dão modelo nenhum.
-      .filter((p): p is keyof typeof ROTULO_DO_PROVIDER => p in ROTULO_DO_PROVIDER)
-      .filter((p) => !comModelo.has(p));
-  }, [credenciais, catalogo]);
+  const semCatalogo = useMemo(
+    () =>
+      credenciais && catalogo ? providersSemCatalogo(credenciais, catalogo) : [],
+    [credenciais, catalogo],
+  );
 
   function invalidar() {
     void queryClient.invalidateQueries({
@@ -201,7 +225,27 @@ export function ModelCatalogSection({ workspaceId }: { workspaceId: string }) {
     mutationFn: () => syncModelCatalog(workspaceId),
     onSuccess: (resultado) => {
       invalidar();
-      showToast({ title: t('catalog.toasts.syncSuccess'), tone: 'success' });
+      // AT-372: o toast diz QUANTOS modelos o sync trouxe e leva ao próximo
+      // passo — ativar um. "Sincronizado" sozinho não dizia se veio algo.
+      const vieram = resultado.porProvider.reduce(
+        (soma, r) => soma + r.descobertos + r.reencontrados,
+        0,
+      );
+      showToast({
+        title: t('catalog.toasts.syncSuccess'),
+        message: t('catalog.toasts.syncCount', { count: vieram }),
+        tone: 'success',
+        acao:
+          vieram > 0
+            ? {
+                rotulo: t('catalog.toasts.syncActivateLink'),
+                aoClicar: () =>
+                  document
+                    .getElementById('catalogo-de-modelos-lista')
+                    ?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+              }
+            : undefined,
+      });
       return resultado;
     },
     onError: () =>
@@ -267,7 +311,7 @@ export function ModelCatalogSection({ workspaceId }: { workspaceId: string }) {
   }
 
   return (
-    <div className={styles.section}>
+    <div className={styles.section} id="catalogo-de-modelos-lista">
       <div className={styles.header}>
         <div>
           <div className={styles.tituloLinha}>
@@ -277,7 +321,7 @@ export function ModelCatalogSection({ workspaceId }: { workspaceId: string }) {
           <div className={styles.subtitle}>{t('catalog.subtitle')}</div>
         </div>
         <div className={styles.acoes}>
-          {grupos.length > 0 && (
+          {(atual?.subgrupos?.length ?? 0) > 0 && (
             <Button variant="ghost" onClick={alternarTudo}>
               {tudoMinimizado ? t('catalog.expandAll') : t('catalog.collapseAll')}
             </Button>
@@ -287,6 +331,21 @@ export function ModelCatalogSection({ workspaceId }: { workspaceId: string }) {
           </Button>
         </div>
       </div>
+
+      {totalSemFiltro > 0 && (
+        <input
+          type="search"
+          className={styles.busca}
+          aria-label={t('catalog.search.aria')}
+          placeholder={t('catalog.search.placeholder')}
+          value={busca}
+          onChange={(e) => setBusca(e.target.value)}
+        />
+      )}
+
+      {buscando && totalVisivel === 0 && (
+        <Alert tone="accent">{t('catalog.search.noMatch', { term: busca.trim() })}</Alert>
+      )}
 
       {totalSemFiltro > 0 && (
         <div className={styles.facetas}>
@@ -339,7 +398,7 @@ export function ModelCatalogSection({ workspaceId }: { workspaceId: string }) {
         </div>
       )}
 
-      {filtrando && totalVisivel === 0 && (
+      {filtrando && !buscando && totalVisivel === 0 && (
         <Alert tone="accent">
           {t('catalog.filteredEmpty.prefix')}
           <strong>{t('catalog.filteredEmpty.thisWorkspace')}</strong>
@@ -408,6 +467,9 @@ export function ModelCatalogSection({ workspaceId }: { workspaceId: string }) {
               ? t('catalog.batchBar.applyUses')
               : t('catalog.batchBar.clearUses')}
           </Button>
+          {/* A explicação do lote mora numa LINHA PRÓPRIA (AT-373): ao lado
+              dos botões ela virava coluna estreita e empurrava a barra além
+              da largura da página. */}
         </div>
       )}
 
@@ -418,48 +480,47 @@ export function ModelCatalogSection({ workspaceId }: { workspaceId: string }) {
         <div className={styles.vazio}>{t('catalog.empty')}</div>
       )}
 
-      {/* Migrado para o `Disclosure` do design system na Onda 4/frente H4 —
-          era a implementação de REFERÊNCIA que ditou a semântica do
-          componente (grupos, subgrupos, `aria-expanded`, "minimizar tudo"),
-          mas nunca tinha sido convertida para consumi-lo. Os dois `Set`s
-          (`gruposFechados`/`subgruposAbertos`) continuam sendo a fonte de
-          verdade — `Disclosure` só fica CONTROLADO por eles via `aberto`/
-          `onAlternar`, sem duplicar estado. */}
-      {grupos.map((grupo) => {
-        const abertoGrupo = !gruposFechados.has(grupo.kind);
-        return (
-          <Disclosure
-            key={grupo.kind}
-            className={styles.grupo}
-            classNameCabecalho={styles.grupoTitulo}
-            aberto={abertoGrupo}
-            onAlternar={() => alternarGrupo(grupo.kind)}
-            titulo={
-              <>
-                {grupo.rotulo}
-                {/* "Hubs" sozinho não diz de QUEM é o catálogo — e preço,
-                    disponibilidade e credencial pertencem ao hub, não ao
-                    fabricante do modelo. Nos outros grupos o provider já é
-                    evidente na linha. */}
-                {grupo.kind === 'hub' && (
-                  <span className={styles.grupoProvedores}>
-                    ·{' '}
-                    {grupo.provedores
-                      .map((p) => ROTULO_DO_PROVIDER[p] ?? p)
-                      .join(', ')}
-                  </span>
-                )}
-              </>
-            }
-            trailing={grupo.modelos.length}
-          >
+      {deFora.length > 0 && (
+        <p className={styles.subtitle}>
+          {t('catalog.tabs.outside', {
+            count: deFora.length,
+            names: deFora.map((p) => ROTULO_DO_PROVIDER[p] ?? p).join(', '),
+          })}
+        </p>
+      )}
+
+      {abas.length > 0 && abaAtiva && atual && (
+        <>
+          <Tabs
+            items={abas.map((a) => ({
+              key: a.provider,
+              label: a.semChave
+                ? `${ROTULO_DO_PROVIDER[a.provider] ?? a.provider} · ${t('catalog.tabs.noKey')}`
+                : (ROTULO_DO_PROVIDER[a.provider] ?? a.provider),
+              count: naAba(a.provider).modelos.length,
+              cor: COR_DO_PROVIDER[a.provider],
+            }))}
+            active={abaAtiva.provider}
+            onChange={setAbaEscolhida}
+          />
+          <div role="tabpanel" aria-label={t('catalog.tabs.aria')}>
+            {abaAtiva.semChave && <Alert tone="warning">{t('catalog.tabs.noKeyNote')}</Alert>}
+            {filtrando && atual.modelos.length === 0 && comMatch.length > 0 && (
+              <Alert tone="accent">
+                {t('catalog.tabs.noMatchHere', {
+                  provider: ROTULO_DO_PROVIDER[abaAtiva.provider] ?? abaAtiva.provider,
+                  tabs: comMatch
+                    .map((a) => ROTULO_DO_PROVIDER[a.provider] ?? a.provider)
+                    .join(', '),
+                })}
+              </Alert>
+            )}
             {/* Um hub serve o catálogo de dezenas de fabricantes numa lista só
                 — 338, no caso do OpenRouter. Repartir por quem serve por baixo
-                é o que torna a lista navegável; sem isso, achar o Claude é
-                rolagem. */}
-            {grupo.subgrupos
-              ? grupo.subgrupos.map((sub) => {
-                  const aberto = subgruposAbertos.has(sub.upstream);
+                é o que torna a lista navegável. */}
+            {atual.subgrupos
+              ? atual.subgrupos.map((sub) => {
+                  const aberto = buscando || subgruposAbertos.has(sub.upstream);
                   const marcadosAqui = sub.modelos.filter((m) =>
                     marcados.has(m.id),
                   ).length;
@@ -493,24 +554,31 @@ export function ModelCatalogSection({ workspaceId }: { workspaceId: string }) {
                           model={model}
                           marcado={marcados.has(model.id)}
                           onToggle={() => alternar(model.id)}
+ workspaceId={workspaceId}
+ podeEditar={podeEditarPreco}
+ aoSalvar={invalidar}
                         />
                       ))}
                     </Disclosure>
                   );
                 })
-              : grupo.modelos.map((model) => (
+              : atual.modelos.map((model) => (
                   <LinhaDoCatalogo
                     key={model.id}
                     model={model}
                     marcado={marcados.has(model.id)}
                     onToggle={() => alternar(model.id)}
+ workspaceId={workspaceId}
+ podeEditar={podeEditarPreco}
+ aoSalvar={invalidar}
                   />
                 ))}
-          </Disclosure>
-        );
-      })}
+          </div>
+        </>
+      )}
 
       <HuggingFaceModelBrowser workspaceId={workspaceId} />
+      {marcados.size > 0 && <div className={styles.respiroDaBarraDeLote} aria-hidden="true" />}
     </div>
   );
 }
@@ -565,16 +633,23 @@ function LinhaDoCatalogo({
   model,
   marcado,
   onToggle,
+  workspaceId,
+  podeEditar,
+  aoSalvar,
 }: {
   model: ModelComCuradoria;
   marcado: boolean;
   onToggle: () => void;
+  workspaceId: string;
+  podeEditar: boolean;
+  aoSalvar: () => void;
 }) {
   const { t } = useTranslation('models');
   const janela = formatarJanela(model);
   const indisponivel = model.availability === 'unavailable';
 
   return (
+    <>
     <label
       className={[styles.linha, indisponivel && styles.linhaIndisponivel]
         .filter(Boolean)
@@ -614,6 +689,13 @@ function LinhaDoCatalogo({
           <Badge tone="accent">{t('badges.generatesImage')}</Badge>
         )}
         {model.manualPricing && <Badge tone="muted">{t('badges.manualPricing')}</Badge>}
+        {model.sugestao?.cobranca && (
+          <Badge tone="muted">
+            {t('priceEditor.suggestedBand', {
+              faixa: t(`priceEditor.${model.sugestao.cobranca}`),
+            })}
+          </Badge>
+        )}
         {/* Uso vem depois das capabilities e com tom próprio: uma é o que o
             provider prova, a outra é o que este workspace decidiu. */}
         {model.uses.map((u) => (
@@ -623,5 +705,220 @@ function LinhaDoCatalogo({
         ))}
       </span>
     </label>
+    <EditorDePreco
+      model={model}
+      workspaceId={workspaceId}
+      podeEditar={podeEditar}
+      aoSalvar={aoSalvar}
+    />
+    </>
   );
 }
+
+type Cobranca = 'api' | 'subscription' | 'free';
+
+/**
+ * Editor inline de preço e cobrança. Mora FORA do `<label>` da linha (o
+ * checkbox do lote não pode herdar o clique). Só o owner edita; quem vê
+ * recebe o motivo em texto (ADR 0064). O preço é da instalação (ADR 0049).
+ */
+function EditorDePreco({
+  model,
+  workspaceId,
+  podeEditar,
+  aoSalvar,
+}: {
+  model: ModelComCuradoria;
+  workspaceId: string;
+  podeEditar: boolean;
+  aoSalvar: () => void;
+}) {
+  const { t, i18n } = useTranslation('models');
+  const { showToast } = useToast();
+  const [aberto, setAberto] = useState(false);
+  const emUsd = (m: number) => String(m / 1_000_000);
+  const [entrada, setEntrada] = useState(emUsd(model.inputPricePerMillionMicros));
+  const [saida, setSaida] = useState(emUsd(model.outputPricePerMillionMicros));
+  const [erro, setErro] = useState<string | null>(null);
+  const { data: historico } = useQuery({
+    queryKey: ['model-price-changes', workspaceId, model.id],
+    queryFn: () => listModelPriceChanges(workspaceId, model.id),
+    enabled: aberto,
+    staleTime: FRESCOR_DA_CONFIGURACAO_MS,
+  });
+  const queryClient = useQueryClient();
+  const aposSalvar = () => {
+    aoSalvar();
+    void queryClient.invalidateQueries({
+      queryKey: ['model-price-changes', workspaceId, model.id],
+    });
+  };
+  const falha = (e: unknown) => setErro(mensagemDaApi(e, t('priceEditor.invalid')));
+
+  const salvarPreco = useMutation({
+    mutationFn: (v: { i: number; o: number }) =>
+      updateModelPricing(workspaceId, model.id, {
+        inputPricePerMillionMicros: v.i,
+        outputPricePerMillionMicros: v.o,
+      }),
+    onSuccess: () => {
+      setErro(null);
+      aposSalvar();
+      showToast({ title: t('priceEditor.saved') });
+    },
+    onError: falha,
+  });
+  const trocarCobranca = useMutation({
+    mutationFn: (b: Cobranca) => updateModelBilling(workspaceId, model.id, b),
+    onSuccess: () => {
+      setErro(null);
+      aposSalvar();
+    },
+    onError: falha,
+  });
+
+  const sug = model.sugestao;
+  const preco = sug?.preco ?? null;
+  const jaAplicado =
+    (!preco ||
+      (preco.entradaMicros === model.inputPricePerMillionMicros &&
+        preco.saidaMicros === model.outputPricePerMillionMicros)) &&
+    (!sug?.cobranca || sug.cobranca === (model.billing ?? 'api'));
+  const [aplicando, setAplicando] = useState(false);
+  // Duas rotas em série, desfecho POR PASSO (RN-469): nenhuma / algumas / todas.
+  async function aplicarSugerido() {
+    if (!sug) return;
+    setAplicando(true);
+    setErro(null);
+    let feitos = 0;
+    const total = (preco ? 1 : 0) + (sug.cobranca ? 1 : 0);
+    try {
+      if (preco) {
+        await updateModelPricing(workspaceId, model.id, {
+          inputPricePerMillionMicros: preco.entradaMicros,
+          outputPricePerMillionMicros: preco.saidaMicros,
+        });
+        feitos++;
+        setEntrada(emUsd(preco.entradaMicros));
+        setSaida(emUsd(preco.saidaMicros));
+      }
+      if (sug.cobranca) {
+        await updateModelBilling(workspaceId, model.id, sug.cobranca);
+        feitos++;
+      }
+      showToast({ title: t('priceEditor.applied') });
+    } catch (e) {
+      const frase = mensagemDaApi(e, t('priceEditor.invalid'));
+      setErro(
+        feitos === 0
+          ? frase
+          : t('priceEditor.appliedPartial', { feitos, total, frase }),
+      );
+    } finally {
+      setAplicando(false);
+      if (feitos > 0) aposSalvar();
+    }
+  }
+
+  function salvar() {
+    const i = microsDoCampo(entrada);
+    const o = microsDoCampo(saida);
+    if (i === null || o === null) return setErro(t('priceEditor.invalid'));
+    salvarPreco.mutate({ i, o });
+  }
+  const micros = (m: number) => usd1m.format(m / 1_000_000);
+
+  return (
+    <Disclosure
+      titulo={t('priceEditor.open')}
+      aberto={aberto}
+      onAlternar={setAberto}
+    >
+      <p>{t('priceEditor.scope')}</p>
+      {!podeEditar && <p>{t('priceEditor.ownerOnly')}</p>}
+      {preco && (
+        <p>
+          {t('priceEditor.suggested', {
+            entrada: micros(preco.entradaMicros),
+            saida: micros(preco.saidaMicros),
+            fabricante: preco.fabricante,
+            data: preco.conferidoEm,
+          })}{' '}
+          <a href={preco.fonte} target="_blank" rel="noreferrer">
+            {t('priceEditor.source')}
+          </a>
+          {preco.observacao && ` — ${preco.observacao}`}
+        </p>
+      )}
+      {sug &&
+        (preco || sug.cobranca) &&
+        (jaAplicado ? (
+          <p>{t('priceEditor.alreadyApplied')}</p>
+        ) : (
+          <Button
+            onClick={() => void aplicarSugerido()}
+            disabled={!podeEditar || aplicando}
+          >
+            {t('priceEditor.apply')}
+          </Button>
+        ))}
+      <Input
+        label={t('priceEditor.input')}
+        inputMode="decimal"
+        value={entrada}
+        disabled={!podeEditar}
+        onChange={(e) => setEntrada(e.target.value)}
+      />
+      <Input
+        label={t('priceEditor.output')}
+        inputMode="decimal"
+        value={saida}
+        disabled={!podeEditar}
+        onChange={(e) => setSaida(e.target.value)}
+      />
+      <label>
+        {t('priceEditor.billing')}
+        <Select
+          value={model.billing ?? 'api'}
+          disabled={!podeEditar || trocarCobranca.isPending}
+          onChange={(e) => trocarCobranca.mutate(e.target.value as Cobranca)}
+        >
+          <option value="api">{t('priceEditor.api')}</option>
+          <option value="subscription">{t('priceEditor.subscription')}</option>
+          <option value="free">{t('priceEditor.free')}</option>
+        </Select>
+      </label>
+      {erro && <Alert tone="danger">{erro}</Alert>}
+      <Button
+        onClick={salvar}
+        disabled={!podeEditar || salvarPreco.isPending}
+      >
+        {t('priceEditor.save')}
+      </Button>
+      <h4>{t('priceEditor.history')}</h4>
+      {historico && historico.length === 0 && <p>{t('priceEditor.historyEmpty')}</p>}
+      <ul>
+        {(historico ?? []).map((h) => (
+          <li key={h.id}>
+            {t('priceEditor.historyRow', {
+              antes: `${micros(h.inputBeforeMicros)} / ${micros(h.outputBeforeMicros)}`,
+              depois: `${micros(h.inputAfterMicros)} / ${micros(h.outputAfterMicros)}`,
+              origem: t(
+                h.source === 'manual'
+                  ? 'priceEditor.sourceManual'
+                  : 'priceEditor.sourceSync',
+              ),
+              quando: new Date(h.createdAt).toLocaleString(i18n.language),
+            })}
+          </li>
+        ))}
+      </ul>
+    </Disclosure>
+  );
+}
+
+const usd1m = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+  maximumFractionDigits: 6,
+});

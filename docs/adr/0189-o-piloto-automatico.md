@@ -1,4 +1,4 @@
-# 0189 — O piloto automático: o modo automático aprova tudo, menos os tetos, o escopo compara com a pasta real de execução, e "Sempre permitir" grava verbo + subcomando
+# ADR 0189 — O piloto automático: o modo automático aprova tudo, menos os tetos, o escopo compara com a pasta real de execução, e "Sempre permitir" grava verbo + subcomando
 
 ## Status
 

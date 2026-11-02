@@ -98,6 +98,29 @@ describe('Table — layout estreito', () => {
     expect(screen.queryAllByTestId('linha-da-tabela')).toHaveLength(0);
     expect(screen.getAllByText('Nome')).toHaveLength(1);
     expect(container.querySelector('[style*="grid-template-columns"]')).not.toBeNull();
+    expect(container.querySelectorAll('[data-slot="grade-cabecalho"]')).toHaveLength(1);
+  });
+
+  it('sem linhas mostra a mensagem vazia', () => {
+    render(<Table columns={colunas} rows={[]} rowKey={(r) => r.nome} emptyMessage="Nada aqui" />);
+    expect(screen.getByText('Nada aqui')).toHaveAttribute('data-slot', 'grade-vazia');
+  });
+
+  it('largaNoMovel e coluna sem rótulo marcam o campo como largo', () => {
+    largura = simularLayoutMovel(true);
+    const { container } = render(
+      <Table
+        columns={[
+          { key: 'nome', label: 'Nome', render: () => 'x' },
+          { key: 'sel', label: 'Sel', largaNoMovel: true, render: () => 'y' },
+          { key: 'acao', label: '', render: () => 'z' },
+        ]}
+        rows={[{ id: 1 }]}
+        rowKey={(r) => String(r.id)}
+      />,
+    );
+    const largo = (k: string) => container.querySelector(`[data-campo="${k}"]`)!.hasAttribute('data-largo');
+    expect([largo('nome'), largo('sel'), largo('acao')]).toEqual([false, true, true]);
   });
 
   it('cruzar o corte troca o desenho sem remontar a tela', () => {

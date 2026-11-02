@@ -62,7 +62,7 @@ const ProjectSettingsTab = painel(() => import('./ProjectSettingsTab'), 'Project
  *
  * PROGRAMA de abas agrupadas — Onda 1: a navegação ganhou um segundo nível
  * (`grupo`, abaixo — desde o ADR 0126 os três grupos ficam abertos ao mesmo
- * tempo num trilho vertical, `routes/ProjectRail.tsx`) e duas chaves novas ainda em placeholder (`prs`,
+ * tempo — desde o ADR 0211 na lista do projeto da sidebar, `routes/AbasDoProjeto.tsx`) e duas chaves novas ainda em placeholder (`prs`,
  * `arquitetura` — Ondas 2/3 entregam o conteúdo real). A fusão mais visível
  * desta onda: `sessions` ("Chat") e `rag` ("Chat RAG") viraram UMA aba só,
  * `chat`, com um controle segmentado por dentro (`ProjectChatShell.tsx`) —
@@ -375,6 +375,24 @@ export const ABAS_DO_PROJETO: readonly AbaDoProjeto[] = [...REGISTRO].sort(
 /** A primeira aba é o default de quem abre o projeto sem `?tab=`. */
 export const ABA_PADRAO: ChaveDeAba = 'overview';
 
+/**
+ * A aba que a ROTA implica quando a moldura do projeto não está montada
+ * (AT-442): na tela de Sessão (`/projects/<id>/sessions/<sid>`) é o Chat —
+ * a sidebar marcava "Visão geral", o padrão. `undefined` fora dessas rotas.
+ */
+export function abaDaRota(
+  pathname: string,
+  projectId: string,
+  // AT-463: o tipo da sessão aberta decide — criativa é "Criativo", onde a
+  // ideação está listada; sem ele (sessão ainda carregando), "Chat".
+  abaDaSessao?: { projectId: string; tab: string } | null,
+): ChaveDeAba | undefined {
+  if (!pathname.startsWith(`/projects/${projectId}/sessions/`)) return undefined;
+  return abaDaSessao?.projectId === projectId && ehChaveDeAba(abaDaSessao.tab)
+    ? abaDaSessao.tab
+    : 'chat';
+}
+
 export const CHAVES_DE_ABA: readonly ChaveDeAba[] = ABAS_DO_PROJETO.map(
   (aba) => aba.key as ChaveDeAba,
 );
@@ -412,6 +430,8 @@ export function abaPorChave(chave: string | undefined): AbaDoProjeto {
 const ALIASES_DE_ABA: Readonly<Record<string, ChaveDeAba>> = {
   sessions: 'chat',
   rag: 'chat',
+  // AT-394: o rótulo da aba é "Histórias", e é isso que se digita na URL.
+  historias: 'backlog',
 };
 
 /**
@@ -439,7 +459,7 @@ export function resolverChaveDeAba(valor: unknown): ChaveDeAba | undefined {
  * `AbaDoProjeto`); `ordem` de uma aba solta é a dela mesma.
  *
  * Só a ESTRUTURA sai daqui — quem resolve `count` contra `ContagensDeAba` e
- * monta os itens que `ProjectRail` consome é `ProjectPage.tsx`, mesma
+ * monta os itens que a sidebar consome é `itensDasAbas` (`AbasDoProjeto.tsx`), mesma
  * divisão de responsabilidade que já existia entre este arquivo e
  * `ABAS_DO_PROJETO`.
  */

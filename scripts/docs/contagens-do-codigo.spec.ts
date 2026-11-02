@@ -75,10 +75,8 @@ describe('contagens derivadas do código (AT-123)', () => {
     ['goldenSetRagCorpus', { arquivo: 'apps/api/scripts/seed-golden-set-rag.ts', de: 'const ARQUIVOS_CURADOS = [', para: "const ARQUIVOS_CURADOS = [\n  'docs/x.md'," }],
     ['goldenSetRagPiso', { arquivo: 'apps/engine/test/fixtures/golden_set_rag/floor.json', de: '"passRate": 17', para: '"passRate": 16' }],
     ['imagensPublicadas', { arquivo: 'scripts/ci/images-manifest.ts', de: 'export const ALVOS = [', para: "export const ALVOS = ['x-y', " }],
-    ['imagensNonRootNoSmoke', { arquivo: 'docker/smoke.sh', de: /for svc in ([^;]+); do/, para: 'for svc in $1 broker; do' }],
     ['operacoesDoGit', { arquivo: 'packages/shared/src/index.ts', de: 'export interface GitProviderContract {', para: 'export interface GitProviderContract {\n  deleteRepo(input: unknown): Promise<void>;' }],
     ['operacoesDoDocker', { arquivo: 'packages/docker-port/src/docker-port.ts', de: 'export abstract class DockerPort {', para: 'export abstract class DockerPort {\n  abstract logs(x: string): Promise<string>;' }],
-    ['abasDoProjeto', { arquivo: 'apps/web/src/routes/project-tabs.ts', de: 'const REGISTRO = [', para: "const REGISTRO = [\n  {\n    key: 'nova',\n  }," }],
     ['servicosDoComposeDeDev', { arquivo: 'docker/docker-compose.yml', de: /^services:\n/m, para: 'services:\n  novo:\n    image: x\n\n' }],
     ['tiposDeAcao', { arquivo: 'apps/api/src/domain/actions/decide.ts', de: /export const ACTION_TYPES: readonly ActionType\[\] = \[/, para: "export const ACTION_TYPES: readonly ActionType[] = [\n  'novo_tipo'," }],
     ['estadosDeAcao', { arquivo: 'apps/api/src/db/schema/actions.ts', de: "pgEnum('action_status', [", para: "pgEnum('action_status', [\n  'novo'," }],
@@ -97,7 +95,7 @@ describe('contagens derivadas do código (AT-123)', () => {
   });
 
   it('as contagens externas (schemas, providers) comparam contra o número que generate.mjs passa', () => {
-    const outro = { ...contexto(), externas: { schemas: 12, providers: 10 } };
+    const outro = { ...contexto(), externas: { schemas: 13, providers: 12 } };
     const resultados = aferirContagens(outro);
     const externas = resultados.filter((_, i) => FONTES_EXTERNAS.has(AFERICOES[i]!.fonte));
     expect(new Set(externas.map((r) => r.estado))).toEqual(new Set(['DESATUAL']));
@@ -124,14 +122,14 @@ describe('contagens derivadas do código (AT-123)', () => {
 
   it('a frase sumir é CEGO', () => {
     const ctx = contexto([
-      { arquivo: 'docs/glossary.md', de: 'executes directly.', para: 'runs directly.' },
+      { arquivo: 'docs/glossary.md', de: 'nunca executa direto.', para: 'nunca roda direto.' },
     ]);
     expect(estadosDa('tiposDeAcao', ctx)).toEqual(['CEGO']);
   });
 
   it('mudar a PROSA sem mudar o artefato reprova como DESATUAL', () => {
     const ctx = contexto([
-      { arquivo: 'CLAUDE.md', de: /já são (\S+) na raiz/, para: 'já são treze na raiz' },
+      { arquivo: '.claude/contexto/stack.md', de: /já são (\S+(?: e \S+)?) na raiz/, para: 'já são treze na raiz' },
     ]);
     expect(estadosDa('overridesRaiz', ctx)).toEqual(['DESATUAL']);
   });

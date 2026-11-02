@@ -24,6 +24,8 @@
  *   - LINHA     no índice, linha de ADR (`| [NNNN](…) |`) sob a seção de outro
  *               tema, fora de qualquer seção de tema, repetida, ou fora da
  *               ordem numérica dentro da seção.
+ *   - TITULO    H1 do ADR fora de `# ADR NNNN — <título>`, ou com número
+ *               diferente do do arquivo (ADR 0218).
  *
  * E o check cego: YAML ilegível, `temas:` ou `adrs:` vazios, ou nenhuma seção
  * de tema no índice é `CEGO` e reprova — uma aferição que não achou o que
@@ -44,11 +46,12 @@ const LINHA_DE_ADR = /^\|\s*\[(\d{4})\]\(/;
 
 /**
  * @param {{ temasYml: string, arquivosAdr: string[], indice: string }} entrada
- *   `arquivosAdr` são nomes como `0001-x.md` (sem diretório).
+ *   `arquivosAdr` são nomes como `0001-x.md` (sem diretório); `titulosAdr`
+ *   mapeia esse nome para o primeiro `# ` do arquivo.
  * @returns {{ cego: string|null, problemas: {regra: string, motivo: string}[],
  *   temas: number, adrs: number }}
  */
-export function conferirTemas({ temasYml, arquivosAdr, indice }) {
+export function conferirTemas({ temasYml, arquivosAdr, indice, titulosAdr = {} }) {
   const problemas = [];
   const falha = (regra, motivo) => problemas.push({ regra, motivo });
   const cego = (motivo) => ({ cego: motivo, problemas: [], temas: 0, adrs: 0 });
@@ -94,6 +97,9 @@ export function conferirTemas({ temasYml, arquivosAdr, indice }) {
   }
   for (const n of [...existentes].sort()) {
     if (!temaDe.has(n)) falha('SEM-TEMA', `ADR ${n} não tem tema em ${TEMAS}`);
+  }
+  for (const [arquivo, h1] of Object.entries(titulosAdr)) {
+    if (!h1?.startsWith(`# ADR ${arquivo.slice(0, 4)} — `)) falha('TITULO', `${arquivo}: o H1 deve ser \`# ADR ${arquivo.slice(0, 4)} — <título>\` (ADR 0218), é "${h1 ?? ''}"`);
   }
   const usados = new Set(temaDe.values());
   for (const id of tituloDe.keys()) {
@@ -165,4 +171,25 @@ export function conferirTemas({ temasYml, arquivosAdr, indice }) {
   }
 
   return { cego: null, problemas, temas: tituloDe.size, adrs: temaDe.size };
+}
+
+/**
+ * Lane que acrescenta ADR às vezes escreve `"0209": tema` na COLUNA 0 — o YAML
+ * a lê como chave de topo, e o ADR fica SEM-TEMA. Recuo é derivável (é o das
+ * outras entradas de `adrs:`), então o `pnpm docs:generate` o acerta (AT-399).
+ * Só mexe em linhas DEPOIS de `adrs:`.
+ */
+export function corrigirRecuo(yml) {
+  const linhas = yml.split('\n');
+  const inicio = linhas.findIndex((l) => /^adrs:\s*$/.test(l));
+  if (inicio < 0) return yml;
+  const recuo =
+    linhas
+      .slice(inicio + 1)
+      .map((l) => /^(\s+)"?\d{4}"?:/.exec(l))
+      .find(Boolean)?.[1] ?? '  ';
+  for (let i = inicio + 1; i < linhas.length; i++) {
+    if (/^"?\d{4}"?:/.test(linhas[i])) linhas[i] = recuo + linhas[i];
+  }
+  return linhas.join('\n');
 }

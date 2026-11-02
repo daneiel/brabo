@@ -11,6 +11,28 @@ function ctx(overrides: Partial<DecideContext> = {}): DecideContext {
   };
 }
 
+describe('qa_environment_start (AT-612, RN-936)', () => {
+  it('semeada auto_approve, um developer a executa sem clique', () => {
+    const r = decide(
+      { actionType: 'qa_environment_start' },
+      ctx({ autonomyMode: 'auto_approve' }),
+    );
+    expect(r.policy).toBe('auto_approve');
+  });
+
+  it('sem a semente pede aprovação, e viewer é negado', () => {
+    expect(decide({ actionType: 'qa_environment_start' }, ctx()).policy).toBe(
+      'require_approval',
+    );
+    expect(
+      decide(
+        { actionType: 'qa_environment_start' },
+        ctx({ effectiveRole: 'viewer', autonomyMode: 'auto_approve' }),
+      ).policy,
+    ).toBe('deny');
+  });
+});
+
 describe('decide', () => {
   it('sem regra em nenhum estágio, cai em require_approval (pending)', () => {
     const result = decide(
@@ -1093,12 +1115,14 @@ describe('decide — modo automático libera o escopo de caminho (RN-603)', () =
     expect(result.policy).toBe('auto_approve');
   });
 
-  it('`git push` continua pedindo aprovação em modo automático (RN-418)', () => {
+  // Invertido pela RN-713 (ADR 0204): o nome guarda a origem (RN-418).
+  it('`git push` continua pedindo aprovação em modo automático (RN-418) — até a RN-713, que o libera', () => {
     const result = decide(
       { actionType: 'terminal', command: 'cd /work && git push origin dev' },
       automatico(),
     );
-    expect(result.policy).toBe('require_approval');
+    expect(result.policy).toBe('auto_approve');
+    expect(result.reason).toMatch(/modo automático \(RN-713\)/);
   });
 
   it('`sudo` continua pedindo aprovação em modo automático (RN-418)', () => {
@@ -1238,10 +1262,21 @@ describe('decide — piloto automático: commit e branch local livres (RN-670)',
     }
   });
 
+  // RN-713 (ADR 0204): push e PR saíram desta lista — o piloto os libera.
+  it.each(['git push origin feature/x', 'gh pr create --fill'])(
+    '`%s` é auto-aprovado no piloto (RN-713)',
+    (command) => {
+      expect(
+        decide({ actionType: 'terminal', command, cwd: '/work' }, piloto())
+          .policy,
+      ).toBe('auto_approve');
+    },
+  );
+
   it.each([
-    'git push origin feature/x',
     'git merge feature/x',
-    'gh pr create --fill',
+    'gh pr merge 3',
+    'sudo apt-get install jq',
     'kubectl apply -f k8s/',
     'doas rm -rf /work/node_modules',
   ])('`%s` segue pedindo aprovação no piloto (teto absoluto)', (command) => {
@@ -1376,7 +1411,9 @@ describe('decide — o teto da RN-418 nas ações tipadas (RN-689)', () => {
   const TIPADAS = ['git_push', 'pr_open'] as const;
 
   for (const tipo of TIPADAS) {
-    it(`\`${tipo}\` com o curinga do piloto automático pede aprovação`, () => {
+    // Invertido pela RN-713 (ADR 0204, decisão do dono de 02/10): o nome
+    // guarda a origem (RN-689); o modo automático passou a liberar push/PR.
+    it(`\`${tipo}\` com o curinga do piloto automático pede aprovação — até a RN-713, que o auto-aprova`, () => {
       const r = decide(
         { actionType: tipo },
         ctx({
@@ -1385,9 +1422,21 @@ describe('decide — o teto da RN-418 nas ações tipadas (RN-689)', () => {
           autonomyOrigin: 'curinga',
         }),
       );
-      expect(r.policy).toBe('require_approval');
-      expect(r.reason).toMatch(/RN-418/);
+      expect(r.policy).toBe('auto_approve');
+      expect(r.reason).toMatch(/RN-713/);
       expect(r.reason).toContain(tipo);
+    });
+
+    it(`\`${tipo}\` com o curinga em require_approval (toggle manual) pede aprovação`, () => {
+      const r = decide(
+        { actionType: tipo },
+        ctx({
+          effectiveRole: 'maintainer',
+          autonomyMode: 'require_approval',
+          autonomyOrigin: 'curinga',
+        }),
+      );
+      expect(r.policy).toBe('require_approval');
     });
 
     it(`\`${tipo}\` com regra ESPECÍFICA em auto_approve pede aprovação`, () => {
@@ -1443,5 +1492,39 @@ describe('decide — o teto da RN-418 nas ações tipadas (RN-689)', () => {
       }),
     );
     expect(r.policy).toBe('auto_approve');
+  });
+});
+
+describe('decide — run.app na PR de infra e container_recreate (AT-610/608)', () => {
+  const infra = { actionType: 'open_infra_pr' as const };
+  const comApp = { ...infra, comAppDeclarado: true };
+  const base = {
+    effectiveRole: 'maintainer' as const,
+    autonomyMode: 'auto_approve' as const,
+  };
+
+  it('sem app + regra específica: auto_approve', () => {
+    expect(
+      decide(infra, ctx({ ...base, autonomyOrigin: 'especifica' })).policy,
+    ).toBe('auto_approve');
+  });
+  it('com app + regra específica: require_approval', () => {
+    const r = decide(comApp, ctx({ ...base, autonomyOrigin: 'especifica' }));
+    expect(r.policy).toBe('require_approval');
+    expect(r.reason).toMatch(/run\.app/);
+  });
+  it('com app + curinga (piloto automático): auto_approve', () => {
+    expect(
+      decide(comApp, ctx({ ...base, autonomyOrigin: 'curinga' })).policy,
+    ).toBe('auto_approve');
+  });
+  it('container_recreate nunca é auto-aprovável, nem com a curinga', () => {
+    const recriar = { actionType: 'container_recreate' as const };
+    expect(
+      decide(recriar, ctx({ ...base, autonomyOrigin: 'curinga' })).policy,
+    ).toBe('require_approval');
+    expect(decide(recriar, ctx({ effectiveRole: 'developer' })).policy).toBe(
+      'deny',
+    );
   });
 });

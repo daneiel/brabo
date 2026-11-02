@@ -24,7 +24,7 @@ defmodule Engine.Gates.AppSecAgent do
 
   alias Engine.Gates.Hooks.AppSecTermination
   alias Engine.Gates.Tools.EmitThreatModel
-  alias Engine.Harness.Tools.{ReadFile, SearchWorkspace, RagSearch, RagFeedback}
+  alias Engine.Harness.Tools.{RegistrarPlano, ReadFile, SearchWorkspace, RagSearch, RagFeedback}
   alias Engine.Harness.{Hooks, ToolLoop}
   alias Engine.Harness.Hooks.{ActionPipeline, EventLog}
 
@@ -34,7 +34,7 @@ defmodule Engine.Gates.AppSecAgent do
   # RagFeedback anda junto de RagSearch (RN-480): buscar sem poder dizer se o
   # trecho serviu deixa a calibração dos pesos sem sinal de verdade nenhum.
   # `:direct` como a busca — votar não é efeito externo.
-  @registry [ReadFile, SearchWorkspace, RagSearch, RagFeedback, EmitThreatModel]
+  @registry [ReadFile, SearchWorkspace, RagSearch, RagFeedback, RegistrarPlano, EmitThreatModel]
 
   @doc "Registro de ferramentas — sem `Terminal`, de propósito (ver moduledoc)."
   def tools, do: @registry
@@ -63,6 +63,8 @@ defmodule Engine.Gates.AppSecAgent do
       session_id: Map.get(story, "sessionId"),
       agent: "appsec",
       tools: @registry,
+      retomada:
+        Engine.Gates.RetomadaDoGate.texto(project_id, Map.get(story, "sessionId"), "appsec"),
       hooks: hooks(),
       messages: [initial_message(story, module_map)],
       context_window: 128_000
@@ -180,8 +182,11 @@ defmodule Engine.Gates.AppSecAgent do
 
   defp diagnostico_de_parada(ctx) do
     case Map.get(ctx, :last_error) do
-      nil -> {"o modelo parou sem chamar emit_threat_model", "modelo"}
-      error -> {"falha no turno de LLM: #{inspect(error)}", "infra"}
+      nil ->
+        {"o modelo parou sem chamar emit_threat_model", "modelo"}
+
+      error ->
+        {"falha no turno de LLM: #{inspect(error)}", Engine.Gates.OrigemDoErro.de_llm(error)}
     end
   end
 end

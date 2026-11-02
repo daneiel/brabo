@@ -1,0 +1,560 @@
+---
+sidebar_position: 7
+traducao_de: 929963d24eb727bd64875486f2f1889172f3084a
+---
+
+# The gates, and how they're measured
+
+A **gate** is a point in the flow where work stops until someone —
+person, agent, or script — says it can proceed. The product has
+thirteen, and until PHASE 15a none of them existed as a list: they were
+scattered across pure rules, use cases, tests and CI workflows.
+Answering "which gates exist" required reading six files.
+
+`docs/gates.yml` is that list. This document explains what it is, and —
+more importantly — what it is **not**.
+
+## The registry describes; it doesn't execute
+
+No gate becomes enforced because of the file. Changing `severidade` in
+it doesn't change any behavior: who blocks a merge is still
+`decide.ts`, who judges a PR is still the QA agent, who fails a
+backmerge is still the CI workflow.
+
+It's the easiest assumption to get wrong, so it's worth repeating:
+**the registry is an index, not policy.** The branching policy still
+lives in [branching-policy.md](branching-policy.md); the `entrada` and
+`entregavel` fields are a sentence in Portuguese, and `onde` points to
+the code that really governs.
+
+What the registry buys is something else: making gates
+**enumerable**. The lesson from Phases 10 and 13 — metric extracted by
+script, never annotated by hand — can't be applied to what can't be
+listed.
+
+## The two fields that age if left undefined
+
+**`verificacao`** answers *how you prove this gate passed*, not who
+judges it. `script` means there's a mechanical artifact — an event, a
+test, a job — that serves as proof. That's why `qa-verificada` is
+`script` even though it's an LLM issuing the verdict: the artifact is
+the `pr.gate_changed` with `veredito`. Who judges lives in `dono`.
+
+**`aprovacao_humana: true`** means the decision belongs to the user —
+directly by a click, **or** delegated by a policy the user wrote
+themselves. That's what lets `acao-aprovada` coexist with `status:
+auto_approved`: the policy deciding on its own is the user having
+decided beforehand. `merge-protegida` is the case where not even
+delegation exists, because the ceiling downgrades `auto_approve` to
+`require_approval` even with autonomy on.
+
+In the four gates the constitution declares manual, this field is
+invariant and locked by a test
+([RN-071](../business-rules/custo.md#rn-071)).
+
+## Three forms of evidence, because not every proof lives in the log
+
+| type | when | what the locator brings |
+|---|---|---|
+| `event_log` | the outcome becomes a domain event | event types + payload filter |
+| `teste` | the guarantee is an assertion | spec path |
+| `ci` | the gate lives in the repository | workflow + spec |
+
+The two cases that forced the field to exist:
+
+- **`merge-protegida`** doesn't emit its own event. It's a ceiling
+  applied last on top of the already-computed verdict, which downgrades
+  `auto_approve` to `require_approval`; the outcome shows up as a
+  pending `proposed_action.created`, indistinguishable from any other
+  pending item. What guarantees the block is the test.
+- **`backmerge`** lives outside the application: it's a required check,
+  with state versioned in `.release/gate.json` on `main`.
+
+Without `evidencia`, the rule "a `block` gate without proof fails"
+would turn the product's two hardest locks permanently red.
+
+## Two validations, and only one of them runs in production
+
+The registry is validated in two layers, and the split is not cosmetic:
+
+| layer | what it asserts | who runs it |
+|---|---|---|
+| `validarRegistro` | claims about the **content** — `block` needs `script`, the four human gates stay human, `active` needs evidence, no duplicate id, no orphan `entrada` | anyone who reads the registry, including the api at runtime |
+| `validarLocalizadores` | the `teste`/`ci` **target file exists** | the test against the real file, and phase 2 of `validacao-gates.ts` — never the api |
+
+The first is true wherever the registry is read. The second is a claim
+about the **repository**, and it only makes sense inside a checkout.
+
+The two used to be one function, and the api's loader called it. The
+consequence was measured on the installed v6.1.0: `GET /gates` answered
+`500` with `RegistroDeGatesInvalido` listing all eleven targets as "does
+not exist" — twelve 5xx responses in about 55 minutes. Nothing was wrong
+with the registry. The production image carries `/app/docs/gates.yml`
+and nothing else from `docs/`; `apps/api/test/`, `scripts/ci/` and
+`.github/` never enter it, so a repository claim evaluated against that
+tree fails for every gate, in every installation.
+
+Nothing was loosened. The rule still exists, still covers the same
+targets, and a target that disappears still fails — it just runs where
+the question means something. Two guards keep it that way: the test that
+climbs to the repository root and checks every locator, and a loader test
+that rebuilds the image's tree on disk (a root with `docs/gates.yml` and
+nothing else) and asserts the registry loads. Putting the check back in
+the loader turns that second one red with the exact message the
+installation produced.
+
+And the api serving the registry is now exercised against the production
+image: `docker/smoke.sh` calls `GET /gates` and `GET /internal/gates`
+(service token) and requires the registry back from both. The body check
+is one shell function, `checar_registro_de_gates`, which
+`scripts/ci/smoke-gates.spec.ts` runs against the three bodies without
+bringing the stack up. No unit suite could have caught the original failure
+— vitest and ExUnit run from a checkout, where the targets exist.
+
+## The shared-type trap
+
+`qa-verificada` and `secops-segura` **are not two event types**: both
+record `pr.gate_changed`, discriminated by `payload.gate`. Worse — the
+same type is recorded when the gate **opens**, without a `veredito`.
+
+A registry that stored only the type name would count opening as
+passing and measure double what actually happened. Hence the filter,
+and hence the `veredito: presente` sentinel. The same applies to the
+two infra PR gates, which share `infra.gate_changed`.
+
+The test asserts that **no pair** (`event_types` + `filtro`) repeats in
+the registry. That uniqueness is what makes the measurement mean
+anything.
+
+The filter only reaches the **payload**, on purpose: accepting an
+arbitrary column in the YAML would open up the entire query. Who
+promoted a story — a person or the PO — lives in the `actor_kind`
+column and stays outside the declarative vocabulary.
+
+## Measuring
+
+```bash
+pnpm --filter api validacao:gates                    # full report
+pnpm --filter api validacao:gates -- --sem-banco     # registry and locators only
+pnpm --filter api validacao:gates -- --projeto <uuid>
+```
+
+Three phases, in this order: **registry** (loads and validates),
+**locators** (does the `teste`/`ci` target exist?) and **event log**
+(latest passage, with event id). The first two never touch the
+database — that's what makes the script useful in CI without Postgres.
+
+Phase 2 reports **every** locator in the registry, not just the ones on
+`active`+`block` gates. It used to have its own narrower loop while the
+api's loader had a wider one, and `rag-acertivo` — `active`, `warn`,
+citing both a workflow and a test — never showed up in the table. One
+rule now, `validarLocalizadores`, shared with the test.
+
+| exit code | when |
+|---|---|
+| `0` | valid registry and locators in place |
+| `1` | invariant violated, target missing, or gate with no passage **when `--projeto` was given** |
+| `2` | invalid usage |
+
+The asymmetry is deliberate. Registry and locators are claims about the
+**repository**: they always hold. Event-log evidence is a claim about
+an **execution**, and only exists if one happened — without
+`--projeto`, phase 3 is just a report. Requiring a passage on a
+freshly created database would make the script exit `1` always, and a
+script that always fails becomes noise nobody reads.
+
+## What enumerating already paid off
+
+Before measuring anything, writing the list found two things nobody
+was seeing:
+
+- QA and SecOps's judgment on **infra** PRs, which has its own path
+  (`infra.gate_changed`, with no backlog task behind it) and wasn't in
+  the spec;
+- `promotion-check` was a required check **with no spec of its own**,
+  unlike `pr-police` and `approval-ladder`. The evidence pointed to the
+  script, with the gap written right there, and the item went to
+  triage — the phase declares and measures, it doesn't fix. **Triage
+  closed it:** `scripts/ci/promotion-check.spec.ts` exists, and the
+  gate's evidence now points to it. It's the cycle working as
+  designed — enumerating found it, triage prioritized it, another
+  phase fixed it.
+
+The third finding came from the measurer's first run: the
+`story-promovida` filter pointed at `actor_kind`, which is a **column**
+and not payload, and the gate showed up as "never passed" on a database
+where it had passed hours before. A registry nobody runs is a registry
+that lies.
+
+## Activating a `planned` gate is the same work as any other
+
+`implementavel` (owner `dev-lead`) was born `planned` in PHASE 14d,
+alongside the rest of the target org chart that `docs/gates.yml`/
+`docs/fluxo.yml` already described with no code behind it. The
+[ADR 0090](../adr/0090-qa-estrategia-e-appsec-segundo-momento.md)
+activated it — and the exercise is worth using as an example because
+**nothing about the registry's shape changed**: `status: planned →
+active` plus the `evidencia` block (pointing to
+`proposed_action.created` filtered by `actionType:
+assess_implementability`) are the ONLY two lines a `warn` gate needs to
+gain to stop being an aspiration. `severidade` stays `warn` — the
+comment in the file already said "born warn even when activated," and
+activating isn't the same decision as promoting to `block` (that would
+require measuring real passages first, same discipline as PHASE 15a).
+
+The real work sits outside the file: the Dev Lead needed a new tool
+(`assess_implementability`) that proposes the assessment as a
+`proposed_action`, and QA-strategy — until then a `proposto` role in
+`docs/fluxo.yml`, with the separation criterion already written there
+("can be the qa-lead itself in a second moment") — had to exist to
+feed the assessment with a real test plan. The registry only started
+describing what the code now does.
+
+That input did not survive real use.
+[ADR 0192](../adr/0192-plano-de-teste-depois-da-entrega.md)
+([RN-674](../business-rules.md#rn-674)) moved the test plan to AFTER the
+dev's delivery — written PRE-DEV it had no code to read and ran out of
+iterations — and the gate's `entrada` changed from `plano-de-teste` to
+`module_map`: the Dev Lead judges the story and the module map it already
+has. The plan now feeds `qa-verificada`, as input to the one verdict that
+gate already gives. Same lesson in the other direction: the registry line
+changed because WHO DELIVERS WHAT TO WHOM changed, not to make a gate pass.
+
+## A registry can age in the wrong direction — stale, not inactive
+
+`implementavel` is the example of a gate that needed new code to leave
+`planned`. `paralelismo-autorizado` is the opposite: the mechanism
+(`RequestParallelizationUseCase`,
+[RN-083](../business-rules/custo.md#rn-083)) has been in production since
+PHASE 14d — it was the registry that fell behind, declaring `planned`
+over something that was already `active` in the sibling `docs/fluxo.yml`
+and in the code. The fluxo.yml × code audit (finding A1/B5,
+[auditoria-fluxo-vs-codigo.md](auditoria-fluxo-vs-codigo.md)) found the
+divergence; the fix was just the same two lines `implementavel` also
+gained — `status: active` plus `evidencia` pointing to
+`proposed_action.created` filtered by `actionType: parallelize`.
+
+Worth noting why this changed nothing on the team panel's PR track:
+`paralelismo-autorizado` is `fluxo: execucao`, and the screen only
+derives steps from `fluxo: pr` gates (see "Consumption" below) — a
+gate can become `active` in the registry without appearing anywhere in
+the UI, if its flow is a different one.
+
+## A gate can be born `active` directly — when the mechanism and the registry arrive together
+
+`implementavel` and `paralelismo-autorizado` are the two examples of a
+gate that already existed (declared `planned` or stale) and gained its
+registry entry AFTERWARD. `necessidade-validada`
+([RN-406](../business-rules.md#rn-406),
+[ADR 0095](../adr/0095-gate-necessidade-validada.md)) is the third
+pattern: mechanism and registry were born in the SAME change, because
+the gate itself didn't exist anywhere — not `planned` in the file, nor
+code behind it.
+
+The choice of `severidade: warn` follows the same reasoning as
+`implementavel`, but for a different reason. `implementavel` is `warn`
+because promoting to `block` would require measuring real passages
+first (PHASE 15a). `necessidade-validada` is `warn` because NOTHING in
+the product today checks its passage before letting the PO continue —
+the Creative→PO handoff already happens inside `confirm_readiness`,
+before this gate even exists. `block` would promise a lock that doesn't
+exist; `warn` describes exactly what the gate is: a measurement that a
+human validated the need's merit, not a gate that blocks the next
+step.
+
+`workspace-verificado` ([RN-423](../business-rules.md#rn-423),
+[ADR 0104](../adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md))
+is the fourth example, and the clearest of the four about why `warn` isn't
+a "weak lock": what really locks things down HERE isn't the gate, it's the
+explicit refusal in
+`Engine.Actions.TerminalExecutor.decisao_de_execucao/1` — without a
+verified workspace or a connected runner, the command is refused
+unconditionally, deep inside the code, without going through the registry.
+The gate exists only to give EVIDENCE of when the confirmation happened
+(`project.workspace_verified` in the event log); promoting it to `block`
+would describe a lock that already exists somewhere else, the same way
+`necessidade-validada` would have lied about one that doesn't exist
+anywhere.
+
+`rag-acertivo` ([RN-490](../business-rules.md#rn-490)/[RN-498](../business-rules.md#rn-498),
+[ADR 0132](../adr/0132-golden-set-de-acerto-do-rag.md)/[ADR 0138](../adr/0138-golden-set-do-rag-em-ci-agendado.md))
+is the fifth example, and the reason it stays `warn` changed shape once,
+which is worth telling in full. It was born `warn` for the plainest
+reason of the five: there was no CI that ran a real LLM — the golden-set
+it measures (17 questions composed from real RNs/ADRs, checked against a
+curated real corpus through the actual `HybridSearchUseCase`) only ran by
+hand (`mix golden_set.rag`), the same posture the QA Automation golden-set
+([ADR 0123](../adr/0123-golden-set-regressao-qa-automacao.md)) still
+carries today. That stopped being true: `.github/workflows/golden-set-rag.yml`
+now runs `mix golden_set.rag` for real, against a real Ollama service —
+it only calls the **embedding** model, CPU, deterministic, never a chat
+model doing judgment. (The claim that the QA golden-set was *not*
+tractable the same way was later measured, and the clock turned out not to
+be the obstacle — see the next section.) What kept `severidade: warn` from becoming stale isn't that the
+gate stayed manual — it's that the workflow is **scheduled** (nightly cron
+plus `workflow_dispatch`), never triggered by `pull_request`. `block` would
+still promise a check that gates a merge, and a scheduled run gates
+nothing: a regression becomes visible within a day, never at PR time. The
+reason moved from "no CI can run this" to "this CI doesn't sit on the merge
+path" — `warn` keeps describing exactly what's true, just not the same
+truth it described before.
+
+## The QA golden-set in CI: the clock fits, the instrument measures, and it runs weekly
+
+The golden-set of the QA Automation agent's semantic judgment
+([ADR 0123](../adr/0123-golden-set-regressao-qa-automacao.md)) is what
+would give `qa-verificada`'s semantic step a trend signal. ADR 0123 and
+[ADR 0138](../adr/0138-golden-set-do-rag-em-ci-agendado.md) both stated,
+without measuring, that running it in CI needed an API LLM secret or new
+infrastructure (a GPU runner). On 2026-09-13 (AT-067) it was measured, in
+the exact mold of `golden-set-rag.yml`: `ubuntu-latest`, no GPU, the same
+pinned `pgvector` and `ollama` service images, `qwen2.5-coder:latest`
+pulled into the job's own Ollama (with the dev compose's
+`OLLAMA_KEEP_ALIVE=1h`/`OLLAMA_CONTEXT_LENGTH=16384`), the api **and the
+engine** up as servers — the engine is extra relative to the RAG job,
+because it is the engine, called by the api through
+`POST /internal/actions/execute`, that runs the `npm test` the QA asks for.
+
+| run | model pull | setup until the mix task | `mix golden_set.qa` | whole job | score |
+|---|---|---|---|---|---|
+| [34769447405](https://github.com/daneiel/brabo/actions/runs/34769447405) | 15 s | ~3 min | 19 min 15 s | 22 min 09 s | 0/6 |
+| [34770869429](https://github.com/daneiel/brabo/actions/runs/34770869429) | 13 s | ~3 min | 22 min 53 s | 25 min 45 s | 0/6 |
+
+A chat turn of the 7B model on that runner's CPU took a median of ~20 s
+(10–34 s over the 23 turns the api log kept). **The clock fits**: a
+nightly or weekly job of under half an hour, no secret, no GPU. The
+"new infrastructure" half of the old sentence is refuted by measurement.
+
+**What does not fit is the instrument.** Both runs scored 0/6, below the
+recorded floor of 1/6 — and not because of the model's judgment. The
+event log of the second run shows why: every `npm test` the QA proposed was
+auto-approved (`permissions.json allow: npm test`) and then **refused by
+the engine**, because since [RN-502](../business-rules.md#rn-502)
+([ADR 0143](../adr/0143-agentes-de-dev-so-depois-do-container.md),
+2026-09-04) a `container` project with no `running` container does not run
+terminal commands anywhere. The seed script dates from 2026-08-30 and never
+registers a container. So no case can ever see `exit 0`, and
+`emit_qa_verdict` refuses `approved` without one — three of the six
+expected verdicts became impossible. The refusal message says "bring the
+project's container up (Infra proposes `container_start`)", and the model
+did what it read: in three cases it asked the terminal for
+`container_start` or `docker-compose up` (left `pending`, so
+`awaiting_approval`), and in one it repeated `npm test` sixty times until
+`toolloop.limit_reached` (`blocked(modelo)`). The remaining two stalled on
+their first call with an empty `command` — the unreliability ADR 0123
+already recorded for this model, independent of RN-502. Nothing here is
+CI-specific: the same refusal applies to a local run.
+
+That is why no `golden-set-qa.yml` was committed. A scheduled workflow
+that is red on every run for a reason unrelated to what it measures is
+worse than none — background red teaches people to ignore red. The design
+that was measured stays in the repository history (the workflow as of
+commit `e7d7d1b16`, including a temporary diagnostic step). Making it
+measure again meant deciding how the golden-set runs the suite under
+RN-502, and that was a decision for a human. Relaxing the refusal so the
+harness passes was never one of the options: it would weaken the
+isolation RN-502 exists for, to make a test pass.
+
+### The decision, and the second measurement (AT-076)
+
+On 2026-09-27 the maintainer chose the first path: **the seed brings up a
+real container through the broker and registers it `running`, by the
+production path.** RN-502 is untouched; what changed is that the seed now
+satisfies its precondition. For each case, after cloning the skeleton into
+the project's managed folder, `apps/api/scripts/golden-set-qa-container.ts`
+walks the same use cases a real project walks, in its own `consultiva`
+session: `CreateModuleMapUseCase` (one module), `RouteModulesToInfraUseCase`
+(one candidate image), `ProposeActionUseCase` for `container_start` with
+actor `agent/infra`, and `ApproveActionUseCase` as the project owner. The
+approval runs `ExecuteContainerStartUseCase`, which records the election as
+a new `artifact.project_image` through `DecidirImagemDoProjetoUseCase` (so
+`validarDecisaoDeImagem` judges the image), calls `ContainerBrokerPort.start`
+and registers `provisioning → running` through the state machine. The seed
+proposes and approves instead of calling the execution use case directly
+because two rules live on the proposal side — the named 409
+`sem_broker_na_instalacao` ([RN-591](../business-rules.md#rn-591)) and
+`decide()`'s policy for `container_start` — and a harness that skipped them
+would stop following production the day either changed.
+
+The image is `node:24.11.1-bookworm-slim`, pinned by the multi-platform
+index digest in the seed (the ADR 0159 rule, although that file sits outside
+the trees `imagens-pinadas.ts` scans). Debian rather than Alpine because the
+broker keeps the container alive with `sleep infinity`. The geometry that
+makes the three sides see the same code: the worktree **is** the managed
+project folder (`projectScopeRoot`), the broker mounts
+`<PROJECT_WORKSPACES_HOST_ROOT>/<workspace_dir_name>` at `/work`, and the
+engine translates the QA's `cwd` into `/work` before the `exec`. In the CI
+job the api, the engine and the broker all run natively on the runner, so
+`PROJECT_WORKSPACES_ROOT` (api, engine) and `PROJECT_WORKSPACES_HOST_ROOT`
+(broker) are the same path; the broker is the only process that talks to
+Docker.
+
+A case whose container does not come up now fails the seed with
+`ContainerDoGoldenSetNaoSubiuError`, naming the step and the reason the
+product gave, and the ExUnit module **fails** when the api is up but the
+seed fails. Before, it returned `{:skip, _}` from the test body — which
+ExUnit does not treat as a skip: the test passed, green, having measured
+nothing.
+
+Measured with a temporary `push`-triggered workflow on the branch (removed
+before the PR, as AT-067 did):
+
+| run | model pull | image pull | container up (proposal → executed) | `mix golden_set.qa` | whole job | score |
+|---|---|---|---|---|---|---|
+| [36291440108](https://github.com/daneiel/brabo/actions/runs/36291440108) | 15 s | 6 s | 0.20–0.28 s per case | 48 min 29 s | 52 min 38 s | 3/6 |
+| [36294037297](https://github.com/daneiel/brabo/actions/runs/36294037297) | 15 s | 6 s | 0.22–0.30 s per case | 83 min 16 s | 86 min 16 s | 3/6 |
+
+Against the three criteria, in both runs: the event log has **zero** RN-502
+refusals (no terminal action and no session event mentions it); `npm test`
+ran inside the container with `exit 0` in five of the six cases in the first
+run and in all six in the second (the gaps are empty `command`s the broker
+refused by name — the model unreliability ADR 0123 already recorded); and
+the score is reported as it came, 3/6 twice, against the floor of 1/6.
+
+| case | expected | 36291440108 | 36294037297 |
+|---|---|---|---|
+| `rf-covered` | approved | ✓ approved | ✓ approved |
+| `rf-uncovered` | changes_requested | ✓ changes_requested | ✓ changes_requested |
+| `rf-single-clean` | approved | ✗ changes_requested | ✗ `blocked(modelo)` |
+| `rf-mismatched-filename` | approved | ✗ changes_requested | ✓ approved |
+| `rf-partial-coverage` | changes_requested | ✗ `blocked(modelo)` | ✗ `blocked(modelo)` |
+| `rf-skipped-test` | changes_requested | ✓ changes_requested | ✗ approved |
+
+Same total, different cases: the misses are now the model's judgment and its
+variance, which is what the golden-set exists to measure — `rf-skipped-test`
+approved once, counting a `test.skip` as coverage, and `rf-single-clean` ran
+`npm test` 30 times in the second run before ending `blocked(modelo)`.
+
+The runs got longer (48 and 83 min against 19–23 min) because the cases now
+do the work: they read files and reason about coverage instead of stopping
+at the refusal, and a case that repeats itself now repeats real
+executions. A scheduled job needs a `timeout-minutes` above the 86 min seen
+here. Two things were seen and not changed here: the api→broker call has
+a 5 s ceiling for every operation, `start` included, so a `container_start`
+whose image is not yet in the daemon would time out while the pull
+continues (the job pulls the image first; not measured without it); and the
+engine's heartbeat closed the idle sessions (`heartbeat_timeout`) about
+30 s after the seed, while the QA kept proposing and running commands in
+them (the QA runs in the `mix` process, outside any session process), with
+no visible effect on the round.
+
+### Scheduled, weekly (AT-149)
+
+On 2026-09-27 the maintainer chose the cadence: **weekly**
+([ADR 0168](../adr/0168-golden-set-do-qa-em-ci-semanal.md)).
+`.github/workflows/golden-set-qa.yml` is the AT-076 design made permanent —
+api, engine and broker native on the runner, only the broker talking to
+Docker, the same managed folder on the three sides — on `schedule` plus
+`workflow_dispatch`, never `pull_request`, the same posture as
+`golden-set-rag.yml`.
+
+Weekly and not nightly like the RAG job, for two measured reasons. The RAG
+run costs ~20 minutes and is deterministic, so yesterday's drop is a real
+drop. This one costs 52 to 86 minutes and **varies**: the two AT-076 runs
+reached the same 3/6 through different cases. A nightly run would spend hours
+of runner a week to read the same trend with more noise; one run a week is
+what the ratchet floor needs to show a fall, and `workflow_dispatch` answers
+right away after a change to the QA prompt or the seed. It runs on Saturday
+at 01:17 UTC: away from the RAG's daily 06:00, the property proofs' Sunday
+04:00 and the external-link check's Monday 06:00; on Saturday so that a red
+run waits for the week to start; at minute 17 because Actions delays, and may
+drop, schedules at the top of the hour. `timeout-minutes` is 150: the 86 min
+measured plus room for a run in which more than one case hits the iteration
+ceiling. That is the model's variance, and the job does not measure the clock.
+
+The verdict is the test's own: below the `passRate` that `floor.json` records
+for the model, ExUnit fails. The workflow only adds two instrument guards —
+the score line must exist (the test skips when the api is down, and a skip in
+an unattended run is a green that measured nothing) and the event log must
+hold no RN-502 refusal (the AT-067 signature) — and on failure it prints the
+logs, as the RAG job does. The image to pre-pull is read from the seed's own
+constant (`IMAGEM_DO_GOLDEN_SET_QA`), not from a second literal: the
+broker's `docker run` runs under the Docker port's 30 s control ceiling
+([RN-604](../business-rules.md#rn-604)), and a job that pulled one image
+while the seed asked for another would put the pull inside that ceiling.
+
+The proof run, with a temporary `push` trigger on the branch removed before
+the PR:
+
+| run | model pull | image pull | `mix golden_set.qa` | whole job | score |
+|---|---|---|---|---|---|
+| [36327281774](https://github.com/daneiel/brabo/actions/runs/36327281774) | 15 s | 5 s | 10 min 13 s | 13 min 41 s | 3/6 |
+
+Zero RN-502 refusals in the event log, all six containers `running` before
+the first case. The same 3/6 once more, through yet another set of cases —
+`rf-covered`, `rf-uncovered` and `rf-skipped-test` hit; `rf-single-clean` and
+`rf-mismatched-filename` got `changes_requested` where `approved` was
+expected, and `rf-partial-coverage` was approved with partial coverage. The
+run took a sixth of the AT-076 ones (10 against 48–83 minutes of
+`mix golden_set.qa`): no case this time repeated itself until the iteration
+ceiling. The timeout stays sized by the slowest run measured, not the
+fastest.
+
+## A gate can be missing from the registry while `fluxo.yml` already assigns it
+
+`deployavel` is the fourth pattern, and the least flattering: it was
+declared as `area-infra`'s `gate_saida` in `docs/fluxo.yml` and was
+**absent from `docs/gates.yml` altogether** — not `planned`, not stale,
+simply not there. The team model has three pieces (catalogue, flow,
+registry) and nothing yet cross-checks them, so a gate can be a
+deliverable in one and not exist in another. This is the **second**
+finding of that shape; the first was `paralelismo-autorizado` ageing in
+the opposite direction.
+
+It enters as `planned`/`warn`, with no `evidencia` block and no
+verification script, because [RN-070](../business-rules/custo.md#rn-070)/
+[RN-071](../business-rules/custo.md#rn-071) forbid `block` without one — and
+because what blocks it is not code. The infrastructure exists (overlays,
+GHCR images by digest, smoke/rollout/restore scripts); what is missing
+is a production environment with real traffic and someone maintaining
+it. See [ADR 0153](../adr/0153-deploy-enabled-o-gatilho-que-ninguem-cria.md),
+which also stops ten documents from citing `DEPLOY_ENABLED` as if it
+were a variable that exists in the code.
+
+## Consumption: the screen derives, it doesn't repeat
+
+The PR track on the panel — Dev → QA → SecOps → You — used to be a
+list written into the component. Since PHASE 15b it comes from the
+registry, via `GET /gates`.
+
+What changes in practice is one property, not the appearance: **a gate
+that leaves the registry leaves the screen on its own.** Before,
+deactivating SecOps left a dead step on the track until someone
+remembered to edit the code — exactly the kind of aging that motivated
+the registry to exist.
+
+Three decisions worth explaining:
+
+**The route is separate from the internal one.** `/internal/gates` is
+service-to-service, with a service token, and serves the measurement
+script; `/gates` belongs to the logged-in user and serves the screen.
+Same registry, different audiences.
+
+**No `projectId`.** The registry is a fact about the PRODUCT: the same
+gates apply to every project. Attaching it to a project would suggest
+it's possible to have different gates per project, which is exactly
+what ADR 0054 deliberately left undecided.
+
+**Only `active` gates.** A `planned` gate describes a future role
+(dev-lead, platform). On a screen that says what's happening now, it
+would appear as if it were happening.
+
+### What the screen still decides on its own
+
+Each step's **label** (`QA`, `You`) and **which step each gate
+represents** stay in the component. It's not an inconsistency: the
+registry describes policy, and what to call things for the user is a
+screen decision. What left it was the LIST — which steps exist.
+
+A PR gate the registry brings that the screen doesn't yet know how to
+draw is **ignored**, with a test asserting it: an `undefined` step in
+the middle of the track would be worse than its absence.
+
+## References
+
+- [ADR 0054](../adr/0054-gates-como-registro-declarativo.md) — the
+  decision
+- [ADR 0048](../adr/0048-decisao-no-log-e-a-ordem-do-gate.md) — the
+  decision in the event log, without which there'd be nothing to
+  measure
+- [RN-070](../business-rules/custo.md#rn-070), [RN-071](../business-rules/custo.md#rn-071)

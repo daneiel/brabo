@@ -35,6 +35,7 @@
   },
   "timeline": {
     "title": "Linha do tempo do time",
+    "lendoExecucao": "Lendo a sessão de execução, não a mais recente.",
     "description": "Um ramo por agente, do primeiro marco ao que ele está fazendo agora. Quem está ativo, ou entre os 5 mais recentes, abre sozinho — o resto fica a um clique, com a contagem de marcos novos no cabeçalho."
   },
   "ambiente": {
@@ -64,23 +65,27 @@
     "espelhoRessalvaErro": "O agente local reportou: {{erro}}",
     "espelhoDestinoTrocado": "O destino mudou depois desta rodada: ela escreveu em {{destino}}. Reconecte o brabo-runner para o novo valer.",
     "modelosLocais": "modelos locais",
-    "modelosLocaisNenhum": "nenhum modelo do Ollama ativo no workspace",
-    "modelosLocaisValor_zero": "{{count}} do Ollama, ativos no workspace",
-    "modelosLocaisValor_one": "{{count}} do Ollama, ativo no workspace",
-    "modelosLocaisValor_other": "{{count}} do Ollama, ativos no workspace"
+    "modelosLocaisNenhum": "nenhum modelo de conversa do Ollama ativo no workspace",
+    "modelosLocaisValor_zero": "{{count}} de conversa do Ollama, ativos no workspace",
+    "modelosLocaisValor_one": "{{count}} de conversa do Ollama, ativo no workspace",
+    "modelosLocaisValor_other": "{{count}} de conversa do Ollama, ativos no workspace",
+    "modelosLocaisEmbedding_zero": "{{count}} de embedding (só para a busca, não conversam)",
+    "modelosLocaisEmbedding_one": "{{count}} de embedding (só para a busca, não conversa)",
+    "modelosLocaisEmbedding_other": "{{count}} de embedding (só para a busca, não conversam)"
   },
   "activity": {
     "title": "Atividade",
     "count_zero": "{{count}} eventos",
     "count_one": "{{count}} evento",
     "count_other": "{{count}} eventos",
-    "loadErrorTitle": "Não foi possível carregar a atividade."
+    "loadErrorTitle": "Não foi possível carregar a atividade.",
+    "emptyNoSession": "Nenhuma atividade ainda: ela começa com a primeira sessão do projeto."
   },
   "executionSection": {
     "title": "Execução",
     "activationErrorTitle": "Não foi possível saber se a execução já foi ativada.",
     "introReady": "Ative a execução para os dev agents implementarem o backlog em paralelo.",
-    "introNeedsModuleMap": "Defina o module_map (Arquiteto) antes de ativar a execução.",
+    "introNeedsModuleMap": "Ainda não há o que ativar: o Arquiteto precisa definir os módulos do projeto antes.",
     "introNeedsRepository": "O projeto ainda não tem repositório, e sem ele os dev agents não têm onde trabalhar. Ele nasce quando você aceita o handoff ao Arquiteto — ou, se esse já foi aceito, o handoff ao Dev Lead.",
     "provisionNow": "Provisionar o repositório agora",
     "activate": "Ativar execução",
@@ -101,12 +106,16 @@
     "errorTitle": "Erro",
     "activateError": "Não foi possível ativar a execução",
     "unblockError": "Não foi possível desbloquear a tarefa",
+    "unblockedTitle": "Tarefa desbloqueada",
+    "unblockedWithoutExecution": "Nenhuma execução está rodando: a tarefa só roda quando você religar a execução, aqui nesta seção.",
     "authorizationNeededTitle": "Precisa da sua autorização",
     "authorizationNeededMessage_zero": "A sessão já tem {{count}} agentes, o teto do lead é {{max}}. O pedido está em Aprovações.",
     "authorizationNeededMessage_one": "A sessão já tem {{count}} agente, o teto do lead é {{max}}. O pedido está em Aprovações.",
     "authorizationNeededMessage_other": "A sessão já tem {{count}} agentes, o teto do lead é {{max}}. O pedido está em Aprovações.",
     "requestDeniedTitle": "Pedido recusado",
-    "requestError": "Não foi possível pedir"
+    "requestError": "Não foi possível pedir",
+    "unblocking": "Desbloqueando…",
+    "unblockNeedsSession": "A sessão ainda está carregando: desbloquear depende dela."
   },
   "architectureSummary": {
     "title": "Arquitetura",
@@ -117,5 +126,35 @@
     "statusGenerated": "gerado",
     "statusPending": "pendente",
     "link": "Ver arquitetura completa →"
+  },
+  "primeirosPassos": {
+    "title": "Primeiros passos",
+    "progresso": "{{feitos}} de {{total}} feitos",
+    "feito": "Feito",
+    "credencial": {
+      "titulo": "Cadastrar uma chave de provedor de modelo",
+      "pendente": "Sem chave, os agentes não têm com o que conversar.",
+      "link": "Cadastrar a chave →"
+    },
+    "modelo": {
+      "titulo": "Ativar um modelo e aplicá-lo ao time",
+      "pendente": "Nenhum agente tem modelo ainda: ative um modelo em Providers e escolha-o aqui.",
+      "link": "Escolher o modelo →"
+    },
+    "ideacao": {
+      "titulo": "Começar a primeira ideação",
+      "pendente": "Conte a ideia ao Criativo — é daí que saem as histórias.",
+      "link": "Abrir o Criativo →"
+    }
+  },
+  "rodarNaSuaMaquina": {
+    "title": "Rodar na sua máquina",
+    "envExample": "Antes, copie o arquivo de ambiente de exemplo: cp .env.example .env",
+    "copiar": "Copiar",
+    "copiado": "Copiado",
+    "urlRecusada": "(endereço fora da sua máquina, não vira link)",
+    "notaAntes": "Declarado pela Infra na",
+    "pr": "PR",
+    "notaDepois": ", não verificado na sua máquina."
   }
 }

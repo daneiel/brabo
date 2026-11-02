@@ -18,3 +18,6 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Spec da API por locale (ADR 0220), derivada no build
+/.openapi

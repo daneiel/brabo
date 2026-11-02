@@ -13,16 +13,25 @@ function rolarParaOFim(el: HTMLElement | null) {
 }
 
 /**
- * A rolagem do fio da tela de Sessão: os refs da sentinela, do container que
- * rola e do conteúdo que cresce, a navegação até o evento citado pelo
- * Psicólogo (Fase 4b), a abertura no fim (achado 10) e o "acompanha o fim"
- * com a guarda dos 120px (RN-173) — pelas dependências de estado E pelo
- * `ResizeObserver` do conteúdo.
- *
- * Morou em `SessionPage.tsx` até o PR 7 do programa do ADR 0176, que moveu os
- * refs e os quatro efeitos sem mudar uma linha: as listas de dependências são
- * as mesmas, e o hook é chamado no MESMO ponto do componente em que os
- * efeitos estavam, então a ordem em que o React os roda também não muda.
+ * A identidade do que há no fio (RN-951): o `seq` do último evento e os ids
+ * das ações. Muda quando chega conteúdo novo mesmo que o TAMANHO das listas
+ * não mude (teto de 200 eventos, ação decidida e outra chegando).
+ */
+export function identidadeDoFio(
+  events: readonly SessionEvent[],
+  actions: readonly ProposedAction[],
+): string {
+  const ultimo = events.reduce((m, e) => (e.seq > m ? e.seq : m), 0);
+  return `${events.length === 0 ? 'vazio' : ultimo}|${actions.map((a) => a.id).join(',')}`;
+}
+
+/**
+ * A rolagem do fio da tela de Sessão (RN-951, AT-635): o fio acompanha SEMPRE
+ * a última mensagem — a cada evento/ação nova, a cada mudança de altura do
+ * conteúdo ou do container, mesmo que a pessoa tenha rolado para cima (revoga
+ * a guarda dos 120px da RN-173 e o item 4 da RN-751). Instantâneo
+ * (`block: 'end'`) e sem mexer no foco. Com `?highlightEvent` a abertura vai
+ * ao evento citado (Fase 4b); o acompanhamento começa na primeira mudança.
  */
 export function useRolagemDoFio({
   highlightEvent,
@@ -35,25 +44,18 @@ export function useRolagemDoFio({
   logOpen: boolean;
   events: SessionEvent[];
   actions: ProposedAction[];
-  /**
-   * O texto em curso vem como STORE desde a AT-301 — a página não re-renderiza
-   * por token, então ele não pode mais ser dependência de efeito aqui.
-   */
+  /** O texto em curso vem como STORE (AT-301): não é dependência de efeito. */
   streamingStore: StoreDoStreaming;
 }) {
-  // Achado 10: sentinela no fim da lista de mensagens — a sessão abre nela,
-  // em vez de abrir no TOPO (mais antigas primeiro), que era o comportamento
-  // sem NENHUM scroll automático.
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
-  // O CONTEÚDO do fio (RN-173) — o que muda de altura. O container rola, mas
-  // não é ele que cresce; observar o container não veria nada.
   const messagesInnerRef = useRef<HTMLDivElement | null>(null);
-  const abriuNoFimRef = useRef(false);
+  // Só acompanha depois de a abertura acontecer (no fim, ou no evento citado
+  // e então na primeira mudança).
+  const seguindoRef = useRef(false);
+  const vistoRef = useRef<string | null>(null);
 
-  // Navegação de evidência (Fase 4b): rola até o evento assim que ele
-  // existir no DOM — depende do log estar aberto E dos eventos já terem
-  // chegado pelo poll, daí a dependência em `events.length`.
+  // Navegação de evidência (Fase 4b): rola até o evento assim que ele existir.
   useEffect(() => {
     if (!highlightEvent || !logOpen) return;
     document
@@ -61,45 +63,24 @@ export function useRolagemDoFio({
       ?.scrollIntoView({ block: 'center', behavior: 'smooth' });
   }, [highlightEvent, logOpen, events.length]);
 
-  // Achado 10: a sessão abre sempre na ÚLTIMA mensagem. Roda uma vez, assim
-  // que a primeira leva de eventos chega — a navegação de evidência do
-  // Psicólogo (efeito acima) tem prioridade quando existe `highlightEvent`,
-  // e por isso este nem tenta rolar nesse caso.
-  useEffect(() => {
-    if (highlightEvent || abriuNoFimRef.current || events.length === 0) return;
-    rolarParaOFim(messagesEndRef.current);
-    abriuNoFimRef.current = true;
-  }, [highlightEvent, events.length]);
-
-  // Conteúdo novo acompanha o fim SE o usuário já estava lá — não arranca o
-  // scroll de quem subiu pra reler o histórico. A guarda dos 120px é
-  // DELIBERADA e continua intacta: ela é a diferença entre "o chat me segue"
-  // e "o chat me arrasta".
   const acompanharOFim = useCallback(() => {
-    if (!abriuNoFimRef.current) return;
-    const container = scrollContainerRef.current;
-    if (!container) return;
-    const pertoDoFim =
-      container.scrollHeight - container.scrollTop - container.clientHeight < 120;
-    if (pertoDoFim) rolarParaOFim(messagesEndRef.current);
+    if (seguindoRef.current) rolarParaOFim(messagesEndRef.current);
   }, []);
 
-  // RN-173: as dependências eram só `[events.length, streamingText]`, e por
-  // isso TUDO que cresce o fio sem um evento novo passava despercebido — um
-  // `ApprovalCard` chegando pelo poll de `usePendingActions` (que é uma query
-  // SEPARADA) empurrava a conversa para fora da tela sem rolar nada. `actions`
-  // entra aqui pelo mesmo motivo que `events`: é uma das duas fontes da
-  // timeline.
+  // Por IDENTIDADE, não por `length`: a primeira leva abre no fim (achado 10;
+  // com `highlightEvent` fica no evento citado); toda mudança depois vai ao fim.
+  const identidade = identidadeDoFio(events, actions);
   useEffect(() => {
-    acompanharOFim();
-  }, [events.length, actions.length, acompanharOFim]);
+    if (events.length === 0 && actions.length === 0) return;
+    const primeira = vistoRef.current === null;
+    vistoRef.current = identidade;
+    if (primeira && highlightEvent) return;
+    seguindoRef.current = true;
+    rolarParaOFim(messagesEndRef.current);
+  }, [identidade]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // O texto do streaming (AT-301): em vez de dependência de efeito — que
-  // exigiria a página re-renderizar a cada token —, uma assinatura direta do
-  // store. O aviso chega ANTES de a bolha pintar o texto novo, então o
-  // acompanhamento vai para a volta seguinte do laço de eventos, depois do
-  // commit; só o TEXTO dispara (a faixa de atividade mora fora da área que
-  // rola), como a dependência antiga.
+  // O texto do streaming (AT-301): assinatura direta do store; o aviso chega
+  // ANTES de a bolha pintar, então a rolagem vai à volta seguinte.
   useEffect(() => {
     let textoAnterior = streamingStore.ler().texto;
     let pendente: ReturnType<typeof setTimeout> | null = null;
@@ -120,21 +101,14 @@ export function useRolagemDoFio({
     };
   }, [streamingStore, acompanharOFim]);
 
-  // A outra metade do mesmo problema, e a que NENHUMA lista de dependências
-  // resolve: altura que muda sem estado novo no `SessionPage` — abrir/fechar
-  // um `Disclosure` (o colapso por agente da RN-138, os "Detalhes" do próprio
-  // card de aprovação), o Markdown reflowando, um diagrama renderizando
-  // depois. Quem sabe disso é o LAYOUT, não o React, então quem pergunta é um
-  // `ResizeObserver` — sobre o CONTEÚDO, com a MESMA guarda dos 120px.
-  //
-  // A guarda de existência é a mesma razão de `rolarParaOFim`: jsdom não
-  // implementa `ResizeObserver`, e num navegador de verdade ele sempre existe
-  // — a guarda nunca muda o comportamento visível.
+  // Altura que muda sem estado novo: o CONTEÚDO (Disclosure, Markdown,
+  // Mermaid) e o CONTAINER (faixa de atividade, composer, pendências acima).
+  // Guarda de existência: jsdom não tem `ResizeObserver`.
   useEffect(() => {
-    const alvo = messagesInnerRef.current;
-    if (!alvo || typeof ResizeObserver === 'undefined') return;
+    if (typeof ResizeObserver === 'undefined') return;
     const observador = new ResizeObserver(() => acompanharOFim());
-    observador.observe(alvo);
+    if (messagesInnerRef.current) observador.observe(messagesInnerRef.current);
+    if (scrollContainerRef.current) observador.observe(scrollContainerRef.current);
     return () => observador.disconnect();
   }, [acompanharOFim]);
 

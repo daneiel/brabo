@@ -1,175 +1,177 @@
-# ADR 0114 — Native Ollama detection in dev bootstrap: ask once, persist to `.env`, gate the compose services behind a profile
+# ADR 0114 — Detecção de Ollama nativo no bootstrap de dev: perguntar uma vez, persistir no `.env`, pôr os serviços do compose atrás de um profile
 
-- **Status:** Accepted
-- **Date:** 2026-08-26
-- **Context:** closes a real port collision found during local dev bootstrap between the compose's `ollama` service and a native Ollama install already running on the developer's machine
-- **References (without editing):** [ADR 0025](0025-fase5-deploy-kubernetes-kustomize.md) (decision 10 — `pnpm dev` and `make deploy-local` share ports on purpose), [ADR 0100](0100-rag-search-e-modelos-garantidos-no-boot.md) (introduced the `ollama`/`ollama-model-loader` pair this ADR gates)
+- **Status:** Aceito
+- **Data:** 2026-08-26
+- **Contexto:** fecha uma colisão real de porta achada no bootstrap de dev local entre o serviço `ollama` do compose e uma instalação nativa do Ollama já rodando na máquina de quem desenvolve
+- **Referências (sem editar):** [ADR 0025](0025-fase5-deploy-kubernetes-kustomize.md) (decisão 10 — `pnpm dev` e `make deploy-local` compartilham portas de propósito), [ADR 0100](0100-rag-search-e-modelos-garantidos-no-boot.md) (introduziu o par `ollama`/`ollama-model-loader` que este ADR põe atrás do profile)
 
-## Context
+## Contexto
 
-`scripts/dev/preflight.mjs` already existed to catch a known port clash
-before `docker compose up`: `pnpm dev` and `make deploy-local` share ports
-3000/4000/8080 on purpose (ADR 0025, decision 10), and an opaque `port is
-already allocated` from Docker doesn't say who's holding the port or what to
-do about it. Preflight reads `docker compose config`, cross-references
-`docker ps` and `ss -tlnp`, and reports every collision by name.
+O `scripts/dev/preflight.mjs` já existia para pegar um choque de portas
+conhecido antes do `docker compose up`: `pnpm dev` e `make deploy-local`
+compartilham as portas 3000/4000/8080 de propósito (ADR 0025, decisão 10), e
+um `port is already allocated` opaco do Docker não diz quem está segurando a
+porta nem o que fazer. O preflight lê `docker compose config`, cruza com
+`docker ps` e `ss -tlnp` e relata cada colisão pelo nome.
 
-`OLLAMA_PORT` (default `11434`) sits in that same set — and it is also the
-default port of a *native* Ollama install, the kind a developer might
-already run for unrelated reasons on their own machine. Unlike the k3d
-clash, this collision has a legitimate resolution the generic conflict
-report doesn't know about: reuse the native daemon instead of running a
-second one in a container. Reported as "port 11434 ← ollama (unknown
-process)" like any other conflict, the fix looks like a problem to route
-around, when the actual answer is "let it be reused."
+O `OLLAMA_PORT` (padrão `11434`) está nesse mesmo conjunto — e é também a
+porta padrão de uma instalação *nativa* do Ollama, do tipo que um
+desenvolvedor talvez já rode por motivos sem relação na própria máquina. Ao
+contrário do choque com o k3d, esta colisão tem uma resolução legítima que o
+relatório genérico de conflitos desconhece: reusar o daemon nativo em vez de
+rodar um segundo num container. Relatada como "port 11434 ← ollama (unknown
+process)", como qualquer outro conflito, a correção parece um problema a
+contornar, quando a resposta de fato é "deixe reusar".
 
-## Decision
+## Decisão
 
-### 1. Confirm it's really Ollama before treating it specially
+### 1. Confirmar que é mesmo o Ollama antes de tratá-lo de forma especial
 
-`detectarOllamaNativo` (`scripts/dev/preflight.mjs:234`) only special-cases
-the port when a live GET to `http://localhost:<porta>/api/tags` answers with
-the shape Ollama always returns, even with no model pulled yet
-(`{"models":[]}`, checked via `ehOllama`, `preflight.mjs:159`). A short
-timeout (1.5s) matters here: this runs before any container comes up, so a
-hang here would hang the entire `docker compose up`. Anything on the port
-that doesn't answer like Ollama falls through to the existing generic
-conflict report — this decision only touches the one case where the
-occupant is provably the thing this ADR is about.
+`detectarOllamaNativo` (`scripts/dev/preflight.mjs:234`) só trata a porta
+como caso especial quando um GET ao vivo em
+`http://localhost:<porta>/api/tags` responde com a forma que o Ollama sempre
+devolve, mesmo sem modelo baixado ainda (`{"models":[]}`, conferido via
+`ehOllama`, `preflight.mjs:159`). Um timeout curto (1,5s) importa aqui: isto
+roda antes de qualquer container subir, então um travamento aqui travaria o
+`docker compose up` inteiro. Qualquer coisa na porta que não responda como o
+Ollama cai no relatório genérico de conflitos que já existia — esta decisão
+só toca o único caso em que o ocupante é, comprovadamente, a coisa de que
+este ADR trata.
 
-### 2. Ask once, apply the default without a TTY, and record the decision so it isn't asked again
+### 2. Perguntar uma vez, aplicar o padrão sem TTY e registrar a decisão para não perguntar de novo
 
-`perguntarUsoDoOllama` (`preflight.mjs:198`) prompts "Detectamos Ollama já
-rodando na porta N. Usar essa instância? [S/n]" — but only when
-`process.stdin.isTTY`. `bootstrap.sh`'s menu items run their command in the
-background with stdin redirected from `/dev/null`, on purpose, so a running
-command never steals the arrow keys the menu itself is reading; a prompt
-that tried to read a line from a stream that's already closed would hang
-forever. Without a TTY the function logs why and returns the default (yes)
-directly — the same shape of guard the rest of the product already uses
-whenever a decision needs a human but one might not be watching.
+`perguntarUsoDoOllama` (`preflight.mjs:198`) pergunta "Detectamos Ollama já
+rodando na porta N. Usar essa instância? [S/n]" — mas só quando
+`process.stdin.isTTY`. Os itens de menu do `bootstrap.sh` rodam o comando em
+segundo plano com o stdin redirecionado de `/dev/null`, de propósito, para
+que um comando em execução nunca roube as setas que o próprio menu está
+lendo; uma pergunta que tentasse ler uma linha de um fluxo já fechado
+travaria para sempre. Sem TTY a função registra no log por quê e devolve o
+padrão (sim) direto — a mesma forma de guarda que o resto do produto já usa
+sempre que uma decisão precisa de um humano mas talvez não haja um olhando.
 
-The answer is written to `.env` and never asked again for as long as
-`OLLAMA_MODE` is present there: `detectarOllamaNativo` short-circuits at the
-top the moment the key exists (`preflight.mjs:236`). Nothing in the normal
-`pnpm dev` loop re-asks — the one way to reopen the question is the new menu
-item in Decision 5.
+A resposta é gravada no `.env` e nunca mais perguntada enquanto
+`OLLAMA_MODE` estiver lá: `detectarOllamaNativo` encerra logo no início no
+momento em que a chave existe (`preflight.mjs:236`). Nada no laço normal do
+`pnpm dev` pergunta de novo — o único jeito de reabrir a pergunta é o item de
+menu novo da Decisão 5.
 
-### 3. `escreverEnv` — the first thing in this repo that *writes* `.env`, not just reads it
+### 3. `escreverEnv` — a primeira coisa neste repositório que *escreve* o `.env`, não só o lê
 
-Every existing script that touches `.env` (`reset-total.sh`'s `*_TEST_KEY`
-lookups, this same file's own `lerEnv`) only ever greps a value out. Nothing
-before this needed to *update* one, so there was no existing bash pattern to
-reuse for that direction. `escreverEnv` (`preflight.mjs:118`) is Node
-because the update needs one property bash's line-oriented tools don't give
-for free without extra care: read the file, rewrite a line in place when its
-key already exists, append the key at the end when it doesn't, and leave
-every comment and every other key untouched. On the "yes, use it" path it
-writes `OLLAMA_MODE=host` and `OLLAMA_HOST=http://host.docker.internal:<porta>`;
-on "no" it writes `OLLAMA_MODE=container` plus a fresh `OLLAMA_PORT` found by
-scanning upward from `11500` (`proximaPortaLivre`, `preflight.mjs:178`) so
-the container gets a free port instead of colliding with the native one it
-was just told to leave alone.
+Todo script existente que toca o `.env` (as buscas de `*_TEST_KEY` do
+`reset-total.sh`, o próprio `lerEnv` deste mesmo arquivo) só extrai um valor
+com grep. Nada antes disto precisou *atualizar* um, então não havia padrão em
+bash a reusar nessa direção. O `escreverEnv` (`preflight.mjs:118`) é Node
+porque a atualização precisa de uma propriedade que as ferramentas de bash
+orientadas a linha não dão de graça sem cuidado extra: ler o arquivo,
+reescrever uma linha no lugar quando a chave dela já existe, acrescentar a
+chave no fim quando não existe, e deixar intactos todo comentário e toda
+outra chave. No caminho "sim, usar" ele grava `OLLAMA_MODE=host` e
+`OLLAMA_HOST=http://host.docker.internal:<porta>`; no "não" grava
+`OLLAMA_MODE=container` mais um `OLLAMA_PORT` novo, achado varrendo para cima
+a partir de `11500` (`proximaPortaLivre`, `preflight.mjs:178`), para que o
+container ganhe uma porta livre em vez de colidir com a nativa que ele acabou
+de ser instruído a deixar em paz.
 
-### 4. Gate `ollama`/`ollama-model-loader` behind a compose profile
+### 4. Pôr `ollama`/`ollama-model-loader` atrás de um profile do compose
 
-Both services (introduced by ADR 0100) move under `profiles: ["local-llm"]`
-(`docker/docker-compose.yml:82,119`) — the same pattern
-`docker-compose.prod.yml` already uses for the equivalent pair under the
-literal name `llm` (different file, so the literal doesn't need to match).
-A profiled service doesn't start with a bare `docker compose up`, which is
-exactly what `OLLAMA_MODE=host` needs: not "started but unreachable," but
-never started at all, so it never competes for the port and never burns RAM
-loading a model nothing will query.
+Os dois serviços (introduzidos pelo ADR 0100) passam para `profiles:
+["local-llm"]` (`docker/docker-compose.yml:82,119`) — o mesmo padrão que o
+`docker-compose.prod.yml` já usa para o par equivalente sob o nome literal
+`llm` (arquivo diferente, então o literal não precisa coincidir). Um serviço
+com profile não sobe num `docker compose up` puro, que é exatamente o que
+`OLLAMA_MODE=host` precisa: não "subiu mas está inalcançável", e sim nunca
+subiu, então nunca disputa a porta e nunca gasta RAM carregando um modelo que
+nada vai consultar.
 
-### 5. `scripts/dev/perfil-ollama.sh` decides `--profile local-llm` at the moment each command runs
+### 5. `scripts/dev/perfil-ollama.sh` decide `--profile local-llm` no momento em que cada comando roda
 
-One small script, not a duplicated `grep` in three places: it prints
-`--profile local-llm` unless `.env` already says `OLLAMA_MODE=host`, and
-nothing otherwise. It is consumed by the only two `docker compose` callers
-that bring up the **whole** stack rather than one named service — "Docker ›
-Deploy › All" and "Docker › Create" (`bootstrap.sh`, items `1.1.1`/`1.2`) —
-via `$(bash scripts/dev/perfil-ollama.sh)`, written **escaped** as
-`\$(...)` in the command-tree source so it evaluates when the menu item is
-*executed*, not when the tree is built (the same escaping already used for
-`\${POSTGRES_USER}` in Database › Delete's command). Api/Engine/Web
-(`1.1.2`–`1.1.4`) target one service each and never touch `ollama`, so they
-were left unchanged.
+Um script pequeno, não um `grep` duplicado em três lugares: ele imprime
+`--profile local-llm` a menos que o `.env` já diga `OLLAMA_MODE=host`, e nada
+caso contrário. Ele é consumido pelos dois únicos chamadores de `docker
+compose` que sobem a stack **inteira** em vez de um serviço nomeado —
+"Docker › Deploy › All" e "Docker › Create" (`bootstrap.sh`, itens
+`1.1.1`/`1.2`) — via `$(bash scripts/dev/perfil-ollama.sh)`, escrito
+**escapado** como `\$(...)` na fonte da árvore de comandos para que seja
+avaliado quando o item de menu é *executado*, não quando a árvore é montada
+(o mesmo escape já usado para `\${POSTGRES_USER}` no comando de Database ›
+Delete). Api/Engine/Web (`1.1.2`–`1.1.4`) miram um serviço cada e nunca tocam
+o `ollama`, então ficaram como estavam.
 
-### 6. "Docker › Reconfigurar Ollama" (`1.5`) reopens the question
+### 6. "Docker › Reconfigurar Ollama" (`1.5`) reabre a pergunta
 
-`scripts/dev/reconfigurar-ollama.sh` removes `OLLAMA_MODE` and `OLLAMA_HOST`
-from `.env` unconditionally, and `OLLAMA_PORT` *only* when the mode being
-forgotten was `container` — in `host` mode that port was written by whoever
-installed Ollama natively, not by this mechanism, and deleting it would make
-the next boot silently forget a value that was never this feature's to own.
-The item needs no confirmation screen: it changes at most three lines of
-`.env` and nothing destructive to data, the same bar the rest of the
-non-trivial-but-non-destructive menu items already clear (Generate,
-Migrate, Seed).
+O `scripts/dev/reconfigurar-ollama.sh` remove `OLLAMA_MODE` e `OLLAMA_HOST`
+do `.env` incondicionalmente, e `OLLAMA_PORT` *só* quando o modo esquecido
+era `container` — no modo `host` essa porta foi gravada por quem instalou o
+Ollama nativamente, não por este mecanismo, e apagá-la faria o próximo boot
+esquecer em silêncio um valor que nunca foi desta feature. O item não precisa
+de tela de confirmação: muda no máximo três linhas do `.env` e nada
+destrutivo para os dados, a mesma régua que o resto dos itens de menu não
+triviais mas não destrutivos já cumpre (Generate, Migrate, Seed).
 
-## Consequences
+## Consequências
 
-**A profile that hides the port also hides a real conflict, so the
-detection path had to grow its own.** With `ollama` under an inactive
-profile, `docker compose config` no longer lists port `11434` at all by
-default — the generic per-port loop that used to catch "something else is
-squatting on 11434" would simply stop seeing it, a silent regression versus
-the behavior that existed *before* this ADR. `detectarOllamaNativo` closes
-that gap itself: when the port is occupied by something that answers
-anything other than Ollama's shape, it returns a conflict entry in the exact
-format the generic loop already produces, so it lands in the same report.
+**Um profile que esconde a porta também esconde um conflito real, então o
+caminho de detecção teve de ganhar o seu.** Com o `ollama` sob um profile
+inativo, o `docker compose config` deixa de listar a porta `11434` por
+padrão — o laço genérico por porta que pegava "outra coisa está ocupando a
+11434" simplesmente deixaria de vê-la, uma regressão silenciosa em relação ao
+comportamento que existia *antes* deste ADR. O `detectarOllamaNativo` fecha
+essa lacuna ele mesmo: quando a porta está ocupada por algo que responde
+qualquer coisa diferente da forma do Ollama, ele devolve uma entrada de
+conflito no formato exato que o laço genérico já produz, e ela cai no mesmo
+relatório.
 
-**Removing `api`'s `depends_on: ollama` was a forced, not incidental,
-change.** Compose refuses the whole file with "depends on undefined
-service" when a service outside an inactive profile depends on one inside
-it — confirmed by testing in an isolated sandbox before touching the real
-file, and it broke every `docker compose` invocation (`up`, `down`, `ps`,
-even `config`, which `preflight.mjs` itself calls). The dependency was
-already vestigial for compose's purposes: `api` calls Ollama at agent-turn
-runtime, never at its own boot, so nothing about startup ordering was lost.
+**Remover o `depends_on: ollama` da `api` foi uma mudança forçada, não
+acidental.** O Compose recusa o arquivo inteiro com "depends on undefined
+service" quando um serviço fora de um profile inativo depende de um de
+dentro dele — confirmado testando num sandbox isolado antes de tocar o
+arquivo real, e isso quebrava toda invocação de `docker compose` (`up`,
+`down`, `ps`, até `config`, que o próprio `preflight.mjs` chama). A
+dependência já era vestigial para os fins do compose: a `api` chama o Ollama
+em runtime, no turno do agente, nunca no próprio boot, então nada da ordem de
+subida se perdeu.
 
-**"Docker › Destroy" also passes through the same conditional `--profile`.**
-`docker compose down` without `--profile` ignores containers that belong to
-an inactive profile — if `ollama`/`ollama-model-loader` came up under
-`local-llm`, a plain `down` leaves them running and can leave the network in
-a "still in use" state. `CMD["1.3"]` in `bootstrap.sh` now resolves through
-the same `scripts/dev/perfil-ollama.sh` helper the `up` paths use, so Destroy
-tears down exactly what the matching `up` brought up — covered by
-`bootstrap.spec.ts`'s "Docker › Destroy também passa pelo perfil do Ollama"
-case.
+**"Docker › Destroy" também passa pelo mesmo `--profile` condicional.** O
+`docker compose down` sem `--profile` ignora containers que pertencem a um
+profile inativo — se `ollama`/`ollama-model-loader` subiram sob `local-llm`,
+um `down` puro os deixa rodando e pode deixar a rede num estado "ainda em
+uso". O `CMD["1.3"]` do `bootstrap.sh` agora resolve pelo mesmo helper
+`scripts/dev/perfil-ollama.sh` que os caminhos de `up` usam, então o Destroy
+derruba exatamente o que o `up` correspondente subiu — coberto pelo caso
+"Docker › Destroy também passa pelo perfil do Ollama" do `bootstrap.spec.ts`.
 
-**Declared, not fixed here: a project's own idle `ollama` container can be
-mistaken for a native install.** If a developer switches to
-`OLLAMA_MODE=container` but doesn't bring the containers down first,
-`detectarOllamaNativo` has no way to tell "a native install is on this
-port" from "the project's own `ollama` container, from a previous run, is
-still on this port" — it would ask again in that case. Not implemented: the
-sequence is uncommon (reconfiguring without stopping the stack first) and
-was out of the scope of the request that produced this feature.
+**Declarado, não corrigido aqui: um container `ollama` ocioso do próprio
+projeto pode ser confundido com uma instalação nativa.** Se um desenvolvedor
+passa para `OLLAMA_MODE=container` mas não derruba os containers antes, o
+`detectarOllamaNativo` não tem como distinguir "há uma instalação nativa
+nesta porta" de "o container `ollama` do próprio projeto, de uma execução
+anterior, ainda está nesta porta" — ele perguntaria de novo nesse caso. Não
+implementado: a sequência é incomum (reconfigurar sem parar a stack antes) e
+estava fora do escopo do pedido que produziu esta feature.
 
-**Append order in `.env` is not curated.** When none of the three keys
-exist yet, `escreverEnv` appends them at the end of the file, not next to
-the `OLLAMA_PORT`/`OLLAMA_HOST` block `.env.example` already documents them
-around. Cosmetic, not a correctness problem — the values are exactly as
-valid wherever they land in the file.
+**A ordem de acréscimo no `.env` não é curada.** Quando nenhuma das três
+chaves existe ainda, o `escreverEnv` as acrescenta no fim do arquivo, não ao
+lado do bloco `OLLAMA_PORT`/`OLLAMA_HOST` em torno do qual o `.env.example`
+já as documenta. Cosmético, não problema de correção — os valores são
+igualmente válidos onde quer que caiam no arquivo.
 
-## Alternatives considered
+## Alternativas consideradas
 
-- **Keep reporting the occupied port as a generic conflict and let the
-  developer resolve it by hand through `.env`.** Rejected: this is a common,
-  benign situation, not an error — labeling it identically to "the k3d
-  cluster is up" or "an unrelated process is on this port" teaches the
-  developer to work around something that has a one-line fix, every single
-  time they start the stack.
-- **Detect and silently reuse the native instance, no question asked.**
-  Rejected on the same principle the rest of the product already holds for
-  configuration it doesn't own (CLAUDE.md: the product never overwrites a
-  user's configuration without an explicit decision) — even a low-stakes
-  dev convenience gets one explicit question, asked once, not a silent
-  default a developer only discovers later by reading `.env`.
-- **Leave `ollama`/`ollama-model-loader` outside any profile and just stop
-  publishing the port in `host` mode.** Rejected: the containers would still
-  start, still load a model into memory, and still spend CPU/RAM that
-  nothing would ever query — a profile keeps them from starting at all,
-  which is what "use the native one instead" actually means.
+- **Continuar relatando a porta ocupada como conflito genérico e deixar o
+  desenvolvedor resolver à mão pelo `.env`.** Recusada: é uma situação comum
+  e benigna, não um erro — rotulá-la do mesmo jeito que "o cluster k3d está
+  de pé" ou "um processo sem relação está nesta porta" ensina o
+  desenvolvedor a contornar algo que tem correção de uma linha, toda vez que
+  ele sobe a stack.
+- **Detectar e reusar a instância nativa em silêncio, sem perguntar.**
+  Recusada pelo mesmo princípio que o resto do produto já mantém para
+  configuração que não é dele (CLAUDE.md: o produto nunca sobrescreve
+  configuração do usuário sem decisão explícita) — mesmo uma conveniência de
+  dev de baixo risco ganha uma pergunta explícita, feita uma vez, não um
+  padrão silencioso que o desenvolvedor só descobre depois lendo o `.env`.
+- **Deixar `ollama`/`ollama-model-loader` fora de qualquer profile e só parar
+  de publicar a porta no modo `host`.** Recusada: os containers ainda
+  subiriam, ainda carregariam um modelo na memória e ainda gastariam
+  CPU/RAM que nada jamais consultaria — um profile impede que eles subam, que
+  é o que "usar o nativo no lugar" de fato quer dizer.

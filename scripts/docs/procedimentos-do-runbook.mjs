@@ -12,7 +12,7 @@
  * `schedule:`, e a célula continua afirmando. Este módulo é a parte que confere.
  *
  * O que ele lê: a PRIMEIRA tabela depois do cabeçalho
- * `## Procedures and how each is verified` de `docs/runbook.md`, com as colunas
+ * `{#procedimentos-e-verificacao}` de `docs/runbook.md`, com as colunas
  * exatas `procedure | anchor | verification | schedule`. O que reprova, por
  * linha:
  *
@@ -47,7 +47,8 @@
 
 import { parse } from 'yaml';
 
-export const SECAO = /^##\s+Procedures and how each is verified\b/;
+// Pela âncora, não pelo título: o título muda com o idioma da fonte (ADR 0216).
+export const SECAO = /^##\s.*\{#procedimentos-e-verificacao\}\s*$/;
 export const COLUNAS = ['procedure', 'anchor', 'verification', 'schedule'];
 
 const CELULA_DE_SEPARADOR = /^:?-{3,}:?$/;
@@ -67,7 +68,7 @@ function celulas(linha) {
 export function extrairTabela(texto) {
   const linhas = texto.split('\n');
   const inicio = linhas.findIndex((l) => SECAO.test(l));
-  if (inicio === -1) return { cego: 'não achei a seção `## Procedures and how each is verified`', linhas: [] };
+  if (inicio === -1) return { cego: 'não achei a seção `{#procedimentos-e-verificacao}`', linhas: [] };
 
   let i = inicio + 1;
   while (i < linhas.length && !linhas[i].trim().startsWith('|')) {

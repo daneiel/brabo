@@ -1,4 +1,4 @@
-# 0166 — A preferência de roteamento mora no binding de modelo, viaja com ele, e congela no metering
+# ADR 0166 — A preferência de roteamento mora no binding de modelo, viaja com ele, e congela no metering
 
 ## Status
 

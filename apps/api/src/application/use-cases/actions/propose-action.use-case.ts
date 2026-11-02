@@ -4,6 +4,9 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ExecuteQaEnvironmentStartUseCase } from './execute-qa-environment-start.use-case';
+import { recusaDoRun } from '../../../domain/infra/run-instructions';
+import { runComoEfeitoDeAcao } from '../../efeito-de-acao';
 import { UnitOfWork } from '../../ports/unit-of-work.port';
 import { SessionRepository } from '../../ports/session-repository.port';
 import { ProjectRepository } from '../../ports/project-repository.port';
@@ -45,6 +48,10 @@ import type { ActionStatus } from '../../../domain/actions/action-state-machine'
 import type { PermissionPolicy } from '../../../domain/actions/permissions-file';
 import type { ProposedAction } from '../../../domain/actions/proposed-action.entity';
 import { Traced } from '../../../infrastructure/observability/traced.decorator';
+import {
+  DEFAULT_TASK_BUDGET_MICROS,
+  MULTIPLICADOR_DA_PRIMEIRA_TAREFA_DO_MODULO,
+} from '../execution/activate-execution.use-case';
 
 export interface ProposeActionInput {
   actionType: string;
@@ -73,6 +80,7 @@ export class ProposeActionUseCase {
     private readonly obterCicloDeVidaDoContainer: ObterCicloDeVidaDoContainerUseCase,
     private readonly brokerPort: ContainerBrokerPort,
     private readonly executeExecutionPlan: ExecuteExecutionPlanUseCase,
+    private readonly executeQaStart?: ExecuteQaEnvironmentStartUseCase,
   ) {}
 
   @Traced('application')
@@ -142,6 +150,21 @@ export class ProposeActionUseCase {
       }
     }
 
+    // RN-852 (AT-517, ADR 0213): a PR de infra declara COMO rodar o
+    // entregável (`run`), com a MESMA régua do engine. Recusa é 400 nomeado
+    // antes de criar a proposta, e o texto volta ao Infra Lead.
+    if (actionType === 'open_infra_pr') {
+      const recusa = recusaDoRun(
+        (input.payload as { run?: unknown } | null)?.run,
+      );
+      if (recusa) {
+        throw new BadRequestException({
+          code: 'run_invalido',
+          message: recusa,
+        });
+      }
+    }
+
     // Contexto todo buscado ANTES de chamar decide() — a função em si é
     // pura (ver domain/actions/decide.ts), zero IO.
     //
@@ -184,6 +207,11 @@ export class ProposeActionUseCase {
         actionType,
         command,
         targetBranch,
+        comAppDeclarado:
+          actionType === 'open_infra_pr' &&
+          Boolean(
+            (input.payload as { run?: { app?: unknown } } | null)?.run?.app,
+          ),
         cwd:
           actionType === 'terminal' ? cwdFromPayload(input.payload) : undefined,
       },
@@ -203,6 +231,21 @@ export class ProposeActionUseCase {
       },
     );
 
+    // AT-381 (RN-709): o plano leva o orçamento por tarefa VIGENTE — o mesmo
+    // que a ativação usará —, para o cartão mostrar a estimativa antes do
+    // clique. É teto por tarefa, não preço.
+    const payloadDaProposta =
+      actionType === 'propose_execution_plan'
+        ? {
+            ...(input.payload ?? {}),
+            orcamentoPorTarefaMicros:
+              project.taskBudgetMicros ?? DEFAULT_TASK_BUDGET_MICROS,
+            // RN-802 (AT-473): a primeira de cada módulo vale o dobro (RN-774).
+            multiplicadorDaPrimeiraDoModulo:
+              MULTIPLICADOR_DA_PRIMEIRA_TAREFA_DO_MODULO,
+          }
+        : input.payload;
+
     const { status, rejectionReason } = initialStatusFor(
       decision.policy,
       decision.reason,
@@ -213,7 +256,7 @@ export class ProposeActionUseCase {
         projectId,
         sessionId,
         actionType,
-        payload: input.payload,
+        payload: payloadDaProposta,
         status,
         resolvedPolicy: decision.policy,
         actor: input.actor,
@@ -273,6 +316,26 @@ export class ProposeActionUseCase {
       return created;
     });
 
+    // AT-516 (RN-848): o que a execução grava é EFEITO local da ação, e o
+    // canal da sessão é avisado mesmo dentro do pedido interno do engine.
+    return runComoEfeitoDeAcao(() =>
+      this.executarSeAutoAprovada(
+        projectId,
+        sessionId,
+        action,
+        status,
+        actionType,
+      ),
+    );
+  }
+
+  private async executarSeAutoAprovada(
+    projectId: string,
+    sessionId: string,
+    action: ProposedAction,
+    status: ProposedAction['status'],
+    actionType: ActionType,
+  ): Promise<ProposedAction> {
     if (status === 'auto_approved' && actionType === 'terminal') {
       return this.executeTerminalAction.execute(projectId, sessionId, action);
     }
@@ -322,6 +385,10 @@ export class ProposeActionUseCase {
     // `decide.ts` garante que ele nunca resolve `auto_approve`, então este
     // `status === 'auto_approved'` nunca é `true` para ele — um branch aqui
     // seria código morto que a suíte não teria como exercitar.
+    if (status === 'auto_approved' && actionType === 'qa_environment_start') {
+      return this.executeQaStart!.execute(projectId, sessionId, action);
+    }
+
     if (status === 'auto_approved' && actionType === 'container_stop') {
       return this.executeContainerStop.execute(projectId, sessionId, action);
     }
@@ -343,6 +410,8 @@ const ACOES_DO_BROKER: ActionType[] = [
   'container_start',
   'container_stop',
   'container_remove',
+  'container_recreate',
+  'qa_environment_start',
 ];
 
 function initialStatusFor(

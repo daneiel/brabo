@@ -1,1 +1,0 @@
-{"responses":{"204":{"description":"Key revoked. No body."},"401":{"description":"No token, expired token, or invalid signature."},"404":{"description":"No machine key with this id belongs to the caller (it does not exist, is a project key, or is someone else’s — one answer for all)."},"429":{"description":"Rate limit per user or per IP."}}}

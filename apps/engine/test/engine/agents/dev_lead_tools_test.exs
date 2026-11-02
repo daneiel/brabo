@@ -37,8 +37,8 @@ defmodule Engine.Agents.DevLeadToolsTest do
          %{ctx: ctx} do
       assert {:ok, msg} = DevLeadTools.run(plano([modulo("api", 2), modulo("web", 1)]), ctx)
 
-      assert msg =~ "3 agente(s)"
-      assert msg =~ "2 módulo(s)"
+      assert msg =~ "o plano pedia 3"
+      assert msg =~ "2 dev agent(s) sobem"
 
       assert_received {:propose_action, action_type, actor, payload}
       assert action_type == "propose_execution_plan"
@@ -68,7 +68,7 @@ defmodule Engine.Agents.DevLeadToolsTest do
       Process.put(:fake_propose_action, %{"id" => "pa-9", "status" => "executed"})
 
       assert {:ok, msg} = DevLeadTools.run(plano([modulo("api", 1)]), ctx)
-      assert msg =~ "1 agente(s)"
+      assert msg =~ "1 dev agent(s) sobem"
     end
 
     test "status denied vira {:error, _} — a proposta não é reencaminhada como sucesso", %{
@@ -136,6 +136,17 @@ defmodule Engine.Agents.DevLeadToolsTest do
 
       assert {:ok, msg} = DevLeadTools.run(plano([modulo("api", 1)]), ctx)
       assert msg =~ "execução ATIVADA"
+      assert msg =~ "1 dev agent(s) sobem, um por módulo"
+      refute msg =~ "a mais"
+    end
+
+    # RN-747 (AT-437): 2 agentes pedidos num módulo único — sobe 1, e é dito.
+    test "agente a mais no plano é dito como NÃO subindo", %{ctx: ctx} do
+      Process.put(:fake_propose_action, %{"id" => "pa-12", "status" => "executed"})
+
+      assert {:ok, msg} = DevLeadTools.run(plano([modulo("api", 2)]), ctx)
+      assert msg =~ "1 dev agent(s) sobem"
+      assert msg =~ "o plano pedia 2; os 1 a mais NÃO sobem"
     end
 
     test "status failed vira {:error, _} com o motivo da ativação", %{ctx: ctx} do
@@ -322,6 +333,54 @@ defmodule Engine.Agents.DevLeadToolsTest do
 
       refute_received {:appsec_dispatch, _project_id, _story_id}
       refute_received {:propose_action, "assess_implementability", _actor, _payload}
+    end
+  end
+
+  describe "resumo_do_plano/1 (AT-381, RN-709)" do
+    test "cita tarefas por módulo e os módulos sem tarefa" do
+      texto =
+        Engine.Agents.DevLeadTools.resumo_do_plano(%{
+          "tarefasPorModulo" => %{"api" => 13, "catalog" => 5},
+          "modulosSemTarefa" => ["server"]
+        })
+
+      assert texto =~ "api 13 · catalog 5"
+      assert texto =~ "Sem tarefa, sem agente: server"
+    end
+
+    test "sem resumo da api, nada é inventado" do
+      assert Engine.Agents.DevLeadTools.resumo_do_plano(%{}) == ""
+    end
+  end
+
+  describe "tarefas_do_backlog (RN-887)" do
+    test "a tarefa bloqueada diz BLOQUEADA e o motivo; a todo normal não" do
+      Process.put(:fake_backlog, [
+        %{
+          "stories" => [
+            %{
+              "title" => "H1",
+              "moduleIds" => ["api"],
+              "tasks" => [
+                %{
+                  "id" => "t-b",
+                  "title" => "Presa",
+                  "status" => "todo",
+                  "blocked" => true,
+                  "blockedReason" => "limite de correções"
+                },
+                %{"id" => "t-n", "title" => "Livre", "status" => "todo", "blocked" => false}
+              ]
+            }
+          ]
+        }
+      ])
+
+      texto = DevLeadTools.tarefas_do_backlog("proj-1")
+      [presa] = texto |> String.split("\n") |> Enum.filter(&(&1 =~ "task_id=t-b"))
+      [livre] = texto |> String.split("\n") |> Enum.filter(&(&1 =~ "task_id=t-n"))
+      assert presa =~ "BLOQUEADA: limite de correções"
+      refute livre =~ "BLOQUEADA"
     end
   end
 end

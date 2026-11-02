@@ -1,0 +1,162 @@
+{
+  "tab": {
+    "title": "执行者",
+    "summary_other": "{{count}} 个智能体 · {{working}} 个工作中 · {{waiting}} 个等待中",
+    "subtitle": "dev agent 和 QA —— 负责实现与负责验证的成员。团队其他成员见“概览”。",
+    "sessionError": {
+      "title": "无法确定此项目的执行会话。"
+    },
+    "noActiveExecution": "此项目当前没有进行中的执行。",
+    "showingSession": "正在显示",
+    "rosterError": {
+      "title": "无法得知谁在执行。"
+    },
+    "noExecutors": "此会话中尚无 dev agent 或 QA 开始行动。",
+    "timeline": {
+      "title": "时间线",
+      "subtitle": "dev agent 与 QA 的分支，从第一个里程碑到当前正在做的事。"
+    },
+    "toast": {
+      "autonomyError": "无法更改自主模式",
+      "rearmed": "智能体已重新启用",
+      "rearmError": "无法重新启用智能体"
+    }
+  },
+  "agentCard": {
+    "status": {
+      "trabalhando": "工作中",
+      "aguardando": "等待中",
+      "ocioso": "空闲",
+      "falhou": "失败",
+      "travado": "已卡住"
+    },
+    "autonomy": {
+      "manual": "手动",
+      "auto": "自动",
+      "autoModeHint": "自动模式：可运行任何命令，包括项目文件夹之外的命令。git push 和 PR 将放行；部署、sudo/doas 以及合并到受保护分支仍需你的批准。"
+    },
+    "rearm": "重新启用"
+  },
+  "teamGrid": {
+    "leadBadge": "Lead",
+    "subspecialty_other": "{{count}} 个子专长"
+  },
+  "agentStatus": {
+    "creditExhausted": "模型提供商额度已用尽 —— 请充值并重新启用以恢复",
+    "circuitBreaker": {
+      "default": "已触发自动停止",
+      "withCount_other": "自动停止：连续 {{count}} 个任务被阻塞"
+    },
+    "delegation": {
+      "completed": "已完成委派",
+      "failed": "失败 —— 来源：{{origin}}",
+      "dispensed": "已免除 —— {{justification}}"
+    }
+  },
+  "timelineTree": {
+    "empty": "此会话中尚无智能体开始行动。",
+    "newSinceLastVisit_other": "自上次查看以来有 {{count}} 个新里程碑",
+    "iteration": "第 {{n}} 次迭代",
+    "marker": {
+      "args": "参数",
+      "result": "结果",
+      "resultFailed": "结果（失败）",
+      "error": "错误：{{error}}"
+    },
+    "label": {
+      "agentActivated": "接手了工作",
+      "agentResponse": "已回复",
+      "agentError": "失败",
+      "toolCall": "使用了工具",
+      "toolResult": "工具已返回",
+      "handoffOffered": "提出了移交",
+      "handoffAccepted": "接受了移交",
+      "artifactProductBrief": "发布了产品简报",
+      "artifactBusinessRule": "发布了业务规则",
+      "artifactModuleMap": "发布了 module_map",
+      "artifactModuleRouting": "将模块路由给 Infra",
+      "artifactInsight": "发布了假设",
+      "delegationCompleted": "子智能体已完成",
+      "delegationFailed": "子智能体失败",
+      "delegationDispensed": "免除了委派",
+      "devStarted": "正在寻找任务",
+      "devWorking": "工作中",
+      "devIdle": "空闲",
+      "devAwaitingApproval": "等待你的批准",
+      "devAwaitingGate": "等待 gate",
+      "devBlocked": "已阻塞",
+      "devBlockedByContainer": "已暂停：项目没有运行中的容器",
+      "devError": "错误",
+      "devIdleTripped": "已触发自动停止",
+      "devCreditExhausted": "提供商额度已用尽",
+      "prGateChanged": "gate 已变化"
+    },
+    "now": {
+      "notYet": "尚未开始行动",
+      "failed": "因失败而停止",
+      "failedWithDetail": "因失败而停止（{{detalhe}}）",
+      "handedOff": "已移交",
+      "handedOffWithDetail": "已移交 {{detalhe}}",
+      "turnEnded": "本轮已结束",
+      "withDetail": "{{rotulo}} —— {{detalhe}}"
+    },
+    "detail": {
+      "origin": "来源 {{origem}}"
+    }
+  },
+  "autoModeTeam": {
+    "title": "为团队开启自动模式",
+    "subtitle": "执行已开始。为所选智能体开启自动模式后，它们接下来的命令将无需批准即可运行 —— 包括项目文件夹之外的命令。这只是一个提议：不点击下方按钮就不会有任何变化，每个智能体仍保留自己的手动/自动开关。",
+    "released": {
+      "summary": "自动驾驶放行什么、不放行什么",
+      "title": "自动模式就是自动驾驶 —— 无需询问即放行：",
+      "commands": "项目容器内的任何命令，即使路径在项目文件夹之外",
+      "compound": "含有在 permissions.json 中无规则片段的复合命令",
+      "commitBranch": "git commit 和创建本地分支",
+      "pushPr": "git push 和创建 PR",
+      "alwaysAllow": "在此智能体上点击“始终允许”不会关闭自动驾驶"
+    },
+    "notReleased": {
+      "title": "自动模式不放行 —— 以下操作仍需你的批准：",
+      "merge": "合并到受保护分支（dev、qa、main）",
+      "push": "部署",
+      "privileged": "sudo 和 doas",
+      "containerRemove": "移除容器（container_remove）",
+      "instructionPatch": "修改智能体指令（instruction_patch）",
+      "parallelize": "并行化或提高并行上限",
+      "deny": "permissions.json 中 deny（或 ask）的内容按原样执行",
+      "turnOff": "如需关闭，请使用每个智能体卡片上的手动/自动开关。"
+    },
+    "noRole": "开启自动模式需要 maintainer 角色（从工作区读取；此处不查询项目角色）。",
+    "button_other": "为 {{count}} 个智能体开启",
+    "loading": "正在读取哪些智能体已处于自动模式…… 读取完成后按钮即可使用。",
+    "erroGenerico": "无法开启自动模式",
+    "result": {
+      "all_other": "已为 {{count}} 个智能体开启自动模式。",
+      "none": "没有智能体开启自动模式：{{mensagem}}",
+      "some": "已为 {{total}} 个中的 {{ok}} 个智能体开启。仍为手动：{{falharam}}。"
+    },
+    "planSubtitle": "批准计划后执行即开始。现在为所选智能体开启自动模式，它们的命令将无需批准即可运行 —— 包括项目文件夹之外的命令。这只是一个提议：不点击下方按钮就不会有任何变化，每个智能体仍保留自己的手动/自动开关。"
+  },
+  "religar": {
+    "descricao_other": "当前没有执行在运行，还有 {{count}} 个任务待处理。只有重新启动执行，它们才会继续运行。",
+    "botao": "重新启动执行",
+    "erro": "无法重新启动执行"
+  },
+  "parar": {
+    "descricao": "停止执行将结束此会话：dev agent 和 gate 都会停止，不会再开始其他任务。",
+    "botao": "停止执行",
+    "semPapel": "停止执行需要工作区中的 developer 角色。",
+    "confirmarTitulo": "停止执行？",
+    "ficaTarefas_other": "{{count}} 个进行中的任务将被阻塞，worktree 中的工作以提交形式保留，待你放行后重新回到队列。",
+    "ficaPrs": "已打开的 PR 保持打开，等待你合并。",
+    "ficaAprovacoes": "待处理的审批仍保留在“审批”标签页中。",
+    "retomar": "执行后此会话无法重新打开；如需恢复，请在新会话中启动执行。",
+    "confirmar": "停止执行",
+    "erro": "无法停止执行。",
+    "nenhumaTarefa": "目前没有进行中或审查中的任务。",
+    "lendoTarefas": "正在读取待办列表以统计进行中和审查中的任务……",
+    "tarefasNaoLidas": "无法读取待办列表：无法统计进行中和审查中的任务。",
+    "ficaRevisao_other": "{{count}} 个任务处于 QA 审查中：其 gate 将停止，任务被阻塞，PR 保持打开；待你放行后重新回到队列。"
+  }
+}

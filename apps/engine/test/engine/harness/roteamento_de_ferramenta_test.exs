@@ -270,6 +270,30 @@ defmodule Engine.Harness.RoteamentoDeFerramentaTest do
 
       assert_received {:llm_turn_catalogo_completo, "criativo"}
     end
+
+    test "resposta VAZIA cortada pelo teto de saída NÃO repete, nos dois caminhos; sem corte repete",
+         %{project_id: p, session_id: s} do
+      cortada = resposta(%{"content" => ""}, roteamento()) |> Map.put("truncated", true)
+
+      Process.put(:fake_llm_turns, [cortada, FakeEngineApiClient.final_response("NÃO DEVIA")])
+      assert {:ok, _} = EngineApiClient.llm_turn(p, s, "dev-api", [], @tools)
+      refute_received {:llm_turn_catalogo_completo, _}
+
+      Process.put(:fake_llm_turns, [cortada, FakeEngineApiClient.final_response("NÃO DEVIA")])
+
+      assert {:ok, _} =
+               EngineApiClient.llm_turn_stream(p, s, "criativo", [], @tools, fn _ -> :ok end)
+
+      refute_received {:llm_turn_catalogo_completo, _}
+
+      Process.put(:fake_llm_turns, [
+        resposta(%{"content" => ""}, roteamento()) |> Map.put("truncated", false),
+        FakeEngineApiClient.tool_call_response("terminal", %{"command" => "ls"})
+      ])
+
+      assert {:ok, _} = EngineApiClient.llm_turn(p, s, "dev-api", [], @tools)
+      assert_received {:llm_turn_catalogo_completo, "dev-api"}
+    end
   end
 
   describe "ToolLoop" do

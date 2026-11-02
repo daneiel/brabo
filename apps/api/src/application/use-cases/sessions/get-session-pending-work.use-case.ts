@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { HandoffRepository } from '../../ports/handoff-repository.port';
 import { ProposedActionRepository } from '../../ports/proposed-action-repository.port';
 import { SessionEventRepository } from '../../ports/session-event-repository.port';
+import { TaskRepository } from '../../ports/backlog-repository.port';
 import { AGENTES_CONVERSACIONAIS } from '../../../domain/sessions/conversa-em-sessao-encerrada';
 
 export interface SessionPendingWork {
@@ -39,6 +40,16 @@ const FALA_DO_USUARIO = [
 const FIM_DE_TURNO: readonly string[] = [...FALA_DO_AGENTE, ...FALA_DO_USUARIO];
 const TIPOS_DA_FALA_DO_AGENTE: ReadonlySet<string> = new Set(FALA_DO_AGENTE);
 
+const MOTIVO_DA_TAREFA = {
+  bloqueada: 'bloqueada aguardando desbloqueio',
+  aguardando_merge: 'com PR aguardando o merge do usuário',
+  conflito_de_merge: 'devolvida por conflito de merge',
+  // RN-856 (AT-522): o desbloqueio põe a tarefa em `todo` e o dev a pega um
+  // instante depois — entre os dois, nada mais segurava a sessão.
+  em_curso_de_dev: 'em curso com um dev agent da execução',
+  a_fazer_de_modulo_com_dev: 'a fazer no módulo de um dev agent da execução',
+} as const;
+
 const NADA_PENDENTE: SessionPendingWork = {
   pending: false,
   motivo: null,
@@ -62,6 +73,7 @@ export class GetSessionPendingWorkUseCase {
     private readonly handoffs: HandoffRepository,
     private readonly proposedActions: ProposedActionRepository,
     private readonly sessionEvents: SessionEventRepository,
+    private readonly tasks: TaskRepository,
   ) {}
 
   async execute(sessionId: string): Promise<SessionPendingWork> {
@@ -218,6 +230,24 @@ export class GetSessionPendingWorkUseCase {
       };
     }
 
+    // SEXTO sinal (RN-776, AT-457): a TAREFA da execução esperando alguém.
+    // No TP-01 de 09/10 o heartbeat fechou as duas sessões de execução 2–8 s
+    // depois do `dev.idle` "sem task pegável" — o dev agent estava ocioso de
+    // verdade, mas havia tarefa BLOQUEADA e PR aprovada nos gates esperando o
+    // merge do usuário. Fechada a sessão, os dev agents são parados (RN-763),
+    // e o desbloqueio e o conflito de merge (RN-715) não tinham quem acordar.
+    // Sem teto, como os sinais de cima: quem destrava é uma pessoa. Só vale
+    // para a sessão de execução VIGENTE do projeto — a tarefa é do projeto, e
+    // sem esse recorte uma sessão de execução antiga ficaria imortal.
+    const tarefa = await this.tasks.findPendenteDaExecucao(sessionId);
+    if (tarefa) {
+      return {
+        pending: true,
+        motivo: `tarefa ${tarefa.taskId} ${MOTIVO_DA_TAREFA[tarefa.motivo]}`,
+        aguardandoUsuarioDesde: null,
+      };
+    }
+
     // QUINTO sinal (RN-581, AT-072): agente conversacional esperando o
     // USUÁRIO. No `exp001` o heartbeat fechou a sessão 30s depois de a aba
     // parar, com o Criativo tendo acabado de perguntar — nenhum dos quatro
@@ -278,9 +308,12 @@ const DEV_EVENT_TYPES = [
   'dev.awaiting_approval',
   'dev.idle',
   'dev.idle_tripped',
+  'dev.credit_exhausted',
   'dev.blocked',
   'dev.blocked_by_container',
   'dev.error',
+  // RN-797: a task fechou como "já na dev" — desfecho, não espera humana.
+  'dev.task_already_in_dev',
 ];
 
 // `dev.blocked_by_container` é espera por AÇÃO HUMANA, como `dev.idle_tripped`
@@ -294,6 +327,8 @@ const DEV_PENDING_TYPES = new Set([
   'dev.blocked',
   'dev.blocked_by_container',
   'dev.idle_tripped',
+  // RN-726: pausado por crédito do provedor, à espera do Rearmar humano.
+  'dev.credit_exhausted',
   'dev.awaiting_gate',
   'dev.awaiting_approval',
 ]);

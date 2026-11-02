@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import i18next from 'i18next';
 import { initReactI18next, I18nextProvider } from 'react-i18next';
 import settingsPtBR from '../../locales/pt-BR/settings.json';
@@ -10,7 +10,6 @@ import modelsPtBR from '../../locales/pt-BR/models.json';
 import modelsEn from '../../locales/en/models.json';
 import { ToastProvider } from '../../components/ui/ToastProvider';
 import type { Project } from '../../lib/api-types';
-import { AreaModelsSection } from './AreaModelsSection';
 import { BudgetSection } from './BudgetSection';
 import { ExecutionSection } from './ExecutionSection';
 import { ModelsSection } from './ModelsSection';
@@ -202,31 +201,38 @@ describe('padrão único de valor herdado — Teto de gasto por área', () => {
   });
 });
 
-describe('padrão único de valor herdado — Modelo por área', () => {
-  it('área que herda: a marca no polo ausente, sem o botão do verbo', async () => {
-    getAreaModelBinding.mockResolvedValue({
-      modelId: 'm-projeto',
-      origin: 'project',
-      skipped: [],
-    });
-    montar(<AreaModelsSection projectId="proj-1" />);
+describe('padrão único de valor herdado — a caixa da área em Modelos por agente', () => {
+  /** Todo lead resolve com a origem dada (o lote responde por chave). */
+  function leadsComOrigem(origin: string) {
+    getAgentModelBinding.mockImplementation((_p: string, slug: string) =>
+      Promise.resolve(
+        ['dev-lead', 'qa', 'infra'].includes(slug)
+          ? { modelId: 'm-area', origin, skipped: [] }
+          : null,
+      ),
+    );
+  }
 
-    expect(await screen.findAllByText('Sem valor próprio')).toHaveLength(3);
+  it('área que herda: caixas desmarcadas, sem a marca nem o botão do verbo', async () => {
+    leadsComOrigem('project');
+    montar(<ModelsSection projectId="proj-1" />);
+
+    const caixas = await screen.findAllByRole('checkbox', { name: /Valer para a área/ });
+    expect(caixas).toHaveLength(3);
+    for (const caixa of caixas) expect(caixa).not.toBeChecked();
+    expect(screen.queryByText('Sem valor próprio')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Voltar a herdar' })).toBeNull();
   });
 
-  it('área com padrão próprio: polo positivo e o verbo compartilhado', async () => {
-    getAreaModelBinding.mockResolvedValue({
-      modelId: 'm-area',
-      origin: 'area',
-      skipped: [],
-    });
-    montar(<AreaModelsSection projectId="proj-1" />);
+  it('área com padrão próprio: caixas marcadas, e desmarcar é o "voltar a herdar" (sem botão)', async () => {
+    leadsComOrigem('area');
+    montar(<ModelsSection projectId="proj-1" />);
 
-    expect(await screen.findAllByText('Valor próprio')).toHaveLength(3);
-    expect(
-      screen.getAllByRole('button', { name: 'Voltar a herdar' }),
-    ).toHaveLength(3);
+    const caixas = await screen.findAllByRole('checkbox', { name: /Valer para a área/ });
+    await waitFor(() => {
+      for (const caixa of caixas) expect(caixa).toBeChecked();
+    });
+    expect(screen.queryByRole('button', { name: /voltar a herdar/i })).toBeNull();
   });
 });
 
@@ -263,17 +269,14 @@ describe('padrão único de valor herdado — as duas línguas', () => {
     expect(screen.getByText('uses the default (3)')).toBeInTheDocument();
   });
 
-  it('en: o verbo e sua variante minúscula continuam sendo a MESMA chave', async () => {
-    getAreaModelBinding.mockResolvedValue({
-      modelId: 'm-area',
-      origin: 'area',
-      skipped: [],
-    });
-    montar(<AreaModelsSection projectId="proj-1" />, 'en');
+  it('en: o rótulo da caixa da área vem do catálogo en', async () => {
+    montar(<ModelsSection projectId="proj-1" />, 'en');
 
     expect(
-      await screen.findAllByRole('button', { name: 'Go back to inheriting' }),
-    ).toHaveLength(3);
+      await screen.findByRole('checkbox', {
+        name: 'Apply to the whole Dev area (lead + subagents)',
+      }),
+    ).toBeInTheDocument();
   });
 
   it('en: a tabela deriva o registro minúsculo do mesmo rótulo', async () => {

@@ -22,6 +22,8 @@ import {
 import type { TerminalExecutionResult } from '../../domain/actions/terminal-execution-result';
 import type { DevAgentImpl } from '../../domain/execution/dev-agent-impl';
 import { AnamneseDisabledError } from '../../domain/anamnese/anamnese-disabled.error';
+import { TurnoNaoRetomavelError } from '../../domain/sessions/turno-nao-retomavel.error';
+import { GateNaoEstacionadoError } from '../../domain/gates/gate-nao-estacionado.error';
 import { PsychologistDisabledError } from '../../domain/psychologist/psychologist-disabled.error';
 
 /**
@@ -167,13 +169,21 @@ export class HttpApiToEngineClient implements ApiToEngineClient {
     actionId: string,
     command: string,
     cwd?: string,
+    alvo?: { qa: true; taskId: string },
   ): Promise<TerminalExecutionResult> {
     const engineUrl = process.env.ENGINE_URL ?? 'http://localhost:4000';
 
     const res = await fetch(`${engineUrl}/internal/actions/execute`, {
       method: 'POST',
       headers: this.buildHeaders(),
-      body: JSON.stringify({ projectId, sessionId, actionId, command, cwd }),
+      body: JSON.stringify({
+        projectId,
+        sessionId,
+        actionId,
+        command,
+        cwd,
+        ...(alvo ? { alvo } : {}),
+      }),
     });
 
     if (!res.ok) {
@@ -342,6 +352,69 @@ export class HttpApiToEngineClient implements ApiToEngineClient {
     if (!res.ok) {
       throw new Error(
         `Falha no comando ao engine (anamnese/run): ${res.status} ${await res.text()}`,
+      );
+    }
+  }
+
+  /** RN-724: distingue o 409 `gate_nao_estacionado` de falha de transporte. */
+  async resumeParkedGate(
+    projectId: string,
+    taskId: string,
+    gate: string,
+  ): Promise<void> {
+    projectId = garantirSegmentoDeUrlInterna(projectId, 'projectId');
+    taskId = garantirSegmentoDeUrlInterna(taskId, 'taskId');
+    gate = garantirSegmentoDeUrlInterna(gate, 'gate');
+    const engineUrl = process.env.ENGINE_URL ?? 'http://localhost:4000';
+
+    const res = await fetch(
+      `${engineUrl}/internal/projects/${projectId}/tasks/${taskId}/gates/${gate}/resume`,
+      {
+        method: 'POST',
+        headers: this.buildHeaders(),
+        body: JSON.stringify({}),
+      },
+    );
+
+    if (res.status === 409) {
+      throw new GateNaoEstacionadoError();
+    }
+
+    if (!res.ok) {
+      throw new Error(
+        `Falha no comando ao engine (gates/resume): ${res.status} ${await res.text()}`,
+      );
+    }
+  }
+
+  /** AT-582: distingue o 409 nomeado do engine de falha de transporte. */
+  async resumeAgentTurn(
+    projectId: string,
+    sessionId: string,
+    agent: string,
+  ): Promise<void> {
+    sessionId = garantirSegmentoDeUrlInterna(sessionId, 'sessionId');
+    const engineUrl = process.env.ENGINE_URL ?? 'http://localhost:4000';
+
+    const res = await fetch(
+      `${engineUrl}/internal/sessions/${sessionId}/agent/resume`,
+      {
+        method: 'POST',
+        headers: this.buildHeaders(),
+        body: JSON.stringify({ projectId, agent }),
+      },
+    );
+
+    if (res.status === 409) {
+      const corpo = (await res.json().catch(() => ({}))) as { motivo?: string };
+      throw new TurnoNaoRetomavelError(
+        corpo.motivo ?? 'turno_nao_interrompido',
+      );
+    }
+
+    if (!res.ok) {
+      throw new Error(
+        `Falha no comando ao engine (agent/resume): ${res.status} ${await res.text()}`,
       );
     }
   }

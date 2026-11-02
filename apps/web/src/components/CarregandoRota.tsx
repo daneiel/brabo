@@ -1,3 +1,4 @@
+import { Shimmer } from './ui/Shimmer';
 import { useTranslation } from 'react-i18next';
 import { Skeleton } from './ui/Skeleton';
 
@@ -19,7 +20,7 @@ export function CarregandoRota() {
       data-testid="carregando-rota"
       style={{ display: 'grid', gap: 12, padding: 24 }}
     >
-      <p style={{ margin: 0, color: 'var(--text-muted)' }}>{t('route.loading')}</p>
+      <p style={{ margin: 0, color: 'var(--text-muted)' }}><Shimmer>{t('route.loading')}</Shimmer></p>
       <Skeleton width="40%" height={28} />
       <Skeleton height={16} />
       <Skeleton width="80%" height={16} />

@@ -49,7 +49,7 @@ const CODIGO_CERTO = {
 const PROSA_CERTA = [
   '## api',
   '| `API_PORT` | `3000` | the port |',
-  '## Tooling variables (not product)',
+  '## Variáveis de ferramenta (não do produto)',
   '| `E2E_BASE_URL` | — | where the browser points |',
 ].join('\n');
 

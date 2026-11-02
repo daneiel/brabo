@@ -1,4 +1,4 @@
-# 0148 — Os artefatos dos agentes projetados em arquivo, numa pasta `docs/`
+# ADR 0148 — Os artefatos dos agentes projetados em arquivo, numa pasta `docs/`
 
 ## Context
 

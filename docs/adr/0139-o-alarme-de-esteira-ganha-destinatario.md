@@ -1,4 +1,4 @@
-# 0139 — O alarme de merge de esteira ganha destinatário, e a regra de `dev`
+# ADR 0139 — O alarme de merge de esteira ganha destinatário, e a regra de `dev`
 
 ## Context
 

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, afterEach, afterAll, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { Session } from '../lib/api-types';
 import { historicoFalso } from '../test/historico-de-eventos';
 // Instância REAL do app (mesmo padrão de SessionPage.arquiteto-modelo-icone.test.tsx):
@@ -167,6 +167,19 @@ const PERGUNTA = {
   createdAt: '2026-08-11T12:00:00.000Z',
 };
 
+/** AT-653: o formulário é um questionário passo a passo; este helper anda por ele. */
+const campo = async (rotulo: string) =>
+  within(await screen.findByRole('group', { name: rotulo })).getByRole('textbox');
+const proxima = () => fireEvent.click(screen.getByRole('button', { name: 'Próxima' }));
+async function preencherNomeEUsuarios(nome = 'Checkout Fácil', usuarios = 'Lojistas de pequeno porte') {
+  fireEvent.change(await campo('Qual o nome do produto?'), {
+    target: { value: nome },
+  });
+  proxima();
+  fireEvent.change((await campo('Quem são os usuários?')), { target: { value: usuarios } });
+  proxima();
+}
+
 beforeEach(async () => {
   vi.clearAllMocks();
   await i18n.changeLanguage('pt-BR');
@@ -179,43 +192,98 @@ afterAll(() => {
 });
 
 describe('SessionPage — perguntas estruturadas do Criativo (RN-162)', () => {
-  it('renderiza um campo por pergunta, do tipo certo', async () => {
+  it('mostra uma pergunta por vez, com progresso, e o campo do tipo certo', async () => {
     eventos.mockReturnValue({ items: [PERGUNTA] });
 
     montar();
 
-    expect(await screen.findByLabelText('Qual o nome do produto?')).toBeInTheDocument();
-    expect(screen.getByLabelText('Quem são os usuários?').tagName).toBe('TEXTAREA');
+    expect(await campo('Qual o nome do produto?')).toBeInTheDocument();
+    expect(screen.getByText('Pergunta 1 de 3')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Anterior' })).not.toBeInTheDocument();
+    // Só o último passo oferece o envio.
+    expect(screen.queryByRole('button', { name: 'Enviar respostas' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('radio')).not.toBeInTheDocument();
 
-    const select = screen.getByLabelText('Qual plataforma?');
-    expect(select).toBeInTheDocument();
-    // RN-171: a saída por texto livre entra no FIM da lista — `allowOther`
-    // ausente vale `true`, como no engine.
-    expect(
-      Array.from(select.querySelectorAll('option')).map((o) => o.textContent),
-    ).toEqual(['Selecione', 'Web', 'Mobile', 'Ambos', 'Outra (escrever)']);
+    fireEvent.change((await campo('Qual o nome do produto?')), { target: { value: 'x' } });
+    proxima();
+    expect(screen.getByText('Pergunta 2 de 3')).toBeInTheDocument();
+    expect((await campo('Quem são os usuários?')).tagName).toBe('TEXTAREA');
 
+    fireEvent.change((await campo('Quem são os usuários?')), { target: { value: 'y' } });
+    proxima();
+    // RN-171: a lista vira escolhas (radio) e a saída livre é um campo ao lado.
+    expect(screen.getAllByRole('radio').map((r) => (r as HTMLInputElement).value)).toEqual([
+      'Web',
+      'Mobile',
+      'Ambos',
+    ]);
+    expect(screen.getByLabelText('Sua resposta — Qual plataforma?')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Enviar respostas' })).toBeDisabled();
   });
 
-  it('Enviar respostas fica desabilitado até todos os campos estarem preenchidos', async () => {
+  it('a textarea aceita várias linhas e só conta como respondida com texto', async () => {
+    eventos.mockReturnValue({ items: [PERGUNTA] });
+    montar();
+    fireEvent.change(await campo('Qual o nome do produto?'), { target: { value: 'x' } });
+    proxima();
+    const area = (await campo('Quem são os usuários?'));
+    proxima();
+    expect(screen.getByText('Pergunta 2 de 3')).toBeInTheDocument();
+    fireEvent.change(area, { target: { value: 'linha 1\nlinha 2' } });
+    expect(area).toHaveValue('linha 1\nlinha 2');
+    proxima();
+    expect(screen.getByText('Pergunta 3 de 3')).toBeInTheDocument();
+  });
+
+  it('RN-693: os campos de texto não convidam o autofill nem o gerenciador de senhas', async () => {
+    eventos.mockReturnValue({ items: [PERGUNTA] });
+    montar();
+    const nome = await campo('Qual o nome do produto?');
+    fireEvent.change(nome, { target: { value: 'x' } });
+    proxima();
+    const area = await campo('Quem são os usuários?');
+    fireEvent.change(area, { target: { value: 'y' } });
+    proxima();
+    const livre = screen.getByLabelText('Sua resposta — Qual plataforma?');
+    for (const c of [nome, area, livre]) {
+      expect(c.getAttribute('autocomplete')).toBe('off');
+      expect(c.getAttribute('data-1p-ignore')).not.toBeNull();
+      expect(c.getAttribute('data-lpignore')).toBe('true');
+      expect(c.getAttribute('data-bwignore')).not.toBeNull();
+      expect(c.getAttribute('data-form-type')).toBe('other');
+    }
+  });
+
+  it('RN-830: Enter que confirma a composição do IME não avança nem envia', async () => {
+    eventos.mockReturnValue({ items: [PERGUNTA] });
+    montar();
+    const nome = await campo('Qual o nome do produto?');
+    fireEvent.change(nome, { target: { value: 'x' } });
+    expect(fireEvent.keyDown(nome, { key: 'Enter', isComposing: true })).toBe(false);
+    expect(screen.getByText('Pergunta 1 de 3')).toBeInTheDocument();
+  });
+
+  it('Próxima e Enviar respostas ficam desabilitados até a pergunta do passo estar respondida', async () => {
     eventos.mockReturnValue({ items: [PERGUNTA] });
 
     montar();
 
-    const nome = await screen.findByLabelText('Qual o nome do produto?');
-    const botao = screen.getByRole('button', { name: 'Enviar respostas' });
-
+    const nome = await campo('Qual o nome do produto?');
+    // Pergunta vazia não avança.
+    proxima();
+    expect(screen.getByText('Pergunta 1 de 3')).toBeInTheDocument();
     fireEvent.change(nome, { target: { value: 'Checkout Fácil' } });
-    expect(botao).toBeDisabled();
+    proxima();
+    expect(screen.getByText('Pergunta 2 de 3')).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText('Quem são os usuários?'), {
+    fireEvent.change((await campo('Quem são os usuários?')), {
       target: { value: 'Lojistas de pequeno porte' },
     });
+    proxima();
+
+    const botao = screen.getByRole('button', { name: 'Enviar respostas' });
     expect(botao).toBeDisabled();
-
-    fireEvent.change(screen.getByLabelText('Qual plataforma?'), { target: { value: 'Web' } });
-
+    fireEvent.click(screen.getByRole('radio', { name: 'Web' }));
     expect(botao).not.toBeDisabled();
   });
 
@@ -225,13 +293,8 @@ describe('SessionPage — perguntas estruturadas do Criativo (RN-162)', () => {
 
     montar();
 
-    fireEvent.change(await screen.findByLabelText('Qual o nome do produto?'), {
-      target: { value: 'Checkout Fácil' },
-    });
-    fireEvent.change(screen.getByLabelText('Quem são os usuários?'), {
-      target: { value: 'Lojistas de pequeno porte' },
-    });
-    fireEvent.change(screen.getByLabelText('Qual plataforma?'), { target: { value: 'Web' } });
+    await preencherNomeEUsuarios();
+    fireEvent.click(screen.getByRole('radio', { name: 'Web' }));
 
     fireEvent.click(screen.getByRole('button', { name: 'Enviar respostas' }));
 
@@ -261,13 +324,8 @@ describe('SessionPage — perguntas estruturadas do Criativo (RN-162)', () => {
 
     montar();
 
-    fireEvent.change(await screen.findByLabelText('Qual o nome do produto?'), {
-      target: { value: 'Checkout Fácil' },
-    });
-    fireEvent.change(screen.getByLabelText('Quem são os usuários?'), {
-      target: { value: 'Lojistas' },
-    });
-    fireEvent.change(screen.getByLabelText('Qual plataforma?'), { target: { value: 'Web' } });
+    await preencherNomeEUsuarios('Checkout Fácil', 'Lojistas');
+    fireEvent.click(screen.getByRole('radio', { name: 'Web' }));
 
     const leiturasAntes = getSession.mock.calls.length;
     fireEvent.click(screen.getByRole('button', { name: 'Enviar respostas' }));
@@ -280,8 +338,11 @@ describe('SessionPage — perguntas estruturadas do Criativo (RN-162)', () => {
     // Não é o erro genérico, e a sessão foi relida.
     expect(screen.queryByText('Não foi possível enviar as respostas')).not.toBeInTheDocument();
     await waitFor(() => expect(getSession.mock.calls.length).toBeGreaterThan(leiturasAntes));
-    // As respostas continuam nos campos.
-    expect(screen.getByLabelText('Qual o nome do produto?')).toHaveValue('Checkout Fácil');
+    // As respostas continuam nos campos (o estado é do card).
+    expect(screen.getByRole('radio', { name: 'Web' })).toBeChecked();
+    fireEvent.click(screen.getByRole('button', { name: 'Anterior' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Anterior' }));
+    expect(await campo('Qual o nome do produto?')).toHaveValue('Checkout Fácil');
   });
 
   it('já respondido (chat.structured_question_answered posterior): vira somente leitura, sem formulário', async () => {
@@ -331,67 +392,41 @@ describe('SessionPage — perguntas estruturadas do Criativo (RN-162)', () => {
  * do tool não sabia dizer "além destas, o que você quiser".
  */
 describe('SessionPage — saída por texto livre no select (RN-171)', () => {
-  it('escolher "Outra (escrever)" revela um campo de texto, e é ele que vale como resposta', async () => {
+  it('escrever no campo ao lado das opções é a resposta, e nenhum sentinela viaja', async () => {
     answerStructuredQuestion.mockResolvedValue({ ok: true });
     eventos.mockReturnValue({ items: [PERGUNTA] });
 
     montar();
 
-    fireEvent.change(await screen.findByLabelText('Qual o nome do produto?'), {
-      target: { value: 'Checkout Fácil' },
-    });
-    fireEvent.change(screen.getByLabelText('Quem são os usuários?'), {
-      target: { value: 'Lojistas' },
-    });
-
-    // Nenhum campo de texto livre antes de escolher a saída.
-    expect(screen.queryByLabelText(/^Sua resposta/)).not.toBeInTheDocument();
-
-    fireEvent.change(screen.getByLabelText('Qual plataforma?'), {
-      target: { value: '__outra__' },
-    });
-
-    const livre = screen.getByLabelText('Sua resposta — Qual plataforma?');
-    // O sentinela NÃO é resposta: enquanto o campo está vazio, o envio segue
-    // travado (e o backend recusaria com 400 de qualquer forma).
+    await preencherNomeEUsuarios('Checkout Fácil', 'Lojistas');
     expect(screen.getByRole('button', { name: 'Enviar respostas' })).toBeDisabled();
 
-    fireEvent.change(livre, { target: { value: 'Terminal de PDV' } });
-    expect(screen.getByRole('button', { name: 'Enviar respostas' })).not.toBeDisabled();
-
+    fireEvent.change(screen.getByLabelText('Sua resposta — Qual plataforma?'), {
+      target: { value: 'Terminal de PDV' },
+    });
     fireEvent.click(screen.getByRole('button', { name: 'Enviar respostas' }));
 
     await waitFor(() => {
-      expect(answerStructuredQuestion).toHaveBeenCalledWith(
-        'proj-1',
-        ID,
-        'criativo',
-        'ev-perguntas',
-        {
-          nome: 'Checkout Fácil',
-          usuarios: 'Lojistas',
-          // O sentinela nunca sai da tela — o que viaja é o TEXTO.
-          plataforma: 'Terminal de PDV',
-        },
-      );
+      expect(answerStructuredQuestion).toHaveBeenCalledWith('proj-1', ID, 'criativo', 'ev-perguntas', {
+        nome: 'Checkout Fácil',
+        usuarios: 'Lojistas',
+        plataforma: 'Terminal de PDV',
+      });
     });
   });
 
-  it('voltar de "Outra" para uma opção da lista descarta o texto livre', async () => {
+  it('escolher uma opção da lista descarta o texto livre', async () => {
     eventos.mockReturnValue({ items: [PERGUNTA] });
 
     montar();
 
-    const select = await screen.findByLabelText('Qual plataforma?');
-    fireEvent.change(select, { target: { value: '__outra__' } });
-    fireEvent.change(screen.getByLabelText('Sua resposta — Qual plataforma?'), {
-      target: { value: 'Terminal de PDV' },
-    });
+    await preencherNomeEUsuarios();
+    const livre = screen.getByLabelText('Sua resposta — Qual plataforma?');
+    fireEvent.change(livre, { target: { value: 'Terminal de PDV' } });
+    fireEvent.click(screen.getByRole('radio', { name: 'Web' }));
 
-    fireEvent.change(select, { target: { value: 'Web' } });
-
-    expect(screen.queryByLabelText('Sua resposta — Qual plataforma?')).not.toBeInTheDocument();
-    expect((select as HTMLSelectElement).value).toBe('Web');
+    expect(livre).toHaveValue('');
+    expect(screen.getByRole('radio', { name: 'Web' })).toBeChecked();
   });
 
   it('allowOther: false fecha a lista — a saída não é oferecida', async () => {
@@ -416,10 +451,8 @@ describe('SessionPage — saída por texto livre no select (RN-171)', () => {
 
     montar();
 
-    const select = await screen.findByLabelText('Vai cobrar?');
-    expect(
-      Array.from(select.querySelectorAll('option')).map((o) => o.textContent),
-    ).toEqual(['Selecione', 'Sim', 'Não']);
+    expect(await screen.findByRole('radio', { name: 'Sim' })).toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Sua resposta/)).not.toBeInTheDocument();
   });
 });
 
@@ -464,13 +497,8 @@ describe('SessionPage — responder o formulário arma o indicador de turno (RN-
 
     montar();
 
-    fireEvent.change(await screen.findByLabelText('Qual o nome do produto?'), {
-      target: { value: 'Checkout Fácil' },
-    });
-    fireEvent.change(screen.getByLabelText('Quem são os usuários?'), {
-      target: { value: 'Lojistas' },
-    });
-    fireEvent.change(screen.getByLabelText('Qual plataforma?'), { target: { value: 'Web' } });
+    await preencherNomeEUsuarios('Checkout Fácil', 'Lojistas');
+    fireEvent.click(screen.getByRole('radio', { name: 'Web' }));
 
     fireEvent.click(screen.getByRole('button', { name: 'Enviar respostas' }));
     await waitFor(() => expect(answerStructuredQuestion).toHaveBeenCalled());
@@ -514,13 +542,8 @@ describe('SessionPage — responder o formulário arma o indicador de turno (RN-
 
     montar();
 
-    fireEvent.change(await screen.findByLabelText('Qual o nome do produto?'), {
-      target: { value: 'Checkout Fácil' },
-    });
-    fireEvent.change(screen.getByLabelText('Quem são os usuários?'), {
-      target: { value: 'Lojistas' },
-    });
-    fireEvent.change(screen.getByLabelText('Qual plataforma?'), { target: { value: 'Web' } });
+    await preencherNomeEUsuarios('Checkout Fácil', 'Lojistas');
+    fireEvent.click(screen.getByRole('radio', { name: 'Web' }));
 
     fireEvent.click(screen.getByRole('button', { name: 'Enviar respostas' }));
     await waitFor(() => expect(answerStructuredQuestion).toHaveBeenCalled());

@@ -124,7 +124,7 @@ function montar() {
 /** O nome no cabeçalho da bolha que contém `texto`. */
 function autorDa(texto: string): { nome: string; tipo: string | null } {
   const bolha = screen.getByText(texto).closest('[data-autor]') as HTMLElement;
-  const nome = bolha.querySelector('[class*="messageName"]')?.textContent ?? '';
+  const nome = bolha.querySelector('[data-slot="message-header"]')?.textContent ?? '';
   return { nome, tipo: bolha.getAttribute('data-autor') };
 }
 

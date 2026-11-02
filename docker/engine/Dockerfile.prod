@@ -6,11 +6,14 @@
 # existe (`bin/engine eval`), já que `mix ecto.migrate` não está disponível.
 
 # ---------------------------------------------------------------------------
-# Estágio 1: builder. Mesma base pinada do dev (Elixir 1.17.3 / OTP 27.1.2 /
-# Alpine 3.20.3) — a versão do Alpine tem que casar com a do runtime, porque o
+# Estágio 1: builder. Elixir 1.20.4 / OTP 29.1.1 / Alpine 3.24.2, o MESMO do
+# dev (ADR 0209). O OTP 27 abortava no boot (`sys_sigaltstack(): Internal
+# error`) sob a musl 1.2.6 do Alpine 3.24 em host com AMX (erlang/otp#11349);
+# a correção existe só a partir do OTP 29.1. Builder e runtime
+# sobem JUNTOS — a versão do Alpine tem que casar com a do runtime, porque o
 # ERTS embarcado no release é linkado contra a musl desta imagem.
 # ---------------------------------------------------------------------------
-FROM hexpm/elixir:1.17.3-erlang-27.1.2-alpine-3.20.3@sha256:1ec24d1913fa669eb93797df02e70a021da73786ab2bbb1f0de1a6360ba90255 AS builder
+FROM hexpm/elixir:1.20.4-erlang-29.1.1-alpine-3.24.2@sha256:ad851f40ce103dcb4ad56f23877d99473ef5c013e09b9e57921ffe877ac6d6a9 AS builder
 
 # build-base: compilar as NIFs das deps nativas.
 # hadolint ignore=DL3018
@@ -38,7 +41,7 @@ RUN mix compile --warnings-as-errors && mix release
 # Estágio 2: runtime. Alpine puro — o ERTS vem no release, não precisa de
 # Erlang/Elixir instalados.
 # ---------------------------------------------------------------------------
-FROM alpine:3.20.3@sha256:1e42bbe2508154c9126d48c2b8a75420c3544343bf86fd041fb7527e017a4b4a AS runtime
+FROM alpine:3.24.3@sha256:be2656061b536c1883c4034790e21d0a09c5aaaf51968b89368a3c0371ea2c9a AS runtime
 
 # Versões PINADAS de todo binário externo. Os valores são os que já rodam no
 # container de dev hoje — não são escolhas novas.
@@ -55,7 +58,7 @@ ARG HADOLINT_SHA256=56de6d5e5ec427e17b74fa48d51271c7fc0d61244bf5c90e828aab8362d5
 # publicado no release, e por download+sha256sum independente do tarball.
 ARG ACTIONLINT_VERSION=1.7.12
 ARG ACTIONLINT_SHA256=8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
-ARG SEMGREP_VERSION=1.171.0
+ARG SEMGREP_VERSION=1.183.0
 ARG YAMLLINT_VERSION=1.38.0
 # PyJWT acima do que o semgrep declara. O semgrep prende `pyjwt~=2.13.0` até o
 # último release publicado (1.178.0, medido em 2026-09-30), e a 2.13.0 tem seis
@@ -117,13 +120,9 @@ RUN apk add --no-cache --virtual .fetch curl tar \
 # semgrep e yamllint com versão FIXA (em dev são `pip install` sem versão, o que
 # significa que dois builds do mesmo commit podem trazer scanners diferentes).
 #
-# O semgrep arrasta `mcp==1.23.3` (fixo, não é range), versão com 3 CVEs HIGH,
-# e o semgrep já está no último release publicado — não há para onde subir.
-# Tentamos remover o `mcp`, já que os gates só rodam `semgrep scan` e nunca o
-# subcomando `semgrep mcp`: NÃO FUNCIONA. O `semgrep/cli.py` importa
-# `semgrep.commands.mcp` no topo, incondicionalmente, e sem o módulo o binário
-# inteiro morre em ModuleNotFoundError. Os 3 CVEs estão aceitos e datados em
-# .trivyignore, com o critério de reavaliação escrito lá.
+# O semgrep 1.183.0 exige `mcp==1.29.0` (fixo), que já corrige os 3 CVEs HIGH do
+# 1.23.3 (AT-625). O `semgrep/cli.py` importa `semgrep.commands.mcp` no topo,
+# então o pacote não pode ser removido.
 # hadolint ignore=DL3013
 RUN pip install --no-cache-dir --break-system-packages \
       "semgrep==${SEMGREP_VERSION}" "yamllint==${YAMLLINT_VERSION}" \

@@ -55,7 +55,11 @@ export const INTERVALO_DO_PROJETO_MS = 15_000;
 /** O orçamento muda com gasto de token, não com decisão; pode esperar mais. */
 export const INTERVALO_DO_ORCAMENTO_COM_CANAL_MS = 30_000;
 
-const vivos = new Set<string>();
+// AT-500 (RN-833): vivo é CONTAGEM de conexões por sessão, não um booleano —
+// com duas conexões da mesma sessão (duas montagens, ou a geração nova ainda
+// nascendo), a queda de uma não marca morta a outra.
+const vivos = new Map<string, Set<unknown>>();
+const CONEXAO_PADRAO = Symbol('conexao-padrao');
 const ouvintes = new Set<() => void>();
 
 function avisar() {
@@ -63,12 +67,18 @@ function avisar() {
 }
 
 /** Chamado SÓ por `connectSessionHeartbeat` (join ok / queda / cleanup). */
-export function marcarCanalDaSessao(sessionId: string, vivo: boolean): void {
+export function marcarCanalDaSessao(
+  sessionId: string,
+  vivo: boolean,
+  conexao: unknown = CONEXAO_PADRAO,
+): void {
   const estava = vivos.has(sessionId);
-  if (vivo === estava) return;
-  if (vivo) vivos.add(sessionId);
+  const conexoes = vivos.get(sessionId) ?? new Set<unknown>();
+  if (vivo) conexoes.add(conexao);
+  else conexoes.delete(conexao);
+  if (conexoes.size > 0) vivos.set(sessionId, conexoes);
   else vivos.delete(sessionId);
-  avisar();
+  if (vivos.has(sessionId) !== estava) avisar();
 }
 
 export function canalDaSessaoVivo(sessionId: string | undefined): boolean {
@@ -110,7 +120,9 @@ export type AlvoDoCanal =
   | 'pendenciasDoProjeto'
   | 'handoffs'
   | 'backlog'
-  | 'orcamento';
+  | 'orcamento'
+  | 'prs'
+  | 'perguntas';
 
 /**
  * Tipo de evento → queries que ele invalida. Os prefixos são os tipos
@@ -134,8 +146,31 @@ export function alvosDoEvento(type: string): AlvoDoCanal[] {
   // avisa essa proposta, mas avisa o bloqueio — e é a deixa para reler a fila
   // do projeto, onde ela está (AT-298).
   if (type === 'dev.blocked_by_container') alvos.push('pendenciasDoProjeto');
+  // RN-861 (AT-521): a pergunta que nasce, a que é respondida e o gate que
+  // passa a esperar o usuário mudam a fila "Perguntas em aberto".
+  if (
+    type === 'artifact.open_question' ||
+    type === 'open_question.answered' ||
+    type === 'pr.gate_changed'
+  ) {
+    alvos.push('perguntas');
+  }
   if (type.startsWith('handoff.')) alvos.push('handoffs');
   if (type.startsWith('backlog.')) alvos.push('backlog');
+  // RN-705: o merge executado (ou recusado) muda a lista de PRs do projeto —
+  // sem isto a PR mergeada seguia "aberta" com o botão até recarregar.
+  // RN-841 (AT-510): a PR que NASCE também muda a lista — a da ADR e a de
+  // infra (`adr.pr_opened`/`infra.pr_opened`) e a do terminal tipado
+  // (`action.pr_open`); sem isto a fila "PRs prontas" só aparecia com F5.
+  if (
+    type === 'action.git_merge' ||
+    type === 'action.failed' ||
+    type === 'action.pr_open' ||
+    type === 'adr.pr_opened' ||
+    type === 'infra.pr_opened'
+  ) {
+    alvos.push('prs');
+  }
   return alvos;
 }
 
@@ -154,6 +189,8 @@ export const JANELA_DE_INVALIDACAO_MS: Record<AlvoDoCanal, number> = {
   handoffs: 2_000,
   backlog: 2_000,
   orcamento: 10_000,
+  prs: 2_000,
+  perguntas: 2_000,
 };
 
 export interface InvalidadorDoCanal {
@@ -181,6 +218,8 @@ export function criarInvalidadorDoCanal(
     handoffs: ['session-handoffs', projectId, sessionId],
     backlog: ['backlog', projectId],
     orcamento: ['session-budget', projectId, sessionId],
+    prs: ['code-pull-requests', projectId],
+    perguntas: ['open-questions', projectId],
   };
   const ultimo = new Map<AlvoDoCanal, number>();
   const pendentes = new Map<AlvoDoCanal, ReturnType<typeof setTimeout>>();
@@ -188,6 +227,12 @@ export function criarInvalidadorDoCanal(
   function invalidar(alvo: AlvoDoCanal) {
     ultimo.set(alvo, agora());
     void queryClient.invalidateQueries({ queryKey: chaves[alvo] });
+    // RN-847 (AT-518): os arquivos do painel "Contexto da sessão" saem do
+    // diff das PRs; o que muda a lista de PRs muda o resumo, com a MESMA
+    // janela do alvo `prs` (nenhuma busca a mais fora dela).
+    if (alvo === 'prs') {
+      void queryClient.invalidateQueries({ queryKey: ['session-context-summary', projectId] });
+    }
   }
 
   function agendar(alvo: AlvoDoCanal) {

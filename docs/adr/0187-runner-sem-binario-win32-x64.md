@@ -1,4 +1,4 @@
-# 0187 — O binário standalone do runner deixa de prometer o Windows
+# ADR 0187 — O binário standalone do runner deixa de prometer o Windows
 
 ## Status
 

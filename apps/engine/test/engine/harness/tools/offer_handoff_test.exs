@@ -76,4 +76,68 @@ defmodule Engine.Harness.Tools.OfferHandoffTest do
     assert {:error, texto} = OfferHandoff.run(%{"to_agent" => "arquiteto"}, ctx)
     assert texto =~ "falha ao oferecer handoff"
   end
+
+  # RN-720: o PO não oferece ao Arquiteto com backlog descoberto, e a recusa
+  # lista o que falta — a cobertura vem da api (`computeCoverage`).
+  describe "cobertura (RN-720)" do
+    test "regra sem história e história draft incompleta: recusa com a lista, sem ofertar",
+         %{ctx: ctx} do
+      Process.put(:fake_business_rules, %{
+        "rules" => [
+          %{"id" => "r1", "title" => "Taxa fixa", "covered" => false},
+          %{"id" => "r2", "title" => "Coberta", "covered" => true}
+        ],
+        "uncoveredCount" => 1
+      })
+
+      Process.put(:fake_backlog, [
+        %{
+          "stories" => [
+            %{
+              "id" => "st-1",
+              "title" => "Checkout",
+              "status" => "draft",
+              "proposedReady" => false
+            },
+            %{"id" => "st-2", "title" => "Pronta", "status" => "draft", "proposedReady" => true}
+          ]
+        }
+      ])
+
+      assert {:error, texto} = OfferHandoff.run(%{"to_agent" => "arquiteto"}, ctx)
+      assert texto =~ "RECUSADO"
+      assert texto =~ "id=r1 | Taxa fixa"
+      refute texto =~ "id=r2"
+      assert texto =~ "id=st-1 | Checkout"
+      refute texto =~ "id=st-2"
+      assert texto =~ "complete_story"
+      refute_received {:handoff_created, _, _, _, _, _}
+    end
+
+    test "cobertura completa: oferta segue (e o aceite automático continua)", %{ctx: ctx} do
+      Process.put(:fake_business_rules, %{
+        "rules" => [%{"id" => "r1", "title" => "Taxa fixa", "covered" => true}],
+        "uncoveredCount" => 0
+      })
+
+      Process.put(:fake_backlog, [
+        %{"stories" => [%{"id" => "st-1", "title" => "C", "status" => "ready"}]}
+      ])
+
+      Process.put(:fake_handoff, %{"id" => "ho-1", "aceiteAutomatico" => %{"aceito" => true}})
+
+      assert {:ok, texto} = OfferHandoff.run(%{"to_agent" => "arquiteto"}, ctx)
+      assert texto =~ "aceito automaticamente"
+      assert_received {:handoff_created, "p1", "s1", "po", "arquiteto", nil}
+    end
+
+    test "outro agente não passa pela checagem", %{ctx: ctx} do
+      Process.put(:fake_business_rules, %{
+        "rules" => [%{"id" => "r1", "title" => "x", "covered" => false}],
+        "uncoveredCount" => 1
+      })
+
+      assert {:ok, _} = OfferHandoff.run(%{"to_agent" => "po"}, %{ctx | agent: "criativo"})
+    end
+  end
 end

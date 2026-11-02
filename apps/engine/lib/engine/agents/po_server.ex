@@ -29,13 +29,23 @@ defmodule Engine.Agents.PoServer do
     FalhaDeTurno,
     Reidratacao,
     ResultadoDeFerramenta,
+    TextoDoTurno,
     TurnoAssincrono,
     TurnoOrfao
   }
 
-  alias Engine.Harness.Tools.{CreateEpic, CreateStory, CreateTask, OfferHandoff}
+  alias Engine.Harness.Tools.{
+    ArchiveStory,
+    CompleteStory,
+    CreateEpic,
+    CreateStory,
+    CreateTask,
+    OfferHandoff,
+    UpdateStory
+  }
+
   alias Engine.Harness.Tools.{AskStructuredQuestions, ListarBacklog, ListarRegrasDeNegocio}
-  alias Engine.Harness.Tools.{EmitArtifact, ListarMetricasDeProduto}
+  alias Engine.Harness.Tools.{DeclareOpenQuestion, EmitArtifact, ListarMetricasDeProduto}
   alias Engine.Sessions.EngineApiClient
 
   @agent "po"
@@ -125,6 +135,10 @@ defmodule Engine.Agents.PoServer do
          ListarMetricasDeProduto.spec(),
          CreateEpic.spec(),
          CreateStory.spec(),
+         # RN-720: completar a história existente em vez de recriá-la.
+         CompleteStory.spec(),
+         UpdateStory.spec(),
+         ArchiveStory.spec(),
          CreateTask.spec(),
          # RN-165: perguntar em vez de parar. A ferramenta é a MESMA do
          # Criativo (RN-162) — o PO só passou a advertisá-la.
@@ -132,7 +146,9 @@ defmodule Engine.Agents.PoServer do
          OfferHandoff.spec(),
          # Frente 3 do plano de decision_record — mesma ferramenta do
          # Criativo (RN-162 style reuse), tipo novo (`decision_record`).
-         EmitArtifact.spec()
+         EmitArtifact.spec(),
+         DeclareOpenQuestion.spec(),
+         Engine.Harness.Tools.RegistrarPlano.spec()
        ],
        # Épicos criados NESTE processo que ainda não receberam história
        # (RN-165): `%{epic_id => titulo}`. Não é reidratado de propósito — a
@@ -140,12 +156,21 @@ defmodule Engine.Agents.PoServer do
        # reconstruído do event log reabriria cobrança de épico antigo que o
        # usuário já resolveu de outro jeito.
        epicos_sem_historia: %{},
+       epicos_conhecidos: %{},
+       # RN-700: o handoff ao Arquiteto já foi oferecido (pelo modelo ou pelo
+       # servidor) NESTE processo. Não reidratado: depois de um restart a api
+       # deduplica a oferta pendente e recusa com 409 nomeado o destino já
+       # ativo, e as duas respostas só religam esta marca.
+       handoff_ao_arquiteto: false,
        # Guardado enquanto o turno roda numa Task supervisionada, fora do
        # handler que bloqueava o processo inteiro — é o que permite um
        # `:cancel` chegar e ser atendido (RN-122). Ver `TurnoAssincrono`.
        # RN-673: a fila de mensagens que chegaram com turno em curso,
        # reconstruída do log (sobrevive a restart), e como montar o turno
        # que a lê. Ver `TurnoAssincrono.receber_mensagem/4`.
+       # AT-582: a retomada do turno interrompido, ANTES da fila (a fila espera o fim dela).
+       retomada_agendada: TurnoAssincrono.retomada_ao_subir(project_id, session_id, @agent),
+       montar_turno_de_retomada: &turno_de_retomada/1,
        fila_de_mensagens: TurnoAssincrono.fila_ao_subir(project_id, session_id, @agent),
        montar_turno_de_mensagem: &turno_de_mensagem/2,
        turno_assincrono: nil
@@ -158,7 +183,10 @@ defmodule Engine.Agents.PoServer do
   @impl true
   def handle_cast(:kickoff, state) do
     work = state |> append(user_msg(kickoff_instruction(state))) |> compact()
-    TurnoAssincrono.iniciar(state, nil, fn -> run_turn(work, @max_iterations) end)
+
+    TurnoAssincrono.iniciar(state, nil, fn ->
+      run_turn(work, Engine.Harness.FalhaRepetida.inicio_de_turno(@max_iterations))
+    end)
   end
 
   @impl true
@@ -205,7 +233,10 @@ defmodule Engine.Agents.PoServer do
   @impl true
   def handle_call({:revise, story}, from, state) do
     work = state |> append(revision_message(story)) |> compact()
-    TurnoAssincrono.iniciar(state, from, fn -> run_turn(work, @max_iterations) end)
+
+    TurnoAssincrono.iniciar(state, from, fn ->
+      run_turn(work, Engine.Harness.FalhaRepetida.inicio_de_turno(@max_iterations))
+    end)
   end
 
   # RN-673: como UMA fala do usuário vira turno — a mesma montagem que o
@@ -213,7 +244,15 @@ defmodule Engine.Agents.PoServer do
   # também para o turno que lê a FILA (várias falas num texto só).
   defp turno_de_mensagem(state, text) do
     work = state |> append(user_msg(text)) |> compact()
-    fn -> run_turn(work, @max_iterations) end
+    fn -> run_turn(work, Engine.Harness.FalhaRepetida.inicio_de_turno(@max_iterations)) end
+  end
+
+  # AT-582: o turno de retomada não tem fala nova do usuário; o histórico
+  # reidratado já termina nela e a orientação vai efêmera (`RetomadaDoTurno`).
+  defp turno_de_retomada(state) do
+    fn ->
+      run_turn(compact(state), Engine.Harness.FalhaRepetida.inicio_de_turno(@max_iterations))
+    end
   end
 
   @impl true
@@ -234,10 +273,21 @@ defmodule Engine.Agents.PoServer do
   # fora. Mesmo tipo de evento e mesmo payload: quem lê o log não precisa
   # aprender um segundo nome para o mesmo fato.
   defp run_turn(state, remaining) when remaining <= 0 do
-    emit(state, "toolloop.limit_reached", %{
-      iteration: @max_iterations,
-      max_iterations: @max_iterations
-    })
+    # AT-590: lê a linha ANTES de gravar o texto (que a esvaziaria) e a põe no evento.
+    gravado = Engine.Agents.GravadoNoTurno.descarregar()
+    gravar_texto_do_turno(state, "", nil)
+
+    payload =
+      %{
+        iteration: @max_iterations,
+        max_iterations: @max_iterations,
+        gravado: gravado
+      }
+      |> Map.merge(regras_sem_historia(state))
+
+    Engine.Harness.FalhaRepetida.narrar_ou(state.project_id, state.session_id, @agent, fn ->
+      emit(state, "toolloop.limit_reached", payload)
+    end)
 
     encerrar_turno(state)
   end
@@ -266,23 +316,30 @@ defmodule Engine.Agents.PoServer do
       # servidor é `restart: :temporary`, ele morria e não voltava — a correção
       # de uma falha silenciosa tinha virado uma QUEDA, com o gatilho mais
       # corriqueiro que existe (acabar o orçamento).
-      {:ok, %{"error" => erro}} when is_binary(erro) and erro != "" ->
-        emit_falha(state, {:final, erro})
+      {:ok, %{"error" => erro} = frame} when is_binary(erro) and erro != "" ->
+        gravar_texto_do_turno(state, "", nil)
+        emit_falha(state, {:final, erro, Map.get(frame, "errorCode")})
         state
 
       {:ok, %{"message" => message} = frame} ->
         content = Map.get(message, "content", "")
         model_name = Map.get(frame, "modelName")
-        state = append(state, assistant_msg(content))
-        if content != "", do: emit_response(state, content, model_name)
+        state = append(state, Engine.Agents.MensagemDoAssistente.de(content, message))
 
         case tool_calls(message, state.tool_specs) do
           [] ->
+            # AT-572: fecho sem texto nem corte é falha do modelo, dita no fio (agent.error).
+            if gravar_texto_do_turno(state, content, model_name) == :vazio,
+              do: emit_falha(state, :resposta_vazia)
+
             encerrar_turno(state)
 
           calls ->
+            # RN-698: o texto desta volta continua na próxima — vira UMA
+            # `agent.response` no fim do turno, nunca um fragmento por volta.
+            TextoDoTurno.acumular(content, model_name)
             state = Enum.reduce(calls, state, &dispatch_tool/2)
-            run_turn(state, remaining - 1)
+            run_turn(state, Engine.Harness.FalhaRepetida.restante(remaining - 1))
         end
 
       {:error, reason} ->
@@ -290,8 +347,26 @@ defmodule Engine.Agents.PoServer do
         # indistinguível de sucesso, e o motivo real ia só por broadcast, que
         # é efêmero. A falha vira evento durável COM origem, e o agente diz o
         # que houve no próprio fio.
+        gravar_texto_do_turno(state, "", nil)
         emit_falha(state, reason)
         state
+    end
+  end
+
+  # AT-590: o que falta no teto — a MESMA leitura de `fechar_handoff/1`. Falha da
+  # leitura = chave ausente, nunca erro.
+  defp regras_sem_historia(state) do
+    case EngineApiClient.list_business_rules(state.project_id) do
+      {:ok, %{"uncoveredCount" => n}} when is_integer(n) -> %{regrasSemHistoria: n}
+      _ -> %{}
+    end
+  end
+
+  # RN-698: o texto do turno inteiro, numa `agent.response` só.
+  defp gravar_texto_do_turno(state, ultimo, model_name) do
+    case TextoDoTurno.payload_do_turno(ultimo, model_name) do
+      nil -> :vazio
+      payload -> emit(state, "agent.response", payload)
     end
   end
 
@@ -304,8 +379,9 @@ defmodule Engine.Agents.PoServer do
 
     emit(state, "tool.call", %{tool: name, args: args})
     broadcast(state, "tool.call", %{tool: name, agent: @agent})
-    result = run_tool(name, args, state)
+    result = executar_ferramenta(name, args, state)
     emit(state, "tool.result", ResultadoDeFerramenta.payload(name, result))
+    Engine.Agents.GravadoNoTurno.anotar(name, args, result, state.project_id)
 
     text =
       case result do
@@ -324,6 +400,13 @@ defmodule Engine.Agents.PoServer do
     })
   end
 
+  # RN-719: argumentos normalizados contra a spec e exceção vira erro do laço.
+  defp executar_ferramenta(name, args, state) do
+    Engine.Harness.ArgumentosDeFerramenta.executar(name, args, state.tool_specs, fn a ->
+      run_tool(name, a, state)
+    end)
+  end
+
   defp run_tool("listar_regras_de_negocio", args, state),
     do: ListarRegrasDeNegocio.run(args, state)
 
@@ -334,6 +417,9 @@ defmodule Engine.Agents.PoServer do
 
   defp run_tool("create_epic", args, state), do: CreateEpic.run(args, state)
   defp run_tool("create_story", args, state), do: CreateStory.run(args, state)
+  defp run_tool("complete_story", args, state), do: CompleteStory.run(args, state)
+  defp run_tool("update_story", args, state), do: UpdateStory.run(args, state)
+  defp run_tool("archive_story", args, state), do: ArchiveStory.run(args, state)
   defp run_tool("create_task", args, state), do: CreateTask.run(args, state)
 
   defp run_tool("ask_structured_questions", args, state),
@@ -341,6 +427,13 @@ defmodule Engine.Agents.PoServer do
 
   defp run_tool("offer_handoff", args, state), do: OfferHandoff.run(args, state)
   defp run_tool("emit_artifact", args, state), do: EmitArtifact.run(args, state)
+
+  defp run_tool("declare_open_question", args, state),
+    do: DeclareOpenQuestion.run(args, state)
+
+  defp run_tool("registrar_plano", args, state),
+    do: Engine.Harness.Tools.RegistrarPlano.run(args, state)
+
   defp run_tool(name, _args, _state), do: {:error, "ferramenta desconhecida: #{name}"}
 
   # --- A obrigação da história (RN-165) ---
@@ -354,21 +447,34 @@ defmodule Engine.Agents.PoServer do
     # Sem id parseável a obrigação ainda existe — ela só passa a ser
     # identificada pelo título. Perder a cobrança porque a frase do tool-result
     # mudou seria trocar um defeito silencioso por outro.
-    chave = CreateEpic.id_no_resultado(texto) || "titulo:#{Map.get(args, "title")}"
+    id = CreateEpic.id_no_resultado(texto)
+    chave = id || "titulo:#{Map.get(args, "title")}"
+    titulo = Map.get(args, "title", "(sem título)")
+
+    # Só id real entra em `epicos_conhecidos`: chave por título tornaria o mapa
+    # não vazio e faria o `create_story` recusar UUID legítimo (RN-896).
+    conhecidos = Map.get(state, :epicos_conhecidos, %{})
 
     %{
       state
-      | epicos_sem_historia:
-          Map.put(state.epicos_sem_historia, chave, Map.get(args, "title", "(sem título)"))
+      | epicos_sem_historia: Map.put(state.epicos_sem_historia, chave, titulo),
+        epicos_conhecidos: if(id, do: Map.put(conhecidos, id, titulo), else: conhecidos)
     }
   end
 
   defp anotar_obrigacao(state, "create_story", args, {:ok, _texto}) do
+    id = Map.get(args, "epic_id")
+
     %{
       state
-      | epicos_sem_historia: Map.delete(state.epicos_sem_historia, Map.get(args, "epic_id"))
+      | epicos_sem_historia: Map.delete(state.epicos_sem_historia, id),
+        epicos_conhecidos:
+          Map.put_new(Map.get(state, :epicos_conhecidos, %{}), id, "(do backlog)")
     }
   end
+
+  defp anotar_obrigacao(state, "offer_handoff", %{"to_agent" => "arquiteto"}, {:ok, _}),
+    do: %{state | handoff_ao_arquiteto: true}
 
   defp anotar_obrigacao(state, _name, _args, _result), do: state
 
@@ -381,10 +487,13 @@ defmodule Engine.Agents.PoServer do
   # o broadcast, para quem está com a aba aberta ver na hora. A lista é
   # esvaziada depois de reportada — a cobrança é por ocorrência, não um alarme
   # que repete a cada turno até alguém desligar.
-  defp encerrar_turno(%{epicos_sem_historia: pendentes} = state) when map_size(pendentes) == 0,
-    do: state
+  defp encerrar_turno(state), do: state |> cobrar_epicos_sem_historia() |> fechar_handoff()
 
-  defp encerrar_turno(%{epicos_sem_historia: pendentes} = state) do
+  defp cobrar_epicos_sem_historia(%{epicos_sem_historia: pendentes} = state)
+       when map_size(pendentes) == 0,
+       do: state
+
+  defp cobrar_epicos_sem_historia(%{epicos_sem_historia: pendentes} = state) do
     titulos = Map.values(pendentes)
 
     mensagem =
@@ -403,6 +512,97 @@ defmodule Engine.Agents.PoServer do
     broadcast(state, "agent.error", %{origem: "modelo", mensagem: mensagem})
 
     %{state | epicos_sem_historia: %{}}
+  end
+
+  # --- O handoff ao Arquiteto no fim do turno (RN-700) ---
+  #
+  # Medido no uso real (AT-364): o PO escreveu "Handoff ao Arquiteto" e
+  # encerrou o turno sem chamar `offer_handoff` — a RN-163 diz que agente não
+  # anuncia ação que o código não executa, e o fluxo parou até o usuário pedir.
+  # O critério de "pronto" é OBJETIVO (o `uncoveredCount` que a api devolve, a
+  # régua de cobertura do aceite automático da RN-660, mais toda história com
+  # ≥ 1 tarefa), então quem oferece é o SERVIDOR, no molde da Infra que propõe
+  # a subida sozinha (ADR 0190, RN-671/672). Fora do critério, o desfecho é
+  # explícito e nomeado — nunca só o texto do modelo. Backlog sem regra ou sem
+  # história não é julgado: o PO ainda não começou.
+  defp fechar_handoff(%{handoff_ao_arquiteto: true} = state), do: state
+
+  defp fechar_handoff(state) do
+    with {:ok, %{"rules" => [_ | _]} = regras} <-
+           EngineApiClient.list_business_rules(state.project_id),
+         {:ok, epicos} when is_list(epicos) <- EngineApiClient.list_backlog(state.project_id),
+         [_ | _] = historias <- Enum.flat_map(epicos, &Map.get(&1, "stories", [])) do
+      sem_tarefa = Enum.filter(historias, &(Map.get(&1, "tasks", []) == []))
+
+      cond do
+        Map.get(regras, "uncoveredCount", 0) > 0 ->
+          state
+
+        sem_tarefa != [] ->
+          titulos = Enum.map(sem_tarefa, &Map.get(&1, "title", "(sem título)"))
+
+          handoff_nao_oferecido(
+            state,
+            "modelo",
+            "Não ofereci o handoff ao Arquiteto: #{length(sem_tarefa)} história(s) sem " <>
+              "nenhuma tarefa — " <>
+              Enum.map_join(titulos, ", ", &"\"#{&1}\"") <>
+              ". História sem tarefa não é entregue: o Dev Lead não tem o que distribuir.",
+            %{storyIds: Enum.map(sem_tarefa, &Map.get(&1, "id")), storyTitles: titulos}
+          )
+
+        true ->
+          oferecer_handoff(state)
+      end
+    else
+      {:error, reason} ->
+        handoff_nao_oferecido(
+          state,
+          "infra",
+          "Não conferi se o backlog está pronto para o Arquiteto: #{inspect(reason)}.",
+          %{}
+        )
+
+      _ ->
+        state
+    end
+  end
+
+  defp oferecer_handoff(state) do
+    case EngineApiClient.create_handoff(
+           state.project_id,
+           state.session_id,
+           @agent,
+           "arquiteto",
+           nil
+         ) do
+      {:ok, _} ->
+        %{state | handoff_ao_arquiteto: true}
+
+      # O Arquiteto já está ativo: não há o que oferecer, e não é falha.
+      {:error, {409, %{"reason" => "agente_ja_ativo"}}} ->
+        %{state | handoff_ao_arquiteto: true}
+
+      {:error, reason} ->
+        handoff_nao_oferecido(
+          state,
+          "infra",
+          "O backlog está pronto, mas a oferta do handoff ao Arquiteto falhou: " <>
+            "#{inspect(reason)}.",
+          %{}
+        )
+    end
+  end
+
+  defp handoff_nao_oferecido(state, origem, mensagem, extra) do
+    emit(
+      state,
+      "backlog.handoff_not_offered",
+      Map.merge(%{origem: origem, mensagem: mensagem, toAgent: "arquiteto"}, extra)
+    )
+
+    broadcast(state, "agent.error", %{origem: origem, mensagem: mensagem})
+    state
   end
 
   # --- Kickoff: monta a instrução a partir do brief + regras do event log ---
@@ -457,9 +657,26 @@ defmodule Engine.Agents.PoServer do
     história completa vira 'ready' na hora ou fica aguardando a promoção do usuário — o
     retorno de create_story diz qual foi o caso, e AGUARDAR APROVAÇÃO NÃO É ERRO: não
     tente recriar nem "consertar" uma história que voltou como completa.
-    Adicione tarefas com create_task quando fizer sentido.
-    Cubra TODAS as regras com ao menos uma história. Quando o backlog estiver pronto, ofereça
-    um handoff ao arquiteto com offer_handoff(to_agent: "arquiteto").
+    Toda história precisa de ao menos UMA tarefa (create_task) — história sem tarefa não
+    conta como entregue: o Dev Lead distribui tarefas, não histórias.
+    O entregável precisa poder ser instalado e subido por quem não o escreveu: no DoD da
+    história que cria a entrada da aplicação (servidor, CLI, configuração ou persistência)
+    — ou numa história própria —, inclua o critério "README diz como instalar, configurar
+    (variáveis de ambiente obrigatórias e opcionais, com o padrão) e subir a aplicação, e
+    como criar o primeiro acesso, quando houver".
+    Cubra TODAS as regras com ao menos uma história. História que já existe e ficou
+    incompleta (sem `business_rule_ids`, RF, DoD ou DoR) se COMPLETA com complete_story —
+    nunca a recrie com create_story. Título errado se corrige com update_story, e história
+    DUPLICADA ou criada por engano se arquiva com archive_story (só draft e sem tarefa em
+    execução) — nunca deixe a duplicata no backlog. offer_handoff ao arquiteto é RECUSADO enquanto houver
+    regra sem história ou história draft incompleta, e o resultado lista quais; nunca diga
+    ao usuário que a cobertura está completa sem a ferramenta ter aceitado.
+    Não reescreva uma regra do usuário: se emit_artifact avisar que a sua regra parece
+    alterar uma existente, pergunte ao usuário (ask_structured_questions) qual vale antes
+    de seguir. Quando o backlog estiver pronto (toda
+    regra coberta, toda história com tarefa), ofereça um handoff ao arquiteto com
+    offer_handoff(to_agent: "arquiteto") — CHAME a ferramenta; nunca escreva que fez o
+    handoff sem chamá-la. Se você não chamar, o sistema oferece sozinho quando o critério fecha.
 
     #{obrigacoes()}
 
@@ -471,6 +688,13 @@ defmodule Engine.Agents.PoServer do
 
     A lista acima é a desta sessão. `listar_regras_de_negocio` traz as do PROJETO
     inteiro, com quais já estão cobertas — use-a se desconfiar que falta alguma.
+
+    ESCREVA EM LOTE, EM CAMADAS: (1) leia primeiro — `listar_regras_de_negocio`
+    e `listar_backlog` na MESMA resposta, sem nenhuma escrita junto; (2) depois, TODOS os
+    épicos numa resposta só com create_epic; (3) depois, TODAS as histórias numa resposta
+    só com create_story, usando o `epic_id` que voltou em cada épico; (4) depois, TODAS as
+    tarefas numa resposta só com create_task, usando o `story_id` que voltou em cada história. Nunca recrie um épico que
+    já existe. No máximo cerca de 10 chamadas de ferramenta por resposta.
     """
   end
 
@@ -484,7 +708,7 @@ defmodule Engine.Agents.PoServer do
   # Perguntar é a terceira saída, e ela só existe se estiver escrita.
   defp obrigacoes do
     """
-    DUAS REGRAS QUE NÃO SE NEGOCIAM:
+    TRÊS REGRAS QUE NÃO SE NEGOCIAM:
 
     1. ÉPICO SEM HISTÓRIA NÃO SERVE PARA NADA. Épico não gera tarefa; história
        gera. Se você criar um épico e terminar sem nenhuma história nele, a
@@ -496,6 +720,12 @@ defmodule Engine.Agents.PoServer do
        o critério de aceite, quem é o usuário do fluxo, o que acontece no caso
        de erro). Uma pergunta é sempre melhor que um backlog vazio ou que uma
        história inventada.
+    3. TODO VALOR INFORMADO TEM BORDA DECLARADA. Cada RF que recebe valor do
+       usuário (data, número, texto, lista, limite) diz, no RF e no DoD, se a
+       borda — passado/futuro, zero, vazio, negativo, o próprio limite — é
+       ACEITA ou RECUSADA (com o status HTTP/erro). Ex.: expiração no passado
+       é recusada com 400. Sem saber, use `declare_open_question` com
+       `afeta.historias` e uma sugestão; nunca invente nem omita.
     """
   end
 
@@ -518,9 +748,6 @@ defmodule Engine.Agents.PoServer do
 
   defp user_msg(text), do: %{"role" => "user", "content" => text, :pinned => false}
 
-  defp assistant_msg(content),
-    do: %{"role" => "assistant", "content" => content, :pinned => false}
-
   # A devolução de uma história recusada (Fase 12c — RN-048).
   #
   # `:pinned => true` e não `false` como as mensagens de conversa: é o PRIMEIRO
@@ -534,10 +761,9 @@ defmodule Engine.Agents.PoServer do
   # original continua no contexto, então o parecer que a contradiz precisa
   # dizer que vale mais.
   #
-  # O que o PO pode fazer está dito EXPLICITAMENTE porque não existe ferramenta
-  # de editar história — só `create_story`. Mandar "corrija a história" seria
-  # pedir o impossível, e um modelo diante de uma instrução impossível inventa
-  # uma ferramenta ou repete a chamada até esgotar o loop.
+  # O que o PO pode fazer está dito EXPLICITAMENTE. Desde a RN-727 ele CORRIGE
+  # a própria história (`update_story`, `complete_story`) em vez de recriá-la,
+  # e arquiva a que não serve mais (`archive_story`).
   defp revision_message(story) do
     %{
       "role" => "user",
@@ -549,10 +775,10 @@ defmodule Engine.Agents.PoServer do
           "estava completa: onde os dois se contradisserem, siga o motivo. A promoção " <>
           "é decisão do usuário, e repropor a mesma história sem endereçar o que ele " <>
           "apontou só devolve o problema para ele.\n\n" <>
-          "Não existe ferramenta de EDITAR história. O que você pode fazer: criar a " <>
-          "versão corrigida com `create_story` (a recusada fica registrada como " <>
-          "devolvida, com o motivo), ou — se o motivo não estiver claro — responder " <>
-          "perguntando ao usuário antes de recriar qualquer coisa.",
+          "O que você pode fazer: corrigir a MESMA história — o título e a descrição " <>
+          "com `update_story`, RF/DoD/DoR e regras com `complete_story` — ou, se ela " <>
+          "não deve existir, arquivá-la com `archive_story`. Se o motivo não estiver " <>
+          "claro, pergunte ao usuário antes de mudar qualquer coisa.",
       :pinned => true
     }
   end
@@ -582,19 +808,16 @@ defmodule Engine.Agents.PoServer do
   # default: o único call site aqui sempre passa os 3 argumentos — diferente
   # do Criativo, que tem um segundo call site (mensagem sintética de erro de
   # ferramenta) sem modelo nenhum.
-  defp emit_response(state, content, model_name),
-    do: emit(state, "agent.response", %{content: content, modelName: model_name})
-
   # A falha, gravada e DITA. O `broadcast` continua, para quem está com a aba
   # aberta ver na hora — mas ele deixou de ser a única fonte.
   defp emit_falha(state, reason) do
     origem = FalhaDeTurno.origem(reason)
-    mensagem = FalhaDeTurno.mensagem(reason)
+    mensagem = FalhaDeTurno.mensagem(reason, state.project_id)
 
     emit(state, "agent.error", %{
       origem: origem,
       mensagem: mensagem,
-      reason: inspect(reason)
+      reason: FalhaDeTurno.diagnostico(reason)
     })
 
     broadcast(state, "agent.error", %{origem: origem, mensagem: mensagem})

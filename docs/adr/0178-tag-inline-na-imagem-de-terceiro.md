@@ -1,4 +1,4 @@
-# 0178 — A tag da imagem de terceiro mora DENTRO da referência, antes do digest
+# ADR 0178 — A tag da imagem de terceiro mora DENTRO da referência, antes do digest
 
 ## Status
 

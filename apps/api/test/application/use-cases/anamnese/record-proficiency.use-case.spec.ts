@@ -36,6 +36,11 @@ function buildHarness(
     events?: Record<string, string>;
     // sessões que pertencem ao projeto
     sessionsInProject?: string[];
+    // autor e tipo de cada evento; ausente = mensagem da própria user-1
+    meta?: Record<
+      string,
+      { type: string; actor: { kind: string; id: string } }
+    >;
   } = {},
 ) {
   const events = opts.events ?? { 'evt-1': 'sess-1' };
@@ -63,7 +68,18 @@ function buildHarness(
 
   const sessionEvents = {
     findById: (id: string) =>
-      Promise.resolve(events[id] ? { id, sessionId: events[id] } : null),
+      Promise.resolve(
+        events[id]
+          ? {
+              id,
+              sessionId: events[id],
+              ...(opts.meta?.[id] ?? {
+                type: 'chat.message',
+                actor: { kind: 'user', id: 'user-1' },
+              }),
+            }
+          : null,
+      ),
   } as unknown as SessionEventRepository;
 
   const sessions = {
@@ -237,5 +253,57 @@ describe('RecordProficiencyUseCase', () => {
       ),
     ).rejects.toThrow();
     expect(upsertMany).not.toHaveBeenCalled();
+  });
+
+  it('RN-716: evidência só de aprovação não grava perfil nem profile_updated', async () => {
+    const { useCase, upsertMany } = buildHarness({
+      stacks: ['NestJS'],
+      events: { 'evt-adr': 'sess-1' },
+      meta: {
+        'evt-adr': {
+          type: 'proposed_action.approved',
+          actor: { kind: 'user', id: 'user-1' },
+        },
+      },
+    });
+
+    await expect(
+      useCase.execute(
+        'proj-1',
+        input([
+          buildDraft({
+            competency: 'arquitetura',
+            evidenceEventIds: ['evt-adr'],
+          }),
+        ]),
+      ),
+    ).rejects.toThrow('NÃO OBSERVADA');
+    expect(upsertMany).not.toHaveBeenCalled();
+  });
+
+  describe('fecharJanelaSemPerfil (RN-722)', () => {
+    it('grava a rodada com zero perfis e não narra nada', async () => {
+      const h = buildHarness();
+      const { profiles: _p, ...janela } = input([]);
+      const r = await h.useCase.fecharJanelaSemPerfil('proj-1', janela);
+      expect(r).toEqual({ runId: 'run-1', profiles: [] });
+      expect(h.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          projectId: 'proj-1',
+          windowTo: janela.windowTo,
+          profileCount: 0,
+        }),
+      );
+      expect(h.appendEvent).not.toHaveBeenCalled();
+    });
+
+    it('recusa sessão de outro projeto, sem gravar rodada', async () => {
+      const h = buildHarness({ sessionsInProject: [] });
+      const { profiles: _p, ...janela } = input([]);
+      await expect(
+        h.useCase.fecharJanelaSemPerfil('proj-1', janela),
+      ).rejects.toThrow(/não pertence/);
+      expect(h.create).not.toHaveBeenCalled();
+    });
   });
 });

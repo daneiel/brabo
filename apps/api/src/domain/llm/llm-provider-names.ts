@@ -23,6 +23,8 @@ export const LLM_PROVIDER_NAMES = [
   'deepinfra',
   'bitdeer',
   'vultr',
+  '9router',
+  'opencode-zen',
 ] as const satisfies readonly LLMProviderName[];
 
 /**

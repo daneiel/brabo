@@ -1,1 +1,0 @@
-{"parameters":[{"name":"projectId","required":true,"in":"path","schema":{"type":"string"}},{"name":"dias","required":false,"in":"query","description":"Sliding window. Default 30, max 180.","schema":{"type":"string"}}]}

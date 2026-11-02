@@ -132,4 +132,23 @@ defmodule Engine.Actions.GitExecutorTest do
 
     assert saida =~ "nothing to commit"
   end
+
+  # RN-761 (AT-446): sem `.gitignore`, `node_modules`/`_build` não entram no
+  # commit do agente; o código entra.
+  test "commit exclui diretórios de dependência mesmo sem .gitignore", %{work_dir: work_dir} do
+    {:ok, wt} = WorktreeManager.add_worktree(work_dir, "dev-api", "task-dep")
+    File.mkdir_p!(Path.join(wt.path, "node_modules/express"))
+    File.write!(Path.join(wt.path, "node_modules/express/index.js"), "x")
+    File.mkdir_p!(Path.join(wt.path, "apps/x/_build"))
+    File.write!(Path.join(wt.path, "apps/x/_build/a.beam"), "x")
+    File.write!(Path.join(wt.path, "server.js"), "rota")
+
+    assert {:ok, %{sha: sha}} =
+             GitExecutor.commit(commit_payload(wt.path, "dev-api", "feat: login"))
+
+    arquivos = git(work_dir, ["show", "--name-only", "--format=", sha])
+    assert arquivos =~ "server.js"
+    refute arquivos =~ "node_modules"
+    refute arquivos =~ "_build"
+  end
 end

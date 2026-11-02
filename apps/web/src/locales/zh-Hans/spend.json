@@ -1,0 +1,116 @@
+{
+  "shared": {
+    "loading": "加载中…",
+    "summing": "汇总中…",
+    "retry": "重试",
+    "tokensDetail": "{{input}} 输入 · {{output}} 输出",
+    "rankingDetail": "{{tokens}} tok · {{calls}}×"
+  },
+  "role": {
+    "error": "无法确定你在此工作区中的角色，而显示哪份报告正是由它决定的。"
+  },
+  "budget": {
+    "notSet": "此项目尚未设置预算——没有上限，这里没有可显示的内容。"
+  },
+  "workspace": {
+    "title": "工作区花费",
+    "subtitle": "最近 {{dias}} 天。钱花在了哪里——按模型、按 provider、按项目、按智能体和按人员。从哪个<strong>密钥</strong>支出见下方部分。",
+    "error": "暂时无法加载花费。消耗仍有记录——这只是读取失败。",
+    "totalLabel": "{{dias}} 天合计",
+    "callsDetail_other": "{{n}} 次调用",
+    "tokensLabel": "Tokens",
+    "dailySpendTitle": "每日花费",
+    "byModelTitle": "按模型",
+    "byModelEmpty": "此时间窗口内没有调用。",
+    "byProviderTitle": "按 provider",
+    "byProviderEmpty": "此时间窗口内没有 provider 产生花费。",
+    "byProjectTitle": "按项目",
+    "byProjectEmpty": "此时间窗口内没有项目产生花费。",
+    "byActorTitle": "按智能体和人员",
+    "byActorEmpty": "此时间窗口内没有任何花费。"
+  },
+  "member": {
+    "title": "我的消耗",
+    "subtitle": "最近 {{dias}} 天，仅<strong>你</strong>在此项目中的消耗。费用为<strong>估算</strong>：调用由工作区所有者的密钥支付，账单归他所有。",
+    "error": "暂时无法加载你的消耗。记录仍在——这只是读取失败。",
+    "estimatedLabel": "{{dias}} 天估算",
+    "callsDetail_other": "你的 {{n}} 次调用",
+    "tokensLabel": "你的 tokens",
+    "dailySpendTitle": "你的每日花费",
+    "bySessionTitle": "按会话",
+    "bySessionEmpty": "最近 30 天你在此项目中没有任何花费。智能体的花费出自工作区所有者的密钥，并显示在他的报告中。",
+    "note": "这里不按 provider 或凭据细分——那是别人的账户，本页面关心的是你的消耗。"
+  },
+  "charts": {
+    "noSpendInWindow": "此时间窗口内没有花费。",
+    "window_other": "最近 {{count}} 天",
+    "spend": "花费",
+    "calls_other": "{{count}} 次调用",
+    "viewAsTable": "以表格查看",
+    "colDay": "日期",
+    "colSpend": "花费",
+    "colCalls": "调用次数"
+  },
+  "libSpend": {
+    "callTitle_other": "{{dia}} · {{custo}} · {{count}} 次调用",
+    "actorPerson": "{{id}}（人员）",
+    "budgetBlocked": "此项目已达到预算的 {{pct}}%——新的 LLM 调用已被阻止，直到上限提高。",
+    "budgetWarning": "此项目已超过所设预算的 {{pct}}%。"
+  },
+  "window": {
+    "label": "时间范围",
+    "option": "{{n}} 天"
+  },
+  "subscription": {
+    "label": "订阅",
+    "detail": "已计入总额——固定席位，不是美元扣费",
+    "noPrice": "订阅——未登记价格",
+    "inRow": "订阅 {{valor}}"
+  },
+  "global": {
+    "title": "支出",
+    "ownerSubtitle": "工作区内的所有项目。资金来自哪把密钥，见下方分区。",
+    "memberSubtitle": "您在工作区每个项目中的消耗。费用为估算：由所有者的密钥支付，账单归所有者。",
+    "memberTitle": "我的用量",
+    "memberError": "暂时无法加载您的用量。记录仍在——这只是读取失败。",
+    "memberByProject": "按项目",
+    "memberByProjectEmpty": "此时间范围内您没有支出。",
+    "memberTotal": "您 {{dias}} 天的支出",
+    "memberDaily": "您每日的支出",
+    "budgetsTitle": "项目预算",
+    "budgetsEmpty": "此工作区没有项目。",
+    "budgetNone": "无预算——去设置",
+    "budgetOf": "{{gasto}} / {{limite}}",
+    "budgetsError": "暂时无法加载预算。"
+  },
+  "project": {
+    "ownerTitle": "项目支出",
+    "ownerSubtitle": "最近 {{dias}} 天，仅此项目——按模型、提供方、智能体与人员、会话。所有项目的支出见“支出”页面。",
+    "bySessionTitle": "按会话",
+    "bySessionEmpty": "此时间范围内没有会话产生支出。"
+  },
+  "team": {
+    "title": "项目支出",
+    "subtitle": "最近 {{dias}} 天：智能体在此项目上的支出。不含提供方和密钥——账单属于工作区所有者。",
+    "error": "暂时无法加载项目支出。",
+    "totalLabel": "项目 {{dias}} 天总计",
+    "byAgentTitle": "按智能体",
+    "byAgentEmpty": "此时间范围内没有智能体产生支出。",
+    "byAreaTitle": "按领域",
+    "byAreaEmpty": "此时间范围内没有领域产生支出。",
+    "noArea": "无领域"
+  },
+  "budgetEditor": {
+    "title": "项目预算",
+    "limitLabel": "上限（美元）",
+    "policyLabel": "达到上限时",
+    "block": "阻止新的调用",
+    "allow": "仅提醒",
+    "save": "保存预算",
+    "saving": "保存中…",
+    "saved": "预算已保存。",
+    "error": "无法保存预算。未作任何更改。",
+    "invalid": "请输入大于零的上限。",
+    "noRole": "设置预算需要此项目的 maintainer 角色。"
+  }
+}

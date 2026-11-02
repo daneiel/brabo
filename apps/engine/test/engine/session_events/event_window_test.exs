@@ -39,15 +39,15 @@ defmodule Engine.SessionEvents.EventWindowTest do
     %{project_id: project_id, session_id: session_id}
   end
 
-  defp insere_evento!(session_id, created_at, seq) do
+  defp insere_evento!(session_id, created_at, seq, opts \\ []) do
     Engine.Repo.insert_all("session_events", [
       %{
         id: "evt-#{System.unique_integer([:positive])}",
         session_id: Ecto.UUID.dump!(session_id),
         seq: seq,
-        type: "chat.message",
-        actor_kind: "user",
-        actor_id: "user-1",
+        type: Keyword.get(opts, :type, "chat.message"),
+        actor_kind: Keyword.get(opts, :actor_kind, "user"),
+        actor_id: Keyword.get(opts, :actor_id, "user-1"),
         payload: %{},
         created_at: created_at
       }
@@ -120,5 +120,64 @@ defmodule Engine.SessionEvents.EventWindowTest do
 
     # Os 2 mais recentes (seq 4 e 5), devolvidos em ordem crescente.
     assert Enum.map(recorte, & &1.seq) == [4, 5]
+  end
+
+  describe "o que a própria Anamnese e o sistema escrevem fica fora (RN-722)" do
+    test "anamnese.*, ator anamnese e sistema não contam; a interação da pessoa conta", %{
+      project_id: project_id,
+      session_id: session_id
+    } do
+      agora = DateTime.utc_now()
+      t = DateTime.add(agora, -60, :second)
+      anam = [actor_kind: "agent", actor_id: "anamnese"]
+
+      insere_evento!(session_id, t, 1, [type: "anamnese.analysis"] ++ anam)
+      insere_evento!(session_id, t, 2, [type: "tool.call"] ++ anam)
+      insere_evento!(session_id, t, 3, [type: "agent.status"] ++ anam)
+
+      insere_evento!(session_id, t, 4,
+        type: "session.created",
+        actor_kind: "system",
+        actor_id: "system"
+      )
+
+      insere_evento!(session_id, t, 5)
+
+      insere_evento!(session_id, t, 6,
+        type: "agent.response",
+        actor_kind: "agent",
+        actor_id: "po"
+      )
+
+      de = DateTime.add(agora, -3600, :second)
+
+      assert Event.count_for_project_window(project_id, de, agora) == 2
+
+      assert project_id
+             |> Event.list_for_project_window(de, agora)
+             |> Enum.map(& &1.seq)
+             |> Enum.sort() == [5, 6]
+    end
+
+    test "dez eventos da Anamnese sozinhos não passam a triagem", %{
+      project_id: project_id,
+      session_id: session_id
+    } do
+      agora = DateTime.utc_now()
+      t = DateTime.add(agora, -60, :second)
+
+      for seq <- 1..12 do
+        insere_evento!(session_id, t, seq,
+          type: "anamnese.run_skipped",
+          actor_kind: "agent",
+          actor_id: "anamnese"
+        )
+      end
+
+      de = DateTime.add(agora, -3600, :second)
+      total = Event.count_for_project_window(project_id, de, agora)
+      assert total == 0
+      refute Engine.Anamnese.Triage.should_run?(total, 0, 0)
+    end
   end
 end

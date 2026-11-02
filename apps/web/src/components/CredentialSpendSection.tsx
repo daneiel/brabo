@@ -1,3 +1,4 @@
+import { Shimmer } from './ui/Shimmer';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { getCredentialSpend } from '../lib/api-client';
@@ -40,7 +41,7 @@ export function CredentialSpendSection({ workspaceId }: { workspaceId: string })
         </div>
       </div>
 
-      {isLoading && <div className={styles.vazio}>{t('spend.loading')}</div>}
+      {isLoading && <div className={styles.vazio}><Shimmer>{t('spend.loading')}</Shimmer></div>}
 
       {isError && <div className={styles.vazio}>{t('spend.error')}</div>}
 

@@ -94,6 +94,35 @@ defmodule Engine.Dev.ContextBuilderTest do
     assert prompt =~ "commits em pt-BR"
   end
 
+  test "RN-881: decisoesDoProjeto vira a seção \"Outras decisões do projeto\" da story", %{
+    project_id: project_id,
+    session_id: session_id
+  } do
+    Process.put(
+      :fake_dev_context,
+      Map.put(dev_context([]), "decisoesDoProjeto", [
+        %{"pergunta" => "Banco?", "decisao" => "SQLite"}
+      ])
+    )
+
+    assert {:ok, ctx} = ContextBuilder.fetch(project_id, session_id, "t-1", "api")
+    story = Enum.find(ctx.task_state_units, &(&1.id == :story)).content
+    assert story =~ "Outras decisões do projeto:"
+    assert story =~ "SQLite"
+    assert [%{"decisao" => "SQLite"}] = ctx.decisoes_do_projeto
+  end
+
+  test "RN-881 falha: sem decisoesDoProjeto a seção some", %{
+    project_id: project_id,
+    session_id: session_id
+  } do
+    Process.put(:fake_dev_context, dev_context([]))
+    assert {:ok, ctx} = ContextBuilder.fetch(project_id, session_id, "t-1", "api")
+    story = Enum.find(ctx.task_state_units, &(&1.id == :story)).content
+    refute story =~ "Outras decisões do projeto"
+    assert ctx.decisoes_do_projeto == []
+  end
+
   test "o módulo do dev viaja pra api (é o filtro de ADR)", %{
     project_id: project_id,
     session_id: session_id

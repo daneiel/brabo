@@ -1,0 +1,292 @@
+{
+  "semFrase": "查看详情",
+  "actions": {
+    "unknownVerb": "提议了一个操作",
+    "terminal": {
+      "verb": "想要执行命令",
+      "phraseWithCommand": "在项目终端中执行命令 \"{{command}}\"。",
+      "phraseFallback": "在项目终端中执行一个命令。"
+    },
+    "gitCommit": {
+      "verb": "提议更改",
+      "base": "记录一次提交",
+      "filesSuffix_other": "，包含 {{count}} 个文件",
+      "pathSuffix": "，文件 {{path}}",
+      "branchSuffix": "，在分支 {{branch}} 上",
+      "repoSuffix": "，在项目仓库中",
+      "messageSuffix": "：\"{{message}}\""
+    },
+    "gitPush": {
+      "verb": "想要推送更改",
+      "withBranch": "将分支 {{branch}} 推送到项目的远程仓库。",
+      "fallback": "将工作分支推送到项目的远程仓库。"
+    },
+    "prOpen": {
+      "verb": "开启了 pull request",
+      "base": "开启一个 pull request",
+      "routeBoth": "，从 {{source}} 到 {{target}}",
+      "routeSourceOnly": "，基于 {{source}}",
+      "titleSuffix": "：\"{{title}}\""
+    },
+    "spend": {
+      "verb": "申请额外花费",
+      "base": "授权超出既定预算的 token 花费",
+      "reasonSuffix": "——{{reason}}"
+    },
+    "gitRepoCreate": {
+      "verb": "想要创建仓库",
+      "base": "创建仓库",
+      "named": " {{name}}",
+      "unnamed": "（项目仓库）",
+      "atProvider": "，在 {{provider}} 上",
+      "atDefaultProvider": "，在已配置的 git provider 上",
+      "withVisibility": "，可见性为 {{visibility}}"
+    },
+    "gitBranchCreate": {
+      "verb": "想要创建分支",
+      "base": "创建分支",
+      "named": " {{branch}}",
+      "fromRef": "，基于 {{from}}",
+      "suffix": "，在项目仓库中。"
+    },
+    "gitBranchProtect": {
+      "verb": "想要保护分支",
+      "base": "开启分支保护",
+      "named": " {{branch}}",
+      "suffix": "——此后，没有 pull request 任何内容都无法进入该分支。"
+    },
+    "writeFile": {
+      "verb": "提议写入文件",
+      "base": "写入文件",
+      "pathSuffix": " {{path}}",
+      "fixedSuffix": "，位于工作区中——超出了该智能体可自行修改的范围。"
+    },
+    "openAdrPr": {
+      "verb": "开启了 ADR 的 pull request",
+      "base": "开启一个包含 ADR 的 pull request",
+      "titled": " \"{{title}}\"",
+      "atFile": "，位于 docs/adr/{{slug}}.md"
+    },
+    "openInfraPr": {
+      "verb": "开启了基础设施的 pull request",
+      "base": "开启一个基础设施 pull request",
+      "titled": " \"{{title}}\"",
+      "filesSuffix_other": "，包含 {{count}} 个文件"
+    },
+    "gitMerge": {
+      "verb": "想要合并",
+      "base": "合并 pull request",
+      "prId": " #{{pr}}",
+      "target": " 到 {{target}}",
+      "suffix": "，在项目仓库中。"
+    },
+    "instructionPatch": {
+      "verb": "提议调整某个智能体的指令",
+      "base": "修改 {{agent}} 的指令文件",
+      "transition": "，从 v{{from}} 到 v{{to}}",
+      "suffix": "——对其后续轮次生效。"
+    },
+    "parallelize": {
+      "verb": "想要再增加一个并行智能体",
+      "base": "再增加一个并行工作的智能体",
+      "module": "，在模块 {{module}} 中",
+      "activeCount_other": "——会话已有 {{count}} 个活跃智能体，上限为 {{max}}"
+    },
+    "raiseMaxParallel": {
+      "verb": "提议提高并行上限",
+      "base": "提高并行智能体上限",
+      "area": "（领域 {{area}}）",
+      "jump": "，从 {{from}} 到 {{to}}",
+      "suffix": "——会改变产品无需询问即可花费的额度。"
+    },
+    "proposeExecutionPlan": {
+      "verb": "提议执行计划",
+      "base": "批准 Dev Lead 的执行计划",
+      "summaryCount_other": "——{{count}} 个智能体，分布在 {{modules}}",
+      "modulesCount_other": "{{count}} 个模块",
+      "reasonSuffix": "：\"{{summary}}\"",
+      "note": "，并激活执行：dev agent 将启动并开始产生花费。"
+    },
+    "assessImplementability": {
+      "verb": "评估 story 的可实现性",
+      "base": "将 story 记录为{{label}}",
+      "viableLabel": "可实现",
+      "unfeasibleLabel": "不可行",
+      "justificationSuffix": "：\"{{justification}}\""
+    }
+  },
+  "approvalCard": {
+    "batchSelectAriaLabel": "选择以批量批准",
+    "details": {
+      "title": "详情",
+      "rawPayloadTitle": "原始 payload",
+      "fieldCount_other": "{{count}} 个字段"
+    },
+    "actions": {
+      "approve": "批准",
+      "deny": "拒绝",
+      "alwaysAllow": "始终允许",
+      "autoMode": "自动模式"
+    },
+    "notes": {
+      "alwaysAllow": "始终允许：在项目的 .brabo/permissions.json 中为命令的每个片段写入一条规则，按动词 + 子命令（例如 \"npm test\"、\"git status\"）——下一个具有相同动词和子命令的命令将无需询问直接运行。",
+      "alwaysAllowTyped": "始终允许：在项目的 .brabo/permissions.json 中为此类操作写入一条规则——下一个同类操作将无需询问直接运行。",
+      "alwaysAllowScoped": "始终允许：仅对 {{agent}} 放行此类操作，不包括项目中的其他智能体。",
+      "autoMode": "自动模式：{{actor}} 无需询问即可运行任何命令，包括项目文件夹之外的命令，也包括 git push 和开启 PR。deploy、sudo/doas、受保护分支的合并、指令补丁、并行度以及移除容器仍需你决定；deny 中的规则仍会被拒绝。可在智能体卡片上关闭。",
+      "autoModeTyped": "自动模式：{{actor}} 的后续操作将无需询问直接批准，包括 git push 和开启 PR。deploy、受保护分支的合并、指令补丁、并行度以及移除容器仍需你决定；deny 中的规则仍会被拒绝。可在智能体卡片上关闭。",
+      "autoModeNotThis": "开启自动模式不会批准此操作：它仍在等待你点击“批准”。",
+      "obsolete": "该操作已通过其他途径决定；此卡片会自动更新。"
+    },
+    "decided": {
+      "denied": "已拒绝",
+      "alwaysAllowed": "始终允许 · 已写入 permissions.json",
+      "failed": "失败",
+      "approvedTerminal": "已批准 · 命令执行中",
+      "approved": "已批准"
+    },
+    "body": {
+      "terminal": {
+        "invalidCommand": "模型没有为此操作生成有效的命令。",
+        "outputHeader": "terminal · output",
+        "compression": "rtk −{{percent}}%",
+        "emptyOutput": "（无输出）"
+      },
+      "writeFile": {
+        "invalidBoth": "模型没有为此操作生成有效的路径和内容。",
+        "invalidPath": "模型没有为此操作生成有效的路径。",
+        "invalidContent": "模型没有为此操作生成有效的内容。",
+        "previewHeader": "内容预览",
+        "linesTruncated_other": "{{count}} 行中的 {{shown}} 行"
+      },
+      "prOpen": {
+        "defaultTitle": "Pull request"
+      },
+      "gitMerge": {
+        "defaultTitle": "Pull request",
+        "prTitle": "Pull request #{{pr}}"
+      },
+      "instructionPatch": {
+        "hypothesisOrigin": "来源：假设 {{id}}"
+      },
+      "gitCommitPush": {
+        "noDetails": "没有更多详情。"
+      },
+      "empty": "此操作不携带 payload。"
+    },
+    "actorYou": "你",
+    "actorOtherMember": "其他成员"
+  },
+  "prGateTimeline": {
+    "steps": {
+      "dev": "Dev",
+      "qa": "QA",
+      "secops": "SecOps",
+      "user": "你"
+    },
+    "viewPr": "查看 PR",
+    "blocked": "已阻塞",
+    "verdict": {
+      "approved": "已批准",
+      "changesRequested": "要求修改",
+      "dispensed": "已免除"
+    },
+    "coverage": {
+      "rule": "规则",
+      "tests": "测试",
+      "covered": "覆盖",
+      "coveredYes": "已覆盖",
+      "coveredNo": "无测试"
+    }
+  },
+  "approvalsTab": {
+    "genericLoading": "加载中…",
+    "pending": {
+      "title": "待处理",
+      "eyebrow": "按紧急程度排序",
+      "selectedCount_other": "已选 {{count}} 项",
+      "approveSelected": "批准所选",
+      "clear": "清除",
+      "findingSession": "正在查找项目会话…",
+      "sessionsError": "无法打开项目的会话。",
+      "noSession": "还没有会话——审批来自智能体在会话中的提议。",
+      "loadingQueue": "正在加载队列…",
+      "queueError": "无法加载审批队列。",
+      "empty": "没有待处理的审批。团队运转顺畅。",
+      "motivoNaoLido": {
+        "todas_other": "无法读取这 {{count}} 个操作的策略原因：读取提议它们的会话日志失败。",
+        "algumas_other": "无法读取下方 {{total}} 个操作中 {{count}} 个的策略原因：读取提议它们的会话日志失败。"
+      }
+    },
+    "devPrs": {
+      "title": "审查中的 PR",
+      "eyebrow": "{{count}} 个来自 dev agent，处于 QA/SecOps gate",
+      "loading": "正在加载审查中的 PR…",
+      "backlogError": "无法加载 backlog。",
+      "empty": "还没有 dev agent 的 PR 处于审查中。"
+    },
+    "infraPrs": {
+      "title": "审查中的基础设施 PR",
+      "eyebrow": "{{count}} 个基础设施 PR，处于 QA/SecOps gate",
+      "loading": "正在加载基础设施 PR…",
+      "error": "无法加载基础设施 PR。",
+      "empty": "还没有基础设施 PR 处于审查中。",
+      "mergeLink": "在 PR 标签页中合并"
+    },
+    "permissions": {
+      "title": "项目权限",
+      "subtitle": "在智能体每次操作前应用的规则。可逐行撤销。",
+      "bannerPrefix": "评估顺序：",
+      "bannerMiddle": "始终优先",
+      "bannerSuffix": "，与文件中的顺序无关。",
+      "searchPlaceholder": "搜索规则或模式…",
+      "columnPattern": "模式",
+      "columnType": "类型",
+      "columnAction": "操作",
+      "revoke": "撤销",
+      "revokeAriaLabel": "撤销 {{pattern}}",
+      "loading": "正在读取 permissions.json…",
+      "error": "无法加载项目权限。",
+      "emptyNoRules": "还没有配置任何规则。",
+      "emptyNoMatch": "没有符合搜索的规则。"
+    },
+    "toast": {
+      "autoModeOnTitle": "自动模式已开启",
+      "autoModeOnErrorTitle": "无法开启自动模式"
+    }
+  },
+  "prsTab": {
+    "title": "项目的 pull request",
+    "subtitle": "直接来自 git provider——涵盖所有会话，而不仅是最新的一个。",
+    "gateStatusError": "无法加载 backlog 的 gate 状态。",
+    "mergeErrorTitle": "无法提议合并",
+    "mergeButton": "合并",
+    "mergeBlockedFallback": "gate 已阻塞——请先修复再提议合并。",
+    "mergeNoSession": "项目中没有可用于提议操作的会话。",
+    "gatePendenteBloqueada": "此 PR 的 gate {{gate}} 仍待处理，且其任务已被阻塞：在任务解除阻塞之前无法合并。",
+    "mergeIndisponivelBloqueada": "无法合并：此 PR 的任务已被阻塞——{{reason}}",
+    "mergeIndisponivelSemSessao": "无法合并：项目中没有可用于提议操作的会话。",
+    "gatePendente": "此 PR 的 gate {{gate}} 仍待处理。合并仍然可用——由你决定。",
+    "mergeRecusado": "上一次合并尝试被拒绝：{{reason}}",
+    "mergeRecusadoArquivos_other": "冲突文件：{{files}}",
+    "mergeResolverAntes": "请先解决冲突（将 PR 分支 rebase 到 dev 上），然后重试合并。"
+  },
+  "politica": {
+    "motivo": "策略的决定原因：{{motivo}}",
+    "motivoNaoRegistrado": "未记录策略原因（提议早于原因写入日志）",
+    "foraDoRecorte": "策略原因不在此页面加载的事件范围内",
+    "raiz": {
+      "raizGerenciada": "范围根目录：托管文件夹“{{segmento}}”",
+      "baseDeProjetos": "范围根目录：项目基目录中的“{{segmento}}”",
+      "nomeDaPasta": "范围根目录：runner 机器上的文件夹“{{segmento}}”",
+      "indisponivel": "范围根目录：没有相对形式（挂载的文件夹位于项目基目录之外，或未配置基目录）",
+      "formaDesconhecida": "范围根目录：以此页面无法识别的形式记录",
+      "naoRegistrada": "未记录范围根目录（提议早于根目录写入日志）"
+    },
+    "linha": {
+      "autoAprovada": "{{ator}}：操作已由策略自动批准",
+      "negada": "{{ator}}：操作被策略拒绝",
+      "pendente": "{{ator}}：操作等待决定",
+      "proposta": "{{ator}} 提议了一个操作"
+    }
+  }
+}

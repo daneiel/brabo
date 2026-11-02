@@ -90,6 +90,8 @@ export interface LinhaDeRanking {
   rotulo: string;
   costMicros: number;
   detalhe: string;
+  /** Substitui o US$ da linha (ex.: assinatura sem preço registrado). */
+  valor?: string;
 }
 
 /**
@@ -133,7 +135,7 @@ export function Ranking({
               </span>
               <span className={styles.rankingDetalhe}>{linha.detalhe}</span>
               <span className={styles.rankingValor}>
-                {formatarUsd(linha.costMicros)}
+                {linha.valor ?? formatarUsd(linha.costMicros)}
               </span>
             </li>
           ))}

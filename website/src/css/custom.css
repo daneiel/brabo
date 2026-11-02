@@ -1,44 +1,41 @@
 /**
- * Alinhado ao design system em `design/tokens.css`: paleta petróleo + areia,
- * acento terracota, dark como modo primário. Os valores são COPIADOS, não
- * importados — o `tokens.css` é do app React e traz muita coisa que o site de
- * documentação não usa. Se a paleta mudar lá, atualize aqui.
+ * O site segue o produto nos dois temas (ADR 0181): a fonte única é
+ * `design/tokens.css`, importado aqui — escuro em `:root`, claro em
+ * `[data-theme='light']`, a mesma convenção do Docusaurus. Os `--ifm-*` só
+ * apontam para os tokens. Fontes ficam as de sistema do Infima de propósito:
+ * os `--font-*` do tokens nomeiam famílias que o site não carrega.
+ * `scripts/docs/contraste-do-site.spec.ts` cobra 4,5:1 nos dois temas.
  */
+@import '../../../design/tokens.css';
 
-:root {
-  --ifm-color-primary: #c4552d;
-  --ifm-color-primary-dark: #b04d29;
-  --ifm-color-primary-darker: #a5451f;
-  --ifm-color-primary-darkest: #883a1a;
-  --ifm-color-primary-light: #d6633a;
-  --ifm-color-primary-lighter: #e37b4e;
-  --ifm-color-primary-lightest: #e98d66;
+/* `html[data-theme]` empata em especificidade com o `html[data-theme='dark']`
+   do Infima e vem depois, então vence nos dois temas. */
+html[data-theme] {
+  --ifm-color-primary: var(--accent);
+  /* Variações só para fundo/borda/hover; texto usa o primary. */
+  --ifm-color-primary-dark: color-mix(in srgb, var(--accent) 90%, black);
+  --ifm-color-primary-darker: color-mix(in srgb, var(--accent) 85%, black);
+  --ifm-color-primary-darkest: color-mix(in srgb, var(--accent) 70%, black);
+  --ifm-color-primary-light: color-mix(in srgb, var(--accent) 90%, white);
+  --ifm-color-primary-lighter: color-mix(in srgb, var(--accent) 85%, white);
+  --ifm-color-primary-lightest: color-mix(in srgb, var(--accent) 70%, white);
 
-  --ifm-background-color: #ffffff;
-  --ifm-font-color-base: #0a2e3d;
-  --ifm-heading-color: #061b24;
+  --ifm-background-color: var(--surface-0);
+  --ifm-background-surface-color: var(--surface-1);
+  --ifm-navbar-background-color: var(--surface-1);
+  --ifm-font-color-base: var(--text-primary);
+  --ifm-heading-color: var(--text-primary);
+  --ifm-color-content-secondary: var(--text-secondary);
+  --ifm-toc-border-color: var(--border);
 
   --ifm-code-font-size: 92%;
-  --ifm-code-background: #efe4d2;
-  --docusaurus-highlighted-code-line-bg: rgba(10, 46, 61, 0.1);
+  --ifm-code-background: var(--code-bg);
+  --prism-background-color: var(--code-bg);
+  --docusaurus-highlighted-code-line-bg: color-mix(in srgb, var(--accent) 15%, transparent);
 }
 
-[data-theme='dark'] {
-  --ifm-color-primary: #d6633a;
-  --ifm-color-primary-dark: #c4552d;
-  --ifm-color-primary-darker: #b04d29;
-  --ifm-color-primary-darkest: #a5451f;
-  --ifm-color-primary-light: #e37b4e;
-  --ifm-color-primary-lighter: #e98d66;
-  --ifm-color-primary-lightest: #efa07e;
-
-  --ifm-background-color: #061b24;
-  --ifm-background-surface-color: #0a2e3d;
-  --ifm-font-color-base: #f5ede0;
-  --ifm-heading-color: #f5ede0;
-
-  --ifm-code-background: #03141b;
-  --docusaurus-highlighted-code-line-bg: rgba(245, 237, 224, 0.12);
+body {
+  background-color: var(--surface-0);
 }
 
 /* Tabela é o formato dominante nesta documentação (env vars, rotas, eventos,

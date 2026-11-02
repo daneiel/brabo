@@ -1,825 +1,869 @@
 ---
 id: configuration
-title: Configuration
-sidebar_label: Configuration
+title: Configuração
+sidebar_label: Configuração
 sidebar_position: 1
-description: All environment variables for the api, engine and web, with defaults and what breaks when they're wrong.
-keywords: [configuration, environment variables, env, deploy]
+description: Todas as variáveis de ambiente da api, do engine e do web, com os defaults e o que quebra quando estão erradas.
+keywords: [configuração, variáveis de ambiente, env, deploy]
 ---
 
-# Configuration
+# Configuração
 
-All configuration is via **environment variable**. There is no application
-config file — what exists is `permissions.json`, which is project policy, not
-process configuration.
+Toda a configuração é por **variável de ambiente**. Não há arquivo de
+configuração da aplicação — o que existe é o `permissions.json`, que é política
+do projeto, não configuração de processo.
 
-Two versioned files are read at runtime and are not configuration, although
-they're easy to confuse with it: `permissions.json` above, and
-`docs/gates.yml` ([ADR 0054](../adr/0054-gates-como-registro-declarativo.md)),
-the declarative gate registry. Neither has an environment variable to point to
-a path — the registry is found by walking up from `__dirname` — and neither
-changes behavior by being edited in production: the registry DESCRIBES the
-gates, it doesn't apply them. It travels inside the api image; see the
+Dois arquivos versionados são lidos em tempo de execução e não são
+configuração, embora seja fácil confundi-los com ela: o `permissions.json`
+acima e o `docs/gates.yml` ([ADR 0054](../adr/0054-gates-como-registro-declarativo.md)),
+o registro declarativo de gates. Nenhum dos dois tem variável de ambiente que
+aponte um caminho — o registro é achado subindo a partir de `__dirname` — e
+nenhum muda comportamento ao ser editado em produção: o registro DESCREVE os
+gates, não os aplica. Ele viaja dentro da imagem da api; veja o
 [runbook](../runbook.md#registro-de-gates).
 
-What travels is the registry and **nothing it points at**. The `evidencia`
-of a `teste`/`ci` gate names files under `apps/api/test/`, `scripts/ci/`
-and `.github/`, and none of those are in the image. Checking that those
-targets exist is therefore a claim about the repository, enforced in CI,
-never by the process serving `GET /gates` — which is why the api reads the
-registry without looking for them. It used to look, and it answered `500`
-in every installation ([RN-070](../business-rules/custo.md#rn-070)).
+O que viaja é o registro e **nada daquilo para que ele aponta**. A `evidencia`
+de um gate `teste`/`ci` nomeia arquivos sob `apps/api/test/`, `scripts/ci/` e
+`.github/`, e nenhum deles está na imagem. Conferir que esses alvos existem é,
+portanto, uma afirmação sobre o repositório, cobrada no CI, nunca pelo processo
+que serve `GET /gates` — por isso a api lê o registro sem procurá-los. Ela já
+procurou, e respondia `500` em toda instalação
+([RN-070](../business-rules/custo.md#rn-070)).
 
-> **`up --wait` only proves what has a healthcheck.** In the development
-> compose, `api`, `engine` and `web` had none, so `docker compose up --wait`
-> reported them ready the moment the container started — before the process
-> was listening. That is how a container could die seconds later with the
-> command still reporting success. The three now carry the same check their
-> production images already declare in the Dockerfile (`/health` for api and
-> engine, which touches the database; `/` for the Vite server). The container
-> broker got its own in a separate change; `postgres` and `neo4j` always had
-> one. Nothing here is an environment variable — it is written down because
-> `--wait` is the thing scripts trust, and a service without a healthcheck
-> makes it lie.
+> **`up --wait` só prova o que tem healthcheck.** No compose de
+> desenvolvimento, `api`, `engine` e `web` não tinham nenhum, então
+> `docker compose up --wait` os dava como prontos no instante em que o
+> container subia — antes de o processo escutar. Foi assim que um container
+> podia morrer segundos depois com o comando ainda anunciando sucesso. Os três
+> agora carregam a mesma checagem que as imagens de produção já declaram no
+> Dockerfile (`/health` na api e no engine, que toca o banco; `/` no servidor
+> do Vite). O broker de containers ganhou a dele numa mudança à parte;
+> `postgres` e `neo4j` sempre tiveram. Nada aqui é variável de ambiente — está
+> escrito porque o `--wait` é aquilo em que os scripts confiam, e um serviço
+> sem healthcheck o faz mentir.
 
-The defaults below were extracted from the code, not from prior
-documentation. The **when it fails** column is the part that saves time:
-almost every variable has a default that works in development and a specific
-failure mode in production.
+Os defaults abaixo foram extraídos do código, não de documentação anterior. A
+coluna **quando falha** é a parte que economiza tempo: quase toda variável tem
+um default que funciona em desenvolvimento e um modo de falha específico em
+produção.
 
-> **A variable only reaches the process if the compose maps it.** `docker
-> compose` does not forward the host environment into a container: a variable
-> arrives if — and only if — it is written in that service's `environment:`
-> (or an `env_file`). This is not a detail; it is how `ANAMNESE_ENABLED` and
-> `PSYCHOLOGIST_ENABLED` stayed silently unreachable while three places in the
-> code promised the 2026-08-10 pause was reversible with `X=true` plus a
-> restart. Measured inside the running engine container, they came back empty
-> and `runtime.exs` fell back to `"false"` — no error anywhere. Every boolean
-> flag the engine reads is now mapped in all three compose files (dev,
-> production and installation — the installation one only since AT-202), with
-> the code's own default except for the two background-agent boot keys that
-> production and installation turn off on purpose, and
-> `scripts/ci/flags-do-engine-no-compose.spec.ts` fails the build for the next
-> one that isn't ([RN-540](../business-rules.md#rn-540)).
-> Kubernetes is deliberately outside that rule: a Deployment/ConfigMap
-> intercepts nothing, so there is no broken switch to fix there.
+> **Uma variável só chega ao processo se o compose a mapear.** O `docker
+> compose` não repassa o ambiente do host para dentro do container: a variável
+> chega se — e somente se — estiver escrita no `environment:` daquele serviço
+> (ou num `env_file`). Isso não é detalhe; foi assim que `ANAMNESE_ENABLED` e
+> `PSYCHOLOGIST_ENABLED` ficaram inalcançáveis em silêncio enquanto três
+> lugares do código prometiam que a pausa de 2026-08-10 se revertia com
+> `X=true` e um reinício. Medidas dentro do container do engine em execução,
+> voltaram vazias e o `runtime.exs` caiu em `"false"` — sem erro em lugar
+> nenhum. Toda flag booleana que o engine lê está mapeada agora nos três
+> arquivos de compose (dev, produção e instalação — o de instalação só desde a
+> AT-202), com o default do próprio código, salvo as duas chaves de boot dos
+> agentes de fundo que produção e instalação desligam de propósito, e
+> `scripts/ci/flags-do-engine-no-compose.spec.ts` reprova o build para a
+> próxima que não estiver ([RN-540](../business-rules.md#rn-540)).
+> O Kubernetes fica de fora dessa regra de propósito: um Deployment/ConfigMap
+> não intercepta nada, então ali não há chave quebrada a consertar.
 
-> **Development defaults are insecure on purpose.** Values like
-> `dev-master-key-change-me` exist so `pnpm dev` comes up without ceremony. In
-> production they need to be changed — and for six of them the process
-> **refuses** to boot without changing them (api or engine, marked with 🔒).
-> Five follow the pattern of
+> **Os defaults de desenvolvimento são inseguros de propósito.** Valores como
+> `dev-master-key-change-me` existem para que o `pnpm dev` suba sem cerimônia.
+> Em produção eles precisam ser trocados — e para seis deles o processo
+> **recusa** subir sem a troca (api ou engine, marcados com 🔒). Cinco seguem o
+> padrão do
 > [ADR 0059](../adr/0059-segredo-do-state-de-oauth-sem-default.md)/[RN-093](../business-rules/custo.md#rn-093):
-> missing, set to the public example literal, or too short brings the boot
-> down. See [RN-114](../business-rules/custo.md#rn-114) for the four that joined the
-> original `GIT_OAUTH_STATE_SECRET`.
+> ausente, igual ao literal público de exemplo ou curto demais derruba o boot.
+> Veja a [RN-114](../business-rules/custo.md#rn-114) para as quatro que se
+> juntaram ao `GIT_OAUTH_STATE_SECRET` original.
 
-## Installation compose (`docker-compose.install.yml`)
+## Compose de instalação (`docker-compose.install.yml`)
 
-The compose that runs on an **installed** machine takes the five product
-images from **mandatory variables**, with no default — `install.sh` writes them
-into `.env`:
+O compose que roda numa máquina **instalada** pega as cinco imagens do produto
+de **variáveis obrigatórias**, sem default — o `install.sh` as escreve no
+`.env`:
 
-| variable | what |
+| variável | o quê |
 |---|---|
-| `BRABO_API_IMAGE` | full reference of the api image; `ghcr.io/…@sha256:…` when the source is GHCR, `brabo-api:prod` when built locally |
-| `BRABO_ENGINE_IMAGE` | same, for the engine |
-| `BRABO_WEB_IMAGE` | same, for the web |
-| `BRABO_BACKUP_IMAGE` | same, for the backup job (under the `backup` profile) |
-| `BRABO_BROKER_IMAGE` | same, for the container broker ([ADR 0162](../adr/0162-broker-publicado-e-oferecido-pelo-instalador.md)). Written **whether or not** the broker is turned on: Compose interpolates the whole file before filtering by profile, so a `${VAR:?…}` on a disabled service still refuses the file (measured) |
+| `BRABO_API_IMAGE` | referência completa da imagem da api; `ghcr.io/…@sha256:…` quando a origem é o GHCR, `brabo-api:prod` quando construída localmente |
+| `BRABO_ENGINE_IMAGE` | o mesmo, para o engine |
+| `BRABO_WEB_IMAGE` | o mesmo, para o web |
+| `BRABO_BACKUP_IMAGE` | o mesmo, para o job de backup (sob o profile `backup`) |
+| `BRABO_BROKER_IMAGE` | o mesmo, para o broker de containers ([ADR 0162](../adr/0162-broker-publicado-e-oferecido-pelo-instalador.md)). Escrita **esteja ou não** o broker ligado: o Compose interpola o arquivo inteiro antes de filtrar por profile, então um `${VAR:?…}` num serviço desligado ainda recusa o arquivo (medido) |
 
-They are `${VAR:?…}` on purpose. With a default, a missing variable would bring
-half the stack up on an image nobody picked, and the mistake would show up as
-strange behaviour instead of a refusal.
+Elas são `${VAR:?…}` de propósito. Com default, uma variável ausente subiria
+metade da stack numa imagem que ninguém escolheu, e o erro apareceria como
+comportamento estranho em vez de recusa.
 
-These are **not** in the generated inventory below: the generator scans
-`apps/`, and these are read by Compose, not by product code
+Elas **não** estão no inventário gerado abaixo: o gerador varre `apps/`, e
+estas são lidas pelo Compose, não por código do produto
 ([RN-527](../business-rules.md#rn-527)).
 
-The **broker** is in this compose since [ADR 0162](../adr/0162-broker-publicado-e-oferecido-pelo-instalador.md),
-**off**, under the `container-broker` profile, and `install.sh` turns it on
-only when asked and answered "s" ([RN-575](../business-rules.md#rn-575)). Then
-it writes four lines, together or not at all:
+O **broker** está neste compose desde o [ADR 0162](../adr/0162-broker-publicado-e-oferecido-pelo-instalador.md),
+**desligado**, sob o profile `container-broker`, e o `install.sh` o liga só
+quando pergunta e a resposta é "s" ([RN-575](../business-rules.md#rn-575)).
+Então ele escreve quatro linhas, juntas ou nenhuma:
 
-| variable | what `install.sh` writes |
+| variável | o que o `install.sh` escreve |
 |---|---|
-| `COMPOSE_PROFILES` | `container-broker` — read by Compose from the `--env-file`, so `up -d --wait` brings the broker up with no flag |
-| `BROKER_URL` | `http://broker:8090` — the api's side; without it the api never calls the broker |
-| `DOCKER_GID` | the socket's gid **as seen from inside a container**, measured with the broker image itself; failing to measure is a named refusal, never the `999` default |
-| `PROJECT_WORKSPACES_HOST_ROOT` | `<DockerRootDir>/volumes/brabo_project_workspaces/_data`, computed before startup and checked against the volume's real `Mountpoint` after it |
+| `COMPOSE_PROFILES` | `container-broker` — lida pelo Compose a partir do `--env-file`, então `up -d --wait` sobe o broker sem flag |
+| `BROKER_URL` | `http://broker:8090` — o lado da api; sem ela a api nunca chama o broker |
+| `DOCKER_GID` | o gid do socket **visto de dentro de um container**, medido com a própria imagem do broker; falhar na medição é recusa nomeada, nunca o default `999` |
+| `PROJECT_WORKSPACES_HOST_ROOT` | `<DockerRootDir>/volumes/brabo_project_workspaces/_data`, calculado antes da subida e conferido contra o `Mountpoint` real do volume depois dela |
 
-`BRABO_PROJECTS_HOST_BASE` is not written: the compose derives it from
-`BRABO_PROJECTS_BASE`, as in the validation compose. Turning it on or off later
-is in the [runbook](../runbook.md#broker-na-instalacao).
+`BRABO_PROJECTS_HOST_BASE` não é escrita: o compose a deriva de
+`BRABO_PROJECTS_BASE`, como no compose de validação. Ligar ou desligar depois
+está no [runbook](../runbook.md#broker-na-instalacao).
+
+Os **modelos locais** (Ollama, o profile `llm`) são perguntados logo depois do
+broker ([RN-691](../business-rules.md#rn-691)). Responder "s" mede antes uma
+porta livre do host e escreve:
+
+| variável | o que o `install.sh` escreve |
+|---|---|
+| `OLLAMA_PORT` | `11434`, ou a primeira porta livre até `11443` quando algo (um Ollama nativo) já escuta ali; a faixa inteira ocupada é recusa nomeada, sem escrever nada |
+| `COMPOSE_PROFILES` | `llm`, junto com `container-broker` numa linha SÓ quando os dois foram aceitos (`container-broker,llm`) — duas linhas não somam, a última vence |
+
+Sem elas a checagem de duplicata semântica é pulada. Ligar depois está no
+[runbook](../runbook.md#modelos-locais-na-instalacao).
 
 
 ## api
 
-### Essentials
+### Essenciais
 
-| variable | default | when it fails |
+| variável | default | quando falha |
 |---|---|---|
-| `DATABASE_URL` | `postgres://brabo:brabo@localhost:5432/brabo` | without it, nothing comes up |
+| `DATABASE_URL` | `postgres://brabo:brabo@localhost:5432/brabo` | sem ela, nada sobe |
 | `PORT` | `3000` | — |
-| `API_JSON_BODY_LIMIT` | `10mb` | ceiling for the JSON body the api accepts, applied to the parser registered in `main.ts` before any route. It exists so that a change to the engine's transport ceiling (`TRANSPORT_MAX_BODY_BYTES`, 8 MiB) doesn't require a new deploy — the default keeps headroom over it. Too small, and a large context turn comes back as **413** |
-| `NODE_ENV` | — | `production` turns on strict CORS and key validation |
-| `API_PUBLIC_URL` | `http://localhost:3000` | used in git OAuth callbacks; wrong = broken callback |
-| `ENGINE_URL` | `http://localhost:4000` in code, `http://engine:4000` in Compose | synchronous api→engine commands fail. **Leave it empty in `.env`**: set there, it wins over the Compose default and the api tries to talk to `localhost:4000` from inside its own container — every session activation dies with `ECONNREFUSED` and the frontend never moves. Each environment already has the right default without the line |
-| `ENGINE_PUBLIC_URL` | same as `ENGINE_URL` | used only to build the `engineWsUrl` (WebSocket) returned in `POST .../runner-ticket`/`.../terminal-ticket` — the runner and the web can be OUTSIDE the cluster, so the internal address (`http://engine:4000`) doesn't work; `ENGINE_URL` remains the one used for the usual synchronous api→engine calls (RN-419) |
-| `BRABO_VERSION` | `dev` | becomes `service.version` in the OpenTelemetry resource — it's how you know which build generated a trace. The release image injects the tag via a `docker-bake.hcl` `ARG`; outside of a release it stays `dev`. It does **not** appear in `/health`, which deliberately doesn't return the version (see the route's `description`) |
+| `API_JSON_BODY_LIMIT` | `10mb` | teto do corpo JSON que a api aceita, aplicado ao parser registrado em `main.ts` antes de qualquer rota. Existe para que uma mudança no teto de transporte do engine (`TRANSPORT_MAX_BODY_BYTES`, 8 MiB) não exija deploy novo — o default guarda folga sobre ele. Pequeno demais, e um turno de contexto grande volta como **413** |
+| `NODE_ENV` | — | `production` liga o CORS estrito e a validação das chaves |
+| `API_PUBLIC_URL` | `http://localhost:3000` | usada nos callbacks de OAuth de git; errada = callback quebrado |
+| `ENGINE_URL` | `http://localhost:4000` no código, `http://engine:4000` no Compose | os comandos síncronos api→engine falham. **Deixe-a vazia no `.env`**: definida ali, ela vence o default do Compose e a api tenta falar com `localhost:4000` de dentro do próprio container — toda ativação de sessão morre com `ECONNREFUSED` e o frontend não sai do lugar. Cada ambiente já tem o default certo sem a linha |
+| `ENGINE_PUBLIC_URL` | o mesmo que `ENGINE_URL` | usada só para montar o `engineWsUrl` (WebSocket) devolvido em `POST .../runner-ticket`/`.../terminal-ticket` — o runner e o web podem estar FORA do cluster, então o endereço interno (`http://engine:4000`) não serve; `ENGINE_URL` continua sendo a usada nas chamadas síncronas de sempre api→engine (RN-419) |
+| `BRABO_VERSION` | `dev` | vira `service.version` no resource do OpenTelemetry — é como se sabe que build gerou um trace. A imagem de release injeta a tag por um `ARG` do `docker-bake.hcl`; fora de release fica `dev`. **Não** aparece em `/health`, que de propósito não devolve a versão (veja a `description` da rota) |
 | `MIGRATIONS_FOLDER` | `./src/db/migrations` | — |
 
-### Security 🔒
+### Segurança 🔒
 
-| variable | default | when it fails |
+| variável | default | quando falha |
 |---|---|---|
-| `CREDENTIALS_MASTER_KEY` 🔒 | `dev-master-key-change-me` **only outside production** | wraps the DEKs. **In production the api refuses to boot** if it's missing, set to the default above (public — it's in `.env.example`), or shorter than 16 characters (RN-114). This is only the BOOT check: swapping it for a **valid but different** key without re-wrapping still makes every credential unreadable with no error at all — the failure shows up on first use. See [rotation](../runbook.md#rotacao-da-chave-mestra) |
-| `CREDENTIALS_MASTER_KEY_PREVIOUS` | — | only during rotation. Present = the api tries the previous key when the current one fails |
-| `GIT_OAUTH_STATE_SECRET` 🔒 | `dev-oauth-state-secret-change-me` **only outside production** | signs the OAuth `state`; weak = CSRF in the git connection flow. **In production the api refuses to boot** without it, with the default above (which is public — it's in `.env.example`), or with fewer than 16 characters. Generate with `openssl rand -base64 32`. See [ADR 0059](../adr/0059-segredo-do-state-de-oauth-sem-default.md) and [RN-093](../business-rules/custo.md#rn-093) |
-| `WEB_ORIGIN` 🔒 | `http://localhost:${WEB_PORT}` | **in production the api refuses to boot** if it's missing or is `*`. CORS is strict per environment. **The port is part of the value**: the web on `:5174` is a different origin and gets blocked — see [ADR 0037](../adr/0037-cors-do-engine-e-a-porta-como-contrato.md). In the composes, the default **derives from `WEB_PORT`**, so changing the port carries CORS with it; setting `WEB_ORIGIN` by hand overrides the derivation and it becomes your responsibility to keep it consistent again |
-| `WEB_PORT` | `5173` (dev) · `8088` (prod) | published port of the web on the host. Not read by any service — it **feeds the default of `WEB_ORIGIN`** in the composes, and that's what keeps port and CORS from diverging |
+| `CREDENTIALS_MASTER_KEY` 🔒 | `dev-master-key-change-me` **só fora de produção** | embrulha as DEKs. **Em produção a api recusa subir** se ela falta, se é o default acima (público — está no `.env.example`) ou se tem menos de 16 caracteres (RN-114). Essa é só a checagem do BOOT: trocá-la por uma chave **válida mas diferente** sem re-embrulhar ainda deixa toda credencial ilegível sem erro nenhum — a falha aparece no primeiro uso. Veja a [rotação](../runbook.md#rotacao-da-chave-mestra) |
+| `CREDENTIALS_MASTER_KEY_PREVIOUS` | — | só durante a rotação. Presente = a api tenta a chave anterior quando a atual falha |
+| `GIT_OAUTH_STATE_SECRET` 🔒 | `dev-oauth-state-secret-change-me` **só fora de produção** | assina o `state` do OAuth; fraca = CSRF no fluxo de conexão de git. **Em produção a api recusa subir** sem ela, com o default acima (que é público — está no `.env.example`) ou com menos de 16 caracteres. Gere com `openssl rand -base64 32`. Veja o [ADR 0059](../adr/0059-segredo-do-state-de-oauth-sem-default.md) e a [RN-093](../business-rules/custo.md#rn-093) |
+| `WEB_ORIGIN` 🔒 | `http://localhost:${WEB_PORT}` | **em produção a api recusa subir** se ela falta ou é `*`. O CORS é estrito por ambiente. **A porta faz parte do valor**: o web em `:5174` é outra origem e é bloqueado — veja o [ADR 0037](../adr/0037-cors-do-engine-e-a-porta-como-contrato.md). Nos composes, o default **deriva de `WEB_PORT`**, então mudar a porta leva o CORS junto; definir `WEB_ORIGIN` à mão sobrepõe a derivação e mantê-la coerente passa a ser responsabilidade sua |
+| `WEB_PORT` | `5173` (dev) · `8088` (prod) | porta publicada do web no host. Nenhum serviço a lê — ela **alimenta o default de `WEB_ORIGIN`** nos composes, e é isso que impede porta e CORS de divergirem |
 
-### First-party auth
+### Auth first-party
 
-Auth lives in the api's domain, and since the cutover it's also the sole
-issuer. Decisions in
-[ADR 0031](../adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh.md) and
+A auth mora no domínio da api, e desde o corte é também a única emissora.
+Decisões no
+[ADR 0031](../adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh.md) e no
 [ADR 0032](../adr/0032-corte-do-keycloak-e-sessao-em-cookie.md).
 
-| variable | default | what it does |
+| variável | default | o que faz |
 |---|---|---|
-| `AUTH_JWT_SECRET` 🔒 | `dev-auth-jwt-secret-change-me` **only outside production** | passphrase the access token's Ed25519 pair is **derived** from via scrypt — no private key is committed. **In production the api refuses to boot** if it's missing, set to the default above (public — it's in `.env.example`), or shorter than 16 characters (RN-114) |
-| `AUTH_JWT_SECRET_PREVIOUS` | — | accepted **only for verification**, during rotation; enters the JWKS and never signs |
-| `AUTH_TOKEN_PEPPER` 🔒 | `dev-auth-token-pepper-change-me` **only outside production** | HMAC key for hashing opaque tokens (refresh, account links, PATs) and the lockout bucket key. **Its own secret — it no longer falls back to `AUTH_JWT_SECRET`** ([RN-613](../business-rules/autenticacao.md#rn-613)). **In production the api refuses to boot** if it's missing, set to either example value from this repository, or shorter than 16 characters. An installation that ran without it must set it to the **current** `AUTH_JWT_SECRET`, or everyone is logged out — see the [runbook](../runbook.md#rotacao-do-auth-jwt-secret) |
+| `AUTH_JWT_SECRET` 🔒 | `dev-auth-jwt-secret-change-me` **só fora de produção** | frase de onde o par Ed25519 do access token é **derivado** por scrypt — nenhuma chave privada é commitada. **Em produção a api recusa subir** se ela falta, se é o default acima (público — está no `.env.example`) ou se tem menos de 16 caracteres (RN-114) |
+| `AUTH_JWT_SECRET_PREVIOUS` | — | aceita **só para verificação**, durante a rotação; entra no JWKS e nunca assina |
+| `AUTH_TOKEN_PEPPER` 🔒 | `dev-auth-token-pepper-change-me` **só fora de produção** | chave HMAC do hash dos tokens opacos (refresh, vínculos de conta, PATs) e da chave do balde de bloqueio. **Segredo próprio — não cai mais em `AUTH_JWT_SECRET`** ([RN-613](../business-rules/autenticacao.md#rn-613)). **Em produção a api recusa subir** se ele falta, se é qualquer dos valores de exemplo deste repositório ou se tem menos de 16 caracteres. Instalação que rodou sem ele precisa defini-lo com o `AUTH_JWT_SECRET` **atual**, senão todo mundo é deslogado — veja o [runbook](../runbook.md#rotacao-do-auth-jwt-secret) |
 | `AUTH_ACCESS_TOKEN_TTL_MS` | `900000` | 15 min |
-| `AUTH_REFRESH_TOKEN_TTL_MS` | `1209600000` | 14 days |
-| `AUTH_REFRESH_ABSOLUTE_TTL_MS` | `2592000000` | absolute ceiling of the family, counted from login — without it rotation grants an eternal session |
-| `AUTH_REGISTRATION_ENABLED` | `true` | any value other than `"false"` keeps registration open |
-| `AUTH_LOCKOUT_ENABLED` | `true` | same convention |
-| `AUTH_LOCKOUT_WINDOW_MS` | `900000` | sliding window of the count |
-| `AUTH_LOCKOUT_THRESHOLDS` | `5:30,8:300,12:900` | email bucket ladder, `failures:seconds` |
-| `AUTH_LOCKOUT_IP_THRESHOLDS` | `20:30,30:120` | IP bucket ladder, more permissive and with a short ceiling |
-| `AUTH_EMAIL_TOKEN_TTL_MS` | `172800000` | email verification, 48 h |
-| `AUTH_RESET_TOKEN_TTL_MS` | `3600000` | password reset, 1 h |
-| `AUTH_SET_PASSWORD_TTL_MS` | `604800000` | setting the first password (migrated user), 7 days — longer than the reset because the recipient didn't ask for it |
-| `AUTH_IP_ATTEMPT_THRESHOLD` | `60` | ceiling of attempts per IP on the auth routes |
-| `AUTH_MAIL_LOG_TOKENS` | `false` | **dev only**: prints the verification/reset token to the log |
+| `AUTH_REFRESH_TOKEN_TTL_MS` | `1209600000` | 14 dias |
+| `AUTH_REFRESH_ABSOLUTE_TTL_MS` | `2592000000` | teto absoluto da família, contado do login — sem ele a rotação concede sessão eterna |
+| `AUTH_REGISTRATION_ENABLED` | `true` | qualquer valor diferente de `"false"` mantém o cadastro aberto |
+| `AUTH_LOCKOUT_ENABLED` | `true` | mesma convenção |
+| `AUTH_LOCKOUT_WINDOW_MS` | `900000` | janela deslizante da contagem |
+| `AUTH_LOCKOUT_THRESHOLDS` | `5:30,8:300,12:900` | escada do balde por email, `falhas:segundos` |
+| `AUTH_LOCKOUT_IP_THRESHOLDS` | `20:30,30:120` | escada do balde por IP, mais permissiva e com teto curto |
+| `AUTH_EMAIL_TOKEN_TTL_MS` | `172800000` | verificação de email, 48 h |
+| `AUTH_RESET_TOKEN_TTL_MS` | `3600000` | redefinição de senha, 1 h |
+| `AUTH_SET_PASSWORD_TTL_MS` | `604800000` | definição da primeira senha (usuário migrado), 7 dias — mais longo que a redefinição porque quem recebe não pediu |
+| `AUTH_IP_ATTEMPT_THRESHOLD` | `60` | teto de tentativas por IP nas rotas de auth |
+| `AUTH_MAIL_LOG_TOKENS` | `false` | **só dev**: imprime no log o token de verificação/redefinição |
 
-> **The email ladder's ceiling equals the window on purpose.** With a sliding
-> window, whoever keeps insisting pushes the window along and stays blocked
-> for as long as they keep it up; whoever stopped comes back with a clean
-> window. A ceiling **larger** than the window would create a lockout the
-> window can't represent, and would require a persistent `locked_until`
-> column with an unlock queue. Don't touch one without the other.
+> **O teto da escada por email é igual à janela de propósito.** Com janela
+> deslizante, quem insiste empurra a janela e fica bloqueado enquanto
+> insistir; quem parou volta com a janela limpa. Um teto **maior** que a janela
+> criaria um bloqueio que a janela não consegue representar, e exigiria uma
+> coluna `locked_until` persistente com fila de desbloqueio. Não mexa num sem o
+> outro.
 
-> **Rotating `AUTH_TOKEN_PEPPER` logs everyone out** and invalidates
-> outstanding verification and reset tokens. Unlike the keys, the pepper does
-> **not** have a `_PREVIOUS`. See the [runbook](../runbook.md).
+> **Rotacionar o `AUTH_TOKEN_PEPPER` desloga todo mundo** e invalida os tokens
+> de verificação e de redefinição pendentes. Diferente das chaves, o pepper
+> **não** tem `_PREVIOUS`. Veja o [runbook](../runbook.md).
 
-> **Where the `_PREVIOUS` variables reach.** `AUTH_JWT_SECRET_PREVIOUS`,
-> `CREDENTIALS_MASTER_KEY_PREVIOUS` and `BRABO_SERVICE_TOKEN_PREVIOUS` are
-> mapped in the `environment:` of all three composes (dev, production and
-> install) as `${X:-}` — the api gets the three, the engine and the broker get
+> **Até onde as variáveis `_PREVIOUS` chegam.** `AUTH_JWT_SECRET_PREVIOUS`,
+> `CREDENTIALS_MASTER_KEY_PREVIOUS` e `BRABO_SERVICE_TOKEN_PREVIOUS` estão
+> mapeadas no `environment:` dos três composes (dev, produção e instalação)
+> como `${X:-}` — a api recebe as três, o engine e o broker recebem
 > `BRABO_SERVICE_TOKEN_PREVIOUS` ([RN-595](../business-rules/autenticacao.md#rn-595)).
-> Empty is the same as absent in every reader, so outside a rotation nothing
-> changes; during one, setting them in `.env` and recreating the service is
-> enough. Before RN-595 they were mapped nowhere and `docker compose` doesn't
-> forward the host environment, so a rotation silently became a hard swap.
-> **On Kubernetes they reach the Pods through the secret store** (AT-220): the
-> `ExternalSecret` pulls the whole `brabo` object with `dataFrom.extract`, so
-> a `_PREVIOUS` present there lands in `brabo-secrets` and an absent one is
-> simply not there. The price is that every key of that object becomes an
-> environment variable of api, engine, migrations and backup — the store
-> object must hold nothing else. The procedure is in the
-> [runbook](../runbook.md#rotacao-no-kubernetes).
+> Vazio é o mesmo que ausente em todo leitor, então fora de uma rotação nada
+> muda; durante uma, basta defini-las no `.env` e recriar o serviço. Antes da
+> RN-595 elas não estavam mapeadas em lugar nenhum e o `docker compose` não
+> repassa o ambiente do host, então uma rotação virava troca seca em silêncio.
+> **No Kubernetes elas chegam aos Pods pelo cofre de segredos** (AT-220): o
+> `ExternalSecret` puxa o objeto `brabo` inteiro com `dataFrom.extract`, então
+> um `_PREVIOUS` presente ali cai em `brabo-secrets` e um ausente simplesmente
+> não está lá. O preço é que toda chave desse objeto vira variável de ambiente
+> de api, engine, migrations e backup — o objeto do cofre não pode guardar mais
+> nada. O procedimento está no [runbook](../runbook.md#rotacao-no-kubernetes).
 
-### Real SMTP (MailSender)
+### SMTP real (MailSender)
 
-`MailSender` sends real email only when `MAIL_TRANSPORT=smtp` — the default
-is `log` (link/token go to the api's log, `AUTH_MAIL_LOG_TOKENS` above),
-including in production: sending email is the operator's opt-in. Decision in
+O `MailSender` só manda email de verdade com `MAIL_TRANSPORT=smtp` — o default
+é `log` (link/token vão para o log da api, `AUTH_MAIL_LOG_TOKENS` acima),
+inclusive em produção: mandar email é opção do operador. Decisão no
 [ADR 0096](../adr/0096-smtp-real-no-mailsender.md).
 
-| variable | default | what it does |
+| variável | default | o que faz |
 |---|---|---|
-| `MAIL_TRANSPORT` | `log` | `log` (default) or `smtp`. Any other value falls back to `log` |
-| `SMTP_HOST` 🔒 | — | SMTP provider host. **Only when `MAIL_TRANSPORT=smtp`**: in production the api refuses to boot if it's missing, whitespace-only, or set to the example value published in `.env.example` (RN-114) |
-| `SMTP_PORT` | `587` | provider port — `587` is STARTTLS, `465` is implicit TLS (`SMTP_SECURE=true`) |
-| `SMTP_SECURE` | `false` | `true` turns on implicit TLS on the connection (typically port 465) |
-| `SMTP_USER` 🔒 | — | SMTP auth username. Same requirement as `SMTP_HOST` in production |
-| `SMTP_PASSWORD` 🔒 | — | SMTP auth password/token. Same requirement as `SMTP_HOST` in production — **never appears in logs** |
-| `SMTP_FROM` | — | sender, format `"Name <email@domain>"` (or just the email). Same requirement as `SMTP_HOST` in production, plus format validation |
+| `MAIL_TRANSPORT` | `log` | `log` (default) ou `smtp`. Qualquer outro valor cai em `log` |
+| `SMTP_HOST` 🔒 | — | host do provedor SMTP. **Só com `MAIL_TRANSPORT=smtp`**: em produção a api recusa subir se ele falta, se é só espaço ou se é o valor de exemplo publicado no `.env.example` (RN-114) |
+| `SMTP_PORT` | `587` | porta do provedor — `587` é STARTTLS, `465` é TLS implícito (`SMTP_SECURE=true`) |
+| `SMTP_SECURE` | `false` | `true` liga TLS implícito na conexão (tipicamente a porta 465) |
+| `SMTP_USER` 🔒 | — | usuário da auth SMTP. Mesma exigência de `SMTP_HOST` em produção |
+| `SMTP_PASSWORD` 🔒 | — | senha/token da auth SMTP. Mesma exigência de `SMTP_HOST` em produção — **nunca aparece em log** |
+| `SMTP_FROM` | — | remetente, no formato `"Nome <email@dominio>"` (ou só o email). Mesma exigência de `SMTP_HOST` em produção, mais a validação do formato |
 
-> The email body is **plain text**, no HTML — the `MailSender` port doesn't
-> carry structure for rich bodies, and a template engine would be an
-> injection surface with no upside. The link uses `WEB_ORIGIN` (above).
+> O corpo do email é **texto puro**, sem HTML — a porta `MailSender` não
+> carrega estrutura para corpo rico, e um motor de template seria superfície de
+> injeção sem ganho. O link usa `WEB_ORIGIN` (acima).
 
-### Development seed
+### Seed de desenvolvimento
 
-Consumed by `pnpm --filter api seed`, not by the running api. Without an
-external IdP, this is where the credential to log into the local web and the
-smoke test comes from.
+Consumidas por `pnpm --filter api seed`, não pela api em execução. Sem IdP
+externo, é daqui que vem a credencial para entrar no web local e no smoke.
 
-| variable | default | what it does |
+| variável | default | o que faz |
 |---|---|---|
-| `BRABO_SEED_PASSWORD` | `brabo12345678` | password of the seeded users (`owner@brabo.dev`, `dev@brabo.dev`), created with email **already verified** |
-| `BRABO_FORCE_SEED` | — | unlocks the seed with `NODE_ENV=production`, where it **refuses to run** by default. Do not set it in a real environment: the account is born with a known, verified password |
+| `BRABO_SEED_PASSWORD` | `brabo12345678` | senha dos usuários semeados (`owner@brabo.dev`, `dev@brabo.dev`), criados com o email **já verificado** |
+| `BRABO_FORCE_SEED` | — | destrava o seed com `NODE_ENV=production`, onde por padrão ele **recusa rodar**. Não a defina num ambiente real: a conta nasce com senha conhecida e verificada |
 
-> The seed is idempotent and **doesn't touch the password** of anyone who
-> already exists. Running it again after someone has changed their own
-> password doesn't revert it.
+> O seed é idempotente e **não mexe na senha** de quem já existe. Rodá-lo de
+> novo depois de alguém trocar a própria senha não a reverte.
 
 ### Rate limit
 
-Sliding window in Postgres — there's no Redis
+Janela deslizante no Postgres — não há Redis
 ([ADR 0027](../adr/0027-fase5-backup-hardening-release.md)).
 
-| variable | default | what it does |
+| variável | default | o que faz |
 |---|---|---|
-| `RATE_LIMIT_ENABLED` | `true` | any value other than `"false"` keeps it on |
-| `RATE_LIMIT_WINDOW_MS` | `60000` | window size |
-| `RATE_LIMIT_USER` | `300` | requests per user per window |
-| `RATE_LIMIT_IP` | `600` | requests per IP per window |
+| `RATE_LIMIT_ENABLED` | `true` | qualquer valor diferente de `"false"` o mantém ligado |
+| `RATE_LIMIT_WINDOW_MS` | `60000` | tamanho da janela |
+| `RATE_LIMIT_USER` | `300` | requisições por usuário por janela |
+| `RATE_LIMIT_IP` | `600` | requisições por IP por janela |
 
-> If the rate limit table is unavailable, the request **goes through**. The
-> guard protects against abuse, not unauthorized access — that's the job of
-> the authentication guard, which runs first.
+> Se a tabela do rate limit está indisponível, a requisição **passa**. O guard
+> protege contra abuso, não contra acesso não autorizado — esse é o trabalho do
+> guard de autenticação, que roda antes.
 
-### Internal traffic 🔒
+### Tráfego interno 🔒
 
-The shared secret that authenticates api ↔ engine. **The same variable on both
-sides** — each one sends the current value and accepts both, and that's what
-makes rotation possible without downtime ([RN-035](../business-rules/autenticacao.md#rn-035)).
+O segredo compartilhado que autentica api ↔ engine. **A mesma variável dos dois
+lados** — cada um envia o valor atual e aceita os dois, e é isso que torna a
+rotação possível sem indisponibilidade ([RN-035](../business-rules/autenticacao.md#rn-035)).
 
-| variable | default | what it does |
+| variável | default | o que faz |
 |---|---|---|
-| `BRABO_SERVICE_TOKEN` 🔒 | `dev-service-token-change-me` **only outside production** | goes in the `X-Brabo-Service-Token` header and is what `EngineServiceGuard` compares in constant time. **In production the api refuses to boot** if it's missing, set to the default above (public — it's in `.env.example`), or shorter than 16 characters (RN-114) |
-| `BRABO_SERVICE_TOKEN_PREVIOUS` | — | accepted **only for verification**, during rotation. When set, it goes through the **same** rule as the current token: surrounding whitespace is trimmed, and in production the api refuses to boot if it's the public default or shorter than 16 characters. Unlike the current token, it's never required ([RN-598](../business-rules/autenticacao.md#rn-598)) |
+| `BRABO_SERVICE_TOKEN` 🔒 | `dev-service-token-change-me` **só fora de produção** | vai no cabeçalho `X-Brabo-Service-Token` e é o que o `EngineServiceGuard` compara em tempo constante. **Em produção a api recusa subir** se ele falta, se é o default acima (público — está no `.env.example`) ou se tem menos de 16 caracteres (RN-114) |
+| `BRABO_SERVICE_TOKEN_PREVIOUS` | — | aceito **só para verificação**, durante a rotação. Quando definido, passa pela **mesma** regra do token atual: o espaço em volta é aparado, e em produção a api recusa subir se ele é o default público ou tem menos de 16 caracteres. Diferente do atual, nunca é obrigatório ([RN-598](../business-rules/autenticacao.md#rn-598)) |
 
-> Setting only the NEW value on one side (without going through the
-> `_PREVIOUS` dance) doesn't break anyone's boot: the symptom is `403` on
-> `/internal/*` and `401` on api-to-engine calls. Procedure in the
-> [runbook](../runbook.md#rotacao-das-chaves-do-auth). The BOOT check above
-> (RN-114) is a different thing: it only fails on the public default or a
-> missing/short variable, not on a mismatch between the two sides.
+> Definir só o valor NOVO de um lado (sem passar pela dança do `_PREVIOUS`) não
+> quebra o boot de ninguém: o sintoma é `403` em `/internal/*` e `401` nas
+> chamadas da api ao engine. Procedimento no
+> [runbook](../runbook.md#rotacao-das-chaves-do-auth). A checagem de BOOT acima
+> (RN-114) é outra coisa: ela só falha com o default público ou com a variável
+> ausente/curta, não com divergência entre os dois lados.
 
 ### Git
 
-| variable | default | note |
+| variável | default | nota |
 |---|---|---|
-| `GIT_LOCAL_REPOS_ROOT` | `/tmp/brabo-git-repos` | Local provider. In `/tmp`, repos disappear on reboot |
-| `PROJECT_WORKSPACES_ROOT` | `/tmp/brabo-project-workspaces` | project agent worktrees in **Container** mode. **Needs to be the same path on the engine**, and the same volume |
-| `BRABO_PROJECTS_BASE` | empty | the single host folder under which **Mounted**-mode projects live, mounted by identity into `api` and `engine`. Empty is a NORMAL state: the api reports `projectsBase: null` and the project wizard doesn't offer Mounted mode at all |
-| `GITHUB_OAUTH_CLIENT_ID` / `_SECRET` | empty | empty = GitHub OAuth connection unavailable (PAT still works) |
-| `GITLAB_OAUTH_CLIENT_ID` / `_SECRET` | empty | same |
+| `GIT_LOCAL_REPOS_ROOT` | `/tmp/brabo-git-repos` | provider local. Em `/tmp`, os repositórios somem no reboot |
+| `PROJECT_WORKSPACES_ROOT` | `/tmp/brabo-project-workspaces` | worktrees dos agentes de projeto no modo **Container**. **Precisa ser o mesmo caminho no engine**, e o mesmo volume |
+| `BRABO_PROJECTS_BASE` | vazio | a pasta única do host sob a qual moram os projetos no modo **Mounted**, montada por identidade em `api` e `engine`. Vazio é estado NORMAL: a api informa `projectsBase: null` e o assistente de projeto nem oferece o modo Mounted |
+| `GITHUB_OAUTH_CLIENT_ID` / `_SECRET` | vazio | vazio = conexão OAuth com o GitHub indisponível (o PAT continua funcionando) |
+| `GITLAB_OAUTH_CLIENT_ID` / `_SECRET` | vazio | idem |
 
-#### Project in Mounted mode: one base, mounted by identity
+#### Projeto no modo Mounted: uma base, montada por identidade
 
-Since [ADR 0072](../adr/0072-projeto-local-ou-container.md), a project can be
-born in **Mounted** mode (the old `local`, renamed by
+Desde o [ADR 0072](../adr/0072-projeto-local-ou-container.md), um projeto pode
+nascer no modo **Mounted** (o antigo `local`, renomeado pelo
 [ADR 0104](../adr/0104-execution-mode-tres-valores-e-workspace-verificado-pelo-runner.md))
-— the code lives in a user folder and `PROJECT_WORKSPACES_ROOT` **doesn't
-participate** in its root.
+— o código mora numa pasta do usuário e `PROJECT_WORKSPACES_ROOT` **não
+participa** da raiz dele.
 
-The path of a given project is a project-level datum
-(`projects.workspace_path`), chosen at creation and never an environment
-variable. What the ENVIRONMENT provides is the **base** those folders live
-under — `BRABO_PROJECTS_BASE`, one per installation
+O caminho de um projeto é dado do projeto (`projects.workspace_path`),
+escolhido na criação e nunca variável de ambiente. O que o AMBIENTE fornece é a
+**base** sob a qual essas pastas moram — `BRABO_PROJECTS_BASE`, uma por
+instalação
 ([ADR 0141](../adr/0141-base-unica-dos-projetos-montados.md),
 [RN-500](../business-rules.md#rn-500)):
 
 ```bash
-# .env — ABSOLUTE. `~` is not expanded by Compose.
+# .env — ABSOLUTO. `~` não é expandido pelo Compose.
 BRABO_PROJECTS_BASE=/home/voce/projetos-brabo
 ```
 
-You don't have to write that line by hand. Since
+Você não precisa escrever essa linha à mão. Desde o
 [ADR 0146](../adr/0146-base-consentida-no-bootstrap.md), `pnpm bootstrap` →
-**Docker › Base de projetos** runs `scripts/dev/consentir-base.mjs`, which
-proposes `$HOME/projetos-brabo`, refuses anything overlapping either the Brabo
-checkout or `PROJECT_WORKSPACES_HOST_DIR` (two roots with opposite owners —
-sharing a folder would make a Mounted project called `loja` land on top of a
-Container project whose `workspace_dir_name` is also `loja`), **proves** on
-macOS and Windows that Docker can actually see the folder by mounting it, and
-only then writes the variable.
+**Docker › Base de projetos** roda `scripts/dev/consentir-base.mjs`, que
+propõe `$HOME/projetos-brabo`, recusa o que se sobreponha ao checkout do Brabo
+ou a `PROJECT_WORKSPACES_HOST_DIR` (duas raízes com donos opostos —
+compartilhar uma pasta faria um projeto Mounted chamado `loja` cair em cima de
+um projeto Container cujo `workspace_dir_name` também é `loja`), **prova** no
+macOS e no Windows que o Docker enxerga mesmo a pasta montando-a, e só então
+escreve a variável.
 
-The proof is a mount, never a read of Docker Desktop's `settings.json`: that
-file is undocumented, differs across versions and platforms, and describes what
-the user configured rather than what the daemon will do — the same rule the
-product already applies to LLM providers, where a capability is declared only
-when proved by execution. It has **three** outcomes and they don't collapse:
-proved, refused (the variable is not written), and *couldn't prove* — no local
-image to mount with — which writes the variable and says loudly that the proof
-did not run.
+A prova é uma montagem, nunca a leitura do `settings.json` do Docker Desktop:
+esse arquivo não é documentado, muda entre versões e plataformas, e descreve o
+que o usuário configurou, não o que o daemon vai fazer — a mesma regra que o
+produto já aplica aos providers de LLM, onde capability só é declarada quando
+provada por execução. Ela tem **três** desfechos e eles não colapsam: provado,
+recusado (a variável não é escrita) e *não deu para provar* — sem imagem local
+para montar — que escreve a variável e diz em voz alta que a prova não rodou.
 
-Run from the menu it only **reports**: every bootstrap menu item runs with
-stdin from `/dev/null` on purpose, so it cannot ask. To choose, run
-`node scripts/dev/consentir-base.mjs` in your own terminal.
+Rodado pelo menu, ele só **informa**: todo item do menu do bootstrap roda com
+stdin de `/dev/null` de propósito, então não pode perguntar. Para escolher,
+rode `node scripts/dev/consentir-base.mjs` no seu próprio terminal.
 
 ```yaml
-# docker/docker-compose.yml — on BOTH `api` and `engine`, already written
+# docker/docker-compose.yml — em `api` E `engine`, já escrito
     volumes:
       - ${BRABO_PROJECTS_BASE:-brabo_projects_base}:${BRABO_PROJECTS_BASE:-/data/brabo-projects-base}
 ```
 
-The operator sets this **once** and restarts `api` + `engine`; nothing is
-edited per project, ever. Before this, every mounted project needed a
-hand-written bind-mount line in both services plus a restart — which kills
-every in-flight agent turn, terminal socket and LLM call in the installation.
+O operador define isso **uma vez** e reinicia `api` + `engine`; nada é editado
+por projeto, nunca. Antes disso, todo projeto montado precisava de uma linha de
+bind-mount escrita à mão nos dois serviços e de um reinício — que mata todo
+turno de agente, socket de terminal e chamada de LLM em voo na instalação.
 
-The mount is by **identity** (`$X:$X`): the same absolute path on the host and
-inside both containers. That is what keeps honest the string the user types and
-the screen shows back, and it is why `projectScopeRoot` (api) and
-`Engine.Actions.Workspace.workspace_dir/2` (engine) need no translation layer.
+A montagem é por **identidade** (`$X:$X`): o mesmo caminho absoluto no host e
+dentro dos dois containers. É isso que mantém honesta a string que o usuário
+digita e a tela mostra de volta, e é por isso que `projectScopeRoot` (api) e
+`Engine.Actions.Workspace.workspace_dir/2` (engine) não precisam de camada de
+tradução.
 
-**It is not `PROJECT_WORKSPACES_HOST_DIR`, and must never point at the same
-folder.** A managed workspace is named by `workspace_dir_name` (UNIQUE) and a
-mounted project is named by the user, so `<base>/loja` and a container project
-whose folder name is `loja` would collide, with the repo bootstrap running
-`git init` inside someone else's project. The ADR has the other two reasons.
+**Ela não é `PROJECT_WORKSPACES_HOST_DIR`, e nunca pode apontar para a mesma
+pasta.** Um workspace gerenciado é nomeado por `workspace_dir_name` (UNIQUE) e
+um projeto montado é nomeado pelo usuário, então `<base>/loja` e um projeto
+container cuja pasta se chama `loja` colidiriam, com o bootstrap do repositório
+rodando `git init` dentro do projeto de outra pessoa. O ADR tem os outros dois
+motivos.
 
-With the variable **unset**, Mounted mode isn't offered — never offer a mode
-the installation can't honor. And `pnpm dev` **refuses to start** when the base
-overlaps the Brabo checkout in either direction; that check lives in the
-preflight because it runs on the host, and the api can only compare against
-`process.cwd()` (`/workspace` inside its own container). See the
+Com a variável **não definida**, o modo Mounted não é oferecido — nunca ofereça
+um modo que a instalação não consegue honrar. E o `pnpm dev` **recusa subir**
+quando a base se sobrepõe ao checkout do Brabo em qualquer sentido; essa
+checagem mora no preflight porque ele roda no host, e a api só consegue
+comparar com `process.cwd()` (`/workspace` dentro do próprio container). Veja o
 [runbook](../runbook.md#projeto-no-modo-local).
 
 ### LLM
 
-| variable | default | note |
+| variável | default | nota |
 |---|---|---|
 | `OLLAMA_HOST` | `http://localhost:11434` | — |
-| `OLLAMA_REQUEST_TIMEOUT_MS` | `300000` | **inactivity** ceiling of the Ollama socket, not total duration. A local model has a different order of magnitude of latency to the first token, hence its own env var; see [inference environment](../runbook.md#ambiente-de-inferencia) |
-| `LLM_REQUEST_TIMEOUT_MS` | `300000` | the same inactivity ceiling for the API providers (OpenAI and compatible, Anthropic). Applies to "didn't even send the headers" and to "stopped sending chunks mid-stream" — see [LLM providers](llm-providers.md#inactivity-ceiling) |
-| `HUGGINGFACE_API_TOKEN` | *(unset)* | **optional** Hugging Face Hub token for the model search (`GET /workspaces/:workspaceId/huggingface/models`). Present, it goes as `Authorization: Bearer …` and raises the Hub's rate limit; absent, the header is simply not sent — the Hub accepts public search without a credential, and a missing token is never an error |
-| `HUGGINGFACE_HUB_URL` | `https://huggingface.co` | base URL of the Hub the search talks to. An override for tests (a fake HTTP server on an ephemeral port); in production it is left unset |
-| `HUGGINGFACE_REQUEST_TIMEOUT_MS` | `15000` | **inactivity** ceiling of the Hub search request, same semantics as `LLM_REQUEST_TIMEOUT_MS` (the name is built in a constant, so the generated inventory below does not see it) |
+| `NINE_ROUTER_BASE_URL` | `http://host.docker.internal:20128/v1` | URL base do 9Router (provider `9router`, ADR 0222), que roda na máquina do dono, fora do compose. É da INSTALAÇÃO, não do workspace: o padrão só alcança o host porque os composes de instalação e de produção mapeiam `host.docker.internal:host-gateway` na api. Vale para as chamadas de chat, o catálogo e o teste de conexão da credencial |
+| `OLLAMA_REQUEST_TIMEOUT_MS` | `300000` | teto de **inatividade** do socket do Ollama, não de duração total. Um modelo local tem latência até o primeiro token de outra ordem de grandeza, daí a variável própria; veja o [ambiente de inferência](../runbook.md#ambiente-de-inferencia) |
+| `LLM_REQUEST_TIMEOUT_MS` | `300000` | o mesmo teto de inatividade para os providers de API (OpenAI e compatíveis, Anthropic). Vale para "nem mandou os cabeçalhos" e para "parou de mandar pedaços no meio do stream" — veja [providers de LLM](llm-providers.md#inactivity-ceiling) |
+| `HUGGINGFACE_API_TOKEN` | *(não definida)* | token **opcional** do Hugging Face Hub para a busca de modelos (`GET /workspaces/:workspaceId/huggingface/models`). Presente, vai como `Authorization: Bearer …` e sobe o rate limit do Hub; ausente, o cabeçalho simplesmente não é enviado — o Hub aceita busca pública sem credencial, e token ausente nunca é erro |
+| `HUGGINGFACE_HUB_URL` | `https://huggingface.co` | URL base do Hub com que a busca fala. Sobreposição para testes (um servidor HTTP falso numa porta efêmera); em produção fica sem definir |
+| `HUGGINGFACE_REQUEST_TIMEOUT_MS` | `15000` | teto de **inatividade** da requisição de busca ao Hub, mesma semântica de `LLM_REQUEST_TIMEOUT_MS` (o nome é montado numa constante, então o inventário gerado abaixo não o vê) |
 
-> **TODO(humano):** no compose file maps the three `HUGGINGFACE_*` variables into the `api` service's `environment:`, and the service has no `env_file`, so setting them in the `.env` has no effect under Compose — should `HUGGINGFACE_API_TOKEN` be forwarded (at least in production and installation)?
+> **TODO(humano):** nenhum arquivo de compose mapeia as três variáveis `HUGGINGFACE_*` no `environment:` do serviço `api`, e o serviço não tem `env_file`, então defini-las no `.env` não tem efeito sob o Compose — `HUGGINGFACE_API_TOKEN` deve ser repassada (ao menos em produção e na instalação)?
 
-### Knowledge graph (ADR 0099)
+### Grafo de conhecimento (ADR 0099)
 
-| variable | default | note |
+| variável | default | nota |
 |---|---|---|
-| `NEO4J_URI` | — | e.g. `bolt://neo4j:7687`. **This one is the switch**: empty = graph OFF, dependent routes degrade (`GraphUnavailableError`/503) — nobody needs a local Neo4j just to run the suite. In production, the absence of any of the three brings the boot down. Turning the graph on in development is this one line in `.env` and a restart of the api; until 2026-09-04 that did nothing, because the dev compose did not pass the three variables to the `api` service at all and the service has no `env_file` — `docker-compose.prod.yml` had supplied them since day one, which is why only development was affected |
-| `NEO4J_USER` | `neo4j` (dev) | reaches the container with the same default the `neo4j` service uses for `NEO4J_AUTH`, so set it only to CHANGE the user — changing it there changes both sides at once. Two independent defaults would leave the api authenticating with credentials the server no longer has |
-| `NEO4J_PASSWORD` 🔒 | `dev-neo4j-password-change-me` (dev only) | same pairing rule as `NEO4J_USER`. **No public default in production** on purpose — there's no plausible "example value" for a database password, and `docker-compose.prod.yml` keeps `NEO4J_AUTH` empty so the official image's own entrypoint refuses to start rather than booting with a guessable one |
-| `GRAPH_PROJECTOR_INTERVAL_MS` | `2000` | period of the poller that drains the outbox's `graph_projection` queue and writes handoffs/hypotheses/profiles/interactions to the graph (RN-416) |
-| `ARTIFACT_PROJECTOR_INTERVAL_MS` | `2000` | period of the poller that drains the outbox's `artifact_projection` queue and writes each agent's artifacts as Markdown under the project's `docs/` folder ([RN-523](../business-rules.md#rn-523)). A DERIVED projection: the event log stays the source, and the folder can be deleted and rebuilt |
+| `NEO4J_URI` | — | ex.: `bolt://neo4j:7687`. **Esta é a chave**: vazia = grafo DESLIGADO, as rotas dependentes degradam (`GraphUnavailableError`/503) — ninguém precisa de um Neo4j local só para rodar a suíte. Em produção, a ausência de qualquer uma das três derruba o boot. Ligar o grafo em desenvolvimento é esta linha no `.env` e um reinício da api; até 2026-09-04 isso não fazia nada, porque o compose de dev não passava as três variáveis ao serviço `api` e o serviço não tem `env_file` — o `docker-compose.prod.yml` as fornecia desde o primeiro dia, por isso só o desenvolvimento era afetado |
+| `NEO4J_USER` | `neo4j` (dev) | chega ao container com o mesmo default que o serviço `neo4j` usa para `NEO4J_AUTH`, então defina-a só para TROCAR o usuário — trocar ali troca os dois lados de uma vez. Dois defaults independentes deixariam a api autenticando com uma credencial que o servidor não tem mais |
+| `NEO4J_PASSWORD` 🔒 | `dev-neo4j-password-change-me` (só dev) | mesma regra de pareamento de `NEO4J_USER`. **Sem default público em produção** de propósito — não há "valor de exemplo" plausível para senha de banco, e o `docker-compose.prod.yml` mantém `NEO4J_AUTH` vazio para que o próprio entrypoint da imagem oficial recuse subir em vez de subir com uma senha adivinhável |
+| `GRAPH_PROJECTOR_INTERVAL_MS` | `2000` | período do poller que esvazia a fila `graph_projection` da outbox e escreve handoffs/hipóteses/perfis/interações no grafo (RN-416) |
+| `CUSTO_RECONCILIACAO_INTERVAL_MS` | `300000` | período do job da api que troca a ESTIMATIVA de custo de uma chamada abortada pelo orçamento de raciocínio pelo custo real do `GET /generation` do OpenRouter ([RN-915](../business-rules/custo.md#rn-915)); `0` desliga |
+| `ARTIFACT_PROJECTOR_INTERVAL_MS` | `2000` | período do poller que esvazia a fila `artifact_projection` da outbox e escreve os artefatos de cada agente como Markdown sob a pasta `docs/` do projeto ([RN-523](../business-rules.md#rn-523)). Projeção DERIVADA: o event log continua sendo a fonte, e a pasta pode ser apagada e reconstruída |
 
-### Observability
+### Observabilidade
 
-| variable | default | note |
+| variável | default | nota |
 |---|---|---|
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | — | **missing turns off EXPORT, not instrumentation** (ADR 0035). The span is still created and `trace_id` still shows up in the log — that's what gives correlation in development, without a collector. Without it, the span is discarded at the end instead of leaving the process |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | — | **ausente desliga a EXPORTAÇÃO, não a instrumentação** (ADR 0035). O span continua sendo criado e o `trace_id` continua aparecendo no log — é isso que dá correlação em desenvolvimento, sem coletor. Sem ela, o span é descartado no fim em vez de sair do processo |
 | `OTEL_SERVICE_NAME` | `brabo-api` | — |
-| `OTEL_DIAG_LOG` | — | `1` turns on OTel's own diagnostic log |
-| `LOG_LEVEL` | `info` in production, `debug` outside | also decides the FORMAT together with `NODE_ENV`: outside production the log comes out readable (pino-pretty in-process, with the layer tree); in production, one JSON line per event |
-| `METRICS_GAUGE_INTERVAL_MS` | `15000` | collection period of the domain gauges |
+| `OTEL_DIAG_LOG` | — | `1` liga o log de diagnóstico do próprio OTel |
+| `LOG_LEVEL` | `info` em produção, `debug` fora | decide também o FORMATO junto com `NODE_ENV`: fora de produção o log sai legível (pino-pretty no processo, com a árvore de camadas); em produção, uma linha JSON por evento |
+| `METRICS_GAUGE_INTERVAL_MS` | `15000` | período de coleta dos gauges de domínio |
 
 ---
 
 ## engine
 
-### Essentials
+### Essenciais
 
-| variable | default | when it fails |
+| variável | default | quando falha |
 |---|---|---|
-| `DATABASE_URL` | `ecto://brabo:brabo@localhost:5432/brabo` | note the `ecto://` scheme, not `postgres://` |
-| `POSTGRES_HOST` / `_USER` / `_PASSWORD` | `localhost` / `brabo` / `brabo` | used when `DATABASE_URL` isn't assembled |
-| `POOL_SIZE` | — | an exhausted pool jams Oban and the queue stops being consumed |
+| `DATABASE_URL` | `ecto://brabo:brabo@localhost:5432/brabo` | note o esquema `ecto://`, não `postgres://` |
+| `POSTGRES_HOST` / `_USER` / `_PASSWORD` | `localhost` / `brabo` / `brabo` | usadas quando o `DATABASE_URL` não é montado |
+| `POOL_SIZE` | — | um pool esgotado trava o Oban e a fila para de ser consumida |
 | `PORT` | `4000` | — |
-| `PHX_HOST` / `PHX_SERVER` | — | `PHX_SERVER=true` is what makes the release serve HTTP |
-| `SECRET_KEY_BASE` 🔒 | — | required in the release (`runtime.exs`, `:prod` block, Phoenix's default `raise`). Until RN-114, `docker-compose.prod.yml` supplied a public literal as a fallback and masked that `raise` — the variable always arrived SET. The `raise` itself didn't change |
-| `API_URL` | `http://localhost:3000` | the engine calls the api back through here |
+| `PHX_HOST` / `PHX_SERVER` | — | `PHX_SERVER=true` é o que faz a release servir HTTP |
+| `SECRET_KEY_BASE` 🔒 | — | obrigatória na release (`runtime.exs`, bloco `:prod`, o `raise` padrão do Phoenix). Até a RN-114, o `docker-compose.prod.yml` fornecia um literal público como fallback e mascarava esse `raise` — a variável sempre chegava DEFINIDA. O `raise` em si não mudou |
+| `API_URL` | `http://localhost:3000` | o engine chama a api de volta por aqui |
 | `ECTO_IPV6` | — | — |
-| `SKIP_MIGRATIONS` | — | used by the migration Job |
+| `SKIP_MIGRATIONS` | — | usada pelo Job de migration |
 
-### Cluster and shutdown
+### Cluster e desligamento
 
-| variable | default | note |
+| variável | default | nota |
 |---|---|---|
-| `DNS_CLUSTER_QUERY` | — | the headless Service that forms the Erlang cluster. **Without it each replica is an island** and every rollout drains everything |
-| `SHUTDOWN_DRAIN_TIMEOUT_MS` | `45000` | `preStop` window. Goes up **together** with `terminationGracePeriodSeconds`, never alone |
-| `SESSION_HEARTBEAT_TIMEOUT_MS` | `30000` | how long the session waits for the tab's heartbeat before asking the api whether there is pending work |
-| `SESSION_CONVERSATION_IDLE_TIMEOUT_MS` | `28800000` (8h) | ceiling of an **idle conversation**: a conversational agent waiting for the user holds the session past the heartbeat for this long, counted from the end of its turn; past it the session closes as `closed` with cause `conversation_idle_timeout` ([RN-581](../business-rules.md#rn-581)). Mapped to the engine in all three composes (dev, production, installation) with this same default; **not** written in `deploy/k8s/`, on purpose — nothing there intercepts the environment, so absence is the default, and changing it is an `env:` item in the overlay's engine patch |
-| `RELEASE_NAME` / `RELEASE_NODE` | — | node identity in the distribution |
+| `DNS_CLUSTER_QUERY` | — | o Service headless que forma o cluster Erlang. **Sem ela cada réplica é uma ilha** e todo rollout drena tudo |
+| `SHUTDOWN_DRAIN_TIMEOUT_MS` | `45000` | janela do `preStop`. Sobe **junto** com `terminationGracePeriodSeconds`, nunca sozinha |
+| `SESSION_HEARTBEAT_TIMEOUT_MS` | `30000` | quanto a sessão espera pelo heartbeat da aba antes de perguntar à api se há trabalho pendente |
+| `SESSION_CONVERSATION_IDLE_TIMEOUT_MS` | `28800000` (8h) | teto de uma **conversa ociosa**: um agente conversacional esperando o usuário segura a sessão além do heartbeat por esse tempo, contado do fim do turno dele; passado isso a sessão fecha como `closed` com a causa `conversation_idle_timeout` ([RN-581](../business-rules.md#rn-581)). Mapeada para o engine nos três composes (dev, produção, instalação) com esse mesmo default; **não** escrita em `deploy/k8s/`, de propósito — nada ali intercepta o ambiente, então a ausência é o default, e mudá-la é um item `env:` no patch do engine do overlay |
+| `RELEASE_NAME` / `RELEASE_NODE` | — | identidade do nó na distribuição |
 
 ### Harness
 
-| variable | default | note |
+| variável | default | nota |
 |---|---|---|
-| `TOOL_LOOP_MAX_ITERATIONS` | `8` | ceiling of loop turns for the **conversational** agent. Once exhausted, the agent ends with a blocking artifact |
-| `TOOL_LOOP_MAX_ITERATIONS_EXECUCAO` | `60` | ceiling for **dev agents**. Higher because they explore the repository before writing — and because `task_budget_micros` keeps spend in check underneath |
-| `TOOL_LOOP_MAX_ITERATIONS_GATE` | `60` | ceiling for **QA** subagents, for the same reason |
-| `DEFAULT_CONTEXT_WINDOW` | `8192` | used when the model doesn't declare its window |
-| `CONTEXT_COMPACTION_THRESHOLD` | `0.7` | fraction of the window that triggers compaction |
-| `LLM_TURN_TIMEOUT_MS` | `300000` | 5 min per turn |
-| `TOOL_ROUTER_TIMEOUT_MS` | `2000` | ceiling, in ms, of ONE call to the Jev tool router ([ADR 0179](../adr/0179-o-laco-pergunta-ao-jev-qual-ferramenta.md), [RN-625](../business-rules.md#rn-625)). Read by the **api**, not the engine. Past it the step falls to the whole tool catalog with `motivoDaQueda: timeout`; the turn never fails because of the Jev. 0 of 328 measured requests went over 2 000 ms. The on/off switch is per workspace (`PUT workspaces/:id/tool-router`), not an environment variable |
-| `TERMINAL_ACTION_TIMEOUT_MS` | `15000` | ceiling for a terminal command |
-| `TERMINAL_OUTPUT_MAX_BYTES` | `32768` | BYTE ceiling of a command's output ([RN-074](../business-rules/custo.md#rn-074)). The output stays in the loop's history and travels on every following turn; without a ceiling, a `find` over a large tree brings down the entire execution with a `413` from the provider |
-| `READ_FILE_MAX_BYTES` | `32768` | BYTE ceiling of the content read by `read_file` ([RN-141](../business-rules/autenticacao.md#rn-141)) — same class of overflow as RN-074, through the `read_file` door instead of the terminal; independent variable, same value by coincidence of context |
-| `SEARCH_WORKSPACE_MAX_BYTES` | `32768` | BYTE ceiling of `search_workspace`'s final text ([RN-150](../business-rules/autenticacao.md#rn-150)) — same class of overflow as RN-074/RN-141, through the search door; independent variable |
-| `SEARCH_WORKSPACE_MAX_HITS` | `500` | ceiling on the NUMBER of hits `search_workspace` collects before assembling the response ([RN-150](../business-rules/autenticacao.md#rn-150)) — stops scanning/reading content as soon as it hits the ceiling, avoiding paying I/O for a tree with too many hits only to truncate by bytes afterward |
-| `SECOPS_SCAN_TIMEOUT_MS` | `180000` | 3 min for the SecOps scanner |
-| `TRANSPORT_MAX_BODY_BYTES` | `8388608` (8 MiB) | TRANSPORT ceiling that context compaction respects on top of the model's window ([RN-412](../business-rules.md#rn-412)) — the effective window is `min(context_window, this ceiling converted to tokens)`, so compaction fires BEFORE the body overflows the api's HTTP limit, not only when the model would "forget" |
-| `GRAPH_INSTRUCTION_TEMPLATES_ENABLED` | `false` | turns on the `:graph` source of `InstructionFiles` — today only the ux-designer identity resolves a template from the graph before the inline text (RN-413). Its OWN name, not `GRAPH_TEMPLATES_ENABLED` below — the two would collide with opposite defaults if they shared the key |
+| `TOOL_LOOP_MAX_ITERATIONS` | `8` | teto de voltas do laço do agente **conversacional**. Esgotado, o agente termina com um artefato de bloqueio |
+| `TOOL_LOOP_MAX_ITERATIONS_EXECUCAO` | `60` | teto dos **dev agents**. Maior porque eles exploram o repositório antes de escrever — e porque o `task_budget_micros` segura o gasto por baixo |
+| `TOOL_LOOP_MAX_ITERATIONS_GATE` | `60` | teto dos subagentes de **QA**, pelo mesmo motivo |
+| `DEFAULT_CONTEXT_WINDOW` | `128000` | usado quando o modelo não declara a janela (os agentes conversacionais nunca declaram); era `8192` até a RN-702 |
+| `CONTEXT_COMPACTION_THRESHOLD` | `0.7` | fração da janela que dispara a compactação |
+| `LLM_TURN_TIMEOUT_MS` | `300000` | 5 min por turno |
+| `TOOL_ROUTER_TIMEOUT_MS` | `2000` | teto, em ms, de UMA chamada ao roteador de ferramentas Jev ([ADR 0179](../adr/0179-o-laco-pergunta-ao-jev-qual-ferramenta.md), [RN-625](../business-rules.md#rn-625)). Lida pela **api**, não pelo engine. Passado o teto, o passo cai no catálogo inteiro de ferramentas com `motivoDaQueda: timeout`; o turno nunca falha por causa do Jev. 0 de 328 requisições medidas passou de 2 000 ms. A chave liga/desliga é por workspace (`PUT workspaces/:id/tool-router`), não variável de ambiente |
+| `TERMINAL_ACTION_TIMEOUT_MS` | `120000` | teto de um comando de terminal (2 min desde a [RN-757](../business-rules.md#rn-757): um `npm install` simples não cabia nos 15 s antigos). O engine espera esse valor + 90 s no `container-exec` e + 120 s no `propose_action` de uma ação `terminal`; acima de ~180 s a espera de fora passa do limite de 300 s de cabeçalhos do `fetch` do Node que a api usa para chamar `/internal/actions/execute` |
+| `TERMINAL_OUTPUT_MAX_BYTES` | `32768` | teto em BYTES da saída de um comando ([RN-074](../business-rules/custo.md#rn-074)). A saída fica no histórico do laço e viaja em todo turno seguinte; sem teto, um `find` numa árvore grande derruba a execução inteira com um `413` do provider |
+| `READ_FILE_MAX_BYTES` | `32768` | teto em BYTES do conteúdo lido por `read_file` ([RN-141](../business-rules/autenticacao.md#rn-141)) — a mesma classe de estouro da RN-074, pela porta do `read_file` em vez do terminal; variável independente, mesmo valor por coincidência de contexto |
+| `SEARCH_WORKSPACE_MAX_BYTES` | `32768` | teto em BYTES do texto final de `search_workspace` ([RN-150](../business-rules/autenticacao.md#rn-150)) — a mesma classe de estouro da RN-074/RN-141, pela porta da busca; variável independente |
+| `SEARCH_WORKSPACE_MAX_HITS` | `500` | teto do NÚMERO de ocorrências que `search_workspace` coleta antes de montar a resposta ([RN-150](../business-rules/autenticacao.md#rn-150)) — para de varrer/ler conteúdo assim que bate o teto, evitando pagar I/O numa árvore com ocorrências demais só para truncar por bytes depois |
+| `SECOPS_SCAN_TIMEOUT_MS` | `180000` | 3 min para o scanner do SecOps |
+| `TRANSPORT_MAX_BODY_BYTES` | `8388608` (8 MiB) | teto de TRANSPORTE que a compactação de contexto respeita por cima da janela do modelo ([RN-412](../business-rules.md#rn-412)) — a janela efetiva é `min(context_window, este teto convertido em tokens)`, então a compactação dispara ANTES de o corpo estourar o limite HTTP da api, não só quando o modelo "esqueceria" |
+| `GRAPH_INSTRUCTION_TEMPLATES_ENABLED` | `false` | liga a fonte `:graph` de `InstructionFiles` — hoje só a identidade do ux-designer resolve um template do grafo antes do texto inline (RN-413). Nome PRÓPRIO, não o `GRAPH_TEMPLATES_ENABLED` abaixo — as duas colidiriam com defaults opostos se dividissem a chave |
 
-### Psychologist
+### Psicólogo
 
-| variable | default | note |
+| variável | default | nota |
 |---|---|---|
-| `PSYCHOLOGIST_ENABLED` | `false` | GLOBAL pause of NEW rounds (automatic and on-demand) — the user's product decision on 2026-08-10, not a bug, same flag shape as `ANAMNESE_ENABLED` below (which was turned back on in [RN-680](../business-rules.md#rn-680); this one was not). Doesn't erase anything that already exists. Turning it on requires restarting the engine ([RN-117](../business-rules/autenticacao.md#rn-117)). No boot key pairs with it: the Psychologist's automatic trigger is session close, not a tick |
-| `PSYCHOLOGIST_TRIAGE_THRESHOLD` | `20` | events in the session that separate a **light** analysis from a **heavy** one |
+| `PSYCHOLOGIST_ENABLED` | `false` | pausa GLOBAL de rodadas NOVAS (automáticas e sob demanda) — decisão de produto do usuário em 2026-08-10, não bug, mesma forma de flag de `ANAMNESE_ENABLED` abaixo (que foi religada na [RN-680](../business-rules.md#rn-680); esta não). Não apaga nada que já exista. Ligá-la exige reiniciar o engine ([RN-117](../business-rules/autenticacao.md#rn-117)). Nenhuma chave de boot faz par com ela: o gatilho automático do Psicólogo é o fechamento da sessão, não um tick |
+| `PSYCHOLOGIST_TRIAGE_THRESHOLD` | `20` | eventos na sessão que separam a análise **leve** da **pesada** |
 | `PSYCHOLOGIST_MAX_ITERATIONS_LEVE` / `_PESADA` | `4` / `8` | — |
-| `PSYCHOLOGIST_BUDGET_MICROS_LEVE` / `_PESADA` | `50000` / `300000` | USD 0.05 and USD 0.30 per analysis |
-| `PSYCHOLOGIST_MAX_PROMPT_EVENTS_LEVE` / `_PESADA` | `50` / `400` | how many events go into the prompt |
-| `PSYCHOLOGIST_MAX_PAYLOAD_CHARS` | `600` | truncation of each event's payload |
-| `PSYCHOLOGIST_RAG_TOP_K` | `3` | how many relevant `rag_search` snippets go into the context, deducted from the recent-events ceiling above ([RN-417](../business-rules.md#rn-417)) |
-| `GRAPH_TEMPLATES_ENABLED` | `false` | turns on resolving `psychologist-kickoff`/`anamnese-kickoff`/`context-manager-summarize` as a graph template — key SHARED between Psychologist, Anamnese and the `ContextManager`'s summarization prompt ([RN-417](../business-rules.md#rn-417)), not to be confused with `GRAPH_INSTRUCTION_TEMPLATES_ENABLED` above. Off (the default) means the graph API is never even called; on, any failure falls back to the inline text with no error |
+| `PSYCHOLOGIST_BUDGET_MICROS_LEVE` / `_PESADA` | `50000` / `300000` | USD 0,05 e USD 0,30 por análise |
+| `PSYCHOLOGIST_MAX_PROMPT_EVENTS_LEVE` / `_PESADA` | `50` / `400` | quantos eventos entram no prompt |
+| `PSYCHOLOGIST_MAX_PAYLOAD_CHARS` | `600` | truncamento do payload de cada evento |
+| `PSYCHOLOGIST_RAG_TOP_K` | `3` | quantos trechos relevantes do `rag_search` entram no contexto, descontados do teto de eventos recentes acima ([RN-417](../business-rules.md#rn-417)) |
+| `GRAPH_TEMPLATES_ENABLED` | `false` | liga a resolução de `psychologist-kickoff`/`anamnese-kickoff`/`context-manager-summarize` como template do grafo — chave COMPARTILHADA entre Psicólogo, Anamnese e o prompt de sumarização do `ContextManager` ([RN-417](../business-rules.md#rn-417)), não confundir com `GRAPH_INSTRUCTION_TEMPLATES_ENABLED` acima. Desligada (o default) quer dizer que a API do grafo nem é chamada; ligada, qualquer falha cai no texto inline sem erro |
 
 ### Anamnese
 
-| variable | default | note |
+| variável | default | nota |
 |---|---|---|
-| `ANAMNESE_ENABLED` | `true` | product flag: may a NEW round happen (periodic and on-demand). `false` is a GLOBAL pause that erases nothing ([RN-115](../business-rules/autenticacao.md#rn-115)); changing it requires restarting the engine. It was `false` from 2026-08-10 (the user's pause) until the owner turned the Anamnesis back on with fixes on 2026-10-01 ([RN-680](../business-rules.md#rn-680)): a round with no eligible subject — an effective project member with their own interaction in the window — makes no LLM call. **On its own it is not enough for the PERIODIC round**: `START_ANAMNESE` (boot key, below) also has to be `true`, and the two answer different questions |
-| `ANAMNESE_INTERVAL_SECONDS` | `900` | 15 min between runs |
-| `ANAMNESE_MIN_EVENTS` | `10` | below this it doesn't run — avoids profiling on noise |
-| `ANAMNESE_INITIAL_WINDOW_DAYS` | `30` | window of the first run |
+| `ANAMNESE_ENABLED` | `true` | flag de produto: pode acontecer uma rodada NOVA (periódica e sob demanda). `false` é uma pausa GLOBAL que não apaga nada ([RN-115](../business-rules/autenticacao.md#rn-115)); mudá-la exige reiniciar o engine. Foi `false` de 2026-08-10 (a pausa do usuário) até o dono religar a Anamnese com correções em 2026-10-01 ([RN-680](../business-rules.md#rn-680)): rodada sem sujeito elegível — membro efetivo do projeto com interação própria na janela — não faz chamada de LLM. **Sozinha não basta para a rodada PERIÓDICA**: `START_ANAMNESE` (chave de boot, abaixo) também precisa ser `true`, e as duas respondem perguntas diferentes |
+| `ANAMNESE_INTERVAL_SECONDS` | `900` | 15 min entre rodadas |
+| `ANAMNESE_MIN_EVENTS` | `10` | abaixo disso não roda — evita traçar perfil sobre ruído |
+| `ANAMNESE_INITIAL_WINDOW_DAYS` | `30` | janela da primeira rodada |
 | `ANAMNESE_MAX_ITERATIONS` | `6` | — |
-| `ANAMNESE_BUDGET_MICROS` | `200000` | USD 0.20 per run |
+| `ANAMNESE_BUDGET_MICROS` | `200000` | USD 0,20 por rodada |
 | `ANAMNESE_MAX_PROMPT_EVENTS` | `500` | — |
 | `ANAMNESE_MAX_PAYLOAD_CHARS` | `600` | — |
 
-### Load guards
+### Guardas de carga
 
-| variable | default | note |
+| variável | default | nota |
 |---|---|---|
-| `START_OUTBOX_DRAIN` | `true` | boot key of the outbox drain (`Engine.Workers.OutboxDrainWorker`, every 2s) — the ONLY consumer of the `session`/`task`/`container` events the api writes to the outbox — plus orphan-worktree pruning and orphan-session adoption. Off, nobody delivers those events: a session the api closed keeps its process and conversational agents running ([RN-581](../business-rules.md#rn-581)), and a dev agent waiting for an action decision, a gate, its PR or the container reaching `running` is never woken. It does NOT turn the Psychologist on: the drain only enqueues it with `PSYCHOLOGIST_ENABLED=true`. `false` only in the production compose (`docker-compose.prod.yml`), on purpose; the install compose uses the code's `true` since AT-219 |
-| `START_ANAMNESE` | `true` | test/dev LOAD guard: prevents `kickoff/0` from even being called on boot, but doesn't decide anything about product — not to be confused with `ANAMNESE_ENABLED` (product: GLOBAL pause, survives any value of this one). Turning it off prevents **new** enqueues, **it doesn't clear the queue**. Accumulated jobs run on the next boot — the queue needs to be purged. See [inference environment](../runbook.md#ambiente-de-inferencia) |
-| `START_MODEL_SYNC` | `true` | periodic tick of the model catalog sync. Turning it off doesn't freeze anything: the "Update catalog" button on the settings screen calls the same use case ([RN-043](../business-rules/custo.md#rn-043)) |
-| `MODEL_SYNC_INTERVAL_SECONDS` | `21600` (6h) | a provider's catalog changes on a scale of days, and each round spends one API call per provider — hence the generous default |
-| `START_GATE_RESCUE` | `true` | periodic tick of the gate-cycle rescue (`Engine.Gates.GateRescuer`, [RN-140](../business-rules.md#rn-140)). Turning it off doesn't change the boot: the rescue runs once there regardless |
-| `GATE_RESCUE_INTERVAL_SECONDS` | `300` (5 min) | a stuck gate blocks the user's entire PR — a much shorter interval than Anamnese/model sync, and each tick costs only a query that's almost always empty |
-| `GATE_RESCUE_STALE_AFTER_SECONDS` | `900` (15 min) | generous on purpose: a QA subagent's ToolLoop can legitimately run up to `TOOL_LOOP_MAX_ITERATIONS_GATE` (60) iterations, and a short threshold would rescue — and duplicate — a merely slow cycle |
+| `START_OUTBOX_DRAIN` | `true` | chave de boot do drain da outbox (`Engine.Workers.OutboxDrainWorker`, a cada 2s) — o ÚNICO consumidor dos eventos `session`/`task`/`container` que a api escreve na outbox — mais a poda de worktree órfão e a adoção de sessão órfã. Desligada, ninguém entrega esses eventos: sessão que a api fechou continua com o processo e os agentes conversacionais rodando ([RN-581](../business-rules.md#rn-581)), e dev agent esperando decisão de ação, gate, a PR dele ou o container chegar a `running` nunca acorda. Ela NÃO liga o Psicólogo: o drain só o enfileira com `PSYCHOLOGIST_ENABLED=true`. `false` só no compose de produção (`docker-compose.prod.yml`), de propósito; o compose de instalação usa o `true` do código desde a AT-219 |
+| `START_ANAMNESE` | `true` | guarda de CARGA de teste/dev: impede que `kickoff/0` sequer seja chamado no boot, mas não decide nada de produto — não confundir com `ANAMNESE_ENABLED` (produto: pausa GLOBAL, sobrevive a qualquer valor desta). Desligá-la impede enfileiramentos **novos**, **não limpa a fila**. Os jobs acumulados rodam no próximo boot — a fila precisa ser expurgada. Veja o [ambiente de inferência](../runbook.md#ambiente-de-inferencia) |
+| `START_MODEL_SYNC` | `true` | tick periódico da sincronização do catálogo de modelos. Desligá-lo não congela nada: o botão "Atualizar catálogo" da página Providers chama o mesmo caso de uso ([RN-043](../business-rules/custo.md#rn-043)) |
+| `MODEL_SYNC_INTERVAL_SECONDS` | `21600` (6h) | o catálogo de um provider muda em escala de dias, e cada rodada gasta uma chamada de API por provider — daí o default generoso |
+| `START_GATE_RESCUE` | `true` | tick periódico do resgate de ciclo de gate (`Engine.Gates.GateRescuer`, [RN-140](../business-rules.md#rn-140)). Desligá-lo não muda o boot: o resgate roda ali uma vez de qualquer jeito |
+| `GATE_RESCUE_INTERVAL_SECONDS` | `300` (5 min) | um gate travado bloqueia a PR inteira do usuário — intervalo bem mais curto que o da Anamnese/sincronização de modelos, e cada tick custa só uma consulta quase sempre vazia |
+| `GATE_RESCUE_STALE_AFTER_SECONDS` | `900` (15 min) | generoso de propósito: o ToolLoop de um subagente de QA pode legitimamente rodar até `TOOL_LOOP_MAX_ITERATIONS_GATE` (60) iterações, e um limiar curto resgataria — e duplicaria — um ciclo apenas lento |
 
-### Internal traffic and observability
+### Tráfego interno e observabilidade
 
-| variable | default |
+| variável | default |
 |---|---|
-| `BRABO_SERVICE_TOKEN` 🔒 | `dev-service-token-change-me` **only outside production** — **the same value as the api**. Surrounding whitespace is trimmed, and a whitespace-only value counts as missing. In a `:prod` release the engine refuses to boot if it's missing, the public default above, or shorter than 16 characters, naming the variable — the same rule as the api ([RN-601](../business-rules/autenticacao.md#rn-601)) |
-| `BRABO_SERVICE_TOKEN_PREVIOUS` 🔒 | — accepted only for verification, during rotation. Trimmed; in a `:prod` release the engine refuses to boot if it's the public default or shorter than 16 characters. Never required, and equal to the current one means no rotation ([RN-601](../business-rules/autenticacao.md#rn-601)) |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | — the Elixir exporter speaks **HTTP/protobuf on 4318**, not gRPC on 4317. Missing turns off only the export (`traces_exporter: :none`), not instrumentation — see ADR 0035 |
-| `WEB_ORIGIN` | — **the same variable as the api**, and it feeds TWO things here: the Phoenix socket's `check_origin` (the live team panel) and the HTTP CORS of the health routes, which the browser needs to read `/health` ([ADR 0037](../adr/0037-cors-do-engine-e-a-porta-como-contrato.md)). Missing in production closes CORS and keeps `check_origin` at Phoenix's strict default — the engine **still boots** regardless, unlike the api |
-| `PROJECT_WORKSPACES_ROOT` | `/tmp/brabo-project-workspaces` — **same as the api's, on the same volume** |
+| `BRABO_SERVICE_TOKEN` 🔒 | `dev-service-token-change-me` **só fora de produção** — **o mesmo valor da api**. O espaço em volta é aparado, e um valor só de espaço conta como ausente. Numa release `:prod` o engine recusa subir se ele falta, se é o default público acima ou se tem menos de 16 caracteres, nomeando a variável — a mesma regra da api ([RN-601](../business-rules/autenticacao.md#rn-601)) |
+| `BRABO_SERVICE_TOKEN_PREVIOUS` 🔒 | — aceito só para verificação, durante a rotação. Aparado; numa release `:prod` o engine recusa subir se ele é o default público ou tem menos de 16 caracteres. Nunca obrigatório, e igual ao atual quer dizer que não há rotação ([RN-601](../business-rules/autenticacao.md#rn-601)) |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | — o exportador Elixir fala **HTTP/protobuf na 4318**, não gRPC na 4317. Ausente desliga só a exportação (`traces_exporter: :none`), não a instrumentação — veja o ADR 0035 |
+| `WEB_ORIGIN` | — **a mesma variável da api**, e aqui ela alimenta DUAS coisas: o `check_origin` do socket Phoenix (o painel do time ao vivo) e o CORS HTTP das rotas de saúde, que o navegador precisa para ler `/health` ([ADR 0037](../adr/0037-cors-do-engine-e-a-porta-como-contrato.md)). Ausente em produção fecha o CORS e mantém o `check_origin` no default estrito do Phoenix — o engine **sobe mesmo assim**, diferente da api |
+| `PROJECT_WORKSPACES_ROOT` | `/tmp/brabo-project-workspaces` — **a mesma da api, no mesmo volume** |
 
-> `SOME_APP_SSL_CERT_PATH`, `SOME_APP_SSL_KEY_PATH` and `MIX_TEST_PARTITION`
-> are leftovers from the Phoenix scaffold and test configuration. Do not
-> configure them.
+> `SOME_APP_SSL_CERT_PATH`, `SOME_APP_SSL_KEY_PATH` e `MIX_TEST_PARTITION`
+> são sobras do scaffold do Phoenix e da configuração de teste. Não as
+> configure.
 
 ---
 
 ## web
 
-The web is static, served by nginx. It reads its configuration from **two**
-sources, and the distinction matters:
+O web é estático, servido pelo nginx. Ele lê a configuração de **duas**
+fontes, e a distinção importa:
 
-| source | when | how |
+| fonte | quando | como |
 |---|---|---|
-| `import.meta.env.VITE_*` | **build** | baked into the bundle. Changing it requires a rebuild |
-| `window.__BRABO_CONFIG__` | **runtime** | served at `/config.js`, generated by the container's entrypoint |
+| `import.meta.env.VITE_*` | **build** | embutida no bundle. Mudar exige rebuild |
+| `window.__BRABO_CONFIG__` | **runtime** | servida em `/config.js`, gerado pelo entrypoint do container |
 
-That's why the same image serves every environment: `/config.js` is rewritten
-at boot. The `VITE_*` vars are the development fallback.
+Por isso a mesma imagem serve todo ambiente: o `/config.js` é reescrito no
+boot. As `VITE_*` são o fallback de desenvolvimento.
 
-| variable | serves for |
+| variável | serve para |
 |---|---|
-| `VITE_API_URL` | api address |
-| `VITE_ENGINE_URL` | engine address (Phoenix channel) |
-| `VITE_LOG_LEVEL` | level of the browser's JSON logger (default `info`). In a cluster the `WEB_LOG_LEVEL` key of `brabo-config` is in charge, which the entrypoint writes to `/config.js` — `VITE_*` only counts in a local build |
-| `VITE_BRABO_VERSION` | version shown in the footer of the auth screens (default `dev`). **The only one that's build-time by choice, not by limitation** — see below |
+| `VITE_API_URL` | endereço da api |
+| `VITE_ENGINE_URL` | endereço do engine (canal Phoenix) |
+| `VITE_LOG_LEVEL` | nível do logger JSON do navegador (default `info`). Num cluster manda a chave `WEB_LOG_LEVEL` do `brabo-config`, que o entrypoint escreve no `/config.js` — `VITE_*` só conta num build local |
+| `VITE_BRABO_VERSION` | versão mostrada no rodapé das telas de auth (default `dev`). **A única que é de build por escolha, não por limitação** — veja abaixo |
 
-A blank page after deploy is almost always `/config.js` pointing to
-`localhost` — the deploy smoke test checks exactly that.
+Página em branco depois do deploy é quase sempre o `/config.js` apontando para
+`localhost` — o smoke do deploy confere exatamente isso.
 
-### Why the version doesn't go through `/config.js`
+### Por que a versão não passa pelo `/config.js`
 
-URLs belong to the **environment**: the same image needs to talk to the
-staging api and to the production api, and that's what `/config.js` exists
-for (ADR 0024). The version belongs to the **artifact** — the image
-`brabo-web:1.1.2` shouldn't be able to report anything else. If it came from
-`/config.js`, the footer would become an editable field instead of an
-identity, and a wrong ConfigMap would make the screen lie about which build
-is running.
+URLs são do **ambiente**: a mesma imagem precisa falar com a api de staging e
+com a de produção, e é para isso que o `/config.js` existe (ADR 0024). A versão
+é do **artefato** — a imagem `brabo-web:1.1.2` não deveria conseguir informar
+outra coisa. Se viesse do `/config.js`, o rodapé viraria um campo editável em
+vez de uma identidade, e um ConfigMap errado faria a tela mentir sobre qual
+build está rodando.
 
-The full path, from commit to screen: `release.yml` computes
-`versao=${TAG#v}` → passes it as `VERSION` to `docker buildx bake` → the
-`web` target of `docker-bake.hcl` converts it into `VITE_BRABO_VERSION` → the
-`ARG`/`ENV` of `docker/web/Dockerfile.prod` exposes it to `pnpm build` → Vite
-inlines it into `import.meta.env` → `runtime-config.ts` reads it →
-`AuthLayout` shows it. The same `VERSION` feeds the api image's
-`BRABO_VERSION` (ADR 0036).
+O caminho inteiro, do commit à tela: o `release.yml` calcula
+`versao=${TAG#v}` → passa como `VERSION` ao `docker buildx bake` → o alvo
+`web` do `docker-bake.hcl` a converte em `VITE_BRABO_VERSION` → o
+`ARG`/`ENV` do `docker/web/Dockerfile.prod` a expõe ao `pnpm build` → o Vite a
+embute em `import.meta.env` → o `runtime-config.ts` a lê → o `AuthLayout` a
+mostra. O mesmo `VERSION` alimenta o `BRABO_VERSION` da imagem da api
+(ADR 0036).
 
 ---
 
 ## Backup
 
-Consumed by the backup image, not by the apps — as a CronJob on Kubernetes and
-as `docker compose run --rm backup …` on a compose install. Details in
-[Restore](../runbook.md#restore); the reasoning is
+Consumidas pela imagem de backup, não pelas apps — como CronJob no Kubernetes e
+como `docker compose run --rm backup …` numa instalação por compose. Detalhes
+em [Restauração](../runbook.md#restore); o raciocínio está no
 [ADR 0152](../adr/0152-backup-de-volumes-contra-compose.md).
 
-**The destination is one of two, and the choice is `BACKUP_DIR`.** Set it and
-the backup goes to disk; leave it empty and it goes to S3, which is what the
-Kubernetes CronJob does. The five `BACKUP_S3_*` variables stopped being
-unconditionally required: they are the configuration of *one* destination, and
-demanding a bucket before you can migrate demands infrastructure a single-machine
-install never asked for.
+**O destino é um de dois, e a escolha é `BACKUP_DIR`.** Defina-a e o backup vai
+para disco; deixe-a vazia e ele vai para o S3, que é o que o CronJob do
+Kubernetes faz. As cinco variáveis `BACKUP_S3_*` deixaram de ser obrigatórias
+incondicionalmente: elas são a configuração de *um* destino, e exigir um bucket
+antes de poder migrar exige uma infraestrutura que uma instalação de máquina
+única nunca pediu.
 
-| variable | default | note |
+| variável | default | nota |
 |---|---|---|
-| `BACKUP_DIR` | — (S3) | destination **directory**. Set ⇒ disk; empty ⇒ S3. In the compose service it defaults to `/backups` |
-| `BRABO_BACKUP_HOST_DIR` | `backup_local` (named volume) | host path mounted at `/backups`. The named-volume default verifies a backup; it is the **wrong** destination to migrate with, because `docker compose down -v` deletes it along with what it was meant to save |
-| `BACKUP_S3_ENDPOINT` / `BACKUP_S3_BUCKET` | — | S3-compatible destination; required only when `BACKUP_DIR` is empty |
-| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | — | bucket credential |
-| `BACKUP_KEEP_DAILY` | `7` | retention by **count**, not by age |
+| `BACKUP_DIR` | — (S3) | **diretório** de destino. Definida ⇒ disco; vazia ⇒ S3. No serviço do compose o default é `/backups` |
+| `BRABO_BACKUP_HOST_DIR` | `backup_local` (volume nomeado) | caminho do host montado em `/backups`. O default de volume nomeado serve para verificar um backup; é o destino **errado** para migrar, porque `docker compose down -v` o apaga junto com o que ele devia salvar |
+| `BACKUP_S3_ENDPOINT` / `BACKUP_S3_BUCKET` | — | destino compatível com S3; obrigatórias só quando `BACKUP_DIR` está vazia |
+| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | — | credencial do bucket |
+| `BACKUP_KEEP_DAILY` | `7` | retenção por **contagem**, não por idade |
 | `BACKUP_KEEP_WEEKLY` | `4` | — |
-| `GIT_REPOS_DIR` | `/data/git-repos` | the bare repos of `local`-provider projects. Absent ⇒ the step is **skipped and said so** (the Kubernetes CronJob does not mount this volume) |
-| `RESTORE_DB` | — | name of the restore's destination database |
-| `RESTORE_PREFIX` | `daily/` | `weekly/` to restore from a weekly copy |
-| `RESTORE_GIT_PREFIX` | `git-daily/` | `git-weekly/` for the weekly copy of the bare repos |
-| `RESTORE_GIT_FORCE` | — | `1` allows extracting **over** existing bare repos. Off by default: overlaying two repository states produces a mix that no `git` complains about |
-| `RESTORE_ADMIN_URL` | — | connection with `CREATEDB` permission; in production it's separate from `DATABASE_URL` |
+| `GIT_REPOS_DIR` | `/data/git-repos` | os repositórios bare dos projetos do provider `local`. Ausente ⇒ o passo é **pulado e dito** (o CronJob do Kubernetes não monta esse volume) |
+| `RESTORE_DB` | — | nome do banco de destino da restauração |
+| `RESTORE_PREFIX` | `daily/` | `weekly/` para restaurar de uma cópia semanal |
+| `RESTORE_GIT_PREFIX` | `git-daily/` | `git-weekly/` para a cópia semanal dos repositórios bare |
+| `RESTORE_GIT_FORCE` | — | `1` permite extrair **por cima** de repositórios bare existentes. Desligada por padrão: sobrepor dois estados de repositório produz uma mistura de que nenhum `git` reclama |
+| `RESTORE_ADMIN_URL` | — | conexão com permissão `CREATEDB`; em produção é separada do `DATABASE_URL` |
 
-Four prefixes, not two: `daily/` and `weekly/` hold the Postgres dumps,
-`git-daily/` and `git-weekly/` the bare-repo archives. They are kept apart
-because retention is by **count** — two kinds of file under one prefix would
-make "keep 7" mean three and a half backups.
+Quatro prefixos, não dois: `daily/` e `weekly/` guardam os dumps do Postgres,
+`git-daily/` e `git-weekly/` os arquivos dos repositórios bare. Ficam separados
+porque a retenção é por **contagem** — duas espécies de arquivo sob um prefixo
+fariam "guardar 7" significar três backups e meio.
 
-## Local inference (containers)
+## Inferência local (containers)
 
-These are not read by our code — they belong to the `ollama` container, and
-they're here because they're the most frequent cause of an agent behaving
-strangely. The symptom table is in
-[inference environment](../runbook.md#ambiente-de-inferencia).
+Estas não são lidas pelo nosso código — são do container `ollama`, e estão aqui
+porque são a causa mais frequente de um agente se comportar de forma estranha.
+A tabela de sintomas está no
+[ambiente de inferência](../runbook.md#ambiente-de-inferencia).
 
-| variable | why |
+| variável | por quê |
 |---|---|
-| `OLLAMA_CONTEXT_LENGTH` | the default of 4096 **silently** truncates a prompt built for 128k |
-| `OLLAMA_MAX_LOADED_MODELS` | with a high `OLLAMA_KEEP_ALIVE`, models pile up until memory overflows |
-| `OLLAMA_KEEP_ALIVE` | how long the model stays resident |
-| `DEMO_QA_MODEL` | points the QA gate to an API model — the per-agent binding wins over the project's |
+| `OLLAMA_CONTEXT_LENGTH` | o default de 4096 trunca **em silêncio** um prompt montado para 128k |
+| `OLLAMA_MAX_LOADED_MODELS` | com `OLLAMA_KEEP_ALIVE` alto, os modelos se acumulam até a memória estourar |
+| `OLLAMA_KEEP_ALIVE` | quanto tempo o modelo fica residente |
+| `DEMO_QA_MODEL` | aponta o gate de QA para um modelo de API — o binding por agente vence o do projeto |
 
-> **The `ollama` image version is not a variable — it is a digest.** Like every
-> third-party image in `docker/`, it is pinned as
-> `ollama/ollama:0.33.1@sha256:…`
-> ([ADR 0159](../adr/0159-imagem-de-terceiro-por-digest.md), tag inline since
-> [ADR 0178](../adr/0178-tag-inline-na-imagem-de-terceiro.md)), and the same
-> digest is used by `ci.yml`/`golden-set-rag.yml`, because the RAG golden-set
-> floor is keyed by model rather than by environment
-> ([ADR 0138](../adr/0138-golden-set-do-rag-em-ci-agendado.md)). So an
-> inference behaviour that changed between two `docker compose pull`s is no
-> longer a possible cause: nothing moves unless someone edits the digest.
-> Bumping it is [a runbook procedure](../runbook.md#subindo-imagem-de-terceiro),
-> and `scripts/ci/imagens-pinadas.ts` refuses a bump that reaches only some of
-> the places the tag appears.
+> **A versão da imagem `ollama` não é variável — é digest.** Como toda imagem
+> de terceiro em `docker/`, ela é pinada como
+> `ollama/ollama:0.40.6@sha256:…`
+> ([ADR 0159](../adr/0159-imagem-de-terceiro-por-digest.md), tag inline desde o
+> [ADR 0178](../adr/0178-tag-inline-na-imagem-de-terceiro.md)), e o mesmo
+> digest é usado por `ci.yml`/`golden-set-rag.yml`, porque o piso do
+> golden-set do RAG é chaveado pelo modelo e não pelo ambiente
+> ([ADR 0138](../adr/0138-golden-set-do-rag-em-ci-agendado.md)). Então um
+> comportamento de inferência que mudou entre dois `docker compose pull` deixou
+> de ser causa possível: nada se move a não ser que alguém edite o digest.
+> Subir a versão é [um procedimento do runbook](../runbook.md#subindo-imagem-de-terceiro),
+> e o `scripts/ci/imagens-pinadas.ts` recusa uma subida que alcance só parte
+> dos lugares onde a tag aparece.
 
 ---
 
-## Local observability (containers)
+## Observabilidade local (containers)
 
-Also not read by our code: these are the ports of the
-`docker/docker-compose.observability.yml` overlay, which brings up
-Prometheus, Loki and Grafana alongside the development stack (`pnpm dev:obs`).
-The mechanism is in [local observability](../runbook.md#observabilidade-local).
+Também não lidas pelo nosso código: são as portas do overlay
+`docker/docker-compose.observability.yml`, que sobe Prometheus, Loki e Grafana
+ao lado da stack de desenvolvimento (`pnpm dev:obs`). O mecanismo está em
+[observabilidade local](../runbook.md#observabilidade-local).
 
-| variable | default | why |
+| variável | default | por quê |
 |---|---|---|
-| `GRAFANA_PORT` | `3001` | same port the cluster's Grafana uses; the two **don't coexist**, for the same reason `pnpm dev` and `make deploy-local` don't coexist |
-| `PROMETHEUS_PORT` | `9090` | the port the runbook already uses in the cluster's `kubectl port-forward` |
-| `LOKI_PORT` | `3100` | only for querying directly; the normal path is through Grafana |
+| `GRAFANA_PORT` | `3001` | a mesma porta que o Grafana do cluster usa; os dois **não coexistem**, pelo mesmo motivo de `pnpm dev` e `make deploy-local` não coexistirem |
+| `PROMETHEUS_PORT` | `9090` | a porta que o runbook já usa no `kubectl port-forward` do cluster |
+| `LOKI_PORT` | `3100` | só para consultar direto; o caminho normal é pelo Grafana |
 
-The overlay does **not** define `OTEL_EXPORTER_OTLP_ENDPOINT`: without a
-Collector in between, pointing the apps at an address that doesn't exist just
-produces an export error on every turn
+O overlay **não** define `OTEL_EXPORTER_OTLP_ENDPOINT`: sem um Collector no
+meio, apontar as apps para um endereço que não existe só produz um erro de
+exportação a cada turno
 ([ADR 0035](../adr/0035-observabilidade-legivel-e-trace-sem-coletor.md)
-separated instrumenting from exporting exactly for this reason). Metrics and
-logs work without it; traces still require the cluster.
+separou instrumentar de exportar exatamente por isso). Métricas e logs
+funcionam sem ela; traces ainda exigem o cluster.
 
 ---
 
-## Container broker
+## Broker de containers
 
-The broker ([ADR 0130](../adr/0130-broker-de-container.md)) is the only process
-in the product that talks to a Docker daemon on the server, and the only service
-with `/var/run/docker.sock` mounted. **Locally it comes up with `pnpm dev`; in
-production it stays under `profiles: ["container-broker"]`.** The two compose
-files differ on purpose ([ADR 0146](../adr/0146-base-consentida-no-bootstrap.md),
-point 3) — do not uniformize them.
+O broker ([ADR 0130](../adr/0130-broker-de-container.md)) é o único processo do
+produto que fala com um daemon Docker no servidor, e o único serviço com
+`/var/run/docker.sock` montado. **Localmente ele sobe com o `pnpm dev`; em
+produção fica sob `profiles: ["container-broker"]`.** Os dois arquivos de
+compose divergem de propósito ([ADR 0146](../adr/0146-base-consentida-no-bootstrap.md),
+ponto 3) — não os uniformize.
 
-It used to be off by default in both, on the grounds that nothing called it yet.
-That premise died: it has four real callers, and
-[ADR 0144](../adr/0144-a-segunda-raiz-do-broker.md) made **Mounted** mode bring
-its container up through the broker — so with the profile off, the default local
-mode ended in `BrokerIndisponivelError`. What sustains the asymmetry is what the
-socket means on each side: whoever runs `pnpm dev` already holds it (they are
-running `docker compose`), while in production it is a real privilege boundary
-and the operator is not the developer.
+Ele já foi desligado por padrão nos dois, sob o argumento de que nada o chamava
+ainda. Essa premissa morreu: ele tem quatro chamadores reais, e o
+[ADR 0144](../adr/0144-a-segunda-raiz-do-broker.md) fez o modo **Mounted** subir
+o container pelo broker — então, com o profile desligado, o modo local padrão
+terminava em `BrokerIndisponivelError`. O que sustenta a assimetria é o que o
+socket significa de cada lado: quem roda `pnpm dev` já o tem (está rodando
+`docker compose`), enquanto em produção ele é uma fronteira real de privilégio e
+o operador não é o desenvolvedor.
 
-This changes **when** the broker runs, never **what** it accepts: the five
-containment layers are untouched, and it still receives a `projectId` plus one of
-five operations, with no parameter anywhere to write `privileged` or a free `-v`.
+Isso muda **quando** o broker roda, nunca **o que** ele aceita: as cinco
+camadas de contenção estão intactas, e ele continua recebendo um `projectId`
+mais uma de cinco operações, sem parâmetro em lugar nenhum onde escrever
+`privileged` ou um `-v` livre.
 
-Coming up by default is what exposed a defect that had never mattered: the local
-image installed its dependencies on START, and the broker's only network is
-`internal: true`, so there is no registry to reach — the container died with
-`getaddrinfo EAI_AGAIN registry.npmjs.org`, and with no healthcheck `up --wait`
-still printed `Healthy`. Dependencies now install at BUILD time and the service
-has a healthcheck; the network was not touched, and must not be. The operational
-detail lives in the [runbook](../runbook.md#broker-de-container).
+Subir por padrão foi o que expôs um defeito que nunca tinha importado: a imagem
+local instalava as dependências no START, e a única rede do broker é
+`internal: true`, então não há registry a alcançar — o container morria com
+`getaddrinfo EAI_AGAIN registry.npmjs.org`, e sem healthcheck o `up --wait`
+ainda imprimia `Healthy`. As dependências agora se instalam no BUILD e o
+serviço tem healthcheck; a rede não foi tocada, e não deve ser. O detalhe
+operacional mora no [runbook](../runbook.md#broker-de-container).
 
-In production, bring it up explicitly:
+Em produção, suba-o explicitamente:
 
 ```bash
 docker compose -f docker/docker-compose.prod.yml \
   --profile container-broker up -d broker
 ```
 
-| variable | default | when it fails |
+| variável | default | quando falha |
 |---|---|---|
-| `BROKER_URL` | `http://broker:8090` in the **dev** compose; empty in production and installation (read by the **api**) | Empty is a NORMAL state: whoever reads a container's observed state then says "not observed" instead of inheriting the recorded one ([RN-486](../business-rules.md#rn-486)), and the api answers `brokerConfigurado: false`, so project creation only offers `runner` ([RN-573](../business-rules.md#rn-573)). Locally the broker is up by default, so the dev compose defaults it to the service it brings up ([RN-599](../business-rules.md#rn-599)) — a value in `.env` still wins. The production and installation composes keep no default on purpose: there the broker is under a profile, and whoever turns it on writes the URL |
-| `BROKER_PORT` | `8090` | Port the broker listens on. It publishes NOTHING to the host — only the api reaches it, through the `internal: true` compose network |
-| `BRABO_SERVICE_TOKEN` 🔒 | `dev-service-token-change-me` in development | The SAME secret as api ↔ engine, in the same header. With `NODE_ENV=production` the broker refuses to boot when it is empty, when it is the repository's public literal, or under 16 characters — the RN-114 rule, which here guards a process that talks to the host's Docker. `BRABO_SERVICE_TOKEN_PREVIOUS`, when set, goes through the same rule except the requirement: trimmed, and in production the broker refuses to boot if it's the public literal or under 16 characters ([RN-601](../business-rules/autenticacao.md#rn-601)) |
-| `API_URL` | `http://api:3000` | Where the broker READS the Architect's decision. It does not receive a container spec; it comes and gets one ([RN-485](../business-rules.md#rn-485)) |
-| `PROJECT_WORKSPACES_HOST_ROOT` | — | The project folders' root **on the HOST**, not inside any container. Without it, `start` refuses naming this variable and the other four operations keep working. Do not confuse it with `PROJECT_WORKSPACES_ROOT`, which is the path inside the containers: `-v` is resolved by the DAEMON against the host filesystem, and a path from inside the api would make it create and mount an EMPTY folder |
-| `DOCKER_GID` | `999` (compose) | The gid of the host's `docker` group (`getent group docker \| cut -d: -f3`). The socket is `root:docker` and the broker runs non-root, so compose uses `group_add`. The default is the most common one and is wrong on several distributions. Since [ADR 0146](../adr/0146-base-consentida-no-bootstrap.md) this matters on EVERY development machine, not only where someone turned the profile on — getting it wrong does not break the boot, it breaks the use: every operation dies with "permission denied" on the socket, surfacing only when someone proposes `container_start`. `pnpm dev` reports the state of this variable on every run ([RN-512](../business-rules.md#rn-512)), and says "does not apply" on a machine with no `docker` group rather than accusing it |
+| `BROKER_URL` | `http://broker:8090` no compose de **dev**; vazia em produção e na instalação (lida pela **api**) | Vazia é estado NORMAL: quem lê o estado observado de um container diz então "não observado" em vez de herdar o registrado ([RN-486](../business-rules.md#rn-486)), e a api responde `brokerConfigurado: false`, então a criação de projeto só oferece `runner` ([RN-573](../business-rules.md#rn-573)). Localmente o broker sobe por padrão, então o compose de dev a aponta por default para o serviço que ele sobe ([RN-599](../business-rules.md#rn-599)) — um valor no `.env` ainda vence. Os composes de produção e de instalação não têm default de propósito: ali o broker fica sob profile, e quem o liga escreve a URL |
+| `BROKER_PORT` | `8090` | Porta em que o broker escuta. Ele NÃO publica nada no host — só a api o alcança, pela rede `internal: true` do compose |
+| `BRABO_SERVICE_TOKEN` 🔒 | `dev-service-token-change-me` em desenvolvimento | O MESMO segredo de api ↔ engine, no mesmo cabeçalho. Com `NODE_ENV=production` o broker recusa subir quando ele está vazio, quando é o literal público do repositório ou com menos de 16 caracteres — a regra da RN-114, que aqui guarda um processo que fala com o Docker do host. `BRABO_SERVICE_TOKEN_PREVIOUS`, quando definido, passa pela mesma regra salvo a obrigatoriedade: aparado, e em produção o broker recusa subir se ele é o literal público ou tem menos de 16 caracteres ([RN-601](../business-rules/autenticacao.md#rn-601)) |
+| `API_URL` | `http://api:3000` | De onde o broker LÊ a decisão do Arquiteto. Ele não recebe uma especificação de container; ele vem buscá-la ([RN-485](../business-rules.md#rn-485)) |
+| `PROJECT_WORKSPACES_HOST_ROOT` | — | A raiz das pastas de projeto **no HOST**, não dentro de container nenhum. Sem ela, `start` recusa nomeando esta variável e as outras quatro operações continuam funcionando. Não a confunda com `PROJECT_WORKSPACES_ROOT`, que é o caminho dentro dos containers: o `-v` é resolvido pelo DAEMON contra o sistema de arquivos do host, e um caminho de dentro da api o faria criar e montar uma pasta VAZIA |
+| `DOCKER_GID` | `999` (compose) | O gid do grupo `docker` do host (`getent group docker \| cut -d: -f3`). O socket é `root:docker` e o broker roda sem root, então o compose usa `group_add`. O default é o mais comum e está errado em várias distribuições. Desde o [ADR 0146](../adr/0146-base-consentida-no-bootstrap.md) isso importa em TODA máquina de desenvolvimento, não só onde alguém ligou o profile — errar não quebra o boot, quebra o uso: toda operação morre com "permission denied" no socket, e isso só aparece quando alguém propõe `container_start`. O `pnpm dev` informa o estado desta variável a cada execução ([RN-512](../business-rules.md#rn-512)), e diz "não se aplica" numa máquina sem grupo `docker` em vez de acusá-la |
 
-`PROJECT_WORKSPACES_HOST_ROOT` cannot be derived from a managed Docker volume.
-In the **dev** compose it derives from `PROJECT_WORKSPACES_HOST_DIR` (above) —
-so leaving that one unset, the state of a freshly copied `.env.example`, leaves
-the broker with no root and `container` mode with no container: the stack comes
-up healthy and `container_start` ends refused. `pnpm dev` reports that on every
-run, in the same mould as `DOCKER_GID`, and never refuses to start
-([RN-599](../business-rules.md#rn-599)). It also reports the `~` case: Compose
-expands `~` in the bind-mount source that `api`/`engine` use, but NOT in the
-variable the broker receives (measured with `docker compose config`), so write
-the path ALREADY EXPANDED. And an explicit `PROJECT_WORKSPACES_HOST_ROOT` that
-differs from the folder `api`/`engine` mount is reported as divergent — the
-container would get a folder the agents never wrote to. Switching from the
-managed volume to a host folder does not migrate what is already in the
-`project_workspaces` volume: the data stays there, it just stops being what
-`api` and `engine` see.
+`PROJECT_WORKSPACES_HOST_ROOT` não pode ser derivada de um volume Docker
+gerenciado. No compose de **dev** ela deriva de `PROJECT_WORKSPACES_HOST_DIR`
+(acima) — então deixar essa sem definir, o estado de um `.env.example` recém
+copiado, deixa o broker sem raiz e o modo `container` sem container: a stack
+sobe saudável e o `container_start` termina recusado. O `pnpm dev` informa isso
+a cada execução, no mesmo molde do `DOCKER_GID`, e nunca recusa subir
+([RN-599](../business-rules.md#rn-599)). Ele informa também o caso do `~`: o
+Compose expande `~` na origem do bind-mount que `api`/`engine` usam, mas NÃO na
+variável que o broker recebe (medido com `docker compose config`), então
+escreva o caminho JÁ EXPANDIDO. E um `PROJECT_WORKSPACES_HOST_ROOT` explícito
+que difere da pasta que `api`/`engine` montam é informado como divergente — o
+container receberia uma pasta em que os agentes nunca escreveram. Trocar o
+volume gerenciado por uma pasta do host não migra o que já está no volume
+`project_workspaces`: os dados ficam lá, só deixam de ser o que `api` e
+`engine` enxergam.
 
-`BRABO_PROJECTS_HOST_BASE` is the broker's SECOND root — the base of **Mounted**
-projects, also on the host
+`BRABO_PROJECTS_HOST_BASE` é a SEGUNDA raiz do broker — a base dos projetos
+**Mounted**, também no host
 ([ADR 0141](../adr/0141-base-unica-dos-projetos-montados.md),
-[ADR 0144](../adr/0144-a-segunda-raiz-do-broker.md)). Unlike the one above it
-does not need to be filled in: the compose derives it from
-`BRABO_PROJECTS_BASE`, which is already a host path by definition (it is what
-`api` and `engine` mount by identity). Set it explicitly only if the Docker
-daemon reaches that folder by a different path.
+[ADR 0144](../adr/0144-a-segunda-raiz-do-broker.md)). Diferente da de cima, ela
+não precisa ser preenchida: o compose a deriva de `BRABO_PROJECTS_BASE`, que já
+é um caminho do host por definição (é o que `api` e `engine` montam por
+identidade). Defina-a explicitamente só se o daemon Docker alcança essa pasta
+por outro caminho.
 
-It is what makes a **Mounted** project able to have a container at all
-([RN-503](../business-rules.md#rn-503)): the api sends a discriminated locator
-(`localizacao.tipo` — `gerenciada` or `montada`) plus the relative segment, and
-the broker resolves it against the matching root. The two roots never stand in
-for each other. Missing this one makes `start` of a `mounted` project refuse
-with **503**, NAMING the variable, without touching a container — falling back
-to `PROJECT_WORKSPACES_HOST_ROOT` would mount another project's folder, because
-the managed root is named by `workspace_dir_name` and the base is named by the
-user.
+É ela que permite a um projeto **Mounted** ter container
+([RN-503](../business-rules.md#rn-503)): a api envia um localizador
+discriminado (`localizacao.tipo` — `gerenciada` ou `montada`) mais o segmento
+relativo, e o broker o resolve contra a raiz correspondente. As duas raízes
+nunca se substituem. Faltar esta faz o `start` de um projeto `mounted` recusar
+com **503**, NOMEANDO a variável, sem tocar em container — cair em
+`PROJECT_WORKSPACES_HOST_ROOT` montaria a pasta de outro projeto, porque a raiz
+gerenciada é nomeada por `workspace_dir_name` e a base é nomeada pelo usuário.
 
 
 ---
 
-## Dev container user (build-time)
+## Usuário dos containers de dev (build) {#dev-container-user-build-time}
 
-Not read by our code either, and not even a *runtime* environment variable:
-these are Docker `build.args` for the three dev images (`docker/api/Dockerfile`,
-`docker/web/Dockerfile`, `docker/engine/Dockerfile`), consulted once at
-`docker compose build` and baked into the `USER` each container runs as. They
-exist so the containers run with the **same UID/GID as your host user**
-instead of root — everything written to a bind mount (`apps/api/dist`, a
-project workspace in `mounted` execution mode) is then already yours, no
-`sudo chown` needed afterward.
+Também não lidas pelo nosso código, e nem são variável de ambiente de
+*runtime*: são `build.args` do Docker para as três imagens de dev
+(`docker/api/Dockerfile`, `docker/web/Dockerfile`, `docker/engine/Dockerfile`),
+consultados uma vez no `docker compose build` e embutidos no `USER` com que
+cada container roda. Existem para que os containers rodem com o **mesmo
+UID/GID do seu usuário do host** em vez de root — tudo o que é escrito num bind
+mount (`apps/api/dist`, um workspace de projeto no modo de execução `mounted`)
+já é seu, sem `sudo chown` depois.
 
-| variable | default | why |
+| variável | default | por quê |
 |---|---|---|
-| `DEV_UID` | `1000` | your `id -u`. NOT read from the shell's `${UID}` — it's read-only in bash and isn't exported to the environment by default, so the compose file would always see it empty |
-| `DEV_GID` | `1000` | your `id -g`, same reasoning |
+| `DEV_UID` | `1000` | o seu `id -u`. NÃO é lido do `${UID}` do shell — ele é somente leitura no bash e não é exportado para o ambiente por padrão, então o arquivo de compose sempre o veria vazio |
+| `DEV_GID` | `1000` | o seu `id -g`, mesmo raciocínio |
 
-`1000`/`1000` matches both the most common single-developer Linux setup and
-the `node` user that `node:24-alpine` (the `api`/`web` base image) already
-ships — when your pair matches, the Dockerfiles reuse that built-in user
-instead of creating a new one. An environment that already has containers
-running as root from before this change needs a one-time `chown` of the
-`node_modules`/`_build`/`deps`/`.mix`/`.hex` named volumes (or
-`docker compose down -v` to let them be recreated) — see the note in
-[Getting started](../getting-started.md).
+`1000`/`1000` casa com a configuração Linux mais comum de um desenvolvedor só e
+com o usuário `node` que o `node:26-alpine` (a imagem base de `api`/`web`) já
+traz — quando o seu par casa, os Dockerfiles reaproveitam esse usuário em vez
+de criar um novo. Um ambiente que já tem containers rodando como root de antes
+dessa mudança precisa de um `chown` único dos volumes nomeados
+`node_modules`/`_build`/`deps`/`.mix`/`.hex` (ou de `docker compose down -v`
+para deixá-los ser recriados) — veja a nota em
+[Primeiros passos](../getting-started.md).
+
+Os composes de produção e de instalação são diferentes: o engine roda da
+imagem de produção como o usuário fixo `engine` (uid/gid `1000`, sem
+`DEV_UID`), com `read_only: true` e um tmpfs em `/home/engine`. Esse tmpfs é
+declarado `uid=1000,gid=1000,mode=0700` — não é variável — porque o semgrep (o
+gate de SecOps) escreve `~/.semgrep` ali; criado como root, o scan não devolve
+nada e o gate aprova sem análise estática
+([RN-707](../business-rules.md#rn-707), runbook
+[O gate de SecOps está preso em "SAST não rodou"](../runbook.md#semgrep-do-gate)).
+
+As duas imagens do engine pinam o semgrep com o argumento de build
+`SEMGREP_VERSION` (`1.183.0`, o mesmo em `docker/engine/Dockerfile` e
+`Dockerfile.prod`, mantidos iguais por `scripts/ci/semgrep-do-engine.spec.ts`).
+É argumento de build, não variável de runtime — nada vai no `.env`. Sem pin, o
+pip pegou a 1.179.0, que não publica wheel `musllinux`: na imagem Alpine o
+pacote vinha do sdist sem `semgrep-core` e todo scan falhava. Subir a versão é
+escolher uma release com wheel `musllinux` no PyPI e mudar os dois Dockerfiles
+no mesmo PR.
+
+As imagens do engine rodam **Elixir 1.20.4 / OTP 29.1.1** sobre Alpine 3.24
+(builder `hexpm/elixir:1.20.4-erlang-29.1.1-alpine-3.24.2`, runtime
+`alpine:3.24.3`, as duas por digest — [ADR 0209](../adr/0209-engine-em-otp-29.md)).
+OTP abaixo de 29.1 aborta no boot sob a musl 1.2.6 do Alpine 3.24 em hosts
+cuja CPU tem AMX (`sys_sigaltstack(): Internal error`); não desça o OTP sem
+descer a musl. Nada vai no `.env`.
+
+Nenhum dos seis Dockerfiles usa corepack (o Node 25+ não o traz mais, AT-360):
+o build instala o pnpm do tarball do registry, conferido contra um sha512
+escrito no próprio Dockerfile — os argumentos de build `PNPM_VERSION`
+(`11.3.0`, o mesmo do `packageManager` em `package.json`, para o pnpm nunca
+tentar baixar outra versão em runtime) e `PNPM_SHA512`. São argumentos de
+build, não variáveis de runtime, e não há nada a definir no `.env`: subir o
+pnpm é mudar o `packageManager`, o `PNPM_VERSION` dos workflows e os dois
+argumentos nos seis Dockerfiles no mesmo PR — veja a seção do runbook sobre a
+imagem do broker.
 
 ---
 
-## Tooling variables (not product)
+## Variáveis de ferramenta (não do produto)
 
-Everything above is **product**: what whoever operates an installation sets in
-the deployment `.env`. What follows is **tooling** — read only by CI and by
-whoever develops Brabo. None of it belongs in an operator's `.env`, and that
-distinction is the reason the inventory below marks each source.
+Tudo acima é **produto**: o que quem opera uma instalação define no `.env` do
+deploy. O que segue é **ferramenta** — lido só pelo CI e por quem desenvolve o
+Brabo. Nada disso pertence ao `.env` de um operador, e essa distinção é o
+motivo de o inventário abaixo marcar cada fonte.
 
-### Demo and seed scripts — `apps/api/scripts/`
+### Scripts de demonstração e seed — `apps/api/scripts/`
 
-They drive real agents against a local Ollama, so what they take is a **model
-name** and a **deadline**. Every one of them has a default and none is
-required.
+Eles conduzem agentes reais contra um Ollama local, então o que recebem é um
+**nome de modelo** e um **prazo**. Todos têm default e nenhum é obrigatório.
 
-| variable | default | what it changes |
+| variável | default | o que muda |
 |---|---|---|
-| `DEMO_MODEL` | `qwen2.5-coder:7b` | the model every demo script uses, unless one of the ones below overrides it for a specific role |
-| `DEMO_QA_MODEL` | `DEMO_MODEL` | only the QA agent, in the PR-gates demos — so you can judge with a model other than the one that wrote the code |
-| `DEMO_WORKFLOWS_MODEL` | `DEMO_MODEL` | only the Infra agent in the GitHub-workflows demo |
-| `DEMO_MODEL_LEVE` | `qwen2.5-coder:7b` | the Psychologist's **light** model (the one the cheap pass uses) |
-| `DEMO_MODEL_PESADO` | `qwen-psicologo-pesado:latest` | the Psychologist's **heavy** model. It's a local `Modelfile` variant, not a published tag — hence the one below |
-| `DEMO_OLLAMA_COPY_FROM` | `qwen2.5-coder:7b` | the base the demo copies from when it has to create the heavy model on the local Ollama |
-| `DEMO_TIMEOUT_MS` | `1800000` (30 min); `900000` in the dev-agent demo | how long the script waits for the run to finish before giving up |
-| `DEMO_ANAMNESE_TIMEOUT_MS` | `900000` (15 min) | the same deadline, for the Anamnesis demo |
-| `DEMO_PSICOLOGO_TIMEOUT_MS` | `600000` (10 min) | the same deadline, for the Psychologist demo |
-| `GOLDEN_SET_QA_MODEL` | `qwen2.5-coder:latest` | the model that `seed-golden-set-qa.ts` records as the judge of the QA golden set ([ADR 0123](../adr/0123-golden-set-regressao-qa-automacao.md)) |
+| `DEMO_MODEL` | `qwen2.5-coder:7b` | o modelo que todo script de demonstração usa, a não ser que um dos abaixo o sobreponha para um papel específico |
+| `DEMO_QA_MODEL` | `DEMO_MODEL` | só o agente de QA, nas demonstrações dos gates de PR — para julgar com um modelo diferente do que escreveu o código |
+| `DEMO_WORKFLOWS_MODEL` | `DEMO_MODEL` | só o agente de Infra na demonstração de workflows do GitHub |
+| `DEMO_MODEL_LEVE` | `qwen2.5-coder:7b` | o modelo **leve** do Psicólogo (o que a passada barata usa) |
+| `DEMO_MODEL_PESADO` | `qwen-psicologo-pesado:latest` | o modelo **pesado** do Psicólogo. É uma variante de `Modelfile` local, não uma tag publicada — daí a de baixo |
+| `DEMO_OLLAMA_COPY_FROM` | `qwen2.5-coder:7b` | a base de que a demonstração copia quando precisa criar o modelo pesado no Ollama local |
+| `DEMO_TIMEOUT_MS` | `1800000` (30 min); `900000` na demonstração de dev agent | quanto o script espera a execução terminar antes de desistir |
+| `DEMO_ANAMNESE_TIMEOUT_MS` | `900000` (15 min) | o mesmo prazo, para a demonstração da Anamnese |
+| `DEMO_PSICOLOGO_TIMEOUT_MS` | `600000` (10 min) | o mesmo prazo, para a demonstração do Psicólogo |
+| `GOLDEN_SET_QA_MODEL` | `qwen2.5-coder:latest` | o modelo que `seed-golden-set-qa.ts` registra como juiz do golden-set de QA ([ADR 0123](../adr/0123-golden-set-regressao-qa-automacao.md)) |
 
-`NOME`, which the inventory below lists under this source, **is not a
-variable**: it's the literal `process.env.NOME` inside a prompt string in
-`demo-pr-gates.ts`, teaching the agent how to replace a hardcoded secret. The
-inventory extracts by pattern and has no way to tell a mention from a read —
-it's listed here instead of being filtered at the source, because a
-name-by-name ignore list is a second place to keep in sync.
+`NOME`, que o inventário abaixo lista sob esta fonte, **não é variável**: é o
+literal `process.env.NOME` dentro de uma string de prompt em
+`demo-pr-gates.ts`, ensinando o agente a substituir um segredo fixo no código.
+O inventário extrai por padrão e não tem como distinguir uma menção de uma
+leitura — ele está listado aqui em vez de filtrado na fonte, porque uma lista
+de ignorados nome a nome é um segundo lugar a manter em dia.
 
-### Browser E2E — `e2e/`
+### E2E de navegador — `e2e/`
 
-`e2e/` isn't a workspace member ([ADR 0120](../adr/0120-e2e-de-navegador-contra-o-compose-de-producao.md)) and runs against the
-**production compose**, which is why its addresses are the published ports and
-not the dev ones. The credentials are the seed account's — the same ones
-`docker/smoke.sh` creates. The inventory scans every `.ts` under `e2e/`,
-**the Playwright specs included** — there the spec is the code that reads the
-environment, not a unit test beside it (AT-124).
+`e2e/` não é membro do workspace ([ADR 0120](../adr/0120-e2e-de-navegador-contra-o-compose-de-producao.md)) e roda contra o
+**compose de produção**, por isso os endereços dele são as portas publicadas e
+não as de dev. As credenciais são as da conta do seed — as mesmas que o
+`docker/smoke.sh` cria. O inventário varre todo `.ts` sob `e2e/`, **inclusive
+os specs do Playwright** — ali o spec é o código que lê o ambiente, não um
+teste unitário ao lado dele (AT-124).
 
-| variable | default | what it changes |
+| variável | default | o que muda |
 |---|---|---|
-| `E2E_API_URL` | `http://localhost:3000` | where the suite's HTTP support hits the api |
-| `E2E_WEB_URL` | `http://localhost:8088` | the `baseURL` Playwright opens, and the origin the CSRF assertion depends on |
-| `E2E_USER` | `owner@brabo.dev` | the account the suite logs in with |
-| `E2E_PASSWORD` | the seed password hardcoded in `e2e/suporte/api.ts` | that account's password. It's the password of a **local seed**, never a real one — it isn't repeated here so that the only copy stays the one in the code |
+| `E2E_API_URL` | `http://localhost:3000` | onde o suporte HTTP da suíte bate na api |
+| `E2E_WEB_URL` | `http://localhost:8088` | o `baseURL` que o Playwright abre, e a origem de que depende a asserção de CSRF |
+| `E2E_USER` | `owner@brabo.dev` | a conta com que a suíte entra |
+| `E2E_PASSWORD` | a senha do seed fixa em `e2e/suporte/api.ts` | a senha dessa conta. É a senha de um **seed local**, nunca uma real — não é repetida aqui para que a única cópia continue sendo a do código |
 
 
-### Local cluster and scheduled proofs — `deploy/k8s/`
+### Cluster local e provas agendadas — `deploy/k8s/`
 
-The bootstrap (`make deploy-local`) and the property proofs that
-`.github/workflows/propriedades.yml` runs weekly read these from the
-environment. All have defaults; none belongs in an installation's `.env`. The
-inventory scans every `deploy/k8s/*.sh` and matches only the expansion with a
-default (`${X:-…}`), which is how a shell script reads a variable from outside
-(AT-212).
+O bootstrap (`make deploy-local`) e as provas de propriedade que o
+`.github/workflows/propriedades.yml` roda toda semana leem estas do ambiente.
+Todas têm default; nenhuma pertence ao `.env` de uma instalação. O inventário
+varre todo `deploy/k8s/*.sh` e casa só a expansão com default (`${X:-…}`), que
+é como um script de shell lê uma variável de fora (AT-212).
 
-| variable | default | what it changes |
+| variável | default | o que muda |
 |---|---|---|
-| `BRABO_CLUSTER_NAME` | `brabo` | the name of the k3d/kind cluster the bootstrap creates or reuses |
-| `BRABO_CLUSTER_TOOL` | `k3d` | `kind` switches the bootstrap to kind — which ignores NetworkPolicy in silence, hence k3d as the default |
-| `BRABO_KEEP_CLUSTER` | unset | `1` reuses an existing cluster with the same name instead of deleting and recreating it |
-| `BRABO_SKIP_BUILD` | unset | `1` skips building the production images and uses the ones already in the Docker daemon |
-| `BRABO_SKIP_OBSERVABILITY` | unset | `1` skips Tempo, Loki, Collector, Alloy and Grafana (Prometheus and the adapter stay: the engine's HPA reads them). Only `propriedades.yml` sets it (AT-177) |
-| `TAG` | unset | a release tag (`vX.Y.Z-qa.N`) for the bootstrap to check out and deploy instead of the working tree; requires a clean tree |
-| `BRABO_NAMESPACE` | `brabo` | the namespace every proof script talks to |
-| `API_URL` / `ENGINE_URL` / `WEB_URL` | `http://localhost:3000` / `:4000` / `:8088` | where the proof scripts reach the cluster's services — the ports the k3d load balancer publishes. Same names as the product variables above, a different reader: here they are only the scripts' target |
-| `SMOKE_USER` | `owner@brabo.dev` | the account the smoke and the proofs log in with |
-| `BRABO_SMOKE_PASSWORD` | the seed's local password, hardcoded in the scripts | that account's password — also what the bootstrap passes to the seed pod as `BRABO_SEED_PASSWORD` |
-| `HPA_JOBS` | `60` | how many probe jobs `make hpa-test` enqueues to make the engine scale |
-| `HPA_TIMEOUT` | `240` | seconds `make hpa-test` waits for the scale-up |
-| `ROLLOUT_SESSIONS` | `5` | how many sessions `make rollout-test` opens before the rollout |
-| `ROLLOUT_CONVERGENCE_SECONDS` | `120` | the ceiling for every session to be adopted or drained after the rollout. Do not raise it to turn a red run green (see the orphan-session gap in `CLAUDE.md`) |
-| `ROLLOUT_EVIDENCE_DIR` | a `mktemp -d` | where `make rollout-test` writes the evidence (pod logs, events, replica samples); `propriedades.yml` sets it and uploads the folder |
-| `EVIDENCIA_INTERVALO` | `2` | seconds between the evidence collectors' samples; the spec shortens it (AT-174) |
-| `RESTORE_MUTACAO` | unset | `tabela-faltando` turns `make test-restore` into `make test-restore-mutacao`, the deliberate break it must catch (AT-126) |
-| `RESTORE_KEEP_JOB` | unset | `1` keeps the backup/restore Jobs after `make test-restore`, for inspection |
-| `PROJECT_WORKSPACES_ROOT_NO_POD` | `/data/project-workspaces` | where `make test-reprojecao-artefatos-k8s` looks for the artifact folder inside the api pod |
-| `KUBE_VERSION` | `1.31.0` | the Kubernetes version `make k8s-validate` validates the rendered overlays against |
+| `BRABO_CLUSTER_NAME` | `brabo` | o nome do cluster k3d/kind que o bootstrap cria ou reaproveita |
+| `BRABO_CLUSTER_TOOL` | `k3d` | `kind` troca o bootstrap para o kind — que ignora NetworkPolicy em silêncio, daí o k3d como default |
+| `BRABO_KEEP_CLUSTER` | não definida | `1` reaproveita um cluster existente com o mesmo nome em vez de apagá-lo e recriá-lo |
+| `BRABO_SKIP_BUILD` | não definida | `1` pula o build das imagens de produção e usa as que já estão no daemon Docker |
+| `BRABO_SKIP_OBSERVABILITY` | não definida | `1` pula Tempo, Loki, Collector, Alloy e Grafana (Prometheus e o adapter ficam: o HPA do engine os lê). Só o `propriedades.yml` a define (AT-177) |
+| `TAG` | não definida | uma tag de release (`vX.Y.Z-qa.N`) para o bootstrap fazer checkout e deploy em vez da árvore de trabalho; exige árvore limpa |
+| `BRABO_NAMESPACE` | `brabo` | o namespace com que todo script de prova fala |
+| `API_URL` / `ENGINE_URL` / `WEB_URL` | `http://localhost:3000` / `:4000` / `:8088` | onde os scripts de prova alcançam os serviços do cluster — as portas que o load balancer do k3d publica. Mesmos nomes das variáveis de produto acima, outro leitor: aqui são só o alvo dos scripts |
+| `SMOKE_USER` | `owner@brabo.dev` | a conta com que o smoke e as provas entram |
+| `BRABO_SMOKE_PASSWORD` | a senha local do seed, fixa nos scripts | a senha dessa conta — também o que o bootstrap passa ao pod do seed como `BRABO_SEED_PASSWORD` |
+| `HPA_JOBS` | `60` | quantos jobs de sonda o `make hpa-test` enfileira para fazer o engine escalar |
+| `HPA_TIMEOUT` | `240` | segundos que o `make hpa-test` espera pelo scale-up |
+| `ROLLOUT_SESSIONS` | `5` | quantas sessões o `make rollout-test` abre antes do rollout |
+| `ROLLOUT_CONVERGENCE_SECONDS` | `120` | o teto para toda sessão ser adotada ou drenada depois do rollout. Não o suba para virar verde uma rodada vermelha (veja a lacuna da sessão órfã no `CLAUDE.md`) |
+| `ROLLOUT_EVIDENCE_DIR` | um `mktemp -d` | onde o `make rollout-test` escreve a evidência (logs dos pods, eventos, amostras de réplicas); o `propriedades.yml` a define e sobe a pasta |
+| `EVIDENCIA_INTERVALO` | `2` | segundos entre as amostras dos coletores de evidência; o spec o encurta (AT-174) |
+| `RESTORE_MUTACAO` | não definida | `tabela-faltando` transforma o `make test-restore` no `make test-restore-mutacao`, a quebra deliberada que ele precisa pegar (AT-126) |
+| `RESTORE_KEEP_JOB` | não definida | `1` mantém os Jobs de backup/restauração depois do `make test-restore`, para inspeção |
+| `PROJECT_WORKSPACES_ROOT_NO_POD` | `/data/project-workspaces` | onde o `make test-reprojecao-artefatos-k8s` procura a pasta de artefatos dentro do pod da api |
+| `KUBE_VERSION` | `1.31.0` | a versão do Kubernetes contra a qual o `make k8s-validate` valida os overlays renderizados |
 
 ---
 
-## Full inventory
+## Inventário completo
 
-The tables above explain **what each variable does**. This section is the
-**inventory**: extracted from the code on every `pnpm docs:generate`, it
-exists so that a new variable doesn't go undocumented anywhere without
-anyone noticing.
+As tabelas acima explicam **o que cada variável faz**. Esta seção é o
+**inventário**: extraído do código a cada `pnpm docs:generate`, ele existe para
+que uma variável nova não fique sem documentação em lugar nenhum sem que
+ninguém perceba.
 
 <!-- BEGIN:GENERATED:env-inventario -->
 
-> ⚠️ Block generated by `pnpm docs:generate`. Do not edit by hand — the next build overwrites it.
+> ⚠️ Bloco gerado por `pnpm docs:generate`. Não edite à mão — o próximo build o sobrescreve.
 
-Inventory extracted from the code: **180 variables** read at runtime. All have a description in the tables above.
+Inventário extraído do código: **182 variáveis** lidas em tempo de execução. Todas têm descrição nas tabelas acima.
 
-Each source is marked **product** — what whoever operates the installation sets in the deployment `.env` — or **tooling**, read only by CI and by whoever develops the product. A tooling variable never belongs in an operator's `.env`.
+Cada fonte é marcada **produto** — o que quem opera a instalação configura no `.env` do deploy — ou **ferramenta**, lida só pelo CI e por quem desenvolve o produto. Variável de ferramenta nunca pertence ao `.env` de um operador.
 
-**api** — 65 variables · product
+**api** — 67 variáveis · produto
 
 - `API_JSON_BODY_LIMIT` <sub>(apps/api/src/main.ts)</sub>
 - `API_PUBLIC_URL` <sub>(apps/api/src/application/use-cases/auth/start-social-login.use-case.ts)</sub>
@@ -849,6 +893,7 @@ Each source is marked **product** — what whoever operates the installation set
 - `BROKER_URL` <sub>(apps/api/src/infrastructure/http-clients/container-broker.client.ts)</sub>
 - `CREDENTIALS_MASTER_KEY` <sub>(apps/api/src/infrastructure/security/envelope-encryption.service.ts)</sub>
 - `CREDENTIALS_MASTER_KEY_PREVIOUS` <sub>(apps/api/src/infrastructure/security/envelope-encryption.service.ts)</sub>
+- `CUSTO_RECONCILIACAO_INTERVAL_MS` <sub>(apps/api/src/application/use-cases/llm/reconciliar-custo-estimado.use-case.ts)</sub>
 - `DATABASE_URL` <sub>(apps/api/src/db/migrate.ts)</sub>
 - `ENGINE_PUBLIC_URL` <sub>(apps/api/src/application/use-cases/runner/request-runner-ticket.use-case.ts)</sub>
 - `ENGINE_URL` <sub>(apps/api/src/application/use-cases/runner/request-runner-ticket.use-case.ts)</sub>
@@ -868,6 +913,7 @@ Each source is marked **product** — what whoever operates the installation set
 - `NEO4J_PASSWORD` <sub>(apps/api/src/infrastructure/graph/neo4j-config.ts)</sub>
 - `NEO4J_URI` <sub>(apps/api/src/infrastructure/graph/neo4j-config.ts)</sub>
 - `NEO4J_USER` <sub>(apps/api/src/infrastructure/graph/neo4j-config.ts)</sub>
+- `NINE_ROUTER_BASE_URL` <sub>(apps/api/src/infrastructure/llm/nine-router-provider.ts)</sub>
 - `NODE_ENV` <sub>(apps/api/src/infrastructure/graph/neo4j-config.ts)</sub>
 - `OLLAMA_HOST` <sub>(apps/api/src/infrastructure/llm/ollama-provider.ts)</sub>
 - `OTEL_DIAG_LOG` <sub>(apps/api/src/tracing.ts)</sub>
@@ -887,7 +933,7 @@ Each source is marked **product** — what whoever operates the installation set
 - `SMTP_USER` <sub>(apps/api/src/infrastructure/mail/smtp-config.ts)</sub>
 - `WEB_ORIGIN` <sub>(apps/api/src/infrastructure/mail/smtp-mail-sender.ts)</sub>
 
-**engine** — 63 variables · product
+**engine** — 63 variáveis · produto
 
 - `ANAMNESE_BUDGET_MICROS` <sub>(apps/engine/config/runtime.exs)</sub>
 - `ANAMNESE_ENABLED` <sub>(apps/engine/config/runtime.exs)</sub>
@@ -953,14 +999,14 @@ Each source is marked **product** — what whoever operates the installation set
 - `TRANSPORT_MAX_BODY_BYTES` <sub>(apps/engine/config/runtime.exs)</sub>
 - `WEB_ORIGIN` <sub>(apps/engine/config/runtime.exs)</sub>
 
-**web** — 4 variables · product
+**web** — 4 variáveis · produto
 
 - `VITE_API_URL` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
 - `VITE_BRABO_VERSION` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
 - `VITE_ENGINE_URL` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
 - `VITE_LOG_LEVEL` <sub>(apps/web/src/lib/runtime-config.ts)</sub>
 
-**broker** — 7 variables · product
+**broker** — 7 variáveis · produto
 
 - `API_URL` <sub>(apps/broker/src/config.ts)</sub>
 - `BRABO_PROJECTS_HOST_BASE` <sub>(apps/broker/src/config.ts)</sub>
@@ -970,7 +1016,7 @@ Each source is marked **product** — what whoever operates the installation set
 - `NODE_ENV` <sub>(apps/broker/src/config.ts)</sub>
 - `PROJECT_WORKSPACES_HOST_ROOT` <sub>(apps/broker/src/config.ts)</sub>
 
-**api/scripts** — 15 variables · tooling
+**api/scripts** — 15 variáveis · ferramenta
 
 - `DATABASE_URL` <sub>(apps/api/scripts/demo-repo-bootstrap.ts)</sub>
 - `DEMO_ANAMNESE_TIMEOUT_MS` <sub>(apps/api/scripts/demo-anamnese.ts)</sub>
@@ -988,14 +1034,14 @@ Each source is marked **product** — what whoever operates the installation set
 - `OLLAMA_HOST` <sub>(apps/api/scripts/demo-psicologo.ts)</sub>
 - `RATE_LIMIT_WINDOW_MS` <sub>(apps/api/scripts/relatorio-seguranca-runtime.ts)</sub>
 
-**e2e** — 4 variables · tooling
+**e2e** — 4 variáveis · ferramenta
 
 - `E2E_API_URL` <sub>(e2e/suporte/api.ts)</sub>
 - `E2E_PASSWORD` <sub>(e2e/suporte/api.ts)</sub>
 - `E2E_USER` <sub>(e2e/suporte/api.ts)</sub>
 - `E2E_WEB_URL` <sub>(e2e/playwright.config.ts)</sub>
 
-**deploy/k8s** — 22 variables · tooling
+**deploy/k8s** — 22 variáveis · ferramenta
 
 - `API_URL` <sub>(deploy/k8s/rollout-test.sh)</sub>
 - `BRABO_CLUSTER_NAME` <sub>(deploy/k8s/bootstrap.sh)</sub>
@@ -1023,8 +1069,8 @@ Each source is marked **product** — what whoever operates the installation set
 
 ---
 
-> **TODO(humano):** there is no schema validation of the variables at boot
-> (something like `zod`/`envalid` in the api or `NimbleOptions` in the
-> engine). Today an invalid numeric value silently becomes `NaN` and a typo
-> in a variable name falls back to the default without warning. The only
-> exceptions are the ones marked 🔒, which fail explicitly in production.
+> **TODO(humano):** não há validação de esquema das variáveis no boot
+> (algo como `zod`/`envalid` na api ou `NimbleOptions` no engine). Hoje um
+> valor numérico inválido vira `NaN` em silêncio e um erro de digitação no
+> nome de uma variável cai no default sem aviso. As únicas exceções são as
+> marcadas com 🔒, que falham explicitamente em produção.

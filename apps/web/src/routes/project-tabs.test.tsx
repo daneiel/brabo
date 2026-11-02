@@ -2,6 +2,12 @@ import { describe, expect, it, vi, beforeEach, afterAll } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import { ProjectPage } from './ProjectPage';
+import { AbasDoProjeto, itensDasAbas } from './AbasDoProjeto';
+import {
+  pedirAba,
+  useAbaPublicada,
+  useContagensDoProjeto,
+} from '../lib/contagens-do-projeto';
 // A instância REAL do app (não uma isolada): `project-tabs.ts` (não-React)
 // resolve `label` chamando `i18n.t(...)` direto no singleton global de
 // `lib/i18n.ts` (mesmo padrão de `ProjectExecutorsTab.test.tsx`), então uma
@@ -123,12 +129,32 @@ const PROJETO: Project = {
   updatedAt: '2026-08-01T10:00:00.000Z',
 };
 
+/**
+ * A lista do projeto como a sidebar a monta (ADR 0211): mesmas contagens
+ * (o hook da moldura), a aba ativa que a moldura publica, e o clique pedido
+ * à moldura. O `Shell` inteiro tem o próprio teste (`Shell.test.tsx`).
+ */
+function AbasDaSidebar() {
+  const publicada = useAbaPublicada();
+  const { contagens } = useContagensDoProjeto('proj-1');
+  return (
+    <AbasDoProjeto
+      projectId="proj-1"
+      nomeDoProjeto="Checkout"
+      itens={itensDasAbas(contagens)}
+      active={publicada?.tab}
+      onChange={(tab) => pedirAba({ projectId: 'proj-1', tab })}
+    />
+  );
+}
+
 function montar(initialTab?: Parameters<typeof ProjectPage>[0]['initialTab']) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   return render(
     <QueryClientProvider client={client}>
+      <AbasDaSidebar />
       <ProjectPage projectId="proj-1" initialTab={initialTab} />
     </QueryClientProvider>,
   );
@@ -174,7 +200,7 @@ describe('abas do projeto derivam de um registro só', () => {
   // que o singleton tinha ANTES de `changeLanguage('pt-BR')`. O rótulo certo
   // só existe depois, dentro do corpo do teste.
   it.each(ABAS_DO_PROJETO.map((aba) => aba.key))(
-    'a aba %s tem botão no trilho E painel que renderiza',
+    'a aba %s tem link na sidebar E painel que renderiza',
     async (key) => {
       const label = abaPorChave(key)!.label;
       montar(key as never);
@@ -203,7 +229,7 @@ describe('abas do projeto derivam de um registro só', () => {
   // deixar os TRÊS grupos abertos ao mesmo tempo. A asserção continua sendo
   // sobre a ORDEM DECLARADA que sai do registro — só que agora achatada, com
   // os cabeçalhos de grupo pontuando a lista sem serem selecionáveis.
-  it('o trilho mostra as 12 abas juntas, na ordem declarada, com os três grupos abertos', async () => {
+  it('a sidebar mostra as 12 abas juntas, na ordem declarada, com os três grupos abertos', async () => {
     montar();
 
     const botoes = await screen.findAllByRole('tab');

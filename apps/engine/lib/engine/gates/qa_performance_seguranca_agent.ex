@@ -20,7 +20,7 @@ defmodule Engine.Gates.QaPerformanceSegurancaAgent do
 
   alias Engine.Gates.Hooks.Termination
   alias Engine.Gates.Tools.EmitPerfSegurancaVerdict
-  alias Engine.Harness.Tools.{ReadFile, SearchWorkspace, RagSearch, RagFeedback}
+  alias Engine.Harness.Tools.{RegistrarPlano, ReadFile, SearchWorkspace, RagSearch, RagFeedback}
   alias Engine.Harness.{Hooks, ToolLoop}
   alias Engine.Harness.Hooks.{ActionPipeline, EventLog}
 
@@ -30,7 +30,14 @@ defmodule Engine.Gates.QaPerformanceSegurancaAgent do
   # RagFeedback anda junto de RagSearch (RN-480): buscar sem poder dizer se o
   # trecho serviu deixa a calibração dos pesos sem sinal de verdade nenhum.
   # `:direct` como a busca — votar não é efeito externo.
-  @registry [ReadFile, SearchWorkspace, RagSearch, RagFeedback, EmitPerfSegurancaVerdict]
+  @registry [
+    ReadFile,
+    SearchWorkspace,
+    RagSearch,
+    RagFeedback,
+    RegistrarPlano,
+    EmitPerfSegurancaVerdict
+  ]
 
   @doc "Registro de ferramentas — sem `Terminal`, de propósito (ver moduledoc)."
   def tools, do: @registry
@@ -82,6 +89,8 @@ defmodule Engine.Gates.QaPerformanceSegurancaAgent do
       agent: "qa-performance-seguranca",
       workspace_root: dev_state.worktree_path,
       tools: @registry,
+      retomada:
+        Engine.Gates.RetomadaDoGate.texto(project_id, session_id, "qa-performance-seguranca"),
       hooks: hooks(),
       # Mesmo pool da Automação — as duas subespecialidades compartilham o
       # orçamento da task (ver RN-036: é assim que "o orçamento migra pra
@@ -179,8 +188,11 @@ defmodule Engine.Gates.QaPerformanceSegurancaAgent do
 
   defp diagnostico_de_parada(ctx) do
     case Map.get(ctx, :last_error) do
-      nil -> {"o modelo parou sem chamar emit_perf_seguranca_verdict", "modelo"}
-      error -> {"falha no turno de LLM: #{inspect(error)}", "infra"}
+      nil ->
+        {"o modelo parou sem chamar emit_perf_seguranca_verdict", "modelo"}
+
+      error ->
+        {"falha no turno de LLM: #{inspect(error)}", Engine.Gates.OrigemDoErro.de_llm(error)}
     end
   end
 end

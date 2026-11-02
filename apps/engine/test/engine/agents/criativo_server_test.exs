@@ -166,6 +166,72 @@ defmodule Engine.Agents.CriativoServerTest do
     assert_received {:handoff_created, _, ^session_id, "criativo", "po", _artifact_id}
   end
 
+  # RN-697 (AT-352): no uso real o turno da prontidão gravou +4 regras e um
+  # formulário que ninguém responderia. Sem catálogo, ele só sintetiza — e
+  # nem a chamada que o modelo devolva (copiada do histórico) é atendida.
+  test "prontidão: o turno vai SEM ferramentas e não grava regra nem pergunta", %{
+    state: state
+  } do
+    Process.put(:fake_events, [
+      %{"id" => "evt-a", "type" => "artifact.business_rule", "payload" => %{}}
+    ])
+
+    Process.put(:fake_llm_turns, [business_rule_turn([1])])
+
+    assert {:reply, :ok, novo} = sync_call(CriativoServer, :confirm_readiness, state)
+
+    assert_received {:llm_turn_stream, "criativo", _msgs, []}
+    refute_received {:event_appended, _, _, %{type: "artifact.business_rule"}}
+    refute_received {:event_appended, _, _, %{type: "chat.structured_question"}}
+    assert_received {:event_appended, _, _, %{type: "artifact.product_brief"}}
+    # O catálogo volta para o próximo turno.
+    assert novo.tool_specs == state.tool_specs
+    assert CriativoServer.ferramentas_da_prontidao() == []
+  end
+
+  test "regressão RN-697: o turno NORMAL continua com emit_artifact e ask_structured_questions",
+       %{state: state} do
+    Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("Oi")])
+
+    assert {:reply, :ok, _} = sync_call(CriativoServer, {:user_message, "oi"}, state)
+
+    assert_received {:llm_turn_stream, "criativo", _msgs, tools}
+    nomes = Enum.map(tools, & &1.name)
+    assert "emit_artifact" in nomes
+    assert "ask_structured_questions" in nomes
+  end
+
+  # RN-698 (AT-354): o texto que o modelo escreve em duas voltas (antes e
+  # depois da ferramenta) vira UMA `agent.response`, e não um fragmento por
+  # volta — o fio mostrava só " histórias e tarefas que cubram tudo.".
+  # AT-395 (decisão do dono de 03/10): o `content` é só o FECHO, e a volta
+  # anterior vai em `passos` — continua UMA `agent.response`.
+  test "texto partido entre voltas vira UMA agent.response: fecho em content, o resto em passos",
+       %{
+         state: state
+       } do
+    primeira = put_in(business_rule_turn([2])["message"]["content"], "Vou registrar as")
+
+    Process.put(:fake_llm_turns, [
+      primeira,
+      FakeEngineApiClient.final_response(" regras que cubram tudo.")
+    ])
+
+    assert {:reply, :ok, _} = sync_call(CriativoServer, {:user_message, "x"}, state)
+
+    assert_received {:event_appended, _, _,
+     %{
+       type: "agent.response",
+       payload: %{
+         # RN-731: o fato do que foi gravado vem ao lado do fecho (sem idioma: en).
+         content: "regras que cubram tudo.\n\nRecorded this turn: 1 business rule.",
+         passos: ["Vou registrar as"]
+       }
+     }}
+
+    refute_received {:event_appended, _, _, %{type: "agent.response"}}
+  end
+
   # RN-116: `{:ok, _handoff} = ...` era um match rígido — a api recusando o
   # handoff (aqui: 500 simulado) derrubava o GenServer inteiro com
   # `MatchError`, DEPOIS do turno já ter rodado e do product_brief já ter sido
@@ -336,6 +402,23 @@ defmodule Engine.Agents.CriativoServerTest do
 
     assert payload.origem == "politica"
     assert payload.mensagem =~ "credencial"
+  end
+
+  # RN-949: a api devolve frame final com content vazio e este errorCode.
+  test "tool_call_as_text vira agent.error origem modelo, sem agent.response", %{
+    state: state,
+    session_id: session_id
+  } do
+    Process.put(:fake_llm_turns, [
+      %{"error" => "chamada em XML (modelo x)", "errorCode" => "tool_call_as_text"}
+    ])
+
+    assert {:reply, :ok, _} = sync_call(CriativoServer, {:user_message, "oi"}, state)
+
+    assert_received {:event_appended, _, ^session_id, %{type: "agent.error", payload: payload}}
+    assert payload.origem == "modelo"
+    assert payload.mensagem =~ "como texto"
+    refute_received {:event_appended, _, ^session_id, %{type: "agent.response"}}
   end
 
   # O payload recusado pelo schema sumia: o resultado da ferramenta era
@@ -572,10 +655,12 @@ defmodule Engine.Agents.CriativoServerTest do
                          origem: "modelo",
                          reason: "limite_de_iteracoes",
                          max_iterations: 12,
+                         gravado: gravado,
                          mensagem: mensagem
                        }
                      }}
 
+    assert gravado =~ ~r/refused|recusada/
     assert mensagem =~ "limite de 12 idas ao modelo"
 
     assert_received %Phoenix.Socket.Broadcast{event: "agent.error"}
@@ -631,6 +716,42 @@ defmodule Engine.Agents.CriativoServerTest do
 
     assert_received {:llm_turn_stream, "criativo", _, _}
     refute_received {:llm_turn_stream, "criativo", _, _}
+  end
+
+  # AT-384: o turno que fecha entregando o formulário grava o texto com o
+  # modelo da chamada que o escreveu — antes saía `modelName: nil`.
+  test "turno que termina em formulário grava agent.response com modelName", %{
+    state: state,
+    session_id: session_id
+  } do
+    Process.put(:fake_llm_turns, [
+      Map.put(structured_question_turn(), "modelName", "anthropic/claude-haiku-4.5")
+    ])
+
+    assert {:reply, :ok, _} =
+             sync_call(CriativoServer, {:user_message, "quero um app"}, state)
+
+    assert_received {:event_appended, _, ^session_id,
+                     %{
+                       type: "agent.response",
+                       payload: %{
+                         content: "Preciso entender melhor o produto.",
+                         modelName: "anthropic/claude-haiku-4.5"
+                       }
+                     }}
+  end
+
+  test "formulário sem modelName no frame: não inventa modelo", %{
+    state: state,
+    session_id: session_id
+  } do
+    Process.put(:fake_llm_turns, [structured_question_turn()])
+
+    assert {:reply, :ok, _} =
+             sync_call(CriativoServer, {:user_message, "quero um app"}, state)
+
+    assert_received {:event_appended, _, ^session_id,
+                     %{type: "agent.response", payload: %{modelName: nil}}}
   end
 
   test "rehydration: reconstrói o histórico do event log no init", %{} do

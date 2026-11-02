@@ -1,6 +1,6 @@
 import { AGENTS } from '../../lib/agents';
 import { ModelIcon } from './icons';
-import styles from './ChatBubble.module.css';
+import { AvatarAgente } from '@/components/shadcn/avatar';
 
 /**
  * O avatar do agente — a caixa colorida que representa "quem está falando",
@@ -22,8 +22,8 @@ import styles from './ChatBubble.module.css';
 export function AvatarDoAgente({ id }: { id: string | undefined }) {
   const Icon = (id ? AGENTS[id as keyof typeof AGENTS]?.icon : undefined) ?? ModelIcon;
   return (
-    <span className={styles.avatar}>
+    <AvatarAgente data-agente={id}>
       <Icon size={15} />
-    </span>
+    </AvatarAgente>
   );
 }

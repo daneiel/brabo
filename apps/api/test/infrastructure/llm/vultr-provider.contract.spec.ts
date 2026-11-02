@@ -104,6 +104,9 @@ describe('VultrProvider — quirks (Fase 11b)', () => {
       // (ADR 0075) — a base sabe falar o dialeto, o provider nao declara.
       embeddings: false,
       routingPreference: false,
+      stickySession: false,
+      priceCeiling: false,
+      promptCaching: false,
     });
     expect(VULTR_BASE_URL).toBe('https://api.vultrinference.com/v1');
   });

@@ -198,6 +198,7 @@ function payloadField(payload: unknown, key: string): string | undefined {
 const PASSO_DO_BOOTSTRAP: Record<string, string> = {
   commit_pr_template: 'template de PR',
   commit_branching_policy: 'política de branches',
+  commit_gitignore: '.gitignore base',
   create_dev_branch: 'branch dev',
   create_qa_branch: 'branch qa',
   create_rc_branch: 'branch rc',
@@ -321,6 +322,17 @@ export function classifyEvent(event: SessionEvent): ActivityDisplay {
   // aqui, antes do genérico de `dev.`, porque naquele ele virava "atividade
   // em dev-api" em cinza neutro: indistinguível de ruído no sino de
   // notificações, enquanto UMA task bloqueada aparecia em vermelho.
+  // RN-726: o provedor recusou por falta de crédito — não é a parada
+  // automática, e o texto diz como retomar.
+  if (type === 'dev.credit_exhausted') {
+    return {
+      kind: 'commit',
+      icon: CommitIcon,
+      color: 'var(--danger)',
+      bad: true,
+      text: `${actorLabel} PAUSOU — crédito do provedor do modelo esgotado. Recarregue e rearme no painel do time para retomar.`,
+    };
+  }
   if (type === 'dev.idle_tripped') {
     const n = payloadField(payload, 'consecutiveBlocked');
     return {

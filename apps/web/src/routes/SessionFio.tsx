@@ -1,10 +1,18 @@
-import type { CSSProperties, Dispatch, SetStateAction } from 'react';
+import { useEffect, type CSSProperties, type Dispatch, type SetStateAction } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { AGENTS } from '../lib/agents';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Disclosure } from '../components/ui/Disclosure';
-import { ModelIcon, UserIcon } from '../components/ui/icons';
+import { MensagemDeConversa } from '../components/ai-elements/message';
+import { Sugestoes } from '../components/ai-elements/suggestion';
+import { Shimmer } from '../components/ui/Shimmer';
+import { UserIcon } from '../components/ui/icons';
+import { AvatarDoAgente } from '../components/ui/AvatarDoAgente';
+import {
+  limparMensagemNaoEnviada,
+  useMensagemNaoEnviada,
+} from '../lib/mensagem-nao-enviada';
 import { useTextoDoStreaming, type StoreDoStreaming } from '../lib/streaming-do-turno';
 import { FIO_RECENTES_ABERTAS, type dividirFio } from './session-fio';
 import styles from './SessionPage.module.css';
@@ -61,6 +69,13 @@ export function SessionFio({
   agenteExibido,
 }: SessionFioProps) {
   const { t } = useTranslation('sessionPage');
+  // RN-831: a mensagem cujo envio falhou fica no fio até a próxima tentativa —
+  // um envio novo (ou o reenvio) acende a otimista e a substitui.
+  const naoEnviada = useMensagemNaoEnviada();
+  useEffect(() => {
+    if (optimisticUser !== null) limparMensagemNaoEnviada();
+  }, [optimisticUser]);
+  useEffect(() => limparMensagemNaoEnviada, []);
   return (
     <>
       {/* O Criativo é ativado e NÃO fala primeiro: ele espera a sua
@@ -98,15 +113,10 @@ export function SessionFio({
             <p className={styles.conviteTexto}>
               {t('convite.criativa.exemploIntro')}
             </p>
-            <button
-              type="button"
-              className={styles.conviteExemplo}
-              onClick={() =>
-                setDraft(t('convite.criativa.exemplo'))
-              }
-            >
-              “{t('convite.criativa.exemplo')}”
-            </button>
+            <Sugestoes
+              sugestoes={[t('convite.criativa.exemplo')]}
+              onEscolher={setDraft}
+            />
             <p className={styles.conviteRodape}>
               <Trans
                 i18nKey="convite.criativa.rodape"
@@ -175,20 +185,50 @@ export function SessionFio({
       ))}
 
       {optimisticUser && (
-        <div
-          className={styles.message}
+        <MensagemDeConversa
+          align="end"
           style={{ ['--msg-color' as string]: 'var(--accent)' } as CSSProperties}
+          avatar={
+            <span className={[styles.avatar, styles.user].join(' ')}>
+              <UserIcon size={15} />
+            </span>
+          }
+          autor={<span className={styles.messageName}>{user.name ?? t('compartilhado.voce')}</span>}
         >
-          <span className={[styles.avatar, styles.user].join(' ')}>
-            <UserIcon size={15} />
-          </span>
-          <div className={styles.messageBody}>
-            <div className={styles.messageHeader}>
-              <span className={styles.messageName}>{user.name ?? t('compartilhado.voce')}</span>
+          {optimisticUser}
+        </MensagemDeConversa>
+      )}
+
+      {naoEnviada && !optimisticUser && (
+        <MensagemDeConversa
+          align="end"
+          style={{ ['--msg-color' as string]: 'var(--accent)' } as CSSProperties}
+          data-testid="mensagem-nao-enviada"
+          avatar={
+            <span className={[styles.avatar, styles.user].join(' ')}>
+              <UserIcon size={15} />
+            </span>
+          }
+          autor={<span className={styles.messageName}>{user.name ?? t('compartilhado.voce')}</span>}
+          rodape={
+            <div className={styles.messageNaoEnviada}>
+              <span>{t('mensagens.naoEnviada')}</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  const { reenviar } = naoEnviada;
+                  limparMensagemNaoEnviada();
+                  reenviar();
+                }}
+              >
+                {t('mensagens.tentarDeNovo')}
+              </Button>
             </div>
-            <div className={styles.bubble}>{optimisticUser}</div>
-          </div>
-        </div>
+          }
+        >
+          {naoEnviada.texto}
+        </MensagemDeConversa>
       )}
 
       {/* `statusAgent` cobre o intervalo entre o `agent.status`
@@ -247,51 +287,22 @@ function BolhaDoStreaming({
   const streamingText = useTextoDoStreaming(store);
   if (!(streamingText || (pensandoVisivel && (streaming || statusAgent)))) return null;
   return (
-    <div
-      className={styles.message}
-      style={
-        {
-          ['--msg-color' as string]:
-            agenteExibido?.color ?? 'var(--accent)',
-        } as CSSProperties
+    <MensagemDeConversa
+      style={{ ['--msg-color' as string]: agenteExibido?.color ?? 'var(--accent)' } as CSSProperties}
+      /* RN-829: o MESMO avatar da bolha persistida. */
+      avatar={<AvatarDoAgente id={agenteExibido?.key} />}
+      /* Quem fala é o AGENTE (achado C), nunca o nome do modelo. RN-156:
+         "Reunindo informações..." só antes de haver texto — o silêncio é
+         trabalho em curso, não ausência de resposta (achado B). */
+      autor={
+        <span className={styles.messageName}>
+          {streamingText
+            ? (agenteExibido?.name ?? t('compartilhado.agenteGenerico'))
+            : <Shimmer>{t('mensagens.reunindoInformacoes')}</Shimmer>}
+        </span>
       }
     >
-      <span className={styles.avatar}>
-        {agenteExibido ? <agenteExibido.icon size={15} /> : <ModelIcon size={15} />}
-      </span>
-      <div className={styles.messageBody}>
-        <div className={styles.messageHeader}>
-          {/*
-            Quem fala é o AGENTE (achado C). O modelo é detalhe de
-            execução e aparecia aqui como se fosse o interlocutor —
-            depois trocava para o agente quando o evento persistido
-            chegava, o que também mudava o nome na cara do usuário.
-            Sem o agente no delta, degrada para "agente" genérico,
-            nunca para o nome do modelo.
-
-            RN-156: "Reunindo informações..." só antes de haver
-            texto — é o que deixa explícito que o silêncio é
-            trabalho em curso, não ausência de resposta (achado
-            B). Frase fixa, sem o nome do agente interpolado: o
-            nome já aparece no cabeçalho assim que o streaming
-            real começa, e repeti-lo aqui não ajudava a leitura.
-          */}
-          <span className={styles.messageName}>
-            {streamingText
-              ? (agenteExibido?.name ?? t('compartilhado.agenteGenerico'))
-              : t('mensagens.reunindoInformacoes')}
-          </span>
-        </div>
-        {streamingText ? (
-          <div className={styles.bubble}>{streamingText}</div>
-        ) : (
-          <div className={styles.typing}>
-            <span className={styles.typingDot} />
-            <span className={styles.typingDot} />
-            <span className={styles.typingDot} />
-          </div>
-        )}
-      </div>
-    </div>
+      {streamingText}
+    </MensagemDeConversa>
   );
 }

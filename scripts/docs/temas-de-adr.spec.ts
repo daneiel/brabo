@@ -34,13 +34,14 @@ const L2 = '| [0002](0002-b.md) | two |';
 const L3 = '| [0003](0003-c.md) | three |';
 
 function indice(corpo: string[] = [...SECAO_GIT, L1, L3, '', ...SECAO_WEB, L2, '']): string {
-  return ['---', 'id: adr-index', '---', '# Architectural decisions', '', 'Intro.', '', ...corpo, '## The convention', '', '- the next one is **0004**.', ''].join('\n');
+  return ['---', 'id: adr-index', '---', '# Decisões arquiteturais', '', 'Intro.', '', ...corpo, '## A convenção', '', '- o próximo é **0004**.', ''].join('\n');
 }
 
-function conferir(over: { temasYml?: string; arquivosAdr?: string[]; indice?: string } = {}) {
+function conferir(over: { temasYml?: string; arquivosAdr?: string[]; indice?: string; titulosAdr?: Record<string, string> } = {}) {
   return conferirTemas({
     temasYml: over.temasYml ?? TEMAS_CERTOS,
     arquivosAdr: over.arquivosAdr ?? ARQUIVOS,
+    titulosAdr: over.titulosAdr ?? { '0001-a.md': '# ADR 0001 — Um' },
     indice: over.indice ?? indice(),
   });
 }
@@ -53,6 +54,13 @@ describe('conferirTemas — a forma certa', () => {
     expect(r.cego).toBeNull();
     expect(r.problemas).toEqual([]);
     expect(r).toMatchObject({ adrs: 3, temas: 2 });
+  });
+});
+
+describe('conferirTemas — o título (ADR 0218)', () => {
+  it('reprova H1 sem o prefixo ADR, e o com número de outro arquivo (TITULO)', () => {
+    expect(regras(conferir({ titulosAdr: { '0001-a.md': '# 0001 — Um' } }))).toEqual(['TITULO']);
+    expect(regras(conferir({ titulosAdr: { '0001-a.md': '# ADR 0002 — Um' } }))).toEqual(['TITULO']);
   });
 });
 

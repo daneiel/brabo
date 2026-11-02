@@ -15,10 +15,17 @@ defmodule Engine.Anamnese.Tools do
     EmitProficiency,
     ProposeInstructionPatch,
     ProposeMaxParallel,
+    ReportAgentDeviation,
     SkipProficiency
   }
 
-  @registry [EmitProficiency, ProposeInstructionPatch, ProposeMaxParallel, SkipProficiency]
+  @registry [
+    EmitProficiency,
+    ProposeInstructionPatch,
+    ProposeMaxParallel,
+    ReportAgentDeviation,
+    SkipProficiency
+  ]
 
   def registry, do: @registry
 

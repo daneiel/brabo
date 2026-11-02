@@ -11,6 +11,9 @@
     // `locales/*/common.json` como módulo, para o `tsc` tipar as chaves.
     "resolveJsonModule": true,
 
+    /* Alias `@/` do shadcn (AT-645); o código existente não foi reescrito. */
+    "paths": { "@/*": ["./src/*"] },
+
     /* Bundler mode */
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,

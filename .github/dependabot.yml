@@ -102,8 +102,8 @@ updates:
   #    `docker` também lê YAML com `image:` (é como ele cobre Kubernetes), e
   #    leria os composes, abrindo um segundo PR para a mesma imagem.
   #
-  #    O grupo é o que impede o vermelho ENTRE pastas: `node:24-alpine` mora em
-  #    três Dockerfiles de dev e `node:24.21.0-alpine3.23` em três de produção,
+  #    O grupo é o que impede o vermelho ENTRE pastas: `node:26-alpine` mora em
+  #    três Dockerfiles de dev e `node:26.10.0-alpine3.24` em três de produção,
   #    cada um numa pasta — sem grupo seriam três PRs, cada um com a mesma tag e
   #    um digest diferente dos outros dois.
   #

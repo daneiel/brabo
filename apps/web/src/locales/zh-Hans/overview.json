@@ -1,0 +1,146 @@
+{
+  "architectureTab": {
+    "title": "架构",
+    "emptyState": "尚无架构 —— Arquiteto 会生成 module_map 和 ADR。",
+    "modulesLabel": "模块",
+    "modulesLabelVersioned": "模块 · v{{version}}",
+    "noModules": "尚无模块。",
+    "c4Label": "C4 图",
+    "c4LabelVersioned": "C4 图 · v{{version}}",
+    "c4Empty": "尚无图 —— Arquiteto 会根据 module_map 生成 Context + Container（create_c4_diagram）。",
+    "adrsLabel": "ADR",
+    "noAdrs": "尚无提议的 ADR。",
+    "pendenciesLabel": "交叉验证待办",
+    "reasonNoModule": "未关联模块",
+    "reasonMissingModule": "模块不存在：{{missing}}"
+  },
+  "c4": {
+    "titleContext": "上下文",
+    "titleContainer": "容器",
+    "expandLabel": "放大图 {{titulo}}",
+    "expandTitle": "放大",
+    "renderErrorTitle": "无法绘制此图。",
+    "viewRawSyntax": "查看 Mermaid 语法",
+    "emptyDiagram": "图为空。",
+    "invalidSyntax": "Mermaid 语法无效。"
+  },
+  "team": {
+    "title": "智能体团队",
+    "summary_other": "{{count}} 个智能体 · {{working}} 个工作中 · {{waiting}} 个等待中",
+    "autonomyErrorTitle": "无法更改自主模式",
+    "rearmSuccess": "智能体已重新启用",
+    "rearmErrorTitle": "无法重新启用智能体"
+  },
+  "timeline": {
+    "title": "团队时间线",
+    "lendoExecucao": "正在读取执行会话，而非最近的会话。",
+    "description": "每个智能体一个分支，从第一个里程碑到它当前正在做的事。处于活动状态或位于最近 5 个之列的会自动展开 —— 其余的点击即可查看，标题中显示新里程碑的数量。"
+  },
+  "ambiente": {
+    "title": "环境",
+    "carregando": "正在检查…",
+    "codigo": "代码",
+    "modos": {
+      "container": "托管容器",
+      "mounted": "挂载文件夹",
+      "runner": "你机器上的文件夹"
+    },
+    "runner": "runner",
+    "runnerConfirmado": "文件夹已于 {{data}} 确认",
+    "runnerNuncaConfirmado": "文件夹尚未确认",
+    "runnerRessalva": "这是确认的记录，并不表示 runner 此刻正在运行 —— 了解当前状态的是“代码”标签页中的终端。",
+    "runnerRessalvaNunca": "尚无 runner 连接到此项目。请在“代码”标签页中安装并运行 `brabo-runner`。",
+    "espelho": "镜像",
+    "espelhoNunca": "从未同步",
+    "espelhoValor_other": "于 {{data}} 复制了 {{count}} 个文件",
+    "espelhoSemNovidade": "于 {{data}} 同步 —— 无需复制",
+    "espelhoFalhou": "上一轮失败",
+    "espelhoFalhouComUltima": "上一轮失败 —— 最后一次成功复制于 {{data}}",
+    "espelhoRessalva": "这是上一轮的记录，并不保证文件夹与之后的变更同步：镜像在指定时刻（一次提交）运行，而非持续运行。它只复制 —— 从不删除你这边的任何内容。",
+    "espelhoRessalvaNunca": "此项目尚未报告任何一轮。镜像在本地智能体已连接且产生提交时运行。",
+    "espelhoRessalvaErro": "本地智能体报告：{{erro}}",
+    "espelhoDestinoTrocado": "此轮之后目标已更改：它写入了 {{destino}}。请重新连接 brabo-runner 以使新目标生效。",
+    "modelosLocais": "本地模型",
+    "modelosLocaisNenhum": "工作区中没有启用的 Ollama 对话模型",
+    "modelosLocaisValor_other": "{{count}} 个 Ollama 对话模型，已在工作区启用",
+    "modelosLocaisEmbedding_other": "{{count}} 个 embedding 模型（仅用于搜索，不能对话）"
+  },
+  "activity": {
+    "title": "活动",
+    "count_other": "{{count}} 个事件",
+    "loadErrorTitle": "无法加载活动。",
+    "emptyNoSession": "尚无活动：活动从项目的第一个会话开始。"
+  },
+  "executionSection": {
+    "title": "执行",
+    "activationErrorTitle": "无法得知执行是否已启动。",
+    "introReady": "启动执行，让 dev agent 并行实现待办事项。",
+    "introNeedsModuleMap": "目前还没有可启动的内容：Arquiteto 需要先定义项目的模块。",
+    "introNeedsRepository": "项目还没有仓库，没有仓库 dev agent 就无处工作。仓库在你接受给 Arquiteto 的 handoff 时创建 —— 如果那个已被接受，则在接受给 Dev Lead 的 handoff 时创建。",
+    "provisionNow": "立即创建仓库",
+    "activate": "启动执行",
+    "devAgentsLabel": "Dev agents",
+    "spinningUp": "正在启动智能体…",
+    "devAgentModule": "模块：{{module}}",
+    "devAgentTask": "任务：{{task}}",
+    "devAgentProgress": "第 {{iteration}} 次迭代 · 成本 {{cost}}",
+    "blockedTasksLabel": "被阻塞的任务",
+    "noDiagnosis": "无诊断",
+    "unblock": "解除阻塞",
+    "suggestionBefore": "存在相互独立的任务于 ",
+    "suggestionAfter": " —— 要再启动一个 dev 吗？",
+    "accept": "接受",
+    "pullRequestsLabel": "Pull requests",
+    "noPullRequests": "尚无已打开的 PR。",
+    "pullRequestFallback": "PR",
+    "errorTitle": "错误",
+    "activateError": "无法启动执行",
+    "unblockError": "无法解除任务阻塞",
+    "unblockedTitle": "任务已解除阻塞",
+    "unblockedWithoutExecution": "当前没有执行在运行：只有在本节重新启动执行后，任务才会运行。",
+    "authorizationNeededTitle": "需要你的授权",
+    "authorizationNeededMessage_other": "会话已有 {{count}} 个智能体，lead 的上限为 {{max}}。请求已放入“审批”。",
+    "requestDeniedTitle": "请求被拒绝",
+    "requestError": "无法发起请求",
+    "unblocking": "正在解除阻塞…",
+    "unblockNeedsSession": "会话仍在加载：解除阻塞依赖于它。"
+  },
+  "architectureSummary": {
+    "title": "架构",
+    "emptyState": "尚无架构 —— Arquiteto 会生成 module_map 和 ADR。",
+    "summary_other": "已映射 {{count}} 个模块，C4 图{{status}}。",
+    "statusGenerated": "已生成",
+    "statusPending": "待生成",
+    "link": "查看完整架构 →"
+  },
+  "primeirosPassos": {
+    "title": "入门步骤",
+    "progresso": "已完成 {{feitos}} / {{total}}",
+    "feito": "已完成",
+    "credencial": {
+      "titulo": "添加模型提供商密钥",
+      "pendente": "没有密钥，智能体就无法对话。",
+      "link": "添加密钥 →"
+    },
+    "modelo": {
+      "titulo": "启用一个模型并应用到团队",
+      "pendente": "还没有智能体配置模型：请在 Providers 中启用一个，再在此处选择。",
+      "link": "选择模型 →"
+    },
+    "ideacao": {
+      "titulo": "开始第一次构思",
+      "pendente": "把想法告诉 Criativo —— 用户故事就从这里产生。",
+      "link": "打开 Criativo →"
+    }
+  },
+  "rodarNaSuaMaquina": {
+    "title": "在你的机器上运行",
+    "envExample": "先复制示例环境文件：cp .env.example .env",
+    "copiar": "复制",
+    "copiado": "已复制",
+    "urlRecusada": "（地址不在你的机器上，不生成链接）",
+    "notaAntes": "由 Infra 在",
+    "pr": "PR",
+    "notaDepois": "中声明，未在你的机器上验证。"
+  }
+}

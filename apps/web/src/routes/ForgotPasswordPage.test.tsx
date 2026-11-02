@@ -100,17 +100,13 @@ describe('ForgotPasswordPage', () => {
     expect(screen.queryByRole('status')).toBeNull();
   });
 
-  it('explica o caso do migrado sem afirmar nada sobre a conta', () => {
-    // Texto FIXO, presente sempre — não deriva de resposta nenhuma do servidor,
-    // e é por isso que pode existir sem vazar.
+  it('não mostra mais o aviso de migração (AT-374)', () => {
     montar();
 
-    expect(
-      screen.getByText(/a senha antiga não foi migrada/i),
-    ).toBeInTheDocument();
+    expect(screen.queryByText(/migrad|senha antiga/i)).not.toBeInTheDocument();
   });
 
-  it('o aviso de migração não entra na live region do erro', async () => {
+  it('o alerta de erro não fala em migração', async () => {
     // Se entrasse, o anúncio de uma falha de rede passaria a incluir "senha
     // antiga não foi migrada" — insinuação sobre a conta dentro de um alerta.
     montar(vi.fn().mockRejectedValue(new Error('offline')));

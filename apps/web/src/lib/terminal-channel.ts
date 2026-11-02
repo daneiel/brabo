@@ -1,4 +1,5 @@
-import { Socket } from 'phoenix';
+import type { Socket } from 'phoenix';
+import { criarSocket, type SocketDescartavel } from './socket-phoenix';
 import { logger } from './logger';
 import { getTerminalTicket } from './api-client';
 
@@ -90,6 +91,8 @@ export function connectTerminalChannel(
   const sessionRef = crypto.randomUUID();
 
   let socket: Socket | null = null;
+  // AT-500 (RN-833): o descarte remove também os ouvintes de `window`.
+  let descartavel: SocketDescartavel | null = null;
   let channel: ReturnType<Socket['channel']> | null = null;
   let fechado = false;
   let ptyAberto = false;
@@ -148,7 +151,7 @@ export function connectTerminalChannel(
     // fechado, nunca com uma mensagem legível). `apps/runner/src/channel.ts`
     // já fazia certo: passa `engineWsUrl` direto pro `Socket`, sem tocar.
     const wsUrl = engineWsUrl.replace(/^http/, 'ws');
-    socket = new Socket(wsUrl, {
+    descartavel = criarSocket(wsUrl, {
       params: { ticket },
       // Reconexão automática do phoenix.js DESLIGADA — ver o docblock do
       // módulo. Sem isto, o transporte que nunca abre gira sozinho pra
@@ -156,6 +159,7 @@ export function connectTerminalChannel(
       // de decidir nada.
       reconnectAfterMs: () => NUNCA_RECONECTAR_SOZINHO_MS,
     });
+    socket = descartavel.socket;
 
     socket.onError((erro: unknown) => {
       logger.warn('socket do terminal com erro', { projectId, erro: String(erro) });
@@ -184,7 +188,7 @@ export function connectTerminalChannel(
       handlers.onErro(
         'Não consegui conectar ao engine — verifique a rede e tente de novo.',
       );
-      socket?.disconnect();
+      descartavel?.descartar();
     }, TIMEOUT_CONEXAO_MS);
 
     const canal = socket.channel(`terminal:${projectId}`, {});
@@ -221,7 +225,7 @@ export function connectTerminalChannel(
 
     if (fechado) {
       canal.leave();
-      socket.disconnect();
+      descartavel?.descartar();
       return;
     }
 
@@ -252,7 +256,7 @@ export function connectTerminalChannel(
       filaAntesDoCanal = [];
       channel?.push('pty_close', { sessionRef });
       channel?.leave();
-      socket?.disconnect();
+      descartavel?.descartar();
     },
   };
 }

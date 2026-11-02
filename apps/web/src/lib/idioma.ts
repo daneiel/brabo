@@ -34,13 +34,55 @@ export type Idioma = UserLocale;
 /** A chave do `localStorage`. Só cache — ver o docblock acima. */
 export const CHAVE_IDIOMA = 'brabo.locale';
 
-/** O default do APP para quem ainda não tem preferência nenhuma (Onda 6). */
-export const IDIOMA_PADRAO: Idioma = 'en';
+/**
+ * O default do APP para quem ainda não tem preferência nenhuma — `pt-BR`
+ * desde o ADR 0216 (RN-891), que reverteu o `en` da Onda 6. É também o
+ * `fallbackLng` de `i18n.ts`: idioma sem catálogo cai aqui, nunca no inglês.
+ */
+export const IDIOMA_PADRAO: Idioma = 'pt-BR';
 
-export const IDIOMAS: readonly Idioma[] = ['pt-BR', 'en'];
+/** Os quatro idiomas da interface (ADR 0216 item 2), na ordem do seletor. */
+export const IDIOMAS: readonly Idioma[] = ['pt-BR', 'en', 'ru', 'zh-Hans'];
 
-function ehIdioma(valor: unknown): valor is Idioma {
-  return valor === 'pt-BR' || valor === 'en';
+/** O nome de cada idioma NELE MESMO — rótulo do seletor, nunca traduzido. */
+export const ROTULO_NATIVO: Record<Idioma, string> = {
+  'pt-BR': 'Português (Brasil)',
+  en: 'English',
+  ru: 'Русский',
+  'zh-Hans': '简体中文',
+};
+
+export function ehIdioma(valor: unknown): valor is Idioma {
+  return typeof valor === 'string' && (IDIOMAS as readonly string[]).includes(valor);
+}
+
+/**
+ * Resolve uma tag BCP-47 do navegador para um dos quatro idiomas (ADR 0216
+ * item 3): `pt*` → pt-BR; `zh`, `zh-CN`, `zh-SG` e `zh-Hans*` → zh-Hans;
+ * `ru*` → ru; `en*` → en; qualquer outra (inclusive `zh-TW`/`zh-Hant`) →
+ * pt-BR, o padrão (item 4).
+ */
+export function resolverIdiomaDoNavegador(tag: string): Idioma {
+  const t = tag.trim().toLowerCase();
+  const primario = t.split('-')[0];
+  if (primario === 'pt') return 'pt-BR';
+  if (primario === 'ru') return 'ru';
+  if (primario === 'en') return 'en';
+  if (
+    t === 'zh' ||
+    t === 'zh-cn' ||
+    t === 'zh-sg' ||
+    t === 'zh-hans' ||
+    t.startsWith('zh-hans-')
+  ) {
+    return 'zh-Hans';
+  }
+  return IDIOMA_PADRAO;
+}
+
+/** Acompanha o idioma ativo no `<html lang>` (ADR 0216 item 2). */
+export function aplicarLangNoDocumento(idioma: string): void {
+  if (typeof document !== 'undefined') document.documentElement.lang = idioma;
 }
 
 /** A preferência em CACHE, ou `null` se não houver nenhuma ainda. */
@@ -68,7 +110,7 @@ function gravarIdiomaCache(idioma: Idioma): void {
  */
 export function idiomaSugeridoPeloNavegador(): Idioma {
   const lang = typeof navigator !== 'undefined' ? navigator.language : '';
-  return lang.toLowerCase().startsWith('pt') ? 'pt-BR' : 'en';
+  return resolverIdiomaDoNavegador(lang ?? '');
 }
 
 /**

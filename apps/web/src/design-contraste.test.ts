@@ -86,6 +86,12 @@ describe.each([
     expect(contraste(tema.textSecondary, tema.surface1)).toBeGreaterThanOrEqual(AA_TEXTO);
   });
 
+  it('Shimmer (ADR 0210): a cor-base --text-secondary, o pior ponto do brilho, sobre --surface-0/1/2', () => {
+    for (const fundo of [tema.surface0, tema.surface1, tema.surface2]) {
+      expect(contraste(tema.textSecondary, fundo)).toBeGreaterThanOrEqual(AA_TEXTO);
+    }
+  });
+
   it('TokenMeter compact: gasto/saldo (--text-secondary, mono 11px) sobre --surface-0', () => {
     // Item 2 da fidelidade do dashboard: rodapé novo do compact. --text-muted
     // reprovaria aqui (mesma razão documentada em Input.module.css pro

@@ -1,0 +1,49 @@
+{
+  "carousel": {
+    "roleDescription": "карусель",
+    "counter": "{{current}} из {{total}}",
+    "previousLabel": "Предыдущая история",
+    "nextLabel": "Следующая история",
+    "dotsGroupLabel": "Перейти к истории",
+    "slideLabel": "Слайд {{index}}",
+    "slideLabelNamed": "Слайд {{index}}: {{label}}",
+    "dotLabel": "История {{index}}",
+    "dotLabelNamed": "История {{index}}: {{label}}"
+  },
+  "input": {
+    "showPassword": "Показать пароль",
+    "hidePassword": "Скрыть пароль"
+  },
+  "modal": {
+    "closeLabel": "Закрыть"
+  },
+  "markdownMessage": {
+    "codeFence": {
+      "defaultLanguage": "текст",
+      "mostrarLinhas_one": "Показать {{count}} строку",
+      "mostrarLinhas_few": "Показать {{count}} строки",
+      "mostrarLinhas_many": "Показать все {{count}} строк",
+      "mostrarLinhas_other": "Показать все {{count}} строки",
+      "recolher": "Свернуть"
+    },
+    "table": {
+      "emptyMessage": "Таблица без строк."
+    }
+  },
+  "table": {
+    "emptyMessage": "Здесь пока ничего нет."
+  },
+  "toast": {
+    "closeLabel": "Закрыть уведомление"
+  },
+  "erroDeCarregamento": {
+    "defaultMessage": "Не удалось связаться с api.",
+    "trace": "trace {{traceId}}",
+    "retry": "Попробовать снова"
+  },
+  "codeBlock": {
+    "copiar": "Копировать",
+    "copiado": "Скопировано",
+    "falhaAoCopiar": "Не удалось скопировать"
+  }
+}

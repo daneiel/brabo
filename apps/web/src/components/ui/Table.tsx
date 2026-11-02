@@ -1,7 +1,18 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLayoutMovel } from '../../lib/layout-movel';
-import styles from './Table.module.css';
+import {
+  Grade,
+  GradeCabecalho,
+  GradeCampo,
+  GradeCartao,
+  GradeCelula,
+  GradeCorpo,
+  GradeLinha,
+  GradeRotulo,
+  GradeValor,
+  GradeVazia,
+} from '@/components/shadcn/table';
 
 export interface TableColumn<T> {
   key: string;
@@ -37,55 +48,47 @@ export function Table<T>({ columns, rows, rowKey, emptyMessage }: TableProps<T>)
   // largura inteira do cartão, com o rótulo em cima.
   if (movel) {
     return (
-      <div className={[styles.table, styles.pilha].join(' ')} data-layout="pilha">
-        {rows.length === 0 && <div className={styles.empty}>{mensagemVazia}</div>}
+      <Grade data-layout="pilha">
+        {rows.length === 0 && <GradeVazia>{mensagemVazia}</GradeVazia>}
         {rows.map((row) => (
-          <div key={rowKey(row)} className={styles.cartao} data-testid="linha-da-tabela">
+          <GradeCartao key={rowKey(row)} data-testid="linha-da-tabela">
             {columns.map((column) => (
-              <div
+              <GradeCampo
                 key={column.key}
                 data-campo={column.key}
-                data-largo={!column.label || column.largaNoMovel ? '' : undefined}
-                className={[
-                  styles.campo,
-                  (!column.label || column.largaNoMovel) && styles.campoLargo,
-                ]
-                  .filter(Boolean)
-                  .join(' ')}
+                largo={!column.label || column.largaNoMovel}
               >
-                {column.label && <span className={styles.campoRotulo}>{column.label}</span>}
-                <div className={styles.campoValor}>{column.render(row)}</div>
-              </div>
+                {column.label && <GradeRotulo>{column.label}</GradeRotulo>}
+                <GradeValor>{column.render(row)}</GradeValor>
+              </GradeCampo>
             ))}
-          </div>
+          </GradeCartao>
         ))}
-      </div>
+      </Grade>
     );
   }
 
   return (
-    <div className={styles.table}>
-      <div className={styles.header}>
-        <div className={styles.row} style={{ gridTemplateColumns }}>
+    <Grade>
+      <GradeCabecalho>
+        <GradeLinha style={{ gridTemplateColumns }}>
           {columns.map((column) => (
-            <div key={column.key} className={styles.cell}>
+            <GradeCelula key={column.key} cabecalho>
               {column.label}
-            </div>
+            </GradeCelula>
           ))}
-        </div>
-      </div>
-      <div className={styles.body}>
-        {rows.length === 0 && <div className={styles.empty}>{mensagemVazia}</div>}
+        </GradeLinha>
+      </GradeCabecalho>
+      <GradeCorpo>
+        {rows.length === 0 && <GradeVazia>{mensagemVazia}</GradeVazia>}
         {rows.map((row) => (
-          <div key={rowKey(row)} className={styles.row} style={{ gridTemplateColumns }}>
+          <GradeLinha key={rowKey(row)} corpo style={{ gridTemplateColumns }}>
             {columns.map((column) => (
-              <div key={column.key} className={styles.cell}>
-                {column.render(row)}
-              </div>
+              <GradeCelula key={column.key}>{column.render(row)}</GradeCelula>
             ))}
-          </div>
+          </GradeLinha>
         ))}
-      </div>
-    </div>
+      </GradeCorpo>
+    </Grade>
   );
 }

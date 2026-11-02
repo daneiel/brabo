@@ -22,6 +22,8 @@
 
 import {
   especificacaoValidada,
+  EspecificacaoInvalidaError,
+  type AlvoDeQa,
   nomeDeWorkspaceValidado,
   segmentoDeProjetoValidado,
   PONTO_DE_MONTAGEM,
@@ -200,6 +202,46 @@ export async function start(
 ): Promise<ContainerIniciado> {
   const spec = await especificacaoDoProjeto(deps, projectId);
   return deps.docker.start(spec);
+}
+
+/**
+ * ADR 0229: sobe a instância de QA efêmera. A lista de serviços vem da api
+ * (declarada pela Infra), nunca do corpo; a chave da ROTA tem de ser a que a
+ * api devolveu, senão a instância subiria com a spec de outra tarefa.
+ */
+export async function startQa(
+  deps: DependenciasDoBroker,
+  projectId: string,
+  chave: string,
+): Promise<ContainerIniciado> {
+  const spec = await especificacaoDoProjeto(deps, projectId, chave);
+  return deps.docker.start(spec);
+}
+
+export async function removeQa(
+  deps: DependenciasDoBroker,
+  projectId: string,
+  chave: string,
+): Promise<void> {
+  await deps.docker.remove(await nomeDaPasta(deps, projectId), alvoDeQa(chave));
+}
+
+export async function execQa(
+  deps: DependenciasDoBroker,
+  projectId: string,
+  chave: string,
+  pedido: unknown,
+): Promise<ResultadoDeExec> {
+  const nome = await nomeDaPasta(deps, projectId);
+  return deps.docker.exec(nome, pedidoDeExecValidado(pedido), alvoDeQa(chave));
+}
+
+function alvoDeQa(chave: string): AlvoDeQa {
+  // Valida a forma pela MESMA régua da spec (8 caracteres [a-z0-9]).
+  if (!/^[a-z0-9]{8}$/.test(chave)) {
+    throw new EspecificacaoInvalidaError('qa.chave', 'esperava 8 caracteres [a-z0-9]');
+  }
+  return { papel: 'qa', chave };
 }
 
 export async function stop(
@@ -385,8 +427,12 @@ function semBarraFinal(caminho: string): string {
 async function especificacaoDoProjeto(
   deps: DependenciasDoBroker,
   projectId: string,
+  chaveDeQa?: string,
 ): Promise<EspecificacaoDeContainer> {
-  const contexto = await deps.buscarContexto(projectId);
+  const contexto = await deps.buscarContexto(
+    projectId,
+    chaveDeQa === undefined ? undefined : { papel: 'qa', task: alvoDeQa(chaveDeQa).chave },
+  );
   garantirModoSuportado(projectId, contexto);
 
   if (contexto.imagem === null || contexto.imagem === undefined) {
@@ -414,7 +460,46 @@ async function especificacaoDoProjeto(
     // ADR 0180: do contexto lido da api (o dono medido da pasta), nunca do
     // corpo do pedido — `pedidoDeExecValidado` e o corpo de `start` não o têm.
     usuario: contexto.usuarioDaPasta,
+    // ADR 0228/0229: tudo daqui também vem da api, nunca do corpo do pedido.
+    // Instância de QA não sobe app nem publica porta (a spec recusaria).
+    ...(chaveDeQa === undefined
+      ? {
+          comandoDoApp: contexto.comandoDoApp,
+          portas: contexto.ports?.map((p) => ({
+            host: p.host,
+            container: p.container,
+            protocolo: p.protocol,
+          })),
+          dns: contexto.dns,
+          hostsExtras: contexto.extraHosts?.map((h) => ({ nome: h.name, ip: h.ip })),
+        }
+      : { qa: qaDoContexto(contexto, chaveDeQa) }),
   });
+}
+
+function qaDoContexto(contexto: ContextoDoProjeto, chaveDaRota: string): unknown {
+  const qa = contexto.qa;
+  if (qa === null || qa === undefined) {
+    throw new EspecificacaoInvalidaError('qa', 'a api não mandou `qa` na spec desta instância');
+  }
+  if (qa.chave !== chaveDaRota) {
+    throw new EspecificacaoInvalidaError(
+      'qa.chave',
+      `a api devolveu a chave ${JSON.stringify(qa.chave)}, a rota pediu ${JSON.stringify(chaveDaRota)}`,
+    );
+  }
+  return {
+    chave: qa.chave,
+    servicos: (qa.services ?? []).map((s) => ({
+      nome: s.name,
+      imagem: s.image,
+      env: s.env,
+      dados: s.tmpfs,
+      usuario: s.user ?? undefined,
+      comando: s.command ?? undefined,
+      compartilhado: s.shared,
+    })),
+  };
 }
 
 /**

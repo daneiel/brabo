@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as moduloInteiro from './precisa-de-voce';
 import {
+  gateEsperandoClique,
   montarFilas,
   ORDEM_DAS_FILAS,
   temAlgoEsperando,
@@ -262,5 +263,17 @@ describe('temAlgoEsperando', () => {
   it('basta UMA fila com item — e a resposta é booleana, nunca um total', () => {
     const filas = montarFilas({ ...VAZIO, hipoteses: [hipotese()] });
     expect(temAlgoEsperando(filas)).toBe(true);
+  });
+});
+
+describe('gateEsperandoClique (AT-449, RN-766)', () => {
+  it('nomeia o gate quando quem propôs é subagente de QA ou o SecOps', () => {
+    expect(gateEsperandoClique(acao({ actor: { kind: 'agent', id: 'qa-automacao' } }))).toBe('qa');
+    expect(gateEsperandoClique(acao({ actor: { kind: 'agent', id: 'secops' } }))).toBe('secops');
+  });
+
+  it('dev agent e humano não são gate', () => {
+    expect(gateEsperandoClique(acao())).toBeNull();
+    expect(gateEsperandoClique(acao({ actor: { kind: 'user', id: 'qa-user' } }))).toBeNull();
   });
 });

@@ -1,4 +1,4 @@
-# 0160 — O compose do instalador viaja com ele, como asset assinado
+# ADR 0160 — O compose do instalador viaja com ele, como asset assinado
 
 ## Status
 

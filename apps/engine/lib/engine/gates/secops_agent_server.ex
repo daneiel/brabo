@@ -79,6 +79,12 @@ defmodule Engine.Gates.SecOpsAgentServer do
   @impl true
   def init(project_id), do: {:ok, %{project_id: project_id}}
 
+  # RN-722: o SecOps não suspende — o ciclo roda inteiro dentro do
+  # `handle_cast`. Respondeu, então não há task em voo; ocupado, não responde
+  # e o `GateRescuer` trata o silêncio como "vivo".
+  @impl true
+  def handle_call({:em_voo?, _task_id}, _from, state), do: {:reply, false, state}
+
   @impl true
   def handle_cast({:run, task_id}, state) do
     case DevAgentState.find_by_task_id(state.project_id, task_id) do
@@ -122,19 +128,136 @@ defmodule Engine.Gates.SecOpsAgentServer do
 
     worktree = dev_state.worktree_path
 
-    diff_note =
+    {diff_note, dependencias} =
       case Diff.compute(project_id, worktree) do
         {:ok, diff_text} ->
-          "#{length(Diff.changed_paths(diff_text))} arquivo(s) alterado(s) nesta PR."
+          paths = Diff.changed_paths(diff_text)
+
+          {"#{length(paths)} arquivo(s) alterado(s) nesta PR.", dependencias_commitadas(paths)}
 
         {:error, reason} ->
-          "diff indisponível (#{inspect(reason)})."
+          {"diff indisponível (#{inspect(reason)}).", []}
       end
 
-    {semgrep_findings, semgrep_note} = Scanner.run(semgrep(), worktree, "semgrep")
+    case Scanner.run(semgrep(), worktree, "semgrep") do
+      {_findings, semgrep_note} when is_binary(semgrep_note) ->
+        sast_nao_rodou(project_id, dev_state, task_id, semgrep_note)
+
+      {semgrep_findings, nil} ->
+        julgar(
+          project_id,
+          dev_state,
+          task_id,
+          worktree,
+          diff_note,
+          semgrep_findings ++ dependencias
+        )
+    end
+  end
+
+  # RN-761 (AT-446): diretório de dependência instalada no diff é achado do
+  # gate, com ou sem scanner — a PR de 1.453 arquivos, 1.437 em
+  # `node_modules/`, passou aprovada.
+  @doc false
+  def dependencias_commitadas(paths) do
+    dados =
+      for p <- Engine.Actions.DiretoriosDeDependencia.dados_commitados(paths) do
+        %{
+          tool: "brabo",
+          path: p,
+          line: 0,
+          message:
+            "arquivo de dados em tempo de execução commitado (#{p}); " <>
+              "tire-o do commit e do repositório e ponha no .gitignore"
+        }
+      end
+
+    deps =
+      paths
+      |> Engine.Actions.DiretoriosDeDependencia.commitados()
+      |> Enum.map(fn dir ->
+        n = Enum.count(paths, &(dir in Path.split(&1)))
+
+        %{
+          tool: "brabo",
+          path: dir,
+          line: 0,
+          message:
+            "diretório de dependência/build commitado (#{n} arquivo(s)); " <>
+              "tire-o do commit e do repositório e ponha no .gitignore"
+        }
+      end)
+
+    deps ++ dados
+  end
+
+  # RN-714 (AT-380): a análise estática (semgrep) que NÃO rodou — binário
+  # ausente, saída inválida, exceção ou teto de tempo — não vira aprovação.
+  # Nenhum veredito é gravado: a PR fica em `awaiting_secops` (o gate segue
+  # PENDENTE e bloqueia), o contrato externo continua com os dois vereditos de
+  # sempre, e o motivo vai ao fio como `agent.error` de origem `infra`. A linha
+  # de `GateState` fica `in_progress` de propósito: é ela que faz o
+  # `GateRescuer` reexecutar o gate (no boot e depois do limiar de staleness),
+  # e é assim que corrigir o ambiente volta a julgar.
+  #
+  # AT-386: o resgate repete o ciclo enquanto o ambiente não muda, e cada
+  # repetição gravava um `agent.error` idêntico. Se o último evento do SecOps
+  # desta task (erro ou veredito) já é este erro com o MESMO motivo, nada é
+  # gravado — só Logger. Motivo novo, ou veredito no meio, grava de novo.
+  # Leitura ilegível não prova repetição: grava.
+  defp sast_nao_rodou(project_id, dev_state, task_id, nota) do
+    if erro_ja_registrado?(project_id, dev_state.session_id, task_id, nota) do
+      Logger.info(
+        "secops: SAST segue sem rodar (#{nota}) na task #{task_id}; agent.error já no fio, não repetido"
+      )
+    else
+      gravar_sast_nao_rodou(project_id, dev_state, task_id, nota)
+    end
+  end
+
+  # Leitura CONTIDA (ADR 0060): só os dois tipos do SecOps, cauda com teto.
+  defp erro_ja_registrado?(project_id, session_id, task_id, nota) do
+    case Engine.Agents.Reidratacao.eventos_do_tipo(project_id, session_id, [
+           "agent.error",
+           "artifact.secops_verdict"
+         ]) do
+      {:ok, eventos, _truncado?} ->
+        eventos
+        |> Enum.filter(&do_secops_da_task?(&1, task_id))
+        |> List.last()
+        |> case do
+          %{"type" => "agent.error", "payload" => %{"reason" => ^nota}} -> true
+          _ -> false
+        end
+
+      {:error, _} ->
+        false
+    end
+  end
+
+  defp do_secops_da_task?(%{"actorId" => "secops", "type" => "agent.error"} = e, task_id),
+    do: get_in(e, ["payload", "taskId"]) == task_id
+
+  defp do_secops_da_task?(%{"type" => "artifact.secops_verdict"} = e, task_id),
+    do: get_in(e, ["payload", "taskId"]) == task_id
+
+  defp do_secops_da_task?(_, _), do: false
+
+  defp gravar_sast_nao_rodou(project_id, dev_state, task_id, nota) do
+    ArtifactEmitter.append(project_id, dev_state.session_id, "secops", "agent.error", %{
+      taskId: task_id,
+      origem: "infra",
+      mensagem:
+        "SAST não rodou: #{nota} — o gate SecOps fica pendente e bloqueia a PR (task #{task_id}); " <>
+          "reexecute o gate depois de corrigir.",
+      reason: nota
+    })
+  end
+
+  defp julgar(project_id, dev_state, task_id, worktree, diff_note, semgrep_findings) do
     {gitleaks_findings, gitleaks_note} = Scanner.run(gitleaks(), worktree, "gitleaks")
     findings = semgrep_findings ++ gitleaks_findings
-    skipped_notes = Enum.filter([semgrep_note, gitleaks_note], & &1)
+    skipped_notes = Enum.filter([gitleaks_note], & &1)
 
     security_adrs = security_relevant_adrs(project_id, dev_state.session_id, task_id)
 

@@ -49,6 +49,8 @@ export interface SessionReadiness {
   arquitetoActive: boolean;
   hasBusinessRule: boolean;
   hasPromotedStory: boolean;
+  /** RN-824: a sessão já gravou um `artifact.module_map` (o Arquiteto mapeou os módulos). */
+  hasModuleMap: boolean;
 }
 
 /**
@@ -129,10 +131,21 @@ export function useSessionReadiness(
     [backlogData],
   );
 
+  // RN-824: o mapa de módulos gravado é o sinal de que a arquitetura tem o
+  // que confirmar — é ele que faz o composer AVISAR que o próximo passo é o
+  // clique "Confirmar arquitetura pronta". Mesma fonte (`events`), sem query.
+  const hasModuleMap = useMemo(() => temMapaDeModulos(events), [events]);
+
   return {
     criativoActive,
     arquitetoActive,
     hasBusinessRule,
     hasPromotedStory,
+    hasModuleMap,
   };
+}
+
+/** RN-824: derivação pura — a sessão tem ao menos um `artifact.module_map`. */
+export function temMapaDeModulos(events: SessionEvent[]): boolean {
+  return events.some((e) => e.type === 'artifact.module_map');
 }

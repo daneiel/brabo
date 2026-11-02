@@ -27,9 +27,22 @@ export type MdInline =
 export type MdAlinhamento = 'left' | 'center' | 'right';
 
 export type MdBlock =
-  | { type: 'heading'; level: 1 | 2 | 3; inline: MdInline[] }
+  | { type: 'heading'; level: 1 | 2 | 3 | 4; inline: MdInline[] }
   | { type: 'paragraph'; inline: MdInline[] }
-  | { type: 'list'; ordered: boolean; items: MdInline[][] }
+  /**
+   * RN-837: `tarefas` (checklist, só visual: `true`/`false` por item, `null`
+   * no item sem caixa) e `filhos` (UM nível de aninhamento, a sublista do
+   * item de mesmo índice) só existem quando a lista os usa.
+   */
+  | {
+      type: 'list';
+      ordered: boolean;
+      items: MdInline[][];
+      tarefas?: (boolean | null)[];
+      filhos?: ({ ordered: boolean; items: MdInline[][] } | null)[];
+    }
+  | { type: 'hr' }
+  | { type: 'blockquote'; blocks: MdBlock[] }
   | { type: 'code'; lang: string; content: string }
   /**
    * Tabela GFM (RN-176). `header` tem uma entrada por COLUNA e é ela que
@@ -105,7 +118,12 @@ export function parseInline(text: string): MdInline[] {
 
 const FENCE_RE = /^```\s*([\w+-]*)\s*$/;
 const FENCE_FIM_RE = /^```\s*$/;
-const HEADING_RE = /^(#{1,3})\s+(.*)$/;
+const HEADING_RE = /^(#{1,4})\s+(.*)$/;
+const HR_RE = /^\s{0,3}([-*_])(\s*\1){2,}\s*$/;
+const CITACAO_RE = /^\s{0,3}>\s?(.*)$/;
+const TAREFA_RE = /^\[([ xX])\]\s+(.*)$/;
+/** Item com 2+ espaços (ou tab) de recuo é filho do item anterior (RN-837). */
+const RECUO_RE = /^(?: {2,}|\t)/;
 const UL_RE = /^\s*[-*+]\s+(.*)$/;
 const OL_RE = /^\s*\d+[.)]\s+(.*)$/;
 /**
@@ -167,7 +185,11 @@ export function parseMarkdown(source: string): MdBlock[] {
   const blocos: MdBlock[] = [];
 
   let paragrafoBuf: string[] = [];
-  let listaBuf: { ordered: boolean; items: string[] } | null = null;
+  let listaBuf: {
+    ordered: boolean;
+    items: string[];
+    filhos: ({ ordered: boolean; items: string[] } | null)[];
+  } | null = null;
 
   function fecharParagrafo() {
     if (paragrafoBuf.length === 0) return;
@@ -176,11 +198,22 @@ export function parseMarkdown(source: string): MdBlock[] {
   }
   function fecharLista() {
     if (!listaBuf) return;
-    blocos.push({
+    const tarefas = listaBuf.items.map((t) => {
+      const m = TAREFA_RE.exec(t);
+      return m ? m[1] !== ' ' : null;
+    });
+    const bloco: MdBlock & { type: 'list' } = {
       type: 'list',
       ordered: listaBuf.ordered,
-      items: listaBuf.items.map(parseInline),
-    });
+      items: listaBuf.items.map((t) => parseInline(TAREFA_RE.exec(t)?.[2] ?? t)),
+    };
+    if (tarefas.some((t) => t !== null)) bloco.tarefas = tarefas;
+    if (listaBuf.filhos.some((f) => f !== null)) {
+      bloco.filhos = listaBuf.filhos.map((f) =>
+        f ? { ordered: f.ordered, items: f.items.map(parseInline) } : null,
+      );
+    }
+    blocos.push(bloco);
     listaBuf = null;
   }
 
@@ -219,10 +252,36 @@ export function parseMarkdown(source: string): MdBlock[] {
       fecharLista();
       blocos.push({
         type: 'heading',
-        level: heading[1].length as 1 | 2 | 3,
+        level: heading[1].length as 1 | 2 | 3 | 4,
         inline: parseInline(heading[2]),
       });
       i++;
+      continue;
+    }
+
+    // RN-837: `---` sozinho na linha é régua — exceto logo depois de texto de
+    // parágrafo, onde é o separador de uma tabela ou um setext que não
+    // suportamos; ali segue como texto, como antes.
+    if (HR_RE.test(linha) && paragrafoBuf.length === 0) {
+      fecharLista();
+      blocos.push({ type: 'hr' });
+      i++;
+      continue;
+    }
+
+    // RN-837: citação — as linhas `>` seguidas viram UM bloco, com o miolo
+    // reprocessado pelo mesmo parser (degrada igual, nunca lança).
+    if (CITACAO_RE.test(linha)) {
+      fecharParagrafo();
+      fecharLista();
+      const miolo: string[] = [];
+      while (i < linhas.length) {
+        const m = CITACAO_RE.exec(linhas[i]);
+        if (!m) break;
+        miolo.push(m[1]);
+        i++;
+      }
+      blocos.push({ type: 'blockquote', blocks: parseMarkdown(miolo.join('\n')) });
       continue;
     }
 
@@ -259,12 +318,25 @@ export function parseMarkdown(source: string): MdBlock[] {
       continue;
     }
 
+    // RN-837: sublista de UM nível — item recuado com lista aberta vai para o
+    // último item; recuo mais fundo achata nesse mesmo nível.
+    const sub = UL_RE.exec(linha) ?? OL_RE.exec(linha);
+    if (sub && listaBuf && listaBuf.items.length > 0 && RECUO_RE.test(linha)) {
+      const ultimo = listaBuf.items.length - 1;
+      const ordenada = !UL_RE.test(linha);
+      listaBuf.filhos[ultimo] ??= { ordered: ordenada, items: [] };
+      listaBuf.filhos[ultimo]!.items.push(sub[1]);
+      i++;
+      continue;
+    }
+
     const ul = UL_RE.exec(linha);
     if (ul) {
       fecharParagrafo();
       if (listaBuf && listaBuf.ordered) fecharLista();
-      if (!listaBuf) listaBuf = { ordered: false, items: [] };
+      if (!listaBuf) listaBuf = { ordered: false, items: [], filhos: [] };
       listaBuf.items.push(ul[1]);
+      listaBuf.filhos.push(null);
       i++;
       continue;
     }
@@ -273,8 +345,9 @@ export function parseMarkdown(source: string): MdBlock[] {
     if (ol) {
       fecharParagrafo();
       if (listaBuf && !listaBuf.ordered) fecharLista();
-      if (!listaBuf) listaBuf = { ordered: true, items: [] };
+      if (!listaBuf) listaBuf = { ordered: true, items: [], filhos: [] };
       listaBuf.items.push(ol[1]);
+      listaBuf.filhos.push(null);
       i++;
       continue;
     }
@@ -287,6 +360,37 @@ export function parseMarkdown(source: string): MdBlock[] {
   fecharParagrafo();
   fecharLista();
   return blocos;
+}
+
+/**
+ * RN-837 — modo STREAM: o texto de um turno em curso é um PREFIXO da resposta,
+ * e o corte cai no meio de um fence, de um código inline ou de um negrito.
+ * Fecha o que ficou aberto, só no fim, para o prefixo renderizar sem marcador
+ * cru: fence com número ímpar de aberturas ganha ```` ``` ````; fora de fence,
+ * crase ímpar ganha `` ` `` e `**` ímpar ganha `**`. Um `*`/`**`/`#`/`>` sem
+ * conteúdo depois, na ponta, sai. Só para texto EM CURSO: o texto final é
+ * renderizado como veio, sem passar por aqui.
+ */
+export function fecharMarcadoresAbertos(texto: string): string {
+  const foraDeFence = (t: string): { fora: string; aberto: boolean } => {
+    let aberto = false;
+    const fora: string[] = [];
+    for (const l of t.split('\n')) {
+      if (/^\s*```/.test(l)) aberto = !aberto;
+      else if (!aberto) fora.push(l);
+    }
+    return { fora: fora.join('\n'), aberto };
+  };
+  if (foraDeFence(texto).aberto) return texto.replace(/\n`{1,2}$/, '') + '\n```';
+
+  let fim = texto.replace(/(^|\s)(\*{1,2}|#{1,6}|>|`{1,2})$/, '$1');
+  const { fora } = foraDeFence(fim);
+  if ((fora.match(/`/g) ?? []).length % 2 === 1) fim += '`';
+  const semCodigo = fora.replace(/`[^`\n]*`/g, '');
+  if ((semCodigo.match(/\*\*/g) ?? []).length % 2 === 1) {
+    fim = fim.replace(/\*+$/, '') + '**';
+  }
+  return fim;
 }
 
 /** Aliases comuns de linguagem na info string do fence → chave que

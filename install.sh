@@ -153,6 +153,18 @@ BROKER_LIGADO='nao'
 DOCKER_GID_MEDIDO=''
 RAIZ_GERENCIADA_NO_HOST=''
 
+# Os modelos locais (profile `llm`, AT-351), preenchidas por `consentir_llm`.
+# `LLM_LIGADO` é `sim` só com um "s" digitado E uma porta do host MEDIDA livre
+# para o Ollama — a 11434 é o default de um Ollama NATIVO, e publicar por cima
+# dele terminava num `address already in use` no meio da subida.
+LLM_LIGADO='nao'
+OLLAMA_PORTA_ESCOLHIDA=''
+# A faixa que o instalador mede quando a 11434 está ocupada. Dez portas: o
+# bastante para conviver com um Ollama nativo e mais alguma coisa, pouco o
+# bastante para a recusa ser lida como "algo errado aqui", e não como azar.
+OLLAMA_PORTA_PADRAO=11434
+OLLAMA_PORTA_TETO=11443
+
 # O volume da pasta GERENCIADA (modo `container`), com o prefixo do projeto
 # compose (`name: brabo` no compose de instalação). É o único nome que este
 # script precisa saber do layout do Docker: dele sai a raiz que o broker monta.
@@ -370,7 +382,7 @@ detectar_por_sinais() {
     # nenhum, e o passo de detecção segue com o resto dos sinais. `timeout`
     # devolve 124, que o `|| true` do pipeline já absorve.
     projetos="$(timeout 5 docker compose ls --all --format json 2>/dev/null \
-      | grep -oE '"Name":"brabo[^"]*"' | cut -d'"' -f4 | sort -u | tr '\n' ' ' || true)"
+      | grep -oE '"Name":"brabo"' | cut -d'"' -f4 | sort -u | tr '\n' ' ' || true)"
     if [ -n "${projetos// /}" ]; then
       achados="${achados}compose:${projetos% }\n"
     fi
@@ -453,6 +465,7 @@ imprimir_plano() {
   printf 'conferir-saude\tfaz\t/health da api e do engine, antes de dizer que instalou\n'
   printf 'consentir-base\tfaz\tUMA base para os dois lados: .env do servidor e runner.json do agente\n'
   printf 'ligar-broker\tpergunta\tdefault NÃO; sim mede o gid do socket DE DENTRO de um container e grava COMPOSE_PROFILES, BROKER_URL e DOCKER_GID no .env; sem TTY fica desligado\n'
+  printf 'ligar-modelos-locais\tpergunta\tdefault NÃO; sim MEDE a porta do Ollama (11434, ou a primeira livre até 11443) e grava OLLAMA_PORT e o profile llm no .env; sem TTY fica desligado\n'
   printf 'ligar-broker-sem-perguntar\tnunca\to broker recebe o socket do Docker desta máquina (ADR 0162)\n'
   printf 'instalar-runner\tfaz\tbinário verificado contra o manifesto assinado, instalado com bit de execução\n'
   printf 'criar-primeira-conta\tpergunta\te-mail e senha no TTY, sem eco; a conta nasce verificada e o passo se cala se já houver gente\n'
@@ -462,6 +475,7 @@ imprimir_plano() {
   printf 'ligar-smtp\tnunca\tMAIL_TRANSPORT=log continua o default; a instalação deixa de DEPENDER de e-mail para fechar\n'
   printf 'pedir-credencial-de-llm\tnunca\té decisão de quem vai gastar\n'
   printf 'migrar-instalacao-anterior\tfaz\tbackup, PROVA que restaura, pergunta, e só então apaga\n'
+  printf 'reinstalar-do-zero\tpergunta\ta mesma ordem da migração, mas os dados antigos NÃO são restaurados; o backup provado fica na pasta\n'
   printf 'apagar-sem-backup-provado\tnunca\tbackup que não restaurou não autoriza deleção nenhuma\n'
   printf 'apagar-volumes\tso-com-confirmacao\tlistados um a um antes de perguntar\n'
   printf 'apagar-base-de-projetos\tnunca\ta pasta é do usuário, não do produto\n'
@@ -776,6 +790,40 @@ SECRET_KEY_BASE=${SECRET_KEY_BASE}
 NEO4J_PASSWORD=${NEO4J_PASSWORD}
 ENV
   escrever_env_do_broker "$env_arquivo"
+  escrever_env_do_llm "$env_arquivo"
+  escrever_env_dos_profiles "$env_arquivo"
+}
+
+# Os modelos locais (AT-351): a porta MEDIDA, ou nada. Sem a porta não há
+# bloco — o default do compose é a 11434, e gravar o profile sem ter medido a
+# porta é o `address already in use` que esta pergunta existe para evitar.
+escrever_env_do_llm() {
+  local env_arquivo="$1"
+  if [ "$LLM_LIGADO" != 'sim' ]; then
+    cat >> "$env_arquivo" <<'ENV'
+# Modelos locais (profile llm): DESLIGADOS (a pergunta do instalador). Sem eles
+# a checagem semântica de duplicata é pulada. Ver docs/runbook.md.
+ENV
+    return 0
+  fi
+  case "$OLLAMA_PORTA_ESCOLHIDA" in
+    ''|*[!0-9]*) recusar 'os modelos locais foram ligados sem a porta do Ollama medida — isto é defeito deste script, não da sua máquina.' ;;
+  esac
+  cat >> "$env_arquivo" <<ENV
+# Modelos locais: LIGADOS com consentimento no instalador (AT-351).
+OLLAMA_PORT=${OLLAMA_PORTA_ESCOLHIDA}
+ENV
+}
+
+# UMA linha de profiles, composta do que foi consentido — e nenhuma quando
+# nada foi. Duas linhas COMPOSE_PROFILES no mesmo `.env` não somam: a última
+# vence, e o broker sumiria calado ao se ligar os modelos.
+escrever_env_dos_profiles() {
+  local env_arquivo="$1" perfis=''
+  if [ "$BROKER_LIGADO" = 'sim' ]; then perfis='container-broker'; fi
+  if [ "$LLM_LIGADO" = 'sim' ]; then perfis="${perfis:+${perfis},}llm"; fi
+  [ -n "$perfis" ] || return 0
+  printf 'COMPOSE_PROFILES=%s\n' "$perfis" >> "$env_arquivo"
 }
 
 # O terminal diz DE ONDE veio o pepper, nunca o valor — ele vale tanto quanto
@@ -813,7 +861,7 @@ ENV
   esac
   cat >> "$env_arquivo" <<ENV
 # Broker de container: LIGADO com consentimento no instalador (ADR 0162).
-COMPOSE_PROFILES=container-broker
+# O profile dele sai na linha COMPOSE_PROFILES, no fim, junto com os outros.
 BROKER_URL=http://broker:8090
 DOCKER_GID=${DOCKER_GID_MEDIDO}
 PROJECT_WORKSPACES_HOST_ROOT=${RAIZ_GERENCIADA_NO_HOST}
@@ -1047,6 +1095,74 @@ consentir_broker() {
 
   BROKER_LIGADO='sim'
   ok 'broker de container: ligado'
+}
+
+# Uma porta do host está em uso quando ALGUÉM aceita conexão nela. Mede pelo
+# `/dev/tcp` do próprio bash (existe no 3.2 do macOS) e não por `ss`/`lsof`,
+# que nem toda máquina tem. Recusada = livre; o teto é para não pendurar.
+porta_em_uso() {
+  local porta="$1"
+  if command -v timeout >/dev/null 2>&1; then
+    timeout 2 bash -c "exec 3<>/dev/tcp/127.0.0.1/${porta}" 2>/dev/null
+  else
+    bash -c "exec 3<>/dev/tcp/127.0.0.1/${porta}" 2>/dev/null
+  fi
+}
+
+# A primeira porta livre de OLLAMA_PORTA_PADRAO a OLLAMA_PORTA_TETO, ou falha.
+escolher_porta_do_ollama() {
+  local p="$OLLAMA_PORTA_PADRAO"
+  while [ "$p" -le "$OLLAMA_PORTA_TETO" ]; do
+    if ! porta_em_uso "$p"; then
+      OLLAMA_PORTA_ESCOLHIDA="$p"
+      return 0
+    fi
+    p=$((p + 1))
+  done
+  return 1
+}
+
+# A pergunta dos modelos locais (AT-351). Mesmo molde do broker: o custo e o
+# que se perde são ditos ANTES, só um "s" digitado liga, e sem terminal fica
+# desligado DIZENDO isso. Ligar MEDE a porta antes de gravar qualquer coisa.
+consentir_llm() {
+  dizer ''
+  dizer "${C_BOLD}Modelos locais (Ollama)${C_RESET}"
+  dizer 'Liga o Ollama desta instalação (profile llm). O custo: alguns GB de disco'
+  dizer 'para a imagem e os modelos que o `ollama-model-loader` baixa na subida'
+  dizer '(gemma3:1b, yi-coder:1.5b e nomic-embed-text, por padrão), e RAM enquanto'
+  dizer 'um modelo está carregado. Sem ele: a checagem SEMÂNTICA de duplicata de'
+  dizer 'história e regra é pulada (ela precisa de embedding local), e não há'
+  dizer 'modelo local para os agentes — só os providers externos, pela tela.'
+  dizer ''
+
+  if [ ! -t 0 ]; then
+    dizer 'Não há terminal para perguntar: os modelos locais ficam DESLIGADOS.'
+    LLM_LIGADO='nao'
+    return 0
+  fi
+
+  printf 'Ligar os modelos locais? [s/N] '
+  local resposta; read -r resposta || resposta=''
+  case "$resposta" in
+    s|S|sim|SIM) ;;
+    *)
+      LLM_LIGADO='nao'
+      ok 'modelos locais: desligados (dá para ligar depois — docs/runbook.md)'
+      return 0
+      ;;
+  esac
+
+  if ! escolher_porta_do_ollama; then
+    recusar "as portas ${OLLAMA_PORTA_PADRAO} a ${OLLAMA_PORTA_TETO} do host estão TODAS em uso, e o Ollama da instalação precisa publicar uma delas. Nada foi gravado. Libere uma (um Ollama nativo costuma ocupar a ${OLLAMA_PORTA_PADRAO}) ou rode o instalador de novo e responda NÃO."
+  fi
+  if [ "$OLLAMA_PORTA_ESCOLHIDA" != "$OLLAMA_PORTA_PADRAO" ]; then
+    ok "porta ${OLLAMA_PORTA_PADRAO} em uso nesta máquina (um Ollama nativo?): o Ollama da instalação publica na ${OLLAMA_PORTA_ESCOLHIDA}"
+  else
+    ok "porta do Ollama no host: ${OLLAMA_PORTA_ESCOLHIDA} (livre, medida)"
+  fi
+  LLM_LIGADO='sim'
+  ok 'modelos locais: ligados'
 }
 
 # Depois da subida, com a pilha de pé: o broker respondeu ao healthcheck (o
@@ -1611,10 +1727,16 @@ migrar_instalacao_anterior() {
   dizer '  - a pasta de espelho (RN-516: o espelho nunca apaga, e este tampouco)'
   dizer "  - o backup que acabou de ser provado, em ${destino}"
   dizer ''
-  printf 'Apagar os volumes e reinstalar? [s/N] '
+  dizer 'Duas formas de seguir, as duas DEPOIS do backup provado:'
+  dizer '  s — apagar, reinstalar e restaurar os dados antigos'
+  dizer '  z — apagar e reinstalar DO ZERO: os dados antigos NÃO voltam; o backup'
+  dizer "      provado fica em ${destino}, e restaurá-lo depois é docs/runbook.md#restore"
+  printf 'Apagar os volumes e reinstalar? [s = restaurar / z = do zero / N = parar] '
   local resposta; read -r resposta || resposta=''
+  local restaurar='sim'
   case "$resposta" in
     s|S|sim|SIM) ;;
+    z|Z|zero|ZERO) restaurar='nao' ;;
     *) dizer "Nada foi apagado. O backup provado continua em ${destino}."; exit 0 ;;
   esac
 
@@ -1622,7 +1744,12 @@ migrar_instalacao_anterior() {
     || recusar "a deleção falhou pela metade. O backup provado está em ${destino} — não prossiga sem olhar."
   ok 'volumes removidos'
 
-  MIGRAR_DE="$destino"
+  if [ "$restaurar" = 'sim' ]; then
+    MIGRAR_DE="$destino"
+  else
+    MIGRAR_DE=''
+    ok "reinstalação do zero: nada será restaurado; o backup provado fica em ${destino}"
+  fi
 }
 
 # Chamado DEPOIS da subida, com o banco novo de pé.
@@ -1824,6 +1951,8 @@ main() {
   # Depois da base (a segunda raiz do broker DERIVA dela) e antes do `.env`
   # (é ele que carrega a decisão): uma recusa aqui não deixa nada gravado.
   consentir_broker
+  # Mesmo lugar e mesma razão do broker: uma recusa (porta) não deixa nada gravado.
+  consentir_llm
 
   # O `.env` que existir aqui é LIDO antes de ser sobrescrito — só para o
   # pepper (RN-613), e sem ser executado. Numa migração ele ainda está no lugar:
@@ -1909,6 +2038,12 @@ JSON
     dizer '  Broker de container: DESLIGADO — projetos Container e Pasta montada não'
     dizer '  executam; o modo Runner não depende dele (docs/runbook.md explica como ligar).'
   fi
+  if [ "$LLM_LIGADO" = 'sim' ]; then
+    dizer "  Modelos locais: LIGADOS — Ollama na porta ${OLLAMA_PORTA_ESCOLHIDA} do host."
+  else
+    dizer '  Modelos locais: DESLIGADOS — a checagem semântica de duplicata é pulada'
+    dizer '  (docs/runbook.md explica como ligar).'
+  fi
 
   # O que ficou pela metade sai NOMEADO, e no fim — onde quem instalou ainda
   # está olhando. Um passo que falha no meio de trinta linhas de saída some.
@@ -1935,8 +2070,7 @@ JSON
   dizer 'e entra pela tela, na conta do dono do workspace.'
   dizer 'Não pareia o agente local com um PROJETO: a chave desta máquina atende'
   dizer 'todos os seus projetos em modo Runner, e a pasta de cada um nasce'
-  dizer 'sozinha sob a base. Parear uma pasta específica pela tela do projeto'
-  dizer 'continua existindo (ADR 0118), para quem quiser.'
+  dizer 'sozinha sob a base.'
 }
 
 main "$@"

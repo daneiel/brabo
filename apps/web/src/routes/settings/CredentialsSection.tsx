@@ -1,23 +1,29 @@
-import { useState, type CSSProperties } from 'react';
+import { useMemo, useState, type CSSProperties } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
   deleteCredential,
   listCredentials,
+  listModelCatalog,
   mensagemDaApi,
+  syncModelCatalog,
   testCredential,
   upsertCredential,
 } from '../../lib/api-client';
 import {
+  COR_DO_PROVIDER,
   CREDENCIAIS_DE_LLM,
+  providersSemCatalogo,
   type LlmCredentialProvider,
 } from '../../lib/models';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { useToast } from '../../components/ui/ToastProvider';
 import styles from '../ProjectSettingsTab.module.css';
-import { SecaoDeConfiguracoes } from './SecaoDeConfiguracoes';
 import { FRESCOR_DA_CONFIGURACAO_MS } from '../../lib/query-policy';
+import { listProviderCapabilities } from '../../lib/api-client';
+import { useCurrentWorkspaceWithRole } from '../../lib/hooks';
+import { roleAtLeast } from '../../lib/roles';
 
 /**
  * A sigla de duas letras do chip do conector (handoff, seção 7 item 4).
@@ -33,26 +39,6 @@ function siglaDoConector(label: string): string {
     maiusculas.length >= 2 ? maiusculas.slice(0, 2).join('') : label.slice(0, 2);
   return letras.toUpperCase();
 }
-
-/**
- * A cor da borda esquerda de cada conector (handoff, seção 7 item 4). Só tokens
- * semânticos — o handoff nomeia terracota para a Anthropic e teal para a
- * OpenAI, e os demais seguem o mesmo repertório de quatro acentos.
- *
- * `Record<LlmCredentialProvider, …>` de propósito: provider novo entra na lista
- * derivando de `ROTULO_DO_PROVIDER`, e é o compilador que cobra a cor aqui em
- * vez de ele nascer sem borda nenhuma.
- */
-const COR_DO_CONECTOR: Record<LlmCredentialProvider, string> = {
-  anthropic: 'var(--accent)',
-  openai: 'var(--success)',
-  openrouter: 'var(--violet)',
-  'nvidia-nim': 'var(--success)',
-  together: 'var(--warning)',
-  deepinfra: 'var(--violet)',
-  bitdeer: 'var(--accent)',
-  vultr: 'var(--warning)',
-};
 
 /**
  * Exportada para o teste, como ExecutionSection e PromotionSection.
@@ -92,6 +78,62 @@ export function CredentialsSection() {
     staleTime: FRESCOR_DA_CONFIGURACAO_MS,
   });
   const [drafts, setDrafts] = useState<Record<string, string>>({});
+
+  /**
+   * "Atualizar catálogo" AO LADO da credencial (RN-694): cadastrar a chave não
+   * descobre modelo, e o botão que descobre morava no fim da página. É a MESMA
+   * ação do catálogo (`POST .../models/sync`, `owner`) e só aparece no card
+   * cujo provider tem credencial e nenhum modelo no catálogo. Ler o catálogo
+   * pede `maintainer`; o botão pede `owner` — abaixo disso a nota fica e o
+   * controle não é oferecido (RN-102).
+   */
+  const { data: comPapel } = useCurrentWorkspaceWithRole();
+  const workspaceId = comPapel?.workspace?.id;
+  const podeLerCatalogo = roleAtLeast(comPapel?.role, 'maintainer');
+  const podeSincronizar = roleAtLeast(comPapel?.role, 'owner');
+  const { data: catalogo } = useQuery({
+    queryKey: ['model-catalog', workspaceId],
+    queryFn: () => listModelCatalog(workspaceId!),
+    enabled: !!workspaceId && podeLerCatalogo,
+    staleTime: FRESCOR_DA_CONFIGURACAO_MS,
+  });
+  const semCatalogo = useMemo(
+    () =>
+      credentials && catalogo
+        ? new Set<string>(providersSemCatalogo(credentials, catalogo))
+        : new Set<string>(),
+    [credentials, catalogo],
+  );
+  // Provider sem `listModels` não tem o que sincronizar: o botão não é
+  // oferecido e a nota diz por quê. Capability ainda desconhecida (carregando
+  // ou falhada) NÃO vira "sem catálogo" — fica o comportamento anterior.
+  const { data: capacidades } = useQuery({
+    queryKey: ['provider-capabilities'],
+    queryFn: listProviderCapabilities,
+    staleTime: FRESCOR_DA_CONFIGURACAO_MS,
+  });
+  const semListModels = (id: string) =>
+    capacidades?.find((c) => c.provider === id)?.capabilities.listModels === false;
+  const [sincronizando, setSincronizando] = useState(false);
+
+  async function handleSync() {
+    if (!workspaceId) return;
+    setSincronizando(true);
+    try {
+      await syncModelCatalog(workspaceId);
+      void queryClient.invalidateQueries({ queryKey: ['model-catalog', workspaceId] });
+      void queryClient.invalidateQueries({ queryKey: ['models'] });
+      showToast({ title: t('catalog.toasts.syncSuccess', { ns: 'models' }), tone: 'success' });
+    } catch (erro) {
+      showToast({
+        title: t('catalog.toasts.syncErrorTitle', { ns: 'models' }),
+        message: mensagemDaApi(erro),
+        tone: 'danger',
+      });
+    } finally {
+      setSincronizando(false);
+    }
+  }
 
   // Qual provider está com uma chamada em voo — `null` quando nenhum. Um id
   // só, e não um booleano por card: duas chamadas simultâneas aqui não fazem
@@ -174,7 +216,7 @@ export function CredentialsSection() {
   }
 
   return (
-    <SecaoDeConfiguracoes chave="credentials">
+    <section className={styles.section}>
       <div className={styles.sectionHead}>
         <h2 className={styles.title}>{t('credentials.title')}</h2>
         <span className={styles.eyebrow}>{t('credentials.eyebrow')}</span>
@@ -197,7 +239,7 @@ export function CredentialsSection() {
           const existing = credentials?.find((c) => c.provider === id);
           const rascunho = drafts[id]?.trim() ?? '';
           const ocupado = emVoo === id;
-          const cor = COR_DO_CONECTOR[id];
+          const cor = COR_DO_PROVIDER[id];
           return (
             <div
               key={id}
@@ -238,6 +280,13 @@ export function CredentialsSection() {
                     })
                   : t('credentials.connector.noneSaved')}
               </div>
+              {existing && semCatalogo.has(id) && (
+                <div className={styles.conectorNota}>
+                  {semListModels(id)
+                    ? t('credentials.connector.noCatalogSource')
+                    : t('credentials.connector.noModels')}
+                </div>
+              )}
 
               {/* O input fica SEMPRE visível: com credencial salva ele é o
                   caminho da troca, que antes só existia removendo primeiro. */}
@@ -290,6 +339,16 @@ export function CredentialsSection() {
                     >
                       {t('credentials.connector.remove')}
                     </Button>
+                    {semCatalogo.has(id) && podeSincronizar && !semListModels(id) && (
+                      <Button
+                        variant="secondary"
+                        aria-label={t('credentials.connector.updateCatalogAria', { label })}
+                        disabled={sincronizando}
+                        onClick={() => void handleSync()}
+                      >
+                        {t('credentials.connector.updateCatalog')}
+                      </Button>
+                    )}
                   </>
                 )}
               </div>
@@ -297,6 +356,6 @@ export function CredentialsSection() {
           );
         })}
       </div>
-    </SecaoDeConfiguracoes>
+    </section>
   );
 }

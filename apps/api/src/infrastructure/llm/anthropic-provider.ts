@@ -62,6 +62,9 @@ export class AnthropicProvider implements LLMProvider {
     embeddings: false,
     // Não é hub: não há upstreams entre os quais escolher (ADR 0166).
     routingPreference: false,
+    stickySession: false,
+    priceCeiling: false,
+    promptCaching: false,
   };
 
   constructor(
@@ -194,6 +197,9 @@ export class AnthropicProvider implements LLMProvider {
 
       const toolCalls = toToolCalls(finalMessage.content);
       if (toolCalls.length > 0) yield { type: 'tool_calls', toolCalls };
+      // `stop_reason: "max_tokens"` (RN-737): o teto de saída cortou a resposta.
+      if (finalMessage.stop_reason === 'max_tokens')
+        yield { type: 'truncated' };
 
       yield {
         type: 'usage',

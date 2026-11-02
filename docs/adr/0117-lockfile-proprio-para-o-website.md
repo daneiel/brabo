@@ -1,158 +1,159 @@
-# ADR 0117 — `website/` gets its own lockfile, out of the product's `pnpm audit`
+# ADR 0117 — `website/` ganha lockfile próprio, fora do `pnpm audit` do produto
 
-- **Status:** accepted
-- **Date:** 2026-08-28
+- **Status:** aceito
+- **Data:** 2026-08-28
 
-## Context
+## Contexto
 
-`website/` (the Docusaurus site that publishes `docs/`) has been a member of
-the root `pnpm-workspace.yaml` since it was created, sharing the single
-`pnpm-lock.yaml` with `apps/api`, `apps/web`, `apps/runner`, `packages/*`
-and `scripts`. Nothing in `website/` ever reaches a production image — the
-site is built and published by its own workflow
-(`docs-deploy.yml`/`docs-check.yml`), never bundled into the api, web or
-runner artifacts.
+`website/` (o site Docusaurus que publica `docs/`) é membro do
+`pnpm-workspace.yaml` da raiz desde que foi criado, compartilhando o único
+`pnpm-lock.yaml` com `apps/api`, `apps/web`, `apps/runner`, `packages/*` e
+`scripts`. Nada em `website/` chega a uma imagem de produção — o site é
+construído e publicado pelo próprio workflow
+(`docs-deploy.yml`/`docs-check.yml`), nunca empacotado nos artefatos da api,
+do web ou do runner.
 
-Sharing the lockfile charged two prices that had nothing to do with the
-product:
+Compartilhar o lockfile cobrava dois preços que nada tinham a ver com o
+produto:
 
-1. **`pnpm audit` stopped answering "is the product safe?"** and started
-   answering "is the product **and** a documentation generator safe?".
-   Docusaurus, `docusaurus-theme-openapi-docs` and their transitive tree
-   (webpack, postman-collection, oas-validator, `@redocly/*`…) are a
-   large, fast-moving surface that never ships, and every advisory in it
-   showed up in the same `pnpm audit` gate the product depends on
+1. **O `pnpm audit` deixou de responder "o produto está seguro?"** e passou a
+   responder "o produto **e** um gerador de documentação estão seguros?".
+   Docusaurus, `docusaurus-theme-openapi-docs` e a árvore transitiva deles
+   (webpack, postman-collection, oas-validator, `@redocly/*`…) são uma
+   superfície grande e que muda rápido, que nunca é entregue, e todo advisory
+   nela aparecia no mesmo portão de `pnpm audit` de que o produto depende
    (`ci.yml`, job "Auditoria de dependências").
-2. **Most of the security overrides in `pnpm-workspace.yaml` existed only
-   to patch a transitive dependency of the site.** Of the 13 entries
-   audited for this decision, `serialize-javascript` and the `yaml@1.x`
-   range were used **exclusively** by `website/`'s dependency tree
-   (confirmed with `pnpm why <pkg> -r` against the shared lockfile, not by
-   re-reading the comments — see "What the audit found" below). Maintaining
-   them at the root meant carrying `website/`'s vulnerability surface as
-   if it were the product's.
+2. **A maioria dos overrides de segurança em `pnpm-workspace.yaml` existia só
+   para corrigir uma dependência transitiva do site.** Das 13 entradas
+   auditadas para esta decisão, `serialize-javascript` e a faixa `yaml@1.x`
+   eram usadas **exclusivamente** pela árvore de dependências de `website/`
+   (confirmado com `pnpm why <pkg> -r` contra o lockfile compartilhado, não
+   relendo os comentários — ver "O que a auditoria achou" abaixo). Mantê-los
+   na raiz significava carregar a superfície de vulnerabilidade de `website/`
+   como se fosse do produto.
 
-## What the audit found
+## O que a auditoria achou {#what-the-audit-found}
 
-The backlog entry that proposed this assumed the split would be a clean
-"website's overrides move out, the product's stay." Running `pnpm why
-<pkg> -r` against the pre-split lockfile for all 13 overrides showed a
-messier reality: several packages the comments attributed to
-`website/` alone are **also** pulled in by `apps/api` or `apps/web`,
-through a different chain than the one the comment described:
+A entrada do backlog que propôs isto supunha que a separação seria limpa: "os
+overrides do website saem, os do produto ficam". Rodar `pnpm why <pkg> -r`
+contra o lockfile de antes da separação para os 13 overrides mostrou uma
+realidade mais bagunçada: vários pacotes que os comentários atribuíam só a
+`website/` são **também** puxados por `apps/api` ou `apps/web`, por uma cadeia
+diferente da que o comentário descrevia:
 
-| package | website's own chain | also required by |
+| pacote | cadeia do próprio website | também exigido por |
 |---|---|---|
 | `js-yaml` (`<4.3.1`) | `openapi-to-postmanv2` / `@11ty/gray-matter` | `apps/api`, via `eslint` → `@eslint/eslintrc` |
-| `js-yaml` (`<5.2.2`) | `@redocly/openapi-core` | `apps/api`, via `@nestjs/swagger` (already known) |
-| `mermaid` | `@docusaurus/theme-mermaid` | `apps/web`, direct runtime dependency (ADR 0068) |
-| `dompurify` | via `mermaid` | `apps/web`, via the same `mermaid` |
+| `js-yaml` (`<5.2.2`) | `@redocly/openapi-core` | `apps/api`, via `@nestjs/swagger` (já conhecido) |
+| `mermaid` | `@docusaurus/theme-mermaid` | `apps/web`, dependência direta de runtime (ADR 0068) |
+| `dompurify` | via `mermaid` | `apps/web`, via o mesmo `mermaid` |
 | `uuid` | `postman-collection`, `sockjs` | `apps/web`, via `mermaid` |
-| `postcss` | `postcss-preset-env` (transitive of `docusaurus-theme-openapi-docs`) | `apps/web`, via `vite`'s own `postcss: ^8.5.17` dependency |
-| `nanoid` | via its own `postcss` chain | `apps/web`, via the same `postcss` chain under `vite` |
+| `postcss` | `postcss-preset-env` (transitiva de `docusaurus-theme-openapi-docs`) | `apps/web`, via a dependência própria do `vite`, `postcss: ^8.5.17` |
+| `nanoid` | via a própria cadeia de `postcss` | `apps/web`, via a mesma cadeia de `postcss` sob o `vite` |
 | `fast-uri` | `@redocly/ajv` | `apps/api`, via `ajv` → `@angular-devkit/core` → `@nestjs/schematics` |
-| `lodash` | `@docusaurus/core`, direct | `apps/api`, via `@nestjs/swagger` (already known) |
-| `undici` | `cheerio` (local search) | `apps/web`, `jsdom` devDependency (already known — the one case the backlog entry had flagged as mixed) |
+| `lodash` | `@docusaurus/core`, direta | `apps/api`, via `@nestjs/swagger` (já conhecido) |
+| `undici` | `cheerio` (busca local) | `apps/web`, devDependency `jsdom` (já conhecido — o único caso que a entrada do backlog marcara como misto) |
 
-Only two overrides turned out to be truly website-exclusive
-(`serialize-javascript`, `yaml@1.x`), and one turned out to be
-product-exclusive with no presence anywhere in `website/`'s tree
-(`esbuild`, via `drizzle-kit`).
+Só dois overrides se revelaram de fato exclusivos do website
+(`serialize-javascript`, `yaml@1.x`), e um se revelou exclusivo do produto, sem
+presença nenhuma na árvore de `website/` (`esbuild`, via `drizzle-kit`).
 
-This matters for the decision below: splitting the lockfile does **not**
-mean most overrides simply "move." A once-shared override that patches a
-package present on both sides has to keep protecting **both** trees once
-they stop sharing a resolution — dropping it from one side because the
-comment named the other side would silently reopen the CVE on the side
-that got dropped.
+Isso importa para a decisão abaixo: separar o lockfile **não** significa que a
+maioria dos overrides simplesmente "se muda". Um override antes compartilhado
+que corrige um pacote presente nos dois lados tem de continuar protegendo **as
+duas** árvores quando elas deixam de compartilhar uma resolução — tirá-lo de um
+lado porque o comentário nomeava o outro reabriria em silêncio o CVE no lado
+que o perdeu.
 
-## Decision
+## Decisão
 
-### 1. `website` leaves `pnpm-workspace.yaml`'s `packages:` list
+### 1. `website` sai da lista `packages:` do `pnpm-workspace.yaml`
 
-It's no longer a workspace member. `pnpm install` at the repository root
-stops touching anything under `website/`, and `apps/api`/`apps/web`/
-`apps/runner`/`packages/*`/`scripts` keep installing exactly as before.
+Ele deixa de ser membro do workspace. `pnpm install` na raiz do repositório
+para de tocar qualquer coisa sob `website/`, e
+`apps/api`/`apps/web`/`apps/runner`/`packages/*`/`scripts` continuam instalando
+exatamente como antes.
 
-### 2. `website/` gets its own `pnpm-lock.yaml`, installed independently
+### 2. `website/` ganha o próprio `pnpm-lock.yaml`, instalado de forma independente
 
-`pnpm install` run **inside** `website/` (not `pnpm --filter website` from
-the root — that verb requires workspace membership) resolves and locks
-`website/`'s dependencies on their own, against `website/package.json`
-alone.
+`pnpm install` rodado **dentro** de `website/` (não `pnpm --filter website` da
+raiz — esse verbo exige ser membro do workspace) resolve e trava as
+dependências de `website/` sozinhas, contra `website/package.json` apenas.
 
-### 3. Overrides split by where the vulnerable package actually resolves, not by which comment named it
+### 3. Overrides separados por onde o pacote vulnerável de fato resolve, não por qual comentário o nomeava
 
-- **Website-exclusive** (`serialize-javascript`, `yaml@1.x`): removed from
-  the root `pnpm-workspace.yaml`, added to a new `pnpm.overrides` block in
-  `website/package.json` (the standalone-project syntax — no
-  `pnpm-workspace.yaml` inside `website/`, so the workspace-level
-  `overrides:` key doesn't apply there).
-- **Mixed** (`js-yaml` both ranges, `mermaid`, `dompurify`, `uuid`,
-  `postcss`, `nanoid`, `fast-uri`, `lodash`, `undici`): kept at the root
-  **and** duplicated into `website/package.json`. Two lockfiles now
-  resolve these packages independently, so each needs its own floor.
-- **Product-exclusive** (`esbuild`): stays at the root only. `website/`
-  never resolves it, so an entry there would be dead weight.
+- **Exclusivos do website** (`serialize-javascript`, `yaml@1.x`): removidos do
+  `pnpm-workspace.yaml` da raiz, acrescentados a um bloco novo
+  `pnpm.overrides` em `website/package.json` (a sintaxe de projeto avulso — não
+  há `pnpm-workspace.yaml` dentro de `website/`, então a chave `overrides:` de
+  nível de workspace não vale ali).
+- **Mistos** (`js-yaml` nas duas faixas, `mermaid`, `dompurify`, `uuid`,
+  `postcss`, `nanoid`, `fast-uri`, `lodash`, `undici`): mantidos na raiz **e**
+  duplicados em `website/package.json`. Dois lockfiles agora resolvem esses
+  pacotes de forma independente, então cada um precisa do próprio piso.
+- **Exclusivos do produto** (`esbuild`): ficam só na raiz. `website/` nunca o
+  resolve, então uma entrada ali seria peso morto.
 
-The comments in both files say which category each entry falls into and
-point at this ADR, so the next person who touches one of the mixed
-entries doesn't have to re-run `pnpm why` from scratch to know the other
-side needs the same fix.
+Os comentários nos dois arquivos dizem em que categoria cada entrada cai e
+apontam para este ADR, para que a próxima pessoa que tocar uma das entradas
+mistas não tenha de rodar `pnpm why` do zero para saber que o outro lado
+precisa da mesma correção.
 
-### 4. Scripts and workflows move from `--filter website` to `--dir website`
+### 4. Scripts e workflows passam de `--filter website` para `--dir website`
 
-`pnpm --filter <name>` selects a package **by workspace membership** —
-with `website` out of the workspace, every `docs:*` script in the root
-`package.json` (`start`, `build`, `serve`, `clear`) switches to
-`pnpm --dir website <script>`, which runs pnpm as if it had been started
-inside that directory, membership or not. The script names people already
-type (`pnpm docs:build`, `pnpm docs:start`) don't change.
+`pnpm --filter <name>` seleciona um pacote **por pertencer ao workspace** —
+com `website` fora do workspace, todo script `docs:*` do `package.json` da raiz
+(`start`, `build`, `serve`, `clear`) passa a `pnpm --dir website <script>`, que
+roda o pnpm como se tivesse sido iniciado dentro daquele diretório, membro ou
+não. Os nomes de script que as pessoas já digitam (`pnpm docs:build`,
+`pnpm docs:start`) não mudam.
 
-`docs-deploy.yml` and `docs-check.yml` each gain a second, separate
-`pnpm install --frozen-lockfile` step scoped to `website/`
-(`working-directory: website`), right after the existing root install.
-The root install no longer reaches `website/`'s dependencies at all, and
-without this second step the build step would fail on a missing
-`node_modules`.
+`docs-deploy.yml` e `docs-check.yml` ganham cada um um segundo passo separado
+`pnpm install --frozen-lockfile` escopado a `website/`
+(`working-directory: website`), logo depois da instalação da raiz que já
+existe. A instalação da raiz não alcança mais as dependências de `website/`, e
+sem esse segundo passo o passo de build falharia por falta de `node_modules`.
 
-## Consequences
+## Consequências
 
-- **`pnpm audit` at the root now reports only the product's dependency
-  tree.** Docusaurus, its theme, its OpenAPI plugin and their transitive
-  packages disappear from the gate `ci.yml`'s "Auditoria de dependências"
-  job runs — the CVE surface it reports shrinks to what actually ships.
-- **The single-install convenience is gone.** A change that touches both
-  a product package and `website/` (rare, but `docs:generate` output does
-  touch both) now needs two `pnpm install` runs, one at the root and one
-  inside `website/`, instead of one. `docs-deploy.yml`/`docs-check.yml`
-  pay this same price with a second CI step.
-- **A mixed override has two homes to keep in sync.** If `apps/web` drops
-  `mermaid` (or `vite` bumps `postcss` past the vulnerable range on its
-  own), the root entry becomes removable the normal way (`pnpm audit`
-  stops complaining) but the `website/package.json` copy won't notice
-  until someone runs `pnpm audit` **inside** `website/` too — there is no
-  single command that audits both trees in one pass yet.
-- `docs/.docmap.yml`'s `site-e-publicacao` rule already watches
-  `website/**` and `.github/workflows/docs-deploy.yml` at `warn`, so a
-  future change to either keeps prompting a look at
-  `docs/explanation/documentation-workflow.md`, which now also notes the
-  two-lockfile setup.
+- **O `pnpm audit` na raiz agora relata só a árvore de dependências do
+  produto.** Docusaurus, o tema dele, o plugin de OpenAPI e os pacotes
+  transitivos deles somem do portão que o job "Auditoria de dependências" do
+  `ci.yml` roda — a superfície de CVE que ele relata encolhe para o que de fato
+  é entregue.
+- **A conveniência da instalação única acabou.** Uma mudança que toca um
+  pacote do produto e `website/` (rara, mas a saída do `docs:generate` toca os
+  dois) agora precisa de duas execuções de `pnpm install`, uma na raiz e uma
+  dentro de `website/`, em vez de uma. `docs-deploy.yml`/`docs-check.yml`
+  pagam esse mesmo preço com um segundo passo de CI.
+- **Um override misto tem duas casas a manter em sincronia.** Se `apps/web`
+  largar o `mermaid` (ou o `vite` subir o `postcss` para além da faixa
+  vulnerável por conta própria), a entrada da raiz fica removível do jeito
+  normal (o `pnpm audit` para de reclamar), mas a cópia em
+  `website/package.json` não vai perceber até alguém rodar `pnpm audit`
+  **dentro** de `website/` também — ainda não há um comando único que audite
+  as duas árvores de uma vez.
+- A regra `site-e-publicacao` do `docs/.docmap.yml` já observa `website/**` e
+  `.github/workflows/docs-deploy.yml` em `warn`, então uma mudança futura em
+  qualquer um continua pedindo uma olhada em
+  `docs/explanation/documentation-workflow.md`, que agora também registra o
+  arranjo de dois lockfiles.
 
-## Discarded alternatives
+## Alternativas descartadas
 
-- **Leave `website/` in the workspace and just tolerate its CVEs in
-  `pnpm audit`**: the status quo. Rejected because the whole point of the
-  audit gate is telling the team when a package that ships has a known
-  vulnerability, and a Docusaurus theme package drowns that signal in
-  noise nobody can act on except by bumping a doc-tooling dependency.
-- **Move `website/` to a separate repository**: solves the same problem
-  and more, but loses the doc source (`docs/` stays in this repository)
-  living next to the site that renders it, and the `docs:generate`
-  pipeline that reads `apps/api` source directly to build the OpenAPI
-  reference would need a cross-repository step. Out of scope for what the
-  backlog entry asked.
-- **Keep every override at the root "just in case"**: simpler to write,
-  and wrong the same way the original mixed-attribution comments were —
-  it hides which package actually needs protecting on which side, and the
-  next split (or the next audit of these entries) starts from zero again.
+- **Deixar `website/` no workspace e só tolerar os CVEs dele no
+  `pnpm audit`**: o status quo. Rejeitada porque o objetivo inteiro do portão
+  de auditoria é avisar o time quando um pacote que é entregue tem
+  vulnerabilidade conhecida, e um pacote de tema do Docusaurus afoga esse sinal
+  em ruído sobre o qual ninguém pode agir, a não ser subindo uma dependência de
+  ferramenta de documentação.
+- **Mover `website/` para um repositório separado**: resolve o mesmo problema
+  e mais, mas perde a fonte da doc (`docs/` fica neste repositório) morando ao
+  lado do site que a renderiza, e o pipeline `docs:generate`, que lê o código
+  de `apps/api` direto para montar a referência OpenAPI, precisaria de um passo
+  entre repositórios. Fora do escopo do que a entrada do backlog pediu.
+- **Manter todo override na raiz "por via das dúvidas"**: mais simples de
+  escrever, e errado do mesmo jeito que os comentários originais de atribuição
+  mista eram — esconde qual pacote de fato precisa de proteção em qual lado, e
+  a próxima separação (ou a próxima auditoria destas entradas) começa do zero
+  outra vez.

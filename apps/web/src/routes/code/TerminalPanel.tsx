@@ -1,3 +1,4 @@
+import { Shimmer } from '../../components/ui/Shimmer';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Terminal as XTermTerminal } from '@xterm/xterm';
@@ -158,7 +159,7 @@ export function TerminalPanel({ projectId }: { projectId: string }) {
       {estado.tipo === 'carregando' && (
         <div className={styles.overlay}>
           <Skeleton width={220} height={20} radius={999} />
-          <p className={styles.overlayTexto}>{t('terminalPanel.loading')}</p>
+          <p className={styles.overlayTexto}><Shimmer>{t('terminalPanel.loading')}</Shimmer></p>
         </div>
       )}
 

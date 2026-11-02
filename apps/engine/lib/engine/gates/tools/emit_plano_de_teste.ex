@@ -70,7 +70,7 @@ defmodule Engine.Gates.Tools.EmitPlanoDeTeste do
   def run(_args, _ctx),
     do:
       {:error,
-       "emit_plano_de_teste exige planoDeTeste, criteriosExecutaveis (lista não vazia) e estrategiaDeAutomacao"}
+       "emit_plano_de_teste exige `planoDeTeste`, `criteriosExecutaveis` (lista não vazia) e `estrategiaDeAutomacao`"}
 
   defp leu_algo?(messages) do
     Enum.any?(messages, fn m ->

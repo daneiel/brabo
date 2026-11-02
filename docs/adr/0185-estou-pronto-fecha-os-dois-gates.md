@@ -1,4 +1,4 @@
-# 0185 — "Estou pronto — a necessidade está validada": um clique fecha a prontidão, o gate `necessidade-validada` e o aceite do PO
+# ADR 0185 — "Estou pronto — a necessidade está validada": um clique fecha a prontidão, o gate `necessidade-validada` e o aceite do PO
 
 ## Status
 

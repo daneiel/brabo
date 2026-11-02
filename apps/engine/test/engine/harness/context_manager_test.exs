@@ -100,7 +100,8 @@ defmodule Engine.Harness.ContextManagerTest do
     assert payload.messagesSummarized == 2
   end
 
-  test "sumarizador falhando: o resumo gravado é o fallback determinístico, nunca vazio" do
+  # RN-702 (AT-366): o fallback era "(N turnos anteriores omitidos)".
+  test "sumarizador falhando: falha NOMEADA com origem e resumo determinístico com o conteúdo" do
     long = String.duplicate("conteúdo antigo e verboso ", 20)
     Process.put(:fake_llm_turn_error, :timeout)
 
@@ -116,7 +117,52 @@ defmodule Engine.Harness.ContextManagerTest do
     assert {:ok, _} = ContextManager.maybe_compact(ctx)
 
     assert_received {:event_appended, _, _, %{type: "context.compacted", payload: payload}}
-    assert payload.summary == "(1 turnos anteriores omitidos)"
+    refute payload.summary =~ "omitidos"
+    assert payload.summary =~ "Resumo determinístico"
+    assert payload.summary =~ "user: conteúdo antigo e verboso"
+    assert payload.summaryOrigin == "deterministico"
+    assert payload.falha == %{origem: "infra", motivo: "o sumarizador excedeu o tempo"}
+  end
+
+  test "sumarizador respondendo: summaryOrigin modelo, sem falha" do
+    long = String.duplicate("conteúdo antigo e verboso ", 20)
+    Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("Decidiu-se X.")])
+
+    ctx = %{
+      project_id: "proj-1",
+      session_id: "sess-1",
+      agent: "arquiteto",
+      messages: [msg("system", "P", true), msg("user", long, false), msg("assistant", "r", false)],
+      context_window: 1,
+      compaction_keep_recent: 1
+    }
+
+    assert {:ok, _} = ContextManager.maybe_compact(ctx)
+    assert_received {:event_appended, _, _, %{type: "context.compacted", payload: payload}}
+    assert payload.summaryOrigin == "modelo"
+    assert payload.falha == nil
+  end
+
+  # RN-702 (AT-366): sem `context_window` (os conversacionais), a janela padrão
+  # era 8 192 e 6,8k tokens compactavam. Agora o padrão é 128k.
+  test "sem context_window declarado: 6,8k tokens NÃO compactam" do
+    anterior = Application.get_env(:engine, :default_context_window)
+    Application.delete_env(:engine, :default_context_window)
+
+    on_exit(fn ->
+      if anterior, do: Application.put_env(:engine, :default_context_window, anterior)
+    end)
+
+    trecho = String.duplicate("a", div(6_800 * Tokenizer.bytes_per_token(), 35))
+
+    messages =
+      [msg("system", "P", true)] ++ Enum.map(1..35, fn _ -> msg("user", trecho, false) end)
+
+    ctx = %{project_id: "proj-1", session_id: "sess-1", agent: "arquiteto", messages: messages}
+
+    assert {:ok, out} = ContextManager.maybe_compact(ctx)
+    assert out.messages == messages
+    refute_received {:event_appended, _, _, %{type: "context.compacted"}}
   end
 
   test "sem estouro de janela: não compacta, contexto intacto" do
@@ -456,7 +502,7 @@ defmodule Engine.Harness.ContextManagerTest do
       assert {:ok, out} = ContextManager.maybe_compact(ctx_que_compacta())
 
       contents = Enum.map(out.messages, &Map.get(&1, "content"))
-      assert Enum.any?(contents, &(&1 =~ "turnos anteriores omitidos"))
+      assert Enum.any?(contents, &(&1 =~ "Resumo determinístico"))
       refute Enum.any?(contents, &(&1 =~ "idioma original"))
     end
   end

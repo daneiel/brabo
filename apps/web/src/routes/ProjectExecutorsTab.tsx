@@ -6,6 +6,7 @@ import { useBindingsDosAgentes } from '../lib/bindings-resolvidos';
 import {
   useActiveExecutionSession,
   useArchitecture,
+  useBacklog,
   useCurrentWorkspace,
   useCurrentWorkspaceWithRole,
   useHandoffs,
@@ -21,13 +22,18 @@ import {
   setAgentAutonomy,
 } from '../lib/api-client';
 import { deriveAgentRoster, groupRosterByArea, isExecutorAgentId, isExecutorGroup } from '../lib/agent-status';
-import { deriveExecutionProgress } from '../lib/execution';
+import { contarTarefasPendentes, deriveExecutionProgress } from '../lib/execution';
+import { ReligarExecucao } from '../components/ReligarExecucao';
 import { connectSessionHeartbeat } from '../lib/session-channel';
 import { INTERVALO_DO_PROJETO_MS, criarInvalidadorDoCanal } from '../lib/canal-vivo';
 import { rotuloDaSessao } from '../lib/session-label';
 import { roleAtLeast } from '../lib/roles';
 import { PendenciasDeOutrasSessoes } from '../components/PendenciasDeOutrasSessoes';
-import { ModoAutomaticoDoTime } from '../components/ModoAutomaticoDoTime';
+import {
+  ModoAutomaticoDoTime,
+  agentesDaOfertaEmLote,
+} from '../components/ModoAutomaticoDoTime';
+import { PararExecucao } from '../components/PararExecucao';
 import type { AutonomyMode } from '../components/AgentCard';
 import { AgentTeamGrid } from '../components/AgentTeamGrid';
 import { AgentTimelineTree } from '../components/AgentTimelineTree';
@@ -86,6 +92,13 @@ export function ProjectExecutorsTab({ projectId }: { projectId: string }) {
   const executionSessionQuery = useActiveExecutionSession(projectId);
   const executionSession = executionSessionQuery.session;
   const sessionId = executionSession?.id;
+  // RN-794 (AT-469): o backlog só é lido quando a leitura CONFIRMOU que não há
+  // execução vigente — é ele que diz quantas tarefas ficaram pendentes. Com a
+  // execução de pé a query fica desligada (nenhuma requisição a mais, RN-632),
+  // e no ritmo de projeto quando ligada.
+  const semExecucaoVigente = executionSessionQuery.isSuccess && !executionSession;
+  const backlogQuery = useBacklog(semExecucaoVigente ? projectId : undefined, INTERVALO_DO_PROJETO_MS);
+  const tarefasPendentes = contarTarefasPendentes(backlogQuery.data);
   const eventsQuery = useSessionEvents(projectId, sessionId);
   const events = eventsQuery.data?.items ?? [];
   // Quem espera decisão sai da fila do PROJETO (AT-297, RN-638): a mesma
@@ -271,7 +284,12 @@ export function ProjectExecutorsTab({ projectId }: { projectId: string }) {
           <Skeleton width={220} height={18} />
         </div>
       ) : !executionSession ? (
-        <div className={styles.sectionSub}>{t('tab.noActiveExecution')}</div>
+        <>
+          <div className={styles.sectionSub}>{t('tab.noActiveExecution')}</div>
+          {tarefasPendentes > 0 && (
+            <ReligarExecucao projectId={projectId} tarefasPendentes={tarefasPendentes} />
+          )}
+        </>
       ) : (
         <div className={styles.sectionSub}>
           {t('tab.showingSession')}{' '}
@@ -289,17 +307,16 @@ export function ProjectExecutorsTab({ projectId }: { projectId: string }) {
 
       {sessionId && (
         <>
-          {/* AT-298: o que os agentes propuseram FORA da execução e a destrava
-              — o `container_start` do Infra Lead nasce na sessão de chat,
-              enquanto o `dev.blocked_by_container` aparece aqui. Mesmo atalho
-              do chat (RN-626/RN-467): mesmo card, mesmos endpoints, filas
-              separadas. As da PRÓPRIA execução não entram: o roster já as
-              marca como `aguardando`, e a aba Aprovações as decide. */}
-          <PendenciasDeOutrasSessoes
-            projectId={projectId}
-            sessionId={sessionId}
-            podeDecidir={podeDecidir}
-          />
+
+          {/* RN-763 (AT-456): parar a execução é FECHAR a sessão dela; o
+              engine para os dev agents e os gates. */}
+          {executionSession?.status === 'active' && (
+            <PararExecucao
+              projectId={projectId}
+              sessionId={sessionId}
+              podeParar={podeDecidir}
+            />
+          )}
 
           {/* RN-661 (AT-315): no início da execução, a oferta de ligar o
               modo automático para o time de uma vez. Some quando todos já
@@ -307,11 +324,29 @@ export function ProjectExecutorsTab({ projectId }: { projectId: string }) {
           {executorRoster.length > 0 && (
             <ModoAutomaticoDoTime
               projectId={projectId}
-              agentes={executorRoster.map((r) => r.id)}
+              agentes={agentesDaOfertaEmLote(executorRoster.map((r) => r.id))}
               autonomyRules={autonomyRules}
               podeLigar={podeLigarModoAutomatico}
             />
           )}
+
+          {/* AT-298: o que os agentes propuseram FORA da execução e a destrava
+              — o `container_start` do Infra Lead nasce na sessão de chat,
+              enquanto o `dev.blocked_by_container` aparece aqui. Mesmo atalho
+              do chat (RN-626/RN-467): mesmo card, mesmos endpoints, filas
+              separadas. As da PRÓPRIA execução não entram: o roster já as
+              marca como `aguardando`, e a aba Aprovações as decide. RN-816
+              (AT-480): vem DEPOIS de "Parar execução" e da oferta em lote —
+              chega depois do primeiro paint, e acima deles empurrava o botão
+              para baixo do cursor. */}
+          <PendenciasDeOutrasSessoes
+            projectId={projectId}
+            sessionId={sessionId}
+            podeDecidir={podeDecidir}
+            // RN-825/826: as filas de PR pronta e tarefa bloqueada são do chat;
+            // aqui o backlog só é lido sem execução vigente (RN-794).
+            filasDoChat={false}
+          />
 
           {/* `executionActivated` vem do resumo agregado — os três estados
               da RN-088 aqui: sem eles, um "nenhum dev agent" de CARREGANDO

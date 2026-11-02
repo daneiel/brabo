@@ -14,8 +14,10 @@ import { ExecuteAdrPrUseCase } from './execute-adr-pr.use-case';
 import { ExecuteInfraPrUseCase } from './execute-infra-pr.use-case';
 import { ExecuteContainerStartUseCase } from './execute-container-start.use-case';
 import { ExecuteContainerStartViaRunnerUseCase } from './execute-container-start-via-runner.use-case';
+import { ExecuteQaEnvironmentStartUseCase } from './execute-qa-environment-start.use-case';
 import { ExecuteContainerStopUseCase } from './execute-container-stop.use-case';
 import { ExecuteContainerRemoveUseCase } from './execute-container-remove.use-case';
+import { ExecuteContainerRecreateUseCase } from './execute-container-recreate.use-case';
 import { ExecuteInstructionPatchUseCase } from './execute-instruction-patch.use-case';
 import { ExecuteGitActionUseCase } from './execute-git-action.use-case';
 import { ExecuteParallelizationUseCase } from '../execution/execute-parallelization.use-case';
@@ -52,6 +54,8 @@ export class ApproveActionUseCase {
     private readonly metrics: BraboMetrics,
     private readonly appendSessionEvent: AppendSessionEventUseCase,
     private readonly executeExecutionPlan: ExecuteExecutionPlanUseCase,
+    private readonly executeContainerRecreate: ExecuteContainerRecreateUseCase,
+    private readonly executeQaStart?: ExecuteQaEnvironmentStartUseCase,
   ) {}
 
   @Traced('application')
@@ -122,6 +126,14 @@ export class ApproveActionUseCase {
       );
     }
 
+    if (approved.actionType === 'qa_environment_start') {
+      return this.avisarQuemEsperava(
+        projectId,
+        sessionId,
+        await this.executeQaStart!.execute(projectId, sessionId, approved),
+      );
+    }
+
     if (approved.actionType === 'container_stop') {
       return this.avisarQuemEsperava(
         projectId,
@@ -135,6 +147,18 @@ export class ApproveActionUseCase {
         projectId,
         sessionId,
         await this.executeContainerRemove.execute(
+          projectId,
+          sessionId,
+          approved,
+        ),
+      );
+    }
+
+    if (approved.actionType === 'container_recreate') {
+      return this.avisarQuemEsperava(
+        projectId,
+        sessionId,
+        await this.executeContainerRecreate.execute(
           projectId,
           sessionId,
           approved,

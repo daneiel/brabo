@@ -10,7 +10,6 @@ import { ToastProvider } from '../../components/ui/ToastProvider';
 import type { Model, ModelsByCategory, Project } from '../../lib/api-types';
 import { roleAtLeast } from '../../lib/roles';
 import { ModelsSection } from './ModelsSection';
-import { AreaModelsSection } from './AreaModelsSection';
 import { loteSobreLeiturasPorChave } from '../../test/lote-de-bindings';
 
 /**
@@ -36,7 +35,7 @@ import { loteSobreLeiturasPorChave } from '../../test/lote-de-bindings';
  *
  * A diferença é a regra, não descuido ([RN-102](docs/business-rules/custo.md#rn-102)):
  * o binding do agente alcança UM agente, o da área alcança o lead e todos os
- * subagentes de uma vez. Copiar aqui o gate de `AreaModelsSection` trancaria um
+ * subagentes de uma vez. Copiar aqui o gate da caixa da área trancaria um
  * `developer` fora de uma ação que a api aceita — o defeito INVERSO, e pior que
  * o original, porque tirar capacidade de quem tem é invisível para quem a
  * perdeu.
@@ -106,9 +105,8 @@ const DO_AGENTE = 'Modelo do agente';
 const OUTRO = 'Outro modelo';
 const DA_AREA = 'Modelo da área';
 
-/** As duas regiões — o `<section>` de cada seção tem nome acessível. */
+/** A região — o `<section>` da seção tem nome acessível. */
 const REGIAO_AGENTES = 'Modelos por agente';
-const REGIAO_AREAS = 'Modelo por área';
 
 const VOLTAR_INLINE = 'voltar a herdar';
 
@@ -344,51 +342,58 @@ describe('tabela de agentes — quem PODE editar', () => {
  * fazem a MESMA pergunta com mínimos DIFERENTES, e um `developer` tem de ver
  * uma habilitada e a outra não, na mesma tela, ao mesmo tempo.
  */
-describe('a régua é do ENDPOINT, não da seção', () => {
-  it('developer edita o AGENTE e não a ÁREA', async () => {
-    comPapel('developer');
-    montar(
-      <>
-        <ModelsSection projectId="proj-1" />
-        <AreaModelsSection projectId="proj-1" />
-      </>,
+describe('a régua é do ENDPOINT, não da linha', () => {
+  /** QA-automação diverge; o lead `qa` SEGUE a área (caixa marcada). */
+  function leadSegueAArea() {
+    getAgentModelBinding.mockImplementation((_p: string, slug: string) =>
+      Promise.resolve(
+        slug === SLUG
+          ? { modelId: 'm-agente', origin: 'agent', skipped: [] }
+          : slug === 'qa'
+            ? { modelId: 'm-area', origin: 'area', skipped: [] }
+            : null,
+      ),
     );
+  }
+
+  it('developer edita o AGENTE e não a ÁREA (caixa e modelo do lead inertes)', async () => {
+    comPapel('developer');
+    leadSegueAArea();
+    montar(<ModelsSection projectId="proj-1" />);
 
     const agentes = within(
       await screen.findByRole('region', { name: REGIAO_AGENTES }),
     );
-    const areas = within(screen.getByRole('region', { name: REGIAO_AREAS }));
 
     expect(await agentes.findByRole('button', { name: DO_AGENTE })).toBeEnabled();
     expect(agentes.getByRole('button', { name: VOLTAR_INLINE })).toBeEnabled();
 
-    // A seção de área pede `maintainer`: TODO picker dela e todo "Voltar a
-    // herdar" dela continuam desabilitados para o mesmo `developer`.
-    const pickersDeArea = await areas.findAllByRole('button', { name: DA_AREA });
-    expect(pickersDeArea.length).toBeGreaterThan(0);
-    for (const picker of pickersDeArea) expect(picker).toBeDisabled();
-    for (const botao of areas.getAllByRole('button', { name: 'Voltar a herdar' })) {
-      expect(botao).toBeDisabled();
-    }
+    // O binding de área pede `maintainer`: a caixa e o picker do lead que a
+    // segue continuam desabilitados para o mesmo `developer`.
+    const pickerDoLead = await agentes.findByRole('button', { name: DA_AREA });
+    expect(pickerDoLead).toBeDisabled();
+    const caixas = agentes.getAllByRole('checkbox', { name: /Valer para a área/ });
+    expect(caixas).toHaveLength(3);
+    for (const caixa of caixas) expect(caixa).toBeDisabled();
+    expect(
+      agentes.getByText(/Exige papel maintainer para marcar a caixa da área/),
+    ).toBeInTheDocument();
   });
 
   it('maintainer alcança as duas — o mínimo do agente é MENOR, não outro', async () => {
     comPapel('maintainer');
-    montar(
-      <>
-        <ModelsSection projectId="proj-1" />
-        <AreaModelsSection projectId="proj-1" />
-      </>,
-    );
+    leadSegueAArea();
+    montar(<ModelsSection projectId="proj-1" />);
 
     const agentes = within(
       await screen.findByRole('region', { name: REGIAO_AGENTES }),
     );
-    const areas = within(screen.getByRole('region', { name: REGIAO_AREAS }));
 
     expect(await agentes.findByRole('button', { name: DO_AGENTE })).toBeEnabled();
-    for (const picker of await areas.findAllByRole('button', { name: DA_AREA })) {
-      expect(picker).toBeEnabled();
-    }
+    expect(await agentes.findByRole('button', { name: DA_AREA })).toBeEnabled();
+    // A caixa precisa de um vigente para copiar para a área: só a do lead de
+    // QA (que tem modelo) fica habilitada; as outras duas não têm o que gravar.
+    expect(agentes.getByRole('checkbox', { name: /área QA inteira/ })).toBeEnabled();
+    expect(agentes.queryByText(/Exige papel maintainer para marcar/)).toBeNull();
   });
 });

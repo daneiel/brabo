@@ -36,3 +36,12 @@
   font-size: var(--fs-meta);
   color: var(--warning);
 }
+
+/* RN-816 (AT-480): o lugar da esteira do gate enquanto o backlog carrega —
+   a altura de um PrGateTimeline de uma linha de etapas, para o Merge desta
+   linha e o das de baixo não mudarem de lugar quando ela chega. */
+.reservaDaEsteira {
+  width: 100%;
+  min-height: 96px;
+  height: 96px;
+}

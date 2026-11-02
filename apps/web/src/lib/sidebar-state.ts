@@ -150,7 +150,7 @@ export function corDoProjeto(projectId: string): string {
  *
  * `AutoCollapseContext`/`useAutoCollapseSidebar` existiam para a aba de
  * Código montar a sidebar recolhida sem gravar preferência. Com o trilho
- * vertical do projeto (`routes/ProjectRail.tsx`) sempre presente, manter isso
+ * vertical do projeto (o `ProjectRail`, removido no ADR 0211) sempre presente, manter isso
  * poria a trilha de ícones do Shell (62px) encostada no trilho do projeto —
  * dois trilhos verticais adjacentes, permanentes, na aba mais pesada. O
  * colapso passa a ser só o MANUAL, do usuário, e esse continua persistido em

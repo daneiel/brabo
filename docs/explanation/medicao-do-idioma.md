@@ -1,84 +1,86 @@
 ---
 id: medicao-do-idioma
-title: Measuring the language heuristic
-description: The instrument that measures the AT-080 language-detection heuristic against a labeled corpus, the numbers it produced on the synthetic corpus, and the paid validation of the language orientation and its cost (AT-167, 2026-09-29).
+title: Medição da heurística de idioma
+description: O instrumento que mede a heurística de detecção de idioma da AT-080 contra um corpus rotulado, os números que ele produziu no corpus sintético, e a validação paga da orientação de idioma e do custo dela (AT-167, 2026-09-29).
 ---
 
-# Measuring the language heuristic
+# Medição da heurística de idioma {#measuring-the-language-heuristic}
 
-> AT-160 (EP-028, HS-053). The heuristic being measured is the one the AT-080
-> specification proposed ("A — own heuristic, no dependency"). Since AT-163
-> ([RN-624](../business-rules.md#rn-624)) the product runs it: the api detects
-> the author's language with it and ASKS before anything changes. The
-> product's thresholds are **provisional** — see
-> [The product's provisional thresholds](#the-products-provisional-thresholds).
+> AT-160 (EP-028, HS-053). A heurística medida é a que a especificação da
+> AT-080 propôs ("A — heurística própria, sem dependência"). Desde a AT-163
+> ([RN-624](../business-rules.md#rn-624)) o produto a roda: a api detecta
+> o idioma do autor com ela e PERGUNTA antes de qualquer coisa mudar. Os
+> limiares do produto são **provisórios** — veja
+> [Os limiares provisórios do produto](#the-products-provisional-thresholds).
 
-## What exists
+## O que existe {#what-exists}
 
-The instrument lives in `scripts/idioma/` and runs with the repository's Node
-(type stripping, no build step). **No new dependency**: the heuristic is marker
-lists and regular expressions, and the extraction talks to Postgres through
-`psql` inside the database container.
+O instrumento mora em `scripts/idioma/` e roda com o Node do repositório
+(type stripping, sem passo de build). **Nenhuma dependência nova**: a heurística
+é lista de marcadores e expressões regulares, e a extração fala com o Postgres
+por `psql` dentro do container do banco.
 
-The heuristic itself lives in the **api** —
-`apps/api/src/domain/iam/heuristica-de-idioma.ts` — and `scripts/idioma/heuristica.ts`
-only re-exports it, so the instrument measures exactly the code the product
-runs. That direction is forced: the api reaches neither `scripts/` nor any
-runtime package without a build step, and `packages/shared` is types only. The
-file has no imports, so Node runs it from `scripts/` by type stripping (the
-`idioma:*` commands silence the "typeless package" warning that comes with it),
-and `scripts/idioma/` has its own `tsconfig.json` — the only difference is
-turning `verbatimModuleSyntax` off, which rejects every `export` of a CommonJS
-module such as the api's. A `.mts` file was tried first: it passed both
-typechecks and the build, and broke every `ts-node` script of the api. The rule
-of *what is evidence* (`evidenciasDoAutor`) moved with the heuristic, and the
-real-corpus extraction uses the same one.
+A heurística em si mora na **api** —
+`apps/api/src/domain/iam/heuristica-de-idioma.ts` — e `scripts/idioma/heuristica.ts`
+só a reexporta, então o instrumento mede exatamente o código que o produto
+roda. Essa direção é forçada: a api não alcança nem `scripts/` nem pacote de
+runtime nenhum sem passo de build, e `packages/shared` é só tipos. O arquivo
+não tem imports, então o Node o roda a partir de `scripts/` por type stripping
+(os comandos `idioma:*` silenciam o aviso de "typeless package" que vem junto),
+e `scripts/idioma/` tem `tsconfig.json` próprio — a única diferença é desligar
+`verbatimModuleSyntax`, que recusa todo `export` de módulo CommonJS como os da
+api. Um arquivo `.mts` foi tentado primeiro: passou nos dois typechecks e no
+build, e quebrou todo script `ts-node` da api. A regra do *que é evidência*
+(`evidenciasDoAutor`) se mudou junto com a heurística, e a extração do corpus
+real usa a mesma.
 
-| file | role |
+| arquivo | papel |
 |---|---|
-| `heuristica.ts` | re-exports the api's heuristic: cleaning, contrastive scoring, the candidate and the provisional parameters, the 10-message sample, the hysteresis and the evidence rule |
-| `corpus-sintetico.jsonl` | the **versioned** synthetic corpus — every line hand-written for the instrument, `origem: "sintetico"` |
-| `sequencias-sinteticas.json` | synthetic conversations for the sample-and-hysteresis path |
-| `medicao.ts` / `medir.ts` | the instrument and its CLI |
-| `extrair.ts` | extracts the **real** corpus from the local event log, to a file outside git |
-| `rotular.ts` | assisted labeling of the real corpus, in the terminal |
+| `heuristica.ts` | reexporta a heurística da api: limpeza, pontuação contrastiva, o candidato e os parâmetros provisórios, a amostra de 10 mensagens, a histerese e a regra de evidência |
+| `corpus-sintetico.jsonl` | o corpus sintético **versionado** — toda linha escrita à mão para o instrumento, `origem: "sintetico"` |
+| `sequencias-sinteticas.json` | conversas sintéticas para o caminho da amostra e da histerese |
+| `medicao.ts` / `medir.ts` | o instrumento e o CLI dele |
+| `extrair.ts` | extrai o corpus **real** do event log local, para um arquivo fora do git |
+| `rotular.ts` | rotulação assistida do corpus real, no terminal |
 
-## The two corpora, and where each one lives
+## Os dois corpora, e onde cada um mora {#the-two-corpora-and-where-each-one-lives}
 
-The maintainer's decision (AT-168, answer 5) is **real + synthetic**. They have
-opposite storage rules:
+A decisão do mantenedor (AT-168, resposta 5) é **real + sintético**. Eles têm
+regras de armazenamento opostas:
 
-- **Synthetic** — versioned, reviewed like code. It covers the nine mandatory
-  cases of AT-080 (typos, legitimate Spanish, English, mixed text, "ok", code,
-  logs, quotations in another language) plus Portuguese full of English jargon,
-  inline identifiers, and languages outside the three (French, Italian, German,
-  Galician, Catalan, Dutch) — the language list is open (AT-168, answer 2).
-- **Real** — the user's own messages from the **local** event log. It never
-  enters git, a fixture, a CI log or a PR body. `extrair.ts` and `corpus.ts`
-  refuse any destination inside the checkout, and the file is written with mode
-  600 under `$XDG_CACHE_HOME/brabo/corpus-idioma/` (else `~/.cache/…`). The
-  report never prints an item's text — only ids, labels and counts — so its
-  output can be pasted into a PR.
+- **Sintético** — versionado, revisado como código. Cobre os nove casos
+  obrigatórios da AT-080 (erros de digitação, espanhol legítimo, inglês, texto
+  misto, "ok", código, logs, citações em outro idioma) mais português cheio de
+  jargão em inglês, identificadores inline, e idiomas fora dos três (francês,
+  italiano, alemão, galego, catalão, holandês) — a lista de idiomas é aberta
+  (AT-168, resposta 2).
+- **Real** — as mensagens do próprio usuário no event log **local**. Nunca
+  entra no git, numa fixture, num log de CI nem no corpo de uma PR. `extrair.ts`
+  e `corpus.ts` recusam qualquer destino dentro do checkout, e o arquivo é
+  gravado com modo 600 em `$XDG_CACHE_HOME/brabo/corpus-idioma/` (senão
+  `~/.cache/…`). O relatório nunca imprime o texto de um item — só ids, rótulos
+  e contagens —, então a saída dele pode ser colada numa PR.
 
-What the extraction takes as evidence follows the AT-080 cleaning: only events
-whose actor is the **user** (the agent's reply is never evidence, so a Spanish
-answer from the model cannot feed the detection back), and, for the structured
-form, only the **answers** — the concatenated `chat.message` the api writes right
-after it, whose labels are the agent's text, is skipped.
+O que a extração toma como evidência segue a limpeza da AT-080: só eventos
+cujo ator é o **usuário** (a resposta do agente nunca é evidência, então uma
+resposta em espanhol do modelo não pode realimentar a detecção) e, no
+formulário estruturado, só as **respostas** — o `chat.message` concatenado que
+a api grava logo depois, cujos rótulos são texto do agente, é pulado.
 
-The labeling assistant does **not** pre-fill the heuristic's guess: accepting it
-with ENTER would anchor the label on the thing the label exists to measure. ENTER
-accepts the language the owner declares with `--padrao`.
+O assistente de rotulação **não** pré-preenche o palpite da heurística:
+aceitá-lo com ENTER ancoraria o rótulo justamente na coisa que o rótulo existe
+para medir. ENTER aceita o idioma que o dono declara com `--padrao`.
 
-Labels: a BCP-47 code (`pt-BR`, `es`, `fr`…), `und` (nothing to decide: "ok",
-only code, only a log) or `mul` (mixed, no dominant language). Scoring:
-`pt`/`es`/`en` must get their own language; `und`, `mul` and any other language
-must get `indeterminado` — the only correct answer a three-language heuristic can
-give them. An `indeterminado` on a decidable item is **lost coverage** (the known
-preference stays); a wrong language is an **error**, and `falso es` is counted
-apart because it is the defect the epic exists to remove.
+Rótulos: um código BCP-47 (`pt-BR`, `es`, `fr`…), `und` (nada a decidir: "ok",
+só código, só um log) ou `mul` (misto, sem idioma dominante). Pontuação:
+`pt`/`es`/`en` têm de receber o próprio idioma; `und`, `mul` e qualquer outro
+idioma têm de receber `indeterminado` — a única resposta correta que uma
+heurística de três idiomas pode dar a eles. Um `indeterminado` num item
+decidível é **cobertura perdida** (a preferência conhecida fica); um idioma
+errado é **erro**, e `falso es` é contado à parte porque é o defeito que o
+épico existe para remover.
 
-## Running it
+## Como rodar {#running-it}
 
 ```bash
 # synthetic corpus (the default)
@@ -90,249 +92,256 @@ pnpm --filter @brabo/scripts idioma:rotular --padrao pt-BR
 pnpm --filter @brabo/scripts idioma:medir --real
 ```
 
-`--container` runs `psql` inside that container with one read-only `SELECT` on
-`session_events` (`--usuario`/`--banco` default to the compose's `brabo`/`brabo`);
-`--database-url <url>` uses a host `psql` instead. Re-running the extraction keeps
-existing labels and appends new messages unlabeled.
+`--container` roda `psql` dentro desse container com um único `SELECT` só de
+leitura em `session_events` (`--usuario`/`--banco` têm como default o
+`brabo`/`brabo` do compose); `--database-url <url>` usa um `psql` do host no
+lugar. Rodar a extração de novo mantém os rótulos existentes e acrescenta as
+mensagens novas sem rótulo.
 
-## Numbers on the synthetic corpus (2026-09-28)
+## Números no corpus sintético (2026-09-28) {#numbers-on-the-synthetic-corpus-2026-09-28}
 
-123 labeled items, 7 sequences, candidate parameters of AT-080 (20-word minimum,
-threshold 0.8, margin 0.3, 10 messages / 2,000 characters, hysteresis 2). Two
-marker lists: `at080` is the specification's list verbatim; `ampliada` is a
-larger list written by this instrument **before** it was run against the corpus
-(frequent function words absent from the other two languages). Same corpus, so
-`ampliada` is not validated by these numbers — the real corpus is what can tell.
+123 itens rotulados, 7 sequências, parâmetros candidatos da AT-080 (mínimo de
+20 palavras, limiar 0,8, margem 0,3, 10 mensagens / 2.000 caracteres, histerese
+2). Duas listas de marcadores: `at080` é a lista da especificação, literal;
+`ampliada` é uma lista maior escrita por este instrumento **antes** de ele rodar
+contra o corpus (palavras funcionais frequentes ausentes dos outros dois
+idiomas). Mesmo corpus, então `ampliada` não é validada por estes números — quem
+pode dizer é o corpus real.
 
-Per message, candidate parameters:
+Por mensagem, parâmetros candidatos:
 
-| label | n | `at080` correct | `at080` indeterminate | `ampliada` correct | `ampliada` indeterminate |
+| rótulo | n | `at080` correto | `at080` indeterminado | `ampliada` correto | `ampliada` indeterminado |
 |---|---|---|---|---|---|
-| pt | 56 | 26 (46.4%) | 30 | 30 (53.6%) | 26 |
-| es | 20 | 6 (30.0%) | 14 | 7 (35.0%) | 13 |
-| en | 14 | 6 (42.9%) | 8 | 6 (42.9%) | 8 |
+| pt | 56 | 26 (46,4%) | 30 | 30 (53,6%) | 26 |
+| es | 20 | 6 (30,0%) | 14 | 7 (35,0%) | 13 |
+| en | 14 | 6 (42,9%) | 8 | 6 (42,9%) | 8 |
 | und | 15 | 15 (100%) | 0 | 15 (100%) | 0 |
 | mul | 5 | 5 (100%) | 0 | 5 (100%) | 0 |
-| other languages | 13 | 10 | 0 | 9 | 0 |
+| outros idiomas | 13 | 10 | 0 | 9 | 0 |
 
-Wrong-language verdicts: **none on a `pt`/`es`/`en` item**, in either list. All of
-them are on languages outside the three — `at080`: French → pt (the `ê` of
-*arrêté*), **Galician → es** (the one `falso es`), Dutch → en; `ampliada`: French →
-es, German → pt and → en, Dutch → en.
+Vereditos de idioma errado: **nenhum num item `pt`/`es`/`en`**, em nenhuma das
+listas. Todos estão em idiomas fora dos três — `at080`: francês → pt (o `ê` de
+*arrêté*), **galego → es** (o único `falso es`), holandês → en; `ampliada`:
+francês → es, alemão → pt e → en, holandês → en.
 
-The cleaning removed more than half of the words of **zero** decidable items.
+A limpeza removeu mais da metade das palavras de **zero** itens decidíveis.
 
-All seven synthetic sequences end where expected with at most the allowed number
-of switches, in both lists — including Portuguese with a long Spanish quotation,
-one whole Spanish message in the middle of Portuguese, and Portuguese dense with
-English jargon.
+As sete sequências sintéticas terminam onde se espera com no máximo o número
+permitido de trocas, nas duas listas — inclusive português com uma citação
+longa em espanhol, uma mensagem inteira em espanhol no meio do português, e
+português denso de jargão em inglês.
 
-CPU on this machine: `at080` 11.7 µs per message and 49 µs per evaluation of the
-10-message sample; `ampliada` 16.8 µs and 60 µs. It varies with the machine; the
-order of magnitude is the point.
+CPU nesta máquina: `at080` 11,7 µs por mensagem e 49 µs por avaliação da
+amostra de 10 mensagens; `ampliada` 16,8 µs e 60 µs. Varia com a máquina; o que
+importa é a ordem de grandeza.
 
-## What the numbers say
+## O que os números dizem {#what-the-numbers-say}
 
-- **With the `at080` list, the threshold and the margin never bind.** 66 of the
-  67 items that score at all score for one language only (confidence = 1.0), so
-  sweeping the threshold from 0.5 to 1.0 changes nothing. The word minimum is the
-  only knob that acts: per message, decidable items reach their language 42.2%
-  of the time at 20 words, 58.9% at 10 and 66.7% with no minimum — at 20 it
-  throws away every short and typo message and most of the technical ones.
-- **Dropping the minimum lets mixed text decide.** With no minimum, `at080` turns
-  three of the five mixed messages into `en` or `pt`, and `ampliada` also decides
-  two `und` items as `en` — unfenced code (`const total = itens.reduce(…)`) and
-  pnpm output (`ELIFECYCLE  Test failed. See above for more details.`) pass the
-  cleaning, which only knows fenced code and the log shapes AT-080 listed.
-- **The margin of 0.3 is redundant with the threshold of 0.8** in any list: with
-  three languages, a winner at ≥ 0.8 is at least 0.6 above the second.
-- **The unit that matters is the sample, not the message** — in the sequences
-  the 10-message window reaches the language with messages that alone would be
-  `indeterminado`. A single Spanish message in a Portuguese window turns the
-  sample `indeterminado` for as long as it stays in the window (sequence `q03`):
-  no switch, but no confirmation either.
-- **The open language list is where the errors are.** With three languages, a
-  Galician or French user can be told they write Spanish or Portuguese. Under the
-  AT-168 rule the detection only *asks*, and the user confirms, so the cost is a
-  wrong question — but it is still the heuristic's only failure mode here.
+- **Com a lista `at080`, o limiar e a margem nunca atuam.** 66 dos 67 itens que
+  pontuam alguma coisa pontuam para um idioma só (confiança = 1,0), então
+  varrer o limiar de 0,5 a 1,0 não muda nada. O mínimo de palavras é o único
+  botão que age: por mensagem, os itens decidíveis chegam ao idioma deles 42,2%
+  das vezes com 20 palavras, 58,9% com 10 e 66,7% sem mínimo — com 20 ele joga
+  fora toda mensagem curta e com erro de digitação e a maior parte das técnicas.
+- **Tirar o mínimo deixa texto misto decidir.** Sem mínimo, `at080` transforma
+  três das cinco mensagens mistas em `en` ou `pt`, e `ampliada` também decide
+  dois itens `und` como `en` — código sem cerca (`const total = itens.reduce(…)`)
+  e saída do pnpm (`ELIFECYCLE  Test failed. See above for more details.`) passam
+  pela limpeza, que só conhece código cercado e os formatos de log que a AT-080
+  listou.
+- **A margem de 0,3 é redundante com o limiar de 0,8** em qualquer lista: com
+  três idiomas, um vencedor com ≥ 0,8 fica pelo menos 0,6 acima do segundo.
+- **A unidade que importa é a amostra, não a mensagem** — nas sequências, a
+  janela de 10 mensagens chega ao idioma com mensagens que sozinhas seriam
+  `indeterminado`. Uma única mensagem em espanhol numa janela em português torna
+  a amostra `indeterminado` enquanto ela estiver na janela (sequência `q03`):
+  nenhuma troca, mas nenhuma confirmação também.
+- **A lista aberta de idiomas é onde estão os erros.** Com três idiomas, um
+  usuário galego ou francês pode ouvir que escreve espanhol ou português. Pela
+  regra da AT-168 a detecção só *pergunta*, e o usuário confirma, então o custo
+  é uma pergunta errada — mas continua sendo o único modo de falha da heurística
+  aqui.
 
-These are synthetic numbers: the corpus was written by the same hand that wrote
-the heuristic. The thresholds of AT-163 should come from the real corpus.
+Estes são números sintéticos: o corpus foi escrito pela mesma mão que escreveu
+a heurística. Os limiares da AT-163 deveriam vir do corpus real.
 
-## The product's provisional thresholds
+## Os limiares provisórios do produto {#the-products-provisional-thresholds}
 
-AT-163 had to ship with *some* numbers before the real corpus exists, so the
-api reads `PARAMETROS_PROVISORIOS` — **provisional, not calibrated**, and
-declared so in [RN-624](../business-rules.md#rn-624):
+A AT-163 tinha de sair com *algum* número antes de o corpus real existir, então
+a api lê `PARAMETROS_PROVISORIOS` — **provisórios, não calibrados**, e assim
+declarados na [RN-624](../business-rules.md#rn-624):
 
-| parameter | provisional | AT-080 candidate | why |
+| parâmetro | provisório | candidato da AT-080 | por quê |
 |---|---|---|---|
-| marker list | `at080` | — | `ampliada` gains 4 points in pt and gets German wrong twice; neither is validated by real data |
-| word minimum (over the sample) | **10** | 20 | coverage of decidable items 42.2% → 58.9% with the **same** three wrong verdicts (French, Galician, Dutch — languages outside the three); below 10, mixed text starts to decide |
-| threshold / margin | 0.8 / 0.3 | 0.8 / 0.3 | they never bind on the synthetic corpus, so there is no better number to pick yet |
-| sample | 10 messages / 2,000 characters | same | — |
-| hysteresis | 2 | 2 | — |
+| lista de marcadores | `at080` | — | `ampliada` ganha 4 pontos em pt e erra o alemão duas vezes; nenhuma das duas é validada por dado real |
+| mínimo de palavras (sobre a amostra) | **10** | 20 | cobertura dos itens decidíveis 42,2% → 58,9% com os **mesmos** três vereditos errados (francês, galego, holandês — idiomas fora dos três); abaixo de 10, texto misto começa a decidir |
+| limiar / margem | 0,8 / 0,3 | 0,8 / 0,3 | nunca atuam no corpus sintético, então ainda não há número melhor para escolher |
+| amostra | 10 mensagens / 2.000 caracteres | igual | — |
+| histerese | 2 | 2 | — |
 
-The hysteresis is **recomputed, never stored**: the api reads the last 11
-pieces of evidence and asks whether the last two evaluations of the sample
-agree. CPU on this machine, synthetic corpus: 11.6 µs to clean and classify
-one message, 110 µs per detection (11 messages, two evaluations). The read is
-served by a partial index on `session_events`: 0.056 ms against 13.5 ms for a
-sequential scan, measured over 200,000 events.
+A histerese é **recalculada, nunca guardada**: a api lê as últimas 11
+evidências e pergunta se as duas últimas avaliações da amostra concordam. CPU
+nesta máquina, corpus sintético: 11,6 µs para limpar e classificar uma
+mensagem, 110 µs por detecção (11 mensagens, duas avaliações). A leitura é
+servida por um índice parcial em `session_events`: 0,056 ms contra 13,5 ms de
+uma varredura sequencial, medidos sobre 200.000 eventos.
 
-To recalibrate: run the real corpus (`idioma:medir --real`), then change
-`PARAMETROS_PROVISORIOS` in the api — it is the only place the product reads
-them from, and the instrument imports the same file (its report still sweeps the AT-080 candidates).
+Para recalibrar: rode o corpus real (`idioma:medir --real`) e depois mude
+`PARAMETROS_PROVISORIOS` na api — é o único lugar de onde o produto os lê, e o
+instrumento importa o mesmo arquivo (o relatório dele continua varrendo os
+candidatos da AT-080).
 
-## Paid validation of the language orientation (AT-167, 2026-09-29)
+## Validação paga da orientação de idioma (AT-167, 2026-09-29) {#paid-validation-of-the-language-orientation-at-167-2026-09-29}
 
-> The protocol is AT-082's, with the decisions of AT-169: budget US$ 5,
-> 5 rounds per case and arm, acceptance threshold "in the treated arm, **zero**
-> Spanish answers where pt-BR is expected, and correct language **≥ 95%** in
-> C01–C04 and C06–C15", model under test `deepseek/deepseek-v4.1-flash`,
-> comparison model `anthropic/claude-haiku-4.5`, incremental cost ceiling
-> 50 input tokens per call. Code at `d48f99f8e` (the `dev` of 2026-09-29).
+> O protocolo é o da AT-082, com as decisões da AT-169: orçamento de US$ 5,
+> 5 rodadas por caso e braço, limiar de aceite "no braço tratado, **zero**
+> respostas em espanhol onde se espera pt-BR, e idioma correto **≥ 95%** em
+> C01–C04 e C06–C15", modelo sob teste `deepseek/deepseek-v4.1-flash`, modelo
+> de comparação `anthropic/claude-haiku-4.5`, teto de custo incremental de
+> 50 tokens de entrada por chamada. Código em `d48f99f8e` (a `dev` de 2026-09-29).
 
-### Where it runs, and what is (and is not) the product
+### Onde roda, e o que é (e o que não é) o produto {#where-it-runs-and-what-is-and-is-not-the-product}
 
-A script outside the product, `scripts/idioma/validar.ts` (the pure part —
-matrix, judging, report — in `validacao.ts`, tested by `validacao.spec.ts`). It
-calls OpenRouter **directly** and writes nothing to the database. What the
-product sends to the model is **read from the product's files at every run**,
-never copied — the read throws, naming what it missed, if a file changes shape:
+Um script fora do produto, `scripts/idioma/validar.ts` (a parte pura — matriz,
+julgamento, relatório — em `validacao.ts`, testada por `validacao.spec.ts`). Ele
+chama o OpenRouter **direto** e não grava nada no banco. O que o produto manda
+ao modelo é **lido dos arquivos do produto a cada execução**, nunca copiado — a
+leitura lança, nomeando o que não achou, se um arquivo mudar de forma:
 
-- the orientation (RN-622/623): `@textos`, the generic sentence, the artifact
-  clause, `@forma_curta` and `@ferramentas_de_artefato` of
-  `apps/engine/lib/engine/harness/idioma_da_resposta.ex`, sent as the LAST
-  message, `role: "system"`, in every call of a treated turn (tool iterations
-  included) and never kept in the history;
-- the summary prompt and its language sentence (RN-621) of
+- a orientação (RN-622/623): `@textos`, a frase genérica, a cláusula de
+  artefato, `@forma_curta` e `@ferramentas_de_artefato` de
+  `apps/engine/lib/engine/harness/idioma_da_resposta.ex`, enviada como a ÚLTIMA
+  mensagem, `role: "system"`, em toda chamada de um turno tratado (iterações de
+  ferramenta incluídas) e nunca mantida no histórico;
+- o prompt de resumo e a frase de idioma dele (RN-621) de
   `apps/engine/lib/engine/harness/context_manager.ex`;
-- the Criativo persona (`CRIATIVO_INSTRUCTIONS`), its two tools with the real
-  descriptions, and the tool results the product returns.
+- a persona do Criativo (`CRIATIVO_INSTRUCTIONS`), as duas ferramentas dele com
+  as descrições reais, e os resultados de ferramenta que o produto devolve.
 
-Declared differences from the product: the system prompt is only the persona
-(no `ContextBuilder` layers); compaction is **forced** before the fifth turn
-of C04 (keeping the last two messages, the product's `keep_recent`), with the
-model under test as summarizer; resumption (C15) is the history rebuilt as
-text, the shape of `Engine.Agents.Reidratacao`; at most 4 model calls per
-turn (the Criativo allows 12); and `max_tokens` is capped at 4000 (the product
-sends none). The upstream provider was **not** fixed — recorded per call as a
-confounder. Baseline = the code before RN-621/622: no orientation **and** the
-old summary prompt (AT-169 answer 4: the validation measures the set, there is
-no isolated baseline of the old summary).
+Diferenças declaradas em relação ao produto: o system prompt é só a persona
+(sem as camadas do `ContextBuilder`); a compactação é **forçada** antes do
+quinto turno do C04 (mantendo as duas últimas mensagens, o `keep_recent` do
+produto), com o modelo sob teste como resumidor; a retomada (C15) é o histórico
+reconstruído como texto, a forma de `Engine.Agents.Reidratacao`; no máximo 4
+chamadas ao modelo por turno (o Criativo permite 12); e `max_tokens` tem teto
+de 4000 (o produto não manda nenhum). O provider upstream **não** foi fixado —
+registrado por chamada como confundidor. Baseline = o código antes da
+RN-621/622: sem orientação **e** com o prompt de resumo antigo (AT-169 resposta
+4: a validação mede o conjunto, não há baseline isolado do resumo antigo).
 
-The resolved language of each message's author is part of the case: `pt-BR`
-for Ana (C01–C05, C07–C11, C13–C15), `en` for Bob (C06 as a confirmed detected
-`en`, C12 as an explicit `en` preference writing Portuguese); project language
-`pt-BR`. C05 expects **pt-BR**: under AT-168 answer 4 detection only *asks*, so
-the author's resolved language stays pt-BR until confirmed.
+O idioma resolvido do autor de cada mensagem faz parte do caso: `pt-BR` para a
+Ana (C01–C05, C07–C11, C13–C15), `en` para o Bob (C06 como `en` detectado e
+confirmado, C12 como preferência `en` explícita escrevendo português); idioma
+do projeto `pt-BR`. O C05 espera **pt-BR**: pela resposta 4 da AT-168 a
+detecção só *pergunta*, então o idioma resolvido do autor continua pt-BR até a
+confirmação.
 
-A first passo-zero run with `max_tokens` 1000 was **discarded**: DeepSeek's
-reasoning used the whole cap in 7 calls and the answer came back empty (two
-summaries became the product's fallback text). Its records are kept apart in
-the output folder; an empty answer now counts as `falha`, never
+Uma primeira execução do passo zero com `max_tokens` 1000 foi **descartada**: o
+raciocínio do DeepSeek gastou o teto inteiro em 7 chamadas e a resposta voltou
+vazia (dois resumos viraram o texto de fallback do produto). Os registros dela
+ficam à parte na pasta de saída; resposta vazia agora conta como `falha`, nunca
 `indeterminado`.
 
-### Step zero: not reproduced
+### Passo zero: não reproduzido {#step-zero-not-reproduced}
 
-Baseline only, `deepseek/deepseek-v4.1-flash`, C01–C04, 5 rounds: **0 Spanish
-answers in 35 judged answers** (35 pt, 0 indeterminate). The 13/09 report
-(Spanish from Portuguese input) is **not reproduced**, so no improvement on
-*that* defect can be claimed from the treatment. The run continued because the
-AT-169 threshold is absolute on the treated arm and the other cases (C05, C06,
-C12, C16, C17) do show the baseline answering in the wrong language.
+Só baseline, `deepseek/deepseek-v4.1-flash`, C01–C04, 5 rodadas: **0 respostas
+em espanhol em 35 respostas julgadas** (35 pt, 0 indeterminadas). O relato de
+13/09 (espanhol a partir de entrada em português) **não é reproduzido**, então
+nenhuma melhora *naquele* defeito pode ser atribuída ao tratamento. A execução
+continuou porque o limiar da AT-169 é absoluto no braço tratado e os outros
+casos (C05, C06, C12, C16, C17) mostram, sim, o baseline respondendo no idioma
+errado.
 
-### Results by case × arm × model
+### Resultados por caso × braço × modelo {#results-by-case--arm--model}
 
-First judge: the local classifier (`ampliada` list, candidate parameters) on
-the prose. "ok" = expected language; "wrong (es)" = another language (of which
-Spanish); "ind." = indeterminate. n is judged answers (5 rounds × judged turns).
+Primeiro juiz: o classificador local (lista `ampliada`, parâmetros candidatos)
+sobre a prosa. "ok" = idioma esperado; "errado (es)" = outro idioma (dos quais
+espanhol); "ind." = indeterminado. n é o número de respostas julgadas (5 rodadas
+× turnos julgados).
 
-| case | DeepSeek baseline | DeepSeek treatment | Haiku baseline | Haiku treatment |
+| caso | DeepSeek baseline | DeepSeek tratamento | Haiku baseline | Haiku tratamento |
 |---|---|---|---|---|
 | C01 (n=5) | 5 ok | 5 ok | 5 ok | 5 ok |
 | C02 (n=5) | 5 ok | 5 ok | 5 ok | 5 ok |
 | C03 (n=15) | 15 ok | 15 ok | 15 ok | 15 ok |
 | C04 (n=10) | 10 ok | 10 ok | 10 ok | 10 ok |
-| C05 (n=5, out of the 95% list) | 1 ok, 4 wrong (4 es) | 5 ok | 0 ok, 5 wrong (5 es) | 2 ok, 3 wrong (3 es) |
-| C06 (n=5) | 2 ok, 2 wrong, 1 ind. | 3 ok, 2 ind. | 4 ok, 1 wrong | 5 ok |
-| C07–C10 (n=5 each) | all ok | all ok | all ok | all ok |
-| C11 (n=10) | 6 ok, 4 wrong | 5 ok, 5 wrong | 5 ok, 1 wrong, 4 ind. | 6 ok, 4 wrong |
-| C12 (n=10) | 0 ok, 10 wrong | 4 ok, 6 ind. | 0 ok, 10 wrong | **0 ok, 10 wrong** |
+| C05 (n=5, fora da lista dos 95%) | 1 ok, 4 errados (4 es) | 5 ok | 0 ok, 5 errados (5 es) | 2 ok, 3 errados (3 es) |
+| C06 (n=5) | 2 ok, 2 errados, 1 ind. | 3 ok, 2 ind. | 4 ok, 1 errado | 5 ok |
+| C07–C10 (n=5 cada) | todos ok | todos ok | todos ok | todos ok |
+| C11 (n=10) | 6 ok, 4 errados | 5 ok, 5 errados | 5 ok, 1 errado, 4 ind. | 6 ok, 4 errados |
+| C12 (n=10) | 0 ok, 10 errados | 4 ok, 6 ind. | 0 ok, 10 errados | **0 ok, 10 errados** |
 | C13 (n=5) | 5 ok | 5 ok | 5 ok | 5 ok |
-| C14, C15 (n=5 each) | all ok | all ok | all ok | all ok |
-| C16 (n=20, out of the list) | 10 ok, 10 wrong | 19 ok, 1 ind. | 10 ok, 10 wrong | 18 ok, 2 wrong |
-| C17 (n=20, out of the list) | 12 ok, 8 wrong | 20 ok | 16 ok, 4 wrong | 20 ok |
+| C14, C15 (n=5 cada) | todos ok | todos ok | todos ok | todos ok |
+| C16 (n=20, fora da lista) | 10 ok, 10 errados | 19 ok, 1 ind. | 10 ok, 10 errados | 18 ok, 2 errados |
+| C17 (n=20, fora da lista) | 12 ok, 8 errados | 20 ok | 16 ok, 4 errados | 20 ok |
 
-C13 called `emit_artifact` in 20 of 20 conversations. No call failed.
+O C13 chamou `emit_artifact` em 20 de 20 conversas. Nenhuma chamada falhou.
 
-### Against the threshold
+### Contra o limiar {#against-the-threshold}
 
-| model | Spanish where pt-BR expected (treated) | correct in C01–C04, C06–C15 (strict, classifier) | verdict by the classifier |
+| modelo | espanhol onde se espera pt-BR (tratado) | corretos em C01–C04, C06–C15 (estrito, classificador) | veredito pelo classificador |
 |---|---|---|---|
-| `deepseek/deepseek-v4.1-flash` | 0 | 82/95 (86.3%), 8 indeterminate | **does not pass** |
-| `anthropic/claude-haiku-4.5` | 3 (all C05) | 81/95 (85.3%), 0 indeterminate | **does not pass** |
+| `deepseek/deepseek-v4.1-flash` | 0 | 82/95 (86,3%), 8 indeterminados | **não passa** |
+| `anthropic/claude-haiku-4.5` | 3 (todos no C05) | 81/95 (85,3%), 0 indeterminados | **não passa** |
 
-The 13 DeepSeek misses are two groups. The reading below was the agent's,
-made BEFORE the review; the review ([next section](#human-review-and-the-haiku-diagnosis-at-167-follow-up))
-corrected it — the 8 indeterminates are not all English prose:
+As 13 falhas do DeepSeek formam dois grupos. A leitura abaixo foi a do agente,
+feita ANTES da revisão; a revisão ([próxima seção](#human-review-and-the-haiku-diagnosis-at-167-follow-up))
+a corrigiu — os 8 indeterminados não são todos prosa em inglês:
 
-- the 8 indeterminates (C06 ×2, C12 ×6) read as English prose — the `ampliada`
-  list scores English poorly ("Great starting point — …");
-- the 5 C11 misses answer the translation request with the **English
-  translation inside a Portuguese frame**, which the orientation allows ("unless
-  the user explicitly asks … in this message" covers the translation, not the
-  frame). The protocol's "translation in en" does not say which of the two is
-  right.
+- os 8 indeterminados (C06 ×2, C12 ×6) parecem prosa em inglês — a lista
+  `ampliada` pontua mal o inglês ("Great starting point — …");
+- as 5 falhas do C11 respondem ao pedido de tradução com a **tradução em inglês
+  dentro de uma moldura em português**, o que a orientação permite ("a menos que
+  o usuário peça explicitamente … nesta mensagem" cobre a tradução, não a
+  moldura). O "tradução em en" do protocolo não diz qual dos dois está certo.
 
-If the review accepts both groups, DeepSeek reaches 95/95 and **passes**; if it
-rejects C11, 90/95 (94.7%) and fails by one answer. Haiku **fails either way**:
-with the explicit `en` preference and Portuguese messages (C12) it answered in
-Portuguese in 10 of 10 treated answers, and it answered 3 of 5 Spanish messages
-in Spanish (C05). A hypothesis, not measured: for Anthropic models OpenRouter
-lifts the trailing `system` message into the top system prompt, where it loses
-the recency it has at the end of the list. (Measured afterwards, and **not
-confirmed**: see the diagnosis below.)
+Se a revisão aceitar os dois grupos, o DeepSeek chega a 95/95 e **passa**; se
+recusar o C11, 90/95 (94,7%) e falha por uma resposta. O Haiku **falha de
+qualquer jeito**: com a preferência `en` explícita e mensagens em português
+(C12) ele respondeu em português em 10 de 10 respostas tratadas, e respondeu 3
+de 5 mensagens em espanhol em espanhol (C05). Uma hipótese, não medida: para
+modelos da Anthropic o OpenRouter sobe a mensagem `system` do fim para o system
+prompt do topo, onde ela perde a recência que tem no fim da lista. (Medido
+depois, e **não confirmado**: veja o diagnóstico abaixo.)
 
-The answers to review (every indeterminate or divergent one, every C11
-translation, and a deterministic 1-in-10 sample of the concordant) are 146 of
-560, listed in `revisao.md` in the output folder.
+As respostas a revisar (toda indeterminada ou divergente, toda tradução do C11,
+e uma amostra determinística de 1 em 10 das concordantes) são 146 de 560,
+listadas em `revisao.md` na pasta de saída.
 
-### Incremental cost of the orientation
+### Custo incremental da orientação {#incremental-cost-of-the-orientation}
 
-Paired `prompt_tokens` of the **first** call of each conversation (identical
-input in both arms but the orientation), from OpenRouter's `usage`, never an
-estimate:
+`prompt_tokens` pareados da **primeira** chamada de cada conversa (entrada
+idêntica nos dois braços, salvo a orientação), tirados do `usage` do OpenRouter,
+nunca estimados:
 
-| model | orientation | pairs | Δ input tokens |
+| modelo | orientação | pares | Δ tokens de entrada |
 |---|---|---|---|
-| DeepSeek | pt-BR (108 characters) | 75 | 32 (every pair) |
-| DeepSeek | en + artifact clause (128 characters) | 15 | 27 |
+| DeepSeek | pt-BR (108 caracteres) | 75 | 32 (todo par) |
+| DeepSeek | en + cláusula de artefato (128 caracteres) | 15 | 27 |
 | Haiku | pt-BR | 75 | 30 |
-| Haiku | en + artifact clause | 15 | 27 |
+| Haiku | en + cláusula de artefato | 15 | 27 |
 
-All under the 50-token ceiling. At catalog input price that is about
-US$ 0.0000096 per call on DeepSeek and US$ 0.00003 on Haiku — an upper bound,
-since DeepSeek served most of the input from cache (cached tokens are
-returned; the per-call cost with cache is inside `usage.cost`, not separated
-per message). The orientation goes in every call of a turn, so a turn with
-tool iterations pays it once per iteration.
+Tudo abaixo do teto de 50 tokens. Ao preço de entrada do catálogo isso dá cerca
+de US$ 0,0000096 por chamada no DeepSeek e US$ 0,00003 no Haiku — um limite
+superior, já que o DeepSeek serviu a maior parte da entrada do cache (os tokens
+em cache são devolvidos; o custo por chamada com cache está dentro de
+`usage.cost`, não separado por mensagem). A orientação vai em toda chamada de
+um turno, então um turno com iterações de ferramenta a paga uma vez por iteração.
 
-### Spend
+### Gasto {#spend}
 
-The cost of the validation is the sum of `usage.cost` of each response, kept
-per call in `chamadas.jsonl`: **US$ 2.3071** in total — US$ 2.2629 in the
-counted runs (DeepSeek 0.1526 baseline + 0.2133 treatment; Haiku 0.9526 +
-0.9443; 865 calls), US$ 0.0281 in the discarded step zero and US$ 0.0162 in a
-one-case smoke. The `GET /api/v1/key` counter moved from 1.8301 to 4.1578
-(Δ 2.3277) over the same period, but the key is shared with other paid lanes
-running at the same time and the counter lags, so that delta is context, not
-this validation's spend. Generation ids were not recorded, so the per-call cost
-was not cross-checked against `GET /api/v1/generation`. The product's own
-metering (`token_usage`) was not involved: the script bypasses the api.
+O custo da validação é a soma do `usage.cost` de cada resposta, guardado por
+chamada em `chamadas.jsonl`: **US$ 2,3071** no total — US$ 2,2629 nas execuções
+contadas (DeepSeek 0,1526 baseline + 0,2133 tratamento; Haiku 0,9526 + 0,9443;
+865 chamadas), US$ 0,0281 no passo zero descartado e US$ 0,0162 num smoke de um
+caso. O contador de `GET /api/v1/key` foi de 1,8301 a 4,1578 (Δ 2,3277) no mesmo
+período, mas a chave é compartilhada com outras lanes pagas rodando ao mesmo
+tempo e o contador atrasa, então esse delta é contexto, não o gasto desta
+validação. Os ids de geração não foram gravados, então o custo por chamada não
+foi conferido contra `GET /api/v1/generation`. O metering do próprio produto
+(`token_usage`) não entrou: o script passa por fora da api.
 
-### Reproducing
+### Como reproduzir {#reproducing}
 
 ```bash
 # the key file holds OPENROUTER_TEST_KEY=…; the key is never printed
@@ -343,204 +352,211 @@ pnpm --filter @brabo/scripts idioma:validar --arquivo-de-chave ~/.config/brabo/o
 pnpm --filter @brabo/scripts idioma:validar --relatorio                             # report only
 ```
 
-Output goes to `$XDG_CACHE_HOME/brabo/validacao-idioma/<date>/` (else
-`~/.cache/…`), mode 600, and the script refuses a folder inside the checkout.
-`--teto-usd` stops before the call that would pass it, by the running sum of
+A saída vai para `$XDG_CACHE_HOME/brabo/validacao-idioma/<date>/` (senão
+`~/.cache/…`), modo 600, e o script recusa pasta dentro do checkout.
+`--teto-usd` para antes da chamada que o ultrapassaria, pela soma corrente de
 `usage.cost`.
 
-Not measured: cache savings as such, the product's full system prompt, real
-(threshold-triggered) compaction, a restart of the real engine, the tokenizer
-count of the artifact clause in Portuguese, and any fixed upstream.
+Não medidos: a economia de cache em si, o system prompt completo do produto, a
+compactação real (disparada por limiar), um reinício do engine real, a contagem
+do tokenizador da cláusula de artefato em português, e qualquer upstream fixo.
 
-The 146 answers were reviewed by hand; the result, and the one decision that
-is still the owner's, are in the next section.
+As 146 respostas foram revisadas à mão; o resultado, e a única decisão que
+continua sendo do dono, estão na próxima seção.
 
-## Human review and the Haiku diagnosis (AT-167 follow-up)
+## Revisão humana e o diagnóstico do Haiku (continuação da AT-167) {#human-review-and-the-haiku-diagnosis-at-167-follow-up}
 
-Two offline-or-cheap follow-ups to the paid validation, both on the same run
-(`respostas.jsonl`, 560 judged answers): the human review of the 146 answers the
-classifier flagged (Part A, no spend), and the test of the "OpenRouter hoists the
-trailing `system` message" hypothesis for Haiku (Part B, US$ 0.1485). Neither
-changes the product.
+Duas continuações offline ou baratas da validação paga, ambas sobre a mesma
+execução (`respostas.jsonl`, 560 respostas julgadas): a revisão humana das 146
+respostas que o classificador sinalizou (Parte A, sem gasto), e o teste da
+hipótese "o OpenRouter iça a mensagem `system` do fim" para o Haiku (Parte B,
+US$ 0,1485). Nenhuma das duas muda o produto.
 
-### Part A — the review of the 146
+### Parte A — a revisão das 146 {#part-a--the-review-of-the-146}
 
-Every one of the 146 answers in `revisao.md` was read, one by one, by the agent
-that wrote this section (not by a second human; the label file is kept for
-anyone who wants to contradict it). For each: the **real** language of the text
-the user reads, whether it is correct for the case, and a one-line reason. The
-files live outside git with the answers —
-`~/.cache/brabo/validacao-idioma/2026-09-29/revisao-feita.md` (the 146) and
-`amostra-lida.md` (the sample below). `pnpm --filter @brabo/scripts
-idioma:revisar` reads them and prints every table of this section; the labels
-are data, the arithmetic is code (`scripts/idioma/revisao.ts`, tested).
+Cada uma das 146 respostas de `revisao.md` foi lida, uma a uma, pelo agente que
+escreveu esta seção (não por um segundo humano; o arquivo de rótulos fica
+guardado para quem quiser contradizê-lo). Para cada uma: o idioma **real** do
+texto que o usuário lê, se ele está correto para o caso, e um motivo em uma
+linha. Os arquivos moram fora do git, junto com as respostas —
+`~/.cache/brabo/validacao-idioma/2026-09-29/revisao-feita.md` (as 146) e
+`amostra-lida.md` (a amostra abaixo). `pnpm --filter @brabo/scripts
+idioma:revisar` os lê e imprime toda tabela desta seção; os rótulos são dado, a
+aritmética é código (`scripts/idioma/revisao.ts`, testado).
 
-The labels are four, because the reading found a fact the classifier cannot see:
+Os rótulos são quatro, porque a leitura achou um fato que o classificador não
+enxerga:
 
-- `sim` / `nao`: the answer is / is not in the expected language;
-- `formulario`: the **prose** is in the expected language, but the questions of
-  the structured form (`ask_structured_questions`, the substance of a first
-  answer) came out in Portuguese for an author whose language is `en`;
-- `c11`: a translation into English inside a Portuguese frame — the owner's
-  decision, see below.
+- `sim` / `nao`: a resposta está / não está no idioma esperado;
+- `formulario`: a **prosa** está no idioma esperado, mas as perguntas do
+  formulário estruturado (`ask_structured_questions`, a substância de uma
+  primeira resposta) saíram em português para um autor cujo idioma é `en`;
+- `c11`: uma tradução para o inglês dentro de uma moldura em português — decisão
+  do dono, veja abaixo.
 
-| of the 146 | correct | incorrect | prose right, form in Portuguese | C11 (owner's decision) |
+| das 146 | corretas | incorretas | prosa certa, formulário em português | C11 (decisão do dono) |
 |---|---|---|---|---|
-| all | 42 | 81 | 8 | 15 |
-| baseline arm (89) | 18 | 64 | 1 | 6 |
-| treated arm (57) | 24 | 17 | 7 | 9 |
+| todas | 42 | 81 | 8 | 15 |
+| braço baseline (89) | 18 | 64 | 1 | 6 |
+| braço tratado (57) | 24 | 17 | 7 | 9 |
 
-The 14 answers the classifier called **indeterminate** were, once read: 3
-English answers (Haiku's plain English translations of C11), 2 incorrect
-(DeepSeek C12, Portuguese and English sentences interleaved in the prose), 8
-English prose with the form in Portuguese, and 1 C11. So the agent's earlier
-sentence — "the 8 indeterminates read as English prose" — was half right: the
-prose was English, and so was **not** the form in 6 of the 8.
+As 14 respostas que o classificador chamou de **indeterminadas** eram, uma vez
+lidas: 3 respostas em inglês (traduções simples do C11 pelo Haiku), 2
+incorretas (DeepSeek C12, frases em português e em inglês intercaladas na
+prosa), 8 de prosa em inglês com o formulário em português, e 1 C11. Então a
+frase anterior do agente — "os 8 indeterminados parecem prosa em inglês" —
+estava meio certa: a prosa era inglês, e o formulário **não** era em 6 dos 8.
 
-**The classifier's error, measured.** On the 118 definitive verdicts
-(`pt`/`es`/`en`) among the 146 read answers, the reading contradicted **0**. The
-classifier never called an answer right that was wrong, nor wrong that was right;
-its only failures are the 3 "indeterminate" that were plain English. For the 414
-answers that were **not** flagged (all concordant with the expectation), a sample
-was read: 60 drawn with `random.Random(20260929).sample(range(414), 60)` over the
-answers in `respostas.jsonl` order, plus the 14 unflagged C06/C12 answers with
-expected `en` that the draw missed (they decide the threshold, so they were read
-whole) — 74 read, **0 divergent** (Wilson 95% upper bound 4.9%). Together with
-the 39 concordant answers that the 1-in-10 hash had already flagged and were
-read too, the random part is 0 in 99 (upper bound 3.7%): at most ~15 of the 414
-could be wrong, and the sample suggests none. Two slips seen in the sample are
-one-word insertions (`"What falta for us…"`, `"reminders automáticos"`) that
-do not change the language of the answer.
+**O erro do classificador, medido.** Nos 118 vereditos definitivos
+(`pt`/`es`/`en`) entre as 146 respostas lidas, a leitura contradisse **0**. O
+classificador nunca chamou de certa uma resposta errada, nem de errada uma
+certa; as únicas falhas dele são as 3 "indeterminadas" que eram inglês simples.
+Para as 414 respostas que **não** foram sinalizadas (todas concordantes com a
+expectativa), uma amostra foi lida: 60 sorteadas com
+`random.Random(20260929).sample(range(414), 60)` sobre as respostas na ordem de
+`respostas.jsonl`, mais as 14 respostas C06/C12 não sinalizadas com `en`
+esperado que o sorteio não pegou (elas decidem o limiar, então foram lidas
+inteiras) — 74 lidas, **0 divergentes** (limite superior de Wilson a 95%: 4,9%).
+Somadas às 39 respostas concordantes que o hash de 1 em 10 já tinha sinalizado
+e que também foram lidas, a parte aleatória dá 0 em 99 (limite superior 3,7%):
+no máximo ~15 das 414 poderiam estar erradas, e a amostra sugere nenhuma. Dois
+deslizes vistos na amostra são inserções de uma palavra (`"What falta for us…"`,
+`"reminders automáticos"`) que não mudam o idioma da resposta.
 
-What the classifier **cannot** see is the form: `clf=en` on an English answer
-did not tell that its questions were in Portuguese (it flagged those answers as
-indeterminate only when the mix was heavy). That is why the sample read the
-C06/C12 answers whole, and why the two readings below exist.
+O que o classificador **não** consegue ver é o formulário: `clf=en` numa
+resposta em inglês não dizia que as perguntas dela estavam em português (ele só
+sinalizou essas respostas como indeterminadas quando a mistura era pesada). É
+por isso que a amostra leu inteiras as respostas C06/C12, e por isso que existem
+as duas leituras abaixo.
 
-### The threshold, recomputed with the reviewed labels
+### O limiar, recalculado com os rótulos revisados {#the-threshold-recomputed-with-the-reviewed-labels}
 
-Treated arm, C01–C04 and C06–C15 (n = 95), Spanish counted on the **real** language
-of every treated answer where pt-BR is expected (C05 included). Wilson 95%
-interval. Two independent readings: **C11** (the owner's, open) and **form**
-(prose right, form in Portuguese — the agent resolved it as a fact about what
-the user reads, and shows the other side so it can be contradicted).
+Braço tratado, C01–C04 e C06–C15 (n = 95), espanhol contado pelo idioma
+**real** de toda resposta tratada onde se espera pt-BR (C05 incluído). Intervalo
+de Wilson a 95%. Duas leituras independentes: **C11** (a do dono, em aberto) e
+**formulário** (prosa certa, formulário em português — o agente a resolveu como
+fato sobre o que o usuário lê, e mostra o outro lado para que possa ser
+contradito).
 
-| model | C11 counts | form counts | hits | rate | 95% interval | Spanish (pt expected) | verdict |
+| modelo | C11 conta | formulário conta | acertos | taxa | intervalo de 95% | espanhol (pt esperado) | veredito |
 |---|---|---|---|---|---|---|---|
-| DeepSeek | yes | yes | 93/95 | 97.9% | 92.6–99.4% | 0 | passes |
-| DeepSeek | **yes** | **no** | 87/95 | 91.6% | 84.3–95.7% | 0 | does not pass |
-| DeepSeek | no | yes | 88/95 | 92.6% | 85.6–96.4% | 0 | does not pass |
-| DeepSeek | no | no | 82/95 | 86.3% | 78.0–91.8% | 0 | does not pass |
-| Haiku | yes | (any) | 85/95 | 89.5% | 81.7–94.2% | 3 (C05) | does not pass |
-| Haiku | no | (any) | 81/95 | 85.3% | 76.8–91.0% | 3 (C05) | does not pass |
+| DeepSeek | sim | sim | 93/95 | 97,9% | 92,6–99,4% | 0 | passa |
+| DeepSeek | **sim** | **não** | 87/95 | 91,6% | 84,3–95,7% | 0 | não passa |
+| DeepSeek | não | sim | 88/95 | 92,6% | 85,6–96,4% | 0 | não passa |
+| DeepSeek | não | não | 82/95 | 86,3% | 78,0–91,8% | 0 | não passa |
+| Haiku | sim | (qualquer) | 85/95 | 89,5% | 81,7–94,2% | 3 (C05) | não passa |
+| Haiku | não | (qualquer) | 81/95 | 85,3% | 76,8–91,0% | 3 (C05) | não passa |
 
-The pass threshold is 91 hits of 95 (94.7% fails). Reading the table:
+O limiar de aprovação é 91 acertos de 95 (94,7% reprova). Lendo a tabela:
 
-- **Haiku fails in every reading**: 3 Spanish answers in C05 (the zero-Spanish
-  clause alone) and, with everything accepted, 85/95.
-- **DeepSeek passes in exactly one cell**: C11 accepted **and** English prose
-  with a Portuguese form accepted. Reject either one and it fails — by 4
-  answers if the form is rejected (87 of the 91 needed), by 3 if C11 is (88). Reject both and it
-  is the classifier's number, 82.
-- The C11 decision therefore only matters if the form is accepted. With the form
-  counted as a miss, DeepSeek fails whatever C11 is, and the finding to act on
-  is not C11 but the form: in the treated arm, 8 of DeepSeek's 15 C06+C12
-  answers carry Portuguese text inside an English answer (6 form-only, 2
-  interleaved), while 7 are clean English, forms included. The model can
-  write the form in English — it does so about half of the time.
-  **Where it came from (AT-282, [RN-667](../business-rules.md#rn-667)):** the
-  tool's own description told the model the `label` was "o texto da pergunta,
-  **em pt-BR**" — a second, fixed language instruction outside the facade,
-  competing with the trailing orientation in every call. It now says "no
-  idioma da sua resposta" and names no language; the orientation itself is
-  unchanged. The after-measurement was **not run** (no OpenRouter key on the
-  machine that made the change) and is pending the owner — C06 and C12,
-  treated arm, 5 rounds, with the budget cap in the RN.
+- **O Haiku falha em toda leitura**: 3 respostas em espanhol no C05 (só a
+  cláusula de zero espanhol já basta) e, com tudo aceito, 85/95.
+- **O DeepSeek passa em exatamente uma célula**: C11 aceito **e** prosa em
+  inglês com formulário em português aceita. Recuse qualquer um dos dois e ele
+  falha — por 4 respostas se o formulário for recusado (87 dos 91 necessários),
+  por 3 se for o C11 (88). Recuse os dois e é o número do classificador, 82.
+- A decisão do C11 portanto só importa se o formulário for aceito. Com o
+  formulário contado como falha, o DeepSeek falha seja qual for o C11, e o
+  achado sobre o qual agir não é o C11 mas o formulário: no braço tratado, 8 das
+  15 respostas C06+C12 do DeepSeek trazem texto em português dentro de uma
+  resposta em inglês (6 só no formulário, 2 intercaladas), enquanto 7 são inglês
+  limpo, formulários incluídos. O modelo consegue escrever o formulário em
+  inglês — faz isso mais ou menos metade das vezes.
+  **De onde veio (AT-282, [RN-667](../business-rules.md#rn-667)):** a própria
+  descrição da ferramenta dizia ao modelo que o `label` era "o texto da pergunta,
+  **em pt-BR**" — uma segunda instrução de idioma, fixa, fora da fachada,
+  competindo com a orientação do fim em toda chamada. Agora ela diz "no idioma
+  da sua resposta" e não nomeia idioma; a orientação em si não mudou. A medição
+  do depois **não foi rodada** (sem chave do OpenRouter na máquina que fez a
+  mudança) e está pendente com o dono — C06 e C12, braço tratado, 5 rodadas,
+  com o teto de orçamento da RN.
 
-What C11 is, in the data. DeepSeek's 5 treated misses: 3 have the English
-translation quoted in a Portuguese frame ("Registrei a regra… A tradução que
-você pediu: > …"), and 2 have **no translation in the recorded text** — the run
-keeps only the last message of a turn, and these turns called `emit_artifact`
-first, so the translation was in an earlier message of the same turn (10 calls
-for 5 conversations, two per conversation), so the translation was presumably
-in an earlier message of the same turn, and was not kept. Both are counted as
-frame-only, i.e. as hits under "C11 counts". Haiku's 4 treated misses are an
-English translation with a Portuguese note or Portuguese alternatives around it.
+O que o C11 é, nos dados. As 5 falhas tratadas do DeepSeek: 3 têm a tradução em
+inglês citada numa moldura em português ("Registrei a regra… A tradução que
+você pediu: > …"), e 2 **não têm tradução no texto gravado** — a execução guarda
+só a última mensagem de um turno, e esses turnos chamaram `emit_artifact`
+primeiro, então a tradução estava numa mensagem anterior do mesmo turno (10
+chamadas para 5 conversas, duas por conversa), então a tradução presumivelmente
+estava numa mensagem anterior do mesmo turno, e não foi guardada. As duas são
+contadas como só-moldura, ou seja, como acertos em "C11 conta". As 4 falhas
+tratadas do Haiku são uma tradução em inglês com uma nota em português ou
+alternativas em português em volta.
 
-> **TODO(humano):** Does a translation into English inside a Portuguese frame
-> count as correct in C11? It decides the C11 axis of the table above:
-> **accepted** → DeepSeek 93/95 and passes (if English prose with a Portuguese
-> form is also accepted; 87/95 if not); **rejected** → DeepSeek 88/95 (or 82/95)
-> and fails. Haiku fails either way. Recommendation, in one sentence: accept it
-> — the orientation's exception covers only the requested translation and the
-> frame stays in the author's language, so rejecting it would penalise exactly
-> the behaviour the orientation is meant to produce. (The second question, the
-> form in Portuguese, is a product-scope question and is stated as a finding
-> above; it was not put to the owner because the agent resolved it as a fact —
-> what the user reads.)
+> **TODO(humano):** Uma tradução para o inglês dentro de uma moldura em português
+> conta como correta no C11? Ela decide o eixo C11 da tabela acima:
+> **aceita** → DeepSeek 93/95 e passa (se a prosa em inglês com formulário em
+> português também for aceita; 87/95 se não); **recusada** → DeepSeek 88/95 (ou
+> 82/95) e falha. O Haiku falha de qualquer jeito. Recomendação, em uma frase:
+> aceitar — a exceção da orientação cobre só a tradução pedida e a moldura fica
+> no idioma do autor, então recusá-la penalizaria exatamente o comportamento que
+> a orientação existe para produzir. (A segunda pergunta, o formulário em
+> português, é de escopo de produto e está enunciada como achado acima; não foi
+> levada ao dono porque o agente a resolveu como fato — o que o usuário lê.)
 
-### Part B — is it the position of the orientation? (AT-279)
+### Parte B — é a posição da orientação? (AT-279) {#part-b--is-it-the-position-of-the-orientation-at-279}
 
-The hypothesis: for Anthropic models OpenRouter lifts the trailing `system`
-message into the top system prompt, losing its recency. Test: C12 (author
-preference `en`, messages in pt-BR), `anthropic/claude-haiku-4.5`, first turn,
-5 rounds per position, the orientation text **read from the product** (it was
-`Respond in English (en), unless the user explicitly asks for another language
-in this message. Write project artifacts in pt-BR.`), only its position varied:
+A hipótese: para modelos da Anthropic o OpenRouter sobe a mensagem `system` do
+fim para o system prompt do topo, perdendo a recência dela. Teste: C12
+(preferência do autor `en`, mensagens em pt-BR), `anthropic/claude-haiku-4.5`,
+primeiro turno, 5 rodadas por posição, o texto da orientação **lido do produto**
+(era `Respond in English (en), unless the user explicitly asks for another language
+in this message. Write project artifacts in pt-BR.`), variando só a posição:
 
-1. `ultima-system` — as today (`idioma_da_resposta.ex:231`, a trailing
-   `role: "system"`);
-2. `system-fundido` — appended to the first `system` (persona + orientation);
-3. `sufixo-user` — suffix of the last `user` message, **no** `system` added;
-4. `ultima-system-e-sufixo-user` — the trailing `system` **plus** the same
-   sentence as a suffix.
+1. `ultima-system` — como hoje (`idioma_da_resposta.ex:231`, um
+   `role: "system"` no fim);
+2. `system-fundido` — acrescentada ao primeiro `system` (persona + orientação);
+3. `sufixo-user` — sufixo da última mensagem `user`, **sem** `system` acrescentado;
+4. `ultima-system-e-sufixo-user` — o `system` do fim **mais** a mesma frase como
+   sufixo.
 
-| position | classifier hits | read |
+| posição | acertos do classificador | leitura |
 |---|---|---|
-| 1 `ultima-system` (as today) | 0/5 | 5 Portuguese, forms included |
-| 2 `system-fundido` | 0/5 | 5 Portuguese |
-| 3 `sufixo-user` | 0/5 | 5 Portuguese |
-| 4 `ultima-system-e-sufixo-user` | 0/5 | 5 Portuguese |
-| control: 1, without the artifact clause | 0/5 | 5 Portuguese |
-| control: 3, without the artifact clause | 0/5 | 5 Portuguese |
+| 1 `ultima-system` (como hoje) | 0/5 | 5 em português, formulários incluídos |
+| 2 `system-fundido` | 0/5 | 5 em português |
+| 3 `sufixo-user` | 0/5 | 5 em português |
+| 4 `ultima-system-e-sufixo-user` | 0/5 | 5 em português |
+| controle: 1, sem a cláusula de artefato | 0/5 | 5 em português |
+| controle: 3, sem a cláusula de artefato | 0/5 | 5 em português |
 
-The four positions were read in full and the two controls read in part, and all
-30 answers were also checked for English function words (none in any): all 30
-are Portuguese, prose and form. The
-position-1 defect is **reproduced** (0/5, as the 0/10 of the paid run), and
-**no position corrects it** — not even the one where the orientation is inside
-the user's own last message and there is no trailing `system` at all. The
-hypothesis is **not confirmed**. The prompt-token counts show the text reached
-the model in every position (2 426, 2 427, 2 427 and 2 454 input tokens: +1 for
-the two single placements and +28 for the double), so this is not a dropped
-message. The control also excludes the suspect second sentence: the artifact
-clause ("Write project artifacts in pt-BR.", RN-623) is not the cause either
-(0/10 without it).
+As quatro posições foram lidas por inteiro e os dois controles em parte, e as
+30 respostas foram também conferidas atrás de palavras funcionais do inglês
+(nenhuma em nenhuma): as 30 são em português, prosa e formulário. O defeito da
+posição 1 é **reproduzido** (0/5, como o 0/10 da execução paga), e **nenhuma
+posição o corrige** — nem aquela em que a orientação está dentro da própria
+última mensagem do usuário e não há `system` no fim. A hipótese **não se
+confirma**. As contagens de tokens de prompt mostram que o texto chegou ao
+modelo em toda posição (2 426, 2 427, 2 427 e 2 454 tokens de entrada: +1 para
+as duas colocações simples e +28 para a dupla), então não é mensagem descartada.
+O controle exclui também a segunda frase suspeita: a cláusula de artefato
+("Write project artifacts in pt-BR.", RN-623) também não é a causa (0/10 sem
+ela).
 
-What this does not exclude, and was not measured: the second turn (only the
-first was run, for budget — the paid run had the second turn wrong 5/5 as well);
-a stronger wording (the sentence says "unless the user explicitly asks", and
-Portuguese input may be read as that); the language of the persona itself
-(`CRIATIVO_INSTRUCTIONS` is Portuguese); and the upstream (all 30 calls were
-served by Amazon Bedrock, so an upstream effect cannot be separated). DeepSeek
-follows the same orientation in the same case — its treated C12 answers were
-English prose in 8 of 10 — which points at the model, not at the placement.
+O que isto não exclui, e não foi medido: o segundo turno (só o primeiro rodou,
+por orçamento — a execução paga teve o segundo turno errado 5/5 também); uma
+redação mais forte (a frase diz "unless the user explicitly asks", e entrada em
+português pode ser lida assim); o idioma da própria persona
+(`CRIATIVO_INSTRUCTIONS` é em português); e o upstream (as 30 chamadas foram
+servidas pelo Amazon Bedrock, então um efeito de upstream não pode ser
+separado). O DeepSeek segue a mesma orientação no mesmo caso — as respostas C12
+tratadas dele foram prosa em inglês em 8 de 10 —, o que aponta para o modelo,
+não para a colocação.
 
-**Proposed change: none about position.** The one place a position would be
-changed, if it had helped, is `Engine.Harness.IdiomaDaResposta.anexar/4`
-(`apps/engine/lib/engine/harness/idioma_da_resposta.ex:231`, the `messages ++
-[%{"role" => "system", …}]`), called from the two `llm_turn` paths of
-`apps/engine/lib/engine/sessions/engine_api_client.ex:609` and `:661`. It stays
-as it is. The next activity, if the owner wants Haiku to obey `en` over
-Portuguese input, is to test wording and persona language (the list above),
-with this same script.
+**Mudança proposta: nenhuma sobre posição.** O único lugar onde uma posição
+seria mudada, se tivesse ajudado, é `Engine.Harness.IdiomaDaResposta.anexar/4`
+(`apps/engine/lib/engine/harness/idioma_da_resposta.ex:231`, o `messages ++
+[%{"role" => "system", …}]`), chamado pelos dois caminhos `llm_turn` de
+`apps/engine/lib/engine/sessions/engine_api_client.ex:609` e `:661`. Ele fica
+como está. A próxima atividade, se o dono quiser que o Haiku obedeça `en` diante
+de entrada em português, é testar a redação e o idioma da persona (a lista
+acima), com este mesmo script.
 
-**Spend** (sum of each response's `usage.cost`, never the `/key` counter): US$
-0.0980 for the four positions (20 calls) and US$ 0.0505 for the two controls
-(10 calls) — **US$ 0.1485** of the US$ 0.20 ceiling, 30 calls, none failed.
+**Gasto** (soma do `usage.cost` de cada resposta, nunca o contador de `/key`):
+US$ 0,0980 para as quatro posições (20 chamadas) e US$ 0,0505 para os dois
+controles (10 chamadas) — **US$ 0,1485** do teto de US$ 0,20, 30 chamadas,
+nenhuma falhou.
 
-To reproduce Part B (the key file holds `OPENROUTER_TEST_KEY=…`; it is never
-printed; the output goes outside the checkout):
+Para reproduzir a Parte B (o arquivo de chave guarda `OPENROUTER_TEST_KEY=…`;
+ela nunca é impressa; a saída vai para fora do checkout):
 
 ```bash
 pnpm --filter @brabo/scripts idioma:diagnosticar \
@@ -554,6 +570,6 @@ pnpm --filter @brabo/scripts idioma:diagnosticar \
 pnpm --filter @brabo/scripts idioma:revisar                          # Part A tables
 ```
 
-`--turnos N` and `--sem-clausula` exist only for this diagnosis; the product
-never places the orientation anywhere but last, and `posicionar` in
-`validacao.ts` is not used by it.
+`--turnos N` e `--sem-clausula` existem só para este diagnóstico; o produto
+nunca põe a orientação em outro lugar que não o fim, e `posicionar` em
+`validacao.ts` não é usado por ele.

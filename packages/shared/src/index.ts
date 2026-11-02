@@ -33,7 +33,9 @@ export type LLMProviderName =
   | "together"
   | "deepinfra"
   | "bitdeer"
-  | "vultr";
+  | "vultr"
+  | "9router"
+  | "opencode-zen";
 
 /**
  * Taxonomia normalizada de falha de provider (Fase 9a — ADR 0041). Espelha o
@@ -46,8 +48,18 @@ export type LLMErrorCode =
   | "auth"
   /** Cota ou throughput estourado (429). */
   | "rate_limit"
+  /**
+   * A conta no provider está sem crédito (402). Separado de `upstream` porque
+   * o remédio é recarregar a conta, não tentar de novo (RN-730).
+   */
+  | "insufficient_credit"
   /** O modelo pedido não existe nesse provider (404). */
   | "model_not_found"
+  /**
+   * O hub não achou upstream que caiba no TETO DE PREÇO enviado (404 com
+   * `priceCeiling`, ADR 0225). Distinto de `model_not_found`: o modelo existe.
+   */
+  | "price_ceiling"
   /** O prompt não cabe na janela do modelo (413, ou 400 com o marcador). */
   | "context_length"
   /** O provider ficou MUDO além do teto de inatividade. */
@@ -55,7 +67,12 @@ export type LLMErrorCode =
   /** Nem chegou a falar com o provider (DNS, recusa de conexão, TLS). */
   | "connection"
   /** Falhou do lado de lá por motivo que não se encaixa nos anteriores. */
-  | "upstream";
+  | "upstream"
+  /**
+   * O modelo escreveu a chamada de ferramenta COMO TEXTO (`<invoke ...>`), duas
+   * vezes seguidas (AT-633, RN-949). Erro do MODELO, não do provider.
+   */
+  | "tool_call_as_text";
 
 /**
  * O que o provider sabe fazer, independente do modelo escolhido — o TETO.
@@ -94,6 +111,33 @@ export interface LLMProviderCapabilities {
    * responde a ele — nunca por leitura de documentação (ADR 0041).
    */
   readonly routingPreference: boolean;
+  /**
+   * O hub prende a conversa ao upstream que a atendeu quando recebe uma CHAVE
+   * DE SESSÃO (`ChatOptions.sessionKey`, ADR 0221). Obrigatório e `true` só
+   * depois de um smoke contra a API real mostrar o mesmo upstream em todas as
+   * chamadas com a chave e mais de um sem ela — nunca por leitura de doc.
+   */
+  readonly stickySession: boolean;
+  /**
+   * O hub aceita um TETO DE PREÇO por chamada (`ChatOptions.priceCeiling`,
+   * ADR 0225): só serve a chamada um upstream cujo preço cabe nele. Obrigatório
+   * e `true` só depois de um smoke contra a API real mostrar o upstream servido
+   * dentro do teto — nunca por leitura de documentação.
+   */
+  readonly priceCeiling: boolean;
+  /**
+   * O provider sabe receber PONTOS DE CACHE DE PROMPT explícitos
+   * (`cache_control: { type: "ephemeral" }` em blocos de conteúdo, RN-892) —
+   * o prefixo estável da chamada (ferramentas, instruções, histórico) é lido
+   * do cache do upstream em vez de cobrado inteiro a cada chamada. Camada de
+   * PROVIDER; a de modelo é decidida pela config do provider (no OpenRouter,
+   * só modelo `anthropic/*` precisa do ponto explícito).
+   *
+   * Obrigatório pelo mesmo motivo de `embeddings`, e `true` só depois de um
+   * smoke contra a API real mostrar `cached_tokens` > 0 na segunda chamada —
+   * nunca por leitura de documentação (ADR 0041).
+   */
+  readonly promptCaching: boolean;
 }
 
 /**
@@ -267,6 +311,36 @@ export interface ChatOptions {
    * declara `capabilities.routingPreference` IGNORA — nunca falha por ele.
    */
   routingPreference?: RoutingPreference;
+  /**
+   * Chave de sessão do agente (`brabo:<sessionId>:<agentId>`, ADR 0221).
+   * Provider que não declara `capabilities.stickySession` IGNORA.
+   */
+  sessionKey?: string;
+  /**
+   * Teto de preço por chamada, em micro-USD por milhão de tokens (ADR 0225).
+   * Provider que não declara `capabilities.priceCeiling` IGNORA.
+   */
+  priceCeiling?: { inputPerMillionMicros: number; outputPerMillionMicros: number };
+  /**
+   * O modelo RACIOCINA (`models.supports_reasoning`, do catálogo). Provider que
+   * sabe controlar o raciocínio soma uma FOLGA ao teto de saída, para o
+   * raciocínio nunca comer a saída visível (RN-741) — mas NÃO manda campo de
+   * raciocínio por isso (RN-782): aceitar o parâmetro não é pedir raciocínio.
+   * Provider sem a configuração ignora.
+   */
+  reasoning?: boolean;
+  /**
+   * Desliga o raciocínio EXPLICITAMENTE (RN-783) — hoje só para os dev agents
+   * (`dev-*`), por decisão do dono. Só vale com `reasoning: true` e provider que
+   * sabe dizer "desligado"; os outros ignoram.
+   */
+  reasoningOff?: boolean;
+  /**
+   * Orçamento de raciocínio PROVADO do modelo (`models.reasoning_budget`, ADR
+   * 0223): vira `reasoning: {max_tokens: N}` e o teto de saída passa a ser a
+   * saída visível + N. Só vale com `reasoning: true`, sem `reasoningOff`.
+   */
+  reasoningBudget?: number;
 }
 
 export interface ChatTextDeltaChunk {
@@ -279,6 +353,12 @@ export interface ChatUsageChunk {
   inputTokens: number;
   outputTokens: number;
   estimated: boolean;
+  /**
+   * `true` quando o stream foi ABORTADO pelo orçamento de raciocínio: a
+   * resposta abortada não traz `usage`, então os tokens são caracteres/4 e o
+   * custo real só sai depois, em `GET /generation` (ADR 0224, RN-915).
+   */
+  abortadoPeloRaciocinio?: true;
   /**
    * Quem REALMENTE serviu a chamada, quando o provider é um hub e informa isso
    * (Fase 9b). Num hub, "openrouter" é a porta de entrada, não o custo real —
@@ -334,7 +414,22 @@ export interface ChatToolCallsChunk {
   toolCalls: ToolCall[];
 }
 
+// A resposta foi CORTADA pelo teto de saída (`max_tokens`, RN-734): o
+// `finish_reason: "length"` do dialeto OpenAI-compatível ou o
+// `stop_reason: "max_tokens"` do Anthropic (RN-737). Aditivo — quem não o lê
+// segue como antes; o texto e as `tool_calls` que chegaram vêm truncados.
+export interface ChatTruncatedChunk {
+  type: "truncated";
+  /**
+   * Por que cortou (ADR 0224, RN-915). Ausente = o teto de saída
+   * (`max_tokens`); `"raciocinio"` = o provider ABORTOU o stream porque o
+   * raciocínio passou do `reasoningBudget` do modelo.
+   */
+  motivo?: "raciocinio";
+}
+
 export type ChatStreamChunk =
+  | ChatTruncatedChunk
   | ChatTextDeltaChunk
   | ChatUsageChunk
   | ChatErrorChunk
@@ -524,6 +619,12 @@ export interface OpenPullRequestInput {
   title: string;
   body?: string;
   accessToken?: string;
+  /**
+   * Quem abre a PR (RN-705) — `<agente>[bot]` para dev agent. Só o provider
+   * local o GRAVA (não há usuário autenticado por trás de um repositório em
+   * disco); os remotos o ignoram, o autor ali é o dono do token.
+   */
+  author?: string;
 }
 
 export interface MergePullRequestInput {

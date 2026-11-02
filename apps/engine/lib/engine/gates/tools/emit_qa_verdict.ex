@@ -16,14 +16,19 @@ defmodule Engine.Gates.Tools.EmitQaVerdict do
       name: "emit_qa_verdict",
       description:
         "Registra o parecer de QA (aprovado ou mudanças solicitadas) com a matriz " <>
-          "de cobertura regra→testes. Só aceito aprovar com a suite verde (exit 0).",
+          "de cobertura regra→testes. Só aceito aprovar com a suite verde (exit 0). " <>
+          "`needs_user_decision` quando o requisito depende de decisão do usuário: " <>
+          "exige `pergunta` (e a sua `sugestao`) ou `openQuestionId` de uma pergunta existente.",
       parameters: %{
         "type" => "object",
         "properties" => %{
           "veredito" => %{
             "type" => "string",
-            "enum" => ["approved", "changes_requested"]
+            "enum" => ["approved", "changes_requested", "needs_user_decision"]
           },
+          "pergunta" => %{"type" => "string"},
+          "sugestao" => %{"type" => "string"},
+          "openQuestionId" => %{"type" => "string"},
           "resumo" => %{"type" => "string"},
           "itens" => %{"type" => "array", "items" => %{"type" => "string"}},
           "coverageMatrix" => %{
@@ -61,6 +66,35 @@ defmodule Engine.Gates.Tools.EmitQaVerdict do
 
   def run(%{"veredito" => "changes_requested"}, _ctx) do
     {:ok, "parecer registrado: mudanças solicitadas"}
+  end
+
+  # ADR 0214 (RN-862): requisito não confirmado pelo usuário não é defeito do
+  # dev — é pergunta. Sem pergunta nem pergunta existente, é recusa nomeada.
+  # AT-526 (RN-876): `openQuestionId` que não é uuid ("1") a api recusa com
+  # 400 — a recusa vem aqui, dentro do laço, antes de chamar a api.
+  @uuid ~r/\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/i
+
+  def run(%{"veredito" => "needs_user_decision", "openQuestionId" => id}, _ctx)
+      when is_binary(id) and id != "" do
+    if Regex.match?(@uuid, id),
+      do: {:ok, "parecer registrado: decisão do usuário pedida"},
+      else:
+        {:error,
+         "`openQuestionId` \"#{id}\" não é o uuid de uma pergunta aberta: " <>
+           "use o uuid exato de uma pergunta ABERTA, ou mande a pergunta nova em " <>
+           "`pergunta`/`sugestao` sem `openQuestionId`"}
+  end
+
+  def run(%{"veredito" => "needs_user_decision"} = args, _ctx) do
+    pergunta = Map.get(args, "pergunta")
+    existente = Map.get(args, "openQuestionId")
+
+    if (is_binary(pergunta) and String.trim(pergunta) != "") or
+         (is_binary(existente) and existente != ""),
+       do: {:ok, "parecer registrado: decisão do usuário pedida"},
+       else:
+         {:error,
+          "needs_user_decision exige `pergunta` (com a sua `sugestao`) ou `openQuestionId`"}
   end
 
   def run(_args, _ctx),

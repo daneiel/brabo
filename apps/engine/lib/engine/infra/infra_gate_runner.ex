@@ -10,7 +10,7 @@ defmodule Engine.Infra.InfraGateRunner do
 
   Disparado via `Engine.Gates.Dispatcher.run_infra_qa/3`/`run_infra_secops/3`
   (fire-and-forget, `Task.start`). `changes_requested` devolve pro
-  `Engine.Infra.InfraLeadServer.correct/2` (mesma branch, sem PR nova — o
+  `Engine.Infra.InfraLeadServer.correct/3` (mesma branch, sem PR nova — o
   Lead reroda a área inteira, Fase 8c).
   """
 
@@ -241,7 +241,7 @@ defmodule Engine.Infra.InfraGateRunner do
 
     case result do
       {:ok, %{"nextAction" => "correct"}} ->
-        InfraLeadServer.correct(session_id, %{
+        InfraLeadServer.correct(project_id, session_id, %{
           gate: gate,
           reason: resumo,
           diagnosis: Enum.join(itens, "; ")
