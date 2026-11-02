@@ -14,6 +14,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- Os alertas do Dependabot de 02/11 fecham por `overrides` nos dois lockfiles: `joi` 17.13.9 e `follow-redirects` 1.16.2 (website), `glob` 14.0.2 e `minimatch` 11.0.1 (raiz e website; só a 11 corrige, uso dev-only). O `deepmerge` (low) segue declarado sem override, porque a correção citada não está publicada (AT-669).
 - Correções visuais da onda 4 do shadcn, achadas nas capturas dos dois temas (AT-665/AT-666): formulário de orçamento da aba Gastos sobre o kit, em grade; card "Gasto por dia" sem o recuo do `<figure>`; "Definir orçamento" sem borda dupla e avatares sem corte no Início; seções de Configurações com espaçamento interno e o anel de foco da casa ao abrir por link; checkbox da comunidade em Providers no lugar; pendências do fio com margem e "Reabrir sessão" sem quebra; vazio de PRs em revisão igual ao de Pendentes; links inline com alvo de 24px.
 - O alarme do `tag-release` fecha a issue da branch no primeiro carimbo verde, com o run e o SHA no comentário, em vez de pedir fechamento manual; falha repetida segue virando comentário (AT-664).
 - O check de promoção espera, por até 10 min, o `tag-release` que ainda está carimbando o commit, em vez de reprovar por corrida logo depois do merge no degrau de baixo (AT-663).
