@@ -15,6 +15,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 ### Correções
 
 - Correções visuais da onda 4 do shadcn, achadas nas capturas dos dois temas (AT-665/AT-666): formulário de orçamento da aba Gastos sobre o kit, em grade; card "Gasto por dia" sem o recuo do `<figure>`; "Definir orçamento" sem borda dupla e avatares sem corte no Início; seções de Configurações com espaçamento interno e o anel de foco da casa ao abrir por link; checkbox da comunidade em Providers no lugar; pendências do fio com margem e "Reabrir sessão" sem quebra; vazio de PRs em revisão igual ao de Pendentes; links inline com alvo de 24px.
+- A auditoria mensal de documentação volta a abrir a sua issue: o workflow cria o rótulo `docs` antes do `gh issue create` (idempotente), e um spec reprova qualquer `--label` sem o create no mesmo arquivo (AT-671).
 - A falha do golden-set do RAG agendado passa a abrir (ou comentar) uma issue, e o verde a fecha, pelo mesmo alarme do `propriedades.yml` (AT-667).
 - O alarme do `tag-release` fecha a issue da branch no primeiro carimbo verde, com o run e o SHA no comentário, em vez de pedir fechamento manual; falha repetida segue virando comentário (AT-664).
 - O check de promoção espera, por até 10 min, o `tag-release` que ainda está carimbando o commit, em vez de reprovar por corrida logo depois do merge no degrau de baixo (AT-663).

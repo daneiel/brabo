@@ -45,6 +45,10 @@ jobs:
           set -euo pipefail
           TITULO="Auditoria de documentação"
 
+          # Idempotente: o rótulo pode não existir (repositório novo) e --force
+          # não falha se já existe. Sem isto, o create abaixo morre por rótulo ausente.
+          gh label create docs --color 0075ca --description "Documentação" --force
+
           EXISTENTE=$(gh issue list --label docs --state open \
             --search "$TITULO in:title" --json number,title \
             --jq "[.[] | select(.title == \"$TITULO\")] | first | .number // empty")
