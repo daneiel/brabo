@@ -11,11 +11,11 @@ import { describe, expect, it } from 'vitest';
  */
 
 export function rotulosSemCreate(conteudo: string): string[] {
-  const usados = [...conteudo.matchAll(/--label[ =]([A-Za-z0-9_.-]+)/g)].map((m) => m[1]);
+  const usados = [...conteudo.matchAll(/--label[ =]([A-Za-z0-9_.-]+)/g)].map((m) => m[1] ?? '');
   const criados = new Set(
     [...conteudo.matchAll(/gh label create ([A-Za-z0-9_.-]+)([^\n]*)/g)]
-      .filter((m) => /--force/.test(m[2]))
-      .map((m) => m[1]),
+      .filter((m) => /--force/.test(m[2] ?? ''))
+      .map((m) => m[1] ?? ''),
   );
   return [...new Set(usados)].filter((r) => !criados.has(r));
 }
