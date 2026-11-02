@@ -1,3 +1,5 @@
+import { Item } from '../components/shadcn/item';
+import { Input as CampoDeRenomear } from '../components/shadcn/input';
 import { useState, type KeyboardEvent, type MouseEvent } from 'react';
 import { SEM_AUTOFILL } from '../lib/conversa-comecou';
 import { useTranslation } from 'react-i18next';
@@ -388,7 +390,7 @@ export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps)
           {sorted.map((session, indice) => {
             const resumo = resumoDe(indice);
             return (
-              <div
+              <Item
                 key={session.id}
                 className={styles.row}
                 onClick={() => navigate({ to: '/projects/$projectId/sessions/$sessionId', params: { projectId, sessionId: session.id } })}
@@ -398,7 +400,7 @@ export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps)
                   // `SessionPage`. `stopPropagation` no clique é o que
                   // impede o clique de posicionar o cursor e navegar pra
                   // dentro da sessão ao mesmo tempo.
-                  <input
+                  <CampoDeRenomear
                     className={styles.rowIdEditavel}
                     value={rascunho.valor}
                     autoFocus
@@ -466,7 +468,7 @@ export function ProjectSessionsTab({ projectId, kind }: ProjectSessionsTabProps)
                   </span>
                 )}
                 <span className={styles.rowDate}>{new Date(session.createdAt).toLocaleString('pt-BR')}</span>
-              </div>
+              </Item>
             );
           })}
         </div>

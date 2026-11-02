@@ -1,3 +1,4 @@
+import { Item } from '../components/shadcn/item';
 import { Shimmer } from '../components/ui/Shimmer';
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -89,7 +90,7 @@ function BlocoDeDados<T>({
     );
   }
   if (query.data === undefined) {
-    return <div className={styles.clean}><Shimmer>{textoCarregando}</Shimmer></div>;
+    return <Item variant="outline" className={styles.clean}><Shimmer>{textoCarregando}</Shimmer></Item>;
   }
   return <>{children(query.data)}</>;
 }
@@ -464,7 +465,7 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
         >
           {() =>
             !latestSession ? (
-              <div className={styles.clean}>{t('approvalsTab.pending.noSession')}</div>
+              <Item variant="outline" className={styles.clean}>{t('approvalsTab.pending.noSession')}</Item>
             ) : (
               <BlocoDeDados
                 query={pendentesQuery}
@@ -537,7 +538,7 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
         >
           {() =>
             gateTasks.length === 0 ? (
-              <div className={styles.clean}>{t('approvalsTab.devPrs.empty')}</div>
+              <Item variant="outline" className={styles.clean}>{t('approvalsTab.devPrs.empty')}</Item>
             ) : (
               <div className={styles.queue}>
                 {gateTasks.map((task) => (
@@ -570,7 +571,7 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
         >
           {(infraArtifacts) =>
             infraArtifacts.length === 0 ? (
-              <div className={styles.clean}>{t('approvalsTab.infraPrs.empty')}</div>
+              <Item variant="outline" className={styles.clean}>{t('approvalsTab.infraPrs.empty')}</Item>
             ) : (
               <div className={styles.queue}>
                 {infraArtifacts.map((artifact) => (
