@@ -82,7 +82,9 @@ sha, autor, data, primeira linha da mensagem. É a **única** operação que fal
 GraphQL: a API REST do GitHub não tem blame, só a API GraphQL
 (`repository.object(expression:).blame(path:)`). O GitLab usa
 `RepositoryFiles.allFileBlames`; o Local usa `git blame --porcelain`. Ela corta
-em `GIT_BLAME_LINE_LIMIT` (2000 linhas).
+em `GIT_BLAME_LINE_LIMIT` (2000 linhas). O Local lê a saída do `git` com teto de
+64 MiB por chamada (`GIT_MAX_BUFFER`); o padrão do Node, 1 MiB, derrubava
+`show`, `blame` e o diff de arquivo maior que isso.
 
 `listPullRequests(state?)` devolve `GitPullRequestSummary[]` — id, número,
 título, autor, estado, branches, `updatedAt` — **não** `GitPullRequest[]`, que
