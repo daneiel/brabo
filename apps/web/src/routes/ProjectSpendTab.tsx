@@ -2,6 +2,8 @@ import { Shimmer } from '../components/ui/Shimmer';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
+import { Alert, AlertTexto } from '../components/shadcn/alert';
+import { Card } from '../components/shadcn/card';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
@@ -59,16 +61,12 @@ export function ProjectSpendTab({ projectId }: { projectId: string }) {
       )}
 
       {papel.isError && (
-        <div className={styles.estadoErro} role="alert">
-          <span>{t('role.error')}</span>
-          <button
-            type="button"
-            className={styles.botao}
-            onClick={() => papel.refetch()}
-          >
+        <Alert variant="danger" role="alert" className={styles.estadoErro}>
+          <AlertTexto>{t('role.error')}</AlertTexto>
+          <Button type="button" size="sm" onClick={() => papel.refetch()}>
             {t('shared.retry')}
-          </button>
-        </div>
+          </Button>
+        </Alert>
       )}
 
       {/* O orçamento é do PROJETO, não da audiência — mostra para as duas
@@ -156,14 +154,9 @@ function OrcamentoDoProjeto({
         costUSD={budget.data.spentMicros / 1_000_000}
       />
       {alerta && (
-        <div
-          className={
-            alerta.nivel === 'danger' ? styles.alertaDanger : styles.alertaWarning
-          }
-          role="alert"
-        >
-          {alerta.mensagem}
-        </div>
+        <Alert variant={alerta.nivel === 'danger' ? 'danger' : 'warning'} role="alert">
+          <AlertTexto>{alerta.mensagem}</AlertTexto>
+        </Alert>
       )}
       {editor}
     </div>
@@ -232,8 +225,8 @@ function EditorDoOrcamento({
         </Button>
       </div>
       {!podeEditar && <p className={styles.nota}>{t('budgetEditor.noRole')}</p>}
-      {invalido && <p className={styles.estadoErro} role="alert">{t('budgetEditor.invalid')}</p>}
-      {salvar.isError && <p className={styles.estadoErro} role="alert">{t('budgetEditor.error')}</p>}
+      {invalido && <Alert variant="danger" role="alert"><AlertTexto>{t('budgetEditor.invalid')}</AlertTexto></Alert>}
+      {salvar.isError && <Alert variant="danger" role="alert"><AlertTexto>{t('budgetEditor.error')}</AlertTexto></Alert>}
       {salvar.isSuccess && <p className={styles.nota} role="status">{t('budgetEditor.saved')}</p>}
     </form>
   );
@@ -275,16 +268,12 @@ function MeuConsumo({ projectId }: { projectId: string }) {
       )}
 
       {meu.isError && (
-        <div className={styles.estadoErro} role="alert">
-          <span>{t('member.error')}</span>
-          <button
-            type="button"
-            className={styles.botao}
-            onClick={() => meu.refetch()}
-          >
+        <Alert variant="danger" role="alert" className={styles.estadoErro}>
+          <AlertTexto>{t('member.error')}</AlertTexto>
+          <Button type="button" size="sm" onClick={() => meu.refetch()}>
             {t('shared.retry')}
-          </button>
-        </div>
+          </Button>
+        </Alert>
       )}
 
       {meu.data && (
@@ -310,12 +299,12 @@ function MeuConsumo({ projectId }: { projectId: string }) {
             />
           </div>
 
-          <div className={styles.faixa}>
+          <Card className={styles.grafico}>
             <GastoPorDia
               serie={meu.data.porDia}
               titulo={t('member.dailySpendTitle')}
             />
-          </div>
+          </Card>
 
           <Ranking
             titulo={t('member.bySessionTitle')}
