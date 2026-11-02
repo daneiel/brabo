@@ -6,6 +6,8 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Funcionalidades
 
+- Base dos ícones do shadcn (AT-682): ícone dentro de `Button` passa a 16px, `svg.lucide` usa traço 1,6 como os da casa, o `lucide-react` sai do grupo `vendor-ui` da carga inicial e `design/COMPONENTS.md` ganha a seção "Iconografia".
+
 - O projeto ganha o link de apoio no Ko-fi (`ko-fi.com/daneiel`): botão "Sponsor" do GitHub (`.github/FUNDING.yml`), selo nos quatro READMEs e item no rodapé do site de documentação (AT-678).
 - O fio da Sessão passa a mostrar, antes de cada resposta do agente, os passos do turno encerrado num bloco recolhido: cada ferramenta com nome, ok ou falha e o resultado (com aviso de corte), nunca os argumentos (RN-974, AT-675).
 - A faixa do turno em curso da Sessão passa a ser uma cadeia de passos recolhível (`ChainOfThought` do AI Elements), operável por teclado, no lugar do bloco "Passos do turno" antigo (AT-674).
