@@ -110,6 +110,14 @@ describe('ProficiencySection', () => {
     ).toBeTruthy();
   });
 
+  it('o subtítulo mora no "?" e abre sob demanda', async () => {
+    renderTab();
+
+    expect(screen.queryByText(/nunca características pessoais/)).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /^Ajuda: Perfil de proficiência/ }));
+    expect(await screen.findByText(/nunca características pessoais/)).toBeTruthy();
+  });
+
   it('identifica a pessoa por e-mail, não pelo UUID', () => {
     renderTab();
 
