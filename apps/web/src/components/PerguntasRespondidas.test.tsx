@@ -99,6 +99,7 @@ async function responderA() {
   getOpenQuestions.mockResolvedValueOnce({ itens: [p], total: 1 });
   getOpenQuestions.mockResolvedValue({ itens: [], total: 0 });
   montar(pendencias());
+  fireEvent.click(await screen.findByRole('button', { name: /^Perguntas em aberto \d/ }));
   fireEvent.click(await screen.findByRole('button', { name: 'Aceitar sugestão' }));
   return screen.findByTestId('pergunta-respondida');
 }

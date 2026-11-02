@@ -4,6 +4,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ## Unreleased
 
+- O painel "Pendências deste projeto" do chat vira uma faixa de abas (uma por fila com item, nenhuma aberta ao nascer, contagem por fila) e cada fila pagina de 3 em 3 com "anterior / x–y de N / próxima", no lugar do teto de 20 (RN-975, AT-680).
 ### Funcionalidades
 
 - O projeto ganha o link de apoio no Ko-fi (`ko-fi.com/daneiel`): botão "Sponsor" do GitHub (`.github/FUNDING.yml`), selo nos quatro READMEs e item no rodapé do site de documentação (AT-678).

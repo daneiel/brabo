@@ -13,6 +13,8 @@ import {
 } from '../lib/perguntas-em-aberto';
 import { formatRelativeTime } from '../lib/time';
 import { Button } from './ui/Button';
+import { PaginadorDaFila } from './PaginadorDaFila';
+import { paginar } from '../lib/paginacao-de-fila';
 import styles from './PendenciasDeOutrasSessoes.module.css';
 
 const TETO_DA_RESPOSTA = 2000;
@@ -56,6 +58,9 @@ export function PerguntasEmAberto({
   podeCorrigir = false,
 }: PerguntasEmAbertoProps) {
   const { t } = useTranslation('sessionPage');
+  // AT-680 (RN-975): 3 por página; as respondidas ficam fora da paginação.
+  const [paginaPedida, setPaginaPedida] = useState(0);
+  const pagina = paginar(perguntas, paginaPedida);
   const abertas = new Set(perguntas.map((p) => p.questionId));
   const jaRespondidas = respondidas.filter((p) => !abertas.has(p.questionId));
   if (perguntas.length === 0 && jaRespondidas.length === 0) return null;
@@ -70,7 +75,7 @@ export function PerguntasEmAberto({
         {t('pendencias.filas.perguntas')}
         <span className={styles.contagem}>{total}</span>
       </h4>
-      {perguntas.map((p) => (
+      {pagina.itens.map((p) => (
         <CartaoDaPergunta
           key={p.questionId}
           projectId={projectId}
@@ -89,6 +94,11 @@ export function PerguntasEmAberto({
           aoDispensar={aoDispensar}
         />
       ))}
+      <PaginadorDaFila
+        fila={t('pendencias.filas.perguntas')}
+        pagina={pagina}
+        aoMudar={setPaginaPedida}
+      />
       {total > perguntas.length && (
         <p className={styles.recorte}>
           {t('pendencias.perguntas.recorte', { mostradas: perguntas.length, total })}
