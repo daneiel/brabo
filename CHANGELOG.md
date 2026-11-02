@@ -2,21 +2,27 @@
 
 Gerado dos conventional commits por `scripts/changelog.mjs`.
 
-## v7.2.0 — 2026-11-02
+## Unreleased
 
 ### Funcionalidades
+
+- O projeto ganha o link de apoio no Ko-fi (`ko-fi.com/daneiel`): botão "Sponsor" do GitHub (`.github/FUNDING.yml`), selo nos quatro READMEs e item no rodapé do site de documentação (AT-678).
 - O fio da Sessão passa a mostrar, antes de cada resposta do agente, os passos do turno encerrado num bloco recolhido: cada ferramenta com nome, ok ou falha e o resultado (com aviso de corte), nunca os argumentos (RN-974, AT-675).
 - A faixa do turno em curso da Sessão passa a ser uma cadeia de passos recolhível (`ChainOfThought` do AI Elements), operável por teclado, no lugar do bloco "Passos do turno" antigo (AT-674).
 - **Composer da Sessão com a barra do `PromptInput` (AT-674, L4).** Os botões Enviar/Enfileirar e Parar ficam numa barra abaixo do campo (`PromptInputToolbar`, mais o `PromptInputFooter`, só layout). Ordem no DOM, Enter/Shift+Enter, fila (RN-673) e campo não controlado (RN-882) não mudam.
-
 - O visual v3 (meio-termo aprovado pelo dono): liga o preflight do Tailwind e sobe os raios para a escala do shadcn (`--radius` 0,625rem), mantendo o terracota, a tipografia e as superfícies do Brabo (ADR 0237, revisa o 0232 no preflight).
 - O chat da Sessão ganha o botão Copiar sob cada resposta do agente (o markdown cru, com o estado "Copiado" e rótulo acessível; sem clipboard disponível, não faz nada) e o épico ou a história criada no turno passa a aparecer num cartão `Artifact` com o link para a aba Histórias (AT-674, lane L1).
+- O convite do fio vazio da Sessão (consultiva e criativa) passa a usar o estado vazio de conversa dos componentes de IA (`ConversationEmptyState`), com o mesmo texto e as mesmas ações; o fio com mensagens não o mostra e a rolagem segue acompanhando a última mensagem (AT-674, L2).
+
+## v7.2.0 — 2026-11-02
+
+### Funcionalidades
+
 - A Visão geral (listas de bloqueadas, PRs e sugestões, feed de atividade, grade de agentes), as abas Arquitetura e Insights (card de hipótese, diagrama C4) e as seções de pessoas e o sumário das Configurações passam a usar os componentes do shadcn; nenhuma regra muda (AT-655, onda 4, rodada B).
 - A `qa` é aposentada por hora no repositório do Brabo e a esteira passa a `dev → main`, com a versão final ancorada na `-dev.N` (AT-660, ADR 0235); o Gitflow do produto não muda.
 - A rotina que arquiva branches mergeadas passa a rodar toda segunda às 09:00 (Brasília), sem carência (AT-661).
 - O seletor de modelo abre num `Popover` do kit (acompanha o gatilho e não fecha mais ao rolar a página), os filtros do catálogo de modelos usam `Chip`/`Input` do kit, a aba Gastos usa `Alert`/`Card`/`Button` do kit, e o bloco de ativar execução e o resumo de arquitetura da Visão geral viram `Item` (AT-655, Rodada 148).
 - PR do Dependabot para a `dev` deixa de esperar a aprovação do owner: com os outros checks verdes, fica mergeável. A `main` segue com a escada inteira (AT-668, ADR 0236).
-- O convite do fio vazio da Sessão (consultiva e criativa) passa a usar o estado vazio de conversa dos componentes de IA (`ConversationEmptyState`), com o mesmo texto e as mesmas ações; o fio com mensagens não o mostra e a rolagem segue acompanhando a última mensagem (AT-674, L2).
 
 ### Correções
 
@@ -73,7 +79,6 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Funcionalidades
 
-- O projeto ganha o link de apoio no Ko-fi (`ko-fi.com/daneiel`): botão "Sponsor" do GitHub (`.github/FUNDING.yml`), selo nos quatro READMEs e item no rodapé do site de documentação (AT-678).
 - A topbar da Sessão mostra quanto da janela do modelo o agente com quem se conversa ocupa (a entrada da última chamada dele contra a janela do modelo; "não sei" quando a janela é desconhecida, nunca 0%), sem requisição nova (AT-654, RN-969).
 - A Visão geral, os cartões de Parar e Religar a execução, a página de Providers e as caixas de marcar da seção de modelos passam a ser montados sobre o shadcn; nenhuma regra muda (AT-655, onda 4, rodada B parcial).
 - A aba Executores e as abas Backlog, Sessões, Aprovações e PRs passam a ser montadas sobre o shadcn (AT-636, onda 4, rodada A): subagente delegado vira `Subagent` com o estado e a origem (RN-970), o modo automático do time vira `Checkbox`, a lista do piloto só monta quando aberta, linhas e avisos viram `Item`, e o parecer do gate na timeline da PR vira `Collapsible`; nenhuma regra muda (AT-655).
