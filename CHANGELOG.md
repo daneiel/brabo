@@ -14,6 +14,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- O golden-set do QA volta a ficar verde: o módulo do seed declara `resources` (o mínimo da RN-683 caía no piso e a proposta de container era recusada), e a falha agendada passa a abrir issue, e o verde a fechar (AT-670).
 - Correções visuais da onda 4 do shadcn, achadas nas capturas dos dois temas (AT-665/AT-666): formulário de orçamento da aba Gastos sobre o kit, em grade; card "Gasto por dia" sem o recuo do `<figure>`; "Definir orçamento" sem borda dupla e avatares sem corte no Início; seções de Configurações com espaçamento interno e o anel de foco da casa ao abrir por link; checkbox da comunidade em Providers no lugar; pendências do fio com margem e "Reabrir sessão" sem quebra; vazio de PRs em revisão igual ao de Pendentes; links inline com alvo de 24px.
 - A falha do golden-set do RAG agendado passa a abrir (ou comentar) uma issue, e o verde a fecha, pelo mesmo alarme do `propriedades.yml` (AT-667).
 - O alarme do `tag-release` fecha a issue da branch no primeiro carimbo verde, com o run e o SHA no comentário, em vez de pedir fechamento manual; falha repetida segue virando comentário (AT-664).
