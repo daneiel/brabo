@@ -59,6 +59,10 @@ jobs:
     needs: imagens
     name: Golden-set do QA (ExUnit, contra Ollama real, container pelo broker)
     runs-on: ubuntu-latest
+    # Job-level SUBSTITUI o topo: `issues: write` é só do alarme final (AT-667).
+    permissions:
+      contents: read
+      issues: write
     # 150: as duas rodadas medidas da AT-076 levaram 52 e 86 min, com o mesmo
     # modelo e o mesmo placar — a variância é do modelo (um caso repetiu
     # `npm test` 30 vezes antes de terminar `blocked(modelo)`). 86 min + ~75%
@@ -286,3 +290,16 @@ jobs:
           echo "--- api ---"; grep -E 'ERROR|WARN|broker|container' /tmp/api.log | grep -v Neo4j | tail -100 || true
           echo "--- engine ---"; grep -iE 'error|recus|actions/execute|container' /tmp/engine.log | grep -v SELECT | tail -100 || true
           psql "$DATABASE_URL" -c "select p.name as caso, pa.action_type, pa.status, left(pa.payload->>'command', 40) as cmd, pa.execution_result->>'exitCode' as exit from proposed_actions pa join projects p on p.id = pa.project_id order by p.name, pa.seq;" || true
+
+      # Alarme da rodada agendada (AT-670): mesmo molde do golden-set do RAG.
+      - name: Abrir, atualizar ou fechar a issue do golden-set
+        if: ${{ !cancelled() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          URL_DO_RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          WORKFLOW_DA_PROVA: golden-set-qa.yml
+          JOB: ${{ job.status }}
+        run: |
+          set -euo pipefail
+          source scripts/ci/alarmar-prova.sh
+          alarmar 'golden-set-qa' "${JOB}" 'o passo "mix golden_set.qa" tem o placar e os logs da api, do broker e do engine'
