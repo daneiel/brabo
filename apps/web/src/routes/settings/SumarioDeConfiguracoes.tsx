@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { Button } from '@/components/shadcn/button';
 import { useSumario } from './SecaoDeConfiguracoes';
 import { GRUPOS_DO_SUMARIO, SECOES_DE_CONFIGURACOES } from './sumario';
 import styles from './sumario.module.css';
@@ -59,9 +60,11 @@ export function SumarioDeConfiguracoes() {
           {secoes.map((secao) => {
             const atual = secao.chave === ativa;
             return (
-              <button
+              <Button
                 key={secao.chave}
                 type="button"
+                variant="ghost"
+                size="sm"
                 // `aria-current="location"` e não `aria-selected`: o sumário
                 // não é um `tablist`, e o que ele marca é "você está aqui na
                 // página", não "este painel está aberto".
@@ -72,7 +75,7 @@ export function SumarioDeConfiguracoes() {
                 onClick={() => irPara(secao.chave)}
               >
                 {t(secao.titulo, { ns: secao.ns })}
-              </button>
+              </Button>
             );
           })}
         </div>

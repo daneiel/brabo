@@ -19,6 +19,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
+import { Button as BotaoShadcn } from '@/components/shadcn/button';
 import { TrashIcon } from '../../components/ui/icons';
 import { useToast } from '../../components/ui/ToastProvider';
 import styles from '../ProjectSettingsTab.module.css';
@@ -153,15 +154,17 @@ export function PersonalAccessTokensSection({ projectId }: { projectId: string }
       width: '56px',
       render: (pat) =>
         pat.revokedAt ? null : (
-          <button
+          <BotaoShadcn
             type="button"
+            variant="ghost"
+            size="icon-sm"
             aria-label={t('personalAccessTokens.table.removeAria', { name: pat.name })}
             title={t('personalAccessTokens.table.removeTitle')}
             className={styles.remove}
             onClick={() => handleRevoke(pat.id)}
           >
             <TrashIcon size={14} />
-          </button>
+          </BotaoShadcn>
         ),
     },
   ];
@@ -200,8 +203,10 @@ export function PersonalAccessTokensSection({ projectId }: { projectId: string }
       width: '56px',
       render: (tok) =>
         tok.revokedAt ? null : (
-          <button
+          <BotaoShadcn
             type="button"
+            variant="ghost"
+            size="icon-sm"
             aria-label={t('personalAccessTokens.admin.table.removeAria', {
               name: tok.name,
               email: tok.userEmail,
@@ -211,7 +216,7 @@ export function PersonalAccessTokensSection({ projectId }: { projectId: string }
             onClick={() => handleRevokeComoMaintainer(tok.id)}
           >
             <TrashIcon size={14} />
-          </button>
+          </BotaoShadcn>
         ),
     },
   ];
