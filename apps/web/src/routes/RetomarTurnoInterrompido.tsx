@@ -5,6 +5,7 @@ import type { SessionEvent } from '../lib/api-types';
 import { Button } from '../components/ui/Button';
 import { useToast } from '../components/ui/ToastProvider';
 import styles from './SessionPage.module.css';
+import { RotateCcw } from 'lucide-react';
 
 export const MOTIVO_TURNO_INTERROMPIDO = 'turno_interrompido_por_reinicio';
 
@@ -131,6 +132,7 @@ export function RetomarTurnoInterrompido({
           loading={retomando}
           onClick={() => void retomar()}
         >
+          <RotateCcw aria-hidden="true" />
           {t('turnoInterrompido.botao')}
         </Button>
         <span className={styles.mergearNota} data-testid="retomar-turno-nota">

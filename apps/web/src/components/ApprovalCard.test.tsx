@@ -972,3 +972,10 @@ describe('ApprovalCard — o motivo da política e a raiz do escopo (AT-148, RN-
     expect(screen.queryByTestId('motivo-da-politica')).toBeNull();
   });
 });
+
+it('AT-682: o ícone do botão é decorativo (aria-hidden) e o nome vem do texto', () => {
+  render(<ApprovalCard action={makeAction()} onApprove={vi.fn()} onDeny={vi.fn()} onAlwaysAllow={vi.fn()} />);
+  const botao = document.body.querySelector('button svg')!.closest('button')!;
+  expect(botao.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+  expect(botao.textContent?.trim().length).toBeGreaterThan(0);
+});

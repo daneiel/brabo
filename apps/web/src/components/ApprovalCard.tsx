@@ -31,6 +31,7 @@ import { podeOferecerSemprePermitir } from '../lib/sempre-permitir';
 import { OQueOPilotoLibera } from './OQueOPilotoLibera';
 import { ModoAutomaticoDoPlano } from './ModoAutomaticoDoPlano';
 import styles from './ApprovalCard.module.css';
+import { Check, X, ShieldCheck, Zap } from 'lucide-react';
 
 export type ApprovalUrgency = 'critico' | 'alta' | 'normal';
 
@@ -362,9 +363,11 @@ export function ApprovalCard({
             )}
           <div className={styles.acoesDoCard} data-acoes-do-card="">
             <Button variant="success" disabled={inerte} onClick={() => void decidir(() => onApprove())}>
+              <Check aria-hidden="true" />
               {t('approvalCard.actions.approve')}
             </Button>
             <Button variant="danger" disabled={inerte} onClick={() => void decidir(() => onDeny())}>
+              <X aria-hidden="true" />
               {t('approvalCard.actions.deny')}
             </Button>
             {/* Patch de instrução NUNCA é auto-aprovável (teto em decide.ts):
@@ -372,6 +375,7 @@ export function ApprovalCard({
                 prometia um efeito que não existe. */}
             {podeSemprePermitir && (
               <Button variant="secondary" disabled={inerte} onClick={() => void decidir(() => onAlwaysAllow())}>
+                <ShieldCheck aria-hidden="true" />
                 {t('approvalCard.actions.alwaysAllow')}
               </Button>
             )}
@@ -381,6 +385,7 @@ export function ApprovalCard({
                 cai aqui: não há AGENTE pra confiar). */}
             {onActivateAutoMode && podeSemprePermitir && (
               <Button variant="ghost" disabled={inerte} onClick={onActivateAutoMode}>
+                <Zap aria-hidden="true" />
                 {t('approvalCard.actions.autoMode')}
               </Button>
             )}

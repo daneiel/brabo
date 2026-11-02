@@ -318,3 +318,12 @@ describe('ProjectApprovalsTab — cada card mostra o PRÓPRIO motivo da polític
     expect(screen.queryByText(/fora dos eventos carregados nesta tela/)).toBeNull();
   });
 });
+
+it('AT-682: o ícone do botão é decorativo (aria-hidden) e o nome vem do texto', async () => {
+  getProjectPendingActions.mockResolvedValue([acao()]);
+  montar();
+  fireEvent.click(await screen.findByRole('checkbox'));
+  const botao = await screen.findByRole('button', { name: 'Limpar' });
+  expect(botao.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+  expect(botao.textContent?.trim().length).toBeGreaterThan(0);
+});

@@ -156,3 +156,10 @@ describe('RedeDoContainer', () => {
     expect(screen.getByText(/nada garante que algo escute/)).toBeTruthy();
   });
 });
+
+it('AT-682: o ícone do botão é decorativo (aria-hidden) e o nome vem do texto', async () => {
+  getRede.mockResolvedValue(rede);
+  montar();
+  const botao = await screen.findByRole('button', { name: 'Salvar rede' });
+  expect(botao.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+});
