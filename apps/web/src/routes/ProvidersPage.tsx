@@ -4,6 +4,7 @@ import { listProviderCapabilities } from '../lib/api-client';
 import { useCurrentWorkspaceWithRole } from '../lib/hooks';
 import { FRESCOR_DA_CONFIGURACAO_MS } from '../lib/query-policy';
 import { Badge } from '../components/ui/Badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/shadcn/table';
 import { COR_DO_PROVIDER, ROTULO_DO_PROVIDER, providerAtivo } from '../lib/models';
 import { useProvidersComChave } from '../lib/providers-com-chave';
 import type { LLMProviderName } from '../lib/api-types';
@@ -56,41 +57,41 @@ export function ProvidersPage() {
         )}
         {capacidades.data && (
           <>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th scope="col">{t('capabilities.provider')}</th>
+          <Table className={styles.table}>
+            <TableHeader>
+              <TableRow>
+                <TableHead scope="col">{t('capabilities.provider')}</TableHead>
                 {colunas.map((c) => (
-                  <th key={c} scope="col">
+                  <TableHead key={c} scope="col">
                     {c}
-                  </th>
+                  </TableHead>
                 ))}
-              </tr>
-            </thead>
-            <tbody>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {ativos.map((p) => (
-                <tr key={p.provider}>
-                  <th scope="row">
+                <TableRow key={p.provider}>
+                  <TableHead scope="row">
                     <span
                       className={styles.provider}
                       style={{ '--cor-do-provider': COR_DO_PROVIDER[p.provider as LLMProviderName] } as CSSProperties}
                     >
                       {ROTULO_DO_PROVIDER[p.provider as LLMProviderName] ?? p.provider}
                     </span>
-                  </th>
+                  </TableHead>
                   {colunas.map((c) => (
-                    <td key={c}>
+                    <TableCell key={c}>
                       {(p.capabilities as unknown as Record<string, unknown>)[c] === true ? (
                         <Badge tone="success">{t('capabilities.proven')}</Badge>
                       ) : (
                         <Badge tone="muted">{t('capabilities.notProven')}</Badge>
                       )}
-                    </td>
+                    </TableCell>
                   ))}
-                </tr>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
           {deFora.length > 0 && (
             <p className={styles.note}>
               {t('capabilities.outside', {

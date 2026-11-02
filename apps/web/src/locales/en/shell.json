@@ -56,6 +56,10 @@
     "older_one": "+ {{count}} older",
     "older_other": "+ {{count}} older"
   },
+  "contexto": {
+    "rotulo": "{{usados}} of {{janela}} tokens in the last call · {{modelo}}",
+    "semJanela": "Context window of {{modelo}} unknown: can't tell how much is used."
+  },
   "tokenMeter": {
     "unitTokens": "tokens",
     "live": {

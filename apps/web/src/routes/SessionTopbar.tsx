@@ -1,4 +1,6 @@
 import {
+  lazy,
+  Suspense,
   useEffect,
   useId,
   useRef,
@@ -45,6 +47,9 @@ import { pontoDaSessao } from '../lib/session-timeline';
 import { sessaoEhTerminal } from '../lib/sessao-encerrada';
 import styles from './SessionPage.module.css';
 
+// Fora do chunk de entrada: o Context traz HoverCard e Progress (AT-654).
+const JanelaDoAgente = lazy(() => import('./JanelaDoAgente'));
+
 /**
  * A barra do topo da tela de Sessão: a saída para o projeto, o ponto de
  * estado, o título que se renomeia no lugar (RN-098), o tipo (RN-097), o
@@ -77,6 +82,8 @@ export interface SessionTopbarProps {
   resolvedBinding: Awaited<ReturnType<typeof getSessionModelBinding>> | undefined;
   budget: Awaited<ReturnType<typeof getSessionBudget>> | undefined;
   queryClient: QueryClient;
+  /** Agente DESTINATÁRIO do composer (AT-654): de quem a janela é mostrada. */
+  destinatario?: string | null;
   isActive: boolean;
   sessaoCriativa: boolean;
   criativoActive: boolean;
@@ -105,6 +112,7 @@ export function SessionTopbar({
   resolvedBinding,
   budget,
   queryClient,
+  destinatario,
   isActive,
   sessaoCriativa,
   criativoActive,
@@ -137,15 +145,20 @@ export function SessionTopbar({
       }
     />
   );
-  const medidor = budget && (
-    <TokenMeter
+  const medidor = (
+    <>
+      <Suspense fallback={null}>
+        <JanelaDoAgente projectId={projectId} sessionId={sessionId} agente={destinatario} />
+      </Suspense>
+      {budget && <TokenMeter
       variant="live"
       unitLabel="USD"
       used={budget.spentMicros / 1_000_000}
       limit={budget.limitMicros / 1_000_000}
       costBRL={0}
       costUSD={budget.spentMicros / 1_000_000}
-    />
+    />}
+    </>
   );
 
   return (
