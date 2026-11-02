@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { getCodeTree, mensagemDaApi } from '../../lib/api-client';
 import { FileIcon, FolderIcon } from '../../components/ui/icons';
+import { FileTree } from '../../components/ai-elements/file-tree';
 import { Disclosure } from '../../components/ui/Disclosure';
 import type { CodeTreeEntry } from '../../lib/api-types';
 import styles from './CodeExplorer.module.css';
@@ -57,7 +58,7 @@ export function CodeExplorer({ projectId, gitRef, activePath, onOpenFile }: Code
         )}
 
         {gitRef && raizQuery.data && raizQuery.data.entries.length > 0 && (
-          <ul className={styles.lista}>
+          <FileTree rotulo={t('explorer.title')}>
             {ordenar(raizQuery.data.entries).map((entrada) => (
               <TreeEntry
                 key={entrada.path}
@@ -69,7 +70,7 @@ export function CodeExplorer({ projectId, gitRef, activePath, onOpenFile }: Code
                 onOpenFile={onOpenFile}
               />
             ))}
-          </ul>
+          </FileTree>
         )}
 
         {gitRef && raizQuery.data?.truncated && (
@@ -111,9 +112,12 @@ function TreeEntry({ entrada, projectId, gitRef, depth, activePath, onOpenFile }
   if (entrada.type === 'file') {
     const ativo = entrada.path === activePath;
     return (
-      <li>
+      <li role="none">
         <button
           type="button"
+          role="treeitem"
+          data-tree-row=""
+          aria-selected={ativo}
           className={[styles.linha, ativo && styles.linhaAtiva].filter(Boolean).join(' ')}
           style={{ paddingLeft: indentacao + 18 }}
           onClick={() => onOpenFile(entrada.path)}
@@ -134,8 +138,9 @@ function TreeEntry({ entrada, projectId, gitRef, depth, activePath, onOpenFile }
     // herda por qualquer número de wrappers que o `Disclosure` insira, e
     // `.linha` (classNameCabecalho) lê `var(--indent)`. Pixel a pixel igual
     // ao `style={{ paddingLeft: indentacao }}` de antes.
-    <li style={{ ['--indent' as string]: `${indentacao}px` }}>
+    <li role="none" style={{ ['--indent' as string]: `${indentacao}px` }}>
       <Disclosure
+        propsCabecalho={{ role: 'treeitem', 'data-tree-row': '' }}
         aberto={aberto}
         onAlternar={() => setAberto((v) => !v)}
         classNameCabecalho={styles.linha}
@@ -146,7 +151,7 @@ function TreeEntry({ entrada, projectId, gitRef, depth, activePath, onOpenFile }
           </>
         }
       >
-        <ul className={styles.lista}>
+        <ul role="group" className={styles.lista}>
           {filhosQuery.isLoading && (
             <li className={styles.estadoFilho} style={{ paddingLeft: indentacao + 18 }}>
               <Shimmer>{t('explorer.loading')}</Shimmer>

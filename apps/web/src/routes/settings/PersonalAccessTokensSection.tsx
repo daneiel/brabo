@@ -1,3 +1,4 @@
+import { Snippet } from '../../components/ai-elements/snippet';
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -49,7 +50,6 @@ export function PersonalAccessTokensSection({ projectId }: { projectId: string }
   const [name, setName] = useState('');
   const [expiresInDays, setExpiresInDays] = useState('');
   const [emitido, setEmitido] = useState<PersonalAccessTokenIssued | null>(null);
-  const [copiado, setCopiado] = useState(false);
 
   function invalidate() {
     queryClient.invalidateQueries({ queryKey: ['pats', projectId] });
@@ -65,7 +65,6 @@ export function PersonalAccessTokensSection({ projectId }: { projectId: string }
       });
       setName('');
       setExpiresInDays('');
-      setCopiado(false);
       setEmitido(issued);
       invalidate();
     } catch {
@@ -92,20 +91,6 @@ export function PersonalAccessTokensSection({ projectId }: { projectId: string }
   async function handleRevokeComoMaintainer(tokenId: string) {
     await revokePersonalAccessTokenAsMaintainer(projectId, tokenId);
     queryClient.invalidateQueries({ queryKey: ['pats-admin', projectId] });
-  }
-
-  async function copiarToken() {
-    if (!emitido) return;
-    try {
-      await navigator.clipboard.writeText(emitido.token);
-      setCopiado(true);
-    } catch {
-      showToast({
-        title: t('personalAccessTokens.toast.copyErrorTitle'),
-        message: t('personalAccessTokens.toast.copyErrorMessage'),
-        tone: 'danger',
-      });
-    }
   }
 
   const columns: TableColumn<PersonalAccessTokenSummary>[] = [
@@ -287,10 +272,7 @@ export function PersonalAccessTokensSection({ projectId }: { projectId: string }
             <code>brabo-runner</code>
             {t('personalAccessTokens.modal.bodyEnd')}
           </p>
-          <Input mono readOnly value={emitido.token} onFocus={(e) => e.currentTarget.select()} />
-          <Button onClick={copiarToken} variant="secondary">
-            {copiado ? t('personalAccessTokens.modal.copiedButton') : t('personalAccessTokens.modal.copyButton')}
-          </Button>
+          <Snippet texto={emitido.token} rotulo={t('personalAccessTokens.modal.copyButton')} rotuloCopiado={t('personalAccessTokens.modal.copiedButton')} />
         </Modal>
       )}
     </SecaoDeConfiguracoes>
