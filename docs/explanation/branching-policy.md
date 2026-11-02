@@ -3,7 +3,7 @@ id: branching-policy
 title: Política de branches e de versionamento
 sidebar_label: Política de branches
 sidebar_position: 2
-description: A escada dev → qa → main, a taxonomia de branches, quem nasce de onde e por que a política é mecanizada em vez de combinada.
+description: A escada dev → main, a taxonomia de branches, quem nasce de onde e por que a política é mecanizada em vez de combinada.
 keywords: [branches, gitflow, promoção, hotfix, versionamento, release]
 ---
 
@@ -33,21 +33,19 @@ Duas consequências que aceitamos de propósito:
 
 ## A escada {#the-ladder}
 
-Três branches permanentes, **uma por ambiente**. O código sobe um degrau
-por vez.
+Duas branches permanentes, **uma por ambiente**. A `qa` foi aposentada por
+hora em 02/11/2026 ([ADR 0235](../adr/0235-a-qa-e-aposentada-e-a-esteira-fica-dev-e-main.md)):
+a volta é reverter a PR da rodada e reviver `refs/archive/qa`.
 
 ```mermaid
 flowchart LR
-  D[dev<br/>desenvolvimento] -->|promoção| Q[qa<br/>homologação]
-  Q -->|promoção| M[main<br/>produção]
-  M -.->|retropropagação| Q
-  Q -.->|retropropagação| D
+  D[dev<br/>desenvolvimento] -->|promoção| M[main<br/>produção]
+  M -.->|retropropagação| D
 ```
 
 | branch | ambiente | o que significa estar aqui |
 |---|---|---|
 | `dev` | desenvolvimento | integrado, testado pelo CI |
-| `qa` | homologação | em validação funcional |
 | `main` | produção | o que está no ar |
 
 Existia um quarto degrau, `rc` (pré-produção), entre `qa` e `main`. Ele foi
@@ -122,7 +120,7 @@ degraus de baixo **desatualizados** — a correção existe em `main` e não em
 `dev`.
 
 Por isso toda correção nascida no alto gera uma **retropropagação**: `main →
-qa → dev`, em cadeia, em ordem. Enquanto ela não se completa, os degraus
+dev` (até o ADR 0235, `main → qa → dev`, em cadeia). Enquanto ela não se completa, os degraus
 afetados ficam travados — veja [O portão de retropropagação](#the-back-merge-gate).
 
 A cadeia completa de um hotfix são **três PRs**: o hotfix mais as duas
@@ -136,8 +134,8 @@ Todo PR recebe um rótulo de família, aplicado automaticamente:
 |---|---|---|
 | `trabalho` | uma função de trabalho → `dev` | `feature/pr-police` → `dev` |
 | `correcao-alta` | `hotfix` → `main` | `hotfix/vaza-token` → `main` |
-| `promocao` | degrau adjacente, subindo | `dev` → `qa` |
-| `retropropagacao` | degrau adjacente, descendo | `main` → `qa` |
+| `promocao` | degrau adjacente, subindo | `dev` → `main` |
+| `retropropagacao` | degrau adjacente, descendo | `main` → `dev` |
 
 O rótulo não é enfeite: é ele que permite responder "quantos hotfixes
 tivemos neste trimestre?" sem arqueologia no git.
@@ -184,9 +182,11 @@ aplicação.
 
 ## Branches mergeadas são arquivadas {#merged-branches-get-archived}
 
-Toda branch cujo PR foi mergeado sai da lista de branches **7 dias depois do
-merge** — mecanicamente, por `archive-merged-branch.yml`, que roda uma vez
-por dia (`schedule:`, mais `workflow_dispatch`) e percorre todas as branches
+Toda branch cujo PR foi mergeado sai da lista de branches **sem carência, na
+próxima rodada** — mecanicamente, por `archive-merged-branch.yml`, que roda
+**toda segunda às 09:00 (Brasília)** (`schedule:` `0 12 * * 1`, mais
+`workflow_dispatch`; AT-661). O agendamento só dispara com o workflow na
+branch padrão `main` e percorre todas as branches
 do repositório (AT-557, decisão do dono de 2026-10-15). Até lá a branch fica
 onde está, para que uma correção de acompanhamento ainda possa ir por cima
 dela. Uma branch só é arquivada quando todas estas valem:
@@ -194,7 +194,7 @@ dela. Uma branch só é arquivada quando todas estas valem:
 - ela não é um dos nomes excluídos abaixo, nem vem de fork;
 - nenhum PR com essa head está **aberto**;
 - um PR com essa head foi **mergeado** neste repositório, e o mais recente
-  foi mergeado há 7 dias ou mais (`DIAS_ATE_ARQUIVAR`);
+  foi mergeado (`DIAS_ATE_ARQUIVAR` é 0, sem carência);
 - a ponta da branch ainda é o `head.sha` desse PR — uma branch que recebeu
   commit depois do merge **fica**.
 
@@ -216,7 +216,7 @@ nenhum deles é trabalho descartável de feature.
 
 | nome | por que é excluído |
 |---|---|
-| `dev`, `qa`, `main` | as três permanentes — elas aparecem como `head` de todo PR de promoção mergeado (`dev`→`qa`, `qa`→`main`), que é exatamente o caso que esta exclusão existe para pegar |
+| `dev`, `qa`, `main` | as três permanentes — elas aparecem como `head` de todo PR de promoção mergeado (`dev`→`main`; antes, também `qa`), que é exatamente o caso que esta exclusão existe para pegar |
 | `gh-pages` | a branch de deploy do site de documentação (veja "Push direto é bloqueado" acima) — não é branch de feature, e apagar `refs/heads/gh-pages` derrubaria o site no ar junto |
 
 Uma quinta condição não é um nome, é uma fronteira: um PR cuja branch de
@@ -228,7 +228,7 @@ A decisão em si — quais quatro nomes são excluídos, e a checagem de fork �
 uma função pura testada
 ([`scripts/ci/archive-branch.ts`](https://github.com/daneiel/brabo/blob/dev/scripts/ci/archive-branch.ts)),
 não shell inline: é a parte deste mecanismo em que errar de fato justifica
-testes — e a elegibilidade de 7 dias também (`aptaParaArquivar`, mesmo
+testes — e a elegibilidade também (`aptaParaArquivar`, mesmo
 arquivo). O mesmo script então chama a API do GitHub: cria a ref
 `refs/archive/` (ou a força, quando o nome já foi arquivado antes), a lê de
 volta e confere que ela aponta para o SHA da branch, e só então apaga a
@@ -275,7 +275,7 @@ segurança de `main` para `dev` é trabalho do `dependabot-para-dev.yml`
 
 A isenção acima é sobre o **nome** da branch. O **destino** não é isento:
 uma atualização de dependência entra pela `dev`, como todo o resto, e chega
-à `main` pela promoção `dev → qa → main`. Uma dependência mergeada direto na
+à `main` pela promoção `dev → main`. Uma dependência mergeada direto na
 `main` pula a escada e faz a `main` divergir da branch onde o trabalho
 acontece.
 
@@ -421,11 +421,10 @@ propósito: com um único mantenedor, ela é aritmeticamente impossível.
 | destino | exigência |
 |---|---|
 | `dev` | 1 × devs |
-| `qa` | 2 × devs |
 | `main` | 1 × PO **+** 1 × gestão |
 
-Para `main`, **pessoas distintas** — a exigência volta a valer. Para `dev` e
-`qa` a distinção é automática: as vagas são do mesmo papel e cada pessoa só
+Para `main`, **pessoas distintas** — a exigência volta a valer. Para `dev`
+a distinção é automática: as vagas são do mesmo papel e cada pessoa só
 conta uma revisão.
 
 Os papéis são **listas de handles** em variáveis de repositório, não times
@@ -474,8 +473,7 @@ Pré-requisitos, antes de virar qualquer variável:
 
 1. **Todo papel com gente de verdade.** `main` exige PO **e** gestão; se as
    duas listas apontam para a mesma pessoa, nenhum PR para `main` passa
-   nunca — a regra de pessoas distintas não pode ser satisfeita. `qa` exige
-   **dois** devs distintos: uma lista com um nome só bloqueia a promoção.
+   nunca — a regra de pessoas distintas não pode ser satisfeita.
 2. **Um critério de quem entra em cada lista**, definido e escrito — quem
    entra, quem sai, e com base em quê.
 
@@ -518,8 +516,7 @@ sendo ato manual, como toda entrada numa branch permanente.
 |---|---|
 | 1 | **quem dispara** — sob `APPROVAL_MODE=solo`, só o
 `OWNER_HANDLE`. Qualquer outro ator reprova, nomeando quem pode |
-| 2 | **par adjacente** — `dev→qa` e `qa→main`. `dev→main` é recusado,
-apontando para o caminho em degraus |
+| 2 | **par adjacente** — `dev→main` (desde o ADR 0235; antes, `dev→qa` e `qa→main`) |
 | 3 | **versão do ciclo** — calculada a partir dos PRs mergeados desde a
 última tag final |
 | 4 | **PR aberto** — corpo listando cada PR, sua função, seu impacto e a
@@ -535,7 +532,9 @@ ganha uma célula a mais e a tabela quebra. É por isso que a ordem das duas
 substituições é estrutural, e o teste em `promote.spec.ts` conta os
 delimitadores REAIS da linha em vez de comparar a string inteira.
 
-### Promoção automática para qa (fase de teste) {#automatic-promotion-to-qa}
+### Promoção automática para qa (fase de teste) — REVOGADA {#automatic-promotion-to-qa}
+
+> **Revogada em 02/11/2026 (ADR 0235):** sem `qa` esta promoção não tem destino; `promote-auto-qa.yml` e `QA_FASE_DE_TESTE` saem. O texto abaixo é o registro histórico do ADR 0217.
 
 Enquanto a QA está na **fase de teste**, `dev` → `qa` se promove sozinha
 (ADR 0217, decisão do dono de 15/10). O interruptor é a variável de
@@ -589,6 +588,13 @@ apontando para um commit que não existe mais |
 Uma verificação que **não pôde ser feita** conta como reprovada, nunca como
 aprovada — uma ref que não resolve é ignorância, não permissão.
 
+O carimbo **espera** quem ainda está carimbando (AT-663). Logo depois do merge no
+degrau de baixo, o PR de promoção roda antes de a tag existir. Se faltar o carimbo
+e houver `tag-release` em andamento para aquele commit, o check busca as tags de novo
+a cada 20 s, por até 10 min (`esperarCarimbo`, `PRAZO_DO_CARIMBO_MS`), e só reprova se o
+prazo vencer. Sem `tag-release` rodando, ou sem conseguir perguntar à API, reprova na
+hora, como antes. Esperar nunca aprova sem a tag.
+
 Os três checks que leem a história inteira (`pr-police`, `promotion-check` e
 `backmerge-gate`) fazem `actions/checkout` com `fetch-depth: 0` e têm teto de
 15 minutos no job. Com 5, o download do repositório, que cresce a cada PR,
@@ -613,7 +619,9 @@ intenção declarada.
 
 ## Versionamento {#versioning}
 
-Toda tag nasce de workflow, no formato `vX.Y.Z-dev.N` / `-qa.N` / final.
+> **Leitura depois do ADR 0235 (02/11/2026):** as seções de versionamento, âncora, retropropagação e portão abaixo ainda contam a esteira de três degraus. Onde citam `qa` como degrau intermediário, vale hoje: a promoção é `dev → main`, a âncora da tag final é a `-dev.N` do pai do merge, e a retropropagação de um hotfix é só `main → dev`. Os exemplos com `-qa.N` são históricos.
+
+Toda tag nasce de workflow, no formato `vX.Y.Z-dev.N` / final (as `-qa.N` são históricas, de antes do ADR 0235).
 
 **A versão mora na TAG, não em arquivos.** Ninguém consegue commitar direto
 numa branch permanente para subir o `package.json`, então exigir que os
@@ -1000,7 +1008,7 @@ branch porque a taxa de base difere:
 
 | branch | o que entra | regra |
 |---|---|---|
-| `qa`, `main` | só tráfego da esteira | um pai só é sempre defeito |
+| `main` | só tráfego da esteira | um pai só é sempre defeito |
 | `dev` | trabalho, o dia todo, por squash **de propósito** | defeito só quando o PR trazia uma **aresta nova** — a head dele era um merge cujo segundo pai ainda não estava na base |
 
 Essa distinção da `dev` é estreita de propósito. Um PR de trabalho que puxou

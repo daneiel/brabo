@@ -15,12 +15,12 @@ import {
 
 const REPO = 'daneiel/brabo';
 
-function hotfix(tag: string, prQa = 60, prDev = 61): EntradaDeHistorico {
+function hotfix(tag: string, _legado = 60, prDev = 61): EntradaDeHistorico {
   return {
     tag,
     sha: 'abc12345',
     em: '2026-07-27T10:00:00Z',
-    prs: { qa: prQa, dev: prDev },
+    prs: { dev: prDev },
   };
 }
 
@@ -37,8 +37,7 @@ describe('gate limpo', () => {
   it('deixa passar qualquer PR', () => {
     for (const [head, base] of [
       ['feature/x', 'dev'],
-      ['dev', 'qa'],
-      ['main', 'qa'],
+      ['dev', 'main'],
       ['hotfix/y', 'main'],
     ]) {
       const v = avaliarGate(GATE_LIMPO, { head: head!, base: base! });
@@ -63,56 +62,26 @@ describe('gate limpo', () => {
 // ------------------------------------------------------ 2. cadeia do hotfix
 
 describe('cadeia completa do hotfix', () => {
-  it('trava qa e dev, na ordem, aguardando a tag', () => {
+  it('trava só dev, aguardando a tag', () => {
     const g = travado('v0.2.1');
-    expect(g.locked).toEqual(['qa', 'dev']);
-    expect(g.order).toEqual(['qa', 'dev']);
-    expect(g.awaiting).toBe('v0.2.1');
-    expect(proximaNaOrdem(g)).toBe('qa');
-  });
-
-  it('main→qa é a retropropagação da vez', () => {
-    const v = avaliarGate(travado('v0.2.1'), { head: 'main', base: 'qa' }, REPO);
-    expect(v.ok).toBe(true);
-    expect(v.motivo).toBe('RETROPROPAGACAO-DA-VEZ');
-    expect(v.detalhe).toContain('depois vem');
-  });
-
-  it('destrava qa, e aí dev vira a da vez', () => {
-    const g = destravar(travado('v0.2.1'), 'qa');
     expect(g.locked).toEqual(['dev']);
+    expect(g.order).toEqual(['dev']);
     expect(g.awaiting).toBe('v0.2.1');
     expect(proximaNaOrdem(g)).toBe('dev');
-    expect(avaliarGate(g, { head: 'main', base: 'dev' }).ok).toBe(true);
+  });
+
+  it('main→dev é a retropropagação da vez', () => {
+    const v = avaliarGate(travado('v0.2.1'), { head: 'main', base: 'dev' }, REPO);
+    expect(v.ok).toBe(true);
+    expect(v.motivo).toBe('RETROPROPAGACAO-DA-VEZ');
   });
 
   it('a ÚLTIMA destrava limpa o awaiting e o histórico', () => {
-    const g = destravar(destravar(travado('v0.2.1'), 'qa'), 'dev');
+    const g = destravar(travado('v0.2.1'), 'dev');
     expect(g.locked).toEqual([]);
     expect(g.awaiting).toBeNull();
     expect(g.historico).toEqual([]);
     expect(avaliarGate(g, { head: 'feature/x', base: 'dev' }).ok).toBe(true);
-  });
-});
-
-// -------------------------------------------------------- 3. fora de ordem
-
-describe('fora de ordem', () => {
-  it('main→dev antes de qa é BARRADO, dizendo o que destravar antes', () => {
-    const v = avaliarGate(travado('v0.2.1'), { head: 'main', base: 'dev' }, REPO);
-    expect(v.ok).toBe(false);
-    expect(v.motivo).toBe('FORA-DE-ORDEM');
-    expect(v.detalhe).toContain('destrave `qa` antes de `dev`');
-    // A mensagem tem que EXPLICAR, não só recusar.
-    expect(v.detalhe).toContain('sem a correção');
-    expect(v.detalhe).toContain(`https://github.com/${REPO}/pull/60`);
-  });
-
-  it('depois que qa sai, dev deixa de estar fora de ordem', () => {
-    const g = destravar(travado('v0.2.1'), 'qa');
-    expect(avaliarGate(g, { head: 'main', base: 'dev' }).motivo).toBe(
-      'RETROPROPAGACAO-DA-VEZ',
-    );
   });
 });
 
@@ -137,10 +106,6 @@ describe('trabalho durante gate ativo', () => {
     expect(v.motivo).toBe('DESTINO-TRAVADO');
   });
 
-  it('promoção dev→qa é barrada durante o gate', () => {
-    expect(avaliarGate(travado('v0.2.1'), { head: 'dev', base: 'qa' }).ok).toBe(false);
-  });
-
   it('outro hotfix para main PASSA — main nunca é travada', () => {
     const v = avaliarGate(travado('v0.2.1'), { head: 'hotfix/z', base: 'main' });
     expect(v.ok).toBe(true);
@@ -159,8 +124,6 @@ describe('trabalho durante gate ativo', () => {
   it('o trabalho LIBERA depois da cadeia inteira', () => {
     let g = travado('v0.2.1');
     expect(avaliarGate(g, { head: 'feature/x', base: 'dev' }).ok).toBe(false);
-    g = destravar(g, 'qa');
-    expect(avaliarGate(g, { head: 'feature/x', base: 'dev' }).ok).toBe(false);
     g = destravar(g, 'dev');
     expect(avaliarGate(g, { head: 'feature/x', base: 'dev' }).ok).toBe(true);
   });
@@ -176,15 +139,15 @@ describe('acúmulo de hotfixes', () => {
     expect(g.awaiting).toBe('v0.2.2');
     // A ordem e a trava continuam as mesmas: os PRs de backmerge já abertos
     // carregam `main`, e `main` já tem os dois hotfixes.
-    expect(g.locked).toEqual(['qa', 'dev']);
+    expect(g.locked).toEqual(['dev']);
   });
 
   it('hotfix novo REtrava uma branch já destravada', () => {
-    // qa tinha saído; o hotfix seguinte traz conteúdo novo que precisa descer.
-    let g = destravar(travado('v0.2.1'), 'qa');
-    expect(g.locked).toEqual(['dev']);
+    // dev tinha saído; o hotfix seguinte traz conteúdo novo que precisa descer.
+    let g = destravar(travado('v0.2.1'), 'dev');
+    expect(g.locked).toEqual([]);
     g = travar(g, hotfix('v0.2.2', 70, 71));
-    expect(g.locked).toEqual(['qa', 'dev']);
+    expect(g.locked).toEqual(['dev']);
   });
 
   it('a mensagem aponta o PR do hotfix MAIS RECENTE', () => {
@@ -195,9 +158,8 @@ describe('acúmulo de hotfixes', () => {
     expect(v.detalhe).toContain('v0.2.2');
   });
 
-  it('a cadeia acumulada fecha com as mesmas duas destravas', () => {
+  it('a cadeia acumulada fecha com a destrava de dev', () => {
     let g = travado('v0.2.1', 'v0.2.2');
-    g = destravar(g, 'qa');
     g = destravar(g, 'dev');
     expect(g.locked).toEqual([]);
     expect(g.awaiting).toBeNull();
@@ -215,12 +177,11 @@ describe('higiene: a trava é conferida, não só declarada', () => {
   });
 
   it('trava cai quando o hotfix JÁ está na branch', () => {
-    // O caso real: os PRs de retropropagação levam o `gate.json` para `qa` e
-    // `dev`; meses depois uma promoção sobe aquela cópia velha de volta para
+    // O caso real: os PRs de retropropagação levam o `gate.json` para `dev`; meses depois uma promoção sobe aquela cópia velha de volta para
     // `main`. Sem higiene, o repositório trava para sempre — não existe
     // retropropagação pendente que resolva.
     const h = higienizar(travado('v0.2.1'), () => true);
-    expect(h.removidas).toEqual(['qa', 'dev']);
+    expect(h.removidas).toEqual(['dev']);
     expect(h.gate.locked).toEqual([]);
     expect(h.gate.awaiting).toBeNull();
   });
@@ -228,14 +189,7 @@ describe('higiene: a trava é conferida, não só declarada', () => {
   it('trava fica de pé quando o hotfix ainda NÃO desceu', () => {
     const h = higienizar(travado('v0.2.1'), () => false);
     expect(h.removidas).toEqual([]);
-    expect(h.gate.locked).toEqual(['qa', 'dev']);
-  });
-
-  it('cai só a branch que já recebeu; a outra continua travada', () => {
-    const h = higienizar(travado('v0.2.1'), (b) => b === 'qa');
-    expect(h.removidas).toEqual(['qa']);
     expect(h.gate.locked).toEqual(['dev']);
-    expect(proximaNaOrdem(h.gate)).toBe('dev');
   });
 
   it('NÃO CONSEGUIR VERIFICAR mantém a trava', () => {
@@ -243,8 +197,8 @@ describe('higiene: a trava é conferida, não só declarada', () => {
     // desligaria o gate exatamente quando o estado é incerto.
     const h = higienizar(travado('v0.2.1'), () => null);
     expect(h.removidas).toEqual([]);
-    expect(h.naoVerificadas).toEqual(['qa', 'dev']);
-    expect(h.gate.locked).toEqual(['qa', 'dev']);
+    expect(h.naoVerificadas).toEqual(['dev']);
+    expect(h.gate.locked).toEqual(['dev']);
   });
 
   it('a pergunta é feita com o sha do hotfix MAIS RECENTE', () => {
@@ -253,7 +207,7 @@ describe('higiene: a trava é conferida, não só declarada', () => {
       vistos.push(sha);
       return false;
     });
-    expect(vistos).toEqual(['abc12345', 'abc12345']);
+    expect(vistos).toEqual(['abc12345']);
   });
 
   it('depois da higiene o trabalho volta a passar', () => {

@@ -79,8 +79,8 @@ coisas saíram do import sem perder uma palavra:
   entrada no `docs_alternativos`), e índice que só serve para localizar sai do
   import.
 - A documentação publica um site por branch permanente, e o CAMINHO nomeia o
-  AMBIENTE, não a branch (ADR 0073): `main` → `/brabo/prd/`, `qa` → `/brabo/qa/`,
-  `dev` → `/brabo/dev/`, com a raiz sendo o índice gerado por
+  AMBIENTE, não a branch (ADR 0073): `main` → `/brabo/prd/`,
+  `dev` → `/brabo/dev/` (a `qa` foi aposentada, ADR 0235), com a raiz sendo o índice gerado por
   `scripts/docs/landing.mjs`. O mapa branch→caminho existe num ponto por
   processo (o passo do `docs-deploy.yml`, `DEGRAUS` no `docusaurus.config.ts` e
   no `landing.mjs`) — nunca interpole `$GITHUB_REF_NAME` num caminho.

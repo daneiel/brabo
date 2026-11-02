@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { aptaParaArquivar, deveArquivar, refDeArquivo } from './archive-branch.ts';
 
 /**
- * A regra: toda branch mergeada é arquivada, exceto dev/qa/main (aparecem
+ * A regra: toda branch mergeada é arquivada, exceto dev/main e a qa aposentada (aparecem
  * como `head` de todo PR de promoção), `gh-pages` (deploy do site, não é
  * feature) e branch de fork (repositório que o token não controla).
  */
@@ -53,13 +53,13 @@ describe('aptaParaArquivar', () => {
     agora: new Date('2026-10-15T12:00:00Z'),
   };
 
-  it('exatamente 7 dias depois do merge: arquiva', () => {
+  it('mergeada há 7 dias, sem commit depois: arquiva', () => {
     expect(aptaParaArquivar(base).apta).toBe(true);
   });
 
-  it('6 dias depois do merge: fica', () => {
-    const r = aptaParaArquivar({ ...base, ultimaMergeada: { mergedAt: '2026-10-09T12:00:00Z', headSha: 'abc' } });
-    expect(r).toEqual({ apta: false, motivo: 'mergeada há menos de 7 dias' });
+  it('mergeada agora há pouco (0 dias): arquiva na mesma segunda', () => {
+    const r = aptaParaArquivar({ ...base, ultimaMergeada: { mergedAt: '2026-10-15T11:59:00Z', headSha: 'abc' } });
+    expect(r.apta).toBe(true);
   });
 
   it('com PR aberta: fica', () => {

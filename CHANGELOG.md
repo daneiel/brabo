@@ -6,6 +6,8 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Funcionalidades
 
+- A `qa` é aposentada por hora no repositório do Brabo e a esteira passa a `dev → main`, com a versão final ancorada na `-dev.N` (AT-660, ADR 0235); o Gitflow do produto não muda.
+- A rotina que arquiva branches mergeadas passa a rodar toda segunda às 09:00 (Brasília), sem carência (AT-661).
 - A topbar da Sessão mostra quanto da janela do modelo o agente com quem se conversa ocupa (a entrada da última chamada dele contra a janela do modelo; "não sei" quando a janela é desconhecida, nunca 0%), sem requisição nova (AT-654, RN-969).
 - A Visão geral, os cartões de Parar e Religar a execução, a página de Providers e as caixas de marcar da seção de modelos passam a ser montados sobre o shadcn; nenhuma regra muda (AT-655, onda 4, rodada B parcial).
 - A aba Executores e as abas Backlog, Sessões, Aprovações e PRs passam a ser montadas sobre o shadcn (AT-636, onda 4, rodada A): subagente delegado vira `Subagent` com o estado e a origem (RN-970), o modo automático do time vira `Checkbox`, a lista do piloto só monta quando aberta, linhas e avisos viram `Item`, e o parecer do gate na timeline da PR vira `Collapsible`; nenhuma regra muda (AT-655).
@@ -21,6 +23,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- O check de promoção espera, por até 10 min, o `tag-release` que ainda está carimbando o commit, em vez de reprovar por corrida logo depois do merge no degrau de baixo (AT-663).
 - O JS da carga inicial do web cai de 1,36 MB para 1,24 MB: o Base UI deixou de ir no grupo de vendor pré-carregado pela entrada (AT-654).
 - A página global de Gastos (`/spend`) ganha a moldura das outras páginas globais (padding, cabeçalho e título de página de 22px) e o seletor "Janela" passa a ser o da casa, também na aba Gastos do projeto (AT-648).
 - O preço e a cobrança dos modelos são curados na tela de Providers; a edição manual deixa de ser desfeita pelo sync, que passa a respeitar a marca `manual_pricing` (AT-634, RN-964).

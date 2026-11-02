@@ -103,7 +103,7 @@ export function montarAlarme(falha: FalhaDeCarimbo): Alarme {
     '- **`BRABO_BOT_TOKEN` inválido ou expirado.** O `checkout` falha com',
     "  `fatal: could not read Username for 'https://github.com'` e nada é carimbado em",
     '  branch nenhuma. Só rotacionar o segredo resolve.',
-    '- **Âncora inválida** numa promoção para `main` (a `-qa.N` esperada não bate).',
+    '- **Âncora inválida** numa promoção para `main` (a `-dev.N` esperada não bate).',
     '',
     '---',
     '',

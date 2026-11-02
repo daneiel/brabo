@@ -1,7 +1,7 @@
 name: archive-merged-branch
 
-# Uma vez por dia, arquiva a branch mergeada há 7 dias ou mais — exceto dev,
-# qa, main (permanentes) e gh-pages (deploy do site de docs). "Arquivar" é
+# Toda segunda às 09:00 (Brasília), arquiva a branch mergeada sem commit depois
+# do merge — exceto dev, main (permanentes), qa (aposentada) e gh-pages (deploy do site de docs). "Arquivar" é
 # mecânico: mover de `refs/heads/<nome>` para `refs/archive/<nome>`, nunca
 # apagar — o objeto e o histórico continuam no repositório, recuperável por
 # quem souber o ref. Fonte da política: docs/explanation/branching-policy.md
@@ -11,7 +11,7 @@ name: archive-merged-branch
 # o motivo e falhas, e o job sai vermelho se houver falha.
 on:
   schedule:
-    - cron: '17 6 * * *'
+    - cron: '0 12 * * 1' # segunda 09:00 em Brasília (UTC-3)
   workflow_dispatch:
 
 permissions:
@@ -24,7 +24,7 @@ concurrency:
 
 jobs:
   arquivar:
-    name: Arquivar branches mergeadas há 7 dias
+    name: Arquivar branches mergeadas
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

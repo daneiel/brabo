@@ -2,7 +2,7 @@
  * destravar-gate — no merge de uma retropropagação: tira a branch da trava.
  * Fonte da política: docs/explanation/branching-policy.md
  *
- * Roda no push da branch que RECEBEU o backmerge (`qa` ou `dev`), mas escreve
+ * Roda no push da branch que RECEBEU o backmerge (`dev`), mas escreve
  * o gate na `main`, que é onde ele mora. A última destrava limpa o `awaiting`.
  *
  * Sintaxe apagável apenas (o Node executa este `.ts` por type stripping).
@@ -43,7 +43,7 @@ async function principal(): Promise<void> {
     return;
   }
 
-  // Só destrava se o commit veio MESMO de `main`. Um merge qualquer em `qa`
+  // Só destrava se o commit veio MESMO de `main`. Um merge qualquer em `dev`
   // durante a trava não deveria acontecer (o check barra), mas se acontecesse,
   // destravar aqui apagaria a trava sem a correção ter descido.
   const pais = git('rev-list', '--parents', '-n1', sha).split(/\s+/).slice(1);

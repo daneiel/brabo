@@ -17,7 +17,7 @@ name: CI
 # rascunho já dispara `opened` e `synchronize`. Quem quer CI antes de pedir
 # review abre o PR como rascunho.
 #
-# O gatilho cobre a escada inteira (dev, qa, main). Enquanto filtrava só `dev`,
+# O gatilho cobre a escada inteira (dev, main). Enquanto filtrava só `dev`,
 # um PR de promoção não rodava CI nenhum — e exigir estes checks nas
 # permanentes travaria o PR para sempre, porque o check exigido nunca
 # apareceria.
@@ -25,7 +25,6 @@ on:
   pull_request:
     branches:
       - dev
-      - qa
       - main
 
 # Push seguido de push no mesmo PR cancela a execução anterior: o que importa

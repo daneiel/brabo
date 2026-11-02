@@ -13,9 +13,9 @@ A fonte é o pt-BR em `docs/` (ADR 0216), inclusive `docs/reference/**` (ADR 021
 
 | locale | páginas traduzidas | caracteres traduzidos | em dia | defasadas | sem procedência | ausentes | órfãs |
 |---|---|---|---|---|---|---|---|
-| `en` | 270 de 284 (95.1%) | 99.3% de 5.939.676 | 253 | 16 | 1 | 14 | 0 |
-| `ru` | 270 de 284 (95.1%) | 99.3% de 5.939.676 | 253 | 16 | 1 | 14 | 0 |
-| `zh-Hans` | 270 de 284 (95.1%) | 99.3% de 5.939.676 | 253 | 16 | 1 | 14 | 0 |
+| `en` | 270 de 285 (94.7%) | 99.2% de 5.943.513 | 251 | 18 | 1 | 15 | 0 |
+| `ru` | 270 de 285 (94.7%) | 99.2% de 5.943.513 | 251 | 18 | 1 | 15 | 0 |
+| `zh-Hans` | 270 de 285 (94.7%) | 99.2% de 5.943.513 | 251 | 18 | 1 | 15 | 0 |
 
 > **TODO(humano):** revisão nativa por idioma — quem revisou e quando. Ainda não há revisão nativa registrada.
 
@@ -29,12 +29,14 @@ A fonte é o pt-BR em `docs/` (ADR 0216), inclusive `docs/reference/**` (ADR 021
 - `explanation/aceite-providers.md` (tradução de 2026-10-15)
 - `explanation/branching-policy.md` (tradução de 2026-10-15)
 - `explanation/cadeia-de-suprimentos-do-ci.md` (tradução de 2026-10-15)
+- `explanation/documentation-workflow.md` (tradução de 2026-10-16)
 - `getting-started.md` (tradução de 2026-10-15)
 - `glossary.md` (tradução de 2026-10-15)
 - `reference/configuration.md` (tradução de 2026-10-16)
 - `reference/events.md` (tradução de 2026-10-16)
 - `reference/internal-api.md` (tradução de 2026-10-15)
 - `reference/llm-providers.md` (tradução de 2026-10-16)
+- `reference/rulesets.md` (tradução de 2026-10-15)
 - `runbook.md` (tradução de 2026-10-15)
 - `security-surface.md` (tradução de 2026-10-15)
 
@@ -48,12 +50,14 @@ A fonte é o pt-BR em `docs/` (ADR 0216), inclusive `docs/reference/**` (ADR 021
 - `explanation/aceite-providers.md` (tradução de 2026-10-15)
 - `explanation/branching-policy.md` (tradução de 2026-10-15)
 - `explanation/cadeia-de-suprimentos-do-ci.md` (tradução de 2026-10-15)
+- `explanation/documentation-workflow.md` (tradução de 2026-10-16)
 - `getting-started.md` (tradução de 2026-10-15)
 - `glossary.md` (tradução de 2026-10-15)
 - `reference/configuration.md` (tradução de 2026-10-16)
 - `reference/events.md` (tradução de 2026-10-16)
 - `reference/internal-api.md` (tradução de 2026-10-15)
 - `reference/llm-providers.md` (tradução de 2026-10-16)
+- `reference/rulesets.md` (tradução de 2026-10-15)
 - `runbook.md` (tradução de 2026-10-15)
 - `security-surface.md` (tradução de 2026-10-15)
 
@@ -67,12 +71,14 @@ A fonte é o pt-BR em `docs/` (ADR 0216), inclusive `docs/reference/**` (ADR 021
 - `explanation/aceite-providers.md` (tradução de 2026-10-15)
 - `explanation/branching-policy.md` (tradução de 2026-10-15)
 - `explanation/cadeia-de-suprimentos-do-ci.md` (tradução de 2026-10-15)
+- `explanation/documentation-workflow.md` (tradução de 2026-10-16)
 - `getting-started.md` (tradução de 2026-10-15)
 - `glossary.md` (tradução de 2026-10-15)
 - `reference/configuration.md` (tradução de 2026-10-16)
 - `reference/events.md` (tradução de 2026-10-16)
 - `reference/internal-api.md` (tradução de 2026-10-15)
 - `reference/llm-providers.md` (tradução de 2026-10-16)
+- `reference/rulesets.md` (tradução de 2026-10-15)
 - `runbook.md` (tradução de 2026-10-15)
 - `security-surface.md` (tradução de 2026-10-15)
 

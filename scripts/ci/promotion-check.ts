@@ -15,7 +15,39 @@
  */
 
 import { ESCADA, type Permanente } from './pr-police.ts';
-import { lerTagDeEstagio, type Estagio } from './version.ts';
+import { ESTAGIO_ANTERIOR_A_MAIN, lerTagDeEstagio, type Estagio } from './version.ts';
+
+/**
+ * Espera o carimbo do degrau de baixo quando o `tag-release` daquele commit
+ * ainda está rodando (pedido do dono, 02/11, AT-663). Logo depois do merge no
+ * degrau de baixo, o PR de promoção roda antes de a tag existir e reprovava
+ * por corrida, não por defeito. Sem `tag-release` em andamento a resposta é
+ * imediata, como antes: esperar só faz sentido quando há quem carimbe.
+ */
+export async function esperarCarimbo(op: {
+  procurar: () => string[];
+  tagReleaseEmAndamento: () => boolean;
+  dormir: (ms: number) => Promise<void>;
+  agora: () => number;
+  prazoMs: number;
+  intervaloMs: number;
+}): Promise<{ tags: string[]; motivo: 'achou' | 'sem-tag-release' | 'prazo' }> {
+  const inicio = op.agora();
+  for (;;) {
+    const tags = op.procurar();
+    if (tags.length > 0) return { tags, motivo: 'achou' };
+    if (!op.tagReleaseEmAndamento()) {
+      // O run pode ter terminado entre a busca e a pergunta: uma última olhada.
+      const ultima = op.procurar();
+      return ultima.length > 0 ? { tags: ultima, motivo: 'achou' } : { tags: [], motivo: 'sem-tag-release' };
+    }
+    if (op.agora() - inicio >= op.prazoMs) return { tags: [], motivo: 'prazo' };
+    await op.dormir(op.intervaloMs);
+  }
+}
+
+/** Prazo da espera: abaixo do `timeout-minutes: 15` do job. */
+export const PRAZO_DO_CARIMBO_MS = 10 * 60_000;
 
 export interface Conferencia {
   nome: string;
@@ -25,10 +57,7 @@ export interface Conferencia {
 
 /** O estágio cujo carimbo o commit precisa ter para subir para `destino`. */
 export function estagioExigido(destino: Permanente): Estagio | null {
-  const i = ESCADA.indexOf(destino);
-  if (i <= 0) return null;
-  const anterior = ESCADA[i - 1]!;
-  return anterior === 'main' ? null : (anterior as Estagio);
+  return destino === 'main' ? ESTAGIO_ANTERIOR_A_MAIN : null;
 }
 
 /** As tags daquele estágio que apontam para o commit. */
@@ -116,16 +145,54 @@ async function principal(): Promise<void> {
 
   // --- 2. degrau de baixo carimbado.
   const estagio = estagioExigido(base);
-  const tags = git('tag', '--list', 'v*').split('\n').map((t) => t.trim()).filter(Boolean);
-  const shaPorTag: Record<string, string> = {};
-  for (const t of tags) {
+  const procurar = (): string[] => {
+    if (estagio === null) return [];
     try {
-      shaPorTag[t] = git('rev-list', '-n1', t);
+      git('fetch', '--tags', '--quiet', 'origin');
     } catch {
-      // Tag que não resolve fica de fora — a ausência vira reprovação abaixo,
-      // nunca aprovação silenciosa.
+      // Sem rede, segue com as tags que já estão no checkout.
     }
-  }
+    const tags = git('tag', '--list', 'v*').split('\n').map((t) => t.trim()).filter(Boolean);
+    const shaPorTag: Record<string, string> = {};
+    for (const t of tags) {
+      try {
+        shaPorTag[t] = git('rev-list', '-n1', t);
+      } catch {
+        // Tag que não resolve fica de fora — a ausência vira reprovação abaixo,
+        // nunca aprovação silenciosa.
+      }
+    }
+    return tagsDoCommit(tags, shaPorTag, headSha, estagio);
+  };
+  const tagReleaseEmAndamento = (): boolean => {
+    try {
+      const n = execFileSync(
+        'gh',
+        [
+          'api',
+          `repos/${repo}/actions/workflows/tag-release.yml/runs?branch=${encodeURIComponent(head)}&per_page=20`,
+          '--jq',
+          `[.workflow_runs[] | select(.head_sha == "${headSha}" and .status != "completed")] | length`,
+        ],
+        { encoding: 'utf8' },
+      ).trim();
+      return Number(n) > 0;
+    } catch {
+      // Sem como perguntar, não espera: reprova como antes, nunca aprova.
+      return false;
+    }
+  };
+  const espera =
+    estagio === null
+      ? { tags: [] as string[], motivo: 'sem-tag-release' as const }
+      : await esperarCarimbo({
+          procurar,
+          tagReleaseEmAndamento,
+          dormir: (ms) => new Promise((r) => setTimeout(r, ms)),
+          agora: () => Date.now(),
+          prazoMs: PRAZO_DO_CARIMBO_MS,
+          intervaloMs: 20_000,
+        });
 
   if (estagio === null) {
     conferencias.push({
@@ -134,7 +201,7 @@ async function principal(): Promise<void> {
       detalhe: `não sei qual estágio precede \`${base}\` — a escada é ${ESCADA.join(' → ')}.`,
     });
   } else {
-    const encontradas = tagsDoCommit(tags, shaPorTag, headSha, estagio);
+    const encontradas = espera.tags;
     conferencias.push(
       encontradas.length > 0
         ? {
@@ -147,9 +214,12 @@ async function principal(): Promise<void> {
             ok: false,
             detalhe:
               `o commit ${headSha.slice(0, 8)} não tem nenhuma tag \`-${estagio}.N\`.\n` +
-              `      Promover sem o carimbo do degrau de baixo é promover algo que\n` +
-              `      nunca passou por lá. Espere o \`tag-release\` do merge em\n` +
-              `      \`${head}\` terminar, ou confira por que ele não rodou.`,
+              (espera.motivo === 'prazo'
+                ? `      Esperei ${PRAZO_DO_CARIMBO_MS / 60_000} min o \`tag-release\` em andamento e ele não\n` +
+                  `      carimbou. Confira o run dele e rode este check de novo.`
+                : `      Promover sem o carimbo do degrau de baixo é promover algo que\n` +
+                  `      nunca passou por lá, e não há \`tag-release\` rodando para\n` +
+                  `      \`${head}\` neste commit. Confira por que ele não rodou.`),
           },
     );
   }

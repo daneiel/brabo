@@ -90,7 +90,7 @@ describe('modo solo', () => {
   });
 
   it('vale para qualquer degrau — solo não escala por destino', () => {
-    for (const destino of ['dev', 'qa', 'main']) {
+    for (const destino of ['dev', 'main']) {
       expect(avaliarEscada(solo({ destino, reviews: [aprovou(OWNER)] })).ok).toBe(true);
       expect(avaliarEscada(solo({ destino })).ok).toBe(false);
     }
@@ -99,21 +99,10 @@ describe('modo solo', () => {
 
 // -------------------------------------------------------- 2. modo community
 
-describe('modo community — os quatro degraus', () => {
+describe('modo community — os dois degraus', () => {
   it('dev exige 1 dev', () => {
     expect(avaliarEscada(community({ destino: 'dev' })).ok).toBe(false);
     expect(avaliarEscada(community({ destino: 'dev', reviews: [aprovou('ana')] })).ok).toBe(true);
-  });
-
-  it('qa exige 2 devs — um só não basta', () => {
-    const um = avaliarEscada(community({ destino: 'qa', reviews: [aprovou('ana')] }));
-    expect(um.ok).toBe(false);
-    expect(um.faltando.join(' ')).toContain('1 de 2');
-
-    const dois = avaliarEscada(
-      community({ destino: 'qa', reviews: [aprovou('ana'), aprovou('bruno')] }),
-    );
-    expect(dois.ok).toBe(true);
   });
 
   it('main exige 1 po + 1 gestao — dois devs não servem', () => {
@@ -237,7 +226,7 @@ describe('reviews que contam', () => {
 
   it('a mesma pessoa aprovando duas vezes conta como UMA', () => {
     const v = avaliarEscada(
-      community({ destino: 'qa', reviews: [aprovou('ana'), aprovou('ana')] }),
+      community({ destino: 'main', reviews: [aprovou('ana'), aprovou('ana')] }),
     );
     expect(v.ok).toBe(false);
   });
@@ -249,7 +238,7 @@ describe('troca de modo é só configuração', () => {
   it('a MESMA entrada dá vereditos diferentes em solo e community', () => {
     const reviews = [aprovou('ana')];
     const comum = {
-      destino: 'qa',
+      destino: 'main',
       autorDoPr: 'contribuidor',
       shaDoUltimoCommit: SHA,
       reviews,
@@ -262,10 +251,10 @@ describe('troca de modo é só configuração', () => {
     expect(emSolo.ok).toBe(false);
     expect(emSolo.faltando.join(' ')).toContain(OWNER);
 
-    // Em community, `ana` é dev — mas `qa` exige DOIS devs.
+    // Em community, `ana` é dev — mas `main` exige po e gestao.
     const emCommunity = avaliarEscada({ ...comum, modo: 'community' });
     expect(emCommunity.ok).toBe(false);
-    expect(emCommunity.faltando.join(' ')).toContain('devs');
+    expect(emCommunity.faltando.join(' ')).toContain('po');
 
     // Nada além do campo `modo` mudou entre as duas chamadas.
     expect(emSolo.modo).toBe('solo');
@@ -315,48 +304,5 @@ describe('resumo legível', () => {
     const v = avaliarEscada(solo({ destino: 'feature/x' }));
     expect(v.ok).toBe(false);
     expect(v.faltando.join(' ')).toContain('não é uma branch permanente');
-  });
-});
-
-// ---------------------------------------- 7. promoção automática (ADR 0217)
-
-describe('promoção automática dev → qa em fase de teste', () => {
-  const BOT = 'brabo-bot';
-  const auto = (over: Partial<EntradaEscada> = {}): EntradaEscada =>
-    solo({
-      destino: 'qa',
-      origem: 'dev',
-      autorDoPr: BOT,
-      botLogin: BOT,
-      faseDeTesteQa: true,
-      ...over,
-    });
-
-  it('dispensa a aprovação do PR dev → qa aberto pelo bot, com a razão', () => {
-    const v = avaliarEscada(auto());
-    expect(v.ok).toBe(true);
-    expect(v.dispensadoPorFaseDeTeste).toBe(true);
-    expect(formatarEscada(auto(), v)).toContain('QA_FASE_DE_TESTE');
-  });
-
-  it('vale também no modo community', () => {
-    expect(avaliarEscada(auto({ modo: 'community', aprovadores: {} })).ok).toBe(true);
-  });
-
-  it('variável desligada: segue exigindo o owner', () => {
-    expect(avaliarEscada(auto({ faseDeTesteQa: false })).ok).toBe(false);
-  });
-
-  it('qa → main nunca é dispensado', () => {
-    expect(avaliarEscada(auto({ destino: 'main', origem: 'qa' })).ok).toBe(false);
-  });
-
-  it('autor que não é o bot, ou bot não resolvido, não é dispensado', () => {
-    expect(avaliarEscada(auto({ autorDoPr: 'contribuidor' })).ok).toBe(false);
-    expect(avaliarEscada(auto({ botLogin: '' })).ok).toBe(false);
-  });
-
-  it('origem que não é dev não é dispensada', () => {
-    expect(avaliarEscada(auto({ origem: 'feature/x' })).ok).toBe(false);
   });
 });
