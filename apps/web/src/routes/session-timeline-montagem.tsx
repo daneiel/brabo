@@ -23,6 +23,8 @@ import { AvatarDoAgente } from '../components/ui/AvatarDoAgente';
 import { Button } from '../components/ui/Button';
 import { MensagemDeConversa } from '../components/ai-elements/message';
 import { ArtifactCard } from '../components/ai-elements/artifact';
+import { PassosEncerrados } from '../components/ai-elements/passos-encerrados';
+import { passosDoTurno } from '../lib/passos-do-turno';
 import { AcaoCopiar } from '../components/ai-elements/copiar';
 import { Carousel, type CarouselSlide } from '../components/ui/Carousel';
 import { ehTetoDoCriativo, lerFalhaDeTurno } from '../lib/session-falha';
@@ -911,6 +913,11 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
             {text === '' ? t('mensagens.respostaVazia') : <MarkdownMessage text={text} />}
           </MensagemDeConversa>
       );
+      // RN-974: sem `mensagem: true`, o bloco não conta no corte (RN-644).
+      const ferramentas = passosDoTurno(events, event);
+      if (ferramentas.length > 0) {
+        empurrar({ node: <PassosEncerrados key={`${event.id}-cadeia`} passos={ferramentas} /> });
+      }
       passos.forEach((passo, i) =>
         empurrar({
           agentId: event.actor.kind === 'agent' ? event.actor.id : undefined,

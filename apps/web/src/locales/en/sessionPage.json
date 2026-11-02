@@ -230,6 +230,8 @@
   "turno": {
     "artefato": { "epico": "Epic created", "historia": "Story created" },
     "pensando": "Thinking…",
+    "ferramentaFalhou": "The tool failed.",
+    "resultadoCortado": "Result cut at the 2,000-character limit.",
     "passosDoTurno": "Turn steps",
     "passosCount_one": "{{count}} step",
     "passosCount_other": "{{count}} steps"

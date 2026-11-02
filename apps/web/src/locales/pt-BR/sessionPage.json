@@ -238,6 +238,8 @@
   "turno": {
     "artefato": { "epico": "Épico criado", "historia": "História criada" },
     "pensando": "Pensando…",
+    "ferramentaFalhou": "A ferramenta falhou.",
+    "resultadoCortado": "Resultado cortado pelo limite de 2.000 caracteres.",
     "passosDoTurno": "Passos do turno",
     "passosCount_zero": "{{count}} passos",
     "passosCount_one": "{{count}} passo",

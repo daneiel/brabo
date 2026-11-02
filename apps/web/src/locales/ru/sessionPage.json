@@ -246,6 +246,8 @@
   "turno": {
     "artefato": { "epico": "Эпик создан", "historia": "История создана" },
     "pensando": "Думаю…",
+    "ferramentaFalhou": "Инструмент завершился ошибкой.",
+    "resultadoCortado": "Результат обрезан по лимиту в 2000 символов.",
     "passosDoTurno": "Шаги хода",
     "passosCount_one": "{{count}} шаг",
     "passosCount_few": "{{count}} шага",

@@ -5,6 +5,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 ## Unreleased
 
 ### Funcionalidades
+- O fio da Sessão passa a mostrar, antes de cada resposta do agente, os passos do turno encerrado num bloco recolhido: cada ferramenta com nome, ok ou falha e o resultado (com aviso de corte), nunca os argumentos (RN-974, AT-675).
 - A faixa do turno em curso da Sessão passa a ser uma cadeia de passos recolhível (`ChainOfThought` do AI Elements), operável por teclado, no lugar do bloco "Passos do turno" antigo (AT-674).
 - **Composer da Sessão com a barra do `PromptInput` (AT-674, L4).** Os botões Enviar/Enfileirar e Parar ficam numa barra abaixo do campo (`PromptInputToolbar`, mais o `PromptInputFooter`, só layout). Ordem no DOM, Enter/Shift+Enter, fila (RN-673) e campo não controlado (RN-882) não mudam.
 
