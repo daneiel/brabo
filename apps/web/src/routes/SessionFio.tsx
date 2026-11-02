@@ -2,10 +2,10 @@ import { useEffect, type CSSProperties, type Dispatch, type SetStateAction } fro
 import { Trans, useTranslation } from 'react-i18next';
 import { AGENTS } from '../lib/agents';
 import { Button } from '../components/ui/Button';
-import { Card } from '../components/ui/Card';
 import { Disclosure } from '../components/ui/Disclosure';
 import { MensagemDeConversa } from '../components/ai-elements/message';
 import { Sugestoes } from '../components/ai-elements/suggestion';
+import { ConversationEmptyState } from '../components/ai-elements/conversation';
 import { Shimmer } from '../components/ui/Shimmer';
 import { UserIcon } from '../components/ui/icons';
 import { AvatarDoAgente } from '../components/ui/AvatarDoAgente';
@@ -87,7 +87,7 @@ export function SessionFio({
           nunca o teriam. */}
       {conviteVisivel && (
         sessaoCriativa ? (
-          <Card padding="lg" className={styles.convite}>
+          <ConversationEmptyState className={styles.convite}>
             <h2 className={styles.conviteTitulo}>{t('convite.criativa.titulo')}</h2>
             <p className={styles.conviteTexto}>
               <Trans
@@ -124,9 +124,9 @@ export function SessionFio({
                 components={{ b: <strong /> }}
               />
             </p>
-          </Card>
+          </ConversationEmptyState>
         ) : (
-          <Card padding="lg" className={styles.convite}>
+          <ConversationEmptyState className={styles.convite}>
             <h2 className={styles.conviteTitulo}>{t('convite.consultiva.titulo')}</h2>
             <p className={styles.conviteTexto}>
               <Trans
@@ -142,7 +142,7 @@ export function SessionFio({
                 components={{ b: <strong /> }}
               />
             </p>
-          </Card>
+          </ConversationEmptyState>
         )
       )}
 

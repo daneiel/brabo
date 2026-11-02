@@ -11,6 +11,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - A rotina que arquiva branches mergeadas passa a rodar toda segunda às 09:00 (Brasília), sem carência (AT-661).
 - O seletor de modelo abre num `Popover` do kit (acompanha o gatilho e não fecha mais ao rolar a página), os filtros do catálogo de modelos usam `Chip`/`Input` do kit, a aba Gastos usa `Alert`/`Card`/`Button` do kit, e o bloco de ativar execução e o resumo de arquitetura da Visão geral viram `Item` (AT-655, Rodada 148).
 - PR do Dependabot para a `dev` deixa de esperar a aprovação do owner: com os outros checks verdes, fica mergeável. A `main` segue com a escada inteira (AT-668, ADR 0236).
+- O convite do fio vazio da Sessão (consultiva e criativa) passa a usar o estado vazio de conversa dos componentes de IA (`ConversationEmptyState`), com o mesmo texto e as mesmas ações; o fio com mensagens não o mostra e a rolagem segue acompanhando a última mensagem (AT-674, L2).
 
 ### Correções
 
