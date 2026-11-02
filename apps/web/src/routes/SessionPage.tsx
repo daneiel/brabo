@@ -855,6 +855,7 @@ export function SessionPage({
             podeReabrir={podeReabrir}
             reabrindo={reabrindo}
             handleReopen={handleReopen}
+            podeDecidir={podeDecidir}
           />
         </div>
 

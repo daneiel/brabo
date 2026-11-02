@@ -54,8 +54,10 @@ export default defineConfig({
               // ADR 0232: shadcn/Base UI. Lista de PERMITIDOS, como as acima.
               // @base-ui/@floating-ui ficam FORA (AT-654): o grupo é pré-carregado pela
               // entrada, e cada componente do kit usado em qualquer tela engordava a carga inicial.
+              // lucide-react também FICA FORA (AT-682): cada ícone cai no chunk da tela que o usa.
+              // JS da carga inicial (entrada + modulepreload): 1 246 739 B antes, 1 243 611 B depois.
               name: 'vendor-ui',
-              test: /[\\/]node_modules[\\/](use-sync-external-store|class-variance-authority|clsx|tailwind-merge|lucide-react)[\\/]/,
+              test: /[\\/]node_modules[\\/](use-sync-external-store|class-variance-authority|clsx|tailwind-merge)[\\/]/,
             },
           ],
         },

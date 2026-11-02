@@ -22,6 +22,13 @@ export function usePerguntasEmAberto(projectId: string | undefined) {
   });
 }
 
+/** O painel ouve este evento e abre a aba Perguntas (a aba fechada está `hidden`). */
+export const EVENTO_ABRIR_PERGUNTAS = 'brabo:abrir-perguntas';
+
 export function rolarAteAsPerguntas() {
-  document.getElementById(ID_DA_FILA_DE_PERGUNTAS)?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+  window.dispatchEvent(new Event(EVENTO_ABRIR_PERGUNTAS));
+  // Depois do render que revela a aba: scrollIntoView em `hidden` não faz nada.
+  setTimeout(() => {
+    document.getElementById(ID_DA_FILA_DE_PERGUNTAS)?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+  }, 0);
 }

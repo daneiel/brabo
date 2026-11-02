@@ -65,7 +65,7 @@ vi.mock('../lib/hooks', () => ({
   useSessionEvent: () => ({ data: undefined, isError: false }),
   usePendingActions: () => ({ data: { items: [] } }),
   useHandoffs: () => ({ data: [] }),
-  useCurrentWorkspaceWithRole: () => ({ data: undefined }),
+  useCurrentWorkspaceWithRole: () => ({ data: { role: 'developer', workspace: { id: 'ws-1' } } }),
   useBacklog: () => ({ data: [] }),
 }));
 

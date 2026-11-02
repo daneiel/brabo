@@ -9,7 +9,8 @@ import { Select } from '../components/ui/Select';
 import { sessaoEhTerminal } from '../lib/sessao-encerrada';
 import { pontoDaSessao } from '../lib/session-timeline';
 import { agentesParaChamar } from '../lib/session-destinatario';
-import { AvisoDePerguntasEmAberto } from '../components/PerguntasEmAberto';
+import { usePerguntasEmAberto, rolarAteAsPerguntas } from '../lib/perguntas-em-aberto';
+import { SugestoesDeAcao, type AcaoSugerida } from '../components/ai-elements/suggestion';
 import { InputGroup } from '../components/shadcn/input-group';
 import { PromptInputToolbar } from '../components/ai-elements/prompt-input';
 import { CampoDoComposer } from '../components/CampoDoComposer';
@@ -74,6 +75,8 @@ export interface SessionComposerProps {
   podeReabrir?: boolean;
   reabrindo?: boolean;
   handleReopen?: () => Promise<void>;
+  /** RN-102: o mínimo das ações de passo é o do ENDPOINT (`developer`). */
+  podeDecidir?: boolean;
 }
 
 /**
@@ -126,9 +129,59 @@ export function SessionComposer({
   podeReabrir = false,
   reabrindo = false,
   handleReopen,
+  podeDecidir = true,
 }: SessionComposerProps) {
   const { t } = useTranslation('sessionPage');
   const [handoffManualAberto, setHandoffManualAberto] = useState(false);
+  const perguntas = usePerguntasEmAberto(session?.projectId).data?.total ?? 0;
+  const motivoDePapel = t('composer.sugestaoExigeDeveloper');
+  const proximoPasso = arquitetoActive && !arquiteturaJaDeclarada && !streaming && hasModuleMap;
+  // RN-976: as ações de passo são sugestões acima do "Para", com o predicado e o handler de antes.
+  const acoes: AcaoSugerida[] = [];
+  if (criativoActive && !prontidaoJaDeclarada)
+    acoes.push({
+      chave: 'pronto',
+      rotulo: t('composer.prontoParaProduzir'),
+      aoClicar: handleReadiness,
+      desabilitada: streaming || !hasBusinessRule || !podeDecidir,
+      motivo: !podeDecidir
+        ? motivoDePapel
+        : !hasBusinessRule
+          ? t('composer.prontoParaProduzirDesabilitado')
+          : undefined,
+      explica: t('composer.prontoParaProduzirExplica'),
+    });
+  if (arquitetoActive && !arquiteturaJaDeclarada)
+    acoes.push({
+      chave: 'arquitetura',
+      rotulo: t('composer.confirmarArquitetura'),
+      aoClicar: handleArchitectureReadiness,
+      desabilitada: streaming || !hasPromotedStory || !podeDecidir,
+      motivo: !podeDecidir
+        ? motivoDePapel
+        : !hasPromotedStory && !proximoPasso
+          ? t('composer.confirmarArquiteturaDesabilitado')
+          : undefined,
+      explica: t('composer.confirmarArquiteturaExplica'),
+    });
+  if (
+    perguntas > 0 &&
+    ((criativoActive && !prontidaoJaDeclarada) || (arquitetoActive && !arquiteturaJaDeclarada))
+  )
+    acoes.push({
+      chave: 'perguntas',
+      rotulo: `${t('composer.perguntasEmAberto', { count: perguntas })} · ${t('composer.responderPerguntas')}`,
+      aoClicar: rolarAteAsPerguntas,
+      testId: 'aviso-perguntas-em-aberto',
+    });
+  if (isActive && opcoesDeDestinatario.length > 0 && !handoffManualAberto)
+    acoes.push({
+      chave: 'handoff',
+      rotulo: t('handoff.manualAbrir'),
+      aoClicar: () => setHandoffManualAberto(true),
+      desabilitada: !podeDecidir,
+      motivo: !podeDecidir ? motivoDePapel : undefined,
+    });
   return (
     <>
       {/*
@@ -242,13 +295,6 @@ export function SessionComposer({
       {/* RN-712: o seletor nasce RECOLHIDO — ele é o caso que a cadeia não
           cobre, e aberto desde o primeiro minuto oferecia Dev Lead, QA e
           Infra no meio da ideação. Um clique o abre. */}
-      {isActive && opcoesDeDestinatario.length > 0 && !handoffManualAberto && (
-        <div className={styles.manualHandoffRow}>
-          <Button variant="ghost" onClick={() => setHandoffManualAberto(true)}>
-            {t('handoff.manualAbrir')}
-          </Button>
-        </div>
-      )}
       {isActive && opcoesDeDestinatario.length > 0 && handoffManualAberto && (
         <div className={styles.manualHandoffRow}>
           <Select
@@ -279,6 +325,19 @@ export function SessionComposer({
 
       {session?.status === 'active' ? (
         <>
+        {(acoes.length > 0 || proximoPasso) && (
+          <div className={styles.sugestoesRow}>
+            <SugestoesDeAcao acoes={acoes} />
+            {/* RN-824: o próximo passo é um clique HUMANO, dito em texto. */}
+            {proximoPasso && (
+              <span className={styles.destinatarioAviso} data-testid="proximo-passo-arquitetura">
+                {hasPromotedStory
+                  ? t('composer.confirmarArquiteturaProximoPasso')
+                  : t('composer.confirmarArquiteturaDesabilitado')}
+              </span>
+            )}
+          </div>
+        )}
         {/*
           O destinatário da mensagem, VISÍVEL e escolhido (RN-631, AT-251).
           Antes ele não aparecia em lugar nenhum: era "o último agente
@@ -360,29 +419,6 @@ export function SessionComposer({
             </>
           )}
         </div>
-        {/*
-          RN-824 (AT-491): o próximo passo depois do mapa de módulos é um
-          clique HUMANO — o sistema não oferece a Infra sozinho. A tela DIZ
-          isso em texto visível, e sem história promovida diz o motivo uma
-          vez em texto (o `title` de botão desabilitado não abre, RN-102).
-        */}
-        {arquitetoActive && !arquiteturaJaDeclarada && !streaming && hasModuleMap && (
-          <div className={styles.manualHandoffRow} data-testid="proximo-passo-arquitetura">
-            <span className={styles.destinatarioAviso}>
-              {hasPromotedStory
-                ? t('composer.confirmarArquiteturaProximoPasso')
-                : t('composer.confirmarArquiteturaDesabilitado')}
-            </span>
-          </div>
-        )}
-        {((criativoActive && !prontidaoJaDeclarada) ||
-          (arquitetoActive && !arquiteturaJaDeclarada)) && (
-          <AvisoDePerguntasEmAberto
-            projectId={session?.projectId}
-            classeDaLinha={styles.manualHandoffRow}
-            classeDoTexto={styles.destinatarioAviso}
-          />
-        )}
         <div className={`${styles.composer} ${styles.composerComDestinatario}`}>
         <InputGroup className={styles.textarea}>
           {/* RN-882: o campo é dono do valor durante a digitação. */}
@@ -412,52 +448,6 @@ export function SessionComposer({
           )}
           </PromptInputToolbar>
         </InputGroup>
-          {/*
-            Some depois que o Criativo passou a bola (achado L). O botão
-            dependia só de o Criativo estar ativo, e continuava oferecendo
-            "Estou pronto para produzir" DEPOIS do handoff — convidando a
-            declarar de novo uma prontidão que já foi declarada, e cuja
-            consequência (o handoff para o PO) já está na tela.
-
-            Desde o ADR 0185 o mesmo clique fecha os DOIS gates — a
-            prontidão e a necessidade validada (RN-657) — e aceita em nome
-            da pessoa o handoff ao PO que o Criativo oferecer (RN-658). O
-            rótulo diz isso: é ele que faz do clique um julgamento de
-            mérito, e não só o piso "≥1 regra" da RN-142.
-          */}
-          {criativoActive && !prontidaoJaDeclarada && (
-            <Button
-              variant="success"
-              onClick={handleReadiness}
-              disabled={streaming || !hasBusinessRule}
-              title={
-                !hasBusinessRule
-                  ? t('composer.prontoParaProduzirDesabilitado')
-                  : t('composer.prontoParaProduzirExplica')
-              }
-            >
-              {t('composer.prontoParaProduzir')}
-            </Button>
-          )}
-          {/*
-            Mirror do botão acima, para o Arquiteto (achado do problema 1)
-            — some depois que ele já ofereceu o handoff, pelo mesmo motivo
-            que o do Criativo some depois de `prontidaoJaDeclarada`.
-          */}
-          {arquitetoActive && !arquiteturaJaDeclarada && (
-            <Button
-              variant="success"
-              onClick={handleArchitectureReadiness}
-              disabled={streaming || !hasPromotedStory}
-              title={
-                !hasPromotedStory
-                  ? t('composer.confirmarArquiteturaDesabilitado')
-                  : t('composer.confirmarArquiteturaExplica')
-              }
-            >
-              {t('composer.confirmarArquitetura')}
-            </Button>
-          )}
         </div>
         </>
       ) : (

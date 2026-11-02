@@ -65,6 +65,10 @@ const pendencias = () => (
   <PendenciasDeOutrasSessoes projectId="proj-1" sessionId="sess-1" podeDecidir />
 );
 
+async function abrir() {
+  fireEvent.click(await screen.findByRole('button', { name: /^Perguntas em aberto \d/ }));
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   usuario = 'user-autor';
@@ -79,10 +83,11 @@ beforeEach(() => {
 describe('Perguntas em aberto no chat (RN-861)', () => {
   it('fila própria com contagem própria; o autor responde e aceita a sugestão', async () => {
     montar(pendencias());
+    await abrir();
     const fila = await screen.findByTestId('fila-perguntas-em-aberto');
     expect(within(fila).getByRole('heading').textContent).toContain('Perguntas em aberto');
     expect(within(fila).getByRole('heading').textContent).toContain('2');
-    expect(screen.getByText(/Perguntas em aberto 2/)).toBeTruthy();
+    expect(screen.getAllByText(/Perguntas em aberto 2/).length).toBeGreaterThan(0);
     expect(getOpenQuestions).toHaveBeenCalledWith('proj-1', 'open');
 
     const [primeira, segunda] = screen.getAllByTestId('pergunta-em-aberto');
@@ -104,6 +109,7 @@ describe('Perguntas em aberto no chat (RN-861)', () => {
   it('quem não é o autor da sessão vê o cartão com o controle inerte e o motivo em texto', async () => {
     usuario = 'outra-pessoa';
     montar(pendencias());
+    await abrir();
     const [primeira] = await screen.findAllByTestId('pergunta-em-aberto');
     expect(within(primeira!).getByText('Pergunta a?')).toBeTruthy();
     expect(
@@ -121,6 +127,7 @@ describe('Perguntas em aberto no chat (RN-861)', () => {
       new ApiError(409, { reason: 'pergunta_ja_respondida', message: 'A pergunta já foi respondida.' }),
     );
     montar(pendencias());
+    await abrir();
     const [primeira] = await screen.findAllByTestId('pergunta-em-aberto');
     fireEvent.click(within(primeira!).getByRole('button', { name: 'Aceitar sugestão' }));
     expect((await within(primeira!).findByRole('alert')).textContent).toBe(
@@ -152,5 +159,31 @@ describe('Perguntas em aberto no chat (RN-861)', () => {
     montar(<AvisoDePerguntasEmAberto projectId="proj-2" />);
     await waitFor(() => expect(getOpenQuestions).toHaveBeenCalledWith('proj-2', 'open'));
     expect(screen.getAllByTestId('aviso-perguntas-em-aberto')).toHaveLength(1);
+  });
+});
+
+describe('Perguntas em aberto — paginação (AT-680, RN-975)', () => {
+  it('5 perguntas mostram 3 cartões e o paginador; o total da fila segue 5', async () => {
+    getOpenQuestions.mockResolvedValue({
+      itens: ['a', 'b', 'c', 'd', 'e'].map((i) => pergunta(i)),
+      total: 5,
+    });
+    montar(pendencias());
+    await abrir();
+    const fila = await screen.findByTestId('fila-perguntas-em-aberto');
+    expect(within(fila).getAllByText(/^Pergunta [a-e]\?$/)).toHaveLength(3);
+    expect(within(fila).getByRole('status')).toHaveTextContent('1–3 de 5');
+    expect(within(fila).getByRole('heading', { level: 4 })).toHaveTextContent('5');
+    fireEvent.click(within(fila).getByRole('button', { name: 'Próxima página de Perguntas em aberto' }));
+    expect(within(fila).getByRole('status')).toHaveTextContent('4–5 de 5');
+    expect(within(fila).getAllByText(/^Pergunta [a-e]\?$/)).toHaveLength(2);
+  });
+
+  it('CASO DE FALHA: com 3 perguntas não há paginador', async () => {
+    getOpenQuestions.mockResolvedValue({ itens: ['a', 'b', 'c'].map((i) => pergunta(i)), total: 3 });
+    montar(pendencias());
+    await abrir();
+    const fila = await screen.findByTestId('fila-perguntas-em-aberto');
+    expect(within(fila).queryByRole('status')).toBeNull();
   });
 });

@@ -210,3 +210,8 @@ pre {
     background-position: 200% 0;
   }
 }
+
+/* Traço dos ícones lucide igual ao dos ícones da casa (components/ui/icons.tsx). AT-682 */
+svg.lucide {
+  stroke-width: 1.6;
+}

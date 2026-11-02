@@ -33,8 +33,6 @@ export function usePendenciasDoProjeto(projectId: string, sessionId: string) {
   });
 }
 
-/** O teto de cards desenhados: a lista é recorte e a tela diz que é. */
-export const TETO_DE_PENDENCIAS_NO_CHAT = 20;
 
 export interface PendenciasDeOutrasSessoes {
   /** Aprovações comuns (terminal, commit, ...): a fila `aprovacoes`. */

@@ -477,3 +477,11 @@ o outline com `Highlight`.
 Botão e link: `outline: 2px solid var(--accent); outline-offset: 2px`.
 Link de texto sobre `--surface-1` usa `var(--accent-hover)` em repouso —
 `var(--accent)` dá 3.88:1 e reprova o AA (ADR 0036).
+
+## Iconografia
+
+- Ícone novo vem do Lucide, via `lucide-react`. Os ícones da casa (`components/ui/icons.tsx`) não migram.
+- Tamanho 16px e traço 1,6: o `Button` já força `size-4` em `svg` sem `size-*` e o `index.css` fixa `svg.lucide` em 1,6.
+- Ação destrutiva mantém o texto; o ícone só acompanha.
+- Ícone sozinho tem `aria-label` e `title` traduzidos.
+- Controle inerte explica o motivo em TEXTO (ADR 0064), nunca só por tooltip.

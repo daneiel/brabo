@@ -70,7 +70,8 @@
     "perguntasEmAberto_zero": "{{count}} perguntas em aberto",
     "perguntasEmAberto_one": "{{count}} pergunta em aberto",
     "perguntasEmAberto_other": "{{count}} perguntas em aberto",
-    "responderPerguntas": "Responder"
+    "responderPerguntas": "Responder",
+    "sugestaoExigeDeveloper": "Esta ação exige o papel developer neste workspace."
   },
   "ativacao": {
     "mensagemNaoEnviada": "Sua mensagem não enviada",
@@ -260,7 +261,12 @@
     "origem_zero": "{{count}} propostas na sessão {{hashtag}} · a mais antiga {{tempo}}",
     "origem_one": "Proposta na sessão {{hashtag}} · {{tempo}}",
     "origem_other": "{{count}} propostas na sessão {{hashtag}} · a mais antiga {{tempo}}",
-    "recorte": "Mostrando {{mostradas}} de {{total}} — as demais estão na aba Aprovações.",
+    "abas": "Filas de pendências",
+    "paginacao": {
+      "anterior": "Página anterior de {{fila}}",
+      "proxima": "Próxima página de {{fila}}",
+      "faixa": "{{inicio}}–{{fim}} de {{total}}"
+    },
     "semPapel": "Decidir aqui exige o papel developer no projeto. Você vê a pendência, mas quem decide é outra pessoa.",
     "motivoNaoLido": {
       "todas_zero": "Não foi possível ler o motivo da política destes {{count}} cards: a leitura do log da sessão que propôs as ações falhou.",

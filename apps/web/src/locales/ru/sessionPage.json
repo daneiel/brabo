@@ -71,7 +71,8 @@
     "perguntasEmAberto_few": "{{count}} открытых вопроса",
     "perguntasEmAberto_many": "{{count}} открытых вопросов",
     "perguntasEmAberto_other": "{{count}} открытого вопроса",
-    "responderPerguntas": "Ответить"
+    "responderPerguntas": "Ответить",
+    "sugestaoExigeDeveloper": "Это действие требует роли developer в этом рабочем пространстве."
   },
   "ativacao": {
     "mensagemNaoEnviada": "Ваше сообщение не отправлено",
@@ -270,7 +271,12 @@
     "origem_few": "{{count}} предложения в сессии {{hashtag}} · самое старое {{tempo}}",
     "origem_many": "{{count}} предложений в сессии {{hashtag}} · самое старое {{tempo}}",
     "origem_other": "{{count}} предложения в сессии {{hashtag}} · самое старое {{tempo}}",
-    "recorte": "Показано {{mostradas}} из {{total}} — остальные на вкладке «Одобрения».",
+    "abas": "Очереди ожидающих",
+    "paginacao": {
+      "anterior": "Предыдущая страница: {{fila}}",
+      "proxima": "Следующая страница: {{fila}}",
+      "faixa": "{{inicio}}–{{fim}} из {{total}}"
+    },
     "semPapel": "Для решения здесь нужна роль developer в проекте. Вы видите ожидающий элемент, но решает другой человек.",
     "motivoNaoLido": {
       "todas_one": "Не удалось прочитать причину политики для {{count}} карточки: чтение журнала сессии, предложившей действия, не удалось.",
