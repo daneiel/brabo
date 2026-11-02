@@ -1,0 +1,19 @@
+/* PRÉVIA DE ENSAIO (não mergear): raios do shadcn com a identidade do Brabo. */
+:root {
+  --radius: 0.625rem;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --r-xs: calc(var(--radius) - 4px);
+  --r-sm: calc(var(--radius) - 2px);
+  --r-md: calc(var(--radius) - 2px);
+  --r-lg: var(--radius);
+}
+/* O preflight zera tamanho e peso dos títulos; volta ao da v1 (padrão do navegador). */
+h1 { font-size: 2em; }
+h2 { font-size: 1.5em; }
+h3 { font-size: 1.17em; }
+h4, h5, h6 { font-weight: bold; }
+h4 { font-size: 1em; }
+h5 { font-size: 0.83em; }
+h6 { font-size: 0.67em; }

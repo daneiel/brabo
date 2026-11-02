@@ -12,6 +12,7 @@ import { I18nextProvider } from 'react-i18next';
 import './fonts.css';
 import './index.css';
 import './shadcn.css';
+import './styles/previa-meio-termo.css';
 import { router } from './router';
 import { onMudancaDeSessao, restaurarSessao } from './lib/auth';
 import { ToastProvider } from './components/ui/ToastProvider';
