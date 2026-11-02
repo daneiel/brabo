@@ -12,6 +12,7 @@ import {
 import type { HuggingFaceModel, ModelPullRequest } from '../lib/api-types';
 import { Alert } from './ui/Alert';
 import { Badge } from './ui/Badge';
+import { Ajuda } from '@/components/ui/Ajuda';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Modal } from './ui/Modal';
@@ -170,8 +171,8 @@ export function HuggingFaceModelBrowser({ workspaceId }: { workspaceId: string }
         <div className={styles.tituloLinha}>
           <h3 className={styles.title}>{t('huggingface.title')}</h3>
           <span className={styles.eyebrow}>{t('huggingface.eyebrow')}</span>
+          <Ajuda assunto={t('huggingface.title')}>{t('huggingface.subtitle')}</Ajuda>
         </div>
-        <div className={styles.subtitle}>{t('huggingface.subtitle')}</div>
       </div>
 
       <form className={styles.buscaLinha} onSubmit={submeterBusca}>
@@ -184,8 +185,13 @@ export function HuggingFaceModelBrowser({ workspaceId }: { workspaceId: string }
             aria-label={t('huggingface.searchLabel')}
           />
         </div>
-        <Button type="submit" variant="secondary" disabled={termo.trim().length === 0}>
-          {t('huggingface.searchButton')}
+        <Button
+          type="submit"
+          variant="secondary"
+          legenda={t('huggingface.searchButton')}
+          disabled={termo.trim().length === 0}
+        >
+          <SearchIcon aria-hidden="true" />
         </Button>
       </form>
 

@@ -18,6 +18,7 @@ import {
   type LlmCredentialProvider,
 } from '../../lib/models';
 import { Input } from '../../components/ui/Input';
+import { Ajuda } from '@/components/ui/Ajuda';
 import { Button } from '../../components/ui/Button';
 import { useToast } from '../../components/ui/ToastProvider';
 import styles from '../ProjectSettingsTab.module.css';
@@ -221,13 +222,13 @@ export function CredentialsSection() {
       <div className={styles.sectionHead}>
         <h2 className={styles.title}>{t('credentials.title')}</h2>
         <span className={styles.eyebrow}>{t('credentials.eyebrow')}</span>
-      </div>
-      <div className={styles.subtitle}>
-        {t('credentials.subtitle.before')}
-        <strong>{t('credentials.subtitle.swap')}</strong>
-        {t('credentials.subtitle.middle')}
-        <strong>{t('credentials.subtitle.test')}</strong>
-        {t('credentials.subtitle.after')}
+        <Ajuda assunto={t('credentials.title')}>
+          {t('credentials.subtitle.before')}
+          <strong>{t('credentials.subtitle.swap')}</strong>
+          {t('credentials.subtitle.middle')}
+          <strong>{t('credentials.subtitle.test')}</strong>
+          {t('credentials.subtitle.after')}
+        </Ajuda>
       </div>
 
       {/* Grid de conectores do handoff (seção 7, item 4): um card por
@@ -312,7 +313,7 @@ export function CredentialsSection() {
                 {/* Nome acessível com o provider: são oito cards com botões de
                     texto idêntico, e "Salvar" sozinho não diz salvar o quê. */}
                 <Button
-                  aria-label={
+                  legenda={
                     existing
                       ? t('credentials.connector.swapKeyAria', { label })
                       : t('credentials.connector.saveKeyAria', { label })
@@ -321,14 +322,12 @@ export function CredentialsSection() {
                   onClick={() => handleSave(id)}
                 >
                   {existing ? <RefreshCw aria-hidden="true" /> : <Save aria-hidden="true" />}
-                  {existing ? t('credentials.connector.swap') : t('credentials.connector.save')}
                 </Button>
                 {existing && (
                   <>
                     <Button
                       variant="secondary"
-                      aria-label={t('credentials.connector.testKeyAria', { label })}
-                      title={t('credentials.connector.test')}
+                      legenda={t('credentials.connector.testKeyAria', { label })}
                       disabled={ocupado}
                       onClick={() => handleTest(id)}
                     >
@@ -336,22 +335,20 @@ export function CredentialsSection() {
                     </Button>
                     <Button
                       variant="danger"
-                      aria-label={t('credentials.connector.removeKeyAria', { label })}
+                      legenda={t('credentials.connector.removeKeyAria', { label })}
                       disabled={ocupado}
                       onClick={() => handleRemove(id)}
                     >
                       <Trash2 aria-hidden="true" />
-                      {t('credentials.connector.remove')}
                     </Button>
                     {semCatalogo.has(id) && podeSincronizar && !semListModels(id) && (
                       <Button
                         variant="secondary"
-                        aria-label={t('credentials.connector.updateCatalogAria', { label })}
+                        legenda={t('credentials.connector.updateCatalogAria', { label })}
                         disabled={sincronizando}
                         onClick={() => void handleSync()}
                       >
                         <RefreshCw aria-hidden="true" />
-                        {t('credentials.connector.updateCatalog')}
                       </Button>
                     )}
                   </>

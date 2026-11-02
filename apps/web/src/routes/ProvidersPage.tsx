@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { listProviderCapabilities } from '../lib/api-client';
 import { useCurrentWorkspaceWithRole } from '../lib/hooks';
 import { FRESCOR_DA_CONFIGURACAO_MS } from '../lib/query-policy';
+import { Ajuda } from '../components/ui/Ajuda';
 import { Badge } from '../components/ui/Badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/shadcn/table';
 import { COR_DO_PROVIDER, ROTULO_DO_PROVIDER, providerAtivo } from '../lib/models';
@@ -46,8 +47,12 @@ export function ProvidersPage() {
       <section className={styles.section} aria-labelledby="providers-capabilities">
         <h2 id="providers-capabilities" className={styles.sectionTitle}>
           {t('capabilities.title')}
+          <Ajuda assunto={t('capabilities.title')}>
+            {t('capabilities.note')}
+            <br />
+            {t('routing')}
+          </Ajuda>
         </h2>
-        <p className={styles.note}>{t('capabilities.note')}</p>
         {capacidades.isError && (
           <ErroDeCarregamento
             titulo={t('capabilities.loadError')}
@@ -102,7 +107,6 @@ export function ProvidersPage() {
           )}
           </>
         )}
-        <p className={styles.note}>{t('routing')}</p>
       </section>
 
       {workspaceId && <ModelCatalogSection workspaceId={workspaceId} />}
