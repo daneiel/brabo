@@ -1270,7 +1270,7 @@ describe('ModelsSection — a caixa da área na linha do lead (AT-600, RN-102)',
     montarSecao(<ModelsSection projectId="proj-1" />);
 
     for (const caixa of await screen.findAllByRole('checkbox', { name: CAIXA })) {
-      expect(caixa).toBeDisabled();
+      expect(caixa).toHaveAttribute('aria-disabled', 'true');
     }
     expect(
       screen.getAllByText(/Exige papel maintainer para marcar a caixa da área/),

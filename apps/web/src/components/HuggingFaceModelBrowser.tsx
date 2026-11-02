@@ -18,6 +18,7 @@ import { Modal } from './ui/Modal';
 import { useToast } from './ui/ToastProvider';
 import { AlertIcon, ModelIcon, SearchIcon } from './ui/icons';
 import styles from './HuggingFaceModelBrowser.module.css';
+import { Checkbox } from './shadcn/checkbox';
 
 const STATUS_TERMINAL = new Set<ModelPullRequest['status']>(['active', 'failed']);
 
@@ -189,10 +190,9 @@ export function HuggingFaceModelBrowser({ workspaceId }: { workspaceId: string }
       </form>
 
       <label className={styles.comunidade}>
-        <input
-          type="checkbox"
+        <Checkbox
           checked={incluirComunidade}
-          onChange={(e) => setIncluirComunidade(e.target.checked)}
+          onCheckedChange={setIncluirComunidade}
         />
         {t('huggingface.communityToggle')}
       </label>
