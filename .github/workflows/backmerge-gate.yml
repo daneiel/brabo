@@ -4,7 +4,7 @@ name: backmerge-gate
 # Fonte da política: docs/explanation/branching-policy.md
 #
 # `hotfix/` entra direto em `main` porque incidente não espera a escada. Isso
-# deixa `qa` e `dev` sem a correção — e o próximo release a DESFAZ, em silêncio.
+# deixa `dev` sem a correção — e o próximo release a DESFAZ, em silêncio.
 # Este check impede que qualquer coisa suba enquanto a correção não descer.
 on:
   pull_request:
@@ -40,12 +40,11 @@ jobs:
           # que veio junto num backmerge daria estado velho, justamente durante
           # a cadeia em que ele muda a cada merge.
           #
-          # `qa` e `dev` vêm junto porque a trava é CONFERIDA contra elas: um
+          # `dev` vem junto porque a trava é CONFERIDA contra ela: um
           # registro velho que sobreviveu a uma promoção não pode travar o
           # repositório para sempre.
           git fetch --no-tags --quiet origin \
             '+refs/heads/main:refs/remotes/origin/main' \
-            '+refs/heads/qa:refs/remotes/origin/qa' \
             '+refs/heads/dev:refs/remotes/origin/dev'
 
       - name: Consultar o gate

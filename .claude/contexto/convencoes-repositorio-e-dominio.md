@@ -2,7 +2,10 @@
 > Edite aqui; o `CLAUDE.md` só guarda o índice das partes.
 
 ## Convenções (repositório, dados e domínio)
-- Branches permanentes: dev, qa, main — um branch, um ambiente. `rc` saiu
+- Branches permanentes: dev, main — um branch, um ambiente; a esteira é
+  `dev → main`. A `qa` foi APOSENTADA por hora (ADR 0235, só no repositório do
+  Brabo; arquivada em `refs/archive/qa`, segue em `PROTECTED_BRANCHES` do
+  produto e em `NUNCA_ARQUIVAR`). `rc` saiu
   da política (ADR 0030) e o bootstrap parou de criá-la, mas continua em
   `PROTECTED_BRANCHES` DE PROPÓSITO: a lista decide o que a trava de merge
   RECUSA, e repositórios bootstrapados por versões anteriores ainda têm a
@@ -151,8 +154,8 @@
   workflow da `main`. É por isso que o drift lê `PR_BODY_FILE` antes de
   `PR_BODY`. A linha do bot é marcada e sai sozinha se o diff deixar de ser
   pin; a de humano nunca é tocada.
-- Toda branch cujo PR é mergeado é ARQUIVADA automaticamente 7 DIAS depois
-  do merge, por checagem DIÁRIA (`.github/workflows/archive-merged-branch.yml`,
+- Toda branch cujo PR é mergeado é ARQUIVADA automaticamente, SEM carência, por checagem
+  SEMANAL (segunda 09:00 de Brasília, AT-661) (`.github/workflows/archive-merged-branch.yml`,
   AT-557): sem PR aberta e sem commit depois do merge; branch sem PR mergeada
   não é tocada — move de
   `refs/heads/<nome>` para `refs/archive/<nome>`, nunca apaga: histórico

@@ -6,8 +6,8 @@
  * `refs/heads/<nome>` para `refs/archive/<nome>` — fora do namespace de
  * branches (some da lista do GitHub), mas o objeto e o histórico continuam
  * no repositório, recuperável por quem souber o ref. As três permanentes
- * (dev/qa/main) NUNCA são arquivadas — elas aparecem como `head` de todo PR
- * de promoção mergeado (dev→qa, qa→main), e são exatamente o caso que este
+ * (dev/main, e a qa aposentada) NUNCA são arquivadas — elas aparecem como `head` de todo PR
+ * de promoção mergeado (dev→main), e são exatamente o caso que este
  * módulo existe para excluir. `gh-pages` também fica de fora: é a branch de
  * deploy do site de docs (GitHub Pages), não uma branch de feature — apagar
  * `refs/heads/gh-pages` derrubaria o site.
@@ -41,8 +41,8 @@ export function refDeArquivo(branch: string): string {
   return `refs/archive/${branch}`;
 }
 
-/** Dias depois do merge até a branch ser arquivada (decisão do dono, 15/10, AT-557). */
-export const DIAS_ATE_ARQUIVAR = 7;
+/** Dias depois do merge (0: arquiva na hora; revisa a decisão de 15/10, AT-661). */
+export const DIAS_ATE_ARQUIVAR = 0;
 const MS_POR_DIA = 24 * 60 * 60 * 1000;
 
 export interface EntradaDeAptidao {

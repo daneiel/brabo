@@ -13,7 +13,7 @@ import {
 } from './pr-police.ts';
 
 /**
- * Ancestralidade da escada esticada e saudável: main ⊆ rc ⊆ qa ⊆ dev, e o head
+ * Ancestralidade da escada esticada e saudável: main ⊆ dev, e o head
  * contém só o que `nasceuDe` contém. É o cenário de repositório em ritmo
  * normal.
  */
@@ -127,7 +127,7 @@ describe('taxonomia', () => {
   });
 
   it('REJEITA rcfix — saiu da taxonomia junto com o degrau `rc`', () => {
-    const v = avaliarPr(pr({ head: 'rcfix/x', base: 'qa' }));
+    const v = avaliarPr(pr({ head: 'rcfix/x', base: 'dev' }));
     expect(v.ok).toBe(false);
     expect(v.violacoes[0]!.codigo).toBe('FUNCAO-DESCONHECIDA');
     // A mensagem tem que ENSINAR o caminho novo, não só recusar.
@@ -183,8 +183,7 @@ describe('destino', () => {
 
 describe('escada', () => {
   it.each([
-    ['dev', 'qa'],
-    ['qa', 'main'],
+    ['dev', 'main'],
   ])('aceita a promoção %s → %s', (head, base) => {
     const v = avaliarPr({ head, base });
     expect(v.ok).toBe(true);
@@ -192,28 +191,18 @@ describe('escada', () => {
   });
 
   it.each([
-    ['main', 'qa'],
-    ['qa', 'dev'],
+    ['main', 'dev'],
   ])('aceita a retropropagação %s → %s', (head, base) => {
     const v = avaliarPr({ head, base });
     expect(v.ok).toBe(true);
     expect(v.familia).toBe('retropropagacao');
   });
 
-  it.each([['dev', 'main', 'qa']])(
-    'reprova a promoção %s → %s por pular %s',
-    (head, base, pulado) => {
-    const v = avaliarPr({ head, base });
+  it('a qa aposentada não é mais permanente: qa → main reprova no nome', () => {
+    const v = avaliarPr({ head: 'qa', base: 'main' });
     expect(v.ok).toBe(false);
-    expect(v.violacoes[0]!.codigo).toBe('PROMOCAO-NAO-ADJACENTE');
-    expect(v.violacoes[0]!.observado).toContain(pulado);
-    // O conserto tem que dizer o caminho em etapas, não só "é proibido".
-      expect(v.violacoes[0]!.conserto).toContain('etapas');
-    },
-  );
-
-  it('reprova a retropropagação main → dev por pular degrau', () => {
-    expect(avaliarPr({ head: 'main', base: 'dev' }).ok).toBe(false);
+    expect(v.violacoes[0]!.codigo).toBe('NOME-FORA-DO-FORMATO');
+    expect(avaliarPr({ head: 'dev', base: 'qa' }).ok).toBe(false);
   });
 
   it('reprova permanente mirando ela mesma', () => {
@@ -227,7 +216,7 @@ describe('escada', () => {
   it('não aplica o regex de nome a PR entre permanentes', () => {
     // `main` não tem barra: se a ordem de avaliação estiver invertida, todo PR
     // de promoção recebe "use funcao/descritivo", que é uma mensagem absurda.
-    const v = avaliarPr({ head: 'qa', base: 'main' });
+    const v = avaliarPr({ head: 'dev', base: 'main' });
     expect(v.ok).toBe(true);
     expect(v.violacoes).toHaveLength(0);
   });
@@ -242,17 +231,6 @@ describe('escada', () => {
 // ------------------------------------------------------------- 5. contaminação
 
 describe('contaminação de origem', () => {
-  it('reprova hotfix nascido de qa', () => {
-    const v = avaliarPr(
-      pr({ head: 'hotfix/x', base: 'main', ancestralidade: escadaEsticada('qa') }),
-    );
-    expect(v.ok).toBe(false);
-    const c = v.violacoes.find((x) => x.codigo === 'ORIGEM-CONTAMINADA')!;
-    expect(c.observado).toContain('`qa`');
-    expect(c.conserto).toContain('git checkout -b');
-    expect(c.conserto).toContain('origin/main');
-  });
-
   it('reprova hotfix nascido de dev', () => {
     const v = avaliarPr(
       pr({ head: 'hotfix/x', base: 'main', ancestralidade: escadaEsticada('dev') }),
@@ -280,16 +258,6 @@ describe('contaminação de origem', () => {
     expect(avaliarPr(pr({ head: 'hotfix/x', base: 'main', ancestralidade: a })).ok).toBe(true);
   });
 
-  it('aceita hotfix quando qa é ancestral de main — regressão do falso positivo pós-promoção', () => {
-    // Logo depois de `qa → main`, o tip de qa está DENTRO de main. Um hotfix
-    // legítimo contém o tip de qa, e sem o teste dinâmico de "mais avançada"
-    // isso viraria contaminação.
-    const a = escadaEsticada('main');
-    a.headContem.qa = true;
-    a.contida.qa = { ...a.contida.qa, main: true };
-    expect(avaliarPr(pr({ head: 'hotfix/x', base: 'main', ancestralidade: a })).ok).toBe(true);
-  });
-
   it('avisa em vez de reprovar quando a ancestralidade não pôde ser medida', () => {
     const v = avaliarPr(pr({ head: 'hotfix/x', base: 'main', ancestralidade: undefined }));
     expect(v.ok).toBe(true);
@@ -303,10 +271,9 @@ describe('contaminação de origem', () => {
   });
 
   it('permanente inexistente entra como não verificada, nunca como aprovada', () => {
-    // `qa` e `rc` ainda não existiam no remoto: a medida não existe. Tratar
+    // `dev` ainda não existia no remoto: a medida não existe. Tratar
     // ausência como `false` faria toda checagem passar em silêncio.
     const r = verificarContaminacao('main', { headContem: {}, contida: {} });
-    expect(r.naoVerificado).toContain('qa');
     expect(r.naoVerificado).toContain('dev');
   });
 });
@@ -398,7 +365,7 @@ describe('breaking/ e o marcador de quebra andam juntos', () => {
     // Promoção carrega commits marcados do degrau de baixo, e isso é normal:
     // a quebra já foi declarada quando entrou. Cobrar de novo travaria a
     // esteira inteira depois de qualquer release MAJOR.
-    const v = avaliarPr({ head: 'dev', base: 'qa', quebrasMarcadas: true });
+    const v = avaliarPr({ head: 'dev', base: 'main', quebrasMarcadas: true });
 
     expect(v.ok).toBe(true);
   });
@@ -412,7 +379,7 @@ describe('toda violação ensina', () => {
     pr({ head: 'feature/' }),
     pr({ head: 'ci/x' }),
     pr({ head: 'feature/x', base: 'qa' }),
-    { head: 'dev', base: 'main' },
+    { head: 'qa', base: 'main' },
     pr({ head: 'hotfix/x', base: 'main', ancestralidade: escadaEsticada('dev') }),
     pr({ head: 'breaking/x', quebrasMarcadas: false }),
     pr({ head: 'feature/x', quebrasMarcadas: true }),

@@ -3,7 +3,7 @@
  * Fonte da política: docs/explanation/branching-policy.md
  *
  * POR QUE ELE EXISTE. `hotfix/` entra direto em `main` porque incidente não
- * espera a escada. Isso deixa `qa` e `dev` sem a correção — e o próximo release
+ * espera a escada. Isso deixa `dev` sem a correção — e o próximo release
  * a DESFAZ, em silêncio, meses depois. O gate impede que qualquer coisa suba
  * enquanto a correção não descer.
  *
@@ -16,7 +16,7 @@
 import { ESCADA, type Permanente } from './pr-police.ts';
 
 /** A ordem de destrava: do degrau mais alto para o mais baixo. */
-export const ORDEM_DE_DESTRAVA: readonly Permanente[] = ['qa', 'dev'];
+export const ORDEM_DE_DESTRAVA: readonly Permanente[] = ESCADA.slice(0, -1).reverse();
 
 export const CAMINHO_DO_GATE = '.release/gate.json';
 
@@ -52,10 +52,10 @@ export const GATE_LIMPO: Gate = {
 // ---------------------------------------------------------------- transições
 
 /**
- * Um hotfix entrou em `main`: trava `qa` e `dev`.
+ * Um hotfix entrou em `main`: trava `dev`.
  *
  * ACÚMULO SAI DE GRAÇA. Um segundo hotfix durante gate ativo não abre PR novo
- * nem cria fila paralela: os PRs `main→qa` e `main→dev` já estão abertos e
+ * nem cria fila paralela: os PR `main→dev` já estão abertos e
  * carregam o que `main` TIVER — inclusive o hotfix novo. Aqui só se acrescenta
  * a entrada no histórico e se reafirma a trava. Branch que já foi destravada
  * volta a travar, porque agora há conteúdo novo para descer.
@@ -107,8 +107,8 @@ export interface Higiene {
  * Deixa cair as travas que a REALIDADE já satisfez.
  *
  * O `.release/gate.json` mora na `main`, mas os PRs de retropropagação
- * carregam o arquivo junto para `qa` e `dev`. Meses depois, uma promoção
- * `qa → main` sobe aquela cópia de volta — e num merge onde os dois lados
+ * carregam o arquivo junto para `dev`. Meses depois, uma promoção
+ * `dev → main` sobe aquela cópia de volta — e num merge onde os dois lados
  * mudaram, uma trava velha pode reaparecer na `main` sem nenhum hotfix por
  * trás. Sem esta higiene, o gate ficaria travado para sempre: não há
  * retropropagação pendente que o destrave.

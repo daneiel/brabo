@@ -17,7 +17,7 @@
 # dono do repositório alcança. O que ele faz é as duas coisas que cabem aqui.
 #
 # E todo PR de dependência entra pela `dev` (`target-branch: dev`), nunca
-# direto na `main`: chega lá pela promoção `dev → qa → main`, como o resto.
+# direto na `main`: chega lá pela promoção `dev → main`, como o resto.
 # `target-branch` só vale para atualização de VERSÃO — security update o GitHub
 # abre sempre contra a branch default, e quem o traz para a `dev` é o
 # `.github/workflows/dependabot-para-dev.yml`.

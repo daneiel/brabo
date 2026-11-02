@@ -48,21 +48,7 @@ export function celulaDeTabela(texto: string): string {
   return texto.replace(/\\/g, '\\\\').replace(/\|/g, '\\|');
 }
 
-/** O aviso da fase de teste (ADR 0217) — o mesmo texto do site e da política. */
-export const AVISO_DA_FASE_DE_TESTE =
-  'Fase de teste: a QA é promovida automaticamente a cada merge na dev e ainda ' +
-  'não é considerada ambiente validado.';
-
 export const MENSAGEM_DO_CICLO_VAZIO = 'nada a promover: o ciclo está vazio';
-
-/**
- * Ciclo vazio é falha só na promoção MANUAL (alguém pediu algo impossível).
- * Na automática (ADR 0217) é desfecho normal de todo push na `dev` sem
- * trabalho novo — vermelho recorrente ensinaria a ignorar o vermelho.
- */
-export function cicloVazioEhFalha(automatica: boolean): boolean {
-  return !automatica;
-}
 
 /** O corpo do PR: cada PR do ciclo, seu impacto, e a versão proposta. */
 export function corpoDaPromocao(
@@ -71,18 +57,10 @@ export function corpoDaPromocao(
   versao: string,
   ultimaFinal: string | null,
   prs: PrClassificado[],
-  automatica = false,
 ): string {
   const l: string[] = [];
   const impacto = maiorImpacto(prs)!;
 
-  if (automatica) {
-    l.push(`> **${AVISO_DA_FASE_DE_TESTE}**`);
-    l.push('>');
-    l.push('> Aberto e mergeado pelo workflow `promote-auto-qa` depois de todos os');
-    l.push('> checks terminarem verdes (`QA_FASE_DE_TESTE=true`, ADR 0217).');
-    l.push('');
-  }
 
   l.push(`Promoção **\`${de}\` → \`${para}\`**, gerada pelo workflow \`promote\`.`);
   l.push('');
@@ -153,7 +131,7 @@ async function principal(): Promise<void> {
       'par inválido',
       `"${entradaDoPar}" não é um par da esteira.\n` +
         '  O formato é `origem->destino`, e as duas precisam ser permanentes.\n' +
-        '  Os pares válidos: `dev->qa` e `qa->main`.',
+        '  Os pares válidos: `dev->main`.',
     );
     return;
   }
@@ -180,7 +158,7 @@ async function principal(): Promise<void> {
   //
   // O range é `<última final>..origin/dev` e não `..origin/<de>`: a versão do
   // ciclo é decidida pelo que ENTROU no fluxo, e tudo entra por `dev`. Numa
-  // promoção `qa->main` o conteúdo já passou por `dev`, então o ciclo é o
+  // promoção `dev->main` o conteúdo já passou por `dev`, então o ciclo é o
   // mesmo — o que muda é só o carimbo.
   const range = ultimaFinal ? `${ultimaFinal}..origin/dev` : 'origin/dev';
   // COM os merges: o número do PR só aparece no assunto do merge commit quando
@@ -228,14 +206,6 @@ async function principal(): Promise<void> {
     versao = proximaVersao(ultimaFinal, prs);
   } catch (erro) {
     if (erro instanceof CicloVazioError) {
-      if (!cicloVazioEhFalha(process.env.PROMOCAO_AUTOMATICA === 'true')) {
-        console.log(`::notice title=promote::${MENSAGEM_DO_CICLO_VAZIO}`);
-        if (process.env.GITHUB_STEP_SUMMARY) {
-          appendFileSync(process.env.GITHUB_STEP_SUMMARY, `### promote: ${MENSAGEM_DO_CICLO_VAZIO}\n`);
-        }
-        if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, 'vazio=true\n');
-        return;
-      }
       falhar('ciclo vazio', erro.message);
       return;
     }
@@ -253,7 +223,6 @@ async function principal(): Promise<void> {
       versao,
       ultimaFinal,
       classificados,
-      process.env.PROMOCAO_AUTOMATICA === 'true',
     ),
   );
 
