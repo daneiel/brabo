@@ -120,7 +120,7 @@ degraus de baixo **desatualizados** — a correção existe em `main` e não em
 `dev`.
 
 Por isso toda correção nascida no alto gera uma **retropropagação**: `main →
-qa → dev`, em cadeia, em ordem. Enquanto ela não se completa, os degraus
+dev` (até o ADR 0235, `main → qa → dev`, em cadeia). Enquanto ela não se completa, os degraus
 afetados ficam travados — veja [O portão de retropropagação](#the-back-merge-gate).
 
 A cadeia completa de um hotfix são **três PRs**: o hotfix mais as duas
@@ -134,8 +134,8 @@ Todo PR recebe um rótulo de família, aplicado automaticamente:
 |---|---|---|
 | `trabalho` | uma função de trabalho → `dev` | `feature/pr-police` → `dev` |
 | `correcao-alta` | `hotfix` → `main` | `hotfix/vaza-token` → `main` |
-| `promocao` | degrau adjacente, subindo | `dev` → `qa` |
-| `retropropagacao` | degrau adjacente, descendo | `main` → `qa` |
+| `promocao` | degrau adjacente, subindo | `dev` → `main` |
+| `retropropagacao` | degrau adjacente, descendo | `main` → `dev` |
 
 O rótulo não é enfeite: é ele que permite responder "quantos hotfixes
 tivemos neste trimestre?" sem arqueologia no git.
@@ -275,7 +275,7 @@ segurança de `main` para `dev` é trabalho do `dependabot-para-dev.yml`
 
 A isenção acima é sobre o **nome** da branch. O **destino** não é isento:
 uma atualização de dependência entra pela `dev`, como todo o resto, e chega
-à `main` pela promoção `dev → qa → main`. Uma dependência mergeada direto na
+à `main` pela promoção `dev → main`. Uma dependência mergeada direto na
 `main` pula a escada e faz a `main` divergir da branch onde o trabalho
 acontece.
 
@@ -421,11 +421,10 @@ propósito: com um único mantenedor, ela é aritmeticamente impossível.
 | destino | exigência |
 |---|---|
 | `dev` | 1 × devs |
-| `qa` | 2 × devs |
 | `main` | 1 × PO **+** 1 × gestão |
 
-Para `main`, **pessoas distintas** — a exigência volta a valer. Para `dev` e
-`qa` a distinção é automática: as vagas são do mesmo papel e cada pessoa só
+Para `main`, **pessoas distintas** — a exigência volta a valer. Para `dev`
+a distinção é automática: as vagas são do mesmo papel e cada pessoa só
 conta uma revisão.
 
 Os papéis são **listas de handles** em variáveis de repositório, não times
@@ -474,8 +473,7 @@ Pré-requisitos, antes de virar qualquer variável:
 
 1. **Todo papel com gente de verdade.** `main` exige PO **e** gestão; se as
    duas listas apontam para a mesma pessoa, nenhum PR para `main` passa
-   nunca — a regra de pessoas distintas não pode ser satisfeita. `qa` exige
-   **dois** devs distintos: uma lista com um nome só bloqueia a promoção.
+   nunca — a regra de pessoas distintas não pode ser satisfeita.
 2. **Um critério de quem entra em cada lista**, definido e escrito — quem
    entra, quem sai, e com base em quê.
 
@@ -518,8 +516,7 @@ sendo ato manual, como toda entrada numa branch permanente.
 |---|---|
 | 1 | **quem dispara** — sob `APPROVAL_MODE=solo`, só o
 `OWNER_HANDLE`. Qualquer outro ator reprova, nomeando quem pode |
-| 2 | **par adjacente** — `dev→qa` e `qa→main`. `dev→main` é recusado,
-apontando para o caminho em degraus |
+| 2 | **par adjacente** — `dev→main` (desde o ADR 0235; antes, `dev→qa` e `qa→main`) |
 | 3 | **versão do ciclo** — calculada a partir dos PRs mergeados desde a
 última tag final |
 | 4 | **PR aberto** — corpo listando cada PR, sua função, seu impacto e a
@@ -615,7 +612,9 @@ intenção declarada.
 
 ## Versionamento {#versioning}
 
-Toda tag nasce de workflow, no formato `vX.Y.Z-dev.N` / `-qa.N` / final.
+> **Leitura depois do ADR 0235 (02/11/2026):** as seções de versionamento, âncora, retropropagação e portão abaixo ainda contam a esteira de três degraus. Onde citam `qa` como degrau intermediário, vale hoje: a promoção é `dev → main`, a âncora da tag final é a `-dev.N` do pai do merge, e a retropropagação de um hotfix é só `main → dev`. Os exemplos com `-qa.N` são históricos.
+
+Toda tag nasce de workflow, no formato `vX.Y.Z-dev.N` / final (as `-qa.N` são históricas, de antes do ADR 0235).
 
 **A versão mora na TAG, não em arquivos.** Ninguém consegue commitar direto
 numa branch permanente para subir o `package.json`, então exigir que os
@@ -1002,7 +1001,7 @@ branch porque a taxa de base difere:
 
 | branch | o que entra | regra |
 |---|---|---|
-| `qa`, `main` | só tráfego da esteira | um pai só é sempre defeito |
+| `main` | só tráfego da esteira | um pai só é sempre defeito |
 | `dev` | trabalho, o dia todo, por squash **de propósito** | defeito só quando o PR trazia uma **aresta nova** — a head dele era um merge cujo segundo pai ainda não estava na base |
 
 Essa distinção da `dev` é estreita de propósito. Um PR de trabalho que puxou
