@@ -1,51 +1,51 @@
 {
-  "versao": "7.0.0",
-  "commit": "bcc92005a368",
-  "publicadoEm": "2026-10-01T20:04:55.627Z",
+  "versao": "7.1.0",
+  "commit": "1505f3c20046",
+  "publicadoEm": "2026-11-02T13:23:44.647Z",
   "imagens": [
     {
       "alvo": "api",
       "repositorio": "ghcr.io/daneiel/brabo-api",
-      "digest": "sha256:c90c336f0455718857688735417d4c5304c97ccff0b12fc7a356054477e258c3",
+      "digest": "sha256:7d76fdb0482fd93b5247f509354fe97b69a3fb1e6c6e78a8fdcbf355ad2a800b",
       "tags": [
-        "7.0.0",
-        "bcc92005a368"
+        "7.1.0",
+        "1505f3c20046"
       ]
     },
     {
       "alvo": "engine",
       "repositorio": "ghcr.io/daneiel/brabo-engine",
-      "digest": "sha256:c18e51691253dc84411cc0f5dcf10ab9798cd94cde63edee3b06688e0e04d836",
+      "digest": "sha256:8a0589386cf540dcd7cb9834174f0f48f180d75b442906d31924485877f9a13c",
       "tags": [
-        "7.0.0",
-        "bcc92005a368"
+        "7.1.0",
+        "1505f3c20046"
       ]
     },
     {
       "alvo": "web",
       "repositorio": "ghcr.io/daneiel/brabo-web",
-      "digest": "sha256:99d534cec964a61c66c2adf5ef62a3921fc337f47a70e54d6f371fcb57de32ec",
+      "digest": "sha256:dc8aaad35edffb21c7ee90bc09a3684907a5f13ebe27e6e13b45aa9d27f85a02",
       "tags": [
-        "7.0.0",
-        "bcc92005a368"
+        "7.1.0",
+        "1505f3c20046"
       ]
     },
     {
       "alvo": "backup",
       "repositorio": "ghcr.io/daneiel/brabo-backup",
-      "digest": "sha256:393a56a7032599e21b772727f0b9d5465cac93e44641a23dfd43cc305e07d570",
+      "digest": "sha256:80b636a5729e6c300e322331bf374d571f5430b2f06dfde6588e522bc9c8f230",
       "tags": [
-        "7.0.0",
-        "bcc92005a368"
+        "7.1.0",
+        "1505f3c20046"
       ]
     },
     {
       "alvo": "broker",
       "repositorio": "ghcr.io/daneiel/brabo-broker",
-      "digest": "sha256:86cd0b544791c1bc1b155e0bd02a19900e06e7638e787866119e51e58bbee863",
+      "digest": "sha256:c21094b5e96226dc67b2472e70c819714ab0293ce0b854b1067fbf06a2843954",
       "tags": [
-        "7.0.0",
-        "bcc92005a368"
+        "7.1.0",
+        "1505f3c20046"
       ]
     }
   ]
