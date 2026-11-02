@@ -4,6 +4,8 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ## Unreleased
 
+- A aba Arquitetura ganha o grafo de módulos em Canvas (`@xyflow/react`, chunk próprio carregado só na aba, ADR 0238) e o cartão "Rodar na sua máquina" mostra o entregável num Web preview com `sandbox` mínimo, só para URL local; o CSP do web ganha `frame-src` para `localhost` e `127.0.0.1` (ADR 0239). Textos nos quatro idiomas (AT-684, AT-685).
+
 - O painel "Pendências deste projeto" do chat vira uma faixa de abas (uma por fila com item, nenhuma aberta ao nascer, contagem por fila) e cada fila pagina de 3 em 3 com "anterior / x–y de N / próxima", no lugar do teto de 20 (RN-975, AT-680).
 ### Funcionalidades
 

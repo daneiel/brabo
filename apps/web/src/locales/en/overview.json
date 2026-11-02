@@ -149,5 +149,16 @@
     "notaAntes": "Declared by Infra in the",
     "pr": "pull request",
     "notaDepois": ", not verified on your machine."
+  },
+  "grafo": {
+    "carregando": "Loading the graph…",
+    "vazio": "No modules to draw the graph."
+  },
+  "entregavel": {
+    "recarregar": "Reload",
+    "endereco": "Address",
+    "abrir": "Open in new tab",
+    "titulo": "Deliverable",
+    "vazio": "There is no published deliverable to preview."
   }
 }

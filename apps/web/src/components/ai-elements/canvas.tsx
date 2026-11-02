@@ -1,4 +1,6 @@
 import '@xyflow/react/dist/style.css';
+import type { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Background, Controls, MarkerType, ReactFlow, type Edge, type Node } from '@xyflow/react';
 
 export interface ModuloDoGrafo {
@@ -26,8 +28,16 @@ function camadas(modulos: ModuloDoGrafo[]): Map<string, number> {
   return memo;
 }
 
+/* Controles de zoom pelos tokens do tema (a lib traz branco fixo). */
+export const CONTROLES = {
+  '--xy-controls-button-background-color': 'var(--surface-2)',
+  '--xy-controls-button-background-color-hover': 'var(--surface-2)',
+  '--xy-controls-button-color': 'var(--text-primary)',
+  '--xy-controls-button-border-color': 'var(--border-strong)',
+} as CSSProperties;
+
 /* Grafo de módulos (AT-684): nós = módulos, arestas = dependsOn, derivados do module_map vigente. */
-export function Canvas({ modulos }: { modulos: ModuloDoGrafo[] }) {
+export function grafoDe(modulos: ModuloDoGrafo[]): { nos: Node[]; arestas: Edge[] } {
   const camada = camadas(modulos);
   const contagem = new Map<number, number>();
   const nos: Node[] = modulos.map((m) => {
@@ -37,7 +47,16 @@ export function Canvas({ modulos }: { modulos: ModuloDoGrafo[] }) {
     return {
       id: m.name,
       position: { x: i * 240, y: c * 120 },
-      data: { label: `${m.name} · ${m.stack}` },
+      data: {
+        label: (
+          <div style={{ textAlign: 'left' }}>
+            <div style={{ fontWeight: 600 }}>{m.name}</div>
+            <div title={m.stack} style={{ fontSize: 10, opacity: 0.75, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {m.stack}
+            </div>
+          </div>
+        ),
+      },
       style: {
         background: 'var(--surface-2)',
         color: 'var(--text-primary)',
@@ -61,8 +80,15 @@ export function Canvas({ modulos }: { modulos: ModuloDoGrafo[] }) {
       })),
   );
 
+  return { nos, arestas };
+}
+
+export function Canvas({ modulos }: { modulos: ModuloDoGrafo[] }) {
+  const { t } = useTranslation('overview');
+  if (modulos.length === 0) return <p data-slot="ai-canvas-vazio">{t('grafo.vazio')}</p>;
+  const { nos, arestas } = grafoDe(modulos);
   return (
-    <div data-slot="ai-canvas" className="h-96 w-full overflow-hidden rounded-lg border bg-card">
+    <div data-slot="ai-canvas" className="h-96 w-full overflow-hidden rounded-lg border bg-card" style={CONTROLES}>
       <ReactFlow nodes={nos} edges={arestas} nodesConnectable={false} fitView proOptions={{ hideAttribution: true }}>
         <Background />
         <Controls showInteractive={false} />

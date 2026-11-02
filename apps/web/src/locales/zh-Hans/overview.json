@@ -142,5 +142,16 @@
     "notaAntes": "由 Infra 在",
     "pr": "PR",
     "notaDepois": "中声明，未在你的机器上验证。"
+  },
+  "grafo": {
+    "carregando": "正在加载图…",
+    "vazio": "没有可绘制图的模块。"
+  },
+  "entregavel": {
+    "recarregar": "重新加载",
+    "endereco": "地址",
+    "abrir": "在新标签页打开",
+    "titulo": "交付物",
+    "vazio": "没有可预览的已发布交付物。"
   }
 }

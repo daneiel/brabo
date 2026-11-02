@@ -3,6 +3,7 @@ import { useQuery, type QueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { getRunInstructions } from '../lib/api-client';
 import { FRESCOR_DA_CONFIGURACAO_MS } from '../lib/query-policy';
+import { EntregavelPreview } from './EntregavelPreview';
 import styles from './RodarNaSuaMaquina.module.css';
 
 /** A `queryKey` do cartão; o aviso `infra.pr_opened` do canal a invalida. */
@@ -75,6 +76,7 @@ export function RodarNaSuaMaquina({ projectId }: { projectId: string }) {
           </li>
         ))}
       </ul>
+      <EntregavelPreview urls={run.urls} />
       <p className={styles.nota}>
         {t('rodarNaSuaMaquina.notaAntes')}{' '}
         <a href={run.prUrl} target="_blank" rel="noopener noreferrer" className={styles.link}>
