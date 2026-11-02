@@ -12,6 +12,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- Sessão, Aprovações, Backlog e Visão geral: margem e tipografia das pendências do fio, "Reabrir sessão" sem quebra, vazio de PRs em revisão como o de Pendentes, contraste do vermelho no tema claro (token `--danger`) e alvos de clique de 24px nos links inline (AT-666).
 - O alarme do `tag-release` fecha a issue da branch no primeiro carimbo verde, com o run e o SHA no comentário, em vez de pedir fechamento manual; falha repetida segue virando comentário (AT-664).
 - O check de promoção espera, por até 10 min, o `tag-release` que ainda está carimbando o commit, em vez de reprovar por corrida logo depois do merge no degrau de baixo (AT-663).
 
