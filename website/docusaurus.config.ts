@@ -45,7 +45,7 @@ const EDIT_BRANCH = 'dev';
 //
 // O ADR 0073 separou BRANCH de CAMINHO: a `main` publica em `/brabo/prd/`,
 // porque o endereço nomeia o AMBIENTE para quem lê, e `main` é vocabulário de
-// quem commita. `qa` e `dev` coincidem por acaso, não por regra — quem manda é
+// quem commita. `dev` e `prd` são nomes de ambiente, não de branch — quem manda é
 // a tabela `DEGRAUS` abaixo, e nada aqui deriva caminho de branch por
 // interpolação.
 //
@@ -72,7 +72,7 @@ const BASE_URL = process.env.DOCS_BASE_URL ?? '/brabo/prd/';
 // diz "sou produção" sem depender de como o endereço está escrito hoje.
 const DOCS_BRANCH = process.env.DOCS_BRANCH ?? 'main';
 
-// `main` é a documentação real; `dev` e `qa` são pré-visualização do degrau.
+// `main` é a documentação real; `dev` é pré-visualização do degrau.
 const E_PRODUCAO = DOCS_BRANCH === 'main';
 
 // Os três degraus, para o seletor da barra do topo, e o MAPA branch→caminho que
@@ -81,7 +81,6 @@ const E_PRODUCAO = DOCS_BRANCH === 'main';
 // `/brabo/dev/prd/`, que não existe.
 const DEGRAUS = [
   { branch: 'main', caminho: 'prd', rotulo: 'prd — estável' },
-  { branch: 'qa', caminho: 'qa', rotulo: 'qa — candidata' },
   { branch: 'dev', caminho: 'dev', rotulo: 'dev — em desenvolvimento' },
 ] as const;
 
@@ -90,12 +89,6 @@ const DEGRAUS = [
 // existe para build local com `DOCS_BRANCH` fora da lista: ele degrada para o
 // próprio valor em vez de exibir `undefined`.
 const CAMINHO_ATUAL = DEGRAUS.find((d) => d.branch === DOCS_BRANCH)?.caminho ?? DOCS_BRANCH;
-
-// Fase de teste da QA (ADR 0217): enquanto a `qa` é promovida sozinha a cada
-// merge na `dev`, o site do degrau `qa` avisa que ele não é ambiente validado.
-// O texto é o MESMO de `AVISO_DA_FASE_DE_TESTE` em `scripts/ci/promote.ts`.
-const AVISO_DA_QA =
-  'Fase de teste: a QA é promovida automaticamente a cada merge na dev e ainda não é considerada ambiente validado.';
 
 const config: Config = {
   title: 'Brabo',
@@ -109,7 +102,7 @@ const config: Config = {
   projectName: 'brabo',
   trailingSlash: false,
 
-  // `dev` e `qa` saem do índice de busca. São o MESMO conteúdo da produção em
+  // `dev` sai do índice de busca. São o MESMO conteúdo da produção em
   // outro estágio de maturidade: indexados, competiriam com a documentação real
   // nos resultados, e quem chegasse pelo Google leria a versão não validada sem
   // perceber. A raiz continua indexável.
@@ -223,7 +216,7 @@ const config: Config = {
         // plugin descarta toda página que tenha
         // `<meta name="robots" content="noindex">` (`parse.js`, "Unlisted
         // content"), que é exatamente o que o `noIndex` emite. Sem esta linha, os
-        // degraus `dev` e `qa` publicariam com a busca MORTA — índice de 666
+        // degrau `dev` publicaria com a busca MORTA — índice de 666
         // bytes, `documents: []`, e a caixa de busca respondendo "No results"
         // para qualquer termo.
         //
@@ -288,15 +281,6 @@ const config: Config = {
   ],
 
   themeConfig: {
-    ...(DOCS_BRANCH === 'qa'
-      ? {
-          announcementBar: {
-            id: 'qa-fase-de-teste',
-            content: AVISO_DA_QA,
-            isCloseable: false,
-          },
-        }
-      : {}),
     mermaid: { theme: { light: 'neutral', dark: 'dark' } },
     colorMode: {
       defaultMode: 'dark',

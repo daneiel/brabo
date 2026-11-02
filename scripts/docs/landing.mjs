@@ -40,13 +40,6 @@ const DEGRAUS = [
     descricao: 'A documentação publicada. É esta que o Google indexa.',
   },
   {
-    caminho: 'qa',
-    branch: 'qa',
-    titulo: 'qa',
-    selo: 'candidata',
-    descricao: 'O que está em validação, a caminho da próxima release.',
-  },
-  {
     caminho: 'dev',
     branch: 'dev',
     titulo: 'dev',
@@ -128,7 +121,7 @@ function paginaIndice(degraus) {
     publicados.length > 0
       ? cartoes
       : `      <p class="vazio">Nenhum degrau publicado ainda. A documentação aparece aqui
-      no primeiro push em <code>dev</code>, <code>qa</code> ou <code>main</code>.</p>`;
+      no primeiro push em <code>dev</code> ou <code>main</code>.</p>`;
 
   return `<!doctype html>
 <html lang="pt-BR">
@@ -136,7 +129,7 @@ function paginaIndice(degraus) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Brabo — documentação</title>
-<meta name="description" content="Documentação do Brabo, publicada por degrau da esteira: prd, qa e dev.">
+<meta name="description" content="Documentação do Brabo, publicada por degrau da esteira: prd e dev.">
 <!-- A raiz não é conteúdo: é um índice. Quem indexa é /prd/. -->
 <meta name="robots" content="noindex, follow">
 <link rel="canonical" href="https://daneiel.github.io/brabo/${ESTAVEL}/">
@@ -237,7 +230,7 @@ function pagina404() {
   //    REESCRITO: o prefixo `main/` sai e `prd/` entra. Cair no
   //    reencaminhamento genérico produziria `/brabo/prd/main/<algo>`.
   //
-  // 2. `/brabo/{prd,qa,dev}/<algo>` — 404 DENTRO de um degrau que existe: a
+  // 2. `/brabo/{prd,dev}/<algo>` — 404 DENTRO de um degrau que existe: a
   //    página realmente não existe, e reencaminhar giraria o navegador em
   //    laço. A guarda cobre exatamente os caminhos publicados, e é por isso
   //    que `main` saiu dela ao deixar de ser publicado.
