@@ -21,6 +21,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- O check de promoção espera, por até 10 min, o `tag-release` que ainda está carimbando o commit, em vez de reprovar por corrida logo depois do merge no degrau de baixo (AT-663).
 - A página global de Gastos (`/spend`) ganha a moldura das outras páginas globais (padding, cabeçalho e título de página de 22px) e o seletor "Janela" passa a ser o da casa, também na aba Gastos do projeto (AT-648).
 - O preço e a cobrança dos modelos são curados na tela de Providers; a edição manual deixa de ser desfeita pelo sync, que passa a respeitar a marca `manual_pricing` (AT-634, RN-964).
 - O 503 do 9Router que embrulha um 4xx do upstream (`[404]: … (reset after 2m)`) passa a ser classificado pelo status de dentro: modelo inexistente vira `model_not_found` em vez de `upstream` passageiro e retomado (AT-639, RN-959).

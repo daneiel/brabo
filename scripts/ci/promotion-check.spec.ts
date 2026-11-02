@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { estagioExigido, tagsDoCommit } from './promotion-check.ts';
+import { esperarCarimbo, estagioExigido, tagsDoCommit } from './promotion-check.ts';
 
 /**
  * O `promotion-check` é **check required** no PR de promoção, e era o único da
@@ -101,5 +101,64 @@ describe('tagsDoCommit — o que conta como carimbo DAQUELE commit', () => {
     expect(
       tagsDoCommit(['v1.2.0-dev.1'], {}, sha, 'dev'),
     ).toEqual([]);
+  });
+});
+
+describe('esperarCarimbo (AT-663)', () => {
+  const relogio = () => {
+    let t = 0;
+    return { agora: () => t, dormir: async (ms: number) => void (t += ms) };
+  };
+
+  it('espera o tag-release em andamento e aprova quando a tag aparece', async () => {
+    const r = relogio();
+    let buscas = 0;
+    const res = await esperarCarimbo({
+      procurar: () => (++buscas >= 3 ? ['v7.1.0-dev.287'] : []),
+      tagReleaseEmAndamento: () => true,
+      ...r,
+      prazoMs: 600_000,
+      intervaloMs: 20_000,
+    });
+    expect(res).toEqual({ tags: ['v7.1.0-dev.287'], motivo: 'achou' });
+    expect(r.agora()).toBe(40_000);
+  });
+
+  it('sem tag-release rodando, responde na hora (não espera)', async () => {
+    const r = relogio();
+    const res = await esperarCarimbo({
+      procurar: () => [],
+      tagReleaseEmAndamento: () => false,
+      ...r,
+      prazoMs: 600_000,
+      intervaloMs: 20_000,
+    });
+    expect(res.motivo).toBe('sem-tag-release');
+    expect(r.agora()).toBe(0);
+  });
+
+  it('desiste no prazo e reprova, nunca aprova sem tag', async () => {
+    const r = relogio();
+    const res = await esperarCarimbo({
+      procurar: () => [],
+      tagReleaseEmAndamento: () => true,
+      ...r,
+      prazoMs: 60_000,
+      intervaloMs: 20_000,
+    });
+    expect(res).toEqual({ tags: [], motivo: 'prazo' });
+  });
+
+  it('o run terminou entre a busca e a pergunta: a última olhada acha a tag', async () => {
+    const r = relogio();
+    let buscas = 0;
+    const res = await esperarCarimbo({
+      procurar: () => (++buscas >= 2 ? ['v7.1.0-dev.1'] : []),
+      tagReleaseEmAndamento: () => false,
+      ...r,
+      prazoMs: 600_000,
+      intervaloMs: 20_000,
+    });
+    expect(res.motivo).toBe('achou');
   });
 });

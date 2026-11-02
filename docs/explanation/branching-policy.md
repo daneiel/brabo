@@ -588,6 +588,13 @@ apontando para um commit que não existe mais |
 Uma verificação que **não pôde ser feita** conta como reprovada, nunca como
 aprovada — uma ref que não resolve é ignorância, não permissão.
 
+O carimbo **espera** quem ainda está carimbando (AT-663). Logo depois do merge no
+degrau de baixo, o PR de promoção roda antes de a tag existir. Se faltar o carimbo
+e houver `tag-release` em andamento para aquele commit, o check busca as tags de novo
+a cada 20 s, por até 10 min (`esperarCarimbo`, `PRAZO_DO_CARIMBO_MS`), e só reprova se o
+prazo vencer. Sem `tag-release` rodando, ou sem conseguir perguntar à API, reprova na
+hora, como antes. Esperar nunca aprova sem a tag.
+
 Os três checks que leem a história inteira (`pr-police`, `promotion-check` e
 `backmerge-gate`) fazem `actions/checkout` com `fetch-depth: 0` e têm teto de
 15 minutos no job. Com 5, o download do repositório, que cresce a cada PR,
