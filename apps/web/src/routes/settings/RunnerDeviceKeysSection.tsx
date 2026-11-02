@@ -20,6 +20,7 @@ import { Table, type TableColumn } from '../../components/ui/Table';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
+import { Button as BotaoShadcn } from '@/components/shadcn/button';
 import { TrashIcon } from '../../components/ui/icons';
 import { useToast } from '../../components/ui/ToastProvider';
 import styles from '../ProjectSettingsTab.module.css';
@@ -247,15 +248,17 @@ export function RunnerDeviceKeysSection({ projectId }: { projectId: string }) {
       // oferecer o gesto sugeriria que sobrou efeito a produzir.
       render: (chave) =>
         chave.revokedAt ? null : (
-          <button
+          <BotaoShadcn
             type="button"
+            variant="ghost"
+            size="icon-sm"
             aria-label={t('runnerDeviceKeys.table.revokeAria', { name: chave.name })}
             title={t('runnerDeviceKeys.table.revokeTitle')}
             className={styles.remove}
             onClick={() => setARevogar(chave)}
           >
             <TrashIcon size={14} />
-          </button>
+          </BotaoShadcn>
         ),
     },
   ];

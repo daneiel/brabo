@@ -10,7 +10,9 @@ import {
   type ActivityKind,
 } from '../lib/activity';
 import { EventItem } from './EventItem';
+import { Button } from './ui/Button';
 import { Disclosure } from './ui/Disclosure';
+import { EmptyState } from './ui/EmptyState';
 import { Select } from './ui/Select';
 import { ClockIcon } from './ui/icons';
 import styles from './ActivityFeed.module.css';
@@ -143,32 +145,29 @@ export function ActivityFeed({
         )}
         <div className={styles.chips}>
           {kindsPresent.map((kind) => (
-            <button
+            <Button
               key={kind}
-              type="button"
-              className={[styles.chip, kindFilter === kind && styles.active].filter(Boolean).join(' ')}
+              size="sm"
+              variant={kindFilter === kind ? 'primary' : 'secondary'}
               onClick={() => setKindFilter((current) => (current === kind ? null : kind))}
             >
               {t(KIND_LABEL_KEY[kind])}
-            </button>
+            </Button>
           ))}
-          <button
-            type="button"
-            className={[styles.chip, mostrarMaquina && styles.active].filter(Boolean).join(' ')}
+          <Button
+            size="sm"
+            variant={mostrarMaquina ? 'primary' : 'secondary'}
             aria-pressed={mostrarMaquina}
             onClick={() => setMostrarMaquina((v) => !v)}
             title={t('feed.machineEventsTitle')}
           >
             {t('feed.machineEvents')}
-          </button>
+          </Button>
         </div>
       </div>
 
       {filtered.length === 0 ? (
-        <div className={styles.empty}>
-          <ClockIcon size={22} />
-          {t('feed.empty')}
-        </div>
+        <EmptyState icone={<ClockIcon size={22} />}>{t('feed.empty')}</EmptyState>
       ) : (
         <>
           <div className={styles.list}>
@@ -222,14 +221,9 @@ export function ActivityFeed({
             {t('feed.pagerCount', { shown: filtered.length, total: events.length })}
           </span>
           {hasOlder && (
-            <button
-              type="button"
-              className={styles.pagerButton}
-              onClick={onLoadOlder}
-              disabled={loadingOlder}
-            >
+            <Button size="sm" variant="secondary" onClick={onLoadOlder} disabled={loadingOlder}>
               {loadingOlder ? t('feed.loadingOlder') : t('feed.loadOlder')}
-            </button>
+            </Button>
           )}
         </div>
       )}

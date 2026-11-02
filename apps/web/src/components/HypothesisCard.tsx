@@ -5,6 +5,7 @@ import { AGENTS } from '../lib/agents';
 import { descreverHipotese } from '../lib/aprovacoes';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
+import { Card } from './ui/Card';
 import { Disclosure } from './ui/Disclosure';
 import { HypothesisIcon } from './ui/icons';
 import styles from './HypothesisCard.module.css';
@@ -49,7 +50,11 @@ export function HypothesisCard({
   }
 
   return (
-    <div className={[styles.card, decided && styles.decided].filter(Boolean).join(' ')}>
+    <Card
+      radius="lg"
+      padding="none"
+      className={[styles.card, decided && styles.decided].filter(Boolean).join(' ')}
+    >
       <div className={styles.header}>
         <span className={styles.headerIcon}>
           <HypothesisIcon size={14} />
@@ -119,14 +124,15 @@ export function HypothesisCard({
           <div className={styles.label}>{t('hypothesisCard.evidenceLabel')}</div>
           <div className={styles.evidence}>
             {hypothesis.evidenceEventIds.map((eventId) => (
-              <button
+              <Button
                 key={eventId}
-                type="button"
+                variant="secondary"
+                size="sm"
                 className={styles.chip}
                 onClick={() => goToEvidence(eventId)}
               >
                 {eventId.slice(-8)}
-              </button>
+              </Button>
             ))}
           </div>
         </div>
@@ -142,6 +148,6 @@ export function HypothesisCard({
           </Button>
         </div>
       )}
-    </div>
+    </Card>
   );
 }
