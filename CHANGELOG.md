@@ -2,7 +2,7 @@
 
 Gerado dos conventional commits por `scripts/changelog.mjs`.
 
-## Unreleased
+## v7.2.0 — 2026-11-02
 
 ### Funcionalidades
 
@@ -15,6 +15,46 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - Correções visuais da onda 4 do shadcn, achadas nas capturas dos dois temas (AT-665/AT-666): formulário de orçamento da aba Gastos sobre o kit, em grade; card "Gasto por dia" sem o recuo do `<figure>`; "Definir orçamento" sem borda dupla e avatares sem corte no Início; seções de Configurações com espaçamento interno e o anel de foco da casa ao abrir por link; checkbox da comunidade em Providers no lugar; pendências do fio com margem e "Reabrir sessão" sem quebra; vazio de PRs em revisão igual ao de Pendentes; links inline com alvo de 24px.
 - O alarme do `tag-release` fecha a issue da branch no primeiro carimbo verde, com o run e o SHA no comentário, em vez de pedir fechamento manual; falha repetida segue virando comentário (AT-664).
 - O check de promoção espera, por até 10 min, o `tag-release` que ainda está carimbando o commit, em vez de reprovar por corrida logo depois do merge no degrau de baixo (AT-663).
+
+- **ci**: o alarme do tag-release fecha a issue no primeiro carimbo verde (5fe7d9f074)
+- **web**: teste do streaming sem busca de uso de tokens e janela do agente só lê o cache (7df3c95068)
+- **ci**: o check de promoção espera o tag-release em andamento antes de reprovar (140d9e9285)
+
+### Novidades
+
+- **web**: a topbar da Sessão mostra quanto da janela do modelo o destinatário ocupa (71bcff266c)
+
+### Desempenho
+
+- **web**: a janela do agente sai do chunk de entrada (bfb7fb2b85)
+
+### Refatorações
+
+- **web**: botões de remover e sumário de Configurações no Button do shadcn (bf123b18bd)
+- **web**: Visão geral, feed de atividade e grid do time sobre o kit shadcn (141ab63ed9)
+- **web**: Arquitetura e Insights sobre Card, Button e Disclosure do shadcn (fd0bccf3bb)
+- **web**: Modelos e providers sobre o shadcn (tabela de capabilities e caixas) (37fe3801b4)
+- **web**: Visão geral usa Card e Item do shadcn (AT-655) (04956d1a1b)
+- **web**: cartões de Parar/Religar execução sobre o Item do shadcn (7e8eeb7ccd)
+
+### Documentação
+
+- **changelog**: v7.1.0 (a8f47a6be0)
+- corrige o link do ADR 0034 no ADR 0235 (5ff2ea7adf)
+- ADR 0235 aposenta a qa, esteira dev → main e arquivamento semanal (AT-660, AT-661) (b9759a4ada)
+- **site**: tira o degrau qa do site de documentação (91da268f84)
+
+### Manutenção
+
+- integra a Rodada 145 (AT-655 rodada B) e regenera os gerados (6d2d093bb5)
+- junta a dev no corte da v7.1.0 e devolve o Unreleased (95c4b65f29)
+- **deps**: o neo4j do k8s acompanha o digest dos composes (5dd5044fcc)
+- resolve o CHANGELOG da junção com a dev (as duas entradas) (3ab261df19)
+- **deps**: Bump the imagens-dos-dockerfiles-e-manifests group across 3 directories with 2 updates (e9d0859f81)
+- **deps**: Bump the imagens-dos-composes group (c7bd36d16b)
+- integra a Rodada 143 (AT-660 qa aposentada, AT-661 arquivamento semanal) e limpa a política de branches (276abc28c9)
+- **ci**: aposenta a qa, a esteira fica dev e main, e o arquivamento vira semanal (92a314bad1)
+- integra a Rodada 141 (AT-654 web, AT-655 rodada B parcial) e regenera os gerados (e996a8ba9f)
 
 ## v7.1.0 — 2026-11-02
 
