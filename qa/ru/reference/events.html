@@ -1,0 +1,1038 @@
+<!doctype html><html lang=ru dir=ltr class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-reference/events" data-has-hydrated=false><head><meta charset=UTF-8><meta name=generator content="Docusaurus v3.10.2"><title data-rh=true>События | Brabo</title><meta data-rh=true name=viewport content="width=device-width, initial-scale=1.0"/><meta data-rh=true name=robots content="noindex, nofollow"/><meta data-rh=true name=twitter:card content=summary_large_image /><meta data-rh=true property=og:url content=https://daneiel.github.io/brabo/qa/ru/reference/events /><meta data-rh=true property=og:locale content=ru /><meta data-rh=true property=og:locale:alternate content=pt_BR /><meta data-rh=true property=og:locale:alternate content=en /><meta data-rh=true property=og:locale:alternate content=zh_Hans /><meta data-rh=true name=docusaurus_locale content=ru /><meta data-rh=true name=docsearch:language content=ru /><meta data-rh=true name=docusaurus_version content=current /><meta data-rh=true name=docusaurus_tag content=docs-default-current /><meta data-rh=true name=docsearch:version content=current /><meta data-rh=true name=docsearch:docusaurus_tag content=docs-default-current /><meta data-rh=true property=og:title content="События | Brabo"/><meta data-rh=true name=description content="Типы событий неизменяемого журнала, broadcasts канала и spans трассировки — три разные вещи с похожими именами."/><meta data-rh=true property=og:description content="Типы событий неизменяемого журнала, broadcasts канала и spans трассировки — три разные вещи с похожими именами."/><meta data-rh=true name=keywords content="события,event log,session_events,broadcast,span,outbox"/><link data-rh=true rel=icon href=/brabo/qa/ru/img/favicon.ico /><link data-rh=true rel=canonical href=https://daneiel.github.io/brabo/qa/ru/reference/events /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/qa/reference/events hreflang=pt-BR /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/qa/en/reference/events hreflang=en /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/qa/ru/reference/events hreflang=ru /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/qa/zh-Hans/reference/events hreflang=zh-Hans /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/qa/reference/events hreflang=x-default /><script data-rh=true type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","item":"https://daneiel.github.io/brabo/qa/ru/reference/events","name":"События","position":1}]}</script><link rel=stylesheet href=/brabo/qa/ru/assets/css/styles.41f6b491.css /><script src=/brabo/qa/ru/assets/js/runtime~main.dbb2fc44.js defer></script><script src=/brabo/qa/ru/assets/js/main.c877ccbe.js defer></script></head><body><svg style="display: none;"><defs>
+<symbol id=theme-svg-external-link viewBox="0 0 24 24"><path fill=currentColor d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
+</defs></svg>
+<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme-524")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")),document.documentElement.setAttribute("data-theme-choice",t||"system")}(),function(){try{for(var[t,e]of new URLSearchParams(window.location.search).entries())if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}(),document.documentElement.setAttribute("data-announcement-bar-initially-dismissed",function(){try{return"true"===localStorage.getItem("docusaurus.announcement.dismiss-524")}catch(t){}return!1}())</script><div id=__docusaurus><link rel=preload as=image href=/brabo/qa/ru/img/logo.svg /><div role=region aria-label="Перейти к основному содержимому"><a class=skipToContent_CFOX href=#__docusaurus_skipToContent_fallback>Перейти к основному содержимому</a></div><div class="theme-announcement-bar announcementBar_WKrp" role=banner><div class="content_yzPg announcementBarContent_fSaH">Fase de teste: a QA é promovida automaticamente a cada merge na dev e ainda não é considerada ambiente validado.</div></div><nav aria-label="Главная навигация" class="theme-layout-navbar navbar navbar--fixed-top"><div class=navbar__inner><div class="theme-layout-navbar-left navbar__items"><button aria-label="Переключить навигационную панель" aria-expanded=false class="navbar__toggle clean-btn" type=button><svg width=30 height=30 viewBox="0 0 30 30" aria-hidden=true><path stroke=currentColor stroke-linecap=round stroke-miterlimit=10 stroke-width=2 d="M4 7h22M4 15h22M4 23h22"/></svg></button><a class=navbar__brand href=/brabo/qa/ru/><div class=navbar__logo><img src=/brabo/qa/ru/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--light_vzqw"/><img src=/brabo/qa/ru/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--dark_FhTf"/></div><b class="navbar__title text--truncate">Brabo</b></a><a aria-current=page class="navbar__item navbar__link navbar__link--active" href=/brabo/qa/ru/>Документация</a><a class="navbar__item navbar__link" href=/brabo/qa/ru/runbook>Руководство по эксплуатации</a><a class="navbar__item navbar__link" href=/brabo/qa/ru/adr>Решения (ADR)</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a href=# aria-haspopup=true aria-expanded=false role=button class=navbar__link><svg viewBox="0 0 24 24" width=20 height=20 aria-hidden=true class=iconLanguage_g_CG><path fill=currentColor d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg>Русский</a><ul class=dropdown__menu><li><a href=/brabo/qa/reference/events target=_self rel="noopener noreferrer" class=dropdown__link lang=pt-BR>Português (Brasil)</a><li><a href=/brabo/qa/en/reference/events target=_self rel="noopener noreferrer" class=dropdown__link lang=en>English</a><li><a href=/brabo/qa/ru/reference/events target=_self rel="noopener noreferrer" class="dropdown__link dropdown__link--active" lang=ru>Русский</a><li><a href=/brabo/qa/zh-Hans/reference/events target=_self rel="noopener noreferrer" class=dropdown__link lang=zh-Hans>简体中文</a></ul></div><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a href=# aria-haspopup=true aria-expanded=false role=button class=navbar__link>qa</a><ul class=dropdown__menu><li><a href=https://daneiel.github.io/brabo/prd/ target=_blank rel="noopener noreferrer" class=dropdown__link>prd — estável<svg width=12 height=12 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/qa/ target=_blank rel="noopener noreferrer" class=dropdown__link>qa — candidata ✓<svg width=12 height=12 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/dev/ target=_blank rel="noopener noreferrer" class=dropdown__link>dev — в разработке<svg width=12 height=12 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><div class="toggle_pnX7 colorModeToggle_Dj3Z"><button class="clean-btn toggleButton_DKER toggleButtonDisabled_qzkp" type=button disabled title="системный режим" aria-label="Переключение между темным и светлым режимом (сейчас используется системный режим)"><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL lightToggleIcon_E8tM"><path fill=currentColor d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL darkToggleIcon_rXjT"><path fill=currentColor d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL systemToggleIcon_zwCm"><path fill=currentColor d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"/></svg></button></div><div class=navbarSearchContainer_zRAa><div class="navbar__search searchBarContainer_eGzj" dir=ltr><svg aria-hidden=true class=searchIcon_PXpx focusable=false viewBox="0 0 16 16"><path fill=currentColor d="M6.02945 10.20327a4.17382 4.17382 0 1 1 4.17382-4.17382 4.15609 4.15609 0 0 1-4.17382 4.17382Zm9.69195 4.2199-4.8225-4.82338A5.88021 5.88021 0 0 0 12.058 6.02856 6.00467 6.00467 0 1 0 9.59979 10.8989l4.82338 4.82338a.89729.89729 0 0 0 1.29912 0 .89749.89749 0 0 0-.00087-1.29909Z"/></svg><input placeholder=Поиск aria-label=Search class="navbar__search-input searchInput_xOBI" value="" /><div class="loadingRing_JccP searchBarLoadingRing_aTss"><div></div><div></div><div></div><div></div></div></div></div></div></div><div role=presentation class=navbar-sidebar__backdrop></div></nav><div id=__docusaurus_skipToContent_fallback class="theme-layout-main main-wrapper mainWrapper_WJkx"><div class=docsWrapper_mIeg><button aria-label="Прокрутка к началу" class="clean-btn theme-back-to-top-button backToTopButton_Afc8" type=button></button><div class=docRoot_XZYc><aside class="theme-doc-sidebar-container docSidebarContainer_FPqZ"><div class=sidebarViewport_waOe><div class=sidebar_RQC4><nav aria-label="Боковая панель документации" class="menu thin-scrollbar menu_ZM4U menuWithAnnouncementBar_EJk2"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/qa/ru/><span class=categoryLinkLabel_jKch>🚀 Начните здесь</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/><span class=linkLabel_CzBh>Введение</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/getting-started><span class=linkLabel_CzBh>Первые шаги</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/tutorials/from-zero-to-deliverable><span class=linkLabel_CzBh>С нуля до готового результата</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/tutorials/interface-antes-e-depois-shadcn><span class=linkLabel_CzBh>Interface antes e depois do shadcn (31/10/2026)</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/qa/ru/architecture><span class=categoryLinkLabel_jKch>🏗️ Архитектура</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/architecture><span class=linkLabel_CzBh>Архитектура</span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist" tabindex=0 href=/brabo/qa/ru/adr><span class=categoryLinkLabel_jKch>Решения (ADR)</span></a><button aria-label="Развернуть категорию 'Решения (ADR)'" aria-expanded=false type=button class="clean-btn menu__caret"></button></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/qa/ru/business-rules><span class=categoryLinkLabel_jKch>📐 Правила</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/business-rules><span class=linkLabel_CzBh>Бизнес-правила</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/business-rules/custo><span class=linkLabel_CzBh>Стоимость и metering</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/business-rules/autenticacao><span class=linkLabel_CzBh>Аутентификация</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role=button aria-expanded=true href=/brabo/qa/ru/reference/configuration><span class=categoryLinkLabel_jKch>📖 Справочник</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/reference/configuration><span class=linkLabel_CzBh>Конфигурация</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link menu__link--active" aria-current=page tabindex=0 href=/brabo/qa/ru/reference/events><span class=linkLabel_CzBh>События</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/reference/permissions><span class=linkLabel_CzBh>Права доступа</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/reference/artifacts><span class=linkLabel_CzBh>Артефакты</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/reference/git-providers><span class=linkLabel_CzBh>Git-провайдеры</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/reference/internal-api><span class=linkLabel_CzBh>Внутренний API</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/reference/scripts><span class=linkLabel_CzBh>Скрипты и команды</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/reference/rulesets><span class=linkLabel_CzBh>Правила репозитория (rulesets)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/reference/paridade-de-traducao><span class=linkLabel_CzBh>Паритет переводов</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/reference/brb><span class=linkLabel_CzBh>Реестр BRB</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/security-surface><span class=linkLabel_CzBh>Открытая поверхность api</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/reference/api><span class=linkLabel_CzBh>Справочник API</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/qa/ru/explanation/documentation-workflow><span class=categoryLinkLabel_jKch>💡 Пояснения</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true tabindex=0 href=/brabo/qa/ru/explanation/documentation-workflow><span class=categoryLinkLabel_jKch>Процесс и конвейер</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/explanation/documentation-workflow><span class=linkLabel_CzBh>Синхронизация документации</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/explanation/branching-policy><span class=linkLabel_CzBh>Политика веток</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/explanation/cadeia-de-suprimentos-do-ci><span class=linkLabel_CzBh>Цепочка поставок CI</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/explanation/gates><span class=linkLabel_CzBh>Gates и то, как они измеряются</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/explanation/observability><span class=linkLabel_CzBh>Наблюдаемость</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/explanation/modelo-de-time><span class=linkLabel_CzBh>Модель команды и поток результатов</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/qa/ru/explanation/primeiro-dogfooding><span class=categoryLinkLabel_jKch>Проверки и измерения</span></a></div><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/qa/ru/explanation/historico-de-fases><span class=categoryLinkLabel_jKch>История фаз</span></a></div><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/qa/ru/explanation/localizacao><span class=categoryLinkLabel_jKch>Локализация</span></a></div><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/qa/ru/explanation/tanstack-ai><span class=categoryLinkLabel_jKch>Технические заметки</span></a></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/qa/ru/runbook><span class=categoryLinkLabel_jKch>🛠️ Эксплуатация</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/runbook><span class=linkLabel_CzBh>Руководство по эксплуатации</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/qa/ru/glossary><span class=categoryLinkLabel_jKch>📚 Словарь</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/glossary><span class=linkLabel_CzBh>Глоссарий</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true><span class=categoryLinkLabel_jKch>🤝 Участие</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>Как внести вклад</span><svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>Где попросить помощи</span><svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>Сообщить об уязвимости</span><svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></ul></nav></div></div></aside><main class=docMainContainer_ia8v><div class="container padding-top--md padding-bottom--lg"><div class=row><div class="col docItemCol_xjE4"><div class=docItemContainer_cPej><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_sZul" aria-label="Навигационная цепочка текущей страницы"><ul class=breadcrumbs><li class=breadcrumbs__item><a aria-label="Главная страница" class=breadcrumbs__link href=/brabo/qa/ru/><svg viewBox="0 0 24 24" class=breadcrumbHomeIcon_AUjL><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill=currentColor /></svg></a><li class=breadcrumbs__item><span class=breadcrumbs__link>📖 Справочник</span><li class="breadcrumbs__item breadcrumbs__item--active"><span class=breadcrumbs__link>События</span></ul></nav><div class="tocCollapsible_nbAK theme-doc-toc-mobile tocMobile_r92C"><button type=button class="clean-btn tocCollapsibleButton_hcyq">Содержание этой страницы</button></div><div class="alert alert--warning margin-bottom--md" role=note data-faixa-de-traducao="">Перевод от 2026-10-16; оригинал с тех пор изменился.</div><div class="theme-doc-markdown markdown"><header><h1>События</h1></header>
+<p>В Brabo сосуществуют три семейства имён, и их легко спутать, потому что все
+используют <code>предмет.глагол</code>:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>семейство<th>где хранится<th>долговечность<tbody><tr><td><strong>Доменное событие</strong><td>строка в <code>session_events</code><td><strong>постоянное и неизменяемое</strong><tr><td><strong>Broadcast</strong><td>канал Phoenix → браузер<td>эфемерный, не сохраняется<tr><td><strong>Span</strong><td>трасса OpenTelemetry<td>хранение Tempo (24 ч локально)</table>
+<p>Только первое является контрактом. Два других — транспорт и наблюдение.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=доменное-событие>Доменное событие<a href=#доменное-событие class=hash-link aria-label="Прямая ссылка на Доменное событие" title="Прямая ссылка на Доменное событие" translate=no>​</a></h2>
+<p>Строка в <code>session_events</code>, append-only, с плотным <code>seq</code> по сессии
+(<a class="" href=/brabo/qa/ru/business-rules#rn-002>RN-002</a>). Колонки:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>колонка<th>что<tbody><tr><td><code>id</code><td>uuid<tr><td><code>session_id</code><td>сессия-владелец<tr><td><code>seq</code><td>порядок внутри сессии, начиная с 1, без пропусков<tr><td><code>type</code><td>идентификатор ниже<tr><td><code>actor</code><td>кто вызвал: <code>{kind, id}</code> — пользователь, агент или система<tr><td><code>payload</code><td>jsonb, собственный формат каждого типа<tr><td><code>created_at</code><td>—</table>
+<blockquote>
+<p><strong><code>type</code> в коде — свободная <code>string</code></strong> — нет ни union в TypeScript, ни enum в
+базе, перечисляющих допустимые типы. Список ниже извлечён из точек эмиссии и
+поэтому может устареть, ничего не сломав. См. примечание в конце этой
+страницы.</p>
+</blockquote>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=сессия>Сессия<a href=#сессия class=hash-link aria-label="Прямая ссылка на Сессия" title="Прямая ссылка на Сессия" translate=no>​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>тип<th>когда<tbody><tr><td><code>session.created</code><td>сессия рождается в <code>created</code><tr><td><code>session.activated</code><td>перешла в <code>active</code><tr><td><code>session.draining</code><td>узел, на котором она размещена, дренируется<tr><td><code>session.closed</code><td>обычное завершение<tr><td><code>session.closed_abnormally</code><td>завершение с причиной — <code>node_shutdown</code> самая частая<tr><td><code>session.reopened</code><td>сессия <code>closed</code>/<code>closed_abnormally</code> вернулась в <code>active</code> (ADR 0183)</table>
+<p><strong>Терминальная сессия больше не принимает разговор (<a class="" href=/brabo/qa/ru/business-rules#rn-581>RN-581</a>).</strong>
+Когда сессия <code>closed</code> или <code>closed_abnormally</code>, запись события разговора
+отклоняется с <strong>409</strong> и <code>reason: "sessao_encerrada"</code>. Разговор — это тип,
+существующий только как разговор (<code>chat.message</code>,
+<code>chat.message_cancelled</code>, <code>chat.structured_question</code>, <code>chat.structured_question_answered</code>,
+<code>agent.status</code>, <code>agent.activated</code>, <code>handoff.offered</code>, <code>handoff.accepted</code>,
+<code>readiness.confirmed</code>, <code>necessity.validated</code>,
+<code>architecture.readiness_confirmed</code>), или любое событие, чей актор — разговорный
+агент: поэтому <code>tool.call</code>/<code>agent.response</code> Креатива отклоняются, а те же типы
+от Психолога, который работает <strong>поверх</strong> закрытой сессии, продолжают
+приниматься. Человеческие решения о ожидающем действии
+(<code>action.approved</code>/<code>action.denied</code>) тоже продолжают приниматься: очередь
+действий переживает сессию. Сессия, закрытая потому, что разговор простаивал
+дольше потолка, несёт <code>termination_reason: "conversation_idle_timeout"</code> и
+заканчивается <code>closed</code>, как <code>heartbeat_timeout</code>.</p>
+<p><strong>Закрытую сессию можно открыть заново (<a class="" href=/brabo/qa/ru/business-rules#rn-649>RN-649</a>, ADR 0183).</strong>
+<code>POST /projects/:projectId/sessions/:sessionId/reopen</code> (<code>developer</code>, ADR 0184)
+возвращает сессию <code>closed</code>/<code>closed_abnormally</code> в <code>active</code> и записывает
+<code>session.reopened</code> с <code>{from, to, closedAt, terminationReason}</code> — единственную
+запись об интервале, когда она была закрыта, поскольку <code>closed_at</code> и
+<code>termination_reason</code> в строке очищаются. Ни одно предыдущее событие не
+редактируется, и <code>kind</code> сессии не меняется. Сессия, у которой уже есть
+<code>execution.activated</code>, отклоняется с 409 <code>sessao_com_execucao</code>.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=чат-и-агенты>Чат и агенты<a href=#чат-и-агенты class=hash-link aria-label="Прямая ссылка на Чат и агенты" title="Прямая ссылка на Чат и агенты" translate=no>​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>тип<th>когда<tbody><tr><td><code>chat.message</code><td>сообщение в ленте сессии, от пользователя или агента<tr><td><code>chat.message_queued</code><td>сообщение пришло, когда агент был посреди хода, и попало в его ОЧЕРЕДЬ, а не было отклонено (<a class="" href=/brabo/qa/ru/business-rules#rn-673>RN-673</a>, <a class="" href=/brabo/qa/ru/adr/0191-a-mensagem-com-turno-em-curso-entra-numa-fila>ADR 0191</a>). Актор: агент. Payload: <code>mensagemId</code> (id <code>chat.message</code>), <code>texto</code>, <code>idioma</code> и <code>posicao</code>. Текст передаётся здесь, потому что именно его очередь перечитывает после перезапуска engine. Поставленное в очередь сообщение остаётся ОЖИДАЮЩИМ, пока <code>chat.message_delivered</code> или <code>chat.message_cancelled</code> его не назовёт; не более 10 на агента и сессию<tr><td><code>chat.message_delivered</code><td>начался ход, читающий очередь: ожидающие сообщения читаются ВМЕСТЕ, по порядку, в одном ходе. Актор: агент. Payload: <code>mensagemIds</code><tr><td><code>chat.message_cancelled</code><td>тот, кто ОТПРАВИЛ ожидающее сообщение, отменил его — ни один агент его не прочитал. Актор: этот пользователь. Payload: <code>mensagemId</code>, <code>agente</code>. Записывается engine; отклоняется в закрытой сессии (<a class="" href=/brabo/qa/ru/business-rules#rn-581>RN-581</a>)<tr><td><code>chat.structured_question</code><td>Креатив запросил НЕСКОЛЬКО ответов сразу, через форму — инструмент <code>ask_structured_questions</code> (RN-162). Каждый вопрос несёт <code>id</code>, <code>label</code>, <code>type</code>, <code>options</code> и <code>allowOther</code> — это выход свободного текста для <code>select</code>, и он равен <code>true</code>, когда модель ничего не объявляет (<a class="" href=/brabo/qa/ru/business-rules/autenticacao#rn-171>RN-171</a>)<tr><td><code>chat.structured_question_answered</code><td>пользователь ответил на форму; ответы также возвращаются как <code>chat.message</code>, чтобы агент их прочитал<tr><td><code>agent.activated</code><td>агент взял работу в сессии<tr><td><code>agent.response</code><td>полный консолидированный ответ агента. <code>modelName</code> говорит, КАКАЯ модель его сгенерировала, у трёх производителей (пять разговорных агентов, <code>ToolLoop</code> каждого исполнительного агента/агента gate и чат api без активного агента) — <code>null</code>, когда ход упал до разрешения binding, и отсутствует в событиях, записанных до появления правила (<a class="" href=/brabo/qa/ru/business-rules/autenticacao#rn-175>RN-175</a>). От разговорного агента <code>content</code> — это только ЗАКЛЮЧИТЕЛЬНЫЙ текст хода, а <code>passos</code> (отсутствует, когда их нет) перечисляет по порядку текст предыдущих раундов, который лента сворачивает под «Шаги хода» (<a class="" href=/brabo/qa/ru/business-rules#rn-698>RN-698</a>, AT-395)<tr><td><code>agent.error</code><td>сбой агента, с <code>origem</code> (<code>infra</code>/<code>modelo</code>/<code>codigo</code>/<code>politica</code>) и <code>mensagem</code>, которое он говорит в ленте (<a class="" href=/brabo/qa/ru/business-rules/custo#rn-059>RN-059</a>). Также выдаётся с <code>reason: turno_interrompido_por_reinicio</code> (источник <code>infra</code>), когда engine перезапустился посреди хода и осиротевший статус <code>working</code> закрывается при загрузке или подъёме агента, после чего идёт <code>agent.status: idle</code> (<a class="" href=/brabo/qa/ru/business-rules#rn-586>RN-586</a>). Покрывает весь ход, а также сбой ОДНОГО инструмента посреди цикла, с <code>tool</code> и <code>retentativa</code> в payload (<a class="" href=/brabo/qa/ru/business-rules/autenticacao#rn-163>RN-163</a>)<tr><td><code>tool_router.decided</code><td>шаг, на котором Jev выбрал инструмент (<a class="" href=/brabo/qa/ru/business-rules#rn-625>RN-625</a>, <a class="" href=/brabo/qa/ru/adr/0179-o-laco-pergunta-ao-jev-qual-ferramenta>ADR 0179</a>): <code>menuAntes</code>/<code>menuDepois</code>, <code>escolha</code>, <code>confianca</code>, <code>segunda</code>, <code>anterior</code>, <code>aplicado</code> (меню вышло меньше каталога), <code>motivoDaQueda</code> + <code>origemDaQueda</code> (<code>infra</code>/<code>modelo</code>/<code>codigo</code>), когда Jev упал, <code>latenciaMs</code>, <code>custoMicros</code> (РЕАЛЬНЫЙ <code>usage.cost</code>) и <code>foraDoCardapio</code> (инструменты, которые модель вызвала, хотя их не предлагали). Записывается фасадом engine для каждого агента; отсутствует, когда маршрутизатор не запрашивался (provider не OpenRouter, меньше двух инструментов, ключ workspace выключен). Измерение выигрыша (AT-239) читается из этого события и из <code>token_usage</code>, никогда не записывается вручную<tr><td><code>tool.result</code><td>результат выполнения инструмента, записываемый hook <code>Engine.Harness.Hooks.EventLog</code> и, для семи разговорных агентов (Infra Lead с <a class="" href=/brabo/qa/ru/business-rules#rn-617>RN-617</a>), их серверами с <code>tool</code>, <code>ok</code> и <code>resultado</code> (или <code>erro</code>), обрезанным до 2 000 символов с <code>resultadoTotal</code>, когда обрезается (<a class="" href=/brabo/qa/ru/business-rules#rn-589>RN-589</a>). Тот же payload приходит от Infra Lead для каждого инструмента, который он выполняет напрямую, и от Dev Lead, когда приостановленный вызов разрешается — никогда пока он ждёт одобрения (<a class="" href=/brabo/qa/ru/business-rules#rn-593>RN-593</a>)<tr><td><code>handoff.offered</code><td>агент предложил работу другому<tr><td><code>handoff.accepted</code><td>получатель принял. Обычно человеком (актор <code>user</code>). Когда принятие подразумевалось в клике «Я готов» (<a class="" href=/brabo/qa/ru/business-rules#rn-658>RN-658</a>), актор остаётся этим человеком, а payload — и payload следующего <code>agent.activated</code> — несёт также <code>implicito: { via: "readiness.confirmed", readinessEventId }</code>. С <a class="" href=/brabo/qa/ru/business-rules#rn-660>RN-660</a> (<a class="" href=/brabo/qa/ru/adr/0186-aceite-automatico-do-handoff-ao-arquiteto>ADR 0186</a>) предложение PO Архитектору может быть принято актором <code>system</code> <code>handoff-auto-accept</code>, и тогда payload несёт также <code>automatico: true</code>, <code>emNomeDe</code> (кто открыл сессию — репозиторий создаётся от имени этого человека) и <code>criterio</code> (<code>regras</code>, <code>cobertas</code>, <code>repositorio</code>)<tr><td><code>handoff.auto_accept_failed</code><td>система решила принять предложение PO Архитектору (<a class="" href=/brabo/qa/ru/business-rules#rn-660>RN-660</a>), и принятие упало. Payload: <code>handoffId</code>, <code>toAgent</code>, <code>origem</code> (<code>infra</code>) и <code>error</code>. Актор <code>system</code> <code>handoff-auto-accept</code>. Предложение сохраняет кнопку, если не было помечено <code>accepted</code><tr><td><code>handoff.superseded</code><td>handoff <code>offered</code> перестал быть действующим и больше не может быть принят (<a class="" href=/brabo/qa/ru/business-rules#rn-635>RN-635</a>, <a class="" href=/brabo/qa/ru/adr/0182-ciclo-de-vida-do-handoff>ADR 0182</a>). Payload: <code>handoffId</code>, <code>toAgent</code>, <code>motivo</code> (<code>agente_ativado</code> — получатель был активирован любым путём; <code>nova_oferta</code> — более новое предложение тому же получателю в проекте его заменило) и <code>substitutaId</code> (заменившее предложение, <code>null</code> для <code>agente_ativado</code>). Записывается актором <code>system</code> <code>handoff-lifecycle</code> в сессии СТАРОГО предложения, которая может быть закрыта — это запись, а не разговор, поэтому RN-581 её пропускает. <code>status</code> строки становится <code>superseded</code>; событие — это история<tr><td><code>context.compacted</code><td>менеджер контекста резюмировал самые старые ходы истории агента, чтобы уместиться в окно. С <a class="" href=/brabo/qa/ru/business-rules#rn-580>RN-580</a> payload несёт, помимо <code>tokensBefore</code>/<code>tokensAfter</code>, <code>summary</code>, заменивший эти ходы, <code>agent</code> — владельца истории, и <code>messagesSummarized</code>. События, записанные раньше, несут только два счётчика — резюме потеряно, и регидратация говорит об этом, а не выдумывает его</table>
+<p><strong>Что перечитывает разговорный агент (<a class="" href=/brabo/qa/ru/business-rules#rn-580>RN-580</a>).</strong>
+Когда один из семи разговорных агентов поднимается над сессией, в которой уже
+есть разговор, <code>Engine.Agents.Reidratacao</code> восстанавливает его историю из
+<strong>хвоста</strong> этого журнала (последние 200 событий): <code>chat.message</code>, <code>agent.response</code>,
+<code>chat.structured_question</code> (как ход самого агента, с метками и вариантами)
+и СОБСТВЕННЫЕ <code>tool.call</code>/<code>tool.result</code> (как текстовую заметку — события не
+несут id вызова, поэтому никогда не повторяются как <code>role: tool</code>).
+<code>chat.structured_question_answered</code> намеренно пропускается: api записывает те
+же ответы как <code>chat.message</code> сразу после, и именно это агент прочитал вживую.
+<code>chat.message</code>, отменённое в очереди или ещё ожидающее для этого агента, тоже
+пропускается (<a class="" href=/brabo/qa/ru/business-rules#rn-673>RN-673</a>): первое так и не было
+сказано, второе придёт ходом, читающим очередь. С
+<a class="" href=/brabo/qa/ru/business-rules#rn-589>RN-589</a> все семь записывают <code>tool.result</code> с текстом,
+который вернул инструмент (<code>resultado</code>, обрезанный до 2 000 символов, с
+<code>resultadoTotal</code>, дающим реальный размер при обрезке); вызов сессии, записанный
+до этого, не имеет <code>tool.result</code>, и заметка говорит, что в журнале нет исхода.
+Когда разговор длиннее хвоста, история открывается системным сообщением о том,
+сколько предыдущих событий осталось за бортом, последним записанным резюме
+компактизации и открывающими сообщениями.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=предлагаемые-действия>Предлагаемые действия<a href=#предлагаемые-действия class=hash-link aria-label="Прямая ссылка на Предлагаемые действия" title="Прямая ссылка на Предлагаемые действия" translate=no>​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>тип<th>когда<tbody><tr><td><code>proposed_action.created</code><td>действие родилось — до любого выполнения. <code>payload.status</code> говорит, как оно родилось (<code>pending</code>, <code>auto_approved</code> или <code>denied</code>), и именно это отличает человеческое решение от политики (<a class="" href=/brabo/qa/ru/business-rules/custo#rn-049>RN-049</a>). <code>payload.reason</code> говорит, КАКОЕ правило политики решило — строка, которую возвращает <code>decide()</code>, во всех трёх исходах; отсутствует в событиях, записанных до появления правила, что означает «не записано», а не «без причины». Одноимённая строка outbox его НЕ несёт (<a class="" href=/brabo/qa/ru/business-rules#rn-567>RN-567</a>). В действиях <code>terminal</code> — единственном типе, чьё решение учитывает область пути, — <code>payload.scopeRoot</code> говорит, с КАКИМ корнем сравнивала область, как <code>{ executionMode, ancora, segmento }</code>: <code>container</code> → <code>ancora: raiz_gerenciada</code> и <code>workspace_dir_name</code>; <code>mounted</code> → <code>ancora: base_de_projetos</code> и сегмент под <code>BRABO_PROJECTS_BASE</code> (<code>ancora: indisponivel</code>, <code>segmento: null</code>, когда папка вне базы или базы нет); <code>runner</code> → <code>ancora: nome_da_pasta</code> и <code>workspace_dir_name</code>. НИКОГДА абсолютный путь, который раскрыл бы <code>$HOME</code> пользователя каждому участнику. Отсутствует в старых событиях и в других типах действий; в outbox тоже нет (<a class="" href=/brabo/qa/ru/business-rules#rn-609>RN-609</a>)<tr><td><code>proposed_action.approved</code><td>решено пользователем — <code>actor</code> — это <strong>тот, кто кликнул</strong>. Автоодобрение здесь НЕ проходит: оно появляется в <code>created</code> со <code>status: auto_approved</code> и актором-агентом<tr><td><code>proposed_action.denied</code><td>отклонено — терминальное состояние. <code>actor</code> — кто отказал, а <code>payload.reason</code> — причина<tr><td><code>proposed_action.executed</code><td>выполнено успешно<tr><td><code>action.failed</code><td>выполнено и упало<tr><td><code>permission.granted</code><td>разрешение записано в политику</table>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=backlog>Backlog<a href=#backlog class=hash-link aria-label="Прямая ссылка на Backlog" title="Прямая ссылка на Backlog" translate=no>​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>тип<th>когда<tbody><tr><td><code>backlog.epic_created</code><td>—<tr><td><code>backlog.story_created</code><td>—<tr><td><code>backlog.story_transitioned</code><td>смена состояния истории. <code>actor</code> говорит, кто её продвинул: <code>agent/po</code> в режиме <code>auto</code>, <code>user</code> в режиме <code>manual</code> (<a class="" href=/brabo/qa/ru/business-rules/custo#rn-048>RN-048</a>)<tr><td><code>backlog.story_completed</code><td>PO дополнил существующую историю <code>draft</code> через <code>complete_story</code> — связанные правила, заполненные RF/DoD/DoR — вместо того чтобы создавать её заново (<a class="" href=/brabo/qa/ru/business-rules#rn-720>RN-720</a>)<tr><td><code>backlog.story_promotion_proposed</code><td>PO завершил ПОЛНУЮ историю в проекте в режиме <code>manual</code>: она остаётся <code>draft</code> в ожидании решения пользователя, и ни одна её задача до тех пор не может быть взята (<a class="" href=/brabo/qa/ru/business-rules/custo#rn-048>RN-048</a>)<tr><td><code>backlog.story_promotion_returned</code><td>пользователь ОТКЛОНИЛ продвижение и вернул историю PO с причиной — которая становится закреплённым сообщением в его сессии, как gate, возвращённый dev (<a class="" href=/brabo/qa/ru/business-rules/custo#rn-048>RN-048</a>)<tr><td><code>backlog.story_updated</code><td>заголовок и/или описание истории <code>draft</code> без задачи в работе исправлены пользователем (вкладка Backlog) или PO (<code>update_story</code>). Несёт <code>previousTitle</code>, <code>title</code> и <code>descriptionChanged</code> (RN-727)<tr><td><code>backlog.story_archived</code><td>история <code>draft</code> без задачи в работе АРХИВИРОВАНА пользователем или PO (<code>archive_story</code>): она и её задачи уходят из backlog, покрытия, плана и claim; строка остаётся. Несёт <code>reason</code> и <code>taskIds</code> (RN-727, ADR 0212)<tr><td><code>backlog.story_demoted</code><td>модуль исчез из <code>module_map</code>; история вернулась в <code>draft</code> (<a class="" href=/brabo/qa/ru/business-rules#rn-012>RN-012</a>)<tr><td><code>backlog.story_overlap_warned</code><td>история создана, но ВСЕ правила, которые она упоминает, уже покрыты другой — предупреждение, не блокировка: судит о наложении пользователь (<a class="" href=/brabo/qa/ru/business-rules/custo#rn-081>RN-081</a>)<tr><td><code>backlog.semantic_duplicate_warned</code><td>записана история или бизнес-правило, чей ЗАГОЛОВОК по embedding находится на пороге или выше относительно существующего того же типа в проекте — предупреждение, никогда отказ; payload называет похожий элемент и косинус. Актор <code>system</code>/<code>duplicata-semantica</code> (<a class="" href=/brabo/qa/ru/business-rules/custo#rn-681>RN-681</a>)<tr><td><code>backlog.semantic_duplicate_check_skipped</code><td>проверка семантического дубликата НЕ смогла выполниться — нет provider embedding, daemon недоступен, потолок 10 с — и <code>reason</code> говорит, что именно; элемент всё равно записан (<a class="" href=/brabo/qa/ru/business-rules/custo#rn-681>RN-681</a>)<tr><td><code>backlog.story_modules_assigned</code><td>связь история ↔ модуль<tr><td><code>backlog.task_created</code><td>—<tr><td><code>backlog.task_claimed</code><td>dev agent взял задачу<tr><td><code>backlog.task_status_changed</code><td>—<tr><td><code>backlog.task_merge_conflict</code><td>одобренный merge PR задачи отклонён из-за конфликта слияния: <code>taskId</code>, <code>pullRequestId</code>, <code>conflictingFiles</code>, <code>actionId</code>. С <a class="" href=/brabo/qa/ru/business-rules#rn-715>RN-715</a> задача возвращается в <code>in_progress</code>, а dev agent-владелец пробуждается строкой <code>task.merge_conflict</code> в outbox (<a class="" href=/brabo/qa/ru/business-rules#rn-705>RN-705</a>)<tr><td><code>backlog.task_blocked</code><td>исчерпан потолок попыток исправления, или зарегистрировано препятствие<tr><td><code>backlog.task_unblocked</code><td>—<tr><td><code>backlog.epic_without_story</code><td>PO закончил ход, создав эпик и НИ ОДНОЙ истории для него. Эпик не порождает задачу — порождает история, — поэтому это состояние, которое блокирует выполнение без видимой ошибки. Явный исход по образцу <a class="" href=/brabo/qa/ru/business-rules/custo#rn-059>RN-059</a>: долговечное событие с <code>origem</code>, <code>epicIds</code>/<code>epicTitles</code> и сообщением, плюс broadcast <code>agent.error</code>. Сообщается ОДИН раз за случай, никогда в цикле (<a class="" href=/brabo/qa/ru/business-rules/autenticacao#rn-165>RN-165</a>)<tr><td><code>backlog.handoff_not_offered</code><td>PO закончил ход, когда все бизнес-правила покрыты, но не смог предложить handoff Архитектору: у какой-то истории нет задачи (<code>origem: modelo</code>, с <code>storyIds</code>/<code>storyTitles</code>), или чтение backlog либо создание предложения упало (<code>origem: infra</code>). Когда у каждой истории есть задача, сервер PO сам предлагает handoff (<a class="" href=/brabo/qa/ru/business-rules#rn-700>RN-700</a>)</table>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=выполнение-и-gates>Выполнение и gates<a href=#выполнение-и-gates class=hash-link aria-label="Прямая ссылка на Выполнение и gates" title="Прямая ссылка на Выполнение и gates" translate=no>​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>тип<th>когда<tbody><tr><td><code>execution.plan_proposed</code><td><strong>ВЫВЕДЕН ИЗ ОБИХОДА с ADR 0086</strong> (<a class="" href=/brabo/qa/ru/business-rules#rn-284>RN-284</a>) — в старых сессиях этот тип ещё может быть в журнале; новые сессии используют <code>proposed_action</code> типа <code>propose_execution_plan</code> (см. <code>docs/reference/permissions.md</code>), потому что план Dev Lead стал настоящим решением, одобряемым или отклоняемым в Одобрениях, а не простым событием<tr><td><code>execution.activated</code><td>началась фаза выполнения. <strong>Входит только в сессию <code>criativa</code></strong> — в <code>consultiva</code> запись отвечает 409 (<a class="" href=/brabo/qa/ru/business-rules#rn-097>RN-097</a>). Именно это событие, а не колонка <code>sessions.kind</code>, говорит, ВЫПОЛНЯЕТСЯ ли сессия<tr><td><code>execution.parallelization_suggested</code><td>система предложила распараллелить — выдаётся при активации, только когда у проекта есть зарегистрированный контейнер <code>running</code> (иначе dev agents блокируются, <code>dev.blocked_by_container</code>, и больше агентов лишь умножили бы заблокированных; AT-104)<tr><td><code>execution.plan_applied</code><td>человек ОДОБРИЛ <code>propose_execution_plan</code> Dev Lead (или он был автоодобрен), и это одобрение АКТИВИРОВАЛО выполнение: каждая задача плана получила свой модуль, и <code>ActivateExecutionUseCase</code> отработал (<a class="" href=/brabo/qa/ru/business-rules#rn-677>RN-677</a>, <a class="" href=/brabo/qa/ru/business-rules#rn-678>RN-678</a>). Payload: <code>actionId</code>, <code>sessaoDeExecucao</code>, <code>modulos</code>, <code>tarefasAtribuidas</code> и — когда план несёт <code>tarefas</code> — <code>tarefasPorModulo</code> и <code>modulosSemTarefa</code> (модули, оставшиеся без агента, RN-709). Записывается в сессии Dev Lead, актор <code>system</code>/<code>action-executor</code><tr><td><code>execution.plan_failed</code><td>одобренный план НЕ активировал выполнение — план больше не совпадает с действующим <code>module_map</code>, или активация отказала (например, 409 без репозитория). Payload: те же поля плюс <code>motivo</code>, фраза самой api. Человеческое решение остаётся записанным; в задачи ничего не записано, когда отклонён сам план<tr><td><code>execution.parallelization_accepted</code><td>принято — субагент наследует потолок базового агента<tr><td><code>dev.started</code><td>dev agent начал цикл (активация, распараллеливание — НЕ регидратация, которая никогда не перезапускает)<tr><td><code>dev.working</code><td>взял задачу и собрал worktree<tr><td><code>dev.idle</code><td>очередь модуля пуста — сейчас нет задачи, которую можно взять<tr><td><code>dev.blocked_by_container</code><td>агент НЕ взял задачу, потому что у проекта нет ЗАРЕГИСТРИРОВАННОГО контейнера <code>running</code> (<a class="" href=/brabo/qa/ru/business-rules#rn-502>RN-502</a>). Он останавливается в <code>:idle</code>, как два выше — <code>idle</code> единственное состояние, которое wake ещё спасает, — и это событие единственное, что отличает «нет контейнера» от «очередь пуста» (<code>dev.idle</code>) и от «claim упал» (<code>dev.error</code>). Api никогда не вызывается: охрана выполняется ДО <code>claim_task/1</code>, так что ни одна задача не остаётся взятой без живого владельца. Разрешается само: <code>container.running</code> в outbox пробуждает каждого агента <code>:idle</code> проекта<tr><td><code>dev.awaiting_approval</code><td>действия git остались в ожидании одобрения (Фаза 12e): <strong>gate НЕ открывается</strong> — без PR нечего судить — и worktree удерживается до <code>task.pr_settled</code> (<a class="" href=/brabo/qa/ru/business-rules/custo#rn-050>RN-050</a>)<tr><td><code>dev.awaiting_gate</code><td>PR открыт, ждёт gate (Фаза 12b) — <code>task_id</code>/<code>worktree</code> остаются удержанными<tr><td><code>dev.blocked</code><td>задача возвращена с диагнозом (лимит итераций, превышен бюджет, <code>report_blocked</code>, сбой worktree/контекста). С <a class="" href=/brabo/qa/ru/business-rules#rn-743>RN-743</a> несёт <code>trabalhoPreservado</code> (<code>{branch, commit}</code> или <code>null</code>): незакоммиченная работа закоммичена в ветку задачи как <code>&lt;agente>[bot]</code>, и следующая задача агента стартует от этой ветки<tr><td><code>dev.idle_tripped</code><td>предохранитель сработал (RN-047) — N заблокированных задач подряд останавливают агента<tr><td><code>dev.credit_exhausted</code><td>provider модели отказал из-за нехватки кредита (RN-726) — агент встаёт на паузу в <code>idle_tripped</code>, не засчитываясь предохранителю и не беря следующую задачу; Перевзвести возобновляет<tr><td><code>dev.rearmed</code><td>пользователь перевзвёл застрявшего агента (Фаза 12b) — <code>actor</code> — это ПОЛЬЗОВАТЕЛЬ, который кликнул, а не агент<tr><td><code>pr.gate_changed</code><td>PR перешёл к новому gate (<code>awaiting_qa</code> → <code>awaiting_secops</code> → <code>awaiting_user</code>)<tr><td><code>infra.gate_changed</code><td>gate Infra<tr><td><code>gate.rescue_parked</code><td><code>GateRescuer</code> ПРИПАРКОВАЛ цикл QA/SecOps, простаивающий более 2 ч, вместо того чтобы перезапустить его (<a class="" href=/brabo/qa/ru/business-rules#rn-722>RN-722</a>, ADR 0207); лента показывает кнопку «Возобновить gate» (<a class="" href=/brabo/qa/ru/business-rules#rn-724>RN-724</a>). Payload: <code>taskId</code>, <code>gate</code>, <code>idadeSegundos</code>, <code>motivo</code>. Актор <code>system</code>/<code>gate-rescuer</code><tr><td><code>gate.interrupted</code><td>при ЗАГРУЗКЕ engine у недавнего цикла gate <code>in_progress</code> не было живого процесса ни на одном узле кластера: перезапуск его убил, и спасатель перезапускает его сразу, не дожидаясь порога в 15 минут (<a class="" href=/brabo/qa/ru/business-rules#rn-823>RN-823</a>). Payload: <code>taskId</code>, <code>gate</code>, <code>ultimaAtividadeEm</code>, <code>retomadoEm</code>. Актор <code>system</code>/<code>gate-rescuer</code>; лента показывает его как предупреждение. В граф не проецируется<tr><td><code>infra.artifact_blocked</code><td>артефакт Infra отклонён</table>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=делегирование-фаза-8b-adr-0038>Делегирование (Фаза 8b, ADR 0038)<a href=#делегирование-фаза-8b-adr-0038 class=hash-link aria-label="Прямая ссылка на Делегирование (Фаза 8b, ADR 0038)" title="Прямая ссылка на Делегирование (Фаза 8b, ADR 0038)" translate=no>​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>тип<th>когда<tbody><tr><td><code>delegation.completed</code><td>подспециальность завершила работу; <code>payload.parecerArtifactId</code> ссылается на её ВНУТРЕННИЙ <code>artifact.qa_verdict</code> — никогда на то, что доходит до gate<tr><td><code>delegation.failed</code><td>подспециальность не завершила работу; <code>payload.failureOrigin</code> — это ИСТОЧНИК (<code>infra</code>|<code>modelo</code>|<code>codigo</code>|<code>politica</code>, никогда методом исключения — ADR 0020)<tr><td><code>delegation.dispensed</code><td>lead решил НЕ делегировать; <code>payload.justification</code> объясняет почему — отказ от делегирования никогда не бывает молчаливым</table>
+<p>Все три выдаются <code>QaLeadServer</code>, по одному на подспециальность, ОТДЕЛЬНО от
+вызова <code>record_gate_verdict</code> — событие <code>pr.gate_changed</code> выше остаётся
+единственным, описывающим сам gate; эти описывают область за ним.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=цикл-инструментов>Цикл инструментов<a href=#цикл-инструментов class=hash-link aria-label="Прямая ссылка на Цикл инструментов" title="Прямая ссылка на Цикл инструментов" translate=no>​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>тип<th>когда<tbody><tr><td><code>toolloop.limit_reached</code><td>цикл упёрся в потолок итераций. <code>payload</code> несёт <code>iteration</code> и <code>max_iterations</code> — потолок задаётся по ТИПУ агента (<a class="" href=/brabo/qa/ru/business-rules/custo#rn-085>RN-085</a>)<tr><td><code>toolloop.budget_exceeded</code><td>бюджет токенов этого цикла закончился раньше работы; <code>payload</code> несёт <code>tokens_spent_micros</code> и <code>token_budget_micros</code></table>
+<p>Выдаются <code>Engine.Harness.ToolLoop</code> и — начиная с
+<a class="" href=/brabo/qa/ru/business-rules/autenticacao#rn-166>RN-166</a> — также <code>PoServer</code>, у
+которого СОБСТВЕННЫЙ цикл и который до тех пор исчерпывал потолок <strong>молча</strong>.
+Тот же тип и тот же payload намеренно: это тот же факт, и читающий журнал не
+должен учить второе имя только потому, что разговорный агент не использует
+<code>ToolLoop</code>.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=артефакты>Артефакты<a href=#артефакты class=hash-link aria-label="Прямая ссылка на Артефакты" title="Прямая ссылка на Артефакты" translate=no>​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>тип<th>схема<tbody><tr><td><code>artifact.product_brief</code><td><code>title</code>, <code>summary</code>, <code>rules</code><tr><td><code>artifact.business_rule</code><td><code>title</code>, <code>description</code>, <code>origin</code><tr><td><code>artifact.decision_record</code><td><code>context</code>, <code>options</code>, <code>choice</code>, <code>consequences</code> — «сжатый ADR», который может выдать любой из шести разговорных агентов; переиспользует общий шаблон вместо выделенного и сосуществует с <code>open_adr_pr</code> (только Архитектор, документ, по-настоящему закоммиченный) (<a class="" href=/brabo/qa/ru/business-rules#rn-505>RN-505</a>)<tr><td><code>artifact.module_map</code><td>карта модулей Архитектора<tr><td><code>artifact.module_routing</code><td>образ-кандидат Архитектора по модулю, по одному элементу на модуль действующего <code>module_map</code> — Архитектор ПРЕДЛАГАЕТ, Infra ВЫБИРАЕТ (<a class="" href=/brabo/qa/ru/business-rules#rn-487>RN-487</a>, <a class="" href=/brabo/qa/ru/adr/0131-roteamento-de-modulos-para-infra>ADR 0131</a>)<tr><td><code>artifact.module_contracts</code><td>контракт между модулями от Архитектора: по модулю — что он ВЫСТАВЛЯЕТ (<code>modulo</code>, <code>expoe: [{tipo, assinatura, descricao}]</code>), с <code>version</code> — каждый раз весь список, действующий заменяет предыдущий; что модуль потребляет — это <code>dependsOn</code> из <code>module_map</code> (<a class="" href=/brabo/qa/ru/business-rules#rn-684>RN-684</a>, <a class="" href=/brabo/qa/ru/adr/0200-contrato-entre-modulos-artefato-do-arquiteto>ADR 0200</a>)<tr><td><code>artifact.project_image</code><td><code>image</code>, <code>rationale</code>, <code>network</code>, <code>resources</code>, <code>version</code> (кто решил — актор: <code>arquiteto</code> или <code>infra-lead</code>) — образ контейнера проекта, выдаваемый api (<code>DecidirImagemDoProjetoUseCase</code>), когда его решает Архитектор или Infra Lead выбирает кандидата (<a class="" href=/brabo/qa/ru/business-rules#rn-491>RN-491</a>); версионируется, без таблицы. Engine только ЧИТАЕТ, существует ли он, чтобы локально отклонить <code>container_start_via_runner</code> без него (<a class="" href=/brabo/qa/ru/business-rules#rn-610>RN-610</a>)<tr><td><code>artifact.insight</code><td>—<tr><td><code>artifact.prototipo_navegavel</code><td><code>personas</code>, <code>jornadas</code>, <code>prototipo</code> (<code>telas</code>, <code>anotacoes</code>), <code>resumo</code> — прототип UX Designer (<a class="" href=/brabo/qa/ru/business-rules#rn-286>RN-286</a>, ADR 0087)<tr><td><code>artifact.rfc_staff</code><td>— (валидируется в <code>Engine.Agents.StaffTools</code>, а не <code>ArtifactSchemas</code> — тот же случай, что <code>artifact.insight</code>): <code>problema</code>, <code>opcoes</code> (список <code>descricao</code>/<code>tradeoffs</code>), <code>recomendacao</code>, <code>poc</code> (<code>escopo</code>, фиксированное <code>descartavel: true</code>). RFC от Staff (ADR 0088), возвращаемая Архитектору через handoff в том же вызове инструмента<tr><td><code>artifact.plano_de_teste</code><td><code>storyId</code>, <code>taskId</code>, <code>planoDeTeste</code>, <code>criteriosExecutaveis</code>, <code>estrategiaDeAutomacao</code> — результат qa-стратегии (ADR 0090), написанный ПОСЛЕ сдачи dev и потребляемый циклом <code>qa-verificada</code> с <a class="" href=/brabo/qa/ru/adr/0192-plano-de-teste-depois-da-entrega>ADR 0192</a> (<a class="" href=/brabo/qa/ru/business-rules#rn-674>RN-674</a>)<tr><td><code>artifact.threat_model</code><td><code>storyId</code>, <code>threatModel</code>, <code>requisitosDeSeguranca</code> — «второй момент» SecOps над ДИЗАЙНОМ истории (<a class="" href=/brabo/qa/ru/business-rules#rn-360>RN-360</a>, ADR 0090)</table>
+<p>Схемы закрыты: отсутствующее поле отклоняет эмиссию
+(<code>Engine.Harness.ArtifactSchemas</code>).</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=архитектура-и-готовность>Архитектура и готовность<a href=#архитектура-и-готовность class=hash-link aria-label="Прямая ссылка на Архитектура и готовность" title="Прямая ссылка на Архитектура и готовность" translate=no>​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>тип<th>когда<tbody><tr><td><code>architecture.readiness_confirmed</code><td>—<tr><td><code>readiness.confirmed</code><td>пользователь кликнул «Я готов — потребность подтверждена» с Креативом. С <a class="" href=/brabo/qa/ru/adr/0185-estou-pronto-fecha-os-dois-gates>ADR 0185</a> payload несёт <code>necessidadeValidada: true</code> и <code>aceiteImplicitoDoPo: true</code> — метку, которую читает неявное принятие PO (<a class="" href=/brabo/qa/ru/business-rules#rn-658>RN-658</a>); более старые события несут <code>{}</code><tr><td><code>necessity.validated</code><td>gate <code>necessidade-validada</code> (Креатив → PO): человек — никогда не вывод модели — заявляет, что бизнес-потребность, консолидированная Креативом, верна. С <a class="" href=/brabo/qa/ru/adr/0185-estou-pronto-fecha-os-dois-gates>ADR 0185</a> записывается ТЕМ ЖЕ кликом, что и <code>readiness.confirmed</code>, как только engine принимает ход, с <code>productBriefId: null</code> (brief приходит из этого хода), <code>via: "readiness.confirmed"</code> и <code>readinessEventId</code> (<a class="" href=/brabo/qa/ru/business-rules#rn-657>RN-657</a>). События отдельного клика из ADR 0095 (<a class="" href=/brabo/qa/ru/business-rules#rn-406>RN-406</a>) несут <code>productBriefId</code>, указывающий на подтверждённый <code>artifact.product_brief</code></table>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=git-и-bootstrap>Git и bootstrap<a href=#git-и-bootstrap class=hash-link aria-label="Прямая ссылка на Git и bootstrap" title="Прямая ссылка на Git и bootstrap" translate=no>​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>тип<th>когда<tbody><tr><td><code>project.git_connected</code><td>учётные данные git привязаны к проекту<tr><td><code>project.repository_provisioned</code><td>репозиторий <strong>создан</strong> Brabo<tr><td><code>project.repository_adopted</code><td>репозиторий, который <strong>уже существовал</strong>, стал принадлежать проекту (<a class="" href=/brabo/qa/ru/business-rules/custo#rn-046>RN-046</a>)<tr><td><code>bootstrap.repository_adopted</code><td>тот же факт в выделенной сессии, с <code>defaultBranch</code>, наблюдаемой у provider<tr><td><code>bootstrap.step_started</code><td>начался один из шести шагов Gitflow<tr><td><code>bootstrap.step_completed</code><td>завершён<tr><td><code>bootstrap.step_skipped</code><td>уже было сделано — <strong>это успех</strong>, а не ошибка (<a class="" href=/brabo/qa/ru/business-rules#rn-029>RN-029</a>)<tr><td><code>bootstrap.step_degraded</code><td>завершён без одной из возможностей provider (например, защита ветки в Local)<tr><td><code>bootstrap.step_failed</code><td>упал; bootstrap можно возобновить с этой точки<tr><td><code>bootstrap.plan_approved</code><td>пользователь одобрил план принятия — <strong>только начиная отсюда bootstrap выполняется в принятом репозитории</strong> (<a class="" href=/brabo/qa/ru/business-rules/custo#rn-045>RN-045</a>)<tr><td><code>bootstrap.adopted_as_is</code><td>пользователь отказался от bootstrap; ни один шаг не выполнялся, и план остаётся доказательством того, что не было применено</table>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=стоимость>Стоимость<a href=#стоимость class=hash-link aria-label="Прямая ссылка на Стоимость" title="Прямая ссылка на Стоимость" translate=no>​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>тип<th>когда<tbody><tr><td><code>budget.threshold_crossed</code><td>70%, 90% или 100% — <strong>один раз на порог</strong> (<a class="" href=/brabo/qa/ru/business-rules/custo#rn-018>RN-018</a>)</table>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=телеметрия-rag-rn-479480481>Телеметрия RAG (RN-479/480/481)<a href=#телеметрия-rag-rn-479480481 class=hash-link aria-label="Прямая ссылка на Телеметрия RAG (RN-479/480/481)" title="Прямая ссылка на Телеметрия RAG (RN-479/480/481)" translate=no>​</a></h3>
+<p>Эти два — <strong>повествование, никогда не источник измерения</strong>, и существуют только
+при наличии сессии — то есть на пути агента. Поиск из вкладки RAG — это поиск
+<em>проекта</em>, и сессии у него нет, а <code>session_events.session_id</code> —
+<code>NOT NULL</code>, так что измерение по event log молча потеряло бы именно те поиски,
+которые человек сделал, глядя на оценки. Источник измерения — пара таблиц
+<code>rag_searches</code>/<code>rag_feedback</code> (читается <code>pnpm --filter api medir:rag</code>);
+событие лишь помещает тот же факт на временную шкалу сессии.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>тип<th>когда<tbody><tr><td><code>rag.search</code><td>агент выполнил гибридный поиск внутри сессии — payload несёт <code>searchId</code> строки телеметрии, запрос, <code>topK</code>, сколько результатов прошло порог, была ли поиск <code>degraded</code> и ids chunks (<a class="" href=/brabo/qa/ru/business-rules#rn-479>RN-479</a>, <a class="" href=/brabo/qa/ru/business-rules#rn-481>RN-481</a>)<tr><td><code>rag.feedback</code><td>агент оценил извлечённый chunk как <code>util</code>/<code>irrelevante</code> — payload несёт <code>searchId</code>, <code>chunkId</code>, вердикт и <strong>позицию</strong>, которую этот chunk занимал в том поиске (<a class="" href=/brabo/qa/ru/business-rules#rn-480>RN-480</a>)</table>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=локальный-runner-adr-01030104>Локальный runner (ADR 0103/0104)<a href=#локальный-runner-adr-01030104 class=hash-link aria-label="Прямая ссылка на Локальный runner (ADR 0103/0104)" title="Прямая ссылка на Локальный runner (ADR 0103/0104)" translate=no>​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>тип<th>когда<tbody><tr><td><code>project.workspace_verified</code><td><code>brabo-runner</code> подключился и подтвердил путь проекта с <code>execution_mode: runner</code> — runner является источником истины для пути, перезаписывая введённое при создании (<a class="" href=/brabo/qa/ru/business-rules#rn-423>RN-423</a>)</table>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=психолог>Психолог<a href=#психолог class=hash-link aria-label="Прямая ссылка на Психолог" title="Прямая ссылка на Психолог" translate=no>​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>тип<th>когда<tbody><tr><td><code>psychologist.analysis_completed</code><td>—<tr><td><code>psychologist.analysis_failed</code><td>с классифицированной причиной: <code>infra</code>, <code>modelo</code>, <code>código</code> или <code>política</code><tr><td><code>psychologist.analysis_skipped</code><td>в сессии не было АНАЛИЗИРУЕМОГО события, и анализ не выполнялся — <code>payload.analisaveis</code> и <code>payload.eventCount</code> показывают разницу (<a class="" href=/brabo/qa/ru/business-rules/custo#rn-079>RN-079</a>)<tr><td><code>psychologist.hypothesis_proposed</code><td>гипотеза с действительными <code>evidenceEventIds</code> (<a class="" href=/brabo/qa/ru/business-rules#rn-021>RN-021</a>)<tr><td><code>psychologist.hypothesis_accepted</code><td>—<tr><td><code>psychologist.hypothesis_dismissed</code><td>—<tr><td><code>psychologist.hypothesis_accepted_for_anamnese</code><td>принята и передана — звено, замыкающее цикл с Анамнезом</table>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=анамнез-и-инструкции>Анамнез и инструкции<a href=#анамнез-и-инструкции class=hash-link aria-label="Прямая ссылка на Анамнез и инструкции" title="Прямая ссылка на Анамнез и инструкции" translate=no>​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>тип<th>когда<tbody><tr><td><code>anamnese.run_completed</code><td>—<tr><td><code>anamnese.run_failed</code><td>—<tr><td><code>anamnese.run_skipped</code><td>раунд завершился БЕЗ профиля, намеренно — <code>payload.motivo</code> говорит почему (<a class="" href=/brabo/qa/ru/business-rules/custo#rn-063>RN-063</a>)<tr><td><code>anamnese.analysis</code><td>текст, который модель Анамнеза написала во время раунда (<code>payload.content</code>); никогда не отрисовывается в ленте сессии (<a class="" href=/brabo/qa/ru/business-rules#rn-695>RN-695</a>)<tr><td><code>anamnese.profile_updated</code><td><code>proficiency_profile</code> изменился<tr><td><code>anamnese.agent_deviation</code><td>отклонение АГЕНТА, замеченное Анамнезом (цикл, отменено пользователем, исправлено пользователем) — сигнал продукта, никогда не черта пользователя; <code>payload</code> — только <code>agente</code>, <code>tipo</code> и <code>evidenceEventIds</code>, без персональных данных, в граф не проецируется (<a class="" href=/brabo/qa/ru/business-rules#rn-717>RN-717</a>, <a class="" href=/brabo/qa/ru/adr/0205-desvio-do-agente-como-sinal-do-produto>ADR 0205</a>)<tr><td><code>instruction.rolled_back</code><td>откат версии инструкции — создаёт новую версию, не удаляет (<a class="" href=/brabo/qa/ru/business-rules#rn-027>RN-027</a>)</table>
+<hr/>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=broadcast>Broadcast<a href=#broadcast class=hash-link aria-label="Прямая ссылка на Broadcast" title="Прямая ссылка на Broadcast" translate=no>​</a></h2>
+<p>Сообщения канала Phoenix в браузер. Они <strong>не</strong> сохраняются: кто перезагружает
+страницу, не получает их обратно — получает обратно event log.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>broadcast<th>что<tbody><tr><td><code>agent.delta</code><td>фрагмент текста потоковой передачи модели<tr><td><code>agent.status</code><td>видимое изменение состояния агента<tr><td><code>agent.done</code><td>ход завершился<tr><td><code>agent.error</code><td>ход упал<tr><td><code>event.appended</code><td>новое событие вошло в журнал — триггер обновления панели; несёт только <code>type</code> и <code>actorId</code></table>
+<p>Доменное событие почти всегда производит <code>event.appended</code>; обратное неверно.
+С <a class="" href=/brabo/qa/ru/business-rules#rn-579>RN-579</a> engine выдаёт его для <strong>каждой</strong> записи,
+которую api подтвердила через фасад <code>EngineApiClient</code> (записи, предлагаемые
+действия, handoffs, backlog PO), и никогда для отклонённой. Записи, которые api
+делает сама — человек, решающий действие, переход сессии, — доходят до того же
+broadcast с AT-157: api просит его у engine после commit записи
+(<code>POST /internal/sessions/:id/event-appended</code>) и не просит для записей, пришедших
+от engine, который их уже объявляет. Браузер использует его только как триггер:
+инвалидирует то, что затрагивает <code>type</code> (события и бюджет всегда; действия,
+handoffs или backlog по префиксу), с минимальным окном на цель, и при живом
+канале опросы экрана сессии падают до 15 с (30 с для бюджета).</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=кто-может-слушать-rn-108>Кто может слушать (RN-108)<a href=#кто-может-слушать-rn-108 class=hash-link aria-label="Прямая ссылка на Кто может слушать (RN-108)" title="Прямая ссылка на Кто может слушать (RN-108)" translate=no>​</a></h3>
+<p>Вход в канал <code>session:&lt;id></code> — а значит, получение любого из этих broadcasts —
+требует непрозрачного одноразового тикета, выдаваемого
+<code>POST /projects/:projectId/sessions/:sessionId/socket-ticket</code> (TTL 30 с).
+До RN-108 <code>connect/3</code> сокета Phoenix не проверял ничего, кроме существования
+<code>session_id</code>: кто узнал UUID, мог войти и слушать всё. Тикет не сохраняется и
+не читается в event log — он живёт в <code>session_socket_tickets</code>, проверяется и
+потребляется самим engine, — поэтому не появляется в инвентаре доменных событий
+ниже. См. <a class="" href=/brabo/qa/ru/business-rules/autenticacao#rn-108>RN-108</a>.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=span>Span<a href=#span class=hash-link aria-label="Прямая ссылка на Span" title="Прямая ссылка на Span" translate=no>​</a></h2>
+<p>Имена spans OpenTelemetry. Сессия — это <strong>корневая трасса</strong>, проходящая через
+api и engine (<a class="" href=/brabo/qa/ru/adr/0026-fase5-observabilidade-e-graceful-shutdown>ADR 0026</a>).</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=доменные-имена>Доменные имена<a href=#доменные-имена class=hash-link aria-label="Прямая ссылка на Доменные имена" title="Прямая ссылка на Доменные имена" translate=no>​</a></h3>
+<p>Названы вручную, по одному на важную операцию. Именно их ищут в Tempo:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>span<th>где<tbody><tr><td><code>session.create</code><td>api — корень<tr><td><code>agent.turn</code><td>engine — один проход ToolLoop<tr><td><code>llm.turn</code><td>engine — вызов модели<tr><td><code>tool.call</code><td>engine — выполнение инструмента<tr><td><code>gate.scanner</code><td>engine — сканер SecOps, с именем сканера в атрибуте<tr><td><code>outbox.session_lifecycle</code><td>engine — job Oban, привязанный к трассе сессии<tr><td><code>outbox.psychologist</code><td>engine — то же, анализ Психолога</table>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=имена-производные-от-кода>Имена, производные от кода<a href=#имена-производные-от-кода class=hash-link aria-label="Прямая ссылка на Имена, производные от кода" title="Прямая ссылка на Имена, производные от кода" translate=no>​</a></h3>
+<p>Декоратор <code>@Traced</code> в api
+(<a class="" href=/brabo/qa/ru/adr/0035-observabilidade-legivel-e-trace-sem-coletor>ADR 0035</a>) называет
+span как <strong><code>Classe.metodo</code></strong> — например <code>TransitionSessionUseCase.execute</code>,
+<code>DrizzleOutboxRepository.append</code>. Они не помещаются в список здесь: рождаются и
+умирают вместе с кодом, и список устарел бы при первом переименовании.</p>
+<p>Различие важно при запросе: доменное имя стабильно и может идти в сохранённый
+запрос или dashboard; имя, производное от кода, — нет.</p>
+<p>Атрибуты, которые несут эти spans, — <code>brabo.layer</code>, <code>code.namespace</code>,
+<code>code.function</code> — служат для поиска в Tempo и <strong>не являются контрактом</strong>, в
+отличие от <code>trace_id</code>. Их можно переименовать, ничего не сломав вне Tempo.</p>
+<p>Как перейти от сессии к <code>tool.call</code>, описано в
+<a class="" href=/brabo/qa/ru/runbook#observabilidade>runbook</a>; вся модель описана в
+<a class="" href=/brabo/qa/ru/explanation/observability>наблюдаемости</a>.</p>
+<hr/>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=как-событие-доходит-до-engine>Как событие доходит до engine<a href=#как-событие-доходит-до-engine class=hash-link aria-label="Прямая ссылка на Как событие доходит до engine" title="Прямая ссылка на Как событие доходит до engine" translate=no>​</a></h2>
+<p>Не через внешнюю очередь. Api записывает событие и намерение его опубликовать
+<strong>в одной транзакции</strong> (transactional outbox); Oban потребляет прямо из
+Postgres. Именно это предотвращает «событие записано, но engine так и не
+узнал».</p>
+<!-- -->
+<hr/>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=полный-инвентарь>Полный инвентарь<a href=#полный-инвентарь class=hash-link aria-label="Прямая ссылка на Полный инвентарь" title="Прямая ссылка на Полный инвентарь" translate=no>​</a></h2>
+<p>Разделы выше говорят, <strong>когда</strong> происходит каждое событие. Это механический
+обход точек эмиссии, повторяемый при каждом <code>pnpm docs:generate</code>, — именно он
+заставляет новый идентификатор появиться здесь, даже если о нём никто не
+написал.</p>
+<!-- -->
+<blockquote>
+<p>⚠️ Блок сгенерирован <code>pnpm docs:generate</code>. Не редактируйте вручную — следующая сборка его перезапишет.</p>
+</blockquote>
+<p>Извлечено из точек генерации идентификаторов: <strong>115</strong>, из них не описаны выше: <strong>3</strong>.</p>
+<ul>
+<li class=""><code>action.failed</code> <sub>(apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts)</sub></li>
+<li class=""><code>agent.activated</code> <sub>(apps/api/src/application/use-cases/agents/activate-agent.use-case.ts)</sub></li>
+<li class=""><code>agent.delta</code> <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub></li>
+<li class=""><code>agent.done</code> <sub>(apps/engine/lib/engine/agents/turno_assincrono.ex)</sub></li>
+<li class=""><code>agent.error</code> <sub>(apps/api/src/application/use-cases/agents/aceite-implicito-do-po.use-case.ts)</sub></li>
+<li class=""><code>agent.plan</code> <sub>(apps/engine/lib/engine/agents/diario.ex)</sub></li>
+<li class=""><code>agent.response</code> <sub>(apps/api/src/application/use-cases/llm/send-chat-message.use-case.ts)</sub></li>
+<li class=""><code>agent.status</code> <sub>(apps/engine/lib/engine/agents/diario.ex)</sub></li>
+<li class=""><code>agent.turn</code> <sub>(apps/engine/lib/engine/harness/tool_loop.ex)</sub></li>
+<li class=""><code>agent.turn_resumed</code> <sub>(apps/engine/lib/engine/agents/diario.ex)</sub></li>
+<li class=""><code>anamnese.agent_deviation</code> <sub>(apps/engine/lib/engine/anamnese/tools/report_agent_deviation.ex)</sub></li>
+<li class=""><code>anamnese.analysis</code> <sub>(apps/engine/lib/engine/workers/anamnese_worker.ex)</sub></li>
+<li class=""><code>anamnese.profile_updated</code> <sub>(apps/api/src/application/use-cases/anamnese/record-proficiency.use-case.ts)</sub></li>
+<li class=""><code>anamnese.run_completed</code> <sub>(apps/api/src/application/use-cases/anamnese/record-proficiency.use-case.ts)</sub></li>
+<li class=""><code>anamnese.run_failed</code> <sub>(apps/engine/lib/engine/session_events/event.ex)</sub></li>
+<li class=""><code>anamnese.run_skipped</code> <sub>(apps/engine/lib/engine/session_events/event.ex)</sub></li>
+<li class=""><code>architecture.readiness_confirmed</code> <sub>(apps/api/src/application/use-cases/agents/offer-infra-handoff.use-case.ts)</sub></li>
+<li class=""><code>artifact.business_rule</code> <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub></li>
+<li class=""><code>artifact.decision_record</code> <sub>(apps/api/src/application/use-cases/backlog/perguntas-em-aberto.use-case.ts)</sub></li>
+<li class=""><code>artifact.insight</code> <sub>(apps/engine/lib/engine/harness/tools/emit_insight.ex)</sub></li>
+<li class=""><code>artifact.module_map</code> <sub>(apps/api/src/application/use-cases/architecture/create-module-map.use-case.ts)</sub></li>
+<li class=""><code>artifact.open_question</code> — ⚠️ <strong>не описан выше</strong> <sub>(apps/engine/lib/engine/harness/decisoes_do_projeto.ex)</sub></li>
+<li class=""><code>artifact.plano_de_teste</code> <sub>(apps/engine/lib/engine/gates/qa_lead_server.ex)</sub></li>
+<li class=""><code>artifact.product_brief</code> <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub></li>
+<li class=""><code>artifact.project_image</code> <sub>(apps/engine/lib/engine/harness/ambiente_do_agente.ex)</sub></li>
+<li class=""><code>artifact.prototipo_navegavel</code> <sub>(apps/engine/lib/engine/agents/ux_designer_tools.ex)</sub></li>
+<li class=""><code>artifact.qa_verdict</code> <sub>(apps/engine/lib/engine/gates/qa_lead_server.ex)</sub></li>
+<li class=""><code>artifact.rfc_staff</code> <sub>(apps/engine/lib/engine/agents/staff_tools.ex)</sub></li>
+<li class=""><code>artifact.secops_verdict</code> — ⚠️ <strong>не описан выше</strong> <sub>(apps/engine/lib/engine/gates/secops_agent_server.ex)</sub></li>
+<li class=""><code>artifact.threat_model</code> <sub>(apps/engine/lib/engine/agents/dev_lead_tools.ex)</sub></li>
+<li class=""><code>backlog.epic_created</code> <sub>(apps/api/src/application/use-cases/backlog/create-epic.use-case.ts)</sub></li>
+<li class=""><code>backlog.epic_without_story</code> <sub>(apps/engine/lib/engine/agents/po_server.ex)</sub></li>
+<li class=""><code>backlog.handoff_not_offered</code> <sub>(apps/engine/lib/engine/agents/po_server.ex)</sub></li>
+<li class=""><code>backlog.semantic_duplicate_check_skipped</code> <sub>(apps/api/src/application/use-cases/backlog/verificar-duplicata-semantica.use-case.ts)</sub></li>
+<li class=""><code>backlog.semantic_duplicate_warned</code> <sub>(apps/api/src/application/use-cases/backlog/verificar-duplicata-semantica.use-case.ts)</sub></li>
+<li class=""><code>backlog.story_archived</code> <sub>(apps/api/src/application/use-cases/backlog/corrigir-historia.use-case.ts)</sub></li>
+<li class=""><code>backlog.story_completed</code> <sub>(apps/api/src/application/use-cases/backlog/complete-story.use-case.ts)</sub></li>
+<li class=""><code>backlog.story_created</code> <sub>(apps/api/src/application/use-cases/backlog/create-story.use-case.ts)</sub></li>
+<li class=""><code>backlog.story_demoted</code> <sub>(apps/api/src/application/use-cases/architecture/create-module-map.use-case.ts)</sub></li>
+<li class=""><code>backlog.story_modules_assigned</code> <sub>(apps/api/src/application/use-cases/architecture/assign-story-modules.use-case.ts)</sub></li>
+<li class=""><code>backlog.story_overlap_warned</code> <sub>(apps/api/src/application/use-cases/backlog/create-story.use-case.ts)</sub></li>
+<li class=""><code>backlog.story_promotion_proposed</code> <sub>(apps/api/src/application/use-cases/backlog/complete-story.use-case.ts)</sub></li>
+<li class=""><code>backlog.story_promotion_returned</code> <sub>(apps/api/src/application/use-cases/backlog/return-story.use-case.ts)</sub></li>
+<li class=""><code>backlog.story_transitioned</code> <sub>(apps/api/src/application/use-cases/backlog/transition-story.use-case.ts)</sub></li>
+<li class=""><code>backlog.story_updated</code> <sub>(apps/api/src/application/use-cases/backlog/corrigir-historia.use-case.ts)</sub></li>
+<li class=""><code>backlog.task_blocked</code> <sub>(apps/api/src/application/use-cases/execution/mark-task-blocked.use-case.ts)</sub></li>
+<li class=""><code>backlog.task_claimed</code> <sub>(apps/api/src/application/use-cases/execution/claim-next-task.use-case.ts)</sub></li>
+<li class=""><code>backlog.task_created</code> <sub>(apps/api/src/application/use-cases/backlog/create-task.use-case.ts)</sub></li>
+<li class=""><code>backlog.task_merge_conflict</code> <sub>(apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts)</sub></li>
+<li class=""><code>backlog.task_status_changed</code> <sub>(apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts)</sub></li>
+<li class=""><code>backlog.task_unblocked</code> <sub>(apps/api/src/application/use-cases/execution/unblock-task.use-case.ts)</sub></li>
+<li class=""><code>bootstrap.adopted_as_is</code> <sub>(apps/api/src/application/use-cases/git/decide-bootstrap-plan.use-case.ts)</sub></li>
+<li class=""><code>bootstrap.plan_approved</code> <sub>(apps/api/src/application/use-cases/git/decide-bootstrap-plan.use-case.ts)</sub></li>
+<li class=""><code>bootstrap.repository_adopted</code> <sub>(apps/api/src/application/use-cases/git/adopt-repository.use-case.ts)</sub></li>
+<li class=""><code>bootstrap.step_acknowledged</code> — ⚠️ <strong>не описан выше</strong> <sub>(apps/api/src/application/use-cases/git/acknowledge-protection-failure.use-case.ts)</sub></li>
+<li class=""><code>bootstrap.step_completed</code> <sub>(apps/api/src/application/use-cases/git/bootstrap-runner.ts)</sub></li>
+<li class=""><code>bootstrap.step_degraded</code> <sub>(apps/api/src/application/use-cases/git/bootstrap-runner.ts)</sub></li>
+<li class=""><code>bootstrap.step_failed</code> <sub>(apps/api/src/application/use-cases/git/bootstrap-runner.ts)</sub></li>
+<li class=""><code>bootstrap.step_skipped</code> <sub>(apps/api/src/application/use-cases/git/bootstrap-runner.ts)</sub></li>
+<li class=""><code>bootstrap.step_started</code> <sub>(apps/api/src/application/use-cases/git/bootstrap-runner.ts)</sub></li>
+<li class=""><code>budget.threshold_crossed</code> <sub>(apps/api/src/application/use-cases/llm/record-llm-usage.use-case.ts)</sub></li>
+<li class=""><code>chat.message</code> <sub>(apps/api/src/application/use-cases/agents/send-agent-message.use-case.ts)</sub></li>
+<li class=""><code>chat.message_cancelled</code> <sub>(apps/engine/lib/engine/agents/fila_de_mensagens.ex)</sub></li>
+<li class=""><code>chat.message_delivered</code> <sub>(apps/engine/lib/engine/agents/fila_de_mensagens.ex)</sub></li>
+<li class=""><code>chat.message_queued</code> <sub>(apps/engine/lib/engine/agents/fila_de_mensagens.ex)</sub></li>
+<li class=""><code>chat.structured_question</code> <sub>(apps/engine/lib/engine/agents/reidratacao.ex)</sub></li>
+<li class=""><code>chat.structured_question_answered</code> <sub>(apps/api/src/application/use-cases/agents/answer-structured-question.use-case.ts)</sub></li>
+<li class=""><code>delegation.completed</code> <sub>(apps/api/src/application/use-cases/execution/record-delegation.use-case.ts)</sub></li>
+<li class=""><code>delegation.dispensed</code> <sub>(apps/api/src/application/use-cases/execution/record-delegation.use-case.ts)</sub></li>
+<li class=""><code>delegation.failed</code> <sub>(apps/api/src/application/use-cases/execution/record-delegation.use-case.ts)</sub></li>
+<li class=""><code>event.appended</code> <sub>(apps/engine/lib/engine/sessions/live_broadcast.ex)</sub></li>
+<li class=""><code>execution.activated</code> <sub>(apps/api/src/application/use-cases/execution/activate-execution.use-case.ts)</sub></li>
+<li class=""><code>execution.parallelization_accepted</code> <sub>(apps/api/src/application/use-cases/execution/accept-parallelization.use-case.ts)</sub></li>
+<li class=""><code>execution.parallelization_suggested</code> <sub>(apps/api/src/application/use-cases/execution/activate-execution.use-case.ts)</sub></li>
+<li class=""><code>gate.interrupted</code> <sub>(apps/engine/lib/engine/gates/gate_rescuer.ex)</sub></li>
+<li class=""><code>gate.rescue_parked</code> <sub>(apps/engine/lib/engine/gates/gate_rescuer.ex)</sub></li>
+<li class=""><code>gate.scanner</code> <sub>(apps/engine/lib/engine/gates/scanner.ex)</sub></li>
+<li class=""><code>handoff.accepted</code> <sub>(apps/api/src/application/use-cases/agents/accept-handoff.use-case.ts)</sub></li>
+<li class=""><code>handoff.auto_accept_failed</code> <sub>(apps/api/src/application/use-cases/agents/aceitar-handoff-automaticamente.use-case.ts)</sub></li>
+<li class=""><code>handoff.offered</code> <sub>(apps/api/src/application/use-cases/agents/create-handoff.use-case.ts)</sub></li>
+<li class=""><code>handoff.superseded</code> <sub>(apps/api/src/application/use-cases/agents/ciclo-de-vida-do-handoff.service.ts)</sub></li>
+<li class=""><code>infra.artifact_blocked</code> <sub>(apps/api/src/application/use-cases/execution/mark-infra-artifact-blocked.use-case.ts)</sub></li>
+<li class=""><code>infra.correction_delivered</code> <sub>(apps/engine/lib/engine/infra/infra_lead_server.ex)</sub></li>
+<li class=""><code>infra.correction_queued</code> <sub>(apps/engine/lib/engine/infra/infra_lead_server.ex)</sub></li>
+<li class=""><code>infra.gate_changed</code> <sub>(apps/api/src/application/use-cases/execution/record-infra-gate-verdict.use-case.ts)</sub></li>
+<li class=""><code>instruction.rolled_back</code> <sub>(apps/api/src/application/use-cases/instructions/rollback-instruction.use-case.ts)</sub></li>
+<li class=""><code>llm.turn</code> <sub>(apps/engine/lib/engine/sessions/engine_api_client.ex)</sub></li>
+<li class=""><code>necessity.validated</code> <sub>(apps/api/src/application/use-cases/agents/confirm-readiness.use-case.ts)</sub></li>
+<li class=""><code>permission.granted</code> <sub>(apps/api/src/application/use-cases/actions/approve-always-action.use-case.ts)</sub></li>
+<li class=""><code>pr.gate_changed</code> <sub>(apps/api/src/application/use-cases/execution/open-gate.use-case.ts)</sub></li>
+<li class=""><code>project.git_connected</code> <sub>(apps/api/src/application/use-cases/git/handle-git-oauth-callback.use-case.ts)</sub></li>
+<li class=""><code>project.repository_adopted</code> <sub>(apps/api/src/application/use-cases/git/adopt-repository.use-case.ts)</sub></li>
+<li class=""><code>project.repository_provisioned</code> <sub>(apps/api/src/application/use-cases/git/provision-repository.use-case.ts)</sub></li>
+<li class=""><code>project.workspace_verified</code> <sub>(apps/api/src/application/use-cases/iam/confirm-project-workspace.use-case.ts)</sub></li>
+<li class=""><code>proposed_action.approved</code> <sub>(apps/api/src/application/use-cases/actions/approve-action.use-case.ts)</sub></li>
+<li class=""><code>proposed_action.created</code> <sub>(apps/api/src/application/use-cases/actions/propose-action.use-case.ts)</sub></li>
+<li class=""><code>proposed_action.denied</code> <sub>(apps/api/src/application/use-cases/actions/deny-action.use-case.ts)</sub></li>
+<li class=""><code>proposed_action.executed</code> <sub>(apps/api/src/application/use-cases/actions/execute-git-action.use-case.ts)</sub></li>
+<li class=""><code>psychologist.analysis_completed</code> <sub>(apps/api/src/application/use-cases/execution/propose-hypotheses.use-case.ts)</sub></li>
+<li class=""><code>psychologist.analysis_failed</code> <sub>(apps/engine/lib/engine/workers/psychologist_worker.ex)</sub></li>
+<li class=""><code>psychologist.analysis_skipped</code> <sub>(apps/engine/lib/engine/workers/psychologist_worker.ex)</sub></li>
+<li class=""><code>psychologist.hypothesis_accepted</code> <sub>(apps/api/src/application/use-cases/execution/accept-hypothesis.use-case.ts)</sub></li>
+<li class=""><code>psychologist.hypothesis_accepted_for_anamnese</code> <sub>(apps/api/src/application/use-cases/execution/accept-hypothesis.use-case.ts)</sub></li>
+<li class=""><code>psychologist.hypothesis_dismissed</code> <sub>(apps/api/src/application/use-cases/execution/dismiss-hypothesis.use-case.ts)</sub></li>
+<li class=""><code>psychologist.hypothesis_proposed</code> <sub>(apps/api/src/application/use-cases/execution/propose-hypotheses.use-case.ts)</sub></li>
+<li class=""><code>rag.feedback</code> <sub>(apps/api/src/application/use-cases/rag/record-rag-feedback.use-case.ts)</sub></li>
+<li class=""><code>rag.search</code> <sub>(apps/api/src/application/use-cases/rag/hybrid-search.use-case.ts)</sub></li>
+<li class=""><code>readiness.confirmed</code> <sub>(apps/api/src/application/use-cases/agents/confirm-readiness.use-case.ts)</sub></li>
+<li class=""><code>session.activated</code> <sub>(apps/api/src/db/seed.ts)</sub></li>
+<li class=""><code>session.closed</code> <sub>(apps/engine/lib/engine/outbox/drain.ex)</sub></li>
+<li class=""><code>session.closed_abnormally</code> <sub>(apps/engine/lib/engine/outbox/drain.ex)</sub></li>
+<li class=""><code>session.created</code> <sub>(apps/api/src/application/use-cases/sessions/create-session.use-case.ts)</sub></li>
+<li class=""><code>session.draining</code> <sub>(apps/engine/lib/engine/shutdown.ex)</sub></li>
+<li class=""><code>tool.call</code> <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub></li>
+<li class=""><code>tool.result</code> <sub>(apps/engine/lib/engine/agents/arquiteto_server.ex)</sub></li>
+</ul>
+<!-- -->
+<hr/>
+<blockquote>
+<p><strong>TODO(humano):</strong> <code>type</code> — свободная <code>string</code> в
+<code>application/ports/session-event-repository.port.ts</code> — ничто не мешает
+опечатке молча создать новый тип, и ничто не гарантирует, что эта страница
+покрывает все. Union в TypeScript, экспортируемый из <code>packages/shared</code>,
+решил бы обе проблемы и позволил бы этому списку быть <strong>сгенерированным</strong>, а
+не поддерживаемым вручную. Пока его нет, список выше — датированное
+извлечение из точек эмиссии.</p>
+</blockquote></div><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_yZb9"><a href=https://github.com/daneiel/brabo/blob/dev/docs/reference/events.md target=_blank rel="noopener noreferrer" class=theme-edit-this-page><svg fill=currentColor height=20 width=20 viewBox="0 0 40 40" class=iconEdit_ANja aria-hidden=true><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"/></g></svg>Отредактировать эту страницу</a></div><div class="col lastUpdated_Kb4y"><span class=theme-last-updated>Последнее обновление<!-- --> <b><time datetime=2026-10-30T12:15:01.000Z itemprop=dateModified>30 окт. 2026 г.</time></b> от <b>Daniel Souza</b></span></div></div></footer></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Страница документа"><a class="pagination-nav__link pagination-nav__link--prev" href=/brabo/qa/ru/reference/configuration><div class=pagination-nav__sublabel>Предыдущая страница</div><div class=pagination-nav__label>Configuração</div></a><a class="pagination-nav__link pagination-nav__link--next" href=/brabo/qa/ru/reference/permissions><div class=pagination-nav__sublabel>Следующая страница</div><div class=pagination-nav__label>Permissões</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_wOiH thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href=#доменное-событие class="table-of-contents__link toc-highlight">Доменное событие</a><ul><li><a href=#сессия class="table-of-contents__link toc-highlight">Сессия</a><li><a href=#чат-и-агенты class="table-of-contents__link toc-highlight">Чат и агенты</a><li><a href=#предлагаемые-действия class="table-of-contents__link toc-highlight">Предлагаемые действия</a><li><a href=#backlog class="table-of-contents__link toc-highlight">Backlog</a><li><a href=#выполнение-и-gates class="table-of-contents__link toc-highlight">Выполнение и gates</a><li><a href=#делегирование-фаза-8b-adr-0038 class="table-of-contents__link toc-highlight">Делегирование (Фаза 8b, ADR 0038)</a><li><a href=#цикл-инструментов class="table-of-contents__link toc-highlight">Цикл инструментов</a><li><a href=#артефакты class="table-of-contents__link toc-highlight">Артефакты</a><li><a href=#архитектура-и-готовность class="table-of-contents__link toc-highlight">Архитектура и готовность</a><li><a href=#git-и-bootstrap class="table-of-contents__link toc-highlight">Git и bootstrap</a><li><a href=#стоимость class="table-of-contents__link toc-highlight">Стоимость</a><li><a href=#телеметрия-rag-rn-479480481 class="table-of-contents__link toc-highlight">Телеметрия RAG (RN-479/480/481)</a><li><a href=#локальный-runner-adr-01030104 class="table-of-contents__link toc-highlight">Локальный runner (ADR 0103/0104)</a><li><a href=#психолог class="table-of-contents__link toc-highlight">Психолог</a><li><a href=#анамнез-и-инструкции class="table-of-contents__link toc-highlight">Анамнез и инструкции</a></ul><li><a href=#broadcast class="table-of-contents__link toc-highlight">Broadcast</a><ul><li><a href=#кто-может-слушать-rn-108 class="table-of-contents__link toc-highlight">Кто может слушать (RN-108)</a></ul><li><a href=#span class="table-of-contents__link toc-highlight">Span</a><ul><li><a href=#доменные-имена class="table-of-contents__link toc-highlight">Доменные имена</a><li><a href=#имена-производные-от-кода class="table-of-contents__link toc-highlight">Имена, производные от кода</a></ul><li><a href=#как-событие-доходит-до-engine class="table-of-contents__link toc-highlight">Как событие доходит до engine</a><li><a href=#полный-инвентарь class="table-of-contents__link toc-highlight">Полный инвентарь</a></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Документация</div><ul class="footer__items clean-list"><li class=footer__item><a class=footer__link-item href=/brabo/qa/ru/getting-started>Первые шаги</a><li class=footer__item><a class=footer__link-item href=/brabo/qa/ru/architecture>Архитектура</a><li class=footer__item><a class=footer__link-item href=/brabo/qa/ru/business-rules>Бизнес-правила</a><li class=footer__item><a class=footer__link-item href=/brabo/qa/ru/runbook>Руководство по эксплуатации</a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Сообщество</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class=footer__link-item>Как внести вклад<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class=footer__link-item>Где попросить помощи<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class=footer__link-item>Безопасность<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Ещё</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class=footer__link-item>GitHub<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CHANGELOG.md target=_blank rel="noopener noreferrer" class=footer__link-item>CHANGELOG<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/LICENSE target=_blank rel="noopener noreferrer" class=footer__link-item>Лицензия MIT<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/THIRD_PARTY_NOTICES.md target=_blank rel="noopener noreferrer" class=footer__link-item>Уведомления о сторонних компонентах<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div></div><div class="footer__bottom text--center"><div class=footer__copyright>Copyright © 2026 Daniel Souza. Распространяется по лицензии MIT. Сторонние инструменты сохраняют собственные лицензии — см. Уведомления о сторонних компонентах.</div></div></div></footer></div></body>

@@ -1,0 +1,878 @@
+<!doctype html><html lang=ru dir=ltr class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-architecture" data-has-hydrated=false><head><meta charset=UTF-8><meta name=generator content="Docusaurus v3.10.2"><title data-rh=true>Архитектура | Brabo</title><meta data-rh=true name=viewport content="width=device-width, initial-scale=1.0"/><meta data-rh=true name=robots content="noindex, nofollow"/><meta data-rh=true name=twitter:card content=summary_large_image /><meta data-rh=true property=og:url content=https://daneiel.github.io/brabo/qa/ru/architecture /><meta data-rh=true property=og:locale content=ru /><meta data-rh=true property=og:locale:alternate content=pt_BR /><meta data-rh=true property=og:locale:alternate content=en /><meta data-rh=true property=og:locale:alternate content=zh_Hans /><meta data-rh=true name=docusaurus_locale content=ru /><meta data-rh=true name=docsearch:language content=ru /><meta data-rh=true name=docusaurus_version content=current /><meta data-rh=true name=docusaurus_tag content=docs-default-current /><meta data-rh=true name=docsearch:version content=current /><meta data-rh=true name=docsearch:docusaurus_tag content=docs-default-current /><meta data-rh=true property=og:title content="Архитектура | Brabo"/><meta data-rh=true name=description content="Карта Brabo — контейнеры, карта кода, поток хода агента, инварианты слоёв и известный долг."/><meta data-rh=true property=og:description content="Карта Brabo — контейнеры, карта кода, поток хода агента, инварианты слоёв и известный долг."/><meta data-rh=true name=keywords content="архитектура,карта кода,инварианты,harness,event log"/><link data-rh=true rel=icon href=/brabo/qa/ru/img/favicon.ico /><link data-rh=true rel=canonical href=https://daneiel.github.io/brabo/qa/ru/architecture /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/qa/architecture hreflang=pt-BR /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/qa/en/architecture hreflang=en /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/qa/ru/architecture hreflang=ru /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/qa/zh-Hans/architecture hreflang=zh-Hans /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/qa/architecture hreflang=x-default /><script data-rh=true type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","item":"https://daneiel.github.io/brabo/qa/ru/architecture","name":"Архитектура","position":1}]}</script><link rel=stylesheet href=/brabo/qa/ru/assets/css/styles.41f6b491.css /><script src=/brabo/qa/ru/assets/js/runtime~main.dbb2fc44.js defer></script><script src=/brabo/qa/ru/assets/js/main.c877ccbe.js defer></script></head><body><svg style="display: none;"><defs>
+<symbol id=theme-svg-external-link viewBox="0 0 24 24"><path fill=currentColor d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
+</defs></svg>
+<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme-524")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")),document.documentElement.setAttribute("data-theme-choice",t||"system")}(),function(){try{for(var[t,e]of new URLSearchParams(window.location.search).entries())if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}(),document.documentElement.setAttribute("data-announcement-bar-initially-dismissed",function(){try{return"true"===localStorage.getItem("docusaurus.announcement.dismiss-524")}catch(t){}return!1}())</script><div id=__docusaurus><link rel=preload as=image href=/brabo/qa/ru/img/logo.svg /><div role=region aria-label="Перейти к основному содержимому"><a class=skipToContent_CFOX href=#__docusaurus_skipToContent_fallback>Перейти к основному содержимому</a></div><div class="theme-announcement-bar announcementBar_WKrp" role=banner><div class="content_yzPg announcementBarContent_fSaH">Fase de teste: a QA é promovida automaticamente a cada merge na dev e ainda não é considerada ambiente validado.</div></div><nav aria-label="Главная навигация" class="theme-layout-navbar navbar navbar--fixed-top"><div class=navbar__inner><div class="theme-layout-navbar-left navbar__items"><button aria-label="Переключить навигационную панель" aria-expanded=false class="navbar__toggle clean-btn" type=button><svg width=30 height=30 viewBox="0 0 30 30" aria-hidden=true><path stroke=currentColor stroke-linecap=round stroke-miterlimit=10 stroke-width=2 d="M4 7h22M4 15h22M4 23h22"/></svg></button><a class=navbar__brand href=/brabo/qa/ru/><div class=navbar__logo><img src=/brabo/qa/ru/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--light_vzqw"/><img src=/brabo/qa/ru/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--dark_FhTf"/></div><b class="navbar__title text--truncate">Brabo</b></a><a aria-current=page class="navbar__item navbar__link navbar__link--active" href=/brabo/qa/ru/>Документация</a><a class="navbar__item navbar__link" href=/brabo/qa/ru/runbook>Руководство по эксплуатации</a><a class="navbar__item navbar__link" href=/brabo/qa/ru/adr>Решения (ADR)</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a href=# aria-haspopup=true aria-expanded=false role=button class=navbar__link><svg viewBox="0 0 24 24" width=20 height=20 aria-hidden=true class=iconLanguage_g_CG><path fill=currentColor d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg>Русский</a><ul class=dropdown__menu><li><a href=/brabo/qa/architecture target=_self rel="noopener noreferrer" class=dropdown__link lang=pt-BR>Português (Brasil)</a><li><a href=/brabo/qa/en/architecture target=_self rel="noopener noreferrer" class=dropdown__link lang=en>English</a><li><a href=/brabo/qa/ru/architecture target=_self rel="noopener noreferrer" class="dropdown__link dropdown__link--active" lang=ru>Русский</a><li><a href=/brabo/qa/zh-Hans/architecture target=_self rel="noopener noreferrer" class=dropdown__link lang=zh-Hans>简体中文</a></ul></div><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a href=# aria-haspopup=true aria-expanded=false role=button class=navbar__link>qa</a><ul class=dropdown__menu><li><a href=https://daneiel.github.io/brabo/prd/ target=_blank rel="noopener noreferrer" class=dropdown__link>prd — estável<svg width=12 height=12 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/qa/ target=_blank rel="noopener noreferrer" class=dropdown__link>qa — candidata ✓<svg width=12 height=12 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/dev/ target=_blank rel="noopener noreferrer" class=dropdown__link>dev — в разработке<svg width=12 height=12 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><div class="toggle_pnX7 colorModeToggle_Dj3Z"><button class="clean-btn toggleButton_DKER toggleButtonDisabled_qzkp" type=button disabled title="системный режим" aria-label="Переключение между темным и светлым режимом (сейчас используется системный режим)"><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL lightToggleIcon_E8tM"><path fill=currentColor d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL darkToggleIcon_rXjT"><path fill=currentColor d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL systemToggleIcon_zwCm"><path fill=currentColor d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"/></svg></button></div><div class=navbarSearchContainer_zRAa><div class="navbar__search searchBarContainer_eGzj" dir=ltr><svg aria-hidden=true class=searchIcon_PXpx focusable=false viewBox="0 0 16 16"><path fill=currentColor d="M6.02945 10.20327a4.17382 4.17382 0 1 1 4.17382-4.17382 4.15609 4.15609 0 0 1-4.17382 4.17382Zm9.69195 4.2199-4.8225-4.82338A5.88021 5.88021 0 0 0 12.058 6.02856 6.00467 6.00467 0 1 0 9.59979 10.8989l4.82338 4.82338a.89729.89729 0 0 0 1.29912 0 .89749.89749 0 0 0-.00087-1.29909Z"/></svg><input placeholder=Поиск aria-label=Search class="navbar__search-input searchInput_xOBI" value="" /><div class="loadingRing_JccP searchBarLoadingRing_aTss"><div></div><div></div><div></div><div></div></div></div></div></div></div><div role=presentation class=navbar-sidebar__backdrop></div></nav><div id=__docusaurus_skipToContent_fallback class="theme-layout-main main-wrapper mainWrapper_WJkx"><div class=docsWrapper_mIeg><button aria-label="Прокрутка к началу" class="clean-btn theme-back-to-top-button backToTopButton_Afc8" type=button></button><div class=docRoot_XZYc><aside class="theme-doc-sidebar-container docSidebarContainer_FPqZ"><div class=sidebarViewport_waOe><div class=sidebar_RQC4><nav aria-label="Боковая панель документации" class="menu thin-scrollbar menu_ZM4U menuWithAnnouncementBar_EJk2"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/qa/ru/><span class=categoryLinkLabel_jKch>🚀 Начните здесь</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/><span class=linkLabel_CzBh>Введение</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/getting-started><span class=linkLabel_CzBh>Первые шаги</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/tutorials/from-zero-to-deliverable><span class=linkLabel_CzBh>С нуля до готового результата</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/tutorials/interface-antes-e-depois-shadcn><span class=linkLabel_CzBh>Interface antes e depois do shadcn (31/10/2026)</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role=button aria-expanded=true href=/brabo/qa/ru/architecture><span class=categoryLinkLabel_jKch>🏗️ Архитектура</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link menu__link--active" aria-current=page tabindex=0 href=/brabo/qa/ru/architecture><span class=linkLabel_CzBh>Архитектура</span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist" tabindex=0 href=/brabo/qa/ru/adr><span class=categoryLinkLabel_jKch>Решения (ADR)</span></a><button aria-label="Развернуть категорию 'Решения (ADR)'" aria-expanded=false type=button class="clean-btn menu__caret"></button></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/qa/ru/business-rules><span class=categoryLinkLabel_jKch>📐 Правила</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/business-rules><span class=linkLabel_CzBh>Бизнес-правила</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/business-rules/custo><span class=linkLabel_CzBh>Стоимость и metering</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/business-rules/autenticacao><span class=linkLabel_CzBh>Аутентификация</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/qa/ru/reference/configuration><span class=categoryLinkLabel_jKch>📖 Справочник</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/reference/configuration><span class=linkLabel_CzBh>Конфигурация</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/reference/events><span class=linkLabel_CzBh>События</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/reference/permissions><span class=linkLabel_CzBh>Права доступа</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/reference/artifacts><span class=linkLabel_CzBh>Артефакты</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/reference/git-providers><span class=linkLabel_CzBh>Git-провайдеры</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/reference/internal-api><span class=linkLabel_CzBh>Внутренний API</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/reference/scripts><span class=linkLabel_CzBh>Скрипты и команды</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/reference/rulesets><span class=linkLabel_CzBh>Правила репозитория (rulesets)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/reference/paridade-de-traducao><span class=linkLabel_CzBh>Паритет переводов</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/reference/brb><span class=linkLabel_CzBh>Реестр BRB</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/security-surface><span class=linkLabel_CzBh>Открытая поверхность api</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/reference/api><span class=linkLabel_CzBh>Справочник API</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/qa/ru/explanation/documentation-workflow><span class=categoryLinkLabel_jKch>💡 Пояснения</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true tabindex=0 href=/brabo/qa/ru/explanation/documentation-workflow><span class=categoryLinkLabel_jKch>Процесс и конвейер</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/explanation/documentation-workflow><span class=linkLabel_CzBh>Синхронизация документации</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/explanation/branching-policy><span class=linkLabel_CzBh>Политика веток</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/explanation/cadeia-de-suprimentos-do-ci><span class=linkLabel_CzBh>Цепочка поставок CI</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/explanation/gates><span class=linkLabel_CzBh>Gates и то, как они измеряются</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/explanation/observability><span class=linkLabel_CzBh>Наблюдаемость</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/explanation/modelo-de-time><span class=linkLabel_CzBh>Модель команды и поток результатов</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/qa/ru/explanation/primeiro-dogfooding><span class=categoryLinkLabel_jKch>Проверки и измерения</span></a></div><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/qa/ru/explanation/historico-de-fases><span class=categoryLinkLabel_jKch>История фаз</span></a></div><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/qa/ru/explanation/localizacao><span class=categoryLinkLabel_jKch>Локализация</span></a></div><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/qa/ru/explanation/tanstack-ai><span class=categoryLinkLabel_jKch>Технические заметки</span></a></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/qa/ru/runbook><span class=categoryLinkLabel_jKch>🛠️ Эксплуатация</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/runbook><span class=linkLabel_CzBh>Руководство по эксплуатации</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/qa/ru/glossary><span class=categoryLinkLabel_jKch>📚 Словарь</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/glossary><span class=linkLabel_CzBh>Глоссарий</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true><span class=categoryLinkLabel_jKch>🤝 Участие</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>Как внести вклад</span><svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>Где попросить помощи</span><svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>Сообщить об уязвимости</span><svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></ul></nav></div></div></aside><main class=docMainContainer_ia8v><div class="container padding-top--md padding-bottom--lg"><div class=row><div class="col docItemCol_xjE4"><div class=docItemContainer_cPej><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_sZul" aria-label="Навигационная цепочка текущей страницы"><ul class=breadcrumbs><li class=breadcrumbs__item><a aria-label="Главная страница" class=breadcrumbs__link href=/brabo/qa/ru/><svg viewBox="0 0 24 24" class=breadcrumbHomeIcon_AUjL><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill=currentColor /></svg></a><li class=breadcrumbs__item><span class=breadcrumbs__link>🏗️ Архитектура</span><li class="breadcrumbs__item breadcrumbs__item--active"><span class=breadcrumbs__link>Архитектура</span></ul></nav><div class="tocCollapsible_nbAK theme-doc-toc-mobile tocMobile_r92C"><button type=button class="clean-btn tocCollapsibleButton_hcyq">Содержание этой страницы</button></div><div class="alert alert--warning margin-bottom--md" role=note data-faixa-de-traducao="">Перевод от 2026-10-16; оригинал с тех пор изменился.</div><div class="theme-doc-markdown markdown"><header><h1>Архитектура</h1></header>
+<p>Этот документ — карта для тех, кто будет <strong>работать</strong> с кодом. Он говорит,
+с чего начинать чтение, что обещает каждая граница и что, как уже известно,
+кривое.</p>
+<p>Решения и их обоснования живут в <a class="" href=/brabo/qa/ru/adr>ADR</a> — их 216, и многие
+фиксируют реальный дефект, найденный при исполнении. Здесь мы не
+повторяем аргумент: мы указываем на него.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=the-outside-view>Взгляд снаружи<a href=#the-outside-view class=hash-link aria-label="Прямая ссылка на Взгляд снаружи" title="Прямая ссылка на Взгляд снаружи" translate=no>​</a></h2>
+<p>Brabo получает <strong>продуктовое намерение</strong> («хочу систему, которая делает X») и
+возвращает <strong>git-репозиторий с кодом, тестами и историей решений</strong>,
+произведённый командой ИИ-агентов. Между входом и выходом любое действие с
+эффектом во внешнем мире — запуск команды, коммит, открытие PR, трата
+токенов — проходит через запрос одобрения, который решает человек.</p>
+<p>Снаружи это веб-приложение. Отличает его то, что работу выполняют
+долгоживущие процессы, общающиеся с языковыми моделями, и что система
+построена так, чтобы <strong>ничего не происходило без следа и без разрешения</strong>.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=containers>Контейнеры<a href=#containers class=hash-link aria-label="Прямая ссылка на Контейнеры" title="Прямая ссылка на Контейнеры" translate=no>​</a></h2>
+<!-- -->
+<p>Две вещи на этой схеме не очевидны и многое объясняют:</p>
+<p><strong>Engine никогда не говорит с LLM или с git напрямую.</strong> Он просит api. Именно
+это гарантирует, что у metering, бюджета и конвейера одобрения нет обходов —
+нет пути, который бы их миновал.</p>
+<p><strong>Связь api→engine двойная.</strong> Асинхронное событие через <em>transactional
+outbox</em> в Postgres (потребляемое Oban) и внутренний HTTP для синхронной
+команды. Outbox существует, потому что запись состояния и публикация события
+должны быть одной транзакцией; HTTP существует, потому что некоторым
+операциям нужен немедленный ответ.</p>
+<p>Outbox опустошает три <code>aggregate_type</code>: <code>session</code> (с Фазы 5), <code>task</code> (Фаза 12b
+— <code>task.gate_resolved</code>/<code>task.became_claimable</code>, перепланирование dev agent
+после того, как gate разрешается или новая задача становится доступной) и
+<code>container</code> (<a class="" href=/brabo/qa/ru/adr/0143-agentes-de-dev-so-depois-do-container>ADR 0143</a>
+/<a class="" href=/brabo/qa/ru/business-rules#rn-502>RN-502</a> — <code>container.running</code>, присоединяемый в
+той же транзакции, что регистрирует достижение контейнером проекта
+состояния <code>running</code>, чтобы dev agents, которых его отсутствие поставило на
+стоянку в <code>:idle</code>, проснулись сами; собственный агрегат, а не
+позаимствованный <code>task</code>, потому что событие не касается никакой задачи).
+Причина, по которой это outbox, а не синхронный HTTP-вызов, как остальные:
+перезапуск engine между вердиктом gate и реакцией агента не может потерять
+сигнал — строка переживает процесс, который её прочитал бы, а HTTP не
+пережил бы смерть того, кто ждал ответа.
+Dev agent, который ПАДАЕТ (любой выход, кроме <code>:normal</code>/<code>:shutdown</code>), не
+считается завершённым: <code>Engine.Dev.Monitor</code> записывает долговременный
+<code>agent.error</code> (источник <code>infra</code>) и перезапускает его из собственной строки в
+<code>dev_agent_states</code>, до трёх раз; прерванная задача блокируется с диагнозом
+уже существовавшим восстановлением после перезапуска
+(<a class="" href=/brabo/qa/ru/business-rules#rn-742>RN-742</a>).
+<code>dev_agent_states</code> получила <code>consecutive_blocked</code>/<code>max_consecutive_blocked</code>
+(предохранитель, <a class="" href=/brabo/qa/ru/business-rules/custo#rn-047>RN-047</a>); полное решение — в
+<a class="" href=/brabo/qa/ru/adr/0045-reagendamento-por-evento-do-dev-agent>ADR 0045</a>.
+Задача, заблокированная из-за временного сбоя сети/провайдера (DNS, сброшенное
+соединение, 5xx/429), снова разблокируется job Oban через 1, 3 и 10 мин (до
+трёх раз, тем же сценарием разблокировки, что и у человека), а dev agent
+делает паузу на минуту вместо того, чтобы брать следующую задачу
+(<a class="" href=/brabo/qa/ru/business-rules#rn-864>RN-864</a>).</p>
+<p>Агенты gate (<code>QaLeadServer</code>/<code>SecOpsAgentServer</code>) не проходят через outbox на
+промежуточных переходах (<code>correct</code>/<code>run_secops</code> остаются прямым вызовом в
+памяти — механическое доказательство в комментарии
+<code>record-gate-verdict.use-case.ts</code>: только ТЕРМИНАЛЬНЫЕ исходы,
+<code>done</code>/<code>blocked</code>, путешествуют через outbox), поэтому они получили ТУ ЖЕ
+страховочную сетку, что уже была у dev agents: <code>gate_states</code>, плюс
+<code>GateRescuer</code>, который обходит застрявшие циклы и возобновляет их сам, — без
+новой таблицы для пути outbox, потому что проблема была не в отсутствии
+outbox, а в отсутствии долговременного состояния для того, что происходит
+МЕЖДУ двумя вызовами в одном процессе. См.
+<a class="" href=/brabo/qa/ru/business-rules#rn-140>RN-140</a>, <a class="" href=/brabo/qa/ru/adr/0067-o-gate-sobrevive-ao-restart>ADR 0067</a>.</p>
+<p>У gate QA есть ТРЕТИЙ вердикт помимо <code>approved</code>/<code>changes_requested</code>:
+<code>needs_user_decision</code> — для требования, которое пользователь никогда не
+подтверждал (или которому противоречит действующее решение). Он не
+расходует исправление; QA Lead консолидирует его выше <code>approved</code>, а цикл
+СТАВИТСЯ НА СТОЯНКУ механизмом
+<a class="" href=/brabo/qa/ru/adr/0207-ciclo-de-gate-velho-estaciona>ADR 0207</a>, пока пользователь не
+ответит на вопрос, что его возобновляет. Разговорная сторона того же правила —
+инструмент <code>declare_open_question</code> (Criativo, PO, Arquiteto, Dev Lead),
+записывающий <code>artifact.open_question</code>; ответы пользователя возвращаются к dev и
+QA как «решения пользователя» в dev-context (<a class="" href=/brabo/qa/ru/business-rules#rn-862>RN-862</a>,
+<a class="" href=/brabo/qa/ru/adr/0214-pergunta-em-aberto-vira-pendencia>ADR 0214</a>).</p>
+<p>Тот, кто ЗАПРАШИВАЕТ gate, никогда не является самим gate:
+<code>Engine.Gates.Dispatcher</code> — behaviour с пятью callback (QA для PR и SecOps,
+два детерминированных gate инфраструктуры и AppSec проектирования — gate
+стратегии QA ушёл с
+<a class="" href=/brabo/qa/ru/adr/0192-plano-de-teste-depois-da-entrega>ADR 0192</a>, когда план
+тестирования стал первым шагом самого QA для PR), чья единственная работа —
+поднять GenServer на проект при необходимости и сделать в него cast.
+Косвенность существует ради тестов вызывающих: <code>Engine.Agents.DevLeadTools</code>
+проверяется ЛЁГКИМ тестом без sandbox Ecto, и подъём настоящего GenServer там
+лишь для доказательства того, что gate был ЗАПРОШЕН, привязал бы тест Dev
+Lead к базе. Самый новый из пяти, <code>run_appsec_design/2</code>, закрыл последний
+gate, который был вызываемым без вызывающего в production:
+<code>assess_implementability</code> теперь запрашивает модель угроз проектирования
+истории ПАРАЛЛЕЛЬНО — вердикт никогда её не ждёт, а запрос происходит один
+раз на историю (<a class="" href=/brabo/qa/ru/business-rules#rn-539>RN-539</a>,
+<a class="" href=/brabo/qa/ru/adr/0090-qa-estrategia-e-appsec-segundo-momento>ADR 0090</a>).</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=code-map>Карта кода<a href=#code-map class=hash-link aria-label="Прямая ссылка на Карта кода" title="Прямая ссылка на Карта кода" translate=no>​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=appsapi--nestjs-906-files-in-src-measured-2026-09-25><code>apps/api</code> — NestJS, 906 файлов в <code>src/</code> (измерено 2026-09-25)<a href=#appsapi--nestjs-906-files-in-src-measured-2026-09-25 class=hash-link aria-label="Прямая ссылка на appsapi--nestjs-906-files-in-src-measured-2026-09-25" title="Прямая ссылка на appsapi--nestjs-906-files-in-src-measured-2026-09-25" translate=no>​</a></h3>
+<p>Четыре слоя, и порядок важен:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>каталог<th>что это<th>начните с<th>для чего <strong>не</strong> годится<tbody><tr><td><code>src/domain/</code> (72)<td>чистое бизнес-правило. Без IO, без фреймворка<td><code>actions/decide.ts</code> — сердце одобрения<td>не знает, что такое HTTP, база или NestJS<tr><td><code>src/application/</code> (177)<td>сценарии использования. Оркеструют домен и порты<td><code>use-cases/sessions/</code><td>не хранит правил; если там есть бизнес-<code>if</code>, он не на своём месте<tr><td><code>src/infrastructure/</code> (76)<td>реализации портов: Drizzle, HTTP-клиенты, криптография<td><code>persistence/drizzle/</code><td>ничего не решает<tr><td><code>src/interfaces/http/</code> (105)<td>контроллеры, guards, DTO<td><code>auth/jwt-auth.guard.ts</code><td>ни правил, ни запросов</table>
+<p>Символы для grep, когда заблудились: <code>decide(</code>, <code>assertTransition</code>,
+<code>@RequireRole</code>, <code>PROTECTED_BRANCHES</code>, <code>EncryptionService</code>.</p>
+<p><strong>Точка входа:</strong> <code>src/main.ts</code> — и порядок <code>imports</code> в нём значим
+(<code>./tracing-boot</code> идёт первым намеренно; автоинструментирование
+OpenTelemetry не подхватывает уже загруженный модуль, и отдельный модуль —
+то, что это гарантирует: TypeScript поднимает все <code>require</code> наверх, поэтому
+вызов, записанный между импортами, выполнился бы слишком поздно).</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=appsengine--elixirotp-219-files-in-lib-measured-2026-09-25><code>apps/engine</code> — Elixir/OTP, 219 файлов в <code>lib/</code> (измерено 2026-09-25)<a href=#appsengine--elixirotp-219-files-in-lib-measured-2026-09-25 class=hash-link aria-label="Прямая ссылка на appsengine--elixirotp-219-files-in-lib-measured-2026-09-25" title="Прямая ссылка на appsengine--elixirotp-219-files-in-lib-measured-2026-09-25" translate=no>​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>модуль<th>что это<th>начните с<tbody><tr><td><code>harness/</code> (33)<td>сборка контекста, ToolLoop, сжатие. <strong>Ни один вызов LLM не происходит вне его</strong><td><code>harness/tool_loop/</code><tr><td><code>dev/</code> (15)<td>dev agents, worktrees, монитор<td><code>dev/dev_agent_server.ex</code><tr><td><code>gates/</code> (20)<td>область QA (Lead + Автоматизация, подспециальности Performance/Безопасность и стратегии QA — второй этап Lead, ADR 0090 — все с LLM) и SecOps (детерминированный)<td><code>gates/qa_lead_server.ex</code><tr><td><code>infra/</code> (9)<td>область Infra (разговорный Lead в рамках сессии — с <a class="" href=/brabo/qa/ru/business-rules#rn-617>RN-617</a> седьмой разговорный агент, доступный через composer и выполняющий свои ходы в <code>TurnoAssincrono</code>, — + подспециальность Workflows через ToolLoop — два архитектурных семейства в одной области, см. RN-037)<td><code>infra/infra_lead_server.ex</code><tr><td><code>sessions/</code> (9)<td>жизненный цикл сессии, реестр <code>:global</code><td><code>sessions/session_server.ex</code><tr><td><code>actions/</code> (9)<td>исполнители терминала и git, детекторы lint/сканеров<td><code>actions/git_executor.ex</code><tr><td><code>agents/</code> (16)<td>Criativo, PO, Arquiteto, Dev Lead, Staff (ADR 0088, спящий для автоматического запуска) — каждый ход выполняется в супервизируемом Task (<code>TurnoAssincrono</code>, RN-122), а не внутри <code>handle_call</code>, поэтому <code>:cancel</code> действительно может его прервать<td><code>agents/turno_assincrono.ex</code><tr><td><code>psychologist/</code> (6) · <code>anamnese/</code> (6)<td>анализ и улучшение команды<td>—</table>
+<p><strong>Точка входа:</strong> <code>lib/engine/application.ex</code> — там всё дерево супервизии, и
+это лучший файл, чтобы понять, что работает.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=appsbroker--nodets-9-files-in-src-measured-2026-09-25><code>apps/broker</code> — Node/TS, 9 файлов в <code>src/</code> (измерено 2026-09-25)<a href=#appsbroker--nodets-9-files-in-src-measured-2026-09-25 class=hash-link aria-label="Прямая ссылка на appsbroker--nodets-9-files-in-src-measured-2026-09-25" title="Прямая ссылка на appsbroker--nodets-9-files-in-src-measured-2026-09-25" translate=no>​</a></h3>
+<p>Единственный процесс продукта с доступом к Docker daemon
+(<a class="" href=/brabo/qa/ru/adr/0130-broker-de-container>ADR 0130</a>) и самый маленький сервис здесь:
+без фреймворка, <code>node:http</code>, шесть маршрутов (измерено 2026-09-25 в
+<code>src/servidor.ts</code>).</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>файл<th>что это<tbody><tr><td><code>src/operacoes.ts</code><td>ПЯТЬ операций и составление spec. Ничто, что становится <code>docker run</code>, не приходит извне<tr><td><code>src/servidor.ts</code><td>закрытый список маршрутов, проверка токена и таблица сбоев (статус + <code>origem</code>)<tr><td><code>src/api-client.ts</code><td>как он ЧИТАЕТ решение Arquiteto в api — вызов, из-за которого он не принимает spec<tr><td><code>src/config.ts</code><td>четыре переменные окружения и отказ подниматься в production с публичным токеном репозитория</table>
+<p><strong>Точка входа:</strong> <code>src/index.ts</code>. Самого доступа к Docker здесь нет: он идёт из
+<code>packages/docker-port</code>, того же файла, что использует runner.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=appsweb--react-19-487-files-in-src-measured-2026-09-25><code>apps/web</code> — React 19, 487 файлов в <code>src/</code> (измерено 2026-09-25)<a href=#appsweb--react-19-487-files-in-src-measured-2026-09-25 class=hash-link aria-label="Прямая ссылка на appsweb--react-19-487-files-in-src-measured-2026-09-25" title="Прямая ссылка на appsweb--react-19-487-files-in-src-measured-2026-09-25" translate=no>​</a></h3>
+<p><code>src/lib/api-types.ts</code> и <code>src/lib/activity.ts</code> — два файла, которые стоит
+прочитать первыми: первый — контракт с api, второй классифицирует 40 типов
+событий лога во что-то отображаемое — это лучший источник истины о том, что
+означает каждое событие.</p>
+<p>Три вывода из одного event log, отвечающие на разные вопросы:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>файл<th>отвечает<tbody><tr><td><code>lib/activity.ts</code><td>«что произошло» — хронологическая лента<tr><td><code>lib/agent-status.ts</code><td>«кто существует и в каком состоянии» — карточки команды<tr><td><code>lib/timeline-tree.ts</code><td>«что сделал каждый агент и что делает СЕЙЧАС» — дерево</table>
+<p><code>lib/aprovacoes.ts</code> отвечает на четвёртый вопрос, и он идёт не из event log:
+«что произойдёт, если я одобрю». Глагол и фраза каждого типа
+<code>proposed_action</code> живут там, и их потребляют три экрана решений — очередь
+Aprovações, карточка внутри чата и вкладка Insights
+(<a class="" href=/brabo/qa/ru/business-rules#rn-096>RN-096</a>).</p>
+<p><strong>Объединение <code>ActionType</code> БЫЛО копией, и копия устарела — дважды, в
+production</strong> (три типа bootstrap Gitflow; затем
+<code>parallelize</code>/<code>raise_max_parallel</code>), оба раза незаметно для компилятора,
+потому что <code>apps/api</code> не является зависимостью <code>apps/web</code>. ADR 0116 закрыл
+класс: <code>ActionType</code> теперь генерируется <code>openapi-typescript</code> из
+<code>docs/reference/openapi.json</code> (<code>lib/api-types.generated.ts</code>, реэкспортируемый
+<code>lib/api-types.ts</code>), а не набирается вручную, и компилятор теперь требует,
+чтобы карты <code>Record&lt;ActionType, ...></code> в <code>lib/aprovacoes.ts</code> были исчерпывающими
+при каждой правке. Остальной <code>api-types.ts</code> — ~1600 строк — по-прежнему
+написан вручную; мигрировал только этот тип, с доказанной повторяющейся
+стоимостью. <code>lib/aprovacoes.test.ts</code> тоже остаётся, но для более узкой
+работы: ему больше не нужно ловить ОТСУТСТВУЮЩУЮ запись (это ловит
+компилятор), только плохую — слишком короткую фразу, без точки, сырой
+<code>snake_case</code>, просачивающийся в португальскую прозу. В сомнении UI всё равно
+деградирует, а не роняет дерево React.</p>
+<p>Дерево инвертирует ось ленты (сначала агент, потом время), потому что в
+сессии с Criativo, PO, Arquiteto и N dev хронологическая колонка не могла
+ответить, кто что делал. Ни у одного из трёх нет собственного состояния или
+маршрута — все выводятся из одних и тех же событий, и событие, которого нет в
+логе, не появляется ни в одном из них.</p>
+<p><strong>Область чтения: экран проекта спрашивает по сессии, экран списка — по
+workspace.</strong> Внутри проекта запросы идут по сессии и по проекту, что является
+естественным срезом открытого. Но дашборд и боковая панель показывают ВСЕ
+проекты, и там срез по проекту превращается в N+1 — было семь запросов с
+опросом на карточку, 3.824 запр./мин при 23 проектах против лимита 300, и
+экран ронял сам себя ответами 429. Оба читают
+<code>GET /workspaces/:id/projects-summary</code> — read model, пересекающую агрегаты
+(git, бюджет, сессия, backlog, архитектура), число обращений к базе в которой
+не растёт с количеством проектов (<a class="" href=/brabo/qa/ru/business-rules#rn-090>RN-090</a>).</p>
+<p>Ящик колокольчика следует тому же срезу, с одним отличием, которое стоит
+зафиксировать: ему нужна точка отсечки прочитанного для каждого проекта, а
+эта точка — <code>seq</code>, хранящийся в браузере смотрящего (<code>lib/read-state.ts</code>), —
+у сервера её нет и не будет «отметить как прочитанное». Поэтому клиент
+<strong>отправляет</strong> карту <code>project → afterSeq</code> в теле
+<code>POST /workspaces/:id/unread-events</code>, которое является чтением, несмотря на
+глагол, и возвращает <code>200</code> (<a class="" href=/brabo/qa/ru/business-rules#rn-091>RN-091</a>). Глагол
+вытекает из тела, а не из мутации: это десятки пар, а строка запроса такого
+размера ломается на прокси, не говоря уже о том, что кладёт id проектов в
+логи доступа.</p>
+<p>Этот endpoint возвращает ФАКТЫ из event log, а не собранные компоненты:
+<code>lib/agents.ts</code> (кто lead, иконка, цвет) и <code>rosterFromFacts</code>
+(<code>lib/agent-status.ts</code>) остаются работой web, а правило присутствия — то же,
+что использует панель команды. Это та же граница, что у трёх выводов выше:
+api говорит, что произошло, а web решает, что из этого рисуется.</p>
+<p>Две проверки UI автоматические: контраст (<code>lib/contraste.ts</code>, тест по
+<code>design/tokens.css</code>) и раскладка (<code>scripts/dev/validacao-visual.js</code>,
+запускаемый в браузере). Объяснены в <code>design/README.md</code>.</p>
+<p><strong>Установка решает, что предлагает мастер проекта.</strong> <code>getProjectsBase</code>
+(<code>lib/api-client.ts</code>) читает <code>GET /workspaces/:workspaceId/projects-base</code> —
+единую базу смонтированных проектов этой установки (<a class="" href=/brabo/qa/ru/adr/0141-base-unica-dos-projetos-montados>ADR
+0141</a>), — и мастер Нового
+проекта — её единственный вызывающий (<a class="" href=/brabo/qa/ru/business-rules#rn-513>RN-513</a>).
+<code>projectsBase: null</code> — нормальное состояние, а не сбой: у установки нет
+<code>BRABO_PROJECTS_BASE</code>, поэтому карточка смонтированной папки просто не
+предлагается, а <code>container</code> остаётся по умолчанию. То же верно, пока ответ в
+пути и когда запрос ПРОВАЛИВАЕТСЯ — неизвестное никогда не становится
+предложением, то же правило, что в
+<a class="" href=/brabo/qa/ru/business-rules#rn-088>RN-088</a>/<a class="" href=/brabo/qa/ru/business-rules#rn-468>RN-468</a>. С базой
+карточка приходит ПРЕДВЫБРАННОЙ, а поле пути открывается с <code>&lt;base>/&lt;slug></code>,
+составленным <code>caminhoSugeridoNaBase</code> (<code>lib/wizard.ts</code>) — чистой функцией рядом
+с <code>caminhoDentroDaBase</code>, которая отвечает «находится ли этот путь под базой?»
+по СЕГМЕНТУ и отражает <code>dentroDoEscopo</code> из api. Ни предвыбор, ни подсказка не
+перезаписывают человеческий выбор.</p>
+<p><strong>Выбор папки — единственное чтение web с ДВУМЯ ТРАНСПОРТАМИ</strong>, а интерфейс,
+делающий его одним, живёт в <code>lib/fs-browser.ts</code>
+(<a class="" href=/brabo/qa/ru/business-rules#rn-504>RN-504</a>). У <code>FsBrowser</code> — <code>listarDiretorio</code> /
+<code>diretorioInicial</code> / <code>fechar</code> — две реализации, и они говорят не с одной и той
+же машиной: <code>criarFsBrowserViaApi(workspaceId)</code> вызывает
+<code>GET /workspaces/:workspaceId/project-folders</code> в api, жёстко ограниченный
+<code>BRABO_PROJECTS_BASE</code> (<a class="" href=/brabo/qa/ru/adr/0141-base-unica-dos-projetos-montados>ADR 0141</a>),
+тогда как <code>connectFsBrowserChannel(projectId)</code> (<code>lib/fs-browser-channel.ts</code>)
+говорит через Phoenix-канал <code>terminal:&lt;projectId></code> и читает диск ПОЛЬЗОВАТЕЛЯ
+через runner.</p>
+<p>Интерфейс был извлечён из модуля канала именно потому, что у него перестала
+быть единственная реализация. <code>FolderBrowserModal</code> выбирает между ними через
+размеченное объединение — <code>origem: { tipo: 'api'; workspaceId } | { tipo: 'runner'; projectId }</code>, а не два необязательных props, чтобы «ни одного» и
+«оба» не были представимыми состояниями, которые компоненту пришлось бы
+обрабатывать во время выполнения, — и его тело никогда не узнаёт, что
+получило. По <code>origem</code> ветвятся только три вещи: какая фабрика работает,
+какие ярлыки существуют (<code>/</code> не предлагается транспортом api; он вне базы по
+построению, и кнопка могла бы закончиться лишь 400) и имеет ли смысл
+<code>RunnerOnboardingPanel</code>.</p>
+<p><code>ListagemResultado</code> получил три НЕОБЯЗАТЕЛЬНЫХ поля — <code>arquivos</code>, <code>simbolicos</code>,
+<code>truncado</code>, — и они необязательны, потому что только транспорт api считает то,
+что исключил. Протокол runner (<code>FsEntrada</code> в <code>apps/runner/src/channel.ts</code>)
+возвращает папки и файлы вперемешку и ничего не считает; заполнить там нули
+означало бы утверждать «ничего не осталось за бортом», а это не то же, что
+не знать.</p>
+<p>RN-504 направила ОБА режима в api и объявила цену: для <code>runner</code> список
+перестал быть машиной пользователя и стал базой. Это было принято, потому
+что режим <code>runner</code> должен был уйти из мастера создания, — он не ушёл, и
+<a class="" href=/brabo/qa/ru/business-rules#rn-533>RN-533</a> (<a class="" href=/brabo/qa/ru/adr/0151-base-consentida-no-runner>ADR 0151</a>
+пункт 7) это отменяет. Теперь транспорт выбирает РЕЖИМ, потому что они
+отвечают на разные вопросы: <code>mounted</code> спрашивает api (ваша папка живёт под
+базой, на СЕРВЕРЕ), <code>runner</code> спрашивает локального агента (ваша папка живёт на
+машине, которую сервер не видит). Ветвь <code>runner</code> опирается на проект, который
+мастер уже создал заранее (<a class="" href=/brabo/qa/ru/business-rules#rn-437>RN-437</a>); когда это
+создание проваливается, никакое модальное окно не открывается, потому что
+откат на api показал бы базу СЕРВЕРА под подписью «ваша машина».</p>
+<p>Сбой несёт РАЗМЕЧЕННУЮ причину (<code>MotivoDeFalhaDoAgente</code>): <code>sem-agente</code> — это
+сервер, УТВЕРЖДАЮЩИЙ, что runner нет, <code>sem-resposta</code> — таймаут, упавший socket
+или отвергнутый ticket, — незнание, названное незнанием
+(<a class="" href=/brabo/qa/ru/business-rules#rn-088>RN-088</a>/<a class="" href=/brabo/qa/ru/business-rules#rn-468>RN-468</a>).
+Компонент решал по <code>includes('Nenhum runner conectado')</code>, сопоставляя
+фразу на pt-BR, живущую в <code>.ex</code> engine; сопоставление подстроки теперь живёт
+ровно в одном месте — модуле, владеющем протоколом канала, — и переписанное
+сообщение engine деградирует до <code>sem-resposta</code>, но никогда до «агент есть».
+Обе причины монтируют <code>EsperaDoRunner</code> — ожидание RN-474, ПЕРЕИСПОЛЬЗОВАННОЕ:
+те же три состояния, тот же потолок, тот же сигнал, — которое само повторяет
+упавший листинг, когда меняется штамп. Одно ожидание на экран:
+<code>RunnerOnboardingPanel</code> получает <code>mostrarEspera</code>, ложное лишь там, где его
+хозяин уже показывает ожидание. И выбор папки ГОВОРИТ, чей диск он
+перечисляет, в обоих источниках, — единственной подсказкой до этого была
+подпись ярлыка, которая называет место, а не машину.</p>
+<p><strong>Панель также РАСПОЗНАЁТ уже сопряжённую машину</strong>
+(<a class="" href=/brabo/qa/ru/business-rules#rn-548>RN-548</a>, <a class="" href=/brabo/qa/ru/adr/0154-chave-de-dispositivo-de-maquina>ADR 0154</a>).
+<code>listRunnerDeviceKeys</code> в <code>lib/api-client.ts</code> читает
+<code>GET /projects/:projectId/runner-device-keys</code>, который начиная с
+<a class="" href=/brabo/qa/ru/business-rules#rn-543>RN-543</a> помечает ВИД каждого ключа, — а весь вывод
+живёт вне компонента, в <code>lib/agente-de-maquina.ts</code>, потому что правило
+касается ДАННЫХ, а компонент — отрисовки. Семь состояний, ни одно не
+схлопывается в другое, и сбой выводится из <code>isError</code>, а не из статуса,
+поэтому сетевая ошибка говорит «не знаю», а не крутится в «verificando…»
+вечно. Зарегистрированный ключ — НЕ работающий агент — та же дисциплина, что
+уже навязывает <code>workspaceVerifiedAt</code>, — а список принадлежит УЧЁТНОЙ ЗАПИСИ, а
+не этому браузеру, поэтому самая сильная доступная фраза — «у вашей учётной
+записи есть сопряжённая машина». Оба ограничения произносятся на экране. Поток
+через браузер из
+<a class="" href=/brabo/qa/ru/adr/0118-configuracao-automatica-do-runner-pelo-navegador>ADR 0118</a>
+(сгенерировать ключ, скачать бинарник, записать папку) был выведен из
+употребления в <a class="" href=/brabo/qa/ru/adr/0203-aposenta-o-fluxo-do-runner-pelo-navegador>ADR 0203</a>
+(<a class="" href=/brabo/qa/ru/business-rules#rn-687>RN-687</a>): панель теперь показывает команду
+<code>install.sh</code>, которая уходит, когда распознан ключ, обслуживающий проект, а
+ручная команда с PAT остаётся в <code>&lt;details></code>, названном по случаю, на который
+она отвечает (другая машина). Минимум для чтения берётся из <code>roleAtLeast</code>
+против <code>developer</code> ENDPOINT, а настоящий 403 попадает в то же состояние — роль
+workspace — прокси, авторитет — api.</p>
+<p><strong>Вкладка Код (FASE 26) — тот же шаблон чтения</strong>, применённый к коду, а не к
+событиям: <code>getContainerState</code>/<code>getCodeTree</code>/<code>getCodeFile</code>/
+<code>searchCode</code>/<code>getCodeDiff</code> в <code>lib/api-client.ts</code> отражают маршруты чтения api
+(<code>container</code> плюс семь в <code>code.controller.ts</code>, FASE 26b), с типами в
+<code>lib/api-types.ts</code> (<code>EstadoDoContainer</code>, <code>CodeTree</code>, <code>CodeFile</code>,
+<code>CodeSearchResult</code>, <code>CodeDiff</code>), скопированными из DTO, — то же соглашение,
+что и в остальном файле, без импорта <code>apps/api</code>. <code>routes/code/ highlight.ts</code> — СОБСТВЕННЫЙ токенизатор на regex для подсветки синтаксиса,
+ноль новых зависимостей. Ворота <code>ProjectCodeTab.tsx</code> (RN-107) спрашивают о
+состоянии контейнера ДО попытки читать код, чтобы оно появилось как
+собственное сообщение, а не как сноска к 409.</p>
+<p><strong>FASE 26b добавила <code>getCodeBlame</code>/<code>getCodePullRequests</code>/<code>getCodeBranches</code> в
+тот же шаблон</strong>, с <code>CodeBlame</code>/<code>CodePullRequestList</code>/
+<code>CodeBranchDetailList</code> в <code>lib/api-types.ts</code> — фундамент для трёх объявленных
+незавершённых пунктов вкладки Код (RN-110/111/112). У всех трёх теперь есть
+потребитель: <code>CodeEditor.tsx</code> (переключатель blame), <code>code/PrListAndDiff.tsx</code>
+(список PR + diff, потребляемый и <code>CodeDiffPanel.tsx</code>, и отдельной вкладкой
+<code>prs</code>) и <code>CodeBranchPicker.tsx</code> (богатый выпадающий список веток).</p>
+<p>Ворота образа контейнера (RN-105) — единая воронка
+(<code>ReadProjectCodeUseCase.alvo</code>), общая для семи маршрутов, поэтому любой из
+них может дать 409, пока Arquiteto не решил образ, — а не только дерево.
+<code>ProjectCodeTab.tsx</code> избегает этого 409 предварительной проверкой (<code>RN-107</code>,
+выше); у вкладки <code>prs</code> нет чтения дерева/файла, против которого
+предварительно проверять, поэтому <code>code/PrListAndDiff.tsx</code> реагирует на 409
+собственных вызовов <code>getCodePullRequests</code>/<code>getCodeDiff</code>. Оба пути отрисовывают
+одно и то же представление, <code>ContainerImageGateNotice</code>
+(<code>components/ContainerImageGate.tsx</code>), обнаруживаемое <code>isContainerImageGateError</code>
+(<code>lib/api-client.ts</code>, сопоставляет <code>ApiError.status === 409</code>), — баг, найденный
+при использовании: до этого вкладка <code>prs</code> показывала этот 409 как обычную
+временную ошибку с кнопкой «попробовать снова», а это неправильная
+возможность для состояния, которое разрешается только действием Arquiteto.</p>
+<p><strong>Глобальная страница контейнеров (<code>/containers</code>, ADR 0136/RN-495) — чтение
+WORKSPACE</strong>, а не проекта, — <code>getContainersOverview</code> в <code>lib/api-client.ts</code>
+вызывает <code>GET workspaces/:workspaceId/containers</code>, а <code>ContainerOverviewItem</code>
+в <code>lib/api-types.ts</code> отражает <code>ContainerOverviewItemResponseDto</code>. Сторона api —
+выделенная read model, <code>ContainersOverviewRepository</code>/
+<code>DrizzleContainersOverviewRepository</code>, с той же дисциплиной «без N+1 между
+проектами», что у <code>ProjectsSummaryRepository</code>, — три постоянных запроса
+(<code>projects</code> с LEFT JOIN на строки контейнеров, события <code>artifact.project_image</code>
+пакетом, ожидающие <code>proposed_actions</code> контейнеров пакетом), никогда по
+одному на проект. То, что нельзя сделать пакетом, — спросить broker о
+наблюдаемом состоянии, — получает вместо этого явный бюджет на загрузку
+(<code>ObterVisaoGeralDeContainersUseCase.TETO_DE_VERIFICACOES_POR_CARGA</code>,
+спрашиваются только строки <code>provisioning</code>/<code>running</code>, с потолком 20): строка
+вне бюджета говорит <code>naoVerificado</code>, никогда молча не переиспользуя ответ
+другой строки и не наследуя зарегистрированное состояние. Действия
+(остановить/удалить/поднять) — <code>proposed_action</code>, как везде, — страница
+никогда не вызывает broker напрямую, — а ожидающее действие каждой строки
+(если есть) приходит в том же пакетном чтении и отрисовывается как встроенный
+<code>ApprovalCard</code>, тот же шаблон, что <code>ProjectPrsTab.tsx</code> уже использует для
+предложений merge.</p>
+<p>Начиная с <a class="" href=/brabo/qa/ru/business-rules#rn-521>RN-521</a> join — LEFT, и страница
+перечисляет ВСЕ проекты workspace, потому что она стала человеческим путём
+для подъёма ПЕРВОГО контейнера: подъём, проваливающийся до регистрации, не
+оставляет строки, а старый INNER JOIN скрывал ровно тот проект, которому
+страница была нужна. Поэтому <code>ContainerOverviewItem.registrado</code> допускает null
+— третье именованное в типе состояние, отличное от <code>stopped</code> и от «не удалось
+пронаблюдать», — а строки без контейнера никогда не попадают в бюджет broker,
+поэтому не могут вытеснить настоящий контейнер. Ветвление между
+<code>container_start</code> (broker) и <code>container_start_via_runner</code> (локальный агент) —
+чистая функция КЛИЕНТА, <code>routes/containers-subida.ts</code>: она же решает, когда
+НЕ предлагать кнопку (нет решённого образа, <code>runner</code>, папку которого ни один
+агент никогда не подтверждал, роль ниже <code>maintainer</code> по <code>roleAtLeast</code>), и у
+каждого отказа есть собственный текст — экран никогда не предлагает
+действие, о котором уже знает, что оно провалится, и никогда не скрывает
+почему.</p>
+<p>ДРУГОЙ предлагающий — агент Infra Lead — ветвится так же начиная с
+<a class="" href=/brabo/qa/ru/business-rules#rn-566>RN-566</a>. Оба его инструмента проходят через единую
+<code>recusa_local_de_subida/2</code> в <code>infra_lead_server.ex</code>, которая читает проект
+ОДИН раз (<code>Project.get/1</code>, тот же процесс BEAM, никогда HTTP: сетевой вызов
+внутри цикла агента — та цена, которую это исправление не могло платить) и
+возвращает <code>nil</code> или ИМЕНОВАННУЮ причину, по ветви на инструмент, —
+<code>container</code>/<code>mounted</code> предлагают <code>container_start</code>, <code>runner</code> отвергается с
+указанием на <code>container_start_via_runner</code>, а ветвь <code>container_start</code> — СПИСОК
+РАЗРЕШЁННЫХ, как у broker, поэтому новый режим в enum рождается отвергнутым.
+Отказ — текст РЕЗУЛЬТАТА инструмента, который читает модель (вход цикла,
+<a class="" href=/brabo/qa/ru/business-rules/autenticacao#rn-163>RN-163</a>), а не <code>agent.error</code>, а
+<code>tool.call</code> по-прежнему порождается, чтобы локальный отказ никогда не исчезал
+из timeline. Чего агент НЕ проверяет, а экран проверяет, — решённый образ и
+подтверждённую папку.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=outside-the-applications>Вне приложений<a href=#outside-the-applications class=hash-link aria-label="Прямая ссылка на Вне приложений" title="Прямая ссылка на Вне приложений" translate=no>​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>каталог<th>что это<tbody><tr><td><code>packages/shared/</code><td><code>GitProviderContract</code> — пятнадцать операций, <strong>типы и ничего больше</strong>: значение, переживающее <code>tsc</code>, ломает загрузку api (зафиксировано тестом), поэтому константа живёт у потребителя<tr><td><code>packages/docker-port/</code><td>ПОРТ Docker (пять операций) и его CLI-адаптер, общие для <code>apps/runner</code> и <code>apps/broker</code> — <a class="" href=/brabo/qa/ru/adr/0130-broker-de-container>ADR 0130</a>. Это runtime-код, и именно поэтому он НЕ в <code>packages/shared</code>; у него нет шага сборки, и оба потребителя его УПАКОВЫВАЮТ, поэтому ни один образ никогда не разрешает его из <code>node_modules</code><tr><td><code>docker/</code><td>образы dev и production; <code>smoke.sh</code><tr><td><code>deploy/k8s/</code><td>база Kustomize + overlays (local, staging, prod)<tr><td><code>design/</code><td>дизайн-система: токены, типографика, компоненты</table>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=an-agent-turns-flow>Поток хода агента<a href=#an-agent-turns-flow class=hash-link aria-label="Прямая ссылка на Поток хода агента" title="Прямая ссылка на Поток хода агента" translate=no>​</a></h2>
+<p>Горячий путь, от начала до конца. Именно здесь живёт большая часть
+сложности.</p>
+<!-- -->
+<p>Цикл <code>Harness → вызов инструмента → одобрение → событие</code> повторяется, пока агент
+не вызовет инструмент завершения или не упрётся в потолок (итерации, токены,
+бюджет).</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=boundaries-and-invariants>Границы и инварианты<a href=#boundaries-and-invariants class=hash-link aria-label="Прямая ссылка на Границы и инварианты" title="Прямая ссылка на Границы и инварианты" translate=no>​</a></h2>
+<p>Это самая важная часть. Каждый пункт ниже проверяем, и у многих есть тест,
+проваливающийся при нарушении.</p>
+<p><strong>1. Домен чист.</strong> <code>apps/api/src/domain/</code> не импортирует
+<code>infrastructure</code>, <code>application</code>, <code>@nestjs</code> и никакой драйвер базы —
+проверено: <strong>ноль</strong> вхождений всех трёх. Направление всегда
+<code>interfaces → application → domain</code>, и 89 файлов <code>application</code> импортируют
+<code>domain</code>. Если вам нужен IO внутри <code>domain/</code>, схема неверна: создайте порт в
+<code>application/ports/</code>.</p>
+<p><strong>2. Доменное событие неизменяемо.</strong> В таблице событий никогда не бывает
+<code>UPDATE</code>. У <code>session_events</code> есть <code>unique(session_id, seq)</code>, а <code>seq</code> плотен по
+сессии — тест восстановления проверяет отсутствие дыр. Состояние, которому
+нужно меняться (жизненный цикл гипотезы, статус handoff), живёт в собственной
+изменяемой таблице рядом с событиями. Предложение handoff, переставшее быть
+действующим, становится <code>superseded</code> в этой таблице и получает собственное
+событие <code>handoff.superseded</code> — никогда не правку объявившего его
+<code>handoff.offered</code> (<a class="" href=/brabo/qa/ru/adr/0182-ciclo-de-vida-do-handoff>ADR
+0182</a>).</p>
+<p><strong>3. Ни одного вызова LLM вне Harness.</strong> Это не соглашение: у engine нет
+клиента LLM. Он просит api, которая выполняет metering.</p>
+<p><strong>4. Любое действие с внешним эффектом становится <code>proposed_action</code>.</strong>
+<code>deny</code> всегда побеждает <code>allow</code> в <code>permissions.json</code>, и два <strong>потолка</strong>
+применяются последними, поверх уже вычисленного вердикта: merge в защищённую
+ветку и патч инструкции <strong>никогда</strong> не автоодобряются.
+См. <a class="" href=/brabo/qa/ru/business-rules>RN-006 и RN-007</a>.</p>
+<p><strong>5. Merge в защищённую ветку — ручной.</strong> Варианта его автоматизировать нет.
+Это потолок в домене (<code>decide.ts</code>), гарантированный тестом.</p>
+<p><strong>6. Одна сессия — один владелец.</strong> <code>SessionServer</code> регистрируется под
+<code>:global</code>, а не в локальном <code>Registry</code> — без этого N реплик держали бы N копий
+одной сессии, и копии без heartbeat убили бы живую сессию
+(<a class="" href=/brabo/qa/ru/adr/0026-fase5-observabilidade-e-graceful-shutdown>ADR 0026</a>).</p>
+<p><strong>7. Сбой агента записывает ИСТОЧНИК</strong> (<code>infra | model | code | policy</code>),
+никогда диагноз методом исключения. Дорогой урок
+<a class="" href=/brabo/qa/ru/adr/0020-destravar-gates-qa-secops>ADR 0020</a>: падение провайдера было
+записано как «модель остановилась, не подав сигнала», и система обвинила
+модель в инфраструктурной проблеме.</p>
+<p><strong>8. Контейнер проекта решается, а не подразумевается.</strong> Вкладка Код
+разблокируется только после того, как Arquiteto выпустит
+<code>artifact.project_image</code>, — пока состояние <code>sem_decisao</code>, чтение кода
+возвращает <code>409</code> (<a class="" href=/brabo/qa/ru/business-rules/autenticacao#rn-105>RN-105</a>). А
+<code>git push</code>, открытие PR и deploy не проходят через терминал даже в рамках
+проекта: <code>decide()</code> распознаёт их по префиксу команды и возвращает <code>deny</code> ДО
+любого разрешающего шага — не <code>require_approval</code>, потому что «всегда
+разрешать» записало бы шаблон в <code>allow</code> и снова открыло бы дверь
+(<a class="" href=/brabo/qa/ru/business-rules/autenticacao#rn-106>RN-106</a>,
+<a class="" href=/brabo/qa/ru/adr/0065-container-por-projeto-a-fronteira-deixa-de-ser-politica>ADR 0065</a>).
+Жизненного цикла контейнера (подготовить, перезапустить, очистить) пока не
+существует — объявленный срез FASE 25, записанный в CLAUDE.md, — поэтому
+этот инвариант пока сосуществует с политикой области путей
+<a class="" href=/brabo/qa/ru/adr/0055-escopo-de-caminho-na-politica-de-terminal>ADR 0055</a>.</p>
+<p>А начиная с <a class="" href=/brabo/qa/ru/adr/0143-agentes-de-dev-so-depois-do-container>ADR 0143</a>
+/<a class="" href=/brabo/qa/ru/business-rules#rn-502>RN-502</a> решённый образ больше не единственное
+предусловие: <strong>dev agent не берёт ни одной задачи, пока контейнер проекта не
+ЗАРЕГИСТРИРОВАН как <code>running</code></strong>. Страж живёт в
+<code>Engine.Dev.AgentIo.try_claim/2</code> — единственной точке claim, — а не только в
+<code>activate-execution</code> api, потому что реидратация доходит до <code>try_claim/2</code>, не
+проходя ни через какой маршрут (<code>DevAgentServer.init/1</code> ->
+<code>finish_restart_recovery/1</code>). Без контейнера агент переходит в <code>:idle</code>
+(единственное состояние, которое ещё спасает wake) и говорит об этом через
+<code>dev.blocked_by_container</code>. Другая половина того же правила в том, что
+<code>Engine.Actions.TerminalExecutor</code> перестал падать в <code>System.cmd</code> внутри
+процесса engine, когда контейнера нет: он отказывает, с названием причины,
+как уже делал режим <code>runner</code>.</p>
+<p><strong>9. Агент, который ПИШЕТ, должен уметь ЧИТАТЬ и должен уметь СПРАШИВАТЬ.</strong>
+Обе половины — один и тот же урок, и пришли они от агента, у которого были
+только инструменты записи: PO собирал контекст один раз, при kickoff, и с тех
+пор действовал по устаревшему снимку — перед пробелом он выбирал между
+выдумыванием и остановкой (<a class="" href=/brabo/qa/ru/business-rules/autenticacao#rn-164>RN-164</a>,
+<a class="" href=/brabo/qa/ru/business-rules/autenticacao#rn-165>RN-165</a>). Чтение <strong>не</strong> становится
+<code>proposed_action</code> (инвариант 4 касается ВНЕШНЕГО эффекта, а чтение им не
+является), но оно ограничено в смысле
+<a class="" href=/brabo/qa/ru/adr/0060-superficie-de-leitura-de-codigo>ADR 0060</a>: область закрыта путём
+маршрута, стоимость постоянна на вызов, и есть потолок строк в тексте,
+передаваемом модели. И цикл агента не заканчивается молча — потолок итераций
+порождает <code>toolloop.limit_reached</code>, невыполненное обязательство порождает
+долговременный исход с источником (<a class="" href=/brabo/qa/ru/business-rules/autenticacao#rn-166>RN-166</a>).</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=cross-cutting-concerns>Сквозные вопросы<a href=#cross-cutting-concerns class=hash-link aria-label="Прямая ссылка на Сквозные вопросы" title="Прямая ссылка на Сквозные вопросы" translate=no>​</a></h2>
+<p><strong>Кросс-origin.</strong> Web отдаётся с собственного origin и говорит с <strong>двумя</strong>
+другими, поэтому CORS — архитектурная граница, а не деталь конфигурации
+(<a class="" href=/brabo/qa/ru/adr/0037-cors-do-engine-e-a-porta-como-contrato>ADR 0037</a>).
+Четыре пути, и только три проходят через CORS:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>путь<th>механизм<tbody><tr><td>web → api, HTTP<td>CORS Nest, точный origin из <code>WEB_ORIGIN</code> + <code>credentials</code><tr><td>web → engine, HTTP (<code>/health</code>)<td><code>EngineWeb.Plugs.Cors</code>, только маршруты health<tr><td>web → engine, WebSocket<td><code>check_origin</code> endpoint Phoenix — <strong>WebSocket не проходит через CORS</strong><tr><td>api ↔ engine, HTTP<td><strong>CORS неприменим</strong>: серверный клиент, а не браузер</table>
+<p>Одна переменная — <code>WEB_ORIGIN</code> — питает первые три, в обоих сервисах.
+Независимое двукратное чтение её — вот как CORS engine остался вообще без
+origin, тогда как в <code>check_origin</code> уже был правильный список; в engine она
+теперь разрешается один раз, в <code>runtime.exs</code>.</p>
+<p>И <strong>порт — часть origin</strong>: web на <code>:5174</code> — другая система в глазах браузера.
+Поэтому <code>vite.config.ts</code> использует <code>strictPort</code>.</p>
+<p><strong>Аутентификация.</strong> First-party, в домене api — внешнего IdP нет. Пароли с
+argon2id, access token EdDSA на 15 минут и непрозрачный refresh token с
+обязательной ротацией; сессия web живёт в cookie <code>httpOnly</code> с CSRF через
+double-submit. <code>JwtAuthGuard</code> глобален и <strong>читает</strong> пользователя по <code>sub</code>
+токена (это <code>users.id</code>); открытый маршрут требует явного <code>@Public()</code>.</p>
+<p>Ни одно решение RBAC не читает claim токена: роль берётся из
+<code>request.user.id</code> и строк в базе. Поэтому матрица прав пережила смену
+эмитента без изменений. Решения — в
+<a class="" href=/brabo/qa/ru/adr/0031-auth-first-party-argon2id-e-rotacao-de-refresh>ADR 0031</a> и в
+<a class="" href=/brabo/qa/ru/adr/0032-corte-do-keycloak-e-sessao-em-cookie>ADR 0032</a>.</p>
+<p>Вызовы engine не проходят через JWT: маршруты <code>/internal/*</code> —
+<code>@ServiceRoute()</code>, а <code>EngineServiceGuard</code> сравнивает общий секрет
+(<code>BRABO_SERVICE_TOKEN</code>) за постоянное время. Вся поверхность
+классифицирована в <a class="" href=/brabo/qa/ru/security-surface><code>security-surface.md</code></a>, и табличный
+тест проваливает новый маршрут без классификации.</p>
+<p><strong>Авторизация.</strong> RBAC в домене, с эффективной ролью, разрешаемой от проекта
+(с откатом к workspace). <code>@RequireRole</code> на маршрутах.</p>
+<p><strong>Ошибка.</strong> Доменные ошибки — типизированные классы
+(<code>InvalidSessionTransitionError</code>, <code>StoryNotReadyError</code>), переводимые в HTTP
+глобальными фильтрами в <code>main.ts</code>. Ошибки git-провайдера нормализуются единым
+контрактом (<a class="" href=/brabo/qa/ru/adr/0002-git-error-normalization>ADR 0002</a>) — вызывающий
+не знает, говорил ли он с GitHub или GitLab.</p>
+<p><strong>Логирование.</strong> <strong>Однострочный</strong> JSON на событие в production во всех трёх
+приложениях, с коррелированным <code>trace_id</code>; человекочитаемый в разработке. Api
+использует pino с обязательным скрытием <code>apiKey</code>, <code>access_token</code>,
+<code>clientSecret</code> и service token api↔engine. Каждая строка говорит, из какого
+класса и метода она пришла, а строка на запрос показывает <strong>путь по слоям</strong> с
+длительностью каждого шага — см.
+<a class="" href=/brabo/qa/ru/explanation/observability>наблюдаемость</a>.</p>
+<p><strong>Транзакция.</strong> Шаблон — <em>unit of work</em>: записать состояние и опубликовать
+событие в <strong>одной</strong> транзакции, через outbox. Публикация вне транзакции
+создала бы событие для состояния, которое так и не сохранилось.</p>
+<p><strong>Трассировка.</strong> OpenTelemetry от начала до конца, и <code>trace_id</code> рождается в
+<strong>web</strong>: браузер генерирует <code>traceparent</code>, api принимает его как родителя, а
+engine принимает родителя от api. Сессия — <strong>один корневой trace</strong> —
+<code>traceparent</code> сохраняется в <code>sessions.trace_parent</code> и путешествует в конверте
+outbox, поэтому асинхронная работа, запущенная событием, остаётся в trace
+того, кто его произвёл.</p>
+<p>Инструментирование и <strong>экспорт</strong> независимы
+(<a class="" href=/brabo/qa/ru/adr/0035-observabilidade-legivel-e-trace-sem-coletor>ADR 0035</a>): span
+создаётся всегда, и <code>trace_id</code> всегда идёт в лог, даже без коллектора;
+<code>OTEL_EXPORTER_OTLP_ENDPOINT</code> лишь решает, покидает ли он процесс. Именно это
+даёт корреляцию в <code>pnpm dev</code>.</p>
+<p><strong>Секреты.</strong> Envelope encryption: случайный DEK на запись, обёрнутый
+мастер-ключом. Ротация без простоя через <code>CREDENTIALS_MASTER_KEY_PREVIOUS</code> —
+см. <a class="" href=/brabo/qa/ru/runbook>runbook</a>.</p>
+<p><strong>Иерархия агентов.</strong> Начиная с Фазы 8b
+(<a class="" href=/brabo/qa/ru/adr/0038-hierarquia-de-agentes>ADR 0038</a>) у области могут быть LEAD и
+подспециальности — сегодня «qa» (<code>qa-lead</code>, <code>qa-automacao</code>,
+<code>qa-performance-seguranca</code>) и «infra» (<code>infra</code> как lead, <code>infra-workflows</code> как
+субагент — Фаза 8c, RN-037). Lead — единственная точка внешнего контакта:
+внутреннее делегирование никогда не становится handoff и никогда не видно вне
+области. Первый экземпляр доказывает центральную гарантию модели —
+<code>QaLeadServer</code> консолидирует вердикты двух подспециальностей в единый
+<code>qa_verdict</code>, а контракт, который уже был у api (<code>RecordGateVerdictUseCase</code>,
+<code>nextGateStatus</code>), не изменился ни на строку. Второй показывает, что модель не
+требует одинаковой внутренней реализации: <code>InfraLeadServer</code> остаётся
+разговорным GenServer в рамках сессии (по образцу <code>ArquitetoServer</code>, внешний
+контакт неизменен по явной просьбе CLAUDE.md 8c) и делегирует
+<code>WorkflowsAgent</code> — который, без пользователя на другой стороне, работает как
+ограниченный <code>ToolLoop</code>, как субагенты QA. Начиная с
+<a class="" href=/brabo/qa/ru/business-rules#rn-617>RN-617</a>
+(<a class="" href=/brabo/qa/ru/adr/0175-infra-lead-conversa-pelo-composer>ADR 0175</a>) Infra Lead также
+получает сообщения из composer, и три его хода (kickoff, исправление gate,
+сообщение) выполняются в том же Task <code>TurnoAssincrono</code>, что и у остальных
+шести разговорных агентов. Универсальным <code>delegations</code> из 8b понадобилась ОДНА
+корректировка, чтобы обслуживать вторую область: <code>task_id</code> стал nullable,
+потому что Infra делегирует по сессии, а не по задаче backlog.</p>
+<p>Фаза 8d замыкает цикл со стороны <code>apps/web</code>, без нового маршрута — всё идёт
+из тех же <code>session_events</code>, которые панель уже получает
+(<code>useSessionEvents</code>). <code>apps/web/src/lib/agents.ts</code> получил <code>AREAS</code>/<code>areaFor</code>:
+реестр, связывающий <code>AgentKey</code> субагента (<code>qa-automacao</code>,
+<code>qa-performance-seguranca</code>, <code>infra-workflows</code>) с областью lead, — именно этот
+обратный поиск группирует панель команды (lead с печатью «Lead» +
+сворачиваемые подспециальности), группирует Insights по области и
+пересказывает <code>delegation.completed</code>/<code>failed</code>/<code>dispensed</code> в ленте
+(<code>activity.ts</code>). <code>consolidated_verdict</code> (решение №4 ADR 0038) так и не стал
+настоящим артефактом — QA и Infra переиспользуют <code>qa_verdict</code>/<code>open_infra_pr</code>,
+см. <a class="" href=/brabo/qa/ru/adr/0038-hierarquia-de-agentes#fechamento-fase-8d>заключительное примечание ADR</a>.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=data>Данные<a href=#data class=hash-link aria-label="Прямая ссылка на Данные" title="Прямая ссылка на Данные" translate=no>​</a></h2>
+<!-- -->
+<p>Всего 56 таблиц. Самая новая — <code>detected_language_declines</code>
+(<a class="" href=/brabo/qa/ru/business-rules#rn-624>RN-624</a>): одна строка на человека и язык, от
+которого человек ОТКАЗАЛСЯ, когда его спросили «мы заметили, что вы пишете на
+X, — использовать X в ответах?», с датой. Её присутствие и не даёт тому же
+вопросу вернуться; подтверждение этого языка позже удаляет строку. Само
+определение не хранит состояния — выборка читается из <code>session_events</code> по
+частичному индексу <code>session_events_evidencia_de_idioma_idx</code> (актор-пользователь,
+два типа доказательств), а гистерезис пересчитывается, — поэтому эта
+таблица и подтверждённая пара в <code>users</code> — всё, что оно записывает, и только
+когда человек отвечает. До неё самой новой была <code>session_language_overrides</code>
+(<a class="" href=/brabo/qa/ru/business-rules#rn-618>RN-618</a>,
+<a class="" href=/brabo/qa/ru/adr/0177-idioma-das-respostas-por-conta-sessao-e-projeto>ADR 0177</a>): язык
+ответа, который человек закрепил в сессии, с ключом по ПАРЕ
+<code>{session_id, user_id}</code>, чтобы два участника никогда не касались друг друга.
+Это конфигурация, а не событие — повторное закрепление — upsert,
+освобождение — <code>DELETE</code>. Тот же ADR добавляет <code>users.response_language</code>
+(<code>NULL</code> — «автоматически») и пару подтверждённого определения
+<code>users.detected_language</code> / <code>detected_language_confirmed_at</code>, связанные CHECK;
+<code>users.locale</code> остаётся языком интерфейса, закрытым в <code>pt-BR</code>/<code>en</code>. А
+<code>projects.language</code> (<a class="" href=/brabo/qa/ru/business-rules#rn-619>RN-619</a>) — язык того, у чего
+нет автора-человека, — общих артефактов и ходов, которые никто не набирал, —
+всегда конкретный код BCP-47. До неё самой новой была
+<code>project_mirror_states</code>
+(<a class="" href=/brabo/qa/ru/business-rules#rn-517>RN-517</a>,
+<a class="" href=/brabo/qa/ru/adr/0147-agente-local-com-capacidades>ADR 0147</a> пункт 7): одна строка на
+проект, <code>project_id</code> уникален, хранящая то, что сделал ПОСЛЕДНИЙ прогон
+зеркала, — последнюю успешную синхронизацию с её тремя счётчиками и
+замороженной целью плюс последнюю ошибку. ТАБЛИЦА, а не событие, по той же
+причине, что и <code>rag_searches</code> чуть выше: у прогона зеркала нет сессии, а
+<code>session_events.session_id</code> — <code>NOT NULL</code>, поэтому event log молча отбросил бы
+всё. Три состояния, которые никогда не схлопываются
+(<a class="" href=/brabo/qa/ru/business-rules#rn-088>RN-088</a>): «никогда не синхронизировано» —
+ОТСУТСТВУЮЩАЯ строка, «синхронизировано и ничего не скопировано» —
+присутствующая строка с <code>files_copied = 0</code>, а «упало» — <code>last_error_at</code> новее
+<code>last_synced_at</code>. Колонки успеха и сбоя НЕПЕРЕСЕКАЮЩИЕСЯ, и ни одна запись не
+трогает колонки другой, — и именно поэтому экран может сказать «падает с
+сегодняшнего дня, последняя хорошая копия была вчера, 412 файлов», а не
+потерять самое полезное, что у него есть.</p>
+<p>Две до неё — <code>rag_searches</code>/<code>rag_feedback</code> (RN-479/480): след гибридного
+поиска и голос о том, что он вернул, добавленные потому, что
+<code>rag-search-limits.ts</code> объявляет в собственном комментарии, что ни одно из
+четырёх чисел гибридного поиска не получено калибровкой на реальных данных, —
+а калибровать было невозможно, пока поиск не оставлял следа. Это ТАБЛИЦЫ, а не
+только события сессии, по конкретной причине: <code>session_events.session_id</code> —
+<code>NOT NULL</code>, а поиск из вкладки RAG — поиск <em>проекта</em> без сессии, поэтому event
+log молча отбросил бы ровно те поиски, которые человек запускал, глядя на
+оценки (тот же класс проблемы, что вынудил срез metering embedding в
+<a class="" href=/brabo/qa/ru/adr/0075-embeddings-no-contrato-de-llm-provider>ADR 0075</a>).
+<code>rag_searches.pesos</code> замораживает веса каждого поиска в самой строке — та же
+дисциплина, что у замороженной цены в metering
+(<a class="" href=/brabo/qa/ru/adr/0042-catalogo-vivo-ciclo-de-vida-do-modelo-e-preco-auditavel>ADR 0042</a>), —
+чтобы последующая калибровка молча не изменила смысл каждого прежнего
+измерения. <code>session_socket_tickets</code> остаётся вне диаграммы по той же причине,
+что и <code>refresh_tokens</code>/<code>account_tokens</code>: это механизм auth, а не доменное
+отношение.</p>
+<p><code>projects.mirror_path</code> (FASE 28, <a class="" href=/brabo/qa/ru/business-rules#rn-515>RN-515</a>,
+<a class="" href=/brabo/qa/ru/adr/0147-agente-local-com-capacidades>ADR 0147</a> пункт 4) — колонка, а не
+таблица, потому что это ОДНО необязательное значение на проект: абсолютный
+путь на машине ПОЛЬЗОВАТЕЛЯ, куда capability <code>espelho</code> локального агента
+копирует работу. Он допускает null, и <code>NULL</code> — НОРМАЛЬНОЕ состояние — проект
+без зеркала составляет большинство, и продукт никогда сам не выбирает цель.
+Он намеренно <strong>не</strong> несёт CHECK, привязывающего его к <code>execution_mode</code>, в
+отличие от соседнего <code>workspace_path</code>: у <code>container</code> не может быть цели (его
+источник — управляемый том на СЕРВЕРЕ, а процесс, который копировал бы,
+работает на машине пользователя), но <code>execution_mode</code> ПРЕОБРАЗУЕМ
+(<a class="" href=/brabo/qa/ru/business-rules#rn-447>RN-447</a>, <a class="" href=/brabo/qa/ru/adr/0111-conversao-de-execution-mode-de-projeto-existente>ADR 0111</a>),
+поэтому CHECK заставил бы преобразование в <code>container</code> взорваться в Postgres,
+вместо того чтобы отказать с причиной. Отказ живёт в сценарии использования,
+а преобразование обнуляет колонку — та же форма, что у
+<code>workspace_verified_at</code>, и по дополнительной причине: оба направления цикла
+источник↔цель проверялись против СТАРОГО <code>workspace_path</code>.
+Начиная с <a class="" href=/brabo/qa/ru/business-rules#rn-516>RN-516</a> engine ЧИТАЕТ эту колонку —
+именно она решает, требует ли <code>join</code> runner capability <code>espelho</code>, и именно
+она путешествует обратно в разрешении этого join (<code>Engine.Runners.Espelho</code>,
+<code>EngineWeb.TerminalChannel</code>). Engine никогда её не пишет. Начиная с
+<a class="" href=/brabo/qa/ru/business-rules#rn-517>RN-517</a> ПО СОСЕДСТВУ ЕСТЬ внутренний маршрут —
+<code>POST /internal/projects/:projectId/mirror-sync-result</code>, — но он пишет
+<code>project_mirror_states</code>, никогда эту колонку: цель — КОНФИГУРАЦИЯ
+(пользователь её объявляет), а исход прогона — ТЕЛЕМЕТРИЯ (локальный агент о
+нём сообщает), и их слияние позволило бы отчёту перезаписать выбор.
+<strong>Ограничения — это бизнес-правила</strong>: уникальность <code>(session_id, seq)</code> event
+log, <code>check</code>, требующий ровно одной области в <code>budgets</code> (проект <strong>или</strong> сессия,
+никогда оба), частичные индексы, гарантирующие идемпотентность анализа, — и,
+начиная с Фазы 8b, три <code>check</code> в <code>delegations</code>, фиксирующие, какое поле
+обязательно по <code>status</code> (<code>completed</code> → <code>parecerArtifactId</code>, <code>failed</code> →
+<code>failureOrigin</code>, <code>dispensed</code> → <code>justification</code>; см.
+<a class="" href=/brabo/qa/ru/business-rules#rn-036>RN-036</a>). <code>delegations.task_id</code> родился
+<code>NOT NULL</code> и стал nullable в Фазе 8c — область Infra делегирует по сессии, без
+задачи backlog за PR инфраструктуры (см.
+<a class="" href=/brabo/qa/ru/business-rules#rn-037>RN-037</a>).</p>
+<p><code>agent_areas</code> (FASE 14d,
+<a class="" href=/brabo/qa/ru/adr/0053-dev-lead-e-paralelismo-autorizado>ADR 0053</a>) — то, что Фаза 8
+вырезала. Она вернулась, потому что область <strong>dev</strong> не перечислима в коде:
+<code>qa</code> и <code>infra</code> укладываются в фиксированный список, но члены dev — по одному на
+модуль <code>module_map</code>, решаемые Arquiteto и разные в каждом проекте.
+Уникальность <code>(project_id, key)</code> делает засев идемпотентным, а <code>max_parallel</code>
+(по умолчанию 2) — потолок, который lead использует, не спрашивая, — выше
+него — <code>proposed_action</code>
+(см. <a class="" href=/brabo/qa/ru/business-rules/custo#rn-083>RN-083</a>). <code>budget_micros</code>/<code>spent_micros</code>
+(ADR 0110) отражают <code>max_parallel</code> в той же строке — потолок расходов,
+АДДИТИВНЫЙ к <code>budgets</code> (проект/сессия), никогда не каскад: он проверяется и
+увеличивается независимо, теми же <code>CheckBudgetGateUseCase</code>/
+<code>RecordLlmUsageUseCase</code>, которые уже ведают расходами проекта и сессии (см.
+<a class="" href=/brabo/qa/ru/business-rules#rn-443>RN-443</a>). Не путайте это с каскадом binding
+модели из <a class="" href=/brabo/qa/ru/adr/0064-escopo-de-area-na-cascata-e-o-binding-de-agente-global>ADR 0064</a>
+(<code>session > agent > area > project > workspace</code>) — тот выбирает единственного
+победителя; бюджет области никогда не выбирает.</p>
+<p><strong>Миграции:</strong> Drizzle в api (<code>src/db/migrations/</code>, применяемые однократным Job
+— реплики <strong>не</strong> мигрируют при загрузке, иначе они оспаривали бы одну и ту же
+миграцию) и Ecto в engine, в собственной схеме (<code>engine</code>). Перекрёстных
+ссылок между двумя схемами нет, поэтому они выполняются параллельно.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=divida-tecnica>Известный технический долг<a href=#divida-tecnica class=hash-link aria-label="Прямая ссылка на Известный технический долг" title="Прямая ссылка на Известный технический долг" translate=no>​</a></h2>
+<p>Выведен из горячих точек истории и из ADR, фиксирующих открытое состояние.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>долг<th>доказательство<th>влияние<tbody><tr><td><del><code>schema.ts</code> — самый изменяемый файл репозитория (23 изменения) и сосредоточивает 51 таблицу в одном файле</del><td>история → <strong>закрыто</strong> <a class="" href=/brabo/qa/ru/adr/0121-schema-dividido-por-agregado-de-dominio>ADR 0121</a><td>схема теперь — файл на доменный агрегат в <code>apps/api/src/db/schema/</code>, отражающий <code>src/domain/*</code>, а старый путь сохранён как barrel <code>export *</code>, чтобы ни одному из 144 потребителей ничего не пришлось менять. Два агрегата теперь можно редактировать одновременно без конфликта. Чего это НЕ касается: миграции идентичны байт в байт (критерием приёмки был <code>drizzle-kit generate</code> с нулевым diff), а строка контракта api↔engine ниже — другой долг, всё ещё открытый<tr><td>Контракт api↔engine разбросан по 4 горячим файлам (<code>internal-sessions.controller.ts</code>, <code>api-to-engine-client.ts</code>, <code>engine_api_client.ex</code>, <code>router.ex</code>) без единого источника<td>история<td>изменение требует синхронной правки всех четырёх; ничто не гарантирует их согласия<tr><td>Демонстрация gates <strong>не является регрессионным тестом</strong> — зависит от суждения локальной 7B-модели<td><a class="" href=/brabo/qa/ru/adr/0020-destravar-gates-qa-secops>ADR 0020</a><td>у семантического пути gate нет автоматического покрытия<tr><td>Фаза 4a с критерием приёмки, помеченным <strong>НЕ ЗАКРЫТ</strong><td><a class="" href=/brabo/qa/ru/adr/0021-fechamento-4a-infra-e-painel>ADR 0021</a><td>есть заведомо незавершённая работа без issue для отслеживания<tr><td>Очередь Oban накапливает <code>AnamneseWorker</code> прошлых исполнений; страж блокирует только <strong>новые</strong> постановки в очередь<td><a class="" href=/brabo/qa/ru/adr/0020-destravar-gates-qa-secops>ADR 0020</a><td>выключения стража недостаточно — очередь нужно очистить<tr><td><code>TerminalExecutor</code> запускает набор управляемого проекта <strong>внутри</strong> образа engine<td><a class="" href=/brabo/qa/ru/adr/0024-fase5-imagens-producao-ci>ADR 0024</a><td>не масштабируется на произвольные стеки; выход — песочница на проект<tr><td><del>Образы не публикуются в registry; overlay production указывает на <code>ghcr.io/OWNER/*</code></del><td><a class="" href=/brabo/qa/ru/adr/0027-fase5-backup-hardening-release>ADR 0027</a> → <strong>закрыто</strong> <a class="" href=/brabo/qa/ru/adr/0119-imagens-publicadas-no-ghcr-por-digest>ADR 0119</a><td>четыре образа публикуются в GHCR на каждом финальном теге, а overlay закрепляет по digest из <code>.release/images.json</code>. Остаток — НЕ этот долг: ничто не делает deploy автоматически, а образы не подписаны и не аттестованы<tr><td><del><code>SessionPage.tsx</code> весил 169 КиБ, и его импортировали 25 тестовых файлов; <code>ProjectSettingsTab.tsx</code> весил 90 КиБ</del><td><a class="" href=/brabo/qa/ru/adr/0122-sessionpage-dividido-em-cinco-prs>ADR 0122</a> + <a class="" href=/brabo/qa/ru/adr/0124-hook-do-canal-de-turno-do-sessionpage>ADR 0124</a> + <a class="" href=/brabo/qa/ru/adr/0125-projectsettingstab-dividido-por-secao>ADR 0125</a> — <strong>эта строка ЗАКРЫВАЕТСЯ в обеих половинах</strong><td>пять механических PR ADR 0122 были смержены первыми: PR 1 извлёк чистые хелперы timeline/хода в <code>apps/web/src/lib/session-timeline.ts</code>, PR 2 извлёк <code>StorySlide</code> в <code>apps/web/src/routes/StorySlide.tsx</code>, PR 3 извлёк <code>StructuredQuestionCard</code> (плюс его приватный хелпер <code>permiteOutra</code>) в <code>apps/web/src/routes/StructuredQuestionCard.tsx</code>, PR 4 извлёк хелперы дерева backlog (<code>urlDaPr</code>, <code>vinculoDeBacklog</code>, <code>montarArvoreDeBacklog</code>, <code>totalDeDescendentes</code>) в <code>apps/web/src/lib/session-backlog-tree.ts</code>, а <code>ItemDeBacklog</code> + <code>ContextAside</code> (всю правую боковую панель) — в <code>apps/web/src/routes/ContextAside.tsx</code>, и PR 5 извлёк шесть выводов готовности (<code>criativoActive</code>, <code>arquitetoActive</code>, <code>hasBusinessRule</code>, <code>hasPromotedStory</code>, <code>hasProductBrief</code>, <code>activeAgent</code>) в hook <code>useSessionReadiness</code> в <code>apps/web/src/lib/session-readiness.ts</code> — <code>SessionPage.tsx</code> сократился с 3 807 до 2 661 строки, явно оставив вне рамок скопление состояния канала хода (<code>turnoViaCanal</code>/<code>statusAgent</code>/<code>pensandoVisivel</code>/<code>atividadeDoTurno</code>) для будущего собственного ADR. ADR 0124 — это тот ADR: сначала механический PR дедупликации заставил <code>handleSend</code>/<code>handleReadiness</code>/<code>handleArchitectureReadiness</code> вызывать уже существующую пару <code>iniciarTurnoDoAgente</code>/<code>finalizarTurnoDoAgente</code>, а не дублировать её ветку inline, а затем второй PR извлёк состояние, эффект канала <code>connectSessionHeartbeat</code> и три функции жизненного цикла в hook <code>useTurnoDoAgente</code> (<code>apps/web/src/lib/session-turno.ts</code>). <code>SessionPage.tsx</code> теперь 2 479 строк; 25 (24 после миграции PR 1) файлов <code>SessionPage.*.test.tsx</code> прошли без правок через семь PR обоих ADR. ADR 0125 закрывает ДРУГУЮ половину, одним PR вместо пяти: <code>ProjectSettingsTab.tsx</code> делится на файл на раздел в <code>apps/web/src/routes/settings/</code> (17 разделов + <code>settings/shared.ts</code> из двух символов, хранящий только <code>ORIGIN_TONE</code> и <code>formatarCustoMicros</code> — два хелпера с более чем одним вызывающим), сокращаясь с 2 532 до 77 строк и ОСТАВАЯСЬ на своём пути как точка входа и barrel, — что несёт нагрузку, потому что <code>ProjectSettingsTab.test.tsx</code> импортирует из него 11 имён, а <code>ProjectPage.test.tsx</code>/<code>project-tabs.test.tsx</code> делают его <code>vi.mock</code> ПО ПУТИ. Один PR, а не пять, потому что этот файл никогда не имел формы <code>SessionPage.tsx</code>: родитель не хранил никакого состояния (17 JSX-потомков, ни hook, ни query, ни проверки роли), ни один раздел не получал больше, чем <code>{projectId}</code>, и 11 из 17 уже экспортировались. <code>ProjectSettingsTab.module.css</code> остаётся общей таблицей стилей с 15 импортёрами (тот же ответ, что ADR 0122 дал для <code>SessionPage.module.css</code>). Весь набор web — 142 файла, 1 537 тестов — прошёл с НУЛЁМ изменённых тестовых файлов<tr><td><del><code>SessionPage.tsx</code> снова вырос после закрытия своей строки: <strong>2 559 строк</strong> (116 КиБ, 26 файлов <code>SessionPage.*.test.tsx</code>), измерено в <code>dev</code> на <code>b61bc49cd</code> <strong>2026-09-13</strong> — строка выше закрыла его на <strong>2 479</strong></del><td><code>git show --numstat</code> по двум коммитам, тронувшим его после <a class="" href=/brabo/qa/ru/adr/0124-hook-do-canal-de-turno-do-sessionpage>ADR 0124</a>: <code>62eebad55</code> (+8, селектор модели «aptos para agentes») и <code>a26ddd84d</code> (+72, исполнимая карточка handoff Infra, RN-499)<td>закрытая строка выше верна для <code>ProjectSettingsTab.tsx</code> (теперь полоса и barrel в 96 строк) и <strong>больше не верна для <code>SessionPage.tsx</code></strong>. Никто ничего не сделал неправильно — каждое добавление было законной фичей, — и именно поэтому долг, закрытый <strong>числом</strong>, требует повторного измерения числа: без этого регрессия — сумма правильных решений. Эта строка <strong>объявляет</strong>, а не декомпозирует: дальнейшее деление — программа с собственным ADR, по образцу 0122/0125. Ворот размера в CI нет намеренно — храповик на файле, который никто не декомпозирует, лишь производит красные PR. Закрытая строка остаётся как история. <strong>Программа теперь существует:</strong> <a class="" href=/brabo/qa/ru/adr/0176-sessionpage-abaixo-de-mil-linhas>ADR 0176</a> (AT-138, 2026-09-28) перемерил <strong>2 637 строк</strong> в <code>dev</code> на <code>018b8cd24c</code> и объявляет десять механических PR, сложенных стопкой до 834, причём ворота размера рождаются только в последнем. <strong>Закрыто</strong> последним PR этой программы: в файле <strong>834 строки</strong>, и <code>apps/web/src/routes/SessionPage.teto.test.ts</code> проваливает его при 1 000 и более — ворота размера, от которых эта строка отказалась для файла, который никто не декомпозировал, теперь существуют, поскольку кто-то его декомпозировал</table></div><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_yZb9"><a href=https://github.com/daneiel/brabo/blob/dev/docs/architecture.md target=_blank rel="noopener noreferrer" class=theme-edit-this-page><svg fill=currentColor height=20 width=20 viewBox="0 0 40 40" class=iconEdit_ANja aria-hidden=true><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"/></g></svg>Отредактировать эту страницу</a></div><div class="col lastUpdated_Kb4y"><span class=theme-last-updated>Последнее обновление<!-- --> <b><time datetime=2026-10-16T13:17:04.000Z itemprop=dateModified>16 окт. 2026 г.</time></b> от <b>Daniel Souza</b></span></div></div></footer></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Страница документа"><a class="pagination-nav__link pagination-nav__link--prev" href=/brabo/qa/ru/tutorials/interface-antes-e-depois-shadcn><div class=pagination-nav__sublabel>Предыдущая страница</div><div class=pagination-nav__label>Interface antes e depois do shadcn (31/10/2026)</div></a><a class="pagination-nav__link pagination-nav__link--next" href=/brabo/qa/ru/adr><div class=pagination-nav__sublabel>Следующая страница</div><div class=pagination-nav__label>Индекс ADR</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_wOiH thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href=#the-outside-view class="table-of-contents__link toc-highlight">Взгляд снаружи</a><li><a href=#containers class="table-of-contents__link toc-highlight">Контейнеры</a><li><a href=#code-map class="table-of-contents__link toc-highlight">Карта кода</a><ul><li><a href=#appsapi--nestjs-906-files-in-src-measured-2026-09-25 class="table-of-contents__link toc-highlight"><code>apps/api</code> — NestJS, 906 файлов в <code>src/</code> (измерено 2026-09-25)</a><li><a href=#appsengine--elixirotp-219-files-in-lib-measured-2026-09-25 class="table-of-contents__link toc-highlight"><code>apps/engine</code> — Elixir/OTP, 219 файлов в <code>lib/</code> (измерено 2026-09-25)</a><li><a href=#appsbroker--nodets-9-files-in-src-measured-2026-09-25 class="table-of-contents__link toc-highlight"><code>apps/broker</code> — Node/TS, 9 файлов в <code>src/</code> (измерено 2026-09-25)</a><li><a href=#appsweb--react-19-487-files-in-src-measured-2026-09-25 class="table-of-contents__link toc-highlight"><code>apps/web</code> — React 19, 487 файлов в <code>src/</code> (измерено 2026-09-25)</a><li><a href=#outside-the-applications class="table-of-contents__link toc-highlight">Вне приложений</a></ul><li><a href=#an-agent-turns-flow class="table-of-contents__link toc-highlight">Поток хода агента</a><li><a href=#boundaries-and-invariants class="table-of-contents__link toc-highlight">Границы и инварианты</a><li><a href=#cross-cutting-concerns class="table-of-contents__link toc-highlight">Сквозные вопросы</a><li><a href=#data class="table-of-contents__link toc-highlight">Данные</a><li><a href=#divida-tecnica class="table-of-contents__link toc-highlight">Известный технический долг</a></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Документация</div><ul class="footer__items clean-list"><li class=footer__item><a class=footer__link-item href=/brabo/qa/ru/getting-started>Первые шаги</a><li class=footer__item><a class=footer__link-item href=/brabo/qa/ru/architecture>Архитектура</a><li class=footer__item><a class=footer__link-item href=/brabo/qa/ru/business-rules>Бизнес-правила</a><li class=footer__item><a class=footer__link-item href=/brabo/qa/ru/runbook>Руководство по эксплуатации</a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Сообщество</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class=footer__link-item>Как внести вклад<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class=footer__link-item>Где попросить помощи<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class=footer__link-item>Безопасность<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Ещё</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class=footer__link-item>GitHub<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CHANGELOG.md target=_blank rel="noopener noreferrer" class=footer__link-item>CHANGELOG<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/LICENSE target=_blank rel="noopener noreferrer" class=footer__link-item>Лицензия MIT<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/THIRD_PARTY_NOTICES.md target=_blank rel="noopener noreferrer" class=footer__link-item>Уведомления о сторонних компонентах<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div></div><div class="footer__bottom text--center"><div class=footer__copyright>Copyright © 2026 Daniel Souza. Распространяется по лицензии MIT. Сторонние инструменты сохраняют собственные лицензии — см. Уведомления о сторонних компонентах.</div></div></div></footer></div></body>

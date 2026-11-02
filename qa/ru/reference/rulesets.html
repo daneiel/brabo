@@ -1,0 +1,926 @@
+<!doctype html><html lang=ru dir=ltr class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-reference/rulesets" data-has-hydrated=false><head><meta charset=UTF-8><meta name=generator content="Docusaurus v3.10.2"><title data-rh=true>Rulesets репозитория | Brabo</title><meta data-rh=true name=viewport content="width=device-width, initial-scale=1.0"/><meta data-rh=true name=robots content="noindex, nofollow"/><meta data-rh=true name=twitter:card content=summary_large_image /><meta data-rh=true property=og:url content=https://daneiel.github.io/brabo/qa/ru/reference/rulesets /><meta data-rh=true property=og:locale content=ru /><meta data-rh=true property=og:locale:alternate content=pt_BR /><meta data-rh=true property=og:locale:alternate content=en /><meta data-rh=true property=og:locale:alternate content=zh_Hans /><meta data-rh=true name=docusaurus_locale content=ru /><meta data-rh=true name=docsearch:language content=ru /><meta data-rh=true name=docusaurus_version content=current /><meta data-rh=true name=docusaurus_tag content=docs-default-current /><meta data-rh=true name=docsearch:version content=current /><meta data-rh=true name=docsearch:docusaurus_tag content=docs-default-current /><meta data-rh=true property=og:title content="Rulesets репозитория | Brabo"/><meta data-rh=true name=description content="Точная конфигурация rulesets для трёх постоянных веток и для тегов, для ручного применения — репозиторий версионирует источник, GitHub получает применение."/><meta data-rh=true property=og:description content="Точная конфигурация rulesets для трёх постоянных веток и для тегов, для ручного применения — репозиторий версионирует источник, GitHub получает применение."/><meta data-rh=true name=keywords content="rulesets,защита веток,обязательные проверки,теги,релиз"/><link data-rh=true rel=icon href=/brabo/qa/ru/img/favicon.ico /><link data-rh=true rel=canonical href=https://daneiel.github.io/brabo/qa/ru/reference/rulesets /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/qa/reference/rulesets hreflang=pt-BR /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/qa/en/reference/rulesets hreflang=en /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/qa/ru/reference/rulesets hreflang=ru /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/qa/zh-Hans/reference/rulesets hreflang=zh-Hans /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/qa/reference/rulesets hreflang=x-default /><script data-rh=true type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","item":"https://daneiel.github.io/brabo/qa/ru/reference/rulesets","name":"Правила репозитория (rulesets)","position":1}]}</script><link rel=stylesheet href=/brabo/qa/ru/assets/css/styles.41f6b491.css /><script src=/brabo/qa/ru/assets/js/runtime~main.dbb2fc44.js defer></script><script src=/brabo/qa/ru/assets/js/main.c877ccbe.js defer></script></head><body><svg style="display: none;"><defs>
+<symbol id=theme-svg-external-link viewBox="0 0 24 24"><path fill=currentColor d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
+</defs></svg>
+<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme-524")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")),document.documentElement.setAttribute("data-theme-choice",t||"system")}(),function(){try{for(var[t,e]of new URLSearchParams(window.location.search).entries())if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}(),document.documentElement.setAttribute("data-announcement-bar-initially-dismissed",function(){try{return"true"===localStorage.getItem("docusaurus.announcement.dismiss-524")}catch(t){}return!1}())</script><div id=__docusaurus><link rel=preload as=image href=/brabo/qa/ru/img/logo.svg /><div role=region aria-label="Перейти к основному содержимому"><a class=skipToContent_CFOX href=#__docusaurus_skipToContent_fallback>Перейти к основному содержимому</a></div><div class="theme-announcement-bar announcementBar_WKrp" role=banner><div class="content_yzPg announcementBarContent_fSaH">Fase de teste: a QA é promovida automaticamente a cada merge na dev e ainda não é considerada ambiente validado.</div></div><nav aria-label="Главная навигация" class="theme-layout-navbar navbar navbar--fixed-top"><div class=navbar__inner><div class="theme-layout-navbar-left navbar__items"><button aria-label="Переключить навигационную панель" aria-expanded=false class="navbar__toggle clean-btn" type=button><svg width=30 height=30 viewBox="0 0 30 30" aria-hidden=true><path stroke=currentColor stroke-linecap=round stroke-miterlimit=10 stroke-width=2 d="M4 7h22M4 15h22M4 23h22"/></svg></button><a class=navbar__brand href=/brabo/qa/ru/><div class=navbar__logo><img src=/brabo/qa/ru/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--light_vzqw"/><img src=/brabo/qa/ru/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--dark_FhTf"/></div><b class="navbar__title text--truncate">Brabo</b></a><a aria-current=page class="navbar__item navbar__link navbar__link--active" href=/brabo/qa/ru/>Документация</a><a class="navbar__item navbar__link" href=/brabo/qa/ru/runbook>Руководство по эксплуатации</a><a class="navbar__item navbar__link" href=/brabo/qa/ru/adr>Решения (ADR)</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a href=# aria-haspopup=true aria-expanded=false role=button class=navbar__link><svg viewBox="0 0 24 24" width=20 height=20 aria-hidden=true class=iconLanguage_g_CG><path fill=currentColor d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg>Русский</a><ul class=dropdown__menu><li><a href=/brabo/qa/reference/rulesets target=_self rel="noopener noreferrer" class=dropdown__link lang=pt-BR>Português (Brasil)</a><li><a href=/brabo/qa/en/reference/rulesets target=_self rel="noopener noreferrer" class=dropdown__link lang=en>English</a><li><a href=/brabo/qa/ru/reference/rulesets target=_self rel="noopener noreferrer" class="dropdown__link dropdown__link--active" lang=ru>Русский</a><li><a href=/brabo/qa/zh-Hans/reference/rulesets target=_self rel="noopener noreferrer" class=dropdown__link lang=zh-Hans>简体中文</a></ul></div><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a href=# aria-haspopup=true aria-expanded=false role=button class=navbar__link>qa</a><ul class=dropdown__menu><li><a href=https://daneiel.github.io/brabo/prd/ target=_blank rel="noopener noreferrer" class=dropdown__link>prd — estável<svg width=12 height=12 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/qa/ target=_blank rel="noopener noreferrer" class=dropdown__link>qa — candidata ✓<svg width=12 height=12 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/dev/ target=_blank rel="noopener noreferrer" class=dropdown__link>dev — в разработке<svg width=12 height=12 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><div class="toggle_pnX7 colorModeToggle_Dj3Z"><button class="clean-btn toggleButton_DKER toggleButtonDisabled_qzkp" type=button disabled title="системный режим" aria-label="Переключение между темным и светлым режимом (сейчас используется системный режим)"><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL lightToggleIcon_E8tM"><path fill=currentColor d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL darkToggleIcon_rXjT"><path fill=currentColor d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL systemToggleIcon_zwCm"><path fill=currentColor d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"/></svg></button></div><div class=navbarSearchContainer_zRAa><div class="navbar__search searchBarContainer_eGzj" dir=ltr><svg aria-hidden=true class=searchIcon_PXpx focusable=false viewBox="0 0 16 16"><path fill=currentColor d="M6.02945 10.20327a4.17382 4.17382 0 1 1 4.17382-4.17382 4.15609 4.15609 0 0 1-4.17382 4.17382Zm9.69195 4.2199-4.8225-4.82338A5.88021 5.88021 0 0 0 12.058 6.02856 6.00467 6.00467 0 1 0 9.59979 10.8989l4.82338 4.82338a.89729.89729 0 0 0 1.29912 0 .89749.89749 0 0 0-.00087-1.29909Z"/></svg><input placeholder=Поиск aria-label=Search class="navbar__search-input searchInput_xOBI" value="" /><div class="loadingRing_JccP searchBarLoadingRing_aTss"><div></div><div></div><div></div><div></div></div></div></div></div></div><div role=presentation class=navbar-sidebar__backdrop></div></nav><div id=__docusaurus_skipToContent_fallback class="theme-layout-main main-wrapper mainWrapper_WJkx"><div class=docsWrapper_mIeg><button aria-label="Прокрутка к началу" class="clean-btn theme-back-to-top-button backToTopButton_Afc8" type=button></button><div class=docRoot_XZYc><aside class="theme-doc-sidebar-container docSidebarContainer_FPqZ"><div class=sidebarViewport_waOe><div class=sidebar_RQC4><nav aria-label="Боковая панель документации" class="menu thin-scrollbar menu_ZM4U menuWithAnnouncementBar_EJk2"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/qa/ru/><span class=categoryLinkLabel_jKch>🚀 Начните здесь</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/><span class=linkLabel_CzBh>Введение</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/getting-started><span class=linkLabel_CzBh>Первые шаги</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/tutorials/from-zero-to-deliverable><span class=linkLabel_CzBh>С нуля до готового результата</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/tutorials/interface-antes-e-depois-shadcn><span class=linkLabel_CzBh>Interface antes e depois do shadcn (31/10/2026)</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/qa/ru/architecture><span class=categoryLinkLabel_jKch>🏗️ Архитектура</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/architecture><span class=linkLabel_CzBh>Архитектура</span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist" tabindex=0 href=/brabo/qa/ru/adr><span class=categoryLinkLabel_jKch>Решения (ADR)</span></a><button aria-label="Развернуть категорию 'Решения (ADR)'" aria-expanded=false type=button class="clean-btn menu__caret"></button></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/qa/ru/business-rules><span class=categoryLinkLabel_jKch>📐 Правила</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/business-rules><span class=linkLabel_CzBh>Бизнес-правила</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/business-rules/custo><span class=linkLabel_CzBh>Стоимость и metering</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/business-rules/autenticacao><span class=linkLabel_CzBh>Аутентификация</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role=button aria-expanded=true href=/brabo/qa/ru/reference/configuration><span class=categoryLinkLabel_jKch>📖 Справочник</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/reference/configuration><span class=linkLabel_CzBh>Конфигурация</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/reference/events><span class=linkLabel_CzBh>События</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/reference/permissions><span class=linkLabel_CzBh>Права доступа</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/reference/artifacts><span class=linkLabel_CzBh>Артефакты</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/reference/git-providers><span class=linkLabel_CzBh>Git-провайдеры</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/reference/internal-api><span class=linkLabel_CzBh>Внутренний API</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/reference/scripts><span class=linkLabel_CzBh>Скрипты и команды</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link menu__link--active" aria-current=page tabindex=0 href=/brabo/qa/ru/reference/rulesets><span class=linkLabel_CzBh>Правила репозитория (rulesets)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/reference/paridade-de-traducao><span class=linkLabel_CzBh>Паритет переводов</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/reference/brb><span class=linkLabel_CzBh>Реестр BRB</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/security-surface><span class=linkLabel_CzBh>Открытая поверхность api</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/reference/api><span class=linkLabel_CzBh>Справочник API</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/qa/ru/explanation/documentation-workflow><span class=categoryLinkLabel_jKch>💡 Пояснения</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true tabindex=0 href=/brabo/qa/ru/explanation/documentation-workflow><span class=categoryLinkLabel_jKch>Процесс и конвейер</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/explanation/documentation-workflow><span class=linkLabel_CzBh>Синхронизация документации</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/explanation/branching-policy><span class=linkLabel_CzBh>Политика веток</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/explanation/cadeia-de-suprimentos-do-ci><span class=linkLabel_CzBh>Цепочка поставок CI</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/explanation/gates><span class=linkLabel_CzBh>Gates и то, как они измеряются</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/explanation/observability><span class=linkLabel_CzBh>Наблюдаемость</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/explanation/modelo-de-time><span class=linkLabel_CzBh>Модель команды и поток результатов</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/qa/ru/explanation/primeiro-dogfooding><span class=categoryLinkLabel_jKch>Проверки и измерения</span></a></div><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/qa/ru/explanation/historico-de-fases><span class=categoryLinkLabel_jKch>История фаз</span></a></div><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/qa/ru/explanation/localizacao><span class=categoryLinkLabel_jKch>Локализация</span></a></div><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/qa/ru/explanation/tanstack-ai><span class=categoryLinkLabel_jKch>Технические заметки</span></a></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/qa/ru/runbook><span class=categoryLinkLabel_jKch>🛠️ Эксплуатация</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/runbook><span class=linkLabel_CzBh>Руководство по эксплуатации</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/qa/ru/glossary><span class=categoryLinkLabel_jKch>📚 Словарь</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/qa/ru/glossary><span class=linkLabel_CzBh>Глоссарий</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true><span class=categoryLinkLabel_jKch>🤝 Участие</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>Как внести вклад</span><svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>Где попросить помощи</span><svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>Сообщить об уязвимости</span><svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></ul></nav></div></div></aside><main class=docMainContainer_ia8v><div class="container padding-top--md padding-bottom--lg"><div class=row><div class="col docItemCol_xjE4"><div class=docItemContainer_cPej><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_sZul" aria-label="Навигационная цепочка текущей страницы"><ul class=breadcrumbs><li class=breadcrumbs__item><a aria-label="Главная страница" class=breadcrumbs__link href=/brabo/qa/ru/><svg viewBox="0 0 24 24" class=breadcrumbHomeIcon_AUjL><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill=currentColor /></svg></a><li class=breadcrumbs__item><span class=breadcrumbs__link>📖 Справочник</span><li class="breadcrumbs__item breadcrumbs__item--active"><span class=breadcrumbs__link>Правила репозитория (rulesets)</span></ul></nav><div class="tocCollapsible_nbAK theme-doc-toc-mobile tocMobile_r92C"><button type=button class="clean-btn tocCollapsibleButton_hcyq">Содержание этой страницы</button></div><div class="theme-doc-markdown markdown"><header><h1>Rulesets репозитория</h1></header>
+<p>Эта страница — <strong>версионируемый источник</strong> защиты. Применение её в GitHub —
+<strong>ручной</strong> шаг: репозиторий не может защитить сам себя, и эта асимметрия
+намеренная — ослабляющий защиту должен быть человеком, с записью.</p>
+<p>Политика, которую применяют эти правила, описана в
+<a class="" href=/brabo/qa/ru/explanation/branching-policy>Política de branches</a>.</p>
+<blockquote>
+<p><strong>Текущее состояние:</strong> <code>gh api repos/daneiel/brabo/rulesets</code> возвращает <strong>0</strong>.
+Ничего ещё не применено. До тех пор всё здесь — объявленное намерение, а не
+реальная защита.</p>
+</blockquote>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=предусловие-все-три-ветки-должны-существовать>Предусловие: все три ветки должны существовать<a href=#предусловие-все-три-ветки-должны-существовать class=hash-link aria-label="Прямая ссылка на Предусловие: все три ветки должны существовать" title="Прямая ссылка на Предусловие: все три ветки должны существовать" translate=no>​</a></h2>
+<p>У лестницы три ступени, и ruleset не нацеливается на то, чего нет.</p>
+<div class="language-bash codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:var(--syntax-text);--prism-background-color:var(--code-bg)><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-bash codeBlock_mqej thin-scrollbar" style=color:var(--syntax-text);background-color:var(--code-bg)><code class=codeBlockLines_uNqR><div class=token-line style=color:var(--syntax-text)><span class="token plain">git fetch origin</span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">git push origin origin/dev:refs/heads/qa</span><br/></div></code></pre></div></div>
+<p><code>dev</code> и <code>main</code> уже существуют. <code>qa</code> рождается от <code>dev</code> — лестница начинается
+пустой и заполняется продвижениями.</p>
+<blockquote>
+<p>Ветка <code>rc</code> была <strong>удалена</strong> из лестницы. Если она ещё существует в remote
+старого клона, удалите её: <code>git push origin --delete rc</code>. Постоянная ветка,
+которой нет в лестнице, — приглашение для PR нацелиться на ступень, которой
+больше нет.</p>
+</blockquote>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=ruleset-1--три-постоянные-ветки>Ruleset 1 — три постоянные ветки<a href=#ruleset-1--три-постоянные-ветки class=hash-link aria-label="Прямая ссылка на Ruleset 1 — три постоянные ветки" title="Прямая ссылка на Ruleset 1 — три постоянные ветки" translate=no>​</a></h2>
+<p><strong>Имя:</strong> <code>permanentes</code>
+<strong>Enforcement:</strong> <code>Active</code>
+<strong>Цель:</strong> Branch → <code>Include by pattern</code>, три записи: <code>dev</code>, <code>qa</code>, <code>main</code></p>
+<blockquote>
+<p>Один ruleset на три, а не три ruleset: требование во всех идентично. Между
+ступенями различается <strong>кто одобряет</strong>, и это решает <code>approval-ladder</code> по
+назначению, а не защита.</p>
+</blockquote>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=правила-которые-нужно-отметить>Правила, которые нужно отметить<a href=#правила-которые-нужно-отметить class=hash-link aria-label="Прямая ссылка на Правила, которые нужно отметить" title="Прямая ссылка на Правила, которые нужно отметить" translate=no>​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>правило<th>значение<th>почему<tbody><tr><td><strong>Restrict deletions</strong><td>✅<td>случайно удалить <code>main</code> через интерфейс необратимо<tr><td><strong>Block force pushes</strong><td>✅<td>force-push в постоянную ветку переписывает уже продвинутое; тег ступени в итоге указывал бы на несуществующий коммит<tr><td><strong>Require a pull request before merging</strong><td>✅<td>это центральное правило: никакое изменение не входит без PR<tr><td>↳ Required approvals<td><strong>0</strong><td>считает <code>approval-ladder</code>, который знает режим и назначение. Нативное число GitHub не отличает <code>dev</code> от <code>main</code><tr><td>↳ Dismiss stale approvals on push<td>✅<td>одобрение старого коммита не считается — одобренное не то, что будет смёржено<tr><td>↳ Require review from Code Owners<td>✅<td><code>CODEOWNERS</code> ставит владельца ревьюером всего<tr><td><strong>Require status checks to pass</strong><td>✅<td>см. список ниже<tr><td>↳ Require branches to be up to date<td>❌<td>заставило бы делать rebase при каждом merge в <code>dev</code>; CI уже запускается на merge-коммите<tr><td><strong>Block merge queue</strong><td>—<td>не используется</table>
+<p><strong>Required approvals = 0 — это не ослабление.</strong> GitHub умеет только считать; он
+не знает, что <code>main</code> требует PO + управление, а <code>dev</code> — одного разработчика, и
+что в режиме <code>solo</code> PR самого владельца проходит без ревью. Поставить здесь <code>1</code>
+<strong>сломало бы</strong> режим solo: владелец не может одобрить собственный PR через
+интерфейс, и PR застрял бы навсегда. Настоящее требование живёт в
+<code>approval-ladder</code>, который является обязательной проверкой, — а обязательную
+проверку не обойти.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=две-конфигурации-рядом>Две конфигурации рядом<a href=#две-конфигурации-рядом class=hash-link aria-label="Прямая ссылка на Две конфигурации рядом" title="Прямая ссылка на Две конфигурации рядом" translate=no>​</a></h3>
+<p>Ruleset <strong>один и тот же</strong> в обоих режимах. Меняется переменная — и поэтому
+миграция не проходит через Settings → Rules.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th><th><code>solo</code> (сегодня)<th><code>community</code> (в будущем)<tbody><tr><td><strong>Required approvals в ruleset</strong><td><strong>0</strong><td><strong>0</strong><tr><td>кто требует<td>проверка <code>Escada de aprovação</code><td>та же проверка<tr><td>переменные<td><code>APPROVAL_MODE=solo</code>, <code>OWNER_HANDLE</code><td><code>APPROVAL_MODE=community</code>, <code>APROVADORES_*</code><tr><td><code>dev</code><td>1 от владельца<td>1 × devs<tr><td><code>qa</code><td>1 от владельца<td>2 × devs<tr><td><code>main</code><td>1 от владельца<td>1 × PO + 1 × управление<tr><td>PR самого владельца<td>проходит без ревью<td>идёт по лестнице, как у любого<tr><td>разные люди<td>приостановлено<td>действует в <code>main</code></table>
+<p><strong>Required approvals остаётся 0 в обоих случаях, и это обдуманно.</strong> GitHub
+умеет только считать: не отличает <code>dev</code> от <code>main</code>, не знает ролей и не знает,
+что в режиме solo PR самого владельца проходит без ревью. Поставить там <code>1</code>
+<strong>сломало бы режим solo</strong> — владелец не может одобрить собственный PR через
+интерфейс, и каждый его PR застрял бы навсегда. Настоящее требование живёт в
+проверке, которая обязательна и не обходится.</p>
+<p>Скопируйте и вставьте, чтобы включить каждый режим:</p>
+<div class="language-bash codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:var(--syntax-text);--prism-background-color:var(--code-bg)><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-bash codeBlock_mqej thin-scrollbar" style=color:var(--syntax-text);background-color:var(--code-bg)><code class=codeBlockLines_uNqR><div class=token-line style=color:var(--syntax-text)><span class="token plain"># solo — what's in effect today</span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">gh variable set APPROVAL_MODE --body solo</span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">gh variable set OWNER_HANDLE  --body daneiel</span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain" style=display:inline-block></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain"># community — fill in the lists BEFORE flipping the switch</span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">gh variable set APROVADORES_DEVS   --body "ana,bruno,carla"</span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">gh variable set APROVADORES_PO     --body "paula"</span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">gh variable set APROVADORES_GESTAO --body "gustavo"</span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">gh variable set APPROVAL_MODE      --body community</span><br/></div></code></pre></div></div>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=обязательные-проверки>Обязательные проверки<a href=#обязательные-проверки class=hash-link aria-label="Прямая ссылка на Обязательные проверки" title="Прямая ссылка на Обязательные проверки" translate=no>​</a></h3>
+<p>Имя <strong>точное</strong>, как его регистрирует GitHub (это <code>name:</code> job, а не workflow):</p>
+<p>Колонка длительности <strong>измерена</strong>, а не оценена — три реальных запуска,
+холодный и тёплый кэш. Она существует, чтобы «оптимизировать CI» начиналось с
+числа, а не с догадки. <code>*</code> отмечает строку, измеренную по одному реальному
+запуску вместо трёх, — job новый (или только что переименован) и ещё не был
+перемерен холодный × тёплый; одно и то же число заполняет обе колонки, пока не
+будет.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>проверка<th>workflow<th>холодный<th>тёплый<tbody><tr><td><code>Build, scan e smoke das imagens de produção</code><td><code>ci.yml</code><td><strong>295s</strong><td>109s<tr><td><code>Testes TS (api)</code><td><code>ci.yml</code><td>177s*<td><strong>177s</strong>*<tr><td><code>Testes TS (web)</code><td><code>ci.yml</code><td>169s*<td><strong>169s</strong>*<tr><td><code>Testes TS (pacotes)</code><td><code>ci.yml</code><td>56s*<td><strong>56s</strong>*<tr><td><code>Testes do engine (ExUnit)</code><td><code>ci.yml</code><td>124s<td>39s<tr><td><code>Auditoria de dependências</code><td><code>ci.yml</code><td>99s<td>85s<tr><td><code>Lint</code><td><code>ci.yml</code><td>66s<td>69s<tr><td><code>Drift, gerados e build</code><td><code>docs-check.yml</code><td>53s<td>51s<tr><td><code>Manifests de Kubernetes</code><td><code>ci.yml</code><td>14s<td>13s<tr><td><code>Gitleaks no repositório</code><td><code>ci.yml</code><td>5s<td>7s<tr><td><code>Política de branches</code><td><code>pr-police.yml</code><td>7s<td>7s<tr><td><code>Escada de aprovação</code><td><code>approval-ladder.yml</code><td>13s<td>15s<tr><td><code>Check de promoção</code><td><code>promotion-check.yml</code><td>9s<td>9s<tr><td><code>Backmerge gate</code><td><code>backmerge-gate.yml</code><td>7s<td>7s</table>
+<p><strong>После AT-303..306 (только бесплатные изменения, без платного runner).</strong> Имена
+в таблице выше <strong>не</strong> изменились — переименованная обязательная проверка
+блокирует каждый PR, — а числа выше — это ДО. Что изменилось под капотом:</p>
+<ul>
+<li class=""><strong><code>Build, scan e smoke das imagens de produção</code> пропускает тяжёлые шаги,
+когда diff не затрагивает образ</strong> (AT-303). Первый шаг классифицирует diff PR
+с помощью <code>scripts/ci/diff-toca-imagem.ts</code> (список разрешённого — того, что
+никогда не попадает в образ, в smoke или в E2E: <code>docs/</code> кроме
+<code>docs/gates.yml</code>, <code>website/</code>, <code>scripts/docs/</code>, <code>deploy/k8s/</code>, <code>.github/</code>
+кроме <code>ci.yml</code>, <code>*.md</code> в корне кроме <code>THIRD_PARTY_NOTICES.md</code>,
+<code>design/*.md</code>; spec доказывает список против настоящих Dockerfile, мутацией).
+Bake, Trivy, broker, smoke и E2E несут <code>if:</code> <strong>на шаге</strong>, и job всегда
+завершается — зелёным, говоря почему в сводке job. Никогда <code>paths:</code> в
+триггере и никогда <code>if:</code> на job: оба оставили бы обязательную проверку
+ожидающей или приклеенной к старому вердикту. В сомнении (пустой diff, HEAD,
+который не merge-коммит PR, падающий <code>git diff</code>) запускается всё.</li>
+<li class=""><strong>Тот же job кэширует браузер Playwright, store pnpm из <code>e2e/</code> и базу
+Trivy</strong> (AT-304) — см.
+<a class="" href=/brabo/qa/ru/explanation/cadeia-de-suprimentos-do-ci#images-job-caches>что кэширует job образов</a>.</li>
+<li class=""><strong><code>Testes TS (api)</code> и <code>Testes TS (web)</code> стали АГРЕГАТОРАМИ двух шардов
+каждый</strong> (AT-305). Jobs <code>Testes TS (api) — shard N/2</code> и <code>Testes TS (web) — shard N/2</code> запускают каждый половину файлов, с покрытием, но с
+обнулённой нижней границей, и пишут отчёт <code>blob</code> vitest; агрегатор — который
+сохраняет обязательное имя — проверяет, что оба шарда завершились <code>success</code>,
+что оба отчёта пришли, и запускает <code>vitest --merge-reports --coverage</code>,
+который применяет НЕИЗМЕНЁННЫЕ <code>coverage.thresholds</code> из
+<code>vitest.config.ts</code>/<code>vite.config.ts</code> к объединённому покрытию (измерено
+локально: объединённое покрытие идентично покрытию единого запуска). У
+агрегатора намеренно <code>if: always()</code>: без него красный шард оставил бы его
+<code>skipped</code>, а <code>skipped</code> считается зелёным для обязательной проверки. Имена
+шардов <strong>не</strong> являются обязательными проверками и не должны перечисляться в
+ruleset. Typecheck выполняется только в шарде 1.</li>
+<li class=""><strong><code>Testes do engine (ExUnit)</code> и шарды api ждут новый job,
+<code>imagens / Ler as imagens do compose</code></strong> (ADR 0197): он читает ссылку на
+pgvector из <code>docker/docker-compose.yml</code> и передаёт её в их <code>services:</code>, так
+что ни один workflow не хранит литерал образа. Он <strong>не</strong> является
+обязательной проверкой и не должен перечисляться в ruleset — то, что он
+решит, проявляется в зависящих от него jobs. Эти jobs несут
+<code>if: ${{ !cancelled() }}</code> по той же причине, что и агрегаторы выше: если бы
+<code>imagens</code> упал, по умолчанию был бы ПРОПУЩЕН <code>Testes do engine (ExUnit)</code>, а
+<code>skipped</code> считается зелёным для обязательной проверки; с ним job запускается,
+получает пустой образ и падает.</li>
+<li class=""><code>claude-code-review.yml</code> получил <code>concurrency</code> (cancel-in-progress, на PR) и
+<code>timeout-minutes: 30</code>; <code>docs-check.yml</code> получил <code>timeout-minutes</code> в обоих
+jobs (AT-306).</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>проверка<th>до, холодный<th>до, тёплый<th>после, холодный<th>после, тёплый<th>после, PR только docs<tbody><tr><td><code>Build, scan e smoke das imagens de produção</code><td>295s<td>109s<td>TODO(humano)<td>TODO(humano)<td>TODO(humano)<tr><td><code>Testes TS (api)</code> (шарды + агрегатор, время по часам)<td>177s<td>177s<td>TODO(humano)<td>TODO(humano)<td>—<tr><td><code>Testes TS (web)</code> (шарды + агрегатор, время по часам)<td>169s<td>169s<td>TODO(humano)<td>TODO(humano)<td>—</table>
+<blockquote>
+<p><strong>TODO(humano):</strong> заполнить колонки «после» запусками этого самого PR
+(холодный: первый push; тёплый: перезапуск того же коммита; только docs: PR,
+затрагивающий только <code>docs/</code>), а затем перенести числа в основную таблицу.</p>
+</blockquote>
+<p><strong>Следствие для критерия <code>edited</code> ниже:</strong> job образов теперь зависит и от БАЗЫ
+(diff берётся относительно неё), а <code>ci.yml</code> по-прежнему не перезапускается на
+<code>edited</code>. Единственное небезопасное направление — PR, пропустивший образы
+относительно одной базы и затем перенаправленный на базу, где его diff затронул
+бы образ, — редкость, поскольку продвижения запускаются от верхушек постоянных
+веток (чей diff всегда что-то затрагивает), а перенаправления обычно сужают
+diff. Следующий push переклассифицирует.</p>
+<p><strong><code>ci.yml</code> параллелен, кроме двух агрегаторов</strong> — у <code>test-api</code> и <code>test-web</code>
+есть <code>needs</code> на свои шарды, больше ни у чего нет <code>needs:</code>.
+Полный вердикт PR стоит САМОЙ МЕДЛЕННОЙ цепочки, а не суммы (которая ~12 мин
+CPU). До AT-303..305 у того, кто хотел укоротить PR, было две цели, и только
+две:</p>
+<ul>
+<li class="">
+<p><strong>холодный кэш: job образов</strong>, где 195s из 295s — это
+<code>docker buildx bake</code>, самый большой отдельный пункт во всей CI, в 3× больше
+второго. Bakefile уже собирает четыре образа параллельно с кэшем <code>type=gha</code>
+на образ, и комментарий в его начале измеряет, почему разбивать его на
+матрицу jobs было бы ХУЖЕ: 1,7 GB образов на артефакт стоят больше сборки, а
+smoke нужны все четыре в одном daemon;</p>
+</li>
+<li class="">
+<p><strong>старый job <code>Testes TS (api + web)</code></strong>, где 91s из 159s были
+<code>pnpm --filter api test</code>, сериализованным через <code>fileParallelism: false</code> в
+<code>apps/api/vitest.config.ts</code>, потому что ~80 spec, затрагивающих базу,
+делили ОДНУ <code>brabo_test</code> и выполняли TRUNCATE между тестами —
+параллельные заходы столкнулись бы. Это было исправлено
+(<code>perf/banco-por-worker-nos-testes-da-api</code>, CHANGELOG): каждый worker
+Vitest получает СОБСТВЕННУЮ базу — <code>test/support/global-setup.ts</code> один раз
+мигрирует TEMPLATE и клонирует по базе на worker через
+<code>CREATE DATABASE ... TEMPLATE</code> (дёшево, копия страниц, а не повторный
+прогон migrations), <code>test/support/test-db-name.ts</code> определяет, к какой из
+них подключается spec, по <code>VITEST_POOL_ID</code>, а <code>vitest.config.ts</code>
+включает <code>fileParallelism: true</code> с <code>maxWorkers: 4</code> (фиксировано по 4 vCPU
+runner, не автоопределяется — число должно быть ОДИНАКОВЫМ на машине
+разработчика с большим числом ядер и на runner, иначе измеренное локально
+поведение — не то, что выполняется там). Измерено локально: длительность
+самого набора api упала с 792,58s до 471,23s на чистом запуске (~40%, три
+повтора без нестабильности). Перемерено на настоящем hosted runner GitHub (PR
+#491, <code>ci.yml</code>): сам шаг <code>pnpm --filter api test</code> упал до <strong>96s</strong> — прямо
+на нижней границе <code>91s</code> тёплого кэша, которую эта таблица называла
+теоретически лучшим случаем, а не случайный выброс.</p>
+<p>Это исправление изменило форму job, где оно выполнялось, и именно это
+сделало возможным ВТОРОЕ сокращение. Шаг тестов самого <code>apps/web</code> вырос до
+125s в том же запуске, который измерил общие <code>343s</code> job (PR
+#494, job <code>101317149006</code>), — уже не тот маленький хвост, который описывал
+акцент ниже, а ровня api. <code>perf/paraleliza-testes-ts</code> (CHANGELOG)
+разделил job на три параллельных — <code>test-api</code> (сохраняет сервис <code>postgres</code> и
+окружение <code>DATABASE_URL</code>/<code>TEST_DATABASE_URL</code>, поскольку только он трогает
+базу), <code>test-web</code> и <code>test-packages</code> (скрипты CI, порт Docker, broker,
+runner — шесть компонентов, которым Postgres никогда не был нужен), — каждый
+со своими <code>checkout</code> + <code>setup-node</code> + <code>pnpm install</code>. Измерено на настоящем
+hosted runner GitHub (PR #495, <code>ci.yml</code>): <strong>177s</strong>
+(<code>test-api</code>), <strong>169s</strong> (<code>test-web</code>), <strong>56s</strong> (<code>test-packages</code>) против
+<strong>343s</strong> заменённого ими job — проверка, державшая PR, теперь САМАЯ
+МЕДЛЕННАЯ из трёх, а не их сумма, реальное сокращение на <strong>~48%</strong>.</p>
+<p><code>test-web</code> и <code>test-packages</code> были стабильны во всех запусках этого PR
+(164–169s и 55–56s). <code>test-api</code> — нет: второй push измерил его в <strong>388s</strong> —
+хуже общих 343s старого job — при всех шагах по-прежнему зелёных, а затем
+простой перезапуск ТОГО ЖЕ коммита измерил <strong>172s</strong>. Три реальных замера
+<code>test-api</code> в этом PR: 177s, 388s, 172s. Два из трёх ложатся туда же, куда
+<code>test-web</code> и <code>test-packages</code> (с запасом в пределах цели ~4 мин); запуск в
+388s согласуется с конкуренцией за общий runner на стороне GitHub, а не с
+регрессией разделения — в job ничего не менялось между тем запуском и
+перезапуском, измерившим 172s. Записано как наблюдаемое, не сглажено: тот,
+кто будет разбирать следующий медленный запуск <code>test-api</code>, должен знать, что
+этот разброс уже существовал в день разделения job, и проверить конкуренцию,
+прежде чем предполагать новую регрессию.</p>
+</li>
+</ul>
+<blockquote>
+<p><strong>Предупреждение о «двух издержках», жившее здесь, больше не действует — обе
+посылки изменились.</strong> Оно говорило, что разделение <code>Testes TS (api + web)</code>
+(1) удалит обязательную проверку при переименовании, навсегда блокируя
+каждый PR, если только job fan-in или изменение в Settings не сохранит имя,
+и (2) не окупится, потому что 91s api несли бы setup, на сколько бы jobs его
+ни делили, ради чистого выигрыша ~7s.</p>
+<p>Посылка 2 перестала быть верной, когда набор web вырос до стоимости набора
+api — разделение трёх компонентов сравнимого размера, а не одного большого
+плюс маленьких хвостов, и превращает «≈150s против 159s» в
+«177s против 343s». Посылка 1 перестала действовать по ортогональной причине:
+<strong>к этому репозиторию ещё не применён ни один ruleset</strong> — <code>gh api repos/daneiel/brabo/branches/dev/protection</code> по-прежнему возвращает <code>404</code>,
+как в заметке «Текущее состояние» вверху этой страницы, — так что удалять
+было нечего. Таблица обязательных проверок выше уже отражает новое имя.
+<strong>Если ruleset когда-нибудь будет применён</strong>, перечислите <code>Testes TS (api)</code>,
+<code>Testes TS (web)</code> и <code>Testes TS (pacotes)</code> — никогда не выведенное из
+употребления имя <code>Testes TS (api + web)</code>, которое молча ни с чем не совпало бы
+и блокировало бы каждый будущий PR, ровно как описывает общее предупреждение
+ниже.</p>
+</blockquote>
+<blockquote>
+<p><strong>Имя проверки меньше того, что она охраняет.</strong> <code>Drift, gerados e build</code> — три вещи в заголовке и <strong>пять</strong> gates в job: целостность
+<code>.docmap.yml</code>, актуальность сгенерированного, drift, сборка сайта и — с тех
+пор как справочник API был опубликован сломанным в двух релизах —
+<strong>справочник API рендерится</strong> (<code>scripts/docs/api-render-check.mjs</code>).</p>
+<p>Последний существует, потому что зелёная сборка — не отрисовывающаяся
+страница: MDX компилируется, SSR пишет содержимое, <code>docs:build</code> проходит, а
+страница умирает при гидратации в браузере. Весь механизм описан в
+<code>docs/explanation/documentation-workflow.md</code>. При добавлении gate в этот job
+имя проверки <strong>не</strong> меняется — и поэтому его не нужно перерегистрировать в
+таблице выше, но это должно быть где-то записано. Записано здесь.</p>
+</blockquote>
+<blockquote>
+<p><strong><code>pull_request_target</code> требует, чтобы workflow был в ветке ПО УМОЛЧАНИЮ.</strong>
+Быть в базовой ветке PR недостаточно. Это измерено, а не предположено: с
+<code>pull_request_target</code> у <code>pr-police</code> было <strong>ноль запусков</strong>, тогда как
+<code>approval-ladder</code> и <code>docs-check</code> — использующие <code>pull_request</code> — нормально
+запустились с того же коммита. Поскольку ветка по умолчанию — <code>main</code>, а она
+продвигается только по лестнице, которую охраняет сама проверка, триггер
+стал бы проблемой курицы и яйца. Оба используют <code>pull_request</code>.</p>
+</blockquote>
+<blockquote>
+<p><strong>Откуда GitHub читает каждый workflow — три семейства, три ответа.</strong> Это
+стоило трёх отдельных открытий за эту фазу и нигде не очевидно:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>триггер<th>читает workflow из<th>следствие здесь<tbody><tr><td><code>pull_request</code>, <code>push</code><td><strong>ветки события</strong><td>работает с первого PR<tr><td><code>pull_request_target</code><td><strong>ветки по умолчанию</strong><td>не запускался: <code>main</code> отстаёт<tr><td><code>workflow_dispatch</code><td><strong>ветки по умолчанию</strong><td>даже не появляется в списке workflows</table>
+<p>Последние два создают проблему курицы и яйца, когда ветка по умолчанию
+устарела: workflow, который двигает конвейер, уже должен быть в <code>main</code>, чтобы
+его можно было запустить. Обходом было вручную запустить скрипт <code>promote</code> при
+первом продвижении — тот же скрипт, только ручной триггер. После того как
+<code>main</code> получает workflows, dispatch работает навсегда.</p>
+</blockquote>
+<blockquote>
+<p><strong>Обязательная проверка, которая никогда не запускается, блокирует PR
+навсегда.</strong> Поэтому триггер <code>ci.yml</code> покрывает все три постоянные ветки — до
+FASE 6 он срабатывал только на PR в <code>dev</code>, и требование этих проверок при
+продвижении <code>dev→qa</code> дало бы вечно ожидающий PR. Триггер <code>push</code> был удалён:
+при <code>pull_request</code>, покрывающем всё, он лишь дублировал запуски. Добавляя
+новый job в CI, либо внесите его в этот список, либо оставьте вне его
+намеренно и пусть кто-то напишет почему.</p>
+</blockquote>
+<blockquote>
+<p><strong>А обязательная проверка, которая не ПЕРЕЗАПУСКАЕТСЯ, приклеивается к
+старому вердикту.</strong> Это другая сторона урока выше, и она стоила одному PR
+ошибочного провала.</p>
+<p>Типы <code>pull_request</code> по умолчанию — <code>opened</code>, <code>reopened</code> и <code>synchronize</code>, —
+ни один не покрывает <strong>смену базы</strong>. А смена базы — рутина: GitHub открывает
+PR против ветки по умолчанию, а автор затем исправляет её на <code>dev</code>. В PR
+#71 <code>Drift, gerados e build</code> запустился в первые полдюжины секунд,
+против <code>origin/main...HEAD</code>, и упал на семи файлах, которые уже были
+отревьюены и смёржены в #70. Перенаправление его не перезапустило; красное
+осталось.</p>
+<p>Критерий того, кому нужен <code>edited</code>, — <strong>от чего зависит проверка</strong>:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>проверка зависит от…<th>нужен <code>edited</code>?<th>кто<tbody><tr><td>только от HEAD<td>нет<td><code>ci.yml</code> — тестирует коммит, и база не меняет результат (кроме решения о пропуске в job образов с AT-303 — см. «Следствие для критерия <code>edited</code>» выше)<tr><td>от БАЗЫ или от ТЕЛА PR<td><strong>да</strong><td><code>pr-police</code>, <code>approval-ladder</code>, <code>promotion-check</code>, <code>backmerge-gate</code>, <code>docs-check</code></table>
+<p>В <code>docs-check</code> — и то и другое: drift сравнивает интервал, начинающийся с
+базы, и читает тело в поисках строки <code>docs-not-needed:</code>. Без <code>edited</code>
+предохранительный клапан, документированный чуть ниже, был недостижим —
+запись обоснования в тело ничего не переоценивала, и только фиктивный коммит
+разблокировал бы PR.</p>
+</blockquote>
+<p><strong><code>claude-review</code> намеренно не входит в этот список</strong>, и это и есть «пусть
+кто-то напишет почему»: ревью через LLM субъективно и стоит токенов, поэтому
+оно информирует PR, не имея права её блокировать. Поскольку проверка не
+обязательна, job можно пропустить, не оставив PR ожидающим, — и он
+пропускается в каждом PR, открытом <strong>ботом</strong>. Action отказывается работать с
+нечеловеческим актором (<em>"Workflow initiated
+by non-human actor: &lt;name> (type: Bot)"</em>), так что без этого <code>if</code> проверка
+падает каждый раз. Это случилось дважды: в PR #64 и #65 цикла <code>v0.3.1</code>
+(продвижение, открытые <code>github-actions[bot]</code>) и снова в PR #526
+(Dependabot).</p>
+<p>Второй раз стал следствием того, <strong>как</strong> было записано условие. Оно
+перечисляло логин — <code>github-actions[bot]</code>, — что верно, пока множество не
+изменится, и молча неверно в день, когда появляется новый бот;
+<code>dependabot.yml</code> пришёл в PR #520, и следующий PR Dependabot воспроизвёл
+провал, урок которого уже был записан. Условие теперь проверяет <code>type</code> автора,
+повторяя <code>ehAutorBot</code> (<code>scripts/ci/pr-police.ts</code>), с суффиксом <code>[bot]</code> в
+логине как страховкой — GitHub не допускает <code>[</code> в логине человека, так что его
+не подделать.</p>
+<p>Для PR продвижения есть вторая, независимая причина: это был бы тот же diff,
+отревьюенный повторно, поскольку продвижение несёт только коммиты, уже
+отревьюенные в PR в <code>dev</code>. А для Dependabot есть третья, которая закрывает дверь
+сама по себе, — его PR запускаются с <strong>хранилищем секретов Dependabot</strong>,
+отдельным от хранилища Actions, так что <code>CLAUDE_CODE_OAUTH_TOKEN</code> приходит
+пустым. Даже если разрешить актора, у ревью не было бы учётных данных, а
+проверка, падающая из-за отсутствия секрета, хуже пропущенной: она читается как
+дефект кода.</p>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=чего-не-может-выполнить-pr-между-постоянными-ветками>Чего не может выполнить PR между постоянными ветками<a href=#чего-не-может-выполнить-pr-между-постоянными-ветками class=hash-link aria-label="Прямая ссылка на Чего не может выполнить PR между постоянными ветками" title="Прямая ссылка на Чего не может выполнить PR между постоянными ветками" translate=no>​</a></h3>
+<p><code>Drift, gerados e build</code> <strong>является</strong> обязательной, поэтому запускается в каждом
+PR — но шаг <strong>drift</strong> объявляет себя неприменимым, когда head — постоянная
+ветка самого репозитория (продвижение <code>dev→qa</code>, <code>qa→main</code>; back-merge
+<code>main→qa</code>, <code>qa→dev</code>). Остальные шаги job — docmap, сгенерированное и сборка
+сайта — продолжают выполняться: они зависят только от HEAD и действуют на любой
+ступени.</p>
+<p>Причина та же, что и у <code>claude-review</code>, с отягчающим обстоятельством.
+Избыточность, во-первых: PR между постоянными ветками не имеет <strong>авторства</strong>, он
+упаковывает коммиты, drift которых уже был взыскан в PR в <code>dev</code>, файл за
+файлом. Взыскивать снова — значит взыскивать тот же долг на каждой ступени. Но,
+в отличие от ревью через LLM, здесь требование было <strong>невыполнимым</strong> — и именно
+это провалило #72, продвижение цикла <code>v1.0.1</code>, из-за файлов <code>docker/**</code>,
+пришедших из #70:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>кажущийся выход<th>почему его нет<tbody><tr><td>обновить документацию в PR продвижения<td><code>promotion-check</code> требует <strong>чистого интервала</strong> — head должен быть верхушкой источника. Коммит там проваливает другую обязательную проверку<tr><td>повторить <code>docs-not-needed:</code> из исходного PR<td>тело PR продвижения генерируется <code>promote</code>; обоснование из #70 не пересекает ступень<tr><td>ставить метку на каждое продвижение<td>это учит пользоваться предохранительным клапаном рефлекторно, пока он ничего не будет значить, — противоположность тому, чего просит <code>.docmap.yml</code></table>
+<p>Фильтр живёт <strong>внутри</strong> шага, а не в <code>if:</code> на job, следуя тому же принципу,
+который записывает <code>promotion-check</code>: обязательная проверка, индексированная по
+sha, которая не запускается, оставляет PR ожидающим навсегда. Шаг запускается,
+решает, что не применим, и пишет это в сводку — вместо того чтобы исчезнуть.</p>
+<blockquote>
+<p><strong>Head с именем <code>main</code> из форка — не продвижение.</strong> Это рабочая ветка
+третьего лица, и она проходит drift, как любая другая. Поэтому условие
+сопоставляет имя <strong>и</strong> требует того же репозитория — та же оговорка, которую
+<code>pr-police</code> применяет при классификации семейства PR.</p>
+</blockquote>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=bypass>Bypass<a href=#bypass class=hash-link aria-label="Прямая ссылка на Bypass" title="Прямая ссылка на Bypass" translate=no>​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>кто<th>режим<th>зачем<tbody><tr><td>актор <code>BRABO_BOT_TOKEN</code><td><code>Always</code><td>писать <code>.release/gate.json</code> в <code>main</code></table>
+<p><strong>Ни у одного человека нет bypass</strong> — даже у владельца. Этот принадлежит боту и
+существует по причине без обхода: gate блокирует ветки, и PR для снятия
+блокировки был бы заблокирован самим gate. Коммит остаётся в <code>git log</code>, с датой
+и содержимым, и <code>tag-release</code> распознаёт его по тому, что он затрагивает
+(<code>.release/</code> и ничего больше), а не по тому, кем он себя называет.</p>
+<blockquote>
+<p><strong>Предупреждение об охвате bypass.</strong> Rulesets GitHub дают bypass <strong>актору</strong>, а
+не пути: тот, кто может писать <code>.release/gate.json</code> в <code>main</code>, технически может
+писать что угодно. Ограничить по пути в интерфейсе нельзя. Реально
+ограничивает workflow — он пишет только этот файл — и история, где любой
+другой прямой коммит сразу бросается в глаза. Записано как есть: ограничение
+инструмента, а не решение.</p>
+</blockquote>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=секрет-brabo_bot_token>Секрет <code>BRABO_BOT_TOKEN</code><a href=#секрет-brabo_bot_token class=hash-link aria-label="Прямая ссылка на секрет-brabo_bot_token" title="Прямая ссылка на секрет-brabo_bot_token" translate=no>​</a></h3>
+<p>Классический PAT со scopes <code>repo</code> + <code>workflow</code>, в <strong>Settings → Secrets and
+variables → Actions</strong>:</p>
+<div class="language-bash codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:var(--syntax-text);--prism-background-color:var(--code-bg)><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-bash codeBlock_mqej thin-scrollbar" style=color:var(--syntax-text);background-color:var(--code-bg)><code class=codeBlockLines_uNqR><div class=token-line style=color:var(--syntax-text)><span class="token plain">gh secret set BRABO_BOT_TOKEN --body '&lt;token>'</span><br/></div></code></pre></div></div>
+<p>Это не удобство. От него зависят две вещи, и обе молча ломаются без него:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>что<th>почему<tbody><tr><td>тег запускает <code>Release</code><td><strong>тег, созданный с <code>GITHUB_TOKEN</code>, не запускает workflow</strong><tr><td>PR back-merge рождаются с проверками<td><strong>PR, открытый с <code>GITHUB_TOKEN</code>, не запускает workflow</strong></table>
+<p>Это правило GitHub против рекурсии, и оно уже взяло свою цену: Release
+<code>v0.2.0</code> так и не была опубликована из-за него. Второй случай хуже — PR
+back-merge без проверки никогда не стал бы зелёным, и цепочка застряла бы
+навсегда. Поэтому job gate <strong>громко падает</strong>, когда секрета нет, а не идёт
+дальше, оставляя репозиторий в тупике.</p>
+<p>Scope <code>workflow</code> — не излишество: PR back-merge несут ветку целиком, и она может
+содержать изменение в <code>.github/workflows/**</code>. Без этого scope push отклоняется
+ровно в том случае, который важнее всего, — при распространении исправления CI.</p>
+<blockquote>
+<p><strong>Текущее состояние: настроено и испытано.</strong> В <code>v1.1.1</code> конвейер впервые
+замкнулся сам — <code>tag-release</code> пропустил шаг предупреждения, отправил тег с
+PAT, и это <strong>запустило</strong> <code>release.yml</code>, который опубликовал Release. Тег,
+отправленный с <code>GITHUB_TOKEN</code>, его бы не запустил; этот запуск — доказательство
+того, что токен действителен и имеет scope на push.</p>
+<p><strong>Шесть тегов остаются осиротевшими</strong> — <code>v0.2.0</code>, <code>v0.3.0</code>, <code>v0.3.1</code>, <code>v1.0.0</code>,
+<code>v1.0.1</code> и <code>v1.1.0</code> — из периода, когда секрета не было. PAT их не
+восстанавливает: он действует только для новых тегов. Для них процедура ниже.</p>
+</blockquote>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=republishing-a-tag-that-was-orphaned>Повторная публикация осиротевшего тега<a href=#republishing-a-tag-that-was-orphaned class=hash-link aria-label="Прямая ссылка на Повторная публикация осиротевшего тега" title="Прямая ссылка на Повторная публикация осиротевшего тега" translate=no>​</a></h3>
+<p>У <code>release.yml</code> есть <code>workflow_dispatch</code> с входом тега, и он существует из-за
+шести тегов выше. Один лишь триггер <code>push: tags</code> сделал бы провал
+<strong>необратимым</strong>: повторная публикация потребовала бы удалить и пересоздать тег,
+то есть переписать запись, чтобы исправить её следствие.</p>
+<div class="language-bash codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:var(--syntax-text);--prism-background-color:var(--code-bg)><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-bash codeBlock_mqej thin-scrollbar" style=color:var(--syntax-text);background-color:var(--code-bg)><code class=codeBlockLines_uNqR><div class=token-line style=color:var(--syntax-text)><span class="token plain">gh workflow run release.yml -f tag=v1.1.0</span><br/></div></code></pre></div></div>
+<p>Три защиты, и каждая существует из-за конкретного режима отказа:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>защита<th>против чего<tbody><tr><td>запустить его может только <code>OWNER_HANDLE</code> (режим <code>solo</code>)<td>то же ограничение, что и у <code>promote</code>; триггер push здесь не проходит, потому что там авторизовал тег<tr><td>вход должен совпадать с <code>^v[0-9]+\.[0-9]+\.[0-9]+$</code><td><code>workflow_dispatch</code> принимает свободный текст. Без этого <code>-qa.1</code> опубликовал бы Release того, что никто не подтвердил как финальное<tr><td>отказ, если Release уже существует<td>опубликованная заметка — это запись; молча перезаписать её значило бы стереть то, что кто-то уже прочитал или на что сослался</table>
+<p>И <code>checkout</code> делается <strong>на теге</strong>, а не на ref события. При dispatch
+<code>github.ref_name</code> — ветка по умолчанию; без этой предосторожности повторная
+публикация породила бы Release с именем <code>main</code>, с changelog <code>main</code>, без
+какой-либо ошибки.</p>
+<blockquote>
+<p><strong>Dispatch работает только после того, как это дойдёт до <code>main</code>.</strong> Это
+проблема курицы и яйца из таблицы триггеров выше: <code>workflow_dispatch</code> читает
+workflow из ветки <strong>по умолчанию</strong>. Пока изменение только в <code>dev</code>, вход даже
+не появляется.</p>
+</blockquote>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=ruleset-2--теги-версий>Ruleset 2 — теги версий<a href=#ruleset-2--теги-версий class=hash-link aria-label="Прямая ссылка на Ruleset 2 — теги версий" title="Прямая ссылка на Ruleset 2 — теги версий" translate=no>​</a></h2>
+<p><strong>Имя:</strong> <code>tags-de-release</code>
+<strong>Enforcement:</strong> <code>Active</code>
+<strong>Цель:</strong> Tag → <code>Include by pattern</code> → <code>v*</code></p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>правило<th>значение<tbody><tr><td><strong>Restrict creations</strong><td>✅<tr><td><strong>Restrict updates</strong><td>✅<tr><td><strong>Restrict deletions</strong><td>✅</table>
+<p>Шаблон <code>v*</code> покрывает три формы, которые создаёт конвейер: <code>-dev.N</code>, <code>-qa.N</code> и
+финальную. Создавать их может только <code>tag-release</code>.</p>
+<blockquote>
+<p><strong>Что запускает финальный тег и почему ничто из этого не обязательная
+проверка.</strong> Отправка <code>vX.Y.Z</code> параллельно запускает <code>release.yml</code>,
+<code>build-runner-binaries.yml</code> и <code>publish-runner.yml</code>. Их jobs никогда не
+появляются в таблице обязательных проверок выше, и это структурно, а не
+упущение: обязательные проверки удерживают <strong>pull request</strong>, а когда тег
+существует, PR уже смёржен. Тег удерживает ruleset — создаёт его только
+<code>tag-release</code>, и только после конвейера, в конце которого он запускается.</p>
+<p>Финальный тег также запускает <code>install-e2e.yml</code>, который испытывает
+опубликованный <code>install.sh</code> на <strong>чистой машине</strong> — а эфемерный runner Actions
+именно ею и является. С <a class="" href=/brabo/qa/ru/business-rules#rn-549>RN-549</a> он доходит
+до конца: пять звеньев, замыкающих установку, локальный агент поднят и
+ждёт, и первый проект <code>runner</code> подхвачен. Он не запускается в
+<code>pull_request</code>, и причина та же, что держит подпись вне PR: подписанный
+манифест существует только после финального тега, а запуск скрипта там дал бы
+ему дверь для пропуска проверки
+(<a class="" href=/brabo/qa/ru/business-rules#rn-534>RN-534</a>). Следствие сказано, а не скрыто —
+<strong>PR, который меняет этот workflow, его не запускает</strong>, — а в каждом PR
+запускается <code>scripts/dev/install-e2e.spec.ts</code>, который проваливается, если
+триггер получит <code>pull_request</code> или если фраза, которую workflow ищет grep,
+перестанет существовать в <code>install.sh</code>.</p>
+<p>С <a class="" href=/brabo/qa/ru/adr/0149-assinatura-dos-artefatos-publicados>ADR 0149</a>
+у <code>build-runner-binaries.yml</code> <strong>два</strong> job вместо одного: матрица <code>build</code>
+(четыре цели, <code>fail-fast: false</code>) и job <code>checksums</code>. С
+<a class="" href=/brabo/qa/ru/business-rules#rn-565>RN-565</a> у второго нет <code>needs:</code> на матрицу —
+он ждёт, с потолком, <strong>assets</strong> Release, а не самый медленный job, —
+поэтому цель, упавшая при сборке или так и не получившая runner, не лишает
+остальные подписанного манифеста. Он называет в логе, какие цели манифест
+<strong>не</strong> покрывает, потому что <code>checksums.txt</code>, перечисляющий три и молчащий о
+четвёртой, хуже никакого: тот, кто проверяет три, заключает, что проверил
+релиз.</p>
+<p>Цель <code>darwin-x64</code> (Mac Intel) <strong>вышла из матрицы</strong> в
+<a class="" href=/brabo/qa/ru/adr/0174-runner-sem-binario-darwin-x64>ADR 0174</a>, и причина измерена
+(AT-065, 2026-09-13): её метка <code>macos-13</code> указывала на образ, который
+GitHub вывел из эксплуатации в декабре 2025 года, а замена на Intel,
+<code>macos-15-intel</code>, планируется за секунды и собирает, но проваливает
+<code>--self-test-pty</code> под Bun (<code>onData</code> из <code>node-pty</code> никогда не срабатывает —
+oven-sh/bun#25822, открыт). То же доказательство проходит под Node, поэтому
+Mac Intel устанавливает runner через <code>npm install -g @brabo/runner</code>. Запуск
+workflow с пустым входом <code>tag</code> — это репетиция: собирает и делает smoke,
+ничего не прикрепляя, и именно так это было измерено без создания тега.</p>
+</blockquote>
+<h3 class="anchor anchorTargetStickyNavbar_PEh0" id=bypass-1>Bypass<a href=#bypass-1 class=hash-link aria-label="Прямая ссылка на Bypass" title="Прямая ссылка на Bypass" translate=no>​</a></h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>кто<th>режим<tbody><tr><td>app/бот, запускающий workflow релиза<td><code>Always</code></table>
+<p>Это исключение для push, предусмотренное политикой: <strong>версия рождается из
+workflow, никогда вручную</strong>. Тег, созданный вручную, не проходит проверку того,
+что финальный тег указывает на тот же коммит, что и последний <code>-qa.N</code>, а именно
+эта проверка не даёт опубликовать что-то отличное от проверенного.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=как-применить>Как применить<a href=#как-применить class=hash-link aria-label="Прямая ссылка на Как применить" title="Прямая ссылка на Как применить" translate=no>​</a></h2>
+<p>Интерфейс: <strong>Settings → Rules → Rulesets → New ruleset</strong>.</p>
+<p>Через API, если предпочитаете версионировать команду:</p>
+<div class="language-bash codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:var(--syntax-text);--prism-background-color:var(--code-bg)><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-bash codeBlock_mqej thin-scrollbar" style=color:var(--syntax-text);background-color:var(--code-bg)><code class=codeBlockLines_uNqR><div class=token-line style=color:var(--syntax-text)><span class="token plain">gh api -X POST repos/daneiel/brabo/rulesets --input ruleset-permanentes.json</span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">gh api repos/daneiel/brabo/rulesets --jq '.[] | "\(.name): \(.enforcement)"'</span><br/></div></code></pre></div></div>
+<blockquote>
+<p><strong>TODO(humano):</strong> два файла <code>.json</code> с payload здесь не версионируются, потому
+что API rulesets требует <code>repository_id</code> и id приложений, различающиеся от
+установки к установке, — фиксированный файл скопировали бы неправильно. Если
+хотите их версионировать, сгенерируйте через
+<code>gh api repos/daneiel/brabo/rulesets/&lt;id> > docs/reference/...</code> после
+применения через интерфейс, и этот документ начнёт указывать на них.</p>
+</blockquote>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=settings--pages-источник--ветка-gh-pages>Settings → Pages: источник — ветка <code>gh-pages</code><a href=#settings--pages-источник--ветка-gh-pages class=hash-link aria-label="Прямая ссылка на settings--pages-источник--ветка-gh-pages" title="Прямая ссылка на settings--pages-источник--ветка-gh-pages" translate=no>​</a></h2>
+<p>Применение <strong>ручное</strong>, по той же причине, что и у rulesets: репозиторий
+версионирует источник, GitHub получает применение.</p>
+<p><strong>Settings → Pages → Build and deployment → Source:
+<code>Deploy from a branch</code></strong>, с веткой <strong><code>gh-pages</code></strong> и папкой
+<strong><code>/ (root)</code></strong>.</p>
+<p><strong>Уже применено.</strong> <code>gh api repos/daneiel/brabo/pages</code> возвращает
+<code>"build_type": "legacy"</code> с <code>source.branch: "gh-pages"</code>, и все три ступени
+отвечают в сети.</p>
+<p>Промежуточный шаг стоит записи, потому что сбивает с толку: пока
+<code>build_type</code> был <code>"workflow"</code>, <code>docs-deploy.yml</code> коммитил в <code>gh-pages</code>,
+<strong>и Pages ничего оттуда не отдавал</strong> — публикация оставалась в репозитории, не
+выходя в сеть, а старый сайт всё ещё отвечал из последнего артефакта
+<code>actions/deploy-pages</code>. Ничто в CI не краснеет в этом состоянии.</p>
+<p>Почему переключение обязательно, а не предпочтение: <code>actions/deploy-pages</code>
+публикует <strong>один артефакт как весь сайт</strong> и не умеет обновлять часть дерева,
+что несовместимо с подкаталогом на ступень. Полный дизайн, отброшенные
+альтернативы и исключение для push, которое это открывает, описаны в
+<a class="" href=/brabo/qa/ru/adr/0034-documentacao-publicada-por-degrau>ADR 0034</a>.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>ветка<th>URL<th>индексируется<tbody><tr><td>— (индекс трёх)<td><code>https://daneiel.github.io/brabo/</code><td>❌ <code>noindex, follow</code><tr><td><code>main</code><td><code>https://daneiel.github.io/brabo/prd/</code><td>✅<tr><td><code>qa</code><td><code>https://daneiel.github.io/brabo/qa/</code><td>❌ <code>noIndex</code><tr><td><code>dev</code><td><code>https://daneiel.github.io/brabo/dev/</code><td>❌ <code>noIndex</code></table>
+<p>Все три стали симметричными в
+<a class="" href=/brabo/qa/ru/adr/0071-publicacao-simetrica-por-degrau>ADR 0071</a>, который также
+объясняет сгенерированный корень и <code>404.html</code>, перенаправляющий старые ссылки
+на стабильную ступень.
+<a class="" href=/brabo/qa/ru/adr/0073-o-caminho-publicado-nomeia-o-ambiente>ADR 0073</a> отделил
+ПУТЬ от ВЕТКИ: <code>main</code> публикуется в <code>/prd/</code>, потому что адрес называет среду
+для читающего. <code>404.html</code> стал переписывать
+<code>/brabo/main/&lt;algo></code> в <code>/brabo/prd/&lt;algo></code> — старый каталог уходит из
+дерева, и <code>keep_files: false</code> его удаляет.</p>
+<p><strong>Конфигурация Pages не меняется ни с одним из двух</strong> — источником остаётся
+ветка <code>gh-pages</code> в папке <code>/ (root)</code>; изменилось содержимое, которое workflow
+собирает перед push. И <code>prd</code> <strong>не</strong> ветка: её нет ни в одном ruleset, её нет в
+<code>git</code>, это лишь имя каталога в <code>gh-pages</code>.</p>
+<blockquote>
+<p><strong><code>gh-pages</code> НЕ входит в ruleset постоянных веток.</strong> Она не постоянная, и
+боту нужно пушить в неё — её включение заблокировало бы саму публикацию.
+Поэтому там же хватает <code>GITHUB_TOKEN</code>, без bypass и без <code>BRABO_BOT_TOKEN</code>.</p>
+</blockquote>
+<blockquote>
+<p><strong>И она вне охвата Gitleaks, по причине, которая проявилась лишь позже.</strong>
+<code>gitleaks detect</code> сканирует <strong>каждый достижимый коммит</strong>, а не только
+историю HEAD, — а <code>fetch-depth: 0</code> приносит все refs. Как только появилась
+<code>gh-pages</code>, собранный сайт попал в сканирование: <strong>112 находок
+<code>generic-api-key</code></strong> в одном коммите, все в <code>dev/assets/js/*.js</code>, — это имена
+файлов аватаров внутри минифицированного bundle со слишком высокой для
+правила энтропией. Это провалило PR продвижения <strong>#78</strong>, первый
+просканированный после её появления.</p>
+<p><code>ci.yml</code> теперь удаляет <code>refs/remotes/origin/gh-pages</code> перед сканированием.
+<strong>Не</strong> через allowlist путей в <code>.gitleaks.toml</code>: он действовал бы для каждого
+коммита, и <code>dev/</code>, появившийся однажды в исходном коде, молча перестал бы
+сканироваться. Исключение ref исключает ровно те коммиты, которые не являются
+исходным кодом.</p>
+<p>Измерено gitleaks 8.30.1, версией CI: 133 коммита и 112 находок
+до, 132 и ни одной после — а PAT GitHub с реальной энтропией, подложенный
+в <code>apps/api/src/</code>, по-прежнему обнаруживается, что доказывает, что дыра не
+открылась.</p>
+</blockquote>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=метки-семейств-должны-существовать>Метки семейств должны существовать<a href=#метки-семейств-должны-существовать class=hash-link aria-label="Прямая ссылка на Метки семейств должны существовать" title="Прямая ссылка на Метки семейств должны существовать" translate=no>​</a></h2>
+<p><code>pr-police</code> применяет одну из четырёх меток, и <code>gh pr edit --add-label</code>
+<strong>падает</strong>, если метки нет, — что оставило бы PR без классификации, молча.</p>
+<div class="language-bash codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:var(--syntax-text);--prism-background-color:var(--code-bg)><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-bash codeBlock_mqej thin-scrollbar" style=color:var(--syntax-text);background-color:var(--code-bg)><code class=codeBlockLines_uNqR><div class=token-line style=color:var(--syntax-text)><span class="token plain">gh label create trabalho        --color 0E8A16 --description "Work PR: taxonomy prefix for dev"</span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">gh label create promocao        --color 1D76DB --description "Promotion between adjacent rungs, going up"</span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">gh label create retropropagacao --color 5319E7 --description "Back-propagation between adjacent rungs, going down"</span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">gh label create correcao-alta   --color D93F0B --description "hotfix: a fix that's born high on the ladder"</span><br/></div></code></pre></div></div>
+<p>Без <code>|| true</code> намеренно: если команда упадёт, вам нужно это увидеть.</p>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=проверить-что-всё-на-месте>Проверить, что всё на месте<a href=#проверить-что-всё-на-месте class=hash-link aria-label="Прямая ссылка на Проверить, что всё на месте" title="Прямая ссылка на Проверить, что всё на месте" translate=no>​</a></h2>
+<div class="language-bash codeBlockContainer_Vzt9 theme-code-block" style=--prism-color:var(--syntax-text);--prism-background-color:var(--code-bg)><div class=codeBlockContent_FxwE><pre tabindex=0 class="prism-code language-bash codeBlock_mqej thin-scrollbar" style=color:var(--syntax-text);background-color:var(--code-bg)><code class=codeBlockLines_uNqR><div class=token-line style=color:var(--syntax-text)><span class="token plain"># do the rulesets exist and are they active?</span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">gh api repos/daneiel/brabo/rulesets --jq '.[] | "\(.name): \(.enforcement)"'</span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain" style=display:inline-block></span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain"># does the protection respond? (should be REJECTED)</span><br/></div><div class=token-line style=color:var(--syntax-text)><span class="token plain">git push origin HEAD:dev</span><br/></div></code></pre></div></div>
+<p>Вторая команда — тот тест, который важен. Ruleset, настроенный, но не
+проверенный, неотличим от отсутствующего — и разница проявляется только в тот
+день, когда кто-то пушит прямо в <code>main</code>.</div><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_yZb9"><a href=https://github.com/daneiel/brabo/blob/dev/docs/reference/rulesets.md target=_blank rel="noopener noreferrer" class=theme-edit-this-page><svg fill=currentColor height=20 width=20 viewBox="0 0 40 40" class=iconEdit_ANja aria-hidden=true><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"/></g></svg>Отредактировать эту страницу</a></div><div class="col lastUpdated_Kb4y"><span class=theme-last-updated>Последнее обновление<!-- --> <b><time datetime=2026-10-16T03:11:36.000Z itemprop=dateModified>16 окт. 2026 г.</time></b> от <b>Daniel Souza</b></span></div></div></footer></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Страница документа"><a class="pagination-nav__link pagination-nav__link--prev" href=/brabo/qa/ru/reference/scripts><div class=pagination-nav__sublabel>Предыдущая страница</div><div class=pagination-nav__label>Scripts e comandos</div></a><a class="pagination-nav__link pagination-nav__link--next" href=/brabo/qa/ru/reference/paridade-de-traducao><div class=pagination-nav__sublabel>Следующая страница</div><div class=pagination-nav__label>Paridade de tradução</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_wOiH thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href=#предусловие-все-три-ветки-должны-существовать class="table-of-contents__link toc-highlight">Предусловие: все три ветки должны существовать</a><li><a href=#ruleset-1--три-постоянные-ветки class="table-of-contents__link toc-highlight">Ruleset 1 — три постоянные ветки</a><ul><li><a href=#правила-которые-нужно-отметить class="table-of-contents__link toc-highlight">Правила, которые нужно отметить</a><li><a href=#две-конфигурации-рядом class="table-of-contents__link toc-highlight">Две конфигурации рядом</a><li><a href=#обязательные-проверки class="table-of-contents__link toc-highlight">Обязательные проверки</a><li><a href=#чего-не-может-выполнить-pr-между-постоянными-ветками class="table-of-contents__link toc-highlight">Чего не может выполнить PR между постоянными ветками</a><li><a href=#bypass class="table-of-contents__link toc-highlight">Bypass</a><li><a href=#секрет-brabo_bot_token class="table-of-contents__link toc-highlight">Секрет <code>BRABO_BOT_TOKEN</code></a><li><a href=#republishing-a-tag-that-was-orphaned class="table-of-contents__link toc-highlight">Повторная публикация осиротевшего тега</a></ul><li><a href=#ruleset-2--теги-версий class="table-of-contents__link toc-highlight">Ruleset 2 — теги версий</a><ul><li><a href=#bypass-1 class="table-of-contents__link toc-highlight">Bypass</a></ul><li><a href=#как-применить class="table-of-contents__link toc-highlight">Как применить</a><li><a href=#settings--pages-источник--ветка-gh-pages class="table-of-contents__link toc-highlight">Settings → Pages: источник — ветка <code>gh-pages</code></a><li><a href=#метки-семейств-должны-существовать class="table-of-contents__link toc-highlight">Метки семейств должны существовать</a><li><a href=#проверить-что-всё-на-месте class="table-of-contents__link toc-highlight">Проверить, что всё на месте</a></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Документация</div><ul class="footer__items clean-list"><li class=footer__item><a class=footer__link-item href=/brabo/qa/ru/getting-started>Первые шаги</a><li class=footer__item><a class=footer__link-item href=/brabo/qa/ru/architecture>Архитектура</a><li class=footer__item><a class=footer__link-item href=/brabo/qa/ru/business-rules>Бизнес-правила</a><li class=footer__item><a class=footer__link-item href=/brabo/qa/ru/runbook>Руководство по эксплуатации</a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Сообщество</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class=footer__link-item>Как внести вклад<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class=footer__link-item>Где попросить помощи<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class=footer__link-item>Безопасность<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Ещё</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class=footer__link-item>GitHub<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CHANGELOG.md target=_blank rel="noopener noreferrer" class=footer__link-item>CHANGELOG<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/LICENSE target=_blank rel="noopener noreferrer" class=footer__link-item>Лицензия MIT<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/THIRD_PARTY_NOTICES.md target=_blank rel="noopener noreferrer" class=footer__link-item>Уведомления о сторонних компонентах<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div></div><div class="footer__bottom text--center"><div class=footer__copyright>Copyright © 2026 Daniel Souza. Распространяется по лицензии MIT. Сторонние инструменты сохраняют собственные лицензии — см. Уведомления о сторонних компонентах.</div></div></div></footer></div></body>
