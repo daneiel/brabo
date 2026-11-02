@@ -7,7 +7,7 @@
   para `dev → main`)
 - **Revoga:** o mecanismo do [ADR 0217](0217-promocao-automatica-para-qa-em-fase-de-teste.md)
   (promoção automática para a `qa`, que sem `qa` não tem destino)
-- **Contexto anterior:** [ADR 0034](0034-site-de-documentacao-por-degrau.md),
+- **Contexto anterior:** [ADR 0034](0034-documentacao-publicada-por-degrau.md),
   [ADR 0071](0071-publicacao-simetrica-por-degrau.md) e
   [ADR 0073](0073-o-caminho-publicado-nomeia-o-ambiente.md) (um site por
   degrau: passa a haver um degrau a menos)
