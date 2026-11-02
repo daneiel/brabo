@@ -1028,7 +1028,8 @@ ele deixa uma execução vermelha na aba Actions e nada mais. O repositório
 tinha zero issues em toda a sua história; não havia canal. Por isso o
 `tag-release` agora tem um job `avisar` que **abre uma issue** nomeando a
 branch, o commit, a execução e a correção, e comenta na existente em vez de
-abrir uma segunda para a mesma branch. Ele se autentica com `github.token`,
+abrir uma segunda para a mesma branch, e **fecha a issue aberta** no primeiro
+carimbo verde seguinte, com o run e o SHA no comentário (AT-664). Ele se autentica com `github.token`,
 nunca com o PAT — um `BRABO_BOT_TOKEN` inválido é ele mesmo uma das falhas
 que ele tem de relatar, e um alarme que depende do que pode estar quebrado é
 um alarme que se cala exatamente quando é preciso.
