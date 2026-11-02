@@ -6778,7 +6778,7 @@ caminho que a execução em container substitui; o que muda agora é só a
   `apps/api/src/application/use-cases/execution/activate-execution.use-case.ts:176`
   (o 400), `apps/api/src/interfaces/http/execution/execution.controller.ts:74`
   (a anotação de OpenAPI, que prometia 409 para dois casos que nunca foram
-  409), `apps/web/src/routes/ProjectOverviewTab.tsx:473`
+  409), `apps/web/src/routes/ProjectOverviewTab.tsx:481`
   (`mensagemDaApi`), `apps/engine/lib/engine/actions/workspace.ex:61`
   (a mensagem da lacuna que fica)
 - **Teste:**
@@ -17825,7 +17825,7 @@ numa delas é inferência pelos 106 ≈ 9 × 12.
   `apps/web/src/routes/ProjectPage.tsx:77` (os contadores do trilho);
   `apps/web/src/components/AcoesDoContainer.tsx:52` (`useLatestSession`, sem poll);
   `apps/web/src/routes/ProjectExecutorsTab.tsx:203` (`invalidador`),
-  `apps/web/src/routes/ProjectOverviewTab.tsx:191` (`invalidador`);
+  `apps/web/src/routes/ProjectOverviewTab.tsx:202` (`invalidador`);
   `apps/web/src/components/EsperaDoRunner.tsx:73` (`confirmadoPor`)
 - **Teste:** `apps/web/src/routes/duas-abas.orcamento.test.tsx` (as duas abas
   com canal vivo, com rajada, com o canal que nunca conecta, e `/containers`;
@@ -18092,7 +18092,7 @@ o do chat.
   `:121` (os merges da mesma leitura);
   `apps/web/src/routes/ProjectApprovalsTab.tsx:115` (`pendentesQuery`), `:119`
   (`sessaoDeTrabalho`), `:326` (`handleApprove`);
-  `apps/web/src/routes/ProjectOverviewTab.tsx:114` (`pendentesDoProjeto`);
+  `apps/web/src/routes/ProjectOverviewTab.tsx:125` (`pendentesDoProjeto`);
   `apps/web/src/routes/ProjectExecutorsTab.tsx:107` (`pendentesQuery`), `:290`
   (o bloco); `apps/web/src/routes/code/CodeShell.tsx:101` (`pendentesQuery`);
   `apps/web/src/routes/SessionPage.tsx:782` (o bloco sem `isActive`);
@@ -18345,7 +18345,7 @@ barra) fechou no ADR 0211.
   `:39` (`useLayoutMovel`); `apps/web/src/routes/Shell.tsx:438`
   (`movel`), `:479` (`prenderFoco`), `:498` (`fecharAoSeguirLink`);
   `apps/web/src/routes/ProjectPage.tsx:49` (`movel`);
-  `apps/web/src/routes/ProjectOverviewTab.tsx:68` (`movel`)
+  `apps/web/src/routes/ProjectOverviewTab.tsx:76` (`movel`)
 - **Teste:** `apps/web/src/routes/Shell.test.tsx` ("Shell — layout móvel
   (RN-643)": a gaveta abre com o foco dentro e o Esc a fecha devolvendo o foco;
   fecha pelo link, pelo X, pelo fundo e pela troca de rota; ignora o colapso
@@ -22628,7 +22628,7 @@ sem dizer qual.
   sidebar já assina, e `useActiveExecutionSession` ganha `staleTime` igual ao
   intervalo, para o segundo assinante não refazer a busca ([RN-632](#rn-632)).
 - **Onde:** `apps/web/src/routes/ContextAside.tsx:393` (`trailing`),
-  `apps/web/src/routes/ProjectOverviewTab.tsx:86` (`linhaDoTempoNaExecucao`)
+  `apps/web/src/routes/ProjectOverviewTab.tsx:97` (`linhaDoTempoNaExecucao`)
 - **Teste:** `apps/web/src/routes/SessionPage.painel-e-agrupamento.test.tsx`
   (decisão fora da janela não vira 0; sessão inteira na janela diz vazio),
   `apps/web/src/routes/ProjectOverviewTab.test.tsx` (lê a sessão de execução e
@@ -22998,7 +22998,7 @@ sem dizer qual.
 - **Onde:** `apps/web/src/components/ReligarExecucao.tsx:23` (`ReligarExecucao`),
   `apps/web/src/lib/execution.ts:21` (`contarTarefasPendentes`),
   `apps/web/src/routes/ProjectExecutorsTab.tsx:99` (`semExecucaoVigente`),
-  `apps/web/src/routes/ProjectOverviewTab.tsx:506` (`semExecucaoVigente`)
+  `apps/web/src/routes/ProjectOverviewTab.tsx:514` (`semExecucaoVigente`)
 - **Teste:** `apps/web/src/routes/ProjectExecutorsTab.test.tsx` (religar a
   execução), `apps/web/src/routes/ProjectOverviewTab.test.tsx` (religar a
   execução encerrada)
@@ -23013,7 +23013,7 @@ sem dizer qual.
   Infra Lead cujo handoff foi aceito lá), e com uma ideação aberta depois a
   árvore dizia "Nenhum agente entrou em ação nesta sessão ainda" sobre um time
   trabalhando. Sem leitura nova.
-- **Onde:** `apps/web/src/routes/ProjectOverviewTab.tsx:267` (`overviewEvents`)
+- **Onde:** `apps/web/src/routes/ProjectOverviewTab.tsx:275` (`overviewEvents`)
 - **Teste:** `apps/web/src/routes/ProjectOverviewTab.test.tsx` ("AT-471: agente
   que só agiu na execução aparece na árvore…"; o caso sem execução segue lendo
   a mais recente)
@@ -23782,8 +23782,8 @@ sem dizer qual.
   altura reservada, e jsdom não faz layout — o teste prova a ORDEM, não o
   deslocamento em pixels; qual das duas causas (salto ou sessão não lida) fez o
   1º clique do TP-01 se perder não foi medido no navegador.
-- **Onde:** `apps/web/src/routes/ProjectOverviewTab.tsx:485` (`desbloqueio`),
-  `apps/web/src/routes/ProjectOverviewTab.tsx:611` (`blockedTasks`)
+- **Onde:** `apps/web/src/routes/ProjectOverviewTab.tsx:494` (`desbloqueio`),
+  `apps/web/src/routes/ProjectOverviewTab.tsx:619` (`blockedTasks`)
 - **Teste:** `apps/web/src/routes/ProjectOverviewTab.test.tsx` ("RN-835
   (AT-502): o desbloqueio chama uma vez, fica em voo e diz quando terminou";
   falha: "RN-835: a recusa do desbloqueio mostra a frase da api na linha"),
@@ -24142,7 +24142,7 @@ sem dizer qual.
   aviso `infra.pr_opened` do canal da sessão a relê.
 - **Onde:** `apps/web/src/components/RodarNaSuaMaquina.tsx:32` (`RodarNaSuaMaquina`), `:20` (`urlLocalSegura`),
   `:13` (`releSeInfraAbriuPr`),
-  `apps/web/src/routes/ProjectOverviewTab.tsx:202` (`releSeInfraAbriuPr`),
+  `apps/web/src/routes/ProjectOverviewTab.tsx:210` (`releSeInfraAbriuPr`),
   `apps/web/src/lib/api-client.ts:850` (`getRunInstructions`)
 - **Teste:** `apps/web/src/components/RodarNaSuaMaquina.test.tsx` ("mostra
   comando, copiar, link local e a nota de não verificado"; "sem declaração
