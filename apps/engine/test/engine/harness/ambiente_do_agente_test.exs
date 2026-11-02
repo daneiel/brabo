@@ -1,0 +1,75 @@
+defmodule Engine.Harness.AmbienteDoAgenteTest do
+  @moduledoc """
+  RN-706 (AT-379/AT-378): o dev agent e o subagente de QA recebem, como
+  mensagem de sistema EFÊMERA, onde estão — a pasta traduzida para o
+  container, a imagem e a rede, que git no terminal não é o caminho, e o
+  módulo dele.
+  """
+
+  use ExUnit.Case, async: true
+
+  alias Engine.Harness.AmbienteDoAgente
+
+  @raiz "/data/project-workspaces/loja"
+  @imagem %{"image" => "node:22-bookworm-slim", "network" => "none"}
+
+  test "caminho feliz: com container running, a pasta é /work/.worktrees/<agente>" do
+    texto =
+      AmbienteDoAgente.montar(%{
+        cwd: @raiz <> "/.worktrees/dev-api",
+        raiz: @raiz,
+        container_running: true,
+        imagem: @imagem,
+        modulo: "api"
+      })
+
+    assert texto =~ "/work/.worktrees/dev-api"
+    refute texto =~ @raiz
+    assert texto =~ "node:22-bookworm-slim"
+    assert texto =~ "rede `none`"
+    assert texto =~ "git_commit"
+    assert texto =~ "Seu módulo: `api`"
+    # RN-944: o caminho do write_file e o `cd` que não persiste.
+    assert texto =~ "relativo à RAIZ do repositório"
+    assert texto =~ "`cd` não vale"
+    assert texto =~ "package.json"
+    # RN-948: o terminal começa na raiz; gerenciador de pacotes na pasta do módulo.
+    assert texto =~ "npm --prefix api"
+    # RN-796: segredo de teste nasce em tempo de execução, nunca literal.
+    assert texto =~ "gerados em tempo de execução"
+    refute String.ends_with?(texto, "…")
+    assert String.length(texto) <= AmbienteDoAgente.teto_de_caracteres()
+  end
+
+  test "falha: sem container running, não afirma /work e diz que não há container" do
+    texto =
+      AmbienteDoAgente.montar(%{
+        cwd: @raiz <> "/.worktrees/qa-automacao",
+        raiz: @raiz,
+        container_running: false,
+        imagem: nil
+      })
+
+    refute texto =~ "/work"
+    assert texto =~ "NÃO tem container `running`"
+    # o QA (`qa-*`) também lê com `read_file`
+    assert texto =~ "`cd` não vale"
+  end
+
+  test "anexar: efêmera no fim só para dev-*/qa-*, e o dicionário é restaurado" do
+    historico = [%{"role" => "user", "content" => "oi"}]
+    Process.put(:brabo_ambiente_do_agente, "Ambiente X")
+
+    try do
+      assert List.last(AmbienteDoAgente.anexar(historico, "dev-api")) ==
+               %{"role" => "system", "content" => "Ambiente X"}
+
+      assert length(AmbienteDoAgente.anexar(historico, "qa-automacao")) == 2
+      assert AmbienteDoAgente.anexar(historico, "po") == historico
+    after
+      Process.delete(:brabo_ambiente_do_agente)
+    end
+
+    assert AmbienteDoAgente.anexar(historico, "dev-api") == historico
+  end
+end

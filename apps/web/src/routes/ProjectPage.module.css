@@ -126,9 +126,9 @@
 }
 
 /*
- * O eixo horizontal da página: trilho de navegação à esquerda
- * (`ProjectRail.module.css`) e o painel da aba à direita (ADR 0126). Era
- * `.wrapper` inteiro em coluna, com a régua de abas dentro do cabeçalho.
+ * O corpo da página, abaixo do cabeçalho: só o painel da aba. O trilho de
+ * navegação que morava à esquerda (ADR 0126) saiu no ADR 0211 — as abas
+ * moram na lista do projeto da sidebar.
  * `min-height: 0` é o que deixa `.body` rolar por dentro em vez de esticar
  * a página.
  */
@@ -181,13 +181,9 @@
   display: flex;
 }
 
-/* Layout móvel (RN-643, AT-316): a barra do trilho fica ACIMA do painel (o
-   corpo vira coluna) e os respiros laterais caem para os 16px de uma tela de
-   telefone. `.movel` vem da mesma consulta que o trilho lê (`useLayoutMovel`). */
-.movel .corpo {
-  flex-direction: column;
-}
-
+/* Layout móvel (RN-643, AT-316): os respiros laterais caem para os 16px de
+   uma tela de telefone. `.movel` vem de `useLayoutMovel`; as abas moram na
+   gaveta da sidebar desde o ADR 0211. */
 .movel .headerTop {
   padding: 12px 16px;
 }

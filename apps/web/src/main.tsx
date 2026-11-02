@@ -11,6 +11,7 @@ import { I18nextProvider } from 'react-i18next';
 // As fontes vêm antes: `index.css` já as referencia por `var(--font-*)`.
 import './fonts.css';
 import './index.css';
+import './shadcn.css';
 import { router } from './router';
 import { onMudancaDeSessao, restaurarSessao } from './lib/auth';
 import { ToastProvider } from './components/ui/ToastProvider';

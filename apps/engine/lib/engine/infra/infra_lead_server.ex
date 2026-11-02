@@ -127,7 +127,7 @@ defmodule Engine.Infra.InfraLeadServer do
   use GenServer, restart: :temporary
 
   alias Engine.Harness.{ContextBuilder, PromptAssembler, ContextManager, ToolCallRecovery}
-  alias Engine.Infra.{InfraLead, WorkflowsAgent}
+  alias Engine.Infra.{InfraLead, InstrucoesDeExecucao, WorkflowsAgent}
 
   alias Engine.Infra.Tools.{
     ValidateInfraFile,
@@ -154,6 +154,7 @@ defmodule Engine.Infra.InfraLeadServer do
     FalhaDeTurno,
     Reidratacao,
     ResultadoDeFerramenta,
+    TextoDoTurno,
     TurnoAssincrono,
     TurnoOrfao
   }
@@ -190,8 +191,8 @@ defmodule Engine.Infra.InfraLeadServer do
   def cancelar_mensagem(session_id, mensagem_id, user_id),
     do: GenServer.call(via(session_id), {:cancelar_mensagem, mensagem_id, user_id}, 15_000)
 
-  @doc "Gate (QA/SecOps) pediu mudanças — mesma branch/PR, sem PR nova."
-  def correct(session_id, findings), do: GenServer.cast(via(session_id), {:correct, findings})
+  @correcao_enfileirada "infra.correction_queued"
+  @correcao_entregue "infra.correction_delivered"
 
   # --- Callbacks ---
 
@@ -216,6 +217,12 @@ defmodule Engine.Infra.InfraLeadServer do
 
     history = Reidratacao.historico(project_id, session_id, @agent)
 
+    # AT-582: a retomada (antes da fila) e as correções pendentes do log.
+    TurnoAssincrono.retomada_ao_subir(project_id, session_id, @agent)
+    fila = TurnoAssincrono.fila_ao_subir(project_id, session_id, @agent)
+    correcoes = ler_correcoes_pendentes(project_id, session_id)
+    if correcoes != [], do: send(self(), :entregar_correcoes)
+
     {:ok,
      %{
        session_id: session_id,
@@ -226,7 +233,8 @@ defmodule Engine.Infra.InfraLeadServer do
          ValidateInfraFile.spec(),
          ProposeInfraPr.spec(),
          ProposeContainerStart.spec(),
-         ProposeContainerStartViaRunner.spec()
+         ProposeContainerStartViaRunner.spec(),
+         Engine.Harness.Tools.RegistrarPlano.spec()
        ],
        # O turno em curso, numa Task supervisionada (RN-122, ADR 0163). Fora
        # do handler: é o que deixa um `:cancel` ("Parar") ser atendido no meio
@@ -235,15 +243,16 @@ defmodule Engine.Infra.InfraLeadServer do
        # RN-673: a fila de mensagens que chegaram com turno em curso,
        # reconstruída do log (sobrevive a restart), e como montar o turno
        # que a lê. Ver `TurnoAssincrono.receber_mensagem/4`.
-       fila_de_mensagens: TurnoAssincrono.fila_ao_subir(project_id, session_id, @agent),
+       fila_de_mensagens: fila,
        montar_turno_de_mensagem: &turno_de_mensagem/2,
+       montar_turno_de_retomada: &turno_de_retomada/1,
        turno_assincrono: nil,
        # Correção de gate (`{:correct, _}`) que chegou com um turno em curso:
        # guardada e rodada no fecho, na ordem de chegada. Antes da RN-617 o
        # turno bloqueava o processo e o cast esperava na caixa de mensagens;
        # sem esta fila o `TurnoAssincrono` a DESCARTARIA (sem `from`, com turno
        # em curso, ele só loga) — e o gate pediria mudança a ninguém.
-       correcoes_pendentes: []
+       correcoes_pendentes: correcoes
      }}
   end
 
@@ -263,7 +272,7 @@ defmodule Engine.Infra.InfraLeadServer do
       state
       |> append(user_msg(kickoff_instruction(ctx, subida)))
       |> compact()
-      |> run_turn(@max_iterations)
+      |> run_turn(Engine.Harness.FalhaRepetida.inicio_de_turno(@max_iterations))
       |> concluir()
     end)
   end
@@ -332,7 +341,21 @@ defmodule Engine.Infra.InfraLeadServer do
     work = state |> append(user_msg(text)) |> compact()
 
     fn ->
-      work |> run_turn(@max_iterations) |> concluir()
+      work
+      |> run_turn(Engine.Harness.FalhaRepetida.inicio_de_turno(@max_iterations))
+      |> concluir()
+    end
+  end
+
+  # AT-582: o turno retomado não tem fala nova — o histórico e a mensagem
+  # efêmera da retomada dizem onde parou.
+  defp turno_de_retomada(state) do
+    work = compact(state)
+
+    fn ->
+      work
+      |> run_turn(Engine.Harness.FalhaRepetida.inicio_de_turno(@max_iterations))
+      |> concluir()
     end
   end
 
@@ -350,6 +373,10 @@ defmodule Engine.Infra.InfraLeadServer do
   end
 
   def handle_info({:container_running, _outro_projeto}, state), do: {:noreply, state}
+
+  # AT-582: entrega das correções reconstruídas do log no `init/1`; com turno
+  # de pé (retomada ou fila) elas esperam o fim dele (`handle_info` genérico).
+  def handle_info(:entregar_correcoes, state), do: {:noreply, drenar_correcao_pendente(state)}
 
   @impl true
   def handle_info(msg, state) do
@@ -385,6 +412,16 @@ defmodule Engine.Infra.InfraLeadServer do
   defp drenar_correcao_pendente(state), do: state
 
   defp iniciar_correcao(state, findings) do
+    if id = Map.get(findings, :id) do
+      _ =
+        EngineApiClient.append_event(state.project_id, state.session_id, %{
+          type: @correcao_entregue,
+          actorKind: "agent",
+          actorId: @agent,
+          payload: %{id: id}
+        })
+    end
+
     instruction =
       user_msg(
         "O gate #{findings.gate} pediu mudanças: #{findings.reason}\n" <>
@@ -400,7 +437,7 @@ defmodule Engine.Infra.InfraLeadServer do
         state
         |> append(instruction)
         |> compact()
-        |> run_turn(@max_iterations)
+        |> run_turn(Engine.Harness.FalhaRepetida.inicio_de_turno(@max_iterations))
         |> concluir()
       end)
 
@@ -417,10 +454,17 @@ defmodule Engine.Infra.InfraLeadServer do
   # correção da RN-166/RN-459 nos outros seis: esgotá-lo terminava o turno sem
   # evento nenhum, indistinguível de um turno que simplesmente acabou.
   defp run_turn(state, remaining) when remaining <= 0 do
-    emit(state, "toolloop.limit_reached", %{
-      iteration: @max_iterations,
-      max_iterations: @max_iterations
-    })
+    # AT-590: lê a linha ANTES de gravar o texto (que a esvaziaria) e a põe no evento.
+    gravado = Engine.Agents.GravadoNoTurno.descarregar()
+    gravar_texto_do_turno(state, "")
+
+    Engine.Harness.FalhaRepetida.narrar_ou(state.project_id, state.session_id, @agent, fn ->
+      emit(state, "toolloop.limit_reached", %{
+        iteration: @max_iterations,
+        max_iterations: @max_iterations,
+        gravado: gravado
+      })
+    end)
 
     {:done, state}
   end
@@ -441,18 +485,30 @@ defmodule Engine.Infra.InfraLeadServer do
       # A api narra a falha no PRÓPRIO frame final (budget, credencial, binding).
       # Isto não caía no `{:error, _}` abaixo e não emitia evento nenhum: o
       # turno terminava em silêncio absoluto, pior que o balão vazio.
-      {:ok, %{"error" => erro}} when is_binary(erro) and erro != "" ->
-        emit_falha(state, {:final, erro})
+      {:ok, %{"error" => erro} = frame} when is_binary(erro) and erro != "" ->
+        gravar_texto_do_turno(state, "")
+        emit_falha(state, {:final, erro, Map.get(frame, "errorCode")})
         {:done, state}
 
-      {:ok, %{"message" => message}} ->
+      {:ok, %{"message" => message} = frame} ->
         content = Map.get(message, "content", "")
-        state = append(state, assistant_msg(content))
-        if content != "", do: emit_response(state, content)
+        # AT-455: o modelo que gerou o turno vai no payload, como nos outros
+        # conversacionais — sem ele a bolha da Infra dizia "modelo não registrado".
+        model_name = Map.get(frame, "modelName")
+        state = append(state, Engine.Agents.MensagemDoAssistente.de(content, message))
 
         case tool_calls(message, state.tool_specs) do
-          [] -> {:done, state}
-          calls -> dispatch_calls(calls, state, remaining)
+          [] ->
+            # AT-572: fecho sem texto nem corte é falha do modelo, dita no fio (agent.error).
+            if gravar_texto_do_turno(state, content, model_name) == :vazio,
+              do: emit_falha(state, :resposta_vazia)
+
+            {:done, state}
+
+          calls ->
+            # RN-698: o texto desta volta continua na próxima.
+            TextoDoTurno.acumular(content, model_name)
+            dispatch_calls(calls, state, remaining)
         end
 
       {:error, reason} ->
@@ -460,6 +516,7 @@ defmodule Engine.Infra.InfraLeadServer do
         # indistinguível de sucesso, e o motivo real ia só por broadcast, que
         # é efêmero. A falha vira evento durável COM origem, e o agente diz o
         # que houve no próprio fio.
+        gravar_texto_do_turno(state, "")
         emit_falha(state, reason)
         {:done, state}
     end
@@ -489,6 +546,9 @@ defmodule Engine.Infra.InfraLeadServer do
             pr != nil ->
               {pr, recusa_pr_repetida_no_lote(call, title, files, st)}
 
+            match?({:error, _}, InstrucoesDeExecucao.validar(Map.get(args, "run"))) ->
+              {nil, recusa_run_invalido(call, title, files, st)}
+
             st_recusado = recusa_de_infra_pr(call, title, files, st) ->
               {nil, st_recusado}
 
@@ -503,7 +563,8 @@ defmodule Engine.Infra.InfraLeadServer do
                   :pinned => false
                 })
 
-              {{title, files}, st}
+              {:ok, run} = InstrucoesDeExecucao.validar(Map.get(args, "run"))
+              {{title, files}, Map.put(st, :run_da_pr, run)}
           end
 
         "propose_container_start" ->
@@ -517,9 +578,27 @@ defmodule Engine.Infra.InfraLeadServer do
       end
     end)
     |> case do
-      {{title, files}, state} -> {:proposed, title, files, state}
-      {nil, state} -> run_turn(state, remaining - 1)
+      {{title, files}, state} ->
+        gravar_texto_do_turno(state, "")
+        {:proposed, title, files, state}
+
+      {nil, state} ->
+        run_turn(state, Engine.Harness.FalhaRepetida.restante(remaining - 1))
     end
+  end
+
+  # `run` inválido (RN-851): recusa NOMEADA que entra no laço (RN-163), antes
+  # do HALT — o mesmo molde da PR repetida no lote.
+  defp recusa_run_invalido(call, title, files, state) do
+    {:error, motivo} = InstrucoesDeExecucao.validar(Map.get(call["arguments"] || %{}, "run"))
+    caminhos = if is_list(files), do: for(%{"path" => path} <- files, do: path), else: []
+
+    emit(state, "tool.call", %{
+      tool: "propose_infra_pr",
+      args: %{title: title, paths: caminhos}
+    })
+
+    registrar_resultado(state, Map.get(call, "id"), "propose_infra_pr", {:error, motivo})
   end
 
   defp recusa_pr_repetida_no_lote(call, title, files, state) do
@@ -557,7 +636,11 @@ defmodule Engine.Infra.InfraLeadServer do
   # ela existe). No caminho que propõe nada muda: a `proposed_action` continua
   # sendo o rastro dele, como sempre foi.
   defp recusa_de_infra_pr(call, title, files, state) do
-    case ProjectRepository.recusa_de_pr_sem_repositorio(state.project_id, "open_infra_pr") do
+    motivo =
+      ProjectRepository.recusa_de_pr_sem_repositorio(state.project_id, "open_infra_pr") ||
+        recusa_de_bind_mount_relativo(files)
+
+    case motivo do
       nil ->
         nil
 
@@ -585,6 +668,27 @@ defmodule Engine.Infra.InfraLeadServer do
     end
   end
 
+  # RN-962: bind-mount relativo em compose nasce root na primeira subida e o
+  # app non-root não grava nele. Volume NOMEADO é o que o prompt pede.
+  @bind_relativo ~r/^\s*(-\s*["']?\.{1,2}\/[^\s"':]*:|source:\s*["']?\.)/m
+
+  defp recusa_de_bind_mount_relativo(files) when is_list(files) do
+    achado =
+      Enum.find(files, fn
+        %{"path" => path, "content" => c} when is_binary(path) and is_binary(c) ->
+          Regex.match?(~r/compose[^\/]*\.ya?ml$/, path) and Regex.match?(@bind_relativo, c)
+
+        _ ->
+          false
+      end)
+
+    if achado,
+      do:
+        "#{achado["path"]} usa bind-mount relativo (./pasta:/destino ou source: ./pasta): a pasta nasce root e o app não grava nela. Use VOLUME NOMEADO (volumes: dados: no topo) para dados persistentes."
+  end
+
+  defp recusa_de_bind_mount_relativo(_), do: nil
+
   # `propose_container_start` NÃO halts como `propose_infra_pr` — é ação
   # independente (elege candidata do roteamento do Arquiteto, ADR 0131), sem
   # consolidação com o Workflows. Despacha inline, direto pra api, e deixa o
@@ -602,7 +706,7 @@ defmodule Engine.Infra.InfraLeadServer do
 
     payload = %{
       imagem: Map.get(args, "imagem", ""),
-      network: Map.get(args, "network", "none"),
+      network: Map.get(args, "network") || rede_herdada(state.project_id),
       resources: Map.get(args, "resources", %{}),
       rationale: Map.get(args, "rationale", "")
     }
@@ -702,7 +806,7 @@ defmodule Engine.Infra.InfraLeadServer do
       # gravado ganha, lá, de onde veio cada número.
       payload = %{
         imagem: imagem,
-        network: "none",
+        network: rede_herdada(state.project_id),
         resources: %{},
         rationale: rationale_do_servidor(modulos, length(rotas))
       }
@@ -729,6 +833,12 @@ defmodule Engine.Infra.InfraLeadServer do
   end
 
   defp subir_no_aceite(state, _sem_contexto), do: {state, nil}
+
+  # RN-723 (ADR 0208, revisa o ponto 3 do ADR 0190): a eleição da Infra
+  # HERDA a rede que o Arquiteto declarou na `artifact.project_image` dele,
+  # lida localmente (o mesmo Postgres, sem HTTP no laço). Sem decisão do
+  # Arquiteto, `none` como sempre.
+  defp rede_herdada(project_id), do: Event.rede_do_arquiteto(project_id) || "none"
 
   @doc """
   A eleição do servidor (RN-671): a candidata do MAIOR número de módulos, e no
@@ -998,7 +1108,7 @@ defmodule Engine.Infra.InfraLeadServer do
 
     emit(state, "tool.call", %{tool: name, args: args})
 
-    registrar_resultado(state, id, name, run_tool(name, args, state))
+    registrar_resultado(state, id, name, executar_ferramenta(name, args, state))
   end
 
   # O desfecho de uma ferramenta despachada inline, nos DOIS lugares de
@@ -1023,7 +1133,18 @@ defmodule Engine.Infra.InfraLeadServer do
     })
   end
 
+  # RN-719: argumentos normalizados contra a spec e exceção vira erro do laço.
+  defp executar_ferramenta(name, args, state) do
+    Engine.Harness.ArgumentosDeFerramenta.executar(name, args, state.tool_specs, fn a ->
+      run_tool(name, a, state)
+    end)
+  end
+
   defp run_tool("validate_infra_file", args, state), do: ValidateInfraFile.run(args, state)
+
+  defp run_tool("registrar_plano", args, state),
+    do: Engine.Harness.Tools.RegistrarPlano.run(args, state)
+
   defp run_tool(name, _args, _state), do: {:error, "ferramenta desconhecida: #{name}"}
 
   # --- Conclusão do turno: consolida com o Workflows e propõe (ou bloqueia) ---
@@ -1090,7 +1211,12 @@ defmodule Engine.Infra.InfraLeadServer do
         "ao dev-lead: #{inspect(reason)}. O fim de cada turno meu tenta de " <>
         "novo — me mande uma mensagem para eu repetir a oferta."
 
-    emit(state, "agent.error", %{origem: origem, mensagem: mensagem, reason: inspect(reason)})
+    emit(state, "agent.error", %{
+      origem: origem,
+      mensagem: mensagem,
+      reason: FalhaDeTurno.diagnostico(reason)
+    })
+
     broadcast(state, "agent.error", %{origem: origem, mensagem: mensagem})
     state
   end
@@ -1164,7 +1290,14 @@ defmodule Engine.Infra.InfraLeadServer do
   defp finalize(state, title, files) do
     resultado_lead = {:ok, %{files: files, summary: title}}
     infra_ctx = fetch_infra_ctx(state)
-    resultado_workflows = WorkflowsAgent.run(state.project_id, state.session_id, infra_ctx)
+
+    # RN-710: sem CI que rode (repositório `local` ou ausente), o Workflows é
+    # DISPENSADO com motivo nomeado e a PR segue só com o que o Lead fez.
+    resultado_workflows =
+      case WorkflowsAgent.dispensa(infra_ctx) do
+        :delegar -> WorkflowsAgent.run(state.project_id, state.session_id, infra_ctx)
+        {:dispensar, motivo} -> {:dispensed, motivo}
+      end
 
     emit_delegation_result(state, "infra-lead", resultado_lead)
     emit_delegation_result(state, "infra-workflows", resultado_workflows)
@@ -1195,7 +1328,7 @@ defmodule Engine.Infra.InfraLeadServer do
   # arquivos.
   defp abrir_pr(state, title, files) do
     actor = %{kind: "agent", id: @agent}
-    payload = %{title: title, files: files}
+    payload = %{title: title, files: files, run: Map.get(state, :run_da_pr)}
 
     case EngineApiClient.propose_action(
            state.project_id,
@@ -1212,7 +1345,7 @@ defmodule Engine.Infra.InfraLeadServer do
         state
 
       {:error, reason} ->
-        broadcast(state, "agent.error", %{reason: inspect(reason)})
+        broadcast(state, "agent.error", %{reason: FalhaDeTurno.diagnostico(reason)})
         state
     end
   end
@@ -1242,6 +1375,10 @@ defmodule Engine.Infra.InfraLeadServer do
           failure_reason: "resultado inválido: #{inspect(reason)}"
         })
     end
+  end
+
+  defp emit_delegation_result(state, subagent, {:dispensed, motivo}) do
+    record_delegation(state, subagent, %{status: "dispensed", justification: motivo})
   end
 
   defp emit_delegation_result(state, subagent, {:blocked, info}) do
@@ -1279,15 +1416,19 @@ defmodule Engine.Infra.InfraLeadServer do
   defp kickoff_instruction({:ok, ctx}, subida), do: build_kickoff(ctx, subida)
 
   defp kickoff_instruction(_sem_contexto, _subida),
-    do: "Proponha os artefatos de infra (Dockerfiles, compose de dev)."
+    do:
+      "Proponha os artefatos de infra que sobem o APP na máquina do usuário " <>
+        "(Dockerfile por módulo, docker-compose.yml com porta ${APP_PORT:-8080}, " <>
+        ".env.example e a seção \"#{Engine.Harness.Tools.WriteFile.titulo_secao_de_uso()}\" no README) e chame " <>
+        "`propose_infra_pr` com `run`."
 
-  # Os passos 4 e 5 do kickoff — o que o modelo precisa saber da subida. Com
+  # Os passos 5 e 6 do kickoff — o que o modelo precisa saber da subida. Com
   # a subida feita pelo SERVIDOR (RN-671), o texto diz o que JÁ aconteceu, e
   # não pede ao modelo uma eleição que o código já fez; sem ela (sem
   # roteamento, projeto `runner`), os passos de sempre.
   defp passo_da_subida({:servidor, imagem, {:ok, texto}}) do
     """
-    4. A subida do container JÁ foi proposta pelo SERVIDOR neste aceite, sem
+    5. A subida do container JÁ foi proposta pelo SERVIDOR neste aceite, sem
        esperar por você: ele elegeu `#{imagem}` entre as candidatas do
        roteamento abaixo. Resultado: #{texto} Não chame `propose_container_start`
        de novo neste turno. Se o status for `failed`, diga isso ao usuário com
@@ -1297,7 +1438,7 @@ defmodule Engine.Infra.InfraLeadServer do
 
   defp passo_da_subida({:servidor, imagem, {:error, motivo}}) do
     """
-    4. O SERVIDOR tentou propor a subida do container neste aceite, elegendo
+    5. O SERVIDOR tentou propor a subida do container neste aceite, elegendo
        `#{imagem}`, e ela foi RECUSADA: #{motivo}
        Se outra candidata do roteamento resolver o motivo, chame
        `propose_container_start` com ela; senão, diga o motivo ao usuário e
@@ -1307,12 +1448,12 @@ defmodule Engine.Infra.InfraLeadServer do
 
   defp passo_da_subida(_sem_subida_do_servidor) do
     """
-    4. Se houver roteamento de módulos abaixo, ELEJA uma das imagens candidatas
+    5. Se houver roteamento de módulos abaixo, ELEJA uma das imagens candidatas
        para o container do projeto e chame `propose_container_start` (imagem +
        network + resources + rationale dizendo por que ESTA candidata, nunca
        inventando uma imagem fora da lista). Sem roteamento vigente, pule-o; o
        container do projeto segue como está.
-    5. Se o projeto estiver no modo `runner` (código na máquina do usuário, sem
+    6. Se o projeto estiver no modo `runner` (código na máquina do usuário, sem
        bind-mount pro servidor), `propose_container_start` não serve — chame
        `container_start_via_runner` (só `rationale` opcional, sem eleger nada:
        sobe a imagem já decidida). Se você não souber o modo, tente
@@ -1320,10 +1461,25 @@ defmodule Engine.Infra.InfraLeadServer do
     """
   end
 
+  # `projectImage` da api: `{image, rationale, network, resources}`; `imagem`
+  # e string seguem aceitos por compatibilidade.
+  defp imagem_com_rede(img, %{"network" => rede}) when is_binary(rede) and rede != "",
+    do: "`#{img}` (rede `#{rede}`)"
+
+  defp imagem_com_rede(img, _), do: "`#{img}`"
+
   defp build_kickoff(ctx, subida) do
     module_map = Map.get(ctx, "moduleMap")
     adrs = Map.get(ctx, "adrs", [])
     routing = Map.get(ctx, "moduleRouting")
+
+    imagem_text =
+      case Map.get(ctx, "projectImage") do
+        %{"image" => img} = pi when is_binary(img) and img != "" -> imagem_com_rede(img, pi)
+        %{"imagem" => img} = pi when is_binary(img) and img != "" -> imagem_com_rede(img, pi)
+        img when is_binary(img) and img != "" -> "`#{img}`"
+        _ -> "(não decidida — use a candidata do roteamento do módulo e diga isso no README)"
+      end
 
     modules_text =
       case module_map do
@@ -1360,22 +1516,35 @@ defmodule Engine.Infra.InfraLeadServer do
 
     """
     Você recebeu o handoff do Arquiteto. Proponha os artefatos de INFRA que são
-    SEUS — Dockerfiles e compose de dev. O pipeline de CI é responsabilidade de
-    outra subespecialidade (Workflows), que roda depois e junta o resultado à
-    mesma PR — você não precisa gerá-lo.
+    SEUS: os que sobem o APP na máquina do usuário. O pipeline de CI é de outra
+    subespecialidade (Workflows), que roda depois e junta o resultado à mesma PR.
 
-    1. Para cada módulo do module_map abaixo, gere um Dockerfile adequado ao stack.
-    2. Gere um compose de desenvolvimento (docker-compose.yml) integrando os módulos.
-    3. Valide CADA arquivo com `validate_infra_file` (path + content) antes de propor.
+    1. Para cada módulo do module_map abaixo, um Dockerfile com `FROM` = a imagem
+       decidida: #{imagem_text}.
+    2. Um docker-compose.yml que SOBE O APP: `build` do Dockerfile de cada módulo,
+       porta `${APP_PORT:-8080}:<porta interna>`, VOLUME NOMEADO para dados persistentes
+       (nunca bind-mount relativo `./pasta`: nasce root e o app não grava) e
+       `env_file: .env`, com um `.env.example` commitado só com as variáveis
+       obrigatórias, sem valor (nunca um `.env`).
+    3. No README, a seção "#{Engine.Harness.Tools.WriteFile.titulo_secao_de_uso()}": o comando e as URLs. Módulo
+       HTTP declara SEMPRE `/docs` (a UI Swagger, `kind: "api_docs"`) mesmo antes
+       de existir, e módulo web a página inicial — nunca rota de negócio.
+    4. Valide CADA arquivo com `validate_infra_file` (path + content) antes de propor.
     #{String.trim_trailing(passo_da_subida(subida))}
-    6. Por último, chame `propose_infra_pr` (title + files) com o que é seu — a
-       consolidação com o pipeline de CI acontece depois, automaticamente.
-       `propose_infra_pr` ENCERRA o seu turno: uma subida do container que
-       caiba a você só acontece se for chamada ANTES dela ou na MESMA resposta. Não
-       diga que vai subir o container "depois" ou "em paralelo" sem chamar a
-       ferramenta — o que não foi chamado não acontece.
+    7. Por último, chame `propose_infra_pr` (title + files + run: o mesmo comando e
+       URLs do README) com o que é seu. Se o app é um servidor HTTP, declare também
+       `run.app` (`{command, port}`): o comando que o sobe DENTRO do container de
+       trabalho, em /work, e a porta INTERNA onde ele escuta. Se os testes do app
+       precisam de banco ou S3, declare `run.qa.services` (imagem fixada por
+       digest). Ela ENCERRA o seu turno: uma subida do
+       container que caiba a você só acontece se for chamada ANTES dela ou na
+       MESMA resposta — o que não foi chamado não acontece.
 
     Você NUNCA aplica nada em ambiente — só propõe. Sem acesso a terminal.
+    Os arquivos vão SÓ na `propose_infra_pr`: não cole o conteúdo deles no chat.
+    Esse compose é para o USUÁRIO rodar; o container de TRABALHO dos agentes sobe
+    pelo SISTEMA (broker), e não há deploy neste fluxo — não o prometa. Com o
+    container `running`, o SISTEMA oferece o Dev Lead (RN-711).
 
     MÓDULOS:
     #{modules_text}
@@ -1404,9 +1573,6 @@ defmodule Engine.Infra.InfraLeadServer do
 
   defp user_msg(text), do: %{"role" => "user", "content" => text, :pinned => false}
 
-  defp assistant_msg(content),
-    do: %{"role" => "assistant", "content" => content, :pinned => false}
-
   defp append(state, message), do: %{state | messages: state.messages ++ [message]}
 
   defp to_wire(message), do: Map.delete(message, :pinned)
@@ -1431,16 +1597,24 @@ defmodule Engine.Infra.InfraLeadServer do
   defp emit_response(state, content),
     do: emit(state, "agent.response", %{content: content})
 
+  # RN-698: o texto do turno inteiro, numa `agent.response` só.
+  defp gravar_texto_do_turno(state, ultimo, model_name \\ nil) do
+    case TextoDoTurno.payload_do_turno(ultimo, model_name) do
+      nil -> :vazio
+      payload -> emit(state, "agent.response", payload)
+    end
+  end
+
   # A falha, gravada e DITA. O `broadcast` continua, para quem está com a aba
   # aberta ver na hora — mas ele deixou de ser a única fonte.
   defp emit_falha(state, reason) do
     origem = FalhaDeTurno.origem(reason)
-    mensagem = FalhaDeTurno.mensagem(reason)
+    mensagem = FalhaDeTurno.mensagem(reason, state.project_id)
 
     emit(state, "agent.error", %{
       origem: origem,
       mensagem: mensagem,
-      reason: inspect(reason)
+      reason: FalhaDeTurno.diagnostico(reason)
     })
 
     broadcast(state, "agent.error", %{origem: origem, mensagem: mensagem})
@@ -1462,5 +1636,77 @@ defmodule Engine.Infra.InfraLeadServer do
   # grava é `TurnoAssincrono`, no aceite (`working`) e no fecho (`idle`).
   defp broadcast(state, event, payload) do
     EngineWeb.Endpoint.broadcast("session:" <> state.session_id, event, payload)
+  end
+
+  # --- AT-582: correções de gate duráveis ---
+
+  @doc """
+  Gate (QA/SecOps) pediu mudanças — mesma branch/PR, sem PR nova.
+
+  AT-582 (molde da RN-673): a correção é gravada em `infra.correction_queued`
+  ANTES de ir ao processo. Sem processo vivo ele é acordado e o `init/1` lê a
+  pendente do log; com processo, o cast leva o `id` para o fecho gravar
+  `infra.correction_delivered`.
+  """
+  def correct(project_id, session_id, findings) do
+    id = Ecto.UUID.generate()
+
+    _ =
+      EngineApiClient.append_event(project_id, session_id, %{
+        type: @correcao_enfileirada,
+        actorKind: "agent",
+        actorId: @agent,
+        payload: %{
+          id: id,
+          gate: findings.gate,
+          reason: findings.reason,
+          diagnosis: String.slice(to_string(findings.diagnosis), 0, 2_000)
+        }
+      })
+
+    case Registry.lookup(Engine.Sessions.Registry, "infra:" <> session_id) do
+      [] -> acordar(project_id, session_id)
+      _ -> GenServer.cast(via(session_id), {:correct, Map.put(findings, :id, id)})
+    end
+
+    :ok
+  end
+
+  @doc "Acorda o Infra Lead pelo supervisor (o `init/1` reconstrói o que estava pendente). Nunca lança."
+  def acordar(project_id, session_id),
+    do: Engine.Agents.FilaDeMensagens.acordar(@agent, session_id, project_id)
+
+  @doc "As correções de gate gravadas e ainda não entregues, na ordem do `seq`. Puro."
+  def correcoes_pendentes(eventos) do
+    ordenados = Enum.sort_by(eventos, &(&1["seq"] || 0))
+
+    entregues =
+      for %{"type" => @correcao_entregue, "payload" => %{"id" => id}} <- ordenados, do: id
+
+    for %{"type" => @correcao_enfileirada, "payload" => %{"id" => id} = p} <- ordenados,
+        id not in entregues do
+      %{id: id, gate: p["gate"], reason: p["reason"], diagnosis: p["diagnosis"]}
+    end
+  end
+
+  @doc "Lê do log as correções pendentes. Nunca lança: leitura que falha vira lista vazia."
+  def ler_correcoes_pendentes(project_id, session_id) do
+    case Reidratacao.eventos_do_tipo(project_id, session_id, [
+           @correcao_enfileirada,
+           @correcao_entregue
+         ]) do
+      {:ok, eventos, _} -> correcoes_pendentes(eventos)
+      _ -> []
+    end
+  rescue
+    _ -> []
+  end
+
+  @doc "Boot (Rehydrator): acorda o Infra Lead que tem correção pendente na sessão."
+  def acordar_se_ha_correcao(project_id, session_id) do
+    if ler_correcoes_pendentes(project_id, session_id) != [],
+      do: acordar(project_id, session_id)
+
+    :ok
   end
 end

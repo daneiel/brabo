@@ -11,7 +11,7 @@ export interface RosterEntry {
 
 // agent_id/branch slug a partir do nome do módulo — mesma regra de
 // `devAgentId` em activate-execution.use-case.ts (api).
-function devAgentId(moduleName: string): string {
+export function devAgentId(moduleName: string): string {
   return `dev-${moduleName
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
@@ -99,6 +99,9 @@ const DEV_STATUS_EVENTS: Record<string, AgentStatus> = {
   'dev.awaiting_approval': 'aguardando',
   'dev.awaiting_gate': 'aguardando',
   'dev.idle_tripped': 'travado',
+  // RN-726: provedor sem crédito. O engine pausa em `idle_tripped` (o Rearmar
+  // é a retomada) sem acionar a parada automática — `travado` com motivo próprio.
+  'dev.credit_exhausted': 'travado',
   // Os dois abaixo não são `dev.*` — não entram na comparação com o engine.
   'agent.response': 'trabalhando',
   'backlog.task_blocked': 'falhou',
@@ -107,14 +110,18 @@ const DEV_STATUS_EVENTS: Record<string, AgentStatus> = {
 /**
  * Tipo `dev.*` que o engine emite e que o painel decidiu NÃO considerar, com
  * o motivo — a válvula que impede o teste cruzado de forçar um mapeamento
- * inventado. Vazio hoje, e essa é a resposta certa: os nove tipos que o
+ * inventado. Hoje só o desfecho de task da RN-797; os demais tipos que o
  * engine emite têm todos um estado honesto no painel.
  *
  * Declarar aqui é uma DECISÃO registrada, não um esquecimento: o tipo fica
  * invisível para `devStatus` (o painel mostra o evento conhecido anterior), e
  * quem ler saberá que foi de propósito.
  */
-export const DEV_STATUS_EVENTS_FORA: Record<string, string> = {};
+export const DEV_STATUS_EVENTS_FORA: Record<string, string> = {
+  // RN-797: desfecho da TASK, não estado do agente — o `dev.idle`/`dev.started`
+  // que vem logo depois é que diz o que ele está fazendo.
+  'dev.task_already_in_dev': 'desfecho da task; o estado do agente vem do evento seguinte',
+};
 
 /**
  * O estado que o painel dá a um tipo `dev.*`, para quem precisa da MESMA
@@ -191,9 +198,14 @@ export function subagentOutcomeLabel(events: SessionEvent[], subagentId: string)
 export function breakerReasonFor(events: SessionEvent[], agentId: string): string | undefined {
   const last = lastEventFor(
     events,
-    (e) => e.actor.id === agentId && e.type === 'dev.idle_tripped',
+    (e) =>
+      e.actor.id === agentId &&
+      (e.type === 'dev.idle_tripped' || e.type === 'dev.credit_exhausted'),
   );
   if (!last) return undefined;
+  if (last.type === 'dev.credit_exhausted') {
+    return i18n.t('agentStatus.creditExhausted', { ns: 'executors' });
+  }
   const n = (last.payload as { consecutiveBlocked?: number }).consecutiveBlocked;
   return n
     ? i18n.t('agentStatus.circuitBreaker.withCount', { ns: 'executors', count: n })
@@ -219,7 +231,19 @@ function gateStatus(events: SessionEvent[], gate: 'qa' | 'secops'): AgentStatus 
   if (!last) return 'ocioso';
   const current = (last.payload as { gateStatus?: string }).gateStatus;
   const expected = gate === 'qa' ? 'awaiting_qa' : 'awaiting_secops';
-  return current === expected ? 'trabalhando' : 'ocioso';
+  if (current !== expected) return 'ocioso';
+  // RN-729: o ciclo do gate pode terminar em FALHA sem um `gate_changed`
+  // novo — o subagente da área falha e nada mais está em curso. Uma
+  // `delegation.failed` de membro da área DEPOIS do último parecer encerra o
+  // "trabalhando": o lead diz `falhou`, nunca trabalho que não existe.
+  const membros: readonly string[] = AREAS[gate]?.members ?? [];
+  const posterior = events.slice(events.indexOf(last) + 1);
+  const falhou = posterior.some(
+    (e) =>
+      e.type === 'delegation.failed' &&
+      membros.includes((e.payload as DelegationEventPayload).subagent),
+  );
+  return falhou ? 'falhou' : 'trabalhando';
 }
 
 // Subagente só entra no painel quando há EVIDÊNCIA de atividade nesta

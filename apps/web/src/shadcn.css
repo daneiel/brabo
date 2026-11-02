@@ -1,0 +1,43 @@
+/*
+ * Fundação do shadcn/ui (AT-645, ADR 0232). Importado DEPOIS de `index.css`.
+ * Sem preflight de propósito: ele entra só na limpeza final. Nenhuma variável
+ * crua do shadcn (`--accent`, `--radius-*`, `--font-mono`...) é declarada —
+ * as cores semânticas apontam para os tokens do Brabo (`design/tokens.css`).
+ */
+@import 'tailwindcss/theme' layer(theme);
+@import 'tailwindcss/utilities' layer(utilities) source(none);
+/* Só o shadcn gera utilitário; varrer o src inteiro emitiria .absolute, .container... soltos. */
+@source './components/shadcn';
+@source './components/ai-elements';
+
+/* O tema é escrito por `public/theme-boot.js` em `[data-theme]`, nunca `.dark`. */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+@theme {
+  --color-*: initial;
+}
+
+@theme inline {
+  --color-background: var(--surface-0);
+  --color-foreground: var(--text-primary);
+  --color-card: var(--surface-1);
+  --color-card-foreground: var(--text-primary);
+  --color-popover: var(--surface-1);
+  --color-popover-foreground: var(--text-primary);
+  --color-primary: var(--accent);
+  --color-primary-foreground: var(--on-accent);
+  --color-secondary: var(--surface-2);
+  --color-secondary-foreground: var(--text-primary);
+  --color-muted: var(--surface-2);
+  --color-muted-foreground: var(--text-muted);
+  --color-accent: var(--surface-2);
+  --color-accent-foreground: var(--text-primary);
+  --color-destructive: var(--danger);
+  --color-border: var(--border);
+  --color-input: var(--border-strong);
+  --color-ring: var(--accent);
+
+  /* Só nomes que o Brabo NÃO declara; `--radius-*` e `--font-mono` já são dele
+     e o `:root` sem layer do tokens.css vence o default do Tailwind. */
+  --font-sans: var(--font-body);
+}

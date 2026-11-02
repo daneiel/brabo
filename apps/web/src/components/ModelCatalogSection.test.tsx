@@ -16,6 +16,11 @@ const setModelsActive = vi.fn();
 const syncModelCatalog = vi.fn();
 const listCredentials = vi.fn();
 const setModelUses = vi.fn();
+const listCredentialedProviders = vi.fn();
+const listWorkspaces = vi.fn();
+const updateModelPricing = vi.fn();
+const updateModelBilling = vi.fn();
+const listModelPriceChanges = vi.fn();
 
 vi.mock('../lib/api-client', () => ({
   listModelCatalog: (...args: unknown[]) => listModelCatalog(...args),
@@ -23,6 +28,13 @@ vi.mock('../lib/api-client', () => ({
   syncModelCatalog: (...args: unknown[]) => syncModelCatalog(...args),
   listCredentials: (...args: unknown[]) => listCredentials(...args),
   setModelUses: (...args: unknown[]) => setModelUses(...args),
+  listCredentialedProviders: (...args: unknown[]) => listCredentialedProviders(...args),
+  setAgentModelBinding: vi.fn(),
+  listWorkspaces: (...a: unknown[]) => listWorkspaces(...a),
+  updateModelPricing: (...a: unknown[]) => updateModelPricing(...a),
+  updateModelBilling: (...a: unknown[]) => updateModelBilling(...a),
+  listModelPriceChanges: (...a: unknown[]) => listModelPriceChanges(...a),
+  mensagemDaApi: (_e: unknown, f?: string) => f ?? 'erro',
 }));
 
 function model(
@@ -76,6 +88,12 @@ beforeEach(async () => {
   setModelUses.mockResolvedValue([]);
   syncModelCatalog.mockResolvedValue({ porProvider: [] });
   listCredentials.mockResolvedValue([]);
+  listWorkspaces.mockResolvedValue([]);
+  updateModelPricing.mockResolvedValue({});
+  updateModelBilling.mockResolvedValue({});
+  listModelPriceChanges.mockResolvedValue([]);
+  // Sem resposta do titular = "não sei": todos os providers aparecem.
+  listCredentialedProviders.mockRejectedValue(new Error('indisponível'));
 });
 
 afterAll(() => {
@@ -250,7 +268,7 @@ describe('ModelCatalogSection', () => {
       montar();
 
       const aviso = (await screen.findByText(/OpenRouter/)).closest(
-        'div[class*="alerta"]',
+        '[data-slot="alert"]',
       );
       expect(aviso).toBeTruthy();
       // O aviso precisa dizer o que fazer, não só que algo falta.
@@ -352,73 +370,84 @@ describe('subgrupos colapsáveis', () => {
   });
 });
 
-describe('colapso de grupo e "minimizar tudo"', () => {
+describe('abas por provider com chave do titular (AT-607)', () => {
   function catalogoMisto() {
     return {
       local: { ollama: [model({ id: 'l-1', provider: 'ollama', name: 'llama3.2:1b', displayName: 'Llama 3.2 1B' })] },
       cloud: {
         openai: [model({ id: 'd-1', provider: 'openai', name: 'gpt-4o', displayName: 'GPT-4o direto' })],
+        anthropic: [model({ id: 'a-1', provider: 'anthropic', name: 'claude-x', displayName: 'Claude direto', isActive: false })],
         openrouter: [model({ id: 'h-1', provider: 'openrouter', name: 'openai/gpt-4o', displayName: 'GPT-4o via hub' })],
       },
     } as CatalogoPorCategoria;
   }
 
-  it('grupos nascem ABERTOS — fechá-los de saída esconderia até o que é pequeno', async () => {
+  it('sem resposta do titular mostra uma aba por provider e só o modelo da aba ativa', async () => {
     listModelCatalog.mockResolvedValue(catalogoMisto());
     montar();
 
     expect(await screen.findByText('Llama 3.2 1B')).toBeTruthy();
-    expect(screen.getByText('GPT-4o direto')).toBeTruthy();
-  });
-
-  it('fechar "Local" some com os modelos dele e não toca nos outros', async () => {
-    listModelCatalog.mockResolvedValue(catalogoMisto());
-    montar();
-    await screen.findByText('Llama 3.2 1B');
-
-    fireEvent.click(screen.getByRole('button', { name: /^Local/ }));
-
-    expect(screen.queryByText('Llama 3.2 1B')).toBeNull();
-    expect(screen.getByText('GPT-4o direto')).toBeTruthy();
-  });
-
-  /**
-   * "Hubs" sozinho não diz de QUEM é o catálogo — e preço, disponibilidade e
-   * credencial pertencem ao hub, não ao fabricante do modelo.
-   */
-  it('o grupo de hub nomeia o provedor que o serve', async () => {
-    listModelCatalog.mockResolvedValue(catalogoMisto());
-    montar();
-
-    const hub = await screen.findByRole('button', { name: /Hubs/ });
-    expect(hub.textContent).toContain('OpenRouter');
-  });
-
-  it('APIs diretas não repetem o provider no cabeçalho — a linha já diz', async () => {
-    listModelCatalog.mockResolvedValue(catalogoMisto());
-    montar();
-
-    const direto = await screen.findByRole('button', { name: /APIs diretas/ });
-    expect(direto.textContent).not.toContain('OpenAI');
-  });
-
-  it('minimizar tudo fecha grupos e subgrupos; expandir tudo reabre os dois', async () => {
-    listModelCatalog.mockResolvedValue(catalogoMisto());
-    montar();
-    await screen.findByText('Llama 3.2 1B');
-
-    fireEvent.click(screen.getByRole('button', { name: 'Minimizar tudo' }));
-    expect(screen.queryByText('Llama 3.2 1B')).toBeNull();
+    expect(screen.getAllByRole('tab')).toHaveLength(4);
     expect(screen.queryByText('GPT-4o direto')).toBeNull();
 
-    // O botão oferece a AÇÃO, não o estado: agora ele reabre.
+    fireEvent.click(screen.getByRole('tab', { name: /OpenAI/ }));
+    expect(screen.getByText('GPT-4o direto')).toBeTruthy();
+    expect(screen.queryByText('Llama 3.2 1B')).toBeNull();
+  });
+
+  it('só os providers com chave do titular viram aba; o resto entra na linha "de fora"', async () => {
+    listModelCatalog.mockResolvedValue(catalogoMisto());
+    listCredentialedProviders.mockResolvedValue({ providers: ['openai'] });
+    montar();
+
+    await screen.findByText('Llama 3.2 1B');
+    await waitFor(() => expect(screen.getAllByRole('tab')).toHaveLength(2));
+    expect(screen.getByRole('tab', { name: /Ollama/ })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: /OpenAI/ })).toBeTruthy();
+    expect(screen.getByText(/2 de fora, sem chave do titular: Anthropic, OpenRouter/)).toBeTruthy();
+  });
+
+  it('provider sem chave com modelo ATIVO vira aba marcada, para dar para desativar (RN-043)', async () => {
+    const cat = catalogoMisto();
+    cat.cloud.anthropic = [model({ id: 'a-1', provider: 'anthropic', name: 'claude-x', displayName: 'Claude direto', isActive: true })];
+    listModelCatalog.mockResolvedValue(cat);
+    listCredentialedProviders.mockResolvedValue({ providers: ['openai'] });
+    montar();
+
+    const aba = await screen.findByRole('tab', { name: /Anthropic · sem chave do titular/ });
+    fireEvent.click(aba);
+    expect(screen.getByText('Claude direto')).toBeTruthy();
+    expect(screen.getByText(/ainda tem modelo ativo/)).toBeTruthy();
+  });
+
+  it('a seleção sobrevive à troca de aba e a busca sem resultado na aba nomeia as que casam', async () => {
+    listModelCatalog.mockResolvedValue(catalogoMisto());
+    montar();
+    await screen.findByText('Llama 3.2 1B');
+
+    fireEvent.click(screen.getAllByRole('checkbox')[0]);
+    fireEvent.click(screen.getByRole('tab', { name: /OpenAI/ }));
+    expect(screen.getByText(/1 selecionado/)).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText('Buscar modelo no catálogo'), {
+      target: { value: 'llama' },
+    });
+    expect(await screen.findByText(/Nenhum modelo de OpenAI casa com a busca.*Casam em: Ollama/)).toBeTruthy();
+  });
+
+  it('o hub continua repartido por fabricante; "expandir tudo" abre os subgrupos da aba', async () => {
+    listModelCatalog.mockResolvedValue(catalogoMisto());
+    montar();
+    await screen.findByText('Llama 3.2 1B');
+
+    fireEvent.click(screen.getByRole('tab', { name: /OpenRouter/ }));
+    expect(screen.getByRole('button', { name: /OpenAI/ })).toBeTruthy();
+    expect(screen.queryByText('GPT-4o via hub')).toBeNull();
+
     fireEvent.click(screen.getByRole('button', { name: 'Expandir tudo' }));
-    expect(screen.getByText('Llama 3.2 1B')).toBeTruthy();
-    // E "expandir tudo" abre também os subgrupos, que nascem fechados.
     expect(screen.getByText('GPT-4o via hub')).toBeTruthy();
   });
 });
-
 
 /**
  * Facetas de capability (ADR 0051).
@@ -564,5 +593,165 @@ describe('curadoria por uso', () => {
 
     expect(screen.getByText('O de código')).toBeTruthy();
     expect(screen.queryByText('Sem opinião')).toBeNull();
+  });
+
+  describe('preço e cobrança', () => {
+    const comPapel = (role: string) =>
+      listWorkspaces.mockResolvedValue([{ id: 'ws-1', role }]);
+
+    it('owner edita preço em micros e troca a cobrança; histórico listado', async () => {
+      comPapel('owner');
+      listModelPriceChanges.mockResolvedValue([
+        {
+          id: 'h1',
+          modelId: 'm-1',
+          inputBeforeMicros: 0,
+          inputAfterMicros: 1_000_000,
+          outputBeforeMicros: 0,
+          outputAfterMicros: 5_000_000,
+          source: 'manual',
+          changedBy: 'u',
+          createdAt: '2026-10-31T10:00:00.000Z',
+        },
+      ]);
+      montar();
+      await screen.findByText('GPT-4o mini');
+      fireEvent.click(screen.getByRole('button', { name: /Preço e cobrança/ }));
+      expect(await screen.findByText(/manual ·/)).toBeTruthy();
+      fireEvent.change(screen.getByLabelText('Entrada (US$ por 1M)'), {
+        target: { value: '1' },
+      });
+      fireEvent.change(screen.getByLabelText('Saída (US$ por 1M)'), {
+        target: { value: '5' },
+      });
+      await waitFor(() =>
+        expect(
+          (screen.getByRole('button', { name: 'Salvar preço' }) as HTMLButtonElement)
+            .disabled,
+        ).toBe(false),
+      );
+      fireEvent.click(screen.getByRole('button', { name: 'Salvar preço' }));
+      await waitFor(() =>
+        expect(updateModelPricing).toHaveBeenCalledWith('ws-1', 'm-1', {
+          inputPricePerMillionMicros: 1_000_000,
+          outputPricePerMillionMicros: 5_000_000,
+        }),
+      );
+      fireEvent.change(screen.getByLabelText('Cobrança'), {
+        target: { value: 'subscription' },
+      });
+      await waitFor(() =>
+        expect(updateModelBilling).toHaveBeenCalledWith('ws-1', 'm-1', 'subscription'),
+      );
+    });
+
+    const sugestao = {
+      cobranca: 'api' as const,
+      preco: {
+        fabricante: 'Anthropic',
+        entradaMicros: 100_000,
+        saidaMicros: 500_000,
+        fonte: 'https://docs.claude.com/pricing.md',
+        conferidoEm: '2026-11-01',
+        observacao: 'Prompt até 100 000 tokens.',
+      },
+    };
+    const abrirComSugestao = async (role: string, over = {}) => {
+      comPapel(role);
+      listModelCatalog.mockResolvedValue(catalogo([model({ sugestao, ...over })]));
+      montar();
+      await screen.findByText('GPT-4o mini');
+      fireEvent.click(screen.getByRole('button', { name: /Preço e cobrança/ }));
+    };
+
+    it('owner aplica o sugerido: preço e cobrança em série', async () => {
+      await abrirComSugestao('owner', { billing: 'subscription' });
+      expect(await screen.findByText(/Anthropic, conferido em 2026-11-01/)).toBeTruthy();
+      expect(screen.getByText(/Prompt até 100 000 tokens/)).toBeTruthy();
+      fireEvent.click(await screen.findByRole('button', { name: 'Aplicar sugerido' }));
+      await waitFor(() =>
+        expect(updateModelBilling).toHaveBeenCalledWith('ws-1', 'm-1', 'api'),
+      );
+      expect(updateModelPricing).toHaveBeenCalledWith('ws-1', 'm-1', {
+        inputPricePerMillionMicros: 100_000,
+        outputPricePerMillionMicros: 500_000,
+      });
+    });
+
+    it('falha no 2º passo diz quantos passaram', async () => {
+      updateModelBilling.mockRejectedValueOnce(new Error('x'));
+      await abrirComSugestao('owner', { billing: 'subscription' });
+      fireEvent.click(await screen.findByRole('button', { name: 'Aplicar sugerido' }));
+      expect(await screen.findByText(/Aplicou 1 de 2 passos/)).toBeTruthy();
+    });
+
+    it('maintainer vê a sugestão com o botão inerte; igual ao vigente some o botão', async () => {
+      await abrirComSugestao('maintainer');
+      expect(
+        (screen.getByRole('button', { name: 'Aplicar sugerido' }) as HTMLButtonElement)
+          .disabled,
+      ).toBe(true);
+    });
+
+    it('sugestão igual ao vigente mostra "já aplicado"', async () => {
+      await abrirComSugestao('owner', {
+        billing: 'api',
+        inputPricePerMillionMicros: 100_000,
+        outputPricePerMillionMicros: 500_000,
+      });
+      expect(await screen.findByText(/já está aplicado/)).toBeTruthy();
+      expect(screen.queryByRole('button', { name: 'Aplicar sugerido' })).toBeNull();
+    });
+
+    it('negativo é recusado no cliente', async () => {
+      comPapel('owner');
+      montar();
+      await screen.findByText('GPT-4o mini');
+      fireEvent.click(screen.getByRole('button', { name: /Preço e cobrança/ }));
+      fireEvent.change(screen.getByLabelText('Entrada (US$ por 1M)'), {
+        target: { value: '-1' },
+      });
+      await waitFor(() =>
+        expect(
+          (screen.getByRole('button', { name: 'Salvar preço' }) as HTMLButtonElement)
+            .disabled,
+        ).toBe(false),
+      );
+      fireEvent.click(screen.getByRole('button', { name: 'Salvar preço' }));
+      expect(await screen.findByText(/zero ou maiores/)).toBeTruthy();
+      expect(updateModelPricing).not.toHaveBeenCalled();
+    });
+
+    it('maintainer vê tudo inerte, com o motivo em texto', async () => {
+      comPapel('maintainer');
+      montar();
+      await screen.findByText('GPT-4o mini');
+      fireEvent.click(screen.getByRole('button', { name: /Preço e cobrança/ }));
+      expect(await screen.findByText(/Só o owner edita/)).toBeTruthy();
+      expect(
+        (screen.getByRole('button', { name: 'Salvar preço' }) as HTMLButtonElement)
+          .disabled,
+      ).toBe(true);
+      expect((screen.getByLabelText('Cobrança') as HTMLSelectElement).disabled).toBe(
+        true,
+      );
+    });
+
+    it('preço zero nunca aparece como $0.00 nas três cobranças', async () => {
+      const zero = { inputPricePerMillionMicros: 0, outputPricePerMillionMicros: 0 };
+      listModelCatalog.mockResolvedValue(
+        catalogo([
+          model({ id: 'a', displayName: 'A', billing: 'api', ...zero }),
+          model({ id: 'b', displayName: 'B', billing: 'subscription', ...zero }),
+          model({ id: 'c', displayName: 'C', billing: 'free', ...zero }),
+        ]),
+      );
+      montar();
+      await screen.findByText('A');
+      expect(screen.getByText('sem preço registrado')).toBeTruthy();
+      expect(screen.getByText('assinatura — sem preço registrado')).toBeTruthy();
+      expect(screen.getByText('grátis')).toBeTruthy();
+      expect(screen.queryByText(/\$0\.00/)).toBeNull();
+    });
   });
 });

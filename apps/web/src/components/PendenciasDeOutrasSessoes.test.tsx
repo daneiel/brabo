@@ -3,12 +3,19 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ProposedAction } from '../lib/api-types';
 import i18n from '../lib/i18n';
+import { acaoEstaNoBloco } from '../lib/acoes-no-bloco';
+import { CartaoOuReferenciaNoFio } from './CartaoOuReferenciaNoFio';
 
 const getProjectPendingActions = vi.fn();
 const approveAction = vi.fn();
 const denyAction = vi.fn();
 const approveAlwaysAction = vi.fn();
 const listSessionEvents = vi.fn();
+const getCodePullRequests = vi.fn();
+const listBacklog = vi.fn();
+const proposeAction = vi.fn();
+const unblockTask = vi.fn();
+const getOpenQuestions = vi.fn();
 
 vi.mock('../lib/api-client', async (importOriginal) => {
   const original = await importOriginal<typeof import('../lib/api-client')>();
@@ -19,6 +26,11 @@ vi.mock('../lib/api-client', async (importOriginal) => {
     denyAction: (...a: unknown[]) => denyAction(...a),
     approveAlwaysAction: (...a: unknown[]) => approveAlwaysAction(...a),
     listSessionEvents: (...a: unknown[]) => listSessionEvents(...a),
+    getCodePullRequests: (...a: unknown[]) => getCodePullRequests(...a),
+    listBacklog: (...a: unknown[]) => listBacklog(...a),
+    proposeAction: (...a: unknown[]) => proposeAction(...a),
+    unblockTask: (...a: unknown[]) => unblockTask(...a),
+    getOpenQuestions: (...a: unknown[]) => getOpenQuestions(...a),
   };
 });
 
@@ -59,10 +71,11 @@ function acao(id: string, over: Partial<ProposedAction> = {}): ProposedAction {
 function montar(
   podeDecidir = true,
   client = new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+  filasDoChat = true,
 ) {
   return render(
     <QueryClientProvider client={client}>
-      <PendenciasDeOutrasSessoes projectId="proj-1" sessionId={AQUI} podeDecidir={podeDecidir} />
+      <PendenciasDeOutrasSessoes projectId="proj-1" sessionId={AQUI} podeDecidir={podeDecidir} filasDoChat={filasDoChat} />
     </QueryClientProvider>,
   );
 }
@@ -72,9 +85,32 @@ beforeEach(() => {
   // O motivo da política de cada card é lido pela ação (AT-340); por padrão
   // o log responde sem o evento.
   listSessionEvents.mockResolvedValue({ items: [], nextCursor: null });
+  getCodePullRequests.mockResolvedValue({ items: [] });
+  listBacklog.mockResolvedValue([]);
+  getOpenQuestions.mockResolvedValue({ itens: [], total: 0 });
 });
 
 describe('PendenciasDeOutrasSessoes (AT-265)', () => {
+  it('RN-943: no chat, com pergunta da PRÓPRIA sessão, o título é do projeto', async () => {
+    getOpenQuestions.mockResolvedValue({
+      itens: [{
+        questionId: 'q1', eventId: 'ev-q1', sessionId: AQUI, pergunta: 'Qual banco?', sugestao: 'Postgres',
+        afeta: { regras: [], historias: [], tarefas: [] }, autor: 'criativo',
+        criadaEm: new Date().toISOString(), status: 'open', autorDaSessao: 'u', resposta: null,
+      }],
+      total: 1,
+    });
+    montar();
+    const topo = await screen.findByRole('button', { name: /Pendências deste projeto/ });
+    expect(topo).not.toHaveTextContent(/outras sessões/);
+  });
+
+  it('RN-943 (falha): sem as filas do chat (Executores) o título antigo continua', async () => {
+    getProjectPendingActions.mockResolvedValue([acao('a1')]);
+    montar(true, undefined, false);
+    expect(await screen.findByRole('button', { name: /Pendências de outras sessões deste projeto/ })).toBeInTheDocument();
+  });
+
   it('mostra as pendências da outra sessão, com filas separadas e decide pelo endpoint com o sessionId DA AÇÃO', async () => {
     getProjectPendingActions.mockResolvedValue([
       acao('a1'),
@@ -161,7 +197,7 @@ describe('PendenciasDeOutrasSessoes — cabe na coluna e mostra todos (AT-318)',
     expect(within(aprovacoes).queryAllByRole('button', { expanded: true })).toHaveLength(0);
     expect(within(aprovacoes).getAllByRole('button', { expanded: false }).length).toBeGreaterThanOrEqual(3);
     // Presença por fila, cada uma com o próprio número — nunca "4".
-    const topo = screen.getByRole('button', { name: /Pendências de outras sessões/ });
+    const topo = screen.getByRole('button', { name: /Pendências deste projeto/ });
     expect(topo).toHaveTextContent('Aprovações 3 · Merges de PR 1');
     expect(topo).not.toHaveTextContent(/\b4\b/);
   });
@@ -170,7 +206,7 @@ describe('PendenciasDeOutrasSessoes — cabe na coluna e mostra todos (AT-318)',
     getProjectPendingActions.mockResolvedValue([acao('a1')]);
     montar();
 
-    const topo = await screen.findByRole('button', { name: /Pendências de outras sessões/ });
+    const topo = await screen.findByRole('button', { name: /Pendências deste projeto/ });
     fireEvent.click(topo);
 
     expect(topo).toHaveAttribute('aria-expanded', 'false');
@@ -241,5 +277,182 @@ describe('PendenciasDeOutrasSessoes — motivo da política (AT-340)', () => {
     // Só o card lido fala; o da leitura falha não inventa motivo nem diz
     // "não registrado", que é o que a api afirma quando responde sem evento.
     expect(screen.getAllByTestId('motivo-da-politica')).toHaveLength(1);
+  });
+});
+
+function pr(id: string, sourceBranch: string) {
+  return {
+    id,
+    number: Number(id),
+    title: `PR ${id}`,
+    url: '',
+    author: null,
+    state: 'open',
+    sourceBranch,
+    targetBranch: 'dev',
+    updatedAt: null,
+  };
+}
+
+function backlog(tarefas: Record<string, unknown>[]) {
+  return [
+    {
+      id: 'e1',
+      projectId: 'proj-1',
+      sessionId: EXECUCAO,
+      title: 'Épico',
+      description: '',
+      createdAt: '',
+      updatedAt: '',
+      stories: [
+        {
+          id: 's1',
+          tasks: tarefas.map((t) => ({
+            storyId: 's1',
+            description: '',
+            status: 'in_review',
+            assignedTo: null,
+            blocked: false,
+            blockedReason: null,
+            gateStatus: null,
+            gateCorrectionCount: 0,
+            createdAt: '',
+            updatedAt: '',
+            ...t,
+          })),
+        },
+      ],
+    },
+  ];
+}
+
+describe('PendenciasDeOutrasSessoes — PRs prontas e tarefas bloqueadas (AT-497, RN-825/826)', () => {
+  it('a PR com os gates aprovados aparece, a com gate pendente não, e Mergear mostra o cartão ali', async () => {
+    getProjectPendingActions.mockResolvedValue([]);
+    getCodePullRequests.mockResolvedValue({
+      items: [pr('1', 'feature/task-aaaaaaaa'), pr('2', 'feature/task-bbbbbbbb'), pr('3', 'docs/adr-0300')],
+    });
+    listBacklog.mockResolvedValue(
+      backlog([
+        { id: 'aaaaaaaa-1', title: 'Pronta', gateStatus: 'awaiting_user' },
+        { id: 'bbbbbbbb-1', title: 'Em QA', gateStatus: 'awaiting_qa' },
+      ]),
+    );
+    proposeAction.mockResolvedValue(
+      acao('m-novo', {
+        sessionId: AQUI,
+        actionType: 'git_merge',
+        actor: { kind: 'user', id: 'u' },
+        payload: { pullRequestId: '1', sourceBranch: 'feature/task-aaaaaaaa', targetBranch: 'dev' },
+      }),
+    );
+
+    montar();
+
+    const fila = await screen.findByTestId('fila-prs-prontas');
+    expect(within(fila).getByText(/PR 1/)).toBeInTheDocument();
+    // PR de ADR (sem tarefa) também é pronta; a de gate pendente, não.
+    expect(within(fila).getByText(/PR 3/)).toBeInTheDocument();
+    expect(within(fila).queryByText(/PR 2/)).toBeNull();
+
+    fireEvent.click(within(fila).getAllByRole('button', { name: 'Mergear' })[0]!);
+    await waitFor(() =>
+      expect(proposeAction).toHaveBeenCalledWith(
+        'proj-1',
+        AQUI,
+        expect.objectContaining({ actionType: 'git_merge' }),
+      ),
+    );
+    expect(await within(fila).findByRole('button', { name: 'Aprovar' })).toBeInTheDocument();
+    // RN-843: a ação desenhada aqui fica registrada para o fio recolher a dele.
+    expect(acaoEstaNoBloco('m-novo')).toBe(true);
+
+    // RN-843: recolher o bloco desmonta o cartão e o desregistra — o fio volta
+    // ao cartão completo; abrir de novo devolve a referência.
+    const fioDaAcao = {
+      id: 'm-novo',
+      status: 'pending',
+    } as unknown as ProposedAction;
+    render(
+      <div data-testid="fio">
+        <CartaoOuReferenciaNoFio action={fioDaAcao}>
+          <button type="button">Aprovar</button>
+        </CartaoOuReferenciaNoFio>
+      </div>,
+    );
+    const fio = screen.getByTestId('fio');
+    expect(within(fio).queryByRole('button', { name: 'Aprovar' })).toBeNull();
+    const cabecalho = document.querySelector('[aria-expanded="true"]') as HTMLElement;
+    fireEvent.click(cabecalho);
+    expect(acaoEstaNoBloco('m-novo')).toBe(false);
+    expect(screen.getAllByRole('button', { name: 'Aprovar' })).toHaveLength(1);
+    expect(within(fio).getByRole('button', { name: 'Aprovar' })).toBeInTheDocument();
+    fireEvent.click(document.querySelector('[aria-expanded="false"]') as HTMLElement);
+    expect(await within(screen.getByTestId('fila-prs-prontas')).findByRole('button', { name: 'Aprovar' })).toBeInTheDocument();
+    expect(acaoEstaNoBloco('m-novo')).toBe(true);
+    expect(within(fio).queryByRole('button', { name: 'Aprovar' })).toBeNull();
+  });
+
+  it('RN-841: a tarefa que entra em awaiting_user relê as PRs, e a PR nova aparece sem remontar', async () => {
+    getProjectPendingActions.mockResolvedValue([]);
+    getCodePullRequests.mockResolvedValueOnce({ items: [] });
+    listBacklog.mockResolvedValueOnce(
+      backlog([{ id: 'aaaaaaaa-1', title: 'Pronta', gateStatus: 'awaiting_qa' }]),
+    );
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const invalidar = vi.spyOn(client, 'invalidateQueries');
+    montar(true, client);
+    await waitFor(() => expect(getCodePullRequests).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(listBacklog).toHaveBeenCalledTimes(1));
+
+    getCodePullRequests.mockResolvedValue({ items: [pr('1', 'feature/task-aaaaaaaa')] });
+    listBacklog.mockResolvedValue(
+      backlog([{ id: 'aaaaaaaa-1', title: 'Pronta', gateStatus: 'awaiting_user' }]),
+    );
+    // A leitura de 15 s do backlog, simulada.
+    await client.invalidateQueries({ queryKey: ['backlog'] });
+
+    const fila = await screen.findByTestId('fila-prs-prontas');
+    expect(within(fila).getByText(/PR 1/)).toBeInTheDocument();
+    expect(getCodePullRequests).toHaveBeenCalledTimes(2);
+    // RN-847 (AT-518): o resumo do contexto é invalidado junto.
+    expect(
+      invalidar.mock.calls.some(
+        ([f]) => JSON.stringify(f?.queryKey) === JSON.stringify(['session-context-summary', 'proj-1']),
+      ),
+    ).toBe(true);
+  });
+
+  it('CASO DE FALHA RN-841: backlog relido sem mudança não relê as PRs', async () => {
+    getProjectPendingActions.mockResolvedValue([]);
+    listBacklog.mockResolvedValue(
+      backlog([{ id: 'aaaaaaaa-1', title: 'Pronta', gateStatus: 'awaiting_qa' }]),
+    );
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    montar(true, client);
+    await waitFor(() => expect(listBacklog).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(getCodePullRequests).toHaveBeenCalledTimes(1));
+    await client.invalidateQueries({ queryKey: ['backlog'] });
+    await waitFor(() => expect(listBacklog).toHaveBeenCalledTimes(2));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(getCodePullRequests).toHaveBeenCalledTimes(1);
+  });
+
+  it('CASO DE FALHA: desbloquear com erro diz o erro da api na linha da tarefa', async () => {
+    getProjectPendingActions.mockResolvedValue([]);
+    listBacklog.mockResolvedValue(
+      backlog([{ id: 't8', title: 'Tarefa 8', blocked: true, blockedReason: 'ciclo de correção esgotado' }]),
+    );
+    unblockTask.mockRejectedValue(new ApiError(409, { message: 'a tarefa não está bloqueada' }));
+
+    montar();
+
+    const fila = await screen.findByTestId('fila-tarefas-bloqueadas');
+    expect(within(fila).getByText('ciclo de correção esgotado')).toBeInTheDocument();
+    fireEvent.click(within(fila).getByRole('button', { name: 'Desbloquear' }));
+    await waitFor(() => expect(unblockTask).toHaveBeenCalledWith('proj-1', AQUI, 't8'));
+    expect(await within(fila).findByTestId('retorno-desbloqueio')).toHaveTextContent(
+      'a tarefa não está bloqueada',
+    );
   });
 });

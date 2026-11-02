@@ -81,6 +81,9 @@ export interface SessionTopbarProps {
   sessaoCriativa: boolean;
   criativoActive: boolean;
   conviteVisivel: boolean;
+  /** RN-712: algum agente já entrou na sessão — o botão de iniciar a
+   *  ideação deixa de existir (ele não reabre a ideação no meio da sessão). */
+  ideacaoComecou?: boolean;
   handleStartIdeation: () => Promise<void>;
   handleClose: () => Promise<void>;
   asideOpen: boolean;
@@ -106,6 +109,7 @@ export function SessionTopbar({
   sessaoCriativa,
   criativoActive,
   conviteVisivel,
+  ideacaoComecou = false,
   handleStartIdeation,
   handleClose,
   asideOpen,
@@ -285,7 +289,7 @@ export function SessionTopbar({
           `!conversaComecou`, que não volta a `false` — o botão sozinho não
           dizia o que fazia. A pista (ícone + nota do Criativo, mesma cor
           da bolha dele no fio, e `title` pro hover) fica ao lado dele. */}
-      {isActive && sessaoCriativa && !criativoActive && !conviteVisivel && (
+      {isActive && sessaoCriativa && !criativoActive && !conviteVisivel && !ideacaoComecou && (
         <span className={styles.iniciarIdeacaoComPista}>
           <BulbIcon
             size={14}

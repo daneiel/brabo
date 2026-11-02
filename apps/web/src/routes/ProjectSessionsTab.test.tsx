@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach, beforeAll, afterAll, afterEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { I18nextProvider } from 'react-i18next';
 // Instância REAL, não uma isolada: `lib/session-kind.ts` (`TIPOS_DE_SESSAO`)
 // e `components/CredentialSpendSection.tsx#formatarUsd` são módulos
@@ -22,6 +22,7 @@ import { simularLayoutMovel } from '../test/match-media';
 // a classe de verdade — é ela que carrega a frase que o toast mostra.
 import { ApiError } from '../lib/api-client';
 import type { ProposedAction, Session, SessionKind } from '../lib/api-types';
+import { consultaDasAcoesDaSessao } from '../lib/acoes-da-sessao';
 
 beforeAll(async () => {
   await i18n.changeLanguage('pt-BR');
@@ -39,7 +40,7 @@ const createSession = vi.fn();
 const transitionSession = vi.fn();
 const renameSession = vi.fn();
 const getActiveExecutionSession = vi.fn();
-const getMySpend = vi.fn();
+const getProjectSpendTeam = vi.fn();
 
 // Um SÓ mock de navegação, compartilhado entre chamadas de `useNavigate` —
 // é o que permite os testes de "não navega ao editar" / "navega fora do
@@ -65,7 +66,7 @@ vi.mock('../lib/api-client', async () => {
     transitionSession: (...args: unknown[]) => transitionSession(...args),
     renameSession: (...args: unknown[]) => renameSession(...args),
     getActiveExecutionSession: (...args: unknown[]) => getActiveExecutionSession(...args),
-    getMySpend: (...args: unknown[]) => getMySpend(...args),
+    getProjectSpendTeam: (...args: unknown[]) => getProjectSpendTeam(...args),
   };
 });
 
@@ -149,10 +150,10 @@ beforeEach(() => {
   // Default: nenhuma execução vigente. Os testes de RN-144 sobrescrevem isto
   // quando precisam de uma sessão de execução de verdade.
   getActiveExecutionSession.mockResolvedValue(null);
-  // Default: os KPIs da aba Criativo (RN-227/229/230) buscam `getMySpend`
+  // Default: os KPIs da aba Criativo (RN-227/229/230) buscam `getProjectSpendTeam`
   // assim que montam — sem isto, todo teste que abre `ProjectCriativoTab`
   // dispararia a chamada REAL não mockada.
-  getMySpend.mockResolvedValue({
+  getProjectSpendTeam.mockResolvedValue({
     projectId: 'proj-1',
     dias: 30,
     actorId: 'user-1',
@@ -231,6 +232,79 @@ describe('ProjectSessionsTab — aprovações por sessão', () => {
 
     expect(await screen.findByText('#11111111')).toBeTruthy();
     expect(screen.queryByText(/decidid(a|as) por você/)).toBeNull();
+  });
+});
+
+/**
+ * AT-365: a aba e o fio da Sessão gravam a MESMA entrada de cache
+ * (`['session-actions', projectId, sessionId]`). A aba lia por ela a PRIMEIRA
+ * página crescente (`listActions({ limit: 200 })`, sem `latest`) — abrir a aba
+ * trocava o recorte do fio pelas 200 ações mais ANTIGAS, contra a RN-637. A
+ * aba agora faz a MESMA pergunta do fio (`consultaDasAcoesDaSessao`).
+ */
+describe('ProjectSessionsTab — a leitura de ações é a mesma do fio (AT-365)', () => {
+  const SID = '11111111-aaaa';
+
+  // O servidor de mentira responde DIFERENTE a cada pergunta: a cauda
+  // (`latest`) traz as 200 mais novas, a primeira página crescente traz as
+  // 200 mais antigas, e `status=pending` traz a pendente que a cauda empurrou.
+  function servidorDeAcoes() {
+    const antigas = Array.from({ length: 200 }, (_, i) =>
+      acao({ id: `velha-${i}`, seq: i + 1, status: 'executed', sessionId: SID }),
+    );
+    const cauda = Array.from({ length: 200 }, (_, i) =>
+      acao({ id: `nova-${i}`, seq: 1000 + i, status: 'executed', sessionId: SID }),
+    );
+    const pendenteEmpurrada = acao({ id: 'pendente-velha', seq: 50, status: 'pending', sessionId: SID });
+    listActions.mockImplementation(
+      (_p: string, _s: string, opts: { latest?: boolean; status?: string } = {}) => {
+        if (opts.status === 'pending') return Promise.resolve({ items: [pendenteEmpurrada], nextCursor: null });
+        if (opts.latest) return Promise.resolve({ items: cauda, nextCursor: 'mais' });
+        return Promise.resolve({ items: antigas, nextCursor: 'mais' });
+      },
+    );
+  }
+
+  it('abrir a aba NÃO troca o recorte que o fio gravou no cache', async () => {
+    listSessions.mockResolvedValue([sessao(SID, '2026-08-01T00:00:00.000Z')]);
+    servidorDeAcoes();
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    // O fio leu primeiro (é o que `usePendingActions` faz na Sessão).
+    await client.fetchQuery(consultaDasAcoesDaSessao('proj-1', SID));
+    const doFio = client.getQueryData<{ items: ProposedAction[] }>(['session-actions', 'proj-1', SID]);
+    expect(doFio?.items.some((a) => a.id === 'nova-199')).toBe(true);
+
+    render(
+      <I18nextProvider i18n={i18n}>
+        <QueryClientProvider client={client}>
+          <ToastProvider>
+            <ProjectSessionsTab projectId="proj-1" kind="consultiva" />
+          </ToastProvider>
+        </QueryClientProvider>
+      </I18nextProvider>,
+    );
+    await screen.findByText('#11111111');
+    // A aba refaz a leitura ao montar (dado velho) — e refaz a MESMA.
+    await waitFor(() => expect(listActions.mock.calls.length).toBeGreaterThan(2));
+
+    const depois = client.getQueryData<{ items: ProposedAction[] }>(['session-actions', 'proj-1', SID]);
+    const ids = depois?.items.map((a) => a.id) ?? [];
+    expect(ids).toContain('nova-199');
+    expect(ids).toContain('pendente-velha');
+    expect(ids.some((id) => id.startsWith('velha-'))).toBe(false);
+    // Nenhuma chamada sem `latest`: a primeira página crescente não é mais lida.
+    for (const [, , opts] of listActions.mock.calls) {
+      expect((opts as { latest?: boolean }).latest).toBe(true);
+    }
+  });
+
+  it('a pendente que a cauda empurrou para fora conta em "aguardando"', async () => {
+    listSessions.mockResolvedValue([sessao(SID, '2026-08-01T00:00:00.000Z')]);
+    servidorDeAcoes();
+
+    montar();
+
+    expect(await screen.findByText('1 aguardando · 0 decididas por você')).toBeTruthy();
   });
 });
 
@@ -390,6 +464,19 @@ describe('ProjectSessionsTab — cada aba é um tipo', () => {
     expect(screen.queryByLabelText(/Criativa/)).toBeNull();
     // O que sobrou é o nome, que continua opcional.
     expect(screen.getByLabelText('Nome (opcional)')).toBeTruthy();
+  });
+
+  it('AT-472: o nome da nova ideação não convida o gerenciador de senhas', async () => {
+    montarAba(ProjectCriativoTab);
+    await screen.findByText('Criativo');
+    fireEvent.click(screen.getByRole('button', { name: 'Nova ideação' }));
+
+    const campo = screen.getByLabelText('Nome (opcional)');
+    expect(campo.getAttribute('autocomplete')).toBe('off');
+    expect(campo.getAttribute('aria-autocomplete')).toBe('none');
+    expect(campo.getAttribute('data-protonpass-ignore')).toBe('true');
+    expect(campo.getAttribute('data-1p-ignore')).toBe('true');
+    expect(campo.getAttribute('data-lpignore')).toBe('true');
   });
 
   it('caminho feliz: o CTA cria com o kind da ABA', async () => {
@@ -664,7 +751,10 @@ describe('ProjectSessionsTab — selo de status (RN-227)', () => {
 
     montarAba(ProjectCriativoTab);
 
-    expect(await screen.findByText('encerrando')).toBeTruthy();
+    const selo = await screen.findByText('encerrando');
+    expect(selo).toBeTruthy();
+    // `closing` é estado EM CURSO: o rótulo vai no Shimmer (AT-403).
+    expect(selo.className).toMatch(/shimmer|estatico/);
     // Nem o texto cru, nem o rótulo de "fechada" — os dois mentiriam sobre
     // um desfecho que ainda não aconteceu.
     expect(screen.queryByText('closing')).toBeNull();
@@ -681,7 +771,7 @@ describe('ProjectSessionsTab — selo de status (RN-227)', () => {
 
     montarAba(ProjectCriativoTab);
 
-    expect(await screen.findByText('aguardando')).toBeTruthy();
+    expect((await screen.findByText('aguardando')).className).not.toMatch(/shimmer|estatico/);
     expect(screen.queryByText('created')).toBeNull();
   });
 });
@@ -767,7 +857,7 @@ describe('ProjectSessionsTab — KPIs da aba Criativo', () => {
         status: 'closed',
       }),
     ]);
-    getMySpend.mockResolvedValue({
+    getProjectSpendTeam.mockResolvedValue({
       projectId: 'proj-1',
       dias: 30,
       actorId: 'user-1',
@@ -785,9 +875,9 @@ describe('ProjectSessionsTab — KPIs da aba Criativo', () => {
     expect(screen.getByText('2')).toBeTruthy();
     expect(screen.getByText('Ativas agora')).toBeTruthy();
     expect(screen.getByText('1')).toBeTruthy();
-    // `getMySpend(projectId, 30)` é a MESMA chamada que a aba Gastos faz
+    // `getProjectSpendTeam(projectId, 30)` é a MESMA chamada que a aba Gastos faz
     // para a visão do membro — nenhuma agregação nova.
-    expect(getMySpend).toHaveBeenCalledWith('proj-1', 30);
+    expect(getProjectSpendTeam).toHaveBeenCalledWith('proj-1', 30);
     expect(await screen.findByText('US$ 5,00')).toBeTruthy();
   });
 
@@ -795,7 +885,7 @@ describe('ProjectSessionsTab — KPIs da aba Criativo', () => {
     listSessions.mockResolvedValue([
       sessao('11111111-aaaa', '2026-08-01T00:00:00.000Z', { kind: 'criativa' }),
     ]);
-    getMySpend.mockRejectedValue(new Error('falhou'));
+    getProjectSpendTeam.mockRejectedValue(new Error('falhou'));
 
     montarAba(ProjectCriativoTab);
 
@@ -816,7 +906,7 @@ describe('ProjectSessionsTab — KPIs da aba Criativo', () => {
     ).toBeTruthy();
   });
 
-  it('a aba Chat não busca KPI nenhum — sem `getMySpend`', async () => {
+  it('a aba Chat não busca KPI nenhum — sem `getProjectSpendTeam`', async () => {
     listSessions.mockResolvedValue([
       sessao('11111111-aaaa', '2026-08-01T00:00:00.000Z', {
         kind: 'consultiva',
@@ -828,7 +918,7 @@ describe('ProjectSessionsTab — KPIs da aba Criativo', () => {
 
     await screen.findByText('Dúvidas de billing · #11111111');
     expect(screen.queryByText('Sessões no projeto')).toBeNull();
-    expect(getMySpend).not.toHaveBeenCalled();
+    expect(getProjectSpendTeam).not.toHaveBeenCalled();
   });
 });
 

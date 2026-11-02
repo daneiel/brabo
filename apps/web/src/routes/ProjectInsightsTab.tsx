@@ -1,3 +1,4 @@
+import { Shimmer } from '../components/ui/Shimmer';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from '@tanstack/react-router';
@@ -153,7 +154,7 @@ export function ProjectInsightsTab({ projectId }: { projectId: string }) {
           onTentarDeNovo={() => void hypothesesQuery.refetch()}
         />
       ) : hypothesesQuery.data === undefined ? (
-        <div className={styles.sectionSub}>{t('projectInsightsTab.loading')}</div>
+        <div className={styles.sectionSub}><Shimmer>{t('projectInsightsTab.loading')}</Shimmer></div>
       ) : all.length === 0 ? (
         <EmptyState>
           {t(

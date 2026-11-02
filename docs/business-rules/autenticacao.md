@@ -200,8 +200,8 @@ sobrescrito, e o pepper dele é mantido — ou, sem pepper, nasce com o
 
 - **Onde:** `apps/api/src/infrastructure/security/auth-key-material.ts:168`
   (`pepperAtual`), `:212` (`pepper`); `apps/api/src/main.ts:46` (a checagem de
-  boot); `install.sh:688` (`valor_no_env_anterior`), `:720` (`gerar_segredos`),
-  `:783` (`dizer_a_origem_do_pepper`); a variável nos três composes
+  boot); `install.sh:702` (`valor_no_env_anterior`), `:734` (`gerar_segredos`),
+  `:831` (`dizer_a_origem_do_pepper`); a variável nos três composes
   (`docker/docker-compose.yml`, `docker-compose.prod.yml`,
   `docker-compose.install.yml`), no `docker/smoke.sh` e no `.env.example`
 - **Teste:** `test/infrastructure/security/auth-key-material.spec.ts`
@@ -1610,13 +1610,13 @@ e o card do agente mostra uma frase sob o toggle — só quando a CURINGA está
 ligada, porque o toggle sobre o tipo representativo grava regra específica,
 que não libera o escopo.
 
-- **Onde:** `apps/api/src/domain/actions/decide.ts:295` (`modoAutomaticoDoAgente`),
+- **Onde:** `apps/api/src/domain/actions/decide.ts:309` (`modoAutomaticoDoAgente`),
   `apps/api/src/domain/actions/decide.ts:370` (o veredito sintetizado do
   composto ignorado), `apps/api/src/domain/actions/decide.ts:455` (o teto de
   escopo pulado),
   `apps/api/src/infrastructure/persistence/drizzle/agent-autonomy.repository.ts:25`
   (`resolve`, com a origem),
-  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:195`
+  `apps/api/src/application/use-cases/actions/propose-action.use-case.ts:221`
   (`autonomyOrigin`), `apps/web/src/components/AgentTeamGrid.tsx:108`
   (`autonomyHint`), `apps/web/src/components/ApprovalCard.tsx:313` (a nota
   nas duas variantes)
@@ -2418,8 +2418,10 @@ descrito aqui.
 - **Onde:** `apps/web/src/lib/activity.ts:94` (`OrigemDeEvento`), `:125`
   (`origemDoEvento`), `:152` (`agruparPorOrigem`);
   `apps/web/src/components/ActivityFeed.tsx:34` (o corte de 5), `:66` (o
-  toggle); `apps/web/src/routes/session-fio.tsx:119` (o corte do fio), `:268`
-  (`dividirFio`); `apps/web/src/routes/SessionPage.tsx:504` (`fio`)
+  toggle); `apps/web/src/routes/session-fio.tsx:119` (o corte do fio), `:291`
+  (`dividirFio`); `apps/web/src/routes/SessionPage.tsx:516` (`fio`)
+  toggle); `apps/web/src/routes/session-fio.tsx:119` (o corte do fio), `:291`
+  (`dividirFio`); `apps/web/src/routes/SessionPage.tsx:516` (`fio`)
 - **Teste:** `apps/web/src/lib/activity-origem.test.ts`,
   `apps/web/src/components/ActivityFeed.test.tsx` (describe "ordem,
   agrupamento e o toggle de máquina"),
@@ -2452,7 +2454,7 @@ lista, e um `useEffect` renderizaria uma vez com a página inválida antes de
 corrigir. Com 5 ou menos, o paginador **não existe** — controle que não pagina
 nada é ruído ocupando altura.
 
-- **Onde:** `apps/web/src/routes/ContextAside.tsx:104` (`REGRAS_POR_PAGINA`) e
+- **Onde:** `apps/web/src/routes/ContextAside.tsx:109` (`REGRAS_POR_PAGINA`) e
   a ordenação das quatro seções no mesmo arquivo;
   `apps/web/src/components/ActivityFeed.tsx:98` (o `sort` decrescente)
 - **Teste:** `apps/web/src/routes/SessionPage.painel-e-agrupamento.test.tsx`
@@ -2527,7 +2529,7 @@ tela pausa durante o turno — e com ele a duplicata visual da bolha em
 streaming.
 
 - **Onde:** `apps/web/src/lib/hooks.ts:262` (o `pausarPoll` do histórico),
-  `:388` (`baixados`); `apps/web/src/routes/ContextAside.tsx:149`
+  `:388` (`baixados`); `apps/web/src/routes/ContextAside.tsx:154`
   (`eventosAnteriores`) e o `ActivityFeed` com o pager, no fim do mesmo
   arquivo
 - **Teste:** `apps/web/src/routes/SessionPage.painel-e-agrupamento.test.tsx`
@@ -2734,12 +2736,34 @@ O projeto da rota ATUAL sempre aparece expandido (`projetosAbertosEfetivo`),
 mesmo sem estar no `Set` persistido — abrir "de graça" pela rota não grava
 nada; só o clique explícito no chevron entra em `brabo.sidebar.open`.
 
-- **Onde:** `apps/web/src/routes/Shell.tsx:353-374` (estado e o efetivo),
-  `apps/web/src/routes/Shell.tsx` (`LinhaDeAba`), `apps/web/src/lib/sidebar-state.ts`
-  (`lerProjetosAbertos`/`gravarProjetosAbertos`)
+**Desde o [ADR 0211](../adr/0211-uma-navegacao-so-a-sidebar-absorve-o-trilho.md)
+(AT-404) esta lista é a ÚNICA navegação do projeto:** o trilho vertical saiu e
+ela recebeu tudo o que só ele tinha — os três grupos com cabeçalho, a aba
+ativa marcada, o `tablist` vertical nomeado pelo projeto, o teclado
+(`ArrowDown`/`ArrowUp`/`Home`/`End` com volta, atravessando grupos) e os CINCO
+contadores, cada um na sua aba e nunca somados. A omissão deliberada acima
+continua valendo para projeto FECHADO e para o projeto aberto fora da moldura
+(na Sessão, por exemplo): só Aprovações, do resumo. Com a moldura do projeto
+montada, os cinco números saem do MESMO hook que ela usa
+(`useContagensDoProjeto`), sem requisição nova. Recolhida, o quadrado do
+projeto aberto abre um flyout com as mesmas abas.
+
+- **Onde:** `apps/web/src/routes/Shell.tsx:594` (`projetosAbertosEfetivo`),
+  `:542` (`useContagensDoProjeto`), `:549` (`irParaAba`), `:564`
+  (`flyoutAberto`), `:237` (`contagensDoResumo`);
+  `apps/web/src/routes/AbasDoProjeto.tsx:78` (`AbasDoProjeto`), `:34`
+  (`itensDasAbas`), `:95` (`aoTeclar`);
+  `apps/web/src/lib/contagens-do-projeto.ts:22` (`useContagensDoProjeto`),
+  `:70` (`publicarAbaAtiva`), `:86` (`pedirAba`);
+  `apps/web/src/lib/sidebar-state.ts` (`lerProjetosAbertos`/`gravarProjetosAbertos`)
 - **Teste:** `apps/web/src/lib/sidebar-state.test.ts` (describe "conjuntos"),
-  `apps/web/src/routes/Shell.test.tsx`
-- **Origem:** PROGRAMA 28, Onda 2, frente B
+  `apps/web/src/routes/Shell.test.tsx` (describe "Shell — abas do projeto
+  aberto (ADR 0211)": as 12 abas, os cinco contadores separados, a ativa, o
+  clique e a seta navegando, o flyout recolhido, a gaveta no telefone e o caso
+  de falha — sem a moldura montada, só o número do resumo),
+  `apps/web/src/routes/AbasDoProjeto.test.tsx` (grupos, ativa, contadores,
+  teclado, roving tabindex, link por projeto), `apps/web/src/routes/project-tabs.test.tsx`
+- **Origem:** PROGRAMA 28, Onda 2, frente B; ADR 0211 (AT-404)
 
 ### RN-197 — Duas cores de projeto, dois propósitos: identidade não é status {#rn-197}
 
@@ -2860,7 +2884,7 @@ o hook, o estado `autoColapsado`, o `Provider` em torno de `<Outlet />` e o
 — foram todos removidos.
 
 O motivo é estrutural: com o trilho vertical do projeto
-(`routes/ProjectRail.tsx`) sempre presente, manter o auto-colapso poria a
+(`routes/ProjectRail.tsx`, removido no ADR 0211) sempre presente, manter o auto-colapso poria a
 trilha de ícones do Shell encostada no trilho do projeto — DOIS trilhos
 verticais adjacentes, permanentes, na aba mais pesada do produto.
 
@@ -2875,6 +2899,13 @@ MEDIDOS no navegador, contra ~110px antes (62px de sidebar recolhida + 48px
 do trilho do Código). Recolher manualmente continua possível e
 ainda produz trilho do Shell ao lado do trilho do projeto — a diferença é
 que agora quem escolheu foi o usuário, não o sistema.
+
+**Revisto pelo [ADR 0211](../adr/0211-uma-navegacao-so-a-sidebar-absorve-o-trilho.md)
+(AT-404):** o trilho do projeto saiu, e a moldura da aba Código passou a
+**312px** com a sidebar expandida (264 + 48 do `CodeShell`) e **110px**
+recolhida (62 + 48) — sem trilho duplo em nenhum dos dois casos. O colapso
+continua só do usuário. A aba ativa que a sidebar marca vem da moldura do
+projeto (`publicarAbaAtiva`), não só de `brabo.tab`.
 
 - **Onde:** `apps/web/src/lib/sidebar-state.ts:80-105`
   (`lerProjetoAtivo`/`gravarProjetoAtivo`, `lerAbaAtiva`/`gravarAbaAtiva`, e

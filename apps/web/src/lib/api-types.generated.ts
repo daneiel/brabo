@@ -541,6 +541,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/internal/projects/{projectId}/qa-environments/{taskId}/remove": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Removes the QA instance of a task (RN-936)
+         * @description Automatic, no proposal: it only reaches what carries the QA label (the broker guarantees it). Idempotent.
+         */
+        post: operations["InternalQaEnvironmentsController_remove"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/projects/{projectId}/qa-environments/{taskId}/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Brings up the ephemeral QA instance of a task (RN-935)
+         * @description Records the row, then asks the broker. `sucesso: false` is the NORMAL shape of a refused broker. At most ONE active instance per project: another task active -> 409 `instancia_de_qa_ocupada`. `runner` projects -> 409 `qa_nao_suporta_runner`.
+         */
+        post: operations["InternalQaEnvironmentsController_start"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/internal/projects/{projectId}/workspace-verification": {
         parameters: {
             query?: never;
@@ -555,6 +595,26 @@ export interface paths {
          * @description Called only by the engine, after a runner connects and sends `workspace_confirm` over the channel. The runner is the SOURCE OF TRUTH for the path — the api overwrites `workspacePath` with what it reported, after re-validating it lexically (system root/overlap with Brabo are still forbidden even coming from the runner). Idempotent: reconnecting with the SAME path writes nothing again.
          */
         post: operations["InternalProjectsController_confirmWorkspaceVerification"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/qa-environments/sweep": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Removes QA instances whose gate is no longer in flight (RN-937)
+         * @description The engine sends the task ids it still has in flight; every other active or failed instance is removed. Shared services and the QA network have no broker operation yet (declared gap).
+         */
+        post: operations["InternalQaEnvironmentsController_sweep"];
         delete?: never;
         options?: never;
         head?: never;
@@ -635,6 +695,26 @@ export interface paths {
         get: operations["InternalSessionsController_anamneseContext"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/sessions/{sessionId}/anamnese-window": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Closes the Anamnese window of a round that emitted no profile
+         * @description Records an anamnese run with zero profiles so the next round starts at windowTo — without it, the window never advanced and every tick paid for a new round over the same material.
+         */
+        post: operations["InternalSessionsController_anamneseWindow"];
         delete?: never;
         options?: never;
         head?: never;
@@ -753,7 +833,7 @@ export interface paths {
         put?: never;
         /**
          * Records QA's or SecOps's verdict on a task's PR
-         * @description The response's `nextAction` is what the engine obeys: `correct` returns to dev, `run_secops` advances the gate, `done` releases it to the user, and `blocked` means the correction cap ran out. MERGE is never automatic — `done` only means it's the human's turn.
+         * @description The response's `nextAction` is what the engine obeys: `correct` returns to dev, `run_secops` advances the gate, `done` releases it to the user, `await_user` parks the cycle until the open question is answered (RN-860, no correction counted), and `blocked` means the correction cap ran out. MERGE is never automatic — `done` only means it's the human's turn.
          */
         post: operations["InternalSessionsController_gateVerdict"];
         delete?: never;
@@ -1122,6 +1202,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/internal/sessions/{sessionId}/stories/{storyId}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Archives a draft story
+         * @description The story and its tasks leave the backlog, coverage, plan and claim; the row stays and `backlog.story_archived` records it, with the PO as actor (RN-727).
+         */
+        post: operations["InternalSessionsController_archiveStoryRoute"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/sessions/{sessionId}/stories/{storyId}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Completes an existing draft story instead of re-creating it
+         * @description `businessRuleIds` is ADDED to the rules already linked; non-empty lists replace the current ones and omitted lists stay. After writing, the story is promoted by the SAME criterion as story creation (`ready` in `auto` mode, `proposedReady` in `manual`) (RN-720).
+         */
+        post: operations["InternalSessionsController_completeStoryRoute"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/sessions/{sessionId}/stories/{storyId}/update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Corrects the title and/or description of a draft story
+         * @description Only a `draft` story with no task in execution; writes `backlog.story_updated` with the PO as actor (RN-727). A `ready` one too when `questionId` cites an open question the user already answered (RN-859).
+         */
+        post: operations["InternalSessionsController_updateStoryRoute"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/internal/sessions/{sessionId}/story-modules": {
         parameters: {
             query?: never;
@@ -1216,6 +1356,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/internal/sessions/{sessionId}/tasks/{taskId}/unblock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Unblocks a task after a transient network/provider failure
+         * @description Called by the engine retry job (up to 3 times, after 1, 3 and 10 min). Same use case as the human unblock, with a `system` actor; a task that is no longer blocked is left untouched.
+         */
+        post: operations["InternalSessionsController_unblockTaskAutomatically"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/internal/sessions/{sessionId}/tasks/claim": {
         parameters: {
             query?: never;
@@ -1230,6 +1390,26 @@ export interface paths {
          * @description ATOMIC by design: with several dev agents on the same module, two concurrent claims cannot return the same task. With no task available, returns empty instead of an error.
          */
         post: operations["InternalSessionsController_claimTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/sessions/{sessionId}/tasks/in-progress-by-dev": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lists the project's in-progress tasks held by a dev agent
+         * @description Not blocked and outside the PR gates; empty unless the session is an execution session. Used by the engine when stopping an execution, to block the ones no live dev agent holds.
+         */
+        get: operations["InternalSessionsController_tarefasEmCursoDeDev"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1347,7 +1527,7 @@ export interface paths {
         };
         /**
          * Lists the PENDING actions of the whole project, across any session
-         * @description Only `status=pending` is supported today (omitting it also counts as pending). `actionType` filters by type — e.g. `git_merge`, for the PRs tab to find the merge proposal for a PR without knowing which session created it.
+         * @description `status` is `pending` (the default) or `failed`. `actionType` filters by type — e.g. `git_merge`, for the PRs tab to find the merge proposal for a PR without knowing which session created it. `status=failed` REQUIRES `actionType` and lists the actions whose execution failed — the PRs tab reads the last refused merge of each PR from it (a merge conflict carries `executionResult.conflictingFiles`).
          */
         get: operations["ProjectActionsController_list"];
         put?: never;
@@ -1607,7 +1787,7 @@ export interface paths {
         };
         /**
          * Returns the epic → story → task tree
-         * @description Nested and complete, in a single call. This is READ-ONLY: backlog is written by agents, through the `/internal/*` routes.
+         * @description Nested and complete, in a single call. ARCHIVED stories (RN-727) are not listed. Backlog is written by agents, through the `/internal/*` routes.
          */
         get: operations["BacklogController_backlog"];
         put?: never;
@@ -1815,6 +1995,30 @@ export interface paths {
          */
         get: operations["ContainersController_cicloDeVida"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{projectId}/container/network": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Declared network of the container (artifact.container_network)
+         * @description The current declaration (ports on 127.0.0.1, DNS, extra hosts), or `null`. It is what was DECLARED; it only takes effect when the container is recreated (`container_recreate`).
+         */
+        get: operations["ContainersController_rede"];
+        /**
+         * Declares the container network (human only)
+         * @description Emits a new version of `artifact.container_network` (the current one replaces the previous). Not an external effect: nothing changes in Docker until a `container_recreate` is approved (AT-608, RN-932). 400 `rede_invalida` names the field.
+         */
+        put: operations["ContainersController_declarar"];
         post?: never;
         delete?: never;
         options?: never;
@@ -2344,6 +2548,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{projectId}/open-questions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lists the agents' open questions of the project (RN-858)
+         * @description Status comes from the event log: open is an `artifact.open_question` without `open_question.answered`. Newest first, capped at 50 with `total`.
+         */
+        get: operations["OpenQuestionsController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{projectId}/open-questions/{questionId}/answer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Answers an open question (RN-858)
+         * @description Only the author of the session where the question was born answers. Writes a `decision_record` (actor: the user, with `questionId`) and `open_question.answered`, and asks the engine to resume the parked QA gate of each affected task (RN-860), best effort.
+         */
+        post: operations["OpenQuestionsController_answer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects/{projectId}/permissions": {
         parameters: {
             query?: never;
@@ -2376,14 +2620,14 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Lista os próprios Personal Access Tokens deste projeto
-         * @description Nunca inclui o token bruto — só o que já foi emitido.
+         * Lists your own Personal Access Tokens for this project
+         * @description Never includes the raw token — only what was already issued.
          */
         get: operations["PersonalAccessTokensController_listPats"];
         put?: never;
         /**
-         * Emite um Personal Access Token pro runner local
-         * @description O token bruto (`brb_...`) só aparece NESTA resposta — não fica recuperável depois, só o hash é guardado. Use em `--token`/`BRABO_ACCOUNT_TOKEN` do `brabo-runner`.
+         * Issues a Personal Access Token for the local runner
+         * @description The raw token (`brb_...`) appears only in THIS response — it is not recoverable later, only the hash is stored. Use it in `--token`/`BRABO_ACCOUNT_TOKEN` of `brabo-runner`.
          */
         post: operations["PersonalAccessTokensController_issuePat"];
         delete?: never;
@@ -2403,8 +2647,8 @@ export interface paths {
         put?: never;
         post?: never;
         /**
-         * Revoga um Personal Access Token próprio
-         * @description Idempotente — revogar de novo não é erro. Desde a RN-685 (ADR 0201) também DERRUBA as conexões de runner abertas com ESTE token, e só elas — a chave de dispositivo do mesmo usuário fica de pé —, e anula os tickets dele ainda não usados. Engine fora do ar NÃO faz a revogação falhar.
+         * Revokes one of your own Personal Access Tokens
+         * @description Idempotent — revoking again is not an error. Since RN-685 (ADR 0201) it also DROPS the runner connections opened with THIS token, and only those — the same user's device key stays up —, and voids its still-unused tickets. The engine being down does NOT make the revocation fail.
          */
         delete: operations["PersonalAccessTokensController_revokePat"];
         options?: never;
@@ -2423,8 +2667,8 @@ export interface paths {
         put?: never;
         post?: never;
         /**
-         * Revoga o Personal Access Token de QUALQUER usuário no projeto
-         * @description Resposta a incidente — dev desligado com token vazando (RN-427). Idempotente — revogar de novo não é erro. Desde a RN-685 (ADR 0201) também DERRUBA o runner já conectado com este token, e só ele.
+         * Revokes the Personal Access Token of ANY user in the project
+         * @description Incident response — a departed dev with a leaking token (RN-427). Idempotent — revoking again is not an error. Since RN-685 (ADR 0201) it also DROPS the runner already connected with this token, and only it.
          */
         delete: operations["PersonalAccessTokensController_revokePatAsMaintainer"];
         options?: never;
@@ -2440,8 +2684,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Lista TODOS os Personal Access Tokens do projeto, de qualquer usuário
-         * @description Visão de `maintainer` para resposta a incidente (RN-427) — inclui o dono de cada token. Nunca inclui o token bruto.
+         * Lists ALL Personal Access Tokens of the project, from any user
+         * @description The `maintainer` view for incident response (RN-427) — includes the owner of each token. Never includes the raw token.
          */
         get: operations["PersonalAccessTokensController_listAllPats"];
         put?: never;
@@ -2652,6 +2896,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{projectId}/run-instructions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Returns how to run the deliverable on your machine
+         * @description RN-852 (ADR 0213): the current `artifact.run_instructions`, emitted when an `open_infra_pr` with `run` executes. DECLARED by the Infra agent, never verified on the reader's machine. `null` when there is none.
+         */
+        get: operations["BacklogController_runInstructions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects/{projectId}/runner-device-keys": {
         parameters: {
             query?: never;
@@ -2660,8 +2924,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Lista as próprias chaves de dispositivo deste projeto
-         * @description Ninguém revoga o que não consegue ver (RN-519). Inclui as já REVOGADAS — sumir com a linha faria a tela afirmar que a chave nunca existiu. Nunca devolve a JWK pública, e a privada a api nunca viu. `lastUsedAt` nulo é o sinal de uma chave ÓRFÃ: registrada e nunca usada por runner nenhum. Desde a RN-543 inclui também as chaves de MÁQUINA do chamador (`especie: "maquina"`, `projectId` nulo), que servem este projeto sem pertencer a ele — sem elas na lista, uma chave de máquina seria invisível em toda tela.
+         * Lists your own device keys for this project
+         * @description Nobody revokes what they cannot see (RN-519). Includes the already REVOKED ones — dropping the row would make the screen claim the key never existed. Never returns the public JWK, and the api never saw the private one. A null `lastUsedAt` is the sign of an ORPHAN key: registered and never used by any runner. Since RN-543 it also includes the caller's MACHINE keys (`especie: "maquina"`, null `projectId`), which serve this project without belonging to it — without them in the list, a machine key would be invisible on every screen.
          */
         get: operations["RunnerDeviceKeysController_listDeviceKeys"];
         put?: never;
@@ -2683,8 +2947,8 @@ export interface paths {
         put?: never;
         post?: never;
         /**
-         * Revoga uma chave de dispositivo própria
-         * @description Idempotente — revogar de novo não é erro. Desde a RN-520 também DERRUBA a conexão viva: antes, revogar só impedia ticket NOVO, e um runner já conectado seguia executando comando aprovado. Desde a RN-685 (ADR 0201) o alvo é a CHAVE: caem só as conexões abertas com ela — em todo projeto, se for de máquina —, e outro runner do mesmo usuário, conectado com PAT ou com outra chave, fica de pé. Os tickets dela ainda não usados são anulados. Engine fora do ar ou nenhum runner conectado NÃO fazem a revogação falhar.
+         * Revokes one of your own device keys
+         * @description Idempotent — revoking again is not an error. Since RN-520 it also DROPS the live connection: before, revoking only prevented a NEW ticket, and an already connected runner kept running approved commands. Since RN-685 (ADR 0201) the target is the KEY: only the connections opened with it drop — in every project, if it is a machine key —, and another runner of the same user, connected with a PAT or another key, stays up. Its still-unused tickets are voided. The engine being down or no runner connected does NOT make the revocation fail.
          */
         delete: operations["RunnerDeviceKeysController_revokeDeviceKey"];
         options?: never;
@@ -2702,8 +2966,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Emite um ticket de uso único para o runner local conectar
-         * @description Autentica `connect/3` do socket Phoenix `/runner` (tópico `terminal:<projectId>`, papel "runner") — NÃO é o JWT reaproveitado, e esta rota em si só aceita um Personal Access Token no lugar do JWT de sessão (ADR 0105). TTL de 30s e uso único. Recusa com 400 se o projeto não estiver no modo "runner" (RN-421): o runner não tem o que servir num projeto cujo código mora no container gerenciado.
+         * Issues a single-use ticket for the local runner to connect
+         * @description Authenticates `connect/3` of the Phoenix socket `/runner` (topic `terminal:<projectId>`, role "runner") — it is NOT the reused JWT, and this route itself only accepts a Personal Access Token instead of the session JWT (ADR 0105). 30s TTL and single use. Refuses with 400 if the project is not in "runner" mode (RN-421): the runner has nothing to serve in a project whose code lives in the managed container.
          */
         post: operations["RunnerTicketsController_runnerTicket"];
         delete?: never;
@@ -2901,6 +3165,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{projectId}/sessions/{sessionId}/agents/{agent}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resumes the turn an engine restart interrupted
+         * @description Human gesture, with no cap: the automatic resume happens once at boot (ADR 0226) and this is the button for the rest. The reply is the ACCEPT (the turn goes up in the engine); progress arrives on the session channel. Requires `developer`.
+         */
+        post: operations["AgentResumeController_resume"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects/{projectId}/sessions/{sessionId}/agents/{agent}/start": {
         parameters: {
             query?: never;
@@ -3039,6 +3323,26 @@ export interface paths {
          * @description Server-Sent Events. `delta` frames carry the incremental text and `done` closes with the token and cost accounting. A `metering_failed` frame means the RESPONSE went out but the cost was not accounted for — the failure shows up instead of disappearing. If the budget is exceeded with `policy=block`, the stream carries `error` and no `delta`. This route carries NO agent: it sends the text alone to the bound model, with no history and no system prompt. In a `consultiva` session where no agent was ever activated it is refused before any effect (RN-682) — talk to an agent through `.../agents/:agent/message` instead.
          */
         post: operations["ChatController_chat"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{projectId}/sessions/{sessionId}/context-summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Counts the whole session for the context panel
+         * @description Business rules, decision records and artifacts per agent counted over the WHOLE session log (the screen reads a 200-event tail), plus the files touched by `git_commit`/`git_push` in this session and in the execution session its approved Dev Lead plan activated (RN-828). Since RN-844 it also returns the ITEMS of rules and decisions (latest 50 each; the totals stay in `regras`/`decisoes`) and the files of the PRs opened in those sessions, read from the same diff the PRs tab reads, for at most 20 PRs per call; `prsNaoLidas` says how many were left out or failed. Read only; no new table.
+         */
+        get: operations["SessionsController_contextSummary"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -3360,6 +3664,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{projectId}/spend/team": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The project's total spend and cost by agent and area
+         * @description The MEMBER's view of the PROJECT (RN-953, ADR 0233, revising 0063): total and cost per agent/area, NEVER provider or credential — the route has no dimension parameter and never asks for `provider`.
+         */
+        get: operations["SpendController_getProjectSpendTeam"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{projectId}/stories/{storyId}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Archives a draft story (RN-727)
+         * @description The story leaves the backlog, the coverage, the promotion queue, the Dev Lead's plan and the claim — and so do its tasks. Nothing is deleted: the row stays with `archivedAt`, and `backlog.story_archived` records who, why and which tasks. Only a `draft` story with no task in execution.
+         */
+        post: operations["BacklogController_archive"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects/{projectId}/stories/{storyId}/return": {
         parameters: {
             query?: never;
@@ -3378,6 +3722,26 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/projects/{projectId}/stories/{storyId}/title": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Corrects the title of a draft story (RN-727)
+         * @description Only a `draft` story with no task in execution (`in_progress`/`in_review`). Writes `backlog.story_updated` with the previous and the new title. Same role as the other backlog writes (promote/return).
+         */
+        patch: operations["BacklogController_updateTitle"];
         trace?: never;
     };
     "/projects/{projectId}/stories/promote": {
@@ -3400,6 +3764,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/projects/{projectId}/tasks/{taskId}/gates/{gate}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resumes a parked gate cycle
+         * @description A gate cycle stalled for more than 2 h is parked instead of restarted on its own (ADR 0207). This is the human gesture that resumes it.
+         */
+        post: operations["GateResumeController_resume"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects/{projectId}/terminal-ticket": {
         parameters: {
             query?: never;
@@ -3410,8 +3794,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Emite um ticket de uso único para a aba Terminal da web
-         * @description Mesmo socket `/runner`, mesmo tópico, papel "terminal" — quem VÊ o terminal (o comando em si só roda de verdade se houver um runner conectado). Vale para qualquer modo de projeto.
+         * Issues a single-use ticket for the web Terminal tab
+         * @description Same `/runner` socket, same topic, role "terminal" — whoever SEES the terminal (the command itself only really runs if a runner is connected). Valid for any project mode.
          */
         post: operations["RunnerTicketsController_terminalTicket"];
         delete?: never;
@@ -3428,12 +3812,32 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Baixa o binário standalone do runner local pra plataforma pedida
-         * @description Proxy de GitHub Releases — `platform` aceita só linux-x64, linux-arm64, darwin-arm64. Sem autenticação: o binário não é segredo. Os bytes são conferidos contra o `checksums.txt` da mesma Release antes de qualquer coisa ser respondida (ADR 0149, RN-525); a rota NÃO verifica a assinatura do manifesto — isso é integridade, não procedência, e quem verifica assinatura é o `install.sh`.
+         * Downloads the standalone local runner binary for the requested platform
+         * @description GitHub Releases proxy — `platform` accepts only linux-x64, linux-arm64, darwin-arm64. No authentication: the binary is not a secret. The bytes are checked against the `checksums.txt` of the same Release before anything is answered (ADR 0149, RN-525); the route does NOT verify the manifest signature — that is integrity, not provenance, and whoever verifies the signature is `install.sh`.
          */
         get: operations["RunnerReleasesController_binary"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/runner/llm-credentials": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Stores an LLM API key imported by the local runner
+         * @description Authenticated by a MACHINE device key (never a session JWT, never a project-bound credential). Same envelope encryption as `POST /users/me/credentials`. 409 `credencial_existente` when the user already has this provider and `substituir` is not `true`. The key is never logged nor returned.
+         */
+        post: operations["RunnerLlmCredentialsController_execute"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3448,8 +3852,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Lista os projetos em modo "runner" que este agente local atende
-         * @description Autenticada por uma chave de dispositivo de MÁQUINA (ADR 0154) — NUNCA por JWT de sessão, e nunca por uma credencial presa a um projeto, que responde 403. Devolve os projetos em `execution_mode: "runner"` nos quais o dono da chave alcança pelo menos `developer` (o mesmo mínimo de `POST .../runner-ticket`), com o nome da pasta e o estado de verificação de cada um. O agente pergunta em vez de varrer o disco: a base da máquina é do usuário e pode ter pasta que não é projeto nenhum.
+         * Lists the projects in "runner" mode that this local agent serves
+         * @description Authenticated by a MACHINE device key (ADR 0154) — NEVER by a session JWT, and never by a credential bound to a project, which answers 403. Returns the projects in `execution_mode: "runner"` in which the key owner reaches at least `developer` (the same minimum as `POST .../runner-ticket`), with the folder name and verification state of each. The agent asks instead of scanning the disk: the machine base belongs to the user and may hold folders that are not projects.
          */
         get: operations["RunnerProjectsController_listRunnerProjects"];
         put?: never;
@@ -3788,6 +4192,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/workspaces/{workspaceId}/llm-providers/credentialed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lists the LLM providers the workspace owner has a key for
+         * @description The owner of record (`workspaces.created_by`) is whose key the agents spend (RN-058). Only provider NAMES — never a secret, id or date. `ollama` (local, no key) never appears.
+         */
+        get: operations["ModelsController_credentialed"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/workspaces/{workspaceId}/members": {
         parameters: {
             query?: never;
@@ -3858,6 +4282,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/workspaces/{workspaceId}/models/{modelId}/billing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Sets a model's curated billing mark (api | subscription | free)
+         * @description Same curation level as the pricing route. `subscription` makes the spend report show the cost apart from the US$ paid (RN-954). Never re-prices the past.
+         */
+        patch: operations["ModelsController_updateBilling"];
+        trace?: never;
+    };
     "/workspaces/{workspaceId}/models/{modelId}/price-changes": {
         parameters: {
             query?: never;
@@ -3909,7 +4353,7 @@ export interface paths {
         put?: never;
         /**
          * Turns models on or off in the selector (batch)
-         * @description Owner's curation, APPLYING ONLY TO THIS WORKSPACE (ADR 0049). Only touches `isActive` — `availability` is what the sync observed at the provider, is global, and does not change here. Whole batch or nothing: a non-existent id fails the call without applying any row.
+         * @description Owner's curation, APPLYING ONLY TO THIS WORKSPACE (ADR 0049). Only touches `isActive` — `availability` is what the sync observed at the provider, is global, and does not change here. Whole batch or nothing: a nonexistent id fails the call without applying any row.
          */
         post: operations["ModelsController_activate"];
         delete?: never;
@@ -4116,6 +4560,26 @@ export interface paths {
          * @description The OWNER's audience. The PROVIDER axis came back (ADR 0076, RN-186) and is here, not on the member's route, because breaking down by provider is breaking down by CREDENTIAL — and credential is whoever pays's business (RN-060). Complements `credential-spend`, which keeps answering the INVOICE question (per month, with the tie to the key that exists today). Person and agent also come in separate blocks, by `actor_kind`. Sliding window in days, and the daily series comes DENSE — a day with no spend comes in as zero, otherwise the sparkline lies about the pace.
          */
         get: operations["SpendController_getWorkspaceSpendReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workspaces/{workspaceId}/spend/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My own consumption in this workspace, summed by project
+         * @description The non-owner's global page (RN-953). Only the caller's rows, by PROJECT and by day, without provider or credential.
+         */
+        get: operations["SpendController_getMyWorkspaceSpend"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4384,6 +4848,12 @@ export interface components {
             /** @enum {string} */
             motivo: "oferta_pendente" | "agente_ativo";
         };
+        AlvoQaInternalDto: {
+            /** @example true */
+            qa: boolean;
+            /** Format: uuid */
+            taskId: string;
+        };
         AnaliseDeTerminoResponseDto: {
             /**
              * @description The ORIGIN of the failure, never deduced by elimination (lesson from ADR 0020).
@@ -4490,6 +4960,18 @@ export interface components {
              */
             answer: "confirm" | "decline";
         };
+        AnswerOpenQuestionDto: {
+            /**
+             * @description Free-text answer. Send this OR `aceitarSugestao: true`.
+             * @example 404 for a code that does not exist.
+             */
+            resposta?: string;
+            /**
+             * @description Accept the agent's suggestion as the answer.
+             * @example true
+             */
+            aceitarSugestao?: boolean;
+        };
         AnswerStructuredQuestionDto: {
             /**
              * @description Answer keyed by question `id` — the same `id` that came in `chat.structured_question`.
@@ -4502,6 +4984,12 @@ export interface components {
             answers: {
                 [key: string]: string;
             };
+        };
+        AppDeExecucaoResponseDto: {
+            /** @example npm start */
+            command: string;
+            /** @example 3000 */
+            port: number;
         };
         AppendSessionEventDto: {
             /**
@@ -4571,7 +5059,7 @@ export interface components {
              * @example terminal
              * @enum {string}
              */
-            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability" | "container_start" | "container_stop" | "container_remove" | "container_start_via_runner";
+            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability" | "container_start" | "container_stop" | "container_remove" | "container_recreate" | "container_start_via_runner" | "qa_environment_start";
             /**
              * @description Parameters of the action, specific to the `actionType`.
              * @example {
@@ -4665,6 +5153,22 @@ export interface components {
             pendencies: components["schemas"]["ArchitecturePendencyResponseDto"][];
             c4Diagram: components["schemas"]["EstadoDoC4DiagramaResponseDto"];
         };
+        ArchiveStoryDto: {
+            /**
+             * @description Optional; recorded in `backlog.story_archived`.
+             * @example Duplicate of "Register a user".
+             */
+            reason?: string;
+        };
+        ArchiveStoryInternalDto: {
+            /**
+             * Format: uuid
+             * @example 01JC4Z0000PROJETO0000000001
+             */
+            projectId: string;
+            /** @example Duplicate of "Register a user". */
+            reason?: string;
+        };
         AreaDeAgentesResponseDto: {
             /** @example 01JC4Z8QK3M7YV2N5T9B0PXHRA */
             id: string;
@@ -4703,6 +5207,39 @@ export interface components {
              *     ]
              */
             members: string[];
+        };
+        ArquivosTocadosResponseDto: {
+            /** @description Most recent first, capped at 100. */
+            itens: components["schemas"]["ArquivoTocadoResponseDto"][];
+            /**
+             * @description Real total, even when `itens` was cut.
+             * @example 140
+             */
+            total: number;
+            /**
+             * @description PRs of the read sessions whose files were NOT read: past the 20-PR cap, or the provider refused the diff (RN-844).
+             * @example 0
+             */
+            prsNaoLidas: number;
+        };
+        ArquivoTocadoResponseDto: {
+            /** @example 01JC4Z0000ACAO00000000000001 */
+            actionId: string;
+            /** @example src/app.ts */
+            path: string;
+            /** @example 12 */
+            additions: number;
+            /** @example 3 */
+            deletions: number;
+        };
+        ArtefatosDoAgenteResponseDto: {
+            /** @example po */
+            actorId: string;
+            /**
+             * @description PRs (`pr_open`/`open_adr_pr`) plus epics, stories and tasks this agent created in the session.
+             * @example 7
+             */
+            quantos: number;
         };
         AssignStoryModulesInternalDto: {
             /**
@@ -4828,7 +5365,7 @@ export interface components {
              * @example create_qa_branch
              * @enum {string}
              */
-            step: "commit_pr_template" | "commit_branching_policy" | "create_dev_branch" | "create_qa_branch" | "create_rc_branch" | "protect_branches";
+            step: "commit_pr_template" | "commit_branching_policy" | "commit_gitignore" | "create_dev_branch" | "create_qa_branch" | "create_rc_branch" | "protect_branches";
             /**
              * @description The same taxonomy as `proposed_actions` — each approved step becomes a recorded action when the bootstrap runs.
              * @example git_branch_create
@@ -5028,6 +5565,25 @@ export interface components {
             module: string;
             /** @example dev-api */
             agentId: string;
+        };
+        CloseAnamneseWindowInternalDto: {
+            /**
+             * Format: uuid
+             * @example 01JC4Z0000PROJETO0000000001
+             */
+            projectId: string;
+            /**
+             * Format: date-time
+             * @example 2026-07-27T12:00:00.000Z
+             */
+            windowFrom: string;
+            /**
+             * Format: date-time
+             * @example 2026-07-27T12:15:00.000Z
+             */
+            windowTo: string;
+            /** @example 12 */
+            eventCount: number;
         };
         CodeBlameLineResponseDto: {
             /**
@@ -5277,6 +5833,51 @@ export interface components {
              */
             truncated: boolean;
         };
+        CompleteStoryInternalDto: {
+            /**
+             * Format: uuid
+             * @example 01JC4Z0000PROJETO0000000001
+             */
+            projectId: string;
+            /** @example As a buyer, I want to pay by card. */
+            description?: string;
+            /**
+             * @example [
+             *       "The cart accepts up to 50 items"
+             *     ]
+             */
+            rf?: string[];
+            /**
+             * @example [
+             *       "Response under 200ms at p95"
+             *     ]
+             */
+            rnf?: string[];
+            /**
+             * @example [
+             *       "Unit tests green"
+             *     ]
+             */
+            dod?: string[];
+            /**
+             * @example [
+             *       "Module defined"
+             *     ]
+             */
+            dor?: string[];
+            /**
+             * @description ADDED to the rules the story already cites (completing never unlinks a rule); each new id has to reference an existing `artifact.business_rule`.
+             * @example [
+             *       "RN-014"
+             *     ]
+             */
+            businessRuleIds?: string[];
+            /**
+             * Format: uuid
+             * @description RN-859 (ADR 0214): an open question the user ALREADY answered — only then a `ready` story (no task in execution) can be corrected.
+             */
+            questionId?: string;
+        };
         ConfirmacaoDeArquiteturaResponseDto: {
             /**
              * @example true
@@ -5342,30 +5943,32 @@ export interface components {
              * @example 300000
              */
             timeoutMs?: number;
+            /** @description AT-612: run in the task QA instance instead of the work container. Set by the engine from the gate context, never by the model. */
+            alvo?: components["schemas"]["AlvoQaInternalDto"];
         };
         ContainerExecInternalResponseDto: {
             /**
-             * @description `false` quando o broker recusou ou não respondeu — os outros campos ficam ausentes e `motivo` explica.
+             * @description `false` when the broker refused or did not answer — the other fields are absent and `motivo` explains.
              * @example true
              */
             sucesso: boolean;
             /**
-             * @description Presente só quando `sucesso: true`.
+             * @description Present only when `sucesso: true`.
              * @example 0
              */
             exitCode?: number;
             /**
-             * @description Presente só quando `sucesso: true`.
+             * @description Present only when `sucesso: true`.
              * @example ok
              */
             output?: string;
             /**
-             * @description Presente só quando `sucesso: true`.
+             * @description Present only when `sucesso: true`.
              * @example false
              */
             timedOut?: boolean;
             /**
-             * @description Presente só quando `sucesso: false`.
+             * @description Present only when `sucesso: false`.
              * @example o broker de container não respondeu em http://broker:8090: timeout
              */
             motivo?: string;
@@ -5410,6 +6013,20 @@ export interface components {
             /** @description The pending `container_start`/`container_stop`/`container_remove`/`container_start_via_runner` action for this project, if any — in ANY of its sessions. The page renders the inline `ApprovalCard` for it instead of the action button, same pattern as the PRs tab. */
             acaoPendente: components["schemas"]["ProposedActionResponseDto"] | null;
             /**
+             * @description The current (highest version) image decision, or null.
+             * @example {
+             *       "version": 3,
+             *       "image": "node:22",
+             *       "network": "egress"
+             *     }
+             */
+            decisaoVigente: Record<string, never> | null;
+            /**
+             * @description The registered container (running/stopped/provisioning) differs in CONTENT (image, network, resources) from the current decision; only recreating it (stop, remove, start) applies the new one.
+             * @example false
+             */
+            imagemDesatualizada: boolean;
+            /**
              * @description Whether THIS INSTALLATION has a container broker configured (`BROKER_URL` set, ADR 0130) — the same value on every row, because it is installation configuration and not a property of the project. `container` and `mounted` projects only start a container through the broker (ADR 0144), so with `false` the page refuses the start button for them BEFORE the click and says why (ADR 0161, RN-574); `runner` projects are unaffected. It says the variable exists, never that the broker answers — that is what `naoObservado` reports.
              * @example false
              */
@@ -5449,6 +6066,32 @@ export interface components {
              * @example 3
              */
             imagemVersao: number;
+            /** @description AT-610 (ADR 0228): the app command declared by the Infra in `run.app` (`artifact.run_instructions`), or `null`. Always `null` for `runner`. */
+            comandoDoApp: string | null;
+            /** @description AT-608: ports declared in `artifact.container_network`, published on 127.0.0.1 only. `null` when undeclared or `runner`. */
+            ports: {
+                /** @example 8080 */
+                host?: number;
+                /** @example 3000 */
+                container?: number;
+                /** @example tcp */
+                protocol?: string;
+            }[] | null;
+            /** @description AT-608: DNS servers (literal IPs), or `null`. */
+            dns: string[] | null;
+            /** @description AT-608: `--add-host` entries (IPv4), or `null`. */
+            extraHosts: {
+                /** @example api.local */
+                name?: string;
+                /** @example 10.0.0.5 */
+                ip?: string;
+            }[] | null;
+            /** @description AT-612 (ADR 0229): ONLY with `papel=qa`. `chave` = 8 first [a-z0-9] of the task id; `services` = `run.qa.services` declared by the Infra (image with digest, env, tmpfs, user `<uid>:<gid>` never 0, command argv after the image, shared). */
+            qa?: {
+                /** @example a1b2c3d4 */
+                chave?: string;
+                services?: Record<string, never>[];
+            };
         };
         ContratoDeModuloInternalDto: {
             /**
@@ -5501,13 +6144,13 @@ export interface components {
         };
         ConvertExecutionModeDto: {
             /**
-             * @description O novo modo de execução. Pode repetir o modo atual do projeto — nesse caso, só `workspacePath` muda de verdade.
+             * @description The new execution mode. It may repeat the current project mode — in that case, only `workspacePath` really changes.
              * @example runner
              * @enum {string}
              */
             executionMode: "container" | "mounted" | "runner";
             /**
-             * @description O caminho absoluto da pasta do usuário — obrigatório quando `executionMode` é `mounted` ou `runner`, recusado quando é `container`. Mesma validação da criação (RN-170/RN-422/RN-423): em `mounted`, precisa existir e ser gravável de dentro do container; em `runner`, só o formato é validado agora — a confirmação de verdade vem do runner conectando de novo.
+             * @description The absolute path of the user folder — required when `executionMode` is `mounted` or `runner`, refused when it is `container`. Same validation as creation (RN-170/RN-422/RN-423): in `mounted`, it must exist and be writable from inside the container; in `runner`, only the format is validated now — the real confirmation comes from the runner connecting again.
              * @example /home/you/projects/store
              */
             workspacePath?: string;
@@ -5530,7 +6173,7 @@ export interface components {
              * @example terminal
              * @enum {string}
              */
-            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability" | "container_start" | "container_stop" | "container_remove" | "container_start_via_runner";
+            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability" | "container_start" | "container_stop" | "container_remove" | "container_recreate" | "container_start_via_runner" | "qa_environment_start";
             /** @description Always an agent on this route. */
             actor: components["schemas"]["ActorDto"];
             /**
@@ -5604,7 +6247,7 @@ export interface components {
              */
             dor: string[];
             /**
-             * @description Modules from the `module_map` that the story touches. A story with no module, or with a non-existent module, becomes an architecture pending item.
+             * @description Modules from the `module_map` that the story touches. A story with no module, or with a nonexistent module, becomes an architecture pending item.
              * @example [
              *       "api"
              *     ]
@@ -5630,6 +6273,17 @@ export interface components {
              * @example 2026-08-02T14:00:00.000Z
              */
             returnedAt: Record<string, never> | null;
+            /**
+             * Format: date-time
+             * @description When the story was ARCHIVED (RN-727). Archived stories leave the backlog, the coverage, the plan and the claim; `null` is a story in play.
+             * @example null
+             */
+            archivedAt: string | null;
+            /**
+             * @description Why it was archived, when someone said (RN-727).
+             * @example null
+             */
+            archivedReason: string | null;
             /**
              * Format: date-time
              * @example 2026-07-25T09:00:00.000Z
@@ -5831,6 +6485,16 @@ export interface components {
              */
             slug: string;
         };
+        CredentialedProvidersResponseDto: {
+            /**
+             * @description LLM providers the workspace owner of record has a key for. Names only; `ollama` never appears.
+             * @example [
+             *       "anthropic",
+             *       "openrouter"
+             *     ]
+             */
+            providers: ("ollama" | "anthropic" | "openai" | "openrouter" | "nvidia-nim" | "together" | "deepinfra" | "bitdeer" | "vultr" | "9router" | "opencode-zen")[];
+        };
         CredentialSpendPorMesResponseDto: {
             /**
              * Format: date-time
@@ -5982,6 +6646,14 @@ export interface components {
             network: "none" | "egress";
             resources: components["schemas"]["RecursosDoContainerResponseDto"];
         };
+        DeclararRedeDto: {
+            /** @description Up to 10 TCP ports published on 127.0.0.1 only. `host` 1024-65535, never an installation port, no duplicates. */
+            ports?: components["schemas"]["PortaDto"][];
+            /** @description Up to 3 literal IPs. */
+            dns?: string[];
+            /** @description Up to 10 `--add-host` entries: name in [a-z0-9.-], never localhost or an installation service, IPv4 literal. */
+            extraHosts?: components["schemas"]["HostExtraDto"][];
+        };
         DeclareModuleContractsInternalDto: {
             /** Format: uuid */
             projectId: string;
@@ -6063,12 +6735,54 @@ export interface components {
             /** @example Above that, the addition is refused with 409. */
             description: string;
         };
+        DevContextDecisaoResponseDto: {
+            id: string;
+            questionId: string | null;
+            /** @description The question that was decided. */
+            pergunta: string;
+            /** @description The user's decision. */
+            decisao: string;
+            /** Format: date-time */
+            decididaEm: string;
+        };
+        DevContextModuleOpenTaskResponseDto: {
+            /** @example 01J0000000000000000000000 */
+            id: string;
+            /** @example Expose POST /links */
+            title: string;
+            /** @example todo */
+            status: string;
+            /** @example Members create short links */
+            storyTitle: string;
+        };
+        DevContextSiblingTaskResponseDto: {
+            /** @example 01J0000000000000000000000 */
+            id: string;
+            /** @example Expose POST /login returning a JWT */
+            title: string;
+            /** @example todo */
+            status: string;
+        };
         DevTaskContextResponseDto: {
             task: components["schemas"]["TaskResponseDto"];
             story: components["schemas"]["StoryResponseDto"];
             businessRules: components["schemas"]["DevContextBusinessRuleResponseDto"][];
             /** @description ADRs that apply: the cross-cutting ones (no module declared) plus the ones that cite this agent's module. */
             adrs: components["schemas"]["DevContextAdrResponseDto"][];
+            /** @description The other tasks of the same story, with their status. The QA gate judges the delivery by what belongs to THIS task; a requirement of a sibling task is an observation, never a rejection (RN-765). */
+            siblingTasks: components["schemas"]["DevContextSiblingTaskResponseDto"][];
+            /** @description Tasks of OTHER stories of the same module that are not done yet, with the story title (at most 20). A requirement that depends on what another story will deliver is an observation for the QA gate, never a rejection (RN-785). */
+            moduleOpenTasks: components["schemas"]["DevContextModuleOpenTaskResponseDto"][];
+            /** @description Real number of open tasks of the module in other stories — larger than `moduleOpenTasks.length` when the list was cut. */
+            moduleOpenTasksTotal: number;
+            /** @description The current contract of the task module (`artifact.module_contracts`) — the source of the INTERFACE for the QA gate. When the story and the contract diverge, the verdict names the divergence instead of rejecting the dev that followed the contract (RN-786). `null` without a resolvable module or contract. */
+            moduleContract: components["schemas"]["ContratoDeModuloResponseDto"] | null;
+            /** @description Whether this is the FIRST task of the module: the oldest `backlog.task_claimed` of the project for `module` is this task. The engine gives it twice the per-task budget (RN-774). `false` without `module`. */
+            primeiraDoModulo: boolean;
+            /** @description RN-859: the user's decisions tied to this task, its story or its rules by `afeta` — they win over RF/DoR on conflict. Newest first, at most 10, each text cut at 1,500 characters. */
+            decisoes: components["schemas"]["DevContextDecisaoResponseDto"][];
+            /** @description RN-872 (ADR 0215): the project's OTHER decisions — those whose `afeta` does not touch this task. Separate section, inside the SAME cap of 10 as `decisoes` (task decisions take the cap first), newest first. */
+            decisoesDoProjeto: components["schemas"]["DevContextDecisaoResponseDto"][];
         };
         DiffLineResponseDto: {
             /**
@@ -6321,12 +7035,17 @@ export interface components {
         };
         GateVerdictResponseDto: {
             /**
-             * @description What happens next. `correct` returns to dev; `run_secops` advances the gate; `done` releases it to the user; `blocked` means the correction cap ran out and only a human can unblock it.
+             * @description What happens next. `correct` returns to dev; `run_secops` advances the gate; `done` releases it to the user; `await_user` parks the cycle until the open question is answered (RN-860); `blocked` means the correction cap ran out and only a human can unblock it.
              * @example run_secops
              * @enum {string}
              */
-            nextAction: "correct" | "run_secops" | "done" | "blocked";
+            nextAction: "correct" | "run_secops" | "done" | "blocked" | "await_user";
             task: components["schemas"]["TaskResponseDto"];
+            /**
+             * Format: uuid
+             * @description With `await_user`: the open question the cycle waits on.
+             */
+            openQuestionId?: string;
         };
         GitAuthorizeUrlResponseDto: {
             /**
@@ -6395,9 +7114,15 @@ export interface components {
                 [key: string]: unknown;
             };
         };
+        HostExtraDto: {
+            /** @example api.local */
+            name: string;
+            /** @example 10.0.0.5 */
+            ip: string;
+        };
         HuggingFaceModelResponseDto: {
             /**
-             * @description `<publisher>/<modelo>` no Hugging Face Hub.
+             * @description `<publisher>/<model>` on the Hugging Face Hub.
              * @example meta-llama/Llama-3.1-8B-Instruct-GGUF
              */
             repoId: string;
@@ -6408,7 +7133,7 @@ export interface components {
             /** @example 210 */
             likes: number;
             /**
-             * @description O publisher está no allowlist curado de fabricantes conhecidos (`domain/llm/huggingface-official-publishers.ts`). `false` é qualquer reupload de terceiro — a tela mostra o aviso de segurança quando `includeCommunity=true` trouxe este resultado.
+             * @description The publisher is in the curated allowlist of known vendors (`domain/llm/huggingface-official-publishers.ts`). `false` is any third-party reupload — the screen shows the security warning when `includeCommunity=true` brought this result.
              * @example true
              */
             official: boolean;
@@ -6563,6 +7288,14 @@ export interface components {
             decisao: components["schemas"]["DecisaoDeImagemResponseDto"];
             /** @example 1 */
             version: number;
+            /**
+             * @description The `running`/`stopped` container registered for the project, or null. The new decision does NOT change it: it only applies once the container is recreated (stop, remove, start).
+             * @example {
+             *       "status": "running",
+             *       "imageVersion": 2
+             *     }
+             */
+            containerDePe: Record<string, never> | null;
         };
         ImagemParaOBrokerResponseDto: {
             /**
@@ -6576,6 +7309,28 @@ export interface components {
              */
             network: "none" | "egress";
             resources: components["schemas"]["RecursosDoContainerResponseDto"];
+        };
+        ImportLlmCredentialDto: {
+            /**
+             * @example anthropic
+             * @enum {string}
+             */
+            provider: "anthropic" | "openai" | "openrouter" | "nvidia-nim" | "together" | "deepinfra" | "bitdeer" | "vultr" | "9router" | "opencode-zen";
+            /** @description The API key in plain text. Encrypted before touching the database; NEVER logged and NEVER returned. */
+            apiKey: string;
+            /**
+             * @description Tool and path the key was read from. Audit log only; never a value.
+             * @example codex: ~/.codex/auth.json
+             */
+            origem: string;
+            /** @description Must be `true` to replace an existing credential of this provider. */
+            substituir?: boolean;
+        };
+        ImportLlmCredentialResponseDto: {
+            /** @enum {string} */
+            provider: "anthropic" | "openai" | "openrouter" | "nvidia-nim" | "together" | "deepinfra" | "bitdeer" | "vultr" | "9router" | "opencode-zen";
+            /** @description Whether an existing credential was replaced. */
+            substituida: boolean;
         };
         IndexDocsReportResponseDto: {
             filesScanned: number;
@@ -6648,6 +7403,8 @@ export interface components {
             gitProvider: "local" | "github" | "gitlab" | null;
             /** @description The Architect-routed candidates (route_modules_to_infra, ADR 0131) — what the Infra Lead elects among when proposing container_start (ADR 0130/0133). "sem_roteamento" when the Architect has not routed anything yet. */
             moduleRouting: components["schemas"]["EstadoDoRoteamentoResponseDto"];
+            /** @description RN-852: the CURRENT artifact.project_image decision (image, network, resources) — the FROM of the Dockerfile and the network the Infra compose respects. null when no image has been decided. */
+            projectImage: components["schemas"]["DecisaoDeImagemResponseDto"] | null;
         };
         InfraGateVerdictResponseDto: {
             /**
@@ -6712,12 +7469,12 @@ export interface components {
         };
         IssuePatRequestDto: {
             /**
-             * @description Nome pra você reconhecer este token depois — não é único.
+             * @description A name for you to recognize this token later — not unique.
              * @example laptop
              */
             name: string;
             /**
-             * @description Expira em N dias. Omitido = sem expiração (revogável a qualquer hora, mas nunca expira sozinho).
+             * @description Expires in N days. Omitted = no expiration (revocable at any time, but never expires on its own).
              * @example 90
              */
             expiresInDays?: number;
@@ -6735,19 +7492,19 @@ export interface components {
              */
             createdAt: string;
             /**
-             * @description Nulo = sem expiração.
+             * @description Null = no expiration.
              * @example null
              */
             expiresAt: Record<string, never> | null;
             /** @example null */
             revokedAt: Record<string, never> | null;
             /**
-             * @description Nulo = nunca usado.
+             * @description Null = never used.
              * @example null
              */
             lastUsedAt: Record<string, never> | null;
             /**
-             * @description Guarde agora — não é recuperável depois. Use em --token ou BRABO_ACCOUNT_TOKEN.
+             * @description Store it now — it is not recoverable later. Use it in --token or BRABO_ACCOUNT_TOKEN.
              * @example brb_9f8a...
              */
             token: string;
@@ -6778,9 +7535,50 @@ export interface components {
             /** @example Returns a new board; never mutates the one passed in. */
             descricao: string;
         };
+        ItemDeDecisaoResponseDto: {
+            /** @example evt_01JC4Z */
+            eventId: string;
+            /** @example 43 */
+            seq: number;
+            /** @example criativo */
+            actorId: string;
+            /** @example SQLite em arquivo */
+            escolha: string | null;
+            contexto: string | null;
+        };
+        ItemDeRegraResponseDto: {
+            /** @example evt_01JC4Z */
+            eventId: string;
+            /** @example 42 */
+            seq: number;
+            /** @example po */
+            actorId: string;
+            /** @example Login exige e-mail */
+            titulo: string | null;
+            descricao: string | null;
+            /**
+             * @description How many origin references the rule cites.
+             * @example 2
+             */
+            origens: number;
+        };
         JwksResponseDto: {
             /** @description Active public Ed25519 keys. Two during a rotation. */
             keys: Record<string, never>[];
+        };
+        LastCallResponseDto: {
+            /**
+             * @description Input tokens of that call.
+             * @example 42000
+             */
+            inputTokens: number;
+            /** @example qwen2.5-coder:7b */
+            modelName: string;
+            /**
+             * @description The model's context window, or null when unknown.
+             * @example 128000
+             */
+            contextWindow: number | null;
         };
         LlmMessageResponseDto: {
             /**
@@ -6812,6 +7610,21 @@ export interface components {
              * @example false
              */
             routingPreference: boolean;
+            /**
+             * @description The provider pins a conversation to the upstream that served it when given a session key (ADR 0221). Only `true` after a smoke against the real API showed one upstream with the key and several without it.
+             * @example false
+             */
+            stickySession: boolean;
+            /**
+             * @description The provider accepts a per-call PRICE CEILING (`provider.max_price` = catalog price x 1.5, ADR 0225): only an upstream within it serves the call. Only `true` after a smoke against the real API showed the served upstream within the ceiling.
+             * @example false
+             */
+            priceCeiling: boolean;
+            /**
+             * @description The provider accepts explicit PROMPT-CACHE breakpoints (`cache_control`) on the stable prefix of a call (RN-892). Only `true` after a smoke against the real API showed cached input tokens on a repeated call.
+             * @example false
+             */
+            promptCaching: boolean;
         };
         LlmTurnResponseDto: {
             message: components["schemas"]["LlmMessageResponseDto"];
@@ -6822,10 +7635,20 @@ export interface components {
              */
             error: Record<string, never> | null;
             /**
-             * @description Name of the model that generated the response (finding from problem 2) — `null` when the turn failed before resolving a model (no binding, or binding to a non-existent model).
+             * @description The provider failure's normalized `code` (ADR 0041) — `auth`, `rate_limit`, `insufficient_credit` (HTTP 402, RN-730), `model_not_found`, `context_length`, `timeout`, `connection` or `upstream`. `null` with no error, or when the error is not the provider's (budget, missing binding). Decide by this, never by the text of `error`.
+             * @example null
+             */
+            errorCode: Record<string, never> | null;
+            /**
+             * @description Name of the model that generated the response (finding from problem 2) — `null` when the turn failed before resolving a model (no binding, or binding to a nonexistent model).
              * @example llama3.2:3b
              */
             modelName: Record<string, never> | null;
+            /**
+             * @description Present (always `true`) only when the provider cut the response at the output cap (`finish_reason: "length"` / `stop_reason: "max_tokens"`, RN-737): the text and the `toolCalls` arguments are truncated. The engine refuses to run a truncated tool call and narrates the cut.
+             * @enum {boolean}
+             */
+            truncated?: true;
             /** @description The step where the Jev chose the tool (ADR 0179, RN-625). Absent when the router was not consulted (provider other than OpenRouter, fewer than two tools, workspace switch off). The engine narrates it as `tool_router.decided`. */
             toolRouting?: components["schemas"]["ToolRoutingResponseDto"];
         };
@@ -6846,6 +7669,11 @@ export interface components {
              * @example llama3.2:3b
              */
             modelName?: Record<string, never> | null;
+            /**
+             * @description Only on the `final` frame, and only when the provider cut the response at the output cap (RN-737).
+             * @enum {boolean}
+             */
+            truncated?: true;
         };
         LlmUsageResponseDto: {
             /** @example 1820 */
@@ -7103,6 +7931,11 @@ export interface components {
              */
             generatesImage: boolean;
             /**
+             * @description Reasoning budget (tokens) the model is PROVEN to respect, curated by hand (ADR 0223). Null = not proven; the field is not sent.
+             * @example 2048
+             */
+            reasoningBudget: number | null;
+            /**
              * @description Price typed in from the provider's docs, not synced. The price sync does not overwrite a row marked without an explicit decision.
              * @example true
              */
@@ -7113,6 +7946,12 @@ export interface components {
              * @enum {string}
              */
             availability: "available" | "unavailable";
+            /**
+             * @description CURATED billing mark (AT-632, RN-954): `subscription` is a seat — its cost is shown apart from the US$ paid. Never set by sync.
+             * @example api
+             * @enum {string}
+             */
+            billing: "api" | "subscription" | "free";
             /**
              * Format: date-time
              * @description Last time sync saw the model in the provider catalog.
@@ -7146,6 +7985,116 @@ export interface components {
              * @example false
              */
             freeRoutingAlias: boolean;
+        };
+        ModeloDoCatalogoResponseDto: {
+            /** @example 01JC4Z0000MODELO00000000001 */
+            id: string;
+            /**
+             * @example anthropic
+             * @enum {string}
+             */
+            provider: "ollama" | "anthropic" | "openai";
+            /**
+             * @description Identifier at the provider.
+             * @example claude-opus-4-8
+             */
+            name: string;
+            /** @example Claude Opus 4.8 */
+            displayName: string;
+            /**
+             * @description Price per million INPUT tokens, in micro-USD.
+             * @example 15000000
+             */
+            inputPricePerMillionMicros: number;
+            /**
+             * @description Price per million OUTPUT tokens, in micro-USD.
+             * @example 75000000
+             */
+            outputPricePerMillionMicros: number;
+            /**
+             * @description Also the model's `context_length` capability.
+             * @example 200000
+             */
+            contextWindow: Record<string, never> | null;
+            /**
+             * @description NATIVE tool calling. Without this the model is chat-only and cannot be bound to an agent (RN-040).
+             * @example true
+             */
+            supportsToolCalling: boolean;
+            /** @example true */
+            supportsStreaming: boolean;
+            /**
+             * @description Accepts IMAGE input. `false` means the provider did not declare the modality — not that the model can't do it (ADR 0041).
+             * @example false
+             */
+            supportsVision: boolean;
+            /**
+             * @description Accepts explicit reasoning (thinking). On OpenRouter it comes from `supported_parameters: reasoning`.
+             * @example true
+             */
+            supportsReasoning: boolean;
+            /**
+             * @description PRODUCES image — an axis different from accepting it as input. Few models have it, and confusing the two sends the user to the wrong model.
+             * @example false
+             */
+            generatesImage: boolean;
+            /**
+             * @description Reasoning budget (tokens) the model is PROVEN to respect, curated by hand (ADR 0223). Null = not proven; the field is not sent.
+             * @example 2048
+             */
+            reasoningBudget: number | null;
+            /**
+             * @description Price typed in from the provider's docs, not synced. The price sync does not overwrite a row marked without an explicit decision.
+             * @example true
+             */
+            manualPricing: boolean;
+            /**
+             * @description REMOTE reality observed by sync, an axis independent from curation. `unavailable` is a model that vanished from the provider catalog — it is never deleted, because bindings and cost history point to it.
+             * @example available
+             * @enum {string}
+             */
+            availability: "available" | "unavailable";
+            /**
+             * @description CURATED billing mark (AT-632, RN-954): `subscription` is a seat — its cost is shown apart from the US$ paid. Never set by sync.
+             * @example api
+             * @enum {string}
+             */
+            billing: "api" | "subscription" | "free";
+            /**
+             * Format: date-time
+             * @description Last time sync saw the model in the provider catalog.
+             * @example 2026-07-30T03:00:00.000Z
+             */
+            lastSeenAt: Record<string, never> | null;
+            /**
+             * Format: date-time
+             * @example 2026-07-01T00:00:00.000Z
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @example 2026-07-01T00:00:00.000Z
+             */
+            updatedAt: string;
+            /**
+             * @description Curation by the OWNER **of this workspace**: a deactivated model disappears from the selector but stays in historical costs. A model discovered by sync has no curation row, and no row means `false`.
+             * @example true
+             */
+            isActive: boolean;
+            /**
+             * @description What THIS workspace uses the model for. The operator's opinion, not a provider capability — no catalog publishes "good for code". An empty list means "nobody has an opinion", not "not fit for it".
+             * @example [
+             *       "codigo"
+             *     ]
+             */
+            uses: ("codigo" | "documentacao" | "analise" | "imagem" | "conversa")[];
+            /**
+             * @description OpenRouter free-routing alias (an id starting with `~`): the catalog price is a showcase price and the bill comes from whichever upstream served the call. Curation refuses to ACTIVATE it (422 `alias_de_roteamento_livre`); one activated before the rule stays active, marked by this flag, and once deactivated it cannot come back. Derived from provider and name on read, never stored.
+             * @example false
+             */
+            freeRoutingAlias: boolean;
+            /** @description SUGGESTION only (derived on read, never stored): billing band from the 9Router alias and the manufacturer price from a curated table. Applying it is a curation gesture. Null for OpenRouter and unlisted ids. */
+            sugestao: components["schemas"]["SugestaoDoCatalogoResponseDto"] | null;
         };
         ModelPriceChangeResponseDto: {
             /** @example 01JC4Z0000PRECO000000000001 */
@@ -7193,24 +8142,24 @@ export interface components {
             /** @example meta-llama/Llama-3.1-8B-Instruct-GGUF */
             repoId: string;
             /**
-             * @description Só presente quando o Hub publicou `usedStorage` na busca — nunca estimado por palpite.
+             * @description Present only when the Hub published `usedStorage` in the search — never guessed.
              * @example null
              */
             estimatedSizeBytes: Record<string, never> | null;
             /**
-             * @description `pending_confirmation` → `confirmed` → `pulling` → `active` | `failed`. Os dois primeiros estados SÃO a segunda confirmação explícita que o produto exige antes de qualquer download rodar.
+             * @description `pending_confirmation` → `confirmed` → `pulling` → `active` | `failed`. The first two states ARE the second explicit confirmation the product requires before any download runs.
              * @example pending_confirmation
              * @enum {string}
              */
             status: "pending_confirmation" | "confirmed" | "pulling" | "active" | "failed";
             /**
              * Format: date-time
-             * @description Quando o clique de confirmação aconteceu.
+             * @description When the confirmation click happened.
              * @example null
              */
             confirmedAt: Record<string, never> | null;
             /**
-             * @description Só em `failed`, prefixado pela origem (infra | modelo | código | política) — nunca falha calada.
+             * @description Only in `failed`, prefixed by the origin (infra | model | code | policy) — never a silent failure.
              * @example null
              */
             failedReason: Record<string, never> | null;
@@ -7278,6 +8227,11 @@ export interface components {
              */
             generatesImage: boolean;
             /**
+             * @description Reasoning budget (tokens) the model is PROVEN to respect, curated by hand (ADR 0223). Null = not proven; the field is not sent.
+             * @example 2048
+             */
+            reasoningBudget: number | null;
+            /**
              * @description Price typed in from the provider's docs, not synced. The price sync does not overwrite a row marked without an explicit decision.
              * @example true
              */
@@ -7288,6 +8242,12 @@ export interface components {
              * @enum {string}
              */
             availability: "available" | "unavailable";
+            /**
+             * @description CURATED billing mark (AT-632, RN-954): `subscription` is a seat — its cost is shown apart from the US$ paid. Never set by sync.
+             * @example api
+             * @enum {string}
+             */
+            billing: "api" | "subscription" | "free";
             /**
              * Format: date-time
              * @description Last time sync saw the model in the provider catalog.
@@ -7357,6 +8317,11 @@ export interface components {
             actorId: string;
             /** @example 1250000 */
             totalMicros: number;
+            /**
+             * @description Part of the cost from models curated as `subscription` (RN-954): a seat, shown apart from the US$ paid (`cost - subscription`).
+             * @example 0
+             */
+            assinaturaMicros: number;
             /** @example 120000 */
             inputTokens: number;
             /** @example 35000 */
@@ -7364,6 +8329,33 @@ export interface components {
             /** @example 42 */
             chamadas: number;
             porSessao: components["schemas"]["SpendLinhaResponseDto"][];
+            porDia: components["schemas"]["SpendPorDiaResponseDto"][];
+        };
+        MyWorkspaceSpendResponseDto: {
+            /** Format: uuid */
+            workspaceId: string;
+            /** @example 30 */
+            dias: number;
+            /**
+             * Format: uuid
+             * @description Always whoever called.
+             */
+            actorId: string;
+            /** @example 1250000 */
+            totalMicros: number;
+            /**
+             * @description Seat part of the total (RN-954).
+             * @example 0
+             */
+            assinaturaMicros: number;
+            /** @example 120000 */
+            inputTokens: number;
+            /** @example 35000 */
+            outputTokens: number;
+            /** @example 42 */
+            chamadas: number;
+            /** @description By PROJECT. */
+            porProjeto: components["schemas"]["SpendLinhaResponseDto"][];
             porDia: components["schemas"]["SpendPorDiaResponseDto"][];
         };
         ObservacaoDeContainerResponseDto: {
@@ -7492,6 +8484,45 @@ export interface components {
             /** @example dev-api */
             agentId: string;
         };
+        OpenQuestionAffectsDto: {
+            regras: string[];
+            historias: string[];
+            tarefas: string[];
+        };
+        OpenQuestionAnswerDto: {
+            texto: string;
+            aceitouSugestao: boolean;
+            decisionEventId: string;
+            respondidaPor: string;
+            /** Format: date-time */
+            respondidaEm: string;
+        };
+        OpenQuestionResponseDto: {
+            /** Format: uuid */
+            questionId: string;
+            eventId: string;
+            sessionId: string;
+            pergunta: string;
+            sugestao: string | null;
+            afeta: components["schemas"]["OpenQuestionAffectsDto"];
+            /**
+             * @description The agent that asked.
+             * @example criativo
+             */
+            autor: string;
+            /** Format: date-time */
+            criadaEm: string;
+            /** @enum {string} */
+            status: "open" | "answered";
+            /** @description The user who created the origin session — the only one who may answer. */
+            autorDaSessao: string | null;
+            resposta: components["schemas"]["OpenQuestionAnswerDto"] | null;
+        };
+        OpenQuestionsListResponseDto: {
+            itens: components["schemas"]["OpenQuestionResponseDto"][];
+            /** @description Total matching the filter; `itens` is capped at 50 (RN-180). */
+            total: number;
+        };
         PaginaDeAcoesResponseDto: {
             items: components["schemas"]["ProposedActionResponseDto"][];
             /**
@@ -7513,7 +8544,7 @@ export interface components {
              * @example create_dev_branch
              * @enum {string}
              */
-            step: "commit_pr_template" | "commit_branching_policy" | "create_dev_branch" | "create_qa_branch" | "create_rc_branch" | "protect_branches";
+            step: "commit_pr_template" | "commit_branching_policy" | "commit_gitignore" | "create_dev_branch" | "create_qa_branch" | "create_rc_branch" | "protect_branches";
             /**
              * @example running
              * @enum {string}
@@ -7599,14 +8630,14 @@ export interface components {
              */
             createdAt: string;
             /**
-             * @description Nulo = sem expiração.
+             * @description Null = no expiration.
              * @example null
              */
             expiresAt: Record<string, never> | null;
             /** @example null */
             revokedAt: Record<string, never> | null;
             /**
-             * @description Nulo = nunca usado.
+             * @description Null = never used.
              * @example null
              */
             lastUsedAt: Record<string, never> | null;
@@ -7628,17 +8659,48 @@ export interface components {
              */
             createdAt: string;
             /**
-             * @description Nulo = sem expiração.
+             * @description Null = no expiration.
              * @example null
              */
             expiresAt: Record<string, never> | null;
             /** @example null */
             revokedAt: Record<string, never> | null;
             /**
-             * @description Nulo = nunca usado.
+             * @description Null = never used.
              * @example null
              */
             lastUsedAt: Record<string, never> | null;
+        };
+        PortaDto: {
+            /** @example 8080 */
+            host: number;
+            /** @example 3000 */
+            container: number;
+            /** @example tcp */
+            protocol: string;
+        };
+        PrecoSugeridoResponseDto: {
+            /** @example Anthropic */
+            fabricante: string;
+            /**
+             * @description micro-USD per 1M tokens.
+             * @example 100000
+             */
+            entradaMicros: number;
+            /**
+             * @description micro-USD per 1M tokens.
+             * @example 500000
+             */
+            saidaMicros: number;
+            /** @example https://docs.claude.com/en/docs/about-claude/pricing.md */
+            fonte: string;
+            /**
+             * @description Date the row was checked.
+             * @example 2026-11-01
+             */
+            conferidoEm: string;
+            /** @example Prompt up to 100,000 tokens. */
+            observacao?: string;
         };
         PriorHypothesisResponseDto: {
             /** @example dev-api */
@@ -7929,7 +8991,7 @@ export interface components {
             /** @example 01JC4Z0000USUARIO0000000002 */
             userId: string;
             /**
-             * @description EFFECTIVE role: the higher of the project one and the one inherited from the workspace. Whoever is workspace `owner` isn't downgraded by a lesser project association.
+             * @description EFFECTIVE role: the project role when there is one, otherwise the one inherited from the workspace (RN-471) — the project role OVERRIDES the workspace one in both directions, higher or lower.
              * @example maintainer
              * @enum {string}
              */
@@ -8073,6 +9135,29 @@ export interface components {
              */
             brokerConfigurado: boolean;
         };
+        ProjectSpendTeamResponseDto: {
+            /** Format: uuid */
+            projectId: string;
+            /** @example 30 */
+            dias: number;
+            /** @example 1250000 */
+            totalMicros: number;
+            /**
+             * @description Seat part of the total (RN-954).
+             * @example 0
+             */
+            assinaturaMicros: number;
+            /** @example 120000 */
+            inputTokens: number;
+            /** @example 35000 */
+            outputTokens: number;
+            /** @example 42 */
+            chamadas: number;
+            /** @description By AGENT. */
+            porAgente: components["schemas"]["SpendLinhaResponseDto"][];
+            /** @description By catalog AREA of the agent; `sem-area` when none. */
+            porArea: components["schemas"]["SpendLinhaResponseDto"][];
+        };
         ProjectUnreadEventsResponseDto: {
             /** @example 01JC4Z0000PROJETO0000000001 */
             projectId: string;
@@ -8137,7 +9222,7 @@ export interface components {
              * @example terminal
              * @enum {string}
              */
-            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability" | "container_start" | "container_stop" | "container_remove" | "container_start_via_runner";
+            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability" | "container_start" | "container_stop" | "container_remove" | "container_recreate" | "container_start_via_runner" | "qa_environment_start";
             /** @description Who is proposing it. */
             actor: components["schemas"]["ActorDto"];
             /**
@@ -8170,7 +9255,7 @@ export interface components {
              * @example terminal
              * @enum {string}
              */
-            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability" | "container_start" | "container_stop" | "container_remove" | "container_start_via_runner";
+            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability" | "container_start" | "container_stop" | "container_remove" | "container_recreate" | "container_start_via_runner" | "qa_environment_start";
             /**
              * @description Parameters of the action, specific to the `actionType`.
              * @example {
@@ -8313,7 +9398,7 @@ export interface components {
              * @example openrouter
              * @enum {string}
              */
-            provider: "ollama" | "anthropic" | "openai" | "openrouter" | "nvidia-nim" | "together" | "deepinfra" | "bitdeer" | "vultr";
+            provider: "ollama" | "anthropic" | "openai" | "openrouter" | "nvidia-nim" | "together" | "deepinfra" | "bitdeer" | "vultr" | "9router" | "opencode-zen";
             capabilities: components["schemas"]["LLMProviderCapabilitiesResponseDto"];
         };
         ProvisionedRepositoryResponseDto: {
@@ -8465,6 +9550,18 @@ export interface components {
              * @example false
              */
             enabled: boolean;
+        };
+        QaEnvironmentResponseDto: {
+            /** @description `false` when the broker refused; `motivo` explains. */
+            sucesso: boolean;
+            /** @enum {string} */
+            status: "provisioning" | "running" | "failed" | "removed";
+            /**
+             * @description Instance key (8 chars of the task id).
+             * @example a1b2c3d4
+             */
+            chave: string;
+            motivo: string | null;
         };
         RagCoverageResponseDto: {
             docs: components["schemas"]["RagFileCoverageResponseDto"];
@@ -8656,19 +9753,35 @@ export interface components {
              */
             gate: "qa" | "secops";
             /**
+             * @description `needs_user_decision` (QA only, RN-860): the cycle waits for the user's answer to an open question — it does not count as a correction.
              * @example changes_requested
              * @enum {string}
              */
-            veredito: "approved" | "changes_requested";
+            veredito: "approved" | "changes_requested" | "needs_user_decision";
             /** @example Missing tests for the insufficient-stock path. */
             resumo: string;
             /**
              * @description What needs to change, item by item.
              * @example [
-             *       "No test for a non-existent SKU"
+             *       "No test for a nonexistent SKU"
              *     ]
              */
             itens: string[];
+            /**
+             * @description With `needs_user_decision`: the new open question (up to 500 chars).
+             * @example Should a nonexistent code answer 404?
+             */
+            pergunta?: string;
+            /**
+             * @description With `needs_user_decision`: the agent's suggestion.
+             * @example 404 with a plain message.
+             */
+            sugestao?: string;
+            /**
+             * Format: uuid
+             * @description With `needs_user_decision`: an EXISTING open question instead of a new one.
+             */
+            openQuestionId?: string;
             /**
              * @description Cap on round trips before the task becomes `blocked`. Omitted uses the domain's default.
              * @example 3
@@ -8748,6 +9861,13 @@ export interface components {
              * @example 512
              */
             pidsLimit: number;
+        };
+        RedeDoContainerResponseDto: {
+            ports: components["schemas"]["PortaDto"][];
+            dns: string[];
+            extraHosts: components["schemas"]["HostExtraDto"][];
+            /** @example 1 */
+            version: number;
         };
         RegisterDto: {
             /**
@@ -8831,7 +9951,7 @@ export interface components {
              * @example null
              * @enum {string|null}
              */
-            failedStep: "commit_pr_template" | "commit_branching_policy" | "create_dev_branch" | "create_qa_branch" | "create_rc_branch" | "protect_branches" | null;
+            failedStep: "commit_pr_template" | "commit_branching_policy" | "commit_gitignore" | "create_dev_branch" | "create_qa_branch" | "create_rc_branch" | "protect_branches" | null;
             /** @example null */
             lastError: Record<string, never> | null;
             /**
@@ -8867,12 +9987,12 @@ export interface components {
         };
         RequestModelPullDto: {
             /**
-             * @description `<publisher>/<modelo>` no Hugging Face Hub.
+             * @description `<publisher>/<model>` on the Hugging Face Hub.
              * @example meta-llama/Llama-3.1-8B-Instruct-GGUF
              */
             repoId: string;
             /**
-             * @description Vem da busca quando o Hub publicou o tamanho — nunca estimado por palpite no cliente.
+             * @description Comes from the search when the Hub published the size — never guessed by the client.
              * @example 4900000000
              */
             estimatedSizeBytes?: number;
@@ -8904,13 +10024,18 @@ export interface components {
             routingPreference: "price" | "throughput" | "latency" | null;
             /** @description More specific scopes the cascade discarded before reaching `origin`. Empty on the normal path. */
             skipped: components["schemas"]["SkippedBindingResponseDto"][];
+            /**
+             * @description Present when the agent asked about had no model of its own (nor of its area or project) and inherited the RESOLVED binding of its area lead (RN-703). `origin` is then the origin of the lead binding.
+             * @example secops
+             */
+            herdadoDoLead?: string;
         };
         ResultadoPorProviderResponseDto: {
             /**
              * @example openai
              * @enum {string}
              */
-            provider: "ollama" | "anthropic" | "openai" | "openrouter" | "nvidia-nim" | "together" | "deepinfra" | "bitdeer" | "vultr";
+            provider: "ollama" | "anthropic" | "openai" | "openrouter" | "nvidia-nim" | "together" | "deepinfra" | "bitdeer" | "vultr" | "9router" | "opencode-zen";
             /**
              * @description Models that did not exist in the database. They enter INACTIVE — activating is the owner's curation (RN-043).
              * @example 3
@@ -9017,7 +10142,7 @@ export interface components {
         };
         RoteamentoDeModuloInternalDto: {
             /**
-             * @description Nome do módulo — precisa existir no module_map vigente.
+             * @description Module name — must exist in the current module_map.
              * @example checkout-api
              */
             modulo: string;
@@ -9065,6 +10190,28 @@ export interface components {
             /** @example true */
             covered: boolean;
         };
+        RunInstructionsResponseDto: {
+            /** @example cp .env.example .env && docker compose up --build */
+            command: string;
+            urls: components["schemas"]["UrlDeExecucaoResponseDto"][];
+            /**
+             * @description The PR commits a `.env.example` to copy before running.
+             * @example true
+             */
+            envExample: boolean;
+            /** @description AT-610 (ADR 0228): the command the container runs to start the app and the port it listens on. Absent when the Infra did not declare it. */
+            app?: components["schemas"]["AppDeExecucaoResponseDto"];
+            /** @description AT-612 (ADR 0229): the infra services of the ephemeral QA instance declared by the Infra (`run.qa`). Absent when none. */
+            qa?: Record<string, never>;
+            /** @example http://localhost:3000/git/acme/pulls/3 */
+            prUrl: string;
+            /** @example 1 */
+            version: number;
+            /** @example 01JC4Z0000EVENTORUNINSTRUC01 */
+            eventId: string;
+            /** @example 2026-10-11T12:00:00.000Z */
+            declaredAt: string;
+        };
         RunLlmTurnDto: {
             /**
              * Format: uuid
@@ -9104,12 +10251,12 @@ export interface components {
             /** @example laptop */
             name: string;
             /**
-             * @description Nulo = chave de MÁQUINA (ADR 0154): vale para qualquer projeto do dono dela, e não só para este. Ver `especie`.
+             * @description Null = MACHINE key (ADR 0154): valid for any project of its owner, not only this one. See `especie`.
              * @example 01JC4Z0000PROJETO000000001
              */
             projectId: Record<string, never> | null;
             /**
-             * @description `projeto` = presa ao projeto desta rota (ADR 0118). `maquina` = descreve a MÁQUINA (ADR 0154) e aparece na listagem de todo projeto que ela atende — revogá-la derruba o agente local em todos eles.
+             * @description `projeto` = bound to the project of this route (ADR 0118). `maquina` = describes the MACHINE (ADR 0154) and appears in the listing of every project it serves — revoking it drops the local agent in all of them.
              * @example projeto
              * @enum {string}
              */
@@ -9120,12 +10267,12 @@ export interface components {
              */
             createdAt: string;
             /**
-             * @description Nulo = ativa. Revogada continua aparecendo na lista.
+             * @description Null = active. A revoked key keeps appearing in the list.
              * @example null
              */
             revokedAt: Record<string, never> | null;
             /**
-             * @description Nulo = nunca usada — o sinal de uma chave órfã (aba fechada no meio do fluxo de configuração automática do runner).
+             * @description Null = never used — the sign of an orphan key (tab closed in the middle of the runner automatic setup flow).
              * @example null
              */
             lastUsedAt: Record<string, never> | null;
@@ -9136,26 +10283,26 @@ export interface components {
             /** @example Brabo */
             name: string;
             /**
-             * @description O nome da pasta do projeto (RN-109) — segmento relativo sob a base da máquina, nunca um caminho absoluto.
+             * @description The project folder name (RN-109) — a relative segment under the machine base, never an absolute path.
              * @example brabo-01jc4z
              */
             workspaceDirName: string;
             /**
-             * @description Quando o runner confirmou a pasta pela primeira vez (RN-423). Nulo = nunca confirmada. É registro de uma confirmação, não batimento (RN-468): não diz que a pasta está de pé agora.
+             * @description When the runner first confirmed the folder (RN-423). Null = never confirmed. It records a confirmation, not a heartbeat (RN-468): it does not say the folder is up now.
              * @example null
              */
             workspaceVerifiedAt: Record<string, never> | null;
         };
         RunnerTicketResponseDto: {
-            /** @description Token opaco de uso único, base64url. TTL de 30s: some depois do primeiro `connect/3` bem-sucedido no socket `/runner`, ou quando expira. */
+            /** @description Opaque single-use token, base64url. 30s TTL: gone after the first successful `connect/3` on the `/runner` socket, or when it expires. */
             ticket: string;
             /**
-             * @description Quando o ticket expira (ISO 8601).
+             * @description When the ticket expires (ISO 8601).
              * @example 2026-08-09T12:00:30.000Z
              */
             expiresAt: string;
             /**
-             * @description URL pública do socket Phoenix `/runner`, já em ws(s):// — pronta para o cliente (runner CLI ou web) abrir a conexão com `{ticket}` nos params.
+             * @description Public URL of the Phoenix `/runner` socket, already in ws(s):// — ready for the client (runner CLI or web) to open the connection with `{ticket}` in the params.
              * @example ws://localhost:4000/runner
              */
             engineWsUrl: string;
@@ -9242,7 +10389,46 @@ export interface components {
              * @example pt-BR
              * @enum {string}
              */
-            locale: "pt-BR" | "en";
+            locale: "pt-BR" | "en" | "ru" | "zh-Hans";
+        };
+        SessionAgentTokenUsageResponseDto: {
+            /**
+             * @description The agent's slug, or the user's id.
+             * @example dev-api
+             */
+            actorId: string;
+            /**
+             * @description Cost in micro-USD.
+             * @example 3400000
+             */
+            costMicros: number;
+            /** @example 128000 */
+            inputTokens: number;
+            /** @example 14200 */
+            outputTokens: number;
+            /** @description The agent's latest call in the session (Jev excluded); null when none. */
+            lastCall: components["schemas"]["LastCallResponseDto"] | null;
+        };
+        SessionContextSummaryResponseDto: {
+            /** @description The requested session plus the execution session(s) its approved Dev Lead plan activated (RN-828). */
+            sessoesLidas: string[];
+            /**
+             * @description `artifact.business_rule` in the whole session.
+             * @example 11
+             */
+            regras: number;
+            /**
+             * @description `artifact.decision_record` in the whole session.
+             * @example 6
+             */
+            decisoes: number;
+            /** @description Latest business rules of the session, capped at 50; the total is `regras` (RN-844). */
+            itensDeRegras: components["schemas"]["ItemDeRegraResponseDto"][];
+            /** @description Latest decision records of the session, capped at 50; the total is `decisoes` (RN-844). */
+            itensDeDecisoes: components["schemas"]["ItemDeDecisaoResponseDto"][];
+            artefatosPorAgente: components["schemas"]["ArtefatosDoAgenteResponseDto"][];
+            /** @description Files of the PRs opened in this session and in the linked execution session (read from the PR diff, RN-844), then files from `git_commit`/`git_push` payloads. */
+            arquivosTocados: components["schemas"]["ArquivosTocadosResponseDto"];
         };
         SessionEventResponseDto: {
             /**
@@ -9450,7 +10636,7 @@ export interface components {
              * @example pt-BR
              * @enum {string}
              */
-            interfaceLocale: "pt-BR" | "en";
+            interfaceLocale: "pt-BR" | "en" | "ru" | "zh-Hans";
             /**
              * @description The language YOUR recent messages point to, when the screen should ASK whether to use it for the answers (RN-624) — `null` means no question. Detection never changes the preference by itself: only answering `confirm` on `POST /users/me/preferences/detected-language` does. Never asked when the effective language comes from an explicit choice (this session or the Account), when it already is the detected one, or when you declined this language before. Best effort: a detection failure is `null`, never an error of this route.
              * @example es
@@ -9468,7 +10654,7 @@ export interface components {
              * @example terminal
              * @enum {string}
              */
-            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability" | "container_start" | "container_stop" | "container_remove" | "container_start_via_runner" | "*";
+            actionType: "terminal" | "git_commit" | "git_push" | "pr_open" | "spend" | "git_repo_create" | "git_branch_create" | "git_branch_protect" | "write_file" | "open_adr_pr" | "git_merge" | "open_infra_pr" | "instruction_patch" | "parallelize" | "raise_max_parallel" | "propose_execution_plan" | "assess_implementability" | "container_start" | "container_stop" | "container_remove" | "container_recreate" | "container_start_via_runner" | "qa_environment_start" | "*";
             /**
              * @description This agent's autonomy for this type. Does NOT override `permissions.json`: a pattern in `deny` stays blocked no matter how much autonomy the agent has.
              * @example auto_approve
@@ -9623,6 +10809,11 @@ export interface components {
             actorKind: Record<string, never> | null;
             /** @example 1250000 */
             costMicros: number;
+            /**
+             * @description Part of the cost from models curated as `subscription` (RN-954): a seat, shown apart from the US$ paid (`cost - subscription`).
+             * @example 0
+             */
+            assinaturaMicros: number;
             /** @example 120000 */
             inputTokens: number;
             /** @example 35000 */
@@ -9690,7 +10881,7 @@ export interface components {
              */
             dor: string[];
             /**
-             * @description Modules from the `module_map` that the story touches. A story with no module, or with a non-existent module, becomes an architecture pending item.
+             * @description Modules from the `module_map` that the story touches. A story with no module, or with a nonexistent module, becomes an architecture pending item.
              * @example [
              *       "api"
              *     ]
@@ -9716,6 +10907,17 @@ export interface components {
              * @example 2026-08-02T14:00:00.000Z
              */
             returnedAt: Record<string, never> | null;
+            /**
+             * Format: date-time
+             * @description When the story was ARCHIVED (RN-727). Archived stories leave the backlog, the coverage, the plan and the claim; `null` is a story in play.
+             * @example null
+             */
+            archivedAt: string | null;
+            /**
+             * @description Why it was archived, when someone said (RN-727).
+             * @example null
+             */
+            archivedReason: string | null;
             /**
              * Format: date-time
              * @example 2026-07-25T09:00:00.000Z
@@ -9777,7 +10979,7 @@ export interface components {
              */
             dor: string[];
             /**
-             * @description Modules from the `module_map` that the story touches. A story with no module, or with a non-existent module, becomes an architecture pending item.
+             * @description Modules from the `module_map` that the story touches. A story with no module, or with a nonexistent module, becomes an architecture pending item.
              * @example [
              *       "api"
              *     ]
@@ -9803,6 +11005,17 @@ export interface components {
              * @example 2026-08-02T14:00:00.000Z
              */
             returnedAt: Record<string, never> | null;
+            /**
+             * Format: date-time
+             * @description When the story was ARCHIVED (RN-727). Archived stories leave the backlog, the coverage, the plan and the claim; `null` is a story in play.
+             * @example null
+             */
+            archivedAt: string | null;
+            /**
+             * @description Why it was archived, when someone said (RN-727).
+             * @example null
+             */
+            archivedReason: string | null;
             /**
              * Format: date-time
              * @example 2026-07-25T09:00:00.000Z
@@ -9842,8 +11055,44 @@ export interface components {
              */
             catalogoCompleto?: boolean;
         };
+        SugestaoDoCatalogoResponseDto: {
+            /**
+             * @description Suggested billing band (9Router alias). Null: no suggestion.
+             * @enum {string|null}
+             */
+            cobranca: "api" | "subscription" | "free" | null;
+            /** @description Manufacturer list price; null when the table has no row. */
+            preco: components["schemas"]["PrecoSugeridoResponseDto"] | null;
+        };
+        SweepQaEnvironmentsInternalDto: {
+            /** @description Task ids that still have a gate in flight; every other active instance is removed. */
+            taskIdsEmVoo: string[];
+            /**
+             * Format: uuid
+             * @description Limit the sweep to one project.
+             */
+            projectId?: string;
+        };
+        SweepQaEnvironmentsResponseDto: {
+            removidas: string[];
+            falhas: {
+                taskId?: string;
+                motivo?: string;
+            }[];
+        };
         SyncModelCatalogResponseDto: {
             porProvider: components["schemas"]["ResultadoPorProviderResponseDto"][];
+        };
+        TarefaEmCursoDeDevResponseDto: {
+            /** Format: uuid */
+            projectId: string;
+            /** Format: uuid */
+            taskId: string;
+            /**
+             * @description The dev agent holding it.
+             * @example dev-api
+             */
+            assignedTo: string;
         };
         TaskResponseDto: {
             /** @example 01JC4Z0000TAREFA00000000001 */
@@ -9989,6 +11238,18 @@ export interface components {
              */
             status: "created" | "active" | "closing" | "closed" | "closed_abnormally";
         };
+        UnblockTaskInternalDto: {
+            /**
+             * Format: uuid
+             * @example 01JC4Z0000PROJETO0000000001
+             */
+            projectId: string;
+            /**
+             * @description The dev agent whose transient failure scheduled the retry.
+             * @example dev-api
+             */
+            agentId: string;
+        };
         UnreadCursorDto: {
             /**
              * Format: uuid
@@ -10004,6 +11265,13 @@ export interface components {
         UnreadEventsDto: {
             /** @description One cursor per project to query. An EMPTY list returns an empty list — "I asked for nothing" is not "give me everything". A project from another workspace is silently ignored, because the cursor comes from the caller's local storage and may carry leftovers from an old workspace. */
             cursors: components["schemas"]["UnreadCursorDto"][];
+        };
+        UpdateModelBillingDto: {
+            /**
+             * @example subscription
+             * @enum {string}
+             */
+            billing: "api" | "subscription" | "free";
         };
         UpdateModelPricingDto: {
             /**
@@ -10042,13 +11310,36 @@ export interface components {
              */
             language?: string;
         };
+        UpdateStoryInternalDto: {
+            /**
+             * Format: uuid
+             * @example 01JC4Z0000PROJETO0000000001
+             */
+            projectId: string;
+            /** @example Register a user */
+            title?: string;
+            /** @example As a visitor, I want to sign up. */
+            description?: string;
+            /**
+             * Format: uuid
+             * @description RN-859 (ADR 0214): an open question the user ALREADY answered — only then a `ready` story (no task in execution) can be corrected.
+             */
+            questionId?: string;
+        };
+        UpdateStoryTitleDto: {
+            /**
+             * @description Trimmed; 1 to 200 characters.
+             * @example Register a user
+             */
+            title: string;
+        };
         UpdateUserPreferencesDto: {
             /**
              * @description The interface language. Closed to the list — not free-form BCP-47.
              * @example en
              * @enum {string}
              */
-            locale?: "pt-BR" | "en";
+            locale?: "pt-BR" | "en" | "ru" | "zh-Hans";
             /**
              * @description The language agents answer in (RN-618): `automatico` or ANY BCP-47 code whose language the server recognizes — an open list, unlike `locale`. Stored canonical (`pt-br` becomes `pt-BR`). An unrecognized code is a 400 that names the rule. Never changes `locale`.
              * @example es
@@ -10082,7 +11373,7 @@ export interface components {
              * @example anthropic
              * @enum {string}
              */
-            provider: "anthropic" | "openai" | "openrouter" | "nvidia-nim" | "together" | "deepinfra" | "bitdeer" | "vultr";
+            provider: "anthropic" | "openai" | "openrouter" | "nvidia-nim" | "together" | "deepinfra" | "bitdeer" | "vultr" | "9router" | "opencode-zen";
             /**
              * @description The key in plain text. It is encrypted via envelope encryption before touching the database and NEVER comes back in any response — not even encrypted. The 512-character cap is protection against an absurd payload, not format validation: whether the key is any good is answered by the provider, at `POST /users/me/credentials/{provider}/test`.
              * @example sk-ant-api03-…
@@ -10098,6 +11389,17 @@ export interface components {
             body: string;
             /** @example sha256:9f2c... */
             hash: string;
+        };
+        UrlDeExecucaoResponseDto: {
+            /** @example Swagger */
+            label: string;
+            /** @example http://localhost:8080/docs */
+            url: string;
+            /**
+             * @example api_docs
+             * @enum {string}
+             */
+            kind: "api_docs" | "web";
         };
         UserCredentialResponseDto: {
             /** @example 01JC4Z0000CREDENCIAL00000001 */
@@ -10123,7 +11425,7 @@ export interface components {
              * @example pt-BR
              * @enum {string}
              */
-            locale: "pt-BR" | "en";
+            locale: "pt-BR" | "en" | "ru" | "zh-Hans";
             /**
              * @description `automatico` (every account starts there) or the BCP-47 code explicitly chosen on the Account page.
              * @example automatico
@@ -10228,8 +11530,18 @@ export interface components {
              * @example 30
              */
             dias: number;
+            /**
+             * Format: uuid
+             * @description The `?projectId=` slice asked for (RN-952); `null` = whole workspace.
+             */
+            projectId: Record<string, never> | null;
             /** @example 1250000 */
             totalMicros: number;
+            /**
+             * @description Part of the cost from models curated as `subscription` (RN-954): a seat, shown apart from the US$ paid (`cost - subscription`).
+             * @example 0
+             */
+            assinaturaMicros: number;
             /** @example 120000 */
             inputTokens: number;
             /** @example 35000 */
@@ -10242,6 +11554,8 @@ export interface components {
             porProvider: components["schemas"]["SpendLinhaResponseDto"][];
             /** @description By PROJECT within the workspace. */
             porProjeto: components["schemas"]["SpendLinhaResponseDto"][];
+            /** @description By SESSION (RN-952). */
+            porSessao: components["schemas"]["SpendLinhaResponseDto"][];
             /** @description By ACTOR — agent and person in the same list, distinguished by `actorKind`. */
             porAtor: components["schemas"]["SpendLinhaResponseDto"][];
             /** @description The PERSON rows (`actor_kind = "user"`) — the block the handoff calls "By owner", because under RN-058 it is the owner's key that all of them spend. Who the owner is sits in `ownerId`. A partition of `porAtor`, with no extra query (RN-188). */
@@ -10987,7 +12301,10 @@ export interface operations {
     };
     InternalContainersController_containerSpec: {
         parameters: {
-            query?: never;
+            query?: {
+                papel?: "qa";
+                task?: string;
+            };
             header?: never;
             path: {
                 projectId: string;
@@ -11164,6 +12481,85 @@ export interface operations {
             };
         };
     };
+    InternalQaEnvironmentsController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+                taskId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QaEnvironmentResponseDto"];
+                };
+            };
+            /** @description Service token missing or different from the shared one. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Project or task not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    InternalQaEnvironmentsController_start: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+                taskId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QaEnvironmentResponseDto"];
+                };
+            };
+            /** @description Service token missing or different from the shared one. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Project or task (of that project) not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Busy instance, runner project or ambiguous task key. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     InternalProjectsController_confirmWorkspaceVerification: {
         parameters: {
             query?: never;
@@ -11203,6 +12599,43 @@ export interface operations {
             };
             /** @description Project does not exist. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    InternalQaEnvironmentsController_sweep: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SweepQaEnvironmentsInternalDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SweepQaEnvironmentsResponseDto"];
+                };
+            };
+            /** @description Invalid body. The `ValidationPipe` runs with `whitelist` and `forbidNonWhitelisted`, so an unknown field also fails. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Service token missing or different from the shared one. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -11347,6 +12780,52 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AnamneseContextResponseDto"];
+                };
+            };
+            /** @description Invalid body. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Service token missing or different from the shared one. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Session, project, or resource not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    InternalSessionsController_anamneseWindow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CloseAnamneseWindowInternalDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordProficiencyResponseDto"];
                 };
             };
             /** @description Invalid body. */
@@ -12527,6 +14006,166 @@ export interface operations {
             };
         };
     };
+    InternalSessionsController_archiveStoryRoute: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                storyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ArchiveStoryInternalDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StoryResponseDto"];
+                };
+            };
+            /** @description Invalid body. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Service token missing or different from the shared one. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Story is not in this project. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Named refusal (`reason`): `historia_arquivada`, `historia_nao_draft` or `historia_com_tarefa_em_execucao`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    InternalSessionsController_completeStoryRoute: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: string;
+                storyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompleteStoryInternalDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StoryResponseDto"];
+                };
+            };
+            /** @description A business_rule_id does not reference an existing rule. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Service token missing or different from the shared one. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Story is not in this project. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Story is no longer `draft`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    InternalSessionsController_updateStoryRoute: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                storyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateStoryInternalDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StoryResponseDto"];
+                };
+            };
+            /** @description No field, or an empty title. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Service token missing or different from the shared one. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Story is not in this project. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Named refusal (`reason`): `historia_arquivada`, `historia_nao_draft` or `historia_com_tarefa_em_execucao`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     InternalSessionsController_storyModules: {
         parameters: {
             query?: never;
@@ -12767,6 +14406,53 @@ export interface operations {
             };
         };
     };
+    InternalSessionsController_unblockTaskAutomatically: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: string;
+                taskId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UnblockTaskInternalDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskResponseDto"];
+                };
+            };
+            /** @description Invalid body. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Service token missing or different from the shared one. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Session, project, or resource not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     InternalSessionsController_claimTask: {
         parameters: {
             query?: never;
@@ -12788,6 +14474,48 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TaskResponseDto"];
+                };
+            };
+            /** @description Invalid body. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Service token missing or different from the shared one. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Session, project, or resource not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    InternalSessionsController_tarefasEmCursoDeDev: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sessionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TarefaEmCursoDeDevResponseDto"][];
                 };
             };
             /** @description Invalid body. */
@@ -14725,6 +16453,102 @@ export interface operations {
             };
         };
     };
+    ContainersController_rede: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Or `null`. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RedeDoContainerResponseDto"];
+                };
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient role on the project. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ContainersController_declarar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeclararRedeDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RedeDoContainerResponseDto"];
+                };
+            };
+            /** @description Invalid body. The `ValidationPipe` runs with `whitelist` and `forbidNonWhitelisted`, so an unknown field also fails. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient role on the project. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     BacklogController_coverage: {
         parameters: {
             query?: never;
@@ -16264,6 +18088,111 @@ export interface operations {
             };
         };
     };
+    OpenQuestionsController_list: {
+        parameters: {
+            query?: {
+                status?: "open" | "answered" | "all";
+            };
+            header?: never;
+            path: {
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OpenQuestionsListResponseDto"];
+                };
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OpenQuestionsController_answer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+                questionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnswerOpenQuestionDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OpenQuestionResponseDto"];
+                };
+            };
+            /** @description No answer, or a suggestion accepted where there is none. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not the session author — body with `reason: "so_o_autor_da_sessao"`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Question is not in this project. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Already answered — `reason: "pergunta_ja_respondida"`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     ProjectsController_getPermissions: {
         parameters: {
             query?: never;
@@ -16399,14 +18328,14 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Papel insuficiente no projeto. */
+            /** @description Insufficient role on the project. */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Projeto não encontrado. */
+            /** @description Project not found. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -16459,14 +18388,14 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Papel insuficiente no projeto. */
+            /** @description Insufficient role on the project. */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Projeto não encontrado. */
+            /** @description Project not found. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -16494,7 +18423,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Token revogado. Sem corpo. */
+            /** @description Token revoked. No body. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -16508,14 +18437,14 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Papel insuficiente no projeto. */
+            /** @description Insufficient role on the project. */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Projeto não encontrado. */
+            /** @description Project not found. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -16543,7 +18472,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Token revogado. Sem corpo. */
+            /** @description Token revoked. No body. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -16557,14 +18486,14 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Papel insuficiente no projeto. */
+            /** @description Insufficient role on the project. */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Projeto não encontrado. */
+            /** @description Project not found. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -16606,14 +18535,14 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Papel insuficiente no projeto. */
+            /** @description Insufficient role on the project. */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Projeto não encontrado. */
+            /** @description Project not found. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -17150,6 +19079,55 @@ export interface operations {
             };
         };
     };
+    BacklogController_runInstructions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunInstructionsResponseDto"];
+                };
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient role on the project. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Project does not exist. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     RunnerDeviceKeysController_listDeviceKeys: {
         parameters: {
             query?: never;
@@ -17176,14 +19154,14 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Papel insuficiente no projeto. */
+            /** @description Insufficient role on the project. */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Projeto não encontrado. */
+            /** @description Project not found. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -17211,7 +19189,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Chave revogada. Sem corpo. */
+            /** @description Key revoked. No body. */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -17225,14 +19203,14 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Papel insuficiente no projeto. */
+            /** @description Insufficient role on the project. */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Projeto não encontrado. */
+            /** @description Project not found. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -17267,7 +19245,7 @@ export interface operations {
                     "application/json": components["schemas"]["RunnerTicketResponseDto"];
                 };
             };
-            /** @description Projeto não está no modo "runner". */
+            /** @description Project is not in "runner" mode. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -17281,14 +19259,14 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Papel insuficiente no projeto. */
+            /** @description Insufficient role on the project. */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Projeto não encontrado. */
+            /** @description Project not found. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -18017,6 +19995,64 @@ export interface operations {
             };
         };
     };
+    AgentResumeController_resume: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+                sessionId: string;
+                agent: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OkResponseDto"];
+                };
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Role below `developer` on the project. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Session does not exist. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Nothing to resume — `reason: turno_nao_interrompido` (the agent has no interrupted turn, or one is already running) or `agente_sem_retomada` (the agent cannot resume). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     AgentsController_start: {
         parameters: {
             query?: never;
@@ -18477,6 +20513,56 @@ export interface operations {
             };
             /** @description `destinatario_ausente`: a `consultiva` session with no agent — the message has no recipient. Nothing was recorded and no model was called (RN-682). */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SessionsController_contextSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+                sessionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionContextSummaryResponseDto"];
+                };
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient role in the project. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Project or session does not exist. */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -19436,7 +21522,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AgentTokenUsageResponseDto"][];
+                    "application/json": components["schemas"]["SessionAgentTokenUsageResponseDto"][];
                 };
             };
             /** @description No token, expired token, or invalid signature. */
@@ -19583,6 +21669,119 @@ export interface operations {
             };
         };
     };
+    SpendController_getProjectSpendTeam: {
+        parameters: {
+            query?: {
+                /** @description Sliding window. Default 30, max 180. */
+                dias?: string;
+            };
+            header?: never;
+            path: {
+                projectId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectSpendTeamResponseDto"];
+                };
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient role. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    BacklogController_archive: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+                storyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ArchiveStoryDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StoryResponseDto"];
+                };
+            };
+            /** @description Invalid body. The `ValidationPipe` runs with `whitelist` and `forbidNonWhitelisted`, so an unknown field also fails. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient role on the project. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Project does not exist. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Named refusal (`reason`): `historia_arquivada`, `historia_nao_draft` or `historia_com_tarefa_em_execucao`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     BacklogController_return: {
         parameters: {
             query?: never;
@@ -19630,6 +21829,74 @@ export interface operations {
             };
             /** @description Project does not exist. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    BacklogController_updateTitle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+                storyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateStoryTitleDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StoryResponseDto"];
+                };
+            };
+            /** @description Empty title or over 200 characters. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient role on the project. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Project does not exist. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Named refusal (`reason`): `historia_arquivada`, `historia_nao_draft` or `historia_com_tarefa_em_execucao`. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -19704,6 +21971,57 @@ export interface operations {
             };
         };
     };
+    GateResumeController_resume: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                projectId: string;
+                taskId: string;
+                gate: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OkResponseDto"];
+                };
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Role below `developer` on the project. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The cycle is not parked — body with `reason: "gate_nao_estacionado"`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     RunnerTicketsController_terminalTicket: {
         parameters: {
             query?: never;
@@ -19730,14 +22048,14 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Papel insuficiente no projeto. */
+            /** @description Insufficient role on the project. */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Projeto não encontrado. */
+            /** @description Project not found. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -19762,7 +22080,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description O binário do runner, em stream, com o sha256 já conferido contra o manifesto. Não é JSON: `Content-Type: application/octet-stream`. O header `Content-Digest` repete o hash conferido (RFC 9530). */
+            /** @description The runner binary, streamed, with the sha256 already checked against the manifest. Not JSON: `Content-Type: application/octet-stream`. The `Content-Digest` header repeats the checked hash (RFC 9530). */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -19771,8 +22089,66 @@ export interface operations {
                     "application/octet-stream": string;
                 };
             };
-            /** @description Recusa nomeada — nunca bytes com aviso. O corpo traz `motivo`: `plataforma_nao_publicada`, `release_sem_manifesto`, `manifesto_nao_cobre_a_plataforma`, `manifesto_ilegivel`, `download_falhou` ou `hash_divergente`. */
+            /** @description Named refusal — never bytes with a warning. The body carries `motivo`: `plataforma_nao_publicada`, `release_sem_manifesto`, `manifesto_nao_cobre_a_plataforma`, `manifesto_ilegivel`, `download_falhou` or `hash_divergente`. */
             502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RunnerLlmCredentialsController_execute: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ImportLlmCredentialDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportLlmCredentialResponseDto"];
+                };
+            };
+            /** @description Invalid body. The `ValidationPipe` runs with `whitelist` and `forbidNonWhitelisted`, so an unknown field also fails. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Credential bound to a project. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Code `credencial_existente`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -19804,7 +22180,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description A credencial apresentada está presa a um projeto — esta rota exige uma chave de dispositivo de máquina. */
+            /** @description The presented credential is bound to a project — this route requires a machine device key. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -20795,6 +23171,41 @@ export interface operations {
             };
         };
     };
+    ModelsController_credentialed: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CredentialedProvidersResponseDto"];
+                };
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     WorkspacesController_listMembers: {
         parameters: {
             query?: never;
@@ -21069,6 +23480,66 @@ export interface operations {
             };
         };
     };
+    ModelsController_updateBilling: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                modelId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateModelBillingDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelResponseDto"];
+                };
+            };
+            /** @description Invalid body. The `ValidationPipe` runs with `whitelist` and `forbidNonWhitelisted`, so an unknown field also fails. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Requires `owner` on the workspace. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Model not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     ModelsController_priceChanges: {
         parameters: {
             query?: never;
@@ -21256,10 +23727,10 @@ export interface operations {
                 content: {
                     "application/json": {
                         local?: {
-                            [key: string]: components["schemas"]["ModelComCuradoriaResponseDto"][];
+                            [key: string]: components["schemas"]["ModeloDoCatalogoResponseDto"][];
                         };
                         cloud?: {
-                            [key: string]: components["schemas"]["ModelComCuradoriaResponseDto"][];
+                            [key: string]: components["schemas"]["ModeloDoCatalogoResponseDto"][];
                         };
                     };
                 };
@@ -21777,6 +24248,8 @@ export interface operations {
             query?: {
                 /** @description Sliding window. Default 30, max 180. */
                 dias?: string;
+                /** @description Slice to ONE project of this workspace (RN-952). A project from another workspace answers 404. */
+                projectId?: string;
             };
             header?: never;
             path: {
@@ -21802,6 +24275,58 @@ export interface operations {
                 content?: never;
             };
             /** @description Requires `owner` on the workspace. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Project not in this workspace. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit per user or per IP. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SpendController_getMyWorkspaceSpend: {
+        parameters: {
+            query?: {
+                /** @description Sliding window. Default 30, max 180. */
+                dias?: string;
+            };
+            header?: never;
+            path: {
+                workspaceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyWorkspaceSpendResponseDto"];
+                };
+            };
+            /** @description No token, expired token, or invalid signature. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Insufficient role. */
             403: {
                 headers: {
                     [name: string]: unknown;

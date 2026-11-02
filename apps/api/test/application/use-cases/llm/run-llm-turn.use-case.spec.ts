@@ -95,6 +95,9 @@ class FakeProvider implements LLMProvider {
     listModels: false,
     embeddings: false,
     routingPreference: false,
+    stickySession: false,
+    priceCeiling: false,
+    promptCaching: false,
   };
   constructor(private readonly script: ChatStreamChunk[]) {}
   async *chat(): AsyncGenerator<ChatStreamChunk> {
@@ -111,6 +114,9 @@ class ThrowingProvider implements LLMProvider {
     listModels: false,
     embeddings: false,
     routingPreference: false,
+    stickySession: false,
+    priceCeiling: false,
+    promptCaching: false,
   };
   async *chat(): AsyncGenerator<ChatStreamChunk> {
     await Promise.resolve();
@@ -415,6 +421,8 @@ describe('RunLlmTurnUseCase — preferência de roteamento (ADR 0166, RN-583)', 
         listModels: false,
         embeddings: false,
         routingPreference: aceitaRoteamento,
+        stickySession: false,
+        priceCeiling: false,
       };
     }
     async *chat(
@@ -458,6 +466,7 @@ describe('RunLlmTurnUseCase — preferência de roteamento (ADR 0166, RN-583)', 
     });
 
     expect(provider.recebidas[0]?.routingPreference).toBe('throughput');
+    expect(provider.recebidas[0]?.sessionKey).toBe(`brabo:${session.id}:echo`);
     const [linha] = await db
       .select()
       .from(tokenUsage)
@@ -485,5 +494,154 @@ describe('RunLlmTurnUseCase — preferência de roteamento (ADR 0166, RN-583)', 
       .from(tokenUsage)
       .where(eq(tokenUsage.sessionId, session.id));
     expect(linha.routingPreference).toBeNull();
+  });
+});
+
+describe('RunLlmTurnUseCase — retentativa sem raciocínio (AT-587, RN-916)', () => {
+  class ProviderPorChamada extends FakeProvider {
+    readonly opcoesRecebidas: ChatOptions[] = [];
+    readonly aceitaRaciocinioDesligado = true;
+    constructor(private readonly chamadas: ChatStreamChunk[][]) {
+      super([]);
+    }
+    async *chat(_m: unknown, options: ChatOptions) {
+      await Promise.resolve();
+      const roteiro = this.chamadas[this.opcoesRecebidas.length];
+      this.opcoesRecebidas.push(options);
+      for (const chunk of roteiro ?? []) yield chunk;
+    }
+  }
+  const cortada = (): ChatStreamChunk[] => [
+    { type: 'truncated' },
+    {
+      type: 'usage',
+      inputTokens: 100,
+      outputTokens: 4096,
+      estimated: false,
+      reasoningTokens: 4096,
+    },
+  ];
+  const rodar = async (chamadas: ChatStreamChunk[][]) => {
+    const { project, session, model } = await setup();
+    await db
+      .update(models)
+      .set({ supportsReasoning: true })
+      .where(eq(models.id, model.id));
+    const provider = new ProviderPorChamada(chamadas);
+    const result = await buildUseCase(provider).execute({
+      projectId: project.id,
+      sessionId: session.id,
+      agentId: 'po',
+      messages: [{ role: 'user', content: 'oi' }],
+    });
+    const linhas = await db
+      .select()
+      .from(tokenUsage)
+      .where(eq(tokenUsage.sessionId, session.id));
+    return { provider, result, linhas };
+  };
+
+  it('truncada por raciocínio: retenta UMA vez com reasoningOff e grava as DUAS chamadas', async () => {
+    const { provider, result, linhas } = await rodar([
+      cortada(),
+      [
+        { type: 'text_delta', text: 'pronto' },
+        { type: 'usage', inputTokens: 100, outputTokens: 50, estimated: false },
+      ],
+    ]);
+    expect(provider.opcoesRecebidas).toHaveLength(2);
+    expect(provider.opcoesRecebidas[0].reasoningOff).toBeUndefined();
+    expect(provider.opcoesRecebidas[1].reasoningOff).toBe(true);
+    expect(result.message.content).toBe('pronto');
+    expect(result.truncated).toBeUndefined();
+    expect(linhas).toHaveLength(2);
+  });
+
+  it('falha: se a segunda também trunca, nunca há terceira e o desfecho é o de hoje', async () => {
+    const { provider, result, linhas } = await rodar([
+      cortada(),
+      cortada(),
+      cortada(),
+    ]);
+    expect(provider.opcoesRecebidas).toHaveLength(2);
+    expect(result.truncated).toBe(true);
+    expect(linhas).toHaveLength(2);
+  });
+
+  it('falha: truncada COM texto não retenta', async () => {
+    const { provider, linhas } = await rodar([
+      [{ type: 'text_delta', text: 'parcial' }, ...cortada()],
+    ]);
+    expect(provider.opcoesRecebidas).toHaveLength(1);
+    expect(linhas).toHaveLength(1);
+  });
+
+  describe('chamada escrita como texto (AT-633, RN-949)', () => {
+    const XML =
+      'Registrei.\n<invoke name="read_file">\n<parameter name="path">a</parameter>\n</invoke>';
+    const ferramentas = [
+      { name: 'read_file', description: 'lê', parameters: {} },
+    ];
+    const usage: ChatStreamChunk = {
+      type: 'usage',
+      inputTokens: 5,
+      outputTokens: 2,
+      estimated: false,
+    };
+    function comRoteiros(roteiros: ChatStreamChunk[][]) {
+      const provider = new FakeProvider([]);
+      let n = 0;
+      provider.chat = async function* () {
+        await Promise.resolve();
+        for (const c of roteiros[n++]) yield c;
+      };
+      return { provider, chamadas: () => n };
+    }
+
+    it('duas vezes: erro tool_call_as_text, content vazio, 2 linhas de uso, nenhum <invoke> sai', async () => {
+      const { project, session } = await setup();
+      const { provider, chamadas } = comRoteiros([
+        [{ type: 'text_delta', text: XML }, usage],
+        [{ type: 'text_delta', text: XML }, usage],
+      ]);
+      const r = await buildUseCase(provider).execute({
+        projectId: project.id,
+        sessionId: session.id,
+        agentId: 'po',
+        messages: [{ role: 'user', content: 'oi' }],
+        tools: ferramentas,
+      });
+      expect(r.errorCode).toBe('tool_call_as_text');
+      expect(r.message.content).toBe('');
+      expect(r.error).toContain('llama3.2:3b');
+      const linhas = await db
+        .select()
+        .from(tokenUsage)
+        .where(eq(tokenUsage.sessionId, session.id));
+      expect(linhas).toHaveLength(2);
+      expect(chamadas()).toBe(2);
+    });
+
+    it('segunda resposta limpa: resposta normal e 2 linhas de uso', async () => {
+      const { project, session } = await setup();
+      const { provider } = comRoteiros([
+        [{ type: 'text_delta', text: XML }, usage],
+        [{ type: 'text_delta', text: 'pronto' }, usage],
+      ]);
+      const r = await buildUseCase(provider).execute({
+        projectId: project.id,
+        sessionId: session.id,
+        agentId: 'po',
+        messages: [{ role: 'user', content: 'oi' }],
+        tools: ferramentas,
+      });
+      expect(r.error).toBeNull();
+      expect(r.message.content).toBe('pronto');
+      const linhas = await db
+        .select()
+        .from(tokenUsage)
+        .where(eq(tokenUsage.sessionId, session.id));
+      expect(linhas).toHaveLength(2);
+    });
   });
 });

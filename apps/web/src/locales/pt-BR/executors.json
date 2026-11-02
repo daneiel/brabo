@@ -35,7 +35,7 @@
     "autonomy": {
       "manual": "manual",
       "auto": "auto",
-      "autoModeHint": "Modo automático: roda qualquer comando, inclusive fora da pasta do projeto. Push, PR, deploy, sudo/doas e merge em branch protegida continuam pedindo sua aprovação."
+      "autoModeHint": "Modo automático: roda qualquer comando, inclusive fora da pasta do projeto. git push e PR ficam liberados; deploy, sudo/doas e merge em branch protegida continuam pedindo sua aprovação."
     },
     "rearm": "rearmar"
   },
@@ -46,6 +46,7 @@
     "subspecialty_other": "{{count}} subespecialidades"
   },
   "agentStatus": {
+    "creditExhausted": "crédito do provedor do modelo esgotado — recarregue e rearme para retomar",
     "circuitBreaker": {
       "default": "parada automática acionada",
       "withCount_zero": "parada automática: {{count}} tarefas bloqueadas seguidas",
@@ -95,6 +96,7 @@
       "devBlockedByContainer": "parado: o projeto não tem container de pé",
       "devError": "erro",
       "devIdleTripped": "parada automática acionada",
+      "devCreditExhausted": "crédito do provedor esgotado",
       "prGateChanged": "gate mudou"
     },
     "now": {
@@ -119,12 +121,13 @@
       "commands": "qualquer comando dentro do container do projeto, mesmo com caminho fora da pasta do projeto",
       "compound": "comando composto com segmento sem regra no permissions.json",
       "commitBranch": "git commit e criar branch LOCAL",
+      "pushPr": "git push e abertura de PR",
       "alwaysAllow": "clicar \"Sempre permitir\" neste agente não desliga o piloto"
     },
     "notReleased": {
       "title": "O modo automático NÃO libera — estes continuam pedindo sua aprovação:",
       "merge": "merge em branch protegida (dev, qa, main)",
-      "push": "git push, abertura de PR e deploy",
+      "push": "deploy",
       "privileged": "sudo e doas",
       "containerRemove": "remover container (container_remove)",
       "instructionPatch": "mudar instrução de agente (instruction_patch)",
@@ -136,6 +139,7 @@
     "button_zero": "Ligar para {{count}} agentes",
     "button_one": "Ligar para {{count}} agente",
     "button_other": "Ligar para {{count}} agentes",
+    "loading": "Lendo quais agentes já estão em modo automático… o botão liga quando isso for conhecido.",
     "erroGenerico": "Não foi possível ligar o modo automático",
     "result": {
       "all_one": "Modo automático ligado para {{count}} agente.",
@@ -143,6 +147,34 @@
       "all_zero": "Nenhum agente escolhido.",
       "none": "Nenhum agente teve o modo automático ligado: {{mensagem}}",
       "some": "Ligado para {{ok}} de {{total}} agentes. Ficaram em manual: {{falharam}}."
-    }
+    },
+    "planSubtitle": "Ao aprovar o plano, a execução começa. Ligar o modo automático agora nos agentes escolhidos faz os comandos deles rodarem sem pedir aprovação — inclusive fora da pasta do projeto. É uma oferta: nada muda sem o clique abaixo, e cada agente continua com o próprio toggle manual/auto."
+  },
+  "religar": {
+    "descricao_zero": "Nenhuma execução está rodando, e nenhuma tarefa está pendente.",
+    "descricao_one": "Nenhuma execução está rodando, e {{count}} tarefa segue pendente. Ela só volta a rodar se você religar a execução.",
+    "descricao_other": "Nenhuma execução está rodando, e {{count}} tarefas seguem pendentes. Elas só voltam a rodar se você religar a execução.",
+    "botao": "Religar execução",
+    "erro": "Não foi possível religar a execução"
+  },
+  "parar": {
+    "descricao": "Parar a execução encerra esta sessão: os dev agents e os gates param, e nenhum começa outra tarefa.",
+    "botao": "Parar execução",
+    "semPapel": "Parar a execução pede o papel developer no workspace.",
+    "confirmarTitulo": "Parar a execução?",
+    "ficaTarefas_zero": "Nenhuma tarefa está em curso.",
+    "ficaTarefas_one": "{{count}} tarefa em curso é bloqueada com o trabalho do worktree preservado em commit, e volta à fila quando você a liberar.",
+    "ficaTarefas_other": "{{count}} tarefas em curso são bloqueadas com o trabalho do worktree preservado em commit, e voltam à fila quando você as liberar.",
+    "ficaPrs": "As PRs já abertas continuam abertas, à espera do seu merge.",
+    "ficaAprovacoes": "As aprovações pendentes continuam na aba Aprovações.",
+    "retomar": "Esta sessão não pode ser reaberta depois da execução; para retomar, ative a execução numa sessão nova.",
+    "confirmar": "Parar execução",
+    "erro": "Não foi possível parar a execução.",
+    "nenhumaTarefa": "Nenhuma tarefa está em curso nem em revisão agora.",
+    "lendoTarefas": "Lendo o backlog para contar as tarefas em curso e em revisão…",
+    "tarefasNaoLidas": "Não foi possível ler o backlog: as tarefas em curso e em revisão não puderam ser contadas.",
+    "ficaRevisao_zero": "Nenhuma tarefa está em revisão.",
+    "ficaRevisao_one": "{{count}} tarefa em revisão de QA: o gate dela para e a tarefa é bloqueada, com a PR aberta; volta à fila quando você a liberar.",
+    "ficaRevisao_other": "{{count}} tarefas em revisão de QA: os gates delas param e as tarefas são bloqueadas, com as PRs abertas; voltam à fila quando você as liberar."
   }
 }

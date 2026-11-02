@@ -11,10 +11,13 @@ import { LlmUseCasesModule } from '../llm/llm-use-cases.module';
 import { VerificarDuplicataSemanticaUseCase } from './verificar-duplicata-semantica.use-case';
 import { CreateEpicUseCase } from './create-epic.use-case';
 import { CreateStoryUseCase } from './create-story.use-case';
+import { CompleteStoryUseCase } from './complete-story.use-case';
 import { CreateTaskUseCase } from './create-task.use-case';
 import { TransitionStoryUseCase } from './transition-story.use-case';
 import { PromoteStoriesUseCase } from './promote-stories.use-case';
 import { ReturnStoryUseCase } from './return-story.use-case';
+import { CorrigirHistoriaUseCase } from './corrigir-historia.use-case';
+import { PerguntasEmAbertoUseCase } from './perguntas-em-aberto.use-case';
 import { ListBacklogUseCase } from './list-backlog.use-case';
 import { GetCoverageUseCase } from './get-coverage.use-case';
 import { ListBusinessRulesUseCase } from './list-business-rules.use-case';
@@ -23,10 +26,13 @@ import { ListProductMetricsUseCase } from './list-product-metrics.use-case';
 const USE_CASES = [
   CreateEpicUseCase,
   CreateStoryUseCase,
+  CompleteStoryUseCase,
   CreateTaskUseCase,
   TransitionStoryUseCase,
   PromoteStoriesUseCase,
   ReturnStoryUseCase,
+  CorrigirHistoriaUseCase,
+  PerguntasEmAbertoUseCase,
   ListBacklogUseCase,
   GetCoverageUseCase,
   ListBusinessRulesUseCase,

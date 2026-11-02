@@ -1,10 +1,16 @@
 import { useTranslation } from 'react-i18next';
 import { corDoAgente } from '../lib/agents';
+import { textoPlanoDoMarkdown } from '../lib/texto-plano';
 import type { EstadoDaAtividadeDoTurno } from '../lib/atividade-do-turno';
 import { useAtividadeDoStreaming, type StoreDoStreaming } from '../lib/streaming-do-turno';
 import { AvatarDoAgente } from './ui/AvatarDoAgente';
 import { Disclosure } from './ui/Disclosure';
-import { ChatIcon, TerminalIcon } from './ui/icons';
+import { Shimmer } from './ui/Shimmer';
+import { ChatIcon } from './ui/icons';
+import { Tool } from './ai-elements/tool';
+import { Plan, type EstadoDoPasso } from './ai-elements/plan';
+import { TraceIcon, TraceLine, TraceTitle } from './shadcn/trace';
+import type { PlanoDoAgente } from '../routes/RetomarTurnoInterrompido';
 import styles from './TurnActivityStrip.module.css';
 
 interface TurnActivityStripProps {
@@ -17,6 +23,8 @@ interface TurnActivityStripProps {
   /** Indicador de "pensando" (RN-131/156) — o MESMO timer de 5s que
    *  `SessionPage.tsx` já mantém; este componente nunca arma um próprio. */
   pensandoVisivel: boolean;
+  /** Plano do turno em curso (RN-967), derivado dos eventos já carregados. */
+  plano?: PlanoDoAgente | null;
 }
 
 /**
@@ -36,31 +44,46 @@ interface TurnActivityStripProps {
  * (turno começou agora mesmo, antes dos 5s), o componente não renderiza
  * NADA, o mesmo silêncio que a bolha antiga tinha antes do timer.
  */
-export function TurnActivityStrip({ estado, agente, pensandoVisivel }: TurnActivityStripProps) {
+export function TurnActivityStrip({ estado, agente, pensandoVisivel, plano }: TurnActivityStripProps) {
   const { t } = useTranslation('sessionPage');
 
   const ultimaLinha = estado.linhas[estado.linhas.length - 1];
   // O corrente tem prioridade — é o dado mais recente, e RN-131 manda: texto
   // de verdade aparece na hora, nunca espera timer nenhum. Sem corrente,
   // degrada pra última linha arquivada (o que a ferramenta acabou de fazer).
-  const previa = estado.corrente !== '' ? estado.corrente : (ultimaLinha?.texto ?? null);
+  // RN-712: a faixa é PRÉVIA, nunca a resposta — Markdown cru (`**`, `##`,
+  // `|---|`) vira texto plano; a bolha renderizada chega no fim do turno.
+  const bruta = estado.corrente !== '' ? estado.corrente : (ultimaLinha?.texto ?? null);
+  const previa = bruta === null ? null : textoPlanoDoMarkdown(bruta);
 
   if (previa === null && !pensandoVisivel) return null;
 
   const linhasParaExpandir = [
     ...estado.linhas,
     ...(estado.corrente !== ''
-      ? [{ tipo: 'narracao' as const, texto: estado.corrente }]
+      ? [{ tipo: 'narracao' as const, texto: textoPlanoDoMarkdown(estado.corrente) }]
       : []),
   ];
 
   return (
-    <div className={styles.faixa} style={corDoAgente(agente ?? undefined)}>
+    <div
+      className={styles.faixa}
+      style={corDoAgente(agente ?? undefined)}
+      // RN-830: leitor de tela ouve o que o agente está fazendo, sem interromper.
+      role="status"
+      aria-live="polite"
+    >
       <AvatarDoAgente id={agente ?? undefined} />
       <div className={styles.corpo}>
         <div className={styles.previa} title={previa ?? undefined}>
-          {previa ?? t('turno.pensando')}
+          {previa ?? <Shimmer>{t('turno.pensando')}</Shimmer>}
         </div>
+        {plano && plano.passos.length > 0 && (
+          <Plan
+            objetivo={plano.objetivo}
+            passos={plano.passos.map((p) => ({ texto: p.texto, estado: p.estado as EstadoDoPasso }))}
+          />
+        )}
         {linhasParaExpandir.length > 0 && (
           <Disclosure
             titulo={t('turno.passosDoTurno')}
@@ -68,18 +91,22 @@ export function TurnActivityStrip({ estado, agente, pensandoVisivel }: TurnActiv
             classNameCabecalho={styles.disclosureCabecalho}
           >
             <div className={styles.linhas}>
-              {linhasParaExpandir.map((linha, indice) => (
+              {linhasParaExpandir.map((linha, indice) =>
                 // Índice como key: as linhas não têm id próprio (narração
                 // efêmera, nunca persistida) e a lista só cresce ao FIM.
-                <div key={indice} className={styles.linha}>
-                  {linha.tipo === 'ferramenta' ? (
-                    <TerminalIcon size={12} className={styles.linhaIconeFerramenta} />
-                  ) : (
-                    <ChatIcon size={12} className={styles.linhaIconeNarracao} />
-                  )}
-                  <span>{linha.texto}</span>
-                </div>
-              ))}
+                linha.tipo === 'ferramenta' ? (
+                  <Tool
+                    key={indice}
+                    titulo={linha.texto}
+                    estado={indice === linhasParaExpandir.length - 1 ? 'running' : undefined}
+                  />
+                ) : (
+                  <TraceLine key={indice}>
+                    <TraceIcon><ChatIcon size={12} /></TraceIcon>
+                    <TraceTitle>{linha.texto}</TraceTitle>
+                  </TraceLine>
+                ),
+              )}
             </div>
           </Disclosure>
         )}

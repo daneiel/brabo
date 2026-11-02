@@ -1,4 +1,4 @@
-# 0168 — O golden-set do QA passa a rodar em CI, agendado e semanal
+# ADR 0168 — O golden-set do QA passa a rodar em CI, agendado e semanal
 
 ## Status
 

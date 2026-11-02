@@ -42,6 +42,7 @@ import { AceitarHandoffAutomaticamenteUseCase } from '../../../application/use-c
 import { AceiteImplicitoDoPoUseCase } from '../../../application/use-cases/agents/aceite-implicito-do-po.use-case';
 import { CreateEpicUseCase } from '../../../application/use-cases/backlog/create-epic.use-case';
 import { CreateStoryUseCase } from '../../../application/use-cases/backlog/create-story.use-case';
+import { CompleteStoryUseCase } from '../../../application/use-cases/backlog/complete-story.use-case';
 import { CreateTaskUseCase } from '../../../application/use-cases/backlog/create-task.use-case';
 import { CreateModuleMapUseCase } from '../../../application/use-cases/architecture/create-module-map.use-case';
 import { AssignStoryModulesUseCase } from '../../../application/use-cases/architecture/assign-story-modules.use-case';
@@ -50,9 +51,13 @@ import { RouteModulesToInfraUseCase } from '../../../application/use-cases/archi
 import { DeclareModuleContractsUseCase } from '../../../application/use-cases/architecture/declare-module-contracts.use-case';
 import { DecidirImagemDoProjetoUseCase } from '../../../application/use-cases/containers/decidir-imagem-do-projeto.use-case';
 import { ClaimNextTaskUseCase } from '../../../application/use-cases/execution/claim-next-task.use-case';
+import { TarefaEmCursoDeDevResponseDto } from './dto/tarefa-em-curso-de-dev.response.dto';
+import { ListTarefasEmCursoDeDevUseCase } from '../../../application/use-cases/execution/list-tarefas-em-curso-de-dev.use-case';
 import { MarkTaskUseCase } from '../../../application/use-cases/execution/mark-task.use-case';
 import { GetDevTaskContextUseCase } from '../../../application/use-cases/execution/get-dev-task-context.use-case';
 import { MarkTaskBlockedUseCase } from '../../../application/use-cases/execution/mark-task-blocked.use-case';
+import { UnblockTaskUseCase } from '../../../application/use-cases/execution/unblock-task.use-case';
+import { UnblockTaskInternalDto } from './dto/unblock-task-internal.dto';
 import { RecordGateVerdictUseCase } from '../../../application/use-cases/execution/record-gate-verdict.use-case';
 import { RecordDelegationUseCase } from '../../../application/use-cases/execution/record-delegation.use-case';
 import { OpenGateUseCase } from '../../../application/use-cases/execution/open-gate.use-case';
@@ -74,6 +79,7 @@ import {
   ProposeInstructionPatchInternalDto,
   ProposeMaxParallelInternalDto,
   RecordProficiencyInternalDto,
+  CloseAnamneseWindowInternalDto,
 } from './dto/record-proficiency-internal.dto';
 import { OpenGateInternalDto } from './dto/open-gate-internal.dto';
 import { ReportSessionTerminationDto } from './dto/report-session-termination.dto';
@@ -85,7 +91,13 @@ import { StreamLlmTurnDto } from './dto/stream-llm-turn.dto';
 import { CreateActionInternalDto } from './dto/create-action-internal.dto';
 import { CreateHandoffInternalDto } from './dto/create-handoff-internal.dto';
 import { CreateEpicInternalDto } from './dto/create-epic-internal.dto';
-import { CreateStoryInternalDto } from './dto/create-story-internal.dto';
+import {
+  ArchiveStoryInternalDto,
+  CompleteStoryInternalDto,
+  CreateStoryInternalDto,
+  UpdateStoryInternalDto,
+} from './dto/create-story-internal.dto';
+import { CorrigirHistoriaUseCase } from '../../../application/use-cases/backlog/corrigir-historia.use-case';
 import {
   CreatedStoryResponseDto,
   SemanticDuplicateCheckInternalDto,
@@ -171,6 +183,8 @@ export class InternalSessionsController {
     private readonly aceiteImplicitoDoPo: AceiteImplicitoDoPoUseCase,
     private readonly createEpic: CreateEpicUseCase,
     private readonly createStory: CreateStoryUseCase,
+    private readonly completeStory: CompleteStoryUseCase,
+    private readonly corrigirHistoria: CorrigirHistoriaUseCase,
     private readonly createTask: CreateTaskUseCase,
     private readonly createModuleMap: CreateModuleMapUseCase,
     private readonly createC4Diagram: CreateC4DiagramUseCase,
@@ -179,9 +193,11 @@ export class InternalSessionsController {
     private readonly assignStoryModules: AssignStoryModulesUseCase,
     private readonly decidirImagem: DecidirImagemDoProjetoUseCase,
     private readonly claimNextTask: ClaimNextTaskUseCase,
+    private readonly listTarefasEmCursoDeDev: ListTarefasEmCursoDeDevUseCase,
     private readonly markTask: MarkTaskUseCase,
     private readonly getDevTaskContext: GetDevTaskContextUseCase,
     private readonly markTaskBlocked: MarkTaskBlockedUseCase,
+    private readonly unblockTask: UnblockTaskUseCase,
     private readonly recordGateVerdict: RecordGateVerdictUseCase,
     private readonly recordDelegation: RecordDelegationUseCase,
     private readonly openGate: OpenGateUseCase,
@@ -503,6 +519,109 @@ export class InternalSessionsController {
   }
 
   /**
+   * Ferramenta complete_story do PO (RN-720): completa uma história `draft`
+   * existente — liga regras e preenche RF/DoD/DoR — e a promove pelo MESMO
+   * critério de create_story, sem recriá-la.
+   */
+  @Post(':sessionId/stories/:storyId/complete')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Completes an existing draft story instead of re-creating it',
+    description:
+      '`businessRuleIds` is ADDED to the rules already linked; non-empty lists replace the ' +
+      'current ones and omitted lists stay. After writing, the story is promoted by the SAME ' +
+      'criterion as story creation (`ready` in `auto` mode, `proposedReady` in `manual`) (RN-720).',
+  })
+  @ApiOkResponse({ type: StoryResponseDto })
+  @ApiNotFoundResponse({ description: 'Story is not in this project.' })
+  @ApiConflictResponse({ description: 'Story is no longer `draft`.' })
+  @ApiBadRequestResponse({
+    description: 'A business_rule_id does not reference an existing rule.',
+  })
+  completeStoryRoute(
+    @Param('sessionId') sessionId: string,
+    @Param('storyId') storyId: string,
+    @Body() dto: CompleteStoryInternalDto,
+  ) {
+    return this.completeStory.execute(dto.projectId, sessionId, {
+      storyId,
+      description: dto.description,
+      rf: dto.rf,
+      rnf: dto.rnf,
+      dod: dto.dod,
+      dor: dto.dor,
+      businessRuleIds: dto.businessRuleIds,
+      questionId: dto.questionId,
+    });
+  }
+
+  /**
+   * Ferramenta update_story do PO (RN-727): corrige título e/ou descrição de
+   * uma história `draft` sem tarefa em execução — a MESMA régua da aba Backlog.
+   */
+  @Post(':sessionId/stories/:storyId/update')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Corrects the title and/or description of a draft story',
+    description:
+      'Only a `draft` story with no task in execution; writes `backlog.story_updated` ' +
+      'with the PO as actor (RN-727). A `ready` one too when `questionId` cites an ' +
+      'open question the user already answered (RN-859).',
+  })
+  @ApiOkResponse({ type: StoryResponseDto })
+  @ApiNotFoundResponse({ description: 'Story is not in this project.' })
+  @ApiConflictResponse({
+    description:
+      'Named refusal (`reason`): `historia_arquivada`, `historia_nao_draft` or ' +
+      '`historia_com_tarefa_em_execucao`.',
+  })
+  @ApiBadRequestResponse({ description: 'No field, or an empty title.' })
+  updateStoryRoute(
+    @Param('storyId') storyId: string,
+    @Body() dto: UpdateStoryInternalDto,
+  ) {
+    return this.corrigirHistoria.editar(
+      dto.projectId,
+      storyId,
+      { title: dto.title, description: dto.description },
+      { kind: 'agent', id: 'po' },
+      dto.questionId,
+    );
+  }
+
+  /**
+   * Ferramenta archive_story do PO (RN-727): arquiva uma história `draft` sem
+   * tarefa em execução. Ela e as tarefas saem do backlog, da cobertura, do
+   * plano e do claim; nada é apagado.
+   */
+  @Post(':sessionId/stories/:storyId/archive')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Archives a draft story',
+    description:
+      'The story and its tasks leave the backlog, coverage, plan and claim; the row ' +
+      'stays and `backlog.story_archived` records it, with the PO as actor (RN-727).',
+  })
+  @ApiOkResponse({ type: StoryResponseDto })
+  @ApiNotFoundResponse({ description: 'Story is not in this project.' })
+  @ApiConflictResponse({
+    description:
+      'Named refusal (`reason`): `historia_arquivada`, `historia_nao_draft` or ' +
+      '`historia_com_tarefa_em_execucao`.',
+  })
+  archiveStoryRoute(
+    @Param('storyId') storyId: string,
+    @Body() dto: ArchiveStoryInternalDto,
+  ) {
+    return this.corrigirHistoria.arquivar(
+      dto.projectId,
+      storyId,
+      dto.reason ?? null,
+      { kind: 'agent', id: 'po' },
+    );
+  }
+
+  /**
    * A duplicata SEMÂNTICA de regra de negócio (RN-681, ADR 0198). O engine
    * chama DEPOIS de gravar o `artifact.business_rule` (a regra é evento, não
    * linha da api) e devolve `message` ao modelo como parte do resultado de
@@ -746,6 +865,21 @@ export class InternalSessionsController {
     );
   }
 
+  // RN-856 (AT-522): o encerramento da execução bloqueia a órfã que nenhum
+  // processo segura — esta é a lista de onde ele a tira.
+  @Get(':sessionId/tasks/in-progress-by-dev')
+  @ApiOperation({
+    summary: "Lists the project's in-progress tasks held by a dev agent",
+    description:
+      'Not blocked and outside the PR gates; empty unless the session is an ' +
+      'execution session. Used by the engine when stopping an execution, to ' +
+      'block the ones no live dev agent holds.',
+  })
+  @ApiOkResponse({ type: TarefaEmCursoDeDevResponseDto, isArray: true })
+  tarefasEmCursoDeDev(@Param('sessionId') sessionId: string) {
+    return this.listTarefasEmCursoDeDev.execute(sessionId);
+  }
+
   @Post(':sessionId/tasks/:taskId/status')
   @ApiOperation({ summary: "Moves the task's state as work progresses" })
   @ApiCreatedResponse({ type: TaskResponseDto })
@@ -919,6 +1053,34 @@ export class InternalSessionsController {
   }
 
   /**
+   * RN-864 (AT-525): a retomada automática de uma task bloqueada por falha
+   * PASSAGEIRA de rede/provedor. O MESMO caso de uso do "Desbloquear" humano,
+   * com ator `system` — e no-op se a task já não está bloqueada.
+   */
+  @Post(':sessionId/tasks/:taskId/unblock')
+  @ApiOperation({
+    summary: 'Unblocks a task after a transient network/provider failure',
+    description:
+      'Called by the engine retry job (up to 3 times, after 1, 3 and 10 min). ' +
+      'Same use case as the human unblock, with a `system` actor; a task that ' +
+      'is no longer blocked is left untouched.',
+  })
+  @ApiCreatedResponse({ type: TaskResponseDto })
+  unblockTaskAutomatically(
+    @Param('sessionId') sessionId: string,
+    @Param('taskId') taskId: string,
+    @Body() dto: UnblockTaskInternalDto,
+  ) {
+    return this.unblockTask.execute(
+      dto.projectId,
+      sessionId,
+      taskId,
+      dto.agentId,
+      { kind: 'system' },
+    );
+  }
+
+  /**
    * Parecer de um gate de PR (QA/SecOps, Fase 4a) — aplica a máquina de
    * estados do gate, comenta a PR, e devolve pro engine a próxima ação
    * (correct/run_secops/done/blocked).
@@ -929,7 +1091,8 @@ export class InternalSessionsController {
     description:
       "The response's `nextAction` is what the engine obeys: `correct` returns " +
       'to dev, `run_secops` advances the gate, `done` releases it to the user, ' +
-      'and `blocked` means the correction cap ran out. MERGE is never automatic ' +
+      '`await_user` parks the cycle until the open question is answered ' +
+      '(RN-860, no correction counted), and `blocked` means the correction cap ran out. MERGE is never automatic ' +
       "— `done` only means it's the human's turn.",
   })
   @ApiCreatedResponse({ type: GateVerdictResponseDto })
@@ -946,6 +1109,9 @@ export class InternalSessionsController {
         veredito: dto.veredito,
         resumo: dto.resumo,
         itens: dto.itens,
+        pergunta: dto.pergunta,
+        sugestao: dto.sugestao,
+        openQuestionId: dto.openQuestionId,
       },
       dto.maxCorrections,
     );
@@ -1082,6 +1248,31 @@ export class InternalSessionsController {
       windowTo: new Date(dto.windowTo),
       eventCount: dto.eventCount,
       profiles: dto.profiles,
+    });
+  }
+
+  /**
+   * Rodada da Anamnese que avaliou a janela e encerrou sem perfil
+   * (`skip_proficiency`) fecha a janela mesmo assim (RN-722).
+   */
+  @Post(':sessionId/anamnese-window')
+  @ApiOperation({
+    summary: 'Closes the Anamnese window of a round that emitted no profile',
+    description:
+      'Records an anamnese run with zero profiles so the next round starts at ' +
+      'windowTo — without it, the window never advanced and every tick paid ' +
+      'for a new round over the same material.',
+  })
+  @ApiCreatedResponse({ type: RecordProficiencyResponseDto })
+  anamneseWindow(
+    @Param('sessionId') sessionId: string,
+    @Body() dto: CloseAnamneseWindowInternalDto,
+  ) {
+    return this.recordProficiency.fecharJanelaSemPerfil(dto.projectId, {
+      sessionId,
+      windowFrom: new Date(dto.windowFrom),
+      windowTo: new Date(dto.windowTo),
+      eventCount: dto.eventCount,
     });
   }
 

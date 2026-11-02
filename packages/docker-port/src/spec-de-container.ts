@@ -34,8 +34,13 @@
  * injeção de ARGUMENTO — são coisas diferentes, e a segunda se resolve aqui.
  */
 
+import { isIP } from 'node:net';
 import {
   idDeUsuarioValido,
+  type HostExtra,
+  type InstanciaDeQa,
+  type PortaDoContainer,
+  type ServicoDeQa,
   raizDeProjetoValidada,
   type UsuarioDoContainer,
   type EspecificacaoDeContainer,
@@ -130,7 +135,45 @@ export interface EntradaDeEspecificacao {
   raizDoProjeto?: unknown;
   /** `{uid, gid}` medido pela api, ou `null`/ausente. Ver `usuarioValidado`. */
   usuario?: unknown;
+  /** AT-610: comando do app (≤300, sem `\n \r \0`). */
+  comandoDoApp?: unknown;
+  /** AT-608: `[{host, container, protocolo}]`. */
+  portas?: unknown;
+  dns?: unknown;
+  hostsExtras?: unknown;
+  /** AT-612: `{chave, servicos}` — instância de QA. */
+  qa?: unknown;
 }
+
+/** As portas da instalação: publicar uma delas no loopback colidiria com o próprio Brabo. */
+export const PORTAS_DA_INSTALACAO: readonly number[] = [
+  3000, 4000, 5173, 5432, 7474, 7687, 8088, 8090, 11434,
+];
+export const TETO_DE_PORTAS = 10;
+export const TETO_DE_DNS = 3;
+export const TETO_DE_HOSTS_EXTRAS = 10;
+export const TETO_DO_COMANDO_DO_APP = 300;
+export const TETO_DE_SERVICOS_DE_QA = 6;
+/** Nomes que `--add-host` nunca pode sobrescrever: o loopback e os serviços do Brabo. */
+export const NOMES_RESERVADOS = [
+  'localhost',
+  'host.docker.internal',
+  'api',
+  'engine',
+  'web',
+  'postgres',
+  'neo4j',
+  'broker',
+  'ollama',
+];
+/** Teto CONSTANTE de cada serviço de QA, qualquer que seja o pedido. */
+export const TETO_DE_SERVICO_DE_QA = { cpus: 1, memoriaMb: 512, pidsLimit: 256 } as const;
+
+const CHAVE_DE_QA = /^[a-z0-9]{8}$/;
+const NOME_DE_SERVICO = /^[a-z][a-z0-9-]{0,31}$/;
+const CHAVE_DE_ENV = /^[A-Z_][A-Z0-9_]*$/;
+const DIGEST = /@sha256:[a-f0-9]{64}$/;
+const CAMINHO_DE_DADOS = /^\/[A-Za-z0-9_./-]+$/;
 
 /**
  * O PARSE do usuário (ADR 0180). Ausente e `null` são "como sempre"; qualquer
@@ -244,6 +287,32 @@ export function especificacaoValidada(
   }
 
   const usuario = usuarioValidado(entrada.usuario);
+  const comandoDoApp = comandoDoAppValidado(entrada.comandoDoApp);
+  const portas = portasValidadas(entrada.portas);
+  const dns = dnsValidado(entrada.dns);
+  const hostsExtras = hostsExtrasValidados(entrada.hostsExtras);
+  const qa = instanciaDeQaValidada(entrada.qa);
+
+  if (rede === 'none' && (portas.length > 0 || dns.length > 0 || hostsExtras.length > 0)) {
+    throw new EspecificacaoInvalidaError(
+      'rede',
+      'portas, dns e hostsExtras exigem rede `egress`: com `none` o container não tem pilha de rede',
+    );
+  }
+  if (qa !== null) {
+    if (comandoDoApp !== null || portas.length > 0) {
+      throw new EspecificacaoInvalidaError(
+        'qa',
+        'a instância de QA não sobe app e não publica porta: o app de trabalho nunca é tocado',
+      );
+    }
+    if (rede === 'none' && qa.servicos.some((x) => x.compartilhado === true)) {
+      throw new EspecificacaoInvalidaError(
+        'qa.servicos',
+        'serviço compartilhado exige rede `egress`: a instância se liga à rede privada do projeto',
+      );
+    }
+  }
 
   return {
     workspaceDirName,
@@ -269,6 +338,173 @@ export function especificacaoValidada(
     ),
     // Só aparece quando há: a spec do runner (ADR 0137) não tem dono medido.
     ...(usuario === null ? {} : { usuario }),
+    // Só aparecem quando há: ausentes, a spec é byte a byte a de antes.
+    ...(comandoDoApp === null ? {} : { comandoDoApp }),
+    ...(portas.length === 0 ? {} : { portas }),
+    ...(dns.length === 0 ? {} : { dns }),
+    ...(hostsExtras.length === 0 ? {} : { hostsExtras }),
+    ...(qa === null ? {} : { qa }),
+  };
+}
+
+/** AT-610: ≤300, uma linha, sem NUL. Vazio é recusado (ausente/`null` é o jeito de dizer "sem app"). */
+export function comandoDoAppValidado(valor: unknown): string | null {
+  if (valor === undefined || valor === null) return null;
+  if (typeof valor !== 'string' || valor.trim().length === 0) {
+    throw new EspecificacaoInvalidaError('comandoDoApp', `esperava texto não vazio, recebi ${descrever(valor)}`);
+  }
+  if (valor.length > TETO_DO_COMANDO_DO_APP) {
+    throw new EspecificacaoInvalidaError('comandoDoApp', `passa de ${TETO_DO_COMANDO_DO_APP} caracteres`);
+  }
+  if (temQuebraOuNul(valor)) {
+    throw new EspecificacaoInvalidaError('comandoDoApp', 'contém quebra de linha ou NUL');
+  }
+  return valor;
+}
+
+function listaOuVazia(valor: unknown, campo: string, teto: number): unknown[] {
+  if (valor === undefined || valor === null) return [];
+  if (!Array.isArray(valor)) {
+    throw new EspecificacaoInvalidaError(campo, `esperava lista, recebi ${descrever(valor)}`);
+  }
+  if (valor.length > teto) {
+    throw new EspecificacaoInvalidaError(campo, `${valor.length} itens passam do teto de ${teto}`);
+  }
+  return valor;
+}
+
+function portaNaFaixa(n: unknown, campo: string, minimo: number): number {
+  if (typeof n !== 'number' || !Number.isInteger(n) || n < minimo || n > 65535) {
+    throw new EspecificacaoInvalidaError(campo, `esperava inteiro de ${minimo} a 65535, recebi ${descrever(n)}`);
+  }
+  return n;
+}
+
+/** AT-608: sempre TCP, host 1024–65535 fora da instalação, sem duplicata. O IP (127.0.0.1) é constante do adaptador. */
+export function portasValidadas(valor: unknown): PortaDoContainer[] {
+  const vistos = new Set<number>();
+  return listaOuVazia(valor, 'portas', TETO_DE_PORTAS).map((item, i) => {
+    const p = (item ?? {}) as { host?: unknown; container?: unknown; protocolo?: unknown };
+    const host = portaNaFaixa(p.host, `portas[${i}].host`, 1024);
+    const container = portaNaFaixa(p.container, `portas[${i}].container`, 1);
+    if (p.protocolo !== 'tcp') {
+      throw new EspecificacaoInvalidaError(`portas[${i}].protocolo`, `só existe \`tcp\`, recebi ${descrever(p.protocolo)}`);
+    }
+    if (PORTAS_DA_INSTALACAO.includes(host)) {
+      throw new EspecificacaoInvalidaError(`portas[${i}].host`, `${host} é porta da instalação do Brabo`);
+    }
+    if (vistos.has(host)) {
+      throw new EspecificacaoInvalidaError(`portas[${i}].host`, `${host} aparece duas vezes`);
+    }
+    vistos.add(host);
+    return { host, container, protocolo: 'tcp' as const };
+  });
+}
+
+/** AT-608: IP literal v4/v6, teto 3. */
+export function dnsValidado(valor: unknown): string[] {
+  return listaOuVazia(valor, 'dns', TETO_DE_DNS).map((ip, i) => {
+    if (typeof ip !== 'string' || isIP(ip) === 0) {
+      throw new EspecificacaoInvalidaError(`dns[${i}]`, `esperava IP literal, recebi ${descrever(ip)}`);
+    }
+    return ip;
+  });
+}
+
+/** AT-608: nome em `[a-z0-9.-]` (≤253), nunca reservado; IPv4 literal (v6 em `--add-host` é ambíguo com o `:`). */
+export function hostsExtrasValidados(valor: unknown): HostExtra[] {
+  return listaOuVazia(valor, 'hostsExtras', TETO_DE_HOSTS_EXTRAS).map((item, i) => {
+    const h = (item ?? {}) as { nome?: unknown; ip?: unknown };
+    const nome = h.nome;
+    if (
+      typeof nome !== 'string' ||
+      nome.length === 0 ||
+      nome.length > 253 ||
+      !/^[a-z0-9.-]+$/.test(nome) ||
+      /^[.-]|[.-]$|\.\./.test(nome)
+    ) {
+      throw new EspecificacaoInvalidaError(`hostsExtras[${i}].nome`, `nome inválido: ${descrever(nome)}`);
+    }
+    if (NOMES_RESERVADOS.includes(nome) || nome.startsWith('brabo')) {
+      throw new EspecificacaoInvalidaError(`hostsExtras[${i}].nome`, `${nome} é reservado (loopback ou serviço da instalação)`);
+    }
+    if (typeof h.ip !== 'string' || isIP(h.ip) !== 4) {
+      throw new EspecificacaoInvalidaError(`hostsExtras[${i}].ip`, `esperava IPv4 literal, recebi ${descrever(h.ip)}`);
+    }
+    return { nome, ip: h.ip };
+  });
+}
+
+/** AT-612: chave `[a-z0-9]{8}` e serviços declarados pela Infra, imagem por digest. */
+export function instanciaDeQaValidada(valor: unknown): InstanciaDeQa | null {
+  if (valor === undefined || valor === null) return null;
+  const q = valor as { chave?: unknown; servicos?: unknown };
+  if (typeof q.chave !== 'string' || !CHAVE_DE_QA.test(q.chave)) {
+    throw new EspecificacaoInvalidaError('qa.chave', `esperava 8 caracteres [a-z0-9], recebi ${descrever(q.chave)}`);
+  }
+  const nomes = new Set<string>();
+  const servicos = listaOuVazia(q.servicos, 'qa.servicos', TETO_DE_SERVICOS_DE_QA).map((item, i) =>
+    servicoDeQaValidado(item, i, nomes),
+  );
+  return { chave: q.chave, servicos };
+}
+
+/** `"<uid>:<gid>"`, inteiros >= 1 (sem zero a esquerda): nunca root, nem por `0:1000`. */
+function usuarioDeServicoValidado(valor: unknown, campo: string): string | null {
+  if (valor === undefined || valor === null) return null;
+  const m = typeof valor === 'string' ? /^([1-9][0-9]{0,9}):([1-9][0-9]{0,9})$/.exec(valor) : null;
+  if (m === null || Number(m[1]) > 4294967294 || Number(m[2]) > 4294967294) {
+    throw new EspecificacaoInvalidaError(campo, `esperava "<uid>:<gid>" inteiros diferentes de 0, recebi ${descrever(valor)}`);
+  }
+  return valor as string;
+}
+
+function servicoDeQaValidado(item: unknown, i: number, nomes: Set<string>): ServicoDeQa {
+  const campo = `qa.servicos[${i}]`;
+  const s = (item ?? {}) as Record<string, unknown>;
+  if (typeof s.nome !== 'string' || !NOME_DE_SERVICO.test(s.nome) || nomes.has(s.nome)) {
+    throw new EspecificacaoInvalidaError(`${campo}.nome`, `nome inválido ou repetido: ${descrever(s.nome)}`);
+  }
+  nomes.add(s.nome);
+  if (typeof s.imagem !== 'string' || !referenciaDeImagemAceitavel(s.imagem) || !DIGEST.test(s.imagem)) {
+    throw new EspecificacaoInvalidaError(`${campo}.imagem`, 'exige referência por digest (`nome@sha256:<64 hex>`), sem tag solta');
+  }
+  const env: Record<string, string> = {};
+  if (s.env !== undefined && s.env !== null) {
+    if (typeof s.env !== 'object' || Array.isArray(s.env) || Object.keys(s.env).length > 20) {
+      throw new EspecificacaoInvalidaError(`${campo}.env`, 'esperava objeto com até 20 chaves');
+    }
+    for (const [k, v] of Object.entries(s.env)) {
+      if (!CHAVE_DE_ENV.test(k) || typeof v !== 'string' || v.length > 1024 || temQuebraOuNul(v)) {
+        throw new EspecificacaoInvalidaError(`${campo}.env`, `variável ${JSON.stringify(k)} inválida`);
+      }
+      env[k] = v;
+    }
+  }
+  const dados = listaOuVazia(s.dados, `${campo}.dados`, 3).map((c) => {
+    if (typeof c !== 'string' || !CAMINHO_DE_DADOS.test(c) || c.split('/').includes('..')) {
+      throw new EspecificacaoInvalidaError(`${campo}.dados`, `caminho de tmpfs inválido: ${descrever(c)}`);
+    }
+    return c;
+  });
+  const usuario = usuarioDeServicoValidado(s.usuario, `${campo}.usuario`);
+  const comando = listaOuVazia(s.comando, `${campo}.comando`, 16).map((a) => {
+    if (typeof a !== 'string' || a.length === 0 || a.length > 200 || temQuebraOuNul(a)) {
+      throw new EspecificacaoInvalidaError(`${campo}.comando`, `argumento inválido: ${descrever(a)}`);
+    }
+    return a;
+  });
+  if (s.compartilhado !== undefined && typeof s.compartilhado !== 'boolean') {
+    throw new EspecificacaoInvalidaError(`${campo}.compartilhado`, 'esperava booleano');
+  }
+  return {
+    nome: s.nome,
+    imagem: s.imagem,
+    ...(Object.keys(env).length > 0 ? { env } : {}),
+    ...(dados.length > 0 ? { dados: dados as string[] } : {}),
+    ...(usuario !== null ? { usuario } : {}),
+    ...(comando.length > 0 ? { comando: comando as string[] } : {}),
+    ...(s.compartilhado === true ? { compartilhado: true } : {}),
   };
 }
 
@@ -318,4 +554,8 @@ function descrever(valor: unknown): string {
   } catch {
     return '(valor não serializável)';
   }
+}
+
+function temQuebraOuNul(texto: string): boolean {
+  return texto.includes("\n") || texto.includes("\r") || texto.includes("\0");
 }

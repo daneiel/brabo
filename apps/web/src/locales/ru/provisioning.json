@@ -1,0 +1,38 @@
+{
+  "provisioningPage": {
+    "title": "Подготовка репозитория",
+    "fallbackProjectName": "Проект",
+    "subtitle": "{{name}} · bootstrap Gitflow",
+    "successBanner": "Репозиторий успешно подготовлен.",
+    "failedBannerTitle": "Ошибка на шаге: {{step}}",
+    "failedBannerTitleNoStep": "Не удалось создать репозиторий",
+    "protectionFailureNote": "Защита веток часто не срабатывает в приватном репозитории на бесплатном тарифе. Можно продолжить без неё — блокировка merge в Brabo не зависит от защиты провайдера и продолжает действовать.",
+    "starting": "Запускаем подготовку…",
+    "goToProject": "Перейти к проекту",
+    "retry": "Повторить",
+    "proceedWithoutProtection": "Продолжить без защиты веток",
+    "working": "Работаем…",
+    "timedOut": "Мы перестали отслеживать через {{minutes}} мин.",
+    "timedOutDetail": "Это не значит, что произошла ошибка — подготовка выполняется внутри запроса, и медленный провайдер может ещё работать. Повторить безопасно: bootstrap идемпотентен и продолжит с шага, на котором остановился.",
+    "watchAgain": "Проверить снова",
+    "genericError": "Не удалось подготовить репозиторий."
+  },
+  "bootstrapSteps": {
+    "stepLabel": {
+      "commitPrTemplate": "Коммит шаблона PR",
+      "commitBranchingPolicy": "Коммит политики веток",
+      "commitGitignore": "Коммит базового .gitignore",
+      "createDevBranch": "Создать ветку dev",
+      "createQaBranch": "Создать ветку qa",
+      "protectBranches": "Защитить ветки"
+    },
+    "stateLabel": {
+      "pendente": "Ожидает",
+      "rodando": "Выполняется",
+      "ok": "OK",
+      "skip": "Пропущено",
+      "falha": "Ошибка"
+    },
+    "notSupportedNote": "не поддерживается"
+  }
+}

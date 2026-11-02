@@ -19,6 +19,8 @@ export interface SpendLinha {
   rotulo: string | null;
   actorKind: string | null;
   costMicros: number;
+  /** Parte de `costMicros` de modelo marcado `subscription` (RN-954). */
+  assinaturaMicros?: number;
   inputTokens: number;
   outputTokens: number;
   chamadas: number;
@@ -46,11 +48,17 @@ export interface WorkspaceSpendReport {
   workspaceId: string;
   ownerId: string;
   dias: number;
+  /** Recorte por projeto, quando pedido (RN-952); `null` = workspace inteiro. */
+  projectId?: string | null;
   totalMicros: number;
+  /** Parte do total de modelos `subscription`, separada do US$ pago (RN-954). */
+  assinaturaMicros?: number;
   inputTokens: number;
   outputTokens: number;
   chamadas: number;
   porModelo: SpendLinha[];
+  /** Por SESSÃO (RN-952). */
+  porSessao?: SpendLinha[];
   /** Por PROVIDER — fala de CREDENCIAL, e só existe na visão do owner (RN-186). */
   porProvider: SpendLinha[];
   porProjeto: SpendLinha[];
@@ -59,6 +67,36 @@ export interface WorkspaceSpendReport {
   porOwner: SpendLinha[];
   /** Partição de `porAtor` por `actorKind === 'agent'` (RN-188). */
   porAgente: SpendLinha[];
+  porDia: SpendPorDia[];
+}
+
+/**
+ * O gasto do PROJETO visto pelo MEMBRO (ADR 0233, RN-953): total e custo por
+ * agente/área. Não há `porProvider` nem credencial, e a ausência é o contrato.
+ */
+export interface ProjectSpendTeam {
+  projectId: string;
+  dias: number;
+  totalMicros: number;
+  assinaturaMicros?: number;
+  inputTokens: number;
+  outputTokens: number;
+  chamadas: number;
+  porAgente: SpendLinha[];
+  porArea: SpendLinha[];
+}
+
+/** O meu consumo no workspace, somado por projeto (RN-953). */
+export interface MyWorkspaceSpend {
+  workspaceId: string;
+  dias: number;
+  actorId: string;
+  totalMicros: number;
+  assinaturaMicros?: number;
+  inputTokens: number;
+  outputTokens: number;
+  chamadas: number;
+  porProjeto: SpendLinha[];
   porDia: SpendPorDia[];
 }
 

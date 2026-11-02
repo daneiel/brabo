@@ -23,9 +23,9 @@ const PROVIDER_LABEL_KEY: Record<GitProviderName, string> = {
 
 const PROVISIONING_BADGE: Record<
   Exclude<ProvisioningStatus, 'provisioned'>,
-  { tone: BadgeTone; labelKey: string; pulse?: boolean }
+  { tone: BadgeTone; labelKey: string; pulse?: boolean; emCurso?: boolean }
 > = {
-  provisioning: { tone: 'warning', labelKey: 'projectCard.provisioning.provisioning', pulse: true },
+  provisioning: { tone: 'warning', labelKey: 'projectCard.provisioning.provisioning', pulse: true, emCurso: true },
   provision_failed: { tone: 'danger', labelKey: 'projectCard.provisioning.failed' },
   // Fase 12a: repo adotado com plano gerado e ainda não decidido — nada roda
   // até o usuário aprovar ou dispensar (RN-045). O estado entrou no tipo e
@@ -102,6 +102,7 @@ export function ProjectCard({
             tone={provisioningBadge.tone}
             dot
             pulse={provisioningBadge.pulse}
+            emCurso={provisioningBadge.emCurso}
             className={styles.unreadBadge}
           >
             {t(provisioningBadge.labelKey)}

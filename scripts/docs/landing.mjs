@@ -65,6 +65,11 @@ const ESTAVEL = 'prd';
 // senão `/brabo/main/architecture` viraria `/brabo/prd/main/architecture`.
 const CAMINHO_APOSENTADO = 'main';
 
+// O prefixo de locale que o ADR 0216 aposentou: pt-BR virou o locale PADRÃO e
+// passou a morar na raiz do degrau. Link salvo para `/brabo/<degrau>/pt-BR/…`
+// é reescrito para `/brabo/<degrau>/…`, no molde do `main` acima.
+const LOCALE_APOSENTADO = 'pt-BR';
+
 /**
  * A versão publicada num degrau, lida das tags do próprio repositório.
  *
@@ -136,15 +141,29 @@ function paginaIndice(degraus) {
 <meta name="robots" content="noindex, follow">
 <link rel="canonical" href="https://daneiel.github.io/brabo/${ESTAVEL}/">
 <style>
+  /* Valores de design/tokens.css (o índice é um HTML avulso na raiz do Pages e
+     não alcança o arquivo): surface-0/1, border, text-primary/secondary/muted e
+     accent, escuro e claro. Mudou a paleta lá, mude aqui. */
   :root {
-    color-scheme: dark;
-    --fundo: #061b24;
-    --superficie: #0a2e3d;
-    --borda: #1c4a5a;
-    --texto: #f5ede0;
-    --suave: #aec6ce;
-    --tenue: #6e8a94;
-    --destaque: #d6633a;
+    color-scheme: dark light;
+    --fundo: #0d0d0f;
+    --superficie: #141417;
+    --borda: #2a2a30;
+    --texto: #ececef;
+    --suave: #a1a1aa;
+    --tenue: #86868f;
+    --destaque: #c8744f;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --fundo: #ffffff;
+      --superficie: #fafafa;
+      --borda: #e4e4e7;
+      --texto: #18181b;
+      --suave: #52525b;
+      --tenue: #696972;
+      --destaque: #a4502c;
+    }
   }
   * { box-sizing: border-box; }
   body {
@@ -240,6 +259,13 @@ function pagina404() {
     var aposentado = /^${CAMINHO_APOSENTADO}(?:\\/(.*))?$/.exec(resto);
     if (aposentado) {
       window.location.replace(raiz + '${ESTAVEL}/' + (aposentado[1] || '') + cauda);
+      return;
+    }
+    // O locale aposentado (ADR 0216): pt-BR virou o padrão e saiu do prefixo,
+    // então /brabo/<degrau>/${LOCALE_APOSENTADO}/<algo> -> /brabo/<degrau>/<algo>.
+    var localeAntigo = /^(${guarda})\\/${LOCALE_APOSENTADO}(?:\\/(.*))?$/.exec(resto);
+    if (localeAntigo) {
+      window.location.replace(raiz + localeAntigo[1] + '/' + (localeAntigo[2] || '') + cauda);
       return;
     }
     // Já está dentro de um degrau publicado: a página realmente não existe.

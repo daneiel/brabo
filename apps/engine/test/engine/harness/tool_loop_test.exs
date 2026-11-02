@@ -74,6 +74,81 @@ defmodule Engine.Harness.ToolLoopTest do
     assert out.max_iterations == 5
   end
 
+  # RN-780 (AT-459): resposta vazia cortada pelo teto é retentada uma vez.
+  defp cortada_vazia,
+    do: FakeEngineApiClient.final_response("") |> Map.put("truncated", true)
+
+  test "corte só de raciocínio: a volta é retentada uma vez e segue", %{ctx: ctx} do
+    Process.put(:fake_llm_turns, [cortada_vazia(), FakeEngineApiClient.final_response("pronto")])
+
+    assert {:ok, out} = ToolLoop.run(ctx)
+    refute Map.get(out, :corte_pelo_teto)
+    assert List.last(out.messages)["content"] == "pronto"
+    refute Enum.any?(out.messages, &(&1["role"] == "assistant" and &1["content"] == ""))
+  end
+
+  test "corte só de raciocínio repetido: para marcando corte_pelo_teto", %{ctx: ctx} do
+    Process.put(:fake_llm_turns, [cortada_vazia(), cortada_vazia()])
+
+    assert {:ok, out} = ToolLoop.run(ctx)
+    assert out.corte_pelo_teto == true
+  end
+
+  # RN-946 (AT-620): cortada com texto marca chave própria e não retenta.
+  test "corte no meio do texto: marca corte_com_texto, sem corte_pelo_teto", %{ctx: ctx} do
+    Process.put(:fake_llm_turns, [
+      FakeEngineApiClient.final_response("Vou registrá-lo") |> Map.put("truncated", true)
+    ])
+
+    assert {:ok, out} = ToolLoop.run(ctx)
+    assert out.corte_com_texto == true
+    refute Map.has_key?(out, :corte_pelo_teto)
+  end
+
+  test "não cortada com texto: não marca corte_com_texto", %{ctx: ctx} do
+    Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("pronto")])
+    assert {:ok, out} = ToolLoop.run(ctx)
+    refute Map.has_key?(out, :corte_com_texto)
+  end
+
+  # RN-810 (AT-484): falha de rede passageira do provider é retentada.
+  defp falha_de_rede,
+    do:
+      FakeEngineApiClient.final_response("")
+      |> Map.put("error", "getaddrinfo EAI_AGAIN openrouter.ai")
+      |> Map.put("errorCode", "connection")
+
+  test "falha de rede do provider: retenta e segue quando a rede volta", %{ctx: ctx} do
+    Process.put(:fake_llm_turns, [falha_de_rede(), FakeEngineApiClient.final_response("pronto")])
+
+    assert {:ok, out} = ToolLoop.run(ctx)
+    refute Map.get(out, :last_error)
+    assert List.last(out.messages)["content"] == "pronto"
+  end
+
+  test "falha de rede que persiste esgota o teto e devolve o erro", %{ctx: ctx} do
+    Process.put(:fake_llm_turns, [falha_de_rede(), falha_de_rede(), falha_de_rede()])
+
+    assert {:ok, out} = ToolLoop.run(ctx)
+    assert out.last_error =~ "EAI_AGAIN"
+    assert out.last_error_code == "connection"
+  end
+
+  test "RN-949: tool_call_as_text chega em last_error_code, sem agent.response", %{ctx: ctx} do
+    Process.put(:fake_llm_turns, [
+      FakeEngineApiClient.final_response("")
+      |> Map.put("error", "chamada em XML (modelo x)")
+      |> Map.put("errorCode", "tool_call_as_text")
+    ])
+
+    assert {:ok, out} = ToolLoop.run(ctx)
+    assert out.last_error =~ "XML"
+    assert out.last_error_code == "tool_call_as_text"
+
+    assert Engine.Agents.FalhaDeTurno.origem({:final, out.last_error, out.last_error_code}) ==
+             "modelo"
+  end
+
   test "caminho feliz: resposta final imediata, sem tool calls", %{ctx: ctx} do
     Process.put(:fake_llm_turns, [FakeEngineApiClient.final_response("tudo pronto")])
 

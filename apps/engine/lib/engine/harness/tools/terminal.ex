@@ -13,7 +13,10 @@ defmodule Engine.Harness.Tools.Terminal do
     %{
       name: "terminal",
       description:
-        "Executa um comando de shell no workspace do projeto (via pipeline de aprovação).",
+        "Executa um comando de shell no workspace do projeto (via pipeline de aprovação). " <>
+          "O shell do container é `sh` (dash), não bash: sem brace expansion " <>
+          "(`mkdir -p src/{a,b}` cria uma pasta chamada `{a,b}`), sem `[[ ]]`, sem " <>
+          "arrays e sem `source` — use `mkdir -p src/a src/b`, `[ ]` e `.`.",
       parameters: %{
         "type" => "object",
         "properties" => %{

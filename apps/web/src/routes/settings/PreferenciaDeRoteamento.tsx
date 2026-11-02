@@ -80,35 +80,47 @@ export function PreferenciaDeRoteamento({
   const rotuloDoValor = valor
     ? t(`roteamento.options.${valor}`)
     : t('roteamento.options.hub');
+  // O teto de preço (priceCeiling) é do mesmo provider: dito junto do critério.
+  const teto = doProvider.capabilities.priceCeiling ? (
+    <span className={styles.vazioComTexto} data-roteamento="teto">
+      {t('roteamento.teto')}
+    </span>
+  ) : null;
 
   if (!proprio) {
     const nivel = t(`cascata.niveis.${resolvido.origin as ModelBindingScope}`);
     return (
-      <span className={styles.vazioComTexto} data-roteamento="herdado">
-        {t('roteamento.inherited', { valor: rotuloDoValor, nivel })}{' '}
-        {t('roteamento.inheritedHint')}
-      </span>
+      <>
+        <span className={styles.vazioComTexto} data-roteamento="herdado">
+          {t('roteamento.inherited', { valor: rotuloDoValor, nivel })}{' '}
+          {t('roteamento.inheritedHint')}
+        </span>
+        {teto}
+      </>
     );
   }
 
   return (
-    <Select
-      aria-label={t('roteamento.ariaLabel', { alvo })}
-      value={valor ?? HUB_DECIDE}
-      disabled={!podeEditar}
-      onChange={(evento) => {
-        const escolhido = evento.target.value;
-        onChange(
-          escolhido === HUB_DECIDE ? null : (escolhido as RoutingPreference),
-        );
-      }}
-    >
-      <option value={HUB_DECIDE}>{t('roteamento.options.hub')}</option>
-      {OPCOES.map((opcao) => (
-        <option key={opcao} value={opcao}>
-          {t(`roteamento.options.${opcao}`)}
-        </option>
-      ))}
-    </Select>
+    <>
+      <Select
+        aria-label={t('roteamento.ariaLabel', { alvo })}
+        value={valor ?? HUB_DECIDE}
+        disabled={!podeEditar}
+        onChange={(evento) => {
+          const escolhido = evento.target.value;
+          onChange(
+            escolhido === HUB_DECIDE ? null : (escolhido as RoutingPreference),
+          );
+        }}
+      >
+        <option value={HUB_DECIDE}>{t('roteamento.options.hub')}</option>
+        {OPCOES.map((opcao) => (
+          <option key={opcao} value={opcao}>
+            {t(`roteamento.options.${opcao}`)}
+          </option>
+        ))}
+      </Select>
+      {teto}
+    </>
   );
 }

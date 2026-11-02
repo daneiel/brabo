@@ -20,6 +20,7 @@ defmodule Engine.Agents.ArquitetoServer do
     FalhaDeTurno,
     Reidratacao,
     ResultadoDeFerramenta,
+    TextoDoTurno,
     TurnoAssincrono,
     TurnoOrfao
   }
@@ -33,7 +34,10 @@ defmodule Engine.Agents.ArquitetoServer do
     DeclareModuleContracts,
     ProposeAdr,
     EmitInsight,
-    EmitArtifact
+    DeclareOpenQuestion,
+    EmitArtifact,
+    ListarAdrsPropostas,
+    ListarBacklog
   }
 
   alias Engine.Sessions.EngineApiClient
@@ -114,7 +118,14 @@ defmodule Engine.Agents.ArquitetoServer do
          EmitInsight.spec(),
          # Frente 3 do plano de decision_record — mesma ferramenta do
          # Criativo, tipo novo (`decision_record`).
-         EmitArtifact.spec()
+         EmitArtifact.spec(),
+         DeclareOpenQuestion.spec(),
+         Engine.Harness.Tools.RegistrarPlano.spec(),
+         # RN-772/773 (AT-454): leituras do estado que muda FORA da conversa
+         # (a aprovação das ADRs, as tarefas do PO) — sem elas o Arquiteto
+         # afirmava o retrato da hora em que propôs.
+         ListarAdrsPropostas.spec(),
+         ListarBacklog.spec()
        ],
        # Guardado enquanto o turno roda numa Task supervisionada, fora do
        # handler que bloqueava o processo inteiro — é o que permite um
@@ -122,6 +133,9 @@ defmodule Engine.Agents.ArquitetoServer do
        # RN-673: a fila de mensagens que chegaram com turno em curso,
        # reconstruída do log (sobrevive a restart), e como montar o turno
        # que a lê. Ver `TurnoAssincrono.receber_mensagem/4`.
+       # AT-582: a retomada do turno interrompido, ANTES da fila (a fila espera o fim dela).
+       retomada_agendada: TurnoAssincrono.retomada_ao_subir(project_id, session_id, @agent),
+       montar_turno_de_retomada: &turno_de_retomada/1,
        fila_de_mensagens: TurnoAssincrono.fila_ao_subir(project_id, session_id, @agent),
        montar_turno_de_mensagem: &turno_de_mensagem/2,
        turno_assincrono: nil
@@ -134,7 +148,10 @@ defmodule Engine.Agents.ArquitetoServer do
   @impl true
   def handle_cast(:kickoff, state) do
     work = state |> append(user_msg(kickoff_instruction(state))) |> compact()
-    TurnoAssincrono.iniciar(state, nil, fn -> run_turn(work, @max_iterations) end)
+
+    TurnoAssincrono.iniciar(state, nil, fn ->
+      run_turn(work, Engine.Harness.FalhaRepetida.inicio_de_turno(@max_iterations))
+    end)
   end
 
   @impl true
@@ -192,7 +209,15 @@ defmodule Engine.Agents.ArquitetoServer do
   # também para o turno que lê a FILA (várias falas num texto só).
   defp turno_de_mensagem(state, text) do
     work = state |> append(user_msg(text)) |> compact()
-    fn -> run_turn(work, @max_iterations) end
+    fn -> run_turn(work, Engine.Harness.FalhaRepetida.inicio_de_turno(@max_iterations)) end
+  end
+
+  # AT-582: o turno de retomada não tem fala nova do usuário; o histórico
+  # reidratado já termina nela e a orientação vai efêmera (`RetomadaDoTurno`).
+  defp turno_de_retomada(state) do
+    fn ->
+      run_turn(compact(state), Engine.Harness.FalhaRepetida.inicio_de_turno(@max_iterations))
+    end
   end
 
   @impl true
@@ -210,16 +235,18 @@ defmodule Engine.Agents.ArquitetoServer do
   defp executar_offer_infra_handoff(state) do
     instruction =
       user_msg(
-        "O usuário confirmou que a arquitetura está pronta. Finalize " <>
-          "quaisquer considerações pendentes — o handoff para o InfraAgent " <>
-          "será oferecido em seguida."
+        "O usuário JÁ confirmou que a arquitetura está pronta — não peça " <>
+          "essa confirmação de novo. Finalize quaisquer considerações " <>
+          "pendentes; o SISTEMA oferece em seguida o handoff à Infra, que " <>
+          "sobe o container do projeto (não prometa pipeline nem deploy).\n\n" <>
+          ListarAdrsPropostas.contexto_de_prontidao(state)
       )
 
     state =
       state
       |> append(instruction)
       |> compact()
-      |> run_turn(@max_iterations)
+      |> run_turn(Engine.Harness.FalhaRepetida.inicio_de_turno(@max_iterations))
 
     # Era `{:ok, _handoff} = ...`: um `MatchError` no `{:error, _}` derrubava
     # o GenServer inteiro (`restart: :temporary`, sem reinício automático),
@@ -244,10 +271,17 @@ defmodule Engine.Agents.ArquitetoServer do
   # já aplicada ao PO: um Arquiteto que esgotasse as 14 iterações terminava
   # sem evento nenhum, indistinguível de um turno que simplesmente acabou.
   defp run_turn(state, remaining) when remaining <= 0 do
-    emit(state, "toolloop.limit_reached", %{
-      iteration: @max_iterations,
-      max_iterations: @max_iterations
-    })
+    # AT-590: lê a linha ANTES de gravar o texto (que a esvaziaria) e a põe no evento.
+    gravado = Engine.Agents.GravadoNoTurno.descarregar()
+    gravar_texto_do_turno(state, "", nil)
+
+    Engine.Harness.FalhaRepetida.narrar_ou(state.project_id, state.session_id, @agent, fn ->
+      emit(state, "toolloop.limit_reached", %{
+        iteration: @max_iterations,
+        max_iterations: @max_iterations,
+        gravado: gravado
+      })
+    end)
 
     state
   end
@@ -276,23 +310,29 @@ defmodule Engine.Agents.ArquitetoServer do
       # servidor é `restart: :temporary`, ele morria e não voltava — a correção
       # de uma falha silenciosa tinha virado uma QUEDA, com o gatilho mais
       # corriqueiro que existe (acabar o orçamento).
-      {:ok, %{"error" => erro}} when is_binary(erro) and erro != "" ->
-        emit_falha(state, {:final, erro})
+      {:ok, %{"error" => erro} = frame} when is_binary(erro) and erro != "" ->
+        gravar_texto_do_turno(state, "", nil)
+        emit_falha(state, {:final, erro, Map.get(frame, "errorCode")})
         state
 
       {:ok, %{"message" => message} = frame} ->
         content = Map.get(message, "content", "")
         model_name = Map.get(frame, "modelName")
-        state = append(state, assistant_msg(content))
-        if content != "", do: emit_response(state, content, model_name)
+        state = append(state, Engine.Agents.MensagemDoAssistente.de(content, message))
 
         case tool_calls(message, state.tool_specs) do
           [] ->
+            # AT-572: fecho sem texto nem corte é falha do modelo, dita no fio (agent.error).
+            if gravar_texto_do_turno(state, content, model_name) == :vazio,
+              do: emit_falha(state, :resposta_vazia)
+
             state
 
           calls ->
+            # RN-698: o texto desta volta continua na próxima.
+            TextoDoTurno.acumular(content, model_name)
             state = Enum.reduce(calls, state, &dispatch_tool/2)
-            run_turn(state, remaining - 1)
+            run_turn(state, Engine.Harness.FalhaRepetida.restante(remaining - 1))
         end
 
       {:error, reason} ->
@@ -300,6 +340,7 @@ defmodule Engine.Agents.ArquitetoServer do
         # indistinguível de sucesso, e o motivo real ia só por broadcast, que
         # é efêmero. A falha vira evento durável COM origem, e o agente diz o
         # que houve no próprio fio.
+        gravar_texto_do_turno(state, "", nil)
         emit_falha(state, reason)
         state
     end
@@ -313,8 +354,9 @@ defmodule Engine.Agents.ArquitetoServer do
     emit(state, "tool.call", %{tool: name, args: args})
     broadcast(state, "tool.call", %{tool: name, agent: @agent})
 
-    resultado = run_tool(name, args, state)
+    resultado = executar_ferramenta(name, args, state)
     emit(state, "tool.result", ResultadoDeFerramenta.payload(name, resultado))
+    Engine.Agents.GravadoNoTurno.anotar(name, args, resultado, state.project_id)
     {_, text} = resultado
 
     append(state, %{
@@ -324,6 +366,13 @@ defmodule Engine.Agents.ArquitetoServer do
       "name" => name,
       :pinned => false
     })
+  end
+
+  # RN-719: argumentos normalizados contra a spec e exceção vira erro do laço.
+  defp executar_ferramenta(name, args, state) do
+    Engine.Harness.ArgumentosDeFerramenta.executar(name, args, state.tool_specs, fn a ->
+      run_tool(name, a, state)
+    end)
   end
 
   defp run_tool("create_module_map", args, state), do: CreateModuleMap.run(args, state)
@@ -338,6 +387,18 @@ defmodule Engine.Agents.ArquitetoServer do
   defp run_tool("propose_adr", args, state), do: ProposeAdr.run(args, state)
   defp run_tool("emit_insight", args, state), do: EmitInsight.run(args, state)
   defp run_tool("emit_artifact", args, state), do: EmitArtifact.run(args, state)
+
+  defp run_tool("declare_open_question", args, state),
+    do: DeclareOpenQuestion.run(args, state)
+
+  defp run_tool("listar_adrs_propostas", args, state),
+    do: ListarAdrsPropostas.run(args, state)
+
+  defp run_tool("listar_backlog", args, state), do: ListarBacklog.run(args, state)
+
+  defp run_tool("registrar_plano", args, state),
+    do: Engine.Harness.Tools.RegistrarPlano.run(args, state)
+
   defp run_tool(name, _args, _state), do: {:error, "ferramenta desconhecida: #{name}"}
 
   # --- Kickoff ---
@@ -348,7 +409,8 @@ defmodule Engine.Agents.ArquitetoServer do
     case Reidratacao.eventos_do_tipo(state.project_id, state.session_id, [
            "artifact.product_brief",
            "artifact.business_rule",
-           "backlog.story_created"
+           "backlog.story_created",
+           "artifact.decision_record"
          ]) do
       {:ok, events, truncado?} -> build_kickoff(events) <> Reidratacao.aviso_de_recorte(truncado?)
       _ -> "Defina a arquitetura do produto (module_map, ADRs, insights)."
@@ -383,6 +445,18 @@ defmodule Engine.Agents.ArquitetoServer do
         "- story_id=#{Map.get(p, "storyId")} | #{Map.get(p, "title", "")}"
       end)
 
+    # RN-711 (AT-370): as restrições técnicas que o usuário declarou viram
+    # `decision_record` (o Criativo as registra); o Arquiteto as lê aqui.
+    restricoes =
+      events
+      |> Enum.filter(&(Map.get(&1, "type") == "artifact.decision_record"))
+      |> Enum.map_join("\n", fn r ->
+        p = Map.get(r, "payload", %{})
+        "- #{Map.get(p, "choice", "")} (contexto: #{Map.get(p, "context", "")})"
+      end)
+
+    restricoes = if restricoes == "", do: "(nenhuma registrada)", else: restricoes
+
     """
     Você recebeu o produto do PO. Defina a ARQUITETURA:
     1. create_module_map: proponha os módulos (name, stack, responsibility, depends_on) SEM
@@ -409,6 +483,10 @@ defmodule Engine.Agents.ArquitetoServer do
     8. emit_insight: registre tensões entre as regras e a arquitetura (ex.: um RNF sem
        módulo que o atenda).
 
+    O status das suas ADRs e as tarefas do backlog mudam fora desta conversa: antes de
+    afirmá-los, leia `listar_adrs_propostas` e `listar_backlog` — nunca o que um resultado
+    anterior dizia.
+
     PRODUCT BRIEF:
     #{summary}
 
@@ -417,6 +495,11 @@ defmodule Engine.Agents.ArquitetoServer do
 
     HISTÓRIAS DO BACKLOG:
     #{stories}
+
+    RESTRIÇÕES E DECISÕES REGISTRADAS (decision_record — respeite-as; ex.: "um módulo só"
+    significa UM módulo no create_module_map. Se precisar contrariar alguma, diga QUAL e
+    POR QUÊ na `responsibility` do módulo e na sua resposta):
+    #{restricoes}
     """
   end
 
@@ -438,9 +521,6 @@ defmodule Engine.Agents.ArquitetoServer do
   end
 
   defp user_msg(text), do: %{"role" => "user", "content" => text, :pinned => false}
-
-  defp assistant_msg(content),
-    do: %{"role" => "assistant", "content" => content, :pinned => false}
 
   defp append(state, message), do: %{state | messages: state.messages ++ [message]}
 
@@ -465,19 +545,24 @@ defmodule Engine.Agents.ArquitetoServer do
 
   # `model_name` viaja do frame `final` da api (achado do problema 2). Sem
   # default: o único call site aqui sempre passa os 3 argumentos.
-  defp emit_response(state, content, model_name),
-    do: emit(state, "agent.response", %{content: content, modelName: model_name})
+  # RN-698: o texto do turno inteiro, numa `agent.response` só.
+  defp gravar_texto_do_turno(state, ultimo, model_name) do
+    case TextoDoTurno.payload_do_turno(ultimo, model_name) do
+      nil -> :vazio
+      payload -> emit(state, "agent.response", payload)
+    end
+  end
 
   # A falha, gravada e DITA. O `broadcast` continua, para quem está com a aba
   # aberta ver na hora — mas ele deixou de ser a única fonte.
   defp emit_falha(state, reason) do
     origem = FalhaDeTurno.origem(reason)
-    mensagem = FalhaDeTurno.mensagem(reason)
+    mensagem = FalhaDeTurno.mensagem(reason, state.project_id)
 
     emit(state, "agent.error", %{
       origem: origem,
       mensagem: mensagem,
-      reason: inspect(reason)
+      reason: FalhaDeTurno.diagnostico(reason)
     })
 
     broadcast(state, "agent.error", %{origem: origem, mensagem: mensagem})
@@ -498,7 +583,7 @@ defmodule Engine.Agents.ArquitetoServer do
     emit(state, "agent.error", %{
       origem: origem,
       mensagem: mensagem,
-      reason: inspect(reason)
+      reason: FalhaDeTurno.diagnostico(reason)
     })
 
     broadcast(state, "agent.error", %{origem: origem, mensagem: mensagem})

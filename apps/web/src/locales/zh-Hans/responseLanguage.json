@@ -1,0 +1,48 @@
+{
+  "account": {
+    "title": "回复语言",
+    "eyebrow": "智能体",
+    "subtitle": "智能体在任何项目和会话中用哪种语言回复您。它与界面语言是分开的：更改一个不会更改另一个。在会话中，您仍可在会话栏里为该会话单独固定另一种语言。",
+    "label": "智能体回复语言",
+    "automatic": "自动",
+    "otherCode": "其他代码…",
+    "otherLabel": "语言代码 (BCP-47)",
+    "otherHint": "例如：pt-PT、es-MX、fr-CA。api 会拒绝不是语言的代码。",
+    "save": "保存",
+    "saving": "正在保存…",
+    "saved": "回复语言已保存",
+    "error": "无法保存回复语言",
+    "loading": "正在加载回复语言…",
+    "loadError": "无法读取回复语言。",
+    "effective": "您的回复实际使用的语言：{{idioma}} —— {{origem}}。",
+    "detectedNote": "根据您的消息检测并经您确认的语言：{{idioma}}。"
+  },
+  "origin": {
+    "sessao": "由您在此会话中固定",
+    "conta": "由您在账户中选择",
+    "detectado": "根据您的消息检测并经您确认",
+    "interface": "界面语言，因为尚未选择或检测到任何语言"
+  },
+  "session": {
+    "label": "回复：",
+    "selectAria": "此会话中的回复语言",
+    "followAccount": "跟随账户（{{idioma}}）",
+    "otherLabel": "此会话的语言代码 (BCP-47)",
+    "pin": "固定",
+    "effective": "{{idioma}}，{{origem}}",
+    "readOnly": "在此更改需要 developer 角色",
+    "accountLink": "账户",
+    "loading": "回复语言…",
+    "loadError": "回复语言不可用",
+    "error": "无法在此会话中固定语言"
+  },
+  "detection": {
+    "aria": "关于检测到的语言的询问",
+    "question": "我们检测到您使用 {{idioma}} 书写 —— 回复时使用 {{idioma}} 吗？",
+    "note": "根据您在此账户中的消息检测。在您回答之前不会有任何改变。",
+    "confirm": "使用 {{idioma}}",
+    "decline": "否",
+    "later": "以后再说",
+    "error": "无法保存关于检测到的语言的回答"
+  }
+}

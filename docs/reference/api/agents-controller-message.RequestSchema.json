@@ -1,1 +1,0 @@
-{"title":"Body","body":{"required":true,"content":{"application/json":{"schema":{"type":"object","properties":{"text":{"type":"string","example":"I want to allow discount coupons at checkout.","minLength":1,"maxLength":10000,"description":"User's message to the session's active agent."}},"required":["text"],"title":"SendAgentMessageDto"}}}}}

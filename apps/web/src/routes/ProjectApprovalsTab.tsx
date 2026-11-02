@@ -1,3 +1,5 @@
+import { Item } from '../components/shadcn/item';
+import { Shimmer } from '../components/ui/Shimmer';
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -28,6 +30,7 @@ import {
   type SecOpsVerdictPayload,
   type Task,
 } from '../lib/api-types';
+import { pedirAba } from '../lib/contagens-do-projeto';
 import { ApprovalCard } from '../components/ApprovalCard';
 import { useDecisoesDaPolitica } from '../lib/decisao-da-politica-queries';
 import { PrGateTimeline, type GateVerdict } from '../components/PrGateTimeline';
@@ -87,7 +90,7 @@ function BlocoDeDados<T>({
     );
   }
   if (query.data === undefined) {
-    return <div className={styles.clean}>{textoCarregando}</div>;
+    return <Item variant="outline" className={styles.clean}><Shimmer>{textoCarregando}</Shimmer></Item>;
   }
   return <>{children(query.data)}</>;
 }
@@ -139,7 +142,8 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
   // gateStatus setado (mesmo já tendo chegado a awaiting_user).
   const gateTasks: Task[] = (epics ?? []).flatMap((epic) =>
     epic.stories.flatMap((story) =>
-      story.tasks.filter((t) => t.gateStatus !== null || t.blocked),
+      // RN-705: tarefa `done` (PR mergeada) saiu da revisão — não espera mais ninguém.
+      story.tasks.filter((t) => t.status !== 'done' && (t.gateStatus !== null || t.blocked)),
     ),
   );
 
@@ -461,7 +465,7 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
         >
           {() =>
             !latestSession ? (
-              <div className={styles.clean}>{t('approvalsTab.pending.noSession')}</div>
+              <Item variant="outline" className={styles.clean}>{t('approvalsTab.pending.noSession')}</Item>
             ) : (
               <BlocoDeDados
                 query={pendentesQuery}
@@ -534,7 +538,7 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
         >
           {() =>
             gateTasks.length === 0 ? (
-              <div className={styles.clean}>{t('approvalsTab.devPrs.empty')}</div>
+              <Item variant="outline" className={styles.clean}>{t('approvalsTab.devPrs.empty')}</Item>
             ) : (
               <div className={styles.queue}>
                 {gateTasks.map((task) => (
@@ -567,16 +571,26 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
         >
           {(infraArtifacts) =>
             infraArtifacts.length === 0 ? (
-              <div className={styles.clean}>{t('approvalsTab.infraPrs.empty')}</div>
+              <Item variant="outline" className={styles.clean}>{t('approvalsTab.infraPrs.empty')}</Item>
             ) : (
               <div className={styles.queue}>
                 {infraArtifacts.map((artifact) => (
-                  <PrGateTimeline
-                    key={artifact.id}
-                    task={artifact}
-                    prAction={infraPrActionFor(artifact.prActionId)}
-                    verdicts={infraVerdictsFor(artifact.prActionId)}
-                  />
+                  <div key={artifact.id}>
+                    <PrGateTimeline
+                      task={artifact}
+                      prAction={infraPrActionFor(artifact.prActionId)}
+                      verdicts={infraVerdictsFor(artifact.prActionId)}
+                    />
+                    {/* RN-729: a etapa "Você" diz ONDE agir — o merge mora na
+                        aba PRs, e o botão leva até ela pela moldura. */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => pedirAba({ projectId, tab: 'prs' })}
+                    >
+                      {t('approvalsTab.infraPrs.mergeLink')}
+                    </Button>
+                  </div>
                 ))}
               </div>
             )

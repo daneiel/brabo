@@ -1,14 +1,17 @@
+import type React from 'react';
 import type { InputHTMLAttributes, ReactNode } from 'react';
 import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { EyeIcon, EyeOffIcon } from './icons';
-import styles from './Input.module.css';
+import { Input as CampoInput } from '@/components/shadcn/input';
+import { Field, FieldDescription, FieldError, FieldLabel, FieldLabelRow } from '@/components/shadcn/field';
+import { InputFieldIcon, InputFieldToggle, InputFieldWrapper } from '@/components/shadcn/input-group';
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   mono?: boolean;
   icon?: ReactNode;
   /** Rótulo visível, associado ao campo por id. */
-  label?: string;
+  label?: React.ReactNode;
   /** Mensagem de erro sob o campo. Também marca o input como inválido. */
   error?: string | null;
   /** Texto de apoio, mostrado quando não há erro. */
@@ -16,7 +19,7 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   /**
    * Fundo afundado (`--code-bg`), para o campo se separar do card que o
    * contém (ADR 0036; o fundo passou de `--surface-2` a `--code-bg` na FASE
-   * 17a, ver a nota em `Input.module.css`).
+   * 17a, ver a nota em `shadcn/input.tsx`).
    *
    * É prop e não default porque o `Input` é usado por cinco telas fora de auth, e
    * o `design/COMPONENTS.md` especifica `--surface-0`/`--surface-1` para campo.
@@ -66,7 +69,6 @@ export function Input({
   preenchido,
   revelavel,
   acaoNoLabel,
-  className,
   id,
   type,
   ...rest
@@ -82,23 +84,14 @@ export function Input({
   const podeRevelar = revelavel === true && type === 'password';
   const tipoEfetivo = podeRevelar && revelado ? 'text' : type;
 
-  const classes = [
-    styles.input,
-    mono && styles.mono,
-    icon && styles.withIcon,
-    podeRevelar && styles.withToggle,
-    preenchido && styles.preenchido,
-    error && styles.invalid,
-    className,
-  ]
-    .filter(Boolean)
-    .join(' ');
-
   const campo = (
-    <input
+    <CampoInput
       id={inputId}
-      className={classes}
       type={tipoEfetivo}
+      data-mono={mono ? '' : undefined}
+      data-icone={icon ? '' : undefined}
+      data-revelavel={podeRevelar ? '' : undefined}
+      data-preenchido={preenchido ? '' : undefined}
       aria-invalid={error ? true : undefined}
       aria-describedby={error || hint ? descricaoId : undefined}
       {...rest}
@@ -107,13 +100,12 @@ export function Input({
 
   const corpo =
     icon || podeRevelar ? (
-      <div className={styles.wrapper}>
-        {icon && <span className={styles.icon}>{icon}</span>}
+      <InputFieldWrapper>
+        {icon && <InputFieldIcon>{icon}</InputFieldIcon>}
         {campo}
         {podeRevelar && (
-          <button
+          <InputFieldToggle
             type="button"
-            className={styles.toggle}
             // Rótulo diz a AÇÃO, não o estado: é o que o leitor de tela anuncia
             // ao focar, e "senha visível" deixaria a pessoa sem saber o que o
             // botão faz.
@@ -122,43 +114,33 @@ export function Input({
             onClick={() => setRevelado((v) => !v)}
           >
             {revelado ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
-          </button>
+          </InputFieldToggle>
         )}
-      </div>
+      </InputFieldWrapper>
     ) : (
       campo
     );
 
   if (!label && !error && !hint && !acaoNoLabel) return corpo;
 
-  const rotulo = label && (
-    <label className={styles.label} htmlFor={inputId}>
-      {label}
-    </label>
-  );
+  const rotulo = label && <FieldLabel htmlFor={inputId}>{label}</FieldLabel>;
 
   return (
-    <div className={styles.campo}>
+    <Field>
       {acaoNoLabel ? (
-        <div className={styles.linhaLabel}>
+        <FieldLabelRow>
           {rotulo}
           {acaoNoLabel}
-        </div>
+        </FieldLabelRow>
       ) : (
         rotulo
       )}
       {corpo}
       {error ? (
-        <span id={descricaoId} className={styles.erro} role="alert">
-          {error}
-        </span>
+        <FieldError id={descricaoId}>{error}</FieldError>
       ) : (
-        hint && (
-          <span id={descricaoId} className={styles.hint}>
-            {hint}
-          </span>
-        )
+        hint && <FieldDescription id={descricaoId}>{hint}</FieldDescription>
       )}
-    </div>
+    </Field>
   );
 }

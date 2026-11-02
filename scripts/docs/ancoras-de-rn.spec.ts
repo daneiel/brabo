@@ -65,17 +65,27 @@ describe('conferirAncoras — mutação', () => {
 describe('a árvore real', () => {
   const lista = arquivosDeRn(arquivos) as string[];
 
-  it('varre os três arquivos de RN e as traduções pt-BR', () => {
+  it('varre os três arquivos de RN da fonte pt-BR', () => {
     expect(lista).toEqual(
       expect.arrayContaining([
         'docs/business-rules.md',
         'docs/business-rules/custo.md',
         'docs/business-rules/autenticacao.md',
-        'website/i18n/pt-BR/docusaurus-plugin-content-docs/current/business-rules.md',
-        'website/i18n/pt-BR/docusaurus-plugin-content-docs/current/business-rules/custo.md',
-        'website/i18n/pt-BR/docusaurus-plugin-content-docs/current/business-rules/autenticacao.md',
       ]),
     );
+  });
+
+  it('pede o glob de cada locale traduzido (ADR 0216)', () => {
+    const pedidos: string[] = [];
+    arquivosDeRn((g: string) => {
+      pedidos.push(g);
+      return [];
+    });
+    for (const l of ['en', 'ru', 'zh-Hans']) {
+      expect(pedidos).toContain(`website/i18n/${l}/docusaurus-plugin-content-docs/current/business-rules.md`);
+      expect(pedidos).toContain(`website/i18n/${l}/docusaurus-plugin-content-docs/current/business-rules/*.md`);
+    }
+    expect(pedidos.some((g) => g.includes('i18n/pt-BR'))).toBe(false);
   });
 
   it('todo cabeçalho de RN tem a âncora certa, e a varredura não é cega', () => {

@@ -1,0 +1,325 @@
+{
+  "semFrase": "подробнее",
+  "actions": {
+    "unknownVerb": "предлагает действие",
+    "terminal": {
+      "verb": "хочет выполнить команду",
+      "phraseWithCommand": "Выполняет команду \"{{command}}\" в терминале проекта.",
+      "phraseFallback": "Выполняет команду в терминале проекта."
+    },
+    "gitCommit": {
+      "verb": "предлагает изменение",
+      "base": "Создаёт коммит",
+      "filesSuffix_one": " из {{count}} файла",
+      "filesSuffix_few": " из {{count}} файлов",
+      "filesSuffix_many": " из {{count}} файлов",
+      "filesSuffix_other": " из {{count}} файла",
+      "pathSuffix": " файла {{path}}",
+      "branchSuffix": " в ветке {{branch}}",
+      "repoSuffix": " в репозитории проекта",
+      "messageSuffix": ": \"{{message}}\""
+    },
+    "gitPush": {
+      "verb": "хочет отправить изменения",
+      "withBranch": "Отправляет ветку {{branch}} в удалённый репозиторий проекта.",
+      "fallback": "Отправляет рабочую ветку в удалённый репозиторий проекта."
+    },
+    "prOpen": {
+      "verb": "открыл pull request",
+      "base": "Открывает pull request",
+      "routeBoth": " из {{source}} в {{target}}",
+      "routeSourceOnly": " из {{source}}",
+      "titleSuffix": ": \"{{title}}\""
+    },
+    "spend": {
+      "verb": "запрашивает дополнительные расходы",
+      "base": "Разрешает расход токенов сверх уже заданного бюджета",
+      "reasonSuffix": " — {{reason}}"
+    },
+    "gitRepoCreate": {
+      "verb": "хочет создать репозиторий",
+      "base": "Создаёт репозиторий",
+      "named": " {{name}}",
+      "unnamed": " проекта",
+      "atProvider": " в {{provider}}",
+      "atDefaultProvider": " у настроенного git-провайдера",
+      "withVisibility": " с видимостью {{visibility}}"
+    },
+    "gitBranchCreate": {
+      "verb": "хочет создать ветку",
+      "base": "Создаёт ветку",
+      "named": " {{branch}}",
+      "fromRef": " от {{from}}",
+      "suffix": " в репозитории проекта."
+    },
+    "gitBranchProtect": {
+      "verb": "хочет защитить ветку",
+      "base": "Включает защиту ветки",
+      "named": " {{branch}}",
+      "suffix": " — после этого в неё ничего не попадёт без pull request."
+    },
+    "writeFile": {
+      "verb": "предлагает записать файл",
+      "base": "Записывает файл",
+      "pathSuffix": " {{path}}",
+      "fixedSuffix": " в рабочем пространстве — вне области, которую этот агент меняет сам."
+    },
+    "openAdrPr": {
+      "verb": "открыл pull request с ADR",
+      "base": "Открывает pull request с ADR",
+      "titled": " \"{{title}}\"",
+      "atFile": " в docs/adr/{{slug}}.md"
+    },
+    "openInfraPr": {
+      "verb": "открыл pull request инфраструктуры",
+      "base": "Открывает pull request инфраструктуры",
+      "titled": " \"{{title}}\"",
+      "filesSuffix_one": " с {{count}} файлом",
+      "filesSuffix_few": " с {{count}} файлами",
+      "filesSuffix_many": " с {{count}} файлами",
+      "filesSuffix_other": " с {{count}} файла"
+    },
+    "gitMerge": {
+      "verb": "хочет выполнить merge",
+      "base": "Выполняет merge pull request",
+      "prId": " #{{pr}}",
+      "target": " в {{target}}",
+      "suffix": " в репозитории проекта."
+    },
+    "instructionPatch": {
+      "verb": "предлагает изменить инструкцию агента",
+      "base": "Изменяет файл инструкции {{agent}}",
+      "transition": " с v{{from}} на v{{to}}",
+      "suffix": " — действует для его следующих ходов."
+    },
+    "parallelize": {
+      "verb": "хочет ещё одного агента параллельно",
+      "base": "Запускает ещё одного агента работать параллельно",
+      "module": " в модуле {{module}}",
+      "activeCount_one": " — в сессии уже {{count}} активный агент при лимите {{max}}",
+      "activeCount_few": " — в сессии уже {{count}} активных агента при лимите {{max}}",
+      "activeCount_many": " — в сессии уже {{count}} активных агентов при лимите {{max}}",
+      "activeCount_other": " — в сессии уже {{count}} активного агента при лимите {{max}}"
+    },
+    "raiseMaxParallel": {
+      "verb": "предлагает поднять лимит параллельности",
+      "base": "Поднимает лимит параллельных агентов",
+      "area": " области {{area}}",
+      "jump": " с {{from}} до {{to}}",
+      "suffix": " — меняет, сколько продукт тратит без вопросов."
+    },
+    "proposeExecutionPlan": {
+      "verb": "предлагает план выполнения",
+      "base": "Утверждает план выполнения Dev Lead",
+      "summaryCount_one": " — {{count}} агент в {{modules}}",
+      "summaryCount_few": " — {{count}} агента в {{modules}}",
+      "summaryCount_many": " — {{count}} агентов в {{modules}}",
+      "summaryCount_other": " — {{count}} агента в {{modules}}",
+      "modulesCount_one": "{{count}} модуле",
+      "modulesCount_few": "{{count}} модулях",
+      "modulesCount_many": "{{count}} модулях",
+      "modulesCount_other": "{{count}} модуля",
+      "reasonSuffix": ": \"{{summary}}\"",
+      "note": " и ЗАПУСКАЕТ выполнение: dev agents поднимаются и начинают тратить."
+    },
+    "assessImplementability": {
+      "verb": "оценивает реализуемость истории",
+      "base": "Отмечает историю как {{label}}",
+      "viableLabel": "реализуемую",
+      "unfeasibleLabel": "НЕРЕАЛИЗУЕМУЮ",
+      "justificationSuffix": ": \"{{justification}}\""
+    }
+  },
+  "approvalCard": {
+    "batchSelectAriaLabel": "Выбрать для пакетного одобрения",
+    "details": {
+      "title": "Подробности",
+      "rawPayloadTitle": "Исходный payload",
+      "fieldCount_one": "{{count}} поле",
+      "fieldCount_few": "{{count}} поля",
+      "fieldCount_many": "{{count}} полей",
+      "fieldCount_other": "{{count}} поля"
+    },
+    "actions": {
+      "approve": "Одобрить",
+      "deny": "Отклонить",
+      "alwaysAllow": "Всегда разрешать",
+      "autoMode": "Автоматический режим"
+    },
+    "notes": {
+      "alwaysAllow": "Всегда разрешать: записывает в .brabo/permissions.json проекта правило для каждого сегмента команды, по глаголу + подкоманде (напр.: \"npm test\", \"git status\") — следующая команда с тем же глаголом и подкомандой выполнится без вопросов.",
+      "alwaysAllowTyped": "Всегда разрешать: записывает в .brabo/permissions.json проекта правило для этого типа действия — следующее действие того же типа выполнится без вопросов.",
+      "alwaysAllowScoped": "Всегда разрешать: разрешает этот тип действия только для {{agent}}, а не для других агентов проекта.",
+      "autoMode": "Автоматический режим: {{actor}} выполняет любую команду без вопросов, в том числе вне папки проекта, включая git push и открытие PR. Ваше решение по-прежнему нужно для deploy, sudo/doas, merge в защищённую ветку, patch инструкции, параллельности и удаления контейнера; то, что в deny, остаётся запрещённым. Отключается в карточке агента.",
+      "autoModeTyped": "Автоматический режим: следующие действия {{actor}} одобряются без вопросов, включая git push и открытие PR. Ваше решение по-прежнему нужно для deploy, merge в защищённую ветку, patch инструкции, параллельности и удаления контейнера; то, что в deny, остаётся запрещённым. Отключается в карточке агента.",
+      "autoModeNotThis": "Включение автоматического режима не одобряет это действие: оно по-прежнему ждёт вашего «Одобрить».",
+      "obsolete": "Решение по действию уже принято другим путём; эта карточка обновится сама."
+    },
+    "decided": {
+      "denied": "Отклонено",
+      "alwaysAllowed": "Всегда разрешено · записано в permissions.json",
+      "failed": "Ошибка",
+      "approvedTerminal": "Одобрено · команда выполняется",
+      "approved": "Одобрено"
+    },
+    "body": {
+      "terminal": {
+        "invalidCommand": "Модель не сформировала корректную команду для этого действия.",
+        "outputHeader": "терминал · вывод",
+        "compression": "rtk −{{percent}}%",
+        "emptyOutput": "(нет вывода)"
+      },
+      "writeFile": {
+        "invalidBoth": "Модель не сформировала корректные путь и содержимое для этого действия.",
+        "invalidPath": "Модель не сформировала корректный путь для этого действия.",
+        "invalidContent": "Модель не сформировала корректное содержимое для этого действия.",
+        "previewHeader": "предпросмотр содержимого",
+        "linesTruncated_one": "{{shown}} из {{count}} строки",
+        "linesTruncated_few": "{{shown}} из {{count}} строк",
+        "linesTruncated_many": "{{shown}} из {{count}} строк",
+        "linesTruncated_other": "{{shown}} из {{count}} строки"
+      },
+      "prOpen": {
+        "defaultTitle": "Pull request"
+      },
+      "gitMerge": {
+        "defaultTitle": "Pull request",
+        "prTitle": "Pull request #{{pr}}"
+      },
+      "instructionPatch": {
+        "hypothesisOrigin": "источник: гипотеза {{id}}"
+      },
+      "gitCommitPush": {
+        "noDetails": "Дополнительных подробностей нет."
+      },
+      "empty": "Это действие не содержит payload."
+    },
+    "actorYou": "Вы",
+    "actorOtherMember": "Другой участник"
+  },
+  "prGateTimeline": {
+    "steps": {
+      "dev": "Dev",
+      "qa": "QA",
+      "secops": "SecOps",
+      "user": "Вы"
+    },
+    "viewPr": "открыть PR",
+    "blocked": "заблокирована",
+    "verdict": {
+      "approved": "одобрено",
+      "changesRequested": "запрошены изменения",
+      "dispensed": "не требуется"
+    },
+    "coverage": {
+      "rule": "Правило",
+      "tests": "Тесты",
+      "covered": "Покрытие",
+      "coveredYes": "покрыто",
+      "coveredNo": "без теста"
+    }
+  },
+  "approvalsTab": {
+    "genericLoading": "Загрузка…",
+    "pending": {
+      "title": "Ожидают",
+      "eyebrow": "по срочности",
+      "selectedCount_one": "Выбрано: {{count}}",
+      "selectedCount_few": "Выбрано: {{count}}",
+      "selectedCount_many": "Выбрано: {{count}}",
+      "selectedCount_other": "Выбрано: {{count}}",
+      "approveSelected": "Одобрить выбранные",
+      "clear": "Очистить",
+      "findingSession": "Ищем сессию проекта…",
+      "sessionsError": "Не удалось открыть сессии проекта.",
+      "noSession": "Сессий пока нет — одобрения появляются из того, что агенты предлагают в сессии.",
+      "loadingQueue": "Загрузка очереди…",
+      "queueError": "Не удалось загрузить очередь одобрений.",
+      "empty": "Нет ожидающих одобрений. Команда работает без задержек.",
+      "motivoNaoLido": {
+        "todas_one": "Не удалось прочитать причину политики для {{count}} действия: чтение журнала сессии, которая их предложила, завершилось ошибкой.",
+        "todas_few": "Не удалось прочитать причину политики для этих {{count}} действий: чтение журнала сессии, которая их предложила, завершилось ошибкой.",
+        "todas_many": "Не удалось прочитать причину политики для этих {{count}} действий: чтение журнала сессии, которая их предложила, завершилось ошибкой.",
+        "todas_other": "Не удалось прочитать причину политики для этих {{count}} действия: чтение журнала сессии, которая их предложила, завершилось ошибкой.",
+        "algumas_one": "Не удалось прочитать причину политики для {{count}} из {{total}} действий ниже: чтение журнала сессии, которая их предложила, завершилось ошибкой.",
+        "algumas_few": "Не удалось прочитать причину политики для {{count}} из {{total}} действий ниже: чтение журнала сессии, которая их предложила, завершилось ошибкой.",
+        "algumas_many": "Не удалось прочитать причину политики для {{count}} из {{total}} действий ниже: чтение журнала сессии, которая их предложила, завершилось ошибкой.",
+        "algumas_other": "Не удалось прочитать причину политики для {{count}} из {{total}} действий ниже: чтение журнала сессии, которая их предложила, завершилось ошибкой."
+      }
+    },
+    "devPrs": {
+      "title": "PR на ревью",
+      "eyebrow": "{{count}} от dev agents на gate QA/SecOps",
+      "loading": "Загрузка PR на ревью…",
+      "backlogError": "Не удалось загрузить бэклог.",
+      "empty": "Пока нет PR от dev agent на ревью."
+    },
+    "infraPrs": {
+      "title": "PR инфраструктуры на ревью",
+      "eyebrow": "{{count}} инфраструктурных на gate QA/SecOps",
+      "loading": "Загрузка PR инфраструктуры…",
+      "error": "Не удалось загрузить PR инфраструктуры.",
+      "empty": "Пока нет PR инфраструктуры на ревью.",
+      "mergeLink": "Выполнить merge на вкладке PR"
+    },
+    "permissions": {
+      "title": "Разрешения проекта",
+      "subtitle": "Правила, применяемые перед каждым действием агентов. Отзывайте построчно.",
+      "bannerPrefix": "Порядок проверки:",
+      "bannerMiddle": "всегда побеждает",
+      "bannerSuffix": ", независимо от порядка в файле.",
+      "searchPlaceholder": "Искать правило или шаблон…",
+      "columnPattern": "Шаблон",
+      "columnType": "Тип",
+      "columnAction": "Действие",
+      "revoke": "Отозвать",
+      "revokeAriaLabel": "Отозвать {{pattern}}",
+      "loading": "Читаем permissions.json…",
+      "error": "Не удалось загрузить разрешения проекта.",
+      "emptyNoRules": "Правил пока нет.",
+      "emptyNoMatch": "Ни одно правило не соответствует поиску."
+    },
+    "toast": {
+      "autoModeOnTitle": "Автоматический режим включён",
+      "autoModeOnErrorTitle": "Не удалось включить автоматический режим"
+    }
+  },
+  "prsTab": {
+    "title": "Pull requests проекта",
+    "subtitle": "Напрямую от git-провайдера — из ВСЕХ сессий, а не только последней.",
+    "gateStatusError": "Не удалось загрузить статус gate из бэклога.",
+    "mergeErrorTitle": "Не удалось предложить merge",
+    "mergeButton": "Merge",
+    "mergeBlockedFallback": "Gate заблокирован — исправьте, прежде чем предлагать merge.",
+    "mergeNoSession": "В проекте нет сессии, чтобы предложить действие.",
+    "gatePendenteBloqueada": "Gate {{gate}} для этого PR ещё не пройден, а его задача заблокирована: merge недоступен, пока её не разблокируют.",
+    "mergeIndisponivelBloqueada": "Merge недоступен: задача этого PR заблокирована — {{reason}}",
+    "mergeIndisponivelSemSessao": "Merge недоступен: в проекте нет сессии, чтобы предложить действие.",
+    "gatePendente": "Gate {{gate}} для этого PR ещё не пройден. Merge по-прежнему доступен — решать вам.",
+    "mergeRecusado": "Последняя попытка merge была отклонена: {{reason}}",
+    "mergeRecusadoArquivos_one": "Файлы в конфликте: {{files}}",
+    "mergeRecusadoArquivos_few": "Файлы в конфликте: {{files}}",
+    "mergeRecusadoArquivos_many": "Файлы в конфликте: {{files}}",
+    "mergeRecusadoArquivos_other": "Файлы в конфликте: {{files}}",
+    "mergeResolverAntes": "Сначала разрешите конфликт (rebase ветки PR на dev) и попробуйте merge снова."
+  },
+  "politica": {
+    "motivo": "Политика решила по причине: {{motivo}}",
+    "motivoNaoRegistrado": "Причина политики не записана (предложено до того, как причина стала попадать в журнал)",
+    "foraDoRecorte": "Причина политики вне событий, загруженных на этом экране",
+    "raiz": {
+      "raizGerenciada": "корень области: управляемая папка «{{segmento}}»",
+      "baseDeProjetos": "корень области: «{{segmento}}» внутри базы проектов",
+      "nomeDaPasta": "корень области: папка «{{segmento}}» на машине runner",
+      "indisponivel": "корень области: нет относительной формы (смонтированная папка вне базы проектов или база не настроена)",
+      "formaDesconhecida": "корень области: записан в форме, неизвестной этому экрану",
+      "naoRegistrada": "корень области не записан (предложено до того, как корень стал попадать в журнал)"
+    },
+    "linha": {
+      "autoAprovada": "{{ator}}: действие одобрено политикой автоматически",
+      "negada": "{{ator}}: действие отклонено политикой",
+      "pendente": "{{ator}}: действие ожидает решения",
+      "proposta": "{{ator}} предложил действие"
+    }
+  }
+}

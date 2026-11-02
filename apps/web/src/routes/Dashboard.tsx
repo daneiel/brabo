@@ -99,7 +99,7 @@ function ProjectCardContainer({
         navigate({
           to: '/projects/$projectId',
           params: { projectId: project.id },
-          search: { tab: 'settings' },
+          search: { tab: 'spend' },
         })
       }
       lastActivityText={lastActivityText}

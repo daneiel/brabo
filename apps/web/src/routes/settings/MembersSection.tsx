@@ -66,7 +66,7 @@ export function MembersSection({ projectId }: { projectId: string }) {
 
   /**
    * O papel EFETIVO de quem está olhando, NESTE projeto — e não o papel de
-   * workspace que `ModelsSection`/`AreaModelsSection` leem.
+   * workspace que `ModelsSection` leem.
    *
    * ## Por que `maintainer`, e não o `developer` da seção de modelos
    *

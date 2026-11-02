@@ -34,27 +34,106 @@ defmodule Engine.Gates.GateRescuer do
   segundo `record_gate_verdict` é rejeitado pela api sem gravar nada), nunca
   dado inconsistente.
 
+  Duas guardas a mais desde a RN-722, as duas para o `"in_progress"`:
+
+    * **Ciclo esperando HUMANO não é órfão.** Se a sessão do ciclo tem
+      `proposed_action` PENDENTE de um ator do gate (`qa*`, `secops*`,
+      `appsec`), o ciclo está parado por decisão de alguém, não por crash —
+      reiniciá-lo pagaria a área de novo e deixaria a ação pendente órfã. O
+      resgate registra no log e segue; a linha fica para o próximo tick.
+    * **"Vivo" é por TASK, não por projeto.** O processo do lead é UM por
+      projeto e a linha é por task: um lead vivo e ocioso segurava para
+      sempre o resgate de um ciclo perdido (8 h no uso real). O resgate
+      PERGUNTA ao lead se aquela task está em voo (`em_voo?/2`); lead
+      ocupado demais para responder conta como vivo (a próxima varredura
+      pergunta de novo).
+
+  E desde o ADR 0207 (decisão do dono, 02/10), um TETO: ciclo `"in_progress"`
+  parado há mais de `gate_rescue_park_after_seconds` (default 2 h) desde a
+  ÚLTIMA ATIVIDADE (`updated_at`, a mesma coluna do limiar de staleness — um
+  ciclo que avança de subagente em subagente não é velho) NÃO é retomado
+  sozinho, nem no boot nem no tick: o resgate grava `gate.rescue_parked` no log
+  da sessão (task, gate, idade, motivo) e ESTACIONA a linha. Retomar passa a
+  exigir gesto humano, por `retomar_estacionado/3`. Reiniciar sozinho, horas
+  depois, um ciclo que ninguém olhou é pagar a área inteira de novo sobre um
+  contexto que pode ter mudado.
+
+  E desde a RN-823 (AT-495), o BOOT não espera o limiar para o ciclo que o
+  próprio reinício matou: no boot, a linha `"in_progress"` RECENTE (abaixo do
+  limiar de staleness, e por isso invisível para `run/0`) sem processo vivo
+  NESTE nó nem nos OUTROS nós do cluster (`:erpc.multicall` sobre
+  `Node.list/0`, a régua do `Engine.Agents.TurnoOrfao`; nó que não responde
+  conta como VIVO) é órfã do reinício, não um ciclo lento. As guardas de
+  sempre valem (ação pendente de ator do gate, dev dono ausente), e o boot
+  grava `gate.interrupted` no log da sessão (gate, task, última atividade e
+  quando foi retomado) ANTES de redespachar a área. O tick periódico segue com
+  o limiar de 15 min: fora do boot, linha recente é ciclo em voo. Resíduo
+  declarado: nó do cluster que ainda não se conectou no instante do boot não
+  é perguntado — o pior desfecho segue sendo o de sempre, trabalho duplicado
+  e barato.
+
   Chamado de dois lugares (mesmo par que `Engine.Dev.DevRehydrator` usa para
   dev agents): uma vez no boot (`Engine.Application`) e periodicamente via
   `Engine.Workers.GateRescueSchedulerWorker` (Oban).
   """
 
   require Logger
+  import Ecto.Query, only: [from: 2]
 
   alias Engine.Dev.{DevAgentServer, DevAgentState}
-  alias Engine.Gates.{Dispatcher, GateState}
+  alias Engine.Gates.{Dispatcher, GateState, RetomadaDoGate}
+  alias Engine.Sessions.EngineApiClient
 
   def run do
     stale_after_seconds()
     |> GateState.list_stale()
     |> Enum.each(&rescue_one/1)
 
+    varrer_instancias_de_qa()
     :ok
   end
 
-  defp rescue_one(%{step: "in_progress", gate: gate, project_id: project_id, task_id: task_id}) do
+  @doc """
+  AT-612 (RN-937): limpeza das instâncias de QA órfãs, no boot e no tick. A
+  lista de "em voo" é a das linhas de `gate_states` do gate `qa` não
+  estacionadas — durável e do cluster inteiro (todo nó grava ali), o que dispensa
+  perguntar nó a nó. Falha só loga: a limpeza nunca derruba o resgate.
+  """
+  def varrer_instancias_de_qa do
+    em_voo =
+      GateState.list_all()
+      |> Enum.filter(&(&1.gate == "qa" and is_nil(&1.parked_at)))
+      |> Enum.map(& &1.task_id)
+      |> Enum.filter(&match?({:ok, _}, Ecto.UUID.cast(&1)))
+
+    case EngineApiClient.varrer_instancias_de_qa(em_voo) do
+      {:ok, %{"falhas" => [_ | _] = falhas}} ->
+        Logger.warning("GateRescuer: limpeza de instâncias de QA com falhas: #{inspect(falhas)}")
+
+      {:ok, _} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning("GateRescuer: limpeza de instâncias de QA falhou: #{inspect(reason)}")
+    end
+  rescue
+    e ->
+      Logger.warning("GateRescuer: limpeza de instâncias de QA falhou: #{Exception.message(e)}")
+  end
+
+  defp rescue_one(
+         %{step: "in_progress", gate: gate, project_id: project_id, task_id: task_id} = linha
+       ) do
     cond do
-      locally_alive?(project_id, gate) ->
+      task_em_voo?(project_id, gate, task_id) ->
+        :ok
+
+      aguardando_humano?(gate, Map.get(linha, :session_id)) ->
+        Logger.info(
+          "GateRescuer: ciclo #{gate} da task #{task_id} (projeto #{project_id}) " <>
+            "espera decisão humana em ação pendente — não reiniciado (RN-722)"
+        )
+
         :ok
 
       DevAgentState.find_by_task_id(project_id, task_id) == nil ->
@@ -63,12 +142,15 @@ defmodule Engine.Gates.GateRescuer do
         # bookkeeping órfã.
         GateState.delete(project_id, task_id, gate)
 
+      velho_demais?(linha) ->
+        estacionar(linha, nil)
+
       true ->
         Logger.warning(
           "GateRescuer: reiniciando ciclo #{gate} órfão (task #{task_id}, projeto #{project_id})"
         )
 
-        dispatch_fresh(gate, project_id, task_id)
+        retomar_ou_estacionar(linha)
     end
   end
 
@@ -125,10 +207,98 @@ defmodule Engine.Gates.GateRescuer do
     GateState.delete(project_id, task_id, gate)
   end
 
+  # AT-582: teto de 1 retomada automatica por ciclo, no boot e no tick. A
+  # segunda estaciona (mesmo caminho do ADR 0207) e espera o "Retomar gate".
+  defp retomar_ou_estacionar(%{auto_resumes: gastas} = linha) when gastas >= 1,
+    do: estacionar(linha, "retomada_automatica_ja_usada")
+
+  defp retomar_ou_estacionar(%{project_id: project_id, task_id: task_id, gate: gate} = linha) do
+    :ok = GateState.gastar_retomada!(project_id, task_id, gate)
+    RetomadaDoGate.marcar(project_id, Map.get(linha, :session_id), gate)
+    dispatch_fresh(gate, project_id, task_id)
+  end
+
   defp dispatch_fresh("qa", project_id, task_id), do: :ok = Dispatcher.run_qa(project_id, task_id)
 
   defp dispatch_fresh("secops", project_id, task_id),
     do: :ok = Dispatcher.run_secops(project_id, task_id)
+
+  @doc """
+  Varredura de BOOT (RN-823): a de `run/0` mais o ciclo recente órfão do
+  reinício. A lista dos recentes é lida ANTES de `run/0`, para não tomar por
+  órfã a linha que o próprio `run/0` acabou de redespachar.
+  """
+  def run_boot do
+    limiar = stale_after_seconds()
+
+    recentes =
+      0
+      |> GateState.list_stale()
+      |> Enum.filter(&(&1.step == "in_progress" and recente?(&1, limiar)))
+
+    :ok = run()
+    Enum.each(recentes, &interrompido_no_boot/1)
+    :ok
+  end
+
+  defp recente?(%{updated_at: %DateTime{} = em}, limiar),
+    do: DateTime.diff(DateTime.utc_now(), em, :second) <= limiar
+
+  defp recente?(_linha, _limiar), do: false
+
+  defp interrompido_no_boot(%{gate: gate, project_id: project_id, task_id: task_id} = linha) do
+    cond do
+      task_em_voo?(project_id, gate, task_id) or em_voo_em_outro_no?(project_id, gate, task_id) ->
+        :ok
+
+      aguardando_humano?(gate, Map.get(linha, :session_id)) ->
+        :ok
+
+      DevAgentState.find_by_task_id(project_id, task_id) == nil ->
+        GateState.delete(project_id, task_id, gate)
+
+      true ->
+        Logger.warning(
+          "GateRescuer: ciclo #{gate} da task #{task_id} (projeto #{project_id}) " <>
+            "interrompido pelo reinício do engine — retomado no boot (RN-823)"
+        )
+
+        if is_binary(linha.session_id) do
+          EngineApiClient.append_event(project_id, linha.session_id, %{
+            type: "gate.interrupted",
+            actorKind: "system",
+            actorId: "gate-rescuer",
+            payload: %{
+              taskId: task_id,
+              gate: gate,
+              ultimaAtividadeEm: DateTime.to_iso8601(linha.updated_at),
+              retomadoEm: DateTime.to_iso8601(DateTime.utc_now())
+            }
+          })
+        end
+
+        retomar_ou_estacionar(linha)
+    end
+  end
+
+  @doc false
+  # Chamado por `:erpc` dos OUTROS nós no boot deles (RN-823).
+  def em_voo_neste_no?(project_id, gate, task_id), do: task_em_voo?(project_id, gate, task_id)
+
+  defp em_voo_em_outro_no?(project_id, gate, task_id) do
+    case Node.list() do
+      [] ->
+        false
+
+      nos ->
+        nos
+        |> :erpc.multicall(__MODULE__, :em_voo_neste_no?, [project_id, gate, task_id], 2_000)
+        |> Enum.any?(fn
+          {:ok, false} -> false
+          _ -> true
+        end)
+    end
+  end
 
   # VIVO, e não só registrado (AT-204): o Registry apaga a chave de forma
   # ASSÍNCRONA, e logo depois de o processo morrer o lookup ainda pode devolver
@@ -141,17 +311,137 @@ defmodule Engine.Gates.GateRescuer do
     end
   end
 
+  # ADR 0207: idade pela última atividade do ciclo.
+  defp velho_demais?(%{updated_at: %DateTime{} = em}) do
+    DateTime.diff(DateTime.utc_now(), em, :second) > park_after_seconds()
+  end
+
+  defp velho_demais?(_linha), do: false
+
+  defp estacionar(%{project_id: project_id, task_id: task_id, gate: gate} = linha, causa) do
+    idade = DateTime.diff(DateTime.utc_now(), linha.updated_at, :second)
+
+    Logger.warning(
+      "GateRescuer: ciclo #{gate} da task #{task_id} (projeto #{project_id}) parado há " <>
+        "#{idade}s — ESTACIONADO, retomar exige gesto humano (ADR 0207)"
+    )
+
+    :ok = GateState.park!(project_id, task_id, gate)
+
+    if is_binary(linha.session_id) do
+      EngineApiClient.append_event(project_id, linha.session_id, %{
+        type: "gate.rescue_parked",
+        actorKind: "system",
+        actorId: "gate-rescuer",
+        payload: %{
+          taskId: task_id,
+          gate: gate,
+          idadeSegundos: idade,
+          motivo:
+            causa ||
+              "ciclo parado há mais de #{div(park_after_seconds(), 60)} min sem atividade; " <>
+                "o resgate automático não o reinicia — retomar exige gesto humano"
+        }
+      })
+    end
+
+    :ok
+  end
+
+  defp park_after_seconds,
+    do: Application.get_env(:engine, :gate_rescue_park_after_seconds, 7_200)
+
+  @doc """
+  O gesto humano que retoma um ciclo ESTACIONADO (ADR 0207). Hoje não há tela:
+  é chamado pelo operador (`bin/engine rpc`). Linha que não existe ou não está
+  estacionada devolve `{:error, :nao_estacionado}` e não despacha nada.
+  """
+  def retomar_estacionado(project_id, task_id, gate) do
+    case GateState.get(project_id, task_id, gate) do
+      %{parked_at: %DateTime{}} = linha ->
+        Logger.warning(
+          "GateRescuer: retomando por gesto humano o ciclo #{gate} estacionado " <>
+            "(task #{task_id}, projeto #{project_id})"
+        )
+
+        # Gesto humano devolve o orçamento: sem isso, uma queda logo depois do
+        # "Retomar" estacionaria o ciclo de novo sem ninguém olhar.
+        :ok = GateState.zerar_retomadas!(project_id, task_id, gate)
+        RetomadaDoGate.marcar(project_id, Map.get(linha, :session_id), gate)
+        dispatch_fresh(gate, project_id, task_id)
+
+      _ ->
+        {:error, :nao_estacionado}
+    end
+  end
+
+  # RN-722: o lead VIVO só segura o resgate se a TASK está em voo nele.
+  defp task_em_voo?(project_id, gate, task_id) do
+    case Registry.lookup(Engine.Gates.Registry, {project_id, gate}) do
+      [{pid, _}] -> Process.alive?(pid) and perguntar_em_voo(pid, task_id)
+      [] -> false
+    end
+  end
+
+  defp perguntar_em_voo(pid, task_id) do
+    GenServer.call(pid, {:em_voo?, task_id}, em_voo_timeout_ms())
+  catch
+    # Ocupado (rodando um ciclo dentro do `handle_cast`) — pode ser ESTA task;
+    # na dúvida não religa, e a próxima varredura pergunta de novo.
+    :exit, {:timeout, _} -> true
+    # Morreu entre o lookup e a pergunta.
+    :exit, _ -> false
+  end
+
+  defp em_voo_timeout_ms,
+    do: Application.get_env(:engine, :gate_rescue_em_voo_timeout_ms, 2_000)
+
+  @atores_do_gate %{"qa" => ["qa%"], "secops" => ["secops%", "appsec"]}
+
+  # RN-722: ação PENDENTE de um ator do gate na sessão do ciclo — lida direto
+  # do Postgres (mesmo padrão de `outbox_events`), sem HTTP no resgate.
+  defp aguardando_humano?(_gate, nil), do: false
+
+  defp aguardando_humano?(gate, session_id) do
+    case Ecto.UUID.cast(session_id) do
+      {:ok, uuid} -> ha_acao_pendente_do_gate?(gate, uuid)
+      :error -> false
+    end
+  end
+
+  defp ha_acao_pendente_do_gate?(gate, session_id) do
+    padroes = Map.get(@atores_do_gate, gate, [])
+
+    query =
+      from(a in "proposed_actions",
+        where:
+          a.session_id == type(^session_id, :binary_id) and
+            a.status == "pending",
+        select: a.actor_id
+      )
+
+    query
+    |> Engine.Repo.all()
+    |> Enum.any?(fn ator -> Enum.any?(padroes, &casa?(ator, &1)) end)
+  end
+
+  defp casa?(ator, padrao) do
+    case String.split(padrao, "%") do
+      [prefixo, ""] -> String.starts_with?(ator, prefixo)
+      _ -> ator == padrao
+    end
+  end
+
   defp stale_after_seconds,
     do: Application.get_env(:engine, :gate_rescue_stale_after_seconds, 900)
 
   # --- Boot task (mesmo idioma do Engine.Dev.DevRehydrator) -----------------
   #
-  # Sem bypass de staleness no boot: uma linha recente demais pode pertencer
-  # a um processo vivo em OUTRA réplica (Registry é local ao nó), então o
-  # boot varre com o MESMO limiar que o tick periódico usa.
+  # O boot varre com o MESMO limiar do tick E, para a linha recente, pergunta
+  # aos outros nós antes de tomá-la por órfã do reinício (RN-823).
 
   def start_link(_opts) do
-    :ok = run()
+    :ok = run_boot()
     :ignore
   end
 

@@ -82,14 +82,19 @@ defmodule Engine.Harness.ArtifactSchemas do
     # pesquisável no log da sessão. Sem validação cruzada de propósito:
     # `choice` não precisa bater com um item de `options` — texto livre é
     # mais robusto, e o schema genérico só valida presença de chave.
-    "decision_record" => ["context", "options", "choice", "consequences"]
+    "decision_record" => ["context", "options", "choice", "consequences"],
+    # ADR 0214 (RN-862) — a pergunta que um agente deixa para o usuário. Sai
+    # só pela ferramenta PRÓPRIA `declare_open_question`, nunca por
+    # `emit_artifact` (fora de `@tool_emittable`).
+    "open_question" => ["questionId", "pergunta", "afeta"]
   }
 
+  # ADR 0214: `needs_user_decision` é o requisito que só o usuário decide.
   # Pareceres de gate. Os vereditos possíveis são os mesmos da máquina de
   # estados da api (`pr-gate-state-machine.ts`) — um veredito fora disso faria
   # o `RecordGateVerdictUseCase` estourar, então é melhor recusar o artefato.
   @gate_verdict_types ["qa_verdict", "secops_verdict"]
-  @gate_verdicts ["approved", "changes_requested"]
+  @gate_verdicts ["approved", "changes_requested", "needs_user_decision"]
 
   # Um parecer é sobre UMA task de dev (`taskId`) ou sobre UMA PR de infra
   # (`prActionId`, ver `Engine.Infra.InfraGateRunner`) — nunca sobre as duas,

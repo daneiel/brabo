@@ -46,6 +46,7 @@ defmodule Engine.Agents.StaffServer do
     Reidratacao,
     ResultadoDeFerramenta,
     StaffTools,
+    TextoDoTurno,
     TurnoAssincrono,
     TurnoOrfao
   }
@@ -112,13 +113,20 @@ defmodule Engine.Agents.StaffServer do
        messages: [system_msg | history],
        # Frente 3 do plano de decision_record: `emit_artifact` entra como
        # SEGUNDA ferramenta, aditiva — `propose_rfc` continua a primeira.
-       tool_specs: [StaffTools.spec(), EmitArtifact.spec()],
+       tool_specs: [
+         StaffTools.spec(),
+         EmitArtifact.spec(),
+         Engine.Harness.Tools.RegistrarPlano.spec()
+       ],
        # Guardado enquanto o turno roda numa Task supervisionada, fora do
        # handler que bloqueava o processo inteiro — é o que permite um
        # `:cancel` chegar e ser atendido (RN-122). Ver `TurnoAssincrono`.
        # RN-673: a fila de mensagens que chegaram com turno em curso,
        # reconstruída do log (sobrevive a restart), e como montar o turno
        # que a lê. Ver `TurnoAssincrono.receber_mensagem/4`.
+       # AT-582: a retomada do turno interrompido, ANTES da fila (a fila espera o fim dela).
+       retomada_agendada: TurnoAssincrono.retomada_ao_subir(project_id, session_id, @agent),
+       montar_turno_de_retomada: &turno_de_retomada/1,
        fila_de_mensagens: TurnoAssincrono.fila_ao_subir(project_id, session_id, @agent),
        montar_turno_de_mensagem: &turno_de_mensagem/2,
        turno_assincrono: nil
@@ -171,7 +179,15 @@ defmodule Engine.Agents.StaffServer do
   # também para o turno que lê a FILA (várias falas num texto só).
   defp turno_de_mensagem(state, text) do
     work = state |> append(user_msg(text)) |> compact()
-    fn -> run_turn(work, @max_iterations) end
+    fn -> run_turn(work, Engine.Harness.FalhaRepetida.inicio_de_turno(@max_iterations)) end
+  end
+
+  # AT-582: o turno de retomada não tem fala nova do usuário; o histórico
+  # reidratado já termina nela e a orientação vai efêmera (`RetomadaDoTurno`).
+  defp turno_de_retomada(state) do
+    fn ->
+      run_turn(compact(state), Engine.Harness.FalhaRepetida.inicio_de_turno(@max_iterations))
+    end
   end
 
   @impl true
@@ -188,10 +204,17 @@ defmodule Engine.Agents.StaffServer do
   # já aplicada ao PO: um Staff que esgotasse as 14 iterações terminava sem
   # evento nenhum, indistinguível de um turno que simplesmente acabou.
   defp run_turn(state, remaining) when remaining <= 0 do
-    emit(state, "toolloop.limit_reached", %{
-      iteration: @max_iterations,
-      max_iterations: @max_iterations
-    })
+    # AT-590: lê a linha ANTES de gravar o texto (que a esvaziaria) e a põe no evento.
+    gravado = Engine.Agents.GravadoNoTurno.descarregar()
+    gravar_texto_do_turno(state, "", nil)
+
+    Engine.Harness.FalhaRepetida.narrar_ou(state.project_id, state.session_id, @agent, fn ->
+      emit(state, "toolloop.limit_reached", %{
+        iteration: @max_iterations,
+        max_iterations: @max_iterations,
+        gravado: gravado
+      })
+    end)
 
     state
   end
@@ -211,26 +234,33 @@ defmodule Engine.Agents.StaffServer do
       # A api narra a falha no PRÓPRIO frame final (budget, credencial, binding).
       # Devolve `state` (mapa), e NÃO `{state, ""}` (tupla) — ver o comentário
       # equivalente em `arquiteto_server.ex`/`dev_lead_server.ex`.
-      {:ok, %{"error" => erro}} when is_binary(erro) and erro != "" ->
-        emit_falha(state, {:final, erro})
+      {:ok, %{"error" => erro} = frame} when is_binary(erro) and erro != "" ->
+        gravar_texto_do_turno(state, "", nil)
+        emit_falha(state, {:final, erro, Map.get(frame, "errorCode")})
         state
 
       {:ok, %{"message" => message} = frame} ->
         content = Map.get(message, "content", "")
         model_name = Map.get(frame, "modelName")
-        state = append(state, assistant_msg(content))
-        if content != "", do: emit_response(state, content, model_name)
+        state = append(state, Engine.Agents.MensagemDoAssistente.de(content, message))
 
         case tool_calls(message, state.tool_specs) do
           [] ->
+            # AT-572: fecho sem texto nem corte é falha do modelo, dita no fio (agent.error).
+            if gravar_texto_do_turno(state, content, model_name) == :vazio,
+              do: emit_falha(state, :resposta_vazia)
+
             state
 
           calls ->
+            # RN-698: o texto desta volta continua na próxima.
+            TextoDoTurno.acumular(content, model_name)
             state = Enum.reduce(calls, state, &dispatch_tool/2)
-            run_turn(state, remaining - 1)
+            run_turn(state, Engine.Harness.FalhaRepetida.restante(remaining - 1))
         end
 
       {:error, reason} ->
+        gravar_texto_do_turno(state, "", nil)
         emit_falha(state, reason)
         state
     end
@@ -244,8 +274,9 @@ defmodule Engine.Agents.StaffServer do
     emit(state, "tool.call", %{tool: name, args: args})
     broadcast(state, "tool.call", %{tool: name, agent: @agent})
 
-    resultado = run_tool(name, args, state)
+    resultado = executar_ferramenta(name, args, state)
     emit(state, "tool.result", ResultadoDeFerramenta.payload(name, resultado))
+    Engine.Agents.GravadoNoTurno.anotar(name, args, resultado, state.project_id)
     {_, text} = resultado
 
     append(state, %{
@@ -257,8 +288,19 @@ defmodule Engine.Agents.StaffServer do
     })
   end
 
+  # RN-719: argumentos normalizados contra a spec e exceção vira erro do laço.
+  defp executar_ferramenta(name, args, state) do
+    Engine.Harness.ArgumentosDeFerramenta.executar(name, args, state.tool_specs, fn a ->
+      run_tool(name, a, state)
+    end)
+  end
+
   defp run_tool("propose_rfc", args, state), do: StaffTools.run(args, state)
   defp run_tool("emit_artifact", args, state), do: EmitArtifact.run(args, state)
+
+  defp run_tool("registrar_plano", args, state),
+    do: Engine.Harness.Tools.RegistrarPlano.run(args, state)
+
   defp run_tool(name, _args, _state), do: {:error, "ferramenta desconhecida: #{name}"}
 
   # --- Helpers ---
@@ -280,9 +322,6 @@ defmodule Engine.Agents.StaffServer do
 
   defp user_msg(text), do: %{"role" => "user", "content" => text, :pinned => false}
 
-  defp assistant_msg(content),
-    do: %{"role" => "assistant", "content" => content, :pinned => false}
-
   defp append(state, message), do: %{state | messages: state.messages ++ [message]}
 
   defp to_wire(message), do: Map.delete(message, :pinned)
@@ -302,17 +341,22 @@ defmodule Engine.Agents.StaffServer do
     end
   end
 
-  defp emit_response(state, content, model_name),
-    do: emit(state, "agent.response", %{content: content, modelName: model_name})
+  # RN-698: o texto do turno inteiro, numa `agent.response` só.
+  defp gravar_texto_do_turno(state, ultimo, model_name) do
+    case TextoDoTurno.payload_do_turno(ultimo, model_name) do
+      nil -> :vazio
+      payload -> emit(state, "agent.response", payload)
+    end
+  end
 
   defp emit_falha(state, reason) do
     origem = FalhaDeTurno.origem(reason)
-    mensagem = FalhaDeTurno.mensagem(reason)
+    mensagem = FalhaDeTurno.mensagem(reason, state.project_id)
 
     emit(state, "agent.error", %{
       origem: origem,
       mensagem: mensagem,
-      reason: inspect(reason)
+      reason: FalhaDeTurno.diagnostico(reason)
     })
 
     broadcast(state, "agent.error", %{origem: origem, mensagem: mensagem})

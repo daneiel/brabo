@@ -28,6 +28,21 @@ defmodule Engine.Anamnese.Elegibilidade do
   (`decidedBy`). É a MESMA janela que o prompt leva — evento omitido pelo
   corte não conta, porque o modelo não poderia citá-lo.
 
+  Desde a RN-722 (decisão do dono, 02/10) "ao menos UMA" virou ao menos
+  `min_interacoes_proprias/0` (default 5) interações próprias NOVAS — e a
+  janela já começa no fim da última tentativa (concluída ou encerrada sem
+  perfil), então "na janela" é "desde a última tentativa". Abaixo disso,
+  nenhuma chamada ao LLM nem ao RAG.
+
+  Desde a RN-756 (AT-439) só conta interação com CONTEÚDO TÉCNICO do sujeito:
+  evento `actor_kind: "user"` de um tipo em `tipos_de_evento_com_conteudo/0`
+  (mensagem escrita por ele, resposta a pergunta estruturada) e decisão
+  com motivo de recusa escrito (`rejectionReason` não vazio — é uma
+  correção; o status não é lido).
+  Aprovação, handoff, clique e qualquer outro evento de usuário NÃO contam:
+  não são evidência de competência, e no TP-01 de 08/10 duas rodadas pagas só
+  com eles terminaram em `skip_proficiency`.
+
   Hipótese aceita na fila NÃO cria sujeito: ela forçava a rodada, e a rodada
   sem sujeito foi exatamente o que gastou no uso real. O destino da hipótese
   aceita, desde a RN-680, é o FATO do perfil no grafo, que não depende de
@@ -48,13 +63,15 @@ defmodule Engine.Anamnese.Elegibilidade do
       {:sem_sujeito, :nenhum_membro,
        "nenhum membro efetivo do projeto fora do opt-out da Anamnese"}
     else
-      ativos = interlocutores(events, decisions)
+      contagem = interlocutores(events, decisions)
+      minimo = min_interacoes_proprias()
 
-      case Enum.filter(members, &MapSet.member?(ativos, Map.get(&1, "userId"))) do
+      case Enum.filter(members, &(Map.get(contagem, Map.get(&1, "userId"), 0) >= minimo)) do
         [] ->
           {:sem_sujeito, :nenhuma_interacao_propria,
-           "#{length(members)} membro(s) elegível(is), nenhum com interação própria " <>
-             "nos #{length(events)} evento(s) e #{length(decisions)} decisão(ões) da janela"}
+           "#{length(members)} membro(s) elegível(is), nenhum com #{minimo}+ interações " <>
+             "próprias nos #{length(events)} evento(s) e #{length(decisions)} decisão(ões) " <>
+             "da janela (RN-722); só mensagem escrita e recusa com motivo contam (RN-756)"}
 
         sujeitos ->
           {:ok, sujeitos}
@@ -65,13 +82,33 @@ defmodule Engine.Anamnese.Elegibilidade do
   defp interlocutores(events, decisions) do
     de_eventos =
       events
-      |> Enum.filter(&(Map.get(&1, :actor_kind) == "user"))
+      |> Enum.filter(
+        &(Map.get(&1, :actor_kind) == "user" and
+            Map.get(&1, :type) in tipos_de_evento_com_conteudo())
+      )
       |> Enum.map(&Map.get(&1, :actor_id))
 
-    de_decisoes = Enum.map(decisions, &Map.get(&1, "decidedBy"))
+    de_decisoes =
+      decisions
+      |> Enum.filter(&recusa_com_motivo?/1)
+      |> Enum.map(&Map.get(&1, "decidedBy"))
 
     (de_eventos ++ de_decisoes)
     |> Enum.filter(&is_binary/1)
-    |> MapSet.new()
+    |> Enum.frequencies()
   end
+
+  # RN-756: só a recusa com motivo escrito é correção técnica; aprovar não é.
+  defp recusa_com_motivo?(d) do
+    motivo = Map.get(d, "rejectionReason")
+    is_binary(motivo) and String.trim(motivo) != ""
+  end
+
+  @doc "Tipos de evento de usuário que trazem conteúdo técnico dele (RN-756)."
+  def tipos_de_evento_com_conteudo,
+    do: ["chat.message", "chat.structured_question_answered"]
+
+  @doc "Mínimo de interações próprias novas para alguém ser sujeito (RN-722)."
+  def min_interacoes_proprias,
+    do: Application.get_env(:engine, :anamnese_min_interacoes_proprias, 5)
 end

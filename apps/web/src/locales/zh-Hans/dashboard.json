@@ -1,0 +1,67 @@
+{
+  "topbar": {
+    "title": "项目",
+    "searchPlaceholder": "搜索项目…",
+    "newProject": "新建项目"
+  },
+  "summary": {
+    "unavailable": "摘要不可用",
+    "line": "{{projects}} · {{agents}} · 本月 {{spent}}"
+  },
+  "empty": {
+    "loadError": "无法加载您的项目。",
+    "noProjectsYet": "这里还没有项目。",
+    "createProject": "创建项目",
+    "noSearchResults": "未找到与“{{search}}”匹配的项目。"
+  },
+  "activity": {
+    "noSession": "还没有会话",
+    "latestSessionEmpty": "最近的会话中还没有活动",
+    "loading": "正在加载活动…",
+    "unavailable": "活动不可用"
+  },
+  "gitError": {
+    "title": "无法创建仓库",
+    "bodyWithProvider": "项目已创建，但通过 {{provider}} 创建仓库失败。请在设置中检查 provider 的凭据，然后重新尝试创建。",
+    "bodyWithoutProvider": "项目已创建，但创建仓库失败。请在设置中检查 provider 的凭据，然后重新尝试创建。",
+    "backToProjects": "返回项目列表"
+  },
+  "status": {
+    "heading": "Brabo —— 平台状态",
+    "columns": {
+      "service": "服务",
+      "status": "状态",
+      "lastCheck": "最后检查"
+    },
+    "services": {
+      "api": "api (NestJS)",
+      "engine": "engine (Elixir/Phoenix)"
+    },
+    "back": "返回",
+    "noTimestamp": "未提供",
+    "state": {
+      "ok": "运行中",
+      "error": "已停止",
+      "checking": "检查中"
+    }
+  },
+  "projectCard": {
+    "provider": {
+      "github": "GitHub",
+      "gitlab": "GitLab",
+      "local": "本地仓库"
+    },
+    "provisioning": {
+      "provisioning": "创建中",
+      "failed": "失败",
+      "awaitingPlanDecision": "等待您的决定"
+    },
+    "online": "{{count}} 在线"
+  },
+  "projectStatus": {
+    "saudavel": "活跃",
+    "atencao": "预算 ≥70%",
+    "risco": "需要关注",
+    "inativo": "近期无活动"
+  }
+}

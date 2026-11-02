@@ -1,4 +1,4 @@
-FROM hexpm/elixir:1.17.3-erlang-27.1.2-alpine-3.20.3@sha256:1ec24d1913fa669eb93797df02e70a021da73786ab2bbb1f0de1a6360ba90255
+FROM hexpm/elixir:1.20.4-erlang-29.1.1-alpine-3.24.2@sha256:ad851f40ce103dcb4ad56f23877d99473ef5c013e09b9e57921ffe877ac6d6a9
 
 # UID/GID do usuário que roda o container — ver docker/api/Dockerfile, mesmo
 # mecanismo (docker-compose.yml `build.args` + .env.example). Fica no TOPO
@@ -87,8 +87,16 @@ RUN apk add --no-cache --virtual .binaries-build curl tar \
 # só pra instalar. Historicamente mais estável em glibc/Debian do que
 # Alpine/musl — mesmo tratamento best-effort do gitleaks acima
 # (Engine.Actions.SemgrepDetector degrada graciosamente se ausente).
+#
+# A versão é FIXA e é a MESMA do Dockerfile.prod (o spec
+# scripts/ci/semgrep-do-engine.spec.ts reprova a divergência). Sem versão o pip
+# pegou a 1.179.0, que não publica wheel `musllinux`: no Alpine ele monta o
+# pacote do sdist, SEM o `semgrep-core`, e todo scan sai com exit 2 ("Failed to
+# find semgrep-core") — o gate SecOps de dev ficava pendente para sempre.
+# Subir a versão exige wheel musllinux publicada no PyPI.
+ARG SEMGREP_VERSION=1.183.0
 RUN apk add --no-cache python3 py3-pip \
-  && (pip install --no-cache-dir --break-system-packages semgrep \
+  && (pip install --no-cache-dir --break-system-packages "semgrep==${SEMGREP_VERSION}" \
       || echo "[build] semgrep nao instalado -- SecOpsAgent detecta a ausencia em runtime")
 
 # yamllint (gate de QA de infra, Fase 4a) — valida a sintaxe do compose e do

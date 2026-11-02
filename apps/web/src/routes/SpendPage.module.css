@@ -1,0 +1,24 @@
+/* Página global de gastos (`/spend`, AT-648) — moldura das outras páginas
+   globais (ContainersPage.module.css): sem ela o título encostava na sidebar.
+   Só o estado de carga/erro e o botão vêm de ProjectSpendTab.module.css. */
+
+.page {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.title {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 22px;
+  color: var(--text-primary);
+  margin: 0;
+}

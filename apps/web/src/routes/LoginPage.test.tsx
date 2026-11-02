@@ -128,14 +128,10 @@ describe('LoginPage', () => {
     liberar({ ok: true });
   });
 
-  it('explica a migração sem afirmar nada sobre a conta', async () => {
-    // Texto FIXO, presente sempre — derivado de nenhum sinal do servidor, e é
-    // por isso que ele pode existir sem vazar.
+  it('não mostra mais o aviso de migração (AT-374)', () => {
     montar();
 
-    expect(
-      screen.getByText(/a senha antiga não foi migrada/i),
-    ).toBeInTheDocument();
+    expect(screen.queryByText(/migrad|senha antiga/i)).not.toBeInTheDocument();
   });
 
   it('leva para registro e para esqueci-senha', () => {

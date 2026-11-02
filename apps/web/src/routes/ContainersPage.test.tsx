@@ -52,6 +52,8 @@ vi.mock('../lib/hooks', () => ({
 
 vi.mock('../lib/auth', () => ({
   userIdDaSessao: () => 'user-1',
+  // O card nomeia o ator humano pela leitura de membros (RN-705).
+  emailDaSessao: () => null,
 }));
 
 vi.mock('@tanstack/react-router', () => ({
@@ -124,6 +126,8 @@ function item(overrides: Partial<ContainerOverviewItem> = {}): ContainerOverview
     naoVerificado: null,
     acaoPendente: null,
     brokerConfigurado: true,
+    decisaoVigente: null,
+    imagemDesatualizada: false,
     ...overrides,
   };
 }
@@ -406,6 +410,46 @@ describe('ContainersPage', () => {
     });
   });
 
+  // AT-422 (RN-738): a decisão executada relê a linha e o ciclo de vida.
+  it('aprovar container_stop relê a visão geral e o ciclo de vida do projeto', async () => {
+    const spy = vi.spyOn(QueryClient.prototype, 'invalidateQueries');
+    useContainersOverview.mockReturnValue({
+      isPending: false,
+      isError: false,
+      data: [item({ acaoPendente: acaoPendente() })],
+      refetch: vi.fn(),
+    });
+    approveAction.mockResolvedValue(acaoPendente({ status: 'executed' }));
+
+    montar();
+    fireEvent.click(screen.getByRole('button', { name: 'Aprovar' }));
+
+    await waitFor(() => {
+      expect(spy).toHaveBeenCalledWith({ queryKey: ['containers-overview'] });
+      expect(spy).toHaveBeenCalledWith({ queryKey: ['container-lifecycle', 'proj-1'] });
+    });
+    spy.mockRestore();
+  });
+
+  it('aprovação recusada pela api ainda relê a linha (nada de estado de antes)', async () => {
+    const spy = vi.spyOn(QueryClient.prototype, 'invalidateQueries');
+    useContainersOverview.mockReturnValue({
+      isPending: false,
+      isError: false,
+      data: [item({ acaoPendente: acaoPendente() })],
+      refetch: vi.fn(),
+    });
+    approveAction.mockRejectedValue(new Error('409'));
+
+    montar();
+    fireEvent.click(screen.getByRole('button', { name: 'Aprovar' }));
+
+    await waitFor(() => {
+      expect(spy).toHaveBeenCalledWith({ queryKey: ['containers-overview'] });
+    });
+    spy.mockRestore();
+  });
+
   it('container_remove pendente: o card NÃO oferece "sempre permitir" (teto absoluto)', () => {
     useContainersOverview.mockReturnValue({
       isPending: false,
@@ -576,6 +620,40 @@ describe('ContainersPage', () => {
     expect(screen.getByRole('button', { name: 'Remover' })).toBeDisabled();
     expect(screen.getByText(/stops and removes containers|para e remove os containers/)).toBeInTheDocument();
     expect(proposeAction).not.toHaveBeenCalled();
+  });
+
+  it('RN-902: container de pé com imagem desatualizada mostra o aviso com os três passos e o motivo de "Subir de novo"', () => {
+    useContainersOverview.mockReturnValue({
+      isPending: false,
+      isError: false,
+      data: [
+        item({
+          imagemDesatualizada: true,
+          decisaoVigente: { version: 3, image: 'node:22', network: 'egress' },
+        }),
+      ],
+      refetch: vi.fn(),
+    });
+
+    montar();
+
+    expect(screen.getByText(/Parar → Remover → Subir de novo|Stop → Remove → Start again/)).toBeInTheDocument();
+    expect(screen.getByText(/subir de novo não aplica|starting again does not apply/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Subir de novo' })).toBeDisabled();
+  });
+
+  it('RN-902: sem divergência o aviso e o motivo "já está de pé" não aparecem', () => {
+    useContainersOverview.mockReturnValue({
+      isPending: false,
+      isError: false,
+      data: [item()],
+      refetch: vi.fn(),
+    });
+
+    montar();
+
+    expect(screen.queryByText(/Parar → Remover|Stop → Remove/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/não aplica uma imagem nova|does not apply a new image/)).not.toBeInTheDocument();
   });
 
   it('com broker, Parar segue habilitado num container de pé', () => {

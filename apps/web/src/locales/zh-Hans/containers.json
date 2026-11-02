@@ -1,0 +1,130 @@
+{
+  "title": "容器",
+  "subtitle": "此工作区的所有项目——镜像、状态、资源，以及停止、删除或启动容器的操作。",
+  "loadError": "无法加载容器。",
+  "loading": "加载中…",
+  "empty": "此工作区还没有任何项目。",
+  "table": {
+    "project": "项目",
+    "image": "镜像",
+    "imageUnresolved": "（镜像不可用）",
+    "imageDecidedNotFrozen": "已决定，尚未固定",
+    "imageUndecided": "尚未决定镜像",
+    "registered": "已登记",
+    "observed": "已观测",
+    "resources": "资源",
+    "resourcesValue": "{{cpus}} CPU · {{memoryMb}} MB · {{pidsLimit}} pids",
+    "resourcesNone": "—",
+    "since": "起始",
+    "sinceNone": "—",
+    "actions": "操作",
+    "detail": "详情",
+    "openDetail": "打开"
+  },
+  "status": {
+    "provisioning": "正在创建",
+    "running": "运行中",
+    "stopped": "已停止",
+    "failed": "失败",
+    "removed": "已删除",
+    "nuncaProvisionado": "从未创建"
+  },
+  "observed": {
+    "none": "未观测",
+    "naoVerificado": {
+      "fora_do_escopo_da_verificacao": "未核实——登记的状态无需守护进程确认",
+      "teto_de_verificacoes_atingido": "未核实——已达到本次加载的核实上限",
+      "sem_container_registrado": "没有可观测的容器"
+    },
+    "naoObservado": {
+      "broker-nao-configurado": "未配置 broker",
+      "broker-sem-resposta": "broker 无响应",
+      "broker-recusou": "broker 拒绝了请求"
+    }
+  },
+  "actions": {
+    "stop": "停止",
+    "remove": "删除",
+    "start": "启动容器",
+    "startAgain": "重新启动",
+    "errorTitle": "无法提议该操作",
+    "startNoDecisionTitle": "此项目没有镜像决定",
+    "startNoDecisionMessage": "Arquiteto（或 Infra）尚未为此项目决定镜像——没有可用于启动的镜像。",
+    "startRationale": "由用户在容器页面请求启动。",
+    "bloqueio": {
+      "ja_esta_de_pe": "容器已在运行——再次启动不会应用新镜像。",
+      "sem_broker_na_instalacao": "此安装无法为“容器”或“挂载文件夹”项目启动容器：它没有容器 broker（BROKER_URL 为空），而启动它们的正是 broker。批准启动只会以失败告终。“本地 Runner”项目不依赖它——它们的容器由本地智能体启动。",
+      "sem_broker_para_parar": "此安装没有容器 broker（BROKER_URL 为空），而停止和删除“容器”或“挂载文件夹”项目容器的正是它：停止或删除只会以失败告终。",
+      "sem_imagem_decidida": "尚未决定镜像：在启动任何容器之前，Arquiteto（或 Infra）需要先决定一个。",
+      "runner_nunca_confirmou": "从未有本地智能体确认过此项目的文件夹——请先在那台机器上运行 `brabo-runner` 再启动。",
+      "sem_papel": "启动容器需要此工作区的 maintainer 角色。",
+      "sem_sessao": "此项目还没有会话——提议该操作需要一个会话。"
+    },
+    "desatualizada": "镜像决策已变更（镜像 {{imagem}}，网络 {{rede}}，v{{para}}）；容器仍在使用 v{{de}}。要应用：停止 → 移除 → 再次启动。",
+    "ressalva": {
+      "runner_pode_estar_desconectado": "该文件夹曾被本地智能体确认过；如果它现在没有运行，操作在批准时会失败。",
+      "registrado_rodando_observado_parado": "登记显示运行中，但容器已停止（Docker 重启了？）。重新启动会唤起同一个容器，无需先停止。"
+    },
+    "semContainer": {
+      "nuncaProvisionado": "从未创建：没有可停止或删除的容器。",
+      "removido": "容器已删除：没有可停止或删除的内容。"
+    },
+    "bloqueioCurto": {
+      "sem_broker_na_instalacao": "此安装没有容器 broker：启动只会以失败告终。",
+      "sem_broker_para_parar": "此安装没有容器 broker：停止和删除只会以失败告终。",
+      "sem_broker_ambos": "此安装没有容器 broker：启动、停止和删除都只会以失败告终。"
+    },
+    "bloqueioDetalhe": "为什么？"
+  },
+  "detail": {
+    "title": "容器",
+    "back": "返回容器列表",
+    "notFound": "此项目不在该工作区的列表中。",
+    "network": "网络",
+    "mode": "执行模式",
+    "networkNone": "尚无网络决定",
+    "urls": "声明的 URL",
+    "urlsNone": "Infra 未为此项目声明 URL。",
+    "urlsNote": "由 Infra 在其 PR 中声明，未经验证。",
+    "urlRecusada": "（不在你的机器上的地址，不生成链接）",
+    "networkValue": {
+      "none": "无网络",
+      "egress": "可出站访问互联网"
+    }
+  },
+  "rede": {
+    "titulo": "端口、DNS 和主机",
+    "nenhuma": "此容器未声明网络。",
+    "versao": "已声明版本：{{version}}",
+    "portas": "已发布端口（TCP）",
+    "portasDica": "每行一个，格式为 本机端口:容器端口。本机端口 1024 至 65535，最多 10 个。",
+    "dns": "DNS",
+    "hosts": "额外主机",
+    "hostsDica": "每行一个：名称和 IPv4，以空格分隔。最多 10 个。",
+    "loopback": "端口只发布在本机的 127.0.0.1 上，绝不对外网开放。",
+    "soVale": "新配置只有在重新创建容器后才生效。",
+    "semPapel": "修改网络需要项目的 maintainer 角色。",
+    "semSessao": "项目没有可记录网络的会话。",
+    "salvar": "保存网络",
+    "recriar": "应用并重新启动",
+    "recriarAviso": "重新创建属于绝对上限操作：始终需要人工批准。它会销毁容器并启动新的；/work 文件夹会保留。",
+    "recriarBloqueio": {
+      "runner": "项目处于 runner 模式：重新创建稍后提供。",
+      "semContainer": "没有可重新创建的已登记容器。",
+      "semSessao": "项目没有可提出该操作的会话。",
+      "naoSalva": "重新创建前请先保存网络。"
+    },
+    "observadas": "观察到的地址",
+    "observadasNota": "端口已发布；不保证有程序在监听。",
+    "erro": {
+      "teto": "超出条目上限",
+      "formatoPorta": "请使用 本机端口:容器端口",
+      "faixaPorta": "端口超出允许范围",
+      "portaDaInstalacao": "端口已被安装占用",
+      "portaRepetida": "端口重复",
+      "ipInvalido": "IP 无效",
+      "formatoHost": "请使用以空格分隔的名称和 IPv4",
+      "nomeReservado": "保留名称"
+    }
+  }
+}

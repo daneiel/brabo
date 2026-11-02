@@ -1,4 +1,4 @@
-# 0153 — `DEPLOY_ENABLED`: o gatilho que dez documentos citam e nenhum cria
+# ADR 0153 — `DEPLOY_ENABLED`: o gatilho que dez documentos citam e nenhum cria
 
 ## Status
 

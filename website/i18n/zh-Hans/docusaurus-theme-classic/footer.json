@@ -1,0 +1,62 @@
+{
+  "link.title.Documentação": {
+    "message": "文档",
+    "description": "The title of the footer links column with title=Documentação in the footer"
+  },
+  "link.title.Comunidade": {
+    "message": "社区",
+    "description": "The title of the footer links column with title=Comunidade in the footer"
+  },
+  "link.title.Mais": {
+    "message": "更多",
+    "description": "The title of the footer links column with title=Mais in the footer"
+  },
+  "link.item.label.Primeiros passos": {
+    "message": "快速开始",
+    "description": "The label of footer link with label=Primeiros passos linking to /getting-started"
+  },
+  "link.item.label.Arquitetura": {
+    "message": "架构",
+    "description": "The label of footer link with label=Arquitetura linking to /architecture"
+  },
+  "link.item.label.Regras de negócio": {
+    "message": "业务规则",
+    "description": "The label of footer link with label=Regras de negócio linking to /business-rules"
+  },
+  "link.item.label.Como contribuir": {
+    "message": "如何贡献",
+    "description": "The label of footer link with label=Como contribuir linking to https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md"
+  },
+  "link.item.label.Onde pedir ajuda": {
+    "message": "在哪里求助",
+    "description": "The label of footer link with label=Onde pedir ajuda linking to https://github.com/daneiel/brabo/blob/dev/SUPPORT.md"
+  },
+  "link.item.label.Segurança": {
+    "message": "安全",
+    "description": "The label of footer link with label=Segurança linking to https://github.com/daneiel/brabo/blob/dev/SECURITY.md"
+  },
+  "link.item.label.GitHub": {
+    "message": "GitHub",
+    "description": "The label of footer link with label=GitHub linking to https://github.com/daneiel/brabo"
+  },
+  "link.item.label.CHANGELOG": {
+    "message": "CHANGELOG",
+    "description": "The label of footer link with label=CHANGELOG linking to https://github.com/daneiel/brabo/blob/dev/CHANGELOG.md"
+  },
+  "link.item.label.Licença MIT": {
+    "message": "MIT 许可证",
+    "description": "The label of footer link with label=Licença MIT linking to https://github.com/daneiel/brabo/blob/dev/LICENSE"
+  },
+  "link.item.label.Avisos de terceiros": {
+    "message": "第三方声明",
+    "description": "The label of footer link with label=Avisos de terceiros linking to https://github.com/daneiel/brabo/blob/dev/THIRD_PARTY_NOTICES.md"
+  },
+  "copyright": {
+    "message": "Copyright © 2026 Daniel Souza。基于 MIT 许可证授权。第三方工具保留各自的许可证——参见第三方声明。",
+    "description": "The footer copyright"
+  },
+  "link.item.label.Manual de operação": {
+    "message": "运维手册",
+    "description": "The label of footer link with label=Manual de operação linking to /runbook"
+  }
+}

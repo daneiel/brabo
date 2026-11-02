@@ -4,7 +4,15 @@ defmodule Engine.Gates.QaTools do
   código (sem `write_file`). Passado como `ctx.tools` pro `ToolLoop`.
   """
 
-  alias Engine.Harness.Tools.{ReadFile, SearchWorkspace, Terminal, RagSearch, RagFeedback}
+  alias Engine.Harness.Tools.{
+    RegistrarPlano,
+    ReadFile,
+    SearchWorkspace,
+    Terminal,
+    RagSearch,
+    RagFeedback
+  }
+
   alias Engine.Gates.Tools.EmitQaVerdict
 
   # RagSearch entrou aqui (frente rag_search): o QA-lead revisando uma PR
@@ -14,7 +22,15 @@ defmodule Engine.Gates.QaTools do
   #
   # RagFeedback anda junto (RN-480): buscar sem poder dizer se o trecho serviu
   # deixa a calibração dos pesos sem sinal de verdade. `:direct` como a busca.
-  @registry [ReadFile, SearchWorkspace, Terminal, RagSearch, RagFeedback, EmitQaVerdict]
+  @registry [
+    ReadFile,
+    SearchWorkspace,
+    Terminal,
+    RagSearch,
+    RagFeedback,
+    RegistrarPlano,
+    EmitQaVerdict
+  ]
 
   def registry, do: @registry
 end

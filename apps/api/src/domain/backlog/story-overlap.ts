@@ -23,7 +23,7 @@ import type { Story } from './backlog.entity';
  * existem porque uma roda no PO (api) e a outra no Criativo (engine).
  */
 export function normalizarTitulo(titulo: string): string {
-  return titulo
+  return decodificarEscapesLiterais(titulo)
     .toLowerCase()
     .normalize('NFD')
     .replace(/\p{Mn}/gu, '')
@@ -31,11 +31,27 @@ export function normalizarTitulo(titulo: string): string {
     .trim();
 }
 
-/** A primeira história do projeto com o mesmo título, se houver. */
-export function tituloDuplicado(
+/**
+ * Decodifica escape LITERAL (`ó`, par surrogate, `\n`, `\t`) que o modelo
+ * mandou dentro de texto (RN-725): o título gravado escapado antes da AT-405
+ * tem de casar com o mesmo título escrito normal.
+ */
+export function decodificarEscapesLiterais(texto: string): string {
+  return texto
+    .replace(/\\u([0-9a-fA-F]{4})/g, (_m, h: string) =>
+      String.fromCharCode(parseInt(h, 16)),
+    )
+    .replace(/\\([nt])/g, (_m, c: string) => (c === 'n' ? '\n' : '\t'));
+}
+
+/**
+ * A primeira história (ou épico, RN-894) do projeto com o mesmo título, se
+ * houver.
+ */
+export function tituloDuplicado<T extends Pick<Story, 'title'>>(
   titulo: string,
-  existentes: readonly Story[],
-): Story | null {
+  existentes: readonly T[],
+): T | null {
   const alvo = normalizarTitulo(titulo);
   if (alvo === '') return null;
 

@@ -135,7 +135,7 @@ diferentes.
 var(--fs-sm)`) para linha de tabela, painel lateral e barra de idioma; `icon` é
 o **botão de ícone** do handoff — quadrado (36px, ou 28px com `sm`), raio
 `--r-sm` (7px), nome acessível por `aria-label`. Botão cru (`<button>` com
-módulo próprio) fica só onde o elemento NÃO é uma ação de botão: aba do trilho
+módulo próprio) fica só onde o elemento NÃO é uma ação de botão: aba do projeto
 (`role="tab"`), cabeçalho de disclosure, item de navegação, título editável.
 
 ## Card, Chip e Badge (AT-286, AT-287)
@@ -152,6 +152,10 @@ módulo próprio) fica só onde o elemento NÃO é uma ação de botão: aba do 
   danger|accent|muted`, mais `neutral` (texto `--text-secondary`: badge cujo
   texto é conteúdo, como nome de branch) e `agent` (cor herdada de
   `--agent-color`). `size="md"` é o de 11px; `square` é o retângulo de tabela.
+  `emCurso` põe o rótulo no `Shimmer` — só em estado EM CURSO (container e
+  projeto `provisioning`); os outros badges não mudam. Os pulsos de ponto
+  (`pulse` do Badge, marcador do gate corrente, pontos de status) param em
+  `prefers-reduced-motion: reduce`: a animação sai, o ponto fica.
 
 ## AgentCard
 
@@ -411,6 +415,19 @@ duas requisições); ganha `aria-busy="true"` (sem isso, quem usa leitor de
 tela só percebe que o botão desabilitou); e o spinner é `aria-hidden`, para
 não entrar no nome acessível. Em `prefers-reduced-motion` a animação para —
 o elemento **fica**, porque removê-lo mudaria o layout do botão.
+
+## Shimmer (texto em curso — ADR 0210)
+
+`components/ui/Shimmer.tsx`, adaptado do Shimmer do AI Elements: o texto fica
+em `--text-secondary` e um brilho em `--text-primary` corre por ele
+(`duration` 2s, largura `--spread` = comprimento × `spread`). Quando usar:
+TEXTO que diz que algo está em curso ("Pensando…", "Reunindo informações…",
+o status "trabalhando" do AgentCard, e o texto de carregamento de tela —
+"Carregando…", "Buscando…", "Somando…", "Verificando…", AT-402). Quando NÃO usar: bloco que espera dado →
+`Skeleton`; botão que espera resposta → `loading`. O texto fica no DOM;
+`role`/`aria-live` são do contêiner de quem chama. Em
+`prefers-reduced-motion` a animação para e o texto fica, estático, na
+cor-base. É o único lugar do web que importa `motion`.
 
 ## Campo preenchido (segunda anatomia de input)
 

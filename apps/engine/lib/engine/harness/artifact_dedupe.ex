@@ -28,6 +28,7 @@ defmodule Engine.Harness.ArtifactDedupe do
   @spec normalizar(String.t()) :: String.t()
   def normalizar(titulo) when is_binary(titulo) do
     titulo
+    |> Engine.Harness.ArgumentosDeFerramenta.decodificar_escapes()
     |> String.downcase()
     |> :unicode.characters_to_nfd_binary()
     # \p{Mn} = marca combinante (o acento já separado pelo NFD).

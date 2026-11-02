@@ -1,16 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { Card } from './Card';
-import styles from './Card.module.css';
 
 describe('Card (AT-286)', () => {
   it('nasce com a superfície do design system, raio lg e padding md', () => {
     render(<Card>conteúdo</Card>);
     const card = screen.getByText('conteúdo');
     expect(card.tagName).toBe('DIV');
-    expect(card).toHaveClass(styles.card, styles.padMd);
-    expect(card).not.toHaveClass(styles.radiusMd);
-    expect(card).not.toHaveClass(styles.recorta);
+    expect(card).toHaveAttribute('data-padding', 'md');
+    expect(card).toHaveAttribute('data-radius', 'lg');
+    expect(card).not.toHaveAttribute('data-recorta');
   });
 
   it('aplica as variantes e mantém className e style de quem posiciona', () => {
@@ -27,8 +26,10 @@ describe('Card (AT-286)', () => {
       </Card>,
     );
     const card = screen.getByTestId('c');
-    expect(card).toHaveClass(styles.card, styles.padNone, styles.radiusMd, styles.recorta, 'externa');
-    expect(card).not.toHaveClass(styles.padMd);
+    expect(card).toHaveAttribute('data-padding', 'none');
+    expect(card).toHaveAttribute('data-radius', 'md');
+    expect(card).toHaveAttribute('data-recorta', 'true');
+    expect(card).toHaveClass('externa');
     expect(card.style.getPropertyValue('--msg-color')).toBe('red');
   });
 

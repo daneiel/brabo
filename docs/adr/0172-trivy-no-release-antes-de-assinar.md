@@ -1,4 +1,4 @@
-# 0172 — O release escaneia com Trivy o que publica, por digest, antes de assinar
+# ADR 0172 — O release escaneia com Trivy o que publica, por digest, antes de assinar
 
 ## Status
 

@@ -4,6 +4,8 @@ import i18next from 'i18next';
 import { initReactI18next, I18nextProvider } from 'react-i18next';
 import commonEn from '../locales/en/common.json';
 import commonPtBR from '../locales/pt-BR/common.json';
+import settingsEn from '../locales/en/settings.json';
+import settingsPtBR from '../locales/pt-BR/settings.json';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ToastProvider } from '../components/ui/ToastProvider';
 import { AccountPage } from './AccountPage';
@@ -60,13 +62,13 @@ function novaInstanciaI18n() {
   const instancia = i18next.createInstance();
   void instancia.use(initReactI18next).init({
     resources: {
-      en: { common: commonEn },
-      'pt-BR': { common: commonPtBR },
+      en: { common: commonEn, settings: settingsEn },
+      'pt-BR': { common: commonPtBR, settings: settingsPtBR },
     },
     lng: 'en',
     fallbackLng: 'en',
     defaultNS: 'common',
-    ns: ['common'],
+    ns: ['common', 'settings'],
     interpolation: { escapeValue: false },
     returnNull: false,
   });
@@ -118,6 +120,25 @@ describe('AccountPage', () => {
     });
     expect(screen.getByRole('heading', { name: 'Idioma', level: 2 })).toBeInTheDocument();
     expect(definirIdiomaMock).toHaveBeenCalledWith('pt-BR', expect.anything());
+  });
+
+  it('mostra a matriz "quem pode aprovar o quê" a qualquer pessoa logada (RN-911)', () => {
+    montar();
+    const titulo = settingsEn.matrix.title;
+    expect(screen.getByRole('heading', { name: titulo, level: 2 })).toBeInTheDocument();
+    // 5 ações × 4 papéis: cabeçalho + 5 linhas.
+    expect(screen.getAllByRole('row')).toHaveLength(6);
+  });
+
+  it('CASO DE FALHA: a matriz não é chave crua quando o idioma troca para pt-BR', async () => {
+    definirIdiomaMock.mockImplementation(async (novo: string, i18n) => {
+      await i18n.changeLanguage(novo);
+    });
+    montar();
+    fireEvent.change(screen.getByRole('combobox', { name: 'Language' }), { target: { value: 'pt-BR' } });
+    expect(
+      await screen.findByRole('heading', { name: settingsPtBR.matrix.title, level: 2 }),
+    ).toBeInTheDocument();
   });
 
   it('sem sessão (sem e-mail), a tela ainda renderiza sem quebrar', () => {

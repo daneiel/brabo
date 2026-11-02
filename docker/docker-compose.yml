@@ -9,7 +9,7 @@ name: brabo-dev
 
 services:
   postgres:
-    image: pgvector/pgvector:pg16@sha256:ccc6e83d6e35e931dc7c5def2022729d5a6c370318d099181995567ff1fb4d6b
+    image: pgvector/pgvector:pg16@sha256:7b822b0aac60967beb1ea5e576b8602c94c300a157d187f385ae3e0da199b90a
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-brabo}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-brabo}
@@ -33,7 +33,7 @@ services:
   # default público que vira fallback silencioso" que o resto do compose segue
   # (ADR 0059).
   neo4j:
-    image: neo4j:5.26-community@sha256:22ec5cd05a8cbb372fc4bed5e384c30bc75fd92504c72be4462039761b105f61
+    image: neo4j:5.26-community@sha256:adaa077a3ab023015143b8f73f7076a7d053f12985f5b06f4c6a128c3a2f7240
     environment:
       NEO4J_AUTH: ${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD:-dev-neo4j-password-change-me}
       # NÃO defina NEO4J_USERNAME/NEO4J_PASSWORD aqui (só NEO4J_AUTH acima) —
@@ -89,7 +89,7 @@ services:
     # `latest` muda sob o pé sem aviso, e um upgrade silencioso de Ollama já
     # quebrou build antes (mudança de rota da API). Atualizar é decisão
     # manual — subir o número aqui, não seguir `latest`.
-    image: ollama/ollama:0.33.1@sha256:075246f72d4109385b4a01c3ac8e9cbd26a0bcb21cd7aa30edbccd24e1b3180c
+    image: ollama/ollama:0.40.10@sha256:4c5b27871a3239a717048f9b93057680a51b60c8119a7016aebb57f938e25e35
     profiles: ["local-llm"]
     entrypoint: ["sh", "-c", "ollama serve & sleep 5 && ollama pull llama3.2:1b; wait"]
     volumes:
@@ -129,7 +129,7 @@ services:
     # MESMA tag do serviço `ollama` acima, de propósito: os dois falam o
     # mesmo protocolo HTTP, e divergir a versão entre daemon e CLI é o tipo
     # de coisa que só aparece em produção.
-    image: ollama/ollama:0.33.1@sha256:075246f72d4109385b4a01c3ac8e9cbd26a0bcb21cd7aa30edbccd24e1b3180c
+    image: ollama/ollama:0.40.10@sha256:4c5b27871a3239a717048f9b93057680a51b60c8119a7016aebb57f938e25e35
     profiles: ["local-llm"]
     depends_on:
       ollama:
@@ -176,6 +176,9 @@ services:
       # isto fecha o lado de quem a escolhe de propósito.
       WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:${WEB_PORT:-5173}}
       OLLAMA_HOST: ${OLLAMA_HOST:-http://ollama:11434}
+      # O 9Router roda no HOST, fora do compose (AT-576a, ADR 0222): a URL é da
+      # instalação e o padrão atravessa o `extra_hosts` do serviço.
+      NINE_ROUTER_BASE_URL: ${NINE_ROUTER_BASE_URL:-http://host.docker.internal:20128/v1}
       # Teto de INATIVIDADE do socket na chamada ao Ollama (ver
       # ollama-provider.ts). Precisa ser >= o LLM_TURN_TIMEOUT_MS do engine,
       # senão quem desiste primeiro é a api e o teto do engine não vale nada.
@@ -342,7 +345,7 @@ services:
     # depois de apagar e recriar os schemas — "esta api está de pé CONTRA o
     # banco migrado?" —, e `/live` responderia "ok" com o banco vazio.
     #
-    # `wget` do busybox (o `node:24-alpine` não traz `curl`) e contra
+    # `wget` do busybox (o `node:26-alpine` não traz `curl`) e contra
     # `127.0.0.1`, como no broker. `start_period` alto porque o CMD de dev roda
     # `pnpm install` e `pnpm db:migrate` ANTES de o Nest escutar — numa primeira
     # subida com os volumes de node_modules vazios isso passa de dois minutos,
@@ -397,7 +400,7 @@ services:
       # valor tem que ser o MESMO dos dois lados, e uma variável presente num
       # só é como os dois passam a enxergar árvores diferentes.
       BRABO_PROJECTS_BASE: ${BRABO_PROJECTS_BASE:-}
-      TERMINAL_ACTION_TIMEOUT_MS: ${TERMINAL_ACTION_TIMEOUT_MS:-15000}
+      TERMINAL_ACTION_TIMEOUT_MS: ${TERMINAL_ACTION_TIMEOUT_MS:-120000}
       # Teto de BYTES da saída de um comando (RN-074). A saída fica no
       # histórico do laço e viaja em TODO turno seguinte — sem teto, um `find`
       # numa árvore grande derruba a execução com 413 da api do Brabo (o
@@ -627,7 +630,7 @@ services:
     # "reset completo" com o processo morto cinco segundos depois. Foi assim que
     # a queda por corepack/registry passou despercebida: verde falso.
     #
-    # `wget` do busybox porque `node:24-alpine` não traz `curl`, e contra
+    # `wget` do busybox porque `node:26-alpine` não traz `curl`, e contra
     # `127.0.0.1` porque este serviço não publica porta nenhuma — o teste roda
     # DENTRO do container, que é a única forma que sobra e a que a contenção
     # quer. Mesmo teste do `HEALTHCHECK` do `Dockerfile.prod`, deliberadamente.

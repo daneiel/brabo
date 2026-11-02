@@ -1,4 +1,4 @@
-# 0183 — A sessão encerrada pode ser reaberta: uma saída própria dos terminais, para `active`, com evento novo
+# ADR 0183 — A sessão encerrada pode ser reaberta: uma saída própria dos terminais, para `active`, com evento novo
 
 ## Status
 

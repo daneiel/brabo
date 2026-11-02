@@ -30,8 +30,11 @@ import type { ActionType } from './decide';
 export const TIPOS_SEM_SEMPRE_PERMITIR: readonly ActionType[] = [
   'git_push',
   'pr_open',
+  'open_adr_pr',
+  'open_infra_pr',
   'git_merge',
   'container_remove',
+  'container_recreate',
   'instruction_patch',
   'parallelize',
   'raise_max_parallel',
@@ -43,10 +46,14 @@ export const TETO_DO_SEMPRE_PERMITIR = 'teto_do_sempre_permitir';
 const MOTIVO_POR_TIPO: Record<string, string> = {
   git_push: 'push leva código para fora da máquina (teto da RN-418)',
   pr_open: 'abrir PR publica no provider (teto da RN-418)',
+  open_adr_pr: 'abrir PR publica no provider (teto da RN-418)',
+  open_infra_pr: 'abrir PR publica no provider (teto da RN-418)',
   git_merge:
     'merge é decisão a cada vez — em branch protegida, nunca automatizável',
   container_remove:
     'remover o container descarta o que existe e exige reprovisionar do zero',
+  container_recreate:
+    'recriar o container remove o que existe e o sobe com outra rede/comando',
   instruction_patch:
     'mudar a instrução de um agente pede revisar o diff a cada vez',
   parallelize: 'gastar com mais agentes é decisão sua a cada vez',

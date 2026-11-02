@@ -1,3 +1,4 @@
+import { Shimmer } from '../../components/ui/Shimmer';
 import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -108,7 +109,7 @@ export function CodeBranchPicker({ projectId, currentRef, onSelect }: CodeBranch
           </div>
 
           {branchesQuery.isLoading && (
-            <div className={styles.estado}>{t('branchPicker.loading')}</div>
+            <div className={styles.estado}><Shimmer>{t('branchPicker.loading')}</Shimmer></div>
           )}
 
           {branchesQuery.isError && (

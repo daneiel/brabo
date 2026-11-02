@@ -1,0 +1,67 @@
+{
+  "topbar": {
+    "title": "Проекты",
+    "searchPlaceholder": "Искать проекты…",
+    "newProject": "Новый проект"
+  },
+  "summary": {
+    "unavailable": "сводка недоступна",
+    "line": "{{projects}} · {{agents}} · {{spent}} в этом месяце"
+  },
+  "empty": {
+    "loadError": "Не удалось загрузить ваши проекты.",
+    "noProjectsYet": "Здесь пока нет проектов.",
+    "createProject": "Создать проект",
+    "noSearchResults": "По запросу \"{{search}}\" проекты не найдены."
+  },
+  "activity": {
+    "noSession": "Сессий пока нет",
+    "latestSessionEmpty": "В последней сессии пока нет активности",
+    "loading": "загрузка активности…",
+    "unavailable": "активность недоступна"
+  },
+  "gitError": {
+    "title": "Не удалось создать репозиторий",
+    "bodyWithProvider": "Проект создан, но создание репозитория через {{provider}} не удалось. Проверьте учётные данные провайдера в Настройках и попробуйте снова.",
+    "bodyWithoutProvider": "Проект создан, но создание репозитория не удалось. Проверьте учётные данные провайдера в Настройках и попробуйте снова.",
+    "backToProjects": "Вернуться к проектам"
+  },
+  "status": {
+    "heading": "Brabo — статус платформы",
+    "columns": {
+      "service": "Сервис",
+      "status": "Статус",
+      "lastCheck": "Последняя проверка"
+    },
+    "services": {
+      "api": "api (NestJS)",
+      "engine": "engine (Elixir/Phoenix)"
+    },
+    "back": "Назад",
+    "noTimestamp": "не указано",
+    "state": {
+      "ok": "работает",
+      "error": "недоступен",
+      "checking": "проверка"
+    }
+  },
+  "projectCard": {
+    "provider": {
+      "github": "GitHub",
+      "gitlab": "GitLab",
+      "local": "Локальный репозиторий"
+    },
+    "provisioning": {
+      "provisioning": "Создаётся",
+      "failed": "Ошибка",
+      "awaitingPlanDecision": "Ждёт вашего решения"
+    },
+    "online": "{{count}} онлайн"
+  },
+  "projectStatus": {
+    "saudavel": "активен",
+    "atencao": "бюджет ≥70%",
+    "risco": "требует внимания",
+    "inativo": "нет недавней активности"
+  }
+}

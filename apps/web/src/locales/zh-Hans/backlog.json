@@ -1,0 +1,88 @@
+{
+  "statusLabel": {
+    "draft": "草稿",
+    "ready": "就绪",
+    "inProgress": "进行中",
+    "done": "已完成"
+  },
+  "sectionLabel": {
+    "backlog": "用户故事",
+    "traceability": "可追溯性",
+    "promotionQueue": "等待你推进"
+  },
+  "empty": {
+    "epics": "还没有史诗。在会话中接受 Criativo 的 handoff，PO 就会生成待办列表。",
+    "rules": "还没有业务规则。"
+  },
+  "coverage": {
+    "uncoveredBadge_other": "{{count}} 条未覆盖",
+    "coveredBy_other": "被 {{count}} 个用户故事覆盖",
+    "uncovered": "未覆盖——没有用户故事"
+  },
+  "ruleRefs_other": "关联 {{count}} 条业务规则",
+  "promotionQueue": {
+    "hint": "PO 已完成这些用户故事，内容完整。在你推进之前，dev agent 不能领取其中的任何任务。",
+    "selectedCount_other": "已选 {{count}} 个",
+    "promoteSelected": "推进所选",
+    "selectAria": "选择 {{title}}",
+    "taskRefsSuffix_other": " · {{count}} 个任务将可领取",
+    "promote": "推进",
+    "reject": "拒绝",
+    "returnModalTitle": "将“{{title}}”退回给 PO？",
+    "reasonLabel": "原因",
+    "reasonHint": "将作为置顶消息发送到 PO 的会话。说明缺少什么——他会据此重写用户故事。",
+    "reasonPlaceholder": "例如：验收标准没有覆盖付款被拒的情况。",
+    "returnConfirm": "退回给 PO",
+    "cancel": "取消",
+    "toast": {
+      "promoted_other": "已推进 {{count}} 个用户故事",
+      "partialPromoted_other": "已推进 {{count}} 个",
+      "partialFailed_other": "{{count}} 个被领域规则拒绝",
+      "promoteError": "无法推进",
+      "returnedSuccess": "用户故事已退回给 PO",
+      "returnError": "无法退回"
+    }
+  },
+  "epicNode": {
+    "storyCount_other": "{{count}} 个用户故事"
+  },
+  "storyNode": {
+    "awaitingYou": "等待你处理",
+    "returned": "已退回",
+    "youReturned": "你退回给 PO 的原因：",
+    "taskCount_other": "{{count}} 个任务",
+    "editTitle": "编辑标题",
+    "archive": "归档",
+    "editModalTitle": "编辑用户故事标题",
+    "titleLabel": "标题",
+    "save": "保存",
+    "cancel": "取消",
+    "archiveModalTitle": "归档“{{title}}”？",
+    "archiveExplain_other": "该用户故事及其 {{count}} 个任务将从待办列表、覆盖情况和计划中移除。不会删除任何内容：记录保留在会话历史中。",
+    "archiveReasonLabel": "原因（可选）",
+    "archiveReasonPlaceholder": "例如：与另一个用户故事重复。",
+    "archiveConfirm": "归档",
+    "inertRole": "编辑和归档需要 developer 或更高角色。",
+    "inertStatus": "只有草稿状态的用户故事可以编辑或归档。",
+    "inertRunning_other": "{{count}} 个任务正在执行——请等待完成后再编辑或归档。",
+    "toast": {
+      "updated": "标题已修改",
+      "updateError": "无法修改标题",
+      "archived": "用户故事已归档",
+      "archiveError": "无法归档"
+    }
+  },
+  "fieldLabels": {
+    "rf": "RF",
+    "rnf": "RNF",
+    "dor": "DoR",
+    "dod": "DoD"
+  },
+  "taskState": {
+    "blocked": "已阻塞",
+    "todo": "待办",
+    "inProgress": "进行中",
+    "inReview": "审查中",
+    "done": "已完成"
+  }
+}

@@ -9,7 +9,6 @@ import modelsPtBR from '../../locales/pt-BR/models.json';
 import { ToastProvider } from '../../components/ui/ToastProvider';
 import { AGENT_LIST, AREAS } from '../../lib/agents';
 import type { BindingsResolvidosEmLote, Project } from '../../lib/api-types';
-import { AreaModelsSection } from './AreaModelsSection';
 import { ModelsSection } from './ModelsSection';
 
 /**
@@ -117,7 +116,10 @@ function lote(): BindingsResolvidosEmLote {
       binding:
         a.key === 'arquiteto'
           ? { modelId: 'm-arq', origin: 'agent', routingPreference: null, skipped: [] }
-          : null,
+          : // O lead de QA herda o padrão da área (a caixa marcada).
+            a.key === 'qa'
+            ? { modelId: 'm-qa', origin: 'area', routingPreference: null, skipped: [] }
+            : null,
     })),
     areas: Object.keys(AREAS).map((key) => ({
       key,
@@ -130,7 +132,6 @@ function lote(): BindingsResolvidosEmLote {
 }
 
 const SEM_MODELO_AGENTE = settingsPtBR.modelsSection.originChainNoModel;
-const SEM_PADRAO_AREA = settingsPtBR.areaModels.originChainNoModel;
 const NAO_LIDO = settingsPtBR.resolvedBindings.cellUnread;
 const LENDO = settingsPtBR.resolvedBindings.cellLoading;
 
@@ -147,24 +148,20 @@ beforeEach(() => {
 });
 
 describe('bindings resolvidos em lote nas seções de modelo (AT-334, RN-654)', () => {
-  it('caminho feliz: as duas seções renderizam a partir de UMA leitura em lote, sem rota por chave', async () => {
+  it('caminho feliz: a tabela (com a caixa da área) renderiza a partir de UMA leitura em lote, sem rota por chave', async () => {
     getResolvedModelBindings.mockResolvedValue(lote());
 
-    montar(
-      <>
-        <ModelsSection projectId="proj-1" />
-        <AreaModelsSection projectId="proj-1" />
-      </>,
-    );
+    montar(<ModelsSection projectId="proj-1" />);
 
-    // Só a linha do Arquiteto divergiu — e só a área de QA tem padrão próprio.
-    // Cada seção tem o seu "voltar a herdar": um na tabela, um no card de QA.
+    // Só a linha do Arquiteto divergiu; o lead de QA segue a área (caixa
+    // marcada, sem "voltar a herdar" — não há binding próprio a apagar).
     await waitFor(() =>
-      expect(screen.getAllByRole('button', { name: /voltar a herdar/i })).toHaveLength(2),
+      expect(screen.getAllByRole('button', { name: /voltar a herdar/i })).toHaveLength(1),
     );
-    // Os demais 16 agentes e as outras 2 áreas: a afirmação da api, `null`.
-    expect(screen.getAllByText(SEM_MODELO_AGENTE)).toHaveLength(AGENT_LIST.length - 1);
-    expect(screen.getAllByText(SEM_PADRAO_AREA)).toHaveLength(Object.keys(AREAS).length - 1);
+    expect(screen.getByRole('checkbox', { name: /área QA inteira/ })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: /área Dev inteira/ })).not.toBeChecked();
+    // Os demais agentes: a afirmação da api, `null`.
+    expect(screen.getAllByText(SEM_MODELO_AGENTE)).toHaveLength(AGENT_LIST.length - 2);
 
     expect(getResolvedModelBindings).toHaveBeenCalledTimes(1);
     expect(getResolvedModelBindings).toHaveBeenCalledWith(
@@ -185,32 +182,24 @@ describe('bindings resolvidos em lote nas seções de modelo (AT-334, RN-654)', 
       new ApiError(503, { message: 'Banco indisponível agora' }),
     );
 
-    montar(
-      <>
-        <ModelsSection projectId="proj-1" />
-        <AreaModelsSection projectId="proj-1" />
-      </>,
-    );
+    montar(<ModelsSection projectId="proj-1" />);
 
-    // Uma frase por seção, com o motivo da api.
-    await waitFor(() => expect(screen.getAllByRole('alert')).toHaveLength(2));
+    // Uma frase, com o motivo da api.
+    await waitFor(() => expect(screen.getAllByRole('alert')).toHaveLength(1));
     const avisos = screen.getAllByRole('alert');
     for (const aviso of avisos) expect(aviso.textContent).toContain('Banco indisponível agora');
 
-    // Todas as 17 linhas e os 3 cards dizem "não lido" — e NENHUMA diz "sem
-    // modelo", que seria afirmar o que não se leu.
-    expect(screen.getAllByText(NAO_LIDO)).toHaveLength(
-      AGENT_LIST.length + Object.keys(AREAS).length,
-    );
+    // Todas as linhas dizem "não lido" — e NENHUMA diz "sem modelo", que seria
+    // afirmar o que não se leu.
+    expect(screen.getAllByText(NAO_LIDO)).toHaveLength(AGENT_LIST.length);
     expect(screen.queryByText(SEM_MODELO_AGENTE)).toBeNull();
-    expect(screen.queryByText(SEM_PADRAO_AREA)).toBeNull();
     expect(screen.queryByRole('button', { name: /voltar a herdar/i })).toBeNull();
 
-    // Reler resolve: a MESMA chave serve as duas seções.
+    // Reler resolve.
     getResolvedModelBindings.mockResolvedValue(lote());
     fireEvent.click(screen.getAllByRole('button', { name: /tentar de novo/i })[0]);
     await waitFor(() => expect(screen.queryByRole('alert')).toBeNull());
-    expect(screen.getAllByText(SEM_MODELO_AGENTE)).toHaveLength(AGENT_LIST.length - 1);
+    expect(screen.getAllByText(SEM_MODELO_AGENTE)).toHaveLength(AGENT_LIST.length - 2);
     expect(screen.queryByText(NAO_LIDO)).toBeNull();
   });
 

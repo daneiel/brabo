@@ -5,6 +5,7 @@ import { getProject } from '../lib/api-client';
 import type { Project } from '../lib/api-types';
 import { Alert } from './ui/Alert';
 import { Button } from './ui/Button';
+import { Shimmer } from './ui/Shimmer';
 import styles from './EsperaDoRunner.module.css';
 
 /**
@@ -184,8 +185,7 @@ export function EsperaDoRunner({
   return (
     <div className={styles.bloco} role="status">
       <p className={styles.esperando}>
-        <span className={styles.pulso} aria-hidden="true" />
-        {t('esperaDoRunner.esperando')}
+        <Shimmer>{t('esperaDoRunner.esperando')}</Shimmer>
       </p>
       <p className={styles.detalhe}>
         {t('esperaDoRunner.esperandoDetalhe', { minutos: Math.round(TETO_MS / 60_000) })}

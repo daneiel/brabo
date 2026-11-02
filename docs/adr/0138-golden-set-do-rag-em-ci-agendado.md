@@ -1,4 +1,4 @@
-# 0138 — O golden-set do RAG passa a rodar em CI, agendado — e continua `warn`
+# ADR 0138 — O golden-set do RAG passa a rodar em CI, agendado — e continua `warn`
 
 ## Context
 

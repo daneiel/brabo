@@ -252,3 +252,10 @@
   font-size: 13px;
   line-height: 1.6;
 }
+
+/* AT-449 (RN-766): o gate parado esperando o clique, dito ao lado do card. */
+.gateParado {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}

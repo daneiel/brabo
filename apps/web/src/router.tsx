@@ -24,7 +24,7 @@ import {
 /**
  * Code-splitting por rota (AT-300).
  *
- * Até aqui as catorze telas eram importadas ESTATICAMENTE, e o bundle inicial
+ * Até aqui as quinze telas eram importadas ESTATICAMENTE, e o bundle inicial
  * carregava todas elas — inclusive a Sessão inteira para quem só abriu o login.
  * Cada tela agora é um chunk próprio, por `lazyRouteComponent` (do TanStack, e
  * não `React.lazy`) por dois motivos medidos no código do router:
@@ -66,9 +66,18 @@ const VerifyEmailPageLazy = lazyRouteComponent(
   'VerifyEmailPage',
 );
 const AccountPageLazy = lazyRouteComponent(() => import('./routes/AccountPage'), 'AccountPage');
+const ProvidersPageLazy = lazyRouteComponent(
+  () => import('./routes/ProvidersPage'),
+  'ProvidersPage',
+);
+const SpendPageLazy = lazyRouteComponent(() => import('./routes/SpendPage'), 'SpendPage');
 const ContainersPageLazy = lazyRouteComponent(
   () => import('./routes/ContainersPage'),
   'ContainersPage',
+);
+const ContainerDetalhePageLazy = lazyRouteComponent(
+  () => import('./routes/ContainerDetalhePage'),
+  'ContainerDetalhePage',
 );
 
 /**
@@ -166,7 +175,10 @@ const loginRoute = createRoute({
   getParentRoute: () => authLayout,
   path: '/login',
   validateSearch: (search: Record<string, unknown>): LoginSearch => ({
-    oauthError: search.oauth_error === '1',
+    // `undefined`, nunca `false`: o router ESCREVE de volta na URL o que o
+    // `validateSearch` devolve, e `false` virava `?oauthError=false` na
+    // primeira tela de uma instalação nova, sem OAuth nenhum (AT-374).
+    oauthError: search.oauth_error === '1' ? true : undefined,
     proxima: typeof search.proxima === 'string' ? search.proxima : undefined,
   }),
   component: comCarga(LoginPageLazy, () => {
@@ -256,6 +268,24 @@ const containersRoute = createRoute({
   component: ContainersPageLazy,
 });
 
+const containerDetalheRoute = createRoute({
+  getParentRoute: () => appLayout,
+  path: '/containers/$projectId',
+  component: ContainerDetalhePageLazy,
+});
+
+const providersRoute = createRoute({
+  getParentRoute: () => appLayout,
+  path: '/providers',
+  component: ProvidersPageLazy,
+});
+
+const spendRoute = createRoute({
+  getParentRoute: () => appLayout,
+  path: '/spend',
+  component: SpendPageLazy,
+});
+
 // A lista de abas mora em `routes/project-tabs.ts` — aqui só se pergunta se a
 // chave existe. Enquanto a lista era copiada neste arquivo, aceitar `?tab=x`
 // e ter painel para `x` eram duas decisões independentes.
@@ -269,6 +299,8 @@ interface ProjectSearch {
    * duas decisões independentes.
    */
   section?: ChaveDeSecao;
+  /** RN-884: a história que a aba Histórias abre (o "Corrigir a história"). */
+  historia?: string;
 }
 
 const projectRoute = createRoute({
@@ -285,10 +317,11 @@ const projectRoute = createRoute({
   validateSearch: (search: Record<string, unknown>): ProjectSearch => ({
     tab: resolverChaveDeAba(search.tab),
     section: resolverChaveDeSecao(search.section),
+    historia: typeof search.historia === 'string' ? search.historia : undefined,
   }),
   component: comCarga(ProjectPageLazy, () => {
     const { projectId } = projectRoute.useParams();
-    const { tab, section } = projectRoute.useSearch();
+    const { tab, section, historia } = projectRoute.useSearch();
     // `?section=` sozinho ABRE Configurações. A alternativa era abrir a Visão
     // geral e não rolar para lugar nenhum — a mesma falha silenciosa que o
     // registro de abas existe para não repetir: um link que a URL aceita e a
@@ -298,6 +331,7 @@ const projectRoute = createRoute({
         projectId={projectId}
         initialTab={tab ?? (section ? 'settings' : undefined)}
         initialSection={section}
+        initialStory={historia}
       />
     );
   }),
@@ -419,6 +453,9 @@ const routeTree = rootRoute.addChildren([
     indexRoute,
     accountRoute,
     containersRoute,
+containerDetalheRoute,
+    providersRoute,
+    spendRoute,
     projectRoute,
     sessionRoute,
     provisioningRoute,

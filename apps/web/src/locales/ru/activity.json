@@ -1,0 +1,21 @@
+{
+  "feed": {
+    "kindLabel": {
+      "commit": "Коммиты",
+      "pr": "Pull requests",
+      "hypothesis": "Гипотезы",
+      "session": "Сессия",
+      "permission": "Разрешения",
+      "terminal": "Команды",
+      "delegation": "Делегирования",
+      "generic": "Прочее"
+    },
+    "allAgents": "Все агенты",
+    "machineEvents": "Машинные события",
+    "machineEventsTitle": "tool.call, tool.result, agent.response/delta, agent.status и context.compacted — то, чем обмениваются агент и harness",
+    "empty": "Здесь пока нет активности.",
+    "pagerCount": "Загружено {{shown}} из {{total}}",
+    "loadingOlder": "Загрузка…",
+    "loadOlder": "Загрузить более ранние"
+  }
+}

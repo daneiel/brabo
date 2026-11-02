@@ -11,6 +11,8 @@ import { TogetherProvider } from './together-provider';
 import { DeepInfraProvider } from './deepinfra-provider';
 import { BitdeerProvider } from './bitdeer-provider';
 import { VultrProvider } from './vultr-provider';
+import { NineRouterProvider } from './nine-router-provider';
+import { OpenCodeZenProvider } from './opencode-zen-provider';
 import { TracedLLMProvider } from './traced-llm-provider';
 import { BraboMetrics } from '../observability/brabo-metrics';
 
@@ -26,6 +28,8 @@ export class LLMProviderRegistryImpl implements LLMProviderRegistry {
     private readonly deepinfra: DeepInfraProvider,
     private readonly bitdeer: BitdeerProvider,
     private readonly vultr: VultrProvider,
+    private readonly nineRouter: NineRouterProvider,
+    private readonly openCodeZen: OpenCodeZenProvider,
     private readonly metrics: BraboMetrics,
   ) {}
 
@@ -70,6 +74,10 @@ export class LLMProviderRegistryImpl implements LLMProviderRegistry {
         return this.bitdeer;
       case 'vultr':
         return this.vultr;
+      case '9router':
+        return this.nineRouter;
+      case 'opencode-zen':
+        return this.openCodeZen;
     }
   }
 }

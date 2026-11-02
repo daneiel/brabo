@@ -1,0 +1,558 @@
+{
+  "summary": {
+    "title": "本页内容",
+    "ariaLabel": "设置目录",
+    "groups": {
+      "projeto": "项目与执行",
+      "modelos": "模型",
+      "pessoas": "人员与访问",
+      "avancado": "高级"
+    }
+  },
+  "heranca": {
+    "semValorProprio": "无自有值",
+    "proprio": "自有值",
+    "voltarAHerdar": "恢复继承"
+  },
+  "secao": {
+    "naoSalvas_other": "本节有 {{count}} 项未保存的更改",
+    "invalidas_other": "{{count}} 个值无效——请修正后保存",
+    "toast": {
+      "salvas_other": "已保存 {{count}} 项更改",
+      "parcial": "已保存 {{salvas}}/{{total}}",
+      "parcialDetalhe": "未保存：{{itens}}。{{motivo}}"
+    }
+  },
+  "matrix": {
+    "title": "谁可以批准什么",
+    "eyebrow": "简要矩阵",
+    "subtitle": "仅供参考的表格——反映后端目前按操作类型应用的最低角色；部分行尚无独立的细粒度检查，使用最接近的近似规则。",
+    "columns": {
+      "action": "操作"
+    },
+    "rows": {
+      "mergeOpenPr": "合并 / 打开 PR",
+      "deployProduction": "部署到生产环境",
+      "privilegedCommand": "特权命令",
+      "schemaMigration": "修改 schema/迁移",
+      "editPermissions": "编辑 permissions.json"
+    },
+    "legend": {
+      "canApprove": "可批准",
+      "noPermission": "无权限"
+    }
+  },
+  "bestModels": {
+    "title": "按能力划分的最佳模型",
+    "eyebrow": "精选 · 实际使用 · 成本",
+    "subtitle": {
+      "before": "“推荐”是指在本工作区精选标记了该能力的模型中，本项目被最多智能体使用的那个——成本相同时以成本决定。不计算任何质量评分（精选始终为手动）；请在",
+      "link": "Providers",
+      "after": "页面中标记用途。"
+    },
+    "columns": {
+      "capability": "能力",
+      "recommended": "推荐",
+      "alternative": "备选",
+      "usedBy": "使用者"
+    },
+    "noCuratedCoverage": "无精选覆盖",
+    "noAgentYet": "尚无智能体",
+    "usedByCount_other": "本项目 {{count}} 个智能体",
+    "emptyMessage": "尚未登记任何能力。"
+  },
+  "cascata": {
+    "niveis": {
+      "workspace": "工作区",
+      "project": "项目",
+      "area": "领域",
+      "agent": "智能体",
+      "session": "会话"
+    },
+    "modeloDesconhecido": "未知模型",
+    "titulo": {
+      "vigente": "当前生效的模型（{{modelo}}）来自这一层级。",
+      "doStart": "级联中没有任何层级在此选择模型——产品继承启动智能体 Criativo 的模型，而不是回落到工作区默认值。Criativo 使用 {{modelo}}。",
+      "definido": "此层级{{polo}}（{{modelo}}），但更具体的层级优先。",
+      "vazio": "此层级{{polo}}。",
+      "puladoIndisponivel": "级联已跳过此层级：{{modelo}} 已从 provider 中消失。",
+      "puladoSemToolCalling": "级联已跳过此层级：{{modelo}} 不支持 tool calling，无法用于智能体。"
+    },
+    "niveisComNome": {
+      "area": "领域 {{area}}"
+    }
+  },
+  "modelsSection": {
+    "title": "按智能体的模型",
+    "eyebrow": "按级联生效的 binding",
+    "subtitle": {
+      "intro": "来源表示值在哪里解析：",
+      "mostSpecificWins": "最具体的优先。",
+      "areaWord": "领域",
+      "areaExplain": "是 lead 与子智能体共享的默认值：在 lead 的那一行（Dev Lead、QA 或 Infra）勾选复选框，其模型即适用于整个领域。",
+      "needsDeveloper": " 更换模型、将某个模型应用到所有智能体或恢复继承需要 developer 角色。",
+      "needsMaintainerArea": " 勾选领域复选框或更改其模型需要 maintainer 角色。"
+    },
+    "costCard": {
+      "label": "团队每月预估成本",
+      "detail": "· 基于 30 天历史"
+    },
+    "columns": {
+      "agent": "智能体",
+      "model": "当前模型",
+      "origin": "来源",
+      "fallback": "回退",
+      "estimate": "月预估"
+    },
+    "backToInheritTitleWithArea": "删除此智能体的自有模型——它将恢复使用领域 {{area}} 的默认值。",
+    "backToInheritTitleNoArea": "删除此智能体的自有模型——它将恢复从项目或工作区继承。",
+    "toast": {
+      "reverted": "{{agent}} 已恢复继承",
+      "alreadyInherits": "{{agent}} 本来就在继承——没有可删除的自有模型",
+      "clearError": "无法恢复继承",
+      "setError": "无法更换该智能体的模型"
+    },
+    "emptyMessage": "尚未配置任何智能体。",
+    "noModelsAvailable": "暂无可用模型。",
+    "originChainNoModel": "所有层级均无模型",
+    "originChainNoModelTitle": "智能体、领域、项目和工作区都没有选择模型。会话仍可以固定一个。",
+    "fallbackNone": "下方没有层级",
+    "fallbackNoneTitle": "当前模型已来自级联的最后一层——下面没有可回落的层级。",
+    "noEstimateYet": "尚无花费",
+    "noEstimateTitle": "此智能体在过去 30 天内未在本项目中记录任何消耗。这与花费为零不同，后者显示为 US$ 0,00。",
+    "bulk": {
+      "label": "将一个模型应用到所有智能体",
+      "detail": "· 覆盖每个智能体自己的模型，每个智能体调用一次，并使子智能体脱离领域默认值",
+      "apply_other": "应用到 {{count}} 个智能体",
+      "applying": "正在应用…",
+      "toast": {
+        "applied_other": "{{model}} 已应用到 {{count}} 个智能体",
+        "error": "无法将该模型应用到智能体"
+      }
+    },
+    "noModelsAvailableLink": "在 Providers 中启用 →",
+    "areaBox": {
+      "label": "适用于整个{{area}}领域（lead + 子智能体）",
+      "notFollowing_other": "该领域有 {{count}} 个智能体拥有自己的模型，不跟随：{{list}}",
+      "dynamic": "此处不列出按模块、且拥有自己模型的子智能体。",
+      "needsModel": "请先为 lead 选择一个模型：没有生效的模型时，该领域的勾选框不起作用。",
+      "toast": {
+        "saveError": "无法保存领域模型",
+        "applied": "{{area}}领域：lead 的模型适用于整个领域",
+        "reverted": "{{area}}领域已恢复继承",
+        "alreadyInherits": "{{area}}领域本来就是继承",
+        "partial": "领域默认值已保存，但 {{agent}} 自己的模型未被移除（{{reason}}）"
+      }
+    }
+  },
+  "members": {
+    "title": "成员与角色",
+    "eyebrow": "IAM · 按项目",
+    "subtitle": "角色决定谁可以批准智能体在本项目中的哪些操作。",
+    "subtitleCascata": " 此表中的角色在本项目中取代工作区角色，双向生效——在这里设为 viewer 甚至会降级工作区的 owner。仅通过工作区访问项目的人不会出现在列表中。",
+    "subtitleNeedsMaintainer": " 邀请、更改角色或移除成员需要 maintainer 角色。",
+    "invite": {
+      "placeholder": "用户 ID（UUID）",
+      "button": "邀请"
+    },
+    "table": {
+      "member": "成员",
+      "role": "项目中的角色",
+      "status": "状态",
+      "active": "活跃",
+      "removeAria": "移除 {{name}}",
+      "removeTitle": "移除"
+    },
+    "toast": {
+      "inviteErrorTitle": "添加成员失败",
+      "inviteErrorMessage": "请确认该用户 ID 存在",
+      "roleErrorTitle": "无法更改角色",
+      "removeErrorTitle": "无法移除成员"
+    },
+    "emptyMessage": "除项目所有者外暂无其他成员。"
+  },
+  "repository": {
+    "title": "仓库",
+    "eyebrow": "git · provider 与策略",
+    "adopted": "已接管——仓库在项目之前就已存在，分支策略由它自己决定。",
+    "created": "由 Brabo 创建，并已应用 Gitflow 初始化。",
+    "dismissed": {
+      "before": "接管时初始化已被",
+      "strong": "跳过",
+      "after": "：我们没有修改任何分支或保护规则。"
+    },
+    "divergesTitle": "此仓库与模板存在差异："
+  },
+  "execution": {
+    "title": "执行",
+    "eyebrow": "dev agent 自动停止",
+    "subtitle": "dev agent 的自动停止——从下一次激活执行起生效，不影响已在运行的智能体。",
+    "card": {
+      "title": "连续阻塞多少个任务后停止",
+      "hintDefault": "使用默认值（{{default}}）",
+      "hintConfigured": "已为本项目配置"
+    },
+    "save": "保存",
+    "saving": "正在保存…",
+    "toast": {
+      "success": "自动停止上限已保存",
+      "error": "无法保存"
+    }
+  },
+  "executionMode": {
+    "title": "代码存放位置",
+    "eyebrow": "转换执行模式",
+    "subtitle": "更改本项目命令的执行位置——托管目录、通过 bind-mount 挂载的你自己的目录，或通过 runner 连接的你自己的目录。",
+    "needsMaintainer": "只有 maintainer 或 owner 可以转换。",
+    "warning": {
+      "refuses": "如果当前有 dev agent 正在工作或卡住，转换会被拒绝——请等待其完成（或解除卡住的任务）后再试。",
+      "carries": "转换会带走项目的策略：permissions.json 换了位置，allow/deny/ask 保持不变。",
+      "leavesPath": "转换不会复制或移动目录内容。{{caminho}} 中的内容——包括未提交的工作——会留在原处，之后也不会有任何东西去取回。",
+      "leavesManaged": "转换不会复制或移动目录内容。本项目在服务器上的托管目录中的内容——包括未提交的工作——会留在原处，之后也不会有任何东西去取回。",
+      "mirrorCleared": "镜像目标（{{destino}}）会被清空：每次转换都会清除它，如果新模式支持镜像，之后需要重新声明。",
+      "containerRemoved": "本项目已登记的容器会被停止并移除：离开 Container 模式会拆除它，且不会自动重新启动。",
+      "containerUnknown": "无法读取本项目是否有已登记的容器。如果有，离开 Container 模式会停止并移除它。",
+      "verifiedLost": "于 {{data}} 确认的目录将不再视为已确认：每次转换都会清除这条记录，Runner 项目需要 runner 在连接时重新确认目录。"
+    },
+    "card": {
+      "title": "执行模式"
+    },
+    "selectAria": "新的执行模式",
+    "pathAria": "新的目录路径",
+    "noBroker": "此安装没有容器 broker（BROKER_URL 为空），而它负责启动 Container 和挂载目录项目的容器。转换为其中任一模式都会得到一个永远无法执行的项目。Runner 项目不依赖它。",
+    "path": {
+      "underBase": "该目录位于此安装的项目基础目录（{{base}}）内，浏览器也从这里打开。",
+      "noBase": "此安装未声明挂载项目的基础目录：无处可浏览，挂载目录模式在这里也无处存在。",
+      "baseUnknown": "无法查询此安装的项目基础目录——无法确定它是否存在，因此目录浏览器不可用。请刷新页面重试。",
+      "baseLoading": "正在查询此安装的项目基础目录…",
+      "runnerTyped": "这里输入的路径是临时的：在 Runner 项目中，目录由 runner 在连接时决定，它的确认会覆盖这个值（机器智能体使用 <base>/<项目目录>）。这也是这里没有目录浏览器的原因：浏览需要一个已连接到此项目的 runner，而已连接的 runner 已经确认了自己的目录。先转换；下一步——连接 runner——会出现在下方。"
+    },
+    "save": "转换",
+    "saving": "正在转换…",
+    "toast": {
+      "success": "执行模式已转换",
+      "error": "无法转换"
+    },
+    "nextStep": {
+      "title": "下一步：连接 runner",
+      "intro": "项目现在处于 Runner 模式，目录尚未确认。转换已保存；还差一个 runner 连接到本项目——由它来确认目录。",
+      "machineAgent": "如果你的机器上已经运行着机器智能体：当它没有服务任何 Runner 项目时，会在 60 秒内自动接手本项目。当它已在服务其他 Runner 项目时，不会接手——项目列表只在智能体启动时读取一次——因此请重启它的服务：",
+      "restartLinux": "systemctl --user restart brabo-runner.service   # Linux",
+      "restartMac": "launchctl kickstart -k gui/$(id -u)/dev.brabo.runner   # macOS"
+    }
+  },
+  "parallelism": {
+    "title": "按领域的并行度",
+    "eyebrow": "无需询问可运行多少智能体",
+    "subtitle": {
+      "before": "每个领域的 lead ",
+      "strong": "在会话中",
+      "after": "无需你授权即可拥有的智能体数量。超过上限时它不会启动任何智能体：请求会变成审批中的一项操作，附带原因，等待你处理。上限针对整个会话而非每个模块——按模块计数会让大量智能体在未经授权的情况下启动。"
+    },
+    "empty": {
+      "before": "暂无领域。它们在你激活执行时产生，因为 dev 领域的成员来自 Arquiteto 的 ",
+      "code": "module_map",
+      "after": "。"
+    },
+    "card": {
+      "title": "领域 {{area}}",
+      "lead": "Lead：{{lead}}",
+      "membersCount_other": " — {{count}} 名成员",
+      "noMembersYet": " — 暂无成员",
+      "capAria": "领域 {{area}} 的智能体上限"
+    },
+    "save": "保存",
+    "saving": "正在保存…",
+    "toast": {
+      "success": "领域 {{area}} 的上限已保存",
+      "error": "无法保存"
+    }
+  },
+  "budget": {
+    "title": "按领域的花费上限",
+    "eyebrow": "可选上限",
+    "subtitle": {
+      "before": "为每个领域设置的可选花费上限，",
+      "strong": "叠加",
+      "after": "于项目和会话预算之上——三者中任一先达到上限都会阻止调用。留空表示无上限，这也是默认值。"
+    },
+    "empty": {
+      "before": "暂无领域。它们在你激活执行时产生，因为 dev 领域的成员来自 Arquiteto 的 ",
+      "code": "module_map",
+      "after": "。"
+    },
+    "card": {
+      "title": "领域 {{area}}",
+      "spent": "已花费：{{amount}}",
+      "capAria": "领域 {{area}} 的花费上限（美元）",
+      "noCap": "无上限"
+    },
+    "placeholder": "无上限",
+    "save": "保存",
+    "saving": "正在保存…",
+    "toast": {
+      "success": "领域 {{area}} 的花费上限已保存",
+      "error": "无法保存"
+    }
+  },
+  "promotion": {
+    "title": "用户故事晋级",
+    "eyebrow": "由谁推进",
+    "subtitle": {
+      "before": "用户故事只有在",
+      "em": "就绪",
+      "after": "时才会成为可领取的工作。这里决定由谁推进这一步。两种模式下的校验完全相同——变化的是由谁触发，而不是要求什么。适用于之后的用户故事；已提出的仍在等待你。"
+    },
+    "card": {
+      "title": "由谁晋级",
+      "hintManual": "PO 完善用户故事后，它会在“用户故事”标签页等待你。在此之前，其中的任务都不可领取。",
+      "hintAuto": "PO 完成一个完整的用户故事后自动晋级。",
+      "defaultNote": "新项目默认为自动。在这里修改只对本项目生效；之前创建的项目保持原有模式。"
+    },
+    "selectAria": "由谁晋级用户故事",
+    "optionManual": "手动——由我晋级",
+    "optionAuto": "自动——由 PO 晋级",
+    "toast": {
+      "manual": "手动晋级：由你决定什么就绪",
+      "auto": "自动晋级：PO 自行晋级",
+      "error": "无法保存"
+    }
+  },
+  "projectLanguage": {
+    "title": "项目语言",
+    "eyebrow": "无人工作者",
+    "subtitle": "无人输入内容的语言：共享产物（product brief、业务规则、ADR）和无作者的回合（智能体开场、dev agent、gate、提交信息、PR 正文）。智能体回复你的内容遵循你在“账户”中设置的回复语言。",
+    "artifactsNote": "包括智能体在与某人对话期间写入的共享产物（业务规则、用户故事、ADR…）：回复使用对方的语言，产物使用此处的语言。",
+    "card": {
+      "title": "语言",
+      "hint": "当前：{{idioma}}。"
+    },
+    "selectAria": "项目语言",
+    "otherCode": "其他代码…",
+    "otherLabel": "语言代码（BCP-47）",
+    "otherHint": "例如：pt-PT、es-MX、fr-CA。api 会拒绝不是语言的代码。",
+    "save": "保存",
+    "readOnly": "只有项目的 maintainer 或 owner 可以更改语言。你可以看到当前值，但控件不可用。",
+    "toast": {
+      "saved": "项目语言已保存",
+      "error": "无法保存项目语言"
+    }
+  },
+  "credentials": {
+    "title": "Provider 凭据",
+    "eyebrow": "只写 · 按用户",
+    "subtitle": {
+      "before": "只写密钥——保存后不再显示。由于无法查看已保存的内容，提供的操作是",
+      "swap": "替换",
+      "middle": "和",
+      "test": "测试",
+      "after": "：测试在服务器上基于加密的密钥运行，只返回结论。"
+    },
+    "connector": {
+      "hub": "provider 中枢",
+      "provider": "provider 凭据",
+      "configured": "已配置",
+      "missing": "无密钥",
+      "configuredNote": "配置于 {{date}} · 不再显示",
+      "noneSaved": "未保存任何凭据",
+      "newKeyAria": "{{label}} 的新密钥",
+      "apiKeyAria": "{{label}} 的 API key",
+      "swapPlaceholder": "替换密钥",
+      "apiKeyPlaceholder": "API key",
+      "swapKeyAria": "替换 {{label}} 的密钥",
+      "saveKeyAria": "保存 {{label}} 的密钥",
+      "swap": "替换",
+      "save": "保存",
+      "testKeyAria": "测试 {{label}} 的密钥",
+      "test": "测试",
+      "removeKeyAria": "移除 {{label}} 的密钥",
+      "remove": "移除",
+      "updateCatalog": "更新目录",
+      "updateCatalogAria": "更新 {{label}} 的模型目录",
+      "noModels": "目录中暂无此 provider 的模型——登记密钥不会发现模型。",
+      "noCatalogSource": "此 provider 不提供模型列表，因此无需同步——其模型通过 seed 导入。"
+    },
+    "toast": {
+      "saved": "凭据已保存",
+      "saveErrorTitle": "无法保存",
+      "testOk": "provider 接受了该密钥",
+      "testRefused": "provider 拒绝了该密钥",
+      "testUnsupportedTitle": "此 provider 无法验证",
+      "testUnsupportedMessage": "密钥仍已保存——此 provider 没有测试端点。",
+      "testErrorTitle": "无法测试",
+      "removed": "凭据已移除",
+      "removeErrorTitle": "无法移除"
+    }
+  },
+  "proficiency": {
+    "title": "熟练度画像",
+    "eyebrow": "Anamnese · 推导",
+    "subtitle": "由 Anamnese 根据你的交互推导。仅包含技术与流程能力——绝不包含个人特征。",
+    "emptyMessage": "暂无内容——Anamnese 会定期基于项目日志运行。",
+    "deleteButton": "删除我的画像",
+    "reactivateButton": "重新启用画像",
+    "runNowButton": "立即运行",
+    "runNowDisabledTitle": "Anamnese 已全局暂停",
+    "pausedNotice": "根据团队决定，Anamnese 已全局暂停——暂时不会有新的轮次。已推导的内容仍保留在这里。",
+    "modal": {
+      "title": "删除我的熟练度画像？",
+      "body": "你画像中的条目会被真正删除，并且在你重新启用之前 Anamnese 不会再为你建立画像。已删除的内容无法恢复。",
+      "confirm": "删除",
+      "cancel": "取消"
+    },
+    "toast": {
+      "deleted": "画像已删除",
+      "deletedMessage": "在你重新启用之前，Anamnese 不会再为你建立画像。",
+      "deleteErrorTitle": "错误",
+      "deleteErrorMessage": "无法删除画像",
+      "reactivated": "已重新启用",
+      "reactivatedMessage": "Anamnese 将重新为你建立画像。",
+      "reactivateErrorTitle": "错误",
+      "reactivateErrorMessage": "无法重新启用",
+      "queued": "轮次已排队",
+      "queuedMessage": "Anamnese 现在将分析该时间窗口。",
+      "pausedTitle": "Anamnese 已暂停",
+      "pausedFallback": "Anamnese 已全局停用。",
+      "genericErrorTitle": "错误",
+      "genericErrorMessage": "无法将轮次加入队列",
+      "evidenceUnavailableTitle": "证据不可用",
+      "evidenceUnavailableMessage": "在本项目中找不到所引用的事件。"
+    }
+  },
+  "personalAccessTokens": {
+    "title": "访问令牌",
+    "eyebrow": "本地 runner",
+    "subtitle": {
+      "before": "Personal Access Token 用于在本机认证 ",
+      "after": "，仅限本项目——可随时撤销，生成后原始值不会再次显示。"
+    },
+    "namePlaceholder": "名称（例如：laptop）",
+    "expiresPlaceholder": "N 天后过期（可选）",
+    "generateButton": "生成令牌",
+    "toast": {
+      "issueErrorTitle": "生成令牌失败",
+      "issueErrorMessage": "请重试。",
+      "copyErrorTitle": "无法复制",
+      "copyErrorMessage": "请手动复制该值。"
+    },
+    "table": {
+      "name": "名称",
+      "created": "创建时间",
+      "expires": "过期时间",
+      "expiresNever": "永不",
+      "lastUsed": "最近使用",
+      "lastUsedNever": "从未使用",
+      "status": "状态",
+      "statusRevoked": "已撤销",
+      "statusActive": "有效",
+      "removeAria": "撤销 {{name}}",
+      "removeTitle": "撤销"
+    },
+    "emptyMessage": "本项目尚未生成任何访问令牌。",
+    "admin": {
+      "title": "项目的所有令牌",
+      "eyebrow": "maintainer",
+      "subtitle": "事件响应——撤销项目中任何用户的令牌，而不仅是你自己的。",
+      "emptyMessage": "本项目尚未生成任何访问令牌。",
+      "table": {
+        "name": "名称",
+        "owner": "所有者",
+        "created": "创建时间",
+        "status": "状态",
+        "statusRevoked": "已撤销",
+        "statusActive": "有效",
+        "removeAria": "撤销 {{name}}（{{email}}）",
+        "removeTitle": "撤销"
+      }
+    },
+    "modal": {
+      "title": "令牌已生成",
+      "bodyBefore": "请立即复制——关闭此窗口后无法再找回该令牌。用于 ",
+      "bodyMiddle": " 或 ",
+      "bodyAfter": "（",
+      "bodyEnd": "）。",
+      "copyButton": "复制",
+      "copiedButton": "已复制"
+    }
+  },
+  "runnerDeviceKeys": {
+    "title": "设备密钥",
+    "eyebrow": "本地 runner",
+    "subtitle": "设备密钥让 brabo-runner 无需手动输入令牌即可认证：Ed25519 密钥对在你的机器或浏览器中生成，只有公钥会到达这里。列表是你用于本项目的密钥，包括已撤销的——删掉那一行会让本页面声称该密钥从未存在。",
+    "subtitleAlcance": "机器密钥服务你所有 runner 模式的项目，因此会出现在所有这些项目的列表中：撤销它会让所有项目中的本地智能体断开，而不仅是本项目。",
+    "subtitleNaoEBatimento": "已登记的密钥不代表智能体正在运行：它证明设备曾经配对过，而不是智能体此刻在线——当前状态要看项目的终端。",
+    "subtitleNeedsDeveloper": "列出和撤销设备密钥需要本项目的 developer 角色，因此本页面没有向 api 请求列表。",
+    "verificando": "正在加载你的设备密钥…",
+    "naoSei": "无法读取你的设备密钥。这并不代表没有——只是我不知道。",
+    "emptyMessage": "你没有任何设备密钥服务于本项目。",
+    "orfa": "从未被任何本地智能体使用过的有效密钥，通常是中断的配置流程遗留下来的——它不起作用，但仍然有效。如果不认识，请撤销。",
+    "table": {
+      "name": "名称",
+      "especie": "类型",
+      "especieMaquina": "机器",
+      "especieProjeto": "项目",
+      "created": "创建时间",
+      "lastUsed": "最近使用",
+      "lastUsedNever": "从未使用",
+      "status": "状态",
+      "statusActive": "有效",
+      "statusRevoked": "已撤销",
+      "revokeAria": "撤销 {{name}}",
+      "revokeTitle": "撤销"
+    },
+    "toast": {
+      "revokeErrorTitle": "无法撤销该密钥"
+    },
+    "modal": {
+      "title": "撤销设备密钥",
+      "body": "撤销“{{name}}”是不可逆的：它将不再认证本地智能体，创建新密钥需要重新走一遍流程。",
+      "alcanceMaquina": "这是一个机器密钥：它服务你所有 runner 模式的项目，撤销后，用它连接的本地智能体会在所有这些项目中断开——而不仅是本项目。",
+      "alcanceProjeto": "这是一个项目密钥：撤销后，用它连接的本地智能体会在其所属项目中断开。",
+      "precisao": "只有用此密钥连接的会断开：你在同一项目中通过其他密钥或令牌认证的其他 runner 仍保持连接。用它发起但尚未使用的连接请求也会失效。",
+      "cancel": "取消",
+      "confirm": "撤销"
+    }
+  },
+  "instructionVersions": {
+    "title": "指令历史",
+    "eyebrow": "按智能体的版本管理",
+    "subtitle": "每个批准的补丁都会成为一个版本。回退会用旧内容写入一个新版本——不会删除任何东西。",
+    "emptyMessage": "尚无智能体的指令被修改。",
+    "current": "当前",
+    "hypothesis": "假设 {{id}}",
+    "hideDiff": "隐藏 diff",
+    "showDiff": "diff +{{additions}} −{{deletions}}",
+    "revert": "回退",
+    "reverting": "正在回退…",
+    "toast": {
+      "revertedTitle": "已回退",
+      "revertedMessage": "{{agent}} 已恢复到 v{{version}} 的内容。",
+      "errorTitle": "错误",
+      "errorMessage": "无法回退"
+    }
+  },
+  "roteamento": {
+    "label": "路由",
+    "ariaLabel": "{{alvo}} 的路由偏好",
+    "options": {
+      "hub": "由中枢决定",
+      "price": "最低价格",
+      "throughput": "最高吞吐量",
+      "latency": "最低延迟"
+    },
+    "notSupported": "无路由偏好：provider {{provider}} 未声明此能力——该能力只有在针对真实 API 验证后才会声明。",
+    "inherited": "路由：{{valor}}——随 {{nivel}} 层级的模型而来。",
+    "inheritedHint": "若要在此定义，请为这一行选择自有模型。",
+    "toast": {
+      "saveError": "无法保存路由偏好"
+    },
+    "teto": "在 OpenRouter 上，每次调用还带有价格上限（目录价格的 1.5 倍）：只有上限内的上游会提供服务；若没有上游符合，则不带上限重试一次。"
+  },
+  "resolvedBindings": {
+    "readError": "无法读取当前生效的模型：{{reason}}",
+    "readErrorFallback": "请求失败",
+    "retry": "重试",
+    "cellLoading": "读取中…",
+    "cellUnread": "未读取"
+  }
+}

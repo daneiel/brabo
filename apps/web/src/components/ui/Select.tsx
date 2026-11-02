@@ -1,18 +1,10 @@
 import type { SelectHTMLAttributes } from 'react';
-import { ChevronDownIcon } from './icons';
-import styles from './Select.module.css';
+import { NativeSelect } from '@/components/shadcn/native-select';
 
-type SelectProps = SelectHTMLAttributes<HTMLSelectElement>;
+// `size` (linhas visíveis) cede ao `size` sm/default do shadcn; ninguém o usa.
+type SelectProps = Omit<SelectHTMLAttributes<HTMLSelectElement>, 'size'>;
 
-export function Select({ className, children, ...rest }: SelectProps) {
-  return (
-    <div className={styles.wrapper}>
-      <select className={[styles.select, className].filter(Boolean).join(' ')} {...rest}>
-        {children}
-      </select>
-      <span className={styles.chevron}>
-        <ChevronDownIcon size={14} />
-      </span>
-    </div>
-  );
+/** `<select>` nativo sobre `shadcn/native-select`; atributos do `<select>`. */
+export function Select({ children, ...rest }: SelectProps) {
+  return <NativeSelect {...rest}>{children}</NativeSelect>;
 }

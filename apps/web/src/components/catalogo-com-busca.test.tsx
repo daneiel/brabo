@@ -1,0 +1,218 @@
+/**
+ * RN-694 (AT-357): o catálogo tem busca, o card da credencial oferece
+ * "Atualizar catálogo" quando o provider não tem modelo nenhum, e o primeiro
+ * modelo ativado pode ir ao time inteiro num clique explícito.
+ */
+import { describe, expect, it, vi, beforeEach, afterAll } from 'vitest';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import type { ReactNode } from 'react';
+import { ModelCatalogSection } from './ModelCatalogSection';
+import { CredentialsSection } from '../routes/settings/CredentialsSection';
+import { ToastProvider } from './ui/ToastProvider';
+import i18n from '../lib/i18n';
+import type { CatalogoPorCategoria, ModelComCuradoria } from '../lib/api-types';
+
+const listModelCatalog = vi.fn();
+const setModelsActive = vi.fn();
+const syncModelCatalog = vi.fn();
+const listCredentials = vi.fn();
+const setAgentModelBinding = vi.fn();
+const listWorkspaces = vi.fn();
+const listProviderCapabilities = vi.fn();
+const listCredentialedProviders = vi.fn();
+
+vi.mock('../lib/api-client', async () => {
+  const real = await vi.importActual<typeof import('../lib/api-client')>(
+    '../lib/api-client',
+  );
+  return {
+    ApiError: real.ApiError,
+    mensagemDaApi: real.mensagemDaApi,
+    listModelCatalog: (...a: unknown[]) => listModelCatalog(...a),
+    setModelsActive: (...a: unknown[]) => setModelsActive(...a),
+    syncModelCatalog: (...a: unknown[]) => syncModelCatalog(...a),
+    listCredentials: (...a: unknown[]) => listCredentials(...a),
+    setModelUses: vi.fn(),
+    setAgentModelBinding: (...a: unknown[]) => setAgentModelBinding(...a),
+    listWorkspaces: (...a: unknown[]) => listWorkspaces(...a),
+    listProviderCapabilities: (...a: unknown[]) => listProviderCapabilities(...a),
+    listCredentialedProviders: (...a: unknown[]) => listCredentialedProviders(...a),
+    upsertCredential: vi.fn(),
+    deleteCredential: vi.fn(),
+    testCredential: vi.fn(),
+  };
+});
+
+function model(over: Partial<ModelComCuradoria> = {}): ModelComCuradoria {
+  return {
+    id: 'm-1',
+    provider: 'openai',
+    name: 'gpt-4o-mini',
+    displayName: 'GPT-4o mini',
+    inputPricePerMillionMicros: 150_000,
+    outputPricePerMillionMicros: 600_000,
+    contextWindow: 128_000,
+    supportsToolCalling: true,
+    supportsStreaming: true,
+    supportsVision: false,
+    supportsReasoning: false,
+    generatesImage: false,
+    manualPricing: true,
+    isActive: false,
+    uses: [],
+    freeRoutingAlias: false,
+    availability: 'available',
+    lastSeenAt: '2026-08-01T00:00:00.000Z',
+    ...over,
+  };
+}
+
+const HAIKU = model({
+  id: 'm-haiku',
+  provider: 'openrouter',
+  name: 'anthropic/claude-haiku-4.5',
+  displayName: 'Anthropic: Claude Haiku 4.5',
+});
+const LLAMA = model({
+  id: 'm-llama',
+  provider: 'openrouter',
+  name: 'meta-llama/llama-3.3-70b-instruct',
+  displayName: 'Meta: Llama 3.3 70B',
+});
+
+function catalogo(
+  porProvider: Record<string, ModelComCuradoria[]>,
+): CatalogoPorCategoria {
+  return { local: {}, cloud: porProvider } as CatalogoPorCategoria;
+}
+
+function papel(role: string) {
+  listWorkspaces.mockResolvedValue([
+    { workspace: { id: 'ws-1', name: 'W', slug: 'w' }, role },
+  ]);
+}
+
+function montar(no: ReactNode) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={client}>
+      <ToastProvider>{no}</ToastProvider>
+    </QueryClientProvider>,
+  );
+}
+
+beforeEach(async () => {
+  vi.clearAllMocks();
+  await i18n.changeLanguage('pt-BR');
+  listProviderCapabilities.mockResolvedValue([]);
+  listCredentialedProviders.mockRejectedValue(new Error('indisponível'));
+  listModelCatalog.mockResolvedValue(catalogo({ openrouter: [HAIKU, LLAMA] }));
+  setModelsActive.mockResolvedValue([]);
+  syncModelCatalog.mockResolvedValue({ porProvider: [] });
+  listCredentials.mockResolvedValue([]);
+  setAgentModelBinding.mockResolvedValue({});
+  papel('owner');
+});
+
+afterAll(() => {
+  void i18n.changeLanguage('en');
+});
+
+describe('busca no catálogo (RN-694)', () => {
+  it('acha pelo id sem diferenciar maiúsculas e abre o subgrupo do hub sozinho', async () => {
+    montar(<ModelCatalogSection workspaceId="ws-1" />);
+    await screen.findByLabelText('Buscar modelo no catálogo');
+    // Sem busca, o subgrupo do hub nasce fechado: a linha não está na tela.
+    expect(screen.queryByText('Anthropic: Claude Haiku 4.5')).toBeNull();
+
+    fireEvent.change(screen.getByLabelText('Buscar modelo no catálogo'), {
+      target: { value: 'CLAUDE-HAIKU' },
+    });
+
+    expect(await screen.findByText('Anthropic: Claude Haiku 4.5')).toBeTruthy();
+    expect(screen.queryByText('Meta: Llama 3.3 70B')).toBeNull();
+  });
+
+  it('busca sem resultado DIZ que nada casou, com o termo', async () => {
+    montar(<ModelCatalogSection workspaceId="ws-1" />);
+    fireEvent.change(await screen.findByLabelText('Buscar modelo no catálogo'), {
+      target: { value: 'gemini' },
+    });
+
+    expect(await screen.findByText(/Nenhum modelo do catálogo casa com “gemini”/)).toBeTruthy();
+  });
+});
+
+describe('catálogo sem atalho para o time (RN-911)', () => {
+  it('nenhum modelo ativo e um marcado: só ativar/desativar, sem "Ativar e aplicar"', async () => {
+    listModelCatalog.mockResolvedValue(catalogo({ openrouter: [HAIKU, LLAMA] }));
+    montar(<ModelCatalogSection workspaceId="ws-1" />);
+    fireEvent.change(await screen.findByLabelText('Buscar modelo no catálogo'), {
+      target: { value: 'haiku' },
+    });
+    await screen.findByText('Anthropic: Claude Haiku 4.5');
+    fireEvent.click(screen.getByRole('checkbox', { name: /Claude Haiku 4.5/ }));
+
+    expect(screen.getByRole('button', { name: /^Ativar$/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Ativar e aplicar aos/ })).toBeNull();
+  });
+});
+
+describe('"Atualizar catálogo" ao lado da credencial (RN-694)', () => {
+  function credencial(provider: string) {
+    return {
+      id: `cred-${provider}`,
+      provider,
+      createdAt: '2026-08-01T00:00:00.000Z',
+      updatedAt: '2026-08-01T00:00:00.000Z',
+    };
+  }
+
+  it('credencial sem modelo no catálogo ganha o botão, que chama o mesmo sync', async () => {
+    listCredentials.mockResolvedValue([credencial('anthropic')]);
+    montar(<CredentialsSection />);
+
+    const botao = await screen.findByRole('button', {
+      name: 'Atualizar o catálogo de modelos de Anthropic',
+    });
+    fireEvent.click(botao);
+
+    await waitFor(() => expect(syncModelCatalog).toHaveBeenCalledWith('ws-1'));
+    expect(await screen.findByText('Catálogo sincronizado')).toBeTruthy();
+  });
+
+  it('provider sem listModels não ganha o botão e a nota diz por quê', async () => {
+    listCredentials.mockResolvedValue([credencial('vultr')]);
+    listProviderCapabilities.mockResolvedValue([
+      { provider: 'vultr', capabilities: { listModels: false } },
+    ]);
+    montar(<CredentialsSection />);
+
+    expect(await screen.findByText(/não publica lista de modelos/)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Atualizar o catálogo/ })).toBeNull();
+  });
+
+  it('credencial cujo provider já tem modelo no catálogo não ganha o botão', async () => {
+    listCredentials.mockResolvedValue([credencial('openrouter')]);
+    montar(<CredentialsSection />);
+
+    await screen.findByLabelText('Nova chave de OpenRouter');
+    await waitFor(() => expect(listModelCatalog).toHaveBeenCalled());
+    expect(screen.queryByRole('button', { name: /Atualizar o catálogo/ })).toBeNull();
+  });
+
+  it('sync que falha vira toast com o título de falha', async () => {
+    listCredentials.mockResolvedValue([credencial('anthropic')]);
+    syncModelCatalog.mockRejectedValue(new Error('fora'));
+    montar(<CredentialsSection />);
+
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'Atualizar o catálogo de modelos de Anthropic',
+      }),
+    );
+
+    expect(await screen.findByText('Sync falhou')).toBeTruthy();
+  });
+});

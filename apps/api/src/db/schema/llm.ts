@@ -11,6 +11,7 @@ import {
   uuid,
   text,
   integer,
+  real,
   bigint,
   boolean,
   timestamp,
@@ -33,6 +34,8 @@ export const llmProviderEnum = pgEnum('llm_provider', [
   'deepinfra',
   'bitdeer',
   'vultr',
+  '9router',
+  'opencode-zen',
 ]);
 
 // workspace < project < area < agent < session, do menos pro mais específico —
@@ -53,6 +56,13 @@ export const modelBindingScopeEnum = pgEnum('model_binding_scope', [
 // diferente de `is_active`, que é a curadoria do owner. Um modelo pode estar
 // ativo E indisponível: é esse cruzamento que gera aviso no binding. Manter os
 // dois separados é o que preserva a escolha do owner quando o modelo volta.
+// Marca CURADA de cobrança (AT-632, RN-954): nunca descoberta pelo sync.
+export const modelBillingEnum = pgEnum('model_billing', [
+  'api',
+  'subscription',
+  'free',
+]);
+
 export const modelAvailabilityEnum = pgEnum('model_availability', [
   'available',
   'unavailable',
@@ -92,6 +102,8 @@ export const credentialProviderEnum = pgEnum('credential_provider', [
   'deepinfra',
   'bitdeer',
   'vultr',
+  '9router',
+  'opencode-zen',
   'github',
   'gitlab',
 ]);
@@ -141,6 +153,10 @@ export const models = pgTable(
      */
     supportsReasoning: boolean('supports_reasoning').notNull().default(false),
     generatesImage: boolean('generates_image').notNull().default(false),
+    // Curado à mão, nunca descoberto (ADR 0223): `reasoning.max_tokens` que o
+    // modelo RESPEITA, provado por smoke. NULL = não provado. O upsert do sync
+    // não o toca.
+    reasoningBudget: integer('reasoning_budget'),
     // Preço digitado à mão a partir da doc do provider, em vez de vindo de
     // sync (Fase 9b). Quem sincroniza preço na Fase 9c NÃO pode sobrescrever
     // uma linha marcada aqui sem decisão explícita: o número manual costuma
@@ -155,6 +171,8 @@ export const models = pgTable(
     availability: modelAvailabilityEnum('availability')
       .notNull()
       .default('available'),
+    // Curada à mão (AT-632): `subscription` = assento (o custo não é US$ pago).
+    billing: modelBillingEnum('billing').notNull().default('api'),
     /** Última vez que o sync viu este modelo no catálogo remoto. */
     lastSeenAt: timestamp('last_seen_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true })
@@ -366,6 +384,9 @@ export const tokenUsage = pgTable(
     // O id da resposta no provider (`gen-…` no OpenRouter): é por ele que
     // `GET /generation?id=` confere a cobrança depois (RN-665).
     generationId: text('generation_id'),
+    // `true` = `cost_micros` é ESTIMATIVA de stream abortado pelo orçamento de
+    // raciocínio (ADR 0224, RN-915); o reconciliador troca pelo custo real.
+    custoAReconciliar: boolean('custo_a_reconciliar').notNull().default(false),
     // PARTES dos tokens que o provider informou (RN-666, AT-272): quantos da
     // entrada vieram de CACHE (cache read, cobrado a uma fração do preço) e
     // quantos da saída foram RACIOCÍNIO. Nunca somadas a `input_tokens` /
@@ -386,6 +407,11 @@ export const tokenUsage = pgTable(
     // o binding daquele instante. `null` = nada foi enviado (binding sem
     // preferência, ou provider que não a declara).
     routingPreference: routingPreferenceEnum('routing_preference'),
+    // O fator do teto de preço que FOI AO FIO (`provider.max_price` = catálogo ×
+    // fator, ADR 0225, RN-917), congelado como o `routing_preference`. `null` =
+    // nada foi enviado (provider sem a capability, preço 0, ou a repetição sem
+    // teto depois do 404).
+    priceCeilingFactor: real('price_ceiling_factor'),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),

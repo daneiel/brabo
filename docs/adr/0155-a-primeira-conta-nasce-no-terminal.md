@@ -1,4 +1,4 @@
-# 0155 — A primeira conta nasce no terminal, e o agente local sobe pareado
+# ADR 0155 — A primeira conta nasce no terminal, e o agente local sobe pareado
 
 ## Status
 

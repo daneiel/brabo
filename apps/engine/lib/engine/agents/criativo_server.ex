@@ -46,11 +46,12 @@ defmodule Engine.Agents.CriativoServer do
     FalhaDeTurno,
     Reidratacao,
     ResultadoDeFerramenta,
+    TextoDoTurno,
     TurnoAssincrono,
     TurnoOrfao
   }
 
-  alias Engine.Harness.Tools.{AskStructuredQuestions, EmitArtifact}
+  alias Engine.Harness.Tools.{AskStructuredQuestions, DeclareOpenQuestion, EmitArtifact}
   alias Engine.Sessions.EngineApiClient
 
   @agent "criativo"
@@ -111,13 +112,21 @@ defmodule Engine.Agents.CriativoServer do
        project_id: project_id,
        agent: @agent,
        messages: [system_msg | history],
-       tool_specs: [EmitArtifact.spec(), AskStructuredQuestions.spec()],
+       tool_specs: [
+         EmitArtifact.spec(),
+         AskStructuredQuestions.spec(),
+         DeclareOpenQuestion.spec(),
+         Engine.Harness.Tools.RegistrarPlano.spec()
+       ],
        # Guardado enquanto o turno roda numa Task supervisionada, fora do
        # `handle_call` que bloqueava o processo inteiro — é o que permite um
        # `:cancel` chegar e ser atendido (RN-122). Ver `TurnoAssincrono`.
        # RN-673: a fila de mensagens que chegaram com turno em curso,
        # reconstruída do log (sobrevive a restart), e como montar o turno
        # que a lê. Ver `TurnoAssincrono.receber_mensagem/4`.
+       # AT-582: a retomada do turno interrompido, ANTES da fila (a fila espera o fim dela).
+       retomada_agendada: TurnoAssincrono.retomada_ao_subir(project_id, session_id, @agent),
+       montar_turno_de_retomada: &turno_de_retomada/1,
        fila_de_mensagens: TurnoAssincrono.fila_ao_subir(project_id, session_id, @agent),
        montar_turno_de_mensagem: &turno_de_mensagem/2,
        turno_assincrono: nil
@@ -196,6 +205,12 @@ defmodule Engine.Agents.CriativoServer do
     fn -> run_turn(work) end
   end
 
+  # AT-582: o turno de retomada não tem fala nova do usuário; o histórico
+  # reidratado já termina nela e a orientação vai efêmera (`RetomadaDoTurno`).
+  defp turno_de_retomada(state) do
+    fn -> run_turn(compact(state)) end
+  end
+
   @impl true
   def handle_info(msg, state) do
     case TurnoAssincrono.tratar_resultado(msg, state) do
@@ -217,11 +232,20 @@ defmodule Engine.Agents.CriativoServer do
           "de negócio levantadas nesta conversa num resumo executivo do produto."
       )
 
+    # RN-697 (AT-352): o turno da prontidão SÓ sintetiza. Sem catálogo de
+    # ferramentas, o modelo não registra regra nova nem abre formulário que
+    # ninguém responderia — o PO já entrou pelo aceite implícito (RN-658). O
+    # catálogo volta intacto para o próximo turno.
+    tool_specs = state.tool_specs
+
     {state, summary} =
       state
       |> append(instruction)
       |> compact()
+      |> Map.put(:tool_specs, ferramentas_da_prontidao())
       |> run_turn_capturing()
+
+    state = Map.put(state, :tool_specs, tool_specs)
 
     brief_id = emit_product_brief(state, summary)
 
@@ -243,6 +267,11 @@ defmodule Engine.Agents.CriativoServer do
     end
   end
 
+  @doc false
+  # O catálogo do turno da prontidão: nenhum (RN-697). Função, e não `[]`
+  # literal, para o teste afirmar sobre a MESMA fonte que o turno usa.
+  def ferramentas_da_prontidao, do: []
+
   # --- Turno com laço bounded de tool use (RN-163) ---
 
   defp run_turn(state) do
@@ -251,7 +280,11 @@ defmodule Engine.Agents.CriativoServer do
   end
 
   defp run_turn_capturing(state),
-    do: run_turn_capturing(state, @max_iterations, %{falhas: [], conteudo: ""})
+    do:
+      run_turn_capturing(state, Engine.Harness.FalhaRepetida.inicio_de_turno(@max_iterations), %{
+        falhas: [],
+        conteudo: ""
+      })
 
   # `acc` guarda o que só o TURNO INTEIRO sabe, e que não cabe no `state` (que
   # é o histórico do modelo e sobrevive ao turno):
@@ -280,22 +313,29 @@ defmodule Engine.Agents.CriativoServer do
       # A api narra a falha no PRÓPRIO frame final (budget, credencial, binding).
       # Isto não caía no `{:error, _}` abaixo e não emitia evento nenhum: o
       # turno terminava em silêncio absoluto, pior que o balão vazio.
-      {:ok, %{"error" => erro}} when is_binary(erro) and erro != "" ->
-        emit_falha(state, {:final, erro})
+      {:ok, %{"error" => erro} = frame} when is_binary(erro) and erro != "" ->
+        gravar_texto_do_turno(state, "", nil)
+        emit_falha(state, {:final, erro, Map.get(frame, "errorCode")})
         {state, acc.conteudo}
 
       {:ok, %{"message" => message} = frame} ->
         content = Map.get(message, "content", "")
         model_name = Map.get(frame, "modelName")
-        state = append(state, assistant_msg(content))
-        if content != "", do: emit_response(state, content, model_name)
+        state = append(state, Engine.Agents.MensagemDoAssistente.de(content, message))
         acc = if content == "", do: acc, else: %{acc | conteudo: content}
 
         case tool_calls(message, state.tool_specs) do
           [] ->
+            # AT-572: fecho sem texto nem corte é falha do modelo, dita no fio (agent.error).
+            if gravar_texto_do_turno(state, content, model_name) == :vazio,
+              do: emit_falha(state, :resposta_vazia)
+
             {encerrar(state, acc), acc.conteudo}
 
           calls ->
+            # RN-698: o texto desta volta continua na próxima — vira UMA
+            # `agent.response` no fim do turno, nunca um fragmento por volta.
+            TextoDoTurno.acumular(content, model_name)
             {state, desfechos} = despachar(calls, state)
             continuar(state, acc, desfechos, remaining - 1)
         end
@@ -305,6 +345,7 @@ defmodule Engine.Agents.CriativoServer do
         # indistinguível de sucesso, e o motivo real ia só por broadcast, que
         # é efêmero. A falha vira evento durável COM origem, e o agente diz o
         # que houve no próprio fio.
+        gravar_texto_do_turno(state, "", nil)
         emit_falha(state, reason)
         {state, acc.conteudo}
     end
@@ -316,6 +357,7 @@ defmodule Engine.Agents.CriativoServer do
   # dentro de `dispatch_tool/2`, como antes, era prometer no escuro — não havia
   # laço nenhum para cumprir a promessa.
   defp continuar(state, acc, desfechos, remaining) do
+    remaining = Engine.Harness.FalhaRepetida.restante(remaining)
     falhas = erros(desfechos)
     vai_tentar? = falhas != [] and remaining > 0
     acc = %{acc | falhas: acc.falhas ++ falhas}
@@ -334,7 +376,9 @@ defmodule Engine.Agents.CriativoServer do
       # ferramenta que erra doze vezes seguidas acaba num silêncio idêntico ao
       # de um turno bem-sucedido.
       remaining <= 0 ->
-        emit_falha_limite(state, acc)
+        gravado = Engine.Agents.GravadoNoTurno.descarregar()
+        gravar_texto_do_turno(state, "", nil)
+        emit_falha_limite(state, acc, gravado)
         {state, acc.conteudo}
 
       # Perguntas estruturadas ENTREGUES: a bola está com o usuário, e as
@@ -342,10 +386,19 @@ defmodule Engine.Agents.CriativoServer do
       # o modelo de novo aqui gastaria uma volta para ele reperguntar o que
       # acabou de perguntar.
       aguardando_usuario?(desfechos) ->
+        gravar_texto_do_turno(state, "", nil)
         {encerrar(state, acc), acc.conteudo}
 
       true ->
         run_turn_capturing(state, remaining, acc)
+    end
+  end
+
+  # RN-698: o texto do turno inteiro, numa `agent.response` só.
+  defp gravar_texto_do_turno(state, ultimo, model_name) do
+    case TextoDoTurno.payload_do_turno(ultimo, model_name) do
+      nil -> :vazio
+      payload -> emit(state, "agent.response", payload)
     end
   end
 
@@ -390,8 +443,8 @@ defmodule Engine.Agents.CriativoServer do
   # Devolve `{state, desfecho}`: a NARRAÇÃO da falha saiu daqui (ver
   # `continuar/4`), mas o desfecho de cada chamada precisa subir para o laço
   # decidir se volta ao modelo.
-  defp dispatch_tool(%{"name" => "emit_artifact", "arguments" => args} = call, state) do
-    executar(call, state, "emit_artifact", fn -> EmitArtifact.run(args, state) end)
+  defp dispatch_tool(%{"name" => "emit_artifact", "arguments" => _} = call, state) do
+    executar(call, state, "emit_artifact", fn a -> EmitArtifact.run(a, state) end)
   end
 
   # RN-162: o Criativo emite `chat.structured_question` quando quer que o
@@ -400,9 +453,20 @@ defmodule Engine.Agents.CriativoServer do
   # pergunta foi registrada — as respostas voltam num turno FUTURO, como
   # `chat.message` normal (via `AnswerStructuredQuestionUseCase` na api),
   # não por este tool call.
-  defp dispatch_tool(%{"name" => "ask_structured_questions", "arguments" => args} = call, state) do
-    executar(call, state, "ask_structured_questions", fn ->
-      AskStructuredQuestions.run(args, state)
+  defp dispatch_tool(%{"name" => "ask_structured_questions", "arguments" => _} = call, state) do
+    executar(call, state, "ask_structured_questions", fn a ->
+      AskStructuredQuestions.run(a, state)
+    end)
+  end
+
+  # ADR 0214 (RN-862): a dúvida deixada para o usuário vira pendência.
+  defp dispatch_tool(%{"name" => "declare_open_question", "arguments" => _} = call, state) do
+    executar(call, state, "declare_open_question", fn a -> DeclareOpenQuestion.run(a, state) end)
+  end
+
+  defp dispatch_tool(%{"name" => "registrar_plano", "arguments" => _} = call, state) do
+    executar(call, state, "registrar_plano", fn a ->
+      Engine.Harness.Tools.RegistrarPlano.run(a, state)
     end)
   end
 
@@ -413,7 +477,7 @@ defmodule Engine.Agents.CriativoServer do
   # do `run_tool/3` do PO.
   defp dispatch_tool(call, state) do
     tool = to_string(Map.get(call, "name", "desconhecida"))
-    executar(call, state, tool, fn -> {:error, "ferramenta desconhecida: #{tool}"} end)
+    executar(call, state, tool, fn _ -> {:error, "ferramenta desconhecida: #{tool}"} end)
   end
 
   defp executar(call, state, tool, fun) do
@@ -425,13 +489,15 @@ defmodule Engine.Agents.CriativoServer do
     # modelo emitiu `titulo`/`descricao` contra `title`/`description` — sumia
     # sem evento, sem aviso e sem chegar ao modelo: o Criativo dizia "registrei
     # as regras", quatro regras iam para o lixo e o painel ficava vazio.
-    case fun.() do
+    case Engine.Harness.ArgumentosDeFerramenta.executar(tool, args, state.tool_specs, fun) do
       {:ok, texto} ->
         emit(state, "tool.result", ResultadoDeFerramenta.payload(tool, {:ok, texto}))
+        Engine.Agents.GravadoNoTurno.anotar(tool, args, {:ok, texto}, state.project_id)
         {realimentar(state, call, texto, tool), {:ok, tool}}
 
       {:error, motivo} ->
         emit(state, "tool.result", ResultadoDeFerramenta.payload(tool, {:error, motivo}))
+        Engine.Agents.GravadoNoTurno.anotar(tool, args, {:error, motivo}, state.project_id)
 
         # O erro VOLTA para o modelo: na volta seguinte ele lê o motivo e
         # reemite corrigido, que é como um laço de ferramenta deve funcionar —
@@ -516,9 +582,6 @@ defmodule Engine.Agents.CriativoServer do
 
   defp user_msg(text), do: %{"role" => "user", "content" => text, :pinned => false}
 
-  defp assistant_msg(content),
-    do: %{"role" => "assistant", "content" => content, :pinned => false}
-
   defp append(state, message), do: %{state | messages: state.messages ++ [message]}
 
   defp to_wire(message), do: Map.delete(message, :pinned)
@@ -527,6 +590,10 @@ defmodule Engine.Agents.CriativoServer do
   # protocolo nativo. O ToolLoop já recuperava isso (ADR 0020), mas os agentes
   # conversacionais têm loop PRÓPRIO e ficaram de fora — o InfraAgent morria
   # com resposta vazia tendo escrito o `propose_infra_pr` certo em texto.
+  # Sem catálogo (o turno da prontidão, RN-697), nenhuma chamada é atendida —
+  # nem a que o modelo copie do histórico, onde as ferramentas aparecem.
+  defp tool_calls(_message, []), do: []
+
   defp tool_calls(message, tool_specs) do
     case Map.get(message, "toolCalls") || [] do
       [] ->
@@ -551,12 +618,12 @@ defmodule Engine.Agents.CriativoServer do
   # aberta ver na hora — mas ele deixou de ser a única fonte.
   defp emit_falha(state, reason) do
     origem = FalhaDeTurno.origem(reason)
-    mensagem = FalhaDeTurno.mensagem(reason)
+    mensagem = FalhaDeTurno.mensagem(reason, state.project_id)
 
     emit(state, "agent.error", %{
       origem: origem,
       mensagem: mensagem,
-      reason: inspect(reason)
+      reason: FalhaDeTurno.diagnostico(reason)
     })
 
     broadcast(state, "agent.error", %{origem: origem, mensagem: mensagem})
@@ -596,6 +663,7 @@ defmodule Engine.Agents.CriativoServer do
   # tem de mudar na volta seguinte, e é ele que a origem precisa apontar.
   defp origem_da_ferramenta("falha ao emitir artefato: " <> _), do: "infra"
   defp origem_da_ferramenta("falha ao registrar perguntas: " <> _), do: "infra"
+  defp origem_da_ferramenta("falha ao registrar a pergunta: " <> _), do: "infra"
   defp origem_da_ferramenta(_outro), do: "modelo"
 
   defp prefixo_da_ferramenta("emit_artifact"), do: "Não consegui registrar isso"
@@ -611,7 +679,16 @@ defmodule Engine.Agents.CriativoServer do
   # `agent.error` e não `toolloop.limit_reached` porque este agente não roda
   # dentro do `ToolLoop`: reusar o nome faria o evento mentir sobre quem o
   # produziu, e `agent.error` é o que a tela do fio já sabe mostrar.
-  defp emit_falha_limite(state, acc) do
+  defp emit_falha_limite(state, acc, gravado) do
+    if Engine.Harness.FalhaRepetida.parou?() do
+      Engine.Harness.FalhaRepetida.narrar(state.project_id, state.session_id, @agent)
+      state
+    else
+      emit_falha_limite_do_teto(state, acc, gravado)
+    end
+  end
+
+  defp emit_falha_limite_do_teto(state, acc, gravado) do
     origem = "modelo"
 
     mensagem =
@@ -630,7 +707,8 @@ defmodule Engine.Agents.CriativoServer do
       origem: origem,
       mensagem: mensagem,
       reason: "limite_de_iteracoes",
-      max_iterations: @max_iterations
+      max_iterations: @max_iterations,
+      gravado: gravado
     })
 
     broadcast(state, "agent.error", %{origem: origem, mensagem: mensagem})
@@ -654,7 +732,7 @@ defmodule Engine.Agents.CriativoServer do
     emit(state, "agent.error", %{
       origem: origem,
       mensagem: mensagem,
-      reason: inspect(reason)
+      reason: FalhaDeTurno.diagnostico(reason)
     })
 
     broadcast(state, "agent.error", %{origem: origem, mensagem: mensagem})

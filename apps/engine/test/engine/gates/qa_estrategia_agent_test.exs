@@ -108,6 +108,43 @@ defmodule Engine.Gates.QaEstrategiaAgentTest do
     assert payload.estrategiaDeAutomacao == "testes de integração na api"
   end
 
+  # RN-805 (AT-478): no uso real o modelo mandou `criteriosExecutaveis` como
+  # STRING JSON; a tool (args normalizados) disse "9 critérios", o hook leu o
+  # cru, o artefato foi recusado com `:criterios_vazios` e a Automação caiu no
+  # `Enum` da string — o QA Lead morreu e o gate ficou 18 min parado.
+  test "critérios em string JSON viram lista: o plano é gravado e devolvido como lista", %{
+    project_id: project_id,
+    session_id: session_id,
+    dev_state: dev_state
+  } do
+    Process.put(:fake_llm_turns, [
+      FakeEngineApiClient.tool_call_response("read_file", %{"path" => "src/app.js"}),
+      FakeEngineApiClient.tool_call_response("emit_plano_de_teste", %{
+        "planoDeTeste" => "Cobrir o handler de erros.",
+        "criteriosExecutaveis" => ~s(["dado X, quando Y, então Z", "dado A, então B"]),
+        "estrategiaDeAutomacao" => "integração"
+      })
+    ])
+
+    assert {:ok, plano} =
+             QaEstrategiaAgent.run(
+               project_id,
+               session_id,
+               "task-1",
+               dev_state,
+               dev_context(),
+               {:ok, []}
+             )
+
+    assert plano.criterios_executaveis == ["dado X, quando Y, então Z", "dado A, então B"]
+
+    assert_received {:event_appended, ^project_id, ^session_id,
+                     %{type: "artifact.plano_de_teste", payload: payload}}
+
+    assert payload.criteriosExecutaveis == plano.criterios_executaveis
+    refute_received {:event_appended, _, _, %{type: "qa-estrategia.error"}}
+  end
+
   test "os arquivos da entrega entram na mensagem — é o que aponta as 8 iterações", %{
     project_id: project_id,
     session_id: session_id,
@@ -134,6 +171,12 @@ defmodule Engine.Gates.QaEstrategiaAgentTest do
     assert conteudo =~ "- apps/api/test/cadastro.spec.ts"
     assert conteudo =~ "ENTREGOU"
     assert conteudo =~ "Cadastro na api"
+    # RN-890 (AT-542): o plano pede código de saída do comando que recusa.
+    instrucao = QaEstrategiaAgent.instrucao_de_codigo_de_saida()
+    assert instrucao =~ "RECUSA entrada"
+    assert instrucao =~ "0 no caminho feliz"
+    assert instrucao =~ "DIFERENTE de 0 na recusa"
+    assert conteudo =~ instrucao
   end
 
   test "diff que falhou não derruba o plano: a mensagem diz POR QUE não listou", %{
@@ -214,5 +257,53 @@ defmodule Engine.Gates.QaEstrategiaAgentTest do
 
     assert_received {:event_appended, ^project_id, ^session_id,
                      %{type: "agent.error", payload: %{origem: "modelo"}}}
+  end
+
+  test "corte pelo teto de saída (RN-780): o motivo nomeia o corte, não 'parou sem chamar'", %{
+    project_id: project_id,
+    session_id: session_id,
+    dev_state: dev_state
+  } do
+    cortada = FakeEngineApiClient.final_response("") |> Map.put("truncated", true)
+    Process.put(:fake_llm_turns, [cortada, cortada])
+
+    assert {:error, motivo} =
+             QaEstrategiaAgent.run(
+               project_id,
+               session_id,
+               "task-1",
+               dev_state,
+               dev_context(),
+               {:ok, []}
+             )
+
+    assert motivo =~ "cortou duas vezes"
+    refute motivo =~ "parou sem chamar"
+
+    assert_received {:event_appended, ^project_id, ^session_id,
+                     %{type: "agent.error", payload: %{origem: "modelo"}}}
+  end
+
+  test "corte no meio do texto (RN-946): o motivo nomeia o corte", %{
+    project_id: project_id,
+    session_id: session_id,
+    dev_state: dev_state
+  } do
+    Process.put(:fake_llm_turns, [
+      FakeEngineApiClient.final_response("Vou registrá-lo") |> Map.put("truncated", true)
+    ])
+
+    assert {:error, motivo} =
+             QaEstrategiaAgent.run(
+               project_id,
+               session_id,
+               "task-1",
+               dev_state,
+               dev_context(),
+               {:ok, []}
+             )
+
+    assert motivo =~ "no meio do texto"
+    refute motivo =~ "parou sem chamar"
   end
 end

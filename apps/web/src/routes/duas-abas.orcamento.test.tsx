@@ -43,7 +43,12 @@ import type { SessionChannelHandlers } from '../lib/session-channel';
  *   idem, dev agent em rajada ............ 71 + 89 = 160
  *   idem, canal que nunca conecta ........ 156 + 104 = 260
  *   CARGA de Executores / Visão geral .... 29 / 33 → 27 / 31 (bindings em lote)
+ *   Visão geral + "Rodar na sua máquina" (RN-855): 31 → 32, UMA leitura
+ *   de configuração, sem poll
  */
+
+const carga_run = (c: Record<string, number>) =>
+  c['GET /projects/:id/run-instructions'];
 
 const contagem = new Map<string, number>();
 const canais: SessionChannelHandlers[] = [];
@@ -345,7 +350,9 @@ describe('orçamento de requisições com DUAS abas (AT-278, RN-632)', () => {
     }
     // `dev`: 29 e 33.
     expect(total(executores)).toBeLessThanOrEqual(27);
-    expect(total(visaoGeral)).toBeLessThanOrEqual(31);
+    // RN-855: +1, o `GET .../run-instructions` do cartão, uma vez por carga.
+    expect(carga_run(visaoGeral)).toBe(1);
+    expect(total(visaoGeral)).toBeLessThanOrEqual(32);
   }, 60_000);
 
   it('/containers não polla a lista de sessões de cada projeto (9 projetos: 108/min → 0)', async () => {

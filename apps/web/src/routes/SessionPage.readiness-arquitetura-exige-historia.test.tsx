@@ -201,7 +201,10 @@ describe('SessionPage — "Confirmar arquitetura pronta" exige história promovi
     });
 
     expect(botao).not.toBeDisabled();
-    expect(botao).not.toHaveAttribute('title');
+    expect(botao).toHaveAttribute(
+      'title',
+      'Declara a arquitetura pronta e oferece o handoff à Infra, que sobe o container do projeto.',
+    );
   });
 
   it('história em progresso ou concluída também conta como promovida', async () => {

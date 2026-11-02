@@ -9,6 +9,7 @@ import {
   users,
   workspaces,
 } from '../../../src/db/schema';
+import { MODELO_DO_JEV } from '../../../src/domain/llm/tool-router';
 import { DrizzleTokenUsageRepository } from '../../../src/infrastructure/persistence/drizzle/token-usage.repository';
 
 const { db, pool } = createTestDb();
@@ -98,6 +99,95 @@ describe('DrizzleTokenUsageRepository.sumBySessionGroupedByActor (Fase 4a)', () 
     expect(porAgente['qa'].costMicros).toBe(70);
   });
 
+  it('lastCall: última chamada do agente, sem o Jev, com a janela do modelo (RN-969)', async () => {
+    const { sessionId, modelId } = await seed();
+    await db
+      .update(models)
+      .set({ contextWindow: 32000 })
+      .where(eq(models.id, modelId));
+    const chamada = (
+      actorId: string,
+      inputTokens: number,
+      modelName = 'qwen2.5-coder:7b',
+    ) =>
+      repo.record({
+        sessionId,
+        actor: { kind: 'agent', id: actorId },
+        provider: 'ollama',
+        modelId: modelName === MODELO_DO_JEV ? null : modelId,
+        modelName,
+        inputTokens,
+        outputTokens: 1,
+        estimated: false,
+        costMicros: 1,
+        latencyMs: 1,
+        bindingOrigin: 'project',
+      });
+    await chamada('dev-core', 100);
+    await chamada('dev-core', 900);
+    await chamada('dev-core', 5, MODELO_DO_JEV); // mais recente, mas é do Jev
+    await chamada('so-jev', 7, MODELO_DO_JEV);
+    const [m2] = await db
+      .insert(models)
+      .values({ provider: 'ollama', name: 'sem-janela', displayName: 'S' })
+      .returning();
+    await repo.record({
+      sessionId,
+      actor: { kind: 'agent', id: 'qa' },
+      provider: 'ollama',
+      modelId: m2.id,
+      modelName: 'sem-janela',
+      inputTokens: 33,
+      outputTokens: 1,
+      estimated: false,
+      costMicros: 1,
+      latencyMs: 1,
+      bindingOrigin: 'project',
+    });
+
+    const por = Object.fromEntries(
+      (await repo.sumBySessionGroupedByActor(sessionId)).map((l) => [
+        l.actorId,
+        l,
+      ]),
+    );
+    expect(por['dev-core'].lastCall).toEqual({
+      inputTokens: 900,
+      modelName: 'qwen2.5-coder:7b',
+      contextWindow: 32000,
+    });
+    expect(por['dev-core'].inputTokens).toBe(1005); // a soma não muda
+    expect(por['qa'].lastCall?.contextWindow).toBeNull();
+    expect(por['so-jev'].lastCall).toBeNull();
+  });
+
+  it('lastCall: empate em created_at desempata por id DESC, de forma determinística', async () => {
+    const { sessionId, modelId } = await seed();
+    const base = {
+      sessionId,
+      actorKind: 'agent' as const,
+      actorId: 'dev-core',
+      provider: 'ollama' as const,
+      modelId,
+      modelName: 'qwen2.5-coder:7b',
+      outputTokens: 1,
+      costMicros: 1,
+      latencyMs: 1,
+      bindingOrigin: 'project' as const,
+      createdAt: new Date('2026-01-01T00:00:00Z'),
+    };
+    const linhas = await db
+      .insert(tokenUsage)
+      .values([
+        { ...base, inputTokens: 111 },
+        { ...base, inputTokens: 222 },
+      ])
+      .returning();
+    const vencedora = linhas.reduce((a, b) => (a.id > b.id ? a : b));
+    const [r] = await repo.sumBySessionGroupedByActor(sessionId);
+    expect(r.lastCall?.inputTokens).toBe(vencedora.inputTokens);
+  });
+
   it('sessão sem consumo devolve lista vazia, não erro', async () => {
     const { sessionId } = await seed();
     expect(await repo.sumBySessionGroupedByActor(sessionId)).toEqual([]);
@@ -169,5 +259,46 @@ describe('DrizzleTokenUsageRepository.sumByProjectGroupedByAgentLast30Days', () 
     expect(await repo.sumByProjectGroupedByAgentLast30Days(projectId)).toEqual(
       [],
     );
+  });
+});
+
+describe('DrizzleTokenUsageRepository: reconciliação do custo estimado (RN-915)', () => {
+  it('lista só a marcada e troca uma única vez', async () => {
+    const { sessionId, modelId } = await seed();
+    const base = {
+      sessionId,
+      actor: { kind: 'agent' as const, id: 'po' },
+      provider: 'openrouter' as const,
+      modelId,
+      modelName: 'm',
+      inputTokens: 100,
+      outputTokens: 400,
+      estimated: true,
+      costMicros: 900,
+      inputPricePerMillionMicros: 0,
+      outputPricePerMillionMicros: 0,
+      latencyMs: 1,
+      bindingOrigin: 'project' as const,
+      upstreamProvider: null,
+      routingPreference: null,
+    };
+    await repo.record({
+      ...base,
+      generationId: 'gen-a',
+      custoAReconciliar: true,
+      priceImplicit: true,
+    });
+    await repo.record({ ...base, generationId: 'gen-b' });
+
+    const desde = new Date(Date.now() - 3600_000);
+    const pendentes = await repo.listarACorrigir(desde, 10);
+    expect(pendentes.map((p) => p.generationId)).toEqual(['gen-a']);
+
+    expect(await repo.aplicarCustoReal(pendentes[0].id, 321, 642000)).toBe(
+      true,
+    );
+    // idempotente: a linha já não está marcada
+    expect(await repo.aplicarCustoReal(pendentes[0].id, 999, 1)).toBe(false);
+    expect(await repo.listarACorrigir(desde, 10)).toEqual([]);
   });
 });

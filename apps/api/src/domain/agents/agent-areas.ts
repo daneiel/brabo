@@ -31,6 +31,12 @@ export interface AreaDeAgentes {
   lead: string;
   members: readonly string[];
   /**
+   * Teto de paralelismo que a área NASCE com (AT-599, RN-909). Vale só no
+   * INSERT de `agent_areas`: quem já tem a linha mantém o que decidiu, exceto
+   * pela migração 0073, que aplicou este valor a todos os projetos.
+   */
+  maxParallelPadrao: number;
+  /**
    * Predicado de membro, para a área cujos membros NÃO são enumeráveis.
    *
    * Só a área de `dev` usa: os membros dela são um por módulo do `module_map`,
@@ -64,6 +70,7 @@ export const AGENT_AREAS: readonly AreaDeAgentes[] = [
     label: 'Dev',
     lead: DEV_LEAD,
     members: [],
+    maxParallelPadrao: 5,
     ehMembro: ehDevDeModulo,
   },
   {
@@ -71,14 +78,23 @@ export const AGENT_AREAS: readonly AreaDeAgentes[] = [
     label: 'QA',
     lead: 'qa',
     members: ['qa-automacao', 'qa-performance-seguranca'],
+    maxParallelPadrao: 4,
   },
   {
     key: 'infra',
     label: 'Infra',
     lead: 'infra',
     members: ['infra-workflows'],
+    maxParallelPadrao: 2,
   },
 ];
+
+/** Teto de paralelismo que uma área nasce com (AT-599). */
+export function maxParallelPadraoDa(key: string): number {
+  const area = AGENT_AREAS.find((a) => a.key === key);
+  if (!area) throw new Error(`área sem catálogo: ${key}`);
+  return area.maxParallelPadrao;
+}
 
 /** Área do agente, se houver — como LEAD ou como membro. */
 export function areaDo(agentId: string): AreaDeAgentes | undefined {
@@ -101,6 +117,28 @@ function ehMembroDe(area: AreaDeAgentes, agentId: string): boolean {
   if (area.lead === agentId) return false;
   if (area.members.includes(agentId)) return true;
   return area.ehMembro ? area.ehMembro(agentId) : false;
+}
+
+/**
+ * Subagentes que o ENGINE roda por dentro de um lead mas que não são membros
+ * de área do catálogo (não recebem handoff, então não entram em
+ * `AGENT_AREAS`): o `appsec` roda dentro do gate do `secops`, e a
+ * `qa-estrategia` dentro do `qa`. Servem SÓ para a herança de modelo da
+ * RN-703 — endereçamento de handoff continua lendo `AGENT_AREAS`.
+ */
+const LEAD_DE_SUBAGENTE_FORA_DE_AREA: Readonly<Record<string, string>> = {
+  appsec: 'secops',
+  'qa-estrategia': 'qa',
+};
+
+/**
+ * O lead de quem um subagente herda o modelo quando não tem nenhum (RN-703):
+ * o lead da área do catálogo, ou o da tabela acima. `undefined` para lead e
+ * agente sem área.
+ */
+export function leadDoSubagente(agentId: string): string | undefined {
+  const area = AGENT_AREAS.find((a) => ehMembroDe(a, agentId));
+  return area?.lead ?? LEAD_DE_SUBAGENTE_FORA_DE_AREA[agentId];
 }
 
 /** `true` quando o agente é subagente de uma área (membro, não lead). */

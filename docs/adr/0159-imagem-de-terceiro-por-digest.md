@@ -1,4 +1,4 @@
-# 0159 — Imagem de terceiro entra por digest, e o lint reprova quem esquecer
+# ADR 0159 — Imagem de terceiro entra por digest, e o lint reprova quem esquecer
 
 ## Status
 

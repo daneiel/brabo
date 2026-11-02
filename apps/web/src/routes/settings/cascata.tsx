@@ -35,7 +35,7 @@ import styles from '../ProjectSettingsTab.module.css';
  *
  * Cada nível vira um nó com um dos quatro estados abaixo, e a cadeia inteira é
  * derivada NO CLIENTE, sem endpoint novo — `ModelsSection` já busca os quatro
- * níveis, e `AreaModelsSection` passou a buscar os dois que lhe faltavam.
+ * níveis, e a caixa da área passou a usar os dois.
  *
  * - `vigente` — é daqui que sai o modelo em uso (o único nó em `Badge`);
  * - `definido` — este nível TEM valor próprio, mas um mais específico venceu;

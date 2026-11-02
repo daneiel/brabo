@@ -21,7 +21,7 @@ export type Role = 'owner' | 'maintainer' | 'developer' | 'viewer';
  * O idioma da interface (fundação de i18n, Onda 6a). Espelha o enum
  * `user_locale` da api — fechado a dois valores.
  */
-export type UserLocale = 'pt-BR' | 'en';
+export type UserLocale = 'pt-BR' | 'en' | 'ru' | 'zh-Hans';
 
 /**
  * De onde veio o idioma em que os agentes respondem (RN-618) — a tela NOMEIA
@@ -534,7 +534,9 @@ export type LLMProviderName =
   | 'together'
   | 'deepinfra'
   | 'bitdeer'
-  | 'vultr';
+  | 'vultr'
+  | '9router'
+  | 'opencode-zen';
 export type ModelCategory = 'local' | 'cloud';
 
 /** Realidade REMOTA observada pelo sync de catálogo (Fase 9c). */
@@ -564,6 +566,8 @@ export interface Model {
   generatesImage: boolean;
   /** Preço digitado da doc do provider, não sincronizado (Fase 9b). */
   manualPricing: boolean;
+  /** Marca curada de cobrança (RN-954): `subscription` é assento, não US$. */
+  billing?: 'api' | 'subscription' | 'free';
   /**
    * Eixo INDEPENDENTE da curadoria: um modelo pode estar ativo num workspace
    * e indisponível no provider ao mesmo tempo. `unavailable` nunca é deletado
@@ -594,6 +598,20 @@ export interface ModelComCuradoria extends Model {
    * marcado por isto.
    */
   freeRoutingAlias: boolean;
+  /** Sugestão do catálogo (RN-965): nunca gravada sozinha; aplicar é curadoria. */
+  sugestao?: SugestaoDoCatalogo | null;
+}
+
+export interface SugestaoDoCatalogo {
+  cobranca: 'api' | 'subscription' | 'free' | null;
+  preco: {
+    fabricante: string;
+    entradaMicros: number;
+    saidaMicros: number;
+    fonte: string;
+    conferidoEm: string;
+    observacao?: string;
+  } | null;
 }
 
 export type ModelsByCategory = Record<ModelCategory, Record<string, Model[]>>;
@@ -827,6 +845,7 @@ export interface ProvisionedRepository {
 export type BootstrapStepName =
   | 'commit_pr_template'
   | 'commit_branching_policy'
+  | 'commit_gitignore'
   | 'create_dev_branch'
   | 'create_qa_branch'
   // Aposentado com o degrau `rc` (ADR 0030, achado #3): o bootstrap não o
@@ -928,6 +947,41 @@ export interface Handoff {
   status: HandoffStatus;
   createdAt: string;
   updatedAt: string;
+}
+
+/**
+ * RN-827/828 — o agregado da sessão INTEIRA do painel de contexto
+ * (`GET .../sessions/:sessionId/context-summary`). Contado no servidor; a
+ * tela o SOMA à janela de eventos que já carregou.
+ */
+export interface ResumoDoContextoDaSessao {
+  sessoesLidas: string[];
+  regras: number;
+  decisoes: number;
+  /** RN-844: as regras mais recentes da sessão, até 50; o total é `regras`. */
+  itensDeRegras: {
+    eventId: string;
+    seq: number;
+    actorId: string;
+    titulo: string | null;
+    descricao: string | null;
+    origens: number;
+  }[];
+  /** RN-844: as decisões mais recentes da sessão, até 50; o total é `decisoes`. */
+  itensDeDecisoes: {
+    eventId: string;
+    seq: number;
+    actorId: string;
+    escolha: string | null;
+    contexto: string | null;
+  }[];
+  artefatosPorAgente: { actorId: string; quantos: number }[];
+  arquivosTocados: {
+    itens: { actionId: string; path: string; additions: number; deletions: number }[];
+    total: number;
+    /** RN-844: PRs cujos arquivos não foram lidos (além do teto de 20, ou diff recusado). */
+    prsNaoLidas: number;
+  };
 }
 
 // Payload do session_event `artifact.business_rule` emitido pelo Criativo.
@@ -1425,12 +1479,22 @@ export type EstadoObservadoDeContainer =
   | 'exited'
   | 'dead';
 
+/** `GET/PUT projects/:id/container/network` (RN-932); o GET devolve `null` sem declaração. */
+export interface RedeDoContainer {
+  ports: Array<{ host: number; container: number; protocol: string }>;
+  dns: string[];
+  extraHosts: Array<{ name: string; ip: string }>;
+}
+export type RedeVigenteDoContainer = RedeDoContainer & { version: number };
+
 export interface ObservacaoDeContainer {
   containerId: string;
   nome: string;
   estado: EstadoObservadoDeContainer;
   imagem: string;
   iniciadoEm: string | null;
+  /** ADR 0228: o que o daemon diz publicado; pode faltar. */
+  portasPublicadas?: Array<{ ip: string; host: number; container: number; protocolo?: string }>;
 }
 
 export type MotivoDeNaoObservacao =
@@ -1509,6 +1573,10 @@ export interface ContainerOverviewItem {
    * a tela recusa a subida ANTES do clique dizendo por quê.
    */
   brokerConfigurado: boolean;
+  /** Decisão de imagem vigente (maior versão), ou null (RN-902). */
+  decisaoVigente: { version: number; image: string; network: "none" | "egress" } | null;
+  /** Conteúdo do container registrado difere da decisão vigente (RN-902). */
+  imagemDesatualizada: boolean;
 }
 
 // --- Aba Code, só leitura (FASE 26) — espelha
@@ -1917,3 +1985,13 @@ export interface ModelPullRequest {
   createdAt: string;
   updatedAt: string;
 }
+
+/**
+ * Como rodar o entregável na máquina do usuário, declarado pela Infra na PR
+ * dela (`artifact.run_instructions`, RN-852). `null` quando nunca declarado.
+ */
+export type RunInstructions = components['schemas']['RunInstructionsResponseDto'];
+
+/** RN-858/861 (AT-521): a pergunta que um agente deixou para o usuário. */
+export type OpenQuestion = components['schemas']['OpenQuestionResponseDto'];
+export type OpenQuestionsList = components['schemas']['OpenQuestionsListResponseDto'];

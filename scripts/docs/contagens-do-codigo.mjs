@@ -18,8 +18,8 @@
  *                 não pôde ser contada. Um check cego fica verde dizendo que
  *                 conferiu o que não olhou — por isso reprova.
  *
- * A comparação ignora CAIXA (o `CLAUDE.md` escreve "SEIS" e "CINCO" para dar
- * ênfase), e a FORMA do número é a da frase: por extenso em pt-BR (masculino
+ * A comparação ignora CAIXA (as partes do `CLAUDE.md`, em `.claude/contexto/`,
+ * escrevem "SEIS" e "CINCO" para dar ênfase), e a FORMA do número é a da frase: por extenso em pt-BR (masculino
  * ou feminino), por extenso em inglês, ou algarismo. Passar do fim da tabela
  * por extenso cai no algarismo — que a frase então não vai dizer, e reprova
  * como DESATUAL em vez de passar calado.
@@ -134,13 +134,6 @@ export const FONTES = {
       return m === null ? null : [...m[1].matchAll(/'[a-z-]+'/g)].length;
     },
   },
-  imagensNonRootNoSmoke: {
-    descricao: 'o laço non-root de `docker/smoke.sh`',
-    contar: ({ ler }) => {
-      const m = /non-root'\n\s*for svc in ([^;]+); do/.exec(ler('docker/smoke.sh'));
-      return m === null ? null : m[1].trim().split(/\s+/).length;
-    },
-  },
   operacoesDoGit: {
     descricao: 'os métodos de `GitProviderContract` em `packages/shared/src/index.ts`',
     contar: ({ ler }) => {
@@ -156,15 +149,6 @@ export const FONTES = {
       const corpo = trecho(ler('packages/docker-port/src/docker-port.ts'), 'export abstract class DockerPort {', '\n}');
       if (corpo === null) return null;
       const n = [...corpo.matchAll(/^\s+abstract [a-zA-Z]+\(/gm)].length;
-      return n === 0 ? null : n;
-    },
-  },
-  abasDoProjeto: {
-    descricao: 'as entradas de `REGISTRO` em `apps/web/src/routes/project-tabs.ts`',
-    contar: ({ ler }) => {
-      const corpo = trecho(ler('apps/web/src/routes/project-tabs.ts'), 'const REGISTRO = [', '] as const');
-      if (corpo === null) return null;
-      const n = [...corpo.matchAll(/^ {4}key: '/gm)].length;
       return n === 0 ? null : n;
     },
   },
@@ -232,50 +216,47 @@ export const FONTES = {
 
 export const AFERICOES = [
   // overrides — "já são catorze na raiz e treze no website"
-  { arquivo: 'CLAUDE.md', padrao: /já são (\S+) na raiz e \S+ no website/, fonte: 'overridesRaiz', forma: 'pt_m' },
-  { arquivo: 'CLAUDE.md', padrao: /já são \S+ na raiz e (\S+) no website/, fonte: 'overridesWebsite', forma: 'pt_m' },
+  { arquivo: '.claude/contexto/stack.md', padrao: /já são (\S+(?: e \S+)?) na raiz e \S+(?: e \S+)? no website/, fonte: 'overridesRaiz', forma: 'pt_m' },
+  { arquivo: '.claude/contexto/stack.md', padrao: /já são \S+(?: e \S+)? na raiz e (\S+(?: e \S+)?) no website/, fonte: 'overridesWebsite', forma: 'pt_m' },
 
   // golden-set do RAG
-  { arquivo: 'CLAUDE.md', padrao: /um corpo de (\S+) perguntas medindo/, fonte: 'goldenSetRagCasos', forma: 'digito' },
-  { arquivo: 'docs/explanation/gates.md', padrao: /\((\S+) questions composed from real RNs/, fonte: 'goldenSetRagCasos', forma: 'digito' },
-  { arquivo: 'CLAUDE.md', padrao: /corpus CURADO \((\S+) arquivos, não os/, fonte: 'goldenSetRagCorpus', forma: 'digito' },
-  { arquivo: 'CLAUDE.md', padrao: /corpus CURADO \((\S+) arquivos\), não os/, fonte: 'goldenSetRagCorpus', forma: 'digito' },
-  { arquivo: 'CLAUDE.md', padrao: /medido de verdade \((\d+\/\d+),/, fonte: 'goldenSetRagPiso', forma: 'digito' },
+  { arquivo: '.claude/contexto/estado-atual.md', padrao: /um corpo de (\S+) perguntas medindo/, fonte: 'goldenSetRagCasos', forma: 'digito' },
+  { arquivo: 'docs/explanation/gates.md', padrao: /\((\S+) perguntas compostas a partir de RNs/, fonte: 'goldenSetRagCasos', forma: 'digito' },
+  { arquivo: '.claude/contexto/estado-atual.md', padrao: /corpus CURADO \((\S+) arquivos, não os/, fonte: 'goldenSetRagCorpus', forma: 'digito' },
+  { arquivo: '.claude/contexto/estado-atual.md', padrao: /corpus CURADO \((\S+) arquivos\), não os/, fonte: 'goldenSetRagCorpus', forma: 'digito' },
+  { arquivo: '.claude/contexto/estado-atual.md', padrao: /medido de verdade \((\d+\/\d+),/, fonte: 'goldenSetRagPiso', forma: 'digito' },
 
   // imagens de terceiro presas por digest
-  { arquivo: 'docs/explanation/cadeia-de-suprimentos-do-ci.md', padrao: /all (\S+) third-party references/, fonte: 'imagensDeTerceiro', forma: 'digito' },
+  { arquivo: 'docs/explanation/cadeia-de-suprimentos-do-ci.md', padrao: /todas as (\S+) referências de terceiros/, fonte: 'imagensDeTerceiro', forma: 'digito' },
 
   // imagens que o produto publica / que o smoke confere
-  { arquivo: 'CLAUDE.md', padrao: /As (\S+) imagens de\s+produção são PUBLICADAS/, fonte: 'imagensPublicadas', forma: 'pt_f' },
-  { arquivo: 'README.md', padrao: /build das (\S+) imagens com/, fonte: 'imagensPublicadas', forma: 'pt_f' },
+  { arquivo: '.claude/contexto/stack.md', padrao: /As (\S+) imagens de\s+produção são PUBLICADAS/, fonte: 'imagensPublicadas', forma: 'pt_f' },
   // RN-524 e RN-527 (AT-192): ficaram em "quatro" depois do ADR 0162
   { arquivo: 'docs/business-rules.md', padrao: /- as \*\*(\S+) imagens\*\* são assinadas \*\*por DIGEST\*\*/, fonte: 'imagensPublicadas', forma: 'pt_f' },
   { arquivo: 'docs/business-rules.md', padrao: /- as (\S+) imagens vêm de \*\*variável obrigatória\*\*/, fonte: 'imagensPublicadas', forma: 'pt_f' },
-  { arquivo: 'README.md', padrao: /confere que as (\S+) imagens rodam non-root/, fonte: 'imagensNonRootNoSmoke', forma: 'pt_f' },
 
   // contrato de git
   { arquivo: 'README.md', padrao: /o contrato de (\S+) operações e as capabilities/, fonte: 'operacoesDoGit', forma: 'pt_f' },
   { arquivo: 'CONTRIBUTING.md', padrao: /implementar as (\S+) operações, declarar/, fonte: 'operacoesDoGit', forma: 'pt_f' },
-  { arquivo: 'docs/reference/git-providers.md', padrao: /\*\*(\S+) operations\*\* —/, fonte: 'operacoesDoGit', forma: 'en' },
-  { arquivo: 'docs/reference/git-providers.md', padrao: /implementing all (\S+) operations, honestly/, fonte: 'operacoesDoGit', forma: 'en' },
-  { arquivo: 'docs/architecture.md', padrao: /`GitProviderContract` — (\S+) operations, \*\*types/, fonte: 'operacoesDoGit', forma: 'en' },
+  { arquivo: 'docs/reference/git-providers.md', padrao: /O contrato tem \*\*(\S+) operações\*\* —/, fonte: 'operacoesDoGit', forma: 'pt_f' },
+  { arquivo: 'docs/reference/git-providers.md', padrao: /implementar todas as\s+(\S+) operações, declarando/, fonte: 'operacoesDoGit', forma: 'pt_f' },
+  { arquivo: 'docs/architecture.md', padrao: /`GitProviderContract` — (\S+) operações, \*\*tipos/, fonte: 'operacoesDoGit', forma: 'pt_f' },
 
   // porta de Docker
-  { arquivo: 'CLAUDE.md', padrao: /PORTA de\s+(\S+) operações \(`packages\/docker-port`/, fonte: 'operacoesDoDocker', forma: 'pt_f' },
-  { arquivo: 'CLAUDE.md', padrao: /das (\S+) operações da `DockerPort`/, fonte: 'operacoesDoDocker', forma: 'pt_f' },
-  { arquivo: 'docs/architecture.md', padrao: /the Docker PORT \((\S+) operations\)/, fonte: 'operacoesDoDocker', forma: 'en' },
+  { arquivo: '.claude/rules/runner.md', padrao: /PORTA de\s+(\S+) operações \(`packages\/docker-port`/, fonte: 'operacoesDoDocker', forma: 'pt_f' },
+  { arquivo: '.claude/rules/broker-e-containers.md', padrao: /das (\S+) operações da `DockerPort`/, fonte: 'operacoesDoDocker', forma: 'pt_f' },
+  { arquivo: 'docs/architecture.md', padrao: /a PORTA do Docker \((\S+) operações\)/, fonte: 'operacoesDoDocker', forma: 'pt_f' },
 
   // web, compose, ações, banco
-  { arquivo: 'README.md', padrao: /— (\S+) abas, derivadas de um registro único/, fonte: 'abasDoProjeto', forma: 'pt_f' },
-  { arquivo: 'CLAUDE.md', padrao: /Os (\S+) serviços do compose de DEV têm healthcheck/, fonte: 'servicosDoComposeDeDev', forma: 'pt_m' },
-  { arquivo: 'docs/glossary.md', padrao: /executes directly\. (\S+) types\./, fonte: 'tiposDeAcao', forma: 'en' },
-  { arquivo: 'docs/glossary.md', padrao: /executes directly\. \S+ types\. (\S+) states/, fonte: 'estadosDeAcao', forma: 'en' },
-  { arquivo: 'docs/architecture.md', padrao: /^(\d+) tables in total\./m, fonte: 'tabelasDoBanco', forma: 'digito' },
+  { arquivo: '.claude/contexto/convencoes-repositorio-e-dominio.md', padrao: /Os (\S+) serviços do compose de DEV têm healthcheck/, fonte: 'servicosDoComposeDeDev', forma: 'pt_m' },
+  { arquivo: 'docs/glossary.md', padrao: /nunca executa direto\.\s+São (\d+) tipos/, fonte: 'tiposDeAcao', forma: 'digito' },
+  { arquivo: 'docs/glossary.md', padrao: /nunca executa direto\.\s+São \d+ tipos e (\d+) estados/, fonte: 'estadosDeAcao', forma: 'digito' },
+  { arquivo: 'docs/architecture.md', padrao: /^(\d+) tabelas no total\./m, fonte: 'tabelasDoBanco', forma: 'digito' },
 
   // artefatos e providers
   { arquivo: 'README.md', padrao: /os (\S+) schemas e quem pode emitir/, fonte: 'schemasDeArtefato', forma: 'pt_m' },
-  { arquivo: 'docs/reference/artifacts.md', padrao: /^description: The (\S+) artifact schemas/m, fonte: 'schemasDeArtefato', forma: 'en' },
-  { arquivo: 'CLAUDE.md', padrao: /; (\d+) providers \(ADR 0043\)/, fonte: 'providersDeLlm', forma: 'digito' },
+  { arquivo: 'docs/reference/artifacts.md', padrao: /^description: Os (\S+) schemas de artefato/m, fonte: 'schemasDeArtefato', forma: 'pt_m' },
+  { arquivo: '.claude/contexto/stack.md', padrao: /; (\d+) providers \(ADR 0043\)/, fonte: 'providersDeLlm', forma: 'digito' },
 ];
 
 /**

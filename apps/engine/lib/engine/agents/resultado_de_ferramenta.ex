@@ -29,6 +29,13 @@ defmodule Engine.Agents.ResultadoDeFerramenta do
   def payload(tool, {:error, texto}) do
     texto = to_string(texto)
     base = %{tool: tool, ok: false, erro: cortar(texto)}
+
+    # Exceção dentro da ferramenta (RN-719): origem `codigo`, nunca por eliminação.
+    base =
+      if Engine.Harness.ArgumentosDeFerramenta.falha_interna?(texto),
+        do: Map.put(base, :origem, "codigo"),
+        else: base
+
     total(base, texto)
   end
 

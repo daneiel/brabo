@@ -1,4 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
+import { ConflictException, NotFoundException } from '@nestjs/common';
+import type { SessionEventRepository } from '../../../../src/application/ports/session-event-repository.port';
 import { RecordGateVerdictUseCase } from '../../../../src/application/use-cases/execution/record-gate-verdict.use-case';
 import type { MarkTaskBlockedUseCase } from '../../../../src/application/use-cases/execution/mark-task-blocked.use-case';
 import type { TaskRepository } from '../../../../src/application/ports/backlog-repository.port';
@@ -74,6 +76,8 @@ function buildHarness(opts: {
   task?: Task | null;
   prAction?: ProposedAction | null;
   repo?: ProvisionedRepository | null;
+  perguntas?: Array<{ payload: unknown }>;
+  respostas?: Array<{ payload: unknown }>;
 }) {
   const task = opts.task === undefined ? buildTask() : opts.task;
   const prAction =
@@ -153,6 +157,14 @@ function buildHarness(opts: {
     markTaskBlocked,
     outbox,
     uowStub,
+    {
+      listByTypeForProject: (_p: string, tipo: string) =>
+        Promise.resolve(
+          tipo === 'artifact.open_question'
+            ? (opts.perguntas ?? [])
+            : (opts.respostas ?? []),
+        ),
+    } as unknown as SessionEventRepository,
   );
 
   return {
@@ -166,6 +178,67 @@ function buildHarness(opts: {
 }
 
 describe('RecordGateVerdictUseCase', () => {
+  // RN-870 (AT-526): o openQuestionId existe, é do projeto e está aberto.
+  describe('openQuestionId do veredito', () => {
+    const Q = '11111111-1111-4111-8111-111111111111';
+    const veredito = {
+      taskId: 'task-1',
+      gate: 'qa' as const,
+      veredito: 'needs_user_decision' as const,
+      resumo: 'x',
+      itens: [],
+      openQuestionId: Q,
+    };
+
+    it('pergunta aberta: estaciona sem gravar outra', async () => {
+      const { useCase, appendEvent } = buildHarness({
+        perguntas: [{ payload: { questionId: Q } }],
+      });
+      const r = await useCase.execute('proj-1', 'sess-1', veredito);
+      expect(r).toMatchObject({ nextAction: 'await_user', openQuestionId: Q });
+      const tipos = (
+        appendEvent.execute as ReturnType<typeof vi.fn>
+      ).mock.calls.map((c) => (c[2] as { type: string }).type);
+      expect(tipos).toEqual(['pr.gate_changed']);
+    });
+
+    it('inexistente ou de outro projeto: 404 nomeado, sem escrita', async () => {
+      const { useCase, appendEvent, updateGateStatus, commentOnPullRequest } =
+        buildHarness({ perguntas: [] });
+      const erro = await useCase
+        .execute('proj-1', 'sess-1', veredito)
+        .catch((e: unknown) => e);
+      expect(erro).toBeInstanceOf(NotFoundException);
+      expect((erro as NotFoundException).getResponse()).toMatchObject({
+        reason: 'pergunta_nao_encontrada',
+      });
+      expect(
+        (appendEvent.execute as ReturnType<typeof vi.fn>).mock.calls,
+      ).toHaveLength(0);
+      expect(updateGateStatus).not.toHaveBeenCalled();
+      expect(commentOnPullRequest).not.toHaveBeenCalled();
+    });
+
+    it('já respondida: 409 com a decisão, sem escrita nem pr.gate_changed', async () => {
+      const { useCase, appendEvent, updateGateStatus } = buildHarness({
+        perguntas: [{ payload: { questionId: Q } }],
+        respostas: [{ payload: { questionId: Q, resposta: '404 curto' } }],
+      });
+      const erro = await useCase
+        .execute('proj-1', 'sess-1', veredito)
+        .catch((e: unknown) => e);
+      expect(erro).toBeInstanceOf(ConflictException);
+      expect((erro as ConflictException).getResponse()).toMatchObject({
+        reason: 'pergunta_ja_respondida',
+        decisao: '404 curto',
+      });
+      expect(
+        (appendEvent.execute as ReturnType<typeof vi.fn>).mock.calls,
+      ).toHaveLength(0);
+      expect(updateGateStatus).not.toHaveBeenCalled();
+    });
+  });
+
   it('QA aprovado: avança pro secops, comenta a PR', async () => {
     const { useCase, updateGateStatus, commentOnPullRequest } = buildHarness(
       {},
@@ -253,6 +326,8 @@ describe('RecordGateVerdictUseCase', () => {
       'ciclo de correção esgotado (gate)',
       'ainda falhando',
       'qa-agent',
+      // RN-762 (AT-450): sem isto o `backlog.task_blocked` saía `origin: null`.
+      'politica',
     );
     expect(updateGateStatus).not.toHaveBeenCalled();
   });
@@ -379,5 +454,69 @@ describe('RecordGateVerdictUseCase', () => {
 
       expect(outboxAppend).not.toHaveBeenCalled();
     });
+  });
+
+  // RN-860 (ADR 0214): o gate espera o usuário sem gastar o ciclo.
+  it('needs_user_decision no teto: grava a pergunta, não conta correção, não bloqueia', async () => {
+    const {
+      useCase,
+      updateGateStatus,
+      markTaskBlockedExecute,
+      appendEvent,
+      outboxAppend,
+    } = buildHarness({ task: buildTask({ gateCorrectionCount: 3 }) });
+
+    const result = await useCase.execute(
+      'proj-1',
+      'sess-1',
+      {
+        taskId: 'task-1',
+        gate: 'qa',
+        veredito: 'needs_user_decision',
+        resumo: 'comportamento de código inexistente não confirmado',
+        itens: [],
+        pergunta: 'Código inexistente responde 404?',
+        sugestao: '404 com mensagem curta',
+      },
+      3,
+    );
+
+    expect(result.nextAction).toBe('await_user');
+    expect(result.openQuestionId).toMatch(/^[0-9a-f-]{36}$/);
+    expect(updateGateStatus).toHaveBeenCalledWith('task-1', 'awaiting_qa', 3);
+    expect(markTaskBlockedExecute).not.toHaveBeenCalled();
+    expect(outboxAppend).not.toHaveBeenCalled();
+    const tipos = (
+      appendEvent.execute as ReturnType<typeof vi.fn>
+    ).mock.calls.map((c) => (c[2] as { type: string }).type);
+    expect(tipos).toEqual(['artifact.open_question', 'pr.gate_changed']);
+    const pergunta = (appendEvent.execute as ReturnType<typeof vi.fn>).mock
+      .calls[0][2] as { actor: unknown; payload: Record<string, unknown> };
+    expect(pergunta.actor).toEqual({ kind: 'agent', id: 'qa-agent' });
+    expect(pergunta.payload).toMatchObject({
+      autor: 'qa-agent',
+      sessionId: 'sess-1',
+      afeta: { regras: [], historias: ['story-1'], tarefas: ['task-1'] },
+    });
+    const mudanca = (appendEvent.execute as ReturnType<typeof vi.fn>).mock
+      .calls[1][2] as { payload: Record<string, unknown> };
+    expect(mudanca.payload).toMatchObject({
+      esperandoUsuario: true,
+      openQuestionId: result.openQuestionId,
+    });
+  });
+
+  it('needs_user_decision sem pergunta nem openQuestionId é recusado', async () => {
+    const { useCase, updateGateStatus } = buildHarness({});
+    await expect(
+      useCase.execute('proj-1', 'sess-1', {
+        taskId: 'task-1',
+        gate: 'qa',
+        veredito: 'needs_user_decision',
+        resumo: 'x',
+        itens: [],
+      }),
+    ).rejects.toThrow(/exige `pergunta`/);
+    expect(updateGateStatus).not.toHaveBeenCalled();
   });
 });

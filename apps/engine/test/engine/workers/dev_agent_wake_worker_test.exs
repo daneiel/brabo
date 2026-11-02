@@ -212,6 +212,59 @@ defmodule Engine.Workers.DevAgentWakeWorkerTest do
     end
   end
 
+  describe "task.merge_conflict (RN-715)" do
+    setup do
+      Application.put_env(:engine, :engine_api_client, Engine.Sessions.FakeEngineApiClient)
+      Application.put_env(:engine, :test_pid, self())
+
+      on_exit(fn ->
+        Application.delete_env(:engine, :engine_api_client)
+        Application.delete_env(:engine, :test_pid)
+      end)
+    end
+
+    defp conflito(project_id, agent_id) do
+      job("task.merge_conflict", %{
+        "projectId" => project_id,
+        "sessionId" => Ecto.UUID.generate(),
+        "taskId" => "t1",
+        "agentId" => agent_id,
+        "pullRequestId" => "pr-6",
+        "conflictingFiles" => ["package.json"]
+      })
+    end
+
+    test "entrega o conflito, com os arquivos, ao agente dono" do
+      project_id = Ecto.UUID.generate()
+      seed_agent(project_id, "dev-api", "api", "idle")
+      :ok = Wake.subscribe(project_id, "dev-api")
+
+      assert :ok = DevAgentWakeWorker.perform(conflito(project_id, "dev-api"))
+
+      assert_receive {:merge_conflict,
+                      %{
+                        task_id: "t1",
+                        pull_request_id: "pr-6",
+                        conflicting_files: ["package.json"]
+                      }}
+
+      refute_received {:task_blocked, _, _, _, _}
+    end
+
+    test "dono que não existe: bloqueia a task com motivo nomeado, nada calado" do
+      project_id = Ecto.UUID.generate()
+      :ok = Wake.subscribe(project_id, "dev-api")
+
+      assert :ok = DevAgentWakeWorker.perform(conflito(project_id, "dev-api"))
+
+      refute_receive {:merge_conflict, _}, 100
+      assert_received {:task_blocked, "t1", motivo, diagnostico, "dev-api"}
+      assert motivo =~ "conflito de merge"
+      assert diagnostico =~ "package.json"
+      assert_received {:task_blocked_origin, "t1", "infra"}
+    end
+  end
+
   test "payload incompleto ou event_type inesperado: :ok, sem falhar" do
     assert :ok = DevAgentWakeWorker.perform(%Oban.Job{args: %{"event_type" => "algo"}})
   end

@@ -1,3 +1,4 @@
+import { Shimmer } from '../components/ui/Shimmer';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -156,7 +157,7 @@ export function ProjectRagTab({ projectId }: { projectId: string }) {
           onTentarDeNovo={() => void coverageQuery.refetch()}
         />
       )}
-      {coverageQuery.isLoading && <div className={styles.estado}>{t('rag.loadingCoverage')}</div>}
+      {coverageQuery.isLoading && <div className={styles.estado}><Shimmer>{t('rag.loadingCoverage')}</Shimmer></div>}
       {coverageQuery.data && <RagCoveragePanel coverage={coverageQuery.data} />}
 
       <form className={styles.formulario} onSubmit={submeter}>
@@ -194,7 +195,7 @@ export function ProjectRagTab({ projectId }: { projectId: string }) {
       <div className={styles.resultados}>
         {!buscado && <div className={styles.estado}>{t('rag.emptyPrompt')}</div>}
 
-        {buscado && searchQuery.isLoading && <div className={styles.estado}>{t('rag.searching')}</div>}
+        {buscado && searchQuery.isLoading && <div className={styles.estado}><Shimmer>{t('rag.searching')}</Shimmer></div>}
 
         {buscado && searchQuery.isError && (
           <ErroDeCarregamento

@@ -1,0 +1,30 @@
+{
+  "tools": {
+    "listar_regras_de_negocio": "正在重新阅读项目的业务规则",
+    "listar_backlog": "正在检查 backlog 中已有的内容",
+    "listar_metricas_de_produto": "正在查询产品指标",
+    "create_epic": "正在创建史诗",
+    "create_story": "正在编写用户故事",
+    "create_task": "正在添加任务",
+    "ask_structured_questions": "正在为您准备问题",
+    "offer_handoff": "正在准备 handoff",
+    "emit_artifact": "正在记录所学到的内容",
+    "create_module_map": "正在绘制模块图",
+    "assign_story_modules": "正在将用户故事关联到模块",
+    "choose_project_image": "正在选择项目镜像",
+    "create_c4_diagram": "正在绘制 C4 图",
+    "route_modules_to_infra": "正在将模块路由到候选镜像",
+    "declare_module_contracts": "正在声明模块之间的契约",
+    "propose_adr": "正在起草 ADR",
+    "emit_insight": "正在记录洞察",
+    "propose_execution_plan": "正在制定执行计划",
+    "assess_implementability": "正在评估用户故事是否可实现",
+    "propose_prototype": "正在设计原型",
+    "propose_rfc": "正在起草 RFC",
+    "validate_infra_file": "正在验证基础设施文件",
+    "propose_infra_pr": "正在准备基础设施 PR",
+    "propose_container_start": "正在提议启动容器",
+    "container_start_via_runner": "正在提议在您的机器上启动容器"
+  },
+  "fallback": "正在使用 {{tool}}…"
+}

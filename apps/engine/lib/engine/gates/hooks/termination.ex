@@ -24,10 +24,38 @@ defmodule Engine.Gates.Hooks.Termination do
       %{
         veredito: Map.get(args, "veredito"),
         resumo: Map.get(args, "resumo", ""),
-        itens: Map.get(args, "itens", []),
-        coverage_matrix: Map.get(args, "coverageMatrix", [])
-      }}}
+        itens: lista(Map.get(args, "itens")),
+        coverage_matrix: lista(Map.get(args, "coverageMatrix"))
+      }
+      |> com_decisao_do_usuario(args)}}
   end
 
   def call(ctx), do: {:cont, ctx}
+
+  # ADR 0214 (RN-862): o veredito `needs_user_decision` leva a pergunta.
+  defp com_decisao_do_usuario(verdict, %{"veredito" => "needs_user_decision"} = args) do
+    Map.put(verdict, :decisao_do_usuario, %{
+      pergunta: Map.get(args, "pergunta"),
+      sugestao: Map.get(args, "sugestao"),
+      open_question_id: Map.get(args, "openQuestionId")
+    })
+  end
+
+  defp com_decisao_do_usuario(verdict, _args), do: verdict
+
+  # RN-787 (AT-464): o modelo manda `itens`/`coverageMatrix` ora como lista,
+  # ora como STRING JSON; o hook lê o argumento cru, e o `qa_verdict` gravava o
+  # tipo que chegou. Normaliza para lista (o molde da RN-719); string que não é
+  # lista JSON vira lista vazia, nunca o texto cru no artefato.
+  @doc false
+  def lista(valor) when is_list(valor), do: valor
+
+  def lista(valor) when is_binary(valor) do
+    case Jason.decode(valor) do
+      {:ok, l} when is_list(l) -> l
+      _ -> []
+    end
+  end
+
+  def lista(_), do: []
 end

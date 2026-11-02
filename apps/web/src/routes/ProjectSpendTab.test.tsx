@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach, beforeAll } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '../lib/i18n';
 import { ProjectSpendTab } from './ProjectSpendTab';
@@ -26,6 +26,9 @@ const getProject = vi.fn();
 const getProjectBudget = vi.fn();
 const getCredentialSpend = vi.fn();
 const listWorkspaces = vi.fn();
+const getProjectSpendTeam = vi.fn();
+const setProjectBudget = vi.fn();
+const listModelCatalog = vi.fn();
 
 vi.mock('../lib/api-client', () => ({
   getMySpend: (...a: unknown[]) => getMySpend(...a),
@@ -34,6 +37,9 @@ vi.mock('../lib/api-client', () => ({
   getProjectBudget: (...a: unknown[]) => getProjectBudget(...a),
   getCredentialSpend: (...a: unknown[]) => getCredentialSpend(...a),
   listWorkspaces: (...a: unknown[]) => listWorkspaces(...a),
+  getProjectSpendTeam: (...a: unknown[]) => getProjectSpendTeam(...a),
+  setProjectBudget: (...a: unknown[]) => setProjectBudget(...a),
+  listModelCatalog: (...a: unknown[]) => listModelCatalog(...a),
 }));
 
 function serie(dias: number) {
@@ -170,6 +176,21 @@ beforeEach(() => {
   getProject.mockResolvedValue({ id: 'p-1', workspaceId: 'ws-1' });
   getWorkspaceSpendReport.mockResolvedValue(doWorkspace);
   getMySpend.mockResolvedValue(meu);
+  listModelCatalog.mockResolvedValue({});
+  getProjectSpendTeam.mockResolvedValue({
+    projectId: 'p-1',
+    dias: 30,
+    totalMicros: 3_000_000,
+    inputTokens: 100,
+    outputTokens: 50,
+    chamadas: 9,
+    porAgente: [
+      { chave: 'criativo', rotulo: null, actorKind: 'agent', costMicros: 3_000_000, inputTokens: 100, outputTokens: 50, chamadas: 9 },
+    ],
+    porArea: [
+      { chave: 'produto', rotulo: null, actorKind: null, costMicros: 3_000_000, inputTokens: 100, outputTokens: 50, chamadas: 9 },
+    ],
+  });
   // Sem orçamento por padrão: a maioria dos testes não é sobre o bloco
   // "por projeto" — cada teste dele sobrescreve.
   getProjectBudget.mockResolvedValue(null);
@@ -230,33 +251,47 @@ describe('ProjectSpendTab — a audiência do owner', () => {
   it('mostra os cinco recortes do workspace, incluindo provider', async () => {
     montar();
 
-    expect(await screen.findByText('Gastos do workspace')).toBeInTheDocument();
+    expect(await screen.findByText('Gastos do projeto')).toBeInTheDocument();
     expect(await screen.findByText('Por modelo')).toBeInTheDocument();
     expect(screen.getByText('Por provider')).toBeInTheDocument();
-    expect(screen.getByText('Por projeto')).toBeInTheDocument();
+    // SÓ o projeto (RN-952): recorte por sessão no lugar do por projeto.
+    expect(screen.getByText('Por sessão')).toBeInTheDocument();
+    expect(screen.queryByText('Por projeto')).not.toBeInTheDocument();
+    expect(getWorkspaceSpendReport).toHaveBeenCalledWith('ws-1', 30, 'p-1');
     expect(screen.getByText('Por agente e pessoa')).toBeInTheDocument();
     expect(screen.getByText('Gasto por dia')).toBeInTheDocument();
 
     expect(screen.getByText('caro/modelo')).toBeInTheDocument();
     // RN-211: o rótulo humano do provider, não o slug cru.
     expect(screen.getByText('Anthropic')).toBeInTheDocument();
-    expect(screen.getByText('Loja')).toBeInTheDocument();
     expect(screen.getByText('criativo')).toBeInTheDocument();
     expect(screen.getByText('a1b2c3d4 (pessoa)')).toBeInTheDocument();
   });
 
-  /**
-   * A pergunta da FATURA é outra, e continua no componente que já existia —
-   * exclusivo do owner pela RN-060. A aba a reaproveita em vez de reescrevê-la.
-   */
-  it('traz a seção de credencial junto, e nunca chama a rota do membro', async () => {
+  /** A fatura por chave é GLOBAL (página Gastos): a aba do projeto não a traz. */
+  it('não traz a seção de credencial, e nunca chama a rota do membro', async () => {
     montar();
 
-    await screen.findByText('Gastos do workspace');
-    await waitFor(() =>
-      expect(screen.getByText('Gasto das suas chaves')).toBeInTheDocument(),
-    );
+    await screen.findByText('Gastos do projeto');
+    expect(screen.queryByText('Gasto das suas chaves')).not.toBeInTheDocument();
+    expect(getCredentialSpend).not.toHaveBeenCalled();
     expect(getMySpend).not.toHaveBeenCalled();
+    expect(getProjectSpendTeam).not.toHaveBeenCalled();
+  });
+
+  it('modelo de assinatura sem preço aparece "assinatura — sem preço registrado", nunca US$ 0', async () => {
+    getWorkspaceSpendReport.mockResolvedValue({
+      ...doWorkspace,
+      porModelo: [
+        { chave: 'cc/claude', rotulo: null, actorKind: null, costMicros: 0, inputTokens: 5, outputTokens: 5, chamadas: 2 },
+      ],
+    });
+    listModelCatalog.mockResolvedValue({
+      chat: { '9router': [{ name: 'cc/claude', billing: 'subscription' }] },
+    });
+    montar();
+
+    expect(await screen.findByText('assinatura — sem preço registrado')).toBeInTheDocument();
   });
 });
 
@@ -275,9 +310,14 @@ describe('ProjectSpendTab — a audiência do membro', () => {
     expect(await screen.findByText('O meu consumo')).toBeInTheDocument();
     expect(await screen.findByText('Por sessão')).toBeInTheDocument();
     expect(screen.getByText('#a1b2c3d4')).toBeInTheDocument();
+    // ADR 0233: o total do projeto e o custo por agente e por área.
+    expect(await screen.findByText('Por agente')).toBeInTheDocument();
+    expect(screen.getByText('Por área')).toBeInTheDocument();
+    expect(getProjectSpendTeam).toHaveBeenCalledWith('p-1', 30);
 
     expect(getWorkspaceSpendReport).not.toHaveBeenCalled();
     expect(getCredentialSpend).not.toHaveBeenCalled();
+    expect(screen.queryByText('Por provider')).not.toBeInTheDocument();
     expect(screen.queryByText('Por modelo')).not.toBeInTheDocument();
     expect(screen.queryByText('Gasto das suas chaves')).not.toBeInTheDocument();
     expect(getMySpend).toHaveBeenCalledWith('p-1', 30);
@@ -400,10 +440,47 @@ describe('ProjectSpendTab — o orçamento do projeto', () => {
     getProjectBudget.mockRejectedValue(new Error('403'));
     montar();
 
-    await screen.findByText('Gastos do workspace');
+    await screen.findByText('Gastos do projeto');
     expect(
       screen.queryByText(/Nenhum orçamento definido/i),
     ).not.toBeInTheDocument();
     expect(screen.queryByTestId('token-meter')).not.toBeInTheDocument();
+  });
+});
+
+describe('ProjectSpendTab — o editor do orçamento', () => {
+  it('maintainer+ grava o teto (PUT) e a política escolhida', async () => {
+    listWorkspaces.mockResolvedValue([{ id: 'ws-1', role: 'owner' }]);
+    setProjectBudget.mockResolvedValue({});
+    montar();
+
+    const campo = await screen.findByLabelText(/Teto em US\$/);
+    fireEvent.change(campo, { target: { value: '12,5' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar orçamento' }));
+
+    await waitFor(() =>
+      expect(setProjectBudget).toHaveBeenCalledWith('p-1', { limitUsd: 12.5, policy: 'block' }),
+    );
+    expect(await screen.findByText('Orçamento salvo.')).toBeInTheDocument();
+  });
+
+  it('teto inválido não chama a api', async () => {
+    listWorkspaces.mockResolvedValue([{ id: 'ws-1', role: 'owner' }]);
+    montar();
+
+    await screen.findByLabelText(/Teto em US\$/);
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar orçamento' }));
+
+    expect(await screen.findByText('Informe um teto maior que zero.')).toBeInTheDocument();
+    expect(setProjectBudget).not.toHaveBeenCalled();
+  });
+
+  it('abaixo de maintainer o controle fica inerte e o motivo é dito em texto', async () => {
+    listWorkspaces.mockResolvedValue([{ id: 'ws-1', role: 'developer' }]);
+    montar();
+
+    expect(await screen.findByText(/exige o papel de maintainer/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Teto em US\$/)).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Salvar orçamento' })).toBeDisabled();
   });
 });

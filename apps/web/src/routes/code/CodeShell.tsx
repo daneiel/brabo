@@ -19,6 +19,7 @@ import { CodeEditor } from './CodeEditor';
 import { CodeBottomPanel } from './CodeBottomPanel';
 import { CodeBranchPicker } from './CodeBranchPicker';
 import { linguagemPorCaminho } from './highlight';
+import { Shimmer } from '../../components/ui/Shimmer';
 import styles from './CodeShell.module.css';
 
 type RailView = 'explorer' | 'search';
@@ -227,7 +228,7 @@ export function CodeShell({ projectId }: { projectId: string }) {
         <span className={styles.statusItem}>{t('shell.encodingLabel')}</span>
         <span className={styles.statusItem}>
           <span className={styles.pulso} aria-hidden="true" />
-          {t('shell.activeAgents', { count: agentesAtivos })}
+          <Shimmer>{t('shell.activeAgents', { count: agentesAtivos })}</Shimmer>
         </span>
       </div>
     </div>

@@ -1,19 +1,19 @@
-# ADR 0122 — `SessionPage.tsx` split into five mechanical PRs, declared upfront
+# ADR 0122 — `SessionPage.tsx` dividido em cinco PRs mecânicos, declarados de antemão
 
-- **Status:** accepted
-- **Date:** 2026-08-29
-- **References (without editing):** [ADR 0121](0121-schema-dividido-por-agregado-de-dominio.md)
-  (same shape of reasoning as this one — a shared file grew past the point
-  where "just work around it" is cheaper than drawing a boundary — but a
-  different execution shape: 0121 was one zero-diff commit, this is five
-  PRs in sequence, because the file is under active feature churn and a
-  single PR would either freeze the codebase or race every other change).
+- **Status:** aceito
+- **Data:** 2026-08-29
+- **Referencia (sem editar):** [ADR 0121](0121-schema-dividido-por-agregado-de-dominio.md)
+  (o mesmo formato de raciocínio deste — um arquivo compartilhado cresceu além
+  do ponto em que "só contornar" sai mais barato que traçar uma fronteira —,
+  mas outro formato de execução: o 0121 foi um commit de diff zero, este são
+  cinco PRs em sequência, porque o arquivo está sob mudança ativa de features
+  e um PR único congelaria o código ou disputaria corrida com toda outra
+  mudança).
 
-## Context
+## Contexto
 
-`apps/web/src/routes/SessionPage.tsx` is 3 807 lines and 169 KiB —
-`docs/explanation/backlog.md`'s technical-debt review already carries a row
-for it:
+`apps/web/src/routes/SessionPage.tsx` tem 3 807 linhas e 169 KiB — a revisão
+de dívida técnica de `docs/explanation/backlog.md` já tem uma linha para ele:
 
 > Decompose `SessionPage.tsx` / `ProjectSettingsTab.tsx` | G | `SessionPage.tsx`
 > is 169 KiB with 25 test files importing it; `ProjectSettingsTab.tsx` is
@@ -21,169 +21,174 @@ for it:
 > historico-de-fases.md, but never promoted to a tracked debt item; per the
 > standing rule this is its own phase, never a drive-by refactor
 
-Three concrete costs make this more than a size complaint:
+Três custos concretos fazem disso mais que uma queixa de tamanho:
 
-1. **25 test files depend on it** (`SessionPage.*.test.tsx` plus
-   `SessionPage.ponto.test.ts`) — any structural change risks a wide blast
-   radius, and the size of the file makes it hard to tell in advance which
-   of the 25 a given change can touch.
-2. **The file is under active churn, not legacy code.** 50 commits have
-   touched it; the most recent 15 are almost entirely `feat` additions
-   (structured questions, handoff, the turn-activity strip, the RN-172
-   turn/desfecho ordering…), and none of them was an extraction — this is
-   the first attempt at drawing an internal boundary in the file's history.
-   That rules out a big-bang rewrite: freezing the file for one large PR
-   would either block every other feature landing in it or force painful,
-   repeated rebases.
-3. **The test suite already draws part of the boundary.** Before this PR,
-   `SessionPage.ordenacao-e-avisos.test.tsx` imports `aberturasDeTurno`,
-   `turnoDoSeq`, `afundarDesfechos`, `ordemDaAcaoNaTimeline` and
-   `agruparNarracoesDoTurno` **directly by name** from `./SessionPage`
-   (`await import('./SessionPage')`, destructured), and
-   `SessionPage.ponto.test.ts` does the same for `pontoDaSessao` — not
-   through rendering the component, but as plain function calls. The tests
-   had already decided these five (plus `agruparNarracoesDoTurno`) are
-   independent units; this ADR promotes that existing boundary to a real
-   module boundary instead of inventing a new one.
+1. **25 arquivos de teste dependem dele** (`SessionPage.*.test.tsx` mais
+   `SessionPage.ponto.test.ts`) — qualquer mudança estrutural arrisca um raio
+   de impacto largo, e o tamanho do arquivo torna difícil saber de antemão
+   quais dos 25 uma dada mudança pode tocar.
+2. **O arquivo está sob mudança ativa, não é código legado.** 50 commits o
+   tocaram; os 15 mais recentes são quase todos acréscimos `feat` (perguntas
+   estruturadas, handoff, a faixa de atividade do turno, a ordenação
+   turno/desfecho da RN-172…), e nenhum deles foi uma extração — esta é a
+   primeira tentativa de traçar uma fronteira interna na história do arquivo.
+   Isso descarta uma reescrita de uma vez: congelar o arquivo para um PR
+   grande bloquearia toda outra feature que caísse nele ou forçaria rebases
+   dolorosos e repetidos.
+3. **A suíte de testes já traça parte da fronteira.** Antes deste PR,
+   `SessionPage.ordenacao-e-avisos.test.tsx` importa `aberturasDeTurno`,
+   `turnoDoSeq`, `afundarDesfechos`, `ordemDaAcaoNaTimeline` e
+   `agruparNarracoesDoTurno` **direto pelo nome** de `./SessionPage`
+   (`await import('./SessionPage')`, desestruturado), e
+   `SessionPage.ponto.test.ts` faz o mesmo com `pontoDaSessao` — não
+   renderizando o componente, mas como chamadas de função simples. Os testes
+   já tinham decidido que essas cinco (mais `agruparNarracoesDoTurno`) são
+   unidades independentes; este ADR promove essa fronteira existente a uma
+   fronteira real de módulo, em vez de inventar uma nova.
 
-Given the churn and the blast radius, the standing rule from `CLAUDE.md`
-applies — "not a drive-by refactor" — so this is its own phase, planned as a
-sequence of independently-mergeable, behavior-neutral PRs, each one
-evidenced by the same 25 test files passing **unedited**.
+Dados a mudança ativa e o raio de impacto, vale a regra permanente do
+`CLAUDE.md` — "não é refatoração de passagem" —, então isto é uma fase
+própria, planejada como uma sequência de PRs mergeáveis de forma
+independente e neutros em comportamento, cada um evidenciado pelos mesmos 25
+arquivos de teste passando **sem edição**.
 
-## Decision
+## Decisão
 
-Five PRs, executed and merged one at a time (never in parallel — each one
-lands on `dev` before the next starts), in this order:
+Cinco PRs, executados e mergeados um de cada vez (nunca em paralelo — cada um
+chega à `dev` antes de o próximo começar), nesta ordem:
 
-1. **Pure timeline/turn helpers → `apps/web/src/lib/session-timeline.ts`**
-   (this PR). `aberturasDeTurno`, `turnoDoSeq`, `afundarDesfechos`,
-   `pontoDaSessao`, `ordemDaAcaoNaTimeline`, and the `TimelineEntry` type
-   they share. All five are confirmed pure — no JSX, no `styles`/CSS-module
-   reference, no closure over component state — which makes this the
-   lowest-risk slice and the right one to go first: a mechanical `.ts` move
-   with nothing to reconcile against React's render cycle.
-   `agruparNarracoesDoTurno` stays in `SessionPage.tsx` on purpose, even
-   though it sits in the same region and is tested the same way: it returns
-   JSX (`<Disclosure>`) and reads three `styles.narracoes*` class names from
-   `SessionPage.module.css`. Moving it would mean deciding that `lib/`
-   accepts its first `.tsx` file — today it holds only `.ts` sources (a few
-   `.tsx` **tests** exist, but zero `.tsx` **source** files) — and that
-   precedent belongs to a PR that is actually about JSX sub-components
-   (PR 2), not one that is supposed to be a pure-function move.
+1. **Helpers puros de timeline/turno → `apps/web/src/lib/session-timeline.ts`**
+   (este PR). `aberturasDeTurno`, `turnoDoSeq`, `afundarDesfechos`,
+   `pontoDaSessao`, `ordemDaAcaoNaTimeline` e o tipo `TimelineEntry` que eles
+   compartilham. Os cinco foram confirmados puros — sem JSX, sem referência a
+   `styles`/CSS module, sem closure sobre estado do componente —, o que faz
+   desta a fatia de menor risco e a certa para ir primeiro: uma mudança
+   mecânica de `.ts`, sem nada a conciliar com o ciclo de render do React.
+   `agruparNarracoesDoTurno` fica em `SessionPage.tsx` de propósito, embora
+   esteja na mesma região e seja testado do mesmo jeito: ele devolve JSX
+   (`<Disclosure>`) e lê três nomes de classe `styles.narracoes*` de
+   `SessionPage.module.css`. Movê-lo significaria decidir que `lib/` aceita
+   seu primeiro arquivo `.tsx` — hoje ela só tem fontes `.ts` (existem alguns
+   **testes** `.tsx`, mas zero arquivos **fonte** `.tsx`) —, e esse
+   precedente pertence a um PR que de fato trate de subcomponentes JSX
+   (PR 2), não a um que deveria ser só uma mudança de funções puras.
 
-2. **`StorySlide` → `apps/web/src/routes/StorySlide.tsx`.** The first JSX
-   sub-component to move, and the simplest one: a single leaf component
-   (the promotion-carousel slide, RN-148) with no children that also need
-   to move. This is the PR that decides the `SessionPage.module.css`
-   sharing question, covered below.
+2. **`StorySlide` → `apps/web/src/routes/StorySlide.tsx`.** O primeiro
+   subcomponente JSX a mudar, e o mais simples: um único componente folha (o
+   slide do carrossel de promoção, RN-148) sem filhos que também precisem
+   mudar. É o PR que decide a questão do compartilhamento de
+   `SessionPage.module.css`, tratada abaixo.
 
 3. **`StructuredQuestionCard` + `permiteOutra` → `apps/web/src/routes/StructuredQuestionCard.tsx`.**
-   Another self-contained JSX sub-component (the RN-162/RN-171 structured-
-   question form) plus the one pure helper it privately depends on — moved
-   together because splitting a component from the single helper that only
-   it calls would add a file for no reader's benefit.
+   Outro subcomponente JSX autocontido (o formulário de pergunta estruturada
+   da RN-162/RN-171) mais o único helper puro de que ele depende em privado —
+   movidos juntos porque separar um componente do único helper que só ele
+   chama acrescentaria um arquivo sem benefício para leitor nenhum.
 
-4. **Backlog-tree helpers + `ItemDeBacklog` + `ContextAside` → `apps/web/src/lib/session-backlog-tree.ts` + `apps/web/src/routes/ContextAside.tsx`.**
-   The largest slice: pure tree-shaping helpers (their natural home is
-   `lib/`, same reasoning as PR 1) alongside the JSX that renders them
-   (`ItemDeBacklog`, `ContextAside` — natural home is `routes/`, same
-   reasoning as PRs 2–3). Goes after the simpler single-component moves
-   specifically because it's a two-file, two-kind extraction and benefits
-   from PRs 2–3 having already answered the CSS-sharing question once.
+4. **Helpers da árvore do backlog + `ItemDeBacklog` + `ContextAside` → `apps/web/src/lib/session-backlog-tree.ts` + `apps/web/src/routes/ContextAside.tsx`.**
+   A maior fatia: helpers puros de montagem da árvore (a casa natural deles é
+   `lib/`, mesmo raciocínio do PR 1) ao lado do JSX que os renderiza
+   (`ItemDeBacklog`, `ContextAside` — casa natural em `routes/`, mesmo
+   raciocínio dos PRs 2–3). Vem depois das mudanças mais simples de
+   componente único justamente por ser uma extração de dois arquivos e de
+   dois tipos, e ganha com os PRs 2–3 já terem respondido uma vez a questão do
+   compartilhamento de CSS.
 
-5. **Readiness flags → `apps/web/src/lib/session-readiness.ts`, a
-   `useSessionReadiness` hook.** Last, and the only PR in the set that is
-   **not** a file move: the readiness flags (RN-160/RN-161 gates on the
-   Architect/PO buttons) are computed inline from state and props that live
-   in `SessionPage.tsx`, so extracting them means writing a new hook with an
-   explicit input/output contract, not relocating an existing standalone
-   function or component. Ordered last because it is the riskiest of the
-   five — a hook boundary can change *when* something recomputes even when
-   the formula is unchanged — and by PR 5 the other four will have already
-   shrunk the file enough to make that risk easier to review in isolation.
+5. **Flags de prontidão → `apps/web/src/lib/session-readiness.ts`, um hook
+   `useSessionReadiness`.** O último, e o único PR do conjunto que **não** é
+   uma mudança de arquivo: as flags de prontidão (os portões da RN-160/RN-161
+   nos botões do Arquiteto/PO) são calculadas em linha a partir de estado e
+   props que moram em `SessionPage.tsx`, então extraí-las significa escrever
+   um hook novo com contrato explícito de entrada/saída, não realocar uma
+   função ou componente avulso existente. Vem por último porque é o mais
+   arriscado dos cinco — uma fronteira de hook pode mudar *quando* algo é
+   recalculado mesmo com a fórmula intacta —, e no PR 5 os outros quatro já
+   terão encolhido o arquivo o bastante para esse risco ser mais fácil de
+   revisar isolado.
 
-### The `SessionPage.module.css` sharing question, answered once
+### A questão do compartilhamento de `SessionPage.module.css`, respondida uma vez
 
-`SessionPage.module.css` has exactly one importer today —
-`SessionPage.tsx` itself (verified: `grep` for the specifier across
-`apps/web/src` outside test files returns one hit). That means PRs 2–4 can
-have their newly-extracted sibling files (`StorySlide.tsx`,
-`StructuredQuestionCard.tsx`, `ContextAside.tsx`) import
-`../routes/SessionPage.module.css` directly, the same way `SessionPage.tsx`
-does today — no CSS split, no new shared stylesheet, no risk of the two
-copies drifting, because there was never a second copy. This is a decision
-worth writing down once, here, rather than re-litigating it in three
-separate PR reviews.
+`SessionPage.module.css` tem hoje exatamente um importador — o próprio
+`SessionPage.tsx` (verificado: um `grep` pelo especificador em `apps/web/src`
+fora dos arquivos de teste devolve um resultado). Isso quer dizer que os
+PRs 2–4 podem fazer seus arquivos irmãos recém-extraídos (`StorySlide.tsx`,
+`StructuredQuestionCard.tsx`, `ContextAside.tsx`) importarem
+`../routes/SessionPage.module.css` direto, do mesmo jeito que
+`SessionPage.tsx` faz hoje — sem dividir o CSS, sem folha de estilo
+compartilhada nova, sem risco de as duas cópias divergirem, porque nunca
+houve uma segunda cópia. É uma decisão que vale escrever uma vez, aqui, em
+vez de rediscuti-la em três revisões de PR separadas.
 
-### Explicitly out of scope for the whole five-PR effort
+### Explicitamente fora do escopo de todo o esforço de cinco PRs
 
-Two things stay untouched by this ADR and by all five PRs:
+Duas coisas ficam intocadas por este ADR e pelos cinco PRs:
 
-- **The turn-channel state cluster**: `turnoViaCanal`, `statusAgent`,
-  `pensandoVisivel`, `atividadeDoTurno`. These four pieces of state are
-  read AND written by four different turn-entry handlers
+- **O agrupamento de estado do canal de turno**: `turnoViaCanal`,
+  `statusAgent`, `pensandoVisivel`, `atividadeDoTurno`. Esses quatro estados
+  são lidos E escritos por quatro handlers diferentes de entrada de turno
   (`handleSend`, `handleReadiness`, `handleArchitectureReadiness`,
-  `handleAcceptHandoff`) and closed over by `finalizarTurnoDoAgente`, which
-  the in-code comment calls "o ÚNICO lugar que finaliza um turno" (the ONE
-  place that ends a turn) — every one of those four handlers turns
-  `turnoViaCanal` on, and only `finalizarTurnoDoAgente` turns it off. It is
-  not a contiguous JSX subtree or a set of pure functions; it is
-  interleaved control flow, and moving it is a design decision about where
-  turn-lifecycle state should live, not a mechanical relocation. It gets
-  its own, later, separately-numbered ADR when that work is scoped.
-- **`apps/web/src/routes/ProjectSettingsTab.tsx`** (~90 KiB, the other file
-  named in the same backlog row). Smaller, already has its own in-progress
-  first step (named in-file functions, not yet extracted to modules), and
-  is a separate scope decision — this ADR covers `SessionPage.tsx` only.
+  `handleAcceptHandoff`) e capturados em closure por `finalizarTurnoDoAgente`,
+  que o comentário no código chama de "o ÚNICO lugar que finaliza um turno" —
+  cada um desses quatro handlers liga `turnoViaCanal`, e só
+  `finalizarTurnoDoAgente` o desliga. Não é uma subárvore JSX contígua nem um
+  conjunto de funções puras; é fluxo de controle entrelaçado, e movê-lo é
+  uma decisão de desenho sobre onde o estado do ciclo de vida do turno deve
+  morar, não uma realocação mecânica. Ele ganha um ADR próprio, posterior e
+  com número separado, quando esse trabalho for delimitado.
+- **`apps/web/src/routes/ProjectSettingsTab.tsx`** (~90 KiB, o outro arquivo
+  citado na mesma linha do backlog). Menor, já tem um primeiro passo próprio
+  em andamento (funções nomeadas dentro do arquivo, ainda não extraídas para
+  módulos), e é uma decisão de escopo separada — este ADR cobre só
+  `SessionPage.tsx`.
 
-## Consequences
+## Consequências
 
-- **Two people can work in different corners of `SessionPage.tsx` with
-  less overlap** after all five PRs land — the same benefit ADR 0121
-  described for the schema split, at smaller scale (five extracted units,
-  not sixteen files).
-- **The acceptance bar for every PR in this set is the same: zero
-  observable behavior change**, proven by the same 25
-  `SessionPage.*.test.tsx` files passing **unedited** after each PR. A PR
-  in this set that needs to edit one of those 25 files to make it pass is
-  not actually mechanical, and should stop rather than "fix" the test.
-- **The turn-channel cluster and `ProjectSettingsTab.tsx` stay exactly as
-  disputed as before.** This ADR does not reduce their risk and does not
-  claim to — naming them here is what keeps the cut declared instead of
-  silently narrowed. A future PR that touches the turn-channel cluster
-  needs its own new-numbered ADR that references this one; it does not
-  amend this one, per the standing rule that an accepted ADR is never
-  edited.
-- **`lib/` gains its first files with `TimelineEntry`-shaped JSX-adjacent
-  types** (PR 1's `TimelineEntry` holds a `ReactNode` field) **without
-  gaining its first `.tsx` source file** — `agruparNarracoesDoTurno`
-  staying in `SessionPage.tsx` is what preserves that property through PR 1.
-  PR 2 is the one that spends that precedent, deliberately, once, with its
-  own review.
-- **`SessionPage.tsx` shrinks in five visible steps** (3 807 → smaller after
-  each PR) instead of one large diff — easier to review, but it also means
-  the file spends four PRs' worth of time in a partially-decomposed state,
-  which is accepted here as the cost of not freezing active feature work.
+- **Duas pessoas podem trabalhar em cantos diferentes de `SessionPage.tsx`
+  com menos sobreposição** depois que os cinco PRs entrarem — o mesmo
+  benefício que o ADR 0121 descreveu para a divisão do schema, em escala
+  menor (cinco unidades extraídas, não dezesseis arquivos).
+- **O critério de aceite de todo PR deste conjunto é o mesmo: zero mudança de
+  comportamento observável**, provado pelos mesmos 25 arquivos
+  `SessionPage.*.test.tsx` passando **sem edição** depois de cada PR. Um PR
+  deste conjunto que precise editar um desses 25 arquivos para passar não é,
+  de fato, mecânico, e deve parar em vez de "consertar" o teste.
+- **O agrupamento do canal de turno e `ProjectSettingsTab.tsx` continuam
+  exatamente tão disputados quanto antes.** Este ADR não reduz o risco deles
+  e não afirma reduzir — nomeá-los aqui é o que mantém o corte declarado em
+  vez de estreitado em silêncio. Um PR futuro que toque o agrupamento do
+  canal de turno precisa de um ADR próprio, com número novo, que referencie
+  este; ele não emenda este, pela regra permanente de que ADR aceito nunca é
+  editado.
+- **`lib/` ganha seus primeiros arquivos com tipos vizinhos de JSX no formato
+  de `TimelineEntry`** (o `TimelineEntry` do PR 1 tem um campo `ReactNode`)
+  **sem ganhar seu primeiro arquivo fonte `.tsx`** — é
+  `agruparNarracoesDoTurno` ficar em `SessionPage.tsx` que preserva essa
+  propriedade no PR 1. O PR 2 é o que gasta esse precedente, de propósito,
+  uma vez, com revisão própria.
+- **`SessionPage.tsx` encolhe em cinco passos visíveis** (3 807 → menor a
+  cada PR) em vez de um diff grande — mais fácil de revisar, mas também quer
+  dizer que o arquivo passa o tempo de quatro PRs num estado parcialmente
+  decomposto, o que aqui se aceita como o custo de não congelar o trabalho
+  ativo de features.
 
-## Discarded alternatives
+## Alternativas descartadas
 
-- **One large PR moving everything at once.** Rejected: the file is under
-  active churn (50 commits, the last 15 mostly feature additions), so a
-  single PR either freezes all other `SessionPage.tsx` work until it merges
-  or accumulates merge conflicts faster than it can be reviewed. Splitting
-  into five independently-mergeable PRs lets normal feature work continue
-  between them.
-- **Moving `agruparNarracoesDoTurno` alongside the other five in PR 1**,
-  since it lives in the same source region (lines 281–345) and is tested
-  the same way. Rejected: it returns JSX and reads `styles.narracoes*`,
-  so moving it would silently decide that `lib/` accepts `.tsx` source
-  files — a real precedent that deserves its own review, not a side effect
-  of a PR framed as "pure function move."
-- **Extracting the turn-channel cluster as part of this same plan**, since
-  it is the other large chunk of state in the file. Rejected outright:
-  it is coupled control flow across four handlers, not a boundary the
-  test suite already draws, and the in-code comment already names it as
-  the one place that must stay synchronized — exactly the kind of change
-  this ADR's "mechanical, provably behavior-neutral" acceptance bar cannot
-  honestly claim to cover.
+- **Um PR grande movendo tudo de uma vez.** Recusado: o arquivo está sob
+  mudança ativa (50 commits, os 15 últimos na maioria acréscimos de feature),
+  então um PR único ou congela todo outro trabalho em `SessionPage.tsx` até
+  ser mergeado ou acumula conflitos de merge mais rápido do que pode ser
+  revisado. Dividir em cinco PRs mergeáveis de forma independente deixa o
+  trabalho normal de features continuar entre eles.
+- **Mover `agruparNarracoesDoTurno` junto com os outros cinco no PR 1**, já
+  que ele mora na mesma região do fonte (linhas 281–345) e é testado do mesmo
+  jeito. Recusado: ele devolve JSX e lê `styles.narracoes*`, então movê-lo
+  decidiria em silêncio que `lib/` aceita arquivos fonte `.tsx` — um
+  precedente real que merece revisão própria, não um efeito colateral de um
+  PR apresentado como "mudança de função pura".
+- **Extrair o agrupamento do canal de turno como parte deste mesmo plano**,
+  já que é o outro grande bloco de estado do arquivo. Recusado de saída: é
+  fluxo de controle acoplado entre quatro handlers, não uma fronteira que a
+  suíte de testes já traça, e o comentário no código já o nomeia como o único
+  lugar que precisa ficar sincronizado — exatamente o tipo de mudança que o
+  critério de aceite "mecânico, comprovadamente neutro em comportamento"
+  deste ADR não pode afirmar com honestidade que cobre.

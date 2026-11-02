@@ -1,8 +1,9 @@
 /**
  * Instância do i18next (fundação de i18n, Onda 6a).
  *
- * `en` é o idioma DEFAULT do app a partir de agora — `pt-BR` continua
- * mantido e selecionável (ver o plano da Onda 6). O idioma inicial vem de
+ * `pt-BR` é o idioma DEFAULT e o `fallbackLng` desde o ADR 0216 (RN-891);
+ * `en`, `ru` e `zh-Hans` são selecionáveis. Locale sem pasta em `locales/`
+ * não quebra nada: o glob volta vazio e a tela cai no pt-BR. O idioma inicial vem de
  * {@link idiomaInicial} (cache do navegador ou sugestão de
  * `navigator.language`) para não esperar a sessão terminar de restaurar;
  * `apps/web/src/lib/idioma.ts#sincronizarIdiomaDaSessao` troca para o valor
@@ -18,7 +19,7 @@
  */
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import { idiomaInicial } from './idioma';
+import { aplicarLangNoDocumento, IDIOMA_PADRAO, idiomaInicial } from './idioma';
 
 type RecursoDeNamespace = Record<string, unknown>;
 type ModuloJson = { default: RecursoDeNamespace };
@@ -37,23 +38,44 @@ function recursosPorNamespace(
   return recursos;
 }
 
-const modulosEn = import.meta.glob<ModuloJson>('../locales/en/*.json', { eager: true });
-const modulosPtBR = import.meta.glob<ModuloJson>('../locales/pt-BR/*.json', { eager: true });
+const modulos = import.meta.glob<ModuloJson>('../locales/*/*.json', { eager: true });
 
-const recursosEn = recursosPorNamespace(modulosEn);
-const recursosPtBR = recursosPorNamespace(modulosPtBR);
+/** Recursos por locale, a partir das pastas que EXISTEM em `locales/`. */
+function recursosPorLocale(): Record<string, Record<string, RecursoDeNamespace>> {
+  const porLocale: Record<string, Record<string, ModuloJson>> = {};
+  for (const [caminho, modulo] of Object.entries(modulos)) {
+    const partes = caminho.split('/');
+    const locale = partes[partes.length - 2];
+    (porLocale[locale] ??= {})[caminho] = modulo;
+  }
+  const recursos: Record<string, Record<string, RecursoDeNamespace>> = {};
+  for (const [locale, mods] of Object.entries(porLocale)) {
+    recursos[locale] = recursosPorNamespace(mods);
+  }
+  return recursos;
+}
+
+const recursos = recursosPorLocale();
+
+/** Os locales com catálogo (pasta em `locales/`). O resto cai no pt-BR. */
+export const LOCALES_COM_CATALOGO: readonly string[] = Object.keys(recursos);
+
+export function temCatalogo(idioma: string): boolean {
+  return LOCALES_COM_CATALOGO.includes(idioma);
+}
+
+i18n.on('languageChanged', aplicarLangNoDocumento);
 
 void i18n.use(initReactI18next).init({
-  resources: {
-    en: recursosEn,
-    'pt-BR': recursosPtBR,
-  },
+  resources: recursos,
   lng: idiomaInicial(),
-  fallbackLng: 'en',
+  fallbackLng: IDIOMA_PADRAO,
   defaultNS: 'common',
-  ns: Object.keys(recursosEn),
+  ns: Object.keys(recursos[IDIOMA_PADRAO] ?? {}),
   interpolation: { escapeValue: false }, // React já escapa.
   returnNull: false,
 });
+
+aplicarLangNoDocumento(i18n.language);
 
 export default i18n;

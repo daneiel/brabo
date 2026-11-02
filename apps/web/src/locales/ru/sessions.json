@@ -1,0 +1,247 @@
+{
+  "chatShell": {
+    "segments": {
+      "chat": "Беседа",
+      "search": "Поиск"
+    },
+    "ariaLabel": "Режим чата"
+  },
+  "rag": {
+    "scopes": {
+      "docs": "Docs",
+      "adr": "ADR",
+      "session": "Сессии",
+      "local": "Локально"
+    },
+    "title": "Чат RAG",
+    "subtitle": "Гибридный поиск (вектор + лексика) по docs/ADR репозитория, беседам этого проекта и прикреплённым локальным папкам — никогда по исходному коду и Pull Request.",
+    "reindexButton": {
+      "idle": "Переиндексировать",
+      "loading": "Переиндексация…"
+    },
+    "coverageError": "Не удалось загрузить покрытие индекса.",
+    "loadingCoverage": "Загрузка покрытия…",
+    "reindexSuccessTitle": "Переиндексация завершена",
+    "reindexSuccessMessage": "{{chunks}} · {{sessions}}{{embeddingSuffix}}",
+    "reindexChunks_one": "{{count}} фрагмент docs/ADR",
+    "reindexChunks_few": "{{count}} фрагмента docs/ADR",
+    "reindexChunks_many": "{{count}} фрагментов docs/ADR",
+    "reindexChunks_other": "{{count}} фрагмента docs/ADR",
+    "reindexSessions_one": "{{indexed}} из {{count}} сессии",
+    "reindexSessions_few": "{{indexed}} из {{count}} сессий",
+    "reindexSessions_many": "{{indexed}} из {{count}} сессий",
+    "reindexSessions_other": "{{indexed}} из {{count}} сессии",
+    "embeddingUnavailableSuffix": " · embedding недоступен, индексировано только по лексическому сигналу",
+    "reindexErrorTitle": "Переиндексация не удалась",
+    "reindexErrorDefaultMessage": "api не ответил. Индекс не изменён.",
+    "searchPlaceholder": "Поиск по индексу (мин. 2 символа)",
+    "searchAriaLabel": "Поисковый запрос",
+    "searchButton": "Найти",
+    "scopeFilterAriaLabel": "Фильтр по области",
+    "allScopes": "все области",
+    "scopesMarked_one": "{{count}} область отмечена",
+    "scopesMarked_few": "{{count}} области отмечены",
+    "scopesMarked_many": "{{count}} областей отмечено",
+    "scopesMarked_other": "{{count}} области отмечено",
+    "emptyPrompt": "Введите запрос и ищите по индексу проекта.",
+    "searching": "Поиск…",
+    "searchError": "Сейчас не удалось выполнить поиск.",
+    "vectorUnavailable": "Поиск только по ключевым словам — embedding недоступен",
+    "noResults": "Ничего не найдено по запросу «{{query}}».",
+    "attachLocalFolder": {
+      "button": "Прикрепить локальную папку",
+      "modalTitle": "Прикрепить локальную папку",
+      "explanation": "Содержимое файлов читается вашим браузером и отправляется как текст — никакие пути с вашего компьютера не отправляются. Каждая новая папка ЗАМЕНЯЕТ прикреплённую ранее.",
+      "chooseFolder": "Выбрать папку…",
+      "reading": "Чтение файлов…",
+      "emptyFolder": "В этой папке не найдено подходящих файлов (распознанный текст/код).",
+      "summary": "{{files}}, {{skipped}} (слишком большие или бинарные)",
+      "skippedCount_one": "{{count}} пропущен",
+      "skippedCount_few": "{{count}} пропущено",
+      "skippedCount_many": "{{count}} пропущено",
+      "skippedCount_other": "{{count}} пропущено",
+      "summaryNoSkipped_one": "{{count}} файл из «{{folderName}}»",
+      "summaryNoSkipped_few": "{{count}} файла из «{{folderName}}»",
+      "summaryNoSkipped_many": "{{count}} файлов из «{{folderName}}»",
+      "summaryNoSkipped_other": "{{count}} файла из «{{folderName}}»",
+      "tooManyFiles_one": "В папке {{count}} файл — лимит {{limit}}. Выберите папку поменьше.",
+      "tooManyFiles_few": "В папке {{count}} файла — лимит {{limit}}. Выберите папку поменьше.",
+      "tooManyFiles_many": "В папке {{count}} файлов — лимит {{limit}}. Выберите папку поменьше.",
+      "tooManyFiles_other": "В папке {{count}} файла — лимит {{limit}}. Выберите папку поменьше.",
+      "tooManyBytes": "Объём содержимого папки превышает допустимый лимит. Выберите папку поменьше.",
+      "confirmButton_one": "Прикрепить {{count}} файл",
+      "confirmButton_few": "Прикрепить {{count}} файла",
+      "confirmButton_many": "Прикрепить {{count}} файлов",
+      "confirmButton_other": "Прикрепить {{count}} файла",
+      "confirmButtonLoading": "Прикрепление…",
+      "cancelButton": "Отмена",
+      "successTitle": "Папка прикреплена",
+      "successMessage_one": "{{count}} файл проиндексирован из «{{folderName}}»{{embeddingSuffix}}",
+      "successMessage_few": "{{count}} файла проиндексировано из «{{folderName}}»{{embeddingSuffix}}",
+      "successMessage_many": "{{count}} файлов проиндексировано из «{{folderName}}»{{embeddingSuffix}}",
+      "successMessage_other": "{{count}} файла проиндексировано из «{{folderName}}»{{embeddingSuffix}}",
+      "errorTitle": "Не удалось прикрепить",
+      "errorDefaultMessage": "api не ответил. Ничего не изменено."
+    }
+  },
+  "ragCitation": {
+    "scopeLabels": {
+      "docs": "docs",
+      "adr": "ADR",
+      "session": "сессия",
+      "local": "локально"
+    },
+    "scoreTitle": "Комбинированная оценка (0.6 вектор + 0.4 лексика)",
+    "relevance": "{{score}} релевантность",
+    "signals": "вектор {{vector}} · лексика {{lexical}}",
+    "collapse": "свернуть",
+    "expand": "показать фрагмент полностью",
+    "viewInSession": "Открыть в сессии",
+    "feedback": {
+      "groupLabel": "Этот фрагмент помог?",
+      "question": "Этот фрагмент помог?",
+      "useful": "полезно",
+      "irrelevant": "нерелевантно",
+      "sending": "сохраняем…",
+      "recorded": "отмечено как {{verdict}} — в этом поиске он был на {{rank}}-м месте",
+      "errorDefault": "Не удалось сохранить ваш голос",
+      "verdicts": {
+        "util": "полезно",
+        "irrelevante": "нерелевантно"
+      }
+    }
+  },
+  "ragCoverage": {
+    "noFilesInRepo": "в репозитории нет файлов",
+    "filesIndexed": "файлов проиндексировано",
+    "truncated": "подсчёт обрезан лимитом",
+    "docsLabel": "docs",
+    "adrLabel": "ADR",
+    "sessionsLabel": "сессии",
+    "noSessionsInProject": "в проекте нет сессий",
+    "sessionsIndexed": "сессий проиндексировано",
+    "localLabel": "локально",
+    "noLocalFolder": "папка не прикреплена",
+    "localFolder": "из «{{folderName}}»",
+    "localAttachedAt": "прикреплено {{date}}",
+    "chunksInIndex_one": "{{count}} фрагмент в индексе",
+    "chunksInIndex_few": "{{count}} фрагмента в индексе",
+    "chunksInIndex_many": "{{count}} фрагментов в индексе",
+    "chunksInIndex_other": "{{count}} фрагмента в индексе",
+    "chunksWithoutVector_one": "{{count}} без вектора — индексирован только по лексическому сигналу",
+    "chunksWithoutVector_few": "{{count}} без вектора — индексированы только по лексическому сигналу",
+    "chunksWithoutVector_many": "{{count}} без вектора — индексированы только по лексическому сигналу",
+    "chunksWithoutVector_other": "{{count}} без вектора — индексированы только по лексическому сигналу"
+  },
+  "sessionFailure": {
+    "noMessage": "Ход завершился сбоем, причина не записана. Попробуйте ещё раз; если повторится, в журнале событий есть исходный payload.",
+    "unknownOrigin": "не определён"
+  },
+  "sessionKind": {
+    "consultiva": {
+      "label": "Консультация",
+      "description": "Только беседа: вопросы, контекст, разъяснения. Ни один агент не включается сам, и она не переходит к выполнению."
+    },
+    "criativa": {
+      "label": "Творческая",
+      "description": "Для создания: открывает генерацию идей с Criativo, который фиксирует бизнес-правила и передаёт эстафету PO. Только она переходит к выполнению."
+    },
+    "execucao": {
+      "label": "Выполнение",
+      "description": "Сессия выполнения: dev agents работают над задачами плана, одобренного Dev Lead."
+    }
+  },
+  "sessionsTab": {
+    "status": {
+      "created": "ожидает",
+      "active": "активна",
+      "closing": "закрывается",
+      "closed": "закрыта",
+      "closedAbnormally": "прервана"
+    },
+    "filters": {
+      "all": "Все",
+      "active": "Активные",
+      "closed": "Закрытые",
+      "aborted": "Прерванные"
+    },
+    "kindCopy": {
+      "criativa": {
+        "title": "Criativo",
+        "openButton": "Новая идея",
+        "confirmButton": "Открыть творческую сессию",
+        "empty": "Идей пока нет. Откройте сессию, чтобы Criativo вместе с вами собрал бизнес-правила продукта."
+      },
+      "consultiva": {
+        "title": "Чат",
+        "openButton": "Новая беседа",
+        "confirmButton": "Открыть консультационную сессию",
+        "empty": "Бесед пока нет. Откройте беседу, чтобы задавать вопросы и запрашивать контекст, не включая ни одного агента."
+      }
+    },
+    "cancelButton": "Отмена",
+    "renameError": {
+      "title": "Ошибка",
+      "message": "Не удалось переименовать сессию"
+    },
+    "createActivationFailed": {
+      "title": "Сессия создана, но не активировалась",
+      "message": "Откройте сессию и попробуйте «Активировать сессию»."
+    },
+    "createFailed": {
+      "title": "Не удалось открыть сессию"
+    },
+    "newSessionForm": {
+      "nameLabel": "Название (необязательно)",
+      "namePlaceholder": "Оформление корзины",
+      "nameHint": "Хэштег id по-прежнему отображается — название лишь добавляется к нему."
+    },
+    "openingButton": "Открываем…",
+    "filterGroupAriaLabel": "Фильтр сессий по статусу",
+    "contagem": {
+      "acoesPropostas_one": "{{count}} действие предложено в этих сессиях",
+      "acoesPropostas_few": "{{count}} действия предложено в этих сессиях",
+      "acoesPropostas_many": "{{count}} действий предложено в этих сессиях",
+      "acoesPropostas_other": "{{count}} действия предложено в этих сессиях",
+      "decididasPorVoce_one": "{{count}} решено вами",
+      "decididasPorVoce_few": "{{count}} решено вами",
+      "decididasPorVoce_many": "{{count}} решено вами",
+      "decididasPorVoce_other": "{{count}} решено вами",
+      "autoAprovadas_one": "{{count}} одобрено политикой автоматически",
+      "autoAprovadas_few": "{{count}} одобрено политикой автоматически",
+      "autoAprovadas_many": "{{count}} одобрено политикой автоматически",
+      "autoAprovadas_other": "{{count}} одобрено политикой автоматически",
+      "aguardando": "{{count}} ожидают",
+      "auto": "{{count}} авто"
+    },
+    "loadError": "Не удалось загрузить сессии этого проекта.",
+    "filterEmpty": "По этому фильтру сессий нет.",
+    "renameInput": {
+      "ariaLabel": "Название сессии",
+      "placeholder": "Без названия — сессия останется {{hashtag}}"
+    },
+    "rowTitle": "Сессия {{rotulo}} — нажмите, чтобы переименовать",
+    "kpis": {
+      "sessionsInProject": {
+        "label": "Сессии в проекте",
+        "detail": "все идеи, в любом статусе"
+      },
+      "activeNow": {
+        "label": "Активны сейчас",
+        "detail": "из {{total}} всего"
+      },
+      "ideationToCommit": {
+        "label": "Конверсия идея → commit",
+        "value": "—",
+        "detail": "не измеряется: сессия сейчас не связана с commit"
+      },
+      "monthlyCost": {
+        "label": "Расходы за месяц",
+        "errorValue": "—",
+        "loadingValue": "…",
+        "errorDetail": "не удалось загрузить",
+        "detail": "итого по проекту за 30 дней"
+      }
+    }
+  }
+}

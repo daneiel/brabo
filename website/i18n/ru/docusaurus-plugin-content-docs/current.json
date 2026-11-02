@@ -1,0 +1,178 @@
+{
+  "version.label": {
+    "message": "Следующая",
+    "description": "The label for version current"
+  },
+  "sidebar.docs.category.🚀 Comece aqui": {
+    "message": "🚀 Начните здесь",
+    "description": "The label for category '🚀 Comece aqui' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.🏗️ Arquitetura": {
+    "message": "🏗️ Архитектура",
+    "description": "The label for category '🏗️ Arquitetura' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Decisões (ADR)": {
+    "message": "Решения (ADR)",
+    "description": "The label for category 'Decisões (ADR)' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.📐 Regras": {
+    "message": "📐 Правила",
+    "description": "The label for category '📐 Regras' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.📖 Referência": {
+    "message": "📖 Справочник",
+    "description": "The label for category '📖 Referência' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.💡 Explicação": {
+    "message": "💡 Пояснения",
+    "description": "The label for category '💡 Explicação' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.🛠️ Operação": {
+    "message": "🛠️ Эксплуатация",
+    "description": "The label for category '🛠️ Operação' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.📚 Vocabulário": {
+    "message": "📚 Словарь",
+    "description": "The label for category '📚 Vocabulário' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.🤝 Contribuir": {
+    "message": "🤝 Участие",
+    "description": "The label for category '🤝 Contribuir' in sidebar 'docs'"
+  },
+  "sidebar.docs.link.Referência da API": {
+    "message": "Справочник API",
+    "description": "The label for link 'Referência da API' in sidebar 'docs', linking to '/reference/api/'"
+  },
+  "sidebar.docs.link.Como contribuir": {
+    "message": "Как внести вклад",
+    "description": "The label for link 'Como contribuir' in sidebar 'docs', linking to 'https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md'"
+  },
+  "sidebar.docs.link.Onde pedir ajuda": {
+    "message": "Где попросить помощи",
+    "description": "The label for link 'Onde pedir ajuda' in sidebar 'docs', linking to 'https://github.com/daneiel/brabo/blob/dev/SUPPORT.md'"
+  },
+  "sidebar.docs.link.Reportar vulnerabilidade": {
+    "message": "Сообщить об уязвимости",
+    "description": "The label for link 'Reportar vulnerabilidade' in sidebar 'docs', linking to 'https://github.com/daneiel/brabo/blob/dev/SECURITY.md'"
+  },
+  "sidebar.docs.category.Git, repositório e política de branches": {
+    "message": "Git, репозиторий и политика веток",
+    "description": "The label for category 'Git, repositório e política de branches' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Harness de agente, turnos e sessões": {
+    "message": "Обвязка агента, ходы и сессии",
+    "description": "The label for category 'Harness de agente, turnos e sessões' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.O time de agentes — papéis, áreas e handoffs": {
+    "message": "Команда агентов — роли, области и передачи",
+    "description": "The label for category 'O time de agentes — papéis, áreas e handoffs' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Gates, QA e revisão de segurança": {
+    "message": "Гейты, QA и проверка безопасности",
+    "description": "The label for category 'Gates, QA e revisão de segurança' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Execução, política de terminal e aprovações": {
+    "message": "Выполнение, политика терминала и одобрения",
+    "description": "The label for category 'Execução, política de terminal e aprovações' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Onde o código mora — modos de execução": {
+    "message": "Где живёт код — режимы выполнения",
+    "description": "The label for category 'Onde o código mora — modos de execução' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Container do projeto e broker": {
+    "message": "Контейнер проекта и брокер",
+    "description": "The label for category 'Container do projeto e broker' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.O runner local": {
+    "message": "Локальный runner",
+    "description": "The label for category 'O runner local' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Autenticação, acesso e segredos": {
+    "message": "Аутентификация, доступ и секреты",
+    "description": "The label for category 'Autenticação, acesso e segredos' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Providers de LLM, modelos e gasto": {
+    "message": "LLM-провайдеры, модели и расходы",
+    "description": "The label for category 'Providers de LLM, modelos e gasto' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.RAG, grafo de conhecimento e artefatos": {
+    "message": "RAG, граф знаний и артефакты",
+    "description": "The label for category 'RAG, grafo de conhecimento e artefatos' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Interface web e design system": {
+    "message": "Веб-интерфейс и дизайн-система",
+    "description": "The label for category 'Interface web e design system' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Operação, deploy e instalação": {
+    "message": "Эксплуатация, развёртывание и установка",
+    "description": "The label for category 'Operação, deploy e instalação' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.CI, release e cadeia de suprimentos": {
+    "message": "CI, релизы и цепочка поставок",
+    "description": "The label for category 'CI, release e cadeia de suprimentos' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Documentação": {
+    "message": "Документация",
+    "description": "The label for category 'Documentação' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Processo e esteira": {
+    "message": "Процесс и конвейер",
+    "description": "The label for category 'Processo e esteira' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Validações e medições": {
+    "message": "Проверки и измерения",
+    "description": "The label for category 'Validações e medições' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.História das fases": {
+    "message": "История фаз",
+    "description": "The label for category 'História das fases' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Localização": {
+    "message": "Локализация",
+    "description": "The label for category 'Localização' in sidebar 'docs'"
+  },
+  "sidebar.docs.category.Notas técnicas": {
+    "message": "Технические заметки",
+    "description": "The label for category 'Notas técnicas' in sidebar 'docs'"
+  },
+  "sidebar.docs.doc.Configuração": {
+    "message": "Конфигурация",
+    "description": "The label for the doc item 'Configuração' in sidebar 'docs', linking to the doc reference/configuration"
+  },
+  "sidebar.docs.doc.Eventos": {
+    "message": "События",
+    "description": "The label for the doc item 'Eventos' in sidebar 'docs', linking to the doc reference/events"
+  },
+  "sidebar.docs.doc.Permissões": {
+    "message": "Права доступа",
+    "description": "The label for the doc item 'Permissões' in sidebar 'docs', linking to the doc reference/permissions"
+  },
+  "sidebar.docs.doc.Artefatos": {
+    "message": "Артефакты",
+    "description": "The label for the doc item 'Artefatos' in sidebar 'docs', linking to the doc reference/artifacts"
+  },
+  "sidebar.docs.doc.Provedores de git": {
+    "message": "Git-провайдеры",
+    "description": "The label for the doc item 'Provedores de git' in sidebar 'docs', linking to the doc reference/git-providers"
+  },
+  "sidebar.docs.doc.API interna": {
+    "message": "Внутренний API",
+    "description": "The label for the doc item 'API interna' in sidebar 'docs', linking to the doc reference/internal-api"
+  },
+  "sidebar.docs.doc.Scripts e comandos": {
+    "message": "Скрипты и команды",
+    "description": "The label for the doc item 'Scripts e comandos' in sidebar 'docs', linking to the doc reference/scripts"
+  },
+  "sidebar.docs.doc.Rulesets do repositório": {
+    "message": "Правила репозитория (rulesets)",
+    "description": "The label for the doc item 'Rulesets do repositório' in sidebar 'docs', linking to the doc reference/rulesets"
+  },
+  "sidebar.docs.doc.Paridade de tradução": {
+    "message": "Паритет переводов",
+    "description": "The label for the doc item 'Paridade de tradução' in sidebar 'docs', linking to the doc reference/paridade-de-traducao"
+  },
+  "sidebar.docs.doc.Registro BRB": {
+    "message": "Реестр BRB",
+    "description": "The label for the doc item 'Registro BRB' in sidebar 'docs', linking to the doc reference/brb"
+  }
+}

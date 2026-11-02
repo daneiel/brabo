@@ -1,3 +1,4 @@
+import { Shimmer } from '../components/ui/Shimmer';
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -174,7 +175,7 @@ export function MachineDeviceKeysSection() {
         {t('subtitle')} {t('subtitleAlcance')} {t('subtitleNaoEBatimento')}
       </p>
 
-      {isPending && <p className={styles.sectionSubtitle}>{t('verificando')}</p>}
+      {isPending && <p className={styles.sectionSubtitle}><Shimmer>{t('verificando')}</Shimmer></p>}
       {isError && <p className={styles.sectionSubtitle}>{t('naoSei')}</p>}
       {isSuccess && (
         <Table

@@ -1,4 +1,4 @@
-# 0182 — A oferta de handoff ganha ciclo de vida: uma pendente por destino, e `superseded`
+# ADR 0182 — A oferta de handoff ganha ciclo de vida: uma pendente por destino, e `superseded`
 
 ## Status
 

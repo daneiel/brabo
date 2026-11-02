@@ -85,6 +85,7 @@ vi.mock('../lib/api-client', async () => {
   return {
     ApiError: real.ApiError,
     mensagemDaApi: real.mensagemDaApi,
+    listCredentials: async () => [],
     listSessions: (...args: unknown[]) => listSessions(...args),
     listSessionEvents: (...args: unknown[]) => listSessionEvents(...args),
     listHandoffs: (...args: unknown[]) => listHandoffs(...args),

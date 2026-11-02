@@ -1,4 +1,4 @@
-# 0158 — O id da chave mestra gravado no envelope, como observabilidade e nunca como autoridade
+# ADR 0158 — O id da chave mestra gravado no envelope, como observabilidade e nunca como autoridade
 
 ## Status
 

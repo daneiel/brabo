@@ -28,6 +28,15 @@ export interface NewStory {
   dor?: string[];
 }
 
+export interface StoryContent {
+  description: string;
+  rf: string[];
+  rnf: string[];
+  businessRuleIds: string[];
+  dod: string[];
+  dor: string[];
+}
+
 export interface NewTask {
   storyId: string;
   title: string;
@@ -43,9 +52,22 @@ export abstract class EpicRepository {
 export abstract class StoryRepository {
   abstract create(input: NewStory): Promise<Story>;
   abstract findById(id: string): Promise<Story | null>;
+  // As NÃO arquivadas (RN-727): é a leitura do backlog e da cobertura.
   abstract findByProject(projectId: string): Promise<Story[]>;
+  // RN-727: o título/descrição corrigidos e o arquivamento (que também tira a história da
+  // fila de promoção). `findById` continua achando a arquivada.
+  abstract updateText(
+    id: string,
+    text: { title: string; description: string },
+  ): Promise<Story>;
+  abstract archive(id: string, reason: string | null): Promise<Story>;
   abstract updateStatus(id: string, status: StoryStatus): Promise<Story>;
   abstract updateModules(id: string, moduleIds: string[]): Promise<Story>;
+  /**
+   * Completa os campos de uma história existente (RN-720): o PO liga regras e
+   * preenche RF/DoD/DoR sem recriar a história.
+   */
+  abstract updateContent(id: string, content: StoryContent): Promise<Story>;
   // Fase 12c (RN-048). `proposedReady` liga ao criar em modo `manual` e
   // desliga tanto na promoção quanto na recusa — sempre junto do fato que a
   // resolveu, para nunca sobrar uma story "aguardando" que já foi decidida.
@@ -56,6 +78,23 @@ export abstract class StoryRepository {
   // As stories aguardando decisão do usuário — a seção do Backlog e o badge
   // de contagem.
   abstract listProposedReady(projectId: string): Promise<Story[]>;
+}
+
+export interface TarefaPendenteDaExecucao {
+  taskId: string;
+  motivo:
+    | 'bloqueada'
+    | 'aguardando_merge'
+    | 'conflito_de_merge'
+    // RN-856: dev da execução segurando a tarefa, ou fila do módulo dele.
+    | 'em_curso_de_dev'
+    | 'a_fazer_de_modulo_com_dev';
+}
+
+export interface TarefaEmCursoDeDev {
+  projectId: string;
+  taskId: string;
+  assignedTo: string;
 }
 
 export abstract class TaskRepository {
@@ -98,6 +137,23 @@ export abstract class TaskRepository {
   // estava. Atômico (UPDATE ... WHERE status <> 'done') e devolve `null` se
   // nada mudou — é isso que torna o merge repetido idempotente, sem evento.
   abstract markDoneIfNotDone(id: string): Promise<Task | null>;
+  // O merge recusado por conflito devolve a tarefa ao dev agent (RN-715):
+  // `in_review` → `in_progress` e `gate_status` zerado (os vereditos antigos
+  // não valem para a branch rebaseada). Só a partir de `in_review`; devolve
+  // `null` se nada mudou.
+  abstract reabrirPorConflitoDeMerge(id: string): Promise<Task | null>;
+  // RN-776 (AT-457): a primeira tarefa da EXECUÇÃO VIGENTE que ainda espera
+  // alguém — bloqueada, com PR em `awaiting_user`, ou devolvida por conflito
+  // de merge (`backlog.task_merge_conflict` nesta sessão) e ainda
+  // `in_progress`. Só responde quando `sessionId` é a sessão de execução
+  // vigente do projeto (`findActiveExecutionSession`): sessão de execução
+  // antiga não segura nada, senão a tarefa a seguraria para sempre.
+  // RN-856: `in_progress` com dono `dev-*`, fora de gate e não bloqueada, do
+  // projeto da sessão — vazio quando a sessão não é de execução.
+  abstract listEmCursoDeDev(sessionId: string): Promise<TarefaEmCursoDeDev[]>;
+  abstract findPendenteDaExecucao(
+    sessionId: string,
+  ): Promise<TarefaPendenteDaExecucao | null>;
   // Quantas tasks `todo` de story `ready` estão disponíveis pro módulo — usado
   // pra sugerir paralelização (≥2 = ramos independentes disponíveis).
   abstract countClaimableByModule(

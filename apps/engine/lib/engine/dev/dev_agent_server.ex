@@ -73,15 +73,21 @@ defmodule Engine.Dev.DevAgentServer do
 
   use GenServer, restart: :temporary
 
-  alias Engine.Agents.FalhaDeTurno
-  alias Engine.Dev.{AgentIo, ContextBuilder, Tools, Wake}
+  alias Engine.Agents.{Diario, FalhaDeTurno}
+  alias Engine.Dev.{AgentIo, ContextBuilder, TetoDaTarefa, Tools, Wake}
   alias Engine.Dev.Hooks.Termination
   alias Engine.Gates.Dispatcher
   alias Engine.Harness.ToolLoop
   alias Engine.Harness.Hooks
   alias Engine.Harness.Hooks.{ActionPipeline, EventLog}
+  alias Engine.Projects.ProjectRepository
   alias Engine.Runners.CredencialDeGit
   alias Engine.Sessions.EngineApiClient
+  alias Engine.Workers.RetomadaDeTarefaWorker
+
+  # RN-715: o conflito de merge reusa o laço de correção sob este "gate".
+  @gate_conflito "conflito_de_merge"
+  @reentrega_do_conflito_ms 30_000
 
   # Marca da implementação no estado durável: a reidratação sobe o server
   # certo a partir dela (ver Engine.Dev.DevRehydrator).
@@ -183,15 +189,15 @@ defmodule Engine.Dev.DevAgentServer do
   end
 
   def handle_continue({:restart_recovery, _}, state) do
-    {:noreply,
-     state
-     |> AgentIo.block_task(
-       "engine reiniciou durante a task",
-       "o ToolLoop não pôde ser retomado após o restart — turno, mensagens " <>
-         "e edições do worktree só existiam em memória",
-       "infra"
-     )
-     |> finish_restart_recovery()}
+    # AT-582 (ADR 0226): queda RECENTE (janela do diário) e ainda sem retomada
+    # nesta tarefa → o worktree vira commit, o agente readota a MESMA tarefa e
+    # o laço roda de novo com o diário; a tarefa nunca sai de `in_progress`.
+    # Senão (2a queda, fora da janela, falha de leitura) o bloqueio de sempre.
+    # As funções moram no FIM do módulo (as refs das RNs apontam para cá).
+    case retomada_do_commit(state) do
+      {:ok, diario} -> {:noreply, retomar_do_commit(state, diario)}
+      :bloquear -> {:noreply, bloquear_por_reinicio(state)}
+    end
   end
 
   # Fecha o `working` reidratado: task já bloqueada por `AgentIo.block_task`
@@ -227,7 +233,10 @@ defmodule Engine.Dev.DevAgentServer do
         # `status: :working` e `task_id` setado, e daí nenhum dos três
         # `handle_info/2` agia nunca mais — travado por uma falha
         # transitória de leitura de contexto.
-        AgentIo.emit(state, "dev.error", %{agentId: state.agent_id, reason: inspect(reason)})
+        AgentIo.emit(state, "dev.error", %{
+          agentId: state.agent_id,
+          reason: FalhaDeTurno.diagnostico(reason)
+        })
 
         {:noreply,
          state
@@ -337,9 +346,96 @@ defmodule Engine.Dev.DevAgentServer do
 
   def handle_info({:pr_settled, _}, state), do: {:noreply, state}
 
+  # RN-715: o merge da PR desta task foi recusado por conflito com a `dev`, e a
+  # api a devolveu (`in_progress`, gate zerado). Livre, o agente READOTA a
+  # branch da PR (`WorktreeManager.adopt/3`) e roda o laço de CORREÇÃO com o
+  # motivo — integrar a `dev`, resolver os arquivos, reenviar —, e o gate abre
+  # de novo do QA: os vereditos antigos não valem para a branch nova.
+  def handle_info({:merge_conflict, %{task_id: task_id} = conflito}, %{status: :idle} = state) do
+    slug = "task-" <> String.slice(to_string(task_id), 0, 8)
+    state = %{state | task_id: task_id, status: :working}
+
+    case AgentIo.worktree_manager().adopt(state.project_id, state.agent_id, slug) do
+      {:ok, %{path: path, branch: branch}} ->
+        state = %{state | worktree: path, branch: branch}
+        AgentIo.persist(state)
+
+        AgentIo.emit(state, "dev.working", %{
+          agentId: state.agent_id,
+          taskId: task_id,
+          branch: branch,
+          cause: "merge_conflict"
+        })
+
+        case ContextBuilder.fetch(state.project_id, state.session_id, task_id, state.module) do
+          {:ok, dev_context} ->
+            {:noreply, implement_correction(state, dev_context, achados_do_conflito(conflito))}
+
+          {:error, reason} ->
+            {:noreply,
+             state
+             |> AgentIo.block_task(
+               "falha ao montar contexto do conflito de merge",
+               inspect(reason),
+               "infra"
+             )
+             |> finish_task(:blocked)}
+        end
+
+      {:error, reason} ->
+        {:noreply,
+         state
+         |> AgentIo.block_task(
+           "não foi possível retomar a branch da PR em conflito",
+           inspect(reason),
+           "infra"
+         )
+         |> finish_task(:blocked)}
+    end
+  end
+
+  # Ocupado com outra coisa: tenta de novo mais tarde, em vez de perder o
+  # conflito (a entrega do `Wake` é at-most-once). Só em memória — restart na
+  # janela perde a reentrega, lacuna declarada na RN-715.
+  def handle_info({:merge_conflict, _} = msg, %{status: status} = state)
+      when status in [:working, :awaiting_gate, :awaiting_approval] do
+    Process.send_after(self(), msg, @reentrega_do_conflito_ms)
+    {:noreply, state}
+  end
+
+  # Disjuntor aberto (`idle_tripped`): o agente não pega trabalho até rearmar,
+  # e a task não pode ficar `in_progress` sem ninguém — bloqueia, nomeado.
+  def handle_info({:merge_conflict, %{task_id: task_id} = conflito}, state) do
+    _ =
+      EngineApiClient.mark_task_blocked(
+        state.project_id,
+        state.session_id,
+        task_id,
+        "conflito de merge sem dev agent disponível",
+        "o merge da PR foi recusado por conflito com a dev (#{Enum.join(Map.get(conflito, :conflicting_files, []), ", ")}) " <>
+          "e #{state.agent_id} está com o disjuntor aberto (#{state.status})",
+        state.agent_id,
+        "politica"
+      )
+
+    {:noreply, state}
+  end
+
+  # RN-864: em pausa por falha passageira de rede, o wake não reivindica — é
+  # o fim da pausa (`:fim_da_pausa_de_rede`) que volta a tentar.
+  def handle_info({:wake, :became_claimable}, %{status: :idle, pausa_de_rede: true} = state),
+    do: {:noreply, state}
+
   def handle_info({:wake, :became_claimable}, %{status: :idle} = state) do
     {:noreply, try_claim(state)}
   end
+
+  def handle_info(:fim_da_pausa_de_rede, %{status: :idle} = state) do
+    {:noreply, try_claim(Map.put(state, :pausa_de_rede, false))}
+  end
+
+  def handle_info(:fim_da_pausa_de_rede, state),
+    do: {:noreply, Map.put(state, :pausa_de_rede, false)}
 
   def handle_info({:wake, :became_claimable}, state), do: {:noreply, state}
 
@@ -380,7 +476,11 @@ defmodule Engine.Dev.DevAgentServer do
     # dono vivo e invisível pro claim (que só pega `todo`).
     state = %{state | task_id: task_id}
 
-    case AgentIo.worktree_manager().create(state.project_id, state.agent_id, slug) do
+    # RN-743/RN-760: a task anterior deste agente deixou branch não mergeada
+    # — esta nasce dela, não de `dev`.
+    {criado, state} = AgentIo.criar_worktree(state, slug)
+
+    case criado do
       {:ok, %{path: path, branch: branch}} ->
         state = %{state | worktree: path, branch: branch}
         AgentIo.persist(state)
@@ -405,13 +505,19 @@ defmodule Engine.Dev.DevAgentServer do
         end
 
       {:error, reason} ->
-        AgentIo.emit(state, "dev.error", %{agentId: state.agent_id, reason: inspect(reason)})
+        AgentIo.emit(state, "dev.error", %{
+          agentId: state.agent_id,
+          reason: FalhaDeTurno.diagnostico(reason)
+        })
 
         # RN-558: a recusa da credencial no runner tem motivo e ORIGEM próprios
         # (`politica`, ADR 0020) — nunca `codigo`, que mandaria quem tria a
         # rodada seguinte procurar uma cláusula que ninguém escreveu. Qualquer
         # outra falha mantém o desfecho de sempre.
-        {motivo, origem} = CredencialDeGit.desfecho(reason)
+        {motivo, origem} =
+          if Engine.Dev.WorktreeManager.conflito_de_integracao?(reason),
+            do: {"conflito ao integrar a dev atual no worktree da task", "codigo"},
+            else: CredencialDeGit.desfecho(reason)
 
         state
         |> AgentIo.block_task(motivo, inspect(reason), origem)
@@ -435,10 +541,13 @@ defmodule Engine.Dev.DevAgentServer do
       workspace_root: state.worktree,
       tools: Tools.registry(),
       hooks: dev_hooks(),
-      token_budget_micros: state.task_budget_micros,
+      # RN-774: o teto EFETIVO da tarefa (2x na primeira do módulo), e se
+      # ela é a primeira, para o diagnóstico do bloqueio dizer o teto que valeu.
+      token_budget_micros: TetoDaTarefa.efetivo(state.task_budget_micros, task),
+      primeira_do_modulo: TetoDaTarefa.primeira?(task),
       business_rules_units: business_rules_units,
       task_state_units: task_state_units,
-      messages: [initial_message(task, story)],
+      messages: [initial_message(task, story), retrato_do_worktree(state)],
       # Janela grande o bastante pra uma task inteira (vários terminals/reads)
       # não disparar compactação no meio do trabalho — o ContextManager ainda
       # roda: só não some com histórico recente por um cálculo de janela
@@ -481,27 +590,88 @@ defmodule Engine.Dev.DevAgentServer do
     |> Hooks.register(:post_tool_use, Termination)
   end
 
-  defp initial_message(task, story) do
+  # RN-744: o agente começa sabendo a branch e o que já existe no worktree,
+  # em vez de descobrir por tentativa (e criar de novo o que já estava lá).
+  defp retrato_do_worktree(state) do
+    %{
+      "role" => "user",
+      "content" => Engine.Dev.WorktreeManager.retrato(state.worktree, state.branch),
+      :pinned => true
+    }
+  end
+
+  @doc false
+  def initial_message(task, story) do
     %{
       "role" => "user",
       # Instrução explícita porque modelos menores tendem a DESCREVER a
       # solução (ou imprimir a tool call como JSON no texto) em vez de
       # chamar a ferramenta — o loop então termina sem desfecho e a task é
       # bloqueada sem o modelo ter feito nada.
+      # RN-846 (AT-515): rota HTTP documentada e erro de entrada próprio.
+      # RN-850 (AT-520): a rota vai DENTRO de "Rotas HTTP", e o README não
+      # ganha nota de processo.
       "content" =>
         "Implemente a task \"#{task["title"]}\" da story \"#{story["title"]}\". " <>
           "Rode a suite de testes do projeto via `terminal` e só sinalize conclusão com " <>
           "`report_done` depois de vê-la passar (exit 0). Se não conseguir concluir, " <>
           "use `report_blocked` com o diagnóstico do que foi tentado e por que falhou.\n\n" <>
+          "`report_done` faz o commit, o push e abre a PR: nunca procure " <>
+          "`git_commit`/`git_push`/`pr_open`, e falta de ferramenta de git não é " <>
+          "motivo de `report_blocked`. Se o script `test` do `package.json` lista os " <>
+          "arquivos um a um, inclua nele todo arquivo de teste novo.\n\n" <>
+          "Rota HTTP criada ou mudada entra no `README.md` da RAIZ do repositório (sem repetir a seção em README de pasta): método, caminho, corpo, " <>
+          "respostas e códigos, DENTRO da seção \"Rotas HTTP\" (crie-a antes de " <>
+          "\"Testes\" se faltar), nunca no fim do arquivo. O README é do usuário: " <>
+          "sem nota de processo nem instrução para agentes. Erro de entrada (JSON malformado, campo inválido) " <>
+          "responde com mensagem própria no formato de erro do projeto, nunca a " <>
+          "mensagem crua da biblioteca.\n\n" <>
           "IMPORTANTE: aja apenas por chamadas de ferramenta. Não escreva código " <>
           "nem JSON na sua resposta em texto, e não explique o que pretende fazer — " <>
           "chame `write_file` para criar cada arquivo e `terminal` para rodar a suite. " <>
           "Toda resposta sua deve conter pelo menos uma chamada de ferramenta.\n\n" <>
           "A interface de OUTRO módulo (o que ele expõe e de quais o seu depende) é o " <>
           "contrato declarado pelo Arquiteto: leia com `listar_contratos_de_modulos`, " <>
-          "nunca no worktree ou no código de outro dev agent.",
+          "nunca no worktree ou no código de outro dev agent." <>
+          clausula_de_openapi(task),
       :pinned => true
     }
+  end
+
+  # RN-853 (AT-517, ADR 0213): só quando a tarefa toca entrypoint/rotas — a
+  # mensagem é fixada e volta a cada iteração, então não paga sempre. A régua
+  # é a do recorte do QA, nunca uma cópia.
+  defp clausula_de_openapi(task) do
+    if Engine.Gates.RecorteDaTarefa.toca_ponto_de_entrada?(task),
+      # RN-879 (AT-531) e RN-880 (AT-532): URL absoluta, código de erro e CORS;
+      # RN-885 (AT-535): a porta do CORS é a PUBLICADA (`APP_PORT`).
+      do:
+        "\n\nMódulo que expõe HTTP serve `/openapi.json` (OpenAPI 3) " <>
+          "e TODA rota HTTP criada ou mudada nesta tarefa entra nele (path com " <>
+          "método, corpo e respostas); serve também " <>
+          "`/docs` (UI Swagger); sem rede ou sem pacote, `/docs` é uma página HTML " <>
+          "que carrega o swagger-ui de CDN (quem baixa é o navegador do usuário). " <>
+          "Módulo web serve a página inicial. Ao criar, acrescente a URL na seção " <>
+          "\"#{Engine.Harness.Tools.WriteFile.titulo_secao_de_uso()}\" do README (que a Infra escreve)." <>
+          "\n\nURL absoluta que a API devolve (ex.: um link curto) vem de " <>
+          "`PUBLIC_BASE_URL` ou do `Host` da requisição COM a porta — nunca " <>
+          "`http://localhost` fixo nem o hostname sem porta. O mesmo erro (ex.: " <>
+          "recurso inexistente) responde o MESMO `code` em todas as rotas. A API " <>
+          "responde CORS com origens de `CORS_ORIGINS` (padrão: " <>
+          "`http://localhost:<porta>` e `http://127.0.0.1:<porta>`, com a porta PUBLICADA " <>
+          "— `APP_PORT`, que o compose passa ao app —, nunca a interna `PORT`), `OPTIONS` 204 e " <>
+          "`Access-Control-Allow-*` com `Authorization` e `Content-Type`. No " <>
+          "`/openapi.json`, `servers` só relativo (`/`), nunca URL absoluta; o " <>
+          "swagger-ui de CDN vai com versão EXATA (ex.: `swagger-ui-dist@5.17.14`), " <>
+          "nunca `@5`.",
+      else: ""
+  end
+
+  # RN-774: o diagnóstico diz o teto que valeu para ESTA tarefa.
+  defp diagnostico_de_orcamento(ctx) do
+    "gasto: #{ctx.tokens_spent_micros} micro-USD (" <>
+      TetoDaTarefa.descrever(ctx.token_budget_micros, Map.get(ctx, :primeira_do_modulo, false)) <>
+      ")"
   end
 
   # --- Correção pedida por um gate (mesmo worktree/branch — sem novo claim) ---
@@ -526,7 +696,10 @@ defmodule Engine.Dev.DevAgentServer do
       workspace_root: state.worktree,
       tools: Tools.registry(),
       hooks: dev_hooks(),
-      token_budget_micros: state.task_budget_micros,
+      # RN-774: o teto EFETIVO da tarefa (2x na primeira do módulo), e se
+      # ela é a primeira, para o diagnóstico do bloqueio dizer o teto que valeu.
+      token_budget_micros: TetoDaTarefa.efetivo(state.task_budget_micros, task),
+      primeira_do_modulo: TetoDaTarefa.primeira?(task),
       business_rules_units: business_rules_units,
       task_state_units: task_state_units,
       messages: [initial_message(task, story), correction_message(findings)],
@@ -545,6 +718,36 @@ defmodule Engine.Dev.DevAgentServer do
   # obedecia ao enunciado e repunha o problema a cada volta, até estourar o
   # teto de correções. Visto na execução do critério de aceite (ADR 0020): três
   # correções seguidas devolvendo o mesmo achado do gitleaks.
+  # RN-715: o conflito entra pelo MESMO laço de correção, com um "gate" próprio
+  # que só existe aqui — é ele que escolhe o texto e o reabrir do gate.
+  defp achados_do_conflito(conflito) do
+    %{
+      gate: @gate_conflito,
+      reason:
+        "o merge da PR #{Map.get(conflito, :pull_request_id)} foi recusado por conflito com a dev",
+      diagnosis:
+        "arquivos em conflito: #{Enum.join(Map.get(conflito, :conflicting_files, []), ", ")}"
+    }
+  end
+
+  defp correction_message(%{gate: @gate_conflito} = findings) do
+    base = ProjectRepository.branch_de_trabalho()
+
+    %{
+      "role" => "user",
+      "content" =>
+        "#{String.capitalize(findings.reason)}. #{String.capitalize(findings.diagnosis)}.\n\n" <>
+          "Você está de volta na branch da PR (mesma branch, com os commits dela). " <>
+          "Traga a #{base} atual para a branch via `terminal` — `git fetch origin #{base}` e " <>
+          "`git merge origin/#{base}` —, resolva os conflitos nesses arquivos mantendo o que " <>
+          "a task pede e o que a #{base} já tem, e conclua o merge com commit.\n\n" <>
+          "Rode a suite de novo via `terminal` e só sinalize conclusão com `report_done` " <>
+          "depois de vê-la passar (exit 0). Os gates vão julgar a branch de novo. Se não " <>
+          "conseguir, use `report_blocked`.",
+      :pinned => true
+    }
+  end
+
   defp correction_message(findings) do
     %{
       "role" => "user",
@@ -570,7 +773,7 @@ defmodule Engine.Dev.DevAgentServer do
     # A PR já existe (mesma branch) — só commit+push, sem propose_pr de novo.
     AgentIo.propose_commit(state, summary)
     AgentIo.propose_push(state)
-    trigger_gate_recheck(state, findings.gate)
+    gate = trigger_gate_recheck(state, findings.gate)
 
     state = %{state | status: :awaiting_gate}
     AgentIo.persist(state)
@@ -578,7 +781,7 @@ defmodule Engine.Dev.DevAgentServer do
     AgentIo.emit(state, "dev.awaiting_gate", %{
       agentId: state.agent_id,
       taskId: state.task_id,
-      gate: findings.gate
+      gate: gate
     })
 
     state
@@ -610,27 +813,37 @@ defmodule Engine.Dev.DevAgentServer do
     state
     |> AgentIo.block_task(
       "orçamento de tokens excedido (correção)",
-      "gasto: #{ctx.tokens_spent_micros} micro-USD (teto: #{ctx.token_budget_micros})",
+      diagnostico_de_orcamento(ctx),
       "politica"
     )
     |> finish_task(:blocked)
   end
 
-  defp handle_correction_outcome({:ok, ctx}, state, _findings) do
-    state
-    |> AgentIo.block_task(
-      "parou sem concluir nem reportar bloqueio (correção)",
-      stop_diagnosis(ctx),
-      origem_da_parada(ctx)
-    )
-    |> finish_task(:blocked)
+  # AT-621: a correção pós-gate segue o MESMO caminho do laço principal
+  # (crédito RN-726 + falha passageira RN-864), só com o sufixo no motivo.
+  defp handle_correction_outcome({:ok, ctx}, state, _findings),
+    do: parada_sem_conclusao(ctx, state, " (correção)")
+
+  # Devolve o gate que vai julgar agora.
+  defp trigger_gate_recheck(state, "qa") do
+    :ok = Dispatcher.run_qa(state.project_id, state.task_id)
+    "qa"
   end
 
-  defp trigger_gate_recheck(state, "qa"),
-    do: :ok = Dispatcher.run_qa(state.project_id, state.task_id)
+  defp trigger_gate_recheck(state, "secops") do
+    :ok = Dispatcher.run_secops(state.project_id, state.task_id)
+    "secops"
+  end
 
-  defp trigger_gate_recheck(state, "secops"),
-    do: :ok = Dispatcher.run_secops(state.project_id, state.task_id)
+  # RN-715: depois do conflito o fluxo de gates RECOMEÇA do QA (`open_gate`
+  # volta o `gate_status` a `awaiting_qa` e zera o contador) — os vereditos
+  # antigos eram sobre a branch antes de integrar a `dev`.
+  defp trigger_gate_recheck(state, @gate_conflito) do
+    _ =
+      EngineApiClient.open_gate(state.project_id, state.session_id, state.task_id, state.agent_id)
+
+    trigger_gate_recheck(state, "qa")
+  end
 
   # A ferramenta ficou pendente de aprovação (ADR 0052). O agente PARA e retém
   # tudo — worktree, task e o `ctx` do laço, com o histórico de mensagens —, do
@@ -674,27 +887,12 @@ defmodule Engine.Dev.DevAgentServer do
   end
 
   defp handle_outcome({:halted, {"report_done", %{summary: summary}}, _ctx}, state, task, story) do
-    desfechos = [
-      AgentIo.propose_commit(state, summary),
-      AgentIo.propose_push(state),
-      propose_pr(state, task, story)
-    ]
-
-    _ =
-      EngineApiClient.mark_task(
-        state.project_id,
-        state.session_id,
-        state.task_id,
-        "in_review",
-        state.agent_id
-      )
-
-    if Enum.all?(desfechos, &(&1 == :executed)) do
-      abrir_gate(state)
-    else
-      aguardar_aprovacao(state, desfechos)
-    end
+    if AgentIo.worktree_manager().sem_diff_contra_a_dev?(state.worktree, state.project_id),
+      do: ja_na_dev(state),
+      else: entregar(state, summary, task, story)
   end
+
+  @motivo_credito_esgotado "crédito do provider esgotado"
 
   # As origens abaixo NÃO são chute: cada desfecho do ToolLoop diz quem
   # decidiu parar, e é isso que a origem nomeia (achados P/Q/T).
@@ -725,7 +923,7 @@ defmodule Engine.Dev.DevAgentServer do
     state
     |> AgentIo.block_task(
       "orçamento de tokens excedido",
-      "gasto: #{ctx.tokens_spent_micros} micro-USD (teto: #{ctx.token_budget_micros})",
+      diagnostico_de_orcamento(ctx),
       "politica"
     )
     |> finish_task(:blocked)
@@ -734,18 +932,144 @@ defmodule Engine.Dev.DevAgentServer do
   # O caminho do achado T. Quando há `last_error`, a origem sai do MESMO erro
   # que o diagnóstico já narra — antes, `diagnosis` dizia "falha na chamada ao
   # modelo: {413, …}" e `origem` dizia "indeterminada", na mesma linha.
-  defp handle_outcome({:ok, ctx}, state, _task, _story) do
+  # RN-726: o provider recusou por falta de crédito. A origem é `infra`, o
+  # motivo é nomeado, e a task NÃO conta para a parada automática (não é
+  # defeito de código): o agente PAUSA sem reivindicar a próxima, e o Rearmar
+  # do painel é a retomada depois de recarregar.
+  defp handle_outcome({:ok, ctx}, state, _task, _story), do: parada_sem_conclusao(ctx, state, "")
+
+  defp parada_sem_conclusao(%{last_error: erro} = ctx, state, sufixo) when is_binary(erro) do
+    if FalhaDeTurno.credito_esgotado?(%{
+         "errorCode" => Map.get(ctx, :last_error_code),
+         "error" => erro
+       }) do
+      state
+      |> AgentIo.block_task(motivo_de_credito(erro), stop_diagnosis(ctx), "infra")
+      |> AgentIo.pausar_por_credito()
+    else
+      bloquear_parada(ctx, state, sufixo)
+    end
+  end
+
+  defp parada_sem_conclusao(ctx, state, sufixo), do: bloquear_parada(ctx, state, sufixo)
+
+  # RN-886 (AT-534): o 403 de orçamento do OpenRouter diz limite, gasto e reset.
+  defp motivo_de_credito(erro) do
+    case FalhaDeTurno.orcamento_esgotado(erro) do
+      nil -> @motivo_credito_esgotado
+      orcamento -> FalhaDeTurno.frase_de_orcamento(orcamento, "pt-BR")
+    end
+  end
+
+  # RN-810 (AT-484): bloqueio de origem `infra` (a rede do provider caiu
+  # depois das retentativas do `ToolLoop`) não conta para o disjuntor de
+  # bloqueios seguidos — não é defeito do agente nem do código.
+  #
+  # RN-864 (AT-525): a falha PASSAGEIRA de rede/provedor
+  # (`FalhaDeTurno.passageira?/1`) volta sozinha — até 3 retomadas, depois de
+  # 1, 3 e 10 min, pelo MESMO desbloqueio do humano
+  # (`Engine.Workers.RetomadaDeTarefaWorker`). Esgotadas, fica bloqueada
+  # pedindo o clique, e o motivo diz quantas houve. E o agente PAUSA
+  # (`AgentIo.pausar_por_rede/1`) em vez de pegar a próxima e falhar de novo.
+  defp bloquear_parada(ctx, state, sufixo) do
+    origem = origem_da_parada(ctx)
+
+    if origem == "infra" and passageira?(ctx) do
+      bloquear_passageira(ctx, state, sufixo)
+    else
+      state
+      |> AgentIo.block_task(motivo_da_parada(ctx, sufixo), stop_diagnosis(ctx), origem)
+      |> finish_task(if origem == "infra", do: :blocked_infra, else: :blocked)
+    end
+  end
+
+  defp passageira?(ctx) do
+    FalhaDeTurno.passageira?(%{
+      "errorCode" => Map.get(ctx, :last_error_code),
+      "error" => Map.get(ctx, :last_error)
+    })
+  end
+
+  defp bloquear_passageira(ctx, state, base) do
+    task_id = state.task_id
+    retomadas = Map.get(state, :retomadas_automaticas, %{})
+    feitas = Map.get(retomadas, task_id, 0)
+    limite? = limite_de_uso?(ctx)
+
+    # AT-594: no 429 o texto nomeia a cota e manda trocar de modelo; a rede
+    # segue com o texto de sempre.
+    {causa, dica_esgotada} =
+      if limite?,
+        do: {"limite de uso do modelo", "troque o modelo do dev agent ou desbloqueie à mão"},
+        else: {"falha passageira de rede", "desbloqueie à mão"}
+
+    {sufixo, state} =
+      case RetomadaDeTarefaWorker.agendar(state, task_id, feitas) do
+        {:ok, minutos} ->
+          {base <>
+             " — retomada automática #{feitas + 1} de #{RetomadaDeTarefaWorker.teto()} " <>
+             "em #{minutos} min (#{causa}#{if limite?, do: "; se repetir, troque o modelo do dev agent"})",
+           Map.put(state, :retomadas_automaticas, Map.put(retomadas, task_id, feitas + 1))}
+
+        :esgotado ->
+          {base <> " — #{feitas} retomadas automáticas já tentadas; #{dica_esgotada}",
+           Map.put(state, :retomadas_automaticas, Map.delete(retomadas, task_id))}
+      end
+
     state
-    |> AgentIo.block_task(
-      "parou sem concluir nem reportar bloqueio",
-      stop_diagnosis(ctx),
-      origem_da_parada(ctx)
-    )
-    |> finish_task(:blocked)
+    |> AgentIo.block_task(motivo_da_parada(ctx, sufixo), stop_diagnosis(ctx), "infra")
+    |> AgentIo.pausar_por_rede(causa)
   end
 
   # Caminho normal (autonomia `auto_approve`, o default da ativação): a PR
   # existe, o gate pode julgar.
+  defp entregar(state, summary, task, story) do
+    desfechos = [
+      AgentIo.propose_commit(state, summary),
+      AgentIo.propose_push(state),
+      propose_pr(state, task, story)
+    ]
+
+    _ =
+      EngineApiClient.mark_task(
+        state.project_id,
+        state.session_id,
+        state.task_id,
+        "in_review",
+        state.agent_id
+      )
+
+    if Enum.all?(desfechos, &(&1 == :executed)) do
+      abrir_gate(state)
+    else
+      aguardar_aprovacao(state, desfechos)
+    end
+  end
+
+  # RN-797 (AT-474): a branch não tem diff contra a `dev` (a task reintegrada
+  # cujo código já entrou por outra PR). Sem PR nova, sem gates, sem clique: a
+  # task fecha como "já na dev" com evento nomeado. A PR antiga da branch, se
+  # existir, fica MARCADA pelo evento (`branch`), não fechada no provider.
+  defp ja_na_dev(state) do
+    AgentIo.emit(state, "dev.task_already_in_dev", %{
+      agentId: state.agent_id,
+      taskId: state.task_id,
+      branch: state.branch,
+      motivo: "a branch não tem diff contra a dev: o código já está na dev"
+    })
+
+    _ =
+      EngineApiClient.mark_task(
+        state.project_id,
+        state.session_id,
+        state.task_id,
+        "done",
+        state.agent_id
+      )
+
+    finish_task(state, :approved)
+  end
+
   defp abrir_gate(state) do
     _ =
       EngineApiClient.open_gate(state.project_id, state.session_id, state.task_id, state.agent_id)
@@ -789,6 +1113,35 @@ defmodule Engine.Dev.DevAgentServer do
   end
 
   # Distingue falha de provider (timeout, 5xx) de "o modelo simplesmente parou".
+  # RN-780 (AT-459): a resposta só de raciocínio, cortada pelo teto de saída
+  # duas vezes seguidas (o `ToolLoop` já retentou uma), não é desistência do
+  # modelo — é corte, e o motivo diz isso.
+  @motivo_do_corte "resposta só de raciocínio, cortada pelo teto"
+
+  defp motivo_da_parada(%{corte_pelo_teto: true}, sufixo), do: @motivo_do_corte <> sufixo
+
+  # AT-594: o 429 do provider é cota do modelo, não rede — o motivo diz isso.
+  defp motivo_da_parada(ctx, sufixo) do
+    if limite_de_uso?(ctx),
+      do: "limite de uso do modelo atingido (429)" <> sufixo,
+      else: "parou sem concluir nem reportar bloqueio" <> sufixo
+  end
+
+  # AT-594: 429 (código `rate_limit` ou texto "(429)"/"limite de uso") é limite
+  # de uso do modelo. Predicado privado de propósito: `falha_de_turno.ex` não
+  # muda aqui, e a origem continua `infra` (RN-810/RN-864).
+  defp limite_de_uso?(ctx) do
+    erro = Map.get(ctx, :last_error)
+
+    Map.get(ctx, :last_error_code) == "rate_limit" or
+      (is_binary(erro) and erro =~ ~r/\(429\)|limite de uso/iu)
+  end
+
+  defp stop_diagnosis(%{corte_pelo_teto: true}) do
+    "o modelo gastou o teto de saída sem produzir texto nem chamada de ferramenta " <>
+      "(finish_reason length), duas vezes seguidas — a volta foi retentada uma vez"
+  end
+
   defp stop_diagnosis(ctx) do
     case Map.get(ctx, :last_error) do
       nil -> "o modelo encerrou o turno sem chamar report_done nem report_blocked"
@@ -805,8 +1158,16 @@ defmodule Engine.Dev.DevAgentServer do
   # ninguém mais.
   defp origem_da_parada(ctx) do
     case Map.get(ctx, :last_error) do
-      nil -> "modelo"
-      error -> FalhaDeTurno.origem(error)
+      nil ->
+        "modelo"
+
+      error ->
+        if FalhaDeTurno.passageira?(%{
+             "errorCode" => Map.get(ctx, :last_error_code),
+             "error" => error
+           }),
+           do: "infra",
+           else: FalhaDeTurno.origem(error)
     end
   end
 
@@ -824,7 +1185,9 @@ defmodule Engine.Dev.DevAgentServer do
   defp propose_pr(state, task, story) do
     AgentIo.propose_pr(
       state,
-      "#{story["title"]} — #{task["title"]}",
+      # AT-455: a TAREFA vem primeiro. Com a história na frente, a lista de
+      # PRs cortava o fim e três PRs da mesma história pareciam a mesma.
+      "#{task["title"]} — #{story["title"]}",
       pr_body(task, story)
     )
   end
@@ -837,5 +1200,91 @@ defmodule Engine.Dev.DevAgentServer do
       end
 
     "Task: #{task["title"]}\n#{task["description"]}\n\n## Definition of Done\n#{checklist}"
+  end
+
+  # --- AT-582 (ADR 0226): retomada do commit ---
+
+  defp bloquear_por_reinicio(state) do
+    state
+    |> AgentIo.block_task(
+      "engine reiniciou durante a task",
+      "o ToolLoop não pôde ser retomado após o restart — turno, mensagens " <>
+        "e edições do worktree só existiam em memória",
+      "infra"
+    )
+    |> finish_restart_recovery()
+  end
+
+  # Queda RECENTE (janela do diário) e ainda sem retomada nesta tarefa. O teto
+  # 1x é durável no log: o último `dev.working` do agente com `cause:
+  # "retomada"` para a MESMA tarefa. Falha de leitura = bloqueio.
+  defp retomada_do_commit(%{session_id: sid, task_id: tid} = state)
+       when is_binary(sid) and not is_nil(tid) do
+    case EngineApiClient.list_events(state.project_id, sid,
+           latest: true,
+           limit: Engine.Agents.Reidratacao.teto()
+         ) do
+      {:ok, eventos} ->
+        opts = [marco: {:dev_working, tid}]
+        diario = Diario.de_eventos(eventos, state.agent_id, opts)
+
+        if Diario.retomavel_no_boot?(
+             %{diario | retomada_usada: Diario.retomada_usada?(eventos, state.agent_id, opts)},
+             DateTime.utc_now()
+           ),
+           do: {:ok, diario},
+           else: :bloquear
+
+      _ ->
+        :bloquear
+    end
+  end
+
+  defp retomada_do_commit(_), do: :bloquear
+
+  # Merge NUNCA aqui: o laço retomado é o de implementação, e merge em branch
+  # protegida é sempre do usuário (RN-418). Qualquer falha bloqueia como antes.
+  defp retomar_do_commit(state, diario) do
+    {state, preservado, aviso} = AgentIo.preservar_trabalho(state, "")
+    slug = "task-" <> String.slice(to_string(state.task_id), 0, 8)
+
+    # `:nada` (worktree limpo) devolve aviso vazio; falha de `preservar` devolve
+    # aviso SEM `preservado`. Só o segundo bloqueia.
+    with true <- preservado != nil or aviso == "",
+         {:ok, %{path: path, branch: branch}} <-
+           AgentIo.worktree_manager().adopt(state.project_id, state.agent_id, slug) do
+      state = %{state | worktree: path, branch: branch, status: :working}
+      AgentIo.persist(state)
+
+      AgentIo.emit(state, "dev.working", %{
+        agentId: state.agent_id,
+        taskId: state.task_id,
+        branch: branch,
+        cause: "retomada",
+        commit: preservado && preservado.commit
+      })
+
+      onde =
+        if preservado,
+          do:
+            "Seu trabalho está no commit #{String.slice(preservado.commit, 0, 12)} da branch #{branch}.\n",
+          else: "Seu trabalho está na branch #{branch}.\n"
+
+      case ContextBuilder.fetch(state.project_id, state.session_id, state.task_id, state.module) do
+        {:ok, dev_context} ->
+          # A mensagem efêmera vale para as chamadas do laço (mesmo processo).
+          Engine.Harness.RetomadaDoTurno.com_retomada(
+            onde <> Engine.Harness.RetomadaDoTurno.texto(diario),
+            fn -> implement(state, dev_context) end
+          )
+
+        {:error, reason} ->
+          state
+          |> AgentIo.block_task("falha ao montar contexto da retomada", inspect(reason), "infra")
+          |> finish_task(:blocked)
+      end
+    else
+      _ -> bloquear_por_reinicio(state)
+    end
   end
 end

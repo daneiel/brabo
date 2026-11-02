@@ -1,12 +1,12 @@
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import i18next from 'i18next';
 import { initReactI18next, I18nextProvider } from 'react-i18next';
 import settingsPtBR from '../locales/pt-BR/settings.json';
 // `ModelPicker`/`ModelCatalogSection` (namespace `models`) são filhos de
-// `AreaModelsSection`/`ModelsSection` — sem o namespace aqui, o gatilho do
+// `ModelsSection` — sem o namespace aqui, o gatilho do
 // picker cai na chave crua (`picker.selectModel`).
 import modelsPtBR from '../locales/pt-BR/models.json';
 // `ExecutionModeSection` reusa os rótulos dos três modos e o placeholder do
@@ -15,9 +15,7 @@ import modelsPtBR from '../locales/pt-BR/models.json';
 // textos caem na chave crua.
 import newProjectPtBR from '../locales/pt-BR/newProject.json';
 import {
-  AreaModelsSection,
   BudgetSection,
-  CredentialsSection,
   ExecutionModeSection,
   ExecutionSection,
   MelhoresModelosPorCapacidadeSection,
@@ -27,6 +25,7 @@ import {
   ProficiencySection,
   PromotionSection,
 } from './ProjectSettingsTab';
+import { CredentialsSection } from './settings/CredentialsSection';
 import { ToastProvider } from '../components/ui/ToastProvider';
 import { ApiError } from '../lib/api-client';
 import { CREDENCIAIS_DE_LLM } from '../lib/models';
@@ -804,7 +803,7 @@ describe('CredentialsSection (ADR 0050)', () => {
     expect(screen.getByText('AN')).toBeInTheDocument();
 
     const siglas = screen
-      .getAllByText(/^[A-Z]{2}$/)
+      .getAllByText(/^[A-Z0-9]{2}$/)
       .map((el) => el.textContent);
     expect(siglas).toHaveLength(CREDENCIAIS_DE_LLM.length);
     expect(new Set(siglas).size).toBe(siglas.length);
@@ -1091,7 +1090,7 @@ describe('ModelsSection — colunas do desenho', () => {
   });
 });
 
-describe('AreaModelsSection — padrão herdável da área (ADR 0064, RN-102)', () => {
+describe('ModelsSection — a caixa da área na linha do lead (AT-600, RN-102)', () => {
   function modeloDaArea(id: string, displayName: string) {
     return {
       id,
@@ -1111,81 +1110,174 @@ describe('AreaModelsSection — padrão herdável da área (ADR 0064, RN-102)', 
       updatedAt: '2026-08-01T00:00:00.000Z',
     };
   }
+  const CAIXA = /Valer para a área .* inteira/;
+  const resolvido = (modelId: string, origin: string) => ({
+    modelId,
+    origin,
+    routingPreference: null,
+    skipped: [],
+  });
 
   beforeEach(() => {
+    useCurrentWorkspaceWithRole.mockReturnValue({ data: { role: 'maintainer' } });
     listModels.mockResolvedValue({
-      local: { ollama: [modeloDaArea('m-area', 'Modelo QA')] },
+      local: { ollama: [modeloDaArea('m-area', 'Modelo QA'), modeloDaArea('m-lead', 'Modelo Lead')] },
       cloud: {},
     });
+    setAreaModelBinding.mockResolvedValue(undefined);
+    clearAreaModelBinding.mockResolvedValue(undefined);
   });
 
-  it('lista as três áreas do catálogo, com lead e origem', async () => {
-    getAreaModelBinding.mockResolvedValue({
-      modelId: 'm-area',
-      origin: 'project',
-      skipped: [],
-    });
-    montarSecao(<AreaModelsSection projectId="proj-1" />);
-
-    expect(await screen.findByText('Área Dev')).toBeInTheDocument();
-    expect(screen.getByText('Área QA')).toBeInTheDocument();
-    expect(screen.getByText('Área Infra')).toBeInTheDocument();
-    expect(screen.getByText(/Lead: Dev Lead/)).toBeInTheDocument();
-  });
-
-  it('área SEM padrão próprio não mostra "Voltar a herdar"', async () => {
-    getAreaModelBinding.mockResolvedValue({
-      modelId: 'm-area',
-      origin: 'project',
-      skipped: [],
-    });
-    montarSecao(<AreaModelsSection projectId="proj-1" />);
-
-    await screen.findByText('Área Dev');
-    expect(screen.queryByRole('button', { name: 'Voltar a herdar' })).toBeNull();
-  });
-
-  it('área COM padrão próprio mostra "Voltar a herdar", e clicar apaga (RN-102)', async () => {
-    getAreaModelBinding.mockResolvedValue({
-      modelId: 'm-area',
-      origin: 'area',
-      skipped: [],
-    });
-    montarSecao(<AreaModelsSection projectId="proj-1" />);
-
-    const botoes = await screen.findAllByRole('button', { name: 'Voltar a herdar' });
-    expect(botoes).toHaveLength(3); // uma por área
-    fireEvent.click(botoes[0]);
-
-    await waitFor(() => expect(clearAreaModelBinding).toHaveBeenCalled());
-  });
-
-  it('define o modelo padrão da área — chama setAreaModelBinding, não setAgentModelBinding', async () => {
+  /** Cenário: o lead do Dev tem modelo PRÓPRIO; a área não tem padrão. */
+  function leadDevComModeloProprio() {
+    getAgentModelBinding.mockImplementation((_p: string, slug: string) =>
+      Promise.resolve(slug === 'dev-lead' ? resolvido('m-lead', 'agent') : null),
+    );
     getAreaModelBinding.mockResolvedValue(null);
-    montarSecao(<AreaModelsSection projectId="proj-1" />);
+  }
 
-    const gatilhos = await screen.findAllByRole('button', { name: 'Selecionar modelo' });
-    fireEvent.click(gatilhos[1]); // a área QA, segunda linha
-    fireEvent.click(screen.getByText('Modelo QA'));
+  it('a caixa existe só na linha dos três leads, e a seção "Modelo por área" não existe mais', async () => {
+    montarSecao(<ModelsSection projectId="proj-1" />);
+
+    await screen.findByRole('checkbox', { name: /área Dev inteira/ });
+    expect(screen.getAllByRole('checkbox', { name: CAIXA })).toHaveLength(3);
+    expect(screen.getByRole('checkbox', { name: /área QA inteira/ })).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: /área Infra inteira/ })).toBeInTheDocument();
+    expect(screen.queryByText('Modelo por área')).toBeNull();
+  });
+
+  it('marcar grava a ÁREA com o modelo do lead e APAGA o binding próprio dele', async () => {
+    leadDevComModeloProprio();
+    montarSecao(<ModelsSection projectId="proj-1" />);
+
+    fireEvent.click(await screen.findByRole('checkbox', { name: /área Dev inteira/ }));
 
     await waitFor(() =>
-      expect(setAreaModelBinding).toHaveBeenCalledWith('proj-1', 'qa', 'm-area'),
+      expect(setAreaModelBinding).toHaveBeenCalledWith('proj-1', 'dev', 'm-lead', {
+        routingPreference: null,
+      }),
+    );
+    await waitFor(() =>
+      expect(clearAgentModelBinding).toHaveBeenCalledWith('proj-1', 'dev-lead'),
+    );
+  });
+
+  it('marcar com a área recusando NÃO apaga o binding do lead', async () => {
+    leadDevComModeloProprio();
+    setAreaModelBinding.mockRejectedValue(
+      new ApiError(422, { message: 'Modelo sem tool calling' }),
+    );
+    montarSecao(<ModelsSection projectId="proj-1" />);
+
+    fireEvent.click(await screen.findByRole('checkbox', { name: /área Dev inteira/ }));
+
+    expect(await screen.findByText(/Modelo sem tool calling/)).toBeInTheDocument();
+    expect(clearAgentModelBinding).not.toHaveBeenCalled();
+  });
+
+  it('FALHA PARCIAL: área gravada e DELETE do lead recusado — a tela diz o que ficou gravado (RN-469)', async () => {
+    leadDevComModeloProprio();
+    clearAgentModelBinding.mockRejectedValue(new ApiError(500, { message: 'falhou' }));
+    montarSecao(<ModelsSection projectId="proj-1" />);
+
+    fireEvent.click(await screen.findByRole('checkbox', { name: /área Dev inteira/ }));
+
+    expect(
+      await screen.findByText(/O padrão da área foi gravado, mas o modelo próprio de Dev Lead não foi removido/),
+    ).toBeInTheDocument();
+  });
+
+  it('desmarcar apaga o padrão da ÁREA e não grava nada no lead', async () => {
+    getAgentModelBinding.mockImplementation((_p: string, slug: string) =>
+      Promise.resolve(slug === 'dev-lead' ? resolvido('m-area', 'area') : null),
+    );
+    getAreaModelBinding.mockImplementation((_p: string, key: string) =>
+      Promise.resolve(key === 'dev' ? resolvido('m-area', 'area') : null),
+    );
+    montarSecao(<ModelsSection projectId="proj-1" />);
+
+    const caixa = await screen.findByRole('checkbox', { name: /área Dev inteira/ });
+    await waitFor(() => expect(caixa).toBeChecked());
+    fireEvent.click(caixa);
+
+    await waitFor(() =>
+      expect(clearAreaModelBinding).toHaveBeenCalledWith('proj-1', 'dev'),
     );
     expect(setAgentModelBinding).not.toHaveBeenCalled();
   });
 
-  it('sem papel maintainer, o seletor de modelo fica desabilitado', async () => {
-    useCurrentWorkspaceWithRole.mockReturnValue({ data: { role: 'developer' } });
-    getAreaModelBinding.mockResolvedValue(null);
-    montarSecao(<AreaModelsSection projectId="proj-1" />);
+  it('desmarcar com 404 vira "já herdava", não erro', async () => {
+    getAgentModelBinding.mockImplementation((_p: string, slug: string) =>
+      Promise.resolve(slug === 'dev-lead' ? resolvido('m-area', 'area') : null),
+    );
+    getAreaModelBinding.mockImplementation((_p: string, key: string) =>
+      Promise.resolve(key === 'dev' ? resolvido('m-area', 'area') : null),
+    );
+    clearAreaModelBinding.mockRejectedValue(new ApiError(404, { message: 'nada' }));
+    montarSecao(<ModelsSection projectId="proj-1" />);
 
-    const gatilhos = await screen.findAllByRole('button', { name: 'Selecionar modelo' });
-    for (const gatilho of gatilhos) {
-      expect(gatilho).toBeDisabled();
+    const caixa = await screen.findByRole('checkbox', { name: /área Dev inteira/ });
+    await waitFor(() => expect(caixa).toBeChecked());
+    fireEvent.click(caixa);
+
+    expect(await screen.findByText('Área dev já herdava')).toBeInTheDocument();
+  });
+
+  it('com a caixa marcada, o seletor do lead grava na ÁREA — setAreaModelBinding, não setAgentModelBinding', async () => {
+    getAgentModelBinding.mockImplementation((_p: string, slug: string) =>
+      Promise.resolve(slug === 'qa' ? resolvido('m-area', 'area') : null),
+    );
+    getAreaModelBinding.mockImplementation((_p: string, key: string) =>
+      Promise.resolve(key === 'qa' ? resolvido('m-area', 'area') : null),
+    );
+    montarSecao(<ModelsSection projectId="proj-1" />);
+
+    const caixa = await screen.findByRole('checkbox', { name: /área QA inteira/ });
+    await waitFor(() => expect(caixa).toBeChecked());
+    const celula = caixa.closest('label')!.parentElement!.parentElement!;
+    fireEvent.click(within(celula).getAllByRole('button')[0]);
+    fireEvent.click(screen.getByText('Modelo Lead'));
+
+    await waitFor(() =>
+      expect(setAreaModelBinding).toHaveBeenCalledWith('proj-1', 'qa', 'm-lead'),
+    );
+    expect(setAgentModelBinding).not.toHaveBeenCalled();
+  });
+
+  it('lista os subagentes que NÃO seguem a área (recorte declarado, RN-180)', async () => {
+    getAgentModelBinding.mockImplementation((_p: string, slug: string) =>
+      Promise.resolve(
+        slug === 'qa'
+          ? resolvido('m-area', 'area')
+          : slug === 'qa-automacao'
+            ? resolvido('m-lead', 'agent')
+            : null,
+      ),
+    );
+    getAreaModelBinding.mockImplementation((_p: string, key: string) =>
+      Promise.resolve(key === 'qa' ? resolvido('m-area', 'area') : null),
+    );
+    montarSecao(<ModelsSection projectId="proj-1" />);
+
+    expect(
+      await screen.findByText(/1 agente desta área tem modelo próprio e não segue: /),
+    ).toBeInTheDocument();
+    // Dev não tem subagente fixo: o recorte dos `dev-<modulo>` é declarado.
+  });
+
+  it('developer vê a caixa INERTE, com o motivo escrito uma vez, e segue editando a linha dos agentes', async () => {
+    useCurrentWorkspaceWithRole.mockReturnValue({ data: { role: 'developer' } });
+    montarSecao(<ModelsSection projectId="proj-1" />);
+
+    for (const caixa of await screen.findAllByRole('checkbox', { name: CAIXA })) {
+      expect(caixa).toBeDisabled();
     }
     expect(
-      screen.getByText(/Exige papel maintainer para alterar/),
-    ).toBeInTheDocument();
+      screen.getAllByText(/Exige papel maintainer para marcar a caixa da área/),
+    ).toHaveLength(1);
+    // O mínimo da linha do agente continua sendo `developer`.
+    const gatilhos = screen.getAllByRole('button', { name: 'Selecionar modelo' });
+    expect(gatilhos.some((g) => !g.hasAttribute('disabled'))).toBe(true);
   });
 });
 

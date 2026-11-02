@@ -1,0 +1,208 @@
+{
+  "chatShell": {
+    "segments": {
+      "chat": "对话",
+      "search": "搜索"
+    },
+    "ariaLabel": "聊天模式"
+  },
+  "rag": {
+    "scopes": {
+      "docs": "文档",
+      "adr": "ADR",
+      "session": "会话",
+      "local": "本地"
+    },
+    "title": "RAG 聊天",
+    "subtitle": "混合检索（向量 + 词法），范围为仓库的文档/ADR、本项目记录的对话以及附加的本地文件夹——从不包括源代码，也不包括 Pull Request。",
+    "reindexButton": {
+      "idle": "立即重建索引",
+      "loading": "正在重建索引…"
+    },
+    "coverageError": "无法加载索引覆盖情况。",
+    "loadingCoverage": "正在加载覆盖情况…",
+    "reindexSuccessTitle": "索引重建完成",
+    "reindexSuccessMessage": "{{chunks}} · {{sessions}}{{embeddingSuffix}}",
+    "reindexChunks_other": "{{count}} 个文档/ADR 片段",
+    "reindexSessions_other": "{{count}} 个会话中的 {{indexed}} 个",
+    "embeddingUnavailableSuffix": " · embedding 不可用，仅以词法信号建立索引",
+    "reindexErrorTitle": "索引重建失败",
+    "reindexErrorDefaultMessage": "api 没有响应。索引未被更改。",
+    "searchPlaceholder": "在索引中搜索（至少 2 个字符）",
+    "searchAriaLabel": "搜索词",
+    "searchButton": "搜索",
+    "scopeFilterAriaLabel": "按范围筛选",
+    "allScopes": "所有范围",
+    "scopesMarked_other": "已选 {{count}} 个范围",
+    "emptyPrompt": "输入一个词，在项目索引中搜索。",
+    "searching": "正在搜索…",
+    "searchError": "暂时无法搜索。",
+    "vectorUnavailable": "仅按关键词搜索——embedding 不可用",
+    "noResults": "没有“{{query}}”的结果。",
+    "attachLocalFolder": {
+      "button": "附加本地文件夹",
+      "modalTitle": "附加本地文件夹",
+      "explanation": "文件内容由你的浏览器读取并以文本形式发送——不会发送你机器上的任何路径。每个新文件夹都会替换之前附加的文件夹。",
+      "chooseFolder": "选择文件夹…",
+      "reading": "正在读取文件…",
+      "emptyFolder": "此文件夹中没有符合条件的文件（可识别的文本/代码）。",
+      "summary": "{{files}}，{{skipped}}（过大或为二进制）",
+      "skippedCount_other": "已跳过 {{count}} 个",
+      "summaryNoSkipped_other": "来自“{{folderName}}”的 {{count}} 个文件",
+      "tooManyFiles_other": "该文件夹有 {{count}} 个文件——上限为 {{limit}}。请选择更小的文件夹。",
+      "tooManyBytes": "该文件夹内容总量超过允许的上限。请选择更小的文件夹。",
+      "confirmButton_other": "附加 {{count}} 个文件",
+      "confirmButtonLoading": "正在附加…",
+      "cancelButton": "取消",
+      "successTitle": "文件夹已附加",
+      "successMessage_other": "已为“{{folderName}}”中的 {{count}} 个文件建立索引{{embeddingSuffix}}",
+      "errorTitle": "附加失败",
+      "errorDefaultMessage": "api 没有响应。未做任何更改。"
+    }
+  },
+  "ragCitation": {
+    "scopeLabels": {
+      "docs": "文档",
+      "adr": "ADR",
+      "session": "会话",
+      "local": "本地"
+    },
+    "scoreTitle": "综合得分（0.6 向量 + 0.4 词法）",
+    "relevance": "相关度 {{score}}",
+    "signals": "向量 {{vector}} · 词法 {{lexical}}",
+    "collapse": "收起",
+    "expand": "查看完整片段",
+    "viewInSession": "在会话中查看",
+    "feedback": {
+      "groupLabel": "这个片段有帮助吗？",
+      "question": "这个片段有帮助吗？",
+      "useful": "有用",
+      "irrelevant": "不相关",
+      "sending": "正在记录…",
+      "recorded": "已记录为{{verdict}}——它在本次搜索中排第 {{rank}} 位",
+      "errorDefault": "无法记录你的投票",
+      "verdicts": {
+        "util": "有用",
+        "irrelevante": "不相关"
+      }
+    }
+  },
+  "ragCoverage": {
+    "noFilesInRepo": "仓库中没有文件",
+    "filesIndexed": "已索引文件",
+    "truncated": "计数已被上限截断",
+    "docsLabel": "文档",
+    "adrLabel": "ADR",
+    "sessionsLabel": "会话",
+    "noSessionsInProject": "项目中没有会话",
+    "sessionsIndexed": "已索引会话",
+    "localLabel": "本地",
+    "noLocalFolder": "未附加文件夹",
+    "localFolder": "来自“{{folderName}}”",
+    "localAttachedAt": "附加于 {{date}}",
+    "chunksInIndex_other": "索引中有 {{count}} 个片段",
+    "chunksWithoutVector_other": "{{count}} 个没有向量——仅以词法信号建立索引"
+  },
+  "sessionFailure": {
+    "noMessage": "本轮失败，原因未被记录。请重试；如果再次发生，事件日志中有原始 payload。",
+    "unknownOrigin": "未确定"
+  },
+  "sessionKind": {
+    "consultiva": {
+      "label": "咨询",
+      "description": "仅对话：提问、了解背景、答疑。不会自动激活任何智能体，也不会进入执行。"
+    },
+    "criativa": {
+      "label": "创意",
+      "description": "用于产出：与 Criativo 开启构思，它记录业务规则并交给 PO。这是唯一会进入执行的会话。"
+    },
+    "execucao": {
+      "label": "执行",
+      "description": "执行会话：dev agent 处理 Dev Lead 批准的计划中的任务。"
+    }
+  },
+  "sessionsTab": {
+    "status": {
+      "created": "等待中",
+      "active": "活跃",
+      "closing": "正在结束",
+      "closed": "已关闭",
+      "closedAbnormally": "已中止"
+    },
+    "filters": {
+      "all": "全部",
+      "active": "活跃",
+      "closed": "已关闭",
+      "aborted": "已中止"
+    },
+    "kindCopy": {
+      "criativa": {
+        "title": "Criativo",
+        "openButton": "新构思",
+        "confirmButton": "开启创意会话",
+        "empty": "还没有构思。开启一个，让 Criativo 和你一起梳理产品的业务规则。"
+      },
+      "consultiva": {
+        "title": "聊天",
+        "openButton": "新对话",
+        "confirmButton": "开启咨询会话",
+        "empty": "还没有对话。开启一个来提问和获取背景信息，不会激活任何智能体。"
+      }
+    },
+    "cancelButton": "取消",
+    "renameError": {
+      "title": "错误",
+      "message": "无法重命名会话"
+    },
+    "createActivationFailed": {
+      "title": "会话已创建，但未激活",
+      "message": "打开会话并尝试“激活会话”。"
+    },
+    "createFailed": {
+      "title": "无法开启会话"
+    },
+    "newSessionForm": {
+      "nameLabel": "名称（可选）",
+      "namePlaceholder": "购物车结账",
+      "nameHint": "id 的标签仍会显示——名称只是附加在它旁边。"
+    },
+    "openingButton": "正在开启…",
+    "filterGroupAriaLabel": "按状态筛选会话",
+    "contagem": {
+      "acoesPropostas_other": "这些会话中提出了 {{count}} 个操作",
+      "decididasPorVoce_other": "{{count}} 个由你决定",
+      "autoAprovadas_other": "{{count}} 个由策略自动批准",
+      "aguardando": "{{count}} 个等待中",
+      "auto": "{{count}} 个自动"
+    },
+    "loadError": "无法加载本项目的会话。",
+    "filterEmpty": "此筛选下没有会话。",
+    "renameInput": {
+      "ariaLabel": "会话名称",
+      "placeholder": "无名称——会话显示为 {{hashtag}}"
+    },
+    "rowTitle": "会话 {{rotulo}}——点击重命名",
+    "kpis": {
+      "sessionsInProject": {
+        "label": "项目中的会话",
+        "detail": "所有构思，任意状态"
+      },
+      "activeNow": {
+        "label": "当前活跃",
+        "detail": "共 {{total}} 个"
+      },
+      "ideationToCommit": {
+        "label": "构思 → 提交 转化率",
+        "value": "—",
+        "detail": "未测量：目前会话不与提交关联"
+      },
+      "monthlyCost": {
+        "label": "本月成本",
+        "errorValue": "—",
+        "loadingValue": "…",
+        "errorDetail": "无法加载",
+        "detail": "项目总计，30 天"
+      }
+    }
+  }
+}

@@ -16,6 +16,7 @@ import {
 } from '../../../domain/anamnese/competency-catalog';
 import { validateProficiencyBatch } from '../../../domain/anamnese/proficiency-validation';
 import type {
+  EvidenceEventInfo,
   ProficiencyDraft,
   ProficiencyLevel,
 } from '../../../domain/anamnese/proficiency-validation';
@@ -148,19 +149,53 @@ export class RecordProficiencyUseCase {
     });
   }
 
+  /**
+   * Rodada que avaliou a janela e encerrou SEM perfil (`skip_proficiency`)
+   * também a FECHA (RN-722): grava `anamnese_runs` com zero perfis, para a
+   * próxima rodada começar em `windowTo`. Sem isso o `windowFrom` ficava
+   * preso, a janela sempre continha a interação antiga e cada tick pagava
+   * uma rodada nova sobre o mesmo material. Não narra nada: o
+   * `anamnese.run_skipped` do engine já é o desfecho no log.
+   */
+  async fecharJanelaSemPerfil(
+    projectId: string,
+    input: Omit<RecordProficiencyInput, 'profiles'>,
+  ) {
+    // A sessão é onde a rodada foi atribuída; de outro projeto, a janela
+    // fechada seria a de outro projeto.
+    const session = await this.sessions.findInProject(
+      projectId,
+      input.sessionId,
+    );
+    if (!session) {
+      throw new BadRequestException(
+        `sessão ${input.sessionId} não pertence ao projeto ${projectId}`,
+      );
+    }
+    const run = await this.runs.create({
+      projectId,
+      sessionId: input.sessionId,
+      windowFrom: input.windowFrom,
+      windowTo: input.windowTo,
+      eventCount: input.eventCount,
+      profileCount: 0,
+    });
+    return { runId: run.id, profiles: [] };
+  }
+
   // O evento tem que existir E ser de uma sessão DESTE projeto — a mensagem
   // de rejeição já prometia "deste projeto", mas a checagem aceitava um id de
   // qualquer projeto. Mesma disciplina do ProposeHypothesesUseCase.
   private async resolveKnownEventIds(
     projectId: string,
     drafts: ProficiencyDraft[],
-  ): Promise<Set<string>> {
+  ): Promise<Map<string, EvidenceEventInfo>> {
     const referenced = new Set<string>();
     for (const draft of drafts) {
       for (const id of draft.evidenceEventIds) referenced.add(id);
     }
 
-    const known = new Set<string>();
+    const known = new Map<string, EvidenceEventInfo>();
     await Promise.all(
       Array.from(referenced).map(async (id) => {
         const event = await this.sessionEvents.findById(id);
@@ -169,7 +204,13 @@ export class RecordProficiencyUseCase {
           projectId,
           event.sessionId,
         );
-        if (session) known.add(id);
+        if (session) {
+          known.set(id, {
+            type: event.type,
+            actorKind: event.actor.kind,
+            actorId: event.actor.id,
+          });
+        }
       }),
     );
     return known;

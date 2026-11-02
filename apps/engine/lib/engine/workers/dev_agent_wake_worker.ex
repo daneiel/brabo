@@ -35,6 +35,7 @@ defmodule Engine.Workers.DevAgentWakeWorker do
   use Oban.Worker, queue: :default, max_attempts: 5
 
   alias Engine.Dev.{DevAgentState, Wake}
+  alias Engine.Sessions.EngineApiClient
   alias Engine.Telemetry.Span
 
   @impl true
@@ -135,6 +136,64 @@ defmodule Engine.Workers.DevAgentWakeWorker do
       },
       fn ->
         Wake.deliver(project_id, agent_id, {:pr_settled, %{task_id: task_id, opened: opened}})
+        :ok
+      end
+    )
+  end
+
+  # RN-715: o merge da PR foi recusado por conflito com a `dev`, e a api
+  # devolveu a tarefa (`in_progress`) ao agente que a abriu. Dono sem linha em
+  # `dev_agent_states` não tem quem o acorde: a tarefa é BLOQUEADA com o
+  # motivo nomeado (origem `infra`), nunca fica `in_progress` sem ninguém.
+  def perform(%Oban.Job{
+        args:
+          %{
+            "event_type" => "task.merge_conflict",
+            "payload" =>
+              %{
+                "projectId" => project_id,
+                "sessionId" => session_id,
+                "taskId" => task_id,
+                "agentId" => agent_id
+              } = payload
+          } = args
+      }) do
+    arquivos = Map.get(payload, "conflictingFiles", [])
+
+    Span.with_session(
+      args["traceparent"],
+      "outbox.dev_agent_wake",
+      %{
+        "brabo.project_id" => project_id,
+        "brabo.agent_id" => agent_id,
+        "brabo.task_id" => task_id
+      },
+      fn ->
+        if DevAgentState.get(project_id, agent_id) do
+          Wake.deliver(
+            project_id,
+            agent_id,
+            {:merge_conflict,
+             %{
+               task_id: task_id,
+               pull_request_id: Map.get(payload, "pullRequestId"),
+               conflicting_files: arquivos
+             }}
+          )
+        else
+          _ =
+            EngineApiClient.mark_task_blocked(
+              project_id,
+              session_id,
+              task_id,
+              "conflito de merge sem dev agent para resolvê-lo",
+              "o merge da PR foi recusado por conflito com a dev (#{Enum.join(arquivos, ", ")}) " <>
+                "e o agente que a abriu (#{agent_id}) não está ativo neste projeto",
+              agent_id,
+              "infra"
+            )
+        end
+
         :ok
       end
     )

@@ -29,6 +29,19 @@ type ModuloJson = { default: Arvore };
 
 const modulosEn = import.meta.glob<ModuloJson>('../locales/en/*.json', { eager: true });
 const modulosPtBR = import.meta.glob<ModuloJson>('../locales/pt-BR/*.json', { eager: true });
+// Todos os locales que EXISTIREM (ADR 0216: ru e zh-Hans entram quando a
+// pasta nascer) — a régua de RN/ADR na tela vale para cada um.
+const modulosDeTodos = import.meta.glob<ModuloJson>('../locales/*/*.json', { eager: true });
+
+function porLocale(): Map<string, Record<string, ModuloJson>> {
+  const mapa = new Map<string, Record<string, ModuloJson>>();
+  for (const [caminho, modulo] of Object.entries(modulosDeTodos)) {
+    const partes = caminho.split('/');
+    const locale = partes[partes.length - 2];
+    mapa.set(locale, { ...(mapa.get(locale) ?? {}), [caminho]: modulo });
+  }
+  return mapa;
+}
 
 function nomeDoNamespace(caminho: string): string {
   return (caminho.split('/').pop() ?? '').replace(/\.json$/, '');
@@ -95,10 +108,12 @@ function achados(
 }
 
 describe('vocabulário dos locales (AT-326)', () => {
-  it('nenhuma frase de tela cita número de RN ou ADR, nos dois idiomas', () => {
-    expect(achados(todos(modulosEn), REFERENCIA_INTERNA)).toEqual([]);
-    expect(achados(todos(modulosPtBR), REFERENCIA_INTERNA)).toEqual([]);
-  });
+  it.each([...porLocale().keys()].sort())(
+    'nenhuma frase de tela cita número de RN ou ADR, no locale "%s"',
+    (lng) => {
+      expect(achados(todos(porLocale().get(lng) ?? {}), REFERENCIA_INTERNA)).toEqual([]);
+    },
+  );
 
   it('o pt-BR não usa "circuit breaker", "task(s)" nem "default" onde há palavra em português', () => {
     expect(achados(todos(modulosPtBR), JARGAO_NO_PT)).toEqual([]);

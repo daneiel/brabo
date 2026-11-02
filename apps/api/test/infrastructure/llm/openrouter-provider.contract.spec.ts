@@ -6,6 +6,9 @@ import {
   OPENROUTER_BASE_URL,
   OpenRouterProvider,
   campoDeRoteamentoOpenRouter,
+  campoDeSessaoOpenRouter,
+  campoDeTetoDePrecoOpenRouter,
+  marcarCacheDePromptOpenRouter,
   extrairCustoRealOpenRouter,
   openrouterConfig,
   parseCatalogoOpenRouter,
@@ -133,6 +136,15 @@ describe('OpenRouterProvider — quirks (Fase 11a)', () => {
       // Provada contra a API real em 2026-09-29
       // (`openrouter-provider.roteamento.smoke.spec.ts`, AT-158).
       routingPreference: true,
+      // Provada contra a API real em 2026-10-21
+      // (`openrouter-provider.sessao.smoke.spec.ts`, ADR 0221, AT-580).
+      stickySession: true,
+      // Provada contra a API real em 2026-10-28
+      // (`openrouter-provider.teto.smoke.spec.ts`, ADR 0225, AT-606).
+      priceCeiling: true,
+      // Provada contra a API real em 2026-10-15
+      // (`openrouter-provider.cache.smoke.spec.ts`, RN-892, AT-543).
+      promptCaching: true,
     });
     expect(OPENROUTER_BASE_URL).toBe('https://openrouter.ai/api/v1');
   });
@@ -634,3 +646,248 @@ async function subirServidorFalsoComHeaders(
       }),
   };
 }
+
+describe('OpenRouterProvider — pontos de cache de prompt (RN-892)', () => {
+  const CONVERSA = [
+    { role: 'system' as const, content: 'instruções do agente' },
+    { role: 'user' as const, content: 'pedido' },
+    { role: 'assistant' as const, content: 'resposta' },
+    { role: 'user' as const, content: 'segundo pedido' },
+    { role: 'system' as const, content: 'idioma da resposta: pt-BR' },
+    { role: 'system' as const, content: 'ambiente do agente' },
+  ];
+
+  const provider = (baseUrl: string, ligada: boolean) => {
+    const base = openrouterConfig(baseUrl);
+    return new OpenAICompatibleProvider(
+      {
+        ...base,
+        capabilities: { ...base.capabilities, promptCaching: ligada },
+      },
+      new GptTokenizerEstimator(),
+    );
+  };
+
+  async function corpoDe(ligada: boolean, model: string) {
+    const servidor = await subirServidorFalso(dialetoOpenRouter);
+    for await (const _ of provider(servidor.baseUrl, ligada).chat(CONVERSA, {
+      model,
+    })) {
+      // drena
+    }
+    const corpo = servidor.ultimoPedido();
+    await servidor.fechar();
+    return corpo as unknown as {
+      messages: { role: string; content: unknown }[];
+    };
+  }
+
+  const marcado = (text: string) => [
+    { type: 'text', text, cache_control: { type: 'ephemeral' } },
+  ];
+
+  it('ligada, num modelo anthropic: ponto nas instruções e no fim do histórico, efêmeras do fim DEPOIS e intactas', async () => {
+    const corpo = await corpoDe(true, 'anthropic/claude-haiku-5.5');
+    expect(corpo.messages.map((m) => m.role)).toEqual(
+      CONVERSA.map((m) => m.role),
+    );
+    expect(corpo.messages[0].content).toEqual(marcado('instruções do agente'));
+    expect(corpo.messages[1].content).toBe('pedido');
+    expect(corpo.messages[3].content).toEqual(marcado('segundo pedido'));
+    expect(corpo.messages[4].content).toBe('idioma da resposta: pt-BR');
+    expect(corpo.messages[5].content).toBe('ambiente do agente');
+  });
+
+  it('desligada, o corpo é byte a byte o de antes', async () => {
+    const ligadaOutroModelo = await corpoDe(true, 'openai/gpt-5');
+    const desligada = await corpoDe(false, 'openai/gpt-5');
+    expect(JSON.stringify(desligada)).toBe(JSON.stringify(ligadaOutroModelo));
+    const desligadaAnthropic = await corpoDe(
+      false,
+      'anthropic/claude-haiku-5.5',
+    );
+    expect(
+      desligadaAnthropic.messages.every((m) => typeof m.content === 'string'),
+    ).toBe(true);
+  });
+
+  it('a capability do OpenRouter está LIGADA (provada pelo smoke de 15/10) — voltar a false reprova', () => {
+    expect(openrouterConfig().capabilities.promptCaching).toBe(true);
+    expect(new OpenRouterProvider().capabilities.promptCaching).toBe(true);
+  });
+
+  it('declarar a capability sem o hook falha na construção', () => {
+    const base = openrouterConfig('http://127.0.0.1:1');
+    expect(
+      () =>
+        new OpenAICompatibleProvider({
+          ...base,
+          marcarCacheDePrompt: undefined,
+          capabilities: { ...base.capabilities, promptCaching: true },
+        }),
+    ).toThrow(/promptCaching.*marcarCacheDePrompt/);
+  });
+
+  it('chamada só de mensagens efêmeras não ganha ponto nenhum', () => {
+    const entrada = [
+      { role: 'system', content: 'a' },
+      { role: 'system', content: 'b' },
+    ];
+    expect(marcarCacheDePromptOpenRouter(entrada, 'anthropic/x')).toEqual(
+      entrada,
+    );
+  });
+});
+
+describe('OpenRouterProvider — chave de sessão (ADR 0221, RN-907)', () => {
+  const comSticky = (baseUrl: string) =>
+    new OpenAICompatibleProvider(
+      openrouterConfig(baseUrl),
+      new GptTokenizerEstimator(),
+    );
+  const semSticky = (baseUrl: string) => {
+    const base = openrouterConfig(baseUrl);
+    return new OpenAICompatibleProvider(
+      { ...base, capabilities: { ...base.capabilities, stickySession: false } },
+      new GptTokenizerEstimator(),
+    );
+  };
+  async function corpoCom(
+    provider: OpenAICompatibleProvider,
+    servidor: Awaited<ReturnType<typeof subirServidorFalso>>,
+    sessionKey?: string,
+  ) {
+    for await (const _ of provider.chat([{ role: 'user', content: 'oi' }], {
+      model: '~deepseek/deepseek-v4-flash-latest',
+      ...(sessionKey ? { sessionKey } : {}),
+    })) {
+      // drena
+    }
+    return servidor.ultimoPedido();
+  }
+
+  it('com a capability e a chave, o corpo leva session_id', async () => {
+    const servidor = await subirServidorFalso(dialetoOpenRouter);
+    const corpo = await corpoCom(
+      comSticky(servidor.baseUrl),
+      servidor,
+      'brabo:s1:dev-api',
+    );
+    await servidor.fechar();
+    expect(corpo?.session_id).toBe('brabo:s1:dev-api');
+  });
+
+  it('sem a chave, ou com a capability desligada, NADA de session_id', async () => {
+    const servidor = await subirServidorFalso(dialetoOpenRouter);
+    const semChave = await corpoCom(comSticky(servidor.baseUrl), servidor);
+    const desligada = await corpoCom(
+      semSticky(servidor.baseUrl),
+      servidor,
+      'brabo:s1:dev-api',
+    );
+    await servidor.fechar();
+    expect(semChave).not.toHaveProperty('session_id');
+    expect(desligada).not.toHaveProperty('session_id');
+  });
+
+  it('capability sem `campoDeSessao` falha na construção; o formato é session_id', () => {
+    const base = openrouterConfig('http://127.0.0.1:1');
+    expect(
+      () =>
+        new OpenAICompatibleProvider({
+          ...base,
+          campoDeSessao: undefined,
+          capabilities: { ...base.capabilities, stickySession: true },
+        }),
+    ).toThrow(/stickySession.*campoDeSessao/);
+    expect(campoDeSessaoOpenRouter('k')).toEqual({ session_id: 'k' });
+  });
+});
+
+describe('OpenRouterProvider — teto de preço (ADR 0225, RN-917)', () => {
+  const TETO = {
+    inputPerMillionMicros: 210_000,
+    outputPerMillionMicros: 630_000,
+  };
+  const criar = (baseUrl: string, priceCeiling = true) => {
+    const base = openrouterConfig(baseUrl);
+    return new OpenAICompatibleProvider(
+      { ...base, capabilities: { ...base.capabilities, priceCeiling } },
+      new GptTokenizerEstimator(),
+    );
+  };
+  async function drenar(
+    provider: OpenAICompatibleProvider,
+    extra: Record<string, unknown>,
+  ) {
+    const chunks: ChatStreamChunk[] = [];
+    for await (const c of provider.chat([{ role: 'user', content: 'oi' }], {
+      model: 'deepseek/deepseek-v4.1-flash',
+      ...extra,
+    })) {
+      chunks.push(c);
+    }
+    return chunks;
+  }
+
+  it('o formato é provider.max_price em US$ por milhão', () => {
+    expect(campoDeTetoDePrecoOpenRouter(TETO)).toEqual({
+      provider: { max_price: { prompt: 0.21, completion: 0.63 } },
+    });
+  });
+
+  it('com sort E teto, o objeto provider é MESCLADO (o sort não some)', async () => {
+    const servidor = await subirServidorFalso(dialetoOpenRouter);
+    await drenar(criar(servidor.baseUrl), {
+      routingPreference: 'price',
+      priceCeiling: TETO,
+    });
+    const corpo = servidor.ultimoPedido();
+    await servidor.fechar();
+    expect(corpo?.provider).toEqual({
+      sort: 'price',
+      max_price: { prompt: 0.21, completion: 0.63 },
+    });
+  });
+
+  it('sem a capability, ou sem teto, NADA de max_price', async () => {
+    const servidor = await subirServidorFalso(dialetoOpenRouter);
+    await drenar(criar(servidor.baseUrl, false), { priceCeiling: TETO });
+    const desligada = servidor.ultimoPedido();
+    await drenar(criar(servidor.baseUrl), { routingPreference: 'price' });
+    const semTeto = servidor.ultimoPedido();
+    await servidor.fechar();
+    expect(desligada).not.toHaveProperty('provider');
+    expect(semTeto?.provider).toEqual({ sort: 'price' });
+  });
+
+  it('404 COM teto vira price_ceiling; 404 sem teto segue model_not_found', async () => {
+    const servidor = await subirServidorFalso(dialetoOpenRouter);
+    servidor.usar('erro_404');
+    const comTeto = await drenar(criar(servidor.baseUrl), {
+      priceCeiling: TETO,
+    });
+    const semTeto = await drenar(criar(servidor.baseUrl), {});
+    await servidor.fechar();
+    expect(comTeto.at(-1)).toMatchObject({
+      type: 'error',
+      code: 'price_ceiling',
+    });
+    expect(semTeto.at(-1)).toMatchObject({
+      type: 'error',
+      code: 'model_not_found',
+    });
+  });
+
+  it('capability sem `campoDeTetoDePreco` falha na construção', () => {
+    const base = openrouterConfig('http://127.0.0.1:1');
+    expect(
+      () =>
+        new OpenAICompatibleProvider({
+          ...base,
+          campoDeTetoDePreco: undefined,
+          capabilities: { ...base.capabilities, priceCeiling: true },
+        }),
+    ).toThrow(/priceCeiling.*campoDeTetoDePreco/);
+  });
+});

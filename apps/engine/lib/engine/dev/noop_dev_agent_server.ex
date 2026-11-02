@@ -238,7 +238,9 @@ defmodule Engine.Dev.NoopDevAgentServer do
     # dono vivo e invisível pro claim (que só pega `todo`).
     state = %{state | task_id: task_id}
 
-    case AgentIo.worktree_manager().create(state.project_id, state.agent_id, slug) do
+    {criado, state} = AgentIo.criar_worktree(state, slug)
+
+    case criado do
       {:ok, %{path: path, branch: branch}} ->
         # Conteúdo trivial (sem LLM) só pra ter um diff.
         File.write!(Path.join(path, "NOOP-#{slug}.md"), noop_file_content(state, task))

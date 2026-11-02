@@ -18,6 +18,8 @@ export interface RecordTokenUsageInput {
   outputPricePerMillionMicros: number;
   /** `true` quando o preço é implícito (custo real ÷ tokens), ADR 0179/0188. */
   priceImplicit?: boolean;
+  /** Estimativa de stream abortado, a reconciliar (ADR 0224, RN-915). */
+  custoAReconciliar?: boolean;
   /** O que o catálogo teria cobrado, quando `costMicros` é o real (RN-665). */
   catalogCostMicros?: number | null;
   /** O modelo que a resposta disse ter servido (RN-665). */
@@ -33,9 +35,33 @@ export interface RecordTokenUsageInput {
   upstreamProvider: string | null;
   /** O critério que foi ao fio (ADR 0166) — `null` quando nada foi enviado. */
   routingPreference: RoutingPreference | null;
+  /** O fator do teto de preço que foi ao fio (ADR 0225) — `null` = nada enviado. */
+  priceCeilingFactor: number | null;
+}
+
+/** Linha com custo estimado esperando o custo real, com o projeto para achar a chave. */
+export interface CustoAReconciliar {
+  id: string;
+  projectId: string;
+  provider: LLMProviderName;
+  generationId: string;
+  costMicros: number;
+  inputTokens: number;
+  outputTokens: number;
 }
 
 export abstract class TokenUsageRepository {
+  /** Linhas `custo_a_reconciliar` desde `desde`, mais antigas primeiro. */
+  abstract listarACorrigir(
+    desde: Date,
+    limite: number,
+  ): Promise<CustoAReconciliar[]>;
+  /** Troca a estimativa pelo custo real; só atua se a linha ainda estiver marcada. */
+  abstract aplicarCustoReal(
+    id: string,
+    custoRealMicros: number,
+    precoImplicitoPorMilhao: number,
+  ): Promise<boolean>;
   abstract record(input: RecordTokenUsageInput): Promise<TokenUsage>;
   // Soma de costMicros pra uma sessão, filtrado por actor id (Fase 4b —
   // Psicólogo: custo da análise, somando ['psicologo','psicologo-leve'],
@@ -51,7 +77,7 @@ export abstract class TokenUsageRepository {
   // enunciado pede. Ver ADR 0021.
   abstract sumBySessionGroupedByActor(
     sessionId: string,
-  ): Promise<AgentTokenUsage[]>;
+  ): Promise<SessionAgentTokenUsage[]>;
   // Resumo do workspace pro dashboard de projetos (Fase de fidelidade da
   // UI): "M agentes" e o gasto do mês, numa query só. `actorKind = 'agent'`
   // é filtro OBRIGATÓRIO — sem ele um `user` mandando chat ou um `system`
@@ -187,6 +213,8 @@ export interface SpendBucket {
   /** Só a dimensão `actor` preenche — nas outras é `null`. */
   actorKind: string | null;
   costMicros: number;
+  /** Parte de `costMicros` de modelos com a marca curada `subscription` (RN-954). */
+  assinaturaMicros: number;
   inputTokens: number;
   outputTokens: number;
   chamadas: number;
@@ -208,6 +236,15 @@ export interface AgentTokenUsage {
   costMicros: number;
   inputTokens: number;
   outputTokens: number;
+}
+
+/** A soma do agente na sessão + a última chamada dele (fora o Jev), AT-654. */
+export interface SessionAgentTokenUsage extends AgentTokenUsage {
+  lastCall: {
+    inputTokens: number;
+    modelName: string;
+    contextWindow: number | null;
+  } | null;
 }
 
 export interface WorkspaceTokenUsageSummary {

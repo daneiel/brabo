@@ -1,0 +1,266 @@
+{
+  "groupLabel": {
+    "local": "Локальные",
+    "direct": "Прямые API",
+    "hub": "Хабы"
+  },
+  "upstreamLabel": {
+    "outros": "Производитель не указан"
+  },
+  "facets": {
+    "toolCalling": {
+      "label": "tool calling",
+      "help": "Только те, которыми может пользоваться агент."
+    },
+    "vision": {
+      "label": "читает изображения",
+      "help": "Принимает изображение на ВХОДЕ — скриншот, диаграмму, отрендеренный PDF."
+    },
+    "reasoning": {
+      "label": "thinking",
+      "help": "Показывает явные рассуждения перед ответом. У исполняющих dev agent и у QA автоматизации рассуждения отключены; у остальных агентов всё решает модель."
+    },
+    "imagem": {
+      "label": "генерирует изображения",
+      "help": "СОЗДАЁТ изображения — это другая ось, чем умение их читать."
+    }
+  },
+  "uses": {
+    "codigo": "код",
+    "documentacao": "документация",
+    "analise": "анализ",
+    "imagem": "изображения",
+    "conversa": "диалог"
+  },
+  "providerLabel": {
+    "ollama": "Ollama (локально)",
+    "anthropic": "Anthropic",
+    "openai": "OpenAI",
+    "openrouter": "OpenRouter",
+    "nvidia-nim": "NVIDIA NIM",
+    "together": "Together AI",
+    "deepinfra": "DeepInfra",
+    "bitdeer": "Bitdeer",
+    "vultr": "Vultr",
+    "9router": "9Router",
+    "opencode-zen": "OpenCode Zen"
+  },
+  "price": {
+    "free": "бесплатно",
+    "per1m": "за 1M",
+    "noPrice": "цена не указана",
+    "subscriptionNoPrice": "подписка — цена не указана",
+    "subscription": "подписка · эквивалент {{preco}}"
+  },
+  "contextWindow": {
+    "thousands": "{{value}}k ctx",
+    "exact": "{{value}} ctx"
+  },
+  "badges": {
+    "active": "активна",
+    "inactive": "отключена",
+    "unavailable": "недоступна у провайдера",
+    "toolCalling": "tool calling",
+    "readsImage": "читает изображения",
+    "thinking": "thinking",
+    "generatesImage": "генерирует изображения",
+    "manualPricing": "ручная цена",
+    "freeRoutingAlias": "алиас свободной маршрутизации"
+  },
+  "catalog": {
+    "title": "Каталог моделей",
+    "eyebrow": "отбор по рабочему пространству",
+    "subtitle": "Всё, что находит синхронизация, добавляется отключённым. В выборе моделей появляется только то, что вы активируете.",
+    "expandAll": "Развернуть всё",
+    "collapseAll": "Свернуть всё",
+    "syncing": "Синхронизация…",
+    "updateButton": "Обновить каталог",
+    "usesFilterTitle": "Модели, которые это рабочее пространство отметило как \"{{use}}\"",
+    "countOfTotal": "{{visible}} из {{total}}",
+    "filteredEmpty": {
+      "prefix": "Ни одна модель не соответствует всем отметкам. Возможность, не заявленная провайдером, считается отсутствующей, а использование — это то, что отметило ",
+      "thisWorkspace": "это рабочее пространство",
+      "suffix": " — снимите фильтр, чтобы увидеть остальные."
+    },
+    "missingCatalog": {
+      "prefix": "У вас есть учётные данные ",
+      "middle_one": ", но в каталоге нет ни одной их модели. Добавление ключа не находит модели — нажмите ",
+      "middle_few": ", но в каталоге нет ни одной их модели. Добавление ключа не находит модели — нажмите ",
+      "middle_many": ", но в каталоге нет ни одной их модели. Добавление ключа не находит модели — нажмите ",
+      "middle_other": ", но в каталоге нет ни одной их модели. Добавление ключа не находит модели — нажмите ",
+      "suffix": ", чтобы загрузить их у провайдера."
+    },
+    "toasts": {
+      "syncSuccess": "Каталог синхронизирован",
+      "syncErrorTitle": "Синхронизация не удалась",
+      "syncErrorMessage": "API не ответил. В каталоге ничего не изменилось.",
+      "activated": "Модели активированы",
+      "deactivated": "Модели отключены",
+      "saveError": "Не удалось сохранить",
+      "usesUpdated": "Использования обновлены",
+      "aliasRefused": "Алиас свободной маршрутизации не входит в отбор",
+      "syncCount_one": "От провайдеров пришла {{count}} модель.",
+      "syncCount_few": "От провайдеров пришли {{count}} модели.",
+      "syncCount_many": "От провайдеров пришло {{count}} моделей.",
+      "syncCount_other": "От провайдеров пришло {{count}} модели.",
+      "syncActivateLink": "Активировать модель →"
+    },
+    "empty": "В каталоге нет моделей. Добавьте учётные данные провайдера и обновите.",
+    "freeRoutingAliasReason": "Витринная цена: платить придётся upstream, который обслужит каждый вызов. Алиас с \"~\" нельзя активировать — выберите модель с фиксированным upstream.",
+    "markedHidden_one": "{{count}} отмечена",
+    "markedHidden_few": "{{count}} отмечены",
+    "markedHidden_many": "{{count}} отмечено",
+    "markedHidden_other": "{{count}} отмечено",
+    "batchBar": {
+      "selectedCount_one": "{{count}} выбрана",
+      "selectedCount_few": "{{count}} выбраны",
+      "selectedCount_many": "{{count}} выбрано",
+      "selectedCount_other": "{{count}} выбрано",
+      "activate": "Активировать",
+      "deactivate": "Отключить",
+      "markAs": "отметить как",
+      "applyUsesTitle": "Заменяет использования отмеченных моделей — не добавляет к уже имеющимся",
+      "applyUses": "Применить использования",
+      "clearUses": "Очистить использования"
+    },
+    "syncReport": {
+      "skippedNoCapability": "нет списка каталога",
+      "skippedNoCredential": "нет учётных данных",
+      "failed": "ошибка · источник {{origin}}",
+      "novos_one": "{{count}} новая",
+      "novos_few": "{{count}} новые",
+      "novos_many": "{{count}} новых",
+      "novos_other": "{{count}} новых",
+      "deVolta": "{{count}} вернулись",
+      "sumidos_one": "{{count}} пропала",
+      "sumidos_few": "{{count}} пропали",
+      "sumidos_many": "{{count}} пропало",
+      "sumidos_other": "{{count}} пропало"
+    },
+    "search": {
+      "aria": "Искать модель в каталоге",
+      "placeholder": "Поиск по имени или id (напр.: claude-haiku)",
+      "noMatch": "Ни одна модель каталога не совпадает с «{{term}}». Поиск смотрит на имя и id; проверьте написание или очистите поиск."
+    },
+    "tabs": {
+      "aria": "Провайдеры каталога",
+      "noKey": "нет ключа владельца",
+      "noKeyNote": "У этого провайдера нет ключа владельца рабочего пространства, но есть активная модель. Отключите её, если она не нужна; без ключа ничего нового не синхронизируется.",
+      "noMatchHere": "Ни одна модель {{provider}} не подходит под поиск или фильтры. Подходят: {{tabs}}.",
+      "outside_one": "{{count}} скрыт, нет ключа владельца: {{names}}",
+      "outside_few": "{{count}} скрыты, нет ключа владельца: {{names}}",
+      "outside_many": "{{count}} скрыто, нет ключа владельца: {{names}}",
+      "outside_other": "{{count}} скрыто, нет ключа владельца: {{names}}"
+    }
+  },
+  "picker": {
+    "filterFitForAgents": "подходят для агентов",
+    "noModelsRegistered": "Нет добавленных моделей",
+    "noToolCallingModels": "Ни одна модель не поддерживает нативный tool calling. Снимите фильтр, чтобы увидеть остальные.",
+    "currentHiddenByFilter": "Текущая модель ({{model}}) не поддерживает нативный tool calling и не входит в этот список.",
+    "selectModel": "Выбрать модель"
+  },
+  "spend": {
+    "title": "Расходы по вашим ключам",
+    "eyebrow": "видите только вы",
+    "subtitlePrefix": "Агенты всех проектов этого рабочего пространства расходуют ",
+    "subtitleYours": "ваши",
+    "subtitleSuffix": " учётные данные. Здесь показано, сколько ушло по каждой из них за месяц.",
+    "loading": "Подсчёт…",
+    "error": "Сейчас не удалось загрузить расходы. Потребление по-прежнему записывается — это только чтение.",
+    "empty": "За последние {{months}} мес. не зарегистрировано ни одного вызова LLM.",
+    "totalLabel": "Итого за последние {{months}} мес.",
+    "headers": {
+      "provider": "ПРОВАЙДЕР",
+      "agents": "АГЕНТЫ",
+      "youInChat": "ВЫ В ЧАТЕ",
+      "calls": "ВЫЗОВЫ",
+      "total": "ИТОГО"
+    },
+    "credentialNotRegistered": "ключ не добавлен",
+    "callsCount_one": "({{count}} вызов)",
+    "callsCount_few": "({{count}} вызова)",
+    "callsCount_many": "({{count}} вызовов)",
+    "callsCount_other": "({{count}} вызова)",
+    "currency": {
+      "belowCent": "< {{value}}"
+    }
+  },
+  "huggingface": {
+    "title": "Hugging Face Hub",
+    "eyebrow": "загрузить модель GGUF в Ollama",
+    "subtitle": "Ищет модели GGUF в Hub и запрашивает pull в локальный Ollama. По умолчанию показываются только официальные издатели — ничего не скачивается без второго явного подтверждения.",
+    "searchLabel": "Искать модель в Hugging Face Hub",
+    "searchPlaceholder": "напр.: llama-3.1-8b",
+    "searchButton": "Искать",
+    "searching": "Поиск…",
+    "searchError": "Сейчас не удалось выполнить поиск в Hugging Face Hub.",
+    "noResults": "Для \"{{query}}\" не найдено моделей GGUF.",
+    "communityToggle": "Показывать модели сообщества (неофициальные)",
+    "communityWarning": "Модели сообщества — это повторные загрузки третьих лиц без проверки производителем. Проверьте издателя перед загрузкой — вредоносный репозиторий может содержать подменённые веса.",
+    "downloads": "{{value}} загрузок",
+    "badgeOfficial": "официальная",
+    "badgeCommunity": "сообщество",
+    "pullButton": "Загрузить",
+    "pullStatus": {
+      "pending_confirmation": "ожидает подтверждения",
+      "confirmed": "подтверждено",
+      "pulling": "загрузка…",
+      "active": "активна",
+      "failed": "ошибка"
+    },
+    "confirmModal": {
+      "title": "Подтвердить загрузку модели",
+      "explanation": "Загрузка выполняется на сервере и может занять несколько минут в зависимости от размера модели. Сразу после завершения модель будет АКТИВИРОВАНА в этом рабочем пространстве.",
+      "preparing": "Подготовка запроса…",
+      "repoIdLabel": "Репозиторий",
+      "sizeLabel": "Примерный размер",
+      "sizeUnknown": "Hub не сообщил",
+      "cancel": "Отмена",
+      "confirm": "Подтвердить и загрузить"
+    },
+    "toasts": {
+      "requestErrorTitle": "Не удалось создать запрос на загрузку",
+      "confirmConnectionLostTitle": "Соединение потеряно во время загрузки — следим по статусу",
+      "pullSuccess": "{{repoId}} загружена и активирована",
+      "pullFailedTitle": "Загрузка {{repoId}} не удалась"
+    }
+  },
+  "credentialStep": {
+    "hint": "Для создания в {{provider}} нужен персональный токен доступа (PAT). Выберите уже добавленный или добавьте новый — токен шифруется при сохранении и больше не показывается. Проверка выполняется в настройках проекта, над уже сохранённым токеном.",
+    "credLabel": "{{provider}} подключён",
+    "credMeta": "с {{time}}",
+    "fieldLabel": "Новый токен {{provider}}",
+    "placeholder": "ghp_… / glpat-…",
+    "cancel": "Отмена",
+    "save": "Сохранить",
+    "saving": "Сохранение…",
+    "addNewToken": "Добавить новый токен"
+  },
+  "priceEditor": {
+    "open": "Цена и тариф",
+    "input": "Вход (US$ за 1M)",
+    "output": "Выход (US$ за 1M)",
+    "billing": "Тариф",
+    "api": "по использованию (API)",
+    "subscription": "подписка",
+    "free": "бесплатно",
+    "save": "Сохранить цену",
+    "invalid": "Введите числа, ноль или больше.",
+    "scope": "Цена действует для всей установки и только вперёд; прошлое потребление не меняется.",
+    "ownerOnly": "Цену и тариф меняет только owner.",
+    "history": "История цены",
+    "historyEmpty": "Изменений цены нет.",
+    "historyRow": "{{antes}} → {{depois}} · {{origem}} · {{quando}}",
+    "sourceManual": "вручную",
+    "sourceSync": "синхронизация",
+    "saved": "Цена сохранена.",
+    "suggestedBand": "рекомендуемый тариф: {{faixa}}",
+    "suggested": "рекомендуется: {{entrada}} / {{saida}} за 1M — {{fabricante}}, проверено {{data}}",
+    "source": "источник",
+    "apply": "Применить рекомендуемое",
+    "applied": "Рекомендуемые цена и тариф применены.",
+    "appliedPartial": "Применено шагов: {{feitos}} из {{total}}; остальное не удалось: {{frase}}",
+    "alreadyApplied": "Рекомендуемое значение уже применено."
+  }
+}

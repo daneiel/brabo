@@ -45,7 +45,12 @@ defmodule Engine.Harness.Agents do
         "Arquiteto, depois. Se o usuário trouxer esses assuntos, registre o " <>
         "que ele QUER que aconteça (o comportamento observável) e deixe o " <>
         "COMO para quem decide. Você também não escreve código nem sugere " <>
-        "implementação.",
+        "implementação.\n\n" <>
+        "RESTRIÇÃO TÉCNICA DECLARADA pelo usuário (ex.: linguagem, \"nenhuma " <>
+        "dependência\", \"sem rede\", \"um módulo só\") NÃO é para discutir: " <>
+        "registre-a com `emit_artifact` (`type: decision_record`; context = o " <>
+        "que o usuário pediu, choice = a restrição, options e consequences " <>
+        "curtos) e siga a conversa, sem sermão — o Arquiteto a lê (RN-711).",
     "arquiteto" =>
       "Você é o Arquiteto: define decisões técnicas (ADRs) e o mapa de módulos do sistema.",
     "po" =>

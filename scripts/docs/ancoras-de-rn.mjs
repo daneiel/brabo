@@ -54,17 +54,21 @@ export function conferirAncoras(texto) {
   return { cabecalhos, problemas };
 }
 
-const TRADUCAO_PT_BR = 'website/i18n/pt-BR/docusaurus-plugin-content-docs/current';
+/** Os locales traduzidos (ADR 0216): pt-BR é a fonte, em `docs/`. */
+export const LOCALES_TRADUZIDOS = ['en', 'ru', 'zh-Hans'];
+
+const traducao = (locale) => `website/i18n/${locale}/docusaurus-plugin-content-docs/current`;
 
 /**
  * Os arquivos de RN, pelo GLOB (um quarto arquivo entra sozinho, como na
- * contagem de `generate.mjs`) — os de `docs/` E os traduzidos em pt-BR.
+ * contagem de `generate.mjs`) — os de `docs/` (a fonte pt-BR) E os de cada
+ * locale traduzido.
  *
- * O pt-BR entra porque ele é PÁGINA PUBLICADA com os mesmos links: o site
- * `pt-BR` serve `business-rules#rn-305` pelo arquivo traduzido, e ali a
- * âncora faltava do mesmo jeito (a tradução copiou o cabeçalho sem ela). A
+ * A tradução entra porque ela é PÁGINA PUBLICADA com os mesmos links: o site
+ * do locale serve `business-rules#rn-305` pelo arquivo traduzido, e ali a
+ * âncora faltava do mesmo jeito (uma tradução copiou o cabeçalho sem ela). A
  * regra é por CABEÇALHO, então vale igual numa tradução parcial: o que não foi
- * traduzido cai por fallback na página em inglês, que já é conferida.
+ * traduzido cai por fallback na fonte, que já é conferida.
  *
  * @param {(glob: string) => string[]} arquivos `git ls-files <glob>`
  */
@@ -72,8 +76,10 @@ export function arquivosDeRn(arquivos) {
   return [
     ...arquivos('docs/business-rules.md'),
     ...arquivos('docs/business-rules/*.md'),
-    ...arquivos(`${TRADUCAO_PT_BR}/business-rules.md`),
-    ...arquivos(`${TRADUCAO_PT_BR}/business-rules/*.md`),
+    ...LOCALES_TRADUZIDOS.flatMap((l) => [
+      ...arquivos(`${traducao(l)}/business-rules.md`),
+      ...arquivos(`${traducao(l)}/business-rules/*.md`),
+    ]),
   ];
 }
 

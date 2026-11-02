@@ -92,3 +92,29 @@
   font-size: 11px;
   color: var(--text-muted);
 }
+
+/* AT-497: a linha de ação das filas de PR pronta e de tarefa bloqueada. */
+.acoesDaLinha {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.erro {
+  margin: 0;
+  font-size: 11px;
+  color: var(--danger);
+}
+
+/* RN-861: o campo curto da resposta a uma pergunta em aberto. */
+.campo {
+  flex: 1 1 12rem;
+  min-width: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text-primary);
+  font: inherit;
+}

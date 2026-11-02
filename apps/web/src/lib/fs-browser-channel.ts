@@ -1,4 +1,5 @@
-import { Socket } from 'phoenix';
+import type { Socket } from 'phoenix';
+import { criarSocket, type SocketDescartavel } from './socket-phoenix';
 import { logger } from './logger';
 import { getTerminalTicket } from './api-client';
 import type {
@@ -104,6 +105,8 @@ type Pendente = PendenteListagem | PendenteInicial;
 
 export function connectFsBrowserChannel(projectId: string): FsBrowser {
   let socket: Socket | null = null;
+  // AT-500 (RN-833): o descarte remove também os ouvintes de `window`.
+  let descartavel: SocketDescartavel | null = null;
   let channel: ReturnType<Socket['channel']> | null = null;
   let fechado = false;
   /** Setado quando ticket/join/socket falha — daí em diante, toda chamada nova falha na hora. */
@@ -174,10 +177,11 @@ export function connectFsBrowserChannel(projectId: string): FsBrowser {
     // `runner`) — antes desta correção, `FolderBrowserModal` nunca tinha
     // sido exercitado contra um engine real neste caminho.
     const wsUrl = engineWsUrl.replace(/^http/, 'ws');
-    socket = new Socket(wsUrl, {
+    descartavel = criarSocket(wsUrl, {
       params: { ticket },
       reconnectAfterMs: () => NUNCA_RECONECTAR_SOZINHO_MS,
     });
+    socket = descartavel.socket;
 
     socket.onError((erro: unknown) => {
       logger.warn('socket de navegação de pasta com erro', { projectId, erro: String(erro) });
@@ -241,7 +245,7 @@ export function connectFsBrowserChannel(projectId: string): FsBrowser {
 
     if (fechado) {
       canal.leave();
-      socket.disconnect();
+      descartavel?.descartar();
       return;
     }
 
@@ -291,7 +295,7 @@ export function connectFsBrowserChannel(projectId: string): FsBrowser {
       filaAntesDoCanal = [];
       falharTudoPendente('Navegação encerrada.');
       channel?.leave();
-      socket?.disconnect();
+      descartavel?.descartar();
     },
   };
 }

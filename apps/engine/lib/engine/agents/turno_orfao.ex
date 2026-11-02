@@ -25,9 +25,26 @@ defmodule Engine.Agents.TurnoOrfao do
   E avisa o canal (`agent.error` e `agent.done`) para a faixa de quem está com a
   tela aberta sair sem recarregar.
 
-  NUNCA reexecuta o turno. Reexecutar seria gastar token em nome de uma mensagem
-  que o usuário talvez já tenha esquecido, com o histórico reconstruído pela
-  metade; a decisão de tentar de novo é dele — a mensagem diz isso.
+  Fora da retomada abaixo, NUNCA reexecuta o turno. Reexecutar seria gastar
+  token em nome de uma mensagem que o usuário talvez já tenha esquecido, com o
+  histórico reconstruído pela metade; a decisão de tentar de novo é dele — a
+  mensagem diz isso.
+
+  ## Retomada automática 1× no boot (AT-582, ADR 0226)
+
+  SÓ `varrer/2` (o boot) retoma, e só o turno RECENTE: a última atividade do
+  agente (`createdAt` do evento mais recente dele) cabe em
+  `Engine.Agents.Diario.janela_segundos/0` (900 s, `:retomada_automatica_janela_segundos`)
+  e o turno ainda não foi retomado (não há `agent.turn_resumed` do agente logo
+  antes do `working` órfão — é o teto 1×, durável no log). Nesse caso, em vez de
+  só fechar, grava `agent.error` (`retomada: "automatica"`), `agent.status:
+  idle` e `agent.turn_resumed` (`%{retomaDe, ultimaAtividadeEm, automatica: true}`)
+  e ACORDA o agente (`Engine.Agents.FilaDeMensagens.acordar/3`, ou a função do
+  app env `:acordar_agente`, para teste). Quem retoma de fato é o `init/1` do
+  servidor, por `TurnoAssincrono.retomada_ao_subir/3`. O mesmo critério de
+  "vivo" vale (nó mudo = vivo: na dúvida nem fecha nem retoma). Órfão velho,
+  já retomado ou sem horário no log: o fechamento de sempre. `fechar_ao_subir/3`
+  (o `init/1`) continua só FECHANDO.
 
   ## Onde roda
 
@@ -49,6 +66,7 @@ defmodule Engine.Agents.TurnoOrfao do
 
   require Logger
 
+  alias Engine.Agents.{Diario, FilaDeMensagens}
   alias Engine.Sessions.{EngineApiClient, LiveBroadcast}
 
   # Os sete que rodam pelo `TurnoAssincrono`. O Infra Lead ficou de fora na
@@ -71,7 +89,7 @@ defmodule Engine.Agents.TurnoOrfao do
   @spec varrer(String.t(), String.t()) :: [String.t()]
   def varrer(project_id, session_id) do
     candidatos = Enum.reject(@agentes, &vivo?(&1, session_id, :todos))
-    fechar(project_id, session_id, candidatos)
+    fechar(project_id, session_id, candidatos, retomar: true)
   end
 
   @doc """
@@ -86,10 +104,14 @@ defmodule Engine.Agents.TurnoOrfao do
   end
 
   @doc "Fecha o turno órfão dos `agentes` (os que tiverem `working` como último status)."
-  @spec fechar(String.t(), String.t(), [String.t()]) :: [String.t()]
-  def fechar(_project_id, _session_id, []), do: []
+  @spec fechar(String.t(), String.t(), [String.t()], keyword()) :: [String.t()]
+  def fechar(project_id, session_id, agentes, opts \\ [])
 
-  def fechar(project_id, session_id, agentes) do
+  def fechar(_project_id, _session_id, [], _opts), do: []
+
+  def fechar(project_id, session_id, agentes, opts) do
+    retomar? = Keyword.get(opts, :retomar, false)
+
     case EngineApiClient.list_events(project_id, session_id,
            types: ["agent.status"],
            latest: true,
@@ -97,7 +119,7 @@ defmodule Engine.Agents.TurnoOrfao do
          ) do
       {:ok, eventos} ->
         fechados = orfaos(eventos, agentes)
-        Enum.each(fechados, &encerrar(project_id, session_id, &1))
+        Enum.each(fechados, &encerrar(project_id, session_id, &1, retomar?))
         fechados
 
       {:error, motivo} ->
@@ -132,24 +154,70 @@ defmodule Engine.Agents.TurnoOrfao do
   defp seq(%{"seq" => s}) when is_integer(s), do: s
   defp seq(_), do: 0
 
-  defp encerrar(project_id, session_id, agente) do
-    origem = "infra"
+  defp encerrar(project_id, session_id, agente, true) do
+    case Diario.ler(project_id, session_id, agente) do
+      {:ok, diario} ->
+        if Diario.retomavel_no_boot?(diario, DateTime.utc_now()),
+          do: retomar(project_id, session_id, agente, diario),
+          else: encerrar(project_id, session_id, agente, false)
 
-    mensagem =
+      {:error, _} ->
+        encerrar(project_id, session_id, agente, false)
+    end
+  end
+
+  defp encerrar(project_id, session_id, agente, false) do
+    fechar_com(
+      project_id,
+      session_id,
+      agente,
       "O engine foi reiniciado no meio do meu turno e ele não foi concluído — " <>
         "não vou retomá-lo sozinho. Nada foi refeito nem gasto agora; se ainda " <>
-        "quiser, mande a mensagem de novo."
+        "quiser, mande a mensagem de novo.",
+      %{}
+    )
+  end
+
+  defp retomar(project_id, session_id, agente, diario) do
+    fechar_com(
+      project_id,
+      session_id,
+      agente,
+      "O engine foi reiniciado no meio do meu turno — vou retomá-lo uma vez, do " <>
+        "ponto em que parei.",
+      %{retomada: "automatica"}
+    )
+
+    _ =
+      EngineApiClient.append_event(project_id, session_id, %{
+        type: Diario.tipo_retomada(),
+        actorKind: "agent",
+        actorId: agente,
+        payload: %{
+          retomaDe: diario.retomar_de,
+          ultimaAtividadeEm: DateTime.to_iso8601(diario.ultima_atividade),
+          automatica: true
+        }
+      })
+
+    acordar = Application.get_env(:engine, :acordar_agente, &FilaDeMensagens.acordar/3)
+    acordar.(agente, session_id, project_id)
+    Logger.info("turno órfão: #{agente} da sessão #{session_id} será retomado (1×, recente)")
+  end
+
+  defp fechar_com(project_id, session_id, agente, mensagem, extra) do
+    origem = "infra"
 
     _ =
       EngineApiClient.append_event(project_id, session_id, %{
         type: "agent.error",
         actorKind: "agent",
         actorId: agente,
-        payload: %{
-          origem: origem,
-          mensagem: mensagem,
-          reason: "turno_interrompido_por_reinicio"
-        }
+        payload:
+          Map.merge(
+            %{origem: origem, mensagem: mensagem, reason: "turno_interrompido_por_reinicio"},
+            extra
+          )
       })
 
     EngineWeb.Endpoint.broadcast("session:" <> session_id, "agent.error", %{

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { AlertCircleIcon, AlertIcon, CheckIcon } from './icons';
-import styles from './Alert.module.css';
+import { Alert as AlertShadcn, AlertIcone, AlertTexto } from '@/components/shadcn/alert';
 
 export type AlertTone = 'danger' | 'warning' | 'success' | 'accent';
 
@@ -58,16 +58,10 @@ export function Alert({
   role,
   className,
 }: AlertProps) {
-  const classes = [styles.alerta, styles[tone], className]
-    .filter(Boolean)
-    .join(' ');
-
   return (
-    <div className={classes} role={role}>
-      <span className={styles.icone} aria-hidden="true">
-        {icon ?? <IconeDoTom tone={tone} />}
-      </span>
-      <div className={styles.texto}>{children}</div>
-    </div>
+    <AlertShadcn variant={tone} role={role} className={className}>
+      <AlertIcone>{icon ?? <IconeDoTom tone={tone} />}</AlertIcone>
+      <AlertTexto>{children}</AlertTexto>
+    </AlertShadcn>
   );
 }

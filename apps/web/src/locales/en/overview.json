@@ -34,6 +34,7 @@
   },
   "timeline": {
     "title": "Team timeline",
+    "lendoExecucao": "Reading the execution session, not the most recent one.",
     "description": "One branch per agent, from the first milestone to what it's doing right now. Whoever is active, or among the 5 most recent, opens on its own — the rest is one click away, with a count of new milestones in the header."
   },
   "ambiente": {
@@ -62,21 +63,24 @@
     "espelhoRessalvaErro": "The local agent reported: {{erro}}",
     "espelhoDestinoTrocado": "The destination changed after this round: it wrote to {{destino}}. Reconnect brabo-runner so the new one takes effect.",
     "modelosLocais": "local models",
-    "modelosLocaisNenhum": "no Ollama model active in the workspace",
-    "modelosLocaisValor_one": "{{count}} from Ollama, active in the workspace",
-    "modelosLocaisValor_other": "{{count}} from Ollama, active in the workspace"
+    "modelosLocaisNenhum": "no Ollama chat model active in the workspace",
+    "modelosLocaisValor_one": "{{count}} Ollama chat model, active in the workspace",
+    "modelosLocaisValor_other": "{{count}} Ollama chat models, active in the workspace",
+    "modelosLocaisEmbedding_one": "{{count}} embedding model (search only, does not chat)",
+    "modelosLocaisEmbedding_other": "{{count}} embedding models (search only, do not chat)"
   },
   "activity": {
     "title": "Activity",
     "count_one": "{{count}} event",
     "count_other": "{{count}} events",
-    "loadErrorTitle": "Could not load the activity."
+    "loadErrorTitle": "Could not load the activity.",
+    "emptyNoSession": "No activity yet: it starts with the project's first session."
   },
   "executionSection": {
     "title": "Execution",
     "activationErrorTitle": "Could not tell if execution was already activated.",
     "introReady": "Activate execution for the dev agents to implement the backlog in parallel.",
-    "introNeedsModuleMap": "Define the module_map (Architect) before activating execution.",
+    "introNeedsModuleMap": "Nothing to activate yet: the Architect has to define the project's modules first.",
     "introNeedsRepository": "This project has no repository yet, and without one the dev agents have nowhere to work. It is created when you accept the handoff to the Architect — or, if that one was already accepted, the handoff to the Dev Lead.",
     "provisionNow": "Provision the repository now",
     "activate": "Activate execution",
@@ -97,11 +101,15 @@
     "errorTitle": "Error",
     "activateError": "Could not activate execution",
     "unblockError": "Could not unblock the task",
+    "unblockedTitle": "Task unblocked",
+    "unblockedWithoutExecution": "No execution is running: the task only runs when you restart the execution, here in this section.",
     "authorizationNeededTitle": "Needs your authorization",
     "authorizationNeededMessage_one": "The session already has {{count}} agent, the lead's cap is {{max}}. The request is in Approvals.",
     "authorizationNeededMessage_other": "The session already has {{count}} agents, the lead's cap is {{max}}. The request is in Approvals.",
     "requestDeniedTitle": "Request denied",
-    "requestError": "Could not request"
+    "requestError": "Could not request",
+    "unblocking": "Unblocking…",
+    "unblockNeedsSession": "The session is still loading: unblocking needs it."
   },
   "architectureSummary": {
     "title": "Architecture",
@@ -111,5 +119,35 @@
     "statusGenerated": "generated",
     "statusPending": "pending",
     "link": "View full architecture →"
+  },
+  "primeirosPassos": {
+    "title": "First steps",
+    "progresso": "{{feitos}} of {{total}} done",
+    "feito": "Done",
+    "credencial": {
+      "titulo": "Add a model provider key",
+      "pendente": "Without a key, the agents have nothing to talk with.",
+      "link": "Add the key →"
+    },
+    "modelo": {
+      "titulo": "Activate a model and apply it to the team",
+      "pendente": "No agent has a model yet: activate one in Providers and pick it here.",
+      "link": "Pick the model →"
+    },
+    "ideacao": {
+      "titulo": "Start the first ideation",
+      "pendente": "Tell the Creative agent your idea — that is where the stories come from.",
+      "link": "Open the Creative agent →"
+    }
+  },
+  "rodarNaSuaMaquina": {
+    "title": "Run it on your machine",
+    "envExample": "First copy the example environment file: cp .env.example .env",
+    "copiar": "Copy",
+    "copiado": "Copied",
+    "urlRecusada": "(address outside your machine, not shown as a link)",
+    "notaAntes": "Declared by Infra in the",
+    "pr": "pull request",
+    "notaDepois": ", not verified on your machine."
   }
 }

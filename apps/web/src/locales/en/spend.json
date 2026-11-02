@@ -44,7 +44,16 @@
     "note": "There's no breakdown by provider or credential here — it's someone else's bill, and this screen's question is your own consumption."
   },
   "charts": {
-    "noSpendInWindow": "No spend in this window."
+    "noSpendInWindow": "No spend in this window.",
+    "window_one": "last day",
+    "window_other": "last {{count}} days",
+    "spend": "Spend",
+    "calls_one": "{{count}} call",
+    "calls_other": "{{count}} calls",
+    "viewAsTable": "View as table",
+    "colDay": "Day",
+    "colSpend": "Spend",
+    "colCalls": "Calls"
   },
   "libSpend": {
     "callTitle_one": "{{dia}} · {{custo}} · {{count}} call",
@@ -52,5 +61,61 @@
     "actorPerson": "{{id}} (person)",
     "budgetBlocked": "This project reached {{pct}}% of its budget — new LLM calls are BLOCKED until the cap goes up.",
     "budgetWarning": "This project has already passed {{pct}}% of its defined budget."
+  },
+  "window": {
+    "label": "Window",
+    "option": "{{n}} days"
+  },
+  "subscription": {
+    "label": "Subscription",
+    "detail": "inside the total — a fixed seat, not a USD charge",
+    "noPrice": "subscription — no price recorded",
+    "inRow": "subscription {{valor}}"
+  },
+  "global": {
+    "title": "Spend",
+    "ownerSubtitle": "Every project in the workspace. Which key the money came from is in the section below.",
+    "memberSubtitle": "What you consumed in each project of the workspace. The cost is an estimate: the owner's key pays, and that bill is theirs.",
+    "memberTitle": "My usage",
+    "memberError": "I could not load your usage right now. The record is still there — this is only the read.",
+    "memberByProject": "By project",
+    "memberByProjectEmpty": "You spent nothing in this window.",
+    "memberTotal": "Your spend in {{dias}} days",
+    "memberDaily": "Your spend per day",
+    "budgetsTitle": "Project budgets",
+    "budgetsEmpty": "No projects in this workspace.",
+    "budgetNone": "no budget — set one",
+    "budgetOf": "{{gasto}} of {{limite}}",
+    "budgetsError": "I could not load the budgets right now."
+  },
+  "project": {
+    "ownerTitle": "Project spend",
+    "ownerSubtitle": "Last {{dias}} days, this project only — by model, provider, agent and person, and session. Spend across all projects is on the Spend page.",
+    "bySessionTitle": "By session",
+    "bySessionEmpty": "No session spent in this window."
+  },
+  "team": {
+    "title": "Project spend",
+    "subtitle": "Last {{dias}} days: what the agents spent on this project. No provider or key — the bill belongs to the workspace owner.",
+    "error": "I could not load the project spend right now.",
+    "totalLabel": "Project total in {{dias}} days",
+    "byAgentTitle": "By agent",
+    "byAgentEmpty": "No agent spent in this window.",
+    "byAreaTitle": "By area",
+    "byAreaEmpty": "No area spent in this window.",
+    "noArea": "no area"
+  },
+  "budgetEditor": {
+    "title": "Project budget",
+    "limitLabel": "Limit in USD",
+    "policyLabel": "When the limit is reached",
+    "block": "block new calls",
+    "allow": "only warn",
+    "save": "Save budget",
+    "saving": "Saving…",
+    "saved": "Budget saved.",
+    "error": "I could not save the budget. Nothing changed.",
+    "invalid": "Enter a limit greater than zero.",
+    "noRole": "Setting the budget requires the maintainer role on this project."
   }
 }

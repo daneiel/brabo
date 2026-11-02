@@ -33,10 +33,20 @@ import { fileURLToPath } from 'node:url';
  * mesma lista de `i18n.locales` do config menos `defaultLocale`; locale novo
  * entra aqui também, senão a duplicação dele passa calada.
  */
-export const LOCALES_COM_PREFIXO = ['pt-BR'];
+export const LOCALES_COM_PREFIXO = ['en', 'ru', 'zh-Hans'];
 
-/** Pasta dos ADRs na árvore DEFAULT (`en`), a fonte de verdade dos slugs. */
+/** Pasta dos ADRs na árvore DEFAULT (`pt-BR`), a fonte de verdade dos slugs. */
 const DIR_DE_ADRS = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../docs/adr');
+
+/**
+ * A página existe na fonte pt-BR (`docs/`)?
+ *
+ * @param {string} caminho relativo a `docs/`, ex.: `explanation/aceite-providers.md`
+ * @returns {boolean}
+ */
+export function paginaExisteNaFonte(caminho) {
+  return existsSync(path.join(DIR_DE_ADRS, '..', caminho));
+}
 
 /** Nome de arquivo com cara de ADR (`0118-algum-slug.md`). */
 const PADRAO_DE_ADR = /^\d{4}-[^/]+\.md$/;
@@ -76,7 +86,11 @@ export function adrExisteNoRepositorio(nomeDoArquivo) {
  * @param {(nomeDoArquivo: string) => boolean} [adrExiste] injetável para o spec
  * @returns {string} a rota `pathname://` que substitui o link
  */
-export function reescreverLinkDeGap({ sourceFilePath, url }, adrExiste = adrExisteNoRepositorio) {
+export function reescreverLinkDeGap(
+  { sourceFilePath, url },
+  adrExiste = adrExisteNoRepositorio,
+  paginaExiste = paginaExisteNaFonte,
+) {
   // `sourceFilePath` chega relativo ao CWD do processo (`website/`), por isso
   // `../docs/reference/...` — nunca comparar com `startsWith` supondo raiz do
   // repo. Uma fonte em `website/i18n/pt-BR/.../current/adr/x.md` e uma em
@@ -100,12 +114,22 @@ export function reescreverLinkDeGap({ sourceFilePath, url }, adrExiste = adrExis
     );
   }
   const fonteEhExplicacao = origemRelativaARaiz.startsWith('explanation/');
+  // Desde o ADR 0216 a tradução é PARCIAL em três locales: compilando `en`, um
+  // link de página não traduzida (servida da fonte pt-BR) para uma traduzida
+  // não bate com a árvore de arquivos do locale, em qualquer pasta. O gap passa
+  // a ser também o alvo EXISTIR na fonte `docs/` — que é a página que o locale
+  // serve, traduzida ou por fallback. Alvo que não existe continua lançando.
+  const alvoNaFonte = path.posix.join(
+    path.posix.dirname(origemRelativaARaiz.split(path.sep).join('/')),
+    url.split('#')[0],
+  );
   if (
     !fonteEhReferencia &&
     !alvoEhReferencia &&
     !fonteEhAdr &&
     !alvoEhAdr &&
-    !fonteEhExplicacao
+    !fonteEhExplicacao &&
+    !paginaExiste(alvoNaFonte)
   ) {
     throw new Error(
       `Markdown link quebrado: "${url}" em ${sourceFilePath}. Corrija o link ou aplique o protocolo pathname://.`,

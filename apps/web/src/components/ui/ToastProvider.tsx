@@ -10,6 +10,13 @@ interface ToastEntry {
   title: string;
   message?: string;
   tone: ToastTone;
+  acao?: AcaoDoToast;
+}
+
+/** Um link de ação no toast — o "e agora?" de um desfecho (AT-372). */
+export interface AcaoDoToast {
+  rotulo: string;
+  aoClicar: () => void;
 }
 
 interface ToastOptions {
@@ -17,6 +24,7 @@ interface ToastOptions {
   message?: string;
   tone?: ToastTone;
   durationMs?: number;
+  acao?: AcaoDoToast;
 }
 
 interface ToastContextValue {
@@ -43,9 +51,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const showToast = useCallback(
-    ({ title, message, tone = 'accent', durationMs = 5000 }: ToastOptions) => {
+    ({ title, message, tone = 'accent', durationMs = 5000, acao }: ToastOptions) => {
       const id = nextId++;
-      setToasts((current) => [...current, { id, title, message, tone }]);
+      setToasts((current) => [...current, { id, title, message, tone, acao }]);
       window.setTimeout(() => dismiss(id), durationMs);
     },
     [dismiss],
@@ -67,6 +75,18 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             <div className={styles.content}>
               <div className={styles.title}>{toast.title}</div>
               {toast.message && <div className={styles.message}>{toast.message}</div>}
+              {toast.acao && (
+                <button
+                  type="button"
+                  className={styles.acao}
+                  onClick={() => {
+                    toast.acao?.aoClicar();
+                    dismiss(toast.id);
+                  }}
+                >
+                  {toast.acao.rotulo}
+                </button>
+              )}
             </div>
             <button
               type="button"

@@ -1,0 +1,30 @@
+/* Shimmer (ADR 0210): base = --text-secondary (o pior ponto, medido em
+   design-contraste.test.ts), brilho = --text-primary. */
+.shimmer {
+  display: inline-block;
+  color: transparent;
+  --bg: linear-gradient(
+    90deg,
+    #0000 calc(50% - var(--spread)),
+    var(--text-primary),
+    #0000 calc(50% + var(--spread))
+  );
+  background-image: var(--bg), linear-gradient(var(--text-secondary), var(--text-secondary));
+  background-size: 250% 100%, auto;
+  background-repeat: no-repeat, padding-box;
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.estatico {
+  display: inline-block;
+  color: var(--text-secondary);
+}
+
+/* A animação para, o elemento fica (design/COMPONENTS.md). */
+@media (prefers-reduced-motion: reduce) {
+  .shimmer {
+    background-image: none;
+    color: var(--text-secondary);
+  }
+}

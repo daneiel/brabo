@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import i18next from 'i18next';
 import { initReactI18next, I18nextProvider } from 'react-i18next';
 import settingsPtBR from '../../locales/pt-BR/settings.json';
@@ -9,7 +9,6 @@ import modelsPtBR from '../../locales/pt-BR/models.json';
 import { ToastProvider } from '../../components/ui/ToastProvider';
 import type { Model, ModelsByCategory, Project } from '../../lib/api-types';
 import { ModelsSection } from './ModelsSection';
-import { AreaModelsSection } from './AreaModelsSection';
 import { loteSobreLeiturasPorChave } from '../../test/lote-de-bindings';
 
 /**
@@ -200,7 +199,7 @@ describe('binding de AGENTE — o picker abre com o filtro marcado', () => {
   it('o chat-only não é oferecido, e o apto é', async () => {
     await abrirPickerDoAgente();
 
-    expect((await screen.findByRole('checkbox')) as HTMLInputElement).toBeChecked();
+    expect((await screen.findByRole('checkbox', { name: /aptos para agentes/ })) as HTMLInputElement).toBeChecked();
     expect(screen.queryByText(TAGARELA)).toBeNull();
     // Mais de UM: o nome aparece no gatilho E na opção da lista aberta. Só o
     // gatilho não provaria que o apto continua sendo oferecido.
@@ -210,22 +209,28 @@ describe('binding de AGENTE — o picker abre com o filtro marcado', () => {
   it('desmarcar volta a listar TUDO — é estado inicial, não trava', async () => {
     await abrirPickerDoAgente();
 
-    fireEvent.click(await screen.findByRole('checkbox'));
+    fireEvent.click(await screen.findByRole('checkbox', { name: /aptos para agentes/ }));
 
     expect(screen.getByText(TAGARELA)).toBeInTheDocument();
   });
 });
 
-describe('binding de ÁREA — o picker abre com o filtro marcado', () => {
-  it('o chat-only não é oferecido em nenhuma área', async () => {
-    montar(<AreaModelsSection projectId="proj-1" />);
+describe('binding de ÁREA (caixa na linha do lead) — o picker abre com o filtro marcado', () => {
+  it('o chat-only não é oferecido ao lead que segue a área', async () => {
+    getAgentModelBinding.mockImplementation((_p: string, slug: string) =>
+      Promise.resolve(
+        slug === 'qa' ? { modelId: 'm-tools', origin: 'area', skipped: [] } : null,
+      ),
+    );
+    montar(<ModelsSection projectId="proj-1" />);
 
-    const pickers = await screen.findAllByRole('button', {
-      name: new RegExp(`${COM_FERRAMENTAS}|Selecionar modelo`),
-    });
-    fireEvent.click(pickers[0]!);
+    const caixa = await screen.findByRole('checkbox', { name: /área QA inteira/ });
+    const celula = caixa.closest('label')!.parentElement!.parentElement!;
+    fireEvent.click(within(celula).getAllByRole('button')[0]!);
 
-    expect((await screen.findByRole('checkbox')) as HTMLInputElement).toBeChecked();
+    expect(
+      (await screen.findByRole('checkbox', { name: /aptos para agentes/ })) as HTMLInputElement,
+    ).toBeChecked();
     expect(screen.queryByText(TAGARELA)).toBeNull();
   });
 });
@@ -277,7 +282,7 @@ describe('o vigente que o filtro esconde', () => {
     fireEvent.click(
       (await screen.findAllByRole('button', { name: new RegExp(TAGARELA) }))[0]!,
     );
-    fireEvent.click(await screen.findByRole('checkbox'));
+    fireEvent.click(await screen.findByRole('checkbox', { name: /aptos para agentes/ }));
 
     expect(screen.queryByText(/está fora desta lista/)).toBeNull();
   });

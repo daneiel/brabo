@@ -34,8 +34,18 @@ export class LLMRateLimitError extends LLMProviderError {
   readonly code = 'rate_limit' as const;
 }
 
+/** A conta no provider está sem crédito (402) — RN-730. */
+export class LLMInsufficientCreditError extends LLMProviderError {
+  readonly code = 'insufficient_credit' as const;
+}
+
 export class LLMModelNotFoundError extends LLMProviderError {
   readonly code = 'model_not_found' as const;
+}
+
+/** Nenhum upstream do hub cabe no teto de preço enviado (404 com teto, ADR 0225). */
+export class LLMPriceCeilingError extends LLMProviderError {
+  readonly code = 'price_ceiling' as const;
 }
 
 export class LLMContextLengthExceededError extends LLMProviderError {
@@ -81,10 +91,26 @@ export function normalizeHttpStatus(
   const detalhe = resumo(body);
   const sufixo = detalhe ? `: ${detalhe}` : '';
 
+  // RN-886 (AT-534): o 403 de ORÇAMENTO do OpenRouter (guardrail mensal da
+  // chave, `limit_source: openrouter_guardrail_budget`) não é credencial
+  // rejeitada — é falta de saldo autorizado, a MESMA natureza do 402. Vai pelo
+  // mesmo `insufficient_credit` (RN-730), sem código novo no contrato.
+  if (status === 403 && pareceOrcamento(body)) {
+    return new LLMInsufficientCreditError(
+      provider,
+      `orçamento da chave esgotado em ${provider} (403)${sufixo}`,
+    );
+  }
   if (status === 401 || status === 403) {
     return new LLMAuthError(
       provider,
       `credencial rejeitada por ${provider} (${status})${sufixo}`,
+    );
+  }
+  if (status === 402) {
+    return new LLMInsufficientCreditError(
+      provider,
+      `crédito insuficiente em ${provider} (402)${sufixo}`,
     );
   }
   if (status === 404) {
@@ -111,6 +137,11 @@ export function normalizeHttpStatus(
   );
 }
 
+function pareceOrcamento(body: string | undefined): boolean {
+  if (!body) return false;
+  return /budget limit exceeded|guardrail_budget/i.test(body);
+}
+
 function pareceContexto(body: string | undefined): boolean {
   if (!body) return false;
   const minusculo = body.toLowerCase();
@@ -123,8 +154,14 @@ function pareceContexto(body: string | undefined): boolean {
  * O corpo de erro vai junto da mensagem porque sem ele "429" não diz se o
  * problema é por minuto ou por dia — mas ele é truncado: alguns providers
  * devolvem uma página HTML inteira, e isso acabaria num evento de sessão.
+ *
+ * O teto era 200 e cortava o JSON do OpenRouter antes do `metadata.reason`
+ * (medido no TP-01, 03/10: `…"code":402,"metadata":{"reason":"in…`), que é o
+ * que diz a NATUREZA do erro. 4 000 cabe o corpo JSON de todo provider medido
+ * e ainda segura a página HTML (RN-739). A frase da bolha NÃO cresce com ele:
+ * o engine a corta à parte (`FalhaDeTurno.mensagem/2`, RN-733).
  */
-const LIMITE_DO_DETALHE = 200;
+export const LIMITE_DO_DETALHE = 4_000;
 
 function resumo(body: string | undefined): string {
   if (!body) return '';

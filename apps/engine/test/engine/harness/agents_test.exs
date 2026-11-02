@@ -29,6 +29,13 @@ defmodule Engine.Harness.AgentsTest do
       assert identidade =~ "formato de resposta"
       assert identidade =~ "não escreve código"
     end
+
+    test "restrição técnica declarada vira decision_record, sem sermão (RN-711)" do
+      identidade = Agents.identity("criativo")
+      assert identidade =~ "RESTRIÇÃO TÉCNICA DECLARADA"
+      assert identidade =~ "decision_record"
+      assert identidade =~ "sem sermão"
+    end
   end
 
   describe "identity/1 dos demais" do

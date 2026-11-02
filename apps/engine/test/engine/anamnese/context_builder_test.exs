@@ -23,8 +23,11 @@ defmodule Engine.Anamnese.ContextBuilderTest do
   setup do
     Application.put_env(:engine, :engine_api_client, FakeEngineApiClient)
     Application.put_env(:engine, :test_pid, self())
+    # Sujeito com UMA interação, como antes do piso da RN-722.
+    Application.put_env(:engine, :anamnese_min_interacoes_proprias, 1)
 
     on_exit(fn ->
+      Application.delete_env(:engine, :anamnese_min_interacoes_proprias)
       Application.delete_env(:engine, :engine_api_client)
       Application.delete_env(:engine, :test_pid)
     end)
@@ -45,8 +48,8 @@ defmodule Engine.Anamnese.ContextBuilderTest do
         "decisions" => [
           %{
             "actionType" => "terminal",
-            "status" => "approved",
-            "rejectionReason" => nil,
+            "status" => "rejected",
+            "rejectionReason" => "fora do escopo",
             "decidedBy" => "user-1",
             "decidedAt" => "2026-07-19T10:00:00Z"
           }

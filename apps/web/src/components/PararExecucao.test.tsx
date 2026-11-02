@@ -1,0 +1,102 @@
+import { describe, expect, it, vi, beforeEach, afterAll } from 'vitest';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import i18n from '../lib/i18n';
+
+/**
+ * RN-763 (AT-456): "Parar execução" fecha a sessão de execução, e só depois
+ * de uma confirmação que diz o que fica.
+ */
+const transitionSession = vi.fn();
+const listBacklog = vi.fn();
+
+vi.mock('../lib/api-client', () => ({
+  transitionSession: (...args: unknown[]) => transitionSession(...args),
+  listBacklog: (...args: unknown[]) => listBacklog(...args),
+  mensagemDaApi: (erro: unknown, padrao: string) =>
+    erro instanceof Error ? erro.message : padrao,
+}));
+
+const { PararExecucao } = await import('./PararExecucao');
+
+function montar(podeParar = true) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={client}>
+      <PararExecucao projectId="proj-1" sessionId="sess-1" podeParar={podeParar} />
+    </QueryClientProvider>,
+  );
+}
+
+beforeEach(async () => {
+  vi.clearAllMocks();
+  await i18n.changeLanguage('pt-BR');
+  transitionSession.mockResolvedValue({});
+  listBacklog.mockResolvedValue(backlog(['in_progress', 'in_progress', 'done']));
+});
+
+function backlog(status: string[]) {
+  return [
+    {
+      id: 'e1',
+      stories: [{ id: 's1', tasks: status.map((st, i) => ({ id: `t${i}`, status: st })) }],
+    },
+  ];
+}
+
+afterAll(() => {
+  void i18n.changeLanguage('en');
+});
+
+describe('PararExecucao (RN-763)', () => {
+  it('confirma dizendo o que fica e fecha a sessão (closing → closed)', async () => {
+    montar();
+    fireEvent.click(screen.getByRole('button', { name: 'Parar execução' }));
+    expect(transitionSession).not.toHaveBeenCalled();
+
+    const fica = screen.getByTestId('parar-execucao-o-que-fica');
+    await waitFor(() => expect(fica).toHaveTextContent('2 tarefas em curso são bloqueadas'));
+    expect(fica).toHaveTextContent('PRs já abertas continuam abertas');
+
+    const botoes = screen.getAllByRole('button', { name: 'Parar execução' });
+    fireEvent.click(botoes[botoes.length - 1]);
+
+    await waitFor(() => expect(transitionSession).toHaveBeenCalledTimes(2));
+    expect(transitionSession).toHaveBeenNthCalledWith(1, 'proj-1', 'sess-1', 'closing');
+    expect(transitionSession).toHaveBeenNthCalledWith(2, 'proj-1', 'sess-1', 'closed');
+  });
+
+  it('recusa da api fica na confirmação, com a frase dela', async () => {
+    transitionSession.mockRejectedValueOnce(new Error('sessão já encerrada'));
+    montar();
+    fireEvent.click(screen.getByRole('button', { name: 'Parar execução' }));
+    const botoes = screen.getAllByRole('button', { name: 'Parar execução' });
+    fireEvent.click(botoes[botoes.length - 1]);
+    expect(await screen.findByRole('alert')).toHaveTextContent('sessão já encerrada');
+  });
+
+  it('sem papel o botão fica inerte e o motivo é dito em texto', () => {
+    montar(false);
+    expect(screen.getByRole('button', { name: 'Parar execução' })).toBeDisabled();
+    expect(screen.getByText(/pede o papel developer/)).toBeInTheDocument();
+  });
+
+  it('RN-815 (AT-488): a tarefa em revisão de QA conta, e o modal diz o que acontece com ela', async () => {
+    listBacklog.mockResolvedValue(backlog(['in_review', 'done']));
+    montar();
+    expect(listBacklog).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Parar execução' }));
+    const fica = screen.getByTestId('parar-execucao-o-que-fica');
+    await waitFor(() => expect(fica).toHaveTextContent('1 tarefa em revisão de QA: o gate dela para'));
+    expect(fica).not.toHaveTextContent('Nenhuma tarefa');
+  });
+
+  it('RN-815: sem backlog lido não afirma "nenhuma tarefa"', async () => {
+    listBacklog.mockRejectedValue(new Error('rede'));
+    montar();
+    fireEvent.click(screen.getByRole('button', { name: 'Parar execução' }));
+    const fica = screen.getByTestId('parar-execucao-o-que-fica');
+    await waitFor(() => expect(fica).toHaveTextContent('Não foi possível ler o backlog'));
+    expect(fica).not.toHaveTextContent('Nenhuma tarefa');
+  });
+});

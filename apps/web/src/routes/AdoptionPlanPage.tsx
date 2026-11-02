@@ -1,3 +1,4 @@
+import { Shimmer } from '../components/ui/Shimmer';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from '@tanstack/react-router';
@@ -147,7 +148,7 @@ export function AdoptionPlanPage({
       {erro && <Alert tone="danger" role="alert">{erro}</Alert>}
 
       {!plan && !erro && (
-        <div className={styles.starting}>{t('readingRepo')}</div>
+        <div className={styles.starting}><Shimmer>{t('readingRepo')}</Shimmer></div>
       )}
 
       {plan && decision === null && (
