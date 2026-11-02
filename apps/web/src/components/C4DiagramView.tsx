@@ -3,6 +3,9 @@ import { useTranslation } from 'react-i18next';
 import type { C4Diagrama } from '../lib/api-types';
 import { renderMermaid } from '../lib/mermaid-render';
 import { Alert } from './ui/Alert';
+import { Button } from './ui/Button';
+import { Card } from './ui/Card';
+import { Disclosure } from './ui/Disclosure';
 import { ExpandIcon } from './ui/icons';
 import { Modal } from './ui/Modal';
 import { Skeleton } from './ui/Skeleton';
@@ -79,19 +82,21 @@ function DiagramaMermaid({
   const [ampliado, setAmpliado] = useState(false);
 
   return (
-    <div className={styles.card}>
+    <Card padding="none" className={styles.card}>
       <div className={styles.cardHeader}>
         <div className={styles.cardTitulo}>{titulo}</div>
         {estado.fase === 'pronto' && (
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="sm"
+            icon
             className={styles.expandButton}
             onClick={() => setAmpliado(true)}
             aria-label={t('c4.expandLabel', { titulo })}
             title={t('c4.expandTitle')}
           >
             <ExpandIcon size={13} />
-          </button>
+          </Button>
         )}
       </div>
       {estado.fase === 'rendering' && <Skeleton height={220} />}
@@ -99,10 +104,9 @@ function DiagramaMermaid({
         <Alert tone="danger">
           <strong>{t('c4.renderErrorTitle')}</strong>
           <p>{estado.mensagem}</p>
-          <details className={styles.sintaxeCrua}>
-            <summary>{t('c4.viewRawSyntax')}</summary>
+          <Disclosure titulo={t('c4.viewRawSyntax')} className={styles.sintaxeCrua}>
             <pre>{sintaxe}</pre>
-          </details>
+          </Disclosure>
         </Alert>
       )}
       {estado.fase === 'pronto' && (
@@ -130,7 +134,7 @@ function DiagramaMermaid({
           />
         </Modal>
       )}
-    </div>
+    </Card>
   );
 }
 
