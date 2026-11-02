@@ -22,6 +22,8 @@ export default function JanelaDoAgente({
   const { data } = useQuery({
     queryKey: ['session-token-usage', projectId, sessionId],
     queryFn: () => getSessionTokenUsage(projectId, sessionId),
+    // só lê o cache que a SessionPage já mantém: montar tarde não refaz a busca (RN-969/RN-632)
+    staleTime: Infinity,
   });
   const ultima = agente ? data?.find((a) => a.actorId === agente)?.lastCall : null;
   if (!ultima) return null;

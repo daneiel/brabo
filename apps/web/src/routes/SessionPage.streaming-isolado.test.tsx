@@ -110,6 +110,7 @@ vi.mock('../lib/api-client', () => ({
   getProject: vi.fn().mockResolvedValue({ id: 'proj-1', name: 'core' }),
   getSession: (...args: unknown[]) => getSession(...args),
   getSessionBudget: vi.fn().mockResolvedValue(null),
+  getSessionTokenUsage: vi.fn().mockResolvedValue([]),
   getSessionModelBinding: vi.fn().mockResolvedValue(null),
   listModels: vi.fn().mockResolvedValue(null),
   renameSession: vi.fn(),
