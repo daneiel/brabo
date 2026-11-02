@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Funcionalidades
 
+- A aba Executores e as abas Backlog, Sessões, Aprovações e PRs passam a ser montadas sobre o shadcn (AT-636, onda 4, rodada A): subagente delegado vira `Subagent` com o estado e a origem (RN-970), o modo automático do time vira `Checkbox`, a lista do piloto só monta quando aberta, linhas e avisos viram `Item`, e o parecer do gate na timeline da PR vira `Collapsible`; nenhuma regra muda (AT-655).
 - Paleta de comandos Ctrl+K (⌘K no macOS): busca projetos, abas do projeto aberto, a sessão mais recente de cada projeto e as ações da barra lateral, só com o que já está em memória (abrir a paleta não faz requisição); não abre com o foco no terminal (AT-656, RN-971).
 - O código no chat e na aba Código é realçado pelo shiki, carregado sob demanda por linguagem, com tema pelos tokens da casa nos dois temas; o bloco do chat ganha o botão Copiar (AT-657, RN-972, ADR 0234).
 - A página de Gastos e a aba Gastos do projeto desenham o gasto diário com o Chart (recharts carregado só nessa tela), com o gráfico de antes como reserva e "Ver como tabela" (AT-658, RN-973, ADR 0234).
