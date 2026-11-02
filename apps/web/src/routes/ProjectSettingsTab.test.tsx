@@ -1389,7 +1389,7 @@ describe('PersonalAccessTokensSection (ADR 0105)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Gerar token' }));
 
     expect(
-      await screen.findByDisplayValue('brb_valorquesoexisteumavez'),
+      await screen.findByText('brb_valorquesoexisteumavez'),
     ).toBeInTheDocument();
     expect(issuePersonalAccessToken).toHaveBeenCalledWith('proj-1', {
       name: 'laptop',
@@ -1398,6 +1398,20 @@ describe('PersonalAccessTokensSection (ADR 0105)', () => {
     // O valor só existe na resposta da emissão — a listagem não é
     // reconsultada pra exibir o modal.
     expect(listPersonalAccessTokens).toHaveBeenCalledTimes(1);
+  });
+
+  it('CASO DE FALHA: clipboard recusado no token pessoal avisa por toast', async () => {
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: vi.fn().mockRejectedValue(new Error('negado')) },
+      configurable: true,
+    });
+    issuePersonalAccessToken.mockResolvedValue({ ...token({ id: 'pat-x', name: 'x' }), token: 'brb_abc' });
+    montarTokens();
+    fireEvent.change(screen.getByPlaceholderText('Nome (ex.: laptop)'), { target: { value: 'x' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Gerar token' }));
+    await screen.findByText('brb_abc');
+    fireEvent.click(screen.getByRole('button', { name: 'Copiar' }));
+    expect(await screen.findByText('Não consegui copiar')).toBeInTheDocument();
   });
 
   it('revogar chama o DELETE e invalida a listagem', async () => {

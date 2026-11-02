@@ -95,7 +95,7 @@ describe('CodeExplorer — pasta é um Disclosure (aria-expanded acompanha o cli
     montar();
 
     await screen.findByText('apps');
-    const pasta = screen.getByRole('button', { name: /apps/ });
+    const pasta = screen.getByRole('treeitem', { name: /apps/ });
     expect(pasta.getAttribute('aria-expanded')).toBe('false');
 
     await user.click(pasta);
@@ -115,7 +115,7 @@ describe('CodeExplorer — pasta é um Disclosure (aria-expanded acompanha o cli
     montar();
 
     await screen.findByText('apps');
-    await user.click(screen.getByRole('button', { name: /apps/ }));
+    await user.click(screen.getByRole('treeitem', { name: /apps/ }));
 
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     // A raiz continua íntegra — o erro é só da subpasta.

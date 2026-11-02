@@ -272,7 +272,15 @@ export function PersonalAccessTokensSection({ projectId }: { projectId: string }
             <code>brabo-runner</code>
             {t('personalAccessTokens.modal.bodyEnd')}
           </p>
-          <Snippet texto={emitido.token} rotulo={t('personalAccessTokens.modal.copyButton')} rotuloCopiado={t('personalAccessTokens.modal.copiedButton')} />
+          <Snippet texto={emitido.token} rotulo={t('personalAccessTokens.modal.copyButton')} rotuloCopiado={t('personalAccessTokens.modal.copiedButton')}
+            aoFalhar={() =>
+              showToast({
+                title: t('personalAccessTokens.toast.copyErrorTitle'),
+                message: t('personalAccessTokens.toast.copyErrorMessage'),
+                tone: 'danger',
+              })
+            }
+          />
         </Modal>
       )}
     </SecaoDeConfiguracoes>

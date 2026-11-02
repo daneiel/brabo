@@ -106,9 +106,10 @@ describe('RunnerOnboardingPanel — o caminho é o instalador (ADR 0203)', () =>
       screen.getByText(/o navegador não executa programas na sua máquina/i),
     ).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Copiar' }));
+    await user.click(screen.getAllByRole('button', { name: 'Copiar' })[0]);
     expect(writeText).toHaveBeenCalledWith(COMANDO_DO_INSTALADOR);
     expect(await screen.findByRole('button', { name: 'Copiado!' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Copiado!' })).toHaveAttribute('title', 'Copiado!');
 
     // Depois do instalador, o que falta é o agente CONECTAR — a espera é UMA.
     expect(screen.getAllByText(/procurando o runner/i)).toHaveLength(1);
@@ -125,8 +126,8 @@ describe('RunnerOnboardingPanel — o caminho é o instalador (ADR 0203)', () =>
     ).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /baixar arquivos/i })).not.toBeInTheDocument();
     expect(screen.queryByText(/chmod \+x/)).not.toBeInTheDocument();
-    // O único botão além do de copiar é nenhum: o painel não tem ação de rede.
-    expect(screen.getAllByRole('button').map((b) => b.textContent)).toEqual(['Copiar']);
+    // Só os dois Copiar (instalador e comando manual): o painel não tem ação de rede.
+    expect(screen.getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual(['Copiar', 'Copiar']);
 
     cleanup();
   });
@@ -140,8 +141,8 @@ describe('RunnerOnboardingPanel — o caminho é o instalador (ADR 0203)', () =>
 
     renderComI18n(<RunnerOnboardingPanel projectId="proj-1" />);
 
-    await user.click(await screen.findByRole('button', { name: 'Copiar' }));
-    expect(screen.getByRole('button', { name: 'Copiar' })).toBeInTheDocument();
+    await user.click((await screen.findAllByRole('button', { name: 'Copiar' }))[0]);
+    expect(screen.getAllByRole('button', { name: 'Copiar' })[0]).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(screen.getByText(COMANDO_DO_INSTALADOR)).toBeInTheDocument();
 
