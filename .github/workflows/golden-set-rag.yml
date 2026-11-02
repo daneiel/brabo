@@ -38,6 +38,12 @@ jobs:
     name: Golden-set do RAG (ExUnit, contra Ollama real)
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    # Job-level SUBSTITUI o `permissions:` do topo: `contents: read` volta
+    # explícito, senão o checkout perderia a leitura. `issues: write` é o
+    # alarme do passo final (AT-667) — só abre/fecha a issue da falha agendada.
+    permissions:
+      contents: read
+      issues: write
     services:
       postgres:
         # pgvector, não `postgres:16` puro — mesmo motivo do `test-engine` em
@@ -210,3 +216,18 @@ jobs:
       - name: Log da api (só em falha)
         if: failure()
         run: tail -100 /tmp/api.log || true
+
+      # Alarme da rodada agendada (AT-667): falha abre a issue (ou comenta na
+      # aberta), verde fecha a que estiver aberta. Só a rodada do ramo padrão
+      # toca issue — `alarmar-prova.sh` decide. Mesmo molde do `propriedades.yml`.
+      - name: Abrir, atualizar ou fechar a issue do golden-set
+        if: ${{ !cancelled() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          URL_DO_RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          WORKFLOW_DA_PROVA: golden-set-rag.yml
+          JOB: ${{ job.status }}
+        run: |
+          set -euo pipefail
+          source scripts/ci/alarmar-prova.sh
+          alarmar 'golden-set-rag' "${JOB}" 'o passo "mix golden_set.rag" tem a contagem de casos e o log da api'
