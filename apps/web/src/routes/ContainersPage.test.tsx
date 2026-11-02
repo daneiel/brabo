@@ -175,6 +175,10 @@ beforeEach(() => {
   useLatestSession.mockReturnValue({ latest: sessaoRecente() });
 });
 
+function abrirAjuda(nome: string) {
+  fireEvent.click(screen.getByRole('button', { name: new RegExp(`(Ajuda|Help): ${nome}`) }));
+}
+
 describe('ContainersPage', () => {
   it('carregando: mostra o estado de loading, não a tabela nem erro', () => {
     useContainersOverview.mockReturnValue({ isPending: true, isError: false, data: undefined, refetch: vi.fn() });
@@ -517,6 +521,8 @@ describe('ContainersPage', () => {
 
     montar();
 
+    expect(screen.getByText(/Agente local pode estar desconectado|local agent may be disconnected/)).toBeVisible();
+    abrirAjuda('(Ações do container|Container actions)');
     expect(
       screen.getByText(/se ele não estiver rodando agora, a ação falha ao ser aprovada/),
     ).toBeInTheDocument();
@@ -598,6 +604,8 @@ describe('ContainersPage', () => {
       montar();
 
       expect(screen.getByRole('button', { name: 'Subir container' })).toBeDisabled();
+      expect(screen.getByText(/Sem broker de container nesta instalação/)).toBeVisible();
+      abrirAjuda('(Ações do container|Container actions)');
       expect(
         screen.getByText(/Esta instalação não sobe container para projetos Container ou Pasta montada/),
       ).toBeInTheDocument();
@@ -618,6 +626,7 @@ describe('ContainersPage', () => {
 
     expect(screen.getByRole('button', { name: 'Parar' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Remover' })).toBeDisabled();
+    abrirAjuda('(Ações do container|Container actions)');
     expect(screen.getByText(/stops and removes containers|para e remove os containers/)).toBeInTheDocument();
     expect(proposeAction).not.toHaveBeenCalled();
   });
@@ -637,6 +646,9 @@ describe('ContainersPage', () => {
 
     montar();
 
+    // A linha curta fica visível; os três passos moram no "?".
+    expect(screen.queryByText(/Parar → Remover|Stop → Remove/)).not.toBeInTheDocument();
+    abrirAjuda('(Ações do container|Container actions)');
     expect(screen.getByText(/Parar → Remover → Subir de novo|Stop → Remove → Start again/)).toBeInTheDocument();
     expect(screen.getByText(/subir de novo não aplica|starting again does not apply/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Subir de novo' })).toBeDisabled();
@@ -785,7 +797,7 @@ describe('ContainersPage — Parar/Remover sem container e o motivo curto (AT-32
     expect(screen.queryByText(/Container removido/)).toBeNull();
   });
 
-  it('sem broker: UMA linha curta visível; o nome da variável só no detalhe, fechado', () => {
+  it('sem broker: UMA linha curta visível; o nome da variável só no "?", fechado', () => {
     comDados([
       item({
         registrado: null,
@@ -794,31 +806,24 @@ describe('ContainersPage — Parar/Remover sem container e o motivo curto (AT-32
       }),
     ]);
 
-    const { container } = montar();
+    montar();
 
-    const resumo = screen.getByText(
-      /Sem broker de container nesta instalação: a subida só terminaria em falha\./,
-    );
-    expect(resumo.tagName).toBe('SUMMARY');
-    const detalhe = resumo.closest('details') as HTMLDetailsElement;
-    expect(detalhe.open).toBe(false);
-    // O texto longo (com BROKER_URL) mora DENTRO do <details>, e em mais
-    // lugar nenhum da linha.
-    expect(detalhe.textContent).toMatch(/BROKER_URL/);
-    const foraDoDetalhe = Array.from(container.querySelectorAll('p')).filter(
-      (p) => !p.closest('details'),
-    );
-    expect(foraDoDetalhe.some((p) => /BROKER_URL/.test(p.textContent ?? ''))).toBe(false);
+    expect(
+      screen.getByText(/Sem broker de container nesta instalação: a subida só terminaria em falha\./),
+    ).toBeVisible();
+    expect(screen.queryByText(/BROKER_URL/)).toBeNull();
+    abrirAjuda('(Ações do container|Container actions)');
+    expect(screen.getByText(/BROKER_URL/)).toBeInTheDocument();
   });
 
-  it('sem broker com container parado: subir, parar e remover travados pelo MESMO fato viram UMA linha', () => {
+it('sem broker com container parado: subir, parar e remover travados pelo MESMO fato viram UMA linha', () => {
     comDados([item({ registrado: registro({ status: 'stopped' }), brokerConfigurado: false })]);
 
-    const { container } = montar();
+    montar();
 
     expect(screen.getByText(/subir, parar e remover só terminariam em falha/)).toBeInTheDocument();
-    expect(container.querySelectorAll('details')).toHaveLength(1);
-    // Os dois detalhes continuam lá, atrás do mesmo <details>.
+    // Os dois detalhes continuam lá, atrás do mesmo "?".
+    abrirAjuda('(Ações do container|Container actions)');
     expect(screen.getByText(/Esta instalação não sobe container/)).toBeInTheDocument();
     expect(screen.getByText(/para e remove os containers/)).toBeInTheDocument();
   });

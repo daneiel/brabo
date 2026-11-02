@@ -80,8 +80,16 @@ describe('RedeDoContainer', () => {
     montar();
     expect(await screen.findByDisplayValue('8080:80')).toBeTruthy();
     expect(screen.getByText('Versão declarada: 3')).toBeTruthy();
-    expect(screen.getByText(/só em 127\.0\.0\.1/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Ajuda: Rede do container' }));
+    expect(await screen.findByText(/só em 127\.0\.0\.1/)).toBeTruthy();
     expect(screen.getByText(/só vale depois de recriar/)).toBeTruthy();
+  });
+
+  it('Salvar rede é botão só de ícone: nome acessível sem texto visível', async () => {
+    montar();
+    await screen.findByDisplayValue('8080:80');
+    const botao = screen.getByRole('button', { name: 'Salvar rede' });
+    expect(botao.textContent).toBe('');
   });
 
   it('rede nula tem texto próprio', async () => {

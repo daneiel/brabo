@@ -74,7 +74,12 @@
       "sem_broker_para_parar": "No container broker in this installation: stopping and removing could only fail.",
       "sem_broker_ambos": "No container broker in this installation: starting, stopping and removing could only fail."
     },
-    "bloqueioDetalhe": "Why?"
+    "desatualizadaCurta": "Outdated image: the container uses v{{de}}, the current decision is v{{para}}.",
+    "ressalvaCurta": {
+      "runner_pode_estar_desconectado": "The local agent may be disconnected.",
+      "registrado_rodando_observado_parado": "Recorded as running, observed stopped."
+    },
+    "ajuda": "Container actions"
   },
   "detail": {
     "title": "Container",
@@ -125,6 +130,7 @@
       "ipInvalido": "invalid IP",
       "formatoHost": "use a name and an IPv4 separated by a space",
       "nomeReservado": "reserved name"
-    }
+    },
+    "ajuda": "Container network"
   }
 }

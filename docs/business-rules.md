@@ -14186,7 +14186,7 @@ instalação sem broker continua possível pelo agente.
   `mounted` recusam antes da imagem), `:75` (`runner` não é afetado), `:84`
   (campo ausente recusa), `:93` (já de pé continua dizendo isso);
   `apps/web/src/routes/ContainersPage.test.tsx:562` (botão inerte e o motivo
-  em texto, nunca propõe), `:672` (`runner` segue subindo)
+  em texto, nunca propõe), `:684` (`runner` segue subindo)
 - **Origem:** AT-085 — instalação real da v6.1.0 em 2026-09-14, decidido pelo
   mantenedor em 2026-09-18
 
@@ -18158,7 +18158,7 @@ só terminariam em falha"), com os dois detalhes atrás do mesmo `<details>`.
 - **Código:** `apps/web/src/components/ContainerImageGate.tsx:33`
   (`ContainerImageGateNotice`), `:42` (`bloco`);
   `apps/web/src/routes/ProjectPrsTab.tsx:157` (`superficie="prs"`);
-  `apps/web/src/components/AcoesDoContainer.tsx:250` (`semContainer`), `:268`
+  `apps/web/src/components/AcoesDoContainer.tsx:250` (`semContainer`), `:274`
   (`chaveCurtaDoBroker`); `apps/web/src/components/ui/Button.module.css:101`
   (`.danger:disabled`)
 - **Teste:** `apps/web/src/routes/ProjectPrsTab.test.tsx` ("409 do portão vira

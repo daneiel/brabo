@@ -21,6 +21,7 @@ import {
 } from '../routes/containers-subida';
 import { ApprovalCard } from './ApprovalCard';
 import { Badge, type BadgeTone } from './ui/Badge';
+import { Ajuda } from './ui/Ajuda';
 import { Button } from './ui/Button';
 import { useToast } from './ui/ToastProvider';
 import styles from '../routes/ContainersPage.module.css';
@@ -261,7 +262,11 @@ export function AcoesDoContainer({
   // explica por que "Subir de novo" não faz nada.
   const aviso = avisoDeImagemDesatualizada(item);
   const motivoDaSubida =
-    !subida.pode && (subida.motivo !== 'ja_esta_de_pe' || aviso) ? subida.motivo : null;
+    !subida.pode &&
+    subida.motivo !== 'sem_papel' && // dito UMA vez no topo da página
+    (subida.motivo !== 'ja_esta_de_pe' || aviso)
+      ? subida.motivo
+      : null;
   const semBrokerNaSubida = motivoDaSubida === 'sem_broker_na_instalacao';
   // A falta de broker é UM fato, mesmo quando trava subir E parar/remover:
   // uma linha curta só, com o detalhe (o nome da variável, para o operador)
@@ -314,25 +319,34 @@ export function AcoesDoContainer({
           <Play aria-hidden="true" />
         </Button>
       </div>
-      {aviso && <p className={styles.motivo}>{t('actions.desatualizada', aviso)}</p>}
+      {aviso && (
+        <p className={styles.motivo}>
+          {t('actions.desatualizadaCurta', aviso)}{' '}
+          <Ajuda assunto={t('actions.ajuda')}>{t('actions.desatualizada', aviso)}</Ajuda>
+        </p>
+      )}
       {semContainer && (
         <p className={styles.motivo}>{t(`actions.semContainer.${semContainer}`)}</p>
       )}
       {chaveCurtaDoBroker && (
-        <details className={styles.motivoComDetalhe}>
-          <summary className={styles.motivo}>
-            {t(`actions.bloqueioCurto.${chaveCurtaDoBroker}`)}{' '}
-            <span className={styles.porque}>{t('actions.bloqueioDetalhe')}</span>
-          </summary>
-          {detalhesDoBroker.map((texto) => (
-            <p key={texto} className={styles.detalheDoMotivo}>
-              {texto}
-            </p>
-          ))}
-        </details>
+        <p className={styles.motivo}>
+          {t(`actions.bloqueioCurto.${chaveCurtaDoBroker}`)}{' '}
+          <Ajuda assunto={t('actions.ajuda')}>
+            {detalhesDoBroker.map((texto) => (
+              <span key={texto} className={styles.detalheDoMotivo}>
+                {texto}{' '}
+              </span>
+            ))}
+          </Ajuda>
+        </p>
       )}
       {motivo && <p className={styles.motivo}>{motivo}</p>}
-      {ressalva && <p className={styles.ressalva}>{ressalva}</p>}
+      {ressalva && subida.pode && subida.ressalva && (
+        <p className={styles.ressalva}>
+          {t(`actions.ressalvaCurta.${subida.ressalva}`)}{' '}
+          <Ajuda assunto={t('actions.ajuda')}>{ressalva}</Ajuda>
+        </p>
+      )}
     </div>
   );
 }
