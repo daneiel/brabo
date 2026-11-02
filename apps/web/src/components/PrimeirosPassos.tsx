@@ -5,6 +5,8 @@ import { listCredentials } from '../lib/api-client';
 import { useBindingsResolvidos } from '../lib/bindings-resolvidos';
 import { derivarPrimeirosPassos, type ChaveDoPasso } from '../lib/primeiros-passos';
 import { FRESCOR_DA_CONFIGURACAO_MS } from '../lib/query-policy';
+import { Card } from '@/components/shadcn/card';
+import { Item, ItemActions, ItemContent, ItemGroup, ItemMedia, ItemTitle, ItemDescription } from '@/components/shadcn/item';
 import styles from './PrimeirosPassos.module.css';
 
 /**
@@ -58,48 +60,52 @@ export function PrimeirosPassos({
   const feitos = passos.filter((p) => p.feito).length;
 
   return (
-    <section className={styles.cartao} data-testid="primeiros-passos" aria-label={t('primeirosPassos.title')}>
+    <Card role="region" className={styles.cartao} data-testid="primeiros-passos" aria-label={t('primeirosPassos.title')}>
       <div className={styles.cabecalho}>
         <h2 className={styles.titulo}>{t('primeirosPassos.title')}</h2>
         <span className={styles.contagem}>
           {t('primeirosPassos.progresso', { feitos, total: passos.length })}
         </span>
       </div>
-      <ol className={styles.lista}>
-        {passos.map((passo) => (
-          <li
-            key={passo.chave}
-            className={[styles.passo, passo.feito && styles.feito].filter(Boolean).join(' ')}
-            data-passo={passo.chave}
-            data-feito={passo.feito ? 'sim' : 'nao'}
-          >
-            <span className={styles.marca} aria-hidden="true">
-              {passo.feito ? '✓' : '○'}
-            </span>
-            <span className={styles.texto}>
-              <span className={styles.nome}>{t(`primeirosPassos.${passo.chave}.titulo`)}</span>
-              <span className={styles.estado}>
-                {passo.feito ? t('primeirosPassos.feito') : t(`primeirosPassos.${passo.chave}.pendente`)}
-              </span>
-            </span>
-            {!passo.feito && (
-              (() => {
-                const alvo = destino[passo.chave];
-                const rotulo = t(`primeirosPassos.${passo.chave}.link`);
-                return alvo === 'providers' ? (
-                  <Link to="/providers" className={styles.link}>
-                    {rotulo}
-                  </Link>
-                ) : (
-                  <Link to="/projects/$projectId" params={{ projectId }} search={alvo} className={styles.link}>
-                    {rotulo}
-                  </Link>
-                );
-              })()
-            )}
-          </li>
-        ))}
-      </ol>
-    </section>
+      <ItemGroup className={styles.lista}>
+        {passos.map((passo) => {
+          const alvo = destino[passo.chave];
+          const rotulo = t(`primeirosPassos.${passo.chave}.link`);
+          return (
+            <Item
+              key={passo.chave}
+              size="xs"
+              role="listitem"
+              className={[styles.passo, passo.feito && styles.feito].filter(Boolean).join(' ')}
+              data-passo={passo.chave}
+              data-feito={passo.feito ? 'sim' : 'nao'}
+            >
+              <ItemMedia className={styles.marca} aria-hidden="true">
+                {passo.feito ? '✓' : '○'}
+              </ItemMedia>
+              <ItemContent className={styles.texto}>
+                <ItemTitle className={styles.nome}>{t(`primeirosPassos.${passo.chave}.titulo`)}</ItemTitle>
+                <ItemDescription className={styles.estado}>
+                  {passo.feito ? t('primeirosPassos.feito') : t(`primeirosPassos.${passo.chave}.pendente`)}
+                </ItemDescription>
+              </ItemContent>
+              {!passo.feito && (
+                <ItemActions>
+                  {alvo === 'providers' ? (
+                    <Link to="/providers" className={styles.link}>
+                      {rotulo}
+                    </Link>
+                  ) : (
+                    <Link to="/projects/$projectId" params={{ projectId }} search={alvo} className={styles.link}>
+                      {rotulo}
+                    </Link>
+                  )}
+                </ItemActions>
+              )}
+            </Item>
+          );
+        })}
+      </ItemGroup>
+    </Card>
   );
 }

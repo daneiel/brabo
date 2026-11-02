@@ -47,6 +47,7 @@ import { useToast } from './ui/ToastProvider';
 import { HuggingFaceModelBrowser } from './HuggingFaceModelBrowser';
 import styles from './ModelCatalogSection.module.css';
 import { FRESCOR_DA_CONFIGURACAO_MS } from '../lib/query-policy';
+import { Checkbox } from './shadcn/checkbox';
 
 /**
  * Curadoria do catálogo (Fase 9c, RN-043).
@@ -655,7 +656,7 @@ function LinhaDoCatalogo({
         .filter(Boolean)
         .join(' ')}
     >
-      <input type="checkbox" checked={marcado} onChange={onToggle} />
+      <Checkbox checked={marcado} onCheckedChange={() => onToggle()} />
       <span className={styles.nome}>
         {model.displayName}
         <span className={styles.slug}>{model.name}</span>

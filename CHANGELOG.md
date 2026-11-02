@@ -6,6 +6,8 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Funcionalidades
 
+- A topbar da Sessão mostra quanto da janela do modelo o agente com quem se conversa ocupa (a entrada da última chamada dele contra a janela do modelo; "não sei" quando a janela é desconhecida, nunca 0%), sem requisição nova (AT-654, RN-969).
+- A Visão geral, os cartões de Parar e Religar a execução, a página de Providers e as caixas de marcar da seção de modelos passam a ser montados sobre o shadcn; nenhuma regra muda (AT-655, onda 4, rodada B parcial).
 - A aba Executores e as abas Backlog, Sessões, Aprovações e PRs passam a ser montadas sobre o shadcn (AT-636, onda 4, rodada A): subagente delegado vira `Subagent` com o estado e a origem (RN-970), o modo automático do time vira `Checkbox`, a lista do piloto só monta quando aberta, linhas e avisos viram `Item`, e o parecer do gate na timeline da PR vira `Collapsible`; nenhuma regra muda (AT-655).
 - Paleta de comandos Ctrl+K (⌘K no macOS): busca projetos, abas do projeto aberto, a sessão mais recente de cada projeto e as ações da barra lateral, só com o que já está em memória (abrir a paleta não faz requisição); não abre com o foco no terminal (AT-656, RN-971).
 - O código no chat e na aba Código é realçado pelo shiki, carregado sob demanda por linguagem, com tema pelos tokens da casa nos dois temas; o bloco do chat ganha o botão Copiar (AT-657, RN-972, ADR 0234).
@@ -19,6 +21,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- O JS da carga inicial do web cai de 1,36 MB para 1,24 MB: o Base UI deixou de ir no grupo de vendor pré-carregado pela entrada (AT-654).
 - A página global de Gastos (`/spend`) ganha a moldura das outras páginas globais (padding, cabeçalho e título de página de 22px) e o seletor "Janela" passa a ser o da casa, também na aba Gastos do projeto (AT-648).
 - O preço e a cobrança dos modelos são curados na tela de Providers; a edição manual deixa de ser desfeita pelo sync, que passa a respeitar a marca `manual_pricing` (AT-634, RN-964).
 - O 503 do 9Router que embrulha um 4xx do upstream (`[404]: … (reset after 2m)`) passa a ser classificado pelo status de dentro: modelo inexistente vira `model_not_found` em vez de `upstream` passageiro e retomado (AT-639, RN-959).

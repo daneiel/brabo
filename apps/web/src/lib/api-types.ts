@@ -807,6 +807,8 @@ export interface AgentTokenUsage {
   costMicros: number;
   inputTokens: number;
   outputTokens: number;
+  /** Última chamada do agente na sessão (RN-969); ausente nas outras rotas. */
+  lastCall?: { inputTokens: number; modelName: string; contextWindow: number | null } | null;
 }
 
 export interface Budget {
