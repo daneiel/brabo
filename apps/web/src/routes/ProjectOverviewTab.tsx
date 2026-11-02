@@ -1,3 +1,4 @@
+import { Ajuda } from '../components/ui/Ajuda';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from '@tanstack/react-router';
@@ -321,11 +322,11 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
             Os eventos vão FILTRADOS (sem dev/QA — RN-121): a aba Executores
             tem a própria árvore, e mostrar os mesmos ramos nas duas telas
             era duplicar a mesma pergunta sem ganhar nada. */}
-        <h2 className={styles.sectionHeader}>{t('timeline.title')}</h2>
-        <div className={styles.sectionSub}>
-          {t('timeline.description')}
-          {linhaDoTempoNaExecucao && ` ${t('timeline.lendoExecucao')}`}
-        </div>
+        <h2 className={styles.sectionHeader}>
+          {t('timeline.title')}
+          <Ajuda assunto={t('timeline.title')}>{t('timeline.description')}</Ajuda>
+        </h2>
+        {linhaDoTempoNaExecucao && <div className={styles.sectionSub}>{t('timeline.lendoExecucao')}</div>}
         <AgentTimelineTree events={overviewEvents} projectId={projectId} compactarChamadas />
 
         <ExecutionSection
