@@ -614,7 +614,6 @@ no
 |---|---|---|
 | — (índice dos três) | `https://daneiel.github.io/brabo/` | ❌ `noindex, follow` |
 | `main` | `https://daneiel.github.io/brabo/prd/` | ✅ |
-| `qa` | `https://daneiel.github.io/brabo/qa/` | ❌ `noIndex` |
 | `dev` | `https://daneiel.github.io/brabo/dev/` | ❌ `noIndex` |
 
 Os três ficaram simétricos no
