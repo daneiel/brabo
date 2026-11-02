@@ -37,46 +37,15 @@
 }
 
 .estadoErro {
-  display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-3);
   flex-wrap: wrap;
-  font-size: 13px;
-  color: var(--text-primary);
-  background: var(--surface-1);
-  border: 1px solid var(--danger);
-  border-radius: var(--radius-md);
-  padding: var(--space-3);
-}
-
-.botao {
-  font-family: var(--font-body);
-  font-size: 13px;
-  min-height: 32px;
-  padding: 0 var(--space-3);
-  color: var(--on-accent);
-  background: var(--accent);
-  border: none;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-}
-
-.botao:hover {
-  background: var(--accent-hover);
 }
 
 .destaques {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: var(--space-3);
-}
-
-.faixa {
-  background: var(--surface-1);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: var(--space-3);
 }
 
 .grade {
@@ -107,26 +76,6 @@
   max-width: 360px;
 }
 
-/* Os dois níveis de alerta de orçamento (RN-213) — mesma forma do
-   `.estadoErro`, cor por severidade em vez de sempre `--danger`. */
-.alertaWarning,
-.alertaDanger {
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--text-primary);
-  background: var(--surface-1);
-  border-radius: var(--radius-md);
-  padding: var(--space-2) var(--space-3);
-}
-
-.alertaWarning {
-  border: 1px solid var(--warning);
-}
-
-.alertaDanger {
-  border: 1px solid var(--danger);
-}
-
 /* Editor de orçamento: grade de largura natural, botão do kit sem esticar. */
 .formulario {
   display: grid;
@@ -136,7 +85,7 @@
 }
 
 .formulario > .nota,
-.formulario > .estadoErro {
+.formulario > [data-slot="alert"] {
   grid-column: 1 / -1;
 }
 
@@ -153,6 +102,6 @@
 }
 
 /* O <figure> do gráfico vinha com a margem do navegador (40px) dentro da faixa. */
-.faixa figure {
+.grafico figure {
   margin: 0;
 }
