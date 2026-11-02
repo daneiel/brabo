@@ -5,6 +5,7 @@
  * as cores semânticas apontam para os tokens do Brabo (`design/tokens.css`).
  */
 @import 'tailwindcss/theme' layer(theme);
+@import 'tailwindcss/preflight' layer(base);
 @import 'tailwindcss/utilities' layer(utilities) source(none);
 /* Só o shadcn gera utilitário; varrer o src inteiro emitiria .absolute, .container... soltos. */
 @source './components/shadcn';
