@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ProposedAction, SessionEvent } from './api-types';
 import type { StoreDoStreaming } from './streaming-do-turno';
 
@@ -26,10 +26,10 @@ export function identidadeDoFio(
 }
 
 /**
- * A rolagem do fio da tela de Sessão (RN-951, AT-635): o fio acompanha SEMPRE
- * a última mensagem — a cada evento/ação nova, a cada mudança de altura do
- * conteúdo ou do container, mesmo que a pessoa tenha rolado para cima (revoga
- * a guarda dos 120px da RN-173 e o item 4 da RN-751). Instantâneo
+ * A rolagem do fio da tela de Sessão (AT-683, v5; revisa a RN-951): o fio
+ * acompanha a última mensagem — a cada evento/ação nova, a cada mudança de
+ * altura — SÓ enquanto a pessoa está no fim. Rolou para cima: PAUSA e o
+ * `afastado` acende o botão "ir ao fim" (`irAoFim` retoma). Instantâneo
  * (`block: 'end'`) e sem mexer no foco. Com `?highlightEvent` a abertura vai
  * ao evento citado (Fase 4b); o acompanhamento começa na primeira mudança.
  */
@@ -54,6 +54,9 @@ export function useRolagemDoFio({
   // e então na primeira mudança).
   const seguindoRef = useRef(false);
   const vistoRef = useRef<string | null>(null);
+  // A pessoa subiu: nada a segue até ela voltar ao fim.
+  const pausadoRef = useRef(false);
+  const [afastado, setAfastado] = useState(false);
 
   // Navegação de evidência (Fase 4b): rola até o evento assim que ele existir.
   useEffect(() => {
@@ -64,7 +67,7 @@ export function useRolagemDoFio({
   }, [highlightEvent, logOpen, events.length]);
 
   const acompanharOFim = useCallback(() => {
-    if (seguindoRef.current) rolarParaOFim(messagesEndRef.current);
+    if (seguindoRef.current && !pausadoRef.current) rolarParaOFim(messagesEndRef.current);
   }, []);
 
   // Por IDENTIDADE, não por `length`: a primeira leva abre no fim (achado 10;
@@ -76,7 +79,7 @@ export function useRolagemDoFio({
     vistoRef.current = identidade;
     if (primeira && highlightEvent) return;
     seguindoRef.current = true;
-    rolarParaOFim(messagesEndRef.current);
+    if (!pausadoRef.current) rolarParaOFim(messagesEndRef.current);
   }, [identidade]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // O texto do streaming (AT-301): assinatura direta do store; o aviso chega
@@ -112,5 +115,24 @@ export function useRolagemDoFio({
     return () => observador.disconnect();
   }, [acompanharOFim]);
 
-  return { messagesEndRef, scrollContainerRef, messagesInnerRef };
+  // Distância do fim: acima de ~1 linha de folga, a pessoa subiu.
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    const aoRolar = () => {
+      const longe = el.scrollHeight - el.scrollTop - el.clientHeight > 80;
+      pausadoRef.current = longe;
+      setAfastado(longe);
+    };
+    el.addEventListener('scroll', aoRolar, { passive: true });
+    return () => el.removeEventListener('scroll', aoRolar);
+  }, []);
+
+  const irAoFim = useCallback(() => {
+    pausadoRef.current = false;
+    setAfastado(false);
+    rolarParaOFim(messagesEndRef.current);
+  }, []);
+
+  return { messagesEndRef, scrollContainerRef, messagesInnerRef, afastado, irAoFim };
 }
