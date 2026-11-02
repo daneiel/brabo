@@ -1255,3 +1255,9 @@
   font-size: var(--fs-sm);
   color: var(--danger);
 }
+
+/* AT-666 (achado 4): o botão "Reabrir sessão" não quebra em duas linhas. */
+.reabrir {
+  white-space: nowrap;
+  flex-shrink: 0;
+}

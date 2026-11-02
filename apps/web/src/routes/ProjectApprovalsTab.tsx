@@ -538,7 +538,9 @@ export function ProjectApprovalsTab({ projectId }: ProjectApprovalsTabProps) {
         >
           {() =>
             gateTasks.length === 0 ? (
-              <Item variant="outline" className={styles.clean}>{t('approvalsTab.devPrs.empty')}</Item>
+              <EmptyState icone={<CheckIcon size={20} />} tom="sucesso">
+                {t('approvalsTab.devPrs.empty')}
+              </EmptyState>
             ) : (
               <div className={styles.queue}>
                 {gateTasks.map((task) => (
