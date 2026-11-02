@@ -250,6 +250,7 @@
 /* --- Fase 4a: execução --- */
 
 .execIntro {
+  margin-bottom: 16px;
   display: flex;
   align-items: center;
   gap: 16px;
