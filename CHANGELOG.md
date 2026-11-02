@@ -10,6 +10,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 ### Funcionalidades
 
 - A aprovação de comando de terminal passa a mostrar a saída com as cores ANSI e o `exit` (vermelho quando diferente de 0), a de commit ganha a mensagem, o autor e o total de arquivos (com plural nos quatro idiomas), e os marcos estáticos da linha do tempo dos Executores viram linhas de Trace. A lib `ansi-to-react` entra só no chunk do `ApprovalCard`, com override de `linkify-it` para fechar o advisory GHSA-22p9-wv53-3rq4/GHSA-v245-v573-v5vm (AT-683).
+- A árvore de arquivos da aba Código vira o `FileTree` do AI Elements (árvore ARIA com tabindex móvel: um só ponto de Tab, setas/Home/End movem o foco, direita/esquerda abrem e fecham pasta) e os comandos do instalador, do runner e do token pessoal passam a usar o `Snippet` (bloco mono com botão Copiar só de ícone, com rótulo acessível; falha de clipboard no token pessoal volta a avisar) (AT-683).
 
 - Base dos ícones do shadcn (AT-682): ícone dentro de `Button` passa a 16px, `svg.lucide` usa traço 1,6 como os da casa, o `lucide-react` sai do grupo `vendor-ui` da carga inicial e `design/COMPONENTS.md` ganha a seção "Iconografia".
 

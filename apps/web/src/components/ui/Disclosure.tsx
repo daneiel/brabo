@@ -40,6 +40,8 @@ interface DisclosureProps {
    * de propósito: `getByRole` continua sendo a forma preferida.
    */
   testId?: string;
+  /** Atributos extras do cabeçalho (ex.: `role="treeitem"` da árvore de arquivos). */
+  propsCabecalho?: Record<string, string>;
 }
 
 /**
@@ -86,6 +88,7 @@ export function Disclosure({
   className,
   classNameCabecalho,
   testId,
+  propsCabecalho,
 }: DisclosureProps) {
   const base = useId();
   const idBotao = `${base}-cabecalho`;
@@ -112,6 +115,7 @@ export function Disclosure({
         aria-controls={idRegiao}
         className={classNameCabecalho}
         data-testid={testId}
+        {...propsCabecalho}
       >
         {/* Decorativo: o estado já é anunciado pelo `aria-expanded`. Repeti-lo
             no nome acessível seria ouvir "expandido" duas vezes. */}
