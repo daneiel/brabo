@@ -7,6 +7,7 @@ import { FRESCOR_DA_CONFIGURACAO_MS } from '../lib/query-policy';
 import { useContainersOverview, useCurrentWorkspaceWithRole } from '../lib/hooks';
 import { AcoesDoContainer, EstadoObservadoCelula, TOM_DO_STATUS } from '../components/AcoesDoContainer';
 import { chaveDasInstrucoesDeExecucao, urlLocalSegura } from '../components/RodarNaSuaMaquina';
+import { EntregavelPreview } from '../components/EntregavelPreview';
 import { RedeDoContainer } from '../components/RedeDoContainer';
 import { Badge } from '../components/ui/Badge';
 import { ErroDeCarregamento } from '../components/ErroDeCarregamento';
@@ -126,6 +127,8 @@ export function ContainerDetalhePage() {
               <p className={styles.semRegistro}>{t('detail.urlsNone')}</p>
             )}
           </section>
+
+          {!run.isPending && <EntregavelPreview urls={run.data?.urls ?? []} />}
 
           <RedeDoContainer item={item} papel={atual?.role} />
 
