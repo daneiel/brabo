@@ -70,7 +70,8 @@
     "perguntasEmAberto_zero": "{{count}} perguntas em aberto",
     "perguntasEmAberto_one": "{{count}} pergunta em aberto",
     "perguntasEmAberto_other": "{{count}} perguntas em aberto",
-    "responderPerguntas": "Responder"
+    "responderPerguntas": "Responder",
+    "sugestaoExigeDeveloper": "Esta ação exige o papel developer neste workspace."
   },
   "ativacao": {
     "mensagemNaoEnviada": "Sua mensagem não enviada",

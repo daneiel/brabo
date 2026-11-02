@@ -446,9 +446,16 @@
   flex-wrap: wrap;
 }
 
-.composer > button {
+/* RN-976: as ações de passo, acima do "Para", na medida do fio. */
+.sugestoesRow {
   flex-shrink: 0;
-  white-space: nowrap;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-4) 0;
+  max-width: 780px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 /* O destinatário da mensagem (RN-631) — a primeira linha do composer, com a

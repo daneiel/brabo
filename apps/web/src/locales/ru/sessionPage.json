@@ -71,7 +71,8 @@
     "perguntasEmAberto_few": "{{count}} открытых вопроса",
     "perguntasEmAberto_many": "{{count}} открытых вопросов",
     "perguntasEmAberto_other": "{{count}} открытого вопроса",
-    "responderPerguntas": "Ответить"
+    "responderPerguntas": "Ответить",
+    "sugestaoExigeDeveloper": "Это действие требует роли developer в этом рабочем пространстве."
   },
   "ativacao": {
     "mensagemNaoEnviada": "Ваше сообщение не отправлено",

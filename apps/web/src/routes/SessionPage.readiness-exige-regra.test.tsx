@@ -57,7 +57,7 @@ vi.mock('../lib/hooks', () => ({
   useSessionEvent: () => ({ data: undefined, isError: false }),
   usePendingActions: () => ({ data: { items: [] } }),
   useHandoffs: () => ({ data: [] }),
-  useCurrentWorkspaceWithRole: () => ({ data: undefined }),
+  useCurrentWorkspaceWithRole: () => ({ data: { role: 'developer', workspace: { id: 'ws-1' } } }),
   useBacklog: () => ({ data: [] }),
 }));
 
@@ -152,10 +152,8 @@ describe('SessionPage — "Estou pronto — a necessidade está validada" exige 
     });
 
     expect(botao).toBeDisabled();
-    expect(botao).toHaveAttribute(
-      'title',
-      'Registre pelo menos uma regra de negócio com o Criativo antes de confirmar prontidão',
-    );
+    expect(screen.getByText('Registre pelo menos uma regra de negócio com o Criativo antes de confirmar prontidão')).toBeVisible();
+    expect(botao).not.toHaveAttribute('title');
   });
 
   it('com pelo menos 1 regra capturada, o botão libera — mesma fonte do painel lateral', async () => {

@@ -68,7 +68,8 @@
     "chamarAgente": "呼叫",
     "enfileirar": "加入队列",
     "perguntasEmAberto_other": "{{count}} 个未回答的问题",
-    "responderPerguntas": "回答"
+    "responderPerguntas": "回答",
+    "sugestaoExigeDeveloper": "此操作需要在该工作区拥有 developer 角色。"
   },
   "ativacao": {
     "mensagemNaoEnviada": "你的消息未发送",
