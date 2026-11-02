@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import { Hand, Zap } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { AgentDef } from '../lib/agents';
 import { BranchIcon, ModelIcon } from './ui/icons';
@@ -152,6 +153,7 @@ export function AgentCard({
             aria-pressed={autonomy === 'manual'}
             onClick={() => onAutonomyChange('manual')}
           >
+            <Hand aria-hidden="true" />
             {t('agentCard.autonomy.manual')}
           </Button>
           <Button
@@ -161,6 +163,7 @@ export function AgentCard({
             aria-pressed={autonomy === 'auto'}
             onClick={() => onAutonomyChange('auto')}
           >
+            <Zap aria-hidden="true" />
             {t('agentCard.autonomy.auto')}
           </Button>
         </div>

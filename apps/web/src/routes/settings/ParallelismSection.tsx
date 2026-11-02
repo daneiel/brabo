@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Save } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { listAgentAreas, setAreaMaxParallel } from '../../lib/api-client';
 import type { AgentArea } from '../../lib/api-types';
@@ -108,6 +109,7 @@ export function ParallelismSection({ projectId }: { projectId: string }) {
               onClick={() => void secao.salvarSecao()}
               disabled={!secao.podeSalvar}
             >
+              <Save aria-hidden="true" />
               {secao.salvando ? t('parallelism.saving') : t('parallelism.save')}
             </Button>
             <MarcaDeNaoSalvo sujas={secao.sujas} invalidas={secao.invalidas} />

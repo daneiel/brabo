@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Save } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -874,6 +875,7 @@ function EditorDePreco({
         onClick={salvar}
         disabled={!podeEditar || salvarPreco.isPending}
       >
+        <Save aria-hidden="true" />
         {t('priceEditor.save')}
       </Button>
       <h4>{t('priceEditor.history')}</h4>

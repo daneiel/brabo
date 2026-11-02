@@ -1,4 +1,5 @@
 import { useMemo, useState, type CSSProperties } from 'react';
+import { PlugZap, RefreshCw, Save, Trash2 } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
@@ -319,6 +320,7 @@ export function CredentialsSection() {
                   disabled={ocupado || rascunho.length === 0}
                   onClick={() => handleSave(id)}
                 >
+                  {existing ? <RefreshCw aria-hidden="true" /> : <Save aria-hidden="true" />}
                   {existing ? t('credentials.connector.swap') : t('credentials.connector.save')}
                 </Button>
                 {existing && (
@@ -326,10 +328,11 @@ export function CredentialsSection() {
                     <Button
                       variant="secondary"
                       aria-label={t('credentials.connector.testKeyAria', { label })}
+                      title={t('credentials.connector.test')}
                       disabled={ocupado}
                       onClick={() => handleTest(id)}
                     >
-                      {t('credentials.connector.test')}
+                      <PlugZap aria-hidden="true" />
                     </Button>
                     <Button
                       variant="danger"
@@ -337,6 +340,7 @@ export function CredentialsSection() {
                       disabled={ocupado}
                       onClick={() => handleRemove(id)}
                     >
+                      <Trash2 aria-hidden="true" />
                       {t('credentials.connector.remove')}
                     </Button>
                     {semCatalogo.has(id) && podeSincronizar && !semListModels(id) && (
@@ -346,6 +350,7 @@ export function CredentialsSection() {
                         disabled={sincronizando}
                         onClick={() => void handleSync()}
                       >
+                        <RefreshCw aria-hidden="true" />
                         {t('credentials.connector.updateCatalog')}
                       </Button>
                     )}

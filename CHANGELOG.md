@@ -4,6 +4,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ## Unreleased
 
+- Botões de Provedores, Configurações, Backlog, Gasto, Plano de adoção e do cartão de agente ganham ícone Lucide (Salvar, Trocar, Remover, Atualizar catálogo, Recusar, Editar título, Arquivar, Aprovar plano, Manual/Automático), sempre com o texto; o Testar do provedor vira só ícone com nome acessível e `title` (AT-682).
 - A aba Arquitetura ganha o grafo de módulos em Canvas (`@xyflow/react`, chunk próprio carregado só na aba, ADR 0238) e o cartão "Rodar na sua máquina" mostra o entregável num Web preview com `sandbox` mínimo, só para URL local; o CSP do web ganha `frame-src` para `localhost` e `127.0.0.1` (ADR 0239). Textos nos quatro idiomas (AT-684, AT-685).
 - O fio da Sessão para de seguir quando a pessoa sobe e mostra "Ir ao fim" (revisa a RN-951), as mensagens na fila de um agente viram um painel acima da caixa (a cancelada some) e decisão, mapa de módulos, C4, imagem e parecer de QA/SecOps ganham cartão no fio, nos quatro idiomas (AT-683, RN-977 a RN-979).
 - O painel "Pendências deste projeto" do chat vira uma faixa de abas (uma por fila com item, nenhuma aberta ao nascer, contagem por fila) e cada fila pagina de 3 em 3 com "anterior / x–y de N / próxima", no lugar do teto de 20 (RN-975, AT-680).
