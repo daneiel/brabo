@@ -17670,7 +17670,7 @@ cláusula própria no engine. Nenhuma mudança de api nem de engine.
 - **Onde:** `apps/web/src/lib/session-destinatario.ts:228` (`agentesEmConversa`),
   `:255` (`resolverDestinatario`), `:290` (`useDestinatarioDoChat`), `:116`
   (`useAtivadosNaSessaoInteira`), `:141` (`ativadosSemJanela`);
-  `apps/web/src/routes/SessionComposer.tsx:287` (`destinatarioRow`), `:193`
+  `apps/web/src/routes/SessionComposer.tsx:291` (`destinatarioRow`), `:197`
   (`ofertasForaDaJanela`); `apps/web/src/routes/SessionPage.tsx:350`
   (`aceitarHandoff`); `apps/web/src/routes/session-timeline-montagem.tsx:555`
   (`handoffIdDoEvento`), `:563` (`origem`); `apps/web/src/lib/session-handoffs.ts:68`
@@ -20407,7 +20407,7 @@ E o composer e os campos de texto das perguntas estruturadas levam
 
 - **Onde:** `apps/web/src/lib/conversa-comecou.ts:15` (`conversaComecou`),
   `:29` (`SEM_AUTOFILL`); `apps/web/src/routes/SessionPage.tsx:436`
-  (`conversaComecou`); `apps/web/src/routes/SessionComposer.tsx:389`
+  (`conversaComecou`); `apps/web/src/routes/SessionComposer.tsx:393`
   (`SEM_AUTOFILL`); `apps/web/src/routes/StructuredQuestionCard.tsx:242`
   (`SEM_AUTOFILL`)
 - **Teste:** `apps/web/src/routes/SessionPage.sessao.test.tsx:316` (Criativo
@@ -23548,7 +23548,7 @@ sem dizer qual.
   derivação lê os `events` que a tela já tem — nenhuma query nova
   ([RN-579](#rn-579)).
 - **Onde:** `apps/web/src/lib/session-readiness.ts:149` (`temMapaDeModulos`),
-  `apps/web/src/routes/SessionComposer.tsx:365` (`hasModuleMap`)
+  `apps/web/src/routes/SessionComposer.tsx:369` (`hasModuleMap`)
 - **Teste:** `apps/web/src/routes/SessionPage.proximo-passo-arquitetura.test.tsx`
   ("mapa gravado + história promovida + Arquiteto parado: o texto aparece";
   falhas: "com o handoff do Arquiteto já oferecido, o texto some", "com turno
@@ -23638,7 +23638,7 @@ sem dizer qual.
   `aria-live="polite"`: o leitor de tela anuncia a resposta nova e o que o
   agente está fazendo sem interromper quem está lendo. A checagem mora no
   composer, não na página, que está no teto de linhas ([ADR 0176](adr/0176-sessionpage-abaixo-de-mil-linhas.md)).
-- **Onde:** `apps/web/src/routes/SessionComposer.tsx:81` (`ignorarComposicaoIme`),
+- **Onde:** `apps/web/src/routes/SessionComposer.tsx:85` (`ignorarComposicaoIme`),
   `apps/web/src/components/TurnActivityStrip.tsx:47` (`TurnActivityStrip`)
 - **Teste:** `apps/web/src/routes/SessionFio.at503.test.tsx` ("Enter sem
   composição chega ao handler de envio", "a faixa do turno é uma região de

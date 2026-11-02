@@ -10,7 +10,8 @@ import { sessaoEhTerminal } from '../lib/sessao-encerrada';
 import { pontoDaSessao } from '../lib/session-timeline';
 import { agentesParaChamar } from '../lib/session-destinatario';
 import { AvisoDePerguntasEmAberto } from '../components/PerguntasEmAberto';
-import { InputGroup, InputGroupAddon } from '../components/shadcn/input-group';
+import { InputGroup } from '../components/shadcn/input-group';
+import { PromptInputToolbar } from '../components/ai-elements/prompt-input';
 import { CampoDoComposer } from '../components/CampoDoComposer';
 import styles from './SessionPage.module.css';
 
@@ -393,7 +394,7 @@ export function SessionComposer({
             placeholder={t('composer.placeholder')}
             disabled={streaming && !podeEnfileirar}
           />
-          <InputGroupAddon align="inline-end">
+          <PromptInputToolbar>
           <Button
             onClick={handleSend}
             disabled={
@@ -409,7 +410,7 @@ export function SessionComposer({
               {t('composer.parar')}
             </Button>
           )}
-          </InputGroupAddon>
+          </PromptInputToolbar>
         </InputGroup>
           {/*
             Some depois que o Criativo passou a bola (achado L). O botão

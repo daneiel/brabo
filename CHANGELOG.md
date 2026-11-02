@@ -5,6 +5,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 ## Unreleased
 
 ### Funcionalidades
+- **Composer da Sessão com a barra do `PromptInput` (AT-674, L4).** Os botões Enviar/Enfileirar e Parar ficam numa barra abaixo do campo (`PromptInputToolbar`, mais o `PromptInputFooter`, só layout). Ordem no DOM, Enter/Shift+Enter, fila (RN-673) e campo não controlado (RN-882) não mudam.
 
 - A Visão geral (listas de bloqueadas, PRs e sugestões, feed de atividade, grade de agentes), as abas Arquitetura e Insights (card de hipótese, diagrama C4) e as seções de pessoas e o sumário das Configurações passam a usar os componentes do shadcn; nenhuma regra muda (AT-655, onda 4, rodada B).
 - A `qa` é aposentada por hora no repositório do Brabo e a esteira passa a `dev → main`, com a versão final ancorada na `-dev.N` (AT-660, ADR 0235); o Gitflow do produto não muda.
