@@ -48,7 +48,7 @@ vi.mock('../lib/hooks', () => ({
   useSessionEvent: () => ({ data: undefined, isError: false }),
   usePendingActions: () => ({ data: { items: actionsMock() } }),
   useHandoffs: () => ({ data: handoffsMock() }),
-  useCurrentWorkspaceWithRole: () => ({ data: undefined }),
+  useCurrentWorkspaceWithRole: () => ({ data: { role: 'developer', workspace: { id: 'ws-1' } } }),
   // RN-160: gate por história promovida — este arquivo não é sobre o gate em
   // si (ver `SessionPage.readiness-arquitetura-exige-historia.test.tsx`),
   // então nasce com 1 história `ready` pra não quebrar os testes de

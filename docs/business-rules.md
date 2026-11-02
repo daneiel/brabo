@@ -17670,7 +17670,7 @@ cláusula própria no engine. Nenhuma mudança de api nem de engine.
 - **Onde:** `apps/web/src/lib/session-destinatario.ts:228` (`agentesEmConversa`),
   `:255` (`resolverDestinatario`), `:290` (`useDestinatarioDoChat`), `:116`
   (`useAtivadosNaSessaoInteira`), `:141` (`ativadosSemJanela`);
-  `apps/web/src/routes/SessionComposer.tsx:291` (`destinatarioRow`), `:197`
+  `apps/web/src/routes/SessionComposer.tsx:350` (`destinatarioRow`), `:250`
   (`ofertasForaDaJanela`); `apps/web/src/routes/SessionPage.tsx:350`
   (`aceitarHandoff`); `apps/web/src/routes/session-timeline-montagem.tsx:560`
   (`handoffIdDoEvento`), `:568` (`origem`); `apps/web/src/lib/session-handoffs.ts:68`
@@ -20407,7 +20407,7 @@ E o composer e os campos de texto das perguntas estruturadas levam
 
 - **Onde:** `apps/web/src/lib/conversa-comecou.ts:15` (`conversaComecou`),
   `:29` (`SEM_AUTOFILL`); `apps/web/src/routes/SessionPage.tsx:436`
-  (`conversaComecou`); `apps/web/src/routes/SessionComposer.tsx:393`
+  (`conversaComecou`); `apps/web/src/routes/SessionComposer.tsx:429`
   (`SEM_AUTOFILL`); `apps/web/src/routes/StructuredQuestionCard.tsx:242`
   (`SEM_AUTOFILL`)
 - **Teste:** `apps/web/src/routes/SessionPage.sessao.test.tsx:316` (Criativo
@@ -22414,7 +22414,7 @@ sem dizer qual.
   vocabulário lê os JSON, e o enum entrava pela interpolação em runtime;
   `i18n-enum-cru.test.ts` reprova `t(…, { status: x.status })`.
 - **Onde:** `apps/web/src/routes/ConfirmarEncerramento.tsx:13`
-  (`useEncerrarComConfirmacao`) e `apps/web/src/routes/SessionComposer.tsx:479`
+  (`useEncerrarComConfirmacao`) e `apps/web/src/routes/SessionComposer.tsx:483`
   (`statusGenerico`)
 - **Teste:** `apps/web/src/routes/ConfirmarEncerramento.test.tsx` (sem
   execução encerra direto; com execução só encerra ao confirmar; cancelar não
@@ -23548,7 +23548,7 @@ sem dizer qual.
   derivação lê os `events` que a tela já tem — nenhuma query nova
   ([RN-579](#rn-579)).
 - **Onde:** `apps/web/src/lib/session-readiness.ts:149` (`temMapaDeModulos`),
-  `apps/web/src/routes/SessionComposer.tsx:369` (`hasModuleMap`)
+  `apps/web/src/routes/SessionComposer.tsx:138` (`hasModuleMap`)
 - **Teste:** `apps/web/src/routes/SessionPage.proximo-passo-arquitetura.test.tsx`
   ("mapa gravado + história promovida + Arquiteto parado: o texto aparece";
   falhas: "com o handoff do Arquiteto já oferecido, o texto some", "com turno
@@ -25471,3 +25471,10 @@ sem dizer qual.
 - **Onde:** `apps/web/src/lib/passos-do-turno.ts:16` (`passosDoTurno`), `apps/web/src/routes/session-timeline-montagem.tsx:917` (`passosDoTurno`), `apps/web/src/components/ai-elements/passos-encerrados.tsx:8` (`PassosEncerrados`).
 - **Teste:** `apps/web/src/components/ai-elements/passos-encerrados.test.tsx`.
 - **Origem:** AT-675 (EP-031).
+
+### RN-976 — As ações de passo da conversa são sugestões acima do destinatário, com o mesmo predicado e o mesmo endpoint, e a inércia é dita em texto {#rn-976}
+
+- **Regra:** "Estou pronto", "Confirmar arquitetura pronta", "Responder N perguntas em aberto" e "Endereçar handoff a outro agente…" saem de dentro e de cima do composer e viram uma fileira de sugestões fixa, ACIMA da linha "Para". O predicado de cada uma e o handler (e o endpoint) são os de antes (RN-142, RN-657, RN-672, RN-861, RN-712); a caixa de mensagem fica sozinha na linha e ocupa a largura do fio (780px, antes ~448px). O clique só chama o handler da página, nunca escreve no campo (RN-882), e nada é clicado sozinho; merge nunca vira sugestão. Ação inerte diz o motivo em TEXTO visível, nunca em `title` (RN-102, ADR 0064); as de prontidão e o handoff manual ficam inertes sem o papel `developer`, o mínimo do endpoint, com o motivo de papel dito uma vez. A ordem no DOM (a fileira antes do "Para", e o Enviar como primeiro botão do composer) é contrato do E2E `turno-pelo-canal`.
+- **Onde:** `apps/web/src/routes/SessionComposer.tsx:140` (`acoes`), `apps/web/src/components/ai-elements/suggestion.tsx:46` (`SugestoesDeAcao`).
+- **Teste:** `apps/web/src/routes/SessionPage.sugestoes-no-chat.test.tsx`, `apps/web/src/components/ai-elements/suggestion.test.tsx`.
+- **Origem:** AT-681 (EP-031).

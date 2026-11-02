@@ -15,6 +15,7 @@ import i18n from '../lib/i18n';
  */
 
 const getSession = vi.fn();
+const papel = vi.fn<() => string | undefined>(() => undefined);
 const sendAgentMessage = vi.fn();
 const confirmReadiness = vi.fn();
 const transitionSession = vi.fn();
@@ -55,7 +56,7 @@ vi.mock('../lib/hooks', () => ({
   useSessionEvent: () => ({ data: undefined, isError: false }),
   usePendingActions: () => ({ data: { items: [] } }),
   useHandoffs: () => ({ data: [] }),
-  useCurrentWorkspaceWithRole: () => ({ data: undefined }),
+  useCurrentWorkspaceWithRole: () => ({ data: papel() ? { role: papel(), workspace: { id: 'ws-1' } } : undefined }),
   useBacklog: () => ({ data: [] }),
 }));
 
@@ -131,6 +132,7 @@ const FRASE = 'Esta sessão foi encerrada e não aceita mais mensagens. Abra uma
 beforeEach(async () => {
   vi.clearAllMocks();
   await i18n.changeLanguage('pt-BR');
+  papel.mockReturnValue(undefined);
   eventos.mockReturnValue({ items: EVENTOS_CRIATIVO_ATIVO });
   getSession.mockResolvedValue(sessao());
   getProjectPendingActions.mockResolvedValue([]);
@@ -164,6 +166,7 @@ describe('SessionPage — 409 de conversa em sessão encerrada (AT-154)', () => 
   });
 
   it('confirmar prontidão: mesma frase, e não o erro genérico', async () => {
+    papel.mockReturnValue('developer');
     confirmReadiness.mockRejectedValue(RECUSA);
 
     montar();

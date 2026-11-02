@@ -49,7 +49,7 @@ vi.mock('../lib/hooks', () => ({
   useSessionEvent: () => ({ data: undefined, isError: false }),
   usePendingActions: () => ({ data: { items: [] } }),
   useHandoffs: () => ({ data: [] }),
-  useCurrentWorkspaceWithRole: () => ({ data: undefined }),
+  useCurrentWorkspaceWithRole: () => ({ data: { role: 'developer', workspace: { id: 'ws-1' } } }),
   useBacklog: () => ({ data: backlogMock() }),
 }));
 
@@ -175,10 +175,8 @@ describe('SessionPage — "Confirmar arquitetura pronta" exige história promovi
     });
 
     expect(botao).toBeDisabled();
-    expect(botao).toHaveAttribute(
-      'title',
-      'Promova pelo menos uma história na aba Histórias antes de confirmar a arquitetura',
-    );
+    expect(screen.getByText('Promova pelo menos uma história na aba Histórias antes de confirmar a arquitetura')).toBeVisible();
+    expect(botao).not.toHaveAttribute('title');
   });
 
   it('backlog vazio (nenhum épico ainda) também desabilita', async () => {

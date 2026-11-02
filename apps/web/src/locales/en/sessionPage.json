@@ -69,7 +69,8 @@
     "enfileirar": "Queue",
     "perguntasEmAberto_one": "{{count}} open question",
     "perguntasEmAberto_other": "{{count}} open questions",
-    "responderPerguntas": "Answer them"
+    "responderPerguntas": "Answer them",
+    "sugestaoExigeDeveloper": "This action requires the developer role in this workspace."
   },
   "ativacao": {
     "mensagemNaoEnviada": "Your unsent message",
