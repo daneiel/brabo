@@ -52,6 +52,8 @@ export default defineConfig({
             },
             {
               // ADR 0232: shadcn/Base UI. Lista de PERMITIDOS, como as acima.
+              // @base-ui/@floating-ui ficam FORA (AT-654): o grupo é pré-carregado pela
+              // entrada, e cada componente do kit usado em qualquer tela engordava a carga inicial.
               name: 'vendor-ui',
               test: /[\\/]node_modules[\\/](use-sync-external-store|class-variance-authority|clsx|tailwind-merge|lucide-react)[\\/]/,
             },

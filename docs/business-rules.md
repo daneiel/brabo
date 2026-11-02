@@ -16755,8 +16755,8 @@ turno com autor humano — a divergência que esta regra declarava fechou.
 - **Código:** `apps/web/src/routes/SessionLanguageIndicator.tsx:79`
   (`SessionLanguageIndicator`), `:35` (`idiomaSemOverride`), `:170`
   (`origemPorExtenso`), `:219` (`podeTrocar`);
-  `apps/web/src/routes/SessionTopbar.tsx:247` (`SessionLanguageIndicator`),
-  `:120` (`modoDaBarra`), `:364` (`AjustesAgrupados`);
+  `apps/web/src/routes/SessionTopbar.tsx:260` (`SessionLanguageIndicator`),
+  `:128` (`modoDaBarra`), `:377` (`AjustesAgrupados`);
   `apps/web/src/lib/modo-da-barra-da-sessao.ts:35` (`modoDaBarra`)
 - **Teste:** `apps/web/src/routes/SessionTopbar.test.tsx:174` (a barra de
   1440px não é completa), `:191` (agrupa, e o painel traz idioma com origem),
@@ -18584,7 +18584,7 @@ verificador ainda relata nas Configurações e em Aprovações são ícones deco
 
 - **Código:** `apps/web/src/lib/painel-de-contexto.ts:16`
   (`usePainelDeContexto`); `apps/web/src/routes/GavetaDoContexto.tsx:14`
-  (`GavetaDoContexto`); `apps/web/src/routes/SessionTopbar.tsx:126`
+  (`GavetaDoContexto`); `apps/web/src/routes/SessionTopbar.tsx:134`
   (`movel`); `apps/web/src/components/ui/Table.tsx:24` (`largaNoMovel`),
   `:39` (`movel`); `apps/web/src/routes/Dashboard.tsx:165` (`movel`);
   `apps/web/src/routes/ProjectSessionsTab.tsx:149` (`movel`)
