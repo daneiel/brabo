@@ -55,15 +55,6 @@
   text-overflow: ellipsis;
 }
 
-.disclosureCabecalho {
-  font-family: var(--font-mono);
-  font-size: var(--fs-meta);
-  /* `--text-secondary`, não `--text-muted` — ver o comentário de `.faixa`. */
-  color: var(--text-secondary);
-  padding: 2px 0 0;
-  min-height: 20px;
-}
-
 .linhas {
   display: flex;
   flex-direction: column;

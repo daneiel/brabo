@@ -5,6 +5,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 ## Unreleased
 
 ### Funcionalidades
+- A faixa do turno em curso da Sessão passa a ser uma cadeia de passos recolhível (`ChainOfThought` do AI Elements), operável por teclado, no lugar do bloco "Passos do turno" antigo (AT-674).
 
 - A Visão geral (listas de bloqueadas, PRs e sugestões, feed de atividade, grade de agentes), as abas Arquitetura e Insights (card de hipótese, diagrama C4) e as seções de pessoas e o sumário das Configurações passam a usar os componentes do shadcn; nenhuma regra muda (AT-655, onda 4, rodada B).
 - A `qa` é aposentada por hora no repositório do Brabo e a esteira passa a `dev → main`, com a versão final ancorada na `-dev.N` (AT-660, ADR 0235); o Gitflow do produto não muda.
