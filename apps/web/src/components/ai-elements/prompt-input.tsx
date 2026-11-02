@@ -1,4 +1,4 @@
-import { useState, type FormEvent, type KeyboardEvent } from 'react';
+import { useState, type FormEvent, type KeyboardEvent, type ReactNode } from 'react';
 import {
   InputGroup,
   InputGroupAddon,
@@ -13,6 +13,20 @@ type Props = {
   rotuloEnviar: string;
   desabilitado?: boolean;
 };
+
+/** Barra inferior do PromptInput (só layout, sem estado: o campo segue não controlado, RN-882). */
+export function PromptInputToolbar({ children }: { children: ReactNode }) {
+  return (
+    <InputGroupAddon align="block-end" className="ml-auto justify-end">
+      {children}
+    </InputGroupAddon>
+  );
+}
+
+/** Rodapé do PromptInput: linha de apoio abaixo da barra (avisos, atalhos). Só layout. */
+export function PromptInputFooter({ children }: { children: ReactNode }) {
+  return <div data-slot="prompt-input-footer">{children}</div>;
+}
 
 /** Padrão Prompt Input sem anexos: Enter envia, Shift+Enter quebra linha; vazio não envia. */
 export function CampoDePrompt({ onEnviar, placeholder, rotuloEnviar, desabilitado }: Props) {
