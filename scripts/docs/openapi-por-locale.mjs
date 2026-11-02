@@ -2,7 +2,7 @@
 /**
  * A página da API (Redoc) por locale (ADR 0220, AT-565). A fonte das
  * descrições continua sendo o texto dos decorators da api; cada locale tem um
- * CATÁLOGO em `website/i18n/<locale>/openapi-textos.json`, chaveado pelo sha1
+ * CATÁLOGO em `website/i18n/<locale>/openapi-textos.json`, chaveado pelo sha256
  * (12 hex) do texto da fonte: `{ "<hash>": { "fonte": "...", "traducao": "..." } }`.
  *
  * Funções PURAS (o config do site e o `generate.mjs` as chamam). O comando que
@@ -15,7 +15,7 @@ import { join } from 'node:path';
 
 export const LOCALES_DA_API = ['pt-BR', 'en', 'ru', 'zh-Hans'];
 
-export const hashDoTexto = (t) => createHash('sha1').update(t).digest('hex').slice(0, 12);
+export const hashDoTexto = (t) => createHash('sha256').update(t).digest('hex').slice(0, 12);
 
 const crases = (t) => (t.match(/`[^`]*`/g) ?? []).length;
 
