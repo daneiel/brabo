@@ -3,7 +3,7 @@ id: branching-policy
 title: Política de branches e de versionamento
 sidebar_label: Política de branches
 sidebar_position: 2
-description: A escada dev → qa → main, a taxonomia de branches, quem nasce de onde e por que a política é mecanizada em vez de combinada.
+description: A escada dev → main, a taxonomia de branches, quem nasce de onde e por que a política é mecanizada em vez de combinada.
 keywords: [branches, gitflow, promoção, hotfix, versionamento, release]
 ---
 
@@ -33,21 +33,19 @@ Duas consequências que aceitamos de propósito:
 
 ## A escada {#the-ladder}
 
-Três branches permanentes, **uma por ambiente**. O código sobe um degrau
-por vez.
+Duas branches permanentes, **uma por ambiente**. A `qa` foi aposentada por
+hora em 02/11/2026 ([ADR 0235](../adr/0235-a-qa-e-aposentada-e-a-esteira-fica-dev-e-main.md)):
+a volta é reverter a PR da rodada e reviver `refs/archive/qa`.
 
 ```mermaid
 flowchart LR
-  D[dev<br/>desenvolvimento] -->|promoção| Q[qa<br/>homologação]
-  Q -->|promoção| M[main<br/>produção]
-  M -.->|retropropagação| Q
-  Q -.->|retropropagação| D
+  D[dev<br/>desenvolvimento] -->|promoção| M[main<br/>produção]
+  M -.->|retropropagação| D
 ```
 
 | branch | ambiente | o que significa estar aqui |
 |---|---|---|
 | `dev` | desenvolvimento | integrado, testado pelo CI |
-| `qa` | homologação | em validação funcional |
 | `main` | produção | o que está no ar |
 
 Existia um quarto degrau, `rc` (pré-produção), entre `qa` e `main`. Ele foi
@@ -184,9 +182,11 @@ aplicação.
 
 ## Branches mergeadas são arquivadas {#merged-branches-get-archived}
 
-Toda branch cujo PR foi mergeado sai da lista de branches **7 dias depois do
-merge** — mecanicamente, por `archive-merged-branch.yml`, que roda uma vez
-por dia (`schedule:`, mais `workflow_dispatch`) e percorre todas as branches
+Toda branch cujo PR foi mergeado sai da lista de branches **sem carência, na
+próxima rodada** — mecanicamente, por `archive-merged-branch.yml`, que roda
+**toda segunda às 09:00 (Brasília)** (`schedule:` `0 12 * * 1`, mais
+`workflow_dispatch`; AT-661). O agendamento só dispara com o workflow na
+branch padrão `main` e percorre todas as branches
 do repositório (AT-557, decisão do dono de 2026-10-15). Até lá a branch fica
 onde está, para que uma correção de acompanhamento ainda possa ir por cima
 dela. Uma branch só é arquivada quando todas estas valem:
@@ -194,7 +194,7 @@ dela. Uma branch só é arquivada quando todas estas valem:
 - ela não é um dos nomes excluídos abaixo, nem vem de fork;
 - nenhum PR com essa head está **aberto**;
 - um PR com essa head foi **mergeado** neste repositório, e o mais recente
-  foi mergeado há 7 dias ou mais (`DIAS_ATE_ARQUIVAR`);
+  foi mergeado (`DIAS_ATE_ARQUIVAR` é 0, sem carência);
 - a ponta da branch ainda é o `head.sha` desse PR — uma branch que recebeu
   commit depois do merge **fica**.
 
@@ -216,7 +216,7 @@ nenhum deles é trabalho descartável de feature.
 
 | nome | por que é excluído |
 |---|---|
-| `dev`, `qa`, `main` | as três permanentes — elas aparecem como `head` de todo PR de promoção mergeado (`dev`→`qa`, `qa`→`main`), que é exatamente o caso que esta exclusão existe para pegar |
+| `dev`, `qa`, `main` | as três permanentes — elas aparecem como `head` de todo PR de promoção mergeado (`dev`→`main`; antes, também `qa`), que é exatamente o caso que esta exclusão existe para pegar |
 | `gh-pages` | a branch de deploy do site de documentação (veja "Push direto é bloqueado" acima) — não é branch de feature, e apagar `refs/heads/gh-pages` derrubaria o site no ar junto |
 
 Uma quinta condição não é um nome, é uma fronteira: um PR cuja branch de
@@ -228,7 +228,7 @@ A decisão em si — quais quatro nomes são excluídos, e a checagem de fork �
 uma função pura testada
 ([`scripts/ci/archive-branch.ts`](https://github.com/daneiel/brabo/blob/dev/scripts/ci/archive-branch.ts)),
 não shell inline: é a parte deste mecanismo em que errar de fato justifica
-testes — e a elegibilidade de 7 dias também (`aptaParaArquivar`, mesmo
+testes — e a elegibilidade também (`aptaParaArquivar`, mesmo
 arquivo). O mesmo script então chama a API do GitHub: cria a ref
 `refs/archive/` (ou a força, quando o nome já foi arquivado antes), a lê de
 volta e confere que ela aponta para o SHA da branch, e só então apaga a
@@ -535,7 +535,9 @@ ganha uma célula a mais e a tabela quebra. É por isso que a ordem das duas
 substituições é estrutural, e o teste em `promote.spec.ts` conta os
 delimitadores REAIS da linha em vez de comparar a string inteira.
 
-### Promoção automática para qa (fase de teste) {#automatic-promotion-to-qa}
+### Promoção automática para qa (fase de teste) — REVOGADA {#automatic-promotion-to-qa}
+
+> **Revogada em 02/11/2026 (ADR 0235):** sem `qa` esta promoção não tem destino; `promote-auto-qa.yml` e `QA_FASE_DE_TESTE` saem. O texto abaixo é o registro histórico do ADR 0217.
 
 Enquanto a QA está na **fase de teste**, `dev` → `qa` se promove sozinha
 (ADR 0217, decisão do dono de 15/10). O interruptor é a variável de

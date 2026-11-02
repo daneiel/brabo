@@ -790,10 +790,9 @@ Pages:
 |---|---|---|
 | — (índice) | `https://daneiel.github.io/brabo/` | ❌ |
 | `main` | `https://daneiel.github.io/brabo/prd/` | ✅ |
-| `qa` | `https://daneiel.github.io/brabo/qa/` | ❌ |
 | `dev` | `https://daneiel.github.io/brabo/dev/` | ❌ |
 
-Os três são **simétricos** desde o
+Os dois são **simétricos** (a `qa` foi aposentada, ADR 0235) desde o
 [ADR 0071](../adr/0071-publicacao-simetrica-por-degrau.md); a raiz é
 uma página gerada que lista os três com a versão carimbada de cada um,
 e todo site tem um seletor no topo para trocar de degrau. Antes disso, a
