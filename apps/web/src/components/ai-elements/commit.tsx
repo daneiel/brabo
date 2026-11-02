@@ -1,4 +1,5 @@
 import { GitCommitIcon } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 /*
  * Commit (AT-683, prévia v5). Mensagem, autor e arquivos do que o card já
@@ -11,6 +12,7 @@ type CommitProps = {
 };
 
 export function Commit({ mensagem, autor, arquivos }: CommitProps) {
+  const { t } = useTranslation('approvals');
   if (!mensagem && !autor) return null;
   const mais = arquivos.reduce((n, f) => n + (f.additions || 0), 0);
   const menos = arquivos.reduce((n, f) => n + (f.deletions || 0), 0);
@@ -21,7 +23,7 @@ export function Commit({ mensagem, autor, arquivos }: CommitProps) {
         {mensagem && <p data-slot="ai-commit-message" className="m-0 font-medium text-foreground">{mensagem}</p>}
         <p className="m-0 flex flex-wrap gap-x-2 text-xs text-muted-foreground">
           {autor && <span data-slot="ai-commit-author">{autor}</span>}
-          <span>{arquivos.length} arquivo(s)</span>
+          <span>{t('approvalCard.body.commit.files', { count: arquivos.length })}</span>
           <span>+{mais} −{menos}</span>
         </p>
       </div>
