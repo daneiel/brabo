@@ -7,7 +7,7 @@ import { Modal } from './ui/Modal';
 import { useBacklog } from '../lib/hooks';
 import { contarTarefasAfetadasAoParar } from '../lib/execution';
 import { INTERVALO_DO_PROJETO_MS } from '../lib/canal-vivo';
-import styles from './ModoAutomaticoDoTime.module.css';
+import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup } from './shadcn/item';
 
 export interface PararExecucaoProps {
   projectId: string;
@@ -54,41 +54,45 @@ export function PararExecucao({ projectId, sessionId, podeParar }: PararExecucao
   }
 
   return (
-    <div className={styles.card} data-testid="parar-execucao">
-      <p className={styles.texto}>{t('parar.descricao')}</p>
-      <Button variant="danger" onClick={() => setConfirmando(true)} disabled={!podeParar}>
-        {t('parar.botao')}
-      </Button>
-      {!podeParar && <p className={styles.texto}>{t('parar.semPapel')}</p>}
+    <Item variant="outline" style={{ margin: "12px 0" }} data-testid="parar-execucao">
+      <ItemContent>
+        <ItemDescription>{t('parar.descricao')}</ItemDescription>
+        {!podeParar && <ItemDescription>{t('parar.semPapel')}</ItemDescription>}
+      </ItemContent>
+      <ItemActions>
+        <Button variant="danger" onClick={() => setConfirmando(true)} disabled={!podeParar}>
+          {t('parar.botao')}
+        </Button>
+      </ItemActions>
       {confirmando && (
         <Modal title={t('parar.confirmarTitulo')} onClose={() => setConfirmando(false)}>
-          <ul data-testid="parar-execucao-o-que-fica">
+          <ItemGroup data-testid="parar-execucao-o-que-fica">
             {afetadas === null ? (
-              <li aria-busy="true">
+              <Item size="xs" role="listitem" aria-busy="true">
                 {backlog.isError ? t('parar.tarefasNaoLidas') : t('parar.lendoTarefas')}
-              </li>
+              </Item>
             ) : afetadas.emCurso + afetadas.emRevisao === 0 ? (
-              <li>{t('parar.nenhumaTarefa')}</li>
+              <Item size="xs" role="listitem">{t('parar.nenhumaTarefa')}</Item>
             ) : (
               <>
                 {afetadas.emCurso > 0 && (
-                  <li>{t('parar.ficaTarefas', { count: afetadas.emCurso })}</li>
+                  <Item size="xs" role="listitem">{t('parar.ficaTarefas', { count: afetadas.emCurso })}</Item>
                 )}
                 {afetadas.emRevisao > 0 && (
-                  <li>{t('parar.ficaRevisao', { count: afetadas.emRevisao })}</li>
+                  <Item size="xs" role="listitem">{t('parar.ficaRevisao', { count: afetadas.emRevisao })}</Item>
                 )}
               </>
             )}
-            <li>{t('parar.ficaPrs')}</li>
-            <li>{t('parar.ficaAprovacoes')}</li>
-            <li>{t('parar.retomar')}</li>
-          </ul>
+            <Item size="xs" role="listitem">{t('parar.ficaPrs')}</Item>
+            <Item size="xs" role="listitem">{t('parar.ficaAprovacoes')}</Item>
+            <Item size="xs" role="listitem">{t('parar.retomar')}</Item>
+          </ItemGroup>
           {erro && <p role="alert">{erro}</p>}
           <Button variant="danger" onClick={() => void parar()} disabled={enviando}>
             {t('parar.confirmar')}
           </Button>
         </Modal>
       )}
-    </div>
+    </Item>
   );
 }
