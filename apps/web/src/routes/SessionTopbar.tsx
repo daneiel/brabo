@@ -1,4 +1,6 @@
 import {
+  lazy,
+  Suspense,
   useEffect,
   useId,
   useRef,
@@ -15,7 +17,6 @@ import {
   getSessionBudget,
   getSessionModelBinding,
   getSessionResponseLanguage,
-  getSessionTokenUsage,
   listModels,
   setSessionModelBinding,
 } from '../lib/api-client';
@@ -28,7 +29,6 @@ import {
 } from '../lib/modo-da-barra-da-sessao';
 import { useLayoutMovel } from '../lib/layout-movel';
 import { TokenMeter } from '../components/TokenMeter';
-import { Context } from '../components/ai-elements/context';
 import { SessionLanguageIndicator } from './SessionLanguageIndicator';
 import { ModelPicker } from '../components/ModelPicker';
 import { Button } from '../components/ui/Button';
@@ -46,6 +46,9 @@ import {
 import { pontoDaSessao } from '../lib/session-timeline';
 import { sessaoEhTerminal } from '../lib/sessao-encerrada';
 import styles from './SessionPage.module.css';
+
+// Fora do chunk de entrada: o Context traz HoverCard e Progress (AT-654).
+const JanelaDoAgente = lazy(() => import('./JanelaDoAgente'));
 
 /**
  * A barra do topo da tela de Sessão: a saída para o projeto, o ponto de
@@ -144,7 +147,9 @@ export function SessionTopbar({
   );
   const medidor = (
     <>
-      <JanelaDoAgente projectId={projectId} sessionId={sessionId} agente={destinatario} />
+      <Suspense fallback={null}>
+        <JanelaDoAgente projectId={projectId} sessionId={sessionId} agente={destinatario} />
+      </Suspense>
       {budget && <TokenMeter
       variant="live"
       unitLabel="USD"
@@ -462,48 +467,5 @@ function AjustesAgrupados({
         </div>
       )}
     </div>
-  );
-}
-
-/**
- * Quanto da janela do modelo o agente DESTINATÁRIO ocupa (AT-654, RN-969):
- * `input_tokens` da última chamada dele contra o `context_window` daquele
- * modelo. A MESMA queryKey de `session-destinatario.ts`, sem poll próprio —
- * nenhuma requisição nova. Sem chamada, sem destinatário ou 403: nada aparece.
- */
-function JanelaDoAgente({
-  projectId,
-  sessionId,
-  agente,
-}: {
-  projectId: string;
-  sessionId: string;
-  agente: string | null | undefined;
-}) {
-  const { t } = useTranslation('shell');
-  const { data } = useQuery({
-    queryKey: ['session-token-usage', projectId, sessionId],
-    queryFn: () => getSessionTokenUsage(projectId, sessionId),
-  });
-  const ultima = agente ? data?.find((a) => a.actorId === agente)?.lastCall : null;
-  if (!ultima) return null;
-  const { inputTokens, contextWindow, modelName } = ultima;
-  return (
-    <Context
-      usados={inputTokens}
-      janela={contextWindow}
-      rotulo={t('contexto.rotulo', {
-        usados: inputTokens.toLocaleString(),
-        janela: (contextWindow ?? 0).toLocaleString(),
-        modelo: modelName,
-      })}
-      textoSemJanela={t('contexto.semJanela', { modelo: modelName })}
-    >
-      <span data-testid="janela-do-agente">
-        {contextWindow && contextWindow > 0
-          ? `${Math.min(100, Math.round((inputTokens / contextWindow) * 100))}%`
-          : '—'}
-      </span>
-    </Context>
   );
 }
