@@ -1,0 +1,313 @@
+<!doctype html><html lang=ru dir=ltr class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-explanation/auditoria-fluxo-vs-codigo" data-has-hydrated=false><head><meta charset=UTF-8><meta name=generator content="Docusaurus v3.10.2"><title data-rh=true>Аудит: fluxo.yml × код (v3, ADR 0085) | Brabo</title><meta data-rh=true name=viewport content="width=device-width, initial-scale=1.0"/><meta data-rh=true name=twitter:card content=summary_large_image /><meta data-rh=true property=og:url content=https://daneiel.github.io/brabo/prd/ru/explanation/auditoria-fluxo-vs-codigo /><meta data-rh=true property=og:locale content=ru /><meta data-rh=true property=og:locale:alternate content=pt_BR /><meta data-rh=true property=og:locale:alternate content=en /><meta data-rh=true property=og:locale:alternate content=zh_Hans /><meta data-rh=true name=docusaurus_locale content=ru /><meta data-rh=true name=docsearch:language content=ru /><meta data-rh=true name=docusaurus_version content=current /><meta data-rh=true name=docusaurus_tag content=docs-default-current /><meta data-rh=true name=docsearch:version content=current /><meta data-rh=true name=docsearch:docusaurus_tag content=docs-default-current /><meta data-rh=true property=og:title content="Аудит: fluxo.yml × код (v3, ADR 0085) | Brabo"/><meta data-rh=true name=description content=audit-fluxoyml--code-v3-adr-0085} /><meta data-rh=true property=og:description content=audit-fluxoyml--code-v3-adr-0085} /><link data-rh=true rel=icon href=/brabo/prd/ru/img/favicon.ico /><link data-rh=true rel=canonical href=https://daneiel.github.io/brabo/prd/ru/explanation/auditoria-fluxo-vs-codigo /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/prd/explanation/auditoria-fluxo-vs-codigo hreflang=pt-BR /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/prd/en/explanation/auditoria-fluxo-vs-codigo hreflang=en /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/prd/ru/explanation/auditoria-fluxo-vs-codigo hreflang=ru /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/prd/zh-Hans/explanation/auditoria-fluxo-vs-codigo hreflang=zh-Hans /><link data-rh=true rel=alternate href=https://daneiel.github.io/brabo/prd/explanation/auditoria-fluxo-vs-codigo hreflang=x-default /><script data-rh=true type=application/ld+json>{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","item":"https://daneiel.github.io/brabo/prd/ru/explanation/auditoria-fluxo-vs-codigo","name":"Аудит: fluxo.yml × код (v3, ADR 0085)","position":1}]}</script><link rel=stylesheet href=/brabo/prd/ru/assets/css/styles.41f6b491.css /><script src=/brabo/prd/ru/assets/js/runtime~main.91fb928d.js defer></script><script src=/brabo/prd/ru/assets/js/main.097a2aef.js defer></script></head><body><svg style="display: none;"><defs>
+<symbol id=theme-svg-external-link viewBox="0 0 24 24"><path fill=currentColor d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
+</defs></svg>
+<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme-089")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")),document.documentElement.setAttribute("data-theme-choice",t||"system")}(),function(){try{for(var[t,e]of new URLSearchParams(window.location.search).entries())if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id=__docusaurus><link rel=preload as=image href=/brabo/prd/ru/img/logo.svg /><div role=region aria-label="Перейти к основному содержимому"><a class=skipToContent_CFOX href=#__docusaurus_skipToContent_fallback>Перейти к основному содержимому</a></div><nav aria-label="Главная навигация" class="theme-layout-navbar navbar navbar--fixed-top"><div class=navbar__inner><div class="theme-layout-navbar-left navbar__items"><button aria-label="Переключить навигационную панель" aria-expanded=false class="navbar__toggle clean-btn" type=button><svg width=30 height=30 viewBox="0 0 30 30" aria-hidden=true><path stroke=currentColor stroke-linecap=round stroke-miterlimit=10 stroke-width=2 d="M4 7h22M4 15h22M4 23h22"/></svg></button><a class=navbar__brand href=/brabo/prd/ru/><div class=navbar__logo><img src=/brabo/prd/ru/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--light_vzqw"/><img src=/brabo/prd/ru/img/logo.svg alt=Brabo class="themedComponent_Eyrh themedComponent--dark_FhTf"/></div><b class="navbar__title text--truncate">Brabo</b></a><a aria-current=page class="navbar__item navbar__link navbar__link--active" href=/brabo/prd/ru/>Документация</a><a class="navbar__item navbar__link" href=/brabo/prd/ru/runbook>Руководство по эксплуатации</a><a class="navbar__item navbar__link" href=/brabo/prd/ru/adr>Решения (ADR)</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a href=# aria-haspopup=true aria-expanded=false role=button class=navbar__link><svg viewBox="0 0 24 24" width=20 height=20 aria-hidden=true class=iconLanguage_g_CG><path fill=currentColor d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg>Русский</a><ul class=dropdown__menu><li><a href=/brabo/prd/explanation/auditoria-fluxo-vs-codigo target=_self rel="noopener noreferrer" class=dropdown__link lang=pt-BR>Português (Brasil)</a><li><a href=/brabo/prd/en/explanation/auditoria-fluxo-vs-codigo target=_self rel="noopener noreferrer" class=dropdown__link lang=en>English</a><li><a href=/brabo/prd/ru/explanation/auditoria-fluxo-vs-codigo target=_self rel="noopener noreferrer" class="dropdown__link dropdown__link--active" lang=ru>Русский</a><li><a href=/brabo/prd/zh-Hans/explanation/auditoria-fluxo-vs-codigo target=_self rel="noopener noreferrer" class=dropdown__link lang=zh-Hans>简体中文</a></ul></div><div class="navbar__item dropdown dropdown--hoverable dropdown--right"><a href=# aria-haspopup=true aria-expanded=false role=button class=navbar__link>prd</a><ul class=dropdown__menu><li><a href=https://daneiel.github.io/brabo/prd/ target=_blank rel="noopener noreferrer" class=dropdown__link>prd — стабильная ✓<svg width=12 height=12 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/qa/ target=_blank rel="noopener noreferrer" class=dropdown__link>qa — кандидат<svg width=12 height=12 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li><a href=https://daneiel.github.io/brabo/dev/ target=_blank rel="noopener noreferrer" class=dropdown__link>dev — в разработке<svg width=12 height=12 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><div class="toggle_pnX7 colorModeToggle_Dj3Z"><button class="clean-btn toggleButton_DKER toggleButtonDisabled_qzkp" type=button disabled title="системный режим" aria-label="Переключение между темным и светлым режимом (сейчас используется системный режим)"><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL lightToggleIcon_E8tM"><path fill=currentColor d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL darkToggleIcon_rXjT"><path fill=currentColor d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"/></svg><svg viewBox="0 0 24 24" width=24 height=24 aria-hidden=true class="toggleIcon_MMQL systemToggleIcon_zwCm"><path fill=currentColor d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"/></svg></button></div><div class=navbarSearchContainer_zRAa><div class="navbar__search searchBarContainer_eGzj" dir=ltr><svg aria-hidden=true class=searchIcon_PXpx focusable=false viewBox="0 0 16 16"><path fill=currentColor d="M6.02945 10.20327a4.17382 4.17382 0 1 1 4.17382-4.17382 4.15609 4.15609 0 0 1-4.17382 4.17382Zm9.69195 4.2199-4.8225-4.82338A5.88021 5.88021 0 0 0 12.058 6.02856 6.00467 6.00467 0 1 0 9.59979 10.8989l4.82338 4.82338a.89729.89729 0 0 0 1.29912 0 .89749.89749 0 0 0-.00087-1.29909Z"/></svg><input placeholder=Поиск aria-label=Search class="navbar__search-input searchInput_xOBI" value="" /><div class="loadingRing_JccP searchBarLoadingRing_aTss"><div></div><div></div><div></div><div></div></div></div></div></div></div><div role=presentation class=navbar-sidebar__backdrop></div></nav><div id=__docusaurus_skipToContent_fallback class="theme-layout-main main-wrapper mainWrapper_WJkx"><div class=docsWrapper_mIeg><button aria-label="Прокрутка к началу" class="clean-btn theme-back-to-top-button backToTopButton_Afc8" type=button></button><div class=docRoot_XZYc><aside class="theme-doc-sidebar-container docSidebarContainer_FPqZ"><div class=sidebarViewport_waOe><div class=sidebar_RQC4><nav aria-label="Боковая панель документации" class="menu thin-scrollbar menu_ZM4U"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/prd/ru/><span class=categoryLinkLabel_jKch>🚀 Начните здесь</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/ru/><span class=linkLabel_CzBh>Введение</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/ru/getting-started><span class=linkLabel_CzBh>Первые шаги</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/ru/tutorials/from-zero-to-deliverable><span class=linkLabel_CzBh>С нуля до готового результата</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/ru/tutorials/interface-antes-e-depois-shadcn><span class=linkLabel_CzBh>Interface antes e depois do shadcn (31/10/2026)</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/prd/ru/architecture><span class=categoryLinkLabel_jKch>🏗️ Архитектура</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/ru/architecture><span class=linkLabel_CzBh>Архитектура</span></a><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist" tabindex=0 href=/brabo/prd/ru/adr><span class=categoryLinkLabel_jKch>Решения (ADR)</span></a><button aria-label="Развернуть категорию 'Решения (ADR)'" aria-expanded=false type=button class="clean-btn menu__caret"></button></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/prd/ru/business-rules><span class=categoryLinkLabel_jKch>📐 Правила</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/ru/business-rules><span class=linkLabel_CzBh>Бизнес-правила</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/ru/business-rules/custo><span class=linkLabel_CzBh>Стоимость и metering</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/ru/business-rules/autenticacao><span class=linkLabel_CzBh>Аутентификация</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/prd/ru/reference/configuration><span class=categoryLinkLabel_jKch>📖 Справочник</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/ru/reference/configuration><span class=linkLabel_CzBh>Конфигурация</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/ru/reference/events><span class=linkLabel_CzBh>События</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/ru/reference/permissions><span class=linkLabel_CzBh>Права доступа</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/ru/reference/artifacts><span class=linkLabel_CzBh>Артефакты</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/ru/reference/git-providers><span class=linkLabel_CzBh>Git-провайдеры</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/ru/reference/internal-api><span class=linkLabel_CzBh>Внутренний API</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/ru/reference/scripts><span class=linkLabel_CzBh>Скрипты и команды</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/ru/reference/rulesets><span class=linkLabel_CzBh>Правила репозитория (rulesets)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/ru/reference/paridade-de-traducao><span class=linkLabel_CzBh>Паритет переводов</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/ru/reference/brb><span class=linkLabel_CzBh>Реестр BRB</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/ru/security-surface><span class=linkLabel_CzBh>Открытая поверхность api</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/ru/reference/api><span class=linkLabel_CzBh>Справочник API</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role=button aria-expanded=true href=/brabo/prd/ru/explanation/documentation-workflow><span class=categoryLinkLabel_jKch>💡 Пояснения</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true tabindex=0 href=/brabo/prd/ru/explanation/documentation-workflow><span class=categoryLinkLabel_jKch>Процесс и конвейер</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/ru/explanation/documentation-workflow><span class=linkLabel_CzBh>Синхронизация документации</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/ru/explanation/branching-policy><span class=linkLabel_CzBh>Политика веток</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/ru/explanation/cadeia-de-suprimentos-do-ci><span class=linkLabel_CzBh>Цепочка поставок CI</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/ru/explanation/gates><span class=linkLabel_CzBh>Gates и то, как они измеряются</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/ru/explanation/observability><span class=linkLabel_CzBh>Наблюдаемость</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/ru/explanation/modelo-de-time><span class=linkLabel_CzBh>Модель команды и поток результатов</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret menu__link--active" role=button aria-expanded=true tabindex=0 href=/brabo/prd/ru/explanation/primeiro-dogfooding><span class=categoryLinkLabel_jKch>Проверки и измерения</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/ru/explanation/primeiro-dogfooding><span class=linkLabel_CzBh>Первый dogfooding</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/ru/explanation/execucao-real-hello-world><span class=linkLabel_CzBh>Реальное выполнение (hello world)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/ru/explanation/achados-execucao-real><span class=linkLabel_CzBh>Находки реального прогона конвейера</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/ru/explanation/validacao-fase-12><span class=linkLabel_CzBh>Проверка Фазы 12</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/ru/explanation/validacao-real><span class=linkLabel_CzBh>Реальная валидация (13b)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/ru/explanation/aceite-providers><span class=linkLabel_CzBh>Приёмка providers</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/ru/explanation/medicao-do-idioma><span class=linkLabel_CzBh>Измерение эвристики языка</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/ru/explanation/medicao-do-jev><span class=linkLabel_CzBh>Измерение маршрутизатора инструментов Jev</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class="menu__link menu__link--active" aria-current=page tabindex=0 href=/brabo/prd/ru/explanation/auditoria-fluxo-vs-codigo><span class=linkLabel_CzBh>Аудит: fluxo.yml × код (v3, ADR 0085)</span></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-3 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/ru/explanation/auditoria-visual-rodada-29><span class=linkLabel_CzBh>Визуальный аудит до и после Rodada 29</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/prd/ru/explanation/historico-de-fases><span class=categoryLinkLabel_jKch>История фаз</span></a></div><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/prd/ru/explanation/localizacao><span class=categoryLinkLabel_jKch>Локализация</span></a></div><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-2 menu__list-item menu__list-item--collapsed"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=false tabindex=0 href=/brabo/prd/ru/explanation/tanstack-ai><span class=categoryLinkLabel_jKch>Технические заметки</span></a></div></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/prd/ru/runbook><span class=categoryLinkLabel_jKch>🛠️ Эксплуатация</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/ru/runbook><span class=linkLabel_CzBh>Руководство по эксплуатации</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true href=/brabo/prd/ru/glossary><span class=categoryLinkLabel_jKch>📚 Словарь</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class=menu__link tabindex=0 href=/brabo/prd/ru/glossary><span class=linkLabel_CzBh>Глоссарий</span></a></ul><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class=menu__list-item-collapsible><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="categoryLink_akZY menu__link menu__link--sublist menu__link--sublist-caret" role=button aria-expanded=true><span class=categoryLinkLabel_jKch>🤝 Участие</span></a></div><ul class=menu__list><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>Как внести вклад</span><svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>Где попросить помощи</span><svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class="menu__link menuExternalLink_Ca3u" tabindex=0><span class=linkLabel_CzBh>Сообщить об уязвимости</span><svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></ul></nav></div></div></aside><main class=docMainContainer_ia8v><div class="container padding-top--md padding-bottom--lg"><div class=row><div class="col docItemCol_xjE4"><div class=docItemContainer_cPej><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_sZul" aria-label="Навигационная цепочка текущей страницы"><ul class=breadcrumbs><li class=breadcrumbs__item><a aria-label="Главная страница" class=breadcrumbs__link href=/brabo/prd/ru/><svg viewBox="0 0 24 24" class=breadcrumbHomeIcon_AUjL><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill=currentColor /></svg></a><li class=breadcrumbs__item><span class=breadcrumbs__link>💡 Пояснения</span><li class=breadcrumbs__item><span class=breadcrumbs__link>Проверки и измерения</span><li class="breadcrumbs__item breadcrumbs__item--active"><span class=breadcrumbs__link>Аудит: fluxo.yml × код (v3, ADR 0085)</span></ul></nav><div class="tocCollapsible_nbAK theme-doc-toc-mobile tocMobile_r92C"><button type=button class="clean-btn tocCollapsibleButton_hcyq">Содержание этой страницы</button></div><div class="theme-doc-markdown markdown"><header><h1>Аудит: fluxo.yml × код (v3, ADR 0085)</h1></header>
+<p>Изолированная сессия аудита — <strong>только чтение</strong>. Сопоставляет <code>docs/fluxo.yml</code>
+(целевую модель, объявленную ADR 0085) с реальным кодом, чтобы ответить на два
+вопроса: чего не хватает, чтобы код соблюдал всё, что поток объявляет как
+<code>active</code>, и что действительно выстроено лестницей за каждым триггером
+<a class="" href=/brabo/prd/ru/explanation/modelo-de-time#activation-trigger-table>таблицы активации</a> в
+<code>modelo-de-time.md</code>. Ни одна строка production-кода не изменена в этой
+сессии; ни один из трёх документов-моделей (<code>fluxo.yml</code>, <code>gates.yml</code>,
+<code>agent-areas.ts</code>) не редактировался — каждое найденное между ними расхождение
+трактуется как <strong>находка</strong>, а не как разрешение исправить попутно.</p>
+<blockquote>
+<p>Доктрина ADR 0085: роль <code>proposto</code> объявляет, кто её поглощает сегодня, и
+объективный критерий разделения — целевая оргструктура — это последовательность
+активации, а не стремление. Этот аудит не предвосхищает ни одной роли
+<code>proposto</code>/<code>planned</code>; там, где найдено что-то сверх того, что должно существовать,
+это явно помечено как находка.</p>
+</blockquote>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=how-to-read-this-document>Как читать этот документ<a href=#how-to-read-this-document class=hash-link aria-label="Прямая ссылка на Как читать этот документ" title="Прямая ссылка на Как читать этот документ" translate=no>​</a></h2>
+<ul>
+<li class=""><strong>Раздел A — Расхождения.</strong> Поток объявляет X, код (или соседний <code>gates.yml</code>)
+делает Y. Это конфликт между источниками, требующий решения владельца продукта, —
+ни одно здесь не исправлено.</li>
+<li class=""><strong>Раздел B — Пробелы активных ролей.</strong> Объявленная работа (никогда не
+«proposto») над ролями, которые уже действуют сегодня, — реализуема уже сейчас, без
+ожидания какого-либо триггера.</li>
+<li class=""><strong>Раздел C — Выстроено за триггером.</strong> Что разблокировал бы каждый триггер таблицы
+активации, с оценкой объёма и с указанием, сработал ли он уже.</li>
+<li class=""><strong>Раздел D — План волн.</strong> Предложение последовательности, упорядоченное от
+gate, дешевле всего проверяемого скриптом, к самому дорогому (требующему
+ADR и продуктового решения).</li>
+</ul>
+<hr/>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=a-divergences>A. Расхождения<a href=#a-divergences class=hash-link aria-label="Прямая ссылка на A. Расхождения" title="Прямая ссылка на A. Расхождения" translate=no>​</a></h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>#<th>Серьёзность<th>Пункт<th>Доказательство<tbody><tr><td>A1<td><strong>Критическая</strong><td><code>gate_saida: paralelismo-autorizado</code> у <code>dev-lead</code> — <code>docs/fluxo.yml</code> (роль <code>dev-lead</code>) объявляет <code>status: ativo</code>; <code>docs/gates.yml:239-248</code> объявляет <code>status: planned</code> с комментарием «FASE 14d — entra active quando ela fechar». FASE 14d закрылась 2026-08-07 (в тот же день, что и FASE 15, создавшая <code>gates.yml</code>), и механизм с тех пор активен, протестирован и в production — <code>gates.yml</code> после этого ни разу не обновлялся.<td>Реальный механизм: <code>apps/api/src/application/use-cases/execution/request-parallelization.use-case.ts:35-78</code> (выше потолка создаёт <code>proposed_action</code> типа <code>parallelize</code>); запрет автоодобрения в <code>apps/api/src/domain/actions/decide.ts:266-276</code> (<code>parallelize</code>/<code>raise_max_parallel</code> никогда не выходят из <code>require_approval</code>); тесты: <code>apps/api/test/application/use-cases/execution/request-parallelization.use-case.spec.ts:97</code>, <code>apps/api/test/domain/actions/decide.spec.ts:273-303</code>. Сам <code>docs/fluxo.yml</code> уже регистрирует этот gate как <code>ativo</code> — расхождение <code>gates.yml</code> × (fluxo.yml + код), а не fluxo.yml × код.<tr><td>A2<td>Высокая<td>Выход <code>plano-de-paralelismo</code> у <code>dev-lead</code>, объявленный <code>via: proposed_action</code> (RN-083/154). Код производит простое событие <code>execution.plan_proposed</code> (<code>apps/engine/lib/engine/agents/dev_lead_tools.ex:14-18,60-77</code>), <strong>без</strong> конвейера одобрения — намеренное решение, задокументированное в самом комментарии кода («transformar a proposta em ação a decidir faria o usuário decidir duas vezes»). <code>proposed_action</code> типа <code>parallelize</code>, который действительно существует (та же деталь, что в A1), запускается <strong>действием пользователя в UI</strong>, запрашивающим подкрепление выше потолка (<code>apps/web/src/routes/ProjectOverviewTab.tsx:361</code> → <code>POST /sessions/:sessionId/execution/parallelize</code>), а не исходным выходом плана dev-lead. <code>fluxo.yml</code> сливает два разных механизма в один выход.<td><code>apps/engine/lib/engine/agents/dev_lead_tools.ex:14-18,60-77</code>; <code>apps/web/src/routes/ProjectOverviewTab.tsx:361</code>; <code>apps/engine/lib/engine_web/router.ex:57</code>.<tr><td>A3<td>Средняя<td>Машина состояний <code>dev</code> — <code>fluxo.yml:134</code> объявляет 4 состояния (<code>working|awaiting_gate|idle|idle_tripped</code>); в реальном коде их <strong>5</strong>: добавлено <code>:awaiting_approval</code> (Фаза 12e, ADR 0052) — сохраняемое состояние с собственными переходами, не переходное.<td><code>apps/engine/lib/engine/dev/dev_agent_server.ex:17-18,300-333,622-654</code>.<tr><td>A4<td>Низкая<td>Ссылка на RN-160, прикреплённая ко входу <code>backlog-promovido</code> (источник <code>po</code>) Arquiteto. Настоящая RN-160 касается gate «Confirmar arquitetura pronta» на стороне <strong>выхода</strong> (Arquiteto → Dev Lead), а не входа PO → Arquiteto.<td><code>docs/business-rules.md:5606-5622</code> vs. <code>docs/fluxo.yml</code> (роль <code>arquiteto</code>, входы).<tr><td>A5<td>Низкая<td>Ссылка на RN-161, прикреплённая к выходу <code>handoff-duplo</code> Arquiteto. Настоящая RN-161 (ADR 0069) касается <strong>следующего</strong> шага — принятие handoff к Dev Lead цепочкой запускает активацию выполнения, — а не самого двойного handoff.<td><code>docs/business-rules.md:5624-5644</code> vs. <code>docs/fluxo.yml</code> (роль <code>arquiteto</code>, выходы).<tr><td>A6<td>Низкая<td>Gate «Confirmar arquitetura pronta» (RN-160, ≥1 продвинутая история) гарантируется только на <strong>клиенте</strong> (<code>SessionPage.tsx</code>, <code>hasPromotedStory</code>); backend (<code>OfferInfraHandoffUseCase</code>) не перепроверяет. Прямой вызов внутреннего маршрута, минуя UI, обошёл бы правило. Это не расхождение, объявленное в <code>fluxo.yml</code>, — это дополнительная находка аудита.<td><code>apps/api/src/application/use-cases/agents/offer-infra-handoff.use-case.ts:19-38</code>.<tr><td>A7<td>Информационная<td>Выходной артефакт Criativo в коде — <code>artifact.product_brief</code>, а не буквально <code>necessidade-de-negocio</code> — это то же понятие с другим именем события; терминологическая неточность, а не структурная.<td><code>apps/engine/lib/engine/agents/criativo_server.ex:396-420</code>.<tr><td>A8<td>Низкая<td>Вход <code>worktree-por-agente</code> у <code>dev</code> помечен «origem: harness»; <code>WorktreeManager</code> живёт в <code>Engine.Dev</code> и не является одним из 4 компонентов, перечисленных для роли <code>harness</code> (<code>PromptAssembler</code>, <code>ToolLoop</code>, <code>ContextManager</code>, <code>Hooks</code>, <code>fluxo.yml:244</code>).<td><code>apps/engine/lib/engine/dev/worktree_manager.ex:19-49</code> vs. <code>docs/fluxo.yml</code> (роль <code>harness</code>, компоненты).<tr><td>A9<td>Нюанс (не расхождение)<td>Выход <code>pr-remota</code> у <code>dev</code> объявляет одновременное назначение <code>[area-qa, secops]</code>; реальный механизм последователен и упорядочен машиной состояний — QA всегда до SecOps, никогда параллельно. Это не противоречит fluxo.yml (оба действительно конечные назначения), но может навести на прочтение как одновременный fan-out.<td><code>apps/api/src/domain/execution/pr-gate-state-machine.ts:21-30</code>.</table>
+<p><strong>Находка субагента, отброшенная проверкой.</strong> Первоначальное исследование
+указало на метку <code>achado_aberto: AE</code> (<code>fluxo.yml:158</code>, роль <code>area-qa</code>) как на
+«осиротевшую ссылку». Проверка: <strong>это реальная и задокументированная ссылка</strong> —
+<code>docs/explanation/achados-execucao-real.md:618</code> (<code>### AE. O agente de QA tenta consertar o código que julga (P2)</code>) и <code>docs/explanation/backlog.md:40</code>.
+Расхождения здесь нет; зафиксировано, чтобы не повторять поиск.</p>
+<hr/>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=b-gaps-in-active-roles-already-implementable-work>B. Пробелы активных ролей (работа, реализуемая уже сейчас)<a href=#b-gaps-in-active-roles-already-implementable-work class=hash-link aria-label="Прямая ссылка на B. Пробелы активных ролей (работа, реализуемая уже сейчас)" title="Прямая ссылка на B. Пробелы активных ролей (работа, реализуемая уже сейчас)" translate=no>​</a></h2>
+<p>Все пункты ниже касаются ролей со <code>status: active</code> — ни один
+не зависит от того, чтобы сначала появилась роль <code>proposto</code>/<code>planned</code>.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>#<th>Пробел<th>Где в модели<th>Чего конкретно не хватает<tbody><tr><td>B1<td><strong>Делегирование Dev Lead → dev</strong> (ADR 0053, пункт 5)<td><code>fluxo.yml</code>, выход <code>delegacao</code> у <code>dev-lead</code>, <code>status: lacuna</code><td>Подтверждено отсутствие: <code>dev_lead_server.ex</code> регистрирует только <code>DevLeadTools.spec()</code> (<code>apps/engine/lib/engine/agents/dev_lead_server.ex:75</code>); таблица <code>delegations</code> уже принимает обобщённый <code>area: text</code> (<code>apps/api/src/db/schema.ts:1051-1091</code>), но единственные вызывающие <code>RecordDelegationUseCase</code> — <code>qa_lead_server.ex</code> и <code>infra_lead_server.ex</code>, ни один с <code>area = 'dev'</code>. Шаблон для копирования уже существует дважды (QA и Infra); не хватает его воспроизведения в Dev Lead.<tr><td>B2<td><strong>Gate <code>necessidade-validada</code></strong> (Criativo → PO)<td><code>modelo-de-time.md</code>, «Estado da malha» — «gate novo = ADR»<td>Не существует ни в <code>gates.yml</code>, ни в коде. <code>modelo-de-time.md</code> уже перечисляет открытое предложение («Anti-padrão do Criativo como validação real do gate») — не хватает решения об объективном критерии, ADR и регистрации в <code>gates.yml</code> (может появиться как <code>warn</code>, как <code>implementavel</code>/<code>operavel</code>).<tr><td>B3<td><strong>Gate <code>implementavel</code></strong> (gate_futuro у dev-lead)<td><code>docs/gates.yml:250-259</code>, <code>status: planned</code>, владелец <code>dev-lead</code><td>Dev-lead уже активная роль; gate не зависит от существования <code>qa-estrategia</code>/<code>appsec</code> — наоборот: именно СОЗДАНИЕ этого gate их активирует (см. C1). Не хватает критерия «реализуемости» (напр.: история с минимальным критерием приёмки, без блокирующей зависимости) и регистрации в <code>gates.yml</code>.<tr><td>B4<td><strong>Продуктовые метрики → PO</strong><td><code>fluxo.yml</code>, вход <code>metricas-de-produto</code> у <code>po</code>, <code>status: lacuna</code>; saída_alvo у <code>analytics</code> (proposto)<td>У <code>po_server.ex</code> нет ни одного инструмента продуктовых метрик (<code>apps/engine/lib/engine/agents/po_server.ex:86-99</code>). <code>modelo-de-time.md:21-25</code> уже фиксирует принцип: «analytics nasce como saída nova do <code>medicao</code> antes de ser papel» — то есть это НЕ нужно ждать, пока роль <code>analytics</code> отделится; это расширение <code>medicao</code> (уже активного, с <code>sumGroupedBy</code> в production), которое, появившись, само и есть пересечение триггера «продуктовые метрики становятся входом PO» (см. C2).<tr><td>B5<td><strong><code>docs/gates.yml</code> устарел</strong> (та же находка A1)<td>—<td>Исправить <code>status: planned</code> → <code>active</code> для <code>paralelismo-autorizado</code>, с доказательством <code>event_log</code>/<code>proposed_action.created</code>, отфильтрованным по <code>actionType: parallelize</code>, <code>onde: request-parallelization.use-case.ts</code>. Это исправление метаданных, мгновенно проверяемое <code>pnpm --filter api validacao:gates</code> — скрипт уже имел бы реальное доказательство для цитирования.<tr><td>B6<td><strong>RN-160 без перепроверки в backend</strong> (находка A6)<td>—<td>Необязательное укрепление: <code>OfferInfraHandoffUseCase</code> начинает требовать ≥1 продвинутую историю перед выдачей двойного handoff; сегодня кнопку блокирует только UI.<tr><td>B7<td><strong>Отчёт DORA через <code>medicao</code></strong><td><code>fluxo.yml</code>, роль <code>delivery-metricas</code> (proposto, <code>status: — (nunca)</code> в таблице триггеров — «vira RELATÓRIO do medicao, nunca agente»)<td>Поскольку роль никогда не становится агентом, этот пункт не стоит ни за каким триггером — это работа, доступная уже сегодня над уже активным <code>medicao</code>: lead time, deployment frequency, MTTR и change failure rate, извлечённые из event log + <code>gates.yml</code>, по тому же шаблону, что <code>medir:execucao</code>/<code>sumGroupedBy</code>.</table>
+<hr/>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=c-staged-behind-a-trigger>C. Выстроено за триггером<a href=#c-staged-behind-a-trigger class=hash-link aria-label="Прямая ссылка на C. Выстроено за триггером" title="Прямая ссылка на C. Выстроено за триггером" translate=no>​</a></h2>
+<p>Таблица активации (<code>modelo-de-time.md:52-62</code>), каждая строка с реальным состоянием,
+проверенным в этом аудите.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Триггер<th>Какие роли активирует<th>Сработал?<th>Оценка объёма, если пересечён<tbody><tr><td>Создан gate <code>implementavel</code><td><code>qa-estrategia</code> + <code>appsec</code> — «второй момент» <strong>существующих</strong> агентов (<code>qa-lead</code>/<code>secops</code> получают режим «design», без нового агента)<td><strong>Нет.</strong> <code>implementavel</code> остаётся <code>planned</code>, ни один маршрут/use case его не потребляет (исчерпывающий поиск: ноль вхождений вне <code>gates.yml</code>)<td><strong>M.</strong> Зависит от того, закроется ли сначала B3. Затем: <code>dev-lead</code> вызывает <code>qa-lead</code>/<code>secops</code> в режиме «design» (план тестирования, threat-model) перед предложением параллелизма — переиспользует агентов, без новой таблицы и нового worker.<tr><td>Продуктовые метрики становятся обязательным входом PO<td><code>analytics</code> отделяется от <code>medicao</code><td><strong>Нет</strong> — но работа по его пересечению — это B4, уже доступная сегодня<td><strong>S/M</strong> для производства метрики (B4); отделение самой роли <code>analytics</code> стоит за другим субъективным критерием («когда станет обязательным входом», ещё открытое предложение в <code>modelo-de-time.md</code>) — продуктовое решение, а не дополнительный технический объём.<tr><td><code>DEPLOY_ENABLED</code> переключается<td><code>platform</code> активируется → затем <code>secops-runtime</code><td><strong>Нет.</strong> Ни одного реального чтения <code>DEPLOY_ENABLED</code> в коде приложения — только упоминания в комментариях/документации; <code>tag-release.yml</code> явно документирует, что скрытого job деплоя нет<td><strong>L.</strong> Собственная программа: реальное окружение деплоя, GitHub Environments, зелёный конвейер, потребляемый <code>platform</code>, SLO/дашборд/runbook — и только потом <code>secops-runtime</code> (обнаружение с реальным трафиком). Крупнейший пункт backlog потока.<tr><td>Anamnese выходит из доработки<td>Триггер <code>staff</code> снова получает владельца<td><strong>Нет — и движение пошло в обратную сторону.</strong> <code>ANAMNESE_ENABLED=false</code> с 2026-08-10, явное решение пользователя («hoje ele não está trazendo dados de muito valor», RN-115, <code>docs/business-rules.md:4597-4655</code>)<td>Незакрытый вопрос «autor-da-proposta-de-teto (RN-086)», упомянутый в <code>fluxo.yml:263</code>, <strong>реализован и протестирован в коде</strong> (<code>ProposeMaxParallelUseCase</code>, жёстко заданный актор <code>anamnese</code>; <code>apps/engine/lib/engine/workers/anamnese_worker.ex:270-286</code>; тесты в <code>anamnese_worker_test.exs:387-411</code>) — лишь <strong>спит под флагом</strong>. Это не инженерный пробел; это приостановленное продуктовое решение, ожидающее «будущей доработки того, что выводит Anamnese» (<code>docs/explanation/backlog.md:349</code>).<tr><td>Управляемый проект с собственным UI<td><code>ux-designer</code> отделяется от Criativo<td><strong>Нет.</strong> Поиск артефакта прототипа/дизайна, переданного клиентскому проекту (вне <code>design_handoff_brabo/</code>, который принадлежит самому Brabo): ноль вхождений<td><strong>L.</strong> Зависит от того, получит ли вкладка Code возможность РЕДАКТИРОВАНИЯ/дизайна UI — сегодня она объявлена только для чтения (FASE 26).<tr><td>Реальный объём данных<td><code>dbre</code> отделяется от Dev Lead/Platform<td><strong>Нет.</strong> Ни одна метрика нагрузки/объёма реального production в коде не упоминается<td><strong>L.</strong> Зависит от реальной эксплуатации в production с масштабом, сегодня вне контроля команды.<tr><td>— (никогда)<td><code>delivery-metricas</code> становится отчётом, а не агентом<td>N/A по замыслу<td>См. B7 — сам отчёт не ждёт триггера.</table>
+<hr/>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=d-proposed-wave-plan>D. Предлагаемый план волн<a href=#d-proposed-wave-plan class=hash-link aria-label="Прямая ссылка на D. Предлагаемый план волн" title="Прямая ссылка на D. Предлагаемый план волн" translate=no>​</a></h2>
+<p>Упорядочено от gate, дешевле всего проверяемого скриптом (чистые метаданные, без
+новой логики), к самому дорогому (требует ADR и продуктового решения). Каждая волна —
+будущая сессия с единственным результатом — <strong>ни одна не начата в этой
+сессии</strong>.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Волна<th>Единственный результат<th>Пункты<th>Стоимость<th>Проверка<tbody><tr><td><strong>1</strong><td><code>fluxo.yml</code>/<code>gates.yml</code> актуальны<td>A1/B5 (статус gate <code>paralelismo-autorizado</code>), A3–A5, A8 (исправлены ссылки на RN и машина состояний <code>dev</code>)<td>S<td><code>pnpm docs:check</code> зелёный; <code>pnpm --filter api validacao:gates</code>, цитирующий реальное доказательство для <code>paralelismo-autorizado</code><tr><td><strong>2</strong><td>Dev Lead делегирует dev; готовность архитектуры доказывается в backend<td>B1 (приватный инструмент делегирования в dev-lead, по тому же шаблону, что <code>qa_lead_server.ex</code>/<code>infra_lead_server.ex</code>), B6 (RN-160 перепроверяется в <code>OfferInfraHandoffUseCase</code>)<td>M<td>Тест, доказывающий запись <code>delegations</code> с <code>area='dev'</code>; тест, что внутренний маршрут отклоняет двойной handoff без продвинутой истории<tr><td><strong>3</strong><td><code>medicao</code> говорит о продукте<td>B7 (отчёт DORA), B4 (продуктовые метрики как вход PO — пересекает триггер C2)<td>M<td>Скрипт извлекает 4 метрики DORA из известной фикстуры; тест, что PO читает <code>metricas-de-produto</code>, когда они есть<tr><td><strong>4</strong><td>Рождается gate <code>implementavel</code><td>B3 (критерий «реализуемости» в dev-lead, регистрация в <code>gates.yml</code> — может появиться как <code>warn</code>)<td>M, с ADR<td>ADR принят; <code>validacao:gates</code> покрывает новое доказательство<tr><td><strong>5</strong><td>QA и SecOps получают второй момент<td>C1 (<code>qa-lead</code>/<code>secops</code> в режиме «design»: план тестирования, threat-model) — зависит от закрытой Волны 4<td>M<td>Тест, что dev-lead получает план тестирования и threat-model до предложения параллелизма<tr><td><strong>6</strong><td>Gate <code>necessidade-validada</code><td>B2 (объективный критерий проверки потребности, ADR, регистрация в <code>gates.yml</code>)<td>M, с ADR и предварительным решением<td>ADR принят; <code>validacao:gates</code> покрывает новое доказательство</table>
+<p><strong>Вне волн</strong> (зафиксированный backlog, без оценки сессии — зависят от
+решения о масштабе/реальной инфраструктуре или от того, что владелец продукта снова что-то включит, а не от
+планируемой инженерной работы): <code>DEPLOY_ENABLED</code>/<code>platform</code>/<code>secops-runtime</code> (C3, L,
+собственная программа), повторная активация Anamnese/триггера <code>staff</code> (C4, решение
+пользователя), <code>ux-designer</code> (C5, зависит от того, получит ли вкладка Code редактирование — заморожена
+как только для чтения в FASE 26), <code>dbre</code> (C6, зависит от реального объёма данных
+в production).</p>
+<hr/>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=documentation-infrastructure-note-out-of-scope-for-this-audit>Заметка об инфраструктуре документации (вне объёма этого аудита)<a href=#documentation-infrastructure-note-out-of-scope-for-this-audit class=hash-link aria-label="Прямая ссылка на Заметка об инфраструктуре документации (вне объёма этого аудита)" title="Прямая ссылка на Заметка об инфраструктуре документации (вне объёма этого аудита)" translate=no>​</a></h2>
+<p><code>docs/explanation/modelo-de-time.md</code> существует и полон, но <strong>не
+перечислен в <code>website/sidebars.ts</code></strong> — доступен только по прямой ссылке, а не
+через меню сайта. Это не находка <code>fluxo.yml</code> × код; это ранее существовавший пробел
+публикации, отмеченный здесь, чтобы не потеряться, без исправления
+в этой сессии (вне объявленного объёма: «никаких изменений кода»).</p>
+<hr/>
+<h2 class="anchor anchorTargetStickyNavbar_PEh0" id=summary>Итог<a href=#summary class=hash-link aria-label="Прямая ссылка на Итог" title="Прямая ссылка на Итог" translate=no>​</a></h2>
+<ul>
+<li class=""><strong>9 расхождений</strong> (A1–A9): 1 критическое (gate ошибочно помечен <code>planned</code> в
+документе, который уже работает как <code>active</code>), 1 высокое (механизм одобрения плана
+параллелизма не совпадает с объявленным), 2 средних, 4 низких, 1
+информационное, 1 нюанс без реального противоречия.</li>
+<li class=""><strong>7 пробелов активных ролей</strong> (B1–B7), все реализуемы без ожидания
+триггера.</li>
+<li class=""><strong>7 триггеров таблицы активации</strong>, ни один не сработал — один из них
+(Anamnese) пошёл в обратную сторону с момента последнего чтения fluxo.yml.</li>
+<li class=""><strong>Ноль находок кода, предвосхищающего роль <code>proposto</code>/<code>planned</code></strong> —
+объявленные пробелы действительно пусты во всех проверенных
+ролях.</li>
+</ul></div><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_yZb9"><a href=https://github.com/daneiel/brabo/blob/dev/docs/explanation/auditoria-fluxo-vs-codigo.md target=_blank rel="noopener noreferrer" class=theme-edit-this-page><svg fill=currentColor height=20 width=20 viewBox="0 0 40 40" class=iconEdit_ANja aria-hidden=true><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"/></g></svg>Отредактировать эту страницу</a></div><div class="col lastUpdated_Kb4y"><span class=theme-last-updated>Последнее обновление<!-- --> <b><time datetime=2026-10-15T16:03:21.000Z itemprop=dateModified>15 окт. 2026 г.</time></b> от <b>Daniel Souza</b></span></div></div></footer></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Страница документа"><a class="pagination-nav__link pagination-nav__link--prev" href=/brabo/prd/ru/explanation/medicao-do-jev><div class=pagination-nav__sublabel>Предыдущая страница</div><div class=pagination-nav__label>Измерение маршрутизатора инструментов Jev</div></a><a class="pagination-nav__link pagination-nav__link--next" href=/brabo/prd/ru/explanation/auditoria-visual-rodada-29><div class=pagination-nav__sublabel>Следующая страница</div><div class=pagination-nav__label>Визуальный аудит до и после Rodada 29</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_wOiH thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href=#how-to-read-this-document class="table-of-contents__link toc-highlight">Как читать этот документ</a><li><a href=#a-divergences class="table-of-contents__link toc-highlight">A. Расхождения</a><li><a href=#b-gaps-in-active-roles-already-implementable-work class="table-of-contents__link toc-highlight">B. Пробелы активных ролей (работа, реализуемая уже сейчас)</a><li><a href=#c-staged-behind-a-trigger class="table-of-contents__link toc-highlight">C. Выстроено за триггером</a><li><a href=#d-proposed-wave-plan class="table-of-contents__link toc-highlight">D. Предлагаемый план волн</a><li><a href=#documentation-infrastructure-note-out-of-scope-for-this-audit class="table-of-contents__link toc-highlight">Заметка об инфраструктуре документации (вне объёма этого аудита)</a><li><a href=#summary class="table-of-contents__link toc-highlight">Итог</a></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Документация</div><ul class="footer__items clean-list"><li class=footer__item><a class=footer__link-item href=/brabo/prd/ru/getting-started>Первые шаги</a><li class=footer__item><a class=footer__link-item href=/brabo/prd/ru/architecture>Архитектура</a><li class=footer__item><a class=footer__link-item href=/brabo/prd/ru/business-rules>Бизнес-правила</a><li class=footer__item><a class=footer__link-item href=/brabo/prd/ru/runbook>Руководство по эксплуатации</a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Сообщество</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CONTRIBUTING.md target=_blank rel="noopener noreferrer" class=footer__link-item>Как внести вклад<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SUPPORT.md target=_blank rel="noopener noreferrer" class=footer__link-item>Где попросить помощи<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/SECURITY.md target=_blank rel="noopener noreferrer" class=footer__link-item>Безопасность<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div><div class="theme-layout-footer-column col footer__col"><div class=footer__title>Ещё</div><ul class="footer__items clean-list"><li class=footer__item><a href=https://github.com/daneiel/brabo target=_blank rel="noopener noreferrer" class=footer__link-item>GitHub<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/CHANGELOG.md target=_blank rel="noopener noreferrer" class=footer__link-item>CHANGELOG<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/LICENSE target=_blank rel="noopener noreferrer" class=footer__link-item>Лицензия MIT<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a><li class=footer__item><a href=https://github.com/daneiel/brabo/blob/dev/THIRD_PARTY_NOTICES.md target=_blank rel="noopener noreferrer" class=footer__link-item>Уведомления о сторонних компонентах<svg width=13.5 height=13.5 aria-label="(откроется в новой вкладке)" class=iconExternalLink_jHTF><use href=#theme-svg-external-link /></svg></a></ul></div></div><div class="footer__bottom text--center"><div class=footer__copyright>Copyright © 2026 Daniel Souza. Распространяется по лицензии MIT. Сторонние инструменты сохраняют собственные лицензии — см. Уведомления о сторонних компонентах.</div></div></div></footer></div></body>
