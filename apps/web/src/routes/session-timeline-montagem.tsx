@@ -51,9 +51,8 @@ import { gatePendenteNoMerge } from '../lib/gate-do-merge';
 import { StructuredQuestionCard } from './StructuredQuestionCard';
 import { ecosDeRespostaEstruturada } from '../lib/eco-de-formulario';
 import { agruparNarracoesDoTurno } from './session-fio';
+import { camposDoArtefato } from '../lib/artefato-do-fio';
 import { autorDaMensagem, type ContextoDeAutoria } from '../lib/autor-da-mensagem';
-import { estadosNaFila } from '../lib/fila-de-mensagens';
-import { SeloDaFila } from './SeloDaFila';
 import {
   RetomarGateEstacionado,
   cicloEstacionado,
@@ -125,6 +124,15 @@ export interface ContextoDaTimeline {
  * passadas de apresentação (RN-172 e o colapso de "Passos do turno").
  */
 /** RN-695: o evento é da Anamnese, e por isso fica fora do fio da sessão. */
+const ARTEFATOS_DO_FIO: Record<string, { chave: string; aba: 'arquitetura' | 'prs' }> = {
+  'artifact.decision_record': { chave: 'decisao', aba: 'arquitetura' },
+  'artifact.module_map': { chave: 'mapaDeModulos', aba: 'arquitetura' },
+  'artifact.c4_diagram': { chave: 'c4', aba: 'arquitetura' },
+  'artifact.project_image': { chave: 'imagem', aba: 'arquitetura' },
+  'artifact.qa_verdict': { chave: 'parecerQa', aba: 'prs' },
+  'artifact.secops_verdict': { chave: 'parecerSecops', aba: 'prs' },
+};
+
 export function ehDaAnamnese(event: SessionEvent): boolean {
   return event.actor.kind === 'agent' && event.actor.id === 'anamnese';
 }
@@ -412,9 +420,6 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
     });
   }
 
-  // RN-673: o estado de cada mensagem na fila de um agente — derivado do log
-  // UMA vez por montagem, como o engine o deriva.
-  const filaDasMensagens = estadosNaFila(events);
   // RN-712: a resposta de um formulário estruturado chega ao agente também
   // como `chat.message` do usuário (a api reenvia as respostas como texto).
   // O card respondido já as mostra — a bolha repetida sai do fio.
@@ -455,7 +460,6 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
       // desconhecido —, nunca quem está vendo a tela.
       const autor = autorDaMensagem(event.actor, autoria);
       const deAgente = autor.tipo === 'agente';
-      const naFila = filaDasMensagens.get(event.id);
       empurrar({
         mensagem: true, // RN-644: conta no corte do fio
         node: (
@@ -484,19 +488,6 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
               )
             }
             autor={rotuloDoAutor(autor)}
-            rodape={
-              naFila && (
-                <SeloDaFila
-                  projectId={projectId}
-                  sessionId={sessionId}
-                  mensagemId={event.id}
-                  estado={naFila}
-                  // Só quem ENVIOU cancela (a api recusa os outros com 403),
-                  // e só com a sessão aberta.
-                  podeCancelar={isActive && autor.tipo === 'voce'}
-                />
-              )
-            }
           >
             {text}
           </MensagemDeConversa>
@@ -748,6 +739,36 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
                 className={styles.timelineLink}
               >
                 {t('compartilhado.verNoBacklog')}
+                <ChevronRightIcon size={11} />
+              </Link>
+            }
+          />
+        ),
+      });
+    } else if (ARTEFATOS_DO_FIO[event.type]) {
+      // AT-683 (v5): decisão, mapa de módulos, C4, imagem e parecer de gate
+      // ganham o MESMO cartão do épico/história, com link para a aba.
+      const a = ARTEFATOS_DO_FIO[event.type];
+      const { titulo, descricao, veredito } = camposDoArtefato(event.type, event.payload);
+      empurrar({
+        agentId: event.actor.kind === 'agent' ? event.actor.id : undefined,
+        node: (
+          <ArtifactCard
+            key={event.id}
+            tipo={t(`turno.artefato.${a.chave}`)}
+            titulo={
+              titulo ??
+              (veredito ? t(`turno.artefato.veredito.${veredito}`, { defaultValue: veredito }) : t(`turno.artefato.${a.chave}`))
+            }
+            descricao={descricao}
+            acao={
+              <Link
+                to="/projects/$projectId"
+                params={{ projectId }}
+                search={{ tab: a.aba }}
+                className={styles.timelineLink}
+              >
+                {t('turno.artefato.ver')}
                 <ChevronRightIcon size={11} />
               </Link>
             }

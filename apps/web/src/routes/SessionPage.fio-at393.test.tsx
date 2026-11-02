@@ -122,7 +122,8 @@ describe('SessionPage — AT-393', () => {
       ],
     });
     montar();
-    expect(await screen.findByText('Pagar na entrega')).toBeInTheDocument();
+    // O painel de contexto e o cartão do fio (RN-979) mostram a mesma escolha.
+    expect((await screen.findAllByText('Pagar na entrega')).length).toBeGreaterThanOrEqual(1);
   });
 
   it('sem `agent.error` não há linha de próximo gesto (caso de falha)', async () => {

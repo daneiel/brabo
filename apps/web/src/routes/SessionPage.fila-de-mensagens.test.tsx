@@ -10,9 +10,9 @@ import i18n from '../lib/i18n';
 
 /**
  * RN-673 (ADR 0191): com turno em curso, a mensagem a um agente entra na FILA
- * dele — o composer não trava, a mensagem não arma turno novo na tela, e o fio
- * mostra "na fila" (com cancelar para quem a enviou) ou "cancelada", derivado
- * do log. A fila em si mora no engine; aqui só o contrato do CLIENTE.
+ * dele — o composer não trava, a mensagem não arma turno novo na tela, e o painel
+ * acima da caixa lista as pendentes (RN-977; cancelar só para quem as enviou),
+ * derivado do log. A fila em si mora no engine; aqui só o contrato do CLIENTE.
  */
 
 const getSession = vi.fn();
@@ -204,7 +204,7 @@ describe('SessionPage — a fila de mensagens com turno em curso (RN-673)', () =
     await waitFor(() => expect((campo as HTMLTextAreaElement).value).toBe('a décima primeira'));
   });
 
-  it('a mensagem na fila ganha o selo e, para quem a enviou, o botão de cancelar', async () => {
+  it('o painel lista as pendentes e só quem enviou cancela', async () => {
     eventos.mockReturnValue({
       items: [
         ...eventosIniciais,
@@ -218,8 +218,9 @@ describe('SessionPage — a fila de mensagens com turno em curso (RN-673)', () =
 
     montar();
 
-    const selos = await screen.findAllByText(/na fila de/);
-    expect(selos).toHaveLength(2);
+    const painel = await screen.findByTestId('painel-da-fila');
+    expect(painel).toHaveTextContent('minha pendente');
+    expect(painel).toHaveTextContent('pendente de outra pessoa');
     // Só a MINHA tem o botão: a api recusa cancelar a fala de outra pessoa.
     const cancelar = await screen.findAllByRole('button', { name: 'Cancelar' });
     expect(cancelar).toHaveLength(1);
@@ -230,7 +231,7 @@ describe('SessionPage — a fila de mensagens com turno em curso (RN-673)', () =
     );
   });
 
-  it('entregue some do selo; cancelada fica riscada, sem botão', async () => {
+  it('entregue e cancelada somem: sem pendente, não há painel', async () => {
     eventos.mockReturnValue({
       items: [
         ...eventosIniciais,
@@ -259,8 +260,8 @@ describe('SessionPage — a fila de mensagens com turno em curso (RN-673)', () =
 
     montar();
 
-    expect(await screen.findByText(/cancelada na fila/)).toBeInTheDocument();
-    expect(screen.queryByText(/na fila de/)).toBeNull();
+    await screen.findByPlaceholderText('Escreva uma mensagem… (Enter envia, Shift+Enter quebra linha)');
+    expect(screen.queryByTestId('painel-da-fila')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Cancelar' })).toBeNull();
   });
 });

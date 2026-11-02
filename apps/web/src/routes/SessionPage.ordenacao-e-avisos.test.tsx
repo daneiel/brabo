@@ -740,7 +740,7 @@ describe('RN-173 — o fio acompanha o que cresce', () => {
     await waitFor(() => expect(rolou).toHaveBeenCalled());
   });
 
-  it('RN-951: quem rolou pra cima também é levado ao fim quando chega conteúdo novo', async () => {
+  it('RN-977: quem rolou pra cima NÃO é levado ao fim; aparece "Ir ao fim" e o clique retoma', async () => {
     eventos.mockReturnValue({
       items: [
         {
@@ -780,6 +780,8 @@ describe('RN-173 — o fio acompanha o que cresce', () => {
     rerender(arvore);
 
     await screen.findByText('propõe alteração');
+    expect(rolou).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Ir ao fim' }));
     expect(rolou).toHaveBeenCalled();
   });
 });
