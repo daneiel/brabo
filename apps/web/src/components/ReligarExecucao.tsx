@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import { activateExecution, mensagemDaApi } from '../lib/api-client';
 import { Button } from './ui/Button';
-import styles from './ModoAutomaticoDoTime.module.css';
+import { Item, ItemActions, ItemContent, ItemDescription } from './shadcn/item';
 
 export interface ReligarExecucaoProps {
   projectId: string;
@@ -43,16 +43,16 @@ export function ReligarExecucao({ projectId, tarefasPendentes }: ReligarExecucao
   }
 
   return (
-    <div className={styles.card} data-testid="religar-execucao">
-      <p className={styles.texto}>{t('religar.descricao', { count: tarefasPendentes })}</p>
-      <Button variant="primary" onClick={() => void religar()} disabled={enviando}>
-        {t('religar.botao')}
-      </Button>
-      {erro && (
-        <p className={styles.texto} role="alert">
-          {erro}
-        </p>
-      )}
-    </div>
+    <Item variant="outline" style={{ margin: "12px 0" }} data-testid="religar-execucao">
+      <ItemContent>
+        <ItemDescription>{t('religar.descricao', { count: tarefasPendentes })}</ItemDescription>
+        {erro && <ItemDescription role="alert">{erro}</ItemDescription>}
+      </ItemContent>
+      <ItemActions>
+        <Button variant="primary" onClick={() => void religar()} disabled={enviando}>
+          {t('religar.botao')}
+        </Button>
+      </ItemActions>
+    </Item>
   );
 }
