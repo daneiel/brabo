@@ -83,6 +83,8 @@
   },
   "mensagens": {
     "reunindoInformacoes": "Reunindo informações...",
+    "copiar": "Copiar resposta",
+    "copiado": "Copiado",
     "respostaVazia": "Resposta vazia — evento de uma versão antiga, em que falha de turno era gravada como resposta em branco. O motivo real não foi registrado.",
     "modeloGerador": "Modelo que gerou esta resposta: {{modelName}}",
     "modeloNaoGravado": "Esta resposta foi gravada sem o nome do modelo",
@@ -236,6 +238,9 @@
   "turno": {
     "pensando": "Pensando…",
     "passosDoTurno": "Passos do turno",
+    "ferramentaFalhou": "A ferramenta falhou.",
+    "resultadoCortado": "Resultado cortado pelo limite de 2.000 caracteres.",
+    "artefato": { "epico": "Épico criado", "historia": "História criada" },
     "passosCount_zero": "{{count}} passos",
     "passosCount_one": "{{count}} passo",
     "passosCount_other": "{{count}} passos"

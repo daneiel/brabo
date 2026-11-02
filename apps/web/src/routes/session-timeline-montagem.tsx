@@ -22,6 +22,11 @@ import { MarkdownMessage } from '../components/ui/MarkdownMessage';
 import { AvatarDoAgente } from '../components/ui/AvatarDoAgente';
 import { Button } from '../components/ui/Button';
 import { MensagemDeConversa } from '../components/ai-elements/message';
+import { ChainOfThought } from '../components/ai-elements/chain-of-thought';
+import { Tool } from '../components/ai-elements/tool';
+import { ArtifactCard } from '../components/ai-elements/artifact';
+import { AcaoCopiar } from '../components/ai-elements/copiar';
+import { FERRAMENTAS_DE_ARTEFATO, passosDoTurno } from '../lib/passos-do-turno';
 import { Carousel, type CarouselSlide } from '../components/ui/Carousel';
 import { ehTetoDoCriativo, lerFalhaDeTurno } from '../lib/session-falha';
 import { respostaCortada } from '../lib/resposta-cortada';
@@ -870,9 +875,17 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
               </>
             }
             rodape={
-              /* RN-749: a resposta cortada pelo teto oferece a continuação
-                 num clique — antes a pessoa tinha de adivinhar "continue". */
-              key === event.id &&
+              <>
+              {text !== '' && event.actor.kind === 'agent' && (
+                <AcaoCopiar
+                  texto={text}
+                  rotulo={t('mensagens.copiar')}
+                  rotuloCopiado={t('mensagens.copiado')}
+                />
+              )}
+              {/* RN-749: a resposta cortada pelo teto oferece a continuação
+                 num clique — antes a pessoa tinha de adivinhar "continue". */}
+              {key === event.id &&
               isActive &&
               continuarRespostaCortada &&
               event.actor.kind === 'agent' &&
@@ -884,7 +897,8 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
                 >
                   {t('mensagens.continuarCortada')}
                 </Button>
-              )
+              )}
+              </>
             }
           >
             {/* Resposta vazia é evento ANTIGO (até a RN-059): a tela o NOMEIA.
@@ -893,6 +907,42 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
             {text === '' ? t('mensagens.respostaVazia') : <MarkdownMessage text={text} />}
           </MensagemDeConversa>
       );
+      // Prévia AT-674: passos do turno encerrado — um ChainOfThought recolhido
+      // com as ferramentas (nome, estado, resultado; nunca args, RN-096).
+      const ferramentas = passosDoTurno(events, event);
+      if (ferramentas.length > 0) {
+        empurrar({
+          node: (
+            <div key={`${event.id}-cadeia`} data-testid="passos-do-turno-encerrado">
+              <ChainOfThought
+                titulo={t('turno.passosDoTurno')}
+                contagem={t('turno.passosCount', { count: ferramentas.length })}
+              >
+                {ferramentas.map((f) => (
+                  <Tool
+                    key={f.id}
+                    titulo={f.tool}
+                    estado={f.ok ? undefined : 'error'}
+                    saida={f.ok ? f.resultado : undefined}
+                    erro={f.ok ? undefined : (f.resultado ?? t('turno.ferramentaFalhou'))}
+                    avisoDeTruncada={f.truncado ? t('turno.resultadoCortado') : undefined}
+                  />
+                ))}
+              </ChainOfThought>
+              {ferramentas
+                .filter((f) => f.ok && FERRAMENTAS_DE_ARTEFATO[f.tool])
+                .map((f) => (
+                  <ArtifactCard
+                    key={`${f.id}-artefato`}
+                    tipo={t(`turno.artefato.${FERRAMENTAS_DE_ARTEFATO[f.tool]}`)}
+                    titulo={(f.resultado ?? '').split('\n')[0] ?? ''}
+                    descricao={f.resultado}
+                  />
+                ))}
+            </div>
+          ),
+        });
+      }
       passos.forEach((passo, i) =>
         empurrar({
           agentId: event.actor.kind === 'agent' ? event.actor.id : undefined,

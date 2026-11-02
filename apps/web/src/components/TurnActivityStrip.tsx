@@ -4,10 +4,10 @@ import { textoPlanoDoMarkdown } from '../lib/texto-plano';
 import type { EstadoDaAtividadeDoTurno } from '../lib/atividade-do-turno';
 import { useAtividadeDoStreaming, type StoreDoStreaming } from '../lib/streaming-do-turno';
 import { AvatarDoAgente } from './ui/AvatarDoAgente';
-import { Disclosure } from './ui/Disclosure';
 import { Shimmer } from './ui/Shimmer';
 import { ChatIcon } from './ui/icons';
 import { Tool } from './ai-elements/tool';
+import { ChainOfThought } from './ai-elements/chain-of-thought';
 import { Plan, type EstadoDoPasso } from './ai-elements/plan';
 import { TraceIcon, TraceLine, TraceTitle } from './shadcn/trace';
 import type { PlanoDoAgente } from '../routes/RetomarTurnoInterrompido';
@@ -85,10 +85,10 @@ export function TurnActivityStrip({ estado, agente, pensandoVisivel, plano }: Tu
           />
         )}
         {linhasParaExpandir.length > 0 && (
-          <Disclosure
+          <ChainOfThought
             titulo={t('turno.passosDoTurno')}
-            trailing={t('turno.passosCount', { count: linhasParaExpandir.length })}
-            classNameCabecalho={styles.disclosureCabecalho}
+            contagem={t('turno.passosCount', { count: linhasParaExpandir.length })}
+            emCurso
           >
             <div className={styles.linhas}>
               {linhasParaExpandir.map((linha, indice) =>
@@ -108,7 +108,7 @@ export function TurnActivityStrip({ estado, agente, pensandoVisivel, plano }: Tu
                 ),
               )}
             </div>
-          </Disclosure>
+          </ChainOfThought>
         )}
       </div>
     </div>

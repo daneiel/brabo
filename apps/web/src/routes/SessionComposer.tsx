@@ -393,7 +393,7 @@ export function SessionComposer({
             placeholder={t('composer.placeholder')}
             disabled={streaming && !podeEnfileirar}
           />
-          <InputGroupAddon align="inline-end">
+          <InputGroupAddon align="block-end" className="ml-auto justify-end">
           <Button
             onClick={handleSend}
             disabled={
