@@ -126,3 +126,33 @@
 .alertaDanger {
   border: 1px solid var(--danger);
 }
+
+/* Editor de orçamento: grade de largura natural, botão do kit sem esticar. */
+.formulario {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 260px));
+  gap: var(--space-3);
+  align-items: end;
+}
+
+.formulario > .nota,
+.formulario > .estadoErro {
+  grid-column: 1 / -1;
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.acoes {
+  display: flex;
+}
+
+/* O <figure> do gráfico vinha com a margem do navegador (40px) dentro da faixa. */
+.faixa figure {
+  margin: 0;
+}

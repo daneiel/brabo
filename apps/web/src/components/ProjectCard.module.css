@@ -85,6 +85,7 @@
 
 .avatars {
   display: flex;
+  gap: 6px;
 }
 
 .avatar {
@@ -98,11 +99,6 @@
   background: color-mix(in srgb, var(--agent-color) var(--tint-avatar), var(--surface-2));
   color: var(--agent-color);
   box-shadow: 0 0 0 2px var(--surface-1);
-  margin-left: -6px;
-}
-
-.avatar:first-child {
-  margin-left: 0;
 }
 
 .avatarCount {
@@ -131,7 +127,6 @@
   color: var(--text-muted);
   background: var(--surface-2);
   box-shadow: 0 0 0 2px var(--surface-1);
-  margin-left: -6px;
 }
 
 /*

@@ -1,4 +1,7 @@
 import { Shimmer } from '../components/ui/Shimmer';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { Select } from '../components/ui/Select';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
@@ -192,7 +195,7 @@ function EditorDoOrcamento({
 
   return (
     <form
-      className={styles.orcamentoProjeto}
+      className={styles.formulario}
       aria-label={t('budgetEditor.title')}
       onSubmit={(e) => {
         e.preventDefault();
@@ -205,29 +208,29 @@ function EditorDoOrcamento({
         salvar.mutate(valor);
       }}
     >
-      <label className={styles.nota}>
-        {t('budgetEditor.limitLabel')}{' '}
-        <input
-          inputMode="decimal"
-          value={limite}
-          disabled={!podeEditar}
-          onChange={(e) => setLimite(e.target.value)}
-        />
-      </label>
-      <label className={styles.nota}>
-        {t('budgetEditor.policyLabel')}{' '}
-        <select
+      <Input
+        label={t('budgetEditor.limitLabel')}
+        inputMode="decimal"
+        value={limite}
+        disabled={!podeEditar}
+        onChange={(e) => setLimite(e.target.value)}
+      />
+      <label className={styles.campo}>
+        {t('budgetEditor.policyLabel')}
+        <Select
           value={politica}
           disabled={!podeEditar}
           onChange={(e) => setPolitica(e.target.value as BudgetPolicy)}
         >
           <option value="block">{t('budgetEditor.block')}</option>
           <option value="allow">{t('budgetEditor.allow')}</option>
-        </select>
+        </Select>
       </label>
-      <button type="submit" className={styles.botao} disabled={!podeEditar || salvar.isPending}>
-        {salvar.isPending ? t('budgetEditor.saving') : t('budgetEditor.save')}
-      </button>
+      <div className={styles.acoes}>
+        <Button type="submit" disabled={!podeEditar || salvar.isPending}>
+          {salvar.isPending ? t('budgetEditor.saving') : t('budgetEditor.save')}
+        </Button>
+      </div>
       {!podeEditar && <p className={styles.nota}>{t('budgetEditor.noRole')}</p>}
       {invalido && <p className={styles.estadoErro} role="alert">{t('budgetEditor.invalid')}</p>}
       {salvar.isError && <p className={styles.estadoErro} role="alert">{t('budgetEditor.error')}</p>}
