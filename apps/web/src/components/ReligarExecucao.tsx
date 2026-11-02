@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { activateExecution, mensagemDaApi } from '../lib/api-client';
 import { Button } from './ui/Button';
 import { Item, ItemActions, ItemContent, ItemDescription } from './shadcn/item';
+import { Play } from 'lucide-react';
 
 export interface ReligarExecucaoProps {
   projectId: string;
@@ -50,6 +51,7 @@ export function ReligarExecucao({ projectId, tarefasPendentes }: ReligarExecucao
       </ItemContent>
       <ItemActions>
         <Button variant="primary" onClick={() => void religar()} disabled={enviando}>
+          <Play aria-hidden="true" />
           {t('religar.botao')}
         </Button>
       </ItemActions>

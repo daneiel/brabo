@@ -24,6 +24,7 @@ import { Badge, type BadgeTone } from './ui/Badge';
 import { Button } from './ui/Button';
 import { useToast } from './ui/ToastProvider';
 import styles from '../routes/ContainersPage.module.css';
+import { Square, Trash2, Play } from 'lucide-react';
 
 export const TOM_DO_STATUS: Record<ContainerLifecycleStatus, BadgeTone> = {
   provisioning: 'warning',
@@ -289,6 +290,7 @@ export function AcoesDoContainer({
           loading={emAndamento === 'parar'}
           onClick={() => void parar()}
         >
+          <Square aria-hidden="true" />
           {t('actions.stop')}
         </Button>
         <Button
@@ -297,6 +299,7 @@ export function AcoesDoContainer({
           loading={emAndamento === 'remover'}
           onClick={() => void remover()}
         >
+          <Trash2 aria-hidden="true" />
           {t('actions.remove')}
         </Button>
         <Button
@@ -307,6 +310,7 @@ export function AcoesDoContainer({
             if (subida.pode) void subir(subida.acao);
           }}
         >
+          <Play aria-hidden="true" />
           {item.registrado ? t('actions.startAgain') : t('actions.start')}
         </Button>
       </div>

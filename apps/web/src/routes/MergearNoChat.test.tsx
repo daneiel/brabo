@@ -157,3 +157,10 @@ describe('MergearNoChat (AT-266)', () => {
     expect(proposeAction).not.toHaveBeenCalled();
   });
 });
+
+it('AT-682: o ícone do botão é decorativo (aria-hidden) e o nome vem do texto', () => {
+  montar();
+  const botao = document.body.querySelector('button svg')!.closest('button')!;
+  expect(botao.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+  expect(botao.textContent?.trim().length).toBeGreaterThan(0);
+});

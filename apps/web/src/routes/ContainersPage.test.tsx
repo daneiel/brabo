@@ -863,3 +863,11 @@ describe('ContainersPage — layout estreito (AT-330)', () => {
     expect(screen.getAllByText('Ações')).toHaveLength(1);
   });
 });
+
+it('AT-682: o ícone do botão é decorativo (aria-hidden) e o nome vem do texto', () => {
+  useContainersOverview.mockReturnValue({ isPending: false, isError: false, data: [item()], refetch: vi.fn() });
+  montar();
+  const botao = document.body.querySelector('button svg')!.closest('button')!;
+  expect(botao.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+  expect(botao.textContent?.trim().length).toBeGreaterThan(0);
+});

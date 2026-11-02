@@ -103,3 +103,10 @@ describe('RetomarTurnoInterrompido', () => {
     expect(screen.getByTestId('retomar-turno-nota').textContent).toContain('papel developer');
   });
 });
+
+it('AT-682: o ícone do botão é decorativo (aria-hidden) e o nome vem do texto', () => {
+  montar(true);
+  const botao = document.body.querySelector('button svg')!.closest('button')!;
+  expect(botao.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+  expect(botao.textContent?.trim().length).toBeGreaterThan(0);
+});
