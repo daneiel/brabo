@@ -1,3 +1,4 @@
+import { Ajuda } from '../../components/ui/Ajuda';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
@@ -181,13 +182,13 @@ export function MelhoresModelosPorCapacidadeSection({
     <SecaoDeConfiguracoes chave="best-models">
       <div className={styles.sectionHead}>
         <h2 className={styles.title}>{t('bestModels.title')}</h2>
+        <Ajuda assunto={t('bestModels.title')}>
+          {t('bestModels.subtitle.before')}
+          <a href="/providers">{t('bestModels.subtitle.link')}</a>
+          {t('bestModels.subtitle.after')}
+        </Ajuda>
         <span className={styles.eyebrow}>{t('bestModels.eyebrow')}</span>
       </div>
-      <p className={styles.subtitle}>
-        {t('bestModels.subtitle.before')}
-        <a href="/providers">{t('bestModels.subtitle.link')}</a>
-        {t('bestModels.subtitle.after')}
-      </p>
       <Table
         columns={columns}
         rows={linhas}
