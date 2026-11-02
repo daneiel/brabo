@@ -8,7 +8,7 @@ const semFundoOff =
 const cheioOff = `disabled:bg-[var(--surface-2)] ${semFundoOff}`
 
 const buttonVariants = cva(
-  "group/button inline-flex cursor-pointer items-center justify-center gap-2 rounded-[var(--radius-md)] border border-transparent px-3 py-[9px] font-[family-name:var(--font-body)] text-[length:var(--fs-body)] font-semibold transition-[background,border-color,color] duration-[0.12s] outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] disabled:cursor-not-allowed",
+  "group/button inline-flex [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4cursor-pointer items-center justify-center gap-2 rounded-[var(--radius-md)] border border-transparent px-3 py-[9px] font-[family-name:var(--font-body)] text-[length:var(--fs-body)] font-semibold transition-[background,border-color,color] duration-[0.12s] outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] disabled:cursor-not-allowed",
   {
     variants: {
       variant: {
