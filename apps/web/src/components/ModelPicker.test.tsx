@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterAll } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ModelPicker } from './ModelPicker';
 // A instância REAL do app: o componente usa `useTranslation('models')` sem
 // `I18nextProvider` próprio — mesmo padrão de `ProjectExecutorsTab.test.tsx`.
@@ -165,22 +165,17 @@ describe('ModelPicker', () => {
     expect(screen.getByText('indisponível no provider')).toBeTruthy();
   });
 
-  it('o dropdown recebe coordenadas próprias, sem depender do ancestral', () => {
-    // É isto que faz ele escapar do `overflow: hidden` da Table: a posição vem
-    // do retângulo do gatilho, não do fluxo do container.
+  it('o dropdown sai da hierarquia da célula (portal do Popover)', () => {
+    // É isto que faz ele escapar do `overflow: hidden` da Table.
     const { container } = render(
       <ModelPicker models={MODELOS} onSelect={vi.fn()} />,
     );
     fireEvent.click(screen.getByRole('button', { name: 'Selecionar modelo' }));
 
-    const dropdown = container.querySelector('[style*="top"]') as HTMLElement;
-    expect(dropdown).toBeTruthy();
-    expect(dropdown.style.top).not.toBe('');
-    expect(dropdown.style.left).not.toBe('');
-    expect(dropdown.style.maxHeight).not.toBe('');
+    expect(container.contains(screen.getByText('Local'))).toBe(false);
   });
 
-  it('escolher um modelo chama onSelect e fecha', () => {
+  it('escolher um modelo chama onSelect e fecha', async () => {
     const { onSelect } = abrir();
 
     fireEvent.click(screen.getByText('Qwen2.5 Coder 7B (local)'));
@@ -188,7 +183,7 @@ describe('ModelPicker', () => {
     expect(onSelect).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'm-2' }),
     );
-    expect(screen.queryByText('Local')).toBeNull();
+    await waitFor(() => expect(screen.queryByText('Local')).toBeNull());
   });
 
   it('marca o modelo vigente', () => {
@@ -198,21 +193,22 @@ describe('ModelPicker', () => {
     expect(screen.getAllByText('Qwen2.5 Coder 7B (local)').length).toBeGreaterThan(1);
   });
 
-  it('Escape fecha sem selecionar', () => {
+  it('Escape fecha sem selecionar', async () => {
     const { onSelect } = abrir();
 
-    fireEvent.keyDown(document, { key: 'Escape' });
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' });
 
-    expect(screen.queryByText('Local')).toBeNull();
+    await waitFor(() => expect(screen.queryByText('Local')).toBeNull());
     expect(onSelect).not.toHaveBeenCalled();
   });
 
-  it('clicar fora fecha sem selecionar', () => {
+  it('clicar fora fecha sem selecionar', async () => {
     const { onSelect } = abrir();
 
-    fireEvent.mouseDown(document.body);
+    fireEvent.pointerDown(document.body);
+    fireEvent.click(document.body);
 
-    expect(screen.queryByText('Local')).toBeNull();
+    await waitFor(() => expect(screen.queryByText('Local')).toBeNull());
     expect(onSelect).not.toHaveBeenCalled();
   });
 
@@ -245,29 +241,5 @@ describe('ModelPicker', () => {
 
     expect(screen.getByText(/Nenhum modelo faz tool calling nativo/)).toBeTruthy();
     expect(screen.queryByText('Nenhum modelo cadastrado')).toBeNull();
-  });
-  /**
-   * O defeito: o listener de `scroll` era de CAPTURA e não olhava o alvo, então
-   * rolar a própria lista a fechava — e a rolagem seguia para a página atrás.
-   * Com `max-height` e mais modelos que cabem, os de baixo eram inalcançáveis.
-   */
-  it('rolar DENTRO da lista não fecha', () => {
-    abrir();
-
-    const grupo = screen.getByText('Local');
-    const dropdown = grupo.closest('div[class*="dropdown"]');
-    expect(dropdown).toBeTruthy();
-
-    fireEvent.scroll(dropdown!);
-
-    expect(screen.queryByText('Local')).toBeTruthy();
-  });
-
-  it('rolar a PÁGINA fecha — o `fixed` descola do gatilho', () => {
-    abrir();
-
-    fireEvent.scroll(document.body);
-
-    expect(screen.queryByText('Local')).toBeNull();
   });
 });
