@@ -59,6 +59,8 @@ import { montarTimeline } from './session-timeline-montagem';
 import { SessionTopbar } from './SessionTopbar';
 import { chaveDoIdiomaDaSessao } from '../lib/idioma-da-resposta';
 import { SessionFio } from './SessionFio';
+import { ConversationScrollButton } from '../components/ai-elements/conversation';
+import { PainelDaFila } from './PainelDaFila';
 import { SessionComposer } from './SessionComposer';
 import {
   DESTINATARIO_DA_SESSAO_CRIATIVA,
@@ -292,7 +294,7 @@ export function SessionPage({
   // A rolagem do fio (achado 10, Fase 4b, RN-173) mora em
   // `../lib/session-rolagem` desde o PR 7 do ADR 0176 — os mesmos refs e
   // efeitos, chamados neste mesmo ponto.
-  const { messagesEndRef, scrollContainerRef, messagesInnerRef } = useRolagemDoFio({
+  const { messagesEndRef, scrollContainerRef, messagesInnerRef, afastado, irAoFim } = useRolagemDoFio({
     highlightEvent,
     logOpen,
     events,
@@ -801,6 +803,7 @@ export function SessionPage({
               {/* Sentinela do achado 10 — alvo do scroll de abertura e do
                   "acompanha o fim" enquanto o usuário está perto dele. */}
               <div ref={messagesEndRef} />
+              <ConversationScrollButton visivel={afastado} rotulo={t('fio.irAoFim')} onClick={irAoFim} />
             </div>
           </div>
 
@@ -819,6 +822,8 @@ export function SessionPage({
               plano={planoDoTurno(events, streamingAgent ?? statusAgent)}
             />
           )}
+
+          <PainelDaFila projectId={projectId} sessionId={sessionId} events={events} autoria={autoria} isActive={isActive} />
 
           <SessionComposer
             isActive={isActive}
