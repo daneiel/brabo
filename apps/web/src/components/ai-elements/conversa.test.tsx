@@ -1,6 +1,8 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import { ArtifactCard } from './artifact';
 import { Confirmacao } from './confirmation';
+import { AcaoCopiar } from './copiar';
 import { MensagemDeConversa } from './message';
 import { CampoDePrompt } from './prompt-input';
 import { Sugestoes } from './suggestion';
@@ -70,5 +72,38 @@ describe('ai-elements/conversa (AT-647 A1)', () => {
     rerender(<Confirmacao {...props} desabilitado />);
     fireEvent.click(screen.getByText('Aprovar'));
     expect(onAprovar).toHaveBeenCalledTimes(1);
+  });
+
+  it('copiar: grava o texto no clipboard e troca o rótulo para copiado', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    render(<AcaoCopiar texto="# oi" rotulo="Copiar resposta" rotuloCopiado="Copiado" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Copiar resposta' }));
+    expect(writeText).toHaveBeenCalledWith('# oi');
+    expect(await screen.findByRole('button', { name: 'Copiado' })).toBeTruthy();
+  });
+
+  it('copiar: sem clipboard ou com recusa, não quebra nem marca copiado', async () => {
+    Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true });
+    const { rerender } = render(<AcaoCopiar texto="x" rotulo="Copiar" rotuloCopiado="Copiado" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Copiar' }));
+    const writeText = vi.fn().mockRejectedValue(new Error('negado'));
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    rerender(<AcaoCopiar texto="y" rotulo="Copiar" rotuloCopiado="Copiado" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Copiar' }));
+    await Promise.resolve();
+    expect(screen.getByRole('button', { name: 'Copiar' })).toBeTruthy();
+  });
+
+  it('artifact: mostra tipo, título, trecho e ação; sem opcionais, só o essencial', () => {
+    const { container, rerender } = render(
+      <ArtifactCard tipo="Épico criado" titulo="Login" descricao="d" acao={<a href="/x">Abrir</a>} />,
+    );
+    expect(container.querySelector('[data-slot="ai-artifact-tipo"]')?.textContent).toBe('Épico criado');
+    expect(screen.getByText('Login')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Abrir' })).toBeTruthy();
+    rerender(<ArtifactCard tipo="t" titulo="u" />);
+    expect(container.querySelector('[data-slot="ai-artifact-descricao"]')).toBeNull();
+    expect(container.querySelector('[data-slot="ai-artifact-acao"]')).toBeNull();
   });
 });

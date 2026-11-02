@@ -22,6 +22,8 @@ import { MarkdownMessage } from '../components/ui/MarkdownMessage';
 import { AvatarDoAgente } from '../components/ui/AvatarDoAgente';
 import { Button } from '../components/ui/Button';
 import { MensagemDeConversa } from '../components/ai-elements/message';
+import { ArtifactCard } from '../components/ai-elements/artifact';
+import { AcaoCopiar } from '../components/ai-elements/copiar';
 import { Carousel, type CarouselSlide } from '../components/ui/Carousel';
 import { ehTetoDoCriativo, lerFalhaDeTurno } from '../lib/session-falha';
 import { respostaCortada } from '../lib/resposta-cortada';
@@ -723,24 +725,31 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
       empurrar({
         agentId: event.actor.kind === 'agent' ? event.actor.id : undefined,
         node: (
-          <div className={styles.handoffDivider} key={event.id}>
-            <span className={styles.handoffPill}>
-              <StackIcon size={13} />
-              <span className={styles.handoffAgent} style={corDoAgente(event.actor.id)}>
-                {nomeDoAgente(event.actor.id)}
+          <ArtifactCard
+            key={event.id}
+            tipo={t(event.type === 'backlog.epic_created' ? 'turno.artefato.epico' : 'turno.artefato.historia')}
+            titulo={titulo}
+            descricao={
+              <span className={styles.handoffPill}>
+                <StackIcon size={13} />
+                <span className={styles.handoffAgent} style={corDoAgente(event.actor.id)}>
+                  {nomeDoAgente(event.actor.id)}
+                </span>
+                {t(verboKey)} &quot;{titulo}&quot;
               </span>
-              {t(verboKey)} &quot;{titulo}&quot;
-            </span>
-            <Link
-              to="/projects/$projectId"
-              params={{ projectId }}
-              search={{ tab: 'backlog' }}
-              className={styles.timelineLink}
-            >
-              {t('compartilhado.verNoBacklog')}
-              <ChevronRightIcon size={11} />
-            </Link>
-          </div>
+            }
+            acao={
+              <Link
+                to="/projects/$projectId"
+                params={{ projectId }}
+                search={{ tab: 'backlog' }}
+                className={styles.timelineLink}
+              >
+                {t('compartilhado.verNoBacklog')}
+                <ChevronRightIcon size={11} />
+              </Link>
+            }
+          />
         ),
       });
     } else if (event.type === 'backlog.story_promotion_proposed') {
@@ -870,9 +879,17 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
               </>
             }
             rodape={
-              /* RN-749: a resposta cortada pelo teto oferece a continuação
-                 num clique — antes a pessoa tinha de adivinhar "continue". */
-              key === event.id &&
+              <>
+              {text !== '' && event.actor.kind === 'agent' && (
+                <AcaoCopiar
+                  texto={text}
+                  rotulo={t('mensagens.copiar')}
+                  rotuloCopiado={t('mensagens.copiado')}
+                />
+              )}
+              {/* RN-749: a resposta cortada pelo teto oferece a continuação
+                 num clique — antes a pessoa tinha de adivinhar "continue". */}
+              {key === event.id &&
               isActive &&
               continuarRespostaCortada &&
               event.actor.kind === 'agent' &&
@@ -884,7 +901,8 @@ export function montarTimeline(ctx: ContextoDaTimeline): TimelineEntry[] {
                 >
                   {t('mensagens.continuarCortada')}
                 </Button>
-              )
+              )}
+              </>
             }
           >
             {/* Resposta vazia é evento ANTIGO (até a RN-059): a tela o NOMEIA.

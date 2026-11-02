@@ -82,6 +82,8 @@
     "reabrirExigeDeveloper": "Reabrir a sessão exige o papel developer neste workspace."
   },
   "mensagens": {
+    "copiar": "Copiar resposta",
+    "copiado": "Copiado",
     "reunindoInformacoes": "Reunindo informações...",
     "respostaVazia": "Resposta vazia — evento de uma versão antiga, em que falha de turno era gravada como resposta em branco. O motivo real não foi registrado.",
     "modeloGerador": "Modelo que gerou esta resposta: {{modelName}}",
@@ -234,6 +236,7 @@
     "prsNaoLidas_other": "{{count}} PRs ficaram de fora desta lista (além do limite de leitura, ou o diff não pôde ser lido) — a aba PRs mostra todas."
   },
   "turno": {
+    "artefato": { "epico": "Épico criado", "historia": "História criada" },
     "pensando": "Pensando…",
     "passosDoTurno": "Passos do turno",
     "passosCount_zero": "{{count}} passos",

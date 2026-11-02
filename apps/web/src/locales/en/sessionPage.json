@@ -81,6 +81,8 @@
     "reabrirExigeDeveloper": "Reopening the session requires the developer role in this workspace."
   },
   "mensagens": {
+    "copiar": "Copy response",
+    "copiado": "Copied",
     "reunindoInformacoes": "Gathering information...",
     "respostaVazia": "Empty response — event from an older version, when turn failures were recorded as a blank response. The real reason wasn't recorded.",
     "modeloGerador": "Model that generated this response: {{modelName}}",
@@ -226,6 +228,7 @@
     "prsNaoLidas_other": "{{count}} PRs were left out of this list (past the read limit, or their diff could not be read) — the PRs tab shows them all."
   },
   "turno": {
+    "artefato": { "epico": "Epic created", "historia": "Story created" },
     "pensando": "Thinking…",
     "passosDoTurno": "Turn steps",
     "passosCount_one": "{{count}} step",
