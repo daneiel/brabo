@@ -6,8 +6,7 @@
  * Adaptador do `version.ts`. A regra por branch:
  *
  *   dev  → vX.Y.Z-dev.N   (X.Y.Z é a versão PROJETADA do ciclo em andamento)
- *   qa   → vX.Y.Z-qa.N
- *   main → vX.Y.Z final, e SÓ se o commit for o da última -qa.N
+ *   main → vX.Y.Z final, e SÓ se o commit for o da última -dev.N
  *        → ou vX.Y.(Z+1) quando o merge for HOTFIX: ele nasce de `main`, nunca
  *          passa por `qa`, e exigir âncora dele seria exigir o impossível.
  *
@@ -180,11 +179,11 @@ async function principal(): Promise<void> {
 
   // --- retropropagação não carimba.
   //
-  // Um backmerge `main` → `qa` traz conteúdo que já está em `main`. Sem esta
+  // Um backmerge `main` → `dev` traz conteúdo que já está em `main`. Sem esta
   // saída, o cálculo do ciclo veria os PRs que `dev` acumulou desde a última
-  // final e carimbaria uma `-qa.N` num commit que nunca foi promovido de
-  // `dev` — uma tag dizendo "isto passou por qa" sobre algo que não passou.
-  if (branch === 'qa' || branch === 'dev') {
+  // final e carimbaria uma `-dev.N` num commit que nunca foi promovido de
+  // `dev` — uma tag dizendo "isto passou por dev" sobre algo que não passou.
+  if (branch === 'dev') {
     const segundoPai = paisDoCommit[1];
     if (segundoPai) {
       const contido = ((): boolean | null => {
@@ -266,7 +265,7 @@ async function principal(): Promise<void> {
       emitir(
         'mensagem',
         `${versaoDoHotfix!} — hotfix direto em \`main\`, sobre ${ultimaFinal}.\n` +
-          'A correção ainda NÃO está em `qa` nem em `dev`: o gate trava os dois\n' +
+          'A correção ainda NÃO está em `dev`: o gate a trava\n' +
           'até as retropropagações entrarem.',
       );
       emitir('hotfix', 'sim');

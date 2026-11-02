@@ -1,7 +1,7 @@
 name: dependabot-para-dev
 
 # Dependência entra pela `dev`, como todo o resto, e chega à `main` pela
-# promoção `dev → qa → main`. Fonte da política:
+# promoção `dev → main`. Fonte da política:
 # docs/explanation/branching-policy.md, "Dependabot enters through dev".
 #
 # O `target-branch: dev` do `.github/dependabot.yml` resolve as atualizações de
@@ -89,7 +89,7 @@ jobs:
             echo "#$N → $DECISAO: $MOTIVO"
 
             if [ "$DECISAO" = "fechar" ]; then
-              gh pr close "$N" --repo "$REPO" --comment "Fechado sem merge pelo \`dependabot-para-dev\`: ${MOTIVO}. A correção já está na \`dev\` e chega à \`main\` pela promoção \`dev → qa → main\`."
+              gh pr close "$N" --repo "$REPO" --comment "Fechado sem merge pelo \`dependabot-para-dev\`: ${MOTIVO}. A correção já está na \`dev\` e chega à \`main\` pela promoção \`dev → main\`."
             else
               gh pr edit "$N" --repo "$REPO" --base dev
               # Evento gerado pelo GITHUB_TOKEN não dispara workflow: os checks

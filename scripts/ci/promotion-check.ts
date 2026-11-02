@@ -15,7 +15,7 @@
  */
 
 import { ESCADA, type Permanente } from './pr-police.ts';
-import { lerTagDeEstagio, type Estagio } from './version.ts';
+import { ESTAGIO_ANTERIOR_A_MAIN, lerTagDeEstagio, type Estagio } from './version.ts';
 
 export interface Conferencia {
   nome: string;
@@ -25,10 +25,7 @@ export interface Conferencia {
 
 /** O estágio cujo carimbo o commit precisa ter para subir para `destino`. */
 export function estagioExigido(destino: Permanente): Estagio | null {
-  const i = ESCADA.indexOf(destino);
-  if (i <= 0) return null;
-  const anterior = ESCADA[i - 1]!;
-  return anterior === 'main' ? null : (anterior as Estagio);
+  return destino === 'main' ? ESTAGIO_ANTERIOR_A_MAIN : null;
 }
 
 /** As tags daquele estágio que apontam para o commit. */

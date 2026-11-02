@@ -21,7 +21,6 @@ on:
   push:
     branches:
       - dev
-      - qa
       - main
 
 permissions:
@@ -162,7 +161,7 @@ jobs:
             echo "::notice::gate já estava neste estado — nada a commitar."
             exit 0
           fi
-          git commit -m "chore(gate): trava qa e dev aguardando a retropropagação de ${TAG}"
+          git commit -m "chore(gate): trava dev aguardando a retropropagação de ${TAG}"
           git push origin HEAD:main
           echo "::notice::gate travado em main"
 

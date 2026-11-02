@@ -6,7 +6,7 @@ import { estagioExigido, tagsDoCommit } from './promotion-check.ts';
  * família sem spec própria — `pr-police`, `approval-ladder` e `gate` têm.
  *
  * O que ele guarda: um commit só sobe um degrau se **já foi carimbado no degrau
- * de baixo**. Sem isso, `qa` receberia código que nunca passou por `dev`, e a
+ * de baixo**. Sem isso, `main` receberia código que nunca passou por `dev`, e a
  * escada existiria só no desenho.
  *
  * Os testes abaixo afirmam a REGRA, não a implementação: dizem qual carimbo é
@@ -14,12 +14,8 @@ import { estagioExigido, tagsDoCommit } from './promotion-check.ts';
  */
 
 describe('estagioExigido — que carimbo o destino cobra', () => {
-  it('subir para `qa` cobra o carimbo de `dev`', () => {
-    expect(estagioExigido('qa')).toBe('dev');
-  });
-
-  it('subir para `main` cobra o carimbo de `qa`', () => {
-    expect(estagioExigido('main')).toBe('qa');
+  it('subir para `main` cobra o carimbo de `dev`', () => {
+    expect(estagioExigido('main')).toBe('dev');
   });
 
   it('`dev` não cobra carimbo nenhum — é o primeiro degrau', () => {
@@ -58,7 +54,7 @@ describe('tagsDoCommit — o que conta como carimbo DAQUELE commit', () => {
   });
 
   it('tag de OUTRO estágio não conta, mesmo apontando para o commit', () => {
-    // Um carimbo de `dev` não autoriza subir de `qa` para `main`.
+    // Um carimbo de `dev` não autoriza subir para `main` com uma tag `-qa.N` histórica.
     const tags = tagsDoCommit(
       ['v1.2.0-dev.1'],
       { 'v1.2.0-dev.1': sha },
