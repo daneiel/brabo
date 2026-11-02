@@ -374,7 +374,7 @@ describe('a régua é do ENDPOINT, não da linha', () => {
     expect(pickerDoLead).toBeDisabled();
     const caixas = agentes.getAllByRole('checkbox', { name: /Valer para a área/ });
     expect(caixas).toHaveLength(3);
-    for (const caixa of caixas) expect(caixa).toBeDisabled();
+    for (const caixa of caixas) expect(caixa).toHaveAttribute('aria-disabled', 'true');
     expect(
       agentes.getByText(/Exige papel maintainer para marcar a caixa da área/),
     ).toBeInTheDocument();

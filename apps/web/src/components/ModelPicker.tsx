@@ -5,6 +5,7 @@ import { agruparModelos, formatarJanela, formatarPreco } from '../lib/models';
 import { Badge } from './ui/Badge';
 import { ChevronDownIcon, ModelIcon } from './ui/icons';
 import styles from './ModelPicker.module.css';
+import { Checkbox } from './shadcn/checkbox';
 
 /**
  * O handoff (`design_handoff_brabo/README.md`, seção 7 "Dropdown de modelo")
@@ -249,11 +250,7 @@ export function ModelPicker({
           style={{ top: posicao.top, left: posicao.left, maxHeight: posicao.maxHeight }}
         >
           <label className={styles.filtro}>
-            <input
-              type="checkbox"
-              checked={soAptos}
-              onChange={(e) => setSoAptos(e.target.checked)}
-            />
+            <Checkbox checked={soAptos} onCheckedChange={setSoAptos} />
             {t('picker.filterFitForAgents')}
           </label>
 
