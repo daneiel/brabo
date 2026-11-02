@@ -9,6 +9,8 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 - A Visão geral (listas de bloqueadas, PRs e sugestões, feed de atividade, grade de agentes), as abas Arquitetura e Insights (card de hipótese, diagrama C4) e as seções de pessoas e o sumário das Configurações passam a usar os componentes do shadcn; nenhuma regra muda (AT-655, onda 4, rodada B).
 - A `qa` é aposentada por hora no repositório do Brabo e a esteira passa a `dev → main`, com a versão final ancorada na `-dev.N` (AT-660, ADR 0235); o Gitflow do produto não muda.
 - A rotina que arquiva branches mergeadas passa a rodar toda segunda às 09:00 (Brasília), sem carência (AT-661).
+- O seletor de modelo abre num `Popover` do kit (acompanha o gatilho e não fecha mais ao rolar a página), os filtros do catálogo de modelos usam `Chip`/`Input` do kit, a aba Gastos usa `Alert`/`Card`/`Button` do kit, e o bloco de ativar execução e o resumo de arquitetura da Visão geral viram `Item` (AT-655, Rodada 148).
+- PR do Dependabot para a `dev` deixa de esperar a aprovação do owner: com os outros checks verdes, fica mergeável. A `main` segue com a escada inteira (AT-668, ADR 0236).
 
 ### Correções
 

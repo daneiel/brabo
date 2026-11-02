@@ -55,6 +55,7 @@ jobs:
           PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           PR_AUTOR: ${{ github.event.pull_request.user.login }}
+          PR_AUTOR_TIPO: ${{ github.event.pull_request.user.type }}
           PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
           # O modo e os aprovadores são VARIÁVEIS de repositório — trocar de
           # solo para community é mudar isto aqui, sem tocar em código.

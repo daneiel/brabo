@@ -133,7 +133,10 @@
   únicas exceções de push: tags (bot de release) e .release/gate.json
   (bot do gate).
 - PR do Dependabot entra pela `dev`, nunca direto na `main` — chega lá pela
-  promoção, como o resto. `target-branch: dev` cobre atualização de VERSÃO;
+  promoção, como o resto. Na `dev` ele NÃO espera aprovação humana: a escada o
+  dispensa (ADR 0236, AT-668), reconhecido por autor E branch
+  (`ehBranchDoDependabot`), e os outros checks são a revisão; a `main` segue
+  com a escada inteira. `target-branch: dev` cobre atualização de VERSÃO;
   SECURITY update o GitHub abre sempre contra a branch default (`main`), e
   `.github/workflows/dependabot-para-dev.yml` FECHA o que a `dev` já corrige
   (versão resolvida >= primeira corrigida do ALERTA, nunca o "to" do PR, que é

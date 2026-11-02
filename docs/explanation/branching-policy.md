@@ -406,12 +406,20 @@ regra que ensina a trapacear.
 |---|---|
 | PR de terceiro | **1 aprovação do owner** |
 | PR de autoria do owner | passa no check **sem revisão** |
+| PR do Dependabot para a `dev` | passa no check **sem revisão** ([ADR 0236](../adr/0236-o-dependabot-dispensa-revisao-na-dev.md)) |
 
 A segunda linha não é privilégio, é como o GitHub funciona: **ninguém
 consegue aprovar o próprio PR pela interface**. Num projeto BDFL, o **merge
 manual do owner é a aprovação** — é o ato deliberado dele, no momento em que
 ele escolhe clicar no botão. Exigir uma revisão que a plataforma não permite
 só produziria um check permanentemente vermelho.
+
+A terceira linha vale também no modo `community`, e só na `dev`. Desde
+02/11/2026 os **outros checks** fazem a revisão do Dependabot: com todos
+verdes, a PR fica mergeável. O bot é reconhecido por **autor e branch**, com a
+mesma régua do `pr-police`, então um humano que nomeie a branch `dependabot/`
+continua precisando de aprovação. Para a `main` a escada segue inteira, pela
+promoção.
 
 A exigência de **pessoas distintas fica suspensa** neste modo, e suspensa de
 propósito: com um único mantenedor, ela é aritmeticamente impossível.

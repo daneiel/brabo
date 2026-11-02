@@ -582,14 +582,15 @@ function ExecutionSection({
           <Skeleton width={220} height={18} />
         </div>
       ) : !activated ? (
-        <div className={styles.execIntro}>
-          <div className={styles.sectionSub}>
+        <Item variant="outline" className={styles.execIntro}>
+          <ItemContent>
+          <ItemDescription>
             {!hasModuleMap
               ? t('executionSection.introNeedsModuleMap')
               : semRepositorio
                 ? t('executionSection.introNeedsRepository')
                 : t('executionSection.introReady')}
-          </div>
+          </ItemDescription>
           {hasModuleMap && semRepositorio && (
             <Link
               to="/projects/$projectId/provisioning"
@@ -600,15 +601,18 @@ function ExecutionSection({
               {t('executionSection.provisionNow')}
             </Link>
           )}
+          </ItemContent>
           {/* AT-372: sem mapa de módulos não há o que ativar — o botão some e
               fica o motivo em texto, acima. Com o mapa e sem repositório ele
               segue inerte ao lado do link que resolve. */}
           {hasModuleMap && (
-            <Button variant="primary" onClick={handleActivate} disabled={semRepositorio}>
-              {t('executionSection.activate')}
-            </Button>
+            <ItemActions>
+              <Button variant="primary" onClick={handleActivate} disabled={semRepositorio}>
+                {t('executionSection.activate')}
+              </Button>
+            </ItemActions>
           )}
-        </div>
+        </Item>
       ) : (
         <>
           {/* RN-835 (AT-502): as tarefas bloqueadas vêm PRIMEIRO na seção,
@@ -764,7 +768,9 @@ function ArchitectureSummary({
   return (
     <div className={styles.arch}>
       <div className={styles.sectionHeader}>{t('architectureSummary.title')}</div>
-      <div className={styles.sectionSub}>
+      <Item variant="outline" size="sm">
+       <ItemContent>
+        <ItemDescription>
         {moduleCount > 0
           ? t('architectureSummary.summary', {
               count: moduleCount,
@@ -781,7 +787,9 @@ function ArchitectureSummary({
         >
           {t('architectureSummary.link')}
         </Link>
-      </div>
+        </ItemDescription>
+       </ItemContent>
+      </Item>
     </div>
   );
 }

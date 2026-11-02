@@ -14,7 +14,14 @@
  * Sintaxe apagável apenas (o Node executa este `.ts` por type stripping).
  */
 
-import { ESCADA, type Permanente } from './pr-police.ts';
+import { ESCADA, ehBranchDoDependabot, type Permanente } from './pr-police.ts';
+
+/**
+ * O único degrau em que o Dependabot dispensa revisão (ADR 0236, AT-668): a
+ * `dev`. Ali ele fica mergeável assim que os OUTROS checks passam; a `main`
+ * continua na escada inteira, pela promoção.
+ */
+export const DESTINO_SEM_REVISAO_PARA_O_DEPENDABOT: Permanente = 'dev';
 
 // ---------------------------------------------------------------- a política
 
@@ -81,6 +88,8 @@ export interface EntradaEscada {
   aprovadores?: Partial<Record<Papel, string[]>>;
   /** A branch de ORIGEM do PR (head ref). */
   origem?: string;
+  /** `user.type` do autor na API (`Bot` | `User`) — desambigua `dependabot` sem sufixo. */
+  tipoDoAutor?: string;
 }
 
 /** O que o emparelhamento produz: sempre um papel de verdade. */
@@ -107,6 +116,8 @@ export interface VereditoDeEscada {
   avisos: string[];
   /** Ninguém precisou aprovar — o PR é do próprio owner, no modo solo. */
   dispensadoPorAutoria: boolean;
+  /** Ninguém precisou aprovar — PR do Dependabot para a `dev` (ADR 0236). */
+  dispensadoPorDependabot: boolean;
 }
 
 
@@ -204,6 +215,7 @@ export function avaliarEscada(entrada: EntradaEscada): VereditoDeEscada {
     aprovadoresSemVaga: [] as string[],
     avisos: [] as string[],
     dispensadoPorAutoria: false,
+    dispensadoPorDependabot: false,
   };
 
   if (!ehPermanente(entrada.destino)) {
@@ -213,6 +225,25 @@ export function avaliarEscada(entrada: EntradaEscada): VereditoDeEscada {
       faltando: [
         `destino \`${entrada.destino}\` não é uma branch permanente — ` +
           `a escada só se aplica a ${ESCADA.map((p) => `\`${p}\``).join(', ')}.`,
+      ],
+    };
+  }
+
+  // Dependabot → dev: os outros checks (testes, build, drift, pr-police) são a
+  // revisão. Autor E branch, as duas — a mesma régua do pr-police, para que um
+  // humano não ganhe a dispensa nomeando a branch `dependabot/`.
+  if (
+    entrada.destino === DESTINO_SEM_REVISAO_PARA_O_DEPENDABOT &&
+    ehBranchDoDependabot(entrada.origem ?? '', entrada.autorDoPr, entrada.tipoDoAutor)
+  ) {
+    return {
+      ...base,
+      ok: true,
+      dispensadoPorDependabot: true,
+      faltando: [],
+      avisos: [
+        'PR do Dependabot para a `dev`: dispensado de review (ADR 0236). ' +
+          'Fica mergeável quando os outros checks passam.',
       ],
     };
   }
@@ -364,6 +395,14 @@ export function formatarEscada(
   l.push('');
 
 
+  if (veredito.dispensadoPorDependabot) {
+    l.push('  ✓ APROVADO — PR do Dependabot para a dev, dispensado de review (ADR 0236).');
+    l.push('');
+    l.push('    Os outros checks são a revisão: com todos verdes, o PR fica mergeável.');
+    l.push('    O caminho até a main continua pela promoção, com a escada inteira.');
+    return l.join('\n');
+  }
+
   if (veredito.dispensadoPorAutoria) {
     l.push('  ✓ APROVADO — PR de autoria do owner, dispensado de review.');
     l.push('');
@@ -470,6 +509,7 @@ async function principal(): Promise<void> {
       gestao: listaDaVariavel(process.env.APROVADORES_GESTAO),
     },
     origem: process.env.PR_HEAD_REF,
+    tipoDoAutor: process.env.PR_AUTOR_TIPO,
   };
 
   const veredito = avaliarEscada(entrada);

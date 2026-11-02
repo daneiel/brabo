@@ -306,3 +306,43 @@ describe('resumo legível', () => {
     expect(v.faltando.join(' ')).toContain('não é uma branch permanente');
   });
 });
+
+// ------------------------------------------ Dependabot → dev (ADR 0236, AT-668)
+
+describe('PR do Dependabot dispensa review só na dev', () => {
+  const doBot = {
+    autorDoPr: 'dependabot[bot]',
+    tipoDoAutor: 'Bot',
+    origem: 'dependabot/github_actions/dev/anthropics/claude-code-action-1.0.265',
+  };
+
+  it('solo: passa sem review e diz por quê', () => {
+    const v = avaliarEscada(solo(doBot));
+    expect(v.ok).toBe(true);
+    expect(v.dispensadoPorDependabot).toBe(true);
+    expect(formatarEscada(solo(doBot), v)).toContain('dispensado de review (ADR 0236)');
+  });
+
+  it('community: passa sem review com as listas vazias', () => {
+    const v = avaliarEscada(community({ ...doBot, aprovadores: {} }));
+    expect(v.ok).toBe(true);
+    expect(v.dispensadoPorDependabot).toBe(true);
+  });
+
+  it('para a main continua exigindo a escada', () => {
+    const v = avaliarEscada(solo({ ...doBot, destino: 'main' }));
+    expect(v.ok).toBe(false);
+    expect(v.dispensadoPorDependabot).toBe(false);
+  });
+
+  it('humano com branch dependabot/ não ganha a dispensa', () => {
+    const v = avaliarEscada(solo({ ...doBot, autorDoPr: 'contribuidor', tipoDoAutor: 'User' }));
+    expect(v.ok).toBe(false);
+    expect(v.dispensadoPorDependabot).toBe(false);
+  });
+
+  it('o bot fora de branch dependabot/ não ganha a dispensa', () => {
+    const v = avaliarEscada(solo({ ...doBot, origem: 'feature/qualquer' }));
+    expect(v.ok).toBe(false);
+  });
+});
