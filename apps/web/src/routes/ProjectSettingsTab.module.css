@@ -21,6 +21,23 @@
  */
 .ancora {
   scroll-margin-top: 12px;
+  /* Respiro interno compensado pela margem negativa: o conteúdo não anda, e o
+     anel de foco (abaixo) deixa de encostar no texto. */
+  padding: 8px 12px;
+  margin-inline: -12px;
+  border-radius: var(--radius-md);
+}
+
+/* Foco da seção aberta por `?section=`: o MESMO anel dos controles (`Input`),
+   no lugar da moldura preta padrão do navegador. */
+.ancora:focus-visible {
+  outline: 2px solid transparent; /* forced-colors */
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+/* Bloco irmão dentro da mesma seção (ex.: tokens de todos os usuários). */
+.subsecao {
+  margin-top: 44px;
 }
 
 /* Título e legenda dividem a MESMA linha de base, como no desenho. */
@@ -920,6 +937,8 @@
 /* O picker de modelo e, abaixo dele, o critério de roteamento do MESMO
    binding (ADR 0166): empilhados na mesma célula porque são uma decisão só. */
 .modeloComRoteamento {
+  /* Âncora dos inputs ocultos do Base UI (absolutos): sem ela escapam da célula. */
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 4px;

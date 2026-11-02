@@ -49,6 +49,7 @@
 }
 
 .comunidade {
+  position: relative; /* âncora do input oculto do Checkbox (absoluto) */
   display: flex;
   align-items: center;
   gap: 8px;

@@ -261,7 +261,7 @@ export function PersonalAccessTokensSection({ projectId }: { projectId: string }
       />
 
       {podeGerenciarDeTodos && (
-        <div className={styles.section}>
+        <div className={styles.subsecao}>
           <div className={styles.sectionHead}>
             <h2 className={styles.title}>{t('personalAccessTokens.admin.title')}</h2>
             <span className={styles.eyebrow}>{t('personalAccessTokens.admin.eyebrow')}</span>
