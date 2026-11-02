@@ -87,7 +87,7 @@ Aba do projeto começa no topo, sem margem de seção antes do título: `.arch`
 ## shadcn/ui lê os tokens (ADR 0232)
 
 O `apps/web` tem shadcn/ui (Base UI + Tailwind 4) em `components/shadcn/`. O
-`src/shadcn.css` (importado depois do `index.css`, sem preflight) mapeia as
+`src/shadcn.css` (importado depois do `index.css`, com o preflight do Tailwind ligado desde o ADR 0237) mapeia as
 cores semânticas do shadcn aos tokens deste diretório em `@theme inline`
 (`primary`→`--accent`, `accent`→`--surface-2`, `destructive`→`--danger`...) e
 liga o `dark:` a `[data-theme='dark']`. As variáveis cruas do shadcn

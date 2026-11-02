@@ -1,10 +1,11 @@
 /*
  * Fundação do shadcn/ui (AT-645, ADR 0232). Importado DEPOIS de `index.css`.
- * Sem preflight de propósito: ele entra só na limpeza final. Nenhuma variável
+ * O preflight do Tailwind está ligado desde o ADR 0237. Nenhuma variável
  * crua do shadcn (`--accent`, `--radius-*`, `--font-mono`...) é declarada —
  * as cores semânticas apontam para os tokens do Brabo (`design/tokens.css`).
  */
 @import 'tailwindcss/theme' layer(theme);
+@import 'tailwindcss/preflight' layer(base);
 @import 'tailwindcss/utilities' layer(utilities) source(none);
 /* Só o shadcn gera utilitário; varrer o src inteiro emitiria .absolute, .container... soltos. */
 @source './components/shadcn';

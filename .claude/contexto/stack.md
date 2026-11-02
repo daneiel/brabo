@@ -37,8 +37,8 @@
   outro arquivo o importa) e em grupo de vendor próprio `vendor-motion` em
   `codeSplitting.groups`, fora da carga inicial.
   shadcn/ui com Base UI (`base-nova`) + Tailwind 4 (ADR 0232): componentes em
-  `components/shadcn/` (alias `@/`), `src/shadcn.css` DEPOIS do `index.css`, sem
-  preflight até a limpeza final, `dark` sobre `[data-theme]`, cores mapeadas aos
+  `components/shadcn/` (alias `@/`), `src/shadcn.css` DEPOIS do `index.css`, com
+  o preflight ligado (ADR 0237: raios em `--radius` 0,625rem, títulos e `p`/`ul`/`ol` sem classe restaurados no `index.css`), `dark` sobre `[data-theme]`, cores mapeadas aos
   tokens do Brabo sem declarar variáveis cruas do shadcn; grupo `vendor-ui` em
   `codeSplitting.groups`.
   `@shadcn/react` (AT-653, decisão do dono de 31/10) só para o Questionnaire

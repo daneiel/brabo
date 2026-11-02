@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Funcionalidades
 
+- O visual v3 (meio-termo aprovado pelo dono): liga o preflight do Tailwind e sobe os raios para a escala do shadcn (`--radius` 0,625rem), mantendo o terracota, a tipografia e as superfícies do Brabo (ADR 0237, revisa o 0232 no preflight).
 - A Visão geral (listas de bloqueadas, PRs e sugestões, feed de atividade, grade de agentes), as abas Arquitetura e Insights (card de hipótese, diagrama C4) e as seções de pessoas e o sumário das Configurações passam a usar os componentes do shadcn; nenhuma regra muda (AT-655, onda 4, rodada B).
 - A `qa` é aposentada por hora no repositório do Brabo e a esteira passa a `dev → main`, com a versão final ancorada na `-dev.N` (AT-660, ADR 0235); o Gitflow do produto não muda.
 - A rotina que arquiva branches mergeadas passa a rodar toda segunda às 09:00 (Brasília), sem carência (AT-661).
