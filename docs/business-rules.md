@@ -23783,7 +23783,7 @@ sem dizer qual.
   deslocamento em pixels; qual das duas causas (salto ou sessão não lida) fez o
   1º clique do TP-01 se perder não foi medido no navegador.
 - **Onde:** `apps/web/src/routes/ProjectOverviewTab.tsx:494` (`desbloqueio`),
-  `apps/web/src/routes/ProjectOverviewTab.tsx:619` (`blockedTasks`)
+  `apps/web/src/routes/ProjectOverviewTab.tsx:623` (`blockedTasks`)
 - **Teste:** `apps/web/src/routes/ProjectOverviewTab.test.tsx` ("RN-835
   (AT-502): o desbloqueio chama uma vez, fica em voo e diz quando terminou";
   falha: "RN-835: a recusa do desbloqueio mostra a frase da api na linha"),
