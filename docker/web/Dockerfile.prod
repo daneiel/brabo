@@ -9,7 +9,7 @@
 # Registrado como limitação no ADR 0024 (a saída é injeção em runtime, fora do
 # escopo desta sessão).
 # ---------------------------------------------------------------------------
-FROM node:26.12.1-alpine3.24@sha256:40cd011b55415bc894e45b02fdd5a5dfde056921b7d23a64c74f80497af48797 AS build
+FROM node:26.13.0-alpine3.24@sha256:c6ad9e9c1d80f6eb607c26b4b0a132ff7a2344fad1c78ea3baa2a7d4c8de6d94 AS build
 
 ARG VITE_API_URL=http://localhost:3000
 ARG VITE_ENGINE_URL=http://localhost:4000
@@ -61,7 +61,7 @@ RUN pnpm --filter web build
 # ---------------------------------------------------------------------------
 # Estágio 2: nginx servindo o estático. Base pinada.
 # ---------------------------------------------------------------------------
-FROM nginx:1.31.8-alpine@sha256:1ef7ca94d7879df82421428ce13bd1eaa412404953859cf7a5b6512c25e67a60 AS runtime
+FROM nginx:1.31.8-alpine@sha256:785835ea65db4bba6f021acc0f3be91b0fef76a53fe41f8588c6698d2aed0606 AS runtime
 
 # Hosts liberados no `connect-src` do CSP — mudam por ambiente, então são
 # substituídos em RUNTIME pelo entrypoint (diferente das VITE_*, que não podem).
