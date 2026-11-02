@@ -12,6 +12,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Correções
 
+- A falha do golden-set do RAG agendado passa a abrir (ou comentar) uma issue, e o verde a fecha, pelo mesmo alarme do `propriedades.yml` (AT-667).
 - O alarme do `tag-release` fecha a issue da branch no primeiro carimbo verde, com o run e o SHA no comentário, em vez de pedir fechamento manual; falha repetida segue virando comentário (AT-664).
 - O check de promoção espera, por até 10 min, o `tag-release` que ainda está carimbando o commit, em vez de reprovar por corrida logo depois do merge no degrau de baixo (AT-663).
 
