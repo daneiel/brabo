@@ -4,6 +4,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ## Unreleased
 
+- Componente `Ajuda` (botão "?" sobre o Popover do kit, abre no clique, teclado e hover) para os textos explicativos longos; `ui:ajuda.rotulo` nos quatro idiomas e a régua do que pode e não pode ir para o "?" em `design/COMPONENTS.md`. Ainda sem uso em tela (AT-712).
 - Botões de Provedores, Configurações, Backlog, Gasto, Plano de adoção e do cartão de agente ganham ícone Lucide (Salvar, Trocar, Remover, Atualizar catálogo, Recusar, Editar título, Arquivar, Aprovar plano, Manual/Automático), sempre com o texto; o Testar do provedor vira só ícone com nome acessível e `title` (AT-682).
 - Regra do dono: botão só de ícone com legenda em Tooltip (hover e foco) e `aria-label`; começam Containers (Parar, Remover, Subir), Nova ideação/conversa e Novo projeto; texto só onde nenhum ícone cobre o sentido (AT-682).
 - A aba Arquitetura ganha o grafo de módulos em Canvas (`@xyflow/react`, chunk próprio carregado só na aba, ADR 0238) e o cartão "Rodar na sua máquina" mostra o entregável num Web preview com `sandbox` mínimo, só para URL local; o CSP do web ganha `frame-src` para `localhost` e `127.0.0.1` (ADR 0239). Textos nos quatro idiomas (AT-684, AT-685).

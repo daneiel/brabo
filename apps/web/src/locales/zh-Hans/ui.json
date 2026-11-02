@@ -42,5 +42,8 @@
     "copiar": "复制",
     "copiado": "已复制",
     "falhaAoCopiar": "无法复制"
+  },
+  "ajuda": {
+    "rotulo": "帮助：{{assunto}}"
   }
 }
