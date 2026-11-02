@@ -301,6 +301,14 @@ overrides:
   brace-expansion@<1.1.21: 1.1.21
   brace-expansion@>=2.0.0 <2.1.7: 2.1.7
   brace-expansion@>=4.0.0 <5.0.12: 5.0.12
+  # AT-669 (02/11) — `pnpm why glob minimatch -r`, tudo DEV-ONLY. GHSA-3g3m-2fjr-6pw4
+  # (HIGH, `glob >=9 <=14.0.1`, 14.0.2): `glob@13` ← `@nestjs/cli`.
+  # GHSA-g3hv-75wg-m249 (MODERATE, `minimatch <11.0.1`, 11.0.1): a linha 10 ←
+  # `@typescript-eslint/typescript-estree` e `glob`; só a linha MAIOR afetada
+  # entra. As linhas 3 (`eslint`) e 5 (`@redocly/openapi-core`) NÃO têm
+  # correção na própria linha e subir de major quebra o consumidor (CJS).
+  glob@>=9.0.0 <14.0.2: 14.0.2
+  minimatch@<11.0.1: 11.0.1
   # PRODUTO-EXCLUSIVA, e ALCANÇA PRODUÇÃO: `pnpm why @grpc/grpc-js --prod -r`
   # mostra `@opentelemetry/otlp-grpc-exporter-base@0.221.0` ←
   # `exporter-{logs,metrics,trace}-otlp-grpc` ← `@opentelemetry/sdk-node`, que é

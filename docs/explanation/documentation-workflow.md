@@ -584,7 +584,10 @@ que é mais difícil de notar. Ela relata:
 - ADRs em status `proposed` há mais de 60 dias
 
 Sempre na **mesma** issue, atualizada no lugar. Uma issue nova todo mês
-vira spam, e spam é desligado.
+vira spam, e spam é desligado. O workflow cria o próprio rótulo `docs`
+(`gh label create --force`, idempotente) antes de abrir a issue, e
+`scripts/ci/rotulos-dos-workflows.spec.ts` reprova todo `--label` sem esse
+create no mesmo arquivo.
 
 ### O build do site {#the-site-build}
 

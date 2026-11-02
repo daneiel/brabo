@@ -106,15 +106,22 @@ overrides:
   # núcleo do Docusaurus e pede `joi: ^17.9.2`; a 3.10.2 é a última publicada.
   #
   # HIGH · GHSA-6h2x-m376-mqjq (`>=17.2.0 <17.13.7`), já dentro da linha 17.
-  # Teto subiu para 17.13.8 (AT-613): MODERATE GHSA-wr44-6hxh-3jwq (`<17.13.8`).
-  joi@>=17.2.0 <17.13.8: 17.13.8
+  # Teto subiu para 17.13.8 (AT-613): MODERATE GHSA-wr44-6hxh-3jwq (`<17.13.8`)
+  # e para 17.13.9 (AT-669): HIGH GHSA-4528-x5fx-h6hg (`>=17.1.1 <17.13.9`).
+  joi@>=17.2.0 <17.13.9: 17.13.9
   # WEBSITE-EXCLUSIVA (AT-613) — `pnpm why compression`: `webpack-dev-server`
   # ← `@docusaurus/core`. HIGH · GHSA-vc2v-76pw-4v95 (`<1.8.2`), mesma linha 1.
   compression@<1.8.2: 1.8.2
   # WEBSITE-EXCLUSIVA (AT-613) — `pnpm why follow-redirects`:
   # `http-proxy` ← `webpack-dev-server`. 2 HIGH · GHSA-q3jh-wrc6-jgq8 e
-  # GHSA-8r9p-f939-6h3c (`>=1.16.0 <1.16.1`).
-  follow-redirects@>=1.16.0 <1.16.1: 1.16.1
+  # GHSA-8r9p-f939-6h3c (`>=1.16.0 <1.16.1`); teto 1.16.2 (AT-669): HIGH
+  # GHSA-mrwp-f3q8-3g9p (`>=1.16.0 <=1.16.1`).
+  follow-redirects@>=1.16.0 <1.16.2: 1.16.2
+  # WEBSITE+RAIZ (AT-669) — `pnpm why minimatch`: `serve-handler` ←
+  # `@docusaurus/core` (linha 3) e `@redocly/openapi-core` (linha 5), DEV-ONLY.
+  # MODERATE GHSA-g3hv-75wg-m249 (`<11.0.1`, 11.0.1): só a 11 corrige, então a
+  # faixa é mista e sobe nos DOIS arquivos. Medido: eslint da api roda com a 11.
+  minimatch@<11.0.1: 11.0.1
   # WEBSITE-EXCLUSIVA (AT-613) — `pnpm why launch-editor`: `webpack-dev-server`
   # ← `@docusaurus/core`. HIGH GHSA-587h-7wmj-h5pm e 2 MODERATE
   # (GHSA-698v-4r3x-3vcv, GHSA-r825-w8mm-5pxw), todas `<=2.14.1`.

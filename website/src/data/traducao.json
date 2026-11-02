@@ -1045,7 +1045,7 @@
       "data": "2026-10-16"
     },
     "reference/git-providers.md": {
-      "defasada": false,
+      "defasada": true,
       "data": "2026-10-15"
     },
     "reference/internal-api.md": {
@@ -2127,7 +2127,7 @@
       "data": "2026-10-16"
     },
     "reference/git-providers.md": {
-      "defasada": false,
+      "defasada": true,
       "data": "2026-10-15"
     },
     "reference/internal-api.md": {
@@ -3209,7 +3209,7 @@
       "data": "2026-10-16"
     },
     "reference/git-providers.md": {
-      "defasada": false,
+      "defasada": true,
       "data": "2026-10-15"
     },
     "reference/internal-api.md": {
