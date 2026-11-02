@@ -6,6 +6,7 @@ Gerado dos conventional commits por `scripts/changelog.mjs`.
 
 ### Funcionalidades
 
+- O chat da Sessão ganha o botão Copiar sob cada resposta do agente (o markdown cru, com o estado "Copiado" e rótulo acessível; sem clipboard disponível, não faz nada) e o épico ou a história criada no turno passa a aparecer num cartão `Artifact` com o link para a aba Histórias (AT-674, lane L1).
 - A Visão geral (listas de bloqueadas, PRs e sugestões, feed de atividade, grade de agentes), as abas Arquitetura e Insights (card de hipótese, diagrama C4) e as seções de pessoas e o sumário das Configurações passam a usar os componentes do shadcn; nenhuma regra muda (AT-655, onda 4, rodada B).
 - A `qa` é aposentada por hora no repositório do Brabo e a esteira passa a `dev → main`, com a versão final ancorada na `-dev.N` (AT-660, ADR 0235); o Gitflow do produto não muda.
 - A rotina que arquiva branches mergeadas passa a rodar toda segunda às 09:00 (Brasília), sem carência (AT-661).
