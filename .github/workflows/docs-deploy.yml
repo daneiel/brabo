@@ -3,7 +3,6 @@ name: Documentação
 # Publica a documentação de CADA branch permanente no seu próprio lugar:
 #
 #   main → https://daneiel.github.io/brabo/prd/   (a documentação real)
-#   qa   → https://daneiel.github.io/brabo/qa/
 #   dev  → https://daneiel.github.io/brabo/dev/
 #
 # O caminho nomeia o AMBIENTE, não a branch (ADR 0073): `main` é o nome do
@@ -21,7 +20,7 @@ name: Documentação
 # validação de PR mora lá; aqui mora a publicação. Um propósito por gatilho.
 on:
   push:
-    branches: [dev, qa, main]
+    branches: [dev, main]
     paths: ['docs/**', 'website/**', '.github/workflows/docs-deploy.yml']
 
 # `contents: write` porque a publicação agora é um COMMIT na `gh-pages`, não um
@@ -70,10 +69,9 @@ jobs:
           set -euo pipefail
           case "$GITHUB_REF_NAME" in
             main) caminho='prd' ;;
-            qa)   caminho='qa' ;;
             dev)  caminho='dev' ;;
             *)
-              echo "::error::branch '$GITHUB_REF_NAME' não é permanente — este workflow só publica dev, qa e main."
+              echo "::error::branch '$GITHUB_REF_NAME' não é permanente — este workflow só publica dev e main."
               exit 1
               ;;
           esac
@@ -167,7 +165,7 @@ jobs:
           # 1. Os outros dois degraus, como estão publicados hoje.
           if git ls-remote --exit-code --heads origin gh-pages >/dev/null 2>&1; then
             git fetch --no-tags --depth=1 origin gh-pages
-            for degrau in prd qa dev; do
+            for degrau in prd dev; do
               [ "$degrau" = "$CAMINHO" ] && continue
               if git cat-file -e "FETCH_HEAD:$degrau" 2>/dev/null; then
                 git archive FETCH_HEAD "$degrau" | tar -x -C publicacao
